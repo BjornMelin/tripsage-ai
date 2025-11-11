@@ -316,7 +316,7 @@ Structured JSON logging with:
 
 - JWT tokens via Supabase Auth
 - API keys for server-to-server communication
-- BYOK (Bring Your Own Key) for third-party services
+- BYOK (Bring Your Own Key) for third-party services handled by Next.js route handlers marked `"server-only"` with `dynamic = "force-dynamic"` to keep every secret fetch per-request
 
 ### Authorization
 

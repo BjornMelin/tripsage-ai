@@ -5,10 +5,34 @@
  * retrieval. The Next.js route adapters handle SSR-only concerns and pass in
  * typed dependencies.
  */
+import { z } from "zod";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 
 /** Set of allowed API service providers for key storage. */
 const ALLOWED = new Set(["openai", "openrouter", "anthropic", "xai"]);
+
+/**
+ * Maximum allowed request body size in bytes (64KB).
+ *
+ * This limit prevents memory exhaustion from oversized payloads while allowing
+ * reasonable API key lengths.
+ */
+export const MAX_BODY_SIZE_BYTES = 64 * 1024;
+
+/**
+ * Zod schema for POST /api/keys request body.
+ *
+ * Validates service name and API key with length constraints and trimming.
+ */
+// biome-ignore lint/style/useNamingConvention: Schema names use PascalCase
+export const PostKeyBodySchema = z.object({
+  apiKey: z.string().min(1, "API key is required").max(2048, "API key too long").trim(),
+  service: z
+    .string()
+    .min(1, "Service name is required")
+    .max(50, "Service name too long")
+    .trim(),
+});
 
 /**
  * Dependencies interface for keys handlers.
@@ -19,38 +43,23 @@ export interface KeysDeps {
 }
 
 /**
- * Interface for the request body when posting an API key.
+ * Type inferred from PostKeyBodySchema for validated request bodies.
  */
-export interface PostKeyBody {
-  service?: string;
-  apiKey?: string;
-}
+export type PostKeyBody = z.infer<typeof PostKeyBodySchema>;
 
 /**
  * Insert or replace a user's provider API key.
  *
+ * Expects a validated body from PostKeyBodySchema. Service normalization and
+ * validation are performed here before calling the RPC.
+ *
  * @param deps Collaborators with a typed Supabase client and RPC inserter.
- * @param body Payload containing service and apiKey.
+ * @param body Validated payload containing service and apiKey.
  * @returns 204 on success; otherwise a JSON error Response.
  */
 export async function postKey(deps: KeysDeps, body: PostKeyBody): Promise<Response> {
-  const service = body?.service;
-  const apiKey = body?.apiKey;
-  if (
-    !service ||
-    !apiKey ||
-    typeof service !== "string" ||
-    typeof apiKey !== "string"
-  ) {
-    return new Response(
-      JSON.stringify({ code: "BAD_REQUEST", error: "Invalid request body" }),
-      {
-        headers: { "content-type": "application/json" },
-        status: 400,
-      }
-    );
-  }
-  const normalized = service.trim().toLowerCase();
+  // Normalize service names once so every adapter and RPC sees the canonical lowercase id.
+  const normalized = body.service.toLowerCase();
   if (!ALLOWED.has(normalized)) {
     return new Response(
       JSON.stringify({ code: "BAD_REQUEST", error: "Unsupported service" }),
@@ -70,7 +79,7 @@ export async function postKey(deps: KeysDeps, body: PostKeyBody): Promise<Respon
     });
   }
 
-  await deps.insertUserApiKey(user.id, normalized, apiKey);
+  await deps.insertUserApiKey(user.id, normalized, body.apiKey);
   return new Response(null, { status: 204 });
 }
 

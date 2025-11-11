@@ -72,7 +72,7 @@ Secure third-party API key management:
 
 - **Encryption**: AES-256 with user-specific salts
 - **Storage**: Encrypted in database with RLS protection
-- **Access**: Users can only access their own keys
+- **Access**: Users can only access their own keys via Next.js route handlers marked `"server-only"` and `dynamic = "force-dynamic"` so responses are never cached or executed on the client
 - **Audit**: All key operations logged
 
 ## Security Testing
