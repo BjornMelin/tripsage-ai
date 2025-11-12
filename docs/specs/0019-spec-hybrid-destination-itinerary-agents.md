@@ -93,9 +93,7 @@ flowchart TD
 
 - **Telemetry Files**: `frontend/src/lib/telemetry/agents.ts`, instrumentation hooks in middleware.
 - **Testing**: Vitest (agents, tools, components), Playwright (chat flows), integration tests hitting new route handlers with mocked AI client.
-- **Rollout**:
-  - Feature flag `NEXT_PUBLIC_AGENT_DEST_ITIN` gating PromptInput actions + API entry points.
-- Rollout: complete cutover with the frontend-only agents. Telemetry still monitors success and latency; rollback is done by reverting deploys.
+- Rollout: complete cutover with frontend-only agents (no flags). Telemetry monitors success and latency; rollback is by reverting the deploy.
 
 ## Acceptance Criteria
 
@@ -107,8 +105,9 @@ flowchart TD
 
 ## Status
 
-- P0 completed (schemas, prompts, guardrails, telemetry, flags).
-- P1 in progress (flight + accommodation agents, route handlers, UI cards, tests).
+- P0 completed (platform hardening: schemas, prompts, guardrails, telemetry, caching).
+- P1 completed (flight + accommodation agents shipped in frontend; schema-aware UI cards and route tests).
+- Next phase: P2 – Budget & Memory agents (design/implementation starting).
 
 ## References
 
