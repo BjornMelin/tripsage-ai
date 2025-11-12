@@ -14,6 +14,8 @@ import type { z } from "zod";
 import { runBudgetAgent } from "@/lib/agents/budget-agent";
 import { createErrorHandler } from "@/lib/agents/error-recovery";
 import { getTrustedRateLimitIdentifier } from "@/lib/next/route-helpers";
+import { enforceRouteRateLimit } from "@/lib/ratelimit/config";
+import { getRedis } from "@/lib/redis";
 import { resolveProvider } from "@/lib/providers/registry";
 import { createServerSupabase } from "@/lib/supabase/server";
 import type { BudgetPlanRequest } from "@/schemas/agents";
@@ -49,6 +51,18 @@ export async function POST(req: NextRequest): Promise<Response> {
     const modelHint = new URL(req.url).searchParams.get("model") ?? undefined;
     const { model } = await resolveProvider(user?.id ?? "anon", modelHint);
     const identifier = user?.id ?? getTrustedRateLimitIdentifier(req);
+
+    const rateLimitError = await enforceRouteRateLimit(
+      "budgetPlanning",
+      identifier,
+      getRedis
+    );
+    if (rateLimitError) {
+      return NextResponse.json(
+        { error: rateLimitError.error, reason: rateLimitError.reason },
+        { status: rateLimitError.status }
+      );
+    }
 
     const result = runBudgetAgent({ identifier, model }, body);
     return result.toUIMessageStreamResponse({
