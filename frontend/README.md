@@ -411,7 +411,7 @@ UPSTASH_REDIS_REST_TOKEN=your_upstash_rest_token
 AI_GATEWAY_URL=your_vercel_ai_gateway_url
 
 # External APIs (Optional - for tool functionality)
-OPENWEATHER_API_KEY=your_openweather_key
+OPENWEATHERMAP_API_KEY=your_openweathermap_key
 DUFFEL_ACCESS_TOKEN=your_duffel_token
 GOOGLE_MAPS_API_KEY=your_google_maps_key
 FIRECRAWL_API_KEY=fc-your_firecrawl_key  # For web search (v2.5)

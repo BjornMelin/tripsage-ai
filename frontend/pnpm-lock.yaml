@@ -124,8 +124,8 @@ importers:
         specifier: ^1.35.6
         version: 1.35.6
       ai:
-        specifier: 6.0.0-beta.98
-        version: 6.0.0-beta.98(zod@4.1.12)
+        specifier: 6.0.0-beta.99
+        version: 6.0.0-beta.99(zod@4.1.12)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -2235,6 +2235,12 @@ packages:
 
   ai@6.0.0-beta.98:
     resolution: {integrity: sha512-beGus9P8QVgFQCDRLxoPwTQk9YsI2ZgMjwSy9i9npArRM1qup6Y0s+qWcs4LOhyFyxHHuPWGEDH36oigpa4kBA==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  ai@6.0.0-beta.99:
+    resolution: {integrity: sha512-Z/TQByUwZepN2425FepmvDNNpqVufNtqv1QJju6tGL8uiWLwHc9HKN36+joSuCozeZq9JE77FaQ0TBuRh6Hh/A==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -6103,6 +6109,18 @@ snapshots:
   agent-base@7.1.4: {}
 
   ai@6.0.0-beta.98(zod@4.1.12):
+    dependencies:
+      '@ai-sdk/gateway': 2.0.0-beta.52(zod@4.1.12)
+      '@ai-sdk/provider': 3.0.0-beta.16
+      '@ai-sdk/provider-utils': 4.0.0-beta.33(zod@4.1.12)
+      '@opentelemetry/api': 1.9.0
+      zod: 4.1.12
+    transitivePeerDependencies:
+      - '@valibot/to-json-schema'
+      - arktype
+      - effect
+
+  ai@6.0.0-beta.99(zod@4.1.12):
     dependencies:
       '@ai-sdk/gateway': 2.0.0-beta.52(zod@4.1.12)
       '@ai-sdk/provider': 3.0.0-beta.16

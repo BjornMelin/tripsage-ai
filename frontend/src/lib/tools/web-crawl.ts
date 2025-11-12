@@ -333,6 +333,21 @@ export const crawlUrl = tool({
   }),
 });
 
+export const crawlSiteInputSchema = z.object({
+  excludePaths: z.array(z.string()).optional(),
+  fresh: z.boolean().default(false),
+  includePaths: z.array(z.string()).optional(),
+  limit: z.number().int().min(1).max(100).default(10),
+  maxPages: z.number().int().positive().optional(),
+  maxResults: z.number().int().positive().optional(),
+  maxWaitTime: z.number().int().positive().optional(),
+  pollInterval: z.number().int().positive().default(2).optional(),
+  scrapeOptions: scrapeOptionsSchema,
+  sitemap: z.enum(["include", "skip", "only"]).optional(),
+  timeoutMs: z.number().int().positive().default(120000).optional(),
+  url: z.string().url(),
+});
+
 export const crawlSite = tool({
   description:
     "Crawl a site (limited) via Firecrawl v2.5. Supports path filtering " +
@@ -414,18 +429,5 @@ export const crawlSite = tool({
     if (redis) await redis.set(ck, result, { ex: 6 * 3600 });
     return result;
   },
-  inputSchema: z.object({
-    excludePaths: z.array(z.string()).optional(),
-    fresh: z.boolean().default(false),
-    includePaths: z.array(z.string()).optional(),
-    limit: z.number().int().min(1).max(100).default(10),
-    maxPages: z.number().int().positive().optional(),
-    maxResults: z.number().int().positive().optional(),
-    maxWaitTime: z.number().int().positive().optional(),
-    pollInterval: z.number().int().positive().default(2).optional(),
-    scrapeOptions: scrapeOptionsSchema,
-    sitemap: z.enum(["include", "skip", "only"]).optional(),
-    timeoutMs: z.number().int().positive().default(120000).optional(),
-    url: z.string().url(),
-  }),
+  inputSchema: crawlSiteInputSchema,
 });

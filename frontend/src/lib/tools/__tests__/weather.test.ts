@@ -67,15 +67,15 @@ const minimalWeatherResponse = {
 const _env = process.env;
 
 beforeAll(() => {
-  process.env.OPENWEATHER_API_KEY = "test_key";
+  process.env.OPENWEATHERMAP_API_KEY = "test_key";
 });
 
 beforeEach(() => {
   vi.clearAllMocks();
   (getRedis as ReturnType<typeof vi.fn>).mockReturnValue(null);
   // Ensure env is set for each test
-  if (!process.env.OPENWEATHER_API_KEY) {
-    process.env.OPENWEATHER_API_KEY = "test_key";
+  if (!process.env.OPENWEATHERMAP_API_KEY) {
+    process.env.OPENWEATHERMAP_API_KEY = "test_key";
   }
 });
 
@@ -342,9 +342,9 @@ describe("field extraction", () => {
 
 describe("error handling", () => {
   test("throws when API key not configured", async () => {
-    const originalKey = process.env.OPENWEATHER_API_KEY;
+    const originalKey = process.env.OPENWEATHERMAP_API_KEY;
     // Use Reflect.deleteProperty to actually remove the property (Biome allows this for test cleanup)
-    Reflect.deleteProperty(process.env, "OPENWEATHER_API_KEY");
+    Reflect.deleteProperty(process.env, "OPENWEATHERMAP_API_KEY");
     vi.resetModules();
     const { getCurrentWeather: freshTool } = await import("../weather");
 
@@ -352,7 +352,7 @@ describe("error handling", () => {
       freshTool.execute?.({ city: "Paris", units: "metric" }, mockContext)
     ).rejects.toThrow(/weather_not_configured/);
 
-    process.env.OPENWEATHER_API_KEY = originalKey || "test_key";
+    process.env.OPENWEATHERMAP_API_KEY = originalKey || "test_key";
     vi.resetModules();
   });
 

@@ -1,7 +1,10 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { z } from "zod";
 import { errorResponse, withRequestSpan } from "@/lib/next/route-helpers";
+
+type ValidationIssue = z.core.$ZodIssue;
 
 describe("withRequestSpan", () => {
   beforeEach(() => {
@@ -102,6 +105,31 @@ describe("errorResponse", () => {
     expect(body).toEqual({
       error: "rate_limit_exceeded",
       reason: "Too many requests",
+    });
+  });
+
+  it("includes issues when provided", async () => {
+    const issues: ValidationIssue[] = [
+      {
+        code: "custom",
+        message: "destination is required",
+        params: { field: "destination" },
+        path: ["destination"],
+      },
+    ];
+
+    const response = errorResponse({
+      error: "invalid_request",
+      issues,
+      reason: "Request validation failed",
+      status: 400,
+    });
+
+    const body = await response.json();
+    expect(body).toEqual({
+      error: "invalid_request",
+      issues,
+      reason: "Request validation failed",
     });
   });
 

@@ -64,7 +64,7 @@ async function fetchSafetyScores(destination: string): Promise<SafetyResult | nu
  *
  * @returns Safety scores and advisory information.
  */
-const travelAdvisoryInputSchema = z.object({
+export const travelAdvisoryInputSchema = z.object({
   destination: z.string().min(1, "Destination must be a non-empty string"),
 });
 

@@ -32,7 +32,7 @@ import { WEATHER_CACHE_TTL_SECONDS } from "./constants";
 async function executeWeatherQuery(
   params: Record<string, unknown>
 ): Promise<{ data: unknown; provider: string }> {
-  const apiKey = process.env.OPENWEATHER_API_KEY;
+  const apiKey = process.env.OPENWEATHERMAP_API_KEY;
   if (!apiKey) {
     const error: Error & { code?: string } = new Error("weather_not_configured");
     error.code = "weather_not_configured";
@@ -117,7 +117,7 @@ async function executeWeatherQuery(
  * Supports city name, coordinates, or ZIP code. Includes units selection,
  * language preference, and optional cache bypass flag.
  */
-const weatherSchema = z
+export const getCurrentWeatherInputSchema = z
   .object({
     city: z.string().min(2).optional(),
     coordinates: z
@@ -161,7 +161,7 @@ export const getCurrentWeather = tool({
     "clouds, precipitation (rain/snow), sunrise/sunset times, and weather icon. " +
     "Results cached for 10 minutes.",
   execute: async (params): Promise<WeatherResult> => {
-    const validated = weatherSchema.parse(params);
+    const validated = getCurrentWeatherInputSchema.parse(params);
     const startedAt = Date.now();
 
     // Build query parameters
@@ -248,5 +248,5 @@ export const getCurrentWeather = tool({
 
     return result;
   },
-  inputSchema: weatherSchema,
+  inputSchema: getCurrentWeatherInputSchema,
 });

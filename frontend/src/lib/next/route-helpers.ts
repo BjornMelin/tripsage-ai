@@ -3,6 +3,9 @@
  */
 import { createHash } from "node:crypto";
 import { type NextRequest, NextResponse } from "next/server";
+import type { z } from "zod";
+
+type ValidationIssue = z.core.$ZodIssue;
 
 /**
  * Extract the client IP from trusted sources with deterministic fallback.
@@ -192,15 +195,30 @@ export function errorResponse({
   error,
   reason,
   status,
+  issues,
 }: {
   error: string;
   reason: string;
   status: number;
   err?: unknown;
+  issues?: ValidationIssue[];
 }): NextResponse {
   if (err) {
     const { context, message } = redactErrorForLogging(err);
     console.error("agent.error", { context, error, message, reason });
   }
-  return NextResponse.json({ error, reason }, { status });
+  const body: {
+    error: string;
+    reason: string;
+    issues?: ValidationIssue[];
+  } = {
+    error,
+    reason,
+  };
+
+  if (issues) {
+    body.issues = issues;
+  }
+
+  return NextResponse.json(body, { status });
 }

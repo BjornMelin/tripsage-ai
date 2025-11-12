@@ -11,6 +11,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { cacheLatLng, getCachedLatLng } from "@/lib/google/caching";
 import { getGoogleMapsServerKey } from "@/lib/google/keys";
+import { errorResponse } from "@/lib/next/route-helpers";
 
 const geocodeRequestSchema = z.object({
   address: z.string().optional(),
@@ -59,10 +60,11 @@ export async function POST(req: NextRequest) {
 
       const response = await fetch(url);
       if (!response.ok) {
-        return NextResponse.json(
-          { error: `Geocoding API error: ${response.status}` },
-          { status: response.status }
-        );
+        return errorResponse({
+          error: "upstream_error",
+          reason: `Geocoding API error: ${response.status}`,
+          status: response.status,
+        });
       }
 
       const data = (await response.json()) as {
@@ -97,27 +99,37 @@ export async function POST(req: NextRequest) {
 
       const response = await fetch(url);
       if (!response.ok) {
-        return NextResponse.json(
-          { error: `Geocoding API error: ${response.status}` },
-          { status: response.status }
-        );
+        return errorResponse({
+          error: "upstream_error",
+          reason: `Geocoding API error: ${response.status}`,
+          status: response.status,
+        });
       }
 
       const data = await response.json();
       return NextResponse.json(data);
     }
 
-    return NextResponse.json({ error: "Provide address or lat/lng" }, { status: 400 });
+    return errorResponse({
+      error: "invalid_request",
+      reason: "Provide address or lat/lng",
+      status: 400,
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { details: error.issues, error: "Invalid request" },
-        { status: 400 }
-      );
+      return errorResponse({
+        err: error,
+        error: "invalid_request",
+        issues: error.issues,
+        reason: "Request validation failed",
+        status: 400,
+      });
     }
-    if (error instanceof Error && error.message.includes("required")) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return errorResponse({
+      err: error,
+      error: "internal",
+      reason: "Internal server error",
+      status: 500,
+    });
   }
 }

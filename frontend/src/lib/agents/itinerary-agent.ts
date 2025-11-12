@@ -11,11 +11,17 @@ import "server-only";
 
 import type { LanguageModel, ToolSet } from "ai";
 import { stepCountIs, streamText, tool } from "ai";
-import { z } from "zod";
 
-import { runWithGuardrails } from "@/lib/agents/runtime";
+import { buildGuardedTool } from "@/lib/agents/guarded-tool";
 import { buildRateLimit } from "@/lib/ratelimit/config";
 import { toolRegistry } from "@/lib/tools";
+import { lookupPoiInputSchema } from "@/lib/tools/google-places";
+import {
+  createTravelPlanInputSchema,
+  saveTravelPlanInputSchema,
+} from "@/lib/tools/planning";
+import { webSearchInputSchema } from "@/lib/tools/web-search";
+import { webSearchBatchInputSchema } from "@/lib/tools/web-search-batch";
 import { buildItineraryPrompt } from "@/prompts/agents";
 import type { ItineraryPlanRequest } from "@/schemas/agents";
 
@@ -44,114 +50,106 @@ function buildItineraryTools(identifier: string): ToolSet {
     | ToolLike
     | undefined;
   const savePlanTool = toolRegistry.saveTravelPlan as unknown as ToolLike | undefined;
+  const rateLimit = buildRateLimit("itineraryPlanning", identifier);
+
+  const guardedWebSearch = buildGuardedTool({
+    cache: {
+      hashInput: true,
+      key: "agent:itinerary:web-search",
+      ttlSeconds: 60 * 30,
+    },
+    execute: async (params: unknown) => await webSearchTool.execute(params),
+    rateLimit,
+    schema: webSearchInputSchema,
+    toolKey: "webSearch",
+    workflow: "itineraryPlanning",
+  });
+
+  const guardedWebSearchBatch = buildGuardedTool({
+    cache: {
+      hashInput: true,
+      key: "agent:itinerary:web-search-batch",
+      ttlSeconds: 60 * 30,
+    },
+    execute: async (params: unknown) => await webSearchBatchTool.execute(params),
+    rateLimit,
+    schema: webSearchBatchInputSchema,
+    toolKey: "webSearchBatch",
+    workflow: "itineraryPlanning",
+  });
+
+  const guardedLookupPoi = buildGuardedTool({
+    cache: { hashInput: true, key: "agent:itinerary:poi", ttlSeconds: 600 },
+    execute: async (params: unknown) => {
+      if (!poiTool) return { inputs: params, pois: [], provider: "stub" };
+      return await poiTool.execute(params);
+    },
+    rateLimit,
+    schema: lookupPoiInputSchema,
+    toolKey: "lookupPoiContext",
+    workflow: "itineraryPlanning",
+  });
+
+  const guardedCreatePlan = buildGuardedTool({
+    cache: {
+      hashInput: true,
+      key: "agent:itinerary:create-plan",
+      ttlSeconds: 60 * 5,
+    },
+    execute: async (params: unknown) => {
+      if (!createPlanTool) return { error: "stub", success: false };
+      return await createPlanTool.execute(params);
+    },
+    rateLimit,
+    schema: createTravelPlanInputSchema,
+    toolKey: "createTravelPlan",
+    workflow: "itineraryPlanning",
+  });
+
+  const guardedSavePlan = buildGuardedTool({
+    cache: {
+      hashInput: true,
+      key: "agent:itinerary:save-plan",
+      ttlSeconds: 60 * 5,
+    },
+    execute: async (params: unknown) => {
+      if (!savePlanTool) return { error: "stub", success: false };
+      return await savePlanTool.execute(params);
+    },
+    rateLimit,
+    schema: saveTravelPlanInputSchema,
+    toolKey: "saveTravelPlan",
+    workflow: "itineraryPlanning",
+  });
 
   const webSearch = tool({
     description: webSearchTool.description ?? "Web search",
-    execute: async (params: unknown) => {
-      const { result } = await runWithGuardrails(
-        {
-          cache: {
-            hashInput: true,
-            key: "agent:itinerary:web-search",
-            ttlSeconds: 60 * 30,
-          },
-          rateLimit: buildRateLimit("itineraryPlanning", identifier),
-          tool: "webSearch",
-          workflow: "itineraryPlanning",
-        },
-        params,
-        async (validated) => webSearchTool.execute(validated)
-      );
-      return result;
-    },
-    inputSchema: z.any(),
+    execute: guardedWebSearch,
+    inputSchema: webSearchInputSchema,
   });
 
   const webSearchBatch = tool({
     description: webSearchBatchTool.description ?? "Batch web search",
-    execute: async (params: unknown) => {
-      const { result } = await runWithGuardrails(
-        {
-          cache: {
-            hashInput: true,
-            key: "agent:itinerary:web-search-batch",
-            ttlSeconds: 60 * 30,
-          },
-          rateLimit: buildRateLimit("itineraryPlanning", identifier),
-          tool: "webSearchBatch",
-          workflow: "itineraryPlanning",
-        },
-        params,
-        async (validated) => webSearchBatchTool.execute(validated)
-      );
-      return result;
-    },
-    inputSchema: z.any(),
+    execute: guardedWebSearchBatch,
+    inputSchema: webSearchBatchInputSchema,
   });
 
   const lookupPoiContext = tool({
     description: poiTool?.description ?? "Lookup POIs (context)",
-    execute: async (params: unknown) => {
-      if (!poiTool) return { inputs: params, pois: [], provider: "stub" };
-      const { result } = await runWithGuardrails(
-        {
-          cache: { hashInput: true, key: "agent:itinerary:poi", ttlSeconds: 600 },
-          rateLimit: buildRateLimit("itineraryPlanning", identifier),
-          tool: "lookupPoiContext",
-          workflow: "itineraryPlanning",
-        },
-        params,
-        async (validated) => poiTool.execute(validated)
-      );
-      return result;
-    },
-    inputSchema: z.any(),
+    execute: guardedLookupPoi,
+    inputSchema: lookupPoiInputSchema,
   });
 
   const createTravelPlan = tool({
     description: createPlanTool?.description ?? "Create travel plan",
-    execute: async (params: unknown) => {
-      if (!createPlanTool) return { error: "stub", success: false };
-      const { result } = await runWithGuardrails(
-        {
-          cache: {
-            hashInput: true,
-            key: "agent:itinerary:create-plan",
-            ttlSeconds: 60 * 5,
-          },
-          rateLimit: buildRateLimit("itineraryPlanning", identifier),
-          tool: "createTravelPlan",
-          workflow: "itineraryPlanning",
-        },
-        params,
-        async (validated) => createPlanTool.execute(validated)
-      );
-      return result;
-    },
-    inputSchema: z.any(),
+    execute: guardedCreatePlan,
+    inputSchema: createTravelPlanInputSchema,
   });
 
   const saveTravelPlan = tool({
     description: savePlanTool?.description ?? "Save travel plan",
-    execute: async (params: unknown) => {
-      if (!savePlanTool) return { error: "stub", success: false };
-      const { result } = await runWithGuardrails(
-        {
-          cache: {
-            hashInput: true,
-            key: "agent:itinerary:save-plan",
-            ttlSeconds: 60 * 5,
-          },
-          rateLimit: buildRateLimit("itineraryPlanning", identifier),
-          tool: "saveTravelPlan",
-          workflow: "itineraryPlanning",
-        },
-        params,
-        async (validated) => savePlanTool.execute(validated)
-      );
-      return result;
-    },
-    inputSchema: z.any(),
+    execute: guardedSavePlan,
+    inputSchema: saveTravelPlanInputSchema,
   });
 
   return {
