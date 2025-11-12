@@ -13,7 +13,7 @@ import { fetchWithRetry } from "@/lib/http/fetch-retry";
 import { createMcpClientHelper, getMcpTool } from "@/lib/mcp/client";
 import { getRedis } from "@/lib/redis";
 import { secureUuid } from "@/lib/security/random";
-import { TOOL_ERROR_CODES, createToolError } from "@/lib/tools/errors";
+import { createToolError, TOOL_ERROR_CODES } from "@/lib/tools/errors";
 import {
   ACCOMMODATION_BOOKING_INPUT_SCHEMA,
   ACCOMMODATION_BOOKING_OUTPUT_SCHEMA,
@@ -24,9 +24,6 @@ import {
   type AccommodationBookingResult,
   type AccommodationDetailsResult,
   type AccommodationSearchResult,
-  PROPERTY_TYPE_ENUM,
-  SORT_BY_ENUM,
-  SORT_ORDER_ENUM,
 } from "@/types/accommodations";
 import { requireApproval } from "./approvals";
 import { ACCOM_SEARCH_CACHE_TTL_SECONDS } from "./constants";
@@ -79,7 +76,7 @@ async function executeSearch(
   const httpUrl = process.env.ACCOM_SEARCH_URL || process.env.AIRBNB_MCP_URL;
   const httpToken = process.env.ACCOM_SEARCH_TOKEN || process.env.AIRBNB_MCP_API_KEY;
   if (!httpUrl) {
-    throw createToolError(TOOL_ERROR_CODES.accom_search_not_configured);
+    throw createToolError(TOOL_ERROR_CODES.accomSearchNotConfigured);
   }
 
   const res = await fetchWithRetry(
@@ -101,14 +98,14 @@ async function executeSearch(
     };
     if (errWithCode.code === "fetch_timeout") {
       throw createToolError(
-        TOOL_ERROR_CODES.accom_search_timeout,
+        TOOL_ERROR_CODES.accomSearchTimeout,
         undefined,
         errWithCode.meta
       );
     }
     if (errWithCode.code === "fetch_failed") {
       throw createToolError(
-        TOOL_ERROR_CODES.accom_search_failed,
+        TOOL_ERROR_CODES.accomSearchFailed,
         undefined,
         errWithCode.meta
       );
@@ -120,12 +117,12 @@ async function executeSearch(
     const text = await res.text();
     const code =
       res.status === 429
-        ? TOOL_ERROR_CODES.accom_search_rate_limited
+        ? TOOL_ERROR_CODES.accomSearchRateLimited
         : res.status === 401
-          ? TOOL_ERROR_CODES.accom_search_unauthorized
+          ? TOOL_ERROR_CODES.accomSearchUnauthorized
           : res.status === 402
-            ? TOOL_ERROR_CODES.accom_search_payment_required
-            : TOOL_ERROR_CODES.accom_search_failed;
+            ? TOOL_ERROR_CODES.accomSearchPaymentRequired
+            : TOOL_ERROR_CODES.accomSearchFailed;
     throw createToolError(code, undefined, {
       status: res.status,
       text: text.slice(0, 200),
@@ -276,7 +273,7 @@ export const bookAccommodation = tool({
     const sessionId = validated.sessionId;
 
     if (!sessionId) {
-      throw createToolError(TOOL_ERROR_CODES.accom_booking_session_required);
+      throw createToolError(TOOL_ERROR_CODES.accomBookingSessionRequired);
     }
 
     // Require approval with idempotency key
@@ -372,7 +369,7 @@ export const getAccommodationDetails = tool({
     const httpUrl = process.env.ACCOM_SEARCH_URL || process.env.AIRBNB_MCP_URL;
     const httpToken = process.env.ACCOM_SEARCH_TOKEN || process.env.AIRBNB_MCP_API_KEY;
     if (!httpUrl) {
-      throw createToolError(TOOL_ERROR_CODES.accom_details_not_configured);
+      throw createToolError(TOOL_ERROR_CODES.accomDetailsNotConfigured);
     }
 
     const url = new URL(httpUrl);
@@ -401,14 +398,14 @@ export const getAccommodationDetails = tool({
       };
       if (errWithCode.code === "fetch_timeout") {
         throw createToolError(
-          TOOL_ERROR_CODES.accom_details_timeout,
+          TOOL_ERROR_CODES.accomDetailsTimeout,
           undefined,
           errWithCode.meta
         );
       }
       if (errWithCode.code === "fetch_failed") {
         throw createToolError(
-          TOOL_ERROR_CODES.accom_details_failed,
+          TOOL_ERROR_CODES.accomDetailsFailed,
           undefined,
           errWithCode.meta
         );
@@ -420,12 +417,12 @@ export const getAccommodationDetails = tool({
       const text = await res.text();
       const code =
         res.status === 404
-          ? TOOL_ERROR_CODES.accom_details_not_found
+          ? TOOL_ERROR_CODES.accomDetailsNotFound
           : res.status === 429
-            ? TOOL_ERROR_CODES.accom_details_rate_limited
+            ? TOOL_ERROR_CODES.accomDetailsRateLimited
             : res.status === 401
-              ? TOOL_ERROR_CODES.accom_details_unauthorized
-              : TOOL_ERROR_CODES.accom_details_failed;
+              ? TOOL_ERROR_CODES.accomDetailsUnauthorized
+              : TOOL_ERROR_CODES.accomDetailsFailed;
       throw createToolError(code, undefined, {
         status: res.status,
         text: text.slice(0, 200),
