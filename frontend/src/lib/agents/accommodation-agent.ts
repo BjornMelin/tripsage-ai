@@ -129,6 +129,7 @@ export function runAccommodationAgent(
     )}`,
     stopWhen: stepCountIs(10),
     system: instructions,
+    temperature: 0.3,
     tools: buildAccommodationTools(deps.identifier),
   });
 }

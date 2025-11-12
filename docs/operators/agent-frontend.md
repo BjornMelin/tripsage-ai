@@ -19,8 +19,7 @@ Both stream UI-compatible responses via `toUIMessageStreamResponse()`.
   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - Model provider BYOK/Gateway: configured in `frontend/src/lib/providers/registry.ts`.
 - Flights provider (Duffel): prefer `DUFFEL_ACCESS_TOKEN` (fallback `DUFFEL_API_KEY`).
-- Optional per-workflow temperature (defaults to 0.3):
-  - `AGENT_TEMP_FLIGHT`, `AGENT_TEMP_ACCOMMODATION`
+Temperatures are hard-coded per agent (default 0.3). Adjust via code near each agent orchestrator.
 
 ## Guardrails (Always On)
 

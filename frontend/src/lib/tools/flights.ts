@@ -5,7 +5,8 @@
 import { tool } from "ai";
 import { z } from "zod";
 
-const DUFFEL_KEY = process.env.DUFFEL_API_KEY;
+// Prefer DUFFEL_ACCESS_TOKEN (commonly used in templates), fall back to DUFFEL_API_KEY.
+const DUFFEL_KEY = process.env.DUFFEL_ACCESS_TOKEN || process.env.DUFFEL_API_KEY;
 
 export const searchFlights = tool({
   description:

@@ -89,6 +89,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `frontend/src/lib/tools/constants.ts` centralizes TTL and rate limits.
     - `frontend/src/lib/tools/injection.ts` provides `wrapToolsWithUserId()` for safe tool input injection.
 
+- Frontend-only agent endpoints (App Router):
+  - `frontend/src/app/api/agents/flights/route.ts`
+  - `frontend/src/app/api/agents/accommodations/route.ts`
+- Agent orchestrators (AI SDK v6 `streamText` + guardrails):
+  - `frontend/src/lib/agents/flight-agent.ts`
+  - `frontend/src/lib/agents/accommodation-agent.ts`
+- Rate-limit helpers for agent workflows:
+  - `frontend/src/lib/ratelimit/flight.ts`, `frontend/src/lib/ratelimit/accommodation.ts`
+- POI context tool (stub) and registry wiring:
+  - `frontend/src/lib/tools/poi-lookup.ts`; exported via `frontend/src/lib/tools/index.ts`
+- Flight agent auxiliary tools exposed to ToolLoop:
+  - `distanceMatrix` and `lookupPoiContext` (guardrailed; cached)
+- Tests for new agents and helpers:
+  - Route validation (400) tests under `frontend/src/app/api/agents/**/__tests__/route.validation.test.ts`
+  - Route happy-path tests under `frontend/src/app/api/agents/**/__tests__/route.test.ts`
+  - RL builder tests: `frontend/src/lib/ratelimit/__tests__/builders.test.ts`
+  - POI stub test: `frontend/src/lib/tools/__tests__/poi-lookup.test.ts`
+  - Guardrail telemetry assertion: `frontend/src/lib/agents/__tests__/runtime.test.ts`
+- Operator runbook for full cutover (no flags): `docs/operators/agent-frontend.md`
+
 ### Changed
 
 - Chat page routing: Messages with agent metadata route to specialized endpoints; JSON parsing extracts structured results from markdown code blocks or plain text.
@@ -123,6 +143,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Pruned heavy/duplicated cases; retained empty state, minimal destination info, add-destination happy path, numeric input, and labels in `frontend/src/components/features/trips/__tests__/itinerary-builder.test.tsx`.
 - Test performance documentation updated with reproducible commands and “After” metrics:
   - `frontend/docs/testing/vitest-performance.md` (AI stream ≈12.6ms; Account settings ≈1.6s; Itinerary builder ≈1.5s).
+
+- Flights tool now prefers `DUFFEL_ACCESS_TOKEN` (fallback `DUFFEL_API_KEY`)
+  - `frontend/src/lib/tools/flights.ts`
+- Agent temperatures are hard-coded to `0.3` per agent (no env overrides)
+  - `frontend/src/lib/agents/{flight-agent,accommodation-agent}.ts`
+- Specs updated for full frontend cutover
+  - `docs/specs/0019-spec-hybrid-destination-itinerary-agents.md`
+  - `docs/specs/0020-spec-multi-agent-frontend-migration.md`
 
 - Replaced insecure/random ID generation across frontend stores and error pages with `secureId/secureUUID` and normalized timestamps via `nowIso`.
 - Removed server-side `Math.random` fallback for chat stream request IDs; use `secureUUID()` in `frontend/src/app/api/chat/stream/_handler.ts:1`.
@@ -200,6 +228,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Stream and non‑stream handlers refactored to use `wrapToolsWithUserId()` and planning tool allowlist.
 
 ### Removed
+
+- Feature flag/wave gating for agents
+  - Deleted `docs/operators/agent-waves.md`
+  - Removed `AGENT_WAVE_*` references from tests
+- Per-agent temperature env variables
+  - Deleted `frontend/src/lib/settings/agent-config.ts`
+  - Removed `AGENT_TEMP_*` usage in orchestrators
 
 - Legacy Python web search module and references:
   - Deleted `tripsage/tools/web_tools.py` (CachedWebSearchTool, batch_web_search, decorators).
