@@ -15,6 +15,7 @@ import {
   ConversationEmptyState,
   ConversationScrollButton,
 } from "@/components/ai-elements/conversation";
+import { FlightOfferCard } from "@/components/ai-elements/flight-card";
 import {
   Message,
   MessageAvatar,
@@ -45,7 +46,12 @@ import {
   SourcesContent,
   SourcesTrigger,
 } from "@/components/ai-elements/sources";
+import { StayCard } from "@/components/ai-elements/stay-card";
 import { useSupabase } from "@/lib/supabase/client";
+import {
+  accommodationSearchResultSchema,
+  flightSearchResultSchema,
+} from "@/schemas/agents";
 
 /**
  * Resolve the authenticated Supabase user id for the current browser session.
@@ -106,10 +112,144 @@ function ChatMessageItem({ message }: { message: UIMessage }) {
         {parts.length > 0 ? (
           parts.map((part, idx) => {
             switch (part?.type) {
-              case "text":
+              case "text": {
+                // Try to parse JSON with schemaVersion for structured results
+                const text = part.text ?? "";
+                let parsedJson: unknown = null;
+                try {
+                  // Attempt to extract JSON from text (may be wrapped in markdown code blocks)
+                  const jsonMatch = text.match(
+                    /```(?:json)?\s*(\{[\s\S]*?\})\s*```|(\{[\s\S]*\})/
+                  );
+                  const jsonStr = jsonMatch?.[1] ?? jsonMatch?.[2] ?? text;
+                  parsedJson = JSON.parse(jsonStr);
+                } catch {
+                  // Not valid JSON, render as plain text
+                }
+
+                // Check if parsed JSON matches flight.v1 schema
+                if (parsedJson) {
+                  const flightResult = flightSearchResultSchema.safeParse(parsedJson);
+                  if (flightResult.success) {
+                    return (
+                      <FlightOfferCard
+                        key={`${message.id}-flight-${idx}`}
+                        result={flightResult.data}
+                      />
+                    );
+                  }
+
+                  // Check if parsed JSON matches stay.v1 schema
+                  const stayResult =
+                    accommodationSearchResultSchema.safeParse(parsedJson);
+                  if (stayResult.success) {
+                    return (
+                      <StayCard
+                        key={`${message.id}-stay-${idx}`}
+                        result={stayResult.data}
+                      />
+                    );
+                  }
+                }
+
+                // Fallback to plain text rendering
                 return <Response key={`${message.id}-t-${idx}`}>{part.text}</Response>;
+              }
               case "tool-call":
               case "tool-call-result":
+                {
+                  type ToolResultPart = {
+                    type?: string;
+                    name?: string;
+                    toolName?: string;
+                    tool?: string;
+                    result?: unknown;
+                    output?: unknown;
+                    data?: unknown;
+                  };
+                  const p = part as ToolResultPart;
+                  const toolName = p?.name ?? p?.toolName ?? p?.tool;
+                  const raw = p?.result ?? p?.output ?? p?.data;
+                  type WebSearchUiResult = {
+                    results: Array<{ url: string; title?: string; snippet?: string }>;
+                    fromCache?: boolean;
+                    tookMs?: number;
+                  };
+                  const result =
+                    raw && typeof raw === "object"
+                      ? (raw as WebSearchUiResult)
+                      : undefined;
+                  if (
+                    toolName === "webSearch" &&
+                    result &&
+                    Array.isArray(result.results)
+                  ) {
+                    const sources = result.results;
+                    return (
+                      <div
+                        key={`${message.id}-tool-${idx}`}
+                        className="my-2 rounded-md border bg-muted/30 p-3 text-sm"
+                      >
+                        <div className="mb-2 flex items-center justify-between">
+                          <div className="font-medium">Web Search</div>
+                          <div className="text-xs opacity-70">
+                            {result.fromCache ? "cached" : "live"}
+                            {typeof result.tookMs === "number"
+                              ? ` · ${result.tookMs}ms`
+                              : null}
+                          </div>
+                        </div>
+                        <div className="grid gap-2">
+                          {sources.map((s, i) => (
+                            <div
+                              key={`${message.id}-ws-${i}`}
+                              className="rounded border bg-background p-2"
+                            >
+                              <a
+                                href={s.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-medium hover:underline"
+                              >
+                                {s.title ?? s.url}
+                              </a>
+                              {s.snippet ? (
+                                <div className="mt-1 text-xs opacity-80">
+                                  {s.snippet}
+                                </div>
+                              ) : null}
+                              {"publishedAt" in s &&
+                              (s as { publishedAt?: string }).publishedAt ? (
+                                <div className="mt-1 text-[10px] opacity-60">
+                                  {new Date(
+                                    (s as { publishedAt?: string })
+                                      .publishedAt as string
+                                  ).toLocaleString()}
+                                </div>
+                              ) : null}
+                            </div>
+                          ))}
+                        </div>
+                        {sources.length > 0 ? (
+                          <div className="mt-2">
+                            <Sources>
+                              <SourcesTrigger count={sources.length} />
+                              <SourcesContent>
+                                <div className="space-y-1">
+                                  {sources.map((s, i) => (
+                                    <Source key={`${message.id}-src-${i}`} href={s.url}>
+                                      {s.title ?? s.url}
+                                    </Source>
+                                  ))}
+                                </div>
+                              </SourcesContent>
+                            </Sources>
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  }
+                }
                 return (
                   <div
                     key={`${message.id}-tool-${idx}`}
@@ -221,6 +361,33 @@ export default function ChatPage(): ReactElement {
           credentials: "include",
           headers: undefined,
         }),
+        // Route to agent endpoints when metadata indicates agent request
+        prepareSendMessagesRequest: ({ messages, id }) => {
+          const last = messages[messages.length - 1];
+          // biome-ignore lint/suspicious/noExplicitAny: Metadata shape is dynamic
+          const md = (last && (last as any).metadata) || {};
+          if (md.agent === "flight_search" && md.request) {
+            return {
+              api: "/api/agents/flights",
+              body: md.request,
+              credentials: "include",
+            };
+          }
+          if (md.agent === "accommodation_search" && md.request) {
+            return {
+              api: "/api/agents/accommodations",
+              body: md.request,
+              credentials: "include",
+            };
+          }
+          // Default to general chat stream
+          return {
+            api: "/api/chat/stream",
+            // biome-ignore lint/style/useNamingConvention: API request body matches backend snake_case
+            body: { id, messages, ...(userId ? { user_id: userId } : {}) },
+            credentials: "include",
+          };
+        },
       }),
     [userId]
   );
@@ -337,8 +504,43 @@ export default function ChatPage(): ReactElement {
                   <PromptInputActionMenuTrigger aria-label="More actions" />
                   <PromptInputActionMenuContent>
                     <PromptInputActionAddAttachments />
-                    <PromptInputActionMenuItem disabled>
-                      Model settings (coming soon)
+                    <PromptInputActionMenuItem
+                      onSelect={() =>
+                        sendMessage({
+                          metadata: {
+                            agent: "flight_search",
+                            request: {
+                              cabinClass: "economy",
+                              departureDate: "2025-12-15",
+                              destination: "JFK",
+                              origin: "SFO",
+                              passengers: 1,
+                              returnDate: "2025-12-19",
+                            },
+                          },
+                          text: "Search flights",
+                        })
+                      }
+                    >
+                      Search flights
+                    </PromptInputActionMenuItem>
+                    <PromptInputActionMenuItem
+                      onSelect={() =>
+                        sendMessage({
+                          metadata: {
+                            agent: "accommodation_search",
+                            request: {
+                              checkIn: "2025-12-15",
+                              checkOut: "2025-12-19",
+                              destination: "New York City",
+                              guests: 2,
+                            },
+                          },
+                          text: "Find stays",
+                        })
+                      }
+                    >
+                      Find stays
                     </PromptInputActionMenuItem>
                   </PromptInputActionMenuContent>
                 </PromptInputActionMenu>

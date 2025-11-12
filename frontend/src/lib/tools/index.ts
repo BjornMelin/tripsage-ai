@@ -1,0 +1,67 @@
+/**
+ * @fileoverview Unified tool registry for AI SDK v6.
+ *
+ * Centralizes all available AI tools in a single registry object. Tools are
+ * imported from their respective modules and validated against the AiTool type.
+ * Used for programmatic tool discovery and dynamic tool selection.
+ */
+
+import {
+  bookAccommodation,
+  getAccommodationDetails,
+  searchAccommodations,
+} from "./accommodations";
+import { searchFlights } from "./flights";
+import { distanceMatrix, geocode } from "./maps";
+import { addConversationMemory, searchUserMemories } from "./memory";
+import {
+  combineSearchResults,
+  createTravelPlan,
+  deleteTravelPlan,
+  saveTravelPlan,
+  updateTravelPlan,
+} from "./planning";
+import { lookupPoiContext } from "./poi-lookup";
+import type { AiTool } from "./types";
+import { getCurrentWeather } from "./weather";
+import { crawlSite, crawlUrl } from "./web-crawl";
+import { webSearch } from "./web-search";
+import { webSearchBatch } from "./web-search-batch";
+
+/**
+ * Registry of all available AI tools.
+ *
+ * Maps tool names to their AI SDK v6 tool implementations. Includes tools
+ * for accommodations, flights, maps, memory, planning, POI lookup, weather,
+ * and web search. Validated at compile time to ensure all entries conform
+ * to the AiTool type.
+ */
+export const toolRegistry = {
+  addConversationMemory,
+  bookAccommodation,
+  combineSearchResults,
+  crawlSite,
+  crawlUrl,
+  createTravelPlan,
+  deleteTravelPlan,
+  distanceMatrix,
+  geocode,
+  getAccommodationDetails,
+  getCurrentWeather,
+  lookupPoiContext,
+  saveTravelPlan,
+  searchAccommodations,
+  searchFlights,
+  searchUserMemories,
+  updateTravelPlan,
+  webSearch,
+  webSearchBatch,
+} satisfies Record<string, AiTool>;
+
+/**
+ * Type of the tool registry.
+ *
+ * Infers the exact shape of toolRegistry, preserving tool names and their
+ * corresponding tool implementations for type-safe access.
+ */
+export type ToolRegistry = typeof toolRegistry;

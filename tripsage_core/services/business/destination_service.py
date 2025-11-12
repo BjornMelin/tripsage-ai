@@ -2,13 +2,12 @@
 """Destination service for destination management operations.
 
 This service consolidates destination-related business logic including destination
-search, discovery, points of interest management, weather integration, and travel
-advisory information. It provides clean abstractions over external services
-while maintaining proper data relationships.
+search, discovery, points of interest management, and travel advisory information.
+It provides clean abstractions over external services while maintaining proper
+data relationships.
 """
 
 import logging
-from collections.abc import Mapping
 from datetime import UTC, date, datetime
 from enum import Enum
 from typing import Any, cast
@@ -17,7 +16,6 @@ from uuid import uuid4
 from pydantic import Field
 
 from tripsage_core.exceptions import (
-    CoreExternalAPIError,
     CoreResourceNotFoundError as NotFoundError,
     CoreServiceError as ServiceError,
 )
@@ -359,7 +357,7 @@ class DestinationService(DatabaseOpsMixin, ValidationMixin, InMemorySearchCacheM
     This service handles:
     - Destination search and discovery
     - Points of interest management
-    - Weather and travel advisory integration
+    - Travel advisory integration
     - Saved destinations management
     - Personalized recommendations
     """
@@ -367,34 +365,20 @@ class DestinationService(DatabaseOpsMixin, ValidationMixin, InMemorySearchCacheM
     def __init__(
         self,
         database_service: Any,
-        weather_service: Any | None = None,
         cache_ttl: int = 3600,
     ):
         """Initialize the destination service.
 
         Args:
             database_service: Database service for persistence
-            weather_service: Weather service for climate data
             cache_ttl: Cache TTL in seconds
         """
         # Initialize mixin with cache TTL
         super().__init__(cache_ttl=cache_ttl)
 
-        if weather_service is None:
-            try:
-                from tripsage_core.services.external_apis.weather_service import (
-                    WeatherService,
-                )
-
-                weather_service = WeatherService()
-            except ImportError:
-                logger.warning("Weather service not available")
-                weather_service = None
-
         # Store DB and expose via property expected by mixin
         self._db: Any = database_service
         self.external_service = None  # No external destination service available
-        self.weather_service = weather_service
         self.cache_ttl = cache_ttl
 
         # In-memory cache for destination details (separate from search cache)
@@ -453,7 +437,8 @@ class DestinationService(DatabaseOpsMixin, ValidationMixin, InMemorySearchCacheM
 
             # Enrich with weather data if requested
             if search_request.include_weather:
-                destinations = await self._enrich_with_weather(destinations)
+                # Weather enrichment removed - use TypeScript weather tool instead
+                pass
 
             # Enrich with travel advisory if requested
             if search_request.include_advisory:
@@ -543,7 +528,8 @@ class DestinationService(DatabaseOpsMixin, ValidationMixin, InMemorySearchCacheM
 
             # Enrich with additional data if requested
             if include_weather and not destination.weather:
-                destination = await self._enrich_destination_with_weather(destination)
+                # Weather enrichment removed - use TypeScript weather tool instead
+                pass
 
             if include_pois and not destination.points_of_interest:
                 destination = await self._enrich_destination_with_pois(destination)
@@ -796,55 +782,6 @@ class DestinationService(DatabaseOpsMixin, ValidationMixin, InMemorySearchCacheM
 
         return results
 
-    async def _enrich_with_weather(
-        self, destinations: list[Destination]
-    ) -> list[Destination]:
-        """Enrich destinations with weather information."""
-        if not self.weather_service:
-            return destinations
-
-        for destination in destinations:
-            if destination.latitude and destination.longitude:
-                try:
-                    weather_data = await self.weather_service.get_climate_info(  # type: ignore
-                        destination.latitude, destination.longitude
-                    )
-
-                    if weather_data:
-                        wd = dict(cast(Mapping[str, Any], weather_data))
-                        best_months_raw = wd.get("best_months", [])
-                        months_list_typed = cast(
-                            list[Any],
-                            (
-                                best_months_raw
-                                if isinstance(best_months_raw, list)
-                                else []
-                            ),
-                        )
-                        best_months: list[str] = [str(m) for m in months_list_typed]
-                        destination.weather = DestinationWeather(
-                            season=str(wd.get("season", "Unknown")),
-                            temperature_high_c=float(wd.get("temp_high_c", 0) or 0),
-                            temperature_low_c=float(wd.get("temp_low_c", 0) or 0),
-                            temperature_high_f=None,
-                            temperature_low_f=None,
-                            precipitation_mm=float(wd.get("precipitation", 0) or 0),
-                            humidity_percent=float(wd.get("humidity", 0) or 0),
-                            conditions=str(wd.get("conditions", "Unknown")),
-                            climate_type=ClimateType(
-                                str(wd.get("climate_type", "temperate"))
-                            ),
-                            best_months=best_months,
-                        )
-                except CoreExternalAPIError as e:
-                    logger.warning(
-                        "Failed to get weather for %s",
-                        destination.name,
-                        extra={"error": str(e)},
-                    )
-
-        return destinations
-
     async def _enrich_with_advisory(
         self, destinations: list[Destination]
     ) -> list[Destination]:
@@ -918,47 +855,6 @@ class DestinationService(DatabaseOpsMixin, ValidationMixin, InMemorySearchCacheM
 
         # Sort by relevance score (highest first)
         return sorted(destinations, key=lambda x: x.relevance_score or 0, reverse=True)
-
-    async def _enrich_destination_with_weather(
-        self, destination: Destination
-    ) -> Destination:
-        """Enrich a single destination with weather data."""
-        if destination.latitude and destination.longitude and self.weather_service:
-            try:
-                weather_data = await self.weather_service.get_climate_info(  # type: ignore
-                    destination.latitude, destination.longitude
-                )
-
-                if weather_data:
-                    wd = dict(cast(Mapping[str, Any], weather_data))
-                    best_months_raw = wd.get("best_months", [])
-                    months_list_typed = cast(
-                        list[Any],
-                        best_months_raw if isinstance(best_months_raw, list) else [],
-                    )
-                    best_months: list[str] = [str(m) for m in months_list_typed]
-                    destination.weather = DestinationWeather(
-                        season=str(wd.get("season", "Unknown")),
-                        temperature_high_c=float(wd.get("temp_high_c", 0) or 0),
-                        temperature_low_c=float(wd.get("temp_low_c", 0) or 0),
-                        temperature_high_f=None,
-                        temperature_low_f=None,
-                        precipitation_mm=float(wd.get("precipitation", 0) or 0),
-                        humidity_percent=float(wd.get("humidity", 0) or 0),
-                        conditions=str(wd.get("conditions", "Unknown")),
-                        climate_type=ClimateType(
-                            str(wd.get("climate_type", "temperate"))
-                        ),
-                        best_months=best_months,
-                    )
-            except CoreExternalAPIError as e:
-                logger.warning(
-                    "Failed to get weather for %s",
-                    destination.name,
-                    extra={"error": str(e)},
-                )
-
-        return destination
 
     async def _enrich_destination_with_pois(
         self, destination: Destination

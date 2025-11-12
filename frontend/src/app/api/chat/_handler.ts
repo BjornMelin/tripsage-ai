@@ -4,7 +4,7 @@
  * validation, provider resolution, token clamping, and usage metadata.
  */
 
-import type { LanguageModel, UIMessage } from "ai";
+import type { LanguageModel, ToolSet, UIMessage } from "ai";
 import { convertToModelMessages, generateText as defaultGenerateText } from "ai";
 import { extractTexts, validateImageAttachments } from "@/app/api/_helpers/attachments";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
@@ -184,11 +184,55 @@ export async function handleChatNonStream(
   const { maxTokens, reasons } = clampMaxTokens(clampInput, desired, provider.modelId);
 
   const generate = deps.generate ?? defaultGenerateText;
+  const tools = await (async (): Promise<Record<string, unknown>> => {
+    // Lazy import only the planning tools to avoid pulling unrelated tool modules in tests
+    // that mock the `ai` package without a `tool` export.
+    let local: Record<string, unknown> = {};
+    try {
+      const planning = (await import("@/lib/tools/planning")) as unknown as {
+        createTravelPlan?: unknown;
+        updateTravelPlan?: unknown;
+        saveTravelPlan?: unknown;
+        deleteTravelPlan?: unknown;
+      };
+      local = {
+        createTravelPlan: planning.createTravelPlan,
+        deleteTravelPlan: planning.deleteTravelPlan,
+        saveTravelPlan: planning.saveTravelPlan,
+        updateTravelPlan: planning.updateTravelPlan,
+      } as Record<string, unknown>;
+    } catch {
+      // If tools cannot be imported (e.g., AI SDK mocked without `tool`), proceed without tools.
+      local = {};
+    }
+    const wrapWithUser = (t: unknown) =>
+      typeof (t as { execute?: unknown })?.execute === "function"
+        ? {
+            ...(t as Record<string, unknown>),
+            execute: (a: Record<string, unknown>, c: unknown) =>
+              (t as { execute: (x: unknown, y?: unknown) => Promise<unknown> }).execute(
+                { ...a, userId: user.id },
+                c
+              ),
+          }
+        : t;
+    if (local.createTravelPlan)
+      local.createTravelPlan = wrapWithUser(local.createTravelPlan);
+    if (local.updateTravelPlan)
+      local.updateTravelPlan = wrapWithUser(local.updateTravelPlan);
+    if (local.saveTravelPlan) local.saveTravelPlan = wrapWithUser(local.saveTravelPlan);
+    if (local.deleteTravelPlan)
+      local.deleteTravelPlan = wrapWithUser(local.deleteTravelPlan);
+    return local as unknown as Record<string, unknown>;
+  })();
+
   const result = await generate({
     maxOutputTokens: maxTokens,
     messages: convertToModelMessages(messages),
     model: provider.model,
     system: systemPrompt,
+    toolChoice: "auto",
+    tools: tools as ToolSet,
   });
 
   const usage = result.usage

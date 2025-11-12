@@ -104,7 +104,6 @@ Direct SDK integrations with third-party services:
 ```python
 from tripsage_core.services.external_apis import (
     GoogleMapsService,
-    WeatherService,
     DuffelProvider,
     PlaywrightService
 )
@@ -113,7 +112,6 @@ from tripsage_core.services.external_apis import (
 **Available Services:**
 
 - `GoogleMapsService` - Location and mapping operations
-- `WeatherService` - Weather data and forecasting
 - `DuffelProvider` - Flight search and booking (direct SDK)
 - `CalendarService` - Calendar integration
 - `WebcrawlService` - Content extraction

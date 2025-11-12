@@ -8,6 +8,7 @@
 import type { LanguageModel, UIMessage } from "ai";
 import { convertToModelMessages, streamText as defaultStreamText } from "ai";
 import { extractTexts, validateImageAttachments } from "@/app/api/_helpers/attachments";
+import { createMcpClientHelper } from "@/lib/mcp/client";
 import { secureUuid } from "@/lib/security/random";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { insertSingle } from "@/lib/supabase/typed-helpers";
@@ -17,6 +18,8 @@ import {
   countTokens,
 } from "@/lib/tokens/budget";
 import { getModelContextLimit } from "@/lib/tokens/limits";
+import { toolRegistry } from "@/lib/tools";
+import { wrapToolsWithUserId } from "@/lib/tools/injection";
 
 /**
  * Type representing a resolved AI provider configuration.
@@ -192,13 +195,74 @@ export async function handleChatStream(
   ];
   const { maxTokens, reasons } = clampMaxTokens(clampInput, desired, provider.modelId);
 
+  // Optional MCP tools discovery (SSE) merged with local registry
+  let discoveredTools: Record<string, unknown> | undefined;
+  const mcpUrl = process.env.AIRBNB_MCP_URL || process.env.ACCOM_SEARCH_URL;
+  const mcpAuth = process.env.AIRBNB_MCP_API_KEY || process.env.ACCOM_SEARCH_TOKEN;
+  let mcpClient: Awaited<ReturnType<typeof createMcpClientHelper>> | undefined;
+  try {
+    if (mcpUrl) {
+      mcpClient = await createMcpClientHelper(
+        mcpUrl,
+        mcpAuth ? { authorization: `Bearer ${mcpAuth}` } : undefined
+      );
+      discoveredTools = (await mcpClient.tools()) as Record<string, unknown>;
+    }
+  } catch {
+    discoveredTools = undefined;
+  }
+
   // Stream via AI SDK (DI allows tests to inject a finite stream stub)
   const stream = deps.stream ?? defaultStreamText;
   const result = stream({
     maxOutputTokens: maxTokens,
     messages: convertToModelMessages(messages),
     model: provider.model,
+    onFinish: async () => {
+      try {
+        await mcpClient?.close?.();
+      } catch {
+        /* ignore close errors */
+      }
+    },
     system: systemPrompt,
+    toolChoice: "auto",
+    tools: (() => {
+      const local = wrapToolsWithUserId(
+        { ...toolRegistry },
+        user.id,
+        [
+          "createTravelPlan",
+          "updateTravelPlan",
+          "saveTravelPlan",
+          "deleteTravelPlan",
+          "bookAccommodation",
+        ],
+        payload.sessionId
+      );
+      if (discoveredTools) {
+        // Detect conflicts: MCP tools that overlap with local registry
+        const conflicts: string[] = [];
+        for (const mcpToolName of Object.keys(discoveredTools)) {
+          if (mcpToolName in local) {
+            conflicts.push(mcpToolName);
+          }
+        }
+        if (conflicts.length > 0) {
+          deps.logger?.error?.("mcp_tool_conflicts", {
+            conflicts,
+            message: `MCP tools override local tools: ${conflicts.join(", ")}. Local tools take precedence.`,
+            requestId: secureUuid(),
+          });
+        }
+        // Merge: local tools take precedence over MCP tools to prevent silent overrides
+        const merged = { ...(discoveredTools as Record<string, unknown>), ...local };
+        // biome-ignore lint/suspicious/noExplicitAny: AI SDK tools type is dynamic
+        return merged as any;
+      }
+      // biome-ignore lint/suspicious/noExplicitAny: AI SDK tools type is dynamic
+      return local as any;
+    })(),
   });
 
   const reqId = secureUuid();

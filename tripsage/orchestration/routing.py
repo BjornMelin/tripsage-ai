@@ -46,47 +46,6 @@ class RouterNode(BaseAgentNode):
 
         # Available agent types and their capabilities
         self.agent_capabilities = {
-            "flight_agent": {
-                "description": "Flight search, booking, changes, airline information",
-                "keywords": [
-                    "flight",
-                    "flights",
-                    "fly",
-                    "airline",
-                    "airport",
-                    "departure",
-                    "arrival",
-                    "booking",
-                ],
-                "entities": [
-                    "origin",
-                    "destination",
-                    "departure_date",
-                    "return_date",
-                    "passengers",
-                    "class",
-                ],
-            },
-            "accommodation_agent": {
-                "description": "Hotels, rentals, lodging, accommodation booking",
-                "keywords": [
-                    "hotel",
-                    "hotels",
-                    "accommodation",
-                    "stay",
-                    "rental",
-                    "airbnb",
-                    "lodging",
-                    "room",
-                ],
-                "entities": [
-                    "location",
-                    "check_in",
-                    "check_out",
-                    "guests",
-                    "room_type",
-                ],
-            },
             "budget_agent": {
                 "description": "Budget planning, cost analysis, expense tracking",
                 "keywords": [
@@ -115,22 +74,6 @@ class RouterNode(BaseAgentNode):
                     "sightseeing",
                 ],
                 "entities": ["travel_dates", "duration", "activities", "preferences"],
-            },
-            "destination_research_agent": {
-                "description": (
-                    "Destination research, recommendations, local information"
-                ),
-                "keywords": [
-                    "destination",
-                    "place",
-                    "city",
-                    "country",
-                    "visit",
-                    "recommend",
-                    "explore",
-                    "travel",
-                ],
-                "entities": ["destination", "interests", "season", "duration"],
             },
             "general_agent": {
                 "description": (
@@ -302,23 +245,15 @@ class RouterNode(BaseAgentNode):
         {context_str}
 
         Available agents and their specialties:
-        - flight_agent: Flight search, booking, changes, airline information
-        - accommodation_agent: Hotels, rentals, lodging, accommodation booking
         - budget_agent: Budget planning, cost analysis, expense tracking
         - itinerary_agent: Trip planning, scheduling, activities, day-by-day planning
-        - destination_research_agent: Destination research, recommendations,
-          local information
         - general_agent: General travel assistance, documentation,
           travel tips, multi-domain queries
 
         Classification Rules:
-        1. If asking about specific flights, airlines, or flight booking → flight_agent
-        2. If asking about hotels, accommodations, places to stay → accommodation_agent
-        3. If asking about costs, budgets, expenses → budget_agent
-        4. If asking about itineraries, schedules, daily plans → itinerary_agent
-        5. If asking about destinations, attractions, local info →
-           destination_research_agent
-        6. For general travel questions or unclear intent → general_agent
+        1. If asking about costs, budgets, expenses → budget_agent
+        2. If asking about itineraries, schedules, daily plans → itinerary_agent
+        3. For general travel questions, destinations, or unclear intent → general_agent
 
         Respond with valid JSON only:
         {{"agent": "agent_name", "confidence": 0.9, "reasoning": "brief explanation"}}

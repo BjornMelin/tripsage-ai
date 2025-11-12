@@ -49,7 +49,7 @@ cd frontend && pnpm test                  # Run tests
 - **Frontend**: Next.js 15, TypeScript, Tailwind CSS
 - **Database**: PostgreSQL (Supabase) with pgvector
 - **Cache**: Upstash Redis (HTTP REST API)
-- **AI**: OpenAI integration with LangGraph
+- **AI**: Vercel AI SDK v6 with frontend-only agents
 
 ## Key Principles
 

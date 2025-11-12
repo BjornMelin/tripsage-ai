@@ -50,7 +50,7 @@ from contextlib import asynccontextmanager
 
 from tripsage.api.core.config import get_settings
 from tripsage.api.routers import (
-    auth, trips, flights, accommodations, chat, users, health
+    auth, trips, destinations, activities, itineraries, users, health
 )
 from tripsage.api.middlewares.authentication import AuthenticationMiddleware
 from tripsage.api.middlewares import install_rate_limiting
@@ -191,12 +191,18 @@ async def search_similar_conversations(query_embedding: list[float], limit: int 
 ```python
 # tripsage_core/services/business/flight_service.py
 class FlightService:
+    """Flight service used by frontend AI agents via tool calling."""
+    
     def __init__(self, duffel_client: DuffelClient, cache: CacheService):
         self.duffel = duffel_client
         self.cache = cache
 
     async def search_flights(self, origin: str, destination: str, date: str) -> List[Flight]:
-        """Search for flights with caching."""
+        """Search for flights with caching.
+        
+        Note: This service is primarily used by frontend AI agents
+        (/api/agents/flights) rather than direct Python API endpoints.
+        """
         cache_key = f"flights:{origin}:{destination}:{date}"
 
         # Check cache first
@@ -222,13 +228,9 @@ def get_flight_service(request: Request) -> FlightService:
         request, "flight_service", FlightService
     )
 
-# Usage in router
-@router.get("/flights")
-async def search_flights(
-    origin: str, destination: str, date: str,
-    service: FlightService = Depends(get_flight_service)
-):
-    return await service.search_flights(origin, destination, date)
+# Frontend agent implementation (frontend/src/app/api/agents/flights/route.ts)
+# Flight search is handled by frontend AI agents using AI SDK v6 tool calling.
+# The FlightService is invoked via tools rather than direct HTTP endpoints.
 ```
 
 ## Frontend Architecture
@@ -386,6 +388,41 @@ export async function POST(request: NextRequest) {
   return NextResponse.json(trip);
 }
 ```
+
+#### Frontend AI Agents
+
+Flight and accommodation operations are handled by frontend-only AI agents using Vercel AI SDK v6:
+
+```typescript
+// app/api/agents/flights/route.ts
+import "server-only";
+import type { NextRequest } from "next/server";
+import { runFlightAgent } from "@/lib/agents/flight-agent";
+import { resolveProvider } from "@/lib/providers/registry";
+import { createServerSupabase } from "@/lib/supabase/server";
+
+export const dynamic = "force-dynamic";
+
+export async function POST(req: NextRequest): Promise<Response> {
+  const supabase = await createServerSupabase();
+  const user = (await supabase.auth.getUser()).data.user;
+  
+  const body = await req.json();
+  const { model } = await resolveProvider(user?.id ?? "anon");
+  
+  const result = runFlightAgent({ identifier: user?.id, model }, body);
+  return result.toUIMessageStreamResponse();
+}
+```
+
+**Key features:**
+
+- Server-only routes with `"server-only"` import
+- BYOK provider resolution via `resolveProvider`
+- AI SDK v6 streaming with `toUIMessageStreamResponse()`
+- Tool calling for flight/accommodation search
+- Upstash Redis caching and rate limiting
+- AI Elements card rendering
 
 ### Component Patterns
 

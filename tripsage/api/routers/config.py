@@ -34,7 +34,6 @@ async def list_agent_types(principal: AdminPrincipalDep) -> list[str]:
     _ = principal
     return [
         AgentType.BUDGET_AGENT.value,
-        AgentType.DESTINATION_RESEARCH_AGENT.value,
         AgentType.ITINERARY_AGENT.value,
     ]
 
@@ -62,13 +61,6 @@ async def get_agent_config(
             "top_p": 0.9,
             "timeout_seconds": 30,
             "model": cast(ModelName, "gpt-4o-mini"),
-        },
-        "destination_research_agent": {
-            "temperature": 0.3,
-            "max_tokens": 2000,
-            "top_p": 0.95,
-            "timeout_seconds": 60,
-            "model": cast(ModelName, "gpt-4o"),
         },
         "itinerary_agent": {
             "temperature": 0.2,
