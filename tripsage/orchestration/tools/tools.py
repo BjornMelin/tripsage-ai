@@ -273,11 +273,6 @@ AGENT_TOOLS: dict[str, list[Any]] = {
         add_memory,
         search_memories,
     ],
-    "destination_research_agent": [
-        geocode_location,
-        add_memory,
-        search_memories,
-    ],
     "budget_agent": [
         search_flights,
         search_accommodations,

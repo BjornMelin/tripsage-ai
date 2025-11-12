@@ -320,19 +320,6 @@ AGENT_TEST_RESPONSES = {
             "Food $400, Activities $300."
         ),
     },
-    "destination_research_agent": {
-        "parameter_extraction": (
-            '{"destination": "Tokyo", "research_type": "overview"}'
-        ),
-        "research_result": {
-            "overview": "Tokyo is Japan's capital...",
-            "attractions": ["Senso-ji Temple", "Tokyo Tower"],
-        },
-        "response": (
-            "Tokyo is an amazing destination! Top attractions include "
-            "Senso-ji Temple and Tokyo Tower."
-        ),
-    },
     "itinerary_agent": {
         "parameter_extraction": (
             '{"operation": "create", "destination": "Rome", "duration": 5}'

@@ -18,9 +18,6 @@ from tripsage.orchestration.handoff_coordinator import (
 )
 from tripsage.orchestration.nodes.accommodation_agent import AccommodationAgentNode
 from tripsage.orchestration.nodes.budget_agent import BudgetAgentNode
-from tripsage.orchestration.nodes.destination_research_agent import (
-    DestinationResearchAgentNode,
-)
 from tripsage.orchestration.nodes.error_recovery import ErrorRecoveryNode
 from tripsage.orchestration.nodes.flight_agent import FlightAgentNode
 from tripsage.orchestration.nodes.itinerary_agent import ItineraryAgentNode
@@ -124,13 +121,11 @@ class TripSageOrchestrator:
         flight_agent_node = FlightAgentNode(self.services)
         accommodation_agent_node = AccommodationAgentNode(self.services)
         budget_agent_node = BudgetAgentNode(self.services)
-        destination_research_agent_node = DestinationResearchAgentNode(self.services)
         itinerary_agent_node = ItineraryAgentNode(self.services)
 
         graph.add_node("flight_agent", flight_agent_node)
         graph.add_node("accommodation_agent", accommodation_agent_node)
         graph.add_node("budget_agent", budget_agent_node)
-        graph.add_node("destination_research_agent", destination_research_agent_node)
         graph.add_node("itinerary_agent", itinerary_agent_node)
 
         # General purpose agent for unrouted requests
@@ -154,7 +149,6 @@ class TripSageOrchestrator:
                 "accommodation_agent": "accommodation_agent",
                 "budget_agent": "budget_agent",
                 "itinerary_agent": "itinerary_agent",
-                "destination_research_agent": "destination_research_agent",
                 "general_agent": "general_agent",
                 "error_recovery": "error_recovery",
                 "end": END,
@@ -167,7 +161,6 @@ class TripSageOrchestrator:
             "accommodation_agent",
             "budget_agent",
             "itinerary_agent",
-            "destination_research_agent",
             "general_agent",
         ]:
             graph.add_conditional_edges(
@@ -207,7 +200,6 @@ class TripSageOrchestrator:
             "accommodation_agent",
             "budget_agent",
             "itinerary_agent",
-            "destination_research_agent",
             "general_agent",
         ]:
             return current_agent
