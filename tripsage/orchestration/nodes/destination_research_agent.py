@@ -30,10 +30,7 @@ class DestinationResearchParameters(BaseModel):
 
     destination: str | None = None
     research_type: (
-        Literal[
-            "overview", "attractions", "activities", "culture", "practical", "weather"
-        ]
-        | None
+        Literal["overview", "attractions", "activities", "culture", "practical"] | None
     ) = None
     specific_interests: list[str] | None = None
     travel_dates: str | None = None
@@ -234,7 +231,6 @@ class DestinationResearchAgentNode(BaseAgentNode):  # pylint: disable=too-many-i
         - "activities": Activities and experiences
         - "culture": Cultural information, customs, and etiquette
         - "practical": Practical travel information (transport, currency, etc.)
-        - "weather": Climate and seasonal information
 
         Extract these parameters if mentioned:
         - destination: The destination to research (required)
@@ -331,13 +327,6 @@ class DestinationResearchAgentNode(BaseAgentNode):  # pylint: disable=too-many-i
                 cultural_results = await self._research_cultural_info(destination)
                 research_results["cultural_info"] = cultural_results
 
-            if research_type in ("weather", "all"):
-                weather_results = await self._research_weather_info(
-                    destination, params.get("travel_dates")
-                )
-                research_results["weather_info"] = weather_results
-
-            # Use Google Maps for location data
             location_data = await self._get_location_data(destination)
             research_results["location_data"] = location_data
 
@@ -475,27 +464,6 @@ class DestinationResearchAgentNode(BaseAgentNode):  # pylint: disable=too-many-i
             logger.exception("Cultural info research failed")
             return {"error": str(exc)}
 
-    async def _research_weather_info(
-        self, destination: str, travel_dates: str | None
-    ) -> dict[str, Any]:
-        """Research weather and climate information for a destination."""
-        try:
-            weather_tool = self._get_tool("get_weather")
-            if weather_tool:
-                result = await cast(Any, weather_tool).ainvoke(
-                    {"location": destination}
-                )
-                return {"weather_data": result, "travel_dates": travel_dates}
-            return {
-                "climate": "Climate information",
-                "best_time_to_visit": "Seasonal recommendations",
-                "travel_dates": travel_dates,
-                "sources": "placeholder",
-            }
-        except Exception as exc:
-            logger.exception("Weather info research failed")
-            return {"error": str(exc)}
-
     async def _get_location_data(self, destination: str) -> dict[str, Any]:
         """Get location data using Google Maps tools."""
         try:
@@ -551,7 +519,6 @@ class DestinationResearchAgentNode(BaseAgentNode):  # pylint: disable=too-many-i
             self._format_activities_section(research_type, research_results),
             self._format_practical_section(research_type, research_results),
             self._format_cultural_section(research_type, research_results),
-            self._format_weather_section(research_type, research_results),
         ]
 
         body = "\n".join(filter(None, sections)).strip()
@@ -667,24 +634,6 @@ class DestinationResearchAgentNode(BaseAgentNode):  # pylint: disable=too-many-i
             return ""
 
         return "**Cultural Tips:**\nImportant cultural considerations for your visit."
-
-    def _format_weather_section(
-        self, research_type: str, research_results: dict[str, Any]
-    ) -> str:
-        """Render weather insights subsection."""
-        if research_type not in ("weather", "all"):
-            return ""
-
-        weather = research_results.get("weather_info", {})
-        if not weather or weather.get("error"):
-            return ""
-
-        lines = ["**Weather Information:**"]
-        travel_dates = weather.get("travel_dates")
-        if travel_dates:
-            lines.append(f"For your travel dates: {travel_dates}")
-        lines.append("Weather and seasonal recommendations.")
-        return "\n".join(lines)
 
     async def _handle_general_research_inquiry(
         self, message: str, state: TravelPlanningState

@@ -34,7 +34,6 @@ class ToolCallRequest(BaseModel):
             "duffel_flights",
             "airbnb",
             "google_maps",
-            "weather",
             "supabase",
             "memory",
             "time",

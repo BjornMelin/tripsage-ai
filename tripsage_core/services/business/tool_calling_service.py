@@ -16,12 +16,10 @@ from tripsage_core.services.business.tool_calling.core import (
     format_accommodation_results,
     format_flight_results,
     format_maps_results,
-    format_weather_results,
     sanitize_params,
     validate_accommodation_params,
     validate_flight_params,
     validate_maps_params,
-    validate_weather_params,
 )
 from tripsage_core.services.business.tool_calling.models import (
     ToolCallError,
@@ -76,7 +74,6 @@ class ToolCallService:
             str, Callable[[str, dict[str, Any]], Awaitable[dict[str, Any]]]
         ] = {
             "google_maps": self._handler_context.handle_google_maps,
-            "weather": self._handler_context.handle_weather,
             "airbnb": self._handler_context.handle_airbnb,
             "duffel_flights": self._handler_context.handle_duffel_flights,
             "supabase": self._handler_context.handle_supabase,
@@ -89,7 +86,6 @@ class ToolCallService:
             "duffel_flights": validate_flight_params,
             "airbnb": validate_accommodation_params,
             "google_maps": validate_maps_params,
-            "weather": validate_weather_params,
         }
 
         self._formatter_handlers: dict[
@@ -98,7 +94,6 @@ class ToolCallService:
             "duffel_flights": format_flight_results,
             "airbnb": format_accommodation_results,
             "google_maps": format_maps_results,
-            "weather": format_weather_results,
         }
 
     @trace_span(name="svc.tool_call.execute")

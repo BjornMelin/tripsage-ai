@@ -209,20 +209,6 @@ async def _geocode_location_impl(location: str) -> str:
         return json.dumps({"error": f"Geocoding failed: {e!s}"})
 
 
-async def _get_weather_impl(location: str) -> str:
-    """Get current weather information for a location using WeatherService."""
-    try:
-        svc = _get_service_from_container("weather_service")
-        await svc.connect()
-        # WeatherService signature may vary; pass location as a plain string
-        # pylint: disable=no-value-for-parameter
-        data = await svc.get_current_weather(location)  # type: ignore[call-arg]
-        return json.dumps(data, ensure_ascii=False)
-    except Exception as e:  # pragma: no cover - defensive
-        logger.exception("Weather lookup failed")
-        return json.dumps({"error": f"Weather lookup failed: {e!s}"})
-
-
 async def _web_search_impl(query: str, location: str | None = None) -> str:
     """Search the web for travel-related information using WebCrawlService."""
     try:
@@ -300,9 +286,6 @@ search_accommodations: BaseTool = tool(
 geocode_location: BaseTool = tool("geocode_location", args_schema=LocationParams)(
     _geocode_location_impl
 )
-get_weather: BaseTool = tool("get_weather", args_schema=LocationParams)(
-    _get_weather_impl
-)
 web_search: BaseTool = tool("web_search", args_schema=WebSearchParams)(_web_search_impl)
 add_memory: BaseTool = tool("add_memory", args_schema=MemoryParams)(_add_memory_impl)
 search_memories: BaseTool = tool("search_memories", args_schema=MemoryParams)(
@@ -313,7 +296,6 @@ AGENT_TOOLS: dict[str, list[Any]] = {
     "flight_agent": [
         search_flights,
         geocode_location,
-        get_weather,
         web_search,
         add_memory,
         search_memories,
@@ -321,14 +303,12 @@ AGENT_TOOLS: dict[str, list[Any]] = {
     "accommodation_agent": [
         search_accommodations,
         geocode_location,
-        get_weather,
         web_search,
         add_memory,
         search_memories,
     ],
     "destination_research_agent": [
         geocode_location,
-        get_weather,
         web_search,
         add_memory,
         search_memories,
@@ -344,7 +324,6 @@ AGENT_TOOLS: dict[str, list[Any]] = {
         search_flights,
         search_accommodations,
         geocode_location,
-        get_weather,
         web_search,
         add_memory,
         search_memories,
@@ -357,7 +336,6 @@ ALL_TOOLS: list[Any] = [
     search_flights,
     search_accommodations,
     geocode_location,
-    get_weather,
     web_search,
     add_memory,
     search_memories,
@@ -408,7 +386,6 @@ __all__ = [
     "geocode_location",
     "get_all_tools",
     "get_tools_for_agent",
-    "get_weather",
     "health_check",
     "search_accommodations",
     "search_flights",
