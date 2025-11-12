@@ -27,15 +27,15 @@ const DEFAULT_MODEL_MAPPER: ModelMapper = (
     // Sensible defaults per provider
     switch (provider) {
       case "openai":
-        return "gpt-4o-mini";
+        return "gpt-5-mini";
       case "openrouter":
-        return "openai/gpt-4o-mini";
+        return "x-ai/grok-4-fast";
       case "anthropic":
-        return "claude-3-5-sonnet-20241022";
+        return "claude-haiku-4-5";
       case "xai":
-        return "grok-3";
+        return "grok-4-fast";
       default:
-        return "gpt-4o-mini";
+        return "grok-4-fast";
     }
   }
   // For OpenRouter, accept fully-qualified ids like "provider/model"
@@ -60,7 +60,7 @@ export async function resolveProvider(
 ): Promise<ProviderResolution> {
   const settings = getProviderSettings();
 
-  // Try providers by preference order and build a model when key found.
+  // Check for BYOK keys first (BYOK users get direct provider access, bypassing Gateway)
   for (const provider of settings.preference) {
     // Fetch user's BYOK for this provider (never exposed to client).
     const apiKey = await getUserApiKey(userId, provider);
@@ -112,9 +112,27 @@ export async function resolveProvider(
     }
   }
 
+  // Default to Vercel AI Gateway for non-BYOK users (primary/default path per architecture)
+  // Gateway provides unified routing, budgets, retries, and observability
+  const gatewayApiKey = process.env.AI_GATEWAY_API_KEY;
+  if (gatewayApiKey) {
+    const modelId = DEFAULT_MODEL_MAPPER("openai", modelHint);
+    const gateway = createOpenAI({
+      apiKey: gatewayApiKey,
+      // biome-ignore lint/style/useNamingConvention: API parameter name
+      baseURL: "https://ai-gateway.vercel.sh/v1",
+    });
+    return {
+      model: gateway(modelId),
+      modelId,
+      provider: "openai",
+    };
+  }
+
   throw new Error(
-    "No provider key found for user; please add a provider API key for one " +
-      "of the supported providers: openai, openrouter, anthropic, xai."
+    "No provider key found for user and AI_GATEWAY_API_KEY not configured; " +
+      "please add a provider API key for one of the supported providers: " +
+      "openai, openrouter, anthropic, xai, or configure AI_GATEWAY_API_KEY."
   );
 }
 

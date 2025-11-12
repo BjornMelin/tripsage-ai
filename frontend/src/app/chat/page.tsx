@@ -15,6 +15,7 @@ import {
   ConversationEmptyState,
   ConversationScrollButton,
 } from "@/components/ai-elements/conversation";
+import { FlightOfferCard } from "@/components/ai-elements/flight-card";
 import {
   Message,
   MessageAvatar,
@@ -45,7 +46,12 @@ import {
   SourcesContent,
   SourcesTrigger,
 } from "@/components/ai-elements/sources";
+import { StayCard } from "@/components/ai-elements/stay-card";
 import { useSupabase } from "@/lib/supabase/client";
+import {
+  accommodationSearchResultSchema,
+  flightSearchResultSchema,
+} from "@/schemas/agents";
 
 /**
  * Resolve the authenticated Supabase user id for the current browser session.
@@ -106,8 +112,49 @@ function ChatMessageItem({ message }: { message: UIMessage }) {
         {parts.length > 0 ? (
           parts.map((part, idx) => {
             switch (part?.type) {
-              case "text":
+              case "text": {
+                // Try to parse JSON with schemaVersion for structured results
+                const text = part.text ?? "";
+                let parsedJson: unknown = null;
+                try {
+                  // Attempt to extract JSON from text (may be wrapped in markdown code blocks)
+                  const jsonMatch = text.match(
+                    /```(?:json)?\s*(\{[\s\S]*?\})\s*```|(\{[\s\S]*\})/
+                  );
+                  const jsonStr = jsonMatch?.[1] ?? jsonMatch?.[2] ?? text;
+                  parsedJson = JSON.parse(jsonStr);
+                } catch {
+                  // Not valid JSON, render as plain text
+                }
+
+                // Check if parsed JSON matches flight.v1 schema
+                if (parsedJson) {
+                  const flightResult = flightSearchResultSchema.safeParse(parsedJson);
+                  if (flightResult.success) {
+                    return (
+                      <FlightOfferCard
+                        key={`${message.id}-flight-${idx}`}
+                        result={flightResult.data}
+                      />
+                    );
+                  }
+
+                  // Check if parsed JSON matches stay.v1 schema
+                  const stayResult =
+                    accommodationSearchResultSchema.safeParse(parsedJson);
+                  if (stayResult.success) {
+                    return (
+                      <StayCard
+                        key={`${message.id}-stay-${idx}`}
+                        result={stayResult.data}
+                      />
+                    );
+                  }
+                }
+
+                // Fallback to plain text rendering
                 return <Response key={`${message.id}-t-${idx}`}>{part.text}</Response>;
+              }
               case "tool-call":
               case "tool-call-result":
                 {
@@ -314,6 +361,33 @@ export default function ChatPage(): ReactElement {
           credentials: "include",
           headers: undefined,
         }),
+        // Route to agent endpoints when metadata indicates agent request
+        prepareSendMessagesRequest: ({ messages, id }) => {
+          const last = messages[messages.length - 1];
+          // biome-ignore lint/suspicious/noExplicitAny: Metadata shape is dynamic
+          const md = (last && (last as any).metadata) || {};
+          if (md.agent === "flight_search" && md.request) {
+            return {
+              api: "/api/agents/flights",
+              body: md.request,
+              credentials: "include",
+            };
+          }
+          if (md.agent === "accommodation_search" && md.request) {
+            return {
+              api: "/api/agents/accommodations",
+              body: md.request,
+              credentials: "include",
+            };
+          }
+          // Default to general chat stream
+          return {
+            api: "/api/chat/stream",
+            // biome-ignore lint/style/useNamingConvention: API request body matches backend snake_case
+            body: { id, messages, ...(userId ? { user_id: userId } : {}) },
+            credentials: "include",
+          };
+        },
       }),
     [userId]
   );
@@ -430,8 +504,43 @@ export default function ChatPage(): ReactElement {
                   <PromptInputActionMenuTrigger aria-label="More actions" />
                   <PromptInputActionMenuContent>
                     <PromptInputActionAddAttachments />
-                    <PromptInputActionMenuItem disabled>
-                      Model settings (coming soon)
+                    <PromptInputActionMenuItem
+                      onSelect={() =>
+                        sendMessage({
+                          metadata: {
+                            agent: "flight_search",
+                            request: {
+                              cabinClass: "economy",
+                              departureDate: "2025-12-15",
+                              destination: "JFK",
+                              origin: "SFO",
+                              passengers: 1,
+                              returnDate: "2025-12-19",
+                            },
+                          },
+                          text: "Search flights",
+                        })
+                      }
+                    >
+                      Search flights
+                    </PromptInputActionMenuItem>
+                    <PromptInputActionMenuItem
+                      onSelect={() =>
+                        sendMessage({
+                          metadata: {
+                            agent: "accommodation_search",
+                            request: {
+                              checkIn: "2025-12-15",
+                              checkOut: "2025-12-19",
+                              destination: "New York City",
+                              guests: 2,
+                            },
+                          },
+                          text: "Find stays",
+                        })
+                      }
+                    >
+                      Find stays
                     </PromptInputActionMenuItem>
                   </PromptInputActionMenuContent>
                 </PromptInputActionMenu>
