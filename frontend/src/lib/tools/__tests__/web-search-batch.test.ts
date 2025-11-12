@@ -23,6 +23,57 @@ afterEach(() => {
 });
 
 describe("webSearchBatch", () => {
+  test("normalizes batch results with extra fields", async () => {
+    vi.resetModules();
+    const { webSearchBatch } = await import("@/lib/tools/web-search-batch");
+    // Firecrawl may return extra fields
+    const mockRes = {
+      json: async () => ({
+        results: [
+          {
+            content: "extra",
+            score: 0.9,
+            title: "Example",
+            url: "https://example.com",
+          },
+        ],
+      }),
+      ok: true,
+    } as Response;
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockRes);
+    const out = (await webSearchBatch.execute?.(
+      { queries: ["test"] },
+      mockContext
+    )) as unknown as {
+      results: Array<{
+        query: string;
+        ok: boolean;
+        value?: {
+          results: Array<{
+            url: string;
+            title?: string;
+            snippet?: string;
+            publishedAt?: string;
+          }>;
+          fromCache: boolean;
+          tookMs: number;
+        };
+        error?: { code: string; message?: string };
+      }>;
+      tookMs: number;
+    };
+    expect(out.results[0].ok).toBe(true);
+    expect(out.results[0].value?.results[0].url).toBe("https://example.com");
+    expect(out.results[0].value?.results[0].title).toBe("Example");
+    // Ensure extra fields are normalized out
+    expect("content" in (out.results[0].value?.results[0] ?? {})).toBe(false);
+    expect("score" in (out.results[0].value?.results[0] ?? {})).toBe(false);
+    expect(Object.keys(out.results[0].value?.results[0] ?? {}).sort()).toEqual([
+      "title",
+      "url",
+    ]);
+  });
+
   test("runs multiple queries and aggregates results", async () => {
     vi.resetModules();
     const { webSearchBatch } = await import("@/lib/tools/web-search-batch");
@@ -41,14 +92,41 @@ describe("webSearchBatch", () => {
       results: Array<{
         query: string;
         ok: boolean;
-        value?: { results: Array<{ url: string }> };
+        value?: {
+          results: Array<{
+            url: string;
+            title?: string;
+            snippet?: string;
+            publishedAt?: string;
+          }>;
+          fromCache: boolean;
+          tookMs: number;
+        };
+        error?: { code: string; message?: string };
       }>;
+      tookMs: number;
     };
 
+    // Assert strict output shape: results array, tookMs number
+    expect(Array.isArray(out.results)).toBe(true);
     expect(out.results).toHaveLength(3);
     expect(out.results[0].ok).toBe(true);
+    expect(typeof out.tookMs).toBe("number");
+    // Ensure each result has strict shape
+    for (const r of out.results) {
+      expect(typeof r.ok).toBe("boolean");
+      expect(typeof r.query).toBe("string");
+      if (r.ok) {
+        expect(r.value).toBeDefined();
+        expect(Array.isArray(r.value?.results)).toBe(true);
+        expect(typeof r.value?.fromCache).toBe("boolean");
+        expect(typeof r.value?.tookMs).toBe("number");
+      }
+    }
     const urls = out.results.flatMap((r) => r.value?.results.map((x) => x.url) ?? []);
     expect(urls).toEqual(["https://a", "https://b", "https://c"]);
+    // Ensure no extra fields beyond schema
+    expect(Object.keys(out).sort()).toEqual(["results", "tookMs"]);
   });
 
   test("collects errors per query without failing the batch", async () => {
@@ -68,13 +146,39 @@ describe("webSearchBatch", () => {
       { queries: ["q-ok1", "q-fail", "q-ok2"] },
       mockContext
     )) as unknown as {
-      results: Array<{ query: string; ok: boolean; error?: { code: string } }>;
+      results: Array<{
+        query: string;
+        ok: boolean;
+        value?: {
+          results: Array<{
+            url: string;
+            title?: string;
+            snippet?: string;
+            publishedAt?: string;
+          }>;
+          fromCache: boolean;
+          tookMs: number;
+        };
+        error?: { code: string; message?: string };
+      }>;
+      tookMs: number;
     };
 
+    // Assert strict output shape for error paths
+    expect(Array.isArray(out.results)).toBe(true);
+    expect(typeof out.tookMs).toBe("number");
     const byQuery = Object.fromEntries(out.results.map((r) => [r.query, r]));
     expect(byQuery["q-fail"].ok).toBe(false);
     expect(byQuery["q-fail"].error?.code).toMatch(/web_search_failed|web_search_error/);
     expect(byQuery["q-ok1"].ok).toBe(true);
     expect(byQuery["q-ok2"].ok).toBe(true);
+    // Ensure error result has strict shape
+    expect(typeof byQuery["q-fail"].error?.code).toBe("string");
+    // Ensure success results have strict shape
+    if (byQuery["q-ok1"].value) {
+      expect(Array.isArray(byQuery["q-ok1"].value.results)).toBe(true);
+      expect(typeof byQuery["q-ok1"].value.fromCache).toBe("boolean");
+      expect(typeof byQuery["q-ok1"].value.tookMs).toBe("number");
+    }
   });
 });

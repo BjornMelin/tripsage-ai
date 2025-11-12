@@ -228,12 +228,18 @@ export async function handleChatStream(
     system: systemPrompt,
     toolChoice: "auto",
     tools: (() => {
-      const local = wrapToolsWithUserId({ ...toolRegistry }, user.id, [
-        "createTravelPlan",
-        "updateTravelPlan",
-        "saveTravelPlan",
-        "deleteTravelPlan",
-      ]);
+      const local = wrapToolsWithUserId(
+        { ...toolRegistry },
+        user.id,
+        [
+          "createTravelPlan",
+          "updateTravelPlan",
+          "saveTravelPlan",
+          "deleteTravelPlan",
+          "bookAccommodation",
+        ],
+        payload.sessionId
+      );
       if (discoveredTools) {
         // Detect conflicts: MCP tools that overlap with local registry
         const conflicts: string[] = [];

@@ -1,6 +1,8 @@
 /**
- * @fileoverview Types for the web search tool (Firecrawl v2.5).
+ * @fileoverview Types and Zod schemas for the web search tool (Firecrawl v2.5).
  */
+
+import { z } from "zod";
 
 /**
  * Parameters for executing a web search query with configuration options for
@@ -49,14 +51,68 @@ export type WebSearchSource = {
 };
 
 /**
+ * Strict output schema for webSearch tool.
+ *
+ * Enforces that tool always returns a validated object matching this schema.
+ * Results array defaults to empty array; fromCache and tookMs are always present.
+ */
+export const WEB_SEARCH_OUTPUT_SCHEMA = z
+  .object({
+    fromCache: z.boolean(),
+    results: z
+      .array(
+        z
+          .object({
+            publishedAt: z.string().optional(),
+            snippet: z.string().optional(),
+            title: z.string().optional(),
+            url: z.string(),
+          })
+          .strict()
+      )
+      .default([]),
+    tookMs: z.number(),
+  })
+  .strict();
+
+/**
  * Complete web search response with results array, cache status, and timing
  * metadata.
  */
-export type WebSearchResult = {
-  /** Array of search result sources. */
-  results: WebSearchSource[];
-  /** Whether results were served from cache. */
-  fromCache: boolean;
-  /** Total time taken for the search operation in milliseconds. */
-  tookMs: number;
-};
+export type WebSearchResult = z.infer<typeof WEB_SEARCH_OUTPUT_SCHEMA>;
+
+/**
+ * Strict output schema for webSearchBatch tool.
+ *
+ * Enforces that tool always returns a validated object matching this schema.
+ * Each query result has ok boolean, query string, and either value (success) or error (failure).
+ * Total execution time (tookMs) is always present.
+ */
+export const WEB_SEARCH_BATCH_OUTPUT_SCHEMA = z
+  .object({
+    results: z.array(
+      z
+        .object({
+          // When ok=false: error object with code and optional message
+          error: z
+            .object({
+              code: z.string(),
+              message: z.string().optional(),
+            })
+            .strict()
+            .optional(),
+          ok: z.boolean(),
+          query: z.string(),
+          // When ok=true: value must match webSearch output schema
+          value: WEB_SEARCH_OUTPUT_SCHEMA.optional(),
+        })
+        .strict()
+    ),
+    tookMs: z.number(),
+  })
+  .strict();
+
+/**
+ * Batch web search response with per-query results and total execution time.
+ */
+export type WebSearchBatchResult = z.infer<typeof WEB_SEARCH_BATCH_OUTPUT_SCHEMA>;

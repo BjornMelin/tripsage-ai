@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Telemetry and rate‑limit wiring for single search: `frontend/src/lib/tools/__tests__/web-search.test.ts`
   - Batch behavior and per‑query error handling: `frontend/src/lib/tools/__tests__/web-search-batch.test.ts`
 - Types for web search params/results: `frontend/src/types/web-search.ts`.
+- Strict structured output validation for web search tools: Zod schemas (`WEB_SEARCH_OUTPUT_SCHEMA`, `WEB_SEARCH_BATCH_OUTPUT_SCHEMA`) in `frontend/src/types/web-search.ts`; outputs validated at execution boundaries with `.strict()`.
 - Chat UI shows published time when available on search cards: `frontend/src/app/chat/page.tsx`.
 - Request-scoped Upstash limiter builder shared by BYOK routes: `frontend/src/app/api/keys/_rate-limiter.ts` plus span attribute helper `frontend/src/app/api/keys/_telemetry.ts`.
 - Minimal OpenTelemetry span utility with attribute redaction and unit tests: `frontend/src/lib/telemetry/span.ts` and `frontend/src/lib/telemetry/__tests__/span.test.ts`.
@@ -91,6 +92,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Adds TTL heuristics (realtime/news/daily/semi‑static) for Redis cache; keeps canonical cache keys (flattened `scrapeOptions`).
   - Returns `{ fromCache, tookMs }` metadata; integrates Upstash RL (20/min) keyed by `userId`.
   - Pass‑through support for undocumented `region`/`freshness` only when provided.
+  - Enforces strict structured outputs via Zod schemas; all code paths (cache hits, API responses, error fallbacks) return validated shapes matching `WEB_SEARCH_OUTPUT_SCHEMA`.
+  - Normalizes Firecrawl responses to strip extra fields (content, score, source) before validation; stores normalized data in cache for consistency.
+- Web search batch tool (`frontend/src/lib/tools/web-search-batch.ts`): Enforces strict structured outputs via `WEB_SEARCH_BATCH_OUTPUT_SCHEMA`; per-query success/error shapes validated at execution boundaries. Normalizes results from both primary execution and HTTP fallback paths.
+- Accommodation tools (`frontend/src/lib/tools/accommodations.ts`): Enforce strict structured outputs via Zod schemas (`ACCOMMODATION_SEARCH_OUTPUT_SCHEMA`, `ACCOMMODATION_DETAILS_OUTPUT_SCHEMA`, `ACCOMMODATION_BOOKING_OUTPUT_SCHEMA`); all code paths return validated shapes. Session context injection via `wrapToolsWithUserId` for booking approval flow. Centralized error taxonomy (`frontend/src/lib/tools/errors.ts`) with `TOOL_ERROR_CODES` and `createToolError` helper adopted across accommodation tools.
 - Chat UI renders web search results as cards with title/snippet/URL, citations via AI Elements `Sources`, and displays `fromCache` + `tookMs`.
 - Env: `.env.example` simplified — require only `FIRECRAWL_API_KEY`; `FIRECRAWL_BASE_URL` optional for self‑hosted Firecrawl.
 - BYOK POST/DELETE adapters (`frontend/src/app/api/keys/route.ts`, `frontend/src/app/api/keys/[service]/route.ts`) now build rate limiters per request, derive identifiers per user/IP, and wrap Supabase RPC calls in telemetry spans carrying rate-limit attributes and sanitized key metadata; route tests updated to stub the new factory and span helper.

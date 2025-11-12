@@ -12,6 +12,8 @@ import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 import { fetchWithRetry } from "@/lib/http/fetch-retry";
 import { getRedis } from "@/lib/redis";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
+import { normalizeWebSearchResults } from "@/lib/tools/web-search-normalize";
+import { WEB_SEARCH_OUTPUT_SCHEMA } from "@/types/web-search";
 
 /**
  * Build a per-request Upstash rate limiter for the web search tool.
@@ -258,7 +260,20 @@ export const webSearch = tool({
           if (cached) {
             span.addEvent("cache_hit");
             span.setAttribute("from_cache", true);
-            return { ...cached, fromCache: true, tookMs: Date.now() - startedAt };
+            // Normalize cached results to ensure strict schema compliance
+            const cachedResults = Array.isArray(
+              (cached as { results?: unknown }).results
+            )
+              ? (cached as { results: unknown[] }).results
+              : [];
+            const normalizedResults = normalizeWebSearchResults(cachedResults);
+            const rawOut = {
+              fromCache: true,
+              results: normalizedResults,
+              tookMs: Date.now() - startedAt,
+            };
+            const validated = WEB_SEARCH_OUTPUT_SCHEMA.parse(rawOut);
+            return validated;
           }
         }
         const baseUrl =
@@ -292,17 +307,25 @@ export const webSearch = tool({
           throw new Error(`web_search_failed:${res.status}:${text}`);
         }
         const data = await res.json();
+        // Normalize results to strip extra fields from Firecrawl response
+        const rawResults = Array.isArray(data.results) ? data.results : [];
+        const normalizedResults = normalizeWebSearchResults(rawResults);
+        // Store normalized data in cache to ensure consistency
         if (redis) {
           const ttl = inferTtlSeconds(query);
-          await redis.set(k, data, { ex: ttl });
+          await redis.set(k, { results: normalizedResults }, { ex: ttl });
         }
-        const out = { ...data, fromCache: false, tookMs: Date.now() - startedAt } as {
-          tookMs: number;
-          fromCache: boolean;
-        } & Record<string, unknown>;
+        // Ensure strict output shape: results array, fromCache boolean, tookMs number
+        const rawOut = {
+          fromCache: false,
+          results: normalizedResults,
+          tookMs: Date.now() - startedAt,
+        };
+        // Validate against schema to ensure strict shape
+        const validated = WEB_SEARCH_OUTPUT_SCHEMA.parse(rawOut);
         span.setAttribute("from_cache", false);
-        span.setAttribute("took_ms", out.tookMs);
-        return out;
+        span.setAttribute("took_ms", validated.tookMs);
+        return validated;
       }
     );
   },
