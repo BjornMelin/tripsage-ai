@@ -21,9 +21,9 @@ describe("runWithGuardrails", () => {
     await expect(
       runWithGuardrails(
         {
-          inputSchema: z.object({ foo: z.string() }),
+          parametersSchema: z.object({ foo: z.string() }),
           tool: "demo",
-          workflow: "destination_research",
+          workflow: "destinationResearch",
         },
         { foo: 123 },
         async () => "ok"
@@ -34,9 +34,9 @@ describe("runWithGuardrails", () => {
   it("returns result when guardrails pass", async () => {
     const { result, cacheHit } = await runWithGuardrails(
       {
-        inputSchema: z.object({ foo: z.string() }),
+        parametersSchema: z.object({ foo: z.string() }),
         tool: "demo",
-        workflow: "destination_research",
+        workflow: "destinationResearch",
       },
       { foo: "bar" },
       async () => "ok"
@@ -49,7 +49,11 @@ describe("runWithGuardrails", () => {
     const { recordAgentToolEvent } = await import("@/lib/telemetry/agents");
     const spy = recordAgentToolEvent as unknown as ReturnType<typeof vi.fn>;
     await runWithGuardrails(
-      { inputSchema: z.object({ v: z.number() }), tool: "demo", workflow: "router" },
+      {
+        parametersSchema: z.object({ v: z.number() }),
+        tool: "demo",
+        workflow: "router",
+      },
       { v: 1 },
       async () => ({ ok: true })
     );

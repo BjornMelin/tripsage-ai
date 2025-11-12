@@ -4,7 +4,9 @@
 
 - P0 complete (framework hardening in frontend).
 - P1 complete (flights + accommodations endpoints, tools, UI).
-- P2 starting (budget + memory agents; design/implementation in progress). Target approval remains 2025-11-15.
+- P2 complete (budget + memory + destination + itinerary agents, tools, UI).
+- P3 complete (router + error recovery).
+- P4 complete (OpenTripMap POI + GeoSure travel advisory tools integrated).
 
 ## Goals
 

@@ -398,7 +398,7 @@ Request:
   "session_id": "session-uuid",
   "content": "User prefers budget options",
   "metadata": {
-    "context": "flight_search",
+    "context": "flightSearch",
     "timestamp": "2025-01-15T10:30:00Z"
   }
 }

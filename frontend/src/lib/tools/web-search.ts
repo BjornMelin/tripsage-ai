@@ -4,6 +4,8 @@
  * Uses direct API (not SDK) for latest v2.5 features and cost control.
  */
 
+import "server-only";
+
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { tool } from "ai";
@@ -54,6 +56,31 @@ const scrapeOptionsSchema = z
  * Extracted from scrapeOptionsSchema for type-safe usage.
  */
 type ScrapeOptions = z.infer<typeof scrapeOptionsSchema>;
+
+/**
+ * Zod input schema for web search tool.
+ *
+ * Exported for use in guardrails validation and cache key generation.
+ */
+export const webSearchInputSchema = z.object({
+  categories: z
+    .array(z.union([z.enum(["github", "research", "pdf"]), z.string()]))
+    .optional(),
+  fresh: z.boolean().default(false),
+  freshness: z.string().optional(), // UNVERIFIED
+  limit: z.number().int().min(1).max(10).default(5),
+  location: z.string().max(120).optional(),
+  query: z.string().min(2).max(256),
+  region: z.string().optional(), // UNVERIFIED
+  scrapeOptions: scrapeOptionsSchema,
+  sources: z
+    .array(z.enum(["web", "news", "images"]))
+    .default(["web"])
+    .optional(),
+  tbs: z.string().optional(),
+  timeoutMs: z.number().int().positive().optional(),
+  userId: z.string().optional(),
+});
 
 /**
  * Builds request body for Firecrawl search API with cost-safe defaults.
@@ -329,23 +356,5 @@ export const webSearch = tool({
       }
     );
   },
-  inputSchema: z.object({
-    categories: z
-      .array(z.union([z.enum(["github", "research", "pdf"]), z.string()]))
-      .optional(),
-    fresh: z.boolean().default(false),
-    freshness: z.string().optional(), // UNVERIFIED
-    limit: z.number().int().min(1).max(10).default(5),
-    location: z.string().max(120).optional(),
-    query: z.string().min(2).max(256),
-    region: z.string().optional(), // UNVERIFIED
-    scrapeOptions: scrapeOptionsSchema,
-    sources: z
-      .array(z.enum(["web", "news", "images"]))
-      .default(["web"])
-      .optional(),
-    tbs: z.string().optional(),
-    timeoutMs: z.number().int().positive().optional(),
-    userId: z.string().optional(),
-  }),
+  inputSchema: webSearchInputSchema,
 });

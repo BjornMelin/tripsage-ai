@@ -7,7 +7,7 @@ import {
 } from "@/schemas/agents";
 
 describe("Chat routing logic", () => {
-  it("routes to flight agent when metadata contains flight_search", () => {
+  it("routes to flight agent when metadata contains flightSearch", () => {
     const userId = "user-123";
     const transport = new DefaultChatTransport({
       api: "/api/chat/stream",
@@ -17,14 +17,14 @@ describe("Chat routing logic", () => {
         const last = messages[messages.length - 1];
         // biome-ignore lint/suspicious/noExplicitAny: Metadata shape is dynamic
         const md = (last && (last as any).metadata) || {};
-        if (md.agent === "flight_search" && md.request) {
+        if (md.agent === "flightSearch" && md.request) {
           return {
             api: "/api/agents/flights",
             body: md.request,
             credentials: "include",
           };
         }
-        if (md.agent === "accommodation_search" && md.request) {
+        if (md.agent === "accommodationSearch" && md.request) {
           return {
             api: "/api/agents/accommodations",
             body: md.request,
@@ -43,7 +43,7 @@ describe("Chat routing logic", () => {
       {
         id: "1",
         metadata: {
-          agent: "flight_search",
+          agent: "flightSearch",
           request: {
             cabinClass: "economy",
             departureDate: "2025-12-15",
@@ -75,7 +75,7 @@ describe("Chat routing logic", () => {
     expect(request.body.destination).toBe("JFK");
   });
 
-  it("routes to accommodation agent when metadata contains accommodation_search", () => {
+  it("routes to accommodation agent when metadata contains accommodationSearch", () => {
     const userId = "user-123";
     const transport = new DefaultChatTransport({
       api: "/api/chat/stream",
@@ -85,14 +85,14 @@ describe("Chat routing logic", () => {
         const last = messages[messages.length - 1];
         // biome-ignore lint/suspicious/noExplicitAny: Metadata shape is dynamic
         const md = (last && (last as any).metadata) || {};
-        if (md.agent === "flight_search" && md.request) {
+        if (md.agent === "flightSearch" && md.request) {
           return {
             api: "/api/agents/flights",
             body: md.request,
             credentials: "include",
           };
         }
-        if (md.agent === "accommodation_search" && md.request) {
+        if (md.agent === "accommodationSearch" && md.request) {
           return {
             api: "/api/agents/accommodations",
             body: md.request,
@@ -111,7 +111,7 @@ describe("Chat routing logic", () => {
       {
         id: "1",
         metadata: {
-          agent: "accommodation_search",
+          agent: "accommodationSearch",
           request: {
             checkIn: "2025-12-15",
             checkOut: "2025-12-19",
@@ -151,14 +151,14 @@ describe("Chat routing logic", () => {
         const last = messages[messages.length - 1];
         // biome-ignore lint/suspicious/noExplicitAny: Metadata shape is dynamic
         const md = (last && (last as any).metadata) || {};
-        if (md.agent === "flight_search" && md.request) {
+        if (md.agent === "flightSearch" && md.request) {
           return {
             api: "/api/agents/flights",
             body: md.request,
             credentials: "include",
           };
         }
-        if (md.agent === "accommodation_search" && md.request) {
+        if (md.agent === "accommodationSearch" && md.request) {
           return {
             api: "/api/agents/accommodations",
             body: md.request,

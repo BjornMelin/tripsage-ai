@@ -7,6 +7,8 @@
  * accommodations_tools.
  */
 
+import "server-only";
+
 import { tool } from "ai";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 import { fetchWithRetry } from "@/lib/http/fetch-retry";
@@ -27,6 +29,13 @@ import {
 } from "@/types/accommodations";
 import { requireApproval } from "./approvals";
 import { ACCOM_SEARCH_CACHE_TTL_SECONDS } from "./constants";
+
+/**
+ * Zod input schema for accommodation search tool.
+ *
+ * Exported for use in guardrails validation and cache key generation.
+ */
+export { ACCOMMODATION_SEARCH_INPUT_SCHEMA as searchAccommodationsInputSchema };
 
 /**
  * Execute search via MCP SSE if available, else HTTP POST fallback.

@@ -2,7 +2,7 @@
  * @fileoverview Helpers for Next.js Route Handlers (headers/ratelimit identifiers).
  */
 import { createHash } from "node:crypto";
-import type { NextRequest } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 
 /**
  * Extract the client IP from trusted sources with deterministic fallback.
@@ -142,4 +142,65 @@ export function forwardAuthHeaders(req: NextRequest): HeadersInit | undefined {
   const auth = getAuthorization(req);
   // biome-ignore lint/style/useNamingConvention: HTTP headers conventionally use PascalCase
   return auth ? { Authorization: auth } : undefined;
+}
+
+/**
+ * Wrap a function execution with a request span for observability.
+ *
+ * Records duration and attributes for telemetry. Uses high-resolution time
+ * for accurate measurements.
+ *
+ * @param name - Span name for identification.
+ * @param attrs - Attributes to include in the span log.
+ * @param f - Function to execute and measure.
+ * @returns Promise resolving to the function's return value.
+ */
+export async function withRequestSpan<T>(
+  name: string,
+  attrs: Record<string, string | number>,
+  f: () => Promise<T>
+): Promise<T> {
+  const start = process.hrtime.bigint();
+  try {
+    return await f();
+  } finally {
+    const end = process.hrtime.bigint();
+    const durationMs = Number(end - start) / 1e6;
+    console.debug("agent.span", {
+      durationMs,
+      name,
+      ...attrs,
+    });
+  }
+}
+
+/**
+ * Create a standardized error response for agent routes.
+ *
+ * Returns a NextResponse with consistent error shape and sanitized logging.
+ * All errors are logged with redaction to prevent secrets leakage.
+ *
+ * @param opts - Error response options.
+ * @param opts.status - HTTP status code.
+ * @param opts.error - Error code string (e.g., "invalid_request", "rate_limit_exceeded").
+ * @param opts.reason - Human-readable reason string.
+ * @param opts.err - Optional error object to log (will be redacted).
+ * @returns NextResponse with standardized error format.
+ */
+export function errorResponse({
+  err,
+  error,
+  reason,
+  status,
+}: {
+  error: string;
+  reason: string;
+  status: number;
+  err?: unknown;
+}): NextResponse {
+  if (err) {
+    const { context, message } = redactErrorForLogging(err);
+    console.error("agent.error", { context, error, message, reason });
+  }
+  return NextResponse.json({ error, reason }, { status });
 }

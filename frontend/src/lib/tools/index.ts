@@ -14,6 +14,7 @@ import {
 import { searchFlights } from "./flights";
 import { distanceMatrix, geocode } from "./maps";
 import { addConversationMemory, searchUserMemories } from "./memory";
+import { lookupPoiContext } from "./opentripmap";
 import {
   combineSearchResults,
   createTravelPlan,
@@ -21,7 +22,7 @@ import {
   saveTravelPlan,
   updateTravelPlan,
 } from "./planning";
-import { lookupPoiContext } from "./poi-lookup";
+import { getTravelAdvisory } from "./travel-advisory";
 import type { AiTool } from "./types";
 import { getCurrentWeather } from "./weather";
 import { crawlSite, crawlUrl } from "./web-crawl";
@@ -48,6 +49,7 @@ export const toolRegistry = {
   geocode,
   getAccommodationDetails,
   getCurrentWeather,
+  getTravelAdvisory,
   lookupPoiContext,
   saveTravelPlan,
   searchAccommodations,
