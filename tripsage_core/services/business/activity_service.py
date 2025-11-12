@@ -15,7 +15,6 @@ from tripsage.api.schemas.activities import (
     ActivitySearchRequest,
     ActivitySearchResponse,
 )
-from tripsage.tools.web_tools import CachedWebSearchTool
 from tripsage_core.exceptions.exceptions import CoreServiceError
 from tripsage_core.models.api.maps_models import PlaceDetails, PlaceSummary
 from tripsage_core.services.external_apis.google_maps_service import (
@@ -76,7 +75,6 @@ class ActivityService:
         """
         self.google_maps_service = google_maps_service
         self.cache_service = cache_service
-        self.web_search_tool = CachedWebSearchTool(namespace="activity-search")
 
     @tripsage_safe_execute()
     @cached(content_type=ContentType.SEMI_STATIC, ttl=3600)  # 1 hour cache

@@ -110,6 +110,99 @@ function ChatMessageItem({ message }: { message: UIMessage }) {
                 return <Response key={`${message.id}-t-${idx}`}>{part.text}</Response>;
               case "tool-call":
               case "tool-call-result":
+                {
+                  type ToolResultPart = {
+                    type?: string;
+                    name?: string;
+                    toolName?: string;
+                    tool?: string;
+                    result?: unknown;
+                    output?: unknown;
+                    data?: unknown;
+                  };
+                  const p = part as ToolResultPart;
+                  const toolName = p?.name ?? p?.toolName ?? p?.tool;
+                  const raw = p?.result ?? p?.output ?? p?.data;
+                  type WebSearchUiResult = {
+                    results: Array<{ url: string; title?: string; snippet?: string }>;
+                    fromCache?: boolean;
+                    tookMs?: number;
+                  };
+                  const result =
+                    raw && typeof raw === "object"
+                      ? (raw as WebSearchUiResult)
+                      : undefined;
+                  if (
+                    toolName === "webSearch" &&
+                    result &&
+                    Array.isArray(result.results)
+                  ) {
+                    const sources = result.results;
+                    return (
+                      <div
+                        key={`${message.id}-tool-${idx}`}
+                        className="my-2 rounded-md border bg-muted/30 p-3 text-sm"
+                      >
+                        <div className="mb-2 flex items-center justify-between">
+                          <div className="font-medium">Web Search</div>
+                          <div className="text-xs opacity-70">
+                            {result.fromCache ? "cached" : "live"}
+                            {typeof result.tookMs === "number"
+                              ? ` · ${result.tookMs}ms`
+                              : null}
+                          </div>
+                        </div>
+                        <div className="grid gap-2">
+                          {sources.map((s, i) => (
+                            <div
+                              key={`${message.id}-ws-${i}`}
+                              className="rounded border bg-background p-2"
+                            >
+                              <a
+                                href={s.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-medium hover:underline"
+                              >
+                                {s.title ?? s.url}
+                              </a>
+                              {s.snippet ? (
+                                <div className="mt-1 text-xs opacity-80">
+                                  {s.snippet}
+                                </div>
+                              ) : null}
+                              {"publishedAt" in s &&
+                              (s as { publishedAt?: string }).publishedAt ? (
+                                <div className="mt-1 text-[10px] opacity-60">
+                                  {new Date(
+                                    (s as { publishedAt?: string })
+                                      .publishedAt as string
+                                  ).toLocaleString()}
+                                </div>
+                              ) : null}
+                            </div>
+                          ))}
+                        </div>
+                        {sources.length > 0 ? (
+                          <div className="mt-2">
+                            <Sources>
+                              <SourcesTrigger count={sources.length} />
+                              <SourcesContent>
+                                <div className="space-y-1">
+                                  {sources.map((s, i) => (
+                                    <Source key={`${message.id}-src-${i}`} href={s.url}>
+                                      {s.title ?? s.url}
+                                    </Source>
+                                  ))}
+                                </div>
+                              </SourcesContent>
+                            </Sources>
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  }
+                }
                 return (
                   <div
                     key={`${message.id}-tool-${idx}`}

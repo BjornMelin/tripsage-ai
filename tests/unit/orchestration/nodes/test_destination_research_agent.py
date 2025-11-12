@@ -29,11 +29,8 @@ def _make_services() -> AppServiceContainer:
     )
     # Tools used by research methods
     container.webcrawl_service = MagicMock()
-    container.webcrawl_service.search_web = AsyncMock(return_value={"results": []})
     container.google_maps_service = MagicMock()
     container.google_maps_service.search_places = AsyncMock(return_value={})
-    container.weather_service = MagicMock()
-    container.weather_service.get_current_weather = AsyncMock(return_value={})
     return container
 
 

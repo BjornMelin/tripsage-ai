@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RATE_CREATE_PER_DAY, RATE_UPDATE_PER_MIN } from "../constants";
 import { createTravelPlan, updateTravelPlan } from "../planning";
 
-const { mockSpan, mockWithTelemetrySpan } = vi.hoisted(() => {
+const { mockWithTelemetrySpan } = vi.hoisted(() => {
   const span = {
     addEvent: vi.fn(),
     end: vi.fn(),
@@ -15,7 +15,7 @@ const { mockSpan, mockWithTelemetrySpan } = vi.hoisted(() => {
     (_name: string, _options: unknown, fn: (span: SpanType) => unknown) =>
       Promise.resolve(fn(span))
   );
-  return { mockSpan: span, mockWithTelemetrySpan: withTelemetrySpan };
+  return { mockWithTelemetrySpan: withTelemetrySpan };
 });
 
 vi.mock("@/lib/telemetry/span", () => ({
@@ -160,7 +160,8 @@ describe("planning tool telemetry", () => {
     })) as { success: boolean; planId?: string };
 
     expect(created.success).toBe(true);
-    const planId = created.planId!;
+    expect(created.planId).toBeDefined();
+    const planId = created.planId as string;
 
     vi.clearAllMocks();
 

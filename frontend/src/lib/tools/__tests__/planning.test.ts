@@ -357,6 +357,12 @@ describe("planning tools", () => {
   });
 
   it("deleteTravelPlan works for owner and blocks others", async () => {
+    // Reset userId to u1 (previous test may have changed it)
+    const supabaseModReset = (await import("@/lib/supabase/server")) as unknown as {
+      __setUserIdForTests: (id: string) => void;
+    };
+    supabaseModReset.__setUserIdForTests("u1");
+
     const created = await exec<{ success: boolean; planId: string }>(createTravelPlan, {
       destinations: ["ROM"],
       endDate: "2025-09-10",

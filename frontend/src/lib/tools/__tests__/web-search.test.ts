@@ -5,6 +5,18 @@ vi.mock("@/lib/redis", () => ({
   getRedis: vi.fn(),
 }));
 
+// Telemetry shim: execute callback immediately and capture attrs via spy
+const TELEMETRY_SPAN = {
+  addEvent: vi.fn(),
+  setAttribute: vi.fn(),
+};
+vi.mock("@/lib/telemetry/span", () => ({
+  withTelemetrySpan: vi.fn(
+    (_name: string, _opts: unknown, execute: (span: unknown) => unknown) =>
+      execute(TELEMETRY_SPAN)
+  ),
+}));
+
 const env = process.env;
 
 beforeEach(() => {
@@ -24,7 +36,7 @@ const mockContext = {
 };
 
 describe("webSearch", () => {
-  test("validates inputs and calls Firecrawl", async () => {
+  test("validates inputs and calls Firecrawl with metadata", async () => {
     const { getRedis } = await import("@/lib/redis");
     (getRedis as ReturnType<typeof vi.fn>).mockReturnValue(null);
     const { webSearch } = await import("@/lib/tools/web-search");
@@ -37,7 +49,16 @@ describe("webSearch", () => {
       { fresh: true, limit: 2, query: "test" },
       mockContext
     );
-    expect(out.results[0].url).toBe("https://x");
+    const outAny = out as unknown as {
+      results: Array<{ url: string }>;
+      fromCache: boolean;
+      tookMs: number;
+    };
+    expect(outAny.results[0].url).toBe("https://x");
+    expect(outAny.fromCache).toBe(false);
+    expect(typeof outAny.tookMs).toBe("number");
+    const { withTelemetrySpan } = await import("@/lib/telemetry/span");
+    expect(withTelemetrySpan as unknown as ReturnType<typeof vi.fn>).toHaveBeenCalled();
   });
 
   test("throws when not configured", async () => {
@@ -140,9 +161,11 @@ describe("webSearch", () => {
       {
         categories: ["github", "research"],
         fresh: true,
+        freshness: "d7", // UNVERIFIED
         limit: 10,
         location: "US",
         query: "test query",
+        region: "us", // UNVERIFIED
         scrapeOptions: {
           formats: ["markdown", "html"],
           parsers: ["pdf"],
@@ -161,6 +184,8 @@ describe("webSearch", () => {
     expect(body.sources).toEqual(["web", "news"]);
     expect(body.categories).toEqual(["github", "research"]);
     expect(body.location).toBe("US");
+    expect(body.region).toBe("us");
+    expect(body.freshness).toBe("d7");
     expect(body.tbs).toBe("qdr:d");
     expect(body.timeout).toBe(5000);
     expect(body.scrapeOptions).toEqual({
@@ -168,6 +193,29 @@ describe("webSearch", () => {
       parsers: ["pdf"],
       proxy: "stealth",
     });
+  });
+
+  test("accepts custom categories strings", async () => {
+    const { getRedis } = await import("@/lib/redis");
+    (getRedis as ReturnType<typeof vi.fn>).mockReturnValue(null);
+    const { webSearch } = await import("@/lib/tools/web-search");
+    const mockRes = {
+      json: async () => ({ results: [] }),
+      ok: true,
+    } as Response;
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockRes);
+    await webSearch.execute?.(
+      {
+        categories: ["custom-cat", "github"],
+        fresh: true,
+        limit: 3,
+        query: "test",
+      },
+      mockContext
+    );
+    const call = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
+    const body = JSON.parse(call[1].body as string);
+    expect(body.categories).toEqual(["custom-cat", "github"]);
   });
 
   test("applies cost-safe defaults for scrapeOptions", async () => {
@@ -335,7 +383,7 @@ describe("webSearch cache key generation", () => {
 });
 
 describe("webSearch caching behavior", () => {
-  test("returns cached result when available and fresh=false", async () => {
+  test("returns cached result when available and fresh=false with metadata", async () => {
     const { getRedis } = await import("@/lib/redis");
     const mockRedis = {
       get: vi.fn().mockResolvedValue({ cached: true, results: [] }),
@@ -352,9 +400,53 @@ describe("webSearch caching behavior", () => {
       { fresh: false, limit: 5, query: "test" },
       mockContext
     );
-    expect(result).toEqual({ cached: true, results: [] });
+    const resAny = result as unknown as {
+      results: unknown[];
+      fromCache: boolean;
+      tookMs: number;
+    };
+    expect(resAny.results).toEqual([]);
+    expect(resAny.fromCache).toBe(true);
+    expect(typeof resAny.tookMs).toBe("number");
     expect(fetch).not.toHaveBeenCalled();
     expect(mockRedis.get).toHaveBeenCalled();
+  });
+
+  test("rate limiting calls Upstash when configured", async () => {
+    // Provide Upstash envs to construct limiter
+    process.env.UPSTASH_REDIS_REST_URL = "https://upstash.example";
+    process.env.UPSTASH_REDIS_REST_TOKEN = "token";
+
+    vi.doMock("@upstash/redis", () => ({
+      Redis: { fromEnv: () => ({}) },
+    }));
+
+    const limitSpy = vi.fn(async () => ({
+      limit: 20,
+      remaining: 19,
+      reset: Math.floor(Date.now() / 1000) + 60,
+      success: true,
+    }));
+    const ctorSpy = vi.fn().mockImplementation(function () {
+      // @ts-expect-error - attach instance method dynamically for test
+      this.limit = limitSpy;
+    });
+    vi.resetModules();
+    vi.doMock("@upstash/ratelimit", () => ({
+      Ratelimit: Object.assign(ctorSpy, { slidingWindow: () => ({}) }),
+    }));
+
+    const { getRedis } = await import("@/lib/redis");
+    (getRedis as ReturnType<typeof vi.fn>).mockReturnValue(null);
+    const { webSearch } = await import("@/lib/tools/web-search");
+    const mockRes = { json: async () => ({ results: [] }), ok: true } as Response;
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockRes);
+    await webSearch.execute?.(
+      { fresh: true, limit: 1, query: "foo", userId: "u1" },
+      mockContext
+    );
+    expect(ctorSpy).toHaveBeenCalled();
+    expect(limitSpy).toHaveBeenCalledWith("u1");
   });
 
   test("bypasses cache when fresh=true", async () => {

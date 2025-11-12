@@ -37,7 +37,6 @@ class ToolCallRequest(BaseModel):
             "supabase",
             "memory",
             "time",
-            "firecrawl",
             "linkup",
         ]
         if v not in allowed_services:

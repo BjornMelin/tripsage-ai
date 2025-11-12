@@ -123,15 +123,6 @@ class LocationParams(BaseModel):
     location: str = Field(description="Location name or address")
 
 
-class WebSearchParams(BaseModel):
-    """Parameters for web search."""
-
-    query: str = Field(description="Search query")
-    location: str | None = Field(
-        default=None, description="Location context for search"
-    )
-
-
 # Core Travel Tools
 async def _search_flights_impl(
     origin: str,
@@ -209,28 +200,6 @@ async def _geocode_location_impl(location: str) -> str:
         return json.dumps({"error": f"Geocoding failed: {e!s}"})
 
 
-async def _web_search_impl(query: str, location: str | None = None) -> str:
-    """Search the web for travel-related information using WebCrawlService."""
-    try:
-        svc = _get_service_from_container("webcrawl_service")
-        await svc.connect()
-        params = {
-            "javascript_enabled": False,
-            "extract_markdown": True,
-            "extract_html": False,
-        }
-        # Use a generic search engine wrapper if available; else crawl query URL
-        # For now, just return an empty result to satisfy interface if not implemented.
-        # Some builds may not expose `search_web`; tolerate via pylint hint
-        # pylint: disable=no-member
-        # pyright: ignore[reportAttributeAccessIssue]
-        result = await svc.search_web(query=query, location=location, params=params)  # type: ignore[attr-defined]
-        return json.dumps(result, ensure_ascii=False)
-    except Exception as e:  # pragma: no cover - defensive
-        logger.exception("Web search failed")
-        return json.dumps({"error": f"Web search failed: {e!s}"})
-
-
 async def _add_memory_impl(content: str, category: str | None = None) -> str:
     """Save important information to user memory for future reference."""
     try:
@@ -286,7 +255,6 @@ search_accommodations: BaseTool = tool(
 geocode_location: BaseTool = tool("geocode_location", args_schema=LocationParams)(
     _geocode_location_impl
 )
-web_search: BaseTool = tool("web_search", args_schema=WebSearchParams)(_web_search_impl)
 add_memory: BaseTool = tool("add_memory", args_schema=MemoryParams)(_add_memory_impl)
 search_memories: BaseTool = tool("search_memories", args_schema=MemoryParams)(
     _search_memories_impl
@@ -296,27 +264,23 @@ AGENT_TOOLS: dict[str, list[Any]] = {
     "flight_agent": [
         search_flights,
         geocode_location,
-        web_search,
         add_memory,
         search_memories,
     ],
     "accommodation_agent": [
         search_accommodations,
         geocode_location,
-        web_search,
         add_memory,
         search_memories,
     ],
     "destination_research_agent": [
         geocode_location,
-        web_search,
         add_memory,
         search_memories,
     ],
     "budget_agent": [
         search_flights,
         search_accommodations,
-        web_search,
         add_memory,
         search_memories,
     ],
@@ -324,7 +288,6 @@ AGENT_TOOLS: dict[str, list[Any]] = {
         search_flights,
         search_accommodations,
         geocode_location,
-        web_search,
         add_memory,
         search_memories,
     ],
@@ -336,7 +299,6 @@ ALL_TOOLS: list[Any] = [
     search_flights,
     search_accommodations,
     geocode_location,
-    web_search,
     add_memory,
     search_memories,
 ]
@@ -381,7 +343,6 @@ __all__ = [
     "FlightSearchParams",
     "LocationParams",
     "MemoryParams",
-    "WebSearchParams",
     "add_memory",
     "geocode_location",
     "get_all_tools",
@@ -391,5 +352,4 @@ __all__ = [
     "search_flights",
     "search_memories",
     "set_tool_services",
-    "web_search",
 ]

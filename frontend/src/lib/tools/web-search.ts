@@ -4,10 +4,33 @@
  * Uses direct API (not SDK) for latest v2.5 features and cost control.
  */
 
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
 import { tool } from "ai";
 import { z } from "zod";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
+import { fetchWithRetry } from "@/lib/http/fetch-retry";
 import { getRedis } from "@/lib/redis";
+import { withTelemetrySpan } from "@/lib/telemetry/span";
+
+/**
+ * Build a per-request Upstash rate limiter for the web search tool.
+ * When Upstash env vars are missing, returns undefined (graceful in dev/test).
+ */
+let cachedLimiter: InstanceType<typeof Ratelimit> | undefined;
+function buildToolRateLimiter(): InstanceType<typeof Ratelimit> | undefined {
+  if (cachedLimiter) return cachedLimiter;
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return undefined;
+  cachedLimiter = new Ratelimit({
+    analytics: true,
+    limiter: Ratelimit.slidingWindow(20, "1 m"),
+    prefix: "ratelimit:tools:web-search",
+    redis: Redis.fromEnv(),
+  });
+  return cachedLimiter;
+}
 
 /**
  * Zod schema for optional scraping configuration.
@@ -48,6 +71,9 @@ function buildRequestBody(params: {
   location?: string;
   timeoutMs?: number;
   scrapeOptions?: ScrapeOptions;
+  // Forward-compat parameters (UNVERIFIED in Firecrawl docs)
+  region?: string | undefined;
+  freshness?: string | undefined;
 }): Record<string, unknown> {
   const body: Record<string, unknown> = {
     query: params.query,
@@ -67,6 +93,12 @@ function buildRequestBody(params: {
   if (params.location) {
     body.location = params.location;
   }
+  if (params.region) {
+    body.region = params.region; // UNVERIFIED
+  }
+  if (params.freshness) {
+    body.freshness = params.freshness; // UNVERIFIED
+  }
   if (params.timeoutMs) {
     body.timeout = params.timeoutMs;
   }
@@ -79,6 +111,18 @@ function buildRequestBody(params: {
     };
   }
   return body;
+}
+
+/**
+ * Infer cache TTL seconds from query content, mirroring Python heuristics.
+ */
+function inferTtlSeconds(query: string): number {
+  const q = query.toLowerCase();
+  if (/(\bnow\b|today|right now|weather)/.test(q)) return 120; // realtime
+  if (/(breaking|\bnews\b|update)/.test(q)) return 600; // time-sensitive
+  if (/(price|fare|flight|deal)/.test(q)) return 3600; // daily-ish
+  if (/(menu|hours|schedule)/.test(q)) return 21600; // semi-static
+  return 3600; // default
 }
 
 /**
@@ -102,6 +146,7 @@ export const webSearch = tool({
     "Search the web via Firecrawl v2.5 and return normalized results. " +
     "Supports sources (web/news/images), categories (github/research/pdf), " +
     "time filters (tbs), location, and optional content scraping.",
+  // structured output optional; the tool returns a JSON object with results/fromCache/tookMs
   execute: async ({
     query,
     limit = 5,
@@ -112,84 +157,165 @@ export const webSearch = tool({
     location,
     timeoutMs,
     scrapeOptions,
+    userId,
+    region,
+    freshness,
   }) => {
-    const apiKey = process.env.FIRECRAWL_API_KEY;
-    if (!apiKey) {
-      throw new Error("web_search_not_configured");
-    }
-    const redis = getRedis();
-    // Prepare params for request body (keep scrapeOptions nested)
-    const requestParams = {
-      categories,
-      limit,
-      location,
-      query,
-      scrapeOptions,
-      sources,
-      tbs,
-      timeoutMs,
-    };
-    // Flatten scrapeOptions for cache key generation
-    const cacheParams: Record<string, unknown> = {
-      categories,
-      limit,
-      location,
-      query: query.trim(),
-      sources,
-      tbs,
-      timeoutMs,
-    };
-    // Flatten nested scrapeOptions object into cache params
-    if (scrapeOptions) {
-      if (scrapeOptions.formats && scrapeOptions.formats.length > 0) {
-        cacheParams.scrapeOptionsFormats = scrapeOptions.formats;
-      }
-      if (scrapeOptions.parsers && scrapeOptions.parsers.length > 0) {
-        cacheParams.scrapeOptionsParsers = scrapeOptions.parsers;
-      }
-      if (scrapeOptions.proxy) {
-        cacheParams.scrapeOptionsProxy = scrapeOptions.proxy;
-      }
-    }
-    const k = canonicalizeParamsForCache(cacheParams, "ws");
-    if (!fresh && redis) {
-      const cached = await redis.get(k);
-      if (cached) return cached;
-    }
-    const baseUrl = process.env.FIRECRAWL_BASE_URL ?? "https://api.firecrawl.dev/v2";
-    const url = `${baseUrl}/search`;
-    const body = buildRequestBody(requestParams);
-    const res = await fetch(url, {
-      body: JSON.stringify(body),
-      headers: {
-        authorization: `Bearer ${apiKey}`,
-        "content-type": "application/json",
+    return await withTelemetrySpan(
+      "tool.web_search",
+      {
+        attributes: {
+          categoriesCount: Array.isArray(categories) ? categories.length : 0,
+          fresh: Boolean(fresh),
+          hasLocation: Boolean(location),
+          hasTbs: Boolean(tbs),
+          limit,
+          sourcesCount: Array.isArray(sources) ? sources.length : 0,
+          "tool.name": "webSearch",
+        },
+        redactKeys: ["query"],
       },
-      method: "POST",
-    });
-    if (!res.ok) {
-      const text = await res.text();
-      if (res.status === 429) {
-        throw new Error(`web_search_rate_limited:${text}`);
+      async (span) => {
+        const apiKey = process.env.FIRECRAWL_API_KEY;
+        if (!apiKey) {
+          span.addEvent("not_configured");
+          throw new Error("web_search_not_configured");
+        }
+        const startedAt = Date.now();
+        const redis = getRedis();
+        // Optional Upstash rate limiting per user
+        try {
+          const rl = buildToolRateLimiter();
+          if (rl) {
+            const identifier = `${userId ?? "anonymous"}`;
+            const res = await rl.limit(identifier);
+            if (!res.success) {
+              span.addEvent("rate_limited", { identifier });
+              const retrySec = res.reset
+                ? Math.max(0, res.reset - Math.floor(Date.now() / 1000))
+                : 60;
+              const rateErr = new Error("web_search_rate_limited") as Error & {
+                meta?: {
+                  limit?: number;
+                  remaining?: number;
+                  reset?: number;
+                  retryAfter?: number;
+                };
+              };
+              rateErr.meta = {
+                limit: res.limit,
+                remaining: res.remaining,
+                reset: res.reset,
+                retryAfter: retrySec,
+              };
+              throw rateErr;
+            }
+          }
+        } catch (e) {
+          if ((e as Error).message?.startsWith?.("web_search_rate_limited")) throw e;
+          // continue without RL if construction fails
+        }
+        // Prepare params for request body (keep scrapeOptions nested)
+        const requestParams = {
+          categories,
+          freshness,
+          limit,
+          location,
+          query,
+          region,
+          scrapeOptions,
+          sources,
+          tbs,
+          timeoutMs,
+        };
+        // Flatten scrapeOptions for cache key generation
+        const cacheParams: Record<string, unknown> = {
+          categories,
+          freshness,
+          limit,
+          location,
+          query: query.trim().toLowerCase(),
+          region,
+          sources,
+          tbs,
+          timeoutMs,
+        };
+        // Flatten nested scrapeOptions object into cache params
+        if (scrapeOptions) {
+          if (scrapeOptions.formats && scrapeOptions.formats.length > 0) {
+            cacheParams.scrapeOptionsFormats = scrapeOptions.formats;
+          }
+          if (scrapeOptions.parsers && scrapeOptions.parsers.length > 0) {
+            cacheParams.scrapeOptionsParsers = scrapeOptions.parsers;
+          }
+          if (scrapeOptions.proxy) {
+            cacheParams.scrapeOptionsProxy = scrapeOptions.proxy;
+          }
+        }
+        const k = canonicalizeParamsForCache(cacheParams, "ws");
+        if (!fresh && redis) {
+          const cached = await redis.get(k);
+          if (cached) {
+            span.addEvent("cache_hit");
+            span.setAttribute("from_cache", true);
+            return { ...cached, fromCache: true, tookMs: Date.now() - startedAt };
+          }
+        }
+        const baseUrl =
+          process.env.FIRECRAWL_BASE_URL ?? "https://api.firecrawl.dev/v2";
+        const url = `${baseUrl}/search`;
+        const body = buildRequestBody(requestParams);
+        span.addEvent("http_post", { url });
+        const res = await fetchWithRetry(
+          url,
+          {
+            body: JSON.stringify(body),
+            headers: {
+              authorization: `Bearer ${apiKey}`,
+              "content-type": "application/json",
+            },
+            method: "POST",
+          },
+          { retries: 2, timeoutMs: Math.min(20000, Math.max(5000, timeoutMs ?? 12000)) }
+        );
+        if (!res.ok) {
+          const text = await res.text();
+          if (res.status === 429) {
+            throw new Error(`web_search_rate_limited:${text}`);
+          }
+          if (res.status === 401) {
+            throw new Error(`web_search_unauthorized:${text}`);
+          }
+          if (res.status === 402) {
+            throw new Error(`web_search_payment_required:${text}`);
+          }
+          throw new Error(`web_search_failed:${res.status}:${text}`);
+        }
+        const data = await res.json();
+        if (redis) {
+          const ttl = inferTtlSeconds(query);
+          await redis.set(k, data, { ex: ttl });
+        }
+        const out = { ...data, fromCache: false, tookMs: Date.now() - startedAt } as {
+          tookMs: number;
+          fromCache: boolean;
+        } & Record<string, unknown>;
+        span.setAttribute("from_cache", false);
+        span.setAttribute("took_ms", out.tookMs);
+        return out;
       }
-      if (res.status === 401) {
-        throw new Error(`web_search_unauthorized:${text}`);
-      }
-      if (res.status === 402) {
-        throw new Error(`web_search_payment_required:${text}`);
-      }
-      throw new Error(`web_search_failed:${res.status}:${text}`);
-    }
-    const data = await res.json();
-    if (redis) await redis.set(k, data, { ex: 3600 });
-    return data;
+    );
   },
   inputSchema: z.object({
-    categories: z.array(z.enum(["github", "research", "pdf"])).optional(),
+    categories: z
+      .array(z.union([z.enum(["github", "research", "pdf"]), z.string()]))
+      .optional(),
     fresh: z.boolean().default(false),
+    freshness: z.string().optional(), // UNVERIFIED
     limit: z.number().int().min(1).max(10).default(5),
-    location: z.string().optional(),
-    query: z.string().min(2),
+    location: z.string().max(120).optional(),
+    query: z.string().min(2).max(256),
+    region: z.string().optional(), // UNVERIFIED
     scrapeOptions: scrapeOptionsSchema,
     sources: z
       .array(z.enum(["web", "news", "images"]))
@@ -197,5 +323,6 @@ export const webSearch = tool({
       .optional(),
     tbs: z.string().optional(),
     timeoutMs: z.number().int().positive().optional(),
+    userId: z.string().optional(),
   }),
 });
