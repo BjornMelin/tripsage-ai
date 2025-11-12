@@ -10,7 +10,7 @@ from typing import Any, cast
 
 import httpx
 
-from tripsage.tools.models.accommodations import (
+from tripsage_core.models.schemas_common.accommodation_schemas import (
     AirbnbListingDetailsParams,
     AirbnbSearchParams,
 )

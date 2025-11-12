@@ -5,6 +5,15 @@ across multiple parts of the TripSage application, including API layers,
 services, and core business logic.
 """
 
+from .accommodation_schemas import (
+    AccommodationSearchParams,
+    AirbnbHost,
+    AirbnbListing,
+    AirbnbListingDetails,
+    AirbnbListingDetailsParams,
+    AirbnbSearchParams,
+    AirbnbSearchResult,
+)
 from .base_models import (
     BaseResponse,
     ErrorResponse,
@@ -78,10 +87,18 @@ from .travel import (
 __all__ = [
     # Travel
     "AccommodationPreferences",
+    # Accommodation schemas
+    "AccommodationSearchParams",
     # Enums
     "AccommodationType",
     # Geographic
     "Address",
+    "AirbnbHost",
+    "AirbnbListing",
+    "AirbnbListingDetails",
+    "AirbnbListingDetailsParams",
+    "AirbnbSearchParams",
+    "AirbnbSearchResult",
     "Airport",
     # Flight schemas
     "AirportSearchRequest",

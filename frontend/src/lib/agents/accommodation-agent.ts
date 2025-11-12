@@ -16,8 +16,8 @@ import { buildGuardedTool } from "@/lib/agents/guarded-tool";
 import { buildRateLimit } from "@/lib/ratelimit/config";
 import { toolRegistry } from "@/lib/tools";
 import { searchAccommodationsInputSchema } from "@/lib/tools/accommodations";
+import { lookupPoiInputSchema } from "@/lib/tools/google-places";
 import { geocodeInputSchema } from "@/lib/tools/maps";
-import { lookupPoiInputSchema } from "@/lib/tools/opentripmap";
 import { buildAccommodationPrompt } from "@/prompts/agents";
 import type { AccommodationSearchRequest } from "@/schemas/agents";
 

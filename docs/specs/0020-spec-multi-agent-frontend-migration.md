@@ -44,7 +44,7 @@
 
 ### P4 – Provider Expansion & Enhancements
 
-- **OpenTripMap Tool**: `frontend/src/lib/tools/opentripmap.ts` calling `/places` endpoints with caching (per provider TOS allowing caching).
+- **OpenTripMap Tool**: `frontend/src/lib/tools/opentripmap.ts` calling `/places` endpoints with caching (per provider TOS allowing caching). Uses Google Maps Geocoding API for destination-based lookups with result caching.
 - **GeoSure/Travel Advisory Tool**: `frontend/src/lib/tools/travel-advisory.ts` retrieving safety scores (fallback to GeoSure API or successor).
 - **Integration**: Destination, itinerary, and budget agents consume these tools for improved recommendations; UI displays safety badges.
 

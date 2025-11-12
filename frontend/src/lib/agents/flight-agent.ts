@@ -16,8 +16,8 @@ import { buildGuardedTool } from "@/lib/agents/guarded-tool";
 import { buildRateLimit } from "@/lib/ratelimit/config";
 import { toolRegistry } from "@/lib/tools";
 import { searchFlightsInputSchema } from "@/lib/tools/flights";
+import { lookupPoiInputSchema } from "@/lib/tools/google-places";
 import { distanceMatrixInputSchema, geocodeInputSchema } from "@/lib/tools/maps";
-import { lookupPoiInputSchema } from "@/lib/tools/opentripmap";
 import { buildFlightPrompt } from "@/prompts/agents";
 import type { FlightSearchRequest } from "@/schemas/agents";
 

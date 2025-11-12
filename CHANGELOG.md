@@ -78,16 +78,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Rehype harden test stub to isolate ESM/CJS packaging differences: `frontend/src/test/mocks/rehype-harden.ts` (aliased in Vitest config)
 
 - Travel Planning tools (AI SDK v6, TypeScript):
-  - New server-only tools under `frontend/src/lib/tools/planning.ts`:
-    - `createTravelPlan`, `updateTravelPlan`, `combineSearchResults`, `saveTravelPlan`, `deleteTravelPlan`.
-  - Canonical Zod schema for persisted plans: `frontend/src/lib/tools/planning.schema.ts`.
-  - Upstash Redis persistence (keys `travel_plan:{planId}`) with TTLs: 7d default; 30d for finalized plans.
-  - Best‑effort Supabase memory logging for plan lifecycle events.
-  - Chat stream now injects authenticated `userId` into planning tools; non‑stream handler exposes the same tools with user injection.
-  - Unit tests extended for schema round‑trip, rate limits, delete, and Redis unavailability: `frontend/src/lib/tools/__tests__/planning.test.ts`.
-  - Shared tooling utilities:
-    - `frontend/src/lib/tools/constants.ts` centralizes TTL and rate limits.
-    - `frontend/src/lib/tools/injection.ts` provides `wrapToolsWithUserId()` for safe tool input injection.
+  - Server-only tools: `createTravelPlan`, `updateTravelPlan`, `combineSearchResults`, `saveTravelPlan`, `deleteTravelPlan` in `frontend/src/lib/tools/planning.ts`.
+  - Zod schema for persisted plans: `frontend/src/lib/tools/planning.schema.ts` with camelCase fields.
+  - Upstash Redis persistence: keys `travel_plan:{planId}` with 7d default TTL, 30d for finalized plans.
+  - User injection: `wrapToolsWithUserId()` in `frontend/src/lib/tools/injection.ts` for authenticated tool calls.
+  - Rate limits: create 20/day per user; update 60/min per plan.
+  - Tests: `frontend/src/lib/tools/__tests__/planning.test.ts` covers schema validation, Redis fallbacks, rate limits.
 
 - Agent endpoints (P1-P4 complete):
   - `frontend/src/app/api/agents/flights/route.ts` (P1)
@@ -103,7 +99,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `frontend/src/lib/ratelimit/config.ts` with `buildRateLimit(workflow, identifier)` factory replacing per-workflow builders
   - All agents use unified rate limit config with consistent 1-minute windows
 - Provider tools:
-  - `frontend/src/lib/tools/opentripmap.ts` for POI lookups (replaces `poi-lookup.ts`)
+  - `frontend/src/lib/tools/google-places.ts` for POI lookups using Google Places API (New). Uses Google Maps Geocoding API for destination-based lookups with 30-day max cached results per policy.
   - `frontend/src/lib/tools/travel-advisory.ts` for GeoSure safety scores
 - UI components for agent results:
   - `BudgetChart` for budget planning visualization
@@ -113,7 +109,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tests for agents and tools:
   - Route validation and happy-path tests under `frontend/src/app/api/agents/**/__tests__/`
   - Rate limit builder tests: `frontend/src/lib/ratelimit/__tests__/builders.test.ts`
-  - OpenTripMap and Travel Advisory tool tests with input validation
+  - Google Places and Travel Advisory tool tests with input validation
   - Guardrail telemetry tests: `frontend/src/lib/agents/__tests__/runtime.test.ts`
   - E2E Playwright tests: `frontend/e2e/agents-budget-memory.spec.ts`
 - Operator runbook: `docs/operators/agent-frontend.md` updated with all endpoints and env vars
@@ -163,11 +159,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rate limit configuration centralized and DRY optimized
   - Removed per-workflow builder files (`ratelimit/flight.ts`, `ratelimit/accommodation.ts`, `ratelimit/budget.ts`, `ratelimit/memory.ts`, `ratelimit/destinations.ts`, `ratelimit/itineraries.ts`)
   - Consolidated into `frontend/src/lib/ratelimit/config.ts` with `RATE_LIMIT_CONFIG` map and `buildRateLimit()` factory
-- Legacy POI lookup tool removed and replaced with OpenTripMap integration
-  - Deleted `frontend/src/lib/tools/poi-lookup.ts` and test suite
-  - All imports updated to use `frontend/src/lib/tools/opentripmap.ts` directly
+- Legacy POI lookup tool removed and replaced with Google Places API integration
+  - Deleted `frontend/src/lib/tools/opentripmap.ts` and test suite
+  - All imports updated to use `frontend/src/lib/tools/google-places.ts` directly
+  - Google Places tool implements Google Maps geocoding for destination strings: `geocodeDestinationWithGoogleMaps()` function with normalized cache keys (`googleplaces:geocode:{destination}`), 30-day max TTL per policy
 - Environment variables added to `.env.example`:
-  - `OPENTRIPMAP_API_KEY`, `GEOSURE_API_KEY`, `AI_GATEWAY_API_KEY`, `AI_GATEWAY_URL`
+  - `GOOGLE_MAPS_SERVER_API_KEY`, `NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY`, `GEOSURE_API_KEY`, `AI_GATEWAY_API_KEY`, `AI_GATEWAY_URL`
   - `OPENWEATHER_API_KEY`, `DUFFEL_API_KEY`, `ACCOM_SEARCH_URL`, `ACCOM_SEARCH_TOKEN`, `AIRBNB_MCP_URL`, `AIRBNB_MCP_API_KEY`
 - Specs updated for full frontend cutover
   - `docs/specs/0019-spec-hybrid-destination-itinerary-agents.md`
@@ -210,7 +207,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Token budget utilities release WASM tokenizer resources without `any` casts (`frontend/src/lib/tokens/budget.ts`).
-- Token budget utilities release WASM tokenizer resources without `any` casts (`frontend/src/lib/tokens/budget.ts`).
+- Google Places POI lookup now supports destination-only queries via Google Maps geocoding: uses `geocodeDestinationWithGoogleMaps()` implementation with Google Maps Geocoding API, added geocoding result caching (30-day max TTL per policy), normalized cache keys for consistent lookups (`frontend/src/lib/tools/google-places.ts`).
 - Date formatting is now timezone-agnostic for `YYYY-MM-DD` inputs to avoid CI/system TZ drift; ISO datetimes format in UTC (`frontend/src/lib/schema-adapters.ts`, tests updated in `frontend/src/lib/__tests__/schema-adapters.test.ts`).
 - Stabilized long‑prompt AI stream test by bounding tokenizer work and retaining accuracy:
   - Introduced a safe character threshold for WASM tokenization with heuristic fallback; small/normal inputs still use `js-tiktoken` and tests validate encodings (`frontend/src/lib/tokens/budget.ts`, `frontend/src/lib/tokens/__tests__/budget.test.ts`).
@@ -385,7 +382,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Centralized Supabase typed insert/update via `src/lib/supabase/typed-helpers.ts`; updated hooks to use helpers
 - Chat UI prefers `message.parts` when present; removed ad-hoc adapter in `use-chat-ai` sync
 - Trip store now routes create/update through the typed repository; removed direct Supabase writes from store
-- Rebuilt `tripsage.agents.base.BaseAgent` around LangGraph orchestration with ChatOpenAI fallback execution, memory hydration, and periodic conversation summarization
+- Removed Python agents and orchestration: `tripsage.agents`, `tripsage.orchestration`, and `tripsage.tools` directories deleted as functionality migrated to TypeScript AI SDK v6 in frontend
 - Simplified `ChatAgent` to delegate to the new base workflow while exposing async history/clearing helpers backed by `ChatService` with local fallbacks
 - Flight agent result formatting updated to use canonical offer fields (airlines, outbound_segments, currency/price)
 - Documentation (developers/operators/architecture) updated to \"Duffel API v2 via thin provider,\" headers and env var usage modernized, and examples aligned to canonical mapping

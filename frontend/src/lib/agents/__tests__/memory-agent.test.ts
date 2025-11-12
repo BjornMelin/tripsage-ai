@@ -16,10 +16,13 @@ vi.mock("@/lib/redis", () => ({
   getRedis: () => undefined,
 }));
 
-// Provide a strict schema and a spy-able execute for the memory tool
-const executeSpy = vi.fn().mockImplementation(() => {
-  return { createdAt: new Date().toISOString(), id: Math.floor(Math.random() * 1000) };
-});
+// Hoist spies so they are available to vi.mock factory
+const hoisted = vi.hoisted(() => ({
+  executeSpy: vi.fn().mockImplementation(() => ({
+    createdAt: new Date().toISOString(),
+    id: Math.floor(Math.random() * 1000),
+  })),
+}));
 
 // Keep actual schema exports from the real module (needed by guardrails)
 vi.mock("@/lib/tools/memory", async () => {
@@ -34,7 +37,7 @@ vi.mock("@/lib/tools", () => ({
   toolRegistry: {
     addConversationMemory: {
       description: "mocked addConversationMemory",
-      execute: executeSpy,
+      execute: hoisted.executeSpy,
       inputSchema: z.object({ category: z.string().optional(), content: z.string() }),
     },
   },
@@ -51,17 +54,18 @@ describe("persistMemoryRecords", () => {
 
     const out = await persistMemoryRecords("user-123", req);
     expect(out.successes.length + out.failures.length).toBe(2);
-    expect(executeSpy).toHaveBeenCalledTimes(2);
-    expect(executeSpy).toHaveBeenNthCalledWith(
+    expect(hoisted.executeSpy).toHaveBeenCalledTimes(2);
+    expect(hoisted.executeSpy).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
         category: "user_preference",
         content: "I prefer window seats",
       })
     );
-    expect(executeSpy).toHaveBeenNthCalledWith(2, {
-      content: "Allergies: peanuts",
-    });
+    expect(hoisted.executeSpy).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ content: "Allergies: peanuts" })
+    );
   });
 
   it("rejects large batches (>25)", async () => {

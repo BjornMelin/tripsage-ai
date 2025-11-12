@@ -6,7 +6,7 @@ describe("parseSchemaCard", () => {
     const text = `\`\`\`json
 {
   "schemaVersion": "flight.v1",
-  "offers": []
+  "itineraries": []
 }
 \`\`\``;
     const result = parseSchemaCard(text);
@@ -17,7 +17,7 @@ describe("parseSchemaCard", () => {
   it("should parse plain JSON with stay schema", () => {
     const text = `{
       "schemaVersion": "stay.v1",
-      "listings": []
+      "stays": []
     }`;
     const result = parseSchemaCard(text);
     expect(result).not.toBeNull();
@@ -28,7 +28,7 @@ describe("parseSchemaCard", () => {
     const text = `\`\`\`
 {
   "schemaVersion": "budget.v1",
-  "breakdown": {}
+  "allocations": []
 }
 \`\`\``;
     const result = parseSchemaCard(text);
@@ -69,6 +69,7 @@ describe("parseSchemaCard", () => {
   it("should parse itinerary schema", () => {
     const text = `{
       "schemaVersion": "itin.v1",
+      "destination": "Tokyo",
       "days": []
     }`;
     const result = parseSchemaCard(text);
@@ -80,7 +81,7 @@ describe("parseSchemaCard", () => {
     const text = `\`\`\`json
     {
       "schemaVersion": "flight.v1",
-      "offers": []
+      "itineraries": []
     }
     \`\`\``;
     const result = parseSchemaCard(text);

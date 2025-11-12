@@ -562,6 +562,7 @@ const searchTool = tool({
 - `frontend/src/lib/tools/accommodations.ts` - Accommodation search/booking tools
 - `frontend/src/lib/tools/planning.ts` - Travel planning tools
 - `frontend/src/lib/tools/memory.ts` - Memory and conversation tools
+- `frontend/src/lib/tools/google-places.ts` - POI lookup (Google Places API New + Google Maps geocoding)
 - `frontend/src/lib/tools/approvals.ts` - Approval flow utilities
 
 ## Testing & mocking guidelines

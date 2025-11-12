@@ -24,8 +24,6 @@ from tripsage_core.utils.logging_utils import get_logger
 
 
 if TYPE_CHECKING:  # pragma: no cover - import only for type checking
-    from tripsage.orchestration.graph import TripSageOrchestrator
-    from tripsage.orchestration.memory_bridge import SessionMemoryBridge
     from tripsage_core.services.airbnb_mcp import AirbnbMCP
     from tripsage_core.services.business.accommodation_service import (
         AccommodationService,
@@ -93,9 +91,7 @@ class AppServiceContainer:
     supabase_admin_client: Any | None = None
     supabase_public_client: Any | None = None
 
-    # Orchestration lifecycle helpers
-    checkpoint_service: Any | None = None
-    memory_bridge: SessionMemoryBridge | None = None
+    # MCP service (used by accommodation service)
     mcp_service: AirbnbMCP | None = None
 
     def get_required_service(
@@ -243,23 +239,13 @@ async def _setup_business_services(
     }
 
 
-async def _setup_orchestration_helpers(
-    memory_service: MemoryService,
-) -> dict[str, Any]:
-    """Initialise orchestration helpers."""
-    from tripsage.orchestration.checkpoint_service import SupabaseCheckpointService
-    from tripsage.orchestration.memory_bridge import SessionMemoryBridge
+async def _setup_mcp_service() -> AirbnbMCP:
+    """Initialise MCP service for accommodation searches."""
     from tripsage_core.services.airbnb_mcp import AirbnbMCP
 
-    checkpoint_service = SupabaseCheckpointService()
-    memory_bridge = SessionMemoryBridge(memory_service=memory_service)
     mcp_service = AirbnbMCP()
     await mcp_service.initialize()
-    return {
-        "checkpoint_service": checkpoint_service,
-        "memory_bridge": memory_bridge,
-        "mcp_service": mcp_service,
-    }
+    return mcp_service
 
 
 def _build_service_container(
@@ -267,7 +253,7 @@ def _build_service_container(
     business: dict[str, Any],
     infrastructure: tuple[DatabaseService, CacheService],
     external: tuple[GoogleMapsService, DocumentAnalyzer, WebCrawlService],
-    orchestration: dict[str, Any],
+    mcp_service: AirbnbMCP,
 ) -> AppServiceContainer:
     """Assemble the AppServiceContainer with the provided components."""
     database_service, cache_service = infrastructure
@@ -294,9 +280,7 @@ def _build_service_container(
         webcrawl_service=webcrawl_service,
         cache_service=cache_service,
         database_service=database_service,
-        checkpoint_service=orchestration["checkpoint_service"],
-        memory_bridge=orchestration["memory_bridge"],
-        mcp_service=orchestration["mcp_service"],
+        mcp_service=mcp_service,
     )
 
 
@@ -308,7 +292,6 @@ def _attach_services_to_app_state(
     cache_service: CacheService,
     google_maps_service: GoogleMapsService,
     mcp_service: AirbnbMCP,
-    orchestrator: TripSageOrchestrator,
 ) -> None:
     """Attach commonly accessed services to ``app.state``."""
     app.state.services = services
@@ -316,16 +299,14 @@ def _attach_services_to_app_state(
     app.state.google_maps_service = google_maps_service
     app.state.database_service = database_service
     app.state.mcp_service = mcp_service
-    app.state.orchestrator = orchestrator
     app.state.supabase_admin_client = services.supabase_admin_client
     app.state.supabase_public_client = services.supabase_public_client
 
 
 async def initialise_app_state(
     app: FastAPI,
-) -> tuple[AppServiceContainer, TripSageOrchestrator]:
+) -> AppServiceContainer:
     """Initialise application services and attach them to app.state."""
-    from tripsage.orchestration.graph import TripSageOrchestrator
     from tripsage_core.config import get_settings
 
     settings = get_settings()
@@ -339,22 +320,18 @@ async def initialise_app_state(
         google_maps_service=external[0],
         settings=settings,
     )
-    orchestration = await _setup_orchestration_helpers(
-        memory_service=business["memory_service"]
-    )
+    mcp_service = await _setup_mcp_service()
 
     services = _build_service_container(
         business=business,
         infrastructure=infrastructure,
         external=external,
-        orchestration=orchestration,
+        mcp_service=mcp_service,
     )
 
     # Warm Supabase clients so downstream dependencies can reuse cached instances
     services.supabase_admin_client = await get_admin_client()
     services.supabase_public_client = await get_public_client()
-
-    orchestrator = TripSageOrchestrator(services=services)
 
     _attach_services_to_app_state(
         app=app,
@@ -362,11 +339,10 @@ async def initialise_app_state(
         database_service=infrastructure[0],
         cache_service=infrastructure[1],
         google_maps_service=external[0],
-        mcp_service=orchestration["mcp_service"],
-        orchestrator=orchestrator,
+        mcp_service=mcp_service,
     )
 
-    return services, orchestrator
+    return services
 
 
 async def shutdown_app_state(app: FastAPI) -> None:
@@ -395,7 +371,6 @@ async def shutdown_app_state(app: FastAPI) -> None:
         "google_maps_service",
         "database_service",
         "mcp_service",
-        "orchestrator",
     ):
         if hasattr(app.state, attr):
             delattr(app.state, attr)

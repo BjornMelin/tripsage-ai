@@ -70,7 +70,7 @@ async def lifespan(app: FastAPI):
     Args:
         app: The FastAPI application
     """
-    services, _orchestrator = await initialise_app_state(app)
+    services = await initialise_app_state(app)
 
     # Instantiate shared agents after services are ready
     # ChatAgent removed; chat features are implemented in Next.js via AI SDK.

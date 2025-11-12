@@ -24,7 +24,7 @@ All streaming endpoints return UI-compatible responses via `toUIMessageStreamRes
   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - Model provider BYOK/Gateway: configured in `frontend/src/lib/providers/registry.ts`.
 - Flights provider (Duffel): prefer `DUFFEL_ACCESS_TOKEN` (fallback `DUFFEL_API_KEY`).
-- OpenTripMap POI provider (optional): `OPENTRIPMAP_API_KEY` for POI lookups.
+- Google Places API (required for POI lookups): `GOOGLE_MAPS_SERVER_API_KEY` for Places and Geocoding APIs. Browser key: `NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY` for Maps JS.
 - GeoSure safety provider (optional): `GEOSURE_API_KEY` for travel advisories.
 - Vercel AI Gateway (optional): `AI_GATEWAY_API_KEY` and `AI_GATEWAY_URL` for unified routing.
 - Accommodation search (optional): `ACCOM_SEARCH_URL`/`ACCOM_SEARCH_TOKEN` or `AIRBNB_MCP_URL`/`AIRBNB_MCP_API_KEY`.

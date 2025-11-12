@@ -29,7 +29,7 @@ Adopt a single, final implementation:
 ## Migration
 
 - No back-compat layer is retained. MCP memory stubs are removed for add/search routes.
-- Existing callers importing `ConversationMessage` continue to work; the type re-exports from `tripsage.tools.models`.
+- Note: `ConversationMessage` and other memory models were previously in `tripsage.tools.models` but have been removed as Python agents/tools were migrated to TypeScript AI SDK v6.
 
 ## Alternatives Considered
 

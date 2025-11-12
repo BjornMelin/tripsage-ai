@@ -49,6 +49,23 @@ This spec documents the Zod schemas and expected outputs for the migrated tools.
 - addConversationMemory: `{ content: string, category?: string }` → `{ id, createdAt }`
 - searchUserMemories: `{ query: string, limit?: 1..20 }` → recent memory rows
 
+## POI Lookup (Google Places)
+
+- File: `frontend/src/lib/tools/google-places.ts`
+- lookupPoiContext: `{ destination?: string, lat?: number, lon?: number, radiusMeters?: number, query?: string }` → `{ pois: Array<{placeId, name, lat, lon, types, rating, ...}>, provider: "googleplaces"|"stub" }`
+- Uses Google Places API (New) Text Search with field masks for POI data
+- Uses Google Maps Geocoding API for destination-based lookups with cached results (30-day max TTL per policy, key: `googleplaces:geocode:{normalizedDestination}`)
+- Requires `GOOGLE_MAPS_SERVER_API_KEY` for Places and Geocoding APIs
+
+## Planning (Redis)
+
+- File: `frontend/src/lib/tools/planning.ts`
+- createTravelPlan: `{ title, destinations, startDate, endDate, travelers, budget, preferences? }` → `{ planId, ... }`
+- updateTravelPlan: `{ planId, ...partial }` → updated plan
+- combineSearchResults: `{ planId, flights?, accommodations?, activities? }` → combined results
+- saveTravelPlan: `{ planId }` → persisted plan
+- deleteTravelPlan: `{ planId }` → deletion confirmation
+
 ## Execution Context & Approvals
 
 - Types: `frontend/src/lib/tools/types.ts`

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { z } from "zod";
 
@@ -300,6 +300,8 @@ describe("runWithGuardrails", () => {
           },
           { input: "test" },
           async () => {
+            // Ensure async function includes an await for Biome rule compliance
+            await Promise.resolve();
             throw error;
           }
         )

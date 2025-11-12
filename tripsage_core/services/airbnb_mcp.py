@@ -7,10 +7,12 @@ import logging
 from collections.abc import Awaitable, Callable
 from typing import Any, Final
 
-from tripsage.tools.models.accommodations import AirbnbSearchParams
 from tripsage_core.clients.airbnb_mcp_client import AirbnbMCPClient
 from tripsage_core.config import get_settings
 from tripsage_core.exceptions import CoreServiceError
+from tripsage_core.models.schemas_common.accommodation_schemas import (
+    AirbnbSearchParams,
+)
 
 
 logger = logging.getLogger(__name__)
