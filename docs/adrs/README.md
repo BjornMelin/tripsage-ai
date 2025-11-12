@@ -23,7 +23,7 @@ An Architecture Decision Record (ADR) is a document that captures an important a
 
 | ADR | Title | Status | Date |
 |-----|-------|--------|------|
-| [ADR-0001](adr-0001-langgraph-orchestration.md) | Use LangGraph for Agent Orchestration | Accepted | 2025-06-17 |
+| [ADR-0001](adr-0001-langgraph-orchestration.md) | Use LangGraph for Agent Orchestration | Superseded | 2025-06-17 |
 | [ADR-0002](adr-0002-supabase-platform.md) | Adopt Supabase as Primary Database and Auth Platform | Accepted | 2025-06-17 |
 | [ADR-0003](adr-0003-upstash-redis.md) | Use Upstash Redis (HTTP) for Caching | Accepted | 2025-10-22 |
 | [ADR-0004](adr-0004-fastapi-backend.md) | FastAPI as Backend Framework | Accepted | 2025-06-17 |
@@ -32,7 +32,7 @@ An Architecture Decision Record (ADR) is a document that captures an important a
 | [ADR-0007](adr-0007-testing-strategy.md) | Modern Testing Strategy with Vitest and Playwright | Accepted | 2025-06-17 |
 | [ADR-0008](adr-0008-pydantic-v2-migration.md) | Migrate to Pydantic v2 | Accepted | 2025-06-17 |
 | [ADR-0009](adr-0009-consolidate-ci-to-two-workflows-and-remove-custom-composites.md) | Consolidate CI to two workflows and remove custom composites | Proposed | 2025-10-18 |
-| [ADR-0010](adr-0010-memory-facade-final.md) | Memory Facade Final | Accepted | 2025-10-21 |
+| [ADR-0010](adr-0010-memory-facade-final.md) | Memory Facade Final | Superseded | 2025-10-21 |
 | [ADR-0011](adr-0011-tenacity-only-resilience.md) | Tenacity-only Resilience | Accepted | 2025-10-21 |
 | [ADR-0012](adr-0012-flights-canonical-dto.md) | Flights Canonical DTO | Accepted | 2025-10-21 |
 | [ADR-0013](adr-0013-adopt-next-js-16-proxy-and-async-apis-deprecate-middleware.md) | Adopt Next.js 16 proxy and async APIs; deprecate middleware | Accepted | 2025-10-23 |
@@ -86,9 +86,7 @@ An Architecture Decision Record (ADR) is a document that captures an important a
 
 ### Backend
 
-- ADR-0001: Use LangGraph for Agent Orchestration
 - ADR-0004: FastAPI as Backend Framework
-- ADR-0010: Memory Facade Final
 - ADR-0011: Tenacity-only Resilience
 - ADR-0019: Canonicalize chat service via FastAPI backend
 - ADR-0021: SlowAPI + Aiolimiter Migration (Historic)

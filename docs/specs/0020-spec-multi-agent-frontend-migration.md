@@ -10,7 +10,7 @@
 
 ## Goals
 
-- Migrate the remaining LangGraph agents (flight, accommodation, budget, memory update, router/error recovery) into Next.js Route Handlers powered by the hybrid ToolLoopAgent framework defined in SPEC-0019.
+- Migrate the remaining TypeScript AI SDK v6 agents (flight, accommodation, budget, memory update, router/error recovery) into Next.js Route Handlers powered by the hybrid ToolLoopAgent framework defined in SPEC-0019.
 - Adopt a framework-first wave rollout (per ADR-0039) that hardens shared infrastructure before shipping workflow waves.
 - Integrate additional providers that unlock richer responses: OpenTripMap POI API for attractions data and GeoSure/Travel Advisory safety scores for contextual advisories.
 
@@ -26,9 +26,9 @@
 ### P1 – Flight & Accommodation Agents (Completed)
 
 - **Route Handlers**: `/api/agents/flights/route.ts`, `/api/agents/accommodations/route.ts` streaming ToolLoopAgent responses.
-- **Tools**: Reuse existing `search_flights`, `search_accommodations`, plus new OpenTripMap POI lookup for nearby lodging context.
+- **Tools**: Reuse existing TypeScript `searchFlights`, `searchAccommodations`, plus new OpenTripMap POI lookup for nearby lodging context.
 - **UI**: AI Elements cards summarizing flight options (price, cabin, airline) and accommodation results.
-- **Validation**: Parity tests comparing Python LangGraph responses vs. new agents on recorded scenarios; telemetry dashboard for tool success >95% before traffic shift.
+- **Validation**: Integration tests verifying TypeScript AI SDK v6 tool success >95%; telemetry dashboard for tool execution monitoring.
 
 ### P2 – Budget & Memory Agents
 
@@ -40,7 +40,7 @@
 
 - **Router**: Implement TypeScript intent router that uses AI SDK `generateObject` to classify user requests and set `currentAgent` before hitting specific route handlers.
 - **Error Recovery**: Frontend ToolLoop handles fallback messaging and escalations.
-- **Removal**: Once stable, delete LangGraph graph builder and orchestrator wiring.
+- **Note**: Python LangGraph orchestration and agents have been completely removed; all functionality now runs in TypeScript AI SDK v6.
 
 ### P4 – Provider Expansion & Enhancements
 

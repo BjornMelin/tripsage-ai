@@ -16,7 +16,7 @@ Flight-related data models and flows had diverged across API, business service, 
 - Update the business `FlightService` to produce and consume only canonical DTOs, consolidating search/booking/cancellation logic behind a single boundary.
 - Update the API schemas (`tripsage/api/schemas/flights.py`) to re-export canonical models and common request types, so the public API surface matches the canonical contract.
 - Align the router (`tripsage/api/routers/flights.py`) to return canonical response bodies and to translate `Core*Error` exceptions into consistent HTTP errors (422 validation, 404 not found, 502 upstream failures).
-- Update the agent node to call `FlightService` directly (no divergent tool path) and format results using canonical fields.
+- Update the TypeScript AI SDK v6 flight tools to call `FlightService` directly and format results using canonical fields.
 - Remove deprecated/duplicated code:
   - Deleted legacy Duffel HTTP client and tests.
   - Removed legacy flight models and re-export shims.
