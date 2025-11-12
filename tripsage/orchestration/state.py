@@ -159,7 +159,6 @@ class TravelPlanningState(TypedDict):
     accommodation_searches: list[dict[str, Any]]  # List of SearchResult dicts
     activity_searches: list[dict[str, Any]]  # List of SearchResult dicts
     budget_analyses: list[dict[str, Any]]  # Budget analysis records
-    destination_research: list[dict[str, Any]]  # Destination research outputs
     itineraries: list[dict[str, Any]]  # Planned itineraries
 
     # Booking progress tracking
@@ -220,7 +219,6 @@ def create_initial_state(
         accommodation_searches=[],
         activity_searches=[],
         budget_analyses=[],
-        destination_research=[],
         itineraries=[],
         booking_progress=None,
         # Agent coordination (starts with router)

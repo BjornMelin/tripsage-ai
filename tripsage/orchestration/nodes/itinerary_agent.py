@@ -245,7 +245,6 @@ class ItineraryAgentNode(BaseAgentNode):
 
         Context from conversation:
         - Previous itineraries: {len(state.get("itineraries", []))}
-        - Destination research: {len(state.get("destination_research", []))}
         - Flight searches: {len(state.get("flight_searches", []))}
         - Accommodation searches: {len(state.get("accommodation_searches", []))}
         - Budget analyses: {len(state.get("budget_analyses", []))}

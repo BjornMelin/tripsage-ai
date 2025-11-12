@@ -111,12 +111,6 @@ class ServiceFactory:
             )
 
             instance = GoogleMapsService()
-        elif service_name == "weather":
-            from tripsage_core.services.external_apis.weather_service import (
-                WeatherService,
-            )
-
-            instance = WeatherService()
         elif service_name == "airbnb":
             from tripsage_core.clients.airbnb_mcp_client import AirbnbMCPClient
 
@@ -258,40 +252,6 @@ class HandlerContext:
             return {"directions": [d.model_dump() for d in directions]}
 
         raise ToolCallError(f"Unsupported google_maps method: {method}")
-
-    async def handle_weather(
-        self, method: str, params: dict[str, Any]
-    ) -> dict[str, Any]:
-        """Handle weather service calls."""
-        weather_service: Any = await self.factory.get_service_instance("weather")
-        normalized = normalize_method(
-            method,
-            {
-                "current": "get_current_weather",
-                "current_weather": "get_current_weather",
-                "get_current_weather": "get_current_weather",
-                "forecast": "get_forecast",
-                "get_forecast": "get_forecast",
-            },
-        )
-
-        if normalized == "get_current_weather":
-            weather = await weather_service.get_current_weather(
-                latitude=params.get("lat", 0),
-                longitude=params.get("lon", 0),
-                units=params.get("units", "metric"),
-            )
-            return {"weather": weather}
-
-        if normalized == "get_forecast":
-            forecast = await weather_service.get_forecast(
-                latitude=params.get("lat", 0),
-                longitude=params.get("lon", 0),
-                days=params.get("days", 5),
-            )
-            return {"forecast": forecast}
-
-        raise ToolCallError(f"Unsupported weather method: {method}")
 
     async def handle_airbnb(
         self, method: str, params: dict[str, Any]
@@ -839,20 +799,6 @@ async def validate_maps_params(params: dict[str, Any], method: str) -> list[str]
     return errors
 
 
-async def validate_weather_params(params: dict[str, Any], method: str) -> list[str]:
-    """Validate weather API parameters based on method."""
-    errors: list[str] = []
-
-    has_lat_lon = params.get("lat") is not None and params.get("lon") is not None
-    location = first_param(params, "location")
-    if not has_lat_lon and not location:
-        errors.append(
-            "Either lat/lon pair or location parameter is required for weather"
-        )
-
-    return errors
-
-
 # ============================================================================
 # Formatting Functions
 # ============================================================================
@@ -890,15 +836,4 @@ async def format_maps_results(result: dict[str, Any] | None) -> dict[str, Any]:
         "title": "Location Information",
         "data": data,
         "actions": ["navigate", "save", "share"],
-    }
-
-
-async def format_weather_results(result: dict[str, Any] | None) -> dict[str, Any]:
-    """Format weather API results for chat display."""
-    data: dict[str, Any] = result or {}
-    return {
-        "type": "weather",
-        "title": "Weather Information",
-        "data": data,
-        "actions": ["save", "alert"],
     }

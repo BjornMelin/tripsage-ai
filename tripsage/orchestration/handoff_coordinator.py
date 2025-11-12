@@ -36,7 +36,6 @@ class AgentCapability(str, Enum):
     FLIGHT_SEARCH = "flight_search"
     ACCOMMODATION_SEARCH = "accommodation_search"
     BUDGET_OPTIMIZATION = "budget_optimization"
-    DESTINATION_RESEARCH = "destination_research"
     ITINERARY_PLANNING = "itinerary_planning"
     GENERAL_ASSISTANCE = "general_assistance"
     ERROR_HANDLING = "error_handling"
@@ -95,52 +94,6 @@ class AgentHandoffCoordinator:
     def _initialize_default_rules(self) -> None:
         """Initialize default handoff rules."""
         default_rules = [
-            # Flight-related handoffs
-            HandoffRule(
-                from_agent="general_agent",
-                to_agent="flight_agent",
-                trigger=HandoffTrigger.USER_REQUEST,
-                conditions={
-                    "keywords": [
-                        "flight",
-                        "fly",
-                        "airplane",
-                        "airline",
-                        "departure",
-                        "arrival",
-                    ]
-                },
-                priority=10,
-                context_keys=[
-                    "travel_dates",
-                    "departure_location",
-                    "destination",
-                    "passenger_count",
-                ],
-            ),
-            # Accommodation handoffs
-            HandoffRule(
-                from_agent="general_agent",
-                to_agent="accommodation_agent",
-                trigger=HandoffTrigger.USER_REQUEST,
-                conditions={
-                    "keywords": [
-                        "hotel",
-                        "accommodation",
-                        "stay",
-                        "room",
-                        "booking",
-                        "airbnb",
-                    ]
-                },
-                priority=10,
-                context_keys=[
-                    "travel_dates",
-                    "destination",
-                    "guest_count",
-                    "accommodation_preferences",
-                ],
-            ),
             # Budget optimization handoffs
             HandoffRule(
                 from_agent="*",  # Any agent
@@ -162,29 +115,6 @@ class AgentHandoffCoordinator:
                     "budget_constraints",
                     "total_budget",
                     "expense_categories",
-                ],
-            ),
-            # Destination research handoffs
-            HandoffRule(
-                from_agent="general_agent",
-                to_agent="destination_research_agent",
-                trigger=HandoffTrigger.USER_REQUEST,
-                conditions={
-                    "keywords": [
-                        "destination",
-                        "place",
-                        "where",
-                        "attractions",
-                        "things to do",
-                        "research",
-                    ]
-                },
-                priority=9,
-                context_keys=[
-                    "destination",
-                    "travel_dates",
-                    "interests",
-                    "travel_style",
                 ],
             ),
             # Itinerary planning handoffs
@@ -218,17 +148,8 @@ class AgentHandoffCoordinator:
     def _initialize_agent_capabilities(self) -> None:
         """Initialize agent capability mappings."""
         self.agent_capabilities = {
-            "flight_agent": {
-                AgentCapability.FLIGHT_SEARCH,
-            },
-            "accommodation_agent": {
-                AgentCapability.ACCOMMODATION_SEARCH,
-            },
             "budget_agent": {
                 AgentCapability.BUDGET_OPTIMIZATION,
-            },
-            "destination_research_agent": {
-                AgentCapability.DESTINATION_RESEARCH,
             },
             "itinerary_agent": {
                 AgentCapability.ITINERARY_PLANNING,

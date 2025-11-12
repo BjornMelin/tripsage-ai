@@ -245,11 +245,8 @@ class ErrorRecoveryNode(BaseAgentNode):
         """
         # Define fallback hierarchy
         fallback_mapping = {
-            "flight_agent": "general_agent",
-            "accommodation_agent": "general_agent",
             "budget_agent": "general_agent",
-            "itinerary_agent": "destination_research_agent",
-            "destination_research_agent": "general_agent",
+            "itinerary_agent": "general_agent",
             "general_agent": "error_recovery",
         }
 
@@ -268,11 +265,8 @@ class ErrorRecoveryNode(BaseAgentNode):
             User-friendly fallback message
         """
         agent_descriptions = {
-            "flight_agent": "flight search",
-            "accommodation_agent": "accommodation search",
             "budget_agent": "budget planning",
             "itinerary_agent": "itinerary planning",
-            "destination_research_agent": "destination research",
             "general_agent": "general travel assistance",
             "error_recovery": "error recovery support",
         }

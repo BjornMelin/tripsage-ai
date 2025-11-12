@@ -34,11 +34,9 @@ class ToolCallRequest(BaseModel):
             "duffel_flights",
             "airbnb",
             "google_maps",
-            "weather",
             "supabase",
             "memory",
             "time",
-            "firecrawl",
             "linkup",
         ]
         if v not in allowed_services:

@@ -23,7 +23,6 @@ from .playwright_service import (
     get_playwright_service,
 )
 from .time_service import TimeService, close_time_service, get_time_service
-from .weather_service import WeatherService
 from .webcrawl_service import (
     WebCrawlService,
 )
@@ -35,7 +34,6 @@ __all__ = [
     "GoogleMapsService",
     "PlaywrightService",
     "TimeService",
-    "WeatherService",
     "WebCrawlService",
     "close_document_analyzer",
     "close_playwright_service",

@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Flight and accommodation search result cards: `FlightOfferCard` and `StayCard` components in `frontend/src/components/ai-elements/` rendering structured results with itineraries, pricing, and source citations.
+- Chat message JSON parsing: `ChatMessageItem` detects and validates `flight.v1` and `stay.v1` schema JSON in text parts, rendering cards instead of raw text.
+- Agent routing in chat transport: `DefaultChatTransport.prepareSendMessagesRequest` routes messages with `metadata.agent` to `/api/agents/flights` or `/api/agents/accommodations`; falls back to `/api/chat/stream` for general chat.
+- Quick Actions metadata: Flight and accommodation quick actions send Zod-shaped requests via message metadata (`metadata.agent` and `metadata.request`).
+- Gateway fallback in provider registry: `resolveProvider` falls back to Vercel AI Gateway when no BYOK keys found; BYOK checked first, Gateway used as default for non-BYOK users.
+- Web search batch tool (multi‑query): `frontend/src/lib/tools/web-search-batch.ts` with bounded concurrency, per‑item results, and optional top‑level RL.
+- OpenTelemetry spans for web search tools using `withTelemetrySpan`:
+  - `tool.web_search` (attributes: categoriesCount, sourcesCount, hasLocation, hasTbs, fresh, limit)
+  - `tool.web_search_batch` (attributes: count, fresh)
+- Web search tests:
+  - Telemetry and rate‑limit wiring for single search: `frontend/src/lib/tools/__tests__/web-search.test.ts`
+  - Batch behavior and per‑query error handling: `frontend/src/lib/tools/__tests__/web-search-batch.test.ts`
+- Types for web search params/results: `frontend/src/types/web-search.ts`.
+- Strict structured output validation for web search tools: Zod schemas (`WEB_SEARCH_OUTPUT_SCHEMA`, `WEB_SEARCH_BATCH_OUTPUT_SCHEMA`) in `frontend/src/types/web-search.ts`; outputs validated at execution boundaries with `.strict()`.
+- Chat UI shows published time when available on search cards: `frontend/src/app/chat/page.tsx`.
 - Request-scoped Upstash limiter builder shared by BYOK routes: `frontend/src/app/api/keys/_rate-limiter.ts` plus span attribute helper `frontend/src/app/api/keys/_telemetry.ts`.
 - Minimal OpenTelemetry span utility with attribute redaction and unit tests: `frontend/src/lib/telemetry/span.ts` and `frontend/src/lib/telemetry/__tests__/span.test.ts`.
 - Dependency: `@opentelemetry/api@1.9.0` (frontend) powering BYOK telemetry spans.
@@ -62,11 +77,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Testing support stubs and helpers:
   - Rehype harden test stub to isolate ESM/CJS packaging differences: `frontend/src/test/mocks/rehype-harden.ts` (aliased in Vitest config)
 
+- Travel Planning tools (AI SDK v6, TypeScript):
+  - New server-only tools under `frontend/src/lib/tools/planning.ts`:
+    - `createTravelPlan`, `updateTravelPlan`, `combineSearchResults`, `saveTravelPlan`, `deleteTravelPlan`.
+  - Canonical Zod schema for persisted plans: `frontend/src/lib/tools/planning.schema.ts`.
+  - Upstash Redis persistence (keys `travel_plan:{planId}`) with TTLs: 7d default; 30d for finalized plans.
+  - Best‑effort Supabase memory logging for plan lifecycle events.
+  - Chat stream now injects authenticated `userId` into planning tools; non‑stream handler exposes the same tools with user injection.
+  - Unit tests extended for schema round‑trip, rate limits, delete, and Redis unavailability: `frontend/src/lib/tools/__tests__/planning.test.ts`.
+  - Shared tooling utilities:
+    - `frontend/src/lib/tools/constants.ts` centralizes TTL and rate limits.
+    - `frontend/src/lib/tools/injection.ts` provides `wrapToolsWithUserId()` for safe tool input injection.
+
+- Frontend-only agent endpoints (App Router):
+  - `frontend/src/app/api/agents/flights/route.ts`
+  - `frontend/src/app/api/agents/accommodations/route.ts`
+- Agent orchestrators (AI SDK v6 `streamText` + guardrails):
+  - `frontend/src/lib/agents/flight-agent.ts`
+  - `frontend/src/lib/agents/accommodation-agent.ts`
+- Rate-limit helpers for agent workflows:
+  - `frontend/src/lib/ratelimit/flight.ts`, `frontend/src/lib/ratelimit/accommodation.ts`
+- POI context tool (stub) and registry wiring:
+  - `frontend/src/lib/tools/poi-lookup.ts`; exported via `frontend/src/lib/tools/index.ts`
+- Flight agent auxiliary tools exposed to ToolLoop:
+  - `distanceMatrix` and `lookupPoiContext` (guardrailed; cached)
+- Tests for new agents and helpers:
+  - Route validation (400) tests under `frontend/src/app/api/agents/**/__tests__/route.validation.test.ts`
+  - Route happy-path tests under `frontend/src/app/api/agents/**/__tests__/route.test.ts`
+  - RL builder tests: `frontend/src/lib/ratelimit/__tests__/builders.test.ts`
+  - POI stub test: `frontend/src/lib/tools/__tests__/poi-lookup.test.ts`
+  - Guardrail telemetry assertion: `frontend/src/lib/agents/__tests__/runtime.test.ts`
+- Operator runbook for full cutover (no flags): `docs/operators/agent-frontend.md`
+
 ### Changed
 
+- Chat page routing: Messages with agent metadata route to specialized endpoints; JSON parsing extracts structured results from markdown code blocks or plain text.
+- Provider registry resolution: Checks BYOK keys first (direct provider access), then falls back to Gateway (default path for non-BYOK users).
+- Web search tool (`frontend/src/lib/tools/web-search.ts`):
+  - Uses `fetchWithRetry` with bounded timeouts; direct Firecrawl v2 `/search` POST.
+  - Adds input guards (query ≤256, location ≤120), accepts custom category strings.
+  - Adds TTL heuristics (realtime/news/daily/semi‑static) for Redis cache; keeps canonical cache keys (flattened `scrapeOptions`).
+  - Returns `{ fromCache, tookMs }` metadata; integrates Upstash RL (20/min) keyed by `userId`.
+  - Pass‑through support for undocumented `region`/`freshness` only when provided.
+  - Enforces strict structured outputs via Zod schemas; all code paths (cache hits, API responses, error fallbacks) return validated shapes matching `WEB_SEARCH_OUTPUT_SCHEMA`.
+  - Normalizes Firecrawl responses to strip extra fields (content, score, source) before validation; stores normalized data in cache for consistency.
+- Web search batch tool (`frontend/src/lib/tools/web-search-batch.ts`): Enforces strict structured outputs via `WEB_SEARCH_BATCH_OUTPUT_SCHEMA`; per-query success/error shapes validated at execution boundaries. Normalizes results from both primary execution and HTTP fallback paths.
+- Accommodation tools (`frontend/src/lib/tools/accommodations.ts`): Enforce strict structured outputs via Zod schemas (`ACCOMMODATION_SEARCH_OUTPUT_SCHEMA`, `ACCOMMODATION_DETAILS_OUTPUT_SCHEMA`, `ACCOMMODATION_BOOKING_OUTPUT_SCHEMA`); all code paths return validated shapes. Session context injection via `wrapToolsWithUserId` for booking approval flow. Centralized error taxonomy (`frontend/src/lib/tools/errors.ts`) with `TOOL_ERROR_CODES` and `createToolError` helper adopted across accommodation tools.
+- Chat UI renders web search results as cards with title/snippet/URL, citations via AI Elements `Sources`, and displays `fromCache` + `tookMs`.
+- Env: `.env.example` simplified — require only `FIRECRAWL_API_KEY`; `FIRECRAWL_BASE_URL` optional for self‑hosted Firecrawl.
 - BYOK POST/DELETE adapters (`frontend/src/app/api/keys/route.ts`, `frontend/src/app/api/keys/[service]/route.ts`) now build rate limiters per request, derive identifiers per user/IP, and wrap Supabase RPC calls in telemetry spans carrying rate-limit attributes and sanitized key metadata; route tests updated to stub the new factory and span helper.
 - Same BYOK routes now export `dynamic = "force-dynamic"`/`revalidate = 0` and document the no-cache rationale so user-specific secrets never reuse stale responses.
 - Service normalization and rate-limit identifier behavior are documented/tested (see `frontend/src/app/api/keys/_handlers.ts`, route tests, and `frontend/src/lib/next/route-helpers.ts`), closing reviewer feedback.
+- Telemetry: planning tool executions wrapped in OpenTelemetry spans; rate-limit events recorded via OTEL with consistent attributes.
 - Frontend test utilities moved out of `*.test.*` globs to avoid accidental collection; imports updated:
   - `frontend/src/test/test-utils.test.tsx` → `frontend/src/test/test-utils.tsx` and all references switched to `@/test/test-utils`.
 - AI stream route integration tests optimized:
@@ -81,6 +143,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Pruned heavy/duplicated cases; retained empty state, minimal destination info, add-destination happy path, numeric input, and labels in `frontend/src/components/features/trips/__tests__/itinerary-builder.test.tsx`.
 - Test performance documentation updated with reproducible commands and “After” metrics:
   - `frontend/docs/testing/vitest-performance.md` (AI stream ≈12.6ms; Account settings ≈1.6s; Itinerary builder ≈1.5s).
+
+- Flights tool now prefers `DUFFEL_ACCESS_TOKEN` (fallback `DUFFEL_API_KEY`)
+  - `frontend/src/lib/tools/flights.ts`
+- Agent temperatures are hard-coded to `0.3` per agent (no env overrides)
+  - `frontend/src/lib/agents/{flight-agent,accommodation-agent}.ts`
+- Specs updated for full frontend cutover
+  - `docs/specs/0019-spec-hybrid-destination-itinerary-agents.md`
+  - `docs/specs/0020-spec-multi-agent-frontend-migration.md`
 
 - Replaced insecure/random ID generation across frontend stores and error pages with `secureId/secureUUID` and normalized timestamps via `nowIso`.
 - Removed server-side `Math.random` fallback for chat stream request IDs; use `secureUUID()` in `frontend/src/app/api/chat/stream/_handler.ts:1`.
@@ -148,8 +218,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Shortened and stabilized slow suites (e.g., search/accommodation-card) by mocking `next/image` and increasing a single long-running test timeout where appropriate.
   - Adjusted auth-store time comparison to avoid strict-equality flakiness on timestamp rollover.
 
+- Planning data model is now camelCase and TypeScript-first (no Python compatibility retained):
+  - Persisted fields include `planId`, `userId`, `title`, `destinations`, `startDate`, `endDate`, `travelers`, `budget`, `preferences`, `createdAt`, `updatedAt`, `status`, `finalizedAt`, `components`.
+  - `updateTravelPlan` validates updates via Zod partial schema; unknown/invalid fields are rejected.
+  - `combineSearchResults` derives nights from `startDate`/`endDate` (default 3 when absent).
+  - Non‑stream chat handler now includes tool registry and injects `userId` like streaming handler.
+  - Added rate limits: create 20/day per user; update 60/min per plan (TTL set only when counter=1).
+  - Markdown summary uses camelCase only; legacy snake_case fallbacks removed.
+  - Stream and non‑stream handlers refactored to use `wrapToolsWithUserId()` and planning tool allowlist.
+
 ### Removed
 
+- Feature flag/wave gating for agents
+  - Deleted `docs/operators/agent-waves.md`
+  - Removed `AGENT_WAVE_*` references from tests
+- Per-agent temperature env variables
+  - Deleted `frontend/src/lib/settings/agent-config.ts`
+  - Removed `AGENT_TEMP_*` usage in orchestrators
+
+- Legacy Python web search module and references:
+  - Deleted `tripsage/tools/web_tools.py` (CachedWebSearchTool, batch_web_search, decorators).
+  - Removed import in `tripsage_core/services/business/activity_service.py`.
 - Hard-coded sample sessions from chat layout; callers/tests inject sessions as needed (`frontend/src/components/layouts/chat-layout.tsx`).
 - Redundant/high-cost UI cases from Itinerary builder tests (drag & drop visuals, delete flow, extra icon and cancel cases) to reduce runtime (`frontend/src/components/features/trips/__tests__/itinerary-builder.test.tsx`).
 - Obsolete test wrapper file `frontend/src/test/test-utils.test.tsx` (replaced by `frontend/src/test/test-utils.tsx`).
@@ -517,3 +606,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [Unreleased]: https://github.com/BjornMelin/tripsage-ai/compare/v2.1.0...HEAD
 [2.1.0]: https://github.com/BjornMelin/tripsage-ai/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/BjornMelin/tripsage-ai/releases/tag/v2.0.0
+
+- Legacy Python planning tools removed:
+  - Deleted `tripsage/tools/planning_tools.py` and purged references/tests.

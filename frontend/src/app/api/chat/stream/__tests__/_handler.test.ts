@@ -82,6 +82,10 @@ describe("handleChatStream", () => {
     vi.doMock("ai", () => ({
       convertToModelMessages: (x: unknown) => x,
       streamText: vi.fn(),
+      tool: vi.fn((config: unknown) => ({
+        execute: vi.fn(),
+        ...(config as Record<string, unknown>),
+      })),
     }));
     ({ handleChatStream } = await import("../_handler"));
   });

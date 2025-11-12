@@ -91,6 +91,10 @@ describe("/api/chat/stream route smoke", () => {
       streamText: () => ({
         toUIMessageStreamResponse: () => new Response("ok", { status: 200 }),
       }),
+      tool: vi.fn((config: unknown) => ({
+        execute: vi.fn(),
+        ...(config as Record<string, unknown>),
+      })),
     }));
     const mod = await import("../route");
     const res = await mod.POST(

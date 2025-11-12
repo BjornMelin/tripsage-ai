@@ -18,13 +18,11 @@ from tripsage.orchestration.tools.tools import (
     geocode_location,
     get_all_tools,
     get_tools_for_agent,
-    get_weather,
     health_check,
     search_accommodations,
     search_flights,
     search_memories,
     set_tool_services,
-    web_search,
 )
 from tripsage_core.services.business.flight_service import FlightService
 
@@ -130,40 +128,6 @@ class TestTools:
         assert parsed_result["longitude"] == -122.4194
 
     @pytest.mark.asyncio
-    async def test_get_weather_tool(self, services: Any):
-        """Test the get_weather tool function."""
-        weather_payload = {"temperature": 68, "condition": "Sunny", "humidity": 45}
-        services.weather_service.connect = AsyncMock(return_value=None)
-        services.weather_service.get_current_weather = AsyncMock(
-            return_value=weather_payload
-        )
-        set_tool_services(services)
-
-        result = await cast(Any, get_weather).ainvoke({"location": "San Francisco"})
-
-        parsed_result = json.loads(result)
-        assert parsed_result["temperature"] == 68
-        assert parsed_result["condition"] == "Sunny"
-
-    @pytest.mark.asyncio
-    async def test_web_search_tool(self, services: Any):
-        """Test the web_search tool function."""
-        mock_result = {
-            "results": [{"title": "Best time to visit Paris", "url": "example.com"}]
-        }
-        services.webcrawl_service.connect = AsyncMock(return_value=None)
-        services.webcrawl_service.search_web = AsyncMock(return_value=mock_result)
-        set_tool_services(services)
-
-        result = await cast(Any, web_search).ainvoke(
-            {"query": "best time to visit Paris", "location": "Paris"}
-        )
-
-        parsed_result = json.loads(result)
-        assert "results" in parsed_result
-        assert len(parsed_result["results"]) == 1
-
-    @pytest.mark.asyncio
     @patch("tripsage.orchestration.tools.tools._search_user_memories")
     @patch("tripsage.orchestration.tools.tools._add_conversation_memory")
     @patch("tripsage.orchestration.tools.tools._default_mcp_service")
@@ -249,7 +213,6 @@ class TestTools:
         expected_agents = [
             "flight_agent",
             "accommodation_agent",
-            "destination_research_agent",
             "budget_agent",
             "itinerary_agent",
             "memory_update",
@@ -358,11 +321,6 @@ class TestToolIntegration:
         services.google_maps_service.connect = AsyncMock(return_value=None)
         services.google_maps_service.geocode = AsyncMock(return_value=[place])
 
-        services.weather_service.connect = AsyncMock(return_value=None)
-        services.weather_service.get_current_weather = AsyncMock(
-            return_value={"temperature": 68, "condition": "Sunny"}
-        )
-
         flight_service = MagicMock(spec=FlightService)
         flight_service.search_flights = AsyncMock(
             return_value=_FlightResponse(
@@ -388,14 +346,7 @@ class TestToolIntegration:
         geocode_data = json.loads(geocode_result)[0]
         assert geocode_data["latitude"] == 37.7749
 
-        # 2. Get weather
-        weather_result = await cast(Any, get_weather).ainvoke(
-            {"location": "San Francisco"}
-        )
-        weather_data = json.loads(weather_result)
-        assert weather_data["temperature"] == 68
-
-        # 3. Search flights
+        # 2. Search flights
         flight_result = await cast(Any, search_flights).ainvoke(
             {
                 "origin": "NYC",

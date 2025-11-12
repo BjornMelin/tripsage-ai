@@ -49,7 +49,6 @@ if TYPE_CHECKING:  # pragma: no cover - import only for type checking
         GoogleMapsService,
         PlaywrightService,
         TimeService,
-        WeatherService,
         WebCrawlService,
     )
     from tripsage_core.services.infrastructure import CacheService, DatabaseService
@@ -84,7 +83,6 @@ class AppServiceContainer:
     google_maps_service: GoogleMapsService | None = None
     playwright_service: PlaywrightService | None = None
     time_service: TimeService | None = None
-    weather_service: WeatherService | None = None
     webcrawl_service: WebCrawlService | None = None
 
     # Infrastructure services
@@ -151,23 +149,21 @@ async def _setup_infrastructure_services() -> tuple[DatabaseService, CacheServic
 
 
 async def _setup_external_services() -> tuple[
-    GoogleMapsService, DocumentAnalyzer, WeatherService, WebCrawlService
+    GoogleMapsService, DocumentAnalyzer, WebCrawlService
 ]:
     """Initialise external API clients."""
     from tripsage_core.services.external_apis import (
         DocumentAnalyzer,
         GoogleMapsService,
-        WeatherService,
         WebCrawlService,
     )
 
     google_maps_service = GoogleMapsService()
     await google_maps_service.connect()
 
-    weather_service = WeatherService()
     document_analyzer = DocumentAnalyzer()
     webcrawl_service = WebCrawlService()
-    return google_maps_service, document_analyzer, weather_service, webcrawl_service
+    return google_maps_service, document_analyzer, webcrawl_service
 
 
 async def _setup_business_services(
@@ -175,7 +171,6 @@ async def _setup_business_services(
     database_service: DatabaseService,
     cache_service: CacheService,
     document_analyzer: DocumentAnalyzer,
-    weather_service: WeatherService,
     google_maps_service: GoogleMapsService,
     settings: Any,
 ) -> dict[str, Any]:
@@ -215,7 +210,6 @@ async def _setup_business_services(
     )
     destination_service = DestinationService(
         database_service=database_service,
-        weather_service=weather_service,
     )
     flight_service = FlightService(database_service=database_service)
     itinerary_service = ItineraryService(database_service=database_service)
@@ -272,9 +266,7 @@ def _build_service_container(
     *,
     business: dict[str, Any],
     infrastructure: tuple[DatabaseService, CacheService],
-    external: tuple[
-        GoogleMapsService, DocumentAnalyzer, WeatherService, WebCrawlService
-    ],
+    external: tuple[GoogleMapsService, DocumentAnalyzer, WebCrawlService],
     orchestration: dict[str, Any],
 ) -> AppServiceContainer:
     """Assemble the AppServiceContainer with the provided components."""
@@ -282,7 +274,6 @@ def _build_service_container(
     (
         google_maps_service,
         document_analyzer,
-        weather_service,
         webcrawl_service,
     ) = external
 
@@ -300,7 +291,6 @@ def _build_service_container(
         calendar_service=None,
         document_analyzer=document_analyzer,
         google_maps_service=google_maps_service,
-        weather_service=weather_service,
         webcrawl_service=webcrawl_service,
         cache_service=cache_service,
         database_service=database_service,
@@ -346,7 +336,6 @@ async def initialise_app_state(
         database_service=infrastructure[0],
         cache_service=infrastructure[1],
         document_analyzer=external[1],
-        weather_service=external[2],
         google_maps_service=external[0],
         settings=settings,
     )
