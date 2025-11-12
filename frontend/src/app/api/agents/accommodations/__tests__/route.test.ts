@@ -23,10 +23,11 @@ describe("/api/agents/accommodations route", () => {
       enforceRouteRateLimit: vi.fn().mockResolvedValue(null),
     }));
     vi.doMock("@/lib/next/route-helpers", () => ({
-      errorResponse: vi.fn((opts) =>
-        new Response(JSON.stringify({ error: opts.error }), {
-          status: opts.status,
-        })
+      errorResponse: vi.fn(
+        (opts) =>
+          new Response(JSON.stringify({ error: opts.error }), {
+            status: opts.status,
+          })
       ),
       getTrustedRateLimitIdentifier: vi.fn(() => "hashed-ip"),
       withRequestSpan: vi.fn((_name, _attrs, fn) => fn()),
@@ -60,10 +61,11 @@ describe("/api/agents/accommodations route", () => {
       }),
     }));
     vi.doMock("@/lib/next/route-helpers", () => ({
-      errorResponse: vi.fn((opts) =>
-        new Response(JSON.stringify({ error: opts.error }), {
-          status: opts.status,
-        })
+      errorResponse: vi.fn(
+        (opts) =>
+          new Response(JSON.stringify({ error: opts.error }), {
+            status: opts.status,
+          })
       ),
       getTrustedRateLimitIdentifier: vi.fn(() => "hashed-ip"),
     }));

@@ -133,9 +133,7 @@ describe("buildGuardedTool", () => {
       workflow: "flightSearch",
     });
 
-    await expect(guarded({ input: "test" })).rejects.toThrow(
-      "Rate limit exceeded"
-    );
+    await expect(guarded({ input: "test" })).rejects.toThrow("Rate limit exceeded");
   });
 
   it("works with all optional configurations", async () => {
@@ -176,4 +174,3 @@ describe("buildGuardedTool", () => {
     );
   });
 });
-
