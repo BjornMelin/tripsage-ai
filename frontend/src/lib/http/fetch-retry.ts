@@ -43,19 +43,35 @@ export async function fetchWithRetry(
   options: FetchRetryOptions = {}
 ): Promise<Response> {
   const { timeoutMs = 12000, retries = 2, backoffMs = 100 } = options;
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
   for (let attempt = 0; attempt <= retries; attempt++) {
+    // Fresh controller and timeout for each attempt
+    const controller = new AbortController();
+    // Propagate caller aborts to our controller (no AbortSignal.any dependency)
+    let onCallerAbort: (() => void) | undefined;
+    if (init.signal) {
+      if (init.signal.aborted) {
+        controller.abort();
+      } else {
+        onCallerAbort = () => controller.abort();
+        init.signal.addEventListener("abort", onCallerAbort, { once: true });
+      }
+    }
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const res = await fetch(url, {
         ...init,
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
+      if (init.signal && onCallerAbort) {
+        init.signal.removeEventListener("abort", onCallerAbort);
+      }
       return res;
     } catch (err) {
       clearTimeout(timeoutId);
+      if (init.signal && onCallerAbort) {
+        init.signal.removeEventListener("abort", onCallerAbort);
+      }
       if (attempt === retries) {
         const isTimeout = err instanceof Error && err.name === "AbortError";
         const error: Error & { code?: string; meta?: Record<string, unknown> } =
