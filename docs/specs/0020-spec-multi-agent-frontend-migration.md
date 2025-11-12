@@ -2,8 +2,9 @@
 
 ## Status
 
-- Draft (target approval: 2025-11-15)
-- Wave P1 implementation underway (flights + accommodations endpoints, tools, UI).
+- P0 complete (framework hardening in frontend).
+- P1 complete (flights + accommodations endpoints, tools, UI).
+- P2 starting (budget + memory agents; design/implementation in progress). Target approval remains 2025-11-15.
 
 ## Goals
 
@@ -13,14 +14,14 @@
 
 ## Phase Breakdown
 
-### P0 – Framework Hardening (Prerequisite)
+### P0 – Framework Hardening (Completed)
 
 - **Schemas & Prompts**: Extend `frontend/src/schemas/agents.ts` with shared types for flights, accommodations, budgets, memories, and routing metadata. Update prompt builders to accept user/account context.
 - **Guardrail Middleware**: Generalize middleware to support tool budgets per workflow, caching policies, and telemetry hooks.
 -(Removed) Feature flags: We are performing a complete cutover; routes are always enabled. Rollback is via deployment rollback, not flags.
 - **Deliverables**: Unit tests covering middleware, integration tests for caching + rate limits.
 
-### P1 – Flight & Accommodation Agents
+### P1 – Flight & Accommodation Agents (Completed)
 
 - **Route Handlers**: `/api/agents/flights/route.ts`, `/api/agents/accommodations/route.ts` streaming ToolLoopAgent responses.
 - **Tools**: Reuse existing `search_flights`, `search_accommodations`, plus new OpenTripMap POI lookup for nearby lodging context.
@@ -51,7 +52,7 @@
 - **Caching & Rate Limits**: Upstash buckets per workflow (`ratelimit:flight`, etc.), TTL caches for provider responses.
 - **Telemetry**: Structured events for tool calls (name, duration, cacheHit, validationResult) exported via existing logging pipeline.
 - **Testing**: Vitest suites per agent, integration tests hitting API routes with mocked providers, Playwright e2e scenarios for each workflow wave.
-- **Rollout**: For each wave, enable feature flag for internal users, monitor telemetry, then widen cohort. Document rollback steps (toggle flag + reroute to legacy LangGraph).
+- **Rollout**: Full cutover (no flags). Monitor telemetry; rollback is a deploy revert.
 - **Runbook**: See `docs/operators/agent-frontend.md` for env and validation commands (full cutover; no flags).
 
 ## Non-Goals

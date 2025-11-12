@@ -21,7 +21,13 @@ We will adopt **Option B: framework-first waves** to retire the remaining backen
 1. **Framework Hardening (P0)** – extend the hybrid ToolLoop infrastructure (schemas, guardrails, telemetry, Upstash caches) so it can host any agent type.
 2. **Wave Migrations (P1–P3)** – migrate flight & accommodation agents first, then budget + memory, and finally routing/error-handling flows. Each wave ships fully through the frontend Route Handlers and AI Elements UI before decommissioning the Python equivalent.
 3. **Provider Expansion (P4)** – integrate OpenTripMap (POI data) and GeoSure/Travel Advisory safety scores as TypeScript tools inside the registry so all agents can leverage richer data for recommendations.
-4. **Documentation & Telemetry** – codify the migration playbook in SPEC-0020, enforce feature flags per wave, and instrument tool-level metrics to monitor parity before flipping traffic.
+4. **Documentation & Telemetry** – codify the migration playbook in SPEC-0020 and instrument tool-level metrics to monitor parity. For this program we use full cutover (no feature flags); rollback is a deploy revert.
+
+## Implementation Status
+
+- P0 complete (framework hardening in `frontend/`).
+- P1 complete (flights + accommodations in `frontend/`, UI integrated).
+- Next phase starting: P2 – Budget & Memory agents (design and implementation in progress), followed by P3 – Router & Error Recovery.
 
 ## Consequences
 
