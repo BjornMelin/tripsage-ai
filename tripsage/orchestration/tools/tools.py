@@ -261,18 +261,6 @@ search_memories: BaseTool = tool("search_memories", args_schema=MemoryParams)(
 )
 
 AGENT_TOOLS: dict[str, list[Any]] = {
-    "flight_agent": [
-        search_flights,
-        geocode_location,
-        add_memory,
-        search_memories,
-    ],
-    "accommodation_agent": [
-        search_accommodations,
-        geocode_location,
-        add_memory,
-        search_memories,
-    ],
     "budget_agent": [
         search_flights,
         search_accommodations,

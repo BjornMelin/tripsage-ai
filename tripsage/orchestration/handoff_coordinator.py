@@ -94,52 +94,6 @@ class AgentHandoffCoordinator:
     def _initialize_default_rules(self) -> None:
         """Initialize default handoff rules."""
         default_rules = [
-            # Flight-related handoffs
-            HandoffRule(
-                from_agent="general_agent",
-                to_agent="flight_agent",
-                trigger=HandoffTrigger.USER_REQUEST,
-                conditions={
-                    "keywords": [
-                        "flight",
-                        "fly",
-                        "airplane",
-                        "airline",
-                        "departure",
-                        "arrival",
-                    ]
-                },
-                priority=10,
-                context_keys=[
-                    "travel_dates",
-                    "departure_location",
-                    "destination",
-                    "passenger_count",
-                ],
-            ),
-            # Accommodation handoffs
-            HandoffRule(
-                from_agent="general_agent",
-                to_agent="accommodation_agent",
-                trigger=HandoffTrigger.USER_REQUEST,
-                conditions={
-                    "keywords": [
-                        "hotel",
-                        "accommodation",
-                        "stay",
-                        "room",
-                        "booking",
-                        "airbnb",
-                    ]
-                },
-                priority=10,
-                context_keys=[
-                    "travel_dates",
-                    "destination",
-                    "guest_count",
-                    "accommodation_preferences",
-                ],
-            ),
             # Budget optimization handoffs
             HandoffRule(
                 from_agent="*",  # Any agent
@@ -194,12 +148,6 @@ class AgentHandoffCoordinator:
     def _initialize_agent_capabilities(self) -> None:
         """Initialize agent capability mappings."""
         self.agent_capabilities = {
-            "flight_agent": {
-                AgentCapability.FLIGHT_SEARCH,
-            },
-            "accommodation_agent": {
-                AgentCapability.ACCOMMODATION_SEARCH,
-            },
             "budget_agent": {
                 AgentCapability.BUDGET_OPTIMIZATION,
             },

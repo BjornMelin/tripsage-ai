@@ -8,6 +8,7 @@ Deliver feature parity for destination research and itinerary planning directly 
 - TypeScript tool orchestrators, schemas, prompts, and summarizers.
 - AI Elements chat UX upgrades (quick actions, cards, timelines, progress states).
 - Telemetry, rate limiting, caching, and rollout guidance.
+- Operators runbook for deployment and validation (see `docs/operators/agent-frontend.md`).
 - Removal of any dependency on `tripsage/` or `tripsage_core` for these agents.
 
 Out of scope: implementing new upstream travel data providers (reuse existing tools), rewriting Supabase auth helpers, or modifying backend FastAPI services beyond deletion already in progress.

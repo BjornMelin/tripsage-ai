@@ -52,6 +52,7 @@
 - **Telemetry**: Structured events for tool calls (name, duration, cacheHit, validationResult) exported via existing logging pipeline.
 - **Testing**: Vitest suites per agent, integration tests hitting API routes with mocked providers, Playwright e2e scenarios for each workflow wave.
 - **Rollout**: For each wave, enable feature flag for internal users, monitor telemetry, then widen cohort. Document rollback steps (toggle flag + reroute to legacy LangGraph).
+- **Runbook**: See `docs/operators/agent-frontend.md` for env and validation commands (full cutover; no flags).
 
 ## Non-Goals
 

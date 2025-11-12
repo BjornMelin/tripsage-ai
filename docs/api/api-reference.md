@@ -174,13 +174,17 @@ PUT /api/trips/{trip_id}/collaborators/{user_id}
 DELETE /api/trips/{trip_id}/collaborators/{user_id}
 ```
 
-## Flight Operations
+## AI Agent Endpoints (Frontend)
 
-### Search Flights
+Flight and accommodation operations are handled by frontend-only AI agents implemented with Vercel AI SDK v6. These endpoints stream UI-compatible responses and use tool calling for search operations.
+
+### Flight Agent
 
 ```http
-POST /api/flights/search
+POST /api/agents/flights
 ```
+
+Streams flight search results using AI SDK v6 ToolLoopAgent with tool calling.
 
 Request:
 
@@ -188,62 +192,52 @@ Request:
 {
   "origin": "JFK",
   "destination": "CDG",
-  "departure_date": "2025-07-01",
-  "return_date": "2025-07-15",
+  "departureDate": "2025-07-01",
+  "returnDate": "2025-07-15",
   "passengers": 2,
-  "cabin_class": "economy"
+  "cabinClass": "economy"
 }
 ```
 
-### Get Flight Details
+Response: Streaming UI message stream (SSE) with tool calls and structured flight offers.
+
+**Features:**
+
+- BYOK provider resolution (OpenAI, Anthropic, xAI, etc.)
+- Upstash Redis caching and rate limiting
+- Tool-based flight search via Duffel integration
+- AI Elements card rendering (`flight.v1` schema)
+
+### Accommodation Agent
 
 ```http
-GET /api/flights/{flight_id}
+POST /api/agents/accommodations
 ```
 
-### Book Flight
-
-```http
-POST /api/flights/{flight_id}/book
-```
-
-### List Flight Bookings
-
-```http
-GET /api/flights/bookings
-```
-
-## Accommodation Operations
-
-### Search Accommodations
-
-```http
-POST /api/accommodations/search
-```
+Streams accommodation search results using AI SDK v6 ToolLoopAgent with tool calling.
 
 Request:
 
 ```json
 {
   "location": "Paris",
-  "check_in": "2025-07-01",
-  "check_out": "2025-07-15",
+  "checkIn": "2025-07-01",
+  "checkOut": "2025-07-15",
   "guests": 2,
-  "room_type": "double"
+  "propertyType": "hotel"
 }
 ```
 
-### Get Accommodation Details
+Response: Streaming UI message stream (SSE) with tool calls and structured accommodation listings.
 
-```http
-GET /api/accommodations/{accommodation_id}
-```
+**Features:**
 
-### Book Accommodation
+- BYOK provider resolution
+- Upstash Redis caching and rate limiting
+- Tool-based accommodation search
+- AI Elements card rendering (`stay.v1` schema)
 
-```http
-POST /api/accommodations/{accommodation_id}/book
-```
+**Note:** Legacy Python endpoints (`/api/flights/*` and `/api/accommodations/*`) have been removed. All flight and accommodation operations are now handled by the frontend AI agents.
 
 ## Activities
 
@@ -778,18 +772,26 @@ async function createTrip(tripData) {
   return response.json();
 }
 
-// Search flights
+// Search flights using frontend agent endpoint
 async function searchFlights(searchParams) {
-  const response = await fetch(`${TRIPSAGE_API_URL}/api/flights/search`, {
+  const response = await fetch(`${TRIPSAGE_API_URL}/api/agents/flights`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-API-Key': API_KEY
+      'Authorization': `Bearer ${JWT_TOKEN}`
     },
-    body: JSON.stringify(searchParams)
+    body: JSON.stringify({
+      origin: searchParams.origin,
+      destination: searchParams.destination,
+      departureDate: searchParams.departure_date,
+      returnDate: searchParams.return_date,
+      passengers: searchParams.passengers,
+      cabinClass: searchParams.cabin_class
+    })
   });
 
-  return response.json();
+  // Response is a streaming UI message stream (SSE)
+  return response;
 }
 ```
 
@@ -816,10 +818,24 @@ class TripSageClient:
         return response.json()
 
     def search_flights(self, search_params):
-        """Search for flights"""
-        response = self.session.post(f'{self.base_url}/api/flights/search', json=search_params)
+        """Search for flights using frontend agent endpoint"""
+        # Note: This endpoint streams SSE responses
+        # For Python clients, use a streaming HTTP client or the frontend API
+        response = self.session.post(
+            f'{self.base_url}/api/agents/flights',
+            json={
+                'origin': search_params.get('origin'),
+                'destination': search_params.get('destination'),
+                'departureDate': search_params.get('departure_date'),
+                'returnDate': search_params.get('return_date'),
+                'passengers': search_params.get('passengers', 1),
+                'cabinClass': search_params.get('cabin_class', 'economy')
+            },
+            headers={'Authorization': f'Bearer {self.jwt_token}'}
+        )
         response.raise_for_status()
-        return response.json()
+        # Returns streaming response - handle accordingly
+        return response
 
     def get_trip(self, trip_id):
         """Get trip details"""
@@ -851,15 +867,17 @@ curl -X POST "https://api.tripsage.ai/api/trips/" \
     "budget": {"currency": "USD", "total_amount": 3000}
   }'
 
-# Search flights
-curl -X POST "https://api.tripsage.ai/api/flights/search" \
+# Search flights using frontend agent endpoint (streaming SSE)
+curl -X POST "https://api.tripsage.ai/api/agents/flights" \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: your-api-key" \
+  -H "Authorization: Bearer your-jwt-token" \
   -d '{
     "origin": "JFK",
     "destination": "CDG",
-    "departure_date": "2025-07-01",
-    "passengers": 2
+    "departureDate": "2025-07-01",
+    "returnDate": "2025-07-15",
+    "passengers": 2,
+    "cabinClass": "economy"
   }'
 
 # Get trip details

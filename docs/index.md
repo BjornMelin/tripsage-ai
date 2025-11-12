@@ -98,9 +98,9 @@ TripSage uses a modern, unified architecture:
 - **Backend**: FastAPI with Python 3.13+ and async operations
 - **Database**: Supabase PostgreSQL with Row Level Security and vector extensions
 - **Cache**: Upstash Redis (HTTP) for serverless caching
-- **Frontend**: Next.js 15 with React 19 and TypeScript
+- **Frontend**: Next.js 16 with React 19 and TypeScript
 - **Real-Time**: Supabase Realtime with private channels
-- **AI**: OpenAI GPT-4/GPT-5 with LangGraph orchestration
+- **AI**: Vercel AI SDK v6 with frontend-only agents (flights, accommodations, destinations, itineraries)
 
 ## Support & Community
 
