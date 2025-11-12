@@ -47,7 +47,6 @@ class AgentType(str, Enum):
     """Enumeration of available agent types with metadata."""
 
     BUDGET_AGENT = "budget_agent"
-    DESTINATION_RESEARCH_AGENT = "destination_research_agent"
     ITINERARY_AGENT = "itinerary_agent"
 
     @property
@@ -55,7 +54,6 @@ class AgentType(str, Enum):
         """Human-readable display name."""
         return {
             "budget_agent": "Budget Optimization Agent",
-            "destination_research_agent": "Destination Research Agent",
             "itinerary_agent": "Itinerary Planning Agent",
         }[self.value]
 
@@ -64,7 +62,6 @@ class AgentType(str, Enum):
         """Get recommended temperature for this agent type."""
         return {
             "budget_agent": 0.2,  # Low creativity for accuracy
-            "destination_research_agent": 0.5,  # Moderate for research
             "itinerary_agent": 0.4,  # Structured creativity
         }[self.value]
 

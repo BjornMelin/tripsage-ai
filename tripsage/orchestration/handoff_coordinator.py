@@ -36,7 +36,6 @@ class AgentCapability(str, Enum):
     FLIGHT_SEARCH = "flight_search"
     ACCOMMODATION_SEARCH = "accommodation_search"
     BUDGET_OPTIMIZATION = "budget_optimization"
-    DESTINATION_RESEARCH = "destination_research"
     ITINERARY_PLANNING = "itinerary_planning"
     GENERAL_ASSISTANCE = "general_assistance"
     ERROR_HANDLING = "error_handling"
@@ -164,29 +163,6 @@ class AgentHandoffCoordinator:
                     "expense_categories",
                 ],
             ),
-            # Destination research handoffs
-            HandoffRule(
-                from_agent="general_agent",
-                to_agent="destination_research_agent",
-                trigger=HandoffTrigger.USER_REQUEST,
-                conditions={
-                    "keywords": [
-                        "destination",
-                        "place",
-                        "where",
-                        "attractions",
-                        "things to do",
-                        "research",
-                    ]
-                },
-                priority=9,
-                context_keys=[
-                    "destination",
-                    "travel_dates",
-                    "interests",
-                    "travel_style",
-                ],
-            ),
             # Itinerary planning handoffs
             HandoffRule(
                 from_agent="*",
@@ -226,9 +202,6 @@ class AgentHandoffCoordinator:
             },
             "budget_agent": {
                 AgentCapability.BUDGET_OPTIMIZATION,
-            },
-            "destination_research_agent": {
-                AgentCapability.DESTINATION_RESEARCH,
             },
             "itinerary_agent": {
                 AgentCapability.ITINERARY_PLANNING,

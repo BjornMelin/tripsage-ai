@@ -116,22 +116,6 @@ class RouterNode(BaseAgentNode):
                 ],
                 "entities": ["travel_dates", "duration", "activities", "preferences"],
             },
-            "destination_research_agent": {
-                "description": (
-                    "Destination research, recommendations, local information"
-                ),
-                "keywords": [
-                    "destination",
-                    "place",
-                    "city",
-                    "country",
-                    "visit",
-                    "recommend",
-                    "explore",
-                    "travel",
-                ],
-                "entities": ["destination", "interests", "season", "duration"],
-            },
             "general_agent": {
                 "description": (
                     "General travel assistance, documentation, travel tips, "
@@ -306,8 +290,6 @@ class RouterNode(BaseAgentNode):
         - accommodation_agent: Hotels, rentals, lodging, accommodation booking
         - budget_agent: Budget planning, cost analysis, expense tracking
         - itinerary_agent: Trip planning, scheduling, activities, day-by-day planning
-        - destination_research_agent: Destination research, recommendations,
-          local information
         - general_agent: General travel assistance, documentation,
           travel tips, multi-domain queries
 
@@ -316,9 +298,7 @@ class RouterNode(BaseAgentNode):
         2. If asking about hotels, accommodations, places to stay → accommodation_agent
         3. If asking about costs, budgets, expenses → budget_agent
         4. If asking about itineraries, schedules, daily plans → itinerary_agent
-        5. If asking about destinations, attractions, local info →
-           destination_research_agent
-        6. For general travel questions or unclear intent → general_agent
+        5. For general travel questions, destinations, or unclear intent → general_agent
 
         Respond with valid JSON only:
         {{"agent": "agent_name", "confidence": 0.9, "reasoning": "brief explanation"}}

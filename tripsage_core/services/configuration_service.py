@@ -288,7 +288,6 @@ class ConfigurationService:
 
         agent_types = [
             "budget_agent",
-            "destination_research_agent",
             "itinerary_agent",
         ]
         configs: dict[str, AgentConfig] = {}

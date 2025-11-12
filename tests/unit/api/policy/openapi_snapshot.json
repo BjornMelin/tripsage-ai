@@ -2000,7 +2000,7 @@
           "flights"
         ],
         "summary": "Search Flights",
-        "description": "Search for flight offers using the unified flight service.\n\nArgs:\n    request: Typed flight search parameters validated by Pydantic.\n    principal: Authenticated user context (unused directly but enforces auth).\n    flight_service: Injected flight service instance.\n\nReturns:\n    Search results including offers, metadata, and cache indicators.\n\nRaises:\n    HTTPException: If the underlying service raises a handled error.",
+        "description": "Search for flight offers using the unified flight service.\n\nArgs:\n    request: Typed flight search parameters validated by Pydantic.\n    principal: Authenticated user context (enforces authentication).\n    flight_service: Injected flight service instance.\n\nReturns:\n    Search results including offers, metadata, and cache indicators.\n\nRaises:\n    HTTPException: If the underlying service raises a handled error.",
         "operationId": "search_flights_api_flights_search_post",
         "requestBody": {
           "content": {
@@ -6109,7 +6109,7 @@
           "description"
         ],
         "title": "ActivityResponse",
-        "description": "Activity response model (matches legacy API shape)."
+        "description": "Activity response model (matches API shape)."
       },
       "ActivitySearchRequest": {
         "properties": {
@@ -6538,7 +6538,6 @@
         "type": "string",
         "enum": [
           "budget_agent",
-          "destination_research_agent",
           "itinerary_agent"
         ],
         "title": "AgentType",

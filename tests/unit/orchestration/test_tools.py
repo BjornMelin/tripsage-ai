@@ -213,7 +213,6 @@ class TestTools:
         expected_agents = [
             "flight_agent",
             "accommodation_agent",
-            "destination_research_agent",
             "budget_agent",
             "itinerary_agent",
             "memory_update",
