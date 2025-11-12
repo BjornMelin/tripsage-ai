@@ -12,12 +12,12 @@ import { z } from "zod";
  * Canonical list of workflows supported by the frontend Agent runtime.
  */
 export const agentWorkflowSchema = z.enum([
-  "destination_research",
-  "itinerary_planning",
-  "flight_search",
-  "accommodation_search",
-  "budget_planning",
-  "memory_update",
+  "destinationResearch",
+  "itineraryPlanning",
+  "flightSearch",
+  "accommodationSearch",
+  "budgetPlanning",
+  "memoryUpdate",
   "router",
 ]);
 
@@ -290,6 +290,7 @@ export const budgetPlanResultSchema = z.object({
     .default([]),
   currency: z.string().default("USD"),
   schemaVersion: z.literal("budget.v1").default("budget.v1"),
+  sources: z.array(agentSourceSchema).default([]),
   tips: z.array(z.string()).optional(),
 });
 
@@ -321,6 +322,8 @@ export const memoryUpdateRequestSchema = z.object({
   records: z.array(memoryRecordSchema),
   userId: z.string().uuid().optional(),
 });
+
+export type MemoryUpdateRequest = z.infer<typeof memoryUpdateRequestSchema>;
 
 /**
  * Router classification schema for workflow routing decisions.

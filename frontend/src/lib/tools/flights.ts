@@ -2,11 +2,31 @@
  * @fileoverview Flight search tool using Duffel API v2 (offers request).
  */
 
+import "server-only";
+
 import { tool } from "ai";
 import { z } from "zod";
 
 // Prefer DUFFEL_ACCESS_TOKEN (commonly used in templates), fall back to DUFFEL_API_KEY.
 const DUFFEL_KEY = process.env.DUFFEL_ACCESS_TOKEN || process.env.DUFFEL_API_KEY;
+
+/**
+ * Zod input schema for flight search tool.
+ *
+ * Exported for use in guardrails validation and cache key generation.
+ */
+export const searchFlightsInputSchema = z.object({
+  cabin: z.enum(["economy", "premium_economy", "business", "first"]).default("economy"),
+  currency: z.string().default("USD"),
+  departureDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  destination: z.string().min(3),
+  origin: z.string().min(3),
+  passengers: z.number().int().min(1).max(9).default(1),
+  returnDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+});
 
 export const searchFlights = tool({
   description:
@@ -76,18 +96,5 @@ export const searchFlights = tool({
       offers,
     } as const;
   },
-  inputSchema: z.object({
-    cabin: z
-      .enum(["economy", "premium_economy", "business", "first"])
-      .default("economy"),
-    currency: z.string().default("USD"),
-    departureDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    destination: z.string().min(3),
-    origin: z.string().min(3),
-    passengers: z.number().int().min(1).max(9).default(1),
-    returnDate: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .optional(),
-  }),
+  inputSchema: searchFlightsInputSchema,
 });

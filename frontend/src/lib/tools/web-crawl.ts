@@ -4,6 +4,8 @@
  * Uses direct API (not SDK) for latest v2.5 features and cost control.
  */
 
+import "server-only";
+
 import { tool } from "ai";
 import { z } from "zod";
 import { getRedis } from "@/lib/redis";

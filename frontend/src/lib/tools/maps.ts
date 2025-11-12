@@ -2,10 +2,30 @@
  * @fileoverview Google Maps tools: geocode, distance matrix (basic variants).
  */
 
+import "server-only";
+
 import { tool } from "ai";
 import { z } from "zod";
 
 const GMAPS_KEY = process.env.GOOGLE_MAPS_API_KEY;
+
+/**
+ * Zod input schema for geocode tool.
+ *
+ * Exported for use in guardrails validation and cache key generation.
+ */
+export const geocodeInputSchema = z.object({ address: z.string().min(2) });
+
+/**
+ * Zod input schema for distance matrix tool.
+ *
+ * Exported for use in guardrails validation and cache key generation.
+ */
+export const distanceMatrixInputSchema = z.object({
+  destinations: z.array(z.string().min(2)).min(1),
+  origins: z.array(z.string().min(2)).min(1),
+  units: z.enum(["metric", "imperial"]).default("metric"),
+});
 
 export const geocode = tool({
   description: "Geocode a location using Google Maps Geocoding API.",
@@ -19,7 +39,7 @@ export const geocode = tool({
     const data = await res.json();
     return data?.results ?? [];
   },
-  inputSchema: z.object({ address: z.string().min(2) }),
+  inputSchema: geocodeInputSchema,
 });
 
 export const distanceMatrix = tool({
@@ -36,9 +56,5 @@ export const distanceMatrix = tool({
     if (!res.ok) throw new Error(`gmaps_dm_failed:${res.status}`);
     return await res.json();
   },
-  inputSchema: z.object({
-    destinations: z.array(z.string().min(2)).min(1),
-    origins: z.array(z.string().min(2)).min(1),
-    units: z.enum(["metric", "imperial"]).default("metric"),
-  }),
+  inputSchema: distanceMatrixInputSchema,
 });

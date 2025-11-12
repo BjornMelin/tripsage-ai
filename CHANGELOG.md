@@ -89,25 +89,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `frontend/src/lib/tools/constants.ts` centralizes TTL and rate limits.
     - `frontend/src/lib/tools/injection.ts` provides `wrapToolsWithUserId()` for safe tool input injection.
 
-- Frontend-only agent endpoints (App Router):
-  - `frontend/src/app/api/agents/flights/route.ts`
-  - `frontend/src/app/api/agents/accommodations/route.ts`
+- Agent endpoints (P1-P4 complete):
+  - `frontend/src/app/api/agents/flights/route.ts` (P1)
+  - `frontend/src/app/api/agents/accommodations/route.ts` (P1)
+  - `frontend/src/app/api/agents/budget/route.ts` (P2)
+  - `frontend/src/app/api/agents/memory/route.ts` (P2)
+  - `frontend/src/app/api/agents/destinations/route.ts` (P2)
+  - `frontend/src/app/api/agents/itineraries/route.ts` (P2)
+  - `frontend/src/app/api/agents/router/route.ts` (P3)
 - Agent orchestrators (AI SDK v6 `streamText` + guardrails):
-  - `frontend/src/lib/agents/flight-agent.ts`
-  - `frontend/src/lib/agents/accommodation-agent.ts`
-- Rate-limit helpers for agent workflows:
-  - `frontend/src/lib/ratelimit/flight.ts`, `frontend/src/lib/ratelimit/accommodation.ts`
-- POI context tool (stub) and registry wiring:
-  - `frontend/src/lib/tools/poi-lookup.ts`; exported via `frontend/src/lib/tools/index.ts`
-- Flight agent auxiliary tools exposed to ToolLoop:
-  - `distanceMatrix` and `lookupPoiContext` (guardrailed; cached)
-- Tests for new agents and helpers:
-  - Route validation (400) tests under `frontend/src/app/api/agents/**/__tests__/route.validation.test.ts`
-  - Route happy-path tests under `frontend/src/app/api/agents/**/__tests__/route.test.ts`
-  - RL builder tests: `frontend/src/lib/ratelimit/__tests__/builders.test.ts`
-  - POI stub test: `frontend/src/lib/tools/__tests__/poi-lookup.test.ts`
-  - Guardrail telemetry assertion: `frontend/src/lib/agents/__tests__/runtime.test.ts`
-- Operator runbook for full cutover (no flags): `docs/operators/agent-frontend.md`
+  - `frontend/src/lib/agents/flight-agent.ts`, `accommodation-agent.ts`, `budget-agent.ts`, `memory-agent.ts`, `destination-agent.ts`, `itinerary-agent.ts`, `router-agent.ts`
+- Centralized rate limit configuration:
+  - `frontend/src/lib/ratelimit/config.ts` with `buildRateLimit(workflow, identifier)` factory replacing per-workflow builders
+  - All agents use unified rate limit config with consistent 1-minute windows
+- Provider tools:
+  - `frontend/src/lib/tools/opentripmap.ts` for POI lookups (replaces `poi-lookup.ts`)
+  - `frontend/src/lib/tools/travel-advisory.ts` for GeoSure safety scores
+- UI components for agent results:
+  - `BudgetChart` for budget planning visualization
+  - `DestinationCard` for destination research results
+  - `ItineraryTimeline` for itinerary planning display
+- Error recovery: `frontend/src/lib/agents/error-recovery.ts` with standardized error mapping and streaming error handlers
+- Tests for agents and tools:
+  - Route validation and happy-path tests under `frontend/src/app/api/agents/**/__tests__/`
+  - Rate limit builder tests: `frontend/src/lib/ratelimit/__tests__/builders.test.ts`
+  - OpenTripMap and Travel Advisory tool tests with input validation
+  - Guardrail telemetry tests: `frontend/src/lib/agents/__tests__/runtime.test.ts`
+  - E2E Playwright tests: `frontend/e2e/agents-budget-memory.spec.ts`
+- Operator runbook: `docs/operators/agent-frontend.md` updated with all endpoints and env vars
 
 ### Changed
 
@@ -147,10 +156,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Flights tool now prefers `DUFFEL_ACCESS_TOKEN` (fallback `DUFFEL_API_KEY`)
   - `frontend/src/lib/tools/flights.ts`
 - Agent temperatures are hard-coded to `0.3` per agent (no env overrides)
-  - `frontend/src/lib/agents/{flight-agent,accommodation-agent}.ts`
+  - `frontend/src/lib/agents/{flight-agent,accommodation-agent,budget-agent,memory-agent,destination-agent,itinerary-agent,router-agent}.ts`
+- AgentWorkflow enum refactored from snake_case to camelCase for Google TS style compliance
+  - Updated `frontend/src/schemas/agents.ts` enum values: `flightSearch`, `accommodationSearch`, `budgetPlanning`, `memoryUpdate`, `destinationResearch`, `itineraryPlanning`, `router`
+  - All agent files, UI components, and tests updated to use camelCase workflow strings
+- Rate limit configuration centralized and DRY optimized
+  - Removed per-workflow builder files (`ratelimit/flight.ts`, `ratelimit/accommodation.ts`, `ratelimit/budget.ts`, `ratelimit/memory.ts`, `ratelimit/destinations.ts`, `ratelimit/itineraries.ts`)
+  - Consolidated into `frontend/src/lib/ratelimit/config.ts` with `RATE_LIMIT_CONFIG` map and `buildRateLimit()` factory
+- Legacy POI lookup tool removed and replaced with OpenTripMap integration
+  - Deleted `frontend/src/lib/tools/poi-lookup.ts` and test suite
+  - All imports updated to use `frontend/src/lib/tools/opentripmap.ts` directly
+- Environment variables added to `.env.example`:
+  - `OPENTRIPMAP_API_KEY`, `GEOSURE_API_KEY`, `AI_GATEWAY_API_KEY`, `AI_GATEWAY_URL`
+  - `OPENWEATHER_API_KEY`, `DUFFEL_API_KEY`, `ACCOM_SEARCH_URL`, `ACCOM_SEARCH_TOKEN`, `AIRBNB_MCP_URL`, `AIRBNB_MCP_API_KEY`
 - Specs updated for full frontend cutover
   - `docs/specs/0019-spec-hybrid-destination-itinerary-agents.md`
-  - `docs/specs/0020-spec-multi-agent-frontend-migration.md`
+  - `docs/specs/0020-spec-multi-agent-frontend-migration.md` (P2-P4 complete)
 
 - Replaced insecure/random ID generation across frontend stores and error pages with `secureId/secureUUID` and normalized timestamps via `nowIso`.
 - Removed server-side `Math.random` fallback for chat stream request IDs; use `secureUUID()` in `frontend/src/app/api/chat/stream/_handler.ts:1`.
