@@ -39,6 +39,10 @@ function buildFlightTools(identifier: string): ToolSet {
 
   const flightTool = toolRegistry.searchFlights as unknown as ToolLike;
   const geocodeTool = toolRegistry.geocode as unknown as ToolLike;
+  const poiTool = toolRegistry.lookupPoiContext as unknown as ToolLike | undefined;
+  const distanceMatrixTool = toolRegistry.distanceMatrix as unknown as
+    | ToolLike
+    | undefined;
 
   const searchFlights = tool({
     description: flightTool.description ?? "Search flights",
@@ -84,7 +88,46 @@ function buildFlightTools(identifier: string): ToolSet {
     inputSchema: z.any(),
   });
 
-  return { geocode, searchFlights } satisfies ToolSet;
+  const lookupPoiContext = tool({
+    description: poiTool?.description ?? "Lookup POIs (context)",
+    execute: async (params: unknown) => {
+      if (!poiTool) return { inputs: params, pois: [], provider: "stub" };
+      const { result } = await runWithGuardrails(
+        {
+          cache: { hashInput: true, key: "agent:flight:poi", ttlSeconds: 600 },
+          rateLimit: buildFlightRateLimit(identifier),
+          tool: "lookupPoiContext",
+          workflow: "flight_search",
+        },
+        params,
+        async (validated) => poiTool.execute(validated)
+      );
+      return result;
+    },
+    inputSchema: z.any(),
+  });
+
+  const distanceMatrix = tool({
+    description: distanceMatrixTool?.description ?? "Distance matrix",
+    execute: async (params: unknown) => {
+      if (!distanceMatrixTool)
+        return { distances: [], inputs: params, provider: "stub" };
+      const { result } = await runWithGuardrails(
+        {
+          cache: { hashInput: true, key: "agent:flight:distance", ttlSeconds: 3600 },
+          rateLimit: buildFlightRateLimit(identifier),
+          tool: "distanceMatrix",
+          workflow: "flight_search",
+        },
+        params,
+        async (validated) => distanceMatrixTool.execute(validated)
+      );
+      return result;
+    },
+    inputSchema: z.any(),
+  });
+
+  return { distanceMatrix, geocode, lookupPoiContext, searchFlights } satisfies ToolSet;
 }
 
 /**
@@ -113,6 +156,7 @@ export function runFlightAgent(
     )}`,
     stopWhen: stepCountIs(10),
     system: instructions,
+    temperature: 0.3,
     tools: buildFlightTools(deps.identifier),
   });
 }

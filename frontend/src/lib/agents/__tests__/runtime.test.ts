@@ -44,4 +44,15 @@ describe("runWithGuardrails", () => {
     expect(result).toBe("ok");
     expect(cacheHit).toBe(false);
   });
+
+  it("emits telemetry on success", async () => {
+    const { recordAgentToolEvent } = await import("@/lib/telemetry/agents");
+    const spy = recordAgentToolEvent as unknown as ReturnType<typeof vi.fn>;
+    await runWithGuardrails(
+      { inputSchema: z.object({ v: z.number() }), tool: "demo", workflow: "router" },
+      { v: 1 },
+      async () => ({ ok: true })
+    );
+    expect(spy).toHaveBeenCalled();
+  });
 });
