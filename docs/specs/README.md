@@ -44,6 +44,8 @@ A Technical Specification (Spec) is a document that provides detailed technical 
 | [SPEC-0016](0016-spec-react-compiler-enable.md) | Enable React Compiler in Next.js 16 | Accepted | 2025-11-04 |
 | [SPEC-0017](0017-spec-attachments-migration-next.md) | Attachments & File Uploads Migration (Next.js) | Draft | 2025-11-04 |
 | [SPEC-0018](0018-spec-rag-retriever-indexer.md) | RAG Retriever & Indexer (AI SDK v6) | Draft | 2025-11-04 |
+| [SPEC-0019](0019-spec-hybrid-destination-itinerary-agents.md) | Hybrid Destination & Itinerary Agents (Frontend) | Draft | 2025-11-12 |
+| [SPEC-0020](0020-spec-multi-agent-frontend-migration.md) | Multi-Agent Frontend Migration & Provider Expansion | Draft | 2025-11-12 |
 
 ## By Category
 
@@ -62,6 +64,8 @@ A Technical Specification (Spec) is a document that provides detailed technical 
 - SPEC-0015: AI Elements Response + Sources Integration
 - SPEC-0016: Enable React Compiler in Next.js 16
 - SPEC-0017: Attachments & File Uploads Migration (Next.js)
+- SPEC-0019: Hybrid Destination & Itinerary Agents (Frontend)
+- SPEC-0020: Multi-Agent Frontend Migration & Provider Expansion
 
 ### Backend
 
@@ -73,6 +77,7 @@ A Technical Specification (Spec) is a document that provides detailed technical 
 - SPEC-0010: Python Test Suite Modernization
 - SPEC-0011: BYOK Routes and Security (Next.js + Supabase Vault)
 - SPEC-0018: RAG Retriever & Indexer (AI SDK v6)
+- SPEC-0020: Multi-Agent Frontend Migration & Provider Expansion
 
 ## Creating a New Spec
 
