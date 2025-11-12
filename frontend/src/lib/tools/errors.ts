@@ -5,42 +5,41 @@
  * error handling across all tools.
  */
 
-// biome-ignore-file lint/style/useNamingConvention: Error code property names must match existing string literals used throughout codebase
-
 /**
  * Tool error codes organized by category.
  *
  * Each tool namespace has its own error codes for clarity and observability.
- * Error code strings use snake_case to match existing codebase conventions.
+ * Property names use camelCase per TypeScript conventions; string values use
+ * snake_case for API/log compatibility.
  */
 export const TOOL_ERROR_CODES = {
-  accom_booking_session_required: "accom_booking_session_required",
-  accom_details_failed: "accom_details_failed",
-  accom_details_not_configured: "accom_details_not_configured",
-  accom_details_not_found: "accom_details_not_found",
-  accom_details_rate_limited: "accom_details_rate_limited",
-  accom_details_timeout: "accom_details_timeout",
-  accom_details_unauthorized: "accom_details_unauthorized",
-  accom_search_failed: "accom_search_failed",
+  accomBookingSessionRequired: "accom_booking_session_required",
+  accomDetailsFailed: "accom_details_failed",
+  accomDetailsNotConfigured: "accom_details_not_configured",
+  accomDetailsNotFound: "accom_details_not_found",
+  accomDetailsRateLimited: "accom_details_rate_limited",
+  accomDetailsTimeout: "accom_details_timeout",
+  accomDetailsUnauthorized: "accom_details_unauthorized",
+  accomSearchFailed: "accom_search_failed",
 
   // Accommodation errors
-  accom_search_not_configured: "accom_search_not_configured",
-  accom_search_payment_required: "accom_search_payment_required",
-  accom_search_rate_limited: "accom_search_rate_limited",
-  accom_search_timeout: "accom_search_timeout",
-  accom_search_unauthorized: "accom_search_unauthorized",
-  approval_backend_unavailable: "approval_backend_unavailable",
-  approval_missing_session: "approval_missing_session",
+  accomSearchNotConfigured: "accom_search_not_configured",
+  accomSearchPaymentRequired: "accom_search_payment_required",
+  accomSearchRateLimited: "accom_search_rate_limited",
+  accomSearchTimeout: "accom_search_timeout",
+  accomSearchUnauthorized: "accom_search_unauthorized",
+  approvalBackendUnavailable: "approval_backend_unavailable",
+  approvalMissingSession: "approval_missing_session",
 
   // Approval errors
-  approval_required: "approval_required",
-  web_search_error: "web_search_error",
-  web_search_failed: "web_search_failed",
+  approvalRequired: "approval_required",
+  webSearchError: "web_search_error",
+  webSearchFailed: "web_search_failed",
   // Web search errors
-  web_search_not_configured: "web_search_not_configured",
-  web_search_payment_required: "web_search_payment_required",
-  web_search_rate_limited: "web_search_rate_limited",
-  web_search_unauthorized: "web_search_unauthorized",
+  webSearchNotConfigured: "web_search_not_configured",
+  webSearchPaymentRequired: "web_search_payment_required",
+  webSearchRateLimited: "web_search_rate_limited",
+  webSearchUnauthorized: "web_search_unauthorized",
 } as const;
 
 /**
@@ -76,7 +75,6 @@ export function createToolError(
   }
   return error;
 }
-
 
 /**
  * Check if an error is a ToolError.

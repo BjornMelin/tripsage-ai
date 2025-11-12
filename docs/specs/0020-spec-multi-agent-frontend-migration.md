@@ -3,6 +3,7 @@
 ## Status
 
 - Draft (target approval: 2025-11-15)
+- Wave P1 implementation underway (flights + accommodations endpoints, tools, UI).
 
 ## Goals
 

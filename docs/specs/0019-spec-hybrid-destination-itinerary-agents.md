@@ -105,6 +105,11 @@ flowchart TD
 - Guardrail middleware logs every tool invocation with result + cache metadata; Upstash limits enforced per user/workflow.
 - Automated tests cover schemas, agents, and UI; manual checklist documented for release.
 
+## Status
+
+- P0 completed (schemas, prompts, guardrails, telemetry, flags).
+- P1 in progress (flight + accommodation agents, route handlers, UI cards, tests).
+
 ## References
 
 - ADR-0038 Hybrid Frontend Agents (decision record).  

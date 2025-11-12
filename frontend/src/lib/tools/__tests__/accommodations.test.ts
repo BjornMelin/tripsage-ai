@@ -20,7 +20,9 @@ vi.mock("@/lib/mcp/client", () => ({
 }));
 
 vi.mock("@/lib/tools/approvals", () => ({
-  requireApproval: vi.fn(async () => {}),
+  requireApproval: vi.fn(async () => {
+    // Mock function returns undefined
+  }),
 }));
 
 vi.mock("@/lib/cache/keys", () => ({
@@ -155,7 +157,9 @@ describe("getAccommodationDetails", () => {
   test("returns structured output via MCP when available", async () => {
     const { createMcpClientHelper, getMcpTool } = await import("@/lib/mcp/client");
     const mockClient = {
-      close: vi.fn(async () => {}),
+      close: vi.fn(async () => {
+        // Mock function returns undefined
+      }),
     };
     const mockTool = createMockMcpTool({ id: "1", name: "Hotel" });
     (createMcpClientHelper as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(

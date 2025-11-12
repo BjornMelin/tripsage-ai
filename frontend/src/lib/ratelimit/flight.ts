@@ -17,4 +17,3 @@ export function buildFlightRateLimit(identifier: string): GuardrailRateLimit {
     window: "1 m",
   };
 }
-

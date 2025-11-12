@@ -10,13 +10,10 @@ import type { GuardrailRateLimit } from "@/lib/agents/runtime";
  * @param identifier Stable user or IP-based identifier (already hashed if needed).
  * @returns Rate-limit config: 10 requests per minute by default.
  */
-export function buildAccommodationRateLimit(
-  identifier: string
-): GuardrailRateLimit {
+export function buildAccommodationRateLimit(identifier: string): GuardrailRateLimit {
   return {
     identifier,
     limit: 10,
     window: "1 m",
   };
 }
-
