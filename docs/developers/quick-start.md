@@ -27,7 +27,7 @@ Get the TripSage development environment running quickly.
 - **Frontend**: Next.js 16, React 19, TypeScript 5.9.3
 - **Database**: PostgreSQL with pgvector (via Supabase)
 - **Cache**: Upstash Redis (HTTP REST API)
-- **AI**: OpenAI GPT-4/GPT-5, LangGraph orchestration, Mem0 memory
+- **AI**: Vercel AI SDK v6 with frontend-only agents (flights, accommodations, destinations, itineraries)
 - **Auth**: Supabase JWT with middleware
 - **Styling**: Tailwind CSS v4
 - **State**: Zustand for client state

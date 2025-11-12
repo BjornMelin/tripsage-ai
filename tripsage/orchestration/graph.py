@@ -16,10 +16,8 @@ from tripsage.orchestration.handoff_coordinator import (
     HandoffTrigger,
     get_handoff_coordinator,
 )
-from tripsage.orchestration.nodes.accommodation_agent import AccommodationAgentNode
 from tripsage.orchestration.nodes.budget_agent import BudgetAgentNode
 from tripsage.orchestration.nodes.error_recovery import ErrorRecoveryNode
-from tripsage.orchestration.nodes.flight_agent import FlightAgentNode
 from tripsage.orchestration.nodes.itinerary_agent import ItineraryAgentNode
 from tripsage.orchestration.nodes.memory_update import MemoryUpdateNode
 from tripsage.orchestration.routing import RouterNode
@@ -118,13 +116,9 @@ class TripSageOrchestrator:
         graph.add_node("router", router_node)
 
         # Add specialized agent nodes with service container
-        flight_agent_node = FlightAgentNode(self.services)
-        accommodation_agent_node = AccommodationAgentNode(self.services)
         budget_agent_node = BudgetAgentNode(self.services)
         itinerary_agent_node = ItineraryAgentNode(self.services)
 
-        graph.add_node("flight_agent", flight_agent_node)
-        graph.add_node("accommodation_agent", accommodation_agent_node)
         graph.add_node("budget_agent", budget_agent_node)
         graph.add_node("itinerary_agent", itinerary_agent_node)
 
@@ -145,8 +139,6 @@ class TripSageOrchestrator:
             "router",
             self._route_to_agent,
             {
-                "flight_agent": "flight_agent",
-                "accommodation_agent": "accommodation_agent",
                 "budget_agent": "budget_agent",
                 "itinerary_agent": "itinerary_agent",
                 "general_agent": "general_agent",
@@ -157,8 +149,6 @@ class TripSageOrchestrator:
 
         # Add agent completion flows (all agents can end or continue)
         for agent in [
-            "flight_agent",
-            "accommodation_agent",
             "budget_agent",
             "itinerary_agent",
             "general_agent",
@@ -196,8 +186,6 @@ class TripSageOrchestrator:
 
         # Router should have set the current_agent
         if current_agent in [
-            "flight_agent",
-            "accommodation_agent",
             "budget_agent",
             "itinerary_agent",
             "general_agent",

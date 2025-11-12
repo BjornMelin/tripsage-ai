@@ -8,14 +8,12 @@ from typing import TYPE_CHECKING
 
 
 __all__ = [
-    "accommodations",
     "activities",
     "attachments",
     "auth",
     "config",
     "dashboard",
     "destinations",
-    "flights",
     "health",
     "itineraries",
     "memory",
@@ -26,14 +24,12 @@ __all__ = [
 
 if TYPE_CHECKING:
     from . import (
-        accommodations,
         activities,
         attachments,
         auth,
         config,
         dashboard,
         destinations,
-        flights,
         health,
         itineraries,
         memory,
