@@ -17,7 +17,7 @@
 
 - **Schemas & Prompts**: Extend `frontend/src/schemas/agents.ts` with shared types for flights, accommodations, budgets, memories, and routing metadata. Update prompt builders to accept user/account context.
 - **Guardrail Middleware**: Generalize middleware to support tool budgets per workflow, caching policies, and telemetry hooks.
-- **Feature Flags**: Introduce `NEXT_PUBLIC_AGENT_WAVE_FLIGHT`, `..._BUDGET`, etc., for progressive rollout via config service.
+-(Removed) Feature flags: We are performing a complete cutover; routes are always enabled. Rollback is via deployment rollback, not flags.
 - **Deliverables**: Unit tests covering middleware, integration tests for caching + rate limits.
 
 ### P1 – Flight & Accommodation Agents

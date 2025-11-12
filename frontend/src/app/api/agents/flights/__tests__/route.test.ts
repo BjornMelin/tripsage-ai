@@ -3,24 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 describe("/api/agents/flights route", () => {
   beforeEach(() => {
     vi.resetModules();
-    process.env.AGENT_WAVE_FLIGHT = "true";
   });
 
-  it("returns 503 when feature flag disabled", async () => {
-    process.env.AGENT_WAVE_FLIGHT = "false";
-    const mod = await import("../route");
-    const req = new Request("http://localhost/api/agents/flights", {
-      body: JSON.stringify({
-        departureDate: "2025-12-15",
-        destination: "JFK",
-        origin: "SFO",
-        passengers: 1,
-      }),
-      method: "POST",
-    });
-    const res = await mod.POST(req as unknown as import("next/server").NextRequest);
-    expect(res.status).toBe(503);
-  });
+  // Feature flags removed: route is always enabled
 
   it("streams when valid and enabled", async () => {
     vi.doMock("@/lib/supabase/server", () => ({

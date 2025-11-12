@@ -94,8 +94,7 @@ flowchart TD
 - **Testing**: Vitest (agents, tools, components), Playwright (chat flows), integration tests hitting new route handlers with mocked AI client.
 - **Rollout**:
   - Feature flag `NEXT_PUBLIC_AGENT_DEST_ITIN` gating PromptInput actions + API entry points.
-  - Staged rollout: internal → beta cohort → GA once telemetry meets success metrics (≥95 % tool-call success, median latency delta ≤ +2 s).
-  - Document in `docs/prompts/ai-sdk/05-tools-and-mcp-integration.md` and operator runbooks.
+- Rollout: complete cutover with the frontend-only agents. Telemetry still monitors success and latency; rollback is done by reverting deploys.
 
 ## Acceptance Criteria
 

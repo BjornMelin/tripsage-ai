@@ -14,7 +14,6 @@ import type { z } from "zod";
 import { runAccommodationAgent } from "@/lib/agents/accommodation-agent";
 import { getTrustedRateLimitIdentifier } from "@/lib/next/route-helpers";
 import { resolveProvider } from "@/lib/providers/registry";
-import { getAgentFeatureFlags } from "@/lib/settings/agent-flags";
 import { createServerSupabase } from "@/lib/supabase/server";
 import type { AccommodationSearchRequest } from "@/schemas/agents";
 import { agentSchemas } from "@/schemas/agents";
@@ -31,10 +30,6 @@ const RequestSchema = agentSchemas.accommodationSearchRequestSchema;
  */
 export async function POST(req: NextRequest): Promise<Response> {
   try {
-    const flags = getAgentFeatureFlags();
-    if (!flags.accommodations) {
-      return NextResponse.json({ error: "wave-disabled" }, { status: 503 });
-    }
     const supabase = await createServerSupabase();
     const user = (await supabase.auth.getUser()).data.user;
 
