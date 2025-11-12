@@ -11,11 +11,16 @@ import "server-only";
 
 import type { LanguageModel, ToolSet } from "ai";
 import { stepCountIs, streamText, tool } from "ai";
-import { z } from "zod";
 
-import { runWithGuardrails } from "@/lib/agents/runtime";
+import { buildGuardedTool } from "@/lib/agents/guarded-tool";
 import { buildRateLimit } from "@/lib/ratelimit/config";
 import { toolRegistry } from "@/lib/tools";
+import { lookupPoiInputSchema } from "@/lib/tools/google-places";
+import { travelAdvisoryInputSchema } from "@/lib/tools/travel-advisory";
+import { getCurrentWeatherInputSchema } from "@/lib/tools/weather";
+import { crawlSiteInputSchema } from "@/lib/tools/web-crawl";
+import { webSearchInputSchema } from "@/lib/tools/web-search";
+import { webSearchBatchInputSchema } from "@/lib/tools/web-search-batch";
 import { buildDestinationPrompt } from "@/prompts/agents";
 import type { DestinationResearchRequest } from "@/schemas/agents";
 
@@ -43,139 +48,130 @@ function buildDestinationTools(identifier: string): ToolSet {
   const poiTool = toolRegistry.lookupPoiContext as unknown as ToolLike | undefined;
   const weatherTool = toolRegistry.getCurrentWeather as unknown as ToolLike | undefined;
   const safetyTool = toolRegistry.getTravelAdvisory as unknown as ToolLike | undefined;
+  const rateLimit = buildRateLimit("destinationResearch", identifier);
+
+  const guardedWebSearch = buildGuardedTool({
+    cache: {
+      hashInput: true,
+      key: "agent:destination:web-search",
+      ttlSeconds: 60 * 30,
+    },
+    execute: async (params: unknown) => await webSearchTool.execute(params),
+    rateLimit,
+    schema: webSearchInputSchema,
+    toolKey: "webSearch",
+    workflow: "destinationResearch",
+  });
+
+  const guardedWebSearchBatch = buildGuardedTool({
+    cache: {
+      hashInput: true,
+      key: "agent:destination:web-search-batch",
+      ttlSeconds: 60 * 30,
+    },
+    execute: async (params: unknown) => await webSearchBatchTool.execute(params),
+    rateLimit,
+    schema: webSearchBatchInputSchema,
+    toolKey: "webSearchBatch",
+    workflow: "destinationResearch",
+  });
+
+  const guardedCrawlSite = buildGuardedTool({
+    cache: {
+      hashInput: true,
+      key: "agent:destination:crawl",
+      ttlSeconds: 60 * 60,
+    },
+    execute: async (params: unknown) => {
+      if (!crawlSiteTool) return { pages: [], provider: "stub" };
+      return await crawlSiteTool.execute(params);
+    },
+    rateLimit,
+    schema: crawlSiteInputSchema,
+    toolKey: "crawlSite",
+    workflow: "destinationResearch",
+  });
+
+  const guardedLookupPoi = buildGuardedTool({
+    cache: { hashInput: true, key: "agent:destination:poi", ttlSeconds: 600 },
+    execute: async (params: unknown) => {
+      if (!poiTool) return { inputs: params, pois: [], provider: "stub" };
+      return await poiTool.execute(params);
+    },
+    rateLimit,
+    schema: lookupPoiInputSchema,
+    toolKey: "lookupPoiContext",
+    workflow: "destinationResearch",
+  });
+
+  const guardedGetCurrentWeather = buildGuardedTool({
+    cache: {
+      hashInput: true,
+      key: "agent:destination:weather",
+      ttlSeconds: 60 * 30,
+    },
+    execute: async (params: unknown) => {
+      if (!weatherTool)
+        return { condition: "unknown", provider: "stub", temperature: 0 };
+      return await weatherTool.execute(params);
+    },
+    rateLimit,
+    schema: getCurrentWeatherInputSchema,
+    toolKey: "getCurrentWeather",
+    workflow: "destinationResearch",
+  });
+
+  const guardedGetTravelAdvisory = buildGuardedTool({
+    cache: {
+      hashInput: true,
+      key: "agent:destination:safety",
+      ttlSeconds: 60 * 60 * 24 * 7,
+    },
+    execute: async (params: unknown) => {
+      if (!safetyTool)
+        return { categories: [], destination: "", overallScore: 75, provider: "stub" };
+      return await safetyTool.execute(params);
+    },
+    rateLimit,
+    schema: travelAdvisoryInputSchema,
+    toolKey: "getTravelAdvisory",
+    workflow: "destinationResearch",
+  });
 
   const webSearch = tool({
     description: webSearchTool.description ?? "Web search",
-    execute: async (params: unknown) => {
-      const { result } = await runWithGuardrails(
-        {
-          cache: {
-            hashInput: true,
-            key: "agent:destination:web-search",
-            ttlSeconds: 60 * 30,
-          },
-          rateLimit: buildRateLimit("destinationResearch", identifier),
-          tool: "webSearch",
-          workflow: "destinationResearch",
-        },
-        params,
-        async (validated) => webSearchTool.execute(validated)
-      );
-      return result;
-    },
-    inputSchema: z.any(),
+    execute: guardedWebSearch,
+    inputSchema: webSearchInputSchema,
   });
 
   const webSearchBatch = tool({
     description: webSearchBatchTool.description ?? "Batch web search",
-    execute: async (params: unknown) => {
-      const { result } = await runWithGuardrails(
-        {
-          cache: {
-            hashInput: true,
-            key: "agent:destination:web-search-batch",
-            ttlSeconds: 60 * 30,
-          },
-          rateLimit: buildRateLimit("destinationResearch", identifier),
-          tool: "webSearchBatch",
-          workflow: "destinationResearch",
-        },
-        params,
-        async (validated) => webSearchBatchTool.execute(validated)
-      );
-      return result;
-    },
-    inputSchema: z.any(),
+    execute: guardedWebSearchBatch,
+    inputSchema: webSearchBatchInputSchema,
   });
 
   const crawlSite = tool({
     description: crawlSiteTool?.description ?? "Crawl website",
-    execute: async (params: unknown) => {
-      if (!crawlSiteTool) return { pages: [], provider: "stub" };
-      const { result } = await runWithGuardrails(
-        {
-          cache: {
-            hashInput: true,
-            key: "agent:destination:crawl",
-            ttlSeconds: 60 * 60,
-          },
-          rateLimit: buildRateLimit("destinationResearch", identifier),
-          tool: "crawlSite",
-          workflow: "destinationResearch",
-        },
-        params,
-        async (validated) => crawlSiteTool.execute(validated)
-      );
-      return result;
-    },
-    inputSchema: z.any(),
+    execute: guardedCrawlSite,
+    inputSchema: crawlSiteInputSchema,
   });
 
   const lookupPoiContext = tool({
     description: poiTool?.description ?? "Lookup POIs (context)",
-    execute: async (params: unknown) => {
-      if (!poiTool) return { inputs: params, pois: [], provider: "stub" };
-      const { result } = await runWithGuardrails(
-        {
-          cache: { hashInput: true, key: "agent:destination:poi", ttlSeconds: 600 },
-          rateLimit: buildRateLimit("destinationResearch", identifier),
-          tool: "lookupPoiContext",
-          workflow: "destinationResearch",
-        },
-        params,
-        async (validated) => poiTool.execute(validated)
-      );
-      return result;
-    },
-    inputSchema: z.any(),
+    execute: guardedLookupPoi,
+    inputSchema: lookupPoiInputSchema,
   });
 
   const getCurrentWeather = tool({
     description: weatherTool?.description ?? "Get current weather",
-    execute: async (params: unknown) => {
-      if (!weatherTool)
-        return { condition: "unknown", provider: "stub", temperature: 0 };
-      const { result } = await runWithGuardrails(
-        {
-          cache: {
-            hashInput: true,
-            key: "agent:destination:weather",
-            ttlSeconds: 60 * 30,
-          },
-          rateLimit: buildRateLimit("destinationResearch", identifier),
-          tool: "getCurrentWeather",
-          workflow: "destinationResearch",
-        },
-        params,
-        async (validated) => weatherTool.execute(validated)
-      );
-      return result;
-    },
-    inputSchema: z.any(),
+    execute: guardedGetCurrentWeather,
+    inputSchema: getCurrentWeatherInputSchema,
   });
 
   const getTravelAdvisory = tool({
     description: safetyTool?.description ?? "Get travel advisory and safety scores",
-    execute: async (params: unknown) => {
-      if (!safetyTool)
-        return { categories: [], destination: "", overallScore: 75, provider: "stub" };
-      const { result } = await runWithGuardrails(
-        {
-          cache: {
-            hashInput: true,
-            key: "agent:destination:safety",
-            ttlSeconds: 60 * 60 * 24 * 7,
-          },
-          rateLimit: buildRateLimit("destinationResearch", identifier),
-          tool: "getTravelAdvisory",
-          workflow: "destinationResearch",
-        },
-        params,
-        async (validated) => safetyTool.execute(validated)
-      );
-      return result;
-    },
-    inputSchema: z.any(),
+    execute: guardedGetTravelAdvisory,
+    inputSchema: travelAdvisoryInputSchema,
   });
 
   return {

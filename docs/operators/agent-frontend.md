@@ -28,7 +28,7 @@ All streaming endpoints return UI-compatible responses via `toUIMessageStreamRes
 - GeoSure safety provider (optional): `GEOSURE_API_KEY` for travel advisories.
 - Vercel AI Gateway (optional): `AI_GATEWAY_API_KEY` and `AI_GATEWAY_URL` for unified routing.
 - Accommodation search (optional): `ACCOM_SEARCH_URL`/`ACCOM_SEARCH_TOKEN` or `AIRBNB_MCP_URL`/`AIRBNB_MCP_API_KEY`.
-- Weather (optional): `OPENWEATHER_API_KEY` for weather queries.
+- Weather (optional): `OPENWEATHERMAP_API_KEY` for weather queries.
 
 Temperatures are hard-coded per agent (default 0.3). Adjust via code near each agent orchestrator.
 

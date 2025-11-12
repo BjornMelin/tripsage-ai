@@ -40,7 +40,7 @@ function buildToolRateLimiter(): InstanceType<typeof Ratelimit> | undefined {
  * Validates 1-10 queries and shared search parameters (sources, categories,
  * location, tbs, scrapeOptions). All queries use the same configuration.
  */
-const batchInputSchema = z.object({
+export const webSearchBatchInputSchema = z.object({
   categories: z.array(z.string()).optional(),
   fresh: z.boolean().default(false).optional(),
   limit: z.number().int().min(1).max(10).default(5).optional(),
@@ -239,5 +239,5 @@ export const webSearchBatch = tool({
       }
     );
   },
-  inputSchema: batchInputSchema,
+  inputSchema: webSearchBatchInputSchema,
 });

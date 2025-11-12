@@ -48,6 +48,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       return errorResponse({
         err: zerr,
         error: "invalid_request",
+        issues: zerr.issues,
         reason: "Request validation failed",
         status: 400,
       });

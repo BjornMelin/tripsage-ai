@@ -23,6 +23,33 @@ import { type Plan, planSchema } from "./planning.schema";
 const UUI_DV4 = z.string().uuid();
 const ISO_DATE = z.string().regex(/^\d{4}-\d{2}-\d{2}$/u, "must be YYYY-MM-DD");
 const PREFERENCES = z.record(z.string(), z.unknown()).default({});
+
+export const combineSearchResultsInputSchema = z.object({
+  accommodationResults: z.record(z.string(), z.unknown()).optional(),
+  activityResults: z.record(z.string(), z.unknown()).optional(),
+  destinationInfo: z.record(z.string(), z.unknown()).optional(),
+  endDate: ISO_DATE.optional(),
+  flightResults: z.record(z.string(), z.unknown()).optional(),
+  startDate: ISO_DATE.optional(),
+  userPreferences: z.record(z.string(), z.unknown()).optional(),
+});
+
+export const createTravelPlanInputSchema = z.object({
+  budget: z.number().min(0).optional(),
+  destinations: z.array(z.string().min(1)).min(1),
+  endDate: ISO_DATE,
+  preferences: PREFERENCES.optional(),
+  startDate: ISO_DATE,
+  title: z.string().min(1, "title required"),
+  travelers: z.number().int().min(1).max(50).default(1),
+  userId: z.string().min(1).optional(),
+});
+
+export const saveTravelPlanInputSchema = z.object({
+  finalize: z.boolean().default(false).optional(),
+  planId: UUI_DV4,
+  userId: z.string().min(1).optional(),
+});
 type PlanComponents = Plan["components"];
 
 function redisKeyForPlan(planId: string): string {
@@ -239,16 +266,7 @@ export const createTravelPlan = tool({
       }
     );
   },
-  inputSchema: z.object({
-    budget: z.number().min(0).optional(),
-    destinations: z.array(z.string().min(1)).min(1),
-    endDate: ISO_DATE,
-    preferences: PREFERENCES.optional(),
-    startDate: ISO_DATE,
-    title: z.string().min(1, "title required"),
-    travelers: z.number().int().min(1).max(50).default(1),
-    userId: z.string().min(1).optional(),
-  }),
+  inputSchema: createTravelPlanInputSchema,
 });
 
 export const updateTravelPlan = tool({
@@ -456,15 +474,7 @@ export const combineSearchResults = tool({
 
     return { combinedResults: result, message: "combined", success: true } as const;
   },
-  inputSchema: z.object({
-    accommodationResults: z.record(z.string(), z.unknown()).optional(),
-    activityResults: z.record(z.string(), z.unknown()).optional(),
-    destinationInfo: z.record(z.string(), z.unknown()).optional(),
-    endDate: ISO_DATE.optional(),
-    flightResults: z.record(z.string(), z.unknown()).optional(),
-    startDate: ISO_DATE.optional(),
-    userPreferences: z.record(z.string(), z.unknown()).optional(),
-  }),
+  inputSchema: combineSearchResultsInputSchema,
 });
 
 export const saveTravelPlan = tool({
@@ -564,11 +574,7 @@ export const saveTravelPlan = tool({
       }
     );
   },
-  inputSchema: z.object({
-    finalize: z.boolean().default(false).optional(),
-    planId: UUI_DV4,
-    userId: z.string().min(1).optional(),
-  }),
+  inputSchema: saveTravelPlanInputSchema,
 });
 
 export const deleteTravelPlan = tool({

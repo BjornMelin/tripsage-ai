@@ -116,6 +116,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Agent routes for budget, destination, itinerary, memory, and router flows now call `errorResponse`, `enforceRouteRateLimit`, and `withRequestSpan` before invoking their orchestrators to keep throttling and telemetry consistent.
+- Budget/destination/itinerary orchestrators now build every tool via `buildGuardedTool` with concrete Zod schemas (web search batch, POI lookup, planning combine/save, travel advisory, weather, crawl) instead of bespoke `runWithGuardrails` blocks using `z.any`.
 - Chat page routing: Messages with agent metadata route to specialized endpoints; JSON parsing extracts structured results from markdown code blocks or plain text.
 - Provider registry resolution: Checks BYOK keys first (direct provider access), then falls back to Gateway (default path for non-BYOK users).
 - Web search tool (`frontend/src/lib/tools/web-search.ts`):
@@ -165,7 +167,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Google Places tool implements Google Maps geocoding for destination strings: `geocodeDestinationWithGoogleMaps()` function with normalized cache keys (`googleplaces:geocode:{destination}`), 30-day max TTL per policy
 - Environment variables added to `.env.example`:
   - `GOOGLE_MAPS_SERVER_API_KEY`, `NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY`, `GEOSURE_API_KEY`, `AI_GATEWAY_API_KEY`, `AI_GATEWAY_URL`
-  - `OPENWEATHER_API_KEY`, `DUFFEL_API_KEY`, `ACCOM_SEARCH_URL`, `ACCOM_SEARCH_TOKEN`, `AIRBNB_MCP_URL`, `AIRBNB_MCP_API_KEY`
+  - `OPENWEATHERMAP_API_KEY`, `DUFFEL_API_KEY`, `ACCOM_SEARCH_URL`, `ACCOM_SEARCH_TOKEN`, `AIRBNB_MCP_URL`, `AIRBNB_MCP_API_KEY`
 - Specs updated for full frontend cutover
   - `docs/specs/0019-spec-hybrid-destination-itinerary-agents.md`
   - `docs/specs/0020-spec-multi-agent-frontend-migration.md` (P2-P4 complete)
@@ -205,6 +207,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Hoisted module mocks with `vi.hoisted` where needed to satisfy Vitest hoisting semantics.
 
 ### Fixed
+
+- `/api/geocode` returns `errorResponse` payloads for validation failures and Google Maps upstream errors, replacing brittle custom JSON branches.
+- `.env` docs, Docker compose, and tests now point to a single `OPENWEATHER_API_KEY`, removing the duplicate `OPENWEATHERMAP_API_KEY` guidance that caused misconfiguration.
 
 - Token budget utilities release WASM tokenizer resources without `any` casts (`frontend/src/lib/tokens/budget.ts`).
 - Google Places POI lookup now supports destination-only queries via Google Maps geocoding: uses `geocodeDestinationWithGoogleMaps()` implementation with Google Maps Geocoding API, added geocoding result caching (30-day max TTL per policy), normalized cache keys for consistent lookups (`frontend/src/lib/tools/google-places.ts`).

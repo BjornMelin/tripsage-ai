@@ -11,11 +11,14 @@ import "server-only";
 
 import type { LanguageModel, ToolSet } from "ai";
 import { stepCountIs, streamText, tool } from "ai";
-import { z } from "zod";
 
-import { runWithGuardrails } from "@/lib/agents/runtime";
+import { buildGuardedTool } from "@/lib/agents/guarded-tool";
 import { buildRateLimit } from "@/lib/ratelimit/config";
 import { toolRegistry } from "@/lib/tools";
+import { lookupPoiInputSchema } from "@/lib/tools/google-places";
+import { combineSearchResultsInputSchema } from "@/lib/tools/planning";
+import { travelAdvisoryInputSchema } from "@/lib/tools/travel-advisory";
+import { webSearchBatchInputSchema } from "@/lib/tools/web-search-batch";
 import { buildBudgetPrompt } from "@/prompts/agents";
 import type { BudgetPlanRequest } from "@/schemas/agents";
 
@@ -44,88 +47,84 @@ function buildBudgetTools(identifier: string): ToolSet {
     | undefined;
   const safetyTool = toolRegistry.getTravelAdvisory as unknown as ToolLike | undefined;
 
+  const rateLimit = buildRateLimit("budgetPlanning", identifier);
+
+  const guardedWebSearchBatch = buildGuardedTool({
+    cache: {
+      hashInput: true,
+      key: "agent:budget:web-search",
+      ttlSeconds: 60 * 10,
+    },
+    execute: async (params: unknown) => webSearchBatchTool.execute(params),
+    rateLimit,
+    schema: webSearchBatchInputSchema,
+    toolKey: "webSearchBatch",
+    workflow: "budgetPlanning",
+  });
+
+  const guardedLookupPoiContext = buildGuardedTool({
+    cache: { hashInput: true, key: "agent:budget:poi", ttlSeconds: 600 },
+    execute: async (params: unknown) => {
+      if (!poiTool) return { inputs: params, pois: [], provider: "stub" };
+      return await poiTool.execute(params);
+    },
+    rateLimit,
+    schema: lookupPoiInputSchema,
+    toolKey: "lookupPoiContext",
+    workflow: "budgetPlanning",
+  });
+
+  const guardedCombineSearchResults = buildGuardedTool({
+    cache: { hashInput: true, key: "agent:budget:combine", ttlSeconds: 60 * 10 },
+    execute: async (params: unknown) => {
+      if (!combineTool) return { combinedResults: {}, message: "stub", success: true };
+      return await combineTool.execute(params);
+    },
+    rateLimit,
+    schema: combineSearchResultsInputSchema,
+    toolKey: "combineSearchResults",
+    workflow: "budgetPlanning",
+  });
+
+  const guardedGetTravelAdvisory = buildGuardedTool({
+    cache: {
+      hashInput: true,
+      key: "agent:budget:safety",
+      ttlSeconds: 60 * 60 * 24 * 7,
+    },
+    execute: async (params: unknown) => {
+      if (!safetyTool)
+        return { categories: [], destination: "", overallScore: 75, provider: "stub" };
+      return await safetyTool.execute(params);
+    },
+    rateLimit,
+    schema: travelAdvisoryInputSchema,
+    toolKey: "getTravelAdvisory",
+    workflow: "budgetPlanning",
+  });
+
   const webSearchBatch = tool({
     description: webSearchBatchTool.description ?? "Batch web search",
-    execute: async (params: unknown) => {
-      const { result } = await runWithGuardrails(
-        {
-          cache: {
-            hashInput: true,
-            key: "agent:budget:web-search",
-            ttlSeconds: 60 * 10,
-          },
-          rateLimit: buildRateLimit("budgetPlanning", identifier),
-          tool: "webSearchBatch",
-          workflow: "budgetPlanning",
-        },
-        params,
-        async (validated) => webSearchBatchTool.execute(validated)
-      );
-      return result;
-    },
-    inputSchema: z.any(),
+    execute: guardedWebSearchBatch,
+    inputSchema: webSearchBatchInputSchema,
   });
 
   const lookupPoiContext = tool({
     description: poiTool?.description ?? "Lookup POIs (context)",
-    execute: async (params: unknown) => {
-      if (!poiTool) return { inputs: params, pois: [], provider: "stub" };
-      const { result } = await runWithGuardrails(
-        {
-          cache: { hashInput: true, key: "agent:budget:poi", ttlSeconds: 600 },
-          rateLimit: buildRateLimit("budgetPlanning", identifier),
-          tool: "lookupPoiContext",
-          workflow: "budgetPlanning",
-        },
-        params,
-        async (validated) => poiTool.execute(validated)
-      );
-      return result;
-    },
-    inputSchema: z.any(),
+    execute: guardedLookupPoiContext,
+    inputSchema: lookupPoiInputSchema,
   });
 
   const combineSearchResults = tool({
     description: combineTool?.description ?? "Combine search results",
-    execute: async (params: unknown) => {
-      if (!combineTool) return { combinedResults: {}, message: "stub", success: true };
-      const { result } = await runWithGuardrails(
-        {
-          cache: { hashInput: true, key: "agent:budget:combine", ttlSeconds: 60 * 10 },
-          rateLimit: buildRateLimit("budgetPlanning", identifier),
-          tool: "combineSearchResults",
-          workflow: "budgetPlanning",
-        },
-        params,
-        async (validated) => combineTool.execute(validated)
-      );
-      return result;
-    },
-    inputSchema: z.any(),
+    execute: guardedCombineSearchResults,
+    inputSchema: combineSearchResultsInputSchema,
   });
 
   const getTravelAdvisory = tool({
     description: safetyTool?.description ?? "Get travel advisory and safety scores",
-    execute: async (params: unknown) => {
-      if (!safetyTool)
-        return { categories: [], destination: "", overallScore: 75, provider: "stub" };
-      const { result } = await runWithGuardrails(
-        {
-          cache: {
-            hashInput: true,
-            key: "agent:budget:safety",
-            ttlSeconds: 60 * 60 * 24 * 7,
-          },
-          rateLimit: buildRateLimit("budgetPlanning", identifier),
-          tool: "getTravelAdvisory",
-          workflow: "budgetPlanning",
-        },
-        params,
-        async (validated) => safetyTool.execute(validated)
-      );
-      return result;
-    },
-    inputSchema: z.any(),
+    execute: guardedGetTravelAdvisory,
+    inputSchema: travelAdvisoryInputSchema,
   });
 
   return {

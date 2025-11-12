@@ -70,7 +70,7 @@
     "@types/react-syntax-highlighter": "^15.5.13",
     "@upstash/ratelimit": "2.0.7",
     "@upstash/redis": "^1.35.6",
-    "ai": "6.0.0-beta.98",
+    "ai": "6.0.0-beta.99",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
