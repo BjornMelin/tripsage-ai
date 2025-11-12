@@ -61,36 +61,32 @@ export function parseSchemaCard(text: string): ParsedSchemaCard | null {
     return null;
   }
 
-  // Check if parsed JSON matches flight.v1 schema
-  const flightResult = flightSearchResultSchema.safeParse(parsedJson);
-  if (flightResult.success) {
-    return { data: flightResult.data, kind: "flight" };
+  // Disambiguate by explicit schemaVersion to avoid false positives on schemas
+  const obj = parsedJson as { schemaVersion?: string };
+  switch (obj.schemaVersion) {
+    case "flight.v1": {
+      const r = flightSearchResultSchema.safeParse(parsedJson);
+      return r.success ? { data: r.data, kind: "flight" } : null;
+    }
+    case "stay.v1": {
+      const r = accommodationSearchResultSchema.safeParse(parsedJson);
+      return r.success ? { data: r.data, kind: "stay" } : null;
+    }
+    case "budget.v1": {
+      const r = budgetPlanResultSchema.safeParse(parsedJson);
+      return r.success ? { data: r.data, kind: "budget" } : null;
+    }
+    case "dest.v1": {
+      const r = destinationResearchResultSchema.safeParse(parsedJson);
+      return r.success ? { data: r.data, kind: "destination" } : null;
+    }
+    case "itin.v1": {
+      const r = itineraryPlanResultSchema.safeParse(parsedJson);
+      return r.success ? { data: r.data, kind: "itinerary" } : null;
+    }
+    default:
+      return null;
   }
 
-  // Check if parsed JSON matches stay.v1 schema
-  const stayResult = accommodationSearchResultSchema.safeParse(parsedJson);
-  if (stayResult.success) {
-    return { data: stayResult.data, kind: "stay" };
-  }
-
-  // Check if parsed JSON matches budget.v1 schema
-  const budgetResult = budgetPlanResultSchema.safeParse(parsedJson);
-  if (budgetResult.success) {
-    return { data: budgetResult.data, kind: "budget" };
-  }
-
-  // Check if parsed JSON matches dest.v1 schema
-  const destResult = destinationResearchResultSchema.safeParse(parsedJson);
-  if (destResult.success) {
-    return { data: destResult.data, kind: "destination" };
-  }
-
-  // Check if parsed JSON matches itin.v1 schema
-  const itinResult = itineraryPlanResultSchema.safeParse(parsedJson);
-  if (itinResult.success) {
-    return { data: itinResult.data, kind: "itinerary" };
-  }
-
-  // No matching schema found
-  return null;
+  // Unreachable: switch covers all return branches including default
 }

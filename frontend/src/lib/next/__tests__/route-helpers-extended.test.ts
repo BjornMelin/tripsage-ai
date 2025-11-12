@@ -1,19 +1,20 @@
 /** @vitest-environment node */
 
-import type { NextRequest } from "next/server";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { errorResponse, withRequestSpan } from "@/lib/next/route-helpers";
 
 describe("withRequestSpan", () => {
   beforeEach(() => {
-    vi.spyOn(console, "debug").mockImplementation(() => {});
+    vi.spyOn(console, "debug").mockImplementation(() => {
+      /* noop */
+    });
   });
 
   it("executes function and logs span", async () => {
     const fn = vi.fn().mockResolvedValue("result");
     const result = await withRequestSpan(
       "test.operation",
-      { key: "value", count: 42 },
+      { count: 42, key: "value" },
       fn
     );
 
@@ -22,18 +23,20 @@ describe("withRequestSpan", () => {
     expect(console.debug).toHaveBeenCalledWith(
       "agent.span",
       expect.objectContaining({
-        durationMs: expect.any(Number),
-        name: "test.operation",
-        key: "value",
         count: 42,
+        durationMs: expect.any(Number),
+        key: "value",
+        name: "test.operation",
       })
     );
   });
 
   it("measures execution duration", async () => {
-    const fn = vi.fn().mockImplementation(
-      () => new Promise((resolve) => setTimeout(() => resolve("done"), 10))
-    );
+    const fn = vi
+      .fn()
+      .mockImplementation(
+        () => new Promise((resolve) => setTimeout(() => resolve("done"), 10))
+      );
 
     await withRequestSpan("slow.operation", {}, fn);
 
@@ -45,9 +48,9 @@ describe("withRequestSpan", () => {
     const error = new Error("Test error");
     const fn = vi.fn().mockRejectedValue(error);
 
-    await expect(
-      withRequestSpan("error.operation", {}, fn)
-    ).rejects.toThrow("Test error");
+    await expect(withRequestSpan("error.operation", {}, fn)).rejects.toThrow(
+      "Test error"
+    );
 
     expect(console.debug).toHaveBeenCalled();
   });
@@ -63,8 +66,8 @@ describe("withRequestSpan", () => {
     expect(console.debug).toHaveBeenCalledWith(
       "agent.span",
       expect.objectContaining({
-        name: "failing.operation",
         attr: "test",
+        name: "failing.operation",
       })
     );
   });
@@ -72,7 +75,9 @@ describe("withRequestSpan", () => {
 
 describe("errorResponse", () => {
   beforeEach(() => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {
+      /* noop */
+    });
   });
 
   it("returns standardized error response", () => {
@@ -160,4 +165,3 @@ describe("errorResponse", () => {
     expect(console.error).toHaveBeenCalled();
   });
 });
-

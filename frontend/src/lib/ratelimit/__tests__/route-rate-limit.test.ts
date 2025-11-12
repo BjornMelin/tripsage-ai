@@ -1,9 +1,6 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { Redis } from "@upstash/redis";
-import {
-  buildRouteRateLimiter,
-  enforceRouteRateLimit,
-} from "../config";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { buildRouteRateLimiter, enforceRouteRateLimit } from "../config";
 
 const mockSlidingWindow = vi.hoisted(() => vi.fn(() => ({})));
 const mockLimitFn = vi.hoisted(() => vi.fn());
@@ -60,17 +57,15 @@ describe("enforceRouteRateLimit", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSlidingWindow.mockReturnValue({});
-    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {
+      /* noop */
+    });
   });
 
   it("returns null when Redis is unavailable", async () => {
     const getRedis = vi.fn().mockReturnValue(undefined);
 
-    const result = await enforceRouteRateLimit(
-      "flightSearch",
-      "user-123",
-      getRedis
-    );
+    const result = await enforceRouteRateLimit("flightSearch", "user-123", getRedis);
 
     expect(result).toBeNull();
   });
@@ -93,11 +88,7 @@ describe("enforceRouteRateLimit", () => {
     mockLimitFn.mockResolvedValue({ success: false });
     const getRedis = vi.fn().mockReturnValue({} as Redis);
 
-    const result = await enforceRouteRateLimit(
-      "flightSearch",
-      "user-789",
-      getRedis
-    );
+    const result = await enforceRouteRateLimit("flightSearch", "user-789", getRedis);
 
     expect(result).toEqual({
       error: "rate_limit_exceeded",
@@ -110,11 +101,9 @@ describe("enforceRouteRateLimit", () => {
   it("gracefully degrades on rate limit errors", async () => {
     const error = new Error("Redis connection failed");
     const { Ratelimit } = await import("@upstash/ratelimit");
-    vi.mocked(Ratelimit).mockImplementationOnce(
-      () => {
-        throw error;
-      },
-    );
+    vi.mocked(Ratelimit).mockImplementationOnce(() => {
+      throw error;
+    });
     const getRedis = vi.fn().mockReturnValue({} as Redis);
 
     const result = await enforceRouteRateLimit(
@@ -147,13 +136,8 @@ describe("enforceRouteRateLimit", () => {
     ] as const;
 
     for (const workflow of workflows) {
-      const result = await enforceRouteRateLimit(
-        workflow,
-        "test-id",
-        getRedis
-      );
+      const result = await enforceRouteRateLimit(workflow, "test-id", getRedis);
       expect(result).toBeNull();
     }
   });
 });
-

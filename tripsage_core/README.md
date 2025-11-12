@@ -9,7 +9,7 @@ Shared library providing common components, services, and utilities for the Trip
 - **Configuration Management** - Centralized settings for Supabase, Upstash Redis, and external APIs
 - **Exception System** - HTTP status-integrated error handling
 - **Data Models** - Supabase-compatible models for users, trips, flights, and chat
-- **Business Services** - Core logic for authentication, flights, accommodations, and AI memory
+- **Business Services** - Core logic for authentication, flights, accommodations, and memory
 - **External API Integration** - Direct SDK integrations (Duffel, Google Maps, Weather, etc.)
 - **Infrastructure Services** - Database, caching, and Realtime (Supabase) management
 - **Utilities** - Common functionality for caching, logging, and error handling
@@ -87,8 +87,7 @@ from tripsage_core.services.business import (
 - `AuthService` - JWT and API key authentication
 - `FlightService` - Duffel API integration for flights
 - `AccommodationService` - Hotel search and booking
-- `MemoryService` - AI context and conversation memory (Mem0)
-- `ChatService` - Chat session management
+- `MemoryService` - Conversation memory and user preferences (Mem0)
 - `TripService` - Trip planning and coordination
 - `UserService` - User profiles and preferences
 - `DestinationService` - Location research and insights

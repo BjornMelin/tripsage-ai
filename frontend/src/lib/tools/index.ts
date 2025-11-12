@@ -12,9 +12,9 @@ import {
   searchAccommodations,
 } from "./accommodations";
 import { searchFlights } from "./flights";
+import { lookupPoiContext } from "./google-places";
 import { distanceMatrix, geocode } from "./maps";
 import { addConversationMemory, searchUserMemories } from "./memory";
-import { lookupPoiContext } from "./opentripmap";
 import {
   combineSearchResults,
   createTravelPlan,
