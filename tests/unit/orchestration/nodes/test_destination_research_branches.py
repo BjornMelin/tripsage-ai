@@ -27,11 +27,8 @@ def _make_services() -> AppServiceContainer:
         }
     )
     c.webcrawl_service = MagicMock()
-    c.webcrawl_service.search_web = AsyncMock(return_value={"results": []})
     c.google_maps_service = MagicMock()
     c.google_maps_service.search_places = AsyncMock(return_value={})
-    c.weather_service = MagicMock()
-    c.weather_service.get_current_weather = AsyncMock(return_value={})
     return c
 
 

@@ -64,7 +64,7 @@ const minimalWeatherResponse = {
   weather: [{ description: "sunny" }],
 };
 
-const env = process.env;
+const _env = process.env;
 
 beforeAll(() => {
   process.env.OPENWEATHER_API_KEY = "test_key";
@@ -343,7 +343,8 @@ describe("field extraction", () => {
 describe("error handling", () => {
   test("throws when API key not configured", async () => {
     const originalKey = process.env.OPENWEATHER_API_KEY;
-    delete process.env.OPENWEATHER_API_KEY;
+    // Use Reflect.deleteProperty to actually remove the property (Biome allows this for test cleanup)
+    Reflect.deleteProperty(process.env, "OPENWEATHER_API_KEY");
     vi.resetModules();
     const { getCurrentWeather: freshTool } = await import("../weather");
 

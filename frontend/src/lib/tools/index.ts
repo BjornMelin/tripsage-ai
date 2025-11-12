@@ -21,6 +21,7 @@ import type { AiTool } from "./types";
 import { getCurrentWeather } from "./weather";
 import { crawlSite, crawlUrl } from "./web-crawl";
 import { webSearch } from "./web-search";
+import { webSearchBatch } from "./web-search-batch";
 
 export const toolRegistry = {
   addConversationMemory,
@@ -40,6 +41,7 @@ export const toolRegistry = {
   searchUserMemories,
   updateTravelPlan,
   webSearch,
+  webSearchBatch,
 } satisfies Record<string, AiTool>;
 
 export type ToolRegistry = typeof toolRegistry;

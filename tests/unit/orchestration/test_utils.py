@@ -222,7 +222,6 @@ def create_mock_services(
     activity_service = cast(Any, MagicMock())
     unified_search_service = cast(Any, MagicMock())
     google_maps_service = cast(Any, MagicMock())
-    weather_service = cast(Any, MagicMock())
     webcrawl_service = cast(Any, MagicMock())
     mcp_service = cast(Any, MagicMock())
 
@@ -243,7 +242,6 @@ def create_mock_services(
         google_maps_service=google_maps_service,
         playwright_service=cast(Any, Mock()),
         time_service=cast(Any, Mock()),
-        weather_service=weather_service,
         webcrawl_service=webcrawl_service,
         cache_service=cast(Any, Mock()),
         database_service=cast(Any, Mock()),
@@ -257,15 +255,9 @@ def create_mock_services(
     google_maps_mock.connect = AsyncMock(return_value=None)
     google_maps_mock.geocode = AsyncMock(return_value=[])
 
-    assert container.weather_service is not None
-    weather_mock = cast(Any, container.weather_service)
-    weather_mock.connect = AsyncMock(return_value=None)
-    weather_mock.get_current_weather = AsyncMock(return_value={})
-
     assert container.webcrawl_service is not None
     webcrawl_mock = cast(Any, container.webcrawl_service)
     webcrawl_mock.connect = AsyncMock(return_value=None)
-    webcrawl_mock.search_web = AsyncMock(return_value={"results": []})
 
     if overrides:
         for name, value in overrides.items():

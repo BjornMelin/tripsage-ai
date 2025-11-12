@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Web search batch tool (multi‑query): `frontend/src/lib/tools/web-search-batch.ts` with bounded concurrency, per‑item results, and optional top‑level RL.
+- OpenTelemetry spans for web search tools using `withTelemetrySpan`:
+  - `tool.web_search` (attributes: categoriesCount, sourcesCount, hasLocation, hasTbs, fresh, limit)
+  - `tool.web_search_batch` (attributes: count, fresh)
+- Web search tests:
+  - Telemetry and rate‑limit wiring for single search: `frontend/src/lib/tools/__tests__/web-search.test.ts`
+  - Batch behavior and per‑query error handling: `frontend/src/lib/tools/__tests__/web-search-batch.test.ts`
+- Types for web search params/results: `frontend/src/types/web-search.ts`.
+- Chat UI shows published time when available on search cards: `frontend/src/app/chat/page.tsx`.
 - Request-scoped Upstash limiter builder shared by BYOK routes: `frontend/src/app/api/keys/_rate-limiter.ts` plus span attribute helper `frontend/src/app/api/keys/_telemetry.ts`.
 - Minimal OpenTelemetry span utility with attribute redaction and unit tests: `frontend/src/lib/telemetry/span.ts` and `frontend/src/lib/telemetry/__tests__/span.test.ts`.
 - Dependency: `@opentelemetry/api@1.9.0` (frontend) powering BYOK telemetry spans.
@@ -76,6 +85,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Web search tool (`frontend/src/lib/tools/web-search.ts`):
+  - Uses `fetchWithRetry` with bounded timeouts; direct Firecrawl v2 `/search` POST.
+  - Adds input guards (query ≤256, location ≤120), accepts custom category strings.
+  - Adds TTL heuristics (realtime/news/daily/semi‑static) for Redis cache; keeps canonical cache keys (flattened `scrapeOptions`).
+  - Returns `{ fromCache, tookMs }` metadata; integrates Upstash RL (20/min) keyed by `userId`.
+  - Pass‑through support for undocumented `region`/`freshness` only when provided.
+- Chat UI renders web search results as cards with title/snippet/URL, citations via AI Elements `Sources`, and displays `fromCache` + `tookMs`.
+- Env: `.env.example` simplified — require only `FIRECRAWL_API_KEY`; `FIRECRAWL_BASE_URL` optional for self‑hosted Firecrawl.
 - BYOK POST/DELETE adapters (`frontend/src/app/api/keys/route.ts`, `frontend/src/app/api/keys/[service]/route.ts`) now build rate limiters per request, derive identifiers per user/IP, and wrap Supabase RPC calls in telemetry spans carrying rate-limit attributes and sanitized key metadata; route tests updated to stub the new factory and span helper.
 - Same BYOK routes now export `dynamic = "force-dynamic"`/`revalidate = 0` and document the no-cache rationale so user-specific secrets never reuse stale responses.
 - Service normalization and rate-limit identifier behavior are documented/tested (see `frontend/src/app/api/keys/_handlers.ts`, route tests, and `frontend/src/lib/next/route-helpers.ts`), closing reviewer feedback.
@@ -172,6 +189,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- Legacy Python web search module and references:
+  - Deleted `tripsage/tools/web_tools.py` (CachedWebSearchTool, batch_web_search, decorators).
+  - Removed import in `tripsage_core/services/business/activity_service.py`.
 - Hard-coded sample sessions from chat layout; callers/tests inject sessions as needed (`frontend/src/components/layouts/chat-layout.tsx`).
 - Redundant/high-cost UI cases from Itinerary builder tests (drag & drop visuals, delete flow, extra icon and cancel cases) to reduce runtime (`frontend/src/components/features/trips/__tests__/itinerary-builder.test.tsx`).
 - Obsolete test wrapper file `frontend/src/test/test-utils.test.tsx` (replaced by `frontend/src/test/test-utils.tsx`).
