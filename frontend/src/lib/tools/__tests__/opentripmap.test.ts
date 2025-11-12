@@ -102,7 +102,8 @@ describe("lookupPoiContext", () => {
     });
 
     // Ensure radius is passed in meters (no /1000 conversion)
-    const calledUrl = (global.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+    const calledUrl = (global.fetch as unknown as ReturnType<typeof vi.fn>).mock
+      .calls[0][0] as string;
     expect(calledUrl).toMatch(/radius=1000(&|$)/);
   });
 });
