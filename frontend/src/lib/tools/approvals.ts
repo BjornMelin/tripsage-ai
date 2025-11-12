@@ -20,7 +20,7 @@ export type ApprovalStatus =
 
 /**
  * Require approval for a sensitive action. Throws if not yet approved.
- * 
+ *
  * @param action - The action to require approval for.
  * @param ctx - The tool execution context.
  * @returns A promise that resolves when the action is approved.
@@ -55,7 +55,7 @@ export async function requireApproval(
 
 /**
  * Get approval status for a given action and optional idempotency key.
- * 
+ *
  * @param sessionId - The session ID.
  * @param action - The action to get the approval status for.
  * @param idempotencyKey - The idempotency key.
@@ -78,7 +78,7 @@ export async function getApprovalStatus(
 
 /**
  * Grant approval for a given action in the current session.
- * 
+ *
  * @param sessionId - The session ID.
  * @param action - The action to grant approval for.
  * @param idempotencyKey - The idempotency key.
@@ -95,7 +95,7 @@ export async function grantApproval(
 
 /**
  * Deny approval for a given action in the current session.
- * 
+ *
  * @param sessionId - The session ID.
  * @param action - The action to deny approval for.
  * @param idempotencyKey - The idempotency key.

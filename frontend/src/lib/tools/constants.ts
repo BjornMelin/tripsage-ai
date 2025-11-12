@@ -13,3 +13,9 @@ export const TTL_FINAL_SECONDS = 86400 * 30; // 30 days
  * Used by searchAccommodations tool.
  */
 export const ACCOM_SEARCH_CACHE_TTL_SECONDS = 300;
+
+/**
+ * Cache TTL for weather results (10 minutes).
+ * Used by getCurrentWeather tool.
+ */
+export const WEATHER_CACHE_TTL_SECONDS = 600;
