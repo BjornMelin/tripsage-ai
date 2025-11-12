@@ -8,37 +8,28 @@
  */
 
 import { tool } from "ai";
-import { z } from "zod";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 import { fetchWithRetry } from "@/lib/http/fetch-retry";
 import { createMcpClientHelper, getMcpTool } from "@/lib/mcp/client";
 import { getRedis } from "@/lib/redis";
 import { secureUuid } from "@/lib/security/random";
-import type {
-  AccommodationBookingResult,
-  AccommodationDetailsResult,
-  AccommodationSearchResult,
+import { TOOL_ERROR_CODES, createToolError } from "@/lib/tools/errors";
+import {
+  ACCOMMODATION_BOOKING_INPUT_SCHEMA,
+  ACCOMMODATION_BOOKING_OUTPUT_SCHEMA,
+  ACCOMMODATION_DETAILS_INPUT_SCHEMA,
+  ACCOMMODATION_DETAILS_OUTPUT_SCHEMA,
+  ACCOMMODATION_SEARCH_INPUT_SCHEMA,
+  ACCOMMODATION_SEARCH_OUTPUT_SCHEMA,
+  type AccommodationBookingResult,
+  type AccommodationDetailsResult,
+  type AccommodationSearchResult,
+  PROPERTY_TYPE_ENUM,
+  SORT_BY_ENUM,
+  SORT_ORDER_ENUM,
 } from "@/types/accommodations";
 import { requireApproval } from "./approvals";
 import { ACCOM_SEARCH_CACHE_TTL_SECONDS } from "./constants";
-
-// Property type enum matching Python PropertyType enum values
-const PROPERTY_TYPE_ENUM = z.enum([
-  "hotel",
-  "apartment",
-  "house",
-  "villa",
-  "resort",
-  "hostel",
-  "bed_and_breakfast",
-  "guest_house",
-  "other",
-]);
-
-// Sort field options for search results
-const SORT_BY_ENUM = z.enum(["relevance", "price", "rating", "distance"]);
-// Sort order options (ascending or descending)
-const SORT_ORDER_ENUM = z.enum(["asc", "desc"]);
 
 /**
  * Execute search via MCP SSE if available, else HTTP POST fallback.
@@ -88,9 +79,7 @@ async function executeSearch(
   const httpUrl = process.env.ACCOM_SEARCH_URL || process.env.AIRBNB_MCP_URL;
   const httpToken = process.env.ACCOM_SEARCH_TOKEN || process.env.AIRBNB_MCP_API_KEY;
   if (!httpUrl) {
-    const error: Error & { code?: string } = new Error("accom_search_not_configured");
-    error.code = "accom_search_not_configured";
-    throw error;
+    throw createToolError(TOOL_ERROR_CODES.accom_search_not_configured);
   }
 
   const res = await fetchWithRetry(
@@ -111,93 +100,41 @@ async function executeSearch(
       meta?: Record<string, unknown>;
     };
     if (errWithCode.code === "fetch_timeout") {
-      const error: Error & { code?: string; meta?: Record<string, unknown> } =
-        new Error("accom_search_timeout");
-      error.code = "accom_search_timeout";
-      error.meta = errWithCode.meta;
-      throw error;
+      throw createToolError(
+        TOOL_ERROR_CODES.accom_search_timeout,
+        undefined,
+        errWithCode.meta
+      );
     }
     if (errWithCode.code === "fetch_failed") {
-      const error: Error & { code?: string; meta?: Record<string, unknown> } =
-        new Error("accom_search_failed");
-      error.code = "accom_search_failed";
-      error.meta = errWithCode.meta;
-      throw error;
+      throw createToolError(
+        TOOL_ERROR_CODES.accom_search_failed,
+        undefined,
+        errWithCode.meta
+      );
     }
     throw err;
   });
 
   if (!res.ok) {
     const text = await res.text();
-    const error: Error & { code?: string; meta?: Record<string, unknown> } = new Error(
+    const code =
       res.status === 429
-        ? "accom_search_rate_limited"
+        ? TOOL_ERROR_CODES.accom_search_rate_limited
         : res.status === 401
-          ? "accom_search_unauthorized"
+          ? TOOL_ERROR_CODES.accom_search_unauthorized
           : res.status === 402
-            ? "accom_search_payment_required"
-            : "accom_search_failed"
-    );
-    error.code =
-      res.status === 429
-        ? "accom_search_rate_limited"
-        : res.status === 401
-          ? "accom_search_unauthorized"
-          : res.status === 402
-            ? "accom_search_payment_required"
-            : "accom_search_failed";
-    error.meta = { status: res.status, text: text.slice(0, 200) };
-    throw error;
+            ? TOOL_ERROR_CODES.accom_search_payment_required
+            : TOOL_ERROR_CODES.accom_search_failed;
+    throw createToolError(code, undefined, {
+      status: res.status,
+      text: text.slice(0, 200),
+    });
   }
 
   const data = await res.json();
   return { data, provider: "http_post" };
 }
-
-/**
- * Zod schema for search accommodations tool input validation.
- *
- * Validates location, dates, guest counts, filters, and sorting options.
- * Includes cross-field refinements for date ordering and price ranges.
- */
-const searchSchema = z
-  .object({
-    accessibilityFeatures: z.array(z.string()).optional(),
-    adults: z.number().int().min(1).max(16).optional(),
-    amenities: z.array(z.string()).optional(),
-    bathrooms: z.number().nonnegative().max(10).optional(),
-    bedrooms: z.number().int().min(0).max(10).optional(),
-    beds: z.number().int().min(0).max(20).optional(),
-    checkin: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    checkout: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    children: z.number().int().min(0).max(16).optional(),
-    currency: z.string().length(3).default("USD").optional(),
-    freeCancellation: z.boolean().optional(),
-    fresh: z.boolean().default(false).optional(),
-    guests: z.number().int().min(1).max(16).default(1),
-    infants: z.number().int().min(0).max(16).optional(),
-    instantBook: z.boolean().optional(),
-    location: z.string().min(2),
-    maxDistanceKm: z.number().nonnegative().optional(),
-    minRating: z.number().min(0).max(5).optional(),
-    priceMax: z.number().nonnegative().optional(),
-    priceMin: z.number().nonnegative().optional(),
-    propertyTypes: z.array(PROPERTY_TYPE_ENUM).optional(),
-    sortBy: SORT_BY_ENUM.default("relevance").optional(),
-    sortOrder: SORT_ORDER_ENUM.default("asc").optional(),
-    tripId: z.string().optional(),
-  })
-  .refine((data) => {
-    const checkin = new Date(data.checkin);
-    const checkout = new Date(data.checkout);
-    return checkout > checkin;
-  }, "checkout must be after checkin")
-  .refine((data) => {
-    if (data.priceMin !== undefined && data.priceMax !== undefined) {
-      return data.priceMax >= data.priceMin;
-    }
-    return true;
-  }, "priceMax must be >= priceMin");
 
 /**
  * Search accommodations tool.
@@ -215,7 +152,7 @@ export const searchAccommodations = tool({
     "Supports filters: property types, amenities, price range, guest counts, " +
     "instant book, cancellation policy, distance, rating, and sorting.",
   execute: async (params): Promise<AccommodationSearchResult> => {
-    const validated = searchSchema.parse(params);
+    const validated = ACCOMMODATION_SEARCH_INPUT_SCHEMA.parse(params);
     const startedAt = Date.now();
 
     // Normalize guest counts: if only guests provided, treat as adults
@@ -268,12 +205,13 @@ export const searchAccommodations = tool({
       const cached = await redis.get(cacheKey);
       if (cached) {
         const cachedData = cached as AccommodationSearchResult;
-        return {
+        const rawOut = {
           ...cachedData,
           fromCache: true,
           provider: cachedData.provider || "cache",
           tookMs: Date.now() - startedAt,
         };
+        return ACCOMMODATION_SEARCH_OUTPUT_SCHEMA.parse(rawOut);
       }
     }
 
@@ -282,7 +220,7 @@ export const searchAccommodations = tool({
     const searchId = secureUuid();
     const tookMs = Date.now() - startedAt;
 
-    const result: AccommodationSearchResult = {
+    const rawOut = {
       avgPrice: (data as Record<string, unknown>).avg_price as number | undefined,
       fromCache,
       listings: Array.isArray(data)
@@ -297,50 +235,27 @@ export const searchAccommodations = tool({
           0,
       searchId,
       searchParameters: searchParams,
-      status: "success",
+      status: "success" as const,
       tookMs,
       totalResults: Array.isArray(data)
         ? data.length
         : ((data as Record<string, unknown>).total_results as number | undefined) || 0,
     };
 
-    // Cache result
+    // Validate against strict schema
+    const validatedResult = ACCOMMODATION_SEARCH_OUTPUT_SCHEMA.parse(rawOut);
+
+    // Cache validated result
     if (redis && !validated.fresh) {
-      await redis.set(cacheKey, result, { ex: ACCOM_SEARCH_CACHE_TTL_SECONDS });
+      await redis.set(cacheKey, validatedResult, {
+        ex: ACCOM_SEARCH_CACHE_TTL_SECONDS,
+      });
     }
 
-    return result;
+    return validatedResult;
   },
-  inputSchema: searchSchema,
+  inputSchema: ACCOMMODATION_SEARCH_INPUT_SCHEMA,
 });
-
-/**
- * Zod schema for booking accommodations tool input validation.
- *
- * Validates guest information, dates, payment details, and optional
- * idempotency key. Includes cross-field refinement for date ordering.
- */
-const bookingSchema = z
-  .object({
-    checkin: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    checkout: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    guestEmail: z.string().email(),
-    guestName: z.string().min(1),
-    guestPhone: z.string().optional(),
-    guests: z.number().int().min(1).max(16).default(1),
-    holdOnly: z.boolean().default(false).optional(),
-    idempotencyKey: z.string().optional(),
-    listingId: z.string().min(1),
-    paymentMethod: z.string().optional(),
-    sessionId: z.string().min(6),
-    specialRequests: z.string().optional(),
-    tripId: z.string().optional(),
-  })
-  .refine((data) => {
-    const checkin = new Date(data.checkin);
-    const checkout = new Date(data.checkout);
-    return checkout > checkin;
-  }, "checkout must be after checkin");
 
 /**
  * Book accommodation tool.
@@ -356,21 +271,28 @@ export const bookAccommodation = tool({
     "Book an accommodation (requires user approval). Supports hold-only bookings, " +
     "special requests, and idempotency. Returns structured booking intent.",
   execute: async (params): Promise<AccommodationBookingResult> => {
-    const validated = bookingSchema.parse(params);
+    const validated = ACCOMMODATION_BOOKING_INPUT_SCHEMA.parse(params);
     const idempotencyKey = validated.idempotencyKey || secureUuid();
+    const sessionId = validated.sessionId;
+
+    if (!sessionId) {
+      throw createToolError(TOOL_ERROR_CODES.accom_booking_session_required);
+    }
 
     // Require approval with idempotency key
     await requireApproval("bookAccommodation", {
       idempotencyKey,
-      sessionId: validated.sessionId,
+      sessionId,
     });
 
     // Approval granted, proceed with booking
     // In a full implementation, call the MCP "book" tool or provider API here
     const bookingReference = `bk_${secureUuid().replaceAll("-", "").slice(0, 10)}`;
-    return {
+    const rawOut = {
       bookingId: secureUuid(),
-      bookingStatus: validated.holdOnly ? "hold_created" : "pending_confirmation",
+      bookingStatus: validated.holdOnly
+        ? ("hold_created" as const)
+        : ("pending_confirmation" as const),
       checkin: validated.checkin,
       checkout: validated.checkout,
       guestEmail: validated.guestEmail,
@@ -386,32 +308,12 @@ export const bookAccommodation = tool({
       paymentMethod: validated.paymentMethod,
       reference: bookingReference,
       specialRequests: validated.specialRequests,
-      status: "success",
+      status: "success" as const,
       tripId: validated.tripId,
-    } as const;
+    };
+    return ACCOMMODATION_BOOKING_OUTPUT_SCHEMA.parse(rawOut);
   },
-  inputSchema: bookingSchema,
-});
-
-/**
- * Zod schema for accommodation details tool input validation.
- *
- * Validates listing ID and optional date/guest parameters for accurate
- * pricing and availability information.
- */
-const detailsSchema = z.object({
-  adults: z.number().int().min(1).max(16).default(1).optional(),
-  checkin: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  checkout: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  children: z.number().int().min(0).max(16).default(0).optional(),
-  infants: z.number().int().min(0).max(16).default(0).optional(),
-  listingId: z.string().min(1),
+  inputSchema: ACCOMMODATION_BOOKING_INPUT_SCHEMA,
 });
 
 /**
@@ -428,7 +330,7 @@ export const getAccommodationDetails = tool({
     "Get detailed information for a specific accommodation listing. " +
     "Optionally include check-in/out dates and guest counts for accurate pricing.",
   execute: async (params): Promise<AccommodationDetailsResult> => {
-    const validated = detailsSchema.parse(params);
+    const validated = ACCOMMODATION_DETAILS_INPUT_SCHEMA.parse(params);
     const mcpUrl = process.env.AIRBNB_MCP_URL || process.env.ACCOM_SEARCH_URL;
     const mcpAuth = process.env.AIRBNB_MCP_API_KEY || process.env.ACCOM_SEARCH_TOKEN;
 
@@ -453,11 +355,12 @@ export const getAccommodationDetails = tool({
             infants: validated.infants || 0,
           });
           await client.close();
-          return {
+          const rawOut = {
             listing: result,
             provider: "mcp_sse",
-            status: "success",
+            status: "success" as const,
           };
+          return ACCOMMODATION_DETAILS_OUTPUT_SCHEMA.parse(rawOut);
         }
         await client.close();
       } catch {
@@ -469,11 +372,7 @@ export const getAccommodationDetails = tool({
     const httpUrl = process.env.ACCOM_SEARCH_URL || process.env.AIRBNB_MCP_URL;
     const httpToken = process.env.ACCOM_SEARCH_TOKEN || process.env.AIRBNB_MCP_API_KEY;
     if (!httpUrl) {
-      const error: Error & { code?: string } = new Error(
-        "accom_details_not_configured"
-      );
-      error.code = "accom_details_not_configured";
-      throw error;
+      throw createToolError(TOOL_ERROR_CODES.accom_details_not_configured);
     }
 
     const url = new URL(httpUrl);
@@ -501,52 +400,45 @@ export const getAccommodationDetails = tool({
         meta?: Record<string, unknown>;
       };
       if (errWithCode.code === "fetch_timeout") {
-        const error: Error & { code?: string; meta?: Record<string, unknown> } =
-          new Error("accom_details_timeout");
-        error.code = "accom_details_timeout";
-        error.meta = errWithCode.meta;
-        throw error;
+        throw createToolError(
+          TOOL_ERROR_CODES.accom_details_timeout,
+          undefined,
+          errWithCode.meta
+        );
       }
       if (errWithCode.code === "fetch_failed") {
-        const error: Error & { code?: string; meta?: Record<string, unknown> } =
-          new Error("accom_details_failed");
-        error.code = "accom_details_failed";
-        error.meta = errWithCode.meta;
-        throw error;
+        throw createToolError(
+          TOOL_ERROR_CODES.accom_details_failed,
+          undefined,
+          errWithCode.meta
+        );
       }
       throw err;
     });
 
     if (!res.ok) {
       const text = await res.text();
-      const error: Error & { code?: string; meta?: Record<string, unknown> } =
-        new Error(
-          res.status === 404
-            ? "accom_details_not_found"
-            : res.status === 429
-              ? "accom_details_rate_limited"
-              : res.status === 401
-                ? "accom_details_unauthorized"
-                : "accom_details_failed"
-        );
-      error.code =
+      const code =
         res.status === 404
-          ? "accom_details_not_found"
+          ? TOOL_ERROR_CODES.accom_details_not_found
           : res.status === 429
-            ? "accom_details_rate_limited"
+            ? TOOL_ERROR_CODES.accom_details_rate_limited
             : res.status === 401
-              ? "accom_details_unauthorized"
-              : "accom_details_failed";
-      error.meta = { status: res.status, text: text.slice(0, 200) };
-      throw error;
+              ? TOOL_ERROR_CODES.accom_details_unauthorized
+              : TOOL_ERROR_CODES.accom_details_failed;
+      throw createToolError(code, undefined, {
+        status: res.status,
+        text: text.slice(0, 200),
+      });
     }
 
     const data = await res.json();
-    return {
+    const rawOut = {
       listing: data,
       provider: "http_get",
-      status: "success",
+      status: "success" as const,
     };
+    return ACCOMMODATION_DETAILS_OUTPUT_SCHEMA.parse(rawOut);
   },
-  inputSchema: detailsSchema,
+  inputSchema: ACCOMMODATION_DETAILS_INPUT_SCHEMA,
 });

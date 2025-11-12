@@ -50,15 +50,74 @@ describe("webSearch", () => {
       mockContext
     );
     const outAny = out as unknown as {
-      results: Array<{ url: string }>;
+      results: Array<{
+        url: string;
+        title?: string;
+        snippet?: string;
+        publishedAt?: string;
+      }>;
       fromCache: boolean;
       tookMs: number;
     };
+    // Assert strict output shape: results array, fromCache boolean, tookMs number
+    expect(Array.isArray(outAny.results)).toBe(true);
     expect(outAny.results[0].url).toBe("https://x");
     expect(outAny.fromCache).toBe(false);
     expect(typeof outAny.tookMs).toBe("number");
+    // Ensure no extra fields beyond schema
+    expect(Object.keys(outAny).sort()).toEqual(["fromCache", "results", "tookMs"]);
     const { withTelemetrySpan } = await import("@/lib/telemetry/span");
     expect(withTelemetrySpan as unknown as ReturnType<typeof vi.fn>).toHaveBeenCalled();
+  });
+
+  test("normalizes Firecrawl responses with extra fields", async () => {
+    const { getRedis } = await import("@/lib/redis");
+    (getRedis as ReturnType<typeof vi.fn>).mockReturnValue(null);
+    const { webSearch } = await import("@/lib/tools/web-search");
+    // Firecrawl may return extra fields like content, score, source
+    const mockRes = {
+      json: async () => ({
+        results: [
+          {
+            content: "extra content field",
+            score: 0.95,
+            snippet: "Test snippet",
+            source: "firecrawl",
+            title: "Example",
+            url: "https://example.com",
+          },
+        ],
+      }),
+      ok: true,
+    } as Response;
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockRes);
+    const out = await webSearch.execute?.(
+      { fresh: true, limit: 5, query: "test" },
+      mockContext
+    );
+    const outAny = out as unknown as {
+      results: Array<{
+        url: string;
+        title?: string;
+        snippet?: string;
+        publishedAt?: string;
+      }>;
+      fromCache: boolean;
+      tookMs: number;
+    };
+    // Assert normalized output excludes extra fields
+    expect(Array.isArray(outAny.results)).toBe(true);
+    expect(outAny.results).toHaveLength(1);
+    expect(outAny.results[0].url).toBe("https://example.com");
+    expect(outAny.results[0].title).toBe("Example");
+    expect(outAny.results[0].snippet).toBe("Test snippet");
+    // Ensure extra fields are not present
+    expect("content" in outAny.results[0]).toBe(false);
+    expect("score" in outAny.results[0]).toBe(false);
+    expect("source" in outAny.results[0]).toBe(false);
+    // Ensure strict schema compliance
+    expect(Object.keys(outAny.results[0]).sort()).toEqual(["snippet", "title", "url"]);
+    expect(Object.keys(outAny).sort()).toEqual(["fromCache", "results", "tookMs"]);
   });
 
   test("throws when not configured", async () => {
@@ -383,6 +442,48 @@ describe("webSearch cache key generation", () => {
 });
 
 describe("webSearch caching behavior", () => {
+  test("normalizes cached results with extra fields", async () => {
+    const { getRedis } = await import("@/lib/redis");
+    const mockRedis = {
+      get: vi.fn().mockResolvedValue({
+        results: [
+          {
+            content: "extra",
+            score: 0.8,
+            title: "Cached",
+            url: "https://cached.com",
+          },
+        ],
+      }),
+    };
+    (getRedis as ReturnType<typeof vi.fn>).mockReturnValue(mockRedis);
+    const { webSearch } = await import("@/lib/tools/web-search");
+    const result = await webSearch.execute?.(
+      { fresh: false, limit: 5, query: "test" },
+      mockContext
+    );
+    const resAny = result as unknown as {
+      results: Array<{
+        url: string;
+        title?: string;
+        snippet?: string;
+        publishedAt?: string;
+      }>;
+      fromCache: boolean;
+      tookMs: number;
+    };
+    expect(Array.isArray(resAny.results)).toBe(true);
+    expect(resAny.results[0].url).toBe("https://cached.com");
+    expect(resAny.results[0].title).toBe("Cached");
+    // Ensure extra fields are normalized out
+    expect("content" in resAny.results[0]).toBe(false);
+    expect("score" in resAny.results[0]).toBe(false);
+    expect(resAny.fromCache).toBe(true);
+    expect(typeof resAny.tookMs).toBe("number");
+    expect(Object.keys(resAny.results[0]).sort()).toEqual(["title", "url"]);
+    expect(Object.keys(resAny).sort()).toEqual(["fromCache", "results", "tookMs"]);
+  });
+
   test("returns cached result when available and fresh=false with metadata", async () => {
     const { getRedis } = await import("@/lib/redis");
     const mockRedis = {
@@ -401,13 +502,22 @@ describe("webSearch caching behavior", () => {
       mockContext
     );
     const resAny = result as unknown as {
-      results: unknown[];
+      results: Array<{
+        url: string;
+        title?: string;
+        snippet?: string;
+        publishedAt?: string;
+      }>;
       fromCache: boolean;
       tookMs: number;
     };
+    // Assert strict output shape for cached results
+    expect(Array.isArray(resAny.results)).toBe(true);
     expect(resAny.results).toEqual([]);
     expect(resAny.fromCache).toBe(true);
     expect(typeof resAny.tookMs).toBe("number");
+    // Ensure no extra fields beyond schema
+    expect(Object.keys(resAny).sort()).toEqual(["fromCache", "results", "tookMs"]);
     expect(fetch).not.toHaveBeenCalled();
     expect(mockRedis.get).toHaveBeenCalled();
   });

@@ -10,6 +10,8 @@ import { Redis } from "@upstash/redis";
 import { tool } from "ai";
 import { z } from "zod";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
+import { normalizeWebSearchResults } from "@/lib/tools/web-search-normalize";
+import { WEB_SEARCH_BATCH_OUTPUT_SCHEMA } from "@/types/web-search";
 import { webSearch } from "./web-search";
 
 /**
@@ -58,44 +60,6 @@ const batchInputSchema = z.object({
 });
 
 /**
- * Output schema for batch web search tool.
- *
- * Each query returns success (results, fromCache, tookMs) or error (code, message).
- * Includes total execution time.
- */
-const batchOutputSchema = z.object({
-  results: z.array(
-    z.object({
-      // When ok=false
-      error: z
-        .object({
-          code: z.string(),
-          message: z.string().optional(),
-        })
-        .optional(),
-      ok: z.boolean(),
-      query: z.string(),
-      // When ok=true
-      value: z
-        .object({
-          fromCache: z.boolean(),
-          results: z.array(
-            z.object({
-              publishedAt: z.string().optional(),
-              snippet: z.string().optional(),
-              title: z.string().optional(),
-              url: z.string(),
-            })
-          ),
-          tookMs: z.number(),
-        })
-        .optional(),
-    })
-  ),
-  tookMs: z.number(),
-});
-
-/**
  * Batch web search tool using Firecrawl v2.5 API.
  *
  * Executes multiple queries concurrently (pool size 5). Reuses webSearch tool per
@@ -140,7 +104,9 @@ export const webSearchBatch = tool({
 
         // Bounded concurrency runner with pool size 5
         const poolSize = 5;
-        const results: Array<z.infer<typeof batchOutputSchema>["results"][number]> = [];
+        const results: Array<
+          z.infer<typeof WEB_SEARCH_BATCH_OUTPUT_SCHEMA>["results"][number]
+        > = [];
         let index = 0;
         const runOne = async (q: string) => {
           try {
@@ -168,7 +134,15 @@ export const webSearchBatch = tool({
               fromCache: boolean;
               tookMs: number;
             };
-            results.push({ ok: true, query: q, value });
+            // Normalize results to ensure strict schema compliance
+            const rawResults = Array.isArray(value.results) ? value.results : [];
+            const normalizedResults = normalizeWebSearchResults(rawResults);
+            const validatedValue = {
+              fromCache: Boolean(value.fromCache),
+              results: normalizedResults,
+              tookMs: Number(value.tookMs),
+            };
+            results.push({ ok: true, query: q, value: validatedValue });
           } catch (err) {
             const message = err instanceof Error ? err.message : String(err);
             const code = message.includes("web_search_rate_limited")
@@ -212,21 +186,25 @@ export const webSearchBatch = tool({
                   throw new Error(`web_search_failed:${res.status}:${text}`);
                 }
                 const data = (await res.json()) as {
-                  results: {
+                  results?: {
                     url: string;
                     title?: string;
                     snippet?: string;
                     publishedAt?: string;
                   }[];
                 };
+                // Normalize fallback HTTP response to ensure strict schema compliance
+                const rawResults = Array.isArray(data.results) ? data.results : [];
+                const normalizedResults = normalizeWebSearchResults(rawResults);
+                const validatedValue = {
+                  fromCache: false,
+                  results: normalizedResults,
+                  tookMs: Date.now() - startedAt,
+                };
                 results.push({
                   ok: true,
                   query: q,
-                  value: {
-                    fromCache: false,
-                    results: data.results ?? [],
-                    tookMs: Date.now() - startedAt,
-                  },
+                  value: validatedValue,
                 });
               } catch (e2) {
                 const msg2 = e2 instanceof Error ? e2.message : String(e2);
@@ -251,7 +229,13 @@ export const webSearchBatch = tool({
           );
         }
         await Promise.all(workers);
-        return { results, tookMs: Date.now() - started };
+        // Validate final output against strict schema
+        const rawOut = {
+          results,
+          tookMs: Date.now() - started,
+        };
+        const validated = WEB_SEARCH_BATCH_OUTPUT_SCHEMA.parse(rawOut);
+        return validated;
       }
     );
   },
