@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Flight and accommodation search result cards: `FlightOfferCard` and `StayCard` components in `frontend/src/components/ai-elements/` rendering structured results with itineraries, pricing, and source citations.
+- Chat message JSON parsing: `ChatMessageItem` detects and validates `flight.v1` and `stay.v1` schema JSON in text parts, rendering cards instead of raw text.
+- Agent routing in chat transport: `DefaultChatTransport.prepareSendMessagesRequest` routes messages with `metadata.agent` to `/api/agents/flights` or `/api/agents/accommodations`; falls back to `/api/chat/stream` for general chat.
+- Quick Actions metadata: Flight and accommodation quick actions send Zod-shaped requests via message metadata (`metadata.agent` and `metadata.request`).
+- Gateway fallback in provider registry: `resolveProvider` falls back to Vercel AI Gateway when no BYOK keys found; BYOK checked first, Gateway used as default for non-BYOK users.
 - Web search batch tool (multi‑query): `frontend/src/lib/tools/web-search-batch.ts` with bounded concurrency, per‑item results, and optional top‑level RL.
 - OpenTelemetry spans for web search tools using `withTelemetrySpan`:
   - `tool.web_search` (attributes: categoriesCount, sourcesCount, hasLocation, hasTbs, fresh, limit)
@@ -86,6 +91,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Chat page routing: Messages with agent metadata route to specialized endpoints; JSON parsing extracts structured results from markdown code blocks or plain text.
+- Provider registry resolution: Checks BYOK keys first (direct provider access), then falls back to Gateway (default path for non-BYOK users).
 - Web search tool (`frontend/src/lib/tools/web-search.ts`):
   - Uses `fetchWithRetry` with bounded timeouts; direct Firecrawl v2 `/search` POST.
   - Adds input guards (query ≤256, location ≤120), accepts custom category strings.
