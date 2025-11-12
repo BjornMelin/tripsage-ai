@@ -58,6 +58,8 @@ An Architecture Decision Record (ADR) is a document that captures an important a
 | [ADR-0035](adr-0035-react-compiler-and-component-declarations.md) | React Compiler and Component Declarations | Accepted | 2025-11-04 |
 | [ADR-0036](adr-0036-ai-elements-response-and-sources.md) | AI Elements Response and Sources | Accepted | 2025-11-04 |
 | [ADR-0037](adr-0037-reasoning-tool-codeblock-phased-adoption.md) | Reasoning/Tool/CodeBlock Phased Adoption | Accepted | 2025-11-04 |
+| [ADR-0038](adr-0038-hybrid-frontend-agents.md) | Frontend Hybrid Agents for Destination Research & Itineraries | Accepted | 2025-11-12 |
+| [ADR-0039](adr-0039-frontend-agent-modernization.md) | Framework-First Frontend Agent Modernization | Accepted | 2025-11-12 |
 
 ## By Category
 
@@ -79,6 +81,8 @@ An Architecture Decision Record (ADR) is a document that captures an important a
 - ADR-0035: React Compiler and Component Declarations
 - ADR-0036: AI Elements Response and Sources
 - ADR-0037: Reasoning/Tool/CodeBlock Phased Adoption
+- ADR-0038: Frontend Hybrid Agents for Destination Research & Itineraries
+- ADR-0039: Framework-First Frontend Agent Modernization
 
 ### Backend
 
