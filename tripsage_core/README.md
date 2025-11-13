@@ -102,7 +102,6 @@ Direct SDK integrations with third-party services:
 
 ```python
 from tripsage_core.services.external_apis import (
-    GoogleMapsService,
     DuffelProvider,
     PlaywrightService
 )
@@ -110,13 +109,15 @@ from tripsage_core.services.external_apis import (
 
 **Available Services:**
 
-- `GoogleMapsService` - Location and mapping operations
+> [!NOTE]
+> Location/POI tooling migrated to Next.js; no Python Google Maps service remains.
+> Time-related utilities are no longer exported from Core external_apis; use frontend or direct libs as appropriate.
+> Calendar integration handled by frontend AI SDK tools; no Python CalendarService remains.
+
 - `DuffelProvider` - Flight search and booking (direct SDK)
-- `CalendarService` - Calendar integration
 - `WebcrawlService` - Content extraction
 - `PlaywrightService` - Browser automation
 - `DocumentAnalyzer` - File processing
-- `TimeService` - Time zone utilities
 
 ### Infrastructure Services (`services/infrastructure/`)
 

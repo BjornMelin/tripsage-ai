@@ -89,10 +89,8 @@
   - Notes (2025-11-11): Implemented `searchFlights` using Duffel v2 offer requests.
 - [x] **Maps Tools** - Migrate Google Maps integration
   - Notes (2025-11-11): Implemented `geocode`, `distanceMatrix`.
-- [ ] **Activity Tools** - Migrate activity search and booking
-  - Notes: Implement from activity service
-- [ ] **Destination Tools** - Migrate destination information and insights
-  - Notes: Implement destination service integration
+- [x] **Activity Tools** - Migrated to Next.js; Python ActivityService removed
+- [ ] **Destination Tools** - (Tracked) Destination enrichment remains Python-native for now; verify integration boundaries
 
 ### Security & Reliability
 

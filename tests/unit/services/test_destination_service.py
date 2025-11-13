@@ -19,7 +19,7 @@ from tripsage_core.services.business.destination_service import (
 @pytest.mark.asyncio
 async def test_search_destinations_uses_cache_when_available() -> None:
     """Cached search results should short-circuit destination generation."""
-    service = DestinationService(database_service=object(), weather_service=object())
+    service = DestinationService(database_service=object())
     request = DestinationSearchRequest(
         query="Kyoto",
         categories=[DestinationCategory.CULTURAL],
@@ -80,7 +80,7 @@ async def test_search_destinations_uses_cache_when_available() -> None:
 
 def test_get_cached_search_expires_entries() -> None:
     """Expired cache entries should be evicted before retrieval."""
-    service = DestinationService(database_service=object(), weather_service=object())
+    service = DestinationService(database_service=object())
     service.cache_ttl = 1
 
     cast(Any, service)._cache_search_results("key", {"destinations": []})
