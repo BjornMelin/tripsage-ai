@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Supabase Database Webhooks via `pg_net`/`pgcrypto` with HMAC header; initial HTTP trigger for `trip_collaborators` posting to Vercel (`supabase/migrations/20251113031500_pg_net_webhooks_triggers.sql`).
+- Next.js webhook handlers (Node runtime, dynamic): `/api/hooks/trips`, `/api/hooks/files`, `/api/hooks/cache`, `/api/embeddings` with request HMAC verification and Redis idempotency.
+- Shared utilities:
+  - `frontend/src/lib/security/webhook.ts` (HMAC compute/verify with timing‑safe compare)
+  - `frontend/src/lib/idempotency/redis.ts` (Upstash `SET NX EX`)
+  - `frontend/src/lib/webhooks/payload.ts` (parse/verify helper + stable event key)
+- Vercel functions config with Node 20.x, 60s max duration, and regional pinning (`vercel.json`).
 - Flight and accommodation search result cards: `FlightOfferCard` and `StayCard` components in `frontend/src/components/ai-elements/` rendering structured results with itineraries, pricing, and source citations.
 - Chat message JSON parsing: `ChatMessageItem` detects and validates `flight.v1` and `stay.v1` schema JSON in text parts, rendering cards instead of raw text.
 - Agent routing in chat transport: `DefaultChatTransport.prepareSendMessagesRequest` routes messages with `metadata.agent` to `/api/agents/flights` or `/api/agents/accommodations`; falls back to `/api/chat/stream` for general chat.
@@ -32,9 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `frontend/src/test/factories/stores.ts` (`createMockChatState`, `createMockAgentStatusState`).
 - Timer test helper for deterministic, immediate execution:
   - `frontend/src/test/timers.ts` (`shortCircuitSetTimeout`).
-
 - Secure random ID utility with fallbacks: `frontend/src/lib/security/random.ts` exporting `secureUUID()`, `secureId()`, and `nowIso()`; Vitest coverage in `frontend/src/lib/security/random.test.ts`.
-
 - Dependency-injected handlers for App Router APIs:
   - Chat stream: `frontend/src/app/api/chat/stream/_handler.ts`
   - Chat (non-stream): `frontend/src/app/api/chat/_handler.ts`
@@ -73,7 +78,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `docs/adrs/adr-0037-reasoning-tool-codeblock-phased-adoption.md`
   - `docs/specs/0015-spec-ai-elements-response-sources.md`
   - `docs/specs/0016-spec-react-compiler-enable.md`
-
 - Testing support stubs and helpers:
   - Rehype harden test stub to isolate ESM/CJS packaging differences: `frontend/src/test/mocks/rehype-harden.ts` (aliased in Vitest config)
 - Calendar integration tests and utilities:
@@ -83,7 +87,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Trip export tests: empty destinations, missing dates/activities, partial trip data, metadata structure validation.
   - E2E test optimizations: parallel assertions via `Promise.all()`, optimized wait strategies (`domcontentloaded`), explicit timeouts for CI stability.
   - Test documentation: `frontend/src/app/api/calendar/__tests__/README.md` with usage examples and best practices.
-
 - Travel Planning tools (AI SDK v6, TypeScript):
   - Server-only tools: `createTravelPlan`, `updateTravelPlan`, `combineSearchResults`, `saveTravelPlan`, `deleteTravelPlan` in `frontend/src/lib/tools/planning.ts`.
   - Zod schema for persisted plans: `frontend/src/lib/tools/planning.schema.ts` with camelCase fields.
@@ -91,7 +94,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - User injection: `wrapToolsWithUserId()` in `frontend/src/lib/tools/injection.ts` for authenticated tool calls.
   - Rate limits: create 20/day per user; update 60/min per plan.
   - Tests: `frontend/src/lib/tools/__tests__/planning.test.ts` covers schema validation, Redis fallbacks, rate limits.
-
 - Agent endpoints (P1-P4 complete):
   - `frontend/src/app/api/agents/flights/route.ts` (P1)
   - `frontend/src/app/api/agents/accommodations/route.ts` (P1)
@@ -261,6 +263,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- Decommissioned Supabase Edge Functions (Deno) and tests under `supabase/functions/*` and `supabase/edge-functions/*`.
+- Removed Supabase CLI function deploy/logs targets and Deno lockfile helpers from `Makefile`.
+- Deleted legacy triggers file superseded by Database Webhooks.
 - Feature flag/wave gating for agents
   - Deleted `docs/operators/agent-waves.md`
   - Removed `AGENT_WAVE_*` references from tests
@@ -287,6 +292,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- Pinned `search_path` on SECURITY DEFINER functions and restricted EXECUTE/SELECT grants; enabled strict RLS on `webhook_logs` (service role only).
+- Prevented `X-Signature-HMAC: null` headers from DB when secret is unset; server rejects invalid/missing signatures.
+- Fixed timing-safe comparison bug and guarded hex parsing in HMAC verification to avoid DoS on malformed headers.
 - Provider keys are fetched via server-side Supabase RPCs only; no client exposure
 - OpenRouter attribution headers are non-sensitive and attached only when set
 
