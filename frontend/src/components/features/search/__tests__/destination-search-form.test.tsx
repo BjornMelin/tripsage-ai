@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/test/test-utils";
@@ -8,6 +8,21 @@ import { DestinationSearchForm } from "../destination-search-form";
 
 // Mock function for testing search form submission.
 const MockOnSearch = vi.fn();
+const WAIT_FOR_AUTOCOMPLETE_TICK = async () => {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 350));
+  });
+};
+
+vi.mock("@/hooks/use-memory", () => ({
+  useMemoryContext: () => ({
+    data: null,
+    error: null,
+    isError: false,
+    isLoading: false,
+    isSuccess: false,
+  }),
+}));
 
 describe("DestinationSearchForm", () => {
   beforeEach(() => {
@@ -54,6 +69,7 @@ describe("DestinationSearchForm", () => {
     );
     await user.clear(input);
     await user.type(input, "Paris");
+    await WAIT_FOR_AUTOCOMPLETE_TICK();
     const submitButton = screen.getByRole("button", { name: "Search Destinations" });
     await user.click(submitButton);
     expect(MockOnSearch).toHaveBeenCalledWith(
@@ -92,6 +108,7 @@ describe("DestinationSearchForm", () => {
     // The actual suggestions would be tested with a proper mock of the API calls
     // For now, we verify the input exists and is interactive
     await userEvent.type(input, "Par");
+    await WAIT_FOR_AUTOCOMPLETE_TICK();
   });
 
   it("handles checkbox changes for destination types", async () => {
@@ -145,6 +162,7 @@ describe("DestinationSearchForm", () => {
 
     // Type to trigger suggestions
     await user.type(input, "Par");
+    await WAIT_FOR_AUTOCOMPLETE_TICK();
 
     // The actual suggestion interaction would require mocking the API
     // For now, we verify the input responds to user interaction

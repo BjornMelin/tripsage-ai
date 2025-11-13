@@ -38,6 +38,12 @@ vi.mock("@/components/ui/use-toast", () => ({
   })),
 }));
 
+vi.mock("@/lib/embeddings/generate", () => ({
+  generateEmbedding: vi.fn(async () => [0.01, 0.02, 0.03]),
+}));
+
+vi.mock("@xenova/transformers", () => import("./test/mocks/xenova-transformers"));
+
 vi.mock("zustand/middleware", () => ({
   combine: <T>(fn: T) => fn,
   devtools: <T>(fn: T) => fn,
