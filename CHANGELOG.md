@@ -55,7 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Provider registry and resolution (server-only) returning AI SDK v6 `LanguageModel`:
   - `frontend/src/lib/providers/registry.ts` (`resolveProvider(userId, modelHint?)`)
   - `frontend/src/lib/providers/types.ts`, `frontend/src/lib/settings.ts`
-- OpenRouter attribution headers support (`HTTP-Referer`, `X-Title`) sourced from env
+- OpenRouter provider: switch to `@ai-sdk/openai` with `baseURL: https://openrouter.ai/api/v1` (remove `@openrouter/ai-sdk-provider`); attribution headers remain removed
 - Vitest unit tests for registry precedence and attribution
   - `frontend/src/lib/providers/__tests__/registry.test.ts`
 - Architecture docs: ADR and Spec for provider order, attribution, and SSR boundaries
@@ -76,6 +76,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Testing support stubs and helpers:
   - Rehype harden test stub to isolate ESM/CJS packaging differences: `frontend/src/test/mocks/rehype-harden.ts` (aliased in Vitest config)
+- Calendar integration tests and utilities:
+  - Shared test helpers: `frontend/src/app/api/calendar/__tests__/test-helpers.ts` with hoisted mocks (`vi.hoisted()`), `setupCalendarMocks()` factory, and `buildMockRequest()` helper for consistent route testing.
+  - Integration test coverage: 74 tests across 7 files covering unauthorized (401), rate limits (429), Google API errors, empty arrays, partial updates, multiple events, and timezone handling.
+  - Schema test edge cases: invalid date formats, missing required fields, length validation (summary ≤1024, description ≤8192), email format validation, `timeMax > timeMin` validation for free/busy requests.
+  - Trip export tests: empty destinations, missing dates/activities, partial trip data, metadata structure validation.
+  - E2E test optimizations: parallel assertions via `Promise.all()`, optimized wait strategies (`domcontentloaded`), explicit timeouts for CI stability.
+  - Test documentation: `frontend/src/app/api/calendar/__tests__/README.md` with usage examples and best practices.
 
 - Travel Planning tools (AI SDK v6, TypeScript):
   - Server-only tools: `createTravelPlan`, `updateTravelPlan`, `combineSearchResults`, `saveTravelPlan`, `deleteTravelPlan` in `frontend/src/lib/tools/planning.ts`.
@@ -214,6 +221,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Token budget utilities release WASM tokenizer resources without `any` casts (`frontend/src/lib/tokens/budget.ts`).
 - Google Places POI lookup now supports destination-only queries via Google Maps geocoding: uses `geocodeDestinationWithGoogleMaps()` implementation with Google Maps Geocoding API, added geocoding result caching (30-day max TTL per policy), normalized cache keys for consistent lookups (`frontend/src/lib/tools/google-places.ts`).
 - Date formatting is now timezone-agnostic for `YYYY-MM-DD` inputs to avoid CI/system TZ drift; ISO datetimes format in UTC (`frontend/src/lib/schema-adapters.ts`, tests updated in `frontend/src/lib/__tests__/schema-adapters.test.ts`).
+- Calendar schema validation: `freeBusyRequestSchema` now validates `timeMax > timeMin` using Zod `.refine()` to reject invalid time ranges (`frontend/src/schemas/calendar.ts`).
 - Stabilized long‑prompt AI stream test by bounding tokenizer work and retaining accuracy:
   - Introduced a safe character threshold for WASM tokenization with heuristic fallback; small/normal inputs still use `js-tiktoken` and tests validate encodings (`frontend/src/lib/tokens/budget.ts`, `frontend/src/lib/tokens/__tests__/budget.test.ts`).
   - Ensures `handles very long prompt content` completes within per‑suite timeout.
@@ -235,11 +243,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Resolved CSS import failures by enabling CSS transforms for web deps and adjusting the pool to VM runners.
   - Fixed ESM/CJS mismatch from `rehype-harden` by inlining and aliasing to a stub in tests.
   - Eliminated hoist-related `vi.mock` errors by moving test-local mock components into `vi.hoisted` blocks.
-  - Removed brittle `window.location` property redefinitions (location/reload/href) in tests; replaced with behavior assertions that don’t require redefining non-configurable globals.
+  - Removed brittle `window.location` property redefinitions (location/reload/href) in tests; replaced with behavior assertions that don't require redefining non-configurable globals.
   - Added Web Streams polyfills to fix `TransformStream is not defined` in chat UI tests (AI SDK/eventsource-parser).
   - Mocked `@/components/ai-elements/response` in chat page tests to avoid rehype/Streamdown transitive ESM during unit tests.
   - Shortened and stabilized slow suites (e.g., search/accommodation-card) by mocking `next/image` and increasing a single long-running test timeout where appropriate.
   - Adjusted auth-store time comparison to avoid strict-equality flakiness on timestamp rollover.
+- Calendar test performance: Shared mocks via `vi.hoisted()` reduce setup overhead; tests run in parallel (Vitest threads pool); execution time ~1.1s for 74 tests across 7 files; coverage targets met (90% lines/statements/functions, 85% branches).
 
 - Planning data model is now camelCase and TypeScript-first (no Python compatibility retained):
   - Persisted fields include `planId`, `userId`, `title`, `destinations`, `startDate`, `endDate`, `travelers`, `budget`, `preferences`, `createdAt`, `updatedAt`, `status`, `finalizedAt`, `components`.
