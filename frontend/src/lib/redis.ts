@@ -4,6 +4,7 @@
  * Reads credentials from environment (Vercel integration recommended).
  */
 import { Redis } from "@upstash/redis";
+import { getServerEnvVarWithFallback } from "@/lib/env/server";
 
 let redisSingleton: Redis | undefined;
 
@@ -13,8 +14,8 @@ let redisSingleton: Redis | undefined;
  */
 export function getRedis(): Redis | undefined {
   if (redisSingleton) return redisSingleton;
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  const url = getServerEnvVarWithFallback("UPSTASH_REDIS_REST_URL", undefined);
+  const token = getServerEnvVarWithFallback("UPSTASH_REDIS_REST_TOKEN", undefined);
   if (!url || !token) return undefined;
   redisSingleton = new Redis({ token, url });
   return redisSingleton;

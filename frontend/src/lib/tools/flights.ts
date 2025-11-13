@@ -6,9 +6,15 @@ import "server-only";
 
 import { tool } from "ai";
 import { z } from "zod";
+import { getServerEnvVarWithFallback } from "@/lib/env/server";
 
 // Prefer DUFFEL_ACCESS_TOKEN (commonly used in templates), fall back to DUFFEL_API_KEY.
-const DUFFEL_KEY = process.env.DUFFEL_ACCESS_TOKEN || process.env.DUFFEL_API_KEY;
+function getDuffelKey(): string | undefined {
+  return (
+    getServerEnvVarWithFallback("DUFFEL_ACCESS_TOKEN", undefined) ||
+    getServerEnvVarWithFallback("DUFFEL_API_KEY", undefined)
+  );
+}
 
 /**
  * Zod input schema for flight search tool.
@@ -40,7 +46,8 @@ export const searchFlights = tool({
     cabin,
     currency,
   }) => {
-    if (!DUFFEL_KEY) throw new Error("duffel_not_configured");
+    const DuffelKey = getDuffelKey();
+    if (!DuffelKey) throw new Error("duffel_not_configured");
 
     type CamelSlice = { origin: string; destination: string; departureDate: string };
     const slicesCamel: CamelSlice[] = [{ departureDate, destination, origin }];
@@ -79,7 +86,7 @@ export const searchFlights = tool({
     const res = await fetch("https://api.duffel.com/air/offer_requests", {
       body: JSON.stringify(body),
       headers: {
-        authorization: `Bearer ${DUFFEL_KEY}`,
+        authorization: `Bearer ${DuffelKey}`,
         "content-type": "application/json",
         "duffel-version": "v2",
       },

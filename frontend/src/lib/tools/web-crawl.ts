@@ -289,7 +289,10 @@ export const crawlUrl = tool({
     "(markdown, html, links, screenshot, summary, json), cost-safe defaults, " +
     "and optional page interactions.",
   execute: async ({ url, fresh, scrapeOptions }) => {
-    const apiKey = process.env.FIRECRAWL_API_KEY;
+    const { getServerEnvVar, getServerEnvVarWithFallback } = await import(
+      "@/lib/env/server"
+    );
+    const apiKey = getServerEnvVar("FIRECRAWL_API_KEY");
     if (!apiKey) {
       throw new Error("web_crawl_not_configured");
     }
@@ -299,7 +302,10 @@ export const crawlUrl = tool({
       const cached = await redis.get(ck);
       if (cached) return cached;
     }
-    const baseUrl = process.env.FIRECRAWL_BASE_URL ?? "https://api.firecrawl.dev/v2";
+    const baseUrl = getServerEnvVarWithFallback(
+      "FIRECRAWL_BASE_URL",
+      "https://api.firecrawl.dev/v2"
+    );
     const body = buildScrapeBody(url, scrapeOptions);
     const res = await fetch(`${baseUrl}/scrape`, {
       body: JSON.stringify(body),
@@ -367,7 +373,10 @@ export const crawlSite = tool({
     maxResults,
     maxWaitTime,
   }) => {
-    const apiKey = process.env.FIRECRAWL_API_KEY;
+    const { getServerEnvVar, getServerEnvVarWithFallback } = await import(
+      "@/lib/env/server"
+    );
+    const apiKey = getServerEnvVar("FIRECRAWL_API_KEY");
     if (!apiKey) {
       throw new Error("web_crawl_not_configured");
     }
@@ -384,7 +393,10 @@ export const crawlSite = tool({
       const cached = await redis.get(ck);
       if (cached) return cached;
     }
-    const baseUrl = process.env.FIRECRAWL_BASE_URL ?? "https://api.firecrawl.dev/v2";
+    const baseUrl = getServerEnvVarWithFallback(
+      "FIRECRAWL_BASE_URL",
+      "https://api.firecrawl.dev/v2"
+    );
     const body = buildCrawlBody(
       url,
       limit,
@@ -419,7 +431,7 @@ export const crawlSite = tool({
     if (!crawlId) {
       throw new Error("web_crawl_failed:no_crawl_id");
     }
-    const result = await pollCrawlStatus(baseUrl, apiKey, crawlId, {
+    const result = await pollCrawlStatus(baseUrl as string, apiKey as string, crawlId, {
       maxPages,
       maxResults,
       maxWaitTime,

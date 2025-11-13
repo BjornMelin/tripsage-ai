@@ -32,7 +32,8 @@ import { WEATHER_CACHE_TTL_SECONDS } from "./constants";
 async function executeWeatherQuery(
   params: Record<string, unknown>
 ): Promise<{ data: unknown; provider: string }> {
-  const apiKey = process.env.OPENWEATHERMAP_API_KEY;
+  const { getServerEnvVar } = await import("@/lib/env/server");
+  const apiKey = getServerEnvVar("OPENWEATHERMAP_API_KEY");
   if (!apiKey) {
     const error: Error & { code?: string } = new Error("weather_not_configured");
     error.code = "weather_not_configured";

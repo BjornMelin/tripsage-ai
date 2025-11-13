@@ -6,6 +6,7 @@
 
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
+import { getClientEnvVar } from "@/lib/env/client";
 
 /**
  * Creates Supabase server client with SSR cookie handling and refreshes user session.
@@ -18,10 +19,8 @@ export async function middleware(request: NextRequest) {
 
   // Create Supabase server client with custom cookie handling for SSR
   const supabase = createServerClient(
-    // biome-ignore lint/style/noNonNullAssertion: Required environment variables for Supabase
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    // biome-ignore lint/style/noNonNullAssertion: Required environment variables for Supabase
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    getClientEnvVar("NEXT_PUBLIC_SUPABASE_URL"),
+    getClientEnvVar("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
     {
       cookies: {
         getAll() {

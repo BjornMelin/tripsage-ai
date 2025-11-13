@@ -5,7 +5,14 @@
  * validation is required.
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+import { getClientEnvVarWithFallback } from "@/lib/env/client";
+
+function getApiBaseUrl(): string {
+  return (
+    getClientEnvVarWithFallback("NEXT_PUBLIC_API_URL", "http://localhost:8000") ??
+    "http://localhost:8000"
+  );
+}
 
 /**
  * Options for `fetchApi` including query params and optional auth header.
@@ -64,7 +71,7 @@ export async function fetchApi<T = unknown>(
   const { params, auth, ...fetchOptions } = options;
 
   // Handle query parameters
-  let url = `${API_BASE_URL}${endpoint}`;
+  let url = `${getApiBaseUrl()}${endpoint}`;
 
   if (params) {
     const searchParams = new URLSearchParams();

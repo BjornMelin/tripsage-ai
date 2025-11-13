@@ -25,27 +25,41 @@ vi.mock("@/lib/tools/approvals", () => ({
   }),
 }));
 
+vi.mock("@/lib/env/server", () => ({
+  getServerEnvVarWithFallback: vi.fn((key: string) => {
+    if (key === "AIRBNB_MCP_URL") return process.env.AIRBNB_MCP_URL;
+    if (key === "AIRBNB_MCP_API_KEY") return process.env.AIRBNB_MCP_API_KEY;
+    if (key === "ACCOM_SEARCH_URL")
+      return process.env.ACCOM_SEARCH_URL || "https://api.example.com";
+    if (key === "ACCOM_SEARCH_TOKEN")
+      return process.env.ACCOM_SEARCH_TOKEN || "test_token";
+    return undefined;
+  }),
+}));
+
 vi.mock("@/lib/cache/keys", () => ({
   canonicalizeParamsForCache: vi.fn((_params: unknown, prefix: string) => {
     return `${prefix}:test`;
   }),
 }));
 
-const env = process.env;
-
 beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn());
-  process.env = {
-    ...env,
-    ACCOM_SEARCH_TOKEN: "test_token",
-    ACCOM_SEARCH_URL: "https://api.example.com",
-  };
+  const { getServerEnvVarWithFallback } = require("@/lib/env/server");
+  (getServerEnvVarWithFallback as ReturnType<typeof vi.fn>).mockImplementation(
+    (key: string) => {
+      if (key === "ACCOM_SEARCH_URL") return "https://api.example.com";
+      if (key === "ACCOM_SEARCH_TOKEN") return "test_token";
+      if (key === "AIRBNB_MCP_URL") return undefined;
+      if (key === "AIRBNB_MCP_API_KEY") return undefined;
+      return undefined;
+    }
+  );
 });
 
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.clearAllMocks();
-  process.env = env;
 });
 
 const mockContext = {
@@ -166,8 +180,14 @@ describe("getAccommodationDetails", () => {
       mockClient
     );
     (getMcpTool as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockTool);
-    process.env.AIRBNB_MCP_URL = "https://mcp.example.com";
-    process.env.AIRBNB_MCP_API_KEY = "mcp_key";
+    const { getServerEnvVarWithFallback } = await import("@/lib/env/server");
+    (getServerEnvVarWithFallback as ReturnType<typeof vi.fn>).mockImplementation(
+      (key: string) => {
+        if (key === "AIRBNB_MCP_URL") return "https://mcp.example.com";
+        if (key === "AIRBNB_MCP_API_KEY") return "mcp_key";
+        return undefined;
+      }
+    );
     const { getAccommodationDetails } = await import("@/lib/tools/accommodations");
 
     const result = await getAccommodationDetails.execute?.(

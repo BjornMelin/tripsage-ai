@@ -53,11 +53,17 @@ export { ACCOMMODATION_SEARCH_INPUT_SCHEMA as searchAccommodationsInputSchema };
  *   - "accom_search_unauthorized": Authentication failed (401)
  *   - "accom_search_payment_required": Payment required (402)
  */
+import { getServerEnvVarWithFallback } from "@/lib/env/server";
+
 async function executeSearch(
   params: Record<string, unknown>
 ): Promise<{ data: unknown; provider: string }> {
-  const mcpUrl = process.env.AIRBNB_MCP_URL || process.env.ACCOM_SEARCH_URL;
-  const mcpAuth = process.env.AIRBNB_MCP_API_KEY || process.env.ACCOM_SEARCH_TOKEN;
+  const mcpUrl =
+    getServerEnvVarWithFallback("AIRBNB_MCP_URL", undefined) ||
+    getServerEnvVarWithFallback("ACCOM_SEARCH_URL", undefined);
+  const mcpAuth =
+    getServerEnvVarWithFallback("AIRBNB_MCP_API_KEY", undefined) ||
+    getServerEnvVarWithFallback("ACCOM_SEARCH_TOKEN", undefined);
 
   // Try MCP SSE first
   if (mcpUrl?.includes("mcp") && mcpAuth) {
@@ -82,8 +88,12 @@ async function executeSearch(
   }
 
   // HTTP POST fallback
-  const httpUrl = process.env.ACCOM_SEARCH_URL || process.env.AIRBNB_MCP_URL;
-  const httpToken = process.env.ACCOM_SEARCH_TOKEN || process.env.AIRBNB_MCP_API_KEY;
+  const httpUrl =
+    getServerEnvVarWithFallback("ACCOM_SEARCH_URL", undefined) ||
+    getServerEnvVarWithFallback("AIRBNB_MCP_URL", undefined);
+  const httpToken =
+    getServerEnvVarWithFallback("ACCOM_SEARCH_TOKEN", undefined) ||
+    getServerEnvVarWithFallback("AIRBNB_MCP_API_KEY", undefined);
   if (!httpUrl) {
     throw createToolError(TOOL_ERROR_CODES.accomSearchNotConfigured);
   }
@@ -337,8 +347,12 @@ export const getAccommodationDetails = tool({
     "Optionally include check-in/out dates and guest counts for accurate pricing.",
   execute: async (params): Promise<AccommodationDetailsResult> => {
     const validated = ACCOMMODATION_DETAILS_INPUT_SCHEMA.parse(params);
-    const mcpUrl = process.env.AIRBNB_MCP_URL || process.env.ACCOM_SEARCH_URL;
-    const mcpAuth = process.env.AIRBNB_MCP_API_KEY || process.env.ACCOM_SEARCH_TOKEN;
+    const mcpUrl =
+      getServerEnvVarWithFallback("AIRBNB_MCP_URL", undefined) ||
+      getServerEnvVarWithFallback("ACCOM_SEARCH_URL", undefined);
+    const mcpAuth =
+      getServerEnvVarWithFallback("AIRBNB_MCP_API_KEY", undefined) ||
+      getServerEnvVarWithFallback("ACCOM_SEARCH_TOKEN", undefined);
 
     // Try MCP SSE first
     if (mcpUrl?.includes("mcp") && mcpAuth) {
@@ -375,8 +389,12 @@ export const getAccommodationDetails = tool({
     }
 
     // HTTP fallback
-    const httpUrl = process.env.ACCOM_SEARCH_URL || process.env.AIRBNB_MCP_URL;
-    const httpToken = process.env.ACCOM_SEARCH_TOKEN || process.env.AIRBNB_MCP_API_KEY;
+    const httpUrl =
+      getServerEnvVarWithFallback("ACCOM_SEARCH_URL", undefined) ||
+      getServerEnvVarWithFallback("AIRBNB_MCP_URL", undefined);
+    const httpToken =
+      getServerEnvVarWithFallback("ACCOM_SEARCH_TOKEN", undefined) ||
+      getServerEnvVarWithFallback("AIRBNB_MCP_API_KEY", undefined);
     if (!httpUrl) {
       throw createToolError(TOOL_ERROR_CODES.accomDetailsNotConfigured);
     }

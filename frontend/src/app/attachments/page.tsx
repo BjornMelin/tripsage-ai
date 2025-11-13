@@ -6,14 +6,14 @@ type AttachmentItem = {
   mimeType?: string;
 };
 
+import { getClientEnvVarWithFallback } from "@/lib/env/client";
+
 async function fetchAttachments() {
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/attachments/files`,
-    {
-      // This is an SSR fetch; the underlying route uses next: { tags: ['attachments'] }.
-      cache: "force-cache",
-    }
-  );
+  const basePath = getClientEnvVarWithFallback("NEXT_PUBLIC_BASE_PATH", "");
+  const res = await fetch(`${basePath}/api/attachments/files`, {
+    // This is an SSR fetch; the underlying route uses next: { tags: ['attachments'] }.
+    cache: "force-cache",
+  });
   if (!res.ok) throw new Error("Failed to load attachments");
   return (await res.json()) as { files: AttachmentItem[]; total: number };
 }
