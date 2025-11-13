@@ -123,6 +123,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - E2E Playwright tests: `frontend/e2e/agents-budget-memory.spec.ts`
 - Operator runbook: `docs/operators/agent-frontend.md` updated with all endpoints and env vars
 
+- Trip collaborator notifications via Supabase Database Webhooks, Upstash QStash, and Resend:
+  - QStash-managed worker route `/api/jobs/notify-collaborators` verifies `Upstash-Signature`, validates jobs with Zod, and calls the notification adapter.
+  - Notification adapter `frontend/src/lib/notifications/collaborators.ts` sends Resend emails and optional downstream webhooks with Redis-backed idempotency.
+  - Webhook payload normalization helper `frontend/src/lib/webhooks/payload.ts` parses raw Supabase payloads, verifies HMAC (`HMAC_SECRET`), and builds stable event keys.
+- Embeddings API route `/api/embeddings` now uses AI SDK v6 `embed` with OpenAI `text-embedding-3-small`, returning 1536‑dimensional embeddings with usage metadata.
+- Zod schemas for webhook payloads and notification jobs in `frontend/src/lib/schemas/webhooks.ts`.
+- ADR-0041 documenting QStash + Resend notification pipeline and SPEC-0025 defining trip collaborator notification behavior.
+
 ### Changed
 
 - Agent routes for budget, destination, itinerary, memory, and router flows now call `errorResponse`, `enforceRouteRateLimit`, and `withRequestSpan` before invoking their orchestrators to keep throttling and telemetry consistent.
@@ -141,6 +149,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Accommodation tools (`frontend/src/lib/tools/accommodations.ts`): Enforce strict structured outputs via Zod schemas (`ACCOMMODATION_SEARCH_OUTPUT_SCHEMA`, `ACCOMMODATION_DETAILS_OUTPUT_SCHEMA`, `ACCOMMODATION_BOOKING_OUTPUT_SCHEMA`); all code paths return validated shapes. Session context injection via `wrapToolsWithUserId` for booking approval flow. Centralized error taxonomy (`frontend/src/lib/tools/errors.ts`) with `TOOL_ERROR_CODES` and `createToolError` helper adopted across accommodation tools.
 - Chat UI renders web search results as cards with title/snippet/URL, citations via AI Elements `Sources`, and displays `fromCache` + `tookMs`.
 - Env: `.env.example` simplified — require only `FIRECRAWL_API_KEY`; `FIRECRAWL_BASE_URL` optional for self‑hosted Firecrawl.
+- Env: frontend `.env.example` extended with notification and webhook variables (`RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `RESEND_FROM_NAME`, `QSTASH_TOKEN`, `QSTASH_CURRENT_SIGNING_KEY`, `QSTASH_NEXT_SIGNING_KEY`, `COLLAB_WEBHOOK_URL`, `HMAC_SECRET`) and wired through `frontend/src/lib/env/schema.ts`.
+- Notification behavior for `trip_collaborators` webhooks now flows through `/api/hooks/trips` → QStash queue → `/api/jobs/notify-collaborators`, replacing any legacy in-route side effects.
 - BYOK POST/DELETE adapters (`frontend/src/app/api/keys/route.ts`, `frontend/src/app/api/keys/[service]/route.ts`) now build rate limiters per request, derive identifiers per user/IP, and wrap Supabase RPC calls in telemetry spans carrying rate-limit attributes and sanitized key metadata; route tests updated to stub the new factory and span helper.
 - Same BYOK routes now export `dynamic = "force-dynamic"`/`revalidate = 0` and document the no-cache rationale so user-specific secrets never reuse stale responses.
 - Service normalization and rate-limit identifier behavior are documented/tested (see `frontend/src/app/api/keys/_handlers.ts`, route tests, and `frontend/src/lib/next/route-helpers.ts`), closing reviewer feedback.
