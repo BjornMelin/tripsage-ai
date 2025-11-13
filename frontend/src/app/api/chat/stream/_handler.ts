@@ -5,10 +5,11 @@
  * streaming. It is fully dependency-injected to ensure deterministic tests.
  */
 
-import type { LanguageModel, UIMessage } from "ai";
+import type { UIMessage } from "ai";
 import { convertToModelMessages, streamText as defaultStreamText } from "ai";
 import { extractTexts, validateImageAttachments } from "@/app/api/_helpers/attachments";
 import { createMcpClientHelper } from "@/lib/mcp/client";
+import type { ProviderResolution } from "@/lib/providers/types";
 import { secureUuid } from "@/lib/security/random";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { insertSingle } from "@/lib/supabase/typed-helpers";
@@ -20,19 +21,6 @@ import {
 import { getModelContextLimit } from "@/lib/tokens/limits";
 import { toolRegistry } from "@/lib/tools";
 import { wrapToolsWithUserId } from "@/lib/tools/injection";
-
-/**
- * Type representing a resolved AI provider configuration.
- *
- * @property provider - The AI provider name (e.g., 'openai', 'anthropic').
- * @property modelId - The specific model identifier (e.g., 'gpt-4o-mini').
- * @property model - The AI SDK LanguageModel instance.
- */
-export type ProviderResolution = {
-  provider: string;
-  modelId: string;
-  model: LanguageModel;
-};
 
 /**
  * Function type for resolving AI provider configurations.

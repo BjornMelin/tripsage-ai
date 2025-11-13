@@ -4,9 +4,10 @@
  * validation, provider resolution, token clamping, and usage metadata.
  */
 
-import type { LanguageModel, ToolSet, UIMessage } from "ai";
+import type { ToolSet, UIMessage } from "ai";
 import { convertToModelMessages, generateText as defaultGenerateText } from "ai";
 import { extractTexts, validateImageAttachments } from "@/app/api/_helpers/attachments";
+import type { ProviderResolution } from "@/lib/providers/types";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { insertSingle } from "@/lib/supabase/typed-helpers";
 import {
@@ -15,19 +16,6 @@ import {
   countTokens,
 } from "@/lib/tokens/budget";
 import { getModelContextLimit } from "@/lib/tokens/limits";
-
-/**
- * Type representing a resolved AI provider configuration.
- *
- * @param provider - The provider.
- * @param modelId - The model ID.
- * @param model - The model.
- */
-export type ProviderResolution = {
-  provider: string;
-  modelId: string;
-  model: LanguageModel;
-};
 
 /**
  * Type representing a function that resolves an AI provider configuration.
