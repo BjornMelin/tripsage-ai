@@ -4,9 +4,9 @@
 
 This section contains high-level system design and architectural documentation for TripSage. Architecture documentation focuses on system design decisions, component interactions, and technology stack choices rather than implementation details.
 
-## 📋 Documentation Scope
+## Documentation Scope
 
-**✅ Architecture Documentation Includes:**
+**Architecture Documentation Includes:**
 
 - System design patterns and architectural decisions
 - Component interaction diagrams and data flow
@@ -16,25 +16,26 @@ This section contains high-level system design and architectural documentation f
 - Integration architecture with external systems
 - Cross-cutting concerns (caching, messaging, storage)
 
-**❌ Architecture Documentation Excludes:**
+**Architecture Documentation Excludes:**
 
 - Implementation details and code examples → See [`docs/developers/`](../developers/)
 - Deployment procedures and operations → See [`docs/operators/`](../operators/)
 - API specifications and endpoints → See [`docs/api-reference/`](../api-reference/)
 - Configuration and setup guides → See [`docs/configuration/`](../configuration/)
 
-## 🏗️ Architecture Documents
+## Architecture Documents
 
 ### Core System Architecture
 
 - **[System Overview](system-overview.md)** - Complete system architecture with component interactions, data flow, and technology stack
 - **[Data Architecture](data-architecture.md)** - Database design patterns, storage decisions, and vector search optimization
+- **[Frontend Architecture](frontend-architecture.md)** - Next.js application structure, AI SDK v6 integration, component organization, and data flows
 
 ### Specialized Architecture
 
 - **[Storage Architecture](storage-architecture.md)** - File storage, bucket organization, and security patterns
 
-## 🎯 Architecture Principles
+## Architecture Principles
 
 TripSage follows these core architectural principles:
 
@@ -44,9 +45,9 @@ Single source of truth with Supabase PostgreSQL, eliminating complex multi-datab
 
 ### 2. **Consumer-Aware API Design**
 
-API layer adapts responses and behavior based on consumer type (frontend applications vs AI agents), providing optimal experience for each use case.
+API layer adapts responses and behavior based on consumer type (frontend applications vs AI agents).
 
-### 3. **Performance-First Caching**
+### 3. **Serverless Caching**
 
 Serverless caching with Upstash Redis (HTTP), integrated via Vercel environment variables, eliminating local cache containers and connection pooling.
 
@@ -56,9 +57,9 @@ Direct SDK integrations replacing complex abstraction layers, reducing latency a
 
 ### 5. **Real-time Collaboration**
 
-Supabase Realtime-based architecture enabling live trip planning, agent status updates, and multi-user collaboration with conflict resolution.
+Supabase Realtime-based architecture for live trip planning, agent status updates, and multi-user collaboration.
 
-## 🏗️ Project Structure
+## Project Structure
 
 ```text
 tripsage-ai/
@@ -91,11 +92,11 @@ Core business logic, services, models, and shared utilities:
 
 #### `frontend/`
 
-Next.js 15 application with App Router and modern React patterns.
+Next.js 16 application with App Router and React 19. See [Frontend Architecture](frontend-architecture.md) for detailed structure, AI SDK v6 integration, and component organization.
 
 #### `tests/`
 
-Comprehensive test suite with 90%+ coverage:
+Test suite with 90%+ coverage:
 
 - `unit/` - Unit tests for individual components
 - `integration/` - Service integration tests
@@ -103,16 +104,16 @@ Comprehensive test suite with 90%+ coverage:
 - `performance/` - Performance and load tests
 - `security/` - Security and compliance tests
 
-## 🔗 Related Documentation
+## Related Documentation
 
 - **[Developers Guide](../developers/)** - Implementation details, code examples, testing
 - **[API Documentation](../api/)** - REST specifications and Supabase Realtime guide
 - **[Testing Guide](../../tests/README.md)** - Test organization and best practices
 - **[Deployment](../operators/)** - Infrastructure, monitoring, and operations
 
-## 📊 Architecture Metrics
+## Architecture Metrics
 
-Current production architecture achievements:
+Current architecture metrics:
 
 | Metric | Target | Achieved | Technology |
 |--------|--------|----------|------------|
@@ -122,22 +123,22 @@ Current production architecture achievements:
 | Database Connections | 500+ | **1000+** | Supabase PostgreSQL |
 | Storage Cost Reduction | 50% | **80%** | Unified Architecture |
 
-## 🚧 Architecture Evolution
+## Architecture Evolution
 
-### Current Phase: **Production Ready** (June 2025)
+### Current Phase (June 2025)
 
-- ✅ Unified Supabase architecture implementation
-- ✅ Upstash Redis serverless caching  
-- ✅ Supabase Realtime communication
-- ✅ Service consolidation and SDK migration
-- ✅ Consumer-aware API design
+- Unified Supabase architecture implementation
+- Upstash Redis serverless caching  
+- Supabase Realtime communication
+- Service consolidation and SDK migration
+- Consumer-aware API design
 
-### Next Phase: **Global Scale** (Q3-Q4 2025)
+### Next Phase (Q3-Q4 2025)
 
-- 🔄 Multi-region deployment architecture
-- 🔄 Monitoring and observability
-- 🔄 Security and compliance patterns
-- 🔄 Mobile application architecture
+- Multi-region deployment architecture
+- Monitoring and observability
+- Security and compliance patterns
+- Mobile application architecture
 
 ---
 
