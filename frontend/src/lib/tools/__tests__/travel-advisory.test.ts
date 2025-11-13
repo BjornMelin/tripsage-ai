@@ -19,11 +19,9 @@ vi.mock("@/lib/telemetry/span", () => ({
 describe("getTravelAdvisory", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Explicitly unset the env var to ensure stub behavior
-    process.env.GEOSURE_API_KEY = undefined;
   });
 
-  it("returns stub when API key not configured", async () => {
+  it("returns stub for unmappable destinations", async () => {
     if (!getTravelAdvisory.execute) {
       throw new Error("getTravelAdvisory.execute is undefined");
     }
@@ -64,7 +62,7 @@ describe("getTravelAdvisory", () => {
       categories: [],
       destination: "Tokyo",
       overallScore: 80,
-      provider: "geosure",
+      provider: "state_department",
     });
 
     const result = await getTravelAdvisory.execute(
