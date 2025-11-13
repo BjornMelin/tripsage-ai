@@ -1,15 +1,15 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import React, { type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { api } from "@/lib/api/client";
+import { apiClient } from "@/lib/api/api-client";
 import { useSearchParamsStore } from "@/stores/search-params-store";
 import { useSearchResultsStore } from "@/stores/search-results-store";
 import { AllTheProviders } from "@/test/test-utils";
 import { useAccommodationSearch } from "../use-accommodation-search";
 
 // Mock the API
-vi.mock("@/lib/api/client", () => ({
-  api: {
+vi.mock("@/lib/api/api-client", () => ({
+  apiClient: {
     get: vi.fn(),
     post: vi.fn(),
   },
@@ -72,7 +72,7 @@ describe("useAccommodationSearch", () => {
       },
     ];
 
-    vi.mocked(api.get).mockResolvedValueOnce(mockSuggestions);
+    vi.mocked(apiClient.get).mockResolvedValueOnce(mockSuggestions);
 
     vi.mocked(useSearchParamsStore).mockReturnValue({
       updateAccommodationParams: vi.fn(),
@@ -89,7 +89,7 @@ describe("useAccommodationSearch", () => {
 
     await waitFor(() => {
       expect(result.current.suggestions).toEqual(mockSuggestions);
-      expect(api.get).toHaveBeenCalledWith("/api/accommodations/suggestions");
+      expect(apiClient.get).toHaveBeenCalledWith("/accommodations/suggestions");
     });
   });
 
@@ -135,7 +135,7 @@ describe("useAccommodationSearch", () => {
       totalResults: 1,
     };
 
-    vi.mocked(api.post).mockResolvedValueOnce(mockResults);
+    vi.mocked(apiClient.post).mockResolvedValueOnce(mockResults);
 
     const mockStartSearch = vi.fn().mockReturnValue("search-123");
 
@@ -167,7 +167,10 @@ describe("useAccommodationSearch", () => {
 
     // Wait for API call
     await waitFor(() => {
-      expect(api.post).toHaveBeenCalledWith("/api/accommodations/search", searchParams);
+      expect(apiClient.post).toHaveBeenCalledWith(
+        "/accommodations/search",
+        searchParams
+      );
     });
   });
 
@@ -177,7 +180,7 @@ describe("useAccommodationSearch", () => {
       resolvePromise = resolve;
     });
 
-    vi.mocked(api.post).mockReturnValueOnce(promise);
+    vi.mocked(apiClient.post).mockReturnValueOnce(promise);
 
     vi.mocked(useSearchParamsStore).mockReturnValue({
       updateAccommodationParams: vi.fn(),

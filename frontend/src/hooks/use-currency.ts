@@ -10,12 +10,12 @@
 import { useCallback, useEffect } from "react";
 import { z } from "zod";
 import { useApiQuery } from "@/hooks/use-api-query";
-import { useCurrencyStore } from "@/stores/currency-store";
 import type {
   ConversionResult,
   CurrencyCode,
   UpdateExchangeRatesResponse,
-} from "@/types/currency";
+} from "@/lib/schemas/currency";
+import { useCurrencyStore } from "@/stores/currency-store";
 
 /**
  * Hook for accessing currency state.

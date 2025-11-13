@@ -197,10 +197,12 @@ export function setupCalendarMocks(overrides?: {
       slidingWindow: typeof slidingWindow;
     };
     ctor.slidingWindow = slidingWindow;
+    // biome-ignore lint/style/useNamingConvention: Ratelimit matches external library export
     return { Ratelimit: ctor };
   });
 
   vi.doMock("@upstash/redis", () => ({
+    // biome-ignore lint/style/useNamingConvention: Redis matches external library export
     Redis: {
       fromEnv: vi.fn(() => ({})),
     },

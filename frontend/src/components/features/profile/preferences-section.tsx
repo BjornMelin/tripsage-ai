@@ -34,9 +34,9 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
+import type { CurrencyCode } from "@/lib/schemas/currency";
 import { useCurrencyStore } from "@/stores/currency-store";
 import { useUserProfileStore } from "@/stores/user-store";
-import type { CurrencyCode } from "@/types/currency";
 
 const PreferencesSchema = z.object({
   currency: z.string().min(1, "Please select a currency"),

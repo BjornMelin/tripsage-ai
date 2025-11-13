@@ -10,7 +10,7 @@ import type {
   SearchResult,
   SearchResults as SearchResultsType,
   SearchType,
-} from "@/types/search";
+} from "@/lib/schemas/search";
 import { AccommodationCard } from "./accommodation-card";
 
 interface SearchResultsProps {

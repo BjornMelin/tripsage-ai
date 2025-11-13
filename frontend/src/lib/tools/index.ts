@@ -11,6 +11,7 @@ import {
   getAccommodationDetails,
   searchAccommodations,
 } from "./accommodations";
+import { createCalendarEvent, exportItineraryToICS, getAvailability } from "./calendar";
 import { searchFlights } from "./flights";
 import { lookupPoiContext } from "./google-places";
 import { distanceMatrix, geocode } from "./maps";
@@ -43,11 +44,15 @@ export const toolRegistry = {
   combineSearchResults,
   crawlSite,
   crawlUrl,
+  createCalendarEvent,
   createTravelPlan,
   deleteTravelPlan,
   distanceMatrix,
+  // biome-ignore lint/style/useNamingConvention: ICS is a standard file format acronym
+  exportItineraryToICS,
   geocode,
   getAccommodationDetails,
+  getAvailability,
   getCurrentWeather,
   getTravelAdvisory,
   lookupPoiContext,

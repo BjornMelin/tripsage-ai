@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type { ErrorFallbackProps } from "@/types/errors";
+import type { ErrorFallbackProps } from "@/lib/schemas/errors";
 
 /**
  * Default error fallback component for error boundaries

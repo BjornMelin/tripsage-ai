@@ -129,8 +129,8 @@ describe("Supabase Server Client", () => {
 
   it("should throw an error when environment variables are missing", async () => {
     // Clear environment variables
-    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", undefined);
-    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", undefined);
+    Reflect.deleteProperty(process.env, "NEXT_PUBLIC_SUPABASE_URL");
+    Reflect.deleteProperty(process.env, "NEXT_PUBLIC_SUPABASE_ANON_KEY");
 
     // Re-import module with missing env vars
     vi.resetModules();
@@ -146,7 +146,7 @@ describe("Supabase Server Client", () => {
     );
 
     await expect(createServerSupabase()).rejects.toThrow(
-      "Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY"
+      /Environment validation failed|Missing Supabase environment variables/
     );
   });
 

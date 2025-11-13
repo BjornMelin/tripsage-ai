@@ -11,7 +11,7 @@ import type {
   DestinationResearchRequest,
   FlightSearchRequest,
   ItineraryPlanRequest,
-} from "@/schemas/agents";
+} from "@/lib/schemas/agents";
 
 /**
  * Base context shared across prompt builders.

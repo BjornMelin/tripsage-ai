@@ -14,7 +14,7 @@ import type {
   SearchParams,
   SearchResults,
   SearchType,
-} from "@/types/search";
+} from "@/lib/schemas/search";
 
 import { useSearchFiltersStore } from "./search-filters-store";
 import { useSearchHistoryStore } from "./search-history-store";

@@ -1,51 +1,41 @@
 /**
- * @fileoverview Calendar event schemas aligned with Google Calendar API and
- * tripsage_core/models/api/calendar_models.py.
+ * @fileoverview Canonical Zod v4 schemas for calendar entities aligned with
+ * Google Calendar API and backend calendar models.
  */
 
 import { z } from "zod";
 
-/**
- * Event visibility options.
- */
+/** Zod schema for Google Calendar event visibility levels. */
 export const eventVisibilitySchema = z.enum([
   "default",
   "public",
   "private",
   "confidential",
 ]);
-
+/** TypeScript type for event visibility. */
 export type EventVisibility = z.infer<typeof eventVisibilitySchema>;
 
-/**
- * Event status options.
- */
+/** Zod schema for Google Calendar event status values. */
 export const eventStatusSchema = z.enum(["confirmed", "tentative", "cancelled"]);
-
+/** TypeScript type for event status. */
 export type EventStatus = z.infer<typeof eventStatusSchema>;
 
-/**
- * Attendee response status options.
- */
+/** Zod schema for attendee response status values. */
 export const attendeeResponseStatusSchema = z.enum([
   "needsAction",
   "declined",
   "tentative",
   "accepted",
 ]);
-
+/** TypeScript type for attendee response status. */
 export type AttendeeResponseStatus = z.infer<typeof attendeeResponseStatusSchema>;
 
-/**
- * Reminder method options.
- */
+/** Zod schema for reminder notification methods. */
 export const reminderMethodSchema = z.enum(["email", "popup", "sms"]);
-
+/** TypeScript type for reminder methods. */
 export type ReminderMethod = z.infer<typeof reminderMethodSchema>;
 
-/**
- * Event date/time representation (supports all-day or timed events).
- */
+/** Zod schema for Google Calendar event date/time with timezone support. */
 export const eventDateTimeSchema = z.object({
   date: z
     .string()
@@ -58,22 +48,18 @@ export const eventDateTimeSchema = z.object({
     .transform((val) => (typeof val === "string" ? new Date(val) : val)),
   timeZone: z.string().optional(),
 });
-
+/** TypeScript type for event date/time. */
 export type EventDateTime = z.infer<typeof eventDateTimeSchema>;
 
-/**
- * Event reminder configuration.
- */
+/** Zod schema for Google Calendar event reminders. */
 export const eventReminderSchema = z.object({
   method: reminderMethodSchema.default("popup"),
-  minutes: z.number().int().min(0).max(40320), // Max 4 weeks
+  minutes: z.number().int().min(0).max(40320),
 });
-
+/** TypeScript type for event reminders. */
 export type EventReminder = z.infer<typeof eventReminderSchema>;
 
-/**
- * Event attendee information.
- */
+/** Zod schema for Google Calendar event attendees. */
 export const eventAttendeeSchema = z.object({
   additionalGuests: z.number().int().min(0).default(0),
   comment: z.string().optional(),
@@ -82,33 +68,29 @@ export const eventAttendeeSchema = z.object({
   optional: z.boolean().default(false),
   responseStatus: attendeeResponseStatusSchema.default("needsAction"),
 });
-
+/** TypeScript type for event attendees. */
 export type EventAttendee = z.infer<typeof eventAttendeeSchema>;
 
-/**
- * Conference/meeting information for events.
- */
+/** Zod schema for Google Calendar conference data. */
 export const conferenceDataSchema = z.object({
   conferenceId: z.string().optional(),
   conferenceSolution: z.record(z.string(), z.unknown()).optional(),
   entryPoints: z.array(z.record(z.string(), z.unknown())).optional(),
   notes: z.string().optional(),
 });
-
+/** TypeScript type for conference data. */
 export type ConferenceData = z.infer<typeof conferenceDataSchema>;
 
-/**
- * Extended properties for storing custom metadata.
- */
+/** Zod schema for Google Calendar extended properties. */
 export const extendedPropertiesSchema = z.object({
   private: z.record(z.string(), z.string()).default({}),
   shared: z.record(z.string(), z.string()).default({}),
 });
-
+/** TypeScript type for extended properties. */
 export type ExtendedProperties = z.infer<typeof extendedPropertiesSchema>;
 
 /**
- * Complete calendar event schema.
+ * Zod schema for Google Calendar events.
  */
 export const calendarEventSchema = z.object({
   attendees: z.array(eventAttendeeSchema).default([]),
@@ -147,12 +129,10 @@ export const calendarEventSchema = z.object({
   updated: z.date().optional(),
   visibility: eventVisibilitySchema.default("default"),
 });
-
+/** TypeScript type for calendar events. */
 export type CalendarEvent = z.infer<typeof calendarEventSchema>;
 
-/**
- * Request schema for creating calendar events.
- */
+/** Zod schema for creating new Google Calendar events. */
 export const createEventRequestSchema = z.object({
   attendees: z.array(eventAttendeeSchema).default([]),
   conferenceDataVersion: z.number().int().optional(),
@@ -173,12 +153,10 @@ export const createEventRequestSchema = z.object({
   travelMetadata: z.record(z.string(), z.unknown()).optional(),
   visibility: eventVisibilitySchema.default("default"),
 });
-
+/** TypeScript type for create event requests. */
 export type CreateEventRequest = z.infer<typeof createEventRequestSchema>;
 
-/**
- * Request schema for updating calendar events.
- */
+/** Zod schema for updating existing Google Calendar events. */
 export const updateEventRequestSchema = z.object({
   attendees: z.array(eventAttendeeSchema).optional(),
   description: z.string().max(8192).optional(),
@@ -198,12 +176,10 @@ export const updateEventRequestSchema = z.object({
   travelMetadata: z.record(z.string(), z.unknown()).optional(),
   visibility: eventVisibilitySchema.optional(),
 });
-
+/** TypeScript type for update event requests. */
 export type UpdateEventRequest = z.infer<typeof updateEventRequestSchema>;
 
-/**
- * Calendar list entry schema.
- */
+/** Zod schema for Google Calendar list entries. */
 export const calendarListEntrySchema = z.object({
   accessRole: z.string().default("reader"),
   backgroundColor: z.string().optional(),
@@ -225,12 +201,10 @@ export const calendarListEntrySchema = z.object({
   summaryOverride: z.string().optional(),
   timeZone: z.string().optional(),
 });
-
+/** TypeScript type for calendar list entries. */
 export type CalendarListEntry = z.infer<typeof calendarListEntrySchema>;
 
-/**
- * Calendar list response schema.
- */
+/** Zod schema for Google Calendar list responses. */
 export const calendarListSchema = z.object({
   etag: z.string().optional(),
   items: z.array(calendarListEntrySchema).default([]),
@@ -238,20 +212,19 @@ export const calendarListSchema = z.object({
   nextPageToken: z.string().optional(),
   nextSyncToken: z.string().optional(),
 });
-
+/** TypeScript type for calendar list responses. */
 export type CalendarList = z.infer<typeof calendarListSchema>;
 
-/**
- * Free/busy calendar item schema.
- */
+/** Zod schema for free/busy calendar items. */
 export const freeBusyCalendarItemSchema = z.object({
   id: z.string(),
 });
-
+/** TypeScript type for free/busy calendar items. */
 export type FreeBusyCalendarItem = z.infer<typeof freeBusyCalendarItemSchema>;
 
 /**
- * Free/busy request schema.
+ * Zod schema for Google Calendar free/busy requests.
+ * Validates parameters for checking calendar availability.
  */
 export const freeBusyRequestSchema = z
   .object({
@@ -266,12 +239,10 @@ export const freeBusyRequestSchema = z
     message: "timeMax must be after timeMin",
     path: ["timeMax"],
   });
-
+/** TypeScript type for free/busy requests. */
 export type FreeBusyRequest = z.infer<typeof freeBusyRequestSchema>;
 
-/**
- * Free/busy response schema.
- */
+/** Zod schema for Google Calendar free/busy responses. */
 export const freeBusyResponseSchema = z.object({
   calendars: z.record(z.string(), z.record(z.string(), z.unknown())).default({}),
   groups: z.record(z.string(), z.unknown()).default({}),
@@ -279,12 +250,10 @@ export const freeBusyResponseSchema = z.object({
   timeMax: z.date(),
   timeMin: z.date(),
 });
-
+/** TypeScript type for free/busy responses. */
 export type FreeBusyResponse = z.infer<typeof freeBusyResponseSchema>;
 
-/**
- * Events list request parameters schema.
- */
+/** Zod schema for Google Calendar events list requests. */
 export const eventsListRequestSchema = z.object({
   alwaysIncludeEmail: z.boolean().default(false),
   calendarId: z.string().default("primary"),
@@ -306,12 +275,10 @@ export const eventsListRequestSchema = z.object({
   timeZone: z.string().optional(),
   updatedMin: z.date().optional(),
 });
-
+/** TypeScript type for events list requests. */
 export type EventsListRequest = z.infer<typeof eventsListRequestSchema>;
 
-/**
- * Events list response schema.
- */
+/** Zod schema for Google Calendar events list responses. */
 export const eventsListResponseSchema = z.object({
   accessRole: z.string().optional(),
   defaultReminders: z.array(eventReminderSchema).default([]),
@@ -325,5 +292,5 @@ export const eventsListResponseSchema = z.object({
   timeZone: z.string().optional(),
   updated: z.date().optional(),
 });
-
+/** TypeScript type for events list responses. */
 export type EventsListResponse = z.infer<typeof eventsListResponseSchema>;

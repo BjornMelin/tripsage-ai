@@ -302,6 +302,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Refactor
 
 - **[API]:** Consolidated three separate API clients into a single, unified `ApiClient` to enforce a consistent pattern for all HTTP requests.
+- [Core]: Unified all data models into canonical Zod v4 schemas under
+  `src/lib/schemas/` and removed the redundant `src/types/` and `src/schemas/` directories to establish a single source of truth for data contracts and runtime validation.
 
 ## [2.2.0] - 2025-11-01
 

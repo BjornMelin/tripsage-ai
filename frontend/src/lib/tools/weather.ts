@@ -10,7 +10,7 @@ import { z } from "zod";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 import { fetchWithRetry } from "@/lib/http/fetch-retry";
 import { getRedis } from "@/lib/redis";
-import type { WeatherResult } from "@/types/weather";
+import type { WeatherResult } from "@/lib/schemas/weather";
 import { WEATHER_CACHE_TTL_SECONDS } from "./constants";
 
 /**
@@ -33,7 +33,14 @@ async function executeWeatherQuery(
   params: Record<string, unknown>
 ): Promise<{ data: unknown; provider: string }> {
   const { getServerEnvVar } = await import("@/lib/env/server");
-  const apiKey = getServerEnvVar("OPENWEATHERMAP_API_KEY");
+  let apiKey: string | undefined;
+  try {
+    apiKey = getServerEnvVar("OPENWEATHERMAP_API_KEY") as unknown as string;
+  } catch {
+    const error: Error & { code?: string } = new Error("weather_not_configured");
+    error.code = "weather_not_configured";
+    throw error;
+  }
   if (!apiKey) {
     const error: Error & { code?: string } = new Error("weather_not_configured");
     error.code = "weather_not_configured";

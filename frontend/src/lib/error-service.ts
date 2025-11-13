@@ -2,7 +2,7 @@ import {
   ERROR_REPORT_SCHEMA,
   type ErrorReport,
   type ErrorServiceConfig,
-} from "@/types/errors";
+} from "@/lib/schemas/errors";
 
 /**
  * Error service for logging and reporting errors

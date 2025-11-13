@@ -9,7 +9,7 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import type { Redis } from "@upstash/redis";
 import type { GuardrailRateLimit } from "@/lib/agents/runtime";
-import type { AgentWorkflow } from "@/schemas/agents";
+import type { AgentWorkflow } from "@/lib/schemas/agents";
 
 /**
  * Default rate limit window for all workflows.

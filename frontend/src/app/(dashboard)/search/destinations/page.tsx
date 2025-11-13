@@ -18,8 +18,8 @@ import {
 } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useDestinationSearch } from "@/hooks/use-destination-search";
+import type { Destination, DestinationSearchParams } from "@/lib/schemas/search";
 import { useSearchStore } from "@/stores/search-store";
-import type { Destination, DestinationSearchParams } from "@/types/search";
 
 export default function DestinationsSearchPage() {
   const { hasResults, isSearching: storeIsSearching } = useSearchStore();

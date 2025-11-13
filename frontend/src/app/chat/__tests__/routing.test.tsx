@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   accommodationSearchResultSchema,
   flightSearchResultSchema,
-} from "@/schemas/agents";
+} from "@/lib/schemas/agents";
 
 describe("Chat routing logic", () => {
   it("routes to flight agent when metadata contains flightSearch", () => {

@@ -15,8 +15,8 @@ import ical from "node-ical";
 import { z } from "zod";
 
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
+import { calendarEventSchema } from "@/lib/schemas/calendar";
 import { createServerSupabase } from "@/lib/supabase/server";
-import { calendarEventSchema } from "@/schemas/calendar";
 
 export const dynamic = "force-dynamic";
 
@@ -44,8 +44,10 @@ const importRequestSchema = z.object({
 
 /**
  * POST /api/calendar/ics/import
- *
- * Parse ICS data and return events payload.
+ * Parses ICS calendar data and returns structured events payload.
+ * Requires authenticated user session with rate limiting.
+ * @param req - NextRequest containing ICS data string and validation flag
+ * @returns NextResponse with parsed events array or error
  */
 export async function POST(req: NextRequest) {
   try {

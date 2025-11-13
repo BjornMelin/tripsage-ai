@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { DealType } from "@/types/deals";
+import type { Deal, DealType } from "@/lib/schemas/deals";
 import { useDealAlerts, useDeals, useFeaturedDeals, useSavedDeals } from "../use-deals";
 
 // Mock current timestamp for consistent testing
@@ -105,7 +105,7 @@ const CREATE_MOCK_STORE = () => {
       acc[deal.id] = deal;
       return acc;
     },
-    {} as Record<string, unknown>
+    {} as Record<string, Deal>
   );
 
   return {
@@ -119,7 +119,7 @@ const CREATE_MOCK_STORE = () => {
     clearRecentlyViewed: vi.fn(),
     deals,
     featuredDeals: [SAMPLE_DEALS[0].id],
-    filters: null,
+    filters: undefined,
     getAlertById: vi.fn((id: string) => SAMPLE_ALERTS.find((a) => a.id === id)),
     getDealById: vi.fn((id: string) => deals[id]),
     getDealsStats: vi.fn(() => ({
@@ -139,7 +139,7 @@ const CREATE_MOCK_STORE = () => {
     initialize: vi.fn(),
     isInitialized: true,
     lastUpdated: MOCK_TIMESTAMP,
-    recentlyViewed: [SAMPLE_DEALS[0].id, SAMPLE_DEALS[2].id],
+    recentlyViewedDeals: [SAMPLE_DEALS[0].id, SAMPLE_DEALS[2].id],
     removeAlert: vi.fn(),
     removeDeal: vi.fn(),
     removeFromFeaturedDeals: vi.fn(),
@@ -163,7 +163,7 @@ describe("useDeals Hook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Reset filters for each test
-    MOCK_STORE.filters = null;
+    MOCK_STORE.filters = undefined;
     MOCK_STORE.getFilteredDeals.mockReturnValue(SAMPLE_DEALS);
   });
 
@@ -172,14 +172,16 @@ describe("useDeals Hook", () => {
   });
 
   it("should initialize the store when mounted", () => {
-    const { result: _result } = renderHook(() => useDeals());
+    const { result: _result } = renderHook<ReturnType<typeof useDeals>, void>(() =>
+      useDeals()
+    );
 
     // Check initialization was called
     expect(MOCK_STORE.isInitialized).toBe(true);
   });
 
   it("should provide access to all deals", () => {
-    const { result } = renderHook(() => useDeals());
+    const { result } = renderHook<ReturnType<typeof useDeals>, void>(() => useDeals());
 
     expect(result.current.allDeals).toHaveLength(3);
     expect(result.current.allDeals.map((d) => d.id)).toContain(SAMPLE_DEALS[0].id);
@@ -188,14 +190,14 @@ describe("useDeals Hook", () => {
   });
 
   it("should provide access to featured deals", () => {
-    const { result } = renderHook(() => useDeals());
+    const { result } = renderHook<ReturnType<typeof useDeals>, void>(() => useDeals());
 
     expect(result.current.featuredDeals).toHaveLength(1);
     expect(result.current.featuredDeals[0].id).toBe(SAMPLE_DEALS[0].id);
   });
 
   it("should provide access to saved deals", () => {
-    const { result } = renderHook(() => useDeals());
+    const { result } = renderHook<ReturnType<typeof useDeals>, void>(() => useDeals());
 
     expect(result.current.savedDeals).toHaveLength(2);
     expect(result.current.savedDeals.map((d) => d.id)).toContain(SAMPLE_DEALS[0].id);
@@ -203,7 +205,7 @@ describe("useDeals Hook", () => {
   });
 
   it("should provide access to recently viewed deals", () => {
-    const { result } = renderHook(() => useDeals());
+    const { result } = renderHook<ReturnType<typeof useDeals>, void>(() => useDeals());
 
     expect(result.current.recentlyViewedDeals).toHaveLength(2);
     expect(result.current.recentlyViewedDeals.map((d) => d.id)).toContain(
@@ -215,7 +217,7 @@ describe("useDeals Hook", () => {
   });
 
   it("should provide deal stats", () => {
-    const { result } = renderHook(() => useDeals());
+    const { result } = renderHook<ReturnType<typeof useDeals>, void>(() => useDeals());
 
     expect(result.current.dealStats.totalCount).toBe(3);
     expect(result.current.dealStats.byType).toEqual({
@@ -226,21 +228,21 @@ describe("useDeals Hook", () => {
   });
 
   it("should check if a deal is saved", () => {
-    const { result } = renderHook(() => useDeals());
+    const { result } = renderHook<ReturnType<typeof useDeals>, void>(() => useDeals());
 
     expect(result.current.isDealSaved(SAMPLE_DEALS[0].id)).toBe(true);
     expect(result.current.isDealSaved(SAMPLE_DEALS[2].id)).toBe(false);
   });
 
   it("should check if a deal is featured", () => {
-    const { result } = renderHook(() => useDeals());
+    const { result } = renderHook<ReturnType<typeof useDeals>, void>(() => useDeals());
 
     expect(result.current.isDealFeatured(SAMPLE_DEALS[0].id)).toBe(true);
     expect(result.current.isDealFeatured(SAMPLE_DEALS[1].id)).toBe(false);
   });
 
   it("should filter deals by type", () => {
-    const { result } = renderHook(() => useDeals());
+    const { result } = renderHook<ReturnType<typeof useDeals>, void>(() => useDeals());
 
     // Mock the filtered results
     MOCK_STORE.getFilteredDeals.mockReturnValue([SAMPLE_DEALS[0]]);
@@ -255,7 +257,7 @@ describe("useDeals Hook", () => {
   });
 
   it("should filter deals by destination", () => {
-    const { result } = renderHook(() => useDeals());
+    const { result } = renderHook<ReturnType<typeof useDeals>, void>(() => useDeals());
 
     // Mock the filtered results
     MOCK_STORE.getFilteredDeals.mockReturnValue([SAMPLE_DEALS[1]]);
@@ -270,7 +272,7 @@ describe("useDeals Hook", () => {
   });
 
   it("should clear filters", () => {
-    const { result } = renderHook(() => useDeals());
+    const { result } = renderHook<ReturnType<typeof useDeals>, void>(() => useDeals());
 
     act(() => {
       result.current.clearFilters();
@@ -280,7 +282,7 @@ describe("useDeals Hook", () => {
   });
 
   it("should sort deals by discount", () => {
-    const { result } = renderHook(() => useDeals());
+    const { result } = renderHook<ReturnType<typeof useDeals>, void>(() => useDeals());
 
     const sortedDeals = result.current.sortDeals(
       result.current.allDeals,
@@ -294,7 +296,7 @@ describe("useDeals Hook", () => {
   });
 
   it("should sort deals by price", () => {
-    const { result } = renderHook(() => useDeals());
+    const { result } = renderHook<ReturnType<typeof useDeals>, void>(() => useDeals());
 
     const sortedDeals = result.current.sortDeals(
       result.current.allDeals,
@@ -308,7 +310,7 @@ describe("useDeals Hook", () => {
   });
 
   it("should group deals by destination", () => {
-    const { result } = renderHook(() => useDeals());
+    const { result } = renderHook<ReturnType<typeof useDeals>, void>(() => useDeals());
 
     expect(Object.keys(result.current.dealsByDestination)).toHaveLength(3);
     expect(result.current.dealsByDestination.Paris).toHaveLength(1);
@@ -317,7 +319,7 @@ describe("useDeals Hook", () => {
   });
 
   it("should group deals by type", () => {
-    const { result } = renderHook(() => useDeals());
+    const { result } = renderHook<ReturnType<typeof useDeals>, void>(() => useDeals());
 
     expect(Object.keys(result.current.dealsByType)).toHaveLength(3);
     expect(result.current.dealsByType.flight).toHaveLength(1);
@@ -326,7 +328,7 @@ describe("useDeals Hook", () => {
   });
 
   it("should provide unique destinations", () => {
-    const { result } = renderHook(() => useDeals());
+    const { result } = renderHook<ReturnType<typeof useDeals>, void>(() => useDeals());
 
     expect(result.current.uniqueDestinations).toHaveLength(3);
     expect(result.current.uniqueDestinations).toContain("Paris");
@@ -335,7 +337,7 @@ describe("useDeals Hook", () => {
   });
 
   it("should provide unique providers", () => {
-    const { result } = renderHook(() => useDeals());
+    const { result } = renderHook<ReturnType<typeof useDeals>, void>(() => useDeals());
 
     expect(result.current.uniqueProviders).toHaveLength(3);
     expect(result.current.uniqueProviders).toContain("AirlineCo");
@@ -352,7 +354,9 @@ describe("useDealAlerts Hook", () => {
   });
 
   it("should provide access to all alerts", () => {
-    const { result } = renderHook(() => useDealAlerts());
+    const { result } = renderHook<ReturnType<typeof useDealAlerts>, void>(() =>
+      useDealAlerts()
+    );
 
     expect(result.current.alerts).toHaveLength(2);
     expect(result.current.alerts.map((a) => a.id)).toContain(SAMPLE_ALERTS[0].id);
@@ -360,14 +364,18 @@ describe("useDealAlerts Hook", () => {
   });
 
   it("should provide access to active alerts", () => {
-    const { result } = renderHook(() => useDealAlerts());
+    const { result } = renderHook<ReturnType<typeof useDealAlerts>, void>(() =>
+      useDealAlerts()
+    );
 
     expect(result.current.activeAlerts).toHaveLength(1);
     expect(result.current.activeAlerts[0].id).toBe(SAMPLE_ALERTS[0].id);
   });
 
   it("should group alerts by type", () => {
-    const { result } = renderHook(() => useDealAlerts());
+    const { result } = renderHook<ReturnType<typeof useDealAlerts>, void>(() =>
+      useDealAlerts()
+    );
 
     expect(Object.keys(result.current.alertsByType)).toHaveLength(2);
     expect(result.current.alertsByType.flight).toHaveLength(1);
@@ -394,28 +402,36 @@ describe("useFeaturedDeals Hook", () => {
   });
 
   it("should provide access to featured deals", () => {
-    const { result } = renderHook(() => useFeaturedDeals());
+    const { result } = renderHook<ReturnType<typeof useFeaturedDeals>, void>(() =>
+      useFeaturedDeals()
+    );
 
     expect(result.current.featuredDeals).toHaveLength(1);
     expect(result.current.featuredDeals[0].id).toBe(SAMPLE_DEALS[0].id);
   });
 
   it("should provide sorted featured deals", () => {
-    const { result } = renderHook(() => useFeaturedDeals());
+    const { result } = renderHook<ReturnType<typeof useFeaturedDeals>, void>(() =>
+      useFeaturedDeals()
+    );
 
     expect(result.current.sortedByDiscount).toHaveLength(1);
     expect(result.current.sortedByDiscount[0].id).toBe(SAMPLE_DEALS[0].id);
   });
 
   it("should provide top deals", () => {
-    const { result } = renderHook(() => useFeaturedDeals());
+    const { result } = renderHook<ReturnType<typeof useFeaturedDeals>, void>(() =>
+      useFeaturedDeals()
+    );
 
     expect(result.current.topDeals).toHaveLength(1);
     expect(result.current.topDeals[0].id).toBe(SAMPLE_DEALS[0].id);
   });
 
   it("should toggle featured status", () => {
-    const { result } = renderHook(() => useFeaturedDeals());
+    const { result } = renderHook<ReturnType<typeof useFeaturedDeals>, void>(() =>
+      useFeaturedDeals()
+    );
 
     // Initially featured
     expect(result.current.isDealFeatured(SAMPLE_DEALS[0].id)).toBe(true);
@@ -449,7 +465,9 @@ describe("useSavedDeals Hook", () => {
   });
 
   it("should provide access to saved deals", () => {
-    const { result } = renderHook(() => useSavedDeals());
+    const { result } = renderHook<ReturnType<typeof useSavedDeals>, void>(() =>
+      useSavedDeals()
+    );
 
     expect(result.current.savedDeals).toHaveLength(2);
     expect(result.current.savedDeals.map((d) => d.id)).toContain(SAMPLE_DEALS[0].id);
@@ -457,7 +475,9 @@ describe("useSavedDeals Hook", () => {
   });
 
   it("should provide sorted saved deals", () => {
-    const { result } = renderHook(() => useSavedDeals());
+    const { result } = renderHook<ReturnType<typeof useSavedDeals>, void>(() =>
+      useSavedDeals()
+    );
 
     // Deals are sorted by expiry date, so the closer date should be first
     expect(result.current.sortedByExpiry).toHaveLength(2);
@@ -466,7 +486,9 @@ describe("useSavedDeals Hook", () => {
   });
 
   it("should toggle saved status", () => {
-    const { result } = renderHook(() => useSavedDeals());
+    const { result } = renderHook<ReturnType<typeof useSavedDeals>, void>(() =>
+      useSavedDeals()
+    );
 
     // Initially saved
     expect(result.current.isDealSaved(SAMPLE_DEALS[0].id)).toBe(true);

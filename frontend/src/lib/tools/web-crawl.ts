@@ -292,10 +292,14 @@ export const crawlUrl = tool({
     const { getServerEnvVar, getServerEnvVarWithFallback } = await import(
       "@/lib/env/server"
     );
-    const apiKey = getServerEnvVar("FIRECRAWL_API_KEY");
-    if (!apiKey) {
+    let apiKey: string | undefined;
+    try {
+      apiKey = getServerEnvVar("FIRECRAWL_API_KEY") as unknown as string;
+    } catch {
+      // Normalize missing configuration into a tool-specific error code
       throw new Error("web_crawl_not_configured");
     }
+    if (!apiKey) throw new Error("web_crawl_not_configured");
     const redis = getRedis();
     const ck = scrapeCacheKey(url, scrapeOptions);
     if (!fresh && redis) {
@@ -376,10 +380,13 @@ export const crawlSite = tool({
     const { getServerEnvVar, getServerEnvVarWithFallback } = await import(
       "@/lib/env/server"
     );
-    const apiKey = getServerEnvVar("FIRECRAWL_API_KEY");
-    if (!apiKey) {
+    let apiKey: string | undefined;
+    try {
+      apiKey = getServerEnvVar("FIRECRAWL_API_KEY") as unknown as string;
+    } catch {
       throw new Error("web_crawl_not_configured");
     }
+    if (!apiKey) throw new Error("web_crawl_not_configured");
     const redis = getRedis();
     const ck = crawlCacheKey(
       url,

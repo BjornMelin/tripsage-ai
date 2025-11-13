@@ -14,9 +14,9 @@ import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { fetchWithRetry } from "@/lib/http/fetch-retry";
 import { getRedis } from "@/lib/redis";
+import { WEB_SEARCH_OUTPUT_SCHEMA } from "@/lib/schemas/web-search";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import { normalizeWebSearchResults } from "@/lib/tools/web-search-normalize";
-import { WEB_SEARCH_OUTPUT_SCHEMA } from "@/types/web-search";
 
 /**
  * Build a per-request Upstash rate limiter for the web search tool.

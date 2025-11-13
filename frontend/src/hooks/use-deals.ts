@@ -8,8 +8,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo } from "react";
+import type {
+  Deal,
+  DealAlert,
+  DealFilters,
+  DealState,
+  DealType,
+} from "@/lib/schemas/deals";
 import { useDealsStore } from "@/stores/deals-store";
-import type { Deal, DealAlert, DealState, DealType } from "@/types/deals";
 
 /**
  * Hook for accessing and managing deals.
@@ -72,8 +78,8 @@ export function useDeals() {
   // Filter by deal type
   const filterByType = useCallback(
     (type: DealType) => {
-      const currentFilters = dealsStore.filters || {};
-      const types = currentFilters.types || [];
+      const currentFilters = (dealsStore.filters || {}) as DealFilters;
+      const types: DealType[] = currentFilters.types || [];
 
       // Toggle the type
       let newTypes: DealType[];
@@ -94,8 +100,8 @@ export function useDeals() {
   // Filter by destination
   const filterByDestination = useCallback(
     (destination: string) => {
-      const currentFilters = dealsStore.filters || {};
-      const destinations = currentFilters.destinations || [];
+      const currentFilters = (dealsStore.filters || {}) as DealFilters;
+      const destinations: string[] = currentFilters.destinations || [];
 
       // Toggle the destination
       let newDestinations: string[];
@@ -162,7 +168,7 @@ export function useDeals() {
   // Group deals by destination
   const dealsByDestination = useMemo(() => {
     return allDeals.reduce(
-      (acc, deal) => {
+      (acc: Record<string, Deal[]>, deal: Deal) => {
         const destination = deal.destination;
         if (!acc[destination]) {
           acc[destination] = [];
@@ -177,7 +183,7 @@ export function useDeals() {
   // Group deals by type
   const dealsByType = useMemo(() => {
     return allDeals.reduce(
-      (acc, deal) => {
+      (acc: Record<DealType, Deal[]>, deal: Deal) => {
         const type = deal.type;
         if (!acc[type]) {
           acc[type] = [];

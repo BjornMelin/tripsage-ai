@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
+  ACCOMMODATION_BOOKING_OUTPUT_SCHEMA,
+  ACCOMMODATION_DETAILS_OUTPUT_SCHEMA,
+  ACCOMMODATION_SEARCH_OUTPUT_SCHEMA,
+} from "@/lib/schemas/accommodations";
+import {
   createMockHttpResponse,
   createMockMcpTool,
   createMockRedis,
 } from "@/test/tool-helpers";
-import {
-  ACCOMMODATION_BOOKING_OUTPUT_SCHEMA,
-  ACCOMMODATION_DETAILS_OUTPUT_SCHEMA,
-  ACCOMMODATION_SEARCH_OUTPUT_SCHEMA,
-} from "@/types/accommodations";
 
 vi.mock("@/lib/redis", () => ({
   getRedis: vi.fn(),
@@ -43,10 +43,10 @@ vi.mock("@/lib/cache/keys", () => ({
   }),
 }));
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.stubGlobal("fetch", vi.fn());
-  const { getServerEnvVarWithFallback } = require("@/lib/env/server");
-  (getServerEnvVarWithFallback as ReturnType<typeof vi.fn>).mockImplementation(
+  const mod = await import("@/lib/env/server");
+  (mod.getServerEnvVarWithFallback as ReturnType<typeof vi.fn>).mockImplementation(
     (key: string) => {
       if (key === "ACCOM_SEARCH_URL") return "https://api.example.com";
       if (key === "ACCOM_SEARCH_TOKEN") return "test_token";

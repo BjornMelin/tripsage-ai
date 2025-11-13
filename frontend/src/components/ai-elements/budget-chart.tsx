@@ -12,7 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type { BudgetPlanResult } from "@/schemas/agents";
+import type { BudgetPlanResult } from "@/lib/schemas/agents";
 import { Source, Sources, SourcesContent, SourcesTrigger } from "./sources";
 
 /**

@@ -14,6 +14,7 @@ import { stepCountIs, streamText, tool } from "ai";
 
 import { buildGuardedTool } from "@/lib/agents/guarded-tool";
 import { buildRateLimit } from "@/lib/ratelimit/config";
+import type { ItineraryPlanRequest } from "@/lib/schemas/agents";
 import { toolRegistry } from "@/lib/tools";
 import { lookupPoiInputSchema } from "@/lib/tools/google-places";
 import {
@@ -23,7 +24,6 @@ import {
 import { webSearchInputSchema } from "@/lib/tools/web-search";
 import { webSearchBatchInputSchema } from "@/lib/tools/web-search-batch";
 import { buildItineraryPrompt } from "@/prompts/agents";
-import type { ItineraryPlanRequest } from "@/schemas/agents";
 
 /**
  * Create wrapped tools for itinerary agent with guardrails.

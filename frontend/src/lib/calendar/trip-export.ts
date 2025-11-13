@@ -2,8 +2,8 @@
  * @fileoverview Utilities for exporting trip itineraries to calendar events.
  */
 
-import type { CalendarEvent } from "@/schemas/calendar";
-import { calendarEventSchema } from "@/schemas/calendar";
+import type { CalendarEvent } from "@/lib/schemas/calendar";
+import { calendarEventSchema } from "@/lib/schemas/calendar";
 import type { Trip } from "@/stores/trip-store";
 
 /**
@@ -131,7 +131,7 @@ export function tripToCalendarEvents(trip: Trip): CalendarEvent[] {
  * @param calendarName - Name for the calendar (default: trip name)
  * @returns Promise resolving to ICS file content
  */
-export async function exportTripToICS(
+export async function exportTripToIcs(
   trip: Trip,
   calendarName?: string
 ): Promise<string> {

@@ -3,8 +3,8 @@
 import { renderHook } from "@testing-library/react";
 import React, { type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ActivitySearchParams } from "@/lib/schemas/search";
 import { AllTheProviders } from "@/test/test-utils";
-import type { ActivitySearchParams } from "@/types/search";
 import { useActivitySearch } from "../use-activity-search";
 
 // The current hook is a minimal implementation without side effects.

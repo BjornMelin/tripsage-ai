@@ -14,6 +14,20 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      user_settings: {
+        Row: {
+          user_id: string;
+          allow_gateway_fallback: boolean;
+        };
+        Insert: {
+          user_id: string;
+          allow_gateway_fallback?: boolean;
+        };
+        Update: {
+          user_id?: string;
+          allow_gateway_fallback?: boolean;
+        };
+      };
       // Core Trip Management
       trips: {
         Row: {

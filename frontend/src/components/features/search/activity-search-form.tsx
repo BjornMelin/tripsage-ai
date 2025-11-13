@@ -24,7 +24,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import type { ActivitySearchParams } from "@/types/search";
+import type { ActivitySearchParams } from "@/lib/schemas/search";
 
 const ActivitySearchFormSchema = z.object({
   adults: z.number().min(1).max(20),

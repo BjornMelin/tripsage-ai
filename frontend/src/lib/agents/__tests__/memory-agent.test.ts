@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { persistMemoryRecords } from "@/lib/agents/memory-agent";
-import type { MemoryUpdateRequest } from "@/schemas/agents";
+import type { MemoryUpdateRequest } from "@/lib/schemas/agents";
 
 vi.mock("@/lib/cache/upstash", () => ({
   getCachedJson: vi.fn().mockResolvedValue(null),

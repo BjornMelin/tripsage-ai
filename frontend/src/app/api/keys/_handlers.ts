@@ -113,7 +113,8 @@ export async function getKeys(deps: {
   }
   const { data, error } = await deps.supabase
     .from("api_keys")
-    .select("service, created_at, last_used")
+    // Align with table column names used across codebase/tests
+    .select("service_name, created_at, last_used_at")
     .eq("user_id", user.id)
     .order("service", { ascending: true });
   if (error) {
@@ -128,17 +129,18 @@ export async function getKeys(deps: {
   const rows = data ?? [];
   const payload = rows.map(
     (r: {
-      service: string;
-      // biome-ignore lint/style/useNamingConvention: Database field name
+      // biome-ignore lint/style/useNamingConvention: DB field names
+      service_name: string;
+      // biome-ignore lint/style/useNamingConvention: DB field names
       created_at: string;
-      // biome-ignore lint/style/useNamingConvention: Database field name
-      last_used: string | null;
+      // biome-ignore lint/style/useNamingConvention: DB field names
+      last_used_at: string | null;
     }) => ({
       createdAt: String(r.created_at),
       hasKey: true,
       isValid: true,
-      lastUsed: r.last_used ?? null,
-      service: String(r.service),
+      lastUsed: r.last_used_at ?? null,
+      service: String(r.service_name),
     })
   );
   return new Response(JSON.stringify(payload), {

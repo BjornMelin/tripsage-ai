@@ -12,8 +12,8 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { queryFreeBusy } from "@/lib/calendar/google";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
+import { freeBusyRequestSchema } from "@/lib/schemas/calendar";
 import { createServerSupabase } from "@/lib/supabase/server";
-import { freeBusyRequestSchema } from "@/schemas/calendar";
 
 export const dynamic = "force-dynamic";
 
