@@ -17,24 +17,23 @@ function resolveProvider(userId: string, modelHint?: string): Promise<ProviderRe
 ### Types
 
 - `ProviderId` = `"openai" | "openrouter" | "anthropic" | "xai"`
-- `ProviderResolution` = `{ provider: ProviderId; modelId: string; model: LanguageModel; headers?: Record<string,string>; maxTokens?: number }`
+- `ProviderResolution` = `{ provider: ProviderId; modelId: string; model: LanguageModel; maxTokens?: number }`
 
 Behavior:
 
-- Iterate preference order from `getProviderSettings().preference`.
-- For each provider, call `getUserApiKey(userId, provider)`.
-- On first key found:
-  - Build model via provider factory (see Integration Mapping below).
-  - Attach headers only for OpenRouter (attribution).
-  - Return `ProviderResolution`.
-- If no keys found: throw `Error("No provider key found for user…")`.
+- Resolution order per user:
+  1) Per-user Gateway key (service `gateway`) → `@ai-sdk/gateway` with user API key and optional base URL; use model strings (e.g., `anthropic/claude-sonnet-4`).
+  2) Per-provider BYOK (OpenAI/OpenRouter/Anthropic/xAI) → official providers; first found by preference order.
+  3) Team Gateway fallback (if configured) → `AI_GATEWAY_API_KEY`/`AI_GATEWAY_URL`.
+- Consent: if user setting `allowGatewayFallback` is false and no BYOK keys are present, resolution throws instead of using team Gateway.
 
 ## Integration Mapping
 
 - OpenAI → `createOpenAI({ apiKey })(modelId)`; default model mapping: `gpt-4o-mini`.
-- OpenRouter → `createOpenAI({ apiKey, baseURL: 'https://openrouter.ai/api/v1', headers })(modelId)`; headers from env `OPENROUTER_REFERER`, `OPENROUTER_TITLE`.
+- OpenRouter → `createOpenAI({ apiKey, baseURL: 'https://openrouter.ai/api/v1' })(modelId)` (OpenAI‑compatible endpoint).
 - Anthropic → `createAnthropic({ apiKey })(modelId)`; default model mapping: `claude-3-5-sonnet-20241022`.
-- xAI → `createOpenAI({ apiKey, baseURL: 'https://api.x.ai/v1' })(modelId)`; default model mapping: `grok-3`.
+- xAI → `createXAI({ apiKey })(modelId)` from `@ai-sdk/xai`; default model mapping: `grok-3`.
+- Gateway (user/team) → `createGateway({ apiKey, baseURL? })(modelId)` from `ai` (AI SDK v6 exports Gateway in the core package). Team fallback path now uses createGateway for parity with user BYOK Gateway.
 
 ## Model Hint Mapping
 
@@ -47,21 +46,45 @@ Behavior:
 `getProviderSettings()` returns:
 
 ```ts
-interface ProviderSettings {
-  preference: ProviderId[];
-  openrouterAttribution?: { referer?: string; title?: string };
-}
+interface ProviderSettings { preference: ProviderId[] }
 ```
 
-Env sources:
-
-- `OPENROUTER_REFERER` → `openrouterAttribution.referer`
-- `OPENROUTER_TITLE` → `openrouterAttribution.title`
+Env sources: none (no attribution headers required). User setting: `allowGatewayFallback` (default true).
 
 ## Tests
 
 - Prefer OpenAI when `openai` key exists.
-- Fallback to OpenRouter and attach attribution headers.
+- Fallback to OpenRouter.
 - Fallback to Anthropic/xAI.
 - Throw when no keys exist.
 - Ensure no secrets are present in returned object.
+
+## User Settings API (consent)
+
+- Route: `GET /api/user-settings` → `{ allowGatewayFallback: boolean | null }`
+- Route: `POST /api/user-settings` with `{ allowGatewayFallback: boolean }` to upsert per-user consent (RLS owner-write). Uses SSR Supabase client; no secrets returned.
+
+## ProviderOptions with Gateway (examples)
+
+When using a Gateway model (either user or team), callers can pass `providerOptions` to influence routing/budgeting at the request level:
+
+```ts
+import { streamText } from "ai";
+
+const result = await streamText({
+  model: gatewayModel, // from resolveProvider(...)
+  messages,
+  providerOptions: {
+    gateway: {
+      order: ["anthropic", "openai"],
+      // optional budgeting knobs (example names; consult Gateway docs)
+      budgetTokens: 200_000,
+    },
+  },
+});
+```
+
+Notes:
+
+- Keep `providerOptions` usage close to route handlers; the registry intentionally does not bake these policies in.
+- See README for end-to-end snippets and cautions.
