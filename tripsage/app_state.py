@@ -42,9 +42,7 @@ if TYPE_CHECKING:  # pragma: no cover - import only for type checking
     from tripsage_core.services.configuration_service import ConfigurationService
     from tripsage_core.services.external_apis import (
         DocumentAnalyzer,
-        GoogleCalendarService,
         PlaywrightService,
-        TimeService,
         WebCrawlService,
     )
     from tripsage_core.services.infrastructure import CacheService, DatabaseService
@@ -62,7 +60,6 @@ class AppServiceContainer:
     # Business services
     accommodation_service: AccommodationService | None = None
     # chat_service removed
-    activity_service: Any | None = None
     destination_service: DestinationService | None = None
     file_processing_service: FileProcessingService | None = None
     flight_service: FlightService | None = None
@@ -74,11 +71,8 @@ class AppServiceContainer:
     configuration_service: ConfigurationService | None = None
 
     # External API services
-    calendar_service: GoogleCalendarService | None = None
     document_analyzer: DocumentAnalyzer | None = None
-    google_maps_service: Any | None = None
     playwright_service: PlaywrightService | None = None
-    time_service: TimeService | None = None
     webcrawl_service: WebCrawlService | None = None
 
     # Infrastructure services
@@ -142,9 +136,7 @@ async def _setup_infrastructure_services() -> tuple[DatabaseService, CacheServic
     return (database_service, cache_service)
 
 
-async def _setup_external_services() -> tuple[
-    DocumentAnalyzer, WebCrawlService
-]:
+async def _setup_external_services() -> tuple[DocumentAnalyzer, WebCrawlService]:
     """Initialise external API clients."""
     from tripsage_core.services.external_apis import (
         DocumentAnalyzer,
@@ -194,7 +186,6 @@ async def _setup_business_services(
         ai_analysis_service=document_analyzer,
     )
     accommodation_service = AccommodationService(database_service=database_service)
-    activity_service = None
     destination_service = DestinationService(
         database_service=database_service,
     )
@@ -206,19 +197,16 @@ async def _setup_business_services(
     unified_search_service = UnifiedSearchService(
         cache_service=cache_service,
         destination_service=destination_service,
-        activity_service=activity_service,
         flight_service=flight_service,
         accommodation_service=accommodation_service,
     )
     search_facade = SearchFacade(
         destination_service=destination_service,
-        activity_service=activity_service,
         unified_search_service=unified_search_service,
     )
 
     return {
         "accommodation_service": accommodation_service,
-        "activity_service": activity_service,
         "destination_service": destination_service,
         "file_processing_service": file_processing_service,
         "flight_service": flight_service,
@@ -255,7 +243,6 @@ def _build_service_container(
 
     return AppServiceContainer(
         accommodation_service=business["accommodation_service"],
-        activity_service=business["activity_service"],
         destination_service=business["destination_service"],
         file_processing_service=business["file_processing_service"],
         flight_service=business["flight_service"],
@@ -264,7 +251,6 @@ def _build_service_container(
         search_facade=business["search_facade"],
         trip_service=business["trip_service"],
         unified_search_service=business["unified_search_service"],
-        calendar_service=None,
         document_analyzer=document_analyzer,
         webcrawl_service=webcrawl_service,
         cache_service=cache_service,

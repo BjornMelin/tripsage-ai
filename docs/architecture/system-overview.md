@@ -123,13 +123,14 @@ TripSage Core provides modular services organized by responsibility:
 
 **External API Services** (`tripsage_core/services/external_apis/`):
 
-- `GoogleMapsService`: Location services and geocoding
-- `WeatherService`: Weather data and forecasting
-- `CalendarService`: Calendar integration
+> [!NOTE]
+> Location/POI (Google Maps) and weather tooling are implemented in Next.js using AI SDK v6 tools. The Python backend no longer provides GoogleMapsService or WeatherService.
+> Time-related utilities are no longer exported from Core external_apis; use frontend or direct libs as appropriate.
+> Calendar integrations now live in the frontend AI SDK toolchain; backend service removed.
+
 - `DuffelProvider`: Flight search and booking
 - `PlaywrightService`: Browser automation
 - `DocumentAnalyzer`: File processing
-- `TimeService`: Timezone utilities
 
 **Infrastructure Services** (`tripsage_core/services/infrastructure/`):
 
