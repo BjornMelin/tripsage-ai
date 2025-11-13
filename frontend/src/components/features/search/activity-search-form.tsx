@@ -177,9 +177,14 @@ export function ActivitySearchForm({
                           min={1}
                           max={20}
                           {...field}
-                          onChange={(e) =>
-                            field.onChange(Number.parseInt(e.target.value, 10))
-                          }
+                          value={field.value ?? 1}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            const parsed = Number.parseInt(value, 10);
+                            field.onChange(
+                              value === "" || Number.isNaN(parsed) ? 1 : parsed
+                            );
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
@@ -199,9 +204,14 @@ export function ActivitySearchForm({
                           min={0}
                           max={10}
                           {...field}
-                          onChange={(e) =>
-                            field.onChange(Number.parseInt(e.target.value, 10))
-                          }
+                          value={field.value ?? 0}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            const parsed = Number.parseInt(value, 10);
+                            field.onChange(
+                              value === "" || Number.isNaN(parsed) ? 0 : parsed
+                            );
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
@@ -221,9 +231,14 @@ export function ActivitySearchForm({
                           min={0}
                           max={5}
                           {...field}
-                          onChange={(e) =>
-                            field.onChange(Number.parseInt(e.target.value, 10))
-                          }
+                          value={field.value ?? 0}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            const parsed = Number.parseInt(value, 10);
+                            field.onChange(
+                              value === "" || Number.isNaN(parsed) ? 0 : parsed
+                            );
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
@@ -292,9 +307,13 @@ export function ActivitySearchForm({
                           max={48}
                           placeholder="Any"
                           {...field}
-                          onChange={(e) =>
-                            field.onChange(Number.parseInt(e.target.value, 10))
-                          }
+                          value={field.value ?? ""}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            field.onChange(
+                              value === "" ? undefined : Number.parseInt(value, 10)
+                            );
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
@@ -316,9 +335,13 @@ export function ActivitySearchForm({
                           step={0.5}
                           placeholder="Any"
                           {...field}
-                          onChange={(e) =>
-                            field.onChange(Number.parseFloat(e.target.value))
-                          }
+                          value={field.value ?? ""}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            field.onChange(
+                              value === "" ? undefined : Number.parseFloat(value)
+                            );
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
@@ -338,9 +361,13 @@ export function ActivitySearchForm({
                           min={0}
                           placeholder="No minimum"
                           {...field}
-                          onChange={(e) =>
-                            field.onChange(Number.parseInt(e.target.value, 10))
-                          }
+                          value={field.value ?? ""}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            field.onChange(
+                              value === "" ? undefined : Number.parseInt(value, 10)
+                            );
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
@@ -360,9 +387,13 @@ export function ActivitySearchForm({
                           min={0}
                           placeholder="No maximum"
                           {...field}
-                          onChange={(e) =>
-                            field.onChange(Number.parseInt(e.target.value, 10))
-                          }
+                          value={field.value ?? ""}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            field.onChange(
+                              value === "" ? undefined : Number.parseInt(value, 10)
+                            );
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
