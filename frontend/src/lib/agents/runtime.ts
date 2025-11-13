@@ -14,8 +14,8 @@ import { Ratelimit } from "@upstash/ratelimit";
 import type { ZodType } from "zod";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 import { getRedis } from "@/lib/redis";
+import type { AgentWorkflow } from "@/lib/schemas/agents";
 import { recordAgentToolEvent } from "@/lib/telemetry/agents";
-import type { AgentWorkflow } from "@/schemas/agents";
 
 /**
  * Rate limiting configuration for agent tool guardrails.

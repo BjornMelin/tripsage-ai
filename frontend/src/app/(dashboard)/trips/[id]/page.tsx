@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { exportTripToICS } from "@/lib/calendar/trip-export";
+import { exportTripToIcs } from "@/lib/calendar/trip-export";
 import { useTripStore } from "@/stores/trip-store";
 
 export default function TripDetailsPage() {
@@ -143,7 +143,7 @@ export default function TripDetailsPage() {
             onClick={async () => {
               if (!currentTrip) return;
               try {
-                const icsContent = await exportTripToICS(currentTrip);
+                const icsContent = await exportTripToIcs(currentTrip);
                 const blob = new Blob([icsContent], { type: "text/calendar" });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement("a");

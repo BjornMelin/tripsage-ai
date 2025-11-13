@@ -12,7 +12,7 @@ import {
   destinationResearchResultSchema,
   flightSearchResultSchema,
   itineraryPlanResultSchema,
-} from "@/schemas/agents";
+} from "@/lib/schemas/agents";
 
 type FlightSearchResult = z.infer<typeof flightSearchResultSchema>;
 type AccommodationSearchResult = z.infer<typeof accommodationSearchResultSchema>;

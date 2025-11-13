@@ -13,9 +13,9 @@ import { streamText } from "ai";
 
 import { runWithGuardrails } from "@/lib/agents/runtime";
 import { buildRateLimit } from "@/lib/ratelimit/config";
+import type { MemoryUpdateRequest } from "@/lib/schemas/agents";
 import { toolRegistry } from "@/lib/tools";
 import { addConversationMemoryInputSchema } from "@/lib/tools/memory";
-import type { MemoryUpdateRequest } from "@/schemas/agents";
 
 // Note: no wrapped tools are exposed here; we execute persistence directly with guardrails.
 

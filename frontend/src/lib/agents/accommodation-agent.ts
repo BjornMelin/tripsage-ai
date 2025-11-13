@@ -14,12 +14,12 @@ import { stepCountIs, streamText, tool } from "ai";
 
 import { buildGuardedTool } from "@/lib/agents/guarded-tool";
 import { buildRateLimit } from "@/lib/ratelimit/config";
+import type { AccommodationSearchRequest } from "@/lib/schemas/agents";
 import { toolRegistry } from "@/lib/tools";
 import { searchAccommodationsInputSchema } from "@/lib/tools/accommodations";
 import { lookupPoiInputSchema } from "@/lib/tools/google-places";
 import { geocodeInputSchema } from "@/lib/tools/maps";
 import { buildAccommodationPrompt } from "@/prompts/agents";
-import type { AccommodationSearchRequest } from "@/schemas/agents";
 
 /**
  * Create wrapped tools for accommodation agent with guardrails.

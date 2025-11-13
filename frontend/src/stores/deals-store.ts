@@ -4,7 +4,6 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { nowIso, secureId } from "@/lib/security/random";
 import {
   DEAL_ALERT_SCHEMA,
   DEAL_SCHEMA,
@@ -13,9 +12,19 @@ import {
   type DealState,
   type DealStats,
   type DealType,
-} from "@/types/deals";
+} from "@/lib/schemas/deals";
+import { nowIso, secureId } from "@/lib/security/random";
 
 interface DealsStore extends DealState {
+  // Base state fields materialized on the store
+  deals: Record<string, Deal>;
+  featuredDeals: string[];
+  savedDeals: string[];
+  recentlyViewedDeals: string[];
+  alerts: DealAlert[];
+  filters: DealState["filters"] | undefined;
+  lastUpdated: string | null;
+  isInitialized: boolean;
   // Deals management
   setDeals: (deals: Record<string, Deal>) => void;
   addDeal: (deal: unknown) => boolean;

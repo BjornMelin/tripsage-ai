@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { Accommodation } from "@/types/search";
+import type { Accommodation } from "@/lib/schemas/search";
 import { AccommodationCard } from "../accommodation-card";
 
 describe("AccommodationCard", () => {

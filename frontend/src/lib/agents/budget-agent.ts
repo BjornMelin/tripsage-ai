@@ -14,13 +14,13 @@ import { stepCountIs, streamText, tool } from "ai";
 
 import { buildGuardedTool } from "@/lib/agents/guarded-tool";
 import { buildRateLimit } from "@/lib/ratelimit/config";
+import type { BudgetPlanRequest } from "@/lib/schemas/agents";
 import { toolRegistry } from "@/lib/tools";
 import { lookupPoiInputSchema } from "@/lib/tools/google-places";
 import { combineSearchResultsInputSchema } from "@/lib/tools/planning";
 import { travelAdvisoryInputSchema } from "@/lib/tools/travel-advisory";
 import { webSearchBatchInputSchema } from "@/lib/tools/web-search-batch";
 import { buildBudgetPrompt } from "@/prompts/agents";
-import type { BudgetPlanRequest } from "@/schemas/agents";
 
 /**
  * Create wrapped tools for budget agent with guardrails.

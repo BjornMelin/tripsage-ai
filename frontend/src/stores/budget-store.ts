@@ -13,8 +13,8 @@ import type {
   Expense,
   ExpenseCategory,
 } from "@/lib/schemas/budget";
+import type { CurrencyCode } from "@/lib/schemas/currency";
 import { nowIso, secureId } from "@/lib/security/random";
-import type { CurrencyCode } from "@/types/currency";
 
 // Helper functions
 const GENERATE_ID = () => secureId(12);

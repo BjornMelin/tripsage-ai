@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 
 vi.mock("@/lib/supabase/rpc", () => ({
+  getUserAllowGatewayFallback: vi.fn(async () => true),
   getUserApiKey: vi.fn(),
+  getUserGatewayBaseUrl: vi.fn(async () => null),
+  touchUserApiKey: vi.fn(async () => undefined),
 }));
 
 // Mock provider factories to return simple tagged model ids for assertions.
@@ -16,7 +19,17 @@ vi.mock("@ai-sdk/anthropic", () => ({
     `anthropic::${opts.apiKey ? "key" : "no-key"}::${id}`,
 }));
 
-// No direct OpenRouter provider usage in registry; we use OpenAI-compatible client.
+// OpenRouter now uses OpenAI-compatible provider with baseURL pointing to OpenRouter.
+
+vi.mock("ai", () => ({
+  createGateway: (opts: { apiKey?: string; baseURL?: string }) => (id: string) =>
+    `gateway(${opts.baseURL ?? "https://ai-gateway.vercel.sh/v1"})::${opts.apiKey ? "key" : "no-key"}::${id}`,
+}));
+
+vi.mock("@ai-sdk/xai", () => ({
+  createXai: (opts: { apiKey?: string }) => (id: string) =>
+    `xai::${opts.apiKey ? "key" : "no-key"}::${id}`,
+}));
 
 describe("resolveProvider", () => {
   const env = process.env;
@@ -24,8 +37,8 @@ describe("resolveProvider", () => {
     vi.resetModules();
     process.env = {
       ...env,
-      OPENROUTER_REFERER: "https://example.com",
-      OPENROUTER_TITLE: "TripSage",
+      NEXT_PUBLIC_APP_NAME: "TripSage",
+      NEXT_PUBLIC_SITE_URL: "https://example.com",
     };
   });
   afterEach(() => {
@@ -41,11 +54,23 @@ describe("resolveProvider", () => {
     const result = await resolveProvider("user-1", "gpt-4o-mini");
     expect(result.provider).toBe("openai");
     expect(result.model).toContain("openai(");
-    expect(result.headers).toBeUndefined();
     expect(result.modelId).toBe("gpt-4o-mini");
   });
 
-  it("falls back to OpenRouter and attaches attribution headers", async () => {
+  it("uses per-user Gateway when gateway key exists", async () => {
+    const { getUserApiKey } = await import("@/lib/supabase/rpc");
+    (getUserApiKey as unknown as Mock).mockImplementation(
+      async (_uid: string, svc: string) => (svc === "gateway" ? "gw-user-key" : null)
+    );
+    const { resolveProvider } = await import("../registry");
+    const result = await resolveProvider("user-gw", "openai/gpt-4o-mini");
+    expect(result.provider).toBe("openai");
+    expect(String(result.model)).toContain(
+      "gateway(https://ai-gateway.vercel.sh/v1)::key::openai/gpt-4o-mini"
+    );
+  });
+
+  it("falls back to OpenRouter", async () => {
     const { getUserApiKey } = await import("@/lib/supabase/rpc");
     (getUserApiKey as unknown as Mock).mockImplementation(
       async (_uid: string, svc: string) => (svc === "openrouter" ? "sk-or" : null)
@@ -56,25 +81,24 @@ describe("resolveProvider", () => {
       "anthropic/claude-3.7-sonnet:thinking"
     );
     expect(result.provider).toBe("openrouter");
-    expect(result.model).toContain("openai(https://openrouter.ai/api/v1)");
-    expect(result.headers).toMatchObject({
-      "HTTP-Referer": "https://example.com",
-      "X-Title": "TripSage",
-    });
+    // The OpenRouter path uses OpenAI provider with baseURL set to openrouter.
+    expect(String(result.model)).toContain(
+      "openai(https://openrouter.ai/api/v1)::key::anthropic/claude-3.7-sonnet:thinking"
+    );
     expect(result.modelId).toBe("anthropic/claude-3.7-sonnet:thinking");
   });
 
-  it("falls back to OpenRouter and does not attach headers when envs unset", async () => {
+  it("falls back to OpenRouter when envs unset", async () => {
     const env2 = {
       ...process.env,
     } as typeof process.env & {
       // biome-ignore lint/style/useNamingConvention: Environment variable names must match actual env vars
-      OPENROUTER_REFERER?: string;
+      NEXT_PUBLIC_SITE_URL?: string;
       // biome-ignore lint/style/useNamingConvention: Environment variable names must match actual env vars
-      OPENROUTER_TITLE?: string;
+      NEXT_PUBLIC_APP_NAME?: string;
     };
-    env2.OPENROUTER_REFERER = undefined;
-    env2.OPENROUTER_TITLE = undefined;
+    env2.NEXT_PUBLIC_SITE_URL = undefined;
+    env2.NEXT_PUBLIC_APP_NAME = undefined;
     process.env = env2;
     const { getUserApiKey } = await import("@/lib/supabase/rpc");
     (getUserApiKey as unknown as Mock).mockImplementation(
@@ -83,8 +107,9 @@ describe("resolveProvider", () => {
     const { resolveProvider } = await import("../registry");
     const result = await resolveProvider("user-6", "openai/gpt-4o-mini");
     expect(result.provider).toBe("openrouter");
-    expect(result.model).toContain("openai(https://openrouter.ai/api/v1)");
-    expect(result.headers).toBeUndefined();
+    expect(String(result.model)).toContain(
+      "openai(https://openrouter.ai/api/v1)::key::openai/gpt-4o-mini"
+    );
     // restore env for other tests
     process.env = env;
   });
@@ -98,10 +123,9 @@ describe("resolveProvider", () => {
     const result = await resolveProvider("user-3", "claude-3-5-sonnet-20241022");
     expect(result.provider).toBe("anthropic");
     expect(result.model).toContain("anthropic::key::claude-3-5-sonnet-20241022");
-    expect(result.headers).toBeUndefined();
   });
 
-  it("uses xAI (OpenAI-compatible) when only xai key exists", async () => {
+  it("uses xAI when only xai key exists", async () => {
     const { getUserApiKey } = await import("@/lib/supabase/rpc");
     (getUserApiKey as unknown as Mock).mockImplementation(
       async (_uid: string, svc: string) => (svc === "xai" ? "sk-xai" : null)
@@ -109,8 +133,7 @@ describe("resolveProvider", () => {
     const { resolveProvider } = await import("../registry");
     const result = await resolveProvider("user-4", "grok-3");
     expect(result.provider).toBe("xai");
-    expect(result.model).toContain("x.ai/v1");
-    expect(result.headers).toBeUndefined();
+    expect(String(result.model)).toContain("xai::key::grok-3");
   });
 
   it("throws when user has no provider keys", async () => {

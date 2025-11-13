@@ -1,92 +1,61 @@
+/**
+ * @fileoverview Zod v4 schema for ThemeProvider props (next-themes alignment).
+ */
+
 import { z } from "zod";
 
-/**
- * Zod schema for theme provider attributes
- * Matches next-themes Attribute type definition
- */
 const ATTRIBUTE_SCHEMA = z.union([
   z.literal("class"),
   z.string().regex(/^data-/, "Must be a data attribute (data-*)"),
-]) as z.ZodType<`data-${string}` | "class">;
+]) as unknown as z.ZodType<`data-${string}` | "class">;
 
-/**
- * Zod schema for theme provider value mapping
- */
 const VALUE_OBJECT_SCHEMA = z.record(z.string(), z.string());
 
-/**
- * Zod schema for ThemeProvider props
- * Provides runtime validation for theme configuration
- */
+/** Zod schema for ThemeProvider props aligned with next-themes. */
 export const themeProviderPropsSchema = z.object({
-  /** HTML attribute modified based on the active theme */
   attribute: z.union([ATTRIBUTE_SCHEMA, z.array(ATTRIBUTE_SCHEMA)]).optional(),
-
-  /** Default theme name */
   defaultTheme: z.string().optional(),
-
-  /** Disable all CSS transitions when switching themes */
   disableTransitionOnChange: z.boolean().optional(),
-
-  /** Whether to indicate to browsers which color scheme is used */
   enableColorScheme: z.boolean().optional(),
-
-  /** Whether to switch between dark and light themes based on prefers-color-scheme */
   enableSystem: z.boolean().optional(),
-
-  /** Forced theme name for the current page */
   forcedTheme: z.string().optional(),
-
-  /** Nonce string for CSP headers */
   nonce: z.string().optional(),
-
-  /** Key used to store theme setting in localStorage */
   storageKey: z.string().optional(),
-  /** List of all available theme names */
   themes: z.array(z.string()).optional(),
-
-  /** Mapping of theme name to HTML attribute value */
   value: VALUE_OBJECT_SCHEMA.optional(),
 });
 
-/**
- * Type inference from the Zod schema
- */
+/** TypeScript type for validated theme provider props. */
 export type ValidatedThemeProviderProps = z.infer<typeof themeProviderPropsSchema>;
 
 /**
- * Safe parser for theme provider props
- * @param props - Raw theme provider props
- * @returns Validated props or error details
+ * Validates theme provider props without throwing.
+ * @param props - Props to validate
+ * @returns SafeParse result with success/error
  */
-export const validateThemeProviderProps = (props: unknown) => {
-  return themeProviderPropsSchema.safeParse(props);
-};
+export const validateThemeProviderProps = (props: unknown) =>
+  themeProviderPropsSchema.safeParse(props);
 
 /**
- * Theme validation with error handling
- * @param props - Theme provider props to validate
- * @throws Error with detailed validation messages
+ * Parses and validates theme provider props, throwing on validation failure.
+ * @param props - Props to parse and validate
+ * @returns Validated theme provider props
+ * @throws Error when validation fails with detailed error messages
  */
 export const parseThemeProviderProps = (
   props: unknown
 ): ValidatedThemeProviderProps => {
   const result = validateThemeProviderProps(props);
-
   if (!result.success) {
     const errorMessages = result.error.issues
       .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
       .join(", ");
-
     throw new Error(`Invalid theme provider configuration: ${errorMessages}`);
   }
-
   return result.data;
 };
 
-/**
- * Default theme configuration with validation
- */
+/** Default theme provider configuration with sensible defaults. */
 export const DEFAULT_THEME_CONFIG = parseThemeProviderProps({
   attribute: "class",
   defaultTheme: "system",

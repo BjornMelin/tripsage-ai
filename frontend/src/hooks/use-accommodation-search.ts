@@ -9,10 +9,10 @@
 
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { api } from "@/lib/api/client";
+import { apiClient } from "@/lib/api/api-client";
+import type { Accommodation, AccommodationSearchParams } from "@/lib/schemas/search";
 import { useSearchParamsStore } from "@/stores/search-params-store";
 import { useSearchResultsStore } from "@/stores/search-results-store";
-import type { Accommodation, AccommodationSearchParams } from "@/types/search";
 
 export interface AccommodationSearchResponse {
   results: Accommodation[];
@@ -38,10 +38,10 @@ export function useAccommodationSearch() {
 
   const searchMutation = useMutation({
     mutationFn: async (params: AccommodationSearchParams) => {
-      const response = await api.post<AccommodationSearchResponse>(
-        "/api/accommodations/search",
-        params
-      );
+      const response = await apiClient.post<
+        AccommodationSearchParams,
+        AccommodationSearchResponse
+      >("/accommodations/search", params);
       return response;
     },
     onMutate: (params) => {
@@ -76,8 +76,8 @@ export function useAccommodationSearch() {
 
   const getSuggestions = useQuery({
     queryFn: async () => {
-      const response = await api.get<Accommodation[]>(
-        "/api/accommodations/suggestions"
+      const response = await apiClient.get<Accommodation[]>(
+        "/accommodations/suggestions"
       );
       return response;
     },

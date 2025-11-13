@@ -14,8 +14,6 @@ import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 import { fetchWithRetry } from "@/lib/http/fetch-retry";
 import { createMcpClientHelper, getMcpTool } from "@/lib/mcp/client";
 import { getRedis } from "@/lib/redis";
-import { secureUuid } from "@/lib/security/random";
-import { createToolError, TOOL_ERROR_CODES } from "@/lib/tools/errors";
 import {
   ACCOMMODATION_BOOKING_INPUT_SCHEMA,
   ACCOMMODATION_BOOKING_OUTPUT_SCHEMA,
@@ -26,7 +24,9 @@ import {
   type AccommodationBookingResult,
   type AccommodationDetailsResult,
   type AccommodationSearchResult,
-} from "@/types/accommodations";
+} from "@/lib/schemas/accommodations";
+import { secureUuid } from "@/lib/security/random";
+import { createToolError, TOOL_ERROR_CODES } from "@/lib/tools/errors";
 import { requireApproval } from "./approvals";
 import { ACCOM_SEARCH_CACHE_TTL_SECONDS } from "./constants";
 

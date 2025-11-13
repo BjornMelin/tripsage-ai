@@ -18,12 +18,12 @@ import {
   updateEvent,
 } from "@/lib/calendar/google";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
-import { createServerSupabase } from "@/lib/supabase/server";
 import {
   createEventRequestSchema,
   eventsListRequestSchema,
   updateEventRequestSchema,
-} from "@/schemas/calendar";
+} from "@/lib/schemas/calendar";
+import { createServerSupabase } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 

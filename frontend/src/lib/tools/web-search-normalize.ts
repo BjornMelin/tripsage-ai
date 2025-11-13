@@ -10,7 +10,7 @@
  * fields before validation.
  */
 
-import type { WebSearchSource } from "@/types/web-search";
+import type { WebSearchSource } from "@/lib/schemas/web-search";
 
 /**
  * Normalizes a single search result item to match the strict schema.

@@ -24,7 +24,7 @@ import {
   getTrustedRateLimitIdentifier,
   redactErrorForLogging,
 } from "@/lib/next/route-helpers";
-import { deleteUserApiKey } from "@/lib/supabase/rpc";
+import { deleteUserApiKey, deleteUserGatewayBaseUrl } from "@/lib/supabase/rpc";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
@@ -118,6 +118,9 @@ export async function DELETE(
       },
       async (span) => {
         try {
+          if (normalizedService === "gateway") {
+            await deleteUserGatewayBaseUrl(user.id);
+          }
           await deleteUserApiKey(user.id, normalizedService);
           span.setAttribute("keys.rpc.error", false);
         } catch (rpcError) {

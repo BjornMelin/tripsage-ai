@@ -13,18 +13,6 @@ export {
   useDebouncedLoading,
   useLoading,
 } from "../../hooks/use-loading";
-// Types
-export type {
-  LoadingContextValue,
-  LoadingOverlayProps,
-  LoadingSpinnerBaseProps,
-  LoadingSpinnerConfig,
-  LoadingStateProps,
-  SkeletonConfig,
-  SkeletonProps,
-} from "../../types/loading";
-export { SkeletonType } from "../../types/loading";
-
 // Generic skeletons
 export {
   AvatarSkeleton,
@@ -35,6 +23,8 @@ export {
   TableSkeleton,
 } from "./loading-skeletons";
 export { LoadingSpinner, SpinnerVariants } from "./loading-spinner";
+// Types re-exported from concrete component modules
+export type { LoadingOverlayProps, LoadingStateProps } from "./loading-states";
 // Loading states
 export {
   LoadingButton,
@@ -42,6 +32,7 @@ export {
   LoadingOverlay,
   PageLoading,
 } from "./loading-states";
+export type { SkeletonProps } from "./skeleton";
 // Base components
 export { Skeleton, SkeletonVariants } from "./skeleton";
 // Travel-specific skeletons

@@ -183,18 +183,24 @@ export class ApiClient {
    * @param config Partial configuration to override defaults.
    */
   constructor(config: Partial<ApiClientConfig> = {}) {
+    // For constructor, access env vars directly (NEXT_PUBLIC_ vars are safe in both contexts)
+    // NODE_ENV is also safe to access directly for this use case
+    const publicApiUrl =
+      typeof process !== "undefined"
+        ? (process.env.NEXT_PUBLIC_API_URL as string | undefined)
+        : undefined;
+    const nodeEnv =
+      typeof process !== "undefined" ? process.env.NODE_ENV : "development";
     this.config = {
       authHeaderName: "Authorization",
-      baseUrl: process.env.NEXT_PUBLIC_API_URL
-        ? `${process.env.NEXT_PUBLIC_API_URL}/api`
-        : "/api",
+      baseUrl: publicApiUrl ? `${publicApiUrl}/api` : "/api",
       defaultHeaders: {
         "Content-Type": "application/json",
       },
       retries: 3,
       timeout: 10000,
       validateRequests: true,
-      validateResponses: process.env.NODE_ENV !== "production",
+      validateResponses: nodeEnv !== "production",
       ...config,
     };
   }
@@ -559,9 +565,9 @@ export class ApiClient {
    */
   // biome-ignore lint/suspicious/useAwait: Method delegates to async request method
   // biome-ignore lint/style/useNamingConvention: TypeScript generic type parameter convention
-  public async delete<TResponse = unknown>(
+  public async delete<TRequest = unknown, TResponse = unknown>(
     endpoint: string,
-    options: Omit<RequestConfig<never, TResponse>, "endpoint" | "method"> = {}
+    options: Omit<RequestConfig<TRequest, TResponse>, "endpoint" | "method"> = {}
   ): Promise<TResponse> {
     return this.request({
       ...options,
@@ -741,6 +747,38 @@ export class ApiClient {
   public async healthCheck(): Promise<{ status: string; timestamp: string }> {
     return this.get("/health");
   }
+
+  /**
+   * Sends a chat completion request.
+   *
+   * This is a convenience wrapper around `post` for the chat endpoint.
+   *
+   * @param request Chat completion request payload.
+   * @returns Chat completion response payload.
+   */
+  public sendChat<Request, Response>(request: Request): Promise<Response> {
+    return this.post<Request, Response>("/chat", request);
+  }
+
+  /**
+   * Uploads one or more attachments using multipart/form-data.
+   *
+   * Constructs a `FormData` payload and posts it to `/chat/attachments`.
+   * Content-Type is managed by the browser; do not set it explicitly.
+   *
+   * @param files List of `File` objects to upload.
+   * @returns Object containing uploaded file URLs or metadata.
+   */
+  // biome-ignore lint/style/useNamingConvention: TypeScript generic type parameter convention
+  public uploadAttachments<TResponse = { urls: string[] }>(
+    files: File[]
+  ): Promise<TResponse> {
+    const formData = new FormData();
+    files.forEach((file, i) => {
+      formData.append(`file-${i}`, file);
+    });
+    return this.post<FormData, TResponse>("/chat/attachments", formData);
+  }
 }
 
 /**
@@ -757,7 +795,8 @@ defaultClient.addRequestInterceptor((config) => {
 
 // Add common response interceptor for logging
 defaultClient.addResponseInterceptor((response, config) => {
-  if (process.env.NODE_ENV === "development") {
+  // NODE_ENV check is acceptable here (development-only logging)
+  if (typeof process !== "undefined" && process.env.NODE_ENV === "development") {
     console.log(`API Response [${config.method}] ${config.endpoint}:`, response);
   }
   return Promise.resolve(response);

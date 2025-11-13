@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
 
 type AllowedService = "openai" | "openrouter" | "anthropic" | "xai";
@@ -44,6 +45,9 @@ export default function ApiKeysPage() {
   const [items, setItems] = useState<ApiKeySummary[]>([]);
   const [service, setService] = useState<AllowedService>("openai");
   const [apiKey, setApiKey] = useState("");
+  const [allowGatewayFallback, setAllowGatewayFallback] = useState<boolean | null>(
+    null
+  );
 
   const hasMap = useMemo(() => new Map(items.map((k) => [k.service, true])), [items]);
 
@@ -52,6 +56,11 @@ export default function ApiKeysPage() {
     try {
       const data = await authenticatedApi.get<ApiKeySummary[]>("/api/keys");
       setItems(data);
+      // Load consent flag
+      const settings = await authenticatedApi.get<{
+        allowGatewayFallback: boolean | null;
+      }>("/api/user-settings");
+      setAllowGatewayFallback(settings.allowGatewayFallback);
     } finally {
       setLoading(false);
     }
@@ -81,6 +90,16 @@ export default function ApiKeysPage() {
       await load();
     } finally {
       setLoading(false);
+    }
+  };
+
+  const onToggleFallback = async (val: boolean) => {
+    setAllowGatewayFallback(val);
+    try {
+      await authenticatedApi.post("/api/user-settings", { allowGatewayFallback: val });
+    } catch {
+      // revert on failure
+      setAllowGatewayFallback((prev) => !prev);
     }
   };
 
@@ -171,6 +190,31 @@ export default function ApiKeysPage() {
           <Separator />
           <div className="text-xs text-muted-foreground">
             Keys are encrypted with Supabase Vault. We never store plaintext.
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Gateway Fallback Consent</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <div className="flex items-center justify-between py-2">
+            <div className="space-y-1">
+              <div className="font-medium">Allow fallback to team Gateway</div>
+              <div className="text-sm text-muted-foreground">
+                When no BYOK key is present, permit using the team Vercel AI Gateway.
+              </div>
+            </div>
+            <Switch
+              checked={!!allowGatewayFallback}
+              disabled={loading || allowGatewayFallback === null}
+              onCheckedChange={onToggleFallback}
+            />
+          </div>
+          <div className="text-xs text-muted-foreground">
+            You can change this at any time. Some features may require an active
+            provider key if disabled.
           </div>
         </CardContent>
       </Card>

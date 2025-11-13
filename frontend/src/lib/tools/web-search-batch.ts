@@ -10,9 +10,9 @@ import { Redis } from "@upstash/redis";
 import { tool } from "ai";
 import { z } from "zod";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
+import { WEB_SEARCH_BATCH_OUTPUT_SCHEMA } from "@/lib/schemas/web-search";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import { normalizeWebSearchResults } from "@/lib/tools/web-search-normalize";
-import { WEB_SEARCH_BATCH_OUTPUT_SCHEMA } from "@/types/web-search";
 import { webSearch } from "./web-search";
 
 /**

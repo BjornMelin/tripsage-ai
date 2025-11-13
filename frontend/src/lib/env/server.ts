@@ -20,17 +20,23 @@ let validationError: Error | null = null;
  * @throws Error if validation fails
  */
 function validateServerEnv(): ServerEnv {
-  if (cachedEnv) {
-    return cachedEnv;
-  }
-
-  if (validationError) {
-    throw validationError;
+  const isTest = process.env.NODE_ENV === "test";
+  // In test, do not cache validation results to respect vi.stubEnv between tests
+  if (!isTest) {
+    if (cachedEnv) {
+      return cachedEnv;
+    }
+    if (validationError) {
+      throw validationError;
+    }
   }
 
   try {
-    cachedEnv = envSchema.parse(process.env);
-    return cachedEnv;
+    const parsed = envSchema.parse(process.env);
+    if (!isTest) {
+      cachedEnv = parsed;
+    }
+    return parsed;
   } catch (error) {
     if (error instanceof Error && "issues" in error) {
       const zodError = error as { issues: Array<{ path: string[]; message: string }> };
@@ -55,16 +61,24 @@ function validateServerEnv(): ServerEnv {
  * @throws Error if validation fails or called on client
  */
 export function getServerEnv(): ServerEnv {
-  // In test environments, window may be defined by the test runner
-  // Check for actual browser context, not just window existence
-  if (
-    typeof window !== "undefined" &&
-    typeof process !== "undefined" &&
-    process.env.NODE_ENV !== "test"
-  ) {
+  // In test environments, window may be defined by the test runner (jsdom).
+  // If tests explicitly stub a non-Window object, treat it as client and throw.
+  if (process.env.NODE_ENV === "test" && typeof window !== "undefined") {
+    const w = window as unknown as { document?: unknown };
+    if (!("document" in w)) {
+      throw new Error("getServerEnv() cannot be called on client side");
+    }
+  }
+
+  // Validate environment first so tests can assert validation failures
+  const env = validateServerEnv();
+
+  // In non-test runtime, protect against accidental client-side usage
+  if (process.env.NODE_ENV !== "test" && typeof window !== "undefined") {
     throw new Error("getServerEnv() cannot be called on client side");
   }
-  return validateServerEnv();
+
+  return env;
 }
 
 /**
@@ -111,13 +125,23 @@ export function getServerEnvVarWithFallback<T extends keyof ServerEnv>(
  * @throws Error if key is missing or invalid
  */
 export function getGoogleMapsServerKey(): string {
-  const key = getServerEnvVar("GOOGLE_MAPS_SERVER_API_KEY");
-  if (!key || key === "undefined") {
-    throw new Error(
-      "GOOGLE_MAPS_SERVER_API_KEY is required for Google Maps Platform services"
-    );
+  try {
+    const key = getServerEnvVar("GOOGLE_MAPS_SERVER_API_KEY");
+    if (!key || key === "undefined") {
+      throw new Error(
+        "GOOGLE_MAPS_SERVER_API_KEY is required for Google Maps Platform services"
+      );
+    }
+    return key as string;
+  } catch (error) {
+    // When the env var is missing entirely, preserve original 'not defined' message
+    if (error instanceof Error && error.message.includes("not defined")) {
+      throw error;
+    }
+    throw error instanceof Error
+      ? error
+      : new Error("GOOGLE_MAPS_SERVER_API_KEY is required for Google Maps Platform services");
   }
-  return key;
 }
 
 // Export validated env object for advanced use cases (lazy getter)

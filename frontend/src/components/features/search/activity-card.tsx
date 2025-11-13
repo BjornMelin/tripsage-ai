@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import type { Activity } from "@/types/search";
+import type { Activity } from "@/lib/schemas/search";
 
 interface ActivityCardProps {
   activity: Activity;

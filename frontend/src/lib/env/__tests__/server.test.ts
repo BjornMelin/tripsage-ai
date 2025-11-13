@@ -1,10 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  getGoogleMapsServerKey,
-  getServerEnv,
-  getServerEnvVar,
-  getServerEnvVarWithFallback,
-} from "../server";
+import { getServerEnv, getServerEnvVar, getServerEnvVarWithFallback } from "../server";
 
 describe("env/server", () => {
   beforeEach(() => {
@@ -98,26 +93,36 @@ describe("env/server", () => {
   });
 
   describe("getGoogleMapsServerKey", () => {
-    it("should return Google Maps server API key", () => {
+    it("should return Google Maps server API key", async () => {
       vi.stubEnv("GOOGLE_MAPS_SERVER_API_KEY", "test-server-key");
+      vi.resetModules();
+      const { getGoogleMapsServerKey: freshGetGoogleMapsServerKey } = await import(
+        "../server"
+      );
 
-      const key = getGoogleMapsServerKey();
+      const key = freshGetGoogleMapsServerKey();
       expect(key).toBe("test-server-key");
     });
 
-    it("should throw when key is missing", () => {
+    it("should throw when key is missing", async () => {
       Reflect.deleteProperty(process.env, "GOOGLE_MAPS_SERVER_API_KEY");
-
-      expect(() => getGoogleMapsServerKey()).toThrow(
-        "GOOGLE_MAPS_SERVER_API_KEY is required"
+      vi.resetModules();
+      const { getGoogleMapsServerKey: freshGetGoogleMapsServerKey } = await import(
+        "../server"
       );
+
+      expect(() => freshGetGoogleMapsServerKey()).toThrow("is not defined");
     });
 
-    it("should throw when key is 'undefined' string", () => {
+    it("should throw when key is 'undefined' string", async () => {
       vi.stubEnv("GOOGLE_MAPS_SERVER_API_KEY", "undefined");
+      vi.resetModules();
+      const { getGoogleMapsServerKey: freshGetGoogleMapsServerKey } = await import(
+        "../server"
+      );
 
-      expect(() => getGoogleMapsServerKey()).toThrow(
-        /GOOGLE_MAPS_SERVER_API_KEY.*required/
+      expect(() => freshGetGoogleMapsServerKey()).toThrow(
+        /GOOGLE_MAPS_SERVER_API_KEY.*required.*Google Maps Platform/
       );
     });
   });

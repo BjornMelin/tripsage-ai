@@ -8,7 +8,7 @@ import type {
   FlightSearchParams,
   SearchParams,
   SearchType,
-} from "@/types/search";
+} from "@/lib/schemas/search";
 
 // Validation schemas for search parameters
 const SEARCH_TYPE_SCHEMA = z.enum([

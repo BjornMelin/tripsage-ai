@@ -7,7 +7,7 @@
 
 import "server-only";
 
-import type { AgentWorkflow } from "@/schemas/agents";
+import type { AgentWorkflow } from "@/lib/schemas/agents";
 import type {
   GuardrailCacheConfig,
   GuardrailRateLimit,

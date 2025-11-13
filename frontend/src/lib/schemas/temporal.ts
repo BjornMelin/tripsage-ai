@@ -1,27 +1,20 @@
 /**
- * @fileoverview Temporal schemas for date, time, duration, and recurrence.
+ * @fileoverview Canonical temporal schemas for date/time, duration, ranges, recurrence.
  */
 
 import { z } from "zod";
 
-/**
- * Date range schema with validation.
- */
+/** Zod schema for date ranges with validation. */
 export const dateRangeSchema = z
-  .object({
-    endDate: z.date(),
-    startDate: z.date(),
-  })
+  .object({ endDate: z.date(), startDate: z.date() })
   .refine((data) => data.endDate >= data.startDate, {
     message: "End date must be on or after start date",
     path: ["endDate"],
   });
-
+/** TypeScript type for date ranges. */
 export type DateRange = z.infer<typeof dateRangeSchema>;
 
-/**
- * Time range within a day schema.
- */
+/** Zod schema for time ranges with validation. */
 export const timeRangeSchema = z
   .object({
     endTime: z
@@ -35,39 +28,33 @@ export const timeRangeSchema = z
     message: "End time must be after start time",
     path: ["endTime"],
   });
-
+/** TypeScript type for time ranges. */
 export type TimeRange = z.infer<typeof timeRangeSchema>;
 
-/**
- * Duration schema with days, hours, minutes.
- */
+/** Zod schema for time durations. */
 export const durationSchema = z.object({
   days: z.number().int().min(0).default(0),
   hours: z.number().int().min(0).max(23).default(0),
   minutes: z.number().int().min(0).max(59).default(0),
 });
-
+/** TypeScript type for durations. */
 export type Duration = z.infer<typeof durationSchema>;
 
-/**
- * DateTime range with timezone awareness.
- */
+/** Zod schema for datetime ranges with timezone support. */
 export const dateTimeRangeSchema = z
   .object({
     endDatetime: z.date(),
     startDatetime: z.date(),
     timezone: z.string().optional(),
   })
-  .refine((data) => data.endDatetime > data.startDatetime, {
+  .refine((d) => d.endDatetime > d.startDatetime, {
     message: "End datetime must be after start datetime",
     path: ["endDatetime"],
   });
-
+/** TypeScript type for datetime ranges. */
 export type DateTimeRange = z.infer<typeof dateTimeRangeSchema>;
 
-/**
- * Recurrence rule schema (RFC 5545 compatible).
- */
+/** Zod schema for recurrence rules (RFC 5545 compliant). */
 export const recurrenceRuleSchema = z
   .object({
     byDay: z.array(z.enum(["MO", "TU", "WE", "TH", "FR", "SA", "SU"])).optional(),
@@ -78,24 +65,14 @@ export const recurrenceRuleSchema = z
     interval: z.number().int().min(1).default(1),
     until: z.date().optional(),
   })
-  .refine(
-    (data) => {
-      if (data.count && data.until) {
-        return false;
-      }
-      return true;
-    },
-    {
-      message: "Cannot specify both count and until",
-      path: ["count"],
-    }
-  );
-
+  .refine((d) => !(d.count && d.until), {
+    message: "Cannot specify both count and until",
+    path: ["count"],
+  });
+/** TypeScript type for recurrence rules. */
 export type RecurrenceRule = z.infer<typeof recurrenceRuleSchema>;
 
-/**
- * Business hours schema for a location or service.
- */
+/** Zod schema for weekly business hours. */
 export const businessHoursSchema = z.object({
   friday: timeRangeSchema.optional(),
   monday: timeRangeSchema.optional(),
@@ -106,12 +83,10 @@ export const businessHoursSchema = z.object({
   tuesday: timeRangeSchema.optional(),
   wednesday: timeRangeSchema.optional(),
 });
-
+/** TypeScript type for business hours. */
 export type BusinessHours = z.infer<typeof businessHoursSchema>;
 
-/**
- * Availability information schema.
- */
+/** Zod schema for availability information with capacity and restrictions. */
 export const availabilitySchema = z
   .object({
     available: z.boolean(),
@@ -121,16 +96,11 @@ export const availabilitySchema = z
     toDatetime: z.date().optional(),
   })
   .refine(
-    (data) => {
-      if (data.fromDatetime && data.toDatetime) {
-        return data.toDatetime > data.fromDatetime;
-      }
-      return true;
-    },
+    (d) => (d.fromDatetime && d.toDatetime ? d.toDatetime > d.fromDatetime : true),
     {
       message: "toDatetime must be after fromDatetime",
       path: ["toDatetime"],
     }
   );
-
+/** TypeScript type for availability. */
 export type Availability = z.infer<typeof availabilitySchema>;

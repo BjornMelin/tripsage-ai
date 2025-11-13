@@ -18,7 +18,7 @@ import type {
   SearchMemoriesResponse,
   UpdatePreferencesRequest,
   UpdatePreferencesResponse,
-} from "@/types/memory";
+} from "@/lib/schemas/memory";
 
 /**
  * Hook for fetching user memory context.
