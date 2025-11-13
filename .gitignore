@@ -218,6 +218,7 @@ frontend/*.debug.*
 frontend/debug-*
 frontend/temp-*
 frontend/*.temp.*
+frontend/frontend*.xml
 
 # Additional generated/temporary files
 **/consolidate_*.sh

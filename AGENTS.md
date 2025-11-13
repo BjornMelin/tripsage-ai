@@ -116,7 +116,7 @@ When working on files under `frontend/`, follow these instructions which superse
 
 - Primary routing layer for multi-provider support, observability, fallbacks, metrics, and budgets.
 - Users provide their own provider API keys (OpenAI, Anthropic, xAI, Gemini, etc.) which are routed through Gateway.
-- Configure via `createOpenAI({ baseURL: "https://ai-gateway.vercel.sh/v1", apiKey: process.env.AI_GATEWAY_API_KEY })`.
+- Configure via `createGateway({ baseURL: "https://ai-gateway.vercel.sh/v1", apiKey: process.env.AI_GATEWAY_API_KEY })` from the `ai` package (v6).
 - Users can also use their own provider keys directly through Gateway without a Gateway API key; billing goes to their provider accounts.
 - Primary docs: vercel.com/docs/ai-gateway (OpenAI-compatible API).
 
@@ -126,6 +126,7 @@ When working on files under `frontend/`, follow these instructions which superse
 - Direct provider resolution without Gateway; use when Gateway is unavailable or not desired.
 - Resolves user-specific keys server-side and returns a ready `LanguageModel` for AI SDK v6.
 - Supported providers: `openai`, `openrouter`, `anthropic`, `xai` (OpenAI-compatible for xAI).
+- OpenRouter uses the OpenAI provider configured with `baseURL: "https://openrouter.ai/api/v1"` (OpenAI‑compatible). No attribution headers.
 - Defaults (subject to change): `openai → gpt-4o-mini`, `anthropic → claude-3-5-sonnet-20241022`, `openrouter → openai/gpt-4o-mini`.
 - Usage pattern (Route Handler):
 
