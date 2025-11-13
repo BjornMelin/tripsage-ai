@@ -9,7 +9,7 @@ import "server-only";
 
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getGoogleMapsServerKey } from "@/lib/google/keys";
+import { getGoogleMapsServerKey } from "@/lib/env/server";
 
 const searchRequestSchema = z.object({
   locationBias: z

@@ -101,7 +101,10 @@ OPENAI_API_KEY=your-openai-api-key
 
 # Optional: Third-party APIs
 DUFFEL_ACCESS_TOKEN=your-duffel-token
-GOOGLE_MAPS_API_KEY=your-maps-key
+# Google Maps: server key for Geocoding/Places/Routes (server-side)
+GOOGLE_MAPS_SERVER_API_KEY=your-maps-server-key
+# Frontend Map/Places components (browser)
+NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY=your-maps-browser-key
 OPENWEATHERMAP_API_KEY=your-weather-key
 MEM0_API_KEY=your-mem0-key
 ```

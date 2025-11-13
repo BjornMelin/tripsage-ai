@@ -96,7 +96,11 @@ UPSTASH_REDIS_REST_TOKEN=your-token
 
 # External APIs (Direct SDK integrations)
 DUFFEL_ACCESS_TOKEN=your_duffel_access_token
-GOOGLE_MAPS_API_KEY=your_google_maps_key
+# Google Maps keys:
+# - Server key: required for any service that calls Google Maps Web Services (backend and/or Next.js server routes).
+# - Browser key: required for Maps JavaScript / Places in the browser.
+GOOGLE_MAPS_SERVER_API_KEY=your_google_maps_server_key
+NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY=your_browser_maps_key
 OPENWEATHERMAP_API_KEY=your_weather_key
 
 # MCP Integration (Only Airbnb)

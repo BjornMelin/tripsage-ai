@@ -243,7 +243,7 @@
       }
     },
     {
-      "includes": ["**/schemas/env.ts"],
+      "includes": ["**/schemas/env.ts", "**/env/schema.ts", "**/env/client.ts", "**/env/server.ts"],
       "linter": {
         "rules": {
           "style": {

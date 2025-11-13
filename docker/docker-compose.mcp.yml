@@ -87,7 +87,7 @@ services:
       - DATABASE_JWT_SECRET=${SUPABASE_JWT_SECRET:-dev-jwt-secret}
       # Optional providers
       - DUFFEL_ACCESS_TOKEN=${DUFFEL_ACCESS_TOKEN}
-      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+      - GOOGLE_MAPS_SERVER_API_KEY=${GOOGLE_MAPS_SERVER_API_KEY}
       - OPENWEATHERMAP_API_KEY=${OPENWEATHERMAP_API_KEY}
       # Crawl4AI MCP nested settings expect CRAWL4AI_MCP__API_KEY if used
       - CRAWL4AI_MCP__API_KEY=${CRAWL4AI_API_KEY:-}
@@ -124,6 +124,9 @@ services:
     environment:
       - NODE_ENV=development
       - NEXT_PUBLIC_API_URL=http://tripsage-api:8080
+      # Google Maps keys: browser key for client, server key for Next.js Route Handlers/tools
+      - NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY=${NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY}
+      - GOOGLE_MAPS_SERVER_API_KEY=${GOOGLE_MAPS_SERVER_API_KEY}
     ports:
       - "3000:3000"
     volumes:

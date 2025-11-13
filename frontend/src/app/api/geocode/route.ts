@@ -9,8 +9,8 @@ import "server-only";
 
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { getGoogleMapsServerKey } from "@/lib/env/server";
 import { cacheLatLng, getCachedLatLng } from "@/lib/google/caching";
-import { getGoogleMapsServerKey } from "@/lib/google/keys";
 import { errorResponse } from "@/lib/next/route-helpers";
 
 const geocodeRequestSchema = z.object({

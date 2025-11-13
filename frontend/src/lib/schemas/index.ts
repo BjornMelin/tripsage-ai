@@ -56,7 +56,7 @@ export {
   inputPropsSchema,
   validateComponentProps,
 } from "./components";
-export * from "./env";
+// Env schemas moved to @/lib/env/schema - import from there instead
 export type { LoadingState } from "./error-boundary";
 export { loadingStateSchema } from "./error-boundary";
 // Selective exports from forms (prioritizing forms module)
@@ -111,7 +111,10 @@ import * as agentStatusSchemas from "./agent-status";
 import * as apiSchemas from "./api";
 import * as budgetSchemas from "./budget";
 import * as componentSchemas from "./components";
-import * as envSchemas from "./env";
+
+// Env schemas moved to @/lib/env/schema
+const envSchemas = {} as const;
+
 import * as errorBoundarySchemas from "./error-boundary";
 import * as formSchemas from "./forms";
 import * as loadingSchemas from "./loading";
