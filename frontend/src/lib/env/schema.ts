@@ -63,21 +63,23 @@ const aiServiceEnvSchema = z.object({
 
 // Travel & External API Keys
 const travelApiEnvSchema = z.object({
-  ACCOM_SEARCH_TOKEN: z.string().optional(),
-  ACCOM_SEARCH_URL: z.string().url().optional(),
-  AIRBNB_MCP_API_KEY: z.string().optional(),
-  // Accommodations MCP / HTTP
-  AIRBNB_MCP_URL: z.string().url().optional(),
   BACKEND_API_URL: z.string().url().optional(),
   // Duffel flights
   DUFFEL_ACCESS_TOKEN: z.string().optional(),
   DUFFEL_API_KEY: z.string().optional(),
+  // Expedia Partner Solutions (EPS) Rapid API
+  EPS_API_KEY: z.string().optional(),
+  EPS_API_SECRET: z.string().optional(),
+  EPS_BASE_URL: z.string().url().optional(),
   // Server routes/tools: Server key for Geocoding/Places/Routes/Time Zone (IP+API restricted)
   GOOGLE_MAPS_SERVER_API_KEY: z.string().optional(),
   // Frontend: Browser key for Maps JS (referrer-restricted)
   NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY: z.string().optional(),
+  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional(),
   // Weather
   OPENWEATHERMAP_API_KEY: z.string().optional(),
+  // Stripe payment processing
+  STRIPE_SECRET_KEY: z.string().optional(),
 });
 
 // Monitoring and Analytics (minimal - only used vars)
