@@ -71,6 +71,7 @@
     "@testing-library/react": "^16.3.0",
     "@types/react-syntax-highlighter": "^15.5.13",
     "@upstash/ratelimit": "2.0.7",
+    "@upstash/qstash": "^2.8.4",
     "@upstash/redis": "^1.35.6",
     "ai": "6.0.0-beta.99",
     "class-variance-authority": "^0.7.1",
@@ -103,6 +104,7 @@
     "vaul": "^1.1.2",
     "web-vitals": "^5.1.0",
     "zod": "^4.1.12",
+    "resend": "^6.4.2",
     "zustand": "^5.0.8"
   },
   "devDependencies": {
