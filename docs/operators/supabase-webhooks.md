@@ -14,10 +14,12 @@ This guide shows how to configure Postgres settings (GUCs) for the consolidated 
   - `QSTASH_TOKEN`, `QSTASH_CURRENT_SIGNING_KEY`, `QSTASH_NEXT_SIGNING_KEY`
   - `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `RESEND_FROM_NAME`
   - Optional `COLLAB_WEBHOOK_URL`
+- The QStash worker rejects requests when `QSTASH_CURRENT_SIGNING_KEY` is missing or
+  signatures fail verification. Configure the keys before directing production traffic.
 
 ## 1) Configure Postgres settings (GUCs)
 
-Run in psql or Supabase SQL editor. Replace values to match your environment.
+Run in psql or Supabase SQL editor (or execute `scripts/operators/setup_webhooks.sh`). Replace values to match your environment.
 
 ```sql
 -- Set once on the database (preferred). Replace <db_name> and your domain.
@@ -36,8 +38,9 @@ SELECT current_setting('app.vercel_webhook_trips', true)  AS trips_url,
 
 Notes
 
-- You can also set per‑session using `SET` during testing. The migration functions use `current_setting(..., true)` which returns NULL when unset.
+- You can also set per-session using `SET` during testing. The migration functions use `current_setting(..., true)` which returns NULL when unset.
 - Secrets rotate by updating the database setting and Vercel env atomically (briefly accept both on server during rotation if desired).
+- Automate validation with `scripts/operators/verify_webhook_secret.sh`. The script exits non-zero if the database GUC diverges from `HMAC_SECRET`, making it safe to run in CI/CD checklists.
 
 ## 2) Test signed webhook (manual)
 
@@ -67,7 +70,14 @@ Expected (hook only)
 
 Set the GUCs and execute a change to a subscribed table (e.g., `INSERT INTO trip_collaborators ...`). The trigger will POST to your Vercel route with a signed HMAC.
 
-If QStash is configured, `/api/hooks/trips` will enqueue a job to `/api/jobs/notify-collaborators`. The worker route will then send emails via Resend and call any downstream webhook.
+If QStash is configured, `/api/hooks/trips` enqueues a job to `/api/jobs/notify-collaborators`.
+The worker validates the `Upstash-Signature` header with the configured signing keys and
+returns HTTP 500 if the keys are missing. Only development environments without QStash
+fall back to in-process notifications.
+
+Cache invalidation events post to `/api/hooks/cache`, which bumps per-tag version
+counters in Upstash Redis. Downstream consumers compose cache keys as
+`tag:v{version}:{key}`; no Redis key purging or downstream webhooks occur.
 
 Troubleshooting
 
@@ -80,4 +90,9 @@ Troubleshooting
 - HMAC header is omitted when no secret is configured; handlers reject missing/invalid signatures.
 - Functions run with `SECURITY DEFINER` and `search_path = pg_catalog, public` to avoid hijacking.
 - Keep secrets in DB settings; do not store them in tables.
-- QStash uses `Upstash-Signature` for worker calls; worker routes verify signatures with the configured signing keys.
+- QStash uses `Upstash-Signature` for worker calls; worker routes verify signatures with the configured signing keys and fail closed when they are absent.
+
+## 5) Observability
+
+- Webhook handlers emit spans `webhook.trips`, `webhook.cache`, and `webhook.files`. Failures due to missing secrets add an event `webhook_verification_failed` on the active span (`reason = missing_secret_env | invalid_signature`).
+- Redis-backed helpers emit `redis.unavailable` spans when cache invalidation or idempotency would silently degrade due to missing Upstash credentials. Investigate environment configuration immediately when this event appears.
