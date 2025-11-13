@@ -26,7 +26,6 @@ export * from "./use-supabase-query";
 export * from "./use-supabase-realtime";
 export * from "./use-supabase-storage";
 export * from "./use-trips";
-export * from "./use-trips-with-realtime";
 // WebSocket hooks
 // WebSocket hooks removed in favor of Supabase Realtime
 export * from "./use-websocket-chat";

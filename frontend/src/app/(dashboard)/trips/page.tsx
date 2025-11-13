@@ -20,29 +20,33 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useTripsWithRealtime } from "@/hooks/use-trips-with-realtime";
+import { useDeleteTrip, useTrips } from "@/hooks/use-trips";
 import { type Trip, useTripStore } from "@/stores/trip-store";
 
 type SortOption = "name" | "date" | "budget" | "destinations";
 type FilterOption = "all" | "draft" | "upcoming" | "active" | "completed";
 
 export default function TripsPage() {
-  const { createTrip, deleteTrip } = useTripStore();
+  const { createTrip } = useTripStore();
+  const deleteTripMutation = useDeleteTrip();
   const {
-    trips,
+    data: trips,
     isLoading,
     error,
+    isConnected: _isConnected,
     realtimeStatus: _realtimeStatus,
-  } = useTripsWithRealtime();
+  } = useTrips();
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("date");
   const [filterBy, setFilterBy] = useState<FilterOption>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
-  const filteredAndSortedTrips = useMemo(() => {
-    if (!trips) return [];
+  const tripsArray = trips ?? [];
 
-    let filtered = trips;
+  const filteredAndSortedTrips = useMemo(() => {
+    if (tripsArray.length === 0) return [];
+
+    let filtered = tripsArray;
 
     // Apply search filter
     if (searchQuery) {
@@ -104,7 +108,7 @@ export default function TripsPage() {
           return 0;
       }
     });
-  }, [trips, searchQuery, sortBy, filterBy]);
+  }, [tripsArray, searchQuery, sortBy, filterBy]);
 
   const handleCreateTrip = async () => {
     await createTrip({
@@ -117,15 +121,17 @@ export default function TripsPage() {
 
   const handleDeleteTrip = async (tripId: string) => {
     if (confirm("Are you sure you want to delete this trip?")) {
-      await deleteTrip(tripId);
+      await deleteTripMutation.mutateAsync(tripId);
     }
   };
 
   const getStatusCounts = () => {
-    if (!trips) return { active: 0, completed: 0, draft: 0, upcoming: 0 };
+    const tripsArray = trips ?? [];
+    if (tripsArray.length === 0)
+      return { active: 0, completed: 0, draft: 0, upcoming: 0 };
 
     const now = new Date();
-    return trips.reduce(
+    return tripsArray.reduce(
       (counts: Record<string, number>, trip: Trip) => {
         const startDate =
           trip.startDate || trip.start_date
@@ -162,7 +168,7 @@ export default function TripsPage() {
   }, [error]);
 
   // Show loading state
-  if (isLoading && (!trips || trips.length === 0)) {
+  if (isLoading && tripsArray.length === 0) {
     return (
       <div className="container mx-auto py-8">
         <div className="flex items-center justify-between mb-8">
@@ -190,7 +196,7 @@ export default function TripsPage() {
     );
   }
 
-  if ((!trips || trips.length === 0) && !isLoading) {
+  if (tripsArray.length === 0 && !isLoading) {
     return (
       <div className="container mx-auto py-8">
         <div className="flex items-center justify-between mb-8">
@@ -227,7 +233,7 @@ export default function TripsPage() {
         <div>
           <h1 className="text-3xl font-bold">My Trips</h1>
           <p className="text-muted-foreground">
-            {trips?.length || 0} trip{(trips?.length || 0) !== 1 ? "s" : ""} in your
+            {tripsArray.length} trip{tripsArray.length !== 1 ? "s" : ""} in your
             collection
           </p>
         </div>
@@ -381,7 +387,7 @@ export default function TripsPage() {
       {filteredAndSortedTrips.length > 0 && (
         <div className="text-center mt-8">
           <p className="text-sm text-muted-foreground">
-            Showing {filteredAndSortedTrips.length} of {trips?.length || 0} trips
+            Showing {filteredAndSortedTrips.length} of {tripsArray.length} trips
           </p>
         </div>
       )}
