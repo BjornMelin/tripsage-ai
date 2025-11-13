@@ -15,7 +15,6 @@ from .document_analyzer import (
     close_document_analyzer,
     get_document_analyzer,
 )
-from .google_maps_service import GoogleMapsService
 from .playwright_service import (
     PlaywrightService,
     close_playwright_service,
@@ -31,7 +30,6 @@ from .webcrawl_service import (
 __all__ = [
     "DocumentAnalyzer",
     "GoogleCalendarService",
-    "GoogleMapsService",
     "PlaywrightService",
     "TimeService",
     "WebCrawlService",

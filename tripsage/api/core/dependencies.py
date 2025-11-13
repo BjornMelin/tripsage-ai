@@ -19,7 +19,6 @@ from tripsage_core.exceptions.exceptions import (
 )
 from tripsage_core.services.airbnb_mcp import AirbnbMCP
 from tripsage_core.services.business.accommodation_service import AccommodationService
-from tripsage_core.services.business.activity_service import ActivityService
 from tripsage_core.services.business.destination_service import DestinationService
 from tripsage_core.services.business.file_processing_service import (
     FileProcessingService,
@@ -30,7 +29,6 @@ from tripsage_core.services.business.memory_service import MemoryService
 from tripsage_core.services.business.search_facade import SearchFacade
 from tripsage_core.services.business.trip_service import TripService
 from tripsage_core.services.business.unified_search_service import UnifiedSearchService
-from tripsage_core.services.external_apis.google_maps_service import GoogleMapsService
 from tripsage_core.services.infrastructure import CacheService
 from tripsage_core.services.infrastructure.database_service import DatabaseService
 
@@ -184,15 +182,7 @@ def get_cache_service_dep(request: Request) -> CacheService:
 
 
 # Google Maps service dependency (DI-managed in app lifespan)
-def get_maps_service_dep(request: Request) -> GoogleMapsService:
-    """Get DI-managed Google Maps service instance."""
-    return _get_required_service(request, "google_maps_service", GoogleMapsService)
 
-
-# Activity service dependency constructed from DI-managed services
-def get_activity_service_dep(request: Request) -> ActivityService:
-    """Return the ActivityService singleton."""
-    return _get_required_service(request, "activity_service", ActivityService)
 
 
 def get_file_processing_service(request: Request) -> FileProcessingService:
@@ -281,8 +271,7 @@ SettingsDep = Annotated[Settings, Depends(get_settings_dependency)]
 DatabaseDep = Annotated[DatabaseService, Depends(get_db)]
 CacheDep = Annotated[CacheService, Depends(get_cache_service_dep)]
 MCPServiceDep = Annotated[AirbnbMCP, Depends(get_mcp_service)]
-MapsServiceDep = Annotated[GoogleMapsService, Depends(get_maps_service_dep)]
-ActivityServiceDep = Annotated[ActivityService, Depends(get_activity_service_dep)]
+
 UnifiedSearchServiceDep = Annotated[
     UnifiedSearchService, Depends(get_unified_search_service_dep)
 ]

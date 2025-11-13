@@ -28,7 +28,6 @@ if TYPE_CHECKING:  # pragma: no cover - import only for type checking
     from tripsage_core.services.business.accommodation_service import (
         AccommodationService,
     )
-    from tripsage_core.services.business.activity_service import ActivityService
     from tripsage_core.services.business.destination_service import DestinationService
     from tripsage_core.services.business.file_processing_service import (
         FileProcessingService,
@@ -44,7 +43,6 @@ if TYPE_CHECKING:  # pragma: no cover - import only for type checking
     from tripsage_core.services.external_apis import (
         DocumentAnalyzer,
         GoogleCalendarService,
-        GoogleMapsService,
         PlaywrightService,
         TimeService,
         WebCrawlService,
@@ -64,7 +62,7 @@ class AppServiceContainer:
     # Business services
     accommodation_service: AccommodationService | None = None
     # chat_service removed
-    activity_service: ActivityService | None = None
+    activity_service: Any | None = None
     destination_service: DestinationService | None = None
     file_processing_service: FileProcessingService | None = None
     flight_service: FlightService | None = None
@@ -78,7 +76,7 @@ class AppServiceContainer:
     # External API services
     calendar_service: GoogleCalendarService | None = None
     document_analyzer: DocumentAnalyzer | None = None
-    google_maps_service: GoogleMapsService | None = None
+    google_maps_service: Any | None = None
     playwright_service: PlaywrightService | None = None
     time_service: TimeService | None = None
     webcrawl_service: WebCrawlService | None = None
@@ -145,21 +143,17 @@ async def _setup_infrastructure_services() -> tuple[DatabaseService, CacheServic
 
 
 async def _setup_external_services() -> tuple[
-    GoogleMapsService, DocumentAnalyzer, WebCrawlService
+    DocumentAnalyzer, WebCrawlService
 ]:
     """Initialise external API clients."""
     from tripsage_core.services.external_apis import (
         DocumentAnalyzer,
-        GoogleMapsService,
         WebCrawlService,
     )
 
-    google_maps_service = GoogleMapsService()
-    await google_maps_service.connect()
-
     document_analyzer = DocumentAnalyzer()
     webcrawl_service = WebCrawlService()
-    return google_maps_service, document_analyzer, webcrawl_service
+    return document_analyzer, webcrawl_service
 
 
 async def _setup_business_services(
@@ -167,14 +161,14 @@ async def _setup_business_services(
     database_service: DatabaseService,
     cache_service: CacheService,
     document_analyzer: DocumentAnalyzer,
-    google_maps_service: GoogleMapsService,
     settings: Any,
 ) -> dict[str, Any]:
     """Initialise business-layer services."""
     from tripsage_core.services.business.accommodation_service import (
         AccommodationService,
     )
-    from tripsage_core.services.business.activity_service import ActivityService
+
+    # ActivityService removed (migrated to Next.js tools)
     from tripsage_core.services.business.destination_service import DestinationService
     from tripsage_core.services.business.file_processing_service import (
         FileProcessingService,
@@ -200,10 +194,7 @@ async def _setup_business_services(
         ai_analysis_service=document_analyzer,
     )
     accommodation_service = AccommodationService(database_service=database_service)
-    activity_service = ActivityService(
-        google_maps_service=google_maps_service,
-        cache_service=cache_service,
-    )
+    activity_service = None
     destination_service = DestinationService(
         database_service=database_service,
     )
@@ -252,13 +243,12 @@ def _build_service_container(
     *,
     business: dict[str, Any],
     infrastructure: tuple[DatabaseService, CacheService],
-    external: tuple[GoogleMapsService, DocumentAnalyzer, WebCrawlService],
+    external: tuple[DocumentAnalyzer, WebCrawlService],
     mcp_service: AirbnbMCP,
 ) -> AppServiceContainer:
     """Assemble the AppServiceContainer with the provided components."""
     database_service, cache_service = infrastructure
     (
-        google_maps_service,
         document_analyzer,
         webcrawl_service,
     ) = external
@@ -276,7 +266,6 @@ def _build_service_container(
         unified_search_service=business["unified_search_service"],
         calendar_service=None,
         document_analyzer=document_analyzer,
-        google_maps_service=google_maps_service,
         webcrawl_service=webcrawl_service,
         cache_service=cache_service,
         database_service=database_service,
@@ -290,13 +279,11 @@ def _attach_services_to_app_state(
     services: AppServiceContainer,
     database_service: DatabaseService,
     cache_service: CacheService,
-    google_maps_service: GoogleMapsService,
     mcp_service: AirbnbMCP,
 ) -> None:
     """Attach commonly accessed services to ``app.state``."""
     app.state.services = services
     app.state.cache_service = cache_service
-    app.state.google_maps_service = google_maps_service
     app.state.database_service = database_service
     app.state.mcp_service = mcp_service
     app.state.supabase_admin_client = services.supabase_admin_client
@@ -316,8 +303,7 @@ async def initialise_app_state(
     business = await _setup_business_services(
         database_service=infrastructure[0],
         cache_service=infrastructure[1],
-        document_analyzer=external[1],
-        google_maps_service=external[0],
+        document_analyzer=external[0],
         settings=settings,
     )
     mcp_service = await _setup_mcp_service()
@@ -338,7 +324,6 @@ async def initialise_app_state(
         services=services,
         database_service=infrastructure[0],
         cache_service=infrastructure[1],
-        google_maps_service=external[0],
         mcp_service=mcp_service,
     )
 
@@ -355,8 +340,6 @@ async def shutdown_app_state(app: FastAPI) -> None:
 
     if services.cache_service:
         await services.cache_service.disconnect()
-    if services.google_maps_service:
-        await services.google_maps_service.close()
     if services.memory_service:
         await services.memory_service.close()
     if services.mcp_service:
@@ -368,7 +351,6 @@ async def shutdown_app_state(app: FastAPI) -> None:
     for attr in (
         "services",
         "cache_service",
-        "google_maps_service",
         "database_service",
         "mcp_service",
     ):

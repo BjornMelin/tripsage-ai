@@ -399,7 +399,8 @@ JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
 
 # External APIs (Optional - use BYOK instead)
 DUFFEL_ACCESS_TOKEN=your-duffel-access-token
-GOOGLE_MAPS_API_KEY=your-google-maps-key
+# Google Maps: use server key for server-side routes/services
+GOOGLE_MAPS_SERVER_API_KEY=your-google-maps-server-key
 OPENWEATHERMAP_API_KEY=your-weather-key
 ```
 

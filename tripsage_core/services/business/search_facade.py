@@ -8,11 +8,6 @@ a single facade with pluggable strategies.
 from abc import ABC, abstractmethod
 from typing import Any
 
-from tripsage.api.schemas.activities import (
-    ActivityResponse,
-    ActivitySearchRequest,
-    ActivitySearchResponse,
-)
 from tripsage.api.schemas.destinations import (
     Destination,
     DestinationRecommendation,
@@ -67,7 +62,7 @@ class ActivitySearchStrategy(SearchStrategy):
         """Initialize the activity search strategy."""
         self.activity_service = activity_service
 
-    async def search(self, request: ActivitySearchRequest) -> ActivitySearchResponse:
+    async def search(self, request: Any) -> Any:
         """Execute activity search."""
         return await self.activity_service.search_activities(request)
 
@@ -149,8 +144,8 @@ class SearchFacade:
 
     @tripsage_safe_execute()
     async def search_activities(
-        self, request: ActivitySearchRequest
-    ) -> ActivitySearchResponse:
+        self, request: Any
+    ) -> Any:
         """Search for activities.
 
         Args:
@@ -218,7 +213,7 @@ class SearchFacade:
         )
 
     @tripsage_safe_execute()
-    async def get_activity_details(self, activity_id: str) -> ActivityResponse | None:
+    async def get_activity_details(self, activity_id: str) -> Any | None:
         """Get detailed information about a specific activity.
 
         Args:

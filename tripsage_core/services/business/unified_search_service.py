@@ -34,8 +34,8 @@ RESOURCE_TYPES = {
     "activity": "activities",
 }
 
-# Default search types if none specified
-DEFAULT_SEARCH_TYPES = ["destination", "activity", "accommodation"]
+# Base default search types (augmented at runtime based on capabilities)
+BASE_DEFAULT_TYPES = ["destination", "accommodation"]
 
 
 class UnifiedSearchServiceError(CoreServiceError):
@@ -92,9 +92,11 @@ class UnifiedSearchService(
 
     def get_cache_fields(self, request: UnifiedSearchRequest) -> dict[str, Any]:
         """Extract fields for cache key generation."""
+        # Compute effective types for cache key stability when providers vary
+        effective_types = self._effective_types(request.types)
         cache_fields: dict[str, Any] = {
             "query": request.query,
-            "types": sorted(request.types or DEFAULT_SEARCH_TYPES),
+            "types": sorted(effective_types),
             "destination": request.destination,
             "start_date": request.start_date.isoformat()
             if request.start_date
@@ -124,6 +126,29 @@ class UnifiedSearchService(
     def _get_response_class(self) -> type[UnifiedSearchResponse]:
         """Get the response class for deserialization."""
         return UnifiedSearchResponse
+
+    def _effective_types(self, requested: list[str] | None) -> list[str]:
+        """Resolve the list of types to search given provider availability.
+
+        - Start from explicit "requested" types when provided; otherwise use
+          BASE_DEFAULT_TYPES (destination + accommodation).
+        - Include "activity" only when an activity provider is configured.
+        - Do not auto-include flights (remain opt-in based on request fields).
+        """
+        types = list(requested) if requested else list(BASE_DEFAULT_TYPES)
+
+        if "activity" in types and self._activity_service is None:
+            # Drop activities if no provider is wired in
+            types = [t for t in types if t != "activity"]
+
+        # Deduplicate while preserving order
+        seen: set[str] = set()
+        ordered: list[str] = []
+        for t in types:
+            if t not in seen:
+                seen.add(t)
+                ordered.append(t)
+        return ordered
 
     @tripsage_safe_execute()
     async def unified_search(
@@ -158,8 +183,8 @@ class UnifiedSearchService(
                 )
                 return cached_result
 
-            # Determine which types to search
-            search_types = request.types or DEFAULT_SEARCH_TYPES
+            # Determine which types to search given current capabilities
+            search_types = self._effective_types(request.types)
 
             # Prepare search tasks for parallel execution
             search_tasks: dict[str, Awaitable[list[SearchResultItem]]] = {}
@@ -169,8 +194,8 @@ class UnifiedSearchService(
             if "destination" in search_types:
                 search_tasks["destination"] = self._search_destinations(request)
 
-            # Activity search
-            if "activity" in search_types:
+            # Activity search (only when provider exists)
+            if "activity" in search_types and self._activity_service is not None:
                 search_tasks["activity"] = self._search_activities(request)
 
             # Flight search (if origin is provided)
@@ -308,6 +333,9 @@ class UnifiedSearchService(
     ) -> list[SearchResultItem]:
         """Search activities and convert to unified results."""
         try:
+            # Provider guard: if activity service is not configured, return empty
+            if self._activity_service is None:
+                return []
             if not request.destination:
                 return []
 
@@ -326,7 +354,6 @@ class UnifiedSearchService(
             )
 
             # Search using activity service
-            assert self._activity_service is not None
             activity_response = await self._activity_service.search_activities(
                 activity_request
             )
