@@ -306,7 +306,7 @@ This ensures deterministic parsing and type safety for AI responses.
 
 - Sliding window rate limiting per user/IP
 - Tiered limits: 40 req/min (streaming), 20 req/min (validation)
-- Distributed across Vercel Edge Functions
+- Deployed as Next.js Route Handlers/Background Functions on Vercel
 
 **Implementation**:
 
