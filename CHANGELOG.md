@@ -127,6 +127,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - QStash-managed worker route `/api/jobs/notify-collaborators` verifies `Upstash-Signature`, validates jobs with Zod, and calls the notification adapter.
   - Notification adapter `frontend/src/lib/notifications/collaborators.ts` sends Resend emails and optional downstream webhooks with Redis-backed idempotency.
   - Webhook payload normalization helper `frontend/src/lib/webhooks/payload.ts` parses raw Supabase payloads, verifies HMAC (`HMAC_SECRET`), and builds stable event keys.
+  - Vitest coverage for `/api/jobs/notify-collaborators` covering missing keys, signature failures, schema validation, duplicate suppression, and successful notification runs.
 - Embeddings API route `/api/embeddings` now uses AI SDK v6 `embed` with OpenAI `text-embedding-3-small`, returning 1536‑dimensional embeddings with usage metadata.
 - Zod schemas for webhook payloads and notification jobs in `frontend/src/lib/schemas/webhooks.ts`.
 - ADR-0041 documenting QStash + Resend notification pipeline and SPEC-0025 defining trip collaborator notification behavior.
@@ -151,6 +152,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Env: `.env.example` simplified — require only `FIRECRAWL_API_KEY`; `FIRECRAWL_BASE_URL` optional for self‑hosted Firecrawl.
 - Env: frontend `.env.example` extended with notification and webhook variables (`RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `RESEND_FROM_NAME`, `QSTASH_TOKEN`, `QSTASH_CURRENT_SIGNING_KEY`, `QSTASH_NEXT_SIGNING_KEY`, `COLLAB_WEBHOOK_URL`, `HMAC_SECRET`) and wired through `frontend/src/lib/env/schema.ts`.
 - Notification behavior for `trip_collaborators` webhooks now flows through `/api/hooks/trips` → QStash queue → `/api/jobs/notify-collaborators`, replacing any legacy in-route side effects.
+- Notification pipeline hardening:
+  - `/api/jobs/notify-collaborators` now fails closed when QStash signing keys are missing and always verifies `Upstash-Signature` before processing jobs.
+  - `/api/hooks/trips` fallback execution runs inside its own telemetry span to retain error visibility without touching closed parent spans.
+  - SPEC-0021, the operator guide, and `.env.example` now describe the cache tag bump strategy and the requirement to configure QStash signing keys before accepting jobs.
 - BYOK POST/DELETE adapters (`frontend/src/app/api/keys/route.ts`, `frontend/src/app/api/keys/[service]/route.ts`) now build rate limiters per request, derive identifiers per user/IP, and wrap Supabase RPC calls in telemetry spans carrying rate-limit attributes and sanitized key metadata; route tests updated to stub the new factory and span helper.
 - Same BYOK routes now export `dynamic = "force-dynamic"`/`revalidate = 0` and document the no-cache rationale so user-specific secrets never reuse stale responses.
 - Service normalization and rate-limit identifier behavior are documented/tested (see `frontend/src/app/api/keys/_handlers.ts`, route tests, and `frontend/src/lib/next/route-helpers.ts`), closing reviewer feedback.

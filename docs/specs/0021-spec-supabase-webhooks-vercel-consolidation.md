@@ -60,8 +60,10 @@ Decommission Supabase Edge Functions and related CLI deploy steps after dual-run
   - Validate signature and known table (e.g., `trip_collaborators`).
   - Compute a stable event key from table, type, occurred_at, and record hash.
   - Enforce idempotency via Upstash Redis (`SET NX` with TTL) using the event key.
-  - For `trip_collaborators`, enqueue a job to a background notifications worker
-    (see SPEC-0025) or fall back to in-process background work for development.
+  - For `trip_collaborators`, enqueue a job to the QStash-backed notification worker
+    (see SPEC-0025). The worker rejects requests unless `QSTASH_CURRENT_SIGNING_KEY`
+    is configured and the `Upstash-Signature` header verifies. The route only falls
+    back to in-process work when QStash is intentionally disabled for development.
 
 ### POST /api/hooks/files
 
@@ -75,9 +77,12 @@ Decommission Supabase Edge Functions and related CLI deploy steps after dual-run
 ### POST /api/hooks/cache
 
 - Behavior:
-  - Validate signature
-  - Determine cache patterns from table name; clear Upstash Redis; optionally prune search_* tables
-  - Notify downstream webhook if configured
+  - Validate signature via the shared HMAC helper.
+  - Determine cache tags for the table (e.g., `trip`, `search`) and bump their version
+    counters in Upstash Redis via `bumpTags(tags)`; consumers compose cache keys as
+    `tag:v{version}:{key}` using `frontend/src/lib/cache/tags.ts`.
+  - Return the bumped versions for observability; no Redis key deletion or downstream
+    webhook forwarding occurs in the final implementation.
 
 ### POST /api/embeddings
 
