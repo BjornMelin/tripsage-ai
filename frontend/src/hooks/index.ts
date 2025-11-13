@@ -7,8 +7,6 @@ export * from "./use-accommodation-search";
 export * from "./use-activity-search";
 export * from "./use-agent-status";
 export * from "./use-agent-status-websocket";
-// Legacy hooks (to be migrated)
-export * from "./use-api-query";
 // Modern API hooks
 export * from "./use-authenticated-api";
 export * from "./use-budget";
@@ -22,7 +20,6 @@ export * from "./use-optimistic-chat";
 export * from "./use-search";
 export * from "./use-supabase-chat";
 // Supabase hooks
-export * from "./use-supabase-query";
 export * from "./use-supabase-realtime";
 export * from "./use-supabase-storage";
 export * from "./use-trips";

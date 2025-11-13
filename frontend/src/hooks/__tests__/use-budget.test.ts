@@ -19,28 +19,33 @@ import {
   useUpdateExpense,
 } from "../use-budget";
 
-// Mock all API-related hooks
-vi.mock("../use-api-query", () => ({
-  useApiDeleteMutation: vi.fn().mockReturnValue({
-    error: null,
-    isPending: false,
-    mutate: vi.fn(),
-  }),
-  useApiMutation: vi.fn().mockReturnValue({
-    error: null,
-    isPending: false,
-    mutate: vi.fn(),
-  }),
-  useApiPutMutation: vi.fn().mockReturnValue({
-    error: null,
-    isPending: false,
-    mutate: vi.fn(),
-  }),
-  useApiQuery: vi.fn().mockReturnValue({
-    data: undefined,
-    error: null,
-    isLoading: false,
-    refetch: vi.fn(),
+// Mock TanStack Query
+vi.mock("@tanstack/react-query", async () => {
+  const actual = await vi.importActual("@tanstack/react-query");
+  return {
+    ...actual,
+    useMutation: vi.fn().mockReturnValue({
+      error: null,
+      isPending: false,
+      mutate: vi.fn(),
+      mutateAsync: vi.fn(),
+    }),
+    useQuery: vi.fn().mockReturnValue({
+      data: undefined,
+      error: null,
+      isLoading: false,
+      refetch: vi.fn(),
+    }),
+    useQueryClient: vi.fn().mockReturnValue({
+      invalidateQueries: vi.fn(),
+    }),
+  };
+});
+
+// Mock authenticated API hook
+vi.mock("@/hooks/use-authenticated-api", () => ({
+  useAuthenticatedApi: vi.fn().mockReturnValue({
+    makeAuthenticatedRequest: vi.fn().mockResolvedValue({}),
   }),
 }));
 

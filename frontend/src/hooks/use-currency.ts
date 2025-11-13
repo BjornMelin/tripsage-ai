@@ -7,9 +7,12 @@
 
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect } from "react";
 import { z } from "zod";
-import { useApiQuery } from "@/hooks/use-api-query";
+import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
+import { type AppError, handleApiError, isApiError } from "@/lib/api/error-types";
+import { staleTimes } from "@/lib/query-keys";
 import type {
   ConversionResult,
   CurrencyCode,
@@ -132,6 +135,7 @@ export function useCurrencyData() {
  */
 export function useFetchExchangeRates() {
   const { updateAllExchangeRates } = useCurrencyStore();
+  const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
   // Define response schema for better validation
   const responseSchema = z.object({
@@ -140,14 +144,27 @@ export function useFetchExchangeRates() {
     timestamp: z.string().datetime(),
   });
 
-  const query = useApiQuery<UpdateExchangeRatesResponse>(
-    "/api/currencies/rates",
-    {},
-    {
-      // Refresh rates every hour
-      refetchInterval: 60 * 60 * 1000,
-    }
-  );
+  const query = useQuery<UpdateExchangeRatesResponse, AppError>({
+    queryFn: async () => {
+      try {
+        return await makeAuthenticatedRequest<UpdateExchangeRatesResponse>(
+          "/api/currencies/rates"
+        );
+      } catch (error) {
+        throw handleApiError(error);
+      }
+    },
+    queryKey: ["currency", "rates"],
+    refetchInterval: 60 * 60 * 1000, // Refresh rates every hour
+    retry: (failureCount, error) => {
+      if (isApiError(error)) {
+        if (error.status === 401 || error.status === 403) return false;
+      }
+      return failureCount < 2;
+    },
+    staleTime: staleTimes.currency,
+    throwOnError: false,
+  });
 
   useEffect(() => {
     if (query.data) {
@@ -171,14 +188,29 @@ export function useFetchExchangeRates() {
  */
 export function useFetchExchangeRate(targetCurrency: CurrencyCode) {
   const { baseCurrency, updateExchangeRate } = useCurrencyStore();
+  const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
-  const query = useApiQuery<{ rate: number; timestamp: string }>(
-    `/api/currencies/rates/${targetCurrency}`,
-    {},
-    {
-      enabled: !!targetCurrency && targetCurrency !== baseCurrency,
-    }
-  );
+  const query = useQuery<{ rate: number; timestamp: string }, AppError>({
+    enabled: !!targetCurrency && targetCurrency !== baseCurrency,
+    queryFn: async () => {
+      try {
+        return await makeAuthenticatedRequest<{ rate: number; timestamp: string }>(
+          `/api/currencies/rates/${targetCurrency}`
+        );
+      } catch (error) {
+        throw handleApiError(error);
+      }
+    },
+    queryKey: ["currency", "rate", targetCurrency],
+    retry: (failureCount, error) => {
+      if (isApiError(error)) {
+        if (error.status === 401 || error.status === 403) return false;
+      }
+      return failureCount < 2;
+    },
+    staleTime: staleTimes.currency,
+    throwOnError: false,
+  });
 
   useEffect(() => {
     if (query.data) {

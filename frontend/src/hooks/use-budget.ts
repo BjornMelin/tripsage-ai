@@ -7,13 +7,11 @@
 
 "use client";
 
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import {
-  useApiDeleteMutation,
-  useApiMutation,
-  useApiPutMutation,
-  useApiQuery,
-} from "@/hooks/use-api-query";
+import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
+import { type AppError, handleApiError, isApiError } from "@/lib/api/error-types";
+import { queryKeys, staleTimes } from "@/lib/query-keys";
 import type {
   AddExpenseRequest,
   Budget,
@@ -113,8 +111,26 @@ export function useAlerts(budgetId?: string) {
  */
 export function useFetchBudgets() {
   const { setBudgets } = useBudgetStore();
+  const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
-  const query = useApiQuery<{ budgets: Budget[] }>("/api/budgets", {});
+  const query = useQuery<{ budgets: Budget[] }, AppError>({
+    queryFn: async () => {
+      try {
+        return await makeAuthenticatedRequest<{ budgets: Budget[] }>("/api/budgets");
+      } catch (error) {
+        throw handleApiError(error);
+      }
+    },
+    queryKey: queryKeys.budget.categories(),
+    retry: (failureCount, error) => {
+      if (isApiError(error)) {
+        if (error.status === 401 || error.status === 403) return false;
+      }
+      return failureCount < 2;
+    },
+    staleTime: staleTimes.categories,
+    throwOnError: false,
+  });
 
   useEffect(() => {
     if (query.data) {
@@ -141,14 +157,27 @@ export function useFetchBudgets() {
  */
 export function useFetchBudget(id: string) {
   const { addBudget } = useBudgetStore();
+  const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
-  const query = useApiQuery<Budget>(
-    `/api/budgets/${id}`,
-    {},
-    {
-      enabled: !!id,
-    }
-  );
+  const query = useQuery<Budget, AppError>({
+    enabled: !!id,
+    queryFn: async () => {
+      try {
+        return await makeAuthenticatedRequest<Budget>(`/api/budgets/${id}`);
+      } catch (error) {
+        throw handleApiError(error);
+      }
+    },
+    queryKey: queryKeys.budget.trips(Number.parseInt(id, 10)),
+    retry: (failureCount, error) => {
+      if (isApiError(error)) {
+        if (error.status === 401 || error.status === 403) return false;
+      }
+      return failureCount < 2;
+    },
+    staleTime: staleTimes.categories,
+    throwOnError: false,
+  });
 
   useEffect(() => {
     if (query.data) {
@@ -164,8 +193,32 @@ export function useFetchBudget(id: string) {
  */
 export function useCreateBudget() {
   const { addBudget } = useBudgetStore();
+  const { makeAuthenticatedRequest } = useAuthenticatedApi();
+  const queryClient = useQueryClient();
 
-  const mutation = useApiMutation<Budget, CreateBudgetRequest>("/api/budgets");
+  const mutation = useMutation<Budget, AppError, CreateBudgetRequest>({
+    mutationFn: async (variables) => {
+      try {
+        return await makeAuthenticatedRequest<Budget>("/api/budgets", {
+          body: JSON.stringify(variables),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        });
+      } catch (error) {
+        throw handleApiError(error);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.budget.categories() });
+    },
+    retry: (failureCount, error) => {
+      if (isApiError(error)) {
+        if (error.status >= 400 && error.status < 500) return false;
+      }
+      return failureCount < 1;
+    },
+    throwOnError: false,
+  });
 
   useEffect(() => {
     if (mutation.data) {
@@ -181,8 +234,35 @@ export function useCreateBudget() {
  */
 export function useUpdateBudget() {
   const { updateBudget } = useBudgetStore();
+  const { makeAuthenticatedRequest } = useAuthenticatedApi();
+  const queryClient = useQueryClient();
 
-  const mutation = useApiPutMutation<Budget, UpdateBudgetRequest>("/api/budgets");
+  const mutation = useMutation<Budget, AppError, UpdateBudgetRequest>({
+    mutationFn: async (variables) => {
+      try {
+        return await makeAuthenticatedRequest<Budget>("/api/budgets", {
+          body: JSON.stringify(variables),
+          headers: { "Content-Type": "application/json" },
+          method: "PUT",
+        });
+      } catch (error) {
+        throw handleApiError(error);
+      }
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.budget.trips(Number.parseInt(data.id, 10)),
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.budget.categories() });
+    },
+    retry: (failureCount, error) => {
+      if (isApiError(error)) {
+        if (error.status >= 400 && error.status < 500) return false;
+      }
+      return failureCount < 1;
+    },
+    throwOnError: false,
+  });
 
   useEffect(() => {
     if (mutation.data) {
@@ -198,10 +278,36 @@ export function useUpdateBudget() {
  */
 export function useDeleteBudget() {
   const { removeBudget } = useBudgetStore();
+  const { makeAuthenticatedRequest } = useAuthenticatedApi();
+  const queryClient = useQueryClient();
 
-  const mutation = useApiDeleteMutation<{ success: boolean; id: string }, string>(
-    "/api/budgets"
-  );
+  const mutation = useMutation<{ success: boolean; id: string }, AppError, string>({
+    mutationFn: async (id) => {
+      try {
+        return await makeAuthenticatedRequest<{ success: boolean; id: string }>(
+          `/api/budgets/${id}`,
+          {
+            method: "DELETE",
+          }
+        );
+      } catch (error) {
+        throw handleApiError(error);
+      }
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.budget.trips(Number.parseInt(data.id, 10)),
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.budget.categories() });
+    },
+    retry: (failureCount, error) => {
+      if (isApiError(error)) {
+        if (error.status >= 400 && error.status < 500) return false;
+      }
+      return failureCount < 1;
+    },
+    throwOnError: false,
+  });
 
   useEffect(() => {
     if (mutation.data?.success) {
@@ -219,14 +325,29 @@ export function useDeleteBudget() {
  */
 export function useFetchExpenses(budgetId: string) {
   const { setExpenses } = useBudgetStore();
+  const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
-  const query = useApiQuery<{ expenses: Expense[] }>(
-    `/api/budgets/${budgetId}/expenses`,
-    {},
-    {
-      enabled: !!budgetId,
-    }
-  );
+  const query = useQuery<{ expenses: Expense[] }, AppError>({
+    enabled: !!budgetId,
+    queryFn: async () => {
+      try {
+        return await makeAuthenticatedRequest<{ expenses: Expense[] }>(
+          `/api/budgets/${budgetId}/expenses`
+        );
+      } catch (error) {
+        throw handleApiError(error);
+      }
+    },
+    queryKey: ["budget", "expenses", budgetId],
+    retry: (failureCount, error) => {
+      if (isApiError(error)) {
+        if (error.status === 401 || error.status === 403) return false;
+      }
+      return failureCount < 2;
+    },
+    staleTime: staleTimes.categories,
+    throwOnError: false,
+  });
 
   useEffect(() => {
     if (query.data) {
@@ -242,8 +363,34 @@ export function useFetchExpenses(budgetId: string) {
  */
 export function useAddExpense() {
   const { addExpense } = useBudgetStore();
+  const { makeAuthenticatedRequest } = useAuthenticatedApi();
+  const queryClient = useQueryClient();
 
-  const mutation = useApiMutation<Expense, AddExpenseRequest>("/api/expenses");
+  const mutation = useMutation<Expense, AppError, AddExpenseRequest>({
+    mutationFn: async (variables) => {
+      try {
+        return await makeAuthenticatedRequest<Expense>("/api/expenses", {
+          body: JSON.stringify(variables),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        });
+      } catch (error) {
+        throw handleApiError(error);
+      }
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({
+        queryKey: ["budget", "expenses", data.budgetId],
+      });
+    },
+    retry: (failureCount, error) => {
+      if (isApiError(error)) {
+        if (error.status >= 400 && error.status < 500) return false;
+      }
+      return failureCount < 1;
+    },
+    throwOnError: false,
+  });
 
   useEffect(() => {
     if (mutation.data) {
@@ -259,8 +406,34 @@ export function useAddExpense() {
  */
 export function useUpdateExpense() {
   const { updateExpense } = useBudgetStore();
+  const { makeAuthenticatedRequest } = useAuthenticatedApi();
+  const queryClient = useQueryClient();
 
-  const mutation = useApiPutMutation<Expense, UpdateExpenseRequest>("/api/expenses");
+  const mutation = useMutation<Expense, AppError, UpdateExpenseRequest>({
+    mutationFn: async (variables) => {
+      try {
+        return await makeAuthenticatedRequest<Expense>("/api/expenses", {
+          body: JSON.stringify(variables),
+          headers: { "Content-Type": "application/json" },
+          method: "PUT",
+        });
+      } catch (error) {
+        throw handleApiError(error);
+      }
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({
+        queryKey: ["budget", "expenses", data.budgetId],
+      });
+    },
+    retry: (failureCount, error) => {
+      if (isApiError(error)) {
+        if (error.status >= 400 && error.status < 500) return false;
+      }
+      return failureCount < 1;
+    },
+    throwOnError: false,
+  });
 
   useEffect(() => {
     if (mutation.data) {
@@ -276,11 +449,40 @@ export function useUpdateExpense() {
  */
 export function useDeleteExpense() {
   const { removeExpense } = useBudgetStore();
+  const { makeAuthenticatedRequest } = useAuthenticatedApi();
+  const queryClient = useQueryClient();
 
-  const mutation = useApiDeleteMutation<
+  const mutation = useMutation<
     { success: boolean; id: string; budgetId: string },
+    AppError,
     string
-  >("/api/expenses");
+  >({
+    mutationFn: async (id) => {
+      try {
+        return await makeAuthenticatedRequest<{
+          success: boolean;
+          id: string;
+          budgetId: string;
+        }>(`/api/expenses/${id}`, {
+          method: "DELETE",
+        });
+      } catch (error) {
+        throw handleApiError(error);
+      }
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({
+        queryKey: ["budget", "expenses", data.budgetId],
+      });
+    },
+    retry: (failureCount, error) => {
+      if (isApiError(error)) {
+        if (error.status >= 400 && error.status < 500) return false;
+      }
+      return failureCount < 1;
+    },
+    throwOnError: false,
+  });
 
   useEffect(() => {
     if (mutation.data?.success) {
@@ -298,14 +500,29 @@ export function useDeleteExpense() {
  */
 export function useFetchAlerts(budgetId: string) {
   const { setAlerts } = useBudgetStore();
+  const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
-  const query = useApiQuery<{ alerts: BudgetAlert[] }>(
-    `/api/budgets/${budgetId}/alerts`,
-    {},
-    {
-      enabled: !!budgetId,
-    }
-  );
+  const query = useQuery<{ alerts: BudgetAlert[] }, AppError>({
+    enabled: !!budgetId,
+    queryFn: async () => {
+      try {
+        return await makeAuthenticatedRequest<{ alerts: BudgetAlert[] }>(
+          `/api/budgets/${budgetId}/alerts`
+        );
+      } catch (error) {
+        throw handleApiError(error);
+      }
+    },
+    queryKey: ["budget", "alerts", budgetId],
+    retry: (failureCount, error) => {
+      if (isApiError(error)) {
+        if (error.status === 401 || error.status === 403) return false;
+      }
+      return failureCount < 2;
+    },
+    staleTime: staleTimes.categories,
+    throwOnError: false,
+  });
 
   useEffect(() => {
     if (query.data) {
@@ -321,8 +538,32 @@ export function useFetchAlerts(budgetId: string) {
  */
 export function useCreateAlert() {
   const { addAlert } = useBudgetStore();
+  const { makeAuthenticatedRequest } = useAuthenticatedApi();
+  const queryClient = useQueryClient();
 
-  const mutation = useApiMutation<BudgetAlert, CreateBudgetAlertRequest>("/api/alerts");
+  const mutation = useMutation<BudgetAlert, AppError, CreateBudgetAlertRequest>({
+    mutationFn: async (variables) => {
+      try {
+        return await makeAuthenticatedRequest<BudgetAlert>("/api/alerts", {
+          body: JSON.stringify(variables),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        });
+      } catch (error) {
+        throw handleApiError(error);
+      }
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["budget", "alerts", data.budgetId] });
+    },
+    retry: (failureCount, error) => {
+      if (isApiError(error)) {
+        if (error.status >= 400 && error.status < 500) return false;
+      }
+      return failureCount < 1;
+    },
+    throwOnError: false,
+  });
 
   useEffect(() => {
     if (mutation.data) {
@@ -338,11 +579,40 @@ export function useCreateAlert() {
  */
 export function useMarkAlertAsRead() {
   const { markAlertAsRead } = useBudgetStore();
+  const { makeAuthenticatedRequest } = useAuthenticatedApi();
+  const queryClient = useQueryClient();
 
-  const mutation = useApiPutMutation<
+  const mutation = useMutation<
     { id: string; budgetId: string; isRead: boolean },
+    AppError,
     { id: string; budgetId: string }
-  >("/api/alerts/read");
+  >({
+    mutationFn: async (variables) => {
+      try {
+        return await makeAuthenticatedRequest<{
+          id: string;
+          budgetId: string;
+          isRead: boolean;
+        }>("/api/alerts/read", {
+          body: JSON.stringify(variables),
+          headers: { "Content-Type": "application/json" },
+          method: "PUT",
+        });
+      } catch (error) {
+        throw handleApiError(error);
+      }
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["budget", "alerts", data.budgetId] });
+    },
+    retry: (failureCount, error) => {
+      if (isApiError(error)) {
+        if (error.status >= 400 && error.status < 500) return false;
+      }
+      return failureCount < 1;
+    },
+    throwOnError: false,
+  });
 
   useEffect(() => {
     if (mutation.data) {
@@ -358,15 +628,29 @@ export function useMarkAlertAsRead() {
  */
 export function useFetchCurrencyRates() {
   const { setCurrencies } = useBudgetStore();
+  const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
-  const query = useApiQuery<{ rates: Record<string, number> }>(
-    "/api/currencies/rates",
-    {},
-    {
-      // Refresh currency rates every hour
-      refetchInterval: 60 * 60 * 1000,
-    }
-  );
+  const query = useQuery<{ rates: Record<string, number> }, AppError>({
+    queryFn: async () => {
+      try {
+        return await makeAuthenticatedRequest<{ rates: Record<string, number> }>(
+          "/api/currencies/rates"
+        );
+      } catch (error) {
+        throw handleApiError(error);
+      }
+    },
+    queryKey: ["currency", "rates"],
+    refetchInterval: 60 * 60 * 1000, // Refresh currency rates every hour
+    retry: (failureCount, error) => {
+      if (isApiError(error)) {
+        if (error.status === 401 || error.status === 403) return false;
+      }
+      return failureCount < 2;
+    },
+    staleTime: staleTimes.currency,
+    throwOnError: false,
+  });
 
   useEffect(() => {
     if (query.data) {

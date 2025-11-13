@@ -96,7 +96,7 @@ conversational AI applications.
 - **Types & Schemas**: Zod v3 for runtime validation
 - **UI Components**: Radix UI primitives with Tailwind styling
 - **State Management**: Zustand for client state
-- **Data Fetching**: TanStack Query v5 for server state
+- **Data Fetching**: TanStack Query v5 for server state management. All data fetching hooks use `useQuery` and `useMutation` directly with the unified `apiClient` from `useAuthenticatedApi()`.
 - **Testing**: Vitest (unit + integration) + Playwright (e2e)
 - **Code Quality**: Biome (single gate for linting/formatting)
 - **Observability**: OpenTelemetry with Trace Drains
