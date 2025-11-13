@@ -302,6 +302,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Refactor
 
 - **[Core]:** Standardized all data fetching on TanStack Query, removing custom abstraction hooks (`useApiQuery`, `useSupabaseQuery`) to simplify server state management. All data fetching hooks now use `useQuery` and `useMutation` directly with the unified `apiClient` from `useAuthenticatedApi()`.
+  - Removed custom `getSessionId` helper in favor of the shared utility in `src/lib/utils.ts`.
 - **[Trips]:** Unified three separate trip data hooks into a single `useTrips` hook to manage all CRUD operations and real-time updates for the trip domain.
 - **[API]:** Consolidated three separate API clients into a single, unified `ApiClient` to enforce a consistent pattern for all HTTP requests.
 - [Core]: Unified all data models into canonical Zod v4 schemas under
