@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 
 
 __all__ = [
-    "activities",
     "attachments",
     "auth",
     "config",
@@ -24,7 +23,6 @@ __all__ = [
 
 if TYPE_CHECKING:
     from . import (
-        activities,
         attachments,
         auth,
         config,

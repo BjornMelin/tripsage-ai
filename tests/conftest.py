@@ -324,8 +324,6 @@ def app() -> FastAPI:
     app = build_minimal_app()
     # Include routers needed for integration tests
     from tripsage.api.routers import (
-        accommodations,
-        activities,
         attachments,
         config,
         destinations,
@@ -339,9 +337,7 @@ def app() -> FastAPI:
     app.include_router(health.router, prefix="/api", tags=["health"])
     app.include_router(config.router, prefix="/api", tags=["configuration"])
     app.include_router(trips.router, prefix="/api/trips", tags=["trips"])
-    # chat router removed; chat is handled in Next.js
     app.include_router(memory.router, prefix="/api", tags=["memory"])
-    app.include_router(activities.router, prefix="/api/activities", tags=["activities"])
     app.include_router(
         destinations.router, prefix="/api/destinations", tags=["destinations"]
     )
@@ -350,9 +346,6 @@ def app() -> FastAPI:
     )
     # Search router defines root-level paths (e.g., /unified, /suggest)
     app.include_router(search.router, prefix="", tags=["search"])
-    app.include_router(
-        accommodations.router, prefix="/api/accommodations", tags=["accommodations"]
-    )
     app.include_router(
         attachments.router, prefix="/api/attachments", tags=["attachments"]
     )
