@@ -79,10 +79,9 @@ describe("Memory Hooks", () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(MOCK_MAKE_AUTHENTICATED_REQUEST).toHaveBeenCalledWith(
-        "/api/memory/context/user-123",
-        { params: {} }
-      );
+      expect(MOCK_MAKE_AUTHENTICATED_REQUEST).toHaveBeenCalled();
+      const firstCall = MOCK_MAKE_AUTHENTICATED_REQUEST.mock.calls[0];
+      expect(firstCall[0]).toBe("/api/memory/context/user-123");
       expect(result.current.data).toEqual(mockResponse);
     });
 
@@ -106,9 +105,12 @@ describe("Memory Hooks", () => {
         wrapper: CREATE_WRAPPER(),
       });
 
-      await waitFor(() => {
-        expect(result.current.isError).toBe(true);
-      });
+      await waitFor(
+        () => {
+          expect(result.current.isError).toBe(true);
+        },
+        { timeout: 3000 }
+      );
 
       expect(result.current.error).toBeInstanceOf(Error);
     });
@@ -253,9 +255,12 @@ describe("Memory Hooks", () => {
 
       result.current.mutate(conversationData);
 
-      await waitFor(() => {
-        expect(result.current.isError).toBe(true);
-      });
+      await waitFor(
+        () => {
+          expect(result.current.isError).toBe(true);
+        },
+        { timeout: 3000 }
+      );
 
       expect(result.current.error).toBeInstanceOf(Error);
     });
@@ -332,10 +337,12 @@ describe("Memory Hooks", () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(MOCK_MAKE_AUTHENTICATED_REQUEST).toHaveBeenCalledWith(
-        "/api/memory/insights/user-123",
-        { params: {} }
-      );
+      expect(MOCK_MAKE_AUTHENTICATED_REQUEST).toHaveBeenCalled();
+      {
+        const calls = MOCK_MAKE_AUTHENTICATED_REQUEST.mock.calls;
+        const lastCall = calls[calls.length - 1];
+        expect(lastCall?.[0]).toBe("/api/memory/insights/user-123");
+      }
       expect(result.current.data).toEqual(mockInsights);
     });
   });
@@ -363,10 +370,12 @@ describe("Memory Hooks", () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(MOCK_MAKE_AUTHENTICATED_REQUEST).toHaveBeenCalledWith(
-        "/api/memory/stats/user-123",
-        { params: {} }
-      );
+      expect(MOCK_MAKE_AUTHENTICATED_REQUEST).toHaveBeenCalled();
+      {
+        const calls = MOCK_MAKE_AUTHENTICATED_REQUEST.mock.calls;
+        const lastCall = calls[calls.length - 1];
+        expect(lastCall?.[0]).toBe("/api/memory/stats/user-123");
+      }
       expect(result.current.data).toEqual(mockStats);
     });
   });

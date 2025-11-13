@@ -212,12 +212,14 @@ describe("bookAccommodation", () => {
 
     const result = await bookAccommodation.execute?.(
       {
+        bookingToken: "test-booking-token-123",
         checkin: "2024-01-01",
         checkout: "2024-01-05",
         guestEmail: "test@example.com",
         guestName: "Test User",
         guests: 1,
         listingId: "123",
+        paymentMethodId: "pm_test_123",
         sessionId: "session-123",
       },
       mockContext
@@ -258,12 +260,14 @@ describe("bookAccommodation", () => {
     await expect(
       bookAccommodation.execute?.(
         {
+          bookingToken: "test-booking-token-123",
           checkin: "2024-01-01",
           checkout: "2024-01-05",
           guestEmail: "test@example.com",
           guestName: "Test User",
           guests: 1,
           listingId: "123",
+          paymentMethodId: "pm_test_123",
         },
         mockContext
       )

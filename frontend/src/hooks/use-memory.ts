@@ -135,8 +135,7 @@ export function useMemoryInsights(userId: string, enabled = true) {
     queryFn: async () => {
       try {
         return await makeAuthenticatedRequest<MemoryInsightsResponse>(
-          `/api/memory/insights/${userId}`,
-          { params: {} }
+          `/api/memory/insights/${userId}`
         );
       } catch (error) {
         throw handleApiError(error);
@@ -247,7 +246,7 @@ export function useMemoryStats(userId: string, enabled = true) {
           memoryTypes: Record<string, number>;
           storageSize: number;
           totalMemories: number;
-        }>(`/api/memory/stats/${userId}`, { params: {} });
+        }>(`/api/memory/stats/${userId}`);
       } catch (error) {
         throw handleApiError(error);
       }

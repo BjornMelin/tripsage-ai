@@ -8,6 +8,7 @@
 
 import {
   bookAccommodation,
+  checkAvailability,
   getAccommodationDetails,
   searchAccommodations,
 } from "./accommodations";
@@ -41,6 +42,7 @@ import { webSearchBatch } from "./web-search-batch";
 export const toolRegistry = {
   addConversationMemory,
   bookAccommodation,
+  checkAvailability,
   combineSearchResults,
   crawlSite,
   crawlUrl,
