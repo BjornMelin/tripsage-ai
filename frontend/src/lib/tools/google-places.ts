@@ -11,8 +11,8 @@
 
 import { tool } from "ai";
 import { z } from "zod";
+import { getGoogleMapsServerKey } from "@/lib/env/server";
 import { cacheLatLng, getCachedLatLng } from "@/lib/google/caching";
-import { getGoogleMapsServerKey } from "@/lib/google/keys";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 /**

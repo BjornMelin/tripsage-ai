@@ -1,6 +1,8 @@
 /**
- * @fileoverview Environment variable validation with Zod
- * Provides runtime type safety for all environment variables
+ * @fileoverview Shared environment variable schema definitions.
+ *
+ * Central Zod schema for all environment variables. This module contains
+ * only schema definitions and types; no process.env access or runtime logic.
  */
 
 import { z } from "zod";
@@ -41,11 +43,13 @@ const databaseEnvSchema = z.object({
 
 // Cache configuration (Redis)
 const cacheEnvSchema = z.object({
-  // Deprecated: DRAGONFLY_URL removed; use REDIS_URL
   CACHE_HOST: z.string().optional(),
   CACHE_PASSWORD: z.string().optional(),
   CACHE_PORT: z.coerce.number().int().positive().optional(),
   REDIS_URL: z.string().url().optional(),
+  UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
+  // Upstash REST (web search tools)
+  UPSTASH_REDIS_REST_URL: z.string().url().optional(),
 });
 
 // Authentication providers
@@ -63,17 +67,32 @@ const aiServiceEnvSchema = z.object({
   ANTHROPIC_API_KEY: z.string().optional(),
   AZURE_OPENAI_API_KEY: z.string().optional(),
   AZURE_OPENAI_ENDPOINT: z.string().url().optional(),
+  // Firecrawl & Exa search/crawl
+  FIRECRAWL_API_KEY: z.string().optional(),
+  FIRECRAWL_BASE_URL: z.string().url().optional(),
   GOOGLE_AI_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
 });
 
-// Travel API Keys
+// Travel & External API Keys
 const travelApiEnvSchema = z.object({
+  ACCOM_SEARCH_TOKEN: z.string().optional(),
+  ACCOM_SEARCH_URL: z.string().url().optional(),
+  AIRBNB_MCP_API_KEY: z.string().optional(),
+  // Accommodations MCP / HTTP
+  AIRBNB_MCP_URL: z.string().url().optional(),
   AMADEUS_API_KEY: z.string().optional(),
   AMADEUS_API_SECRET: z.string().optional(),
   BOOKING_API_KEY: z.string().optional(),
-  GOOGLE_MAPS_API_KEY: z.string().optional(),
-  GOOGLE_PLACES_API_KEY: z.string().optional(),
+  // Duffel flights
+  DUFFEL_ACCESS_TOKEN: z.string().optional(),
+  DUFFEL_API_KEY: z.string().optional(),
+  // Server routes/tools: Server key for Geocoding/Places/Routes/Time Zone (IP+API restricted)
+  GOOGLE_MAPS_SERVER_API_KEY: z.string().optional(),
+  // Frontend: Browser key for Maps JS (referrer-restricted)
+  NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY: z.string().optional(),
+  // Weather
+  OPENWEATHERMAP_API_KEY: z.string().optional(),
   SKYSCANNER_API_KEY: z.string().optional(),
 });
 
@@ -119,18 +138,21 @@ const developmentEnvSchema = z.object({
 });
 
 // Complete environment schema
-const envSchema = baseEnvSchema
-  .merge(nextEnvSchema)
-  .merge(supabaseEnvSchema)
-  .merge(databaseEnvSchema)
-  .merge(cacheEnvSchema)
-  .merge(authEnvSchema)
-  .merge(aiServiceEnvSchema)
-  .merge(travelApiEnvSchema)
-  .merge(monitoringEnvSchema)
-  .merge(featureEnvSchema)
-  .merge(securityEnvSchema)
-  .merge(developmentEnvSchema)
+export const envSchema = z
+  .object({
+    ...baseEnvSchema.shape,
+    ...nextEnvSchema.shape,
+    ...supabaseEnvSchema.shape,
+    ...databaseEnvSchema.shape,
+    ...cacheEnvSchema.shape,
+    ...authEnvSchema.shape,
+    ...aiServiceEnvSchema.shape,
+    ...travelApiEnvSchema.shape,
+    ...monitoringEnvSchema.shape,
+    ...featureEnvSchema.shape,
+    ...securityEnvSchema.shape,
+    ...developmentEnvSchema.shape,
+  })
   .refine(
     (data) => {
       // Validation rules that depend on NODE_ENV
@@ -207,166 +229,15 @@ const envSchema = baseEnvSchema
   );
 
 // Client-side environment schema (only NEXT_PUBLIC_ variables)
-const clientEnvSchema = z.object({
+export const clientEnvSchema = z.object({
   NEXT_PUBLIC_API_URL: z.string().url().optional(),
   NEXT_PUBLIC_APP_NAME: z.string().default("TripSage"),
+  NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY: z.string().optional(),
   NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
   NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
 });
 
-// Environment validation functions
-export const validateServerEnv = () => {
-  try {
-    return envSchema.parse(process.env);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      const errors = error.issues.map((issue) => {
-        const path = issue.path.join(".");
-        return `${path}: ${issue.message}`;
-      });
-
-      throw new Error(`Environment validation failed:\n${errors.join("\n")}`);
-    }
-    throw error;
-  }
-};
-
-export const validateClientEnv = () => {
-  try {
-    // Extract NEXT_PUBLIC_ variables from process.env
-    const clientVars = Object.fromEntries(
-      Object.entries(process.env).filter(([key]) => key.startsWith("NEXT_PUBLIC_"))
-    );
-
-    return clientEnvSchema.parse(clientVars);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      const errors = error.issues.map((issue) => {
-        const path = issue.path.join(".");
-        return `${path}: ${issue.message}`;
-      });
-
-      console.error(`Client environment validation failed:\n${errors.join("\n")}`);
-
-      // In development, log the error but don't throw
-      if (process.env.NODE_ENV === "development") {
-        return {};
-      }
-
-      throw new Error(`Client environment validation failed:\n${errors.join("\n")}`);
-    }
-    throw error;
-  }
-};
-
-// Safe environment validation (returns validation result)
-export const safeValidateServerEnv = () => {
-  return envSchema.safeParse(process.env);
-};
-
-export const safeValidateClientEnv = () => {
-  const clientVars = Object.fromEntries(
-    Object.entries(process.env).filter(([key]) => key.startsWith("NEXT_PUBLIC_"))
-  );
-  return clientEnvSchema.safeParse(clientVars);
-};
-
-// Environment variable getter with validation
-export const getEnvVar = <T extends keyof z.infer<typeof envSchema>>(
-  key: T,
-  fallback?: z.infer<typeof envSchema>[T]
-): z.infer<typeof envSchema>[T] => {
-  const value = process.env[key];
-
-  if (value === undefined && fallback !== undefined) {
-    return fallback;
-  }
-
-  if (value === undefined) {
-    throw new Error(`Environment variable ${String(key)} is not defined`);
-  }
-
-  // Type-safe conversion based on schema
-  try {
-    // Use safeParse instead of accessing .shape which is not available in Zod v4
-    const result = envSchema.safeParse(process.env);
-    if (result.success && result.data[key] !== undefined) {
-      return result.data[key];
-    }
-    throw new Error(`Environment variable ${String(key)} not found`);
-  } catch (_error) {
-    if (fallback !== undefined) {
-      return fallback;
-    }
-    throw new Error(`Environment variable ${String(key)} has invalid format: ${value}`);
-  }
-};
-
-// Environment variable checker for conditional features
-export const isFeatureEnabled = (
-  feature: keyof typeof featureEnvSchema.shape
-): boolean => {
-  try {
-    return getEnvVar(feature, false) as boolean;
-  } catch {
-    return false;
-  }
-};
-
-// Environment info helper
-export const getEnvironmentInfo = () => {
-  const env = safeValidateServerEnv();
-
-  if (!env.success) {
-    return {
-      environment: process.env.NODE_ENV || "unknown",
-      errors: env.error.issues,
-      isValid: false,
-    };
-  }
-
-  return {
-    environment: env.data.NODE_ENV,
-    features: {
-      aiFeatures: env.data.ENABLE_AI_FEATURES,
-      analytics: env.data.ENABLE_ANALYTICS,
-      caching: env.data.ENABLE_CACHING,
-      monitoring: env.data.ENABLE_MONITORING,
-    },
-    isValid: true,
-    services: {
-      hasAiServices: Boolean(
-        env.data.OPENAI_API_KEY ||
-          env.data.ANTHROPIC_API_KEY ||
-          env.data.GOOGLE_AI_API_KEY
-      ),
-      hasCache: Boolean(env.data.REDIS_URL || env.data.CACHE_HOST),
-      hasDatabase: Boolean(env.data.DATABASE_URL || env.data.POSTGRES_HOST),
-      hasSupabase: Boolean(env.data.NEXT_PUBLIC_SUPABASE_URL),
-    },
-  };
-};
-
 // Type exports
 export type ServerEnv = z.infer<typeof envSchema>;
 export type ClientEnv = z.infer<typeof clientEnvSchema>;
-export type EnvironmentInfo = ReturnType<typeof getEnvironmentInfo>;
-
-// Schema exports for reuse
-export {
-  envSchema,
-  clientEnvSchema,
-  baseEnvSchema,
-  nextEnvSchema,
-  supabaseEnvSchema,
-  databaseEnvSchema,
-  cacheEnvSchema,
-  authEnvSchema,
-  aiServiceEnvSchema,
-  travelApiEnvSchema,
-  monitoringEnvSchema,
-  featureEnvSchema,
-  securityEnvSchema,
-  developmentEnvSchema,
-};

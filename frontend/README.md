@@ -413,7 +413,9 @@ AI_GATEWAY_URL=your_vercel_ai_gateway_url
 # External APIs (Optional - for tool functionality)
 OPENWEATHERMAP_API_KEY=your_openweathermap_key
 DUFFEL_ACCESS_TOKEN=your_duffel_token
-GOOGLE_MAPS_API_KEY=your_google_maps_key
+# Google Maps: server and browser keys
+GOOGLE_MAPS_SERVER_API_KEY=your_google_maps_server_key   # server routes/tools
+NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY=your_browser_maps_key  # frontend map/places
 FIRECRAWL_API_KEY=fc-your_firecrawl_key  # For web search (v2.5)
 FIRECRAWL_BASE_URL=https://api.firecrawl.dev/v2  # Optional: override base URL
 

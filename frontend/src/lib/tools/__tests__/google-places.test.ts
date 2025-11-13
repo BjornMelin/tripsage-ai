@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
+import { getGoogleMapsServerKey } from "@/lib/env/server";
 import { cacheLatLng, getCachedLatLng } from "@/lib/google/caching";
-import { getGoogleMapsServerKey } from "@/lib/google/keys";
 
 import { lookupPoiContext } from "../google-places";
 
@@ -15,7 +14,7 @@ vi.mock("@/lib/google/caching", () => ({
   getCachedLatLng: vi.fn().mockResolvedValue(null),
 }));
 
-vi.mock("@/lib/google/keys", () => ({
+vi.mock("@/lib/env/server", () => ({
   getGoogleMapsServerKey: vi.fn().mockReturnValue("test-server-key"),
 }));
 

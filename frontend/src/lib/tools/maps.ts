@@ -6,8 +6,9 @@ import "server-only";
 
 import { tool } from "ai";
 import { z } from "zod";
+import { getGoogleMapsServerKey } from "@/lib/env/server";
 
-const GMAPS_KEY = process.env.GOOGLE_MAPS_API_KEY;
+const GMAPS_KEY = getGoogleMapsServerKey();
 
 /**
  * Zod input schema for geocode tool.

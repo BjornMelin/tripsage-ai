@@ -8,6 +8,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { getGoogleMapsBrowserKey } from "@/lib/env/client";
 
 declare global {
   interface Window {
@@ -61,9 +62,7 @@ export function PlacesAutocomplete({
   useEffect(() => {
     if (isLoaded || typeof window === "undefined") return;
 
-    const apiKey =
-      process.env.NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY ||
-      process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    const apiKey = getGoogleMapsBrowserKey();
 
     if (!apiKey) {
       console.warn(

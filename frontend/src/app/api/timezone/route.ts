@@ -8,7 +8,7 @@ import "server-only";
 
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getGoogleMapsServerKey } from "@/lib/google/keys";
+import { getGoogleMapsServerKey } from "@/lib/env/server";
 
 const timezoneRequestSchema = z.object({
   lat: z.number(),
