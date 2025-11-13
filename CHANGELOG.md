@@ -299,6 +299,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - No backwards compatibility shims retained; registry is the final implementation
 - Removed Python chat API entirely in favor of Next.js routes using AI SDK v6; any direct callers to `/api/chat/*` must use `/app/api/chat/stream` (Next.js) instead
 
+### Refactor
+
+- **[API]:** Consolidated three separate API clients into a single, unified `ApiClient` to enforce a consistent pattern for all HTTP requests.
+
 ## [2.2.0] - 2025-11-01
 
 ### [2.2.0] Added
