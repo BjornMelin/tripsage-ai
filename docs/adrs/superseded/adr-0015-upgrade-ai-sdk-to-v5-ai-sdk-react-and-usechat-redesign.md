@@ -1,7 +1,7 @@
 # ADR-0015: Upgrade AI SDK to v5 (@ai-sdk/react) and useChat redesign
 
 **Version**: 1.0.0
-**Status**: Accepted
+**Status**: Superseded by ADR-0023
 **Date**: 2025-10-23
 **Category**: frontend
 **Domain**: AI SDK / useChat

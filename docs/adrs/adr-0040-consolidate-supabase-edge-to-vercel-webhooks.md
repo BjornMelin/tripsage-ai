@@ -6,11 +6,11 @@
 **Category**: Architecture/Platform
 **Domain**: Backend, Integrations
 **Related ADRs**: ADR-0014, ADR-0023, ADR-0028, ADR-0035
-**Related Specs**: SPEC-0021
+**Related Specs**: SPEC-0021, SPEC-0025
 
 ## Context
 
-We currently run several Supabase Edge Functions (Deno) for trip notifications, file processing, cache invalidation, and embeddings. While these were straightforward to wire from database triggers and lived within Supabase infra, they introduce a second runtime/toolchain (Deno) alongside our primary platform on Vercel (Next.js 16, Node/Edge runtimes). All current functions are HTTP-bound and use the Supabase JS client and other HTTP SDKs (Upstash, Resend, OpenAI), with no Deno-specific capabilities required. Supabase provides Database Webhooks via `pg_net`/`supabase_functions.http_request` for external HTTP calls post-commit.
+We previously ran several Supabase Edge Functions (Deno) for trip notifications, file processing, cache invalidation, and embeddings. While these were straightforward to wire from database triggers and lived within Supabase infra, they introduced a second runtime/toolchain (Deno) alongside our primary platform on Vercel (Next.js 16, Node/Edge runtimes). All functions were HTTP-bound and used the Supabase JS client and other HTTP SDKs (Upstash, Resend, OpenAI), with no Deno-specific capabilities required. Supabase provides Database Webhooks via `pg_net`/`supabase_functions.http_request` for external HTTP calls post-commit.
 
 The product is deployed on Vercel and we manage operations there. Consolidating compute on Vercel simplifies observability, deployments, and secrets management while retaining Supabase for DB/Auth/Storage.
 

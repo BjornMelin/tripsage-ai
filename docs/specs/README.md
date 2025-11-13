@@ -1,10 +1,14 @@
 # Technical Specifications
 
-This directory contains Technical Specifications (Specs) for the TripSage project. Specs document detailed technical requirements, API contracts, and implementation guidelines for specific features and components.
+This directory contains Technical Specifications (Specs) for the TripSage
+project. Specs document detailed technical requirements, API contracts, and
+implementation guidelines for specific features and components.
 
 ## What is a Spec?
 
-A Technical Specification (Spec) is a document that provides detailed technical requirements, API contracts, implementation details, and testing guidelines for specific features or components.
+A Technical Specification (Spec) is a document that provides detailed technical
+requirements, API contracts, implementation details, and testing guidelines for
+specific features or components.
 
 ## Spec Process
 
@@ -23,7 +27,6 @@ A Technical Specification (Spec) is a document that provides detailed technical 
 
 | Spec | Title | Status | Date |
 |------|-------|--------|------|
-| [SPEC-0001](0001-spec-ai-sdk-v5.md) | AI SDK v5 Migration (Client + Route) | Superseded by ADR-0031 | 2025-10-24 |
 | [SPEC-0002](0002-spec-next16-migration.md) | Next.js 16 Migration (Proxy, Async APIs, Turbopack) | Accepted | 2025-10-24 |
 | [SPEC-0003](0003-spec-session-resume.md) | Session Resume — TripSage Frontend | Accepted | 2025-10-24 |
 | [SPEC-0004](0004-spec-supabase-ssr-typing.md) | Supabase SSR Typing Migration | Accepted | 2025-10-24 |
@@ -47,6 +50,14 @@ A Technical Specification (Spec) is a document that provides detailed technical 
 | [SPEC-0019](0019-spec-hybrid-destination-itinerary-agents.md) | Hybrid Destination & Itinerary Agents (Frontend) | Draft | 2025-11-12 |
 | [SPEC-0020](0020-spec-multi-agent-frontend-migration.md) | Multi-Agent Frontend Migration & Provider Expansion | Draft | 2025-11-12 |
 
+## Superseded Specs
+
+The following specs have been superseded by newer specifications:
+
+| Spec | Title | Superseded By | Date |
+|------|-------|---------------|------|
+| [SPEC-0001](superseded/0001-spec-ai-sdk-v5.md) | AI SDK v5 Migration (Client + Route) | 0008-spec-ai-sdk-v6-foundations.md | 2025-10-24 |
+
 ## By Category
 
 ### Frontend
@@ -69,7 +80,6 @@ A Technical Specification (Spec) is a document that provides detailed technical 
 
 ### Backend
 
-- SPEC-0001: AI SDK v5 Migration (Client + Route)
 - SPEC-0007: Final DI + Pydantic v2 Schemas Centralization
 - SPEC-0007: SSE Chat Streaming (End-to-End)
 - SPEC-0008: Rate Limiting Strategy
