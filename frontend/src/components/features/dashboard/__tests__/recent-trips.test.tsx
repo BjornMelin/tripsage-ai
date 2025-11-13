@@ -64,9 +64,14 @@ function DoMockTrips(items: Array<Record<string, unknown>> | null, isLoading = f
   vi.resetModules();
   vi.doMock("@/hooks/use-trips", () => ({
     useTrips: () => ({
-      data: items === null ? null : { items, total: items.length },
+      data: items === null ? null : items,
       error: null,
+      isConnected: true,
       isLoading,
+      realtimeStatus: {
+        errors: [],
+        isConnected: true,
+      },
       refetch: vi.fn(),
     }),
   }));

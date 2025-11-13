@@ -1,14 +1,18 @@
 /**
- * @fileoverview React hooks for trip-related API operations including suggestions,
- * trip management, and flight data fetching with proper error handling and caching.
+ * @fileoverview Unified React hooks for trip-related API operations including CRUD
+ * operations, suggestions, real-time updates, and flight data fetching with proper
+ * error handling and caching.
  */
 
 "use client";
 
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
 import { type AppError, handleApiError, isApiError } from "@/lib/api/error-types";
 import { cacheTimes, queryKeys, staleTimes } from "@/lib/query-keys";
+import { useSupabase } from "@/lib/supabase/client";
 import type { Trip } from "@/stores/trip-store";
 
 /** Represents a trip suggestion from the API. */
@@ -182,6 +186,117 @@ export function useCreateTrip() {
   });
 }
 
+/** Data structure for updating a trip. */
+interface UpdateTripData {
+  /** Title of the trip. */
+  readonly title?: string;
+  /** Destination location. */
+  readonly destination?: string;
+  /** Detailed description. */
+  readonly description?: string;
+  /** Start date of the trip. */
+  readonly startDate?: string;
+  /** End date of the trip. */
+  readonly endDate?: string;
+  /** Budget for the trip. */
+  readonly budget?: number;
+  /** Currency code for the budget. */
+  readonly currency?: string;
+  /** Additional metadata. */
+  readonly metadata?: Record<string, unknown>;
+}
+
+/**
+ * Hook to update an existing trip.
+ *
+ * @returns Mutation object for updating trips with loading state and error handling.
+ */
+export function useUpdateTrip() {
+  const { makeAuthenticatedRequest } = useAuthenticatedApi();
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    TripResponse,
+    AppError,
+    { tripId: string | number; data: UpdateTripData }
+  >({
+    mutationFn: async ({ tripId, data }) => {
+      try {
+        const numericTripId =
+          typeof tripId === "string" ? Number.parseInt(tripId, 10) : tripId;
+        return await makeAuthenticatedRequest<TripResponse>(
+          `/api/trips/${numericTripId}`,
+          {
+            body: JSON.stringify(data),
+            headers: { "Content-Type": "application/json" },
+            method: "PUT",
+          }
+        );
+      } catch (error) {
+        throw handleApiError(error);
+      }
+    },
+    onSuccess: (_data, variables) => {
+      const numericTripId =
+        typeof variables.tripId === "string"
+          ? Number.parseInt(variables.tripId, 10)
+          : variables.tripId;
+      // Invalidate specific trip and trips list
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.trips.detail(numericTripId),
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.trips.all() });
+    },
+    retry: (failureCount, error) => {
+      if (isApiError(error)) {
+        if (error.status >= 400 && error.status < 500) return false; // Don't retry client errors
+      }
+      return failureCount < 1;
+    },
+    throwOnError: false,
+  });
+}
+
+/**
+ * Hook to delete a trip.
+ *
+ * @returns Mutation object for deleting trips with loading state and error handling.
+ */
+export function useDeleteTrip() {
+  const { makeAuthenticatedRequest } = useAuthenticatedApi();
+  const queryClient = useQueryClient();
+
+  return useMutation<void, AppError, string | number>({
+    mutationFn: async (tripId: string | number) => {
+      try {
+        const numericTripId =
+          typeof tripId === "string" ? Number.parseInt(tripId, 10) : tripId;
+        await makeAuthenticatedRequest(`/api/trips/${numericTripId}`, {
+          method: "DELETE",
+        });
+      } catch (error) {
+        throw handleApiError(error);
+      }
+    },
+    onSuccess: (_data, tripId) => {
+      const numericTripId =
+        typeof tripId === "string" ? Number.parseInt(tripId, 10) : tripId;
+      // Invalidate specific trip and trips list
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.trips.detail(numericTripId),
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.trips.all() });
+    },
+    retry: (failureCount, error) => {
+      if (isApiError(error)) {
+        if (error.status >= 400 && error.status < 500) return false; // Don't retry client errors
+      }
+      return failureCount < 1;
+    },
+    throwOnError: false,
+  });
+}
+
 /** Parameters for filtering trips. */
 interface TripFilters extends Record<string, unknown> {
   /** Filter by trip status. */
@@ -230,15 +345,33 @@ const convertToApiParams = (
 };
 
 /**
- * Hook to get user's trips with enhanced error handling.
+ * Real-time connection status for trip subscriptions.
+ */
+interface TripRealtimeStatus {
+  /** Whether the real-time connection is active. */
+  isConnected: boolean;
+  /** Array of connection errors encountered. */
+  errors: Error[];
+}
+
+/**
+ * Hook to get user's trips with enhanced error handling and real-time updates.
  *
  * @param filters Optional filters to apply to the trip query.
- * @returns Query object containing trips data, loading state, and error state.
+ * @returns Query object containing trips data, loading state, error state,
+ * and real-time connection status.
  */
 export function useTrips(filters?: TripFilters) {
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
+  const supabase = useSupabase();
+  const queryClient = useQueryClient();
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  const [realtimeStatus, setRealtimeStatus] = useState<TripRealtimeStatus>({
+    errors: [],
+    isConnected: false,
+  });
 
-  return useQuery<Trip[], AppError>({
+  const query = useQuery<Trip[], AppError>({
     gcTime: cacheTimes.medium,
     queryFn: async () => {
       try {
@@ -259,6 +392,253 @@ export function useTrips(filters?: TripFilters) {
     staleTime: staleTimes.trips,
     throwOnError: false,
   });
+
+  // Set up real-time subscription for trips
+  useEffect(() => {
+    let mounted = true;
+
+    const setupRealtime = async () => {
+      try {
+        // Get current user ID
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user || !mounted) return;
+
+        // Clean up existing channel
+        if (channelRef.current) {
+          await supabase.removeChannel(channelRef.current);
+        }
+
+        // Create new channel for trips table changes
+        const channel = supabase
+          .channel(`trips:${user.id}`)
+          .on(
+            "postgres_changes",
+            {
+              event: "*",
+              filter: `user_id=eq.${user.id}`,
+              schema: "public",
+              table: "trips",
+            },
+            (payload) => {
+              if (!mounted) return;
+
+              // Invalidate queries to refetch updated data
+              queryClient.invalidateQueries({
+                queryKey: queryKeys.trips.all(),
+              });
+
+              // If we have a specific trip ID, invalidate that too
+              if (
+                payload.new &&
+                typeof payload.new === "object" &&
+                "id" in payload.new
+              ) {
+                const tripId = payload.new.id;
+                if (typeof tripId === "string" || typeof tripId === "number") {
+                  queryClient.invalidateQueries({
+                    queryKey: queryKeys.trips.detail(
+                      typeof tripId === "string" ? Number.parseInt(tripId, 10) : tripId
+                    ),
+                  });
+                }
+              }
+            }
+          )
+          .subscribe((status) => {
+            if (!mounted) return;
+
+            setRealtimeStatus((prev) => ({
+              ...prev,
+              errors:
+                status === "SUBSCRIBED"
+                  ? []
+                  : status === "CHANNEL_ERROR"
+                    ? [...prev.errors, new Error("Real-time channel error")]
+                    : prev.errors,
+              isConnected: status === "SUBSCRIBED",
+            }));
+          });
+
+        channelRef.current = channel;
+      } catch (error) {
+        if (!mounted) return;
+        setRealtimeStatus((prev) => ({
+          ...prev,
+          errors: [
+            ...prev.errors,
+            error instanceof Error ? error : new Error(String(error)),
+          ],
+          isConnected: false,
+        }));
+      }
+    };
+
+    setupRealtime();
+
+    return () => {
+      mounted = false;
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current).catch(() => {
+          // Ignore cleanup errors
+        });
+        channelRef.current = null;
+      }
+    };
+  }, [supabase, queryClient]);
+
+  return {
+    ...query,
+    isConnected: realtimeStatus.isConnected,
+    realtimeStatus,
+  };
+}
+
+/**
+ * Hook to fetch a single trip by ID with real-time updates.
+ *
+ * @param tripId The ID of the trip to fetch, or null/undefined to skip fetching.
+ * @returns Query object containing trip data, loading state, error state,
+ * and real-time connection status.
+ */
+export function useTrip(tripId: string | number | null | undefined) {
+  const { makeAuthenticatedRequest } = useAuthenticatedApi();
+  const supabase = useSupabase();
+  const queryClient = useQueryClient();
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  const [realtimeStatus, setRealtimeStatus] = useState<TripRealtimeStatus>({
+    errors: [],
+    isConnected: false,
+  });
+
+  const numericTripId =
+    tripId === null || tripId === undefined
+      ? null
+      : typeof tripId === "string"
+        ? Number.parseInt(tripId, 10)
+        : tripId;
+
+  const query = useQuery<Trip | null, AppError>({
+    enabled: numericTripId !== null,
+    gcTime: cacheTimes.medium,
+    queryFn: async () => {
+      if (numericTripId === null) return null;
+      try {
+        return await makeAuthenticatedRequest<Trip>(`/api/trips/${numericTripId}`);
+      } catch (error) {
+        throw handleApiError(error);
+      }
+    },
+    queryKey: queryKeys.trips.detail(numericTripId ?? 0),
+    retry: (failureCount, error) => {
+      if (isApiError(error)) {
+        if (error.status === 401 || error.status === 403) return false;
+      }
+      return failureCount < 2;
+    },
+    staleTime: staleTimes.trips,
+    throwOnError: false,
+  });
+
+  // Set up real-time subscription for specific trip
+  useEffect(() => {
+    if (numericTripId === null) {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current).catch(() => {
+          // Ignore cleanup errors
+        });
+        channelRef.current = null;
+      }
+      setRealtimeStatus({ errors: [], isConnected: false });
+      return;
+    }
+
+    let mounted = true;
+
+    const setupRealtime = async () => {
+      try {
+        // Get current user ID
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user || !mounted) return;
+
+        // Clean up existing channel
+        if (channelRef.current) {
+          await supabase.removeChannel(channelRef.current);
+        }
+
+        // Create new channel for this specific trip
+        const channel = supabase
+          .channel(`trip:${numericTripId}`)
+          .on(
+            "postgres_changes",
+            {
+              event: "*",
+              filter: `id=eq.${numericTripId}`,
+              schema: "public",
+              table: "trips",
+            },
+            () => {
+              if (!mounted) return;
+              // Invalidate this trip's query to refetch updated data
+              queryClient.invalidateQueries({
+                queryKey: queryKeys.trips.detail(numericTripId),
+              });
+              // Also invalidate the list to keep it in sync
+              queryClient.invalidateQueries({
+                queryKey: queryKeys.trips.all(),
+              });
+            }
+          )
+          .subscribe((status) => {
+            if (!mounted) return;
+
+            setRealtimeStatus((prev) => ({
+              ...prev,
+              errors:
+                status === "SUBSCRIBED"
+                  ? []
+                  : status === "CHANNEL_ERROR"
+                    ? [...prev.errors, new Error("Real-time channel error")]
+                    : prev.errors,
+              isConnected: status === "SUBSCRIBED",
+            }));
+          });
+
+        channelRef.current = channel;
+      } catch (error) {
+        if (!mounted) return;
+        setRealtimeStatus((prev) => ({
+          ...prev,
+          errors: [
+            ...prev.errors,
+            error instanceof Error ? error : new Error(String(error)),
+          ],
+          isConnected: false,
+        }));
+      }
+    };
+
+    setupRealtime();
+
+    return () => {
+      mounted = false;
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current).catch(() => {
+          // Ignore cleanup errors
+        });
+        channelRef.current = null;
+      }
+    };
+  }, [numericTripId, supabase, queryClient]);
+
+  return {
+    ...query,
+    isConnected: realtimeStatus.isConnected,
+    realtimeStatus,
+  };
 }
 
 /** Represents an upcoming flight with detailed information. */
