@@ -11,6 +11,7 @@ import { Redis } from "@upstash/redis";
 import { tool } from "ai";
 import { z } from "zod";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
+import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { fetchWithRetry } from "@/lib/http/fetch-retry";
 import { getRedis } from "@/lib/redis";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
@@ -24,8 +25,8 @@ import { WEB_SEARCH_OUTPUT_SCHEMA } from "@/types/web-search";
 let cachedLimiter: InstanceType<typeof Ratelimit> | undefined;
 function buildToolRateLimiter(): InstanceType<typeof Ratelimit> | undefined {
   if (cachedLimiter) return cachedLimiter;
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  const url = getServerEnvVarWithFallback("UPSTASH_REDIS_REST_URL", undefined);
+  const token = getServerEnvVarWithFallback("UPSTASH_REDIS_REST_TOKEN", undefined);
   if (!url || !token) return undefined;
   cachedLimiter = new Ratelimit({
     analytics: true,
@@ -205,7 +206,8 @@ export const webSearch = tool({
         redactKeys: ["query"],
       },
       async (span) => {
-        const apiKey = process.env.FIRECRAWL_API_KEY;
+        const { getServerEnvVar } = await import("@/lib/env/server");
+        const apiKey = getServerEnvVar("FIRECRAWL_API_KEY");
         if (!apiKey) {
           span.addEvent("not_configured");
           throw new Error("web_search_not_configured");
@@ -303,8 +305,10 @@ export const webSearch = tool({
             return validated;
           }
         }
-        const baseUrl =
-          process.env.FIRECRAWL_BASE_URL ?? "https://api.firecrawl.dev/v2";
+        const baseUrl = getServerEnvVarWithFallback(
+          "FIRECRAWL_BASE_URL",
+          "https://api.firecrawl.dev/v2"
+        );
         const url = `${baseUrl}/search`;
         const body = buildRequestBody(requestParams);
         span.addEvent("http_post", { url });

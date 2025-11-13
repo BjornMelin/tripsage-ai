@@ -9,6 +9,7 @@ import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { tool } from "ai";
 import { z } from "zod";
+import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import { normalizeWebSearchResults } from "@/lib/tools/web-search-normalize";
 import { WEB_SEARCH_BATCH_OUTPUT_SCHEMA } from "@/types/web-search";
@@ -22,9 +23,10 @@ import { webSearch } from "./web-search";
  *
  * @returns Rate limiter instance or undefined if not configured.
  */
+
 function buildToolRateLimiter(): InstanceType<typeof Ratelimit> | undefined {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  const url = getServerEnvVarWithFallback("UPSTASH_REDIS_REST_URL", undefined);
+  const token = getServerEnvVarWithFallback("UPSTASH_REDIS_REST_TOKEN", undefined);
   if (!url || !token) return undefined;
   return new Ratelimit({
     analytics: true,
@@ -157,10 +159,15 @@ export const webSearchBatch = tool({
             // Fallback to direct HTTP for unexpected errors (not rate/auth/payment)
             if (code === "web_search_error") {
               try {
-                const apiKey = process.env.FIRECRAWL_API_KEY;
+                const { getServerEnvVar, getServerEnvVarWithFallback } = await import(
+                  "@/lib/env/server"
+                );
+                const apiKey = getServerEnvVar("FIRECRAWL_API_KEY");
                 if (!apiKey) throw new Error("web_search_not_configured");
-                const baseUrl =
-                  process.env.FIRECRAWL_BASE_URL ?? "https://api.firecrawl.dev/v2";
+                const baseUrl = getServerEnvVarWithFallback(
+                  "FIRECRAWL_BASE_URL",
+                  "https://api.firecrawl.dev/v2"
+                );
                 const url = `${baseUrl}/search`;
                 const body = {
                   categories: rest.categories,

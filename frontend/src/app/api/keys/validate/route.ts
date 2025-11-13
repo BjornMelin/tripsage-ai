@@ -14,6 +14,7 @@ import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { getClientIpFromHeaders } from "@/lib/next/route-helpers";
 import type { ProviderId } from "@/lib/providers/types";
 import { getProviderSettings } from "@/lib/settings";
@@ -21,13 +22,15 @@ import { createServerSupabase } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-// Environment variables
-const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
-const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 const RATELIMIT_PREFIX = "ratelimit:keys-validate";
 
 // Create rate limit instance lazily to make testing easier
 const GET_RATELIMIT_INSTANCE = () => {
+  const UPSTASH_URL = getServerEnvVarWithFallback("UPSTASH_REDIS_REST_URL", undefined);
+  const UPSTASH_TOKEN = getServerEnvVarWithFallback(
+    "UPSTASH_REDIS_REST_TOKEN",
+    undefined
+  );
   if (!UPSTASH_URL || !UPSTASH_TOKEN) {
     return undefined;
   }
@@ -116,7 +119,7 @@ const PROVIDER_BUILDERS: Partial<Record<ProviderId, ProviderRequestBuilder>> = {
   openai: (apiKey) =>
     buildSDKRequest({
       apiKey,
-      baseURL: process.env.AI_GATEWAY_URL,
+      baseURL: getServerEnvVarWithFallback("AI_GATEWAY_URL", undefined),
       defaultBaseURL: OPENAI_BASE_URL,
       modelId: DEFAULT_MODEL_IDS.openai,
       sdkCreator: createOpenAI as SDKCreator,

@@ -196,9 +196,14 @@ export async function handleChatStream(
   const { maxTokens, reasons } = clampMaxTokens(clampInput, desired, provider.modelId);
 
   // Optional MCP tools discovery (SSE) merged with local registry
+  const { getServerEnvVarWithFallback } = await import("@/lib/env/server");
   let discoveredTools: Record<string, unknown> | undefined;
-  const mcpUrl = process.env.AIRBNB_MCP_URL || process.env.ACCOM_SEARCH_URL;
-  const mcpAuth = process.env.AIRBNB_MCP_API_KEY || process.env.ACCOM_SEARCH_TOKEN;
+  const mcpUrl =
+    getServerEnvVarWithFallback("AIRBNB_MCP_URL", undefined) ||
+    getServerEnvVarWithFallback("ACCOM_SEARCH_URL", undefined);
+  const mcpAuth =
+    getServerEnvVarWithFallback("AIRBNB_MCP_API_KEY", undefined) ||
+    getServerEnvVarWithFallback("ACCOM_SEARCH_TOKEN", undefined);
   let mcpClient: Awaited<ReturnType<typeof createMcpClientHelper>> | undefined;
   try {
     if (mcpUrl) {

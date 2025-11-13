@@ -1,16 +1,21 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { crawlSite, crawlUrl } from "../web-crawl";
 
-const env = process.env;
+vi.mock("@/lib/env/server", () => ({
+  getServerEnvVar: vi.fn(() => "test_key"),
+  getServerEnvVarWithFallback: vi.fn((key: string, fallback?: string) => {
+    if (key === "FIRECRAWL_API_KEY") return "test_key";
+    if (key === "FIRECRAWL_BASE_URL") return fallback || "https://api.firecrawl.dev/v2";
+    return fallback;
+  }),
+}));
 
 beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn());
-  process.env = { ...env, FIRECRAWL_API_KEY: "test_key" };
 });
 
 afterEach(() => {
   vi.unstubAllGlobals();
-  process.env = env;
 });
 
 const mockContext = {
@@ -56,10 +61,18 @@ test("crawlUrl applies cost-safe defaults", async () => {
 });
 
 test("crawlUrl throws when not configured", async () => {
-  process.env.FIRECRAWL_API_KEY = "";
+  const { getServerEnvVar } = await import("@/lib/env/server");
+  (getServerEnvVar as ReturnType<typeof vi.fn>).mockImplementation(() => {
+    throw new Error("FIRECRAWL_API_KEY is not defined");
+  });
+  vi.resetModules();
+  const { crawlUrl: freshCrawlUrl } = await import("@/lib/tools/web-crawl");
   await expect(
-    crawlUrl.execute?.({ fresh: false, url: "https://example.com" }, mockContext)
+    freshCrawlUrl.execute?.({ fresh: false, url: "https://example.com" }, mockContext)
   ).rejects.toThrow(/web_crawl_not_configured/);
+  // Restore mock
+  (getServerEnvVar as ReturnType<typeof vi.fn>).mockReturnValue("test_key");
+  vi.resetModules();
 });
 
 test("crawlSite validates inputs and starts crawl", async () => {
@@ -121,13 +134,21 @@ test("crawlSite applies cost-safe defaults in scrapeOptions", async () => {
 });
 
 test("crawlSite throws when not configured", async () => {
-  process.env.FIRECRAWL_API_KEY = "";
+  const { getServerEnvVar } = await import("@/lib/env/server");
+  (getServerEnvVar as ReturnType<typeof vi.fn>).mockImplementation(() => {
+    throw new Error("FIRECRAWL_API_KEY is not defined");
+  });
+  vi.resetModules();
+  const { crawlSite: freshCrawlSite } = await import("@/lib/tools/web-crawl");
   await expect(
-    crawlSite.execute?.(
+    freshCrawlSite.execute?.(
       { fresh: false, limit: 5, url: "https://example.com" },
       mockContext
     )
   ).rejects.toThrow(/web_crawl_not_configured/);
+  // Restore mock
+  (getServerEnvVar as ReturnType<typeof vi.fn>).mockReturnValue("test_key");
+  vi.resetModules();
 });
 
 test("crawlSite handles rate limit errors", async () => {
