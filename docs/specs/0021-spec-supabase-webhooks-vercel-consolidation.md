@@ -57,10 +57,11 @@ Decommission Supabase Edge Functions and related CLI deploy steps after dual-run
 - Headers: `X-Event-Type`, `X-Table`, `X-Signature-HMAC`
 - Body: `{ type, table, schema, record, old_record, occurred_at }`
 - Behavior:
-  - Validate signature and known table (e.g., `trip_collaborators`)
-  - Fetch user/trip details (as needed) via Supabase client
-  - Send Resend email and optional webhook
-  - Idempotency: Redis SETNX with event id or DB unique index on `(event_id)`
+  - Validate signature and known table (e.g., `trip_collaborators`).
+  - Compute a stable event key from table, type, occurred_at, and record hash.
+  - Enforce idempotency via Upstash Redis (`SET NX` with TTL) using the event key.
+  - For `trip_collaborators`, enqueue a job to a background notifications worker
+    (see SPEC-0025) or fall back to in-process background work for development.
 
 ### POST /api/hooks/files
 
