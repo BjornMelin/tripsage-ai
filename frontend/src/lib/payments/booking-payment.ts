@@ -8,7 +8,7 @@
  */
 
 import { getExpediaClient } from "@/lib/travel-api/expedia-client";
-import type { EpSCreateBookingRequest } from "@/lib/travel-api/expedia-types";
+import type { EpsCreateBookingRequest } from "@/lib/travel-api/expedia-types";
 import { createPaymentIntent, getPaymentIntent, refundPayment } from "./stripe-client";
 
 /**
@@ -67,7 +67,7 @@ export async function processBookingPayment(params: {
 
   try {
     // Phase 2: Create Expedia booking
-    const bookingRequest: EpSCreateBookingRequest = {
+    const bookingRequest: EpsCreateBookingRequest = {
       bookingToken: params.bookingToken,
       payment: {
         paymentIntentId: paymentIntent.id,
