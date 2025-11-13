@@ -112,7 +112,7 @@ from tripsage_core.services.external_apis import (
 > [!NOTE]
 > Location/POI tooling migrated to Next.js; no Python Google Maps service remains.
 > Time-related utilities are no longer exported from Core external_apis; use frontend or direct libs as appropriate.
-> Calendar integration handled by frontend AI SDK tools; no Python CalendarService remains.
+> Calendar integration implemented in `frontend/src/lib/calendar/` with Google Calendar REST API v3, ICS import/export, and AI SDK tools. See `docs/architecture/calendar-service.md` for details.
 
 - `DuffelProvider` - Flight search and booking (direct SDK)
 - `WebcrawlService` - Content extraction
