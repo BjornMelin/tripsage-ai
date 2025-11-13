@@ -207,7 +207,13 @@ export const webSearch = tool({
       },
       async (span) => {
         const { getServerEnvVar } = await import("@/lib/env/server");
-        const apiKey = getServerEnvVar("FIRECRAWL_API_KEY");
+        let apiKey: string | undefined;
+        try {
+          apiKey = getServerEnvVar("FIRECRAWL_API_KEY") as unknown as string;
+        } catch {
+          span.addEvent("not_configured");
+          throw new Error("web_search_not_configured");
+        }
         if (!apiKey) {
           span.addEvent("not_configured");
           throw new Error("web_search_not_configured");

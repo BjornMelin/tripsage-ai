@@ -1,5 +1,12 @@
 # Prompt: OpenRouter Attribution Headers & Model Routing
 
+**Date**: 2025-11-13
+**Summary**: (Superseded by 2025-11-13-openrouter-provider-v6-migration.md)
+
+- Replaced OpenRouter integration using `createOpenAI({ baseURL: 'https://openrouter.ai/api/v1' })` with the official `@ai-sdk/openai` provider.
+- Removed all attribution headers (`HTTP-Referer`, `X-Title`) and related settings/tests.
+- Updated docs, specs, and ADRs to reflect the official provider usage.
+
 ## Executive summary
 
 - Goal: Ensure requests routed to OpenRouter include `http-referer` and `x-title` headers (or via Gateway); verify model mapping; test presence of headers.

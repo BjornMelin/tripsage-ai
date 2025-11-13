@@ -7,6 +7,7 @@ import "server-only";
 import { tool } from "ai";
 import { z } from "zod";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
+import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 // Prefer DUFFEL_ACCESS_TOKEN (commonly used in templates), fall back to DUFFEL_API_KEY.
 function getDuffelKey(): string | undefined {
@@ -45,63 +46,84 @@ export const searchFlights = tool({
     passengers,
     cabin,
     currency,
-  }) => {
-    const DuffelKey = getDuffelKey();
-    if (!DuffelKey) throw new Error("duffel_not_configured");
-
-    type CamelSlice = { origin: string; destination: string; departureDate: string };
-    const slicesCamel: CamelSlice[] = [{ departureDate, destination, origin }];
-    if (returnDate)
-      slicesCamel.push({
-        departureDate: returnDate,
-        destination: origin,
-        origin: destination,
-      });
-
-    const camel = {
-      cabinClass: cabin,
-      maxConnections: 1,
-      passengers: Array.from({ length: passengers }, () => ({ type: "adult" })),
-      returnOffers: true,
-      slices: slicesCamel,
-    };
-
-    const snake = (v: unknown): unknown => {
-      if (Array.isArray(v)) return v.map(snake);
-      if (v && typeof v === "object") {
-        return Object.fromEntries(
-          Object.entries(v as Record<string, unknown>).map(([k, val]) => [
-            k
-              .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
-              .replace(/__/g, "_")
-              .toLowerCase(),
-            snake(val),
-          ])
-        );
-      }
-      return v;
-    };
-    const body = snake(camel) as Record<string, unknown>;
-
-    const res = await fetch("https://api.duffel.com/air/offer_requests", {
-      body: JSON.stringify(body),
-      headers: {
-        authorization: `Bearer ${DuffelKey}`,
-        "content-type": "application/json",
-        "duffel-version": "v2",
+  }) =>
+    withTelemetrySpan(
+      "tool.flights.search",
+      {
+        attributes: {
+          cabin,
+          destination,
+          hasReturn: Boolean(returnDate),
+          origin,
+          passengers,
+          "tool.name": "searchFlights",
+        },
+        redactKeys: ["origin", "destination"],
       },
-      method: "POST",
-    });
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`duffel_offer_request_failed:${res.status}:${text}`);
-    }
-    const json = await res.json();
-    const offers = json?.data?.offers ?? json?.data ?? [];
-    return {
-      currency,
-      offers,
-    } as const;
-  },
+      async (span) => {
+        const DuffelKey = getDuffelKey();
+        if (!DuffelKey) throw new Error("duffel_not_configured");
+
+        type CamelSlice = {
+          origin: string;
+          destination: string;
+          departureDate: string;
+        };
+        const slicesCamel: CamelSlice[] = [{ departureDate, destination, origin }];
+        if (returnDate)
+          slicesCamel.push({
+            departureDate: returnDate,
+            destination: origin,
+            origin: destination,
+          });
+
+        const camel = {
+          cabinClass: cabin,
+          maxConnections: 1,
+          passengers: Array.from({ length: passengers }, () => ({ type: "adult" })),
+          returnOffers: true,
+          slices: slicesCamel,
+        };
+
+        const snake = (v: unknown): unknown => {
+          if (Array.isArray(v)) return v.map(snake);
+          if (v && typeof v === "object") {
+            return Object.fromEntries(
+              Object.entries(v as Record<string, unknown>).map(([k, val]) => [
+                k
+                  .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+                  .replace(/__/g, "_")
+                  .toLowerCase(),
+                snake(val),
+              ])
+            );
+          }
+          return v;
+        };
+        const body = snake(camel) as Record<string, unknown>;
+
+        const endpoint = "https://api.duffel.com/air/offer_requests";
+        span.addEvent("http_post", { url: endpoint });
+        const res = await fetch(endpoint, {
+          body: JSON.stringify(body),
+          headers: {
+            authorization: `Bearer ${DuffelKey}`,
+            "content-type": "application/json",
+            "duffel-version": "v2",
+          },
+          method: "POST",
+        });
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`duffel_offer_request_failed:${res.status}:${text}`);
+        }
+        const json = await res.json();
+        const offers = json?.data?.offers ?? json?.data ?? [];
+        return {
+          currency,
+          offers,
+        } as const;
+      }
+    ),
   inputSchema: searchFlightsInputSchema,
 });

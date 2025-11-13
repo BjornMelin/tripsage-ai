@@ -11,8 +11,8 @@ export {
   validateFormData,
   validateStrict,
 } from "../validation";
+export * from "./accommodations";
 export * from "./agent-status";
-// Re-export all schemas with selective exports to avoid conflicts
 export * from "./api";
 // Selective exports from budget (excluding conflicting exports)
 export {
@@ -49,6 +49,7 @@ export {
   updateBudgetRequestSchema,
   updateExpenseRequestSchema,
 } from "./budget";
+export * from "./calendar";
 // Selective exports to avoid conflicts
 export {
   buttonPropsSchema,
@@ -56,9 +57,13 @@ export {
   inputPropsSchema,
   validateComponentProps,
 } from "./components";
+// configuration schemas should be imported directly to avoid name collisions
+export * from "./currency";
+export * from "./deals";
 // Env schemas moved to @/lib/env/schema - import from there instead
 export type { LoadingState } from "./error-boundary";
 export { loadingStateSchema } from "./error-boundary";
+export * from "./errors";
 // Selective exports from forms (prioritizing forms module)
 export {
   type AccommodationSearchFormData,
@@ -103,8 +108,12 @@ export {
 export type { SkeletonProps } from "./loading";
 export { skeletonPropsSchema } from "./loading";
 export * from "./memory";
-export * from "./search";
+// search schemas should be imported directly to avoid name collisions
 export * from "./stores";
+export * from "./temporal";
+export * from "./theme-provider";
+export * from "./weather";
+export * from "./web-search";
 
 import * as agentStatusSchemas from "./agent-status";
 // Schema categories for easy access

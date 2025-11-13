@@ -140,7 +140,9 @@ export function getGoogleMapsServerKey(): string {
     }
     throw error instanceof Error
       ? error
-      : new Error("GOOGLE_MAPS_SERVER_API_KEY is required for Google Maps Platform services");
+      : new Error(
+          "GOOGLE_MAPS_SERVER_API_KEY is required for Google Maps Platform services"
+        );
   }
 }
 
