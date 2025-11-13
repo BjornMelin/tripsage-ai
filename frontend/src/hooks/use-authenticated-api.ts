@@ -57,6 +57,52 @@ export function useAuthenticatedApi() {
     []
   );
 
+  const dispatch = useCallback(
+    async <T = unknown>(
+      method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
+      endpointPath: string,
+      headers: Headers,
+      params: Record<string, string | number | boolean> | undefined,
+      data: unknown | FormData | undefined,
+      signal: AbortSignal | undefined
+    ): Promise<T> => {
+      switch (method) {
+        case "GET":
+          return await apiClient.get<T>(endpointPath, {
+            abortSignal: signal,
+            headers: Object.fromEntries(headers.entries()),
+            params,
+          });
+        case "POST":
+          return await apiClient.post<unknown, T>(endpointPath, data as unknown, {
+            abortSignal: signal,
+            headers: Object.fromEntries(headers.entries()),
+            params,
+          });
+        case "PUT":
+          return await apiClient.put<unknown, T>(endpointPath, data as unknown, {
+            abortSignal: signal,
+            headers: Object.fromEntries(headers.entries()),
+            params,
+          });
+        case "PATCH":
+          return await apiClient.patch<unknown, T>(endpointPath, data as unknown, {
+            abortSignal: signal,
+            headers: Object.fromEntries(headers.entries()),
+            params,
+          });
+        case "DELETE":
+          return await apiClient.delete<unknown, T>(endpointPath, {
+            abortSignal: signal,
+            data: data as unknown,
+            headers: Object.fromEntries(headers.entries()),
+            params,
+          });
+      }
+    },
+    []
+  );
+
   const makeAuthenticatedRequest = useCallback(
     async <T = unknown>(
       endpoint: string,
@@ -142,47 +188,14 @@ export function useAuthenticatedApi() {
             headers.set("Content-Type", "application/json");
         }
 
-        // Route by method to ApiClient helpers
-        switch (method) {
-          case "GET":
-            return await apiClient.get<T>(endpointPath, {
-              // propagate signal for cancellation
-              abortSignal: abortControllerRef.current.signal,
-              headers: Object.fromEntries(headers.entries()),
-              params,
-            });
-          case "POST":
-            return await apiClient.post<unknown, T>(endpointPath, data as unknown, {
-              abortSignal: abortControllerRef.current.signal,
-              headers: Object.fromEntries(headers.entries()),
-              params,
-            });
-          case "PUT":
-            return await apiClient.put<unknown, T>(endpointPath, data as unknown, {
-              abortSignal: abortControllerRef.current.signal,
-              headers: Object.fromEntries(headers.entries()),
-              params,
-            });
-          case "PATCH":
-            return await apiClient.patch<unknown, T>(endpointPath, data as unknown, {
-              abortSignal: abortControllerRef.current.signal,
-              headers: Object.fromEntries(headers.entries()),
-              params,
-            });
-          case "DELETE":
-            return await apiClient.delete<unknown, T>(endpointPath, {
-              abortSignal: abortControllerRef.current.signal,
-              data: data as unknown,
-              headers: Object.fromEntries(headers.entries()),
-              params,
-            });
-          default:
-            return await apiClient.get<T>(endpointPath, {
-              abortSignal: abortControllerRef.current.signal,
-              headers: Object.fromEntries(headers.entries()),
-              params,
-            });
-        }
+        return await dispatch<T>(
+          method,
+          endpointPath,
+          headers,
+          params,
+          data,
+          abortControllerRef.current.signal
+        );
       } catch (error) {
         // Preserve existing ApiError details for non-401 cases
         if (error instanceof ApiError) {
@@ -217,57 +230,14 @@ export function useAuthenticatedApi() {
                     retryHeaders.set("Content-Type", "application/json");
                 }
 
-                switch (method) {
-                  case "GET":
-                    return await apiClient.get<T>(endpointPath, {
-                      abortSignal: abortControllerRef.current?.signal,
-                      headers: Object.fromEntries(retryHeaders.entries()),
-                      params,
-                    });
-                  case "POST":
-                    return await apiClient.post<unknown, T>(
-                      endpointPath,
-                      data as unknown,
-                      {
-                        abortSignal: abortControllerRef.current?.signal,
-                        headers: Object.fromEntries(retryHeaders.entries()),
-                        params,
-                      }
-                    );
-                  case "PUT":
-                    return await apiClient.put<unknown, T>(
-                      endpointPath,
-                      data as unknown,
-                      {
-                        abortSignal: abortControllerRef.current?.signal,
-                        headers: Object.fromEntries(retryHeaders.entries()),
-                        params,
-                      }
-                    );
-                  case "PATCH":
-                    return await apiClient.patch<unknown, T>(
-                      endpointPath,
-                      data as unknown,
-                      {
-                        abortSignal: abortControllerRef.current?.signal,
-                        headers: Object.fromEntries(retryHeaders.entries()),
-                        params,
-                      }
-                    );
-                  case "DELETE":
-                    return await apiClient.delete<unknown, T>(endpointPath, {
-                      abortSignal: abortControllerRef.current?.signal,
-                      data: data as unknown,
-                      headers: Object.fromEntries(retryHeaders.entries()),
-                      params,
-                    });
-                  default:
-                    return await apiClient.get<T>(endpointPath, {
-                      abortSignal: abortControllerRef.current?.signal,
-                      headers: Object.fromEntries(retryHeaders.entries()),
-                      params,
-                    });
-                }
+                return await dispatch<T>(
+                  method as "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
+                  endpointPath,
+                  retryHeaders,
+                  params,
+                  data,
+                  abortControllerRef.current?.signal
+                );
               }
               await supabase.auth.signOut();
             } catch {
@@ -290,7 +260,7 @@ export function useAuthenticatedApi() {
         });
       }
     },
-    [isAuthenticated, supabase, normalizeEndpoint]
+    [isAuthenticated, supabase, normalizeEndpoint, dispatch]
   );
 
   const authenticatedApi = useMemo(

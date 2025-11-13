@@ -5,6 +5,7 @@
  */
 
 import type { z } from "zod";
+import { getClientEnvVarWithFallback } from "../env/client";
 import {
   TripSageValidationError,
   ValidationContext,
@@ -183,12 +184,9 @@ export class ApiClient {
    * @param config Partial configuration to override defaults.
    */
   constructor(config: Partial<ApiClientConfig> = {}) {
-    // For constructor, access env vars directly (NEXT_PUBLIC_ vars are safe in both contexts)
-    // NODE_ENV is also safe to access directly for this use case
-    const publicApiUrl =
-      typeof process !== "undefined"
-        ? (process.env.NEXT_PUBLIC_API_URL as string | undefined)
-        : undefined;
+    // Use schema-validated env access for NEXT_PUBLIC_ vars
+    // NODE_ENV is safe to access directly as it's a runtime constant
+    const publicApiUrl = getClientEnvVarWithFallback("NEXT_PUBLIC_API_URL", undefined);
     const nodeEnv =
       typeof process !== "undefined" ? process.env.NODE_ENV : "development";
     this.config = {
@@ -308,11 +306,10 @@ export class ApiClient {
       }
     }
 
-    // Prepare request options
+    // Prepare request options (signal is bound via internal controller below)
     const requestOptions: RequestInit = {
       headers,
       method: finalConfig.method || "GET",
-      signal: finalConfig.abortSignal,
     };
 
     // Add body for POST/PUT/PATCH requests
@@ -332,11 +329,23 @@ export class ApiClient {
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
         const controller = new AbortController();
+        // Bridge external abort signals to our internal controller so timeout always applies
+        if (finalConfig.abortSignal) {
+          if (finalConfig.abortSignal.aborted) {
+            controller.abort();
+          } else {
+            finalConfig.abortSignal.addEventListener(
+              "abort",
+              () => controller.abort(),
+              { once: true }
+            );
+          }
+        }
         const timeoutId = setTimeout(() => controller.abort(), timeout);
 
         const response = await fetch(url.toString(), {
           ...requestOptions,
-          signal: finalConfig.abortSignal || controller.signal,
+          signal: controller.signal,
         });
 
         clearTimeout(timeoutId);

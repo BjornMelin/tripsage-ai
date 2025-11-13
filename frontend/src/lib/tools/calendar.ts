@@ -10,6 +10,7 @@ import "server-only";
 import { tool } from "ai";
 import { z } from "zod";
 import { createEvent, queryFreeBusy } from "@/lib/calendar/google";
+import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import {
   calendarEventSchema,
   createEventRequestSchema,
@@ -121,16 +122,17 @@ export const exportItineraryToICS = toolAny({
   execute: async (params: z.infer<typeof exportItineraryToICSInputSchema>) => {
     try {
       // Call the ICS export route internally
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/calendar/ics/export`,
-        {
-          body: JSON.stringify(params),
-          headers: {
-            "Content-Type": "application/json",
-          },
-          method: "POST",
-        }
+      const siteUrl = getServerEnvVarWithFallback(
+        "NEXT_PUBLIC_SITE_URL",
+        "http://localhost:3000"
       );
+      const response = await fetch(`${siteUrl}/api/calendar/ics/export`, {
+        body: JSON.stringify(params),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
 
       if (!response.ok) {
         const errorText = await response.text();

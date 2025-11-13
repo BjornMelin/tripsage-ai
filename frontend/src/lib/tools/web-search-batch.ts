@@ -88,13 +88,14 @@ export const webSearchBatch = tool({
           "tool.name": "webSearchBatch",
         },
       },
-      async () => {
+      async (span) => {
         // Optional top-level rate limiting (in addition to per-query limits)
         try {
           const rl = buildToolRateLimiter();
           if (rl && userId) {
             const rr = await rl.limit(userId);
             if (!rr.success) {
+              span.addEvent("rate_limited", { userId });
               const err = new Error("web_search_rate_limited");
               (err as Error & { meta?: unknown }).meta = rr;
               throw err;
@@ -159,10 +160,16 @@ export const webSearchBatch = tool({
             // Fallback to direct HTTP for unexpected errors (not rate/auth/payment)
             if (code === "web_search_error") {
               try {
+                // Proper env access via validated server env helpers
                 const { getServerEnvVar, getServerEnvVarWithFallback } = await import(
                   "@/lib/env/server"
                 );
-                const apiKey = getServerEnvVar("FIRECRAWL_API_KEY");
+                let apiKey: string | undefined;
+                try {
+                  apiKey = getServerEnvVar("FIRECRAWL_API_KEY") as unknown as string;
+                } catch {
+                  throw new Error("web_search_not_configured");
+                }
                 if (!apiKey) throw new Error("web_search_not_configured");
                 const baseUrl = getServerEnvVarWithFallback(
                   "FIRECRAWL_BASE_URL",
@@ -180,6 +187,7 @@ export const webSearchBatch = tool({
                   timeout: rest.timeoutMs,
                 } as Record<string, unknown>;
                 const startedAt = Date.now();
+                span.addEvent("http_fallback_post", { q });
                 const res = await fetch(url, {
                   body: JSON.stringify(body),
                   headers: {
@@ -215,9 +223,22 @@ export const webSearchBatch = tool({
                 });
               } catch (e2) {
                 const msg2 = e2 instanceof Error ? e2.message : String(e2);
+                span.addEvent("http_fallback_error", {
+                  message: msg2.slice(0, 120),
+                  q,
+                });
+                // Debug aid for tests
+                console.error("webSearchBatch fallback error for", q, msg2);
                 results.push({ error: { code, message: msg2 }, ok: false, query: q });
               }
             } else {
+              span.addEvent("primary_error", {
+                code,
+                message: message.slice(0, 120),
+                q,
+              });
+              // Debug aid for tests
+              console.error("webSearchBatch primary error for", q, code, message);
               results.push({ error: { code, message }, ok: false, query: q });
             }
           }

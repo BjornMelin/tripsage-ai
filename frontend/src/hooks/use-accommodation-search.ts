@@ -8,7 +8,7 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { apiClient } from "@/lib/api/api-client";
 import type { Accommodation, AccommodationSearchParams } from "@/lib/schemas/search";
 import { useSearchParamsStore } from "@/stores/search-params-store";
@@ -34,7 +34,7 @@ export function useAccommodationSearch() {
   const { startSearch, setSearchResults, setSearchError, completeSearch } =
     useSearchResultsStore();
 
-  let currentSearchId: string | null = null;
+  const currentSearchIdRef = useRef<string | null>(null);
 
   const searchMutation = useMutation({
     mutationFn: async (params: AccommodationSearchParams) => {
@@ -45,7 +45,7 @@ export function useAccommodationSearch() {
       return response;
     },
     onMutate: (params) => {
-      currentSearchId = startSearch("accommodation", { ...params } as Record<
+      currentSearchIdRef.current = startSearch("accommodation", { ...params } as Record<
         string,
         unknown
       >);
@@ -54,25 +54,25 @@ export function useAccommodationSearch() {
 
   // Handle search success
   useEffect(() => {
-    if (searchMutation.data && currentSearchId) {
-      setSearchResults(currentSearchId, {
+    if (searchMutation.data && currentSearchIdRef.current) {
+      setSearchResults(currentSearchIdRef.current, {
         accommodations: searchMutation.data.results,
       });
-      completeSearch(currentSearchId);
+      completeSearch(currentSearchIdRef.current);
     }
-  }, [searchMutation.data, currentSearchId, setSearchResults, completeSearch]);
+  }, [searchMutation.data, setSearchResults, completeSearch]);
 
   // Handle search error
   useEffect(() => {
-    if (searchMutation.error && currentSearchId) {
-      setSearchError(currentSearchId, {
+    if (searchMutation.error && currentSearchIdRef.current) {
+      setSearchError(currentSearchIdRef.current, {
         code: "SEARCH_ERROR",
         message: searchMutation.error.message || "Failed to search accommodations",
         occurredAt: new Date().toISOString(),
         retryable: true,
       });
     }
-  }, [searchMutation.error, currentSearchId, setSearchError]);
+  }, [searchMutation.error, setSearchError]);
 
   const getSuggestions = useQuery({
     queryFn: async () => {

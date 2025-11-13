@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { getServerEnvVarWithFallback } from "@/lib/env/server";
 
 /**
  * Props for CalendarEventList component.
@@ -61,8 +62,12 @@ export async function CalendarEventList({
   }> = [];
 
   try {
+    const siteUrl = getServerEnvVarWithFallback(
+      "NEXT_PUBLIC_SITE_URL",
+      "http://localhost:3000"
+    );
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/calendar/events?${params.toString()}`,
+      `${siteUrl}/api/calendar/events?${params.toString()}`,
       {
         cache: "no-store",
       }

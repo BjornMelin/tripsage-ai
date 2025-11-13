@@ -23,12 +23,7 @@ import {
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 /** Provider preference order for BYOK key resolution. */
-const PROVIDER_PREFERENCE: ProviderId[] = [
-  "openai",
-  "openrouter",
-  "anthropic",
-  "xai",
-];
+const PROVIDER_PREFERENCE: ProviderId[] = ["openai", "openrouter", "anthropic", "xai"];
 
 function extractHost(url: string | undefined): string | undefined {
   if (!url) return undefined;

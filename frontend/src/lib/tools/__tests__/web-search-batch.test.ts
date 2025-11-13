@@ -1,8 +1,19 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 vi.mock("@/lib/telemetry/span", () => ({
-  withTelemetrySpan: vi.fn((_n: string, _o: unknown, fn: (s: unknown) => unknown) =>
-    fn({})
+  withTelemetrySpan: vi.fn(
+    (
+      _n: string,
+      _o: unknown,
+      fn: (s: {
+        addEvent?: (name: string, attributes?: Record<string, unknown>) => void;
+        setAttribute?: (key: string, value: unknown) => void;
+      }) => unknown
+    ) =>
+      fn({
+        addEvent: () => undefined,
+        setAttribute: () => undefined,
+      })
   ),
 }));
 
@@ -15,6 +26,11 @@ const mockContext = { messages: [], toolCallId: "tc-1" };
 beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn());
   process.env.FIRECRAWL_API_KEY = "test_key";
+  // Ensure server env validation passes in tests that call env helpers
+  process.env.NEXT_PUBLIC_SUPABASE_URL =
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "https://test.supabase.co";
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "anon-test";
 });
 
 afterEach(() => {
