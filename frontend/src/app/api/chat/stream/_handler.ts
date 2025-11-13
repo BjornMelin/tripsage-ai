@@ -6,9 +6,14 @@
  */
 
 import type { UIMessage } from "ai";
-import { convertToModelMessages, streamText as defaultStreamText } from "ai";
+import {
+  convertToModelMessages,
+  streamText as defaultStreamText,
+  generateObject,
+  NoSuchToolError,
+  stepCountIs,
+} from "ai";
 import { extractTexts, validateImageAttachments } from "@/app/api/_helpers/attachments";
-import { createMcpClientHelper } from "@/lib/mcp/client";
 import type { ProviderResolution } from "@/lib/providers/types";
 import { secureUuid } from "@/lib/security/random";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
@@ -141,7 +146,12 @@ export async function handleChatStream(
   );
 
   // Memory hydration: prepend system prompt with a short memory summary if present
-  let systemPrompt = "You are a helpful travel planning assistant.";
+  let systemPrompt =
+    "You are a helpful travel planning assistant with access to accommodation booking " +
+    "via Expedia Partner Solutions (hotels and Vrbo vacation rentals). " +
+    "Use searchAccommodations to find properties, getAccommodationDetails for more info, " +
+    "checkAvailability to get booking tokens, and bookAccommodation to complete reservations. " +
+    "Always guide users through the complete booking flow when they want to book accommodations.";
   try {
     const { data: memRows } = await deps.supabase
       .from("memories")
@@ -183,41 +193,54 @@ export async function handleChatStream(
   ];
   const { maxTokens, reasons } = clampMaxTokens(clampInput, desired, provider.modelId);
 
-  // Optional MCP tools discovery (SSE) merged with local registry
-  const { getServerEnvVarWithFallback } = await import("@/lib/env/server");
-  let discoveredTools: Record<string, unknown> | undefined;
-  const mcpUrl =
-    getServerEnvVarWithFallback("AIRBNB_MCP_URL", undefined) ||
-    getServerEnvVarWithFallback("ACCOM_SEARCH_URL", undefined);
-  const mcpAuth =
-    getServerEnvVarWithFallback("AIRBNB_MCP_API_KEY", undefined) ||
-    getServerEnvVarWithFallback("ACCOM_SEARCH_TOKEN", undefined);
-  let mcpClient: Awaited<ReturnType<typeof createMcpClientHelper>> | undefined;
-  try {
-    if (mcpUrl) {
-      mcpClient = await createMcpClientHelper(
-        mcpUrl,
-        mcpAuth ? { authorization: `Bearer ${mcpAuth}` } : undefined
-      );
-      discoveredTools = (await mcpClient.tools()) as Record<string, unknown>;
-    }
-  } catch {
-    discoveredTools = undefined;
-  }
-
   // Stream via AI SDK (DI allows tests to inject a finite stream stub)
   const stream = deps.stream ?? defaultStreamText;
   const result = stream({
+    // Advanced AI SDK v6: Repair invalid tool calls automatically
+    // biome-ignore lint/style/useNamingConvention: AI SDK property name
+    experimental_repairToolCall: async ({ toolCall, tools, inputSchema, error }) => {
+      // Don't attempt to fix invalid tool names
+      if (NoSuchToolError.isInstance(error)) {
+        return null;
+      }
+
+      // Get the tool definition
+      const tool = tools[toolCall.toolName as keyof typeof tools];
+      if (!tool || typeof tool !== "object" || !("inputSchema" in tool)) {
+        return null;
+      }
+
+      // Use generateObject to repair the tool call input with schema validation
+      try {
+        const { object: repairedArgs } = await generateObject({
+          model: provider.model,
+          prompt: [
+            `The model tried to call the tool "${toolCall.toolName}" with the following inputs:`,
+            JSON.stringify(toolCall.input, null, 2),
+            "The tool accepts the following schema:",
+            JSON.stringify(inputSchema(toolCall), null, 2),
+            "Please fix the inputs to match the schema exactly.",
+          ].join("\n"),
+          schema: tool.inputSchema,
+        });
+
+        // Return repaired tool call with stringified input (AI SDK expects string)
+        return {
+          ...toolCall,
+          input: JSON.stringify(repairedArgs),
+        };
+      } catch (repairError) {
+        // If repair fails, return null to let the error propagate
+        console.error(`Failed to repair tool call ${toolCall.toolName}:`, repairError);
+        return null;
+      }
+    },
     maxOutputTokens: maxTokens,
     messages: convertToModelMessages(messages),
     model: provider.model,
-    onFinish: async () => {
-      try {
-        await mcpClient?.close?.();
-      } catch {
-        /* ignore close errors */
-      }
-    },
+    // AI SDK v6: Limit tool execution steps to prevent infinite loops
+    // Accommodation searches can trigger multiple tools (search -> details -> availability -> booking)
+    stopWhen: stepCountIs(10), // Allow up to 10 tool execution steps
     system: systemPrompt,
     toolChoice: "auto",
     tools: (() => {
@@ -233,26 +256,6 @@ export async function handleChatStream(
         ],
         payload.sessionId
       );
-      if (discoveredTools) {
-        // Detect conflicts: MCP tools that overlap with local registry
-        const conflicts: string[] = [];
-        for (const mcpToolName of Object.keys(discoveredTools)) {
-          if (mcpToolName in local) {
-            conflicts.push(mcpToolName);
-          }
-        }
-        if (conflicts.length > 0) {
-          deps.logger?.error?.("mcp_tool_conflicts", {
-            conflicts,
-            message: `MCP tools override local tools: ${conflicts.join(", ")}. Local tools take precedence.`,
-            requestId: secureUuid(),
-          });
-        }
-        // Merge: local tools take precedence over MCP tools to prevent silent overrides
-        const merged = { ...(discoveredTools as Record<string, unknown>), ...local };
-        // biome-ignore lint/suspicious/noExplicitAny: AI SDK tools type is dynamic
-        return merged as any;
-      }
       // biome-ignore lint/suspicious/noExplicitAny: AI SDK tools type is dynamic
       return local as any;
     })(),

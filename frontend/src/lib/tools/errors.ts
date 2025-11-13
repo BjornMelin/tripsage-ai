@@ -13,6 +13,7 @@
  * snake_case for API/log compatibility.
  */
 export const TOOL_ERROR_CODES = {
+  accomBookingFailed: "accom_booking_failed",
   accomBookingSessionRequired: "accom_booking_session_required",
   accomDetailsFailed: "accom_details_failed",
   accomDetailsNotConfigured: "accom_details_not_configured",
