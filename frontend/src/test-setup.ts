@@ -243,6 +243,15 @@ if (typeof process !== "undefined" && process.env) {
       return Reflect.set(target, prop, value);
     },
   });
+
+  // Provide sane defaults for client-visible env used in component barrels
+  // to avoid validation failures when importing UI modules in tests.
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "http://localhost:54321";
+  }
+  if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-anon-key";
+  }
 }
 
 afterEach(() => {

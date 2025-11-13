@@ -8,8 +8,7 @@
 import { useEffect } from "react";
 import { MinimalErrorFallback } from "@/components/error/error-fallback";
 import { errorService } from "@/lib/error-service";
-import { secureUuid } from "@/lib/security/random";
-import { fireAndForget } from "@/lib/utils";
+import { fireAndForget, getSessionId } from "@/lib/utils";
 
 /**
  * Global error boundary for the app.
@@ -56,24 +55,6 @@ function getUserId(): string | undefined {
       window as typeof window & { userStore?: { user?: { id?: string } } }
     ).userStore;
     return userStore?.user?.id;
-  } catch {
-    return undefined;
-  }
-}
-
-/**
- * Gets or creates a session ID from sessionStorage for error tracking.
- *
- * @returns Session ID or undefined if sessionStorage is unavailable
- */
-function getSessionId(): string | undefined {
-  try {
-    let sessionId = sessionStorage.getItem("session_id");
-    if (!sessionId) {
-      sessionId = `session_${secureUuid()}`;
-      sessionStorage.setItem("session_id", sessionId);
-    }
-    return sessionId;
   } catch {
     return undefined;
   }
