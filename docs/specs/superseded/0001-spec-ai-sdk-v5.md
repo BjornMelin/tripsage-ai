@@ -1,5 +1,7 @@
 # Spec: AI SDK v5 Migration (Client + Route)
 
+Status: Superseded by 0008-spec-ai-sdk-v6-foundations.md
+
 **Version**: 1.1.0
 **Status**: Superseded by ADR-0031 (2025-11-02)
 **Date**: 2025-10-24

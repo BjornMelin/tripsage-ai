@@ -1,6 +1,6 @@
 # Supabase Webhooks (DB → Vercel) – Operator Guide
 
-This guide shows how to configure Postgres settings (GUCs) for the consolidated webhook migration and how to verify end‑to‑end delivery with a signed HMAC request.
+This guide shows how to configure Postgres settings (GUCs) for the consolidated webhook migration and how to verify end‑to‑end delivery with a signed HMAC request. It also explains how trip collaborator notifications are processed via Upstash QStash and Resend.
 
 ## Prerequisites
 
@@ -8,7 +8,12 @@ This guide shows how to configure Postgres settings (GUCs) for the consolidated 
 - Vercel project deployed with the webhook routes:
   - `/api/hooks/trips`
   - `/api/hooks/cache`
+  - `/api/jobs/notify-collaborators` (QStash worker for trip notifications)
 - Vercel env var `HMAC_SECRET` set to a strong secret.
+- Vercel env vars for notifications:
+  - `QSTASH_TOKEN`, `QSTASH_CURRENT_SIGNING_KEY`, `QSTASH_NEXT_SIGNING_KEY`
+  - `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `RESEND_FROM_NAME`
+  - Optional `COLLAB_WEBHOOK_URL`
 
 ## 1) Configure Postgres settings (GUCs)
 
@@ -53,7 +58,7 @@ curl -i \
   https://<your-vercel-domain>/api/hooks/trips
 ```
 
-Expected
+Expected (hook only)
 
 - `HTTP/1.1 200 OK` and JSON `{ ok: true, ... }` or `{ ok: true, skipped: true }` depending on payload/table.
 - 401 for invalid/missing signature.
@@ -61,6 +66,8 @@ Expected
 ## 3) Test end‑to‑end from Postgres
 
 Set the GUCs and execute a change to a subscribed table (e.g., `INSERT INTO trip_collaborators ...`). The trigger will POST to your Vercel route with a signed HMAC.
+
+If QStash is configured, `/api/hooks/trips` will enqueue a job to `/api/jobs/notify-collaborators`. The worker route will then send emails via Resend and call any downstream webhook.
 
 Troubleshooting
 
@@ -72,4 +79,5 @@ Troubleshooting
 
 - HMAC header is omitted when no secret is configured; handlers reject missing/invalid signatures.
 - Functions run with `SECURITY DEFINER` and `search_path = pg_catalog, public` to avoid hijacking.
-- Keep secrets in DB settings; don’t store them in tables.
+- Keep secrets in DB settings; do not store them in tables.
+- QStash uses `Upstash-Signature` for worker calls; worker routes verify signatures with the configured signing keys.
