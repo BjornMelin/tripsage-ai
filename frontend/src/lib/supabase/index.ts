@@ -3,27 +3,32 @@
  * Unified factory API for server and browser clients.
  */
 
-// Admin client
+// Admin client (server-only service-role access)
 export { createAdminSupabase, type TypedAdminSupabase } from "./admin";
 
-// Browser client
+// Browser client helpers
 export {
   createClient,
   getBrowserClient,
   type TypedSupabaseClient,
   useSupabase,
 } from "./client";
-// Factory utilities and types
+
+// Unified factory utilities and types (server + middleware)
 export type {
   BrowserSupabaseClient,
   CreateServerSupabaseOptions,
   GetCurrentUserResult,
   ServerSupabaseClient,
 } from "./factory";
-export { isSupabaseClient } from "./guards";
-// Server client and utilities
 export {
-  createServerSupabase,
+  createCookieAdapter,
+  createMiddlewareSupabase,
   getCurrentUser,
-  type TypedServerSupabase,
-} from "./server";
+} from "./factory";
+
+// Runtime guards
+export { isSupabaseClient } from "./guards";
+
+// Server client entrypoint (Next.js cookies() wrapper)
+export { createServerSupabase, type TypedServerSupabase } from "./server";

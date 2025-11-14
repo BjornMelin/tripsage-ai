@@ -12,7 +12,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
 import { type AppError, handleApiError, isApiError } from "@/lib/api/error-types";
 import { cacheTimes, queryKeys, staleTimes } from "@/lib/query-keys";
-import { useSupabase } from "@/lib/supabase/client";
+import { useSupabase } from "@/lib/supabase";
 import type { Trip } from "@/stores/trip-store";
 
 /** Represents a trip suggestion from the API. */

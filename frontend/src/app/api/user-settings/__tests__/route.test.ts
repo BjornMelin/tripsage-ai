@@ -12,7 +12,7 @@ const MOCK_SUPABASE = vi.hoisted(() => ({
 
 const CREATE_SUPABASE = vi.hoisted(() => vi.fn(async () => MOCK_SUPABASE));
 
-vi.mock("@/lib/supabase/server", () => ({
+vi.mock("@/lib/supabase", () => ({
   createServerSupabase: CREATE_SUPABASE,
 }));
 

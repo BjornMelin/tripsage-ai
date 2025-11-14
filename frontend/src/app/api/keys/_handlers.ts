@@ -6,7 +6,7 @@
  * typed dependencies.
  */
 import { z } from "zod";
-import type { TypedServerSupabase } from "@/lib/supabase/server";
+import type { TypedServerSupabase } from "@/lib/supabase";
 
 /** Set of allowed API service providers for key storage. */
 const ALLOWED = new Set(["openai", "openrouter", "anthropic", "xai", "gateway"]);

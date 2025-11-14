@@ -9,7 +9,7 @@ import { render } from "@/test/test-utils";
 const SUPABASE = createMockSupabaseClient();
 const FROM_MOCK = SUPABASE.from as unknown as Mock;
 
-vi.mock("@/lib/supabase/client", () => ({
+vi.mock("@/lib/supabase", () => ({
   createClient: () => SUPABASE,
   getBrowserClient: () => SUPABASE,
   useSupabase: () => SUPABASE,

@@ -9,7 +9,7 @@ const MOCK_CHANNEL = {
   unsubscribe: vi.fn(),
 };
 
-vi.mock("@/lib/supabase/client", () => ({
+vi.mock("@/lib/supabase", () => ({
   getBrowserClient: () => ({ channel: vi.fn(() => MOCK_CHANNEL) }),
 }));
 

@@ -17,7 +17,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { getClientIpFromHeaders } from "@/lib/next/route-helpers";
-import { createServerSupabase } from "@/lib/supabase/server";
+import { createServerSupabase } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 

@@ -6,7 +6,7 @@
 
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { createServerSupabase } from "@/lib/supabase/server";
+import { createServerSupabase } from "@/lib/supabase";
 
 /**
  * Handles OAuth callback from Supabase Auth.

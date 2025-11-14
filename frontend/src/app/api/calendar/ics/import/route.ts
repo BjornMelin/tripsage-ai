@@ -16,7 +16,7 @@ import { z } from "zod";
 
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { calendarEventSchema } from "@/lib/schemas/calendar";
-import { createServerSupabase } from "@/lib/supabase/server";
+import { createServerSupabase } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 

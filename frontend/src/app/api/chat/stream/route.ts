@@ -18,7 +18,7 @@ import { NextResponse } from "next/server";
 
 import { getClientIpFromHeaders } from "@/lib/next/route-helpers";
 import { resolveProvider } from "@/lib/providers/registry";
-import { createServerSupabase } from "@/lib/supabase/server";
+import { createServerSupabase } from "@/lib/supabase";
 import { handleChatStream } from "./_handler";
 
 // Avoid public caching; this route depends on auth/session

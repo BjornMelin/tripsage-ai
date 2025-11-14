@@ -53,7 +53,7 @@ vi.mock("zustand/middleware", () => ({
 }));
 
 const MOCK_SUPABASE = createMockSupabaseClient();
-vi.mock("@/lib/supabase/client", () => ({
+vi.mock("@/lib/supabase", () => ({
   createClient: () => MOCK_SUPABASE,
   getBrowserClient: () => MOCK_SUPABASE,
   useSupabase: () => MOCK_SUPABASE,
