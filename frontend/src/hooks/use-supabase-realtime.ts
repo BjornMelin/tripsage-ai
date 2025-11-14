@@ -59,6 +59,14 @@ export function useTripRealtime(tripId: string | number | null): RealtimeHookRes
   const channel = useRealtimeChannel(topic, { private: true });
   const hasError = Boolean(channel.error);
 
+  const realtimeError = useMemo(
+    () =>
+      hasError && channel.error
+        ? new Error(channel.error ?? "Realtime subscription error")
+        : null,
+    [channel.error, hasError]
+  );
+
   if (!topic) {
     return {
       connectionStatus: { destinations: "disconnected", trips: "disconnected" },
@@ -67,11 +75,6 @@ export function useTripRealtime(tripId: string | number | null): RealtimeHookRes
       isConnected: false,
     };
   }
-
-  const realtimeError =
-    hasError && channel.error
-      ? new Error(channel.error ?? "Realtime subscription error")
-      : null;
 
   return {
     connectionStatus: {

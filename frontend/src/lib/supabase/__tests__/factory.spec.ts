@@ -1,20 +1,11 @@
-/**
- * @fileoverview Tests for unified Supabase factory.
- *
- * This test suite validates the factory's ability to create server clients,
- * manage cookies, integrate with OpenTelemetry, and provide unified user
- * authentication methods.
- */
-
-import { SpanStatusCode, trace } from "@opentelemetry/api";
 // @ts-expect-error startActiveSpanMock is provided only by the Vitest mock.
-import { startActiveSpanMock } from "@opentelemetry/api";
+import { SpanStatusCode, startActiveSpanMock, trace } from "@opentelemetry/api";
 import type { CookieMethodsServer } from "@supabase/ssr";
 import { createServerClient } from "@supabase/ssr";
-import { getClientEnv } from "@/lib/env/client";
 import type { User } from "@supabase/supabase-js";
 import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { getClientEnv } from "@/lib/env/client";
 import type { ServerSupabaseClient } from "../factory";
 import {
   createCookieAdapter,
@@ -48,12 +39,12 @@ vi.mock("@opentelemetry/api", () => {
       OK: 1,
       UNSET: 0,
     },
+    startActiveSpanMock: localStartActiveSpanMock,
     trace: {
       getTracer: vi.fn(() => ({
         startActiveSpan: localStartActiveSpanMock,
       })),
     },
-    startActiveSpanMock: localStartActiveSpanMock,
   };
 });
 
@@ -214,9 +205,7 @@ describe("Supabase Factory", () => {
           );
 
           expect(() =>
-            options.cookies.setAll?.([
-              { name: "cookie", value: "value", options: {} },
-            ])
+            options.cookies.setAll?.([{ name: "cookie", options: {}, value: "value" }])
           ).toThrow("Cookie adapter required for server client creation");
 
           return {
@@ -456,14 +445,12 @@ describe("Supabase Factory", () => {
       expect(startActiveSpanMock).toHaveBeenCalled();
 
       // The callback should set redacted user ID
-      const callbackFn = startActiveSpanMock.mock.calls[0][2] as (
-        span: {
-          end: ReturnType<typeof vi.fn>;
-          recordException: ReturnType<typeof vi.fn>;
-          setAttribute: ReturnType<typeof vi.fn>;
-          setStatus: ReturnType<typeof vi.fn>;
-        }
-      ) => Promise<void>;
+      const callbackFn = startActiveSpanMock.mock.calls[0][2] as (span: {
+        end: ReturnType<typeof vi.fn>;
+        recordException: ReturnType<typeof vi.fn>;
+        setAttribute: ReturnType<typeof vi.fn>;
+        setStatus: ReturnType<typeof vi.fn>;
+      }) => Promise<void>;
       const mockSpan = {
         end: vi.fn(),
         recordException: vi.fn(),
@@ -487,14 +474,12 @@ describe("Supabase Factory", () => {
 
       await getCurrentUser(mockSupabaseClient);
 
-      const callbackFn = startActiveSpanMock.mock.calls[0][2] as (
-        span: {
-          end: ReturnType<typeof vi.fn>;
-          recordException: ReturnType<typeof vi.fn>;
-          setAttribute: ReturnType<typeof vi.fn>;
-          setStatus: ReturnType<typeof vi.fn>;
-        }
-      ) => Promise<void>;
+      const callbackFn = startActiveSpanMock.mock.calls[0][2] as (span: {
+        end: ReturnType<typeof vi.fn>;
+        recordException: ReturnType<typeof vi.fn>;
+        setAttribute: ReturnType<typeof vi.fn>;
+        setStatus: ReturnType<typeof vi.fn>;
+      }) => Promise<void>;
       const mockSpan = {
         end: vi.fn(),
         recordException: vi.fn(),
