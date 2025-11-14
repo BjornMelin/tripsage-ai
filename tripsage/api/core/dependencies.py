@@ -17,8 +17,6 @@ from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError,
     CoreAuthorizationError,
 )
-from tripsage_core.services.airbnb_mcp import AirbnbMCP
-from tripsage_core.services.business.accommodation_service import AccommodationService
 from tripsage_core.services.business.destination_service import DestinationService
 from tripsage_core.services.business.file_processing_service import (
     FileProcessingService,
@@ -181,10 +179,7 @@ def get_cache_service_dep(request: Request) -> CacheService:
     return _get_required_service(request, "cache_service", CacheService)
 
 
-# Google Maps service dependency (DI-managed in app lifespan)
-
-
-
+# File processing service dependency
 def get_file_processing_service(request: Request) -> FileProcessingService:
     """Return the FileProcessingService singleton."""
     return _get_required_service(
@@ -212,25 +207,6 @@ def get_search_facade(request: Request) -> SearchFacade:
         "search_facade",
         SearchFacade,
     )
-
-
-# MCP service dependency
-def get_mcp_service(request: Request) -> AirbnbMCP:
-    """Get DI-managed MCP service instance."""
-    return _get_required_service(request, "mcp_service", AirbnbMCP)
-
-
-# Business service dependencies (container-backed)
-def get_accommodation_service(request: Request) -> AccommodationService:
-    """Return AccommodationService from app.state container."""
-    return _get_required_service(
-        request,
-        "accommodation_service",
-        AccommodationService,
-    )
-
-
-# Chat service no longer provided; chat moved to Next.js routes using AI SDK.
 
 
 def get_destination_service(request: Request) -> DestinationService:
@@ -270,7 +246,6 @@ def get_trip_service(request: Request) -> TripService:
 SettingsDep = Annotated[Settings, Depends(get_settings_dependency)]
 DatabaseDep = Annotated[DatabaseService, Depends(get_db)]
 CacheDep = Annotated[CacheService, Depends(get_cache_service_dep)]
-MCPServiceDep = Annotated[AirbnbMCP, Depends(get_mcp_service)]
 
 UnifiedSearchServiceDep = Annotated[
     UnifiedSearchService, Depends(get_unified_search_service_dep)
@@ -285,9 +260,6 @@ AgentPrincipalDep = Annotated[Principal, Depends(require_agent_principal)]
 AdminPrincipalDep = Annotated[Principal, Depends(require_admin_principal)]
 
 # Business service dependencies (type aliases)
-AccommodationServiceDep = Annotated[
-    AccommodationService, Depends(get_accommodation_service)
-]
 # ChatServiceDep removed
 DestinationServiceDep = Annotated[DestinationService, Depends(get_destination_service)]
 FlightServiceDep = Annotated[FlightService, Depends(get_flight_service_dep)]

@@ -103,7 +103,9 @@ async def test_search_analytics_happy(
         """Provide cache service stub for DI."""
         return cache
 
-    app.dependency_overrides[dep.require_principal] = _provide_principal  # type: ignore[assignment]
+    app.dependency_overrides[dep._require_principal_dependency] = (  # type: ignore[assignment]
+        _provide_principal
+    )
     app.dependency_overrides[dep.get_cache_service_dep] = _provide_cache  # type: ignore[assignment]
 
     client = async_client_factory(app)
@@ -140,7 +142,9 @@ async def test_search_analytics_cache_failure(
         """Provide broken cache service stub for DI."""
         return _BrokenCache()
 
-    app.dependency_overrides[dep.require_principal] = _provide_principal  # type: ignore[assignment]
+    app.dependency_overrides[dep._require_principal_dependency] = (  # type: ignore[assignment]
+        _provide_principal
+    )
     app.dependency_overrides[dep.get_cache_service_dep] = _provide_cache  # type: ignore[assignment]
 
     client = async_client_factory(app)
@@ -156,8 +160,8 @@ async def test_bulk_search_happy_and_over_limit(
     """Bulk search returns list for ≤10 items; 400 when >10 requests."""
     from tripsage.api.core import dependencies as dep
 
-    def _provide_service() -> _SearchService:
-        """Provide search service stub for DI."""
+    def _provide_facade() -> _SearchService:
+        """Provide search facade stub for DI."""
         return _SearchService()
 
     cache = _Cache()
@@ -166,7 +170,7 @@ async def test_bulk_search_happy_and_over_limit(
         """Provide cache service stub for DI."""
         return cache
 
-    app.dependency_overrides[dep.get_unified_search_service_dep] = _provide_service  # type: ignore[assignment]
+    app.dependency_overrides[dep.get_search_facade] = _provide_facade  # type: ignore[assignment]
     app.dependency_overrides[dep.get_cache_service_dep] = _provide_cache  # type: ignore[assignment]
 
     client = async_client_factory(app)

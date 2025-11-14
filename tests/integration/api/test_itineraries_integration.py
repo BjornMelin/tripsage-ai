@@ -77,7 +77,9 @@ async def test_itineraries_create_and_get_404(
         """Provide itinerary service stub for DI."""
         return svc
 
-    app.dependency_overrides[dep.require_principal] = _provide_principal  # type: ignore[assignment]
+    app.dependency_overrides[dep._require_principal_dependency] = (  # type: ignore[assignment]
+        _provide_principal
+    )
     app.dependency_overrides[dep.get_itinerary_service] = _provide_itinerary_service  # type: ignore[assignment]
 
     client = async_client_factory(app)

@@ -105,12 +105,14 @@ async def test_destinations_search_and_get_404(
         """Provide principal instance for DI."""
         return principal
 
-    def _provide_dest_svc() -> _DestSvc:
-        """Provide destination service stub."""
+    def _provide_search_facade() -> _DestSvc:
+        """Provide search facade stub exposing destination operations."""
         return _DestSvc()
 
-    app.dependency_overrides[dep.require_principal] = _provide_principal  # type: ignore[assignment]
-    app.dependency_overrides[dep.get_destination_service] = _provide_dest_svc  # type: ignore[assignment]
+    app.dependency_overrides[dep._require_principal_dependency] = (  # type: ignore[assignment]
+        _provide_principal
+    )
+    app.dependency_overrides[dep.get_search_facade] = _provide_search_facade  # type: ignore[assignment]
 
     client = async_client_factory(app)
 
