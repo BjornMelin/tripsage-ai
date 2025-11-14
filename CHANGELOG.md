@@ -22,6 +22,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Middleware, calendar helpers, and BYOK API handlers use `createMiddlewareSupabase`/`getCurrentUser` from the same entrypoint for consistent SSR auth wiring
   - Tests updated to mock `@/lib/supabase` where appropriate, keeping Supabase integration details behind the barrel module
 
+### Fixed
+
+- Supabase SSR factory and server tests now stub `@supabase/ssr.createServerClient`, `getServerEnv()`, and `getClientEnv()` explicitly, so Zod environment validation and cookie adapters are tested deterministically in `frontend/src/lib/supabase/__tests__/factory.spec.ts` and `frontend/src/lib/supabase/__tests__/server.test.ts` without relying on process environment side effects.
+- Supabase Realtime hooks now provide stable runtime behaviour: `useTripRealtime` memoizes its error instance to avoid unnecessary error object churn; `useWebSocketChat` now delegates channel subscription to the shared `useRealtimeChannel` helper and uses Supabase's built-in reconnection, removing duplicated backoff logic.
+- Agent status WebSocket reconnect backoff in `frontend/src/hooks/use-agent-status-websocket.ts` now increments attempts via a state updater and derives delays from the updated value, so retry intervals grow exponentially and reset only on successful subscription instead of remaining fixed.
+- Chat store realtime lifecycle is guarded by tests: `disconnectRealtime` in `frontend/src/stores/chat-store.ts` is covered by `frontend/src/stores/__tests__/chat-store-realtime.test.ts` to ensure connection status, pending messages, channel reference, and typing state are reset consistently when the UI tears down the realtime connection.
+
 ## [1.0.0] - 2025-11-14
 
 ### [1.0.0] Added

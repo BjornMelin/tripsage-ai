@@ -7,7 +7,11 @@
  */
 
 import { SpanStatusCode, trace } from "@opentelemetry/api";
+// @ts-expect-error startActiveSpanMock is provided only by the Vitest mock.
+import { startActiveSpanMock } from "@opentelemetry/api";
 import type { CookieMethodsServer } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
+import { getClientEnv } from "@/lib/env/client";
 import type { User } from "@supabase/supabase-js";
 import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -25,26 +29,33 @@ vi.mock("@supabase/ssr", () => ({
   createServerClient: vi.fn(),
 }));
 
-vi.mock("@opentelemetry/api", () => ({
-  SpanStatusCode: {
-    ERROR: 2,
-    OK: 1,
-    UNSET: 0,
-  },
-  trace: {
-    getTracer: vi.fn(() => ({
-      startActiveSpan: vi.fn((_name, _options, callback) => {
-        const mockSpan = {
-          end: vi.fn(),
-          recordException: vi.fn(),
-          setAttribute: vi.fn(),
-          setStatus: vi.fn(),
-        };
-        return callback(mockSpan);
-      }),
-    })),
-  },
-}));
+vi.mock("@opentelemetry/api", () => {
+  const localStartActiveSpanMock = vi.fn(
+    (_name: string, _options: unknown, callback: (span: unknown) => unknown) => {
+      const mockSpan = {
+        end: vi.fn(),
+        recordException: vi.fn(),
+        setAttribute: vi.fn(),
+        setStatus: vi.fn(),
+      };
+      return callback(mockSpan);
+    }
+  );
+
+  return {
+    SpanStatusCode: {
+      ERROR: 2,
+      OK: 1,
+      UNSET: 0,
+    },
+    trace: {
+      getTracer: vi.fn(() => ({
+        startActiveSpan: localStartActiveSpanMock,
+      })),
+    },
+    startActiveSpanMock: localStartActiveSpanMock,
+  };
+});
 
 vi.mock("@/lib/env/server", () => ({
   getServerEnv: vi.fn(() => ({
@@ -65,7 +76,7 @@ vi.mock("@/lib/telemetry/tracer", () => ({
 }));
 
 describe("Supabase Factory", () => {
-  const mockCreateServerClient = vi.mocked(require("@supabase/ssr")).createServerClient;
+  const mockCreateServerClient = vi.mocked(createServerClient);
 
   describe("createServerSupabase", () => {
     let mockCookieAdapter: CookieMethodsServer;
@@ -115,8 +126,8 @@ describe("Supabase Factory", () => {
         cookies: mockCookieAdapter,
       });
 
-      const tracer = trace.getTracer("test");
-      expect(tracer.startActiveSpan).toHaveBeenCalledWith(
+      expect(trace.getTracer).toHaveBeenCalled();
+      expect(startActiveSpanMock).toHaveBeenCalledWith(
         "supabase.init",
         expect.objectContaining({
           attributes: expect.objectContaining({
@@ -141,8 +152,8 @@ describe("Supabase Factory", () => {
         enableTracing: false,
       });
 
-      const tracer = trace.getTracer("test");
-      expect(tracer.startActiveSpan).not.toHaveBeenCalled();
+      expect(trace.getTracer).toHaveBeenCalled();
+      expect(startActiveSpanMock).not.toHaveBeenCalled();
     });
 
     it("should use custom span name when provided", () => {
@@ -156,8 +167,8 @@ describe("Supabase Factory", () => {
         spanName: "custom.span.name",
       });
 
-      const tracer = trace.getTracer("test");
-      expect(tracer.startActiveSpan).toHaveBeenCalledWith(
+      expect(trace.getTracer).toHaveBeenCalled();
+      expect(startActiveSpanMock).toHaveBeenCalledWith(
         "custom.span.name",
         expect.any(Object),
         expect.any(Function)
@@ -196,16 +207,28 @@ describe("Supabase Factory", () => {
     });
 
     it("should throw error when cookie adapter is not provided", () => {
-      mockCreateServerClient.mockReturnValue({
-        auth: { getUser: vi.fn() },
-        from: vi.fn(),
-      });
+      mockCreateServerClient.mockImplementation(
+        (_url, _key, options: { cookies: CookieMethodsServer }) => {
+          expect(() => options.cookies.getAll()).toThrow(
+            "Cookie adapter required for server client creation"
+          );
 
-      expect(() =>
-        createServerSupabase({
-          enableTracing: false,
-        })
-      ).toThrow("Cookie adapter required for server client creation");
+          expect(() =>
+            options.cookies.setAll?.([
+              { name: "cookie", value: "value", options: {} },
+            ])
+          ).toThrow("Cookie adapter required for server client creation");
+
+          return {
+            auth: { getUser: vi.fn() },
+            from: vi.fn(),
+          } as unknown as ServerSupabaseClient;
+        }
+      );
+
+      createServerSupabase({
+        enableTracing: false,
+      });
     });
   });
 
@@ -279,8 +302,8 @@ describe("Supabase Factory", () => {
         spanName: "test.middleware.span",
       });
 
-      const tracer = trace.getTracer("test");
-      expect(tracer.startActiveSpan).toHaveBeenCalledWith(
+      expect(trace.getTracer).toHaveBeenCalled();
+      expect(startActiveSpanMock).toHaveBeenCalledWith(
         "test.middleware.span",
         expect.objectContaining({
           attributes: expect.objectContaining({
@@ -297,7 +320,7 @@ describe("Supabase Factory", () => {
     });
 
     it("should use client environment variables", () => {
-      const mockEnv = vi.mocked(require("@/lib/env/client")).getClientEnv;
+      const mockEnv = vi.mocked(getClientEnv);
 
       mockCreateServerClient.mockReturnValue({
         auth: { getUser: vi.fn() },
@@ -391,8 +414,6 @@ describe("Supabase Factory", () => {
     });
 
     it("should enable tracing by default", async () => {
-      const { trace } = require("@opentelemetry/api");
-
       authGetUserMock.mockResolvedValue({
         data: { user: null },
         error: null,
@@ -400,8 +421,7 @@ describe("Supabase Factory", () => {
 
       await getCurrentUser(mockSupabaseClient);
 
-      const tracer = trace.getTracer("test");
-      expect(tracer.startActiveSpan).toHaveBeenCalledWith(
+      expect(startActiveSpanMock).toHaveBeenCalledWith(
         "supabase.auth.getUser",
         expect.objectContaining({
           attributes: expect.objectContaining({
@@ -432,14 +452,18 @@ describe("Supabase Factory", () => {
 
       await getCurrentUser(mockSupabaseClient);
 
-      const { trace } = require("@opentelemetry/api");
-      const tracer = trace.getTracer("test");
-
       // Verify the span was created
-      expect(tracer.startActiveSpan).toHaveBeenCalled();
+      expect(startActiveSpanMock).toHaveBeenCalled();
 
       // The callback should set redacted user ID
-      const callbackFn = tracer.startActiveSpan.mock.calls[0][2];
+      const callbackFn = startActiveSpanMock.mock.calls[0][2] as (
+        span: {
+          end: ReturnType<typeof vi.fn>;
+          recordException: ReturnType<typeof vi.fn>;
+          setAttribute: ReturnType<typeof vi.fn>;
+          setStatus: ReturnType<typeof vi.fn>;
+        }
+      ) => Promise<void>;
       const mockSpan = {
         end: vi.fn(),
         recordException: vi.fn(),
@@ -463,9 +487,14 @@ describe("Supabase Factory", () => {
 
       await getCurrentUser(mockSupabaseClient);
 
-      const { trace } = require("@opentelemetry/api");
-      const tracer = trace.getTracer("test");
-      const callbackFn = tracer.startActiveSpan.mock.calls[0][2];
+      const callbackFn = startActiveSpanMock.mock.calls[0][2] as (
+        span: {
+          end: ReturnType<typeof vi.fn>;
+          recordException: ReturnType<typeof vi.fn>;
+          setAttribute: ReturnType<typeof vi.fn>;
+          setStatus: ReturnType<typeof vi.fn>;
+        }
+      ) => Promise<void>;
       const mockSpan = {
         end: vi.fn(),
         recordException: vi.fn(),
@@ -536,7 +565,12 @@ describe("Supabase Factory", () => {
   describe("isSupabaseClient", () => {
     it("should return true for valid Supabase client", () => {
       const validClient = {
-        auth: {},
+        auth: {
+          getSession: vi.fn(),
+          getUser: vi.fn(),
+          onAuthStateChange: vi.fn(),
+        },
+        channel: vi.fn(),
         from: vi.fn(),
       };
 
