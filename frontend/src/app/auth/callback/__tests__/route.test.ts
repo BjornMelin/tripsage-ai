@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // Mock the server client used by the route handler
 const EXCHANGE_MOCK: MockInstance<(_code: string) => Promise<{ error: Error | null }>> =
   vi.fn(async (_code: string) => ({ error: null }));
-vi.mock("@/lib/supabase/server", () => ({
+vi.mock("@/lib/supabase", () => ({
   createServerSupabase: vi.fn(async () => ({
     auth: { exchangeCodeForSession: EXCHANGE_MOCK },
   })),

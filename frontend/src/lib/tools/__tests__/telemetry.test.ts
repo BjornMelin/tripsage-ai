@@ -52,7 +52,7 @@ vi.mock("@/lib/redis", () => {
   return { getRedis: () => store };
 });
 
-vi.mock("@/lib/supabase/server", () => ({
+vi.mock("@/lib/supabase", () => ({
   createServerSupabase: async () => ({
     auth: {
       getUser: async () => ({

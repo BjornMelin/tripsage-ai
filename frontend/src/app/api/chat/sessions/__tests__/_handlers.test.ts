@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { TypedServerSupabase } from "@/lib/supabase/server";
+import type { TypedServerSupabase } from "@/lib/supabase";
 import {
   createMessage,
   createSession,

@@ -67,7 +67,7 @@ function resetExpedia() {
   expediaState.checkAvailability.mockReset();
 }
 
-vi.mock("@/lib/supabase/server", () => ({
+vi.mock("@/lib/supabase", () => ({
   createServerSupabase: vi.fn(async () => supabaseState.instance),
 }));
 
