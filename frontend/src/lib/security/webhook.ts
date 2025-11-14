@@ -3,6 +3,7 @@
  */
 
 import "server-only";
+
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 /**
@@ -33,7 +34,8 @@ export function computeHmacSha256Hex(
  * @return True if strings are equal, false otherwise.
  */
 export function timingSafeEqualHex(a: string, b: string): boolean {
-  const isHex = (value: string) => value.length % 2 === 0 && /^[0-9a-fA-F]*$/.test(value);
+  const isHex = (value: string) =>
+    value.length % 2 === 0 && /^[0-9a-fA-F]*$/.test(value);
   if (!isHex(a) || !isHex(b)) return false;
   let aBuf: Buffer;
   let bBuf: Buffer;
