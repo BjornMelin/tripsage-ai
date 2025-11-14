@@ -52,6 +52,7 @@ const aiServiceEnvSchema = z.object({
   AI_GATEWAY_API_KEY: z.string().optional(),
   AI_GATEWAY_URL: z.string().url().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
+  EMBEDDINGS_API_KEY: z.string().optional(),
   // Firecrawl & Exa search/crawl
   FIRECRAWL_API_KEY: z.string().optional(),
   FIRECRAWL_BASE_URL: z.string().url().optional(),
