@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Refactor
+
+- **[Environment]:** Centralized environment variable guards with enhanced Zod v4 schema validation
+  - Introduced `EnvValidationError` class with OTEL-compatible metadata and ZodError preservation
+  - Implemented deep freeze for client env objects to prevent mutation
+  - Added centralized `parseEnv()` and `parseClientEnv()` functions with comprehensive error handling
+  - Enhanced API key validation patterns:
+    - Stripe: `/^sk_(live|test)_/` with production enforcement
+    - OpenAI: `/^sk-(?!ant-|live_|test_)/` to exclude other key types
+    - Anthropic: `/^sk-ant-/`
+    - Resend: `/^re_/`
+  - Fixed `.optional().default()` ordering to ensure defaults apply correctly
+  - Improved dev fallback with valid dummy values (`http://localhost:54321`, `dummy-dev-anon-key`)
+  - Environment-specific refinements (Upstash URL required when token configured in production)
+  - Smart defaults for AI Gateway, Firecrawl, Resend sender name
+  - 85.45% statement coverage with 59 comprehensive tests
+  - Files: `frontend/src/lib/env/{schema,server,client,index}.ts`, `frontend/src/lib/env/__tests__/schema.test.ts`
+
 ## [1.0.0] - 2025-11-14
 
 ### [1.0.0] Added
@@ -335,7 +353,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Removed custom `getSessionId` helper in favor of the shared utility in `src/lib/utils.ts`.
 - **[Trips]:** Unified three separate trip data hooks into a single `useTrips` hook to manage all CRUD operations and real-time updates for the trip domain.
 - **[API]:** Consolidated three separate API clients into a single, unified `ApiClient` to enforce a consistent pattern for all HTTP requests.
-- [Core]: Unified all data models into canonical Zod v4 schemas under
+- **[Core]:** Unified all data models into canonical Zod v4 schemas under
   `src/lib/schemas/` and removed the redundant `src/types/` and `src/schemas/` directories to establish a single source of truth for data contracts and runtime validation.
 
 ## [0.2.1] - 2025-11-01

@@ -7,48 +7,24 @@
  */
 
 import type { ClientEnv } from "./schema";
-import { clientEnvSchema } from "./schema";
+import { parseClientEnv } from "./schema";
 
 /**
  * Extract and validate client-safe environment variables.
  *
- * @returns Validated client environment object
- * @throws Error if validation fails
+ * Uses the centralized parseClientEnv() from schema with enhanced error handling
+ * and graceful degradation in development environments. Returns a deeply frozen
+ * object to prevent mutation at any level.
+ *
+ * @returns Validated and deeply frozen client environment object
+ * @throws {EnvValidationError} If validation fails in production
  */
 function validateClientEnv(): ClientEnv {
-  // Extract NEXT_PUBLIC_ variables from process.env
-  const clientVars = Object.fromEntries(
-    Object.entries(process.env).filter(([key]) => key.startsWith("NEXT_PUBLIC_"))
-  );
-
-  try {
-    return clientEnvSchema.parse(clientVars);
-  } catch (error) {
-    if (error instanceof Error && "issues" in error) {
-      const zodError = error as { issues: Array<{ path: string[]; message: string }> };
-      const errors = zodError.issues.map(
-        (issue) => `${issue.path.join(".")}: ${issue.message}`
-      );
-
-      // In development, log but don't throw to allow graceful degradation
-      if (process.env.NODE_ENV === "development") {
-        console.error(`Client environment validation failed:\n${errors.join("\n")}`);
-        // Return partial object with defaults for development
-        return {
-          NEXT_PUBLIC_APP_NAME: "TripSage",
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: "",
-          NEXT_PUBLIC_SUPABASE_URL: "",
-        };
-      }
-
-      throw new Error(`Client environment validation failed:\n${errors.join("\n")}`);
-    }
-    throw error;
-  }
+  return parseClientEnv(); // Already returns deeply frozen object
 }
 
-// Validate and freeze client environment at module load
-const publicEnvValue = Object.freeze(validateClientEnv());
+// Validate and freeze client environment at module load (parseClientEnv already deep-freezes)
+const publicEnvValue = validateClientEnv();
 
 /**
  * Get validated client environment variables.

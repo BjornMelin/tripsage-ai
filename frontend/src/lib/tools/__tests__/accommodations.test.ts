@@ -139,6 +139,12 @@ vi.mock("@/lib/cache/keys", () => ({
   }),
 }));
 
+vi.mock("@/lib/embeddings/generate", () => ({
+  generateEmbedding: vi.fn(async () => [0.1, 0.2, 0.3]),
+  getEmbeddingsApiUrl: vi.fn(() => "https://api.example.com/embeddings"),
+  getEmbeddingsRequestHeaders: vi.fn(() => ({ Authorization: "Bearer test" })),
+}));
+
 beforeEach(async () => {
   resetSupabase();
   resetExpedia();

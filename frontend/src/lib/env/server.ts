@@ -8,7 +8,7 @@
 
 import "server-only";
 import type { ServerEnv } from "./schema";
-import { envSchema } from "./schema";
+import { parseEnv } from "./schema";
 
 // Cached validated environment (parsed once at module load)
 let cachedEnv: ServerEnv | null = null;
@@ -16,6 +16,9 @@ let validationError: Error | null = null;
 
 /**
  * Parse and validate server environment variables.
+ *
+ * Uses the centralized parseEnv() from schema with enhanced error handling,
+ * OTEL-compatible error attributes, and caching for performance.
  *
  * @throws Error if validation fails
  */
@@ -32,24 +35,14 @@ function validateServerEnv(): ServerEnv {
   }
 
   try {
-    const parsed = envSchema.parse(process.env);
+    const parsed = parseEnv();
     if (!isTest) {
       cachedEnv = parsed;
     }
     return parsed;
   } catch (error) {
-    if (error instanceof Error && "issues" in error) {
-      const zodError = error as { issues: Array<{ path: string[]; message: string }> };
-      const errors = zodError.issues.map(
-        (issue) => `${issue.path.join(".")}: ${issue.message}`
-      );
-      validationError = new Error(
-        `Environment validation failed:\n${errors.join("\n")}`
-      );
-    } else {
-      validationError =
-        error instanceof Error ? error : new Error("Environment validation failed");
-    }
+    validationError =
+      error instanceof Error ? error : new Error("Environment validation failed");
     throw validationError;
   }
 }
