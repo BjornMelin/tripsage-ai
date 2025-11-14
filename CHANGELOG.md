@@ -174,6 +174,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Pruned heavy/duplicated cases; retained empty state, minimal destination info, add-destination happy path, numeric input, and labels in `frontend/src/components/features/trips/__tests__/itinerary-builder.test.tsx`.
 - Test performance documentation updated with reproducible commands and “After” metrics:
   - `frontend/docs/testing/vitest-performance.md` (AI stream ≈12.6ms; Account settings ≈1.6s; Itinerary builder ≈1.5s).
+- Operational alerting improvements:
+  - Added `frontend/src/lib/telemetry/tracer.ts` for a single OTEL tracer name and `frontend/src/lib/telemetry/alerts.ts` for `[operational-alert]` JSON logs, with Vitest coverage for tracer, alerts, Redis warnings, and webhook payload failures.
+  - Redis cache/idempotency helpers now emit alerts alongside `redis.unavailable` spans, and `parseAndVerify` logs `webhook.verification_failed` with precise reasons; operator docs and the storage deployment summary explain how to wire log drains for both events.
+- Deployment workflow enforces webhook secret parity: `.github/workflows/deploy.yml` installs `psql`, runs `scripts/operators/verify_webhook_secret.sh`, and requires `PRIMARY_DATABASE_URL` (falling back to `DATABASE_URL`) plus `HMAC_SECRET` secrets; docs highlight the CI guard and primary-DB requirement.
 
 - Flights tool now prefers `DUFFEL_ACCESS_TOKEN` (fallback `DUFFEL_API_KEY`)
   - `frontend/src/lib/tools/flights.ts`

@@ -2,7 +2,8 @@
  * @fileoverview Minimal OpenTelemetry span helper with attribute redaction.
  */
 
-import { type Span, SpanStatusCode, trace } from "@opentelemetry/api";
+import { type Span, SpanStatusCode } from "@opentelemetry/api";
+import { getTelemetryTracer } from "@/lib/telemetry/tracer";
 
 export type TelemetrySpanAttributes = Record<string, string | number | boolean>;
 
@@ -12,6 +13,7 @@ export type WithTelemetrySpanOptions = {
 };
 
 const REDACTED_VALUE = "[REDACTED]";
+const tracer = getTelemetryTracer();
 
 /**
  * Wraps an async operation inside an OpenTelemetry span and ensures the span
@@ -27,7 +29,6 @@ export function withTelemetrySpan<T>(
   options: WithTelemetrySpanOptions,
   execute: (span: Span) => Promise<T> | T
 ): Promise<T> {
-  const tracer = trace.getTracer("tripsage-frontend");
   const spanAttributes = sanitizeAttributes(options.attributes, options.redactKeys);
   const runner = async (span: Span): Promise<T> => {
     try {
