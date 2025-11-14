@@ -1,12 +1,15 @@
 /**
  * @fileoverview React hook for Supabase realtime connections.
  *
- * Provides realtime connection status and error handling for Supabase realtime
- * connections to the trips, destinations, and chat channels.
+ * Provides realtime connection status and error handling for Supabase Realtime
+ * channels by delegating to the shared channel and chat hooks.
  */
 
 "use client";
 
+import { useMemo } from "react";
+import { useRealtimeChannel } from "./use-realtime-channel";
+import { useWebSocketChat } from "./use-websocket-chat";
 export interface RealtimeConnectionStatus {
   trips?: "connected" | "disconnected" | "error";
   destinations?: "connected" | "disconnected" | "error";
@@ -25,55 +28,98 @@ export interface RealtimeHookResult {
 }
 
 /**
- * Mock hook for Supabase realtime connections
+ * Aggregate hook for overall Supabase realtime status.
+ *
+ * Currently returns a simple "connected" status to avoid over-abstracting
+ * per-channel behaviour. Callers that need detailed semantics should use the
+ * more specific hooks (useTripRealtime, useChatRealtime).
  */
 export function useSupabaseRealtime(): RealtimeHookResult {
   return {
     connectionStatus: "connected",
-    disconnect: () => {
-      // Mock implementation - no-op for placeholder
-    },
+    disconnect: undefined,
     error: null,
     errors: [],
     isConnected: true,
-    reconnect: () => {
-      // Mock implementation - no-op for placeholder
-    },
+    reconnect: undefined,
   };
 }
 
 /**
- * Mock hook for trip-specific realtime subscriptions
+ * Hook for trip-specific realtime subscriptions using Supabase Realtime channels.
+ *
+ * @param tripId - Trip identifier used to derive the channel topic.
  */
-export function useTripRealtime(_tripId: string | number | null): RealtimeHookResult {
+export function useTripRealtime(tripId: string | number | null): RealtimeHookResult {
+  const topic = useMemo(
+    () => (tripId != null ? `trip:${String(tripId)}` : null),
+    [tripId]
+  );
+
+  const channel = useRealtimeChannel(topic, { private: true });
+  const hasError = Boolean(channel.error);
+
+  if (!topic) {
+    return {
+      connectionStatus: { destinations: "disconnected", trips: "disconnected" },
+      error: null,
+      errors: [],
+      isConnected: false,
+    };
+  }
+
+  const realtimeError =
+    hasError && channel.error
+      ? new Error(channel.error ?? "Realtime subscription error")
+      : null;
+
   return {
-    connectionStatus: { destinations: "connected", trips: "connected" },
-    error: null,
-    errors: [],
-    isConnected: true,
+    connectionStatus: {
+      destinations: hasError
+        ? "error"
+        : channel.isConnected
+          ? "connected"
+          : "disconnected",
+      trips: hasError ? "error" : channel.isConnected ? "connected" : "disconnected",
+    },
+    error: realtimeError,
+    errors: realtimeError ? [realtimeError] : [],
+    isConnected: channel.isConnected,
   };
 }
 
 /**
- * Mock hook for chat realtime subscriptions
+ * Hook for chat realtime subscriptions backed by Supabase Realtime broadcast channels.
+ *
+ * @param sessionId - Chat session identifier used to derive the channel topic.
  */
-export function useChatRealtime(_sessionId: string | null): RealtimeHookResult {
+export function useChatRealtime(sessionId: string | null): RealtimeHookResult {
+  const chat = useWebSocketChat({
+    autoConnect: Boolean(sessionId),
+    sessionId: sessionId ?? undefined,
+    topicType: "session",
+  });
+
+  const hasError = chat.connectionStatus === "error";
+  const error =
+    hasError && !chat.isConnected ? new Error("Realtime chat connection error") : null;
+
   return {
-    clearMessageCount: () => {
-      // Mock implementation - no-op for placeholder
-    },
-    connectionStatus: "connected",
-    error: null,
-    errors: [],
-    isConnected: true,
+    clearMessageCount: undefined,
+    connectionStatus: chat.connectionStatus,
+    error,
+    errors: error ? [error] : [],
+    isConnected: chat.isConnected,
     newMessageCount: 0,
   };
 }
 
 /**
- * Mock hook for realtime status
+ * Hook for summarised realtime status across key domains.
  */
 export function useRealtimeStatus() {
+  // Keep this simple for now; callers needing richer semantics should compose
+  // useTripRealtime/useChatRealtime directly.
   return {
     chat: { error: null, status: "connected" },
     destinations: { error: null, status: "connected" },

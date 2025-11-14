@@ -30,7 +30,7 @@ describe("/api/chat/stream route smoke", () => {
 
   it("returns 401 unauthenticated (RL disabled)", async () => {
     stubRateLimitDisabled();
-    vi.doMock("@/lib/supabase/server", () => ({
+    vi.doMock("@/lib/supabase", () => ({
       createServerSupabase: vi.fn(async () => ({
         auth: { getUser: vi.fn(async () => ({ data: { user: null } })) },
       })),
@@ -42,7 +42,7 @@ describe("/api/chat/stream route smoke", () => {
 
   it("returns 429 when rate limited (auth ok)", async () => {
     stubRateLimitEnabled();
-    vi.doMock("@/lib/supabase/server", () => ({
+    vi.doMock("@/lib/supabase", () => ({
       createServerSupabase: vi.fn(async () => ({
         auth: { getUser: vi.fn(async () => ({ data: { user: { id: "u1" } } })) },
       })),
@@ -72,7 +72,7 @@ describe("/api/chat/stream route smoke", () => {
   it("returns 200 on success with mocked provider and stream", async () => {
     stubRateLimitDisabled();
     // Authenticated user
-    vi.doMock("@/lib/supabase/server", () => ({
+    vi.doMock("@/lib/supabase", () => ({
       createServerSupabase: vi.fn(async () => ({
         auth: { getUser: vi.fn(async () => ({ data: { user: { id: "u2" } } })) },
       })),

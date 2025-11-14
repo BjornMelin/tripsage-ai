@@ -19,8 +19,8 @@ import {
   getTrustedRateLimitIdentifier,
   redactErrorForLogging,
 } from "@/lib/next/route-helpers";
+import { createServerSupabase } from "@/lib/supabase";
 import { insertUserApiKey, upsertUserGatewayBaseUrl } from "@/lib/supabase/rpc";
-import { createServerSupabase } from "@/lib/supabase/server";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import {
   getKeys,

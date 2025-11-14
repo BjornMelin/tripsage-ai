@@ -8,7 +8,7 @@ import { tool } from "ai";
 import { z } from "zod";
 import { getRedis } from "@/lib/redis";
 import { nowIso, secureUuid } from "@/lib/security/random";
-import { createServerSupabase } from "@/lib/supabase/server";
+import { createServerSupabase } from "@/lib/supabase";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import {
   RATE_CREATE_PER_DAY,

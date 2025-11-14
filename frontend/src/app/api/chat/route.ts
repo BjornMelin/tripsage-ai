@@ -13,7 +13,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getClientIpFromHeaders } from "@/lib/next/route-helpers";
 import { resolveProvider } from "@/lib/providers/registry";
-import { createServerSupabase } from "@/lib/supabase/server";
+import { createServerSupabase } from "@/lib/supabase";
 import { handleChatNonStream } from "./_handler";
 
 // Dynamic due to auth/session

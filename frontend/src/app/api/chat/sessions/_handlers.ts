@@ -5,7 +5,7 @@
  * Adapters (route.ts files) provide SSR-only dependencies and translate the
  * HTTP details to simple POJOs used here.
  */
-import type { TypedServerSupabase } from "@/lib/supabase/server";
+import type { TypedServerSupabase } from "@/lib/supabase";
 import { insertSingle } from "@/lib/supabase/typed-helpers";
 
 /**

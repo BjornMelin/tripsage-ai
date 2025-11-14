@@ -15,7 +15,7 @@ describe("/api/calendar/ics/export route", () => {
   };
 
   const setupMocks = (overrides?: { rateLimit?: typeof mockRateLimit }) => {
-    vi.doMock("@/lib/supabase/server", () => ({
+    vi.doMock("@/lib/supabase", () => ({
       createServerSupabase: vi.fn(async () => ({
         auth: {
           getUser: async () => ({
@@ -114,7 +114,7 @@ describe("/api/calendar/ics/export route", () => {
   });
 
   it("returns 401 when unauthenticated", async () => {
-    vi.doMock("@/lib/supabase/server", () => ({
+    vi.doMock("@/lib/supabase", () => ({
       createServerSupabase: vi.fn(async () => ({
         auth: {
           getUser: async () => ({

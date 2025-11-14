@@ -8,7 +8,7 @@ import type { ToolSet, UIMessage } from "ai";
 import { convertToModelMessages, generateText as defaultGenerateText } from "ai";
 import { extractTexts, validateImageAttachments } from "@/app/api/_helpers/attachments";
 import type { ProviderResolution } from "@/lib/providers/types";
-import type { TypedServerSupabase } from "@/lib/supabase/server";
+import type { TypedServerSupabase } from "@/lib/supabase";
 import { insertSingle } from "@/lib/supabase/typed-helpers";
 import {
   type ChatMessage as ClampMsg,
