@@ -5,7 +5,7 @@
 
 import "server-only";
 
-import { createServerSupabase } from "@/lib/supabase/server";
+import { createServerSupabase } from "@/lib/supabase";
 
 /**
  * Error thrown when Google OAuth token is not available.
