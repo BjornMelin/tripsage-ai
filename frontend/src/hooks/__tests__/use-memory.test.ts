@@ -7,6 +7,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import React, { type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ApiError } from "@/lib/api/error-types";
 import {
   useAddConversationMemory,
   useMemoryContext,
@@ -41,8 +42,9 @@ const CREATE_WRAPPER = () => {
 
 describe("Memory Hooks", () => {
   beforeEach(() => {
+    vi.useRealTimers();
     vi.clearAllMocks();
-    MOCK_MAKE_AUTHENTICATED_REQUEST.mockClear();
+    MOCK_MAKE_AUTHENTICATED_REQUEST.mockReset();
   });
 
   describe("useMemoryContext", () => {
@@ -99,20 +101,19 @@ describe("Memory Hooks", () => {
     });
 
     it("should handle API errors gracefully", async () => {
-      MOCK_MAKE_AUTHENTICATED_REQUEST.mockRejectedValueOnce(new Error("API Error"));
+      const apiError = new ApiError({ message: "Unauthorized", status: 401 });
+      MOCK_MAKE_AUTHENTICATED_REQUEST.mockRejectedValueOnce(apiError);
+      MOCK_MAKE_AUTHENTICATED_REQUEST.mockRejectedValue(apiError);
 
       const { result } = renderHook(() => useMemoryContext("user-123"), {
         wrapper: CREATE_WRAPPER(),
       });
 
-      await waitFor(
-        () => {
-          expect(result.current.isError).toBe(true);
-        },
-        { timeout: 3000 }
-      );
+      await waitFor(() => {
+        expect(result.current.error).toBeInstanceOf(ApiError);
+      });
 
-      expect(result.current.error).toBeInstanceOf(Error);
+      expect(result.current.isError).toBe(true);
     });
   });
 
@@ -239,9 +240,9 @@ describe("Memory Hooks", () => {
     });
 
     it("should handle conversation storage errors", async () => {
-      MOCK_MAKE_AUTHENTICATED_REQUEST.mockRejectedValueOnce(
-        new Error("Storage failed")
-      );
+      const storageError = new Error("Storage failed");
+      MOCK_MAKE_AUTHENTICATED_REQUEST.mockRejectedValueOnce(storageError);
+      MOCK_MAKE_AUTHENTICATED_REQUEST.mockRejectedValue(storageError);
 
       const { result } = renderHook(() => useAddConversationMemory(), {
         wrapper: CREATE_WRAPPER(),
