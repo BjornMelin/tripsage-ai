@@ -24,9 +24,8 @@ help:
 	@echo "  make supa.db.push                               # Apply DB migrations to remote"
 	@echo "  make supa.migration.list                        # Inspect remote migration history"
 	@echo "  make supa.migration.repair VERSION=... STATUS=applied|reverted"
-	@echo "  make supa.functions.deploy-all PROJECT_REF=...  # Deploy all Edge Functions"
-	@echo "  make supa.fn.deploy FN=<name> PROJECT_REF=...   # Deploy one Edge Function"
-	@echo "  make supa.fn.logs   FN=<name> PROJECT_REF=...   # Tail logs for one function"
+	@echo "  make webhooks.setup WEBHOOK_TRIPS_URL=... WEBHOOK_CACHE_URL=... HMAC_SECRET=... DATABASE_URL=..."
+	@echo "  make webhooks.test   WEBHOOK_URL=... HMAC_SECRET=... PAYLOAD='{}'"
 
 .PHONY: supa.link
 supa.link:
@@ -74,27 +73,23 @@ supa.migration.repair:
 		echo "Usage: make supa.migration.repair VERSION=20251027 STATUS=applied|reverted"; exit 1; fi
 	$(SUPABASE_CLI) migration repair --status $(STATUS) $(VERSION) --debug
 
-# Helper: rename Deno v5 lockfiles so the CLI bundler (older Deno) doesn't error
-.PHONY: supa.functions.prepare-locks
-supa.functions.prepare-locks:
-	@set -e; for d in supabase/functions/*; do \
-		if [ -f "$$d/deno.lock" ]; then mv "$$d/deno.lock" "$$d/deno.lock.v5"; fi; \
-	done
+# Removed Supabase Edge Function deploy/log targets — superseded by Database Webhooks to Vercel
+# Webhook setup using operator script
+.PHONY: webhooks.setup
+webhooks.setup:
+	@if [ -z "$$WEBHOOK_TRIPS_URL" ] || [ -z "$$WEBHOOK_CACHE_URL" ] || [ -z "$$HMAC_SECRET" ] || [ -z "$$DATABASE_URL" ]; then \
+		echo "Usage: make webhooks.setup WEBHOOK_TRIPS_URL=... WEBHOOK_CACHE_URL=... HMAC_SECRET=... DATABASE_URL=..."; exit 1; fi
+	WEBHOOK_TRIPS_URL="$$WEBHOOK_TRIPS_URL" \
+	WEBHOOK_CACHE_URL="$$WEBHOOK_CACHE_URL" \
+	HMAC_SECRET="$$HMAC_SECRET" \
+	DATABASE_URL="$$DATABASE_URL" \
+	bash scripts/operators/setup_webhooks.sh
 
-.PHONY: supa.fn.deploy
-supa.fn.deploy: supa.functions.prepare-locks
-	@if [ -z "$(PROJECT_REF)" ] || [ -z "$(FN)" ]; then echo "PROJECT_REF and FN required"; exit 1; fi
-	$(SUPABASE_CLI) functions deploy $(FN) --project-ref $(PROJECT_REF) --debug
-
-.PHONY: supa.functions.deploy-all
-supa.functions.deploy-all: supa.functions.prepare-locks
-	@if [ -z "$(PROJECT_REF)" ]; then echo "PROJECT_REF is required"; exit 1; fi
-	$(SUPABASE_CLI) functions deploy trip-notifications --project-ref $(PROJECT_REF) --debug
-	$(SUPABASE_CLI) functions deploy file-processing    --project-ref $(PROJECT_REF) --debug
-	$(SUPABASE_CLI) functions deploy cache-invalidation --project-ref $(PROJECT_REF) --debug
-	$(SUPABASE_CLI) functions deploy file-processor     --project-ref $(PROJECT_REF) --debug
-
-.PHONY: supa.fn.logs
-supa.fn.logs:
-	@if [ -z "$(PROJECT_REF)" ] || [ -z "$(FN)" ]; then echo "PROJECT_REF and FN required"; exit 1; fi
-	$(SUPABASE_CLI) functions logs $(FN) --project-ref $(PROJECT_REF) --tail
+# Quick HMAC test against a webhook URL
+.PHONY: webhooks.test
+webhooks.test:
+	@if [ -z "$$WEBHOOK_URL" ] || [ -z "$$HMAC_SECRET" ] || [ -z "$$PAYLOAD" ]; then \
+		echo "Usage: make webhooks.test WEBHOOK_URL=... HMAC_SECRET=... PAYLOAD='{""type"":""INSERT"",""table"":""trip_collaborators""}'"; exit 1; fi
+	@sig=$$(printf "%s" "$$PAYLOAD" | openssl dgst -sha256 -hmac "$$HMAC_SECRET" -hex | sed 's/^.* //'); \
+	echo "Signature: $$sig"; \
+	curl -i -H 'Content-Type: application/json' -H "X-Signature-HMAC: $$sig" -d "$$PAYLOAD" "$$WEBHOOK_URL"

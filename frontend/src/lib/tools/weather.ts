@@ -10,7 +10,8 @@ import { z } from "zod";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 import { fetchWithRetry } from "@/lib/http/fetch-retry";
 import { getRedis } from "@/lib/redis";
-import type { WeatherResult } from "@/types/weather";
+import type { WeatherResult } from "@/lib/schemas/weather";
+import { withTelemetrySpan } from "@/lib/telemetry/span";
 import { WEATHER_CACHE_TTL_SECONDS } from "./constants";
 
 /**
@@ -32,7 +33,15 @@ import { WEATHER_CACHE_TTL_SECONDS } from "./constants";
 async function executeWeatherQuery(
   params: Record<string, unknown>
 ): Promise<{ data: unknown; provider: string }> {
-  const apiKey = process.env.OPENWEATHER_API_KEY;
+  const { getServerEnvVar } = await import("@/lib/env/server");
+  let apiKey: string | undefined;
+  try {
+    apiKey = getServerEnvVar("OPENWEATHERMAP_API_KEY") as unknown as string;
+  } catch {
+    const error: Error & { code?: string } = new Error("weather_not_configured");
+    error.code = "weather_not_configured";
+    throw error;
+  }
   if (!apiKey) {
     const error: Error & { code?: string } = new Error("weather_not_configured");
     error.code = "weather_not_configured";
@@ -117,7 +126,7 @@ async function executeWeatherQuery(
  * Supports city name, coordinates, or ZIP code. Includes units selection,
  * language preference, and optional cache bypass flag.
  */
-const weatherSchema = z
+export const getCurrentWeatherInputSchema = z
   .object({
     city: z.string().min(2).optional(),
     coordinates: z
@@ -160,93 +169,104 @@ export const getCurrentWeather = tool({
     "Returns temperature (with min/max), humidity, wind (with gusts), pressure, visibility, " +
     "clouds, precipitation (rain/snow), sunrise/sunset times, and weather icon. " +
     "Results cached for 10 minutes.",
-  execute: async (params): Promise<WeatherResult> => {
-    const validated = weatherSchema.parse(params);
-    const startedAt = Date.now();
+  execute: async (params): Promise<WeatherResult> =>
+    withTelemetrySpan(
+      "tool.weather.current",
+      {
+        attributes: {
+          "tool.name": "getCurrentWeather",
+        },
+      },
+      async (span) => {
+        const validated = getCurrentWeatherInputSchema.parse(params);
+        const startedAt = Date.now();
 
-    // Build query parameters
-    const queryParams: Record<string, unknown> = {
-      units: validated.units,
-    };
-    if (validated.city) {
-      queryParams.q = validated.city.trim();
-    } else if (validated.coordinates) {
-      queryParams.lat = validated.coordinates.lat;
-      queryParams.lon = validated.coordinates.lon;
-    } else if (validated.zip) {
-      queryParams.zip = validated.zip.trim();
-    }
-    if (validated.lang) queryParams.lang = validated.lang;
-
-    // Check cache
-    const redis = getRedis();
-    const cacheKey = canonicalizeParamsForCache(queryParams, "weather");
-    const fromCache = false;
-    if (!validated.fresh && redis) {
-      const cached = await redis.get(cacheKey);
-      if (cached) {
-        const cachedData = cached as WeatherResult;
-        return {
-          ...cachedData,
-          fromCache: true,
-          provider: cachedData.provider || "cache",
-          tookMs: Date.now() - startedAt,
+        // Build query parameters
+        const queryParams: Record<string, unknown> = {
+          units: validated.units,
         };
+        if (validated.city) {
+          queryParams.q = validated.city.trim();
+        } else if (validated.coordinates) {
+          queryParams.lat = validated.coordinates.lat;
+          queryParams.lon = validated.coordinates.lon;
+        } else if (validated.zip) {
+          queryParams.zip = validated.zip.trim();
+        }
+        if (validated.lang) queryParams.lang = validated.lang;
+
+        // Check cache
+        const redis = getRedis();
+        const cacheKey = canonicalizeParamsForCache(queryParams, "weather");
+        const fromCache = false;
+        if (!validated.fresh && redis) {
+          const cached = await redis.get(cacheKey);
+          if (cached) {
+            span.addEvent("cache_hit");
+            const cachedData = cached as WeatherResult;
+            return {
+              ...cachedData,
+              fromCache: true,
+              provider: cachedData.provider || "cache",
+              tookMs: Date.now() - startedAt,
+            };
+          }
+        }
+
+        // Execute weather query
+        const { data, provider } = await executeWeatherQuery(queryParams);
+        const weatherData = data as Record<string, unknown>;
+        const tookMs = Date.now() - startedAt;
+
+        const main = weatherData.main as Record<string, unknown> | undefined;
+        const weather = (weatherData.weather as unknown[])?.[0] as
+          | Record<string, unknown>
+          | undefined;
+        const sys = weatherData.sys as Record<string, unknown> | undefined;
+        const wind = weatherData.wind as Record<string, unknown> | undefined;
+        const clouds = weatherData.clouds as Record<string, unknown> | undefined;
+        const rain = weatherData.rain as Record<string, unknown> | undefined;
+        const snow = weatherData.snow as Record<string, unknown> | undefined;
+
+        // Extract precipitation (rain/snow) - API returns "1h" or "3h" keys
+        const rainValue = (rain?.["1h"] as number) ?? (rain?.["3h"] as number) ?? null;
+        const snowValue = (snow?.["1h"] as number) ?? (snow?.["3h"] as number) ?? null;
+
+        const result: WeatherResult = {
+          city: (weatherData.name as string) || validated.city || "Unknown",
+          clouds: (clouds?.all as number) ?? null,
+          country: sys?.country as string | undefined,
+          description: (weather?.description as string) ?? null,
+          feelsLike: (main?.feels_like as number) ?? null,
+          fromCache,
+          humidity: (main?.humidity as number) ?? null,
+          icon: (weather?.icon as string) ?? null,
+          pressure: (main?.pressure as number) ?? null,
+          provider,
+          rain: rainValue,
+          snow: snowValue,
+          status: "success",
+          sunrise: (sys?.sunrise as number) ?? null,
+          sunset: (sys?.sunset as number) ?? null,
+          temp: (main?.temp as number) ?? null,
+          tempMax: (main?.temp_max as number) ?? null,
+          tempMin: (main?.temp_min as number) ?? null,
+          timezone: weatherData.timezone as number | null | undefined,
+          tookMs,
+          visibility: weatherData.visibility as number | null | undefined,
+          windDirection: (wind?.deg as number) ?? null,
+          windGust: (wind?.gust as number) ?? null,
+          windSpeed: (wind?.speed as number) ?? null,
+        };
+
+        // Cache result
+        if (redis && !validated.fresh) {
+          await redis.set(cacheKey, result, { ex: WEATHER_CACHE_TTL_SECONDS });
+        }
+
+        span.setAttribute("took_ms", tookMs);
+        return result;
       }
-    }
-
-    // Execute weather query
-    const { data, provider } = await executeWeatherQuery(queryParams);
-    const weatherData = data as Record<string, unknown>;
-    const tookMs = Date.now() - startedAt;
-
-    const main = weatherData.main as Record<string, unknown> | undefined;
-    const weather = (weatherData.weather as unknown[])?.[0] as
-      | Record<string, unknown>
-      | undefined;
-    const sys = weatherData.sys as Record<string, unknown> | undefined;
-    const wind = weatherData.wind as Record<string, unknown> | undefined;
-    const clouds = weatherData.clouds as Record<string, unknown> | undefined;
-    const rain = weatherData.rain as Record<string, unknown> | undefined;
-    const snow = weatherData.snow as Record<string, unknown> | undefined;
-
-    // Extract precipitation (rain/snow) - API returns "1h" or "3h" keys
-    const rainValue = (rain?.["1h"] as number) ?? (rain?.["3h"] as number) ?? null;
-    const snowValue = (snow?.["1h"] as number) ?? (snow?.["3h"] as number) ?? null;
-
-    const result: WeatherResult = {
-      city: (weatherData.name as string) || validated.city || "Unknown",
-      clouds: (clouds?.all as number) ?? null,
-      country: sys?.country as string | undefined,
-      description: (weather?.description as string) ?? null,
-      feelsLike: (main?.feels_like as number) ?? null,
-      fromCache,
-      humidity: (main?.humidity as number) ?? null,
-      icon: (weather?.icon as string) ?? null,
-      pressure: (main?.pressure as number) ?? null,
-      provider,
-      rain: rainValue,
-      snow: snowValue,
-      status: "success",
-      sunrise: (sys?.sunrise as number) ?? null,
-      sunset: (sys?.sunset as number) ?? null,
-      temp: (main?.temp as number) ?? null,
-      tempMax: (main?.temp_max as number) ?? null,
-      tempMin: (main?.temp_min as number) ?? null,
-      timezone: weatherData.timezone as number | null | undefined,
-      tookMs,
-      visibility: weatherData.visibility as number | null | undefined,
-      windDirection: (wind?.deg as number) ?? null,
-      windGust: (wind?.gust as number) ?? null,
-      windSpeed: (wind?.speed as number) ?? null,
-    };
-
-    // Cache result
-    if (redis && !validated.fresh) {
-      await redis.set(cacheKey, result, { ex: WEATHER_CACHE_TTL_SECONDS });
-    }
-
-    return result;
-  },
-  inputSchema: weatherSchema,
+    ),
+  inputSchema: getCurrentWeatherInputSchema,
 });

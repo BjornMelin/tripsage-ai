@@ -39,10 +39,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
-import {
-  useTripCollaboration,
-  useTripWithRealtime,
-} from "@/hooks/use-trips-with-realtime";
+import { useTrip } from "@/hooks/use-trips";
 import { createClient } from "@/lib/supabase/client";
 
 /**
@@ -92,11 +89,7 @@ export default function TripCollaborationPage() {
   const inviteInputId = useId();
   const { toast } = useToast();
 
-  const {
-    trip,
-    isConnected,
-    connectionErrors: _connectionErrors,
-  } = useTripWithRealtime(Number.parseInt(tripId, 10));
+  const { data: trip, isConnected, realtimeStatus: _realtimeStatus } = useTrip(tripId);
 
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   useEffect(() => {
@@ -110,7 +103,6 @@ export default function TripCollaborationPage() {
     name?: string;
     visibility?: string;
   } | null;
-  useTripCollaboration(tripId); // Initialize collaboration state
 
   const [inviteEmail, setInviteEmail] = useState("");
   const [isInviting, setIsInviting] = useState(false);

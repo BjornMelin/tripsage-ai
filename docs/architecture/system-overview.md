@@ -110,26 +110,25 @@ TripSage Core provides modular services organized by responsibility:
 - `TripService`: Trip planning and management
 - `FlightService`: Flight search and booking via Duffel (used by frontend agents)
 - `AccommodationService`: Hotel search and booking (used by frontend agents)
-- `DestinationService`: Location research and insights
-- `ActivityService`: Activity recommendations
 - `ItineraryService`: Trip itinerary management
 - `MemoryService`: AI memory and context management via Mem0
 - `ChatService`: Chat session management
 - `UserService`: User profiles and preferences
-- `SearchService`: Multi-provider search orchestration
+- `DestinationService`, `SearchService`, `ActivityService`: Removed; handled via frontend AI SDK v6 agents
 - `FileProcessingService`: Document analysis and processing
 
 **Note:** `FlightService` and `AccommodationService` are now primarily used by frontend AI agents (`/api/agents/flights` and `/api/agents/accommodations`) rather than direct Python API endpoints.
 
 **External API Services** (`tripsage_core/services/external_apis/`):
 
-- `GoogleMapsService`: Location services and geocoding
-- `WeatherService`: Weather data and forecasting
-- `CalendarService`: Calendar integration
+> [!NOTE]
+> Location/POI (Google Maps), weather, and calendar tooling are implemented in Next.js using AI SDK v6 tools. The Python backend no longer provides GoogleMapsService, WeatherService, or CalendarService.
+> Time-related utilities are no longer exported from Core external_apis; use frontend or direct libs as appropriate.
+> Calendar integrations are implemented in `frontend/src/lib/calendar/` with Google Calendar REST API v3, ICS import/export, and AI SDK tools. See [calendar-service.md](./calendar-service.md) for details.
+
 - `DuffelProvider`: Flight search and booking
 - `PlaywrightService`: Browser automation
 - `DocumentAnalyzer`: File processing
-- `TimeService`: Timezone utilities
 
 **Infrastructure Services** (`tripsage_core/services/infrastructure/`):
 

@@ -7,13 +7,33 @@ import "server-only";
 
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
+import { createXai } from "@ai-sdk/xai";
+import { createGateway } from "ai";
 import type {
   ModelMapper,
   ProviderId,
   ProviderResolution,
 } from "@/lib/providers/types";
-import { getProviderSettings } from "@/lib/settings";
-import { getUserApiKey } from "@/lib/supabase/rpc";
+import {
+  getUserAllowGatewayFallback,
+  getUserApiKey,
+  getUserGatewayBaseUrl,
+  touchUserApiKey,
+} from "@/lib/supabase/rpc";
+import { withTelemetrySpan } from "@/lib/telemetry/span";
+
+/** Provider preference order for BYOK key resolution. */
+const PROVIDER_PREFERENCE: ProviderId[] = ["openai", "openrouter", "anthropic", "xai"];
+
+function extractHost(url: string | undefined): string | undefined {
+  if (!url) return undefined;
+  try {
+    return new URL(url).host;
+  } catch {
+    // ignore parse errors for malformed URLs
+    return undefined;
+  }
+}
 
 /**
  * Map a generic model hint to a provider-specific id.
@@ -29,7 +49,7 @@ const DEFAULT_MODEL_MAPPER: ModelMapper = (
       case "openai":
         return "gpt-5-mini";
       case "openrouter":
-        return "x-ai/grok-4-fast";
+        return "openai/gpt-4o-mini";
       case "anthropic":
         return "claude-haiku-4-5";
       case "xai":
@@ -51,88 +71,204 @@ const DEFAULT_MODEL_MAPPER: ModelMapper = (
  *
  * @param userId Supabase auth user id; used to fetch BYOK keys server-side.
  * @param modelHint Optional generic model hint (e.g., "gpt-4o-mini").
- * @returns ProviderResolution including model and optional headers.
+ * @returns ProviderResolution including provider id, model id, and model instance.
  * @throws Error if no provider key is found for the user.
  */
 export async function resolveProvider(
   userId: string,
   modelHint?: string
 ): Promise<ProviderResolution> {
-  const settings = getProviderSettings();
+  // 0) Per-user Gateway key (if present): highest precedence
+  const userGatewayKey = await getUserApiKey(userId, "gateway");
+  if (userGatewayKey) {
+    const baseUrl =
+      (await getUserGatewayBaseUrl(userId)) ?? "https://ai-gateway.vercel.sh/v1";
+    const client = createGateway({
+      apiKey: userGatewayKey,
+      // biome-ignore lint/style/useNamingConvention: provider option name
+      baseURL: baseUrl,
+    });
+    const modelId = DEFAULT_MODEL_MAPPER("openai", modelHint);
+    return await withTelemetrySpan(
+      "providers.resolve",
+      {
+        attributes: {
+          baseUrlHost: extractHost(baseUrl) ?? "ai-gateway.vercel.sh",
+          baseUrlSource: "user",
+          modelId,
+          path: "user-gateway",
+          provider: "gateway",
+        },
+      },
+      async () => ({
+        model: client(modelId) as unknown as import("ai").LanguageModel,
+        modelId,
+        provider: "openai",
+      })
+    );
+  }
 
-  // Check for BYOK keys first (BYOK users get direct provider access, bypassing Gateway)
-  for (const provider of settings.preference) {
-    // Fetch user's BYOK for this provider (never exposed to client).
-    const apiKey = await getUserApiKey(userId, provider);
+  // 1) Check for BYOK keys concurrently (OpenAI, OpenRouter, Anthropic, xAI)
+  const providers = PROVIDER_PREFERENCE;
+  const keyResults = await Promise.all(
+    providers.map(async (p) => ({ key: await getUserApiKey(userId, p), p }))
+  );
+  for (const { p: provider, key: apiKey } of keyResults) {
     if (!apiKey) continue;
+    const modelId = DEFAULT_MODEL_MAPPER(provider, modelHint);
+    if (provider === "openai") {
+      const openai = createOpenAI({ apiKey });
+      // Fire-and-forget: update last used timestamp (ignore errors)
+      touchUserApiKey(userId, provider).catch(() => undefined);
+      return await withTelemetrySpan(
+        "providers.resolve",
+        { attributes: { modelId, path: "user-provider", provider } },
+        async () => ({
+          model: openai(modelId) as unknown as import("ai").LanguageModel,
+          modelId,
+          provider,
+        })
+      );
+    }
+    if (provider === "openrouter") {
+      const openrouter = createOpenAI({
+        apiKey,
+        // biome-ignore lint/style/useNamingConvention: provider option name
+        baseURL: "https://openrouter.ai/api/v1",
+      });
+      // Fire-and-forget: update last used timestamp (ignore errors)
+      touchUserApiKey(userId, provider).catch(() => undefined);
+      return await withTelemetrySpan(
+        "providers.resolve",
+        { attributes: { modelId, path: "user-provider", provider } },
+        async () => ({
+          model: openrouter(modelId) as unknown as import("ai").LanguageModel,
+          modelId,
+          provider,
+        })
+      );
+    }
+    if (provider === "anthropic") {
+      const a = createAnthropic({ apiKey });
+      // Fire-and-forget: update last used timestamp (ignore errors)
+      touchUserApiKey(userId, provider).catch(() => {
+        // Ignore errors for fire-and-forget operation
+      });
+      return await withTelemetrySpan(
+        "providers.resolve",
+        { attributes: { modelId, path: "user-provider", provider } },
+        async () => ({
+          model: a(modelId) as unknown as import("ai").LanguageModel,
+          modelId,
+          provider,
+        })
+      );
+    }
+    if (provider === "xai") {
+      const client = createXai({ apiKey });
+      // Fire-and-forget: update last used timestamp (ignore errors)
+      touchUserApiKey(userId, provider).catch(() => {
+        // Ignore errors for fire-and-forget operation
+      });
+      return await withTelemetrySpan(
+        "providers.resolve",
+        { attributes: { modelId, path: "user-provider", provider } },
+        async () => ({
+          model: client(modelId) as unknown as import("ai").LanguageModel,
+          modelId,
+          provider,
+        })
+      );
+    }
+  }
 
+  // Fallback to server-side API keys when BYOK is not available
+  // Check in preference order for server-side keys
+  const { getServerEnvVarWithFallback } = await import("@/lib/env/server");
+  for (const provider of PROVIDER_PREFERENCE) {
+    let serverApiKey: string | undefined;
     const modelId = DEFAULT_MODEL_MAPPER(provider, modelHint);
 
     if (provider === "openai") {
-      const openai = createOpenAI({ apiKey });
-      return { model: openai(modelId), modelId, provider };
+      serverApiKey = getServerEnvVarWithFallback("OPENAI_API_KEY", undefined);
+      if (serverApiKey) {
+        const openai = createOpenAI({ apiKey: serverApiKey });
+        return { model: openai(modelId), modelId, provider };
+      }
     }
 
     if (provider === "openrouter") {
-      const headers: Record<string, string> = {};
-      const referer = settings.openrouterAttribution?.referer;
-      const title = settings.openrouterAttribution?.title;
-      if (referer) headers["HTTP-Referer"] = referer;
-      if (title) headers["X-Title"] = title;
-
-      const client = createOpenAI({
-        apiKey,
-        // biome-ignore lint/style/useNamingConvention: API parameter name
-        baseURL: "https://openrouter.ai/api/v1",
-        headers: Object.keys(headers).length > 0 ? headers : undefined,
-      });
-      return {
-        headers: Object.keys(headers).length ? headers : undefined,
-        model: client(modelId),
-        modelId,
-        provider,
-      };
+      serverApiKey = getServerEnvVarWithFallback("OPENROUTER_API_KEY", undefined);
+      if (serverApiKey) {
+        const openrouter = createOpenAI({
+          apiKey: serverApiKey,
+          // biome-ignore lint/style/useNamingConvention: provider option name
+          baseURL: "https://openrouter.ai/api/v1",
+        });
+        return { model: openrouter(modelId), modelId, provider };
+      }
     }
 
     if (provider === "anthropic") {
-      // The anthropic() helper reads env by default; to support BYOK, use factory
-      const a = createAnthropic({ apiKey });
-      return { model: a(modelId), modelId, provider };
+      serverApiKey = getServerEnvVarWithFallback("ANTHROPIC_API_KEY", undefined);
+      if (serverApiKey) {
+        const a = createAnthropic({ apiKey: serverApiKey });
+        return { model: a(modelId), modelId, provider };
+      }
     }
 
     if (provider === "xai") {
-      // Use OpenAI-compatible provider for xAI to pass BYOK and base URL.
-      // Avoid @ai-sdk/xai here to ensure user-specific keys are respected.
-      const xai = createOpenAI({
-        apiKey,
-        // biome-ignore lint/style/useNamingConvention: API parameter name
-        baseURL: "https://api.x.ai/v1",
-      });
-      return { model: xai(modelId), modelId, provider };
+      serverApiKey = getServerEnvVarWithFallback("XAI_API_KEY", undefined);
+      if (serverApiKey) {
+        const xai = createXai({ apiKey: serverApiKey });
+        return { model: xai(modelId), modelId, provider };
+      }
     }
   }
 
-  // Default to Vercel AI Gateway for non-BYOK users (primary/default path per architecture)
+  // Final fallback: Vercel AI Gateway (if configured)
   // Gateway provides unified routing, budgets, retries, and observability
-  const gatewayApiKey = process.env.AI_GATEWAY_API_KEY;
+  const allowFallback = await getUserAllowGatewayFallback(userId);
+  const gatewayApiKey = getServerEnvVarWithFallback("AI_GATEWAY_API_KEY", undefined);
   if (gatewayApiKey) {
+    const gatewayUrl =
+      getServerEnvVarWithFallback("AI_GATEWAY_URL", undefined) ??
+      "https://ai-gateway.vercel.sh/v1";
     const modelId = DEFAULT_MODEL_MAPPER("openai", modelHint);
-    const gateway = createOpenAI({
+    const gateway = createGateway({
       apiKey: gatewayApiKey,
-      // biome-ignore lint/style/useNamingConvention: API parameter name
-      baseURL: "https://ai-gateway.vercel.sh/v1",
+      // biome-ignore lint/style/useNamingConvention: provider option name
+      baseURL: gatewayUrl,
     });
-    return {
-      model: gateway(modelId),
-      modelId,
-      provider: "openai",
-    };
+    if (allowFallback === false) {
+      throw new Error(
+        "User has disabled Gateway fallback; no per-user BYOK keys found."
+      );
+    }
+    return await withTelemetrySpan(
+      "providers.resolve",
+      {
+        attributes: {
+          baseUrlHost: extractHost(gatewayUrl) ?? "ai-gateway.vercel.sh",
+          baseUrlSource: "team",
+          modelId,
+          path: "team-gateway",
+          provider: "gateway",
+        },
+      },
+      async () => ({
+        model: gateway(modelId) as unknown as import("ai").LanguageModel,
+        modelId,
+        provider: "openai",
+      })
+    );
   }
 
   throw new Error(
-    "No provider key found for user and AI_GATEWAY_API_KEY not configured; " +
-      "please add a provider API key for one of the supported providers: " +
-      "openai, openrouter, anthropic, xai, or configure AI_GATEWAY_API_KEY."
+    "No provider key found for user and no server-side fallback keys configured; " +
+      "please add a provider API key (BYOK) for one of: openai, openrouter, anthropic, xai, " +
+      "or configure server-side fallback keys: OPENAI_API_KEY, OPENROUTER_API_KEY, " +
+      "ANTHROPIC_API_KEY, XAI_API_KEY, or AI_GATEWAY_API_KEY."
   );
 }
 

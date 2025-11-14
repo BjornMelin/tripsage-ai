@@ -26,8 +26,8 @@ export enum ConnectionStatus {
 }
 
 import type { RealtimeChannel } from "@supabase/supabase-js";
+import type { ConversationMessage, MemoryContextResponse } from "@/lib/schemas/memory";
 import { getBrowserClient } from "@/lib/supabase/client";
-import type { ConversationMessage, MemoryContextResponse } from "@/types/memory";
 
 /**
  * Message interface with support for tool calls and attachments.

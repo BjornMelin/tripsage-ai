@@ -8,32 +8,26 @@ from typing import TYPE_CHECKING
 
 
 __all__ = [
-    "activities",
     "attachments",
     "auth",
     "config",
     "dashboard",
-    "destinations",
     "health",
     "itineraries",
     "memory",
-    "search",
     "trips",
     "users",
 ]
 
 if TYPE_CHECKING:
     from . import (
-        activities,
         attachments,
         auth,
         config,
         dashboard,
-        destinations,
         health,
         itineraries,
         memory,
-        search,
         trips,
         users,
     )

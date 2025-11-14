@@ -17,17 +17,24 @@ vi.mock("@/lib/telemetry/span", () => ({
   ),
 }));
 
-const env = process.env;
+vi.mock("@/lib/env/server", () => ({
+  getServerEnvVar: vi.fn(() => "test_key"),
+  getServerEnvVarWithFallback: vi.fn((key: string, fallback?: string) => {
+    if (key === "FIRECRAWL_API_KEY") return "test_key";
+    if (key === "FIRECRAWL_BASE_URL") return fallback || "https://api.firecrawl.dev/v2";
+    if (key === "UPSTASH_REDIS_REST_URL") return fallback;
+    if (key === "UPSTASH_REDIS_REST_TOKEN") return fallback;
+    return fallback;
+  }),
+}));
 
 beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn());
-  process.env = { ...env, FIRECRAWL_API_KEY: "test_key" };
 });
 
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.clearAllMocks();
-  process.env = env;
 });
 
 const mockContext = {
@@ -123,11 +130,18 @@ describe("webSearch", () => {
   test("throws when not configured", async () => {
     const { getRedis } = await import("@/lib/redis");
     (getRedis as ReturnType<typeof vi.fn>).mockReturnValue(null);
+    const { getServerEnvVar } = await import("@/lib/env/server");
+    (getServerEnvVar as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      throw new Error("FIRECRAWL_API_KEY is not defined");
+    });
+    vi.resetModules();
     const { webSearch } = await import("@/lib/tools/web-search");
-    process.env.FIRECRAWL_API_KEY = "";
     await expect(
       webSearch.execute?.({ fresh: false, limit: 5, query: "test" }, mockContext)
     ).rejects.toThrow(/web_search_not_configured/);
+    // Restore mock
+    (getServerEnvVar as ReturnType<typeof vi.fn>).mockReturnValue("test_key");
+    vi.resetModules();
   });
 
   test("handles rate limit errors", async () => {
@@ -193,8 +207,16 @@ describe("webSearch", () => {
   test("uses custom base URL when configured", async () => {
     const { getRedis } = await import("@/lib/redis");
     (getRedis as ReturnType<typeof vi.fn>).mockReturnValue(null);
+    const { getServerEnvVarWithFallback } = await import("@/lib/env/server");
+    (getServerEnvVarWithFallback as ReturnType<typeof vi.fn>).mockImplementation(
+      (key: string, fallback?: string) => {
+        if (key === "FIRECRAWL_BASE_URL") return "https://custom.firecrawl.dev/v2";
+        if (key === "FIRECRAWL_API_KEY") return "test_key";
+        return fallback;
+      }
+    );
+    vi.resetModules();
     const { webSearch } = await import("@/lib/tools/web-search");
-    process.env.FIRECRAWL_BASE_URL = "https://custom.firecrawl.dev/v2";
     const mockRes = {
       json: async () => ({ results: [] }),
       ok: true,
@@ -524,8 +546,17 @@ describe("webSearch caching behavior", () => {
 
   test("rate limiting calls Upstash when configured", async () => {
     // Provide Upstash envs to construct limiter
-    process.env.UPSTASH_REDIS_REST_URL = "https://upstash.example";
-    process.env.UPSTASH_REDIS_REST_TOKEN = "token";
+    const { getServerEnvVarWithFallback } = await import("@/lib/env/server");
+    (getServerEnvVarWithFallback as ReturnType<typeof vi.fn>).mockImplementation(
+      (key: string, fallback?: string) => {
+        if (key === "UPSTASH_REDIS_REST_URL") return "https://upstash.example";
+        if (key === "UPSTASH_REDIS_REST_TOKEN") return "token";
+        if (key === "FIRECRAWL_API_KEY") return "test_key";
+        if (key === "FIRECRAWL_BASE_URL")
+          return fallback || "https://api.firecrawl.dev/v2";
+        return fallback;
+      }
+    );
 
     vi.doMock("@upstash/redis", () => ({
       Redis: { fromEnv: () => ({}) },

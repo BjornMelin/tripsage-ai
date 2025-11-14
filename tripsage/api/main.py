@@ -23,16 +23,13 @@ from tripsage.api.middlewares import (
 )
 from tripsage.api.middlewares.authentication import AuthenticationMiddleware
 from tripsage.api.routers import (
-    activities,
     attachments,
     auth,
     config,
     dashboard,
-    destinations,
     health,
     itineraries,
     memory,
-    search,
     trips,
     users,
 )
@@ -70,7 +67,7 @@ async def lifespan(app: FastAPI):
     Args:
         app: The FastAPI application
     """
-    services, _orchestrator = await initialise_app_state(app)
+    services = await initialise_app_state(app)
 
     # Instantiate shared agents after services are ready
     # ChatAgent removed; chat features are implemented in Next.js via AI SDK.
@@ -331,16 +328,10 @@ def create_app() -> FastAPI:  # pylint: disable=too-many-statements
         attachments.router, prefix="/api/attachments", tags=["attachments"]
     )
     app.include_router(trips.router, prefix="/api/trips", tags=["trips"])
-    app.include_router(
-        destinations.router,
-        prefix="/api/destinations",
-        tags=["destinations"],
-    )
+    # destinations and search routers removed; handled via frontend AI SDK v6 agents
     app.include_router(
         itineraries.router, prefix="/api/itineraries", tags=["itineraries"]
     )
-    app.include_router(activities.router, prefix="/api/activities", tags=["activities"])
-    app.include_router(search.router, prefix="/api/search", tags=["search"])
     app.include_router(memory.router, prefix="/api", tags=["memory"])
 
     # BYOK key CRUD is now implemented in Next.js routes; Python router removed

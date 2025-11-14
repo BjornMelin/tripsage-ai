@@ -9,13 +9,16 @@ import { useChat } from "@ai-sdk/react";
 import type { FileUIPart, UIMessage } from "ai";
 import { DefaultChatTransport } from "ai";
 import { type ReactElement, useCallback, useEffect, useMemo, useState } from "react";
+import { BudgetChart } from "@/components/ai-elements/budget-chart";
 import {
   Conversation,
   ConversationContent,
   ConversationEmptyState,
   ConversationScrollButton,
 } from "@/components/ai-elements/conversation";
+import { DestinationCard } from "@/components/ai-elements/destination-card";
 import { FlightOfferCard } from "@/components/ai-elements/flight-card";
+import { ItineraryTimeline } from "@/components/ai-elements/itinerary-timeline";
 import {
   Message,
   MessageAvatar,
@@ -48,10 +51,7 @@ import {
 } from "@/components/ai-elements/sources";
 import { StayCard } from "@/components/ai-elements/stay-card";
 import { useSupabase } from "@/lib/supabase/client";
-import {
-  accommodationSearchResultSchema,
-  flightSearchResultSchema,
-} from "@/schemas/agents";
+import { parseSchemaCard } from "@/lib/ui/parse-schema-card";
 
 /**
  * Resolve the authenticated Supabase user id for the current browser session.
@@ -113,42 +113,64 @@ function ChatMessageItem({ message }: { message: UIMessage }) {
           parts.map((part, idx) => {
             switch (part?.type) {
               case "text": {
-                // Try to parse JSON with schemaVersion for structured results
                 const text = part.text ?? "";
-                let parsedJson: unknown = null;
-                try {
-                  // Attempt to extract JSON from text (may be wrapped in markdown code blocks)
-                  const jsonMatch = text.match(
-                    /```(?:json)?\s*(\{[\s\S]*?\})\s*```|(\{[\s\S]*\})/
-                  );
-                  const jsonStr = jsonMatch?.[1] ?? jsonMatch?.[2] ?? text;
-                  parsedJson = JSON.parse(jsonStr);
-                } catch {
-                  // Not valid JSON, render as plain text
-                }
+                const schemaCard = parseSchemaCard(text);
 
-                // Check if parsed JSON matches flight.v1 schema
-                if (parsedJson) {
-                  const flightResult = flightSearchResultSchema.safeParse(parsedJson);
-                  if (flightResult.success) {
-                    return (
-                      <FlightOfferCard
-                        key={`${message.id}-flight-${idx}`}
-                        result={flightResult.data}
-                      />
-                    );
-                  }
-
-                  // Check if parsed JSON matches stay.v1 schema
-                  const stayResult =
-                    accommodationSearchResultSchema.safeParse(parsedJson);
-                  if (stayResult.success) {
-                    return (
-                      <StayCard
-                        key={`${message.id}-stay-${idx}`}
-                        result={stayResult.data}
-                      />
-                    );
+                if (schemaCard) {
+                  switch (schemaCard.kind) {
+                    case "flight":
+                      return (
+                        <FlightOfferCard
+                          key={`${message.id}-flight-${idx}`}
+                          result={
+                            schemaCard.data as Parameters<
+                              typeof FlightOfferCard
+                            >[0]["result"]
+                          }
+                        />
+                      );
+                    case "stay":
+                      return (
+                        <StayCard
+                          key={`${message.id}-stay-${idx}`}
+                          result={
+                            schemaCard.data as Parameters<typeof StayCard>[0]["result"]
+                          }
+                        />
+                      );
+                    case "budget":
+                      return (
+                        <BudgetChart
+                          key={`${message.id}-budget-${idx}`}
+                          result={
+                            schemaCard.data as Parameters<
+                              typeof BudgetChart
+                            >[0]["result"]
+                          }
+                        />
+                      );
+                    case "destination":
+                      return (
+                        <DestinationCard
+                          key={`${message.id}-dest-${idx}`}
+                          result={
+                            schemaCard.data as Parameters<
+                              typeof DestinationCard
+                            >[0]["result"]
+                          }
+                        />
+                      );
+                    case "itinerary":
+                      return (
+                        <ItineraryTimeline
+                          key={`${message.id}-itin-${idx}`}
+                          result={
+                            schemaCard.data as Parameters<
+                              typeof ItineraryTimeline
+                            >[0]["result"]
+                          }
+                        />
+                      );
                   }
                 }
 
@@ -366,16 +388,44 @@ export default function ChatPage(): ReactElement {
           const last = messages[messages.length - 1];
           // biome-ignore lint/suspicious/noExplicitAny: Metadata shape is dynamic
           const md = (last && (last as any).metadata) || {};
-          if (md.agent === "flight_search" && md.request) {
+          if (md.agent === "flightSearch" && md.request) {
             return {
               api: "/api/agents/flights",
               body: md.request,
               credentials: "include",
             };
           }
-          if (md.agent === "accommodation_search" && md.request) {
+          if (md.agent === "accommodationSearch" && md.request) {
             return {
               api: "/api/agents/accommodations",
+              body: md.request,
+              credentials: "include",
+            };
+          }
+          if (md.agent === "budgetPlanning" && md.request) {
+            return {
+              api: "/api/agents/budget",
+              body: md.request,
+              credentials: "include",
+            };
+          }
+          if (md.agent === "memoryUpdate" && md.request) {
+            return {
+              api: "/api/agents/memory",
+              body: md.request,
+              credentials: "include",
+            };
+          }
+          if (md.agent === "destinationResearch" && md.request) {
+            return {
+              api: "/api/agents/destinations",
+              body: md.request,
+              credentials: "include",
+            };
+          }
+          if (md.agent === "itineraryPlanning" && md.request) {
+            return {
+              api: "/api/agents/itineraries",
               body: md.request,
               credentials: "include",
             };
@@ -508,7 +558,7 @@ export default function ChatPage(): ReactElement {
                       onSelect={() =>
                         sendMessage({
                           metadata: {
-                            agent: "flight_search",
+                            agent: "flightSearch",
                             request: {
                               cabinClass: "economy",
                               departureDate: "2025-12-15",
@@ -528,7 +578,7 @@ export default function ChatPage(): ReactElement {
                       onSelect={() =>
                         sendMessage({
                           metadata: {
-                            agent: "accommodation_search",
+                            agent: "accommodationSearch",
                             request: {
                               checkIn: "2025-12-15",
                               checkOut: "2025-12-19",
@@ -541,6 +591,54 @@ export default function ChatPage(): ReactElement {
                       }
                     >
                       Find stays
+                    </PromptInputActionMenuItem>
+                    <PromptInputActionMenuItem
+                      onSelect={() =>
+                        sendMessage({
+                          metadata: {
+                            agent: "budgetPlanning",
+                            request: {
+                              destination: "New York City",
+                              durationDays: 5,
+                              travelers: 2,
+                            },
+                          },
+                          text: "Plan budget",
+                        })
+                      }
+                    >
+                      Plan budget
+                    </PromptInputActionMenuItem>
+                    <PromptInputActionMenuItem
+                      onSelect={() =>
+                        sendMessage({
+                          metadata: {
+                            agent: "destinationResearch",
+                            request: {
+                              destination: "Tokyo",
+                            },
+                          },
+                          text: "Research destination",
+                        })
+                      }
+                    >
+                      Research destination
+                    </PromptInputActionMenuItem>
+                    <PromptInputActionMenuItem
+                      onSelect={() =>
+                        sendMessage({
+                          metadata: {
+                            agent: "itineraryPlanning",
+                            request: {
+                              destination: "Tokyo",
+                              durationDays: 7,
+                            },
+                          },
+                          text: "Plan itinerary",
+                        })
+                      }
+                    >
+                      Plan itinerary
                     </PromptInputActionMenuItem>
                   </PromptInputActionMenuContent>
                 </PromptInputActionMenu>

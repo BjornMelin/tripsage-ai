@@ -18,10 +18,19 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024;
 /** Maximum number of files allowed per upload request. */
 const MAX_FILES_PER_REQUEST = 5;
 
-/** Backend API URL for attachment operations. */
-const BACKEND_API_URL = process.env.BACKEND_API_URL || "http://localhost:8001";
+import { getServerEnvVarWithFallback } from "@/lib/env/server";
 
 const RATELIMIT_PREFIX = "ratelimit:attachments";
+
+/**
+ * Get backend API URL for attachment operations.
+ */
+function getBackendApiUrl(): string {
+  return (
+    getServerEnvVarWithFallback("BACKEND_API_URL", "http://localhost:8001") ??
+    "http://localhost:8001"
+  );
+}
 
 /**
  * Lazily construct a rate limiter when Upstash credentials are configured.
@@ -29,8 +38,11 @@ const RATELIMIT_PREFIX = "ratelimit:attachments";
  * @returns Configured Ratelimit instance or undefined when env vars are absent.
  */
 function createRateLimiter(): Ratelimit | undefined {
-  const upstashUrl = process.env.UPSTASH_REDIS_REST_URL;
-  const upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+  const upstashUrl = getServerEnvVarWithFallback("UPSTASH_REDIS_REST_URL", undefined);
+  const upstashToken = getServerEnvVarWithFallback(
+    "UPSTASH_REDIS_REST_TOKEN",
+    undefined
+  );
   if (!upstashUrl || !upstashToken) {
     return undefined;
   }
@@ -151,7 +163,7 @@ export async function POST(req: NextRequest) {
       files.length === 1 ? "/api/attachments/upload" : "/api/attachments/upload/batch";
     const headers: HeadersInit | undefined = forwardAuthHeaders(req);
 
-    const response = await fetch(`${BACKEND_API_URL}${endpoint}`, {
+    const response = await fetch(`${getBackendApiUrl()}${endpoint}`, {
       body: backendFormData,
       headers,
       method: "POST",

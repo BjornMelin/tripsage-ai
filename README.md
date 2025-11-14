@@ -32,7 +32,7 @@ real-time booking capabilities, and intelligent memory management.
 - **Intelligent Memory**: Mem0-powered user preference learning and context
 - **Ultra-Fast Caching**: Upstash Redis (HTTP) for low-latency serverless caching
 - **Enterprise Security**: RLS policies and JWT authentication
-- **Modern Frontend**: Next.js 15 with React 19 and TypeScript
+- **Modern Frontend**: Next.js 16 with App Router, React 19, TypeScript, and Vercel AI SDK v6
 - **Real-time Collaboration**: Supabase Realtime (private channels + RLS)
 
 ## Quick Start

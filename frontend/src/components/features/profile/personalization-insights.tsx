@@ -1,6 +1,6 @@
 "use client";
 
-// import type { UserPreferences } from "@/types/memory"; // Future implementation
+// import type { UserPreferences } from "@/lib/schemas/memory"; // Future implementation
 import {
   BarChart3,
   Brain,
@@ -27,8 +27,14 @@ import {
   useMemoryStats,
   // useUpdatePreferences, // Future implementation
 } from "@/hooks/use-memory";
+export type PersonalizationInsightsProps = {
+  userId: string;
+  className?: string;
+  showRecommendations?: boolean;
+  onPreferenceUpdate?: (preferences: unknown) => void;
+};
+
 import { cn } from "@/lib/utils";
-import type { PersonalizationInsightsProps } from "@/types/memory";
 
 export function PersonalizationInsights({
   userId,

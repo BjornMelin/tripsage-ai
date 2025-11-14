@@ -6,8 +6,14 @@
 "use cache: private";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { getServerEnvVarWithFallback } from "@/lib/env/server";
 
-const BACKEND_API_URL = process.env.BACKEND_API_URL || "http://localhost:8001";
+function getBackendApiUrl(): string {
+  return (
+    getServerEnvVarWithFallback("BACKEND_API_URL", "http://localhost:8001") ??
+    "http://localhost:8001"
+  );
+}
 
 /**
  * Retrieves attachment files with optional pagination parameters.
@@ -24,7 +30,7 @@ export async function GET(req: NextRequest) {
     // Preserve pagination query params
     const { searchParams } = req.nextUrl;
     const qs = searchParams.toString();
-    const url = `${BACKEND_API_URL}/api/attachments/files${qs ? `?${qs}` : ""}`;
+    const url = `${getBackendApiUrl()}/api/attachments/files${qs ? `?${qs}` : ""}`;
 
     const response = await fetch(url, {
       headers: authHeader ? { authorization: authHeader } : undefined,

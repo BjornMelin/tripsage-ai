@@ -29,7 +29,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useMemoryContext } from "@/hooks/use-memory";
-import type { DestinationSearchParams } from "@/types/search";
+import type { DestinationSearchParams } from "@/lib/schemas/search";
 
 const DestinationSearchFormSchema = z.object({
   language: z.string().optional(),
@@ -194,8 +194,6 @@ export function DestinationSearchForm({
       region: data.region,
       types: data.types,
     };
-
-    console.log("Destination search params:", searchParams);
 
     if (onSearch) {
       onSearch(searchParams);

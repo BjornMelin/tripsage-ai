@@ -19,7 +19,7 @@ import {
   getTrustedRateLimitIdentifier,
   redactErrorForLogging,
 } from "@/lib/next/route-helpers";
-import { insertUserApiKey } from "@/lib/supabase/rpc";
+import { insertUserApiKey, upsertUserGatewayBaseUrl } from "@/lib/supabase/rpc";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import {
@@ -170,7 +170,37 @@ export async function POST(req: NextRequest) {
       );
 
     // postKey normalizes and validates service identifiers before hitting Supabase RPCs.
-    return postKey({ insertUserApiKey: instrumentedInsert, supabase }, validated);
+    const result = await postKey(
+      {
+        insertUserApiKey: instrumentedInsert,
+        supabase,
+        // Store per-user Gateway base URL when provided.
+        upsertUserGatewayBaseUrl: async (u: string, baseUrl: string) =>
+          withTelemetrySpan(
+            "keys.rpc.gateway_cfg.upsert",
+            {
+              attributes: buildKeySpanAttributes({
+                identifierType,
+                operation: "insert",
+                rateLimit: rateLimitMeta,
+                service: "gateway",
+                userId: u,
+              }),
+            },
+            async (span) => {
+              try {
+                await upsertUserGatewayBaseUrl(u, baseUrl);
+                span.setAttribute("keys.rpc.error", false);
+              } catch (rpcError) {
+                span.setAttribute("keys.rpc.error", true);
+                throw rpcError;
+              }
+            }
+          ),
+      },
+      validated
+    );
+    return result;
   } catch (err) {
     // Redact potential secrets from logs
     const { message: safeMessage, context: safeContext } = redactErrorForLogging(err, {

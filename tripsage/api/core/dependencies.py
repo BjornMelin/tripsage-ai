@@ -17,20 +17,13 @@ from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError,
     CoreAuthorizationError,
 )
-from tripsage_core.services.airbnb_mcp import AirbnbMCP
-from tripsage_core.services.business.accommodation_service import AccommodationService
-from tripsage_core.services.business.activity_service import ActivityService
-from tripsage_core.services.business.destination_service import DestinationService
 from tripsage_core.services.business.file_processing_service import (
     FileProcessingService,
 )
 from tripsage_core.services.business.flight_service import FlightService
 from tripsage_core.services.business.itinerary_service import ItineraryService
 from tripsage_core.services.business.memory_service import MemoryService
-from tripsage_core.services.business.search_facade import SearchFacade
 from tripsage_core.services.business.trip_service import TripService
-from tripsage_core.services.business.unified_search_service import UnifiedSearchService
-from tripsage_core.services.external_apis.google_maps_service import GoogleMapsService
 from tripsage_core.services.infrastructure import CacheService
 from tripsage_core.services.infrastructure.database_service import DatabaseService
 
@@ -183,72 +176,13 @@ def get_cache_service_dep(request: Request) -> CacheService:
     return _get_required_service(request, "cache_service", CacheService)
 
 
-# Google Maps service dependency (DI-managed in app lifespan)
-def get_maps_service_dep(request: Request) -> GoogleMapsService:
-    """Get DI-managed Google Maps service instance."""
-    return _get_required_service(request, "google_maps_service", GoogleMapsService)
-
-
-# Activity service dependency constructed from DI-managed services
-def get_activity_service_dep(request: Request) -> ActivityService:
-    """Return the ActivityService singleton."""
-    return _get_required_service(request, "activity_service", ActivityService)
-
-
+# File processing service dependency
 def get_file_processing_service(request: Request) -> FileProcessingService:
     """Return the FileProcessingService singleton."""
     return _get_required_service(
         request,
         "file_processing_service",
         FileProcessingService,
-    )
-
-
-# Unified search service dependency
-def get_unified_search_service_dep(request: Request) -> UnifiedSearchService:
-    """Return the UnifiedSearchService singleton."""
-    return _get_required_service(
-        request,
-        "unified_search_service",
-        UnifiedSearchService,
-    )
-
-
-# Search facade dependency
-def get_search_facade(request: Request) -> SearchFacade:
-    """Return the SearchFacade singleton."""
-    return _get_required_service(
-        request,
-        "search_facade",
-        SearchFacade,
-    )
-
-
-# MCP service dependency
-def get_mcp_service(request: Request) -> AirbnbMCP:
-    """Get DI-managed MCP service instance."""
-    return _get_required_service(request, "mcp_service", AirbnbMCP)
-
-
-# Business service dependencies (container-backed)
-def get_accommodation_service(request: Request) -> AccommodationService:
-    """Return AccommodationService from app.state container."""
-    return _get_required_service(
-        request,
-        "accommodation_service",
-        AccommodationService,
-    )
-
-
-# Chat service no longer provided; chat moved to Next.js routes using AI SDK.
-
-
-def get_destination_service(request: Request) -> DestinationService:
-    """Return DestinationService from the container."""
-    return _get_required_service(
-        request,
-        "destination_service",
-        DestinationService,
     )
 
 
@@ -280,13 +214,6 @@ def get_trip_service(request: Request) -> TripService:
 SettingsDep = Annotated[Settings, Depends(get_settings_dependency)]
 DatabaseDep = Annotated[DatabaseService, Depends(get_db)]
 CacheDep = Annotated[CacheService, Depends(get_cache_service_dep)]
-MCPServiceDep = Annotated[AirbnbMCP, Depends(get_mcp_service)]
-MapsServiceDep = Annotated[GoogleMapsService, Depends(get_maps_service_dep)]
-ActivityServiceDep = Annotated[ActivityService, Depends(get_activity_service_dep)]
-UnifiedSearchServiceDep = Annotated[
-    UnifiedSearchService, Depends(get_unified_search_service_dep)
-]
-SearchFacadeDep = Annotated[SearchFacade, Depends(get_search_facade)]
 
 # Principal-based authentication dependencies
 CurrentPrincipalDep = Annotated[Principal | None, Depends(get_current_principal)]
@@ -296,11 +223,6 @@ AgentPrincipalDep = Annotated[Principal, Depends(require_agent_principal)]
 AdminPrincipalDep = Annotated[Principal, Depends(require_admin_principal)]
 
 # Business service dependencies (type aliases)
-AccommodationServiceDep = Annotated[
-    AccommodationService, Depends(get_accommodation_service)
-]
-# ChatServiceDep removed
-DestinationServiceDep = Annotated[DestinationService, Depends(get_destination_service)]
 FlightServiceDep = Annotated[FlightService, Depends(get_flight_service_dep)]
 ItineraryServiceDep = Annotated[ItineraryService, Depends(get_itinerary_service)]
 MemoryServiceDep = Annotated[MemoryService, Depends(get_memory_service)]

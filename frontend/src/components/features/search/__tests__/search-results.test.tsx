@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Flight } from "@/types/search";
+import type { Flight } from "@/lib/schemas/search";
 import { SearchResults } from "../search-results";
 
 /** Mock function for testing sort functionality. */

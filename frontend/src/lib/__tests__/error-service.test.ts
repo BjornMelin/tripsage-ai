@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ErrorReport, ErrorServiceConfig } from "@/types/errors";
+import type { ErrorReport, ErrorServiceConfig } from "@/lib/schemas/errors";
 import { ErrorService } from "../error-service";
 
 // Mock fetch

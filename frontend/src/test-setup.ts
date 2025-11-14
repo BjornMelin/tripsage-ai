@@ -38,6 +38,13 @@ vi.mock("@/components/ui/use-toast", () => ({
   })),
 }));
 
+vi.mock("@/lib/embeddings/generate", () => ({
+  generateEmbedding: vi.fn(async () =>
+    Array.from({ length: 1536 }, (_, index) => (index + 1) / 1000)
+  ),
+  getEmbeddingsApiUrl: vi.fn(() => "http://localhost:3000/api/embeddings"),
+}));
+
 vi.mock("zustand/middleware", () => ({
   combine: <T>(fn: T) => fn,
   devtools: <T>(fn: T) => fn,
@@ -243,6 +250,15 @@ if (typeof process !== "undefined" && process.env) {
       return Reflect.set(target, prop, value);
     },
   });
+
+  // Provide sane defaults for client-visible env used in component barrels
+  // to avoid validation failures when importing UI modules in tests.
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "http://localhost:54321";
+  }
+  if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-anon-key";
+  }
 }
 
 afterEach(() => {

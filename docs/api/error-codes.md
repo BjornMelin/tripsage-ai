@@ -211,8 +211,8 @@ curl -X POST https://api.tripsage.ai/api/auth/login \
 **Troubleshooting:**
 
 ```javascript
-// 1. Validate airport codes
-const validCodes = await fetch("/api/destinations/search?q=NYC");
+// 1. Validate airport codes (use frontend AI SDK v6 agents)
+// const validCodes = await fetch("/api/agents/destinations", { method: "POST", body: JSON.stringify({ destination: "NYC" }) });
 
 // 2. Check date format and future dates
 const searchParams = {

@@ -1,10 +1,13 @@
 # Architecture Decision Records
 
-This directory contains Architecture Decision Records (ADRs) for the TripSage project. ADRs document significant architectural decisions made during the project's development.
+This directory contains Architecture Decision Records (ADRs) for the TripSage
+project. ADRs document significant architectural decisions made during the
+project's development.
 
 ## What is an ADR?
 
-An Architecture Decision Record (ADR) is a document that captures an important architectural decision made along with its context and consequences.
+An Architecture Decision Record (ADR) is a document that captures an important
+architectural decision made along with its context and consequences.
 
 ## ADR Process
 
@@ -23,21 +26,17 @@ An Architecture Decision Record (ADR) is a document that captures an important a
 
 | ADR | Title | Status | Date |
 |-----|-------|--------|------|
-| [ADR-0001](adr-0001-langgraph-orchestration.md) | Use LangGraph for Agent Orchestration | Accepted | 2025-06-17 |
 | [ADR-0002](adr-0002-supabase-platform.md) | Adopt Supabase as Primary Database and Auth Platform | Accepted | 2025-06-17 |
 | [ADR-0003](adr-0003-upstash-redis.md) | Use Upstash Redis (HTTP) for Caching | Accepted | 2025-10-22 |
 | [ADR-0004](adr-0004-fastapi-backend.md) | FastAPI as Backend Framework | Accepted | 2025-06-17 |
 | [ADR-0005](adr-0005-nextjs-react19.md) | Next.js 15 with React 19 for Frontend | Accepted | 2025-06-17 |
-| [ADR-0006](adr-0006-websocket-architecture.md) | Superseded: legacy socket architecture (replaced by Supabase Realtime) | Superseded | 2025-06-17 |
 | [ADR-0007](adr-0007-testing-strategy.md) | Modern Testing Strategy with Vitest and Playwright | Accepted | 2025-06-17 |
 | [ADR-0008](adr-0008-pydantic-v2-migration.md) | Migrate to Pydantic v2 | Accepted | 2025-06-17 |
 | [ADR-0009](adr-0009-consolidate-ci-to-two-workflows-and-remove-custom-composites.md) | Consolidate CI to two workflows and remove custom composites | Proposed | 2025-10-18 |
-| [ADR-0010](adr-0010-memory-facade-final.md) | Memory Facade Final | Accepted | 2025-10-21 |
 | [ADR-0011](adr-0011-tenacity-only-resilience.md) | Tenacity-only Resilience | Accepted | 2025-10-21 |
 | [ADR-0012](adr-0012-flights-canonical-dto.md) | Flights Canonical DTO | Accepted | 2025-10-21 |
 | [ADR-0013](adr-0013-adopt-next-js-16-proxy-and-async-apis-deprecate-middleware.md) | Adopt Next.js 16 proxy and async APIs; deprecate middleware | Accepted | 2025-10-23 |
 | [ADR-0014](adr-0014-migrate-supabase-auth-to-supabase-ssr-and-deprecate-auth-helpers-react.md) | Migrate Supabase auth to @supabase/ssr; deprecate auth-helpers-react | Accepted | 2025-10-23 |
-| [ADR-0015](adr-0015-upgrade-ai-sdk-to-v5-ai-sdk-react-and-usechat-redesign.md) | Upgrade AI SDK to v5 (@ai-sdk/react) and useChat redesign | Accepted | 2025-10-23 |
 | [ADR-0016](adr-0016-tailwind-css-v4-migration-css-first-config.md) | Tailwind CSS v4 migration (CSS-first config) | Accepted | 2025-10-23 |
 | [ADR-0017](adr-0017-adopt-node-js-v24-lts-baseline.md) | Adopt Node.js v24 LTS baseline | Accepted | 2025-10-23 |
 | [ADR-0018](adr-0018-centralize-supabase-typed-helpers-for-crud.md) | Centralize Supabase typed helpers for CRUD | Accepted | 2025-10-23 |
@@ -61,6 +60,17 @@ An Architecture Decision Record (ADR) is a document that captures an important a
 | [ADR-0038](adr-0038-hybrid-frontend-agents.md) | Frontend Hybrid Agents for Destination Research & Itineraries | Accepted | 2025-11-12 |
 | [ADR-0039](adr-0039-frontend-agent-modernization.md) | Framework-First Frontend Agent Modernization | Accepted | 2025-11-12 |
 
+## Superseded ADRs
+
+The following ADRs have been superseded by newer decisions:
+
+| ADR | Title | Superseded By | Date |
+|-----|-------|---------------|------|
+| [ADR-0001](adr-0001-langgraph-orchestration.md) | Use LangGraph for Agent Orchestration | - | 2025-06-17 |
+| [ADR-0006](adr-0006-websocket-architecture.md) | Superseded: legacy socket architecture (replaced by Supabase Realtime) | - | 2025-06-17 |
+| [ADR-0010](adr-0010-memory-facade-final.md) | Memory Facade Final | - | 2025-10-21 |
+| [ADR-0015](superseded/adr-0015-upgrade-ai-sdk-to-v5-ai-sdk-react-and-usechat-redesign.md) | Upgrade AI SDK to v5 (@ai-sdk/react) and useChat redesign | ADR-0023 | 2025-10-23 |
+
 ## By Category
 
 ### Frontend
@@ -68,7 +78,6 @@ An Architecture Decision Record (ADR) is a document that captures an important a
 - ADR-0005: Next.js 15 with React 19 for Frontend
 - ADR-0013: Adopt Next.js 16 proxy and async APIs; deprecate middleware
 - ADR-0014: Migrate Supabase auth to @supabase/ssr; deprecate auth-helpers-react
-- ADR-0015: Upgrade AI SDK to v5 (@ai-sdk/react) and useChat redesign
 - ADR-0016: Tailwind CSS v4 migration (CSS-first config)
 - ADR-0018: Centralize Supabase typed helpers for CRUD
 - ADR-0023: Adopt AI SDK v6 Foundations (Next.js App Router)
@@ -86,9 +95,7 @@ An Architecture Decision Record (ADR) is a document that captures an important a
 
 ### Backend
 
-- ADR-0001: Use LangGraph for Agent Orchestration
 - ADR-0004: FastAPI as Backend Framework
-- ADR-0010: Memory Facade Final
 - ADR-0011: Tenacity-only Resilience
 - ADR-0019: Canonicalize chat service via FastAPI backend
 - ADR-0021: SlowAPI + Aiolimiter Migration (Historic)

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import type { ChatStatus, FileUIPart, UIMessage } from "ai";
 import { describe, expect, it, vi } from "vitest";
 
@@ -82,7 +82,9 @@ describe("mid-stream resume continuity", () => {
 
     // Invoke the mocked resume to simulate reattach
     const ret = USE_CHAT_SPY.mock.results[0].value;
-    await ret.experimentalResume();
+    await act(async () => {
+      await ret.experimentalResume();
+    });
 
     // Ensure the same number of messages are rendered
     const rendered = await screen.findAllByTestId(/msg-/);

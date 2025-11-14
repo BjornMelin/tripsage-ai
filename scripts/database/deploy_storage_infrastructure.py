@@ -49,8 +49,8 @@ class StorageDeployment:
             print("\nStep 3: Testing RLS policies...")
             results["policies"] = await self.test_rls_policies()
 
-            # 4. Deploy Edge Function
-            print("\nStep 4: Deploying file processor Edge Function...")
+            # 4. Confirm Edge Function retirement (no-op)
+            print("\nStep 4: Confirming Edge Function retirement...")
             results["edge_function"] = await self.deploy_edge_function()
 
             # 5. Configure webhooks
@@ -168,67 +168,68 @@ class StorageDeployment:
             return False
 
     async def deploy_edge_function(self) -> bool:
-        """Deploy the file processor Edge Function."""
-        try:
-            # In a real deployment, this would use Supabase CLI
-            # For now, we'll just verify the function file exists
-            function_file = (
-                self.project_root
-                / "supabase"
-                / "functions"
-                / "file-processor"
-                / "index.ts"
-            )
+        """Confirm Edge Functions retirement for existing deployment scripts.
 
-            if not function_file.exists():
-                print("Edge Function file not found")
-                return False
-
-            print("Edge Function file ready for deployment")
-            print(
-                "Note: Deploy manually using: supabase functions deploy file-processor"
-            )
-            return True
-
-        except Exception as e:  # noqa: BLE001
-            print(f"Edge Function deployment failed: {e}")
-            return False
+        This is an intentional no-op: storage webhooks now flow directly from
+        the database to Vercel. The method remains to keep the deployment
+        sequence stable and always returns ``True``.
+        """
+        print(
+            "Edge Functions retired — using Database Webhooks → Vercel. Skipping deploy."  # noqa: E501
+        )
+        return True
 
     async def configure_webhooks(self) -> bool:
-        """Configure database webhooks for file processing."""
+        """Validate consolidated DB→Vercel webhook functions exist."""
         try:
             module: Any = importlib.import_module("asyncpg")
             connect_func: Any = module.connect
             conn: Any = await connect_func(self.db_url)
 
             try:
-                # Check if webhook function exists
-                function_exists = await conn.fetchval("""
+                # Check consolidated webhook functions exist
+                trips_fn = await conn.fetchval(
+                    """
                     SELECT EXISTS (
                         SELECT 1 FROM pg_proc p
                         JOIN pg_namespace n ON p.pronamespace = n.oid
                         WHERE n.nspname = 'public'
-                        AND p.proname = 'notify_file_processor'
+                          AND p.proname = 'notify_trip_collaborators_http'
                     )
-                """)
+                    """
+                )
+                cache_fn = await conn.fetchval(
+                    """
+                    SELECT EXISTS (
+                        SELECT 1 FROM pg_proc p
+                        JOIN pg_namespace n ON p.pronamespace = n.oid
+                        WHERE n.nspname = 'public'
+                          AND p.proname = 'notify_table_change_cache_http'
+                    )
+                    """
+                )
 
-                if not function_exists:
-                    print("Webhook function not found")
+                if not trips_fn or not cache_fn:
+                    print("Consolidated webhook functions not found. Apply migrations.")
                     return False
 
-                # Check if trigger exists
-                trigger_exists = await conn.fetchval("""
+                # Check a sample trigger exists
+                trigger_exists = await conn.fetchval(
+                    """
                     SELECT EXISTS (
-                        SELECT 1 FROM pg_trigger
-                        WHERE tgname = 'file_attachments_processor_trigger'
+                        SELECT 1 FROM pg_trigger t
+                        JOIN pg_class c ON t.tgrelid = c.oid
+                        JOIN pg_namespace n ON c.relnamespace = n.oid
+                        WHERE n.nspname = 'public' AND t.tgname = 'trg_trips_cache_webhook'
                     )
-                """)
+                    """  # noqa: E501
+                )
 
                 if not trigger_exists:
-                    print("Webhook trigger not found")
+                    print("Cache webhook trigger not found. Apply migrations.")
                     return False
 
-                print("Webhook function and trigger configured")
+                print("Webhooks configured and verified")
                 return True
 
             finally:
@@ -329,11 +330,18 @@ class StorageDeployment:
         if successful_steps == total_steps:
             print("\nStorage infrastructure deployment completed successfully")
             print("\nNext Steps:")
-            print("1. Deploy Edge Function: supabase functions deploy file-processor")
-            print("2. Configure environment variables for webhooks")
-            print("3. Set up CORS settings for browser uploads")
-            print("4. Test file upload/download flows")
-            print("5. Monitor storage usage and performance")
+            print(
+                "1. Configure DB→Vercel webhooks: scripts/operators/setup_webhooks.sh"
+            )
+            print("2. Verify HMAC secret alignment:")
+            print("   scripts/operators/verify_webhook_secret.sh")
+            print("3. Configure Vercel env vars (HMAC_SECRET, Upstash, QStash, Resend)")
+            print("4. Set up CORS settings for browser uploads")
+            print("5. Test file upload/download + webhook delivery flows")
+            print(
+                "6. Monitor storage usage plus [operational-alert] logs for "
+                "redis.unavailable + webhook.verification_failed events"
+            )
         else:
             print(
                 "\nSome deployment steps failed. "

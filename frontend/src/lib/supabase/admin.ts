@@ -6,6 +6,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@supabase/supabase-js";
+import { getServerEnvVar } from "@/lib/env/server";
 import type { Database } from "./database.types";
 
 export type TypedAdminSupabase = SupabaseClient<Database>;
@@ -21,12 +22,12 @@ export type TypedAdminSupabase = SupabaseClient<Database>;
  * @throws Error when required environment variables are missing.
  */
 export function createAdminSupabase(): TypedAdminSupabase {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseUrl = getServerEnvVar("NEXT_PUBLIC_SUPABASE_URL");
+  const serviceRoleKey = getServerEnvVar("SUPABASE_SERVICE_ROLE_KEY");
 
   if (!supabaseUrl || !serviceRoleKey) {
     throw new Error(
-      "Missing Supabase environment variables. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY"
+      "Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY"
     );
   }
 

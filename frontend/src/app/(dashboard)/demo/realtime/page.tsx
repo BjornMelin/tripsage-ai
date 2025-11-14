@@ -24,13 +24,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useTripsWithRealtime } from "@/hooks/use-trips-with-realtime";
+import { useTrips } from "@/hooks/use-trips";
 
 /**
  * Demonstration page showcasing all real-time Supabase integration features
  */
 export default function RealtimeDemoPage() {
-  const { trips, realtimeStatus } = useTripsWithRealtime();
+  const { data: trips, realtimeStatus } = useTrips();
   const [activeTab, setActiveTab] = useState("overview");
 
   const features = [
@@ -224,7 +224,7 @@ export default function RealtimeDemoPage() {
                 <Card>
                   <CardContent className="p-6 text-center">
                     <div className="text-2xl font-bold text-blue-600">
-                      {realtimeStatus.connectionStatus === "connected" ? "✓" : "✗"}
+                      {realtimeStatus.isConnected ? "✓" : "✗"}
                     </div>
                     <div className="text-sm text-muted-foreground">
                       Real-time Status
@@ -234,7 +234,7 @@ export default function RealtimeDemoPage() {
                 <Card>
                   <CardContent className="p-6 text-center">
                     <div className="text-2xl font-bold text-purple-600">
-                      {realtimeStatus.error ? "1" : "0"}
+                      {realtimeStatus.errors.length}
                     </div>
                     <div className="text-sm text-muted-foreground">
                       Connection Errors

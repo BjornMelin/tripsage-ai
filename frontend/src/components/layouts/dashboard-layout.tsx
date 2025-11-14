@@ -76,6 +76,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     { href: "/dashboard", title: "Overview" },
     { href: "/dashboard/trips", title: "My Trips" },
     { href: "/dashboard/search", title: "Search" },
+    { href: "/dashboard/calendar", title: "Calendar" },
     { href: "/chat", title: "AI Assistant" },
     { href: "/dashboard/agent-status", title: "Agent Status" },
     { href: "/dashboard/settings", title: "Settings" },

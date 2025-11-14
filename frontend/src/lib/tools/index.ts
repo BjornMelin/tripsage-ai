@@ -8,10 +8,13 @@
 
 import {
   bookAccommodation,
+  checkAvailability,
   getAccommodationDetails,
   searchAccommodations,
 } from "./accommodations";
+import { createCalendarEvent, exportItineraryToICS, getAvailability } from "./calendar";
 import { searchFlights } from "./flights";
+import { lookupPoiContext } from "./google-places";
 import { distanceMatrix, geocode } from "./maps";
 import { addConversationMemory, searchUserMemories } from "./memory";
 import {
@@ -21,7 +24,7 @@ import {
   saveTravelPlan,
   updateTravelPlan,
 } from "./planning";
-import { lookupPoiContext } from "./poi-lookup";
+import { getTravelAdvisory } from "./travel-advisory";
 import type { AiTool } from "./types";
 import { getCurrentWeather } from "./weather";
 import { crawlSite, crawlUrl } from "./web-crawl";
@@ -39,15 +42,21 @@ import { webSearchBatch } from "./web-search-batch";
 export const toolRegistry = {
   addConversationMemory,
   bookAccommodation,
+  checkAvailability,
   combineSearchResults,
   crawlSite,
   crawlUrl,
+  createCalendarEvent,
   createTravelPlan,
   deleteTravelPlan,
   distanceMatrix,
+  // biome-ignore lint/style/useNamingConvention: ICS is a standard file format acronym
+  exportItineraryToICS,
   geocode,
   getAccommodationDetails,
+  getAvailability,
   getCurrentWeather,
+  getTravelAdvisory,
   lookupPoiContext,
   saveTravelPlan,
   searchAccommodations,

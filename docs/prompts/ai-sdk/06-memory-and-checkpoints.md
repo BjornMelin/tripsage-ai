@@ -2,7 +2,7 @@
 
 ## Executive summary
 
-- Goal: Port session/message persistence and context assembly to Supabase JS in Next.js. If advanced multi-step orchestration is required, adopt LangGraph JS with Supabase-backed persistence; otherwise rely on AI SDK agents.
+- Goal: Port session/message persistence and context assembly to Supabase JS in Next.js. Use direct Supabase integration for memory persistence in AI SDK v6 agents.
 
 ## Custom persona
 
@@ -10,7 +10,7 @@
 
 ## Docs & references
 
-- LangGraph JS overview/persistence (optional): <https://docs.langchain.com/oss/javascript/langgraph/overview> and /persistence
+- Decision: LangGraph JS not adopted; using direct Supabase integration for simplicity and performance.
 - AI SDK agents (workflows/loop control): <https://v6.ai-sdk.dev/docs/agents>
 - exa.crawling_exa for both; firecrawl_scrape for specific sections
 - exa.get_code_context_exa for examples of agents/persistence
@@ -22,7 +22,7 @@
 1) `frontend/lib/memory/index.ts`:
    - addMessage, getMessages(sessionId, limit), getUserContext, sanitize content, select by token budget
 2) Update chat routes to read/write memory as needed; ensure UIMessage.parts alignment (v6 message format)
-3) Optional: integrate LangGraph JS for checkpoints if workflows require it
+3) Use direct Supabase integration for memory persistence (LangGraph JS not required)
 4) Vitest tests: memory read/write; token-window selection
 
 ## Checklist (mark off; add notes under each)
@@ -33,8 +33,8 @@
   - Notes:
 - [ ] Update chat routes to read/write memory
   - Notes:
-- [ ] (Optional) Integrate LangGraph JS checkpoints if required
-  - Notes:
+- [x] Use direct Supabase integration for memory (LangGraph JS not adopted)
+  - Notes: Simpler architecture with better performance and lower complexity.
 - [ ] Vitest tests for memory CRUD + token window selection
   - Notes:
 - [ ] Write ADR(s) and Spec(s) for memory/checkpointing strategy

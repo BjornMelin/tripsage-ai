@@ -9,7 +9,7 @@ import { z } from "zod";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 
 /** Set of allowed API service providers for key storage. */
-const ALLOWED = new Set(["openai", "openrouter", "anthropic", "xai"]);
+const ALLOWED = new Set(["openai", "openrouter", "anthropic", "xai", "gateway"]);
 
 /**
  * Maximum allowed request body size in bytes (64KB).
@@ -27,6 +27,12 @@ export const MAX_BODY_SIZE_BYTES = 64 * 1024;
 // biome-ignore lint/style/useNamingConvention: Schema names use PascalCase
 export const PostKeyBodySchema = z.object({
   apiKey: z.string().min(1, "API key is required").max(2048, "API key too long").trim(),
+  // Optional base URL for per-user Gateway. Must be https when provided.
+  baseUrl: z
+    .string()
+    .url("Invalid URL")
+    .startsWith("https://", "baseUrl must start with https://")
+    .optional(),
   service: z
     .string()
     .min(1, "Service name is required")
@@ -40,6 +46,7 @@ export const PostKeyBodySchema = z.object({
 export interface KeysDeps {
   supabase: TypedServerSupabase;
   insertUserApiKey: (userId: string, service: string, apiKey: string) => Promise<void>;
+  upsertUserGatewayBaseUrl?: (userId: string, baseUrl: string) => Promise<void>;
 }
 
 /**
@@ -79,6 +86,10 @@ export async function postKey(deps: KeysDeps, body: PostKeyBody): Promise<Respon
     });
   }
 
+  // If service is gateway and baseUrl provided, persist base URL metadata
+  if (normalized === "gateway" && body.baseUrl && deps.upsertUserGatewayBaseUrl) {
+    await deps.upsertUserGatewayBaseUrl(user.id, body.baseUrl);
+  }
   await deps.insertUserApiKey(user.id, normalized, body.apiKey);
   return new Response(null, { status: 204 });
 }
@@ -102,9 +113,10 @@ export async function getKeys(deps: {
   }
   const { data, error } = await deps.supabase
     .from("api_keys")
+    // Align with table column names used across codebase/tests
     .select("service_name, created_at, last_used_at")
     .eq("user_id", user.id)
-    .order("service_name", { ascending: true });
+    .order("service", { ascending: true });
   if (error) {
     return new Response(
       JSON.stringify({ code: "DB_ERROR", error: "Failed to fetch keys" }),
@@ -117,11 +129,11 @@ export async function getKeys(deps: {
   const rows = data ?? [];
   const payload = rows.map(
     (r: {
-      // biome-ignore lint/style/useNamingConvention: Database field name
+      // biome-ignore lint/style/useNamingConvention: DB field names
       service_name: string;
-      // biome-ignore lint/style/useNamingConvention: Database field name
+      // biome-ignore lint/style/useNamingConvention: DB field names
       created_at: string;
-      // biome-ignore lint/style/useNamingConvention: Database field name
+      // biome-ignore lint/style/useNamingConvention: DB field names
       last_used_at: string | null;
     }) => ({
       createdAt: String(r.created_at),

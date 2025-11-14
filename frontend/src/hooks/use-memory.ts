@@ -7,7 +7,10 @@
 
 "use client";
 
-import { useApiMutation, useApiQuery } from "@/hooks/use-api-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
+import { type AppError, handleApiError, isApiError } from "@/lib/api/error-types";
+import { staleTimes } from "@/lib/query-keys";
 import type {
   AddConversationMemoryRequest,
   AddConversationMemoryResponse,
@@ -18,7 +21,7 @@ import type {
   SearchMemoriesResponse,
   UpdatePreferencesRequest,
   UpdatePreferencesResponse,
-} from "@/types/memory";
+} from "@/lib/schemas/memory";
 
 /**
  * Hook for fetching user memory context.
@@ -27,24 +30,61 @@ import type {
  * @param enabled - Whether the query should run (default: true)
  */
 export function useMemoryContext(userId: string, enabled = true) {
-  return useApiQuery<MemoryContextResponse>(
-    `/api/memory/context/${userId}`,
-    {},
-    {
-      enabled: enabled && !!userId,
-      gcTime: 10 * 60 * 1000, // 10 minutes
-      staleTime: 5 * 60 * 1000, // 5 minutes
-    }
-  );
+  const { makeAuthenticatedRequest } = useAuthenticatedApi();
+
+  return useQuery<MemoryContextResponse, AppError>({
+    enabled: enabled && !!userId,
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    queryFn: async () => {
+      try {
+        return await makeAuthenticatedRequest<MemoryContextResponse>(
+          `/api/memory/context/${userId}`
+        );
+      } catch (error) {
+        throw handleApiError(error);
+      }
+    },
+    queryKey: ["memory", "context", userId],
+    retry: (failureCount, error) => {
+      if (isApiError(error)) {
+        if (error.status === 401 || error.status === 403) return false;
+      }
+      return failureCount < 2;
+    },
+    staleTime: staleTimes.user,
+    throwOnError: false,
+  });
 }
 
 /**
  * Hook for searching user memories.
  */
 export function useSearchMemories() {
-  return useApiMutation<SearchMemoriesResponse, SearchMemoriesRequest>(
-    "/api/memory/search"
-  );
+  const { makeAuthenticatedRequest } = useAuthenticatedApi();
+
+  return useMutation<SearchMemoriesResponse, AppError, SearchMemoriesRequest>({
+    mutationFn: async (variables) => {
+      try {
+        return await makeAuthenticatedRequest<SearchMemoriesResponse>(
+          "/api/memory/search",
+          {
+            body: JSON.stringify(variables),
+            headers: { "Content-Type": "application/json" },
+            method: "POST",
+          }
+        );
+      } catch (error) {
+        throw handleApiError(error);
+      }
+    },
+    retry: (failureCount, error) => {
+      if (isApiError(error)) {
+        if (error.status >= 400 && error.status < 500) return false;
+      }
+      return failureCount < 1;
+    },
+    throwOnError: false,
+  });
 }
 
 /**
@@ -53,9 +93,31 @@ export function useSearchMemories() {
  * @param userId - User ID to update preferences for
  */
 export function useUpdatePreferences(userId: string) {
-  return useApiMutation<UpdatePreferencesResponse, UpdatePreferencesRequest>(
-    `/api/memory/preferences/${userId}`
-  );
+  const { makeAuthenticatedRequest } = useAuthenticatedApi();
+
+  return useMutation<UpdatePreferencesResponse, AppError, UpdatePreferencesRequest>({
+    mutationFn: async (variables) => {
+      try {
+        return await makeAuthenticatedRequest<UpdatePreferencesResponse>(
+          `/api/memory/preferences/${userId}`,
+          {
+            body: JSON.stringify(variables),
+            headers: { "Content-Type": "application/json" },
+            method: "POST",
+          }
+        );
+      } catch (error) {
+        throw handleApiError(error);
+      }
+    },
+    retry: (failureCount, error) => {
+      if (isApiError(error)) {
+        if (error.status >= 400 && error.status < 500) return false;
+      }
+      return failureCount < 1;
+    },
+    throwOnError: false,
+  });
 }
 
 /**
@@ -65,24 +127,65 @@ export function useUpdatePreferences(userId: string) {
  * @param enabled - Whether the query should run (default: true)
  */
 export function useMemoryInsights(userId: string, enabled = true) {
-  return useApiQuery<MemoryInsightsResponse>(
-    `/api/memory/insights/${userId}`,
-    {},
-    {
-      enabled: enabled && !!userId,
-      gcTime: 30 * 60 * 1000, // 30 minutes
-      staleTime: 10 * 60 * 1000, // 10 minutes
-    }
-  );
+  const { makeAuthenticatedRequest } = useAuthenticatedApi();
+
+  return useQuery<MemoryInsightsResponse, AppError>({
+    enabled: enabled && !!userId,
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    queryFn: async () => {
+      try {
+        return await makeAuthenticatedRequest<MemoryInsightsResponse>(
+          `/api/memory/insights/${userId}`
+        );
+      } catch (error) {
+        throw handleApiError(error);
+      }
+    },
+    queryKey: ["memory", "insights", userId],
+    retry: (failureCount, error) => {
+      if (isApiError(error)) {
+        if (error.status === 401 || error.status === 403) return false;
+      }
+      return failureCount < 2;
+    },
+    staleTime: staleTimes.stats,
+    throwOnError: false,
+  });
 }
 
 /**
  * Hook for adding conversation memory.
  */
 export function useAddConversationMemory() {
-  return useApiMutation<AddConversationMemoryResponse, AddConversationMemoryRequest>(
-    "/api/memory/conversations"
-  );
+  const { makeAuthenticatedRequest } = useAuthenticatedApi();
+
+  return useMutation<
+    AddConversationMemoryResponse,
+    AppError,
+    AddConversationMemoryRequest
+  >({
+    mutationFn: async (variables) => {
+      try {
+        return await makeAuthenticatedRequest<AddConversationMemoryResponse>(
+          "/api/memory/conversations",
+          {
+            body: JSON.stringify(variables),
+            headers: { "Content-Type": "application/json" },
+            method: "POST",
+          }
+        );
+      } catch (error) {
+        throw handleApiError(error);
+      }
+    },
+    retry: (failureCount, error) => {
+      if (isApiError(error)) {
+        if (error.status >= 400 && error.status < 500) return false;
+      }
+      return failureCount < 1;
+    },
+    throwOnError: false,
+  });
 }
 
 /**
@@ -91,7 +194,29 @@ export function useAddConversationMemory() {
  * @param userId - User ID to delete memories for
  */
 export function useDeleteUserMemories(userId: string) {
-  return useApiMutation<DeleteUserMemoriesResponse, void>(`/api/memory/user/${userId}`);
+  const { makeAuthenticatedRequest } = useAuthenticatedApi();
+
+  return useMutation<DeleteUserMemoriesResponse, AppError, void>({
+    mutationFn: async () => {
+      try {
+        return await makeAuthenticatedRequest<DeleteUserMemoriesResponse>(
+          `/api/memory/user/${userId}`,
+          {
+            method: "POST",
+          }
+        );
+      } catch (error) {
+        throw handleApiError(error);
+      }
+    },
+    retry: (failureCount, error) => {
+      if (isApiError(error)) {
+        if (error.status >= 400 && error.status < 500) return false;
+      }
+      return failureCount < 1;
+    },
+    throwOnError: false,
+  });
 }
 
 /**
@@ -101,18 +226,39 @@ export function useDeleteUserMemories(userId: string) {
  * @param enabled - Whether the query should run (default: true)
  */
 export function useMemoryStats(userId: string, enabled = true) {
-  return useApiQuery<{
-    totalMemories: number;
-    memoryTypes: Record<string, number>;
-    lastUpdated: string;
-    storageSize: number;
-  }>(
-    `/api/memory/stats/${userId}`,
-    {},
+  const { makeAuthenticatedRequest } = useAuthenticatedApi();
+
+  return useQuery<
     {
-      enabled: enabled && !!userId,
-      gcTime: 30 * 60 * 1000, // 30 minutes
-      staleTime: 15 * 60 * 1000, // 15 minutes
-    }
-  );
+      lastUpdated: string;
+      memoryTypes: Record<string, number>;
+      storageSize: number;
+      totalMemories: number;
+    },
+    AppError
+  >({
+    enabled: enabled && !!userId,
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    queryFn: async () => {
+      try {
+        return await makeAuthenticatedRequest<{
+          lastUpdated: string;
+          memoryTypes: Record<string, number>;
+          storageSize: number;
+          totalMemories: number;
+        }>(`/api/memory/stats/${userId}`);
+      } catch (error) {
+        throw handleApiError(error);
+      }
+    },
+    queryKey: ["memory", "stats", userId],
+    retry: (failureCount, error) => {
+      if (isApiError(error)) {
+        if (error.status === 401 || error.status === 403) return false;
+      }
+      return failureCount < 2;
+    },
+    staleTime: staleTimes.stats,
+    throwOnError: false,
+  });
 }

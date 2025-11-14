@@ -27,7 +27,9 @@ We will adopt **Option B: framework-first waves** to retire the remaining backen
 
 - P0 complete (framework hardening in `frontend/`).
 - P1 complete (flights + accommodations in `frontend/`, UI integrated).
-- Next phase starting: P2 – Budget & Memory agents (design and implementation in progress), followed by P3 – Router & Error Recovery.
+- P2 complete (budget + memory + destination + itinerary agents in `frontend/`, UI integrated).
+- P3 complete (router + error recovery in `frontend/`).
+- P4 complete (OpenTripMap POI + GeoSure travel advisory tools integrated).
 
 ## Consequences
 

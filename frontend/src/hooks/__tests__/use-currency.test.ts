@@ -14,13 +14,24 @@ vi.mock("zustand/middleware", () => ({
   persist: (fn: unknown) => fn,
 }));
 
-// Mock API query hooks
-vi.mock("@/hooks/use-api-query", () => ({
-  useApiQuery: vi.fn().mockReturnValue({
-    data: null,
-    error: null,
-    isLoading: false,
-    refetch: vi.fn(),
+// Mock TanStack Query
+vi.mock("@tanstack/react-query", async () => {
+  const actual = await vi.importActual("@tanstack/react-query");
+  return {
+    ...actual,
+    useQuery: vi.fn().mockReturnValue({
+      data: null,
+      error: null,
+      isLoading: false,
+      refetch: vi.fn(),
+    }),
+  };
+});
+
+// Mock authenticated API hook
+vi.mock("@/hooks/use-authenticated-api", () => ({
+  useAuthenticatedApi: vi.fn().mockReturnValue({
+    makeAuthenticatedRequest: vi.fn().mockResolvedValue({}),
   }),
 }));
 

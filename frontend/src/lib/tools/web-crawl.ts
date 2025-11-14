@@ -4,9 +4,12 @@
  * Uses direct API (not SDK) for latest v2.5 features and cost control.
  */
 
+import "server-only";
+
 import { tool } from "ai";
 import { z } from "zod";
 import { getRedis } from "@/lib/redis";
+import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 const scrapeOptionsSchema = z
   .object({
@@ -286,49 +289,90 @@ export const crawlUrl = tool({
     "Scrape a single URL via Firecrawl v2.5. Supports multiple formats " +
     "(markdown, html, links, screenshot, summary, json), cost-safe defaults, " +
     "and optional page interactions.",
-  execute: async ({ url, fresh, scrapeOptions }) => {
-    const apiKey = process.env.FIRECRAWL_API_KEY;
-    if (!apiKey) {
-      throw new Error("web_crawl_not_configured");
-    }
-    const redis = getRedis();
-    const ck = scrapeCacheKey(url, scrapeOptions);
-    if (!fresh && redis) {
-      const cached = await redis.get(ck);
-      if (cached) return cached;
-    }
-    const baseUrl = process.env.FIRECRAWL_BASE_URL ?? "https://api.firecrawl.dev/v2";
-    const body = buildScrapeBody(url, scrapeOptions);
-    const res = await fetch(`${baseUrl}/scrape`, {
-      body: JSON.stringify(body),
-      headers: {
-        authorization: `Bearer ${apiKey}`,
-        "content-type": "application/json",
+  execute: async ({ url, fresh, scrapeOptions }) =>
+    withTelemetrySpan(
+      "tool.web_crawl.scrape",
+      {
+        attributes: {
+          fresh: Boolean(fresh),
+          "tool.name": "crawlUrl",
+        },
+        redactKeys: ["url"],
       },
-      method: "POST",
-    });
-    if (!res.ok) {
-      const text = await res.text();
-      if (res.status === 429) {
-        throw new Error(`web_crawl_rate_limited:${text}`);
+      async (span) => {
+        const { getServerEnvVar, getServerEnvVarWithFallback } = await import(
+          "@/lib/env/server"
+        );
+        let apiKey: string | undefined;
+        try {
+          apiKey = getServerEnvVar("FIRECRAWL_API_KEY") as unknown as string;
+        } catch {
+          // Normalize missing configuration into a tool-specific error code
+          throw new Error("web_crawl_not_configured");
+        }
+        if (!apiKey) throw new Error("web_crawl_not_configured");
+        const redis = getRedis();
+        const ck = scrapeCacheKey(url, scrapeOptions);
+        if (!fresh && redis) {
+          const cached = await redis.get(ck);
+          if (cached) {
+            span.addEvent("cache_hit");
+            return cached;
+          }
+        }
+        const baseUrl = getServerEnvVarWithFallback(
+          "FIRECRAWL_BASE_URL",
+          "https://api.firecrawl.dev/v2"
+        );
+        const body = buildScrapeBody(url, scrapeOptions);
+        const endpoint = `${baseUrl}/scrape`;
+        span.addEvent("http_post", { url: endpoint });
+        const res = await fetch(endpoint, {
+          body: JSON.stringify(body),
+          headers: {
+            authorization: `Bearer ${apiKey}`,
+            "content-type": "application/json",
+          },
+          method: "POST",
+        });
+        if (!res.ok) {
+          const text = await res.text();
+          if (res.status === 429) {
+            throw new Error(`web_crawl_rate_limited:${text}`);
+          }
+          if (res.status === 401) {
+            throw new Error(`web_crawl_unauthorized:${text}`);
+          }
+          if (res.status === 402) {
+            throw new Error(`web_crawl_payment_required:${text}`);
+          }
+          throw new Error(`web_crawl_failed:${res.status}:${text}`);
+        }
+        const data = await res.json();
+        if (redis) await redis.set(ck, data, { ex: 6 * 3600 });
+        return data;
       }
-      if (res.status === 401) {
-        throw new Error(`web_crawl_unauthorized:${text}`);
-      }
-      if (res.status === 402) {
-        throw new Error(`web_crawl_payment_required:${text}`);
-      }
-      throw new Error(`web_crawl_failed:${res.status}:${text}`);
-    }
-    const data = await res.json();
-    if (redis) await redis.set(ck, data, { ex: 6 * 3600 });
-    return data;
-  },
+    ),
   inputSchema: z.object({
     fresh: z.boolean().default(false),
     scrapeOptions: scrapeOptionsSchema,
     url: z.string().url(),
   }),
+});
+
+export const crawlSiteInputSchema = z.object({
+  excludePaths: z.array(z.string()).optional(),
+  fresh: z.boolean().default(false),
+  includePaths: z.array(z.string()).optional(),
+  limit: z.number().int().min(1).max(100).default(10),
+  maxPages: z.number().int().positive().optional(),
+  maxResults: z.number().int().positive().optional(),
+  maxWaitTime: z.number().int().positive().optional(),
+  pollInterval: z.number().int().positive().default(2).optional(),
+  scrapeOptions: scrapeOptionsSchema,
+  sitemap: z.enum(["include", "skip", "only"]).optional(),
+  timeoutMs: z.number().int().positive().default(120000).optional(),
+  url: z.string().url(),
 });
 
 export const crawlSite = tool({
@@ -349,81 +393,99 @@ export const crawlSite = tool({
     maxPages,
     maxResults,
     maxWaitTime,
-  }) => {
-    const apiKey = process.env.FIRECRAWL_API_KEY;
-    if (!apiKey) {
-      throw new Error("web_crawl_not_configured");
-    }
-    const redis = getRedis();
-    const ck = crawlCacheKey(
-      url,
-      limit,
-      includePaths,
-      excludePaths,
-      sitemap,
-      scrapeOptions
-    );
-    if (!fresh && redis) {
-      const cached = await redis.get(ck);
-      if (cached) return cached;
-    }
-    const baseUrl = process.env.FIRECRAWL_BASE_URL ?? "https://api.firecrawl.dev/v2";
-    const body = buildCrawlBody(
-      url,
-      limit,
-      includePaths,
-      excludePaths,
-      sitemap,
-      scrapeOptions
-    );
-    const startRes = await fetch(`${baseUrl}/crawl`, {
-      body: JSON.stringify(body),
-      headers: {
-        authorization: `Bearer ${apiKey}`,
-        "content-type": "application/json",
+  }) =>
+    withTelemetrySpan(
+      "tool.web_crawl.crawl",
+      {
+        attributes: {
+          fresh: Boolean(fresh),
+          limit,
+          "tool.name": "crawlSite",
+        },
+        redactKeys: ["url"],
       },
-      method: "POST",
-    });
-    if (!startRes.ok) {
-      const text = await startRes.text();
-      if (startRes.status === 429) {
-        throw new Error(`web_crawl_rate_limited:${text}`);
+      async (span) => {
+        const { getServerEnvVar, getServerEnvVarWithFallback } = await import(
+          "@/lib/env/server"
+        );
+        let apiKey: string | undefined;
+        try {
+          apiKey = getServerEnvVar("FIRECRAWL_API_KEY") as unknown as string;
+        } catch {
+          throw new Error("web_crawl_not_configured");
+        }
+        if (!apiKey) throw new Error("web_crawl_not_configured");
+        const redis = getRedis();
+        const ck = crawlCacheKey(
+          url,
+          limit,
+          includePaths,
+          excludePaths,
+          sitemap,
+          scrapeOptions
+        );
+        if (!fresh && redis) {
+          const cached = await redis.get(ck);
+          if (cached) {
+            span.addEvent("cache_hit");
+            return cached;
+          }
+        }
+        const baseUrl = getServerEnvVarWithFallback(
+          "FIRECRAWL_BASE_URL",
+          "https://api.firecrawl.dev/v2"
+        );
+        const body = buildCrawlBody(
+          url,
+          limit,
+          includePaths,
+          excludePaths,
+          sitemap,
+          scrapeOptions
+        );
+        const startEndpoint = `${baseUrl}/crawl`;
+        span.addEvent("http_post", { url: startEndpoint });
+        const startRes = await fetch(startEndpoint, {
+          body: JSON.stringify(body),
+          headers: {
+            authorization: `Bearer ${apiKey}`,
+            "content-type": "application/json",
+          },
+          method: "POST",
+        });
+        if (!startRes.ok) {
+          const text = await startRes.text();
+          if (startRes.status === 429) {
+            throw new Error(`web_crawl_rate_limited:${text}`);
+          }
+          if (startRes.status === 401) {
+            throw new Error(`web_crawl_unauthorized:${text}`);
+          }
+          if (startRes.status === 402) {
+            throw new Error(`web_crawl_payment_required:${text}`);
+          }
+          throw new Error(`web_crawl_failed:${startRes.status}:${text}`);
+        }
+        const startData = await startRes.json();
+        const crawlId = startData.id as string;
+        if (!crawlId) {
+          throw new Error("web_crawl_failed:no_crawl_id");
+        }
+        const result = await pollCrawlStatus(
+          baseUrl as string,
+          apiKey as string,
+          crawlId,
+          {
+            maxPages,
+            maxResults,
+            maxWaitTime,
+            pollInterval: pollInterval ?? 2,
+            timeoutMs: timeoutMs ?? 120000,
+          }
+        );
+        if (redis) await redis.set(ck, result, { ex: 6 * 3600 });
+        return result;
       }
-      if (startRes.status === 401) {
-        throw new Error(`web_crawl_unauthorized:${text}`);
-      }
-      if (startRes.status === 402) {
-        throw new Error(`web_crawl_payment_required:${text}`);
-      }
-      throw new Error(`web_crawl_failed:${startRes.status}:${text}`);
-    }
-    const startData = await startRes.json();
-    const crawlId = startData.id as string;
-    if (!crawlId) {
-      throw new Error("web_crawl_failed:no_crawl_id");
-    }
-    const result = await pollCrawlStatus(baseUrl, apiKey, crawlId, {
-      maxPages,
-      maxResults,
-      maxWaitTime,
-      pollInterval: pollInterval ?? 2,
-      timeoutMs: timeoutMs ?? 120000,
-    });
-    if (redis) await redis.set(ck, result, { ex: 6 * 3600 });
-    return result;
-  },
-  inputSchema: z.object({
-    excludePaths: z.array(z.string()).optional(),
-    fresh: z.boolean().default(false),
-    includePaths: z.array(z.string()).optional(),
-    limit: z.number().int().min(1).max(100).default(10),
-    maxPages: z.number().int().positive().optional(),
-    maxResults: z.number().int().positive().optional(),
-    maxWaitTime: z.number().int().positive().optional(),
-    pollInterval: z.number().int().positive().default(2).optional(),
-    scrapeOptions: scrapeOptionsSchema,
-    sitemap: z.enum(["include", "skip", "only"]).optional(),
-    timeoutMs: z.number().int().positive().default(120000).optional(),
-    url: z.string().url(),
-  }),
+    ),
+  inputSchema: crawlSiteInputSchema,
 });

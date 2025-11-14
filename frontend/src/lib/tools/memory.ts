@@ -7,6 +7,25 @@ import { z } from "zod";
 import type { Database } from "@/lib/supabase/database.types";
 import { createServerSupabase } from "@/lib/supabase/server";
 
+/**
+ * Allowed memory categories aligned with DB enum `memory_type`.
+ */
+export const memoryCategorySchema = z.enum([
+  "user_preference",
+  "trip_history",
+  "search_pattern",
+  "conversation_context",
+  "other",
+]);
+
+/**
+ * Input schema reused across agent wrappers and tests.
+ */
+export const addConversationMemoryInputSchema = z.object({
+  category: memoryCategorySchema.default("other"),
+  content: z.string().min(1),
+});
+
 export const addConversationMemory = tool({
   description: "Store a short memory snippet for the current user.",
   execute: async ({ content, category }) => {
@@ -55,10 +74,7 @@ export const addConversationMemory = tool({
     if (error) throw new Error(`memory_insert_failed:${error.message}`);
     return { createdAt: data.created_at as string, id: (data as { id: number }).id };
   },
-  inputSchema: z.object({
-    category: z.string().default("general"),
-    content: z.string().min(1),
-  }),
+  inputSchema: addConversationMemoryInputSchema,
 });
 
 export const searchUserMemories = tool({
