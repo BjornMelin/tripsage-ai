@@ -15,6 +15,7 @@ Resources and guidelines for TripSage development.
 | Guide | Purpose |
 |-------|---------|
 | [Development Guide](development-guide.md) | Backend, frontend, database, API patterns, and observability |
+| [Observability](observability.md) | Telemetry spans, `[operational-alert]` contracts, and alerting guidance |
 | [Troubleshooting](troubleshooting.md) | Debugging, CI/CD, and workflow guidance |
 
 ## Development Workflow

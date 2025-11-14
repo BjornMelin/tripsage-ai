@@ -118,18 +118,24 @@ python scripts/database/deploy_storage_infrastructure.py --buckets avatars,docum
 python scripts/database/deploy_storage_infrastructure.py --policies-only
 ```
 
-### Triggers & Functions (Supabase)
+### Database Webhooks → Vercel
 
-Database triggers, functions, and scheduled jobs are managed via Supabase SQL
-migrations and Edge Functions. Use the Supabase CLI and the artifacts under
-`supabase/functions/`, for example:
+Database webhooks are managed via SQL migrations under `supabase/migrations/`.
+This project posts signed HTTP webhooks to Vercel Route Handlers using `pg_net`.
+
+**See:**
+
+- [Migration](../../supabase/migrations/20251113034500_webhooks_consolidated.sql)
+- [Operator guide](../../docs/operators/supabase-webhooks.md)
+
+Use the helper script to set GUCs (URLs and HMAC secret):
 
 ```bash
-cd supabase
-./functions/deploy.sh   # deploy Edge Functions and apply trigger SQL
-# or apply trigger SQL directly
-psql -h localhost -p 54322 -d postgres -U postgres \
-  -f functions/setup_edge_function_triggers.sql
+WEBHOOK_TRIPS_URL=https://<vercel-domain>/api/hooks/trips \
+WEBHOOK_CACHE_URL=https://<vercel-domain>/api/hooks/cache \
+HMAC_SECRET=your-secret \
+DATABASE_URL=postgresql://... \
+bash scripts/operators/setup_webhooks.sh
 ```
 
 ## Migration Best Practices

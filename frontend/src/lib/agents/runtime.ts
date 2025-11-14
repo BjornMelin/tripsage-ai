@@ -14,8 +14,8 @@ import { Ratelimit } from "@upstash/ratelimit";
 import type { ZodType } from "zod";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 import { getRedis } from "@/lib/redis";
+import type { AgentWorkflow } from "@/lib/schemas/agents";
 import { recordAgentToolEvent } from "@/lib/telemetry/agents";
-import type { AgentWorkflow } from "@/schemas/agents";
 
 /**
  * Rate limiting configuration for agent tool guardrails.
@@ -42,6 +42,14 @@ export type GuardrailCacheConfig = {
 };
 
 /**
+ * Parameters schema type for guardrails.
+ *
+ * Accepts Zod schemas for validation. Can be extended to support
+ * FlexibleSchema from AI SDK if needed in the future.
+ */
+export type ParametersSchema = ZodType<unknown>;
+
+/**
  * Complete guardrail configuration for agent tool execution.
  *
  * Combines workflow context, tool name, optional input validation schema,
@@ -50,7 +58,7 @@ export type GuardrailCacheConfig = {
 export type GuardrailConfig = {
   workflow: AgentWorkflow;
   tool: string;
-  inputSchema?: ZodType;
+  parametersSchema?: ParametersSchema;
   cache?: GuardrailCacheConfig;
   rateLimit?: GuardrailRateLimit;
 };
@@ -85,8 +93,8 @@ export async function runWithGuardrails<InputValue, ResultValue>(
   input: InputValue,
   execute: (validatedInput: InputValue) => Promise<ResultValue>
 ): Promise<GuardrailResult<ResultValue>> {
-  const validatedInput = config.inputSchema
-    ? (config.inputSchema.parse(input) as InputValue)
+  const validatedInput = config.parametersSchema
+    ? (config.parametersSchema.parse(input) as InputValue)
     : input;
 
   const cacheKey = config.cache

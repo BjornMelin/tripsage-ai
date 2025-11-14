@@ -9,9 +9,10 @@ import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { tool } from "ai";
 import { z } from "zod";
+import { getServerEnvVarWithFallback } from "@/lib/env/server";
+import { WEB_SEARCH_BATCH_OUTPUT_SCHEMA } from "@/lib/schemas/web-search";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import { normalizeWebSearchResults } from "@/lib/tools/web-search-normalize";
-import { WEB_SEARCH_BATCH_OUTPUT_SCHEMA } from "@/types/web-search";
 import { webSearch } from "./web-search";
 
 /**
@@ -22,9 +23,10 @@ import { webSearch } from "./web-search";
  *
  * @returns Rate limiter instance or undefined if not configured.
  */
+
 function buildToolRateLimiter(): InstanceType<typeof Ratelimit> | undefined {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  const url = getServerEnvVarWithFallback("UPSTASH_REDIS_REST_URL", undefined);
+  const token = getServerEnvVarWithFallback("UPSTASH_REDIS_REST_TOKEN", undefined);
   if (!url || !token) return undefined;
   return new Ratelimit({
     analytics: true,
@@ -40,7 +42,7 @@ function buildToolRateLimiter(): InstanceType<typeof Ratelimit> | undefined {
  * Validates 1-10 queries and shared search parameters (sources, categories,
  * location, tbs, scrapeOptions). All queries use the same configuration.
  */
-const batchInputSchema = z.object({
+export const webSearchBatchInputSchema = z.object({
   categories: z.array(z.string()).optional(),
   fresh: z.boolean().default(false).optional(),
   limit: z.number().int().min(1).max(10).default(5).optional(),
@@ -86,13 +88,14 @@ export const webSearchBatch = tool({
           "tool.name": "webSearchBatch",
         },
       },
-      async () => {
+      async (span) => {
         // Optional top-level rate limiting (in addition to per-query limits)
         try {
           const rl = buildToolRateLimiter();
           if (rl && userId) {
             const rr = await rl.limit(userId);
             if (!rr.success) {
+              span.addEvent("rate_limited", { userId });
               const err = new Error("web_search_rate_limited");
               (err as Error & { meta?: unknown }).meta = rr;
               throw err;
@@ -157,10 +160,21 @@ export const webSearchBatch = tool({
             // Fallback to direct HTTP for unexpected errors (not rate/auth/payment)
             if (code === "web_search_error") {
               try {
-                const apiKey = process.env.FIRECRAWL_API_KEY;
+                // Proper env access via validated server env helpers
+                const { getServerEnvVar, getServerEnvVarWithFallback } = await import(
+                  "@/lib/env/server"
+                );
+                let apiKey: string | undefined;
+                try {
+                  apiKey = getServerEnvVar("FIRECRAWL_API_KEY") as unknown as string;
+                } catch {
+                  throw new Error("web_search_not_configured");
+                }
                 if (!apiKey) throw new Error("web_search_not_configured");
-                const baseUrl =
-                  process.env.FIRECRAWL_BASE_URL ?? "https://api.firecrawl.dev/v2";
+                const baseUrl = getServerEnvVarWithFallback(
+                  "FIRECRAWL_BASE_URL",
+                  "https://api.firecrawl.dev/v2"
+                );
                 const url = `${baseUrl}/search`;
                 const body = {
                   categories: rest.categories,
@@ -173,6 +187,7 @@ export const webSearchBatch = tool({
                   timeout: rest.timeoutMs,
                 } as Record<string, unknown>;
                 const startedAt = Date.now();
+                span.addEvent("http_fallback_post", { q });
                 const res = await fetch(url, {
                   body: JSON.stringify(body),
                   headers: {
@@ -208,9 +223,22 @@ export const webSearchBatch = tool({
                 });
               } catch (e2) {
                 const msg2 = e2 instanceof Error ? e2.message : String(e2);
+                span.addEvent("http_fallback_error", {
+                  message: msg2.slice(0, 120),
+                  q,
+                });
+                // Debug aid for tests
+                console.error("webSearchBatch fallback error for", q, msg2);
                 results.push({ error: { code, message: msg2 }, ok: false, query: q });
               }
             } else {
+              span.addEvent("primary_error", {
+                code,
+                message: message.slice(0, 120),
+                q,
+              });
+              // Debug aid for tests
+              console.error("webSearchBatch primary error for", q, code, message);
               results.push({ error: { code, message }, ok: false, query: q });
             }
           }
@@ -239,5 +267,5 @@ export const webSearchBatch = tool({
       }
     );
   },
-  inputSchema: batchInputSchema,
+  inputSchema: webSearchBatchInputSchema,
 });

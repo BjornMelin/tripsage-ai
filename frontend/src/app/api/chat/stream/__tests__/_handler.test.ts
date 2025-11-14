@@ -81,6 +81,9 @@ describe("handleChatStream", () => {
     vi.resetModules();
     vi.doMock("ai", () => ({
       convertToModelMessages: (x: unknown) => x,
+      generateObject: vi.fn(),
+      NoSuchToolError: class NoSuchToolError extends Error {},
+      stepCountIs: () => () => false,
       streamText: vi.fn(),
       tool: vi.fn((config: unknown) => ({
         execute: vi.fn(),

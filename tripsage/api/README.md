@@ -6,8 +6,7 @@ A FastAPI implementation that serves both frontend applications and AI agents fo
 
 The TripSage API provides endpoints for:
 
-- **Frontend Applications** - Next.js 15 web application with real-time features
-- **AI Agents** - LangGraph-based travel planning agents with context
+- **Frontend Applications** - Next.js 15 web application with real-time features and AI SDK v6 agents
 - **External Integrations** - Third-party services and travel platforms
 **Real-time Communication** - Supabase Realtime private channels with RLS authorization (no custom WebSocket endpoints).
 
@@ -27,14 +26,12 @@ The API implements a dual-consumer architecture serving both frontend and agent 
 
 ```mermaid
 graph TD
-    A[Frontend<br/>Next.js] --> C[API<br/>FastAPI]
-    B[AI Agents<br/>LangGraph] --> C
+    A[Frontend<br/>Next.js + AI SDK v6] --> C[API<br/>FastAPI]
     C --> D[TripSage Core<br/>Shared Layer]
     D --> E[External Services<br/>& Infrastructure]
 
-    subgraph "Consumers"
+    subgraph "Frontend"
         A
-        B
     end
 
     subgraph "API Layer"
@@ -50,29 +47,20 @@ graph TD
     end
 
     style A fill:#e1f5fe
-    style B fill:#f3e5f5
     style C fill:#fff3e0
     style D fill:#e8f5e8
     style E fill:#fafafa
 ```
 
-### Consumer-Specific Design
+### Frontend Integration
 
-The API automatically adapts responses based on the consumer type:
-
-#### Frontend Consumers
+The API serves the Next.js frontend which includes AI SDK v6 agents:
 
 - **User-friendly error messages** - Simplified, actionable error descriptions
 - **Response metadata** - UI state information and display hints
 - **Rate limiting** - Standard user-based limits
 - **Sanitized data** - Secure, filtered data appropriate for frontend display
-
-#### Agent Consumers
-
-- **Detailed error context** - Technical error information for agent decision-making
-- **Raw data access** - Unfiltered data for AI processing
-- **Higher rate limits** - Increased limits for agent operations
-- **Tool integration data** - Context for agent tool calling
+- **AI Agent Support** - Frontend uses AI SDK v6 with TypeScript tools for chat and travel planning
 
 ## Directory Structure
 
@@ -411,7 +399,8 @@ JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
 
 # External APIs (Optional - use BYOK instead)
 DUFFEL_ACCESS_TOKEN=your-duffel-access-token
-GOOGLE_MAPS_API_KEY=your-google-maps-key
+# Google Maps: use server key for server-side routes/services
+GOOGLE_MAPS_SERVER_API_KEY=your-google-maps-server-key
 OPENWEATHERMAP_API_KEY=your-weather-key
 ```
 

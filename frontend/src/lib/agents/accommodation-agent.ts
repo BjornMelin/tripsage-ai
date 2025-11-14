@@ -11,13 +11,15 @@ import "server-only";
 
 import type { LanguageModel, ToolSet } from "ai";
 import { stepCountIs, streamText, tool } from "ai";
-import { z } from "zod";
 
-import { runWithGuardrails } from "@/lib/agents/runtime";
-import { buildAccommodationRateLimit } from "@/lib/ratelimit/accommodation";
+import { buildGuardedTool } from "@/lib/agents/guarded-tool";
+import { buildRateLimit } from "@/lib/ratelimit/config";
+import type { AccommodationSearchRequest } from "@/lib/schemas/agents";
 import { toolRegistry } from "@/lib/tools";
+import { searchAccommodationsInputSchema } from "@/lib/tools/accommodations";
+import { lookupPoiInputSchema } from "@/lib/tools/google-places";
+import { geocodeInputSchema } from "@/lib/tools/maps";
 import { buildAccommodationPrompt } from "@/prompts/agents";
-import type { AccommodationSearchRequest } from "@/schemas/agents";
 
 /**
  * Create wrapped tools for accommodation agent with guardrails.
@@ -37,70 +39,63 @@ function buildAccommodationTools(identifier: string): ToolSet {
   const geocodeTool = toolRegistry.geocode as unknown as ToolLike;
   const poiTool = toolRegistry.lookupPoiContext as unknown as ToolLike;
 
+  const rateLimit = buildRateLimit("accommodationSearch", identifier);
+
+  const guardedSearchAccommodations = buildGuardedTool({
+    cache: {
+      hashInput: true,
+      key: "agent:accom:search",
+      ttlSeconds: 60 * 30,
+    },
+    execute: async (params: unknown) => searchTool.execute(params),
+    rateLimit,
+    schema: searchAccommodationsInputSchema,
+    toolKey: "searchAccommodations",
+    workflow: "accommodationSearch",
+  });
+
+  const guardedGeocode = buildGuardedTool({
+    cache: {
+      hashInput: true,
+      key: "agent:accom:geocode",
+      ttlSeconds: 60 * 60,
+    },
+    execute: async (params: unknown) => geocodeTool.execute(params),
+    rateLimit,
+    schema: geocodeInputSchema,
+    toolKey: "geocode",
+    workflow: "accommodationSearch",
+  });
+
+  const guardedLookupPoi = buildGuardedTool({
+    cache: {
+      hashInput: true,
+      key: "agent:accom:poi",
+      ttlSeconds: 60 * 10,
+    },
+    execute: async (params: unknown) => poiTool.execute(params),
+    rateLimit,
+    schema: lookupPoiInputSchema,
+    toolKey: "lookupPoiContext",
+    workflow: "accommodationSearch",
+  });
+
   const searchAccommodations = tool({
     description: searchTool.description ?? "Search stays",
-    execute: async (params: unknown) => {
-      const { result } = await runWithGuardrails(
-        {
-          cache: {
-            hashInput: true,
-            key: "agent:accom:search",
-            ttlSeconds: 60 * 30,
-          },
-          rateLimit: buildAccommodationRateLimit(identifier),
-          tool: "searchAccommodations",
-          workflow: "accommodation_search",
-        },
-        params,
-        async (validated) => searchTool.execute(validated)
-      );
-      return result;
-    },
-    inputSchema: z.any(),
+    execute: guardedSearchAccommodations,
+    inputSchema: searchAccommodationsInputSchema,
   });
 
   const geocode = tool({
     description: geocodeTool.description ?? "Geocode address",
-    execute: async (params: unknown) => {
-      const { result } = await runWithGuardrails(
-        {
-          cache: {
-            hashInput: true,
-            key: "agent:accom:geocode",
-            ttlSeconds: 60 * 60,
-          },
-          rateLimit: buildAccommodationRateLimit(identifier),
-          tool: "geocode",
-          workflow: "accommodation_search",
-        },
-        params,
-        async (validated) => geocodeTool.execute(validated)
-      );
-      return result;
-    },
-    inputSchema: z.any(),
+    execute: guardedGeocode,
+    inputSchema: geocodeInputSchema,
   });
 
   const lookupPoiContext = tool({
     description: poiTool.description ?? "Lookup POIs",
-    execute: async (params: unknown) => {
-      const { result } = await runWithGuardrails(
-        {
-          cache: {
-            hashInput: true,
-            key: "agent:accom:poi",
-            ttlSeconds: 60 * 10,
-          },
-          rateLimit: buildAccommodationRateLimit(identifier),
-          tool: "lookupPoiContext",
-          workflow: "accommodation_search",
-        },
-        params,
-        async (validated) => poiTool.execute(validated)
-      );
-      return result;
-    },
-    inputSchema: z.any(),
+    execute: guardedLookupPoi,
+    inputSchema: lookupPoiInputSchema,
   });
 
   return { geocode, lookupPoiContext, searchAccommodations } satisfies ToolSet;

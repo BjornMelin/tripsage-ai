@@ -224,6 +224,19 @@ environments:
         - "Security Scan"
         - "Build"
 
+# Secret requirements
+secrets:
+  deploy:
+    - name: "PRIMARY_DATABASE_URL"
+      description: >
+        Writable Supabase connection string used by deploy.yml to run
+        scripts/operators/verify_webhook_secret.sh. Falls back to DATABASE_URL
+        but PRIMARY_DATABASE_URL is required for production parity.
+    - name: "HMAC_SECRET"
+      description: >
+        Shared secret for webhook verification; must match app.webhook_hmac_secret
+        in the primary database or the deploy workflow will fail.
+
 # Release configuration
 release:
   # Semantic versioning

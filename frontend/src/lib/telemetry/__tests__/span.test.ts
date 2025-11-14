@@ -9,12 +9,14 @@ const END_SPAN = vi.hoisted(() => vi.fn());
 
 vi.mock("@opentelemetry/api", () => ({
   SpanStatusCode: { ERROR: 2, OK: 1 },
-  trace: {
-    getTracer: () => ({
-      startActiveSpan: (...args: Parameters<typeof START_ACTIVE_SPAN>) =>
-        START_ACTIVE_SPAN(...args),
-    }),
-  },
+}));
+
+vi.mock("@/lib/telemetry/tracer", () => ({
+  getTelemetryTracer: () => ({
+    startActiveSpan: (...args: Parameters<typeof START_ACTIVE_SPAN>) =>
+      START_ACTIVE_SPAN(...args),
+  }),
+  TELEMETRY_SERVICE_NAME: "tripsage-frontend",
 }));
 
 const { withTelemetrySpan } = await import("@/lib/telemetry/span");

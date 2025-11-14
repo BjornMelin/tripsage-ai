@@ -16,8 +16,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
+import type { FlightSearchParams } from "@/lib/schemas/search";
 import { useSearchStore } from "@/stores/search-store";
-import type { FlightSearchParams } from "@/types/search";
 
 // URL search parameters are handled inline
 

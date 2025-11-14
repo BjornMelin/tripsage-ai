@@ -1,7 +1,10 @@
 "use client";
 
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect } from "react";
-import { useApiMutation, useApiQuery } from "@/hooks/use-api-query";
+import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
+import { type AppError, handleApiError, isApiError } from "@/lib/api/error-types";
+import { queryKeys } from "@/lib/query-keys";
 import type { Agent, AgentTask } from "@/lib/schemas/agent-status";
 import { useAgentStatusStore } from "@/stores/agent-status-store";
 
@@ -24,15 +27,30 @@ export function useAgentStatus() {
     setError,
   } = useAgentStatusStore();
 
+  const { makeAuthenticatedRequest } = useAuthenticatedApi();
+
   // Query for fetching current agent status from backend
-  const statusQuery = useApiQuery<{ agents: Agent[] }>(
-    "/api/agents/status",
-    {},
-    {
-      enabled: isMonitoring,
-      refetchInterval: isMonitoring ? 2000 : false, // Poll every 2 seconds while monitoring
-    }
-  );
+  const statusQuery = useQuery<{ agents: Agent[] }, AppError>({
+    enabled: isMonitoring,
+    queryFn: async () => {
+      try {
+        return await makeAuthenticatedRequest<{ agents: Agent[] }>(
+          "/api/agents/status"
+        );
+      } catch (error) {
+        throw handleApiError(error);
+      }
+    },
+    queryKey: queryKeys.agents.all(),
+    refetchInterval: isMonitoring ? 2000 : false, // Poll every 2 seconds while monitoring
+    retry: (failureCount, error) => {
+      if (isApiError(error)) {
+        if (error.status === 401 || error.status === 403) return false;
+      }
+      return failureCount < 2;
+    },
+    throwOnError: false,
+  });
 
   // Handle status query data updates
   useEffect(() => {
@@ -55,10 +73,30 @@ export function useAgentStatus() {
   }, [statusQuery.error, setError]);
 
   // Mutation for starting an agent
-  const startAgentMutation = useApiMutation<
+  const startAgentMutation = useMutation<
     { agent: Agent },
+    AppError,
     { type: string; name: string; config?: Record<string, unknown> }
-  >("/api/agents/start");
+  >({
+    mutationFn: async (variables) => {
+      try {
+        return await makeAuthenticatedRequest<{ agent: Agent }>("/api/agents/start", {
+          body: JSON.stringify(variables),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        });
+      } catch (error) {
+        throw handleApiError(error);
+      }
+    },
+    retry: (failureCount, error) => {
+      if (isApiError(error)) {
+        if (error.status >= 400 && error.status < 500) return false;
+      }
+      return failureCount < 1;
+    },
+    throwOnError: false,
+  });
 
   // Handle start agent success
   useEffect(() => {
@@ -87,9 +125,33 @@ export function useAgentStatus() {
   }, [startAgentMutation.error, setError]);
 
   // Mutation for stopping an agent
-  const stopAgentMutation = useApiMutation<{ success: boolean }, { agentId: string }>(
-    "/api/agents/stop"
-  );
+  const stopAgentMutation = useMutation<
+    { success: boolean },
+    AppError,
+    { agentId: string }
+  >({
+    mutationFn: async (variables) => {
+      try {
+        return await makeAuthenticatedRequest<{ success: boolean }>(
+          "/api/agents/stop",
+          {
+            body: JSON.stringify(variables),
+            headers: { "Content-Type": "application/json" },
+            method: "POST",
+          }
+        );
+      } catch (error) {
+        throw handleApiError(error);
+      }
+    },
+    retry: (failureCount, error) => {
+      if (isApiError(error)) {
+        if (error.status >= 400 && error.status < 500) return false;
+      }
+      return failureCount < 1;
+    },
+    throwOnError: false,
+  });
 
   // Handle stop agent error
   useEffect(() => {

@@ -12,7 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type { AccommodationSearchResult } from "@/schemas/agents";
+import type { AccommodationSearchResult } from "@/lib/schemas/agents";
 import { Source, Sources, SourcesContent, SourcesTrigger } from "./sources";
 
 /**

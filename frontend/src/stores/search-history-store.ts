@@ -5,8 +5,8 @@
 import { z } from "zod";
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
+import type { SearchParams, SearchType } from "@/lib/schemas/search";
 import { nowIso, secureId } from "@/lib/security/random";
-import type { SearchParams, SearchType } from "@/types/search";
 
 // Validation schemas for search history
 const SEARCH_TYPE_SCHEMA = z.enum([

@@ -4,6 +4,7 @@
 
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
+import { getServerEnvVar, getServerEnvVarWithFallback } from "@/lib/env/server";
 
 const RATELIMIT_PREFIX = "ratelimit:keys";
 
@@ -36,9 +37,9 @@ export class RateLimiterConfigurationError extends Error {
  *   production.
  */
 export function buildRateLimiter(): KeyRateLimiter | undefined {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-  const isProduction = process.env.NODE_ENV === "production";
+  const url = getServerEnvVarWithFallback("UPSTASH_REDIS_REST_URL", undefined);
+  const token = getServerEnvVarWithFallback("UPSTASH_REDIS_REST_TOKEN", undefined);
+  const isProduction = getServerEnvVar("NODE_ENV") === "production";
 
   if (!url || !token) {
     if (isProduction) {

@@ -12,22 +12,24 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
+import { createGateway } from "ai";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { getClientIpFromHeaders } from "@/lib/next/route-helpers";
-import type { ProviderId } from "@/lib/providers/types";
-import { getProviderSettings } from "@/lib/settings";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-// Environment variables
-const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
-const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 const RATELIMIT_PREFIX = "ratelimit:keys-validate";
 
 // Create rate limit instance lazily to make testing easier
 const GET_RATELIMIT_INSTANCE = () => {
+  const UPSTASH_URL = getServerEnvVarWithFallback("UPSTASH_REDIS_REST_URL", undefined);
+  const UPSTASH_TOKEN = getServerEnvVarWithFallback(
+    "UPSTASH_REDIS_REST_TOKEN",
+    undefined
+  );
   if (!UPSTASH_URL || !UPSTASH_TOKEN) {
     return undefined;
   }
@@ -42,8 +44,9 @@ const GET_RATELIMIT_INSTANCE = () => {
 
 type ValidateResult = { isValid: boolean; reason?: string };
 
-const DEFAULT_MODEL_IDS: Record<ProviderId, string> = {
+const DEFAULT_MODEL_IDS: Record<string, string> = {
   anthropic: "claude-3-5-sonnet-20241022",
+  gateway: "openai/gpt-4o-mini",
   openai: "gpt-4o-mini",
   openrouter: "openai/gpt-4o-mini",
   xai: "grok-3",
@@ -105,7 +108,7 @@ function buildSDKRequest(options: BuildSDKRequestOptions): ProviderRequest {
   };
 }
 
-const PROVIDER_BUILDERS: Partial<Record<ProviderId, ProviderRequestBuilder>> = {
+const PROVIDER_BUILDERS: Partial<Record<string, ProviderRequestBuilder>> = {
   anthropic: (apiKey) =>
     buildSDKRequest({
       apiKey,
@@ -113,33 +116,30 @@ const PROVIDER_BUILDERS: Partial<Record<ProviderId, ProviderRequestBuilder>> = {
       modelId: DEFAULT_MODEL_IDS.anthropic,
       sdkCreator: createAnthropic as SDKCreator,
     }),
+  gateway: (apiKey) =>
+    buildSDKRequest({
+      apiKey,
+      baseURL: getServerEnvVarWithFallback("AI_GATEWAY_URL", undefined),
+      defaultBaseURL: "https://ai-gateway.vercel.sh/v1",
+      modelId: DEFAULT_MODEL_IDS.gateway,
+      sdkCreator: createGateway as unknown as SDKCreator,
+    }),
   openai: (apiKey) =>
     buildSDKRequest({
       apiKey,
-      baseURL: process.env.AI_GATEWAY_URL,
+      baseURL: getServerEnvVarWithFallback("AI_GATEWAY_URL", undefined),
       defaultBaseURL: OPENAI_BASE_URL,
       modelId: DEFAULT_MODEL_IDS.openai,
       sdkCreator: createOpenAI as SDKCreator,
     }),
-  openrouter: (apiKey) => {
-    const attribution = getProviderSettings().openrouterAttribution;
-    const headers: Record<string, string> = {};
-    if (attribution?.referer) {
-      // OpenRouter app attribution expects the HTTP-Referer header.
-      headers["HTTP-Referer"] = attribution.referer;
-    }
-    if (attribution?.title) {
-      headers["X-Title"] = attribution.title;
-    }
-    return buildSDKRequest({
+  openrouter: (apiKey) =>
+    buildSDKRequest({
       apiKey,
       baseURL: OPENROUTER_BASE_URL,
       defaultBaseURL: OPENROUTER_BASE_URL,
-      headers: Object.keys(headers).length ? headers : undefined,
       modelId: DEFAULT_MODEL_IDS.openrouter,
       sdkCreator: createOpenAI as SDKCreator,
-    });
-  },
+    }),
   xai: (apiKey) =>
     buildSDKRequest({
       apiKey,
@@ -169,7 +169,7 @@ async function validateProviderKey(
   service: string,
   apiKey: string
 ): Promise<ValidateResult> {
-  const providerId = service.trim().toLowerCase() as ProviderId;
+  const providerId = service.trim().toLowerCase();
   const builder = PROVIDER_BUILDERS[providerId];
   if (!builder) {
     return { isValid: false, reason: "INVALID_SERVICE" };

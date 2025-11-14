@@ -58,8 +58,9 @@ export async function POST(req: NextRequest): Promise<Response> {
     }
 
     // Optional rate limiter (reuse stream config if available)
-    const url = process.env.UPSTASH_REDIS_REST_URL;
-    const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+    const { getServerEnvVarWithFallback } = await import("@/lib/env/server");
+    const url = getServerEnvVarWithFallback("UPSTASH_REDIS_REST_URL", undefined);
+    const token = getServerEnvVarWithFallback("UPSTASH_REDIS_REST_TOKEN", undefined);
     const limiter =
       url && token
         ? new Ratelimit({

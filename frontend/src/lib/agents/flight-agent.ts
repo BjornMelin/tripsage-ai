@@ -11,13 +11,15 @@ import "server-only";
 
 import type { LanguageModel, ToolSet } from "ai";
 import { stepCountIs, streamText, tool } from "ai";
-import { z } from "zod";
 
-import { runWithGuardrails } from "@/lib/agents/runtime";
-import { buildFlightRateLimit } from "@/lib/ratelimit/flight";
+import { buildGuardedTool } from "@/lib/agents/guarded-tool";
+import { buildRateLimit } from "@/lib/ratelimit/config";
+import type { FlightSearchRequest } from "@/lib/schemas/agents";
 import { toolRegistry } from "@/lib/tools";
+import { searchFlightsInputSchema } from "@/lib/tools/flights";
+import { lookupPoiInputSchema } from "@/lib/tools/google-places";
+import { distanceMatrixInputSchema, geocodeInputSchema } from "@/lib/tools/maps";
 import { buildFlightPrompt } from "@/prompts/agents";
-import type { FlightSearchRequest } from "@/schemas/agents";
 
 /**
  * Create wrapped tools for flight agent with guardrails.
@@ -44,87 +46,81 @@ function buildFlightTools(identifier: string): ToolSet {
     | ToolLike
     | undefined;
 
+  const rateLimit = buildRateLimit("flightSearch", identifier);
+
+  const guardedSearchFlights = buildGuardedTool({
+    cache: {
+      hashInput: true,
+      key: "agent:flight:search",
+      ttlSeconds: 60 * 30,
+    },
+    execute: async (params: unknown) => flightTool.execute(params),
+    rateLimit,
+    schema: searchFlightsInputSchema,
+    toolKey: "searchFlights",
+    workflow: "flightSearch",
+  });
+
+  const guardedGeocode = buildGuardedTool({
+    cache: {
+      hashInput: true,
+      key: "agent:flight:geocode",
+      ttlSeconds: 60 * 60,
+    },
+    execute: async (params: unknown) => geocodeTool.execute(params),
+    rateLimit,
+    schema: geocodeInputSchema,
+    toolKey: "geocode",
+    workflow: "flightSearch",
+  });
+
+  const guardedLookupPoi = buildGuardedTool({
+    cache: { hashInput: true, key: "agent:flight:poi", ttlSeconds: 600 },
+    execute: async (params: unknown) => {
+      if (!poiTool) return { inputs: params, pois: [], provider: "stub" };
+      return await poiTool.execute(params);
+    },
+    rateLimit,
+    schema: lookupPoiInputSchema,
+    toolKey: "lookupPoiContext",
+    workflow: "flightSearch",
+  });
+
+  const guardedDistanceMatrix = buildGuardedTool({
+    cache: { hashInput: true, key: "agent:flight:distance", ttlSeconds: 3600 },
+    execute: async (params: unknown) => {
+      if (!distanceMatrixTool)
+        return { distances: [], inputs: params, provider: "stub" };
+      return await distanceMatrixTool.execute(params);
+    },
+    rateLimit,
+    schema: distanceMatrixInputSchema,
+    toolKey: "distanceMatrix",
+    workflow: "flightSearch",
+  });
+
   const searchFlights = tool({
     description: flightTool.description ?? "Search flights",
-    execute: async (params: unknown) => {
-      const { result } = await runWithGuardrails(
-        {
-          cache: {
-            hashInput: true,
-            key: "agent:flight:search",
-            ttlSeconds: 60 * 30,
-          },
-          rateLimit: buildFlightRateLimit(identifier),
-          tool: "searchFlights",
-          workflow: "flight_search",
-        },
-        params,
-        async (validated) => flightTool.execute(validated)
-      );
-      return result;
-    },
-    inputSchema: z.any(),
+    execute: guardedSearchFlights,
+    inputSchema: searchFlightsInputSchema,
   });
 
   const geocode = tool({
     description: geocodeTool.description ?? "Geocode address",
-    execute: async (params: unknown) => {
-      const { result } = await runWithGuardrails(
-        {
-          cache: {
-            hashInput: true,
-            key: "agent:flight:geocode",
-            ttlSeconds: 60 * 60,
-          },
-          rateLimit: buildFlightRateLimit(identifier),
-          tool: "geocode",
-          workflow: "flight_search",
-        },
-        params,
-        async (validated) => geocodeTool.execute(validated)
-      );
-      return result;
-    },
-    inputSchema: z.any(),
+    execute: guardedGeocode,
+    inputSchema: geocodeInputSchema,
   });
 
   const lookupPoiContext = tool({
     description: poiTool?.description ?? "Lookup POIs (context)",
-    execute: async (params: unknown) => {
-      if (!poiTool) return { inputs: params, pois: [], provider: "stub" };
-      const { result } = await runWithGuardrails(
-        {
-          cache: { hashInput: true, key: "agent:flight:poi", ttlSeconds: 600 },
-          rateLimit: buildFlightRateLimit(identifier),
-          tool: "lookupPoiContext",
-          workflow: "flight_search",
-        },
-        params,
-        async (validated) => poiTool.execute(validated)
-      );
-      return result;
-    },
-    inputSchema: z.any(),
+    execute: guardedLookupPoi,
+    inputSchema: lookupPoiInputSchema,
   });
 
   const distanceMatrix = tool({
     description: distanceMatrixTool?.description ?? "Distance matrix",
-    execute: async (params: unknown) => {
-      if (!distanceMatrixTool)
-        return { distances: [], inputs: params, provider: "stub" };
-      const { result } = await runWithGuardrails(
-        {
-          cache: { hashInput: true, key: "agent:flight:distance", ttlSeconds: 3600 },
-          rateLimit: buildFlightRateLimit(identifier),
-          tool: "distanceMatrix",
-          workflow: "flight_search",
-        },
-        params,
-        async (validated) => distanceMatrixTool.execute(validated)
-      );
-      return result;
-    },
-    inputSchema: z.any(),
+    execute: guardedDistanceMatrix,
+    inputSchema: distanceMatrixInputSchema,
   });
 
   return { distanceMatrix, geocode, lookupPoiContext, searchFlights } satisfies ToolSet;

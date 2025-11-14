@@ -35,8 +35,7 @@ Order & dependencies
 9) 08-observability-telemetry-redaction.md (after 01, 04)
    - Adds spans/counters/redaction
 
-10) 09-provider-openrouter-attribution.md (after 02)
-    - Ensures headers present for OpenRouter
+10) (Removed) OpenRouter attribution prompt — not required
 
 11) 10-optional-ai-gateway-adoption.md (feature flag; optional; after 02)
 
@@ -85,4 +84,4 @@ Parallelization notes
 Acceptance gates before decommission
 
 - All Next.js routes green; Vitest coverage for registry/BYOK/chat/tools/memory
-- Observability present; rate limits enforced; attribution headers for OpenRouter
+- Observability present; rate limits enforced; no attribution headers required for OpenRouter

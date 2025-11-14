@@ -9,7 +9,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { type FetchOptions, fetchApi } from "@/lib/api/client";
+import { apiClient } from "@/lib/api/api-client";
 import { ApiError } from "@/lib/api/error-types";
 import { createClient } from "@/lib/supabase/client";
 
@@ -43,8 +43,71 @@ export function useAuthenticatedApi() {
     };
   }, [supabase]);
 
+  /**
+   * Options for authenticated requests.
+   * Extends `RequestInit` with optional `params` for query string support.
+   */
+  type AuthFetchOptions = RequestInit & {
+    params?: Record<string, string | number | boolean>;
+  };
+
+  const normalizeEndpoint = useCallback(
+    (endpoint: string): string =>
+      endpoint.startsWith("/api/") ? endpoint.slice(4) : endpoint,
+    []
+  );
+
+  const dispatch = useCallback(
+    async <T = unknown>(
+      method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
+      endpointPath: string,
+      headers: Headers,
+      params: Record<string, string | number | boolean> | undefined,
+      data: unknown | FormData | undefined,
+      signal: AbortSignal | undefined
+    ): Promise<T> => {
+      switch (method) {
+        case "GET":
+          return await apiClient.get<T>(endpointPath, {
+            abortSignal: signal,
+            headers: Object.fromEntries(headers.entries()),
+            params,
+          });
+        case "POST":
+          return await apiClient.post<unknown, T>(endpointPath, data as unknown, {
+            abortSignal: signal,
+            headers: Object.fromEntries(headers.entries()),
+            params,
+          });
+        case "PUT":
+          return await apiClient.put<unknown, T>(endpointPath, data as unknown, {
+            abortSignal: signal,
+            headers: Object.fromEntries(headers.entries()),
+            params,
+          });
+        case "PATCH":
+          return await apiClient.patch<unknown, T>(endpointPath, data as unknown, {
+            abortSignal: signal,
+            headers: Object.fromEntries(headers.entries()),
+            params,
+          });
+        case "DELETE":
+          return await apiClient.delete<unknown, T>(endpointPath, {
+            abortSignal: signal,
+            data: data as unknown,
+            headers: Object.fromEntries(headers.entries()),
+            params,
+          });
+      }
+    },
+    []
+  );
+
   const makeAuthenticatedRequest = useCallback(
-    async <T = unknown>(endpoint: string, options: FetchOptions = {}): Promise<T> => {
+    async <T = unknown>(
+      endpoint: string,
+      options: AuthFetchOptions = {}
+    ): Promise<T> => {
       if (!isAuthenticated) {
         // Verify with a fresh call in case of stale state
         const { data: sessionData } = await supabase.auth.getSession();
@@ -90,11 +153,49 @@ export function useAuthenticatedApi() {
           session = refreshed;
         }
 
-        return await fetchApi<T>(endpoint, {
-          ...options,
-          auth: `Bearer ${session.access_token}`,
-          signal: abortControllerRef.current.signal,
-        });
+        const method = (options.method || "GET").toUpperCase() as
+          | "GET"
+          | "POST"
+          | "PUT"
+          | "PATCH"
+          | "DELETE";
+
+        const endpointPath = normalizeEndpoint(endpoint);
+
+        // Build headers, ensuring Authorization is present
+        const headers = new Headers(options.headers);
+        headers.set("Authorization", `Bearer ${session.access_token}`);
+
+        const params = options.params as
+          | Record<string, string | number | boolean>
+          | undefined;
+
+        // Prepare body: support FormData, JSON strings, or plain objects
+        let data: unknown | FormData | undefined;
+        if (options.body instanceof FormData) {
+          data = options.body;
+          // Do not force content-type for FormData
+          headers.delete("Content-Type");
+        } else if (typeof options.body === "string") {
+          try {
+            data = JSON.parse(options.body);
+          } catch {
+            data = options.body; // Fallback, but will be JSON.stringified downstream
+          }
+        } else if (options.body !== undefined) {
+          data = options.body as unknown;
+          if (!headers.has("Content-Type"))
+            headers.set("Content-Type", "application/json");
+        }
+
+        return await dispatch<T>(
+          method,
+          endpointPath,
+          headers,
+          params,
+          data,
+          abortControllerRef.current.signal
+        );
       } catch (error) {
         // Preserve existing ApiError details for non-401 cases
         if (error instanceof ApiError) {
@@ -104,11 +205,39 @@ export function useAuthenticatedApi() {
                 data: { session },
               } = await supabase.auth.refreshSession();
               if (session?.access_token) {
-                return await fetchApi<T>(endpoint, {
-                  ...options,
-                  auth: `Bearer ${session.access_token}`,
-                  signal: abortControllerRef.current?.signal,
-                });
+                const retryHeaders = new Headers(options.headers);
+                retryHeaders.set("Authorization", `Bearer ${session.access_token}`);
+
+                const endpointPath = normalizeEndpoint(endpoint);
+                const method = (options.method || "GET").toUpperCase();
+                const params = options.params as
+                  | Record<string, string | number | boolean>
+                  | undefined;
+
+                let data: unknown | FormData | undefined;
+                if (options.body instanceof FormData) {
+                  data = options.body;
+                  retryHeaders.delete("Content-Type");
+                } else if (typeof options.body === "string") {
+                  try {
+                    data = JSON.parse(options.body);
+                  } catch {
+                    data = options.body;
+                  }
+                } else if (options.body !== undefined) {
+                  data = options.body as unknown;
+                  if (!retryHeaders.has("Content-Type"))
+                    retryHeaders.set("Content-Type", "application/json");
+                }
+
+                return await dispatch<T>(
+                  method as "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
+                  endpointPath,
+                  retryHeaders,
+                  params,
+                  data,
+                  abortControllerRef.current?.signal
+                );
               }
               await supabase.auth.signOut();
             } catch {
@@ -131,19 +260,23 @@ export function useAuthenticatedApi() {
         });
       }
     },
-    [isAuthenticated, supabase]
+    [isAuthenticated, supabase, normalizeEndpoint, dispatch]
   );
 
   const authenticatedApi = useMemo(
     () => ({
-      delete: <T = unknown>(endpoint: string, options?: Omit<FetchOptions, "method">) =>
-        makeAuthenticatedRequest<T>(endpoint, { ...options, method: "DELETE" }),
-      get: <T = unknown>(endpoint: string, options?: Omit<FetchOptions, "method">) =>
-        makeAuthenticatedRequest<T>(endpoint, { ...options, method: "GET" }),
+      delete: <T = unknown>(
+        endpoint: string,
+        options?: Omit<AuthFetchOptions, "method">
+      ) => makeAuthenticatedRequest<T>(endpoint, { ...options, method: "DELETE" }),
+      get: <T = unknown>(
+        endpoint: string,
+        options?: Omit<AuthFetchOptions, "method">
+      ) => makeAuthenticatedRequest<T>(endpoint, { ...options, method: "GET" }),
       patch: <T = unknown>(
         endpoint: string,
         data?: unknown,
-        options?: Omit<FetchOptions, "method" | "body">
+        options?: Omit<AuthFetchOptions, "method" | "body">
       ) =>
         makeAuthenticatedRequest<T>(endpoint, {
           ...options,
@@ -153,7 +286,7 @@ export function useAuthenticatedApi() {
       post: <T = unknown>(
         endpoint: string,
         data?: unknown,
-        options?: Omit<FetchOptions, "method" | "body">
+        options?: Omit<AuthFetchOptions, "method" | "body">
       ) =>
         makeAuthenticatedRequest<T>(endpoint, {
           ...options,
@@ -163,7 +296,7 @@ export function useAuthenticatedApi() {
       put: <T = unknown>(
         endpoint: string,
         data?: unknown,
-        options?: Omit<FetchOptions, "method" | "body">
+        options?: Omit<AuthFetchOptions, "method" | "body">
       ) =>
         makeAuthenticatedRequest<T>(endpoint, {
           ...options,
@@ -173,7 +306,7 @@ export function useAuthenticatedApi() {
       upload: <T = unknown>(
         endpoint: string,
         formData: FormData,
-        options?: Omit<FetchOptions, "method" | "body">
+        options?: Omit<AuthFetchOptions, "method" | "body">
       ) =>
         makeAuthenticatedRequest<T>(endpoint, {
           ...options,

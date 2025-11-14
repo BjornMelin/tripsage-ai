@@ -17,7 +17,7 @@ import {
   type CurrencyState,
   EXCHANGE_RATE_SCHEMA,
   type ExchangeRate,
-} from "@/types/currency";
+} from "@/lib/schemas/currency";
 
 // Common currencies with symbols and decimal places
 // ISO 4217 defines currency codes in UPPER_CASE (international standard)

@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Page from "@/app/ai-demo/page";
 
 // Mock fetch to control API responses
@@ -11,6 +11,18 @@ describe("AI Demo Page", () => {
     MOCK_FETCH.mockClear();
     // Ensure both global and window fetch are mocked in JSDOM
     (window as { fetch: typeof fetch }).fetch = MOCK_FETCH;
+  });
+
+  const consoleErrorSpy = vi
+    .spyOn(console, "error")
+    .mockImplementation(() => undefined);
+
+  afterEach(() => {
+    consoleErrorSpy.mockClear();
+  });
+
+  afterAll(() => {
+    consoleErrorSpy.mockRestore();
   });
 
   it("renders prompt input and conversation area", () => {

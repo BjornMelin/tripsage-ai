@@ -1,12 +1,8 @@
 # Repository Guidelines
 
-## ExecPlans
-
-When writing complex features or significant refactors, use an ExecPlan (as described in [.agent/PLANS.md](.agent/PLANS.md)) from design to implementation.
-
 ## Project Structure & Module Organization
 
-For detailed project structure information, see [docs/architecture/project-structure.md](docs/architecture/project-structure.md).
+See [docs/architecture/project-structure.md](docs/architecture/project-structure.md) for project structure details.
 
 **Key Guidelines:**
 
@@ -33,11 +29,11 @@ See `pyproject.toml` and `frontend/package.json` for canonical versions.
 **Frontend:**
 
 - Next.js `16.0.1`; React `19.2.0`
-- AI SDK core `ai@6.0.0-beta.93`; UI hooks `@ai-sdk/react@3.0.0-beta.92`
-- Providers: `@ai-sdk/openai@3.0.0-beta.54`, `@ai-sdk/anthropic@3.0.0-beta.50`
-- Data/Auth: `@supabase/ssr@0.7.0`, `@supabase/supabase-js@2.76.x`
-- Ratelimit & cache: `@upstash/ratelimit@2.0.6`, `@upstash/redis@1.35.x`
-- Styling: Tailwind CSS v4, Biome `2.3.2`, Vitest `4.0.1`
+- AI SDK core `ai@6.0.0-beta.99`; UI hooks `@ai-sdk/react@3.0.0-beta.99`
+- Providers: `@ai-sdk/openai@3.0.0-beta.57`, `@ai-sdk/anthropic@3.0.0-beta.53`
+- Data/Auth: `@supabase/ssr@0.7.0`, `@supabase/supabase-js@2.76.1`
+- Ratelimit & cache: `@upstash/ratelimit@2.0.7`, `@upstash/redis@1.35.6`
+- Styling: Tailwind CSS v4, Biome `2.3.4`, Vitest `4.0.8`
 
 ## Build, Test, and Development Commands
 
@@ -95,7 +91,7 @@ See Quality Gates section for formatting/linting commands. For file-scoped comma
 - Library-first: Prefer maintained libraries that cover ≥80% needs with ≤30% custom code. Use AI SDK v6 primitives (streaming, tools, structured outputs) instead of bespoke orchestrators.
 - KISS/DRY/YAGNI: Keep solutions straightforward; avoid clever abstractions unless required. Aggressively remove duplication. Implement only what's needed now.
 - Keep adapters thin; handlers/services cohesive. Avoid wrapping AI SDK streaming.
-- Share Zod schemas via `src/schemas`; don't duplicate types between client/server.
+- Share Zod v4+ schemas via `src/schemas`; don't duplicate types between client/server.
 - Common pitfalls: Don't re-implement streaming/tool calling (use AI SDK v6); don't duplicate Zod types; avoid module-scope clients/ratelimiters in Route Handlers—build inside requests.
 
 ## Frontend Development
@@ -116,7 +112,7 @@ When working on files under `frontend/`, follow these instructions which superse
 
 - Primary routing layer for multi-provider support, observability, fallbacks, metrics, and budgets.
 - Users provide their own provider API keys (OpenAI, Anthropic, xAI, Gemini, etc.) which are routed through Gateway.
-- Configure via `createOpenAI({ baseURL: "https://ai-gateway.vercel.sh/v1", apiKey: process.env.AI_GATEWAY_API_KEY })`.
+- Configure via `createGateway({ baseURL: "https://ai-gateway.vercel.sh/v1", apiKey: process.env.AI_GATEWAY_API_KEY })` from the `ai` package (v6).
 - Users can also use their own provider keys directly through Gateway without a Gateway API key; billing goes to their provider accounts.
 - Primary docs: vercel.com/docs/ai-gateway (OpenAI-compatible API).
 
@@ -126,6 +122,7 @@ When working on files under `frontend/`, follow these instructions which superse
 - Direct provider resolution without Gateway; use when Gateway is unavailable or not desired.
 - Resolves user-specific keys server-side and returns a ready `LanguageModel` for AI SDK v6.
 - Supported providers: `openai`, `openrouter`, `anthropic`, `xai` (OpenAI-compatible for xAI).
+- OpenRouter uses the OpenAI provider configured with `baseURL: "https://openrouter.ai/api/v1"` (OpenAI‑compatible). No attribution headers.
 - Defaults (subject to change): `openai → gpt-4o-mini`, `anthropic → claude-3-5-sonnet-20241022`, `openrouter → openai/gpt-4o-mini`.
 - Usage pattern (Route Handler):
 

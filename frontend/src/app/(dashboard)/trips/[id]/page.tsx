@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { exportTripToIcs } from "@/lib/calendar/trip-export";
 import { useTripStore } from "@/stores/trip-store";
 
 export default function TripDetailsPage() {
@@ -136,9 +137,30 @@ export default function TripDetailsPage() {
             <Share2 className="h-4 w-4 mr-2" />
             Share
           </Button>
-          <Button variant="outline" size="sm">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              if (!currentTrip) return;
+              try {
+                const icsContent = await exportTripToIcs(currentTrip);
+                const blob = new Blob([icsContent], { type: "text/calendar" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `${currentTrip.name || currentTrip.title || "trip"}.ics`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+              } catch (error) {
+                console.error("Failed to export trip:", error);
+                alert("Failed to export trip to calendar");
+              }
+            }}
+          >
             <Download className="h-4 w-4 mr-2" />
-            Export
+            Export to Calendar
           </Button>
         </div>
       </div>

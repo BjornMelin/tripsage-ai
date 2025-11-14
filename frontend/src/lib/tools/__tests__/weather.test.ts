@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 import { fetchWithRetry } from "@/lib/http/fetch-retry";
 import { getRedis } from "@/lib/redis";
@@ -11,6 +11,10 @@ vi.mock("@/lib/redis", () => ({
 
 vi.mock("@/lib/http/fetch-retry", () => ({
   fetchWithRetry: vi.fn(),
+}));
+
+vi.mock("@/lib/env/server", () => ({
+  getServerEnvVar: vi.fn(() => "test_key"),
 }));
 
 // Shared test fixtures
@@ -64,19 +68,11 @@ const minimalWeatherResponse = {
   weather: [{ description: "sunny" }],
 };
 
-const _env = process.env;
-
-beforeAll(() => {
-  process.env.OPENWEATHER_API_KEY = "test_key";
-});
-
-beforeEach(() => {
+beforeEach(async () => {
   vi.clearAllMocks();
   (getRedis as ReturnType<typeof vi.fn>).mockReturnValue(null);
-  // Ensure env is set for each test
-  if (!process.env.OPENWEATHER_API_KEY) {
-    process.env.OPENWEATHER_API_KEY = "test_key";
-  }
+  const { getServerEnvVar } = await import("@/lib/env/server");
+  (getServerEnvVar as ReturnType<typeof vi.fn>).mockReturnValue("test_key");
 });
 
 afterEach(() => {
@@ -342,9 +338,10 @@ describe("field extraction", () => {
 
 describe("error handling", () => {
   test("throws when API key not configured", async () => {
-    const originalKey = process.env.OPENWEATHER_API_KEY;
-    // Use Reflect.deleteProperty to actually remove the property (Biome allows this for test cleanup)
-    Reflect.deleteProperty(process.env, "OPENWEATHER_API_KEY");
+    const { getServerEnvVar } = await import("@/lib/env/server");
+    (getServerEnvVar as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      throw new Error("OPENWEATHERMAP_API_KEY is not defined");
+    });
     vi.resetModules();
     const { getCurrentWeather: freshTool } = await import("../weather");
 
@@ -352,7 +349,8 @@ describe("error handling", () => {
       freshTool.execute?.({ city: "Paris", units: "metric" }, mockContext)
     ).rejects.toThrow(/weather_not_configured/);
 
-    process.env.OPENWEATHER_API_KEY = originalKey || "test_key";
+    // Restore mock
+    (getServerEnvVar as ReturnType<typeof vi.fn>).mockReturnValue("test_key");
     vi.resetModules();
   });
 

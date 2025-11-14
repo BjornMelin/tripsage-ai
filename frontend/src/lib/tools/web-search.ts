@@ -4,16 +4,19 @@
  * Uses direct API (not SDK) for latest v2.5 features and cost control.
  */
 
+import "server-only";
+
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { tool } from "ai";
 import { z } from "zod";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
+import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { fetchWithRetry } from "@/lib/http/fetch-retry";
 import { getRedis } from "@/lib/redis";
+import { WEB_SEARCH_OUTPUT_SCHEMA } from "@/lib/schemas/web-search";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import { normalizeWebSearchResults } from "@/lib/tools/web-search-normalize";
-import { WEB_SEARCH_OUTPUT_SCHEMA } from "@/types/web-search";
 
 /**
  * Build a per-request Upstash rate limiter for the web search tool.
@@ -22,8 +25,8 @@ import { WEB_SEARCH_OUTPUT_SCHEMA } from "@/types/web-search";
 let cachedLimiter: InstanceType<typeof Ratelimit> | undefined;
 function buildToolRateLimiter(): InstanceType<typeof Ratelimit> | undefined {
   if (cachedLimiter) return cachedLimiter;
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  const url = getServerEnvVarWithFallback("UPSTASH_REDIS_REST_URL", undefined);
+  const token = getServerEnvVarWithFallback("UPSTASH_REDIS_REST_TOKEN", undefined);
   if (!url || !token) return undefined;
   cachedLimiter = new Ratelimit({
     analytics: true,
@@ -54,6 +57,31 @@ const scrapeOptionsSchema = z
  * Extracted from scrapeOptionsSchema for type-safe usage.
  */
 type ScrapeOptions = z.infer<typeof scrapeOptionsSchema>;
+
+/**
+ * Zod input schema for web search tool.
+ *
+ * Exported for use in guardrails validation and cache key generation.
+ */
+export const webSearchInputSchema = z.object({
+  categories: z
+    .array(z.union([z.enum(["github", "research", "pdf"]), z.string()]))
+    .optional(),
+  fresh: z.boolean().default(false),
+  freshness: z.string().optional(), // UNVERIFIED
+  limit: z.number().int().min(1).max(10).default(5),
+  location: z.string().max(120).optional(),
+  query: z.string().min(2).max(256),
+  region: z.string().optional(), // UNVERIFIED
+  scrapeOptions: scrapeOptionsSchema,
+  sources: z
+    .array(z.enum(["web", "news", "images"]))
+    .default(["web"])
+    .optional(),
+  tbs: z.string().optional(),
+  timeoutMs: z.number().int().positive().optional(),
+  userId: z.string().optional(),
+});
 
 /**
  * Builds request body for Firecrawl search API with cost-safe defaults.
@@ -178,7 +206,14 @@ export const webSearch = tool({
         redactKeys: ["query"],
       },
       async (span) => {
-        const apiKey = process.env.FIRECRAWL_API_KEY;
+        const { getServerEnvVar } = await import("@/lib/env/server");
+        let apiKey: string | undefined;
+        try {
+          apiKey = getServerEnvVar("FIRECRAWL_API_KEY") as unknown as string;
+        } catch {
+          span.addEvent("not_configured");
+          throw new Error("web_search_not_configured");
+        }
         if (!apiKey) {
           span.addEvent("not_configured");
           throw new Error("web_search_not_configured");
@@ -276,8 +311,10 @@ export const webSearch = tool({
             return validated;
           }
         }
-        const baseUrl =
-          process.env.FIRECRAWL_BASE_URL ?? "https://api.firecrawl.dev/v2";
+        const baseUrl = getServerEnvVarWithFallback(
+          "FIRECRAWL_BASE_URL",
+          "https://api.firecrawl.dev/v2"
+        );
         const url = `${baseUrl}/search`;
         const body = buildRequestBody(requestParams);
         span.addEvent("http_post", { url });
@@ -329,23 +366,5 @@ export const webSearch = tool({
       }
     );
   },
-  inputSchema: z.object({
-    categories: z
-      .array(z.union([z.enum(["github", "research", "pdf"]), z.string()]))
-      .optional(),
-    fresh: z.boolean().default(false),
-    freshness: z.string().optional(), // UNVERIFIED
-    limit: z.number().int().min(1).max(10).default(5),
-    location: z.string().max(120).optional(),
-    query: z.string().min(2).max(256),
-    region: z.string().optional(), // UNVERIFIED
-    scrapeOptions: scrapeOptionsSchema,
-    sources: z
-      .array(z.enum(["web", "news", "images"]))
-      .default(["web"])
-      .optional(),
-    tbs: z.string().optional(),
-    timeoutMs: z.number().int().positive().optional(),
-    userId: z.string().optional(),
-  }),
+  inputSchema: webSearchInputSchema,
 });

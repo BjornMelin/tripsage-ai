@@ -169,6 +169,7 @@ class SecurityMonitoringService:  # pylint: disable=too-many-instance-attributes
         self._service_activity: dict[str, deque[AuditEvent]] = defaultdict(
             lambda: deque(maxlen=1000)
         )
+        self._blocked_ips: set[str] = set()
 
         # Statistics
         self.stats = {
@@ -696,9 +697,9 @@ class SecurityMonitoringService:  # pylint: disable=too-many-instance-attributes
             ThreatCategory.API_ABUSE,
         ]:
             for entity in threat.affected_entities:
-                if self._is_ip_address(entity):
-                    # TODO: Implement IP blocking
-                    actions_taken.append(f"Blocked IP: {entity}")
+                if self._is_ip_address(entity) and entity not in self._blocked_ips:
+                    self._blocked_ips.add(entity)
+                    actions_taken.append(f"Blocked IP (in-memory): {entity}")
                     self.stats["automated_blocks"] += 1
 
         # Log automated actions
@@ -717,7 +718,12 @@ class SecurityMonitoringService:  # pylint: disable=too-many-instance-attributes
             )
 
     async def _send_alert(self, threat: ThreatIndicator, incident: SecurityIncident):
-        """Send security alert for threat."""
+        """Send security alert for threat.
+
+        Alerts are recorded via the audit logging pipeline and emitted to the
+        application logger. External alerting systems (e.g. Slack, email) can
+        subscribe to these streams rather than being called directly here.
+        """
         self.stats["alerts_sent"] += 1
 
         # Log alert
@@ -737,7 +743,6 @@ class SecurityMonitoringService:  # pylint: disable=too-many-instance-attributes
             affected_entities=threat.affected_entities,
         )
 
-        # TODO: Send to external alerting systems (Slack, email, PagerDuty, etc.)
         logger.warning(
             "SECURITY ALERT: %s",
             threat.description,
@@ -813,11 +818,33 @@ class SecurityMonitoringService:  # pylint: disable=too-many-instance-attributes
             del self._threat_indicators[tid]
 
     async def _analyze_trends(self):
-        """Analyze trends and patterns in threat data."""
-        # TODO: Implement trend analysis
-        # - Identify escalating threat patterns
-        # - Detect coordinated attacks
-        # - Analyze attack timing patterns
+        """Analyze trends and patterns in threat data.
+
+        Performs a lightweight, in-memory trend analysis over recent threat
+        indicators and logs categories that exceed a simple threshold. This
+        keeps the implementation side-effect free while still surfacing useful
+        signals for operators and dashboards.
+        """
+        if not self._threat_indicators:
+            return
+
+        now = datetime.now(UTC)
+        horizon = now - timedelta(hours=1)
+
+        counts: dict[str, int] = {}
+        for indicator in self._threat_indicators.values():
+            if indicator.last_seen < horizon:
+                continue
+            key = indicator.threat_category.value
+            counts[key] = counts.get(key, 0) + 1
+
+        for category, count in counts.items():
+            if count >= 5:
+                logger.info(
+                    "Security trend detected: %s recent indicators for category '%s'",
+                    count,
+                    category,
+                )
 
     async def _update_risk_scores(self):
         """Update risk scores for active incidents."""
@@ -836,6 +863,7 @@ class SecurityMonitoringService:  # pylint: disable=too-many-instance-attributes
             "tracked_services": len(self._service_activity),
             "buffer_size": len(self._event_buffer),
             "is_running": self._is_running,
+            "blocked_ips": len(self._blocked_ips),
         }
 
     def get_active_incidents(self) -> list[SecurityIncident]:

@@ -9,8 +9,8 @@ import {
   type ActivitySearchParams,
   useActivitySearch,
 } from "@/hooks/use-activity-search";
+import type { Activity } from "@/lib/schemas/search";
 import { useSearchStore } from "@/stores/search-store";
-import type { Activity } from "@/types/search";
 
 // URL search parameters are handled inline
 
@@ -36,7 +36,9 @@ export default function ActivitiesSearchPage() {
     }
   }, [searchParams, searchActivities]);
 
-  const handleSearch = (params: import("@/types/search").ActivitySearchParams) => {
+  const handleSearch = (
+    params: import("@/lib/schemas/search").ActivitySearchParams
+  ) => {
     // Convert the params to the hook's expected format
     if (params.destination) {
       const hookParams: ActivitySearchParams = {

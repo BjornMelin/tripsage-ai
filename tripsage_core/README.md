@@ -9,7 +9,7 @@ Shared library providing common components, services, and utilities for the Trip
 - **Configuration Management** - Centralized settings for Supabase, Upstash Redis, and external APIs
 - **Exception System** - HTTP status-integrated error handling
 - **Data Models** - Supabase-compatible models for users, trips, flights, and chat
-- **Business Services** - Core logic for authentication, flights, accommodations, and AI memory
+- **Business Services** - Core logic for authentication, flights, accommodations, and memory
 - **External API Integration** - Direct SDK integrations (Duffel, Google Maps, Weather, etc.)
 - **Infrastructure Services** - Database, caching, and Realtime (Supabase) management
 - **Utilities** - Common functionality for caching, logging, and error handling
@@ -74,21 +74,14 @@ from tripsage_core.models.api import TripCreateRequest
 Core business logic with dependency injection:
 
 ```python
-from tripsage_core.services.business import (
-    AuthService,
-    FlightService,
-    AccommodationService,
-    MemoryService
-)
+from tripsage_core.services.business import AuthService, FlightService, MemoryService
 ```
 
 **Available Services:**
 
 - `AuthService` - JWT and API key authentication
 - `FlightService` - Duffel API integration for flights
-- `AccommodationService` - Hotel search and booking
-- `MemoryService` - AI context and conversation memory (Mem0)
-- `ChatService` - Chat session management
+- `MemoryService` - Conversation memory and user preferences
 - `TripService` - Trip planning and coordination
 - `UserService` - User profiles and preferences
 - `DestinationService` - Location research and insights
@@ -103,7 +96,6 @@ Direct SDK integrations with third-party services:
 
 ```python
 from tripsage_core.services.external_apis import (
-    GoogleMapsService,
     DuffelProvider,
     PlaywrightService
 )
@@ -111,13 +103,15 @@ from tripsage_core.services.external_apis import (
 
 **Available Services:**
 
-- `GoogleMapsService` - Location and mapping operations
+> [!NOTE]
+> Location/POI tooling migrated to Next.js; no Python Google Maps service remains.
+> Time-related utilities are no longer exported from Core external_apis; use frontend or direct libs as appropriate.
+> Calendar integration implemented in `frontend/src/lib/calendar/` with Google Calendar REST API v3, ICS import/export, and AI SDK tools. See `docs/architecture/calendar-service.md` for details.
+
 - `DuffelProvider` - Flight search and booking (direct SDK)
-- `CalendarService` - Calendar integration
 - `WebcrawlService` - Content extraction
 - `PlaywrightService` - Browser automation
 - `DocumentAnalyzer` - File processing
-- `TimeService` - Time zone utilities
 
 ### Infrastructure Services (`services/infrastructure/`)
 

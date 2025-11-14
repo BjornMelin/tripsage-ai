@@ -4,14 +4,14 @@
   - Item: LangChain-based streaming with `ChatOpenAI.astream` in hot path
   - Impact: Extra dependency and indirection; harder error handling and SSE control
   - Risk: Streaming regressions; higher maintenance
-  - Fix: Replaced with OpenAI SDK streaming (`client.chat.completions.create(..., stream=True)`), added optional OpenRouter branch and SSE contract
+  - Fix: Replaced with AI SDK v6 streaming (`streamText`), added BYOK provider resolution and SSE contract
   - Status: Resolved
 
-- Area: Orchestrator nodes (fallback configs)
-  - Item: Server-key-only fallbacks for LLM API key selection
-  - Impact: Violates BYOK precedence; inconsistent behavior across nodes
-  - Risk: Using platform key when user BYOK exists
-  - Fix: Added BYOK resolution via `database_service.fetch_user_service_api_key(user_id, 'openai')` before settings fallback across nodes
+- Area: Agent orchestration (migration to TypeScript)
+  - Item: Python LangGraph orchestration system with complex agent nodes
+  - Impact: High maintenance overhead; deployment complexity; limited scalability
+  - Risk: Agent failures; complex debugging; deployment issues
+  - Fix: Migrated all agent functionality to TypeScript AI SDK v6 with direct tool calling
   - Status: Resolved
 
 - Area: Tests (streaming + BYOK)

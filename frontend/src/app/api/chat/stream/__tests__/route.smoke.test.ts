@@ -88,6 +88,9 @@ describe("/api/chat/stream route smoke", () => {
     // Stream stub
     vi.doMock("ai", () => ({
       convertToModelMessages: (x: unknown) => x,
+      generateObject: vi.fn(),
+      NoSuchToolError: class NoSuchToolError extends Error {},
+      stepCountIs: () => () => false,
       streamText: () => ({
         toUIMessageStreamResponse: () => new Response("ok", { status: 200 }),
       }),

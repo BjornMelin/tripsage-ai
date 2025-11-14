@@ -34,10 +34,12 @@ let cachedLimiter: InstanceType<typeof Ratelimit> | undefined;
  * Lazily construct (and cache) the Upstash rate limiter. Avoid module-scope
  * construction to keep tests deterministic and allow env stubbing.
  */
+import { getServerEnvVarWithFallback } from "@/lib/env/server";
+
 function getRateLimiter(): InstanceType<typeof Ratelimit> | undefined {
   if (cachedLimiter) return cachedLimiter;
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  const url = getServerEnvVarWithFallback("UPSTASH_REDIS_REST_URL", undefined);
+  const token = getServerEnvVarWithFallback("UPSTASH_REDIS_REST_TOKEN", undefined);
   if (!url || !token) return undefined;
   cachedLimiter = new Ratelimit({
     analytics: true,

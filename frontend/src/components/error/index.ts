@@ -15,7 +15,7 @@ export type {
   ErrorInfo,
   ErrorReport,
   ErrorServiceConfig,
-} from "@/types/errors";
+} from "@/lib/schemas/errors";
 export { ErrorBoundary, WithErrorBoundary } from "./error-boundary";
 export {
   ErrorFallback,

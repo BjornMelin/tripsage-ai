@@ -6,7 +6,12 @@ import "server-only";
 import type { TypedAdminSupabase } from "./admin";
 import { createAdminSupabase } from "./admin";
 
-export type SupportedService = "openai" | "openrouter" | "anthropic" | "xai";
+export type SupportedService =
+  | "openai"
+  | "openrouter"
+  | "anthropic"
+  | "xai"
+  | "gateway";
 
 /**
  * Type helper for Supabase RPC calls with proper typing.
@@ -24,6 +29,7 @@ function normalizeService(service: string): SupportedService {
   if (s === "openai" || s === "openrouter" || s === "anthropic" || s === "xai") {
     return s;
   }
+  if (s === "gateway") return s as SupportedService;
   throw new Error(`Invalid service: ${service}`);
 }
 
@@ -144,4 +150,71 @@ export async function touchUserApiKey(
     }
   );
   if (error) throw error;
+}
+
+/** Gateway config (base URL) helpers **/
+
+export async function upsertUserGatewayBaseUrl(
+  userId: string,
+  baseUrl: string,
+  client?: TypedAdminSupabase
+): Promise<void> {
+  const supabase = client ?? createAdminSupabase();
+  const { error } = await (supabase as unknown as SupabaseRpcClient).rpc(
+    "upsert_user_gateway_config",
+    {
+      // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
+      p_base_url: baseUrl,
+      // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
+      p_user_id: userId,
+    }
+  );
+  if (error) throw error;
+}
+
+export async function getUserGatewayBaseUrl(
+  userId: string,
+  client?: TypedAdminSupabase
+): Promise<string | null> {
+  const supabase = client ?? createAdminSupabase();
+  const { data, error } = await (supabase as unknown as SupabaseRpcClient).rpc(
+    "get_user_gateway_base_url",
+    {
+      // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
+      p_user_id: userId,
+    }
+  );
+  if (error) throw error;
+  return typeof data === "string" ? data : null;
+}
+
+export async function deleteUserGatewayBaseUrl(
+  userId: string,
+  client?: TypedAdminSupabase
+): Promise<void> {
+  const supabase = client ?? createAdminSupabase();
+  const { error } = await (supabase as unknown as SupabaseRpcClient).rpc(
+    "delete_user_gateway_config",
+    {
+      // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
+      p_user_id: userId,
+    }
+  );
+  if (error) throw error;
+}
+
+export async function getUserAllowGatewayFallback(
+  userId: string,
+  client?: TypedAdminSupabase
+): Promise<boolean | null> {
+  const supabase = client ?? createAdminSupabase();
+  const { data, error } = await (supabase as unknown as SupabaseRpcClient).rpc(
+    "get_user_allow_gateway_fallback",
+    {
+      // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
+      p_user_id: userId,
+    }
+  );
+  if (error) throw error;
+  return typeof data === "boolean" ? data : null;
 }

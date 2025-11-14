@@ -33,6 +33,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # v5.0.0
 
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Verify webhook secret matches primary database setting
+        env:
+          HMAC_SECRET: ${{ secrets.HMAC_SECRET }}
+          PRIMARY_DATABASE_URL: ${{ secrets.PRIMARY_DATABASE_URL }}
+          FALLBACK_DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          export DATABASE_URL="${PRIMARY_DATABASE_URL:-$FALLBACK_DATABASE_URL}"
+          if [ -z "${DATABASE_URL:-}" ]; then
+            echo "::error::Set PRIMARY_DATABASE_URL (preferred) or DATABASE_URL GitHub secret with the writable Supabase connection string."
+            exit 1
+          fi
+          scripts/operators/verify_webhook_secret.sh
+
       - name: Create deployment
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         id: deployment

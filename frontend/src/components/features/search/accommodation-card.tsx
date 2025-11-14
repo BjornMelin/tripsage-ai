@@ -1,6 +1,7 @@
 /**
  * @fileoverview Accommodation card component for displaying accommodation information.
  */
+
 import {
   Car,
   Coffee,
@@ -15,7 +16,7 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import type { Accommodation } from "@/types/search";
+import type { Accommodation } from "@/lib/schemas/search";
 
 interface AccommodationCardProps {
   accommodation: Accommodation;
