@@ -11,9 +11,34 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
+type SupabaseRelationship = {
+  foreignKeyName: string;
+  columns: string[];
+  referencedRelation: string;
+  referencedColumns: string[];
+  isOneToOne?: boolean;
+};
+
+type SupabaseTableShape = {
+  Row: unknown;
+  Insert: unknown;
+  Update: unknown;
+  Relationships?: SupabaseRelationship[];
+};
+
+type SupabaseTables<T extends Record<string, SupabaseTableShape>> = {
+  [K in keyof T]: Omit<T[K], "Relationships"> & {
+    Relationships: T[K] extends { Relationships: infer R }
+      ? R extends SupabaseRelationship[]
+        ? R
+        : SupabaseRelationship[]
+      : SupabaseRelationship[];
+  };
+};
+
 export type Database = {
   public: {
-    Tables: {
+    Tables: SupabaseTables<{
       user_settings: {
         Row: {
           user_id: string;
@@ -141,62 +166,68 @@ export type Database = {
         };
       };
 
+      accommodation_embeddings: {
+        Row: {
+          amenities: string | null;
+          created_at: string | null;
+          description: string | null;
+          embedding: number[] | null;
+          id: string;
+          name: string | null;
+          source: "hotel" | "vrbo";
+          updated_at: string | null;
+        };
+        Insert: {
+          amenities?: string | null;
+          created_at?: string | null;
+          description?: string | null;
+          embedding?: number[] | null;
+          id: string;
+          name?: string | null;
+          source: "hotel" | "vrbo";
+          updated_at?: string | null;
+        };
+        Update: {
+          amenities?: string | null;
+          created_at?: string | null;
+          description?: string | null;
+          embedding?: number[] | null;
+          id?: string;
+          name?: string | null;
+          source?: "hotel" | "vrbo";
+          updated_at?: string | null;
+        };
+      };
+
       accommodations: {
         Row: {
-          id: number;
-          trip_id: number;
-          name: string;
-          address: string | null;
-          check_in_date: string;
-          check_out_date: string;
-          room_type: string | null;
-          price_per_night: number;
-          total_price: number;
-          currency: string;
-          rating: number | null;
-          amenities: string[] | null;
-          booking_status: "available" | "reserved" | "booked" | "cancelled";
-          external_id: string | null;
-          metadata: Json;
+          id: string;
+          amenities: string | null;
           created_at: string;
+          description: string | null;
+          embedding: number[] | null;
+          name: string | null;
+          source: "hotel" | "vrbo";
           updated_at: string;
         };
         Insert: {
-          id?: never;
-          trip_id: number;
-          name: string;
-          address?: string | null;
-          check_in_date: string;
-          check_out_date: string;
-          room_type?: string | null;
-          price_per_night: number;
-          total_price: number;
-          currency?: string;
-          rating?: number | null;
-          amenities?: string[] | null;
-          booking_status?: "available" | "reserved" | "booked" | "cancelled";
-          external_id?: string | null;
-          metadata?: Json;
+          id: string;
+          amenities?: string | null;
           created_at?: string;
+          description?: string | null;
+          embedding?: number[] | null;
+          name?: string | null;
+          source: "hotel" | "vrbo";
           updated_at?: string;
         };
         Update: {
-          id?: never;
-          trip_id?: number;
-          name?: string;
-          address?: string | null;
-          check_in_date?: string;
-          check_out_date?: string;
-          room_type?: string | null;
-          price_per_night?: number;
-          total_price?: number;
-          currency?: string;
-          rating?: number | null;
-          amenities?: string[] | null;
-          booking_status?: "available" | "reserved" | "booked" | "cancelled";
-          external_id?: string | null;
-          metadata?: Json;
+          id?: string;
+          amenities?: string | null;
           created_at?: string;
+          description?: string | null;
+          embedding?: number[] | null;
+          name?: string | null;
+          source?: "hotel" | "vrbo";
           updated_at?: string;
         };
       };
@@ -357,6 +388,14 @@ export type Database = {
           ended_at?: string | null;
           metadata?: Json;
         };
+        Relationships: [
+          {
+            foreignKeyName: "chat_sessions_trip_id_fkey";
+            columns: ["trip_id"];
+            referencedRelation: "trips";
+            referencedColumns: ["id"];
+          }
+        ];
       };
 
       chat_messages: {
@@ -384,6 +423,14 @@ export type Database = {
           created_at?: string;
           metadata?: Json;
         };
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_session_id_fkey";
+            columns: ["session_id"];
+            referencedRelation: "chat_sessions";
+            referencedColumns: ["id"];
+          }
+        ];
       };
 
       chat_tool_calls: {
@@ -423,6 +470,14 @@ export type Database = {
           completed_at?: string | null;
           error_message?: string | null;
         };
+        Relationships: [
+          {
+            foreignKeyName: "chat_tool_calls_message_id_fkey";
+            columns: ["message_id"];
+            referencedRelation: "chat_messages";
+            referencedColumns: ["id"];
+          }
+        ];
       };
 
       // API Keys (BYOK)
@@ -822,7 +877,7 @@ export type Database = {
           created_at?: string;
         };
       };
-    };
+    }>;
     Views: {
       [_ in never]: never;
     };
@@ -877,6 +932,7 @@ export type Enums<T extends keyof Database["public"]["Enums"]> =
 export type Trip = Tables<"trips">;
 export type Flight = Tables<"flights">;
 export type Accommodation = Tables<"accommodations">;
+export type AccommodationEmbedding = Tables<"accommodation_embeddings">;
 export type Transportation = Tables<"transportation">;
 export type ItineraryItem = Tables<"itinerary_items">;
 export type ChatSession = Tables<"chat_sessions">;

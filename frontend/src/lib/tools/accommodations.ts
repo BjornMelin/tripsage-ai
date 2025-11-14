@@ -12,8 +12,11 @@ import "server-only";
 import { Ratelimit } from "@upstash/ratelimit";
 import { tool } from "ai";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
-import { generateEmbedding } from "@/lib/embeddings/generate";
-import { getServerEnvVarWithFallback } from "@/lib/env/server";
+import {
+  generateEmbedding,
+  getEmbeddingsApiUrl,
+  getEmbeddingsRequestHeaders,
+} from "@/lib/embeddings/generate";
 import { processBookingPayment } from "@/lib/payments/booking-payment";
 import { getRedis } from "@/lib/redis";
 import {
@@ -136,7 +139,7 @@ export const searchAccommodations = tool({
         const queryEmbedding = await generateEmbedding(validated.semanticQuery);
         // biome-ignore lint/suspicious/noExplicitAny: Supabase RPC types are not fully generated
         const { data: ragResults, error: ragError } = await (supabase as any).rpc(
-          "match_accommodations",
+          "match_accommodation_embeddings",
           {
             // biome-ignore lint/style/useNamingConvention: Database function parameters use snake_case
             match_count: 20,
@@ -244,45 +247,28 @@ export const searchAccommodations = tool({
     }
 
     // 7. Async embedding generation for new properties (fire-and-forget)
-    if (listings.length > 0) {
-      const supabaseUrl = getServerEnvVarWithFallback("NEXT_PUBLIC_SUPABASE_URL", "");
-      const supabaseAnonKey = getServerEnvVarWithFallback(
-        "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-        ""
-      );
+    if (listings.length > 0 && typeof fetch === "function") {
+      const embeddingsUrl = getEmbeddingsApiUrl();
+      const embeddingsHeaders = getEmbeddingsRequestHeaders();
 
-      if (
-        supabaseUrl &&
-        supabaseAnonKey &&
-        supabaseUrl.length > 0 &&
-        supabaseAnonKey.length > 0
-      ) {
-        // Trigger embedding generation asynchronously (don't await)
-        Promise.all(
-          listings.map((property: EpsProperty) =>
-            fetch(`${supabaseUrl}/functions/v1/generate-embeddings`, {
-              body: JSON.stringify({
-                property: {
-                  amenities: property.amenities || [],
-                  description: property.description,
-                  id: property.id,
-                  name: property.name,
-                  source: property.source,
-                },
-              }),
-              headers: {
-                // biome-ignore lint/style/useNamingConvention: HTTP header names use PascalCase
-                Authorization: `Bearer ${supabaseAnonKey}`,
-                "Content-Type": "application/json",
-              },
-              method: "POST",
-            }).catch((err) => {
-              console.error(`Failed to trigger embedding for ${property.id}:`, err);
-            })
-          )
-        ).catch(() => {
-          // Ignore errors in async embedding generation
-        });
+      for (const property of listings) {
+        fetch(embeddingsUrl, {
+          body: JSON.stringify({
+            property: {
+              amenities: property.amenities || [],
+              description: property.description,
+              id: property.id,
+              name: property.name,
+              source: property.source,
+            },
+          }),
+          headers: embeddingsHeaders,
+          method: "POST",
+        })
+          .then(() => undefined)
+          .catch((err) => {
+            console.error(`Failed to trigger embedding for ${property.id}:`, err);
+          });
       }
     }
 
