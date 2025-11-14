@@ -24,10 +24,6 @@ from tripsage_core.utils.logging_utils import get_logger
 
 
 if TYPE_CHECKING:  # pragma: no cover - import only for type checking
-    from tripsage_core.services.airbnb_mcp import AirbnbMCP
-    from tripsage_core.services.business.accommodation_service import (
-        AccommodationService,
-    )
     from tripsage_core.services.business.destination_service import DestinationService
     from tripsage_core.services.business.file_processing_service import (
         FileProcessingService,
@@ -58,8 +54,7 @@ class AppServiceContainer:
     """Typed container for application-wide service singletons."""
 
     # Business services
-    accommodation_service: AccommodationService | None = None
-    # chat_service removed
+    # Legacy accommodation_service removed; accommodations handled via frontend agents
     destination_service: DestinationService | None = None
     file_processing_service: FileProcessingService | None = None
     flight_service: FlightService | None = None
@@ -82,9 +77,6 @@ class AppServiceContainer:
     # Supabase clients
     supabase_admin_client: Any | None = None
     supabase_public_client: Any | None = None
-
-    # MCP service (used by accommodation service)
-    mcp_service: AirbnbMCP | None = None
 
     def get_required_service(
         self,
@@ -156,10 +148,6 @@ async def _setup_business_services(
     settings: Any,
 ) -> dict[str, Any]:
     """Initialise business-layer services."""
-    from tripsage_core.services.business.accommodation_service import (
-        AccommodationService,
-    )
-
     # ActivityService removed (migrated to Next.js tools)
     from tripsage_core.services.business.destination_service import DestinationService
     from tripsage_core.services.business.file_processing_service import (
@@ -185,7 +173,7 @@ async def _setup_business_services(
         database_service=database_service,
         ai_analysis_service=document_analyzer,
     )
-    accommodation_service = AccommodationService(database_service=database_service)
+    accommodation_service: None = None
     destination_service = DestinationService(
         database_service=database_service,
     )
@@ -206,7 +194,6 @@ async def _setup_business_services(
     )
 
     return {
-        "accommodation_service": accommodation_service,
         "destination_service": destination_service,
         "file_processing_service": file_processing_service,
         "flight_service": flight_service,
@@ -218,21 +205,11 @@ async def _setup_business_services(
     }
 
 
-async def _setup_mcp_service() -> AirbnbMCP:
-    """Initialise MCP service for accommodation searches."""
-    from tripsage_core.services.airbnb_mcp import AirbnbMCP
-
-    mcp_service = AirbnbMCP()
-    await mcp_service.initialize()
-    return mcp_service
-
-
 def _build_service_container(
     *,
     business: dict[str, Any],
     infrastructure: tuple[DatabaseService, CacheService],
     external: tuple[DocumentAnalyzer, WebCrawlService],
-    mcp_service: AirbnbMCP,
 ) -> AppServiceContainer:
     """Assemble the AppServiceContainer with the provided components."""
     database_service, cache_service = infrastructure
@@ -242,7 +219,6 @@ def _build_service_container(
     ) = external
 
     return AppServiceContainer(
-        accommodation_service=business["accommodation_service"],
         destination_service=business["destination_service"],
         file_processing_service=business["file_processing_service"],
         flight_service=business["flight_service"],
@@ -255,7 +231,6 @@ def _build_service_container(
         webcrawl_service=webcrawl_service,
         cache_service=cache_service,
         database_service=database_service,
-        mcp_service=mcp_service,
     )
 
 
@@ -265,13 +240,11 @@ def _attach_services_to_app_state(
     services: AppServiceContainer,
     database_service: DatabaseService,
     cache_service: CacheService,
-    mcp_service: AirbnbMCP,
 ) -> None:
     """Attach commonly accessed services to ``app.state``."""
     app.state.services = services
     app.state.cache_service = cache_service
     app.state.database_service = database_service
-    app.state.mcp_service = mcp_service
     app.state.supabase_admin_client = services.supabase_admin_client
     app.state.supabase_public_client = services.supabase_public_client
 
@@ -292,13 +265,11 @@ async def initialise_app_state(
         document_analyzer=external[0],
         settings=settings,
     )
-    mcp_service = await _setup_mcp_service()
 
     services = _build_service_container(
         business=business,
         infrastructure=infrastructure,
         external=external,
-        mcp_service=mcp_service,
     )
 
     # Warm Supabase clients so downstream dependencies can reuse cached instances
@@ -310,7 +281,6 @@ async def initialise_app_state(
         services=services,
         database_service=infrastructure[0],
         cache_service=infrastructure[1],
-        mcp_service=mcp_service,
     )
 
     return services
@@ -328,8 +298,6 @@ async def shutdown_app_state(app: FastAPI) -> None:
         await services.cache_service.disconnect()
     if services.memory_service:
         await services.memory_service.close()
-    if services.mcp_service:
-        await services.mcp_service.shutdown()
 
     await close_database_service()
 
@@ -338,7 +306,6 @@ async def shutdown_app_state(app: FastAPI) -> None:
         "services",
         "cache_service",
         "database_service",
-        "mcp_service",
     ):
         if hasattr(app.state, attr):
             delattr(app.state, attr)

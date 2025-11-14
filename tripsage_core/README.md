@@ -74,20 +74,14 @@ from tripsage_core.models.api import TripCreateRequest
 Core business logic with dependency injection:
 
 ```python
-from tripsage_core.services.business import (
-    AuthService,
-    FlightService,
-    AccommodationService,
-    MemoryService
-)
+from tripsage_core.services.business import AuthService, FlightService, MemoryService
 ```
 
 **Available Services:**
 
 - `AuthService` - JWT and API key authentication
 - `FlightService` - Duffel API integration for flights
-- `AccommodationService` - Hotel search and booking
-- `MemoryService` - Conversation memory and user preferences (Mem0)
+- `MemoryService` - Conversation memory and user preferences
 - `TripService` - Trip planning and coordination
 - `UserService` - User profiles and preferences
 - `DestinationService` - Location research and insights

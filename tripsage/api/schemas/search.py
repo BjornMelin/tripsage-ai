@@ -36,7 +36,7 @@ class UnifiedSearchRequest(BaseModel):
     sort_by: str | None = None
     sort_order: str | None = Field("desc", pattern="^(asc|desc)$")
     user_preferences: dict[str, str | int | float | bool] | None = None
-    # Legacy-compatible fields used by core services
+    # Additional fields used by search history and analytics services
     resource_types: list[str] | None = None
     location: str | None = None
     guests: int | None = None
@@ -106,7 +106,7 @@ class UnifiedSearchAggregateResponse(BaseModel):
     errors: dict[str, str] | None = None
 
 
-# Backward-compatible alias expected by core services
+# Canonical response alias used by API and services
 UnifiedSearchResponse = UnifiedSearchAggregateResponse
 
 

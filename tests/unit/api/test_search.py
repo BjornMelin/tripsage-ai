@@ -49,14 +49,12 @@ async def test_unified_search_cache_hit_miss(
     """Verify unified search caches results and returns cached payload."""
     from tripsage.api.core import dependencies as dep
 
-    # DI overrides: search service + cache
-    def _provide_search_service() -> Any:
-        """Provide unified search service stub."""
+    # DI overrides: search facade + cache
+    def _provide_search_facade() -> Any:
+        """Provide search facade stub exposing unified_search."""
         return _SearchService()
 
-    app.dependency_overrides[dep.get_unified_search_service_dep] = (
-        _provide_search_service  # type: ignore[assignment]
-    )
+    app.dependency_overrides[dep.get_search_facade] = _provide_search_facade  # type: ignore[assignment]
 
     class _Cache:
         """In-memory cache stub."""
@@ -105,13 +103,11 @@ async def test_suggestions_basic(
     """Suggestions return a bounded list for the given query."""
     from tripsage.api.core import dependencies as dep
 
-    def _provide_search_service2() -> Any:
-        """Provide unified search service stub (suggestions)."""
+    def _provide_search_facade2() -> Any:
+        """Provide search facade stub (suggestions)."""
         return _SearchService()
 
-    app.dependency_overrides[dep.get_unified_search_service_dep] = (
-        _provide_search_service2
-    )
+    app.dependency_overrides[dep.get_search_facade] = _provide_search_facade2  # type: ignore[assignment]
 
     client = async_client_factory(app)
     r = await client.get("/suggest", params={"query": "rome", "limit": 5})

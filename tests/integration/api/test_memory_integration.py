@@ -40,7 +40,9 @@ async def test_memory_conversation_post(
     def _provide_memsvc() -> _MemSvc:
         return _MemSvc()
 
-    app.dependency_overrides[dep.require_principal] = _provide_principal  # type: ignore[assignment]
+    app.dependency_overrides[dep._require_principal_dependency] = (  # type: ignore[assignment]
+        _provide_principal
+    )
     app.dependency_overrides[dep.get_memory_service] = _provide_memsvc  # type: ignore[assignment]
 
     client = async_client_factory(app)

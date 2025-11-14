@@ -46,7 +46,9 @@ async def test_memory_preference_and_search_error(
         """Provide memory service stub for DI."""
         return _MemSvc()
 
-    app.dependency_overrides[dep.require_principal] = _provide_principal  # type: ignore[assignment]
+    app.dependency_overrides[dep._require_principal_dependency] = (  # type: ignore[assignment]
+        _provide_principal
+    )
     app.dependency_overrides[dep.get_memory_service] = _provide_memsvc  # type: ignore[assignment]
 
     client = async_client_factory(app)

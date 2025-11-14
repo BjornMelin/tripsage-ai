@@ -254,31 +254,6 @@ class ConfigurationService:
         )
         return updated_config
 
-    # Legacy SQL paths removed; Supabase-only implementation above.
-
-    async def get_configuration_versions(
-        self, agent_type: str, environment: str | None = None, limit: int = 10
-    ) -> list[dict[str, Any]]:
-        """Get configuration version history."""
-        if environment is None:
-            environment = self.settings.environment
-
-        # Not implemented in Supabase mode; versioning handled externally.
-        return []
-
-    async def rollback_to_version(
-        self,
-        agent_type: str,
-        version_id: str,
-        rolled_back_by: str,
-        environment: str | None = None,
-    ) -> dict[str, Any]:
-        """Rollback configuration to a specific version."""
-        if environment is None:
-            environment = self.settings.environment
-
-        raise NotImplementedError("Rollback not implemented in Supabase mode")
-
     async def get_all_agent_configs(
         self, environment: str | None = None
     ) -> dict[str, dict[str, Any]]:
@@ -304,18 +279,6 @@ class ConfigurationService:
                 configs[agent_type] = default_fn(agent_type)
 
         return configs
-
-    async def record_performance_metrics(
-        self,
-        agent_type: str,
-        metrics: dict[str, Any],
-        environment: str | None = None,
-    ) -> None:
-        """Record performance metrics for configuration optimization."""
-        if environment is None:
-            environment = self.settings.environment
-
-        # Not implemented in Supabase mode.
 
 
 @lru_cache(maxsize=1)
