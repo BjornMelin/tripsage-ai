@@ -1,9 +1,0 @@
-{
-  "imports": {
-    "std/": "https://deno.land/std@0.224.0/",
-    "std/assert": "https://deno.land/std@0.224.0/assert/mod.ts",
-    "std/testing": "https://deno.land/std@0.224.0/testing/mod.ts",
-    "std/http": "https://deno.land/std@0.224.0/http/mod.ts",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.76.1"
-  }
-}
