@@ -195,8 +195,6 @@ export function DestinationSearchForm({
       types: data.types,
     };
 
-    console.log("Destination search params:", searchParams);
-
     if (onSearch) {
       onSearch(searchParams);
     }
