@@ -15,7 +15,7 @@ import type {
   AgentTask,
   ResourceUsage,
 } from "@/lib/schemas/agent-status";
-import { getBrowserClient } from "@/lib/supabase/client";
+import { getBrowserClient } from "@/lib/supabase";
 import { useAuthStore } from "@/stores";
 import { useAgentStatusStore } from "@/stores/agent-status-store";
 

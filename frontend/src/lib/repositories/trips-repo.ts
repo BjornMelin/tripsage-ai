@@ -1,7 +1,7 @@
 /**
  * @fileoverview Trip repository: typed Supabase CRUD + UI mapping.
  */
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase";
 import type { InsertTables, Tables, UpdateTables } from "@/lib/supabase/database.types";
 import { insertSingle, updateSingle } from "@/lib/supabase/typed-helpers";
 
