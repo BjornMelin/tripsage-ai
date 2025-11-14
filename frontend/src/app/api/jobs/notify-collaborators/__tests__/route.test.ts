@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { NotifyJob } from "@/lib/schemas/webhooks";
 
-type ReceiverVerify = (args: { body: string; signature: string; url: string }) => Promise<boolean>;
+type ReceiverVerify = (args: {
+  body: string;
+  signature: string;
+  url: string;
+}) => Promise<boolean>;
 type TryReserveKey = (key: string, ttlSeconds?: number) => Promise<boolean>;
 type SendNotifications = (
   payload: NotifyJob["payload"],
@@ -46,10 +50,8 @@ vi.mock("@/lib/idempotency/redis", () => ({
 }));
 
 vi.mock("@/lib/notifications/collaborators", () => ({
-  sendCollaboratorNotifications: (
-    payload: NotifyJob["payload"],
-    eventKey: string
-  ) => sendNotificationsMock(payload, eventKey),
+  sendCollaboratorNotifications: (payload: NotifyJob["payload"], eventKey: string) =>
+    sendNotificationsMock(payload, eventKey),
 }));
 
 function makeRequest(body: NotifyJob | Record<string, unknown>, headers?: HeadersInit) {
