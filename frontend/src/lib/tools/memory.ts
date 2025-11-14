@@ -4,8 +4,8 @@
 
 import { tool } from "ai";
 import { z } from "zod";
+import { createServerSupabase } from "@/lib/supabase";
 import type { Database } from "@/lib/supabase/database.types";
-import { createServerSupabase } from "@/lib/supabase/server";
 
 /**
  * Allowed memory categories aligned with DB enum `memory_type`.

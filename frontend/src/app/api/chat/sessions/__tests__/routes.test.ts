@@ -69,7 +69,7 @@ function buildReq(
   return nextRequest;
 }
 
-vi.mock("@/lib/supabase/server", () => {
+vi.mock("@/lib/supabase", () => {
   type StoreRow = Record<string, unknown>;
   type MockQueryBuilder = {
     rows: StoreRow[];

@@ -18,7 +18,7 @@ import {
 import { resolveProvider } from "@/lib/providers/registry";
 import { enforceRouteRateLimit } from "@/lib/ratelimit/config";
 import { getRedis } from "@/lib/redis";
-import { createServerSupabase } from "@/lib/supabase/server";
+import { createServerSupabase } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;

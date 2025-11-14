@@ -30,7 +30,7 @@ describe("/api/calendar/events route", () => {
     googleUpdateEvent?: unknown;
     googleDeleteEvent?: unknown;
   }) => {
-    vi.doMock("@/lib/supabase/server", () => ({
+    vi.doMock("@/lib/supabase", () => ({
       createServerSupabase: vi.fn(async () => mockSupabase),
     }));
 
@@ -131,7 +131,7 @@ describe("/api/calendar/events route", () => {
     });
 
     it("returns 401 when unauthenticated", async () => {
-      vi.doMock("@/lib/supabase/server", () => ({
+      vi.doMock("@/lib/supabase", () => ({
         createServerSupabase: vi.fn(async () => ({
           auth: {
             getUser: async () => ({
@@ -360,7 +360,7 @@ describe("/api/calendar/events route", () => {
     });
 
     it("returns 401 when unauthenticated on delete", async () => {
-      vi.doMock("@/lib/supabase/server", () => ({
+      vi.doMock("@/lib/supabase", () => ({
         createServerSupabase: vi.fn(async () => ({
           auth: {
             getUser: async () => ({

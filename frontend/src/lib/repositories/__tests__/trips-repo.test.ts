@@ -3,7 +3,7 @@ import { createTrip, mapTripRowToUi, updateTrip } from "@/lib/repositories/trips
 import type { Tables } from "@/lib/supabase/database.types";
 import * as helpers from "@/lib/supabase/typed-helpers";
 
-vi.mock("@/lib/supabase/client", () => ({
+vi.mock("@/lib/supabase", () => ({
   createClient: () => ({}),
 }));
 

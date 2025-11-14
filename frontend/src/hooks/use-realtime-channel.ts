@@ -45,12 +45,13 @@ export interface UseRealtimeChannelResult<T = unknown> {
  * consuming and emitting broadcast events.
  *
  * @template T - Expected payload shape for broadcast events.
- * @param topic Supabase topic to join (for example `user:uuid`).
+ * @param topic Supabase topic to join (for example `user:uuid`). When null,
+ *   the hook remains idle and does not subscribe to any channel.
  * @param opts Optional channel configuration.
  * @returns Connection state and broadcast helpers.
  */
 export function useRealtimeChannel<T = unknown>(
-  topic: string,
+  topic: string | null,
   opts: UseRealtimeChannelOptions = { private: true }
 ): UseRealtimeChannelResult<T> {
   const supabase = useMemo(() => getBrowserClient(), []);
@@ -59,6 +60,13 @@ export function useRealtimeChannel<T = unknown>(
   const channelRef = useRef<ChannelInstance | null>(null);
 
   useEffect(() => {
+    if (!topic) {
+      channelRef.current = null;
+      setIsConnected(false);
+      setError(null);
+      return;
+    }
+
     let disposed = false;
     const channel = supabase.channel(topic, {
       config: { private: opts.private !== false },
@@ -70,9 +78,11 @@ export function useRealtimeChannel<T = unknown>(
         return;
       }
       if (status === "SUBSCRIBED") {
+        setError(null);
         setIsConnected(true);
       }
       if (err) {
+        setIsConnected(false);
         setError(err.message ?? "Realtime subscription error");
       }
     });

@@ -319,7 +319,7 @@ export class RealtimeHookTester {
    * Sets up mocks for testing hooks that use Supabase real-time.
    */
   setupMocks() {
-    vi.mock("@/lib/supabase/client", () => ({
+    vi.mock("@/lib/supabase", () => ({
       useSupabase: vi.fn(() => this.testEnv.supabaseClient),
     }));
 

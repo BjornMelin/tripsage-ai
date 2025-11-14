@@ -24,7 +24,7 @@ describe("/api/chat route smoke", () => {
   });
 
   it("returns 401 unauthenticated", async () => {
-    vi.doMock("@/lib/supabase/server", () => ({
+    vi.doMock("@/lib/supabase", () => ({
       createServerSupabase: vi.fn(async () => ({
         auth: { getUser: vi.fn(async () => ({ data: { user: null } })) },
       })),
@@ -35,7 +35,7 @@ describe("/api/chat route smoke", () => {
   });
 
   it("returns 200 on success", async () => {
-    vi.doMock("@/lib/supabase/server", () => ({
+    vi.doMock("@/lib/supabase", () => ({
       createServerSupabase: vi.fn(async () => ({
         auth: { getUser: vi.fn(async () => ({ data: { user: { id: "u1" } } })) },
         from: vi.fn(() => ({ insert: vi.fn(async () => ({ error: null })) })),

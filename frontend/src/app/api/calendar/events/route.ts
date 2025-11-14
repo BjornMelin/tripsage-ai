@@ -23,7 +23,7 @@ import {
   eventsListRequestSchema,
   updateEventRequestSchema,
 } from "@/lib/schemas/calendar";
-import { createServerSupabase } from "@/lib/supabase/server";
+import { createServerSupabase } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 

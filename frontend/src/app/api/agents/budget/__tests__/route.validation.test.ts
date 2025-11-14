@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 describe("/api/agents/budget validation", () => {
   it("returns 400 on invalid body", async () => {
-    vi.doMock("@/lib/supabase/server", () => ({
+    vi.doMock("@/lib/supabase", () => ({
       createServerSupabase: vi.fn(async () => ({
         auth: { getUser: async () => ({ data: { user: { id: "user-1" } } }) },
       })),

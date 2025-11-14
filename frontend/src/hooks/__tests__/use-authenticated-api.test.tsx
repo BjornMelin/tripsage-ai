@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
 import { apiClient } from "@/lib/api/api-client";
 import { ApiError } from "@/lib/api/error-types";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase";
 import type { SupabaseAuthMock } from "@/test/mock-helpers";
 import { render, screen } from "@/test/test-utils";
 

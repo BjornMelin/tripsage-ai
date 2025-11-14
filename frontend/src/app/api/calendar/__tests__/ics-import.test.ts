@@ -15,7 +15,7 @@ describe("/api/calendar/ics/import route", () => {
   };
 
   const setupMocks = (overrides?: { rateLimit?: typeof mockRateLimit }) => {
-    vi.doMock("@/lib/supabase/server", () => ({
+    vi.doMock("@/lib/supabase", () => ({
       createServerSupabase: vi.fn(async () => ({
         auth: {
           getUser: async () => ({

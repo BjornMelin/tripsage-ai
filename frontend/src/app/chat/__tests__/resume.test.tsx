@@ -9,7 +9,7 @@ vi.mock("streamdown", () => ({
   ),
 }));
 
-vi.mock("@/lib/supabase/client", () => {
+vi.mock("@/lib/supabase", () => {
   return {
     useSupabase: () => ({
       auth: {

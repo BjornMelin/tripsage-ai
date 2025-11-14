@@ -22,7 +22,7 @@ describe("/api/calendar/status route", () => {
       kind: "calendar#calendarList",
     };
 
-    vi.doMock("@/lib/supabase/server", () => ({
+    vi.doMock("@/lib/supabase", () => ({
       createServerSupabase: vi.fn(async () => ({
         auth: {
           getUser: async () => ({
@@ -85,7 +85,7 @@ describe("/api/calendar/status route", () => {
   });
 
   it("returns not connected when no token", async () => {
-    vi.doMock("@/lib/supabase/server", () => ({
+    vi.doMock("@/lib/supabase", () => ({
       createServerSupabase: vi.fn(async () => ({
         auth: {
           getUser: async () => ({
@@ -147,7 +147,7 @@ describe("/api/calendar/status route", () => {
   });
 
   it("returns 429 on rate limit exceeded", async () => {
-    vi.doMock("@/lib/supabase/server", () => ({
+    vi.doMock("@/lib/supabase", () => ({
       createServerSupabase: vi.fn(async () => ({
         auth: {
           getUser: async () => ({
