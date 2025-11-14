@@ -24,6 +24,7 @@ import {
 } from "@supabase/ssr";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
+import { getClientEnv } from "@/lib/env/client";
 import { getServerEnv } from "@/lib/env/server";
 import { TELEMETRY_SERVICE_NAME } from "@/lib/telemetry/tracer";
 import type { Database } from "./database.types";
@@ -141,6 +142,78 @@ export function createServerSupabase(
         "db.name": "tripsage",
         "db.supabase.operation": "init",
         "db.system": "postgres",
+        "service.name": TELEMETRY_SERVICE_NAME,
+      },
+    },
+    (span: Span) => {
+      try {
+        const client = createClient();
+        span.setStatus({ code: SpanStatusCode.OK });
+        return client;
+      } catch (error) {
+        span.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: error instanceof Error ? error.message : "Unknown error",
+        });
+        span.recordException(error as Error);
+        throw error;
+      } finally {
+        span.end();
+      }
+    }
+  );
+}
+
+/**
+ * Creates a Supabase client for middleware with client-only environment variables.
+ *
+ * This factory function creates a server-side Supabase client specifically for middleware
+ * running in the Edge runtime. It only validates client-safe environment variables
+ * (NEXT_PUBLIC_*) to avoid dependency on server secrets that aren't available in Edge.
+ *
+ * @param options - Configuration options for the middleware client
+ * @returns A typed Supabase client instance for middleware operations
+ * @throws Error if required client environment variables are missing
+ *
+ * @example
+ * const supabase = createMiddlewareSupabase({
+ *   cookies: customCookieAdapter,
+ *   enableTracing: false, // Disable tracing in Edge runtime
+ * });
+ */
+export function createMiddlewareSupabase(
+  options: CreateServerSupabaseOptions = {}
+): ServerSupabaseClient {
+  const { enableTracing = false, spanName = "middleware.supabase.init" } = options;
+  const tracer = getTracer();
+
+  // Validate only client environment variables for Edge runtime compatibility
+  const env = getClientEnv();
+
+  const createClient = () => {
+    // Use @supabase/ssr for proper SSR cookie handling
+    return createSsrServerClient<Database>(
+      env.NEXT_PUBLIC_SUPABASE_URL,
+      env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      {
+        cookies: createCookieMethods(options.cookies),
+      }
+    );
+  };
+
+  if (!enableTracing) {
+    return createClient();
+  }
+
+  // Wrap client creation in OpenTelemetry span
+  return tracer.startActiveSpan(
+    spanName,
+    {
+      attributes: {
+        "db.name": "tripsage",
+        "db.supabase.operation": "middleware.init",
+        "db.system": "postgres",
+        "runtime.environment": "edge",
         "service.name": TELEMETRY_SERVICE_NAME,
       },
     },
@@ -313,16 +386,5 @@ function createCookieMethods(adapter?: CookieMethodsServer): CookieMethodsServer
   };
 }
 
-/**
- * Type guard to check if a value is a valid Supabase client.
- * @param client - Value to check
- * @returns True if the value is a Supabase client
- */
-export function isSupabaseClient(client: unknown): client is SupabaseClient<Database> {
-  return (
-    typeof client === "object" &&
-    client !== null &&
-    "auth" in client &&
-    "from" in client
-  );
-}
+// Runtime-only utilities (e.g., isSupabaseClient) live in guards.ts to avoid
+// coupling this server-only module to client bundles.
