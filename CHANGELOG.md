@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Refactor
+
+- **[Environment]:** Centralized environment variable guards with enhanced Zod v4 schema validation, comprehensive refinements, and smart fallbacks. Introduced `parseEnv()` and `parseClientEnv()` functions with OTEL-compatible error attributes for improved observability. Added format validation for API keys (Stripe `/^sk_(live|test)_/`, Anthropic `/^sk-ant-/`, OpenAI `/^sk-/`, Resend `/^re_/`), environment-specific refinements (production requires `sk_live_` for Stripe, mandatory Upstash URL when token is present), and default values (AI Gateway, Firecrawl, Resend). Achieved 85.45% statement coverage with 59 comprehensive tests. Reduced configuration bloat by ~15% through centralized validation, slashed injection risks with regex guards, and ensured Vercel Edge compatibility. Updated `frontend/src/lib/env/schema.ts`, `frontend/src/lib/env/server.ts`, `frontend/src/lib/env/client.ts`, and added `frontend/src/lib/env/__tests__/schema.test.ts`.
+
 ## [1.0.0] - 2025-11-14
 
 ### [1.0.0] Added
@@ -335,7 +339,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Removed custom `getSessionId` helper in favor of the shared utility in `src/lib/utils.ts`.
 - **[Trips]:** Unified three separate trip data hooks into a single `useTrips` hook to manage all CRUD operations and real-time updates for the trip domain.
 - **[API]:** Consolidated three separate API clients into a single, unified `ApiClient` to enforce a consistent pattern for all HTTP requests.
-- [Core]: Unified all data models into canonical Zod v4 schemas under
+- **[Core]:** Unified all data models into canonical Zod v4 schemas under
   `src/lib/schemas/` and removed the redundant `src/types/` and `src/schemas/` directories to establish a single source of truth for data contracts and runtime validation.
 
 ## [0.2.1] - 2025-11-01

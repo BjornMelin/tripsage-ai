@@ -17,6 +17,8 @@ export {
 } from "./client";
 // Explicit exports to prevent accidental wildcard imports
 export type { ClientEnv, ServerEnv } from "./schema";
+// Centralized parsing functions (use with caution - server context only for parseEnv)
+export { parseClientEnv, parseEnv } from "./schema";
 // Server-only exports (will fail if imported in client)
 export {
   env as serverEnv,

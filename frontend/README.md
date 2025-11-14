@@ -467,17 +467,22 @@ frontend/
 
 ## Environment configuration
 
+[![Zod](https://img.shields.io/badge/Zod-v4.1-EnvGuard-green?logo=zod)](https://zod.dev)
+
 The frontend uses a centralized environment variable system with explicit
-server/client separation.
+server/client separation, comprehensive Zod validation, and enhanced security
+guards to prevent injection risks and ensure Vercel Edge compatibility.
 
 ### Environment Architecture
 
 Environment variables are managed through `src/lib/env/`:
 
-- **`schema.ts`**: Shared Zod schemas for all environment variables
+- **`schema.ts`**: Shared Zod schemas with refinements, fallbacks, and the
+  centralized `parseEnv()` function for all environment variables
 - **`server.ts`**: Server-only access (API routes, Server Components,
-  server actions)
+  server actions) with caching and validation
 - **`client.ts`**: Client-safe access (only `NEXT_PUBLIC_*` variables)
+  with frozen objects to prevent mutation
 
 ### Key Rules
 
@@ -532,7 +537,36 @@ const basePath = getClientEnvVarWithFallback("NEXT_PUBLIC_BASE_PATH", "");
 **Never** use `process.env` directly in application code. Always use the
 env helpers.
 
-See `src/lib/env/schema.ts` for the full list of supported variables.
+### Env Guards & Security
+
+The centralized schema provides multiple layers of protection:
+
+- **Format Validation**: Regex patterns enforce key formats (e.g., Stripe keys
+  must match `/^sk_(live|test)_/`, Anthropic keys `/^sk-ant-/`, Resend keys
+  `/^re_/`, OpenAI keys `/^sk-/`)
+- **Environment-Specific Refinements**: Production requires stricter validation
+  (e.g., `sk_live_` for Stripe, mandatory Upstash URL if token is present)
+- **Smart Fallbacks**: Default values for common configs (e.g.,
+  `AI_GATEWAY_URL` defaults to `https://ai-gateway.vercel.sh/v1`,
+  `RESEND_FROM_NAME` to `"TripSage"`, `PORT` to `3000`)
+- **OTEL-Compatible Errors**: Validation failures include structured error
+  details with timestamps for observability integration
+- **Edge Runtime Safe**: All validations work in Vercel Edge environments
+  without Node.js-specific dependencies
+
+**Advanced Usage** (direct parsing in factories):
+
+```typescript
+import { parseEnv } from "@/lib/env/schema";
+
+const env = parseEnv(); // Throws with detailed errors if validation fails
+const stripe = new Stripe(env.STRIPE_SECRET_KEY);
+```
+
+See `src/lib/env/schema.ts` for the full list of supported variables and
+validation rules. Refer to [OWASP Environment Variable
+Security](https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html)
+for best practices.
 
 ### HTTP Client (Unified)
 
