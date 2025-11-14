@@ -178,6 +178,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added `frontend/src/lib/telemetry/tracer.ts` for a single OTEL tracer name and `frontend/src/lib/telemetry/alerts.ts` for `[operational-alert]` JSON logs, with Vitest coverage for tracer, alerts, Redis warnings, and webhook payload failures.
   - Redis cache/idempotency helpers now emit alerts alongside `redis.unavailable` spans, and `parseAndVerify` logs `webhook.verification_failed` with precise reasons; operator docs and the storage deployment summary explain how to wire log drains for both events.
 - Deployment workflow enforces webhook secret parity: `.github/workflows/deploy.yml` installs `psql`, runs `scripts/operators/verify_webhook_secret.sh`, and requires `PRIMARY_DATABASE_URL` (falling back to `DATABASE_URL`) plus `HMAC_SECRET` secrets; docs highlight the CI guard and primary-DB requirement.
+- Observability guide documents `[operational-alert]` usage and current events (`redis.unavailable`, `webhook.verification_failed`); developer README links to the guide for future telemetry changes.
+- `.github/ci-config.yml` lists `PRIMARY_DATABASE_URL` and `HMAC_SECRET` under `secrets.deploy` so deploy requirements remain visible in config.
 
 - Flights tool now prefers `DUFFEL_ACCESS_TOKEN` (fallback `DUFFEL_API_KEY`)
   - `frontend/src/lib/tools/flights.ts`
