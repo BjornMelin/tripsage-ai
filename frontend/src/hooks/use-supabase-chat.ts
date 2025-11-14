@@ -15,7 +15,7 @@ import {
 } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { z } from "zod";
-import { useSupabase } from "@/lib/supabase/client";
+import { useSupabase } from "@/lib/supabase";
 import type {
   ChatMessage,
   ChatRole,
