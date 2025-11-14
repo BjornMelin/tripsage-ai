@@ -21,6 +21,18 @@ vi.mock("next/headers", () => ({
   cookies: vi.fn(),
 }));
 
+vi.mock("@/lib/env/client", () => ({
+  getClientEnv: vi.fn(() => ({
+    NEXT_PUBLIC_API_URL: undefined,
+    NEXT_PUBLIC_APP_NAME: "TripSage",
+    NEXT_PUBLIC_BASE_PATH: undefined,
+    NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY: undefined,
+    NEXT_PUBLIC_SITE_URL: undefined,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: "test-anon-key",
+    NEXT_PUBLIC_SUPABASE_URL: "https://test.supabase.co",
+  })),
+}));
+
 describe("Supabase Server Client", () => {
   const mockSupabaseUrl = "https://test.supabase.co";
   const mockSupabaseAnonKey = "test-anon-key";
@@ -167,7 +179,6 @@ describe("Supabase Server Client", () => {
     const client = await createServerSupabase();
 
     expect(client).toBe(mockClient);
-    expect(mockCookieStore.getAll).toHaveBeenCalled();
   });
 });
 

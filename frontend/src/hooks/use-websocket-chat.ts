@@ -4,15 +4,12 @@
 
 "use client";
 
-import type { RealtimeChannel } from "@supabase/supabase-js";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { nowIso, secureUuid } from "@/lib/security/random";
-import { getBrowserClient } from "@/lib/supabase";
 import { useAuthStore } from "@/stores";
+import { useRealtimeChannel } from "./use-realtime-channel";
 
 type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
-
-type ChannelSendRequest = Parameters<RealtimeChannel["send"]>[0];
 
 /**
  * Payload for chat message broadcast events.
@@ -97,36 +94,50 @@ export function useWebSocketChat({
   topicType = "user",
   sessionId,
 }: WebSocketChatOptions = {}): UseWebSocketChatReturn {
-  const supabase = useMemo(() => getBrowserClient(), []);
   const { user } = useAuthStore();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [status, setStatus] = useState<ConnectionStatus>("disconnected");
-  const [_reconnectVersion, setReconnectVersion] = useState(0);
-  const channelRef = useRef<RealtimeChannel | null>(null);
-  const reconnectAttemptsRef = useRef(0);
-  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
+  const topic = useMemo(() => {
     if (!autoConnect) {
-      return;
+      return null;
     }
     const userId = user?.id;
-    const topic =
-      topicType === "session"
-        ? sessionId
-          ? `session:${sessionId}`
-          : null
-        : userId
-          ? `user:${userId}`
-          : null;
+    if (topicType === "session") {
+      return sessionId ? `session:${sessionId}` : null;
+    }
+    return userId ? `user:${userId}` : null;
+  }, [autoConnect, sessionId, topicType, user?.id]);
+
+  const { channel, isConnected, error, sendBroadcast } = useRealtimeChannel<
+    ChatMessageBroadcastPayload | ChatTypingBroadcastPayload
+  >(topic, { private: true });
+
+  useEffect(() => {
     if (!topic) {
+      setStatus("disconnected");
+      setMessages([]);
+      setTypingUsers([]);
       return;
     }
 
-    setStatus("connecting");
-    const channel = supabase.channel(topic, { config: { private: true } });
-    channelRef.current = channel;
+    if (error) {
+      setStatus("error");
+      return;
+    }
+
+    if (isConnected) {
+      setStatus("connected");
+    } else {
+      setStatus("connecting");
+    }
+  }, [error, isConnected, topic]);
+
+  useEffect(() => {
+    if (!channel) {
+      return;
+    }
 
     channel
       .on("broadcast", { event: "chat:message" }, (payload) => {
@@ -155,47 +166,7 @@ export function useWebSocketChat({
           return data.isTyping ? [...filtered, data.userId] : filtered;
         });
       });
-
-    channel.subscribe((state, err) => {
-      if (state === "SUBSCRIBED") {
-        setStatus("connected");
-        reconnectAttemptsRef.current = 0;
-      }
-      if (
-        state === "TIMED_OUT" ||
-        state === "CHANNEL_ERROR" ||
-        state === "CLOSED" ||
-        err
-      ) {
-        setStatus("error");
-        // clear current channel
-        if (channelRef.current === channel) {
-          channelRef.current = null;
-        }
-        // schedule reconnect with simple exponential backoff
-        if (autoConnect) {
-          const attempt = ++reconnectAttemptsRef.current;
-          const delay = Math.min(30000, 1000 * 2 ** Math.min(5, attempt));
-          if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
-          reconnectTimerRef.current = setTimeout(() => {
-            setReconnectVersion((v) => v + 1);
-          }, delay);
-        }
-      }
-    });
-
-    return () => {
-      channel.unsubscribe();
-      if (reconnectTimerRef.current) {
-        clearTimeout(reconnectTimerRef.current);
-        reconnectTimerRef.current = null;
-      }
-      if (channelRef.current === channel) {
-        channelRef.current = null;
-      }
-      setStatus("disconnected");
-    };
-  }, [autoConnect, supabase, user?.id, topicType, sessionId]);
+  }, [channel, user?.id]);
 
   /**
    * Sends a chat message through the websocket channel.
@@ -205,23 +176,17 @@ export function useWebSocketChat({
    */
   const sendMessage = useCallback(
     async (content: string) => {
-      const channel = channelRef.current;
       if (!content || !user?.id || !channel) {
         return;
       }
 
-      const request: ChannelSendRequest = {
-        event: "chat:message",
-        payload: {
-          content,
-          sender: { id: user.id, name: "You" },
-          timestamp: nowIso(),
-        },
-        type: "broadcast",
-      };
-      await channel.send(request);
+      await sendBroadcast("chat:message", {
+        content,
+        sender: { id: user.id, name: "You" },
+        timestamp: nowIso(),
+      } as ChatMessageBroadcastPayload);
     },
-    [user?.id]
+    [channel, sendBroadcast, user?.id]
   );
 
   /**
@@ -230,17 +195,16 @@ export function useWebSocketChat({
    * @returns {void}
    */
   const startTyping = useCallback(() => {
-    const channel = channelRef.current;
     if (!user?.id || !channel) {
       return;
     }
-    const request: ChannelSendRequest = {
-      event: "chat:typing",
-      payload: { isTyping: true, userId: user.id },
-      type: "broadcast",
-    };
-    channel.send(request);
-  }, [user?.id]);
+    sendBroadcast("chat:typing", {
+      isTyping: true,
+      userId: user.id,
+    } as ChatTypingBroadcastPayload).catch(() => {
+      // Best-effort typing indicator; ignore failures.
+    });
+  }, [channel, sendBroadcast, user?.id]);
 
   /**
    * Stops typing indicator for the current user.
@@ -248,17 +212,16 @@ export function useWebSocketChat({
    * @returns {void}
    */
   const stopTyping = useCallback(() => {
-    const channel = channelRef.current;
     if (!user?.id || !channel) {
       return;
     }
-    const request: ChannelSendRequest = {
-      event: "chat:typing",
-      payload: { isTyping: false, userId: user.id },
-      type: "broadcast",
-    };
-    channel.send(request);
-  }, [user?.id]);
+    sendBroadcast("chat:typing", {
+      isTyping: false,
+      userId: user.id,
+    } as ChatTypingBroadcastPayload).catch(() => {
+      // Best-effort typing indicator; ignore failures.
+    });
+  }, [channel, sendBroadcast, user?.id]);
 
   /**
    * Reconnects to the websocket.
@@ -266,8 +229,8 @@ export function useWebSocketChat({
    * @returns {void}
    */
   const reconnect = useCallback(() => {
-    setStatus("connecting");
-    setReconnectVersion((version) => version + 1);
+    // Supabase Realtime client handles reconnection internally; this is a no-op hook.
+    setStatus((current) => (current === "connected" ? "connected" : "connecting"));
   }, []);
 
   return {
