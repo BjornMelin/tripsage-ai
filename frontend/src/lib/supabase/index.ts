@@ -16,7 +16,6 @@ export {
 // Factory utilities and types
 export {
   type BrowserSupabaseClient,
-  type CookieAdapter,
   type CreateServerSupabaseOptions,
   createCookieAdapter,
   type GetCurrentUserResult,
