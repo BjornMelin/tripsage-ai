@@ -7,10 +7,11 @@
  */
 
 import { SpanStatusCode } from "@opentelemetry/api";
+import type { CookieMethodsServer } from "@supabase/ssr";
 import type { User } from "@supabase/supabase-js";
 import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { CookieAdapter, ServerSupabaseClient } from "../factory";
+import type { ServerSupabaseClient } from "../factory";
 import {
   createCookieAdapter,
   createServerSupabase,
@@ -57,7 +58,7 @@ vi.mock("@/lib/telemetry/tracer", () => ({
 
 describe("Supabase Factory", () => {
   describe("createServerSupabase", () => {
-    let mockCookieAdapter: CookieAdapter;
+    let mockCookieAdapter: CookieMethodsServer;
 
     beforeEach(() => {
       mockCookieAdapter = {
@@ -167,25 +168,27 @@ describe("Supabase Factory", () => {
     it("should handle cookie adapter errors gracefully", () => {
       const { createServerClient } = require("@supabase/ssr");
 
-      const errorCookieAdapter: CookieAdapter = {
+      const errorCookieAdapter: CookieMethodsServer = {
         getAll: vi.fn(() => {
           throw new Error("Cookie read error");
         }),
         setAll: vi.fn(),
       };
 
-      createServerClient.mockImplementation((_url, _key, options) => {
-        // Simulate calling getAll to trigger error
-        try {
-          options.cookies.getAll();
-        } catch {
-          // Error should be caught by factory
+      createServerClient.mockImplementation(
+        (_url: string, _key: string, options: { cookies: CookieMethodsServer }) => {
+          // Simulate calling getAll to trigger error
+          try {
+            options.cookies.getAll();
+          } catch {
+            // Error should be caught by factory
+          }
+          return {
+            auth: { getUser: vi.fn() },
+            from: vi.fn(),
+          };
         }
-        return {
-          auth: { getUser: vi.fn() },
-          from: vi.fn(),
-        };
-      });
+      );
 
       expect(() =>
         createServerSupabase({
@@ -213,11 +216,14 @@ describe("Supabase Factory", () => {
 
   describe("getCurrentUser", () => {
     let mockSupabaseClient: ServerSupabaseClient;
+    let authGetUserMock: ReturnType<typeof vi.fn>;
 
     beforeEach(() => {
+      authGetUserMock = vi.fn();
       mockSupabaseClient = {
         auth: {
-          getUser: vi.fn(),
+          getUser:
+            authGetUserMock as unknown as ServerSupabaseClient["auth"]["getUser"],
         },
         from: vi.fn(),
       } as unknown as ServerSupabaseClient;
@@ -237,7 +243,7 @@ describe("Supabase Factory", () => {
         user_metadata: {},
       };
 
-      mockSupabaseClient.auth.getUser.mockResolvedValue({
+      authGetUserMock.mockResolvedValue({
         data: { user: mockUser },
         error: null,
       });
@@ -248,11 +254,11 @@ describe("Supabase Factory", () => {
 
       expect(result.user).toEqual(mockUser);
       expect(result.error).toBeNull();
-      expect(mockSupabaseClient.auth.getUser).toHaveBeenCalledTimes(1);
+      expect(authGetUserMock).toHaveBeenCalledTimes(1);
     });
 
     it("should return null user when not authenticated", async () => {
-      mockSupabaseClient.auth.getUser.mockResolvedValue({
+      authGetUserMock.mockResolvedValue({
         data: { user: null },
         error: null,
       });
@@ -268,7 +274,7 @@ describe("Supabase Factory", () => {
     it("should handle authentication errors", async () => {
       const mockError = new Error("Auth error");
 
-      mockSupabaseClient.auth.getUser.mockResolvedValue({
+      authGetUserMock.mockResolvedValue({
         data: { user: null },
         error: mockError,
       });
@@ -284,7 +290,7 @@ describe("Supabase Factory", () => {
     it("should enable tracing by default", async () => {
       const { trace } = require("@opentelemetry/api");
 
-      mockSupabaseClient.auth.getUser.mockResolvedValue({
+      authGetUserMock.mockResolvedValue({
         data: { user: null },
         error: null,
       });
@@ -316,7 +322,7 @@ describe("Supabase Factory", () => {
         user_metadata: {},
       };
 
-      mockSupabaseClient.auth.getUser.mockResolvedValue({
+      authGetUserMock.mockResolvedValue({
         data: { user: mockUser },
         error: null,
       });
@@ -347,7 +353,7 @@ describe("Supabase Factory", () => {
     it("should record exceptions in telemetry on error", async () => {
       const mockError = new Error("Auth error");
 
-      mockSupabaseClient.auth.getUser.mockResolvedValue({
+      authGetUserMock.mockResolvedValue({
         data: { user: null },
         error: mockError,
       });
@@ -374,7 +380,7 @@ describe("Supabase Factory", () => {
     });
 
     it("should handle unknown errors", async () => {
-      mockSupabaseClient.auth.getUser.mockRejectedValue("Unknown error");
+      authGetUserMock.mockRejectedValue("Unknown error");
 
       const result = await getCurrentUser(mockSupabaseClient, {
         enableTracing: false,
@@ -403,7 +409,7 @@ describe("Supabase Factory", () => {
         { name: "cookie2", value: "value2" },
       ]);
 
-      adapter.setAll([{ name: "new-cookie", options: {}, value: "new-value" }]);
+      adapter.setAll?.([{ name: "new-cookie", options: {}, value: "new-value" }]);
 
       expect(mockCookieStore.set).toHaveBeenCalledWith("new-cookie", "new-value", {});
     });
@@ -419,7 +425,7 @@ describe("Supabase Factory", () => {
       const adapter = createCookieAdapter(mockCookieStore);
 
       expect(() =>
-        adapter.setAll([{ name: "cookie", options: {}, value: "value" }])
+        adapter.setAll?.([{ name: "cookie", options: {}, value: "value" }])
       ).not.toThrow();
     });
   });

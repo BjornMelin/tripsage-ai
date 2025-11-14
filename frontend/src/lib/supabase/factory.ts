@@ -18,7 +18,10 @@
 import "server-only";
 
 import { type Span, SpanStatusCode, trace } from "@opentelemetry/api";
-import { createServerClient as createSsrServerClient } from "@supabase/ssr";
+import {
+  type CookieMethodsServer,
+  createServerClient as createSsrServerClient,
+} from "@supabase/ssr";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
 import { getServerEnv } from "@/lib/env/server";
@@ -36,29 +39,16 @@ export type ServerSupabaseClient = SupabaseClient<Database>;
 export type BrowserSupabaseClient = SupabaseClient<Database>;
 
 /**
- * Cookie adapter interface for SSR cookie handling.
- * Supports both Next.js middleware and server component cookie stores.
- */
-export interface CookieAdapter {
-  getAll: () => Array<{ name: string; value: string }>;
-  setAll: (
-    cookies: Array<{
-      name: string;
-      value: string;
-      options?: Record<string, unknown>;
-    }>
-  ) => void;
-}
-
-/**
  * Options for creating a server Supabase client.
  */
+type CookieSetAllArgs = Parameters<NonNullable<CookieMethodsServer["setAll"]>>[0];
+
 export interface CreateServerSupabaseOptions {
   /**
    * Cookie adapter for SSR cookie handling.
    * If not provided, will use Next.js cookies() by default.
    */
-  cookies?: CookieAdapter;
+  cookies?: CookieMethodsServer;
 
   /**
    * Whether to enable OpenTelemetry tracing for this client.
@@ -134,27 +124,7 @@ export function createServerSupabase(
       env.NEXT_PUBLIC_SUPABASE_URL,
       env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
       {
-        cookies: options.cookies
-          ? {
-              getAll: () => options.cookies?.getAll(),
-              setAll: (cookiesToSet) => {
-                try {
-                  options.cookies?.setAll(cookiesToSet);
-                } catch {
-                  // Ignore cookie set errors (e.g., locked headers in certain runtimes)
-                }
-              },
-            }
-          : // If no cookie adapter provided, use async Next.js cookies()
-            // This requires dynamic import and will be handled by caller
-            {
-              getAll: () => {
-                throw new Error("Cookie adapter required for server client creation");
-              },
-              setAll: () => {
-                throw new Error("Cookie adapter required for server client creation");
-              },
-            },
+        cookies: createCookieMethods(options.cookies),
       }
     );
   };
@@ -287,7 +257,7 @@ export async function getCurrentUser(
 /**
  * Creates a cookie adapter from Next.js ReadonlyRequestCookies.
  *
- * This utility function converts Next.js cookie store to the CookieAdapter interface
+ * This utility function converts Next.js cookie store to the CookieMethodsServer interface
  * required by the Supabase factory. It's primarily used in server components and
  * route handlers.
  *
@@ -301,10 +271,10 @@ export async function getCurrentUser(
  */
 export function createCookieAdapter(
   cookieStore: ReadonlyRequestCookies
-): CookieAdapter {
+): CookieMethodsServer {
   return {
     getAll: () => cookieStore.getAll(),
-    setAll: (cookiesToSet) => {
+    setAll: (cookiesToSet: CookieSetAllArgs) => {
       try {
         cookiesToSet.forEach(({ name, value, options }) => {
           cookieStore.set(name, value, options);
@@ -312,6 +282,33 @@ export function createCookieAdapter(
       } catch {
         // Ignore cookie set errors (e.g., locked headers in certain runtimes)
       }
+    },
+  };
+}
+
+function createCookieMethods(adapter?: CookieMethodsServer): CookieMethodsServer {
+  if (adapter) {
+    return {
+      getAll: () => adapter.getAll(),
+      setAll: adapter.setAll
+        ? (cookiesToSet: CookieSetAllArgs) => {
+            try {
+              return adapter.setAll?.(cookiesToSet);
+            } catch {
+              // Ignore cookie set errors (e.g., locked headers)
+              return undefined;
+            }
+          }
+        : undefined,
+    };
+  }
+
+  return {
+    getAll: () => {
+      throw new Error("Cookie adapter required for server client creation");
+    },
+    setAll: () => {
+      throw new Error("Cookie adapter required for server client creation");
     },
   };
 }
