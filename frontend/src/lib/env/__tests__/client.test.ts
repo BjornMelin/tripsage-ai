@@ -37,7 +37,7 @@ describe("env/client", () => {
       }).rejects.toThrow();
     });
 
-    it("should return defaults in development when validation fails", async () => {
+    it("should return valid dummy values in development when validation fails", async () => {
       vi.stubEnv("NODE_ENV", "development");
       // Missing required vars
 
@@ -46,8 +46,8 @@ describe("env/client", () => {
 
       const env = freshGetClientEnv();
       expect(env.NEXT_PUBLIC_APP_NAME).toBe("TripSage");
-      expect(env.NEXT_PUBLIC_SUPABASE_ANON_KEY).toBe("");
-      expect(env.NEXT_PUBLIC_SUPABASE_URL).toBe("");
+      expect(env.NEXT_PUBLIC_SUPABASE_ANON_KEY).toBe("dummy-dev-anon-key");
+      expect(env.NEXT_PUBLIC_SUPABASE_URL).toBe("http://localhost:54321");
     });
   });
 

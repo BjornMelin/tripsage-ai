@@ -467,7 +467,7 @@ frontend/
 
 ## Environment configuration
 
-[![Zod](https://img.shields.io/badge/Zod-v4.1-EnvGuard-green?logo=zod)](https://zod.dev)
+[![Zod](https://img.shields.io/badge/Zod_v4.1-EnvGuard-green?logo=zod)](https://zod.dev)
 
 The frontend uses a centralized environment variable system with explicit
 server/client separation, comprehensive Zod validation, and enhanced security

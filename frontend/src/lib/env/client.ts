@@ -13,17 +13,18 @@ import { parseClientEnv } from "./schema";
  * Extract and validate client-safe environment variables.
  *
  * Uses the centralized parseClientEnv() from schema with enhanced error handling
- * and graceful degradation in development environments.
+ * and graceful degradation in development environments. Returns a deeply frozen
+ * object to prevent mutation at any level.
  *
- * @returns Validated client environment object
- * @throws Error if validation fails in production
+ * @returns Validated and deeply frozen client environment object
+ * @throws {EnvValidationError} If validation fails in production
  */
 function validateClientEnv(): ClientEnv {
-  return parseClientEnv();
+  return parseClientEnv(); // Already returns deeply frozen object
 }
 
-// Validate and freeze client environment at module load
-const publicEnvValue = Object.freeze(validateClientEnv());
+// Validate and freeze client environment at module load (parseClientEnv already deep-freezes)
+const publicEnvValue = validateClientEnv();
 
 /**
  * Get validated client environment variables.

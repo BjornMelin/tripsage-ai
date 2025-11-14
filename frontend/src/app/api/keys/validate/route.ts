@@ -15,7 +15,7 @@ import { Redis } from "@upstash/redis";
 import { createGateway } from "ai";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { getServerEnvVarWithFallback } from "@/lib/env/server";
+import { getServerEnvVar, getServerEnvVarWithFallback } from "@/lib/env/server";
 import { getClientIpFromHeaders } from "@/lib/next/route-helpers";
 import { createServerSupabase } from "@/lib/supabase/server";
 
@@ -119,7 +119,7 @@ const PROVIDER_BUILDERS: Partial<Record<string, ProviderRequestBuilder>> = {
   gateway: (apiKey) =>
     buildSDKRequest({
       apiKey,
-      baseURL: getServerEnvVarWithFallback("AI_GATEWAY_URL", undefined),
+      baseURL: getServerEnvVar("AI_GATEWAY_URL"),
       defaultBaseURL: "https://ai-gateway.vercel.sh/v1",
       modelId: DEFAULT_MODEL_IDS.gateway,
       sdkCreator: createGateway as unknown as SDKCreator,
@@ -127,7 +127,7 @@ const PROVIDER_BUILDERS: Partial<Record<string, ProviderRequestBuilder>> = {
   openai: (apiKey) =>
     buildSDKRequest({
       apiKey,
-      baseURL: getServerEnvVarWithFallback("AI_GATEWAY_URL", undefined),
+      baseURL: getServerEnvVar("AI_GATEWAY_URL"),
       defaultBaseURL: OPENAI_BASE_URL,
       modelId: DEFAULT_MODEL_IDS.openai,
       sdkCreator: createOpenAI as SDKCreator,

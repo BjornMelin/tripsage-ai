@@ -9,7 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Refactor
 
-- **[Environment]:** Centralized environment variable guards with enhanced Zod v4 schema validation, comprehensive refinements, and smart fallbacks. Introduced `parseEnv()` and `parseClientEnv()` functions with OTEL-compatible error attributes for improved observability. Added format validation for API keys (Stripe `/^sk_(live|test)_/`, Anthropic `/^sk-ant-/`, OpenAI `/^sk-/`, Resend `/^re_/`), environment-specific refinements (production requires `sk_live_` for Stripe, mandatory Upstash URL when token is present), and default values (AI Gateway, Firecrawl, Resend). Achieved 85.45% statement coverage with 59 comprehensive tests. Reduced configuration bloat by ~15% through centralized validation, slashed injection risks with regex guards, and ensured Vercel Edge compatibility. Updated `frontend/src/lib/env/schema.ts`, `frontend/src/lib/env/server.ts`, `frontend/src/lib/env/client.ts`, and added `frontend/src/lib/env/__tests__/schema.test.ts`.
+- **[Environment]:** Centralized environment variable guards with enhanced Zod v4 schema validation
+  - Introduced `EnvValidationError` class with OTEL-compatible metadata and ZodError preservation
+  - Implemented deep freeze for client env objects to prevent mutation
+  - Added centralized `parseEnv()` and `parseClientEnv()` functions with comprehensive error handling
+  - Enhanced API key validation patterns:
+    - Stripe: `/^sk_(live|test)_/` with production enforcement
+    - OpenAI: `/^sk-(?!ant-|live_|test_)/` to exclude other key types
+    - Anthropic: `/^sk-ant-/`
+    - Resend: `/^re_/`
+  - Fixed `.optional().default()` ordering to ensure defaults apply correctly
+  - Improved dev fallback with valid dummy values (`http://localhost:54321`, `dummy-dev-anon-key`)
+  - Environment-specific refinements (Upstash URL required when token configured in production)
+  - Smart defaults for AI Gateway, Firecrawl, Resend sender name
+  - 85.45% statement coverage with 59 comprehensive tests
+  - Files: `frontend/src/lib/env/{schema,server,client,index}.ts`, `frontend/src/lib/env/__tests__/schema.test.ts`
 
 ## [1.0.0] - 2025-11-14
 

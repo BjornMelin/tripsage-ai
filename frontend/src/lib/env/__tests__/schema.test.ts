@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { parseClientEnv, parseEnv } from "../schema";
+import { EnvValidationError, parseClientEnv, parseEnv } from "../schema";
 
 describe("env/schema", () => {
   beforeEach(() => {
@@ -71,11 +71,21 @@ describe("env/schema", () => {
       expect(() => parseEnv()).toThrow(/sk-/);
     });
 
+    it("should reject Anthropic keys as OpenAI keys", () => {
+      vi.stubEnv("OPENAI_API_KEY", "sk-ant-1234567890");
+      expect(() => parseEnv()).toThrow(/excluding.*sk-ant-/);
+    });
+
+    it("should reject Stripe keys as OpenAI keys", () => {
+      vi.stubEnv("OPENAI_API_KEY", "sk_test_1234567890");
+      expect(() => parseEnv()).toThrow(/excluding.*sk_test_/);
+    });
+
     it("should accept valid OpenAI API key", () => {
-      vi.stubEnv("OPENAI_API_KEY", "sk-1234567890");
+      vi.stubEnv("OPENAI_API_KEY", "sk-proj-abcdefghijklmnopqrstuvwxyz1234567890");
 
       const env = parseEnv();
-      expect(env.OPENAI_API_KEY).toBe("sk-1234567890");
+      expect(env.OPENAI_API_KEY).toBe("sk-proj-abcdefghijklmnopqrstuvwxyz1234567890");
     });
 
     it("should validate Resend API key format", () => {
@@ -209,7 +219,7 @@ describe("env/schema", () => {
       expect(() => parseClientEnv()).toThrow("Client environment validation failed");
     });
 
-    it("should return defaults in development when validation fails", () => {
+    it("should return valid dummy values in development when validation fails", () => {
       vi.stubEnv("NODE_ENV", "development");
       // Clear required vars
       Reflect.deleteProperty(process.env, "NEXT_PUBLIC_SUPABASE_URL");
@@ -217,8 +227,8 @@ describe("env/schema", () => {
 
       const env = parseClientEnv();
       expect(env.NEXT_PUBLIC_APP_NAME).toBe("TripSage");
-      expect(env.NEXT_PUBLIC_SUPABASE_ANON_KEY).toBe("");
-      expect(env.NEXT_PUBLIC_SUPABASE_URL).toBe("");
+      expect(env.NEXT_PUBLIC_SUPABASE_ANON_KEY).toBe("dummy-dev-anon-key");
+      expect(env.NEXT_PUBLIC_SUPABASE_URL).toBe("http://localhost:54321");
     });
 
     it("should apply default for NEXT_PUBLIC_APP_NAME", () => {
@@ -300,6 +310,96 @@ describe("env/schema", () => {
         expect((error as Error).message).toContain(
           "https://docs.tripsage.com/env-setup"
         );
+      }
+    });
+  });
+
+  describe("EnvValidationError", () => {
+    it("should preserve ZodError as cause", () => {
+      vi.stubEnv("NODE_ENV", "invalid");
+
+      try {
+        parseEnv();
+        expect.fail("Should have thrown");
+      } catch (error) {
+        expect(error).toBeInstanceOf(EnvValidationError);
+        expect((error as EnvValidationError).cause).toBeDefined();
+        expect((error as EnvValidationError).cause.issues).toBeInstanceOf(Array);
+      }
+    });
+
+    it("should include OTEL-compatible metadata", () => {
+      vi.stubEnv("STRIPE_SECRET_KEY", "invalid");
+
+      try {
+        parseEnv();
+        expect.fail("Should have thrown");
+      } catch (error) {
+        expect(error).toBeInstanceOf(EnvValidationError);
+        const envError = error as EnvValidationError;
+        expect(envError.code).toBe("ENV_VALIDATION_ERROR");
+        expect(envError.timestamp).toBeDefined();
+        expect(envError.errors).toBeInstanceOf(Array);
+        expect(envError.errors.length).toBeGreaterThan(0);
+      }
+    });
+
+    it("should format error messages correctly for server context", () => {
+      vi.stubEnv("NODE_ENV", "invalid");
+
+      try {
+        parseEnv();
+        expect.fail("Should have thrown");
+      } catch (error) {
+        const envError = error as EnvValidationError;
+        expect(envError.message).toContain("Environment validation failed");
+        expect(envError.message).toContain("https://docs.tripsage.com/env-setup");
+      }
+    });
+
+    it("should format error messages correctly for client context", () => {
+      vi.stubEnv("NODE_ENV", "production");
+      Reflect.deleteProperty(process.env, "NEXT_PUBLIC_SUPABASE_URL");
+      Reflect.deleteProperty(process.env, "NEXT_PUBLIC_SUPABASE_ANON_KEY");
+
+      try {
+        parseClientEnv();
+        expect.fail("Should have thrown");
+      } catch (error) {
+        const envError = error as EnvValidationError;
+        expect(envError.message).toContain("Client environment validation failed");
+        expect(envError.message).not.toContain("https://docs.tripsage.com/env-setup");
+      }
+    });
+  });
+
+  describe("deep freeze", () => {
+    it("should deeply freeze parseClientEnv result", () => {
+      const env = parseClientEnv();
+
+      expect(Object.isFrozen(env)).toBe(true);
+
+      // In strict mode (which is enabled), attempt to modify frozen object throws TypeError
+      expect(() => {
+        // biome-ignore lint/style/useNamingConvention: env var keys are SCREAMING_SNAKE_CASE
+        (env as { NEXT_PUBLIC_APP_NAME: string }).NEXT_PUBLIC_APP_NAME = "Modified";
+      }).toThrow(TypeError);
+
+      // Value should remain unchanged
+      expect(env.NEXT_PUBLIC_APP_NAME).toBe("TripSage");
+    });
+
+    it("should freeze nested objects if present", () => {
+      const env = parseClientEnv();
+
+      // Check that the object itself is frozen
+      expect(Object.isFrozen(env)).toBe(true);
+
+      // All values should also be frozen if they're objects
+      for (const value of Object.values(env)) {
+        if (value !== null && typeof value === "object") {
+          expect(Object.isFrozen(value)).toBe(true);
+        }
       }
     });
   });

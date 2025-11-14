@@ -7,6 +7,38 @@
 
 import { z } from "zod";
 
+/**
+ * Custom error class for environment validation failures.
+ * Preserves original ZodError for type checking while adding OTEL-compatible metadata.
+ */
+export class EnvValidationError extends Error {
+  public readonly code = "ENV_VALIDATION_ERROR";
+  public readonly timestamp: string;
+  public readonly errors: string[];
+  public readonly cause: z.ZodError;
+
+  constructor(zodError: z.ZodError, context: "server" | "client" = "server") {
+    const errors = zodError.issues.map(
+      (issue) => `${issue.path.join(".")}: ${issue.message}`
+    );
+
+    const message = `${context === "client" ? "Client e" : "E"}nvironment validation failed:\n${errors.join("\n")}${
+      context === "server"
+        ? "\n\nSee https://docs.tripsage.com/env-setup for configuration guide."
+        : ""
+    }`;
+
+    super(message);
+    this.name = "EnvValidationError";
+    this.errors = errors;
+    this.timestamp = new Date().toISOString();
+    this.cause = zodError;
+
+    // Maintain proper prototype chain for instanceof checks
+    Object.setPrototypeOf(this, EnvValidationError.prototype);
+  }
+}
+
 // Base environment schema for common variables
 const baseEnvSchema = z.object({
   HOSTNAME: z.string().optional(),
@@ -53,8 +85,8 @@ const aiServiceEnvSchema = z.object({
   AI_GATEWAY_URL: z
     .string()
     .url()
-    .default("https://ai-gateway.vercel.sh/v1")
-    .optional(),
+    .optional()
+    .default("https://ai-gateway.vercel.sh/v1"),
   ANTHROPIC_API_KEY: z
     .string()
     .regex(/^sk-ant-/, "Anthropic API key must start with 'sk-ant-'")
@@ -65,11 +97,15 @@ const aiServiceEnvSchema = z.object({
   FIRECRAWL_BASE_URL: z
     .string()
     .url()
-    .default("https://api.firecrawl.dev/v2")
-    .optional(),
+    .optional()
+    .default("https://api.firecrawl.dev/v2"),
+  // OpenAI API key - excludes Stripe and Anthropic prefixes
   OPENAI_API_KEY: z
     .string()
-    .regex(/^sk-/, "OpenAI API key must start with 'sk-'")
+    .regex(
+      /^sk-(?!ant-|live_|test_)[A-Za-z0-9_-]+$/,
+      "OpenAI API key must start with 'sk-' (excluding 'sk-ant-', 'sk_live_', 'sk_test_')"
+    )
     .optional(),
   // OpenRouter API key (server-side fallback, not attribution)
   OPENROUTER_API_KEY: z.string().optional(),
@@ -83,7 +119,8 @@ const aiServiceEnvSchema = z.object({
     .regex(/^re_/, "Resend API key must start with 're_'")
     .optional(),
   RESEND_FROM_EMAIL: z.string().email().optional(),
-  RESEND_FROM_NAME: z.string().default("TripSage").optional(),
+  // Default sender name - can be overridden via env var or at runtime
+  RESEND_FROM_NAME: z.string().optional().default("TripSage"),
   // xAI API key (server-side fallback)
   XAI_API_KEY: z.string().optional(),
 });
@@ -222,7 +259,7 @@ export type ClientEnv = z.infer<typeof clientEnvSchema>;
  * messages and OTEL-compatible error attributes. Use this in server-side contexts
  * (API routes, Server Components, middleware) for consistent env validation.
  *
- * @throws {ZodError} On validation failure with detailed error messages
+ * @throws {EnvValidationError} On validation failure with detailed error messages and OTEL metadata
  * @returns Parsed and validated server environment object
  *
  * @example
@@ -237,39 +274,49 @@ export function parseEnv(): ServerEnv {
   const result = envSchema.safeParse(process.env);
 
   if (!result.success) {
-    const errors = result.error.issues.map(
-      (issue) => `${issue.path.join(".")}: ${issue.message}`
-    );
-
-    // Structure error for OTEL attributes
-    const errorDetails = {
-      code: "ENV_VALIDATION_ERROR",
-      errors,
-      message: "Environment validation failed",
-      timestamp: new Date().toISOString(),
-    };
+    const error = new EnvValidationError(result.error, "server");
 
     // Log for observability (console in dev, OTEL spans in prod)
     if (process.env.NODE_ENV === "development") {
-      console.error("Environment validation failed:", errorDetails);
+      console.error("Environment validation failed:", {
+        code: error.code,
+        errors: error.errors,
+        timestamp: error.timestamp,
+      });
     }
 
-    throw new Error(
-      `Environment validation failed:\n${errors.join("\n")}\n\nSee https://docs.tripsage.com/env-setup for configuration guide.`
-    );
+    throw error;
   }
 
   return result.data;
 }
 
 /**
+ * Deep freeze an object to prevent mutation at any level.
+ *
+ * @param obj - Object to freeze
+ * @returns Deeply frozen object
+ */
+function deepFreeze<T extends Record<string, unknown>>(obj: T): Readonly<T> {
+  Object.freeze(obj);
+
+  for (const value of Object.values(obj)) {
+    if (value !== null && typeof value === "object") {
+      deepFreeze(value as Record<string, unknown>);
+    }
+  }
+
+  return obj;
+}
+
+/**
  * Parse and validate client-safe environment variables.
  *
  * This function validates only NEXT_PUBLIC_* variables that are safe to expose
- * in client bundles. All values are validated and frozen to prevent mutation.
+ * in client bundles. All values are validated and deeply frozen to prevent mutation.
  *
- * @throws {ZodError} On validation failure in production
- * @returns Parsed and validated client environment object (with defaults in dev)
+ * @throws {EnvValidationError} On validation failure in production
+ * @returns Parsed, validated, and frozen client environment object (with valid dummy values in dev)
  *
  * @example
  * ```typescript
@@ -287,22 +334,25 @@ export function parseClientEnv(): ClientEnv {
   const result = clientEnvSchema.safeParse(clientVars);
 
   if (!result.success) {
-    const errors = result.error.issues.map(
-      (issue) => `${issue.path.join(".")}: ${issue.message}`
-    );
-
-    // In development, return defaults to allow graceful degradation
+    // In development, return valid dummy values to allow graceful degradation
     if (process.env.NODE_ENV === "development") {
-      console.error(`Client environment validation failed:\n${errors.join("\n")}`);
-      return {
+      const error = new EnvValidationError(result.error, "client");
+      console.error("Client environment validation failed:", {
+        code: error.code,
+        errors: error.errors,
+        timestamp: error.timestamp,
+      });
+
+      // Return valid dummy values that pass schema validation
+      return deepFreeze({
         NEXT_PUBLIC_APP_NAME: "TripSage",
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: "",
-        NEXT_PUBLIC_SUPABASE_URL: "",
-      };
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: "dummy-dev-anon-key",
+        NEXT_PUBLIC_SUPABASE_URL: "http://localhost:54321",
+      });
     }
 
-    throw new Error(`Client environment validation failed:\n${errors.join("\n")}`);
+    throw new EnvValidationError(result.error, "client");
   }
 
-  return result.data;
+  return deepFreeze(result.data);
 }

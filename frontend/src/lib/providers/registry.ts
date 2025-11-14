@@ -184,7 +184,9 @@ export async function resolveProvider(
 
   // Fallback to server-side API keys when BYOK is not available
   // Check in preference order for server-side keys
-  const { getServerEnvVarWithFallback } = await import("@/lib/env/server");
+  const { getServerEnvVar, getServerEnvVarWithFallback } = await import(
+    "@/lib/env/server"
+  );
   for (const provider of PROVIDER_PREFERENCE) {
     let serverApiKey: string | undefined;
     const modelId = DEFAULT_MODEL_MAPPER(provider, modelHint);
@@ -231,9 +233,7 @@ export async function resolveProvider(
   const allowFallback = await getUserAllowGatewayFallback(userId);
   const gatewayApiKey = getServerEnvVarWithFallback("AI_GATEWAY_API_KEY", undefined);
   if (gatewayApiKey) {
-    const gatewayUrl =
-      getServerEnvVarWithFallback("AI_GATEWAY_URL", undefined) ??
-      "https://ai-gateway.vercel.sh/v1";
+    const gatewayUrl = getServerEnvVar("AI_GATEWAY_URL"); // Has default value in schema
     const modelId = DEFAULT_MODEL_MAPPER("openai", modelHint);
     const gateway = createGateway({
       apiKey: gatewayApiKey,
