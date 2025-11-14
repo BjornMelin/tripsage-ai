@@ -6,12 +6,12 @@ This package contains consolidated Pydantic V2 schemas organized by domain:
 - chat.py          : Chat interaction schemas
 - config.py        : Configuration management schemas
 - dashboard.py     : Dashboard monitoring and analytics schemas
-- destinations.py  : Destination search and info schemas
-- flights.py       : Flight search and booking schemas
 - users.py         : User management schemas
 
-Trip, itinerary, and accommodation schemas now live in
+Trip and itinerary schemas now live in
 ``tripsage_core.models.api`` as the canonical definitions.
+
+Search and destination schemas removed; handled via frontend AI SDK v6 agents.
 
 Import directly from the consolidated schema files:
 
