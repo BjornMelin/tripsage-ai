@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- APP_BASE_URL server setting (env schema + `.env.example`) and Stripe payment return URL now resolved via `getServerEnvVarWithFallback`, so server-only flows no longer pull from client-prefixed env vars (frontend/src/lib/env/schema.ts, frontend/.env.example, frontend/src/lib/payments/stripe-client.ts).
+- AI demo telemetry endpoint (`frontend/src/app/api/telemetry/ai-demo/route.ts`) plus client hooks in `frontend/src/app/ai-demo/page.tsx` emit structured success/error events instead of console logging.
 - Supabase Database Webhooks via `pg_net`/`pgcrypto` with HMAC header; initial HTTP trigger for `trip_collaborators` posting to Vercel (`supabase/migrations/20251113031500_pg_net_webhooks_triggers.sql`).
 - Next.js webhook handlers (Node runtime, dynamic): `/api/hooks/trips`, `/api/hooks/files`, `/api/hooks/cache`, `/api/embeddings` with request HMAC verification and Redis idempotency.
 - Shared utilities:
