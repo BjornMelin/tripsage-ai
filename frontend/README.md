@@ -90,7 +90,7 @@ conversational AI applications.
 - **Providers**: OpenAI, Anthropic, xAI, OpenRouter (BYOK multi-provider)
 - **Language**: TypeScript 5.9 with strict mode
 - **Styling**: Tailwind CSS v4 with CSS-first config
-- **Data/Auth**: Supabase SSR auth with pgvector for embeddings
+- **Data/Auth**: Supabase SSR auth with pgvector for embeddings (see `docs/architecture/supabase-ssr-frontend.md` for factory and client usage)
 - **Ratelimit & Cache**: Upstash Redis for distributed rate limiting and
   caching
 - **Types & Schemas**: Zod v3 for runtime validation

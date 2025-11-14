@@ -233,7 +233,8 @@ export interface ChatState {
   memoryEnabled: boolean;
   autoSyncMemory: boolean;
 
-  // Realtime integration state
+  // Realtime integration state (chat components own the live Supabase connections;
+  // the store only tracks high-level status and is reset via disconnectRealtime).
   connectionStatus: ConnectionStatus;
   isRealtimeEnabled: boolean;
   realtimeChannel: RealtimeChannel | null;
@@ -446,7 +447,7 @@ export const useChatStore = create<ChatState>()(
       },
       connectionStatus: ConnectionStatus.Disconnected,
 
-      // Realtime actions
+      // Realtime actions (owned by chat UI; store tracks status only)
       connectRealtime: (sessionId) => {
         const supabase = getBrowserClient();
         const prev = get().realtimeChannel;
