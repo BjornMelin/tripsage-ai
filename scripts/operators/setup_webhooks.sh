@@ -32,4 +32,6 @@ psql_run \
 echo "[setup_webhooks] Verifying settings..."
 psql_run -Atqc "SELECT current_setting('app.vercel_webhook_trips', true)  AS trips_url,\n           current_setting('app.vercel_webhook_cache', true)  AS cache_url,\n           nullif(current_setting('app.webhook_hmac_secret', true), '') IS NOT NULL AS hmac_set;"
 
+echo "[setup_webhooks] Run scripts/operators/verify_webhook_secret.sh for CI-friendly secret validation"
+
 echo "[setup_webhooks] Done. Optionally test with curl as documented in docs/operators/supabase-webhooks.md"
