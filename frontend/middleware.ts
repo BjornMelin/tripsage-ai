@@ -2,47 +2,54 @@
  * @fileoverview Next.js middleware for Supabase authentication.
  *
  * Handles SSR cookie management and session synchronization for React Server Components.
+ * Uses the unified Supabase factory with OpenTelemetry tracing for observability.
  */
 
-import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
-import { getClientEnvVar } from "@/lib/env/client";
+import { createServerSupabase, getCurrentUser } from "@/lib/supabase/factory";
 
 /**
  * Creates Supabase server client with SSR cookie handling and refreshes user session.
+ *
+ * This middleware uses the unified factory to create a Supabase client with proper
+ * cookie handling and telemetry. It calls getCurrentUser() once to refresh the
+ * session and sync cookies for React Server Components, eliminating duplicate
+ * auth.getUser() calls.
  *
  * @param request - Incoming Next.js request.
  * @returns Response with updated cookies and session state.
  */
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({ request });
+    let response = NextResponse.next({ request });
 
-  // Create Supabase server client with custom cookie handling for SSR
-  const supabase = createServerClient(
-    getClientEnvVar("NEXT_PUBLIC_SUPABASE_URL"),
-    getClientEnvVar("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
+    // Create Supabase server client with custom cookie handling for SSR
+    const supabase = createServerSupabase({
+        cookies: {
+            getAll() {
+                return request.cookies.getAll();
+            },
+            setAll(cookiesToSet) {
+                cookiesToSet.forEach(({ name, value }) => {
+                    request.cookies.set(name, value);
+                });
+                response = NextResponse.next({ request });
+                cookiesToSet.forEach(({ name, value, options }) => {
+                    response.cookies.set(name, value, options);
+                });
+            },
         },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => {
-            request.cookies.set(name, value);
-          });
-          response = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) => {
-            response.cookies.set(name, value, options);
-          });
-        },
-      },
-    }
-  );
+        enableTracing: true,
+        spanName: "middleware.auth.refreshSession",
+    });
 
-  // Refresh session and sync cookies for React Server Components
-  await supabase.auth.getUser();
+    // Refresh session and sync cookies for React Server Components
+    // Using unified getCurrentUser to eliminate duplicate calls
+    await getCurrentUser(supabase, {
+        enableTracing: true,
+        spanName: "middleware.auth.getUser",
+    });
 
-  return response;
+    return response;
 }
 
 /**
