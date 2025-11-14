@@ -32,16 +32,31 @@ export default function AiDemoPage() {
   const [_isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const logTelemetry = useCallback((status: "success" | "error", detail?: string) => {
+    void (async () => {
+      try {
+        await fetch("/api/telemetry/ai-demo", {
+          body: JSON.stringify({ detail, status }),
+          headers: { "content-type": "application/json" },
+          method: "POST",
+        });
+      } catch {
+        // Ignore telemetry failures
+      }
+    })();
+  }, []);
+
   /**
    * Handle prompt submission by streaming response from AI API.
    *
    * @param prompt - The user input text to send to the AI service.
    */
-  const onSubmit = useCallback(async (prompt: string) => {
-    setIsLoading(true);
-    setOutput("");
-    setError(null);
-    try {
+  const onSubmit = useCallback(
+    async (prompt: string) => {
+      setIsLoading(true);
+      setOutput("");
+      setError(null);
+      try {
       const res = await fetch("/api/ai/stream", {
         body: JSON.stringify({ prompt }),
         headers: { "content-type": "application/json" },
@@ -81,15 +96,18 @@ export default function AiDemoPage() {
           }
         }
       }
+      logTelemetry("success");
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Unknown error occurred";
       setError(`Failed to stream response: ${errorMessage}`);
-      console.error("Demo page streaming error:", err);
+      logTelemetry("error", errorMessage);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  },
+    [logTelemetry]
+  );
 
   return (
     <div className="flex h-full flex-col">
