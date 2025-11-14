@@ -6,7 +6,7 @@
  */
 
 import { type NextRequest, NextResponse } from "next/server";
-import { createMiddlewareSupabase, getCurrentUser } from "@/lib/supabase/factory";
+import { createMiddlewareSupabase, getCurrentUser } from "@/lib/supabase";
 
 /**
  * Creates Supabase server client with SSR cookie handling and refreshes user session.
