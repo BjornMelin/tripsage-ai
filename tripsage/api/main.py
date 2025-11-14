@@ -27,11 +27,9 @@ from tripsage.api.routers import (
     auth,
     config,
     dashboard,
-    destinations,
     health,
     itineraries,
     memory,
-    search,
     trips,
     users,
 )
@@ -330,15 +328,10 @@ def create_app() -> FastAPI:  # pylint: disable=too-many-statements
         attachments.router, prefix="/api/attachments", tags=["attachments"]
     )
     app.include_router(trips.router, prefix="/api/trips", tags=["trips"])
-    app.include_router(
-        destinations.router,
-        prefix="/api/destinations",
-        tags=["destinations"],
-    )
+    # destinations and search routers removed; handled via frontend AI SDK v6 agents
     app.include_router(
         itineraries.router, prefix="/api/itineraries", tags=["itineraries"]
     )
-    app.include_router(search.router, prefix="/api/search", tags=["search"])
     app.include_router(memory.router, prefix="/api", tags=["memory"])
 
     # BYOK key CRUD is now implemented in Next.js routes; Python router removed

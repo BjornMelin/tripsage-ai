@@ -12,7 +12,6 @@ from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from fastapi import FastAPI
 
-from tripsage_core.services.business.search_facade import SearchFacade
 from tripsage_core.services.infrastructure.database_service import (
     close_database_service,
 )
@@ -24,7 +23,6 @@ from tripsage_core.utils.logging_utils import get_logger
 
 
 if TYPE_CHECKING:  # pragma: no cover - import only for type checking
-    from tripsage_core.services.business.destination_service import DestinationService
     from tripsage_core.services.business.file_processing_service import (
         FileProcessingService,
     )
@@ -32,9 +30,6 @@ if TYPE_CHECKING:  # pragma: no cover - import only for type checking
     from tripsage_core.services.business.itinerary_service import ItineraryService
     from tripsage_core.services.business.memory_service import MemoryService
     from tripsage_core.services.business.trip_service import TripService
-    from tripsage_core.services.business.unified_search_service import (
-        UnifiedSearchService,
-    )
     from tripsage_core.services.configuration_service import ConfigurationService
     from tripsage_core.services.external_apis import (
         DocumentAnalyzer,
@@ -54,15 +49,14 @@ class AppServiceContainer:
     """Typed container for application-wide service singletons."""
 
     # Business services
-    # Legacy accommodation_service removed; accommodations handled via frontend agents
-    destination_service: DestinationService | None = None
+    # Legacy accommodation_service, destination_service, search_facade,
+    # unified_search_service removed;
+    # search/destination handled via frontend AI SDK v6 agents
     file_processing_service: FileProcessingService | None = None
     flight_service: FlightService | None = None
     itinerary_service: ItineraryService | None = None
     memory_service: MemoryService | None = None
-    search_facade: SearchFacade | None = None
     trip_service: TripService | None = None
-    unified_search_service: UnifiedSearchService | None = None
     configuration_service: ConfigurationService | None = None
 
     # External API services
@@ -148,8 +142,8 @@ async def _setup_business_services(
     settings: Any,
 ) -> dict[str, Any]:
     """Initialise business-layer services."""
-    # ActivityService removed (migrated to Next.js tools)
-    from tripsage_core.services.business.destination_service import DestinationService
+    # ActivityService, DestinationService, UnifiedSearchService, SearchFacade removed
+    # (migrated to Next.js AI SDK v6 agents)
     from tripsage_core.services.business.file_processing_service import (
         FileProcessingService,
     )
@@ -157,9 +151,6 @@ async def _setup_business_services(
     from tripsage_core.services.business.itinerary_service import ItineraryService
     from tripsage_core.services.business.memory_service import MemoryService
     from tripsage_core.services.business.trip_service import TripService
-    from tripsage_core.services.business.unified_search_service import (
-        UnifiedSearchService,
-    )
     from tripsage_core.services.infrastructure.db_ops_mixin import (
         DatabaseServiceProtocol,
     )
@@ -173,35 +164,18 @@ async def _setup_business_services(
         database_service=database_service,
         ai_analysis_service=document_analyzer,
     )
-    accommodation_service: None = None
-    destination_service = DestinationService(
-        database_service=database_service,
-    )
     flight_service = FlightService(database_service=database_service)
     itinerary_service = ItineraryService(database_service=database_service)
     trip_service = TripService(
         database_service=database_service,
     )
-    unified_search_service = UnifiedSearchService(
-        cache_service=cache_service,
-        destination_service=destination_service,
-        flight_service=flight_service,
-        accommodation_service=accommodation_service,
-    )
-    search_facade = SearchFacade(
-        destination_service=destination_service,
-        unified_search_service=unified_search_service,
-    )
 
     return {
-        "destination_service": destination_service,
         "file_processing_service": file_processing_service,
         "flight_service": flight_service,
         "itinerary_service": itinerary_service,
         "memory_service": memory_service,
-        "search_facade": search_facade,
         "trip_service": trip_service,
-        "unified_search_service": unified_search_service,
     }
 
 
@@ -219,14 +193,11 @@ def _build_service_container(
     ) = external
 
     return AppServiceContainer(
-        destination_service=business["destination_service"],
         file_processing_service=business["file_processing_service"],
         flight_service=business["flight_service"],
         itinerary_service=business["itinerary_service"],
         memory_service=business["memory_service"],
-        search_facade=business["search_facade"],
         trip_service=business["trip_service"],
-        unified_search_service=business["unified_search_service"],
         document_analyzer=document_analyzer,
         webcrawl_service=webcrawl_service,
         cache_service=cache_service,

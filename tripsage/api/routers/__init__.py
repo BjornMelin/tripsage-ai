@@ -12,11 +12,9 @@ __all__ = [
     "auth",
     "config",
     "dashboard",
-    "destinations",
     "health",
     "itineraries",
     "memory",
-    "search",
     "trips",
     "users",
 ]
@@ -27,11 +25,9 @@ if TYPE_CHECKING:
         auth,
         config,
         dashboard,
-        destinations,
         health,
         itineraries,
         memory,
-        search,
         trips,
         users,
     )

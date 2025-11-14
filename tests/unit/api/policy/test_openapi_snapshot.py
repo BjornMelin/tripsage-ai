@@ -32,16 +32,22 @@ def test_openapi_snapshot_matches() -> None:
     )
     snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
 
-    # Exclude chat endpoints that are now implemented in Next.js AI SDK.
-    def _strip_chat_paths(spec: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    # Exclude endpoints migrated to Next.js AI SDK v6 agents.
+    def _strip_migrated_paths(
+        spec: dict[str, dict[str, Any]],
+    ) -> dict[str, dict[str, Any]]:
         paths = dict(spec.get("paths", {}))
-        filtered = {k: v for k, v in paths.items() if not k.startswith("/api/chat")}
+        filtered = {
+            k: v
+            for k, v in paths.items()
+            if not (k.startswith(("/api/chat", "/api/search", "/api/destinations")))
+        }
         spec = dict(spec)
         spec["paths"] = filtered
         return spec
 
-    current = _strip_chat_paths(current)
-    snapshot = _strip_chat_paths(snapshot)
+    current = _strip_migrated_paths(current)
+    snapshot = _strip_migrated_paths(snapshot)
 
     assert current == snapshot, (
         "OpenAPI schema changed. If intentional (additive and approved), "

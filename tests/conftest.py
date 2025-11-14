@@ -326,11 +326,9 @@ def app() -> FastAPI:
     from tripsage.api.routers import (
         attachments,
         config,
-        destinations,
         health,
         itineraries,
         memory,
-        search,
         trips,
     )
 
@@ -339,13 +337,8 @@ def app() -> FastAPI:
     app.include_router(trips.router, prefix="/api/trips", tags=["trips"])
     app.include_router(memory.router, prefix="/api", tags=["memory"])
     app.include_router(
-        destinations.router, prefix="/api/destinations", tags=["destinations"]
-    )
-    app.include_router(
         itineraries.router, prefix="/api/itineraries", tags=["itineraries"]
     )
-    # Search router defines root-level paths (e.g., /unified, /suggest)
-    app.include_router(search.router, prefix="", tags=["search"])
     app.include_router(
         attachments.router, prefix="/api/attachments", tags=["attachments"]
     )

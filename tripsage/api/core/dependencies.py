@@ -17,16 +17,13 @@ from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError,
     CoreAuthorizationError,
 )
-from tripsage_core.services.business.destination_service import DestinationService
 from tripsage_core.services.business.file_processing_service import (
     FileProcessingService,
 )
 from tripsage_core.services.business.flight_service import FlightService
 from tripsage_core.services.business.itinerary_service import ItineraryService
 from tripsage_core.services.business.memory_service import MemoryService
-from tripsage_core.services.business.search_facade import SearchFacade
 from tripsage_core.services.business.trip_service import TripService
-from tripsage_core.services.business.unified_search_service import UnifiedSearchService
 from tripsage_core.services.infrastructure import CacheService
 from tripsage_core.services.infrastructure.database_service import DatabaseService
 
@@ -189,35 +186,6 @@ def get_file_processing_service(request: Request) -> FileProcessingService:
     )
 
 
-# Unified search service dependency
-def get_unified_search_service_dep(request: Request) -> UnifiedSearchService:
-    """Return the UnifiedSearchService singleton."""
-    return _get_required_service(
-        request,
-        "unified_search_service",
-        UnifiedSearchService,
-    )
-
-
-# Search facade dependency
-def get_search_facade(request: Request) -> SearchFacade:
-    """Return the SearchFacade singleton."""
-    return _get_required_service(
-        request,
-        "search_facade",
-        SearchFacade,
-    )
-
-
-def get_destination_service(request: Request) -> DestinationService:
-    """Return DestinationService from the container."""
-    return _get_required_service(
-        request,
-        "destination_service",
-        DestinationService,
-    )
-
-
 def get_flight_service_dep(request: Request) -> FlightService:
     """Return FlightService from the container."""
     return _get_required_service(request, "flight_service", FlightService)
@@ -247,11 +215,6 @@ SettingsDep = Annotated[Settings, Depends(get_settings_dependency)]
 DatabaseDep = Annotated[DatabaseService, Depends(get_db)]
 CacheDep = Annotated[CacheService, Depends(get_cache_service_dep)]
 
-UnifiedSearchServiceDep = Annotated[
-    UnifiedSearchService, Depends(get_unified_search_service_dep)
-]
-SearchFacadeDep = Annotated[SearchFacade, Depends(get_search_facade)]
-
 # Principal-based authentication dependencies
 CurrentPrincipalDep = Annotated[Principal | None, Depends(get_current_principal)]
 RequiredPrincipalDep = Annotated[Principal, Depends(_require_principal_dependency)]
@@ -260,8 +223,6 @@ AgentPrincipalDep = Annotated[Principal, Depends(require_agent_principal)]
 AdminPrincipalDep = Annotated[Principal, Depends(require_admin_principal)]
 
 # Business service dependencies (type aliases)
-# ChatServiceDep removed
-DestinationServiceDep = Annotated[DestinationService, Depends(get_destination_service)]
 FlightServiceDep = Annotated[FlightService, Depends(get_flight_service_dep)]
 ItineraryServiceDep = Annotated[ItineraryService, Depends(get_itinerary_service)]
 MemoryServiceDep = Annotated[MemoryService, Depends(get_memory_service)]

@@ -278,38 +278,9 @@ GET /api/activities/{activity_id}
 DELETE /api/activities/{activity_id}
 ```
 
-## Destinations
-
-### Search Destinations
-
-```http
-GET /api/destinations/search
-```
-
-Query parameters:
-
-- `query`: Search term
-- `limit`: Maximum results
-
-### Save Destination
-
-```http
-POST /api/destinations/
-```
-
-### List Saved Destinations
-
-```http
-GET /api/destinations/
-```
-
-### Get Destination Details
-
-```http
-GET /api/destinations/{destination_id}
-```
-
 ## Itineraries
+
+**Note**: Destination and search endpoints have been migrated to frontend AI SDK v6 agents. See `/api/agents/destinations` and `/api/agents/flights` for the new implementation.
 
 ### Create Itinerary
 
@@ -450,56 +421,6 @@ GET /api/memory/stats
 
 ```http
 DELETE /api/memory/clear
-```
-
-## Unified Search
-
-### Unified Search Endpoint
-
-```http
-GET /api/search/
-```
-
-Query parameters:
-
-- `query`: Search term
-- `types`: Comma-separated entity types (trips,flights,accommodations)
-- `limit`: Maximum results per type
-
-### Get Search Suggestions
-
-```http
-GET /api/search/suggestions
-```
-
-### Get Recent Searches
-
-```http
-GET /api/search/recent
-```
-
-### Save Search
-
-```http
-POST /api/search/save
-```
-
-### Delete Saved Search
-
-```http
-DELETE /api/search/{search_id}
-```
-
-### Bulk Search
-
-```http
-POST /api/search/bulk
-```
-
-### Search Analytics
-
-```http
-GET /api/search/analytics
 ```
 
 ## Attachments & Files
