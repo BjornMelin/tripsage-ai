@@ -394,7 +394,7 @@ export type Database = {
             columns: ["trip_id"];
             referencedRelation: "trips";
             referencedColumns: ["id"];
-          }
+          },
         ];
       };
 
@@ -429,7 +429,7 @@ export type Database = {
             columns: ["session_id"];
             referencedRelation: "chat_sessions";
             referencedColumns: ["id"];
-          }
+          },
         ];
       };
 
@@ -476,7 +476,7 @@ export type Database = {
             columns: ["message_id"];
             referencedRelation: "chat_messages";
             referencedColumns: ["id"];
-          }
+          },
         ];
       };
 

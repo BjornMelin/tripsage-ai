@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ResetPasswordForm } from "@/components/auth/reset-password-form";
+import { getCurrentUser } from "@/lib/supabase";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -11,9 +12,9 @@ export const metadata: Metadata = {
 
 export default async function ResetPasswordPage() {
   const supabase = await createServerSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+
+  // Use unified getCurrentUser to eliminate duplicate auth.getUser() calls
+  const { user } = await getCurrentUser(supabase);
 
   if (user) {
     redirect("/dashboard");
