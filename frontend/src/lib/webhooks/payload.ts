@@ -4,8 +4,10 @@
 
 import "server-only";
 import { createHash } from "node:crypto";
+import { trace } from "@opentelemetry/api";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { verifyRequestHmac } from "@/lib/security/webhook";
+import { emitOperationalAlert } from "@/lib/telemetry/alerts";
 
 const OLD_RECORD_KEY = "old_record" as const;
 const OCCURRED_AT_KEY = "occurred_at" as const;
@@ -48,6 +50,13 @@ function normalizeWebhookPayload(raw: RawWebhookPayload): WebhookPayload {
   };
 }
 
+function recordVerificationFailure(reason: string): void {
+  trace.getActiveSpan()?.addEvent("webhook_verification_failed", { reason });
+  emitOperationalAlert("webhook.verification_failed", {
+    attributes: { reason },
+  });
+}
+
 /**
  * Parses and verifies a webhook request with HMAC signature.
  *
@@ -58,17 +67,27 @@ export async function parseAndVerify(
   req: Request
 ): Promise<{ ok: boolean; payload?: WebhookPayload }> {
   const secret = getServerEnvVarWithFallback("HMAC_SECRET", "");
-  if (!secret || !(await verifyRequestHmac(req, secret))) {
+  if (!secret) {
+    recordVerificationFailure("missing_secret_env");
+    return { ok: false };
+  }
+  const verified = await verifyRequestHmac(req, secret);
+  if (!verified) {
+    recordVerificationFailure("invalid_signature");
     return { ok: false };
   }
   let raw: RawWebhookPayload;
   try {
     raw = (await req.json()) as RawWebhookPayload;
   } catch {
+    recordVerificationFailure("invalid_json");
     return { ok: false };
   }
   const payload = normalizeWebhookPayload(raw);
-  if (!payload?.type || !payload?.table) return { ok: false };
+  if (!payload?.type || !payload?.table) {
+    recordVerificationFailure("invalid_payload_shape");
+    return { ok: false };
+  }
   return { ok: true, payload };
 }
 

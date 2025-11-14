@@ -41,6 +41,7 @@ Notes
 - You can also set per-session using `SET` during testing. The migration functions use `current_setting(..., true)` which returns NULL when unset.
 - Secrets rotate by updating the database setting and Vercel env atomically (briefly accept both on server during rotation if desired).
 - Automate validation with `scripts/operators/verify_webhook_secret.sh`. The script exits non-zero if the database GUC diverges from `HMAC_SECRET`, making it safe to run in CI/CD checklists.
+- `.github/workflows/deploy.yml` executes the verification script before creating a deployment. Configure the `PRIMARY_DATABASE_URL` secret (or fallback `DATABASE_URL`) with a writable primary Supabase connection string so drift stops the workflow instead of silently shipping.
 
 ## 2) Test signed webhook (manual)
 
@@ -94,5 +95,6 @@ Troubleshooting
 
 ## 5) Observability
 
-- Webhook handlers emit spans `webhook.trips`, `webhook.cache`, and `webhook.files`. Failures due to missing secrets add an event `webhook_verification_failed` on the active span (`reason = missing_secret_env | invalid_signature`).
-- Redis-backed helpers emit `redis.unavailable` spans when cache invalidation or idempotency would silently degrade due to missing Upstash credentials. Investigate environment configuration immediately when this event appears.
+- Webhook handlers emit spans `webhook.trips`, `webhook.cache`, and `webhook.files`. Failures due to missing secrets add an event `webhook_verification_failed` on the active span (`reason = missing_secret_env | invalid_signature | invalid_json | invalid_payload_shape`).
+- Both handlers also log structured `[operational-alert]` entries when verification fails. Alerts are JSON with `event` (`webhook.verification_failed`) and a reason attribute; wire log drains or SIEM queries to page on repeated failures.
+- Redis-backed helpers emit `redis.unavailable` spans and matching `[operational-alert]` log entries when cache invalidation or idempotency would silently degrade due to missing Upstash credentials. Investigate environment configuration immediately when this event appears.
