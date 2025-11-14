@@ -49,7 +49,7 @@ class StorageDeployment:
             print("\nStep 3: Testing RLS policies...")
             results["policies"] = await self.test_rls_policies()
 
-            # 4. Legacy Edge Function check (now retired)
+            # 4. Confirm Edge Function retirement (no-op)
             print("\nStep 4: Confirming Edge Function retirement...")
             results["edge_function"] = await self.deploy_edge_function()
 
@@ -168,9 +168,11 @@ class StorageDeployment:
             return False
 
     async def deploy_edge_function(self) -> bool:
-        """No-op: Edge Functions retired. Webhooks use DB → Vercel.
+        """Confirm Edge Functions retirement for existing deployment scripts.
 
-        Kept for backward compatibility of scripts; always returns True.
+        This is an intentional no-op: storage webhooks now flow directly from
+        the database to Vercel. The method remains to keep the deployment
+        sequence stable and always returns ``True``.
         """
         print(
             "Edge Functions retired — using Database Webhooks → Vercel. Skipping deploy."  # noqa: E501
@@ -328,8 +330,11 @@ class StorageDeployment:
         if successful_steps == total_steps:
             print("\nStorage infrastructure deployment completed successfully")
             print("\nNext Steps:")
-            print("1. Configure DB→Vercel webhooks: scripts/operators/setup_webhooks.sh")
-            print("2. Verify HMAC secret alignment: scripts/operators/verify_webhook_secret.sh")
+            print(
+                "1. Configure DB→Vercel webhooks: scripts/operators/setup_webhooks.sh"
+            )
+            print("2. Verify HMAC secret alignment:")
+            print("   scripts/operators/verify_webhook_secret.sh")
             print("3. Configure Vercel env vars (HMAC_SECRET, Upstash, QStash, Resend)")
             print("4. Set up CORS settings for browser uploads")
             print("5. Test file upload/download + webhook delivery flows")
