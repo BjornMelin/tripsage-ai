@@ -6,7 +6,7 @@ const VERIFY_MOCK: MockInstance<
   (_args: { token_hash: string; type: string }) => Promise<{ error: Error | null }>
 > = vi.fn(async (_args: { token_hash: string; type: string }) => ({ error: null }));
 
-vi.mock("@/lib/supabase/server", () => ({
+vi.mock("@/lib/supabase", () => ({
   createServerSupabase: vi.fn(async () => ({ auth: { verifyOtp: VERIFY_MOCK } })),
 }));
 

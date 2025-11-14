@@ -54,7 +54,7 @@ vi.mock("@/lib/redis", () => {
   return { getRedis: () => store };
 });
 
-vi.mock("@/lib/supabase/server", () => {
+vi.mock("@/lib/supabase", () => {
   let currentUserId = "u1";
   return {
     // biome-ignore lint/style/useNamingConvention: test-only helper

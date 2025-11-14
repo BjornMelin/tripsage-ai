@@ -44,7 +44,7 @@ vi.mock("@upstash/ratelimit", () => {
   };
 });
 
-vi.mock("@/lib/supabase/server", () => ({
+vi.mock("@/lib/supabase", () => ({
   createServerSupabase: CREATE_SUPABASE,
 }));
 
