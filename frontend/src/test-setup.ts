@@ -39,10 +39,11 @@ vi.mock("@/components/ui/use-toast", () => ({
 }));
 
 vi.mock("@/lib/embeddings/generate", () => ({
-  generateEmbedding: vi.fn(async () => [0.01, 0.02, 0.03]),
+  generateEmbedding: vi.fn(async () =>
+    Array.from({ length: 1536 }, (_, index) => (index + 1) / 1000)
+  ),
+  getEmbeddingsApiUrl: vi.fn(() => "http://localhost:3000/api/embeddings"),
 }));
-
-vi.mock("@xenova/transformers", () => import("./test/mocks/xenova-transformers"));
 
 vi.mock("zustand/middleware", () => ({
   combine: <T>(fn: T) => fn,
