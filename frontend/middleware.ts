@@ -6,7 +6,7 @@
  */
 
 import { type NextRequest, NextResponse } from "next/server";
-import { createServerSupabase, getCurrentUser } from "@/lib/supabase/factory";
+import { createMiddlewareSupabase, getCurrentUser } from "@/lib/supabase/factory";
 
 /**
  * Creates Supabase server client with SSR cookie handling and refreshes user session.
@@ -20,36 +20,36 @@ import { createServerSupabase, getCurrentUser } from "@/lib/supabase/factory";
  * @returns Response with updated cookies and session state.
  */
 export async function middleware(request: NextRequest) {
-    let response = NextResponse.next({ request });
+  let response = NextResponse.next({ request });
 
-    // Create Supabase server client with custom cookie handling for SSR
-    const supabase = createServerSupabase({
-        cookies: {
-            getAll() {
-                return request.cookies.getAll();
-            },
-            setAll(cookiesToSet) {
-                cookiesToSet.forEach(({ name, value }) => {
-                    request.cookies.set(name, value);
-                });
-                response = NextResponse.next({ request });
-                cookiesToSet.forEach(({ name, value, options }) => {
-                    response.cookies.set(name, value, options);
-                });
-            },
-        },
-        enableTracing: true,
-        spanName: "middleware.auth.refreshSession",
-    });
+  // Create Supabase client for Edge runtime with custom cookie handling
+  const supabase = createMiddlewareSupabase({
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value }) => {
+          request.cookies.set(name, value);
+        });
+        response = NextResponse.next({ request });
+        cookiesToSet.forEach(({ name, value, options }) => {
+          response.cookies.set(name, value, options);
+        });
+      },
+    },
+    enableTracing: true,
+    spanName: "middleware.auth.refreshSession",
+  });
 
-    // Refresh session and sync cookies for React Server Components
-    // Using unified getCurrentUser to eliminate duplicate calls
-    await getCurrentUser(supabase, {
-        enableTracing: true,
-        spanName: "middleware.auth.getUser",
-    });
+  // Refresh session and sync cookies for React Server Components
+  // Using unified getCurrentUser to eliminate duplicate calls
+  await getCurrentUser(supabase, {
+    enableTracing: true,
+    spanName: "middleware.auth.getUser",
+  });
 
-    return response;
+  return response;
 }
 
 /**
