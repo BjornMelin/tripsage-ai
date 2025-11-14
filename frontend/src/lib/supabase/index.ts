@@ -14,14 +14,13 @@ export {
   useSupabase,
 } from "./client";
 // Factory utilities and types
-export {
-  type BrowserSupabaseClient,
-  type CreateServerSupabaseOptions,
-  createCookieAdapter,
-  type GetCurrentUserResult,
-  isSupabaseClient,
-  type ServerSupabaseClient,
+export type {
+  BrowserSupabaseClient,
+  CreateServerSupabaseOptions,
+  GetCurrentUserResult,
+  ServerSupabaseClient,
 } from "./factory";
+export { isSupabaseClient } from "./guards";
 // Server client and utilities
 export {
   createServerSupabase,
