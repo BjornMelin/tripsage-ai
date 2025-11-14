@@ -255,8 +255,6 @@ export function useAgentStatusWebSocket(): AgentStatusWebSocketControls {
       return Promise.resolve();
     }
 
-    disconnect();
-    setReconnectAttempts((attempts) => attempts + 1);
     setConnectionError(null);
 
     const topic = `user:${user.id}`;
@@ -290,20 +288,23 @@ export function useAgentStatusWebSocket(): AgentStatusWebSocketControls {
           channelRef.current.unsubscribe();
           channelRef.current = null;
         }
-        const attempt = reconnectAttempts + 1;
-        setReconnectAttempts(attempt);
-        const delay = Math.min(30000, 1000 * 2 ** Math.min(5, attempt));
-        if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
-        reconnectTimerRef.current = setTimeout(() => {
-          connect();
-        }, delay);
+        setReconnectAttempts((prev) => {
+          const next = prev + 1;
+          const delay = Math.min(30000, 1000 * 2 ** Math.min(5, next));
+          if (reconnectTimerRef.current) {
+            clearTimeout(reconnectTimerRef.current);
+          }
+          reconnectTimerRef.current = setTimeout(() => {
+            connect();
+          }, delay);
+          return next;
+        });
       }
     });
 
     channelRef.current = channel;
     return Promise.resolve();
   }, [
-    disconnect,
     handleAgentError,
     handleStatusUpdate,
     handleTaskComplete,
@@ -312,7 +313,6 @@ export function useAgentStatusWebSocket(): AgentStatusWebSocketControls {
     startSession,
     supabase,
     user?.id,
-    reconnectAttempts,
   ]);
 
   const startAgentMonitoring = useCallback(() => {

@@ -106,6 +106,7 @@ htmlcov/
 lcov.info
 *.lcov
 coverage.json
+frontend/coverage-report.json
 # JUnit reports generated locally (kept as CI artifacts, not source)
 frontend/junit-*.xml
 # Playwright specific
