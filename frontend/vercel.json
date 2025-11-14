@@ -1,0 +1,9 @@
+{
+  "functions": {
+    "src/app/api/**/route.*": {
+      "maxDuration": 60,
+      "regions": ["iad1"]
+    }
+  }
+}
+
