@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Tables } from "@/lib/supabase/database.types";
-import type { TypedServerSupabase } from "@/lib/supabase/server";
+import type { TypedServerSupabase } from "@/lib/supabase";
 import { getKeys, postKey } from "../_handlers";
 
 /**
