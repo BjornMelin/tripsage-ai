@@ -82,7 +82,7 @@ export interface TripPreferences {
  * Interface representing a complete trip with all associated data.
  */
 export interface Trip {
-  // ID fields - supporting both legacy and new systems
+  // ID fields - supporting both database and UI representations
   id: string;
   // biome-ignore lint/style/useNamingConvention: Database uses snake_case
   uuid_id?: string;
@@ -105,8 +105,8 @@ export interface Trip {
   // Trip details
   destinations: Destination[];
 
-  // Budget - supporting both legacy and enhanced
-  budget?: number; // Legacy simple budget
+  // Budget - supporting both simple and structured representations
+  budget?: number; // Simple total budget
   // biome-ignore lint/style/useNamingConvention: Database uses snake_case
   budget_breakdown?: Budget; // New enhanced budget
   currency?: string;
@@ -115,7 +115,7 @@ export interface Trip {
 
   // fields
   visibility?: "private" | "shared" | "public";
-  isPublic?: boolean; // Legacy field for backward compatibility
+  isPublic?: boolean; // Boolean mirror of visibility for older payloads
   tags?: string[];
   preferences?: TripPreferences;
   status?: string;

@@ -75,7 +75,6 @@ export default function SecuritySettingsPage() {
   const handleSettingChange = async (key: keyof SecuritySettings, value: boolean) => {
     setIsLoading(true);
     try {
-      // TODO: Implement API call to update settings
       setSettings((prev) => ({ ...prev, [key]: value }));
 
       // Simulate API delay
@@ -92,8 +91,21 @@ export default function SecuritySettingsPage() {
    */
   const handleDownloadSecurityData = () => {
     try {
-      // TODO: Implement security data export
-      console.log("Downloading security data...");
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        settings,
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = "tripsage-security-settings.json";
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Failed to download security data:", error);
     }
@@ -104,8 +116,12 @@ export default function SecuritySettingsPage() {
    */
   const handleDeleteAccount = () => {
     try {
-      // TODO: Implement account deletion
-      console.log("Account deletion requested...");
+      // Account deletion must be performed via a dedicated, authenticated flow.
+      // For now, surface a clear message rather than attempting destructive
+      // operations from this client component.
+      window.alert(
+        "Account deletion is not yet available in this preview. Please contact support to request deletion."
+      );
     } catch (error) {
       console.error("Failed to delete account:", error);
     }
