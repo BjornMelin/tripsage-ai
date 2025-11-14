@@ -16,6 +16,7 @@ const baseEnvSchema = z.object({
 
 // Next.js specific environment variables
 const nextEnvSchema = z.object({
+  APP_BASE_URL: z.string().url().optional(),
   NEXT_PUBLIC_API_URL: z.string().url().optional(),
   NEXT_PUBLIC_APP_NAME: z.string().default("TripSage"),
   NEXT_PUBLIC_BASE_PATH: z.string().optional(),
@@ -57,6 +58,14 @@ const aiServiceEnvSchema = z.object({
   OPENAI_API_KEY: z.string().optional(),
   // OpenRouter API key (server-side fallback, not attribution)
   OPENROUTER_API_KEY: z.string().optional(),
+  QSTASH_CURRENT_SIGNING_KEY: z.string().optional(),
+  QSTASH_NEXT_SIGNING_KEY: z.string().optional(),
+  // Upstash QStash (durable notifications queue)
+  QSTASH_TOKEN: z.string().optional(),
+  // Resend (email notifications)
+  RESEND_API_KEY: z.string().optional(),
+  RESEND_FROM_EMAIL: z.string().email().optional(),
+  RESEND_FROM_NAME: z.string().optional(),
   // xAI API key (server-side fallback)
   XAI_API_KEY: z.string().optional(),
 });
@@ -93,8 +102,13 @@ const monitoringEnvSchema = z.object({
 // Feature flags and configuration (empty - not used in frontend)
 const featureEnvSchema = z.object({});
 
-// Security configuration (empty - not used in frontend)
-const securityEnvSchema = z.object({});
+// Security configuration
+const securityEnvSchema = z.object({
+  // Optional downstream collaborator webhook URL (signed at app layer)
+  COLLAB_WEBHOOK_URL: z.string().url().optional(),
+  // HMAC secret for verifying Supabase Database Webhooks
+  HMAC_SECRET: z.string().optional(),
+});
 
 // Development and debugging (minimal - only ANALYZE and DEBUG used)
 const developmentEnvSchema = z.object({
