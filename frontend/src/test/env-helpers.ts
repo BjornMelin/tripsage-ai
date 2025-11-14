@@ -5,12 +5,11 @@
 import { vi } from "vitest";
 
 /**
- * Disables Upstash rate limiting by stubbing empty environment values.
+ * Disables Upstash rate limiting by not providing environment values.
  */
 export function stubRateLimitDisabled(): void {
-  // Empty strings prevent ratelimiter construction in route modules
-  vi.stubEnv?.("UPSTASH_REDIS_REST_URL", "");
-  vi.stubEnv?.("UPSTASH_REDIS_REST_TOKEN", "");
+  // Don't set UPSTASH vars - absence disables rate limiting
+  // (empty strings would fail URL validation)
   // Provide minimal Supabase env to satisfy server env validation in routes
   vi.stubEnv?.("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
   vi.stubEnv?.("NEXT_PUBLIC_SUPABASE_ANON_KEY", "anon-test-key");
