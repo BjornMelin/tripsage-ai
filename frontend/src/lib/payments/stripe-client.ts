@@ -8,7 +8,7 @@
 import "server-only";
 
 import Stripe from "stripe";
-import { getServerEnvVar } from "@/lib/env/server";
+import { getServerEnvVar, getServerEnvVarWithFallback } from "@/lib/env/server";
 
 /**
  * Get or create Stripe client instance.
@@ -56,7 +56,10 @@ export function createPaymentIntent(params: {
     // biome-ignore lint/style/useNamingConvention: Stripe API uses snake_case
     payment_method: params.paymentMethodId,
     // biome-ignore lint/style/useNamingConvention: Stripe API uses snake_case
-    return_url: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/booking/confirm`,
+    return_url: `${getServerEnvVarWithFallback(
+      "NEXT_PUBLIC_SITE_URL",
+      "http://localhost:3000"
+    )}/booking/confirm`,
   };
 
   if (params.customerId) {
