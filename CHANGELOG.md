@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Comprehensive test coverage in `frontend/src/lib/supabase/__tests__/factory.spec.ts`
   - Updated files: `middleware.ts`, `lib/supabase/server.ts`, `lib/supabase/index.ts`, `app/(auth)/reset-password/page.tsx`
   - Removed all legacy backward compatibility code and exports
+- **Supabase Frontend Surface Normalization**: Standardized frontend imports to use `@/lib/supabase` as the single entrypoint for Supabase clients and helpers, replacing direct `@/lib/supabase/server` imports across route handlers, auth pages, tools, and tests.
+  - Server code now imports `createServerSupabase` and `TypedServerSupabase` from `frontend/src/lib/supabase/index.ts` instead of internal modules
+  - Middleware, calendar helpers, and BYOK API handlers use `createMiddlewareSupabase`/`getCurrentUser` from the same entrypoint for consistent SSR auth wiring
+  - Tests updated to mock `@/lib/supabase` where appropriate, keeping Supabase integration details behind the barrel module
 
 ## [1.0.0] - 2025-11-14
 

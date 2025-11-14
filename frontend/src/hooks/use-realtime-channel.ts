@@ -5,7 +5,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getBrowserClient } from "@/lib/supabase/client";
+import { getBrowserClient } from "@/lib/supabase";
 
 type SupabaseChannelFactory = ReturnType<typeof getBrowserClient>;
 

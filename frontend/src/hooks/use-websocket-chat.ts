@@ -7,7 +7,7 @@
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { nowIso, secureUuid } from "@/lib/security/random";
-import { getBrowserClient } from "@/lib/supabase/client";
+import { getBrowserClient } from "@/lib/supabase";
 import { useAuthStore } from "@/stores";
 
 type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";

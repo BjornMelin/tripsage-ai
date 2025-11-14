@@ -14,7 +14,7 @@ import { NextResponse } from "next/server";
 import { hasGoogleCalendarScopes } from "@/lib/calendar/auth";
 import { listCalendars } from "@/lib/calendar/google";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
-import { createServerSupabase } from "@/lib/supabase/server";
+import { createServerSupabase } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
