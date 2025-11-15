@@ -418,19 +418,19 @@ export const getValidationSummary = (
 
 // Type guards for common validation patterns
 export const isValidEmail = (value: unknown): value is string => {
-  return typeof value === "string" && z.string().email().safeParse(value).success;
+  return typeof value === "string" && z.email().safeParse(value).success;
 };
 
 export const isValidUuid = (value: unknown): value is string => {
-  return typeof value === "string" && z.string().uuid().safeParse(value).success;
+  return typeof value === "string" && z.uuid().safeParse(value).success;
 };
 
 export const isValidDate = (value: unknown): value is string => {
-  return typeof value === "string" && z.string().date().safeParse(value).success;
+  return typeof value === "string" && z.iso.date().safeParse(value).success;
 };
 
 export const isValidUrl = (value: unknown): value is string => {
-  return typeof value === "string" && z.string().url().safeParse(value).success;
+  return typeof value === "string" && z.url().safeParse(value).success;
 };
 
 // Validation hooks for React components
@@ -447,7 +447,7 @@ export const useValidation = <T>(
 
 // Export commonly used validators
 export const validators = {
-  date: (value: unknown) => validate(z.string().date(), value, ValidationContext.Form),
+  date: (value: unknown) => validate(z.iso.date(), value, ValidationContext.Form),
   email: (value: unknown) => validate(z.email(), value, ValidationContext.Form),
   nonEmptyString: (value: unknown) =>
     validate(z.string().min(1), value, ValidationContext.Form),

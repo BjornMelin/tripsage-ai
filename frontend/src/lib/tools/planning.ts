@@ -20,7 +20,7 @@ import { type Plan, planSchema } from "./planning.schema";
 
 // Internal helpers and schemas (not exported)
 
-const UUI_DV4 = z.string().uuid();
+const UUI_DV4 = z.uuid();
 const ISO_DATE = z.string().regex(/^\d{4}-\d{2}-\d{2}$/u, "must be YYYY-MM-DD");
 const PREFERENCES = z.record(z.string(), z.unknown()).default({});
 

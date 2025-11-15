@@ -167,7 +167,7 @@ export const flightSearchResultSchema = z
     currency: z.string().default("USD"),
     itineraries: z.array(
       z.object({
-        bookingUrl: z.string().url().optional(),
+        bookingUrl: z.url().optional(),
         id: z.string(),
         price: z.number().positive(),
         segments: z.array(flightSegmentSchema),

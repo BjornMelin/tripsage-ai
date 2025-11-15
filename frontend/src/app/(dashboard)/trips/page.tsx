@@ -9,7 +9,6 @@
 
 import { Filter, Grid, List, Plus, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { ConnectionStatusIndicator } from "@/components/features/realtime/connection-status-monitor";
 import { TripCard } from "@/components/features/trips";
 import { Button } from "@/components/ui/button";
@@ -29,18 +28,28 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDeleteTrip, useTrips } from "@/hooks/use-trips";
+import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { type Trip, useTripStore } from "@/stores/trip-store";
+
+const parseTripDate = (value?: string | null): Date | null => {
+  if (!value) {
+    return null;
+  }
+  try {
+    return DateUtils.parse(value);
+  } catch {
+    return null;
+  }
+};
 
 type SortOption = "name" | "date" | "budget" | "destinations";
 type FilterOption = "all" | "draft" | "upcoming" | "active" | "completed";
 
 /**
- * Main trips management page component.
+ * Renders the trips management dashboard with filtering, sorting, and view
+ * toggles backed by realtime queries.
  *
- * Provides filtering, sorting, searching, and view mode options for managing
- * user trips with real-time status updates.
- *
- * @returns The trips management page component.
+ * @returns Trips management layout with grid/list modes.
  */
 export default function TripsPage() {
   const { createTrip } = useTripStore();
@@ -81,25 +90,24 @@ export default function TripsPage() {
     // Apply status filter
     if (filterBy !== "all") {
       filtered = filtered.filter((trip: Trip) => {
-        const now = new Date();
-        const startDate =
-          trip.startDate || trip.start_date
-            ? DateUtils.parse(trip.startDate || trip.start_date || "")
-            : null;
-        const endDate =
-          trip.endDate || trip.end_date
-            ? DateUtils.parse(trip.endDate || trip.end_date || "")
-            : null;
+        const startDate = parseTripDate(trip.startDate || trip.start_date);
+        const endDate = parseTripDate(trip.endDate || trip.end_date);
+        const nowTs = Date.now();
 
         switch (filterBy) {
           case "draft":
             return !startDate || !endDate;
           case "upcoming":
-            return startDate && DateUtils.isAfter(startDate, now);
+            return !!startDate && startDate.getTime() > nowTs;
           case "active":
-            return startDate && endDate && DateUtils.isBefore(startDate, now) && DateUtils.isAfter(endDate, now);
+            return (
+              !!startDate &&
+              !!endDate &&
+              startDate.getTime() <= nowTs &&
+              endDate.getTime() >= nowTs
+            );
           case "completed":
-            return endDate && DateUtils.isBefore(endDate, now);
+            return !!endDate && endDate.getTime() < nowTs;
           default:
             return true;
         }
@@ -111,15 +119,11 @@ export default function TripsPage() {
       switch (sortBy) {
         case "name":
           return (a.title || a.name || "").localeCompare(b.title || b.name || "");
-        case "date":
-          return (
-            DateUtils.toUnix(
-              DateUtils.parse(b.createdAt || b.created_at || "")
-            ) -
-            DateUtils.toUnix(
-              DateUtils.parse(a.createdAt || a.created_at || "")
-            )
-          );
+        case "date": {
+          const parsedB = parseTripDate(b.createdAt ?? b.created_at) ?? new Date(0);
+          const parsedA = parseTripDate(a.createdAt ?? a.created_at) ?? new Date(0);
+          return parsedB.getTime() - parsedA.getTime();
+        }
         case "budget":
           return (b.budget || 0) - (a.budget || 0);
         case "destinations":
@@ -153,23 +157,18 @@ export default function TripsPage() {
     const now = new Date();
     return tripsArray.reduce(
       (counts: Record<string, number>, trip: Trip) => {
-        const startDate =
-          trip.startDate || trip.start_date
-            ? DateUtils.parse(trip.startDate || trip.start_date || "")
-            : null;
-        const endDate =
-          trip.endDate || trip.end_date
-            ? DateUtils.parse(trip.endDate || trip.end_date || "")
-            : null;
+        const startDate = parseTripDate(trip.startDate || trip.start_date);
+        const endDate = parseTripDate(trip.endDate || trip.end_date);
+        const nowTs = now.getTime();
 
         if (!startDate || !endDate) {
           counts.draft++;
-        } else if (DateUtils.isAfter(startDate, now)) {
+        } else if (startDate.getTime() > nowTs) {
           counts.upcoming++;
-        } else if (DateUtils.isBefore(startDate, now) && DateUtils.isAfter(endDate, now)) {
-          counts.active++;
-        } else {
+        } else if (endDate.getTime() < nowTs) {
           counts.completed++;
+        } else {
+          counts.active++;
         }
 
         return counts;
