@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Refactored
 
+- **Chat Realtime Stack Simplification (Phase 2)**: Refactored chat realtime hooks and store to be fully library-first and aligned with Option C+ architecture.
+  - Refactored `useWebSocketChat` to use `useRealtimeChannel`'s `onMessage` callback pattern instead of direct channel access, eliminating direct `supabase.channel()` calls.
+  - Removed legacy WebSocket types (`WebSocketMessageEvent`, `WebSocketAgentStatusEvent`) and replaced with Supabase Realtime payload types (`ChatMessageBroadcastPayload`, `ChatTypingBroadcastPayload`, `AgentStatusBroadcastPayload`).
+  - Refactored `chat-store.ts` to be hook-driven: removed `connectRealtime` and `disconnectRealtime` methods that directly managed Supabase channels. Store now exposes `setChatConnectionStatus`, `handleRealtimeMessage`, `handleAgentStatusUpdate`, `handleTypingUpdate`, and `resetRealtimeState` methods.
+  - Updated `useSupabaseRealtime` wrappers (`useTripRealtime`, `useChatRealtime`) to use `connectionStatus` from `useRealtimeChannel` instead of deprecated `isConnected` property.
+  - Rewrote chat realtime tests to be deterministic with proper mocking of `useRealtimeChannel`, achieving 100% branch coverage for new store methods.
+  - Eliminated all deprecated/compat/shim/TODO patterns from chat domain hooks and stores.
+
 - **Supabase Factory Unification**: Merged fragmented client/server creations into unified factory (`frontend/src/lib/supabase/factory.ts`) with OpenTelemetry tracing, Zod env validation, and `getCurrentUser` helper, eliminating 4x duplicate `auth.getUser()` calls across middleware, route handlers, and pages (-20% auth bundle size, N+1 query elimination).
   - Unified factory with server-only directive and SSR cookie handling via `@supabase/ssr`
   - Integrated OpenTelemetry spans for `supabase.init` and `supabase.auth.getUser` operations with attribute redaction
