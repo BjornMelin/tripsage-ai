@@ -23,26 +23,26 @@ export type DealType = z.infer<typeof DEAL_TYPE_SCHEMA>;
  * Represents travel deals with pricing, dates, and metadata.
  */
 export const DEAL_SCHEMA = z.object({
-  createdAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
   currency: z.string().length(3),
   description: z.string().max(500),
   destination: z.string(),
   discountPercentage: z.number().min(0).max(100).optional(),
-  endDate: z.string().datetime().optional(),
-  expiryDate: z.string().datetime(),
+  endDate: z.iso.datetime().optional(),
+  expiryDate: z.iso.datetime(),
   featured: z.boolean().default(false),
   id: z.string(),
-  imageUrl: z.string().url().optional(),
+  imageUrl: z.url().optional(),
   origin: z.string().optional(),
   originalPrice: z.number().positive().optional(),
   price: z.number().positive(),
   provider: z.string(),
-  startDate: z.string().datetime().optional(),
+  startDate: z.iso.datetime().optional(),
   tags: z.array(z.string()).optional(),
   title: z.string().min(3).max(100),
   type: DEAL_TYPE_SCHEMA,
-  updatedAt: z.string().datetime(),
-  url: z.string().url(),
+  updatedAt: z.iso.datetime(),
+  url: z.url(),
   verified: z.boolean().default(false),
 });
 /** TypeScript type for deal entities. */
@@ -50,7 +50,7 @@ export type Deal = z.infer<typeof DEAL_SCHEMA>;
 
 /** Zod schema for deal alert subscriptions. */
 export const DEAL_ALERT_SCHEMA = z.object({
-  createdAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
   dealType: DEAL_TYPE_SCHEMA.optional(),
   destination: z.string().optional(),
   id: z.string(),
@@ -59,7 +59,7 @@ export const DEAL_ALERT_SCHEMA = z.object({
   minDiscount: z.number().min(0).max(100).optional(),
   notificationType: z.enum(["email", "both"]).default("email"),
   origin: z.string().optional(),
-  updatedAt: z.string().datetime(),
+  updatedAt: z.iso.datetime(),
   userId: z.string().optional(),
 });
 /** TypeScript type for deal alerts. */

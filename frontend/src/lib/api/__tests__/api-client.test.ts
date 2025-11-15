@@ -6,19 +6,19 @@ import { ApiClient, ApiClientError } from "../api-client";
 /** Zod schema for validating user response data. */
 const USER_RESPONSE_SCHEMA = z.object({
   age: z.number().int().min(0).max(150),
-  createdAt: z.string().datetime(),
-  email: z.string().email(),
-  id: z.string().uuid(),
+  createdAt: z.iso.datetime(),
+  email: z.email(),
+  id: z.uuid(),
   isActive: z.boolean(),
   metadata: z.record(z.string(), z.unknown()).optional(),
   name: z.string().min(1),
-  updatedAt: z.string().datetime(),
+  updatedAt: z.iso.datetime(),
 });
 
 /** Zod schema for validating user creation request data. */
 const USER_CREATE_REQUEST_SCHEMA = z.object({
   age: z.number().int().min(18, "Must be at least 18 years old"),
-  email: z.string().email("Invalid email format"),
+  email: z.email("Invalid email format"),
   name: z.string().min(1, "Name is required"),
   preferences: z
     .object({
@@ -469,7 +469,17 @@ describe("API client with Zod Validation", () => {
     });
 
     it("validates with strict mode for exact object matching", async () => {
-      const StrictUserSchema = USER_RESPONSE_SCHEMA.strict();
+      // In Zod v4, use z.strictObject() directly instead of .strict()
+      const StrictUserSchema = z.strictObject({
+        age: z.number().int().min(0).max(150),
+        createdAt: z.iso.datetime(),
+        email: z.email(),
+        id: z.uuid(),
+        isActive: z.boolean(),
+        metadata: z.record(z.string(), z.unknown()).optional(),
+        name: z.string().min(1),
+        updatedAt: z.iso.datetime(),
+      });
 
       const responseWithExtraFields = {
         age: 25,

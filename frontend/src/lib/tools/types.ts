@@ -2,34 +2,22 @@
  * @fileoverview Shared types and helpers for AI SDK v6 tool execution.
  */
 
-import type { Redis } from "@upstash/redis";
+import type {
+  ApprovalContext,
+  ExecutionDeps,
+  RateLimitResult,
+  ToolExecutionContext,
+  UserContext,
+} from "@/lib/schemas/tools";
 
-export type UserContext = {
-  userId: string;
-  sessionId?: string;
-  ip?: string;
+// Re-export types from schemas
+export type {
+  ApprovalContext,
+  ExecutionDeps,
+  RateLimitResult,
+  ToolExecutionContext,
+  UserContext,
 };
 
-export type ExecutionDeps = {
-  redis?: Redis;
-  now?: () => number;
-};
-
-export type ApprovalContext = {
-  /** Marks a tool action as requiring explicit user approval. */
-  requireApproval: (action: string, ctx: UserContext) => Promise<void>;
-};
-
-export type ToolExecutionContext = UserContext & ExecutionDeps & ApprovalContext;
-
-// Using the return type of the `tool` helper is sufficient in practice,
-// but we keep the registry typed as Record<string, unknown> to avoid
-// tight coupling to internal AI SDK types.
+// Keep registry as Record<string, unknown> to avoid AI SDK coupling.
 export type AiTool = unknown;
-
-export type RateLimitResult = {
-  success: boolean;
-  limit?: number;
-  remaining?: number;
-  reset?: number;
-};

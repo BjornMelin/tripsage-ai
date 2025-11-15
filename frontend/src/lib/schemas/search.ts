@@ -11,7 +11,7 @@ const COORDINATES_SCHEMA = z.object({
   lng: z.number().min(-180).max(180),
 });
 
-const DATE_STRING_SCHEMA = z.string().datetime().or(z.string().date());
+const DATE_STRING_SCHEMA = z.iso.datetime().or(z.iso.date());
 const POSITIVE_INT_SCHEMA = z.number().int().positive();
 const NON_NEGATIVE_INT_SCHEMA = z.number().int().nonnegative();
 
@@ -148,7 +148,7 @@ export const accommodationSchema = z.object({
   checkOut: DATE_STRING_SCHEMA,
   coordinates: COORDINATES_SCHEMA.optional(),
   id: z.string().min(1),
-  images: z.array(z.string().url()).optional(),
+  images: z.array(z.url()).optional(),
   location: z.string().min(1),
   name: z.string().min(1),
   pricePerNight: z.number().positive(),
@@ -164,7 +164,7 @@ export const activitySchema = z.object({
   description: z.string(),
   duration: POSITIVE_INT_SCHEMA,
   id: z.string().min(1),
-  images: z.array(z.string().url()).optional(),
+  images: z.array(z.url()).optional(),
   location: z.string().min(1),
   name: z.string().min(1),
   price: z.number().nonnegative(),
@@ -189,7 +189,7 @@ export const destinationSchema = z.object({
   formattedAddress: z.string().min(1),
   id: z.string().min(1),
   name: z.string().min(1),
-  photos: z.array(z.string().url()).optional(),
+  photos: z.array(z.url()).optional(),
   placeId: z.string().optional(),
   popularityScore: z.number().min(0).max(10).optional(),
   rating: z.number().min(0).max(5).optional(),

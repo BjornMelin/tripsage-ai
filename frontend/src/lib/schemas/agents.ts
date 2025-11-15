@@ -29,7 +29,7 @@ export const agentSourceSchema = z
     publishedAt: z.string().optional(),
     snippet: z.string().optional(),
     title: z.string().optional(),
-    url: z.string().url(),
+    url: z.url(),
   })
   .describe("Source citation with URL and optional metadata");
 /** TypeScript type for agent source citations. */
@@ -40,7 +40,7 @@ const destinationItemSchema = z.object({
   description: z.string().optional(),
   tags: z.array(z.string()).optional(),
   title: z.string(),
-  url: z.string().url().optional(),
+  url: z.url().optional(),
 });
 
 /** Zod schema for destination research requests. */
@@ -99,7 +99,7 @@ const itineraryDaySchema = z.object({
         location: z.string().optional(),
         name: z.string(),
         time: z.string().optional(),
-        url: z.string().url().optional(),
+        url: z.url().optional(),
       })
     )
     .default([]),
@@ -191,7 +191,7 @@ const stayOptionSchema = z.object({
   name: z.string(),
   nightlyRate: z.number().positive().optional(),
   rating: z.number().min(0).max(5).optional(),
-  url: z.string().url().optional(),
+  url: z.url().optional(),
 });
 
 /** Zod schema for accommodation search requests. */
@@ -272,7 +272,7 @@ export type MemoryRecord = z.infer<typeof memoryRecordSchema>;
 export const memoryUpdateRequestSchema = z
   .object({
     records: z.array(memoryRecordSchema),
-    userId: z.string().uuid().optional(),
+    userId: z.uuid().optional(),
   })
   .describe("Input for updating user memories");
 /** TypeScript type for memory update requests. */
