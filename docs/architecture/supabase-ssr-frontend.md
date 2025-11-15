@@ -33,12 +33,14 @@ import {
 **When to use:** React Server Components, Route Handlers, Server Actions, and any server-side code that needs authenticated database access.
 
 **Features:**
+
 - Uses `@supabase/ssr.createServerClient` with Next.js `cookies()` integration
 - Zod-validated environment variables via `getServerEnv()`
 - OpenTelemetry tracing enabled by default (`supabase.init` span)
 - Cookie-based session management for SSR compatibility
 
 **Example:**
+
 ```typescript
 // In a Route Handler
 import { createServerSupabase } from "@/lib/supabase";
@@ -57,11 +59,13 @@ export async function GET() {
 **When to use:** Next.js middleware (`middleware.ts`) running in Edge runtime.
 
 **Features:**
+
 - Uses client-safe environment variables only (`getClientEnv()`)
 - Default tracing disabled (can be enabled with custom span)
 - Custom cookie adapter for Edge runtime compatibility
 
 **Example:**
+
 ```typescript
 // In middleware.ts
 import { createMiddlewareSupabase, getCurrentUser } from "@/lib/supabase";
@@ -89,11 +93,13 @@ export async function middleware(request: NextRequest) {
 **When to use:** Client components, React hooks, Zustand stores, and any browser-side code.
 
 **Features:**
+
 - Singleton pattern via `getBrowserClient()` for shared instance
 - React hook `useSupabase()` for component usage
 - `createClient()` for fresh instances (rarely needed)
 
 **Example:**
+
 ```typescript
 // In a React component
 import { useSupabase } from "@/lib/supabase";
@@ -117,11 +123,13 @@ export function MyComponent() {
 **When to use:** Server-only Route Handlers that need to call SECURITY DEFINER RPCs (e.g., Vault key operations, BYOK endpoints).
 
 **Features:**
+
 - Uses service-role key (`SUPABASE_SERVICE_ROLE_KEY`)
 - Bypasses Row Level Security (RLS)
 - Never exposed to browser bundles (`"server-only"`)
 
 **Example:**
+
 ```typescript
 // In /api/keys/route.ts
 import { createAdminSupabase } from "@/lib/supabase";
@@ -141,12 +149,14 @@ export async function POST(req: Request) {
 The `getCurrentUser` helper eliminates duplicate `auth.getUser()` calls across middleware, route handlers, and server components.
 
 **Features:**
+
 - Single unified helper for user retrieval
 - OpenTelemetry span (`supabase.auth.getUser`) with PII redaction
 - User ID always redacted in telemetry (`[REDACTED]`)
 - Returns `{ user: User | null, error: Error | null }`
 
 **Example:**
+
 ```typescript
 import { createServerSupabase, getCurrentUser } from "@/lib/supabase";
 
@@ -171,6 +181,7 @@ Utility to convert Next.js `ReadonlyRequestCookies` to `CookieMethodsServer` int
 **When to use:** Custom server contexts where `cookies()` is not directly available.
 
 **Example:**
+
 ```typescript
 import { createCookieAdapter, createServerSupabase } from "@/lib/supabase";
 import { cookies } from "next/headers";
@@ -233,6 +244,30 @@ Aggregate hook providing `useTripRealtime(tripId)` and `useChatRealtime(sessionI
 
 **Implementation:** `src/hooks/use-supabase-realtime.ts` delegates to `useRealtimeChannel` and `useWebSocketChat`.
 
+## Realtime and AI SDK Architectural Invariants
+
+This section documents the architectural invariants that govern how Supabase Realtime and AI SDK v6 are used together in the frontend application. See [Frontend Architecture](./frontend-architecture.md#realtime-and-ai-sdk-responsibilities) for the complete documentation.
+
+### Key Invariants
+
+1. **Transport Separation**: AI SDK v6 (`useChat` + `streamText`) handles all LLM token streaming. Supabase Realtime handles multi-client events (broadcasts, presence, Postgres changes).
+
+2. **Single Low-Level Hook**: All Realtime channel creation flows through `useRealtimeChannel`. Feature code never directly calls `supabase.channel(...)`.
+
+3. **Hooks Own Connections, Stores Own State**: Hooks manage connection lifecycles; Zustand stores hold logical state snapshots.
+
+4. **Security**: Private channels use Realtime Authorization and RLS. Channel topics follow patterns: `user:${userId}`, `session:${sessionId}`, `trip:${tripId}`.
+
+### Current Architecture Violations
+
+The following files violate the "Single Low-Level Hook" invariant and should be refactored in later phases:
+
+- `frontend/src/stores/chat-store.ts` (line 461): Direct `supabase.channel()` call
+- `frontend/src/hooks/use-agent-status-websocket.ts` (line 261): Direct `supabase.channel()` call  
+- `frontend/src/hooks/use-trips.ts` (lines 415, 574): Direct `supabase.channel()` calls for Postgres changes
+
+These violations are documented but not yet fixed to maintain Phase 0's non-destructive scope.
+
 ## Environment Variables
 
 ### Server (`getServerEnv()`)
@@ -275,6 +310,7 @@ The admin client (`createAdminSupabase`) is server-only and used exclusively for
 - Any SECURITY DEFINER functions that require elevated privileges
 
 **Never use in:**
+
 - Browser components
 - Client-side hooks
 - Public API routes without authentication checks
@@ -348,4 +384,3 @@ All imports have been unified to use `@/lib/supabase` barrel export:
 - [Supabase SSR Docs](https://supabase.com/docs/guides/auth/server-side/creating-a-client)
 - [Next.js Caching Guide](https://nextjs.org/docs/app/building-your-application/caching)
 - [OpenTelemetry JS Docs](https://opentelemetry.io/docs/languages/js/)
-

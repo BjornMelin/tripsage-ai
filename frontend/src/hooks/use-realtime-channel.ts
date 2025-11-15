@@ -1,115 +1,254 @@
 /**
- * @fileoverview Shared hook for joining Supabase Realtime channels with minimal wiring.
+ * @fileoverview Core Supabase Realtime channel hook.
+ *
+ * This is the single low-level abstraction for all Supabase Realtime channels in the frontend.
+ * All feature code must use this hook or its thin wrappers (e.g., useWebSocketChat, useTripRealtime).
+ * Never call `supabase.channel(...)` directly in feature code.
+ *
+ * This hook is domain-agnostic and does not know about specific event types like `chat:message`
+ * or `agent_status_update`. Domain hooks translate generic events into store updates.
  */
 
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import type { RealtimeChannel } from "@supabase/supabase-js";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type BackoffConfig, computeBackoffDelay } from "@/lib/realtime/backoff";
 import { getBrowserClient } from "@/lib/supabase";
 
 type SupabaseChannelFactory = ReturnType<typeof getBrowserClient>;
-
 type ChannelInstance = ReturnType<SupabaseChannelFactory["channel"]>;
-type ChannelSendRequest = Parameters<ChannelInstance["send"]>[0];
+type ChannelSendRequest = Parameters<RealtimeChannel["send"]>[0];
 
-type BroadcastFilter = { event: string };
-
-type BroadcastPayload<T> = {
-  event: string;
-  payload: T;
-};
+/**
+ * Connection status for a Realtime channel subscription.
+ */
+export type RealtimeConnectionStatus =
+  | "idle"
+  | "connecting"
+  | "subscribed"
+  | "error"
+  | "closed";
 
 /**
  * Options for configuring a Supabase Realtime channel subscription.
+ *
+ * @template TPayload - Expected payload shape for broadcast events.
  */
-export interface UseRealtimeChannelOptions {
+// biome-ignore lint/style/useNamingConvention: TypeScript generic parameter convention
+export interface UseRealtimeChannelOptions<TPayload = unknown> {
+  /** Whether the channel is private (uses Realtime Authorization). Defaults to true. */
   private?: boolean;
+  /** Optional list of event names to filter broadcasts. If omitted, all events are received. */
+  events?: string[];
+  /** Callback invoked when a broadcast message is received. */
+  onMessage?: (payload: TPayload, event: string) => void;
+  /** Callback invoked when connection status changes. */
+  onStatusChange?: (status: RealtimeConnectionStatus) => void;
+  /** Optional exponential backoff configuration for reconnection. */
+  backoff?: BackoffConfig;
 }
 
 /**
  * Result returned from {@link useRealtimeChannel}, containing connection state and helpers.
- * * @template T - Expected payload shape for broadcast events. * Register a broadcast handler for the provided event filter. */
-export interface UseRealtimeChannelResult<T = unknown> {
-  isConnected: boolean;
-  error: string | null;
-  channel: ChannelInstance | null;
-  onBroadcast: (
-    filter: BroadcastFilter,
-    handler: (payload: BroadcastPayload<T>) => void
-  ) => void;
-  sendBroadcast: (event: string, payload: T) => Promise<void>;
+ *
+ * @template TPayload - Expected payload shape for broadcast events.
+ */
+// biome-ignore lint/style/useNamingConvention: TypeScript generic parameter convention
+export interface UseRealtimeChannelResult<TPayload = unknown> {
+  /** The underlying Supabase RealtimeChannel instance, or null if not connected. */
+  channel: RealtimeChannel | null;
+  /** Current connection status. */
+  connectionStatus: RealtimeConnectionStatus;
+  /** Error from the last connection attempt, or null if no error. */
+  error: Error | null;
+  /** Send a broadcast message to the channel. */
+  sendBroadcast: (event: string, payload: TPayload) => Promise<void>;
+  /** Unsubscribe from the channel and close the connection. */
+  unsubscribe: () => void;
 }
 
 /**
- * Subscribes to a Supabase Realtime topic, returning connection state and helper functions for
- * consuming and emitting broadcast events.
+ * Maps Supabase channel status to our connection status type.
  *
- * @template T - Expected payload shape for broadcast events.
- * @param topic Supabase topic to join (for example `user:uuid`). When null,
- *   the hook remains idle and does not subscribe to any channel.
- * @param opts Optional channel configuration.
+ * @param status - Supabase channel status string (e.g., "SUBSCRIBED", "CHANNEL_ERROR").
+ * @param hasError - Whether an error object was provided with the status.
+ * @returns Mapped connection status for our abstraction.
+ */
+function mapSupabaseStatus(
+  status: string,
+  hasError: boolean
+): RealtimeConnectionStatus {
+  if (hasError) {
+    return "error";
+  }
+  switch (status) {
+    case "SUBSCRIBED":
+      return "subscribed";
+    case "CHANNEL_ERROR":
+    case "TIMED_OUT":
+      return "error";
+    case "CLOSED":
+      return "closed";
+    case "JOINING":
+    case "JOINED":
+      return "connecting";
+    default:
+      return "connecting";
+  }
+}
+
+/**
+ * Subscribes to a Supabase Realtime topic, returning connection state and helper functions
+ * for consuming and emitting broadcast events.
+ *
+ * This is the single low-level abstraction for all Supabase Realtime channels. All feature
+ * code must use this hook or its thin wrappers. Never call `supabase.channel(...)` directly.
+ *
+ * @template TPayload - Expected payload shape for broadcast events.
+ * @param topic - Supabase topic to join (e.g., `user:${userId}`, `session:${sessionId}`).
+ *   When null, the hook remains idle and does not subscribe to any channel.
+ * @param opts - Optional channel configuration including callbacks and backoff settings.
  * @returns Connection state and broadcast helpers.
  */
-export function useRealtimeChannel<T = unknown>(
+// biome-ignore lint/style/useNamingConvention: TypeScript generic parameter convention
+export function useRealtimeChannel<TPayload = unknown>(
   topic: string | null,
-  opts: UseRealtimeChannelOptions = { private: true }
-): UseRealtimeChannelResult<T> {
+  opts: UseRealtimeChannelOptions<TPayload> = { private: true }
+): UseRealtimeChannelResult<TPayload> {
   const supabase = useMemo(() => getBrowserClient(), []);
-  const [isConnected, setIsConnected] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [connectionStatus, setConnectionStatus] =
+    useState<RealtimeConnectionStatus>("idle");
+  const [error, setError] = useState<Error | null>(null);
   const channelRef = useRef<ChannelInstance | null>(null);
+  const reconnectAttemptRef = useRef(0);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const { onMessage, onStatusChange, backoff, events, private: isPrivate } = opts;
+
+  // Update status and notify callback
+  const updateStatus = useCallback(
+    (status: RealtimeConnectionStatus, err: Error | null = null) => {
+      setConnectionStatus(status);
+      setError(err);
+      onStatusChange?.(status);
+    },
+    [onStatusChange]
+  );
+
+  // Cleanup reconnect timer
+  const clearReconnectTimer = useCallback(() => {
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+  }, []);
+
+  // Attempt reconnection with backoff
+  const attemptReconnect = useCallback(() => {
+    if (!backoff || !topic) {
+      return;
+    }
+
+    clearReconnectTimer();
+    reconnectAttemptRef.current += 1;
+    const delay = computeBackoffDelay(reconnectAttemptRef.current, backoff);
+
+    reconnectTimerRef.current = setTimeout(() => {
+      if (topic && channelRef.current) {
+        // Re-subscribe to trigger reconnection
+        channelRef.current.subscribe();
+      }
+    }, delay);
+  }, [backoff, topic, clearReconnectTimer]);
+
+  // Main subscription effect
   useEffect(() => {
     if (!topic) {
       channelRef.current = null;
-      setIsConnected(false);
-      setError(null);
+      updateStatus("idle", null);
+      reconnectAttemptRef.current = 0;
+      clearReconnectTimer();
       return;
     }
 
     let disposed = false;
     const channel = supabase.channel(topic, {
-      config: { private: opts.private !== false },
+      config: { private: isPrivate !== false },
     });
     channelRef.current = channel;
+    updateStatus("connecting", null);
+
+    // Setup broadcast handlers immediately after channel creation
+    // Note: Supabase requires an event filter, so events must be specified when onMessage is provided
+    if (onMessage && events && events.length > 0) {
+      for (const eventName of events) {
+        const handler = (payload: { payload: TPayload }) => {
+          if (disposed) {
+            return;
+          }
+          onMessage(payload.payload, eventName);
+        };
+        // @ts-expect-error - TypeScript overload resolution issue with dynamic event names
+        // The pattern is correct per Supabase docs, but TS can't infer the correct overload
+        channel.on("broadcast", { event: eventName }, handler);
+      }
+    }
 
     channel.subscribe((status, err) => {
       if (disposed) {
         return;
       }
-      if (status === "SUBSCRIBED") {
-        setError(null);
-        setIsConnected(true);
-      }
-      if (err) {
-        setIsConnected(false);
-        setError(err.message ?? "Realtime subscription error");
+
+      const mappedStatus = mapSupabaseStatus(status, Boolean(err));
+      const errorObj = err
+        ? new Error(err.message ?? "Realtime subscription error")
+        : null;
+
+      if (mappedStatus === "subscribed") {
+        reconnectAttemptRef.current = 0;
+        clearReconnectTimer();
+        updateStatus("subscribed", null);
+      } else if (mappedStatus === "error") {
+        updateStatus("error", errorObj);
+        if (backoff) {
+          attemptReconnect();
+        }
+      } else if (mappedStatus === "closed") {
+        updateStatus("closed", null);
+      } else {
+        updateStatus("connecting", null);
       }
     });
 
     return () => {
       disposed = true;
+      clearReconnectTimer();
+      reconnectAttemptRef.current = 0;
       try {
         channel.unsubscribe();
+      } catch {
+        // Ignore unsubscribe errors during cleanup
       } finally {
         if (channelRef.current === channel) {
           channelRef.current = null;
         }
-        setIsConnected(false);
+        updateStatus("idle", null);
       }
     };
-  }, [supabase, topic, opts.private]);
+  }, [
+    supabase,
+    topic,
+    isPrivate,
+    backoff,
+    updateStatus,
+    attemptReconnect,
+    clearReconnectTimer,
+    onMessage,
+    events,
+  ]);
 
-  const onBroadcast: UseRealtimeChannelResult<T>["onBroadcast"] = (filter, handler) => {
-    channelRef.current?.on("broadcast", filter, (payload) => {
-      handler(payload as unknown as BroadcastPayload<T>);
-    });
-  };
-
-  const sendBroadcast: UseRealtimeChannelResult<T>["sendBroadcast"] = async (
-    event,
-    payload
-  ) => {
+  const sendBroadcast = useCallback(async (event: string, payload: TPayload) => {
     const channel = channelRef.current;
     if (!channel) {
       throw new Error("Supabase channel is not connected.");
@@ -120,13 +259,28 @@ export function useRealtimeChannel<T = unknown>(
       type: "broadcast",
     };
     await channel.send(request);
-  };
+  }, []);
+
+  const unsubscribe = useCallback(() => {
+    clearReconnectTimer();
+    reconnectAttemptRef.current = 0;
+    const channel = channelRef.current;
+    if (channel) {
+      try {
+        channel.unsubscribe();
+      } catch {
+        // Ignore unsubscribe errors
+      }
+      channelRef.current = null;
+    }
+    updateStatus("idle", null);
+  }, [clearReconnectTimer, updateStatus]);
 
   return {
     channel: channelRef.current,
+    connectionStatus,
     error,
-    isConnected,
-    onBroadcast,
     sendBroadcast,
+    unsubscribe,
   };
 }
