@@ -2,7 +2,7 @@
  * @fileoverview Server Component for displaying calendar events list.
  */
 
-import { format } from "date-fns";
+import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { Calendar, Clock, MapPin } from "lucide-react";
 import {
   Card,
@@ -44,10 +44,10 @@ export async function CalendarEventList({
   });
 
   if (timeMin) {
-    params.set("timeMin", timeMin.toISOString());
+    params.set("timeMin", DateUtils.formatForApi(timeMin));
   }
   if (timeMax) {
-    params.set("timeMax", timeMax.toISOString());
+    params.set("timeMax", DateUtils.formatForApi(timeMax));
   }
 
   // Fetch events
@@ -98,14 +98,14 @@ export async function CalendarEventList({
           <ul className="space-y-4">
             {events.map((event) => {
               const startDate = event.start.dateTime
-                ? new Date(event.start.dateTime)
+                ? DateUtils.parse(event.start.dateTime)
                 : event.start.date
-                  ? new Date(event.start.date)
+                  ? DateUtils.parse(event.start.date)
                   : null;
               const endDate = event.end.dateTime
-                ? new Date(event.end.dateTime)
+                ? DateUtils.parse(event.end.dateTime)
                 : event.end.date
-                  ? new Date(event.end.date)
+                  ? DateUtils.parse(event.end.date)
                   : null;
 
               return (
@@ -124,8 +124,8 @@ export async function CalendarEventList({
                       {startDate && (
                         <div className="flex items-center gap-1">
                           <Clock className="h-4 w-4" />
-                          {format(startDate, "MMM d, yyyy h:mm a")}
-                          {endDate && ` - ${format(endDate, "h:mm a")}`}
+                          {DateUtils.format(startDate, "MMM d, yyyy h:mm a")}
+                          {endDate && ` - ${DateUtils.format(endDate, "h:mm a")}`}
                         </div>
                       )}
                       {event.location && (
