@@ -24,7 +24,8 @@ Requirements:
 import os
 import sys
 import uuid
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
+from typing import Any
 
 
 try:
@@ -57,6 +58,27 @@ class SupabaseByokVerifier:
         # Type assertion is safe here since we checked for None above
         self.supabase: Client = create_client(self.supabase_url, self.service_role_key)
         self.test_user_id: str = str(uuid.uuid4())  # Generate test user ID
+
+    def _call_rpc(self, name: str, params: Mapping[str, Any] | None = None) -> Any:
+        """Call supabase.rpc(name, params).execute() and return .data or raise.
+
+        Parameters:
+            name: RPC function to call
+            params: Mapping of RPC parameter names to values
+        """
+        try:
+            # supabase.rpc expects a dict or None for params; accept Mapping and
+            # convert to dict to satisfy runtime and static typing checks.
+            params_arg = dict(params) if params is not None else None
+            return self.supabase.rpc(name, params_arg).execute().data
+        except (ConnectionError, TimeoutError) as e:
+            # Preserve the original exception context so the caller can inspect
+            # the underlying network error if needed.
+            raise RuntimeError(f"Network error in {name}: {e}") from e
+        except Exception as e:
+            # Bubble up for the caller to inspect the error message while
+            # preserving the underlying exception context.
+            raise RuntimeError(f"RPC {name} failed: {e}") from e
 
     def run_verification(self) -> bool:
         """Run all verification checks.
@@ -203,19 +225,12 @@ class SupabaseByokVerifier:
 
         for func in rpc_functions:
             try:
-                # Test that function exists and is callable (will fail with validation,
-                # but not with "does not exist")
-                if func.startswith("get_"):
-                    self.supabase.rpc(func, {"p_user_id": self.test_user_id}).execute()
-                elif func == "insert_user_api_key":
-                    self.supabase.rpc(
-                        func,
-                        {
-                            "p_user_id": self.test_user_id,
-                            "p_service": "openai",
-                            "p_api_key": "test-key",
-                        },
-                    ).execute()
+                # All RPC functions are called with a minimal payload.
+                # This is sufficient to check for their existence, as a missing function
+                # will raise a "does not exist" error, while a call with incorrect
+                # parameters will raise a validation error, which is handled and
+                # accepted by the logic below.
+                self.supabase.rpc(func, {"p_user_id": self.test_user_id}).execute()
             except (ConnectionError, TimeoutError) as e:
                 # Network errors during RPC function check
                 print(f"   ❌ Network error checking {func}: {e}")
