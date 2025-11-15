@@ -7,7 +7,6 @@
 
 "use client";
 
-import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { Calendar, Car, Clock, Edit2, MapPin, Plane, Plus, Train } from "lucide-react";
 import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +19,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { DateUtils } from "@/lib/dates/unified-date-utils";
 import type { Destination, Trip } from "@/stores/trip-store";
 
 /**
@@ -65,18 +65,11 @@ interface TimelineEvent {
 }
 
 /**
- * Trip timeline component displaying chronological trip events.
+ * Renders a chronological visualization of trip destinations and events with
+ * optional editing controls.
  *
- * Renders a visual timeline of all trip activities, arrivals, departures,
- * and accommodations with interactive editing capabilities.
- *
- * @param props - Component props.
- * @param props.trip - The trip data to visualize.
- * @param props.onEditDestination - Optional edit callback.
- * @param props.onAddDestination - Optional add destination callback.
- * @param props.className - Optional CSS classes.
- * @param props.showActions - Whether to show action buttons.
- * @returns A formatted timeline component.
+ * @param props - Component properties including trip data and callbacks.
+ * @returns Timeline component summarizing the itinerary.
  */
 export function TripTimeline({
   trip,
@@ -89,7 +82,9 @@ export function TripTimeline({
     const events: TimelineEvent[] = [];
 
     trip.destinations.forEach((destination, index) => {
-      const startDate = destination.startDate ? DateUtils.parse(destination.startDate) : null;
+      const startDate = destination.startDate
+        ? DateUtils.parse(destination.startDate)
+        : null;
       const endDate = destination.endDate ? DateUtils.parse(destination.endDate) : null;
 
       // Arrival event
@@ -123,7 +118,11 @@ export function TripTimeline({
             startDate && endDate
               ? DateUtils.add(
                   startDate,
-                  Math.floor(((activityIndex + 1) * DateUtils.difference(endDate, startDate, "days")) / ((destination.activities?.length ?? 0) + 1)),
+                  Math.floor(
+                    ((activityIndex + 1) *
+                      DateUtils.difference(endDate, startDate, "days")) /
+                      ((destination.activities?.length ?? 0) + 1)
+                  ),
                   "days"
                 )
               : startDate || new Date();

@@ -15,7 +15,7 @@ import {
   RefreshCw,
   Users,
 } from "lucide-react";
-import { type JSX, useMemo } from "react";
+import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -75,7 +75,7 @@ export const AgentStatusDashboard = ({
   reconnect,
   retryCount,
   resume,
-}: AgentStatusDashboardProps): JSX.Element => {
+}: AgentStatusDashboardProps) => {
   const agents = useAgentStatusStore((state) => state.agents);
   const activeAgents = useAgentStatusStore((state) => state.activeAgents);
   const activities = useAgentStatusStore((state) =>

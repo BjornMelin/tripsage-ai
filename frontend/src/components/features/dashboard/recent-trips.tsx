@@ -53,7 +53,7 @@ function TripCardSkeleton() {
 
 /**
  * Render a single trip card.
- * @param trip Trip object to render.
+ * @param trip - Trip object to render.
  */
 function TripCard({ trip }: { trip: Trip }) {
   /**
@@ -81,7 +81,7 @@ function TripCard({ trip }: { trip: Trip }) {
     if (!trip.startDate || !trip.endDate) return null;
     const start = DateUtils.parse(trip.startDate);
     const end = DateUtils.parse(trip.endDate);
-    const diffDays = DateUtils.difference(end, start, "days");
+    const diffDays = Math.max(1, Math.abs(DateUtils.difference(end, start, "days")));
     return `${diffDays} day${diffDays !== 1 ? "s" : ""}`;
   };
 
@@ -93,10 +93,15 @@ function TripCard({ trip }: { trip: Trip }) {
     const now = new Date();
     const start = DateUtils.parse(trip.startDate);
     const end = DateUtils.parse(trip.endDate);
+    const nowTs = now.getTime();
 
-    if (DateUtils.isBefore(now, start)) return "upcoming";
-    if (DateUtils.isAfter(now, start) && DateUtils.isBefore(now, end)) return "ongoing";
-    return "completed";
+    if (start.getTime() > nowTs) {
+      return "upcoming";
+    }
+    if (end.getTime() < nowTs) {
+      return "completed";
+    }
+    return "ongoing";
   };
 
   const status = getTripStatus();
@@ -172,14 +177,11 @@ function EmptyState() {
 }
 
 /**
- * RecentTrips dashboard widget component.
+ * Renders a dashboard widget listing the most recently updated trips.
  *
- * Displays recent trip cards with resilient parsing for different data shapes,
- * includes accessible links, and stable date formatting with loading states.
- *
- * @param limit - Maximum number of trips to display.
- * @param showEmpty - Whether to show empty state when no trips available.
- * @returns The RecentTrips component.
+ * @param props - Component configuration including list limit and whether to
+ * show the empty state.
+ * @returns Recent trip grid with skeleton fallback.
  */
 export function RecentTrips({ limit = 5, showEmpty = true }: RecentTripsProps) {
   const { data: tripsResponse, isLoading } = useTrips();

@@ -48,7 +48,7 @@ const PersonalInfoSchema = z.object({
     .min(1, "Last name is required")
     .max(50, "Last name must be less than 50 characters"),
   location: z.string().max(100, "Location must be less than 100 characters").optional(),
-  website: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
+  website: z.url("Please enter a valid URL").optional().or(z.literal("")),
 });
 
 type PersonalInfoFormData = z.infer<typeof PersonalInfoSchema>;

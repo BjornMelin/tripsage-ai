@@ -2,7 +2,6 @@
  * @fileoverview Server Component for displaying calendar events list.
  */
 
-import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { Calendar, Clock, MapPin } from "lucide-react";
 import {
   Card,
@@ -11,11 +10,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 
-/**
- * Props for CalendarEventList component.
- */
+/** Props for CalendarEventList component. */
 export interface CalendarEventListProps {
   /** Calendar ID to fetch events from (default: "primary") */
   calendarId?: string;
@@ -28,9 +26,10 @@ export interface CalendarEventListProps {
 }
 
 /**
- * CalendarEventList component.
+ * Fetches Calendar events server-side and renders a summarized list in a card.
  *
- * Server Component that fetches and displays calendar events.
+ * @param props - Optional calendar id and time range plus styling hook.
+ * @returns Server component output with event list.
  */
 export async function CalendarEventList({
   calendarId = "primary",

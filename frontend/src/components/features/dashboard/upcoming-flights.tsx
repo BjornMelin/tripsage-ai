@@ -232,17 +232,11 @@ function EmptyState() {
 }
 
 /**
- * Upcoming flights dashboard component.
+ * Renders the upcoming flights dashboard widget with loading and empty states.
  *
- * Fetches and displays a list of upcoming flights with loading states,
- * empty states, and detailed flight information. Integrates with the
- * useUpcomingFlights hook for data fetching and provides links to
- * associated trips and flight search functionality.
- *
- * @param props - Component props.
- * @param props.limit - Maximum number of flights to display. Defaults to 3.
- * @param props.showEmpty - Whether to show an empty state when no flights are available. Defaults to true.
- * @returns A card component containing upcoming flights or loading/empty states.
+ * @param props - Component configuration such as max flights and empty-state
+ * preference.
+ * @returns Card containing fetched flights or fallback UIs.
  */
 export function UpcomingFlights({ limit = 3, showEmpty = true }: UpcomingFlightsProps) {
   const { data: upcomingFlights = [], isLoading } = useUpcomingFlights({
