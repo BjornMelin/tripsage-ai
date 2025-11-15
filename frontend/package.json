@@ -19,7 +19,7 @@
     "test:coverage": "vitest run --coverage",
     "test:benchmark": "npx tsx scripts/benchmark-tests.ts",
     "test:quick": "vitest run --reporter=dot",
-    "test:ci": "CI=1 vitest run --reporter=dot",
+    "test:ci": "CI=1 VITEST_POOL=threads VITEST_MAX_WORKERS=2 vitest run --reporter=dot src/lib && CI=1 VITEST_POOL=threads VITEST_MAX_WORKERS=2 vitest run --reporter=dot src/app && CI=1 VITEST_POOL=threads VITEST_MAX_WORKERS=2 vitest run --reporter=dot src/components && CI=1 VITEST_POOL=threads VITEST_MAX_WORKERS=2 vitest run --reporter=dot src/stores && CI=1 VITEST_POOL=threads VITEST_MAX_WORKERS=2 vitest run --reporter=dot src/test",
     "test:coverage:shard": "CI=1 vitest run --coverage --reporter=blob",
     "test:merge": "vitest run --merge-reports",
     "test:e2e": "playwright test",
@@ -70,8 +70,8 @@
     "@tanstack/react-query-devtools": "^5.90.2",
     "@testing-library/react": "^16.3.0",
     "@types/react-syntax-highlighter": "^15.5.13",
-    "@upstash/ratelimit": "2.0.7",
     "@upstash/qstash": "^2.8.4",
+    "@upstash/ratelimit": "2.0.7",
     "@upstash/redis": "^1.35.6",
     "ai": "6.0.0-beta.99",
     "class-variance-authority": "^0.7.1",
@@ -93,6 +93,7 @@
     "react-hook-form": "^7.66.0",
     "react-syntax-highlighter": "^16.1.0",
     "recharts": "^3.3.0",
+    "resend": "^6.4.2",
     "streamdown": "^1.4.0",
     "stripe": "^19.3.0",
     "tailwind-merge": "^3.3.1",
@@ -101,7 +102,6 @@
     "vaul": "^1.1.2",
     "web-vitals": "^5.1.0",
     "zod": "^4.1.12",
-    "resend": "^6.4.2",
     "zustand": "^5.0.8"
   },
   "devDependencies": {
@@ -128,6 +128,7 @@
     "jsondiffpatch": "^0.7.3",
     "tailwindcss": "^4.1.17",
     "tailwindcss-animate": "^1.0.7",
+    "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "vitest": "^4.0.8"
   },
