@@ -144,7 +144,12 @@ beforeEach(async () => {
   resetExpedia();
   secureUuidMock.mockReset();
   secureUuidMock.mockReturnValue("uuid-123");
-  vi.stubGlobal("fetch", vi.fn());
+  const fetchMock = vi.fn().mockResolvedValue({
+    // Minimal Response-like shape for code paths that might read JSON
+    json: async () => ({}),
+    ok: true,
+  } as unknown);
+  vi.stubGlobal("fetch", fetchMock);
   const mod = await import("@/lib/env/server");
   (mod.getServerEnvVarWithFallback as ReturnType<typeof vi.fn>).mockImplementation(
     (key: string) => {

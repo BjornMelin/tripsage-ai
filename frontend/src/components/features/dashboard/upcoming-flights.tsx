@@ -89,8 +89,12 @@ function FlightCard({ flight }: { flight: UpcomingFlight }) {
    * @returns Formatted time string.
    */
   const formatTime = (timeString: string) => {
-    const date = DateUtils.parse(timeString);
-    return DateUtils.format(date, "HH:mm");
+    try {
+      const date = DateUtils.parse(timeString);
+      return DateUtils.format(date, "HH:mm");
+    } catch {
+      return "Invalid time";
+    }
   };
 
   /**
@@ -100,8 +104,12 @@ function FlightCard({ flight }: { flight: UpcomingFlight }) {
    * @returns Formatted date string.
    */
   const formatDate = (timeString: string) => {
-    const date = DateUtils.parse(timeString);
-    return DateUtils.format(date, "MMM d");
+    try {
+      const date = DateUtils.parse(timeString);
+      return DateUtils.format(date, "MMM d");
+    } catch {
+      return "Invalid date";
+    }
   };
 
   /**
