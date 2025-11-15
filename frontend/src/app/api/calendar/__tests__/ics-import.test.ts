@@ -15,7 +15,7 @@ describe("/api/calendar/ics/import route", () => {
   };
 
   const setupMocks = (overrides?: { rateLimit?: typeof mockRateLimit }) => {
-    vi.doMock("@/lib/supabase", () => ({
+    vi.doMock("@/lib/supabase/server", () => ({
       createServerSupabase: vi.fn(async () => ({
         auth: {
           getUser: async () => ({
@@ -176,6 +176,99 @@ END:VCALENDAR`;
     expect(res.status).toBe(200);
     expect(body.count).toBe(2);
     expect(body.events).toHaveLength(2);
+  });
+
+  it("handles ICS with line folding", async () => {
+    setupMocks();
+
+    // Test RFC 5545 line folding where long lines are split with CRLF + space
+    const icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Test//Test//EN
+BEGIN:VEVENT
+UID:folded-event
+DTSTART;TZID=America/New_York:20250115T100000
+DTEND;TZID=America/New_York:20250115T110000
+SUMMARY:This is a very long summary that would normally be folded
+  across multiple lines in a real ICS file but we're testing the
+  parser's ability to handle it
+DESCRIPTION:This description spans multiple lines and should be
+  properly unfolded by the parser according to RFC 5545 section 3.1
+LOCATION:Test Location
+END:VEVENT
+END:VCALENDAR`;
+
+    const mod = await import("../ics/import/route");
+    const req = new Request("http://localhost/api/calendar/ics/import", {
+      body: JSON.stringify({
+        icsData: icsContent,
+        validateOnly: true,
+      }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    }) as unknown as NextRequest;
+
+    const res = await mod.POST(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.count).toBe(1);
+    expect(body.events[0].summary).toBe(
+      "This is a very long summary that would normally be folded across multiple lines in a real ICS file but we're testing the parser's ability to handle it"
+    );
+    expect(body.events[0].description).toBe(
+      "This description spans multiple lines and should be properly unfolded by the parser according to RFC 5545 section 3.1"
+    );
+  });
+
+  it("handles ICS with property parameters", async () => {
+    setupMocks();
+
+    const icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Test//Test//EN
+BEGIN:VEVENT
+UID:param-event
+DTSTART;TZID=America/New_York:20250115T100000
+DTEND;TZID=America/New_York:20250115T110000
+SUMMARY:Event with timezone parameters
+LOCATION:Conference Room A
+ATTENDEE;CN="John Doe";CUTYPE=INDIVIDUAL:mailto:john@example.com
+ATTENDEE;CN="Jane Smith":mailto:jane@example.com
+RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20251231T235959Z
+END:VEVENT
+END:VCALENDAR`;
+
+    const mod = await import("../ics/import/route");
+    const req = new Request("http://localhost/api/calendar/ics/import", {
+      body: JSON.stringify({
+        icsData: icsContent,
+        validateOnly: true,
+      }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    }) as unknown as NextRequest;
+
+    const res = await mod.POST(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.count).toBe(1);
+    expect(body.events[0].summary).toBe("Event with timezone parameters");
+    expect(body.events[0].location).toBe("Conference Room A");
+
+    // Check attendees with parameters are parsed
+    expect(body.events[0].attendees).toHaveLength(2);
+    expect(body.events[0].attendees[0].displayName).toBe("John Doe");
+    expect(body.events[0].attendees[0].email).toBe("mailto:john@example.com");
+    expect(body.events[0].attendees[1].displayName).toBe("Jane Smith"); // Has CN parameter
+    expect(body.events[0].attendees[1].email).toBe("mailto:jane@example.com");
+
+    // Check recurrence rule is parsed
+    expect(body.events[0].recurrence).toHaveLength(1);
+    expect(body.events[0].recurrence[0]).toContain("FREQ=WEEKLY");
+    expect(body.events[0].recurrence[0]).toContain("BYDAY=MO");
+    expect(body.events[0].recurrence[0]).toContain("UNTIL=20251231T235959");
   });
 
   it("returns 429 on rate limit", async () => {

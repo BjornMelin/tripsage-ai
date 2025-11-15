@@ -316,7 +316,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           ...(vevent.attendees?.length
             ? {
                 attendees: vevent.attendees.map((att) => ({
-                  displayName: att.params?.CN,
+                  displayName: att.params?.CN?.replace(/^"(.*)"$/, "$1"), // Strip surrounding quotes
                   email: att.val,
                 })),
               }
