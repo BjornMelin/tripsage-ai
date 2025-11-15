@@ -22,6 +22,7 @@ from tripsage_core.services.business.file_processing_service import (
 )
 from tripsage_core.services.business.flight_service import FlightService
 from tripsage_core.services.business.itinerary_service import ItineraryService
+from tripsage_core.services.business.trip_service import TripService
 from tripsage_core.services.infrastructure import CacheService
 from tripsage_core.services.infrastructure.database_service import DatabaseService
 

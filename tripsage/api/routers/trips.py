@@ -62,10 +62,6 @@ from tripsage_core.services.business.audit_logging_service import (
     AuditSeverity,
     audit_security_event,
 )
-from tripsage_core.services.business.memory_service import (
-    MemorySearchRequest,
-    MemorySearchResult,
-)
 
 # Import core service and models
 from tripsage_core.services.business.trip_service import (
@@ -1231,14 +1227,13 @@ async def get_trip_suggestions(
     budget_max: float | None = Query(None, description="Maximum budget filter"),
     category: str | None = Query(None, description="Filter by category"),
 ):
-    """Get personalized trip suggestions based on user preferences and history.
+    """Get trip suggestions with optional filters.
 
     Args:
         limit: Maximum number of suggestions to return
         budget_max: Optional maximum budget filter
         category: Optional category filter
         principal: Current authenticated principal
-
 
     Returns:
         List of trip suggestions
@@ -1347,27 +1342,8 @@ async def get_trip_suggestions(
         ),
     ]
 
-    suggestions = base_suggestions
-
-    try:
-        # Memory service removed; fallback to base suggestions
-        logger.info("Using base suggestions (memory service unavailable)")
-        search_memories = cast(
-            Callable[[str, MemorySearchRequest], Awaitable[list[MemorySearchResult]]],
-        )
-        user_memories = await search_memories(principal.user_id, memory_search)
-
-        if user_memories:
-            logger.info(
-                "Personalizing suggestions based on %s user memories",
-                len(user_memories),
-            )
-
-    except (ValueError, KeyError, CoreServiceError):
-        logger.exception("Failed to get personalized suggestions")
-        suggestions = base_suggestions
-
     # Apply filters with proper validation
+    suggestions = base_suggestions
     filtered_suggestions = suggestions
 
     if budget_max:

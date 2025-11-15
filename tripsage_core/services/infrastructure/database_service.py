@@ -543,6 +543,21 @@ class DatabaseService:
         if not self.is_connected:
             await self.connect()
 
+    async def health_check(self) -> bool:
+        """Perform a health probe and return True when the service is healthy.
+
+        Returns:
+            True if the database service is healthy and responsive, False otherwise.
+        """
+        try:
+            await self.ensure_connected()
+            # Perform a simple query to verify database connectivity
+            await self.execute_sql("SELECT 1")
+            return True
+        except Exception:
+            logger.exception("Database health check failed")
+            return False
+
     async def _initialize_supabase_client(self) -> None:
         try:
             supabase_url = self.settings.database_url
@@ -1451,6 +1466,10 @@ class DatabaseService:
             user_id=user_id,
         )
 
+    def get_stats(self) -> JSONObject:
+        """Get database service statistics and health metrics.
+
+        Returns:
             Mapping of connection/query/security summaries.
         """
         stats: JSONObject = {

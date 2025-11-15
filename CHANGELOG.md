@@ -7,15 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Refactor
+### Removed
+
+- **Backend AI SDK v5 Legacy Code (FINAL-ONLY Cleanup)**
+  - Deleted broken router imports: removed `config` and `memory` routers from `tripsage/api/routers/__init__.py` and `tripsage/api/main.py`
+  - Removed dead code paths: deleted `ConfigurationService` and `MemoryService` references from `tripsage/app_state.py`
+  - Fixed broken memory code: removed undefined variable usage in `tripsage/api/routers/trips.py::get_trip_suggestions`
+  - Removed legacy model field: deleted `chat_session_id` from `tripsage_core/models/attachments.py` (frontend handles chat sessions)
+  - Deleted superseded tests: removed `tests/unit/test_config_mocks.py` and `tests/integration/api/test_config_versions_integration.py`
+  - Cleaned legacy comments: removed historical migration context, updated to reflect current state
+  - Backend is now data-only layer; all AI orchestration handled by frontend AI SDK v6
+
+- **Vault Ops Hardening Verification (Technical Debt Resolution)**
+  - Created comprehensive verification documentation: `docs/operators/supabase-configuration.md` with step-by-step security verification process
+  - Implemented automated verification script: `scripts/verify_vault_hardening.py` for continuous security validation
+  - Verified all required migrations applied: vault role hardening, API key security, Gateway BYOK configuration
+  - Established operational runbook for staging/production deployment verification
+  - Resolved privilege creep prevention measures for Vault RPC operations
+
+### Refactored
+
 - **Backend Cleanup**: Removed legacy AI code superseded by frontend AI SDK v6 migration
   - Deleted `tripsage_core/services/configuration_service.py`
   - Removed agent config endpoints and schemas
   - Cleaned chat-related database methods
   - Removed associated tests
   - Backend now focuses on data persistence; AI orchestration moved to frontend
-
-### Refactored
 
 - **Chat Realtime Stack Simplification (Phase 2)**: Refactored chat realtime hooks and store to be fully library-first and aligned with Option C+ architecture.
   - Refactored `useWebSocketChat` to use `useRealtimeChannel`'s `onMessage` callback pattern instead of direct channel access, eliminating direct `supabase.channel()` calls.
