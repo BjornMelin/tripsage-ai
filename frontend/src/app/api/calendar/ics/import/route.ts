@@ -16,7 +16,7 @@ import { RecurringDateGenerator } from "@/lib/dates/recurring-rules";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { calendarEventSchema } from "@/lib/schemas/calendar";
-import { createServerSupabase } from "@/lib/supabase";
+import { createServerSupabase } from "@/lib/supabase/server";
 
 type ParsedIcsEvent = {
   type: "VEVENT";
@@ -33,19 +33,100 @@ type ParsedIcsEvent = {
 };
 
 /**
+ * Unfolds RFC 5545 line folding.
+ * Lines longer than 75 octets are folded by inserting CRLF followed by a single space or tab.
+ *
+ * @param icsData - Raw ICS document string with potential line folding.
+ * @returns Unfolded ICS data string.
+ */
+function unfoldLines(icsData: string): string {
+  // Normalize line endings to \n
+  const normalized = icsData.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const lines = normalized.split("\n");
+  const unfolded: string[] = [];
+  let currentLine = "";
+
+  for (const line of lines) {
+    // Check if this line is a continuation (starts with space or tab)
+    if (line.length > 0 && (line[0] === " " || line[0] === "\t")) {
+      // Continuation line - append to current line (without leading whitespace)
+      currentLine += line.slice(1);
+    } else {
+      // New line - save previous line and start new one
+      if (currentLine) {
+        unfolded.push(currentLine);
+      }
+      currentLine = line;
+    }
+  }
+  // Don't forget the last line
+  if (currentLine) {
+    unfolded.push(currentLine);
+  }
+
+  return unfolded.join("\n");
+}
+
+/**
+ * Parses property name and parameters from an ICS line.
+ * Handles properties with parameters like "DTSTART;TZID=America/New_York:20200101T120000"
+ *
+ * @param line - ICS content line.
+ * @returns Object with property name, parameters, and value.
+ */
+function parseProperty(line: string): {
+  name: string;
+  params: Record<string, string>;
+  value: string;
+} {
+  const colonIndex = line.indexOf(":");
+  if (colonIndex === -1) {
+    return { name: line, params: {}, value: "" };
+  }
+
+  const propertyPart = line.slice(0, colonIndex);
+  const value = line.slice(colonIndex + 1);
+
+  const semicolonIndex = propertyPart.indexOf(";");
+  if (semicolonIndex === -1) {
+    return { name: propertyPart, params: {}, value };
+  }
+
+  const name = propertyPart.slice(0, semicolonIndex);
+  const params: Record<string, string> = {};
+  const paramParts = propertyPart.slice(semicolonIndex + 1).split(";");
+
+  for (const paramPart of paramParts) {
+    const equalsIndex = paramPart.indexOf("=");
+    if (equalsIndex !== -1) {
+      const paramName = paramPart.slice(0, equalsIndex);
+      const paramValue = paramPart.slice(equalsIndex + 1);
+      // Unescape parameter values (RFC 5545 section 3.2)
+      params[paramName] = paramValue.replace(/\\,/g, ",").replace(/\\;/g, ";");
+    }
+  }
+
+  return { name, params, value };
+}
+
+/**
  * Parses raw ICS data into a keyed map of VEVENT entries.
+ * Handles RFC 5545 line folding and property parameters.
  *
  * @param icsData - Raw ICS document string.
  * @returns Event map keyed by incremental ids.
  */
 function parseICS(icsData: string): Record<string, ParsedIcsEvent> {
   const events: Record<string, ParsedIcsEvent> = {};
-  const lines = icsData.split("\n");
+  // Unfold lines first (RFC 5545 section 3.1)
+  const unfolded = unfoldLines(icsData);
+  const lines = unfolded.split("\n");
   let currentEvent: ParsedIcsEvent | null = null;
   let eventId = 0;
 
   for (const line of lines) {
     const trimmed = line.trim();
+    if (!trimmed) continue;
 
     if (trimmed === "BEGIN:VEVENT") {
       currentEvent = { type: "VEVENT" };
@@ -55,29 +136,40 @@ function parseICS(icsData: string): Record<string, ParsedIcsEvent> {
         events[`event_${eventId}`] = currentEvent;
       }
       currentEvent = null;
-    } else if (trimmed.startsWith("SUMMARY:")) {
+    } else {
+      const { name, params, value } = parseProperty(trimmed);
       currentEvent = currentEvent ?? { type: "VEVENT" };
-      currentEvent.summary = trimmed.substring(8);
-    } else if (trimmed.startsWith("DESCRIPTION:")) {
-      currentEvent = currentEvent ?? { type: "VEVENT" };
-      currentEvent.description = trimmed.substring(12);
-    } else if (trimmed.startsWith("LOCATION:")) {
-      currentEvent = currentEvent ?? { type: "VEVENT" };
-      currentEvent.location = trimmed.substring(9);
-    } else if (trimmed.startsWith("DTSTART:")) {
-      const dateStr = trimmed.substring(8);
-      currentEvent = currentEvent ?? { type: "VEVENT" };
-      currentEvent.start = DateUtils.parse(dateStr);
-    } else if (trimmed.startsWith("DTEND:")) {
-      const dateStr = trimmed.substring(6);
-      currentEvent = currentEvent ?? { type: "VEVENT" };
-      currentEvent.end = DateUtils.parse(dateStr);
-    } else if (trimmed.startsWith("UID:")) {
-      currentEvent = currentEvent ?? { type: "VEVENT" };
-      currentEvent.uid = trimmed.substring(4);
-    } else if (trimmed.startsWith("RRULE:")) {
-      currentEvent = currentEvent ?? { type: "VEVENT" };
-      currentEvent.rrule = trimmed.substring(6);
+
+      // Handle common properties
+      if (name === "SUMMARY") {
+        currentEvent.summary = value;
+      } else if (name === "DESCRIPTION") {
+        currentEvent.description = value;
+      } else if (name === "LOCATION") {
+        currentEvent.location = value;
+      } else if (name === "DTSTART") {
+        // Parse date, handling timezone if present
+        currentEvent.start = DateUtils.parse(value);
+      } else if (name === "DTEND") {
+        currentEvent.end = DateUtils.parse(value);
+      } else if (name === "UID") {
+        currentEvent.uid = value;
+      } else if (name === "RRULE") {
+        currentEvent.rrule = value;
+      } else if (name === "CREATED") {
+        currentEvent.created = DateUtils.parse(value);
+      } else if (name === "LAST-MODIFIED") {
+        currentEvent.lastmodified = DateUtils.parse(value);
+      } else if (name === "ATTENDEE") {
+        // Parse attendee with parameters
+        if (!currentEvent.attendees) {
+          currentEvent.attendees = [];
+        }
+        currentEvent.attendees.push({
+          params,
+          val: value,
+        });
+      }
     }
   }
 
@@ -104,7 +196,7 @@ function getRateLimiter(): InstanceType<typeof Ratelimit> | undefined {
 }
 
 const importRequestSchema = z.object({
-  icsData: z.string().min(1, "ICS data is required"),
+  icsData: z.string().min(1, { error: "ICS data is required" }),
   validateOnly: z.boolean().default(true),
 });
 
