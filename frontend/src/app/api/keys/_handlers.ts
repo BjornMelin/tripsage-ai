@@ -6,7 +6,7 @@
  * typed dependencies.
  */
 import { z } from "zod";
-import type { TypedServerSupabase } from "@/lib/supabase";
+import type { TypedServerSupabase } from "@/lib/supabase/server";
 
 /** Set of allowed API service providers for key storage. */
 const ALLOWED = new Set(["openai", "openrouter", "anthropic", "xai", "gateway"]);
@@ -26,17 +26,20 @@ export const MAX_BODY_SIZE_BYTES = 64 * 1024;
  */
 // biome-ignore lint/style/useNamingConvention: Schema names use PascalCase
 export const PostKeyBodySchema = z.object({
-  apiKey: z.string().min(1, "API key is required").max(2048, "API key too long").trim(),
+  apiKey: z
+    .string()
+    .min(1, { error: "API key is required" })
+    .max(2048, { error: "API key too long" })
+    .trim(),
   // Optional base URL for per-user Gateway. Must be https when provided.
   baseUrl: z
-    .string()
-    .url("Invalid URL")
-    .startsWith("https://", "baseUrl must start with https://")
+    .url({ error: "Invalid URL" })
+    .startsWith("https://", { error: "baseUrl must start with https://" })
     .optional(),
   service: z
     .string()
-    .min(1, "Service name is required")
-    .max(50, "Service name too long")
+    .min(1, { error: "Service name is required" })
+    .max(50, { error: "Service name too long" })
     .trim(),
 });
 
@@ -116,7 +119,7 @@ export async function getKeys(deps: {
     // Align with table column names used across codebase/tests
     .select("service_name, created_at, last_used_at")
     .eq("user_id", user.id)
-    .order("service", { ascending: true });
+    .order("service_name", { ascending: true });
   if (error) {
     return new Response(
       JSON.stringify({ code: "DB_ERROR", error: "Failed to fetch keys" }),

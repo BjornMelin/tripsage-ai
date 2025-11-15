@@ -4,8 +4,8 @@
 
 import { tool } from "ai";
 import { z } from "zod";
-import { createServerSupabase } from "@/lib/supabase";
 import type { Database } from "@/lib/supabase/database.types";
+import { createServerSupabase } from "@/lib/supabase/server";
 
 /**
  * Allowed memory categories aligned with DB enum `memory_type`.
@@ -95,7 +95,7 @@ export const searchUserMemories = tool({
     return data ?? [];
   },
   inputSchema: z.object({
-    limit: z.number().int().min(1).max(20).default(5),
+    limit: z.int().min(1).max(20).default(5),
     query: z.string().min(1),
   }),
 });

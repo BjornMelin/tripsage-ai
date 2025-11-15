@@ -8,7 +8,7 @@ import { tool } from "ai";
 import { z } from "zod";
 import { getRedis } from "@/lib/redis";
 import { nowIso, secureUuid } from "@/lib/security/random";
-import { createServerSupabase } from "@/lib/supabase";
+import { createServerSupabase } from "@/lib/supabase/server";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import {
   RATE_CREATE_PER_DAY,
@@ -21,7 +21,8 @@ import { type Plan, planSchema } from "./planning.schema";
 // Internal helpers and schemas (not exported)
 
 const UUI_DV4 = z.uuid();
-const ISO_DATE = z.string().regex(/^\d{4}-\d{2}-\d{2}$/u, "must be YYYY-MM-DD");
+// Use Zod v4 ISO date validator - validates ISO 8601 date format (YYYY-MM-DD)
+const ISO_DATE = z.iso.date({ error: "must be YYYY-MM-DD" });
 const PREFERENCES = z.record(z.string(), z.unknown()).default({});
 
 export const combineSearchResultsInputSchema = z.object({
@@ -40,8 +41,8 @@ export const createTravelPlanInputSchema = z.object({
   endDate: ISO_DATE,
   preferences: PREFERENCES.optional(),
   startDate: ISO_DATE,
-  title: z.string().min(1, "title required"),
-  travelers: z.number().int().min(1).max(50).default(1),
+  title: z.string().min(1, { error: "title required" }),
+  travelers: z.int().min(1).max(50).default(1),
   userId: z.string().min(1).optional(),
 });
 
@@ -309,7 +310,7 @@ export const updateTravelPlan = tool({
           preferences: PREFERENCES.optional(),
           startDate: ISO_DATE.optional(),
           title: z.string().min(1).optional(),
-          travelers: z.number().int().min(1).max(50).optional(),
+          travelers: z.int().min(1).max(50).optional(),
         });
         const parsed = UpdateSchema.safeParse(updates ?? {});
         if (!parsed.success) {
