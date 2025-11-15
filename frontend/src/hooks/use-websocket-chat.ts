@@ -1,5 +1,8 @@
 /**
- * @fileoverview Chat-centric Supabase Realtime hook with Google-style documentation.
+ * @fileoverview Chat-centric Supabase Realtime hook.
+ *
+ * Provides realtime chat capabilities backed by Supabase broadcast channels.
+ * This hook wraps useRealtimeChannel with domain-specific chat event handling.
  */
 
 "use client";
@@ -14,20 +17,26 @@ type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
 /**
  * Payload for chat message broadcast events.
  */
-type ChatMessageBroadcastPayload = {
+export interface ChatMessageBroadcastPayload {
+  /** Optional message identifier. */
   id?: string;
+  /** Message content (Markdown/plain text). */
   content: string;
+  /** ISO timestamp when the message was created. */
   timestamp?: string;
+  /** Sender information. */
   sender?: { id: string; name: string; avatar?: string };
-};
+}
 
 /**
  * Payload for chat typing broadcast events.
  */
-type ChatTypingBroadcastPayload = {
+export interface ChatTypingBroadcastPayload {
+  /** User ID of the typing user. */
   userId: string;
+  /** Whether the user is currently typing. */
   isTyping: boolean;
-};
+}
 
 /**
  * Represents a chat message exchanged through the realtime channel.
@@ -110,38 +119,14 @@ export function useWebSocketChat({
     return userId ? `user:${userId}` : null;
   }, [autoConnect, sessionId, topicType, user?.id]);
 
-  const { channel, isConnected, error, sendBroadcast } = useRealtimeChannel<
-    ChatMessageBroadcastPayload | ChatTypingBroadcastPayload
-  >(topic, { private: true });
-
-  useEffect(() => {
-    if (!topic) {
-      setStatus("disconnected");
-      setMessages([]);
-      setTypingUsers([]);
-      return;
-    }
-
-    if (error) {
-      setStatus("error");
-      return;
-    }
-
-    if (isConnected) {
-      setStatus("connected");
-    } else {
-      setStatus("connecting");
-    }
-  }, [error, isConnected, topic]);
-
-  useEffect(() => {
-    if (!channel) {
-      return;
-    }
-
-    channel
-      .on("broadcast", { event: "chat:message" }, (payload) => {
-        const data = payload.payload as ChatMessageBroadcastPayload | undefined;
+  // Handle incoming chat messages and typing events via onMessage callback
+  const handleMessage = useCallback(
+    (
+      payload: ChatMessageBroadcastPayload | ChatTypingBroadcastPayload,
+      event: string
+    ) => {
+      if (event === "chat:message") {
+        const data = payload as ChatMessageBroadcastPayload;
         if (!data?.content) {
           return;
         }
@@ -155,9 +140,8 @@ export function useWebSocketChat({
             timestamp: new Date(data.timestamp ?? Date.now()),
           },
         ]);
-      })
-      .on("broadcast", { event: "chat:typing" }, (payload) => {
-        const data = payload.payload as ChatTypingBroadcastPayload | undefined;
+      } else if (event === "chat:typing") {
+        const data = payload as ChatTypingBroadcastPayload;
         if (!data?.userId) {
           return;
         }
@@ -165,18 +149,49 @@ export function useWebSocketChat({
           const filtered = prev.filter((usr) => usr !== data.userId);
           return data.isTyping ? [...filtered, data.userId] : filtered;
         });
-      });
-  }, [channel, user?.id]);
+      }
+    },
+    [user?.id]
+  );
+
+  const { sendBroadcast } = useRealtimeChannel<
+    ChatMessageBroadcastPayload | ChatTypingBroadcastPayload
+  >(topic, {
+    events: ["chat:message", "chat:typing"],
+    onMessage: handleMessage,
+    onStatusChange: (newStatus) => {
+      // Map channel status to our connection status
+      if (newStatus === "subscribed") {
+        setStatus("connected");
+      } else if (newStatus === "error") {
+        setStatus("error");
+      } else if (newStatus === "closed") {
+        setStatus("disconnected");
+      } else {
+        setStatus("connecting");
+      }
+    },
+    private: true,
+  });
+
+  // Reset state when topic becomes null
+  useEffect(() => {
+    if (!topic) {
+      setStatus("disconnected");
+      setMessages([]);
+      setTypingUsers([]);
+    }
+  }, [topic]);
 
   /**
-   * Sends a chat message through the websocket channel.
+   * Sends a chat message through the realtime channel.
    *
    * @param content - The message content to send.
    * @returns Promise that resolves when the message is sent.
    */
   const sendMessage = useCallback(
     async (content: string) => {
-      if (!content || !user?.id || !channel) {
+      if (!content || !user?.id || !topic) {
         return;
       }
 
@@ -186,16 +201,14 @@ export function useWebSocketChat({
         timestamp: nowIso(),
       } as ChatMessageBroadcastPayload);
     },
-    [channel, sendBroadcast, user?.id]
+    [sendBroadcast, topic, user?.id]
   );
 
   /**
    * Starts typing indicator for the current user.
-   *
-   * @returns {void}
    */
   const startTyping = useCallback(() => {
-    if (!user?.id || !channel) {
+    if (!user?.id || !topic) {
       return;
     }
     sendBroadcast("chat:typing", {
@@ -204,15 +217,13 @@ export function useWebSocketChat({
     } as ChatTypingBroadcastPayload).catch(() => {
       // Best-effort typing indicator; ignore failures.
     });
-  }, [channel, sendBroadcast, user?.id]);
+  }, [sendBroadcast, topic, user?.id]);
 
   /**
    * Stops typing indicator for the current user.
-   *
-   * @returns {void}
    */
   const stopTyping = useCallback(() => {
-    if (!user?.id || !channel) {
+    if (!user?.id || !topic) {
       return;
     }
     sendBroadcast("chat:typing", {
@@ -221,15 +232,16 @@ export function useWebSocketChat({
     } as ChatTypingBroadcastPayload).catch(() => {
       // Best-effort typing indicator; ignore failures.
     });
-  }, [channel, sendBroadcast, user?.id]);
+  }, [sendBroadcast, topic, user?.id]);
 
   /**
-   * Reconnects to the websocket.
+   * Reconnects to the realtime channel.
    *
-   * @returns {void}
+   * Note: Supabase Realtime handles reconnection automatically via useRealtimeChannel's
+   * backoff logic. This method exists to maintain the hook's API contract.
    */
   const reconnect = useCallback(() => {
-    // Supabase Realtime client handles reconnection internally; this is a no-op hook.
+    // Reconnection is handled automatically by useRealtimeChannel's backoff logic
     setStatus((current) => (current === "connected" ? "connected" : "connecting"));
   }, []);
 

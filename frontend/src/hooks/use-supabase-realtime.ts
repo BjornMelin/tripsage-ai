@@ -58,11 +58,12 @@ export function useTripRealtime(tripId: string | number | null): RealtimeHookRes
 
   const channel = useRealtimeChannel(topic, { private: true });
   const hasError = Boolean(channel.error);
+  const isConnected = channel.connectionStatus === "subscribed";
 
   const realtimeError = useMemo(
     () =>
       hasError && channel.error
-        ? new Error(channel.error ?? "Realtime subscription error")
+        ? new Error(channel.error.message ?? "Realtime subscription error")
         : null,
     [channel.error, hasError]
   );
@@ -78,16 +79,12 @@ export function useTripRealtime(tripId: string | number | null): RealtimeHookRes
 
   return {
     connectionStatus: {
-      destinations: hasError
-        ? "error"
-        : channel.isConnected
-          ? "connected"
-          : "disconnected",
-      trips: hasError ? "error" : channel.isConnected ? "connected" : "disconnected",
+      destinations: hasError ? "error" : isConnected ? "connected" : "disconnected",
+      trips: hasError ? "error" : isConnected ? "connected" : "disconnected",
     },
     error: realtimeError,
     errors: realtimeError ? [realtimeError] : [],
-    isConnected: channel.isConnected,
+    isConnected,
   };
 }
 

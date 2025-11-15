@@ -1,17 +1,26 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useWebSocketChat } from "@/hooks/use-websocket-chat";
+import type { RealtimeConnectionStatus } from "@/hooks/use-realtime-channel";
 
-const MOCK_CHANNEL = {
-  on: vi.fn().mockReturnThis(),
-  send: vi.fn(),
-  subscribe: vi.fn((cb?: (status: string) => void) => cb?.("SUBSCRIBED")),
-  unsubscribe: vi.fn(),
-};
+const mockSendBroadcast = vi.fn().mockResolvedValue(undefined);
 
-vi.mock("@/lib/supabase", () => ({
-  getBrowserClient: () => ({
-    channel: vi.fn(() => MOCK_CHANNEL),
+vi.mock("@/hooks/use-realtime-channel", () => ({
+  useRealtimeChannel: vi.fn((topic, opts) => {
+    // Simulate connection when topic is provided
+    if (topic) {
+      // Call onStatusChange with subscribed status after render
+      setTimeout(() => {
+        opts?.onStatusChange?.("subscribed" as RealtimeConnectionStatus);
+      }, 0);
+    }
+    return {
+      channel: topic ? { unsubscribe: vi.fn() } : null,
+      connectionStatus: topic ? "subscribed" : "idle",
+      error: null,
+      sendBroadcast: mockSendBroadcast,
+      unsubscribe: vi.fn(),
+    };
   }),
 }));
 
@@ -22,43 +31,99 @@ describe("useWebSocketChat", () => {
     vi.clearAllMocks();
   });
 
-  it("subscribes to user topic by default and can reconnect", () => {
+  it("subscribes to user topic by default", async () => {
     const { result } = renderHook(() => useWebSocketChat({ autoConnect: true }));
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    });
+
     expect(result.current.isConnected).toBe(true);
-    act(() => result.current.reconnect());
-    expect(["connecting", "connected"]).toContain(result.current.connectionStatus);
+    expect(result.current.connectionStatus).toBe("connected");
   });
 
-  it("uses session topic when requested and sends message", async () => {
+  it("uses session topic when requested", async () => {
     const { result } = renderHook(() =>
       useWebSocketChat({ autoConnect: true, sessionId: "s1", topicType: "session" })
     );
-    expect(result.current.isConnected).toBe(true);
+
     await act(async () => {
-      await result.current.sendMessage("hello");
+      await new Promise((resolve) => setTimeout(resolve, 10));
     });
-    expect(MOCK_CHANNEL.send).toHaveBeenCalledWith(
-      expect.objectContaining({ event: "chat:message", type: "broadcast" })
-    );
+
+    expect(result.current.isConnected).toBe(true);
+    expect(result.current.connectionStatus).toBe("connected");
   });
 
-  it("emits typing events", () => {
+  it("sends message via sendBroadcast", async () => {
+    const { result } = renderHook(() =>
+      useWebSocketChat({ autoConnect: true, sessionId: "s1", topicType: "session" })
+    );
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      await result.current.sendMessage("hello");
+    });
+
+    expect(mockSendBroadcast).toHaveBeenCalledWith("chat:message", {
+      content: "hello",
+      sender: { id: "u1", name: "You" },
+      timestamp: expect.any(String),
+    });
+  });
+
+  it("emits typing events via sendBroadcast", async () => {
     const { result } = renderHook(() => useWebSocketChat({ autoConnect: true }));
-    act(() => result.current.startTyping());
-    expect(MOCK_CHANNEL.send).toHaveBeenCalledWith(
-      expect.objectContaining({
-        event: "chat:typing",
-        payload: expect.objectContaining({ isTyping: true }),
-        type: "broadcast",
-      })
-    );
-    act(() => result.current.stopTyping());
-    expect(MOCK_CHANNEL.send).toHaveBeenCalledWith(
-      expect.objectContaining({
-        event: "chat:typing",
-        payload: expect.objectContaining({ isTyping: false }),
-        type: "broadcast",
-      })
-    );
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      result.current.startTyping();
+    });
+
+    expect(mockSendBroadcast).toHaveBeenCalledWith("chat:typing", {
+      isTyping: true,
+      userId: "u1",
+    });
+
+    await act(async () => {
+      result.current.stopTyping();
+    });
+
+    expect(mockSendBroadcast).toHaveBeenCalledWith("chat:typing", {
+      isTyping: false,
+      userId: "u1",
+    });
+  });
+
+  it("does not connect when autoConnect is false", () => {
+    const { result } = renderHook(() => useWebSocketChat({ autoConnect: false }));
+
+    expect(result.current.isConnected).toBe(false);
+    expect(result.current.connectionStatus).toBe("disconnected");
+  });
+
+  it("handles connection errors", async () => {
+    const { useRealtimeChannel } = await import("@/hooks/use-realtime-channel");
+    vi.mocked(useRealtimeChannel).mockImplementationOnce((topic, opts) => {
+      setTimeout(() => {
+        opts?.onStatusChange?.("error" as RealtimeConnectionStatus);
+      }, 0);
+      return {
+        channel: null,
+        connectionStatus: "error",
+        error: new Error("Connection failed"),
+        sendBroadcast: mockSendBroadcast,
+        unsubscribe: vi.fn(),
+      };
+    });
+
+    const { result } = renderHook(() => useWebSocketChat({ autoConnect: true }));
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    });
+
+    expect(result.current.connectionStatus).toBe("error");
+    expect(result.current.isConnected).toBe(false);
   });
 });

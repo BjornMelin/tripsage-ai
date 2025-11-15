@@ -23,10 +23,10 @@ describe("useTripRealtime", () => {
   it("returns disconnected state when tripId is null", () => {
     useRealtimeChannelMock.mockReturnValue({
       channel: null,
+      connectionStatus: "idle",
       error: null,
-      isConnected: false,
-      onBroadcast: vi.fn(),
       sendBroadcast: vi.fn(),
+      unsubscribe: vi.fn(),
     });
 
     const { result } = renderHook(() => useTripRealtime(null));
@@ -43,10 +43,10 @@ describe("useTripRealtime", () => {
   it("delegates to useRealtimeChannel for valid trip id", () => {
     useRealtimeChannelMock.mockReturnValue({
       channel: null,
+      connectionStatus: "subscribed",
       error: null,
-      isConnected: true,
-      onBroadcast: vi.fn(),
       sendBroadcast: vi.fn(),
+      unsubscribe: vi.fn(),
     });
 
     const { result } = renderHook(() => useTripRealtime(123));
@@ -64,17 +64,36 @@ describe("useTripRealtime", () => {
   it("maps channel error into Error objects", () => {
     useRealtimeChannelMock.mockReturnValue({
       channel: null,
-      error: "subscription failed",
-      isConnected: false,
-      onBroadcast: vi.fn(),
+      connectionStatus: "error",
+      error: new Error("subscription failed"),
       sendBroadcast: vi.fn(),
+      unsubscribe: vi.fn(),
     });
 
     const { result } = renderHook(() => useTripRealtime(1));
 
     expect(result.current.isConnected).toBe(false);
     expect(result.current.error).toBeInstanceOf(Error);
+    expect(result.current.error?.message).toBe("subscription failed");
     expect(result.current.errors).toHaveLength(1);
+  });
+
+  it("handles connecting state", () => {
+    useRealtimeChannelMock.mockReturnValue({
+      channel: null,
+      connectionStatus: "connecting",
+      error: null,
+      sendBroadcast: vi.fn(),
+      unsubscribe: vi.fn(),
+    });
+
+    const { result } = renderHook(() => useTripRealtime(1));
+
+    expect(result.current.isConnected).toBe(false);
+    expect(result.current.connectionStatus).toEqual({
+      destinations: "disconnected",
+      trips: "disconnected",
+    });
   });
 });
 
