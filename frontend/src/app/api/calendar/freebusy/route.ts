@@ -13,7 +13,7 @@ import { NextResponse } from "next/server";
 import { queryFreeBusy } from "@/lib/calendar/google";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { freeBusyRequestSchema } from "@/lib/schemas/calendar";
-import { createServerSupabase } from "@/lib/supabase";
+import { createServerSupabase } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { TypedServerSupabase } from "@/lib/supabase";
+import type { TypedServerSupabase } from "@/lib/supabase/server";
 
 const MOCK_CREATE_SERVER_SUPABASE = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/supabase", () => ({

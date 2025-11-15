@@ -22,7 +22,7 @@ import { enforceRouteRateLimit } from "@/lib/ratelimit/config";
 import { getRedis } from "@/lib/redis";
 import type { AccommodationSearchRequest } from "@/lib/schemas/agents";
 import { agentSchemas } from "@/lib/schemas/agents";
-import { createServerSupabase } from "@/lib/supabase";
+import { createServerSupabase } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
