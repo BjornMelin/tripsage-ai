@@ -338,13 +338,19 @@ if (typeof process !== "undefined" && process.env) {
 }
 
 beforeEach(() => {
-  vi.useFakeTimers();
+  if (!vi.isFakeTimers()) {
+    vi.useFakeTimers();
+  }
 });
 
 afterEach(() => {
-  vi.runOnlyPendingTimers();
-  vi.clearAllTimers();
-  vi.useRealTimers();
+  if (vi.isFakeTimers()) {
+    vi.runOnlyPendingTimers();
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  } else {
+    vi.useRealTimers();
+  }
   cleanup();
   resetTestQueryClient();
   vi.restoreAllMocks();
