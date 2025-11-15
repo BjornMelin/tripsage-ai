@@ -15,8 +15,7 @@ const forceForks = process.env.CI_FORCE_FORKS === "1";
 const selectedPool = (process.env.VITEST_POOL || (forceForks ? "forks" : "threads")) as
   | "threads"
   | "forks"
-  | "vmThreads"
-  | "vmForks";
+  | "vmThreads";
 // Prefer availableParallelism when present (Node 18+), fall back to cpus
 // Keep at least 1 worker; on CI, avoid exhausting all cores
 const cores = (os as any).availableParallelism?.() ?? os.cpus().length;

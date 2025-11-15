@@ -68,17 +68,8 @@ export async function createTrip(
 ) {
   // Validate input using Zod schema
   const validated = tripsInsertSchema.parse(data);
-  // Cast to match database types (flexibility/search_metadata are Json, not unknown)
-  const typedValidated = validated as Omit<
-    TripInsert,
-    "flexibility" | "search_metadata"
-  > & {
-    flexibility: Json | undefined;
-    // biome-ignore lint/style/useNamingConvention: Database field name
-    search_metadata: Json | undefined;
-  };
   const supabase = createClient();
-  const { data: row, error } = await insertSingle(supabase, "trips", typedValidated);
+  const { data: row, error } = await insertSingle(supabase, "trips", validated);
   if (error || !row) throw error || new Error("Failed to create trip");
   // Validate response using Zod schema
   const validatedRow = tripsRowSchema.parse(row);
@@ -101,17 +92,8 @@ export async function createTrip(
 export async function updateTrip(id: number, userId: string, updates: TripUpdate) {
   // Validate input using Zod schema
   const validated = tripsUpdateSchema.parse(updates);
-  // Cast to match database types (flexibility/search_metadata are Json, not unknown)
-  const typedValidated = validated as Omit<
-    TripUpdate,
-    "flexibility" | "search_metadata"
-  > & {
-    flexibility: Json | undefined;
-    // biome-ignore lint/style/useNamingConvention: Database field name
-    search_metadata: Json | undefined;
-  };
   const supabase = createClient();
-  const { data, error } = await updateSingle(supabase, "trips", typedValidated, (qb) =>
+  const { data, error } = await updateSingle(supabase, "trips", validated, (qb) =>
     // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder types are complex
     (qb as any)
       .eq("id", id)
