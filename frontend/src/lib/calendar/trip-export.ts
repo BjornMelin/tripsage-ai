@@ -2,18 +2,16 @@
  * @fileoverview Utilities for exporting trip itineraries to calendar events.
  */
 
+import { DateUtils } from "@/lib/dates/unified-date-utils";
 import type { CalendarEvent } from "@/lib/schemas/calendar";
 import { calendarEventSchema } from "@/lib/schemas/calendar";
 import type { Trip } from "@/stores/trip-store";
-import { DateUtils } from "@/lib/dates/unified-date-utils";
 
 /**
- * Convert a trip to calendar events for export.
+ * Converts a trip structure into structured calendar events.
  *
- * Creates calendar events from trip destinations, activities, and transportation.
- *
- * @param trip - Trip to convert
- * @returns Array of calendar events
+ * @param trip - Trip definition including destinations and activities.
+ * @returns Serialized calendar events.
  */
 export function tripToCalendarEvents(trip: Trip): CalendarEvent[] {
   const events: CalendarEvent[] = [];
@@ -124,11 +122,11 @@ export function tripToCalendarEvents(trip: Trip): CalendarEvent[] {
 }
 
 /**
- * Export trip to ICS file.
+ * Exports a trip to ICS by invoking the calendar export API route.
  *
- * @param trip - Trip to export
- * @param calendarName - Name for the calendar (default: trip name)
- * @returns Promise resolving to ICS file content
+ * @param trip - Trip data to export.
+ * @param calendarName - Optional calendar name override.
+ * @returns Serialized ICS content returned by the API.
  */
 export async function exportTripToIcs(
   trip: Trip,

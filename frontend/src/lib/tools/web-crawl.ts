@@ -356,7 +356,7 @@ export const crawlUrl = tool({
   inputSchema: z.object({
     fresh: z.boolean().default(false),
     scrapeOptions: scrapeOptionsSchema,
-    url: z.string().url(),
+    url: z.url(),
   }),
 });
 
@@ -372,7 +372,7 @@ export const crawlSiteInputSchema = z.object({
   scrapeOptions: scrapeOptionsSchema,
   sitemap: z.enum(["include", "skip", "only"]).optional(),
   timeoutMs: z.number().int().positive().default(120000).optional(),
-  url: z.string().url(),
+  url: z.url(),
 });
 
 export const crawlSite = tool({

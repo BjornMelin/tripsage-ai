@@ -6,13 +6,13 @@ import { ApiClient, ApiClientError } from "../api-client";
 /** Zod schema for validating user response data. */
 const USER_RESPONSE_SCHEMA = z.object({
   age: z.number().int().min(0).max(150),
-  createdAt: z.iso.datetime(),
+  createdAt: z.string().datetime(),
   email: z.email(),
   id: z.uuid(),
   isActive: z.boolean(),
   metadata: z.record(z.string(), z.unknown()).optional(),
   name: z.string().min(1),
-  updatedAt: z.iso.datetime(),
+  updatedAt: z.string().datetime(),
 });
 
 /** Zod schema for validating user creation request data. */

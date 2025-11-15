@@ -1,7 +1,6 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import type { ComponentProps } from "react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 // Dynamically import the AgentStatusDashboard with loading fallback
@@ -25,7 +24,5 @@ const AgentStatusDashboard = dynamic(
   }
 );
 
-type AgentStatusDashboardProps = ComponentProps<typeof AgentStatusDashboard>;
-
 export { AgentStatusDashboard };
-export type { AgentStatusDashboardProps };
+export type { AgentStatusDashboardProps } from "./agent-status-dashboard";

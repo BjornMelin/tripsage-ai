@@ -43,7 +43,7 @@ const PERSONAL_INFO_SCHEMA = z.object({
   displayName: z.string().optional(),
   emergencyContact: z
     .object({
-      email: z.string().email(),
+      email: z.email(),
       name: z.string(),
       phone: z.string(),
       relationship: z.string(),
@@ -54,7 +54,7 @@ const PERSONAL_INFO_SCHEMA = z.object({
   lastName: z.string().optional(),
   location: z.string().optional(),
   phoneNumber: z.string().optional(),
-  website: z.string().url().optional(),
+  website: z.url().optional(),
 });
 
 const PRIVACY_SETTINGS_SCHEMA = z.object({
@@ -66,9 +66,9 @@ const PRIVACY_SETTINGS_SCHEMA = z.object({
 });
 
 export const userProfileSchema = z.object({
-  avatarUrl: z.string().url().optional(),
+  avatarUrl: z.url().optional(),
   createdAt: z.string(),
-  email: z.string().email(),
+  email: z.email(),
   favoriteDestinations: z
     .array(
       z.object({

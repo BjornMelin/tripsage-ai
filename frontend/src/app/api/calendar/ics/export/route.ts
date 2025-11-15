@@ -12,12 +12,11 @@ import ical from "ical-generator";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-
+import { RecurringDateGenerator } from "@/lib/dates/recurring-rules";
+import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { calendarEventSchema } from "@/lib/schemas/calendar";
 import { createServerSupabase } from "@/lib/supabase";
-import { DateUtils } from "@/lib/dates/unified-date-utils";
-import { RecurringDateGenerator } from "@/lib/dates/recurring-rules";
 
 export const dynamic = "force-dynamic";
 
@@ -45,13 +44,13 @@ const exportRequestSchema = z.object({
 });
 
 /**
- * POST /api/calendar/ics/export
- * Generates ICS calendar file from events payload.
- * Requires authenticated user session with rate limiting.
- * @param req - NextRequest containing calendar name, events array, and timezone
- * @returns NextResponse with ICS file attachment or error
+ * Handles the ICS export request by validating payloads, enforcing rate
+ * limits, and returning the generated calendar file.
+ *
+ * @param req - HTTP request containing calendar metadata and Google-style events.
+ * @returns Response with the ICS attachment or JSON error payload.
  */
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     const supabase = await createServerSupabase();
     const {
@@ -107,11 +106,11 @@ export async function POST(req: NextRequest) {
             : DateUtils.add(startDate, 1, "hours"); // Default 1 hour
 
       const eventData = {
-        start: startDate,
-        end: endDate,
-        summary: event.summary,
         description: event.description,
+        end: endDate,
         location: event.location,
+        start: startDate,
+        summary: event.summary,
         ...(event.recurrence?.length
           ? {
               recurrence: [
@@ -175,9 +174,10 @@ export async function POST(req: NextRequest) {
 }
 
 /**
- * Convert event attendee response status to iCal format.
- * @param status - Attendee response status string
- * @returns iCal-compliant attendee status
+ * Converts an attendee response status to the canonical iCal constant.
+ *
+ * @param status - Google Calendar style attendee status.
+ * @returns iCal attendee status string.
  */
 function eventAttendeeStatusToIcal(
   status: string
@@ -195,9 +195,10 @@ function eventAttendeeStatusToIcal(
 }
 
 /**
- * Convert reminder method to iCal format.
- * @param method - Reminder notification method string
- * @returns iCal-compliant reminder method
+ * Normalizes reminder methods to the subset supported by iCal alarms.
+ *
+ * @param method - Notification channel provided by Google events.
+ * @returns Alarm type accepted by ical-generator.
  */
 function reminderMethodToIcal(method: string): "display" | "email" | "audio" {
   switch (method) {
