@@ -5,6 +5,7 @@
 
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { secureUuid } from "@/lib/security/random";
 
 /**
@@ -24,12 +25,15 @@ export function cn(...inputs: ClassValue[]) {
  * @returns Human-readable date string.
  */
 export function formatDate(input: string | number | Date): string {
-  const date = new Date(input);
-  return date.toLocaleDateString("en-US", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  let date: Date;
+  if (input instanceof Date) {
+    date = input;
+  } else if (typeof input === "number") {
+    date = new Date(input);
+  } else {
+    date = DateUtils.parse(input);
+  }
+  return DateUtils.format(date, "MMMM d, yyyy");
 }
 
 /**

@@ -5,6 +5,7 @@
 import type { CalendarEvent } from "@/lib/schemas/calendar";
 import { calendarEventSchema } from "@/lib/schemas/calendar";
 import type { Trip } from "@/stores/trip-store";
+import { DateUtils } from "@/lib/dates/unified-date-utils";
 
 /**
  * Convert a trip to calendar events for export.
@@ -19,11 +20,11 @@ export function tripToCalendarEvents(trip: Trip): CalendarEvent[] {
 
   // Trip start event
   if (trip.startDate || trip.start_date) {
-    const startDate = new Date(trip.startDate || trip.start_date || "");
+    const startDate = DateUtils.parse(trip.startDate || trip.start_date || "");
     const endDate =
       trip.endDate || trip.end_date
-        ? new Date(trip.endDate || trip.end_date || "")
-        : new Date(startDate.getTime() + 24 * 60 * 60 * 1000); // Default 1 day
+        ? DateUtils.parse(trip.endDate || trip.end_date || "")
+        : DateUtils.add(startDate, 1, "days");
 
     events.push(
       calendarEventSchema.parse({
@@ -47,14 +48,14 @@ export function tripToCalendarEvents(trip: Trip): CalendarEvent[] {
   // Destination events
   trip.destinations.forEach((destination) => {
     if (destination.startDate) {
-      const startDate = new Date(destination.startDate);
+      const startDate = DateUtils.parse(destination.startDate);
 
       // Arrival event
       events.push(
         calendarEventSchema.parse({
           description: destination.transportation?.details || undefined,
           end: {
-            dateTime: new Date(startDate.getTime() + 60 * 60 * 1000), // 1 hour
+            dateTime: DateUtils.add(startDate, 1, "hours"),
           },
           location: `${destination.name}, ${destination.country}`,
           start: {
@@ -72,14 +73,12 @@ export function tripToCalendarEvents(trip: Trip): CalendarEvent[] {
       // Activities
       if (destination.activities && destination.activities.length > 0) {
         destination.activities.forEach((activity, index) => {
-          const activityDate = new Date(
-            startDate.getTime() + index * 24 * 60 * 60 * 1000 // Space activities across days
-          );
+          const activityDate = DateUtils.add(startDate, index, "days");
 
           events.push(
             calendarEventSchema.parse({
               end: {
-                dateTime: new Date(activityDate.getTime() + 2 * 60 * 60 * 1000), // 2 hours
+                dateTime: DateUtils.add(activityDate, 2, "hours"),
               },
               location: `${destination.name}, ${destination.country}`,
               start: {
@@ -98,12 +97,12 @@ export function tripToCalendarEvents(trip: Trip): CalendarEvent[] {
 
       // Departure event
       if (destination.endDate) {
-        const departureDate = new Date(destination.endDate);
+        const departureDate = DateUtils.parse(destination.endDate);
         events.push(
           calendarEventSchema.parse({
             description: destination.transportation?.details || undefined,
             end: {
-              dateTime: new Date(departureDate.getTime() + 60 * 60 * 1000), // 1 hour
+              dateTime: DateUtils.add(departureDate, 1, "hours"),
             },
             location: `${destination.name}, ${destination.country}`,
             start: {

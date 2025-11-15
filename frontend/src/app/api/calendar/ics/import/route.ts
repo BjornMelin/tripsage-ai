@@ -11,12 +11,56 @@ import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import ical from "node-ical";
 import { z } from "zod";
 
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { calendarEventSchema } from "@/lib/schemas/calendar";
 import { createServerSupabase } from "@/lib/supabase";
+import { DateUtils } from "@/lib/dates/unified-date-utils";
+import { RecurringDateGenerator } from "@/lib/dates/recurring-rules";
+
+/**
+ * Simple ICS parser for basic event extraction.
+ *
+ * @param icsData - Raw ICS data string.
+ * @returns Parsed events object.
+ */
+function parseICS(icsData: string) {
+  const events: Record<string, any> = {};
+  const lines = icsData.split('\n');
+  let currentEvent: any = {};
+  let eventId = 0;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    
+    if (trimmed === 'BEGIN:VEVENT') {
+      currentEvent = { type: 'VEVENT' };
+      eventId++;
+    } else if (trimmed === 'END:VEVENT') {
+      events[`event_${eventId}`] = currentEvent;
+      currentEvent = {};
+    } else if (trimmed.startsWith('SUMMARY:')) {
+      currentEvent.summary = trimmed.substring(8);
+    } else if (trimmed.startsWith('DESCRIPTION:')) {
+      currentEvent.description = trimmed.substring(12);
+    } else if (trimmed.startsWith('LOCATION:')) {
+      currentEvent.location = trimmed.substring(9);
+    } else if (trimmed.startsWith('DTSTART:')) {
+      const dateStr = trimmed.substring(8);
+      currentEvent.start = DateUtils.parse(dateStr);
+    } else if (trimmed.startsWith('DTEND:')) {
+      const dateStr = trimmed.substring(6);
+      currentEvent.end = DateUtils.parse(dateStr);
+    } else if (trimmed.startsWith('UID:')) {
+      currentEvent.uid = trimmed.substring(4);
+    } else if (trimmed.startsWith('RRULE:')) {
+      currentEvent.rrule = trimmed.substring(6);
+    }
+  }
+
+  return events;
+}
 
 export const dynamic = "force-dynamic";
 
@@ -83,9 +127,9 @@ export async function POST(req: NextRequest) {
     const validated = importRequestSchema.parse(body);
 
     // Parse ICS data
-    let parsedEvents: ReturnType<typeof ical.parseICS>;
+    let parsedEvents: ReturnType<typeof parseICS>;
     try {
-      parsedEvents = ical.parseICS(validated.icsData);
+      parsedEvents = parseICS(validated.icsData);
     } catch (parseError) {
       const message =
         parseError instanceof Error ? parseError.message : "Failed to parse ICS";
@@ -139,14 +183,14 @@ export async function POST(req: NextRequest) {
         const eventData = {
           description: vevent.description,
           end: {
-            dateTime: endDate.toISOString(),
+            dateTime: DateUtils.formatForApi(endDate),
           },
           location: vevent.location,
           start: {
-            dateTime: startDate.toISOString(),
+            dateTime: DateUtils.formatForApi(startDate),
           },
           summary: vevent.summary || "Untitled Event",
-          ...(vevent.rrule ? { recurrence: [vevent.rrule] } : {}),
+          ...(vevent.rrule ? { recurrence: [RecurringDateGenerator.toRRule(RecurringDateGenerator.parseRRule(vevent.rrule))] } : {}),
           ...(vevent.attendees?.length
             ? {
                 attendees: vevent.attendees.map((att) => ({

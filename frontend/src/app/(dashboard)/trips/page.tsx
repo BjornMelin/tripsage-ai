@@ -1,7 +1,15 @@
+/**
+ * @fileoverview Trips management page with filtering, sorting, and search.
+ *
+ * Provides comprehensive UI for managing user trips including status filtering,
+ * search functionality, sorting options, and grid/list view modes.
+ */
+
 "use client";
 
 import { Filter, Grid, List, Plus, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { ConnectionStatusIndicator } from "@/components/features/realtime/connection-status-monitor";
 import { TripCard } from "@/components/features/trips";
 import { Button } from "@/components/ui/button";
@@ -26,6 +34,14 @@ import { type Trip, useTripStore } from "@/stores/trip-store";
 type SortOption = "name" | "date" | "budget" | "destinations";
 type FilterOption = "all" | "draft" | "upcoming" | "active" | "completed";
 
+/**
+ * Main trips management page component.
+ *
+ * Provides filtering, sorting, searching, and view mode options for managing
+ * user trips with real-time status updates.
+ *
+ * @returns The trips management page component.
+ */
 export default function TripsPage() {
   const { createTrip } = useTripStore();
   const deleteTripMutation = useDeleteTrip();
@@ -68,22 +84,22 @@ export default function TripsPage() {
         const now = new Date();
         const startDate =
           trip.startDate || trip.start_date
-            ? new Date(trip.startDate || trip.start_date || "")
+            ? DateUtils.parse(trip.startDate || trip.start_date || "")
             : null;
         const endDate =
           trip.endDate || trip.end_date
-            ? new Date(trip.endDate || trip.end_date || "")
+            ? DateUtils.parse(trip.endDate || trip.end_date || "")
             : null;
 
         switch (filterBy) {
           case "draft":
             return !startDate || !endDate;
           case "upcoming":
-            return startDate && startDate > now;
+            return startDate && DateUtils.isAfter(startDate, now);
           case "active":
-            return startDate && endDate && startDate <= now && endDate >= now;
+            return startDate && endDate && DateUtils.isBefore(startDate, now) && DateUtils.isAfter(endDate, now);
           case "completed":
-            return endDate && endDate < now;
+            return endDate && DateUtils.isBefore(endDate, now);
           default:
             return true;
         }
@@ -97,8 +113,12 @@ export default function TripsPage() {
           return (a.title || a.name || "").localeCompare(b.title || b.name || "");
         case "date":
           return (
-            new Date(b.createdAt || b.created_at || "").getTime() -
-            new Date(a.createdAt || a.created_at || "").getTime()
+            DateUtils.toUnix(
+              DateUtils.parse(b.createdAt || b.created_at || "")
+            ) -
+            DateUtils.toUnix(
+              DateUtils.parse(a.createdAt || a.created_at || "")
+            )
           );
         case "budget":
           return (b.budget || 0) - (a.budget || 0);
@@ -135,18 +155,18 @@ export default function TripsPage() {
       (counts: Record<string, number>, trip: Trip) => {
         const startDate =
           trip.startDate || trip.start_date
-            ? new Date(trip.startDate || trip.start_date || "")
+            ? DateUtils.parse(trip.startDate || trip.start_date || "")
             : null;
         const endDate =
           trip.endDate || trip.end_date
-            ? new Date(trip.endDate || trip.end_date || "")
+            ? DateUtils.parse(trip.endDate || trip.end_date || "")
             : null;
 
         if (!startDate || !endDate) {
           counts.draft++;
-        } else if (startDate > now) {
+        } else if (DateUtils.isAfter(startDate, now)) {
           counts.upcoming++;
-        } else if (startDate <= now && endDate >= now) {
+        } else if (DateUtils.isBefore(startDate, now) && DateUtils.isAfter(endDate, now)) {
           counts.active++;
         } else {
           counts.completed++;

@@ -1,6 +1,13 @@
+/**
+ * @fileoverview Trip timeline component for visualizing trip itinerary.
+ *
+ * Displays chronological timeline of destinations, activities, and events
+ * with interactive editing capabilities and status indicators.
+ */
+
 "use client";
 
-import { differenceInDays, format, parseISO } from "date-fns";
+import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { Calendar, Car, Clock, Edit2, MapPin, Plane, Plus, Train } from "lucide-react";
 import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -15,25 +22,62 @@ import {
 import { Separator } from "@/components/ui/separator";
 import type { Destination, Trip } from "@/stores/trip-store";
 
+/**
+ * Props for the TripTimeline component.
+ *
+ * @interface TripTimelineProps
+ */
 interface TripTimelineProps {
+  /** The trip data to visualize in timeline format. */
   trip: Trip;
+  /** Optional callback for editing destination details. */
   onEditDestination?: (destination: Destination) => void;
+  /** Optional callback for adding new destinations. */
   onAddDestination?: () => void;
+  /** Optional additional CSS classes. */
   className?: string;
+  /** Whether to show action buttons. Defaults to true. */
   showActions?: boolean;
 }
 
+/**
+ * Represents a single event in the trip timeline.
+ *
+ * @interface TimelineEvent
+ */
 interface TimelineEvent {
+  /** Unique identifier for the event. */
   id: string;
+  /** Type of event determining icon and styling. */
   type: "arrival" | "departure" | "activity" | "accommodation";
+  /** Date and time of the event. */
   date: Date;
+  /** Event title or name. */
   title: string;
+  /** Optional event description. */
   description?: string;
+  /** Location where the event takes place. */
   location: string;
+  /** Associated destination object. */
   destination: Destination;
+  /** Icon type to display for the event. */
   iconType: "flight" | "car" | "train" | "calendar" | "location";
 }
 
+/**
+ * Trip timeline component displaying chronological trip events.
+ *
+ * Renders a visual timeline of all trip activities, arrivals, departures,
+ * and accommodations with interactive editing capabilities.
+ *
+ * @param props - Component props.
+ * @param props.trip - The trip data to visualize.
+ * @param props.onEditDestination - Optional edit callback.
+ * @param props.onAddDestination - Optional add destination callback.
+ * @param props.className - Optional CSS classes.
+ * @param props.showActions - Whether to show action buttons.
+ * @returns A formatted timeline component.
+ */
 export function TripTimeline({
   trip,
   onEditDestination,
@@ -45,8 +89,8 @@ export function TripTimeline({
     const events: TimelineEvent[] = [];
 
     trip.destinations.forEach((destination, index) => {
-      const startDate = destination.startDate ? parseISO(destination.startDate) : null;
-      const endDate = destination.endDate ? parseISO(destination.endDate) : null;
+      const startDate = destination.startDate ? DateUtils.parse(destination.startDate) : null;
+      const endDate = destination.endDate ? DateUtils.parse(destination.endDate) : null;
 
       // Arrival event
       if (startDate) {
@@ -77,10 +121,10 @@ export function TripTimeline({
           // For activities without specific dates, distribute them across the stay
           const activityDate =
             startDate && endDate
-              ? new Date(
-                  startDate.getTime() +
-                    ((activityIndex + 1) * (endDate.getTime() - startDate.getTime())) /
-                      ((destination.activities?.length ?? 0) + 1)
+              ? DateUtils.add(
+                  startDate,
+                  Math.floor(((activityIndex + 1) * DateUtils.difference(endDate, startDate, "days")) / ((destination.activities?.length ?? 0) + 1)),
+                  "days"
                 )
               : startDate || new Date();
 
@@ -114,11 +158,11 @@ export function TripTimeline({
       }
     });
 
-    return events.sort((a, b) => a.date.getTime() - b.date.getTime());
+    return events.sort((a, b) => DateUtils.compare(a.date, b.date));
   }, [trip.destinations]);
 
   const formatEventDate = (date: Date) => {
-    return format(date, "MMM dd, yyyy");
+    return DateUtils.format(date, "MMM dd, yyyy");
   };
 
   // const formatEventTime = (date: Date) => { // Future implementation
@@ -159,9 +203,9 @@ export function TripTimeline({
 
   const getDuration = () => {
     if (!trip.startDate || !trip.endDate) return null;
-    const start = parseISO(trip.startDate);
-    const end = parseISO(trip.endDate);
-    return differenceInDays(end, start) + 1;
+    const start = DateUtils.parse(trip.startDate);
+    const end = DateUtils.parse(trip.endDate);
+    return DateUtils.difference(end, start, "days") + 1;
   };
 
   const duration = getDuration();

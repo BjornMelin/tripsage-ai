@@ -5,7 +5,6 @@
 
 export * from "./use-accommodation-search";
 export * from "./use-activity-search";
-export * from "./use-agent-status";
 export * from "./use-agent-status-websocket";
 // Modern API hooks
 export * from "./use-authenticated-api";
