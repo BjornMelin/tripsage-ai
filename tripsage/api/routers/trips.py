@@ -15,7 +15,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import ValidationError
 
 from tripsage.api.core.dependencies import (
-    MemoryServiceDep,
     RequiredPrincipalDep,
     TripServiceDep,
 )
@@ -1226,7 +1225,6 @@ async def export_trip(
 # Core endpoints
 @router.get("/suggestions", response_model=list[TripSuggestionResponse])
 async def get_trip_suggestions(
-    memory_service: MemoryServiceDep,
     principal: RequiredPrincipalDep,
     *,
     limit: int = Query(20, ge=1, le=100, description="Number of suggestions to return"),
@@ -1240,7 +1238,7 @@ async def get_trip_suggestions(
         budget_max: Optional maximum budget filter
         category: Optional category filter
         principal: Current authenticated principal
-        memory_service: Injected memory service
+
 
     Returns:
         List of trip suggestions
@@ -1352,14 +1350,10 @@ async def get_trip_suggestions(
     suggestions = base_suggestions
 
     try:
-        memory_search = MemorySearchRequest(
-            query="travel preferences destinations budget",
-            limit=10,
-            filters=None,
-        )
+        # Memory service removed; fallback to base suggestions
+        logger.info("Using base suggestions (memory service unavailable)")
         search_memories = cast(
             Callable[[str, MemorySearchRequest], Awaitable[list[MemorySearchResult]]],
-            memory_service.search_memories,
         )
         user_memories = await search_memories(principal.user_id, memory_search)
 

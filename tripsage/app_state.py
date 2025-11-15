@@ -28,7 +28,6 @@ if TYPE_CHECKING:  # pragma: no cover - import only for type checking
     )
     from tripsage_core.services.business.flight_service import FlightService
     from tripsage_core.services.business.itinerary_service import ItineraryService
-    from tripsage_core.services.business.memory_service import MemoryService
     from tripsage_core.services.business.trip_service import TripService
     from tripsage_core.services.configuration_service import ConfigurationService
     from tripsage_core.services.external_apis import (
@@ -55,7 +54,7 @@ class AppServiceContainer:
     file_processing_service: FileProcessingService | None = None
     flight_service: FlightService | None = None
     itinerary_service: ItineraryService | None = None
-    memory_service: MemoryService | None = None
+
     trip_service: TripService | None = None
     configuration_service: ConfigurationService | None = None
 
@@ -158,7 +157,6 @@ async def _setup_business_services(
     memory_service = MemoryService(
         database_service=cast(DatabaseServiceProtocol, database_service)
     )
-    await memory_service.connect()
 
     file_processing_service = FileProcessingService(
         database_service=database_service,
@@ -174,7 +172,6 @@ async def _setup_business_services(
         "file_processing_service": file_processing_service,
         "flight_service": flight_service,
         "itinerary_service": itinerary_service,
-        "memory_service": memory_service,
         "trip_service": trip_service,
     }
 
@@ -196,7 +193,6 @@ def _build_service_container(
         file_processing_service=business["file_processing_service"],
         flight_service=business["flight_service"],
         itinerary_service=business["itinerary_service"],
-        memory_service=business["memory_service"],
         trip_service=business["trip_service"],
         document_analyzer=document_analyzer,
         webcrawl_service=webcrawl_service,
@@ -267,8 +263,6 @@ async def shutdown_app_state(app: FastAPI) -> None:
 
     if services.cache_service:
         await services.cache_service.disconnect()
-    if services.memory_service:
-        await services.memory_service.close()
 
     await close_database_service()
 
