@@ -32,7 +32,7 @@ See `pyproject.toml` and `frontend/package.json` for canonical versions.
 - AI SDK core `ai@6.0.0-beta.99`; UI hooks `@ai-sdk/react@3.0.0-beta.99`
 - Providers: `@ai-sdk/openai@3.0.0-beta.57`, `@ai-sdk/anthropic@3.0.0-beta.53`
 - Data/Auth: `@supabase/ssr@0.7.0`, `@supabase/supabase-js@2.76.1`
-- Ratelimit & cache: `@upstash/ratelimit@2.0.7`, `@upstash/redis@1.35.6`
+- Ratelimit & cache: `@upstash/ratelimit@2.0.7`, `@upstash/redis@1.35.6`, `@upstash/qstash@2.8.4`
 - Styling: Tailwind CSS v4, Biome `2.3.4`, Vitest `4.0.8`
 
 ## Build, Test, and Development Commands
