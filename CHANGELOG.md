@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Refactor
+- **Backend Cleanup**: Removed legacy AI code superseded by frontend AI SDK v6 migration
+  - Deleted `tripsage_core/services/configuration_service.py`
+  - Removed agent config endpoints and schemas
+  - Cleaned chat-related database methods
+  - Removed associated tests
+  - Backend now focuses on data persistence; AI orchestration moved to frontend
+
 ### Refactored
 
 - **Chat Realtime Stack Simplification (Phase 2)**: Refactored chat realtime hooks and store to be fully library-first and aligned with Option C+ architecture.
