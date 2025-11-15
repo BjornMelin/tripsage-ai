@@ -38,7 +38,17 @@ export const getTestQueryClient = (): QueryClient => {
  * Called automatically after each test to ensure test isolation.
  */
 export const resetTestQueryClient = (): void => {
-  sharedQueryClient?.clear();
+  if (!sharedQueryClient) {
+    return;
+  }
+
+  if (typeof sharedQueryClient.clear === "function") {
+    sharedQueryClient.clear();
+    return;
+  }
+
+  sharedQueryClient.getQueryCache?.().clear?.();
+  sharedQueryClient.getMutationCache?.().clear?.();
 };
 
 /**
