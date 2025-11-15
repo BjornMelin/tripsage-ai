@@ -108,6 +108,8 @@ conversational AI applications.
 ```bash
 pnpm install  # Install dependencies
 pnpm dev      # Start development server
+pnpm test     # Run Vitest suite locally
+pnpm test:ci  # Run sharded Vitest suite (CI configuration)
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to view the app.

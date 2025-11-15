@@ -12,7 +12,7 @@ import { defineConfig } from "vitest/config";
 
 const isCi = process.env.CI === "true" || process.env.CI === "1";
 const forceForks = process.env.CI_FORCE_FORKS === "1";
-const selectedPool = (process.env.VITEST_POOL || (forceForks ? "vmForks" : "threads")) as
+const selectedPool = (process.env.VITEST_POOL || (forceForks ? "forks" : "threads")) as
   | "threads"
   | "forks"
   | "vmThreads"
@@ -20,7 +20,9 @@ const selectedPool = (process.env.VITEST_POOL || (forceForks ? "vmForks" : "thre
 // Prefer availableParallelism when present (Node 18+), fall back to cpus
 // Keep at least 1 worker; on CI, avoid exhausting all cores
 const cores = (os as any).availableParallelism?.() ?? os.cpus().length;
-const defaultWorkers = Math.max(1, isCi ? Math.max(1, cores - 1) : Math.floor(cores / 2));
+// In CI, clamp concurrency aggressively to avoid memory pressure from jsdom + V8 coverage.
+const ciDefaultWorkers = Math.max(1, Math.min(2, cores));
+const defaultWorkers = isCi ? ciDefaultWorkers : Math.max(1, Math.floor(cores / 2));
 const optimalWorkers = Number(process.env.VITEST_MAX_WORKERS || defaultWorkers);
 
 export default defineConfig({
@@ -68,6 +70,9 @@ export default defineConfig({
     // Runtime stability
     isolate: true,
     maxWorkers: optimalWorkers,
+    // Optional: when using vm-based pools, recycle workers before they grow too large.
+    // Has effect only for `vmThreads` / `vmForks` pools.
+    vmMemoryLimit: isCi ? "512MB" : undefined,
     passWithNoTests: true,
     // Default to threads for speed; can be overridden via env or per-project
     pool: selectedPool,

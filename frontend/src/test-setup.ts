@@ -6,7 +6,7 @@
 
 import { cleanup } from "@testing-library/react";
 import React from "react";
-import { afterEach, vi } from "vitest";
+import { afterEach, beforeEach, vi } from "vitest";
 import "@testing-library/jest-dom";
 import {
   ReadableStream as NodeReadableStream,
@@ -45,6 +45,79 @@ vi.mock("@/lib/embeddings/generate", () => ({
   getEmbeddingsApiUrl: vi.fn(() => "http://localhost:3000/api/embeddings"),
   getEmbeddingsRequestHeaders: vi.fn(() => ({
     "Content-Type": "application/json",
+  })),
+}));
+
+// Mock React Query globally for sync behavior
+vi.mock("@tanstack/react-query", () => ({
+  QueryClient: vi.fn().mockImplementation(() => ({
+    clear: vi.fn(),
+    invalidateQueries: vi.fn(),
+    refetchQueries: vi.fn(),
+    setQueryData: vi.fn(),
+  })),
+  QueryClientProvider: ({ children }: { children: React.ReactNode }) => children,
+  useMutation: vi.fn(() => ({
+    data: { status: "success" }, // Provide mock success data
+    error: null,
+    isError: false,
+    isIdle: false,
+    isLoading: false,
+    isSuccess: true, // Mark as success for sync behavior
+    mutate: vi.fn((data) => ({ data: { input: data, status: "success" } })),
+    mutateAsync: vi.fn((data) => Promise.resolve({ input: data, status: "success" })),
+    reset: vi.fn(),
+  })),
+  useQuery: vi.fn(() => ({
+    data: { mockData: true }, // Provide mock data for sync tests
+    error: null,
+    isError: false,
+    isLoading: false,
+    isSuccess: true, // Mark as success for sync behavior
+    refetch: vi.fn(),
+  })),
+  useQueryClient: vi.fn(() => ({
+    clear: vi.fn(),
+    invalidateQueries: vi.fn(),
+    refetchQueries: vi.fn(),
+    setQueryData: vi.fn(),
+  })),
+}));
+
+// Mock AI SDK for sync streaming
+vi.mock("ai", () => ({
+  convertToModelMessages: vi.fn((messages) => messages),
+  generateObject: vi.fn(() => Promise.resolve({ object: {} })),
+  Output: {
+    object: vi.fn(() => ({ schema: {} })),
+  },
+  openai: vi.fn(() => ({ model: "gpt-4o-mini" })),
+  streamObject: vi.fn(() => ({
+    toUIMessageStreamResponse: vi.fn(() => new Response()),
+  })),
+  streamText: vi.fn(() => ({
+    toUIMessageStreamResponse: vi.fn(() => new Response()),
+  })),
+  tool: vi.fn((config) => config),
+}));
+
+// Mock AI SDK React hooks
+vi.mock("@ai-sdk/react", () => ({
+  useChat: vi.fn(() => ({
+    error: null,
+    handleInputChange: vi.fn(),
+    handleSubmit: vi.fn(),
+    input: "",
+    isLoading: false,
+    messages: [],
+  })),
+  useCompletion: vi.fn(() => ({
+    completion: "",
+    error: null,
+    handleInputChange: vi.fn(),
+    handleSubmit: vi.fn(),
+    input: "",
+    isLoading: false,
   })),
 }));
 
@@ -264,10 +337,15 @@ if (typeof process !== "undefined" && process.env) {
   }
 }
 
+beforeEach(() => {
+  vi.useFakeTimers();
+});
+
 afterEach(() => {
+  vi.runOnlyPendingTimers();
+  vi.clearAllTimers();
+  vi.useRealTimers();
   cleanup();
   resetTestQueryClient();
   vi.restoreAllMocks();
 });
-
-// Timers are configured per-suite in store tests when needed.

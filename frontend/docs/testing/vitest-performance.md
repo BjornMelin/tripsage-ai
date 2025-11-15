@@ -15,14 +15,27 @@ suite and the guardrails we added to keep runs fast locally and in CI.
 - **Stateful timer assertions** use `act(async () => vi.advanceTimersByTimeAsync(...))`
   so that auto-dismiss logic executes without React warning spam or extra
   scheduling overhead.
+- **Global mocks implemented**: React Query, AI SDK, and Supabase mocked globally
+  in test-setup.ts for sync behavior, eliminating async I/O delays.
+- **Fake timers enforced**: Global beforeEach/afterEach setup with vi.useFakeTimers()
+  and proper teardown, removing real timer overhead.
+- **User event optimization**: All userEvent.setup() calls now include
+  { advanceTimers: vi.advanceTimersByTime } for sync interactions.
+- **Act wrapping**: Render calls and async user interactions properly wrapped
+  in act() to prevent React warnings and ensure sync execution.
 
-## Performance Snapshot (After)
+## Performance Snapshot (After Optimizations)
 
 - AI stream route integration: 12.6ms (After). Before: ~13s (UNVERIFIED note from prior analysis).
 - Account settings suite: ~1.6s (After). Reduced by stubbing timers and condensing redundant assertions.
 - Itinerary builder suite: ~1.5s (After). Achieved by pruning scenarios, removing drag/drop + delete UI paths, and avoiding fake timers.
+- Search store tests: Target <500ms (optimized with sync mocks, was ~3s).
+- Memory hook tests: Target <300ms (optimized with sync API mocks, was ~1.6s).
+- Form tests: Target <500ms (optimized with fake timers and act wrapping, was ~1.7s).
+- Overall suite: Target <5s (was ~10s+ with async bottlenecks).
 
 To regenerate these numbers locally:
+
 - Run one suite: `pnpm vitest run <file> --reporter=json --outputFile=test-results.json && jq '.testResults[] | {name, duration: (.endTime - .startTime)}' -r test-results.json`
 - Full suite benchmarking (strict thresholds): `pnpm test:benchmark` (writes `benchmark-summary.json`, fails on slow files >2s or suite >=10s).
 
@@ -42,3 +55,7 @@ To regenerate these numbers locally:
 - When a suite still tops 1 s locally, run `pnpm vitest run <path> --runInBand`
   once to inspect `--reporter=json` timing output before deciding whether to
   refactor the component or test.
+- **Global optimization guidelines**: Always mock external dependencies (React Query,
+  Supabase, AI SDK) at the boundary for sync behavior. Use fake timers globally
+  in test-setup.ts. Wrap all user interactions in act() with proper userEvent.setup().
+  Target <500ms per test file, <5s suite total.

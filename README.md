@@ -141,6 +141,7 @@ ruff check . --fix && ruff format .    # Lint and format
 cd frontend
 pnpm dev                               # Start Next.js development server
 pnpm test                              # Run Vitest tests (85-90% coverage)
+pnpm test:ci                           # Run sharded Vitest suite (CI-optimized)
 pnpm test:e2e                         # Run Playwright E2E tests
 npx biome lint --apply .               # Format TypeScript
 

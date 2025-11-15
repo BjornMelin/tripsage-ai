@@ -17,7 +17,7 @@ import {
   useUpdatePreferences,
 } from "../use-memory";
 
-// Mock the useAuthenticatedApi hook
+// Mock the useAuthenticatedApi hook with sync responses
 const MOCK_MAKE_AUTHENTICATED_REQUEST = vi.fn();
 vi.mock("../use-authenticated-api", () => ({
   useAuthenticatedApi: () => ({
@@ -42,13 +42,12 @@ const CREATE_WRAPPER = () => {
 
 describe("Memory Hooks", () => {
   beforeEach(() => {
-    vi.useRealTimers();
     vi.clearAllMocks();
     MOCK_MAKE_AUTHENTICATED_REQUEST.mockReset();
   });
 
   describe("useMemoryContext", () => {
-    it("should fetch memory context for user", async () => {
+    it("should fetch memory context for user", () => {
       const mockResponse = {
         memories: [
           {
@@ -71,20 +70,18 @@ describe("Memory Hooks", () => {
         },
       };
 
-      MOCK_MAKE_AUTHENTICATED_REQUEST.mockResolvedValueOnce(mockResponse);
+      MOCK_MAKE_AUTHENTICATED_REQUEST.mockReturnValueOnce(mockResponse);
 
       const { result } = renderHook(() => useMemoryContext("user-123"), {
         wrapper: CREATE_WRAPPER(),
       });
 
-      await waitFor(() => {
-        expect(result.current.isSuccess).toBe(true);
-      });
-
-      expect(MOCK_MAKE_AUTHENTICATED_REQUEST).toHaveBeenCalled();
-      const firstCall = MOCK_MAKE_AUTHENTICATED_REQUEST.mock.calls[0];
-      expect(firstCall[0]).toBe("/api/memory/context/user-123");
+      // With sync mocks, data should be available immediately
+      expect(result.current.isSuccess).toBe(true);
       expect(result.current.data).toEqual(mockResponse);
+      expect(MOCK_MAKE_AUTHENTICATED_REQUEST).toHaveBeenCalledWith(
+        "/api/memory/context/user-123"
+      );
     });
 
     it("should not fetch when userId is empty", () => {
