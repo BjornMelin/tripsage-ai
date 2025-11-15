@@ -7,7 +7,6 @@
 
 "use client";
 
-import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { Calendar, DollarSign, MapPin } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +19,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { useBudgetStore } from "@/stores/budget-store";
 import type { Trip } from "@/stores/trip-store";
 
@@ -40,17 +40,10 @@ interface TripCardProps {
 }
 
 /**
- * Trip card component displaying trip information and actions.
+ * Renders a trip summary card with metadata, actions, and derived values.
  *
- * Renders a card with trip details including dates, duration, budget,
- * destinations, and status with appropriate action buttons.
- *
- * @param props - Component props.
- * @param props.trip - The trip data to display.
- * @param props.onEdit - Optional edit callback.
- * @param props.onDelete - Optional delete callback.
- * @param props.className - Optional CSS classes.
- * @returns A formatted trip card component.
+ * @param props - Component inputs including callbacks and trip data.
+ * @returns Styled card with trip details and actions.
  */
 export function TripCard({ trip, onEdit, onDelete, className }: TripCardProps) {
   const { budgetsByTrip } = useBudgetStore();
