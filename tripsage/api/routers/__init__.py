@@ -10,11 +10,9 @@ from typing import TYPE_CHECKING
 __all__ = [
     "attachments",
     "auth",
-    "config",
     "dashboard",
     "health",
     "itineraries",
-    "memory",
     "trips",
     "users",
 ]
@@ -23,11 +21,9 @@ if TYPE_CHECKING:
     from . import (
         attachments,
         auth,
-        config,
         dashboard,
         health,
         itineraries,
-        memory,
         trips,
         users,
     )

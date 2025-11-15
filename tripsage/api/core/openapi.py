@@ -47,8 +47,6 @@ This API is designed to serve multiple consumer types with adapted responses:
 * **Itinerary Building** - Intelligent scheduling and route optimization
 
 ### AI & Communication
-* **Chat System** - Conversation management with AI agents
-* **Memory & Context** - Persistent conversation memory and user learning
 * **Real-time Communication** - Realtime (Supabase) support for live updates
 * **File Processing** - Document analysis and travel document extraction
 
@@ -158,7 +156,7 @@ authorization (no custom Realtime (Supabase) endpoints).
 
 This API leverages the `tripsage_core` shared library for:
 
-* **Business Services** - Flight, accommodation, memory, and chat services
+* **Business Services** - Trip planning, itinerary optimization, and data management
 * **Infrastructure Services** - Database, caching, and Realtime (Supabase) management
 * **External API Integration** - Standardized patterns for third-party services
 * **Security & Configuration** - Centralized settings and encryption
@@ -198,48 +196,11 @@ TAG_DESCRIPTIONS = [
         ),
     },
     {
-        "name": "flights",
-        "description": (
-            "Flight search and booking endpoints with multi-provider support. "
-            "Includes price tracking, route optimization, and booking management."
-        ),
-    },
-    {
-        "name": "accommodations",
-        "description": (
-            "Accommodation search and booking endpoints. Supports hotels and "
-            "alternative lodging with MCP integration for enhanced search capabilities."
-        ),
-    },
-    {
-        "name": "destinations",
-        "description": (
-            "Destination research endpoints with AI-powered insights. "
-            "Provides destination information, weather, "
-            "and recommendations."
-        ),
-    },
-    {
         "name": "itineraries",
         "description": (
             "Itinerary building and optimization endpoints. "
             "Intelligent trip scheduling with route optimization "
             "and activity coordination."
-        ),
-    },
-    {
-        "name": "chat",
-        "description": (
-            "Chat and conversation endpoints for AI agent interaction. "
-            "Supports session management and conversation history "
-            "for both frontend and agent consumers."
-        ),
-    },
-    {
-        "name": "memory",
-        "description": (
-            "Memory and context management endpoints. Provides persistent conversation "
-            "memory, user preference learning, and contextual retrieval for AI agents."
         ),
     },
     {

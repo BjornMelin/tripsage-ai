@@ -25,16 +25,12 @@ from tripsage.api.middlewares.authentication import AuthenticationMiddleware
 from tripsage.api.routers import (
     attachments,
     auth,
-    config,
     dashboard,
     health,
     itineraries,
-    memory,
     trips,
     users,
 )
-
-# Removed ServiceRegistry: use direct lifespan-managed instances
 from tripsage.app_state import initialise_app_state, shutdown_app_state
 from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError,
@@ -69,8 +65,7 @@ async def lifespan(app: FastAPI):
     """
     services = await initialise_app_state(app)
 
-    # Instantiate shared agents after services are ready
-    # ChatAgent removed; chat features are implemented in Next.js via AI SDK.
+    # Instantiate shared services after app state is ready
 
     # Start database connection monitor for unified health reporting
     database_monitor = None
@@ -97,7 +92,6 @@ async def lifespan(app: FastAPI):
             await database_monitor.stop_monitoring()
             if hasattr(app.state, "database_monitor"):
                 delattr(app.state, "database_monitor")
-        # no chat_agent stored on app.state
         await shutdown_app_state(app)
 
 
@@ -218,8 +212,6 @@ def create_app() -> FastAPI:  # pylint: disable=too-many-statements
             headers={"Retry-After": "60"},
         )
 
-    # CoreMCPError removed; MCP integrations map to CoreExternalAPIError now
-
     @app.exception_handler(CoreExternalAPIError)
     async def external_api_error_handler(request: Request, exc: CoreExternalAPIError):  # type: ignore[reportUnusedFunction]
         """Handle external API errors."""
@@ -321,23 +313,15 @@ def create_app() -> FastAPI:  # pylint: disable=too-many-statements
     # Include routers
     app.include_router(health.router, prefix="/api", tags=["health"])
     app.include_router(dashboard.router, prefix="/api", tags=["dashboard"])
-    # dashboard_realtime router is temporarily excluded pending module finalization
     app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
-    # Chat router removed; handled in Next.js routes
     app.include_router(
         attachments.router, prefix="/api/attachments", tags=["attachments"]
     )
     app.include_router(trips.router, prefix="/api/trips", tags=["trips"])
-    # destinations and search routers removed; handled via frontend AI SDK v6 agents
     app.include_router(
         itineraries.router, prefix="/api/itineraries", tags=["itineraries"]
     )
-    app.include_router(memory.router, prefix="/api", tags=["memory"])
-
-    # BYOK key CRUD is now implemented in Next.js routes; Python router removed
-
     app.include_router(users.router, prefix="/api/users", tags=["users"])
-    app.include_router(config.router, prefix="/api", tags=["configuration"])
 
     # Set custom OpenAPI schema
     app.openapi = lambda: custom_openapi(app)

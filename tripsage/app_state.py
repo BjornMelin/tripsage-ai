@@ -29,7 +29,6 @@ if TYPE_CHECKING:  # pragma: no cover - import only for type checking
     from tripsage_core.services.business.flight_service import FlightService
     from tripsage_core.services.business.itinerary_service import ItineraryService
     from tripsage_core.services.business.trip_service import TripService
-    from tripsage_core.services.configuration_service import ConfigurationService
     from tripsage_core.services.external_apis import (
         DocumentAnalyzer,
         PlaywrightService,
@@ -48,15 +47,11 @@ class AppServiceContainer:
     """Typed container for application-wide service singletons."""
 
     # Business services
-    # Legacy accommodation_service, destination_service, search_facade,
-    # unified_search_service removed;
-    # search/destination handled via frontend AI SDK v6 agents
     file_processing_service: FileProcessingService | None = None
     flight_service: FlightService | None = None
     itinerary_service: ItineraryService | None = None
 
     trip_service: TripService | None = None
-    configuration_service: ConfigurationService | None = None
 
     # External API services
     document_analyzer: DocumentAnalyzer | None = None
@@ -148,15 +143,7 @@ async def _setup_business_services(
     )
     from tripsage_core.services.business.flight_service import FlightService
     from tripsage_core.services.business.itinerary_service import ItineraryService
-    from tripsage_core.services.business.memory_service import MemoryService
     from tripsage_core.services.business.trip_service import TripService
-    from tripsage_core.services.infrastructure.db_ops_mixin import (
-        DatabaseServiceProtocol,
-    )
-
-    memory_service = MemoryService(
-        database_service=cast(DatabaseServiceProtocol, database_service)
-    )
 
     file_processing_service = FileProcessingService(
         database_service=database_service,
