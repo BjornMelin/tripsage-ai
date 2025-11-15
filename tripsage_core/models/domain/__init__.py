@@ -35,7 +35,8 @@ from .accommodation import (
     AccommodationLocation,
     PropertyType,
 )
-from .memory import Entity, Relation, SessionMemory, TravelMemory
+
+# Memory models removed; handled via frontend AI SDK v6
 from .transportation import (
     TransportationLocation,
     TransportationOffer,
@@ -54,18 +55,14 @@ __all__ = [
     "AccommodationLocation",
     "Airport",
     "CabinClass",
-    # Memory models
-    "Entity",
+    # Memory models removed; handled via frontend AI SDK v6
     # Flight models
     "FlightOffer",
     "FlightSegment",
     "PropertyType",
-    "Relation",
-    "SessionMemory",
     "TransportationLocation",
     # Transportation models
     "TransportationOffer",
     "TransportationProvider",
     "TransportationVehicle",
-    "TravelMemory",
 ]
