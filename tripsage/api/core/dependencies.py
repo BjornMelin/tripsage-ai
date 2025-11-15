@@ -22,7 +22,6 @@ from tripsage_core.services.business.file_processing_service import (
 )
 from tripsage_core.services.business.flight_service import FlightService
 from tripsage_core.services.business.itinerary_service import ItineraryService
-from tripsage_core.services.business.memory_service import MemoryService
 from tripsage_core.services.business.trip_service import TripService
 from tripsage_core.services.infrastructure import CacheService
 from tripsage_core.services.infrastructure.database_service import DatabaseService
@@ -200,11 +199,6 @@ def get_itinerary_service(request: Request) -> ItineraryService:
     )
 
 
-def get_memory_service(request: Request) -> MemoryService:
-    """Return MemoryService from the container."""
-    return _get_required_service(request, "memory_service", MemoryService)
-
-
 def get_trip_service(request: Request) -> TripService:
     """Return TripService from the container."""
     return _get_required_service(request, "trip_service", TripService)
@@ -219,13 +213,13 @@ CacheDep = Annotated[CacheService, Depends(get_cache_service_dep)]
 CurrentPrincipalDep = Annotated[Principal | None, Depends(get_current_principal)]
 RequiredPrincipalDep = Annotated[Principal, Depends(_require_principal_dependency)]
 UserPrincipalDep = Annotated[Principal, Depends(require_user_principal)]
-AgentPrincipalDep = Annotated[Principal, Depends(require_agent_principal)]
+
 AdminPrincipalDep = Annotated[Principal, Depends(require_admin_principal)]
 
 # Business service dependencies (type aliases)
 FlightServiceDep = Annotated[FlightService, Depends(get_flight_service_dep)]
 ItineraryServiceDep = Annotated[ItineraryService, Depends(get_itinerary_service)]
-MemoryServiceDep = Annotated[MemoryService, Depends(get_memory_service)]
+
 TripServiceDep = Annotated[TripService, Depends(get_trip_service)]
 FileProcessingServiceDep = Annotated[
     FileProcessingService, Depends(get_file_processing_service)

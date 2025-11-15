@@ -7,7 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **Backend AI SDK v5 Legacy Code (FINAL-ONLY Cleanup)**
+
+  - Deleted broken router imports: removed `config` and `memory` routers from `tripsage/api/routers/__init__.py` and `tripsage/api/main.py`
+  - Removed dead code paths: deleted `ConfigurationService` and `MemoryService` references from `tripsage/app_state.py`
+  - Fixed broken memory code: removed undefined variable usage in `tripsage/api/routers/trips.py::get_trip_suggestions`
+  - Removed legacy model field: deleted `chat_session_id` from `tripsage_core/models/attachments.py` (frontend handles chat sessions)
+  - Deleted superseded tests: removed `tests/unit/test_config_mocks.py` and `tests/integration/api/test_config_versions_integration.py`
+  - Cleaned legacy comments: removed historical migration context, updated to reflect current state
+  - Backend is now a data-only layer; all AI orchestration is handled by frontend AI SDK v6
+
+- **Vault Ops Hardening Verification (Technical Debt Resolution)**
+  - Created comprehensive verification documentation: `docs/operators/supabase-configuration.md` with step-by-step security verification process
+  - Implemented automated verification script: `scripts/verify_vault_hardening.py` for continuous security validation
+  - Verified all required migrations applied: vault role hardening, API key security, Gateway BYOK configuration
+  - Established operational runbook for staging/production deployment verification
+  - Resolved privilege creep prevention measures for Vault RPC operations
+
 ### Refactored
+
+- **Backend Cleanup**: Removed legacy AI code superseded by frontend AI SDK v6 migration
+
+  - Deleted `tripsage_core/services/configuration_service.py`
+  - Removed agent config endpoints and schemas
+  - Cleaned chat-related database methods
+  - Removed associated tests
+  - Backend now focuses on data persistence; AI orchestration moved to frontend
 
 - **Chat Realtime Stack Simplification (Phase 2)**: Refactored chat realtime hooks and store to be fully library-first and aligned with Option C+ architecture.
   - Refactored `useWebSocketChat` to use `useRealtimeChannel`'s `onMessage` callback pattern instead of direct channel access, eliminating direct `supabase.channel()` calls.
@@ -17,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Rewrote chat realtime tests to be deterministic with proper mocking of `useRealtimeChannel`, achieving 100% branch coverage for new store methods.
   - Eliminated all deprecated/compat/shim/TODO patterns from chat domain hooks and stores.
 - **Agent Status Realtime Rebuild (Phase 3)**: Replaced all direct `supabase.channel()` usage with `useRealtimeChannel` inside `useAgentStatusWebSocket`, wired shared exponential backoff, removed demo-only monitoring props/mocks from `app/(dashboard)/agents/page.tsx`, and added deterministic Vitest coverage for the store/hook/dashboard (100% branch coverage within the agent status scope).
+
   - Introduced a normalized `useAgentStatusStore` with agent-id maps, connection slice, and explicit APIs (`registerAgents`, `updateAgentStatus`, `updateAgentTask`, `recordActivity`, `recordResourceUsage`, `setAgentStatusConnection`, `resetAgentStatusState`) while deleting session-era helpers.
   - Removed the unused `use-agent-status` polling hook plus dashboard mock data, so agent dashboards now bind directly to the store + realtime hook with zero demo/test-only branches.
   - Added focused tests: `frontend/src/stores/__tests__/agent-status-store.test.ts`, `frontend/src/hooks/__tests__/use-agent-status-websocket.test.tsx`, and `frontend/src/components/features/agent-monitoring/__tests__/agent-status-dashboard.test.tsx` covering all new branches at 100% coverage.
