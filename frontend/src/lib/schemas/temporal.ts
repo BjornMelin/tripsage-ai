@@ -104,3 +104,41 @@ export const availabilitySchema = z
   );
 /** TypeScript type for availability. */
 export type Availability = z.infer<typeof availabilitySchema>;
+
+/** Zod schema for recurrence frequency (lowercase format for internal use). */
+export const recurrenceFrequencySchema = z.enum([
+  "daily",
+  "weekly",
+  "monthly",
+  "yearly",
+]);
+/** TypeScript type for recurrence frequency. */
+export type RecurrenceFrequency = z.infer<typeof recurrenceFrequencySchema>;
+
+/**
+ * Zod schema for recurring rule configuration (internal format with numeric day-of-week).
+ * This format is used by RecurringDateGenerator and can be converted to/from RFC 5545.
+ */
+export const recurringRuleSchema = z
+  .object({
+    /** Optional maximum number of occurrences. */
+    count: z.number().int().min(1).optional(),
+    /** Day of month for monthly recurrence (1-31). */
+    dayOfMonth: z.number().int().min(1).max(31).optional(),
+    /** Days of week for weekly recurrence (0=Sunday, 6=Saturday). */
+    daysOfWeek: z.array(z.number().int().min(0).max(6)).optional(),
+    /** Optional end date for the recurrence. */
+    endDate: z.date().optional(),
+    /** How often the event repeats (daily, weekly, monthly, yearly). */
+    frequency: recurrenceFrequencySchema,
+    /** The interval between occurrences (e.g., 2 for every 2 weeks). */
+    interval: z.number().int().min(1).default(1),
+    /** Week of month for monthly recurrence (1-5). */
+    weekOfMonth: z.number().int().min(1).max(5).optional(),
+  })
+  .refine((d) => !(d.count && d.endDate), {
+    message: "Cannot specify both count and endDate",
+    path: ["count"],
+  });
+/** TypeScript type for recurring rule. */
+export type RecurringRule = z.infer<typeof recurringRuleSchema>;

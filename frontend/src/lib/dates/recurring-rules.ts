@@ -4,38 +4,12 @@
  * date sequences and parsing RRULE strings without external dependencies.
  */
 
+import type { RecurrenceFrequency, RecurringRule } from "@/lib/schemas/temporal";
+import { recurringRuleSchema } from "@/lib/schemas/temporal";
 import { DateUtils } from "./unified-date-utils";
 
-/**
- * Supported recurrence frequencies for recurring events.
- *
- * @type RecurrenceFrequency
- */
-export type RecurrenceFrequency = "daily" | "weekly" | "monthly" | "yearly";
-
-/**
- * Configuration for recurring date rules.
- *
- * Defines how events repeat based on frequency, interval, and constraints.
- *
- * @interface RecurringRule
- */
-export interface RecurringRule {
-  /** How often the event repeats (daily, weekly, monthly, yearly). */
-  frequency: RecurrenceFrequency;
-  /** The interval between occurrences (e.g., 2 for every 2 weeks). */
-  interval: number;
-  /** Optional end date for the recurrence. */
-  endDate?: Date;
-  /** Optional maximum number of occurrences. */
-  count?: number;
-  /** Days of week for weekly recurrence (0=Sunday, 6=Saturday). */
-  daysOfWeek?: number[];
-  /** Day of month for monthly recurrence (1-31). */
-  dayOfMonth?: number;
-  /** Week of month for monthly recurrence (1-5). */
-  weekOfMonth?: number;
-}
+// Re-export types from schemas
+export type { RecurrenceFrequency, RecurringRule };
 
 /**
  * Utility class for generating recurring date sequences and parsing RRULE strings.
@@ -45,38 +19,79 @@ export interface RecurringRule {
  *
  * @class RecurringDateGenerator
  */
+// biome-ignore lint/complexity/noStaticOnlyClass: Shared via static methods.
 export class RecurringDateGenerator {
   /**
    * Generates a list of dates that match a recurring rule starting from a given date.
    *
-   * @param startDate - The start date for generating occurrences.
-   * @param rule - The recurrence rule to apply.
-   * @param limit - Maximum number of occurrences to generate. Defaults to 50.
-   * @returns Array of dates representing the occurrences.
+   * @param startDate - Anchor date for generating occurrences.
+   * @param rule - Recurrence definition to apply.
+   * @param limit - Maximum number of occurrences to emit (default 50).
+   * @returns Array of generated occurrence dates.
    */
   static generateOccurrences(
     startDate: Date,
     rule: RecurringRule,
-    limit: number = 50,
+    limit: number = 50
   ): Date[] {
+    if (rule.frequency === "weekly" && rule.daysOfWeek?.length) {
+      return RecurringDateGenerator.generateWeeklyWithDays(startDate, rule, limit);
+    }
+
     const occurrences: Date[] = [];
     let currentDate = new Date(startDate);
-    let count = 0;
+    let occurrenceCount = 0;
 
-    while (count < limit) {
+    while (occurrenceCount < limit) {
       if (rule.endDate && DateUtils.isAfter(currentDate, rule.endDate)) {
         break;
       }
-      if (rule.count && count >= rule.count) {
+      if (rule.count && occurrenceCount >= rule.count) {
         break;
       }
 
-      if (this.matchesRule(currentDate, startDate, rule)) {
+      if (RecurringDateGenerator.matchesRule(currentDate, startDate, rule)) {
         occurrences.push(new Date(currentDate));
+        occurrenceCount++;
       }
 
-      currentDate = this.nextOccurrence(currentDate, rule);
-      count++;
+      currentDate = RecurringDateGenerator.nextOccurrence(currentDate, rule);
+    }
+
+    return occurrences;
+  }
+
+  private static generateWeeklyWithDays(
+    startDate: Date,
+    rule: RecurringRule,
+    limit: number
+  ): Date[] {
+    const occurrences: Date[] = [];
+    const sortedDays = [...(rule.daysOfWeek ?? [])].sort();
+    const startWeek = DateUtils.startOf(startDate, "week");
+    let candidate = new Date(startDate);
+
+    while (occurrences.length < limit) {
+      if (rule.endDate && DateUtils.isAfter(candidate, rule.endDate)) {
+        break;
+      }
+
+      const weekDiff = Math.abs(
+        DateUtils.difference(DateUtils.startOf(candidate, "week"), startWeek, "weeks")
+      );
+      const withinInterval = weekDiff % rule.interval === 0;
+      if (
+        withinInterval &&
+        sortedDays.includes(candidate.getDay()) &&
+        (!rule.count || occurrences.length < rule.count)
+      ) {
+        occurrences.push(new Date(candidate));
+        if (rule.count && occurrences.length >= rule.count) {
+          break;
+        }
+      }
+
+      candidate = DateUtils.add(candidate, 1, "days");
     }
 
     return occurrences;
@@ -93,8 +108,8 @@ export class RecurringDateGenerator {
    */
   private static matchesRule(
     date: Date,
-    startDate: Date,
-    rule: RecurringRule,
+    _startDate: Date,
+    rule: RecurringRule
   ): boolean {
     if (rule.frequency === "weekly" && rule.daysOfWeek) {
       return rule.daysOfWeek.includes(date.getDay());
@@ -106,16 +121,14 @@ export class RecurringDateGenerator {
       if (rule.weekOfMonth && rule.daysOfWeek) {
         const weekOfMonth = Math.ceil(date.getDate() / 7);
         return (
-          weekOfMonth === rule.weekOfMonth &&
-          rule.daysOfWeek.includes(date.getDay())
+          weekOfMonth === rule.weekOfMonth && rule.daysOfWeek.includes(date.getDay())
         );
       }
     }
     if (rule.frequency === "yearly") {
       if (rule.dayOfMonth && rule.daysOfWeek) {
         return (
-          date.getDate() === rule.dayOfMonth &&
-          rule.daysOfWeek.includes(date.getDay())
+          date.getDate() === rule.dayOfMonth && rule.daysOfWeek.includes(date.getDay())
         );
       }
     }
@@ -148,13 +161,12 @@ export class RecurringDateGenerator {
   /**
    * Parses an RFC 5545 RRULE string into a RecurringRule object.
    *
-   * Supports common RRULE properties: FREQ, INTERVAL, UNTIL, COUNT, BYDAY, BYMONTHDAY.
-   *
-   * @param rrule - The RRULE string to parse.
-   * @returns A RecurringRule object representing the parsed recurrence.
+   * @param rrule - RRULE string containing frequency definitions.
+   * @returns Parsed recurrence configuration.
    */
+  // biome-ignore lint/style/useNamingConvention: Preserve RR abbreviation for RFC terminology.
   static parseRRule(rrule: string): RecurringRule {
-    const rule: RecurringRule = {
+    const rule: Partial<RecurringRule> = {
       frequency: "daily",
       interval: 1,
     };
@@ -182,18 +194,18 @@ export class RecurringDateGenerator {
 
     const byDayMatch = upper.match(/BYDAY=([A-Z,]+)/);
     if (byDayMatch) {
-      const dayMap: Record<string, number> = {
-        SU: 0,
-        MO: 1,
-        TU: 2,
-        WE: 3,
-        TH: 4,
-        FR: 5,
-        SA: 6,
-      };
+      const dayMap = new Map<string, number>([
+        ["FR", 5],
+        ["MO", 1],
+        ["SA", 6],
+        ["SU", 0],
+        ["TH", 4],
+        ["TU", 2],
+        ["WE", 3],
+      ]);
       rule.daysOfWeek = byDayMatch[1]
         .split(",")
-        .map((day) => dayMap[day] ?? 0)
+        .map((day) => dayMap.get(day) ?? 0)
         .filter((day) => day >= 0 && day <= 6);
     }
 
@@ -202,15 +214,21 @@ export class RecurringDateGenerator {
       rule.dayOfMonth = Number.parseInt(byMonthDayMatch[1], 10);
     }
 
-    return rule;
+    // Validate and parse the rule using Zod schema
+    const parsed = recurringRuleSchema.safeParse(rule);
+    if (!parsed.success) {
+      throw new Error(`Invalid recurrence rule: ${parsed.error.message}`);
+    }
+    return parsed.data;
   }
 
   /**
    * Converts a RecurringRule object into an RFC 5545 RRULE string.
    *
-   * @param rule - The recurrence rule to convert.
-   * @returns A valid RRULE string representation.
+   * @param rule - Recurrence configuration to encode.
+   * @returns Valid RRULE string representation.
    */
+  // biome-ignore lint/style/useNamingConvention: Preserve RR abbreviation for RFC terminology.
   static toRRule(rule: RecurringRule): string {
     const parts = [`FREQ=${rule.frequency.toUpperCase()}`];
 

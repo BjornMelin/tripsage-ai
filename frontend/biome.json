@@ -223,6 +223,16 @@
       }
     },
     {
+      "includes": ["**/schemas/**/*.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": "off"
+          }
+        }
+      }
+    },
+    {
       "includes": ["**/test/factories/**"],
       "linter": {
         "rules": {

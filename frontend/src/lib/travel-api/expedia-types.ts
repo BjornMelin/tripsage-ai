@@ -200,7 +200,7 @@ export const EPS_CREATE_BOOKING_REQUEST_SCHEMA = z.object({
   }),
   specialRequests: z.string().optional(),
   user: z.object({
-    email: z.string().email(),
+    email: z.email(),
     name: z.string().min(1),
     phone: z.string().optional(),
   }),

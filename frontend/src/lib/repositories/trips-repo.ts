@@ -1,15 +1,30 @@
 /**
- * @fileoverview Trip repository: typed Supabase CRUD + UI mapping.
+ * @fileoverview Trip repository: typed Supabase CRUD + UI mapping with Zod validation.
  */
+
+import type { Json, TripsInsert, TripsRow, TripsUpdate } from "@/lib/schemas/supabase";
+import {
+  tripsInsertSchema,
+  tripsRowSchema,
+  tripsUpdateSchema,
+} from "@/lib/schemas/supabase";
 import { createClient } from "@/lib/supabase";
-import type { InsertTables, Tables, UpdateTables } from "@/lib/supabase/database.types";
 import { insertSingle, updateSingle } from "@/lib/supabase/typed-helpers";
 
-export type TripRow = Tables<"trips">;
-export type TripInsert = InsertTables<"trips">;
-export type TripUpdate = UpdateTables<"trips">;
+// Re-export types from schemas
+export type TripRow = TripsRow;
+export type TripInsert = TripsInsert;
+export type TripUpdate = TripsUpdate;
 
-/** Map DB row → UI store trip shape (minimal mapping). */
+/**
+ * Maps a database trip row to UI-friendly trip object format.
+ *
+ * Performs minimal transformation from database schema to client-side representation,
+ * converting snake_case database fields to camelCase where needed.
+ *
+ * @param row - The raw trip row from Supabase database
+ * @returns UI-formatted trip object with camelCase properties
+ */
 export function mapTripRowToUi(row: TripRow) {
   return {
     budget: row.budget,
@@ -37,28 +52,86 @@ export function mapTripRowToUi(row: TripRow) {
   };
 }
 
+/**
+ * Creates a new trip in the database.
+ *
+ * Validates the input data using Zod schema, inserts the trip record,
+ * and returns the created trip in UI-friendly format.
+ *
+ * @param data - Trip creation data excluding user_id, plus required user_id
+ * @returns Promise resolving to the created trip in UI format
+ * @throws Error if validation fails or database insertion fails
+ */
 export async function createTrip(
   // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
   data: Omit<TripInsert, "user_id"> & { user_id: string }
 ) {
+  // Validate input using Zod schema
+  const validated = tripsInsertSchema.parse(data);
+  // Cast to match database types (flexibility/search_metadata are Json, not unknown)
+  const typedValidated = validated as Omit<
+    TripInsert,
+    "flexibility" | "search_metadata"
+  > & {
+    flexibility: Json | undefined;
+    // biome-ignore lint/style/useNamingConvention: Database field name
+    search_metadata: Json | undefined;
+  };
   const supabase = createClient();
-  const { data: row, error } = await insertSingle(supabase, "trips", data);
+  const { data: row, error } = await insertSingle(supabase, "trips", typedValidated);
   if (error || !row) throw error || new Error("Failed to create trip");
-  return mapTripRowToUi(row);
+  // Validate response using Zod schema
+  const validatedRow = tripsRowSchema.parse(row);
+  return mapTripRowToUi(validatedRow);
 }
 
+/**
+ * Updates an existing trip in the database.
+ *
+ * Validates the update data using Zod schema, updates the trip record
+ * for the specified ID and user, and returns the updated trip in UI-friendly format.
+ * Only allows updates for trips owned by the specified user.
+ *
+ * @param id - The numeric ID of the trip to update
+ * @param userId - The user ID for ownership verification
+ * @param updates - Partial trip data to update
+ * @returns Promise resolving to the updated trip in UI format
+ * @throws Error if validation fails, trip not found, or database update fails
+ */
 export async function updateTrip(id: number, userId: string, updates: TripUpdate) {
+  // Validate input using Zod schema
+  const validated = tripsUpdateSchema.parse(updates);
+  // Cast to match database types (flexibility/search_metadata are Json, not unknown)
+  const typedValidated = validated as Omit<
+    TripUpdate,
+    "flexibility" | "search_metadata"
+  > & {
+    flexibility: Json | undefined;
+    // biome-ignore lint/style/useNamingConvention: Database field name
+    search_metadata: Json | undefined;
+  };
   const supabase = createClient();
-  const { data, error } = await updateSingle(supabase, "trips", updates, (qb) =>
+  const { data, error } = await updateSingle(supabase, "trips", typedValidated, (qb) =>
     // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder types are complex
     (qb as any)
       .eq("id", id)
       .eq("user_id", userId)
   );
   if (error || !data) throw error || new Error("Failed to update trip");
-  return mapTripRowToUi(data);
+  // Validate response using Zod schema
+  const validatedRow = tripsRowSchema.parse(data);
+  return mapTripRowToUi(validatedRow);
 }
 
+/**
+ * Retrieves all trips from the database.
+ *
+ * Fetches all trip records ordered by creation date (newest first)
+ * and returns them in UI-friendly format.
+ *
+ * @returns Promise resolving to array of trips in UI format
+ * @throws Error if database query fails
+ */
 export async function listTrips() {
   const supabase = createClient();
   const { data, error } = await supabase
@@ -66,9 +139,22 @@ export async function listTrips() {
     .select("*")
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return (data || []).map(mapTripRowToUi);
+  // Validate all rows using Zod schema
+  const validatedRows = (data || []).map((row) => tripsRowSchema.parse(row));
+  return validatedRows.map(mapTripRowToUi);
 }
 
+/**
+ * Deletes a trip from the database.
+ *
+ * Removes the trip record with the specified ID. If userId is provided,
+ * only deletes trips owned by that user for additional security.
+ *
+ * @param id - The numeric ID of the trip to delete
+ * @param userId - Optional user ID for ownership verification
+ * @returns Promise resolving to true if deletion succeeded
+ * @throws Error if database deletion fails
+ */
 export async function deleteTrip(id: number, userId?: string) {
   const supabase = createClient();
   let qb = supabase.from("trips").delete().eq("id", id);

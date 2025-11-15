@@ -6,27 +6,10 @@
  * a unified API.
  */
 
-/**
- * Safety score category structure.
- */
-export type SafetyCategory = {
-  category: string;
-  value: number;
-  description?: string;
-};
+import type { SafetyCategory, SafetyResult } from "@/lib/schemas/tools";
 
-/**
- * Safety score result structure.
- */
-export type SafetyResult = {
-  destination: string;
-  overallScore: number;
-  categories: SafetyCategory[];
-  summary?: string;
-  lastUpdated?: string;
-  provider: string;
-  sourceUrl?: string;
-};
+// Re-export types from schemas
+export type { SafetyCategory, SafetyResult };
 
 /**
  * Interface for travel advisory providers.

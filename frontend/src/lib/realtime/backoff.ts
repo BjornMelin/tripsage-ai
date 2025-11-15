@@ -3,23 +3,17 @@
  * Pure, deterministic utility with no React or Supabase dependencies.
  */
 
-/**
- * Configuration for exponential backoff delay calculation.
- */
-export interface BackoffConfig {
-  /** Initial delay in milliseconds before the first retry. */
-  initialDelayMs: number;
-  /** Maximum delay in milliseconds (caps exponential growth). */
-  maxDelayMs: number;
-  /** Exponential factor (e.g., 2 for doubling, 1.5 for 50% increase). */
-  factor: number;
-}
+import type { BackoffConfig } from "@/lib/schemas/realtime";
+import { backoffConfigSchema } from "@/lib/schemas/realtime";
+
+// Re-export type from schemas
+export type { BackoffConfig };
 
 /**
  * Computes the backoff delay for a given attempt number using exponential backoff.
  *
  * @param attempt - Zero-based attempt number (0 = first retry, 1 = second retry, etc.).
- * @param config - Backoff configuration parameters.
+ * @param config - Backoff configuration parameters (validated via Zod schema).
  * @returns Delay in milliseconds. Returns 0 for attempt <= 0.
  *
  * @example
@@ -32,9 +26,11 @@ export interface BackoffConfig {
  * ```
  */
 export function computeBackoffDelay(attempt: number, config: BackoffConfig): number {
+  // Validate config using Zod schema
+  const validated = backoffConfigSchema.parse(config);
   if (attempt <= 0) {
     return 0;
   }
-  const base = config.initialDelayMs * config.factor ** (attempt - 1);
-  return Math.min(base, config.maxDelayMs);
+  const base = validated.initialDelayMs * validated.factor ** (attempt - 1);
+  return Math.min(base, validated.maxDelayMs);
 }
