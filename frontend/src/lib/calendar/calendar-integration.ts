@@ -6,35 +6,57 @@
 
 import type { DateRange } from "../dates/unified-date-utils";
 import { DateUtils } from "../dates/unified-date-utils";
-import type { RecurringRule } from "../dates/recurring-rules";
+import type { CalendarEvent, EventDateTime } from "../schemas/calendar";
+import { calendarEventSchema } from "../schemas/calendar";
 
-/**
- * Represents a calendar event with all essential properties.
- *
- * @interface CalendarEvent
- */
-export interface CalendarEvent {
-  /** Unique identifier for the event. */
-  id: string;
-  /** Event title or summary. */
-  title: string;
-  /** Optional event description. */
-  description?: string;
-  /** Event start time. */
-  start: Date;
-  /** Event end time. */
-  end: Date;
-  /** Optional timezone identifier. */
-  timezone?: string;
-  /** Optional event location. */
-  location?: string;
-  /** Optional list of attendee email addresses. */
-  attendees?: string[];
-  /** Optional recurrence rule for repeating events. */
-  recurring?: RecurringRule;
-  /** Optional metadata for provider-specific information. */
-  metadata?: Record<string, unknown>;
-}
+const resolveDateTimeValue = (value: EventDateTime): Date => {
+  if (value.dateTime instanceof Date) {
+    return value.dateTime;
+  }
+  if (typeof value.dateTime === "string") {
+    return DateUtils.parse(value.dateTime);
+  }
+  if (value.date) {
+    return DateUtils.parse(value.date);
+  }
+  throw new Error("Calendar event missing date/time value.");
+};
+
+const serializeEventDateTime = (value: EventDateTime) => {
+  if (value.date) {
+    return { date: value.date };
+  }
+  const resolved = resolveDateTimeValue(value);
+  return {
+    date: resolved.toISOString().split("T")[0],
+    dateTime: DateUtils.formatForApi(resolved),
+  };
+};
+
+const normalizeRemoteEvent = (event: Record<string, unknown>): CalendarEvent =>
+  calendarEventSchema.parse({
+    ...event,
+    end: event.end ?? event.endTime,
+    start: event.start ?? event.startTime,
+    summary: event.summary ?? event.title ?? "Untitled Event",
+  });
+
+const serializeEventPayload = (event: CalendarEvent) => ({
+  ...event,
+  end: serializeEventDateTime(event.end),
+  start: serializeEventDateTime(event.start),
+});
+
+const serializePartialEventPayload = (event: Partial<CalendarEvent>) => {
+  const payload: Record<string, unknown> = { ...event };
+  if (event.end) {
+    payload.end = serializeEventDateTime(event.end);
+  }
+  if (event.start) {
+    payload.start = serializeEventDateTime(event.start);
+  }
+  return payload;
+};
 
 /**
  * Interface for calendar provider implementations.
@@ -51,7 +73,7 @@ export interface CalendarProvider {
    * @returns Promise resolving to an array of calendar events.
    */
   getEvents(dateRange: DateRange): Promise<CalendarEvent[]>;
-  
+
   /**
    * Creates a new calendar event.
    *
@@ -59,7 +81,7 @@ export interface CalendarProvider {
    * @returns Promise resolving to the created event with assigned ID.
    */
   createEvent(event: Omit<CalendarEvent, "id">): Promise<CalendarEvent>;
-  
+
   /**
    * Updates an existing calendar event.
    *
@@ -68,7 +90,7 @@ export interface CalendarProvider {
    * @returns Promise resolving to the updated event.
    */
   updateEvent(id: string, event: Partial<CalendarEvent>): Promise<CalendarEvent>;
-  
+
   /**
    * Deletes a calendar event.
    *
@@ -76,22 +98,22 @@ export interface CalendarProvider {
    * @returns Promise resolving when the event is deleted.
    */
   deleteEvent(id: string): Promise<void>;
-  
+
   /**
    * Exports events to ICS format.
    *
    * @param events - Array of events to export.
    * @returns Promise resolving to ICS string content.
    */
-  exportToICS(events: CalendarEvent[]): Promise<string>;
-  
+  exportToIcs(events: CalendarEvent[]): Promise<string>;
+
   /**
    * Imports events from ICS format.
    *
    * @param icsContent - The ICS content to parse.
    * @returns Promise resolving to an array of imported events.
    */
-  importFromICS(icsContent: string): Promise<CalendarEvent[]>;
+  importFromIcs(icsContent: string): Promise<CalendarEvent[]>;
 }
 
 /**
@@ -110,88 +132,65 @@ export class SupabaseCalendarProvider implements CalendarProvider {
    */
   async getEvents(dateRange: DateRange): Promise<CalendarEvent[]> {
     const response = await fetch("/api/calendar/events", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        start: DateUtils.formatForApi(dateRange.start),
         end: DateUtils.formatForApi(dateRange.end),
+        start: DateUtils.formatForApi(dateRange.start),
       }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
     });
     const events = await response.json();
-    return events.map((event: any) => ({
-      ...event,
-      start: DateUtils.parse(event.start),
-      end: DateUtils.parse(event.end),
-    }));
+    const list = Array.isArray(events) ? events : (events?.items ?? []);
+    return list.map((event: Record<string, unknown>) => normalizeRemoteEvent(event));
   }
 
   async createEvent(event: Omit<CalendarEvent, "id">): Promise<CalendarEvent> {
     const response = await fetch("/api/calendar/events", {
-      method: "PUT",
+      body: JSON.stringify(serializeEventPayload(event)),
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...event,
-        start: DateUtils.formatForApi(event.start),
-        end: DateUtils.formatForApi(event.end),
-      }),
+      method: "PUT",
     });
     const created = await response.json();
-    return {
-      ...created,
-      start: DateUtils.parse(created.start),
-      end: DateUtils.parse(created.end),
-    };
+    return normalizeRemoteEvent(created);
   }
 
   async updateEvent(id: string, event: Partial<CalendarEvent>): Promise<CalendarEvent> {
     const response = await fetch(`/api/calendar/events/${id}`, {
-      method: "PATCH",
+      body: JSON.stringify(serializePartialEventPayload(event)),
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...event,
-        start: event.start ? DateUtils.formatForApi(event.start) : undefined,
-        end: event.end ? DateUtils.formatForApi(event.end) : undefined,
-      }),
+      method: "PATCH",
     });
     const updated = await response.json();
-    return {
-      ...updated,
-      start: DateUtils.parse(updated.start),
-      end: DateUtils.parse(updated.end),
-    };
+    return normalizeRemoteEvent(updated);
   }
 
   async deleteEvent(id: string): Promise<void> {
     await fetch(`/api/calendar/events/${id}`, { method: "DELETE" });
   }
 
-  async exportToICS(events: CalendarEvent[]): Promise<string> {
+  async exportToIcs(events: CalendarEvent[]): Promise<string> {
     const response = await fetch("/api/calendar/ics/export", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         events: events.map((event) => ({
           ...event,
-          start: DateUtils.formatForApi(event.start),
-          end: DateUtils.formatForApi(event.end),
+          end: DateUtils.formatForApi(resolveDateTimeValue(event.end)),
+          start: DateUtils.formatForApi(resolveDateTimeValue(event.start)),
         })),
       }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
     });
     return response.text();
   }
 
-  async importFromICS(icsContent: string): Promise<CalendarEvent[]> {
+  async importFromIcs(icsContent: string): Promise<CalendarEvent[]> {
     const response = await fetch("/api/calendar/ics/import", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ icsContent }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
     });
     const events = await response.json();
-    return events.map((event: any) => ({
-      ...event,
-      start: DateUtils.parse(event.start),
-      end: DateUtils.parse(event.end),
-    }));
+    return events.map((event: Record<string, unknown>) => normalizeRemoteEvent(event));
   }
 }
 
@@ -202,9 +201,26 @@ export class SupabaseCalendarProvider implements CalendarProvider {
  *
  * @class GoogleCalendarProvider
  */
+const toGoogleDateTimePayload = (value: EventDateTime) => {
+  if (value.date) {
+    return { date: value.date };
+  }
+  const resolved = resolveDateTimeValue(value);
+  return {
+    date: resolved.toISOString().split("T")[0],
+    dateTime: DateUtils.formatForApi(resolved),
+  };
+};
+
 export class GoogleCalendarProvider implements CalendarProvider {
   private apiKey: string;
   private calendarId: string;
+
+  private assertServer() {
+    if (typeof window !== "undefined") {
+      throw new Error("GoogleCalendarProvider can only be used on the server.");
+    }
+  }
 
   /**
    * Creates a new Google Calendar provider instance.
@@ -213,6 +229,7 @@ export class GoogleCalendarProvider implements CalendarProvider {
    * @param calendarId - Calendar ID to use. Defaults to "primary".
    */
   constructor(apiKey: string, calendarId: string = "primary") {
+    this.assertServer();
     this.apiKey = apiKey;
     this.calendarId = calendarId;
   }
@@ -225,156 +242,110 @@ export class GoogleCalendarProvider implements CalendarProvider {
    */
   async getEvents(dateRange: DateRange): Promise<CalendarEvent[]> {
     const params = new URLSearchParams({
-      timeMin: DateUtils.formatForApi(dateRange.start),
-      timeMax: DateUtils.formatForApi(dateRange.end),
-      singleEvents: "true",
-      orderBy: "startTime",
       key: this.apiKey,
+      orderBy: "startTime",
+      singleEvents: "true",
+      timeMax: DateUtils.formatForApi(dateRange.end),
+      timeMin: DateUtils.formatForApi(dateRange.start),
     });
 
     const response = await fetch(
-      `https://www.googleapis.com/calendar/v3/calendars/${this.calendarId}/events?${params}`,
+      `https://www.googleapis.com/calendar/v3/calendars/${this.calendarId}/events?${params}`
     );
     const data = await response.json();
 
-    return data.items.map((item: any) => ({
-      id: item.id,
-      title: item.summary,
-      description: item.description,
-      start: DateUtils.parse(item.start.date || item.start.dateTime),
-      end: DateUtils.parse(item.end.date || item.end.dateTime),
-      location: item.location,
-      metadata: item,
-    }));
+    return (data.items || []).map((item: Record<string, unknown>) =>
+      normalizeRemoteEvent({
+        ...item,
+        end: item.end,
+        id: item.id,
+        location: item.location,
+        metadata: item,
+        start: item.start,
+        summary: item.summary,
+      })
+    );
   }
 
   async createEvent(event: Omit<CalendarEvent, "id">): Promise<CalendarEvent> {
     const response = await fetch(
       `https://www.googleapis.com/calendar/v3/calendars/${this.calendarId}/events?key=${this.apiKey}`,
       {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          summary: event.title,
           description: event.description,
+          end: toGoogleDateTimePayload(event.end),
           location: event.location,
-          start: {
-            date: event.start.toISOString().split("T")[0],
-            dateTime: DateUtils.formatForApi(event.start),
-          },
-          end: {
-            date: event.end.toISOString().split("T")[0],
-            dateTime: DateUtils.formatForApi(event.end),
-          },
+          start: toGoogleDateTimePayload(event.start),
+          summary: event.summary,
         }),
-      },
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      }
     );
     const created = await response.json();
-    return {
-      id: created.id,
-      title: created.summary,
-      description: created.description,
-      start: DateUtils.parse(created.start.date || created.start.dateTime),
-      end: DateUtils.parse(created.end.date || created.end.dateTime),
-      location: created.location,
-      metadata: created,
-    };
+    return normalizeRemoteEvent(created);
   }
 
   async updateEvent(id: string, event: Partial<CalendarEvent>): Promise<CalendarEvent> {
     const response = await fetch(
       `https://www.googleapis.com/calendar/v3/calendars/${this.calendarId}/events/${id}?key=${this.apiKey}`,
       {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          summary: event.title,
           description: event.description,
+          end: event.end ? toGoogleDateTimePayload(event.end) : undefined,
           location: event.location,
-          start: event.start
-            ? {
-                date: event.start.toISOString().split("T")[0],
-                dateTime: DateUtils.formatForApi(event.start),
-              }
-            : undefined,
-          end: event.end
-            ? {
-                date: event.end.toISOString().split("T")[0],
-                dateTime: DateUtils.formatForApi(event.end),
-              }
-            : undefined,
+          start: event.start ? toGoogleDateTimePayload(event.start) : undefined,
+          summary: event.summary,
         }),
-      },
+        headers: { "Content-Type": "application/json" },
+        method: "PATCH",
+      }
     );
     const updated = await response.json();
-    return {
-      id: updated.id,
-      title: updated.summary,
-      description: updated.description,
-      start: DateUtils.parse(updated.start.date || updated.start.dateTime),
-      end: DateUtils.parse(updated.end.date || updated.end.dateTime),
-      location: updated.location,
-      metadata: updated,
-    };
+    return normalizeRemoteEvent(updated);
   }
 
   async deleteEvent(id: string): Promise<void> {
     await fetch(
       `https://www.googleapis.com/calendar/v3/calendars/${this.calendarId}/events/${id}?key=${this.apiKey}`,
-      { method: "DELETE" },
+      { method: "DELETE" }
     );
   }
 
-  async exportToICS(events: CalendarEvent[]): Promise<string> {
+  async exportToIcs(events: CalendarEvent[]): Promise<string> {
     const response = await fetch("/api/calendar/ics/export", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         events: events.map((event) => ({
           ...event,
-          start: DateUtils.formatForApi(event.start),
-          end: DateUtils.formatForApi(event.end),
+          end: DateUtils.formatForApi(resolveDateTimeValue(event.end)),
+          start: DateUtils.formatForApi(resolveDateTimeValue(event.start)),
         })),
       }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
     });
     return response.text();
   }
 
-  async importFromICS(icsContent: string): Promise<CalendarEvent[]> {
+  async importFromIcs(icsContent: string): Promise<CalendarEvent[]> {
     const response = await fetch("/api/calendar/ics/import", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ icsContent }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
     });
     const events = await response.json();
-    return events.map((event: any) => ({
-      ...event,
-      start: DateUtils.parse(event.start),
-      end: DateUtils.parse(event.end),
-    }));
+    return events.map((event: Record<string, unknown>) => normalizeRemoteEvent(event));
   }
 }
 
 /**
- * Factory class for creating calendar provider instances.
- *
- * Provides a centralized way to instantiate different calendar providers
- * based on type and configuration options.
- *
- * @class CalendarFactory
+ * Factory helpers for creating calendar providers.
  */
-export class CalendarFactory {
-  /**
-   * Creates a calendar provider instance based on the specified type.
-   *
-   * @param type - The type of calendar provider to create.
-   * @param options - Optional configuration for the provider.
-   * @param options.apiKey - API key required for Google Calendar provider.
-   * @param options.calendarId - Calendar ID for Google Calendar provider.
-   * @returns A configured calendar provider instance.
-   * @throws Error if required options are missing or provider type is unsupported.
-   */
-  static create(type: "supabase" | "google", options?: { apiKey?: string; calendarId?: string }): CalendarProvider {
+export const calendarFactory = {
+  create(
+    type: "supabase" | "google",
+    options?: { apiKey?: string; calendarId?: string }
+  ): CalendarProvider {
     switch (type) {
       case "supabase":
         return new SupabaseCalendarProvider();
@@ -386,5 +357,5 @@ export class CalendarFactory {
       default:
         throw new Error(`Unsupported calendar type: ${type}`);
     }
-  }
-}
+  },
+};

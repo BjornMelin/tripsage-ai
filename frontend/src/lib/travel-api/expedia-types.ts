@@ -73,7 +73,7 @@ export const EPS_PROPERTY_SCHEMA = z.object({
     .array(
       z.object({
         caption: z.string().optional(),
-        url: z.string().url(),
+        url: z.url(),
       })
     )
     .optional(),
@@ -215,7 +215,7 @@ export const EPS_CREATE_BOOKING_RESPONSE_SCHEMA = z.object({
   checkIn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   checkOut: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   confirmationNumber: z.string(),
-  guestEmail: z.string().email(),
+  guestEmail: z.email(),
   guestName: z.string(),
   id: z.string(), // EPS booking confirmation ID
   propertyId: z.string(),

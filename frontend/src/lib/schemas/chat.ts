@@ -166,7 +166,6 @@ export type ChatCompletionRequest = z.infer<typeof CHAT_COMPLETION_REQUEST_SCHEM
 export const CHAT_COMPLETION_RESPONSE_SCHEMA = z.object({
   choices: z.array(
     z.object({
-      // biome-ignore lint/style/useNamingConvention: External API field name
       finish_reason: z.string().optional(),
       index: z.number(),
       message: MESSAGE_SCHEMA,

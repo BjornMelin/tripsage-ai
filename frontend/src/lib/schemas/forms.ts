@@ -349,11 +349,11 @@ export const updateTripFormSchema = z.object({
   budget: z.number().optional(),
   description: z.string().optional(),
   destination: z.string().optional(),
-  endDate: z.string().date().optional(),
+  endDate: z.iso.date().optional(),
   id: z.uuid(),
   isPublic: z.boolean().optional(),
   maxParticipants: z.number().optional(),
-  startDate: z.string().date().optional(),
+  startDate: z.iso.date().optional(),
   tags: z.array(z.string()).optional(),
   title: z.string().optional(),
 });
@@ -377,7 +377,7 @@ export const expenseFormSchema = z.object({
     .min(1, "Description is required")
     .max(200, "Description too long"),
   location: z.string().max(100).optional(),
-  receipt: z.string().url("Invalid receipt URL").optional(),
+  receipt: z.url("Invalid receipt URL").optional(),
   tags: z.array(z.string().max(50)).max(5).optional(),
 });
 

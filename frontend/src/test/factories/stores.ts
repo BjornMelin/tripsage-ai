@@ -91,44 +91,29 @@ export function createMockAgentStatusState(
   overrides: Partial<AgentStatusState> = {}
 ): AgentStatusState {
   const base: AgentStatusState = {
-    get activeAgents() {
-      return this.agents.filter(
-        (a) => a.status !== "idle" && a.status !== "completed" && a.status !== "error"
-      );
-    },
-
-    // Actions (no-ops by default; tests can override)
-    addAgent: () => undefined,
-    addAgentActivity: () => undefined,
-    addAgentTask: () => undefined,
+    activeAgents: [],
+    activities: [],
+    agentOrder: [],
     agents: [],
-    completeAgentTask: () => undefined,
-
-    // Computed
-    get currentSession() {
-      return this.sessions.find((s) => s.id === this.currentSessionId) ?? null;
-    },
-    currentSessionId: null,
-    endSession: () => undefined,
-    error: null,
-
-    // Computed helpers
-    getActiveAgents() {
-      return this.activeAgents;
-    },
-    getCurrentSession() {
-      return this.currentSession;
+    agentsById: {},
+    connection: {
+      error: null,
+      lastChangedAt: null,
+      retryCount: 0,
+      status: "idle",
+      topic: null,
     },
     isMonitoring: false,
-    lastUpdated: null,
-    resetAgentStatus: () => undefined,
-    sessions: [],
-    setError: () => undefined,
-    startSession: () => undefined,
-    updateAgentProgress: () => undefined,
+    lastEventAt: null,
+    recordActivity: () => undefined,
+    recordResourceUsage: () => undefined,
+    registerAgents: () => undefined,
+    resetAgentStatusState: () => undefined,
+    resourceUsage: [],
+    setAgentStatusConnection: () => undefined,
+    setMonitoring: () => undefined,
     updateAgentStatus: () => undefined,
     updateAgentTask: () => undefined,
-    updateResourceUsage: () => undefined,
   };
 
   return { ...base, ...overrides } as AgentStatusState;

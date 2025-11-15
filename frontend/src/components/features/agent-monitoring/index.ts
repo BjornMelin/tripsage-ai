@@ -1,16 +1,19 @@
-// Agent Monitoring Dashboard Components
+/**
+ * @fileoverview Barrel exports for agent monitoring widgets, connection
+ * telemetry types, and UI components shared across dashboard routes.
+ */
 
-// Hook Exports (Realtime-only)
-export { useAgentStatusWebSocket as useWebSocketAgent } from "../../../hooks/use-agent-status-websocket";
-// Type Exports
+/** Re-exports connection telemetry shapes used for displaying analytics data. */
 export type {
   ConnectionAnalytics,
   NetworkMetrics,
 } from "../shared/connection-status";
-// Communication Components
+
+/** Re-exports connection status components for embedding in dashboards. */
 export {
   CompactConnectionStatus,
   ConnectionStatus,
 } from "../shared/connection-status";
-export { AgentCollaborationHub } from "./communication/agent-collaboration-hub";
+
+/** Re-exports the main agent status dashboard component. */
 export { AgentStatusDashboard } from "./dashboard/agent-status-dashboard";

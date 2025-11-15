@@ -15,6 +15,7 @@ import { CalendarEventList } from "@/components/calendar/calendar-event-list";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DateUtils } from "@/lib/dates/unified-date-utils";
 
 function CalendarSkeleton() {
   return (
@@ -33,11 +34,17 @@ function CalendarSkeleton() {
   );
 }
 
+/**
+ * Renders the calendar integration dashboard with connection status, events,
+ * and creation workflow tabs.
+ *
+ * @returns Calendar management layout with tabbed controls.
+ */
 export default function CalendarPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("status");
   const now = new Date();
-  const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const nextWeek = DateUtils.add(now, 7, "days");
 
   return (
     <div className="space-y-6">

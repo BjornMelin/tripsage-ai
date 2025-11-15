@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated `useSupabaseRealtime` wrappers (`useTripRealtime`, `useChatRealtime`) to use `connectionStatus` from `useRealtimeChannel` instead of deprecated `isConnected` property.
   - Rewrote chat realtime tests to be deterministic with proper mocking of `useRealtimeChannel`, achieving 100% branch coverage for new store methods.
   - Eliminated all deprecated/compat/shim/TODO patterns from chat domain hooks and stores.
+- **Agent Status Realtime Rebuild (Phase 3)**: Replaced all direct `supabase.channel()` usage with `useRealtimeChannel` inside `useAgentStatusWebSocket`, wired shared exponential backoff, removed demo-only monitoring props/mocks from `app/(dashboard)/agents/page.tsx`, and added deterministic Vitest coverage for the store/hook/dashboard (100% branch coverage within the agent status scope).
+  - Introduced a normalized `useAgentStatusStore` with agent-id maps, connection slice, and explicit APIs (`registerAgents`, `updateAgentStatus`, `updateAgentTask`, `recordActivity`, `recordResourceUsage`, `setAgentStatusConnection`, `resetAgentStatusState`) while deleting session-era helpers.
+  - Removed the unused `use-agent-status` polling hook plus dashboard mock data, so agent dashboards now bind directly to the store + realtime hook with zero demo/test-only branches.
+  - Added focused tests: `frontend/src/stores/__tests__/agent-status-store.test.ts`, `frontend/src/hooks/__tests__/use-agent-status-websocket.test.tsx`, and `frontend/src/components/features/agent-monitoring/__tests__/agent-status-dashboard.test.tsx` covering all new branches at 100% coverage.
 
 - **Supabase Factory Unification**: Merged fragmented client/server creations into unified factory (`frontend/src/lib/supabase/factory.ts`) with OpenTelemetry tracing, Zod env validation, and `getCurrentUser` helper, eliminating 4x duplicate `auth.getUser()` calls across middleware, route handlers, and pages (-20% auth bundle size, N+1 query elimination).
   - Unified factory with server-only directive and SSR cookie handling via `@supabase/ssr`

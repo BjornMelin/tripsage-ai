@@ -12,49 +12,71 @@ import { Redis } from "@upstash/redis";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-
+import { RecurringDateGenerator } from "@/lib/dates/recurring-rules";
+import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { calendarEventSchema } from "@/lib/schemas/calendar";
 import { createServerSupabase } from "@/lib/supabase";
-import { DateUtils } from "@/lib/dates/unified-date-utils";
-import { RecurringDateGenerator } from "@/lib/dates/recurring-rules";
+
+type ParsedIcsEvent = {
+  type: "VEVENT";
+  summary?: string;
+  description?: string;
+  location?: string;
+  start?: Date | { toJSDate?: () => Date };
+  end?: Date | { toJSDate?: () => Date };
+  rrule?: string;
+  attendees?: Array<{ val: string; params?: Record<string, string> }>;
+  uid?: string;
+  created?: Date;
+  lastmodified?: Date;
+};
 
 /**
- * Simple ICS parser for basic event extraction.
+ * Parses raw ICS data into a keyed map of VEVENT entries.
  *
- * @param icsData - Raw ICS data string.
- * @returns Parsed events object.
+ * @param icsData - Raw ICS document string.
+ * @returns Event map keyed by incremental ids.
  */
-function parseICS(icsData: string) {
-  const events: Record<string, any> = {};
-  const lines = icsData.split('\n');
-  let currentEvent: any = {};
+function parseICS(icsData: string): Record<string, ParsedIcsEvent> {
+  const events: Record<string, ParsedIcsEvent> = {};
+  const lines = icsData.split("\n");
+  let currentEvent: ParsedIcsEvent | null = null;
   let eventId = 0;
 
   for (const line of lines) {
     const trimmed = line.trim();
-    
-    if (trimmed === 'BEGIN:VEVENT') {
-      currentEvent = { type: 'VEVENT' };
+
+    if (trimmed === "BEGIN:VEVENT") {
+      currentEvent = { type: "VEVENT" };
       eventId++;
-    } else if (trimmed === 'END:VEVENT') {
-      events[`event_${eventId}`] = currentEvent;
-      currentEvent = {};
-    } else if (trimmed.startsWith('SUMMARY:')) {
+    } else if (trimmed === "END:VEVENT") {
+      if (currentEvent) {
+        events[`event_${eventId}`] = currentEvent;
+      }
+      currentEvent = null;
+    } else if (trimmed.startsWith("SUMMARY:")) {
+      currentEvent = currentEvent ?? { type: "VEVENT" };
       currentEvent.summary = trimmed.substring(8);
-    } else if (trimmed.startsWith('DESCRIPTION:')) {
+    } else if (trimmed.startsWith("DESCRIPTION:")) {
+      currentEvent = currentEvent ?? { type: "VEVENT" };
       currentEvent.description = trimmed.substring(12);
-    } else if (trimmed.startsWith('LOCATION:')) {
+    } else if (trimmed.startsWith("LOCATION:")) {
+      currentEvent = currentEvent ?? { type: "VEVENT" };
       currentEvent.location = trimmed.substring(9);
-    } else if (trimmed.startsWith('DTSTART:')) {
+    } else if (trimmed.startsWith("DTSTART:")) {
       const dateStr = trimmed.substring(8);
+      currentEvent = currentEvent ?? { type: "VEVENT" };
       currentEvent.start = DateUtils.parse(dateStr);
-    } else if (trimmed.startsWith('DTEND:')) {
+    } else if (trimmed.startsWith("DTEND:")) {
       const dateStr = trimmed.substring(6);
+      currentEvent = currentEvent ?? { type: "VEVENT" };
       currentEvent.end = DateUtils.parse(dateStr);
-    } else if (trimmed.startsWith('UID:')) {
+    } else if (trimmed.startsWith("UID:")) {
+      currentEvent = currentEvent ?? { type: "VEVENT" };
       currentEvent.uid = trimmed.substring(4);
-    } else if (trimmed.startsWith('RRULE:')) {
+    } else if (trimmed.startsWith("RRULE:")) {
+      currentEvent = currentEvent ?? { type: "VEVENT" };
       currentEvent.rrule = trimmed.substring(6);
     }
   }
@@ -87,13 +109,13 @@ const importRequestSchema = z.object({
 });
 
 /**
- * POST /api/calendar/ics/import
- * Parses ICS calendar data and returns structured events payload.
- * Requires authenticated user session with rate limiting.
- * @param req - NextRequest containing ICS data string and validation flag
- * @returns NextResponse with parsed events array or error
+ * Validates ICS payloads, performs rudimentary parsing, and returns structured
+ * event objects while applying rate limiting and auth guards.
+ *
+ * @param req - Request containing raw ICS data and validation flag.
+ * @returns Response containing normalized events or an error payload.
  */
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     const supabase = await createServerSupabase();
     const {
@@ -190,7 +212,15 @@ export async function POST(req: NextRequest) {
             dateTime: DateUtils.formatForApi(startDate),
           },
           summary: vevent.summary || "Untitled Event",
-          ...(vevent.rrule ? { recurrence: [RecurringDateGenerator.toRRule(RecurringDateGenerator.parseRRule(vevent.rrule))] } : {}),
+          ...(vevent.rrule
+            ? {
+                recurrence: [
+                  RecurringDateGenerator.toRRule(
+                    RecurringDateGenerator.parseRRule(vevent.rrule)
+                  ),
+                ],
+              }
+            : {}),
           ...(vevent.attendees?.length
             ? {
                 attendees: vevent.attendees.map((att) => ({

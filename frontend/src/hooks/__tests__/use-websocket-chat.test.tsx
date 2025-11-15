@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { useWebSocketChat } from "@/hooks/use-websocket-chat";
 import type { RealtimeConnectionStatus } from "@/hooks/use-realtime-channel";
+import { useWebSocketChat } from "@/hooks/use-websocket-chat";
 
 const mockSendBroadcast = vi.fn().mockResolvedValue(undefined);
 
@@ -85,7 +85,7 @@ describe("useWebSocketChat", () => {
       userId: "u1",
     });
 
-    await act(async () => {
+    await act(() => {
       result.current.stopTyping();
     });
 
@@ -104,7 +104,7 @@ describe("useWebSocketChat", () => {
 
   it("handles connection errors", async () => {
     const { useRealtimeChannel } = await import("@/hooks/use-realtime-channel");
-    vi.mocked(useRealtimeChannel).mockImplementationOnce((topic, opts) => {
+    vi.mocked(useRealtimeChannel).mockImplementationOnce((_topic, opts) => {
       setTimeout(() => {
         opts?.onStatusChange?.("error" as RealtimeConnectionStatus);
       }, 0);

@@ -243,8 +243,8 @@ describe("Trip Store", () => {
       expect(updatedTrip.budget).toBe(2000);
       // Updated timestamp should be the same or newer; exact inequality is not required
       if (updatedTrip.updatedAt && originalUpdatedAt) {
-        expect(new Date(updatedTrip.updatedAt).getTime()).toBeGreaterThanOrEqual(
-          new Date(originalUpdatedAt).getTime()
+        expect(new Date(updatedTrip.updatedAt).valueOf()).toBeGreaterThanOrEqual(
+          new Date(originalUpdatedAt).valueOf()
         );
       }
 

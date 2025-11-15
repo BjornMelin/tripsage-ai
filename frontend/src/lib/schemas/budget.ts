@@ -52,11 +52,11 @@ export const budgetSchema = z
     categories: z.array(budgetCategorySchema),
     createdAt: DATE_STRING_SCHEMA,
     currency: CURRENCY_CODE_SCHEMA,
-    endDate: z.string().date().optional(),
+    endDate: z.iso.date().optional(),
     id: UUID_SCHEMA,
     isActive: z.boolean(),
     name: z.string().min(1, "Budget name is required").max(100, "Name too long"),
-    startDate: z.string().date().optional(),
+    startDate: z.iso.date().optional(),
     totalAmount: POSITIVE_NUMBER_SCHEMA,
     tripId: UUID_SCHEMA.optional(),
     updatedAt: DATE_STRING_SCHEMA,
@@ -96,7 +96,7 @@ export const expenseSchema = z.object({
   category: expenseCategorySchema,
   createdAt: DATE_STRING_SCHEMA,
   currency: CURRENCY_CODE_SCHEMA,
-  date: z.string().date(),
+  date: z.iso.date(),
   description: z
     .string()
     .min(1, "Description is required")
@@ -154,9 +154,9 @@ export const createBudgetRequestSchema = z
       )
       .optional(),
     currency: CURRENCY_CODE_SCHEMA,
-    endDate: z.string().date().optional(),
+    endDate: z.iso.date().optional(),
     name: z.string().min(1, "Budget name is required").max(100, "Name too long"),
-    startDate: z.string().date().optional(),
+    startDate: z.iso.date().optional(),
     totalAmount: POSITIVE_NUMBER_SCHEMA,
     tripId: UUID_SCHEMA.optional(),
   })
@@ -200,11 +200,11 @@ export const updateBudgetRequestSchema = z
       )
       .optional(),
     currency: CURRENCY_CODE_SCHEMA.optional(),
-    endDate: z.string().date().optional(),
+    endDate: z.iso.date().optional(),
     id: UUID_SCHEMA,
     isActive: z.boolean().optional(),
     name: z.string().min(1).max(100).optional(),
-    startDate: z.string().date().optional(),
+    startDate: z.iso.date().optional(),
     totalAmount: POSITIVE_NUMBER_SCHEMA.optional(),
   })
   .refine(
@@ -226,7 +226,7 @@ export const addExpenseRequestSchema = z.object({
   budgetId: UUID_SCHEMA,
   category: expenseCategorySchema,
   currency: CURRENCY_CODE_SCHEMA,
-  date: z.string().date(),
+  date: z.iso.date(),
   description: z
     .string()
     .min(1, "Description is required")
@@ -252,7 +252,7 @@ export const updateExpenseRequestSchema = z.object({
   budgetId: UUID_SCHEMA.optional(),
   category: expenseCategorySchema.optional(),
   currency: CURRENCY_CODE_SCHEMA.optional(),
-  date: z.string().date().optional(),
+  date: z.iso.date().optional(),
   description: z.string().min(1).max(200).optional(),
   id: UUID_SCHEMA,
   isShared: z.boolean().optional(),
@@ -301,9 +301,9 @@ export const budgetFormSchema = z
       )
       .min(1, "At least one category is required"),
     currency: CURRENCY_CODE_SCHEMA,
-    endDate: z.string().date().optional(),
+    endDate: z.iso.date().optional(),
     name: z.string().min(1, "Budget name is required").max(100, "Name too long"),
-    startDate: z.string().date().optional(),
+    startDate: z.iso.date().optional(),
     totalAmount: z.number().positive("Amount must be positive"),
   })
   .refine(
@@ -337,7 +337,7 @@ export const expenseFormSchema = z.object({
   budgetId: UUID_SCHEMA,
   category: expenseCategorySchema,
   currency: CURRENCY_CODE_SCHEMA,
-  date: z.string().date(),
+  date: z.iso.date(),
   description: z
     .string()
     .min(1, "Description is required")
