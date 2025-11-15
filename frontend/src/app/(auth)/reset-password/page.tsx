@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ResetPasswordForm } from "@/components/auth/reset-password-form";
-import { createServerSupabase, getCurrentUser } from "@/lib/supabase";
+import { createServerSupabase, getCurrentUser } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   description: "Reset your TripSage account password",

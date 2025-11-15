@@ -16,7 +16,7 @@ import {
 import { extractTexts, validateImageAttachments } from "@/app/api/_helpers/attachments";
 import type { ProviderResolution } from "@/lib/providers/types";
 import { secureUuid } from "@/lib/security/random";
-import type { TypedServerSupabase } from "@/lib/supabase";
+import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { insertSingle } from "@/lib/supabase/typed-helpers";
 import {
   type ChatMessage as ClampMsg,

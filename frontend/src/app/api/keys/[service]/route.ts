@@ -24,8 +24,8 @@ import {
   getTrustedRateLimitIdentifier,
   redactErrorForLogging,
 } from "@/lib/next/route-helpers";
-import { createServerSupabase } from "@/lib/supabase";
 import { deleteUserApiKey, deleteUserGatewayBaseUrl } from "@/lib/supabase/rpc";
+import { createServerSupabase } from "@/lib/supabase/server";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 const ALLOWED_SERVICES = new Set(["openai", "openrouter", "anthropic", "xai"]);
