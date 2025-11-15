@@ -4,11 +4,11 @@
 
 import { z } from "zod";
 
-// Common validation patterns
-const TIMESTAMP_SCHEMA = z.string().datetime();
-const UUID_SCHEMA = z.string().uuid();
-const EMAIL_SCHEMA = z.string().email();
-const URL_SCHEMA = z.string().url();
+// Common validation patterns (Zod v4 top-level validators)
+const TIMESTAMP_SCHEMA = z.iso.datetime();
+const UUID_SCHEMA = z.uuid();
+const EMAIL_SCHEMA = z.email();
+const URL_SCHEMA = z.url();
 const POSITIVE_NUMBER_SCHEMA = z.number().positive();
 const NON_NEGATIVE_NUMBER_SCHEMA = z.number().nonnegative();
 

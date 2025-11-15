@@ -25,7 +25,7 @@ export const EXCHANGE_RATE_SCHEMA = z.object({
   rate: z.number().positive(),
   source: z.string().optional(),
   targetCurrency: CURRENCY_CODE_SCHEMA,
-  timestamp: z.string().datetime(),
+  timestamp: z.iso.datetime(),
 });
 
 /** Zod schema for currency conversion pairs. */
@@ -39,7 +39,7 @@ export const CONVERSION_RESULT_SCHEMA = z.object({
   fromAmount: z.number(),
   fromCurrency: CURRENCY_CODE_SCHEMA,
   rate: z.number().positive(),
-  timestamp: z.string().datetime(),
+  timestamp: z.iso.datetime(),
   toAmount: z.number(),
   toCurrency: CURRENCY_CODE_SCHEMA,
 });
@@ -50,7 +50,7 @@ export const CURRENCY_STATE_SCHEMA = z.object({
   currencies: z.record(CURRENCY_CODE_SCHEMA, CURRENCY_SCHEMA),
   exchangeRates: z.record(CURRENCY_CODE_SCHEMA, EXCHANGE_RATE_SCHEMA),
   favoriteCurrencies: z.array(CURRENCY_CODE_SCHEMA),
-  lastUpdated: z.string().datetime().nullable(),
+  lastUpdated: z.iso.datetime().nullable(),
 });
 
 /** Zod schema for exchange rates fetch requests. */
@@ -63,7 +63,7 @@ export const FETCH_EXCHANGE_RATES_REQUEST_SCHEMA = z.object({
 export const UPDATE_EXCHANGE_RATES_RESPONSE_SCHEMA = z.object({
   baseCurrency: CURRENCY_CODE_SCHEMA,
   rates: z.record(CURRENCY_CODE_SCHEMA, z.number().positive()),
-  timestamp: z.string().datetime(),
+  timestamp: z.iso.datetime(),
 });
 
 /** TypeScript type for currency codes. */

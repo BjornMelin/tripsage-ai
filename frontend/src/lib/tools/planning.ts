@@ -302,17 +302,15 @@ export const updateTravelPlan = tool({
         if ((plan as { userId?: string }).userId !== sessionUserId)
           return { error: "unauthorized", success: false } as const;
 
-        const UpdateSchema = z
-          .object({
-            budget: z.number().min(0).nullable().optional(),
-            destinations: z.array(z.string().min(1)).min(1).optional(),
-            endDate: ISO_DATE.optional(),
-            preferences: PREFERENCES.optional(),
-            startDate: ISO_DATE.optional(),
-            title: z.string().min(1).optional(),
-            travelers: z.number().int().min(1).max(50).optional(),
-          })
-          .strict();
+        const UpdateSchema = z.strictObject({
+          budget: z.number().min(0).nullable().optional(),
+          destinations: z.array(z.string().min(1)).min(1).optional(),
+          endDate: ISO_DATE.optional(),
+          preferences: PREFERENCES.optional(),
+          startDate: ISO_DATE.optional(),
+          title: z.string().min(1).optional(),
+          travelers: z.number().int().min(1).max(50).optional(),
+        });
         const parsed = UpdateSchema.safeParse(updates ?? {});
         if (!parsed.success) {
           return {

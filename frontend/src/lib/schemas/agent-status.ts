@@ -5,8 +5,8 @@
 import { z } from "zod";
 
 // Common validation patterns
-const UUID_SCHEMA = z.string().uuid();
-const DATE_STRING_SCHEMA = z.string().datetime();
+const UUID_SCHEMA = z.uuid();
+const DATE_STRING_SCHEMA = z.iso.datetime();
 const PROGRESS_SCHEMA = z.number().int().min(0).max(100);
 
 // Agent status type enum

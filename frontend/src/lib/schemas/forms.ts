@@ -350,7 +350,7 @@ export const updateTripFormSchema = z.object({
   description: z.string().optional(),
   destination: z.string().optional(),
   endDate: z.string().date().optional(),
-  id: z.string().uuid(),
+  id: z.uuid(),
   isPublic: z.boolean().optional(),
   maxParticipants: z.number().optional(),
   startDate: z.string().date().optional(),
@@ -408,7 +408,7 @@ export const sendMessageFormSchema = z.object({
     )
     .max(5, "Too many attachments")
     .optional(),
-  conversationId: z.string().uuid().optional(),
+  conversationId: z.uuid().optional(),
   message: z.string().min(1, "Message cannot be empty").max(10000, "Message too long"),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
@@ -419,7 +419,7 @@ export const createConversationFormSchema = z.object({
     .min(1, "Initial message is required")
     .max(10000, "Message too long"),
   isPrivate: z.boolean(),
-  participants: z.array(z.string().uuid()).optional(),
+  participants: z.array(z.uuid()).optional(),
   title: z.string().min(1, "Title is required").max(200, "Title too long"),
 });
 
@@ -455,7 +455,7 @@ export const feedbackFormSchema = z.object({
     .string()
     .min(10, "Please provide more details")
     .max(1000, "Description too long"),
-  email: z.string().email().optional(),
+  email: z.email().optional(),
   rating: z
     .number()
     .int()
