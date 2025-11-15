@@ -43,6 +43,9 @@ vi.mock("@/lib/embeddings/generate", () => ({
     Array.from({ length: 1536 }, (_, index) => (index + 1) / 1000)
   ),
   getEmbeddingsApiUrl: vi.fn(() => "http://localhost:3000/api/embeddings"),
+  getEmbeddingsRequestHeaders: vi.fn(() => ({
+    "Content-Type": "application/json",
+  })),
 }));
 
 vi.mock("zustand/middleware", () => ({

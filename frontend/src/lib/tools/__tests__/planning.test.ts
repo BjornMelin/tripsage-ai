@@ -186,7 +186,7 @@ describe("planning tools", () => {
     if (!created?.success) throw new Error("create failed");
 
     // simulate session user mismatch (unauthorized)
-    const supabaseMod = await import("@/lib/supabase/server");
+    const supabaseMod = await import("@/lib/supabase");
     (
       supabaseMod as unknown as { __setUserIdForTests: (id: string) => void }
     ).__setUserIdForTests("u2");
@@ -326,7 +326,7 @@ describe("planning tools", () => {
     expect(blocked.error).toBe("rate_limited_plan_create");
 
     // create one plan and exhaust update limit (switch user to avoid create RL spillover)
-    const supabaseMod2 = (await import("@/lib/supabase/server")) as unknown as {
+    const supabaseMod2 = (await import("@/lib/supabase")) as unknown as {
       __setUserIdForTests: (id: string) => void;
     };
     supabaseMod2.__setUserIdForTests("u3");
@@ -358,7 +358,7 @@ describe("planning tools", () => {
 
   it("deleteTravelPlan works for owner and blocks others", async () => {
     // Reset userId to u1 (previous test may have changed it)
-    const supabaseModReset = (await import("@/lib/supabase/server")) as unknown as {
+    const supabaseModReset = (await import("@/lib/supabase")) as unknown as {
       __setUserIdForTests: (id: string) => void;
     };
     supabaseModReset.__setUserIdForTests("u1");
@@ -375,7 +375,7 @@ describe("planning tools", () => {
     expect(redis.data.has(key)).toBe(true);
 
     // unauthorized delete
-    const supabaseMod = (await import("@/lib/supabase/server")) as unknown as {
+    const supabaseMod = (await import("@/lib/supabase")) as unknown as {
       __setUserIdForTests: (id: string) => void;
     };
     supabaseMod.__setUserIdForTests("u2");

@@ -80,7 +80,13 @@ export async function parseAndVerify(
     recordVerificationFailure("invalid_json");
     return { ok: false };
   }
-  const payload = normalizeWebhookPayload(raw);
+  let payload: WebhookPayload;
+  try {
+    payload = normalizeWebhookPayload(raw);
+  } catch {
+    recordVerificationFailure("invalid_payload_shape");
+    return { ok: false };
+  }
   if (!payload?.type || !payload?.table) {
     recordVerificationFailure("invalid_payload_shape");
     return { ok: false };
