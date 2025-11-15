@@ -51,8 +51,12 @@ export async function insertSingle<T extends keyof Database["public"]["Tables"]>
     if (error) return { data: null, error };
     // Validate output if schema exists
     if (schema?.row && data) {
-      const validated = schema.row.parse(data);
-      return { data: validated as Tables<T>, error: null };
+      try {
+        const validated = schema.row.parse(data);
+        return { data: validated as Tables<T>, error: null };
+      } catch (validationError) {
+        return { data: null, error: validationError };
+      }
     }
     return { data: (data ?? null) as Tables<T> | null, error: null };
   }
@@ -98,8 +102,12 @@ export async function updateSingle<T extends keyof Database["public"]["Tables"]>
   if (error) return { data: null, error };
   // Validate output if schema exists
   if (schema?.row && data) {
-    const validated = schema.row.parse(data);
-    return { data: validated as Tables<T>, error: null };
+    try {
+      const validated = schema.row.parse(data);
+      return { data: validated as Tables<T>, error: null };
+    } catch (validationError) {
+      return { data: null, error: validationError };
+    }
   }
   return { data: (data ?? null) as Tables<T> | null, error: null };
 }

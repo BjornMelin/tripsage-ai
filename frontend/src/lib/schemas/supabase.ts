@@ -6,14 +6,14 @@
 import { z } from "zod";
 
 /** Zod schema for JSON values (matches Supabase Json type). */
-export const jsonSchema: z.ZodType<unknown> = z.union([
+export const jsonSchema: z.ZodType<Json> = z.union([
   z.string(),
   z.number(),
   z.boolean(),
   z.null(),
   z.record(z.string(), z.unknown()),
   z.array(z.unknown()),
-]);
+]) as z.ZodType<Json>;
 
 /** TypeScript type for JSON (matches Supabase Json type). */
 export type Json =
@@ -45,7 +45,12 @@ export const tripTypeSchema = z.enum([
 /** TypeScript type for trip type. */
 export type TripType = z.infer<typeof tripTypeSchema>;
 
-/** Zod schema for user_settings table Row. */
+/**
+ * Zod schema for user_settings table Row.
+ *
+ * Note: All user_id fields use z.uuid() because Supabase Auth generates UUIDs
+ * for all user accounts. This is guaranteed by Supabase's authentication system.
+ */
 export const userSettingsRowSchema = z.object({
   allow_gateway_fallback: z.boolean(),
   user_id: z.uuid(),

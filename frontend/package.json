@@ -19,7 +19,7 @@
     "test:coverage": "vitest run --coverage",
     "test:benchmark": "npx tsx scripts/benchmark-tests.ts",
     "test:quick": "vitest run --reporter=dot",
-    "test:ci": "CI=1 VITEST_POOL=threads VITEST_MAX_WORKERS=2 vitest run --reporter=dot src/lib && CI=1 VITEST_POOL=threads VITEST_MAX_WORKERS=2 vitest run --reporter=dot src/app && CI=1 VITEST_POOL=threads VITEST_MAX_WORKERS=2 vitest run --reporter=dot src/components && CI=1 VITEST_POOL=threads VITEST_MAX_WORKERS=2 vitest run --reporter=dot src/stores && CI=1 VITEST_POOL=threads VITEST_MAX_WORKERS=2 vitest run --reporter=dot src/test",
+    "test:ci": "CI=1 VITEST_POOL=threads VITEST_MAX_WORKERS=2 vitest run --reporter=dot src/lib src/app src/components src/stores src/test",
     "test:coverage:shard": "CI=1 vitest run --coverage --reporter=blob",
     "test:merge": "vitest run --merge-reports",
     "test:e2e": "playwright test",

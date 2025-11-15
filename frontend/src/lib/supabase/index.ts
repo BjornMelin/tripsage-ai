@@ -1,14 +1,12 @@
 /**
- * @fileoverview Supabase client exports.
- * Unified factory API for server and browser clients.
+ * @fileoverview Supabase client exports for browser/client-side usage.
  *
- * Note: Server-only utilities (createCookieAdapter, createMiddlewareSupabase)
- * are not re-exported here to prevent client bundles from loading server-only
- * modules. Import them directly from ./factory or ./server when needed.
+ * Note: Server-only utilities (createCookieAdapter, createMiddlewareSupabase,
+ * createAdminSupabase, createServerSupabase, getCurrentUser) are not re-exported
+ * here to prevent client bundles from loading server-only modules.
+ * Import them directly from ./factory, ./server, or ./admin when needed in
+ * server-side code (Route Handlers, Server Components, Server Actions).
  */
-
-// Admin client (server-only service-role access)
-export { createAdminSupabase, type TypedAdminSupabase } from "./admin";
 
 // Browser client helpers
 export {
@@ -18,7 +16,7 @@ export {
   useSupabase,
 } from "./client";
 
-// Shared types (type-only exports are safe)
+// Shared types (type-only exports are safe - they don't cause server-only imports)
 export type {
   BrowserSupabaseClient,
   CreateServerSupabaseOptions,
@@ -28,9 +26,3 @@ export type {
 
 // Runtime guards
 export { isSupabaseClient } from "./guards";
-
-// Server client entrypoint (Next.js cookies() wrapper)
-// This re-export is safe because server.ts has "server-only" guard
-export { createServerSupabase, type TypedServerSupabase } from "./server";
-// getCurrentUser is re-exported from server.ts (which has server-only guard)
-export { getCurrentUser } from "./server";
