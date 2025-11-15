@@ -25,9 +25,11 @@ export enum ConnectionStatus {
   Error = "error",
 }
 
-import type { RealtimeChannel } from "@supabase/supabase-js";
+import type {
+  ChatMessageBroadcastPayload,
+  ChatTypingBroadcastPayload,
+} from "@/hooks/use-websocket-chat";
 import type { ConversationMessage, MemoryContextResponse } from "@/lib/schemas/memory";
-import { getBrowserClient } from "@/lib/supabase";
 
 /**
  * Message interface with support for tool calls and attachments.
@@ -167,48 +169,16 @@ export interface SendMessageOptions {
 }
 
 /**
- * WebSocket message event for real-time chat updates.
- *
- * Event structure for WebSocket messages containing chat content,
- * session identification, and metadata for real-time message streaming.
+ * Agent status update payload from Supabase Realtime broadcast.
  */
-export interface WebSocketMessageEvent {
-  /** Event type identifier */
-  type: "chat_message" | "chat_message_chunk";
-  /** Session ID this event belongs to */
-  sessionId: string;
-  /** Message ID for chunked/streaming messages */
-  messageId?: string;
-  /** Text content of the message */
-  content: string;
-  /** Role of the message sender */
-  role?: "user" | "assistant" | "system";
-  /** Tool calls included in the message */
-  toolCalls?: ToolCall[];
-  /** File attachments in the message */
-  attachments?: Attachment[];
-  /** Whether this is the final chunk of a streaming message */
-  isComplete?: boolean;
-}
-
-/**
- * WebSocket agent status update event.
- *
- * Event structure for real-time agent status updates including activity state,
- * current tasks, and progress information for UI synchronization.
- */
-export interface WebSocketAgentStatusEvent {
-  /** Event type identifier */
-  type: "agent_status_update";
-  /** Session ID this status update belongs to */
-  sessionId: string;
-  /** Whether the agent is currently active */
+export interface AgentStatusBroadcastPayload {
+  /** Whether the agent is currently active. */
   isActive: boolean;
-  /** Current task description */
+  /** Current task description. */
   currentTask?: string;
-  /** Progress percentage of current task */
+  /** Progress percentage of current task (0-100). */
   progress: number;
-  /** Human-readable status message */
+  /** Human-readable status message. */
   statusMessage?: string;
 }
 
@@ -233,11 +203,9 @@ export interface ChatState {
   memoryEnabled: boolean;
   autoSyncMemory: boolean;
 
-  // Realtime integration state (chat components own the live Supabase connections;
-  // the store only tracks high-level status and is reset via disconnectRealtime).
+  // Realtime integration state (hooks own connections; store tracks status only).
   connectionStatus: ConnectionStatus;
   isRealtimeEnabled: boolean;
-  realtimeChannel: RealtimeChannel | null;
   typingUsers: Record<string, { userId: string; username?: string; timestamp: string }>;
   pendingMessages: Message[];
 
@@ -277,17 +245,24 @@ export interface ChatState {
   setMemoryEnabled: (enabled: boolean) => void;
   setAutoSyncMemory: (enabled: boolean) => void;
 
-  // Realtime actions (no direct WS usage)
-  connectRealtime: (sessionId: string) => void;
-  disconnectRealtime: () => void;
+  // Realtime actions (hook-driven; hooks own connections)
+  setChatConnectionStatus: (status: ConnectionStatus) => void;
   setRealtimeEnabled: (enabled: boolean) => void;
-  handleRealtimeMessage: (event: WebSocketMessageEvent) => void;
-  handleAgentStatusUpdate: (event: WebSocketAgentStatusEvent) => void;
+  handleRealtimeMessage: (
+    sessionId: string,
+    payload: ChatMessageBroadcastPayload
+  ) => void;
+  handleAgentStatusUpdate: (
+    sessionId: string,
+    payload: AgentStatusBroadcastPayload
+  ) => void;
+  handleTypingUpdate: (sessionId: string, payload: ChatTypingBroadcastPayload) => void;
   setUserTyping: (sessionId: string, userId: string, username?: string) => void;
   removeUserTyping: (sessionId: string, userId: string) => void;
   clearTypingUsers: (sessionId: string) => void;
   addPendingMessage: (message: Message) => void;
   removePendingMessage: (messageId: string) => void;
+  resetRealtimeState: () => void;
 }
 
 // Zod schema for session data validation when importing
@@ -352,13 +327,14 @@ let abortController: AbortController | null = null;
  *   currentSession,
  *   sendMessage,
  *   createSession,
- *   connectRealtime
+ *   setChatConnectionStatus
  * } = useChatStore();
  * ```
  */
 export const useChatStore = create<ChatState>()(
   persist(
     (set, get) => ({
+      /** Adds a new message to the specified chat session. */
       addMessage: (sessionId, message) => {
         const timestamp = new Date().toISOString();
         const messageId = Date.now().toString();
@@ -384,12 +360,14 @@ export const useChatStore = create<ChatState>()(
         return messageId;
       },
 
+      /** Adds a message to the pending messages queue. */
       addPendingMessage: (message) => {
         set((state) => ({
           pendingMessages: [...state.pendingMessages, message],
         }));
       },
 
+      /** Adds a tool execution result to the specified message. */
       addToolResult: (sessionId, messageId, callId, result) => {
         set((state) => ({
           sessions: state.sessions.map((session) =>
@@ -418,8 +396,10 @@ export const useChatStore = create<ChatState>()(
       },
       autoSyncMemory: true,
 
+      /** Clears the current error state. */
       clearError: () => set({ error: null }),
 
+      /** Removes all messages from the specified chat session. */
       clearMessages: (sessionId) => {
         set((state) => ({
           sessions: state.sessions.map((session) =>
@@ -434,6 +414,7 @@ export const useChatStore = create<ChatState>()(
         }));
       },
 
+      /** Clears all typing indicators for the specified session. */
       clearTypingUsers: (sessionId) => {
         set((state) => {
           const newTypingUsers = { ...state.typingUsers };
@@ -447,94 +428,7 @@ export const useChatStore = create<ChatState>()(
       },
       connectionStatus: ConnectionStatus.Disconnected,
 
-      // Realtime actions (owned by chat UI; store tracks status only)
-      connectRealtime: (sessionId) => {
-        const supabase = getBrowserClient();
-        const prev = get().realtimeChannel;
-        if (prev) {
-          prev.unsubscribe();
-        }
-
-        try {
-          set({ connectionStatus: ConnectionStatus.Connecting });
-          const channel = supabase
-            .channel(`session:${sessionId}`, { config: { private: true } })
-            .on("broadcast", { event: "chat:message" }, (payload) => {
-              const data = payload.payload as
-                | { content?: string; role?: string; id?: string }
-                | undefined;
-              get().handleRealtimeMessage({
-                content: data?.content || "",
-                messageId: data?.id,
-                role: (data?.role as "user" | "assistant" | "system") || "assistant",
-                sessionId,
-                type: "chat_message",
-              });
-            })
-            .on("broadcast", { event: "chat:message_chunk" }, (payload) => {
-              const data = payload.payload as
-                | { content?: string; id?: string; isFinal?: boolean }
-                | undefined;
-              get().handleRealtimeMessage({
-                content: data?.content || "",
-                isComplete: Boolean(data?.isFinal),
-                messageId: data?.id,
-                sessionId,
-                type: "chat_message_chunk",
-              });
-            })
-            .on("broadcast", { event: "chat:typing" }, (payload) => {
-              const data = payload.payload as
-                | { userId?: string; isTyping?: boolean; username?: string }
-                | undefined;
-              if (!data?.userId) return;
-              if (data.isTyping) {
-                get().setUserTyping(sessionId, data.userId, data.username);
-              } else {
-                get().removeUserTyping(sessionId, data.userId);
-              }
-            })
-            .on("broadcast", { event: "agent_status_update" }, (payload) => {
-              const p = payload.payload as
-                | {
-                    isActive?: boolean;
-                    currentTask?: string;
-                    progress?: number;
-                    statusMessage?: string;
-                  }
-                | undefined;
-              get().handleAgentStatusUpdate({
-                currentTask: p?.currentTask,
-                isActive: Boolean(p?.isActive),
-                progress: Number(p?.progress ?? 0),
-                sessionId,
-                statusMessage: p?.statusMessage,
-                type: "agent_status_update",
-              });
-            });
-
-          channel.subscribe((state, err) => {
-            if (state === "SUBSCRIBED") {
-              set({ connectionStatus: ConnectionStatus.Connected });
-            }
-            if (err) {
-              set({
-                connectionStatus: ConnectionStatus.Error,
-                error: err.message ?? "Realtime subscription error",
-              });
-            }
-          });
-
-          set({ realtimeChannel: channel });
-        } catch (error) {
-          console.error("Failed to connect Realtime:", error);
-          set({
-            connectionStatus: ConnectionStatus.Error,
-            error: error instanceof Error ? error.message : "Realtime connection error",
-          });
-        }
-      },
-
+      /** Creates a new chat session with the given title and user ID. */
       createSession: (title, userId) => {
         const timestamp = new Date().toISOString();
         const sessionId = Date.now().toString();
@@ -569,6 +463,7 @@ export const useChatStore = create<ChatState>()(
       },
       currentSessionId: null,
 
+      /** Deletes the specified chat session. */
       deleteSession: (sessionId) => {
         set((state) => {
           const sessions = state.sessions.filter((session) => session.id !== sessionId);
@@ -584,21 +479,9 @@ export const useChatStore = create<ChatState>()(
           return { currentSessionId, sessions };
         });
       },
-
-      disconnectRealtime: () => {
-        const { realtimeChannel } = get();
-        if (realtimeChannel) {
-          realtimeChannel.unsubscribe();
-        }
-        set({
-          connectionStatus: ConnectionStatus.Disconnected,
-          pendingMessages: [],
-          realtimeChannel: null,
-          typingUsers: {},
-        });
-      },
       error: null,
 
+      /** Exports session data as a JSON string for the specified session. */
       exportSessionData: (sessionId) => {
         const { sessions } = get();
         const session = sessions.find((s) => s.id === sessionId);
@@ -623,58 +506,54 @@ export const useChatStore = create<ChatState>()(
         return JSON.stringify(exportData, null, 2);
       },
 
-      handleAgentStatusUpdate: (event) => {
+      /** Updates agent status from realtime broadcast payload. */
+      handleAgentStatusUpdate: (sessionId, payload) => {
         const { currentSessionId } = get();
-        if (!currentSessionId || event.sessionId !== currentSessionId) return;
+        if (!currentSessionId || sessionId !== currentSessionId) return;
 
         get().updateAgentStatus(currentSessionId, {
-          currentTask: event.currentTask,
-          isActive: event.isActive,
-          progress: event.progress,
-          statusMessage: event.statusMessage,
+          currentTask: payload.currentTask,
+          isActive: payload.isActive,
+          progress: payload.progress,
+          statusMessage: payload.statusMessage,
         });
       },
 
-      handleRealtimeMessage: (event) => {
+      /** Handles incoming realtime message broadcast. */
+      handleRealtimeMessage: (sessionId, payload) => {
         const { currentSessionId } = get();
-        if (!currentSessionId || event.sessionId !== currentSessionId) return;
+        if (!currentSessionId || sessionId !== currentSessionId) return;
 
-        if (event.type === "chat_message") {
-          // Add complete message
-          get().addMessage(currentSessionId, {
-            attachments: event.attachments,
-            content: event.content,
-            role: event.role || "assistant",
-            toolCalls: event.toolCalls,
-          });
-        } else if (event.type === "chat_message_chunk") {
-          // Handle streaming message chunks
-          const existingMessage = get()
-            .sessions.find((s) => s.id === currentSessionId)
-            ?.messages.find((m) => m.id === event.messageId);
+        if (!payload.content) {
+          return;
+        }
 
-          if (existingMessage && event.messageId) {
-            // Update existing streaming message
-            get().updateMessage(currentSessionId, event.messageId, {
-              content: existingMessage.content + event.content,
-              isStreaming: !event.isComplete,
-            });
-          } else {
-            // Create new streaming message
-            const messageId = get().addMessage(currentSessionId, {
-              content: event.content,
-              isStreaming: !event.isComplete,
-              role: "assistant",
-            });
+        // Add message from Supabase broadcast payload
+        get().addMessage(currentSessionId, {
+          content: payload.content,
+          role: (payload.sender?.id === get().currentSession?.userId
+            ? "user"
+            : "assistant") as "user" | "assistant" | "system",
+        });
+      },
 
-            // Store the mapping for future chunks
-            if (event.messageId && messageId !== event.messageId) {
-              // Handle message ID mapping if needed
-            }
-          }
+      /** Updates typing indicators from realtime broadcast. */
+      handleTypingUpdate: (sessionId, payload) => {
+        const { currentSessionId } = get();
+        if (!currentSessionId || sessionId !== currentSessionId) return;
+
+        if (!payload.userId) {
+          return;
+        }
+
+        if (payload.isTyping) {
+          get().setUserTyping(sessionId, payload.userId);
+        } else {
+          get().removeUserTyping(sessionId, payload.userId);
         }
       },
 
+      /** Imports session data from a JSON string. */
       importSessionData: (jsonData) => {
         try {
           const data = JSON.parse(jsonData);
@@ -720,15 +599,14 @@ export const useChatStore = create<ChatState>()(
       memoryEnabled: true,
       pendingMessages: [],
 
-      // Realtime integration defaults
-      realtimeChannel: null,
-
+      /** Removes a message from the pending messages queue. */
       removePendingMessage: (messageId) => {
         set((state) => ({
           pendingMessages: state.pendingMessages.filter((m) => m.id !== messageId),
         }));
       },
 
+      /** Removes typing indicator for the specified user. */
       removeUserTyping: (sessionId, userId) => {
         set((state) => {
           const newTypingUsers = { ...state.typingUsers };
@@ -737,6 +615,7 @@ export const useChatStore = create<ChatState>()(
         });
       },
 
+      /** Renames the specified chat session. */
       renameSession: (sessionId, title) => {
         set((state) => ({
           sessions: state.sessions.map((session) =>
@@ -747,6 +626,16 @@ export const useChatStore = create<ChatState>()(
         }));
       },
 
+      /** Resets all realtime connection state. */
+      resetRealtimeState: () => {
+        set({
+          connectionStatus: ConnectionStatus.Disconnected,
+          pendingMessages: [],
+          typingUsers: {},
+        });
+      },
+
+      /** Sends a message and simulates AI response (placeholder implementation). */
       sendMessage: async (content, options = {}) => {
         const { currentSessionId, currentSession } = get();
 
@@ -822,26 +711,37 @@ export const useChatStore = create<ChatState>()(
       },
       sessions: [],
 
+      /** Enables or disables automatic memory synchronization. */
       setAutoSyncMemory: (enabled) => {
         set({ autoSyncMemory: enabled });
       },
 
+      // Realtime actions (hook-driven; hooks own connections)
+      /** Updates the realtime connection status. */
+      setChatConnectionStatus: (status) => {
+        set({ connectionStatus: status });
+      },
+
+      /** Sets the currently active chat session. */
       setCurrentSession: (sessionId) => {
         set({ currentSessionId: sessionId });
       },
 
+      /** Enables or disables memory integration. */
       setMemoryEnabled: (enabled) => {
         set({ memoryEnabled: enabled });
       },
 
+      /** Enables or disables realtime functionality. */
       setRealtimeEnabled: (enabled) => {
         set({ isRealtimeEnabled: enabled });
 
         if (!enabled) {
-          get().disconnectRealtime();
+          get().resetRealtimeState();
         }
       },
 
+      /** Sets typing indicator for the specified user. */
       setUserTyping: (sessionId, userId, username) => {
         set((state) => ({
           typingUsers: {
@@ -860,6 +760,7 @@ export const useChatStore = create<ChatState>()(
         }, 3000);
       },
 
+      /** Stops the current streaming response. */
       stopStreaming: () => {
         if (abortController) {
           abortController.abort();
@@ -878,6 +779,7 @@ export const useChatStore = create<ChatState>()(
         }
       },
 
+      /** Stores conversation messages to memory (placeholder implementation). */
       storeConversationMemory: async (sessionId, messages) => {
         const session = get().sessions.find((s) => s.id === sessionId);
         if (!session?.userId || !get().memoryEnabled || !get().autoSyncMemory) return;
@@ -917,6 +819,7 @@ export const useChatStore = create<ChatState>()(
         }
       },
 
+      /** Streams a message with simulated AI response (placeholder implementation). */
       streamMessage: async (content, options = {}) => {
         const { currentSessionId, currentSession } = get();
 
@@ -1025,6 +928,7 @@ export const useChatStore = create<ChatState>()(
         }
       },
 
+      /** Syncs memory context to the specified session (placeholder implementation). */
       syncMemoryToSession: async (sessionId) => {
         const session = get().sessions.find((s) => s.id === sessionId);
         if (!session?.userId || !get().memoryEnabled) return;
@@ -1045,6 +949,7 @@ export const useChatStore = create<ChatState>()(
       },
       typingUsers: {},
 
+      /** Updates agent status for the specified session. */
       updateAgentStatus: (sessionId, status) => {
         set((state) => ({
           sessions: state.sessions.map((session) =>
@@ -1064,6 +969,7 @@ export const useChatStore = create<ChatState>()(
         }));
       },
 
+      /** Updates the specified message in a session. */
       updateMessage: (sessionId, messageId, updates) => {
         set((state) => ({
           sessions: state.sessions.map((session) =>
@@ -1081,6 +987,7 @@ export const useChatStore = create<ChatState>()(
       },
 
       // Memory actions
+      /** Updates memory context for the specified session. */
       updateSessionMemoryContext: (sessionId, memoryContext) => {
         set((state) => ({
           sessions: state.sessions.map((session) =>

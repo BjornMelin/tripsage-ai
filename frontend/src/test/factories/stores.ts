@@ -31,7 +31,6 @@ export function createMockChatState(overrides: Partial<ChatState> = {}): ChatSta
 
     // Realtime
     connectionStatus: 2 as unknown as ChatState["connectionStatus"],
-    connectRealtime: () => undefined,
     createSession: () => "session-1",
 
     // Computed
@@ -40,11 +39,11 @@ export function createMockChatState(overrides: Partial<ChatState> = {}): ChatSta
     },
     currentSessionId: null,
     deleteSession: () => undefined,
-    disconnectRealtime: () => undefined,
     error: null,
     exportSessionData: () => "{}",
     handleAgentStatusUpdate: () => undefined,
     handleRealtimeMessage: () => undefined,
+    handleTypingUpdate: () => undefined,
     importSessionData: () => "session-1",
     isLoading: false,
     isRealtimeEnabled: false,
@@ -53,14 +52,15 @@ export function createMockChatState(overrides: Partial<ChatState> = {}): ChatSta
     // Memory
     memoryEnabled: false,
     pendingMessages: [],
-    realtimeChannel: null,
     removePendingMessage: () => undefined,
     removeUserTyping: () => undefined,
     renameSession: () => undefined,
+    resetRealtimeState: () => undefined,
     sendMessage: async () => undefined,
     // Core state
     sessions: [],
     setAutoSyncMemory: () => undefined,
+    setChatConnectionStatus: () => undefined,
     setCurrentSession: () => undefined,
     setMemoryEnabled: () => undefined,
     setRealtimeEnabled: () => undefined,
