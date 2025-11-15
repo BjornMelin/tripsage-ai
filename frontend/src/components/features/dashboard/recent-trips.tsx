@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTrips } from "@/hooks/use-trips";
+import { DateUtils } from "@/lib/dates/unified-date-utils";
 import type { Trip } from "@/stores/trip-store";
 
 interface RecentTripsProps {
@@ -60,12 +61,8 @@ function TripCard({ trip }: { trip: Trip }) {
    */
   const formatDate = (dateString?: string) => {
     if (!dateString) return "Not set";
-    return new Date(dateString).toLocaleDateString("en-US", {
-      day: "numeric",
-      month: "short",
-      timeZone: "UTC",
-      year: "numeric",
-    });
+    const date = DateUtils.parse(dateString);
+    return DateUtils.format(date, "MMM d, yyyy");
   };
 
   /**
@@ -82,10 +79,9 @@ function TripCard({ trip }: { trip: Trip }) {
    */
   const getTripDuration = () => {
     if (!trip.startDate || !trip.endDate) return null;
-    const start = new Date(trip.startDate);
-    const end = new Date(trip.endDate);
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const start = DateUtils.parse(trip.startDate);
+    const end = DateUtils.parse(trip.endDate);
+    const diffDays = DateUtils.difference(end, start, "days");
     return `${diffDays} day${diffDays !== 1 ? "s" : ""}`;
   };
 
@@ -95,11 +91,11 @@ function TripCard({ trip }: { trip: Trip }) {
   const getTripStatus = () => {
     if (!trip.startDate || !trip.endDate) return "draft";
     const now = new Date();
-    const start = new Date(trip.startDate);
-    const end = new Date(trip.endDate);
+    const start = DateUtils.parse(trip.startDate);
+    const end = DateUtils.parse(trip.endDate);
 
-    if (now < start) return "upcoming";
-    if (now >= start && now <= end) return "ongoing";
+    if (DateUtils.isBefore(now, start)) return "upcoming";
+    if (DateUtils.isAfter(now, start) && DateUtils.isBefore(now, end)) return "ongoing";
     return "completed";
   };
 

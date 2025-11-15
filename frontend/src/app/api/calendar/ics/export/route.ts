@@ -16,6 +16,8 @@ import { z } from "zod";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { calendarEventSchema } from "@/lib/schemas/calendar";
 import { createServerSupabase } from "@/lib/supabase";
+import { DateUtils } from "@/lib/dates/unified-date-utils";
+import { RecurringDateGenerator } from "@/lib/dates/recurring-rules";
 
 export const dynamic = "force-dynamic";
 
@@ -94,30 +96,37 @@ export async function POST(req: NextRequest) {
         event.start.dateTime instanceof Date
           ? event.start.dateTime
           : event.start.date
-            ? new Date(event.start.date)
+            ? DateUtils.parse(event.start.date)
             : new Date();
 
       const endDate =
         event.end.dateTime instanceof Date
           ? event.end.dateTime
           : event.end.date
-            ? new Date(event.end.date)
-            : new Date(startDate.getTime() + 60 * 60 * 1000); // Default 1 hour
+            ? DateUtils.parse(event.end.date)
+            : DateUtils.add(startDate, 1, "hours"); // Default 1 hour
 
-      const ev = calendar.createEvent({
-        description: event.description,
-        end: endDate,
-        location: event.location,
+      const eventData = {
         start: startDate,
+        end: endDate,
         summary: event.summary,
-      });
+        description: event.description,
+        location: event.location,
+        ...(event.recurrence?.length
+          ? {
+              recurrence: [
+                RecurringDateGenerator.toRRule(
+                  RecurringDateGenerator.parseRRule(event.recurrence[0])
+                ),
+              ],
+            }
+          : {}),
+        ...(event.iCalUID ? { uid: event.iCalUID } : {}),
+        ...(event.created ? { created: event.created } : {}),
+        ...(event.updated ? { lastModified: event.updated } : {}),
+      };
 
-      if (event.recurrence?.length) {
-        ev.repeating({
-          // biome-ignore lint/suspicious/noExplicitAny: third-party type casting for ical types
-          freq: parseRecurrenceFrequency(event.recurrence[0]) as unknown as any,
-        });
-      }
+      const ev = calendar.createEvent(eventData);
 
       if (event.attendees?.length) {
         for (const att of event.attendees) {
@@ -197,20 +206,4 @@ function reminderMethodToIcal(method: string): "display" | "email" | "audio" {
     default:
       return "display";
   }
-}
-
-/**
- * Parse recurrence frequency from RFC 5545 RRULE string.
- * @param rrule - RFC 5545 recurrence rule string
- * @returns Parsed recurrence frequency
- */
-function parseRecurrenceFrequency(
-  rrule: string
-): "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY" {
-  const upper = rrule.toUpperCase();
-  if (upper.includes("FREQ=DAILY")) return "DAILY";
-  if (upper.includes("FREQ=WEEKLY")) return "WEEKLY";
-  if (upper.includes("FREQ=MONTHLY")) return "MONTHLY";
-  if (upper.includes("FREQ=YEARLY")) return "YEARLY";
-  return "DAILY"; // Default
 }
