@@ -198,11 +198,6 @@ def get_itinerary_service(request: Request) -> ItineraryService:
     )
 
 
-def get_memory_service(request: Request) -> MemoryService:
-    """Return MemoryService from the container."""
-    return _get_required_service(request, "memory_service", MemoryService)
-
-
 def get_trip_service(request: Request) -> TripService:
     """Return TripService from the container."""
     return _get_required_service(request, "trip_service", TripService)
