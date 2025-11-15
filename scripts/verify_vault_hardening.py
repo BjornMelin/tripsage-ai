@@ -253,71 +253,77 @@ class SupabaseByokVerifier:
         Returns:
             bool: True if all BYOK operations work correctly, False otherwise.
         """
-        test_key = "sk-test-verification-key-12345"
-        success = False
 
-        try:
-            # 1. Insert test API key
-            insert_result = self.supabase.rpc(
-                "insert_user_api_key",
-                {
-                    "p_user_id": self.test_user_id,
-                    "p_service": "openai",
-                    "p_api_key": test_key,
-                },
-            ).execute()
+        # Small helper to verify the full BYOK lifecycle for a given provider.
+        def _byok_lifecycle(service: str, key: str) -> bool:
+            try:
+                # 1. Insert test API key
+                if (
+                    self._call_rpc(
+                        "insert_user_api_key",
+                        {
+                            "p_user_id": self.test_user_id,
+                            "p_service": service,
+                            "p_api_key": key,
+                        },
+                    )
+                    is None
+                ):
+                    print(f"   ❌ Failed to insert test API key for {service}")
+                    return False
 
-            if not insert_result.data:
-                print("   ❌ Failed to insert test API key")
+                # 2. Retrieve the key and validate
+                retrieve_result = self._call_rpc(
+                    "get_user_api_key",
+                    {"p_user_id": self.test_user_id, "p_service": service},
+                )
+
+                if retrieve_result != key:
+                    print(
+                        f"   ❌ Key mismatch for {service}: expected '{key}',"
+                        f" got '{retrieve_result}'"
+                    )
+                    return False
+
+                # 3. Update last_used timestamp
+                self._call_rpc(
+                    "touch_user_api_key",
+                    {"p_user_id": self.test_user_id, "p_service": service},
+                )
+
+                # 4. Delete the test key
+                self._call_rpc(
+                    "delete_user_api_key",
+                    {"p_user_id": self.test_user_id, "p_service": service},
+                )
+
+                # 5. Verify key is deleted
+                if (
+                    self._call_rpc(
+                        "get_user_api_key",
+                        {"p_user_id": self.test_user_id, "p_service": service},
+                    )
+                    is not None
+                ):
+                    print(f"   ❌ Key not properly deleted for {service}")
+                    return False
+
+                return True
+            except RuntimeError as e:
+                # _call_rpc wraps network errors as RuntimeError. Classify them here.
+                if "Network error" in str(e):
+                    print(
+                        f"   ❌ Network error during BYOK operations for {service}: {e}"
+                    )
+                else:
+                    print(
+                        f"   ❌ Unexpected error during BYOK operations "
+                        f"for {service}: {e}"
+                    )
                 return False
 
-            # 2. Retrieve the key
-            retrieve_result = self.supabase.rpc(
-                "get_user_api_key",
-                {"p_user_id": self.test_user_id, "p_service": "openai"},
-            ).execute()
-
-            if retrieve_result.data != test_key:
-                expected = test_key
-                actual = retrieve_result.data
-                print(f"   ❌ Key mismatch: expected '{expected}', got '{actual}'")
-                return False
-
-            # 3. Update last_used timestamp
-            self.supabase.rpc(
-                "touch_user_api_key",
-                {"p_user_id": self.test_user_id, "p_service": "openai"},
-            ).execute()
-
-            # 4. Delete the test key
-            self.supabase.rpc(
-                "delete_user_api_key",
-                {"p_user_id": self.test_user_id, "p_service": "openai"},
-            ).execute()
-
-            # 5. Verify key is deleted
-            final_check = self.supabase.rpc(
-                "get_user_api_key",
-                {"p_user_id": self.test_user_id, "p_service": "openai"},
-            ).execute()
-
-            if final_check.data is not None:
-                print("   ❌ Key not properly deleted")
-                return False
-
-            success = True
-
-        except (ConnectionError, TimeoutError) as e:
-            # Network errors during BYOK operations
-            print(f"   ❌ Network error during BYOK operations: {e}")
-        except (ValueError, TypeError) as e:
-            # Data validation or type errors
-            print(f"   ❌ Data validation error during BYOK operations: {e}")
-        except Exception as e:  # noqa: BLE001
-            # Unexpected errors during BYOK operations
-            print(f"   ❌ Unexpected error during BYOK operations: {e}")
-
-        return success
+        # Test the core BYOK lifecycle for the default provider (openai)
+        return _byok_lifecycle("openai", "sk-test-verification-key-12345")
 
     def check_gateway_configuration(self) -> bool:
         """Test Gateway configuration operations.
@@ -326,56 +332,55 @@ class SupabaseByokVerifier:
             bool: True if Gateway configuration operations work correctly, False
             otherwise.
         """
-        test_base_url = "https://test-gateway.vercel.sh/v1"
 
-        try:
-            # 1. Set gateway config
-            self.supabase.rpc(
-                "upsert_user_gateway_config",
-                {"p_user_id": self.test_user_id, "p_base_url": test_base_url},
-            ).execute()
+        # Small helper to verify the full gateway config lifecycle.
+        def _gateway_lifecycle(base_url: str) -> bool:
+            try:
+                # 1. Set gateway config
+                self.supabase.rpc(
+                    "upsert_user_gateway_config",
+                    {"p_user_id": self.test_user_id, "p_base_url": base_url},
+                ).execute()
 
-            # 2. Retrieve gateway config
-            result = self.supabase.rpc(
-                "get_user_gateway_base_url", {"p_user_id": self.test_user_id}
-            ).execute()
+                # 2. Retrieve gateway config
+                result = self.supabase.rpc(
+                    "get_user_gateway_base_url", {"p_user_id": self.test_user_id}
+                ).execute()
 
-            if result.data != test_base_url:
-                expected = test_base_url
-                actual = result.data
-                print(
-                    f"   ❌ Gateway URL mismatch: expected '{expected}', got '{actual}'"
-                )
+                if result.data != base_url:
+                    print(
+                        f"   ❌ Gateway URL mismatch: expected '{base_url}',"
+                        f" got '{result.data}'"
+                    )
+                    return False
+
+                # 3. Delete gateway config
+                self.supabase.rpc(
+                    "delete_user_gateway_config", {"p_user_id": self.test_user_id}
+                ).execute()
+
+                # 4. Verify deletion
+                final_check = self.supabase.rpc(
+                    "get_user_gateway_base_url", {"p_user_id": self.test_user_id}
+                ).execute()
+
+                if final_check.data is not None:
+                    print("   ❌ Gateway config not properly deleted")
+                    return False
+
+                return True
+            except (ConnectionError, TimeoutError) as e:
+                print(f"   ❌ Network error during gateway configuration: {e}")
+                return False
+            except (ValueError, TypeError) as e:
+                print(f"   ❌ Data validation error during gateway configuration: {e}")
+                return False
+            except Exception as e:  # noqa: BLE001
+                print(f"   ❌ Unexpected error during gateway configuration: {e}")
                 return False
 
-            # 3. Delete gateway config
-            self.supabase.rpc(
-                "delete_user_gateway_config", {"p_user_id": self.test_user_id}
-            ).execute()
-
-            # 4. Verify deletion
-            final_check = self.supabase.rpc(
-                "get_user_gateway_base_url", {"p_user_id": self.test_user_id}
-            ).execute()
-
-            if final_check.data is not None:
-                print("   ❌ Gateway config not properly deleted")
-                return False
-
-            return True
-
-        except (ConnectionError, TimeoutError) as e:
-            # Network errors during gateway configuration operations
-            print(f"   ❌ Network error during gateway configuration: {e}")
-            return False
-        except (ValueError, TypeError) as e:
-            # Data validation or type errors
-            print(f"   ❌ Data validation error during gateway configuration: {e}")
-            return False
-        except Exception as e:  # noqa: BLE001
-            # Unexpected errors during gateway configuration
-            print(f"   ❌ Unexpected error during gateway configuration: {e}")
-            return False
+        # Test the gateway lifecycle with a test URL
+        return _gateway_lifecycle("https://test-gateway.vercel.sh/v1")
 
     def check_user_settings(self) -> bool:
         """Test user settings operations.
@@ -415,51 +420,52 @@ class SupabaseByokVerifier:
         Returns:
             bool: True if RLS properly isolates user data, False otherwise.
         """
-        try:
-            # Insert test data for our test user
-            self.supabase.rpc(
-                "insert_user_api_key",
-                {
-                    "p_user_id": self.test_user_id,
-                    "p_service": "openai",
-                    "p_api_key": "test-key",
-                },
-            ).execute()
 
-            # Create a second user ID
-            other_user_id = str(uuid.uuid4())
+        # Small helper to test RLS isolation between two user IDs.
+        def _test_rls_isolation(user_id: str, other_user_id: str) -> bool:
+            try:
+                # Insert test data for our test user
+                self.supabase.rpc(
+                    "insert_user_api_key",
+                    {
+                        "p_user_id": user_id,
+                        "p_service": "openai",
+                        "p_api_key": "test-key",
+                    },
+                ).execute()
 
-            # Try to access the first user's data with the second user ID
-            # (should fail or return null)
-            result = self.supabase.rpc(
-                "get_user_api_key", {"p_user_id": other_user_id, "p_service": "openai"}
-            ).execute()
+                # Try to access the first user's data with the second user ID
+                # (should fail or return null)
+                result = self.supabase.rpc(
+                    "get_user_api_key",
+                    {"p_user_id": other_user_id, "p_service": "openai"},
+                ).execute()
 
-            # Should return null (no data for other user)
-            if result.data is not None:
-                print("   ❌ RLS not properly isolating user data")
+                # Should return null (no data for other user)
+                if result.data is not None:
+                    print("   ❌ RLS not properly isolating user data")
+                    return False
+
+                # Clean up test data
+                self.supabase.rpc(
+                    "delete_user_api_key",
+                    {"p_user_id": user_id, "p_service": "openai"},
+                ).execute()
+
+                return True
+            except (ConnectionError, TimeoutError) as e:
+                print(f"   ❌ Network error during RLS isolation test: {e}")
+                return False
+            except (ValueError, TypeError) as e:
+                print(f"   ❌ Data validation error during RLS isolation test: {e}")
+                return False
+            except Exception as e:  # noqa: BLE001
+                print(f"   ❌ Unexpected error during RLS isolation test: {e}")
                 return False
 
-            # Clean up test data
-            self.supabase.rpc(
-                "delete_user_api_key",
-                {"p_user_id": self.test_user_id, "p_service": "openai"},
-            ).execute()
-
-            return True
-
-        except (ConnectionError, TimeoutError) as e:
-            # Network errors during RLS isolation test
-            print(f"   ❌ Network error during RLS isolation test: {e}")
-            return False
-        except (ValueError, TypeError) as e:
-            # Data validation or type errors
-            print(f"   ❌ Data validation error during RLS isolation test: {e}")
-            return False
-        except Exception as e:  # noqa: BLE001
-            # Unexpected errors during RLS isolation test
-            print(f"   ❌ Unexpected error during RLS isolation test: {e}")
-            return False
+        # Test RLS isolation with two different user IDs
+        other_user_id = str(uuid.uuid4())
+        return _test_rls_isolation(self.test_user_id, other_user_id)
 
     def check_multi_provider_support(self) -> bool:
         """Test multi-provider BYOK support.
@@ -523,13 +529,12 @@ def main() -> None:
     try:
         verifier = SupabaseByokVerifier()
         success = verifier.run_verification()
-
-        if not success:
+        if success:
+            print("\n🎉 Supabase BYOK security verification completed successfully!")
+        else:
             print("\n⚠️  Issues found. Please review the Supabase configuration docs:")
             print("   docs/operators/supabase-configuration.md")
             sys.exit(1)
-        else:
-            print("\n🎉 Supabase BYOK security verification completed successfully!")
     except KeyboardInterrupt:
         print("\n❌ Verification interrupted by user")
         sys.exit(1)
