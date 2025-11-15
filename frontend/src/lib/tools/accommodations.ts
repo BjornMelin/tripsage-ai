@@ -34,7 +34,7 @@ import {
   type AccommodationSearchResult,
 } from "@/lib/schemas/accommodations";
 import { secureUuid } from "@/lib/security/random";
-import { createServerSupabase } from "@/lib/supabase";
+import { createServerSupabase } from "@/lib/supabase/server";
 import { createToolError, TOOL_ERROR_CODES } from "@/lib/tools/errors";
 import { ExpediaApiError, getExpediaClient } from "@/lib/travel-api/expedia-client";
 import type {

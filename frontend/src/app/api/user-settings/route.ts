@@ -8,8 +8,8 @@ import "server-only";
 
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { createServerSupabase } from "@/lib/supabase";
 import { getUserAllowGatewayFallback } from "@/lib/supabase/rpc";
+import { createServerSupabase } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 

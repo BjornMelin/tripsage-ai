@@ -5,7 +5,7 @@
  * and renders appropriate UI.
  */
 
-import { createServerSupabase } from "@/lib/supabase";
+import { createServerSupabase } from "@/lib/supabase/server";
 import { CalendarStatus } from "./calendar-status";
 
 /**
