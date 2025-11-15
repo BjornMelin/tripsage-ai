@@ -188,7 +188,14 @@ function FlightCard({ flight }: { flight: UpcomingFlight }) {
           )}
         </div>
         <div className="flex items-center gap-1">
-          <span className="font-medium">${flight.price}</span>
+          <span className="font-medium">
+            {flight.currency && flight.currency.trim().length > 0
+              ? new Intl.NumberFormat("en-US", {
+                  currency: flight.currency,
+                  style: "currency",
+                }).format(flight.price)
+              : `$${flight.price}`}
+          </span>
         </div>
       </div>
 

@@ -437,18 +437,18 @@ export const bookAccommodation = tool({
       sessionId,
     });
 
-    // 3. Two-phase commit: Payment + Booking
+    // 3. Generate single booking ID for consistency
+    const bookingId = secureUuid();
+
+    // 4. Two-phase commit: Payment + Booking
     let paymentIntentId: string;
     let epsBookingId: string;
     let confirmationNumber: string;
 
     try {
-      // Get property details to determine price (in a real implementation,
-      // price would come from checkAvailability bookingToken)
-      // For now, we'll use a placeholder - in production, price should be
-      // extracted from the bookingToken or stored when checkAvailability is called
-      const priceInCents = 20000; // Placeholder - should come from bookingToken
-      const currency = "USD"; // Should come from bookingToken
+      // Use real amount and currency from checkAvailability result
+      const priceInCents = validated.amount;
+      const currency = validated.currency;
 
       // Phase 1: Process payment
       const paymentResult = await processBookingPayment({
@@ -476,7 +476,7 @@ export const bookAccommodation = tool({
       });
     }
 
-    // 4. Save booking to Supabase
+    // 5. Save booking to Supabase
     try {
       // biome-ignore lint/suspicious/noExplicitAny: Supabase types don't include bookings table yet
       const { error: insertError } = await (supabase as any).from("bookings").insert({
@@ -493,7 +493,7 @@ export const bookAccommodation = tool({
         // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
         guest_phone: validated.guestPhone || null,
         guests: validated.guests,
-        id: secureUuid(),
+        id: bookingId, // Use the same bookingId generated above
         // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
         property_id: validated.listingId,
         // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
@@ -517,9 +517,9 @@ export const bookAccommodation = tool({
     }
 
     const bookingReference =
-      confirmationNumber || `bk_${secureUuid().replaceAll("-", "").slice(0, 10)}`;
+      confirmationNumber || `bk_${bookingId.replaceAll("-", "").slice(0, 10)}`;
     const rawOut = {
-      bookingId: secureUuid(),
+      bookingId, // Use the same bookingId for consistency
       bookingStatus: "confirmed" as const,
       checkin: validated.checkin,
       checkout: validated.checkout,

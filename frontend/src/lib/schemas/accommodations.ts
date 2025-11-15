@@ -170,9 +170,11 @@ export type AccommodationDetailsResult = z.infer<
 /** Zod schema for accommodation booking input parameters. */
 export const ACCOMMODATION_BOOKING_INPUT_SCHEMA = z
   .strictObject({
+    amount: z.number().positive(), // Total amount in cents from checkAvailability
     bookingToken: z.string().min(1), // NEW: From checkAvailability
     checkin: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     checkout: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    currency: z.string().length(3), // Currency code (e.g., "USD", "EUR") from checkAvailability
     guestEmail: z.email(),
     guestName: z.string().min(1),
     guestPhone: z.string().optional(),

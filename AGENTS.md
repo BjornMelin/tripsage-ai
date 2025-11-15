@@ -259,6 +259,9 @@ tests/
 - Coverage thresholds: lines 90, statements 90, functions 90, branches 85. Coverage target: ≥85%.
 - Global setup: `frontend/src/test-setup.ts:1` wires mocks (Next navigation/router, Supabase, toast hooks, storage, etc.).
 - No real network calls. Mock `streamText`, provider factories, Supabase, and Upstash at adapter boundary.
+- Commands:
+  - Local: `cd frontend && pnpm test:run` for full suite, or `pnpm test` for watch/dev.
+  - CI: `cd frontend && pnpm test:ci` uses sharded `vitest run` invocations with constrained workers to avoid jsdom/V8 heap pressure.
 - See tests under `frontend/src/app/api/**/__tests__` and `frontend/src/lib/**/__tests__`.
 
 ## Quality & Documentation Gates
