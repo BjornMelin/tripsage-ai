@@ -55,10 +55,6 @@ vi.mock("@tanstack/react-query", () => {
     invalidateQueries = vi.fn();
     refetchQueries = vi.fn();
     setQueryData = vi.fn();
-
-    constructor(options?: any) {
-      // Accept options but don't use them in mock
-    }
   }
 
   return {

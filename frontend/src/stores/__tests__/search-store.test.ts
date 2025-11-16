@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { SearchType } from "@/lib/schemas/search";
+import { beforeEach, describe, expect, it } from "vitest";
+import type { FlightSearchParams, SearchType } from "@/lib/schemas/search";
 import { useSearchFiltersStore } from "../search-filters-store";
 import { useSearchHistoryStore } from "../search-history-store";
 import { useSearchParamsStore } from "../search-params-store";
@@ -154,7 +154,7 @@ describe("Search Store Orchestrator", () => {
     it("executes search with valid params", async () => {
       const { result } = renderHook(() => useSearchStore());
 
-      const flightParams = {
+      const flightParams: FlightSearchParams = {
         adults: 1,
         cabinClass: "economy" as const,
         children: 0,
@@ -180,7 +180,7 @@ describe("Search Store Orchestrator", () => {
       // Execute search with explicit params to avoid getter issues
       let searchId: string | null = null;
       await act(async () => {
-        searchId = await result.current.executeSearch(flightParams as any);
+        searchId = await result.current.executeSearch(flightParams);
       });
 
       expect(searchId).toBeTruthy();

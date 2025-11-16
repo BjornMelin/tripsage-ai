@@ -30,7 +30,7 @@ function CreateTestWrapper() {
     },
   });
 
-  return function TestWrapper({ children }: { children: ReactNode }) {
+  return ({ children }: { children: ReactNode }) => {
     return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
   };
 }
