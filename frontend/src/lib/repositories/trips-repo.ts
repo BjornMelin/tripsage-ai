@@ -2,7 +2,7 @@
  * @fileoverview Trip repository: typed Supabase CRUD + UI mapping with Zod validation.
  */
 
-import type { Json, TripsInsert, TripsRow, TripsUpdate } from "@/lib/schemas/supabase";
+import type { TripsInsert, TripsRow, TripsUpdate } from "@/lib/schemas/supabase";
 import {
   tripsInsertSchema,
   tripsRowSchema,
