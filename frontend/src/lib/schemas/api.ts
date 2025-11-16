@@ -4,11 +4,11 @@
 
 import { z } from "zod";
 
-// Common validation patterns
-const TIMESTAMP_SCHEMA = z.string().datetime();
-const UUID_SCHEMA = z.string().uuid();
-const EMAIL_SCHEMA = z.string().email();
-const URL_SCHEMA = z.string().url();
+// Common validation patterns (Zod v4 top-level validators)
+const TIMESTAMP_SCHEMA = z.iso.datetime();
+const UUID_SCHEMA = z.uuid();
+const EMAIL_SCHEMA = z.email();
+const URL_SCHEMA = z.url();
 const POSITIVE_NUMBER_SCHEMA = z.number().positive();
 const NON_NEGATIVE_NUMBER_SCHEMA = z.number().nonnegative();
 
@@ -219,7 +219,7 @@ export const tripSchema = z.object({
   createdAt: TIMESTAMP_SCHEMA,
   description: z.string().max(1000).optional(),
   destination: z.string().min(1),
-  endDate: z.string().date(),
+  endDate: z.iso.date(),
   id: UUID_SCHEMA,
   itinerary: z.array(
     z.object({
@@ -249,12 +249,12 @@ export const tripSchema = z.object({
           ]),
         })
       ),
-      date: z.string().date(),
+      date: z.iso.date(),
       day: z.number().int().positive(),
       id: UUID_SCHEMA,
     })
   ),
-  startDate: z.string().date(),
+  startDate: z.iso.date(),
   status: z.enum(["planning", "booked", "active", "completed", "cancelled"]),
   title: z.string().min(1).max(200),
   travelers: z.array(
@@ -279,8 +279,8 @@ export const createTripRequestSchema = z.object({
     .optional(),
   description: z.string().max(1000).optional(),
   destination: z.string().min(1),
-  endDate: z.string().date(),
-  startDate: z.string().date(),
+  endDate: z.iso.date(),
+  startDate: z.iso.date(),
   title: z.string().min(1).max(200),
   travelers: z
     .array(

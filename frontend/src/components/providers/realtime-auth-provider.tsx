@@ -6,7 +6,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { getBrowserClient } from "@/lib/supabase/client";
+import { getBrowserClient } from "@/lib/supabase";
 import { getAccessToken } from "@/lib/supabase/token";
 
 /**

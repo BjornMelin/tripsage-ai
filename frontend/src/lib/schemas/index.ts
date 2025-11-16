@@ -110,6 +110,7 @@ export { skeletonPropsSchema } from "./loading";
 export * from "./memory";
 // search schemas should be imported directly to avoid name collisions
 export * from "./stores";
+export * from "./supabase";
 export * from "./temporal";
 export * from "./theme-provider";
 export * from "./weather";
@@ -130,6 +131,7 @@ import * as loadingSchemas from "./loading";
 import * as memorySchemas from "./memory";
 import * as searchSchemas from "./search";
 import * as storeSchemas from "./stores";
+import * as supabaseSchemas from "./supabase";
 
 // Central schema registry
 export const schemas = {
@@ -144,6 +146,7 @@ export const schemas = {
   memory: memorySchemas,
   search: searchSchemas,
   stores: storeSchemas,
+  supabase: supabaseSchemas,
 } as const;
 
 // Commonly used validation patterns
@@ -218,9 +221,9 @@ import { ValidationContext, type ValidationResult, validate } from "../validatio
 // Quick validation helpers
 export const quickValidate = {
   date: (value: unknown): ValidationResult<string> =>
-    validate(z.string().date(), value, ValidationContext.Form),
+    validate(z.iso.date(), value, ValidationContext.Form),
   email: (value: unknown): ValidationResult<string> =>
-    validate(z.string().email(), value, ValidationContext.Form),
+    validate(z.email(), value, ValidationContext.Form),
 
   nonEmptyString: (value: unknown): ValidationResult<string> =>
     validate(z.string().min(1), value, ValidationContext.Form),
@@ -242,10 +245,10 @@ export const quickValidate = {
     validate(z.number().positive(), value, ValidationContext.Form),
 
   url: (value: unknown): ValidationResult<string> =>
-    validate(z.string().url(), value, ValidationContext.Form),
+    validate(z.url(), value, ValidationContext.Form),
 
   uuid: (value: unknown): ValidationResult<string> =>
-    validate(z.string().uuid(), value, ValidationContext.Form),
+    validate(z.uuid(), value, ValidationContext.Form),
 };
 
 // Schema metadata for documentation

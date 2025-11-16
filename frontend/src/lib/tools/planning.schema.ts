@@ -7,7 +7,7 @@ import { z } from "zod";
 
 export const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/u, "must be YYYY-MM-DD");
 
-export const isoDateTime = z.string().datetime();
+export const isoDateTime = z.iso.datetime();
 
 export const planComponentsSchema = z.object({
   accommodations: z.array(z.record(z.string(), z.unknown())).default([]),
@@ -24,7 +24,7 @@ export const planSchema = z.object({
   destinations: z.array(z.string().min(1)).min(1),
   endDate: isoDate,
   finalizedAt: isoDateTime.optional(),
-  planId: z.string().uuid(),
+  planId: z.uuid(),
   preferences: z.record(z.string(), z.unknown()).default({}),
   startDate: isoDate,
   status: z.enum(["draft", "finalized"]).default("draft"),

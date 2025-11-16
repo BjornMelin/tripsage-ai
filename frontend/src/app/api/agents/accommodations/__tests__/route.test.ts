@@ -6,7 +6,7 @@ describe("/api/agents/accommodations route", () => {
   });
 
   it("streams when valid and enabled", async () => {
-    vi.doMock("@/lib/supabase/server", () => ({
+    vi.doMock("@/lib/supabase", () => ({
       createServerSupabase: vi.fn(async () => ({
         auth: { getUser: async () => ({ data: { user: { id: "user-1" } } }) },
       })),
@@ -48,7 +48,7 @@ describe("/api/agents/accommodations route", () => {
   });
 
   it("returns 429 when rate limit exceeded", async () => {
-    vi.doMock("@/lib/supabase/server", () => ({
+    vi.doMock("@/lib/supabase", () => ({
       createServerSupabase: vi.fn(async () => ({
         auth: { getUser: async () => ({ data: { user: null } }) },
       })),

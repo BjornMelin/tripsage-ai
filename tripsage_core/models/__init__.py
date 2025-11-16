@@ -43,9 +43,7 @@ from .db import (
     EntityType,
     Flight,
     FlightBookingStatus,
-    Memory,
-    MemoryCreate,
-    MemoryUpdate,
+    # Memory models removed; handled via frontend AI SDK v6
     # Removed: MessageWithTokenEstimate,
     OptionType,
     PriceHistory,
@@ -71,13 +69,10 @@ from .domain import (
     AccommodationListing,
     AccommodationLocation,
     Airport,
-    Entity,
     FlightOffer,
     FlightSegment,
     PropertyType,
-    Relation,
-    SessionMemory,
-    TravelMemory,
+    # Relation, SessionMemory, TravelMemory removed; handled via frontend AI SDK v6
 )
 from .schemas_common.enums import CabinClass
 
@@ -100,8 +95,7 @@ __all__ = [
     "CancellationPolicy",
     # Chat DB models removed
     "DataSource",
-    # Domain models - Memory
-    "Entity",
+    # Domain models - Memory removed; handled via frontend AI SDK v6
     "EntityType",
     # Database models - Flight DB
     "Flight",
@@ -109,25 +103,22 @@ __all__ = [
     # Domain models - Flight
     "FlightOffer",
     "FlightSegment",
-    # Database models - Memory
-    "Memory",
-    "MemoryCreate",
-    "MemoryUpdate",
+    # Database models - Memory removed; handled via frontend AI SDK v6
     # Removed: MessageWithTokenEstimate,
     "OptionType",
     "PriceHistory",
     "PropertyType",
     # Removed: RecentMessagesResponse,
-    "Relation",
+    # Relation removed; handled via frontend AI SDK v6
     "SavedOption",
     # Database models - Search & History
     "SearchParameters",
-    "SessionMemory",
+    # SessionMemory removed; handled via frontend AI SDK v6
     # Database models - Transportation
     "Transportation",
     "TransportationBookingStatus",
     "TransportationType",
-    "TravelMemory",
+    # TravelMemory removed; handled via frontend AI SDK v6
     # Database models - Trip Management
     "Trip",
     "TripComparison",

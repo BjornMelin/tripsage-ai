@@ -362,6 +362,170 @@ Supabase Realtime subscriptions for live updates:
 
 **Pattern**: Subscriptions managed in `RealtimeAuthProvider` component.
 
+## Realtime and AI SDK Responsibilities
+
+This section documents the architectural invariants that govern how Supabase Realtime and AI SDK v6 are used in the frontend application. These invariants ensure clear separation of concerns and prevent architectural drift.
+
+### Transport Separation
+
+**Invariant**: All LLM responses, token streams, and model interactions flow **only** through AI SDK v6 (via `useChat` on the client and `streamText` / `streamObject` on the server).
+
+- **Client-side**: `useChat` hook from `@ai-sdk/react` with `DefaultChatTransport` manages all chat streaming
+- **Server-side**: Route handlers use `streamText`, `streamObject`, `generateObject`, and `convertToModelMessages` from `ai` package
+- **Never**: Supabase Realtime is never used for streaming model tokens or LLM responses
+
+**Rationale**: AI SDK v6 provides optimized streaming, resumable connections, tool calling, and structured outputs. Mixing transports would create complexity and break AI SDK's built-in features.
+
+### Realtime Backbone
+
+**Invariant**: All multi-client chat events, presence, and agent status updates use Supabase Realtime broadcast and presence.
+
+- **Multi-client chat events**: Message fanout, typing indicators, session broadcasts
+- **Agent status updates**: Live agent execution progress, task updates, resource usage
+- **Presence**: User online/offline status, active sessions
+- **Channel pattern**: All realtime channels are created through `useRealtimeChannel` or its thin wrappers (`useWebSocketChat`, `useTripRealtime`, `useChatRealtime`)
+
+**Rationale**: Supabase Realtime provides efficient pub/sub, presence, and Postgres change subscriptions. It's optimized for multi-client fanout, not token streaming.
+
+### Single Low-Level Hook
+
+**Invariant**: All Supabase Realtime usage is funneled through **one hook**: `useRealtimeChannel` (and possibly very thin wrappers).
+
+- **Core hook**: `useRealtimeChannel` in `frontend/src/hooks/use-realtime-channel.ts` handles all channel lifecycle
+- **Wrappers**: `useWebSocketChat`, `useTripRealtime`, `useChatRealtime` are thin wrappers that delegate to `useRealtimeChannel`
+- **Never**: Feature code never directly instantiates `RealtimeChannel` or calls `supabase.channel(...)` directly
+
+**Current violations** (to be refactored in later phases):
+
+- `frontend/src/stores/chat-store.ts` line 461: Direct `supabase.channel()` call in `connectRealtime`
+- `frontend/src/hooks/use-agent-status-websocket.ts` line 261: Direct `supabase.channel()` call
+- `frontend/src/hooks/use-trips.ts` lines 415, 574: Direct `supabase.channel()` calls for Postgres changes
+
+**Rationale**: Centralizing channel management ensures consistent error handling, reconnection logic, and resource cleanup.
+
+### Hooks Own Connections, Stores Own State
+
+**Invariant**: Hooks handle connection lifecycles, subscribe/unsubscribe, and backoff. Zustand stores hold logical state and lightweight realtime snapshots.
+
+- **Hooks responsibility**: Connection state (`isConnected`, `error`), subscription lifecycle, reconnection logic
+- **Stores responsibility**: Logical state (messages, typing users, agent status objects), UI state snapshots
+- **Pattern**: Hooks update stores via callbacks or direct store mutations; stores never own channels
+
+**Example pattern**:
+
+```typescript
+// Hook manages connection
+const { isConnected, onBroadcast } = useRealtimeChannel(`session:${sessionId}`);
+
+// Hook updates store on events
+useEffect(() => {
+  onBroadcast({ event: "chat:message" }, (payload) => {
+    useChatStore.getState().addMessage(sessionId, payload);
+  });
+}, [onBroadcast, sessionId]);
+```
+
+**Rationale**: Separating connection management from state management improves testability and allows stores to be pure state containers.
+
+### Security and Privacy
+
+**Invariant**: Private channels (per user or per session) use Realtime Authorization and appropriate RLS rules. Sensitive content is not broadcast to public channels.
+
+- **Private channels**: All user-specific and session-specific channels use `{ private: true }` config
+- **Channel topics**: Follow patterns like `user:${userId}`, `session:${sessionId}`, `trip:${tripId}`
+- **Authorization**: Supabase Realtime Authorization policies enforce access control
+- **RLS**: Row-level security rules prevent unauthorized access to channel data
+
+**Rationale**: Security boundaries must be enforced at the transport layer to prevent data leaks.
+
+### Architecture Flow Diagram
+
+```mermaid
+sequenceDiagram
+    participant ClientA
+    participant ClientB
+    participant Supabase as Supabase Realtime
+    participant API as Next.js API (AI SDK)
+
+    Note over ClientA,API: AI SDK v6 handles LLM streaming
+    ClientA->>API: POST /api/chat/stream (messages)
+    API->>API: streamText({ model, messages, tools })
+    API-->>ClientA: token stream (HTTP SSE)
+    
+    Note over ClientA,Supabase: Supabase Realtime handles multi-client events
+    ClientA->>Supabase: broadcast("chat:message", payload)
+    Supabase-->>ClientA: chat:message (echo)
+    Supabase-->>ClientB: chat:message (fanout)
+    
+    Note over ClientA,Supabase: Agent status updates
+    API->>Supabase: broadcast("agent_status_update", status)
+    Supabase-->>ClientA: agent_status_update
+    Supabase-->>ClientB: agent_status_update
+```
+
+### Inventory
+
+#### Supabase Realtime Entry Points
+
+1. **`useRealtimeChannel`** (`frontend/src/hooks/use-realtime-channel.ts`)
+   - Core hook for all Realtime channel subscriptions
+   - Manages connection lifecycle, error handling, broadcast helpers
+   - Used by: `useWebSocketChat`, `useTripRealtime`
+
+2. **`useWebSocketChat`** (`frontend/src/hooks/use-websocket-chat.ts`)
+   - Wrapper around `useRealtimeChannel` for chat-specific events
+   - Handles: `chat:message`, `chat:typing` broadcasts
+   - Used by: `useChatRealtime`
+
+3. **`useTripRealtime`** (`frontend/src/hooks/use-supabase-realtime.ts`)
+   - Wrapper around `useRealtimeChannel` for trip-specific channels
+   - Topic pattern: `trip:${tripId}`
+   - Used by: Trip detail pages, collaboration features
+
+4. **`useChatRealtime`** (`frontend/src/hooks/use-supabase-realtime.ts`)
+   - Wrapper around `useWebSocketChat` for session-based chat
+   - Topic pattern: `session:${sessionId}`
+   - Used by: Chat session components
+
+5. **`useAgentStatusWebSocket`** (`frontend/src/hooks/use-agent-status-websocket.ts`)
+   - **VIOLATION**: Directly calls `supabase.channel()` (should use `useRealtimeChannel`)
+   - Handles: `agent_status_update`, `agent_task_start`, `agent_task_progress`, `agent_task_complete`, `agent_error`
+   - Topic pattern: `user:${userId}`
+   - Used by: Agent monitoring dashboard
+
+6. **`chat-store.ts`** (`frontend/src/stores/chat-store.ts`)
+   - **VIOLATION**: `connectRealtime` method directly calls `supabase.channel()` (should use `useRealtimeChannel`)
+   - Handles: `chat:message`, `chat:message_chunk`, `chat:typing`, `agent_status_update` broadcasts
+   - Topic pattern: `session:${sessionId}`
+
+7. **`use-trips.ts`** (`frontend/src/hooks/use-trips.ts`)
+   - **VIOLATION**: Directly calls `supabase.channel()` for Postgres changes (should use `useRealtimeChannel`)
+   - Handles: Postgres changes on `trips` table
+   - Topic patterns: `trips:${userId}`, `trip:${tripId}`
+
+#### AI SDK v6 Entry Points
+
+1. **Route Handlers**:
+   - **`/api/chat/stream`** (`frontend/src/app/api/chat/stream/route.ts` + `_handler.ts`)
+     - Uses: `streamText`, `convertToModelMessages`, `tool`, `generateObject`
+     - Returns: `result.toUIMessageStreamResponse()`
+     - Handles: Main chat streaming, tool calling, memory integration
+
+   - **`/api/ai/stream`** (`frontend/src/app/api/ai/stream/route.ts`)
+     - Uses: `streamText`
+     - Returns: `result.toUIMessageStreamResponse()`
+     - Purpose: Demo/development route
+
+   - **`/api/agents/*`** (multiple routes)
+     - Uses: `streamText`, `generateObject`, `tool`
+     - Specialized agent endpoints (flights, accommodations, destinations, etc.)
+
+2. **Client Components**:
+   - **`/chat`** (`frontend/src/app/chat/page.tsx`)
+     - Uses: `useChat` from `@ai-sdk/react`, `DefaultChatTransport` from `ai`
+     - Manages: Chat UI state, message streaming, resumable connections
+     - AI Elements: Uses `Conversation`, `Message`, `Response`, `PromptInput`, `Sources` components
+
 ## Data Flow & API Integration
 
 ### API Route Architecture

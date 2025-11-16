@@ -11,6 +11,7 @@ import cl100kBase from "js-tiktoken/ranks/cl100k_base";
 // cl100k_base covers older OpenAI models; retained as a fallback.
 import o200kBase from "js-tiktoken/ranks/o200k_base";
 
+import type { ClampResult, TokenChatMessage } from "@/lib/schemas/tokens";
 import { getModelContextLimit } from "./limits";
 
 /**
@@ -20,10 +21,9 @@ interface TiktokenWithFree extends Tiktoken {
   free?: () => void;
 }
 
-export type ChatMessage = {
-  role: "system" | "user" | "assistant";
-  content: string;
-};
+// Re-export types from schemas (using TokenChatMessage to avoid conflict with api.ChatMessage)
+export type { ClampResult };
+export type ChatMessage = TokenChatMessage;
 
 /** Heuristic fallback ratio: ~4 characters per token (UNVERIFIED for non-OpenAI). */
 export const CHARS_PER_TOKEN_HEURISTIC = 4;
@@ -102,14 +102,6 @@ export function countTokens(texts: string[], modelHint?: string): number {
   // Heuristic fallback
   return Math.max(0, Math.ceil(charSum / CHARS_PER_TOKEN_HEURISTIC));
 }
-
-/** Result of clamping calculation. */
-export type ClampResult = {
-  /** Final safe max tokens for the model/context. */
-  maxTokens: number;
-  /** Reasons describing why clamping occurred. */
-  reasons: string[];
-};
 
 /**
  * Clamp desired max output tokens based on model context window and prompt length.

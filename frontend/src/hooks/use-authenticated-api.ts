@@ -11,7 +11,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiClient } from "@/lib/api/api-client";
 import { ApiError } from "@/lib/api/error-types";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase";
 
 /**
  * Hook for authenticated API calls with JWT token management.

@@ -4,25 +4,35 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Trip } from "@/stores/trip-store";
 import { TripCard } from "../trip-card";
 
-// Mock date-fns
-vi.mock("date-fns", () => ({
-  differenceInDays: vi.fn((end, start) => {
-    const endDate = new Date(end);
-    const startDate = new Date(start);
-    return Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-  }),
-  format: vi.fn((date, formatStr) => {
-    const d = new Date(date);
-    if (formatStr === "MMM dd, yyyy") {
-      return d.toLocaleDateString("en-US", {
-        day: "2-digit",
-        month: "short",
-        timeZone: "UTC",
-        year: "numeric",
-      });
-    }
-    return d.toLocaleDateString("en-US", { timeZone: "UTC" });
-  }),
+// Mock DateUtils
+vi.mock("@/lib/dates/unified-date-utils", () => ({
+  DateUtils: {
+    difference: vi.fn((end, start, unit) => {
+      const endDate = new Date(end);
+      const startDate = new Date(start);
+      if (unit === "days") {
+        return Math.ceil(
+          (endDate.valueOf() - startDate.valueOf()) / (1000 * 60 * 60 * 24)
+        );
+      }
+      return 0;
+    }),
+    format: vi.fn((date, formatStr) => {
+      const d = new Date(date);
+      if (formatStr === "MMM dd, yyyy") {
+        return d.toLocaleDateString("en-US", {
+          day: "2-digit",
+          month: "short",
+          timeZone: "UTC",
+          year: "numeric",
+        });
+      }
+      return d.toLocaleDateString("en-US", { timeZone: "UTC" });
+    }),
+    isAfter: vi.fn((date1, date2) => new Date(date1) > new Date(date2)),
+    isBefore: vi.fn((date1, date2) => new Date(date1) < new Date(date2)),
+    parse: vi.fn((dateStr) => new Date(dateStr)),
+  },
 }));
 
 // Mock Next.js Link

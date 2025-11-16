@@ -20,8 +20,9 @@ import { type Plan, planSchema } from "./planning.schema";
 
 // Internal helpers and schemas (not exported)
 
-const UUI_DV4 = z.string().uuid();
-const ISO_DATE = z.string().regex(/^\d{4}-\d{2}-\d{2}$/u, "must be YYYY-MM-DD");
+const UUI_DV4 = z.uuid();
+// Use Zod v4 ISO date validator - validates ISO 8601 date format (YYYY-MM-DD)
+const ISO_DATE = z.iso.date({ error: "must be YYYY-MM-DD" });
 const PREFERENCES = z.record(z.string(), z.unknown()).default({});
 
 export const combineSearchResultsInputSchema = z.object({
@@ -40,8 +41,8 @@ export const createTravelPlanInputSchema = z.object({
   endDate: ISO_DATE,
   preferences: PREFERENCES.optional(),
   startDate: ISO_DATE,
-  title: z.string().min(1, "title required"),
-  travelers: z.number().int().min(1).max(50).default(1),
+  title: z.string().min(1, { error: "title required" }),
+  travelers: z.int().min(1).max(50).default(1),
   userId: z.string().min(1).optional(),
 });
 
@@ -302,17 +303,15 @@ export const updateTravelPlan = tool({
         if ((plan as { userId?: string }).userId !== sessionUserId)
           return { error: "unauthorized", success: false } as const;
 
-        const UpdateSchema = z
-          .object({
-            budget: z.number().min(0).nullable().optional(),
-            destinations: z.array(z.string().min(1)).min(1).optional(),
-            endDate: ISO_DATE.optional(),
-            preferences: PREFERENCES.optional(),
-            startDate: ISO_DATE.optional(),
-            title: z.string().min(1).optional(),
-            travelers: z.number().int().min(1).max(50).optional(),
-          })
-          .strict();
+        const UpdateSchema = z.strictObject({
+          budget: z.number().min(0).nullable().optional(),
+          destinations: z.array(z.string().min(1)).min(1).optional(),
+          endDate: ISO_DATE.optional(),
+          preferences: PREFERENCES.optional(),
+          startDate: ISO_DATE.optional(),
+          title: z.string().min(1).optional(),
+          travelers: z.int().min(1).max(50).optional(),
+        });
         const parsed = UpdateSchema.safeParse(updates ?? {});
         if (!parsed.success) {
           return {

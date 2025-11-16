@@ -325,17 +325,13 @@ def app() -> FastAPI:
     # Include routers needed for integration tests
     from tripsage.api.routers import (
         attachments,
-        config,
         health,
         itineraries,
-        memory,
         trips,
     )
 
     app.include_router(health.router, prefix="/api", tags=["health"])
-    app.include_router(config.router, prefix="/api", tags=["configuration"])
     app.include_router(trips.router, prefix="/api/trips", tags=["trips"])
-    app.include_router(memory.router, prefix="/api", tags=["memory"])
     app.include_router(
         itineraries.router, prefix="/api/itineraries", tags=["itineraries"]
     )

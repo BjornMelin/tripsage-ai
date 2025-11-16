@@ -360,7 +360,65 @@ describe("UpcomingFlights", () => {
     it("should display price information when available", () => {
       render(<UpcomingFlights />);
 
-      // Should show price with dollar sign
+      // Should show price formatted with currency (Intl.NumberFormat adds .00)
+      expect(screen.getByText("$350.00")).toBeInTheDocument();
+    });
+
+    it("should format non-USD currencies correctly", () => {
+      const flights: UpcomingFlight[] = [
+        {
+          airline: "AF",
+          airlineName: "Air France",
+          arrivalTime: getFutureDate(10),
+          cabinClass: "economy",
+          currency: "EUR",
+          departureTime: getFutureDate(10),
+          destination: "CDG",
+          duration: 300,
+          flightNumber: "AF100",
+          id: "f1",
+          origin: "JFK",
+          price: 450,
+          status: "upcoming",
+          stops: 0,
+          tripId: "trip-1",
+          tripName: "Paris Trip",
+        },
+      ];
+      vi.mocked(useUpcomingFlights).mockReturnValue(CreateMockReturnValue(flights));
+
+      render(<UpcomingFlights />);
+
+      // Should show EUR price formatted correctly
+      expect(screen.getByText("€450.00")).toBeInTheDocument();
+    });
+
+    it("should fallback to dollar sign when currency is missing", () => {
+      const flights: UpcomingFlight[] = [
+        {
+          airline: "UA",
+          airlineName: "United",
+          arrivalTime: getFutureDate(10),
+          cabinClass: "economy",
+          currency: "", // Missing currency
+          departureTime: getFutureDate(10),
+          destination: "LAX",
+          duration: 300,
+          flightNumber: "UA100",
+          id: "f1",
+          origin: "EWR",
+          price: 350,
+          status: "upcoming",
+          stops: 0,
+          tripId: "trip-1",
+          tripName: "Test Trip",
+        },
+      ];
+      vi.mocked(useUpcomingFlights).mockReturnValue(CreateMockReturnValue(flights));
+
+      render(<UpcomingFlights />);
+
+      // Should fallback to simple dollar format when currency is missing
       expect(screen.getByText("$350")).toBeInTheDocument();
     });
 

@@ -349,11 +349,11 @@ export const updateTripFormSchema = z.object({
   budget: z.number().optional(),
   description: z.string().optional(),
   destination: z.string().optional(),
-  endDate: z.string().date().optional(),
-  id: z.string().uuid(),
+  endDate: z.iso.date().optional(),
+  id: z.uuid(),
   isPublic: z.boolean().optional(),
   maxParticipants: z.number().optional(),
-  startDate: z.string().date().optional(),
+  startDate: z.iso.date().optional(),
   tags: z.array(z.string()).optional(),
   title: z.string().optional(),
 });
@@ -377,7 +377,7 @@ export const expenseFormSchema = z.object({
     .min(1, "Description is required")
     .max(200, "Description too long"),
   location: z.string().max(100).optional(),
-  receipt: z.string().url("Invalid receipt URL").optional(),
+  receipt: z.url("Invalid receipt URL").optional(),
   tags: z.array(z.string().max(50)).max(5).optional(),
 });
 
@@ -408,7 +408,7 @@ export const sendMessageFormSchema = z.object({
     )
     .max(5, "Too many attachments")
     .optional(),
-  conversationId: z.string().uuid().optional(),
+  conversationId: z.uuid().optional(),
   message: z.string().min(1, "Message cannot be empty").max(10000, "Message too long"),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
@@ -419,7 +419,7 @@ export const createConversationFormSchema = z.object({
     .min(1, "Initial message is required")
     .max(10000, "Message too long"),
   isPrivate: z.boolean(),
-  participants: z.array(z.string().uuid()).optional(),
+  participants: z.array(z.uuid()).optional(),
   title: z.string().min(1, "Title is required").max(200, "Title too long"),
 });
 
@@ -455,7 +455,7 @@ export const feedbackFormSchema = z.object({
     .string()
     .min(10, "Please provide more details")
     .max(1000, "Description too long"),
-  email: z.string().email().optional(),
+  email: z.email().optional(),
   rating: z
     .number()
     .int()

@@ -7,6 +7,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **Backend AI SDK v5 Legacy Code (FINAL-ONLY Cleanup)**
+
+  - Deleted broken router imports: removed `config` and `memory` routers from `tripsage/api/routers/__init__.py` and `tripsage/api/main.py`
+  - Removed dead code paths: deleted `ConfigurationService` and `MemoryService` references from `tripsage/app_state.py`
+  - Fixed broken memory code: removed undefined variable usage in `tripsage/api/routers/trips.py::get_trip_suggestions`
+  - Removed legacy model field: deleted `chat_session_id` from `tripsage_core/models/attachments.py` (frontend handles chat sessions)
+  - Deleted superseded tests: removed `tests/unit/test_config_mocks.py` and `tests/integration/api/test_config_versions_integration.py`
+  - Cleaned legacy comments: removed historical migration context, updated to reflect current state
+  - Backend is now a data-only layer; all AI orchestration is handled by frontend AI SDK v6
+
+- **Vault Ops Hardening Verification (Technical Debt Resolution)**
+  - Created comprehensive verification documentation: `docs/operators/supabase-configuration.md` with step-by-step security verification process
+  - Implemented automated verification script: `scripts/verify_vault_hardening.py` for continuous security validation
+  - Verified all required migrations applied: vault role hardening, API key security, Gateway BYOK configuration
+  - Established operational runbook for staging/production deployment verification
+  - Resolved privilege creep prevention measures for Vault RPC operations
+
+### Refactored
+
+- **Backend Cleanup**: Removed legacy AI code superseded by frontend AI SDK v6 migration
+
+  - Deleted `tripsage_core/services/configuration_service.py`
+  - Removed agent config endpoints and schemas
+  - Cleaned chat-related database methods
+  - Removed associated tests
+  - Backend now focuses on data persistence; AI orchestration moved to frontend
+
+- **Chat Realtime Stack Simplification (Phase 2)**: Refactored chat realtime hooks and store to be fully library-first and aligned with Option C+ architecture.
+  - Refactored `useWebSocketChat` to use `useRealtimeChannel`'s `onMessage` callback pattern instead of direct channel access, eliminating direct `supabase.channel()` calls.
+  - Removed legacy WebSocket types (`WebSocketMessageEvent`, `WebSocketAgentStatusEvent`) and replaced with Supabase Realtime payload types (`ChatMessageBroadcastPayload`, `ChatTypingBroadcastPayload`, `AgentStatusBroadcastPayload`).
+  - Refactored `chat-store.ts` to be hook-driven: removed `connectRealtime` and `disconnectRealtime` methods that directly managed Supabase channels. Store now exposes `setChatConnectionStatus`, `handleRealtimeMessage`, `handleAgentStatusUpdate`, `handleTypingUpdate`, and `resetRealtimeState` methods.
+  - Updated `useSupabaseRealtime` wrappers (`useTripRealtime`, `useChatRealtime`) to use `connectionStatus` from `useRealtimeChannel` instead of deprecated `isConnected` property.
+  - Rewrote chat realtime tests to be deterministic with proper mocking of `useRealtimeChannel`, achieving 100% branch coverage for new store methods.
+  - Eliminated all deprecated/compat/shim/TODO patterns from chat domain hooks and stores.
+- **Agent Status Realtime Rebuild (Phase 3)**: Replaced all direct `supabase.channel()` usage with `useRealtimeChannel` inside `useAgentStatusWebSocket`, wired shared exponential backoff, removed demo-only monitoring props/mocks from `app/(dashboard)/agents/page.tsx`, and added deterministic Vitest coverage for the store/hook/dashboard (100% branch coverage within the agent status scope).
+
+  - Introduced a normalized `useAgentStatusStore` with agent-id maps, connection slice, and explicit APIs (`registerAgents`, `updateAgentStatus`, `updateAgentTask`, `recordActivity`, `recordResourceUsage`, `setAgentStatusConnection`, `resetAgentStatusState`) while deleting session-era helpers.
+  - Removed the unused `use-agent-status` polling hook plus dashboard mock data, so agent dashboards now bind directly to the store + realtime hook with zero demo/test-only branches.
+  - Added focused tests: `frontend/src/stores/__tests__/agent-status-store.test.ts`, `frontend/src/hooks/__tests__/use-agent-status-websocket.test.tsx`, and `frontend/src/components/features/agent-monitoring/__tests__/agent-status-dashboard.test.tsx` covering all new branches at 100% coverage.
+
+- **Supabase Factory Unification**: Merged fragmented client/server creations into unified factory (`frontend/src/lib/supabase/factory.ts`) with OpenTelemetry tracing, Zod env validation, and `getCurrentUser` helper, eliminating 4x duplicate `auth.getUser()` calls across middleware, route handlers, and pages (-20% auth bundle size, N+1 query elimination).
+  - Unified factory with server-only directive and SSR cookie handling via `@supabase/ssr`
+  - Integrated OpenTelemetry spans for `supabase.init` and `supabase.auth.getUser` operations with attribute redaction
+  - Zod environment validation via `getServerEnv()` ensuring no config leaks
+  - Single `getCurrentUser(supabase)` helper used across middleware, server components, and route handlers
+  - Comprehensive test coverage in `frontend/src/lib/supabase/__tests__/factory.spec.ts`
+  - Updated files: `middleware.ts`, `lib/supabase/server.ts`, `lib/supabase/index.ts`, `app/(auth)/reset-password/page.tsx`
+  - Removed all legacy backward compatibility code and exports
+- **Supabase Frontend Surface Normalization**: Standardized frontend imports to use `@/lib/supabase` as the single entrypoint for Supabase clients and helpers, replacing direct `@/lib/supabase/server` imports across route handlers, auth pages, tools, and tests.
+  - Server code now imports `createServerSupabase` and `TypedServerSupabase` from `frontend/src/lib/supabase/index.ts` instead of internal modules
+  - Middleware, calendar helpers, and BYOK API handlers use `createMiddlewareSupabase`/`getCurrentUser` from the same entrypoint for consistent SSR auth wiring
+  - Tests updated to mock `@/lib/supabase` where appropriate, keeping Supabase integration details behind the barrel module
+
+### Fixed
+
+- **Accommodation booking**: `bookAccommodation` now uses the real amount and currency from check-availability input, and returns the same `bookingId` that is stored in Supabase.
+- **Upcoming flights pricing**: `UpcomingFlights` renders prices using the flight currency instead of always prefixing USD.
+- **Vitest stability**: Frontend Vitest config now clamps CI workers and adds a sharded `test:ci` script that runs the full suite in smaller batches to avoid jsdom/V8 heap pressure.
+
+- Supabase SSR factory and server tests now stub `@supabase/ssr.createServerClient`, `getServerEnv()`, and `getClientEnv()` explicitly, so Zod environment validation and cookie adapters are tested deterministically in `frontend/src/lib/supabase/__tests__/factory.spec.ts` and `frontend/src/lib/supabase/__tests__/server.test.ts` without relying on process environment side effects.
+- Supabase Realtime hooks now provide stable runtime behaviour: `useTripRealtime` memoizes its error instance to avoid unnecessary error object churn; `useWebSocketChat` now delegates channel subscription to the shared `useRealtimeChannel` helper and uses Supabase's built-in reconnection, removing duplicated backoff logic.
+- Agent status WebSocket reconnect backoff in `frontend/src/hooks/use-agent-status-websocket.ts` now increments attempts via a state updater and derives delays from the updated value, so retry intervals grow exponentially and reset only on successful subscription instead of remaining fixed.
+- Chat store realtime lifecycle is guarded by tests: `disconnectRealtime` in `frontend/src/stores/chat-store.ts` is covered by `frontend/src/stores/__tests__/chat-store-realtime.test.ts` to ensure connection status, pending messages, channel reference, and typing state are reset consistently when the UI tears down the realtime connection.
+
 ## [1.0.0] - 2025-11-14
 
 ### [1.0.0] Added

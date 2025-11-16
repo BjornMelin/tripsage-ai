@@ -18,7 +18,7 @@ describe("/api/calendar/freebusy route", () => {
     rateLimit?: typeof mockRateLimit;
     googleFreeBusy?: unknown;
   }) => {
-    vi.doMock("@/lib/supabase/server", () => ({
+    vi.doMock("@/lib/supabase", () => ({
       createServerSupabase: vi.fn(async () => ({
         auth: {
           getUser: async () => ({
@@ -133,7 +133,7 @@ describe("/api/calendar/freebusy route", () => {
   });
 
   it("returns 401 when unauthenticated", async () => {
-    vi.doMock("@/lib/supabase/server", () => ({
+    vi.doMock("@/lib/supabase", () => ({
       createServerSupabase: vi.fn(async () => ({
         auth: {
           getUser: async () => ({

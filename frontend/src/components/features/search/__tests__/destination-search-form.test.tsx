@@ -8,10 +8,8 @@ import { DestinationSearchForm } from "../destination-search-form";
 
 // Mock function for testing search form submission.
 const MockOnSearch = vi.fn();
-const WAIT_FOR_AUTOCOMPLETE_TICK = async () => {
-  await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 350));
-  });
+const WAIT_FOR_AUTOCOMPLETE_TICK = () => {
+  vi.advanceTimersByTime(350);
 };
 
 vi.mock("@/hooks/use-memory", () => ({
@@ -62,23 +60,28 @@ describe("DestinationSearchForm", () => {
   });
 
   it("handles form submission", async () => {
-    const user = userEvent.setup();
     renderWithProviders(<DestinationSearchForm onSearch={MockOnSearch} />);
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const input = screen.getByPlaceholderText(
       "Search for cities, countries, or landmarks..."
     );
-    await user.clear(input);
-    await user.type(input, "Paris");
-    await WAIT_FOR_AUTOCOMPLETE_TICK();
-    const submitButton = screen.getByRole("button", { name: "Search Destinations" });
-    await user.click(submitButton);
+    const submitButton = screen.getByRole("button", { name: /search/i });
+
+    await act(async () => {
+      await user.type(input, "Paris");
+      await user.click(submitButton);
+    });
+
     expect(MockOnSearch).toHaveBeenCalledWith(
-      expect.objectContaining({ query: "Paris" })
+      expect.objectContaining({
+        destination: "Paris",
+      })
     );
   });
 
   it("handles popular destination selection", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderWithProviders(<DestinationSearchForm onSearch={MockOnSearch} />);
 
     const parisButton = screen.getByText("Paris, France");
@@ -112,7 +115,7 @@ describe("DestinationSearchForm", () => {
   });
 
   it("handles checkbox changes for destination types", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderWithProviders(<DestinationSearchForm onSearch={MockOnSearch} />);
     const checkboxes = screen.getAllByRole("checkbox");
     expect(checkboxes.length).toBeGreaterThan(0);
@@ -150,7 +153,7 @@ describe("DestinationSearchForm", () => {
   });
 
   it("handles autocomplete suggestion selection", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderWithProviders(<DestinationSearchForm onSearch={MockOnSearch} />);
 
     const input = screen.getByPlaceholderText(

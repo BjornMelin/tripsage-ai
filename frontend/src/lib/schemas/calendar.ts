@@ -64,7 +64,7 @@ export const eventAttendeeSchema = z.object({
   additionalGuests: z.number().int().min(0).default(0),
   comment: z.string().optional(),
   displayName: z.string().optional(),
-  email: z.string().email(),
+  email: z.email(),
   optional: z.boolean().default(false),
   responseStatus: attendeeResponseStatusSchema.default("needsAction"),
 });
@@ -104,9 +104,8 @@ export const calendarEventSchema = z.object({
   endTimeUnspecified: z.boolean().default(false),
   etag: z.string().optional(),
   extendedProperties: extendedPropertiesSchema.optional(),
-  hangoutLink: z.string().url().optional(),
-  htmlLink: z.string().url().optional(),
-  // biome-ignore lint/style/useNamingConvention: iCalUID is a standard iCalendar field name
+  hangoutLink: z.url().optional(),
+  htmlLink: z.url().optional(),
   iCalUID: z.string().optional(),
   id: z.string().optional(),
   location: z.string().max(1024).optional(),
@@ -257,7 +256,6 @@ export type FreeBusyResponse = z.infer<typeof freeBusyResponseSchema>;
 export const eventsListRequestSchema = z.object({
   alwaysIncludeEmail: z.boolean().default(false),
   calendarId: z.string().default("primary"),
-  // biome-ignore lint/style/useNamingConvention: iCalUID is a standard iCalendar field name
   iCalUID: z.string().optional(),
   maxAttendees: z.number().int().min(1).optional(),
   maxResults: z.number().int().min(1).max(2500).default(250),

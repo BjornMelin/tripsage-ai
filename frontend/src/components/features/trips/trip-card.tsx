@@ -1,6 +1,12 @@
+/**
+ * @fileoverview Trip card component for displaying trip information.
+ *
+ * Shows trip details including dates, duration, budget, destinations, and status
+ * with edit/delete actions and navigation to trip details.
+ */
+
 "use client";
 
-import { differenceInDays, format } from "date-fns";
 import { Calendar, DollarSign, MapPin } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -13,35 +19,62 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { useBudgetStore } from "@/stores/budget-store";
 import type { Trip } from "@/stores/trip-store";
 
+/**
+ * Props for the TripCard component.
+ *
+ * @interface TripCardProps
+ */
 interface TripCardProps {
+  /** The trip data to display. */
   trip: Trip;
+  /** Optional callback for edit action. */
   onEdit?: (trip: Trip) => void;
+  /** Optional callback for delete action. */
   onDelete?: (tripId: string) => void;
+  /** Optional additional CSS classes. */
   className?: string;
 }
 
+/**
+ * Renders a trip summary card with metadata, actions, and derived values.
+ *
+ * @param props - Component inputs including callbacks and trip data.
+ * @returns Styled card with trip details and actions.
+ */
 export function TripCard({ trip, onEdit, onDelete, className }: TripCardProps) {
   const { budgetsByTrip } = useBudgetStore();
   const tripBudgets = budgetsByTrip[trip.id] || [];
 
-  const startDate = trip.startDate ? new Date(trip.startDate) : null;
-  const endDate = trip.endDate ? new Date(trip.endDate) : null;
+  const startDate = trip.startDate ? DateUtils.parse(trip.startDate) : null;
+  const endDate = trip.endDate ? DateUtils.parse(trip.endDate) : null;
   const duration =
-    startDate && endDate ? differenceInDays(endDate, startDate) + 1 : null;
+    startDate && endDate ? DateUtils.difference(endDate, startDate, "days") + 1 : null;
 
+  /**
+   * Formats a date string for display.
+   *
+   * @param dateString - The date string to format.
+   * @returns Formatted date string or "Not set" placeholder.
+   */
   const formatDate = (dateString?: string) => {
     if (!dateString) return "Not set";
-    return format(new Date(dateString), "MMM dd, yyyy");
+    return DateUtils.format(DateUtils.parse(dateString), "MMM dd, yyyy");
   };
 
+  /**
+   * Determines the current status of the trip.
+   *
+   * @returns The trip status: "draft", "upcoming", "active", or "completed".
+   */
   const getTripStatus = () => {
     if (!startDate || !endDate) return "draft";
     const now = new Date();
-    if (now < startDate) return "upcoming";
-    if (now > endDate) return "completed";
+    if (DateUtils.isBefore(now, startDate)) return "upcoming";
+    if (DateUtils.isAfter(now, endDate)) return "completed";
     return "active";
   };
 

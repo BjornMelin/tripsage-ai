@@ -46,6 +46,7 @@ function makeClient(): TypedClient {
 describe("typed-helpers", () => {
   it("insertSingle returns the inserted row for trips", async () => {
     const client = makeClient();
+    const userId = "123e4567-e89b-12d3-a456-426614174000";
     const payload: InsertTables<"trips"> = {
       budget: 1000,
       destination: "NYC",
@@ -53,7 +54,7 @@ describe("typed-helpers", () => {
       name: "Test Trip",
       start_date: "2025-01-01",
       travelers: 1,
-      user_id: "u1",
+      user_id: userId,
     };
 
     // Wire single() to resolve a basic trips row
@@ -72,7 +73,7 @@ describe("typed-helpers", () => {
       travelers: payload.travelers,
       trip_type: "leisure",
       updated_at: "2025-01-01T00:00:00Z",
-      user_id: payload.user_id,
+      user_id: userId,
     };
 
     const chain = (client as unknown as { from: (table: string) => MockChain }).from(
@@ -88,6 +89,7 @@ describe("typed-helpers", () => {
 
   it("updateSingle applies filters and returns the updated row", async () => {
     const client = makeClient();
+    const userId = "123e4567-e89b-12d3-a456-426614174001";
     const updates: Partial<UpdateTables<"trips">> = { name: "Updated" };
     const row: Tables<"trips"> = {
       budget: 500,
@@ -104,7 +106,7 @@ describe("typed-helpers", () => {
       travelers: 2,
       trip_type: "leisure",
       updated_at: "2025-02-02T00:00:00Z",
-      user_id: "u2",
+      user_id: userId,
     };
     const chain = (client as unknown as { from: (table: string) => MockChain }).from(
       "trips"

@@ -3,12 +3,13 @@ import { createTrip, mapTripRowToUi, updateTrip } from "@/lib/repositories/trips
 import type { Tables } from "@/lib/supabase/database.types";
 import * as helpers from "@/lib/supabase/typed-helpers";
 
-vi.mock("@/lib/supabase/client", () => ({
+vi.mock("@/lib/supabase", () => ({
   createClient: () => ({}),
 }));
 
 describe("trips-repo", () => {
   it("mapTripRowToUI shapes core fields", () => {
+    const userId = "123e4567-e89b-12d3-a456-426614174010";
     const row: Tables<"trips"> = {
       budget: 1200,
       created_at: "2025-03-01T00:00:00Z",
@@ -24,7 +25,7 @@ describe("trips-repo", () => {
       travelers: 1,
       trip_type: "leisure",
       updated_at: "2025-03-01T00:00:00Z",
-      user_id: "u42",
+      user_id: userId,
     };
     const ui = mapTripRowToUi(row);
     expect(ui.id).toBe("42");
@@ -33,6 +34,7 @@ describe("trips-repo", () => {
   });
 
   it("createTrip uses insertSingle and returns UI mapping", async () => {
+    const userId = "123e4567-e89b-12d3-a456-426614174011";
     const row: Tables<"trips"> = {
       budget: 100,
       created_at: "2025-01-01T00:00:00Z",
@@ -48,7 +50,7 @@ describe("trips-repo", () => {
       travelers: 1,
       trip_type: "leisure",
       updated_at: "2025-01-01T00:00:00Z",
-      user_id: "u1",
+      user_id: userId,
     };
     vi.spyOn(helpers, "insertSingle").mockResolvedValue({ data: row, error: null });
     const ui = await createTrip({
@@ -58,13 +60,14 @@ describe("trips-repo", () => {
       name: "New",
       start_date: "2025-01-01",
       travelers: 1,
-      user_id: "u1",
+      user_id: userId,
     });
     expect(ui.id).toBe("1");
     expect(ui.name).toBe("New");
   });
 
   it("updateTrip uses updateSingle and returns UI mapping", async () => {
+    const userId = "123e4567-e89b-12d3-a456-426614174012";
     const row: Tables<"trips"> = {
       budget: 300,
       created_at: "2025-02-01T00:00:00Z",
@@ -80,10 +83,10 @@ describe("trips-repo", () => {
       travelers: 2,
       trip_type: "leisure",
       updated_at: "2025-02-01T00:00:00Z",
-      user_id: "u2",
+      user_id: userId,
     };
     vi.spyOn(helpers, "updateSingle").mockResolvedValue({ data: row, error: null });
-    const ui = await updateTrip(2, "u2", { name: "Upd" });
+    const ui = await updateTrip(2, userId, { name: "Upd" });
     expect(ui.id).toBe("2");
     expect(ui.name).toBe("Upd");
   });

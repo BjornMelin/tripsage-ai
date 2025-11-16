@@ -169,7 +169,7 @@ export function setupCalendarMocks(overrides?: {
   });
 
   // Apply vi.doMock calls
-  vi.doMock("@/lib/supabase/server", () => ({
+  vi.doMock("@/lib/supabase", () => ({
     createServerSupabase: CALENDAR_MOCKS.createServerSupabase,
   }));
 

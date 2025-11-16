@@ -1,3 +1,11 @@
+/**
+ * @fileoverview Upcoming flights dashboard component.
+ *
+ * Displays a card-based list of upcoming flights with departure/arrival times,
+ * flight status, duration, and pricing information. Integrates with trip data
+ * and provides links to associated trips and flight search functionality.
+ */
+
 "use client";
 
 import { Clock, Plane } from "lucide-react";
@@ -14,12 +22,27 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { type UpcomingFlight, useUpcomingFlights } from "@/hooks/use-trips";
+import { DateUtils } from "@/lib/dates/unified-date-utils";
 
+/**
+ * Props for the UpcomingFlights component.
+ *
+ * @interface UpcomingFlightsProps
+ */
 interface UpcomingFlightsProps {
+  /** Maximum number of flights to display. Defaults to 3. */
   limit?: number;
+  /** Whether to show an empty state when no flights are available. Defaults to true. */
   showEmpty?: boolean;
 }
 
+/**
+ * Skeleton loading component for flight cards.
+ *
+ * Displays placeholder content while flight data is loading.
+ *
+ * @returns A skeleton flight card component.
+ */
 function FlightCardSkeleton() {
   return (
     <div className="p-3 border border-border rounded-lg">
@@ -48,22 +71,53 @@ function FlightCardSkeleton() {
   );
 }
 
+/**
+ * Individual flight card component.
+ *
+ * Displays detailed information about a single upcoming flight including
+ * departure/arrival times, status, duration, price, and associated trip links.
+ *
+ * @param props - Component props.
+ * @param props.flight - The flight data to display.
+ * @returns A formatted flight card component.
+ */
 function FlightCard({ flight }: { flight: UpcomingFlight }) {
+  /**
+   * Formats a time string to HH:mm format.
+   *
+   * @param timeString - ISO time string to format.
+   * @returns Formatted time string.
+   */
   const formatTime = (timeString: string) => {
-    return new Date(timeString).toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      hour12: false,
-      minute: "2-digit",
-    });
+    try {
+      const date = DateUtils.parse(timeString);
+      return DateUtils.format(date, "HH:mm");
+    } catch {
+      return "Invalid time";
+    }
   };
 
+  /**
+   * Formats a time string to MMM d format.
+   *
+   * @param timeString - ISO time string to format.
+   * @returns Formatted date string.
+   */
   const formatDate = (timeString: string) => {
-    return new Date(timeString).toLocaleDateString("en-US", {
-      day: "numeric",
-      month: "short",
-    });
+    try {
+      const date = DateUtils.parse(timeString);
+      return DateUtils.format(date, "MMM d");
+    } catch {
+      return "Invalid date";
+    }
   };
 
+  /**
+   * Returns the appropriate badge variant for a flight status.
+   *
+   * @param status - The flight status.
+   * @returns Badge variant name.
+   */
   const getStatusColor = (status: UpcomingFlight["status"]) => {
     switch (status) {
       case "upcoming":
@@ -79,6 +133,11 @@ function FlightCard({ flight }: { flight: UpcomingFlight }) {
     }
   };
 
+  /**
+   * Formats flight duration in minutes to "Xh Ym" format.
+   *
+   * @returns Formatted duration string.
+   */
   const getDuration = () => {
     const hours = Math.floor(flight.duration / 60);
     const minutes = flight.duration % 60;
@@ -129,7 +188,14 @@ function FlightCard({ flight }: { flight: UpcomingFlight }) {
           )}
         </div>
         <div className="flex items-center gap-1">
-          <span className="font-medium">${flight.price}</span>
+          <span className="font-medium">
+            {flight.currency && flight.currency.trim().length > 0
+              ? new Intl.NumberFormat("en-US", {
+                  currency: flight.currency,
+                  style: "currency",
+                }).format(flight.price)
+              : `$${flight.price}`}
+          </span>
         </div>
       </div>
 
@@ -159,6 +225,13 @@ function FlightCard({ flight }: { flight: UpcomingFlight }) {
   );
 }
 
+/**
+ * Empty state component for when no upcoming flights are available.
+ *
+ * Displays a message with a call-to-action to search for flights.
+ *
+ * @returns An empty state component with flight search CTA.
+ */
 function EmptyState() {
   return (
     <div className="text-center py-8">
@@ -173,6 +246,13 @@ function EmptyState() {
   );
 }
 
+/**
+ * Renders the upcoming flights dashboard widget with loading and empty states.
+ *
+ * @param props - Component configuration such as max flights and empty-state
+ * preference.
+ * @returns Card containing fetched flights or fallback UIs.
+ */
 export function UpcomingFlights({ limit = 3, showEmpty = true }: UpcomingFlightsProps) {
   const { data: upcomingFlights = [], isLoading } = useUpcomingFlights({
     limit: limit,

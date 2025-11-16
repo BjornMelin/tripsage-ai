@@ -50,7 +50,7 @@ import {
   SourcesTrigger,
 } from "@/components/ai-elements/sources";
 import { StayCard } from "@/components/ai-elements/stay-card";
-import { useSupabase } from "@/lib/supabase/client";
+import { useSupabase } from "@/lib/supabase";
 import { parseSchemaCard } from "@/lib/ui/parse-schema-card";
 
 /**

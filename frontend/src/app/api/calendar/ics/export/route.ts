@@ -12,7 +12,8 @@ import ical from "ical-generator";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-
+import { RecurringDateGenerator } from "@/lib/dates/recurring-rules";
+import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { calendarEventSchema } from "@/lib/schemas/calendar";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -43,13 +44,13 @@ const exportRequestSchema = z.object({
 });
 
 /**
- * POST /api/calendar/ics/export
- * Generates ICS calendar file from events payload.
- * Requires authenticated user session with rate limiting.
- * @param req - NextRequest containing calendar name, events array, and timezone
- * @returns NextResponse with ICS file attachment or error
+ * Handles the ICS export request by validating payloads, enforcing rate
+ * limits, and returning the generated calendar file.
+ *
+ * @param req - HTTP request containing calendar metadata and Google-style events.
+ * @returns Response with the ICS attachment or JSON error payload.
  */
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     const supabase = await createServerSupabase();
     const {
@@ -94,30 +95,37 @@ export async function POST(req: NextRequest) {
         event.start.dateTime instanceof Date
           ? event.start.dateTime
           : event.start.date
-            ? new Date(event.start.date)
+            ? DateUtils.parse(event.start.date)
             : new Date();
 
       const endDate =
         event.end.dateTime instanceof Date
           ? event.end.dateTime
           : event.end.date
-            ? new Date(event.end.date)
-            : new Date(startDate.getTime() + 60 * 60 * 1000); // Default 1 hour
+            ? DateUtils.parse(event.end.date)
+            : DateUtils.add(startDate, 1, "hours"); // Default 1 hour
 
-      const ev = calendar.createEvent({
+      const eventData = {
         description: event.description,
         end: endDate,
         location: event.location,
         start: startDate,
         summary: event.summary,
-      });
+        ...(event.recurrence?.length
+          ? {
+              recurrence: [
+                RecurringDateGenerator.toRRule(
+                  RecurringDateGenerator.parseRRule(event.recurrence[0])
+                ),
+              ],
+            }
+          : {}),
+        ...(event.iCalUID ? { uid: event.iCalUID } : {}),
+        ...(event.created ? { created: event.created } : {}),
+        ...(event.updated ? { lastModified: event.updated } : {}),
+      };
 
-      if (event.recurrence?.length) {
-        ev.repeating({
-          // biome-ignore lint/suspicious/noExplicitAny: third-party type casting for ical types
-          freq: parseRecurrenceFrequency(event.recurrence[0]) as unknown as any,
-        });
-      }
+      const ev = calendar.createEvent(eventData);
 
       if (event.attendees?.length) {
         for (const att of event.attendees) {
@@ -166,9 +174,10 @@ export async function POST(req: NextRequest) {
 }
 
 /**
- * Convert event attendee response status to iCal format.
- * @param status - Attendee response status string
- * @returns iCal-compliant attendee status
+ * Converts an attendee response status to the canonical iCal constant.
+ *
+ * @param status - Google Calendar style attendee status.
+ * @returns iCal attendee status string.
  */
 function eventAttendeeStatusToIcal(
   status: string
@@ -186,9 +195,10 @@ function eventAttendeeStatusToIcal(
 }
 
 /**
- * Convert reminder method to iCal format.
- * @param method - Reminder notification method string
- * @returns iCal-compliant reminder method
+ * Normalizes reminder methods to the subset supported by iCal alarms.
+ *
+ * @param method - Notification channel provided by Google events.
+ * @returns Alarm type accepted by ical-generator.
  */
 function reminderMethodToIcal(method: string): "display" | "email" | "audio" {
   switch (method) {
@@ -197,20 +207,4 @@ function reminderMethodToIcal(method: string): "display" | "email" | "audio" {
     default:
       return "display";
   }
-}
-
-/**
- * Parse recurrence frequency from RFC 5545 RRULE string.
- * @param rrule - RFC 5545 recurrence rule string
- * @returns Parsed recurrence frequency
- */
-function parseRecurrenceFrequency(
-  rrule: string
-): "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY" {
-  const upper = rrule.toUpperCase();
-  if (upper.includes("FREQ=DAILY")) return "DAILY";
-  if (upper.includes("FREQ=WEEKLY")) return "WEEKLY";
-  if (upper.includes("FREQ=MONTHLY")) return "MONTHLY";
-  if (upper.includes("FREQ=YEARLY")) return "YEARLY";
-  return "DAILY"; // Default
 }

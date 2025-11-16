@@ -13,26 +13,16 @@ describe("env/server", () => {
   describe("getServerEnv", () => {
     it("should throw when called on client side", () => {
       // Mock window to simulate client environment
-      const originalWindow = global.window;
-      Object.defineProperty(global, "window", {
-        configurable: true,
-        value: {},
-        writable: true,
-      });
+      const originalWindow = (globalThis as { window?: unknown }).window;
+      // In tests, jsdom defines a Window-like object; replace it with a
+      // plain object so getServerEnv() treats it as a client-only context.
+      (globalThis as { window?: unknown }).window = {};
 
       try {
         expect(() => getServerEnv()).toThrow("cannot be called on client side");
       } finally {
         // Restore
-        if (originalWindow) {
-          Object.defineProperty(global, "window", {
-            configurable: true,
-            value: originalWindow,
-            writable: true,
-          });
-        } else {
-          (global as { window?: unknown }).window = undefined;
-        }
+        (globalThis as { window?: unknown }).window = originalWindow;
       }
     });
 

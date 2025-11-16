@@ -5,6 +5,12 @@
  * error handling across all tools.
  */
 
+import type { ToolError, ToolErrorCode } from "@/lib/schemas/tools";
+import { toolErrorSchema } from "@/lib/schemas/tools";
+
+// Re-export types from schemas
+export type { ToolError, ToolErrorCode };
+
 /**
  * Tool error codes organized by category.
  *
@@ -44,25 +50,12 @@ export const TOOL_ERROR_CODES = {
 } as const;
 
 /**
- * Type for tool error codes.
- */
-export type ToolErrorCode = (typeof TOOL_ERROR_CODES)[keyof typeof TOOL_ERROR_CODES];
-
-/**
- * Extended Error type with tool-specific metadata.
- */
-export interface ToolError extends Error {
-  code: ToolErrorCode;
-  meta?: Record<string, unknown>;
-}
-
-/**
  * Create a standardized tool error.
  *
  * @param code - Error code from TOOL_ERROR_CODES.
  * @param message - Optional error message (defaults to code).
  * @param meta - Optional metadata for observability.
- * @returns ToolError instance.
+ * @returns ToolError instance (validated via Zod schema).
  */
 export function createToolError(
   code: ToolErrorCode,
@@ -74,6 +67,8 @@ export function createToolError(
   if (meta) {
     error.meta = meta;
   }
+  // Validate error structure using Zod schema
+  toolErrorSchema.parse({ code, message: error.message, meta: error.meta });
   return error;
 }
 

@@ -30,7 +30,7 @@ vi.mock("@/lib/supabase/rpc", () => ({
   insertUserApiKey: MOCK_INSERT,
 }));
 
-vi.mock("@/lib/supabase/server", () => ({
+vi.mock("@/lib/supabase", () => ({
   createServerSupabase: CREATE_SUPABASE,
 }));
 

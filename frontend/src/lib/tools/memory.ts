@@ -95,7 +95,7 @@ export const searchUserMemories = tool({
     return data ?? [];
   },
   inputSchema: z.object({
-    limit: z.number().int().min(1).max(20).default(5),
+    limit: z.int().min(1).max(20).default(5),
     query: z.string().min(1),
   }),
 });

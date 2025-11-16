@@ -4,9 +4,14 @@
  */
 
 import { z } from "zod";
+import type { ValidationError, ValidationResult } from "@/lib/schemas/validation";
+import { validationErrorSchema } from "@/lib/schemas/validation";
+
+// Re-export types from schemas
+export type { ValidationError, ValidationResult };
 
 // Error types for different validation contexts
-export enum ValidationContext {
+export enum ValidationContextEnum {
   Api = "api",
   Form = "form",
   Component = "component",
@@ -17,24 +22,35 @@ export enum ValidationContext {
   Budget = "budget",
 }
 
-// Validation error interface
-export interface ValidationError {
-  context: ValidationContext;
-  field?: string;
-  path?: string[];
-  message: string;
-  code: string;
-  value?: unknown;
-  timestamp: Date;
-}
-
-// Validation result interface
-export interface ValidationResult<T = unknown> {
-  success: boolean;
-  data?: T;
-  errors?: ValidationError[];
-  warnings?: string[];
-}
+// Export ValidationContext as both type and runtime value
+export type ValidationContext =
+  | "api"
+  | "form"
+  | "component"
+  | "store"
+  | "search"
+  | "chat"
+  | "trip"
+  | "budget";
+// biome-ignore lint/style/useNamingConvention: Enum-like constant object with PascalCase properties
+export const ValidationContext = {
+  // biome-ignore lint/style/useNamingConvention: Enum-like constant with PascalCase
+  Api: "api" as const,
+  // biome-ignore lint/style/useNamingConvention: Enum-like constant with PascalCase
+  Budget: "budget" as const,
+  // biome-ignore lint/style/useNamingConvention: Enum-like constant with PascalCase
+  Chat: "chat" as const,
+  // biome-ignore lint/style/useNamingConvention: Enum-like constant with PascalCase
+  Component: "component" as const,
+  // biome-ignore lint/style/useNamingConvention: Enum-like constant with PascalCase
+  Form: "form" as const,
+  // biome-ignore lint/style/useNamingConvention: Enum-like constant with PascalCase
+  Search: "search" as const,
+  // biome-ignore lint/style/useNamingConvention: Enum-like constant with PascalCase
+  Store: "store" as const,
+  // biome-ignore lint/style/useNamingConvention: Enum-like constant with PascalCase
+  Trip: "trip" as const,
+} as const;
 
 // Custom validation error class
 export class TripSageValidationError extends Error {
@@ -76,7 +92,7 @@ export const convertZodError = (
   zodError: z.ZodError,
   context: ValidationContext
 ): ValidationError[] => {
-  return zodError.issues.map((issue) => ({
+  const errors = zodError.issues.map((issue) => ({
     code: issue.code,
     context,
     field: issue.path.join(".") || undefined,
@@ -86,6 +102,8 @@ export const convertZodError = (
     // biome-ignore lint/suspicious/noExplicitAny: Zod issue type lacks received property in type definitions
     value: (issue as any).received,
   }));
+  // Validate errors using Zod schema
+  return errors.map((err) => validationErrorSchema.parse(err));
 };
 
 // Generic validation function
@@ -400,19 +418,19 @@ export const getValidationSummary = (
 
 // Type guards for common validation patterns
 export const isValidEmail = (value: unknown): value is string => {
-  return typeof value === "string" && z.string().email().safeParse(value).success;
+  return typeof value === "string" && z.email().safeParse(value).success;
 };
 
 export const isValidUuid = (value: unknown): value is string => {
-  return typeof value === "string" && z.string().uuid().safeParse(value).success;
+  return typeof value === "string" && z.uuid().safeParse(value).success;
 };
 
 export const isValidDate = (value: unknown): value is string => {
-  return typeof value === "string" && z.string().date().safeParse(value).success;
+  return typeof value === "string" && z.iso.date().safeParse(value).success;
 };
 
 export const isValidUrl = (value: unknown): value is string => {
-  return typeof value === "string" && z.string().url().safeParse(value).success;
+  return typeof value === "string" && z.url().safeParse(value).success;
 };
 
 // Validation hooks for React components
@@ -429,15 +447,14 @@ export const useValidation = <T>(
 
 // Export commonly used validators
 export const validators = {
-  date: (value: unknown) => validate(z.string().date(), value, ValidationContext.Form),
-  email: (value: unknown) =>
-    validate(z.string().email(), value, ValidationContext.Form),
+  date: (value: unknown) => validate(z.iso.date(), value, ValidationContext.Form),
+  email: (value: unknown) => validate(z.email(), value, ValidationContext.Form),
   nonEmptyString: (value: unknown) =>
     validate(z.string().min(1), value, ValidationContext.Form),
   positiveNumber: (value: unknown) =>
     validate(z.number().positive(), value, ValidationContext.Form),
-  url: (value: unknown) => validate(z.string().url(), value, ValidationContext.Form),
-  uuid: (value: unknown) => validate(z.string().uuid(), value, ValidationContext.Form),
+  url: (value: unknown) => validate(z.url(), value, ValidationContext.Form),
+  uuid: (value: unknown) => validate(z.uuid(), value, ValidationContext.Form),
 };
 
 // Note: ValidationError interface already exported above

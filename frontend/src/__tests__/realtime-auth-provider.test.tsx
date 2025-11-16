@@ -13,7 +13,7 @@ const mockOnAuthStateChange = vi
     data: { subscription: { unsubscribe: vi.fn() } },
   }));
 
-vi.mock("@/lib/supabase/client", () => ({
+vi.mock("@/lib/supabase", () => ({
   getBrowserClient: () => ({
     auth: { onAuthStateChange: mockOnAuthStateChange },
     realtime: { setAuth: mockSetAuth },
@@ -33,7 +33,7 @@ describe("RealtimeAuthProvider", () => {
   });
 
   it("sets auth on login", async () => {
-    const { getBrowserClient } = await import("@/lib/supabase/client");
+    const { getBrowserClient } = await import("@/lib/supabase");
     getBrowserClient();
     render(<RealtimeAuthProvider />);
 
@@ -51,7 +51,7 @@ describe("RealtimeAuthProvider", () => {
   });
 
   it("clears auth on logout and on unmount", async () => {
-    const { getBrowserClient } = await import("@/lib/supabase/client");
+    const { getBrowserClient } = await import("@/lib/supabase");
     getBrowserClient();
     const { unmount } = render(<RealtimeAuthProvider />);
 

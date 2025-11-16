@@ -151,7 +151,7 @@ describe("ItineraryBuilder", () => {
 
   describe("Add Destination Dialog", () => {
     it("should add destination with basic fields", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       MockAddDestination.mockResolvedValue(undefined);
 
       render(<ItineraryBuilder trip={mockTrip} />);
@@ -193,7 +193,7 @@ describe("ItineraryBuilder", () => {
 
   describe("Form Validation and Edge Cases", () => {
     it("should handle numeric input for estimated cost", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       render(<ItineraryBuilder trip={mockTrip} />);
 
       const addButton = screen.getByText("Add Destination");

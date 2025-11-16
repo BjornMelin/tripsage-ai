@@ -30,13 +30,7 @@ from .flight import (
     Flight,
 )
 
-# Memory models (Mem0 + pgvector)
-from .memory import (
-    Memory,
-    MemoryCreate,
-    MemoryUpdate,
-    SessionMemory,
-)
+# Memory models removed; handled via frontend AI SDK v6
 from .price_history import EntityType, PriceHistory
 from .saved_option import OptionType, SavedOption
 
@@ -81,10 +75,7 @@ __all__ = [
     # Flight
     "Flight",
     "FlightBookingStatus",
-    # Memory models
-    "Memory",
-    "MemoryCreate",
-    "MemoryUpdate",
+    # Memory models removed; handled via frontend AI SDK v6
     # Removed: MessageWithTokenEstimate
     "OptionType",
     "PermissionLevel",
@@ -98,7 +89,6 @@ __all__ = [
     # "ItemType",
     # Search Parameters
     "SearchParameters",
-    "SessionMemory",
     # Transportation
     "Transportation",
     "TransportationBookingStatus",

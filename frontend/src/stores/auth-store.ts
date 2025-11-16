@@ -51,11 +51,11 @@ const USER_SECURITY_SCHEMA = z.object({
  * Zod schema for validating user profile.
  */
 const USER_SCHEMA = z.object({
-  avatarUrl: z.string().url().optional(),
+  avatarUrl: z.url().optional(),
   bio: z.string().optional(),
   createdAt: z.string(),
   displayName: z.string().optional(),
-  email: z.string().email(),
+  email: z.email(),
   firstName: z.string().optional(),
   id: z.string(),
   isEmailVerified: z.boolean(),
@@ -64,7 +64,7 @@ const USER_SCHEMA = z.object({
   preferences: USER_PREFERENCES_SCHEMA.optional(),
   security: USER_SECURITY_SCHEMA.optional(),
   updatedAt: z.string(),
-  website: z.string().url().optional(),
+  website: z.url().optional(),
 });
 
 /**
