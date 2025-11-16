@@ -49,14 +49,21 @@ vi.mock("@/lib/embeddings/generate", () => ({
 }));
 
 // Mock React Query globally for sync behavior
-vi.mock("@tanstack/react-query", () => ({
-  QueryClient: vi.fn().mockImplementation(() => ({
-    clear: vi.fn(),
-    invalidateQueries: vi.fn(),
-    refetchQueries: vi.fn(),
-    setQueryData: vi.fn(),
-  })),
-  QueryClientProvider: ({ children }: { children: React.ReactNode }) => children,
+vi.mock("@tanstack/react-query", () => {
+  class QueryClientMock {
+    clear = vi.fn();
+    invalidateQueries = vi.fn();
+    refetchQueries = vi.fn();
+    setQueryData = vi.fn();
+    
+    constructor(options?: any) {
+      // Accept options but don't use them in mock
+    }
+  }
+  
+  return {
+    QueryClient: QueryClientMock,
+    QueryClientProvider: ({ children }: { children: React.ReactNode }) => children,
   useMutation: vi.fn(() => ({
     data: { status: "success" }, // Provide mock success data
     error: null,
@@ -82,7 +89,8 @@ vi.mock("@tanstack/react-query", () => ({
     refetchQueries: vi.fn(),
     setQueryData: vi.fn(),
   })),
-}));
+  };
+});
 
 // Mock AI SDK for sync streaming
 vi.mock("ai", () => ({
