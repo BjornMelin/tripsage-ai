@@ -1,333 +1,301 @@
-# Repository Guidelines
-
-## Project Structure & Module Organization
-
-See [docs/architecture/project-structure.md](docs/architecture/project-structure.md) for project structure details.
-
-**Key Guidelines:**
-
-- `tripsage/api/` hosts the FastAPI application entry point and core API logic.
-- `tripsage_core/` holds domain services, models, and shared exceptions—extend logic here, not in API layers. Services are split into `business/` and `infrastructure/` subdirectories.
-- `frontend/src/` is the Next.js 16 workspace with `app/`, `components/`, `lib/`, `hooks/`, `contexts/`, `stores/`, `types/`, and `schemas/` directories.
-- `tests/` splits into `unit/`, `integration/`, `e2e/`, `performance/`, and `security/`; fixtures live in `tests/fixtures/` and `tests/factories/`.
-- Supporting automation sits in `scripts/` and `docker/`; configuration samples ship with `.env.example`.
-
-**Key Files:**
-
-- Backend: `tripsage/api/routers/`, `tripsage_core/services/`, `tripsage_core/models/`, `tripsage_core/exceptions.py`
-- Frontend: `frontend/src/app/api/`, `frontend/src/lib/providers/registry.ts`, `frontend/src/lib/tools/`, `frontend/src/components/ai-elements/`
-- Config: `pyproject.toml`, `frontend/package.json`, `frontend/biome.json`, `.pre-commit-config.yaml`
-
-**BYOK routes must stay server-only and fully dynamic: add `import "server-only";` plus `export const dynamic = "force-dynamic"` (no `'use cache'`) whenever secrets or per-user keys are served.**
-
-## Tech Stack & Versions
-
-See `pyproject.toml` and `frontend/package.json` for canonical versions.
-
-**Backend:** Python 3.13+, FastAPI, SQLAlchemy async, Supabase, Pydantic
-
-**Frontend:**
-
-- Next.js `16.0.1`; React `19.2.0`
-- AI SDK core `ai@6.0.0-beta.99`; UI hooks `@ai-sdk/react@3.0.0-beta.99`
-- Providers: `@ai-sdk/openai@3.0.0-beta.57`, `@ai-sdk/anthropic@3.0.0-beta.53`
-- Data/Auth: `@supabase/ssr@0.7.0`, `@supabase/supabase-js@2.76.1`
-- Ratelimit & cache: `@upstash/ratelimit@2.0.7`, `@upstash/redis@1.35.6`, `@upstash/qstash@2.8.4`
-- Styling: Tailwind CSS v4, Biome `2.3.4`, Vitest `4.0.8`
-
-## Build, Test, and Development Commands
-
-### Bootstrap
-
-- Python: `uv sync --all-extras`
-- Frontend: `cd frontend && pnpm install`
-
-### Run Services
-
-- API: `uv run python -m tripsage.api.main` (port 8000)
-- Frontend: `cd frontend && pnpm dev` (port 3000)
-- Containers: `docker-compose up --build`
-
-### Testing
-
-- Backend: `uv run pytest --cov=tripsage --cov=tripsage_core` (≥90% coverage)
-- Frontend: `pnpm test:run` (target ≥85% coverage), `pnpm test:e2e` (Playwright)
-
-See Quality Gates section for formatting/linting commands. For file-scoped commands, see respective config files.
-
-## Coding Style & Naming Conventions
-
-### Python Style Guide
-
-- Type hints: Required; use modern Python 3.9+ syntax (`list[...]`, `dict[...]`, `X | None`).
-- Docstrings: Google-style with `Args:`, `Returns:`, `Raises:` sections. See [docs/developers/code-standards.md](docs/developers/code-standards.md) for examples.
-- Line length: 88 characters (enforced via Ruff).
-- Async-first: Use `async`/`await` for all I/O operations.
-- Exceptions: Derive from `CoreTripSageError` (`tripsage_core.exceptions`).
-- Naming: `snake_case` functions/variables, `PascalCase` classes, `UPPER_CASE` constants.
-
-### TypeScript Style Guide
-
-- Follow Google's TypeScript Style Guide; enforce with Biome.
-- File headers: `@fileoverview` only when it adds value.
-- File order: `@fileoverview` → blank line → `"use client"` (where needed) → blank line → imports → implementation.
-- JSDoc/TSDoc: Use `/** ... */` for user-facing docs; `//` for implementation notes.
-- JSDoc formatting: Markdown; tags on separate lines; wrap `@param`/`@return` text indented by four spaces.
-- Naming: PascalCase for components/hooks in `frontend/app`, camelCase for utilities in `frontend/lib`.
-- Type safety: Strict mode; avoid `any`; handle null/undefined.
-
-### Biome Configuration
-
-- Single gate: `pnpm biome:check` (fail on warnings), `pnpm biome:fix`, `pnpm format:biome`.
-- See `frontend/biome.json` for configuration. Do not change unless explicitly requested.
-
-### Formatting
-
-- Python: Automated via Ruff (`ruff format .`). Never hand-format generated OpenAPI clients—regenerate instead.
-- TypeScript: Automated via Biome (`pnpm biome:fix`). Never hand-format generated code.
-
-## Library and Design Principles
-
-- Library-first: Prefer maintained libraries that cover ≥80% needs with ≤30% custom code. Use AI SDK v6 primitives (streaming, tools, structured outputs) instead of bespoke orchestrators.
-- KISS/DRY/YAGNI: Keep solutions straightforward; avoid clever abstractions unless required. Aggressively remove duplication. Implement only what's needed now.
-- Keep adapters thin; handlers/services cohesive. Avoid wrapping AI SDK streaming.
-- Share Zod v4+ schemas via `src/schemas`; don't duplicate types between client/server.
-- Common pitfalls: Don't re-implement streaming/tool calling (use AI SDK v6); don't duplicate Zod types; avoid module-scope clients/ratelimiters in Route Handlers—build inside requests.
-
-## Frontend Development
-
-When working on files under `frontend/`, follow these instructions which supersede general guidelines where specified.
-
-### Ground Rules
-
-- Library-first, KISS/DRY/YAGNI: See Library and Design Principles section.
-- Repo gates: Biome formatting+linting, `tsc --noEmit`, and targeted Vitest. Treat warnings as failures.
-- IDs & timestamps: Use `@/lib/security/random` (`secureUUID`, `secureId`, `nowIso`). Do not use `Math.random` or direct `crypto.randomUUID`.
-- Auth & caching: Next 16 `cacheComponents: true` enabled; do not publicly cache auth-dependent responses. Keep Supabase cookie reads in server contexts only.
-- Evidence & safety: Follow primary docs; don't echo secrets; no client-side env usage for server keys.
-
-### Models and Providers
-
-#### Vercel AI Gateway (Primary)
-
-- Primary routing layer for multi-provider support, observability, fallbacks, metrics, and budgets.
-- Users provide their own provider API keys (OpenAI, Anthropic, xAI, Gemini, etc.) which are routed through Gateway.
-- Configure via `createGateway({ baseURL: "https://ai-gateway.vercel.sh/v1", apiKey: process.env.AI_GATEWAY_API_KEY })` from the `ai` package (v6).
-- Users can also use their own provider keys directly through Gateway without a Gateway API key; billing goes to their provider accounts.
-- Primary docs: vercel.com/docs/ai-gateway (OpenAI-compatible API).
-
-#### BYOK Provider Registry (Alternative)
-
-- Source: `frontend/src/lib/providers/registry.ts:1`.
-- Direct provider resolution without Gateway; use when Gateway is unavailable or not desired.
-- Resolves user-specific keys server-side and returns a ready `LanguageModel` for AI SDK v6.
-- Supported providers: `openai`, `openrouter`, `anthropic`, `xai` (OpenAI-compatible for xAI).
-- OpenRouter uses the OpenAI provider configured with `baseURL: "https://openrouter.ai/api/v1"` (OpenAI‑compatible). No attribution headers.
-- Defaults (subject to change): `openai → gpt-4o-mini`, `anthropic → claude-3-5-sonnet-20241022`, `openrouter → openai/gpt-4o-mini`.
-- Usage pattern (Route Handler):
-
-```ts
-import type { NextRequest } from "next/server";
-import { resolveProvider } from "@/lib/providers/registry";
-import { convertToModelMessages, streamText } from "ai";
-
-export async function POST(req: NextRequest) {
-  const { userId, messages, model } = await req.json();
-  const { model: llm } = await resolveProvider(userId, model);
-  const result = await streamText({
-    model: llm,
-    messages: convertToModelMessages(messages),
-  });
-  return result.toUIMessageStreamResponse();
-}
-```
-
-**Note:** When using Gateway, keep a single routing path (either Gateway or BYOK registry) for simplicity; don't mix per-route.
-
-### AI SDK v6 Patterns
-
-#### Streaming Route with Tools
-
-Use Next.js Route Handlers; keep side-effects in the adapter; define tools with Zod; stream tokens. Return `result.toUIMessageStreamResponse()` for compatibility with `@ai-sdk/react` UI.
-
-```ts
-import { z } from "zod";
-import { tool, streamText, Output, convertToModelMessages } from "ai";
-import { openai } from "@ai-sdk/openai"; // or a model from resolveProvider
-
-export async function POST(req: Request) {
-  const { messages } = (await req.json()) as { messages: unknown };
-  const weather = tool({
-    description: "Get weather in a city",
-    parameters: z.object({ city: z.string().min(1) }),
-    execute: async ({ city }) => ({ city, tempC: 22 }),
-  });
-  const result = await streamText({
-    model: openai("gpt-4o"),
-    messages: convertToModelMessages(messages),
-    tools: { weather },
-    output: Output.object({ schema: z.object({ summary: z.string() }) }),
-  });
-  return result.toUIMessageStreamResponse();
-}
-```
-
-For structured JSON without tools, use `generateObject`/`streamObject` with Zod. See `frontend/src/app/api/ai/stream/route.ts:1` for examples.
-
-**Key points:** Always convert UI messages server-side with `convertToModelMessages(messages)`. Token budgeting: see `frontend/src/app/api/chat/_handler.ts:1` for helpers. Docs: ai-sdk.dev.
-
-### Client UI
-
-- Hooks: `useChat` from `@ai-sdk/react` manages chat state and streaming.
-- Transport: prefer `DefaultChatTransport` with `api: "/api/chat/stream"` for resumable streams.
-- UI primitives: `src/components/ai-elements/*` (Message, Response, PromptInput, Sources, etc.).
-- Reference: `frontend/src/app/chat/page.tsx:1` shows end-to-end usage.
-
-### Next.js 16 Caching and Supabase SSR
-
-- Caching: `cacheComponents: true` enabled. Use `'use cache'` for file/component caching; `'use cache: private'` for user-specific data. Use `cacheTag()` and `revalidateTag(tag)` for invalidation. Avoid public caching for routes that read/set cookies.
-- Prefetch: Next auto-prefetches `next/link` in viewport. Keep links minimal and meaningful.
-- Supabase SSR: Server client factory `frontend/src/lib/supabase/server.ts:1`; middleware `frontend/middleware.ts:1` refreshes sessions. Never access Supabase cookies in client components.
-
-Docs: Next.js caching guide, Supabase SSR docs.
-
-### Next.js Performance Optimizations
-
-- Fonts: use `next/font` to self-host fonts; prefer variable fonts and minimal subsets.
-- Images: use `next/image` with proper `sizes`, `priority` for LCP images, `placeholder="blur"`.
-- Code splitting: keep most components as Server Components; mark Client Components only where interaction is needed.
-- Dynamic import: use `next/dynamic` for heavy Client Components; consider `ssr: false` only for browser-only dependencies.
-- Compiler: `reactCompiler: true` enabled. Keep components pure; prefer stable references.
-
-Docs: Next.js image/font optimization, React Compiler intro.
-
-### Rate Limiting and Ephemeral State
-
-- Use `@upstash/ratelimit` + `@upstash/redis`. Initialize inside the request adapter (not module scope). Prefer `Redis.fromEnv()`.
-- Examples: `frontend/src/app/api/chat/route.ts:1` and stream routes under `frontend/src/app/api/**/route.ts`.
-
-Docs: Upstash ratelimit examples.
-
-### Styling and UI System
-
-- Tailwind v4 with `@tailwindcss/postcss`; import via `@import "tailwindcss";` (see `frontend/postcss.config.mjs:1` and `frontend/src/app/globals.css:1`).
-- CSS custom properties (`@layer base`) for theming; Tailwind v4 `@theme` tokens optional.
-- shadcn configured via `frontend/components.json:1` with `rsc: true` and `cssVariables: true`.
-
-Docs: Tailwind v4 functions & directives, shadcn UI.
-
-### React 19 Guidance
-
-- React Compiler: Enabled via `reactCompiler: true`. Automatically optimizes re-renders. Keep components pure; prefer stable references.
-- Data fetching: Prefer Server Components and Route Handlers/Server Actions. Avoid `useEffect` for server-fetchable data. Use Suspense boundaries for slow UI.
-- Actions: Use `useActionState` for form actions; `useOptimistic` for immediate UI feedback.
-
-Docs: React Compiler intro, `useActionState`, `useOptimistic`.
-
-### Frontend Checklists
-
-- Server routes: Next Route Handler; DI resolver for model; `streamText`; Upstash limit inside request; `toUIMessageStreamResponse()`. No module-scope state; typed inputs; explicit 4xx on validation errors.
-- Client: `useChat` with `DefaultChatTransport` to `/api/chat/stream`; local `ai-elements/*` components; no secrets.
-- Schemas: Share Zod via `src/schemas`; avoid duplication.
-- Tests: Targeted Vitest runs; no network; mock AI SDK/Upstash/Supabase at adapter boundary.
-- Style: Biome clean; TypeScript strict; minimal JSDoc (no duplicate types).
-
-## Testing Guidelines
-
-### Backend Testing
-
-- Name tests `test_*.py`; group under matching package path (e.g., `tests/unit/api/test_trips.py`).
-- Keep fixtures declarative in `tests/fixtures/`; prefer factory helpers over hardcoded JSON.
-- Coverage target: ≥90% (CI enforced). See [docs/developers/development-guide.md](docs/developers/development-guide.md) for details.
-
-**Test Structure:**
-
-```text
-tests/
-├── unit/           # Unit tests for individual components
-├── integration/    # Integration tests for API endpoints
-├── e2e/           # End-to-end tests
-├── performance/   # Performance and load tests
-├── security/      # Security tests
-├── fixtures/      # Test fixtures and data
-└── factories/     # Factory helpers for test data
-```
-
-### Frontend Testing
-
-- Framework: Vitest with jsdom default, V8 coverage. Config at `frontend/vitest.config.ts:1`.
-- Coverage thresholds: lines 90, statements 90, functions 90, branches 85. Coverage target: ≥85%.
-- Global setup: `frontend/src/test-setup.ts:1` wires mocks (Next navigation/router, Supabase, toast hooks, storage, etc.).
-- No real network calls. Mock `streamText`, provider factories, Supabase, and Upstash at adapter boundary.
-- Commands:
-  - Local: `cd frontend && pnpm test:run` for full suite, or `pnpm test` for watch/dev.
-  - CI: `cd frontend && pnpm test:ci` uses sharded `vitest run` invocations with constrained workers to avoid jsdom/V8 heap pressure.
-- See tests under `frontend/src/app/api/**/__tests__` and `frontend/src/lib/**/__tests__`.
-
-## Quality & Documentation Gates
-
-### Python Quality Gates
-
-- Format: `ruff format .`
-- Lint: `ruff check . --fix`
-- Type check: `uv run pyright`
-- Tests: `uv run pytest --cov=tripsage --cov=tripsage_core` (≥90% coverage)
-
-### TypeScript Quality Gates
-
-- Format/lint: `pnpm biome:check` (fail on warnings), `pnpm biome:fix`
-- Type check: `pnpm type-check`
-- Tests: `pnpm test:run` (≥85% coverage)
-
-CI enforces all gates; pre-commit runs a fast subset (see `.pre-commit-config.yaml`).
-
-### Documentation Requirements
-
-- **Python**: Google-style docstrings with `Args:`, `Returns:`, `Raises:` sections. See [docs/developers/code-standards.md](docs/developers/code-standards.md) for examples.
-- **TypeScript**: JSDoc/TSDoc for top-level exports and non-obvious functions. Use `//` for implementation notes, `/** ... */` for user-facing docs.
-
-## Commit & Pull Request Guidelines
-
-- Use Conventional Commit messages with scope: `feat(scope):`, `fix(scope):`, `chore(scope):`, etc. (e.g., `feat(cache): add Redis caching layer`)
-- Keep commits atomic; prefer checkpoints (`feat: …`, `test: …`).
-- Before opening PR, ensure lint, type, and test gates pass.
-- PRs must describe scope and list validation commands.
-
-## Security & Configuration Tips
-
-- Never commit secrets; copy from `.env.example` and store overrides in your `.env`.
-- Verify platform connectivity with `uv run python scripts/verification/verify_connection.py` and related checks before pushing.
-- Do not expose secrets in prompts, logs, or client code. Never echo `process.env` values.
-- Keep provider keys server-side (BYOK registry). When using Gateway, use the Gateway API key, not raw provider keys, on the server only.
-- Do not public-cache responses that read or set cookies.
-
-## Tool Calling & Workflows
-
-### Research & Information Gathering
-
-- **Library/API research**: `exa.get_code_context_exa` → `firecrawl.firecrawl_search` → `exa.crawling_exa` (specific URLs)
-- **Web research**: `exa.web_search_exa` for quick facts; `firecrawl.firecrawl_search` with deep research parameters for comprehensive multi-source research
-- **Single page extraction**: `firecrawl.firecrawl_scrape` for known URLs
-
-### Code Analysis & Review
-
-- **Architecture assessment**: `zen.analyze` for codebase structure, patterns, and scalability
-- **Systematic code review**: `zen.codereview` for quality, security, and best practices
-- **Security audit**: `zen.secaudit` for security vulnerabilities and compliance
-
-### Planning & Decision Making
-
-- **Task decomposition**: `zen.planner` for complex features/refactors; maintain plan via `update_plan` (single `in_progress` task)
-- **Deep investigation**: `zen.thinkdeep` for complex bugs, performance issues, or architecture decisions
-- **Multi-model consensus**: `zen.consensus` for contested choices; applies decision framework (Solution Leverage 35%, Application Value 30%, Maintenance Load 25%, Adaptability 10%)
-
-## Useful Documentation References
-
-- AI SDK v6: <https://ai-sdk.dev>
-- Next.js: Cache Components, caching guide, image/font optimization, React Compiler
-- React: Compiler intro, `useActionState`, `useOptimistic`
-- Supabase SSR: <https://supabase.com/docs/guides/auth/server-side/creating-a-client>
-- Tailwind v4: Functions & directives, v4 blog
-- Vercel AI Gateway: <https://vercel.com/docs/ai-gateway/openai-compat>
-- Upstash ratelimit: <https://vercel.com/templates/next.js/ratelimit-with-upstash-redis>
-- shadcn UI: <https://ui.shadcn.com>
+# AGENTS.md – TripSage AI Frontend Contract
+
+This file defines the required behavior and rules for all AI coding agents in this repository. When any other docs or history conflict with it, **AGENTS.md wins**.
+
+---
+
+## 0. Architecture, Scope, and Non‑Goals
+
+- **Frontend‑first architecture:** New capabilities must be implemented in `frontend/` using:
+  - Next.js `16.0.1`, React `19.2.0`
+  - AI SDK core `ai@6.0.0-beta.99` and `@ai-sdk/react@3.0.0-beta.99`
+  - Providers: `@ai-sdk/openai`, `@ai-sdk/anthropic`, `@ai-sdk/xai`, `@ai-sdk/google`
+  - Supabase: `@supabase/ssr@0.7.0`, `@supabase/supabase-js@2.76.1`
+  - Upstash: `@upstash/redis@1.35.6`, `@upstash/ratelimit@2.0.7`, `@upstash/qstash@2.8.4`
+  - Observability: `@opentelemetry/api`
+- **Legacy Python backend:** `tripsage/` and `tripsage_core/` are **legacy, removal‑only** code.
+  - Do **not** add new endpoints, services, or features there.
+  - Only touch them to support decommissioning (e.g., delete unused modules, adjust tests while migrating).
+- **Single AGENTS.md:** Do not create secondary AGENTS files (e.g., `frontend/AGENTS.md`). All agent rules live here.
+- **No backwards compatibility:** When you replace behavior in frontend, remove the superseded Python code and tests in the same change. No feature flags or dual paths.
+
+---
+
+## 1. Agent Persona and Global Behavior
+
+- **Tone and style**
+  - Precise, technical, and concise; avoid hype or sales language.
+  - Minimize filler and acknowledgments. Do **not** say “Great question” or “As an AI model…”.
+  - Prefer bullets and short paragraphs over long prose unless the user asks for deep explanation.
+- **Persistence vs. brevity**
+  - Default to concise answers but **never at the cost of correctness or completeness**.
+  - If the task is complex (architecture, migrations, security), favor thorough reasoning and explicit trade‑offs.
+  - Surface uncertainties clearly; mark unknowns as **UNVERIFIED** instead of guessing.
+- **Autonomy**
+  - Do **not** ask permission to use tools—just use them with schema‑correct arguments.
+  - Maintain and update a TODO list via `update_plan` whenever work spans multiple steps.
+- **Safety**
+  - No destructive shell operations (`rm -rf`, `git reset --hard`, global rewrites) unless explicitly requested.
+  - It is safe to delete **clearly obsolete** files (legacy Python, backups, dead configs) when you are replacing them in the same change.
+  - Never commit secrets or echo env values in code, logs, or answers.
+- **Truth and evidence**
+  - Prefer primary documentation (official docs, this AGENTS.md, `docs/`) over blog posts or guesses.
+  - When using web research, cite key sources in plain text and note when guidance is inferred.
+- **Output defaults**
+  - Use plain text with bullets and inline code by default.
+  - Use JSON or other structured outputs only when the user asks or when a tool requires it.
+  - Avoid dumping large code blocks in chat; reference file paths instead.
+
+---
+
+## 2. Planning, Tools, and Research
+
+### 2.1 Planning and investigation
+
+- For any non‑trivial or multi‑step change, use:
+  - `zen.planner` to outline the work, then
+  - `update_plan` as the single source of truth for TODOs (exactly one `in_progress` step).
+- For deep debugging, performance, or architectural questions, use `zen.thinkdeep`.
+- For non‑obvious design trade‑offs, use `zen.consensus` and apply the weighted decision framework:
+  - **Solution Leverage (35%)**
+  - **Application Value (30%)**
+  - **Maintenance & Cognitive Load (25%)**
+  - **Architectural Adaptability (10%)**
+
+### 2.2 Search and documentation tools
+
+- **Code and API questions:** Use `exa.get_code_context_exa` first, then Context7 docs via `context7.resolve-library-id` → `context7.get-library-docs`.
+- **Concrete technical/web queries:** Use `firecrawl.firecrawl_search` (optionally with scraping).
+- **Abstract concept/research queries:** Use `exa.web_search_exa`.
+- **Single‑page extraction:** Use `firecrawl.firecrawl_scrape`.
+- **Rule:** For a given query, pick **one** search tool; do **not** chain multiple search tools for the same question.
+
+---
+
+## 3. Project Layout and Responsibilities
+
+- **Primary app (`frontend/`):**
+  - Next.js 16 workspace with `src/app`, `components`, `lib`, `hooks`, `contexts`, `stores`, `types`, `schemas`.
+  - Core AI behavior lives in route handlers under `frontend/src/app/api/**`.
+  - Shared types and Zod schemas live in `frontend/src/schemas`; reuse them across server/client.
+- **Infrastructure and automation:**
+  - Scripts: `scripts/` for verification and utilities.
+  - Containers: `docker/` and `docker-compose.yml`.
+  - Tests: `tests/` for legacy backend tests; frontend tests live under `frontend/src/**/__tests__`.
+- **Legacy Python (`tripsage/`, `tripsage_core/`):**
+  - Only modify as part of removal/migration work.
+  - Do not introduce new dependencies, models, or architectural patterns.
+
+---
+
+## 4. Library‑First Principles and Coding Style
+
+### 4.1 Global engineering principles
+
+- **Library‑first:** Prefer maintained libraries that cover ≥80 % of needs with ≤30 % custom code.
+- **KISS / DRY / YAGNI:**
+  - Keep solutions straightforward; avoid clever abstractions without clear value.
+  - Remove duplication; centralize shared logic into small, focused helpers.
+  - Implement only what is needed now; avoid speculative APIs and configuration.
+- **Final‑only implementations:**
+  - Remove superseded code and tests as soon as new behavior is in place.
+  - Do not add feature flags or partial migration paths unless explicitly requested.
+- **Logging and telemetry:**
+  - Keep logging minimal and local, focused on debugging and observability.
+  - Use OpenTelemetry where it meaningfully improves troubleshooting; no heavy telemetry frameworks without clear need.
+
+### 4.2 TypeScript and frontend style
+
+- **TypeScript configuration:**
+  - Assume `strict: true`, `noUnusedLocals`, and `noFallthroughCasesInSwitch`.
+  - Avoid `any`; prefer precise union and generic types.
+  - Handle `null`/`undefined` explicitly.
+- **Biome as single gate:**
+  - Format: `pnpm format:biome`.
+  - Lint/fix: `pnpm biome:check` (must be clean) and `pnpm biome:fix`.
+  - Do **not** change `frontend/biome.json` unless explicitly asked; fix code instead.
+- **File headers and structure:**
+  - Source files (`.ts`, `.tsx`):
+    - Optional `@fileoverview` JSDoc at the top when it adds value.
+    - Then a blank line, then `"use client"` (if needed), then a blank line, then imports, then implementation.
+  - Test files (`*.test.ts`, `*.spec.ts`):
+    - No `@fileoverview`. Use `@vitest-environment` only when overriding the default.
+- **JSDoc rules:**
+  - Use `/** ... */` for user‑facing docs; `//` for implementation notes.
+  - Document top‑level exports that are consumed elsewhere and non‑obvious functions.
+  - Do not repeat TypeScript types in JSDoc; avoid tags that duplicate TS (`@private`, `@implements`, etc.).
+- **IDs and timestamps:**
+  - Use `@/lib/security/random` (`secureUuid`, `secureId`, `nowIso`) for IDs and timestamps.
+  - Do **not** use `Math.random` or direct `crypto.randomUUID`.
+
+### 4.3 State management (frontend)
+
+- Use `zustand` for client‑side UI state and `@tanstack/react-query` for server state.
+- Use Supabase Realtime for real‑time collaboration and streaming updates; do not introduce new websocket backends without explicit approval.
+- Do not introduce new state management libraries without explicit approval.
+
+### 4.4 Python (legacy only)
+
+- If you must touch legacy Python while decommissioning:
+  - Keep existing style: type hints, Google‑style docstrings, async I/O where used.
+  - Derive custom exceptions from the existing core exception base.
+  - Do not introduce new libraries, frameworks, or architectural patterns.
+
+### 4.5 Zod v4 schemas
+
+- Treat **Zod v4** APIs and patterns as the canonical standard for this repo; do not revert new code to Zod 3‑style helpers.
+- Error handling:
+  - Prefer the unified `error` option (for example `z.string().min(5, { error: "Too short" })` or `z.string({ error: issue => "..." })`).
+  - Avoid `message`, `invalid_type_error`, `required_error`, or global `errorMap` in new schemas.
+- String helpers:
+  - Prefer top‑level helpers such as `z.email()`, `z.uuid()`, `z.url()`, `z.ipv4()`, `z.ipv6()`, `z.base64()`, `z.base64url()`.
+  - Avoid re‑introducing method style (for example `z.string().email()` or `.uuid()`).
+- Enums:
+  - Prefer `z.enum(MyEnum)` for TypeScript string enums/enum‑like objects.
+  - Do not use `z.nativeEnum(MyEnum)` in new code.
+- Objects and records:
+  - Prefer `z.strictObject({ ... })` / `z.looseObject({ ... })`, `z.record(keySchema, valueSchema)`, and `z.partialRecord(z.enum([...]), valueSchema)`.
+  - Avoid single‑argument `z.record(valueSchema)`, heavy `z.deepPartial()`, or `.merge()` when `.extend()` or object spread is simpler.
+- Numbers:
+  - Prefer `z.number().int()` for integer fields and avoid infinite ranges or unsafe integer tricks.
+- Defaults and transforms:
+  - Treat `.default()` as an output‑type default and use `.prefault()` when a default must be parsed through the schema.
+- Functions and promises:
+  - Prefer `z.function({ input: [...], output }).implement(...)` / `.implementAsync(...)`.
+  - Avoid introducing `z.promise()` and legacy `z.function().args().returns()` as the primary pattern in new code.
+
+---
+
+## 5. Frontend Architecture and Patterns
+
+### 5.1 Next.js route handlers and adapters
+
+- Use Next.js Route Handlers in `frontend/src/app/api/**/route.ts` for all server‑side HTTP entrypoints.
+- Keep adapters thin:
+  - Parse `NextRequest` (headers/body).
+  - Construct SSR‑only clients (`createServerSupabase()`), Upstash ratelimiters, and configuration **inside** the handler (no module‑scope clients).
+  - Delegate business logic to DI handlers in `_handler.ts` or `_handlers.ts`.
+- DI handlers:
+  - Pure, testable functions that accept collaborators (`supabase`, `resolveProvider`, `limit`, `stream`, `clock`, `logger`, `config`).
+  - No direct `process.env` reads and no global state.
+
+### 5.2 AI SDK v6 usage
+
+- Use AI SDK v6 primitives; do **not** build custom streaming or tool‑calling frameworks.
+- Typical pattern for chat/streaming:
+  - Convert UI messages with `convertToModelMessages(messages)`.
+  - Use `streamText` with tools and/or structured outputs (`Output` or Zod schemas).
+  - Return `result.toUIMessageStreamResponse()` from route handlers.
+- For structured JSON responses without streaming, use `generateObject` or `streamObject` with shared Zod schemas from `frontend/src/schemas`.
+
+### 5.3 Models and providers
+
+- **Vercel AI Gateway (primary):**
+  - Configure via `createGateway({ baseURL: "https://ai-gateway.vercel.sh/v1", apiKey: process.env.AI_GATEWAY_API_KEY })`.
+  - Users can also route their own provider keys through Gateway; billing remains with their providers.
+- **BYOK provider registry (alternative):**
+  - Source: `frontend/src/lib/providers/registry.ts`.
+  - Resolves user‑specific keys server‑side and returns a `LanguageModel`.
+  - Supported providers: `openai`, `openrouter`, `anthropic`, `xai`.
+- **BYOK route configuration:**
+  - BYOK key CRUD/validate routes must import `"server-only"` and export `dynamic = "force-dynamic"` and `revalidate = 0`.
+  - Do not add `'use cache'` or other caching directives to BYOK routes; responses must always be evaluated per request.
+- **Routing rule:** Per route, pick either Gateway or the BYOK registry; do **not** mix both paths inside the same route.
+
+### 5.4 Caching, Supabase SSR, and performance
+
+- Caching:
+  - Next.js `cacheComponents: true` is enabled.
+  - Use `'use cache'` for cacheable, public data.
+  - Use `'use cache: private'` for user‑specific data; do not publicly cache auth‑dependent responses.
+- Supabase SSR:
+  - Use server client factories in `frontend/src/lib/supabase/server.ts`.
+  - Never access Supabase cookies in client components.
+- Performance:
+  - Use `next/font` for fonts, `next/image` with proper `sizes`/`priority`.
+  - Keep most components as Server Components; only mark Client Components when interactivity is required.
+  - Use Suspense for slow UI and `useActionState`/`useOptimistic` for forms where appropriate.
+
+### 5.5 Rate limiting and ephemeral state
+
+- Use `@upstash/ratelimit` + `@upstash/redis`.
+  - Initialize `Redis` via `Redis.fromEnv()` inside route handlers.
+  - Initialize `Ratelimit` lazily per request; no module‑scope ratelimiters.
+- Use Upstash QStash for background or delayed tasks where needed; keep handlers idempotent and stateless.
+
+---
+
+## 6. Testing and Quality Gates
+
+### 6.1 Frontend testing
+
+- Framework: Vitest (unit/integration) with jsdom, Playwright for e2e.
+- Test locations:
+  - Unit/integration tests live under `frontend/src/**/__tests__`.
+  - Shared test helpers and mocks live under `frontend/src/test`.
+  - Use `**/*.{test,spec}.ts?(x)` file patterns.
+- Commands (prefer targeted runs):
+  - `pnpm test:run` – full suite (use sparingly).
+  - `pnpm test` or test project‑specific commands – for watch/dev.
+  - `pnpm test:e2e` – only when working on e2e scenarios.
+- Coverage:
+  - Treat coverage thresholds in `frontend/vitest.config.ts` as the minimum.
+  - Add or update tests for the code you change.
+
+### 6.2 Backend (legacy) testing
+
+- When deleting or touching legacy Python code, run **targeted** tests only:
+  - `uv run pytest` scoped to the affected modules.
+  - Ensure related fixtures and factories in `tests/fixtures/` and `tests/factories/` remain consistent until removed.
+- Do not expand test coverage for legacy backend beyond what is required to safely remove it.
+
+### 6.3 Quality gates (when touching code)
+
+- **Frontend:**
+  - `pnpm biome:check` (must be clean; fail on warnings).
+  - `pnpm biome:fix` for auto‑fixable issues.
+  - `pnpm type-check` (TS must pass with `--noEmit`).
+  - Relevant `pnpm test*` commands for changed areas.
+- **Legacy Python:**
+  - `ruff format .` and `ruff check . --fix` for the files you modify.
+  - `uv run pyright` and `uv run pylint` to keep type and lint checks clean in touched areas.
+  - `uv run pytest` for affected tests.
+
+Only run **full‑repo** gates when necessary; otherwise limit checks to the scope you changed, following existing project patterns.
+
+---
+
+## 7. Security and Secrets
+
+- Never commit secrets. Use `.env` (based on `.env.example`) and environment‑specific vaults.
+- Do not log secrets or echo env values in code, docs, or responses.
+- Keep provider keys server‑side:
+  - For Vercel AI Gateway, use the Gateway API key on the server only.
+  - For BYOK providers, resolve keys on the server; never expose them to the client.
+- Do not publicly cache responses that read or set cookies or depend on user‑specific secrets.
+- Prefer well‑maintained security libraries over custom crypto or auth implementations.
+
+---
+
+## 8. Git, Commits, and PRs
+
+- Use Conventional Commit messages with scopes:  
+  - `feat(scope): ...`, `fix(scope): ...`, `chore(scope): ...`, etc.
+- Keep commits small and focused; group related changes (e.g., `feat:`, `test:`, `refactor:`).
+- Before opening a PR:
+  - Ensure all relevant format, lint, type, and test gates pass for the code you touched.
+  - Document the scope of changes and list the commands you ran to validate behavior.
+
+---
+
+## 9. Anti‑Patterns and Hard “Don’ts”
+
+- Do **not**:
+  - Re‑implement streaming or tool calling; use AI SDK v6 primitives.
+  - Duplicate Zod schemas or TypeScript types between client and server; centralize reusable schemas in `frontend/src/schemas`.
+  - Introduce new global/module‑scope state in route handlers, ratelimiters, or clients.
+  - Create new Python features or services under `tripsage/` or `tripsage_core/`.
+  - Change Biome, TypeScript, or test configs unless explicitly requested.
+- Prefer migration and deletion over patching legacy backend behavior. When in doubt, bias toward:
+  - Implementing capabilities in the Next.js/AI SDK frontend stack, and
+  - Removing superseded Python code and tests once the new implementation is validated.
