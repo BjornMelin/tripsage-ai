@@ -94,8 +94,8 @@ describe("Search Store Orchestrator", () => {
       act(() => {
         result.current.initializeSearch("flight");
         const searchId = useSearchResultsStore.getState().startSearch("flight", {
-          origin: "NYC",
           destination: "LAX",
+          origin: "NYC",
         });
         useSearchResultsStore.getState().setSearchResults(searchId, {
           flights: [
@@ -141,8 +141,8 @@ describe("Search Store Orchestrator", () => {
       act(() => {
         result.current.initializeSearch("flight");
         useSearchFiltersStore.getState().setActiveFilter("price_range", {
-          min: 100,
           max: 500,
+          min: 100,
         });
       });
 
@@ -276,8 +276,8 @@ describe("Search Store Orchestrator", () => {
           preferredAirlines: [],
         });
         useSearchFiltersStore.getState().setActiveFilter("price_range", {
-          min: 100,
           max: 500,
+          min: 100,
         });
       });
 
@@ -404,8 +404,8 @@ describe("Search Store Orchestrator", () => {
       act(() => {
         result.current.initializeSearch("flight");
         useSearchFiltersStore.getState().setActiveFilter("price_range", {
-          min: 100,
           max: 500,
+          min: 100,
         });
       });
 
@@ -453,4 +453,3 @@ describe("Search Store Orchestrator", () => {
     });
   });
 });
-

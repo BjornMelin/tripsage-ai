@@ -55,40 +55,40 @@ vi.mock("@tanstack/react-query", () => {
     invalidateQueries = vi.fn();
     refetchQueries = vi.fn();
     setQueryData = vi.fn();
-    
+
     constructor(options?: any) {
       // Accept options but don't use them in mock
     }
   }
-  
+
   return {
     QueryClient: QueryClientMock,
     QueryClientProvider: ({ children }: { children: React.ReactNode }) => children,
-  useMutation: vi.fn(() => ({
-    data: { status: "success" }, // Provide mock success data
-    error: null,
-    isError: false,
-    isIdle: false,
-    isLoading: false,
-    isSuccess: true, // Mark as success for sync behavior
-    mutate: vi.fn((data) => ({ data: { input: data, status: "success" } })),
-    mutateAsync: vi.fn((data) => Promise.resolve({ input: data, status: "success" })),
-    reset: vi.fn(),
-  })),
-  useQuery: vi.fn(() => ({
-    data: { mockData: true }, // Provide mock data for sync tests
-    error: null,
-    isError: false,
-    isLoading: false,
-    isSuccess: true, // Mark as success for sync behavior
-    refetch: vi.fn(),
-  })),
-  useQueryClient: vi.fn(() => ({
-    clear: vi.fn(),
-    invalidateQueries: vi.fn(),
-    refetchQueries: vi.fn(),
-    setQueryData: vi.fn(),
-  })),
+    useMutation: vi.fn(() => ({
+      data: { status: "success" }, // Provide mock success data
+      error: null,
+      isError: false,
+      isIdle: false,
+      isLoading: false,
+      isSuccess: true, // Mark as success for sync behavior
+      mutate: vi.fn((data) => ({ data: { input: data, status: "success" } })),
+      mutateAsync: vi.fn((data) => Promise.resolve({ input: data, status: "success" })),
+      reset: vi.fn(),
+    })),
+    useQuery: vi.fn(() => ({
+      data: { mockData: true }, // Provide mock data for sync tests
+      error: null,
+      isError: false,
+      isLoading: false,
+      isSuccess: true, // Mark as success for sync behavior
+      refetch: vi.fn(),
+    })),
+    useQueryClient: vi.fn(() => ({
+      clear: vi.fn(),
+      invalidateQueries: vi.fn(),
+      refetchQueries: vi.fn(),
+      setQueryData: vi.fn(),
+    })),
   };
 });
 

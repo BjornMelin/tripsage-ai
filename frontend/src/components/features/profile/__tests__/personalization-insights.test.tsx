@@ -22,11 +22,11 @@ const MockUseMemoryStats = vi.mocked(useMemoryStats);
 const MockUseUpdatePreferences = vi.mocked(useUpdatePreferences);
 
 // Test wrapper factory
-function createTestWrapper() {
+function CreateTestWrapper() {
   const queryClient = new QueryClient({
     defaultOptions: {
       mutations: { retry: false },
-      queries: { retry: false, gcTime: 0, staleTime: 0 },
+      queries: { gcTime: 0, retry: false, staleTime: 0 },
     },
   });
 
@@ -135,7 +135,7 @@ describe("PersonalizationInsights", () => {
   describe("Rendering", () => {
     it("renders header with title and description", () => {
       render(<PersonalizationInsights userId="user-123" />, {
-        wrapper: createTestWrapper(),
+        wrapper: CreateTestWrapper(),
       });
 
       expect(screen.getByText("Personalization Insights")).toBeInTheDocument();
@@ -146,7 +146,7 @@ describe("PersonalizationInsights", () => {
 
     it("renders all navigation tabs", () => {
       render(<PersonalizationInsights userId="user-123" />, {
-        wrapper: createTestWrapper(),
+        wrapper: CreateTestWrapper(),
       });
 
       expect(screen.getByText("Overview")).toBeInTheDocument();
@@ -158,7 +158,7 @@ describe("PersonalizationInsights", () => {
     it("applies custom className", () => {
       const { container } = render(
         <PersonalizationInsights userId="user-123" className="custom-class" />,
-        { wrapper: createTestWrapper() }
+        { wrapper: CreateTestWrapper() }
       );
 
       expect(container.firstChild).toHaveClass("custom-class");
@@ -168,7 +168,7 @@ describe("PersonalizationInsights", () => {
   describe("Overview View", () => {
     it("displays travel personality information", () => {
       render(<PersonalizationInsights userId="user-123" />, {
-        wrapper: createTestWrapper(),
+        wrapper: CreateTestWrapper(),
       });
 
       expect(screen.getByText("luxury_adventurer")).toBeInTheDocument();
@@ -182,7 +182,7 @@ describe("PersonalizationInsights", () => {
 
     it("displays memory statistics", () => {
       render(<PersonalizationInsights userId="user-123" />, {
-        wrapper: createTestWrapper(),
+        wrapper: CreateTestWrapper(),
       });
 
       expect(screen.getByText("245")).toBeInTheDocument();
@@ -193,7 +193,7 @@ describe("PersonalizationInsights", () => {
 
     it("displays top destinations", () => {
       render(<PersonalizationInsights userId="user-123" />, {
-        wrapper: createTestWrapper(),
+        wrapper: CreateTestWrapper(),
       });
 
       expect(screen.getByText("Tokyo")).toBeInTheDocument();
@@ -207,7 +207,7 @@ describe("PersonalizationInsights", () => {
   describe("Budget View", () => {
     it("displays budget analysis when budget tab is clicked", () => {
       render(<PersonalizationInsights userId="user-123" />, {
-        wrapper: createTestWrapper(),
+        wrapper: CreateTestWrapper(),
       });
 
       fireEvent.click(screen.getByText("Budget"));
@@ -221,7 +221,7 @@ describe("PersonalizationInsights", () => {
 
     it("displays spending trends", () => {
       render(<PersonalizationInsights userId="user-123" />, {
-        wrapper: createTestWrapper(),
+        wrapper: CreateTestWrapper(),
       });
 
       fireEvent.click(screen.getByText("Budget"));
@@ -237,7 +237,7 @@ describe("PersonalizationInsights", () => {
   describe("Recommendations View", () => {
     it("displays recommendations when recommendations tab is clicked and showRecommendations is true", () => {
       render(<PersonalizationInsights userId="user-123" showRecommendations={true} />, {
-        wrapper: createTestWrapper(),
+        wrapper: CreateTestWrapper(),
       });
 
       fireEvent.click(screen.getByText("Recommendations"));
@@ -254,9 +254,12 @@ describe("PersonalizationInsights", () => {
     });
 
     it("hides recommendations when showRecommendations is false", () => {
-      render(<PersonalizationInsights userId="user-123" showRecommendations={false} />, {
-        wrapper: createTestWrapper(),
-      });
+      render(
+        <PersonalizationInsights userId="user-123" showRecommendations={false} />,
+        {
+          wrapper: CreateTestWrapper(),
+        }
+      );
 
       fireEvent.click(screen.getByText("Recommendations"));
 
@@ -282,7 +285,7 @@ describe("PersonalizationInsights", () => {
       } as unknown as ReturnType<typeof useMemoryStats>);
 
       const { container } = render(<PersonalizationInsights userId="user-123" />, {
-        wrapper: createTestWrapper(),
+        wrapper: CreateTestWrapper(),
       });
 
       const pulses = container.querySelectorAll(".animate-pulse");
@@ -301,7 +304,7 @@ describe("PersonalizationInsights", () => {
       } as unknown as ReturnType<typeof useMemoryInsights>);
 
       render(<PersonalizationInsights userId="user-123" />, {
-        wrapper: createTestWrapper(),
+        wrapper: CreateTestWrapper(),
       });
 
       expect(
@@ -315,10 +318,12 @@ describe("PersonalizationInsights", () => {
   describe("Metadata Display", () => {
     it("displays metadata information", () => {
       render(<PersonalizationInsights userId="user-123" />, {
-        wrapper: createTestWrapper(),
+        wrapper: CreateTestWrapper(),
       });
 
-      expect(screen.getByText("Analysis based on 12 months of data")).toBeInTheDocument();
+      expect(
+        screen.getByText("Analysis based on 12 months of data")
+      ).toBeInTheDocument();
       expect(screen.getByText("Confidence: 87%")).toBeInTheDocument();
       expect(screen.getByText("Updated: 1/1/2024")).toBeInTheDocument();
     });
@@ -336,7 +341,7 @@ describe("PersonalizationInsights", () => {
       } as unknown as ReturnType<typeof useMemoryInsights>);
 
       render(<PersonalizationInsights userId="user-123" />, {
-        wrapper: createTestWrapper(),
+        wrapper: CreateTestWrapper(),
       });
 
       const refreshButton = screen.getByText("Refresh");
@@ -347,7 +352,7 @@ describe("PersonalizationInsights", () => {
 
     it("switches between views correctly", () => {
       render(<PersonalizationInsights userId="user-123" />, {
-        wrapper: createTestWrapper(),
+        wrapper: CreateTestWrapper(),
       });
 
       // Default overview
@@ -380,7 +385,7 @@ describe("PersonalizationInsights", () => {
       } as unknown as ReturnType<typeof useMemoryInsights>);
 
       render(<PersonalizationInsights userId="user-123" />, {
-        wrapper: createTestWrapper(),
+        wrapper: CreateTestWrapper(),
       });
 
       expect(screen.getByText("Personalization Insights")).toBeInTheDocument();
@@ -400,11 +405,10 @@ describe("PersonalizationInsights", () => {
       } as unknown as ReturnType<typeof useMemoryInsights>);
 
       render(<PersonalizationInsights userId="user-123" />, {
-        wrapper: createTestWrapper(),
+        wrapper: CreateTestWrapper(),
       });
 
       expect(screen.getByText("Personalization Insights")).toBeInTheDocument();
     });
   });
 });
-
