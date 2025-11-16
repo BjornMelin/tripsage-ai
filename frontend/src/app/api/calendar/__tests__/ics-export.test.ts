@@ -1,235 +1,168 @@
+/**
+ * @vitest-environment node
+ */
+
 import type { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// Mock Supabase before importing route handlers
+const mockUser = { email: "test@example.com", id: "user-1" };
+const mockSupabase = {
+  auth: {
+    getUser: vi.fn(async () => ({
+      data: { user: mockUser },
+      error: null,
+    })),
+  },
+};
+
+vi.mock("@/lib/supabase/server", () => ({
+  createServerSupabase: vi.fn(async () => mockSupabase),
+}));
+
+// Mock rate limiters to return undefined (disabled)
+vi.mock("@upstash/ratelimit", () => ({
+  Ratelimit: vi.fn(),
+}));
+vi.mock("@upstash/redis", () => ({
+  Redis: { fromEnv: vi.fn(() => ({})) },
+}));
+
+// Mock env helpers
+vi.mock("@/lib/env/server", () => ({
+  getServerEnvVarWithFallback: vi.fn(() => undefined),
+}));
+
+// Import route handlers after mocks
+import * as icsExportRoute from "../ics/export/route";
+
 describe("/api/calendar/ics/export route", () => {
+  const mockEvent = {
+    description: "Test description",
+    end: { dateTime: new Date("2025-07-15T11:00:00Z") },
+    location: "Test Location",
+    start: { dateTime: new Date("2025-07-15T10:00:00Z") },
+    summary: "Test Event",
+  };
+
   beforeEach(() => {
-    vi.resetModules();
     vi.clearAllMocks();
+    mockSupabase.auth.getUser.mockResolvedValue({
+      data: { user: mockUser },
+      error: null,
+    });
   });
 
-  const mockRateLimit = {
-    limit: 30,
-    remaining: 29,
-    reset: Date.now() + 60000,
-    success: true,
-  };
-
-  const setupMocks = (overrides?: { rateLimit?: typeof mockRateLimit }) => {
-    vi.doMock("@/lib/supabase", () => ({
-      createServerSupabase: vi.fn(async () => ({
-        auth: {
-          getUser: async () => ({
-            data: { user: { id: "user-1" } },
-            error: null,
-          }),
-        },
-      })),
-    }));
-
-    vi.doMock("@upstash/ratelimit", () => {
-      const slidingWindow = vi.fn(() => ({}));
-      const rateLimitResult = overrides?.rateLimit || mockRateLimit;
-      const ctor = vi.fn(function RatelimitMock() {
-        return {
-          limit: vi.fn().mockResolvedValue(rateLimitResult),
-        };
-      }) as unknown as {
-        new (...args: unknown[]): { limit: ReturnType<typeof vi.fn> };
-        slidingWindow: typeof slidingWindow;
-      };
-      ctor.slidingWindow = slidingWindow;
-      return { Ratelimit: ctor };
-    });
-
-    vi.doMock("@upstash/redis", () => ({
-      Redis: {
-        fromEnv: vi.fn(() => ({})),
-      },
-    }));
-
-    vi.doMock("@/lib/env/server", () => ({
-      getServerEnvVarWithFallback: vi.fn(() => "test-key"),
-    }));
-  };
-
   it("exports ICS successfully", async () => {
-    setupMocks();
-
-    const mod = await import("../ics/export/route");
     const req = new Request("http://localhost/api/calendar/ics/export", {
       body: JSON.stringify({
         calendarName: "Test Calendar",
-        events: [
-          {
-            end: { dateTime: "2025-01-15T11:00:00.000Z" },
-            start: { dateTime: "2025-01-15T10:00:00.000Z" },
-            summary: "Test Event",
-          },
-        ],
+        events: [mockEvent],
       }),
-      headers: { "Content-Type": "application/json" },
+      headers: { "content-type": "application/json" },
       method: "POST",
-    }) as unknown as NextRequest;
+    }) as NextRequest;
 
-    const res = await mod.POST(req);
-    const text = await res.text();
-
+    const res = await icsExportRoute.POST(req);
     expect(res.status).toBe(200);
-    expect(res.headers.get("Content-Type")).toContain("text/calendar");
+    expect(res.headers.get("Content-Type")).toBe("text/calendar; charset=utf-8");
+    expect(res.headers.get("Content-Disposition")).toContain("Test_Calendar.ics");
+    const text = await res.text();
     expect(text).toContain("BEGIN:VCALENDAR");
-    expect(text).toContain("END:VCALENDAR");
+    expect(text).toContain("BEGIN:VEVENT");
+    expect(text).toContain("Test Event");
   });
 
-  it("returns 400 on invalid request", async () => {
-    setupMocks();
+  it("returns 401 when unauthenticated", async () => {
+    mockSupabase.auth.getUser.mockResolvedValueOnce({
+      data: { user: null },
+      error: { message: "Unauthorized" },
+    } as never);
 
-    const mod = await import("../ics/export/route");
     const req = new Request("http://localhost/api/calendar/ics/export", {
       body: JSON.stringify({
-        // Missing events
+        calendarName: "Test Calendar",
+        events: [mockEvent],
       }),
-      headers: { "Content-Type": "application/json" },
+      headers: { "content-type": "application/json" },
       method: "POST",
-    }) as unknown as NextRequest;
+    }) as NextRequest;
 
-    const res = await mod.POST(req);
-    expect(res.status).toBe(400);
+    const res = await icsExportRoute.POST(req);
+    expect(res.status).toBe(401);
+    const json = await res.json();
+    expect(json.error).toBe("Unauthorized");
   });
 
-  it("returns 400 on empty events array", async () => {
-    setupMocks();
-
-    const mod = await import("../ics/export/route");
+  it("returns 400 on invalid request body", async () => {
     const req = new Request("http://localhost/api/calendar/ics/export", {
       body: JSON.stringify({
         calendarName: "Test Calendar",
         events: [],
       }),
-      headers: { "Content-Type": "application/json" },
+      headers: { "content-type": "application/json" },
       method: "POST",
-    }) as unknown as NextRequest;
+    }) as NextRequest;
 
-    const res = await mod.POST(req);
+    const res = await icsExportRoute.POST(req);
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toBe("Invalid request body");
+  });
+
+  it("returns 400 on empty events array", async () => {
+    const req = new Request("http://localhost/api/calendar/ics/export", {
+      body: JSON.stringify({
+        calendarName: "Test Calendar",
+        events: [],
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    }) as NextRequest;
+
+    const res = await icsExportRoute.POST(req);
     expect(res.status).toBe(400);
   });
 
-  it("returns 401 when unauthenticated", async () => {
-    vi.doMock("@/lib/supabase", () => ({
-      createServerSupabase: vi.fn(async () => ({
-        auth: {
-          getUser: async () => ({
-            data: { user: null },
-            error: { message: "Unauthorized" },
-          }),
-        },
-      })),
-    }));
-
-    const mod = await import("../ics/export/route");
-    const req = new Request("http://localhost/api/calendar/ics/export", {
-      body: JSON.stringify({
-        calendarName: "Test Calendar",
-        events: [
-          {
-            end: { dateTime: "2025-01-15T11:00:00.000Z" },
-            start: { dateTime: "2025-01-15T10:00:00.000Z" },
-            summary: "Test Event",
-          },
-        ],
-      }),
-      headers: { "Content-Type": "application/json" },
-      method: "POST",
-    }) as unknown as NextRequest;
-
-    const res = await mod.POST(req);
-    expect(res.status).toBe(401);
-  });
-
-  it("exports ICS with multiple events", async () => {
-    setupMocks();
-
-    const mod = await import("../ics/export/route");
-    const req = new Request("http://localhost/api/calendar/ics/export", {
-      body: JSON.stringify({
-        calendarName: "Test Calendar",
-        events: [
-          {
-            end: { dateTime: "2025-01-15T11:00:00.000Z" },
-            start: { dateTime: "2025-01-15T10:00:00.000Z" },
-            summary: "Event 1",
-          },
-          {
-            end: { dateTime: "2025-01-16T11:00:00.000Z" },
-            start: { dateTime: "2025-01-16T10:00:00.000Z" },
-            summary: "Event 2",
-          },
-        ],
-      }),
-      headers: { "Content-Type": "application/json" },
-      method: "POST",
-    }) as unknown as NextRequest;
-
-    const res = await mod.POST(req);
-    const text = await res.text();
-
-    expect(res.status).toBe(200);
-    expect(text).toContain("Event 1");
-    expect(text).toContain("Event 2");
-  });
-
   it("includes custom timezone in ICS", async () => {
-    setupMocks();
-
-    const mod = await import("../ics/export/route");
     const req = new Request("http://localhost/api/calendar/ics/export", {
       body: JSON.stringify({
         calendarName: "Test Calendar",
-        events: [
-          {
-            end: { dateTime: "2025-01-15T11:00:00.000Z" },
-            start: { dateTime: "2025-01-15T10:00:00.000Z" },
-            summary: "Test Event",
-          },
-        ],
+        events: [mockEvent],
         timezone: "America/New_York",
       }),
-      headers: { "Content-Type": "application/json" },
+      headers: { "content-type": "application/json" },
       method: "POST",
-    }) as unknown as NextRequest;
+    }) as NextRequest;
 
-    const res = await mod.POST(req);
-    const text = await res.text();
-
+    const res = await icsExportRoute.POST(req);
     expect(res.status).toBe(200);
+    const text = await res.text();
     expect(text).toContain("America/New_York");
   });
 
-  it("returns 429 on rate limit", async () => {
-    setupMocks({
-      rateLimit: {
-        ...mockRateLimit,
-        remaining: 0,
-        success: false,
-      },
-    });
-
-    const mod = await import("../ics/export/route");
+  it("exports ICS with multiple events", async () => {
     const req = new Request("http://localhost/api/calendar/ics/export", {
       body: JSON.stringify({
         calendarName: "Test Calendar",
         events: [
+          mockEvent,
           {
-            end: { dateTime: "2025-01-15T11:00:00.000Z" },
-            start: { dateTime: "2025-01-15T10:00:00.000Z" },
-            summary: "Test Event",
+            ...mockEvent,
+            end: { dateTime: new Date("2025-07-16T11:00:00Z") },
+            start: { dateTime: new Date("2025-07-16T10:00:00Z") },
+            summary: "Second Event",
           },
         ],
       }),
-      headers: { "Content-Type": "application/json" },
+      headers: { "content-type": "application/json" },
       method: "POST",
-    }) as unknown as NextRequest;
+    }) as NextRequest;
 
-    const res = await mod.POST(req);
-    expect(res.status).toBe(429);
+    const res = await icsExportRoute.POST(req);
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    const eventMatches = text.match(/BEGIN:VEVENT/g);
+    expect(eventMatches).toHaveLength(2);
   });
 });

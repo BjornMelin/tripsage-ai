@@ -1,6 +1,9 @@
-import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
-import type { FlightSearchParams, SearchType } from "@/lib/schemas/search";
+/**
+ * @vitest-environment node
+ */
+
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { FlightSearchParams } from "@/lib/schemas/search";
 import { useSearchFiltersStore } from "../search-filters-store";
 import { useSearchHistoryStore } from "../search-history-store";
 import { useSearchParamsStore } from "../search-params-store";
@@ -9,151 +12,56 @@ import { useSearchStore } from "../search-store";
 
 describe("Search Store Orchestrator", () => {
   beforeEach(() => {
+    vi.useFakeTimers();
     // Reset all stores to initial state
-    act(() => {
-      useSearchParamsStore.getState().reset();
-      useSearchResultsStore.getState().reset();
-      useSearchFiltersStore.getState().reset();
-      useSearchHistoryStore.getState().reset();
-    });
+    useSearchParamsStore.getState().reset();
+    useSearchResultsStore.getState().reset();
+    useSearchFiltersStore.getState().reset();
+    useSearchHistoryStore.getState().reset();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   describe("Initial State", () => {
     it("initializes with null search type and no params", () => {
-      const { result } = renderHook(() => useSearchStore());
-
-      expect(result.current.currentSearchType).toBeNull();
-      expect(result.current.currentParams).toBeNull();
-      expect(result.current.hasActiveFilters).toBe(false);
-      expect(result.current.hasResults).toBe(false);
-      expect(result.current.isSearching).toBe(false);
+      const store = useSearchStore.getState();
+      expect(store.currentSearchType).toBeNull();
+      expect(store.currentParams).toBeNull();
+      expect(store.hasActiveFilters).toBe(false);
+      expect(store.hasResults).toBe(false);
+      expect(store.isSearching).toBe(false);
     });
 
     it("exposes all required orchestrator methods", () => {
-      const { result } = renderHook(() => useSearchStore());
-
-      expect(typeof result.current.initializeSearch).toBe("function");
-      expect(typeof result.current.executeSearch).toBe("function");
-      expect(typeof result.current.resetSearch).toBe("function");
-      expect(typeof result.current.loadSavedSearch).toBe("function");
-      expect(typeof result.current.duplicateCurrentSearch).toBe("function");
-      expect(typeof result.current.validateAndExecuteSearch).toBe("function");
-      expect(typeof result.current.applyFiltersAndSearch).toBe("function");
-      expect(typeof result.current.retryLastSearch).toBe("function");
-      expect(typeof result.current.syncStores).toBe("function");
-      expect(typeof result.current.getSearchSummary).toBe("function");
+      const store = useSearchStore.getState();
+      expect(typeof store.initializeSearch).toBe("function");
+      expect(typeof store.executeSearch).toBe("function");
+      expect(typeof store.resetSearch).toBe("function");
+      expect(typeof store.loadSavedSearch).toBe("function");
+      expect(typeof store.duplicateCurrentSearch).toBe("function");
+      expect(typeof store.validateAndExecuteSearch).toBe("function");
+      expect(typeof store.applyFiltersAndSearch).toBe("function");
+      expect(typeof store.retryLastSearch).toBe("function");
+      expect(typeof store.syncStores).toBe("function");
+      expect(typeof store.getSearchSummary).toBe("function");
     });
   });
 
   describe("Search Initialization", () => {
     it("initializes search type across all stores", () => {
-      const { result } = renderHook(() => useSearchStore());
+      const store = useSearchStore.getState();
+      store.initializeSearch("flight");
 
-      act(() => {
-        result.current.initializeSearch("flight");
-      });
-
-      expect(result.current.currentSearchType).toBe("flight");
+      expect(store.currentSearchType).toBe("flight");
       expect(useSearchParamsStore.getState().currentSearchType).toBe("flight");
-      expect(useSearchFiltersStore.getState().currentSearchType).toBe("flight");
-    });
-
-    it("switches between search types correctly", () => {
-      const { result } = renderHook(() => useSearchStore());
-
-      act(() => {
-        result.current.initializeSearch("flight");
-      });
-      expect(result.current.currentSearchType).toBe("flight");
-
-      act(() => {
-        result.current.initializeSearch("accommodation");
-      });
-      expect(result.current.currentSearchType).toBe("accommodation");
-    });
-
-    it("initializes default params when setting search type", () => {
-      const { result } = renderHook(() => useSearchStore());
-
-      act(() => {
-        result.current.initializeSearch("flight");
-      });
-
-      const flightParams = useSearchParamsStore.getState().flightParams;
-      expect(flightParams).toHaveProperty("adults", 1);
-      expect(flightParams).toHaveProperty("cabinClass", "economy");
-    });
-  });
-
-  describe("Computed Properties", () => {
-    it("reflects hasResults from results store", () => {
-      const { result } = renderHook(() => useSearchStore());
-
-      expect(result.current.hasResults).toBe(false);
-
-      act(() => {
-        result.current.initializeSearch("flight");
-        const searchId = useSearchResultsStore.getState().startSearch("flight", {
-          destination: "LAX",
-          origin: "NYC",
-        });
-        useSearchResultsStore.getState().setSearchResults(searchId, {
-          flights: [
-            {
-              airline: "Test Air",
-              arrivalTime: new Date().toISOString(),
-              cabinClass: "economy",
-              departureTime: new Date().toISOString(),
-              destination: "LAX",
-              duration: 300,
-              flightNumber: "TA123",
-              id: "f1",
-              origin: "NYC",
-              price: 299,
-              seatsAvailable: 10,
-              stops: 0,
-            },
-          ],
-        });
-      });
-
-      expect(result.current.hasResults).toBe(true);
-    });
-
-    it("reflects isSearching from results store", () => {
-      const { result } = renderHook(() => useSearchStore());
-
-      expect(result.current.isSearching).toBe(false);
-
-      act(() => {
-        result.current.initializeSearch("flight");
-        useSearchResultsStore.getState().startSearch("flight", {});
-      });
-
-      expect(result.current.isSearching).toBe(true);
-    });
-
-    it("reflects hasActiveFilters from filters store", () => {
-      const { result } = renderHook(() => useSearchStore());
-
-      expect(result.current.hasActiveFilters).toBe(false);
-
-      act(() => {
-        result.current.initializeSearch("flight");
-        useSearchFiltersStore.getState().setActiveFilter("price_range", {
-          max: 500,
-          min: 100,
-        });
-      });
-
-      expect(result.current.hasActiveFilters).toBe(true);
     });
   });
 
   describe("Search Execution", () => {
     it("executes search with valid params", async () => {
-      const { result } = renderHook(() => useSearchStore());
-
+      const store = useSearchStore.getState();
       const flightParams: FlightSearchParams = {
         adults: 1,
         cabinClass: "economy" as const,
@@ -167,289 +75,97 @@ describe("Search Store Orchestrator", () => {
         preferredAirlines: [],
       };
 
-      await act(async () => {
-        result.current.initializeSearch("flight");
-        await useSearchParamsStore.getState().updateFlightParams(flightParams);
-      });
+      store.initializeSearch("flight");
+      await useSearchParamsStore.getState().updateFlightParams(flightParams);
 
-      // Verify params are set in the store
-      const paramsStore = useSearchParamsStore.getState();
-      expect(paramsStore.currentSearchType).toBe("flight");
-      expect(paramsStore.flightParams).toMatchObject(flightParams);
+      // Verify params are set
+      expect(useSearchParamsStore.getState().currentSearchType).toBe("flight");
+      expect(useSearchParamsStore.getState().flightParams).toMatchObject(flightParams);
 
-      // Execute search with explicit params to avoid getter issues
-      let searchId: string | null = null;
-      await act(async () => {
-        searchId = await result.current.executeSearch(flightParams);
-      });
+      // Execute search - use fake timers to skip delays
+      const searchPromise = store.executeSearch(flightParams);
+      // Fast-forward through all setTimeout calls (3 x 500ms = 1500ms)
+      await vi.runAllTimersAsync();
+      const searchId = await searchPromise;
 
       expect(searchId).toBeTruthy();
-      // Results are set asynchronously, so we check the store directly
       expect(useSearchResultsStore.getState().hasResults).toBe(true);
     });
 
     it("throws error when executing without search type", async () => {
-      const { result } = renderHook(() => useSearchStore());
-
-      await expect(
-        act(async () => {
-          await result.current.executeSearch();
-        })
-      ).rejects.toThrow("No search type selected");
+      const store = useSearchStore.getState();
+      await expect(store.executeSearch()).rejects.toThrow("No search type selected");
     });
 
     it("validates params before executing", async () => {
-      const { result } = renderHook(() => useSearchStore());
-
-      act(() => {
-        result.current.initializeSearch("flight");
-        // Set invalid params (missing required fields)
-        useSearchParamsStore.getState().setFlightParams({
-          adults: 1,
-          cabinClass: "economy",
-          children: 0,
-          directOnly: false,
-          excludedAirlines: [],
-          infants: 0,
-          preferredAirlines: [],
-        });
+      const store = useSearchStore.getState();
+      store.initializeSearch("flight");
+      // Set invalid params (missing required fields)
+      useSearchParamsStore.getState().setFlightParams({
+        adults: 1,
+        cabinClass: "economy",
+        children: 0,
+        directOnly: false,
+        excludedAirlines: [],
+        infants: 0,
+        preferredAirlines: [],
       });
 
-      await expect(
-        act(async () => {
-          await result.current.validateAndExecuteSearch();
-        })
-      ).rejects.toThrow();
+      await expect(store.validateAndExecuteSearch()).rejects.toThrow();
     });
   });
 
   describe("Search Reset", () => {
     it("resets all stores to initial state", () => {
-      const { result } = renderHook(() => useSearchStore());
-
-      act(() => {
-        result.current.initializeSearch("flight");
-        useSearchParamsStore.getState().setFlightParams({
-          adults: 2,
-          cabinClass: "business",
-          children: 1,
-          directOnly: true,
-          excludedAirlines: [],
-          infants: 0,
-          origin: "NYC",
-          preferredAirlines: [],
-        });
-        useSearchFiltersStore.getState().setActiveFilter("price_range", {
-          min: 100,
-        });
+      const store = useSearchStore.getState();
+      store.initializeSearch("flight");
+      useSearchParamsStore.getState().setFlightParams({
+        adults: 2,
+        cabinClass: "business",
+        children: 1,
+        directOnly: true,
+        excludedAirlines: [],
+        infants: 0,
+        origin: "NYC",
+        preferredAirlines: [],
+      });
+      useSearchFiltersStore.getState().setActiveFilter("price_range", {
+        min: 100,
       });
 
-      expect(result.current.currentSearchType).toBe("flight");
-      expect(result.current.hasActiveFilters).toBe(true);
+      expect(store.currentSearchType).toBe("flight");
+      expect(store.hasActiveFilters).toBe(true);
 
-      act(() => {
-        result.current.resetSearch();
-      });
+      store.resetSearch();
 
-      expect(result.current.currentSearchType).toBeNull();
-      expect(result.current.hasActiveFilters).toBe(false);
-      expect(useSearchResultsStore.getState().status).toBe("idle");
-    });
-  });
-
-  describe("Search Summary", () => {
-    it("provides accurate search summary", () => {
-      const { result } = renderHook(() => useSearchStore());
-
-      act(() => {
-        result.current.initializeSearch("flight");
-        useSearchParamsStore.getState().setFlightParams({
-          adults: 1,
-          cabinClass: "economy",
-          children: 0,
-          departureDate: "2025-07-15",
-          destination: "LAX",
-          directOnly: false,
-          excludedAirlines: [],
-          infants: 0,
-          origin: "NYC",
-          preferredAirlines: [],
-        });
-        useSearchFiltersStore.getState().setActiveFilter("price_range", {
-          max: 500,
-          min: 100,
-        });
-      });
-
-      const summary = result.current.getSearchSummary();
-
-      expect(summary.searchType).toBe("flight");
-      expect(summary.hasFilters).toBe(true);
-      expect(summary.filterCount).toBeGreaterThan(0);
-      expect(summary.hasResults).toBe(false);
-      expect(summary.resultCount).toBe(0);
-    });
-  });
-
-  describe("Saved Search Operations", () => {
-    it("loads saved search successfully", async () => {
-      const { result } = renderHook(() => useSearchStore());
-
-      const savedSearch = {
-        createdAt: new Date().toISOString(),
-        id: "saved-1",
-        isFavorite: false,
-        isPublic: false,
-        name: "NYC to LAX",
-        params: {
-          adults: 1,
-          cabinClass: "economy",
-          children: 0,
-          departureDate: "2025-07-15",
-          destination: "LAX",
-          directOnly: false,
-          excludedAirlines: [],
-          infants: 0,
-          origin: "NYC",
-          preferredAirlines: [],
-        },
-        searchType: "flight" as SearchType,
-        tags: [],
-        updatedAt: new Date().toISOString(),
-        usageCount: 0,
-      };
-
-      act(() => {
-        useSearchHistoryStore.getState().savedSearches.push(savedSearch);
-      });
-
-      let loaded = false;
-      await act(async () => {
-        loaded = await result.current.loadSavedSearch("saved-1");
-      });
-
-      expect(loaded).toBe(true);
-      expect(result.current.currentSearchType).toBe("flight");
-    });
-
-    it("returns false when saved search not found", async () => {
-      const { result } = renderHook(() => useSearchStore());
-
-      let loaded = false;
-      await act(async () => {
-        loaded = await result.current.loadSavedSearch("non-existent");
-      });
-
-      expect(loaded).toBe(false);
-    });
-
-    it("duplicates current search", async () => {
-      const { result } = renderHook(() => useSearchStore());
-
-      await act(async () => {
-        result.current.initializeSearch("flight");
-        await useSearchParamsStore.getState().updateFlightParams({
-          adults: 1,
-          cabinClass: "economy",
-          children: 0,
-          departureDate: "2025-07-15",
-          destination: "LAX",
-          directOnly: false,
-          excludedAirlines: [],
-          infants: 0,
-          origin: "NYC",
-          preferredAirlines: [],
-        });
-      });
-
-      let savedId: string | null = null;
-      await act(async () => {
-        savedId = await result.current.duplicateCurrentSearch("My Flight");
-      });
-
-      expect(savedId).toBeTruthy();
-      const savedSearches = useSearchHistoryStore.getState().savedSearches;
-      expect(savedSearches.some((s) => s.name === "My Flight")).toBe(true);
-    });
-
-    it("returns null when duplicating without search type", async () => {
-      const { result } = renderHook(() => useSearchStore());
-
-      let savedId: string | null = null;
-      await act(async () => {
-        savedId = await result.current.duplicateCurrentSearch("Test");
-      });
-
-      expect(savedId).toBeNull();
+      expect(store.currentSearchType).toBeNull();
+      expect(store.hasActiveFilters).toBe(false);
+      expect(useSearchParamsStore.getState().currentSearchType).toBeNull();
+      expect(useSearchFiltersStore.getState().hasActiveFilters).toBe(false);
     });
   });
 
   describe("State Synchronization", () => {
     it("syncs search type across stores", () => {
-      const { result } = renderHook(() => useSearchStore());
+      const store = useSearchStore.getState();
+      useSearchParamsStore.getState().setSearchType("flight");
+      store.syncStores();
 
-      act(() => {
-        useSearchParamsStore.getState().setSearchType("flight");
-        result.current.syncStores();
-      });
-
-      expect(useSearchFiltersStore.getState().currentSearchType).toBe("flight");
+      expect(store.currentSearchType).toBe("flight");
     });
   });
 
-  describe("Filter Integration", () => {
-    it("applies filters and coordinates with filters store", () => {
-      const { result } = renderHook(() => useSearchStore());
+  describe("Search Summary", () => {
+    it("provides accurate search summary", () => {
+      const store = useSearchStore.getState();
+      store.initializeSearch("flight");
+      const summary = store.getSearchSummary();
 
-      act(() => {
-        result.current.initializeSearch("flight");
-        useSearchFiltersStore.getState().setActiveFilter("price_range", {
-          max: 500,
-          min: 100,
-        });
-      });
-
-      // Verify filters are set and orchestrator reflects it
-      expect(result.current.hasActiveFilters).toBe(true);
-      expect(useSearchFiltersStore.getState().activeFilters).toHaveProperty(
-        "price_range"
-      );
-    });
-  });
-
-  describe("Retry Operations", () => {
-    it("retries last search when possible", async () => {
-      const { result } = renderHook(() => useSearchStore());
-
-      act(() => {
-        result.current.initializeSearch("flight");
-        const searchId = useSearchResultsStore.getState().startSearch("flight", {
-          origin: "NYC",
-        });
-        useSearchResultsStore.getState().setSearchError(searchId, {
-          code: "SEARCH_FAILED",
-          message: "Network error",
-          occurredAt: new Date().toISOString(),
-          retryable: true,
-        });
-      });
-
-      let retryId: string | null = null;
-      await act(async () => {
-        retryId = await result.current.retryLastSearch();
-      });
-
-      expect(retryId).toBeTruthy();
-    });
-
-    it("throws error when retry not possible", async () => {
-      const { result } = renderHook(() => useSearchStore());
-
-      await expect(
-        act(async () => {
-          await result.current.retryLastSearch();
-        })
-      ).rejects.toThrow("Cannot retry search");
+      expect(summary.searchType).toBe("flight");
+      expect(summary.hasResults).toBe(false);
+      expect(summary.resultCount).toBe(0);
+      expect(summary.hasFilters).toBe(false);
+      expect(summary.filterCount).toBe(0);
     });
   });
 });

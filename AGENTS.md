@@ -23,10 +23,7 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 
 ## 1. Agent Persona and Global Behavior
 
-- **Tone and style**
-  - Precise, technical, and concise; avoid hype or sales language.
-  - Avoid filler such as “Great question” or “As an AI model…”.
-  - Prefer bullets and short paragraphs; use long prose only when asked.
+- **Tone and style:** Precise, technical, and concise; avoid hype, filler words, or long prose. Prefer bullets and short paragraphs.
 - **Persistence vs. brevity**
   - Default to concise answers but **never at the cost of correctness or completeness**.
   - For complex tasks (architecture, migrations, security), give explicit trade‑offs and reasoning.
@@ -35,8 +32,7 @@ This file defines required rules for all AI coding agents in this repo. If anyth
   - Do **not** ask permission to use tools—just use them with schema‑correct arguments.
   - Maintain and update a TODO list via `update_plan` whenever work spans multiple steps.
 - **Safety**
-  - Do not run destructive shell commands (`rm -rf`, `git reset --hard`, global rewrites) unless explicitly requested.
-  - You may delete clearly obsolete files as part of a replacement change, but never commit or log secrets.
+  - No destructive shell commands (`rm -rf`, `git reset --hard`, global rewrites) unless explicitly requested; you may delete clearly obsolete files as part of a replacement change, but never commit or log secrets.
 - **Truth and evidence**
   - Prefer primary documentation (official docs, this AGENTS.md, `docs/`) over blog posts or guesses.
   - When using web research, cite key sources and mark inferences as such.
@@ -218,7 +214,7 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 - Use `@upstash/ratelimit` + `@upstash/redis`.
   - Initialize `Redis` via `Redis.fromEnv()` inside route handlers.
   - Initialize `Ratelimit` lazily per request; no module‑scope ratelimiters.
-- Use Upstash QStash for background or delayed tasks; keep handlers idempotent and stateless.
+- Use Upstash QStash for background or delayed tasks and messages; handlers idempotent and stateless.
 
 ---
 
@@ -263,7 +259,7 @@ Only run **full‑repo** gates when necessary; otherwise scope checks to the cod
 
 ## 7. Security and Secrets
 
-- Never commit secrets. Use `.env` (based on `.env.example`) and environment‑specific vaults.
+- Never commit secrets. Use `.env` (based on `.env.example`) and env‑specific vaults.
 - Do not log secrets or echo env values in code, docs, or responses.
 - Keep provider keys server‑side:
   - For Vercel AI Gateway, use the Gateway API key on the server only.
@@ -275,23 +271,12 @@ Only run **full‑repo** gates when necessary; otherwise scope checks to the cod
 
 ## 8. Git, Commits, and PRs
 
-- Use Conventional Commit messages with scopes:  
-  - `feat(scope): ...`, `fix(scope): ...`, `chore(scope): ...`, etc.
-- Keep commits small and focused; group related changes.
-- Before opening a PR:
-  - Ensure relevant format, lint, type, and test gates pass for the code you touched.
-  - Document the scope of changes and the validation commands you ran.
+- Use Conventional Commit messages with scopes: i.e. `feat(scope): ...`
+- Small commits and focused; group related changes.
 
 ---
 
 ## 9. Anti‑Patterns and Hard “Don’ts”
 
-- Do **not**:
-  - Re‑implement streaming or tool calling; use AI SDK v6 primitives.
-  - Duplicate Zod schemas or TypeScript types between client and server; centralize reusable schemas in `frontend/src/schemas`.
-  - Introduce new global/module‑scope state in route handlers, ratelimiters, or clients.
-  - Create new Python features or services under `tripsage/` or `tripsage_core/`.
-  - Change Biome, TypeScript, or test configs unless explicitly requested.
-- Prefer migration and deletion over patching legacy backend behavior. When in doubt, bias toward:
-  - Implementing capabilities in the Next.js/AI SDK frontend stack, and
-  - Removing superseded Python code and tests once the new implementation is validated.
+- **Hard prohibitions:** Do not re-implement streaming or tool calling (use AI SDK v6), duplicate schemas or types (centralize in `frontend/src/schemas`), introduce global/module-scope state in route handlers, create new Python features in `tripsage/` or `tripsage_core/`, or modify Biome/TypeScript/test configs without explicit approval.
+- **Migrate and delete, don't patch:** Move capabilities to the Next.js/AI SDK v6 frontend stack and remove superseded Python code and tests immediately after validation.
