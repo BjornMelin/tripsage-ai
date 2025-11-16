@@ -54,7 +54,7 @@ const CLIENT = new ApiClient({ baseUrl: "http://localhost" });
 describe("API client with Zod Validation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    MOCK_FETCH.mockClear();
+    MOCK_FETCH.mockReset();
     // Re-bind fetch in case other suites overwrote the global
     // Ensures deterministic behavior within this file regardless of run order
     Object.defineProperty(global, "fetch", {
@@ -308,9 +308,16 @@ describe("API client with Zod Validation", () => {
         timeout: 100,
       });
 
-      await expect(
-        fastClient.getValidated("/api/users", USER_RESPONSE_SCHEMA)
-      ).rejects.toThrow("Network error");
+      const pendingRequest = fastClient.getValidated(
+        "/api/users",
+        USER_RESPONSE_SCHEMA
+      );
+
+      pendingRequest.catch(() => undefined);
+
+      await vi.advanceTimersByTimeAsync(2000);
+
+      await expect(pendingRequest).rejects.toThrow("Network error");
     });
   });
 
