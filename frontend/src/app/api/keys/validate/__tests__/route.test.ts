@@ -244,15 +244,15 @@ describe("/api/keys/validate route", () => {
     expect(res.headers.get("X-RateLimit-Reset")).toBe("789");
   });
 
-  it("falls back to client IP when user is missing", async () => {
+  it("returns 401 when user is missing (auth required)", async () => {
     stubRateLimitEnabled();
-    // Return mock Redis instance when rate limiting enabled (same pattern as working test)
+    // Return mock Redis instance when rate limiting enabled
     MOCK_GET_REDIS.mockReturnValue({} as Redis);
     MOCK_SUPABASE.auth.getUser.mockResolvedValue({
       data: { user: null },
       error: null,
     });
-    LIMIT_SPY.mockResolvedValue({
+    LIMIT_SPY.mockResolvedValueOnce({
       limit: 30,
       remaining: 29,
       reset: 123,
@@ -266,6 +266,7 @@ describe("/api/keys/validate route", () => {
       .mockResolvedValue(new Response(JSON.stringify({}), { status: 200 }));
     mockCreateOpenAI.mockImplementation(() => buildProvider(fetchMock));
 
+    // Import route handler AFTER setting up all mocks
     const { POST } = await import("@/app/api/keys/validate/route");
     const req = createMockNextRequest({
       body: { apiKey: "sk-test", service: "openai" },
@@ -273,12 +274,14 @@ describe("/api/keys/validate route", () => {
       url: "http://localhost/api/keys/validate",
     });
 
-    await POST(req);
+    const res = await POST(req);
 
-    // Verify rate limiter was called with the expected identifier
-    // The identifier should be "anon:10.0.0.1" since user is null
-    expect(LIMIT_SPY).toHaveBeenCalled();
-    const callArgs = LIMIT_SPY.mock.calls[0];
-    expect(callArgs?.[0]).toBe("anon:10.0.0.1");
+    // When auth: true and user is null, authentication fails before rate limiting
+    // Rate limiting only happens after successful authentication
+    expect(res.status).toBe(401);
+    const body = await res.json();
+    expect(body.error).toBe("unauthorized");
+    // Rate limiter should not be called when authentication fails
+    expect(LIMIT_SPY).not.toHaveBeenCalled();
   });
 });

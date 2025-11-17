@@ -36,10 +36,6 @@ vi.mock("@/lib/supabase", () => ({
   }),
 }));
 
-vi.mock("@/lib/supabase/token", () => ({
-  getAccessToken: vi.fn().mockResolvedValue("initial-token"),
-}));
-
 describe("RealtimeAuthProvider", () => {
   beforeEach(() => {
     vi.clearAllMocks();
