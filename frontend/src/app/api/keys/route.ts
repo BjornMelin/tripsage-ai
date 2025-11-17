@@ -5,6 +5,11 @@
 
 import "server-only";
 
+// Security: Prevent caching of sensitive API key data per ADR-0024.
+// With Cache Components enabled, route handlers are dynamic by default.
+// Using withApiGuards({ auth: true }) ensures this route uses cookies/headers,
+// making it dynamic and preventing caching. No 'use cache' directives are present.
+
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -15,13 +20,6 @@ import { API_CONSTANTS, redactErrorForLogging } from "@/lib/next/route-helpers";
 import { insertUserApiKey, upsertUserGatewayBaseUrl } from "@/lib/supabase/rpc";
 import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
 import { getKeys, type PostKeyBody, PostKeyBodySchema, postKey } from "./_handlers";
-
-/**
- * BYOK routes return tenant-specific secrets and must stay fully dynamic. Next.js docs:
- * https://nextjs.org/docs/app/api-reference/file-conventions/route-segment-config#dynamic
- */
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
 
 type IdentifierType = "user" | "ip";
 

@@ -18,7 +18,6 @@ import { resolveProvider } from "@/lib/providers/registry";
 import type { ItineraryPlanRequest } from "@/lib/schemas/agents";
 import { agentSchemas } from "@/lib/schemas/agents";
 
-export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const RequestSchema = agentSchemas.itineraryPlanRequestSchema;

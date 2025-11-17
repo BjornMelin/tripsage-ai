@@ -24,8 +24,6 @@ const searchRequestSchema = z.object({
   textQuery: z.string().min(1),
 });
 
-export const dynamic = "force-dynamic";
-
 /**
  * POST /api/places/search
  *

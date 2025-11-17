@@ -14,7 +14,6 @@ import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse } from "@/lib/next/route-helpers";
 import { resolveProvider } from "@/lib/providers/registry";
 
-export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 /**

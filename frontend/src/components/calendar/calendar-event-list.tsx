@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
-import { getServerEnvVarWithFallback } from "@/lib/env/server";
+import { getClientEnvVarWithFallback } from "@/lib/env/client";
 
 /** Props for CalendarEventList component. */
 export interface CalendarEventListProps {
@@ -61,7 +61,7 @@ export async function CalendarEventList({
   }> = [];
 
   try {
-    const siteUrl = getServerEnvVarWithFallback(
+    const siteUrl = getClientEnvVarWithFallback(
       "NEXT_PUBLIC_SITE_URL",
       "http://localhost:3000"
     );

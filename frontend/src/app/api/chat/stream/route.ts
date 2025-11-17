@@ -17,9 +17,6 @@ import { getClientIpFromHeaders } from "@/lib/next/route-helpers";
 import { resolveProvider } from "@/lib/providers/registry";
 import { handleChatStream } from "./_handler";
 
-// Avoid public caching; this route depends on auth/session
-export const dynamic = "force-dynamic";
-
 // Allow streaming responses for up to 60 seconds
 export const maxDuration = 60;
 

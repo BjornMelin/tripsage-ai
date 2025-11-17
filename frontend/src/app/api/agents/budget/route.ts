@@ -12,19 +12,12 @@ import type { NextRequest } from "next/server";
 import type { z } from "zod";
 import { runBudgetAgent } from "@/lib/agents/budget-agent";
 import { createErrorHandler } from "@/lib/agents/error-recovery";
-import {
-  errorResponse,
-  getTrustedRateLimitIdentifier,
-  withRequestSpan,
-} from "@/lib/next/route-helpers";
+import { withApiGuards } from "@/lib/api/factory";
+import { errorResponse, getTrustedRateLimitIdentifier } from "@/lib/next/route-helpers";
 import { resolveProvider } from "@/lib/providers/registry";
-import { enforceRouteRateLimit } from "@/lib/ratelimit/config";
-import { getRedis } from "@/lib/redis";
 import type { BudgetPlanRequest } from "@/lib/schemas/agents";
 import { agentSchemas } from "@/lib/schemas/agents";
-import { createServerSupabase } from "@/lib/supabase/server";
 
-export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const RequestSchema = agentSchemas.budgetPlanRequestSchema;
@@ -34,62 +27,32 @@ const RequestSchema = agentSchemas.budgetPlanRequestSchema;
  *
  * Validates request, resolves provider, and streams ToolLoop response.
  */
-export async function POST(req: NextRequest): Promise<Response> {
+export const POST = withApiGuards({
+  auth: true,
+  rateLimit: "agents:budget",
+  telemetry: "agent.budgetPlanning",
+})(async (req: NextRequest, { user }) => {
+  const raw = (await req.json().catch(() => ({}))) as unknown;
+  let body: BudgetPlanRequest;
   try {
-    const supabase = await createServerSupabase();
-    const user = (await supabase.auth.getUser()).data.user;
-
-    const raw = (await req.json().catch(() => ({}))) as unknown;
-    let body: BudgetPlanRequest;
-    try {
-      body = RequestSchema.parse(raw);
-    } catch (err) {
-      const zerr = err as z.ZodError;
-      return errorResponse({
-        err: zerr,
-        error: "invalid_request",
-        issues: zerr.issues,
-        reason: "Request validation failed",
-        status: 400,
-      });
-    }
-
-    const identifier = user?.id ?? getTrustedRateLimitIdentifier(req);
-
-    const rateLimitError = await enforceRouteRateLimit(
-      "budgetPlanning",
-      identifier,
-      getRedis
-    );
-    if (rateLimitError) {
-      return errorResponse(rateLimitError);
-    }
-
-    const modelHint = new URL(req.url).searchParams.get("model") ?? undefined;
-    const { model, modelId } = await resolveProvider(user?.id ?? "anon", modelHint);
-
-    return await withRequestSpan(
-      "agent.budgetPlanning",
-      {
-        identifier_type: user?.id ? "user" : "ip",
-        modelId,
-        workflow: "budgetPlanning",
-      },
-      (): Promise<Response> => {
-        const result = runBudgetAgent({ identifier, model }, body);
-        return Promise.resolve(
-          result.toUIMessageStreamResponse({
-            onError: createErrorHandler(),
-          })
-        );
-      }
-    );
+    body = RequestSchema.parse(raw);
   } catch (err) {
+    const zerr = err as z.ZodError;
     return errorResponse({
-      err,
-      error: "internal",
-      reason: "Internal server error",
-      status: 500,
+      err: zerr,
+      error: "invalid_request",
+      issues: zerr.issues,
+      reason: "Request validation failed",
+      status: 400,
     });
   }
-}
+
+  const identifier = user?.id ?? getTrustedRateLimitIdentifier(req);
+  const modelHint = new URL(req.url).searchParams.get("model") ?? undefined;
+  const { model } = await resolveProvider(user?.id ?? "anon", modelHint);
+
+  const result = runBudgetAgent({ identifier, model }, body);
+  return result.toUIMessageStreamResponse({
+    onError: createErrorHandler(),
+  });
+});

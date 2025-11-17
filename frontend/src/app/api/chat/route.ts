@@ -13,9 +13,6 @@ import { getClientIpFromHeaders } from "@/lib/next/route-helpers";
 import { resolveProvider } from "@/lib/providers/registry";
 import { handleChatNonStream } from "./_handler";
 
-// Dynamic due to auth/session
-export const dynamic = "force-dynamic";
-
 // Allow up to 30s for non-stream completion
 export const maxDuration = 30;
 

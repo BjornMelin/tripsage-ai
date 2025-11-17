@@ -3,6 +3,7 @@
  */
 
 import "server-only";
+
 import { SpanStatusCode } from "@opentelemetry/api";
 import { createClient } from "@supabase/supabase-js";
 import { type NextRequest, NextResponse } from "next/server";
@@ -13,9 +14,6 @@ import { withTelemetrySpan } from "@/lib/telemetry/span";
 import { buildEventKey, parseAndVerify } from "@/lib/webhooks/payload";
 
 type FileAttachmentRow = Database["public"]["Tables"]["file_attachments"]["Row"];
-
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
 
 /**
  * Creates an admin Supabase client with service role credentials.

@@ -19,8 +19,6 @@ const photoRequestSchema = z.object({
   skipHttpRedirect: z.boolean().optional(),
 });
 
-export const dynamic = "force-dynamic";
-
 /**
  * GET /api/places/photo
  *

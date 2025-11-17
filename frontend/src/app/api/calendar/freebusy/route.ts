@@ -6,13 +6,15 @@
 
 import "server-only";
 
+// Security: Route handlers are dynamic by default with Cache Components.
+// Using withApiGuards({ auth: true }) ensures this route uses cookies/headers,
+// making it dynamic and preventing caching of user-specific data.
+
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { queryFreeBusy } from "@/lib/calendar/google";
 import { freeBusyRequestSchema } from "@/lib/schemas/calendar";
-
-export const dynamic = "force-dynamic";
 
 /**
  * POST /api/calendar/freebusy
