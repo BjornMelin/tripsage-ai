@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import React, { type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiClient } from "@/lib/api/api-client";
@@ -72,7 +72,7 @@ describe("useAccommodationSearch", () => {
       },
     ];
 
-    vi.mocked(apiClient.get).mockResolvedValueOnce(mockSuggestions);
+    vi.mocked(apiClient.get).mockResolvedValue(mockSuggestions);
 
     vi.mocked(useSearchParamsStore).mockReturnValue({
       updateAccommodationParams: vi.fn(),
@@ -87,10 +87,12 @@ describe("useAccommodationSearch", () => {
 
     const { result } = renderHook(() => useAccommodationSearch(), { wrapper });
 
-    await waitFor(() => {
-      expect(result.current.suggestions).toEqual(mockSuggestions);
-      expect(apiClient.get).toHaveBeenCalledWith("/accommodations/suggestions");
+    await act(async () => {
+      // Wait for hook to fetch suggestions
     });
+
+    expect(result.current.suggestions).toEqual(mockSuggestions);
+    expect(apiClient.get).toHaveBeenCalledWith("/accommodations/suggestions");
   });
 
   it("should update accommodation parameters", () => {
@@ -115,7 +117,7 @@ describe("useAccommodationSearch", () => {
     expect(mockUpdateAccommodationParams).toHaveBeenCalledWith(newParams);
   });
 
-  it("should handle API post requests", async () => {
+  it("should handle API post requests", () => {
     const mockResults = {
       results: [
         {
@@ -135,7 +137,7 @@ describe("useAccommodationSearch", () => {
       totalResults: 1,
     };
 
-    vi.mocked(apiClient.post).mockResolvedValueOnce(mockResults);
+    vi.mocked(apiClient.post).mockResolvedValue(mockResults);
 
     const mockStartSearch = vi.fn().mockReturnValue("search-123");
 
@@ -163,24 +165,21 @@ describe("useAccommodationSearch", () => {
     };
 
     // Trigger search
-    result.current.search(searchParams);
-
-    // Wait for API call
-    await waitFor(() => {
-      expect(apiClient.post).toHaveBeenCalledWith(
-        "/accommodations/search",
-        searchParams
-      );
+    act(() => {
+      result.current.search(searchParams);
     });
+
+    // API call should be made
+    expect(apiClient.post).toHaveBeenCalledWith("/accommodations/search", searchParams);
   });
 
-  it("should handle loading state", async () => {
+  it("should handle loading state", () => {
     let resolvePromise!: (value: unknown) => void;
     const promise = new Promise<unknown>((resolve) => {
       resolvePromise = resolve;
     });
 
-    vi.mocked(apiClient.post).mockReturnValueOnce(promise);
+    vi.mocked(apiClient.post).mockReturnValue(promise);
 
     vi.mocked(useSearchParamsStore).mockReturnValue({
       updateAccommodationParams: vi.fn(),
@@ -198,28 +197,29 @@ describe("useAccommodationSearch", () => {
     expect(result.current.isSearching).toBe(false);
 
     // Start search
-    result.current.search({
-      adults: 2,
-      checkIn: "2024-03-15",
-      checkOut: "2024-03-18",
-      children: 0,
-      destination: "New York",
-      infants: 0,
-      rooms: 1,
+    act(() => {
+      result.current.search({
+        adults: 2,
+        checkIn: "2024-03-15",
+        checkOut: "2024-03-18",
+        children: 0,
+        destination: "New York",
+        infants: 0,
+        rooms: 1,
+      });
     });
 
-    await waitFor(() => {
-      expect(result.current.isSearching).toBe(true);
-    });
+    // Loading state should be true immediately
+    expect(result.current.isSearching).toBe(true);
 
     // Resolve the promise
-    resolvePromise?.({
-      results: [],
-      totalResults: 0,
+    act(() => {
+      resolvePromise?.({
+        results: [],
+        totalResults: 0,
+      });
     });
 
-    await waitFor(() => {
-      expect(result.current.isSearching).toBe(false);
-    });
+    expect(result.current.isSearching).toBe(false);
   });
 });

@@ -1,5 +1,4 @@
 import { screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/test/test-utils";
 
@@ -157,7 +156,6 @@ describe.sequential("RecentTrips", () => {
 
   it("navigates to trip details when card is clicked", async () => {
     await DoMockTrips([MockTrips[0], MockTrips[1]]);
-    userEvent.setup();
     const { RecentTrips } = await import("../recent-trips");
     const { container } = renderWithProviders(<RecentTrips />);
     const { getByRole } = within(container);

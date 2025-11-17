@@ -1,7 +1,6 @@
 /** @vitest-environment jsdom */
 
-import { act, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { fireEvent, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Destination } from "@/lib/schemas/search";
 import { render } from "@/test/test-utils";
@@ -37,11 +36,8 @@ const MockHandlers = {
 };
 
 describe("DestinationCard", () => {
-  let user: ReturnType<typeof userEvent.setup>;
-
   beforeEach(() => {
     vi.clearAllMocks();
-    user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
   });
 
   it("renders destination information correctly", () => {
@@ -91,35 +87,29 @@ describe("DestinationCard", () => {
     expect(screen.getByText("Popularity: 95/100")).toBeInTheDocument();
   });
 
-  it("handles select button click", async () => {
+  it("handles select button click", () => {
     render(<DestinationCard destination={MockDestination} {...MockHandlers} />);
 
     const selectButton = screen.getByText("Select");
-    await act(async () => {
-      await user.click(selectButton);
-    });
+    fireEvent.click(selectButton);
 
     expect(MockHandlers.onSelect).toHaveBeenCalledWith(MockDestination);
   });
 
-  it("handles compare button click", async () => {
+  it("handles compare button click", () => {
     render(<DestinationCard destination={MockDestination} {...MockHandlers} />);
 
     const compareButton = screen.getByText("Compare");
-    await act(async () => {
-      await user.click(compareButton);
-    });
+    fireEvent.click(compareButton);
 
     expect(MockHandlers.onCompare).toHaveBeenCalledWith(MockDestination);
   });
 
-  it("handles view details button click", async () => {
+  it("handles view details button click", () => {
     render(<DestinationCard destination={MockDestination} {...MockHandlers} />);
 
     const detailsButton = screen.getByText("Details");
-    await act(async () => {
-      await user.click(detailsButton);
-    });
+    fireEvent.click(detailsButton);
 
     expect(MockHandlers.onViewDetails).toHaveBeenCalledWith(MockDestination);
   });

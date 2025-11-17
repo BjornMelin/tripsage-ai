@@ -1,5 +1,5 @@
 import type { Session, User } from "@supabase/supabase-js";
-import userEvent from "@testing-library/user-event";
+import { act, fireEvent } from "@testing-library/react";
 import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
@@ -96,21 +96,25 @@ describe("useAuthenticatedApi", () => {
     auth.signOut.mockResolvedValue({ error: null });
   });
 
-  it("throws 401 when the session is missing and refresh fails", async () => {
+  it("throws 401 when the session is missing and refresh fails", () => {
     render(<TestCaller />);
 
-    await userEvent.click(screen.getByRole("button", { name: "ready" }));
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: "ready" }));
+    });
 
     expect(screen.getByRole("button", { name: "UNAUTHORIZED" })).toBeInTheDocument();
   });
 
-  it("attaches Authorization header when a session exists", async () => {
+  it("attaches Authorization header when a session exists", () => {
     const session = CREATE_TEST_SESSION("tok", testUser);
     auth.getSession.mockResolvedValue(BUILD_GET_SESSION_RESPONSE(session));
 
     render(<TestCaller />);
 
-    await userEvent.click(screen.getByRole("button", { name: "ready" }));
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: "ready" }));
+    });
 
     expect(MOCKED_API_GET).toHaveBeenCalledTimes(1);
     const [, options] = MOCKED_API_GET.mock.calls[0];
@@ -119,7 +123,7 @@ describe("useAuthenticatedApi", () => {
     expect(authHeader).toBe("Bearer tok");
   });
 
-  it("refreshes on 401 and retries once", async () => {
+  it("refreshes on 401 and retries once", () => {
     MOCKED_API_GET.mockRejectedValueOnce(
       new ApiError({ code: "UNAUTHORIZED", message: "401", status: 401 })
     ).mockResolvedValueOnce({ ok: true });
@@ -135,7 +139,9 @@ describe("useAuthenticatedApi", () => {
 
     render(<TestCaller />);
 
-    await userEvent.click(screen.getByRole("button", { name: "ready" }));
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: "ready" }));
+    });
 
     expect(MOCKED_API_GET).toHaveBeenCalledTimes(2);
     const [, retryOptions] = MOCKED_API_GET.mock.calls[1];

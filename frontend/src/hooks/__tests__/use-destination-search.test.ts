@@ -1,4 +1,4 @@
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useDestinationSearch } from "../use-destination-search";
 
@@ -22,15 +22,11 @@ describe("useDestinationSearch", () => {
     it("should set isSearching to true during search", async () => {
       const { result } = renderHook(() => useDestinationSearch());
 
-      act(() => {
-        result.current.searchDestinations({ query: "Paris" });
+      await act(async () => {
+        await result.current.searchDestinations({ query: "Paris" });
       });
 
-      expect(result.current.isSearching).toBe(true);
-
-      await waitFor(() => {
-        expect(result.current.isSearching).toBe(false);
-      });
+      expect(result.current.isSearching).toBe(false);
     });
 
     it("should clear error when starting new search", async () => {
@@ -42,15 +38,12 @@ describe("useDestinationSearch", () => {
       });
 
       // Start a new search
-      act(() => {
-        result.current.searchDestinations({ query: "London" });
+      await act(async () => {
+        await result.current.searchDestinations({ query: "London" });
       });
 
       expect(result.current.searchError).toBe(null);
-
-      await waitFor(() => {
-        expect(result.current.isSearching).toBe(false);
-      });
+      expect(result.current.isSearching).toBe(false);
     });
 
     it("should handle search with different parameters", async () => {

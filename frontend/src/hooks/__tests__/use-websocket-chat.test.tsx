@@ -12,8 +12,8 @@ const mockHandleTypingUpdate = vi.fn();
 
 const firedTopics = new Set<string>();
 
-const flushTimers = async () => {
-  await act(async () => {
+const flushTimers = () => {
+  act(() => {
     vi.runAllTimers();
   });
 };
@@ -64,7 +64,7 @@ describe("useWebSocketChat", () => {
 
   it("subscribes to user topic by default", async () => {
     vi.useFakeTimers();
-    const { result } = renderHook(() => useWebSocketChat({ autoConnect: true }));
+    renderHook(() => useWebSocketChat({ autoConnect: true }));
     await flushTimers();
     vi.useRealTimers();
     expect(mockSetChatConnectionStatus).toHaveBeenCalledWith("connected");
@@ -72,7 +72,7 @@ describe("useWebSocketChat", () => {
 
   it("uses session topic when requested", async () => {
     vi.useFakeTimers();
-    const { result } = renderHook(() =>
+    renderHook(() =>
       useWebSocketChat({ autoConnect: true, sessionId: "s1", topicType: "session" })
     );
     await flushTimers();
@@ -85,7 +85,7 @@ describe("useWebSocketChat", () => {
     const { result } = renderHook(() =>
       useWebSocketChat({ autoConnect: true, sessionId: "s1", topicType: "session" })
     );
-    await flushTimers();
+    flushTimers();
     vi.useRealTimers();
     await act(async () => {
       await result.current.sendMessage("hello");
@@ -144,8 +144,8 @@ describe("useWebSocketChat", () => {
     });
 
     vi.useFakeTimers();
-    const { result } = renderHook(() => useWebSocketChat({ autoConnect: true }));
-    await flushTimers();
+    renderHook(() => useWebSocketChat({ autoConnect: true }));
+    flushTimers();
     vi.useRealTimers();
     expect(mockSetChatConnectionStatus).toHaveBeenCalledWith("error");
   });
