@@ -10,38 +10,14 @@ import "server-only";
 
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
-import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
 import { createGateway } from "ai";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { withApiGuards } from "@/lib/api/factory";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
-import { getClientIpFromHeaders } from "@/lib/next/route-helpers";
-import { createServerSupabase } from "@/lib/supabase/server";
 import { recordTelemetryEvent } from "@/lib/telemetry/span";
 
 export const dynamic = "force-dynamic";
-
-const RATELIMIT_PREFIX = "ratelimit:keys-validate";
-
-// Create rate limit instance lazily to make testing easier
-const GET_RATELIMIT_INSTANCE = () => {
-  const UPSTASH_URL = getServerEnvVarWithFallback("UPSTASH_REDIS_REST_URL", undefined);
-  const UPSTASH_TOKEN = getServerEnvVarWithFallback(
-    "UPSTASH_REDIS_REST_TOKEN",
-    undefined
-  );
-  if (!UPSTASH_URL || !UPSTASH_TOKEN) {
-    return undefined;
-  }
-
-  return new Ratelimit({
-    analytics: true,
-    limiter: Ratelimit.slidingWindow(20, "1 m"),
-    prefix: RATELIMIT_PREFIX,
-    redis: Redis.fromEnv(),
-  });
-};
 
 type ValidateResult = { isValid: boolean; reason?: string };
 
@@ -203,100 +179,50 @@ async function validateProviderKey(
 }
 
 /**
- * Require rate limiting for the request identifier.
- *
- * @param identifier Unique bucket key (user id or derived token/IP).
- * @returns NextResponse with 429 status if rate limit exceeded, otherwise null.
- */
-async function requireRateLimit(identifier: string): Promise<NextResponse | null> {
-  const ratelimitInstance = GET_RATELIMIT_INSTANCE();
-  if (!ratelimitInstance) return null;
-  const { success, limit, remaining, reset } =
-    await ratelimitInstance.limit(identifier);
-  if (!success) {
-    return NextResponse.json(
-      { code: "RATE_LIMIT", error: "Rate limit exceeded" },
-      {
-        headers: {
-          "X-RateLimit-Limit": String(limit),
-          "X-RateLimit-Remaining": String(remaining),
-          "X-RateLimit-Reset": String(reset),
-        },
-        status: 429,
-      }
-    );
-  }
-  return null;
-}
-
-/**
  * Handle POST /api/keys/validate to verify a user-supplied API key.
  *
  * Orchestrates rate limiting, authentication, and provider validation.
  *
  * @param req Next.js request containing JSON body with { service, apiKey }.
+ * @param routeContext Route context from withApiGuards
  * @returns 200 with validation result; 400/401/429/500 on error.
  */
-export async function POST(req: NextRequest) {
+export const POST = withApiGuards({
+  auth: true,
+  rateLimit: "keys:validate",
+  // Custom telemetry handled below
+})(async (req: NextRequest, { user: _user }) => {
+  let service: string | undefined;
+  let apiKey: string | undefined;
   try {
-    const supabase = await createServerSupabase();
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.getUser();
-    const identifier = user?.id ?? `anon:${getClientIpFromHeaders(req)}`;
-
-    const rateLimitResponse = await requireRateLimit(identifier);
-    if (rateLimitResponse) {
-      return rateLimitResponse;
-    }
-
-    let service: string | undefined;
-    let apiKey: string | undefined;
-    try {
-      const body = await req.json();
-      service = body.service;
-      apiKey = body.apiKey;
-    } catch (parseError) {
-      const message =
-        parseError instanceof Error ? parseError.message : "Unknown JSON parse error";
-      recordTelemetryEvent("api.keys.validate.parse_error", {
-        attributes: { message },
-        level: "error",
-      });
-      return NextResponse.json(
-        { code: "BAD_REQUEST", error: "Malformed JSON in request body" },
-        { status: 400 }
-      );
-    }
-
-    if (
-      !service ||
-      !apiKey ||
-      typeof service !== "string" ||
-      typeof apiKey !== "string"
-    ) {
-      return NextResponse.json(
-        { code: "BAD_REQUEST", error: "Invalid request body" },
-        { status: 400 }
-      );
-    }
-
-    if (error || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const result = await validateProviderKey(service, apiKey);
-    return NextResponse.json(result, { status: 200 });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    recordTelemetryEvent("api.keys.validate.post_error", {
+    const body = await req.json();
+    service = body.service;
+    apiKey = body.apiKey;
+  } catch (parseError) {
+    const message =
+      parseError instanceof Error ? parseError.message : "Unknown JSON parse error";
+    recordTelemetryEvent("api.keys.validate.parse_error", {
       attributes: { message },
       level: "error",
     });
     return NextResponse.json(
-      { code: "INTERNAL_ERROR", error: "Internal server error" },
-      { status: 500 }
+      { code: "BAD_REQUEST", error: "Malformed JSON in request body" },
+      { status: 400 }
     );
   }
-}
+
+  if (
+    !service ||
+    !apiKey ||
+    typeof service !== "string" ||
+    typeof apiKey !== "string"
+  ) {
+    return NextResponse.json(
+      { code: "BAD_REQUEST", error: "Invalid request body" },
+      { status: 400 }
+    );
+  }
+
+  const result = await validateProviderKey(service, apiKey);
+  return NextResponse.json(result, { status: 200 });
+});

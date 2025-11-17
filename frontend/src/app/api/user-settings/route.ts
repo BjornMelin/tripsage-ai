@@ -1,69 +1,55 @@
 /**
- * @fileoverview User settings API for BYOK/Gateway consent.
- * Route: /api/user-settings
- * Methods: GET (read), POST (upsert allow_gateway_fallback)
+ * @fileoverview User settings API route handlers.
+ *
+ * Handles BYOK/Gateway consent preferences. Methods: GET (read),
+ * POST (upsert allow_gateway_fallback).
  */
 
 import "server-only";
 
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { withApiGuards } from "@/lib/api/factory";
 import { getUserAllowGatewayFallback } from "@/lib/supabase/rpc";
-import { createServerSupabase } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/user-settings
- * Retrieves user's gateway fallback preference setting.
- * Requires authenticated user session.
- * @returns NextResponse with allowGatewayFallback boolean or error
+ * Retrieves the user's gateway fallback preference setting.
+ *
+ * Requires authentication.
+ *
+ * @returns Promise resolving to NextResponse with allowGatewayFallback boolean.
  */
-export async function GET() {
-  const supabase = await createServerSupabase();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-  if (error || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  try {
-    const allowGatewayFallback = await getUserAllowGatewayFallback(user.id);
-    return NextResponse.json({ allowGatewayFallback }, { status: 200 });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    console.error("/api/user-settings GET error:", { message });
-    return NextResponse.json(
-      { code: "INTERNAL_ERROR", error: "Internal server error" },
-      { status: 500 }
-    );
-  }
-}
+export const GET = withApiGuards({
+  auth: true,
+  rateLimit: "user-settings:get",
+  telemetry: "user-settings.get",
+})(async (_req, { user }) => {
+  const allowGatewayFallback = await getUserAllowGatewayFallback(user!.id);
+  return NextResponse.json({ allowGatewayFallback });
+});
 
 import type { Database } from "@/lib/supabase/database.types";
 
 /**
- * POST /api/user-settings
- * Updates user's gateway fallback preference setting.
- * Requires authenticated user session.
- * @param req - NextRequest containing allowGatewayFallback boolean in body
- * @returns NextResponse with success confirmation or error
+ * Updates the user's gateway fallback preference setting.
+ *
+ * Requires authentication. Body must contain `allowGatewayFallback` boolean.
+ *
+ * @param req NextRequest containing allowGatewayFallback boolean in body.
+ * @returns Promise resolving to NextResponse with success confirmation or error.
  */
-export async function POST(req: NextRequest) {
-  const supabase = await createServerSupabase();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-  if (error || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+export const POST = withApiGuards({
+  auth: true,
+  rateLimit: "user-settings:update",
+  telemetry: "user-settings.update",
+})(async (req: NextRequest, { user, supabase }) => {
   let allowGatewayFallback: unknown;
   try {
     const body = await req.json();
     allowGatewayFallback = body?.allowGatewayFallback;
-  } catch (_parseErr) {
+  } catch {
     return NextResponse.json(
       { code: "BAD_REQUEST", error: "Malformed JSON" },
       { status: 400 }
@@ -75,37 +61,31 @@ export async function POST(req: NextRequest) {
       { status: 400 }
     );
   }
-  try {
-    // Upsert row with owner RLS via SSR client
-    type UserSettingsInsert = Database["public"]["Tables"]["user_settings"]["Insert"];
-    // DB column names use snake_case by convention
-    const payload: UserSettingsInsert = {
-      allow_gateway_fallback: allowGatewayFallback,
-      user_id: user.id,
-    };
-    const { error: upsertError } = await (
-      supabase as unknown as {
-        from: (table: string) => {
-          upsert: (
-            values: Record<string, unknown>,
-            options?: { onConflict?: string; ignoreDuplicates?: boolean }
-          ) => Promise<{ error: unknown | null }>;
-        };
-      }
-    )
-      .from("user_settings")
-      .upsert(payload as unknown as Record<string, unknown>, {
-        ignoreDuplicates: false,
-        onConflict: "user_id",
-      });
-    if (upsertError) throw upsertError;
-    return NextResponse.json({ ok: true }, { status: 200 });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    console.error("/api/user-settings POST error:", { message });
-    return NextResponse.json(
-      { code: "INTERNAL_ERROR", error: "Internal server error" },
-      { status: 500 }
-    );
+
+  // Upsert row with owner RLS via SSR client
+  type UserSettingsInsert = Database["public"]["Tables"]["user_settings"]["Insert"];
+  // DB column names use snake_case by convention
+  const payload: UserSettingsInsert = {
+    allow_gateway_fallback: allowGatewayFallback,
+    user_id: user!.id,
+  };
+  const { error: upsertError } = await (
+    supabase as unknown as {
+      from: (table: string) => {
+        upsert: (
+          values: Record<string, unknown>,
+          options?: { onConflict?: string; ignoreDuplicates?: boolean }
+        ) => Promise<{ error: unknown | null }>;
+      };
+    }
+  )
+    .from("user_settings")
+    .upsert(payload as unknown as Record<string, unknown>, {
+      ignoreDuplicates: false,
+      onConflict: "user_id",
+    });
+  if (upsertError) {
+    throw upsertError;
   }
-}
+  return NextResponse.json({ ok: true });
+});

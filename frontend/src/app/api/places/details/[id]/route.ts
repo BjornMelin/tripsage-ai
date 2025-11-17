@@ -9,6 +9,7 @@ import "server-only";
 
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { withApiGuards } from "@/lib/api/factory";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
 
 const detailsRequestSchema = z.object({
@@ -21,13 +22,19 @@ export const dynamic = "force-dynamic";
  * GET /api/places/details/[id]
  *
  * Get place details using Google Places API (New) Place Details.
+ *
+ * @param req - Next.js request object
+ * @param routeContext - Route context from withApiGuards
+ * @param routeParams - Route parameters containing id
+ * @returns JSON response with place details
  */
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
+export function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+  return withApiGuards({
+    auth: false,
+    rateLimit: "places:details",
+    telemetry: "places.details",
+  })(async (req: NextRequest) => {
+    const { id } = await context.params;
     const { searchParams } = new URL(req.url);
     const sessionToken = searchParams.get("sessionToken");
 
@@ -67,16 +74,5 @@ export async function GET(
 
     const data = await response.json();
     return NextResponse.json(data);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { details: error.issues, error: "Invalid request" },
-        { status: 400 }
-      );
-    }
-    if (error instanceof Error && error.message.includes("required")) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
+  })(req, context);
 }

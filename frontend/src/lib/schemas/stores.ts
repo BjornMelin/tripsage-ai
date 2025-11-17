@@ -27,6 +27,89 @@ const PAGINATION_STATE_SCHEMA = z.object({
   total: NON_NEGATIVE_NUMBER_SCHEMA,
 });
 
+// Auth schemas (reusable across auth store slices)
+// Note: These are auth-specific user preferences (UI settings), distinct from
+// memory.ts USER_PREFERENCES_SCHEMA which is for travel preferences
+export const AUTH_USER_PREFERENCES_SCHEMA = z.object({
+  analytics: z.boolean().optional(),
+  autoSaveSearches: z.boolean().optional(),
+  dateFormat: z.enum(["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"]).optional(),
+  language: z.string().optional(),
+  locationServices: z.boolean().optional(),
+  notifications: z
+    .object({
+      email: z.boolean().optional(),
+      marketing: z.boolean().optional(),
+      priceAlerts: z.boolean().optional(),
+      tripReminders: z.boolean().optional(),
+    })
+    .optional(),
+  smartSuggestions: z.boolean().optional(),
+  theme: z.enum(["light", "dark", "system"]).optional(),
+  timeFormat: z.enum(["12h", "24h"]).optional(),
+  timezone: z.string().optional(),
+  units: z.enum(["metric", "imperial"]).optional(),
+});
+
+export const AUTH_USER_SECURITY_SCHEMA = z.object({
+  lastPasswordChange: z.string().optional(),
+  securityQuestions: z
+    .array(
+      z.object({
+        answer: z.string(), // This would be hashed in real implementation
+        question: z.string(),
+      })
+    )
+    .optional(),
+  twoFactorEnabled: z.boolean().optional(),
+});
+
+export const AUTH_USER_SCHEMA = z.object({
+  avatarUrl: z.url().optional(),
+  bio: z.string().optional(),
+  createdAt: z.string(),
+  displayName: z.string().optional(),
+  email: EMAIL_SCHEMA,
+  firstName: z.string().optional(),
+  id: z.string(),
+  isEmailVerified: z.boolean(),
+  lastName: z.string().optional(),
+  location: z.string().optional(),
+  preferences: AUTH_USER_PREFERENCES_SCHEMA.optional(),
+  security: AUTH_USER_SECURITY_SCHEMA.optional(),
+  updatedAt: z.string(),
+  website: z.url().optional(),
+});
+
+export const AUTH_TOKEN_INFO_SCHEMA = z.object({
+  accessToken: z.string(),
+  expiresAt: z.string(),
+  refreshToken: z.string().optional(),
+  tokenType: z.string().default("Bearer"),
+});
+
+export const AUTH_SESSION_SCHEMA = z.object({
+  createdAt: z.string(),
+  deviceInfo: z
+    .object({
+      deviceId: z.string().optional(),
+      ipAddress: z.string().optional(),
+      userAgent: z.string().optional(),
+    })
+    .optional(),
+  expiresAt: z.string(),
+  id: z.string(),
+  lastActivity: z.string(),
+  userId: z.string(),
+});
+
+// Auth type exports
+export type AuthUser = z.infer<typeof AUTH_USER_SCHEMA>;
+export type AuthUserPreferences = z.infer<typeof AUTH_USER_PREFERENCES_SCHEMA>;
+export type AuthUserSecurity = z.infer<typeof AUTH_USER_SECURITY_SCHEMA>;
+export type AuthTokenInfo = z.infer<typeof AUTH_TOKEN_INFO_SCHEMA>;
+export type AuthSession = z.infer<typeof AUTH_SESSION_SCHEMA>;
+
 // Auth store schema
 export const authStoreStateSchema = z.object({
   error: z.string().nullable(),
