@@ -336,6 +336,7 @@ docs/prompts/database-provider-research
 docs/prompts/tools/
 frontend/docs/prompts/tests/complete
 frontend/docs/prompts/review/dry/complete
+frontend/docs/testing/complete
 
 # Frontend workspace (consolidated from frontend/.gitignore)
 next-env.d.ts
