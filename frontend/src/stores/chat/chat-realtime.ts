@@ -89,7 +89,7 @@ export const useChatRealtime = create<ChatRealtimeState>()((set, get) => ({
     });
   },
 
-  handleRealtimeMessage: (sessionId, payload) => {
+  handleRealtimeMessage: (_sessionId, payload) => {
     // This handler is called by hooks that manage actual Supabase channels
     // The slice just tracks state - actual message addition goes through messages slice
     if (!payload.content) {

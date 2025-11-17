@@ -7,12 +7,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type {
-  Attachment,
-  ChatSession,
-  Message,
-  SendMessageOptions,
-} from "@/lib/schemas/chat";
+import type { ChatSession, Message, SendMessageOptions } from "@/lib/schemas/chat";
 import { generateId, getCurrentTimestamp } from "@/lib/stores/helpers";
 import { useChatMemory } from "./chat-memory";
 

@@ -8,7 +8,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo } from "react";
-import { nowIso, secureUuid } from "@/lib/security/random";
+import { nowIso } from "@/lib/security/random";
 import { useAuthCore } from "@/stores/auth/auth-core";
 import { useChatRealtime } from "@/stores/chat/chat-realtime";
 import { useRealtimeChannel } from "./use-realtime-channel";

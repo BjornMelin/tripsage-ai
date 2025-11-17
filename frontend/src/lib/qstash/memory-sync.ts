@@ -72,7 +72,7 @@ export async function enqueueMemorySync(
  * @param messages - Conversation messages to store.
  * @return Promise resolving to enqueue result.
  */
-export async function enqueueConversationMemorySync(
+export function enqueueConversationMemorySync(
   sessionId: string,
   userId: string,
   messages: Array<{
@@ -103,7 +103,7 @@ export async function enqueueConversationMemorySync(
  * @param userId - User identifier.
  * @return Promise resolving to enqueue result.
  */
-export async function enqueueFullMemorySync(
+export function enqueueFullMemorySync(
   sessionId: string,
   userId: string
 ): Promise<{ messageId: string; idempotencyKey: string }> {
@@ -126,7 +126,7 @@ export async function enqueueFullMemorySync(
  * @param userId - User identifier.
  * @return Promise resolving to enqueue result.
  */
-export async function enqueueIncrementalMemorySync(
+export function enqueueIncrementalMemorySync(
   sessionId: string,
   userId: string
 ): Promise<{ messageId: string; idempotencyKey: string }> {
