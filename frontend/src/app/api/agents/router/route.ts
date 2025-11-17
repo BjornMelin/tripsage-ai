@@ -9,12 +9,17 @@ import "server-only";
 
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import type { z } from "zod";
 import { classifyUserMessage } from "@/lib/agents/router-agent";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse } from "@/lib/next/route-helpers";
 import { resolveProvider } from "@/lib/providers/registry";
+import type { RouterRequest } from "@/lib/schemas/agents";
+import { agentSchemas } from "@/lib/schemas/agents";
 
 export const maxDuration = 30;
+
+const RequestSchema = agentSchemas.routerRequestSchema;
 
 /**
  * POST /api/agents/router
@@ -31,12 +36,16 @@ export const POST = withApiGuards({
   telemetry: "agent.router",
 })(async (req: NextRequest, { user }) => {
   const raw = (await req.json().catch(() => ({}))) as unknown;
-  const body = raw as { message?: string };
-  const message = body.message;
-  if (!message || typeof message !== "string") {
+  let body: RouterRequest;
+  try {
+    body = RequestSchema.parse(raw);
+  } catch (err) {
+    const zerr = err as z.ZodError;
     return errorResponse({
+      err: zerr,
       error: "invalid_request",
-      reason: "message field is required and must be a string",
+      issues: zerr.issues,
+      reason: "Request validation failed",
       status: 400,
     });
   }
@@ -44,7 +53,7 @@ export const POST = withApiGuards({
   const modelHint = new URL(req.url).searchParams.get("model") ?? undefined;
   const { model } = await resolveProvider(user?.id ?? "anon", modelHint);
 
-  const classification = await classifyUserMessage({ model }, message);
+  const classification = await classifyUserMessage({ model }, body.message);
 
   return NextResponse.json(classification);
 });

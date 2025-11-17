@@ -1,21 +1,9 @@
-/**
- * @vitest-environment node
- */
-
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setupSupabaseMocks } from "@/test/mocks/supabase";
 import type { PersonalInfo, UserProfile } from "../user-store";
 import { useUserProfileStore } from "../user-store";
 
 setupSupabaseMocks();
-
-// Mock the store to avoid persistence issues in tests
-vi.mock("zustand/middleware", () => ({
-  // biome-ignore lint/suspicious/noExplicitAny: Test mock doesn't need type safety
-  devtools: (fn: any) => fn,
-  // biome-ignore lint/suspicious/noExplicitAny: Test mock doesn't need type safety
-  persist: (fn: any) => fn,
-}));
 
 describe("User Profile Store - Fixed", () => {
   let mockProfile: UserProfile;
@@ -84,13 +72,15 @@ describe("User Profile Store - Fixed", () => {
       await vi.runAllTimersAsync();
       const updateResult = await updatePromise;
 
+      // Get fresh state after update
+      const updatedState = useUserProfileStore.getState();
       expect(updateResult).toBe(true);
-      expect(store.profile?.personalInfo?.firstName).toBe("Jane");
-      expect(store.profile?.personalInfo?.lastName).toBe("Smith");
-      expect(store.profile?.personalInfo?.bio).toBe("Updated bio");
-      expect(store.profile?.personalInfo?.location).toBe("San Francisco, CA");
-      expect(store.isUpdatingProfile).toBe(false);
-      expect(store.error).toBeNull();
+      expect(updatedState.profile?.personalInfo?.firstName).toBe("Jane");
+      expect(updatedState.profile?.personalInfo?.lastName).toBe("Smith");
+      expect(updatedState.profile?.personalInfo?.bio).toBe("Updated bio");
+      expect(updatedState.profile?.personalInfo?.location).toBe("San Francisco, CA");
+      expect(updatedState.isUpdatingProfile).toBe(false);
+      expect(updatedState.error).toBeNull();
     });
 
     it("handles update personal info when no profile exists", async () => {
@@ -108,17 +98,25 @@ describe("User Profile Store - Fixed", () => {
       const store = useUserProfileStore.getState();
       store.setProfile(mockProfile);
 
-      expect(store.profile).toMatchObject(mockProfile);
-      expect(store.displayName).toBe("John Doe");
+      // Get fresh state after setProfile
+      const updatedState = useUserProfileStore.getState();
+      expect(updatedState.profile).toMatchObject(mockProfile);
+      expect(updatedState.displayName).toBe("John Doe");
     });
 
     it("resets profile to null", () => {
       const store = useUserProfileStore.getState();
       store.setProfile(mockProfile);
-      expect(store.profile).not.toBeNull();
+      
+      // Get fresh state after setProfile
+      let updatedState = useUserProfileStore.getState();
+      expect(updatedState.profile).not.toBeNull();
 
       store.reset();
-      expect(store.profile).toBeNull();
+      
+      // Get fresh state after reset
+      updatedState = useUserProfileStore.getState();
+      expect(updatedState.profile).toBeNull();
     });
   });
 });

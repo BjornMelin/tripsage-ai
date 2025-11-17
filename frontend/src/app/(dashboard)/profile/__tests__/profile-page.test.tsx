@@ -231,7 +231,7 @@ describe("ProfilePage", () => {
     render(<ProfilePage />);
 
     const preferencesTab = screen.getByRole("tab", { name: /preferences/i });
-    await act(async () => {
+    act(() => {
       fireEvent.click(preferencesTab);
     });
 

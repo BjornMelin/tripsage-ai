@@ -34,9 +34,10 @@ function createSupabaseStub(overrides: SupabaseOverrides = {}) {
     order: vi.fn().mockReturnThis(),
     select: vi.fn().mockReturnThis(),
   };
-  const rpc = vi.fn<
-    () => Promise<{ data: unknown; error: unknown }>
-  >(async () => ({ data: [], error: null }));
+  const rpc = vi.fn<() => Promise<{ data: unknown; error: unknown }>>(async () => ({
+    data: [],
+    error: null,
+  }));
   return {
     auth: {
       getUser: vi.fn(async () => ({

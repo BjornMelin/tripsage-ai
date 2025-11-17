@@ -15,6 +15,8 @@ import { stepCountIs, streamText, tool } from "ai";
 import { buildGuardedTool } from "@/lib/agents/guarded-tool";
 import { buildRateLimit } from "@/lib/ratelimit/config";
 import type { ItineraryPlanRequest } from "@/lib/schemas/agents";
+import type { ChatMessage } from "@/lib/tokens/budget";
+import { clampMaxTokens } from "@/lib/tokens/budget";
 import { toolRegistry } from "@/lib/tools";
 import { lookupPoiInputSchema } from "@/lib/tools/google-places";
 import {
@@ -168,23 +170,35 @@ function buildItineraryTools(identifier: string): ToolSet {
  * and streams a model-guided tool loop to produce results structured per
  * `itin.v1` schema.
  *
- * @param deps Language model and request-scoped utilities.
+ * @param deps Language model, model identifier, and request-scoped utilities.
  * @param input Validated itinerary plan request.
  * @returns AI SDK stream result for UI consumption.
  */
 export function runItineraryAgent(
   deps: {
     model: LanguageModel;
+    modelId: string;
     identifier: string;
   },
   input: ItineraryPlanRequest
 ) {
   const instructions = buildItineraryPrompt(input);
+  const userPrompt = `Generate itinerary plan and summarize. Always return JSON with schemaVersion="itin.v1" and days[]. Parameters: ${JSON.stringify(
+    input
+  )}`;
+
+  // Token budgeting: clamp max output tokens based on prompt length
+  const messages: ChatMessage[] = [
+    { content: instructions, role: "system" },
+    { content: userPrompt, role: "user" },
+  ];
+  const desiredMaxTokens = 4096; // Default for agent responses
+  const { maxTokens } = clampMaxTokens(messages, desiredMaxTokens, deps.modelId);
+
   return streamText({
+    maxOutputTokens: maxTokens,
     model: deps.model,
-    prompt: `Generate itinerary plan and summarize. Always return JSON with schemaVersion="itin.v1" and days[]. Parameters: ${JSON.stringify(
-      input
-    )}`,
+    prompt: userPrompt,
     stopWhen: stepCountIs(15),
     system: instructions,
     temperature: 0.3,
