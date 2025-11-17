@@ -1,4 +1,6 @@
-import { act, renderHook } from "@testing-library/react";
+/** @vitest-environment jsdom */
+
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import type {
   SearchHistoryItem,
@@ -77,12 +79,17 @@ describe("Search History Store - Settings, Utils, and Analytics", () => {
       expect(result.current.lastSyncAt).toBeNull();
 
       await act(async () => {
-        const success = await result.current.syncWithServer();
+        const promise = result.current.syncWithServer();
+        await waitFor(() => {
+          expect(result.current.isSyncing).toBe(false);
+        });
+        const success = await promise;
         expect(success).toBe(true);
       });
 
-      expect(result.current.isSyncing).toBe(false);
-      expect(result.current.lastSyncAt).toBeTruthy();
+      await waitFor(() => {
+        expect(result.current.lastSyncAt).toBeTruthy();
+      });
     });
   });
 

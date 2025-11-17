@@ -1,4 +1,6 @@
-import { render, screen } from "@testing-library/react";
+/** @vitest-environment jsdom */
+
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMemoryInsights, useMemoryStats } from "@/hooks/use-memory";
 import { PersonalizationInsights } from "../personalization-insights";
@@ -123,12 +125,18 @@ describe("PersonalizationInsights", () => {
     expect(screen.getByText(/Tokyo/i)).toBeInTheDocument();
   });
 
-  it("displays recommendations when recommendations tab is clicked and showRecommendations is true", () => {
+  it("displays recommendations when recommendations tab is clicked and showRecommendations is true", async () => {
     render(<PersonalizationInsights userId="user-123" showRecommendations={true} />, {
       wrapper: CreateTestWrapper(),
     });
 
-    expect(screen.getByText(/luxury eco-lodges/i)).toBeInTheDocument();
+    // Click on recommendations button
+    const recommendationsButton = screen.getByRole("button", { name: /recommendations/i });
+    fireEvent.click(recommendationsButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/luxury eco-lodges/i)).toBeInTheDocument();
+    });
   });
 
   it("switches between views correctly", () => {
@@ -136,7 +144,8 @@ describe("PersonalizationInsights", () => {
       wrapper: CreateTestWrapper(),
     });
 
-    const budgetTab = screen.getByRole("tab", { name: /budget/i });
-    expect(budgetTab).toBeInTheDocument();
+    // Component uses buttons, not tabs with role="tab"
+    const budgetButton = screen.getByRole("button", { name: /budget/i });
+    expect(budgetButton).toBeInTheDocument();
   });
 });

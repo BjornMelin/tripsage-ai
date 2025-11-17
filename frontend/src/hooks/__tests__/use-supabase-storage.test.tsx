@@ -1,3 +1,5 @@
+/** @vitest-environment jsdom */
+
 import { waitFor } from "@testing-library/react";
 import type { Mock } from "vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
