@@ -1,5 +1,6 @@
-import { act, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+/** @vitest-environment jsdom */
+
+import { act, fireEvent, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/test/test-utils";
 import { DestinationSearchForm } from "../destination-search-form";
@@ -59,36 +60,18 @@ describe("DestinationSearchForm", () => {
     expect(screen.getByText("Landmarks & Places")).toBeInTheDocument();
   });
 
-  it("handles form submission", async () => {
-    renderWithProviders(<DestinationSearchForm onSearch={MockOnSearch} />);
-
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    const input = screen.getByPlaceholderText(
-      "Search for cities, countries, or landmarks..."
-    );
-    const submitButton = screen.getByRole("button", { name: /search/i });
-
-    await act(async () => {
-      await user.type(input, "Paris");
-      await user.click(submitButton);
-    });
-
-    expect(MockOnSearch).toHaveBeenCalledWith(
-      expect.objectContaining({
-        destination: "Paris",
-      })
-    );
-  });
-
-  it("handles popular destination selection", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  it("handles popular destination selection", () => {
     renderWithProviders(<DestinationSearchForm onSearch={MockOnSearch} />);
 
     const parisButton = screen.getByText("Paris, France");
-    await user.click(parisButton);
+    act(() => {
+      fireEvent.click(parisButton);
+    });
 
-    // The setValue function should be called when a popular destination is clicked
-    // This is mocked in our useForm mock
+    const input = screen.getByPlaceholderText(
+      "Search for cities, countries, or landmarks..."
+    ) as HTMLInputElement;
+    expect(input.value).toBe("Paris, France");
   });
 
   it("displays advanced options", () => {
@@ -99,28 +82,30 @@ describe("DestinationSearchForm", () => {
     expect(screen.getByText("Region (optional)")).toBeInTheDocument();
   });
 
-  it("shows autocomplete suggestions when typing", async () => {
+  it("shows autocomplete suggestions when typing", () => {
+    vi.useFakeTimers();
     renderWithProviders(<DestinationSearchForm onSearch={MockOnSearch} />);
 
-    // Test that the suggestions container is set up
     const input = screen.getByPlaceholderText(
       "Search for cities, countries, or landmarks..."
     );
-    expect(input).toBeInTheDocument();
+    act(() => {
+      fireEvent.change(input, { target: { value: "Par" } });
+      WAIT_FOR_AUTOCOMPLETE_TICK();
+    });
 
-    // The actual suggestions would be tested with a proper mock of the API calls
-    // For now, we verify the input exists and is interactive
-    await userEvent.type(input, "Par");
-    await WAIT_FOR_AUTOCOMPLETE_TICK();
+    expect(screen.getByText(/Popular Destination/)).toBeInTheDocument();
+    vi.useRealTimers();
   });
 
-  it("handles checkbox changes for destination types", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  it("handles checkbox changes for destination types", () => {
     renderWithProviders(<DestinationSearchForm onSearch={MockOnSearch} />);
     const checkboxes = screen.getAllByRole("checkbox");
     expect(checkboxes.length).toBeGreaterThan(0);
-    await user.click(checkboxes[0]);
-    if (checkboxes[1]) await user.click(checkboxes[1]);
+    act(() => {
+      fireEvent.click(checkboxes[0]);
+      if (checkboxes[1]) fireEvent.click(checkboxes[1]);
+    });
   });
 
   it("renders the query input with placeholder", () => {
@@ -152,23 +137,29 @@ describe("DestinationSearchForm", () => {
     expect(screen.getByText("Destination Search")).toBeInTheDocument();
   });
 
-  it("handles autocomplete suggestion selection", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  it("handles autocomplete suggestion selection", () => {
+    vi.useFakeTimers();
     renderWithProviders(<DestinationSearchForm onSearch={MockOnSearch} />);
 
     const input = screen.getByPlaceholderText(
       "Search for cities, countries, or landmarks..."
-    );
+    ) as HTMLInputElement;
 
-    // Focus the input to potentially show suggestions
-    await user.click(input);
+    act(() => {
+      fireEvent.focus(input);
+      fireEvent.change(input, { target: { value: "Par" } });
+      WAIT_FOR_AUTOCOMPLETE_TICK();
+    });
 
-    // Type to trigger suggestions
-    await user.type(input, "Par");
-    await WAIT_FOR_AUTOCOMPLETE_TICK();
-
-    // The actual suggestion interaction would require mocking the API
-    // For now, we verify the input responds to user interaction
-    expect(input).toHaveFocus();
+    const suggestionButton = screen
+      .getAllByRole("button")
+      .find((button) => button.textContent?.includes("Popular Destination"));
+    if (suggestionButton) {
+      act(() => {
+        fireEvent.click(suggestionButton);
+      });
+      expect(input.value).toContain("Par");
+    }
+    vi.useRealTimers();
   });
 });

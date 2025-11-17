@@ -67,9 +67,9 @@ function resetExpedia() {
   expediaState.checkAvailability.mockReset();
 }
 
-vi.mock("@/lib/supabase", () => ({
-  createServerSupabase: vi.fn(async () => supabaseState.instance),
-}));
+import { setupSupabaseMocks } from "@/test/mocks/supabase";
+
+setupSupabaseMocks();
 
 vi.mock("@/lib/travel-api/expedia-client", () => {
   class ExpediaApiError extends Error {

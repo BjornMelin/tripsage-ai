@@ -6,7 +6,10 @@ import {
   useIsTokenExpired,
   useSessionTimeRemaining,
 } from "@/stores/auth/auth-session";
+import { setupReactQueryMocks } from "@/test/mocks/react-query";
 import { resetAuthSlices, setupAuthSliceTests } from "./_shared";
+
+setupReactQueryMocks();
 
 // Mock fetch for API calls
 global.fetch = vi.fn();

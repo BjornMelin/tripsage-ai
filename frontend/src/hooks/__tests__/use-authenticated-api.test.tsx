@@ -7,7 +7,12 @@ import { apiClient } from "@/lib/api/api-client";
 import { ApiError } from "@/lib/api/error-types";
 import { createClient } from "@/lib/supabase";
 import type { SupabaseAuthMock } from "@/test/mock-helpers";
+import { setupReactQueryMocks } from "@/test/mocks/react-query";
+import { setupSupabaseMocks } from "@/test/mocks/supabase";
 import { render, screen } from "@/test/test-utils";
+
+setupReactQueryMocks();
+setupSupabaseMocks();
 
 vi.mock("@/lib/api/api-client", () => ({
   apiClient: {

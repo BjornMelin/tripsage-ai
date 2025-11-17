@@ -45,7 +45,7 @@ const DestinationSearchFormSchema = z.object({
   ),
 });
 
-type DestinationSearchFormValues = z.infer<typeof DestinationSearchFormSchema>;
+export type DestinationSearchFormValues = z.infer<typeof DestinationSearchFormSchema>;
 
 interface DestinationSuggestion {
   placeId: string;
@@ -191,16 +191,8 @@ export function DestinationSearchForm({
   };
 
   const handleSubmit = (data: DestinationSearchFormValues) => {
-    const searchParams: DestinationSearchParams = {
-      language: data.language,
-      limit: data.limit,
-      query: data.query,
-      region: data.region,
-      types: data.types,
-    };
-
     if (onSearch) {
-      onSearch(searchParams);
+      onSearch(mapDestinationValuesToParams(data));
     }
   };
 
@@ -522,4 +514,17 @@ export function DestinationSearchForm({
       </CardContent>
     </Card>
   );
+}
+
+// biome-ignore lint/style/useNamingConvention: Utility function name is intentionally camelCase
+export function mapDestinationValuesToParams(
+  data: DestinationSearchFormValues
+): DestinationSearchParams {
+  return {
+    language: data.language,
+    limit: data.limit,
+    query: data.query,
+    region: data.region,
+    types: data.types,
+  };
 }

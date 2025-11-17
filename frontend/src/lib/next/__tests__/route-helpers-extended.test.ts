@@ -1,6 +1,10 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { setupReactQueryMocks } from "@/test/mocks/react-query";
+
+setupReactQueryMocks();
+
 import type { z } from "zod";
 import { errorResponse, withRequestSpan } from "@/lib/next/route-helpers";
 
