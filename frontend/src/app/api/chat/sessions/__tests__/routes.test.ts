@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
 import { GET as MSG_GET, POST as MSG_POST } from "../[id]/messages/route";
 import { DELETE as SESS_ID_DELETE, GET as SESS_ID_GET } from "../[id]/route";
@@ -11,6 +11,7 @@ vi.mock("next/headers", () => ({
   ),
 }));
 
+// Mock Supabase server client
 vi.mock("@/lib/supabase/server", () => {
   type StoreRow = Record<string, unknown>;
   type MockQueryBuilder = {
@@ -65,6 +66,11 @@ vi.mock("@/lib/supabase/server", () => {
   };
 });
 
+// Mock Redis
+vi.mock("@/lib/redis", () => ({
+  getRedis: vi.fn(() => Promise.resolve({})),
+}));
+
 // Mock route helpers
 vi.mock("@/lib/next/route-helpers", async () => {
   const actual = await vi.importActual<typeof import("@/lib/next/route-helpers")>(
@@ -76,7 +82,10 @@ vi.mock("@/lib/next/route-helpers", async () => {
   };
 });
 
-describe("chat sessions/messages routes", () => {
+describe("/api/chat/sessions", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
   it("creates and lists sessions", async () => {
     const resCreate = await SESS_POST(
       createMockNextRequest({

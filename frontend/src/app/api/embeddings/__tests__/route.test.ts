@@ -1,6 +1,40 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as route from "@/app/api/embeddings/route";
-import { createMockNextRequest } from "@/test/route-helpers";
+import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
+
+// Mock next/headers cookies() BEFORE any imports that use it
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(() =>
+    Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))
+  ),
+}));
+
+// Mock Supabase server client
+vi.mock("@/lib/supabase/server", () => ({
+  createServerSupabase: vi.fn(async () => ({
+    auth: {
+      getUser: async () => ({
+        data: { user: { id: "user-1" } },
+      }),
+    },
+  })),
+}));
+
+// Mock Redis
+vi.mock("@/lib/redis", () => ({
+  getRedis: vi.fn(() => Promise.resolve({})),
+}));
+
+// Mock route helpers
+vi.mock("@/lib/next/route-helpers", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/next/route-helpers")>(
+    "@/lib/next/route-helpers"
+  );
+  return {
+    ...actual,
+    withRequestSpan: vi.fn((_name, _attrs, fn) => fn()),
+  };
+});
 
 vi.mock("ai", () => ({
   embed: vi.fn(async () => ({
@@ -18,13 +52,13 @@ vi.mock("@/lib/supabase/admin", () => ({
   })),
 }));
 
-beforeEach(() => {
-  UPSERT.mockReset();
-  FROM.mockClear();
-  UPSERT.mockResolvedValue({ error: null });
-});
-
-describe("POST /api/embeddings", () => {
+describe("/api/embeddings", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    UPSERT.mockReset();
+    FROM.mockClear();
+    UPSERT.mockResolvedValue({ error: null });
+  });
   it("returns 400 on missing input", async () => {
     const res = await route.POST(
       createMockNextRequest({

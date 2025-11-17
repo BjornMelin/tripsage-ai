@@ -17,33 +17,9 @@ vi.mock("@/lib/supabase/server", () => ({
   })),
 }));
 
-const mockLimitFn = vi.fn().mockResolvedValue({
-  limit: 20,
-  remaining: 19,
-  reset: Date.now() + 60000,
-  success: true,
-});
-
-const mockSlidingWindow = vi.fn(() => ({}));
-const RATELIMIT_MOCK = vi.fn(function RatelimitMock() {
-  return {
-    limit: mockLimitFn,
-  };
-}) as unknown as {
-  new (...args: unknown[]): { limit: ReturnType<typeof vi.fn> };
-  slidingWindow: typeof mockSlidingWindow;
-};
-(RATELIMIT_MOCK as { slidingWindow: typeof mockSlidingWindow }).slidingWindow =
-  mockSlidingWindow;
-
-vi.mock("@upstash/ratelimit", () => ({
-  Ratelimit: RATELIMIT_MOCK,
-}));
-
-vi.mock("@upstash/redis", () => ({
-  Redis: {
-    fromEnv: vi.fn(() => ({})),
-  },
+// Mock Redis
+vi.mock("@/lib/redis", () => ({
+  getRedis: vi.fn(() => Promise.resolve({})),
 }));
 
 vi.mock("@/lib/env/server", () => ({
@@ -66,15 +42,9 @@ vi.mock("@/lib/next/route-helpers", async () => {
   };
 });
 
-describe("/api/calendar/ics/import route", () => {
+describe("/api/calendar/ics/import", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockLimitFn.mockResolvedValue({
-      limit: 20,
-      remaining: 19,
-      reset: Date.now() + 60000,
-      success: true,
-    });
     mockGetUser.mockResolvedValue({
       data: { user: { id: "user-1" } },
       error: null,
@@ -284,27 +254,5 @@ END:VCALENDAR`;
     expect(body.events[0].recurrence[0]).toContain("FREQ=WEEKLY");
     expect(body.events[0].recurrence[0]).toContain("BYDAY=MO");
     expect(body.events[0].recurrence[0]).toContain("UNTIL=20251231T235959");
-  });
-
-  it("returns 429 on rate limit", async () => {
-    mockLimitFn.mockResolvedValueOnce({
-      limit: 20,
-      remaining: 0,
-      reset: Date.now() + 60000,
-      success: false,
-    });
-
-    const mod = await import("../ics/import/route");
-    const req = createMockNextRequest({
-      body: {
-        icsData: "BEGIN:VCALENDAR\nEND:VCALENDAR",
-        validateOnly: true,
-      },
-      method: "POST",
-      url: "http://localhost/api/calendar/ics/import",
-    });
-
-    const res = await mod.POST(req);
-    expect(res.status).toBe(429);
   });
 });

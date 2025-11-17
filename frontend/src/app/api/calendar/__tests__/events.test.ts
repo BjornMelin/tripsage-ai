@@ -26,12 +26,9 @@ vi.mock("@/lib/supabase/server", () => ({
   createServerSupabase: vi.fn(async () => mockSupabase),
 }));
 
-// Mock rate limiters to return undefined (disabled)
-vi.mock("@upstash/ratelimit", () => ({
-  Ratelimit: vi.fn(),
-}));
-vi.mock("@upstash/redis", () => ({
-  Redis: { fromEnv: vi.fn(() => ({})) },
+// Mock Redis
+vi.mock("@/lib/redis", () => ({
+  getRedis: vi.fn(() => Promise.resolve({})),
 }));
 
 // Mock env helpers
@@ -53,7 +50,7 @@ vi.mock("@/lib/next/route-helpers", async () => {
 // Import route handlers after mocks
 import * as eventsRoute from "../events/route";
 
-describe("/api/calendar/events route", () => {
+describe("/api/calendar/events", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSupabase.auth.getUser.mockResolvedValue({
