@@ -89,9 +89,7 @@ describe("useSupabaseStorage", () => {
     FROM_MOCK.mockReset();
   });
 
-  it(
-    "lists attachments for current user",
-    async () => {
+  it("lists attachments for current user", async () => {
     const attachments = [CREATE_ATTACHMENT()];
 
     FROM_MOCK.mockImplementationOnce((table: string) => {
@@ -107,7 +105,5 @@ describe("useSupabaseStorage", () => {
       },
       { timeout: 3000 }
     );
-    },
-    10000
-  );
+  }, 10000);
 });

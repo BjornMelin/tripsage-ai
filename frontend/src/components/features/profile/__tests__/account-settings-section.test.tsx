@@ -54,10 +54,15 @@ describe("AccountSettingsSection", () => {
     });
 
     // Wait for form validation error to appear
-    await waitFor(() => {
-      const errorMessage = screen.queryByText(/invalid.*email|email.*invalid|valid.*email/i);
-      expect(errorMessage).toBeInTheDocument();
-    }, { timeout: 2000 });
+    await waitFor(
+      () => {
+        const errorMessage = screen.queryByText(
+          /invalid.*email|email.*invalid|valid.*email/i
+        );
+        expect(errorMessage).toBeInTheDocument();
+      },
+      { timeout: 2000 }
+    );
   });
 
   // Removed redundant toast assertion; loading-state test covers submit behavior deterministically.
