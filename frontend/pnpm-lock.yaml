@@ -16,8 +16,8 @@ importers:
         specifier: 3.0.0-beta.53
         version: 3.0.0-beta.53(zod@4.1.12)
       '@ai-sdk/google':
-        specifier: 3.0.0-beta.43
-        version: 3.0.0-beta.43(zod@4.1.12)
+        specifier: 3.0.0-beta.45
+        version: 3.0.0-beta.45(zod@4.1.12)
       '@ai-sdk/mcp':
         specifier: 1.0.0-beta.15
         version: 1.0.0-beta.15(zod@4.1.12)
@@ -328,8 +328,8 @@ packages:
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
-  '@ai-sdk/google@3.0.0-beta.43':
-    resolution: {integrity: sha512-XYNWcOUxBAFtLRwlKi8HMoukNx8VecA4HPu2o8KL2kdASGo2BlFVmHtpVmuatm5ESIKSrX7AckyYhswvpIFiEQ==}
+  '@ai-sdk/google@3.0.0-beta.45':
+    resolution: {integrity: sha512-Ab5NGOl1It4JLtB79HZudJefmtQ5f3EIvPfxF7KPRU68x8yTCsbOWB9iZp5iZJuPwRZ3OXGYf6Fxg1j8U1Kf0Q==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -4443,7 +4443,7 @@ snapshots:
       - arktype
       - effect
 
-  '@ai-sdk/google@3.0.0-beta.43(zod@4.1.12)':
+  '@ai-sdk/google@3.0.0-beta.45(zod@4.1.12)':
     dependencies:
       '@ai-sdk/provider': 3.0.0-beta.16
       '@ai-sdk/provider-utils': 4.0.0-beta.33(zod@4.1.12)
