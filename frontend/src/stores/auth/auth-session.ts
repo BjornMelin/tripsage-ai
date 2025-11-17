@@ -1,6 +1,7 @@
 /**
- * @fileoverview Auth session slice - session view state and metadata.
- * Supabase SSR + cookies remain the source of truth for authentication.
+ * @fileoverview Auth session slice - mirrors Supabase SSR session state for UI purposes only.
+ *
+ * Supabase cookies remain the single source of truth for authentication.
  * This slice intentionally does not persist or manage access/refresh tokens.
  */
 

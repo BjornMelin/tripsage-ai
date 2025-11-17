@@ -1,13 +1,16 @@
 /**
  * @fileoverview Authentication component for user login with email/password and
- * Supabase social OAuth (GitHub, Google). Uses `supabase-js` client-side and
- * redirects to the server-side callback for session exchange.
+ * Supabase social OAuth (GitHub, Google).
+ *
+ * Email/password login submits to the server-side /auth/login route, which
+ * uses Supabase SSR (cookies) as the single source of truth for auth. Social
+ * providers continue to use Supabase OAuth with a server-side callback.
  */
 
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useId, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useId, useMemo } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,61 +38,29 @@ interface LoginFormProps {
  * @returns Login form JSX element.
  */
 export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormProps) {
-  const router = useRouter();
   const search = useSearchParams();
-  const nextParam = search?.get("next") || "";
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-
+  const nextParam = search?.get("next") || search?.get("from") || "";
+  const error = search?.get("error");
   const emailId = useId();
   const passwordId = useId();
 
   const supabase = useMemo(() => createClient(), []);
 
-  useEffect(() => {
-    const checkSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (session) router.push(redirectTo);
-    };
-    checkSession().catch(() => {
-      // Ignore errors in session check
-    });
-  }, [router, redirectTo, supabase]);
-
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const nextSuffix = nextParam ? `?next=${encodeURIComponent(nextParam)}` : "";
 
-  const handleEmailLogin = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-    try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (signInError) throw signInError;
-      router.push(redirectTo);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleSocialLogin = async (provider: "github" | "google") => {
-    setError(null);
     const { error: oAuthError } = await supabase.auth.signInWithOAuth({
       options: {
         redirectTo: `${origin}/auth/callback${nextSuffix}`,
       },
       provider,
     });
-    if (oAuthError) setError(oAuthError.message);
+    if (oAuthError) {
+      // Best-effort surface of social login issues; detailed handling is done server-side.
+      // eslint-disable-next-line no-console
+      console.error("Social login failed:", oAuthError.message);
+    }
   };
 
   return (
@@ -99,22 +70,22 @@ export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormPro
       </CardHeader>
       <CardContent className="space-y-4">
         {error && (
-          <Alert variant="destructive">
+          <Alert variant="destructive" role="status" aria-label="authentication error">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
 
-        <form onSubmit={handleEmailLogin} className="space-y-3">
+        <form action="/auth/login" method="post" className="space-y-3">
+          <input type="hidden" name="redirectTo" value={redirectTo} />
+          {nextParam ? <input type="hidden" name="next" value={nextParam} /> : null}
           <div className="space-y-2">
             <Label htmlFor={emailId}>Email</Label>
             <Input
               id={emailId}
               type="email"
+              name="email"
               autoComplete="email"
               required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={isLoading}
             />
           </div>
           <div className="space-y-2">
@@ -122,15 +93,13 @@ export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormPro
             <Input
               id={passwordId}
               type="password"
+              name="password"
               autoComplete="current-password"
               required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={isLoading}
             />
           </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Signing in..." : "Sign in"}
+          <Button type="submit" className="w-full">
+            Sign in
           </Button>
         </form>
 

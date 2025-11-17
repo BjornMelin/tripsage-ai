@@ -9,7 +9,6 @@
 
 import { AlertCircle, ArrowLeft, CheckCircle2, Loader2, Mail } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import React from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -22,7 +21,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createClient } from "@/lib/supabase";
 
 /**
  * Props for the ResetPasswordForm component.
@@ -43,8 +41,6 @@ interface ResetPasswordFormProps {
  * @returns The password reset form JSX element
  */
 export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
-  const router = useRouter();
-  const supabase = createClient();
   const [email, setEmail] = React.useState("");
   const [isSuccess, setIsSuccess] = React.useState(false);
   const [message, setMessage] = React.useState<string | null>(null);
@@ -59,11 +55,16 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
     try {
       setIsLoading(true);
       setError(null);
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
+      const response = await fetch("/auth/password/reset-request", {
+        body: JSON.stringify({ email }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
       });
-      if (resetError) {
-        setError(resetError.message);
+      if (!response.ok) {
+        const data = (await response.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        setError(data.error ?? "Failed to send reset email");
         setIsLoading(false);
         return;
       }
@@ -79,12 +80,13 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
   React.useEffect(() => {
     if (isSuccess) {
       const timer = setTimeout(() => {
-        router.push("/login");
+        // Redirect back to login after a short delay for convenience.
+        window.location.assign("/login");
       }, 5000);
       return () => clearTimeout(timer);
     }
     return undefined;
-  }, [isSuccess, router]);
+  }, [isSuccess]);
 
   return (
     <Card className={className}>
@@ -120,13 +122,11 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
               </p>
             </div>
 
-            <Button
-              onClick={() => router.push("/login")}
-              className="w-full"
-              variant="outline"
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Return to Sign In
+            <Button className="w-full" variant="outline" asChild>
+              <Link href="/login">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Return to Sign In
+              </Link>
             </Button>
 
             <div className="text-center">

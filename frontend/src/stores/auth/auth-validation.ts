@@ -44,6 +44,16 @@ interface AuthValidationState {
   clearRegisterError: () => void;
 }
 
+export const authValidationInitialState: Pick<
+  AuthValidationState,
+  "isResettingPassword" | "isVerifyingEmail" | "passwordResetError" | "registerError"
+> = {
+  isResettingPassword: false,
+  isVerifyingEmail: false,
+  passwordResetError: null,
+  registerError: null,
+};
+
 /**
  * Auth validation store hook.
  */
@@ -58,9 +68,7 @@ export const useAuthValidation = create<AuthValidationState>()(
             throw new Error("Current and new passwords are required");
           }
 
-          // Call API route that uses createServerSupabase + withApiGuards
-          // TODO: Replace with actual API call to /api/auth/password/change
-          const response = await fetch("/api/auth/password/change", {
+          const response = await fetch("/auth/password/change", {
             body: JSON.stringify({
               currentPassword,
               newPassword,
@@ -95,10 +103,7 @@ export const useAuthValidation = create<AuthValidationState>()(
         set({ registerError: null });
       },
       // Initial state
-      isResettingPassword: false,
-      isVerifyingEmail: false,
-      passwordResetError: null,
-      registerError: null,
+      ...authValidationInitialState,
 
       // Actions
       requestPasswordReset: async (request) => {
@@ -109,10 +114,7 @@ export const useAuthValidation = create<AuthValidationState>()(
             throw new Error("Email is required");
           }
 
-          // Call API route that uses createServerSupabase + withApiGuards
-          // Rate limiting is handled by withApiGuards + ROUTE_RATE_LIMITS
-          // TODO: Replace with actual API call to /api/auth/password/reset-request
-          const response = await fetch("/api/auth/password/reset-request", {
+          const response = await fetch("/auth/password/reset-request", {
             body: JSON.stringify({ email: request.email }),
             headers: { "Content-Type": "application/json" },
             method: "POST",
@@ -140,10 +142,7 @@ export const useAuthValidation = create<AuthValidationState>()(
         set({ isVerifyingEmail: true });
 
         try {
-          // Call API route that uses createServerSupabase + withApiGuards
-          // Rate limiting is handled by withApiGuards + ROUTE_RATE_LIMITS
-          // TODO: Replace with actual API call to /api/auth/email/resend
-          const response = await fetch("/api/auth/email/resend", {
+          const response = await fetch("/auth/email/resend", {
             method: "POST",
           });
 
@@ -161,7 +160,7 @@ export const useAuthValidation = create<AuthValidationState>()(
               : "Failed to resend verification email";
           set({
             isVerifyingEmail: false,
-            passwordResetError: message,
+            registerError: message,
           });
           return false;
         }
@@ -179,9 +178,7 @@ export const useAuthValidation = create<AuthValidationState>()(
             throw new Error("Passwords do not match");
           }
 
-          // Call API route that uses createServerSupabase + withApiGuards
-          // TODO: Replace with actual API call to /api/auth/password/reset
-          const response = await fetch("/api/auth/password/reset", {
+          const response = await fetch("/auth/password/reset", {
             body: JSON.stringify({
               newPassword: reset.newPassword,
               token: reset.token,
@@ -212,9 +209,7 @@ export const useAuthValidation = create<AuthValidationState>()(
         set({ isVerifyingEmail: true });
 
         try {
-          // Call API route that uses createServerSupabase + withApiGuards
-          // TODO: Replace with actual API call to /api/auth/email/verify
-          const response = await fetch("/api/auth/email/verify", {
+          const response = await fetch("/auth/email/verify", {
             body: JSON.stringify({ token }),
             headers: { "Content-Type": "application/json" },
             method: "POST",
@@ -232,7 +227,7 @@ export const useAuthValidation = create<AuthValidationState>()(
             error instanceof Error ? error.message : "Email verification failed";
           set({
             isVerifyingEmail: false,
-            passwordResetError: message,
+            registerError: message,
           });
           return false;
         }
