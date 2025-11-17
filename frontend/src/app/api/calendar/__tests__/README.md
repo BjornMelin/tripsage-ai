@@ -60,14 +60,16 @@ describe("My Route", () => {
 
 ```bash
 # Run all calendar tests
-pnpm test:run src/app/api/calendar/__tests__
+pnpm test:run --project=api src/app/api/calendar/__tests__
 
 # Run with coverage
-pnpm test:coverage src/app/api/calendar/__tests__
+pnpm test:coverage --project=api src/app/api/calendar/__tests__
 
-# Run specific test file
-pnpm test:run src/app/api/calendar/__tests__/events.test.ts
+# Run specific test file (IMPORTANT: use --project=api to limit scope)
+pnpm test:run --project=api src/app/api/calendar/__tests__/events.test.ts
 ```
+
+**Note**: When running a specific test file, always include `--project=api` to limit execution to the API project only. Without this flag, Vitest will run all matching projects (api, component, unit, etc.), causing the entire test suite to execute.
 
 ## Best Practices
 

@@ -17,6 +17,7 @@ import { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
 import { RecurringDateGenerator } from "@/lib/dates/recurring-rules";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
+import { parseJsonBody, validateSchema } from "@/lib/next/route-helpers";
 import { calendarEventSchema } from "@/lib/schemas/calendar";
 
 const exportRequestSchema = z.object({
@@ -74,8 +75,16 @@ export const POST = withApiGuards({
   rateLimit: "calendar:ics:export",
   telemetry: "calendar.ics.export",
 })(async (req: NextRequest): Promise<NextResponse> => {
-  const body = await req.json();
-  const validated = exportRequestSchema.parse(body);
+  const parsed = await parseJsonBody(req);
+  if ("error" in parsed) {
+    return parsed.error;
+  }
+
+  const validation = validateSchema(exportRequestSchema, parsed.body);
+  if ("error" in validation) {
+    return validation.error;
+  }
+  const validated = validation.data;
 
   // Create calendar
   const calendar = ical({

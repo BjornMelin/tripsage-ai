@@ -106,7 +106,7 @@ describe("/api/calendar/ics/export", () => {
     const res = await icsExportRoute.POST(req);
     expect(res.status).toBe(401);
     const json = await res.json();
-    expect(json.error).toBe("Unauthorized");
+    expect(json.error).toBe("unauthorized");
   });
 
   it("returns 400 on invalid request body", async () => {
@@ -122,7 +122,7 @@ describe("/api/calendar/ics/export", () => {
     const res = await icsExportRoute.POST(req);
     expect(res.status).toBe(400);
     const json = await res.json();
-    expect(json.error).toBe("Invalid request body");
+    expect(json.error).toBe("BAD_REQUEST");
   });
 
   it("returns 400 on empty events array", async () => {

@@ -141,15 +141,10 @@ describe("resolveProvider", () => {
     const originalEnv = process.env;
     process.env = {
       ...process.env,
-      // biome-ignore lint/style/useNamingConvention: Environment variable names must match actual env vars
       AI_GATEWAY_API_KEY: undefined,
-      // biome-ignore lint/style/useNamingConvention: Environment variable names must match actual env vars
       ANTHROPIC_API_KEY: undefined,
-      // biome-ignore lint/style/useNamingConvention: Environment variable names must match actual env vars
       OPENAI_API_KEY: undefined,
-      // biome-ignore lint/style/useNamingConvention: Environment variable names must match actual env vars
       OPENROUTER_API_KEY: undefined,
-      // biome-ignore lint/style/useNamingConvention: Environment variable names must match actual env vars
       XAI_API_KEY: undefined,
     };
 

@@ -39,16 +39,24 @@ describe("withRequestSpan", () => {
   });
 
   it("measures execution duration", async () => {
-    vi.useFakeTimers();
     const fn = vi.fn().mockResolvedValue("done");
 
-    const promise = withRequestSpan("slow.operation", {}, fn);
-    await vi.advanceTimersByTimeAsync(10);
-    await promise;
+    // Stub process.hrtime.bigint to return deterministic values
+    let callCount = 0;
+    const hrtimeBigintStub = vi
+      .spyOn(process.hrtime, "bigint")
+      .mockImplementation(() => {
+        callCount++;
+        // First call returns 0n, second call returns 10ms (10_000_000n nanoseconds)
+        return callCount === 1 ? BigInt(0) : BigInt(10_000_000);
+      });
+
+    await withRequestSpan("slow.operation", {}, fn);
 
     const call = (console.debug as ReturnType<typeof vi.fn>).mock.calls[0]?.[1];
-    expect(call?.durationMs).toBeGreaterThanOrEqual(9);
-    vi.useRealTimers();
+    expect(call?.durationMs).toBeCloseTo(10, 5);
+
+    hrtimeBigintStub.mockRestore();
   });
 
   it("propagates errors", async () => {
