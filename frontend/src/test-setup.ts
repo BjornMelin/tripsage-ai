@@ -16,6 +16,10 @@ import {
 } from "node:stream/web";
 import { resetTestQueryClient } from "./test/test-utils";
 
+(
+  globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }
+).IS_REACT_ACT_ENVIRONMENT = true;
+
 // Minimal toast mock (used by many components)
 type UnknownRecord = Record<string, unknown>;
 const MOCK_TOAST = vi.fn((_props?: UnknownRecord) => ({
@@ -23,6 +27,32 @@ const MOCK_TOAST = vi.fn((_props?: UnknownRecord) => ({
   id: `toast-${Date.now()}`,
   update: vi.fn(),
 }));
+
+const LOCATION_ORIGIN = "http://localhost";
+const locationMock: Location = {
+  ancestorOrigins: {
+    contains: vi.fn(() => false),
+    item: vi.fn(() => null),
+    length: 0,
+  } as unknown as DOMStringList,
+  assign: vi.fn(),
+  hash: "",
+  host: "localhost",
+  hostname: "localhost",
+  href: `${LOCATION_ORIGIN}/`,
+  origin: LOCATION_ORIGIN,
+  pathname: "/",
+  port: "",
+  protocol: "http:",
+  reload: vi.fn(),
+  replace: vi.fn(),
+  search: "",
+};
+
+Object.defineProperty(window, "location", {
+  configurable: true,
+  value: locationMock,
+});
 
 vi.mock("@/components/ui/use-toast", () => ({
   toast: MOCK_TOAST,

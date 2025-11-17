@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 
-import { screen } from "@testing-library/react";
+import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Destination } from "@/lib/schemas/search";
@@ -37,10 +37,11 @@ const MockHandlers = {
 };
 
 describe("DestinationCard", () => {
-  const _user = userEvent.setup();
+  let user: ReturnType<typeof userEvent.setup>;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
   });
 
   it("renders destination information correctly", () => {
@@ -91,31 +92,34 @@ describe("DestinationCard", () => {
   });
 
   it("handles select button click", async () => {
-    const user = userEvent.setup();
     render(<DestinationCard destination={MockDestination} {...MockHandlers} />);
 
     const selectButton = screen.getByText("Select");
-    await user.click(selectButton);
+    await act(async () => {
+      await user.click(selectButton);
+    });
 
     expect(MockHandlers.onSelect).toHaveBeenCalledWith(MockDestination);
   });
 
   it("handles compare button click", async () => {
-    const user = userEvent.setup();
     render(<DestinationCard destination={MockDestination} {...MockHandlers} />);
 
     const compareButton = screen.getByText("Compare");
-    await user.click(compareButton);
+    await act(async () => {
+      await user.click(compareButton);
+    });
 
     expect(MockHandlers.onCompare).toHaveBeenCalledWith(MockDestination);
   });
 
   it("handles view details button click", async () => {
-    const user = userEvent.setup();
     render(<DestinationCard destination={MockDestination} {...MockHandlers} />);
 
     const detailsButton = screen.getByText("Details");
-    await user.click(detailsButton);
+    await act(async () => {
+      await user.click(detailsButton);
+    });
 
     expect(MockHandlers.onViewDetails).toHaveBeenCalledWith(MockDestination);
   });

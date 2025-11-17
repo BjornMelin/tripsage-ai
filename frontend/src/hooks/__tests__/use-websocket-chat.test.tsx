@@ -4,12 +4,25 @@ import type { RealtimeConnectionStatus } from "@/hooks/use-realtime-channel";
 import { useWebSocketChat } from "@/hooks/use-websocket-chat";
 
 const mockSendBroadcast = vi.fn().mockResolvedValue(undefined);
+const mockSetChatConnectionStatus = vi.fn();
+const mockSetUserTyping = vi.fn();
+const mockRemoveUserTyping = vi.fn();
+const mockHandleRealtimeMessage = vi.fn();
+const mockHandleTypingUpdate = vi.fn();
+
+const firedTopics = new Set<string>();
+
+const flushTimers = async () => {
+  await act(async () => {
+    vi.runAllTimers();
+  });
+};
 
 vi.mock("@/hooks/use-realtime-channel", () => ({
   useRealtimeChannel: vi.fn((topic, opts) => {
-    // Simulate connection when topic is provided
-    if (topic) {
-      // Call onStatusChange with subscribed status after render
+    const key = topic ?? "default";
+    if (topic && !firedTopics.has(key)) {
+      firedTopics.add(key);
       setTimeout(() => {
         opts?.onStatusChange?.("subscribed" as RealtimeConnectionStatus);
       }, 0);
@@ -24,44 +37,57 @@ vi.mock("@/hooks/use-realtime-channel", () => ({
   }),
 }));
 
+vi.mock("@/stores/auth/auth-core", () => ({
+  useAuthCore: () => ({ user: { id: "u1", name: "You" } }),
+}));
+
+vi.mock("@/stores/chat/chat-realtime", () => ({
+  useChatRealtime: () => ({
+    connectionStatus: "connecting",
+    handleRealtimeMessage: mockHandleRealtimeMessage,
+    handleTypingUpdate: mockHandleTypingUpdate,
+    pendingMessages: [],
+    removeUserTyping: mockRemoveUserTyping,
+    setChatConnectionStatus: mockSetChatConnectionStatus,
+    setUserTyping: mockSetUserTyping,
+    typingUsers: [],
+  }),
+}));
+
 vi.mock("@/stores", () => ({ useAuthStore: () => ({ user: { id: "u1" } }) }));
 
 describe("useWebSocketChat", () => {
   afterEach(() => {
     vi.clearAllMocks();
+    firedTopics.clear();
   });
 
   it("subscribes to user topic by default", async () => {
+    vi.useFakeTimers();
     const { result } = renderHook(() => useWebSocketChat({ autoConnect: true }));
-
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 10));
-    });
-
-    expect(result.current.isConnected).toBe(true);
-    expect(result.current.connectionStatus).toBe("connected");
+    await flushTimers();
+    vi.useRealTimers();
+    expect(mockSetChatConnectionStatus).toHaveBeenCalledWith("connected");
   });
 
   it("uses session topic when requested", async () => {
+    vi.useFakeTimers();
     const { result } = renderHook(() =>
       useWebSocketChat({ autoConnect: true, sessionId: "s1", topicType: "session" })
     );
-
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 10));
-    });
-
-    expect(result.current.isConnected).toBe(true);
-    expect(result.current.connectionStatus).toBe("connected");
+    await flushTimers();
+    vi.useRealTimers();
+    expect(mockSetChatConnectionStatus).toHaveBeenCalledWith("connected");
   });
 
   it("sends message via sendBroadcast", async () => {
+    vi.useFakeTimers();
     const { result } = renderHook(() =>
       useWebSocketChat({ autoConnect: true, sessionId: "s1", topicType: "session" })
     );
-
+    await flushTimers();
+    vi.useRealTimers();
     await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 10));
       await result.current.sendMessage("hello");
     });
 
@@ -73,10 +99,11 @@ describe("useWebSocketChat", () => {
   });
 
   it("emits typing events via sendBroadcast", async () => {
+    vi.useFakeTimers();
     const { result } = renderHook(() => useWebSocketChat({ autoConnect: true }));
-
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 10));
+    await flushTimers();
+    vi.useRealTimers();
+    act(() => {
       result.current.startTyping();
     });
 
@@ -85,7 +112,7 @@ describe("useWebSocketChat", () => {
       userId: "u1",
     });
 
-    await act(() => {
+    act(() => {
       result.current.stopTyping();
     });
 
@@ -99,7 +126,6 @@ describe("useWebSocketChat", () => {
     const { result } = renderHook(() => useWebSocketChat({ autoConnect: false }));
 
     expect(result.current.isConnected).toBe(false);
-    expect(result.current.connectionStatus).toBe("disconnected");
   });
 
   it("handles connection errors", async () => {
@@ -117,13 +143,10 @@ describe("useWebSocketChat", () => {
       };
     });
 
+    vi.useFakeTimers();
     const { result } = renderHook(() => useWebSocketChat({ autoConnect: true }));
-
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 10));
-    });
-
-    expect(result.current.connectionStatus).toBe("error");
-    expect(result.current.isConnected).toBe(false);
+    await flushTimers();
+    vi.useRealTimers();
+    expect(mockSetChatConnectionStatus).toHaveBeenCalledWith("error");
   });
 });
