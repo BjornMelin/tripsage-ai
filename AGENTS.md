@@ -120,6 +120,11 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 - **IDs and timestamps:**
   - Use `@/lib/security/random` (`secureUuid`, `secureId`, `nowIso`) for IDs and timestamps.
   - Do **not** use `Math.random` or direct `crypto.randomUUID`.
+- **Import/export patterns:**
+  - Import directly from slice stores/modules for optimal tree-shaking.
+  - Do **not** create barrel files (`index.ts`) or use `export *` to re-export stores/selectors.
+  - Example: `@/stores/auth/auth-core`, not `@/stores`.
+  - Exception: `lib/schemas/index.ts` for centralized schema access.
 
 ### 4.3 State management (frontend)
 
