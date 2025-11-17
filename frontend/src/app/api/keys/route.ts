@@ -12,11 +12,15 @@ import "server-only";
 
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import type { RateLimitResult } from "@/app/api/keys/_rate-limiter";
 import { buildKeySpanAttributes } from "@/app/api/keys/_telemetry";
 import { withApiGuards } from "@/lib/api/factory";
-import { API_CONSTANTS, redactErrorForLogging } from "@/lib/next/route-helpers";
+import {
+  API_CONSTANTS,
+  parseJsonBody,
+  redactErrorForLogging,
+  validateSchema,
+} from "@/lib/next/route-helpers";
 import { insertUserApiKey, upsertUserGatewayBaseUrl } from "@/lib/supabase/rpc";
 import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
 import { getKeys, type PostKeyBody, PostKeyBodySchema, postKey } from "./_handlers";
@@ -59,13 +63,32 @@ export const POST = withApiGuards({
     }
   }
 
-  let validated: PostKeyBody;
-  try {
-    const body = await req.json();
-    validated = PostKeyBodySchema.parse(body);
-  } catch (parseError) {
-    if (parseError instanceof z.ZodError) {
-      const firstError = parseError.issues[0];
+  const parsed = await parseJsonBody(req);
+  if ("error" in parsed) {
+    // Extract error details for telemetry
+    const { message: safeMessage, context: safeContext } = redactErrorForLogging(
+      new Error("JSON parse failed"),
+      { operation: "json_parse" }
+    );
+    recordTelemetryEvent("api.keys.parse_error", {
+      attributes: {
+        message: safeMessage,
+        ...safeContext,
+      },
+      level: "error",
+    });
+    return NextResponse.json(
+      { code: "BAD_REQUEST", error: "Malformed JSON in request body" },
+      { status: 400 }
+    );
+  }
+
+  const validation = validateSchema(PostKeyBodySchema, parsed.body);
+  if ("error" in validation) {
+    // Extract first error for telemetry
+    const parseResult = PostKeyBodySchema.safeParse(parsed.body);
+    if (!parseResult.success) {
+      const firstError = parseResult.error.issues[0];
       recordTelemetryEvent("api.keys.validation_error", {
         attributes: {
           field: firstError?.path.join("."),
@@ -81,22 +104,9 @@ export const POST = withApiGuards({
         { status: 400 }
       );
     }
-    const { message: safeMessage, context: safeContext } = redactErrorForLogging(
-      parseError,
-      { operation: "json_parse" }
-    );
-    recordTelemetryEvent("api.keys.parse_error", {
-      attributes: {
-        message: safeMessage,
-        ...safeContext,
-      },
-      level: "error",
-    });
-    return NextResponse.json(
-      { code: "BAD_REQUEST", error: "Malformed JSON in request body" },
-      { status: 400 }
-    );
+    return validation.error;
   }
+  const validated = validation.data;
 
   const instrumentedInsert = (u: string, s: string, k: string) =>
     withTelemetrySpan(

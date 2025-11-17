@@ -13,7 +13,7 @@ import "server-only";
 import type { UIMessage } from "ai";
 import type { NextRequest } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { getClientIpFromHeaders } from "@/lib/next/route-helpers";
+import { getClientIpFromHeaders, parseJsonBody } from "@/lib/next/route-helpers";
 import { resolveProvider } from "@/lib/providers/registry";
 import { handleChatStream } from "./_handler";
 
@@ -46,13 +46,10 @@ export const POST = withApiGuards({
   rateLimit: "chat:stream",
   telemetry: "chat.stream",
 })(async (req: NextRequest, { supabase }): Promise<Response> => {
-  // Parse
-  let body: IncomingBody | undefined;
-  try {
-    body = (await req.json()) as IncomingBody;
-  } catch {
-    body = { messages: [] };
-  }
+  // Parse with fallback to empty messages
+  const parsed = await parseJsonBody(req);
+  const body: IncomingBody =
+    "error" in parsed ? { messages: [] } : (parsed.body as IncomingBody);
   const ip = getClientIpFromHeaders(req);
   return handleChatStream(
     {

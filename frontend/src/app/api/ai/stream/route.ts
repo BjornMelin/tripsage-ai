@@ -7,6 +7,7 @@ import { openai } from "@ai-sdk/openai";
 import { streamText } from "ai";
 import type { NextRequest } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
+import { parseJsonBody } from "@/lib/next/route-helpers";
 import {
   type ChatMessage,
   clampMaxTokens,
@@ -35,8 +36,10 @@ export const POST = withApiGuards({
   let desiredMaxTokens = 512;
   let messages: ChatMessage[] | undefined;
 
-  try {
-    const body = (await req.json()) as {
+  // If JSON parsing fails, use default values
+  const parsed = await parseJsonBody(req);
+  if (!("error" in parsed)) {
+    const body = parsed.body as {
       prompt?: string;
       model?: string;
       desiredMaxTokens?: number;
@@ -50,9 +53,6 @@ export const POST = withApiGuards({
     if (Array.isArray(body.messages)) {
       messages = body.messages;
     }
-  } catch (error) {
-    // If JSON parsing fails, use default prompt
-    console.warn("Failed to parse request body, using default prompt:", error);
   }
 
   // Build message list if not provided

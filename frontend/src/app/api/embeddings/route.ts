@@ -9,6 +9,7 @@ import { embed } from "ai";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
+import { parseJsonBody } from "@/lib/next/route-helpers";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import type { InsertTables } from "@/lib/supabase/database.types";
 
@@ -96,7 +97,11 @@ export const POST = withApiGuards({
     }
   }
 
-  const body = (await req.json()) as EmbeddingRequest;
+  const parsed = await parseJsonBody(req);
+  if ("error" in parsed) {
+    return parsed.error;
+  }
+  const body = parsed.body as EmbeddingRequest;
   const text =
     body.text ??
     (body.property

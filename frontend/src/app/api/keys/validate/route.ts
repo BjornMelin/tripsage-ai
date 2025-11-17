@@ -18,6 +18,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
+import { parseJsonBody } from "@/lib/next/route-helpers";
 import { recordTelemetryEvent } from "@/lib/telemetry/span";
 
 type ValidateResult = { isValid: boolean; reason?: string };
@@ -193,17 +194,10 @@ export const POST = withApiGuards({
   rateLimit: "keys:validate",
   // Custom telemetry handled below
 })(async (req: NextRequest, { user: _user }) => {
-  let service: string | undefined;
-  let apiKey: string | undefined;
-  try {
-    const body = await req.json();
-    service = body.service;
-    apiKey = body.apiKey;
-  } catch (parseError) {
-    const message =
-      parseError instanceof Error ? parseError.message : "Unknown JSON parse error";
+  const parsed = await parseJsonBody(req);
+  if ("error" in parsed) {
     recordTelemetryEvent("api.keys.validate.parse_error", {
-      attributes: { message },
+      attributes: { message: "JSON parse failed" },
       level: "error",
     });
     return NextResponse.json(
@@ -211,6 +205,10 @@ export const POST = withApiGuards({
       { status: 400 }
     );
   }
+
+  const body = parsed.body as { service?: unknown; apiKey?: unknown };
+  const service = body.service;
+  const apiKey = body.apiKey;
 
   if (
     !service ||

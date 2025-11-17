@@ -12,6 +12,7 @@ import "server-only";
 
 import type { NextRequest } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
+import { parseJsonBody } from "@/lib/next/route-helpers";
 import { createSession, listSessions } from "./_handlers";
 
 /**
@@ -27,13 +28,10 @@ export const POST = withApiGuards({
   rateLimit: "chat:sessions:create",
   telemetry: "chat.sessions.create",
 })(async (req: NextRequest, { supabase }) => {
-  let title: string | undefined;
-  try {
-    const body = (await req.json()) as { title?: string };
-    title = body?.title;
-  } catch {
-    // Intentionally ignore JSON parsing errors - title is optional
-  }
+  // Title is optional, so gracefully handle parsing errors
+  const parsed = await parseJsonBody(req);
+  const title =
+    "error" in parsed ? undefined : (parsed.body as { title?: string })?.title;
   return createSession({ supabase }, title);
 });
 

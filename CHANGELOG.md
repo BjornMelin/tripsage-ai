@@ -42,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Refactored
 
+- **API route helpers standardization**: Extracted `parseJsonBody` and `validateSchema` helpers to `frontend/src/lib/next/route-helpers.ts` and applied across 30+ API routes, eliminating duplicate JSON parsing and Zod validation code. Standardized error responses (400 for malformed JSON, formatted Zod errors) while preserving route-specific behaviors (custom telemetry, error formats).
 - **Backend Cleanup**: Removed legacy AI code superseded by frontend AI SDK v6 migration
 
   - Deleted `tripsage_core/services/configuration_service.py`

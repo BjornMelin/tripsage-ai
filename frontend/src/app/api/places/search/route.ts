@@ -11,6 +11,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
+import { parseJsonBody, validateSchema } from "@/lib/next/route-helpers";
 
 const searchRequestSchema = z.object({
   locationBias: z
@@ -38,8 +39,16 @@ export const POST = withApiGuards({
   rateLimit: "places:search",
   telemetry: "places.search",
 })(async (req: NextRequest) => {
-  const body = await req.json();
-  const validated = searchRequestSchema.parse(body);
+  const parsed = await parseJsonBody(req);
+  if ("error" in parsed) {
+    return parsed.error;
+  }
+
+  const validation = validateSchema(searchRequestSchema, parsed.body);
+  if ("error" in validation) {
+    return validation.error;
+  }
+  const validated = validation.data;
 
   const apiKey = getGoogleMapsServerKey();
 

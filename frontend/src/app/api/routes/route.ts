@@ -11,6 +11,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
+import { parseJsonBody, validateSchema } from "@/lib/next/route-helpers";
 
 const computeRoutesRequestSchema = z.object({
   destination: z.object({
@@ -47,8 +48,16 @@ export const POST = withApiGuards({
   rateLimit: "routes",
   telemetry: "routes.compute",
 })(async (req: NextRequest) => {
-  const body = await req.json();
-  const validated = computeRoutesRequestSchema.parse(body);
+  const parsed = await parseJsonBody(req);
+  if ("error" in parsed) {
+    return parsed.error;
+  }
+
+  const validation = validateSchema(computeRoutesRequestSchema, parsed.body);
+  if ("error" in validation) {
+    return validation.error;
+  }
+  const validated = validation.data;
 
   const apiKey = getGoogleMapsServerKey();
 
