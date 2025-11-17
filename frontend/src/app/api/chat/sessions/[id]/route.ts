@@ -19,10 +19,10 @@ export const dynamic = "force-dynamic";
  * @param context Route context containing the session ID parameter.
  * @returns Promise resolving to Response with session data or error.
  */
-export async function GET(
+export function GET(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
-) {
+): Promise<Response> {
   return withApiGuards({
     auth: true,
     rateLimit: "chat:sessions:get",
@@ -40,10 +40,10 @@ export async function GET(
  * @param context Route context containing the session ID parameter.
  * @returns Promise resolving to Response with no content or error.
  */
-export async function DELETE(
+export function DELETE(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
-) {
+): Promise<Response> {
   return withApiGuards({
     auth: true,
     rateLimit: "chat:sessions:delete",

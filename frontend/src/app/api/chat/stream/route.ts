@@ -10,15 +10,11 @@
 
 import "server-only";
 
-import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
 import type { UIMessage } from "ai";
 import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
-
+import { withApiGuards } from "@/lib/api/factory";
 import { getClientIpFromHeaders } from "@/lib/next/route-helpers";
 import { resolveProvider } from "@/lib/providers/registry";
-import { createServerSupabase } from "@/lib/supabase/server";
 import { handleChatStream } from "./_handler";
 
 // Avoid public caching; this route depends on auth/session
@@ -26,29 +22,6 @@ export const dynamic = "force-dynamic";
 
 // Allow streaming responses for up to 60 seconds
 export const maxDuration = 60;
-
-const RATELIMIT_PREFIX = "ratelimit:chat";
-let cachedLimiter: InstanceType<typeof Ratelimit> | undefined;
-
-/**
- * Lazily construct (and cache) the Upstash rate limiter. Avoid module-scope
- * construction to keep tests deterministic and allow env stubbing.
- */
-import { getServerEnvVarWithFallback } from "@/lib/env/server";
-
-function getRateLimiter(): InstanceType<typeof Ratelimit> | undefined {
-  if (cachedLimiter) return cachedLimiter;
-  const url = getServerEnvVarWithFallback("UPSTASH_REDIS_REST_URL", undefined);
-  const token = getServerEnvVarWithFallback("UPSTASH_REDIS_REST_TOKEN", undefined);
-  if (!url || !token) return undefined;
-  cachedLimiter = new Ratelimit({
-    analytics: true,
-    limiter: Ratelimit.slidingWindow(40, "1 m"),
-    prefix: RATELIMIT_PREFIX,
-    redis: Redis.fromEnv(),
-  });
-  return cachedLimiter;
-}
 
 /**
  * Type definition for the incoming request body structure.
@@ -68,35 +41,31 @@ type IncomingBody = {
  * and usage metadata.
  *
  * @param req - The Next.js request object.
+ * @param routeContext - Route context from withApiGuards
  * @returns Promise resolving to a Response with streamed chat data.
  */
-export async function POST(req: NextRequest): Promise<Response> {
+export const POST = withApiGuards({
+  auth: false,
+  rateLimit: "chat:stream",
+  telemetry: "chat.stream",
+})(async (req: NextRequest, { supabase }): Promise<Response> => {
+  // Parse
+  let body: IncomingBody | undefined;
   try {
-    const supabase = await createServerSupabase();
-
-    // Parse
-    let body: IncomingBody | undefined;
-    try {
-      body = (await req.json()) as IncomingBody;
-    } catch {
-      body = { messages: [] };
-    }
-    const ip = getClientIpFromHeaders(req);
-    const limiter = getRateLimiter();
-    return handleChatStream(
-      {
-        clock: { now: () => Date.now() },
-        config: { defaultMaxTokens: 1024 },
-        limit: limiter ? (id) => limiter.limit(id) : undefined,
-        logger: { error: console.error, info: console.info },
-        resolveProvider: (userId, modelHint) => resolveProvider(userId, modelHint),
-        supabase,
-      },
-      { ...body, ip }
-    );
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    console.error("/api/chat/stream:fatal", { message });
-    return NextResponse.json({ error: "internal" }, { status: 500 });
+    body = (await req.json()) as IncomingBody;
+  } catch {
+    body = { messages: [] };
   }
-}
+  const ip = getClientIpFromHeaders(req);
+  return handleChatStream(
+    {
+      clock: { now: () => Date.now() },
+      config: { defaultMaxTokens: 1024 },
+      limit: undefined, // Rate limiting handled by factory
+      logger: { error: console.error, info: console.info },
+      resolveProvider: (userId, modelHint) => resolveProvider(userId, modelHint),
+      supabase,
+    },
+    { ...body, ip }
+  );
+});

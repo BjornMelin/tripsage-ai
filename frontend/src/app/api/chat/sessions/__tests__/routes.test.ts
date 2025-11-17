@@ -1,75 +1,17 @@
-import type { NextRequest } from "next/server";
 import { describe, expect, it, vi } from "vitest";
+import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
 import { GET as MSG_GET, POST as MSG_POST } from "../[id]/messages/route";
 import { DELETE as SESS_ID_DELETE, GET as SESS_ID_GET } from "../[id]/route";
 import { GET as SESS_GET, POST as SESS_POST } from "../route";
 
-/**
- * Builds a mock NextRequest object for testing API routes.
- *
- * @param method - HTTP method for the request.
- * @param url - Request URL string.
- * @param body - Optional request body object to be JSON stringified.
- * @param headers - Optional additional headers to merge with defaults.
- * @returns Mock NextRequest object for testing.
- */
-function buildReq(
-  method: string,
-  url: string,
-  body?: unknown,
-  headers?: Record<string, string>
-): NextRequest {
-  const request = new Request(url, {
-    body: body ? JSON.stringify(body) : undefined,
-    headers: { "content-type": "application/json", ...(headers || {}) },
-    method,
-  });
+// Mock next/headers cookies() BEFORE any imports that use it
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(() =>
+    Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))
+  ),
+}));
 
-  // Create a mock NextRequest by defining properties on the Request object
-  const nextRequest = request as NextRequest & {
-    cookies: { delete: () => void; get: () => string | undefined; set: () => void };
-    nextUrl: URL;
-    page: { name?: string; params?: Record<string, string> };
-    ua: { browser?: { name?: string; version?: string }; device?: { type?: string } };
-  };
-
-  Object.defineProperty(nextRequest, "cookies", {
-    value: {
-      delete: vi.fn(),
-      get: vi.fn(() => undefined),
-      getAll: vi.fn(() => []),
-      has: vi.fn(() => false),
-      set: vi.fn(),
-    },
-    writable: false,
-  });
-
-  Object.defineProperty(nextRequest, "nextUrl", {
-    value: new URL(url),
-    writable: false,
-  });
-
-  Object.defineProperty(nextRequest, "page", {
-    value: {},
-    writable: false,
-  });
-
-  Object.defineProperty(nextRequest, "ua", {
-    value: {
-      browser: { name: "test", version: "1.0" },
-      cpu: { architecture: "test" },
-      device: { model: "test", type: "desktop", vendor: "test" },
-      engine: { name: "test", version: "1.0" },
-      os: { name: "test", version: "1.0" },
-      ua: "test-user-agent",
-    },
-    writable: false,
-  });
-
-  return nextRequest;
-}
-
-vi.mock("@/lib/supabase", () => {
+vi.mock("@/lib/supabase/server", () => {
   type StoreRow = Record<string, unknown>;
   type MockQueryBuilder = {
     rows: StoreRow[];
@@ -123,16 +65,36 @@ vi.mock("@/lib/supabase", () => {
   };
 });
 
+// Mock route helpers
+vi.mock("@/lib/next/route-helpers", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/next/route-helpers")>(
+    "@/lib/next/route-helpers"
+  );
+  return {
+    ...actual,
+    withRequestSpan: vi.fn((_name, _attrs, fn) => fn()),
+  };
+});
+
 describe("chat sessions/messages routes", () => {
   it("creates and lists sessions", async () => {
     const resCreate = await SESS_POST(
-      buildReq("POST", "http://x/sessions", { title: "Trip" })
+      createMockNextRequest({
+        body: { title: "Trip" },
+        method: "POST",
+        url: "http://x/sessions",
+      })
     );
     expect(resCreate.status).toBe(201);
     const { id } = (await resCreate.json()) as { id: string };
     expect(typeof id).toBe("string");
 
-    const resList = await SESS_GET();
+    const resList = await SESS_GET(
+      createMockNextRequest({
+        method: "GET",
+        url: "http://x/sessions",
+      })
+    );
     expect(resList.status).toBe(200);
     const list = (await resList.json()) as Array<{ id: string }>;
     expect(list.length).toBe(1);
@@ -141,30 +103,58 @@ describe("chat sessions/messages routes", () => {
 
   it("gets and deletes a session", async () => {
     // create
-    const resCreate = await SESS_POST(buildReq("POST", "http://x/sessions", {}));
+    const resCreate = await SESS_POST(
+      createMockNextRequest({
+        body: {},
+        method: "POST",
+        url: "http://x/sessions",
+      })
+    );
     const { id } = (await resCreate.json()) as { id: string };
     // get
-    const resGet = await SESS_ID_GET(buildReq("GET", "http://x/"), {
-      params: Promise.resolve({ id }),
-    });
+    const resGet = await SESS_ID_GET(
+      createMockNextRequest({
+        method: "GET",
+        url: "http://x/",
+      }),
+      {
+        params: Promise.resolve({ id }),
+      }
+    );
     expect(resGet.status).toBe(200);
     // delete
-    const resDel = await SESS_ID_DELETE(buildReq("DELETE", "http://x/"), {
-      params: Promise.resolve({ id }),
-    });
+    const resDel = await SESS_ID_DELETE(
+      createMockNextRequest({
+        method: "DELETE",
+        url: "http://x/",
+      }),
+      {
+        params: Promise.resolve({ id }),
+      }
+    );
     expect(resDel.status).toBe(204);
   });
 
   it("creates and lists messages for a session", async () => {
     // create session
-    const resCreate = await SESS_POST(buildReq("POST", "http://x/sessions", {}));
+    const resCreate = await SESS_POST(
+      createMockNextRequest({
+        body: {},
+        method: "POST",
+        url: "http://x/sessions",
+      })
+    );
     const { id } = (await resCreate.json()) as { id: string };
 
     // post message
     const resMsg = await MSG_POST(
-      buildReq("POST", `http://x/sessions/${id}/messages`, {
-        parts: [{ text: "hi", type: "text" }],
-        role: "user",
+      createMockNextRequest({
+        body: {
+          parts: [{ text: "hi", type: "text" }],
+          role: "user",
+        },
+        method: "POST",
+        url: `http://x/sessions/${id}/messages`,
       }),
       {
         params: Promise.resolve({ id }),
@@ -173,9 +163,15 @@ describe("chat sessions/messages routes", () => {
     expect(resMsg.status).toBe(201);
 
     // list messages
-    const resList = await MSG_GET(buildReq("GET", "http://x/"), {
-      params: Promise.resolve({ id }),
-    });
+    const resList = await MSG_GET(
+      createMockNextRequest({
+        method: "GET",
+        url: "http://x/",
+      }),
+      {
+        params: Promise.resolve({ id }),
+      }
+    );
     expect(resList.status).toBe(200);
     const msgs = (await resList.json()) as Array<unknown>;
     expect(Array.isArray(msgs)).toBe(true);

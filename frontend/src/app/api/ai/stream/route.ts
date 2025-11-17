@@ -5,6 +5,8 @@
 
 import { openai } from "@ai-sdk/openai";
 import { streamText } from "ai";
+import type { NextRequest } from "next/server";
+import { withApiGuards } from "@/lib/api/factory";
 import {
   type ChatMessage,
   clampMaxTokens,
@@ -19,10 +21,15 @@ export const maxDuration = 30;
 /**
  * Handle POST requests by streaming a simple demo message via AI SDK.
  *
- * @param _req Incoming Request (unused for demo; reserved for future prompt input).
+ * @param req - Next.js request object
+ * @param routeContext - Route context from withApiGuards
  * @returns A Response implementing the UI message stream protocol (SSE).
  */
-export async function POST(req: Request): Promise<Response> {
+export const POST = withApiGuards({
+  auth: false,
+  rateLimit: "ai:stream",
+  telemetry: "ai.stream",
+})(async (req: NextRequest): Promise<Response> => {
   let prompt = "Hello from AI SDK v6";
   let model = "gpt-4o";
   let desiredMaxTokens = 512;
@@ -78,4 +85,4 @@ export async function POST(req: Request): Promise<Response> {
 
   // Return a UI Message Stream response suitable for AI Elements consumers
   return result.toUIMessageStreamResponse();
-}
+});

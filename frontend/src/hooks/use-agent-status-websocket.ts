@@ -9,8 +9,8 @@
 import { useCallback, useEffect, useRef } from "react";
 import type { BackoffConfig } from "@/lib/realtime/backoff";
 import type { AgentStatusType, AgentTask } from "@/lib/schemas/agent-status";
-import { useAuthStore } from "@/stores";
 import { type AgentTaskUpdate, useAgentStatusStore } from "@/stores/agent-status-store";
+import { useAuthCore } from "@/stores/auth/auth-core";
 import {
   type RealtimeConnectionStatus,
   useRealtimeChannel,
@@ -111,7 +111,7 @@ const DEFAULT_STATUS: AgentStatusType = "active";
  * @returns Connection control surface with monitoring helpers.
  */
 export function useAgentStatusWebSocket(): AgentStatusRealtimeControls {
-  const { user } = useAuthStore();
+  const { user } = useAuthCore();
   const {
     isMonitoring,
     setMonitoring,

@@ -1,11 +1,13 @@
 /**
- * @fileoverview Shared test utilities and helpers for auth store tests.
+ * @fileoverview Shared test utilities and helpers for auth slice tests.
  */
 
 import { act } from "@testing-library/react";
 import { afterEach, beforeEach, vi } from "vitest";
-import type { User } from "@/stores/auth-store";
-import { useAuthStore } from "@/stores/auth-store";
+import type { AuthUser } from "@/lib/schemas/stores";
+import { useAuthCore } from "@/stores/auth/auth-core";
+import { useAuthSession } from "@/stores/auth/auth-session";
+import { useAuthValidation } from "@/stores/auth/auth-validation";
 
 /**
  * Accelerates store async flows in test suites by mocking setTimeout.
@@ -32,24 +34,33 @@ export const setupTimeoutMock = (): { mockRestore: () => void } => {
 };
 
 /**
- * Resets the auth store to its initial state.
+ * Resets all auth slices to their initial state.
  */
-export const resetAuthStore = (): void => {
+export const resetAuthSlices = (): void => {
   act(() => {
-    useAuthStore.setState({
+    // Reset auth-core slice
+    useAuthCore.setState({
       error: null,
       isAuthenticated: false,
       isLoading: false,
       isLoggingIn: false,
-      isRefreshingToken: false,
       isRegistering: false,
-      isResettingPassword: false,
-      loginError: null,
-      passwordResetError: null,
-      registerError: null,
+      user: null,
+    });
+
+    // Reset auth-session slice
+    useAuthSession.setState({
+      isRefreshingToken: false,
       session: null,
       tokenInfo: null,
-      user: null,
+    });
+
+    // Reset auth-validation slice
+    useAuthValidation.setState({
+      isResettingPassword: false,
+      isVerifyingEmail: false,
+      passwordResetError: null,
+      registerError: null,
     });
   });
 };
@@ -60,7 +71,7 @@ export const resetAuthStore = (): void => {
  * @param overrides - Partial user to override defaults
  * @returns A complete user object
  */
-export const createMockUser = (overrides: Partial<User> = {}): User => {
+export const createMockUser = (overrides: Partial<AuthUser> = {}): AuthUser => {
   return {
     avatarUrl: "https://example.com/avatar.jpg",
     bio: "Test bio",
@@ -92,18 +103,19 @@ export const createMockUser = (overrides: Partial<User> = {}): User => {
 };
 
 /**
- * Sets up beforeEach and afterEach hooks for auth store tests.
- * Includes timeout mocking and store reset.
+ * Sets up beforeEach and afterEach hooks for auth slice tests.
+ * Includes timeout mocking and slice reset.
  */
-export const setupAuthStoreTests = (): void => {
+export const setupAuthSliceTests = (): void => {
   let timeoutSpy: { mockRestore: () => void } | null = null;
 
   beforeEach(() => {
     timeoutSpy = setupTimeoutMock();
-    resetAuthStore();
+    resetAuthSlices();
   });
 
   afterEach(() => {
     timeoutSpy?.mockRestore();
   });
 };
+

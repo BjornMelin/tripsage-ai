@@ -46,7 +46,11 @@ describe("/api/user-settings", () => {
 
   it("GET returns allowGatewayFallback for authenticated user", async () => {
     const { GET } = await import("../route");
-    const res = await GET();
+    const req = createMockNextRequest({
+      method: "GET",
+      url: "http://localhost/api/user-settings",
+    });
+    const res = await GET(req);
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toEqual({ allowGatewayFallback: true });
@@ -58,7 +62,11 @@ describe("/api/user-settings", () => {
       error: null,
     });
     const { GET } = await import("../route");
-    const res = await GET();
+    const req = createMockNextRequest({
+      method: "GET",
+      url: "http://localhost/api/user-settings",
+    });
+    const res = await GET(req);
     expect(res.status).toBe(401);
   });
 

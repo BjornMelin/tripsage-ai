@@ -177,3 +177,17 @@ export const CHAT_COMPLETION_RESPONSE_SCHEMA = z.object({
 });
 /** TypeScript type for chat completion responses. */
 export type ChatCompletionResponse = z.infer<typeof CHAT_COMPLETION_RESPONSE_SCHEMA>;
+
+/** Zod schema for send message options. */
+export const SEND_MESSAGE_OPTIONS_SCHEMA = z.object({
+  /** Optional file attachments to include with the message */
+  attachments: z.array(z.instanceof(File)).optional(),
+  /** Custom system prompt to override defaults */
+  systemPrompt: z.string().optional(),
+  /** AI temperature parameter for response creativity */
+  temperature: z.number().min(0).max(2).optional(),
+  /** Available tools/functions for the AI to use */
+  tools: z.array(z.record(z.string(), z.unknown())).optional(),
+});
+/** TypeScript type for send message options. */
+export type SendMessageOptions = z.infer<typeof SEND_MESSAGE_OPTIONS_SCHEMA>;
