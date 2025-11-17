@@ -1,3 +1,5 @@
+/** @vitest-environment node */
+
 import type { MockInstance } from "vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
@@ -9,8 +11,11 @@ vi.mock("next/headers", () => ({
   ),
 }));
 
-const SIGN_OUT_MOCK: MockInstance<() => Promise<{ error: Error | null }>> = vi.fn(
-  async () => ({ error: null })
+const SIGN_OUT_MOCK = vi.hoisted(
+  () =>
+    vi.fn(async () => ({ error: null })) as MockInstance<
+      () => Promise<{ error: Error | null }>
+    >
 );
 
 vi.mock("@/lib/supabase/server", () => ({

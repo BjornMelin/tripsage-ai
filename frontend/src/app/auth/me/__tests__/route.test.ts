@@ -1,3 +1,5 @@
+/** @vitest-environment node */
+
 import type { MockInstance } from "vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createMockNextRequest } from "@/test/route-helpers";
