@@ -242,6 +242,7 @@ This file defines required rules for all AI coding agents in this repo. If anyth
   - `pnpm test:run` – full suite.
   - `pnpm test` or project‑specific commands – watch/dev.
   - `pnpm test:e2e` – e2e tests only.
+  - **Single file runs:** Always use `--project=<name>` (e.g., `--project=api`) when running a specific test file to limit execution scope; without it, Vitest runs all matching projects.
 - Coverage:
   - Treat coverage thresholds in `frontend/vitest.config.ts` as the minimum.
   - Add or update tests for the code you change.
