@@ -20,7 +20,6 @@ from tripsage_core.exceptions.exceptions import (
 from tripsage_core.services.business.file_processing_service import (
     FileProcessingService,
 )
-from tripsage_core.services.business.flight_service import FlightService
 from tripsage_core.services.business.itinerary_service import ItineraryService
 from tripsage_core.services.business.trip_service import TripService
 from tripsage_core.services.infrastructure import CacheService
@@ -185,11 +184,6 @@ def get_file_processing_service(request: Request) -> FileProcessingService:
     )
 
 
-def get_flight_service_dep(request: Request) -> FlightService:
-    """Return FlightService from the container."""
-    return _get_required_service(request, "flight_service", FlightService)
-
-
 def get_itinerary_service(request: Request) -> ItineraryService:
     """Return ItineraryService from the container."""
     return _get_required_service(
@@ -217,7 +211,6 @@ UserPrincipalDep = Annotated[Principal, Depends(require_user_principal)]
 AdminPrincipalDep = Annotated[Principal, Depends(require_admin_principal)]
 
 # Business service dependencies (type aliases)
-FlightServiceDep = Annotated[FlightService, Depends(get_flight_service_dep)]
 ItineraryServiceDep = Annotated[ItineraryService, Depends(get_itinerary_service)]
 
 TripServiceDep = Annotated[TripService, Depends(get_trip_service)]

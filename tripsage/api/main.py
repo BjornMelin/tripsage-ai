@@ -24,7 +24,6 @@ from tripsage.api.middlewares import (
 from tripsage.api.middlewares.authentication import AuthenticationMiddleware
 from tripsage.api.routers import (
     attachments,
-    auth,
     dashboard,
     health,
     itineraries,
@@ -313,7 +312,6 @@ def create_app() -> FastAPI:  # pylint: disable=too-many-statements
     # Include routers
     app.include_router(health.router, prefix="/api", tags=["health"])
     app.include_router(dashboard.router, prefix="/api", tags=["dashboard"])
-    app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
     app.include_router(
         attachments.router, prefix="/api/attachments", tags=["attachments"]
     )
