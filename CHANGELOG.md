@@ -37,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated `frontend/src/__tests__/realtime-auth-provider.test.tsx` to rely on the Supabase browser client mock directly instead of mocking the deleted token helper.
 - **Supabase SSR auth validation and observability**
   - Added dedicated route tests for `/auth/login`, `/auth/register`, `/auth/logout`, and `/auth/me` under `frontend/src/app/auth/**/__tests__/route.test.ts` to exercise the Supabase SSR-backed flows and `lib/auth/server.ts` helpers.
+  - Simplified `frontend/src/hooks/use-authenticated-api.ts` to use the shared `apiClient` directly without Supabase JWT or refresh-session management, relying on Supabase SSR cookie sessions and `withApiGuards` as the sole authentication mechanism for `/api/*` routes.
 
 ### Removed
 

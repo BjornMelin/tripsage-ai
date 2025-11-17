@@ -1,3 +1,5 @@
+/** @vitest-environment node */
+
 import type { MockInstance } from "vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
@@ -9,13 +11,16 @@ vi.mock("next/headers", () => ({
   ),
 }));
 
-const SIGN_UP_MOCK: MockInstance<
-  (_args: {
-    email: string;
-    password: string;
-    options: { data: Record<string, unknown>; emailRedirectTo: string };
-  }) => Promise<{ error: Error | null }>
-> = vi.fn(async () => ({ error: null }));
+const SIGN_UP_MOCK = vi.hoisted(
+  () =>
+    vi.fn(async () => ({ error: null })) as MockInstance<
+      (_args: {
+        email: string;
+        password: string;
+        options: { data: Record<string, unknown>; emailRedirectTo: string };
+      }) => Promise<{ error: Error | null }>
+    >
+);
 
 vi.mock("@/lib/supabase/server", () => ({
   createServerSupabase: vi.fn(async () => ({
