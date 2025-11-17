@@ -3,18 +3,16 @@
  */
 
 import { z } from "zod";
+import { primitiveSchemas } from "./registry";
 
-// Common validation patterns
-const CURRENCY_CODE_SCHEMA = z
-  .string()
-  .length(3, "Currency code must be 3 characters")
-  .regex(/^[A-Z]{3}$/, "Currency code must be uppercase letters");
+// Common validation patterns using registry primitives
+const CURRENCY_CODE_SCHEMA = primitiveSchemas.isoCurrency;
 
-const UUID_SCHEMA = z.uuid();
-const DATE_STRING_SCHEMA = z.iso.datetime();
-const POSITIVE_NUMBER_SCHEMA = z.number().positive();
-const NON_NEGATIVE_NUMBER_SCHEMA = z.number().nonnegative();
-const PERCENTAGE_SCHEMA = z.number().min(0).max(100);
+const UUID_SCHEMA = primitiveSchemas.uuid;
+const DATE_STRING_SCHEMA = primitiveSchemas.isoDateTime;
+const POSITIVE_NUMBER_SCHEMA = primitiveSchemas.positiveNumber;
+const NON_NEGATIVE_NUMBER_SCHEMA = primitiveSchemas.nonNegativeNumber;
+const PERCENTAGE_SCHEMA = primitiveSchemas.percentage;
 
 // Expense category enum
 export const expenseCategorySchema = z.enum([
@@ -55,7 +53,10 @@ export const budgetSchema = z
     endDate: z.iso.date().optional(),
     id: UUID_SCHEMA,
     isActive: z.boolean(),
-    name: z.string().min(1, "Budget name is required").max(100, "Name too long"),
+    name: z
+      .string()
+      .min(1, { error: "Budget name is required" })
+      .max(100, { error: "Name too long" }),
     startDate: z.iso.date().optional(),
     totalAmount: POSITIVE_NUMBER_SCHEMA,
     tripId: UUID_SCHEMA.optional(),
@@ -69,7 +70,7 @@ export const budgetSchema = z
       return true;
     },
     {
-      message: "End date must be after start date",
+      error: "End date must be after start date",
       path: ["endDate"],
     }
   )
@@ -83,7 +84,7 @@ export const budgetSchema = z
       return totalCategoryAmount <= data.totalAmount;
     },
     {
-      message: "Total category amounts cannot exceed budget total",
+      error: "Total category amounts cannot exceed budget total",
       path: ["categories"],
     }
   );
@@ -91,7 +92,7 @@ export const budgetSchema = z
 // Expense schema
 export const expenseSchema = z.object({
   amount: POSITIVE_NUMBER_SCHEMA,
-  attachmentUrl: z.url().optional(),
+  attachmentUrl: primitiveSchemas.url.optional(),
   budgetId: UUID_SCHEMA,
   category: expenseCategorySchema,
   createdAt: DATE_STRING_SCHEMA,
@@ -125,7 +126,7 @@ export const budgetSummarySchema = z.object({
   isOverBudget: z.boolean(),
   percentageSpent: z.number().min(0), // Can be over 100%
   projectedTotal: NON_NEGATIVE_NUMBER_SCHEMA,
-  spentByCategory: z.record(expenseCategorySchema, NON_NEGATIVE_NUMBER_SCHEMA),
+  spentByCategory: z.partialRecord(expenseCategorySchema, NON_NEGATIVE_NUMBER_SCHEMA),
   totalBudget: POSITIVE_NUMBER_SCHEMA,
   totalRemaining: z.number(), // Can be negative
   totalSpent: NON_NEGATIVE_NUMBER_SCHEMA,
@@ -222,7 +223,7 @@ export const updateBudgetRequestSchema = z
 
 export const addExpenseRequestSchema = z.object({
   amount: POSITIVE_NUMBER_SCHEMA,
-  attachmentUrl: z.url().optional(),
+  attachmentUrl: primitiveSchemas.url.optional(),
   budgetId: UUID_SCHEMA,
   category: expenseCategorySchema,
   currency: CURRENCY_CODE_SCHEMA,
@@ -248,7 +249,7 @@ export const addExpenseRequestSchema = z.object({
 
 export const updateExpenseRequestSchema = z.object({
   amount: POSITIVE_NUMBER_SCHEMA.optional(),
-  attachmentUrl: z.url().optional(),
+  attachmentUrl: primitiveSchemas.url.optional(),
   budgetId: UUID_SCHEMA.optional(),
   category: expenseCategorySchema.optional(),
   currency: CURRENCY_CODE_SCHEMA.optional(),

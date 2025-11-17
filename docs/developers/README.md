@@ -8,6 +8,7 @@ Resources and guidelines for TripSage development.
 |-------|---------|
 | [Quick Start](quick-start.md) | Project setup and development environment |
 | [Code Standards](code-standards.md) | Coding guidelines and conventions |
+| [Zod Schema Guide](zod-schema-guide.md) | Schema validation and type inference patterns |
 | [Testing Guide](testing-guide.md) | Testing strategies and patterns |
 
 ## Development

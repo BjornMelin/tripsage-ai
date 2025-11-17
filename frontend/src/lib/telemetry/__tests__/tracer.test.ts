@@ -10,9 +10,8 @@ vi.mock("@opentelemetry/api", () => ({
   },
 }));
 
-const { getTelemetryTracer, TELEMETRY_SERVICE_NAME } = await import(
-  "@/lib/telemetry/tracer"
-);
+const { getTelemetryTracer } = await import("@/lib/telemetry/tracer");
+const { TELEMETRY_SERVICE_NAME } = await import("@/lib/telemetry/constants");
 
 describe("getTelemetryTracer", () => {
   it("returns tracer bound to the canonical service name", () => {

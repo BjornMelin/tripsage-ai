@@ -3,7 +3,7 @@
  * - Defaults to threads pool for speed; guardrail env can force forks.
  * - Scales workers by available CPUs; env override supported.
  * - Splits into projects: node env for API/server tests, jsdom for UI.
-*/
+ */
 
 import os from "node:os";
 import path from "node:path";
@@ -25,25 +25,22 @@ const defaultWorkers = isCi ? ciDefaultWorkers : Math.max(1, Math.floor(cores / 
 const optimalWorkers = Number(process.env.VITEST_MAX_WORKERS || defaultWorkers);
 
 export default defineConfig({
-  ssr: {
-    noExternal: ["rehype-harden"],
-  },
   plugins: [react()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      // Shim Next.js server-only import for tests
-      "server-only": path.resolve(__dirname, "./src/test/mocks/server-only.ts"),
       // Shim problematic ESM/CJS package in test runners
-      "rehype-harden": path.resolve(
-        __dirname,
-        "./src/test/mocks/rehype-harden.ts"
-      ),
+      "rehype-harden": path.resolve(__dirname, "./src/test/mocks/rehype-harden.ts"),
       "rehype-harden/dist/index.js": path.resolve(
         __dirname,
         "./src/test/mocks/rehype-harden.ts"
       ),
+      // Shim Next.js server-only import for tests
+      "server-only": path.resolve(__dirname, "./src/test/mocks/server-only.ts"),
     },
+  },
+  ssr: {
+    noExternal: ["rehype-harden"],
   },
   test: {
     // Stop early on cascading failures in CI
@@ -62,6 +59,13 @@ export default defineConfig({
         },
       },
     },
+    // Ensure Vite transforms CSS imports under vmThreads
+    deps: {
+      web: {
+        transformCss: true,
+      },
+    },
+    environment: "jsdom",
     exclude: ["**/node_modules/**", "**/e2e/**", "**/*.e2e.*"],
     globals: true,
     hookTimeout: 8000,
@@ -69,29 +73,22 @@ export default defineConfig({
     // Runtime stability
     isolate: true,
     maxWorkers: optimalWorkers,
-    // Optional: when using vm-based pools, recycle workers before they grow too large.
-    // Has effect only for `vmThreads` / `vmForks` pools.
-    vmMemoryLimit: isCi ? "512MB" : undefined,
     passWithNoTests: true,
     // Default to threads for speed; can be overridden via env or per-project
     pool: selectedPool,
-    // Ensure Vite transforms CSS imports under vmThreads
-    deps: {
-      web: {
-        transformCss: true,
-      },
-    },
+    restoreMocks: true,
     server: {
       deps: {
         inline: ["rehype-harden"],
       },
     },
-    restoreMocks: true,
     setupFiles: ["./src/test-setup.ts"],
     teardownTimeout: 6000,
     // Timeouts
     testTimeout: 5000,
     unstubEnvs: true,
-    environment: "jsdom",
+    // Optional: when using vm-based pools, recycle workers before they grow too large.
+    // Has effect only for `vmThreads` / `vmForks` pools.
+    vmMemoryLimit: isCi ? "512MB" : undefined,
   },
 });

@@ -12,13 +12,8 @@ import {
   type UseFormReturn,
   useForm,
 } from "react-hook-form";
-import type { z } from "zod";
-import {
-  TripSageValidationError,
-  ValidationContext,
-  type ValidationResult,
-  validate,
-} from "../validation";
+import { ZodError, type z } from "zod";
+import type { ValidationResult } from "../schemas/validation";
 
 // Form options - using a data type parameter to avoid complex generic constraints
 interface UseZodFormOptions<Data extends FieldValues>
@@ -143,15 +138,25 @@ export function useZodForm<Data extends FieldValues>(
           partialSchema = schema;
         }
 
-        const result = validate(partialSchema, testData, ValidationContext.Form);
+        const result = partialSchema.safeParse(testData);
 
         if (result.success) {
           return Promise.resolve({ data: value, success: true });
         }
 
         // Find field-specific errors
-        const fieldErrors =
-          result.errors?.filter((err) => err.field === fieldName) || [];
+        const fieldErrors = result.error.issues
+          .filter((issue) => issue.path.join(".") === fieldName)
+          .map((issue) => ({
+            code: issue.code,
+            context: "form" as const,
+            field: fieldName as string,
+            message: issue.message,
+            path: issue.path.map(String),
+            timestamp: new Date(),
+            value: issue.input,
+          }));
+
         if (fieldErrors.length === 0) {
           return Promise.resolve({ data: value, success: true });
         }
@@ -165,7 +170,7 @@ export function useZodForm<Data extends FieldValues>(
           errors: [
             {
               code: "FIELD_VALIDATION_ERROR",
-              context: ValidationContext.Form,
+              context: "form" as const,
               field: fieldName as string,
               message: error instanceof Error ? error.message : "Validation failed",
               timestamp: new Date(),
@@ -184,11 +189,21 @@ export function useZodForm<Data extends FieldValues>(
 
     try {
       const formData = form.getValues();
-      const result = validate(
-        schema as z.ZodType<Data>,
-        formData,
-        ValidationContext.Form
-      );
+      const zodResult = (schema as z.ZodType<Data>).safeParse(formData);
+      const result: ValidationResult<Data> = zodResult.success
+        ? { data: zodResult.data, success: true }
+        : {
+            errors: zodResult.error.issues.map((issue) => ({
+              code: issue.code,
+              context: "form" as const,
+              field: issue.path.join(".") || undefined,
+              message: issue.message,
+              path: issue.path.map(String),
+              timestamp: new Date(),
+              value: issue.input,
+            })),
+            success: false,
+          };
 
       setValidationState((prev) => ({
         ...prev,
@@ -209,7 +224,7 @@ export function useZodForm<Data extends FieldValues>(
         errors: [
           {
             code: "FORM_VALIDATION_ERROR",
-            context: ValidationContext.Form,
+            context: "form" as const,
             message: error instanceof Error ? error.message : "Validation failed",
             timestamp: new Date(),
           },
@@ -278,11 +293,11 @@ export function useZodForm<Data extends FieldValues>(
             console.error("Form submission error:", submitError);
           }
 
-          // Set form errors if it's a validation error
-          if (error instanceof TripSageValidationError) {
-            const formErrors = error.getFieldErrors();
-            Object.entries(formErrors).forEach(([field, message]) => {
-              form.setError(field as FieldPath<Data>, { message, type: "manual" });
+          // Set form errors if it's a Zod validation error
+          if (error instanceof ZodError) {
+            error.issues.forEach((issue) => {
+              const field = issue.path.join(".") as FieldPath<Data>;
+              form.setError(field, { message: issue.message, type: "manual" });
             });
           }
         }
@@ -518,16 +533,11 @@ export function useZodFormWizard<T extends FieldValues>(
     if (result.success) {
       return result.data;
     }
-    throw new TripSageValidationError(
-      ValidationContext.Form,
-      result.error.issues.map((issue) => ({
-        code: issue.code,
-        context: ValidationContext.Form,
-        field: issue.path.join("."),
-        message: issue.message,
-        timestamp: new Date(),
-      }))
+    const error = new Error(
+      `Form validation failed: ${result.error.issues.map((i) => i.message).join(", ")}`
     );
+    (error as Error & { issues: z.ZodIssue[] }).issues = result.error.issues;
+    throw error;
   }, [form, stepData, finalSchema]);
 
   const resetWizard = useCallback(() => {
