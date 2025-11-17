@@ -29,6 +29,9 @@ const MOCK_TOAST = vi.fn((_props?: UnknownRecord) => ({
 }));
 
 const LOCATION_ORIGIN = "http://localhost";
+const HAS_WINDOW = typeof window !== "undefined";
+const withWindow = <T>(fn: (win: Window & typeof globalThis) => T) =>
+  HAS_WINDOW ? fn(window as Window & typeof globalThis) : undefined;
 const locationMock: Location = {
   ancestorOrigins: {
     contains: vi.fn(() => false),
@@ -49,10 +52,12 @@ const locationMock: Location = {
   search: "",
 };
 
-Object.defineProperty(window, "location", {
-  configurable: true,
-  value: locationMock,
-});
+withWindow((win) =>
+  Object.defineProperty(win, "location", {
+    configurable: true,
+    value: locationMock,
+  })
+);
 
 vi.mock("@/components/ui/use-toast", () => ({
   toast: MOCK_TOAST,
@@ -178,7 +183,7 @@ class MockIntersectionObserver implements IntersectionObserver {
  * Helper constant to check if we're in a JSDOM environment.
  * Used to conditionally apply window-specific mocks.
  */
-const IS_JSDOM_ENVIRONMENT = typeof window !== "undefined";
+const IS_JSDOM_ENVIRONMENT = HAS_WINDOW;
 
 if (IS_JSDOM_ENVIRONMENT) {
   const WINDOW_REF = globalThis.window as Window & typeof globalThis;
