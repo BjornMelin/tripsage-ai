@@ -23,6 +23,7 @@
     "test:coverage:shard": "CI=1 vitest run --coverage --reporter=blob",
     "test:merge": "vitest run --merge-reports",
     "test:e2e": "playwright test",
+    "boundary:check": "node ../scripts/check-boundaries.js",
     "codemod:ai-route:dry": "npx jscodeshift -t ../scripts/codemods/ai-route-v6-upgrade.js \"src/app/**/route.ts\" --parser=ts -d -p",
     "codemod:ai-route": "npx jscodeshift -t ../scripts/codemods/ai-route-v6-upgrade.js \"src/app/**/route.ts\" --parser=ts",
     "codemod:ai-messages:dry": "npx jscodeshift -t ../scripts/codemods/ai-chat-messages-convert.js \"src/app/**/route.ts\" --parser=ts -d -p",
@@ -141,8 +142,6 @@
       "prismjs": ">=1.30.0",
       "brace-expansion": ">=2.0.2"
     },
-    "ignoredBuiltDependencies": [
-      "esbuild"
-    ]
+    "ignoredBuiltDependencies": ["esbuild"]
   }
 }

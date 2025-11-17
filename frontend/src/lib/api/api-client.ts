@@ -6,13 +6,7 @@
 
 import type { z } from "zod";
 import { getClientEnvVarWithFallback } from "../env/client";
-import {
-  TripSageValidationError,
-  ValidationContext,
-  type ValidationResult,
-  validateApiResponse,
-  validateStrict,
-} from "../validation";
+import type { ValidationResult } from "../schemas/validation";
 
 /**
  * Error class for API client operations with validation context and structured error information.
@@ -259,24 +253,15 @@ export class ApiClient {
     // Validate request data if schema provided
     if (finalConfig.requestSchema && finalConfig.data !== undefined) {
       if (finalConfig.validateRequest ?? this.config.validateRequests) {
-        try {
-          validateStrict(
-            finalConfig.requestSchema,
+        const validationResult = finalConfig.requestSchema.safeParse(finalConfig.data);
+        if (!validationResult.success) {
+          throw new ApiClientError(
+            `Request validation failed: ${validationResult.error.issues.map((i) => i.message).join(", ")}`,
+            400,
+            "VALIDATION_ERROR",
             finalConfig.data,
-            ValidationContext.Api
+            finalConfig.endpoint
           );
-        } catch (error) {
-          if (error instanceof TripSageValidationError) {
-            throw new ApiClientError(
-              "Request validation failed",
-              400,
-              "VALIDATION_ERROR",
-              finalConfig.data,
-              finalConfig.endpoint,
-              { errors: error.errors, success: false }
-            );
-          }
-          throw error;
         }
       }
     }
@@ -374,15 +359,22 @@ export class ApiClient {
         // Validate response if schema provided
         if (finalConfig.responseSchema) {
           if (finalConfig.validateResponse ?? this.config.validateResponses) {
-            const validationResult = validateApiResponse(
-              finalConfig.responseSchema,
-              responseData,
-              finalConfig.endpoint
-            );
-
-            if (!validationResult.success) {
+            const zodResult = finalConfig.responseSchema.safeParse(responseData);
+            if (!zodResult.success) {
+              const validationResult: ValidationResult<unknown> = {
+                errors: zodResult.error.issues.map((issue) => ({
+                  code: issue.code,
+                  context: "api" as const,
+                  field: issue.path.join(".") || undefined,
+                  message: issue.message,
+                  path: issue.path.map(String),
+                  timestamp: new Date(),
+                  value: issue.input,
+                })),
+                success: false,
+              };
               throw new ApiClientError(
-                "Response validation failed",
+                `Response validation failed: ${zodResult.error.issues.map((i) => i.message).join(", ")}`,
                 500,
                 "RESPONSE_VALIDATION_ERROR",
                 responseData,
@@ -391,7 +383,7 @@ export class ApiClient {
               );
             }
 
-            responseData = validationResult.data;
+            responseData = zodResult.data;
           }
         }
 

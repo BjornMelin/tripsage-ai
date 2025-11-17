@@ -12,7 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/use-toast";
 import { createEventRequestSchema } from "@/lib/schemas/calendar";
 
 const EVENT_FORM_SCHEMA = createEventRequestSchema.extend({
@@ -47,6 +49,7 @@ export function CalendarEventForm({
   className,
 }: CalendarEventFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
 
   const {
     register,
@@ -54,6 +57,7 @@ export function CalendarEventForm({
     formState: { errors },
     watch,
     setValue,
+    reset,
   } = useForm<EventFormData>({
     defaultValues: {
       calendarId: "primary",
@@ -101,9 +105,21 @@ export function CalendarEventForm({
 
       const result = await response.json();
       onSuccess?.(result.id);
+      // Reset form after successful submission
+      reset();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
-      onError?.(message);
+      // Only show toast if parent didn't provide onError callback
+      // Parent can handle error display (e.g., CalendarPage shows toast)
+      if (onError) {
+        onError(message);
+      } else {
+        toast({
+          description: message,
+          title: "Failed to create event",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -195,8 +211,15 @@ export function CalendarEventForm({
             </div>
           </div>
 
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Creating..." : "Create Event"}
+          <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
+            {isSubmitting ? (
+              <>
+                <LoadingSpinner size="sm" className="mr-2" />
+                Creating...
+              </>
+            ) : (
+              "Create Event"
+            )}
           </Button>
         </form>
       </CardContent>

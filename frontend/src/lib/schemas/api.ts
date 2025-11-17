@@ -3,14 +3,15 @@
  */
 
 import { z } from "zod";
+import { primitiveSchemas } from "./registry";
 
-// Common validation patterns (Zod v4 top-level validators)
-const TIMESTAMP_SCHEMA = z.iso.datetime();
-const UUID_SCHEMA = z.uuid();
-const EMAIL_SCHEMA = z.email();
-const URL_SCHEMA = z.url();
-const POSITIVE_NUMBER_SCHEMA = z.number().positive();
-const NON_NEGATIVE_NUMBER_SCHEMA = z.number().nonnegative();
+// Common validation patterns using registry primitives
+const TIMESTAMP_SCHEMA = primitiveSchemas.isoDateTime;
+const UUID_SCHEMA = primitiveSchemas.uuid;
+const EMAIL_SCHEMA = primitiveSchemas.email;
+const URL_SCHEMA = primitiveSchemas.url;
+const POSITIVE_NUMBER_SCHEMA = primitiveSchemas.positiveNumber;
+const NON_NEGATIVE_NUMBER_SCHEMA = primitiveSchemas.nonNegativeNumber;
 
 // Generic API response wrapper
 export const apiResponseSchema = <T extends z.ZodTypeAny>(dataSchema: T) =>
@@ -56,19 +57,24 @@ export const loginRequestSchema = z.object({
 
 export const registerRequestSchema = z.object({
   acceptTerms: z.boolean().refine((val) => val === true, {
-    message: "You must accept the terms and conditions",
+    error: "You must accept the terms and conditions",
   }),
   email: EMAIL_SCHEMA.max(255),
-  firstName: z.string().min(1).max(50),
-  lastName: z.string().min(1).max(50),
+  firstName: z
+    .string()
+    .min(1, { error: "First name is required" })
+    .max(50, { error: "First name too long" }),
+  lastName: z
+    .string()
+    .min(1, { error: "Last name is required" })
+    .max(50, { error: "Last name too long" }),
   password: z
     .string()
-    .min(8, "Password must be at least 8 characters")
-    .max(128, "Password too long")
-    .regex(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-      "Password must contain uppercase, lowercase, and number"
-    ),
+    .min(8, { error: "Password must be at least 8 characters" })
+    .max(128, { error: "Password too long" })
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, {
+      error: "Password must contain uppercase, lowercase, and number",
+    }),
 });
 
 export const authResponseSchema = z.object({
@@ -287,10 +293,10 @@ export const createTripRequestSchema = z.object({
       z.object({
         ageGroup: z.enum(["adult", "child", "infant"]).optional(),
         email: EMAIL_SCHEMA.optional(),
-        name: z.string().min(1),
+        name: z.string().min(1, { error: "Traveler name is required" }),
       })
     )
-    .min(1, "At least one traveler is required"),
+    .min(1, { error: "At least one traveler is required" }),
 });
 
 export const updateTripRequestSchema = createTripRequestSchema.partial();

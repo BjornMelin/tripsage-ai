@@ -168,6 +168,32 @@ describe("ActivitySearchForm", () => {
     });
   });
 
+  it("accepts fractional rating values", async () => {
+    const mockOnSearch = vi.fn();
+    render(<ActivitySearchForm onSearch={mockOnSearch} />, {
+      wrapper: CreateWrapper(),
+    });
+
+    fireEvent.change(screen.getByLabelText(/location/i), {
+      target: { value: "Lisbon" },
+    });
+    fireEvent.change(screen.getByLabelText(/start date/i), {
+      target: { value: "2024-09-01" },
+    });
+    fireEvent.change(screen.getByLabelText(/end date/i), {
+      target: { value: "2024-09-05" },
+    });
+    fireEvent.change(screen.getByLabelText(/min rating/i), {
+      target: { value: "4.5" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /search activities/i }));
+
+    await waitFor(() => {
+      expect(mockOnSearch).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it("handles category selection and deselection", () => {
     render(<ActivitySearchForm />, { wrapper: CreateWrapper() });
 

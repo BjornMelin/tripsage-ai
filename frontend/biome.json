@@ -23,6 +23,16 @@
   },
 
   "files": {
+    "experimentalScannerIgnores": [
+      "**/node_modules/**",
+      "**/.next/**",
+      "**/dist/**",
+      "**/build/**",
+      "**/coverage/**",
+      "**/.turbo/**",
+      "**/.vercel/**",
+      "**/storybook-static/**"
+    ],
     "ignoreUnknown": false,
     "includes": [
       "**/*.ts",
@@ -36,16 +46,6 @@
       "**/*.json",
       "**/*.css",
       "!**/out"
-    ],
-    "experimentalScannerIgnores": [
-      "**/node_modules/**",
-      "**/.next/**",
-      "**/dist/**",
-      "**/build/**",
-      "**/coverage/**",
-      "**/.turbo/**",
-      "**/.vercel/**",
-      "**/storybook-static/**"
     ],
     "maxSize": 1048576
   },
@@ -253,7 +253,12 @@
       }
     },
     {
-      "includes": ["**/schemas/env.ts", "**/env/schema.ts", "**/env/client.ts", "**/env/server.ts"],
+      "includes": [
+        "**/schemas/env.ts",
+        "**/env/schema.ts",
+        "**/env/client.ts",
+        "**/env/server.ts"
+      ],
       "linter": {
         "rules": {
           "style": {
@@ -387,7 +392,11 @@
       }
     },
     {
-      "includes": ["**/loading-states.tsx", "**/loading-spinner.tsx", "**/skeleton.tsx"],
+      "includes": [
+        "**/loading-states.tsx",
+        "**/loading-spinner.tsx",
+        "**/skeleton.tsx"
+      ],
       "linter": {
         "rules": {
           "a11y": {

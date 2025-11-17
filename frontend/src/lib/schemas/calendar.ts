@@ -39,7 +39,7 @@ export type ReminderMethod = z.infer<typeof reminderMethodSchema>;
 export const eventDateTimeSchema = z.object({
   date: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
+    .regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Date must be in YYYY-MM-DD format" })
     .optional()
     .or(z.date().transform((d) => d.toISOString().split("T")[0])),
   dateTime: z
@@ -292,3 +292,20 @@ export const eventsListResponseSchema = z.object({
 });
 /** TypeScript type for events list responses. */
 export type EventsListResponse = z.infer<typeof eventsListResponseSchema>;
+
+/**
+ * Calendar connection status response type.
+ * Used by calendar status API and components.
+ */
+export interface CalendarStatusResponse {
+  connected: boolean;
+  calendars?: Array<{
+    id: string;
+    summary: string;
+    description?: string;
+    timeZone?: string;
+    primary?: boolean;
+    accessRole?: string;
+  }>;
+  message?: string;
+}

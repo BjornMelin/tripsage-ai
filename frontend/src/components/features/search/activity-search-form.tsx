@@ -27,17 +27,21 @@ import { Input } from "@/components/ui/input";
 import type { ActivitySearchParams } from "@/lib/schemas/search";
 
 const ActivitySearchFormSchema = z.object({
-  adults: z.number().min(1).max(20),
+  adults: z
+    .number()
+    .int()
+    .min(1, { error: "At least 1 adult required" })
+    .max(20, { error: "Too many adults" }),
   categories: z.array(z.string()),
-  children: z.number().min(0).max(10),
-  duration: z.number().min(1).max(48).optional(),
-  endDate: z.string().min(1, { message: "End date is required" }),
-  infants: z.number().min(0).max(5),
-  location: z.string().min(1, { message: "Location is required" }),
+  children: z.number().int().min(0).max(10, { error: "Too many children" }),
+  duration: z.number().int().min(1).max(48).optional(),
+  endDate: z.string().min(1, { error: "End date is required" }),
+  infants: z.number().int().min(0).max(5, { error: "Too many infants" }),
+  location: z.string().min(1, { error: "Location is required" }),
   priceMax: z.number().min(0).optional(),
   priceMin: z.number().min(0).optional(),
   rating: z.number().min(1).max(5).optional(),
-  startDate: z.string().min(1, { message: "Start date is required" }),
+  startDate: z.string().min(1, { error: "Start date is required" }),
 });
 
 type ActivitySearchFormValues = z.infer<typeof ActivitySearchFormSchema>;
