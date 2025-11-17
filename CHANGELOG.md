@@ -12,6 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Auth store security hardening (Supabase SSR-aligned)**
   - Removed client-side persistence of access/refresh tokens from `frontend/src/stores/auth/auth-session.ts`; the slice now exposes only session view state (`session`, `sessionTimeRemaining`) with `setSession` / `resetSession`, treating Supabase SSR cookies as the sole session authority.
   - Updated `frontend/src/stores/auth/auth-core.ts` logout to call the session slice’s `resetSession()` action instead of manually mutating token/session fields, ensuring logout consistently clears local auth-session state.
+- **Supabase-first auth flows (frontend)**
+  - Added Supabase SSR-backed login, register, and logout route handlers under `frontend/src/app/auth/{login,register,logout}/route.ts` that use `createServerSupabase()` and Zod form schemas, eliminating client-side `supabase.auth.signInWithPassword`/`signUp` calls for core flows.
+  - Rewired `frontend/src/components/auth/{login-form,register-form}.tsx` to post HTML forms to the new `/auth/*` routes and surface server-side validation/auth errors via query parameters instead of local state.
+  - Introduced a safe redirect helper in `frontend/src/app/auth/login/route.ts` to guard against protocol-relative open redirects when handling `redirectTo`/`next` parameters.
+- **Auth store reset orchestration (Wave B)**
+  - Centralized auth-core and auth-validation default view-model state in `frontend/src/stores/auth/auth-core.ts` (`authCoreInitialState`) and `frontend/src/stores/auth/auth-validation.ts` (`authValidationInitialState`) to keep tests and runtime behavior aligned.
+  - Added `frontend/src/stores/auth/reset-auth.ts` with `resetAuthState()` to reset auth-core, auth-session, and auth-validation slices in one call, including clearing persisted auth-core storage for Supabase SSR-aligned logout flows and test setup.
+  - Updated auth store tests under `frontend/src/stores/__tests__/auth/` to exercise `resetAuthState()` and assert that `logout()` invokes the session slice’s `resetSession()` action, and adjusted email verification tests to expect errors via the `registerError` field.
 
 ### Removed
 
