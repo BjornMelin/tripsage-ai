@@ -21,7 +21,7 @@ import {
 } from "@/lib/next/route-helpers";
 import { insertUserApiKey, upsertUserGatewayBaseUrl } from "@/lib/supabase/rpc";
 import { createServerSupabase } from "@/lib/supabase/server";
-import { withTelemetrySpan } from "@/lib/telemetry/span";
+import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
 import {
   getKeys,
   MAX_BODY_SIZE_BYTES,
@@ -92,6 +92,10 @@ export async function POST(req: NextRequest) {
     if (contentLength) {
       const size = Number.parseInt(contentLength, 10);
       if (Number.isNaN(size) || size > MAX_BODY_SIZE_BYTES) {
+        recordTelemetryEvent("api.keys.size_limit", {
+          attributes: { limit_bytes: MAX_BODY_SIZE_BYTES, size_bytes: size },
+          level: "warning",
+        });
         return NextResponse.json(
           {
             code: "BAD_REQUEST",
@@ -109,6 +113,13 @@ export async function POST(req: NextRequest) {
     } catch (parseError) {
       if (parseError instanceof z.ZodError) {
         const firstError = parseError.issues[0];
+        recordTelemetryEvent("api.keys.validation_error", {
+          attributes: {
+            field: firstError?.path.join("."),
+            message: firstError?.message,
+          },
+          level: "warning",
+        });
         return NextResponse.json(
           {
             code: "BAD_REQUEST",
@@ -121,9 +132,12 @@ export async function POST(req: NextRequest) {
         parseError,
         { operation: "json_parse" }
       );
-      console.error("/api/keys POST JSON parse error:", {
-        message: safeMessage,
-        ...safeContext,
+      recordTelemetryEvent("api.keys.parse_error", {
+        attributes: {
+          message: safeMessage,
+          ...safeContext,
+        },
+        level: "error",
       });
       return NextResponse.json(
         { code: "BAD_REQUEST", error: "Malformed JSON in request body" },
@@ -136,9 +150,12 @@ export async function POST(req: NextRequest) {
         authError ?? new Error("User not found"),
         { operation: "auth_check" }
       );
-      console.error("/api/keys POST auth error:", {
-        message: safeMessage,
-        ...safeContext,
+      recordTelemetryEvent("api.keys.auth_error", {
+        attributes: {
+          message: safeMessage,
+          ...safeContext,
+        },
+        level: "error",
       });
       return NextResponse.json(
         { code: "UNAUTHORIZED", error: "Authentication failed" },
@@ -206,9 +223,12 @@ export async function POST(req: NextRequest) {
     const { message: safeMessage, context: safeContext } = redactErrorForLogging(err, {
       operation: "post_key",
     });
-    console.error("/api/keys POST error:", {
-      message: safeMessage,
-      ...safeContext,
+    recordTelemetryEvent("api.keys.post_error", {
+      attributes: {
+        message: safeMessage,
+        ...safeContext,
+      },
+      level: "error",
     });
     return NextResponse.json(
       { code: "INTERNAL_ERROR", error: "Internal server error" },
@@ -232,9 +252,12 @@ export async function GET() {
     const { message: safeMessage, context: safeContext } = redactErrorForLogging(err, {
       operation: "get_keys",
     });
-    console.error("/api/keys GET error:", {
-      message: safeMessage,
-      ...safeContext,
+    recordTelemetryEvent("api.keys.get_error", {
+      attributes: {
+        message: safeMessage,
+        ...safeContext,
+      },
+      level: "error",
     });
     return NextResponse.json(
       { code: "INTERNAL_ERROR", error: "Internal server error" },
