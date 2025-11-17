@@ -24,6 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Simplified `frontend/src/stores/auth/auth-core.ts` to a pure view-model over the current `AuthUser` snapshot and Supabase SSR session initialization/logout, removing unused login/register and profile mutation methods and all `/api/auth/*` references from the store.
   - Confirmed profile management is handled exclusively by `frontend/src/stores/user-store.ts`, keeping auth-core focused on authentication-derived state instead of user profile editing concerns.
   - Updated `frontend/src/stores/__tests__/auth/auth-core.test.ts` to validate the slimmer auth-core API (initialization, logout, setUser, error handling, display name, and `resetAuthState()` orchestration) and removed tests tied to the legacy `/api/auth/*` mutation methods.
+- **Auth guards and protected routes (Wave D)**
+  - Enforced Supabase SSR authentication for all dashboard routes via `frontend/src/app/(dashboard)/layout.tsx`, which now calls `requireUser()` before rendering the client-side `DashboardLayout`.
+  - Added server layouts for `frontend/src/app/settings` and `frontend/src/app/chat` that call `requireUser()` (with `redirectTo` set to `/settings` and `/chat` respectively), ensuring settings and chat UIs are evaluated per request and gated by Supabase cookies.
+  - Guarded the attachments listing page in `frontend/src/app/attachments/page.tsx` by calling `requireUser({ redirectTo: "/attachments" })` ahead of the SSR fetch to `/api/attachments/files`.
+  - Updated AI/LLM and chat-related API routes to require authentication via `withApiGuards({ auth: true, ... })` for `/api/chat`, `/api/chat/stream`, `/api/chat/attachments`, `/api/agents/router`, and `/api/agents/itineraries`, while keeping the minimal `/api/ai/stream` demo and internal embeddings/route-matrix endpoints as explicitly non-authenticated where existing non-Supabase guards apply.
+  - Added unit tests for `frontend/src/lib/auth/server.ts` in `frontend/src/lib/auth/__tests__/server.test.ts` to verify `getOptionalUser` behavior, successful `requireUser` when a user is present, and redirect-to-login behavior when unauthenticated (matching `/login?next=/dashboard` semantics).
 
 ### Removed
 

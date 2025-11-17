@@ -42,7 +42,7 @@ type IncomingBody = {
  * @returns Promise resolving to a Response with streamed chat data.
  */
 export const POST = withApiGuards({
-  auth: false,
+  auth: true,
   rateLimit: "chat:stream",
   telemetry: "chat.stream",
 })(async (req: NextRequest, { supabase }): Promise<Response> => {

@@ -39,7 +39,7 @@ type IncomingBody = {
  * @returns Promise resolving to a Response with chat completion data.
  */
 export const POST = withApiGuards({
-  auth: false,
+  auth: true,
   rateLimit: "chat:nonstream",
   telemetry: "chat.nonstream",
 })(async (req: NextRequest, { supabase }): Promise<Response> => {

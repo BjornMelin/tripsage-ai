@@ -56,7 +56,7 @@ interface BatchUploadResponse {
  * @returns A JSON response with uploaded file information or an error response.
  */
 export const POST = withApiGuards({
-  auth: false,
+  auth: true,
   rateLimit: "chat:attachments",
   telemetry: "chat.attachments.upload",
 })(async (req: NextRequest) => {
