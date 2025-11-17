@@ -26,7 +26,7 @@ import {
 } from "@/lib/next/route-helpers";
 import { deleteUserApiKey, deleteUserGatewayBaseUrl } from "@/lib/supabase/rpc";
 import { createServerSupabase } from "@/lib/supabase/server";
-import { withTelemetrySpan } from "@/lib/telemetry/span";
+import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
 
 const ALLOWED_SERVICES = new Set(["openai", "openrouter", "anthropic", "xai"]);
 
@@ -135,9 +135,13 @@ export async function DELETE(
       operation: "delete_key",
       service: serviceForLog,
     });
-    console.error("/api/keys/[service] DELETE error:", {
-      message: safeMessage,
-      ...safeContext,
+    recordTelemetryEvent("api.keys.delete_error", {
+      attributes: {
+        message: safeMessage,
+        service: serviceForLog ?? "unknown",
+        ...safeContext,
+      },
+      level: "error",
     });
     return NextResponse.json(
       { code: "INTERNAL_ERROR", error: "Internal server error" },

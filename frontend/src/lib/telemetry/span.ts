@@ -1,5 +1,5 @@
 /**
- * @fileoverview Minimal OpenTelemetry span helper with attribute redaction.
+ * @fileoverview Minimal OpenTelemetry span helper with attribute redaction and logging.
  */
 
 import "server-only";
@@ -12,6 +12,11 @@ export type TelemetrySpanAttributes = Record<string, string | number | boolean>;
 export type WithTelemetrySpanOptions = {
   attributes?: TelemetrySpanAttributes;
   redactKeys?: string[];
+};
+
+export type TelemetryLogOptions = {
+  attributes?: TelemetrySpanAttributes;
+  level?: "info" | "warning" | "error";
 };
 
 const REDACTED_VALUE = "[REDACTED]";
@@ -55,6 +60,13 @@ export function withTelemetrySpan<T>(
   return tracer.startActiveSpan(name, runner);
 }
 
+/**
+ * Sanitizes telemetry span attributes by redacting sensitive keys.
+ *
+ * @param attributes - The attributes to sanitize.
+ * @param redactKeys - The keys to redact.
+ * @returns The sanitized attributes.
+ */
 function sanitizeAttributes(
   attributes?: TelemetrySpanAttributes,
   redactKeys: string[] = []
@@ -69,4 +81,37 @@ function sanitizeAttributes(
     },
     {}
   );
+}
+
+/**
+ * Records a telemetry event with structured attributes.
+ *
+ * Creates a brief span for logging events that don't require full operation tracing.
+ * Uses span events for structured logging without console output.
+ *
+ * @param eventName - Concise event identifier (e.g., "api.keys.parse_error")
+ * @param options - Event attributes and severity level
+ */
+export function recordTelemetryEvent(
+  eventName: string,
+  options: TelemetryLogOptions = {}
+): void {
+  const { attributes, level = "info" } = options;
+  const sanitizedAttributes = sanitizeAttributes(attributes);
+
+  tracer.startActiveSpan(`event.${eventName}`, (span) => {
+    span.setAttribute("event.level", level);
+    span.setAttribute("event.name", eventName);
+
+    if (sanitizedAttributes) {
+      Object.entries(sanitizedAttributes).forEach(([key, value]) => {
+        span.setAttribute(`event.${key}`, value);
+      });
+    }
+
+    // Add event to span without console logging
+    span.addEvent(eventName, sanitizedAttributes);
+
+    span.end();
+  });
 }

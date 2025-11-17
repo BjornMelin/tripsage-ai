@@ -18,6 +18,7 @@ import { NextResponse } from "next/server";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { getClientIpFromHeaders } from "@/lib/next/route-helpers";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { recordTelemetryEvent } from "@/lib/telemetry/span";
 
 export const dynamic = "force-dynamic";
 
@@ -189,10 +190,13 @@ async function validateProviderKey(
   } catch (error) {
     const reason = normalizeErrorReason(error);
     const message = error instanceof Error ? error.message : "Unknown error";
-    console.error("Provider key validation error", {
-      message,
-      provider: providerId,
-      reason,
+    recordTelemetryEvent("api.keys.validate_provider_error", {
+      attributes: {
+        message,
+        provider: providerId,
+        reason,
+      },
+      level: "error",
     });
     return { isValid: false, reason };
   }
@@ -256,7 +260,10 @@ export async function POST(req: NextRequest) {
     } catch (parseError) {
       const message =
         parseError instanceof Error ? parseError.message : "Unknown JSON parse error";
-      console.error("/api/keys/validate POST JSON parse error:", { message });
+      recordTelemetryEvent("api.keys.validate.parse_error", {
+        attributes: { message },
+        level: "error",
+      });
       return NextResponse.json(
         { code: "BAD_REQUEST", error: "Malformed JSON in request body" },
         { status: 400 }
@@ -283,7 +290,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(result, { status: 200 });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    console.error("/api/keys/validate POST error:", { message });
+    recordTelemetryEvent("api.keys.validate.post_error", {
+      attributes: { message },
+      level: "error",
+    });
     return NextResponse.json(
       { code: "INTERNAL_ERROR", error: "Internal server error" },
       { status: 500 }
