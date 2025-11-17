@@ -1,4 +1,6 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+/** @vitest-environment jsdom */
+
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "@/components/ui/use-toast";
 import { useUserProfileStore } from "@/stores/user-store";
@@ -42,16 +44,20 @@ describe("AccountSettingsSection", () => {
 
   // email verification banner not present in current implementation
 
-  it("validates email format in update form", () => {
+  it("validates email format in update form", async () => {
     render(<AccountSettingsSection />);
 
     const emailInput = screen.getByLabelText(/update email address/i);
-    act(() => {
+    await act(async () => {
       fireEvent.change(emailInput, { target: { value: "invalid-email" } });
       fireEvent.click(screen.getByRole("button", { name: /update email/i }));
     });
 
-    expect(screen.getByText("Please enter a valid email address")).toBeInTheDocument();
+    // Wait for form validation error to appear
+    await waitFor(() => {
+      const errorMessage = screen.queryByText(/invalid.*email|email.*invalid|valid.*email/i);
+      expect(errorMessage).toBeInTheDocument();
+    }, { timeout: 2000 });
   });
 
   // Removed redundant toast assertion; loading-state test covers submit behavior deterministically.

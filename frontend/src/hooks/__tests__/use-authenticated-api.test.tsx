@@ -1,5 +1,7 @@
+/** @vitest-environment jsdom */
+
 import type { Session, User } from "@supabase/supabase-js";
-import { act, fireEvent } from "@testing-library/react";
+import { act, fireEvent, waitFor } from "@testing-library/react";
 import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
@@ -95,17 +97,19 @@ describe("useAuthenticatedApi", () => {
     auth.signOut.mockResolvedValue({ error: null });
   });
 
-  it("throws 401 when the session is missing and refresh fails", () => {
+  it("throws 401 when the session is missing and refresh fails", async () => {
     render(<TestCaller />);
 
     act(() => {
       fireEvent.click(screen.getByRole("button", { name: "ready" }));
     });
 
-    expect(screen.getByRole("button", { name: "UNAUTHORIZED" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "UNAUTHORIZED" })).toBeInTheDocument();
+    });
   });
 
-  it("attaches Authorization header when a session exists", () => {
+  it("attaches Authorization header when a session exists", async () => {
     const session = CREATE_TEST_SESSION("tok", testUser);
     auth.getSession.mockResolvedValue(BUILD_GET_SESSION_RESPONSE(session));
 
@@ -115,14 +119,17 @@ describe("useAuthenticatedApi", () => {
       fireEvent.click(screen.getByRole("button", { name: "ready" }));
     });
 
-    expect(MOCKED_API_GET).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(MOCKED_API_GET).toHaveBeenCalledTimes(1);
+    });
+
     const [, options] = MOCKED_API_GET.mock.calls[0];
     const hdr = (options as { headers?: Record<string, unknown> })?.headers;
     const authHeader = hdr?.Authorization ?? hdr?.authorization;
     expect(authHeader).toBe("Bearer tok");
   });
 
-  it("refreshes on 401 and retries once", () => {
+  it("refreshes on 401 and retries once", async () => {
     MOCKED_API_GET.mockRejectedValueOnce(
       new ApiError({ code: "UNAUTHORIZED", message: "401", status: 401 })
     ).mockResolvedValueOnce({ ok: true });
@@ -142,7 +149,10 @@ describe("useAuthenticatedApi", () => {
       fireEvent.click(screen.getByRole("button", { name: "ready" }));
     });
 
-    expect(MOCKED_API_GET).toHaveBeenCalledTimes(2);
+    await waitFor(() => {
+      expect(MOCKED_API_GET).toHaveBeenCalledTimes(2);
+    });
+
     const [, retryOptions] = MOCKED_API_GET.mock.calls[1];
     const retryHdr = (retryOptions as { headers?: Record<string, unknown> })?.headers;
     const retryAuth = retryHdr?.Authorization ?? retryHdr?.authorization;

@@ -1,7 +1,3 @@
-/**
- * Tests for memory hooks - frontend API integration
- */
-
 import {
   QueryClient,
   QueryClientProvider,

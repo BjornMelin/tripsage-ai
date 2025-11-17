@@ -163,11 +163,15 @@ describe("ChatMessages", () => {
 
     it("returns the current session", () => {
       const sessionId = useChatMessages.getState().createSession("Test");
-      const currentSession = useChatMessages.getState().currentSession;
+      const state = useChatMessages.getState();
+      const currentSession = state.currentSession;
 
       expect(currentSession).toBeDefined();
       expect(currentSession?.id).toBe(sessionId);
       expect(currentSession?.title).toBe("Test");
+      // Verify the session exists in sessions array
+      expect(state.sessions.find((s) => s.id === sessionId)).toBeDefined();
+      expect(state.currentSessionId).toBe(sessionId);
     });
   });
 
