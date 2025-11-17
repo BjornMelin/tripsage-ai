@@ -32,7 +32,7 @@ const RequestSchema = agentSchemas.itineraryPlanRequestSchema;
  * @returns Streaming response with itinerary plan
  */
 export const POST = withApiGuards({
-  auth: false,
+  auth: true,
   rateLimit: "agents:itineraries",
   telemetry: "agent.itineraryPlanning",
 })(async (req: NextRequest, { user }) => {

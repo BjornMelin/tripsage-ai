@@ -31,7 +31,7 @@ const RequestSchema = agentSchemas.routerRequestSchema;
  * @returns JSON response with classification result
  */
 export const POST = withApiGuards({
-  auth: false,
+  auth: true,
   rateLimit: "agents:router",
   telemetry: "agent.router",
 })(async (req: NextRequest, { user }) => {

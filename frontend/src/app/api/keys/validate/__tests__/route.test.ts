@@ -1,8 +1,8 @@
 /** @vitest-environment node */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { NextRequest } from "next/server";
 import type { Redis } from "@upstash/redis";
+import type { NextRequest } from "next/server";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   stubRateLimitDisabled,
   stubRateLimitEnabled,
@@ -19,7 +19,7 @@ vi.mock("next/headers", () => ({
 
 const LIMIT_SPY = vi.hoisted(() => vi.fn());
 const MOCK_ROUTE_HELPERS = vi.hoisted(() => ({
-  getClientIpFromHeaders: vi.fn(() => "127.0.0.1"),
+  getClientIpFromHeaders: vi.fn((_req: NextRequest) => "127.0.0.1"),
 }));
 const MOCK_SUPABASE = vi.hoisted(() => ({
   auth: {
@@ -29,7 +29,9 @@ const MOCK_SUPABASE = vi.hoisted(() => ({
 const CREATE_SUPABASE = vi.hoisted(() => vi.fn(async () => MOCK_SUPABASE));
 const mockCreateOpenAI = vi.hoisted(() => vi.fn());
 const mockCreateAnthropic = vi.hoisted(() => vi.fn());
-const MOCK_GET_REDIS = vi.hoisted(() => vi.fn<() => Redis | undefined>(() => undefined));
+const MOCK_GET_REDIS = vi.hoisted(() =>
+  vi.fn<() => Redis | undefined>(() => undefined)
+);
 
 vi.mock("@/lib/next/route-helpers", async () => {
   const actual = await vi.importActual<typeof import("@/lib/next/route-helpers")>(
@@ -39,7 +41,7 @@ vi.mock("@/lib/next/route-helpers", async () => {
     ...actual,
     getClientIpFromHeaders: MOCK_ROUTE_HELPERS.getClientIpFromHeaders,
     getTrustedRateLimitIdentifier: vi.fn((req: NextRequest) => {
-      const ip = MOCK_ROUTE_HELPERS.getClientIpFromHeaders();
+      const ip = MOCK_ROUTE_HELPERS.getClientIpFromHeaders(req);
       // Return "anon:" prefix format for test compatibility
       return ip === "unknown" ? "unknown" : `anon:${ip}`;
     }),
@@ -244,7 +246,7 @@ describe("/api/keys/validate route", () => {
 
   it("falls back to client IP when user is missing", async () => {
     stubRateLimitEnabled();
-    // Return mock Redis instance when rate limiting enabled (getRedis checks env vars via mocked getServerEnvVarWithFallback)
+    // Return mock Redis instance when rate limiting enabled (same pattern as working test)
     MOCK_GET_REDIS.mockReturnValue({} as Redis);
     MOCK_SUPABASE.auth.getUser.mockResolvedValue({
       data: { user: null },
@@ -256,7 +258,7 @@ describe("/api/keys/validate route", () => {
       reset: 123,
       success: true,
     });
-    // Ensure getClientIpFromHeaders returns the expected IP
+    // Ensure getClientIpFromHeaders returns the expected IP when called
     MOCK_ROUTE_HELPERS.getClientIpFromHeaders.mockReturnValue("10.0.0.1");
 
     const fetchMock = vi
@@ -264,7 +266,7 @@ describe("/api/keys/validate route", () => {
       .mockResolvedValue(new Response(JSON.stringify({}), { status: 200 }));
     mockCreateOpenAI.mockImplementation(() => buildProvider(fetchMock));
 
-    const { POST } = await import("../route");
+    const { POST } = await import("@/app/api/keys/validate/route");
     const req = createMockNextRequest({
       body: { apiKey: "sk-test", service: "openai" },
       method: "POST",
@@ -274,6 +276,7 @@ describe("/api/keys/validate route", () => {
     await POST(req);
 
     // Verify rate limiter was called with the expected identifier
+    // The identifier should be "anon:10.0.0.1" since user is null
     expect(LIMIT_SPY).toHaveBeenCalled();
     const callArgs = LIMIT_SPY.mock.calls[0];
     expect(callArgs?.[0]).toBe("anon:10.0.0.1");
