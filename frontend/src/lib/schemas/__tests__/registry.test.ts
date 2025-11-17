@@ -1,5 +1,3 @@
-/** @vitest-environment jsdom */
-
 import { describe, expect, it } from "vitest";
 import {
   type Email,
@@ -14,7 +12,7 @@ import {
 
 describe("primitiveSchemas", () => {
   describe("uuid", () => {
-    it("should validate valid UUID", () => {
+    it.concurrent("should validate valid UUID", () => {
       const validUuid = "123e4567-e89b-12d3-a456-426614174000";
       const result = primitiveSchemas.uuid.safeParse(validUuid);
       expect(result.success).toBe(true);
@@ -23,7 +21,7 @@ describe("primitiveSchemas", () => {
       }
     });
 
-    it("should reject invalid UUID", () => {
+    it.concurrent("should reject invalid UUID", () => {
       const invalidUuid = "not-a-uuid";
       const result = primitiveSchemas.uuid.safeParse(invalidUuid);
       expect(result.success).toBe(false);
@@ -31,7 +29,7 @@ describe("primitiveSchemas", () => {
   });
 
   describe("email", () => {
-    it("should validate valid email", () => {
+    it.concurrent("should validate valid email", () => {
       const validEmail = "test@example.com";
       const result = primitiveSchemas.email.safeParse(validEmail);
       expect(result.success).toBe(true);
@@ -40,7 +38,7 @@ describe("primitiveSchemas", () => {
       }
     });
 
-    it("should reject invalid email", () => {
+    it.concurrent("should reject invalid email", () => {
       const invalidEmail = "not-an-email";
       const result = primitiveSchemas.email.safeParse(invalidEmail);
       expect(result.success).toBe(false);
@@ -48,7 +46,7 @@ describe("primitiveSchemas", () => {
   });
 
   describe("url", () => {
-    it("should validate valid URL", () => {
+    it.concurrent("should validate valid URL", () => {
       const validUrl = "https://example.com";
       const result = primitiveSchemas.url.safeParse(validUrl);
       expect(result.success).toBe(true);
@@ -57,7 +55,7 @@ describe("primitiveSchemas", () => {
       }
     });
 
-    it("should reject invalid URL", () => {
+    it.concurrent("should reject invalid URL", () => {
       const invalidUrl = "not-a-url";
       const result = primitiveSchemas.url.safeParse(invalidUrl);
       expect(result.success).toBe(false);
@@ -65,13 +63,13 @@ describe("primitiveSchemas", () => {
   });
 
   describe("isoDateTime", () => {
-    it("should validate valid ISO datetime", () => {
+    it.concurrent("should validate valid ISO datetime", () => {
       const validDateTime = "2024-01-01T12:00:00Z";
       const result = primitiveSchemas.isoDateTime.safeParse(validDateTime);
       expect(result.success).toBe(true);
     });
 
-    it("should reject invalid ISO datetime", () => {
+    it.concurrent("should reject invalid ISO datetime", () => {
       const invalidDateTime = "not-a-datetime";
       const result = primitiveSchemas.isoDateTime.safeParse(invalidDateTime);
       expect(result.success).toBe(false);
@@ -79,13 +77,13 @@ describe("primitiveSchemas", () => {
   });
 
   describe("timestamp", () => {
-    it("should validate valid timestamp", () => {
+    it.concurrent("should validate valid timestamp", () => {
       const validTimestamp = 1704110400;
       const result = primitiveSchemas.timestamp.safeParse(validTimestamp);
       expect(result.success).toBe(true);
     });
 
-    it("should reject invalid timestamp", () => {
+    it.concurrent("should reject invalid timestamp", () => {
       const invalidTimestamp = -1;
       const result = primitiveSchemas.timestamp.safeParse(invalidTimestamp);
       expect(result.success).toBe(false);
@@ -93,13 +91,13 @@ describe("primitiveSchemas", () => {
   });
 
   describe("nonEmptyString", () => {
-    it("should validate non-empty string", () => {
+    it.concurrent("should validate non-empty string", () => {
       const validString = "hello";
       const result = primitiveSchemas.nonEmptyString.safeParse(validString);
       expect(result.success).toBe(true);
     });
 
-    it("should reject empty string", () => {
+    it.concurrent("should reject empty string", () => {
       const emptyString = "";
       const result = primitiveSchemas.nonEmptyString.safeParse(emptyString);
       expect(result.success).toBe(false);
@@ -107,13 +105,13 @@ describe("primitiveSchemas", () => {
   });
 
   describe("slug", () => {
-    it("should validate valid slug", () => {
+    it.concurrent("should validate valid slug", () => {
       const validSlug = "hello-world-123";
       const result = primitiveSchemas.slug.safeParse(validSlug);
       expect(result.success).toBe(true);
     });
 
-    it("should reject invalid slug", () => {
+    it.concurrent("should reject invalid slug", () => {
       const invalidSlug = "Hello World!";
       const result = primitiveSchemas.slug.safeParse(invalidSlug);
       expect(result.success).toBe(false);
@@ -121,13 +119,13 @@ describe("primitiveSchemas", () => {
   });
 
   describe("iataCode", () => {
-    it("should validate valid IATA code", () => {
+    it.concurrent("should validate valid IATA code", () => {
       const validCode = "JFK";
       const result = primitiveSchemas.iataCode.safeParse(validCode);
       expect(result.success).toBe(true);
     });
 
-    it("should reject invalid IATA code", () => {
+    it.concurrent("should reject invalid IATA code", () => {
       const invalidCode = "jfk";
       const result = primitiveSchemas.iataCode.safeParse(invalidCode);
       expect(result.success).toBe(false);
@@ -135,13 +133,13 @@ describe("primitiveSchemas", () => {
   });
 
   describe("isoCurrency", () => {
-    it("should validate valid currency code", () => {
+    it.concurrent("should validate valid currency code", () => {
       const validCurrency = "USD";
       const result = primitiveSchemas.isoCurrency.safeParse(validCurrency);
       expect(result.success).toBe(true);
     });
 
-    it("should reject invalid currency code", () => {
+    it.concurrent("should reject invalid currency code", () => {
       const invalidCurrency = "usd";
       const result = primitiveSchemas.isoCurrency.safeParse(invalidCurrency);
       expect(result.success).toBe(false);
@@ -149,13 +147,13 @@ describe("primitiveSchemas", () => {
   });
 
   describe("positiveNumber", () => {
-    it("should validate positive number", () => {
+    it.concurrent("should validate positive number", () => {
       const validNumber = 42;
       const result = primitiveSchemas.positiveNumber.safeParse(validNumber);
       expect(result.success).toBe(true);
     });
 
-    it("should reject non-positive number", () => {
+    it.concurrent("should reject non-positive number", () => {
       const invalidNumber = -1;
       const result = primitiveSchemas.positiveNumber.safeParse(invalidNumber);
       expect(result.success).toBe(false);
@@ -163,13 +161,13 @@ describe("primitiveSchemas", () => {
   });
 
   describe("percentage", () => {
-    it("should validate valid percentage", () => {
+    it.concurrent("should validate valid percentage", () => {
       const validPercentage = 50;
       const result = primitiveSchemas.percentage.safeParse(validPercentage);
       expect(result.success).toBe(true);
     });
 
-    it("should reject invalid percentage", () => {
+    it.concurrent("should reject invalid percentage", () => {
       const invalidPercentage = 150;
       const result = primitiveSchemas.percentage.safeParse(invalidPercentage);
       expect(result.success).toBe(false);
@@ -177,13 +175,13 @@ describe("primitiveSchemas", () => {
   });
 
   describe("nonNegativeNumber", () => {
-    it("should validate non-negative number", () => {
+    it.concurrent("should validate non-negative number", () => {
       const validNumber = 0;
       const result = primitiveSchemas.nonNegativeNumber.safeParse(validNumber);
       expect(result.success).toBe(true);
     });
 
-    it("should reject negative number", () => {
+    it.concurrent("should reject negative number", () => {
       const invalidNumber = -1;
       const result = primitiveSchemas.nonNegativeNumber.safeParse(invalidNumber);
       expect(result.success).toBe(false);
@@ -193,7 +191,7 @@ describe("primitiveSchemas", () => {
 
 describe("transformSchemas", () => {
   describe("trimmedString", () => {
-    it("should trim whitespace", () => {
+    it.concurrent("should trim whitespace", () => {
       const input = "  hello world  ";
       const result = transformSchemas.trimmedString.safeParse(input);
       expect(result.success).toBe(true);
@@ -204,7 +202,7 @@ describe("transformSchemas", () => {
   });
 
   describe("lowercaseEmail", () => {
-    it("should convert email to lowercase", () => {
+    it.concurrent("should convert email to lowercase", () => {
       const input = "Test@Example.COM";
       const result = transformSchemas.lowercaseEmail.safeParse(input);
       expect(result.success).toBe(true);
@@ -215,7 +213,7 @@ describe("transformSchemas", () => {
   });
 
   describe("normalizedUrl", () => {
-    it("should normalize URL", () => {
+    it.concurrent("should normalize URL", () => {
       const input = "  HTTPS://EXAMPLE.COM  ";
       const result = transformSchemas.normalizedUrl.safeParse(input);
       expect(result.success).toBe(true);
@@ -228,13 +226,13 @@ describe("transformSchemas", () => {
 
 describe("refinedSchemas", () => {
   describe("futureDate", () => {
-    it("should validate future date", () => {
+    it.concurrent("should validate future date", () => {
       const futureDate = new Date(Date.now() + 86400000).toISOString(); // Tomorrow
       const result = refinedSchemas.futureDate.safeParse(futureDate);
       expect(result.success).toBe(true);
     });
 
-    it("should reject past date", () => {
+    it.concurrent("should reject past date", () => {
       const pastDate = new Date(Date.now() - 86400000).toISOString(); // Yesterday
       const result = refinedSchemas.futureDate.safeParse(pastDate);
       expect(result.success).toBe(false);
@@ -242,13 +240,13 @@ describe("refinedSchemas", () => {
   });
 
   describe("adultAge", () => {
-    it("should validate adult age", () => {
+    it.concurrent("should validate adult age", () => {
       const adultAge = 25;
       const result = refinedSchemas.adultAge.safeParse(adultAge);
       expect(result.success).toBe(true);
     });
 
-    it("should reject minor age", () => {
+    it.concurrent("should reject minor age", () => {
       const minorAge = 17;
       const result = refinedSchemas.adultAge.safeParse(minorAge);
       expect(result.success).toBe(false);
@@ -256,31 +254,31 @@ describe("refinedSchemas", () => {
   });
 
   describe("strongPassword", () => {
-    it("should validate strong password", () => {
+    it.concurrent("should validate strong password", () => {
       const strongPassword = "Test123!Password";
       const result = refinedSchemas.strongPassword.safeParse(strongPassword);
       expect(result.success).toBe(true);
     });
 
-    it("should reject weak password (no uppercase)", () => {
+    it.concurrent("should reject weak password (no uppercase)", () => {
       const weakPassword = "test123!password";
       const result = refinedSchemas.strongPassword.safeParse(weakPassword);
       expect(result.success).toBe(false);
     });
 
-    it("should reject weak password (no lowercase)", () => {
+    it.concurrent("should reject weak password (no lowercase)", () => {
       const weakPassword = "TEST123!PASSWORD";
       const result = refinedSchemas.strongPassword.safeParse(weakPassword);
       expect(result.success).toBe(false);
     });
 
-    it("should reject weak password (no numbers)", () => {
+    it.concurrent("should reject weak password (no numbers)", () => {
       const weakPassword = "Test!Password";
       const result = refinedSchemas.strongPassword.safeParse(weakPassword);
       expect(result.success).toBe(false);
     });
 
-    it("should reject short password", () => {
+    it.concurrent("should reject short password", () => {
       const shortPassword = "Test1!";
       const result = refinedSchemas.strongPassword.safeParse(shortPassword);
       expect(result.success).toBe(false);
@@ -289,34 +287,34 @@ describe("refinedSchemas", () => {
 });
 
 describe("Type exports", () => {
-  it("should export Uuid type", () => {
+  it.concurrent("should export Uuid type", () => {
     const uuid: Uuid = "123e4567-e89b-12d3-a456-426614174000";
     expect(typeof uuid).toBe("string");
   });
 
-  it("should export Email type", () => {
+  it.concurrent("should export Email type", () => {
     const email: Email = "test@example.com";
     expect(typeof email).toBe("string");
   });
 
-  it("should export Url type", () => {
+  it.concurrent("should export Url type", () => {
     const url: Url = "https://example.com";
     expect(typeof url).toBe("string");
   });
 
-  it("should export IsoDateTime type", () => {
+  it.concurrent("should export IsoDateTime type", () => {
     const dateTime: IsoDateTime = "2024-01-01T12:00:00Z";
     expect(typeof dateTime).toBe("string");
   });
 
-  it("should export Timestamp type", () => {
+  it.concurrent("should export Timestamp type", () => {
     const timestamp: Timestamp = 1704110400;
     expect(typeof timestamp).toBe("number");
   });
 });
 
 describe("Error messages", () => {
-  it("should use unified error option format", () => {
+  it.concurrent("should use unified error option format", () => {
     const invalidUuid = "not-a-uuid";
     const result = primitiveSchemas.uuid.safeParse(invalidUuid);
     expect(result.success).toBe(false);

@@ -26,7 +26,7 @@ import type { SupabaseClient, User } from "@supabase/supabase-js";
 import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
 import { getClientEnv } from "@/lib/env/client";
 import { getServerEnv } from "@/lib/env/server";
-import { TELEMETRY_SERVICE_NAME } from "@/lib/telemetry/tracer";
+import { TELEMETRY_SERVICE_NAME } from "@/lib/telemetry/constants";
 import type { Database } from "./database.types";
 
 /**

@@ -8,7 +8,7 @@ describe("Validation Performance", () => {
   const maxTimeMs = 5; // Per execplan requirement: <5ms validation time
 
   describe("primitiveSchemas performance", () => {
-    it("should validate uuid quickly", () => {
+    it.concurrent("should validate uuid quickly", () => {
       const validUuid = "123e4567-e89b-12d3-a456-426614174000";
       const start = performance.now();
 
@@ -21,7 +21,7 @@ describe("Validation Performance", () => {
       expect(avgTime).toBeLessThan(maxTimeMs);
     });
 
-    it("should validate email quickly", () => {
+    it.concurrent("should validate email quickly", () => {
       const validEmail = "test@example.com";
       const start = performance.now();
 
@@ -34,7 +34,7 @@ describe("Validation Performance", () => {
       expect(avgTime).toBeLessThan(maxTimeMs);
     });
 
-    it("should validate url quickly", () => {
+    it.concurrent("should validate url quickly", () => {
       const validUrl = "https://example.com";
       const start = performance.now();
 
@@ -49,7 +49,7 @@ describe("Validation Performance", () => {
   });
 
   describe("transformSchemas performance", () => {
-    it("should transform email quickly", () => {
+    it.concurrent("should transform email quickly", () => {
       const input = "Test@Example.COM";
       const start = performance.now();
 
@@ -62,7 +62,7 @@ describe("Validation Performance", () => {
       expect(avgTime).toBeLessThan(maxTimeMs);
     });
 
-    it("should trim string quickly", () => {
+    it.concurrent("should trim string quickly", () => {
       const input = "  hello world  ";
       const start = performance.now();
 
@@ -77,7 +77,7 @@ describe("Validation Performance", () => {
   });
 
   describe("refinedSchemas performance", () => {
-    it("should validate strong password quickly", () => {
+    it.concurrent("should validate strong password quickly", () => {
       const validPassword = "Test123!Password";
       const start = performance.now();
 
@@ -90,7 +90,7 @@ describe("Validation Performance", () => {
       expect(avgTime).toBeLessThan(maxTimeMs);
     });
 
-    it("should validate future date quickly", () => {
+    it.concurrent("should validate future date quickly", () => {
       const futureDate = new Date(Date.now() + 86400000).toISOString();
       const start = performance.now();
 
@@ -105,7 +105,7 @@ describe("Validation Performance", () => {
   });
 
   describe("Complex schema performance", () => {
-    it("should validate complex object quickly", () => {
+    it.concurrent("should validate complex object quickly", () => {
       const complexObject = {
         email: "test@example.com",
         id: "123e4567-e89b-12d3-a456-426614174000",

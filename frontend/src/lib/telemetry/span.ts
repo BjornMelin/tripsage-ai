@@ -2,6 +2,8 @@
  * @fileoverview Minimal OpenTelemetry span helper with attribute redaction.
  */
 
+import "server-only";
+
 import { type Span, SpanStatusCode } from "@opentelemetry/api";
 import { getTelemetryTracer } from "@/lib/telemetry/tracer";
 
