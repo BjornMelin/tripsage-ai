@@ -15,6 +15,8 @@ import { stepCountIs, streamText, tool } from "ai";
 import { buildGuardedTool } from "@/lib/agents/guarded-tool";
 import { buildRateLimit } from "@/lib/ratelimit/config";
 import type { DestinationResearchRequest } from "@/lib/schemas/agents";
+import type { ChatMessage } from "@/lib/tokens/budget";
+import { clampMaxTokens } from "@/lib/tokens/budget";
 import { toolRegistry } from "@/lib/tools";
 import { lookupPoiInputSchema } from "@/lib/tools/google-places";
 import { travelAdvisoryInputSchema } from "@/lib/tools/travel-advisory";
@@ -191,23 +193,35 @@ function buildDestinationTools(identifier: string): ToolSet {
  * and streams a model-guided tool loop to produce results structured per
  * `dest.v1` schema.
  *
- * @param deps Language model and request-scoped utilities.
+ * @param deps Language model, model identifier, and request-scoped utilities.
  * @param input Validated destination research request.
  * @returns AI SDK stream result for UI consumption.
  */
 export function runDestinationAgent(
   deps: {
     model: LanguageModel;
+    modelId: string;
     identifier: string;
   },
   input: DestinationResearchRequest
 ) {
   const instructions = buildDestinationPrompt(input);
+  const userPrompt = `Research destination and summarize. Always return JSON with schemaVersion="dest.v1" and sources[]. Parameters: ${JSON.stringify(
+    input
+  )}`;
+
+  // Token budgeting: clamp max output tokens based on prompt length
+  const messages: ChatMessage[] = [
+    { content: instructions, role: "system" },
+    { content: userPrompt, role: "user" },
+  ];
+  const desiredMaxTokens = 4096; // Default for agent responses
+  const { maxTokens } = clampMaxTokens(messages, desiredMaxTokens, deps.modelId);
+
   return streamText({
+    maxOutputTokens: maxTokens,
     model: deps.model,
-    prompt: `Research destination and summarize. Always return JSON with schemaVersion="dest.v1" and sources[]. Parameters: ${JSON.stringify(
-      input
-    )}`,
+    prompt: userPrompt,
     stopWhen: stepCountIs(15),
     system: instructions,
     temperature: 0.3,

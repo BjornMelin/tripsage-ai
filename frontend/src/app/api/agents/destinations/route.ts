@@ -49,9 +49,9 @@ export const POST = withApiGuards({
 
   const identifier = user?.id ?? getTrustedRateLimitIdentifier(req);
   const modelHint = new URL(req.url).searchParams.get("model") ?? undefined;
-  const { model } = await resolveProvider(user?.id ?? "anon", modelHint);
+  const { model, modelId } = await resolveProvider(user?.id ?? "anon", modelHint);
 
-  const result = runDestinationAgent({ identifier, model }, body);
+  const result = runDestinationAgent({ identifier, model, modelId }, body);
   return result.toUIMessageStreamResponse({
     onError: createErrorHandler(),
   });

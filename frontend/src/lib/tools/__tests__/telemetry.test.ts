@@ -2,6 +2,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RATE_CREATE_PER_DAY, RATE_UPDATE_PER_MIN } from "../constants";
 import { createTravelPlan, updateTravelPlan } from "../planning";
 
+// Mock Next.js cookies() to avoid "cookies called outside request scope" error
+vi.mock("next/headers", () => ({
+  cookies: () => ({
+    get: vi.fn(),
+    getAll: vi.fn(() => []),
+    has: vi.fn(() => false),
+    set: vi.fn(),
+    delete: vi.fn(),
+  }),
+}));
+
 const { mockWithTelemetrySpan } = vi.hoisted(() => {
   const span = {
     addEvent: vi.fn(),

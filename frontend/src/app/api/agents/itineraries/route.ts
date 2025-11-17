@@ -52,10 +52,10 @@ export const POST = withApiGuards({
   }
 
   const modelHint = new URL(req.url).searchParams.get("model") ?? undefined;
-  const { model } = await resolveProvider(user?.id ?? "anon", modelHint);
+  const { model, modelId } = await resolveProvider(user?.id ?? "anon", modelHint);
 
   const identifier = user?.id ?? "anon";
-  const result = runItineraryAgent({ identifier, model }, body);
+  const result = runItineraryAgent({ identifier, model, modelId }, body);
   return result.toUIMessageStreamResponse({
     onError: createErrorHandler(),
   });
