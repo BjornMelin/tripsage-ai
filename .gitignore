@@ -166,6 +166,7 @@ worktrees/
 ARCHIVED_DOCS/
 docs/archive/
 repomix-output.*
+docs/prompts/mcp/**
 
 # Temporary documentation files
 *_SUMMARY.md
