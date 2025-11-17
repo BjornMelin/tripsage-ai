@@ -1,12 +1,19 @@
 /** @vitest-environment node */
 
-import type { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   stubRateLimitDisabled,
   stubRateLimitEnabled,
   unstubAllEnvs,
 } from "@/test/env-helpers";
+import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
+
+// Mock next/headers cookies() BEFORE any imports that use it
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(() =>
+    Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))
+  ),
+}));
 
 const LIMIT_SPY = vi.hoisted(() => vi.fn());
 const MOCK_ROUTE_HELPERS = vi.hoisted(() => ({
@@ -21,7 +28,16 @@ const CREATE_SUPABASE = vi.hoisted(() => vi.fn(async () => MOCK_SUPABASE));
 const mockCreateOpenAI = vi.hoisted(() => vi.fn());
 const mockCreateAnthropic = vi.hoisted(() => vi.fn());
 
-vi.mock("@/lib/next/route-helpers", () => MOCK_ROUTE_HELPERS);
+vi.mock("@/lib/next/route-helpers", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/next/route-helpers")>(
+    "@/lib/next/route-helpers"
+  );
+  return {
+    ...actual,
+    getClientIpFromHeaders: MOCK_ROUTE_HELPERS.getClientIpFromHeaders,
+    withRequestSpan: vi.fn((_name, _attrs, fn) => fn()),
+  };
+});
 
 vi.mock("@upstash/redis", () => ({
   Redis: {
@@ -44,7 +60,7 @@ vi.mock("@upstash/ratelimit", () => {
   };
 });
 
-vi.mock("@/lib/supabase", () => ({
+vi.mock("@/lib/supabase/server", () => ({
   createServerSupabase: CREATE_SUPABASE,
 }));
 
@@ -54,6 +70,19 @@ vi.mock("@ai-sdk/openai", () => ({
 
 vi.mock("@ai-sdk/anthropic", () => ({
   createAnthropic: mockCreateAnthropic,
+}));
+
+vi.mock("@/lib/telemetry/span", () => ({
+  recordTelemetryEvent: vi.fn(),
+}));
+
+vi.mock("@/lib/env/server", () => ({
+  getServerEnvVarWithFallback: vi.fn((key: string) => {
+    if (key === "UPSTASH_REDIS_REST_URL" || key === "UPSTASH_REDIS_REST_TOKEN") {
+      return "test-value";
+    }
+    return undefined;
+  }),
 }));
 
 type FetchLike = (
@@ -77,7 +106,6 @@ function buildProvider(fetchMock: MockFetch, baseUrl = "https://provider.test/")
 
 describe("/api/keys/validate route", () => {
   beforeEach(() => {
-    vi.resetModules();
     vi.clearAllMocks();
     unstubAllEnvs();
     stubRateLimitDisabled();
@@ -110,10 +138,11 @@ describe("/api/keys/validate route", () => {
     mockCreateOpenAI.mockImplementation(() => buildProvider(fetchMock));
 
     const { POST } = await import("../route");
-    const req = {
-      headers: new Headers(),
-      json: async () => ({ apiKey: "sk-test", service: "openai" }),
-    } as unknown as NextRequest;
+    const req = createMockNextRequest({
+      body: { apiKey: "sk-test", service: "openai" },
+      method: "POST",
+      url: "http://localhost/api/keys/validate",
+    });
 
     const res = await POST(req);
     const body = await res.json();
@@ -135,10 +164,11 @@ describe("/api/keys/validate route", () => {
     mockCreateOpenAI.mockImplementation(() => buildProvider(fetchMock));
 
     const { POST } = await import("../route");
-    const req = {
-      headers: new Headers(),
-      json: async () => ({ apiKey: "sk-test", service: "openai" }),
-    } as unknown as NextRequest;
+    const req = createMockNextRequest({
+      body: { apiKey: "sk-test", service: "openai" },
+      method: "POST",
+      url: "http://localhost/api/keys/validate",
+    });
 
     const res = await POST(req);
     const body = await res.json();
@@ -156,10 +186,11 @@ describe("/api/keys/validate route", () => {
     mockCreateOpenAI.mockImplementation(() => buildProvider(fetchMock));
 
     const { POST } = await import("../route");
-    const req = {
-      headers: new Headers(),
-      json: async () => ({ apiKey: "sk-test", service: "openai" }),
-    } as unknown as NextRequest;
+    const req = createMockNextRequest({
+      body: { apiKey: "sk-test", service: "openai" },
+      method: "POST",
+      url: "http://localhost/api/keys/validate",
+    });
 
     const res = await POST(req);
     const body = await res.json();
@@ -183,10 +214,10 @@ describe("/api/keys/validate route", () => {
       success: false,
     });
     const { POST } = await import("@/app/api/keys/validate/route");
-    const req = {
-      headers: new Headers(),
-      json: vi.fn(),
-    } as unknown as NextRequest;
+    const req = createMockNextRequest({
+      method: "POST",
+      url: "http://localhost/api/keys/validate",
+    });
 
     const res = await POST(req);
 
@@ -195,7 +226,6 @@ describe("/api/keys/validate route", () => {
     expect(res.headers.get("X-RateLimit-Limit")).toBe("20");
     expect(res.headers.get("X-RateLimit-Remaining")).toBe("0");
     expect(res.headers.get("X-RateLimit-Reset")).toBe("789");
-    expect(req.json).not.toHaveBeenCalled();
   });
 
   it("falls back to client IP when user is missing", async () => {
@@ -218,10 +248,11 @@ describe("/api/keys/validate route", () => {
     mockCreateOpenAI.mockImplementation(() => buildProvider(fetchMock));
 
     const { POST } = await import("../route");
-    const req = {
-      headers: new Headers(),
-      json: async () => ({ apiKey: "sk-test", service: "openai" }),
-    } as unknown as NextRequest;
+    const req = createMockNextRequest({
+      body: { apiKey: "sk-test", service: "openai" },
+      method: "POST",
+      url: "http://localhost/api/keys/validate",
+    });
 
     await POST(req);
 

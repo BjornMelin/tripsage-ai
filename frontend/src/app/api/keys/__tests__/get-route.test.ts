@@ -1,14 +1,36 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
+import { getMockCookiesForTest } from "@/test/route-helpers";
+
+// Mock next/headers cookies() BEFORE any imports that use it
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(() =>
+    Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))
+  ),
+}));
 
 const MOCK_CREATE_SERVER_SUPABASE = vi.hoisted(() => vi.fn());
-vi.mock("@/lib/supabase", () => ({
+vi.mock("@/lib/supabase/server", () => ({
   createServerSupabase: MOCK_CREATE_SERVER_SUPABASE,
 }));
 
+vi.mock("@/lib/telemetry/span", () => ({
+  recordTelemetryEvent: vi.fn(),
+}));
+
+// Mock route helpers
+vi.mock("@/lib/next/route-helpers", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/next/route-helpers")>(
+    "@/lib/next/route-helpers"
+  );
+  return {
+    ...actual,
+    withRequestSpan: vi.fn((_name, _attrs, fn) => fn()),
+  };
+});
+
 describe("GET /api/keys route", () => {
   beforeEach(() => {
-    vi.resetModules();
     vi.clearAllMocks();
   });
 
