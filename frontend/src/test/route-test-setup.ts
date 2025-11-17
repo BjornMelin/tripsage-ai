@@ -16,13 +16,11 @@ export function setupRouteTestMocks(
   options: {
     cookies?: Record<string, string>;
     supabaseUser?: { id: string } | null;
-    rateLimitSuccess?: boolean;
   } = {}
 ) {
   const {
     cookies = { "sb-access-token": "test-token" },
     supabaseUser = { id: "user-1" },
-    rateLimitSuccess = true,
   } = options;
 
   // Mock next/headers cookies()
@@ -45,20 +43,5 @@ export function setupRouteTestMocks(
   // Mock Redis
   vi.mock("@/lib/redis", () => ({
     getRedis: vi.fn(() => Promise.resolve({})),
-  }));
-
-  // Mock rate limiting
-  vi.mock("@/lib/ratelimit/config", () => ({
-    enforceRouteRateLimit: vi.fn(() =>
-      Promise.resolve(
-        rateLimitSuccess
-          ? null
-          : {
-              error: "rate_limit_exceeded",
-              reason: "Too many requests",
-              status: 429,
-            }
-      )
-    ),
   }));
 }

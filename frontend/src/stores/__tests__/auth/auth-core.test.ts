@@ -2,6 +2,7 @@ import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { LoginCredentials, RegisterCredentials } from "@/stores/auth/auth-core";
 import { useAuthCore } from "@/stores/auth/auth-core";
+import { useAuthSession } from "@/stores/auth/auth-session";
 import { createMockUser, resetAuthSlices, setupAuthSliceTests } from "./_shared";
 
 // Mock fetch for API calls
@@ -207,6 +208,46 @@ describe("AuthCore", () => {
       expect(result.current.isAuthenticated).toBe(false);
       expect(result.current.user).toBeNull();
       expect(result.current.error).toBeNull();
+    });
+
+    it("clears persisted auth session data", async () => {
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+      } as Response);
+
+      const { result } = renderHook(() => useAuthCore());
+
+      act(() => {
+        useAuthCore.setState({
+          isAuthenticated: true,
+          user: createMockUser(),
+        });
+
+        useAuthSession.setState({
+          isRefreshingToken: false,
+          session: {
+            createdAt: "2025-01-01T00:00:00Z",
+            expiresAt: "2025-01-02T00:00:00Z",
+            id: "session-1",
+            lastActivity: "2025-01-01T01:00:00Z",
+            userId: "user-1",
+          },
+          tokenInfo: {
+            accessToken: "access-token",
+            expiresAt: "2025-01-01T03:00:00Z",
+            refreshToken: "refresh-token",
+            tokenType: "Bearer",
+          },
+        });
+      });
+
+      await act(async () => {
+        await result.current.logout();
+      });
+
+      const authSessionState = useAuthSession.getState();
+      expect(authSessionState.session).toBeNull();
+      expect(authSessionState.tokenInfo).toBeNull();
     });
   });
 

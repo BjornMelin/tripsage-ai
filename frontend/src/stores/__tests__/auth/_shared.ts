@@ -46,6 +46,7 @@ export const resetAuthSlices = (): void => {
       isLoggingIn: false,
       isRegistering: false,
       user: null,
+      userDisplayName: "",
     });
 
     // Reset auth-session slice
@@ -118,4 +119,3 @@ export const setupAuthSliceTests = (): void => {
     timeoutSpy?.mockRestore();
   });
 };
-
