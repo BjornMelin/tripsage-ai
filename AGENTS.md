@@ -196,7 +196,8 @@ This file defines required rules for all AI coding agents in this repo. If anyth
   - Resolves user‑specific keys server‑side and returns a `LanguageModel`.
   - Supported providers: `openai`, `openrouter`, `anthropic`, `xai`.
 - **BYOK route configuration:**
-  - BYOK key CRUD/validate routes must import `"server-only"` and export `dynamic = "force-dynamic"` and `revalidate = 0`.
+  - BYOK key CRUD/validate routes must import `"server-only"`.
+  - Follow security-sensitive route handler patterns (see §5.4 Caching); routes are dynamic by default with Cache Components.
   - Do not add `'use cache'` or other caching directives to BYOK routes; responses must always be evaluated per request.
 - **Routing rule:** Per route, pick either Gateway or the BYOK registry; do **not** mix both paths inside the same route.
 
@@ -206,6 +207,11 @@ This file defines required rules for all AI coding agents in this repo. If anyth
   - Next.js `cacheComponents: true` is enabled.
   - Use `'use cache'` for cacheable, public data.
   - Use `'use cache: private'` for user‑specific data; do not publicly cache auth‑dependent responses.
+  - **Security-sensitive route handlers (BYOK, user settings, auth-dependent):**
+    - Route handlers are dynamic by default with Cache Components; do **not** export `dynamic` or `revalidate` (build error).
+    - Ensure routes use `withApiGuards({ auth: true })` or access `cookies()`/`headers()` to guarantee dynamic execution.
+    - Never use `'use cache'` directives in security-sensitive routes.
+    - Add security comments documenting Cache Components dynamic behavior and ADR-0024 compliance.
 - Supabase SSR:
   - Use server client factories in `frontend/src/lib/supabase/server.ts`.
   - Never access Supabase cookies in client components.
