@@ -4,9 +4,12 @@
  * Never persists the key.
  */
 
-"use cache";
-
 import "server-only";
+
+// Security: Prevent caching of sensitive API key data per ADR-0024.
+// With Cache Components enabled, route handlers are dynamic by default.
+// Using withApiGuards({ auth: true }) ensures this route uses cookies/headers,
+// making it dynamic and preventing caching. No 'use cache' directives are present.
 
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
@@ -16,8 +19,6 @@ import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { recordTelemetryEvent } from "@/lib/telemetry/span";
-
-export const dynamic = "force-dynamic";
 
 type ValidateResult = { isValid: boolean; reason?: string };
 

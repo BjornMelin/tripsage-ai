@@ -12,9 +12,6 @@ import { withApiGuards } from "@/lib/api/factory";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import type { InsertTables } from "@/lib/supabase/database.types";
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
-
 const MAX_INPUT_LENGTH = 8000;
 
 /** Request payload for embedding generation. */

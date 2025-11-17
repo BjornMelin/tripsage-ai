@@ -198,7 +198,9 @@ describe("/api/chat/attachments", () => {
     );
 
     const formData = new FormData();
-    files.forEach((file) => formData.append("file", file));
+    files.forEach((file) => {
+      formData.append("file", file);
+    });
 
     const req = new NextRequest("http://localhost/api/chat/attachments", {
       body: formData,

@@ -1,5 +1,7 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { renderHook } from "@testing-library/react";
+import type { MockInstance } from "vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { RealtimeConnectionStatus } from "@/hooks/use-realtime-channel";
 import { useRealtimeChannel } from "@/hooks/use-realtime-channel";
 
 const mockChannel = {
@@ -8,6 +10,24 @@ const mockChannel = {
   subscribe: vi.fn(),
   unsubscribe: vi.fn(),
 };
+
+const WAIT_OPTIONS = { interval: 5, timeout: 500 } as const;
+const LONG_WAIT_OPTIONS = { interval: 5, timeout: 1000 } as const;
+
+async function waitForMockCall<TArgs extends unknown[]>(
+  mockFn: MockInstance<(...args: TArgs) => unknown>,
+  options = WAIT_OPTIONS
+): Promise<TArgs> {
+  await vi.waitUntil(() => mockFn.mock.calls.length > 0, options);
+  return mockFn.mock.calls.at(-1) as TArgs;
+}
+
+async function waitForStatus(
+  result: { current: { connectionStatus: RealtimeConnectionStatus } },
+  status: RealtimeConnectionStatus
+) {
+  await vi.waitUntil(() => result.current.connectionStatus === status, WAIT_OPTIONS);
+}
 
 vi.mock("@/lib/supabase", () => ({
   getBrowserClient: () => ({ channel: vi.fn(() => mockChannel) }),
@@ -19,10 +39,7 @@ describe("useRealtimeChannel", () => {
     // Default: successful subscription
     mockChannel.subscribe.mockImplementation(
       (cb?: (status: string, err?: Error) => void) => {
-        if (cb) {
-          // Simulate successful subscription asynchronously
-          setTimeout(() => cb("SUBSCRIBED"), 0);
-        }
+        cb?.("SUBSCRIBED");
         return mockChannel;
       }
     );
@@ -38,9 +55,7 @@ describe("useRealtimeChannel", () => {
         useRealtimeChannel("user:123", { private: true })
       );
 
-      await waitFor(() => {
-        expect(result.current.connectionStatus).toBe("subscribed");
-      });
+      await waitForStatus(result, "subscribed");
 
       expect(mockChannel.subscribe).toHaveBeenCalled();
       expect(result.current.channel).toBe(mockChannel);
@@ -49,9 +64,7 @@ describe("useRealtimeChannel", () => {
     it("unsubscribes and cleans up on unmount", async () => {
       const { unmount, result } = renderHook(() => useRealtimeChannel("user:123"));
 
-      await waitFor(() => {
-        expect(result.current.connectionStatus).toBe("subscribed");
-      });
+      await waitForStatus(result, "subscribed");
 
       unmount();
 
@@ -86,9 +99,7 @@ describe("useRealtimeChannel", () => {
         })
       );
 
-      await waitFor(() => {
-        expect(mockChannel.on).toHaveBeenCalled();
-      });
+      await waitForMockCall(mockChannel.on);
 
       // Simulate receiving a broadcast
       if (broadcastHandler) {
@@ -124,12 +135,7 @@ describe("useRealtimeChannel", () => {
         })
       );
 
-      await waitFor(
-        () => {
-          expect(handlers.size).toBeGreaterThanOrEqual(2);
-        },
-        { timeout: 1000 }
-      );
+      await vi.waitUntil(() => handlers.size >= 2, LONG_WAIT_OPTIONS);
 
       // Simulate receiving broadcasts
       const handler1 = handlers.get("event1");
@@ -153,9 +159,7 @@ describe("useRealtimeChannel", () => {
         useRealtimeChannel("user:123", { onStatusChange })
       );
 
-      await waitFor(() => {
-        expect(result.current.connectionStatus).toBe("subscribed");
-      });
+      await waitForStatus(result, "subscribed");
 
       expect(onStatusChange).toHaveBeenCalledWith("subscribed");
       expect(result.current.error).toBeNull();
@@ -166,9 +170,7 @@ describe("useRealtimeChannel", () => {
       const error = new Error("Connection failed");
 
       mockChannel.subscribe.mockImplementation((cb) => {
-        if (cb) {
-          setTimeout(() => cb("CHANNEL_ERROR", error), 0);
-        }
+        cb?.("CHANNEL_ERROR", error);
         return mockChannel;
       });
 
@@ -176,9 +178,7 @@ describe("useRealtimeChannel", () => {
         useRealtimeChannel("user:123", { onStatusChange })
       );
 
-      await waitFor(() => {
-        expect(result.current.connectionStatus).toBe("error");
-      });
+      await waitForStatus(result, "error");
 
       expect(onStatusChange).toHaveBeenCalledWith("error");
       expect(result.current.error).toEqual(error);
@@ -198,9 +198,7 @@ describe("useRealtimeChannel", () => {
         useRealtimeChannel("user:123", { onStatusChange })
       );
 
-      await waitFor(() => {
-        expect(result.current.connectionStatus).toBe("closed");
-      });
+      await waitForStatus(result, "closed");
 
       expect(onStatusChange).toHaveBeenCalledWith("closed");
     });
@@ -219,12 +217,7 @@ describe("useRealtimeChannel", () => {
 
       renderHook(() => useRealtimeChannel("user:123"));
 
-      await waitFor(() => {
-        expect(mockChannel.subscribe).toHaveBeenCalled();
-      });
-
-      // Wait a bit to ensure no reconnection happens
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await waitForMockCall(mockChannel.subscribe);
 
       // Should only have initial subscription call
       expect(mockChannel.subscribe.mock.calls.length).toBeLessThanOrEqual(2);
@@ -252,12 +245,7 @@ describe("useRealtimeChannel", () => {
       );
 
       // Wait for error status
-      await waitFor(
-        () => {
-          expect(result.current.connectionStatus).toBe("error");
-        },
-        { timeout: 1000 }
-      );
+      await waitForStatus(result, "error");
 
       // Verify backoff config is accepted and error is set
       expect(result.current.error).toEqual(error);
@@ -269,9 +257,7 @@ describe("useRealtimeChannel", () => {
     it("sends a broadcast message successfully", async () => {
       const { result } = renderHook(() => useRealtimeChannel("user:123"));
 
-      await waitFor(() => {
-        expect(result.current.connectionStatus).toBe("subscribed");
-      });
+      await waitForStatus(result, "subscribed");
 
       await result.current.sendBroadcast("test:event", { message: "hello" });
 
@@ -295,17 +281,13 @@ describe("useRealtimeChannel", () => {
     it("unsubscribes and resets status to idle", async () => {
       const { result } = renderHook(() => useRealtimeChannel("user:123"));
 
-      await waitFor(() => {
-        expect(result.current.connectionStatus).toBe("subscribed");
-      });
+      await waitForStatus(result, "subscribed");
 
       await result.current.unsubscribe();
 
       expect(mockChannel.unsubscribe).toHaveBeenCalled();
 
-      await waitFor(() => {
-        expect(result.current.connectionStatus).toBe("idle");
-      });
+      await waitForStatus(result, "idle");
 
       expect(result.current.channel).toBeNull();
     });

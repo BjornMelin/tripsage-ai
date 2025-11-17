@@ -16,8 +16,6 @@ const detailsRequestSchema = z.object({
   sessionToken: z.string().optional(),
 });
 
-export const dynamic = "force-dynamic";
-
 /**
  * GET /api/places/details/[id]
  *

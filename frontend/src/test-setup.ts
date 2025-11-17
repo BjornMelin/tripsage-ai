@@ -41,58 +41,8 @@ vi.mock("zustand/middleware", () => ({
   subscribeWithSelector: <T>(fn: T) => fn,
 }));
 
-// React Query mocks - kept global for now but should migrate to local mocks
-// TODO: Migrate tests to use @/test/mocks/react-query
-vi.mock("@tanstack/react-query", () => {
-  class QueryClientMock {
-    clear = vi.fn();
-    invalidateQueries = vi.fn();
-    refetchQueries = vi.fn();
-    setQueryData = vi.fn();
-  }
-
-  return {
-    QueryClient: QueryClientMock,
-    QueryClientProvider: ({ children }: { children: React.ReactNode }) => children,
-    useMutation: vi.fn(() => ({
-      data: { status: "success" },
-      error: null,
-      isError: false,
-      isIdle: false,
-      isLoading: false,
-      isSuccess: true,
-      mutate: vi.fn((data) => ({ data: { input: data, status: "success" } })),
-      mutateAsync: vi.fn((data) => Promise.resolve({ input: data, status: "success" })),
-      reset: vi.fn(),
-    })),
-    useQuery: vi.fn(() => ({
-      data: { mockData: true },
-      error: null,
-      isError: false,
-      isLoading: false,
-      isSuccess: true,
-      refetch: vi.fn(),
-    })),
-    useQueryClient: vi.fn(() => ({
-      clear: vi.fn(),
-      invalidateQueries: vi.fn(),
-      refetchQueries: vi.fn(),
-      setQueryData: vi.fn(),
-    })),
-  };
-});
-
-// Supabase client mocks - kept global for now but should migrate to local mocks
-// TODO: Migrate tests to use @/test/mocks/supabase
-import { createMockSupabaseClient } from "./test/mock-helpers";
-
-const MOCK_SUPABASE = createMockSupabaseClient();
-vi.mock("@/lib/supabase", () => ({
-  createClient: () => MOCK_SUPABASE,
-  getBrowserClient: () => MOCK_SUPABASE,
-  useSupabase: () => MOCK_SUPABASE,
-}));
-
+// React Query and Supabase mocks migrated to @/test/mocks/react-query.ts and supabase.ts
+// Import/use in individual test files: import { mockReactQuery, mockSupabase } from '@/test/mocks/*'; mockReactQuery();
 vi.mock("next/navigation", () => {
   const push = vi.fn();
   const replace = vi.fn();

@@ -13,9 +13,6 @@ import type { Database } from "@/lib/supabase/database.types";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import { buildEventKey, parseAndVerify } from "@/lib/webhooks/payload";
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
-
 type TripCollaboratorRow = Database["public"]["Tables"]["trip_collaborators"]["Row"];
 
 /**

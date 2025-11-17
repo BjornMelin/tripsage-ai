@@ -8,6 +8,7 @@ import type {
   NonStreamPayload,
   ProviderResolver,
 } from "@/app/api/chat/_handler";
+import type { ProviderId } from "@/lib/schemas/providers";
 
 let handleChatNonStream: (
   deps: NonStreamDeps,
@@ -19,7 +20,7 @@ const createResolver =
   async () => ({
     model: {} as LanguageModel,
     modelId,
-    provider: "openai",
+    provider: "openai" as ProviderId,
   });
 
 /**
@@ -153,5 +154,81 @@ describe("handleChatNonStream", () => {
     expect(body.usage.totalTokens).toBe(42);
     expect(body.usage.promptTokens).toBe(10);
     expect(body.usage.completionTokens).toBe(32);
+  });
+
+  it("respects model override in payload", async () => {
+    const resolveProvider = vi.fn((_userId: string, modelHint?: string) => {
+      expect(modelHint).toBe("claude-3.5-sonnet");
+      return Promise.resolve({
+        model: {} as LanguageModel,
+        modelId: "claude-3.5-sonnet",
+        provider: "anthropic" as ProviderId,
+      });
+    });
+    const generateText = vi.fn(async () => ({
+      content: [],
+      experimentalProviderMetadata: undefined,
+      experimentalStream: undefined,
+      finishReason: "stop",
+      messages: [],
+      reasoning: [],
+      reasoningText: "",
+      text: "Response",
+      toolCalls: [],
+      usage: { inputTokens: 5, outputTokens: 10, totalTokens: 15 },
+      warnings: [],
+    })) as unknown as NonStreamDeps["generate"];
+    const res = await handleChatNonStream(
+      {
+        generate: generateText,
+        resolveProvider,
+        supabase: fakeSupabase("u5"),
+      },
+      {
+        messages: [{ id: "u1", parts: [{ text: "hi", type: "text" }], role: "user" }],
+        model: "claude-3.5-sonnet",
+      }
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.model).toBe("claude-3.5-sonnet");
+    expect(resolveProvider).toHaveBeenCalledWith("u5", "claude-3.5-sonnet");
+  });
+
+  it("handles provider resolution failure gracefully", async () => {
+    const resolveProvider = vi.fn(() => {
+      throw new Error("Provider resolution failed");
+    });
+    const logger = { error: vi.fn(), info: vi.fn() };
+    // Provider resolution failure should propagate as an error
+    // The handler doesn't catch this, so it will throw
+    await expect(
+      handleChatNonStream(
+        {
+          logger,
+          resolveProvider,
+          supabase: fakeSupabase("u6"),
+        },
+        {
+          messages: [{ id: "u1", parts: [{ text: "hi", type: "text" }], role: "user" }],
+        }
+      )
+    ).rejects.toThrow("Provider resolution failed");
+  });
+
+  it("429 when rate limited", async () => {
+    const limit = vi.fn(async () => ({ success: false })) as NonStreamDeps["limit"];
+    const res = await handleChatNonStream(
+      {
+        limit,
+        resolveProvider: createResolver("gpt-4o-mini"),
+        supabase: fakeSupabase("u7"),
+      },
+      { ip: "1.2.3.4", messages: [] }
+    );
+    expect(res.status).toBe(429);
+    expect(res.headers.get("Retry-After")).toBe("60");
+    const body = await res.json();
+    expect(body.error).toBe("rate_limited");
   });
 });

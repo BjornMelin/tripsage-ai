@@ -7,12 +7,15 @@
 
 import "server-only";
 
+// Security: Prevent caching of user-specific settings per ADR-0024.
+// With Cache Components enabled, route handlers are dynamic by default.
+// Using withApiGuards({ auth: true }) ensures this route uses cookies/headers,
+// making it dynamic and preventing caching. No 'use cache' directives are present.
+
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { getUserAllowGatewayFallback } from "@/lib/supabase/rpc";
-
-export const dynamic = "force-dynamic";
 
 /**
  * Retrieves the user's gateway fallback preference setting.

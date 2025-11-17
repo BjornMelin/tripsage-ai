@@ -20,8 +20,6 @@ const geocodeRequestSchema = z.object({
   lng: z.number().optional(),
 });
 
-export const dynamic = "force-dynamic";
-
 /**
  * POST /api/geocode
  *

@@ -14,9 +14,6 @@ import { memorySyncJobSchema } from "@/lib/schemas/webhooks";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
-
 /**
  * Creates a QStash receiver for webhook signature verification.
  *

@@ -17,8 +17,6 @@ const timezoneRequestSchema = z.object({
   timestamp: z.number().optional(),
 });
 
-export const dynamic = "force-dynamic";
-
 /**
  * GET /api/timezone
  *

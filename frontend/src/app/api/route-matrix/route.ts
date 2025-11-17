@@ -39,8 +39,6 @@ const routeMatrixRequestSchema = z.object({
   travelMode: z.enum(["DRIVE", "WALK", "BICYCLE", "TRANSIT"]).optional(),
 });
 
-export const dynamic = "force-dynamic";
-
 /**
  * POST /api/route-matrix
  *

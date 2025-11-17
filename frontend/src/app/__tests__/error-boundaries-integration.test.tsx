@@ -1,6 +1,7 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import type { MockInstance } from "vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { ErrorReport } from "@/lib/schemas/errors";
 import { render } from "@/test/test-utils";
 
 import AuthError from "../(auth)/error";
@@ -9,16 +10,69 @@ import DashboardError from "../(dashboard)/error";
 import ErrorComponent from "../error";
 import GlobalError from "../global-error";
 
-// Mock the error service
+const { createErrorReportMock, reportErrorMock } = vi.hoisted(() => {
+  const createErrorReport = vi.fn(
+    (
+      error: Error & { digest?: string },
+      _errorInfo?: { componentStack?: string },
+      additionalInfo?: Partial<ErrorReport>
+    ): ErrorReport => ({
+      error: {
+        digest: error.digest,
+        message: error.message,
+        name: error.name,
+        stack: error.stack,
+      },
+      timestamp: new Date("2025-01-01T00:00:00.000Z").toISOString(),
+      url:
+        typeof window !== "undefined" ? window.location.href : "http://localhost/test",
+      userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "Vitest",
+      ...additionalInfo,
+    })
+  );
+
+  const reportError = vi.fn().mockResolvedValue(undefined);
+
+  return { createErrorReportMock: createErrorReport, reportErrorMock: reportError };
+});
+
+// Mock the error service with deterministic implementations
 vi.mock("@/lib/error-service", () => ({
   errorService: {
-    createErrorReport: vi.fn(),
-    reportError: vi.fn().mockResolvedValue(undefined),
+    createErrorReport: createErrorReportMock,
+    reportError: reportErrorMock,
   },
 }));
 
 // Get the mocked error service
 import { errorService as mockErrorService } from "@/lib/error-service";
+
+const mockedErrorService = vi.mocked(mockErrorService);
+
+const WAIT_OPTIONS = { interval: 10, timeout: 1000 } as const;
+
+async function waitForMockCall<TArgs extends unknown[]>(
+  mockFn: MockInstance<(...args: TArgs) => unknown>
+): Promise<TArgs> {
+  await vi.waitUntil(() => mockFn.mock.calls.length > 0, WAIT_OPTIONS);
+  return mockFn.mock.calls.at(-1) as TArgs;
+}
+
+async function waitForTelemetry() {
+  const [error, errorInfo, metadata] = await waitForMockCall(
+    mockedErrorService.createErrorReport
+  );
+  const [reportPayload] = await waitForMockCall(mockedErrorService.reportError);
+
+  return {
+    create: {
+      error,
+      errorInfo,
+      metadata,
+    },
+    reported: reportPayload as ErrorReport,
+  };
+}
 
 // Console spy setup moved to beforeEach to avoid global suppression issues
 let consoleSpy: MockInstance;
@@ -78,16 +132,18 @@ describe("Next.js Error Boundaries Integration", () => {
     it("should report error on mount", async () => {
       render(<ErrorComponent error={mockError} reset={mockReset} />);
 
-      await waitFor(() => {
-        expect(vi.mocked(mockErrorService).createErrorReport).toHaveBeenCalledWith(
-          mockError,
-          undefined,
-          expect.objectContaining({
-            sessionId: "test_session_id",
-          })
-        );
-        expect(vi.mocked(mockErrorService).reportError).toHaveBeenCalled();
-      });
+      const { create, reported } = await waitForTelemetry();
+
+      expect(create.metadata).toEqual(
+        expect.objectContaining({
+          sessionId: "test_session_id",
+        })
+      );
+      expect(reported).toEqual(
+        expect.objectContaining({
+          sessionId: "test_session_id",
+        })
+      );
     });
 
     // Removed brittle NODE_ENV mutation; rely on behavior assertions only.
@@ -123,17 +179,18 @@ describe("Next.js Error Boundaries Integration", () => {
     it("should report critical error", async () => {
       render(<GlobalError error={mockError} reset={mockReset} />);
 
-      await waitFor(() => {
-        expect(vi.mocked(mockErrorService).createErrorReport).toHaveBeenCalled();
-        expect(vi.mocked(mockErrorService).reportError).toHaveBeenCalled();
-      });
+      const { reported } = await waitForTelemetry();
+
+      expect(reported).toEqual(
+        expect.objectContaining({
+          sessionId: "test_session_id",
+        })
+      );
     });
 
     it("should always log critical errors", async () => {
       render(<GlobalError error={mockError} reset={mockReset} />);
-      await waitFor(() => {
-        expect(consoleSpy).toHaveBeenCalled();
-      });
+      await waitForMockCall(consoleSpy);
     });
   });
 
@@ -152,10 +209,18 @@ describe("Next.js Error Boundaries Integration", () => {
     it("should report dashboard error", async () => {
       render(<DashboardError error={mockError} reset={mockReset} />);
 
-      await waitFor(() => {
-        expect(vi.mocked(mockErrorService).createErrorReport).toHaveBeenCalled();
-        expect(vi.mocked(mockErrorService).reportError).toHaveBeenCalled();
-      });
+      const { create, reported } = await waitForTelemetry();
+
+      expect(create.metadata).toEqual(
+        expect.objectContaining({
+          sessionId: "test_session_id",
+        })
+      );
+      expect(reported).toEqual(
+        expect.objectContaining({
+          sessionId: "test_session_id",
+        })
+      );
     });
 
     // Removed brittle NODE_ENV mutation; implicit assertions elsewhere cover logging.
@@ -171,24 +236,15 @@ describe("Next.js Error Boundaries Integration", () => {
     it("should report auth error without user ID", async () => {
       render(<AuthError error={mockError} reset={mockReset} />);
 
-      await waitFor(() => {
-        expect(vi.mocked(mockErrorService).createErrorReport).toHaveBeenCalledWith(
-          mockError,
-          undefined,
-          expect.objectContaining({
-            sessionId: "test_session_id",
-          })
-        );
+      const { create, reported } = await waitForTelemetry();
 
-        // Should not include userId since user is not authenticated in auth flow
-        expect(vi.mocked(mockErrorService).createErrorReport).not.toHaveBeenCalledWith(
-          expect.anything(),
-          expect.anything(),
-          expect.objectContaining({
-            userId: expect.anything(),
-          })
-        );
-      });
+      expect(create.metadata).toEqual(
+        expect.objectContaining({
+          sessionId: "test_session_id",
+        })
+      );
+      expect(create.metadata?.userId).toBeUndefined();
+      expect(reported.userId).toBeUndefined();
     });
 
     // Logging behavior is environment dependent; skip direct console assertions here.
@@ -205,12 +261,10 @@ describe("Next.js Error Boundaries Integration", () => {
 
       render(<ErrorComponent error={mockError} reset={mockReset} />);
 
-      await waitFor(() => {
-        expect(mockSessionStorage.setItem).toHaveBeenCalledWith(
-          "session_id",
-          expect.stringMatching(/^session_[A-Za-z0-9-]+$/)
-        );
-      });
+      const [key, value] = await waitForMockCall(mockSessionStorage.setItem);
+
+      expect(key).toBe("session_id");
+      expect(value).toMatch(/^session_[A-Za-z0-9-]+$/);
     });
 
     it("should use existing session ID", async () => {
@@ -223,15 +277,18 @@ describe("Next.js Error Boundaries Integration", () => {
 
       render(<ErrorComponent error={mockError} reset={mockReset} />);
 
-      await waitFor(() => {
-        expect(vi.mocked(mockErrorService).createErrorReport).toHaveBeenCalledWith(
-          mockError,
-          undefined,
-          expect.objectContaining({
-            sessionId: "existing_session_id",
-          })
-        );
-      });
+      const { create, reported } = await waitForTelemetry();
+
+      expect(create.metadata).toEqual(
+        expect.objectContaining({
+          sessionId: "existing_session_id",
+        })
+      );
+      expect(reported).toEqual(
+        expect.objectContaining({
+          sessionId: "existing_session_id",
+        })
+      );
     });
 
     it("should handle sessionStorage errors gracefully", () => {
@@ -252,16 +309,22 @@ describe("Next.js Error Boundaries Integration", () => {
   });
 
   describe("User Store Integration", () => {
-    it("should include user ID when user store is available", () => {
+    it("should include user ID when user store is available", async () => {
       window.userStore = {
         user: { id: "integration_test_user" },
       };
 
       render(<DashboardError error={mockError} reset={mockReset} />);
 
-      expect(vi.mocked(mockErrorService).createErrorReport).toHaveBeenCalledWith(
-        mockError,
-        undefined,
+      const { create, reported } = await waitForTelemetry();
+
+      expect(create.metadata).toEqual(
+        expect.objectContaining({
+          sessionId: "test_session_id",
+          userId: "integration_test_user",
+        })
+      );
+      expect(reported).toEqual(
         expect.objectContaining({
           userId: "integration_test_user",
         })
@@ -285,30 +348,31 @@ describe("Next.js Error Boundaries Integration", () => {
     it("should create error reports with consistent format", async () => {
       render(<ErrorComponent error={mockError} reset={mockReset} />);
 
-      await waitFor(() => {
-        expect(vi.mocked(mockErrorService).createErrorReport).toHaveBeenCalledWith(
-          mockError,
-          undefined,
-          expect.objectContaining({
-            sessionId: expect.any(String),
-          })
-        );
-      });
+      const { reported } = await waitForTelemetry();
+
+      expect(reported).toEqual(
+        expect.objectContaining({
+          error: expect.objectContaining({
+            message: "Test integration error",
+            name: mockError.name,
+          }),
+          sessionId: expect.any(String),
+          timestamp: expect.any(String),
+          url: expect.any(String),
+          userAgent: expect.any(String),
+        })
+      );
     });
 
     it("should handle error service failures gracefully", async () => {
-      vi.mocked(mockErrorService).reportError.mockRejectedValue(
-        new Error("Reporting failed")
-      );
+      mockedErrorService.reportError.mockRejectedValue(new Error("Reporting failed"));
 
       // Should not throw when error reporting fails
       expect(() => {
         render(<ErrorComponent error={mockError} reset={mockReset} />);
       }).not.toThrow();
 
-      await waitFor(() => {
-        expect(vi.mocked(mockErrorService).reportError).toHaveBeenCalled();
-      });
+      await waitForMockCall(mockedErrorService.reportError);
     });
   });
 

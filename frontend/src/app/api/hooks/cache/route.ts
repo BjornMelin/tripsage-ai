@@ -9,9 +9,6 @@ import { bumpTags } from "@/lib/cache/tags";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import { parseAndVerify } from "@/lib/webhooks/payload";
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
-
 /**
  * Returns cache tags to invalidate for a given database table.
  *

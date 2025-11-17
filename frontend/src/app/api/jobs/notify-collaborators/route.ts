@@ -3,6 +3,7 @@
  */
 
 import "server-only";
+
 import { Receiver } from "@upstash/qstash";
 import { NextResponse } from "next/server";
 import { getServerEnvVar, getServerEnvVarWithFallback } from "@/lib/env/server";
@@ -10,9 +11,6 @@ import { tryReserveKey } from "@/lib/idempotency/redis";
 import { sendCollaboratorNotifications } from "@/lib/notifications/collaborators";
 import { notifyJobSchema } from "@/lib/schemas/webhooks";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
-
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
 
 /**
  * Creates a QStash receiver for webhook signature verification.
