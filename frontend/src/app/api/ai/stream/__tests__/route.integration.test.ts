@@ -1,4 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { getMockCookiesForTest } from "@/test/route-helpers";
+
+// Mock next/headers cookies() BEFORE any imports that use it
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(() => Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))),
+}));
 
 // Mock the `ai` package to avoid network/model dependencies
 vi.mock("ai", () => ({
@@ -275,8 +281,11 @@ describe("ai stream route", () => {
       url: "http://localhost",
     });
 
-    // Should propagate the error for Next.js error handling
-    await expect(POST(request)).rejects.toThrow("AI SDK error");
+    // withApiGuards catches errors and returns error responses
+    const response = await POST(request);
+    expect(response.status).toBe(500);
+    const body = await response.json();
+    expect(body.error).toBe("internal");
   });
 
   it("handles streamText response conversion errors", async () => {
@@ -297,7 +306,11 @@ describe("ai stream route", () => {
       url: "http://localhost",
     });
 
-    await expect(POST(request)).rejects.toThrow("Response conversion error");
+    // withApiGuards catches errors and returns error responses
+    const response = await POST(request);
+    expect(response.status).toBe(500);
+    const body = await response.json();
+    expect(body.error).toBe("internal");
   });
 
   it("handles prompt content without heavy token calc", async () => {

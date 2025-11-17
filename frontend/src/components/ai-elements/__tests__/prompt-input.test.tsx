@@ -13,41 +13,37 @@ import {
 /** Test suite for PromptInput component */
 describe("ai-elements/prompt-input", () => {
   /** Test that onSubmit is called with typed text when submitted */
-  it(
-    "calls onSubmit with typed text when submitted",
-    async () => {
-      const onSubmit = vi.fn().mockResolvedValue(undefined);
-      render(
-        <PromptInput onSubmit={onSubmit}>
-          <PromptInputBody>
-            <PromptInputTextarea placeholder="Type here" />
-          </PromptInputBody>
-          <PromptInputFooter>
-            <PromptInputSubmit>Send</PromptInputSubmit>
-          </PromptInputFooter>
-        </PromptInput>
-      );
+  it("calls onSubmit with typed text when submitted", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(
+      <PromptInput onSubmit={onSubmit}>
+        <PromptInputBody>
+          <PromptInputTextarea placeholder="Type here" />
+        </PromptInputBody>
+        <PromptInputFooter>
+          <PromptInputSubmit>Send</PromptInputSubmit>
+        </PromptInputFooter>
+      </PromptInput>
+    );
 
-      const textarea = screen.getByPlaceholderText("Type here") as HTMLTextAreaElement;
-      fireEvent.change(textarea, { target: { value: "Hello AI" } });
+    const textarea = screen.getByPlaceholderText("Type here") as HTMLTextAreaElement;
+    fireEvent.change(textarea, { target: { value: "Hello AI" } });
 
-      // Submit the form by clicking the submit button
-      const submit = screen.getByText("Send");
-      const form = submit.closest("form");
-      expect(form).toBeInTheDocument();
-      
-      fireEvent.submit(form!);
+    // Submit the form by clicking the submit button
+    const submit = screen.getByText("Send");
+    const form = submit.closest("form");
+    expect(form).toBeInTheDocument();
 
-      await waitFor(
-        () => {
-          expect(onSubmit).toHaveBeenCalled();
-        },
-        { timeout: 2000 }
-      );
-      
-      const payload = onSubmit.mock.calls[0]?.[0];
-      expect(payload?.text).toBe("Hello AI");
-    },
-    10000
-  );
+    fireEvent.submit(form!);
+
+    await waitFor(
+      () => {
+        expect(onSubmit).toHaveBeenCalled();
+      },
+      { timeout: 2000 }
+    );
+
+    const payload = onSubmit.mock.calls[0]?.[0];
+    expect(payload?.text).toBe("Hello AI");
+  }, 10000);
 });

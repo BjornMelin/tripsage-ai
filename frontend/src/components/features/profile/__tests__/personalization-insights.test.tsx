@@ -131,7 +131,9 @@ describe("PersonalizationInsights", () => {
     });
 
     // Click on recommendations button
-    const recommendationsButton = screen.getByRole("button", { name: /recommendations/i });
+    const recommendationsButton = screen.getByRole("button", {
+      name: /recommendations/i,
+    });
     fireEvent.click(recommendationsButton);
 
     await waitFor(() => {

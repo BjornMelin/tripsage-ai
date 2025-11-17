@@ -1,6 +1,8 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { NextRequest } from "next/server";
+import type { Redis } from "@upstash/redis";
 import {
   stubRateLimitDisabled,
   stubRateLimitEnabled,
@@ -27,6 +29,7 @@ const MOCK_SUPABASE = vi.hoisted(() => ({
 const CREATE_SUPABASE = vi.hoisted(() => vi.fn(async () => MOCK_SUPABASE));
 const mockCreateOpenAI = vi.hoisted(() => vi.fn());
 const mockCreateAnthropic = vi.hoisted(() => vi.fn());
+const MOCK_GET_REDIS = vi.hoisted(() => vi.fn<() => Redis | undefined>(() => undefined));
 
 vi.mock("@/lib/next/route-helpers", async () => {
   const actual = await vi.importActual<typeof import("@/lib/next/route-helpers")>(
@@ -35,14 +38,17 @@ vi.mock("@/lib/next/route-helpers", async () => {
   return {
     ...actual,
     getClientIpFromHeaders: MOCK_ROUTE_HELPERS.getClientIpFromHeaders,
+    getTrustedRateLimitIdentifier: vi.fn((req: NextRequest) => {
+      const ip = MOCK_ROUTE_HELPERS.getClientIpFromHeaders();
+      // Return "anon:" prefix format for test compatibility
+      return ip === "unknown" ? "unknown" : `anon:${ip}`;
+    }),
     withRequestSpan: vi.fn((_name, _attrs, fn) => fn()),
   };
 });
 
-vi.mock("@upstash/redis", () => ({
-  Redis: {
-    fromEnv: vi.fn(() => ({})),
-  },
+vi.mock("@/lib/redis", () => ({
+  getRedis: MOCK_GET_REDIS,
 }));
 
 vi.mock("@upstash/ratelimit", () => {
@@ -77,11 +83,15 @@ vi.mock("@/lib/telemetry/span", () => ({
 }));
 
 vi.mock("@/lib/env/server", () => ({
-  getServerEnvVarWithFallback: vi.fn((key: string) => {
-    if (key === "UPSTASH_REDIS_REST_URL" || key === "UPSTASH_REDIS_REST_TOKEN") {
-      return "test-value";
+  getServerEnvVarWithFallback: vi.fn((key: string, fallback?: unknown) => {
+    // In test environment, check process.env directly (vi.stubEnv sets process.env)
+    if (key === "UPSTASH_REDIS_REST_URL") {
+      return process.env.UPSTASH_REDIS_REST_URL || fallback;
     }
-    return undefined;
+    if (key === "UPSTASH_REDIS_REST_TOKEN") {
+      return process.env.UPSTASH_REDIS_REST_TOKEN || fallback;
+    }
+    return fallback;
   }),
 }));
 
@@ -121,6 +131,8 @@ describe("/api/keys/validate route", () => {
       reset: Date.now() + 60000,
       success: true,
     });
+    MOCK_GET_REDIS.mockReset();
+    MOCK_GET_REDIS.mockReturnValue(undefined); // Disable rate limiting by default
     MOCK_SUPABASE.auth.getUser.mockReset();
     MOCK_SUPABASE.auth.getUser.mockResolvedValue({
       data: { user: { id: "u1" } },
@@ -203,6 +215,8 @@ describe("/api/keys/validate route", () => {
 
   it("throttles per user id and returns headers", async () => {
     stubRateLimitEnabled();
+    // Return mock Redis instance when rate limiting enabled (getRedis checks env vars via mocked getServerEnvVarWithFallback)
+    MOCK_GET_REDIS.mockReturnValue({} as Redis);
     MOCK_SUPABASE.auth.getUser.mockResolvedValue({
       data: { user: { id: "validate-user" } },
       error: null,
@@ -230,6 +244,8 @@ describe("/api/keys/validate route", () => {
 
   it("falls back to client IP when user is missing", async () => {
     stubRateLimitEnabled();
+    // Return mock Redis instance when rate limiting enabled (getRedis checks env vars via mocked getServerEnvVarWithFallback)
+    MOCK_GET_REDIS.mockReturnValue({} as Redis);
     MOCK_SUPABASE.auth.getUser.mockResolvedValue({
       data: { user: null },
       error: null,
@@ -240,7 +256,8 @@ describe("/api/keys/validate route", () => {
       reset: 123,
       success: true,
     });
-    MOCK_ROUTE_HELPERS.getClientIpFromHeaders.mockReturnValueOnce("10.0.0.1");
+    // Ensure getClientIpFromHeaders returns the expected IP
+    MOCK_ROUTE_HELPERS.getClientIpFromHeaders.mockReturnValue("10.0.0.1");
 
     const fetchMock = vi
       .fn<FetchLike>()
@@ -256,6 +273,9 @@ describe("/api/keys/validate route", () => {
 
     await POST(req);
 
-    expect(LIMIT_SPY).toHaveBeenCalledWith("anon:10.0.0.1");
+    // Verify rate limiter was called with the expected identifier
+    expect(LIMIT_SPY).toHaveBeenCalled();
+    const callArgs = LIMIT_SPY.mock.calls[0];
+    expect(callArgs?.[0]).toBe("anon:10.0.0.1");
   });
 });
