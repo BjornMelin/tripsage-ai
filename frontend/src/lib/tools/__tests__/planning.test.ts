@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { getMockCookiesForTest } from "@/test/route-helpers";
 import {
   RATE_CREATE_PER_DAY,
   RATE_UPDATE_PER_MIN,
@@ -13,6 +14,13 @@ import {
   updateTravelPlan,
 } from "../planning";
 import { planSchema } from "../planning.schema";
+
+// Mock next/headers cookies() before any imports that use it
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(() =>
+    Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))
+  ),
+}));
 
 type RedisMock = {
   data: Map<string, unknown>;
@@ -54,36 +62,40 @@ vi.mock("@/lib/redis", () => {
   return { getRedis: () => store };
 });
 
-vi.mock("@/lib/supabase", () => {
-  let currentUserId = "u1";
-  return {
-    // biome-ignore lint/style/useNamingConvention: test-only helper
-    __setUserIdForTests: (id: string) => {
-      currentUserId = id;
-    },
-    createServerSupabase: async () => ({
-      auth: {
-        getUser: async () => ({
-          data: {
-            user: {
-              app_metadata: {},
-              aud: "authenticated",
-              created_at: new Date(0).toISOString(),
-              id: currentUserId,
-              user_metadata: {},
-            },
+let currentUserId = "u1";
+const mockCreateServerSupabase = vi.hoisted(() =>
+  vi.fn(async () => ({
+    auth: {
+      getUser: async () => ({
+        data: {
+          user: {
+            app_metadata: {},
+            aud: "authenticated",
+            created_at: new Date(0).toISOString(),
+            id: currentUserId,
+            user_metadata: {},
           },
-          error: null,
-        }),
-      },
-      from: () => ({
-        insert: () => ({
-          select: () => ({ single: async () => ({ data: { id: 1 } }) }),
-        }),
+        },
+        error: null,
+      }),
+    },
+    from: () => ({
+      insert: () => ({
+        select: () => ({ single: async () => ({ data: { id: 1 } }) }),
       }),
     }),
-  };
+  }))
+);
+
+const setUserIdForTests = vi.hoisted(() => (id: string) => {
+  currentUserId = id;
 });
+
+vi.mock("@/lib/supabase/server", () => ({
+  // biome-ignore lint/style/useNamingConvention: test-only helper
+  __setUserIdForTests: setUserIdForTests,
+  createServerSupabase: mockCreateServerSupabase,
+}));
 
 describe("planning tools", () => {
   let redis: RedisMock;
@@ -186,7 +198,7 @@ describe("planning tools", () => {
     if (!created?.success) throw new Error("create failed");
 
     // simulate session user mismatch (unauthorized)
-    const supabaseMod = await import("@/lib/supabase");
+    const supabaseMod = await import("@/lib/supabase/server");
     (
       supabaseMod as unknown as { __setUserIdForTests: (id: string) => void }
     ).__setUserIdForTests("u2");
@@ -326,7 +338,7 @@ describe("planning tools", () => {
     expect(blocked.error).toBe("rate_limited_plan_create");
 
     // create one plan and exhaust update limit (switch user to avoid create RL spillover)
-    const supabaseMod2 = (await import("@/lib/supabase")) as unknown as {
+    const supabaseMod2 = (await import("@/lib/supabase/server")) as unknown as {
       __setUserIdForTests: (id: string) => void;
     };
     supabaseMod2.__setUserIdForTests("u3");
@@ -358,7 +370,7 @@ describe("planning tools", () => {
 
   it("deleteTravelPlan works for owner and blocks others", async () => {
     // Reset userId to u1 (previous test may have changed it)
-    const supabaseModReset = (await import("@/lib/supabase")) as unknown as {
+    const supabaseModReset = (await import("@/lib/supabase/server")) as unknown as {
       __setUserIdForTests: (id: string) => void;
     };
     supabaseModReset.__setUserIdForTests("u1");
@@ -375,7 +387,7 @@ describe("planning tools", () => {
     expect(redis.data.has(key)).toBe(true);
 
     // unauthorized delete
-    const supabaseMod = (await import("@/lib/supabase")) as unknown as {
+    const supabaseMod = (await import("@/lib/supabase/server")) as unknown as {
       __setUserIdForTests: (id: string) => void;
     };
     supabaseMod.__setUserIdForTests("u2");

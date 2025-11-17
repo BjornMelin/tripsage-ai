@@ -1,28 +1,15 @@
 /**
- * @fileoverview Vitest configuration tuned for stability and CI performance.
- * - Defaults to threads pool for speed; guardrail env can force forks.
- * - Scales workers by available CPUs; env override supported.
- * - Splits into projects: node env for API/server tests, jsdom for UI.
+ * @fileoverview Vitest configuration with multi-project setup for optimized performance.
+ * - Uses projects to split unit, component, API, and integration tests
+ * - Pool selection and concurrency controlled via CLI flags (--pool, --maxWorkers)
+ * - Defaults to jsdom for component tests (correctness over speed)
  */
 
-import os from "node:os";
 import path from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
 const isCi = process.env.CI === "true" || process.env.CI === "1";
-const forceForks = process.env.CI_FORCE_FORKS === "1";
-const selectedPool = (process.env.VITEST_POOL || (forceForks ? "forks" : "threads")) as
-  | "threads"
-  | "forks"
-  | "vmThreads";
-// Prefer availableParallelism when present (Node 18+), fall back to cpus
-// Keep at least 1 worker; on CI, avoid exhausting all cores
-const cores = (os as any).availableParallelism?.() ?? os.cpus().length;
-// In CI, clamp concurrency aggressively to avoid memory pressure from jsdom + V8 coverage.
-const ciDefaultWorkers = Math.max(1, Math.min(2, cores));
-const defaultWorkers = isCi ? ciDefaultWorkers : Math.max(1, Math.floor(cores / 2));
-const optimalWorkers = Number(process.env.VITEST_MAX_WORKERS || defaultWorkers);
 
 export default defineConfig({
   plugins: [react()],
@@ -43,7 +30,7 @@ export default defineConfig({
     noExternal: ["rehype-harden"],
   },
   test: {
-    // Stop early on cascading failures in CI
+    // Shared defaults
     bail: isCi ? 5 : 0,
     clearMocks: true,
     coverage: {
@@ -59,23 +46,18 @@ export default defineConfig({
         },
       },
     },
-    // Ensure Vite transforms CSS imports under vmThreads
     deps: {
-      web: {
-        transformCss: true,
+      optimizer: {
+        web: {
+          enabled: true,
+        },
       },
     },
-    environment: "jsdom",
     exclude: ["**/node_modules/**", "**/e2e/**", "**/*.e2e.*"],
     globals: true,
     hookTimeout: 8000,
-    include: ["**/*.{test,spec}.ts?(x)"],
-    // Runtime stability
-    isolate: true,
-    maxWorkers: optimalWorkers,
-    passWithNoTests: true,
-    // Default to threads for speed; can be overridden via env or per-project
-    pool: selectedPool,
+    include: ["src/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
+    passWithNoTests: false,
     restoreMocks: true,
     server: {
       deps: {
@@ -84,11 +66,109 @@ export default defineConfig({
     },
     setupFiles: ["./src/test-setup.ts"],
     teardownTimeout: 6000,
-    // Timeouts
     testTimeout: 5000,
     unstubEnvs: true,
-    // Optional: when using vm-based pools, recycle workers before they grow too large.
-    // Has effect only for `vmThreads` / `vmForks` pools.
-    vmMemoryLimit: isCi ? "512MB" : undefined,
+    // Pool and parallelism controlled via CLI flags
+    // Projects: schemas, integration, api, component, unit (ordered by specificity)
+    projects: [
+      {
+        // Schema tests: pure validation, no DOM, no isolation (most specific)
+        extends: true,
+        test: {
+          name: "schemas",
+          include: ["src/lib/schemas/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
+          isolate: false,
+          environment: "node",
+          deps: {
+            web: {
+              transformCss: false,
+            },
+          },
+        },
+      },
+      {
+        // Integration tests: end-to-end flows (must come before api/component to catch .integration.* files)
+        extends: true,
+        test: {
+          name: "integration",
+          include: [
+            "src/**/*.integration.{test,spec}.?(c|m)[jt]s?(x)",
+            "src/**/*.int.{test,spec}.?(c|m)[jt]s?(x)",
+            "src/**/*-integration.{test,spec}.?(c|m)[jt]s?(x)",
+          ],
+          exclude: [
+            // Exclude browser-dependent integration tests that need jsdom
+            "src/app/__tests__/error-boundaries-integration.test.tsx",
+          ],
+          environment: "node",
+          deps: {
+            web: {
+              transformCss: false,
+            },
+          },
+        },
+      },
+      {
+        // API route tests: server-side handlers in app/api
+        extends: true,
+        test: {
+          name: "api",
+          include: ["src/app/api/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
+          environment: "node",
+          deps: {
+            web: {
+              transformCss: false,
+            },
+          },
+        },
+      },
+      {
+        // Component tests: React components, hooks, app pages, stores (jsdom environment)
+        extends: true,
+        test: {
+          name: "component",
+          include: [
+            "src/components/**/*.{test,spec}.?(c|m)[jt]s?(x)",
+            "src/app/**/*.{test,spec}.?(c|m)[jt]s?(x)",
+            "src/hooks/**/*.{test,spec}.?(c|m)[jt]s?(x)",
+            "src/stores/**/*.{test,spec}.?(c|m)[jt]s?(x)",
+          ],
+          exclude: ["src/app/api/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
+          environment: "jsdom",
+          deps: {
+            web: {
+              transformCss: true,
+            },
+          },
+        },
+      },
+      {
+        // Unit tests: lib utilities, stores, pure functions (catch-all for remaining)
+        extends: true,
+        test: {
+          name: "unit",
+          include: ["src/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
+          exclude: [
+            "src/lib/schemas/**/*.{test,spec}.?(c|m)[jt]s?(x)",
+            "src/**/*.integration.{test,spec}.?(c|m)[jt]s?(x)",
+            "src/**/*.int.{test,spec}.?(c|m)[jt]s?(x)",
+            "src/**/*-integration.{test,spec}.?(c|m)[jt]s?(x)",
+            "src/app/api/**/*.{test,spec}.?(c|m)[jt]s?(x)",
+            "src/components/**/*.{test,spec}.?(c|m)[jt]s?(x)",
+            "src/app/**/*.{test,spec}.?(c|m)[jt]s?(x)",
+            "src/hooks/**/*.{test,spec}.?(c|m)[jt]s?(x)",
+            "src/stores/**/*.{test,spec}.?(c|m)[jt]s?(x)",
+            // Exclude browser-dependent lib tests that need jsdom
+            "src/lib/__tests__/error-service.test.ts",
+          ],
+          environment: "node",
+          deps: {
+            web: {
+              transformCss: false,
+            },
+          },
+        },
+      },
+    ],
   },
 });

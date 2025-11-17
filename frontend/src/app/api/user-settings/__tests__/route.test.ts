@@ -2,6 +2,14 @@
 
 import type { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { getMockCookiesForTest } from "@/test/route-helpers";
+
+// Mock next/headers cookies() before any imports that use it
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(() =>
+    Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))
+  ),
+}));
 
 const MOCK_SUPABASE = vi.hoisted(() => ({
   auth: {
@@ -12,7 +20,7 @@ const MOCK_SUPABASE = vi.hoisted(() => ({
 
 const CREATE_SUPABASE = vi.hoisted(() => vi.fn(async () => MOCK_SUPABASE));
 
-vi.mock("@/lib/supabase", () => ({
+vi.mock("@/lib/supabase/server", () => ({
   createServerSupabase: CREATE_SUPABASE,
 }));
 
