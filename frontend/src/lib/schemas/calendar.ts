@@ -43,7 +43,7 @@ export const eventDateTimeSchema = z.object({
     .optional()
     .or(z.date().transform((d) => d.toISOString().split("T")[0])),
   dateTime: z
-    .union([z.date(), z.string().datetime()])
+    .union([z.date(), z.iso.datetime()])
     .optional()
     .transform((val) => (typeof val === "string" ? new Date(val) : val)),
   timeZone: z.string().optional(),

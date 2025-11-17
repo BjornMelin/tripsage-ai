@@ -6,34 +6,25 @@
  */
 
 import type { AgentStatusState } from "@/stores/agent-status-store";
-import type { ChatState } from "@/stores/chat-store";
+import type { ChatMemoryState } from "@/stores/chat/chat-memory";
+import type { ChatMessagesState } from "@/stores/chat/chat-messages";
+import type { ChatRealtimeState } from "@/stores/chat/chat-realtime";
 
 /**
- * Create a mock ChatState with minimal defaults and optional overrides.
- *
- * Collections default to empty to avoid hidden coupling between tests.
- * Only the fields that tests commonly touch are populated; actions default to
- * jest/vitest fns in the consuming test via `vi.fn()` if needed.
+ * Create a mock ChatMessagesState with minimal defaults and optional overrides.
  *
  * @param overrides Optional partial state overrides.
- * @returns A ChatState-like object for mocking `useChatStore`.
+ * @returns A ChatMessagesState-like object for mocking `useChatMessages`.
  */
-export function createMockChatState(overrides: Partial<ChatState> = {}): ChatState {
+export function createMockChatMessagesState(
+  overrides: Partial<ChatMessagesState> = {}
+): ChatMessagesState {
   return {
-    // Actions (no-ops by default; tests can override)
     addMessage: () => "message-1",
-    addPendingMessage: () => undefined,
     addToolResult: () => undefined,
-    autoSyncMemory: false,
     clearError: () => undefined,
     clearMessages: () => undefined,
-    clearTypingUsers: () => undefined,
-
-    // Realtime
-    connectionStatus: 2 as unknown as ChatState["connectionStatus"],
     createSession: () => "session-1",
-
-    // Computed
     get currentSession() {
       return null;
     },
@@ -41,41 +32,72 @@ export function createMockChatState(overrides: Partial<ChatState> = {}): ChatSta
     deleteSession: () => undefined,
     error: null,
     exportSessionData: () => "{}",
+    importSessionData: () => "session-1",
+    isLoading: false,
+    isStreaming: false,
+    renameSession: () => undefined,
+    sendMessage: async () => undefined,
+    sessions: [],
+    setCurrentSession: () => undefined,
+    stopStreaming: () => undefined,
+    streamMessage: async () => undefined,
+    updateMessage: () => undefined,
+    ...overrides,
+  } as ChatMessagesState;
+}
+
+/**
+ * Create a mock ChatRealtimeState with minimal defaults and optional overrides.
+ *
+ * @param overrides Optional partial state overrides.
+ * @returns A ChatRealtimeState-like object for mocking `useChatRealtime`.
+ */
+export function createMockChatRealtimeState(
+  overrides: Partial<ChatRealtimeState> = {}
+): ChatRealtimeState {
+  return {
+    addPendingMessage: () => undefined,
+    agentStatuses: {},
+    clearTypingUsers: () => undefined,
+    connectionStatus: "disconnected",
     handleAgentStatusUpdate: () => undefined,
     handleRealtimeMessage: () => undefined,
     handleTypingUpdate: () => undefined,
-    importSessionData: () => "session-1",
-    isLoading: false,
     isRealtimeEnabled: false,
-    isStreaming: false,
-
-    // Memory
-    memoryEnabled: false,
     pendingMessages: [],
     removePendingMessage: () => undefined,
     removeUserTyping: () => undefined,
-    renameSession: () => undefined,
     resetRealtimeState: () => undefined,
-    sendMessage: async () => undefined,
-    // Core state
-    sessions: [],
-    setAutoSyncMemory: () => undefined,
     setChatConnectionStatus: () => undefined,
-    setCurrentSession: () => undefined,
-    setMemoryEnabled: () => undefined,
     setRealtimeEnabled: () => undefined,
     setUserTyping: () => undefined,
-    stopStreaming: () => undefined,
-    storeConversationMemory: async () => undefined,
-    streamMessage: async () => undefined,
-    syncMemoryToSession: async () => undefined,
     typingUsers: {},
     updateAgentStatus: () => undefined,
-    updateMessage: () => undefined,
-    updateSessionMemoryContext: () => undefined,
-
     ...overrides,
-  } as ChatState;
+  } as ChatRealtimeState;
+}
+
+/**
+ * Create a mock ChatMemoryState with minimal defaults and optional overrides.
+ *
+ * @param overrides Optional partial state overrides.
+ * @returns A ChatMemoryState-like object for mocking `useChatMemory`.
+ */
+export function createMockChatMemoryState(
+  overrides: Partial<ChatMemoryState> = {}
+): ChatMemoryState {
+  return {
+    autoSyncMemory: false,
+    lastMemorySyncs: {},
+    memoryContexts: {},
+    memoryEnabled: false,
+    setAutoSyncMemory: () => undefined,
+    setMemoryEnabled: () => undefined,
+    storeConversationMemory: async () => undefined,
+    syncMemoryToSession: async () => undefined,
+    updateSessionMemoryContext: () => undefined,
+    ...overrides,
+  } as ChatMemoryState;
 }
 
 /**

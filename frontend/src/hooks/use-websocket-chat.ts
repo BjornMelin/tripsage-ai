@@ -7,9 +7,10 @@
 
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { nowIso, secureUuid } from "@/lib/security/random";
 import { useAuthCore } from "@/stores/auth/auth-core";
+import { useChatRealtime } from "@/stores/chat/chat-realtime";
 import { useRealtimeChannel } from "./use-realtime-channel";
 
 type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
@@ -104,9 +105,16 @@ export function useWebSocketChat({
   sessionId,
 }: WebSocketChatOptions = {}): UseWebSocketChatReturn {
   const { user } = useAuthCore();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [typingUsers, setTypingUsers] = useState<string[]>([]);
-  const [status, setStatus] = useState<ConnectionStatus>("disconnected");
+  const {
+    connectionStatus: sliceConnectionStatus,
+    typingUsers: sliceTypingUsers,
+    pendingMessages,
+    setChatConnectionStatus,
+    setUserTyping,
+    removeUserTyping,
+    handleRealtimeMessage,
+    handleTypingUpdate,
+  } = useChatRealtime();
 
   const topic = useMemo(() => {
     if (!autoConnect) {
@@ -125,33 +133,34 @@ export function useWebSocketChat({
       payload: ChatMessageBroadcastPayload | ChatTypingBroadcastPayload,
       event: string
     ) => {
+      if (!sessionId && topicType === "session") {
+        return;
+      }
+      const effectiveSessionId = sessionId ?? `user:${user?.id}`;
+
       if (event === "chat:message") {
         const data = payload as ChatMessageBroadcastPayload;
         if (!data?.content) {
           return;
         }
-        setMessages((prev) => [
-          ...prev,
-          {
-            content: data.content,
-            id: data.id ?? secureUuid(),
-            sender: data.sender ?? { id: user?.id ?? "unknown", name: "You" },
-            status: "sent",
-            timestamp: new Date(data.timestamp ?? Date.now()),
-          },
-        ]);
+        handleRealtimeMessage(effectiveSessionId, {
+          content: data.content,
+          id: data.id,
+          sender: data.sender,
+          timestamp: data.timestamp,
+        } as ChatMessageBroadcastPayload);
       } else if (event === "chat:typing") {
         const data = payload as ChatTypingBroadcastPayload;
         if (!data?.userId) {
           return;
         }
-        setTypingUsers((prev) => {
-          const filtered = prev.filter((usr) => usr !== data.userId);
-          return data.isTyping ? [...filtered, data.userId] : filtered;
-        });
+        handleTypingUpdate(effectiveSessionId, {
+          isTyping: data.isTyping,
+          userId: data.userId,
+        } as ChatTypingBroadcastPayload);
       }
     },
-    [user?.id]
+    [handleRealtimeMessage, handleTypingUpdate, sessionId, topicType, user?.id]
   );
 
   const { sendBroadcast } = useRealtimeChannel<
@@ -160,15 +169,15 @@ export function useWebSocketChat({
     events: ["chat:message", "chat:typing"],
     onMessage: handleMessage,
     onStatusChange: (newStatus) => {
-      // Map channel status to our connection status
+      // Map channel status to slice connection status
       if (newStatus === "subscribed") {
-        setStatus("connected");
+        setChatConnectionStatus("connected");
       } else if (newStatus === "error") {
-        setStatus("error");
+        setChatConnectionStatus("error");
       } else if (newStatus === "closed") {
-        setStatus("disconnected");
+        setChatConnectionStatus("disconnected");
       } else {
-        setStatus("connecting");
+        setChatConnectionStatus("connecting");
       }
     },
     private: true,
@@ -177,11 +186,9 @@ export function useWebSocketChat({
   // Reset state when topic becomes null
   useEffect(() => {
     if (!topic) {
-      setStatus("disconnected");
-      setMessages([]);
-      setTypingUsers([]);
+      setChatConnectionStatus("disconnected");
     }
-  }, [topic]);
+  }, [topic, setChatConnectionStatus]);
 
   /**
    * Sends a chat message through the realtime channel.
@@ -211,13 +218,15 @@ export function useWebSocketChat({
     if (!user?.id || !topic) {
       return;
     }
+    const effectiveSessionId = sessionId ?? `user:${user.id}`;
+    setUserTyping(effectiveSessionId, user.id, user.email);
     sendBroadcast("chat:typing", {
       isTyping: true,
       userId: user.id,
     } as ChatTypingBroadcastPayload).catch(() => {
       // Best-effort typing indicator; ignore failures.
     });
-  }, [sendBroadcast, topic, user?.id]);
+  }, [sendBroadcast, sessionId, setUserTyping, topic, user?.id, user?.email]);
 
   /**
    * Stops typing indicator for the current user.
@@ -226,13 +235,15 @@ export function useWebSocketChat({
     if (!user?.id || !topic) {
       return;
     }
+    const effectiveSessionId = sessionId ?? `user:${user.id}`;
+    removeUserTyping(effectiveSessionId, user.id);
     sendBroadcast("chat:typing", {
       isTyping: false,
       userId: user.id,
     } as ChatTypingBroadcastPayload).catch(() => {
       // Best-effort typing indicator; ignore failures.
     });
-  }, [sendBroadcast, topic, user?.id]);
+  }, [removeUserTyping, sendBroadcast, sessionId, topic, user?.id]);
 
   /**
    * Reconnects to the realtime channel.
@@ -242,17 +253,50 @@ export function useWebSocketChat({
    */
   const reconnect = useCallback(() => {
     // Reconnection is handled automatically by useRealtimeChannel's backoff logic
-    setStatus((current) => (current === "connected" ? "connected" : "connecting"));
-  }, []);
+    if (sliceConnectionStatus !== "connected") {
+      setChatConnectionStatus("connecting");
+    }
+  }, [setChatConnectionStatus, sliceConnectionStatus]);
+
+  // Map slice connection status to hook's ConnectionStatus type
+  const connectionStatus: ConnectionStatus = useMemo(() => {
+    if (sliceConnectionStatus === "connected") return "connected";
+    if (sliceConnectionStatus === "error") return "error";
+    if (sliceConnectionStatus === "disconnected") return "disconnected";
+    return "connecting";
+  }, [sliceConnectionStatus]);
+
+  // Convert slice typing users to array of user IDs
+  const typingUsersArray = useMemo(() => {
+    const effectiveSessionId = sessionId ?? `user:${user?.id}`;
+    const users: string[] = [];
+    for (const [key, typing] of Object.entries(sliceTypingUsers)) {
+      if (key.startsWith(`${effectiveSessionId}_`)) {
+        users.push(typing.userId);
+      }
+    }
+    return users;
+  }, [sessionId, sliceTypingUsers, user?.id]);
+
+  // Convert pending messages to ChatMessage format
+  const messages = useMemo(() => {
+    return pendingMessages.map((msg) => ({
+      content: msg.content,
+      id: msg.id,
+      sender: { id: "system", name: "System" },
+      status: "sent" as const,
+      timestamp: new Date(msg.timestamp),
+    }));
+  }, [pendingMessages]);
 
   return {
-    connectionStatus: status,
-    isConnected: status === "connected",
+    connectionStatus,
+    isConnected: sliceConnectionStatus === "connected",
     messages,
     reconnect,
     sendMessage,
     startTyping,
     stopTyping,
-    typingUsers,
+    typingUsers: typingUsersArray,
   };
 }
