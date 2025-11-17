@@ -32,6 +32,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Guarded the attachments listing page in `frontend/src/app/attachments/page.tsx` by calling `requireUser({ redirectTo: "/attachments" })` ahead of the SSR fetch to `/api/attachments/files`.
   - Updated AI/LLM and chat-related API routes to require authentication via `withApiGuards({ auth: true, ... })` for `/api/chat`, `/api/chat/stream`, `/api/chat/attachments`, `/api/agents/router`, and `/api/agents/itineraries`, while keeping the minimal `/api/ai/stream` demo and internal embeddings/route-matrix endpoints as explicitly non-authenticated where existing non-Supabase guards apply.
   - Added unit tests for `frontend/src/lib/auth/server.ts` in `frontend/src/lib/auth/__tests__/server.test.ts` to verify `getOptionalUser` behavior, successful `requireUser` when a user is present, and redirect-to-login behavior when unauthenticated (matching `/login?next=/dashboard` semantics).
+- **Legacy auth cleanup and tests (Wave E)**
+  - Removed the shared Supabase access token helper `frontend/src/lib/supabase/token.ts` and inlined its behavior into `frontend/src/components/providers/realtime-auth-provider.tsx`, keeping Realtime authorization ephemeral and aligned with cookie-based session authority.
+  - Updated `frontend/src/__tests__/realtime-auth-provider.test.tsx` to rely on the Supabase browser client mock directly instead of mocking the deleted token helper.
+- **Supabase SSR auth validation and observability**
+  - Added dedicated route tests for `/auth/login`, `/auth/register`, `/auth/logout`, and `/auth/me` under `frontend/src/app/auth/**/__tests__/route.test.ts` to exercise the Supabase SSR-backed flows and `lib/auth/server.ts` helpers.
 
 ### Removed
 
