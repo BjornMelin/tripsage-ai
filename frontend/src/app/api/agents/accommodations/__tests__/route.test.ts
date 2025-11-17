@@ -1,6 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
 
+const mockLimitFn = vi.fn().mockResolvedValue({
+  limit: 30,
+  remaining: 29,
+  reset: Date.now() + 60000,
+  success: true,
+});
+const mockSlidingWindow = vi.fn(() => ({}));
+const RATELIMIT_MOCK = vi.fn(function RatelimitMock() {
+  return {
+    limit: mockLimitFn,
+  };
+}) as unknown as {
+  new (...args: unknown[]): { limit: typeof mockLimitFn };
+  slidingWindow: typeof mockSlidingWindow;
+};
+(RATELIMIT_MOCK as { slidingWindow: typeof mockSlidingWindow }).slidingWindow =
+  mockSlidingWindow;
+
 // Mock next/headers cookies() before any imports that use it
 vi.mock("next/headers", () => ({
   cookies: vi.fn(() =>
@@ -33,7 +51,12 @@ vi.mock("@/lib/agents/accommodation-agent", () => ({
 
 // Mock Redis
 vi.mock("@/lib/redis", () => ({
-  getRedis: vi.fn(() => Promise.resolve({})),
+  getRedis: vi.fn(() => ({})),
+}));
+
+// Mock Upstash rate limiter
+vi.mock("@upstash/ratelimit", () => ({
+  Ratelimit: RATELIMIT_MOCK,
 }));
 
 // Mock route helpers
@@ -50,6 +73,12 @@ vi.mock("@/lib/next/route-helpers", async () => {
 describe("/api/agents/accommodations route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockLimitFn.mockResolvedValue({
+      limit: 30,
+      remaining: 29,
+      reset: Date.now() + 60000,
+      success: true,
+    });
   });
 
   it("streams when valid and enabled", async () => {
@@ -68,6 +97,32 @@ describe("/api/agents/accommodations route", () => {
     expect(res.status).toBe(200);
   });
 
-  // TODO: Update rate limit tests to work with withApiGuards
-  // Rate limiting is now handled internally by withApiGuards
+  it("returns 429 when the rate limit is exceeded", async () => {
+    mockLimitFn.mockResolvedValueOnce({
+      limit: 30,
+      remaining: 0,
+      reset: Date.now() + 60000,
+      success: false,
+    });
+
+    const mod = await import("../route");
+    const req = createMockNextRequest({
+      body: {
+        checkIn: "2025-12-15",
+        checkOut: "2025-12-19",
+        destination: "NYC",
+        guests: 2,
+      },
+      method: "POST",
+      url: "http://localhost/api/agents/accommodations",
+    });
+
+    const res = await mod.POST(req);
+    expect(res.status).toBe(429);
+    expect(await res.json()).toEqual({
+      error: "rate_limit_exceeded",
+      reason: "Too many requests",
+    });
+    expect(mockLimitFn).toHaveBeenCalledTimes(1);
+  });
 });
