@@ -107,13 +107,13 @@ describe("User Profile Store - Fixed", () => {
     it("resets profile to null", () => {
       const store = useUserProfileStore.getState();
       store.setProfile(mockProfile);
-      
+
       // Get fresh state after setProfile
       let updatedState = useUserProfileStore.getState();
       expect(updatedState.profile).not.toBeNull();
 
       store.reset();
-      
+
       // Get fresh state after reset
       updatedState = useUserProfileStore.getState();
       expect(updatedState.profile).toBeNull();

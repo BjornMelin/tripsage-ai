@@ -5,11 +5,11 @@ import { createTravelPlan, updateTravelPlan } from "../planning";
 // Mock Next.js cookies() to avoid "cookies called outside request scope" error
 vi.mock("next/headers", () => ({
   cookies: () => ({
+    delete: vi.fn(),
     get: vi.fn(),
     getAll: vi.fn(() => []),
     has: vi.fn(() => false),
     set: vi.fn(),
-    delete: vi.fn(),
   }),
 }));
 
