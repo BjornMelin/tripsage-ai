@@ -15,6 +15,8 @@ import { stepCountIs, streamText, tool } from "ai";
 import { buildGuardedTool } from "@/lib/agents/guarded-tool";
 import { buildRateLimit } from "@/lib/ratelimit/config";
 import type { AccommodationSearchRequest } from "@/lib/schemas/agents";
+import type { ChatMessage } from "@/lib/tokens/budget";
+import { clampMaxTokens } from "@/lib/tokens/budget";
 import { toolRegistry } from "@/lib/tools";
 import { searchAccommodationsInputSchema } from "@/lib/tools/accommodations";
 import { lookupPoiInputSchema } from "@/lib/tools/google-places";
@@ -104,11 +106,11 @@ function buildAccommodationTools(identifier: string): ToolSet {
 /**
  * Execute the accommodation agent with AI SDK v6 streaming.
  *
- * @param deps Language model and rate-limit identifier.
+ * @param deps Language model, model identifier, and rate-limit identifier.
  * @param input Validated accommodation search request.
  */
 export function runAccommodationAgent(
-  deps: { model: LanguageModel; identifier: string },
+  deps: { model: LanguageModel; modelId: string; identifier: string },
   input: AccommodationSearchRequest
 ) {
   const instructions = buildAccommodationPrompt({
@@ -117,11 +119,22 @@ export function runAccommodationAgent(
     destination: input.destination,
     guests: input.guests,
   });
+  const userPrompt = `Find stays and summarize. Always return JSON with schemaVersion="stay.v1" and sources[]. Parameters: ${JSON.stringify(
+    input
+  )}`;
+
+  // Token budgeting: clamp max output tokens based on prompt length
+  const messages: ChatMessage[] = [
+    { content: instructions, role: "system" },
+    { content: userPrompt, role: "user" },
+  ];
+  const desiredMaxTokens = 4096; // Default for agent responses
+  const { maxTokens } = clampMaxTokens(messages, desiredMaxTokens, deps.modelId);
+
   return streamText({
+    maxOutputTokens: maxTokens,
     model: deps.model,
-    prompt: `Find stays and summarize. Always return JSON with schemaVersion="stay.v1" and sources[]. Parameters: ${JSON.stringify(
-      input
-    )}`,
+    prompt: userPrompt,
     stopWhen: stepCountIs(10),
     system: instructions,
     temperature: 0.3,

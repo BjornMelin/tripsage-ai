@@ -8,6 +8,7 @@
 import "server-only";
 
 import { getServerEnvVar, getServerEnvVarWithFallback } from "@/lib/env/server";
+import { secureUuid } from "@/lib/security/random";
 import type {
   EpsCheckAvailabilityRequest,
   EpsCheckAvailabilityResponse,
@@ -18,6 +19,13 @@ import type {
   EpsSearchRequest,
   EpsSearchResponse,
 } from "./expedia-types";
+
+export type ExpediaRequestContext = {
+  customerIp?: string;
+  customerSessionId?: string;
+  testScenario?: string;
+  userAgent?: string;
+};
 
 /**
  * Custom error class for Expedia API errors.
@@ -44,15 +52,24 @@ export class ExpediaClient {
   private readonly apiKey: string;
   private readonly apiSecret: string;
   private readonly baseUrl: string;
+  private readonly defaultCustomerIp: string;
+  private readonly defaultUserAgent: string;
 
   constructor() {
     this.apiKey = getServerEnvVar("EPS_API_KEY") ?? "";
     this.apiSecret = getServerEnvVar("EPS_API_SECRET") ?? "";
     this.baseUrl =
+      getServerEnvVarWithFallback("EPS_BASE_URL", "https://api.ean.com/v3") ??
+      "https://api.ean.com/v3";
+    this.defaultCustomerIp = String(
+      getServerEnvVarWithFallback("EPS_DEFAULT_CUSTOMER_IP", "0.0.0.0") ?? "0.0.0.0"
+    );
+    this.defaultUserAgent = String(
       getServerEnvVarWithFallback(
-        "EPS_BASE_URL",
-        "https://api.expediapartnersolutions.com/v1"
-      ) ?? "https://api.expediapartnersolutions.com/v1";
+        "EPS_DEFAULT_USER_AGENT",
+        "TripSage/1.0 (+https://tripsage.ai)"
+      ) ?? "TripSage/1.0 (+https://tripsage.ai)"
+    );
 
     if (!this.apiKey || !this.apiSecret) {
       throw new Error(
@@ -77,6 +94,47 @@ export class ExpediaClient {
     return `Bearer ${this.apiKey}`;
   }
 
+  private buildHeaders(
+    existingHeaders: HeadersInit | undefined,
+    context: ExpediaRequestContext | undefined,
+    authToken: string
+  ): Headers {
+    const resolvedContext: Required<Omit<ExpediaRequestContext, "testScenario">> & {
+      testScenario?: string;
+    } = {
+      customerIp: context?.customerIp ?? this.defaultCustomerIp,
+      customerSessionId: context?.customerSessionId ?? secureUuid(),
+      testScenario: context?.testScenario,
+      userAgent: context?.userAgent ?? this.defaultUserAgent,
+    };
+
+    const headers = new Headers({
+      // biome-ignore lint/style/useNamingConvention: HTTP header names use PascalCase
+      Accept: "application/json",
+      "Accept-Encoding": "gzip",
+      // biome-ignore lint/style/useNamingConvention: HTTP header names use PascalCase
+      Authorization: authToken,
+      "Content-Type": "application/json",
+      "Customer-Ip": resolvedContext.customerIp,
+      "Customer-Session-Id": resolvedContext.customerSessionId,
+      "User-Agent": resolvedContext.userAgent,
+      "X-API-Key": this.apiKey, // Some EPS APIs use X-API-Key header
+    });
+
+    if (resolvedContext.testScenario) {
+      headers.set("Test", resolvedContext.testScenario);
+    }
+
+    if (existingHeaders) {
+      const overrides = new Headers(existingHeaders);
+      overrides.forEach((value, key) => {
+        headers.set(key, value);
+      });
+    }
+
+    return headers;
+  }
+
   /**
    * Make authenticated request to EPS API.
    *
@@ -85,19 +143,18 @@ export class ExpediaClient {
    * @returns Parsed JSON response
    * @throws {ExpediaApiError} On API errors
    */
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  private async request<T>(
+    endpoint: string,
+    options: RequestInit = {},
+    context?: ExpediaRequestContext
+  ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     const authToken = await this.getAuthToken();
+    const headers = this.buildHeaders(options.headers, context, authToken);
 
     const response = await fetch(url, {
       ...options,
-      headers: {
-        // biome-ignore lint/style/useNamingConvention: HTTP header names use PascalCase
-        Authorization: authToken,
-        "Content-Type": "application/json",
-        "X-API-Key": this.apiKey, // Some EPS APIs use X-API-Key header
-        ...options.headers,
-      },
+      headers,
     });
 
     if (!response.ok) {
@@ -127,38 +184,53 @@ export class ExpediaClient {
    * @returns Search results with properties
    * @throws {ExpediaApiError} On API errors
    */
-  async search(params: EpsSearchRequest): Promise<EpsSearchResponse> {
-    // Build query parameters
+  async search(
+    params: EpsSearchRequest,
+    context?: ExpediaRequestContext
+  ): Promise<EpsSearchResponse> {
+    if (!params.propertyIds || params.propertyIds.length === 0) {
+      throw new ExpediaApiError(
+        "Rapid Shopping API requires at least one propertyId per request",
+        "EPS_INVALID_REQUEST"
+      );
+    }
+
     const queryParams = new URLSearchParams({
-      checkIn: params.checkIn,
-      checkOut: params.checkOut,
-      guests: String(params.guests),
-      location: params.location,
+      checkin: params.checkIn,
+      checkout: params.checkOut,
+      // biome-ignore lint/style/useNamingConvention: EPS query parameters use snake_case
+      country_code: params.countryCode ?? "US",
+      currency: params.currency ?? "USD",
+      language: params.language ?? "en-US",
+      // biome-ignore lint/style/useNamingConvention: EPS query parameters use snake_case
+      rate_plan_count: String(params.ratePlanCount ?? 4),
+      // biome-ignore lint/style/useNamingConvention: EPS query parameters use snake_case
+      sales_channel: params.salesChannel ?? "website",
+      // biome-ignore lint/style/useNamingConvention: EPS query parameters use snake_case
+      sales_environment: params.salesEnvironment ?? "hotel_only",
+      // biome-ignore lint/style/useNamingConvention: EPS query parameters use snake_case
+      travel_purpose: params.travelPurpose ?? "leisure",
     });
 
-    if (params.propertyIds && params.propertyIds.length > 0) {
-      queryParams.append("propertyIds", params.propertyIds.join(","));
-    }
-    if (params.priceMin !== undefined) {
-      queryParams.append("priceMin", String(params.priceMin));
-    }
-    if (params.priceMax !== undefined) {
-      queryParams.append("priceMax", String(params.priceMax));
-    }
-    if (params.amenities && params.amenities.length > 0) {
-      queryParams.append("amenities", params.amenities.join(","));
-    }
-    if (params.propertyTypes && params.propertyTypes.length > 0) {
-      queryParams.append("propertyTypes", params.propertyTypes.join(","));
+    queryParams.append("occupancy", String(params.guests));
+    for (const id of params.propertyIds) {
+      queryParams.append("property_id", id);
     }
 
-    // TODO: Update endpoint path per actual EPS API documentation
-    // This is a placeholder based on common REST API patterns
+    if (params.include) {
+      for (const flag of params.include) {
+        queryParams.append("include", flag);
+      }
+    }
+    if (params.amenityCategory) {
+      for (const category of params.amenityCategory) {
+        queryParams.append("amenity_category", category);
+      }
+    }
+
     const endpoint = `/properties/availability?${queryParams.toString()}`;
 
-    return await this.request<EpsSearchResponse>(endpoint, {
-      method: "GET",
-    });
+    return await this.request<EpsSearchResponse>(endpoint, { method: "GET" }, context);
   }
 
   /**

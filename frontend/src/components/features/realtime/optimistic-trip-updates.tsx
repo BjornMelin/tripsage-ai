@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import { useTripRealtime, useUpdateTrip, type UpdateTripData } from "@/hooks";
+import { type UpdateTripData, useTripRealtime, useUpdateTrip } from "@/hooks";
 import type { Trip, UpdateTables } from "@/lib/supabase/database.types";
 
 type TripUpdate = UpdateTables<"trips">;

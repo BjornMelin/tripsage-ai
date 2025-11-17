@@ -278,6 +278,15 @@ export const memoryUpdateRequestSchema = z
 /** TypeScript type for memory update requests. */
 export type MemoryUpdateRequest = z.infer<typeof memoryUpdateRequestSchema>;
 
+/** Zod schema for router classification requests. */
+export const routerRequestSchema = z
+  .object({
+    message: z.string().min(1, { error: "message is required" }),
+  })
+  .describe("Router classification request");
+/** TypeScript type for router requests. */
+export type RouterRequest = z.infer<typeof routerRequestSchema>;
+
 /** Zod schema for router workflow classification results. */
 export const routerClassificationSchema = z
   .object({
@@ -303,6 +312,7 @@ export const agentSchemas = {
   itineraryPlanResultSchema,
   memoryUpdateRequestSchema,
   routerClassificationSchema,
+  routerRequestSchema,
 };
 /** TypeScript type for the agent schemas collection. */
 export type AgentSchemas = typeof agentSchemas;

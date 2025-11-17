@@ -163,9 +163,8 @@ export const useAuthCore = create<AuthCoreState>()(
           set({ isLoading: true });
 
           const clearSessionState = (): void => {
-            const { setSession, setTokenInfo } = useAuthSession.getState();
-            setSession(null);
-            setTokenInfo(null);
+            const { resetSession } = useAuthSession.getState();
+            resetSession();
           };
 
           try {

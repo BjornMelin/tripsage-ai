@@ -166,6 +166,12 @@ export const searchAccommodations = tool({
 
     // 5. Live API call to Expedia
     const expediaClient = getExpediaClient();
+    if (!propertyIds || propertyIds.length === 0) {
+      throw createToolError(TOOL_ERROR_CODES.accomSearchNotConfigured, undefined, {
+        reason: "missing_expedia_property_ids",
+      });
+    }
+
     let searchResponse: EpsSearchResponse;
     try {
       searchResponse = await expediaClient.search({
@@ -176,7 +182,7 @@ export const searchAccommodations = tool({
         location: validated.location.trim(),
         priceMax: validated.priceMax,
         priceMin: validated.priceMin,
-        propertyIds: propertyIds && propertyIds.length > 0 ? propertyIds : undefined,
+        propertyIds,
         propertyTypes: validated.propertyTypes,
       });
     } catch (error) {

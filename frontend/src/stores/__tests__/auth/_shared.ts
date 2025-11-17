@@ -51,9 +51,7 @@ export const resetAuthSlices = (): void => {
 
     // Reset auth-session slice
     useAuthSession.setState({
-      isRefreshingToken: false,
       session: null,
-      tokenInfo: null,
     });
 
     // Reset auth-validation slice

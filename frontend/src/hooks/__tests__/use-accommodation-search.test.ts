@@ -1,4 +1,5 @@
-import { act, renderHook } from "@testing-library/react";
+import { QueryClient } from "@tanstack/react-query";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import React, { type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiClient } from "@/lib/api/api-client";
@@ -20,14 +21,22 @@ vi.mock("@/stores/search-params-store");
 vi.mock("@/stores/search-results-store");
 
 describe("useAccommodationSearch", () => {
+  let queryClient: QueryClient;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    queryClient = new QueryClient({
+      defaultOptions: {
+        mutations: { retry: false },
+        queries: { gcTime: 0, retry: false, staleTime: 0 },
+      },
+    });
   });
 
   const wrapper = ({ children }: { children: ReactNode }) =>
-    React.createElement(AllTheProviders, null, children);
+    React.createElement(AllTheProviders, { children, queryClient });
 
-  it("should return hook properties", () => {
+  it("should return hook properties", async () => {
     const mockUpdateAccommodationParams = vi.fn();
     const mockStartSearch = vi.fn().mockReturnValue("search-123");
     const mockSetSearchResults = vi.fn();
@@ -45,7 +54,13 @@ describe("useAccommodationSearch", () => {
       startSearch: mockStartSearch,
     });
 
+    // Pre-populate the query cache with empty suggestions
+    queryClient.setQueryData(["accommodation-suggestions"], []);
+
     const { result } = renderHook(() => useAccommodationSearch(), { wrapper });
+
+    // Wait for the query to initialize
+    await waitFor(() => expect(result.current.suggestions).toBeDefined());
 
     // Check that the hook returns the expected properties
     expect(result.current.search).toBeDefined();
@@ -87,9 +102,12 @@ describe("useAccommodationSearch", () => {
 
     const { result } = renderHook(() => useAccommodationSearch(), { wrapper });
 
-    await act(async () => {
-      // Wait for hook to fetch suggestions
-    });
+    await waitFor(
+      () => {
+        expect(result.current.suggestions).toBeDefined();
+      },
+      { timeout: 1000 }
+    );
 
     expect(result.current.suggestions).toEqual(mockSuggestions);
     expect(apiClient.get).toHaveBeenCalledWith("/accommodations/suggestions");
@@ -109,6 +127,9 @@ describe("useAccommodationSearch", () => {
       startSearch: vi.fn(),
     });
 
+    // Pre-populate the query cache to prevent undefined data errors
+    queryClient.setQueryData(["accommodation-suggestions"], []);
+
     const { result } = renderHook(() => useAccommodationSearch(), { wrapper });
 
     const newParams = { adults: 3, destination: "London" };
@@ -117,7 +138,7 @@ describe("useAccommodationSearch", () => {
     expect(mockUpdateAccommodationParams).toHaveBeenCalledWith(newParams);
   });
 
-  it("should handle API post requests", () => {
+  it("should handle API post requests", async () => {
     const mockResults = {
       results: [
         {
@@ -140,17 +161,22 @@ describe("useAccommodationSearch", () => {
     vi.mocked(apiClient.post).mockResolvedValue(mockResults);
 
     const mockStartSearch = vi.fn().mockReturnValue("search-123");
+    const mockSetSearchResults = vi.fn();
+    const mockCompleteSearch = vi.fn();
 
     vi.mocked(useSearchParamsStore).mockReturnValue({
       updateAccommodationParams: vi.fn(),
     });
 
     vi.mocked(useSearchResultsStore).mockReturnValue({
-      completeSearch: vi.fn(),
+      completeSearch: mockCompleteSearch,
       setSearchError: vi.fn(),
-      setSearchResults: vi.fn(),
+      setSearchResults: mockSetSearchResults,
       startSearch: mockStartSearch,
     });
+
+    // Pre-populate the query cache to prevent undefined data errors
+    queryClient.setQueryData(["accommodation-suggestions"], []);
 
     const { result } = renderHook(() => useAccommodationSearch(), { wrapper });
 
@@ -164,16 +190,32 @@ describe("useAccommodationSearch", () => {
       rooms: 1,
     };
 
-    // Trigger search
+    // Trigger search and wait for completion
     act(() => {
       result.current.search(searchParams);
     });
 
-    // API call should be made
-    expect(apiClient.post).toHaveBeenCalledWith("/accommodations/search", searchParams);
+    // Wait for API call
+    await waitFor(
+      () => {
+        expect(apiClient.post).toHaveBeenCalledWith(
+          "/accommodations/search",
+          searchParams
+        );
+      },
+      { timeout: 1000 }
+    );
+
+    // Wait for results to be processed
+    await waitFor(
+      () => {
+        expect(mockSetSearchResults).toHaveBeenCalled();
+      },
+      { timeout: 1000 }
+    );
   });
 
-  it("should handle loading state", () => {
+  it("should handle loading state", async () => {
     let resolvePromise!: (value: unknown) => void;
     const promise = new Promise<unknown>((resolve) => {
       resolvePromise = resolve;
@@ -192,6 +234,9 @@ describe("useAccommodationSearch", () => {
       startSearch: vi.fn().mockReturnValue("search-123"),
     });
 
+    // Pre-populate the query cache to prevent undefined data errors
+    queryClient.setQueryData(["accommodation-suggestions"], []);
+
     const { result } = renderHook(() => useAccommodationSearch(), { wrapper });
 
     expect(result.current.isSearching).toBe(false);
@@ -209,8 +254,13 @@ describe("useAccommodationSearch", () => {
       });
     });
 
-    // Loading state should be true immediately
-    expect(result.current.isSearching).toBe(true);
+    // Loading state should become true
+    await waitFor(
+      () => {
+        expect(result.current.isSearching).toBe(true);
+      },
+      { timeout: 1000 }
+    );
 
     // Resolve the promise
     act(() => {
@@ -220,6 +270,12 @@ describe("useAccommodationSearch", () => {
       });
     });
 
+    // Wait for promise resolution
+    await act(async () => {
+      await promise;
+    });
+
+    // Should be false after completion
     expect(result.current.isSearching).toBe(false);
   });
 });
