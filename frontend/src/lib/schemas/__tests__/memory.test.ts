@@ -7,7 +7,7 @@ import {
 
 describe("Memory Schemas", () => {
   describe("SEARCH_MEMORIES_REQUEST_SCHEMA", () => {
-    it("should validate a valid search request with proper filters", () => {
+    it.concurrent("should validate a valid search request with proper filters", () => {
       const validRequest = {
         filters: {
           metadata: { category: "accommodation" },
@@ -25,7 +25,7 @@ describe("Memory Schemas", () => {
       }
     });
 
-    it("should validate a search request without filters", () => {
+    it.concurrent("should validate a search request without filters", () => {
       const validRequest = {
         limit: 20,
         query: "hotels",
@@ -36,7 +36,7 @@ describe("Memory Schemas", () => {
       expect(result.success).toBe(true);
     });
 
-    it("accepts unknown filter properties (backward-compatible)", () => {
+    it.concurrent("accepts unknown filter properties (backward-compatible)", () => {
       const invalidRequest = {
         filters: { category: "accommodation" }, // This should fail
         limit: 10,
@@ -48,7 +48,7 @@ describe("Memory Schemas", () => {
       expect(result.success).toBe(true);
     });
 
-    it("should validate filters with dateRange", () => {
+    it.concurrent("should validate filters with dateRange", () => {
       const validRequest = {
         filters: {
           dateRange: {
@@ -67,7 +67,7 @@ describe("Memory Schemas", () => {
   });
 
   describe("SEARCH_MEMORIES_FILTERS_SCHEMA", () => {
-    it("should validate optional filters", () => {
+    it.concurrent("should validate optional filters", () => {
       const validFilters = {
         metadata: { source: "booking" },
         type: ["accommodation", "flight"],
@@ -77,12 +77,12 @@ describe("Memory Schemas", () => {
       expect(result.success).toBe(true);
     });
 
-    it("should validate undefined filters", () => {
+    it.concurrent("should validate undefined filters", () => {
       const result = SEARCH_MEMORIES_FILTERS_SCHEMA.safeParse(undefined);
       expect(result.success).toBe(true);
     });
 
-    it("allows unknown filter properties by design", () => {
+    it.concurrent("allows unknown filter properties by design", () => {
       const invalidFilters = {
         category: "accommodation", // Wrong property
         invalidProp: "test",
@@ -94,7 +94,7 @@ describe("Memory Schemas", () => {
   });
 
   describe("MEMORY_SCHEMA", () => {
-    it("should validate a complete memory object", () => {
+    it.concurrent("should validate a complete memory object", () => {
       const validMemory = {
         content: "User prefers luxury hotels",
         createdAt: "2024-01-01T10:00:00Z",
@@ -110,7 +110,7 @@ describe("Memory Schemas", () => {
       expect(result.success).toBe(true);
     });
 
-    it("should validate memory without optional fields", () => {
+    it.concurrent("should validate memory without optional fields", () => {
       const minimalMemory = {
         content: "User likes Paris",
         createdAt: "2024-01-01T10:00:00Z",

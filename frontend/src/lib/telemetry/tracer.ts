@@ -3,10 +3,9 @@
  */
 
 import "server-only";
-import { type Tracer, trace } from "@opentelemetry/api";
 
-/** Canonical tracer/service name for frontend observability. */
-export const TELEMETRY_SERVICE_NAME = "tripsage-frontend";
+import { type Tracer, trace } from "@opentelemetry/api";
+import { TELEMETRY_SERVICE_NAME } from "./constants";
 
 /**
  * Returns the shared tracer instance for frontend telemetry.
