@@ -51,19 +51,6 @@ export const resetTestQueryClient = (): void => {
   sharedQueryClient.getMutationCache?.().clear?.();
 };
 
-/**
- * Creates a test QueryClient with disabled retries and caching.
- * @deprecated Use getTestQueryClient() instead for better performance.
- * @returns A configured QueryClient for testing.
- */
-export const createTestQueryClient = () =>
-  new QueryClient({
-    defaultOptions: {
-      mutations: { retry: false },
-      queries: { gcTime: 0, retry: false, staleTime: 0 },
-    },
-  });
-
 // Props for the AllTheProviders component.
 export interface ProvidersProps {
   // The child components to render.
