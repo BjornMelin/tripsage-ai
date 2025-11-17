@@ -10,6 +10,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAgentStatusStore } from "@/stores/agent-status-store";
+import { useChatMessages, useSessions } from "@/stores/chat/chat-messages";
 
 /**
  * Props interface for the ChatSidebar component.
@@ -39,11 +40,31 @@ interface ChatSidebarProps extends React.HTMLAttributes<HTMLElement> {
 function ChatSidebar({
   className,
   onNewChat,
-  sessions = [],
+  sessions: injectedSessions,
   ...props
 }: ChatSidebarProps) {
   const pathname = usePathname();
   const currentChatId = pathname.split("/").pop();
+  const storeSessions = useSessions();
+  const { createSession, setCurrentSession } = useChatMessages();
+
+  // Use injected sessions for tests, otherwise use store sessions
+  const sessions =
+    injectedSessions ??
+    storeSessions.map((s) => ({
+      id: s.id,
+      lastMessage: s.messages?.[s.messages.length - 1]?.content ?? "",
+      title: s.title,
+      updatedAt: s.updatedAt,
+    }));
+
+  const handleNewChat = () => {
+    const sessionId = createSession();
+    setCurrentSession(sessionId);
+    if (onNewChat) {
+      onNewChat();
+    }
+  };
 
   return (
     <nav
@@ -54,7 +75,7 @@ function ChatSidebar({
       <div className="p-4 border-b">
         <button
           type="button"
-          onClick={onNewChat}
+          onClick={handleNewChat}
           className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
         >
           <svg

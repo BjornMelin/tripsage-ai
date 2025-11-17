@@ -46,7 +46,7 @@ export const ROUTE_RATE_LIMITS = {
   "calendar:ics:import": { limit: 10, window: "1 m" },
   "calendar:status": { limit: 60, window: "1 m" },
   "chat:attachments": { limit: 20, window: "1 m" },
-  "chat:nonstream": { limit: 40, window: "1 m" },
+  "chat:nonstream": { limit: 60, window: "1 m" },
   "chat:sessions:create": { limit: 30, window: "1 m" },
   "chat:sessions:delete": { limit: 20, window: "1 m" },
   "chat:sessions:get": { limit: 60, window: "1 m" },
