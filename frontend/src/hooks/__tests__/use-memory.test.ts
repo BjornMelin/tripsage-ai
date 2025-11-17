@@ -45,6 +45,15 @@ vi.mock("../use-authenticated-api", () => ({
   }),
 }));
 
+// Spy on useQuery and useMutation to inspect options passed to them
+vi.mock("@tanstack/react-query", async () => {
+  const actual = await vi.importActual<typeof import("@tanstack/react-query")>("@tanstack/react-query");
+  return Object.assign(actual, {
+    useQuery: vi.fn((...args: Parameters<typeof actual.useQuery>) => actual.useQuery(...args)),
+    useMutation: vi.fn((...args: Parameters<typeof actual.useMutation>) => actual.useMutation(...args)),
+  });
+});
+
 const useQueryMock = vi.mocked(useQuery);
 const useMutationMock = vi.mocked(useMutation);
 
@@ -66,8 +75,6 @@ describe("Memory Hooks", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     MOCK_MAKE_AUTHENTICATED_REQUEST.mockReset();
-    useQueryMock.mockClear();
-    useMutationMock.mockClear();
   });
 
   describe("useMemoryContext", () => {

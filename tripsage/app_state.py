@@ -26,13 +26,11 @@ if TYPE_CHECKING:  # pragma: no cover - import only for type checking
     from tripsage_core.services.business.file_processing_service import (
         FileProcessingService,
     )
-    from tripsage_core.services.business.flight_service import FlightService
     from tripsage_core.services.business.itinerary_service import ItineraryService
     from tripsage_core.services.business.trip_service import TripService
     from tripsage_core.services.external_apis import (
         DocumentAnalyzer,
         PlaywrightService,
-        WebCrawlService,
     )
     from tripsage_core.services.infrastructure import CacheService, DatabaseService
 
@@ -48,7 +46,6 @@ class AppServiceContainer:
 
     # Business services
     file_processing_service: FileProcessingService | None = None
-    flight_service: FlightService | None = None
     itinerary_service: ItineraryService | None = None
 
     trip_service: TripService | None = None
@@ -56,7 +53,6 @@ class AppServiceContainer:
     # External API services
     document_analyzer: DocumentAnalyzer | None = None
     playwright_service: PlaywrightService | None = None
-    webcrawl_service: WebCrawlService | None = None
 
     # Infrastructure services
     cache_service: CacheService | None = None
@@ -116,16 +112,14 @@ async def _setup_infrastructure_services() -> tuple[DatabaseService, CacheServic
     return (database_service, cache_service)
 
 
-async def _setup_external_services() -> tuple[DocumentAnalyzer, WebCrawlService]:
+async def _setup_external_services() -> tuple[DocumentAnalyzer]:
     """Initialise external API clients."""
     from tripsage_core.services.external_apis import (
         DocumentAnalyzer,
-        WebCrawlService,
     )
 
     document_analyzer = DocumentAnalyzer()
-    webcrawl_service = WebCrawlService()
-    return document_analyzer, webcrawl_service
+    return (document_analyzer,)
 
 
 async def _setup_business_services(
@@ -138,10 +132,10 @@ async def _setup_business_services(
     """Initialise business-layer services."""
     # ActivityService, DestinationService, UnifiedSearchService, SearchFacade removed
     # (migrated to Next.js AI SDK v6 agents)
+    # FlightService removed (migrated to frontend/src/lib/tools/flights.ts)
     from tripsage_core.services.business.file_processing_service import (
         FileProcessingService,
     )
-    from tripsage_core.services.business.flight_service import FlightService
     from tripsage_core.services.business.itinerary_service import ItineraryService
     from tripsage_core.services.business.trip_service import TripService
 
@@ -149,7 +143,6 @@ async def _setup_business_services(
         database_service=database_service,
         ai_analysis_service=document_analyzer,
     )
-    flight_service = FlightService(database_service=database_service)
     itinerary_service = ItineraryService(database_service=database_service)
     trip_service = TripService(
         database_service=database_service,
@@ -157,7 +150,6 @@ async def _setup_business_services(
 
     return {
         "file_processing_service": file_processing_service,
-        "flight_service": flight_service,
         "itinerary_service": itinerary_service,
         "trip_service": trip_service,
     }
@@ -167,22 +159,17 @@ def _build_service_container(
     *,
     business: dict[str, Any],
     infrastructure: tuple[DatabaseService, CacheService],
-    external: tuple[DocumentAnalyzer, WebCrawlService],
+    external: tuple[DocumentAnalyzer],
 ) -> AppServiceContainer:
     """Assemble the AppServiceContainer with the provided components."""
     database_service, cache_service = infrastructure
-    (
-        document_analyzer,
-        webcrawl_service,
-    ) = external
+    (document_analyzer,) = external
 
     return AppServiceContainer(
         file_processing_service=business["file_processing_service"],
-        flight_service=business["flight_service"],
         itinerary_service=business["itinerary_service"],
         trip_service=business["trip_service"],
         document_analyzer=document_analyzer,
-        webcrawl_service=webcrawl_service,
         cache_service=cache_service,
         database_service=database_service,
     )

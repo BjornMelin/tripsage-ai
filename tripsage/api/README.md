@@ -71,7 +71,6 @@ tripsage/api/
 │   ├── logging.py         # Structured logging and observability
 │   └── rate_limiting.py   # Rate limiting by consumer type
 ├── routers/               # API endpoints organized by domain
-│   ├── auth.py           # Authentication and authorization
 │   ├── trips.py          # Trip planning and management
 │   ├── itineraries.py    # Itinerary building and optimization
 │   ├── attachments.py    # File upload and processing
@@ -368,17 +367,20 @@ The API leverages `tripsage_core` for:
 Example service integration:
 
 ```python
-from tripsage_core.services.business import FlightService
+from tripsage_core.services.business import TripService
 from tripsage_core.config import get_app_settings
 
 settings = get_app_settings()
-flight_service = FlightService(settings)
+trip_service = TripService(database_service=database_service)
 
-@router.post("/flights/search")
-async def search_flights(criteria: FlightSearchRequest):
-    results = await flight_service.search_flights(criteria)
-    return FlightSearchResponse(data=results)
+@router.post("/trips")
+async def create_trip(request: TripCreateRequest):
+    trip = await trip_service.create_trip(user_id, request)
+    return TripResponse(**trip.model_dump())
 ```
+
+> [!NOTE]
+> Flight search functionality has been migrated to `frontend/src/lib/tools/flights.ts` using Duffel API directly.
 
 ## Monitoring & Observability
 
