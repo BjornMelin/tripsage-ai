@@ -6,7 +6,15 @@
 
 "use client";
 
-import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import {
+  useActionState,
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useState,
+} from "react";
+import { updateGatewayFallbackPreference } from "@/app/api/user-settings/actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -93,14 +101,24 @@ export default function ApiKeysPage() {
     }
   };
 
-  const onToggleFallback = async (val: boolean) => {
+  const [_actionState, actionDispatch, isPending] = useActionState(
+    async (_prevState: unknown, val: boolean) => {
+      try {
+        await updateGatewayFallbackPreference(val);
+        setAllowGatewayFallback(val);
+        return { success: true };
+      } catch {
+        // revert on failure
+        setAllowGatewayFallback((prev) => !prev);
+        return { success: false };
+      }
+    },
+    { success: true }
+  );
+
+  const onToggleFallback = (val: boolean) => {
     setAllowGatewayFallback(val);
-    try {
-      await authenticatedApi.post("/api/user-settings", { allowGatewayFallback: val });
-    } catch {
-      // revert on failure
-      setAllowGatewayFallback((prev) => !prev);
-    }
+    actionDispatch(val);
   };
 
   // Generate unique ids for form controls to satisfy accessibility and lint rules
@@ -208,7 +226,7 @@ export default function ApiKeysPage() {
             </div>
             <Switch
               checked={!!allowGatewayFallback}
-              disabled={loading || allowGatewayFallback === null}
+              disabled={loading || allowGatewayFallback === null || isPending}
               onCheckedChange={onToggleFallback}
             />
           </div>
