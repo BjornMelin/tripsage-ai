@@ -1,3 +1,5 @@
+/** @vitest-environment jsdom */
+
 import { zodResolver } from "@hookform/resolvers/zod";
 import { render } from "@testing-library/react";
 import React from "react";

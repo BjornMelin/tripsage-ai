@@ -20,11 +20,30 @@ import {
   listEvents,
   updateEvent,
 } from "@/lib/calendar/google";
+import { parseJsonBody, validateSchema } from "@/lib/next/route-helpers";
 import {
   createEventRequestSchema,
   eventsListRequestSchema,
   updateEventRequestSchema,
 } from "@/lib/schemas/calendar";
+
+/**
+ * Extracts calendar ID from body or query params with default fallback.
+ *
+ * @param source Source object (body or searchParams).
+ * @param key Key to extract (defaults to "calendarId").
+ * @returns Calendar ID string.
+ */
+function getCalendarId(
+  source: Record<string, unknown> | URLSearchParams,
+  key = "calendarId"
+): string {
+  const value =
+    source instanceof URLSearchParams
+      ? source.get(key)
+      : (source[key] as string | undefined);
+  return value || "primary";
+}
 
 /**
  * GET /api/calendar/events
@@ -77,8 +96,11 @@ export const GET = withApiGuards({
     params.showDeleted = true;
   }
 
-  const validated = eventsListRequestSchema.parse(params);
-  const result = await listEvents(validated);
+  const validation = validateSchema(eventsListRequestSchema, params);
+  if ("error" in validation) {
+    return validation.error;
+  }
+  const result = await listEvents(validation.data);
 
   return NextResponse.json(result);
 });
@@ -97,25 +119,19 @@ export const POST = withApiGuards({
   rateLimit: "calendar:events:create",
   telemetry: "calendar.events.create",
 })(async (req: NextRequest) => {
-  const body = await req.json();
-  const calendarId = (body.calendarId as string) || "primary";
-
-  // Convert date strings to Date objects if needed
-  if (body.start?.dateTime && typeof body.start.dateTime === "string") {
-    body.start.dateTime = new Date(body.start.dateTime);
-  }
-  if (body.start?.date && typeof body.start.date === "string") {
-    // Keep as string for all-day events
-  }
-  if (body.end?.dateTime && typeof body.end.dateTime === "string") {
-    body.end.dateTime = new Date(body.end.dateTime);
-  }
-  if (body.end?.date && typeof body.end.date === "string") {
-    // Keep as string for all-day events
+  const parsed = await parseJsonBody(req);
+  if ("error" in parsed) {
+    return parsed.error;
   }
 
-  const validated = createEventRequestSchema.parse(body);
-  const result = await createEvent(validated, calendarId);
+  const typedBody = parsed.body as Record<string, unknown>;
+  const calendarId = getCalendarId(typedBody);
+
+  const validation = validateSchema(createEventRequestSchema, parsed.body);
+  if ("error" in validation) {
+    return validation.error;
+  }
+  const result = await createEvent(validation.data, calendarId);
 
   return NextResponse.json(result, { status: 201 });
 });
@@ -136,7 +152,7 @@ export const PATCH = withApiGuards({
 })(async (req: NextRequest) => {
   const { searchParams } = new URL(req.url);
   const eventId = searchParams.get("eventId");
-  const calendarId = searchParams.get("calendarId") || "primary";
+  const calendarId = getCalendarId(searchParams);
 
   if (!eventId) {
     return NextResponse.json(
@@ -145,18 +161,16 @@ export const PATCH = withApiGuards({
     );
   }
 
-  const body = await req.json();
-
-  // Convert date strings to Date objects if needed
-  if (body.start?.dateTime && typeof body.start.dateTime === "string") {
-    body.start.dateTime = new Date(body.start.dateTime);
-  }
-  if (body.end?.dateTime && typeof body.end.dateTime === "string") {
-    body.end.dateTime = new Date(body.end.dateTime);
+  const parsed = await parseJsonBody(req);
+  if ("error" in parsed) {
+    return parsed.error;
   }
 
-  const validated = updateEventRequestSchema.parse(body);
-  const result = await updateEvent(eventId, validated, calendarId);
+  const validation = validateSchema(updateEventRequestSchema, parsed.body);
+  if ("error" in validation) {
+    return validation.error;
+  }
+  const result = await updateEvent(eventId, validation.data, calendarId);
 
   return NextResponse.json(result);
 });
@@ -177,7 +191,7 @@ export const DELETE = withApiGuards({
 })(async (req: NextRequest) => {
   const { searchParams } = new URL(req.url);
   const eventId = searchParams.get("eventId");
-  const calendarId = searchParams.get("calendarId") || "primary";
+  const calendarId = getCalendarId(searchParams);
 
   if (!eventId) {
     return NextResponse.json(

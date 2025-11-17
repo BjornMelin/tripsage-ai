@@ -230,8 +230,8 @@ export const freeBusyRequestSchema = z
     calendarExpansionMax: z.number().int().min(1).max(50).default(50),
     groupExpansionMax: z.number().int().min(1).max(100).default(50),
     items: z.array(freeBusyCalendarItemSchema).min(1),
-    timeMax: z.date(),
-    timeMin: z.date(),
+    timeMax: z.union([z.date(), z.string().transform((val) => new Date(val))]),
+    timeMin: z.union([z.date(), z.string().transform((val) => new Date(val))]),
     timeZone: z.string().optional(),
   })
   .refine((data) => data.timeMax > data.timeMin, {

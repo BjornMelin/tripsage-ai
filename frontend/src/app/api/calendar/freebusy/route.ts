@@ -14,6 +14,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { queryFreeBusy } from "@/lib/calendar/google";
+import { parseJsonBody, validateSchema } from "@/lib/next/route-helpers";
 import { freeBusyRequestSchema } from "@/lib/schemas/calendar";
 
 /**
@@ -30,18 +31,16 @@ export const POST = withApiGuards({
   rateLimit: "calendar:freebusy",
   telemetry: "calendar.freebusy",
 })(async (req: NextRequest) => {
-  const body = await req.json();
-
-  // Convert date strings to Date objects
-  if (body.timeMin && typeof body.timeMin === "string") {
-    body.timeMin = new Date(body.timeMin);
-  }
-  if (body.timeMax && typeof body.timeMax === "string") {
-    body.timeMax = new Date(body.timeMax);
+  const parsed = await parseJsonBody(req);
+  if ("error" in parsed) {
+    return parsed.error;
   }
 
-  const validated = freeBusyRequestSchema.parse(body);
-  const result = await queryFreeBusy(validated);
+  const validation = validateSchema(freeBusyRequestSchema, parsed.body);
+  if ("error" in validation) {
+    return validation.error;
+  }
+  const result = await queryFreeBusy(validation.data);
 
   return NextResponse.json(result);
 });

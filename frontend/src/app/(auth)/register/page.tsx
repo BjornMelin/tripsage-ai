@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default async function RegisterPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string }>;
+  searchParams: Promise<{ from?: string; status?: string; error?: string }>;
 }) {
   const params = await searchParams;
   const redirectTo = params.from || "/dashboard";

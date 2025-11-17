@@ -17,6 +17,7 @@ import { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
 import { RecurringDateGenerator } from "@/lib/dates/recurring-rules";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
+import { parseJsonBody, validateSchema } from "@/lib/next/route-helpers";
 import { calendarEventSchema } from "@/lib/schemas/calendar";
 
 type ParsedIcsEvent = {
@@ -195,8 +196,16 @@ export const POST = withApiGuards({
   rateLimit: "calendar:ics:import",
   telemetry: "calendar.ics.import",
 })(async (req: NextRequest): Promise<NextResponse> => {
-  const body = await req.json();
-  const validated = importRequestSchema.parse(body);
+  const parsed = await parseJsonBody(req);
+  if ("error" in parsed) {
+    return parsed.error;
+  }
+
+  const validation = validateSchema(importRequestSchema, parsed.body);
+  if ("error" in validation) {
+    return validation.error;
+  }
+  const validated = validation.data;
 
   // Parse ICS data
   let parsedEvents: ReturnType<typeof parseICS>;

@@ -1,7 +1,4 @@
-/**
- * Test file to verify React key prop fixes
- * Tests that components render without key warnings when using proper keys
- */
+/** @vitest-environment jsdom */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SearchFilters } from "@/components/features/search/search-filters";
@@ -9,20 +6,19 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import type { FilterOption } from "@/lib/schemas/search";
 import { render } from "@/test/test-utils";
 
-// Mock console.warn to capture React key warnings
-const ORIGINAL_WARN = console.warn;
 let warningMessages: string[] = [];
+let warnSpy: ReturnType<typeof vi.spyOn> | null = null;
 
 beforeEach(() => {
   warningMessages = [];
-  console.warn = vi.fn((message: string) => {
+  warnSpy = vi.spyOn(console, "warn").mockImplementation((message: string) => {
     warningMessages.push(message);
-    ORIGINAL_WARN(message);
   });
 });
 
 afterEach(() => {
-  console.warn = ORIGINAL_WARN;
+  warnSpy?.mockRestore();
+  warnSpy = null;
 });
 
 describe("React Key Props", () => {
@@ -30,7 +26,10 @@ describe("React Key Props", () => {
     render(<LoadingSpinner variant="dots" />);
 
     const keyWarnings = warningMessages.filter(
-      (msg) => msg.includes("key") && msg.includes("Warning")
+      (msg) =>
+        typeof msg === "string" &&
+        (msg.includes('unique "key" prop') ||
+          (msg.includes("key") && msg.includes("Warning")))
     );
 
     expect(keyWarnings).toHaveLength(0);
@@ -40,7 +39,10 @@ describe("React Key Props", () => {
     render(<LoadingSpinner variant="bars" />);
 
     const keyWarnings = warningMessages.filter(
-      (msg) => msg.includes("key") && msg.includes("Warning")
+      (msg) =>
+        typeof msg === "string" &&
+        (msg.includes('unique "key" prop') ||
+          (msg.includes("key") && msg.includes("Warning")))
     );
 
     expect(keyWarnings).toHaveLength(0);
@@ -81,7 +83,10 @@ describe("React Key Props", () => {
     );
 
     const keyWarnings = warningMessages.filter(
-      (msg) => msg.includes("key") && msg.includes("Warning")
+      (msg) =>
+        typeof msg === "string" &&
+        (msg.includes('unique "key" prop') ||
+          (msg.includes("key") && msg.includes("Warning")))
     );
 
     expect(keyWarnings).toHaveLength(0);
@@ -97,7 +102,10 @@ describe("React Key Props", () => {
 
     // Verify no React key warnings
     const keyWarnings = warningMessages.filter(
-      (msg) => msg.includes("key") && msg.includes("Warning")
+      (msg) =>
+        typeof msg === "string" &&
+        (msg.includes('unique "key" prop') ||
+          (msg.includes("key") && msg.includes("Warning")))
     );
     expect(keyWarnings).toHaveLength(0);
   });
