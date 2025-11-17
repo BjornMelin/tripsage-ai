@@ -49,7 +49,7 @@ describe("ChatRealtime", () => {
       expect(typingUsers["session-1_user-1"]?.username).toBe("User");
     });
 
-    it("auto-removes typing user after timeout", async () => {
+    it("auto-removes typing user after timeout", () => {
       vi.useFakeTimers();
       useChatRealtime.getState().setUserTyping("session-1", "user-1");
 
