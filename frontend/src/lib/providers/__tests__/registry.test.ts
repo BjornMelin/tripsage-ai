@@ -156,9 +156,9 @@ describe("resolveProvider", () => {
     const { getUserApiKey } = await import("@/lib/supabase/rpc");
     (getUserApiKey as unknown as Mock).mockResolvedValue(null);
     const { resolveProvider } = await import("../registry");
-    
+
     await expect(resolveProvider("user-5")).rejects.toThrow(/No provider key found/);
-    
+
     // Restore original environment
     process.env = originalEnv;
   });

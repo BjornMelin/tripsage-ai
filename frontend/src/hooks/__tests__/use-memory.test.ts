@@ -47,10 +47,16 @@ vi.mock("../use-authenticated-api", () => ({
 
 // Spy on useQuery and useMutation to inspect options passed to them
 vi.mock("@tanstack/react-query", async () => {
-  const actual = await vi.importActual<typeof import("@tanstack/react-query")>("@tanstack/react-query");
+  const actual = await vi.importActual<typeof import("@tanstack/react-query")>(
+    "@tanstack/react-query"
+  );
   return Object.assign(actual, {
-    useQuery: vi.fn((...args: Parameters<typeof actual.useQuery>) => actual.useQuery(...args)),
-    useMutation: vi.fn((...args: Parameters<typeof actual.useMutation>) => actual.useMutation(...args)),
+    useMutation: vi.fn((...args: Parameters<typeof actual.useMutation>) =>
+      actual.useMutation(...args)
+    ),
+    useQuery: vi.fn((...args: Parameters<typeof actual.useQuery>) =>
+      actual.useQuery(...args)
+    ),
   });
 });
 

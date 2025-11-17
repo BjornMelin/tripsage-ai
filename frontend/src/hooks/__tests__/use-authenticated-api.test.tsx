@@ -86,7 +86,10 @@ describe("useAuthenticatedApi", () => {
     auth = supabase.auth as unknown as SupabaseAuthMock;
     testUser = CREATE_TEST_USER();
     MOCKED_API_GET.mockResolvedValue({ ok: true } as unknown as Response);
-    // Set up auth mocks (vi.clearAllMocks() already reset them)
+    // Reset and set up auth mocks
+    auth.getSession.mockReset();
+    auth.refreshSession.mockReset();
+    auth.signOut.mockReset();
     auth.getSession.mockResolvedValue(BUILD_GET_SESSION_RESPONSE(null));
     auth.refreshSession.mockResolvedValue(BUILD_REFRESH_RESPONSE(null, null));
     auth.signOut.mockResolvedValue({ error: null });
