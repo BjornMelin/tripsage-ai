@@ -28,8 +28,8 @@ importers:
         specifier: 3.0.0-beta.99
         version: 3.0.0-beta.99(react@19.2.0)(zod@4.1.12)
       '@ai-sdk/xai':
-        specifier: 3.0.0-beta.37
-        version: 3.0.0-beta.37(zod@4.1.12)
+        specifier: 3.0.0-beta.38
+        version: 3.0.0-beta.38(zod@4.1.12)
       '@hello-pangea/dnd':
         specifier: ^18.0.1
         version: 18.0.1(@types/react@19.2.2)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -378,8 +378,8 @@ packages:
     peerDependencies:
       react: ^18 || ^19 || ^19.0.0-rc
 
-  '@ai-sdk/xai@3.0.0-beta.37':
-    resolution: {integrity: sha512-n7Llj40lOuBggVHfRVe3N20LY5oQa9RxNnfO0sWH0+wfghm+t2b/rj/uKNvxs6Tg2FH/zpVUP97ozUNpeZ0USw==}
+  '@ai-sdk/xai@3.0.0-beta.38':
+    resolution: {integrity: sha512-uxUSDp5WH5RO3Q2sJzoQwf+zPcSDvSwIwp9Sq/X/Cu8f4eTmOvbsSzo0EedCJanigtLcCEAW05AtHAck5F+6JQ==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -4508,7 +4508,7 @@ snapshots:
       - effect
       - zod
 
-  '@ai-sdk/xai@3.0.0-beta.37(zod@4.1.12)':
+  '@ai-sdk/xai@3.0.0-beta.38(zod@4.1.12)':
     dependencies:
       '@ai-sdk/openai-compatible': 2.0.0-beta.34(zod@4.1.12)
       '@ai-sdk/provider': 3.0.0-beta.16

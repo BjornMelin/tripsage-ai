@@ -38,7 +38,7 @@
     "@ai-sdk/mcp": "1.0.0-beta.15",
     "@ai-sdk/openai": "3.0.0-beta.57",
     "@ai-sdk/react": "3.0.0-beta.99",
-    "@ai-sdk/xai": "3.0.0-beta.37",
+    "@ai-sdk/xai": "3.0.0-beta.38",
     "@hello-pangea/dnd": "^18.0.1",
     "@hookform/resolvers": "^5.2.2",
     "@opentelemetry/api": "^1.9.0",
