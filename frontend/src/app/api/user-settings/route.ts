@@ -15,6 +15,7 @@ import "server-only";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
+import { parseJsonBody } from "@/lib/next/route-helpers";
 import { getUserAllowGatewayFallback } from "@/lib/supabase/rpc";
 
 /**
@@ -54,16 +55,15 @@ export const POST = withApiGuards({
   rateLimit: "user-settings:update",
   telemetry: "user-settings.update",
 })(async (req: NextRequest, { user, supabase }) => {
-  let allowGatewayFallback: unknown;
-  try {
-    const body = await req.json();
-    allowGatewayFallback = body?.allowGatewayFallback;
-  } catch {
+  const parsed = await parseJsonBody(req);
+  if ("error" in parsed) {
     return NextResponse.json(
       { code: "BAD_REQUEST", error: "Malformed JSON" },
       { status: 400 }
     );
   }
+  const body = parsed.body as { allowGatewayFallback?: unknown };
+  const allowGatewayFallback = body?.allowGatewayFallback;
   if (typeof allowGatewayFallback !== "boolean") {
     return NextResponse.json(
       { code: "BAD_REQUEST", error: "allowGatewayFallback must be boolean" },

@@ -12,7 +12,7 @@ import { NextResponse } from "next/server";
 import type { z } from "zod";
 import { classifyUserMessage } from "@/lib/agents/router-agent";
 import { withApiGuards } from "@/lib/api/factory";
-import { errorResponse } from "@/lib/next/route-helpers";
+import { errorResponse, parseJsonBody } from "@/lib/next/route-helpers";
 import { resolveProvider } from "@/lib/providers/registry";
 import type { RouterRequest } from "@/lib/schemas/agents";
 import { agentSchemas } from "@/lib/schemas/agents";
@@ -35,10 +35,14 @@ export const POST = withApiGuards({
   rateLimit: "agents:router",
   telemetry: "agent.router",
 })(async (req: NextRequest, { user }) => {
-  const raw = (await req.json().catch(() => ({}))) as unknown;
+  const parsed = await parseJsonBody(req);
+  if ("error" in parsed) {
+    return parsed.error;
+  }
+
   let body: RouterRequest;
   try {
-    body = RequestSchema.parse(raw);
+    body = RequestSchema.parse(parsed.body);
   } catch (err) {
     const zerr = err as z.ZodError;
     return errorResponse({

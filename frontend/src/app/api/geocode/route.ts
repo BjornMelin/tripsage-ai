@@ -12,7 +12,7 @@ import { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
 import { cacheLatLng, getCachedLatLng } from "@/lib/google/caching";
-import { errorResponse } from "@/lib/next/route-helpers";
+import { errorResponse, parseJsonBody, validateSchema } from "@/lib/next/route-helpers";
 
 const geocodeRequestSchema = z.object({
   address: z.string().optional(),
@@ -34,8 +34,16 @@ export const POST = withApiGuards({
   rateLimit: "geocode",
   telemetry: "geocode.lookup",
 })(async (req: NextRequest) => {
-  const body = await req.json();
-  const validated = geocodeRequestSchema.parse(body);
+  const parsed = await parseJsonBody(req);
+  if ("error" in parsed) {
+    return parsed.error;
+  }
+
+  const validation = validateSchema(geocodeRequestSchema, parsed.body);
+  if ("error" in validation) {
+    return validation.error;
+  }
+  const validated = validation.data;
 
   const apiKey = getGoogleMapsServerKey();
 

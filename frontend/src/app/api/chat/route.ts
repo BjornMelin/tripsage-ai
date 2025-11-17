@@ -9,7 +9,7 @@ import "server-only";
 import type { UIMessage } from "ai";
 import type { NextRequest } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { getClientIpFromHeaders } from "@/lib/next/route-helpers";
+import { getClientIpFromHeaders, parseJsonBody } from "@/lib/next/route-helpers";
 import { resolveProvider } from "@/lib/providers/registry";
 import { handleChatNonStream } from "./_handler";
 
@@ -43,15 +43,14 @@ export const POST = withApiGuards({
   rateLimit: "chat:nonstream",
   telemetry: "chat.nonstream",
 })(async (req: NextRequest, { supabase }): Promise<Response> => {
-  let body: IncomingBody | undefined;
-  try {
-    body = (await req.json()) as IncomingBody;
-  } catch {
+  const parsed = await parseJsonBody(req);
+  if ("error" in parsed) {
     return new Response(JSON.stringify({ error: "Malformed JSON in request body." }), {
       headers: { "Content-Type": "application/json" },
       status: 400,
     });
   }
+  const body = parsed.body as IncomingBody;
 
   const ip = getClientIpFromHeaders(req);
 

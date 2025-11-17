@@ -2,8 +2,10 @@
  * @fileoverview Telemetry endpoint for AI demo events.
  */
 
+import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
+import { parseJsonBody } from "@/lib/next/route-helpers";
 import { emitOperationalAlert } from "@/lib/telemetry/alerts";
 
 type TelemetryPayload = {
@@ -24,8 +26,12 @@ export const POST = withApiGuards({
   auth: false,
   rateLimit: "telemetry:ai-demo",
   telemetry: "telemetry.ai-demo",
-})(async (req: Request) => {
-  const body = (await req.json()) as TelemetryPayload;
+})(async (req: NextRequest) => {
+  const parsed = await parseJsonBody(req);
+  if ("error" in parsed) {
+    return parsed.error;
+  }
+  const body = parsed.body as TelemetryPayload;
   if (body.status !== "success" && body.status !== "error") {
     return NextResponse.json({ ok: false }, { status: 400 });
   }

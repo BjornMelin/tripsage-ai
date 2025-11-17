@@ -11,6 +11,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
+import { validateSchema } from "@/lib/next/route-helpers";
 
 const photoRequestSchema = z.object({
   maxHeightPx: z.number().int().positive().optional(),
@@ -39,12 +40,18 @@ export const GET = withApiGuards({
   const maxHeightPx = searchParams.get("maxHeightPx");
   const skipHttpRedirect = searchParams.get("skipHttpRedirect");
 
-  const validated = photoRequestSchema.parse({
+  const params = {
     maxHeightPx: maxHeightPx ? Number.parseInt(maxHeightPx, 10) : undefined,
     maxWidthPx: maxWidthPx ? Number.parseInt(maxWidthPx, 10) : undefined,
     name: name ?? undefined,
     skipHttpRedirect: skipHttpRedirect === "true" ? true : undefined,
-  });
+  };
+
+  const validation = validateSchema(photoRequestSchema, params);
+  if ("error" in validation) {
+    return validation.error;
+  }
+  const validated = validation.data;
 
   if (!validated.name) {
     return NextResponse.json({ error: "name parameter is required" }, { status: 400 });

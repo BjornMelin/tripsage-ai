@@ -13,7 +13,11 @@ import type { z } from "zod";
 import { createErrorHandler } from "@/lib/agents/error-recovery";
 import { runMemoryAgent } from "@/lib/agents/memory-agent";
 import { withApiGuards } from "@/lib/api/factory";
-import { errorResponse, getTrustedRateLimitIdentifier } from "@/lib/next/route-helpers";
+import {
+  errorResponse,
+  getTrustedRateLimitIdentifier,
+  parseJsonBody,
+} from "@/lib/next/route-helpers";
 import { resolveProvider } from "@/lib/providers/registry";
 import type { MemoryUpdateRequest } from "@/lib/schemas/agents";
 import { agentSchemas } from "@/lib/schemas/agents";
@@ -32,10 +36,14 @@ export const POST = withApiGuards({
   rateLimit: "agents:memory",
   telemetry: "agent.memoryUpdate",
 })(async (req: NextRequest, { user }) => {
-  const raw = (await req.json().catch(() => ({}))) as unknown;
+  const parsed = await parseJsonBody(req);
+  if ("error" in parsed) {
+    return parsed.error;
+  }
+
   let body: MemoryUpdateRequest;
   try {
-    body = RequestSchema.parse(raw);
+    body = RequestSchema.parse(parsed.body);
   } catch (err) {
     const zerr = err as z.ZodError;
     return errorResponse({

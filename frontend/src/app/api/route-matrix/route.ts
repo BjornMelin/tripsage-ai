@@ -10,6 +10,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
+import { parseJsonBody, validateSchema } from "@/lib/next/route-helpers";
 
 const routeMatrixRequestSchema = z.object({
   destinations: z.array(
@@ -53,8 +54,16 @@ export const POST = withApiGuards({
   rateLimit: "route-matrix",
   telemetry: "route-matrix.compute",
 })(async (req: NextRequest) => {
-  const body = await req.json();
-  const validated = routeMatrixRequestSchema.parse(body);
+  const parsed = await parseJsonBody(req);
+  if ("error" in parsed) {
+    return parsed.error;
+  }
+
+  const validation = validateSchema(routeMatrixRequestSchema, parsed.body);
+  if ("error" in validation) {
+    return validation.error;
+  }
+  const validated = validation.data;
 
   // Quota-aware batching: limit origins/destinations
   if (validated.origins.length > 25 || validated.destinations.length > 25) {

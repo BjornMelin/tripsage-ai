@@ -10,6 +10,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
+import { validateSchema } from "@/lib/next/route-helpers";
 
 const timezoneRequestSchema = z.object({
   lat: z.number(),
@@ -36,11 +37,17 @@ export const GET = withApiGuards({
   const lng = searchParams.get("lng");
   const timestamp = searchParams.get("timestamp");
 
-  const validated = timezoneRequestSchema.parse({
+  const params = {
     lat: lat ? Number.parseFloat(lat) : undefined,
     lng: lng ? Number.parseFloat(lng) : undefined,
     timestamp: timestamp ? Number.parseInt(timestamp, 10) : undefined,
-  });
+  };
+
+  const validation = validateSchema(timezoneRequestSchema, params);
+  if ("error" in validation) {
+    return validation.error;
+  }
+  const validated = validation.data;
 
   const apiKey = getGoogleMapsServerKey();
 

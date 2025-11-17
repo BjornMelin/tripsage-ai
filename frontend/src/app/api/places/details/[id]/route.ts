@@ -11,6 +11,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
+import { validateSchema } from "@/lib/next/route-helpers";
 
 const detailsRequestSchema = z.object({
   sessionToken: z.string().optional(),
@@ -36,9 +37,15 @@ export function GET(req: NextRequest, context: { params: Promise<{ id: string }>
     const { searchParams } = new URL(req.url);
     const sessionToken = searchParams.get("sessionToken");
 
-    const validated = detailsRequestSchema.parse({
+    const params = {
       sessionToken: sessionToken ?? undefined,
-    });
+    };
+
+    const validation = validateSchema(detailsRequestSchema, params);
+    if ("error" in validation) {
+      return validation.error;
+    }
+    const validated = validation.data;
 
     const apiKey = getGoogleMapsServerKey();
 
