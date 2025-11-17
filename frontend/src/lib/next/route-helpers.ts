@@ -1,11 +1,22 @@
 /**
  * @fileoverview Helpers for Next.js Route Handlers (headers/ratelimit identifiers).
  */
+
 import { createHash } from "node:crypto";
 import { type NextRequest, NextResponse } from "next/server";
 import type { z } from "zod";
 
 type ValidationIssue = z.core.$ZodIssue;
+
+/**
+ * Shared API constants used across route handlers.
+ */
+export const API_CONSTANTS = {
+  /** Content-Type for JSON responses */
+  jsonContentType: "application/json",
+  /** Maximum request body size for API endpoints (64KB) */
+  maxBodySizeBytes: 64 * 1024,
+} as const;
 
 /**
  * Extract the client IP from trusted sources with deterministic fallback.
@@ -145,6 +156,39 @@ export function forwardAuthHeaders(req: NextRequest): HeadersInit | undefined {
   const auth = getAuthorization(req);
   // biome-ignore lint/style/useNamingConvention: HTTP headers conventionally use PascalCase
   return auth ? { Authorization: auth } : undefined;
+}
+
+/**
+ * Result of authentication check.
+ */
+export interface AuthCheckResult {
+  user: unknown; // Supabase User type
+  error: unknown; // Supabase AuthError type
+  isAuthenticated: boolean;
+}
+
+/**
+ * Perform standardized authentication check with Supabase.
+ *
+ * @param supabase - Supabase client instance
+ * @returns Authentication check result
+ */
+export async function checkAuthentication(
+  supabase: unknown // SupabaseClient type
+): Promise<AuthCheckResult> {
+  const { data, error } = await (
+    supabase as {
+      auth: { getUser: () => Promise<{ data: { user: unknown }; error: unknown }> };
+    }
+  ).auth.getUser();
+  const user = data?.user;
+  const isAuthenticated = !error && !!user;
+
+  return {
+    error,
+    isAuthenticated,
+    user,
+  };
 }
 
 /**
