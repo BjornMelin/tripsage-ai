@@ -1,5 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import type React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Trip } from "@/stores/trip-store";
@@ -150,36 +149,39 @@ describe("ItineraryBuilder", () => {
   });
 
   describe("Add Destination Dialog", () => {
-    it("should add destination with basic fields", async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    it("should add destination with basic fields", () => {
       MockAddDestination.mockResolvedValue(undefined);
 
       render(<ItineraryBuilder trip={mockTrip} />);
 
       const addButton = screen.getByText("Add Destination");
-      await user.click(addButton);
+      act(() => {
+        fireEvent.click(addButton);
+      });
 
       // Fill form fields
-      await user.type(screen.getByLabelText("Destination Name"), "Madrid");
-      await user.type(screen.getByLabelText("Country"), "Spain");
-      // Submit minimal form (name + country)
       const dialog = screen.getByRole("dialog");
-      await user.type(screen.getByLabelText("Destination Name"), "Madrid");
-      await user.type(screen.getByLabelText("Country"), "Spain");
+      const nameInput = screen.getByLabelText("Destination Name");
+      const countryInput = screen.getByLabelText("Country");
+      act(() => {
+        fireEvent.change(nameInput, { target: { value: "Madrid" } });
+        fireEvent.change(countryInput, { target: { value: "Spain" } });
+      });
+
       const submitButton = within(dialog).getByRole("button", {
         name: /add destination/i,
       });
-      await user.click(submitButton);
-
-      await waitFor(() => {
-        expect(MockAddDestination).toHaveBeenCalledWith(
-          "trip-1",
-          expect.objectContaining({
-            country: expect.stringContaining("Spain"),
-            name: expect.stringContaining("Madrid"),
-          })
-        );
+      act(() => {
+        fireEvent.click(submitButton);
       });
+
+      expect(MockAddDestination).toHaveBeenCalledWith(
+        "trip-1",
+        expect.objectContaining({
+          country: expect.stringContaining("Spain"),
+          name: expect.stringContaining("Madrid"),
+        })
+      );
     });
   });
 
@@ -192,15 +194,18 @@ describe("ItineraryBuilder", () => {
   // Custom update handler behavior is covered by store mocks; omit redundant assertions.
 
   describe("Form Validation and Edge Cases", () => {
-    it("should handle numeric input for estimated cost", async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    it("should handle numeric input for estimated cost", () => {
       render(<ItineraryBuilder trip={mockTrip} />);
 
       const addButton = screen.getByText("Add Destination");
-      await user.click(addButton);
+      act(() => {
+        fireEvent.click(addButton);
+      });
 
       const costInput = screen.getByLabelText("Estimated Cost ($)");
-      await user.type(costInput, "1500.50");
+      act(() => {
+        fireEvent.change(costInput, { target: { value: "1500.50" } });
+      });
 
       expect(costInput).toHaveValue(1500.5);
     });
