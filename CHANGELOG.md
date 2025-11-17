@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Centralized auth-core and auth-validation default view-model state in `frontend/src/stores/auth/auth-core.ts` (`authCoreInitialState`) and `frontend/src/stores/auth/auth-validation.ts` (`authValidationInitialState`) to keep tests and runtime behavior aligned.
   - Added `frontend/src/stores/auth/reset-auth.ts` with `resetAuthState()` to reset auth-core, auth-session, and auth-validation slices in one call, including clearing persisted auth-core storage for Supabase SSR-aligned logout flows and test setup.
   - Updated auth store tests under `frontend/src/stores/__tests__/auth/` to exercise `resetAuthState()` and assert that `logout()` invokes the session slice’s `resetSession()` action, and adjusted email verification tests to expect errors via the `registerError` field.
+- **Auth core view-model finalization (Wave C)**
+  - Simplified `frontend/src/stores/auth/auth-core.ts` to a pure view-model over the current `AuthUser` snapshot and Supabase SSR session initialization/logout, removing unused login/register and profile mutation methods and all `/api/auth/*` references from the store.
+  - Confirmed profile management is handled exclusively by `frontend/src/stores/user-store.ts`, keeping auth-core focused on authentication-derived state instead of user profile editing concerns.
+  - Updated `frontend/src/stores/__tests__/auth/auth-core.test.ts` to validate the slimmer auth-core API (initialization, logout, setUser, error handling, display name, and `resetAuthState()` orchestration) and removed tests tied to the legacy `/api/auth/*` mutation methods.
 
 ### Removed
 
