@@ -1,7 +1,8 @@
 /**
  * @fileoverview Vitest global setup for the TripSage frontend.
- * Configures environment-wide mocks, testing-library cleanup, and helper wiring
- * to keep unit and integration tests deterministic and isolated.
+ * Provides essential platform polyfills, DOM APIs, and minimal Next.js mocks.
+ * Feature-specific mocks (React Query, AI SDK, Supabase) should be imported
+ * from @/test/mocks/* in individual test files.
  */
 
 import { cleanup } from "@testing-library/react";
@@ -13,16 +14,10 @@ import {
   TransformStream as NodeTransformStream,
   WritableStream as NodeWritableStream,
 } from "node:stream/web";
-import { createMockSupabaseClient } from "./test/mock-helpers";
 import { resetTestQueryClient } from "./test/test-utils";
 
+// Minimal toast mock (used by many components)
 type UnknownRecord = Record<string, unknown>;
-
-/**
- * Mock implementation for toast helpers.
- * @param _props Optional toast properties that are ignored by the mock.
- * @returns A toast handle containing dismiss and update spies.
- */
 const MOCK_TOAST = vi.fn((_props?: UnknownRecord) => ({
   dismiss: vi.fn(),
   id: `toast-${Date.now()}`,
@@ -38,17 +33,16 @@ vi.mock("@/components/ui/use-toast", () => ({
   })),
 }));
 
-vi.mock("@/lib/embeddings/generate", () => ({
-  generateEmbedding: vi.fn(async () =>
-    Array.from({ length: 1536 }, (_, index) => (index + 1) / 1000)
-  ),
-  getEmbeddingsApiUrl: vi.fn(() => "http://localhost:3000/api/embeddings"),
-  getEmbeddingsRequestHeaders: vi.fn(() => ({
-    "Content-Type": "application/json",
-  })),
+// Zustand middleware mocks (used by stores)
+vi.mock("zustand/middleware", () => ({
+  combine: <T>(fn: T) => fn,
+  devtools: <T>(fn: T) => fn,
+  persist: <T>(fn: T) => fn,
+  subscribeWithSelector: <T>(fn: T) => fn,
 }));
 
-// Mock React Query globally for sync behavior
+// React Query mocks - kept global for now but should migrate to local mocks
+// TODO: Migrate tests to use @/test/mocks/react-query
 vi.mock("@tanstack/react-query", () => {
   class QueryClientMock {
     clear = vi.fn();
@@ -61,22 +55,22 @@ vi.mock("@tanstack/react-query", () => {
     QueryClient: QueryClientMock,
     QueryClientProvider: ({ children }: { children: React.ReactNode }) => children,
     useMutation: vi.fn(() => ({
-      data: { status: "success" }, // Provide mock success data
+      data: { status: "success" },
       error: null,
       isError: false,
       isIdle: false,
       isLoading: false,
-      isSuccess: true, // Mark as success for sync behavior
+      isSuccess: true,
       mutate: vi.fn((data) => ({ data: { input: data, status: "success" } })),
       mutateAsync: vi.fn((data) => Promise.resolve({ input: data, status: "success" })),
       reset: vi.fn(),
     })),
     useQuery: vi.fn(() => ({
-      data: { mockData: true }, // Provide mock data for sync tests
+      data: { mockData: true },
       error: null,
       isError: false,
       isLoading: false,
-      isSuccess: true, // Mark as success for sync behavior
+      isSuccess: true,
       refetch: vi.fn(),
     })),
     useQueryClient: vi.fn(() => ({
@@ -88,49 +82,9 @@ vi.mock("@tanstack/react-query", () => {
   };
 });
 
-// Mock AI SDK for sync streaming
-vi.mock("ai", () => ({
-  convertToModelMessages: vi.fn((messages) => messages),
-  generateObject: vi.fn(() => Promise.resolve({ object: {} })),
-  Output: {
-    object: vi.fn(() => ({ schema: {} })),
-  },
-  openai: vi.fn(() => ({ model: "gpt-4o-mini" })),
-  streamObject: vi.fn(() => ({
-    toUIMessageStreamResponse: vi.fn(() => new Response()),
-  })),
-  streamText: vi.fn(() => ({
-    toUIMessageStreamResponse: vi.fn(() => new Response()),
-  })),
-  tool: vi.fn((config) => config),
-}));
-
-// Mock AI SDK React hooks
-vi.mock("@ai-sdk/react", () => ({
-  useChat: vi.fn(() => ({
-    error: null,
-    handleInputChange: vi.fn(),
-    handleSubmit: vi.fn(),
-    input: "",
-    isLoading: false,
-    messages: [],
-  })),
-  useCompletion: vi.fn(() => ({
-    completion: "",
-    error: null,
-    handleInputChange: vi.fn(),
-    handleSubmit: vi.fn(),
-    input: "",
-    isLoading: false,
-  })),
-}));
-
-vi.mock("zustand/middleware", () => ({
-  combine: <T>(fn: T) => fn,
-  devtools: <T>(fn: T) => fn,
-  persist: <T>(fn: T) => fn,
-  subscribeWithSelector: <T>(fn: T) => fn,
-}));
+// Supabase client mocks - kept global for now but should migrate to local mocks
+// TODO: Migrate tests to use @/test/mocks/supabase
+import { createMockSupabaseClient } from "./test/mock-helpers";
 
 const MOCK_SUPABASE = createMockSupabaseClient();
 vi.mock("@/lib/supabase", () => ({

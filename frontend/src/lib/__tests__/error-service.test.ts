@@ -6,37 +6,46 @@ import { ErrorService } from "../error-service";
 const MOCK_FETCH = vi.fn();
 global.fetch = MOCK_FETCH;
 
-// Mock localStorage
-const MOCK_LOCAL_STORAGE = {
-  clear: vi.fn(),
-  getItem: vi.fn(),
-  key: vi.fn(),
-  length: 0,
-  removeItem: vi.fn(),
-  setItem: vi.fn(),
-};
-Object.defineProperty(window, "localStorage", {
-  value: MOCK_LOCAL_STORAGE,
-});
-
-// Mock sessionStorage
-const MOCK_SESSION_STORAGE = {
-  clear: vi.fn(),
-  getItem: vi.fn(),
-  key: vi.fn(),
-  length: 0,
-  removeItem: vi.fn(),
-  setItem: vi.fn(),
-};
-Object.defineProperty(window, "sessionStorage", {
-  value: MOCK_SESSION_STORAGE,
-});
+// Mock localStorage and sessionStorage - setup in beforeEach to avoid issues in node env
+let mockLocalStorage: Storage;
+let mockSessionStorage: Storage;
 
 describe("ErrorService", () => {
   let errorService: ErrorService;
   let mockConfig: ErrorServiceConfig;
 
   beforeEach(() => {
+    // Setup storage mocks in beforeEach (only in jsdom environment)
+    if (typeof window !== "undefined") {
+      mockLocalStorage = {
+        clear: vi.fn(),
+        getItem: vi.fn(),
+        key: vi.fn(),
+        length: 0,
+        removeItem: vi.fn(),
+        setItem: vi.fn(),
+      } as Storage;
+      Object.defineProperty(window, "localStorage", {
+        configurable: true,
+        value: mockLocalStorage,
+        writable: true,
+      });
+
+      mockSessionStorage = {
+        clear: vi.fn(),
+        getItem: vi.fn(),
+        key: vi.fn(),
+        length: 0,
+        removeItem: vi.fn(),
+        setItem: vi.fn(),
+      } as Storage;
+      Object.defineProperty(window, "sessionStorage", {
+        configurable: true,
+        value: mockSessionStorage,
+        writable: true,
+      });
+    }
+
     mockConfig = {
       apiKey: "test-api-key",
       enabled: true,
@@ -50,10 +59,14 @@ describe("ErrorService", () => {
     // Reset mocks
     vi.clearAllMocks();
     MOCK_FETCH.mockClear();
-    MOCK_LOCAL_STORAGE.getItem.mockClear();
-    MOCK_LOCAL_STORAGE.setItem.mockClear();
-    MOCK_SESSION_STORAGE.getItem.mockClear();
-    MOCK_SESSION_STORAGE.setItem.mockClear();
+    if (mockLocalStorage) {
+      (mockLocalStorage.getItem as ReturnType<typeof vi.fn>).mockClear();
+      (mockLocalStorage.setItem as ReturnType<typeof vi.fn>).mockClear();
+    }
+    if (mockSessionStorage) {
+      (mockSessionStorage.getItem as ReturnType<typeof vi.fn>).mockClear();
+      (mockSessionStorage.setItem as ReturnType<typeof vi.fn>).mockClear();
+    }
   });
 
   afterEach(() => {
@@ -175,14 +188,21 @@ describe("ErrorService", () => {
     });
 
     it("should store error locally when enabled", async () => {
+      if (!mockLocalStorage) {
+        // Skip if not in jsdom environment
+        return;
+      }
+
       MOCK_FETCH.mockResolvedValueOnce({
         ok: true,
         status: 200,
         statusText: "OK",
       });
 
-      MOCK_LOCAL_STORAGE.getItem.mockReturnValue(null);
-      Object.keys(localStorage).length = 0;
+      (mockLocalStorage.getItem as ReturnType<typeof vi.fn>).mockReturnValue(null);
+      if (typeof localStorage !== "undefined") {
+        Object.keys(localStorage).length = 0;
+      }
 
       const errorReport: ErrorReport = {
         error: {
@@ -196,7 +216,7 @@ describe("ErrorService", () => {
 
       await errorService.reportError(errorReport);
 
-      expect(MOCK_LOCAL_STORAGE.setItem).toHaveBeenCalledWith(
+      expect(mockLocalStorage.setItem as ReturnType<typeof vi.fn>).toHaveBeenCalledWith(
         expect.stringMatching(/^error_\d+_[a-z0-9]+$/),
         JSON.stringify(errorReport)
       );
@@ -304,6 +324,11 @@ describe("ErrorService", () => {
 
   describe("localStorage cleanup", () => {
     it("should clean up old errors", async () => {
+      if (!mockLocalStorage) {
+        // Skip if not in jsdom environment
+        return;
+      }
+
       MOCK_FETCH.mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -313,7 +338,7 @@ describe("ErrorService", () => {
       // Mock 15 existing error keys
       const oldKeys = Array.from({ length: 15 }, (_, i) => `error_${i}_old`);
 
-      Object.defineProperty(MOCK_LOCAL_STORAGE, "keys", {
+      Object.defineProperty(mockLocalStorage as Record<string, unknown>, "keys", {
         value: () => [...oldKeys, "other_key"],
       });
 
@@ -334,7 +359,9 @@ describe("ErrorService", () => {
       await errorService.reportError(errorReport);
 
       // Should remove 5 oldest keys (keep 10 + 1 new = 11 total, but cleanup removes extras)
-      expect(MOCK_LOCAL_STORAGE.removeItem).toHaveBeenCalledTimes(5);
+      expect(
+        mockLocalStorage.removeItem as ReturnType<typeof vi.fn>
+      ).toHaveBeenCalledTimes(5);
 
       // Restore Object.keys
       Object.keys = originalObjectKeys;

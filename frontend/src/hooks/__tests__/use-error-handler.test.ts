@@ -15,24 +15,38 @@ vi.mock("@/lib/error-service", () => ({
 // Console spy setup moved to beforeEach to avoid global suppression issues
 let consoleSpy: MockInstance;
 
-// Mock sessionStorage
-const MOCK_SESSION_STORAGE = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
+// Mock sessionStorage - setup in beforeEach to avoid issues in node env
+let MOCK_SESSION_STORAGE: {
+  getItem: ReturnType<typeof vi.fn>;
+  setItem: ReturnType<typeof vi.fn>;
 };
-Object.defineProperty(window, "sessionStorage", {
-  value: MOCK_SESSION_STORAGE,
-});
 
 describe("useErrorHandler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    
+    // Setup sessionStorage mock in beforeEach (only in jsdom environment)
+    if (typeof window !== "undefined") {
+      MOCK_SESSION_STORAGE = {
+        getItem: vi.fn(),
+        setItem: vi.fn(),
+      };
+      Object.defineProperty(window, "sessionStorage", {
+        configurable: true,
+        value: MOCK_SESSION_STORAGE,
+        writable: true,
+      });
+    }
+    
     // Create fresh spy for each test
     consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
       // Empty implementation for mocking
     });
-    MOCK_SESSION_STORAGE.getItem.mockClear();
-    MOCK_SESSION_STORAGE.setItem.mockClear();
+    
+    if (MOCK_SESSION_STORAGE) {
+      MOCK_SESSION_STORAGE.getItem.mockClear();
+      MOCK_SESSION_STORAGE.setItem.mockClear();
+    }
 
     // Mock createErrorReport to return a valid report
     vi.mocked(errorService.createErrorReport).mockReturnValue({

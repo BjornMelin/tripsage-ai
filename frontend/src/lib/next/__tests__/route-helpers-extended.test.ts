@@ -35,16 +35,16 @@ describe("withRequestSpan", () => {
   });
 
   it("measures execution duration", async () => {
-    const fn = vi
-      .fn()
-      .mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve("done"), 10))
-      );
+    vi.useFakeTimers();
+    const fn = vi.fn().mockResolvedValue("done");
 
-    await withRequestSpan("slow.operation", {}, fn);
+    const promise = withRequestSpan("slow.operation", {}, fn);
+    await vi.advanceTimersByTimeAsync(10);
+    await promise;
 
     const call = (console.debug as ReturnType<typeof vi.fn>).mock.calls[0]?.[1];
     expect(call?.durationMs).toBeGreaterThanOrEqual(9);
+    vi.useRealTimers();
   });
 
   it("propagates errors", async () => {

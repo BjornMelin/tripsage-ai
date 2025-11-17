@@ -1,38 +1,63 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
+
+// Mock next/headers cookies() before any imports that use it
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(() => Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))),
+}));
+
+// Mock Supabase server client
+vi.mock("@/lib/supabase/server", () => ({
+  createServerSupabase: vi.fn(async () => ({
+    auth: {
+      getUser: async () => ({
+        data: { user: { id: "user-1" } },
+      }),
+    },
+  })),
+}));
+
+// Mock provider registry
+vi.mock("@/lib/providers/registry", () => ({
+  resolveProvider: vi.fn(async () => ({ model: {} })),
+}));
+
+// Mock memory agent
+vi.mock("@/lib/agents/memory-agent", () => ({
+  runMemoryAgent: vi.fn(() => ({
+    toUIMessageStreamResponse: () => new Response("ok", { status: 200 }),
+  })),
+}));
+
+// Mock Redis and rate limiting
+vi.mock("@/lib/redis", () => ({
+  getRedis: vi.fn(() => Promise.resolve({})),
+}));
+
+vi.mock("@/lib/ratelimit/config", () => ({
+  enforceRouteRateLimit: vi.fn(() => Promise.resolve({ success: true })),
+}));
 
 describe("/api/agents/memory route", () => {
   beforeEach(() => {
-    vi.resetModules();
+    vi.clearAllMocks();
   });
 
   it("streams when valid and enabled", async () => {
-    vi.doMock("@/lib/supabase", () => ({
-      createServerSupabase: vi.fn(async () => ({
-        auth: { getUser: async () => ({ data: { user: { id: "user-1" } } }) },
-      })),
-    }));
-    vi.doMock("@/lib/providers/registry", () => ({
-      resolveProvider: vi.fn(async () => ({ model: {} })),
-    }));
-    vi.doMock("@/lib/agents/memory-agent", () => ({
-      runMemoryAgent: vi.fn(() => ({
-        toUIMessageStreamResponse: () => new Response("ok", { status: 200 }),
-      })),
-    }));
-
     const mod = await import("../route");
-    const req = new Request("http://localhost/api/agents/memory", {
-      body: JSON.stringify({
+    const req = createMockNextRequest({
+      body: {
         records: [
           {
             category: "user_preference",
             content: "User prefers window seats",
           },
         ],
-      }),
+      },
       method: "POST",
+      url: "http://localhost/api/agents/memory",
     });
-    const res = await mod.POST(req as unknown as import("next/server").NextRequest);
+    const res = await mod.POST(req);
     expect(res.status).toBe(200);
   });
 });

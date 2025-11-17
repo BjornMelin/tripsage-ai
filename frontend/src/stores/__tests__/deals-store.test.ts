@@ -1,6 +1,12 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { DealType } from "@/lib/schemas/deals";
+import {
+  createDealAlertFixture,
+  createDealFixture,
+  createInvalidDealAlertFixture,
+  createInvalidDealFixture,
+} from "@/test/fixtures/deals";
 import { useDealsStore } from "../deals-store";
 
 // Mock current timestamp for consistent testing
@@ -8,9 +14,8 @@ import { useDealsStore } from "../deals-store";
 const MOCK_TIMESTAMP = "2025-05-20T12:00:00.000Z";
 vi.spyOn(Date.prototype, "toISOString").mockReturnValue(MOCK_TIMESTAMP);
 
-// Sample deal data
-/** Sample flight deal for testing purposes */
-const SAMPLE_DEAL = {
+// Use Zod-validated fixtures
+const SAMPLE_DEAL = createDealFixture({
   createdAt: "2025-05-01T00:00:00.000Z",
   currency: "USD",
   description: "Great deal on round-trip flights to Paris",
@@ -26,27 +31,25 @@ const SAMPLE_DEAL = {
   provider: "AirlineCo",
   tags: ["europe", "summer", "flight-deal"],
   title: "Cheap Flight to Paris",
-  type: "flight" as DealType,
+  type: "flight",
   updatedAt: "2025-05-01T00:00:00.000Z",
   url: "https://example.com/deal1",
   verified: true,
-};
+});
 
-// Sample alert data
-/** Sample deal alert for testing purposes */
-const SAMPLE_ALERT = {
+const SAMPLE_ALERT = createDealAlertFixture({
   createdAt: "2025-05-01T00:00:00.000Z",
-  dealType: "flight" as DealType,
+  dealType: "flight",
   destination: "Paris",
   id: "alert1",
   isActive: true,
   maxPrice: 400,
   minDiscount: 30,
-  notificationType: "email" as const,
+  notificationType: "email",
   origin: "New York",
   updatedAt: "2025-05-01T00:00:00.000Z",
   userId: "user1",
-};
+});
 
 describe("Deals Store", () => {
   beforeEach(() => {
@@ -77,14 +80,21 @@ describe("Deals Store", () => {
 
     it("should reject an invalid deal", () => {
       const store = useDealsStore.getState();
-      const invalidDeal = {
-        id: "invalid1",
-        // Missing required fields
-      };
+      const invalidDeal = createInvalidDealFixture();
+
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        // Suppress console.error during test
+      });
 
       const result = store.addDeal(invalidDeal);
       expect(result).toBe(false);
-      expect(store.deals[invalidDeal.id as string]).toBeUndefined();
+      expect(store.deals.invalid1).toBeUndefined();
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Invalid deal data:",
+        expect.any(Object) // ZodError
+      );
+
+      consoleSpy.mockRestore();
     });
 
     it("should update a deal", () => {
@@ -182,14 +192,21 @@ describe("Deals Store", () => {
 
     it("should reject an invalid alert", () => {
       const store = useDealsStore.getState();
-      const invalidAlert = {
-        id: "invalid1",
-        // Missing required fields
-      };
+      const invalidAlert = createInvalidDealAlertFixture();
+
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        // Suppress console.error during test
+      });
 
       const result = store.addAlert(invalidAlert);
       expect(result).toBe(false);
       expect(store.alerts).toHaveLength(0);
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Invalid alert data:",
+        expect.any(Object) // ZodError
+      );
+
+      consoleSpy.mockRestore();
     });
 
     it("should update an alert", () => {

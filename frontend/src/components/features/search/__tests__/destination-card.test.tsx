@@ -37,6 +37,8 @@ const MockHandlers = {
 };
 
 describe("DestinationCard", () => {
+  const _user = userEvent.setup();
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
