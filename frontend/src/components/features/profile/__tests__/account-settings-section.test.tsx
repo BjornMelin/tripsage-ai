@@ -48,7 +48,7 @@ describe("AccountSettingsSection", () => {
     render(<AccountSettingsSection />);
 
     const emailInput = screen.getByLabelText(/update email address/i);
-    await act(async () => {
+    act(() => {
       fireEvent.change(emailInput, { target: { value: "invalid-email" } });
       fireEvent.click(screen.getByRole("button", { name: /update email/i }));
     });

@@ -32,9 +32,13 @@ describe("ai-elements/prompt-input", () => {
     // Submit the form by clicking the submit button
     const submit = screen.getByText("Send");
     const form = submit.closest("form");
-    expect(form).toBeInTheDocument();
+    expect(form).not.toBeNull();
 
-    fireEvent.submit(form!);
+    if (!form) {
+      throw new Error("Expected prompt form to be present");
+    }
+
+    fireEvent.submit(form);
 
     await waitFor(
       () => {

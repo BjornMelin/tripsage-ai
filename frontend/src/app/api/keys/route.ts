@@ -23,7 +23,7 @@ import {
 } from "@/lib/next/route-helpers";
 import { insertUserApiKey, upsertUserGatewayBaseUrl } from "@/lib/supabase/rpc";
 import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
-import { getKeys, type PostKeyBody, PostKeyBodySchema, postKey } from "./_handlers";
+import { getKeys, PostKeyBodySchema, postKey } from "./_handlers";
 
 type IdentifierType = "user" | "ip";
 

@@ -6,26 +6,37 @@ Complete technical documentation for TripSage AI, an AI-powered travel planning 
 
 ### End Users
 
-- **[User Guide](users/user-guide.md)** - Complete guide for planning and managing trips
+- **[User Guide](users/user-guide.md)** - Complete guide for planning and
+  managing trips
 
 ### API Developers
 
-- **[API Reference](api/api-reference.md)** - Complete REST API documentation with examples
+- **[API Reference](api/api-reference.md)** - Complete REST API
+  documentation with examples
 - **[Authentication](api/api-reference.md#authentication)** - JWT and API key authentication
 - **[Error Codes](api/error-codes.md)** - Error handling reference
 - **[Realtime API](api/realtime-api.md)** - Supabase Realtime integration
 
 ### Application Developers
 
-- **[Development Guide](developers/development-guide.md)** - Setup, architecture, and best practices
-- **[Quick Start](developers/quick-start.md)** - Get development environment running
-- **[Testing Guide](developers/testing-guide.md)** - Testing patterns and coverage requirements
+- **[Development Guide](developers/development-guide.md)** - Setup,
+  architecture, and best practices
+- **[Quick Start](developers/quick-start.md)** - Get development environment
+  running
+- **[Stores](developers/stores.md)** - Zustand store patterns and composition
+- **[Testing Guide](developers/testing-guide.md)** - Testing patterns and
+  coverage requirements
+- **[Metrics](metrics.md)** - Code metrics and performance benchmarks
+- **[Maintenance](maintenance.md)** - Development maintenance checklist
 
 ### Operators & DevOps
 
-- **[Operators Reference](operators/operators-reference.md)** - Deployment, configuration, and operations
-- **[Security Guide](operators/security-guide.md)** - Security implementation and best practices
-- **[Deployment Guide](operators/deployment-guide.md)** - Production deployment procedures
+- **[Operators Reference](operators/operators-reference.md)** -
+  Deployment, configuration, and operations
+- **[Security Guide](operators/security-guide.md)** - Security
+  implementation and best practices
+- **[Deployment Guide](operators/deployment-guide.md)** - Production
+  deployment procedures
 
 ## Quick Setup
 
@@ -86,9 +97,12 @@ open http://localhost:8000/docs
 
 ### For Operators
 
-- **Containerized Deployment**: Docker-based deployment with multi-cloud support
-- **Monitoring**: Built-in health checks and observability with OpenTelemetry
-- **Security**: Row Level Security, encryption, and comprehensive audit logging
+- **Containerized Deployment**: Docker-based deployment with multi-cloud
+  support
+- **Monitoring**: Built-in health checks and observability with
+  OpenTelemetry
+- **Security**: Row Level Security, encryption, and comprehensive audit
+  logging
 - **Scalability**: Horizontal scaling with load balancers and caching layers
 
 ## Architecture Overview
@@ -96,11 +110,13 @@ open http://localhost:8000/docs
 TripSage uses a modern, unified architecture:
 
 - **Backend**: FastAPI with Python 3.13+ and async operations
-- **Database**: Supabase PostgreSQL with Row Level Security and vector extensions
+- **Database**: Supabase PostgreSQL with Row Level Security and vector
+  extensions
 - **Cache**: Upstash Redis (HTTP) for serverless caching
 - **Frontend**: Next.js 16 with React 19 and TypeScript
 - **Real-Time**: Supabase Realtime with private channels
-- **AI**: Vercel AI SDK v6 with frontend-only agents (flights, accommodations, destinations, itineraries)
+- **AI**: Vercel AI SDK v6 with frontend-only agents (flights,
+  accommodations, destinations, itineraries)
 
 ## Support & Community
 
@@ -110,4 +126,6 @@ TripSage uses a modern, unified architecture:
 
 ---
 
-**Getting Started**: New to TripSage? Start with the [User Guide](users/user-guide.md) or [API Reference](api/api-reference.md).
+**Getting Started**: New to TripSage? Start with the
+[User Guide](users/user-guide.md) or
+[API Reference](api/api-reference.md).
