@@ -8,7 +8,6 @@ import "server-only";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-
 import type { RateLimitResult } from "@/app/api/keys/_rate-limiter";
 import {
   buildRateLimiter,
@@ -16,19 +15,15 @@ import {
 } from "@/app/api/keys/_rate-limiter";
 import { buildKeySpanAttributes } from "@/app/api/keys/_telemetry";
 import {
+  API_CONSTANTS,
+  checkAuthentication,
   getTrustedRateLimitIdentifier,
   redactErrorForLogging,
 } from "@/lib/next/route-helpers";
 import { insertUserApiKey, upsertUserGatewayBaseUrl } from "@/lib/supabase/rpc";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
-import {
-  getKeys,
-  MAX_BODY_SIZE_BYTES,
-  type PostKeyBody,
-  PostKeyBodySchema,
-  postKey,
-} from "./_handlers";
+import { getKeys, type PostKeyBody, PostKeyBodySchema, postKey } from "./_handlers";
 
 /**
  * BYOK routes return tenant-specific secrets and must stay fully dynamic. Next.js docs:
@@ -48,10 +43,8 @@ type IdentifierType = "user" | "ip";
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createServerSupabase();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const { user, isAuthenticated } = await checkAuthentication(supabase);
+    const userObj = user as { id: string } | null;
     let ratelimitInstance: ReturnType<typeof buildRateLimiter>;
     try {
       ratelimitInstance = buildRateLimiter();
@@ -67,10 +60,10 @@ export async function POST(req: NextRequest) {
       }
       throw configError;
     }
-    const identifierType: IdentifierType = user?.id ? "user" : "ip";
+    const identifierType: IdentifierType = userObj?.id ? "user" : "ip";
     let rateLimitMeta: RateLimitResult | undefined;
     if (ratelimitInstance) {
-      const identifier = user?.id ?? getTrustedRateLimitIdentifier(req);
+      const identifier = userObj?.id ?? getTrustedRateLimitIdentifier(req);
       rateLimitMeta = await ratelimitInstance.limit(identifier);
       if (!rateLimitMeta.success) {
         return NextResponse.json(
@@ -91,15 +84,15 @@ export async function POST(req: NextRequest) {
     const contentLength = req.headers.get("content-length");
     if (contentLength) {
       const size = Number.parseInt(contentLength, 10);
-      if (Number.isNaN(size) || size > MAX_BODY_SIZE_BYTES) {
+      if (Number.isNaN(size) || size > API_CONSTANTS.maxBodySizeBytes) {
         recordTelemetryEvent("api.keys.size_limit", {
-          attributes: { limit_bytes: MAX_BODY_SIZE_BYTES, size_bytes: size },
+          attributes: { limit_bytes: API_CONSTANTS.maxBodySizeBytes, size_bytes: size },
           level: "warning",
         });
         return NextResponse.json(
           {
             code: "BAD_REQUEST",
-            error: `Request body too large (max ${MAX_BODY_SIZE_BYTES} bytes)`,
+            error: `Request body too large (max ${API_CONSTANTS.maxBodySizeBytes} bytes)`,
           },
           { status: 400 }
         );
@@ -145,9 +138,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (authError || !user) {
+    if (!isAuthenticated) {
       const { message: safeMessage, context: safeContext } = redactErrorForLogging(
-        authError ?? new Error("User not found"),
+        new Error("User not authenticated"),
         { operation: "auth_check" }
       );
       recordTelemetryEvent("api.keys.auth_error", {

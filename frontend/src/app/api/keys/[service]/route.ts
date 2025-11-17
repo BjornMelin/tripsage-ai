@@ -14,13 +14,14 @@ export const revalidate = 0;
 
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import type { RateLimitResult } from "@/app/api/keys/_rate-limiter";
 import {
   buildRateLimiter,
   RateLimiterConfigurationError,
-  type RateLimitResult,
 } from "@/app/api/keys/_rate-limiter";
 import { buildKeySpanAttributes } from "@/app/api/keys/_telemetry";
 import {
+  checkAuthentication,
   getTrustedRateLimitIdentifier,
   redactErrorForLogging,
 } from "@/lib/next/route-helpers";
@@ -46,11 +47,9 @@ export async function DELETE(
   let serviceForLog: string | undefined;
   try {
     const supabase = await createServerSupabase();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    const identifierType: IdentifierType = user?.id ? "user" : "ip";
+    const { user, isAuthenticated } = await checkAuthentication(supabase);
+    const userObj = user as { id: string } | null;
+    const identifierType: IdentifierType = userObj?.id ? "user" : "ip";
     let ratelimitInstance: ReturnType<typeof buildRateLimiter>;
     try {
       ratelimitInstance = buildRateLimiter();
@@ -68,7 +67,7 @@ export async function DELETE(
     }
     let rateLimitMeta: RateLimitResult | undefined;
     if (ratelimitInstance) {
-      const identifier = user?.id ?? getTrustedRateLimitIdentifier(req);
+      const identifier = userObj?.id ?? getTrustedRateLimitIdentifier(req);
       rateLimitMeta = await ratelimitInstance.limit(identifier);
       if (!rateLimitMeta.success) {
         return NextResponse.json(
@@ -101,7 +100,7 @@ export async function DELETE(
       );
     }
 
-    if (authError || !user) {
+    if (!isAuthenticated) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -113,15 +112,15 @@ export async function DELETE(
           operation: "delete",
           rateLimit: rateLimitMeta,
           service: normalizedService,
-          userId: user.id,
+          userId: userObj?.id || "",
         }),
       },
       async (span) => {
         try {
           if (normalizedService === "gateway") {
-            await deleteUserGatewayBaseUrl(user.id);
+            await deleteUserGatewayBaseUrl(userObj?.id || "");
           }
-          await deleteUserApiKey(user.id, normalizedService);
+          await deleteUserApiKey(userObj?.id || "", normalizedService);
           span.setAttribute("keys.rpc.error", false);
         } catch (rpcError) {
           span.setAttribute("keys.rpc.error", true);

@@ -12,14 +12,6 @@ import type { TypedServerSupabase } from "@/lib/supabase/server";
 const ALLOWED = new Set(["openai", "openrouter", "anthropic", "xai", "gateway"]);
 
 /**
- * Maximum allowed request body size in bytes (64KB).
- *
- * This limit prevents memory exhaustion from oversized payloads while allowing
- * reasonable API key lengths.
- */
-export const MAX_BODY_SIZE_BYTES = 64 * 1024;
-
-/**
  * Zod schema for POST /api/keys request body.
  *
  * Validates service name and API key with length constraints and trimming.
