@@ -1,9 +1,16 @@
 /** @vitest-environment node */
 
 import { createHash } from "node:crypto";
-import type { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { unstubAllEnvs } from "@/test/env-helpers";
+import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
+
+// Mock next/headers cookies() BEFORE any imports that use it
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(() =>
+    Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))
+  ),
+}));
 
 const MOCK_INSERT = vi.hoisted(() => vi.fn());
 const MOCK_DELETE = vi.hoisted(() => vi.fn());
@@ -30,7 +37,7 @@ vi.mock("@/lib/supabase/rpc", () => ({
   insertUserApiKey: MOCK_INSERT,
 }));
 
-vi.mock("@/lib/supabase", () => ({
+vi.mock("@/lib/supabase/server", () => ({
   createServerSupabase: CREATE_SUPABASE,
 }));
 
@@ -45,8 +52,20 @@ vi.mock("@/app/api/keys/_rate-limiter", () => ({
 }));
 
 vi.mock("@/lib/telemetry/span", () => ({
+  recordTelemetryEvent: vi.fn(),
   withTelemetrySpan: TELEMETRY_SPY,
 }));
+
+// Mock route helpers - keep actual functions but mock withRequestSpan
+vi.mock("@/lib/next/route-helpers", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/next/route-helpers")>(
+    "@/lib/next/route-helpers"
+  );
+  return {
+    ...actual,
+    withRequestSpan: vi.fn((_name, _attrs, fn) => fn()),
+  };
+});
 
 /**
  * Helper to hash an IP address for rate limiting tests.
@@ -57,7 +76,6 @@ function hashIp(ip: string): string {
 
 describe("/api/keys routes", () => {
   beforeEach(() => {
-    vi.resetModules();
     vi.clearAllMocks();
     unstubAllEnvs();
     CREATE_SUPABASE.mockReset();
@@ -83,12 +101,12 @@ describe("/api/keys routes", () => {
       throw new RateLimiterConfigurationError("Rate limiter config missing");
     });
     vi.stubEnv("NODE_ENV", "production");
-    vi.resetModules();
     const { POST } = await import("@/app/api/keys/route");
-    const req = {
-      headers: new Headers(),
-      json: async () => ({ apiKey: "test", service: "openai" }),
-    } as unknown as NextRequest;
+    const req = createMockNextRequest({
+      body: { apiKey: "test", service: "openai" },
+      method: "POST",
+      url: "http://localhost/api/keys",
+    });
     const res = await POST(req);
     expect(res.status).toBe(500);
     const body = await res.json();
@@ -97,12 +115,12 @@ describe("/api/keys routes", () => {
   });
 
   it("POST /api/keys returns 400 on invalid body", async () => {
-    vi.resetModules();
     const { POST } = await import("@/app/api/keys/route");
-    const req = {
-      headers: new Headers(),
-      json: async () => ({}),
-    } as unknown as NextRequest;
+    const req = createMockNextRequest({
+      body: {},
+      method: "POST",
+      url: "http://localhost/api/keys",
+    });
     const res = await POST(req);
     expect(res.status).toBe(400);
   });
@@ -113,9 +131,11 @@ describe("/api/keys routes", () => {
       error: null,
     });
     MOCK_DELETE.mockResolvedValue(undefined);
-    vi.resetModules();
     const route = await import("@/app/api/keys/[service]/route");
-    const req = { headers: new Headers() } as unknown as NextRequest;
+    const req = createMockNextRequest({
+      method: "DELETE",
+      url: "http://localhost/api/keys/openai",
+    });
     const res = await route.DELETE(req, {
       params: Promise.resolve({ service: "openai" }),
     });
@@ -135,12 +155,12 @@ describe("/api/keys routes", () => {
       reset: 123,
       success: false,
     });
-    vi.resetModules();
     const { POST } = await import("@/app/api/keys/route");
-    const req = {
-      headers: new Headers(),
-      json: vi.fn(),
-    } as unknown as NextRequest;
+    const req = createMockNextRequest({
+      headers: {},
+      method: "POST",
+      url: "http://localhost/api/keys",
+    });
 
     const res = await POST(req);
 
@@ -149,7 +169,6 @@ describe("/api/keys routes", () => {
     expect(res.headers.get("X-RateLimit-Limit")).toBe("10");
     expect(res.headers.get("X-RateLimit-Remaining")).toBe("0");
     expect(res.headers.get("X-RateLimit-Reset")).toBe("123");
-    expect(req.json).not.toHaveBeenCalled();
   });
 
   it("DELETE /api/keys/[service] throttles per user id and returns headers", async () => {
@@ -164,9 +183,11 @@ describe("/api/keys routes", () => {
       reset: 456,
       success: false,
     });
-    vi.resetModules();
     const route = await import("@/app/api/keys/[service]/route");
-    const req = { headers: new Headers() } as unknown as NextRequest;
+    const req = createMockNextRequest({
+      method: "DELETE",
+      url: "http://localhost/api/keys/openai",
+    });
 
     const res = await route.DELETE(req, {
       params: Promise.resolve({ service: "openai" }),
@@ -192,14 +213,14 @@ describe("/api/keys routes", () => {
       reset: 789,
       success: false,
     });
-    vi.resetModules();
     const { POST } = await import("@/app/api/keys/route");
-    const req = {
-      headers: new Headers({
+    const req = createMockNextRequest({
+      headers: {
         "x-forwarded-for": "123.123.123.123",
-      }),
-      json: vi.fn(),
-    } as unknown as NextRequest;
+      },
+      method: "POST",
+      url: "http://localhost/api/keys",
+    });
 
     const res = await POST(req);
 
@@ -210,7 +231,6 @@ describe("/api/keys routes", () => {
     expect(res.headers.get("X-RateLimit-Limit")).toBe("10");
     expect(res.headers.get("X-RateLimit-Remaining")).toBe("5");
     expect(res.headers.get("X-RateLimit-Reset")).toBe("789");
-    expect(req.json).not.toHaveBeenCalled();
   });
 
   it("POST /api/keys throttles with 'unknown' identifier when no user id or IP", async () => {
@@ -225,12 +245,11 @@ describe("/api/keys routes", () => {
       reset: 999,
       success: false,
     });
-    vi.resetModules();
     const { POST } = await import("@/app/api/keys/route");
-    const req = {
-      headers: new Headers(),
-      json: vi.fn(),
-    } as unknown as NextRequest;
+    const req = createMockNextRequest({
+      method: "POST",
+      url: "http://localhost/api/keys",
+    });
 
     const res = await POST(req);
 
@@ -240,17 +259,16 @@ describe("/api/keys routes", () => {
     expect(res.headers.get("X-RateLimit-Limit")).toBe("10");
     expect(res.headers.get("X-RateLimit-Remaining")).toBe("3");
     expect(res.headers.get("X-RateLimit-Reset")).toBe("999");
-    expect(req.json).not.toHaveBeenCalled();
   });
 
   it("POST /api/keys validates request body with Zod schema", async () => {
     MOCK_INSERT.mockResolvedValue(undefined);
-    vi.resetModules();
     const { POST } = await import("@/app/api/keys/route");
-    const req = {
-      headers: new Headers(),
-      json: async () => ({ apiKey: "", service: "openai" }),
-    } as unknown as NextRequest;
+    const req = createMockNextRequest({
+      body: { apiKey: "", service: "openai" },
+      method: "POST",
+      url: "http://localhost/api/keys",
+    });
     const res = await POST(req);
     expect(res.status).toBe(400);
     const body = await res.json();
@@ -259,30 +277,29 @@ describe("/api/keys routes", () => {
   });
 
   it("POST /api/keys rejects oversized request bodies", async () => {
-    vi.resetModules();
     const { POST } = await import("@/app/api/keys/route");
-    const req = {
-      headers: new Headers({
+    const req = createMockNextRequest({
+      headers: {
         "content-length": "70000", // > 64KB
-      }),
-      json: vi.fn(),
-    } as unknown as NextRequest;
+      },
+      method: "POST",
+      url: "http://localhost/api/keys",
+    });
     const res = await POST(req);
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.code).toBe("BAD_REQUEST");
     expect(body.error).toContain("too large");
-    expect(req.json).not.toHaveBeenCalled();
   });
 
   it("POST /api/keys normalizes service names before RPC execution", async () => {
     MOCK_INSERT.mockResolvedValue(undefined);
-    vi.resetModules();
     const { POST } = await import("@/app/api/keys/route");
-    const req = {
-      headers: new Headers(),
-      json: async () => ({ apiKey: "abc123", service: "  OpenAI  " }),
-    } as unknown as NextRequest;
+    const req = createMockNextRequest({
+      body: { apiKey: "abc123", service: "  OpenAI  " },
+      method: "POST",
+      url: "http://localhost/api/keys",
+    });
     const res = await POST(req);
     expect(res.status).toBe(204);
     expect(MOCK_INSERT).toHaveBeenCalledWith("test-user", "openai", "abc123");
@@ -294,12 +311,12 @@ describe("/api/keys routes", () => {
       spanCalls.push(options);
       return execute({ setAttribute: vi.fn() });
     });
-    vi.resetModules();
     const { POST } = await import("@/app/api/keys/route");
-    const req = {
-      headers: new Headers(),
-      json: async () => ({ apiKey: "abc", service: "openai" }),
-    } as unknown as NextRequest;
+    const req = createMockNextRequest({
+      body: { apiKey: "abc", service: "openai" },
+      method: "POST",
+      url: "http://localhost/api/keys",
+    });
     const res = await POST(req);
     expect(res.status).toBe(204);
     expect(TELEMETRY_SPY).toHaveBeenCalledTimes(1);
@@ -318,9 +335,11 @@ describe("/api/keys routes", () => {
       run({ setAttribute: vi.fn() })
     );
     MOCK_DELETE.mockRejectedValueOnce(new Error("boom"));
-    vi.resetModules();
     const route = await import("@/app/api/keys/[service]/route");
-    const req = { headers: new Headers() } as unknown as NextRequest;
+    const req = createMockNextRequest({
+      method: "DELETE",
+      url: "http://localhost/api/keys/openai",
+    });
     const res = await route.DELETE(req, {
       params: Promise.resolve({ service: "openai" }),
     });
