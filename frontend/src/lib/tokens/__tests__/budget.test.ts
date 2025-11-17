@@ -35,8 +35,18 @@ vi.mock("js-tiktoken/lite", () => ({
 }));
 
 // Mock rank files to avoid loading real WASM data (return non-empty objects)
-vi.mock("js-tiktoken/ranks/o200k_base", () => ({ default: { __mock: true } }));
-vi.mock("js-tiktoken/ranks/cl100k_base", () => ({ default: { __mock: true } }));
+vi.mock("js-tiktoken/ranks/o200k_base", () => ({
+  default: {
+    // biome-ignore lint/style/useNamingConvention: Test-only sentinel property name.
+    __mock: true,
+  },
+}));
+vi.mock("js-tiktoken/ranks/cl100k_base", () => ({
+  default: {
+    // biome-ignore lint/style/useNamingConvention: Test-only sentinel property name.
+    __mock: true,
+  },
+}));
 
 describe("countTokens", () => {
   beforeEach(() => {

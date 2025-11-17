@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { LoginCredentials, RegisterCredentials } from "@/stores/auth/auth-core";
 import { useAuthCore } from "@/stores/auth/auth-core";
 import { useAuthSession } from "@/stores/auth/auth-session";
+import { useAuthValidation } from "@/stores/auth/auth-validation";
+import { resetAuthState } from "@/stores/auth/reset-auth";
 import { createMockUser, resetAuthSlices, setupAuthSliceTests } from "./_shared";
 
 // Mock fetch for API calls
@@ -240,6 +242,23 @@ describe("AuthCore", () => {
 
       const authSessionState = useAuthSession.getState();
       expect(authSessionState.session).toBeNull();
+    });
+
+    it("invokes auth-session resetSession when logging out", async () => {
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+      } as Response);
+
+      const sessionState = useAuthSession.getState();
+      const resetSessionSpy = vi.spyOn(sessionState, "resetSession");
+
+      const { result } = renderHook(() => useAuthCore());
+
+      await act(async () => {
+        await result.current.logout();
+      });
+
+      expect(resetSessionSpy).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -489,6 +508,64 @@ describe("AuthCore", () => {
       });
 
       expect(result.current.userDisplayName).toBe("username");
+    });
+  });
+
+  describe("Auth reset orchestration", () => {
+    it("resetAuthState clears auth-core, session, and validation slices", () => {
+      const mockUser = createMockUser();
+
+      act(() => {
+        useAuthCore.setState({
+          error: "Some error",
+          isAuthenticated: true,
+          isLoading: true,
+          isLoggingIn: true,
+          isRegistering: true,
+          user: mockUser,
+          userDisplayName: "Display Name",
+        });
+
+        useAuthSession.setState({
+          session: {
+            createdAt: "2025-01-01T00:00:00Z",
+            expiresAt: "2025-01-02T00:00:00Z",
+            id: "session-1",
+            lastActivity: "2025-01-01T01:00:00Z",
+            userId: "user-1",
+          },
+        });
+
+        useAuthValidation.setState({
+          isResettingPassword: true,
+          isVerifyingEmail: true,
+          passwordResetError: "Reset error",
+          registerError: "Register error",
+        });
+      });
+
+      act(() => {
+        resetAuthState();
+      });
+
+      const coreState = useAuthCore.getState();
+      const sessionState = useAuthSession.getState();
+      const validationState = useAuthValidation.getState();
+
+      expect(coreState.isAuthenticated).toBe(false);
+      expect(coreState.user).toBeNull();
+      expect(coreState.error).toBeNull();
+      expect(coreState.isLoading).toBe(false);
+      expect(coreState.isLoggingIn).toBe(false);
+      expect(coreState.isRegistering).toBe(false);
+      expect(coreState.userDisplayName).toBe("");
+
+      expect(sessionState.session).toBeNull();
+
+      expect(validationState.isResettingPassword).toBe(false);
+      expect(validationState.isVerifyingEmail).toBe(false);
+      expect(validationState.passwordResetError).toBeNull();
+      expect(validationState.registerError).toBeNull();
     });
   });
 });

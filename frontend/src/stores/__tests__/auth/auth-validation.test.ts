@@ -238,7 +238,7 @@ describe("AuthValidation", () => {
       });
 
       expect(verifyResult).toBe(false);
-      expect(result.current.passwordResetError).toBe("Invalid token");
+      expect(result.current.registerError).toBe("Invalid token");
     });
 
     it("successfully resends email verification", async () => {
@@ -271,7 +271,7 @@ describe("AuthValidation", () => {
       });
 
       expect(resendResult).toBe(false);
-      expect(result.current.passwordResetError).toBe("Rate limit exceeded");
+      expect(result.current.registerError).toBe("Rate limit exceeded");
     });
   });
 

@@ -5,9 +5,7 @@
 import { act } from "@testing-library/react";
 import { afterEach, beforeEach, vi } from "vitest";
 import type { AuthUser } from "@/lib/schemas/stores";
-import { useAuthCore } from "@/stores/auth/auth-core";
-import { useAuthSession } from "@/stores/auth/auth-session";
-import { useAuthValidation } from "@/stores/auth/auth-validation";
+import { resetAuthState } from "@/stores/auth/reset-auth";
 
 /**
  * Accelerates store async flows in test suites by mocking setTimeout.
@@ -38,29 +36,7 @@ export const setupTimeoutMock = (): { mockRestore: () => void } => {
  */
 export const resetAuthSlices = (): void => {
   act(() => {
-    // Reset auth-core slice
-    useAuthCore.setState({
-      error: null,
-      isAuthenticated: false,
-      isLoading: false,
-      isLoggingIn: false,
-      isRegistering: false,
-      user: null,
-      userDisplayName: "",
-    });
-
-    // Reset auth-session slice
-    useAuthSession.setState({
-      session: null,
-    });
-
-    // Reset auth-validation slice
-    useAuthValidation.setState({
-      isResettingPassword: false,
-      isVerifyingEmail: false,
-      passwordResetError: null,
-      registerError: null,
-    });
+    resetAuthState();
   });
 };
 

@@ -63,50 +63,69 @@ interface AuthCoreState {
 }
 
 /**
+ * Initial auth core view-model state.
+ * This state mirrors, but does not own, Supabase SSR session authority.
+ */
+export const authCoreInitialState: Pick<
+  AuthCoreState,
+  | "isAuthenticated"
+  | "user"
+  | "error"
+  | "isLoading"
+  | "isLoggingIn"
+  | "isRegistering"
+  | "userDisplayName"
+> = {
+  error: null,
+  isAuthenticated: false,
+  isLoading: false,
+  isLoggingIn: false,
+  isRegistering: false,
+  user: null,
+  userDisplayName: "",
+};
+
+/**
  * Auth core store hook.
  */
 export const useAuthCore = create<AuthCoreState>()(
   devtools(
     persist(
       (set, get) => ({
+        // Initial state
+        ...authCoreInitialState,
+
         clearError: () => {
           set({ error: null });
         },
-        error: null,
 
         initialize: async () => {
-          // Check if user is already authenticated via session
-          // This should call an API route that uses createServerSupabase
-          // TODO: Replace with actual API call to /api/auth/me
+          // Check if user is already authenticated via Supabase SSR session.
           try {
-            const response = await fetch("/api/auth/me");
+            const response = await fetch("/auth/me", {
+              headers: { "Content-Type": "application/json" },
+              method: "GET",
+            });
             if (response.ok) {
-              const data = await response.json();
-              set({
-                isAuthenticated: true,
-                user: data.user,
-                userDisplayName: computeUserDisplayName(data.user),
-              });
-            } else {
-              set({
-                isAuthenticated: false,
-                user: null,
-                userDisplayName: "",
-              });
+              const data = (await response.json()) as { user: AuthUser | null };
+              if (data.user) {
+                set({
+                  isAuthenticated: true,
+                  user: data.user,
+                  userDisplayName: computeUserDisplayName(data.user),
+                });
+                return;
+              }
             }
           } catch (_error) {
-            set({
-              isAuthenticated: false,
-              user: null,
-              userDisplayName: "",
-            });
+            // Swallow errors and fall through to resetting state.
           }
+          set({
+            isAuthenticated: false,
+            user: null,
+            userDisplayName: "",
+          });
         },
-        // Initial state
-        isAuthenticated: false,
-        isLoading: false,
-        isLoggingIn: false,
-        isRegistering: false,
 
         // Actions
         login: async (credentials) => {
@@ -168,9 +187,8 @@ export const useAuthCore = create<AuthCoreState>()(
           };
 
           try {
-            // Call API route that uses createServerSupabase + withApiGuards
-            // TODO: Replace with actual API call to /api/auth/logout
-            await fetch("/api/auth/logout", {
+            // Call server route that uses createServerSupabase
+            await fetch("/auth/logout", {
               method: "POST",
             });
 
@@ -289,6 +307,7 @@ export const useAuthCore = create<AuthCoreState>()(
             };
 
             set({
+              error: null,
               isLoading: false,
               user: updatedUser,
               userDisplayName: computeUserDisplayName(updatedUser),
@@ -335,6 +354,7 @@ export const useAuthCore = create<AuthCoreState>()(
             };
 
             set({
+              error: null,
               isLoading: false,
               user: updatedUser,
               userDisplayName: computeUserDisplayName(updatedUser),
@@ -378,6 +398,7 @@ export const useAuthCore = create<AuthCoreState>()(
             };
 
             set({
+              error: null,
               isLoading: false,
               user: updatedUser,
               userDisplayName: computeUserDisplayName(updatedUser),

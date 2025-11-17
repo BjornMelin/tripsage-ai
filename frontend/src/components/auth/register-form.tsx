@@ -1,13 +1,15 @@
 /**
  * @fileoverview Registration component for email/password sign-up and
- * Supabase social OAuth (GitHub, Google). Sends confirmation links to
- * `/auth/confirm` for email verification.
+ * Supabase social OAuth (GitHub, Google).
+ *
+ * Email/password registration submits to the server-side /auth/register route,
+ * which uses Supabase SSR and sends confirmation links to `/auth/confirm`.
  */
 
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useId, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useId, useMemo } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,74 +40,24 @@ export function RegisterForm({
   redirectTo = "/dashboard",
   className,
 }: RegisterFormProps) {
-  const router = useRouter();
   const search = useSearchParams();
   const nextParam = search?.get("next") || "";
-
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-
+  const error = search?.get("error");
+  const status = search?.get("status");
   const emailId = useId();
   const passwordId = useId();
   const confirmId = useId();
+  const firstNameId = useId();
+  const lastNameId = useId();
+
+  const showSuccess =
+    status === "check_email" ||
+    status === "registered" ||
+    status === "confirmation_sent";
 
   const supabase = useMemo(() => createClient(), []);
 
-  useEffect(() => {
-    const checkSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (session) router.push(redirectTo);
-    };
-    checkSession().catch((err) => {
-      // Log session check errors for debugging/monitoring
-      // eslint-disable-next-line no-console
-      console.error("Session check failed in RegisterForm:", err);
-    });
-  }, [router, redirectTo, supabase]);
-
   const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const nextSuffix = nextParam ? `&next=${encodeURIComponent(nextParam)}` : "";
-
-  /**
-   * Handle sign up.
-   *
-   * @param e - The form event.
-   * @returns A promise that resolves to the sign up result.
-   */
-  const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-    setMessage(null);
-
-    if (password !== confirm) {
-      setError("Passwords do not match");
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      const { error: signUpError } = await supabase.auth.signUp({
-        email,
-        options: {
-          emailRedirectTo: `${origin}/auth/confirm?type=email${nextSuffix}`,
-        },
-        password,
-      });
-      if (signUpError) throw signUpError;
-      setMessage("Check your email for a confirmation link to complete registration.");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Registration failed");
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   /**
    * Handle social login.
@@ -114,14 +66,16 @@ export function RegisterForm({
    * @returns A promise that resolves to the social login result.
    */
   const handleSocialLogin = async (provider: "github" | "google") => {
-    setError(null);
     const { error: oAuthError } = await supabase.auth.signInWithOAuth({
       options: {
         redirectTo: `${origin}/auth/callback${nextParam ? `?next=${encodeURIComponent(nextParam)}` : ""}`,
       },
       provider,
     });
-    if (oAuthError) setError(oAuthError.message);
+    if (oAuthError) {
+      // eslint-disable-next-line no-console
+      console.error("Social registration login failed:", oAuthError.message);
+    }
   };
 
   return (
@@ -133,27 +87,49 @@ export function RegisterForm({
       </CardHeader>
       <CardContent className="space-y-4">
         {error && (
-          <Alert variant="destructive">
+          <Alert variant="destructive" role="status" aria-label="registration error">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        {message && (
-          <Alert>
-            <AlertDescription>{message}</AlertDescription>
+        {showSuccess && (
+          <Alert role="status" aria-label="registration success">
+            <AlertDescription>
+              Check your email for a confirmation link to complete registration.
+            </AlertDescription>
           </Alert>
         )}
 
-        <form onSubmit={handleSignUp} className="space-y-3">
+        <form action="/auth/register" method="post" className="space-y-3">
+          <input type="hidden" name="redirectTo" value={redirectTo} />
+          {nextParam ? <input type="hidden" name="next" value={nextParam} /> : null}
+          <div className="space-y-2">
+            <Label htmlFor={firstNameId}>First name</Label>
+            <Input
+              id={firstNameId}
+              type="text"
+              name="firstName"
+              autoComplete="given-name"
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={lastNameId}>Last name</Label>
+            <Input
+              id={lastNameId}
+              type="text"
+              name="lastName"
+              autoComplete="family-name"
+              required
+            />
+          </div>
           <div className="space-y-2">
             <Label htmlFor={emailId}>Email</Label>
             <Input
               id={emailId}
               type="email"
+              name="email"
               autoComplete="email"
               required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={isLoading}
             />
           </div>
           <div className="space-y-2">
@@ -161,11 +137,9 @@ export function RegisterForm({
             <Input
               id={passwordId}
               type="password"
+              name="password"
               autoComplete="new-password"
               required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={isLoading}
             />
           </div>
           <div className="space-y-2">
@@ -173,15 +147,25 @@ export function RegisterForm({
             <Input
               id={confirmId}
               type="password"
+              name="confirmPassword"
               autoComplete="new-password"
               required
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
-              disabled={isLoading}
             />
           </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Creating account..." : "Sign up"}
+          <div className="flex items-center space-x-2">
+            <input
+              id="acceptTerms"
+              type="checkbox"
+              name="acceptTerms"
+              className="h-4 w-4"
+              required
+            />
+            <Label htmlFor="acceptTerms" className="text-sm">
+              I agree to the Terms of Service and Privacy Policy
+            </Label>
+          </div>
+          <Button type="submit" className="w-full">
+            Sign up
           </Button>
         </form>
 
