@@ -26,7 +26,13 @@ export const GET = withApiGuards({
   rateLimit: "user-settings:get",
   telemetry: "user-settings.get",
 })(async (_req, { user }) => {
-  const allowGatewayFallback = await getUserAllowGatewayFallback(user!.id);
+  if (!user) {
+    return NextResponse.json(
+      { error: "unauthorized", reason: "Authentication required" },
+      { status: 401 }
+    );
+  }
+  const allowGatewayFallback = await getUserAllowGatewayFallback(user.id);
   return NextResponse.json({ allowGatewayFallback });
 });
 
@@ -62,12 +68,19 @@ export const POST = withApiGuards({
     );
   }
 
+  if (!user) {
+    return NextResponse.json(
+      { error: "unauthorized", reason: "Authentication required" },
+      { status: 401 }
+    );
+  }
+
   // Upsert row with owner RLS via SSR client
   type UserSettingsInsert = Database["public"]["Tables"]["user_settings"]["Insert"];
   // DB column names use snake_case by convention
   const payload: UserSettingsInsert = {
     allow_gateway_fallback: allowGatewayFallback,
-    user_id: user!.id,
+    user_id: user.id,
   };
   const { error: upsertError } = await (
     supabase as unknown as {

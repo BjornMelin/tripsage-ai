@@ -1,6 +1,6 @@
-import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { WebhookPayload } from "@/lib/webhooks/payload";
+import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
 
 type ParseAndVerify = (req: Request) => Promise<ParseResult>;
 type BuildEventKey = (payload: WebhookPayload) => string;
@@ -16,6 +16,13 @@ type PublishJson = (args: { body: unknown; url: string }) => Promise<{
 
 type ParseResult = { ok: boolean; payload?: WebhookPayload };
 type TripsRouteModule = typeof import("../route");
+
+// Mock next/headers cookies() BEFORE any imports that use it
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(() =>
+    Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))
+  ),
+}));
 
 const parseAndVerifyMock = vi.hoisted(() => vi.fn<ParseAndVerify>());
 const buildEventKeyMock = vi.hoisted(() => vi.fn<BuildEventKey>(() => "event-key-1"));
@@ -91,17 +98,29 @@ vi.mock("next/server", async () => {
   };
 });
 
+// Mock route helpers
+vi.mock("@/lib/next/route-helpers", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/next/route-helpers")>(
+    "@/lib/next/route-helpers"
+  );
+  return {
+    ...actual,
+    withRequestSpan: vi.fn((_name, _attrs, fn) => fn()),
+  };
+});
+
 function makeRequest(body: unknown, headers: Record<string, string> = {}) {
-  return new NextRequest("http://localhost/api/hooks/trips", {
-    body: JSON.stringify(body),
-    headers: { "content-type": "application/json", ...headers },
+  return createMockNextRequest({
+    body,
+    headers,
     method: "POST",
+    url: "http://localhost/api/hooks/trips",
   });
 }
 
 describe("POST /api/hooks/trips", () => {
   beforeEach(() => {
-    vi.resetModules();
+    vi.clearAllMocks();
     parseAndVerifyMock.mockReset();
     buildEventKeyMock.mockReset();
     buildEventKeyMock.mockReturnValue("event-key-1");

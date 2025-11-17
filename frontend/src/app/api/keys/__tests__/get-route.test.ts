@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
-import { getMockCookiesForTest } from "@/test/route-helpers";
+import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
 
 // Mock next/headers cookies() BEFORE any imports that use it
 vi.mock("next/headers", () => ({
@@ -53,7 +53,11 @@ describe("GET /api/keys route", () => {
       from,
     } as unknown as TypedServerSupabase);
     const { GET } = await import("../route");
-    const res = await GET();
+    const req = createMockNextRequest({
+      method: "GET",
+      url: "http://localhost/api/keys",
+    });
+    const res = await GET(req);
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body[0]).toMatchObject({ hasKey: true, isValid: true, service: "openai" });
@@ -64,7 +68,11 @@ describe("GET /api/keys route", () => {
       auth: { getUser: vi.fn(async () => ({ data: { user: null } })) },
     } as unknown as TypedServerSupabase);
     const { GET } = await import("../route");
-    const res = await GET();
+    const req = createMockNextRequest({
+      method: "GET",
+      url: "http://localhost/api/keys",
+    });
+    const res = await GET(req);
     expect(res.status).toBe(401);
   });
 });

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as route from "@/app/api/embeddings/route";
+import { createMockNextRequest } from "@/test/route-helpers";
 
 vi.mock("ai", () => ({
   embed: vi.fn(async () => ({
@@ -26,9 +27,10 @@ beforeEach(() => {
 describe("POST /api/embeddings", () => {
   it("returns 400 on missing input", async () => {
     const res = await route.POST(
-      new Request("http://localhost/api/embeddings", {
-        body: JSON.stringify({ text: "" }),
+      createMockNextRequest({
+        body: { text: "" },
         method: "POST",
+        url: "http://localhost/api/embeddings",
       })
     );
     expect(res.status).toBe(400);
@@ -36,9 +38,10 @@ describe("POST /api/embeddings", () => {
 
   it("returns 1536-d embedding", async () => {
     const res = await route.POST(
-      new Request("http://localhost/api/embeddings", {
-        body: JSON.stringify({ text: "hello world" }),
+      createMockNextRequest({
+        body: { text: "hello world" },
         method: "POST",
+        url: "http://localhost/api/embeddings",
       })
     );
     expect(res.status).toBe(200);
@@ -52,8 +55,8 @@ describe("POST /api/embeddings", () => {
 
   it("persists accommodation embeddings when property metadata present", async () => {
     const res = await route.POST(
-      new Request("http://localhost/api/embeddings", {
-        body: JSON.stringify({
+      createMockNextRequest({
+        body: {
           property: {
             amenities: ["pool", "wifi"],
             description: "Beautiful stay",
@@ -61,8 +64,9 @@ describe("POST /api/embeddings", () => {
             name: "Test Property",
             source: "hotel",
           },
-        }),
+        },
         method: "POST",
+        url: "http://localhost/api/embeddings",
       })
     );
 
@@ -85,14 +89,15 @@ describe("POST /api/embeddings", () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     const res = await route.POST(
-      new Request("http://localhost/api/embeddings", {
-        body: JSON.stringify({
+      createMockNextRequest({
+        body: {
           property: {
             id: "prop-999",
             name: "fail",
           },
-        }),
+        },
         method: "POST",
+        url: "http://localhost/api/embeddings",
       })
     );
 

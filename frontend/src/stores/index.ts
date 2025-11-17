@@ -1,9 +1,10 @@
 /**
  * @fileoverview Central barrel exporting Zustand stores and selectors.
  */
+
 export { useAgentStatusStore } from "./agent-status-store";
+export { useAuthCore as useAuthStore } from "./auth/auth-core";
 export * from "./auth-store";
-export { useAuthStore } from "./auth-store";
 export { useBudgetStore } from "./budget-store";
 export { useChatStore } from "./chat-store";
 export { useCurrencyStore } from "./currency-store";

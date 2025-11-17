@@ -24,6 +24,7 @@ vi.mock("@/lib/tokens/budget", async (importOriginal) => {
 // Import after mocks are set up
 import { simulateReadableStream, streamText } from "ai";
 import { POST } from "@/app/api/ai/stream/route";
+import { createMockNextRequest } from "@/test/route-helpers";
 
 const MOCK_STREAM_TEXT = vi.mocked(streamText);
 const _MOCK_SIMULATE_READABLE_STREAM = vi.mocked(simulateReadableStream);
@@ -92,10 +93,10 @@ describe("ai stream route", () => {
       >
     );
 
-    const request = new Request("http://localhost", {
-      body: JSON.stringify({ prompt: "Hello world" }),
-      headers: { "content-type": "application/json" },
+    const request = createMockNextRequest({
+      body: { prompt: "Hello world" },
       method: "POST",
+      url: "http://localhost",
     });
 
     const response = await POST(request);
@@ -124,10 +125,10 @@ describe("ai stream route", () => {
       >
     );
 
-    const request = new Request("http://localhost", {
-      body: JSON.stringify({ prompt: "" }),
-      headers: { "content-type": "application/json" },
+    const request = createMockNextRequest({
+      body: { prompt: "" },
       method: "POST",
+      url: "http://localhost",
     });
 
     const response = await POST(request);
@@ -153,10 +154,10 @@ describe("ai stream route", () => {
       >
     );
 
-    const request = new Request("http://localhost", {
-      body: JSON.stringify({}),
-      headers: { "content-type": "application/json" },
+    const request = createMockNextRequest({
+      body: {},
       method: "POST",
+      url: "http://localhost",
     });
 
     const response = await POST(request);
@@ -182,10 +183,10 @@ describe("ai stream route", () => {
       >
     );
 
-    const request = new Request("http://localhost", {
+    const request = createMockNextRequest({
       body: "invalid json{",
-      headers: { "content-type": "application/json" },
       method: "POST",
+      url: "http://localhost",
     });
 
     const response = await POST(request);
@@ -199,8 +200,9 @@ describe("ai stream route", () => {
   });
 
   it("handles non-POST requests", async () => {
-    const request = new Request("http://localhost", {
+    const request = createMockNextRequest({
       method: "GET",
+      url: "http://localhost",
     });
 
     // The route handler should handle this appropriately
@@ -221,9 +223,10 @@ describe("ai stream route", () => {
       >
     );
 
-    const request = new Request("http://localhost", {
-      body: JSON.stringify({ prompt: "test" }),
+    const request = createMockNextRequest({
+      body: { prompt: "test" },
       method: "POST",
+      url: "http://localhost",
     });
 
     const response = await POST(request);
@@ -243,10 +246,10 @@ describe("ai stream route", () => {
       >
     );
 
-    const request = new Request("http://localhost", {
-      body: JSON.stringify({ prompt: "test" }),
-      headers: { "content-type": "application/json" },
+    const request = createMockNextRequest({
+      body: { prompt: "test" },
       method: "POST",
+      url: "http://localhost",
     });
 
     await POST(request);
@@ -266,10 +269,10 @@ describe("ai stream route", () => {
       throw new Error("AI SDK error");
     });
 
-    const request = new Request("http://localhost", {
-      body: JSON.stringify({ prompt: "test" }),
-      headers: { "content-type": "application/json" },
+    const request = createMockNextRequest({
+      body: { prompt: "test" },
       method: "POST",
+      url: "http://localhost",
     });
 
     // Should propagate the error for Next.js error handling
@@ -288,10 +291,10 @@ describe("ai stream route", () => {
       >
     );
 
-    const request = new Request("http://localhost", {
-      body: JSON.stringify({ prompt: "test" }),
-      headers: { "content-type": "application/json" },
+    const request = createMockNextRequest({
+      body: { prompt: "test" },
       method: "POST",
+      url: "http://localhost",
     });
 
     await expect(POST(request)).rejects.toThrow("Response conversion error");
@@ -310,10 +313,10 @@ describe("ai stream route", () => {
       >
     );
 
-    const request = new Request("http://localhost", {
-      body: JSON.stringify({ prompt: longPrompt }),
-      headers: { "content-type": "application/json" },
+    const request = createMockNextRequest({
+      body: { prompt: longPrompt },
       method: "POST",
+      url: "http://localhost",
     });
 
     const response = await POST(request);

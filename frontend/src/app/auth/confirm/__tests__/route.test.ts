@@ -1,12 +1,19 @@
-import type { NextRequest } from "next/server";
 import type { MockInstance } from "vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
+
+// Mock next/headers cookies() BEFORE any imports that use it
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(() =>
+    Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))
+  ),
+}));
 
 const VERIFY_MOCK: MockInstance<
   (_args: { token_hash: string; type: string }) => Promise<{ error: Error | null }>
 > = vi.fn(async (_args: { token_hash: string; type: string }) => ({ error: null }));
 
-vi.mock("@/lib/supabase", () => ({
+vi.mock("@/lib/supabase/server", () => ({
   createServerSupabase: vi.fn(async () => ({ auth: { verifyOtp: VERIFY_MOCK } })),
 }));
 
@@ -24,15 +31,6 @@ vi.mock("next/navigation", async (importOriginal) => {
 
 import { GET } from "../route";
 
-/**
- * Creates a mock request object for testing.
- * @param url The request URL.
- * @return A mock request object.
- */
-function makeReq(url: string): NextRequest {
-  return { headers: new Headers(), url } as NextRequest;
-}
-
 describe("auth/confirm route", () => {
   beforeEach(() => {
     VERIFY_MOCK.mockClear();
@@ -40,9 +38,10 @@ describe("auth/confirm route", () => {
   });
 
   it("verifies token and redirects to next path", async () => {
-    const req = makeReq(
-      "https://app.example.com/auth/confirm?token_hash=thash&type=email&next=%2F"
-    );
+    const req = createMockNextRequest({
+      method: "GET",
+      url: "https://app.example.com/auth/confirm?token_hash=thash&type=email&next=%2F",
+    });
     await GET(req);
     expect(VERIFY_MOCK).toHaveBeenCalledWith({ token_hash: "thash", type: "email" });
     expect(REDIRECT_MOCK).toHaveBeenCalledWith("/");
@@ -50,9 +49,10 @@ describe("auth/confirm route", () => {
 
   it("redirects to error on verify failure", async () => {
     VERIFY_MOCK.mockResolvedValueOnce({ error: new Error("invalid") });
-    const req = makeReq(
-      "https://app.example.com/auth/confirm?token_hash=bad&type=email"
-    );
+    const req = createMockNextRequest({
+      method: "GET",
+      url: "https://app.example.com/auth/confirm?token_hash=bad&type=email",
+    });
     await GET(req);
     expect(REDIRECT_MOCK).toHaveBeenCalledWith("/error");
   });

@@ -15,18 +15,10 @@ export const revalidate = 0;
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import type { RateLimitResult } from "@/app/api/keys/_rate-limiter";
-import {
-  buildRateLimiter,
-  RateLimiterConfigurationError,
-} from "@/app/api/keys/_rate-limiter";
 import { buildKeySpanAttributes } from "@/app/api/keys/_telemetry";
-import {
-  checkAuthentication,
-  getTrustedRateLimitIdentifier,
-  redactErrorForLogging,
-} from "@/lib/next/route-helpers";
+import { withApiGuards } from "@/lib/api/factory";
+import { redactErrorForLogging } from "@/lib/next/route-helpers";
 import { deleteUserApiKey, deleteUserGatewayBaseUrl } from "@/lib/supabase/rpc";
-import { createServerSupabase } from "@/lib/supabase/server";
 import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
 
 const ALLOWED_SERVICES = new Set(["openai", "openrouter", "anthropic", "xai"]);
@@ -37,114 +29,87 @@ type IdentifierType = "user" | "ip";
  * Handle DELETE /api/keys/[service] to remove a user's provider API key.
  *
  * @param req Next.js request.
- * @param ctx Route params including the service identifier.
+ * @param context Route params including the service identifier.
+ * @param routeContext Route context from withApiGuards
  * @returns 204 No Content on success; 400/401/429/500 on error.
  */
-export async function DELETE(
+export function DELETE(
   req: NextRequest,
   context: { params: Promise<{ service: string }> }
-) {
-  let serviceForLog: string | undefined;
-  try {
-    const supabase = await createServerSupabase();
-    const { user, isAuthenticated } = await checkAuthentication(supabase);
-    const userObj = user as { id: string } | null;
-    const identifierType: IdentifierType = userObj?.id ? "user" : "ip";
-    let ratelimitInstance: ReturnType<typeof buildRateLimiter>;
+): Promise<Response> {
+  return withApiGuards({
+    auth: true,
+    rateLimit: "keys:delete",
+    // Custom telemetry handled below
+  })(async (_req: NextRequest, { user }) => {
+    let serviceForLog: string | undefined;
     try {
-      ratelimitInstance = buildRateLimiter();
-    } catch (configError) {
-      if (configError instanceof RateLimiterConfigurationError) {
+      const userObj = user as { id: string } | null;
+      const identifierType: IdentifierType = userObj?.id ? "user" : "ip";
+      // Rate limit metadata not available from factory, using undefined for custom telemetry
+      const rateLimitMeta: RateLimitResult | undefined = undefined;
+
+      const { service } = await context.params;
+      serviceForLog = service;
+      if (!service || typeof service !== "string") {
         return NextResponse.json(
-          {
-            code: "CONFIGURATION_ERROR",
-            error: "Rate limiter configuration error",
-          },
-          { status: 500 }
+          { code: "BAD_REQUEST", error: "Invalid service" },
+          { status: 400 }
         );
       }
-      throw configError;
-    }
-    let rateLimitMeta: RateLimitResult | undefined;
-    if (ratelimitInstance) {
-      const identifier = userObj?.id ?? getTrustedRateLimitIdentifier(req);
-      rateLimitMeta = await ratelimitInstance.limit(identifier);
-      if (!rateLimitMeta.success) {
+      const normalizedService = service.trim().toLowerCase();
+      if (!ALLOWED_SERVICES.has(normalizedService)) {
         return NextResponse.json(
-          { code: "RATE_LIMIT", error: "Rate limit exceeded" },
-          {
-            headers: {
-              "X-RateLimit-Limit": String(rateLimitMeta.limit),
-              "X-RateLimit-Remaining": String(rateLimitMeta.remaining),
-              "X-RateLimit-Reset": String(rateLimitMeta.reset),
-            },
-            status: 429,
-          }
+          { code: "BAD_REQUEST", error: "Unsupported service" },
+          { status: 400 }
         );
       }
-    }
 
-    const { service } = await context.params;
-    serviceForLog = service;
-    if (!service || typeof service !== "string") {
-      return NextResponse.json(
-        { code: "BAD_REQUEST", error: "Invalid service" },
-        { status: 400 }
-      );
-    }
-    const normalizedService = service.trim().toLowerCase();
-    if (!ALLOWED_SERVICES.has(normalizedService)) {
-      return NextResponse.json(
-        { code: "BAD_REQUEST", error: "Unsupported service" },
-        { status: 400 }
-      );
-    }
-
-    if (!isAuthenticated) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    await withTelemetrySpan(
-      "keys.rpc.delete",
-      {
-        attributes: buildKeySpanAttributes({
-          identifierType,
-          operation: "delete",
-          rateLimit: rateLimitMeta,
-          service: normalizedService,
-          userId: userObj?.id || "",
-        }),
-      },
-      async (span) => {
-        try {
-          if (normalizedService === "gateway") {
-            await deleteUserGatewayBaseUrl(userObj?.id || "");
+      await withTelemetrySpan(
+        "keys.rpc.delete",
+        {
+          attributes: buildKeySpanAttributes({
+            identifierType,
+            operation: "delete",
+            rateLimit: rateLimitMeta,
+            service: normalizedService,
+            userId: userObj?.id || "",
+          }),
+        },
+        async (span) => {
+          try {
+            if (normalizedService === "gateway") {
+              await deleteUserGatewayBaseUrl(userObj?.id || "");
+            }
+            await deleteUserApiKey(userObj?.id || "", normalizedService);
+            span.setAttribute("keys.rpc.error", false);
+          } catch (rpcError) {
+            span.setAttribute("keys.rpc.error", true);
+            throw rpcError;
           }
-          await deleteUserApiKey(userObj?.id || "", normalizedService);
-          span.setAttribute("keys.rpc.error", false);
-        } catch (rpcError) {
-          span.setAttribute("keys.rpc.error", true);
-          throw rpcError;
         }
-      }
-    );
-    return new NextResponse(null, { status: 204 });
-  } catch (err) {
-    const { message: safeMessage, context: safeContext } = redactErrorForLogging(err, {
-      operation: "delete_key",
-      service: serviceForLog,
-    });
-    recordTelemetryEvent("api.keys.delete_error", {
-      attributes: {
-        message: safeMessage,
-        service: serviceForLog ?? "unknown",
-        ...safeContext,
-      },
-      level: "error",
-    });
-    return NextResponse.json(
-      { code: "INTERNAL_ERROR", error: "Internal server error" },
-      { status: 500 }
-    );
-  }
+      );
+      return new NextResponse(null, { status: 204 });
+    } catch (err) {
+      const { message: safeMessage, context: safeContext } = redactErrorForLogging(
+        err,
+        {
+          operation: "delete_key",
+          service: serviceForLog,
+        }
+      );
+      recordTelemetryEvent("api.keys.delete_error", {
+        attributes: {
+          message: safeMessage,
+          service: serviceForLog ?? "unknown",
+          ...safeContext,
+        },
+        level: "error",
+      });
+      return NextResponse.json(
+        { code: "INTERNAL_ERROR", error: "Internal server error" },
+        { status: 500 }
+      );
+    }
+  })(req, context);
 }

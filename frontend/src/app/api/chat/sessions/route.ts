@@ -44,6 +44,6 @@ export const GET = withApiGuards({
   auth: true,
   rateLimit: "chat:sessions:list",
   telemetry: "chat.sessions.list",
-})(async (_req, { supabase }) => {
+})((_req, { supabase }) => {
   return listSessions({ supabase });
 });

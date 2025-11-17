@@ -9,7 +9,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { nowIso, secureUuid } from "@/lib/security/random";
-import { useAuthStore } from "@/stores";
+import { useAuthCore } from "@/stores/auth/auth-core";
 import { useRealtimeChannel } from "./use-realtime-channel";
 
 type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
@@ -103,7 +103,7 @@ export function useWebSocketChat({
   topicType = "user",
   sessionId,
 }: WebSocketChatOptions = {}): UseWebSocketChatReturn {
-  const { user } = useAuthStore();
+  const { user } = useAuthCore();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [status, setStatus] = useState<ConnectionStatus>("disconnected");

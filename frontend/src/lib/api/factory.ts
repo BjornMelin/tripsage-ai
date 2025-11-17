@@ -7,20 +7,20 @@
 
 import "server-only";
 
+import type { User } from "@supabase/supabase-js";
+import { Ratelimit } from "@upstash/ratelimit";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { Ratelimit } from "@upstash/ratelimit";
 import {
   checkAuthentication,
   errorResponse,
   getTrustedRateLimitIdentifier,
   withRequestSpan,
 } from "@/lib/next/route-helpers";
+import { ROUTE_RATE_LIMITS, type RouteRateLimitKey } from "@/lib/ratelimit/routes";
 import { getRedis } from "@/lib/redis";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { createServerSupabase } from "@/lib/supabase/server";
-import type { User } from "@supabase/supabase-js";
-import { ROUTE_RATE_LIMITS, type RouteRateLimitKey } from "@/lib/ratelimit/routes";
 
 /**
  * Configuration for route handler guards.
@@ -49,7 +49,7 @@ export interface RouteContext {
  *
  * Supports static routes (req only) and dynamic routes (req + route params).
  */
-export type RouteHandler<T = unknown> = (
+export type RouteHandler<_T = unknown> = (
   req: NextRequest,
   context: RouteContext,
   routeContext?: { params: Promise<Record<string, string>> }
@@ -106,10 +106,10 @@ async function enforceRateLimit(
         { error: "rate_limit_exceeded", reason: "Too many requests" },
         {
           headers: {
+            "Retry-After": String(Math.ceil((reset - Date.now()) / 1000)),
             "X-RateLimit-Limit": String(config.limit),
             "X-RateLimit-Remaining": String(remaining),
             "X-RateLimit-Reset": String(reset),
-            "Retry-After": String(Math.ceil((reset - Date.now()) / 1000)),
           },
           status: 429,
         }
@@ -206,9 +206,9 @@ export function withApiGuards<T = unknown>(
         return await withRequestSpan(
           telemetry,
           {
-            route: req.nextUrl.pathname,
+            identifierType: user?.id ? "user" : "ip",
             method: req.method,
-            identifier_type: user?.id ? "user" : "ip",
+            route: req.nextUrl.pathname,
           },
           executeHandler
         );
@@ -218,4 +218,3 @@ export function withApiGuards<T = unknown>(
     };
   };
 }
-

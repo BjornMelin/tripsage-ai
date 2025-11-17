@@ -1,10 +1,15 @@
-/**
- * @vitest-environment node
- */
+/** @vitest-environment node */
 
-import type { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as googleCalendar from "@/lib/calendar/google";
+import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
+
+// Mock next/headers cookies() BEFORE any imports that use it
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(() =>
+    Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))
+  ),
+}));
 
 // Mock Supabase before importing route handlers
 const mockUser = { email: "test@example.com", id: "user-1" };
@@ -33,6 +38,17 @@ vi.mock("@upstash/redis", () => ({
 vi.mock("@/lib/env/server", () => ({
   getServerEnvVarWithFallback: vi.fn(() => undefined),
 }));
+
+// Mock route helpers
+vi.mock("@/lib/next/route-helpers", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/next/route-helpers")>(
+    "@/lib/next/route-helpers"
+  );
+  return {
+    ...actual,
+    withRequestSpan: vi.fn((_name, _attrs, fn) => fn()),
+  };
+});
 
 // Import route handlers after mocks
 import * as eventsRoute from "../events/route";
@@ -72,9 +88,10 @@ describe("/api/calendar/events route", () => {
         error: { message: "Unauthorized" },
       } as never);
 
-      const req = new Request("http://localhost/api/calendar/events", {
+      const req = createMockNextRequest({
         method: "GET",
-      }) as NextRequest;
+        url: "http://localhost/api/calendar/events",
+      });
 
       const res = await eventsRoute.GET(req);
       expect(res.status).toBe(401);
@@ -83,9 +100,10 @@ describe("/api/calendar/events route", () => {
     });
 
     it("lists events successfully", async () => {
-      const req = new Request("http://localhost/api/calendar/events", {
+      const req = createMockNextRequest({
         method: "GET",
-      }) as NextRequest;
+        url: "http://localhost/api/calendar/events",
+      });
 
       const res = await eventsRoute.GET(req);
       expect(res.status).toBe(200);
@@ -95,12 +113,10 @@ describe("/api/calendar/events route", () => {
     });
 
     it("returns 400 on invalid query parameters", async () => {
-      const req = new Request(
-        "http://localhost/api/calendar/events?maxResults=invalid",
-        {
-          method: "GET",
-        }
-      ) as NextRequest;
+      const req = createMockNextRequest({
+        method: "GET",
+        url: "http://localhost/api/calendar/events?maxResults=invalid",
+      });
 
       const res = await eventsRoute.GET(req);
       expect(res.status).toBe(400);
@@ -109,15 +125,15 @@ describe("/api/calendar/events route", () => {
 
   describe("POST", () => {
     it("creates event successfully", async () => {
-      const req = new Request("http://localhost/api/calendar/events", {
-        body: JSON.stringify({
+      const req = createMockNextRequest({
+        body: {
           end: { dateTime: "2025-07-15T11:00:00Z" },
           start: { dateTime: "2025-07-15T10:00:00Z" },
           summary: "New Event",
-        }),
-        headers: { "content-type": "application/json" },
+        },
         method: "POST",
-      }) as NextRequest;
+        url: "http://localhost/api/calendar/events",
+      });
 
       const res = await eventsRoute.POST(req);
       expect(res.status).toBe(201);
@@ -127,11 +143,11 @@ describe("/api/calendar/events route", () => {
     });
 
     it("returns 400 on invalid request body", async () => {
-      const req = new Request("http://localhost/api/calendar/events", {
-        body: JSON.stringify({ invalid: "data" }),
-        headers: { "content-type": "application/json" },
+      const req = createMockNextRequest({
+        body: { invalid: "data" },
         method: "POST",
-      }) as NextRequest;
+        url: "http://localhost/api/calendar/events",
+      });
 
       const res = await eventsRoute.POST(req);
       expect(res.status).toBe(400);
@@ -140,13 +156,13 @@ describe("/api/calendar/events route", () => {
 
   describe("PATCH", () => {
     it("updates event successfully", async () => {
-      const req = new Request("http://localhost/api/calendar/events?eventId=event-1", {
-        body: JSON.stringify({
+      const req = createMockNextRequest({
+        body: {
           summary: "Updated Event",
-        }),
-        headers: { "content-type": "application/json" },
+        },
         method: "PATCH",
-      }) as NextRequest;
+        url: "http://localhost/api/calendar/events?eventId=event-1",
+      });
 
       const res = await eventsRoute.PATCH(req);
       expect(res.status).toBe(200);
@@ -156,11 +172,11 @@ describe("/api/calendar/events route", () => {
     });
 
     it("returns 400 when eventId missing", async () => {
-      const req = new Request("http://localhost/api/calendar/events", {
-        body: JSON.stringify({ summary: "Updated" }),
-        headers: { "content-type": "application/json" },
+      const req = createMockNextRequest({
+        body: { summary: "Updated" },
         method: "PATCH",
-      }) as NextRequest;
+        url: "http://localhost/api/calendar/events",
+      });
 
       const res = await eventsRoute.PATCH(req);
       expect(res.status).toBe(400);
@@ -169,9 +185,10 @@ describe("/api/calendar/events route", () => {
 
   describe("DELETE", () => {
     it("deletes event successfully", async () => {
-      const req = new Request("http://localhost/api/calendar/events?eventId=event-1", {
+      const req = createMockNextRequest({
         method: "DELETE",
-      }) as NextRequest;
+        url: "http://localhost/api/calendar/events?eventId=event-1",
+      });
 
       const res = await eventsRoute.DELETE(req);
       expect(res.status).toBe(200);
@@ -181,9 +198,10 @@ describe("/api/calendar/events route", () => {
     });
 
     it("returns 400 when eventId missing", async () => {
-      const req = new Request("http://localhost/api/calendar/events", {
+      const req = createMockNextRequest({
         method: "DELETE",
-      }) as NextRequest;
+        url: "http://localhost/api/calendar/events",
+      });
 
       const res = await eventsRoute.DELETE(req);
       expect(res.status).toBe(400);
