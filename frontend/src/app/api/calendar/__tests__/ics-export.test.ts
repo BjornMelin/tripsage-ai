@@ -2,8 +2,15 @@
  * @vitest-environment node
  */
 
-import type { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
+
+// Mock next/headers cookies() BEFORE any imports that use it
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(() =>
+    Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))
+  ),
+}));
 
 // Mock Supabase before importing route handlers
 const mockUser = { email: "test@example.com", id: "user-1" };
@@ -33,6 +40,17 @@ vi.mock("@/lib/env/server", () => ({
   getServerEnvVarWithFallback: vi.fn(() => undefined),
 }));
 
+// Mock route helpers
+vi.mock("@/lib/next/route-helpers", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/next/route-helpers")>(
+    "@/lib/next/route-helpers"
+  );
+  return {
+    ...actual,
+    withRequestSpan: vi.fn((_name, _attrs, fn) => fn()),
+  };
+});
+
 // Import route handlers after mocks
 import * as icsExportRoute from "../ics/export/route";
 
@@ -54,14 +72,14 @@ describe("/api/calendar/ics/export route", () => {
   });
 
   it("exports ICS successfully", async () => {
-    const req = new Request("http://localhost/api/calendar/ics/export", {
-      body: JSON.stringify({
+    const req = createMockNextRequest({
+      body: {
         calendarName: "Test Calendar",
         events: [mockEvent],
-      }),
-      headers: { "content-type": "application/json" },
+      },
       method: "POST",
-    }) as NextRequest;
+      url: "http://localhost/api/calendar/ics/export",
+    });
 
     const res = await icsExportRoute.POST(req);
     expect(res.status).toBe(200);
@@ -79,14 +97,14 @@ describe("/api/calendar/ics/export route", () => {
       error: { message: "Unauthorized" },
     } as never);
 
-    const req = new Request("http://localhost/api/calendar/ics/export", {
-      body: JSON.stringify({
+    const req = createMockNextRequest({
+      body: {
         calendarName: "Test Calendar",
         events: [mockEvent],
-      }),
-      headers: { "content-type": "application/json" },
+      },
       method: "POST",
-    }) as NextRequest;
+      url: "http://localhost/api/calendar/ics/export",
+    });
 
     const res = await icsExportRoute.POST(req);
     expect(res.status).toBe(401);
@@ -95,14 +113,14 @@ describe("/api/calendar/ics/export route", () => {
   });
 
   it("returns 400 on invalid request body", async () => {
-    const req = new Request("http://localhost/api/calendar/ics/export", {
-      body: JSON.stringify({
+    const req = createMockNextRequest({
+      body: {
         calendarName: "Test Calendar",
         events: [],
-      }),
-      headers: { "content-type": "application/json" },
+      },
       method: "POST",
-    }) as NextRequest;
+      url: "http://localhost/api/calendar/ics/export",
+    });
 
     const res = await icsExportRoute.POST(req);
     expect(res.status).toBe(400);
@@ -111,29 +129,29 @@ describe("/api/calendar/ics/export route", () => {
   });
 
   it("returns 400 on empty events array", async () => {
-    const req = new Request("http://localhost/api/calendar/ics/export", {
-      body: JSON.stringify({
+    const req = createMockNextRequest({
+      body: {
         calendarName: "Test Calendar",
         events: [],
-      }),
-      headers: { "content-type": "application/json" },
+      },
       method: "POST",
-    }) as NextRequest;
+      url: "http://localhost/api/calendar/ics/export",
+    });
 
     const res = await icsExportRoute.POST(req);
     expect(res.status).toBe(400);
   });
 
   it("includes custom timezone in ICS", async () => {
-    const req = new Request("http://localhost/api/calendar/ics/export", {
-      body: JSON.stringify({
+    const req = createMockNextRequest({
+      body: {
         calendarName: "Test Calendar",
         events: [mockEvent],
         timezone: "America/New_York",
-      }),
-      headers: { "content-type": "application/json" },
+      },
       method: "POST",
-    }) as NextRequest;
+      url: "http://localhost/api/calendar/ics/export",
+    });
 
     const res = await icsExportRoute.POST(req);
     expect(res.status).toBe(200);
@@ -142,8 +160,8 @@ describe("/api/calendar/ics/export route", () => {
   });
 
   it("exports ICS with multiple events", async () => {
-    const req = new Request("http://localhost/api/calendar/ics/export", {
-      body: JSON.stringify({
+    const req = createMockNextRequest({
+      body: {
         calendarName: "Test Calendar",
         events: [
           mockEvent,
@@ -154,10 +172,10 @@ describe("/api/calendar/ics/export route", () => {
             summary: "Second Event",
           },
         ],
-      }),
-      headers: { "content-type": "application/json" },
+      },
       method: "POST",
-    }) as NextRequest;
+      url: "http://localhost/api/calendar/ics/export",
+    });
 
     const res = await icsExportRoute.POST(req);
     expect(res.status).toBe(200);

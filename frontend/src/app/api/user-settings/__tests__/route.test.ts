@@ -1,8 +1,7 @@
 /** @vitest-environment node */
 
-import type { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getMockCookiesForTest } from "@/test/route-helpers";
+import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
 
 // Mock next/headers cookies() before any imports that use it
 vi.mock("next/headers", () => ({
@@ -37,7 +36,6 @@ function mockTableUpsert(ok = true) {
 
 describe("/api/user-settings", () => {
   beforeEach(() => {
-    vi.resetModules();
     vi.clearAllMocks();
     CREATE_SUPABASE.mockResolvedValue(MOCK_SUPABASE);
     MOCK_SUPABASE.auth.getUser.mockResolvedValue({
@@ -67,9 +65,11 @@ describe("/api/user-settings", () => {
   it("POST upserts consent flag", async () => {
     const { upsert } = mockTableUpsert(true);
     const { POST } = await import("../route");
-    const req = {
-      json: async () => ({ allowGatewayFallback: false }),
-    } as unknown as NextRequest;
+    const req = createMockNextRequest({
+      body: { allowGatewayFallback: false },
+      method: "POST",
+      url: "http://localhost/api/user-settings",
+    });
     const res = await POST(req);
     expect(res.status).toBe(200);
     expect(upsert).toHaveBeenCalledWith(
@@ -80,7 +80,11 @@ describe("/api/user-settings", () => {
 
   it("POST rejects malformed JSON", async () => {
     const { POST } = await import("../route");
-    const req = { json: async () => ({}) } as unknown as NextRequest;
+    const req = createMockNextRequest({
+      body: {},
+      method: "POST",
+      url: "http://localhost/api/user-settings",
+    });
     const res = await POST(req);
     expect(res.status).toBe(400);
   });

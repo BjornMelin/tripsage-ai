@@ -3,7 +3,9 @@ import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpe
 
 // Mock next/headers cookies() before any imports that use it
 vi.mock("next/headers", () => ({
-  cookies: vi.fn(() => Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))),
+  cookies: vi.fn(() =>
+    Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))
+  ),
 }));
 
 // Mock Supabase server client
