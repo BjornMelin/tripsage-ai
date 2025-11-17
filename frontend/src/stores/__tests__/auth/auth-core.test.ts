@@ -224,19 +224,12 @@ describe("AuthCore", () => {
         });
 
         useAuthSession.setState({
-          isRefreshingToken: false,
           session: {
             createdAt: "2025-01-01T00:00:00Z",
             expiresAt: "2025-01-02T00:00:00Z",
             id: "session-1",
             lastActivity: "2025-01-01T01:00:00Z",
             userId: "user-1",
-          },
-          tokenInfo: {
-            accessToken: "access-token",
-            expiresAt: "2025-01-01T03:00:00Z",
-            refreshToken: "refresh-token",
-            tokenType: "Bearer",
           },
         });
       });
@@ -247,7 +240,6 @@ describe("AuthCore", () => {
 
       const authSessionState = useAuthSession.getState();
       expect(authSessionState.session).toBeNull();
-      expect(authSessionState.tokenInfo).toBeNull();
     });
   });
 

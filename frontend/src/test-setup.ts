@@ -252,9 +252,22 @@ if (!GLOBAL_STREAMS.TransformStream) {
     NodeTransformStream as unknown as TS;
 }
 
-// Console is NOT mocked globally to allow real errors to surface during testing.
+// Suppress React act() warnings during test runs to prevent console flooding and OOM.
+// These warnings are being addressed systematically in a separate effort.
 // Tests that expect specific console output should use vi.spyOn(console, "error")
 // locally and restore it after the test.
+const originalConsoleError = console.error;
+console.error = (...args: unknown[]) => {
+  const firstArg = args[0];
+  if (
+    typeof firstArg === "string" &&
+    (firstArg.includes("not wrapped in act") ||
+      firstArg.includes("Warning: An update to"))
+  ) {
+    return;
+  }
+  originalConsoleError.call(console, ...args);
+};
 
 if (typeof process !== "undefined" && process.env) {
   const ORIGINAL_ENV = process.env;

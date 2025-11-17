@@ -186,7 +186,7 @@ describe("ProfilePage", () => {
     expect(screen.getByTestId("personal-info-section")).toBeInTheDocument();
   });
 
-  it("switches to account settings tab", () => {
+  it("switches to account settings tab", async () => {
     vi.mocked(useAuthCore).mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
@@ -209,10 +209,10 @@ describe("ProfilePage", () => {
       fireEvent.click(accountTab);
     });
 
-    expect(screen.getByTestId("account-settings-section")).toBeInTheDocument();
+    expect(await screen.findByTestId("account-settings-section")).toBeInTheDocument();
   });
 
-  it("switches to preferences tab", () => {
+  it("switches to preferences tab", async () => {
     vi.mocked(useAuthCore).mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
@@ -231,14 +231,14 @@ describe("ProfilePage", () => {
     render(<ProfilePage />);
 
     const preferencesTab = screen.getByRole("tab", { name: /preferences/i });
-    act(() => {
+    await act(async () => {
       fireEvent.click(preferencesTab);
     });
 
-    expect(screen.getByTestId("preferences-section")).toBeInTheDocument();
+    expect(await screen.findByTestId("preferences-section")).toBeInTheDocument();
   });
 
-  it("switches to security tab", () => {
+  it("switches to security tab", async () => {
     vi.mocked(useAuthCore).mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
@@ -261,7 +261,7 @@ describe("ProfilePage", () => {
       fireEvent.click(securityTab);
     });
 
-    expect(screen.getByTestId("security-section")).toBeInTheDocument();
+    expect(await screen.findByTestId("security-section")).toBeInTheDocument();
   });
 
   it("renders tab icons correctly", () => {
@@ -294,7 +294,7 @@ describe("ProfilePage", () => {
     expect(securityTab).toBeInTheDocument();
   });
 
-  it("maintains tab state during navigation", () => {
+  it("maintains tab state during navigation", async () => {
     vi.mocked(useAuthCore).mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
@@ -318,7 +318,7 @@ describe("ProfilePage", () => {
       fireEvent.click(preferencesTab);
     });
 
-    expect(screen.getByTestId("preferences-section")).toBeInTheDocument();
+    expect(await screen.findByTestId("preferences-section")).toBeInTheDocument();
 
     // Switch back to personal tab
     const personalTab = screen.getByRole("tab", { name: /personal/i });
@@ -326,7 +326,7 @@ describe("ProfilePage", () => {
       fireEvent.click(personalTab);
     });
 
-    expect(screen.getByTestId("personal-info-section")).toBeInTheDocument();
+    expect(await screen.findByTestId("personal-info-section")).toBeInTheDocument();
   });
 
   it("renders proper heading structure", () => {

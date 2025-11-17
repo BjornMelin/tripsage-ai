@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { UserProfile } from "@/stores/user-store";
 
@@ -91,7 +91,7 @@ describe("SecuritySection", () => {
       ).toBeInTheDocument();
     });
 
-    it("should validate required fields", () => {
+    it("should validate required fields", async () => {
       render(<SecuritySection />);
 
       const submitButton = screen.getByRole("button", { name: /update password/i });
@@ -100,10 +100,15 @@ describe("SecuritySection", () => {
       });
 
       // Should show validation errors
-      expect(screen.getByText(/current password is required/i)).toBeInTheDocument();
+      await waitFor(
+        () => {
+          expect(screen.getByText(/current password is required/i)).toBeInTheDocument();
+        },
+        { timeout: 1000 }
+      );
     });
 
-    it("should validate password strength", () => {
+    it("should validate password strength", async () => {
       render(<SecuritySection />);
 
       const currentPassword = screen.getByPlaceholderText(
@@ -118,12 +123,17 @@ describe("SecuritySection", () => {
         fireEvent.click(submitButton);
       });
 
-      expect(
-        screen.getByText(/^password must be at least 8 characters$/i)
-      ).toBeInTheDocument();
+      await waitFor(
+        () => {
+          expect(
+            screen.getByText(/^password must be at least 8 characters$/i)
+          ).toBeInTheDocument();
+        },
+        { timeout: 1000 }
+      );
     });
 
-    it("should validate password confirmation", () => {
+    it("should validate password confirmation", async () => {
       render(<SecuritySection />);
 
       const currentPassword = screen.getByPlaceholderText(
@@ -142,7 +152,12 @@ describe("SecuritySection", () => {
         fireEvent.click(submitButton);
       });
 
-      expect(screen.getByText(/passwords don't match/i)).toBeInTheDocument();
+      await waitFor(
+        () => {
+          expect(screen.getByText(/passwords don't match/i)).toBeInTheDocument();
+        },
+        { timeout: 1000 }
+      );
     });
 
     it("shows loading state on submit", () => {

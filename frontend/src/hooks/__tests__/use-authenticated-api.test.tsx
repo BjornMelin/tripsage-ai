@@ -85,34 +85,33 @@ describe("useAuthenticatedApi", () => {
     const supabase = createClient();
     auth = supabase.auth as unknown as SupabaseAuthMock;
     testUser = CREATE_TEST_USER();
-    Object.values(auth).forEach((fn) => {
-      if (typeof fn === "function" && "mockReset" in fn) {
-        (fn as ReturnType<typeof vi.fn>).mockReset();
-      }
-    });
     MOCKED_API_GET.mockResolvedValue({ ok: true } as unknown as Response);
+    // Reset and set up auth mocks
+    vi.mocked(auth.getSession).mockReset();
+    vi.mocked(auth.refreshSession).mockReset();
+    vi.mocked(auth.signOut).mockReset();
     auth.getSession.mockResolvedValue(BUILD_GET_SESSION_RESPONSE(null));
     auth.refreshSession.mockResolvedValue(BUILD_REFRESH_RESPONSE(null, null));
     auth.signOut.mockResolvedValue({ error: null });
   });
 
-  it("throws 401 when the session is missing and refresh fails", () => {
+  it("throws 401 when the session is missing and refresh fails", async () => {
     render(<TestCaller />);
 
-    act(() => {
+    await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "ready" }));
     });
 
     expect(screen.getByRole("button", { name: "UNAUTHORIZED" })).toBeInTheDocument();
   });
 
-  it("attaches Authorization header when a session exists", () => {
+  it("attaches Authorization header when a session exists", async () => {
     const session = CREATE_TEST_SESSION("tok", testUser);
     auth.getSession.mockResolvedValue(BUILD_GET_SESSION_RESPONSE(session));
 
     render(<TestCaller />);
 
-    act(() => {
+    await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "ready" }));
     });
 
@@ -123,7 +122,7 @@ describe("useAuthenticatedApi", () => {
     expect(authHeader).toBe("Bearer tok");
   });
 
-  it("refreshes on 401 and retries once", () => {
+  it("refreshes on 401 and retries once", async () => {
     MOCKED_API_GET.mockRejectedValueOnce(
       new ApiError({ code: "UNAUTHORIZED", message: "401", status: 401 })
     ).mockResolvedValueOnce({ ok: true });
@@ -139,7 +138,7 @@ describe("useAuthenticatedApi", () => {
 
     render(<TestCaller />);
 
-    act(() => {
+    await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "ready" }));
     });
 

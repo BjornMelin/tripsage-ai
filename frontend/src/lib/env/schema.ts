@@ -81,6 +81,8 @@ const travelApiEnvSchema = z.object({
   EPS_API_KEY: z.string().optional(),
   EPS_API_SECRET: z.string().optional(),
   EPS_BASE_URL: z.url().optional(),
+  EPS_DEFAULT_CUSTOMER_IP: z.string().optional(),
+  EPS_DEFAULT_USER_AGENT: z.string().optional(),
   // Server routes/tools: Server key for Geocoding/Places/Routes/Time Zone (IP+API restricted)
   GOOGLE_MAPS_SERVER_API_KEY: z.string().optional(),
   // Frontend: Browser key for Maps JS (referrer-restricted)

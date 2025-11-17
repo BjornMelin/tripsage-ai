@@ -14,6 +14,10 @@ const supabaseState = vi.hoisted(() => ({
   instance: createSupabaseStub(),
 }));
 
+vi.mock("@/lib/supabase/server", () => ({
+  createServerSupabase: vi.fn(async () => supabaseState.instance),
+}));
+
 const expediaState = vi.hoisted(() => ({
   checkAvailability: vi.fn(),
   getPropertyDetails: vi.fn(),
@@ -30,6 +34,9 @@ function createSupabaseStub(overrides: SupabaseOverrides = {}) {
     order: vi.fn().mockReturnThis(),
     select: vi.fn().mockReturnThis(),
   };
+  const rpc = vi.fn<
+    () => Promise<{ data: unknown; error: unknown }>
+  >(async () => ({ data: [], error: null }));
   return {
     auth: {
       getUser: vi.fn(async () => ({
@@ -53,7 +60,7 @@ function createSupabaseStub(overrides: SupabaseOverrides = {}) {
       }
       return baseQuery;
     }),
-    rpc: vi.fn(async () => ({ data: [], error: null })),
+    rpc,
   };
 }
 
@@ -113,6 +120,12 @@ vi.mock("@/lib/redis", () => ({
 vi.mock("@/lib/mcp/client", () => ({
   createMcpClientHelper: vi.fn(),
   getMcpTool: vi.fn(),
+}));
+
+vi.mock("@/lib/embeddings/generate", () => ({
+  generateEmbedding: vi.fn(async () => [0.1, 0.2, 0.3]),
+  getEmbeddingsApiUrl: vi.fn(() => "https://embeddings.test"),
+  getEmbeddingsRequestHeaders: vi.fn(() => ({})),
 }));
 
 vi.mock("@/lib/tools/approvals", () => ({
@@ -178,6 +191,10 @@ describe("searchAccommodations", () => {
   test("validates inputs and returns structured output", async () => {
     const { getRedis } = await import("@/lib/redis");
     (getRedis as ReturnType<typeof vi.fn>).mockReturnValue(null);
+    supabaseState.instance.rpc.mockResolvedValue({
+      data: [{ id: "prop-1" }],
+      error: null,
+    });
     expediaState.search.mockResolvedValue({
       properties: [
         {
@@ -197,6 +214,7 @@ describe("searchAccommodations", () => {
         checkout: "2024-01-05",
         guests: 1,
         location: "Paris",
+        semanticQuery: "romantic getaway in Paris",
       },
       mockContext
     );
@@ -217,8 +235,34 @@ describe("searchAccommodations", () => {
       expect.objectContaining({
         guests: 1,
         location: "Paris",
+        propertyIds: ["prop-1"],
       })
     );
+  });
+
+  test("throws when no property matches are available", async () => {
+    const { getRedis } = await import("@/lib/redis");
+    (getRedis as ReturnType<typeof vi.fn>).mockReturnValue(null);
+    supabaseState.instance.rpc.mockResolvedValue({
+      data: [],
+      error: null,
+    });
+    const { searchAccommodations } = await import("@/lib/tools/accommodations");
+
+    await expect(
+      searchAccommodations.execute?.(
+        {
+          checkin: "2024-01-01",
+          checkout: "2024-01-05",
+          guests: 1,
+          location: "Paris",
+          semanticQuery: "romantic getaway in Paris",
+        },
+        mockContext
+      )
+    ).rejects.toThrow(/accom_search_not_configured/);
+
+    expect(expediaState.search).not.toHaveBeenCalled();
   });
 
   test("returns cached result with normalized output", async () => {
@@ -248,6 +292,7 @@ describe("searchAccommodations", () => {
         fresh: false,
         guests: 1,
         location: "Paris",
+        semanticQuery: "romantic getaway in Paris",
       },
       mockContext
     );
