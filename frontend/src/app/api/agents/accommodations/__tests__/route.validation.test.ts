@@ -31,13 +31,9 @@ vi.mock("@/lib/agents/accommodation-agent", () => ({
   })),
 }));
 
-// Mock Redis and rate limiting
+// Mock Redis
 vi.mock("@/lib/redis", () => ({
   getRedis: vi.fn(() => Promise.resolve({})),
-}));
-
-vi.mock("@/lib/ratelimit/config", () => ({
-  enforceRouteRateLimit: vi.fn(() => Promise.resolve(null)),
 }));
 
 describe("/api/agents/accommodations validation", () => {

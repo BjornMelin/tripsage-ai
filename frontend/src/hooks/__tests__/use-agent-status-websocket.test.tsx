@@ -28,13 +28,9 @@ vi.mock("@/hooks/use-realtime-channel", () => ({
   }),
 }));
 
-vi.mock("@/stores", async () => {
-  const actual = await vi.importActual<typeof import("@/stores")>("@/stores");
-  return {
-    ...actual,
-    useAuthStore: mockUseAuthStore,
-  };
-});
+vi.mock("@/stores/auth/auth-core", () => ({
+  useAuthCore: mockUseAuthStore,
+}));
 
 const flushEffects = () => act(async () => Promise.resolve());
 

@@ -108,7 +108,7 @@ export type UserProfile = z.infer<typeof userProfileSchema>;
 export type FavoriteDestination = UserProfile["favoriteDestinations"][0];
 export type TravelDocument = UserProfile["travelDocuments"][0];
 
-// User profile store interface (authentication is handled by auth-store)
+// User profile store interface (authentication is handled by auth slices)
 interface UserProfileState {
   // Profile data
   profile: UserProfile | null;
