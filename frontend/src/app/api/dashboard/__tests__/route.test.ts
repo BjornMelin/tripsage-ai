@@ -1,28 +1,29 @@
 /** @vitest-environment node */
 
 import { NextRequest } from "next/server";
-import { describe, expect, it, vi } from "vitest";
-import { GET as getDashboard } from "../route";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  apiRouteSupabaseMock,
+  mockApiRouteAuthUser,
+  resetApiRouteMocks,
+} from "@/test/api-route-helpers";
 
 function createMockRequest(url: string): NextRequest {
   return new NextRequest(new Request(url));
 }
 
-vi.mock("@/lib/supabase/server", () => ({
-  createServerSupabase: vi.fn(() => ({
-    from: vi.fn(() => ({
-      gte: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockResolvedValue({ data: [], error: null }),
-      lte: vi.fn().mockReturnThis(),
-      select: vi.fn().mockReturnThis(),
-    })),
-  })),
-}));
-
 describe("/api/dashboard route", () => {
+  beforeEach(() => {
+    resetApiRouteMocks();
+    mockApiRouteAuthUser({ id: "user-1" });
+  });
+
   it("returns default metrics when no logs are present", async () => {
+    const selectMock = vi.fn().mockResolvedValue({ data: [], error: null });
+    apiRouteSupabaseMock.from.mockReturnValue({ select: selectMock } as never);
+    const mod = await import("../route");
     const req = createMockRequest("http://localhost/api/dashboard");
-    const res = await getDashboard(req as never, { supabase: {} as never } as never);
+    const res = await mod.GET(req);
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
@@ -33,5 +34,6 @@ describe("/api/dashboard route", () => {
     expect(body.totalRequests).toBe(0);
     expect(body.errorRate).toBe(0);
     expect(body.avgLatencyMs).toBe(0);
+    expect(selectMock).toHaveBeenCalledWith("id, status, created_at");
   });
 });
