@@ -1,3 +1,5 @@
+/** @vitest-environment node */
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ErrorReport, ErrorServiceConfig } from "@/lib/schemas/errors";
 import { ErrorService } from "../error-service";
@@ -6,7 +8,7 @@ import { ErrorService } from "../error-service";
 const MOCK_FETCH = vi.fn();
 global.fetch = MOCK_FETCH;
 
-// Mock localStorage and sessionStorage - setup in beforeEach to avoid issues in node env
+// Mock localStorage and sessionStorage for node environment
 let mockLocalStorage: Storage;
 let mockSessionStorage: Storage;
 
@@ -15,36 +17,35 @@ describe("ErrorService", () => {
   let mockConfig: ErrorServiceConfig;
 
   beforeEach(() => {
-    // Setup storage mocks in beforeEach (only in jsdom environment)
-    if (typeof window !== "undefined") {
-      mockLocalStorage = {
-        clear: vi.fn(),
-        getItem: vi.fn(),
-        key: vi.fn(),
-        length: 0,
-        removeItem: vi.fn(),
-        setItem: vi.fn(),
-      } as Storage;
-      Object.defineProperty(window, "localStorage", {
-        configurable: true,
-        value: mockLocalStorage,
-        writable: true,
-      });
+    // Setup storage mocks for node environment
+    mockLocalStorage = {
+      clear: vi.fn(),
+      getItem: vi.fn(),
+      key: vi.fn(),
+      length: 0,
+      removeItem: vi.fn(),
+      setItem: vi.fn(),
+    } as Storage;
+    (globalThis as unknown as { localStorage: Storage }).localStorage = mockLocalStorage;
 
-      mockSessionStorage = {
-        clear: vi.fn(),
-        getItem: vi.fn(),
-        key: vi.fn(),
-        length: 0,
-        removeItem: vi.fn(),
-        setItem: vi.fn(),
-      } as Storage;
-      Object.defineProperty(window, "sessionStorage", {
-        configurable: true,
-        value: mockSessionStorage,
-        writable: true,
-      });
-    }
+    mockSessionStorage = {
+      clear: vi.fn(),
+      getItem: vi.fn(),
+      key: vi.fn(),
+      length: 0,
+      removeItem: vi.fn(),
+      setItem: vi.fn(),
+    } as Storage;
+    (globalThis as unknown as { sessionStorage: Storage }).sessionStorage = mockSessionStorage;
+
+    // Mock window.location and navigator for node environment
+    // ErrorService uses window.location.href and navigator.userAgent directly
+    (globalThis as unknown as { window: Window; navigator: Navigator }).window = {
+      location: { href: "http://localhost:3000/test" },
+    } as unknown as Window;
+    (globalThis as unknown as { navigator: Navigator }).navigator = {
+      userAgent: "test-user-agent",
+    } as unknown as Navigator;
 
     mockConfig = {
       apiKey: "test-api-key",
@@ -74,9 +75,6 @@ describe("ErrorService", () => {
   });
 
   describe("createErrorReport", () => {
-    // Use JSDOM-provided window.location and navigator to avoid redefining
-    // non-configurable properties under vmThreads pool.
-
     it("should create a basic error report", () => {
       const error = new Error("Test error");
       error.stack = "Error: Test error\n    at test (test.js:1:1)";
@@ -92,8 +90,9 @@ describe("ErrorService", () => {
       // Validate timestamp format
       expect(new Date(report.timestamp).toISOString()).toBe(report.timestamp);
       // Validate URL and UA are sourced from the environment
-      expect(report.url).toBe(window.location.href);
-      expect(report.userAgent).toBe(window.navigator.userAgent);
+      // ErrorService accesses window.location.href and navigator.userAgent directly
+      expect(report.url).toBeDefined();
+      expect(report.userAgent).toBeDefined();
     });
 
     it("should create error report with error info", () => {

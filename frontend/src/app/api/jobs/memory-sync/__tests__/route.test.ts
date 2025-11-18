@@ -25,43 +25,58 @@ vi.mock("@/lib/idempotency/redis", () => ({
   tryReserveKey: vi.fn().mockResolvedValue(true),
 }));
 
-vi.mock("@/lib/supabase/server", () => {
-  // Create a factory function for the from() mock to ensure fresh instances
-  const createFromMock = () => {
-    const insertMock = vi.fn(() => ({
-      select: vi.fn().mockResolvedValue({
-        data: [{ id: 1, created_at: "2024-01-01T00:00:00Z" }],
+// Hoist mock functions so they can be accessed and modified in tests
+const createDefaultFromMock = vi.hoisted(() => {
+  // Create query builder that supports chaining with .eq().eq().single()
+  const createSelectBuilder = () => {
+    const builder: {
+      eq: ReturnType<typeof vi.fn>;
+      single: ReturnType<typeof vi.fn>;
+    } = {
+      eq: vi.fn(),
+      single: vi.fn().mockResolvedValue({
+        data: { id: "session-123" },
         error: null,
       }),
-    }));
-
-    const selectMock = vi.fn(() => ({
-      eq: vi.fn(() => ({
-        single: vi.fn().mockResolvedValue({
-          data: { id: "session-123" },
-          error: null,
-        }),
-      })),
-    }));
-
-    const updateMock = vi.fn(() => ({
-      eq: vi.fn().mockResolvedValue({
-        data: null,
-        error: null,
-      }),
-    }));
-
-    return {
-      insert: insertMock,
-      select: selectMock,
-      update: updateMock,
     };
+    // Make eq return the builder itself for chaining
+    builder.eq = vi.fn(() => builder);
+    return builder;
   };
 
+  return (table: string) => {
+    if (table === "chat_sessions") {
+      return {
+        select: vi.fn(() => createSelectBuilder()),
+        update: vi.fn(() => ({
+          eq: vi.fn().mockResolvedValue({
+            data: null,
+            error: null,
+          }),
+        })),
+      };
+    }
+    if (table === "memories") {
+      return {
+        insert: vi.fn(() => ({
+          select: vi.fn().mockResolvedValue({
+            data: [{ id: 1, created_at: "2024-01-01T00:00:00Z" }],
+            error: null,
+          }),
+        })),
+      };
+    }
+    return {};
+  };
+});
+
+const MOCK_FROM = vi.hoisted(() => vi.fn(createDefaultFromMock));
+
+vi.mock("@/lib/supabase/server", () => {
   return {
     createServerSupabase: vi.fn(() =>
       Promise.resolve({
-        from: createFromMock,
+        from: MOCK_FROM,
       })
     ),
   };
@@ -90,8 +105,8 @@ describe("POST /api/jobs/memory-sync", () => {
   };
 
   beforeEach(() => {
-    // Reset mocks but preserve implementations
-    vi.resetAllMocks();
+    // Reset MOCK_FROM to default implementation before each test
+    MOCK_FROM.mockImplementation(createDefaultFromMock);
   });
 
   it("processes valid memory sync job successfully", async () => {
@@ -183,18 +198,22 @@ describe("POST /api/jobs/memory-sync", () => {
   });
 
   it("handles session not found error", async () => {
-    const { createServerSupabase } = await import("@/lib/supabase/server");
-    const mockSupabase = await createServerSupabase();
-    (mockSupabase.from as ReturnType<typeof vi.fn>).mockReturnValue({
-      select: () => ({
-        eq: () => ({
-          single: () =>
-            Promise.resolve({
-              data: null,
-              error: { message: "not found" },
-            }),
-        }),
-      }),
+    MOCK_FROM.mockImplementation((table: string) => {
+      if (table === "chat_sessions") {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                single: vi.fn().mockResolvedValue({
+                  data: null,
+                  error: { message: "not found" },
+                }),
+              })),
+            })),
+          })),
+        } as unknown as ReturnType<typeof createDefaultFromMock>;
+      }
+      return {} as unknown as ReturnType<typeof createDefaultFromMock>;
     });
 
     const payload = {
@@ -213,6 +232,44 @@ describe("POST /api/jobs/memory-sync", () => {
   });
 
   it("limits batch size to 50 messages", async () => {
+    // Override the memories insert mock to return 50 items
+    MOCK_FROM.mockImplementation((table: string) => {
+      if (table === "chat_sessions") {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                single: vi.fn().mockResolvedValue({
+                  data: { id: "session-123" },
+                  error: null,
+                }),
+              })),
+            })),
+          })),
+          update: vi.fn(() => ({
+            eq: vi.fn().mockResolvedValue({
+              data: null,
+              error: null,
+            }),
+          })),
+        } as unknown as ReturnType<typeof createDefaultFromMock>;
+      }
+      if (table === "memories") {
+        return {
+          insert: vi.fn(() => ({
+            select: vi.fn().mockResolvedValue({
+              data: Array.from({ length: 50 }, (_, i) => ({
+                id: i + 1,
+                created_at: "2024-01-01T00:00:00Z",
+              })),
+              error: null,
+            }),
+          })),
+        } as unknown as ReturnType<typeof createDefaultFromMock>;
+      }
+      return {} as unknown as ReturnType<typeof createDefaultFromMock>;
+    });
+
     const messages = Array.from({ length: 60 }, (_, i) => ({
       content: `Message ${i}`,
       role: "user" as const,
