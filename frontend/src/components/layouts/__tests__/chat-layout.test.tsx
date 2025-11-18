@@ -1,3 +1,5 @@
+/** @vitest-environment jsdom */
+
 import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AgentStatusState } from "@/stores/agent-status-store";
