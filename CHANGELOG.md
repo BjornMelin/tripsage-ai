@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Configuration and dependency updates**: Enabled React Compiler and Cache Components in Next.js 16; updated Zod schemas to v4 APIs (z.uuid(), z.email(), z.int()); migrated user settings to Server Actions with useActionState; consolidated Supabase client imports to @/lib/supabase; unified Next.js config files into single next.config.ts with conditional bundle analyzer; added jsdom environment declarations for tests; removed deprecated Next.js config keys and custom webpack splitChunks.
+- **Chat memory syncing (frontend)**: Rewired `frontend/src/stores/chat/chat-messages.ts` to call `useChatMemory` whenever messages are persisted, trigger `/api/memory/sync` after assistant responses, skip system/placeholder entries, and keep `currentSession` derived from store state; updated slice tests (`frontend/src/stores/__tests__/chat/chat-messages.test.ts`) accordingly.
 
 - **Auth store security hardening (Supabase SSR-aligned)**
   - Removed client-side persistence of access/refresh tokens from `frontend/src/stores/auth/auth-session.ts`; the slice now exposes only session view state (`session`, `sessionTimeRemaining`) with `setSession` / `resetSession`, treating Supabase SSR cookies as the sole session authority.
