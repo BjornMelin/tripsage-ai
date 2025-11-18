@@ -22,9 +22,22 @@ vi.mock("@/lib/telemetry/alerts", () => ({
 }));
 
 vi.mock("@opentelemetry/api", () => ({
+  SpanStatusCode: { ERROR: 2, OK: 1 },
   trace: {
     getActiveSpan: () => ({
       addEvent: vi.fn(),
+      end: vi.fn(),
+      recordException: vi.fn(),
+      setStatus: vi.fn(),
+    }),
+    getTracer: () => ({
+      startActiveSpan: (_name: string, cb: (span: unknown) => unknown) =>
+        cb({
+          addEvent: vi.fn(),
+          end: vi.fn(),
+          recordException: vi.fn(),
+          setStatus: vi.fn(),
+        }),
     }),
   },
 }));
