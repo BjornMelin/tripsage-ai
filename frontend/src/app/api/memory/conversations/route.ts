@@ -25,7 +25,7 @@ export const POST = withApiGuards({
   rateLimit: "memory:conversations",
   schema: memoryAddConversationSchema,
   telemetry: "memory.conversations",
-})(async (req: NextRequest, { user }, validated: MemoryAddConversationRequest) => {
+})(async (_req: NextRequest, { user }, validated: MemoryAddConversationRequest) => {
   if (!user?.id) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }

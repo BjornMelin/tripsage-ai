@@ -26,7 +26,7 @@ export const POST = withApiGuards({
   rateLimit: "places:search",
   schema: placesSearchRequestSchema,
   telemetry: "places.search",
-})(async (req: NextRequest, _context, validated: PlacesSearchRequest) => {
+})(async (_req: NextRequest, _context, validated: PlacesSearchRequest) => {
   const apiKey = getGoogleMapsServerKey();
 
   const requestBody: {

@@ -25,7 +25,7 @@ export const POST = withApiGuards({
   rateLimit: "memory:preferences",
   schema: memoryUpdatePreferencesSchema,
   telemetry: "memory.preferences",
-})(async (req: NextRequest, { user }, validated: MemoryUpdatePreferencesRequest) => {
+})(async (_req: NextRequest, { user }, validated: MemoryUpdatePreferencesRequest) => {
   if (!user?.id) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }

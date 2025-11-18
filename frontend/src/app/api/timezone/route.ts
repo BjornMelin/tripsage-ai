@@ -25,7 +25,7 @@ export const POST = withApiGuards({
   rateLimit: "timezone",
   schema: timezoneRequestSchema,
   telemetry: "timezone.lookup",
-})(async (req: NextRequest, _context, validated: TimezoneRequest) => {
+})(async (_req: NextRequest, _context, validated: TimezoneRequest) => {
   const apiKey = getGoogleMapsServerKey();
 
   const url = new URL("https://maps.googleapis.com/maps/api/timezone/json");

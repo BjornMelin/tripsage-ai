@@ -170,6 +170,7 @@ export const clientEnvSchema = z.object({
   NEXT_PUBLIC_APP_NAME: z.string().default("TripSage"),
   NEXT_PUBLIC_BASE_PATH: z.string().optional(),
   NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY: z.string().optional(),
+  NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT: z.url().optional(),
   NEXT_PUBLIC_SITE_URL: z.url().optional(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
   NEXT_PUBLIC_SUPABASE_URL: z.url(),

@@ -4,13 +4,12 @@
 
 import "server-only";
 
-import { SpanStatusCode } from "@opentelemetry/api";
 import { createClient } from "@supabase/supabase-js";
 import { type NextRequest, NextResponse } from "next/server";
 import { getServerEnvVar } from "@/lib/env/server";
 import { tryReserveKey } from "@/lib/idempotency/redis";
 import type { Database } from "@/lib/supabase/database.types";
-import { withTelemetrySpan } from "@/lib/telemetry/span";
+import { recordErrorOnSpan, withTelemetrySpan } from "@/lib/telemetry/span";
 import { buildEventKey, parseAndVerify } from "@/lib/webhooks/payload";
 
 type FileAttachmentRow = Database["public"]["Tables"]["file_attachments"]["Row"];
@@ -72,8 +71,7 @@ export async function POST(req: NextRequest) {
           .limit(1)
           .single();
         if (error) {
-          span.recordException(error);
-          span.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
+          recordErrorOnSpan(span, error);
           return NextResponse.json({ error: "supabase error" }, { status: 500 });
         }
       }

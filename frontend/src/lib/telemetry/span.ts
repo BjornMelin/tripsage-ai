@@ -4,7 +4,7 @@
 
 import "server-only";
 
-import { type Span, SpanStatusCode } from "@opentelemetry/api";
+import { type Span, SpanStatusCode, trace } from "@opentelemetry/api";
 import { getTelemetryTracer } from "@/lib/telemetry/tracer";
 
 export type TelemetrySpanAttributes = Record<string, string | number | boolean>;
@@ -186,4 +186,56 @@ export function recordTelemetryEvent(
 
     span.end();
   });
+}
+
+/**
+ * Adds an event to the current active span, if one exists.
+ *
+ * This is intended for low-level libraries that need to attach
+ * contextual events without creating new spans or depending on
+ * OpenTelemetry APIs directly.
+ *
+ * @param eventName - Concise event identifier.
+ * @param attributes - Optional event attributes.
+ * @param redactKeys - Optional list of attribute keys to redact.
+ */
+export function addEventToActiveSpan(
+  eventName: string,
+  attributes?: TelemetrySpanAttributes,
+  redactKeys: string[] = []
+): void {
+  const span = trace.getActiveSpan();
+  if (!span) return;
+
+  const sanitizedAttributes = sanitizeAttributes(attributes, redactKeys);
+  span.addEvent(eventName, sanitizedAttributes);
+}
+
+/**
+ * Records an exception and error status on a specific span.
+ *
+ * @param span - Span to record the error on.
+ * @param error - Error instance to record.
+ */
+export function recordErrorOnSpan(span: Span, error: Error): void {
+  span.recordException(error);
+  span.setStatus({
+    code: SpanStatusCode.ERROR,
+    message: error.message,
+  });
+}
+
+/**
+ * Records an exception and error status on the active span, if present.
+ *
+ * This helper is used by higher-level services (e.g., error reporting)
+ * to integrate with tracing without importing OpenTelemetry directly.
+ *
+ * @param error - Error instance to record on the span.
+ */
+export function recordErrorOnActiveSpan(error: Error): void {
+  const span = trace.getActiveSpan();
+  if (!span) return;
+
+  recordErrorOnSpan(span, error);
 }
