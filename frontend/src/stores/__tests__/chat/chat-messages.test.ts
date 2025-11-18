@@ -2,7 +2,6 @@
 
 import { act } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useChatMemory } from "@/stores/chat/chat-memory";
 import { useChatMessages } from "@/stores/chat/chat-messages";
 import { useChatRealtime } from "@/stores/chat/chat-realtime";
 
@@ -23,12 +22,7 @@ describe("ChatMessages", () => {
         pendingMessages: [],
         typingUsers: {},
       });
-      useChatMemory.setState({
-        autoSyncMemory: true,
-        lastMemorySyncs: {},
-        memoryContexts: {},
-        memoryEnabled: true,
-      });
+      // Memory sync handled server-side via orchestrator
     });
   });
 

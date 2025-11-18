@@ -1,13 +1,12 @@
 /** @vitest-environment jsdom */
 
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import React, { type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiClient } from "@/lib/api/api-client";
 import { useSearchParamsStore } from "@/stores/search-params-store";
 import { useSearchResultsStore } from "@/stores/search-results-store";
-import { AllTheProviders } from "@/test/test-utils";
 import { useAccommodationSearch } from "../use-accommodation-search";
 
 // Mock the API
@@ -33,10 +32,12 @@ describe("useAccommodationSearch", () => {
         queries: { gcTime: 0, retry: false, staleTime: 0 },
       },
     });
+    vi.mocked(apiClient.get).mockResolvedValue([]);
+    vi.mocked(apiClient.post).mockResolvedValue({ results: [], totalResults: 0 });
   });
 
   const wrapper = ({ children }: { children: ReactNode }) =>
-    React.createElement(AllTheProviders, { children, queryClient });
+    React.createElement(QueryClientProvider, { client: queryClient }, children);
 
   it("should return hook properties", async () => {
     const mockUpdateAccommodationParams = vi.fn();
@@ -61,8 +62,9 @@ describe("useAccommodationSearch", () => {
 
     const { result } = renderHook(() => useAccommodationSearch(), { wrapper });
 
-    // Wait for the query to initialize
-    await waitFor(() => expect(result.current.suggestions).toBeDefined());
+    await waitFor(() => {
+      expect(result.current.suggestions).toEqual([]);
+    });
 
     // Check that the hook returns the expected properties
     expect(result.current.search).toBeDefined();
@@ -104,14 +106,10 @@ describe("useAccommodationSearch", () => {
 
     const { result } = renderHook(() => useAccommodationSearch(), { wrapper });
 
-    await waitFor(
-      () => {
-        expect(result.current.suggestions).toBeDefined();
-      },
-      { timeout: 1000 }
-    );
+    await waitFor(() => {
+      expect(result.current.suggestions).toEqual(mockSuggestions);
+    });
 
-    expect(result.current.suggestions).toEqual(mockSuggestions);
     expect(apiClient.get).toHaveBeenCalledWith("/accommodations/suggestions");
   });
 
@@ -193,28 +191,17 @@ describe("useAccommodationSearch", () => {
     };
 
     // Trigger search and wait for completion
-    act(() => {
-      result.current.search(searchParams);
+    await act(async () => {
+      await result.current.searchAsync(searchParams);
     });
 
-    // Wait for API call
-    await waitFor(
-      () => {
-        expect(apiClient.post).toHaveBeenCalledWith(
-          "/accommodations/search",
-          searchParams
-        );
-      },
-      { timeout: 1000 }
-    );
-
-    // Wait for results to be processed
-    await waitFor(
-      () => {
-        expect(mockSetSearchResults).toHaveBeenCalled();
-      },
-      { timeout: 1000 }
-    );
+    expect(apiClient.post).toHaveBeenCalledWith("/accommodations/search", searchParams);
+    await waitFor(() => {
+      expect(mockSetSearchResults).toHaveBeenCalledWith("search-123", {
+        accommodations: mockResults.results,
+      });
+      expect(mockCompleteSearch).toHaveBeenCalledWith("search-123");
+    });
   });
 
   it("should handle loading state", async () => {
