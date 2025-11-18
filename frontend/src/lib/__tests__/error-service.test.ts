@@ -1,53 +1,45 @@
-/** @vitest-environment node */
+/** @vitest-environment jsdom */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ErrorReport, ErrorServiceConfig } from "@/lib/schemas/errors";
 import { ErrorService } from "../error-service";
 
-// Mock fetch
 const MOCK_FETCH = vi.fn();
-global.fetch = MOCK_FETCH;
 
-// Mock localStorage and sessionStorage for node environment
+const createStorageMock = (): Storage => ({
+  clear: vi.fn(),
+  getItem: vi.fn(),
+  key: vi.fn(),
+  length: 0,
+  removeItem: vi.fn(),
+  setItem: vi.fn(),
+});
+
 let mockLocalStorage: Storage;
 let mockSessionStorage: Storage;
+let originalLocalStorage: Storage;
+let originalSessionStorage: Storage;
 
 describe("ErrorService", () => {
   let errorService: ErrorService;
   let mockConfig: ErrorServiceConfig;
 
   beforeEach(() => {
-    // Setup storage mocks for node environment
-    mockLocalStorage = {
-      clear: vi.fn(),
-      getItem: vi.fn(),
-      key: vi.fn(),
-      length: 0,
-      removeItem: vi.fn(),
-      setItem: vi.fn(),
-    } as Storage;
-    (globalThis as unknown as { localStorage: Storage }).localStorage =
-      mockLocalStorage;
+    MOCK_FETCH.mockReset();
+    globalThis.fetch = MOCK_FETCH as unknown as typeof fetch;
 
-    mockSessionStorage = {
-      clear: vi.fn(),
-      getItem: vi.fn(),
-      key: vi.fn(),
-      length: 0,
-      removeItem: vi.fn(),
-      setItem: vi.fn(),
-    } as Storage;
-    (globalThis as unknown as { sessionStorage: Storage }).sessionStorage =
-      mockSessionStorage;
-
-    // Mock window.location and navigator for node environment
-    // ErrorService uses window.location.href and navigator.userAgent directly
-    (globalThis as unknown as { window: Window; navigator: Navigator }).window = {
-      location: { href: "http://localhost:3000/test" },
-    } as unknown as Window;
-    (globalThis as unknown as { navigator: Navigator }).navigator = {
-      userAgent: "test-user-agent",
-    } as unknown as Navigator;
+    originalLocalStorage = window.localStorage;
+    originalSessionStorage = window.sessionStorage;
+    mockLocalStorage = createStorageMock();
+    mockSessionStorage = createStorageMock();
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      value: mockLocalStorage,
+    });
+    Object.defineProperty(window, "sessionStorage", {
+      configurable: true,
+      value: mockSessionStorage,
+    });
 
     mockConfig = {
       apiKey: "test-api-key",
@@ -61,7 +53,6 @@ describe("ErrorService", () => {
 
     // Reset mocks
     vi.clearAllMocks();
-    MOCK_FETCH.mockClear();
     if (mockLocalStorage) {
       (mockLocalStorage.getItem as ReturnType<typeof vi.fn>).mockClear();
       (mockLocalStorage.setItem as ReturnType<typeof vi.fn>).mockClear();
@@ -73,6 +64,14 @@ describe("ErrorService", () => {
   });
 
   afterEach(() => {
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      value: originalLocalStorage,
+    });
+    Object.defineProperty(window, "sessionStorage", {
+      configurable: true,
+      value: originalSessionStorage,
+    });
     vi.clearAllTimers();
   });
 
