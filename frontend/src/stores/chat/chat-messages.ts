@@ -7,9 +7,9 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { sendChatMessage, streamChatMessage } from "@/lib/chat/api-client";
 import type { ChatSession, Message, SendMessageOptions } from "@/lib/schemas/chat";
 import { generateId, getCurrentTimestamp } from "@/lib/stores/helpers";
-import { useChatMemory } from "./chat-memory";
 
 /**
  * Chat messages state interface.
@@ -62,6 +62,9 @@ export interface ChatMessagesState {
 // Abort controller for canceling stream requests
 let abortController: AbortController | null = null;
 
+// Track object URLs for attachment cleanup
+const objectUrls = new Map<string, Set<string>>(); // sessionId -> Set<objectUrl>
+
 /**
  * Chat messages store hook.
  */
@@ -89,18 +92,6 @@ export const useChatMessages = create<ChatMessagesState>()(
               : session
           ),
         }));
-
-        // Trigger memory sync for conversation messages
-        const session = get().sessions.find((s) => s.id === sessionId);
-        if (session?.userId) {
-          // Trigger conversation memory storage in background
-          useChatMemory
-            .getState()
-            .storeConversationMemory(sessionId, session.userId, [newMessage])
-            .catch((error) => {
-              console.warn("Memory sync failed:", error);
-            });
-        }
 
         return messageId;
       },
@@ -135,6 +126,15 @@ export const useChatMessages = create<ChatMessagesState>()(
       clearError: () => set({ error: null }),
 
       clearMessages: (sessionId) => {
+        // Revoke object URLs for this session
+        const urls = objectUrls.get(sessionId);
+        if (urls) {
+          urls.forEach((url) => {
+            URL.revokeObjectURL(url);
+          });
+          objectUrls.delete(sessionId);
+        }
+
         set((state) => ({
           sessions: state.sessions.map((session) =>
             session.id === sessionId
@@ -177,6 +177,15 @@ export const useChatMessages = create<ChatMessagesState>()(
       currentSessionId: null,
 
       deleteSession: (sessionId) => {
+        // Revoke object URLs for this session
+        const urls = objectUrls.get(sessionId);
+        if (urls) {
+          urls.forEach((url) => {
+            URL.revokeObjectURL(url);
+          });
+          objectUrls.delete(sessionId);
+        }
+
         set((state) => {
           const sessions = state.sessions.filter((s) => s.id !== sessionId);
 
@@ -275,15 +284,28 @@ export const useChatMessages = create<ChatMessagesState>()(
           sessionId = get().createSession("New Conversation");
         }
 
-        // Add user message
+        const session = get().sessions.find((s) => s.id === sessionId);
+        const existingMessages = session?.messages || [];
+
+        // Add user message with attachment URL tracking
+        const attachmentUrls: string[] = [];
         get().addMessage(sessionId, {
-          attachments: options.attachments?.map((file) => ({
-            contentType: file.type,
-            id: generateId(),
-            name: file.name,
-            size: file.size,
-            url: URL.createObjectURL(file),
-          })),
+          attachments: options.attachments?.map((file) => {
+            const objectUrl = URL.createObjectURL(file);
+            attachmentUrls.push(objectUrl);
+            // Track object URL for cleanup
+            if (!objectUrls.has(sessionId)) {
+              objectUrls.set(sessionId, new Set());
+            }
+            objectUrls.get(sessionId)?.add(objectUrl);
+            return {
+              contentType: file.type,
+              id: generateId(),
+              name: file.name,
+              size: file.size,
+              url: objectUrl,
+            };
+          }),
           content,
           role: "user",
         });
@@ -291,15 +313,18 @@ export const useChatMessages = create<ChatMessagesState>()(
         set({ error: null, isLoading: true });
 
         try {
-          // Placeholder: This will be replaced with actual API call
-          // API calls should go through route handlers, not directly from slice
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+          // Call API route to send message
+          const assistantMessage = await sendChatMessage(
+            {
+              content,
+              options,
+              sessionId,
+            },
+            existingMessages
+          );
 
-          // Mock AI response
-          get().addMessage(sessionId, {
-            content: `I've received your message: "${content}". This is a placeholder response that will be replaced with actual API integration.`,
-            role: "assistant",
-          });
+          // Add assistant response
+          get().addMessage(sessionId, assistantMessage);
 
           set({ isLoading: false });
         } catch (error) {
@@ -337,15 +362,28 @@ export const useChatMessages = create<ChatMessagesState>()(
           sessionId = get().createSession("New Conversation");
         }
 
-        // Add user message
+        const session = get().sessions.find((s) => s.id === sessionId);
+        const existingMessages = session?.messages || [];
+
+        // Add user message with attachment URL tracking
+        const attachmentUrls: string[] = [];
         get().addMessage(sessionId, {
-          attachments: options.attachments?.map((file) => ({
-            contentType: file.type,
-            id: generateId(),
-            name: file.name,
-            size: file.size,
-            url: URL.createObjectURL(file),
-          })),
+          attachments: options.attachments?.map((file) => {
+            const objectUrl = URL.createObjectURL(file);
+            attachmentUrls.push(objectUrl);
+            // Track object URL for cleanup
+            if (!objectUrls.has(sessionId)) {
+              objectUrls.set(sessionId, new Set());
+            }
+            objectUrls.get(sessionId)?.add(objectUrl);
+            return {
+              contentType: file.type,
+              id: generateId(),
+              name: file.name,
+              size: file.size,
+              url: objectUrl,
+            };
+          }),
           content,
           role: "user",
         });
@@ -361,26 +399,27 @@ export const useChatMessages = create<ChatMessagesState>()(
         abortController = new AbortController();
 
         try {
-          // Placeholder: This will be replaced with actual streaming API call
-          // Streaming should use AI SDK v6 primitives in route handlers
           let streamContent = "";
-          const fullResponse =
-            "This is a simulated streaming response that will be replaced with actual API integration using the Vercel AI SDK for real-time streaming of AI-generated content.";
-          const words = fullResponse.split(" ");
 
-          for (let i = 0; i < words.length; i++) {
-            if (abortController?.signal.aborted) {
-              break;
-            }
-
-            streamContent += (i === 0 ? "" : " ") + words[i];
-
-            get().updateMessage(sessionId, assistantMessageId, {
-              content: streamContent,
-            });
-
-            await new Promise((resolve) => setTimeout(resolve, 50));
-          }
+          // Call API route to stream message
+          await streamChatMessage(
+            {
+              content,
+              options,
+              sessionId,
+            },
+            existingMessages,
+            (chunk) => {
+              if (abortController?.signal.aborted) {
+                return;
+              }
+              streamContent += chunk;
+              get().updateMessage(sessionId, assistantMessageId, {
+                content: streamContent,
+              });
+            },
+            abortController.signal
+          );
 
           get().updateMessage(sessionId, assistantMessageId, {
             isStreaming: false,

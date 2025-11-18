@@ -65,6 +65,7 @@ export const ROUTE_RATE_LIMITS = {
   "keys:create": { limit: 10, window: "1 m" },
   "keys:delete": { limit: 20, window: "1 m" },
   "keys:validate": { limit: 20, window: "1 m" },
+  "memory:sync": { limit: 60, window: "1 m" },
   "places:details": { limit: 60, window: "1 m" },
   "places:photo": { limit: 60, window: "1 m" },
 

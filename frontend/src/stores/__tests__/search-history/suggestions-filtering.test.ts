@@ -1,3 +1,5 @@
+/** @vitest-environment jsdom */
+
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import type {
@@ -5,11 +7,27 @@ import type {
   ValidatedSavedSearch,
 } from "@/stores/search-history-store";
 import { useSearchHistoryStore } from "@/stores/search-history-store";
-import { resetSearchHistoryStore } from "./_shared";
 
 describe("Search History Store - Suggestions and Filtering", () => {
   beforeEach(() => {
-    resetSearchHistoryStore();
+    act(() => {
+      useSearchHistoryStore.setState({
+        autoCleanupDays: 30,
+        autoSaveEnabled: true,
+        error: null,
+        isLoading: false,
+        isSyncing: false,
+        lastSyncAt: null,
+        maxRecentSearches: 50,
+        popularSearchTerms: [],
+        quickSearches: [],
+        recentSearches: [],
+        savedSearches: [],
+        searchCollections: [],
+        searchSuggestions: [],
+        syncError: null,
+      });
+    });
   });
 
   describe("Search Suggestions", () => {

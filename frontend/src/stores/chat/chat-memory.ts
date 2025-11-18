@@ -7,11 +7,6 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import {
-  enqueueConversationMemorySync,
-  enqueueFullMemorySync,
-  enqueueIncrementalMemorySync,
-} from "@/lib/qstash/memory-sync";
 import type { Message } from "@/lib/schemas/chat";
 import { getCurrentTimestamp } from "@/lib/stores/helpers";
 
@@ -66,7 +61,7 @@ export const useChatMemory = create<ChatMemoryState>()(
           const messagesToStore = messages || [];
           if (messagesToStore.length === 0) return;
 
-          // Convert messages to QStash job format
+          // Convert messages to API format
           const conversationMessages = messagesToStore.map((msg) => ({
             content: msg.content || "",
             metadata: {
@@ -78,8 +73,24 @@ export const useChatMemory = create<ChatMemoryState>()(
             timestamp: msg.timestamp || new Date().toISOString(),
           }));
 
-          // Enqueue background job for memory storage
-          await enqueueConversationMemorySync(sessionId, userId, conversationMessages);
+          // Call API route to enqueue memory sync job
+          const response = await fetch("/api/memory/sync", {
+            body: JSON.stringify({
+              messages: conversationMessages,
+              mode: "conversation",
+              sessionId,
+              userId,
+            }),
+            headers: { "Content-Type": "application/json" },
+            method: "POST",
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(
+              errorData.error || `Memory sync failed: ${response.status}`
+            );
+          }
 
           // Update local sync timestamp
           const timestamp = getCurrentTimestamp();
@@ -107,11 +118,24 @@ export const useChatMemory = create<ChatMemoryState>()(
 
           // If no sync in last 24 hours, do full sync; otherwise incremental
           const shouldDoFullSync = timeSinceLastSync > 24 * 60 * 60 * 1000;
+          const mode = shouldDoFullSync ? "full" : "incremental";
 
-          if (shouldDoFullSync) {
-            await enqueueFullMemorySync(sessionId, userId);
-          } else {
-            await enqueueIncrementalMemorySync(sessionId, userId);
+          // Call API route to enqueue memory sync job
+          const response = await fetch("/api/memory/sync", {
+            body: JSON.stringify({
+              mode,
+              sessionId,
+              userId,
+            }),
+            headers: { "Content-Type": "application/json" },
+            method: "POST",
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(
+              errorData.error || `Memory sync failed: ${response.status}`
+            );
           }
 
           // Update local sync timestamp

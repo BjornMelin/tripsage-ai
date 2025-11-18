@@ -1,3 +1,5 @@
+/** @vitest-environment node */
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as route from "@/app/api/embeddings/route";
 import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";

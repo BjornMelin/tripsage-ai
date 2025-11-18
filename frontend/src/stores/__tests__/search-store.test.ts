@@ -1,6 +1,4 @@
-/**
- * @vitest-environment node
- */
+/** @vitest-environment jsdom */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { FlightSearchParams } from "@/lib/schemas/search";

@@ -1,3 +1,5 @@
+/** @vitest-environment jsdom */
+
 import { describe, expect, it } from "vitest";
 import { useChatMessages } from "@/stores/chat/chat-messages";
 import { useChatRealtime } from "@/stores/chat/chat-realtime";

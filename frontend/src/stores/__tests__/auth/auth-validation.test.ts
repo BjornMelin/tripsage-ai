@@ -1,21 +1,30 @@
+/** @vitest-environment jsdom */
+
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   PasswordReset,
   PasswordResetRequest,
 } from "@/stores/auth/auth-validation";
 import { useAuthValidation } from "@/stores/auth/auth-validation";
-import { resetAuthSlices, setupAuthSliceTests } from "./_shared";
+import { resetAuthState } from "@/stores/auth/reset-auth";
+import { setupTimeoutMock } from "@/test/store-helpers";
 
 // Mock fetch for API calls
 global.fetch = vi.fn();
 
-setupAuthSliceTests();
-
 describe("AuthValidation", () => {
+  let timeoutCleanup: (() => void) | null = null;
+
   beforeEach(() => {
-    resetAuthSlices();
+    const timeoutMock = setupTimeoutMock();
+    timeoutCleanup = timeoutMock.mockRestore;
+    resetAuthState();
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    timeoutCleanup?.();
   });
 
   describe("Initial State", () => {

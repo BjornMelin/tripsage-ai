@@ -85,7 +85,6 @@ from tripsage_core.services.business import MemoryService, TripService
 - `DestinationService` - Location research and insights
 - `ItineraryService` - Trip optimization and scheduling
 - `APIKeyService` - BYOK encryption and validation
-- `FileProcessingService` - Document analysis
 - `UnifiedSearchService` - Multi-provider search orchestration
 
 ### External API Services (`services/external_apis/`)
@@ -198,8 +197,6 @@ uv run pytest tests/unit/tripsage_core/ --cov=tripsage_core --cov-report=html
 ## Dependencies
 
 - **Supabase** - Database and authentication
-- **Upstash Redis** - Serverless caching
-- **Mem0** - AI memory and context
 - **pgvector** - Vector embeddings
 - **Pydantic** - Data validation
 - **HTTPX** - Async HTTP client
