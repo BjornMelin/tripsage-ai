@@ -79,6 +79,13 @@ export const ROUTE_RATE_LIMITS = {
   "keys:validate": { limit: 20, window: "1 m" },
 
   // Memory
+  "memory:context": { limit: 60, window: "1 m" },
+  "memory:conversations": { limit: 30, window: "1 m" },
+  "memory:delete": { limit: 10, window: "1 m" },
+  "memory:insights": { limit: 30, window: "1 m" },
+  "memory:preferences": { limit: 20, window: "1 m" },
+  "memory:search": { limit: 60, window: "1 m" },
+  "memory:stats": { limit: 30, window: "1 m" },
   "memory:sync": { limit: 60, window: "1 m" },
 
   // Places

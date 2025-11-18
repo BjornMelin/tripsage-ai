@@ -526,84 +526,7 @@ export type Database = {
         };
       };
 
-      // Memory System
-      memories: {
-        Row: {
-          id: number;
-          user_id: string;
-          memory_type:
-            | "user_preference"
-            | "trip_history"
-            | "search_pattern"
-            | "conversation_context"
-            | "other";
-          content: string;
-          embedding: string | null;
-          metadata: Json;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: never;
-          user_id: string;
-          memory_type?:
-            | "user_preference"
-            | "trip_history"
-            | "search_pattern"
-            | "conversation_context"
-            | "other";
-          content: string;
-          embedding?: string | null;
-          metadata?: Json;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: never;
-          user_id?: string;
-          memory_type?:
-            | "user_preference"
-            | "trip_history"
-            | "search_pattern"
-            | "conversation_context"
-            | "other";
-          content?: string;
-          embedding?: string | null;
-          metadata?: Json;
-          created_at?: string;
-          updated_at?: string;
-        };
-      };
-
-      session_memories: {
-        Row: {
-          id: number;
-          session_id: string;
-          user_id: string;
-          content: string;
-          embedding: string | null;
-          metadata: Json;
-          created_at: string;
-        };
-        Insert: {
-          id?: never;
-          session_id: string;
-          user_id: string;
-          content: string;
-          embedding?: string | null;
-          metadata?: Json;
-          created_at?: string;
-        };
-        Update: {
-          id?: never;
-          session_id?: string;
-          user_id?: string;
-          content?: string;
-          embedding?: string | null;
-          metadata?: Json;
-          created_at?: string;
-        };
-      };
+      // Memory System (legacy tables removed - use memories schema instead)
 
       // Trip Collaboration
       trip_collaborators: {
@@ -899,15 +822,113 @@ export type Database = {
         | "other";
       chat_role: "user" | "assistant" | "system";
       tool_call_status: "pending" | "running" | "completed" | "failed";
-      memory_type:
-        | "user_preference"
-        | "trip_history"
-        | "search_pattern"
-        | "conversation_context"
-        | "other";
+      // memory_type enum removed (legacy - no longer used)
       permission_level: "view" | "edit" | "admin";
       upload_status: "uploading" | "completed" | "failed";
       virus_scan_status: "pending" | "clean" | "infected" | "failed";
+    };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
+  };
+  memories: {
+    Tables: SupabaseTables<{
+      sessions: {
+        Row: {
+          id: string;
+          user_id: string;
+          title: string;
+          last_synced_at: string | null;
+          metadata: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          title: string;
+          last_synced_at?: string | null;
+          metadata?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          title?: string;
+          last_synced_at?: string | null;
+          metadata?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      turns: {
+        Row: {
+          id: string;
+          session_id: string;
+          user_id: string;
+          role: "user" | "assistant" | "system";
+          content: Json;
+          attachments: Json;
+          tool_calls: Json;
+          tool_results: Json;
+          pii_scrubbed: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          session_id: string;
+          user_id: string;
+          role: "user" | "assistant" | "system";
+          content: Json;
+          attachments?: Json;
+          tool_calls?: Json;
+          tool_results?: Json;
+          pii_scrubbed?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          session_id?: string;
+          user_id?: string;
+          role?: "user" | "assistant" | "system";
+          content?: Json;
+          attachments?: Json;
+          tool_calls?: Json;
+          tool_results?: Json;
+          pii_scrubbed?: boolean;
+          created_at?: string;
+        };
+      };
+      turn_embeddings: {
+        Row: {
+          turn_id: string;
+          embedding: number[] | null;
+          model: string;
+          created_at: string;
+        };
+        Insert: {
+          turn_id: string;
+          embedding: number[] | null;
+          model: string;
+          created_at?: string;
+        };
+        Update: {
+          turn_id?: string;
+          embedding?: number[] | null;
+          model?: string;
+          created_at?: string;
+        };
+      };
+    }>;
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      [_ in never]: never;
+    };
+    Enums: {
+      [_ in never]: never;
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -942,9 +963,23 @@ export type ChatMessageInsert = InsertTables<"chat_messages">;
 export type ChatToolCall = Tables<"chat_tool_calls">;
 export type ChatToolCallInsert = InsertTables<"chat_tool_calls">;
 export type ApiKey = Tables<"api_keys">;
-export type Memory = Tables<"memories">;
-export type SessionMemory = Tables<"session_memories">;
 export type TripCollaborator = Tables<"trip_collaborators">;
+
+// Memory schema types (memories.*)
+export type MemorySession = Database["memories"]["Tables"]["sessions"]["Row"];
+export type MemorySessionInsert = Database["memories"]["Tables"]["sessions"]["Insert"];
+export type MemorySessionUpdate = Database["memories"]["Tables"]["sessions"]["Update"];
+export type MemoryTurn = Database["memories"]["Tables"]["turns"]["Row"];
+export type MemoryTurnInsert = Database["memories"]["Tables"]["turns"]["Insert"];
+export type MemoryTurnUpdate = Database["memories"]["Tables"]["turns"]["Update"];
+export type MemoryTurnEmbedding =
+  Database["memories"]["Tables"]["turn_embeddings"]["Row"];
+export type MemoryTurnEmbeddingInsert =
+  Database["memories"]["Tables"]["turn_embeddings"]["Insert"];
+export type MemoryTurnEmbeddingUpdate =
+  Database["memories"]["Tables"]["turn_embeddings"]["Update"];
+
+// Legacy type aliases removed - use MemorySession, MemoryTurn, MemoryTurnEmbedding instead
 export type FileAttachment = Tables<"file_attachments">;
 export type FileAttachmentInsert = InsertTables<"file_attachments">;
 export type FileAttachmentUpdate = UpdateTables<"file_attachments">;

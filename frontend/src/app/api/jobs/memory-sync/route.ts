@@ -11,7 +11,8 @@ import { NextResponse } from "next/server";
 import { getServerEnvVar, getServerEnvVarWithFallback } from "@/lib/env/server";
 import { tryReserveKey } from "@/lib/idempotency/redis";
 import { memorySyncJobSchema } from "@/lib/schemas/webhooks";
-import { createServerSupabase } from "@/lib/supabase/server";
+import type { Database } from "@/lib/supabase/database.types";
+import { createAdminSupabase } from "@/lib/supabase/admin";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 /**
@@ -112,7 +113,7 @@ async function processMemorySync(payload: {
     metadata?: Record<string, unknown>;
   }>;
 }) {
-  const supabase = await createServerSupabase();
+  const supabase = createAdminSupabase();
 
   // Verify user has access to this session
   const { data: session, error: sessionError } = await supabase
@@ -133,30 +134,73 @@ async function processMemorySync(payload: {
   if (payload.conversationMessages && payload.conversationMessages.length > 0) {
     const messagesToStore = payload.conversationMessages.slice(0, 50); // Limit batch size
 
-    // Store conversation memories
-    const memoryInserts = messagesToStore.map((msg) => ({
-      content: msg.content,
-      memory_type: "conversation_context" as const,
-      metadata: {
-        role: msg.role,
-        sessionId: payload.sessionId,
-        timestamp: msg.timestamp,
-        ...msg.metadata,
-      },
-      session_id: payload.sessionId,
-      user_id: payload.userId,
-    }));
+    // Ensure memory session exists
+    const { data: memorySession, error: sessionCheckError } = await supabase
+      .schema("memories")
+      .from("sessions")
+      .select("id")
+      .eq("id", payload.sessionId)
+      .eq("user_id", payload.userId)
+      .single();
 
-    const { data: insertedMemories, error: insertError } = await supabase
-      .from("memories")
-      .insert(memoryInserts)
+    if (sessionCheckError && sessionCheckError.code !== "PGRST116") {
+      throw new Error(`memory_session_check_failed: ${sessionCheckError.message}`);
+    }
+
+    // Create session if it doesn't exist
+    if (!memorySession) {
+      const { error: createError } = await supabase
+        .schema("memories")
+        .from("sessions")
+        .insert({
+          id: payload.sessionId,
+          metadata: {},
+          title: messagesToStore[0]?.content?.substring(0, 100) || "Untitled session",
+          user_id: payload.userId,
+        });
+
+      if (createError) {
+        throw new Error(`memory_session_create_failed: ${createError.message}`);
+      }
+    }
+
+    // Store conversation turns
+    const turnInserts: Database["memories"]["Tables"]["turns"]["Insert"][] =
+      messagesToStore.map((msg) => ({
+        attachments: ((msg.metadata?.attachments as unknown[]) ||
+          []) as unknown as Database["memories"]["Tables"]["turns"]["Insert"]["attachments"],
+        // Convert string content to JSONB format: { text: string }
+        content: {
+          text: msg.content,
+        } as unknown as Database["memories"]["Tables"]["turns"]["Insert"]["content"],
+        pii_scrubbed: false,
+        role: msg.role,
+        session_id: payload.sessionId,
+        tool_calls: ((msg.metadata?.toolCalls as unknown[]) ||
+          []) as unknown as Database["memories"]["Tables"]["turns"]["Insert"]["tool_calls"],
+        tool_results: ((msg.metadata?.toolResults as unknown[]) ||
+          []) as unknown as Database["memories"]["Tables"]["turns"]["Insert"]["tool_results"],
+        user_id: payload.userId,
+      }));
+
+    const { data: insertedTurns, error: insertError } = await supabase
+      .schema("memories")
+      .from("turns")
+      .insert(turnInserts)
       .select("id");
 
     if (insertError) {
-      throw new Error(`memory_insert_failed: ${insertError.message}`);
+      throw new Error(`memory_turn_insert_failed: ${insertError.message}`);
     }
 
-    memoriesStored = insertedMemories?.length ?? 0;
+    // Update session last_synced_at
+    await supabase
+      .schema("memories")
+      .from("sessions")
+      .update({ last_synced_at: new Date().toISOString() })
+      .eq("id", payload.sessionId);
+
+    memoriesStored = insertedTurns?.length ?? 0;
   }
 
   // Update memory context summary (simplified - could be enhanced with AI)

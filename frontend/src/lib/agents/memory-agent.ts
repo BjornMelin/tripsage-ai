@@ -43,7 +43,7 @@ export function runMemoryAgent(
 }
 
 type PersistOutcome = {
-  successes: Array<{ id: number; createdAt: string; category: string }>;
+  successes: Array<{ id: string; createdAt: string; category: string }>;
   failures: Array<{ index: number; error: string }>;
 };
 
@@ -123,7 +123,7 @@ export async function persistMemoryRecords(
       params,
       async (validated) => memoryTool.execute(validated)
     );
-    return result as { id: number; createdAt: string };
+    return result as { id: string; createdAt: string };
   };
 
   await Promise.all(

@@ -1,54 +1,16 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
+/** @vitest-environment node */
 
-// Mock next/headers cookies() BEFORE any imports that use it
-vi.mock("next/headers", () => ({
-  cookies: vi.fn(() =>
-    Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))
-  ),
-}));
-
-const mockGetUser = vi.fn();
-vi.mock("@/lib/supabase/server", () => ({
-  createServerSupabase: vi.fn(async () => ({
-    auth: {
-      getUser: mockGetUser,
-    },
-  })),
-}));
-
-// Mock Redis
-vi.mock("@/lib/redis", () => ({
-  getRedis: vi.fn(() => Promise.resolve({})),
-}));
-
-vi.mock("@/lib/env/server", () => ({
-  getServerEnvVarWithFallback: vi.fn((key: string) => {
-    if (key === "UPSTASH_REDIS_REST_URL" || key === "UPSTASH_REDIS_REST_TOKEN") {
-      return "test-value";
-    }
-    return "test-key";
-  }),
-}));
-
-// Mock route helpers
-vi.mock("@/lib/next/route-helpers", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/next/route-helpers")>(
-    "@/lib/next/route-helpers"
-  );
-  return {
-    ...actual,
-    withRequestSpan: vi.fn((_name, _attrs, fn) => fn()),
-  };
-});
+import { beforeEach, describe, expect, it } from "vitest";
+import {
+  mockApiRouteAuthUser,
+  resetApiRouteMocks,
+} from "@/test/api-route-helpers";
+import { createMockNextRequest } from "@/test/route-helpers";
 
 describe("/api/calendar/ics/import", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "user-1" } },
-      error: null,
-    });
+    resetApiRouteMocks();
+    mockApiRouteAuthUser({ id: "user-1" });
   });
 
   it("imports ICS successfully", async () => {

@@ -6,7 +6,6 @@
  */
 
 import type { AgentStatusState } from "@/stores/agent-status-store";
-import type { ChatMemoryState } from "@/stores/chat/chat-memory";
 import type { ChatMessagesState } from "@/stores/chat/chat-messages";
 import type { ChatRealtimeState } from "@/stores/chat/chat-realtime";
 
@@ -75,29 +74,6 @@ export function createMockChatRealtimeState(
     updateAgentStatus: () => undefined,
     ...overrides,
   } as ChatRealtimeState;
-}
-
-/**
- * Create a mock ChatMemoryState with minimal defaults and optional overrides.
- *
- * @param overrides Optional partial state overrides.
- * @returns A ChatMemoryState-like object for mocking `useChatMemory`.
- */
-export function createMockChatMemoryState(
-  overrides: Partial<ChatMemoryState> = {}
-): ChatMemoryState {
-  return {
-    autoSyncMemory: false,
-    lastMemorySyncs: {},
-    memoryContexts: {},
-    memoryEnabled: false,
-    setAutoSyncMemory: () => undefined,
-    setMemoryEnabled: () => undefined,
-    storeConversationMemory: async () => undefined,
-    syncMemoryToSession: async () => undefined,
-    updateSessionMemoryContext: () => undefined,
-    ...overrides,
-  } as ChatMemoryState;
 }
 
 /**

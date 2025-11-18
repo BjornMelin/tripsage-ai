@@ -10,7 +10,8 @@ import { persist } from "zustand/middleware";
 import { sendChatMessage, streamChatMessage } from "@/lib/chat/api-client";
 import type { ChatSession, Message, SendMessageOptions } from "@/lib/schemas/chat";
 import { generateId, getCurrentTimestamp } from "@/lib/stores/helpers";
-import { useChatMemory } from "@/stores/chat/chat-memory";
+
+// Memory sync handled server-side via orchestrator - no client-side memory store needed
 
 type AddMessageOptions = {
   syncMemory?: boolean;
@@ -93,33 +94,19 @@ export const useChatMessages = create<ChatMessagesState>()(
         get().sessions.find((session) => session.id === sessionId);
 
       const storeMessageInMemory = (
-        sessionId: string,
+        _sessionId: string,
         message: Message,
         syncMemory: boolean
       ) => {
         if (!syncMemory || message.role === "system" || message.isStreaming) {
           return;
         }
-
-        const session = findSession(sessionId);
-        const userId = session?.userId;
-        if (!userId) return;
-
-        const { storeConversationMemory } = useChatMemory.getState();
-        storeConversationMemory(sessionId, userId, [message]).catch((error) => {
-          console.warn("Memory sync failed when storing conversation message", error);
-        });
       };
 
       const syncSessionMemory = (sessionId: string) => {
         const session = findSession(sessionId);
         const userId = session?.userId;
         if (!userId) return;
-
-        const { syncMemoryToSession } = useChatMemory.getState();
-        syncMemoryToSession(sessionId, userId).catch((error) => {
-          console.warn("Memory sync failed when syncing session", error);
-        });
       };
 
       return {
