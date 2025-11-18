@@ -40,12 +40,11 @@
     "codemod:check-idempotency": "pnpm codemod:ai-route:dry && pnpm codemod:ai-messages:dry && pnpm codemod:tests-env:dry && git diff --quiet"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "3.0.0-beta.53",
-    "@ai-sdk/google": "3.0.0-beta.43",
+    "@ai-sdk/anthropic": "3.0.0-beta.54",
     "@ai-sdk/mcp": "1.0.0-beta.15",
-    "@ai-sdk/openai": "3.0.0-beta.57",
+    "@ai-sdk/openai": "3.0.0-beta.60",
     "@ai-sdk/react": "3.0.0-beta.99",
-    "@ai-sdk/xai": "3.0.0-beta.37",
+    "@ai-sdk/xai": "3.0.0-beta.38",
     "@hello-pangea/dnd": "^18.0.1",
     "@hookform/resolvers": "^5.2.2",
     "@opentelemetry/api": "^1.9.0",
@@ -70,10 +69,10 @@
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-toast": "^1.2.15",
     "@radix-ui/react-tooltip": "^1.2.8",
-    "@supabase/postgrest-js": "^2.76.1",
+    "@supabase/postgrest-js": "^2.80.0",
     "@supabase/ssr": "^0.7.0",
-    "@supabase/supabase-js": "^2.76.1",
-    "@tanstack/react-query": "^5.90.5",
+    "@supabase/supabase-js": "^2.80.0",
+    "@tanstack/react-query": "^5.90.10",
     "@tanstack/react-query-devtools": "^5.90.2",
     "@testing-library/react": "^16.3.0",
     "@types/react-syntax-highlighter": "^15.5.13",
@@ -90,7 +89,8 @@
     "i18n-iso-countries": "^7.14.0",
     "ical-generator": "^10.0.0",
     "js-tiktoken": "^1.0.21",
-    "lucide-react": "^0.553.0",
+    "lucide-react": "^0.554.0",
+    "mem0ai": "^2.1.38",
     "nanoid": "^5.1.6",
     "next": "16.0.1",
     "next-themes": "^0.4.6",
@@ -148,6 +148,8 @@
       "prismjs": ">=1.30.0",
       "brace-expansion": ">=2.0.2"
     },
-    "ignoredBuiltDependencies": ["esbuild"]
+    "ignoredBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }
