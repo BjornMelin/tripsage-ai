@@ -1,3 +1,5 @@
+/** @vitest-environment jsdom */
+
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";

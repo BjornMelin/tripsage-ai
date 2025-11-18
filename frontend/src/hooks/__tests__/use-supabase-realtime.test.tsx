@@ -1,3 +1,5 @@
+/** @vitest-environment jsdom */
+
 import { renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useChatRealtime, useTripRealtime } from "@/hooks/use-supabase-realtime";

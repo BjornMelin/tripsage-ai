@@ -1,3 +1,5 @@
+/** @vitest-environment jsdom */
+
 import { QueryClient } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import React, { type ReactNode } from "react";

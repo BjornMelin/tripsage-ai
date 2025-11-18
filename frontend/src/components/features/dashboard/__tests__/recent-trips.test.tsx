@@ -1,3 +1,5 @@
+/** @vitest-environment jsdom */
+
 import { screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/test/test-utils";
