@@ -23,14 +23,12 @@ graph TD
     subgraph "Infrastructure Layer"
         DB[Supabase PostgreSQL<br/>• pgvector<br/>• RLS Security<br/>• Vault API Keys<br/>• Realtime]
         CACHE[Upstash Redis<br/>• HTTP Client<br/>• Rate Limiting<br/>• Caching]
-        MEM0[Mem0 SDK<br/>• AI Memory<br/>• Context Management]
     end
 
     FE --> API
     API --> CORE
     CORE --> DB
     CORE --> CACHE
-    CORE --> MEM0
 ```
 
 ## Technology Stack
@@ -40,7 +38,6 @@ graph TD
 - **Backend**: FastAPI (Python 3.11+) - Async API framework with automatic OpenAPI documentation
 - **Database**: Supabase PostgreSQL - Database with pgvector for embeddings
 - **Cache**: Upstash Redis (HTTP) - Serverless Redis with HTTP client
-- **Memory System**: Mem0 SDK - AI context and conversation memory
 - **Frontend**: Next.js 16 - React framework with App Router and Server Components
 - **AI**: AI SDK (@ai-sdk/react) - Unified interface for AI providers
 - **State Management**: Zustand - Lightweight state management
@@ -107,17 +104,14 @@ TripSage Core provides modular services organized by responsibility:
 **Business Services** (`tripsage_core/services/business/`):
 
 - `TripService`: Trip planning and management
-- `FlightService`: Flight search and booking via Duffel (used by frontend agents)
-- `AccommodationService`: Hotel search and booking (used by frontend agents)
 - `ItineraryService`: Trip itinerary management
-- `MemoryService`: AI memory and context management via Mem0
+- `MemoryService`: AI memory and context management
 - `ChatService`: Chat session management
 - `FileProcessingService`: Document analysis and processing
 - `UserService`: User profiles and preferences
 - `DestinationService`, `SearchService`, `ActivityService`: Removed; handled via frontend AI SDK v6 agents
-- `FileProcessingService`: Document analysis and processing
 
-**Note:** `FlightService` and `AccommodationService` are now primarily used by frontend AI agents (`/api/agents/flights` and `/api/agents/accommodations`) rather than direct Python API endpoints.
+**Note:** Flight and accommodation search functionality is now handled by frontend AI agents (`/api/agents/flights` and `/api/agents/accommodations`) using AI SDK v6.
 
 **External API Services** (`tripsage_core/services/external_apis/`):
 
@@ -126,7 +120,6 @@ TripSage Core provides modular services organized by responsibility:
 > Time-related utilities are no longer exported from Core external_apis; use frontend or direct libs as appropriate.
 > Calendar integrations are implemented in `frontend/src/lib/calendar/` with Google Calendar REST API v3, ICS import/export, and AI SDK tools. See [calendar-service.md](./calendar-service.md) for details.
 
-- `DuffelProvider`: Flight search and booking
 - `PlaywrightService`: Browser automation
 - `DocumentAnalyzer`: File processing
 
@@ -198,9 +191,9 @@ sequenceDiagram
 
 Memory operations follow this pattern:
 
-1. Context retrieval: Mem0 SDK fetches relevant conversation history
+1. Context retrieval: Frontend manages conversation history via AI SDK
 2. AI processing: Frontend uses AI SDK with retrieved context
-3. Memory updates: New interactions stored via Mem0 for future use
+3. Memory updates: New interactions stored for future use
 4. Vector storage: Embeddings persisted in PostgreSQL via pgvector
 
 ## Security Architecture
