@@ -1,12 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
-
-// Mock next/headers cookies() before any imports that use it
-vi.mock("next/headers", () => ({
-  cookies: vi.fn(() =>
-    Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))
-  ),
-}));
+import {
+  enableApiRouteRateLimit,
+  mockApiRouteRateLimitOnce,
+  resetApiRouteMocks,
+} from "@/test/api-route-helpers";
+import { createMockNextRequest } from "@/test/route-helpers";
 
 const mockCalendars = {
   items: [
@@ -22,36 +20,6 @@ const mockCalendars = {
   kind: "calendar#calendarList",
 };
 
-const mockLimitFn = vi.fn().mockResolvedValue({
-  limit: 60,
-  remaining: 59,
-  reset: Date.now() + 60000,
-  success: true,
-});
-
-const mockSlidingWindow = vi.fn(() => ({}));
-const RATELIMIT_MOCK = vi.fn(function RatelimitMock() {
-  return {
-    limit: mockLimitFn,
-  };
-}) as unknown as {
-  new (...args: unknown[]): { limit: ReturnType<typeof vi.fn> };
-  slidingWindow: typeof mockSlidingWindow;
-};
-(RATELIMIT_MOCK as { slidingWindow: typeof mockSlidingWindow }).slidingWindow =
-  mockSlidingWindow;
-
-vi.mock("@/lib/supabase/server", () => ({
-  createServerSupabase: vi.fn(async () => ({
-    auth: {
-      getUser: async () => ({
-        data: { user: { id: "user-1" } },
-        error: null,
-      }),
-    },
-  })),
-}));
-
 vi.mock("@/lib/calendar/google", () => ({
   listCalendars: vi.fn(async () => mockCalendars),
 }));
@@ -60,29 +28,10 @@ vi.mock("@/lib/calendar/auth", () => ({
   hasGoogleCalendarScopes: vi.fn(async () => true),
 }));
 
-vi.mock("@upstash/ratelimit", () => ({
-  Ratelimit: RATELIMIT_MOCK,
-}));
-
-vi.mock("@upstash/redis", () => ({
-  Redis: {
-    fromEnv: vi.fn(() => ({})),
-  },
-}));
-
-vi.mock("@/lib/env/server", () => ({
-  getServerEnvVarWithFallback: vi.fn(() => "test-key"),
-}));
-
 describe("/api/calendar/status route", () => {
   beforeEach(() => {
+    resetApiRouteMocks();
     vi.clearAllMocks();
-    mockLimitFn.mockResolvedValue({
-      limit: 60,
-      remaining: 59,
-      reset: Date.now() + 60000,
-      success: true,
-    });
   });
 
   it("returns connected status with calendars", async () => {
@@ -121,10 +70,9 @@ describe("/api/calendar/status route", () => {
   });
 
   it("returns 429 on rate limit exceeded", async () => {
-    mockLimitFn.mockResolvedValueOnce({
-      limit: 60,
+    enableApiRouteRateLimit();
+    mockApiRouteRateLimitOnce({
       remaining: 0,
-      reset: Date.now() + 60000,
       success: false,
     });
 

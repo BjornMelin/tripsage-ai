@@ -2,67 +2,8 @@
 
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
-
-// Mock next/headers cookies() BEFORE any imports that use it
-vi.mock("next/headers", () => ({
-  cookies: vi.fn(() =>
-    Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))
-  ),
-}));
-
-// Mock Supabase server client
-vi.mock("@/lib/supabase/server", () => ({
-  createServerSupabase: vi.fn(async () => ({
-    auth: {
-      getUser: async () => ({
-        data: { user: { id: "user-1" } },
-      }),
-    },
-  })),
-}));
-
-// Mock Upstash Redis and Ratelimit
-vi.mock("@upstash/redis", () => ({
-  Redis: {
-    fromEnv: vi.fn(() => ({
-      evalsha: vi.fn().mockResolvedValue({}),
-      get: vi.fn(),
-      set: vi.fn(),
-    })),
-  },
-}));
-
-vi.mock("@upstash/ratelimit", () => {
-  const mockSlidingWindow = vi.fn(() => ({}));
-  class RatelimitMock {
-    limit = vi
-      .fn()
-      .mockResolvedValue({ remaining: 10, reset: Date.now() + 60000, success: true });
-    static slidingWindow = mockSlidingWindow;
-  }
-  return { Ratelimit: RatelimitMock };
-});
-
-// Mock Redis helper
-vi.mock("@/lib/redis", () => ({
-  getRedis: vi.fn(() => ({
-    evalsha: vi.fn().mockResolvedValue({}),
-    get: vi.fn(),
-    set: vi.fn(),
-  })),
-}));
-
-// Mock route helpers
-vi.mock("@/lib/next/route-helpers", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/next/route-helpers")>(
-    "@/lib/next/route-helpers"
-  );
-  return {
-    ...actual,
-    withRequestSpan: vi.fn((_name, _attrs, fn) => fn()),
-  };
-});
+import { mockApiRouteAuthUser, resetApiRouteMocks } from "@/test/api-route-helpers";
+import { createMockNextRequest } from "@/test/route-helpers";
 
 // Mock global fetch
 const MOCK_FETCH = vi.fn();
@@ -70,6 +11,8 @@ global.fetch = MOCK_FETCH;
 
 describe("/api/chat/attachments", () => {
   beforeEach(() => {
+    resetApiRouteMocks();
+    mockApiRouteAuthUser({ id: "user-1" });
     vi.clearAllMocks();
     MOCK_FETCH.mockResolvedValue(
       new Response(
@@ -105,11 +48,11 @@ describe("/api/chat/attachments", () => {
     // The route filters out non-File entries, so this should result in no files
     const emptyFormData = new FormData();
     emptyFormData.append("text", "not-a-file");
-    const req = new NextRequest("http://localhost/api/chat/attachments", {
+    const request = new Request("http://localhost/api/chat/attachments", {
       body: emptyFormData,
-      headers: { "content-type": "multipart/form-data" },
       method: "POST",
     });
+    const req = new NextRequest(request);
     const res = await mod.POST(req);
     expect(res.status).toBe(400);
     const body = await res.json();

@@ -1,89 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
-
-// Mock next/headers cookies() BEFORE any imports that use it
-vi.mock("next/headers", () => ({
-  cookies: vi.fn(() =>
-    Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))
-  ),
-}));
+import {
+  enableApiRouteRateLimit,
+  mockApiRouteAuthUser,
+  mockApiRouteRateLimitOnce,
+  resetApiRouteMocks,
+} from "@/test/api-route-helpers";
+import { createMockNextRequest } from "@/test/route-helpers";
 
 const mockQueryFreeBusy = vi.fn();
 vi.mock("@/lib/calendar/google", () => ({
   queryFreeBusy: mockQueryFreeBusy,
 }));
 
-const mockLimitFn = vi.fn().mockResolvedValue({
-  limit: 30,
-  remaining: 29,
-  reset: Date.now() + 60000,
-  success: true,
-});
-
-const mockSlidingWindow = vi.fn(() => ({}));
-const RATELIMIT_MOCK = vi.fn(function RatelimitMock() {
-  return {
-    limit: mockLimitFn,
-  };
-}) as unknown as {
-  new (...args: unknown[]): { limit: ReturnType<typeof vi.fn> };
-  slidingWindow: typeof mockSlidingWindow;
-};
-(RATELIMIT_MOCK as { slidingWindow: typeof mockSlidingWindow }).slidingWindow =
-  mockSlidingWindow;
-
-vi.mock("@upstash/ratelimit", () => ({
-  Ratelimit: RATELIMIT_MOCK,
-}));
-
-vi.mock("@upstash/redis", () => ({
-  Redis: {
-    fromEnv: vi.fn(() => ({})),
-  },
-}));
-
-vi.mock("@/lib/env/server", () => ({
-  getServerEnvVarWithFallback: vi.fn((key: string) => {
-    if (key === "UPSTASH_REDIS_REST_URL" || key === "UPSTASH_REDIS_REST_TOKEN") {
-      return "test-value";
-    }
-    return "test-key";
-  }),
-}));
-
-const mockGetUser = vi.fn();
-vi.mock("@/lib/supabase/server", () => ({
-  createServerSupabase: vi.fn(async () => ({
-    auth: {
-      getUser: mockGetUser,
-    },
-  })),
-}));
-
-// Mock route helpers
-vi.mock("@/lib/next/route-helpers", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/next/route-helpers")>(
-    "@/lib/next/route-helpers"
-  );
-  return {
-    ...actual,
-    withRequestSpan: vi.fn((_name, _attrs, fn) => fn()),
-  };
-});
-
 describe("/api/calendar/freebusy route", () => {
   beforeEach(() => {
+    resetApiRouteMocks();
     vi.clearAllMocks();
-    mockLimitFn.mockResolvedValue({
-      limit: 30,
-      remaining: 29,
-      reset: Date.now() + 60000,
-      success: true,
-    });
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "user-1" } },
-      error: null,
-    });
+    mockApiRouteAuthUser({ id: "user-1" });
     mockQueryFreeBusy.mockResolvedValue({
       calendars: {
         primary: {
@@ -152,10 +85,7 @@ describe("/api/calendar/freebusy route", () => {
   });
 
   it("returns 401 when unauthenticated", async () => {
-    mockGetUser.mockResolvedValueOnce({
-      data: { user: null },
-      error: { message: "Unauthorized" },
-    });
+    mockApiRouteAuthUser(null);
 
     const mod = await import("../freebusy/route");
     const req = createMockNextRequest({
@@ -203,10 +133,9 @@ describe("/api/calendar/freebusy route", () => {
   });
 
   it("returns 429 on rate limit", async () => {
-    mockLimitFn.mockResolvedValueOnce({
-      limit: 30,
+    enableApiRouteRateLimit();
+    mockApiRouteRateLimitOnce({
       remaining: 0,
-      reset: Date.now() + 60000,
       success: false,
     });
 

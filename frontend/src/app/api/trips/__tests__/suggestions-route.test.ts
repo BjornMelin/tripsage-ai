@@ -55,7 +55,7 @@ describe("/api/trips/suggestions route", () => {
           error: new Error("Unauthorized"),
         }),
       },
-    } as any);
+    } as unknown as Awaited<ReturnType<typeof createServerSupabase>>);
 
     const req = createMockNextRequest({
       method: "GET",
