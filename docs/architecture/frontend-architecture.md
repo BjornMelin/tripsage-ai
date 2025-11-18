@@ -493,12 +493,22 @@ sequenceDiagram
    - Topic pattern: `user:${userId}`
    - Used by: Agent monitoring dashboard
 
-6. **`chat-store.ts`** (`frontend/src/stores/chat-store.ts`)
-   - **VIOLATION**: `connectRealtime` method directly calls `supabase.channel()` (should use `useRealtimeChannel`)
-   - Handles: `chat:message`, `chat:message_chunk`, `chat:typing`, `agent_status_update` broadcasts
-   - Topic pattern: `session:${sessionId}`
+6. **`chat-messages.ts`** (`frontend/src/stores/chat/chat-messages.ts`)
+   - Zustand slice for message management and UI state
+   - Handles: Message CRUD, attachments, URL object lifecycle
+   - No direct Realtime calls (uses hooks for coordination)
 
-7. **`use-trips.ts`** (`frontend/src/hooks/use-trips.ts`)
+7. **`chat-memory.ts`** (`frontend/src/stores/chat/chat-memory.ts`)
+   - Zustand slice for memory context and sync preferences
+   - Handles: Memory sync preferences, calls `/api/memory/sync` endpoint
+   - No direct server imports (uses API endpoints)
+
+8. **`useChatActions`** (`frontend/src/hooks/useChatActions.ts`)
+   - Orchestrator hook for coordinated chat operations
+   - Combines `chat-messages` and `chat-memory` operations without violating slice isolation
+   - Used by: Chat components for message + memory sync operations
+
+9. **`use-trips.ts`** (`frontend/src/hooks/use-trips.ts`)
    - **VIOLATION**: Directly calls `supabase.channel()` for Postgres changes (should use `useRealtimeChannel`)
    - Handles: Postgres changes on `trips` table
    - Topic patterns: `trips:${userId}`, `trip:${tripId}`
@@ -507,9 +517,19 @@ sequenceDiagram
 
 1. **Route Handlers**:
    - **`/api/chat/stream`** (`frontend/src/app/api/chat/stream/route.ts` + `_handler.ts`)
-     - Uses: `streamText`, `convertToModelMessages`, `tool`, `generateObject`
-     - Returns: `result.toUIMessageStreamResponse()`
-     - Handles: Main chat streaming, tool calling, memory integration
+     - Uses: `streamText`, `convertToModelMessages`, `tool`, `generateObject`, `experimental_repairToolCall`, `stepCountIs(10)`
+     - Returns: `result.toUIMessageStreamResponse()` with `messageMetadata` and error handling
+     - Handles: Main chat streaming with advanced tool calling and memory integration
+
+   - **`/api/chat/send`** (`frontend/src/app/api/chat/send/route.ts`)
+     - Uses: `generateText`, `convertToModelMessages`
+     - Returns: JSON response with completion data
+     - Handles: Non-streaming chat completions
+
+   - **`/api/memory/sync`** (`frontend/src/app/api/memory/sync/route.ts`)
+     - Uses: QStash enqueue functions server-side
+     - Returns: JSON response with job status
+     - Handles: Background memory synchronization jobs
 
    - **`/api/ai/stream`** (`frontend/src/app/api/ai/stream/route.ts`)
      - Uses: `streamText`
@@ -525,6 +545,24 @@ sequenceDiagram
      - Uses: `useChat` from `@ai-sdk/react`, `DefaultChatTransport` from `ai`
      - Manages: Chat UI state, message streaming, resumable connections
      - AI Elements: Uses `Conversation`, `Message`, `Response`, `PromptInput`, `Sources` components
+
+3. **Client API Helpers**:
+   - **`@/lib/chat/api-client.ts`**
+     - `sendChatMessage()`: Calls `/api/chat/send` for non-streaming completions
+     - `streamChatMessage()`: Calls `/api/chat/stream`, parses SSE for `text-delta` chunks
+     - `convertToUiMessages()`: Converts internal `Message[]` to AI SDK `UIMessage[]` format
+     - Handles: `UIMessage` construction with `parts` array, SSE stream consumption
+
+4. **State Management (Chat)**:
+   - **`useChatMessages`** (`frontend/src/stores/chat/chat-messages.ts`)
+     - Message CRUD operations, attachment handling, URL object lifecycle management
+     - No direct AI operations (delegates to API routes)
+   - **`useChatMemory`** (`frontend/src/stores/chat/chat-memory.ts`)
+     - Memory sync preferences, calls `/api/memory/sync` for background jobs
+     - No server-only imports (uses REST endpoints)
+   - **`useChatActions`** (`frontend/src/hooks/useChatActions.ts`)
+     - Orchestrator hook combining message and memory operations
+     - Maintains slice isolation while enabling coordinated workflows
 
 ## Data Flow & API Integration
 

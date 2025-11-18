@@ -63,8 +63,8 @@ graph TD
 
 - App Router: File-based routing with nested layouts
 - Server Components: Server-side rendering with client components for interactivity
-- AI Integration: AI SDK for streaming chat and tool calling
-- State Management: Zustand stores with persistence
+- AI Integration: Complete AI SDK v6 implementation with streaming chat (`/api/chat/*`), memory sync (`/api/memory/sync`), and tool calling
+- State Management: Zustand stores with slice isolation and orchestrator hooks
 - Real-time: Supabase Realtime for live updates
 - UI: shadcn/ui components with Tailwind CSS v4
 - Authentication: Supabase auth with SSR support
@@ -96,7 +96,7 @@ Available routers for different domains:
 - dashboard: Analytics and reporting
 - health: Health checks and monitoring
 
-**Note:** Flight and accommodation operations are handled by frontend-only AI agents (`/api/agents/flights` and `/api/agents/accommodations`) implemented with Vercel AI SDK v6. The legacy Python routers for these domains have been removed.
+**Note:** Flight and accommodation operations are handled by frontend-only AI agents (`/api/agents/flights` and `/api/agents/accommodations`) implemented with Vercel AI SDK v6. Complete chat streaming is now available via `/api/chat/stream` and `/api/chat/send` routes with full AI SDK v6 compliance. Memory synchronization uses `/api/memory/sync` with QStash background jobs. The legacy Python routers for these domains have been removed.
 
 ### Business Logic Layer (TripSage Core)
 
