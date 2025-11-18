@@ -81,7 +81,6 @@ tripsage/api/
 │   ├── requests/         # Input validation schemas (API-only)
 │   └── responses/        # Output formatting schemas (API-only)
 ├── services/             # Business logic and external integrations
-│   ├── auth.py          # Authentication and session management
 │   ├── itinerary.py     # Trip optimization and scheduling
 │   ├── trip.py          # Trip planning and coordination
 │   └── user.py          # User profile and preferences
@@ -91,28 +90,20 @@ tripsage/api/
 
 ## Authentication & Security
 
+> **⚠️ Authentication Endpoints**  
+> Authentication (registration, login, password reset) is handled by the Next.js frontend via Supabase SSR routes (`/auth/*`).  
+> The Python backend middleware validates JWT tokens but does not provide auth endpoints.
+
 ### Multi-Modal Authentication
 
 The API supports multiple authentication methods for different consumer types:
 
 #### JWT Authentication (Primary for Frontend)
 
+JWT tokens are obtained through Supabase authentication via the Next.js frontend (`/auth/*` routes).  
+Once obtained, include the token in the Authorization header:
+
 ```bash
-# Registration
-POST /api/v1/auth/register
-{
-  "email": "user@example.com",
-  "password": "secure_password"
-}
-
-# Login
-POST /api/v1/auth/token
-{
-  "username": "user@example.com",
-  "password": "secure_password"
-}
-
-# Usage
 Authorization: Bearer <jwt_token>
 ```
 
@@ -165,10 +156,8 @@ GET /api/v1/flights/search
 
 #### Authentication
 
-- `POST /api/v1/auth/register` - User registration
-- `POST /api/v1/auth/token` - Login and token generation
-- `POST /api/v1/auth/refresh` - Token refresh
-- `DELETE /api/v1/auth/logout` - Logout and token invalidation
+> **Note:** Authentication endpoints (`/api/v1/auth/*`) are not implemented in the Python backend.  
+> All authentication (registration, login, logout, password reset) is handled by the Next.js frontend via Supabase SSR routes (`/auth/*`).
 
 #### API Key Management
 

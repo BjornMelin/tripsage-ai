@@ -74,12 +74,11 @@ from tripsage_core.models.api import TripCreateRequest
 Core business logic with dependency injection:
 
 ```python
-from tripsage_core.services.business import AuthService, MemoryService
+from tripsage_core.services.business import MemoryService, TripService
 ```
 
 **Available Services:**
 
-- `AuthService` - JWT and API key authentication
 - `MemoryService` - Conversation memory and user preferences
 - `TripService` - Trip planning and coordination
 - `UserService` - User profiles and preferences
@@ -150,21 +149,9 @@ from tripsage_core.utils.logging_utils import get_logger
 
 ## Usage Examples
 
-### Service Usage
-
-```python
-from tripsage_core.services.business import AuthService
-from tripsage_core.config import get_app_settings
-
-settings = get_app_settings()
-
-# Authentication
-auth_service = AuthService(settings)
-user = await auth_service.authenticate_user(email="user@example.com")
-```
-
 > [!NOTE]
-> Flight search functionality has been migrated to `frontend/src/lib/tools/flights.ts` using Duffel API directly.
+> Flight search functionality has been migrated to `frontend/src/lib/tools/flights.ts` using Duffel API directly.  
+> Authentication is handled by the Next.js frontend via Supabase SSR routes (`/auth/*`).
 
 ### Database Operations
 
