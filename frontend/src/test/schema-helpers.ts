@@ -6,8 +6,7 @@
  * - Parse error expectations
  */
 
-import { z } from "zod";
-import type { ZodError } from "zod";
+import type { ZodError, z } from "zod";
 
 /**
  * Assert that a value passes schema validation.

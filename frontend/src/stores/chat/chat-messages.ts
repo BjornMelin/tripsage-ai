@@ -10,10 +10,13 @@ import { persist } from "zustand/middleware";
 import { sendChatMessage, streamChatMessage } from "@/lib/chat/api-client";
 import type { ChatSession, Message, SendMessageOptions } from "@/lib/schemas/chat";
 import { generateId, getCurrentTimestamp } from "@/lib/stores/helpers";
+import { useChatMemory } from "@/stores/chat/chat-memory";
 
-/**
- * Chat messages state interface.
- */
+type AddMessageOptions = {
+  syncMemory?: boolean;
+};
+
+/** Chat messages state interface. */
 export interface ChatMessagesState {
   // State
   sessions: ChatSession[];
@@ -32,7 +35,11 @@ export interface ChatMessagesState {
   renameSession: (sessionId: string, title: string) => void;
 
   // Message actions
-  addMessage: (sessionId: string, message: Omit<Message, "id" | "timestamp">) => string;
+  addMessage: (
+    sessionId: string,
+    message: Omit<Message, "id" | "timestamp">,
+    options?: AddMessageOptions
+  ) => string;
   updateMessage: (
     sessionId: string,
     messageId: string,
@@ -65,400 +72,495 @@ let abortController: AbortController | null = null;
 // Track object URLs for attachment cleanup
 const objectUrls = new Map<string, Set<string>>(); // sessionId -> Set<objectUrl>
 
+const deriveCurrentSession = (
+  sessions: ChatSession[],
+  currentSessionId: string | null
+): ChatSession | null => {
+  if (!currentSessionId) {
+    return null;
+  }
+
+  return sessions.find((session) => session.id === currentSessionId) || null;
+};
+
 /**
  * Chat messages store hook.
  */
 export const useChatMessages = create<ChatMessagesState>()(
   persist(
-    (set, get) => ({
-      addMessage: (sessionId, message) => {
-        const timestamp = getCurrentTimestamp();
-        const messageId = generateId();
+    (set, get) => {
+      const findSession = (sessionId: string) =>
+        get().sessions.find((session) => session.id === sessionId);
 
-        const newMessage: Message = {
-          id: messageId,
-          ...message,
-          timestamp,
-        };
-
-        set((state) => ({
-          sessions: state.sessions.map((session) =>
-            session.id === sessionId
-              ? {
-                  ...session,
-                  messages: [...(session.messages || []), newMessage],
-                  updatedAt: timestamp,
-                }
-              : session
-          ),
-        }));
-
-        return messageId;
-      },
-
-      addToolResult: (sessionId, messageId, callId, result) => {
-        set((state) => ({
-          sessions: state.sessions.map((session) =>
-            session.id === sessionId
-              ? {
-                  ...session,
-                  messages: (session.messages || []).map((message) =>
-                    message.id === messageId
-                      ? {
-                          ...message,
-                          toolCalls: (message.toolCalls || []).map((call) =>
-                            call.id === callId ? { ...call, status: "completed" } : call
-                          ),
-                          toolResults: [
-                            ...(message.toolResults || []),
-                            { callId, result, status: "success" },
-                          ],
-                        }
-                      : message
-                  ),
-                  updatedAt: getCurrentTimestamp(),
-                }
-              : session
-          ),
-        }));
-      },
-
-      clearError: () => set({ error: null }),
-
-      clearMessages: (sessionId) => {
-        // Revoke object URLs for this session
-        const urls = objectUrls.get(sessionId);
-        if (urls) {
-          urls.forEach((url) => {
-            URL.revokeObjectURL(url);
-          });
-          objectUrls.delete(sessionId);
+      const storeMessageInMemory = (
+        sessionId: string,
+        message: Message,
+        syncMemory: boolean
+      ) => {
+        if (!syncMemory || message.role === "system" || message.isStreaming) {
+          return;
         }
 
-        set((state) => ({
-          sessions: state.sessions.map((session) =>
-            session.id === sessionId
-              ? {
-                  ...session,
-                  messages: [],
-                  updatedAt: getCurrentTimestamp(),
-                }
-              : session
-          ),
-        }));
-      },
+        const session = findSession(sessionId);
+        const userId = session?.userId;
+        if (!userId) return;
 
-      createSession: (title, userId) => {
-        const timestamp = getCurrentTimestamp();
-        const sessionId = generateId();
-
-        const newSession: ChatSession = {
-          createdAt: timestamp,
-          id: sessionId,
-          messages: [],
-          title: title || "New Conversation",
-          updatedAt: timestamp,
-          userId,
-        };
-
-        set((state) => ({
-          currentSessionId: sessionId,
-          sessions: [newSession, ...state.sessions],
-        }));
-
-        return sessionId;
-      },
-
-      get currentSession() {
-        const { sessions, currentSessionId } = get();
-        if (!currentSessionId) return null;
-        return sessions.find((s) => s.id === currentSessionId) || null;
-      },
-      currentSessionId: null,
-
-      deleteSession: (sessionId) => {
-        // Revoke object URLs for this session
-        const urls = objectUrls.get(sessionId);
-        if (urls) {
-          urls.forEach((url) => {
-            URL.revokeObjectURL(url);
-          });
-          objectUrls.delete(sessionId);
-        }
-
-        set((state) => {
-          const sessions = state.sessions.filter((s) => s.id !== sessionId);
-
-          const currentSessionId =
-            state.currentSessionId === sessionId
-              ? sessions.length > 0
-                ? sessions[0].id
-                : null
-              : state.currentSessionId;
-
-          return { currentSessionId, sessions };
+        const { storeConversationMemory } = useChatMemory.getState();
+        storeConversationMemory(sessionId, userId, [message]).catch((error) => {
+          console.warn("Memory sync failed when storing conversation message", error);
         });
-      },
-      error: null,
+      };
 
-      exportSessionData: (sessionId) => {
-        const { sessions } = get();
-        const session = sessions.find((s) => s.id === sessionId);
+      const syncSessionMemory = (sessionId: string) => {
+        const session = findSession(sessionId);
+        const userId = session?.userId;
+        if (!userId) return;
 
-        if (!session) return "";
+        const { syncMemoryToSession } = useChatMemory.getState();
+        syncMemoryToSession(sessionId, userId).catch((error) => {
+          console.warn("Memory sync failed when syncing session", error);
+        });
+      };
 
-        const exportData = {
-          ...session,
-          messages: (session.messages || []).map((msg) => ({
-            ...msg,
-            attachments: msg.attachments?.map((att) => ({
-              contentType: att.contentType,
-              id: att.id,
-              name: att.name,
-              url: att.url.startsWith("blob:") ? "" : att.url,
-            })),
-          })),
-        };
+      return {
+        addMessage: (sessionId, message, options) => {
+          const timestamp = getCurrentTimestamp();
+          const messageId = generateId();
 
-        return JSON.stringify(exportData, null, 2);
-      },
+          const newMessage: Message = {
+            id: messageId,
+            ...message,
+            timestamp,
+          };
 
-      importSessionData: (jsonData) => {
-        try {
-          const data = JSON.parse(jsonData);
+          set((state) => {
+            const sessions = state.sessions.map<ChatSession>((session) =>
+              session.id === sessionId
+                ? {
+                    ...session,
+                    messages: [...(session.messages || []), newMessage],
+                    updatedAt: timestamp,
+                  }
+                : session
+            );
 
-          // Basic validation
-          if (
-            !data.id ||
-            !data.title ||
-            !Array.isArray(data.messages) ||
-            !data.createdAt ||
-            !data.updatedAt
-          ) {
-            set({ error: "Invalid session data format" });
-            return null;
+            return {
+              currentSession: deriveCurrentSession(sessions, state.currentSessionId),
+              sessions,
+            };
+          });
+
+          const shouldSyncMemory = options?.syncMemory ?? true;
+          storeMessageInMemory(sessionId, newMessage, shouldSyncMemory);
+
+          return messageId;
+        },
+
+        addToolResult: (sessionId, messageId, callId, result) => {
+          set((state) => {
+            const sessions = state.sessions.map<ChatSession>((session) =>
+              session.id === sessionId
+                ? {
+                    ...session,
+                    messages: (session.messages || []).map((message) =>
+                      message.id === messageId
+                        ? {
+                            ...message,
+                            toolCalls: (message.toolCalls || []).map((call) =>
+                              call.id === callId
+                                ? { ...call, status: "completed" }
+                                : call
+                            ),
+                            toolResults: [
+                              ...(message.toolResults || []),
+                              { callId, result, status: "success" },
+                            ],
+                          }
+                        : message
+                    ),
+                    updatedAt: getCurrentTimestamp(),
+                  }
+                : session
+            );
+
+            return {
+              currentSession: deriveCurrentSession(sessions, state.currentSessionId),
+              sessions,
+            };
+          });
+        },
+
+        clearError: () => set({ error: null }),
+
+        clearMessages: (sessionId) => {
+          // Revoke object URLs for this session
+          const urls = objectUrls.get(sessionId);
+          if (urls) {
+            urls.forEach((url) => {
+              URL.revokeObjectURL(url);
+            });
+            objectUrls.delete(sessionId);
           }
 
+          set((state) => {
+            const sessions = state.sessions.map<ChatSession>((session) =>
+              session.id === sessionId
+                ? {
+                    ...session,
+                    messages: [],
+                    updatedAt: getCurrentTimestamp(),
+                  }
+                : session
+            );
+
+            return {
+              currentSession: deriveCurrentSession(sessions, state.currentSessionId),
+              sessions,
+            };
+          });
+        },
+
+        createSession: (title, userId) => {
           const timestamp = getCurrentTimestamp();
           const sessionId = generateId();
 
-          const importedSession: ChatSession = {
-            ...data,
+          const newSession: ChatSession = {
+            createdAt: timestamp,
             id: sessionId,
-            title: `${data.title} (Imported)`,
+            messages: [],
+            title: title || "New Conversation",
             updatedAt: timestamp,
+            userId,
           };
 
           set((state) => ({
+            currentSession: newSession,
             currentSessionId: sessionId,
-            sessions: [importedSession, ...state.sessions],
+            sessions: [newSession, ...state.sessions],
           }));
 
           return sessionId;
-        } catch (error) {
-          set({
-            error:
-              error instanceof Error ? error.message : "Failed to import session data",
-          });
-          return null;
-        }
-      },
-      isLoading: false,
-      isStreaming: false,
+        },
 
-      renameSession: (sessionId, title) => {
-        set((state) => ({
-          sessions: state.sessions.map((session) =>
-            session.id === sessionId
-              ? { ...session, title, updatedAt: getCurrentTimestamp() }
-              : session
-          ),
-        }));
-      },
+        currentSession: null,
+        currentSessionId: null,
 
-      sendMessage: async (content, options = {}) => {
-        const { currentSessionId, currentSession } = get();
+        deleteSession: (sessionId) => {
+          // Revoke object URLs for this session
+          const urls = objectUrls.get(sessionId);
+          if (urls) {
+            urls.forEach((url) => {
+              URL.revokeObjectURL(url);
+            });
+            objectUrls.delete(sessionId);
+          }
 
-        let sessionId = currentSessionId;
-        if (!sessionId || !currentSession) {
-          sessionId = get().createSession("New Conversation");
-        }
+          set((state) => {
+            const sessions = state.sessions.filter((s) => s.id !== sessionId);
 
-        const session = get().sessions.find((s) => s.id === sessionId);
-        const existingMessages = session?.messages || [];
+            const currentSessionId =
+              state.currentSessionId === sessionId
+                ? sessions.length > 0
+                  ? sessions[0].id
+                  : null
+                : state.currentSessionId;
 
-        // Add user message with attachment URL tracking
-        const attachmentUrls: string[] = [];
-        get().addMessage(sessionId, {
-          attachments: options.attachments?.map((file) => {
-            const objectUrl = URL.createObjectURL(file);
-            attachmentUrls.push(objectUrl);
-            // Track object URL for cleanup
-            if (!objectUrls.has(sessionId)) {
-              objectUrls.set(sessionId, new Set());
-            }
-            objectUrls.get(sessionId)?.add(objectUrl);
             return {
-              contentType: file.type,
-              id: generateId(),
-              name: file.name,
-              size: file.size,
-              url: objectUrl,
+              currentSession: deriveCurrentSession(sessions, currentSessionId),
+              currentSessionId,
+              sessions,
             };
-          }),
-          content,
-          role: "user",
-        });
-
-        set({ error: null, isLoading: true });
-
-        try {
-          // Call API route to send message
-          const assistantMessage = await sendChatMessage(
-            {
-              content,
-              options,
-              sessionId,
-            },
-            existingMessages
-          );
-
-          // Add assistant response
-          get().addMessage(sessionId, assistantMessage);
-
-          set({ isLoading: false });
-        } catch (error) {
-          set({
-            error: error instanceof Error ? error.message : "Failed to send message",
-            isLoading: false,
           });
+        },
+        error: null,
 
-          get().addMessage(sessionId, {
-            content:
-              "Sorry, there was an error processing your request. Please try again.",
-            role: "system",
-          });
-        }
-      },
-      sessions: [],
+        exportSessionData: (sessionId) => {
+          const { sessions } = get();
+          const session = sessions.find((s) => s.id === sessionId);
 
-      setCurrentSession: (sessionId) => {
-        set({ currentSessionId: sessionId });
-      },
+          if (!session) return "";
 
-      stopStreaming: () => {
-        if (abortController) {
-          abortController.abort();
-          abortController = null;
-          set({ isStreaming: false });
-        }
-      },
+          const exportData = {
+            ...session,
+            messages: (session.messages || []).map((msg) => ({
+              ...msg,
+              attachments: msg.attachments?.map((att) => ({
+                contentType: att.contentType,
+                id: att.id,
+                name: att.name,
+                url: att.url.startsWith("blob:") ? "" : att.url,
+              })),
+            })),
+          };
 
-      streamMessage: async (content, options = {}) => {
-        const { currentSessionId, currentSession } = get();
+          return JSON.stringify(exportData, null, 2);
+        },
 
-        let sessionId = currentSessionId;
-        if (!sessionId || !currentSession) {
-          sessionId = get().createSession("New Conversation");
-        }
+        importSessionData: (jsonData) => {
+          try {
+            const data = JSON.parse(jsonData);
 
-        const session = get().sessions.find((s) => s.id === sessionId);
-        const existingMessages = session?.messages || [];
-
-        // Add user message with attachment URL tracking
-        const attachmentUrls: string[] = [];
-        get().addMessage(sessionId, {
-          attachments: options.attachments?.map((file) => {
-            const objectUrl = URL.createObjectURL(file);
-            attachmentUrls.push(objectUrl);
-            // Track object URL for cleanup
-            if (!objectUrls.has(sessionId)) {
-              objectUrls.set(sessionId, new Set());
+            // Basic validation
+            if (
+              !data.id ||
+              !data.title ||
+              !Array.isArray(data.messages) ||
+              !data.createdAt ||
+              !data.updatedAt
+            ) {
+              set({ error: "Invalid session data format" });
+              return null;
             }
-            objectUrls.get(sessionId)?.add(objectUrl);
-            return {
-              contentType: file.type,
-              id: generateId(),
-              name: file.name,
-              size: file.size,
-              url: objectUrl,
+
+            const timestamp = getCurrentTimestamp();
+            const sessionId = generateId();
+
+            const importedSession: ChatSession = {
+              ...data,
+              id: sessionId,
+              title: `${data.title} (Imported)`,
+              updatedAt: timestamp,
             };
-          }),
-          content,
-          role: "user",
-        });
 
-        // Create a placeholder message for streaming
-        const assistantMessageId = get().addMessage(sessionId, {
-          content: "",
-          isStreaming: true,
-          role: "assistant",
-        });
+            set((state) => ({
+              currentSession: importedSession,
+              currentSessionId: sessionId,
+              sessions: [importedSession, ...state.sessions],
+            }));
 
-        set({ error: null, isStreaming: true });
-        abortController = new AbortController();
-
-        try {
-          let streamContent = "";
-
-          // Call API route to stream message
-          await streamChatMessage(
-            {
-              content,
-              options,
-              sessionId,
-            },
-            existingMessages,
-            (chunk) => {
-              if (abortController?.signal.aborted) {
-                return;
-              }
-              streamContent += chunk;
-              get().updateMessage(sessionId, assistantMessageId, {
-                content: streamContent,
-              });
-            },
-            abortController.signal
-          );
-
-          get().updateMessage(sessionId, assistantMessageId, {
-            isStreaming: false,
-          });
-        } catch (error) {
-          if (!(error instanceof DOMException && error.name === "AbortError")) {
+            return sessionId;
+          } catch (error) {
             set({
               error:
-                error instanceof Error ? error.message : "Failed to stream message",
+                error instanceof Error
+                  ? error.message
+                  : "Failed to import session data",
             });
+            return null;
+          }
+        },
+        isLoading: false,
+        isStreaming: false,
+
+        renameSession: (sessionId, title) => {
+          set((state) => {
+            const sessions = state.sessions.map<ChatSession>((session) =>
+              session.id === sessionId
+                ? { ...session, title, updatedAt: getCurrentTimestamp() }
+                : session
+            );
+
+            return {
+              currentSession: deriveCurrentSession(sessions, state.currentSessionId),
+              sessions,
+            };
+          });
+        },
+
+        sendMessage: async (content, options = {}) => {
+          const { currentSessionId, currentSession } = get();
+
+          let sessionId = currentSessionId;
+          if (!sessionId || !currentSession) {
+            sessionId = get().createSession("New Conversation");
+          }
+
+          const session = get().sessions.find((s) => s.id === sessionId);
+          const existingMessages = session?.messages || [];
+
+          // Add user message with attachment URL tracking
+          const attachmentUrls: string[] = [];
+          get().addMessage(sessionId, {
+            attachments: options.attachments?.map((file) => {
+              const objectUrl = URL.createObjectURL(file);
+              attachmentUrls.push(objectUrl);
+              // Track object URL for cleanup
+              if (!objectUrls.has(sessionId)) {
+                objectUrls.set(sessionId, new Set());
+              }
+              objectUrls.get(sessionId)?.add(objectUrl);
+              return {
+                contentType: file.type,
+                id: generateId(),
+                name: file.name,
+                size: file.size,
+                url: objectUrl,
+              };
+            }),
+            content,
+            role: "user",
+          });
+
+          set({ error: null, isLoading: true });
+
+          try {
+            // Call API route to send message
+            const assistantMessage = await sendChatMessage(
+              {
+                content,
+                options,
+                sessionId,
+              },
+              existingMessages
+            );
+
+            // Add assistant response
+            get().addMessage(sessionId, assistantMessage);
+
+            syncSessionMemory(sessionId);
+
+            set({ isLoading: false });
+          } catch (error) {
+            set({
+              error: error instanceof Error ? error.message : "Failed to send message",
+              isLoading: false,
+            });
+
+            get().addMessage(
+              sessionId,
+              {
+                content:
+                  "Sorry, there was an error processing your request. Please try again.",
+                role: "system",
+              },
+              { syncMemory: false }
+            );
+          }
+        },
+        sessions: [],
+
+        setCurrentSession: (sessionId) => {
+          set((state) => ({
+            currentSession: deriveCurrentSession(state.sessions, sessionId),
+            currentSessionId: sessionId,
+          }));
+        },
+
+        stopStreaming: () => {
+          if (abortController) {
+            abortController.abort();
+            abortController = null;
+            set({ isStreaming: false });
+          }
+        },
+
+        streamMessage: async (content, options = {}) => {
+          const { currentSessionId, currentSession } = get();
+
+          let sessionId = currentSessionId;
+          if (!sessionId || !currentSession) {
+            sessionId = get().createSession("New Conversation");
+          }
+
+          const session = get().sessions.find((s) => s.id === sessionId);
+          const existingMessages = session?.messages || [];
+
+          // Add user message with attachment URL tracking
+          const attachmentUrls: string[] = [];
+          get().addMessage(sessionId, {
+            attachments: options.attachments?.map((file) => {
+              const objectUrl = URL.createObjectURL(file);
+              attachmentUrls.push(objectUrl);
+              // Track object URL for cleanup
+              if (!objectUrls.has(sessionId)) {
+                objectUrls.set(sessionId, new Set());
+              }
+              objectUrls.get(sessionId)?.add(objectUrl);
+              return {
+                contentType: file.type,
+                id: generateId(),
+                name: file.name,
+                size: file.size,
+                url: objectUrl,
+              };
+            }),
+            content,
+            role: "user",
+          });
+
+          // Create a placeholder message for streaming
+          const assistantMessageId = get().addMessage(
+            sessionId,
+            {
+              content: "",
+              isStreaming: true,
+              role: "assistant",
+            },
+            { syncMemory: false }
+          );
+
+          set({ error: null, isStreaming: true });
+          abortController = new AbortController();
+
+          try {
+            let streamContent = "";
+
+            // Call API route to stream message
+            await streamChatMessage(
+              {
+                content,
+                options,
+                sessionId,
+              },
+              existingMessages,
+              (chunk) => {
+                if (abortController?.signal.aborted) {
+                  return;
+                }
+                streamContent += chunk;
+                get().updateMessage(sessionId, assistantMessageId, {
+                  content: streamContent,
+                });
+              },
+              abortController.signal
+            );
 
             get().updateMessage(sessionId, assistantMessageId, {
-              content:
-                "Sorry, there was an error generating the response. Please try again.",
               isStreaming: false,
             });
-          }
-        } finally {
-          abortController = null;
-          set({ isStreaming: false });
-        }
-      },
 
-      updateMessage: (sessionId, messageId, updates) => {
-        set((state) => ({
-          sessions: state.sessions.map((session) =>
-            session.id === sessionId
-              ? {
-                  ...session,
-                  messages: (session.messages || []).map((message) =>
-                    message.id === messageId ? { ...message, ...updates } : message
-                  ),
-                  updatedAt: getCurrentTimestamp(),
-                }
-              : session
-          ),
-        }));
-      },
-    }),
+            syncSessionMemory(sessionId);
+          } catch (error) {
+            if (!(error instanceof DOMException && error.name === "AbortError")) {
+              set({
+                error:
+                  error instanceof Error ? error.message : "Failed to stream message",
+              });
+
+              get().updateMessage(sessionId, assistantMessageId, {
+                content:
+                  "Sorry, there was an error generating the response. Please try again.",
+                isStreaming: false,
+              });
+            }
+          } finally {
+            abortController = null;
+            set({ isStreaming: false });
+          }
+        },
+
+        updateMessage: (sessionId, messageId, updates) => {
+          set((state) => {
+            const sessions = state.sessions.map<ChatSession>((session) =>
+              session.id === sessionId
+                ? {
+                    ...session,
+                    messages: (session.messages || []).map((message) =>
+                      message.id === messageId ? { ...message, ...updates } : message
+                    ),
+                    updatedAt: getCurrentTimestamp(),
+                  }
+                : session
+            );
+
+            return {
+              currentSession: deriveCurrentSession(sessions, state.currentSessionId),
+              sessions,
+            };
+          });
+        },
+      };
+    },
     {
       name: "chat-messages-storage",
       partialize: (state) => ({
@@ -468,6 +570,23 @@ export const useChatMessages = create<ChatMessagesState>()(
     }
   )
 );
+
+let syncingCurrentSession = false;
+
+useChatMessages.subscribe((state) => {
+  if (syncingCurrentSession) {
+    return;
+  }
+
+  const derivedSession = deriveCurrentSession(state.sessions, state.currentSessionId);
+  if (state.currentSession === derivedSession) {
+    return;
+  }
+
+  syncingCurrentSession = true;
+  useChatMessages.setState({ currentSession: derivedSession });
+  syncingCurrentSession = false;
+});
 
 // Selectors
 export const useCurrentSession = () => useChatMessages((state) => state.currentSession);

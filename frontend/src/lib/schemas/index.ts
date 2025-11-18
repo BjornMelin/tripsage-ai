@@ -117,6 +117,7 @@ export * from "./stores";
 export * from "./supabase";
 export * from "./temporal";
 export * from "./theme-provider";
+export * from "./trips";
 // Re-export validation types from schemas (not utilities)
 export type {
   ValidationContext,
