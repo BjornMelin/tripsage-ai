@@ -268,7 +268,6 @@ convention = "google"
 "scripts/cli/**/*" = ["T20"]
 "tripsage/api/routers/*.py" = ["B008"]  # Allow Depends() in FastAPI routers
 "tripsage/api/core/*.py" = ["B008"]     # Allow Depends() in FastAPI dependencies
-"tripsage_core/services/business/auth_service.py" = ["B008"]
 "tests/conftest.py" = ["E402"]          # Allow imports-after-exec for env setup
 "scripts/**/*" = []
 "tripsage_core/types/**" = ["A005"]      # Package name overlaps stdlib 'types'

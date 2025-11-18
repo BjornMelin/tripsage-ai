@@ -106,7 +106,6 @@ TripSage Core provides modular services organized by responsibility:
 
 **Business Services** (`tripsage_core/services/business/`):
 
-- `AuthService`: User authentication and authorization
 - `TripService`: Trip planning and management
 - `FlightService`: Flight search and booking via Duffel (used by frontend agents)
 - `AccommodationService`: Hotel search and booking (used by frontend agents)

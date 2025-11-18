@@ -58,17 +58,17 @@ This API is designed to serve multiple consumer types with adapted responses:
 ## Authentication Methods
 
 ### JWT Authentication (Primary for Frontend)
-Obtain a token via `/api/v1/auth/token`, then include in the Authorization header:
+JWT tokens are obtained through Supabase authentication via the Next.js
+frontend and SSR routes (`/auth/*`).
+Once obtained, include the token in the Authorization header:
 
 ```
-POST /api/v1/auth/token
-{
-  "username": "user@example.com",
-  "password": "secure_password"
-}
-
 Authorization: Bearer <jwt_token>
 ```
+
+> **Note:** Authentication endpoints (`/api/v1/auth/*`) are not implemented in
+the Python backend.
+> All authentication is handled by the Next.js frontend and SSR routes (`/auth/*`).
 
 ## Consumer-Specific Response Formats
 
