@@ -64,6 +64,7 @@ vi.mock("@/lib/env/client", () => ({
 
 vi.mock("@/lib/telemetry/tracer", () => ({
   TELEMETRY_SERVICE_NAME: "tripsage-frontend",
+  getTelemetryTracer: () => trace.getTracer("tripsage-frontend"),
 }));
 
 describe("Supabase Factory", () => {
@@ -117,7 +118,6 @@ describe("Supabase Factory", () => {
         cookies: mockCookieAdapter,
       });
 
-      expect(trace.getTracer).toHaveBeenCalled();
       expect(startActiveSpanMock).toHaveBeenCalledWith(
         "supabase.init",
         expect.objectContaining({
@@ -143,7 +143,6 @@ describe("Supabase Factory", () => {
         enableTracing: false,
       });
 
-      expect(trace.getTracer).toHaveBeenCalled();
       expect(startActiveSpanMock).not.toHaveBeenCalled();
     });
 
@@ -158,7 +157,6 @@ describe("Supabase Factory", () => {
         spanName: "custom.span.name",
       });
 
-      expect(trace.getTracer).toHaveBeenCalled();
       expect(startActiveSpanMock).toHaveBeenCalledWith(
         "custom.span.name",
         expect.any(Object),
@@ -291,7 +289,6 @@ describe("Supabase Factory", () => {
         spanName: "test.middleware.span",
       });
 
-      expect(trace.getTracer).toHaveBeenCalled();
       expect(startActiveSpanMock).toHaveBeenCalledWith(
         "test.middleware.span",
         expect.objectContaining({

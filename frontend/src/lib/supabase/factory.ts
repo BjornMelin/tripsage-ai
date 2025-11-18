@@ -17,7 +17,6 @@
 
 import "server-only";
 
-import { SpanStatusCode } from "@opentelemetry/api";
 import {
   type CookieMethodsServer,
   createServerClient as createSsrServerClient,
@@ -27,7 +26,11 @@ import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension
 import { getClientEnv } from "@/lib/env/client";
 import { getServerEnv } from "@/lib/env/server";
 import { TELEMETRY_SERVICE_NAME } from "@/lib/telemetry/constants";
-import { withTelemetrySpan, withTelemetrySpanSync } from "@/lib/telemetry/span";
+import {
+  recordErrorOnSpan,
+  withTelemetrySpan,
+  withTelemetrySpanSync,
+} from "@/lib/telemetry/span";
 import type { Database } from "./database.types";
 
 /**
@@ -262,14 +265,8 @@ export async function getCurrentUser(
       span.setAttribute("user.authenticated", !!result.user);
 
       // If there's an error, record it but don't throw (we return it in the result)
-      // Note: withTelemetrySpan will set status to OK on successful return,
-      // so we need to override it if there's an error in the result
       if (result.error) {
-        span.recordException(result.error);
-        span.setStatus({
-          code: SpanStatusCode.ERROR,
-          message: result.error.message,
-        });
+        recordErrorOnSpan(span, result.error);
       }
 
       return result;
