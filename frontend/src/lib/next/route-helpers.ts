@@ -5,7 +5,7 @@
 import { createHash } from "node:crypto";
 import { type NextRequest, NextResponse } from "next/server";
 import type { z } from "zod";
-import { createServerLogger } from "@/lib/logging/server";
+import { createServerLogger } from "@/lib/telemetry/logger";
 
 const logger = createServerLogger("route-helpers");
 

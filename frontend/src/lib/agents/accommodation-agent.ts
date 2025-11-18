@@ -9,11 +9,11 @@
 
 import "server-only";
 
-import { createHash } from "node:crypto";
 import type { FlexibleSchema, LanguageModel, ToolSet } from "ai";
 import { stepCountIs, streamText } from "ai";
 
 import { createAiTool } from "@/lib/ai/tool-factory";
+import { hashInputForCache } from "@/lib/cache/hash";
 import { buildRateLimit } from "@/lib/ratelimit/config";
 import type { AccommodationSearchRequest } from "@/lib/schemas/agents";
 import type { ChatMessage } from "@/lib/tokens/budget";
@@ -36,7 +36,7 @@ function buildAccommodationTools(identifier: string): ToolSet {
   // Tools are typed as unknown in registry, so we use type assertions for safe access.
   type ToolLike = {
     description?: string;
-    execute?: (params: unknown, context: unknown) => Promise<unknown>;
+    execute?: (params: unknown, callOptions?: unknown) => Promise<unknown> | unknown;
   };
 
   const searchTool = toolRegistry.searchAccommodations as unknown as ToolLike;
@@ -56,11 +56,12 @@ function buildAccommodationTools(identifier: string): ToolSet {
   }) =>
     createAiTool({
       description: options.baseTool.description ?? options.descriptionFallback,
-      execute: (params, context) => {
+      execute: (params, callOptions) => {
         if (typeof options.baseTool.execute !== "function") {
           throw new Error(`Tool ${options.name} missing execute binding`);
         }
-        return options.baseTool.execute(params, context);
+        const result = options.baseTool.execute(params, callOptions);
+        return result instanceof Promise ? result : Promise.resolve(result);
       },
       guardrails: {
         cache: {
@@ -74,6 +75,9 @@ function buildAccommodationTools(identifier: string): ToolSet {
           limit: rateLimit.limit,
           prefix: options.rateLimitPrefix,
           window: rateLimit.window,
+        },
+        telemetry: {
+          workflow: "accommodationSearch",
         },
       },
       inputSchema: options.schema,
@@ -114,7 +118,7 @@ function buildAccommodationTools(identifier: string): ToolSet {
 }
 
 function hashAgentCacheKey(input: unknown): string {
-  return createHash("sha256").update(JSON.stringify(input)).digest("hex").slice(0, 16);
+  return hashInputForCache(input);
 }
 
 /**
@@ -147,10 +151,12 @@ export function runAccommodationAgent(
 
   return streamText({
     maxOutputTokens: maxTokens,
+    messages: [
+      { content: instructions, role: "system" },
+      { content: userPrompt, role: "user" },
+    ],
     model: deps.model,
-    prompt: userPrompt,
     stopWhen: stepCountIs(10),
-    system: instructions,
     temperature: 0.3,
     tools: buildAccommodationTools(deps.identifier),
   });

@@ -8,9 +8,9 @@ import { Client as QStash } from "@upstash/qstash";
 import { after, type NextRequest, NextResponse } from "next/server";
 import { getServerEnvVar, getServerEnvVarWithFallback } from "@/lib/env/server";
 import { tryReserveKey } from "@/lib/idempotency/redis";
-import { createServerLogger } from "@/lib/logging/server";
 import { sendCollaboratorNotifications } from "@/lib/notifications/collaborators";
 import type { Database } from "@/lib/supabase/database.types";
+import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import { buildEventKey, parseAndVerify } from "@/lib/webhooks/payload";
 

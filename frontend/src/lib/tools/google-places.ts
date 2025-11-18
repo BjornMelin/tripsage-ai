@@ -9,6 +9,7 @@
  * - Field masks used to minimize costs
  */
 
+import type { ToolCallOptions } from "ai";
 import { tool } from "ai";
 import { z } from "zod";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
@@ -213,7 +214,7 @@ export const lookupPoiInputSchema = z
 export const lookupPoiContext = tool({
   description:
     "Lookup points of interest near a destination or coordinate using Google Places API.",
-  execute: async (params) => {
+  execute: async (params, _callOptions?: ToolCallOptions) => {
     // Validate input at boundary (AI SDK validates, but ensure for direct calls)
     const validatedParams = lookupPoiInputSchema.parse(params);
     return await withTelemetrySpan(

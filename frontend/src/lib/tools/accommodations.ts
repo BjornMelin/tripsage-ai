@@ -10,6 +10,7 @@
 import "server-only";
 
 import { Ratelimit } from "@upstash/ratelimit";
+import type { ToolCallOptions } from "ai";
 import { tool } from "ai";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 import {
@@ -17,7 +18,6 @@ import {
   getEmbeddingsApiUrl,
   getEmbeddingsRequestHeaders,
 } from "@/lib/embeddings/generate";
-import { createServerLogger } from "@/lib/logging/server";
 import { processBookingPayment } from "@/lib/payments/booking-payment";
 import { getRedis } from "@/lib/redis";
 import {
@@ -36,6 +36,7 @@ import {
 } from "@/lib/schemas/accommodations";
 import { secureUuid } from "@/lib/security/random";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { createServerLogger } from "@/lib/telemetry/logger";
 import { createToolError, TOOL_ERROR_CODES } from "@/lib/tools/errors";
 import { ExpediaApiError, getExpediaClient } from "@/lib/travel-api/expedia-client";
 import type {
@@ -90,7 +91,10 @@ export const searchAccommodations = tool({
     "for more information, checkAvailability to get booking tokens, and bookAccommodation to complete reservations. " +
     "Filters supported: property types (hotel, apartment, house, villa, resort), amenities, price range, " +
     "guest counts, instant book availability, cancellation policy, distance, rating, and sorting options.",
-  execute: async (params): Promise<AccommodationSearchResult> => {
+  execute: async (
+    params,
+    _callOptions?: ToolCallOptions
+  ): Promise<AccommodationSearchResult> => {
     const validated = ACCOMMODATION_SEARCH_INPUT_SCHEMA.parse(params);
     const startedAt = Date.now();
 
@@ -307,7 +311,10 @@ export const getAccommodationDetails = tool({
     "Returns full property information including amenities, policies, reviews, photos, and current rates. " +
     "Optionally provide check-in/out dates and guest counts for accurate pricing and availability. " +
     "Use this after searchAccommodations to get more information about a specific property before booking.",
-  execute: async (params): Promise<AccommodationDetailsResult> => {
+  execute: async (
+    params,
+    _callOptions?: ToolCallOptions
+  ): Promise<AccommodationDetailsResult> => {
     const validated = ACCOMMODATION_DETAILS_INPUT_SCHEMA.parse(params);
 
     const expediaClient = getExpediaClient();
@@ -362,7 +369,10 @@ export const checkAvailability = tool({
     "to complete the booking. This token locks the price and confirms availability. " +
     "Requires user authentication. Use this after getAccommodationDetails to get a bookable rate. " +
     "The returned bookingToken must be passed to bookAccommodation to finalize the reservation.",
-  execute: async (params): Promise<AccommodationCheckAvailabilityResult> => {
+  execute: async (
+    params,
+    _callOptions?: ToolCallOptions
+  ): Promise<AccommodationCheckAvailabilityResult> => {
     const validated = ACCOMMODATION_CHECK_AVAILABILITY_INPUT_SCHEMA.parse(params);
 
     // Auth check (required for booking)
@@ -429,7 +439,10 @@ export const bookAccommodation = tool({
     "If booking fails, payment is automatically refunded. Supports special requests and idempotency keys " +
     "for safe retries. Returns booking confirmation with confirmation number and status. " +
     "Use this only after checkAvailability has returned a valid bookingToken.",
-  execute: async (params): Promise<AccommodationBookingResult> => {
+  execute: async (
+    params,
+    _callOptions?: ToolCallOptions
+  ): Promise<AccommodationBookingResult> => {
     const validated = ACCOMMODATION_BOOKING_INPUT_SCHEMA.parse(params);
     const idempotencyKey = validated.idempotencyKey || secureUuid();
     const sessionId = validated.sessionId;

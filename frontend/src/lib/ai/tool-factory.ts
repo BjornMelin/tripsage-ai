@@ -10,9 +10,14 @@ import "server-only";
 
 import type { Span } from "@opentelemetry/api";
 import { Ratelimit } from "@upstash/ratelimit";
-import type { FlexibleSchema, Tool, ToolCallOptions } from "ai";
+import type { FlexibleSchema, ModelMessage, Tool, ToolCallOptions } from "ai";
 import { tool } from "ai";
+import { hashInputForCache } from "@/lib/cache/hash";
+import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 import { getRedis } from "@/lib/redis";
+import type { AgentWorkflow } from "@/lib/schemas/agents";
+import type { RateLimitResult } from "@/lib/schemas/tools";
+import { rateLimitResultSchema } from "@/lib/schemas/tools";
 import { type TelemetrySpanAttributes, withTelemetrySpan } from "@/lib/telemetry/span";
 import { createToolError, type ToolErrorCode } from "@/lib/tools/errors";
 
@@ -20,7 +25,7 @@ type RateLimitWindow = Parameters<typeof Ratelimit.slidingWindow>[1];
 
 type ToolExecute<InputValue, OutputValue> = (
   params: InputValue,
-  context?: unknown
+  callOptions: ToolCallOptions
 ) => Promise<OutputValue>;
 
 export type ToolOptions<InputValue, OutputValue> = {
@@ -41,6 +46,8 @@ export type TelemetryOptions<InputValue> = {
   attributes?: (params: InputValue) => TelemetrySpanAttributes;
   /** Keys whose values should be redacted on the span. */
   redactKeys?: string[];
+  /** Optional agent workflow identifier for workflow-specific telemetry. */
+  workflow?: AgentWorkflow;
 };
 
 export type CacheHitMeta = {
@@ -52,6 +59,8 @@ export type CacheOptions<InputValue, OutputValue> = {
   key: (params: InputValue) => string | undefined;
   /** Optional namespace prefix (defaults to `tool:${name}`). */
   namespace?: string;
+  /** If true, hash the input using SHA-256 and append first 16 hex chars to key. */
+  hashInput?: boolean;
   /** Serialize result before persistence. Returning undefined skips caching. */
   serialize?: (result: OutputValue, params: InputValue) => unknown;
   /** Deserialize cached payload back into the expected result shape. */
@@ -69,8 +78,11 @@ export type CacheOptions<InputValue, OutputValue> = {
 export type RateLimitOptions<InputValue> = {
   /** Error code to emit when the limit is exceeded. */
   errorCode: ToolErrorCode;
-  /** Build identifier (user/session/IP) for rate limiting. */
-  identifier: (params: InputValue) => string | undefined | null;
+  /** Build identifier (user/session/IP) for rate limiting. Can use params and/or ToolCallOptions. */
+  identifier: (
+    params: InputValue,
+    callOptions?: ToolCallOptions
+  ) => string | undefined | null;
   /** Sliding window limit. */
   limit: number;
   /** Sliding window duration string (e.g., "1 m"). */
@@ -99,31 +111,94 @@ type CacheLookupResult<OutputValue> =
 const rateLimiterCache = new Map<string, InstanceType<typeof Ratelimit>>();
 
 /**
+ * Attempts to extract user context from ToolCallOptions messages.
+ *
+ * AI SDK v6 ToolCallOptions provides messages[] but user context is typically
+ * passed through request context (e.g., Supabase auth) rather than messages.
+ * This helper checks message metadata or system messages as fallback.
+ *
+ * Currently unused but available for future use when tools need to extract
+ * user context from ToolCallOptions.messages.
+ *
+ * @param messages Array of ModelMessage from ToolCallOptions.
+ * @returns User context if found, undefined otherwise.
+ */
+// biome-ignore lint/correctness/noUnusedVariables: Reserved for future use
+function extractUserContextFromMessages(
+  messages: ModelMessage[]
+): { userId?: string; sessionId?: string } | undefined {
+  // Check for user context in message metadata (if supported by AI SDK)
+  for (const message of messages) {
+    if (
+      message.role === "system" &&
+      typeof message.content === "string" &&
+      message.content.includes("user_id:")
+    ) {
+      // Try to extract from system message if it contains user context
+      const match = message.content.match(/user_id:([a-zA-Z0-9-]+)/);
+      if (match?.[1]) {
+        return { userId: match[1] };
+      }
+    }
+    // Check metadata if available (future-proofing for AI SDK updates)
+    if (
+      "metadata" in message &&
+      message.metadata &&
+      typeof message.metadata === "object"
+    ) {
+      const meta = message.metadata as Record<string, unknown>;
+      if (typeof meta.userId === "string") {
+        return {
+          sessionId: typeof meta.sessionId === "string" ? meta.sessionId : undefined,
+          userId: meta.userId,
+        };
+      }
+    }
+  }
+  return undefined;
+}
+
+/**
  * Canonical AI tool factory with optional guardrails.
  */
 export function createAiTool<InputValue, OutputValue>(
   options: CreateAiToolOptions<InputValue, OutputValue>
-) {
+): Tool<InputValue, OutputValue> {
   const { guardrails } = options;
   const telemetryName = guardrails?.telemetry?.name ?? options.name;
 
-  const toolDefinition = {
+  // AI SDK v6 tool() infers types from the object literal, but we need generics
+  // for our guardrails system. We use a type assertion here which is safe because:
+  // 1. The structure matches what tool() expects (description, inputSchema, execute)
+  // 2. The execute signature matches AI SDK v6 (params, ToolCallOptions)
+  // 3. Runtime behavior is correct - tool() accepts our object structure
+  return tool({
     description: options.description,
     execute: (params: InputValue, callOptions: ToolCallOptions) => {
       const startedAt = Date.now();
       return withTelemetrySpan(
         `tool.${telemetryName}`,
         {
-          attributes: buildTelemetryAttributes(
-            options.name,
-            guardrails?.telemetry,
-            params
-          ),
+          attributes: {
+            ...buildTelemetryAttributes(options.name, guardrails?.telemetry, params),
+            ...(callOptions.toolCallId
+              ? { "tool.call_id": callOptions.toolCallId }
+              : {}),
+            ...(guardrails?.telemetry?.workflow
+              ? { "agent.workflow": guardrails.telemetry.workflow }
+              : {}),
+          },
           redactKeys: guardrails?.telemetry?.redactKeys,
         },
         async (span) => {
           if (guardrails?.rateLimit) {
-            await enforceRateLimit(guardrails.rateLimit, options.name, params, span);
+            await enforceRateLimit(
+              guardrails.rateLimit,
+              options.name,
+              params,
+              callOptions,
+              span
+            );
           }
 
           const cache = guardrails?.cache
@@ -153,10 +228,10 @@ export function createAiTool<InputValue, OutputValue>(
         }
       );
     },
-    inputSchema: options.inputSchema,
-  } as unknown as Tool<InputValue, OutputValue>;
-
-  return tool(toolDefinition);
+    // biome-ignore lint/suspicious/noExplicitAny: Type assertion needed for generic wrapper
+    inputSchema: options.inputSchema as any,
+    // biome-ignore lint/suspicious/noExplicitAny: Type assertion needed for generic wrapper
+  } as any) as Tool<InputValue, OutputValue>;
 }
 
 function buildTelemetryAttributes<InputValue>(
@@ -186,19 +261,14 @@ async function readFromCache<InputValue, OutputValue>(
   const redisKey = resolveCacheKey(cache, toolName, params);
   if (!redisKey) return { hit: false };
 
-  const redis = getRedis();
-  if (!redis) {
-    span.addEvent("cache_skipped", { reason: "redis_unavailable" });
-    return { hit: false };
-  }
-
   try {
-    const payload = await redis.get<string>(redisKey);
-    if (!payload) return { hit: false };
-    const parsed = JSON.parse(payload);
-    const value = cache.deserialize
-      ? cache.deserialize(parsed, params)
-      : (parsed as OutputValue);
+    const cached = await getCachedJson<OutputValue>(redisKey);
+    if (!cached) return { hit: false };
+
+    // Apply deserialization if provided
+    const value = cache.deserialize ? cache.deserialize(cached, params) : cached;
+
+    // Apply onHit transformation if provided
     const hydrated = cache.onHit ? cache.onHit(value, params, { startedAt }) : value;
     span.addEvent("cache_hit", { key: redisKey });
     return { hit: true, value: hydrated };
@@ -221,12 +291,6 @@ async function writeToCache<InputValue, OutputValue>(
   const redisKey = resolveCacheKey(cache, toolName, params);
   if (!redisKey) return;
 
-  const redis = getRedis();
-  if (!redis) {
-    span.addEvent("cache_skipped", { reason: "redis_unavailable" });
-    return;
-  }
-
   const payload = cache.serialize ? cache.serialize(result, params) : result;
   if (payload === undefined) return;
 
@@ -236,12 +300,12 @@ async function writeToCache<InputValue, OutputValue>(
       : cache.ttlSeconds;
 
   try {
-    const serialized = JSON.stringify(payload);
-    if (ttl && ttl > 0) {
-      await redis.set(redisKey, serialized, { ex: Math.max(1, Math.floor(ttl)) });
-    } else {
-      await redis.set(redisKey, serialized);
-    }
+    // Use existing helper which handles Redis unavailability gracefully
+    await setCachedJson(
+      redisKey,
+      payload,
+      ttl ? Math.max(1, Math.floor(ttl)) : undefined
+    );
     span.addEvent("cache_write", { key: redisKey, ttl });
   } catch (error) {
     span.addEvent("cache_error", {
@@ -259,8 +323,15 @@ function resolveCacheKey<InputValue, OutputValue>(
   if (cache.shouldBypass?.(params)) {
     return null;
   }
-  const suffix = cache.key(params);
+  let suffix = cache.key(params);
   if (!suffix) return null;
+
+  // Apply SHA-256 hashing if enabled
+  if (cache.hashInput) {
+    const hash = hashInputForCache(params);
+    suffix = `${suffix}:${hash}`;
+  }
+
   const namespace = cache.namespace ?? `tool:${toolName}`;
   return namespace ? `${namespace}:${suffix}` : suffix;
 }
@@ -269,9 +340,10 @@ async function enforceRateLimit<InputValue>(
   config: RateLimitOptions<InputValue>,
   toolName: string,
   params: InputValue,
+  callOptions: ToolCallOptions,
   span: Span
 ): Promise<void> {
-  const identifier = config.identifier(params);
+  const identifier = config.identifier(params, callOptions);
   if (!identifier) return;
 
   const redis = getRedis();
@@ -293,17 +365,27 @@ async function enforceRateLimit<InputValue>(
     rateLimiterCache.set(limiterKey, limiter);
   }
 
-  const { success, remaining, limit, reset } = await limiter.limit(identifier);
-  if (success) return;
+  const result = await limiter.limit(identifier);
+  // Validate rate limit result structure using schema
+  const validatedResult: RateLimitResult = rateLimitResultSchema.parse({
+    limit: result.limit,
+    remaining: result.remaining,
+    reset: result.reset,
+    success: result.success,
+  });
+
+  if (validatedResult.success) return;
 
   span.addEvent("rate_limited", { identifier });
   const nowSeconds = Math.floor(Date.now() / 1000);
-  const retryAfter = reset ? Math.max(0, reset - nowSeconds) : undefined;
+  const retryAfter = validatedResult.reset
+    ? Math.max(0, validatedResult.reset - nowSeconds)
+    : undefined;
   throw createToolError(config.errorCode, undefined, {
     identifier,
-    limit,
-    remaining,
-    reset,
+    limit: validatedResult.limit,
+    remaining: validatedResult.remaining,
+    reset: validatedResult.reset,
     retryAfter,
   });
 }

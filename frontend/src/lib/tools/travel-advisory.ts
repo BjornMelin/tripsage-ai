@@ -6,10 +6,11 @@
  * Falls back to stub if API unavailable.
  */
 
+import type { ToolCallOptions } from "ai";
 import { tool } from "ai";
 import { z } from "zod";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
-import { createServerLogger } from "@/lib/logging/server";
+import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import type { SafetyResult } from "./travel-advisory/providers";
 import { getDefaultProvider, registerProvider } from "./travel-advisory/providers";
@@ -75,7 +76,7 @@ export const travelAdvisoryInputSchema = z.object({
 export const getTravelAdvisory = tool({
   description:
     "Get travel advisory and safety scores for a destination using US State Department Travel Advisories API. Accepts country names or ISO country codes (e.g., 'United States', 'US', 'France', 'FR').",
-  execute: async (params) => {
+  execute: async (params, _callOptions?: ToolCallOptions) => {
     // Validate input at boundary (AI SDK validates, but ensure for direct calls)
     const validatedParams = travelAdvisoryInputSchema.parse(params);
     return await withTelemetrySpan(

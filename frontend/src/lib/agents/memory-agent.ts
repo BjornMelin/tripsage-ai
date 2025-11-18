@@ -83,9 +83,11 @@ async function persistAndSummarize(
 
   return streamText({
     maxOutputTokens: maxTokens,
+    messages: [
+      { content: systemPrompt, role: "system" },
+      { content: userPrompt, role: "user" },
+    ],
     model: deps.model,
-    prompt: userPrompt,
-    system: systemPrompt,
     temperature: 0.1,
   });
 }

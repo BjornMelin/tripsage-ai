@@ -7,11 +7,12 @@
 
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
+import type { ToolCallOptions } from "ai";
 import { tool } from "ai";
 import { z } from "zod";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
-import { createServerLogger } from "@/lib/logging/server";
 import { WEB_SEARCH_BATCH_OUTPUT_SCHEMA } from "@/lib/schemas/web-search";
+import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import { normalizeWebSearchResults } from "@/lib/tools/web-search-normalize";
 import { webSearch } from "./web-search";
@@ -79,7 +80,7 @@ export const webSearchBatchInputSchema = z.object({
 export const webSearchBatch = tool({
   description:
     "Run multiple web searches in a single call, reusing per-query cache and rate limits.",
-  execute: ({ queries, userId, ...rest }, ctx) => {
+  execute: ({ queries, userId, ...rest }, callOptions: ToolCallOptions) => {
     const started = Date.now();
 
     return withTelemetrySpan(
@@ -129,7 +130,7 @@ export const webSearchBatch = tool({
                 query: q,
                 userId,
               },
-              ctx
+              callOptions
             )) as unknown as {
               results: {
                 url: string;

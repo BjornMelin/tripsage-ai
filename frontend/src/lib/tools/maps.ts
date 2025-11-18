@@ -4,6 +4,7 @@
 
 import "server-only";
 
+import type { ToolCallOptions } from "ai";
 import { tool } from "ai";
 import { z } from "zod";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
@@ -39,7 +40,7 @@ export const distanceMatrixInputSchema = z.object({
 
 export const geocode = tool({
   description: "Geocode a location using Google Maps Geocoding API.",
-  execute: async ({ address }) =>
+  execute: async ({ address }, _callOptions?: ToolCallOptions) =>
     withTelemetrySpan(
       "tool.maps.geocode",
       { attributes: { address, "tool.name": "geocode" }, redactKeys: ["address"] },
@@ -62,7 +63,7 @@ export const geocode = tool({
 export const distanceMatrix = tool({
   description:
     "Compute distances between origins and destinations via Google Distance Matrix.",
-  execute: async ({ origins, destinations, units }) =>
+  execute: async ({ origins, destinations, units }, _callOptions?: ToolCallOptions) =>
     withTelemetrySpan(
       "tool.maps.distance_matrix",
       {

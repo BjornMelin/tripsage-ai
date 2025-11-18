@@ -10,14 +10,15 @@
 import "server-only";
 
 import type { LanguageModel, ToolSet } from "ai";
-import { stepCountIs, streamText, tool } from "ai";
+import { stepCountIs, streamText } from "ai";
 
-import { buildGuardedTool } from "@/lib/agents/guarded-tool";
+import { createAiTool } from "@/lib/ai/tool-factory";
 import { buildRateLimit } from "@/lib/ratelimit/config";
 import type { ItineraryPlanRequest } from "@/lib/schemas/agents";
 import type { ChatMessage } from "@/lib/tokens/budget";
 import { clampMaxTokens } from "@/lib/tokens/budget";
 import { toolRegistry } from "@/lib/tools";
+import { TOOL_ERROR_CODES } from "@/lib/tools/errors";
 import { lookupPoiInputSchema } from "@/lib/tools/google-places";
 import {
   createTravelPlanInputSchema,
@@ -42,7 +43,7 @@ function buildItineraryTools(identifier: string): ToolSet {
   // Tools are typed as unknown in registry, so we use type assertions for safe access.
   type ToolLike = {
     description?: string;
-    execute: (params: unknown) => Promise<unknown>;
+    execute: (params: unknown, callOptions?: unknown) => Promise<unknown> | unknown;
   };
 
   const webSearchTool = toolRegistry.webSearch as unknown as ToolLike;
@@ -54,104 +55,157 @@ function buildItineraryTools(identifier: string): ToolSet {
   const savePlanTool = toolRegistry.saveTravelPlan as unknown as ToolLike | undefined;
   const rateLimit = buildRateLimit("itineraryPlanning", identifier);
 
-  const guardedWebSearch = buildGuardedTool({
-    cache: {
-      hashInput: true,
-      key: "agent:itinerary:web-search",
-      ttlSeconds: 60 * 30,
-    },
-    execute: async (params: unknown) => await webSearchTool.execute(params),
-    rateLimit,
-    schema: webSearchInputSchema,
-    toolKey: "webSearch",
-    workflow: "itineraryPlanning",
-  });
-
-  const guardedWebSearchBatch = buildGuardedTool({
-    cache: {
-      hashInput: true,
-      key: "agent:itinerary:web-search-batch",
-      ttlSeconds: 60 * 30,
-    },
-    execute: async (params: unknown) => await webSearchBatchTool.execute(params),
-    rateLimit,
-    schema: webSearchBatchInputSchema,
-    toolKey: "webSearchBatch",
-    workflow: "itineraryPlanning",
-  });
-
-  const guardedLookupPoi = buildGuardedTool({
-    cache: { hashInput: true, key: "agent:itinerary:poi", ttlSeconds: 600 },
-    execute: async (params: unknown) => {
-      if (!poiTool) return { inputs: params, pois: [], provider: "stub" };
-      return await poiTool.execute(params);
-    },
-    rateLimit,
-    schema: lookupPoiInputSchema,
-    toolKey: "lookupPoiContext",
-    workflow: "itineraryPlanning",
-  });
-
-  const guardedCreatePlan = buildGuardedTool({
-    cache: {
-      hashInput: true,
-      key: "agent:itinerary:create-plan",
-      ttlSeconds: 60 * 5,
-    },
-    execute: async (params: unknown) => {
-      if (!createPlanTool) return { error: "stub", success: false };
-      return await createPlanTool.execute(params);
-    },
-    rateLimit,
-    schema: createTravelPlanInputSchema,
-    toolKey: "createTravelPlan",
-    workflow: "itineraryPlanning",
-  });
-
-  const guardedSavePlan = buildGuardedTool({
-    cache: {
-      hashInput: true,
-      key: "agent:itinerary:save-plan",
-      ttlSeconds: 60 * 5,
-    },
-    execute: async (params: unknown) => {
-      if (!savePlanTool) return { error: "stub", success: false };
-      return await savePlanTool.execute(params);
-    },
-    rateLimit,
-    schema: saveTravelPlanInputSchema,
-    toolKey: "saveTravelPlan",
-    workflow: "itineraryPlanning",
-  });
-
-  const webSearch = tool({
+  const webSearch = createAiTool({
     description: webSearchTool.description ?? "Web search",
-    execute: guardedWebSearch,
+    execute: async (params, callOptions) => {
+      if (typeof webSearchTool.execute !== "function") {
+        throw new Error("Tool webSearch missing execute binding");
+      }
+      return (await webSearchTool.execute(params, callOptions)) as unknown;
+    },
+    guardrails: {
+      cache: {
+        hashInput: true,
+        key: () => "agent:itinerary:web-search",
+        namespace: "agent:itinerary:web-search",
+        ttlSeconds: 60 * 30,
+      },
+      rateLimit: {
+        errorCode: TOOL_ERROR_CODES.webSearchRateLimited,
+        identifier: () => rateLimit.identifier,
+        limit: rateLimit.limit,
+        prefix: "ratelimit:agent:itinerary:web-search",
+        window: rateLimit.window,
+      },
+      telemetry: {
+        workflow: "itineraryPlanning",
+      },
+    },
     inputSchema: webSearchInputSchema,
+    name: "webSearch",
   });
 
-  const webSearchBatch = tool({
+  const webSearchBatch = createAiTool({
     description: webSearchBatchTool.description ?? "Batch web search",
-    execute: guardedWebSearchBatch,
+    execute: async (params, callOptions) => {
+      if (typeof webSearchBatchTool.execute !== "function") {
+        throw new Error("Tool webSearchBatch missing execute binding");
+      }
+      return (await webSearchBatchTool.execute(params, callOptions)) as unknown;
+    },
+    guardrails: {
+      cache: {
+        hashInput: true,
+        key: () => "agent:itinerary:web-search-batch",
+        namespace: "agent:itinerary:web-search-batch",
+        ttlSeconds: 60 * 30,
+      },
+      rateLimit: {
+        errorCode: TOOL_ERROR_CODES.webSearchRateLimited,
+        identifier: () => rateLimit.identifier,
+        limit: rateLimit.limit,
+        prefix: "ratelimit:agent:itinerary:web-search-batch",
+        window: rateLimit.window,
+      },
+      telemetry: {
+        workflow: "itineraryPlanning",
+      },
+    },
     inputSchema: webSearchBatchInputSchema,
+    name: "webSearchBatch",
   });
 
-  const lookupPoiContext = tool({
+  const lookupPoiContext = createAiTool({
     description: poiTool?.description ?? "Lookup POIs (context)",
-    execute: guardedLookupPoi,
+    execute: async (params, callOptions) => {
+      if (!poiTool) return { inputs: params, pois: [], provider: "stub" };
+      if (typeof poiTool.execute !== "function") {
+        throw new Error("Tool lookupPoiContext missing execute binding");
+      }
+      return (await poiTool.execute(params, callOptions)) as unknown;
+    },
+    guardrails: {
+      cache: {
+        hashInput: true,
+        key: () => "agent:itinerary:poi",
+        namespace: "agent:itinerary:poi",
+        ttlSeconds: 600,
+      },
+      rateLimit: {
+        errorCode: TOOL_ERROR_CODES.toolRateLimited,
+        identifier: () => rateLimit.identifier,
+        limit: rateLimit.limit,
+        prefix: "ratelimit:agent:itinerary:poi",
+        window: rateLimit.window,
+      },
+      telemetry: {
+        workflow: "itineraryPlanning",
+      },
+    },
     inputSchema: lookupPoiInputSchema,
+    name: "lookupPoiContext",
   });
 
-  const createTravelPlan = tool({
+  const createTravelPlan = createAiTool({
     description: createPlanTool?.description ?? "Create travel plan",
-    execute: guardedCreatePlan,
+    execute: async (params, callOptions) => {
+      if (!createPlanTool) return { error: "stub", success: false };
+      if (typeof createPlanTool.execute !== "function") {
+        throw new Error("Tool createTravelPlan missing execute binding");
+      }
+      return (await createPlanTool.execute(params, callOptions)) as unknown;
+    },
+    guardrails: {
+      cache: {
+        hashInput: true,
+        key: () => "agent:itinerary:create-plan",
+        namespace: "agent:itinerary:create-plan",
+        ttlSeconds: 60 * 5,
+      },
+      rateLimit: {
+        errorCode: TOOL_ERROR_CODES.toolRateLimited,
+        identifier: () => rateLimit.identifier,
+        limit: rateLimit.limit,
+        prefix: "ratelimit:agent:itinerary:create-plan",
+        window: rateLimit.window,
+      },
+      telemetry: {
+        workflow: "itineraryPlanning",
+      },
+    },
     inputSchema: createTravelPlanInputSchema,
+    name: "createTravelPlan",
   });
 
-  const saveTravelPlan = tool({
+  const saveTravelPlan = createAiTool({
     description: savePlanTool?.description ?? "Save travel plan",
-    execute: guardedSavePlan,
+    execute: async (params, callOptions) => {
+      if (!savePlanTool) return { error: "stub", success: false };
+      if (typeof savePlanTool.execute !== "function") {
+        throw new Error("Tool saveTravelPlan missing execute binding");
+      }
+      return (await savePlanTool.execute(params, callOptions)) as unknown;
+    },
+    guardrails: {
+      cache: {
+        hashInput: true,
+        key: () => "agent:itinerary:save-plan",
+        namespace: "agent:itinerary:save-plan",
+        ttlSeconds: 60 * 5,
+      },
+      rateLimit: {
+        errorCode: TOOL_ERROR_CODES.toolRateLimited,
+        identifier: () => rateLimit.identifier,
+        limit: rateLimit.limit,
+        prefix: "ratelimit:agent:itinerary:save-plan",
+        window: rateLimit.window,
+      },
+      telemetry: {
+        workflow: "itineraryPlanning",
+      },
+    },
     inputSchema: saveTravelPlanInputSchema,
+    name: "saveTravelPlan",
   });
 
   return {
@@ -197,10 +251,12 @@ export function runItineraryAgent(
 
   return streamText({
     maxOutputTokens: maxTokens,
+    messages: [
+      { content: instructions, role: "system" },
+      { content: userPrompt, role: "user" },
+    ],
     model: deps.model,
-    prompt: userPrompt,
     stopWhen: stepCountIs(15),
-    system: instructions,
     temperature: 0.3,
     tools: buildItineraryTools(deps.identifier),
   });

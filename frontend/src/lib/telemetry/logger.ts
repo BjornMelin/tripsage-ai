@@ -2,8 +2,10 @@
  * @fileoverview Server-side logging helpers backed by OpenTelemetry.
  *
  * Provides lightweight helpers to emit structured log events without using
- * console.* in production code. For client components/tests, prefer direct
- * console usage guarded by NODE_ENV checks.
+ * console.* in production code. The logger is a thin shim over
+ * recordTelemetryEvent so all emitted messages travel through the same
+ * tracing/export pipeline as the rest of our telemetry surface. For client
+ * components/tests, prefer direct console usage guarded by NODE_ENV checks.
  */
 
 import "server-only";

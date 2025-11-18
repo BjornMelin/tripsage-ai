@@ -4,6 +4,7 @@
  */
 import "server-only";
 
+import type { ToolCallOptions } from "ai";
 import { tool } from "ai";
 import { z } from "zod";
 import { getRedis } from "@/lib/redis";
@@ -208,7 +209,7 @@ function toMarkdownSummary(plan: Plan): string {
 
 export const createTravelPlan = tool({
   description: "Create a new travel plan with destinations, dates, and budget.",
-  execute: async (args) => {
+  execute: async (args, _callOptions?: ToolCallOptions) => {
     return await withTelemetrySpan(
       "planning.createTravelPlan",
       {
@@ -312,7 +313,10 @@ export const createTravelPlan = tool({
 
 export const updateTravelPlan = tool({
   description: "Update fields of an existing travel plan.",
-  execute: async ({ planId, userId: _ignored, updates }) => {
+  execute: async (
+    { planId, userId: _ignored, updates },
+    _callOptions?: ToolCallOptions
+  ) => {
     return await withTelemetrySpan(
       "planning.updateTravelPlan",
       {
@@ -424,7 +428,8 @@ export const updateTravelPlan = tool({
 export const combineSearchResults = tool({
   description:
     "Combine flights, accommodations, activities, and destination info into unified recommendations.",
-  execute: (args) => {
+  execute: (args, _callOptions?: ToolCallOptions) => {
+    // Synchronous function - callOptions available but not used
     const recommendations: {
       flights: Array<Record<string, unknown>>;
       accommodations: Array<Record<string, unknown>>;
@@ -518,7 +523,10 @@ export const combineSearchResults = tool({
 
 export const saveTravelPlan = tool({
   description: "Persist a travel plan and optionally finalize it (extends TTL).",
-  execute: async ({ planId, userId: _ignored, finalize }) => {
+  execute: async (
+    { planId, userId: _ignored, finalize },
+    _callOptions?: ToolCallOptions
+  ) => {
     return await withTelemetrySpan(
       "planning.saveTravelPlan",
       {
@@ -618,7 +626,7 @@ export const saveTravelPlan = tool({
 
 export const deleteTravelPlan = tool({
   description: "Delete an existing travel plan owned by the session user.",
-  execute: async ({ planId }) => {
+  execute: async ({ planId }, _callOptions?: ToolCallOptions) => {
     return await withTelemetrySpan(
       "planning.deleteTravelPlan",
       {
