@@ -1,3 +1,4 @@
+import type { ToolCallOptions } from "ai";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { z } from "zod";
 
@@ -49,6 +50,11 @@ vi.mock("@upstash/ratelimit", () => ({
   },
 }));
 
+const baseCallOptions: ToolCallOptions = {
+  messages: [],
+  toolCallId: "test-call",
+};
+
 beforeEach(() => {
   redisStorage.clear();
   redisClient.get.mockClear();
@@ -80,11 +86,11 @@ describe("createAiTool", () => {
       name: "cachedTool",
     });
 
-    const first = await cachedTool.execute?.({ id: "abc" });
+    const first = await cachedTool.execute?.({ id: "abc" }, baseCallOptions);
     expect(first).toEqual({ fromCache: false, id: "abc" });
     expect(executeSpy).toHaveBeenCalledTimes(1);
 
-    const second = await cachedTool.execute?.({ id: "abc" });
+    const second = await cachedTool.execute?.({ id: "abc" }, baseCallOptions);
     expect(second).toEqual({ fromCache: true, id: "abc" });
     expect(executeSpy).toHaveBeenCalledTimes(1);
     expect(redisClient.get).toHaveBeenCalled();
@@ -115,7 +121,7 @@ describe("createAiTool", () => {
       name: "limitedTool",
     });
 
-    const limitedExecution = limitedTool.execute?.({ id: "1" });
+    const limitedExecution = limitedTool.execute?.({ id: "1" }, baseCallOptions);
     await expect(limitedExecution).rejects.toMatchObject({
       code: TOOL_ERROR_CODES.webSearchRateLimited,
     });
