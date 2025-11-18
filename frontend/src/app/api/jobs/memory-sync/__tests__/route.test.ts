@@ -5,11 +5,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "../route";
 
 // Mock external dependencies
-vi.mock("@upstash/qstash", () => ({
-  Receiver: vi.fn().mockImplementation(() => ({
-    verify: vi.fn().mockResolvedValue(true),
-  })),
-}));
+vi.mock("@upstash/qstash", () => {
+  const mockVerify = vi.fn().mockResolvedValue(true);
+  // Mock Receiver as a class constructor
+  class MockReceiver {
+    verify = mockVerify;
+  }
+  return {
+    Receiver: MockReceiver,
+  };
+});
 
 vi.mock("@/lib/env/server", () => ({
   getServerEnvVar: vi.fn(() => "test-current-key"),
@@ -20,34 +25,47 @@ vi.mock("@/lib/idempotency/redis", () => ({
   tryReserveKey: vi.fn().mockResolvedValue(true),
 }));
 
-vi.mock("@/lib/supabase/server", () => ({
-  createServerSupabase: vi.fn().mockResolvedValue({
-    from: vi.fn(() => ({
-      insert: vi.fn(() => ({
-        select: vi.fn(() => ({
-          single: vi.fn().mockResolvedValue({
-            data: { created_at: "2024-01-01T00:00:00Z", id: 1 },
-            error: null,
-          }),
-        })),
-      })),
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          single: vi.fn().mockResolvedValue({
-            data: { id: "session-123" },
-            error: null,
-          }),
-        })),
-      })),
-      update: vi.fn(() => ({
-        eq: vi.fn().mockResolvedValue({
-          data: null,
+vi.mock("@/lib/supabase/server", () => {
+  // Create a factory function for the from() mock to ensure fresh instances
+  const createFromMock = () => {
+    const insertMock = vi.fn(() => ({
+      select: vi.fn().mockResolvedValue({
+        data: [{ id: 1, created_at: "2024-01-01T00:00:00Z" }],
+        error: null,
+      }),
+    }));
+
+    const selectMock = vi.fn(() => ({
+      eq: vi.fn(() => ({
+        single: vi.fn().mockResolvedValue({
+          data: { id: "session-123" },
           error: null,
         }),
       })),
-    })),
-  }),
-}));
+    }));
+
+    const updateMock = vi.fn(() => ({
+      eq: vi.fn().mockResolvedValue({
+        data: null,
+        error: null,
+      }),
+    }));
+
+    return {
+      insert: insertMock,
+      select: selectMock,
+      update: updateMock,
+    };
+  };
+
+  return {
+    createServerSupabase: vi.fn(() =>
+      Promise.resolve({
+        from: createFromMock,
+      })
+    ),
+  };
+});
 
 vi.mock("@/lib/telemetry/span", () => ({
   withTelemetrySpan: vi.fn((_name, _opts, fn) =>
@@ -72,7 +90,8 @@ describe("POST /api/jobs/memory-sync", () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    // Reset mocks but preserve implementations
+    vi.resetAllMocks();
   });
 
   it("processes valid memory sync job successfully", async () => {
@@ -112,14 +131,17 @@ describe("POST /api/jobs/memory-sync", () => {
       },
     };
 
-    // Mock receiver to reject signature - modify the mock directly
-    vi.mocked((await import("@upstash/qstash")).Receiver).mockImplementation(() => ({
-      verify: vi.fn().mockResolvedValue(false),
-    }));
+    // Mock receiver to reject signature - override the verify method
+    const { Receiver } = await import("@upstash/qstash");
+    const originalVerify = Receiver.prototype.verify;
+    Receiver.prototype.verify = vi.fn().mockResolvedValue(false);
 
     const req = mockRequest(payload, "invalid-sig");
     const response = await POST(req);
     const result = await response.json();
+
+    // Restore original verify
+    Receiver.prototype.verify = originalVerify;
 
     expect(response.status).toBe(401);
     expect(result.error).toBe("invalid qstash signature");

@@ -75,11 +75,13 @@ describe("/api/chat/attachments", () => {
 
   it("should reject empty form data", async () => {
     const mod = await import("../route");
-    const req = createMockNextRequest({
-      body: new FormData(), // Empty form data
-      headers: { "content-type": "multipart/form-data; boundary=test" },
+    // Create a FormData with no files - append an empty string to ensure FormData is valid
+    const emptyFormData = new FormData();
+    // FormData needs at least one entry to be parseable, but we filter out non-File entries
+    const req = new NextRequest("http://localhost/api/chat/attachments", {
+      body: emptyFormData,
+      headers: { "content-type": "multipart/form-data" },
       method: "POST",
-      url: "http://localhost/api/chat/attachments",
     });
     const res = await mod.POST(req);
     expect(res.status).toBe(400);
@@ -170,12 +172,9 @@ describe("/api/chat/attachments", () => {
 
   it("should reject files exceeding size limit", async () => {
     const mod = await import("../route");
-    // Create a file with large size
-    const largeFile = new File(["content"], "large.jpg", { type: "image/jpeg" });
-    Object.defineProperty(largeFile, "size", {
-      value: 11 * 1024 * 1024, // 11MB
-      writable: false,
-    });
+    // Create a file with large size - use a Blob with explicit size
+    const largeContent = new Uint8Array(11 * 1024 * 1024); // 11MB
+    const largeFile = new File([largeContent], "large.jpg", { type: "image/jpeg" });
 
     const formData = new FormData();
     formData.append("file", largeFile);
@@ -254,8 +253,9 @@ describe("/api/chat/attachments", () => {
     const res = await mod.POST(req);
     expect(res.status).toBe(500);
     const body = await res.json();
-    expect(body.error).toBe("Internal server error");
-    expect(body.code).toBe("INTERNAL_ERROR");
+    // withApiGuards returns error: "internal" for caught errors
+    expect(body.error).toBe("internal");
+    expect(body.reason).toBe("Internal server error");
   });
 
   it("should include authorization header when provided", async () => {
