@@ -23,6 +23,11 @@ const createResolver =
     provider: "openai" as ProviderId,
   });
 
+const handleMemoryIntentMock = vi.fn();
+vi.mock("@/lib/memory/orchestrator", () => ({
+  handleMemoryIntent: handleMemoryIntentMock,
+}));
+
 /**
  * Creates a mock Supabase client for testing handleChatNonStream functionality.
  *
@@ -62,6 +67,8 @@ function fakeSupabase(
 describe("handleChatNonStream", () => {
   beforeEach(async () => {
     vi.resetModules();
+    handleMemoryIntentMock.mockReset();
+    handleMemoryIntentMock.mockResolvedValue({ context: [] });
     vi.doMock("ai", () => ({
       convertToModelMessages: (x: unknown) => x,
       generateText: vi.fn(),
@@ -230,5 +237,62 @@ describe("handleChatNonStream", () => {
     expect(res.headers.get("Retry-After")).toBe("60");
     const body = await res.json();
     expect(body.error).toBe("rate_limited");
+  });
+
+  it("emits memory intents for user and assistant turns when sessionId is present", async () => {
+    handleMemoryIntentMock.mockImplementation((intent) => {
+      if ((intent as { type?: string }).type === "fetchContext") {
+        return { context: [] };
+      }
+      return { status: "ok" };
+    });
+
+    const generateText = vi.fn(async () => ({
+      content: [],
+      experimentalProviderMetadata: undefined,
+      experimentalStream: undefined,
+      finishReason: "stop",
+      messages: [],
+      reasoning: [],
+      reasoningText: "",
+      text: "Itinerary ready",
+      toolCalls: [],
+      usage: { inputTokens: 12, outputTokens: 24, totalTokens: 36 },
+      warnings: [],
+    })) as unknown as NonStreamDeps["generate"];
+
+    await handleChatNonStream(
+      {
+        generate: generateText,
+        resolveProvider: createResolver("gpt-4o-mini"),
+        supabase: fakeSupabase("u8"),
+      },
+      {
+        messages: [
+          {
+            id: "u1",
+            parts: [{ text: "remember my window seat", type: "text" }],
+            role: "user",
+          },
+        ],
+        sessionId: "sess-1",
+      }
+    );
+
+    const intents = handleMemoryIntentMock.mock.calls
+      .map(([intent]) => intent as Record<string, unknown>)
+      .filter((intent) => intent?.type === "onTurnCommitted");
+
+    expect(intents).toHaveLength(2);
+    expect(intents[0]).toMatchObject({
+      sessionId: "sess-1",
+      turn: { content: "remember my window seat", role: "user" },
+      userId: "u8",
+    });
+    expect(intents[1]).toMatchObject({
+      sessionId: "sess-1",
+      turn: { content: "Itinerary ready", role: "assistant" },
+      userId: "u8",
+    });
   });
 });

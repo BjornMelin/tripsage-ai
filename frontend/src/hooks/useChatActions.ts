@@ -1,69 +1,43 @@
 /**
- * @fileoverview Orchestrator hook for combined chat and memory actions.
+ * @fileoverview Orchestrator hook for combined chat actions.
  *
- * Coordinates between chat-messages and chat-memory slices without creating
- * cross-slice dependencies. This hook provides high-level actions that combine
- * message operations with memory sync.
+ * Provides high-level actions for chat operations. Memory sync is handled
+ * server-side via the memory orchestrator, so client-side memory sync calls
+ * have been removed.
  */
 
 import { useCallback } from "react";
 import type { Message, SendMessageOptions } from "@/lib/schemas/chat";
-import { useChatMemory } from "@/stores/chat/chat-memory";
 import { useChatMessages } from "@/stores/chat/chat-messages";
 
 /**
- * Hook for orchestrating chat actions with memory sync.
+ * Hook for orchestrating chat actions.
  *
- * Provides high-level actions that combine message operations with memory sync
- * without creating cross-slice dependencies in the stores themselves.
+ * Provides high-level actions for message operations. Memory sync happens
+ * automatically server-side via the memory orchestrator when messages are
+ * sent through the API routes.
  *
  * @returns Object with orchestrated chat actions
  */
 export function useChatActions() {
   const { addMessage, sendMessage, streamMessage } = useChatMessages();
-  const { storeConversationMemory, syncMemoryToSession } = useChatMemory();
 
   /**
-   * Add a message and optionally sync to memory.
+   * Add a message to a session.
    *
    * @param sessionId - Chat session ID
    * @param message - Message to add
-   * @param syncMemory - Whether to sync to memory (default: true)
    * @returns Message ID
    */
   const addMessageWithMemory = useCallback(
-    (
-      sessionId: string,
-      message: Omit<Message, "id" | "timestamp">,
-      syncMemory = true
-    ): string => {
-      const messageId = addMessage(sessionId, message);
-
-      if (syncMemory) {
-        const session = useChatMessages
-          .getState()
-          .sessions.find((s) => s.id === sessionId);
-        if (session?.userId) {
-          // Sync memory in background (best-effort)
-          storeConversationMemory(sessionId, session.userId, [
-            {
-              ...message,
-              id: messageId,
-              timestamp: new Date().toISOString(),
-            } as Message,
-          ]).catch((error) => {
-            console.warn("Memory sync failed:", error);
-          });
-        }
-      }
-
-      return messageId;
+    (sessionId: string, message: Omit<Message, "id" | "timestamp">): string => {
+      return addMessage(sessionId, message);
     },
-    [addMessage, storeConversationMemory]
+    [addMessage]
   );
 
   /**
-   * Send a message and sync to memory.
+   * Send a message.
    *
    * @param content - Message content
    * @param options - Send message options
@@ -71,21 +45,13 @@ export function useChatActions() {
   const sendMessageWithMemory = useCallback(
     async (content: string, options?: SendMessageOptions): Promise<void> => {
       await sendMessage(content, options);
-
-      // Memory sync happens automatically via addMessageWithMemory if needed
-      // This is a convenience wrapper that ensures memory sync is enabled
-      const currentSession = useChatMessages.getState().currentSession;
-      if (currentSession?.userId) {
-        syncMemoryToSession(currentSession.id, currentSession.userId).catch((error) => {
-          console.warn("Memory sync failed:", error);
-        });
-      }
+      // Memory sync happens server-side via orchestrator
     },
-    [sendMessage, syncMemoryToSession]
+    [sendMessage]
   );
 
   /**
-   * Stream a message and sync to memory.
+   * Stream a message.
    *
    * @param content - Message content
    * @param options - Send message options
@@ -93,16 +59,9 @@ export function useChatActions() {
   const streamMessageWithMemory = useCallback(
     async (content: string, options?: SendMessageOptions): Promise<void> => {
       await streamMessage(content, options);
-
-      // Memory sync happens after streaming completes
-      const currentSession = useChatMessages.getState().currentSession;
-      if (currentSession?.userId) {
-        syncMemoryToSession(currentSession.id, currentSession.userId).catch((error) => {
-          console.warn("Memory sync failed:", error);
-        });
-      }
+      // Memory sync happens server-side via orchestrator
     },
-    [streamMessage, syncMemoryToSession]
+    [streamMessage]
   );
 
   return {

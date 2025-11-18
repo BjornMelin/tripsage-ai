@@ -14,6 +14,12 @@ import {
   stepCountIs,
 } from "ai";
 import { extractTexts, validateImageAttachments } from "@/app/api/_helpers/attachments";
+import { handleMemoryIntent } from "@/lib/memory/orchestrator";
+import {
+  assistantResponseToMemoryTurn,
+  persistMemoryTurn,
+  uiMessageToMemoryTurn,
+} from "@/lib/memory/turn-utils";
 import type { ProviderResolution } from "@/lib/providers/types";
 import { secureUuid } from "@/lib/security/random";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
@@ -117,6 +123,7 @@ export async function handleChatStream(
   }
 
   const messages = Array.isArray(payload.messages) ? payload.messages : [];
+  const sessionId = payload.sessionId?.trim() || null;
 
   // Rate limit
   if (deps.limit) {
@@ -153,20 +160,26 @@ export async function handleChatStream(
     "checkAvailability to get booking tokens, and bookAccommodation to complete reservations. " +
     "Always guide users through the complete booking flow when they want to book accommodations.";
   try {
-    const { data: memRows } = await deps.supabase
-      .from("memories")
-      .select("content")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(3);
-    if (Array.isArray(memRows) && memRows.length > 0) {
-      const summary = memRows
-        .map((r: { content: unknown }) => String(r.content))
-        .join("\n");
+    const sessionIdForFetch = sessionId ?? "";
+    const memoryResult = await handleMemoryIntent({
+      limit: 3,
+      sessionId: sessionIdForFetch,
+      type: "fetchContext",
+      userId: user.id,
+    });
+
+    const items = memoryResult.context ?? [];
+    if (items.length > 0) {
+      const summary = items.map((item) => item.context).join("\n");
       systemPrompt += `\n\nUser memory (summary):\n${summary}`;
     }
-  } catch {
-    // ignore
+  } catch (error) {
+    deps.logger?.error?.("chat_stream:memory_fetch_failed", {
+      error: error instanceof Error ? error.message : String(error),
+      sessionId,
+      userId: user.id,
+    });
+    // Memory enrichment is best-effort; ignore orchestrator failures
   }
 
   // Tokens clamp
@@ -195,6 +208,17 @@ export async function handleChatStream(
 
   // Stream via AI SDK (DI allows tests to inject a finite stream stub)
   const stream = deps.stream ?? defaultStreamText;
+  if (sessionId) {
+    const latestMessage =
+      messages.length > 0 ? messages[messages.length - 1] : undefined;
+    await persistMemoryTurn({
+      logger: deps.logger,
+      sessionId,
+      turn: latestMessage ? uiMessageToMemoryTurn(latestMessage) : null,
+      userId: user.id,
+    });
+  }
+
   const result = stream({
     // Advanced AI SDK v6: Repair invalid tool calls automatically
     // biome-ignore lint/style/useNamingConvention: AI SDK property name
@@ -254,7 +278,7 @@ export async function handleChatStream(
           "deleteTravelPlan",
           "bookAccommodation",
         ],
-        payload.sessionId
+        sessionId ?? undefined
       );
       // biome-ignore lint/suspicious/noExplicitAny: AI SDK tools type is dynamic
       return local as any;
@@ -268,7 +292,25 @@ export async function handleChatStream(
     userId: user.id,
   });
 
-  const sessionId = payload.sessionId;
+  if (sessionId) {
+    result.response
+      .then((response) =>
+        persistMemoryTurn({
+          logger: deps.logger,
+          sessionId,
+          turn: assistantResponseToMemoryTurn(response.messages ?? []),
+          userId: user.id,
+        })
+      )
+      .catch((error) => {
+        deps.logger?.error?.("chat_stream:memory_response_failed", {
+          error: error instanceof Error ? error.message : String(error),
+          requestId: reqId,
+          sessionId,
+          userId: user.id,
+        });
+      });
+  }
 
   return result.toUIMessageStreamResponse({
     messageMetadata: async ({ part }) => {

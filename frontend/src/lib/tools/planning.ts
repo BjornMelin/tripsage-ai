@@ -8,6 +8,7 @@ import { tool } from "ai";
 import { z } from "zod";
 import { getRedis } from "@/lib/redis";
 import { nowIso, secureUuid } from "@/lib/security/random";
+import type { Database } from "@/lib/supabase/database.types";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import {
@@ -79,28 +80,67 @@ async function recordPlanMemory(opts: {
     const { data: auth } = await supabase.auth.getUser();
     const sessionUserId = auth?.user?.id;
     if (!sessionUserId || sessionUserId !== opts.userId) return; // degrade silently
-    type LooseFrom = {
-      from: (table: string) => {
-        insert: (values: unknown) => {
-          select: (cols: string) => {
-            single: () => Promise<{ data: unknown; error: unknown }>;
-          };
-        };
-      };
-    };
-    const sb = supabase as unknown as LooseFrom;
-    await sb
-      .from("memories")
-      .insert({
-        content: opts.content,
-        // biome-ignore lint/style/useNamingConvention: database column names use snake_case
-        memory_type: "conversation_context",
-        metadata: opts.metadata ?? {},
-        // biome-ignore lint/style/useNamingConvention: database column names use snake_case
-        user_id: sessionUserId,
-      })
+
+    // Generate a session ID for standalone plan memory entries
+    const sessionId = crypto.randomUUID();
+
+    // Ensure session exists
+    const { data: sessionData, error: sessionError } = await supabase
+      .schema("memories")
+      .from("sessions")
       .select("id")
+      .eq("id", sessionId)
+      .eq("user_id", opts.userId)
       .single();
+
+    if (sessionError && sessionError.code !== "PGRST116") {
+      return; // degrade silently
+    }
+
+    // Create session if it doesn't exist
+    if (!sessionData) {
+      const { error: createError } = await supabase
+        .schema("memories")
+        .from("sessions")
+        .insert({
+          id: sessionId,
+          metadata: (opts.metadata ??
+            {}) as unknown as Database["memories"]["Tables"]["sessions"]["Insert"]["metadata"],
+          title: "Travel Plan",
+          // biome-ignore lint/style/useNamingConvention: database column uses snake_case
+          user_id: opts.userId,
+        });
+
+      if (createError) {
+        return; // degrade silently
+      }
+    }
+
+    // Insert turn
+    await supabase
+      .schema("memories")
+      .from("turns")
+      .insert({
+        attachments:
+          [] as unknown as Database["memories"]["Tables"]["turns"]["Insert"]["attachments"],
+        // Convert string content to JSONB format: { text: string }
+        content: {
+          text: opts.content,
+        } as unknown as Database["memories"]["Tables"]["turns"]["Insert"]["content"],
+        // biome-ignore lint/style/useNamingConvention: database column uses snake_case
+        pii_scrubbed: false,
+        role: "user",
+        // biome-ignore lint/style/useNamingConvention: database column uses snake_case
+        session_id: sessionId,
+        // biome-ignore lint/style/useNamingConvention: database column uses snake_case
+        tool_calls:
+          [] as unknown as Database["memories"]["Tables"]["turns"]["Insert"]["tool_calls"],
+        // biome-ignore lint/style/useNamingConvention: database column uses snake_case
+        tool_results:
+          [] as unknown as Database["memories"]["Tables"]["turns"]["Insert"]["tool_results"],
+        // biome-ignore lint/style/useNamingConvention: database column uses snake_case
+        user_id: opts.userId,
+      });
   } catch {
     // no-op; memory logging is best-effort only
   }

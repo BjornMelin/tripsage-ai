@@ -1,54 +1,11 @@
-/**
- * @vitest-environment node
- */
+/** @vitest-environment node */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
-
-// Mock next/headers cookies() BEFORE any imports that use it
-vi.mock("next/headers", () => ({
-  cookies: vi.fn(() =>
-    Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))
-  ),
-}));
-
-// Mock Supabase before importing route handlers
-const mockUser = { email: "test@example.com", id: "user-1" };
-const mockSupabase = {
-  auth: {
-    getUser: vi.fn(async () => ({
-      data: { user: mockUser },
-      error: null,
-    })),
-  },
-};
-
-vi.mock("@/lib/supabase/server", () => ({
-  createServerSupabase: vi.fn(async () => mockSupabase),
-}));
-
-// Mock Redis
-vi.mock("@/lib/redis", () => ({
-  getRedis: vi.fn(() => Promise.resolve({})),
-}));
-
-// Mock env helpers
-vi.mock("@/lib/env/server", () => ({
-  getServerEnvVarWithFallback: vi.fn(() => undefined),
-}));
-
-// Mock route helpers
-vi.mock("@/lib/next/route-helpers", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/next/route-helpers")>(
-    "@/lib/next/route-helpers"
-  );
-  return {
-    ...actual,
-    withRequestSpan: vi.fn((_name, _attrs, fn) => fn()),
-  };
-});
-
-// Import route handlers after mocks
+import { beforeEach, describe, expect, it } from "vitest";
+import {
+  mockApiRouteAuthUser,
+  resetApiRouteMocks,
+} from "@/test/api-route-helpers";
+import { createMockNextRequest } from "@/test/route-helpers";
 import * as icsExportRoute from "../ics/export/route";
 
 describe("/api/calendar/ics/export", () => {
@@ -61,11 +18,8 @@ describe("/api/calendar/ics/export", () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
-    mockSupabase.auth.getUser.mockResolvedValue({
-      data: { user: mockUser },
-      error: null,
-    });
+    resetApiRouteMocks();
+    mockApiRouteAuthUser({ id: "user-1" });
   });
 
   it("exports ICS successfully", async () => {
@@ -89,10 +43,7 @@ describe("/api/calendar/ics/export", () => {
   });
 
   it("returns 401 when unauthenticated", async () => {
-    mockSupabase.auth.getUser.mockResolvedValueOnce({
-      data: { user: null },
-      error: { message: "Unauthorized" },
-    } as never);
+    mockApiRouteAuthUser(null);
 
     const req = createMockNextRequest({
       body: {
