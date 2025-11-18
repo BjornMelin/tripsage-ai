@@ -11,11 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Document Supabase memory orchestrator architecture and implementation plan (ADR-0042, SPEC-0026, database/memory prompt).
 - Add Next.js 16 trip domain API routes (`/api/trips`, `/api/trips/suggestions`, `/api/itineraries`, `/api/dashboard`) backed by Supabase SSR, Zod v4 schemas, unified `withApiGuards` auth/rate limiting, and AI SDK v6 structured trip suggestions.
+- Add `src/lib/ai/tool-factory.ts` with typed telemetry/cache/rate-limit guardrails plus coverage in `src/lib/ai/tool-factory.test.ts`, establishing a single `createAiTool` entrypoint for all tools.
 
 ### Changed
 
 - **Configuration and dependency updates**: Enabled React Compiler and Cache Components in Next.js 16; updated Zod schemas to v4 APIs (z.uuid(), z.email(), z.int()); migrated user settings to Server Actions with useActionState; consolidated Supabase client imports to @/lib/supabase; unified Next.js config files into single next.config.ts with conditional bundle analyzer; added jsdom environment declarations for tests; removed deprecated Next.js config keys and custom webpack splitChunks.
 - **Chat memory syncing (frontend)**: Rewired `frontend/src/stores/chat/chat-messages.ts` to call `useChatMemory` whenever messages are persisted, trigger `/api/memory/sync` after assistant responses, skip system/placeholder entries, and keep `currentSession` derived from store state; updated slice tests (`frontend/src/stores/__tests__/chat/chat-messages.test.ts`) accordingly.
+- **Tool guardrails unification**: Replaced bespoke wrappers with `createAiTool` for Firecrawl web search (`frontend/src/lib/tools/web-search.ts`) and accommodation agent helpers (`frontend/src/lib/agents/accommodation-agent.ts`), consolidating caching, rate limiting, and telemetry. Updated `frontend/src/lib/tools/__tests__/web-search.test.ts` plus shared test utilities (`frontend/src/test/api-test-helpers.ts`) to exercise the new factory behavior.
 
 - **Auth store security hardening (Supabase SSR-aligned)**
   - Removed client-side persistence of access/refresh tokens from `frontend/src/stores/auth/auth-session.ts`; the slice now exposes only session view state (`session`, `sessionTimeRemaining`) with `setSession` / `resetSession`, treating Supabase SSR cookies as the sole session authority.
@@ -44,6 +46,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Supabase SSR auth validation and observability**
   - Added dedicated route tests for `/auth/login`, `/auth/register`, `/auth/logout`, and `/auth/me` under `frontend/src/app/auth/**/__tests__/route.test.ts` to exercise the Supabase SSR-backed flows and `lib/auth/server.ts` helpers.
   - Simplified `frontend/src/hooks/use-authenticated-api.ts` to use the shared `apiClient` directly without Supabase JWT or refresh-session management, relying on Supabase SSR cookie sessions and `withApiGuards` as the sole authentication mechanism for `/api/*` routes.
+- **Telemetry helpers consolidation (frontend)**: Extended `frontend/src/lib/telemetry/span.ts` with `addEventToActiveSpan`, `recordErrorOnSpan`, and `recordErrorOnActiveSpan` helpers, and updated webhook payload handling (`frontend/src/lib/webhooks/payload.ts`) and file webhook route (`frontend/src/app/api/hooks/files/route.ts`) to use these helpers instead of calling `@opentelemetry/api` directly.
+- **Client error reporting telemetry**: Added `frontend/src/lib/telemetry/client-errors.ts` and rewired `frontend/src/lib/error-service.ts` so browser error reports record exceptions on the active OpenTelemetry span via `recordClientErrorOnActiveSpan` instead of reading `trace.getActiveSpan()` inline.
 
 ### Removed
 
@@ -106,6 +110,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Accommodation booking**: `bookAccommodation` now uses the real amount and currency from check-availability input, and returns the same `bookingId` that is stored in Supabase.
 - **Upcoming flights pricing**: `UpcomingFlights` renders prices using the flight currency instead of always prefixing USD.
 - **Vitest stability**: Frontend Vitest config now clamps CI workers and adds a sharded `test:ci` script that runs the full suite in smaller batches to avoid jsdom/V8 heap pressure.
+- **Client-side OTEL export wiring**: `frontend/src/lib/telemetry/client.ts` now attaches a `BatchSpanProcessor` to `WebTracerProvider` via `addSpanProcessor` before `register()`, ensuring browser spans are exported instead of being dropped; telemetry tests updated in `frontend/src/lib/telemetry/__tests__/client.test.ts` and `frontend/src/lib/telemetry/__tests__/client-errors.test.ts`.
 
 - Supabase SSR factory and server tests now stub `@supabase/ssr.createServerClient`, `getServerEnv()`, and `getClientEnv()` explicitly, so Zod environment validation and cookie adapters are tested deterministically in `frontend/src/lib/supabase/__tests__/factory.spec.ts` and `frontend/src/lib/supabase/__tests__/server.test.ts` without relying on process environment side effects.
 - Supabase Realtime hooks now provide stable runtime behaviour: `useTripRealtime` memoizes its error instance to avoid unnecessary error object churn; `useWebSocketChat` now delegates channel subscription to the shared `useRealtimeChannel` helper and uses Supabase's built-in reconnection, removing duplicated backoff logic.

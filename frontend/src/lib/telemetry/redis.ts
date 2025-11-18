@@ -16,12 +16,12 @@ export function warnRedisUnavailable(feature: string): void {
   if (warnedFeatures.has(feature)) return;
   warnedFeatures.add(feature);
 
-  void withTelemetrySpan(
+  withTelemetrySpan(
     "redis.unavailable",
     {
       attributes: { feature },
     },
-    async (span) => {
+    (span) => {
       span.addEvent("redis_unavailable", { feature });
       // Status will be set to ERROR automatically by withTelemetrySpan
       // since we're not throwing, but this is an error condition
@@ -30,7 +30,9 @@ export function warnRedisUnavailable(feature: string): void {
         message: "Redis client not configured",
       });
     }
-  );
+  ).catch(() => {
+    // Telemetry spans should not block warning propagation when tracing fails
+  });
 
   emitOperationalAlert("redis.unavailable", {
     attributes: { feature },
