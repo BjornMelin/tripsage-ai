@@ -40,7 +40,6 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { type FlightSearchFormData, flightSearchFormSchema } from "@/lib/schemas/forms";
 import { cn } from "@/lib/utils";
-import { formatValidationErrors, validateFormData } from "@/lib/validation";
 
 // Use validated flight search params from schemas
 export type ModernFlightSearchParams = FlightSearchFormData;
@@ -126,17 +125,22 @@ export function FlightSearchForm({
       setFormError(null);
 
       try {
-        // Validate the data before submission
-        const validationResult = validateFormData(flightSearchFormSchema, data);
+        // Validate the data before submission using Zod native parsing
+        const validationResult = flightSearchFormSchema.safeParse(data);
 
         if (!validationResult.success) {
-          const errorMessage = formatValidationErrors(validationResult.errors || []);
+          const errorMessage = validationResult.error.issues
+            .map((issue) => {
+              const field = issue.path.length > 0 ? `${issue.path.join(".")}: ` : "";
+              return `${field}${issue.message}`;
+            })
+            .join(", ");
           setFormError(errorMessage);
           return;
         }
 
         // Type assertion is safe here since success=true guarantees data is present
-        const validatedData = validationResult.data as FlightSearchFormData;
+        const validatedData = validationResult.data;
         await onSearch(validatedData);
       } catch (error) {
         console.error("Search failed:", error);

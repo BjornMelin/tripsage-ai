@@ -7,9 +7,12 @@
  * 3. Refund on booking failure
  */
 
+import { createServerLogger } from "@/lib/telemetry/logger";
 import { getExpediaClient } from "@/lib/travel-api/expedia-client";
 import type { EpsCreateBookingRequest } from "@/lib/travel-api/expedia-types";
 import { createPaymentIntent, getPaymentIntent, refundPayment } from "./stripe-client";
+
+const logger = createServerLogger("booking-payment");
 
 /**
  * Process booking payment and create Expedia booking.
@@ -84,9 +87,15 @@ export async function processBookingPayment(params: {
     // Phase 3: Refund payment on booking failure
     try {
       await refundPayment(paymentIntent.id);
-      console.log(`Refunded payment ${paymentIntent.id} due to booking failure`);
+      logger.info("Refunded payment after booking failure", {
+        paymentIntentId: paymentIntent.id,
+      });
     } catch (refundError) {
-      console.error(`Failed to refund payment ${paymentIntent.id}:`, refundError);
+      logger.error("Failed to refund payment after booking failure", {
+        errorMessage:
+          refundError instanceof Error ? refundError.message : "Unknown refund error",
+        paymentIntentId: paymentIntent.id,
+      });
       // Log but don't throw - booking failure is the primary error
     }
 

@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Trips management page with filtering, sorting, and search.
+ *
+ * Provides comprehensive UI for managing user trips including status filtering,
+ * search functionality, sorting options, and grid/list view modes.
+ */
+
 "use client";
 
 import { Filter, Grid, List, Plus, Search } from "lucide-react";
@@ -21,11 +28,29 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDeleteTrip, useTrips } from "@/hooks/use-trips";
+import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { type Trip, useTripStore } from "@/stores/trip-store";
+
+const parseTripDate = (value?: string | null): Date | null => {
+  if (!value) {
+    return null;
+  }
+  try {
+    return DateUtils.parse(value);
+  } catch {
+    return null;
+  }
+};
 
 type SortOption = "name" | "date" | "budget" | "destinations";
 type FilterOption = "all" | "draft" | "upcoming" | "active" | "completed";
 
+/**
+ * Renders the trips management dashboard with filtering, sorting, and view
+ * toggles backed by realtime queries.
+ *
+ * @returns Trips management layout with grid/list modes.
+ */
 export default function TripsPage() {
   const { createTrip } = useTripStore();
   const deleteTripMutation = useDeleteTrip();
@@ -65,25 +90,24 @@ export default function TripsPage() {
     // Apply status filter
     if (filterBy !== "all") {
       filtered = filtered.filter((trip: Trip) => {
-        const now = new Date();
-        const startDate =
-          trip.startDate || trip.start_date
-            ? new Date(trip.startDate || trip.start_date || "")
-            : null;
-        const endDate =
-          trip.endDate || trip.end_date
-            ? new Date(trip.endDate || trip.end_date || "")
-            : null;
+        const startDate = parseTripDate(trip.startDate || trip.start_date);
+        const endDate = parseTripDate(trip.endDate || trip.end_date);
+        const nowTs = Date.now();
 
         switch (filterBy) {
           case "draft":
             return !startDate || !endDate;
           case "upcoming":
-            return startDate && startDate > now;
+            return !!startDate && startDate.getTime() > nowTs;
           case "active":
-            return startDate && endDate && startDate <= now && endDate >= now;
+            return (
+              !!startDate &&
+              !!endDate &&
+              startDate.getTime() <= nowTs &&
+              endDate.getTime() >= nowTs
+            );
           case "completed":
-            return endDate && endDate < now;
+            return !!endDate && endDate.getTime() < nowTs;
           default:
             return true;
         }
@@ -95,11 +119,11 @@ export default function TripsPage() {
       switch (sortBy) {
         case "name":
           return (a.title || a.name || "").localeCompare(b.title || b.name || "");
-        case "date":
-          return (
-            new Date(b.createdAt || b.created_at || "").getTime() -
-            new Date(a.createdAt || a.created_at || "").getTime()
-          );
+        case "date": {
+          const parsedB = parseTripDate(b.createdAt ?? b.created_at) ?? new Date(0);
+          const parsedA = parseTripDate(a.createdAt ?? a.created_at) ?? new Date(0);
+          return parsedB.getTime() - parsedA.getTime();
+        }
         case "budget":
           return (b.budget || 0) - (a.budget || 0);
         case "destinations":
@@ -133,23 +157,18 @@ export default function TripsPage() {
     const now = new Date();
     return tripsArray.reduce(
       (counts: Record<string, number>, trip: Trip) => {
-        const startDate =
-          trip.startDate || trip.start_date
-            ? new Date(trip.startDate || trip.start_date || "")
-            : null;
-        const endDate =
-          trip.endDate || trip.end_date
-            ? new Date(trip.endDate || trip.end_date || "")
-            : null;
+        const startDate = parseTripDate(trip.startDate || trip.start_date);
+        const endDate = parseTripDate(trip.endDate || trip.end_date);
+        const nowTs = now.getTime();
 
         if (!startDate || !endDate) {
           counts.draft++;
-        } else if (startDate > now) {
+        } else if (startDate.getTime() > nowTs) {
           counts.upcoming++;
-        } else if (startDate <= now && endDate >= now) {
-          counts.active++;
-        } else {
+        } else if (endDate.getTime() < nowTs) {
           counts.completed++;
+        } else {
+          counts.active++;
         }
 
         return counts;

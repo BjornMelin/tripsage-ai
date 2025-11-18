@@ -14,11 +14,11 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAuthStore } from "@/stores/auth-store";
+import { useAuthCore } from "@/stores/auth/auth-core";
 import { useUserProfileStore } from "@/stores/user-store";
 
 export default function ProfilePage() {
-  const { user, isLoading } = useAuthStore();
+  const { user, isLoading } = useAuthCore();
   const { profile: _profile, isLoading: isProfileLoading } = useUserProfileStore();
 
   if (isLoading || isProfileLoading) {

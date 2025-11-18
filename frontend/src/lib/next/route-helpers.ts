@@ -1,11 +1,25 @@
 /**
  * @fileoverview Helpers for Next.js Route Handlers (headers/ratelimit identifiers).
  */
+
 import { createHash } from "node:crypto";
 import { type NextRequest, NextResponse } from "next/server";
 import type { z } from "zod";
+import { createServerLogger } from "@/lib/telemetry/logger";
+
+const logger = createServerLogger("route-helpers");
 
 type ValidationIssue = z.core.$ZodIssue;
+
+/**
+ * Shared API constants used across route handlers.
+ */
+export const API_CONSTANTS = {
+  /** Content-Type for JSON responses */
+  jsonContentType: "application/json",
+  /** Maximum request body size for API endpoints (64KB) */
+  maxBodySizeBytes: 64 * 1024,
+} as const;
 
 /**
  * Extract the client IP from trusted sources with deterministic fallback.
@@ -148,6 +162,39 @@ export function forwardAuthHeaders(req: NextRequest): HeadersInit | undefined {
 }
 
 /**
+ * Result of authentication check.
+ */
+export interface AuthCheckResult {
+  user: unknown; // Supabase User type
+  error: unknown; // Supabase AuthError type
+  isAuthenticated: boolean;
+}
+
+/**
+ * Perform standardized authentication check with Supabase.
+ *
+ * @param supabase - Supabase client instance
+ * @returns Authentication check result
+ */
+export async function checkAuthentication(
+  supabase: unknown // SupabaseClient type
+): Promise<AuthCheckResult> {
+  const { data, error } = await (
+    supabase as {
+      auth: { getUser: () => Promise<{ data: { user: unknown }; error: unknown }> };
+    }
+  ).auth.getUser();
+  const user = data?.user;
+  const isAuthenticated = !error && !!user;
+
+  return {
+    error,
+    isAuthenticated,
+    user,
+  };
+}
+
+/**
  * Wrap a function execution with a request span for observability.
  *
  * Records duration and attributes for telemetry. Uses high-resolution time
@@ -169,7 +216,7 @@ export async function withRequestSpan<T>(
   } finally {
     const end = process.hrtime.bigint();
     const durationMs = Number(end - start) / 1e6;
-    console.debug("agent.span", {
+    logger.info("agent.span", {
       durationMs,
       name,
       ...attrs,
@@ -205,7 +252,7 @@ export function errorResponse({
 }): NextResponse {
   if (err) {
     const { context, message } = redactErrorForLogging(err);
-    console.error("agent.error", { context, error, message, reason });
+    logger.error("agent.error", { context, error, message, reason });
   }
   const body: {
     error: string;
@@ -221,4 +268,73 @@ export function errorResponse({
   }
 
   return NextResponse.json(body, { status });
+}
+
+/**
+ * Parses JSON request body with error handling.
+ *
+ * Canonical helper for route handlers to safely parse JSON request bodies.
+ * Returns a discriminated union to enable type-safe error handling.
+ *
+ * @param req Next.js request object.
+ * @returns Parsed body or error response.
+ *
+ * @example
+ * ```typescript
+ * const parsed = await parseJsonBody(req);
+ * if ("error" in parsed) {
+ *   return parsed.error;
+ * }
+ * const body = parsed.body;
+ * ```
+ */
+export async function parseJsonBody(
+  req: NextRequest
+): Promise<{ body: unknown } | { error: NextResponse }> {
+  try {
+    const body = await req.json();
+    return { body };
+  } catch {
+    return {
+      error: NextResponse.json(
+        { error: "BAD_REQUEST", reason: "Malformed JSON in request body" },
+        { status: 400 }
+      ),
+    };
+  }
+}
+
+/**
+ * Validates data against a Zod schema and returns error response if invalid.
+ *
+ * Canonical helper for route handlers to combine Zod validation with
+ * consistent error responses. Uses safeParse to avoid throwing exceptions.
+ *
+ * @param schema Zod schema to validate against.
+ * @param data Data to validate.
+ * @returns Validation result with parsed data or error response.
+ *
+ * @example
+ * ```typescript
+ * const validation = validateSchema(createEventRequestSchema, body);
+ * if ("error" in validation) {
+ *   return validation.error;
+ * }
+ * const validated = validation.data;
+ * ```
+ */
+export function validateSchema<T extends z.ZodType>(
+  schema: T,
+  data: unknown
+): { data: z.infer<T> } | { error: NextResponse } {
+  const parseResult = schema.safeParse(data);
+  if (!parseResult.success) {
+    return {
+      error: NextResponse.json(
+        { details: parseResult.error.format(), error: "BAD_REQUEST" },
+        { status: 400 }
+      ),
+    };
+  }
+  return { data: parseResult.data };
 }

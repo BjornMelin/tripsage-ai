@@ -6,13 +6,13 @@ import "server-only";
 
 import { openai } from "@ai-sdk/openai";
 import { embed } from "ai";
+import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { withApiGuards } from "@/lib/api/factory";
+import { parseJsonBody } from "@/lib/next/route-helpers";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import type { InsertTables } from "@/lib/supabase/database.types";
-import { withTelemetrySpan } from "@/lib/telemetry/span";
-
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
+import { createServerLogger } from "@/lib/telemetry/logger";
 
 const MAX_INPUT_LENGTH = 8000;
 
@@ -82,84 +82,78 @@ async function persistAccommodationEmbedding(
  * Generates text embeddings using OpenAI's text-embedding-3-small model.
  *
  * @param req - The incoming request containing text or property data.
- * @return Response with embedding vector and metadata, or error response.
+ * @param routeContext - Route context from withApiGuards
+ * @returns Response with embedding vector and metadata, or error response.
  */
-export function POST(req: Request) {
-  return withTelemetrySpan(
-    "embeddings.generate",
-    { attributes: { route: "/api/embeddings" } },
-    async () => {
-      try {
-        const internalKey = process.env.EMBEDDINGS_API_KEY;
-        if (internalKey) {
-          const provided = req.headers.get("x-internal-key");
-          if (provided !== internalKey) {
-            return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-          }
-        }
-
-        const body = (await req.json()) as EmbeddingRequest;
-        const text =
-          body.text ??
-          (body.property
-            ? `${body.property.name ?? ""}. Description: ${body.property.description ?? ""}. Amenities: ${Array.isArray(body.property.amenities) ? body.property.amenities.join(", ") : (body.property.amenities ?? "")}`
-            : "");
-        if (!text || !text.trim()) {
-          return NextResponse.json(
-            { error: "missing text or property" },
-            { status: 400 }
-          );
-        }
-
-        if (text.length > MAX_INPUT_LENGTH) {
-          return NextResponse.json({ error: "text too long" }, { status: 400 });
-        }
-
-        // Generate embedding via AI SDK v6 using OpenAI text-embedding-3-small (1536-d)
-        const { embedding, usage } = await embed({
-          model: openai.textEmbeddingModel("text-embedding-3-small"),
-          value: text,
-        });
-        if (!Array.isArray(embedding) || embedding.length !== 1536) {
-          return NextResponse.json(
-            {
-              error: "embedding dimension mismatch",
-              length: Array.isArray(embedding) ? embedding.length : -1,
-            },
-            { status: 500 }
-          );
-        }
-
-        let persisted = false;
-        if (body.property?.id) {
-          try {
-            await persistAccommodationEmbedding(
-              body.property as PersistableProperty,
-              embedding
-            );
-            persisted = true;
-          } catch (persistError) {
-            console.error(
-              `[Embeddings] Failed to persist property ${body.property.id}:`,
-              persistError
-            );
-          }
-        }
-
-        return NextResponse.json({
-          embedding,
-          id: body.property?.id,
-          modelId: "text-embedding-3-small",
-          persisted,
-          success: true,
-          usage,
-        });
-      } catch (error) {
-        return NextResponse.json(
-          { error: error instanceof Error ? error.message : "internal error" },
-          { status: 500 }
-        );
-      }
+export const POST = withApiGuards({
+  auth: false,
+  rateLimit: "embeddings",
+  telemetry: "embeddings.generate",
+})(async (req: NextRequest) => {
+  const logger = createServerLogger("embeddings.generate");
+  const internalKey = process.env.EMBEDDINGS_API_KEY;
+  if (internalKey) {
+    const provided = req.headers.get("x-internal-key");
+    if (provided !== internalKey) {
+      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
     }
-  );
-}
+  }
+
+  const parsed = await parseJsonBody(req);
+  if ("error" in parsed) {
+    return parsed.error;
+  }
+  const body = parsed.body as EmbeddingRequest;
+  const text =
+    body.text ??
+    (body.property
+      ? `${body.property.name ?? ""}. Description: ${body.property.description ?? ""}. Amenities: ${Array.isArray(body.property.amenities) ? body.property.amenities.join(", ") : (body.property.amenities ?? "")}`
+      : "");
+  if (!text || !text.trim()) {
+    return NextResponse.json({ error: "missing text or property" }, { status: 400 });
+  }
+
+  if (text.length > MAX_INPUT_LENGTH) {
+    return NextResponse.json({ error: "text too long" }, { status: 400 });
+  }
+
+  // Generate embedding via AI SDK v6 using OpenAI text-embedding-3-small (1536-d)
+  const { embedding, usage } = await embed({
+    model: openai.textEmbeddingModel("text-embedding-3-small"),
+    value: text,
+  });
+  if (!Array.isArray(embedding) || embedding.length !== 1536) {
+    return NextResponse.json(
+      {
+        error: "embedding dimension mismatch",
+        length: Array.isArray(embedding) ? embedding.length : -1,
+      },
+      { status: 500 }
+    );
+  }
+
+  let persisted = false;
+  if (body.property?.id) {
+    try {
+      await persistAccommodationEmbedding(
+        body.property as PersistableProperty,
+        embedding
+      );
+      persisted = true;
+    } catch (persistError) {
+      logger.error("persist_failed", {
+        error: persistError instanceof Error ? persistError.message : "unknown_error",
+        propertyId: body.property.id,
+      });
+    }
+  }
+
+  return NextResponse.json({
+    embedding,
+    id: body.property?.id,
+    modelId: "text-embedding-3-small",
+    persisted,
+    success: true,
+    usage,
+  });
+});

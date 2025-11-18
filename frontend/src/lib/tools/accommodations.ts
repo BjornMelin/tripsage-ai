@@ -10,6 +10,7 @@
 import "server-only";
 
 import { Ratelimit } from "@upstash/ratelimit";
+import type { ToolCallOptions } from "ai";
 import { tool } from "ai";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 import {
@@ -35,6 +36,7 @@ import {
 } from "@/lib/schemas/accommodations";
 import { secureUuid } from "@/lib/security/random";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { createServerLogger } from "@/lib/telemetry/logger";
 import { createToolError, TOOL_ERROR_CODES } from "@/lib/tools/errors";
 import { ExpediaApiError, getExpediaClient } from "@/lib/travel-api/expedia-client";
 import type {
@@ -45,6 +47,8 @@ import type {
 } from "@/lib/travel-api/expedia-types";
 import { requireApproval } from "./approvals";
 import { ACCOM_SEARCH_CACHE_TTL_SECONDS } from "./constants";
+
+const accommodationsLogger = createServerLogger("tools.accommodations");
 
 /**
  * Zod input schema for accommodation search tool.
@@ -87,7 +91,10 @@ export const searchAccommodations = tool({
     "for more information, checkAvailability to get booking tokens, and bookAccommodation to complete reservations. " +
     "Filters supported: property types (hotel, apartment, house, villa, resort), amenities, price range, " +
     "guest counts, instant book availability, cancellation policy, distance, rating, and sorting options.",
-  execute: async (params): Promise<AccommodationSearchResult> => {
+  execute: async (
+    params,
+    _callOptions?: ToolCallOptions
+  ): Promise<AccommodationSearchResult> => {
     const validated = ACCOMMODATION_SEARCH_INPUT_SCHEMA.parse(params);
     const startedAt = Date.now();
 
@@ -153,19 +160,28 @@ export const searchAccommodations = tool({
         if (!ragError && ragResults && Array.isArray(ragResults)) {
           propertyIds = (ragResults as Array<{ id: string }>).map((item) => item.id);
           if (propertyIds.length > 0) {
-            console.log(
-              `[RAG] Found ${propertyIds.length} semantic matches for: ${validated.semanticQuery}`
-            );
+            accommodationsLogger.info("rag_semantic_matches", {
+              matchCount: propertyIds.length,
+              query: validated.semanticQuery,
+            });
           }
         }
       } catch (ragErr) {
-        console.error("[RAG] Semantic search error:", ragErr);
+        accommodationsLogger.error("rag_semantic_search_failed", {
+          error: ragErr instanceof Error ? ragErr.message : "unknown_error",
+        });
         // Continue without RAG filtering if it fails
       }
     }
 
     // 5. Live API call to Expedia
     const expediaClient = getExpediaClient();
+    if (!propertyIds || propertyIds.length === 0) {
+      throw createToolError(TOOL_ERROR_CODES.accomSearchNotConfigured, undefined, {
+        reason: "missing_expedia_property_ids",
+      });
+    }
+
     let searchResponse: EpsSearchResponse;
     try {
       searchResponse = await expediaClient.search({
@@ -176,7 +192,7 @@ export const searchAccommodations = tool({
         location: validated.location.trim(),
         priceMax: validated.priceMax,
         priceMin: validated.priceMin,
-        propertyIds: propertyIds && propertyIds.length > 0 ? propertyIds : undefined,
+        propertyIds,
         propertyTypes: validated.propertyTypes,
       });
     } catch (error) {
@@ -267,7 +283,10 @@ export const searchAccommodations = tool({
         })
           .then(() => undefined)
           .catch((err) => {
-            console.error(`Failed to trigger embedding for ${property.id}:`, err);
+            accommodationsLogger.error("embedding_trigger_failed", {
+              error: err instanceof Error ? err.message : "unknown_error",
+              propertyId: property.id,
+            });
           });
       }
     }
@@ -292,7 +311,10 @@ export const getAccommodationDetails = tool({
     "Returns full property information including amenities, policies, reviews, photos, and current rates. " +
     "Optionally provide check-in/out dates and guest counts for accurate pricing and availability. " +
     "Use this after searchAccommodations to get more information about a specific property before booking.",
-  execute: async (params): Promise<AccommodationDetailsResult> => {
+  execute: async (
+    params,
+    _callOptions?: ToolCallOptions
+  ): Promise<AccommodationDetailsResult> => {
     const validated = ACCOMMODATION_DETAILS_INPUT_SCHEMA.parse(params);
 
     const expediaClient = getExpediaClient();
@@ -347,7 +369,10 @@ export const checkAvailability = tool({
     "to complete the booking. This token locks the price and confirms availability. " +
     "Requires user authentication. Use this after getAccommodationDetails to get a bookable rate. " +
     "The returned bookingToken must be passed to bookAccommodation to finalize the reservation.",
-  execute: async (params): Promise<AccommodationCheckAvailabilityResult> => {
+  execute: async (
+    params,
+    _callOptions?: ToolCallOptions
+  ): Promise<AccommodationCheckAvailabilityResult> => {
     const validated = ACCOMMODATION_CHECK_AVAILABILITY_INPUT_SCHEMA.parse(params);
 
     // Auth check (required for booking)
@@ -414,7 +439,10 @@ export const bookAccommodation = tool({
     "If booking fails, payment is automatically refunded. Supports special requests and idempotency keys " +
     "for safe retries. Returns booking confirmation with confirmation number and status. " +
     "Use this only after checkAvailability has returned a valid bookingToken.",
-  execute: async (params): Promise<AccommodationBookingResult> => {
+  execute: async (
+    params,
+    _callOptions?: ToolCallOptions
+  ): Promise<AccommodationBookingResult> => {
     const validated = ACCOMMODATION_BOOKING_INPUT_SCHEMA.parse(params);
     const idempotencyKey = validated.idempotencyKey || secureUuid();
     const sessionId = validated.sessionId;
@@ -437,18 +465,18 @@ export const bookAccommodation = tool({
       sessionId,
     });
 
-    // 3. Two-phase commit: Payment + Booking
+    // 3. Generate single booking ID for consistency
+    const bookingId = secureUuid();
+
+    // 4. Two-phase commit: Payment + Booking
     let paymentIntentId: string;
     let epsBookingId: string;
     let confirmationNumber: string;
 
     try {
-      // Get property details to determine price (in a real implementation,
-      // price would come from checkAvailability bookingToken)
-      // For now, we'll use a placeholder - in production, price should be
-      // extracted from the bookingToken or stored when checkAvailability is called
-      const priceInCents = 20000; // Placeholder - should come from bookingToken
-      const currency = "USD"; // Should come from bookingToken
+      // Use real amount and currency from checkAvailability result
+      const priceInCents = validated.amount;
+      const currency = validated.currency;
 
       // Phase 1: Process payment
       const paymentResult = await processBookingPayment({
@@ -476,7 +504,7 @@ export const bookAccommodation = tool({
       });
     }
 
-    // 4. Save booking to Supabase
+    // 5. Save booking to Supabase
     try {
       // biome-ignore lint/suspicious/noExplicitAny: Supabase types don't include bookings table yet
       const { error: insertError } = await (supabase as any).from("bookings").insert({
@@ -493,7 +521,7 @@ export const bookAccommodation = tool({
         // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
         guest_phone: validated.guestPhone || null,
         guests: validated.guests,
-        id: secureUuid(),
+        id: bookingId, // Use the same bookingId generated above
         // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
         property_id: validated.listingId,
         // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
@@ -508,18 +536,22 @@ export const bookAccommodation = tool({
       });
 
       if (insertError) {
-        console.error("Failed to save booking to database:", insertError);
+        accommodationsLogger.error("booking_insert_failed", {
+          error: insertError instanceof Error ? insertError.message : "unknown_error",
+        });
         // Don't fail the booking if DB save fails - booking is already confirmed
       }
     } catch (dbError) {
-      console.error("Database error saving booking:", dbError);
+      accommodationsLogger.error("booking_database_error", {
+        error: dbError instanceof Error ? dbError.message : "unknown_error",
+      });
       // Don't fail the booking if DB save fails
     }
 
     const bookingReference =
-      confirmationNumber || `bk_${secureUuid().replaceAll("-", "").slice(0, 10)}`;
+      confirmationNumber || `bk_${bookingId.replaceAll("-", "").slice(0, 10)}`;
     const rawOut = {
-      bookingId: secureUuid(),
+      bookingId, // Use the same bookingId for consistency
       bookingStatus: "confirmed" as const,
       checkin: validated.checkin,
       checkout: validated.checkout,

@@ -39,11 +39,11 @@ export type ReminderMethod = z.infer<typeof reminderMethodSchema>;
 export const eventDateTimeSchema = z.object({
   date: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
+    .regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Date must be in YYYY-MM-DD format" })
     .optional()
     .or(z.date().transform((d) => d.toISOString().split("T")[0])),
   dateTime: z
-    .union([z.date(), z.string().datetime()])
+    .union([z.date(), z.iso.datetime()])
     .optional()
     .transform((val) => (typeof val === "string" ? new Date(val) : val)),
   timeZone: z.string().optional(),
@@ -64,7 +64,7 @@ export const eventAttendeeSchema = z.object({
   additionalGuests: z.number().int().min(0).default(0),
   comment: z.string().optional(),
   displayName: z.string().optional(),
-  email: z.string().email(),
+  email: z.email(),
   optional: z.boolean().default(false),
   responseStatus: attendeeResponseStatusSchema.default("needsAction"),
 });
@@ -104,9 +104,8 @@ export const calendarEventSchema = z.object({
   endTimeUnspecified: z.boolean().default(false),
   etag: z.string().optional(),
   extendedProperties: extendedPropertiesSchema.optional(),
-  hangoutLink: z.string().url().optional(),
-  htmlLink: z.string().url().optional(),
-  // biome-ignore lint/style/useNamingConvention: iCalUID is a standard iCalendar field name
+  hangoutLink: z.url().optional(),
+  htmlLink: z.url().optional(),
   iCalUID: z.string().optional(),
   id: z.string().optional(),
   location: z.string().max(1024).optional(),
@@ -231,8 +230,8 @@ export const freeBusyRequestSchema = z
     calendarExpansionMax: z.number().int().min(1).max(50).default(50),
     groupExpansionMax: z.number().int().min(1).max(100).default(50),
     items: z.array(freeBusyCalendarItemSchema).min(1),
-    timeMax: z.date(),
-    timeMin: z.date(),
+    timeMax: z.union([z.date(), z.string().transform((val) => new Date(val))]),
+    timeMin: z.union([z.date(), z.string().transform((val) => new Date(val))]),
     timeZone: z.string().optional(),
   })
   .refine((data) => data.timeMax > data.timeMin, {
@@ -257,7 +256,6 @@ export type FreeBusyResponse = z.infer<typeof freeBusyResponseSchema>;
 export const eventsListRequestSchema = z.object({
   alwaysIncludeEmail: z.boolean().default(false),
   calendarId: z.string().default("primary"),
-  // biome-ignore lint/style/useNamingConvention: iCalUID is a standard iCalendar field name
   iCalUID: z.string().optional(),
   maxAttendees: z.number().int().min(1).optional(),
   maxResults: z.number().int().min(1).max(2500).default(250),
@@ -294,3 +292,47 @@ export const eventsListResponseSchema = z.object({
 });
 /** TypeScript type for events list responses. */
 export type EventsListResponse = z.infer<typeof eventsListResponseSchema>;
+
+// ICS operation schemas
+/**
+ * Zod schema for POST /api/calendar/ics/import request body.
+ *
+ * Validates ICS import request parameters.
+ */
+export const icsImportRequestSchema = z.object({
+  icsData: z.string().min(1, { error: "ICS data is required" }),
+  validateOnly: z.boolean().default(true),
+});
+
+/**
+ * Zod schema for POST /api/calendar/ics/export request body.
+ *
+ * Validates ICS export request parameters.
+ */
+export const icsExportRequestSchema = z.object({
+  calendarName: z.string().default("TripSage Calendar"),
+  events: z.array(calendarEventSchema).min(1, "At least one event is required"),
+  timezone: z.string().optional(),
+});
+
+/** TypeScript type for ICS import requests. */
+export type IcsImportRequest = z.infer<typeof icsImportRequestSchema>;
+/** TypeScript type for ICS export requests. */
+export type IcsExportRequest = z.infer<typeof icsExportRequestSchema>;
+
+/**
+ * Calendar connection status response type.
+ * Used by calendar status API and components.
+ */
+export interface CalendarStatusResponse {
+  connected: boolean;
+  calendars?: Array<{
+    id: string;
+    summary: string;
+    description?: string;
+    timeZone?: string;
+    primary?: boolean;
+    accessRole?: string;
+  }>;
+  message?: string;
+}

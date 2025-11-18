@@ -7,6 +7,12 @@
 import type { ToolSet, UIMessage } from "ai";
 import { convertToModelMessages, generateText as defaultGenerateText } from "ai";
 import { extractTexts, validateImageAttachments } from "@/app/api/_helpers/attachments";
+import { handleMemoryIntent } from "@/lib/memory/orchestrator";
+import {
+  createTextMemoryTurn,
+  persistMemoryTurn,
+  uiMessageToMemoryTurn,
+} from "@/lib/memory/turn-utils";
 import type { ProviderResolution } from "@/lib/providers/types";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { insertSingle } from "@/lib/supabase/typed-helpers";
@@ -100,6 +106,7 @@ export async function handleChatNonStream(
   }
 
   const messages = Array.isArray(payload.messages) ? payload.messages : [];
+  const sessionId = payload.sessionId?.trim() || null;
 
   // Optional rate limit
   if (deps.limit) {
@@ -128,23 +135,29 @@ export async function handleChatNonStream(
     (payload.model || "").trim() || undefined
   );
 
-  // Memory hydration (best-effort)
+  // Memory hydration (best-effort via orchestrator)
   let systemPrompt = "You are a helpful travel planning assistant.";
   try {
-    const { data: memRows } = await deps.supabase
-      .from("memories")
-      .select("content")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(3);
-    if (Array.isArray(memRows) && memRows.length > 0) {
-      const summary = memRows
-        .map((r: { content: unknown }) => String(r.content))
-        .join("\n");
+    const sessionIdForFetch = sessionId ?? "";
+    const memoryResult = await handleMemoryIntent({
+      limit: 3,
+      sessionId: sessionIdForFetch,
+      type: "fetchContext",
+      userId: user.id,
+    });
+
+    const items = memoryResult.context ?? [];
+    if (items.length > 0) {
+      const summary = items.map((item) => item.context).join("\n");
       systemPrompt += `\n\nUser memory (summary):\n${summary}`;
     }
-  } catch {
-    // ignore
+  } catch (error) {
+    deps.logger?.error?.("chat_non_stream:memory_fetch_failed", {
+      error: error instanceof Error ? error.message : String(error),
+      sessionId: payload.sessionId,
+      userId: user.id,
+    });
+    // Memory enrichment is best-effort; ignore orchestrator failures
   }
 
   // Token clamp
@@ -214,6 +227,17 @@ export async function handleChatNonStream(
     return local as unknown as Record<string, unknown>;
   })();
 
+  if (sessionId) {
+    const latestMessage =
+      messages.length > 0 ? messages[messages.length - 1] : undefined;
+    await persistMemoryTurn({
+      logger: deps.logger,
+      sessionId,
+      turn: latestMessage ? uiMessageToMemoryTurn(latestMessage) : null,
+      userId: user.id,
+    });
+  }
+
   const result = await generate({
     maxOutputTokens: maxTokens,
     messages: convertToModelMessages(messages),
@@ -240,7 +264,13 @@ export async function handleChatNonStream(
   } as const;
 
   // Best-effort persistence for assistant message metadata
-  const sessionId = payload.sessionId;
+  await persistMemoryTurn({
+    logger: deps.logger,
+    sessionId,
+    turn: createTextMemoryTurn("assistant", result.text ?? ""),
+    userId: user.id,
+  });
+
   if (sessionId) {
     try {
       await insertSingle(deps.supabase, "chat_messages", {

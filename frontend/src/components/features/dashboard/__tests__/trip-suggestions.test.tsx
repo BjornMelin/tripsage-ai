@@ -1,3 +1,5 @@
+/** @vitest-environment jsdom */
+
 import { screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { type TripSuggestion, useTripSuggestions } from "@/hooks/use-trips";

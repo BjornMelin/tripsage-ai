@@ -10,7 +10,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { nowIso, secureUuid } from "@/lib/security/random";
-import { useSupabase } from "@/lib/supabase/client";
+import { useSupabase } from "@/lib/supabase";
 import type {
   FileAttachment,
   FileAttachmentInsert,

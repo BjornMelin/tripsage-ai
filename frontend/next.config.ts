@@ -1,19 +1,18 @@
 import type { NextConfig } from "next";
-
-// Dynamic import for bundle analyzer to avoid adding it to main bundle
-const withBundleAnalyzer =
-  process.env.ANALYZE === "true"
-    ? require("@next/bundle-analyzer")({ enabled: true })
-    : (config: NextConfig) => config;
+import withBundleAnalyzer from "@next/bundle-analyzer";
 
 const nextConfig: NextConfig = {
-  // Bundle Pages Router dependencies for better performance
-  bundlePagesRouterDependencies: true,
-  // Enable Cache Components (replaces experimental PPR flags in v16)
+  // Deployment optimization
+  output: "standalone",
+
+  // Enable Cache Components (required for "use cache" directives in codebase)
   cacheComponents: true,
 
-  // Turbopack configuration for browser fallbacks and aliases
-  // Use top-level turbopack per Next.js 16 docs
+  // React Compiler is supported in Next 16
+  reactCompiler: true,
+
+  // Strict mode recommended for dev
+  reactStrictMode: true,
 
   compiler: {
     // Remove console.log statements in production
@@ -28,7 +27,7 @@ const nextConfig: NextConfig = {
   // Performance optimizations
   compress: true,
   experimental: {
-    // Optimize package imports for better tree shaking
+    // Package import optimization by allowlist
     optimizePackageImports: [
       "lucide-react",
       "@radix-ui/react-icons",
@@ -36,13 +35,10 @@ const nextConfig: NextConfig = {
       "recharts",
       "@supabase/supabase-js",
       "zod",
-    ],
-
-    // Dev-only: File system cache for Turbopack to speed restarts
-    turbopackFileSystemCacheForDev: true,
-
-    // Enable Turbopack for faster development builds (moved to top level)
-    // turbo config moved to the top level as turbopack property
+      "ai",
+      "@ai-sdk/openai",
+      "@ai-sdk/anthropic"
+    ]
   },
 
   // Headers for security and performance
@@ -110,13 +106,7 @@ const nextConfig: NextConfig = {
   },
 
   // Output configuration
-  output: "standalone",
   poweredByHeader: false, // Remove X-Powered-By header
-  // Enable React Compiler for automatic memoization and performance
-  reactCompiler: true,
-
-  // Strict mode for better development experience
-  reactStrictMode: true,
 
   // Redirects for authentication
   redirects() {
@@ -141,48 +131,8 @@ const nextConfig: NextConfig = {
 
   // Enable static exports optimization
   trailingSlash: false,
-  turbopack: {
-    root: __dirname,
-  },
-
-  // Webpack configuration for additional optimizations
-  webpack: (config, { dev, isServer }) => {
-    // Optimize for production builds
-    if (!dev && !isServer) {
-      config.optimization = {
-        ...config.optimization,
-        splitChunks: {
-          ...config.optimization.splitChunks,
-          cacheGroups: {
-            ...config.optimization.splitChunks?.cacheGroups,
-            // Create separate chunks for chart libraries
-            charts: {
-              chunks: "all",
-              name: "charts",
-              priority: 20,
-              test: /[\\/]node_modules[\\/](recharts|d3)[\\/]/,
-            },
-            // Create separate chunks for data fetching libraries
-            data: {
-              chunks: "all",
-              name: "data",
-              priority: 25,
-              test: /[\\/]node_modules[\\/](@tanstack|@supabase|zod)[\\/]/,
-            },
-            // Create separate chunks for UI libraries
-            ui: {
-              chunks: "all",
-              name: "ui",
-              priority: 30,
-              test: /[\\/]node_modules[\\/](@radix-ui|@headlessui|framer-motion)[\\/]/,
-            },
-          },
-        },
-      };
-    }
-
-    return config;
-  },
 };
 
-export default withBundleAnalyzer(nextConfig);
+export default withBundleAnalyzer({
+  enabled: process.env.ANALYZE === "true"
+})(nextConfig);

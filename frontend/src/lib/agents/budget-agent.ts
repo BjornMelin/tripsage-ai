@@ -10,12 +10,15 @@
 import "server-only";
 
 import type { LanguageModel, ToolSet } from "ai";
-import { stepCountIs, streamText, tool } from "ai";
+import { stepCountIs, streamText } from "ai";
 
-import { buildGuardedTool } from "@/lib/agents/guarded-tool";
+import { createAiTool } from "@/lib/ai/tool-factory";
 import { buildRateLimit } from "@/lib/ratelimit/config";
 import type { BudgetPlanRequest } from "@/lib/schemas/agents";
+import type { ChatMessage } from "@/lib/tokens/budget";
+import { clampMaxTokens } from "@/lib/tokens/budget";
 import { toolRegistry } from "@/lib/tools";
+import { TOOL_ERROR_CODES } from "@/lib/tools/errors";
 import { lookupPoiInputSchema } from "@/lib/tools/google-places";
 import { combineSearchResultsInputSchema } from "@/lib/tools/planning";
 import { travelAdvisoryInputSchema } from "@/lib/tools/travel-advisory";
@@ -37,7 +40,7 @@ function buildBudgetTools(identifier: string): ToolSet {
   // Tools are typed as unknown in registry, so we use type assertions for safe access.
   type ToolLike = {
     description?: string;
-    execute: (params: unknown) => Promise<unknown>;
+    execute: (params: unknown, callOptions?: unknown) => Promise<unknown> | unknown;
   };
 
   const webSearchBatchTool = toolRegistry.webSearchBatch as unknown as ToolLike;
@@ -49,82 +52,130 @@ function buildBudgetTools(identifier: string): ToolSet {
 
   const rateLimit = buildRateLimit("budgetPlanning", identifier);
 
-  const guardedWebSearchBatch = buildGuardedTool({
-    cache: {
-      hashInput: true,
-      key: "agent:budget:web-search",
-      ttlSeconds: 60 * 10,
+  const webSearchBatch = createAiTool({
+    description: webSearchBatchTool.description ?? "Batch web search",
+    execute: async (params, callOptions) => {
+      if (typeof webSearchBatchTool.execute !== "function") {
+        throw new Error("Tool webSearchBatch missing execute binding");
+      }
+      return (await webSearchBatchTool.execute(params, callOptions)) as unknown;
     },
-    execute: async (params: unknown) => webSearchBatchTool.execute(params),
-    rateLimit,
-    schema: webSearchBatchInputSchema,
-    toolKey: "webSearchBatch",
-    workflow: "budgetPlanning",
+    guardrails: {
+      cache: {
+        hashInput: true,
+        key: () => "agent:budget:web-search",
+        namespace: "agent:budget:web-search",
+        ttlSeconds: 60 * 10,
+      },
+      rateLimit: {
+        errorCode: TOOL_ERROR_CODES.webSearchRateLimited,
+        identifier: () => rateLimit.identifier,
+        limit: rateLimit.limit,
+        prefix: "ratelimit:agent:budget:web-search",
+        window: rateLimit.window,
+      },
+      telemetry: {
+        workflow: "budgetPlanning",
+      },
+    },
+    inputSchema: webSearchBatchInputSchema,
+    name: "webSearchBatch",
   });
 
-  const guardedLookupPoiContext = buildGuardedTool({
-    cache: { hashInput: true, key: "agent:budget:poi", ttlSeconds: 600 },
-    execute: async (params: unknown) => {
+  const lookupPoiContext = createAiTool({
+    description: poiTool?.description ?? "Lookup POIs (context)",
+    execute: async (params, callOptions) => {
       if (!poiTool) return { inputs: params, pois: [], provider: "stub" };
-      return await poiTool.execute(params);
+      if (typeof poiTool.execute !== "function") {
+        throw new Error("Tool lookupPoiContext missing execute binding");
+      }
+      return (await poiTool.execute(params, callOptions)) as unknown;
     },
-    rateLimit,
-    schema: lookupPoiInputSchema,
-    toolKey: "lookupPoiContext",
-    workflow: "budgetPlanning",
+    guardrails: {
+      cache: {
+        hashInput: true,
+        key: () => "agent:budget:poi",
+        namespace: "agent:budget:poi",
+        ttlSeconds: 600,
+      },
+      rateLimit: {
+        errorCode: TOOL_ERROR_CODES.toolRateLimited,
+        identifier: () => rateLimit.identifier,
+        limit: rateLimit.limit,
+        prefix: "ratelimit:agent:budget:poi",
+        window: rateLimit.window,
+      },
+      telemetry: {
+        workflow: "budgetPlanning",
+      },
+    },
+    inputSchema: lookupPoiInputSchema,
+    name: "lookupPoiContext",
   });
 
-  const guardedCombineSearchResults = buildGuardedTool({
-    cache: { hashInput: true, key: "agent:budget:combine", ttlSeconds: 60 * 10 },
-    execute: async (params: unknown) => {
+  const combineSearchResults = createAiTool({
+    description: combineTool?.description ?? "Combine search results",
+    // biome-ignore lint/suspicious/useAwait: Tool factory requires async signature for type compatibility
+    execute: async (params, callOptions) => {
       if (!combineTool) return { combinedResults: {}, message: "stub", success: true };
-      return await combineTool.execute(params);
+      if (typeof combineTool.execute !== "function") {
+        throw new Error("Tool combineSearchResults missing execute binding");
+      }
+      const result = combineTool.execute(params, callOptions);
+      return result instanceof Promise ? result : Promise.resolve(result);
     },
-    rateLimit,
-    schema: combineSearchResultsInputSchema,
-    toolKey: "combineSearchResults",
-    workflow: "budgetPlanning",
+    guardrails: {
+      cache: {
+        hashInput: true,
+        key: () => "agent:budget:combine",
+        namespace: "agent:budget:combine",
+        ttlSeconds: 60 * 10,
+      },
+      rateLimit: {
+        errorCode: TOOL_ERROR_CODES.toolRateLimited,
+        identifier: () => rateLimit.identifier,
+        limit: rateLimit.limit,
+        prefix: "ratelimit:agent:budget:combine",
+        window: rateLimit.window,
+      },
+      telemetry: {
+        workflow: "budgetPlanning",
+      },
+    },
+    inputSchema: combineSearchResultsInputSchema,
+    name: "combineSearchResults",
   });
 
-  const guardedGetTravelAdvisory = buildGuardedTool({
-    cache: {
-      hashInput: true,
-      key: "agent:budget:safety",
-      ttlSeconds: 60 * 60 * 24 * 7,
-    },
-    execute: async (params: unknown) => {
+  const getTravelAdvisory = createAiTool({
+    description: safetyTool?.description ?? "Get travel advisory and safety scores",
+    execute: async (params, callOptions) => {
       if (!safetyTool)
         return { categories: [], destination: "", overallScore: 75, provider: "stub" };
-      return await safetyTool.execute(params);
+      if (typeof safetyTool.execute !== "function") {
+        throw new Error("Tool getTravelAdvisory missing execute binding");
+      }
+      return (await safetyTool.execute(params, callOptions)) as unknown;
     },
-    rateLimit,
-    schema: travelAdvisoryInputSchema,
-    toolKey: "getTravelAdvisory",
-    workflow: "budgetPlanning",
-  });
-
-  const webSearchBatch = tool({
-    description: webSearchBatchTool.description ?? "Batch web search",
-    execute: guardedWebSearchBatch,
-    inputSchema: webSearchBatchInputSchema,
-  });
-
-  const lookupPoiContext = tool({
-    description: poiTool?.description ?? "Lookup POIs (context)",
-    execute: guardedLookupPoiContext,
-    inputSchema: lookupPoiInputSchema,
-  });
-
-  const combineSearchResults = tool({
-    description: combineTool?.description ?? "Combine search results",
-    execute: guardedCombineSearchResults,
-    inputSchema: combineSearchResultsInputSchema,
-  });
-
-  const getTravelAdvisory = tool({
-    description: safetyTool?.description ?? "Get travel advisory and safety scores",
-    execute: guardedGetTravelAdvisory,
+    guardrails: {
+      cache: {
+        hashInput: true,
+        key: () => "agent:budget:safety",
+        namespace: "agent:budget:safety",
+        ttlSeconds: 60 * 60 * 24 * 7,
+      },
+      rateLimit: {
+        errorCode: TOOL_ERROR_CODES.toolRateLimited,
+        identifier: () => rateLimit.identifier,
+        limit: rateLimit.limit,
+        prefix: "ratelimit:agent:budget:safety",
+        window: rateLimit.window,
+      },
+      telemetry: {
+        workflow: "budgetPlanning",
+      },
+    },
     inputSchema: travelAdvisoryInputSchema,
+    name: "getTravelAdvisory",
   });
 
   return {
@@ -142,25 +193,39 @@ function buildBudgetTools(identifier: string): ToolSet {
  * and streams a model-guided tool loop to produce results structured per
  * `budget.v1` schema.
  *
- * @param deps Language model and request-scoped utilities.
+ * @param deps Language model, model identifier, and request-scoped utilities.
  * @param input Validated budget plan request.
  * @returns AI SDK stream result for UI consumption.
  */
 export function runBudgetAgent(
   deps: {
     model: LanguageModel;
+    modelId: string;
     identifier: string;
   },
   input: BudgetPlanRequest
 ) {
   const instructions = buildBudgetPrompt(input);
+  const userPrompt = `Generate a budget plan and summarize. Always return JSON with schemaVersion="budget.v1" and allocations[]. Parameters: ${JSON.stringify(
+    input
+  )}`;
+
+  // Token budgeting: clamp max output tokens based on prompt length
+  const messages: ChatMessage[] = [
+    { content: instructions, role: "system" },
+    { content: userPrompt, role: "user" },
+  ];
+  const desiredMaxTokens = 4096; // Default for agent responses
+  const { maxTokens } = clampMaxTokens(messages, desiredMaxTokens, deps.modelId);
+
   return streamText({
+    maxOutputTokens: maxTokens,
+    messages: [
+      { content: instructions, role: "system" },
+      { content: userPrompt, role: "user" },
+    ],
     model: deps.model,
-    prompt: `Generate a budget plan and summarize. Always return JSON with schemaVersion="budget.v1" and allocations[]. Parameters: ${JSON.stringify(
-      input
-    )}`,
     stopWhen: stepCountIs(10),
-    system: instructions,
     temperature: 0.3,
     tools: buildBudgetTools(deps.identifier),
   });

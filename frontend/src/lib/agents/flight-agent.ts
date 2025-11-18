@@ -10,12 +10,15 @@
 import "server-only";
 
 import type { LanguageModel, ToolSet } from "ai";
-import { stepCountIs, streamText, tool } from "ai";
+import { stepCountIs, streamText } from "ai";
 
-import { buildGuardedTool } from "@/lib/agents/guarded-tool";
+import { createAiTool } from "@/lib/ai/tool-factory";
 import { buildRateLimit } from "@/lib/ratelimit/config";
 import type { FlightSearchRequest } from "@/lib/schemas/agents";
+import type { ChatMessage } from "@/lib/tokens/budget";
+import { clampMaxTokens } from "@/lib/tokens/budget";
 import { toolRegistry } from "@/lib/tools";
+import { TOOL_ERROR_CODES } from "@/lib/tools/errors";
 import { searchFlightsInputSchema } from "@/lib/tools/flights";
 import { lookupPoiInputSchema } from "@/lib/tools/google-places";
 import { distanceMatrixInputSchema, geocodeInputSchema } from "@/lib/tools/maps";
@@ -36,7 +39,7 @@ function buildFlightTools(identifier: string): ToolSet {
   // Tools are typed as unknown in registry, so we use type assertions for safe access.
   type ToolLike = {
     description?: string;
-    execute: (params: unknown) => Promise<unknown>;
+    execute: (params: unknown, callOptions?: unknown) => Promise<unknown> | unknown;
   };
 
   const flightTool = toolRegistry.searchFlights as unknown as ToolLike;
@@ -48,79 +51,127 @@ function buildFlightTools(identifier: string): ToolSet {
 
   const rateLimit = buildRateLimit("flightSearch", identifier);
 
-  const guardedSearchFlights = buildGuardedTool({
-    cache: {
-      hashInput: true,
-      key: "agent:flight:search",
-      ttlSeconds: 60 * 30,
+  const searchFlights = createAiTool({
+    description: flightTool.description ?? "Search flights",
+    execute: async (params, callOptions) => {
+      if (typeof flightTool.execute !== "function") {
+        throw new Error("Tool searchFlights missing execute binding");
+      }
+      return (await flightTool.execute(params, callOptions)) as unknown;
     },
-    execute: async (params: unknown) => flightTool.execute(params),
-    rateLimit,
-    schema: searchFlightsInputSchema,
-    toolKey: "searchFlights",
-    workflow: "flightSearch",
+    guardrails: {
+      cache: {
+        hashInput: true,
+        key: () => "agent:flight:search",
+        namespace: "agent:flight:search",
+        ttlSeconds: 60 * 30,
+      },
+      rateLimit: {
+        errorCode: TOOL_ERROR_CODES.webSearchRateLimited,
+        identifier: () => rateLimit.identifier,
+        limit: rateLimit.limit,
+        prefix: "ratelimit:agent:flight:search",
+        window: rateLimit.window,
+      },
+      telemetry: {
+        workflow: "flightSearch",
+      },
+    },
+    inputSchema: searchFlightsInputSchema,
+    name: "searchFlights",
   });
 
-  const guardedGeocode = buildGuardedTool({
-    cache: {
-      hashInput: true,
-      key: "agent:flight:geocode",
-      ttlSeconds: 60 * 60,
+  const geocode = createAiTool({
+    description: geocodeTool.description ?? "Geocode address",
+    execute: async (params, callOptions) => {
+      if (typeof geocodeTool.execute !== "function") {
+        throw new Error("Tool geocode missing execute binding");
+      }
+      return (await geocodeTool.execute(params, callOptions)) as unknown;
     },
-    execute: async (params: unknown) => geocodeTool.execute(params),
-    rateLimit,
-    schema: geocodeInputSchema,
-    toolKey: "geocode",
-    workflow: "flightSearch",
+    guardrails: {
+      cache: {
+        hashInput: true,
+        key: () => "agent:flight:geocode",
+        namespace: "agent:flight:geocode",
+        ttlSeconds: 60 * 60,
+      },
+      rateLimit: {
+        errorCode: TOOL_ERROR_CODES.webSearchRateLimited,
+        identifier: () => rateLimit.identifier,
+        limit: rateLimit.limit,
+        prefix: "ratelimit:agent:flight:geocode",
+        window: rateLimit.window,
+      },
+      telemetry: {
+        workflow: "flightSearch",
+      },
+    },
+    inputSchema: geocodeInputSchema,
+    name: "geocode",
   });
 
-  const guardedLookupPoi = buildGuardedTool({
-    cache: { hashInput: true, key: "agent:flight:poi", ttlSeconds: 600 },
-    execute: async (params: unknown) => {
+  const lookupPoiContext = createAiTool({
+    description: poiTool?.description ?? "Lookup POIs (context)",
+    execute: async (params, callOptions) => {
       if (!poiTool) return { inputs: params, pois: [], provider: "stub" };
-      return await poiTool.execute(params);
+      if (typeof poiTool.execute !== "function") {
+        throw new Error("Tool lookupPoiContext missing execute binding");
+      }
+      return (await poiTool.execute(params, callOptions)) as unknown;
     },
-    rateLimit,
-    schema: lookupPoiInputSchema,
-    toolKey: "lookupPoiContext",
-    workflow: "flightSearch",
+    guardrails: {
+      cache: {
+        hashInput: true,
+        key: () => "agent:flight:poi",
+        namespace: "agent:flight:poi",
+        ttlSeconds: 600,
+      },
+      rateLimit: {
+        errorCode: TOOL_ERROR_CODES.toolRateLimited,
+        identifier: () => rateLimit.identifier,
+        limit: rateLimit.limit,
+        prefix: "ratelimit:agent:flight:poi",
+        window: rateLimit.window,
+      },
+      telemetry: {
+        workflow: "flightSearch",
+      },
+    },
+    inputSchema: lookupPoiInputSchema,
+    name: "lookupPoiContext",
   });
 
-  const guardedDistanceMatrix = buildGuardedTool({
-    cache: { hashInput: true, key: "agent:flight:distance", ttlSeconds: 3600 },
-    execute: async (params: unknown) => {
+  const distanceMatrix = createAiTool({
+    description: distanceMatrixTool?.description ?? "Distance matrix",
+    execute: async (params, callOptions) => {
       if (!distanceMatrixTool)
         return { distances: [], inputs: params, provider: "stub" };
-      return await distanceMatrixTool.execute(params);
+      if (typeof distanceMatrixTool.execute !== "function") {
+        throw new Error("Tool distanceMatrix missing execute binding");
+      }
+      return (await distanceMatrixTool.execute(params, callOptions)) as unknown;
     },
-    rateLimit,
-    schema: distanceMatrixInputSchema,
-    toolKey: "distanceMatrix",
-    workflow: "flightSearch",
-  });
-
-  const searchFlights = tool({
-    description: flightTool.description ?? "Search flights",
-    execute: guardedSearchFlights,
-    inputSchema: searchFlightsInputSchema,
-  });
-
-  const geocode = tool({
-    description: geocodeTool.description ?? "Geocode address",
-    execute: guardedGeocode,
-    inputSchema: geocodeInputSchema,
-  });
-
-  const lookupPoiContext = tool({
-    description: poiTool?.description ?? "Lookup POIs (context)",
-    execute: guardedLookupPoi,
-    inputSchema: lookupPoiInputSchema,
-  });
-
-  const distanceMatrix = tool({
-    description: distanceMatrixTool?.description ?? "Distance matrix",
-    execute: guardedDistanceMatrix,
+    guardrails: {
+      cache: {
+        hashInput: true,
+        key: () => "agent:flight:distance",
+        namespace: "agent:flight:distance",
+        ttlSeconds: 3600,
+      },
+      rateLimit: {
+        errorCode: TOOL_ERROR_CODES.toolRateLimited,
+        identifier: () => rateLimit.identifier,
+        limit: rateLimit.limit,
+        prefix: "ratelimit:agent:flight:distance",
+        window: rateLimit.window,
+      },
+      telemetry: {
+        workflow: "flightSearch",
+      },
+    },
     inputSchema: distanceMatrixInputSchema,
+    name: "distanceMatrix",
   });
 
   return { distanceMatrix, geocode, lookupPoiContext, searchFlights } satisfies ToolSet;
@@ -133,25 +184,39 @@ function buildFlightTools(identifier: string): ToolSet {
  * and streams a model-guided tool loop to produce results structured per
  * `flight.v1` schema.
  *
- * @param deps Language model and request-scoped utilities.
+ * @param deps Language model, model identifier, and request-scoped utilities.
  * @param input Validated flight search request.
  * @returns AI SDK stream result for UI consumption.
  */
 export function runFlightAgent(
   deps: {
     model: LanguageModel;
+    modelId: string;
     identifier: string;
   },
   input: FlightSearchRequest
 ) {
   const instructions = buildFlightPrompt(input);
+  const userPrompt = `Find flight offers and summarize. Always return JSON with schemaVersion="flight.v1" and sources[]. Parameters: ${JSON.stringify(
+    input
+  )}`;
+
+  // Token budgeting: clamp max output tokens based on prompt length
+  const messages: ChatMessage[] = [
+    { content: instructions, role: "system" },
+    { content: userPrompt, role: "user" },
+  ];
+  const desiredMaxTokens = 4096; // Default for agent responses
+  const { maxTokens } = clampMaxTokens(messages, desiredMaxTokens, deps.modelId);
+
   return streamText({
+    maxOutputTokens: maxTokens,
+    messages: [
+      { content: instructions, role: "system" },
+      { content: userPrompt, role: "user" },
+    ],
     model: deps.model,
-    prompt: `Find flight offers and summarize. Always return JSON with schemaVersion="flight.v1" and sources[]. Parameters: ${JSON.stringify(
-      input
-    )}`,
     stopWhen: stepCountIs(10),
-    system: instructions,
     temperature: 0.3,
     tools: buildFlightTools(deps.identifier),
   });

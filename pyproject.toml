@@ -10,14 +10,8 @@ dependencies = [
     "fastapi>=0.119.0,<0.120.0",
     "uvicorn>=0.38.0,<0.39.0",
     "httpx>=0.28.1",
-    "python-multipart>=0.0.20",
     "starlette>=0.48.0,<0.49.0",
     # Authentication and security (Supabase SDK handles token validation)
-    "passlib[bcrypt]>=1.7.4", # For password hashing
-    "cryptography>=46.0.3",
-    "aiohttp>=3.13.1",
-    "pyotp>=2.9.0",
-    "qrcode>=8.2",
     # Data validation and configuration
     "pydantic>=2.12.4",
     "pydantic-settings>=2.12.0",
@@ -25,39 +19,17 @@ dependencies = [
     # Database and caching
     "sqlalchemy[asyncio]>=2.0.44,<2.1.0",
     "redis>=6.4.0,<7.0.0",
-    "aiofiles>=25.1.0,<26.0.0",
     "asyncpg>=0.30.0",
-    "watchdog>=6.0.0",
     "supabase>=2.22.0,<3.0.0",
-    # AI and LLM ecosystem
-    "langchain-core>=1.0.0,<2.0.0",
-    "langchain-openai>=1.0.0,<2.0.0",
-    "langgraph>=1.0.0,<2.0.0",
-    "openai>=2.5.0,<3.0.0",
-    "anthropic>=0.70.0,<1.0.0",
-    "openai-agents>=0.4.0,<0.5.0",
-    "mem0ai>=0.1.118,<2.0.0",
     "tenacity>=9.1.2",
     "slowapi>=0.1.9",
     "aiolimiter>=1.1.0",
     "cashews>=7.4.0,<8.0.0",
     "limits[redis]>=5.6.0",
-    # Web scraping and automation
-    "crawl4ai>=0.7.4,<0.8.0",
-    "playwright>=1.55.0,<1.56.0",
-    # External API integrations
-    "google-api-python-client>=2.187.0,<3.0.0",
-    "google-auth>=2.15.0,<2.42.0",
-    "google-auth-oauthlib>=1.2.3",
-    "googlemaps>=4.10.0",
-    "duffel-api>=0.6.2",
-    "email-validator>=2.3.0,<3.0.0",
     # Observability and monitoring
     "opentelemetry-api>=1.38.0,<1.39.0",
     "opentelemetry-sdk>=1.38.0,<1.39.0",
     "opentelemetry-exporter-otlp>=1.38.0,<1.39.0",
-    "psutil>=7.1.1,<8.0.0",
-    "upstash-redis>=1.4.0",
 ]
 
 [dependency-groups]
@@ -68,13 +40,6 @@ observability = [
     "opentelemetry-instrumentation-redis>=0.59b0,<0.60",
 ]
 
-docs = [
-    "mkdocs>=1.6.0",
-    "mkdocs-material>=9.5.0",
-    "mkdocstrings[python]>=0.26.0",
-    "mkdocs-gen-files>=0.5.0",
-    "mkdocs-literate-nav>=0.6.0",
-]
 
 test = [
     # Core testing framework
@@ -85,14 +50,10 @@ test = [
     "pytest-timeout>=2.4.0",
     # Testing utilities and mocking
     "pytest-benchmark>=5.2.0",
-    "pytest-httpx>=0.35.0",
     "fakeredis>=2.32.0",
     "polyfactory>=2.22.0",
     "nest-asyncio>=1.6.0",
-    "hypothesis>=6.147.0",
     "python-dotenv>=1.2.0",
-    # Performance and load testing
-    "locust>=2.42.2",
     # Coverage reporting
     "coverage[toml]>=7.11.0",
 ]
@@ -110,7 +71,6 @@ dev = [
     {include-group = "lint"},
     # Additional development tools
     "radon>=6.0.1",
-    "python-jose[cryptography]>=3.5.0",
     "bandit>=1.8.6",
     "rich>=14.2.0",
     "numpy>=2.3.4",
@@ -268,7 +228,6 @@ convention = "google"
 "scripts/cli/**/*" = ["T20"]
 "tripsage/api/routers/*.py" = ["B008"]  # Allow Depends() in FastAPI routers
 "tripsage/api/core/*.py" = ["B008"]     # Allow Depends() in FastAPI dependencies
-"tripsage_core/services/business/auth_service.py" = ["B008"]
 "tests/conftest.py" = ["E402"]          # Allow imports-after-exec for env setup
 "scripts/**/*" = []
 "tripsage_core/types/**" = ["A005"]      # Package name overlaps stdlib 'types'

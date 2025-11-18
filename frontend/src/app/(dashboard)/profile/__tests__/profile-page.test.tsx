@@ -1,8 +1,9 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+/** @vitest-environment jsdom */
+
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { User } from "@/stores/auth-store";
-import { useAuthStore } from "@/stores/auth-store";
+import type { AuthUser as User } from "@/lib/schemas/stores";
+import { useAuthCore } from "@/stores/auth/auth-core";
 import type { UserProfile } from "@/stores/user-store";
 import { useUserProfileStore } from "@/stores/user-store";
 import ProfilePage from "../page";
@@ -48,7 +49,7 @@ const MOCK_USER: Partial<User> = {
 
 // Mock the stores and profile components
 vi.mock("@/stores/user-store");
-vi.mock("@/stores/auth-store");
+vi.mock("@/stores/auth/auth-core");
 
 // Define mock components in a hoisted block so they are available to vi.mock
 // factories, which are hoisted by Vitest.
@@ -100,7 +101,7 @@ describe("ProfilePage", () => {
   });
 
   it("renders loading state when user data is loading", () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useAuthCore).mockReturnValue({
       isAuthenticated: false,
       isLoading: true,
       user: null,
@@ -118,7 +119,7 @@ describe("ProfilePage", () => {
   });
 
   it("renders not found state when user is not logged in", () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useAuthCore).mockReturnValue({
       isAuthenticated: false,
       isLoading: false,
       user: null,
@@ -135,7 +136,7 @@ describe("ProfilePage", () => {
   });
 
   it("renders profile page with tabs when user is logged in", () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useAuthCore).mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
       user: MOCK_USER as User,
@@ -167,7 +168,7 @@ describe("ProfilePage", () => {
   });
 
   it("displays personal info section by default", () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useAuthCore).mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
       user: MOCK_USER as User,
@@ -188,7 +189,7 @@ describe("ProfilePage", () => {
   });
 
   it("switches to account settings tab", async () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useAuthCore).mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
       user: MOCK_USER as User,
@@ -206,15 +207,15 @@ describe("ProfilePage", () => {
     render(<ProfilePage />);
 
     const accountTab = screen.getByRole("tab", { name: /account/i });
-    await userEvent.click(accountTab);
-
-    await waitFor(() => {
-      expect(screen.getByTestId("account-settings-section")).toBeInTheDocument();
+    act(() => {
+      fireEvent.click(accountTab);
     });
+
+    expect(await screen.findByTestId("account-settings-section")).toBeInTheDocument();
   });
 
   it("switches to preferences tab", async () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useAuthCore).mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
       user: MOCK_USER as User,
@@ -232,15 +233,15 @@ describe("ProfilePage", () => {
     render(<ProfilePage />);
 
     const preferencesTab = screen.getByRole("tab", { name: /preferences/i });
-    await userEvent.click(preferencesTab);
-
-    await waitFor(() => {
-      expect(screen.getByTestId("preferences-section")).toBeInTheDocument();
+    act(() => {
+      fireEvent.click(preferencesTab);
     });
+
+    expect(await screen.findByTestId("preferences-section")).toBeInTheDocument();
   });
 
   it("switches to security tab", async () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useAuthCore).mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
       user: MOCK_USER as User,
@@ -258,15 +259,15 @@ describe("ProfilePage", () => {
     render(<ProfilePage />);
 
     const securityTab = screen.getByRole("tab", { name: /security/i });
-    await userEvent.click(securityTab);
-
-    await waitFor(() => {
-      expect(screen.getByTestId("security-section")).toBeInTheDocument();
+    act(() => {
+      fireEvent.click(securityTab);
     });
+
+    expect(await screen.findByTestId("security-section")).toBeInTheDocument();
   });
 
   it("renders tab icons correctly", () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useAuthCore).mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
       user: MOCK_USER as User,
@@ -296,7 +297,7 @@ describe("ProfilePage", () => {
   });
 
   it("maintains tab state during navigation", async () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useAuthCore).mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
       user: MOCK_USER as User,
@@ -315,23 +316,23 @@ describe("ProfilePage", () => {
 
     // Switch to preferences tab
     const preferencesTab = screen.getByRole("tab", { name: /preferences/i });
-    await userEvent.click(preferencesTab);
-
-    await waitFor(() => {
-      expect(screen.getByTestId("preferences-section")).toBeInTheDocument();
+    act(() => {
+      fireEvent.click(preferencesTab);
     });
+
+    expect(await screen.findByTestId("preferences-section")).toBeInTheDocument();
 
     // Switch back to personal tab
     const personalTab = screen.getByRole("tab", { name: /personal/i });
-    await userEvent.click(personalTab);
-
-    await waitFor(() => {
-      expect(screen.getByTestId("personal-info-section")).toBeInTheDocument();
+    act(() => {
+      fireEvent.click(personalTab);
     });
+
+    expect(await screen.findByTestId("personal-info-section")).toBeInTheDocument();
   });
 
   it("renders proper heading structure", () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useAuthCore).mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
       user: MOCK_USER as User,

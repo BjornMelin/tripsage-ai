@@ -1,3 +1,5 @@
+/** @vitest-environment jsdom */
+
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -12,7 +14,7 @@ import {
 describe("ai-elements/prompt-input", () => {
   /** Test that onSubmit is called with typed text when submitted */
   it("calls onSubmit with typed text when submitted", async () => {
-    const onSubmit = vi.fn();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
     render(
       <PromptInput onSubmit={onSubmit}>
         <PromptInputBody>
@@ -24,14 +26,28 @@ describe("ai-elements/prompt-input", () => {
       </PromptInput>
     );
 
-    const textarea = screen.getByPlaceholderText("Type here");
+    const textarea = screen.getByPlaceholderText("Type here") as HTMLTextAreaElement;
     fireEvent.change(textarea, { target: { value: "Hello AI" } });
 
+    // Submit the form by clicking the submit button
     const submit = screen.getByText("Send");
-    fireEvent.click(submit);
+    const form = submit.closest("form");
+    expect(form).not.toBeNull();
 
-    await waitFor(() => expect(onSubmit).toHaveBeenCalled());
+    if (!form) {
+      throw new Error("Expected prompt form to be present");
+    }
+
+    fireEvent.submit(form);
+
+    await waitFor(
+      () => {
+        expect(onSubmit).toHaveBeenCalled();
+      },
+      { timeout: 2000 }
+    );
+
     const payload = onSubmit.mock.calls[0]?.[0];
     expect(payload?.text).toBe("Hello AI");
-  });
+  }, 10000);
 });

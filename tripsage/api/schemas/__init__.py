@@ -2,21 +2,14 @@
 
 This package contains consolidated Pydantic V2 schemas organized by domain:
 
-- auth.py          : Authentication schemas
-- chat.py          : Chat interaction schemas
-- config.py        : Configuration management schemas
 - dashboard.py     : Dashboard monitoring and analytics schemas
 - users.py         : User management schemas
 
 Trip and itinerary schemas now live in
 ``tripsage_core.models.api`` as the canonical definitions.
 
-Search and destination schemas removed; handled via frontend AI SDK v6 agents.
-
-Import directly from the consolidated schema files:
-
-    from tripsage.api.schemas.auth import LoginRequest, UserResponse
-    from tripsage.api.schemas.chat import ChatRequest, ChatResponse
+Chat, search, destination, and auth schemas removed; handled via frontend AI SDK agents
+and Supabase authentication.
 
 For shared types from tripsage_core:
     from tripsage_core.models.schemas_common import BookingStatus

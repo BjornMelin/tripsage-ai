@@ -1,15 +1,33 @@
-import { act, renderHook } from "@testing-library/react";
+/** @vitest-environment jsdom */
+
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import type {
   SearchHistoryItem,
   ValidatedSavedSearch,
 } from "@/stores/search-history-store";
 import { useSearchHistoryStore } from "@/stores/search-history-store";
-import { resetSearchHistoryStore } from "./_shared";
 
 describe("Search History Store - Settings, Utils, and Analytics", () => {
   beforeEach(() => {
-    resetSearchHistoryStore();
+    act(() => {
+      useSearchHistoryStore.setState({
+        autoCleanupDays: 30,
+        autoSaveEnabled: true,
+        error: null,
+        isLoading: false,
+        isSyncing: false,
+        lastSyncAt: null,
+        maxRecentSearches: 50,
+        popularSearchTerms: [],
+        quickSearches: [],
+        recentSearches: [],
+        savedSearches: [],
+        searchCollections: [],
+        searchSuggestions: [],
+        syncError: null,
+      });
+    });
   });
 
   describe("Data Management", () => {
@@ -77,12 +95,17 @@ describe("Search History Store - Settings, Utils, and Analytics", () => {
       expect(result.current.lastSyncAt).toBeNull();
 
       await act(async () => {
-        const success = await result.current.syncWithServer();
+        const promise = result.current.syncWithServer();
+        await waitFor(() => {
+          expect(result.current.isSyncing).toBe(false);
+        });
+        const success = await promise;
         expect(success).toBe(true);
       });
 
-      expect(result.current.isSyncing).toBe(false);
-      expect(result.current.lastSyncAt).toBeTruthy();
+      await waitFor(() => {
+        expect(result.current.lastSyncAt).toBeTruthy();
+      });
     });
   });
 

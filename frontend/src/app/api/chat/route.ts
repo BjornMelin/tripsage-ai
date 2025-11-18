@@ -6,18 +6,13 @@
 
 import "server-only";
 
-import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
 import type { UIMessage } from "ai";
 import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
-import { getClientIpFromHeaders } from "@/lib/next/route-helpers";
+import { withApiGuards } from "@/lib/api/factory";
+import { getClientIpFromHeaders, parseJsonBody } from "@/lib/next/route-helpers";
 import { resolveProvider } from "@/lib/providers/registry";
-import { createServerSupabase } from "@/lib/supabase/server";
+import { createServerLogger } from "@/lib/telemetry/logger";
 import { handleChatNonStream } from "./_handler";
-
-// Dynamic due to auth/session
-export const dynamic = "force-dynamic";
 
 // Allow up to 30s for non-stream completion
 export const maxDuration = 30;
@@ -41,52 +36,35 @@ type IncomingBody = {
  * Handles POST requests for chat responses.
  *
  * @param req - The Next.js request object.
+ * @param routeContext - Route context from withApiGuards
  * @returns Promise resolving to a Response with chat completion data.
  */
-export async function POST(req: NextRequest): Promise<Response> {
-  try {
-    const supabase = await createServerSupabase();
-
-    let body: IncomingBody | undefined;
-    try {
-      body = (await req.json()) as IncomingBody;
-    } catch {
-      return new Response(
-        JSON.stringify({ error: "Malformed JSON in request body." }),
-        { headers: { "Content-Type": "application/json" }, status: 400 }
-      );
-    }
-
-    // Optional rate limiter (reuse stream config if available)
-    const { getServerEnvVarWithFallback } = await import("@/lib/env/server");
-    const url = getServerEnvVarWithFallback("UPSTASH_REDIS_REST_URL", undefined);
-    const token = getServerEnvVarWithFallback("UPSTASH_REDIS_REST_TOKEN", undefined);
-    const limiter =
-      url && token
-        ? new Ratelimit({
-            analytics: true,
-            limiter: Ratelimit.slidingWindow(40, "1 m"),
-            prefix: "ratelimit:chat:nonstream",
-            redis: Redis.fromEnv(),
-          })
-        : undefined;
-
-    const ip = getClientIpFromHeaders(req);
-
-    return await handleChatNonStream(
-      {
-        clock: { now: () => Date.now() },
-        config: { defaultMaxTokens: 1024 },
-        limit: limiter ? (id) => limiter.limit(id) : undefined,
-        logger: { error: console.error, info: console.info },
-        resolveProvider: (userId, modelHint) => resolveProvider(userId, modelHint),
-        supabase,
-      },
-      { ...(body || {}), ip }
-    );
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    console.error("/api/chat:fatal", { message });
-    return NextResponse.json({ error: "internal" }, { status: 500 });
+export const POST = withApiGuards({
+  auth: true,
+  rateLimit: "chat:nonstream",
+  telemetry: "chat.nonstream",
+})(async (req: NextRequest, { supabase }): Promise<Response> => {
+  const parsed = await parseJsonBody(req);
+  if ("error" in parsed) {
+    return new Response(JSON.stringify({ error: "Malformed JSON in request body." }), {
+      headers: { "Content-Type": "application/json" },
+      status: 400,
+    });
   }
-}
+  const body = parsed.body as IncomingBody;
+
+  const ip = getClientIpFromHeaders(req);
+  const logger = createServerLogger("chat.nonstream");
+
+  return await handleChatNonStream(
+    {
+      clock: { now: () => Date.now() },
+      config: { defaultMaxTokens: 1024 },
+      limit: undefined, // Rate limiting handled by factory
+      logger,
+      resolveProvider: (userId, modelHint) => resolveProvider(userId, modelHint),
+      supabase,
+    },
+    { ...(body || {}), ip }
+  );
+});

@@ -16,11 +16,11 @@ const baseEnvSchema = z.object({
 
 // Next.js specific environment variables
 const nextEnvSchema = z.object({
-  APP_BASE_URL: z.string().url().optional(),
-  NEXT_PUBLIC_API_URL: z.string().url().optional(),
+  APP_BASE_URL: z.url().optional(),
+  NEXT_PUBLIC_API_URL: z.url().optional(),
   NEXT_PUBLIC_APP_NAME: z.string().default("TripSage"),
   NEXT_PUBLIC_BASE_PATH: z.string().optional(),
-  NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
+  NEXT_PUBLIC_SITE_URL: z.url().optional(),
 });
 
 // Supabase configuration
@@ -28,20 +28,20 @@ const supabaseEnvSchema = z.object({
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z
     .string()
     .min(1, "Supabase anonymous key is required"),
-  NEXT_PUBLIC_SUPABASE_URL: z.string().url("Invalid Supabase URL"),
+  NEXT_PUBLIC_SUPABASE_URL: z.url("Invalid Supabase URL"),
   SUPABASE_JWT_SECRET: z.string().optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
 });
 
 // Database configuration (minimal - only DATABASE_URL used)
 const databaseEnvSchema = z.object({
-  DATABASE_URL: z.string().url().optional(),
+  DATABASE_URL: z.url().optional(),
 });
 
 // Cache configuration (Upstash Redis REST only)
 const cacheEnvSchema = z.object({
   UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
-  UPSTASH_REDIS_REST_URL: z.string().url().optional(),
+  UPSTASH_REDIS_REST_URL: z.url().optional(),
 });
 
 // Authentication providers (empty - not used in frontend)
@@ -50,12 +50,12 @@ const authEnvSchema = z.object({});
 // AI Service API Keys
 const aiServiceEnvSchema = z.object({
   AI_GATEWAY_API_KEY: z.string().optional(),
-  AI_GATEWAY_URL: z.string().url().optional(),
+  AI_GATEWAY_URL: z.url().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
   EMBEDDINGS_API_KEY: z.string().optional(),
   // Firecrawl & Exa search/crawl
   FIRECRAWL_API_KEY: z.string().optional(),
-  FIRECRAWL_BASE_URL: z.string().url().optional(),
+  FIRECRAWL_BASE_URL: z.url().optional(),
   OPENAI_API_KEY: z.string().optional(),
   // OpenRouter API key (server-side fallback, not attribution)
   OPENROUTER_API_KEY: z.string().optional(),
@@ -65,7 +65,7 @@ const aiServiceEnvSchema = z.object({
   QSTASH_TOKEN: z.string().optional(),
   // Resend (email notifications)
   RESEND_API_KEY: z.string().optional(),
-  RESEND_FROM_EMAIL: z.string().email().optional(),
+  RESEND_FROM_EMAIL: z.email().optional(),
   RESEND_FROM_NAME: z.string().optional(),
   // xAI API key (server-side fallback)
   XAI_API_KEY: z.string().optional(),
@@ -73,14 +73,16 @@ const aiServiceEnvSchema = z.object({
 
 // Travel & External API Keys
 const travelApiEnvSchema = z.object({
-  BACKEND_API_URL: z.string().url().optional(),
+  BACKEND_API_URL: z.url().optional(),
   // Duffel flights
   DUFFEL_ACCESS_TOKEN: z.string().optional(),
   DUFFEL_API_KEY: z.string().optional(),
   // Expedia Partner Solutions (EPS) Rapid API
   EPS_API_KEY: z.string().optional(),
   EPS_API_SECRET: z.string().optional(),
-  EPS_BASE_URL: z.string().url().optional(),
+  EPS_BASE_URL: z.url().optional(),
+  EPS_DEFAULT_CUSTOMER_IP: z.string().optional(),
+  EPS_DEFAULT_USER_AGENT: z.string().optional(),
   // Server routes/tools: Server key for Geocoding/Places/Routes/Time Zone (IP+API restricted)
   GOOGLE_MAPS_SERVER_API_KEY: z.string().optional(),
   // Frontend: Browser key for Maps JS (referrer-restricted)
@@ -96,7 +98,7 @@ const travelApiEnvSchema = z.object({
 const monitoringEnvSchema = z.object({
   GOOGLE_ANALYTICS_ID: z.string().optional(),
   MIXPANEL_TOKEN: z.string().optional(),
-  POSTHOG_HOST: z.string().url().optional(),
+  POSTHOG_HOST: z.url().optional(),
   POSTHOG_KEY: z.string().optional(),
 });
 
@@ -106,7 +108,7 @@ const featureEnvSchema = z.object({});
 // Security configuration
 const securityEnvSchema = z.object({
   // Optional downstream collaborator webhook URL (signed at app layer)
-  COLLAB_WEBHOOK_URL: z.string().url().optional(),
+  COLLAB_WEBHOOK_URL: z.url().optional(),
   // HMAC secret for verifying Supabase Database Webhooks
   HMAC_SECRET: z.string().optional(),
 });
@@ -164,13 +166,14 @@ export const envSchema = z
 
 // Client-side environment schema (only NEXT_PUBLIC_ variables)
 export const clientEnvSchema = z.object({
-  NEXT_PUBLIC_API_URL: z.string().url().optional(),
+  NEXT_PUBLIC_API_URL: z.url().optional(),
   NEXT_PUBLIC_APP_NAME: z.string().default("TripSage"),
   NEXT_PUBLIC_BASE_PATH: z.string().optional(),
   NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY: z.string().optional(),
-  NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
+  NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT: z.url().optional(),
+  NEXT_PUBLIC_SITE_URL: z.url().optional(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
-  NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
+  NEXT_PUBLIC_SUPABASE_URL: z.url(),
 });
 
 // Type exports

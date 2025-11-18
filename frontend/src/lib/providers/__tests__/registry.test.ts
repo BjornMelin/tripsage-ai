@@ -137,9 +137,24 @@ describe("resolveProvider", () => {
   });
 
   it("throws when user has no provider keys", async () => {
+    // Clear all API keys from environment to test the error path
+    const originalEnv = process.env;
+    process.env = {
+      ...process.env,
+      AI_GATEWAY_API_KEY: undefined,
+      ANTHROPIC_API_KEY: undefined,
+      OPENAI_API_KEY: undefined,
+      OPENROUTER_API_KEY: undefined,
+      XAI_API_KEY: undefined,
+    };
+
     const { getUserApiKey } = await import("@/lib/supabase/rpc");
     (getUserApiKey as unknown as Mock).mockResolvedValue(null);
     const { resolveProvider } = await import("../registry");
+
     await expect(resolveProvider("user-5")).rejects.toThrow(/No provider key found/);
+
+    // Restore original environment
+    process.env = originalEnv;
   });
 });

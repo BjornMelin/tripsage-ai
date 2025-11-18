@@ -33,15 +33,19 @@ import type { DestinationSearchParams } from "@/lib/schemas/search";
 
 const DestinationSearchFormSchema = z.object({
   language: z.string().optional(),
-  limit: z.number().min(1).max(20),
-  query: z.string().min(1, { message: "Destination is required" }),
+  limit: z
+    .number()
+    .int()
+    .min(1, { error: "Limit must be at least 1" })
+    .max(20, { error: "Limit must be at most 20" }),
+  query: z.string().min(1, { error: "Destination is required" }),
   region: z.string().optional(),
   types: z.array(
     z.enum(["locality", "country", "administrative_area", "establishment"])
   ),
 });
 
-type DestinationSearchFormValues = z.infer<typeof DestinationSearchFormSchema>;
+export type DestinationSearchFormValues = z.infer<typeof DestinationSearchFormSchema>;
 
 interface DestinationSuggestion {
   placeId: string;
@@ -187,16 +191,8 @@ export function DestinationSearchForm({
   };
 
   const handleSubmit = (data: DestinationSearchFormValues) => {
-    const searchParams: DestinationSearchParams = {
-      language: data.language,
-      limit: data.limit,
-      query: data.query,
-      region: data.region,
-      types: data.types,
-    };
-
     if (onSearch) {
-      onSearch(searchParams);
+      onSearch(mapDestinationValuesToParams(data));
     }
   };
 
@@ -518,4 +514,17 @@ export function DestinationSearchForm({
       </CardContent>
     </Card>
   );
+}
+
+// biome-ignore lint/style/useNamingConvention: Utility function name is intentionally camelCase
+export function mapDestinationValuesToParams(
+  data: DestinationSearchFormValues
+): DestinationSearchParams {
+  return {
+    language: data.language,
+    limit: data.limit,
+    query: data.query,
+    region: data.region,
+    types: data.types,
+  };
 }

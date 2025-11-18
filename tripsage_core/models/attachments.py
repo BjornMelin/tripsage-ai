@@ -70,7 +70,6 @@ class AttachmentDB(AttachmentBase):
 
     id: UUID = Field(..., description="Unique attachment identifier")
     user_id: UUID = Field(..., description="ID of the user who uploaded the file")
-    chat_session_id: UUID | None = Field(None, description="Associated chat session ID")
 
     stored_filename: str = Field(..., description="Filename used for storage")
     storage_path: str = Field(..., description="Relative path to stored file")
@@ -113,7 +112,7 @@ class AttachmentDB(AttachmentBase):
         """Serialize datetime to ISO format."""
         return dt.isoformat()
 
-    @field_serializer("id", "user_id", "chat_session_id")
+    @field_serializer("id", "user_id")
     def serialize_uuid(self, uuid_val: UUID | None) -> str | None:
         """Serialize UUID to string."""
         return str(uuid_val) if uuid_val else None

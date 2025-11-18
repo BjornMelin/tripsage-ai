@@ -4,6 +4,7 @@
  */
 
 import { getRedis } from "@/lib/redis";
+import type { ApprovalStatus } from "@/lib/schemas/tools";
 import type { ToolExecutionContext } from "./types";
 
 const KEY = (sessionId: string, action: string, idempotencyKey?: string) =>
@@ -11,12 +12,8 @@ const KEY = (sessionId: string, action: string, idempotencyKey?: string) =>
     ? `approve:${sessionId}:${action}:${idempotencyKey}`
     : `approve:${sessionId}:${action}`;
 
-export type ApprovalStatus =
-  | "pending"
-  | "approved"
-  | "denied"
-  | "expired"
-  | "not_found";
+// Re-export type from schemas
+export type { ApprovalStatus };
 
 /**
  * Require approval for a sensitive action. Throws if not yet approved.

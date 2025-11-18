@@ -1,47 +1,30 @@
 /**
  * @fileoverview React hook for authenticated API requests.
  *
- * This hook provides JWT token management and automatic refresh for Supabase
- * authentication. It handles request cancellation, session refresh, error recovery,
- * and provides typed HTTP method helpers for making authenticated API calls.
+ * Provides a thin, Supabase-SSR-aligned wrapper around the shared `apiClient`.
+ * Authentication is enforced server-side via Supabase cookie sessions and
+ * route guards; this hook does not manage JWTs or refresh tokens.
  */
 
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { apiClient } from "@/lib/api/api-client";
 import { ApiError } from "@/lib/api/error-types";
-import { createClient } from "@/lib/supabase/client";
 
 /**
- * Hook for authenticated API calls with JWT token management.
+ * Hook for authenticated API calls using Supabase SSR cookies.
  *
- * This hook provides an API client with automatic Supabase JWT token management,
- * including token refresh, request cancellation, and typed HTTP method helpers.
- * It handles authentication state changes and automatically refreshes expired tokens.
+ * This hook provides typed HTTP method helpers (get, post, put, patch, delete,
+ * upload) and request cancellation via AbortController. It assumes that all
+ * `/api/*` routes enforce authentication via `withApiGuards` and Supabase
+ * cookie-based sessions.
  *
- * @return Object containing authenticated API methods and current authentication
- * state. The API methods include get, post, put, patch, delete, and upload functions
- * that automatically include valid JWT tokens in their requests.
+ * @returns Object containing authenticated API methods, a low-level
+ * `makeAuthenticatedRequest` helper, and a `cancelRequests` function.
  */
 export function useAuthenticatedApi() {
-  const supabase = createClient();
   const abortControllerRef = useRef<AbortController | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  useEffect(() => {
-    let mounted = true;
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (mounted) setIsAuthenticated(!!session?.access_token);
-    });
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAuthenticated(!!session?.access_token);
-    });
-    return () => {
-      mounted = false;
-      data.subscription.unsubscribe();
-    };
-  }, [supabase]);
 
   /**
    * Options for authenticated requests.
@@ -108,51 +91,10 @@ export function useAuthenticatedApi() {
       endpoint: string,
       options: AuthFetchOptions = {}
     ): Promise<T> => {
-      if (!isAuthenticated) {
-        // Verify with a fresh call in case of stale state
-        const { data: sessionData } = await supabase.auth.getSession();
-        if (!sessionData.session?.access_token) {
-          throw new ApiError({
-            code: "UNAUTHORIZED",
-            message: "User not authenticated",
-            status: 401,
-          });
-        }
-      }
-
       if (abortControllerRef.current) abortControllerRef.current.abort();
       abortControllerRef.current = new AbortController();
 
       try {
-        // Always fetch a fresh session for latest token
-        let {
-          data: { session },
-          error: sessionError,
-        } = await supabase.auth.getSession();
-        if (sessionError) {
-          throw new ApiError({
-            code: "SESSION_ERROR",
-            message: `Session error: ${sessionError.message}`,
-            status: 401,
-          });
-        }
-
-        if (!session?.access_token) {
-          const {
-            data: { session: refreshed },
-            error: refreshError,
-          } = await supabase.auth.refreshSession();
-          if (refreshError || !refreshed?.access_token) {
-            await supabase.auth.signOut();
-            throw new ApiError({
-              code: "SESSION_EXPIRED",
-              message: "Authentication session expired",
-              status: 401,
-            });
-          }
-          session = refreshed;
-        }
-
         const method = (options.method || "GET").toUpperCase() as
           | "GET"
           | "POST"
@@ -162,9 +104,8 @@ export function useAuthenticatedApi() {
 
         const endpointPath = normalizeEndpoint(endpoint);
 
-        // Build headers, ensuring Authorization is present
+        // Build headers
         const headers = new Headers(options.headers);
-        headers.set("Authorization", `Bearer ${session.access_token}`);
 
         const params = options.params as
           | Record<string, string | number | boolean>
@@ -197,53 +138,7 @@ export function useAuthenticatedApi() {
           abortControllerRef.current.signal
         );
       } catch (error) {
-        // Preserve existing ApiError details for non-401 cases
         if (error instanceof ApiError) {
-          if (error.status === 401) {
-            try {
-              const {
-                data: { session },
-              } = await supabase.auth.refreshSession();
-              if (session?.access_token) {
-                const retryHeaders = new Headers(options.headers);
-                retryHeaders.set("Authorization", `Bearer ${session.access_token}`);
-
-                const endpointPath = normalizeEndpoint(endpoint);
-                const method = (options.method || "GET").toUpperCase();
-                const params = options.params as
-                  | Record<string, string | number | boolean>
-                  | undefined;
-
-                let data: unknown | FormData | undefined;
-                if (options.body instanceof FormData) {
-                  data = options.body;
-                  retryHeaders.delete("Content-Type");
-                } else if (typeof options.body === "string") {
-                  try {
-                    data = JSON.parse(options.body);
-                  } catch {
-                    data = options.body;
-                  }
-                } else if (options.body !== undefined) {
-                  data = options.body as unknown;
-                  if (!retryHeaders.has("Content-Type"))
-                    retryHeaders.set("Content-Type", "application/json");
-                }
-
-                return await dispatch<T>(
-                  method as "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
-                  endpointPath,
-                  retryHeaders,
-                  params,
-                  data,
-                  abortControllerRef.current?.signal
-                );
-              }
-              await supabase.auth.signOut();
-            } catch {
-              await supabase.auth.signOut();
-            }
-          }
           throw error;
         }
         if (error instanceof DOMException && error.name === "AbortError") {
@@ -260,7 +155,7 @@ export function useAuthenticatedApi() {
         });
       }
     },
-    [isAuthenticated, supabase, normalizeEndpoint, dispatch]
+    [normalizeEndpoint, dispatch]
   );
 
   const authenticatedApi = useMemo(
@@ -330,7 +225,6 @@ export function useAuthenticatedApi() {
   return {
     authenticatedApi,
     cancelRequests,
-    isAuthenticated,
     makeAuthenticatedRequest,
   };
 }
@@ -339,7 +233,8 @@ export function useAuthenticatedApi() {
  * Return type of the useAuthenticatedApi hook.
  *
  * This type represents the complete return value of the useAuthenticatedApi hook,
- * including both the authenticated API methods and authentication state.
+ * including the authenticated API methods, low-level request helper, and
+ * cancellation function.
  */
 export type AuthenticatedApiReturn = ReturnType<typeof useAuthenticatedApi>;
 

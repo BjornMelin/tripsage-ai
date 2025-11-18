@@ -1,7 +1,14 @@
 /** @vitest-environment node */
 
-import type { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
+
+// Mock next/headers cookies() before any imports that use it
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(() =>
+    Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))
+  ),
+}));
 
 const MOCK_SUPABASE = vi.hoisted(() => ({
   auth: {
@@ -29,7 +36,6 @@ function mockTableUpsert(ok = true) {
 
 describe("/api/user-settings", () => {
   beforeEach(() => {
-    vi.resetModules();
     vi.clearAllMocks();
     CREATE_SUPABASE.mockResolvedValue(MOCK_SUPABASE);
     MOCK_SUPABASE.auth.getUser.mockResolvedValue({
@@ -40,7 +46,11 @@ describe("/api/user-settings", () => {
 
   it("GET returns allowGatewayFallback for authenticated user", async () => {
     const { GET } = await import("../route");
-    const res = await GET();
+    const req = createMockNextRequest({
+      method: "GET",
+      url: "http://localhost/api/user-settings",
+    });
+    const res = await GET(req);
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toEqual({ allowGatewayFallback: true });
@@ -52,16 +62,22 @@ describe("/api/user-settings", () => {
       error: null,
     });
     const { GET } = await import("../route");
-    const res = await GET();
+    const req = createMockNextRequest({
+      method: "GET",
+      url: "http://localhost/api/user-settings",
+    });
+    const res = await GET(req);
     expect(res.status).toBe(401);
   });
 
   it("POST upserts consent flag", async () => {
     const { upsert } = mockTableUpsert(true);
     const { POST } = await import("../route");
-    const req = {
-      json: async () => ({ allowGatewayFallback: false }),
-    } as unknown as NextRequest;
+    const req = createMockNextRequest({
+      body: { allowGatewayFallback: false },
+      method: "POST",
+      url: "http://localhost/api/user-settings",
+    });
     const res = await POST(req);
     expect(res.status).toBe(200);
     expect(upsert).toHaveBeenCalledWith(
@@ -72,7 +88,11 @@ describe("/api/user-settings", () => {
 
   it("POST rejects malformed JSON", async () => {
     const { POST } = await import("../route");
-    const req = { json: async () => ({}) } as unknown as NextRequest;
+    const req = createMockNextRequest({
+      body: {},
+      method: "POST",
+      url: "http://localhost/api/user-settings",
+    });
     const res = await POST(req);
     expect(res.status).toBe(400);
   });

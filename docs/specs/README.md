@@ -49,6 +49,8 @@ specific features or components.
 | [SPEC-0018](0018-spec-rag-retriever-indexer.md) | RAG Retriever & Indexer (AI SDK v6) | Draft | 2025-11-04 |
 | [SPEC-0019](0019-spec-hybrid-destination-itinerary-agents.md) | Hybrid Destination & Itinerary Agents (Frontend) | Draft | 2025-11-12 |
 | [SPEC-0020](0020-spec-multi-agent-frontend-migration.md) | Multi-Agent Frontend Migration & Provider Expansion | Draft | 2025-11-12 |
+| [SPEC-0025](0025-spec-trip-collaborator-notifications-qstash.md) | Trip Collaborator Notifications via QStash | Draft | 2025-11-12 |
+| [SPEC-0026](0026-spec-supabase-memory-orchestrator.md) | Supabase Memory Orchestrator & Provider Adapters | Draft | 2025-11-18 |
 
 ## Superseded Specs
 
@@ -77,6 +79,8 @@ The following specs have been superseded by newer specifications:
 - SPEC-0017: Attachments & File Uploads Migration (Next.js)
 - SPEC-0019: Hybrid Destination & Itinerary Agents (Frontend)
 - SPEC-0020: Multi-Agent Frontend Migration & Provider Expansion
+- SPEC-0025: Trip Collaborator Notifications via QStash
+- SPEC-0026: Supabase Memory Orchestrator & Provider Adapters
 
 ### Backend
 
@@ -88,6 +92,8 @@ The following specs have been superseded by newer specifications:
 - SPEC-0011: BYOK Routes and Security (Next.js + Supabase Vault)
 - SPEC-0018: RAG Retriever & Indexer (AI SDK v6)
 - SPEC-0020: Multi-Agent Frontend Migration & Provider Expansion
+- SPEC-0025: Trip Collaborator Notifications via QStash
+- SPEC-0026: Supabase Memory Orchestrator & Provider Adapters
 
 ## Creating a New Spec
 

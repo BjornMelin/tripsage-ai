@@ -6,6 +6,7 @@ type AttachmentItem = {
   mimeType?: string;
 };
 
+import { requireUser } from "@/lib/auth/server";
 import { getClientEnvVarWithFallback } from "@/lib/env/client";
 
 async function fetchAttachments() {
@@ -19,6 +20,9 @@ async function fetchAttachments() {
 }
 
 export default async function AttachmentsPage() {
+  // Require authentication for viewing user-specific attachments metadata.
+  await requireUser({ redirectTo: "/attachments" });
+
   const data = await fetchAttachments();
   const files = data.files ?? [];
 

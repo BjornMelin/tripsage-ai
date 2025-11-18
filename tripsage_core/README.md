@@ -9,8 +9,8 @@ Shared library providing common components, services, and utilities for the Trip
 - **Configuration Management** - Centralized settings for Supabase, Upstash Redis, and external APIs
 - **Exception System** - HTTP status-integrated error handling
 - **Data Models** - Supabase-compatible models for users, trips, flights, and chat
-- **Business Services** - Core logic for authentication, flights, accommodations, and memory
-- **External API Integration** - Direct SDK integrations (Duffel, Google Maps, Weather, etc.)
+- **Business Services** - Core logic for authentication, accommodations, and memory
+- **External API Integration** - Direct SDK integrations (Google Maps, Weather, etc.)
 - **Infrastructure Services** - Database, caching, and Realtime (Supabase) management
 - **Utilities** - Common functionality for caching, logging, and error handling
 
@@ -74,20 +74,17 @@ from tripsage_core.models.api import TripCreateRequest
 Core business logic with dependency injection:
 
 ```python
-from tripsage_core.services.business import AuthService, FlightService, MemoryService
+from tripsage_core.services.business import MemoryService, TripService
 ```
 
 **Available Services:**
 
-- `AuthService` - JWT and API key authentication
-- `FlightService` - Duffel API integration for flights
 - `MemoryService` - Conversation memory and user preferences
 - `TripService` - Trip planning and coordination
 - `UserService` - User profiles and preferences
 - `DestinationService` - Location research and insights
 - `ItineraryService` - Trip optimization and scheduling
 - `APIKeyService` - BYOK encryption and validation
-- `FileProcessingService` - Document analysis
 - `UnifiedSearchService` - Multi-provider search orchestration
 
 ### External API Services (`services/external_apis/`)
@@ -96,7 +93,6 @@ Direct SDK integrations with third-party services:
 
 ```python
 from tripsage_core.services.external_apis import (
-    DuffelProvider,
     PlaywrightService
 )
 ```
@@ -107,9 +103,9 @@ from tripsage_core.services.external_apis import (
 > Location/POI tooling migrated to Next.js; no Python Google Maps service remains.
 > Time-related utilities are no longer exported from Core external_apis; use frontend or direct libs as appropriate.
 > Calendar integration implemented in `frontend/src/lib/calendar/` with Google Calendar REST API v3, ICS import/export, and AI SDK tools. See `docs/architecture/calendar-service.md` for details.
+> Flight search migrated to `frontend/src/lib/tools/flights.ts` using Duffel API.
+> Web crawling migrated to `frontend/src/lib/tools/web-crawl.ts`.
 
-- `DuffelProvider` - Flight search and booking (direct SDK)
-- `WebcrawlService` - Content extraction
 - `PlaywrightService` - Browser automation
 - `DocumentAnalyzer` - File processing
 
@@ -152,24 +148,9 @@ from tripsage_core.utils.logging_utils import get_logger
 
 ## Usage Examples
 
-### Service Usage
-
-```python
-from tripsage_core.services.business import FlightService, AuthService
-from tripsage_core.config import get_app_settings
-
-settings = get_app_settings()
-
-# Flight search
-flight_service = FlightService(settings)
-results = await flight_service.search_flights(
-    origin="LAX", destination="JFK", departure_date="2024-06-15"
-)
-
-# Authentication
-auth_service = AuthService(settings)
-user = await auth_service.authenticate_user(email="user@example.com")
-```
+> [!NOTE]
+> Flight search functionality has been migrated to `frontend/src/lib/tools/flights.ts` using Duffel API directly.  
+> Authentication is handled by the Next.js frontend via Supabase SSR routes (`/auth/*`).
 
 ### Database Operations
 
@@ -216,8 +197,6 @@ uv run pytest tests/unit/tripsage_core/ --cov=tripsage_core --cov-report=html
 ## Dependencies
 
 - **Supabase** - Database and authentication
-- **Upstash Redis** - Serverless caching
-- **Mem0** - AI memory and context
 - **pgvector** - Vector embeddings
 - **Pydantic** - Data validation
 - **HTTPX** - Async HTTP client

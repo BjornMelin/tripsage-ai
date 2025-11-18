@@ -9,9 +9,9 @@
 
 import "server-only";
 
-import { createHash } from "node:crypto";
 import { Ratelimit } from "@upstash/ratelimit";
 import type { ZodType } from "zod";
+import { hashInputForCache } from "@/lib/cache/hash";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 import { getRedis } from "@/lib/redis";
 import type { AgentWorkflow } from "@/lib/schemas/agents";
@@ -159,10 +159,7 @@ export async function runWithGuardrails<InputValue, ResultValue>(
  */
 function buildCacheKey(cache: GuardrailCacheConfig, input: unknown): string {
   if (!cache.hashInput) return cache.key;
-  const hash = createHash("sha256")
-    .update(JSON.stringify(input))
-    .digest("hex")
-    .slice(0, 16);
+  const hash = hashInputForCache(input);
   return `${cache.key}:${hash}`;
 }
 

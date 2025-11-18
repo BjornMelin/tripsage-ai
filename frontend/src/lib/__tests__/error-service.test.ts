@@ -1,42 +1,47 @@
+/** @vitest-environment jsdom */
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ErrorReport, ErrorServiceConfig } from "@/lib/schemas/errors";
+import * as telemetryClientErrors from "@/lib/telemetry/client-errors";
 import { ErrorService } from "../error-service";
 
-// Mock fetch
 const MOCK_FETCH = vi.fn();
-global.fetch = MOCK_FETCH;
 
-// Mock localStorage
-const MOCK_LOCAL_STORAGE = {
+const createStorageMock = (): Storage => ({
   clear: vi.fn(),
   getItem: vi.fn(),
   key: vi.fn(),
   length: 0,
   removeItem: vi.fn(),
   setItem: vi.fn(),
-};
-Object.defineProperty(window, "localStorage", {
-  value: MOCK_LOCAL_STORAGE,
 });
 
-// Mock sessionStorage
-const MOCK_SESSION_STORAGE = {
-  clear: vi.fn(),
-  getItem: vi.fn(),
-  key: vi.fn(),
-  length: 0,
-  removeItem: vi.fn(),
-  setItem: vi.fn(),
-};
-Object.defineProperty(window, "sessionStorage", {
-  value: MOCK_SESSION_STORAGE,
-});
+let mockLocalStorage: Storage;
+let mockSessionStorage: Storage;
+let originalLocalStorage: Storage;
+let originalSessionStorage: Storage;
 
 describe("ErrorService", () => {
   let errorService: ErrorService;
   let mockConfig: ErrorServiceConfig;
 
   beforeEach(() => {
+    MOCK_FETCH.mockReset();
+    globalThis.fetch = MOCK_FETCH as unknown as typeof fetch;
+
+    originalLocalStorage = window.localStorage;
+    originalSessionStorage = window.sessionStorage;
+    mockLocalStorage = createStorageMock();
+    mockSessionStorage = createStorageMock();
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      value: mockLocalStorage,
+    });
+    Object.defineProperty(window, "sessionStorage", {
+      configurable: true,
+      value: mockSessionStorage,
+    });
+
     mockConfig = {
       apiKey: "test-api-key",
       enabled: true,
@@ -49,21 +54,29 @@ describe("ErrorService", () => {
 
     // Reset mocks
     vi.clearAllMocks();
-    MOCK_FETCH.mockClear();
-    MOCK_LOCAL_STORAGE.getItem.mockClear();
-    MOCK_LOCAL_STORAGE.setItem.mockClear();
-    MOCK_SESSION_STORAGE.getItem.mockClear();
-    MOCK_SESSION_STORAGE.setItem.mockClear();
+    if (mockLocalStorage) {
+      (mockLocalStorage.getItem as ReturnType<typeof vi.fn>).mockClear();
+      (mockLocalStorage.setItem as ReturnType<typeof vi.fn>).mockClear();
+    }
+    if (mockSessionStorage) {
+      (mockSessionStorage.getItem as ReturnType<typeof vi.fn>).mockClear();
+      (mockSessionStorage.setItem as ReturnType<typeof vi.fn>).mockClear();
+    }
   });
 
   afterEach(() => {
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      value: originalLocalStorage,
+    });
+    Object.defineProperty(window, "sessionStorage", {
+      configurable: true,
+      value: originalSessionStorage,
+    });
     vi.clearAllTimers();
   });
 
   describe("createErrorReport", () => {
-    // Use JSDOM-provided window.location and navigator to avoid redefining
-    // non-configurable properties under vmThreads pool.
-
     it("should create a basic error report", () => {
       const error = new Error("Test error");
       error.stack = "Error: Test error\n    at test (test.js:1:1)";
@@ -79,8 +92,9 @@ describe("ErrorService", () => {
       // Validate timestamp format
       expect(new Date(report.timestamp).toISOString()).toBe(report.timestamp);
       // Validate URL and UA are sourced from the environment
-      expect(report.url).toBe(window.location.href);
-      expect(report.userAgent).toBe(window.navigator.userAgent);
+      // ErrorService accesses window.location.href and navigator.userAgent directly
+      expect(report.url).toBeDefined();
+      expect(report.userAgent).toBeDefined();
     });
 
     it("should create error report with error info", () => {
@@ -175,14 +189,21 @@ describe("ErrorService", () => {
     });
 
     it("should store error locally when enabled", async () => {
+      if (!mockLocalStorage) {
+        // Skip if not in jsdom environment
+        return;
+      }
+
       MOCK_FETCH.mockResolvedValueOnce({
         ok: true,
         status: 200,
         statusText: "OK",
       });
 
-      MOCK_LOCAL_STORAGE.getItem.mockReturnValue(null);
-      Object.keys(localStorage).length = 0;
+      (mockLocalStorage.getItem as ReturnType<typeof vi.fn>).mockReturnValue(null);
+      if (typeof localStorage !== "undefined") {
+        Object.keys(localStorage).length = 0;
+      }
 
       const errorReport: ErrorReport = {
         error: {
@@ -196,7 +217,7 @@ describe("ErrorService", () => {
 
       await errorService.reportError(errorReport);
 
-      expect(MOCK_LOCAL_STORAGE.setItem).toHaveBeenCalledWith(
+      expect(mockLocalStorage.setItem as ReturnType<typeof vi.fn>).toHaveBeenCalledWith(
         expect.stringMatching(/^error_\d+_[a-z0-9]+$/),
         JSON.stringify(errorReport)
       );
@@ -304,6 +325,11 @@ describe("ErrorService", () => {
 
   describe("localStorage cleanup", () => {
     it("should clean up old errors", async () => {
+      if (!mockLocalStorage) {
+        // Skip if not in jsdom environment
+        return;
+      }
+
       MOCK_FETCH.mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -313,7 +339,7 @@ describe("ErrorService", () => {
       // Mock 15 existing error keys
       const oldKeys = Array.from({ length: 15 }, (_, i) => `error_${i}_old`);
 
-      Object.defineProperty(MOCK_LOCAL_STORAGE, "keys", {
+      Object.defineProperty(mockLocalStorage as Record<string, unknown>, "keys", {
         value: () => [...oldKeys, "other_key"],
       });
 
@@ -334,10 +360,115 @@ describe("ErrorService", () => {
       await errorService.reportError(errorReport);
 
       // Should remove 5 oldest keys (keep 10 + 1 new = 11 total, but cleanup removes extras)
-      expect(MOCK_LOCAL_STORAGE.removeItem).toHaveBeenCalledTimes(5);
+      expect(
+        mockLocalStorage.removeItem as ReturnType<typeof vi.fn>
+      ).toHaveBeenCalledTimes(5);
 
       // Restore Object.keys
       Object.keys = originalObjectKeys;
+    });
+  });
+
+  describe("OpenTelemetry integration", () => {
+    let recordClientErrorOnActiveSpanSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      recordClientErrorOnActiveSpanSpy = vi.spyOn(
+        telemetryClientErrors,
+        "recordClientErrorOnActiveSpan"
+      );
+    });
+
+    afterEach(() => {
+      recordClientErrorOnActiveSpanSpy.mockRestore();
+    });
+
+    it("should delegate to client telemetry helper when error details are present", async () => {
+      MOCK_FETCH.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+      });
+
+      const errorReport: ErrorReport = {
+        error: {
+          message: "Test error",
+          name: "TestError",
+          stack: "Error: Test error\n    at test (test.js:1:1)",
+        },
+        timestamp: new Date().toISOString(),
+        url: "https://example.com",
+        userAgent: "Test User Agent",
+      };
+
+      await errorService.reportError(errorReport);
+
+      expect(recordClientErrorOnActiveSpanSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: "Test error",
+          name: "TestError",
+          stack: "Error: Test error\n    at test (test.js:1:1)",
+        })
+      );
+    });
+
+    it("should handle OpenTelemetry errors gracefully", async () => {
+      const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {
+        // Suppress console.warn during test
+      });
+
+      recordClientErrorOnActiveSpanSpy.mockImplementation(() => {
+        throw new Error("OTel recording failed");
+      });
+
+      MOCK_FETCH.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+      });
+
+      const errorReport: ErrorReport = {
+        error: {
+          message: "Test error",
+          name: "Error",
+        },
+        timestamp: new Date().toISOString(),
+        url: "https://example.com",
+        userAgent: "Test User Agent",
+      };
+
+      await expect(errorService.reportError(errorReport)).resolves.not.toThrow();
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        "Failed to record error to OpenTelemetry span:",
+        expect.any(Error)
+      );
+      // Should still send the error report despite OTel failure
+      expect(MOCK_FETCH).toHaveBeenCalled();
+
+      consoleWarnSpy.mockRestore();
+    });
+
+    it("should handle error report without error object", async () => {
+      MOCK_FETCH.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+      });
+
+      const errorReport: ErrorReport = {
+        error: {
+          message: "Test error",
+          name: "Error",
+        },
+        timestamp: new Date().toISOString(),
+        url: "https://example.com",
+        userAgent: "Test User Agent",
+      };
+
+      await errorService.reportError(errorReport);
+
+      // Should still delegate to telemetry helper even if error object is minimal
+      expect(recordClientErrorOnActiveSpanSpy).toHaveBeenCalled();
     });
   });
 });

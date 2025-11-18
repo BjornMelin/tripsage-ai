@@ -9,67 +9,55 @@ import "server-only";
 
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import type { z } from "zod";
 import { classifyUserMessage } from "@/lib/agents/router-agent";
-import {
-  errorResponse,
-  getTrustedRateLimitIdentifier,
-  withRequestSpan,
-} from "@/lib/next/route-helpers";
+import { withApiGuards } from "@/lib/api/factory";
+import { errorResponse, parseJsonBody } from "@/lib/next/route-helpers";
 import { resolveProvider } from "@/lib/providers/registry";
-import { enforceRouteRateLimit } from "@/lib/ratelimit/config";
-import { getRedis } from "@/lib/redis";
-import { createServerSupabase } from "@/lib/supabase/server";
+import type { RouterRequest } from "@/lib/schemas/agents";
+import { agentSchemas } from "@/lib/schemas/agents";
 
-export const dynamic = "force-dynamic";
 export const maxDuration = 30;
+
+const RequestSchema = agentSchemas.routerRequestSchema;
 
 /**
  * POST /api/agents/router
  *
  * Classifies user message into an agent workflow.
+ *
+ * @param req - Next.js request object
+ * @param routeContext - Route context from withApiGuards
+ * @returns JSON response with classification result
  */
-export async function POST(req: NextRequest): Promise<Response> {
+export const POST = withApiGuards({
+  auth: true,
+  rateLimit: "agents:router",
+  telemetry: "agent.router",
+})(async (req: NextRequest, { user }) => {
+  const parsed = await parseJsonBody(req);
+  if ("error" in parsed) {
+    return parsed.error;
+  }
+
+  let body: RouterRequest;
   try {
-    const supabase = await createServerSupabase();
-    const user = (await supabase.auth.getUser()).data.user;
-
-    const raw = (await req.json().catch(() => ({}))) as unknown;
-    const body = raw as { message?: string };
-    const message = body.message;
-    if (!message || typeof message !== "string") {
-      return errorResponse({
-        error: "invalid_request",
-        reason: "message field is required and must be a string",
-        status: 400,
-      });
-    }
-
-    const identifier = user?.id ?? getTrustedRateLimitIdentifier(req);
-    const rateLimitError = await enforceRouteRateLimit("router", identifier, getRedis);
-    if (rateLimitError) {
-      return errorResponse(rateLimitError);
-    }
-
-    const modelHint = new URL(req.url).searchParams.get("model") ?? undefined;
-    const { model, modelId } = await resolveProvider(user?.id ?? "anon", modelHint);
-
-    const classification = await withRequestSpan(
-      "agent.router",
-      {
-        identifier_type: user?.id ? "user" : "ip",
-        modelId,
-        workflow: "router",
-      },
-      () => classifyUserMessage({ model }, message)
-    );
-
-    return NextResponse.json(classification);
+    body = RequestSchema.parse(parsed.body);
   } catch (err) {
+    const zerr = err as z.ZodError;
     return errorResponse({
-      err,
-      error: "internal",
-      reason: "Internal server error",
-      status: 500,
+      err: zerr,
+      error: "invalid_request",
+      issues: zerr.issues,
+      reason: "Request validation failed",
+      status: 400,
     });
   }
-}
+
+  const modelHint = new URL(req.url).searchParams.get("model") ?? undefined;
+  const { model } = await resolveProvider(user?.id ?? "anon", modelHint);
+
+  const classification = await classifyUserMessage({ model }, body.message);
+
+  return NextResponse.json(classification);
+});

@@ -16,8 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import { useTripRealtime } from "@/hooks";
-// TODO: Implement useUpdateTrip hook or replace with proper mutation
+import { type UpdateTripData, useTripRealtime, useUpdateTrip } from "@/hooks";
 import type { Trip, UpdateTables } from "@/lib/supabase/database.types";
 
 type TripUpdate = UpdateTables<"trips">;
@@ -50,15 +49,7 @@ interface OptimisticTripUpdatesProps {
 export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  // const updateTrip = useUpdateTrip(); // TODO: Implement this hook
-  const updateTrip: {
-    mutateAsync: (data: { id: number; updates: Partial<TripUpdate> }) => Promise<void>;
-  } = {
-    mutateAsync: (_data: { id: number; updates: Partial<TripUpdate> }) => {
-      // TODO: Implement actual mutation
-      return Promise.reject(new Error("Not implemented"));
-    },
-  };
+  const updateTrip = useUpdateTrip();
   const { isConnected, errors } = useTripRealtime(tripId.toString());
 
   const [formData, setFormData] = useState<Partial<TripUpdate>>({});
@@ -148,9 +139,11 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
 
     try {
       // Perform actual update
+      const updates = { [field]: value } as UpdateTripData;
+
       await updateTrip.mutateAsync({
-        id: tripId,
-        updates: { [field]: value },
+        data: updates,
+        tripId,
       });
 
       // Mark as successful and clear snapshots

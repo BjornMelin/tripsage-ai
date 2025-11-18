@@ -9,7 +9,7 @@ import {
 } from "../error-boundary";
 
 describe("errorBoundaryPropsSchema", () => {
-  it("validates valid props", () => {
+  it.concurrent("validates valid props", () => {
     const validProps = {
       children: "test",
       fallback: () => null,
@@ -19,7 +19,7 @@ describe("errorBoundaryPropsSchema", () => {
     expect(() => errorBoundaryPropsSchema.parse(validProps)).not.toThrow();
   });
 
-  it("validates minimal props", () => {
+  it.concurrent("validates minimal props", () => {
     const minimalProps = {
       children: "test",
     };
@@ -29,7 +29,7 @@ describe("errorBoundaryPropsSchema", () => {
 });
 
 describe("errorStateSchema", () => {
-  it("validates valid error state", () => {
+  it.concurrent("validates valid error state", () => {
     const validState = {
       error: new Error("Test error"),
       errorInfo: { componentStack: "Component stack" },
@@ -39,7 +39,7 @@ describe("errorStateSchema", () => {
     expect(() => errorStateSchema.parse(validState)).not.toThrow();
   });
 
-  it("validates state with null error", () => {
+  it.concurrent("validates state with null error", () => {
     const stateWithNullError = {
       error: null,
       errorInfo: null,
@@ -49,7 +49,7 @@ describe("errorStateSchema", () => {
     expect(() => errorStateSchema.parse(stateWithNullError)).not.toThrow();
   });
 
-  it("requires hasError boolean", () => {
+  it.concurrent("requires hasError boolean", () => {
     const invalidState = {
       error: null,
       errorInfo: null,
@@ -61,7 +61,7 @@ describe("errorStateSchema", () => {
 });
 
 describe("routeErrorPropsSchema", () => {
-  it("validates valid route error props", () => {
+  it.concurrent("validates valid route error props", () => {
     const validProps = {
       error: new Error("Route error"),
       reset: () => {
@@ -72,7 +72,7 @@ describe("routeErrorPropsSchema", () => {
     expect(() => routeErrorPropsSchema.parse(validProps)).not.toThrow();
   });
 
-  it("validates error without digest", () => {
+  it.concurrent("validates error without digest", () => {
     const propsWithoutDigest = {
       error: new Error("Route error"),
       reset: () => {
@@ -83,7 +83,7 @@ describe("routeErrorPropsSchema", () => {
     expect(() => routeErrorPropsSchema.parse(propsWithoutDigest)).not.toThrow();
   });
 
-  it("requires reset function", () => {
+  it.concurrent("requires reset function", () => {
     const invalidProps = {
       error: {
         message: "Route error",
@@ -97,7 +97,7 @@ describe("routeErrorPropsSchema", () => {
 });
 
 describe("globalErrorPropsSchema", () => {
-  it("validates valid global error props", () => {
+  it.concurrent("validates valid global error props", () => {
     const validProps = {
       error: new Error("Critical error"),
       reset: () => {
@@ -110,7 +110,7 @@ describe("globalErrorPropsSchema", () => {
 });
 
 describe("loadingStateSchema", () => {
-  it("accepts minimal valid loading state", () => {
+  it.concurrent("accepts minimal valid loading state", () => {
     const validState = {
       isLoading: true,
     };
@@ -118,7 +118,7 @@ describe("loadingStateSchema", () => {
     expect(() => loadingStateSchema.parse(validState)).not.toThrow();
   });
 
-  it("honors optional fields and defaults", () => {
+  it.concurrent("honors optional fields and defaults", () => {
     const state = {
       isLoading: false,
       loadingText: "Saving",
@@ -128,7 +128,7 @@ describe("loadingStateSchema", () => {
     expect(() => loadingStateSchema.parse(state)).not.toThrow();
   });
 
-  it("requires isLoading boolean", () => {
+  it.concurrent("requires isLoading boolean", () => {
     const invalidState = {
       isLoading: 1, // should be boolean
     };
@@ -138,7 +138,7 @@ describe("loadingStateSchema", () => {
 });
 
 describe("skeletonPropsSchema", () => {
-  it("validates valid skeleton props", () => {
+  it.concurrent("validates valid skeleton props", () => {
     const validProps = {
       animation: "wave" as const,
       className: "custom-class",
@@ -150,12 +150,12 @@ describe("skeletonPropsSchema", () => {
     expect(() => skeletonPropsSchema.parse(validProps)).not.toThrow();
   });
 
-  it("validates minimal props", () => {
+  it.concurrent("validates minimal props", () => {
     const minimalProps = {};
     expect(() => skeletonPropsSchema.parse(minimalProps)).not.toThrow();
   });
 
-  it("validates allowed variants", () => {
+  it.concurrent("validates allowed variants", () => {
     const variants = ["circular", "rectangular", "text"] as const;
 
     variants.forEach((variant) => {
@@ -164,12 +164,12 @@ describe("skeletonPropsSchema", () => {
     });
   });
 
-  it("rejects invalid variant", () => {
+  it.concurrent("rejects invalid variant", () => {
     const invalidProps = { variant: "invalid" } as { variant: string };
     expect(() => skeletonPropsSchema.parse(invalidProps)).toThrow();
   });
 
-  it("accepts string and number dimensions", () => {
+  it.concurrent("accepts string and number dimensions", () => {
     const propsWithStringDimensions = { height: "50px", width: "100px" };
     const propsWithNumberDimensions = { height: 50, width: 100 };
     expect(() => skeletonPropsSchema.parse(propsWithStringDimensions)).not.toThrow();

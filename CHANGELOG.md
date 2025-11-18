@@ -7,6 +7,119 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Document Supabase memory orchestrator architecture and implementation plan (ADR-0042, SPEC-0026, database/memory prompt).
+- Add Next.js 16 trip domain API routes (`/api/trips`, `/api/trips/suggestions`, `/api/itineraries`, `/api/dashboard`) backed by Supabase SSR, Zod v4 schemas, unified `withApiGuards` auth/rate limiting, and AI SDK v6 structured trip suggestions.
+- Add `src/lib/ai/tool-factory.ts` with typed telemetry/cache/rate-limit guardrails plus coverage in `src/lib/ai/tool-factory.test.ts`, establishing a single `createAiTool` entrypoint for all tools.
+
+### Changed
+
+- **AI SDK v6 Tool Migration**: Complete refactoring of tool architecture to fully leverage AI SDK v6 capabilities. Migrated `createAiTool` factory to remove type assertions, properly integrate ToolCallOptions with user context extraction from messages, consolidate guardrails into single source of truth, eliminate double-wrapping in agent tools, and update all 18+ tool definitions to use consistent patterns. Enhanced type safety with strict TypeScript compliance, improved test coverage using AI SDK patterns, and eliminated code duplication between tool-factory and guarded-tool implementations. Added comprehensive documentation in `docs/developers/ai-sdk-v6-tools.md` for future tool development.
+- **Configuration and dependency updates**: Enabled React Compiler and Cache Components in Next.js 16; updated Zod schemas to v4 APIs (z.uuid(), z.email(), z.int()); migrated user settings to Server Actions with useActionState; consolidated Supabase client imports to @/lib/supabase; unified Next.js config files into single next.config.ts with conditional bundle analyzer; added jsdom environment declarations for tests; removed deprecated Next.js config keys and custom webpack splitChunks.
+- **Chat memory syncing (frontend)**: Rewired `frontend/src/stores/chat/chat-messages.ts` to call `useChatMemory` whenever messages are persisted, trigger `/api/memory/sync` after assistant responses, skip system/placeholder entries, and keep `currentSession` derived from store state; updated slice tests (`frontend/src/stores/__tests__/chat/chat-messages.test.ts`) accordingly.
+- **Tool guardrails unification**: Replaced bespoke wrappers with `createAiTool` for Firecrawl web search (`frontend/src/lib/tools/web-search.ts`) and accommodation agent helpers (`frontend/src/lib/agents/accommodation-agent.ts`), consolidating caching, rate limiting, and telemetry. Updated `frontend/src/lib/tools/__tests__/web-search.test.ts` plus shared test utilities (`frontend/src/test/api-test-helpers.ts`) to exercise the new factory behavior.
+
+- **Auth store security hardening (Supabase SSR-aligned)**
+  - Removed client-side persistence of access/refresh tokens from `frontend/src/stores/auth/auth-session.ts`; the slice now exposes only session view state (`session`, `sessionTimeRemaining`) with `setSession` / `resetSession`, treating Supabase SSR cookies as the sole session authority.
+  - Updated `frontend/src/stores/auth/auth-core.ts` logout to call the session slice’s `resetSession()` action instead of manually mutating token/session fields, ensuring logout consistently clears local auth-session state.
+- **Supabase-first auth flows (frontend)**
+  - Added Supabase SSR-backed login, register, and logout route handlers under `frontend/src/app/auth/{login,register,logout}/route.ts` that use `createServerSupabase()` and Zod form schemas, eliminating client-side `supabase.auth.signInWithPassword`/`signUp` calls for core flows.
+  - Rewired `frontend/src/components/auth/{login-form,register-form}.tsx` to post HTML forms to the new `/auth/*` routes and surface server-side validation/auth errors via query parameters instead of local state.
+  - Introduced a safe redirect helper in `frontend/src/app/auth/login/route.ts` to guard against protocol-relative open redirects when handling `redirectTo`/`next` parameters.
+- **Auth store reset orchestration (Wave B)**
+  - Centralized auth-core and auth-validation default view-model state in `frontend/src/stores/auth/auth-core.ts` (`authCoreInitialState`) and `frontend/src/stores/auth/auth-validation.ts` (`authValidationInitialState`) to keep tests and runtime behavior aligned.
+  - Added `frontend/src/stores/auth/reset-auth.ts` with `resetAuthState()` to reset auth-core, auth-session, and auth-validation slices in one call, including clearing persisted auth-core storage for Supabase SSR-aligned logout flows and test setup.
+  - Updated auth store tests under `frontend/src/stores/__tests__/auth/` to exercise `resetAuthState()` and assert that `logout()` invokes the session slice’s `resetSession()` action, and adjusted email verification tests to expect errors via the `registerError` field.
+- **Auth core view-model finalization (Wave C)**
+  - Simplified `frontend/src/stores/auth/auth-core.ts` to a pure view-model over the current `AuthUser` snapshot and Supabase SSR session initialization/logout, removing unused login/register and profile mutation methods and all `/api/auth/*` references from the store.
+  - Confirmed profile management is handled exclusively by `frontend/src/stores/user-store.ts`, keeping auth-core focused on authentication-derived state instead of user profile editing concerns.
+  - Updated `frontend/src/stores/__tests__/auth/auth-core.test.ts` to validate the slimmer auth-core API (initialization, logout, setUser, error handling, display name, and `resetAuthState()` orchestration) and removed tests tied to the legacy `/api/auth/*` mutation methods.
+- **Auth guards and protected routes (Wave D)**
+  - Enforced Supabase SSR authentication for all dashboard routes via `frontend/src/app/(dashboard)/layout.tsx`, which now calls `requireUser()` before rendering the client-side `DashboardLayout`.
+  - Added server layouts for `frontend/src/app/settings` and `frontend/src/app/chat` that call `requireUser()` (with `redirectTo` set to `/settings` and `/chat` respectively), ensuring settings and chat UIs are evaluated per request and gated by Supabase cookies.
+  - Guarded the attachments listing page in `frontend/src/app/attachments/page.tsx` by calling `requireUser({ redirectTo: "/attachments" })` ahead of the SSR fetch to `/api/attachments/files`.
+  - Updated AI/LLM and chat-related API routes to require authentication via `withApiGuards({ auth: true, ... })` for `/api/chat`, `/api/chat/stream`, `/api/chat/attachments`, `/api/agents/router`, and `/api/agents/itineraries`, while keeping the minimal `/api/ai/stream` demo and internal embeddings/route-matrix endpoints as explicitly non-authenticated where existing non-Supabase guards apply.
+  - Added unit tests for `frontend/src/lib/auth/server.ts` in `frontend/src/lib/auth/__tests__/server.test.ts` to verify `getOptionalUser` behavior, successful `requireUser` when a user is present, and redirect-to-login behavior when unauthenticated (matching `/login?next=/dashboard` semantics).
+- **Legacy auth cleanup and tests (Wave E)**
+  - Removed the shared Supabase access token helper `frontend/src/lib/supabase/token.ts` and inlined its behavior into `frontend/src/components/providers/realtime-auth-provider.tsx`, keeping Realtime authorization ephemeral and aligned with cookie-based session authority.
+  - Updated `frontend/src/__tests__/realtime-auth-provider.test.tsx` to rely on the Supabase browser client mock directly instead of mocking the deleted token helper.
+- **Supabase SSR auth validation and observability**
+  - Added dedicated route tests for `/auth/login`, `/auth/register`, `/auth/logout`, and `/auth/me` under `frontend/src/app/auth/**/__tests__/route.test.ts` to exercise the Supabase SSR-backed flows and `lib/auth/server.ts` helpers.
+  - Simplified `frontend/src/hooks/use-authenticated-api.ts` to use the shared `apiClient` directly without Supabase JWT or refresh-session management, relying on Supabase SSR cookie sessions and `withApiGuards` as the sole authentication mechanism for `/api/*` routes.
+- **Telemetry helpers consolidation (frontend)**: Extended `frontend/src/lib/telemetry/span.ts` with `addEventToActiveSpan`, `recordErrorOnSpan`, and `recordErrorOnActiveSpan` helpers, and updated webhook payload handling (`frontend/src/lib/webhooks/payload.ts`) and file webhook route (`frontend/src/app/api/hooks/files/route.ts`) to use these helpers instead of calling `@opentelemetry/api` directly.
+- **Client error reporting telemetry**: Added `frontend/src/lib/telemetry/client-errors.ts` and rewired `frontend/src/lib/error-service.ts` so browser error reports record exceptions on the active OpenTelemetry span via `recordClientErrorOnActiveSpan` instead of reading `trace.getActiveSpan()` inline.
+
+### Removed
+
+- **Backend AI SDK v5 Legacy Code (FINAL-ONLY Cleanup)**
+
+  - Deleted broken router imports: removed `config` and `memory` routers from `tripsage/api/routers/__init__.py` and `tripsage/api/main.py`
+  - Removed dead code paths: deleted `ConfigurationService` and `MemoryService` references from `tripsage/app_state.py`
+  - Fixed broken memory code: removed undefined variable usage in `tripsage/api/routers/trips.py::get_trip_suggestions`
+  - Removed legacy model field: deleted `chat_session_id` from `tripsage_core/models/attachments.py` (frontend handles chat sessions)
+  - Deleted superseded tests: removed `tests/unit/test_config_mocks.py` and `tests/integration/api/test_config_versions_integration.py`
+  - Cleaned legacy comments: removed historical migration context, updated to reflect current state
+  - Backend is now a data-only layer; all AI orchestration is handled by frontend AI SDK v6
+
+- **Vault Ops Hardening Verification (Technical Debt Resolution)**
+  - Created comprehensive verification documentation: `docs/operators/supabase-configuration.md` with step-by-step security verification process
+  - Implemented automated verification script: `scripts/verify_vault_hardening.py` for continuous security validation
+  - Verified all required migrations applied: vault role hardening, API key security, Gateway BYOK configuration
+  - Established operational runbook for staging/production deployment verification
+  - Resolved privilege creep prevention measures for Vault RPC operations
+
+### Refactored
+
+- **API route helpers standardization**: Extracted `parseJsonBody` and `validateSchema` helpers to `frontend/src/lib/next/route-helpers.ts` and applied across 30+ API routes, eliminating duplicate JSON parsing and Zod validation code. Standardized error responses (400 for malformed JSON, formatted Zod errors) while preserving route-specific behaviors (custom telemetry, error formats).
+- **Backend Cleanup**: Removed legacy AI code superseded by frontend AI SDK v6 migration
+
+  - Deleted `tripsage_core/services/configuration_service.py`
+  - Removed agent config endpoints and schemas
+  - Cleaned chat-related database methods
+  - Removed associated tests
+  - Backend now focuses on data persistence; AI orchestration moved to frontend
+
+- **Chat Realtime Stack Simplification (Phase 2)**: Refactored chat realtime hooks and store to be fully library-first and aligned with Option C+ architecture.
+  - Refactored `useWebSocketChat` to use `useRealtimeChannel`'s `onMessage` callback pattern instead of direct channel access, eliminating direct `supabase.channel()` calls.
+  - Removed legacy WebSocket types (`WebSocketMessageEvent`, `WebSocketAgentStatusEvent`) and replaced with Supabase Realtime payload types (`ChatMessageBroadcastPayload`, `ChatTypingBroadcastPayload`, `AgentStatusBroadcastPayload`).
+  - Refactored `chat-store.ts` to be hook-driven: removed `connectRealtime` and `disconnectRealtime` methods that directly managed Supabase channels. Store now exposes `setChatConnectionStatus`, `handleRealtimeMessage`, `handleAgentStatusUpdate`, `handleTypingUpdate`, and `resetRealtimeState` methods.
+  - Updated `useSupabaseRealtime` wrappers (`useTripRealtime`, `useChatRealtime`) to use `connectionStatus` from `useRealtimeChannel` instead of deprecated `isConnected` property.
+  - Rewrote chat realtime tests to be deterministic with proper mocking of `useRealtimeChannel`, achieving 100% branch coverage for new store methods.
+  - Eliminated all deprecated/compat/shim/TODO patterns from chat domain hooks and stores.
+- **Agent Status Realtime Rebuild (Phase 3)**: Replaced all direct `supabase.channel()` usage with `useRealtimeChannel` inside `useAgentStatusWebSocket`, wired shared exponential backoff, removed demo-only monitoring props/mocks from `app/(dashboard)/agents/page.tsx`, and added deterministic Vitest coverage for the store/hook/dashboard (100% branch coverage within the agent status scope).
+
+  - Introduced a normalized `useAgentStatusStore` with agent-id maps, connection slice, and explicit APIs (`registerAgents`, `updateAgentStatus`, `updateAgentTask`, `recordActivity`, `recordResourceUsage`, `setAgentStatusConnection`, `resetAgentStatusState`) while deleting session-era helpers.
+  - Removed the unused `use-agent-status` polling hook plus dashboard mock data, so agent dashboards now bind directly to the store + realtime hook with zero demo/test-only branches.
+  - Added focused tests: `frontend/src/stores/__tests__/agent-status-store.test.ts`, `frontend/src/hooks/__tests__/use-agent-status-websocket.test.tsx`, and `frontend/src/components/features/agent-monitoring/__tests__/agent-status-dashboard.test.tsx` covering all new branches at 100% coverage.
+
+- **Supabase Factory Unification**: Merged fragmented client/server creations into unified factory (`frontend/src/lib/supabase/factory.ts`) with OpenTelemetry tracing, Zod env validation, and `getCurrentUser` helper, eliminating 4x duplicate `auth.getUser()` calls across middleware, route handlers, and pages (-20% auth bundle size, N+1 query elimination).
+  - Unified factory with server-only directive and SSR cookie handling via `@supabase/ssr`
+  - Integrated OpenTelemetry spans for `supabase.init` and `supabase.auth.getUser` operations with attribute redaction
+  - Zod environment validation via `getServerEnv()` ensuring no config leaks
+  - Single `getCurrentUser(supabase)` helper used across middleware, server components, and route handlers
+  - Comprehensive test coverage in `frontend/src/lib/supabase/__tests__/factory.spec.ts`
+  - Updated files: `middleware.ts`, `lib/supabase/server.ts`, `lib/supabase/index.ts`, `app/(auth)/reset-password/page.tsx`
+  - Removed all legacy backward compatibility code and exports
+- **Supabase Frontend Surface Normalization**: Standardized frontend imports to use `@/lib/supabase` as the single entrypoint for Supabase clients and helpers, replacing direct `@/lib/supabase/server` imports across route handlers, auth pages, tools, and tests.
+  - Server code now imports `createServerSupabase` and `TypedServerSupabase` from `frontend/src/lib/supabase/index.ts` instead of internal modules
+  - Middleware, calendar helpers, and BYOK API handlers use `createMiddlewareSupabase`/`getCurrentUser` from the same entrypoint for consistent SSR auth wiring
+  - Tests updated to mock `@/lib/supabase` where appropriate, keeping Supabase integration details behind the barrel module
+
+### Fixed
+
+- **Accommodation booking**: `bookAccommodation` now uses the real amount and currency from check-availability input, and returns the same `bookingId` that is stored in Supabase.
+- **Upcoming flights pricing**: `UpcomingFlights` renders prices using the flight currency instead of always prefixing USD.
+- **Vitest stability**: Frontend Vitest config now clamps CI workers and adds a sharded `test:ci` script that runs the full suite in smaller batches to avoid jsdom/V8 heap pressure.
+- **Client-side OTEL export wiring**: `frontend/src/lib/telemetry/client.ts` now attaches a `BatchSpanProcessor` to `WebTracerProvider` via `addSpanProcessor` before `register()`, ensuring browser spans are exported instead of being dropped; telemetry tests updated in `frontend/src/lib/telemetry/__tests__/client.test.ts` and `frontend/src/lib/telemetry/__tests__/client-errors.test.ts`.
+- **Agent tool error codes**: Updated rate limiting error codes from `webSearchRateLimited` to `toolRateLimited` for non-search tools (POI lookup, combine search results, travel advisory, crawl, weather, geocode, distance matrix) to match semantic purpose.
+- **Agent cache configuration**: Re-enabled `hashInput: true` on all agent tool cache guardrails so Redis keys include per-request hashes, preventing stale cross-user responses.
+
+- Supabase SSR factory and server tests now stub `@supabase/ssr.createServerClient`, `getServerEnv()`, and `getClientEnv()` explicitly, so Zod environment validation and cookie adapters are tested deterministically in `frontend/src/lib/supabase/__tests__/factory.spec.ts` and `frontend/src/lib/supabase/__tests__/server.test.ts` without relying on process environment side effects.
+- Supabase Realtime hooks now provide stable runtime behaviour: `useTripRealtime` memoizes its error instance to avoid unnecessary error object churn; `useWebSocketChat` now delegates channel subscription to the shared `useRealtimeChannel` helper and uses Supabase's built-in reconnection, removing duplicated backoff logic.
+- Agent status WebSocket reconnect backoff in `frontend/src/hooks/use-agent-status-websocket.ts` now increments attempts via a state updater and derives delays from the updated value, so retry intervals grow exponentially and reset only on successful subscription instead of remaining fixed.
+- Chat store realtime lifecycle is guarded by tests: `disconnectRealtime` in `frontend/src/stores/chat-store.ts` is covered by `frontend/src/stores/__tests__/chat-store-realtime.test.ts` to ensure connection status, pending messages, channel reference, and typing state are reset consistently when the UI tears down the realtime connection.
+
 ## [1.0.0] - 2025-11-14
 
 ### [1.0.0] Added

@@ -7,6 +7,31 @@
 
 import { z } from "zod";
 
+const EPS_SALES_CHANNEL_VALUES = [
+  "website",
+  "agent_tool",
+  "mobile_app",
+  "mobile_web",
+  "meta",
+  "cache",
+] as const;
+
+const EPS_SALES_ENVIRONMENT_VALUES = [
+  "hotel_package",
+  "hotel_only",
+  "loyalty",
+] as const;
+
+const EPS_TRAVEL_PURPOSE_VALUES = ["leisure", "business"] as const;
+
+const EPS_SEARCH_INCLUDE_VALUES = [
+  "unavailable_reason",
+  "sale_scenario.mobile_promotion",
+  "rooms.rates.marketing_fee_incentives",
+  "rooms.rates.current_refundability",
+  "rooms.rates.marketing_fee_details",
+] as const;
+
 /**
  * Property source type (hotel or vacation rental).
  */
@@ -19,14 +44,27 @@ export type PropertySource = z.infer<typeof PROPERTY_SOURCE_SCHEMA>;
  */
 export const EPS_SEARCH_REQUEST_SCHEMA = z.object({
   amenities: z.array(z.string()).optional(),
+  amenityCategory: z.array(z.string()).optional(),
   checkIn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   checkOut: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  countryCode: z
+    .string()
+    .length(2)
+    .regex(/^[A-Za-z]+$/)
+    .optional(),
+  currency: z.string().min(3).max(3).optional(),
   guests: z.number().int().min(1).max(16),
+  include: z.array(z.enum(EPS_SEARCH_INCLUDE_VALUES)).optional(),
+  language: z.string().min(2).optional(),
   location: z.string().min(1),
   priceMax: z.number().nonnegative().optional(),
   priceMin: z.number().nonnegative().optional(),
-  propertyIds: z.array(z.string()).optional(),
+  propertyIds: z.array(z.string()).min(1),
   propertyTypes: z.array(z.string()).optional(),
+  ratePlanCount: z.number().int().min(1).max(250).optional(),
+  salesChannel: z.enum(EPS_SALES_CHANNEL_VALUES).optional(),
+  salesEnvironment: z.enum(EPS_SALES_ENVIRONMENT_VALUES).optional(),
+  travelPurpose: z.enum(EPS_TRAVEL_PURPOSE_VALUES).optional(),
 });
 
 export type EpsSearchRequest = z.infer<typeof EPS_SEARCH_REQUEST_SCHEMA>;
@@ -73,7 +111,7 @@ export const EPS_PROPERTY_SCHEMA = z.object({
     .array(
       z.object({
         caption: z.string().optional(),
-        url: z.string().url(),
+        url: z.url(),
       })
     )
     .optional(),
@@ -200,7 +238,7 @@ export const EPS_CREATE_BOOKING_REQUEST_SCHEMA = z.object({
   }),
   specialRequests: z.string().optional(),
   user: z.object({
-    email: z.string().email(),
+    email: z.email(),
     name: z.string().min(1),
     phone: z.string().optional(),
   }),
@@ -215,7 +253,7 @@ export const EPS_CREATE_BOOKING_RESPONSE_SCHEMA = z.object({
   checkIn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   checkOut: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   confirmationNumber: z.string(),
-  guestEmail: z.string().email(),
+  guestEmail: z.email(),
   guestName: z.string(),
   id: z.string(), // EPS booking confirmation ID
   propertyId: z.string(),

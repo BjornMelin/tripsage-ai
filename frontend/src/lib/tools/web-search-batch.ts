@@ -7,13 +7,17 @@
 
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
+import type { ToolCallOptions } from "ai";
 import { tool } from "ai";
 import { z } from "zod";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { WEB_SEARCH_BATCH_OUTPUT_SCHEMA } from "@/lib/schemas/web-search";
+import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import { normalizeWebSearchResults } from "@/lib/tools/web-search-normalize";
 import { webSearch } from "./web-search";
+
+const webSearchBatchLogger = createServerLogger("tools.web_search_batch");
 
 /**
  * Build Upstash rate limiter for batch web search tool.
@@ -76,7 +80,7 @@ export const webSearchBatchInputSchema = z.object({
 export const webSearchBatch = tool({
   description:
     "Run multiple web searches in a single call, reusing per-query cache and rate limits.",
-  execute: ({ queries, userId, ...rest }, ctx) => {
+  execute: ({ queries, userId, ...rest }, callOptions: ToolCallOptions) => {
     const started = Date.now();
 
     return withTelemetrySpan(
@@ -126,7 +130,7 @@ export const webSearchBatch = tool({
                 query: q,
                 userId,
               },
-              ctx
+              callOptions
             )) as unknown as {
               results: {
                 url: string;
@@ -228,7 +232,7 @@ export const webSearchBatch = tool({
                   q,
                 });
                 // Debug aid for tests
-                console.error("webSearchBatch fallback error for", q, msg2);
+                webSearchBatchLogger.error("fallback_error", { error: msg2, query: q });
                 results.push({ error: { code, message: msg2 }, ok: false, query: q });
               }
             } else {
@@ -238,7 +242,11 @@ export const webSearchBatch = tool({
                 q,
               });
               // Debug aid for tests
-              console.error("webSearchBatch primary error for", q, code, message);
+              webSearchBatchLogger.error("primary_error", {
+                code,
+                error: message,
+                query: q,
+              });
               results.push({ error: { code, message }, ok: false, query: q });
             }
           }

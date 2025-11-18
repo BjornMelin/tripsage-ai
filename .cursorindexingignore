@@ -1,0 +1,22 @@
+# Historical planning documents (implementation prompts)
+docs/prompts/**
+
+# Review and superseded documentation
+docs/review/**
+docs/adrs/superseded/**
+docs/specs/superseded/**
+
+# Operational documentation (useful for ops but not core codebase understanding)
+docs/operators/**
+docs/runbooks/**
+docs/cookbooks/**
+docs/ops/**
+
+# Migration documentation (historical change records)
+docs/migrations/**
+
+# End-user documentation (important for users but not codebase structure)
+docs/users/**
+
+# MCP server documentation (tooling-specific)
+docs/developers/mcp-servers/**

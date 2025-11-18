@@ -1,12 +1,36 @@
+/** @vitest-environment jsdom */
+
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { ValidatedFilterOption } from "@/stores/search-filters-store";
 import { useSearchFiltersStore } from "@/stores/search-filters-store";
-import { resetSearchFiltersStore } from "./_shared";
 
 describe("Search Filters Store - Presets", () => {
   beforeEach(() => {
-    resetSearchFiltersStore();
+    act(() => {
+      const currentState = useSearchFiltersStore.getState();
+      useSearchFiltersStore.setState({
+        activeFilters: {},
+        activePreset: null,
+        activeSortOption: null,
+        availableFilters: {
+          accommodation: currentState.availableFilters?.accommodation || [],
+          activity: currentState.availableFilters?.activity || [],
+          destination: currentState.availableFilters?.destination || [],
+          flight: currentState.availableFilters?.flight || [],
+        },
+        availableSortOptions: {
+          accommodation: currentState.availableSortOptions?.accommodation || [],
+          activity: currentState.availableSortOptions?.activity || [],
+          destination: currentState.availableSortOptions?.destination || [],
+          flight: currentState.availableSortOptions?.flight || [],
+        },
+        currentSearchType: null,
+        filterPresets: [],
+        filterValidationErrors: {},
+        isApplyingFilters: false,
+      });
+    });
   });
 
   describe("Filter Presets", () => {

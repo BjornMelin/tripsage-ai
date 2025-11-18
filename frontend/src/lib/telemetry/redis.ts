@@ -3,11 +3,9 @@
  */
 
 import "server-only";
-import { SpanStatusCode } from "@opentelemetry/api";
 import { emitOperationalAlert } from "@/lib/telemetry/alerts";
-import { getTelemetryTracer } from "@/lib/telemetry/tracer";
+import { recordErrorOnSpan, withTelemetrySpan } from "@/lib/telemetry/span";
 
-const tracer = getTelemetryTracer();
 const warnedFeatures = new Set<string>();
 
 /**
@@ -17,13 +15,17 @@ export function warnRedisUnavailable(feature: string): void {
   if (warnedFeatures.has(feature)) return;
   warnedFeatures.add(feature);
 
-  tracer.startActiveSpan("redis.unavailable", { attributes: { feature } }, (span) => {
-    span.setStatus({
-      code: SpanStatusCode.ERROR,
-      message: "Redis client not configured",
-    });
-    span.addEvent("redis_unavailable", { feature });
-    span.end();
+  withTelemetrySpan(
+    "redis.unavailable",
+    {
+      attributes: { feature },
+    },
+    (span) => {
+      span.addEvent("redis_unavailable", { feature });
+      recordErrorOnSpan(span, new Error("Redis client not configured"));
+    }
+  ).catch(() => {
+    // Telemetry spans should not block warning propagation when tracing fails
   });
 
   emitOperationalAlert("redis.unavailable", {

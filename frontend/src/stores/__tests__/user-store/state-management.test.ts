@@ -1,11 +1,25 @@
-import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
-import { type UserProfile, useUserProfileStore } from "@/stores/user-store";
-import { setupUserProfileStoreTests } from "./_shared";
+/** @vitest-environment jsdom */
 
-setupUserProfileStoreTests();
+import { act, renderHook } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { type UserProfile, useUserProfileStore } from "@/stores/user-store";
+import { setupTimeoutMock } from "@/test/store-helpers";
 
 describe("User Profile Store - State Management", () => {
+  let timeoutCleanup: (() => void) | null = null;
+
+  beforeEach(() => {
+    const timeoutMock = setupTimeoutMock();
+    timeoutCleanup = timeoutMock.mockRestore;
+    act(() => {
+      useUserProfileStore.getState().reset();
+    });
+  });
+
+  afterEach(() => {
+    timeoutCleanup?.();
+  });
+
   describe("Store Hook", () => {
     it("returns a valid store state object", () => {
       const { result } = renderHook(() => useUserProfileStore());

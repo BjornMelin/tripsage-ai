@@ -1,4 +1,6 @@
-import { act, render, screen } from "@testing-library/react";
+/** @vitest-environment jsdom */
+
+import { act, render, screen, waitFor } from "@testing-library/react";
 import type { ChatStatus, FileUIPart, UIMessage } from "ai";
 import { describe, expect, it, vi } from "vitest";
 
@@ -31,7 +33,7 @@ type UseChatReturn = {
   stop: () => void;
 };
 
-vi.mock("@/lib/supabase/client", () => {
+vi.mock("@/lib/supabase", () => {
   return {
     useSupabase: () => ({
       auth: {
@@ -81,13 +83,17 @@ describe("mid-stream resume continuity", () => {
     render(<Page />);
 
     // Invoke the mocked resume to simulate reattach
-    const ret = USE_CHAT_SPY.mock.results[0].value;
+    const ret = USE_CHAT_SPY.mock.results[0]?.value;
+    expect(ret).toBeDefined();
+
     await act(async () => {
       await ret.experimentalResume();
     });
 
     // Ensure the same number of messages are rendered
-    const rendered = await screen.findAllByTestId(/msg-/);
-    expect(rendered.length).toBe(INITIAL_MESSAGES.length);
+    await waitFor(async () => {
+      const rendered = await screen.findAllByTestId(/msg-/);
+      expect(rendered.length).toBe(INITIAL_MESSAGES.length);
+    });
   });
 });

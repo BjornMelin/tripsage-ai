@@ -1,3 +1,5 @@
+/** @vitest-environment jsdom */
+
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -18,11 +20,22 @@ Object.defineProperty(window, "matchMedia", {
 });
 
 import { useUiStore } from "@/stores/ui-store";
-import { resetUiStore } from "./_shared";
 
 describe("UI Store - Modals", () => {
   beforeEach(() => {
-    resetUiStore();
+    act(() => {
+      useUiStore.getState().reset();
+      useUiStore.setState({
+        features: {
+          enableAnalytics: true,
+          enableAnimations: true,
+          enableBetaFeatures: false,
+          enableHaptics: true,
+          enableSounds: false,
+        },
+        theme: "system",
+      });
+    });
   });
 
   describe("Modal Management", () => {

@@ -1,14 +1,38 @@
+/** @vitest-environment node */
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
+import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
+
+// Mock next/headers cookies() BEFORE any imports that use it
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(() =>
+    Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))
+  ),
+}));
 
 const MOCK_CREATE_SERVER_SUPABASE = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/supabase/server", () => ({
   createServerSupabase: MOCK_CREATE_SERVER_SUPABASE,
 }));
 
+vi.mock("@/lib/telemetry/span", () => ({
+  recordTelemetryEvent: vi.fn(),
+}));
+
+// Mock route helpers
+vi.mock("@/lib/next/route-helpers", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/next/route-helpers")>(
+    "@/lib/next/route-helpers"
+  );
+  return {
+    ...actual,
+    withRequestSpan: vi.fn((_name, _attrs, fn) => fn()),
+  };
+});
+
 describe("GET /api/keys route", () => {
   beforeEach(() => {
-    vi.resetModules();
     vi.clearAllMocks();
   });
 
@@ -31,7 +55,11 @@ describe("GET /api/keys route", () => {
       from,
     } as unknown as TypedServerSupabase);
     const { GET } = await import("../route");
-    const res = await GET();
+    const req = createMockNextRequest({
+      method: "GET",
+      url: "http://localhost/api/keys",
+    });
+    const res = await GET(req);
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body[0]).toMatchObject({ hasKey: true, isValid: true, service: "openai" });
@@ -42,7 +70,11 @@ describe("GET /api/keys route", () => {
       auth: { getUser: vi.fn(async () => ({ data: { user: null } })) },
     } as unknown as TypedServerSupabase);
     const { GET } = await import("../route");
-    const res = await GET();
+    const req = createMockNextRequest({
+      method: "GET",
+      url: "http://localhost/api/keys",
+    });
+    const res = await GET(req);
     expect(res.status).toBe(401);
   });
 });

@@ -1,5 +1,6 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+/** @vitest-environment jsdom */
+
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { UserProfile } from "@/stores/user-store";
 
@@ -93,20 +94,23 @@ describe("SecuritySection", () => {
     });
 
     it("should validate required fields", async () => {
-      const user = userEvent.setup();
       render(<SecuritySection />);
 
       const submitButton = screen.getByRole("button", { name: /update password/i });
-      await user.click(submitButton);
+      act(() => {
+        fireEvent.click(submitButton);
+      });
 
       // Should show validation errors
-      await waitFor(() => {
-        expect(screen.getByText(/current password is required/i)).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText(/current password is required/i)).toBeInTheDocument();
+        },
+        { timeout: 1000 }
+      );
     });
 
     it("should validate password strength", async () => {
-      const user = userEvent.setup();
       render(<SecuritySection />);
 
       const currentPassword = screen.getByPlaceholderText(
@@ -115,19 +119,23 @@ describe("SecuritySection", () => {
       const newPassword = screen.getByPlaceholderText(/enter your new password/i);
       const submitButton = screen.getByRole("button", { name: /update password/i });
 
-      await user.type(currentPassword, "oldpassword");
-      await user.type(newPassword, "weak");
-      await user.click(submitButton);
-
-      await waitFor(() => {
-        expect(
-          screen.getByText(/^password must be at least 8 characters$/i)
-        ).toBeInTheDocument();
+      act(() => {
+        fireEvent.change(currentPassword, { target: { value: "oldpassword" } });
+        fireEvent.change(newPassword, { target: { value: "weak" } });
+        fireEvent.click(submitButton);
       });
+
+      await waitFor(
+        () => {
+          expect(
+            screen.getByText(/^password must be at least 8 characters$/i)
+          ).toBeInTheDocument();
+        },
+        { timeout: 1000 }
+      );
     });
 
     it("should validate password confirmation", async () => {
-      const user = userEvent.setup();
       render(<SecuritySection />);
 
       const currentPassword = screen.getByPlaceholderText(
@@ -137,18 +145,24 @@ describe("SecuritySection", () => {
       const confirmPassword = screen.getByPlaceholderText(/confirm your new password/i);
       const submitButton = screen.getByRole("button", { name: /update password/i });
 
-      await user.type(currentPassword, "oldpassword");
-      await user.type(newPassword, "NewPassword123");
-      await user.type(confirmPassword, "DifferentPassword123");
-      await user.click(submitButton);
-
-      await waitFor(() => {
-        expect(screen.getByText(/passwords don't match/i)).toBeInTheDocument();
+      act(() => {
+        fireEvent.change(currentPassword, { target: { value: "oldpassword" } });
+        fireEvent.change(newPassword, { target: { value: "NewPassword123" } });
+        fireEvent.change(confirmPassword, {
+          target: { value: "DifferentPassword123" },
+        });
+        fireEvent.click(submitButton);
       });
+
+      await waitFor(
+        () => {
+          expect(screen.getByText(/passwords don't match/i)).toBeInTheDocument();
+        },
+        { timeout: 1000 }
+      );
     });
 
-    it("shows loading state on submit", async () => {
-      const user = userEvent.setup();
+    it("shows loading state on submit", () => {
       render(<SecuritySection />);
 
       const currentPassword = screen.getByPlaceholderText(
@@ -156,15 +170,17 @@ describe("SecuritySection", () => {
       );
       const newPassword = screen.getByPlaceholderText(/enter your new password/i);
       const confirmPassword = screen.getByPlaceholderText(/confirm your new password/i);
-      await user.type(currentPassword, "oldpassword");
-      await user.type(newPassword, "NewPassword123");
-      await user.type(confirmPassword, "NewPassword123");
+      act(() => {
+        fireEvent.change(currentPassword, { target: { value: "oldpassword" } });
+        fireEvent.change(newPassword, { target: { value: "NewPassword123" } });
+        fireEvent.change(confirmPassword, { target: { value: "NewPassword123" } });
+      });
 
       const submitButton = screen.getByRole("button", { name: /update password/i });
-      await user.click(submitButton);
-      await waitFor(() => {
-        expect(screen.getByText(/updating\.\.\./i)).toBeInTheDocument();
+      act(() => {
+        fireEvent.click(submitButton);
       });
+      expect(screen.getByText(/updating\.\.\./i)).toBeInTheDocument();
     });
 
     // Error path not implemented in current component; omitted.

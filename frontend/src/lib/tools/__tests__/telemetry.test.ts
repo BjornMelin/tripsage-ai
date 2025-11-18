@@ -1,6 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { getMockCookiesForTest } from "@/test/route-helpers";
 import { RATE_CREATE_PER_DAY, RATE_UPDATE_PER_MIN } from "../constants";
 import { createTravelPlan, updateTravelPlan } from "../planning";
+
+// Mock Next.js cookies() before any imports that use it
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(() =>
+    Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))
+  ),
+}));
 
 const { mockWithTelemetrySpan } = vi.hoisted(() => {
   const span = {
@@ -24,6 +32,7 @@ vi.mock("@/lib/telemetry/span", () => ({
 
 type RedisMock = {
   data: Map<string, unknown>;
+  ttl: Map<string, number>;
   get: (key: string) => Promise<unknown | null>;
   set: (key: string, value: unknown) => Promise<void>;
   expire: (key: string, seconds: number) => Promise<void>;
@@ -33,10 +42,18 @@ type RedisMock = {
 
 vi.mock("@/lib/redis", () => {
   const data = new Map<string, unknown>();
+  const ttl = new Map<string, number>();
   const store: RedisMock = {
     data,
-    del: () => Promise.resolve(1),
-    expire: () => Promise.resolve(),
+    del: (key) => {
+      const existed = data.delete(key);
+      ttl.delete(key);
+      return Promise.resolve(existed ? 1 : 0);
+    },
+    expire: (key, seconds) => {
+      ttl.set(key, seconds);
+      return Promise.resolve();
+    },
     get: (key) => Promise.resolve(data.has(key) ? data.get(key) : null),
     incr: (key) => {
       const current = (data.get(key) as number | undefined) ?? 0;
@@ -48,12 +65,14 @@ vi.mock("@/lib/redis", () => {
       data.set(key, value);
       return Promise.resolve();
     },
+    ttl,
   };
   return { getRedis: () => store };
 });
 
-vi.mock("@/lib/supabase/server", () => ({
-  createServerSupabase: async () => ({
+let currentUserId = "u1";
+const mockCreateServerSupabase = vi.hoisted(() =>
+  vi.fn(async () => ({
     auth: {
       getUser: async () => ({
         data: {
@@ -61,7 +80,7 @@ vi.mock("@/lib/supabase/server", () => ({
             app_metadata: {},
             aud: "authenticated",
             created_at: new Date(0).toISOString(),
-            id: "u1",
+            id: currentUserId,
             user_metadata: {},
           },
         },
@@ -73,7 +92,17 @@ vi.mock("@/lib/supabase/server", () => ({
         select: () => ({ single: async () => ({ data: { id: 1 } }) }),
       }),
     }),
-  }),
+  }))
+);
+
+const setUserIdForTests = vi.hoisted(() => (id: string) => {
+  currentUserId = id;
+});
+
+vi.mock("@/lib/supabase/server", () => ({
+  // biome-ignore lint/style/useNamingConvention: test-only helper
+  __setUserIdForTests: setUserIdForTests,
+  createServerSupabase: mockCreateServerSupabase,
 }));
 
 describe("planning tool telemetry", () => {
@@ -85,6 +114,12 @@ describe("planning tool telemetry", () => {
     };
     redis = mod.getRedis();
     redis.data.clear();
+    redis.ttl.clear();
+    // Reset user ID to default
+    const supabaseMod = (await import("@/lib/supabase/server")) as unknown as {
+      __setUserIdForTests: (id: string) => void;
+    };
+    supabaseMod.__setUserIdForTests("u1");
     vi.clearAllMocks();
   });
 

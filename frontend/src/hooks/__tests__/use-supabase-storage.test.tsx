@@ -1,3 +1,5 @@
+/** @vitest-environment jsdom */
+
 import { waitFor } from "@testing-library/react";
 import type { Mock } from "vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -9,7 +11,23 @@ import { render } from "@/test/test-utils";
 const SUPABASE = createMockSupabaseClient();
 const FROM_MOCK = SUPABASE.from as unknown as Mock;
 
-vi.mock("@/lib/supabase/client", () => ({
+// Mock auth.getUser to return a user
+SUPABASE.auth = {
+  ...SUPABASE.auth,
+  getUser: vi.fn().mockResolvedValue({
+    data: { user: { id: "mock-user-id" } },
+    error: null,
+  }),
+  onAuthStateChange: vi.fn().mockReturnValue({
+    data: {
+      subscription: {
+        unsubscribe: vi.fn(),
+      },
+    },
+  }),
+} as unknown as typeof SUPABASE.auth;
+
+vi.mock("@/lib/supabase", () => ({
   createClient: () => SUPABASE,
   getBrowserClient: () => SUPABASE,
   useSupabase: () => SUPABASE,
@@ -81,8 +99,11 @@ describe("useSupabaseStorage", () => {
 
     const { getByTestId } = render(<FileCount />);
 
-    await waitFor(() => {
-      expect(getByTestId("files")).toHaveTextContent("1");
-    });
-  });
+    await waitFor(
+      () => {
+        expect(getByTestId("files")).toHaveTextContent("1");
+      },
+      { timeout: 3000 }
+    );
+  }, 10000);
 });

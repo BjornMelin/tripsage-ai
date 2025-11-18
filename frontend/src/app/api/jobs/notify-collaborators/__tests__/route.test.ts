@@ -1,5 +1,8 @@
+/** @vitest-environment node */
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { NotifyJob } from "@/lib/schemas/webhooks";
+import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
 
 type ReceiverVerify = (args: {
   body: string;
@@ -13,6 +16,13 @@ type SendNotifications = (
 ) => Promise<{ emailed?: boolean; webhookPosted?: boolean }>;
 
 type RouteModule = typeof import("../route");
+
+// Mock next/headers cookies() BEFORE any imports that use it
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(() =>
+    Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))
+  ),
+}));
 
 const envStore = vi.hoisted<Record<string, string | undefined>>(() => ({
   QSTASH_CURRENT_SIGNING_KEY: "current",
@@ -54,15 +64,29 @@ vi.mock("@/lib/notifications/collaborators", () => ({
     sendNotificationsMock(payload, eventKey),
 }));
 
-function makeRequest(body: NotifyJob | Record<string, unknown>, headers?: HeadersInit) {
-  return new Request("http://localhost/api/jobs/notify-collaborators", {
-    body: JSON.stringify(body),
+// Mock route helpers
+vi.mock("@/lib/next/route-helpers", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/next/route-helpers")>(
+    "@/lib/next/route-helpers"
+  );
+  return {
+    ...actual,
+    withRequestSpan: vi.fn((_name, _attrs, fn) => fn()),
+  };
+});
+
+function makeRequest(
+  body: NotifyJob | Record<string, unknown>,
+  headers?: Record<string, string>
+) {
+  return createMockNextRequest({
+    body,
     headers: {
-      "content-type": "application/json",
       "Upstash-Signature": "sig",
       ...headers,
     },
     method: "POST",
+    url: "http://localhost/api/jobs/notify-collaborators",
   });
 }
 
@@ -79,7 +103,7 @@ const validJob: NotifyJob = {
 
 describe("POST /api/jobs/notify-collaborators", () => {
   beforeEach(() => {
-    vi.resetModules();
+    vi.clearAllMocks();
     receiverVerifyMock.mockReset();
     tryReserveKeyMock.mockReset();
     sendNotificationsMock.mockReset();

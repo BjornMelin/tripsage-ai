@@ -1,5 +1,6 @@
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+/** @vitest-environment jsdom */
+
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import {
   Source,
@@ -17,8 +18,7 @@ describe("ai-elements/sources", () => {
    * Verifies Sources popover opens and displays source links when trigger is clicked.
    * Tests the complete interaction flow from trigger click to content display.
    */
-  it("opens popover and shows sources", async () => {
-    const user = userEvent.setup();
+  it("opens popover and shows sources", () => {
     render(
       <Sources>
         <SourcesTrigger count={2} />
@@ -29,7 +29,7 @@ describe("ai-elements/sources", () => {
       </Sources>
     );
 
-    await user.click(screen.getByRole("button", { name: /sources/i }));
+    fireEvent.click(screen.getByRole("button", { name: /sources/i }));
 
     expect(screen.getByText("A")).toBeInTheDocument();
     expect(screen.getByText("B")).toBeInTheDocument();

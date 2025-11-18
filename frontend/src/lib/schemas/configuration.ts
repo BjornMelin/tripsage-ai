@@ -76,12 +76,12 @@ export type AgentConfigRequest = z.infer<typeof AGENT_CONFIG_REQUEST_SCHEMA>;
 
 /** Zod schema for complete agent configuration records. */
 export const AGENT_CONFIG_SCHEMA = z.object({
-  createdAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
   id: VERSION_ID_SCHEMA,
   model: MODEL_NAME_SCHEMA,
   parameters: AGENT_CONFIG_REQUEST_SCHEMA,
   scope: CONFIGURATION_SCOPE_ENUM,
-  updatedAt: z.string().datetime(),
+  updatedAt: z.iso.datetime(),
 });
 /** TypeScript type for agent configurations. */
 export type AgentConfig = z.infer<typeof AGENT_CONFIG_SCHEMA>;

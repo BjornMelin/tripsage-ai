@@ -55,7 +55,7 @@ const BudgetFormUiSchema = budgetFormSchema
       z.object({
         amount: z.number().positive("Amount must be positive"),
         category: expenseCategorySchema,
-        id: z.string().uuid().optional(),
+        id: z.uuid().optional(),
       })
     ),
   })

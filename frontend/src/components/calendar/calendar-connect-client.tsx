@@ -4,9 +4,11 @@
 
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { createClient } from "@/lib/supabase/client";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { useToast } from "@/components/ui/use-toast";
+import { createClient } from "@/lib/supabase";
 
 /**
  * CalendarConnectClient component.
@@ -15,14 +17,19 @@ import { createClient } from "@/lib/supabase/client";
  */
 export function CalendarConnectClient() {
   const [isConnecting, setIsConnecting] = useState(false);
-  const supabase = createClient();
+  const { toast } = useToast();
+  const supabase = useMemo(() => createClient(), []);
 
   const handleConnect = async () => {
     setIsConnecting(true);
     try {
+      const redirectUrl =
+        process.env.NEXT_PUBLIC_SITE_URL ||
+        process.env.NEXT_PUBLIC_APP_URL ||
+        window.location.origin;
       const { error } = await supabase.auth.signInWithOAuth({
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
+          redirectTo: `${redirectUrl}/auth/callback?next=/dashboard`,
           scopes: "https://www.googleapis.com/auth/calendar.events",
         },
         provider: "google",
@@ -30,13 +37,26 @@ export function CalendarConnectClient() {
 
       if (error) {
         console.error("OAuth error:", error);
-        alert(`Failed to connect: ${error.message}`);
+        toast({
+          description: error.message || "Failed to connect Google Calendar",
+          title: "Connection failed",
+          variant: "destructive",
+        });
         setIsConnecting(false);
+      } else {
+        toast({
+          description: "Please authorize calendar access in the popup window.",
+          title: "Redirecting to Google",
+        });
+        // If successful, user will be redirected to OAuth flow
       }
-      // If successful, user will be redirected to OAuth flow
     } catch (error) {
       console.error("Connection error:", error);
-      alert("Failed to connect calendar");
+      toast({
+        description: "Failed to connect calendar. Please try again.",
+        title: "Connection error",
+        variant: "destructive",
+      });
       setIsConnecting(false);
     }
   };
@@ -47,8 +67,19 @@ export function CalendarConnectClient() {
         Connect your Google Calendar to sync events, check availability, and export
         itineraries.
       </p>
-      <Button onClick={handleConnect} disabled={isConnecting}>
-        {isConnecting ? "Connecting..." : "Connect Google Calendar"}
+      <Button
+        onClick={handleConnect}
+        disabled={isConnecting}
+        className="w-full sm:w-auto"
+      >
+        {isConnecting ? (
+          <>
+            <LoadingSpinner size="sm" className="mr-2" />
+            Connecting...
+          </>
+        ) : (
+          "Connect Google Calendar"
+        )}
       </Button>
     </div>
   );

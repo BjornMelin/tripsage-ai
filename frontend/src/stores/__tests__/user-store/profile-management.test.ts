@@ -1,5 +1,7 @@
+/** @vitest-environment jsdom */
+
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type {
   PersonalInfo,
   PrivacySettings,
@@ -7,9 +9,21 @@ import type {
   UserProfile,
 } from "@/stores/user-store";
 import { useUserProfileStore } from "@/stores/user-store";
-import { resetUserProfileStore, setupUserProfileStoreTests } from "./_shared";
+import { setupTimeoutMock } from "@/test/store-helpers";
 
-setupUserProfileStoreTests();
+let timeoutCleanup: (() => void) | null = null;
+
+beforeEach(() => {
+  const timeoutMock = setupTimeoutMock();
+  timeoutCleanup = timeoutMock.mockRestore;
+  act(() => {
+    useUserProfileStore.getState().reset();
+  });
+});
+
+afterEach(() => {
+  timeoutCleanup?.();
+});
 
 describe("User Profile Store - Profile Management", () => {
   const mockProfile: UserProfile = {
@@ -52,7 +66,9 @@ describe("User Profile Store - Profile Management", () => {
   };
 
   beforeEach(() => {
-    resetUserProfileStore();
+    act(() => {
+      useUserProfileStore.getState().reset();
+    });
   });
 
   describe("Profile Management", () => {

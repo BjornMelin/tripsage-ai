@@ -4,10 +4,12 @@
  */
 import "server-only";
 
+import type { ToolCallOptions } from "ai";
 import { tool } from "ai";
 import { z } from "zod";
 import { getRedis } from "@/lib/redis";
 import { nowIso, secureUuid } from "@/lib/security/random";
+import type { Database } from "@/lib/supabase/database.types";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import {
@@ -20,8 +22,9 @@ import { type Plan, planSchema } from "./planning.schema";
 
 // Internal helpers and schemas (not exported)
 
-const UUI_DV4 = z.string().uuid();
-const ISO_DATE = z.string().regex(/^\d{4}-\d{2}-\d{2}$/u, "must be YYYY-MM-DD");
+const UUI_DV4 = z.uuid();
+// Use Zod v4 ISO date validator - validates ISO 8601 date format (YYYY-MM-DD)
+const ISO_DATE = z.iso.date({ error: "must be YYYY-MM-DD" });
 const PREFERENCES = z.record(z.string(), z.unknown()).default({});
 
 export const combineSearchResultsInputSchema = z.object({
@@ -40,8 +43,8 @@ export const createTravelPlanInputSchema = z.object({
   endDate: ISO_DATE,
   preferences: PREFERENCES.optional(),
   startDate: ISO_DATE,
-  title: z.string().min(1, "title required"),
-  travelers: z.number().int().min(1).max(50).default(1),
+  title: z.string().min(1, { error: "title required" }),
+  travelers: z.int().min(1).max(50).default(1),
   userId: z.string().min(1).optional(),
 });
 
@@ -78,28 +81,67 @@ async function recordPlanMemory(opts: {
     const { data: auth } = await supabase.auth.getUser();
     const sessionUserId = auth?.user?.id;
     if (!sessionUserId || sessionUserId !== opts.userId) return; // degrade silently
-    type LooseFrom = {
-      from: (table: string) => {
-        insert: (values: unknown) => {
-          select: (cols: string) => {
-            single: () => Promise<{ data: unknown; error: unknown }>;
-          };
-        };
-      };
-    };
-    const sb = supabase as unknown as LooseFrom;
-    await sb
-      .from("memories")
-      .insert({
-        content: opts.content,
-        // biome-ignore lint/style/useNamingConvention: database column names use snake_case
-        memory_type: "conversation_context",
-        metadata: opts.metadata ?? {},
-        // biome-ignore lint/style/useNamingConvention: database column names use snake_case
-        user_id: sessionUserId,
-      })
+
+    // Generate a session ID for standalone plan memory entries
+    const sessionId = crypto.randomUUID();
+
+    // Ensure session exists
+    const { data: sessionData, error: sessionError } = await supabase
+      .schema("memories")
+      .from("sessions")
       .select("id")
+      .eq("id", sessionId)
+      .eq("user_id", opts.userId)
       .single();
+
+    if (sessionError && sessionError.code !== "PGRST116") {
+      return; // degrade silently
+    }
+
+    // Create session if it doesn't exist
+    if (!sessionData) {
+      const { error: createError } = await supabase
+        .schema("memories")
+        .from("sessions")
+        .insert({
+          id: sessionId,
+          metadata: (opts.metadata ??
+            {}) as unknown as Database["memories"]["Tables"]["sessions"]["Insert"]["metadata"],
+          title: "Travel Plan",
+          // biome-ignore lint/style/useNamingConvention: database column uses snake_case
+          user_id: opts.userId,
+        });
+
+      if (createError) {
+        return; // degrade silently
+      }
+    }
+
+    // Insert turn
+    await supabase
+      .schema("memories")
+      .from("turns")
+      .insert({
+        attachments:
+          [] as unknown as Database["memories"]["Tables"]["turns"]["Insert"]["attachments"],
+        // Convert string content to JSONB format: { text: string }
+        content: {
+          text: opts.content,
+        } as unknown as Database["memories"]["Tables"]["turns"]["Insert"]["content"],
+        // biome-ignore lint/style/useNamingConvention: database column uses snake_case
+        pii_scrubbed: false,
+        role: "user",
+        // biome-ignore lint/style/useNamingConvention: database column uses snake_case
+        session_id: sessionId,
+        // biome-ignore lint/style/useNamingConvention: database column uses snake_case
+        tool_calls:
+          [] as unknown as Database["memories"]["Tables"]["turns"]["Insert"]["tool_calls"],
+        // biome-ignore lint/style/useNamingConvention: database column uses snake_case
+        tool_results:
+          [] as unknown as Database["memories"]["Tables"]["turns"]["Insert"]["tool_results"],
+        // biome-ignore lint/style/useNamingConvention: database column uses snake_case
+        user_id: opts.userId,
+      });
   } catch {
     // no-op; memory logging is best-effort only
   }
@@ -167,7 +209,7 @@ function toMarkdownSummary(plan: Plan): string {
 
 export const createTravelPlan = tool({
   description: "Create a new travel plan with destinations, dates, and budget.",
-  execute: async (args) => {
+  execute: async (args, _callOptions?: ToolCallOptions) => {
     return await withTelemetrySpan(
       "planning.createTravelPlan",
       {
@@ -271,7 +313,10 @@ export const createTravelPlan = tool({
 
 export const updateTravelPlan = tool({
   description: "Update fields of an existing travel plan.",
-  execute: async ({ planId, userId: _ignored, updates }) => {
+  execute: async (
+    { planId, userId: _ignored, updates },
+    _callOptions?: ToolCallOptions
+  ) => {
     return await withTelemetrySpan(
       "planning.updateTravelPlan",
       {
@@ -302,17 +347,15 @@ export const updateTravelPlan = tool({
         if ((plan as { userId?: string }).userId !== sessionUserId)
           return { error: "unauthorized", success: false } as const;
 
-        const UpdateSchema = z
-          .object({
-            budget: z.number().min(0).nullable().optional(),
-            destinations: z.array(z.string().min(1)).min(1).optional(),
-            endDate: ISO_DATE.optional(),
-            preferences: PREFERENCES.optional(),
-            startDate: ISO_DATE.optional(),
-            title: z.string().min(1).optional(),
-            travelers: z.number().int().min(1).max(50).optional(),
-          })
-          .strict();
+        const UpdateSchema = z.strictObject({
+          budget: z.number().min(0).nullable().optional(),
+          destinations: z.array(z.string().min(1)).min(1).optional(),
+          endDate: ISO_DATE.optional(),
+          preferences: PREFERENCES.optional(),
+          startDate: ISO_DATE.optional(),
+          title: z.string().min(1).optional(),
+          travelers: z.int().min(1).max(50).optional(),
+        });
         const parsed = UpdateSchema.safeParse(updates ?? {});
         if (!parsed.success) {
           return {
@@ -385,7 +428,8 @@ export const updateTravelPlan = tool({
 export const combineSearchResults = tool({
   description:
     "Combine flights, accommodations, activities, and destination info into unified recommendations.",
-  execute: (args) => {
+  execute: (args, _callOptions?: ToolCallOptions) => {
+    // Synchronous function - callOptions available but not used
     const recommendations: {
       flights: Array<Record<string, unknown>>;
       accommodations: Array<Record<string, unknown>>;
@@ -479,7 +523,10 @@ export const combineSearchResults = tool({
 
 export const saveTravelPlan = tool({
   description: "Persist a travel plan and optionally finalize it (extends TTL).",
-  execute: async ({ planId, userId: _ignored, finalize }) => {
+  execute: async (
+    { planId, userId: _ignored, finalize },
+    _callOptions?: ToolCallOptions
+  ) => {
     return await withTelemetrySpan(
       "planning.saveTravelPlan",
       {
@@ -579,7 +626,7 @@ export const saveTravelPlan = tool({
 
 export const deleteTravelPlan = tool({
   description: "Delete an existing travel plan owned by the session user.",
-  execute: async ({ planId }) => {
+  execute: async ({ planId }, _callOptions?: ToolCallOptions) => {
     return await withTelemetrySpan(
       "planning.deleteTravelPlan",
       {
