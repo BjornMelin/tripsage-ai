@@ -30,6 +30,7 @@ recordTelemetryEvent("api.keys.validation_error", {
 
 **Guidelines:**
 
+- **Logging split:** Production/server code must emit telemetry (spans/events or `createServerLogger`). Use `console.*` only in tests and client-only UI to aid local debugging; never ship console logging in backend routes, tools, or shared libs.
 - Use concise event names: `api.{module}.{action}_error`
 - Include relevant context in attributes (no secrets)
 - Use appropriate severity levels: "error", "warning", "info"
