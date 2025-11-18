@@ -26,7 +26,8 @@ describe("ErrorService", () => {
       removeItem: vi.fn(),
       setItem: vi.fn(),
     } as Storage;
-    (globalThis as unknown as { localStorage: Storage }).localStorage = mockLocalStorage;
+    (globalThis as unknown as { localStorage: Storage }).localStorage =
+      mockLocalStorage;
 
     mockSessionStorage = {
       clear: vi.fn(),
@@ -36,7 +37,8 @@ describe("ErrorService", () => {
       removeItem: vi.fn(),
       setItem: vi.fn(),
     } as Storage;
-    (globalThis as unknown as { sessionStorage: Storage }).sessionStorage = mockSessionStorage;
+    (globalThis as unknown as { sessionStorage: Storage }).sessionStorage =
+      mockSessionStorage;
 
     // Mock window.location and navigator for node environment
     // ErrorService uses window.location.href and navigator.userAgent directly

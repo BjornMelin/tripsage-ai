@@ -60,7 +60,7 @@ const createDefaultFromMock = vi.hoisted(() => {
       return {
         insert: vi.fn(() => ({
           select: vi.fn().mockResolvedValue({
-            data: [{ id: 1, created_at: "2024-01-01T00:00:00Z" }],
+            data: [{ created_at: "2024-01-01T00:00:00Z", id: 1 }],
             error: null,
           }),
         })),
@@ -259,8 +259,8 @@ describe("POST /api/jobs/memory-sync", () => {
           insert: vi.fn(() => ({
             select: vi.fn().mockResolvedValue({
               data: Array.from({ length: 50 }, (_, i) => ({
-                id: i + 1,
                 created_at: "2024-01-01T00:00:00Z",
+                id: i + 1,
               })),
               error: null,
             }),

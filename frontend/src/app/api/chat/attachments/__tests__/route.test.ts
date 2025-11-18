@@ -36,7 +36,9 @@ vi.mock("@upstash/redis", () => ({
 vi.mock("@upstash/ratelimit", () => {
   const mockSlidingWindow = vi.fn(() => ({}));
   class RatelimitMock {
-    limit = vi.fn().mockResolvedValue({ success: true, remaining: 10, reset: Date.now() + 60000 });
+    limit = vi
+      .fn()
+      .mockResolvedValue({ remaining: 10, reset: Date.now() + 60000, success: true });
     static slidingWindow = mockSlidingWindow;
   }
   return { Ratelimit: RatelimitMock };
