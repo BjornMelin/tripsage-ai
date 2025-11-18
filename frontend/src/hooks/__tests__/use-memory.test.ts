@@ -48,14 +48,15 @@ vi.mock("@tanstack/react-query", async () => {
   const actual = await vi.importActual<typeof import("@tanstack/react-query")>(
     "@tanstack/react-query"
   );
-  return Object.assign(actual, {
+  return {
+    ...actual,
     useMutation: vi.fn((...args: Parameters<typeof actual.useMutation>) =>
       actual.useMutation(...args)
     ),
     useQuery: vi.fn((...args: Parameters<typeof actual.useQuery>) =>
       actual.useQuery(...args)
     ),
-  });
+  };
 });
 
 const useQueryMock = vi.mocked(useQuery);
