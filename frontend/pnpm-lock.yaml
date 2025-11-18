@@ -19,8 +19,8 @@ importers:
         specifier: 1.0.0-beta.15
         version: 1.0.0-beta.15(zod@4.1.12)
       '@ai-sdk/openai':
-        specifier: 3.0.0-beta.60
-        version: 3.0.0-beta.60(zod@4.1.12)
+        specifier: 3.0.0-beta.61
+        version: 3.0.0-beta.61(zod@4.1.12)
       '@ai-sdk/react':
         specifier: 3.0.0-beta.99
         version: 3.0.0-beta.99(react@19.2.0)(zod@4.1.12)
@@ -364,8 +364,8 @@ packages:
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
-  '@ai-sdk/openai@3.0.0-beta.60':
-    resolution: {integrity: sha512-rJw42J/inb407sDvJYet+E135NH5Vi/Sfk1STDpmIOAU+dVzrFsjg1f5UY+czf7R7M+iEE75xk4XAeSOFM+Kzw==}
+  '@ai-sdk/openai@3.0.0-beta.61':
+    resolution: {integrity: sha512-yhm2LiclQiYd2HYwgiiaISe6ZFkemLOm9wkfVTnSO4MCnJXGn8DqBZb/dkbJ1ZmBPgk/26+ajsrcKiv/CUzMAQ==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -5754,10 +5754,10 @@ packages:
     resolution: {integrity: sha512-7dSzzRQ++CKnNI/krKnYRV7JKKPUXMEh61soaHKg9mrWEhzFWhFnxPxGl+69cD1Ou63C13NUPCnmIcrvqCuM6w==}
     engines: {node: '>=12'}
 
-  zod-to-json-schema@3.24.6:
-    resolution: {integrity: sha512-h/z3PKvcTcTetyjl1fkj79MHNEjm+HpD6NXheWjzOekY7kV+lwDYnHw+ivHkijnCSMz1yJaWBD9vu/Fcmk+vEg==}
+  zod-to-json-schema@3.25.0:
+    resolution: {integrity: sha512-HvWtU2UG41LALjajJrML6uQejQhNJx+JBO9IflpSja4R03iNWfKXrj6W2h7ljuLyc1nKS+9yDyL/9tD1U/yBnQ==}
     peerDependencies:
-      zod: ^3.24.1
+      zod: ^3.25 || ^4
 
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
@@ -5834,7 +5834,7 @@ snapshots:
       - arktype
       - effect
 
-  '@ai-sdk/openai@3.0.0-beta.60(zod@4.1.12)':
+  '@ai-sdk/openai@3.0.0-beta.61(zod@4.1.12)':
     dependencies:
       '@ai-sdk/provider': 3.0.0-beta.16
       '@ai-sdk/provider-utils': 4.0.0-beta.33(zod@4.1.12)
@@ -6573,7 +6573,7 @@ snapshots:
       p-retry: 4.6.2
       uuid: 10.0.0
       zod: 3.25.76
-      zod-to-json-schema: 3.24.6(zod@3.25.76)
+      zod-to-json-schema: 3.25.0(zod@3.25.76)
     transitivePeerDependencies:
       - '@opentelemetry/api'
       - '@opentelemetry/exporter-trace-otlp-proto'
@@ -6587,7 +6587,7 @@ snapshots:
   '@mistralai/mistralai@1.10.0':
     dependencies:
       zod: 3.25.76
-      zod-to-json-schema: 3.24.6(zod@3.25.76)
+      zod-to-json-schema: 3.25.0(zod@3.25.76)
 
   '@next/bundle-analyzer@16.0.1':
     dependencies:
@@ -11866,7 +11866,7 @@ snapshots:
       y18n: 5.0.8
       yargs-parser: 21.1.1
 
-  zod-to-json-schema@3.24.6(zod@3.25.76):
+  zod-to-json-schema@3.25.0(zod@3.25.76):
     dependencies:
       zod: 3.25.76
 
