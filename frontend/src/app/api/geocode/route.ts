@@ -28,7 +28,7 @@ export const POST = withApiGuards({
   rateLimit: "geocode",
   schema: geocodeRequestSchema,
   telemetry: "geocode.lookup",
-})(async (req: NextRequest, _context, validated: GeocodeRequest) => {
+})(async (_req: NextRequest, _context, validated: GeocodeRequest) => {
   const apiKey = getGoogleMapsServerKey();
 
   // Forward geocoding: address -> lat/lng

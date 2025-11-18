@@ -4,12 +4,12 @@
 
 import "server-only";
 import { createHash } from "node:crypto";
-import { trace } from "@opentelemetry/api";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import type { WebhookPayload } from "@/lib/schemas/webhooks";
 import { webhookPayloadSchema } from "@/lib/schemas/webhooks";
 import { verifyRequestHmac } from "@/lib/security/webhook";
 import { emitOperationalAlert } from "@/lib/telemetry/alerts";
+import { addEventToActiveSpan } from "@/lib/telemetry/span";
 
 const OLD_RECORD_KEY = "old_record" as const;
 const OCCURRED_AT_KEY = "occurred_at" as const;
@@ -48,7 +48,7 @@ function normalizeWebhookPayload(raw: RawWebhookPayload): WebhookPayload {
 }
 
 function recordVerificationFailure(reason: string): void {
-  trace.getActiveSpan()?.addEvent("webhook_verification_failed", { reason });
+  addEventToActiveSpan("webhook_verification_failed", { reason });
   emitOperationalAlert("webhook.verification_failed", {
     attributes: { reason },
   });

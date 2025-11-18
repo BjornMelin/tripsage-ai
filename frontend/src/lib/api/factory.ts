@@ -58,10 +58,10 @@ export interface RouteContext {
  * When a schema is provided in GuardsConfig, the handler receives validated
  * data as the third argument.
  */
-export type RouteHandler<TData = unknown, TParams = unknown> = (
+export type RouteHandler<Data = unknown> = (
   req: NextRequest,
   context: RouteContext,
-  data: TData,
+  data: Data,
   routeContext?: { params: Promise<Record<string, string>> }
 ) => Promise<Response> | Response;
 
@@ -166,10 +166,10 @@ async function enforceRateLimit(
  * });
  * ```
  */
-export function withApiGuards<TSchema extends z.ZodType>(
-  config: GuardsConfig<TSchema> & { schema: TSchema }
+export function withApiGuards<SchemaType extends z.ZodType>(
+  config: GuardsConfig<SchemaType> & { schema: SchemaType }
 ): (
-  handler: RouteHandler<z.infer<TSchema>>
+  handler: RouteHandler<z.infer<SchemaType>>
 ) => (
   req: NextRequest,
   routeContext?: { params: Promise<Record<string, string>> }
@@ -182,10 +182,10 @@ export function withApiGuards(
   req: NextRequest,
   routeContext?: { params: Promise<Record<string, string>> }
 ) => Promise<Response>;
-export function withApiGuards<TSchema extends z.ZodType>(
-  config: GuardsConfig<TSchema>
+export function withApiGuards<SchemaType extends z.ZodType>(
+  config: GuardsConfig<SchemaType>
 ): (
-  handler: RouteHandler<TSchema extends z.ZodType ? z.infer<TSchema> : unknown>
+  handler: RouteHandler<SchemaType extends z.ZodType ? z.infer<SchemaType> : unknown>
 ) => (
   req: NextRequest,
   routeContext?: { params: Promise<Record<string, string>> }
@@ -198,7 +198,7 @@ export function withApiGuards<TSchema extends z.ZodType>(
   }
 
   return (
-    handler: RouteHandler<TSchema extends z.ZodType ? z.infer<TSchema> : unknown>
+    handler: RouteHandler<SchemaType extends z.ZodType ? z.infer<SchemaType> : unknown>
   ) => {
     return async (
       req: NextRequest,
@@ -230,7 +230,7 @@ export function withApiGuards<TSchema extends z.ZodType>(
       }
 
       // Parse and validate request body if schema is provided
-      let validatedData: TSchema extends z.ZodType ? z.infer<TSchema> : unknown;
+      let validatedData: SchemaType extends z.ZodType ? z.infer<SchemaType> : unknown;
       if (schema) {
         const parsed = await parseJsonBody(req);
         if ("error" in parsed) {
@@ -247,12 +247,12 @@ export function withApiGuards<TSchema extends z.ZodType>(
             status: 400,
           });
         }
-        validatedData = parseResult.data as TSchema extends z.ZodType
-          ? z.infer<TSchema>
+        validatedData = parseResult.data as SchemaType extends z.ZodType
+          ? z.infer<SchemaType>
           : unknown;
       } else {
-        validatedData = undefined as TSchema extends z.ZodType
-          ? z.infer<TSchema>
+        validatedData = undefined as SchemaType extends z.ZodType
+          ? z.infer<SchemaType>
           : unknown;
       }
 

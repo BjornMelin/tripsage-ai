@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 
 import type { QueryClient } from "@tanstack/react-query";
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { apiClient } from "@/lib/api/api-client";
 import { useSearchParamsStore } from "@/stores/search-params-store";
@@ -38,7 +38,7 @@ describe("useAccommodationSearch", () => {
     queryClient.clear();
   });
 
-  it("returns default hook state and suggestions", async () => {
+  it("returns default hook state and suggestions", () => {
     queryClient.setQueryData(["accommodation-suggestions"], []);
 
     const { result } = renderHook(() => useAccommodationSearch(), { wrapper });
@@ -50,7 +50,7 @@ describe("useAccommodationSearch", () => {
     expect(result.current.searchError).toBeNull();
   });
 
-  it("fetches accommodation suggestions", async () => {
+  it("fetches accommodation suggestions", () => {
     const mockSuggestions = [
       {
         amenities: ["wifi", "spa"],
@@ -144,7 +144,12 @@ describe("useAccommodationSearch", () => {
     expect(storeState.currentSearchId).toBeTruthy();
     expect(storeState.isSearching).toBe(true);
 
-    const currentSearchId = storeState.currentSearchId!;
+    const currentSearchId = storeState.currentSearchId;
+    expect(currentSearchId).toBeTruthy();
+    if (!currentSearchId) {
+      throw new Error("Search ID should be defined after calling searchAsync");
+    }
+
     act(() => {
       useSearchResultsStore
         .getState()

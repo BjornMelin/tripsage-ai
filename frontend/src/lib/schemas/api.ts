@@ -338,7 +338,6 @@ export const updateApiKeyRequestSchema = z.object({
  * Validates service name and API key with length constraints and trimming.
  * Used for BYOK (Bring Your Own Key) provider key storage.
  */
-// biome-ignore lint/style/useNamingConvention: Schema names use PascalCase
 export const postKeyBodySchema = z.object({
   apiKey: z
     .string()

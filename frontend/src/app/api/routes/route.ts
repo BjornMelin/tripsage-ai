@@ -29,7 +29,7 @@ export const POST = withApiGuards({
   rateLimit: "routes",
   schema: computeRoutesRequestSchema,
   telemetry: "routes.compute",
-})(async (req: NextRequest, _context, validated: ComputeRoutesRequest) => {
+})(async (_req: NextRequest, _context, validated: ComputeRoutesRequest) => {
   const apiKey = getGoogleMapsServerKey();
 
   // Field mask: only fields we render

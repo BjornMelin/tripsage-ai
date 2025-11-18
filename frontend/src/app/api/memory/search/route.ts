@@ -25,7 +25,7 @@ export const POST = withApiGuards({
   rateLimit: "memory:search",
   schema: memorySearchRequestSchema,
   telemetry: "memory.search",
-})(async (req: NextRequest, { user }, validated: MemorySearchRequest) => {
+})(async (_req: NextRequest, { user }, validated: MemorySearchRequest) => {
   if (!user?.id) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }

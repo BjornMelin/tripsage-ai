@@ -25,7 +25,7 @@ export const POST = withApiGuards({
   rateLimit: "route-matrix",
   schema: routeMatrixRequestSchema,
   telemetry: "route-matrix.compute",
-})(async (req: NextRequest, _context, validated: RouteMatrixRequest) => {
+})(async (_req: NextRequest, _context, validated: RouteMatrixRequest) => {
   // Quota-aware batching: limit origins/destinations
   if (validated.origins.length > 25 || validated.destinations.length > 25) {
     return NextResponse.json(

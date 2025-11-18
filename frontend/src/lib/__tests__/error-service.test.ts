@@ -2,6 +2,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ErrorReport, ErrorServiceConfig } from "@/lib/schemas/errors";
+import * as telemetryClientErrors from "@/lib/telemetry/client-errors";
 import { ErrorService } from "../error-service";
 
 const MOCK_FETCH = vi.fn();
@@ -365,6 +366,109 @@ describe("ErrorService", () => {
 
       // Restore Object.keys
       Object.keys = originalObjectKeys;
+    });
+  });
+
+  describe("OpenTelemetry integration", () => {
+    let recordClientErrorOnActiveSpanSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      recordClientErrorOnActiveSpanSpy = vi.spyOn(
+        telemetryClientErrors,
+        "recordClientErrorOnActiveSpan"
+      );
+    });
+
+    afterEach(() => {
+      recordClientErrorOnActiveSpanSpy.mockRestore();
+    });
+
+    it("should delegate to client telemetry helper when error details are present", async () => {
+      MOCK_FETCH.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+      });
+
+      const errorReport: ErrorReport = {
+        error: {
+          message: "Test error",
+          name: "TestError",
+          stack: "Error: Test error\n    at test (test.js:1:1)",
+        },
+        timestamp: new Date().toISOString(),
+        url: "https://example.com",
+        userAgent: "Test User Agent",
+      };
+
+      await errorService.reportError(errorReport);
+
+      expect(recordClientErrorOnActiveSpanSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: "Test error",
+          name: "TestError",
+          stack: "Error: Test error\n    at test (test.js:1:1)",
+        })
+      );
+    });
+
+    it("should handle OpenTelemetry errors gracefully", async () => {
+      const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {
+        // Suppress console.warn during test
+      });
+
+      recordClientErrorOnActiveSpanSpy.mockImplementation(() => {
+        throw new Error("OTel recording failed");
+      });
+
+      MOCK_FETCH.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+      });
+
+      const errorReport: ErrorReport = {
+        error: {
+          message: "Test error",
+          name: "Error",
+        },
+        timestamp: new Date().toISOString(),
+        url: "https://example.com",
+        userAgent: "Test User Agent",
+      };
+
+      await expect(errorService.reportError(errorReport)).resolves.not.toThrow();
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        "Failed to record error to OpenTelemetry span:",
+        expect.any(Error)
+      );
+      // Should still send the error report despite OTel failure
+      expect(MOCK_FETCH).toHaveBeenCalled();
+
+      consoleWarnSpy.mockRestore();
+    });
+
+    it("should handle error report without error object", async () => {
+      MOCK_FETCH.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+      });
+
+      const errorReport: ErrorReport = {
+        error: {
+          message: "Test error",
+          name: "Error",
+        },
+        timestamp: new Date().toISOString(),
+        url: "https://example.com",
+        userAgent: "Test User Agent",
+      };
+
+      await errorService.reportError(errorReport);
+
+      // Should still delegate to telemetry helper even if error object is minimal
+      expect(recordClientErrorOnActiveSpanSpy).toHaveBeenCalled();
     });
   });
 });
