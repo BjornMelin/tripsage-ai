@@ -112,6 +112,7 @@ TripSage Core provides modular services organized by responsibility:
 - `ItineraryService`: Trip itinerary management
 - `MemoryService`: AI memory and context management via Mem0
 - `ChatService`: Chat session management
+- `FileProcessingService`: Document analysis and processing
 - `UserService`: User profiles and preferences
 - `DestinationService`, `SearchService`, `ActivityService`: Removed; handled via frontend AI SDK v6 agents
 - `FileProcessingService`: Document analysis and processing
