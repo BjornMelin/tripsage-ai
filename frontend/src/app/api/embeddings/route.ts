@@ -9,6 +9,7 @@ import { embed } from "ai";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
+import { createServerLogger } from "@/lib/logging/server";
 import { parseJsonBody } from "@/lib/next/route-helpers";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import type { InsertTables } from "@/lib/supabase/database.types";
@@ -89,6 +90,7 @@ export const POST = withApiGuards({
   rateLimit: "embeddings",
   telemetry: "embeddings.generate",
 })(async (req: NextRequest) => {
+  const logger = createServerLogger("embeddings.generate");
   const internalKey = process.env.EMBEDDINGS_API_KEY;
   if (internalKey) {
     const provided = req.headers.get("x-internal-key");
@@ -139,10 +141,10 @@ export const POST = withApiGuards({
       );
       persisted = true;
     } catch (persistError) {
-      console.error(
-        `[Embeddings] Failed to persist property ${body.property.id}:`,
-        persistError
-      );
+      logger.error("persist_failed", {
+        error: persistError instanceof Error ? persistError.message : "unknown_error",
+        propertyId: body.property.id,
+      });
     }
   }
 

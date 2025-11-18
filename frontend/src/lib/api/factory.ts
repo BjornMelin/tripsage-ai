@@ -11,10 +11,13 @@ import type { User } from "@supabase/supabase-js";
 import { Ratelimit } from "@upstash/ratelimit";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import type { z } from "zod";
+import { createServerLogger } from "@/lib/logging/server";
 import {
   checkAuthentication,
   errorResponse,
   getTrustedRateLimitIdentifier,
+  parseJsonBody,
   withRequestSpan,
 } from "@/lib/next/route-helpers";
 import { ROUTE_RATE_LIMITS, type RouteRateLimitKey } from "@/lib/ratelimit/routes";
@@ -22,16 +25,20 @@ import { getRedis } from "@/lib/redis";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { createServerSupabase } from "@/lib/supabase/server";
 
+const apiFactoryLogger = createServerLogger("api.factory");
+
 /**
  * Configuration for route handler guards.
  */
-export interface GuardsConfig {
+export interface GuardsConfig<T extends z.ZodType = z.ZodType> {
   /** Whether authentication is required. Defaults to false. */
   auth?: boolean;
   /** Rate limit key from ROUTE_RATE_LIMITS registry. */
   rateLimit?: RouteRateLimitKey;
   /** Telemetry span name for observability. */
   telemetry?: string;
+  /** Optional Zod schema for request body validation. */
+  schema?: T;
 }
 
 /**
@@ -48,10 +55,13 @@ export interface RouteContext {
  * Route handler function signature.
  *
  * Supports static routes (req only) and dynamic routes (req + route params).
+ * When a schema is provided in GuardsConfig, the handler receives validated
+ * data as the third argument.
  */
-export type RouteHandler<_T = unknown> = (
+export type RouteHandler<TData = unknown, TParams = unknown> = (
   req: NextRequest,
   context: RouteContext,
+  data: TData,
   routeContext?: { params: Promise<Record<string, string>> }
 ) => Promise<Response> | Response;
 
@@ -80,7 +90,9 @@ async function enforceRateLimit(
 ): Promise<NextResponse | null> {
   const config = getRateLimitConfig(rateLimitKey);
   if (!config) {
-    console.warn(`Rate limit config not found for key: ${String(rateLimitKey)}`);
+    apiFactoryLogger.warn("missing_rate_limit_config", {
+      key: String(rateLimitKey),
+    });
     return null; // Graceful degradation
   }
 
@@ -117,8 +129,8 @@ async function enforceRateLimit(
     }
     return null;
   } catch (error) {
-    console.error("Rate limit enforcement error", {
-      error: error instanceof Error ? error.message : "Unknown error",
+    apiFactoryLogger.error("rate_limit_enforcement_error", {
+      error: error instanceof Error ? error.message : "unknown_error",
       key: String(rateLimitKey),
     });
     return null; // Graceful degradation on error
@@ -142,23 +154,52 @@ async function enforceRateLimit(
  *   return NextResponse.json(data);
  * });
  * ```
+ *
+ * @example
+ * ```typescript
+ * export const POST = withApiGuards({
+ *   auth: true,
+ *   schema: RequestSchema,
+ * })(async (req, { user }, body) => {
+ *   // body is typed as z.infer<typeof RequestSchema>
+ *   return NextResponse.json({ success: true });
+ * });
+ * ```
  */
-export function withApiGuards<T = unknown>(
+export function withApiGuards<TSchema extends z.ZodType>(
+  config: GuardsConfig<TSchema> & { schema: TSchema }
+): (
+  handler: RouteHandler<z.infer<TSchema>>
+) => (
+  req: NextRequest,
+  routeContext?: { params: Promise<Record<string, string>> }
+) => Promise<Response>;
+export function withApiGuards(
   config: GuardsConfig
 ): (
-  handler: RouteHandler<T>
+  handler: RouteHandler<unknown>
+) => (
+  req: NextRequest,
+  routeContext?: { params: Promise<Record<string, string>> }
+) => Promise<Response>;
+export function withApiGuards<TSchema extends z.ZodType>(
+  config: GuardsConfig<TSchema>
+): (
+  handler: RouteHandler<TSchema extends z.ZodType ? z.infer<TSchema> : unknown>
 ) => (
   req: NextRequest,
   routeContext?: { params: Promise<Record<string, string>> }
 ) => Promise<Response> {
-  const { auth = false, rateLimit, telemetry } = config;
+  const { auth = false, rateLimit, telemetry, schema } = config;
 
   // Validate rate limit key exists if provided
   if (rateLimit && !ROUTE_RATE_LIMITS[rateLimit]) {
-    console.warn(`Rate limit key not found in registry: ${rateLimit}`);
+    apiFactoryLogger.warn("unknown_rate_limit_key", { rateLimit });
   }
 
-  return (handler: RouteHandler<T>) => {
+  return (
+    handler: RouteHandler<TSchema extends z.ZodType ? z.infer<TSchema> : unknown>
+  ) => {
     return async (
       req: NextRequest,
       routeContext?: { params: Promise<Record<string, string>> }
@@ -188,10 +229,37 @@ export function withApiGuards<T = unknown>(
         }
       }
 
+      // Parse and validate request body if schema is provided
+      let validatedData: TSchema extends z.ZodType ? z.infer<TSchema> : unknown;
+      if (schema) {
+        const parsed = await parseJsonBody(req);
+        if ("error" in parsed) {
+          return parsed.error;
+        }
+
+        const parseResult = schema.safeParse(parsed.body);
+        if (!parseResult.success) {
+          return errorResponse({
+            err: parseResult.error,
+            error: "invalid_request",
+            issues: parseResult.error.issues,
+            reason: "Request validation failed",
+            status: 400,
+          });
+        }
+        validatedData = parseResult.data as TSchema extends z.ZodType
+          ? z.infer<TSchema>
+          : unknown;
+      } else {
+        validatedData = undefined as TSchema extends z.ZodType
+          ? z.infer<TSchema>
+          : unknown;
+      }
+
       // Execute handler with telemetry if configured
       const executeHandler = async () => {
         try {
-          return await handler(req, { supabase, user }, routeContext);
+          return await handler(req, { supabase, user }, validatedData, routeContext);
         } catch (error) {
           return errorResponse({
             err: error,

@@ -13,12 +13,14 @@ import "server-only";
 
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
 import { RecurringDateGenerator } from "@/lib/dates/recurring-rules";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
-import { parseJsonBody, validateSchema } from "@/lib/next/route-helpers";
-import { calendarEventSchema } from "@/lib/schemas/calendar";
+import {
+  calendarEventSchema,
+  type IcsImportRequest,
+  icsImportRequestSchema,
+} from "@/lib/schemas/calendar";
 
 type ParsedIcsEvent = {
   type: "VEVENT";
@@ -178,11 +180,6 @@ function parseICS(icsData: string): Record<string, ParsedIcsEvent> {
   return events;
 }
 
-const importRequestSchema = z.object({
-  icsData: z.string().min(1, { error: "ICS data is required" }),
-  validateOnly: z.boolean().default(true),
-});
-
 /**
  * Validates ICS payloads, performs rudimentary parsing, and returns structured
  * event objects while applying rate limiting and auth guards.
@@ -194,119 +191,115 @@ const importRequestSchema = z.object({
 export const POST = withApiGuards({
   auth: true,
   rateLimit: "calendar:ics:import",
+  schema: icsImportRequestSchema,
   telemetry: "calendar.ics.import",
-})(async (req: NextRequest): Promise<NextResponse> => {
-  const parsed = await parseJsonBody(req);
-  if ("error" in parsed) {
-    return parsed.error;
-  }
-
-  const validation = validateSchema(importRequestSchema, parsed.body);
-  if ("error" in validation) {
-    return validation.error;
-  }
-  const validated = validation.data;
-
-  // Parse ICS data
-  let parsedEvents: ReturnType<typeof parseICS>;
-  try {
-    parsedEvents = parseICS(validated.icsData);
-  } catch (parseError) {
-    const message =
-      parseError instanceof Error ? parseError.message : "Failed to parse ICS";
-    return NextResponse.json(
-      { details: message, error: "Invalid ICS format" },
-      { status: 400 }
-    );
-  }
-
-  // Convert parsed events to calendar event format
-  const events: unknown[] = [];
-  for (const [_key, event] of Object.entries(parsedEvents)) {
-    if (event.type === "VEVENT") {
-      const vevent = event as {
-        summary?: string;
-        description?: string;
-        location?: string;
-        start?: Date | { toJSDate?: () => Date };
-        end?: Date | { toJSDate?: () => Date };
-        rrule?: string;
-        attendees?: Array<{ val: string; params?: Record<string, string> }>;
-        uid?: string;
-        created?: Date;
-        lastmodified?: Date;
-      };
-
-      const startDate =
-        vevent.start instanceof Date
-          ? vevent.start
-          : vevent.start &&
-              typeof vevent.start === "object" &&
-              "toJSDate" in vevent.start &&
-              typeof vevent.start.toJSDate === "function"
-            ? vevent.start.toJSDate()
-            : null;
-
-      const endDate =
-        vevent.end instanceof Date
-          ? vevent.end
-          : vevent.end &&
-              typeof vevent.end === "object" &&
-              "toJSDate" in vevent.end &&
-              typeof vevent.end.toJSDate === "function"
-            ? vevent.end.toJSDate()
-            : null;
-
-      if (!startDate || !endDate) {
-        continue; // Skip events without valid dates
-      }
-
-      const eventData = {
-        description: vevent.description,
-        end: {
-          dateTime: DateUtils.formatForApi(endDate),
-        },
-        location: vevent.location,
-        start: {
-          dateTime: DateUtils.formatForApi(startDate),
-        },
-        summary: vevent.summary || "Untitled Event",
-        ...(vevent.rrule
-          ? {
-              recurrence: [
-                RecurringDateGenerator.toRRule(
-                  RecurringDateGenerator.parseRRule(vevent.rrule)
-                ),
-              ],
-            }
-          : {}),
-        ...(vevent.attendees?.length
-          ? {
-              attendees: vevent.attendees.map((att) => ({
-                displayName: att.params?.CN?.replace(/^"(.*)"$/, "$1"), // Strip surrounding quotes
-                email: att.val,
-              })),
-            }
-          : {}),
-        ...(vevent.uid ? { iCalUID: vevent.uid } : {}),
-        ...(vevent.created ? { created: vevent.created } : {}),
-        ...(vevent.lastmodified ? { updated: vevent.lastmodified } : {}),
-      };
-
-      // Validate against schema (but don't fail on minor issues)
-      try {
-        calendarEventSchema.parse(eventData);
-      } catch {
-        // Continue even if validation fails - return raw data
-      }
-
-      events.push(eventData);
+})(
+  async (
+    req: NextRequest,
+    _context,
+    validated: IcsImportRequest
+  ): Promise<NextResponse> => {
+    // Parse ICS data
+    let parsedEvents: ReturnType<typeof parseICS>;
+    try {
+      parsedEvents = parseICS(validated.icsData);
+    } catch (parseError) {
+      const message =
+        parseError instanceof Error ? parseError.message : "Failed to parse ICS";
+      return NextResponse.json(
+        { details: message, error: "Invalid ICS format" },
+        { status: 400 }
+      );
     }
-  }
 
-  return NextResponse.json({
-    count: events.length,
-    events,
-    validateOnly: validated.validateOnly,
-  });
-});
+    // Convert parsed events to calendar event format
+    const events: unknown[] = [];
+    for (const [_key, event] of Object.entries(parsedEvents)) {
+      if (event.type === "VEVENT") {
+        const vevent = event as {
+          summary?: string;
+          description?: string;
+          location?: string;
+          start?: Date | { toJSDate?: () => Date };
+          end?: Date | { toJSDate?: () => Date };
+          rrule?: string;
+          attendees?: Array<{ val: string; params?: Record<string, string> }>;
+          uid?: string;
+          created?: Date;
+          lastmodified?: Date;
+        };
+
+        const startDate =
+          vevent.start instanceof Date
+            ? vevent.start
+            : vevent.start &&
+                typeof vevent.start === "object" &&
+                "toJSDate" in vevent.start &&
+                typeof vevent.start.toJSDate === "function"
+              ? vevent.start.toJSDate()
+              : null;
+
+        const endDate =
+          vevent.end instanceof Date
+            ? vevent.end
+            : vevent.end &&
+                typeof vevent.end === "object" &&
+                "toJSDate" in vevent.end &&
+                typeof vevent.end.toJSDate === "function"
+              ? vevent.end.toJSDate()
+              : null;
+
+        if (!startDate || !endDate) {
+          continue; // Skip events without valid dates
+        }
+
+        const eventData = {
+          description: vevent.description,
+          end: {
+            dateTime: DateUtils.formatForApi(endDate),
+          },
+          location: vevent.location,
+          start: {
+            dateTime: DateUtils.formatForApi(startDate),
+          },
+          summary: vevent.summary || "Untitled Event",
+          ...(vevent.rrule
+            ? {
+                recurrence: [
+                  RecurringDateGenerator.toRRule(
+                    RecurringDateGenerator.parseRRule(vevent.rrule)
+                  ),
+                ],
+              }
+            : {}),
+          ...(vevent.attendees?.length
+            ? {
+                attendees: vevent.attendees.map((att) => ({
+                  displayName: att.params?.CN?.replace(/^"(.*)"$/, "$1"), // Strip surrounding quotes
+                  email: att.val,
+                })),
+              }
+            : {}),
+          ...(vevent.uid ? { iCalUID: vevent.uid } : {}),
+          ...(vevent.created ? { created: vevent.created } : {}),
+          ...(vevent.lastmodified ? { updated: vevent.lastmodified } : {}),
+        };
+
+        // Validate against schema (but don't fail on minor issues)
+        try {
+          calendarEventSchema.parse(eventData);
+        } catch {
+          // Continue even if validation fails - return raw data
+        }
+
+        events.push(eventData);
+      }
+    }
+
+    return NextResponse.json({
+      count: events.length,
+      events,
+      validateOnly: validated.validateOnly,
+    });
+  }
+);

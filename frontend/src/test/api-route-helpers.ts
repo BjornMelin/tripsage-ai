@@ -41,8 +41,10 @@ vi.mock("next/headers", () => ({
   cookies: COOKIES_MOCK,
 }));
 
+const REDIS_DEFAULT_EVALSHA_RESULT = { success: true };
+
 const REDIS_MOCK = vi.hoisted(() => ({
-  evalsha: vi.fn(),
+  evalsha: vi.fn(async () => REDIS_DEFAULT_EVALSHA_RESULT),
   get: vi.fn(),
   set: vi.fn(),
 }));
@@ -138,6 +140,7 @@ export function resetApiRouteMocks(): void {
     STATE.rateLimitEnabled ? REDIS_MOCK : undefined
   );
   REDIS_MOCK.evalsha.mockReset();
+  REDIS_MOCK.evalsha.mockResolvedValue(REDIS_DEFAULT_EVALSHA_RESULT);
   REDIS_MOCK.get.mockReset();
   REDIS_MOCK.set.mockReset();
 }
@@ -177,3 +180,9 @@ export const apiRouteSupabaseMock = SUPABASE_CLIENT;
 export const apiRouteRateLimitSpy = LIMIT_SPY;
 export const apiRouteCookiesMock = COOKIES_MOCK;
 export const apiRouteCreateSupabaseMock = CREATE_SUPABASE_MOCK;
+export const apiRouteRedisMock = REDIS_MOCK;
+
+/** Override the next redis.evalsha response returned to Upstash rate limiters. */
+export function mockApiRouteRedisEvalshaOnce(result: RateLimitResult): void {
+  REDIS_MOCK.evalsha.mockResolvedValueOnce(result);
+}

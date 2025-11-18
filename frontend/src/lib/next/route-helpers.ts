@@ -5,6 +5,9 @@
 import { createHash } from "node:crypto";
 import { type NextRequest, NextResponse } from "next/server";
 import type { z } from "zod";
+import { createServerLogger } from "@/lib/logging/server";
+
+const logger = createServerLogger("route-helpers");
 
 type ValidationIssue = z.core.$ZodIssue;
 
@@ -213,7 +216,7 @@ export async function withRequestSpan<T>(
   } finally {
     const end = process.hrtime.bigint();
     const durationMs = Number(end - start) / 1e6;
-    console.debug("agent.span", {
+    logger.info("agent.span", {
       durationMs,
       name,
       ...attrs,
@@ -249,7 +252,7 @@ export function errorResponse({
 }): NextResponse {
   if (err) {
     const { context, message } = redactErrorForLogging(err);
-    console.error("agent.error", { context, error, message, reason });
+    logger.error("agent.error", { context, error, message, reason });
   }
   const body: {
     error: string;

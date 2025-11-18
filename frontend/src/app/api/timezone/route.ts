@@ -7,19 +7,12 @@
 import "server-only";
 
 import { type NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
-import { validateSchema } from "@/lib/next/route-helpers";
-
-const timezoneRequestSchema = z.object({
-  lat: z.number(),
-  lng: z.number(),
-  timestamp: z.number().optional(),
-});
+import { type TimezoneRequest, timezoneRequestSchema } from "@/lib/schemas/api";
 
 /**
- * GET /api/timezone
+ * POST /api/timezone
  *
  * Get time zone information for coordinates.
  *
@@ -27,28 +20,12 @@ const timezoneRequestSchema = z.object({
  * @param routeContext - Route context from withApiGuards
  * @returns JSON response with timezone data
  */
-export const GET = withApiGuards({
+export const POST = withApiGuards({
   auth: false,
   rateLimit: "timezone",
+  schema: timezoneRequestSchema,
   telemetry: "timezone.lookup",
-})(async (req: NextRequest) => {
-  const { searchParams } = new URL(req.url);
-  const lat = searchParams.get("lat");
-  const lng = searchParams.get("lng");
-  const timestamp = searchParams.get("timestamp");
-
-  const params = {
-    lat: lat ? Number.parseFloat(lat) : undefined,
-    lng: lng ? Number.parseFloat(lng) : undefined,
-    timestamp: timestamp ? Number.parseInt(timestamp, 10) : undefined,
-  };
-
-  const validation = validateSchema(timezoneRequestSchema, params);
-  if ("error" in validation) {
-    return validation.error;
-  }
-  const validated = validation.data;
-
+})(async (req: NextRequest, _context, validated: TimezoneRequest) => {
   const apiKey = getGoogleMapsServerKey();
 
   const url = new URL("https://maps.googleapis.com/maps/api/timezone/json");

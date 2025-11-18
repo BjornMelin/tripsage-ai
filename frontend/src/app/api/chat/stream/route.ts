@@ -13,6 +13,7 @@ import "server-only";
 import type { UIMessage } from "ai";
 import type { NextRequest } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
+import { createServerLogger } from "@/lib/logging/server";
 import { getClientIpFromHeaders, parseJsonBody } from "@/lib/next/route-helpers";
 import { resolveProvider } from "@/lib/providers/registry";
 import { handleChatStream } from "./_handler";
@@ -51,12 +52,13 @@ export const POST = withApiGuards({
   const body: IncomingBody =
     "error" in parsed ? { messages: [] } : (parsed.body as IncomingBody);
   const ip = getClientIpFromHeaders(req);
+  const logger = createServerLogger("chat.stream");
   return handleChatStream(
     {
       clock: { now: () => Date.now() },
       config: { defaultMaxTokens: 1024 },
       limit: undefined, // Rate limiting handled by factory
-      logger: { error: console.error, info: console.info },
+      logger,
       resolveProvider: (userId, modelHint) => resolveProvider(userId, modelHint),
       supabase,
     },

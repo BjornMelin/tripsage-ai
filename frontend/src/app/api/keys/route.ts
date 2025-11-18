@@ -15,15 +15,11 @@ import { NextResponse } from "next/server";
 import type { RateLimitResult } from "@/app/api/keys/_rate-limiter";
 import { buildKeySpanAttributes } from "@/app/api/keys/_telemetry";
 import { withApiGuards } from "@/lib/api/factory";
-import {
-  API_CONSTANTS,
-  parseJsonBody,
-  redactErrorForLogging,
-  validateSchema,
-} from "@/lib/next/route-helpers";
+import { API_CONSTANTS } from "@/lib/next/route-helpers";
+import { type PostKeyBody, postKeyBodySchema } from "@/lib/schemas/api";
 import { insertUserApiKey, upsertUserGatewayBaseUrl } from "@/lib/supabase/rpc";
 import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
-import { getKeys, PostKeyBodySchema, postKey } from "./_handlers";
+import { getKeys, postKey } from "./_handlers";
 
 type IdentifierType = "user" | "ip";
 
@@ -37,14 +33,17 @@ type IdentifierType = "user" | "ip";
 export const POST = withApiGuards({
   auth: true,
   rateLimit: "keys:create",
+  schema: postKeyBodySchema,
   // Custom telemetry handled below, factory telemetry disabled
-})(async (req: NextRequest, { user, supabase }) => {
+})(async (req: NextRequest, { user, supabase }, validated: PostKeyBody) => {
   const userObj = user as { id: string } | null;
   const identifierType: IdentifierType = userObj?.id ? "user" : "ip";
   // Rate limit metadata not available from factory, using undefined for custom telemetry
   const rateLimitMeta: RateLimitResult | undefined = undefined;
 
   // Check Content-Length before parsing to prevent memory exhaustion
+  // Note: This check happens after withApiGuards has already parsed the body,
+  // but we keep it for defense-in-depth and telemetry.
   const contentLength = req.headers.get("content-length");
   if (contentLength) {
     const size = Number.parseInt(contentLength, 10);
@@ -62,51 +61,6 @@ export const POST = withApiGuards({
       );
     }
   }
-
-  const parsed = await parseJsonBody(req);
-  if ("error" in parsed) {
-    // Extract error details for telemetry
-    const { message: safeMessage, context: safeContext } = redactErrorForLogging(
-      new Error("JSON parse failed"),
-      { operation: "json_parse" }
-    );
-    recordTelemetryEvent("api.keys.parse_error", {
-      attributes: {
-        message: safeMessage,
-        ...safeContext,
-      },
-      level: "error",
-    });
-    return NextResponse.json(
-      { code: "BAD_REQUEST", error: "Malformed JSON in request body" },
-      { status: 400 }
-    );
-  }
-
-  const validation = validateSchema(PostKeyBodySchema, parsed.body);
-  if ("error" in validation) {
-    // Extract first error for telemetry
-    const parseResult = PostKeyBodySchema.safeParse(parsed.body);
-    if (!parseResult.success) {
-      const firstError = parseResult.error.issues[0];
-      recordTelemetryEvent("api.keys.validation_error", {
-        attributes: {
-          field: firstError?.path.join("."),
-          message: firstError?.message,
-        },
-        level: "warning",
-      });
-      return NextResponse.json(
-        {
-          code: "BAD_REQUEST",
-          error: firstError?.message ?? "Invalid request body",
-        },
-        { status: 400 }
-      );
-    }
-    return validation.error;
-  }
-  const validated = validation.data;
 
   const instrumentedInsert = (u: string, s: string, k: string) =>
     withTelemetrySpan(

@@ -9,6 +9,7 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
+import { createServerLogger } from "@/lib/logging/server";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import type { SafetyResult } from "./travel-advisory/providers";
 import { getDefaultProvider, registerProvider } from "./travel-advisory/providers";
@@ -51,7 +52,10 @@ async function fetchSafetyScores(destination: string): Promise<SafetyResult | nu
     return null;
   } catch (error) {
     // Log error but don't throw - let caller handle fallback
-    console.error(`Error fetching travel advisory for ${destination}:`, error);
+    travelAdvisoryLogger.error("provider_fetch_failed", {
+      destination,
+      error: error instanceof Error ? error.message : "unknown_error",
+    });
     return null;
   }
 }
@@ -122,3 +126,4 @@ export const getTravelAdvisory = tool({
   },
   inputSchema: travelAdvisoryInputSchema,
 });
+const travelAdvisoryLogger = createServerLogger("tools.travel_advisory");

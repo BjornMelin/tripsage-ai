@@ -5,35 +5,12 @@
  * retrieval. The Next.js route adapters handle SSR-only concerns and pass in
  * typed dependencies.
  */
-import { z } from "zod";
+
+import type { PostKeyBody } from "@/lib/schemas/api";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 
 /** Set of allowed API service providers for key storage. */
 const ALLOWED = new Set(["openai", "openrouter", "anthropic", "xai", "gateway"]);
-
-/**
- * Zod schema for POST /api/keys request body.
- *
- * Validates service name and API key with length constraints and trimming.
- */
-// biome-ignore lint/style/useNamingConvention: Schema names use PascalCase
-export const PostKeyBodySchema = z.object({
-  apiKey: z
-    .string()
-    .min(1, { error: "API key is required" })
-    .max(2048, { error: "API key too long" })
-    .trim(),
-  // Optional base URL for per-user Gateway. Must be https when provided.
-  baseUrl: z
-    .url({ error: "Invalid URL" })
-    .startsWith("https://", { error: "baseUrl must start with https://" })
-    .optional(),
-  service: z
-    .string()
-    .min(1, { error: "Service name is required" })
-    .max(50, { error: "Service name too long" })
-    .trim(),
-});
 
 /**
  * Dependencies interface for keys handlers.
@@ -45,14 +22,9 @@ export interface KeysDeps {
 }
 
 /**
- * Type inferred from PostKeyBodySchema for validated request bodies.
- */
-export type PostKeyBody = z.infer<typeof PostKeyBodySchema>;
-
-/**
  * Insert or replace a user's provider API key.
  *
- * Expects a validated body from PostKeyBodySchema. Service normalization and
+ * Expects a validated body from postKeyBodySchema. Service normalization and
  * validation are performed here before calling the RPC.
  *
  * @param deps Collaborators with a typed Supabase client and RPC inserter.

@@ -245,6 +245,57 @@ export const DELETE_USER_MEMORIES_RESPONSE_SCHEMA = z.object({
   success: z.boolean(),
 });
 
+// API request schemas for route handlers
+/**
+ * Zod schema for POST /api/memory/search request body.
+ *
+ * Validates memory search request parameters.
+ */
+export const memorySearchRequestSchema = z.object({
+  filters: z
+    .object({
+      category: z.string().optional(),
+      dateRange: z
+        .object({
+          end: z.string().optional(),
+          start: z.string().optional(),
+        })
+        .optional(),
+      query: z.string().optional(),
+    })
+    .optional(),
+  limit: z.number().int().min(1).max(50).default(10),
+});
+
+/**
+ * Zod schema for POST /api/memory/preferences/[userId] request body.
+ *
+ * Validates memory preferences update request parameters.
+ */
+export const memoryUpdatePreferencesSchema = z.object({
+  merge_strategy: z.enum(["merge", "replace"]).default("merge"),
+  preferences: z.record(z.string(), z.unknown()),
+});
+
+/**
+ * Zod schema for POST /api/memory/conversations request body.
+ *
+ * Validates add conversation memory request parameters.
+ */
+export const memoryAddConversationSchema = z.object({
+  category: z
+    .enum([
+      "user_preference",
+      "trip_history",
+      "search_pattern",
+      "conversation_context",
+      "other",
+    ])
+    .default("conversation_context"),
+  content: z.string().min(1),
+  sessionId: z.string().optional(),
+});
+
 // Type exports
 export type Memory = z.infer<typeof MEMORY_SCHEMA>;
 export type UserPreferences = z.infer<typeof USER_PREFERENCES_SCHEMA>;
@@ -270,3 +321,8 @@ export type MemoryInsightsResponse = z.infer<typeof MEMORY_INSIGHTS_RESPONSE_SCH
 export type DeleteUserMemoriesResponse = z.infer<
   typeof DELETE_USER_MEMORIES_RESPONSE_SCHEMA
 >;
+export type MemorySearchRequest = z.infer<typeof memorySearchRequestSchema>;
+export type MemoryUpdatePreferencesRequest = z.infer<
+  typeof memoryUpdatePreferencesSchema
+>;
+export type MemoryAddConversationRequest = z.infer<typeof memoryAddConversationSchema>;

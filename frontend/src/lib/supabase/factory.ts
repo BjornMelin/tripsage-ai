@@ -17,7 +17,7 @@
 
 import "server-only";
 
-import { type Span, SpanStatusCode, trace } from "@opentelemetry/api";
+import { SpanStatusCode } from "@opentelemetry/api";
 import {
   type CookieMethodsServer,
   createServerClient as createSsrServerClient,
@@ -27,6 +27,7 @@ import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension
 import { getClientEnv } from "@/lib/env/client";
 import { getServerEnv } from "@/lib/env/server";
 import { TELEMETRY_SERVICE_NAME } from "@/lib/telemetry/constants";
+import { withTelemetrySpan, withTelemetrySpanSync } from "@/lib/telemetry/span";
 import type { Database } from "./database.types";
 
 /**
@@ -73,14 +74,6 @@ export interface GetCurrentUserResult {
 }
 
 /**
- * Creates a tracer instance for Supabase operations.
- * @internal
- */
-function getTracer() {
-  return trace.getTracer(TELEMETRY_SERVICE_NAME);
-}
-
-/**
  * Redacts sensitive user information from telemetry logs.
  * @param userId - User ID to redact
  * @returns Redacted user ID string
@@ -114,7 +107,6 @@ export function createServerSupabase(
   options: CreateServerSupabaseOptions = {}
 ): ServerSupabaseClient {
   const { enableTracing = true, spanName = "supabase.init" } = options;
-  const tracer = getTracer();
 
   // Validate environment variables using Zod schema
   const env = getServerEnv();
@@ -134,8 +126,8 @@ export function createServerSupabase(
     return createClient();
   }
 
-  // Wrap client creation in OpenTelemetry span
-  return tracer.startActiveSpan(
+  // Wrap client creation in OpenTelemetry span (synchronous operation)
+  return withTelemetrySpanSync(
     spanName,
     {
       attributes: {
@@ -145,22 +137,7 @@ export function createServerSupabase(
         "service.name": TELEMETRY_SERVICE_NAME,
       },
     },
-    (span: Span) => {
-      try {
-        const client = createClient();
-        span.setStatus({ code: SpanStatusCode.OK });
-        return client;
-      } catch (error) {
-        span.setStatus({
-          code: SpanStatusCode.ERROR,
-          message: error instanceof Error ? error.message : "Unknown error",
-        });
-        span.recordException(error as Error);
-        throw error;
-      } finally {
-        span.end();
-      }
-    }
+    () => createClient()
   );
 }
 
@@ -185,7 +162,6 @@ export function createMiddlewareSupabase(
   options: CreateServerSupabaseOptions = {}
 ): ServerSupabaseClient {
   const { enableTracing = false, spanName = "middleware.supabase.init" } = options;
-  const tracer = getTracer();
 
   // Validate only client environment variables for Edge runtime compatibility
   const env = getClientEnv();
@@ -205,8 +181,8 @@ export function createMiddlewareSupabase(
     return createClient();
   }
 
-  // Wrap client creation in OpenTelemetry span
-  return tracer.startActiveSpan(
+  // Wrap client creation in OpenTelemetry span (synchronous operation)
+  return withTelemetrySpanSync(
     spanName,
     {
       attributes: {
@@ -217,22 +193,7 @@ export function createMiddlewareSupabase(
         "service.name": TELEMETRY_SERVICE_NAME,
       },
     },
-    (span: Span) => {
-      try {
-        const client = createClient();
-        span.setStatus({ code: SpanStatusCode.OK });
-        return client;
-      } catch (error) {
-        span.setStatus({
-          code: SpanStatusCode.ERROR,
-          message: error instanceof Error ? error.message : "Unknown error",
-        });
-        span.recordException(error as Error);
-        throw error;
-      } finally {
-        span.end();
-      }
-    }
+    () => createClient()
   );
 }
 
@@ -258,7 +219,6 @@ export async function getCurrentUser(
   options: { enableTracing?: boolean; spanName?: string } = {}
 ): Promise<GetCurrentUserResult> {
   const { enableTracing = true, spanName = "supabase.auth.getUser" } = options;
-  const tracer = getTracer();
 
   const fetchUser = async (): Promise<GetCurrentUserResult> => {
     try {
@@ -284,7 +244,7 @@ export async function getCurrentUser(
     return await fetchUser();
   }
 
-  return await tracer.startActiveSpan(
+  return await withTelemetrySpan(
     spanName,
     {
       attributes: {
@@ -294,35 +254,25 @@ export async function getCurrentUser(
         "service.name": TELEMETRY_SERVICE_NAME,
       },
     },
-    async (span: Span) => {
-      try {
-        const result = await fetchUser();
+    async (span) => {
+      const result = await fetchUser();
 
-        // Redact user ID in telemetry for privacy
-        span.setAttribute("user.id", redactUserId(result.user?.id));
-        span.setAttribute("user.authenticated", !!result.user);
+      // Redact user ID in telemetry for privacy
+      span.setAttribute("user.id", redactUserId(result.user?.id));
+      span.setAttribute("user.authenticated", !!result.user);
 
-        if (result.error) {
-          span.setStatus({
-            code: SpanStatusCode.ERROR,
-            message: result.error.message,
-          });
-          span.recordException(result.error);
-        } else {
-          span.setStatus({ code: SpanStatusCode.OK });
-        }
-
-        return result;
-      } catch (error) {
+      // If there's an error, record it but don't throw (we return it in the result)
+      // Note: withTelemetrySpan will set status to OK on successful return,
+      // so we need to override it if there's an error in the result
+      if (result.error) {
+        span.recordException(result.error);
         span.setStatus({
           code: SpanStatusCode.ERROR,
-          message: error instanceof Error ? error.message : "Unknown error",
+          message: result.error.message,
         });
-        span.recordException(error as Error);
-        throw error;
-      } finally {
-        span.end();
       }
+
+      return result;
     }
   );
 }

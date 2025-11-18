@@ -66,8 +66,7 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 - **Library‑first:** Prefer maintained libraries covering ≥80 % of needs with ≤30 % custom code.
 - **KISS / DRY / YAGNI:** Keep solutions straightforward; remove duplication via small focused helpers; implement only what's needed now—no speculative APIs or feature flags (unless requested).
 - **Final‑only:** Remove superseded code/tests immediately after new behavior lands; no partial migrations.
-- **Logging/telemetry:** Minimal local logging; server code must emit OpenTelemetry (spans/events or `createServerLogger`) instead of `console.*`. Tests and client-only UI may keep `console.*` for local debugging. See `docs/developers/observability.md`.
-- **Logging/telemetry:** Server code: emit OpenTelemetry spans via `withTelemetrySpan()` or `recordTelemetryEvent()` (in `@/lib/telemetry`), never `console.*`. Tests and client UI: `console.*` OK for debugging. See `docs/developers/observability.md`.
+- **Telemetry/logging:** Server code must use helpers from `@/lib/telemetry/span` and `@/lib/logging/server`: `withTelemetrySpan()` (async), `withTelemetrySpanSync()` (sync), `recordTelemetryEvent()` (events), `createServerLogger()` (structured logs), `emitOperationalAlert()` (critical alerts). Never use `console.*` in server modules except tests, client-only UI, or `lib/telemetry/alerts.ts`. Direct `@opentelemetry/api` usage allowed only in `lib/telemetry/*` and `lib/supabase/factory.ts`. See `docs/developers/observability.md`.
 
 ### 4.2 TypeScript and frontend style
 
