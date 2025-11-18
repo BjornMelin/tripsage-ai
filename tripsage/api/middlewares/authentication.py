@@ -252,16 +252,13 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             True if authentication should be skipped, False otherwise
         """
         # Skip authentication for public endpoints
+        # Note: /api/auth/* endpoints NA - auth handled by Next.js /auth/* routes
         skip_paths = [
             "/api/docs",
             "/api/redoc",
             "/api/openapi.json",
             "/openapi.json",
             "/api/health",
-            "/api/auth/login",
-            "/api/auth/register",
-            "/api/auth/reset-password",
-            "/api/auth/token",  # OAuth2 token endpoint
         ]
 
         return any(path.startswith(skip_path) for skip_path in skip_paths)

@@ -12,19 +12,16 @@ import type { NextRequest } from "next/server";
 import type { z } from "zod";
 import { createErrorHandler } from "@/lib/agents/error-recovery";
 import { runFlightAgent } from "@/lib/agents/flight-agent";
+import { withApiGuards } from "@/lib/api/factory";
 import {
   errorResponse,
   getTrustedRateLimitIdentifier,
-  withRequestSpan,
+  parseJsonBody,
 } from "@/lib/next/route-helpers";
 import { resolveProvider } from "@/lib/providers/registry";
-import { enforceRouteRateLimit } from "@/lib/ratelimit/config";
-import { getRedis } from "@/lib/redis";
 import type { FlightSearchRequest } from "@/lib/schemas/agents";
 import { agentSchemas } from "@/lib/schemas/agents";
-import { createServerSupabase } from "@/lib/supabase/server";
 
-export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const RequestSchema = agentSchemas.flightSearchRequestSchema;
@@ -34,63 +31,36 @@ const RequestSchema = agentSchemas.flightSearchRequestSchema;
  *
  * Validates request, resolves provider, and streams ToolLoop response.
  */
-export async function POST(req: NextRequest): Promise<Response> {
+export const POST = withApiGuards({
+  auth: true,
+  rateLimit: "agents:flight",
+  telemetry: "agent.flightSearch",
+})(async (req: NextRequest, { user }) => {
+  const parsed = await parseJsonBody(req);
+  if ("error" in parsed) {
+    return parsed.error;
+  }
+
+  let body: FlightSearchRequest;
   try {
-    const supabase = await createServerSupabase();
-    const user = (await supabase.auth.getUser()).data.user;
-
-    const raw = (await req.json().catch(() => ({}))) as unknown;
-    let body: FlightSearchRequest;
-    try {
-      body = RequestSchema.parse(raw);
-    } catch (err) {
-      const zerr = err as z.ZodError;
-      return errorResponse({
-        err: zerr,
-        error: "invalid_request",
-        issues: zerr.issues,
-        reason: "Request validation failed",
-        status: 400,
-      });
-    }
-
-    const identifier = user?.id ?? getTrustedRateLimitIdentifier(req);
-
-    // Route-level rate limiting using centralized config
-    const rateLimitError = await enforceRouteRateLimit(
-      "flightSearch",
-      identifier,
-      getRedis
-    );
-    if (rateLimitError) {
-      return errorResponse(rateLimitError);
-    }
-
-    const modelHint = new URL(req.url).searchParams.get("model") ?? undefined;
-    const { model, modelId } = await resolveProvider(user?.id ?? "anon", modelHint);
-
-    return await withRequestSpan(
-      "agent.flightSearch",
-      {
-        identifier_type: user?.id ? "user" : "ip",
-        modelId,
-        workflow: "flightSearch",
-      },
-      (): Promise<Response> => {
-        const result = runFlightAgent({ identifier, model }, body);
-        return Promise.resolve(
-          result.toUIMessageStreamResponse({
-            onError: createErrorHandler(),
-          })
-        );
-      }
-    );
+    body = RequestSchema.parse(parsed.body);
   } catch (err) {
+    const zerr = err as z.ZodError;
     return errorResponse({
-      err,
-      error: "internal",
-      reason: "Internal server error",
-      status: 500,
+      err: zerr,
+      error: "invalid_request",
+      issues: zerr.issues,
+      reason: "Request validation failed",
+      status: 400,
     });
   }
-}
+
+  const identifier = user?.id ?? getTrustedRateLimitIdentifier(req);
+  const modelHint = new URL(req.url).searchParams.get("model") ?? undefined;
+  const { model, modelId } = await resolveProvider(user?.id ?? "anon", modelHint);
+
+  const result = runFlightAgent({ identifier, model, modelId }, body);
+  return result.toUIMessageStreamResponse({
+    onError: createErrorHandler(),
+  });
+});

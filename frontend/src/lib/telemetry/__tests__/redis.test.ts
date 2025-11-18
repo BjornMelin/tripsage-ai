@@ -33,11 +33,13 @@ describe("warnRedisUnavailable", () => {
       const callback = args.at(-1) as (span: {
         addEvent: (name: string, attrs: Record<string, string>) => void;
         end: () => void;
+        recordException: (error: Error) => void;
         setStatus: (status: Record<string, unknown>) => void;
-      }) => void;
-      callback({
+      }) => unknown;
+      return callback({
         addEvent: vi.fn(),
         end: vi.fn(),
+        recordException: vi.fn(),
         setStatus: vi.fn(),
       });
     });

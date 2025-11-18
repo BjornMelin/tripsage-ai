@@ -1,23 +1,36 @@
+/** @vitest-environment jsdom */
+
 import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AgentStatusState } from "@/stores/agent-status-store";
 import { useAgentStatusStore } from "@/stores/agent-status-store";
-import { useChatStore } from "@/stores/chat-store";
+import { useChatMessages, useSessions } from "@/stores/chat/chat-messages";
+import { useChatRealtime } from "@/stores/chat/chat-realtime";
 import {
   createMockAgentStatusState,
-  createMockChatState,
+  createMockChatMessagesState,
+  createMockChatRealtimeState,
 } from "@/test/factories/stores";
 import { render } from "@/test/test-utils";
 import { AgentStatusPanel, ChatLayout, ChatSidebar } from "../chat-layout";
 
 // Store mocks (partial to preserve non-mocked exports)
-vi.mock("@/stores/chat-store", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/stores/chat-store")>();
+vi.mock("@/stores/chat/chat-messages", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/stores/chat/chat-messages")>();
   return {
     ...actual,
-    useChatStore: vi.fn(),
+    useChatMessages: vi.fn(),
+    useSessions: vi.fn(),
   };
 });
+vi.mock("@/stores/chat/chat-realtime", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/stores/chat/chat-realtime")>();
+  return {
+    ...actual,
+    useChatRealtime: vi.fn(),
+  };
+});
+// chat-memory store removed - memory sync handled server-side
 vi.mock("@/stores/agent-status-store", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/stores/agent-status-store")>();
   return {
@@ -31,7 +44,9 @@ vi.mock("next/navigation", () => ({
   usePathname: vi.fn(() => "/chat"),
 }));
 
-const MOCK_USE_CHAT_STORE = vi.mocked(useChatStore);
+const MOCK_USE_CHAT_MESSAGES = vi.mocked(useChatMessages);
+const MOCK_USE_SESSIONS = vi.mocked(useSessions);
+const MOCK_USE_CHAT_REALTIME = vi.mocked(useChatRealtime);
 const MOCK_USE_AGENT_STATUS_STORE = vi.mocked(useAgentStatusStore);
 
 afterEach(() => {
@@ -41,7 +56,9 @@ afterEach(() => {
 
 describe("ChatLayout", () => {
   beforeEach(() => {
-    MOCK_USE_CHAT_STORE.mockReturnValue(createMockChatState());
+    MOCK_USE_CHAT_MESSAGES.mockReturnValue(createMockChatMessagesState());
+    MOCK_USE_SESSIONS.mockReturnValue([]);
+    MOCK_USE_CHAT_REALTIME.mockReturnValue(createMockChatRealtimeState());
     MOCK_USE_AGENT_STATUS_STORE.mockReturnValue(createMockAgentStatusState());
   });
 
@@ -119,6 +136,13 @@ describe("ChatLayout", () => {
 
 describe("ChatSidebar", () => {
   beforeEach(() => {
+    MOCK_USE_CHAT_MESSAGES.mockReturnValue(
+      createMockChatMessagesState({
+        createSession: vi.fn(() => "new-session-id"),
+        setCurrentSession: vi.fn(),
+      })
+    );
+    MOCK_USE_SESSIONS.mockReturnValue([]);
     MOCK_USE_AGENT_STATUS_STORE.mockReturnValue(createMockAgentStatusState());
   });
 

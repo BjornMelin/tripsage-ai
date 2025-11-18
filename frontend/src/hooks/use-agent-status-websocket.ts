@@ -1,388 +1,329 @@
 /**
- * @fileoverview React hook that connects to the agent status Supabase channel and
- * synchronizes realtime events with the agent status store.
- *
- * This hook manages WebSocket connections to Supabase realtime channels for
- * monitoring agent status updates, task progress, and resource usage in real-time.
+ * @fileoverview Hook that wires Supabase realtime agent status events into the agent
+ * status store via the shared `useRealtimeChannel` helper. All direct channel
+ * management has been deleted per FINAL-ONLY policy.
  */
 
 "use client";
 
-import type { RealtimeChannel } from "@supabase/supabase-js";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type {
-  AgentStatusType,
-  AgentTask,
-  ResourceUsage,
-} from "@/lib/schemas/agent-status";
-import { getBrowserClient } from "@/lib/supabase/client";
-import { useAuthStore } from "@/stores";
-import { useAgentStatusStore } from "@/stores/agent-status-store";
+import { useCallback, useEffect, useRef } from "react";
+import type { BackoffConfig } from "@/lib/realtime/backoff";
+import type { AgentStatusType, AgentTask } from "@/lib/schemas/agent-status";
+import { type AgentTaskUpdate, useAgentStatusStore } from "@/stores/agent-status-store";
+import { useAuthCore } from "@/stores/auth/auth-core";
+import {
+  type RealtimeConnectionStatus,
+  useRealtimeChannel,
+} from "./use-realtime-channel";
 
-/**
- * Generic envelope structure for broadcast messages.
- */
-type BroadcastEnvelope<T> = {
-  /** The event type identifier. */
-  event: string;
-  /** Optional payload data for the event. */
-  payload?: T;
+const BACKOFF_CONFIG: BackoffConfig = {
+  factor: 2,
+  initialDelayMs: 1000,
+  maxDelayMs: 30000,
 };
 
-/**
- * Payload structure for agent status update events.
- */
-type AgentStatusUpdatePayload = {
-  /** The unique identifier of the agent. */
+const AGENT_EVENTS = [
+  "agent_status_update",
+  "agent_task_start",
+  "agent_task_progress",
+  "agent_task_complete",
+  "agent_error",
+] as const;
+
+interface AgentStatusUpdatePayload {
   agentId: string;
-  /** Optional new status for the agent. */
   status?: AgentStatusType;
-  /** Optional progress percentage (0-100). */
   progress?: number;
-};
-
-/**
- * Payload structure for agent task start events.
- */
-type AgentTaskStartPayload = {
-  /** The unique identifier of the agent. */
-  agentId: string;
-  /** Optional task information. */
-  task?: {
-    /** Optional unique identifier for the task. */
-    id?: string;
-    /** Optional title of the task. */
-    title?: string;
-    /** Optional description of the task. */
-    description?: string;
-  };
-};
-
-/**
- * Payload structure for agent task progress events.
- */
-type AgentTaskProgressPayload = {
-  /** The unique identifier of the agent. */
-  agentId: string;
-  /** The unique identifier of the task. */
-  taskId: string;
-  /** Optional progress percentage (0-100). */
-  progress?: number;
-  /** Optional new status for the task. */
-  status?: AgentTask["status"];
-};
-
-/**
- * Payload structure for agent task completion events.
- */
-type AgentTaskCompletePayload = {
-  /** The unique identifier of the agent. */
-  agentId: string;
-  /** The unique identifier of the task. */
-  taskId: string;
-  /** Optional error message if the task failed. */
-  error?: string;
-};
-
-/**
- * Payload structure for agent error events.
- */
-type AgentErrorPayload = {
-  /** The unique identifier of the agent. */
-  agentId: string;
-  /** Optional error information. */
-  error?: unknown;
-};
-
-/**
- * Interface defining the controls and state exposed by the WebSocket hook.
- */
-interface AgentStatusWebSocketControls {
-  /** Indicates whether the WebSocket connection is currently active. */
-  isConnected: boolean;
-  /** Error message from the last connection attempt, if any. */
-  connectionError: string | null;
-  /** Number of reconnection attempts made. */
-  reconnectAttempts: number;
-  /** Function to establish the WebSocket connection. */
-  connect: () => Promise<void>;
-  /** Function to disconnect the WebSocket connection. */
-  disconnect: () => void;
-  /** Function to start monitoring agent activity. */
-  startAgentMonitoring: () => void;
-  /** Function to stop monitoring agent activity. */
-  stopAgentMonitoring: () => void;
-  /** Function to report resource usage for an agent. */
-  reportResourceUsage: (
-    agentId: string,
-    cpu: number,
-    memory: number,
-    tokens: number
-  ) => Promise<void>;
-  /** Reference to the underlying Supabase realtime channel. */
-  wsClient: RealtimeChannel | null;
+  name?: string;
+  description?: string;
+  metadata?: Record<string, unknown>;
+  type?: string;
 }
 
+interface AgentTaskStartPayload {
+  agentId: string;
+  task?: Pick<AgentTask, "id" | "title" | "description">;
+}
+
+interface AgentTaskProgressPayload {
+  agentId: string;
+  taskId: string;
+  progress?: number;
+  status?: AgentTask["status"];
+}
+
+interface AgentTaskCompletePayload {
+  agentId: string;
+  taskId: string;
+  error?: string;
+}
+
+interface AgentErrorPayload {
+  agentId: string;
+  error?: unknown;
+}
+
+interface AgentResourceUsagePayload {
+  agentId: string;
+  cpu: number;
+  memory: number;
+  tokens: number;
+}
+
+type AgentRealtimePayload =
+  | AgentStatusUpdatePayload
+  | AgentTaskStartPayload
+  | AgentTaskProgressPayload
+  | AgentTaskCompletePayload
+  | AgentErrorPayload
+  | AgentResourceUsagePayload;
+
+export interface AgentStatusRealtimeControls {
+  /** Raw realtime connection status from `useRealtimeChannel`. */
+  connectionStatus: RealtimeConnectionStatus;
+  /** Last connection error, if any. */
+  connectionError: string | null;
+  /** Number of consecutive retries triggered by backoff. */
+  retryCount: number;
+  /** Current user topic (e.g., `user:123`). */
+  topic: string | null;
+  /** Resume realtime monitoring (re-subscribes). */
+  resume: () => void;
+  /** Pause realtime monitoring (unsubscribes). */
+  pause: () => void;
+  /** Force a reconnect cycle using backoff helper. */
+  reconnect: () => void;
+  /** Report local resource usage sample back to Supabase (best effort). */
+  reportResourceUsage: (input: {
+    agentId: string;
+    cpu: number;
+    memory: number;
+    tokens: number;
+  }) => Promise<void>;
+}
+
+const DEFAULT_STATUS: AgentStatusType = "active";
+
 /**
- * Connects to the authenticated user's private Supabase channel and exposes helpers
- * for managing realtime agent status updates.
+ * Subscribes the current user to their Supabase agent-status channel and keeps
+ * the Zustand store in sync while exposing connection controls.
  *
- * This hook establishes a WebSocket connection to Supabase realtime channels to
- * receive live updates about agent status, task progress, and resource usage.
- * It automatically handles reconnection logic with exponential backoff and
- * integrates with the agent status store for state management.
- *
- * @return Object containing connection state, error information, and control
- * functions for managing the WebSocket connection and agent monitoring.
+ * @returns Connection control surface with monitoring helpers.
  */
-export function useAgentStatusWebSocket(): AgentStatusWebSocketControls {
-  const supabase = useMemo(() => getBrowserClient(), []);
-  const { user } = useAuthStore();
+export function useAgentStatusWebSocket(): AgentStatusRealtimeControls {
+  const { user } = useAuthCore();
   const {
-    currentSession,
-    startSession,
-    endSession,
+    isMonitoring,
+    setMonitoring,
+    resetAgentStatusState,
     updateAgentStatus,
-    updateAgentProgress,
-    addAgentTask,
     updateAgentTask,
-    completeAgentTask,
-    addAgentActivity,
-    updateResourceUsage,
+    recordActivity,
+    recordResourceUsage,
+    setAgentStatusConnection,
+    connection,
   } = useAgentStatusStore();
+  const retryCounterRef = useRef(0);
+  const topic = user?.id ? `user:${user.id}` : null;
+  const shouldSubscribe = Boolean(topic && isMonitoring);
 
-  const channelRef = useRef<RealtimeChannel | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
-  const [connectionError, setConnectionError] = useState<string | null>(null);
-  const [reconnectAttempts, setReconnectAttempts] = useState(0);
-  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const handleStatusUpdate = useCallback(
-    (payload: BroadcastEnvelope<AgentStatusUpdatePayload>) => {
-      const { agentId, status, progress } = payload.payload ?? {};
-      if (!agentId) {
-        return;
-      }
-      if (status) {
-        updateAgentStatus(agentId, status);
-      }
-      if (typeof progress === "number") {
-        updateAgentProgress(agentId, progress);
-      }
-    },
-    [updateAgentProgress, updateAgentStatus]
-  );
-
-  const handleTaskStart = useCallback(
-    (payload: BroadcastEnvelope<AgentTaskStartPayload>) => {
-      const { agentId, task } = payload.payload ?? {};
-      if (!agentId || !task) {
-        return;
-      }
-      addAgentTask(agentId, {
-        description: task.description ?? "",
-        status: "in_progress",
-        title: task.title ?? task.description ?? "Untitled Task",
-      });
-    },
-    [addAgentTask]
-  );
-
-  const handleTaskProgress = useCallback(
-    (payload: BroadcastEnvelope<AgentTaskProgressPayload>) => {
-      const { agentId, taskId, progress, status } = payload.payload ?? {};
-      if (!agentId || !taskId) {
-        return;
-      }
-      const updates: Partial<AgentTask> = {};
-      if (status) {
-        updates.status = status;
-      }
-      if (Object.keys(updates).length > 0) {
-        updateAgentTask(agentId, taskId, updates);
-      }
-      if (typeof progress === "number") {
-        updateAgentProgress(agentId, progress);
-      }
-    },
-    [updateAgentProgress, updateAgentTask]
-  );
-
-  const handleTaskComplete = useCallback(
-    (payload: BroadcastEnvelope<AgentTaskCompletePayload>) => {
-      const { agentId, taskId, error } = payload.payload ?? {};
-      if (!agentId || !taskId) {
-        return;
-      }
-      completeAgentTask(agentId, taskId, error);
-    },
-    [completeAgentTask]
-  );
-
-  const handleAgentError = useCallback(
-    (payload: BroadcastEnvelope<AgentErrorPayload>) => {
-      const { agentId, error } = payload.payload ?? {};
-      if (!agentId) {
-        return;
-      }
-      updateAgentStatus(agentId, "error");
-      addAgentActivity({
-        agentId,
-        message: typeof error === "string" ? error : "Agent reported an error",
-        metadata: { error },
-        type: "error",
-      });
-    },
-    [addAgentActivity, updateAgentStatus]
-  );
-
-  const disconnect = useCallback(() => {
-    if (channelRef.current) {
-      channelRef.current.unsubscribe();
-      channelRef.current = null;
-    }
-    setIsConnected(false);
-    setReconnectAttempts(0);
-    if (reconnectTimerRef.current) {
-      clearTimeout(reconnectTimerRef.current);
-      reconnectTimerRef.current = null;
-    }
+  const resolveStatus = useCallback((fallbackId: string): AgentStatusType => {
+    const agent = useAgentStatusStore.getState().agentsById[fallbackId];
+    return agent?.status ?? DEFAULT_STATUS;
   }, []);
 
-  const connect = useCallback(() => {
-    if (!user?.id) {
-      setConnectionError("Cannot connect without an authenticated user.");
-      return Promise.resolve();
-    }
-
-    disconnect();
-    setReconnectAttempts((attempts) => attempts + 1);
-    setConnectionError(null);
-
-    const topic = `user:${user.id}`;
-    const channel = supabase.channel(topic, { config: { private: true } });
-
-    channel
-      .on("broadcast", { event: "agent_status_update" }, handleStatusUpdate)
-      .on("broadcast", { event: "agent_task_start" }, handleTaskStart)
-      .on("broadcast", { event: "agent_task_progress" }, handleTaskProgress)
-      .on("broadcast", { event: "agent_task_complete" }, handleTaskComplete)
-      .on("broadcast", { event: "agent_error" }, handleAgentError);
-
-    channel.subscribe((status, err) => {
-      if (err) {
-        setConnectionError(err.message ?? "Realtime subscription error");
-      }
-
-      if (status === "SUBSCRIBED") {
-        setIsConnected(true);
-        setReconnectAttempts(0);
-        startSession();
-      }
-
-      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
-        setIsConnected(false);
-        if (!err) {
-          setConnectionError(`Realtime channel status: ${status}`);
+  const handleMessage = useCallback(
+    (payload: AgentRealtimePayload, event: string) => {
+      switch (event) {
+        case "agent_status_update": {
+          const data = payload as AgentStatusUpdatePayload;
+          if (!data.agentId) {
+            return;
+          }
+          updateAgentStatus(data.agentId, data.status ?? DEFAULT_STATUS, {
+            description: data.description,
+            metadata: data.metadata,
+            name: data.name,
+            progress: data.progress,
+            type: data.type,
+          });
+          break;
         }
-        // Explicitly unsubscribe and schedule reconnect with backoff
-        if (channelRef.current) {
-          channelRef.current.unsubscribe();
-          channelRef.current = null;
+        case "agent_task_start": {
+          const data = payload as AgentTaskStartPayload;
+          if (!data.agentId || !data.task?.title) {
+            return;
+          }
+          const update: AgentTaskUpdate = {
+            description: data.task.description,
+            taskId: data.task.id,
+            title: data.task.title,
+            type: "start",
+          };
+          updateAgentTask(data.agentId, update);
+          break;
         }
-        const attempt = reconnectAttempts + 1;
-        setReconnectAttempts(attempt);
-        const delay = Math.min(30000, 1000 * 2 ** Math.min(5, attempt));
-        if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
-        reconnectTimerRef.current = setTimeout(() => {
-          connect();
-        }, delay);
+        case "agent_task_progress": {
+          const data = payload as AgentTaskProgressPayload;
+          if (!data.agentId || !data.taskId) {
+            return;
+          }
+          const update: AgentTaskUpdate = {
+            progress: data.progress,
+            status: data.status,
+            taskId: data.taskId,
+            type: "progress",
+          };
+          updateAgentTask(data.agentId, update);
+          if (typeof data.progress === "number") {
+            updateAgentStatus(data.agentId, resolveStatus(data.agentId), {
+              progress: data.progress,
+            });
+          }
+          break;
+        }
+        case "agent_task_complete": {
+          const data = payload as AgentTaskCompletePayload;
+          if (!data.agentId || !data.taskId) {
+            return;
+          }
+          const update: AgentTaskUpdate = {
+            error: data.error,
+            taskId: data.taskId,
+            type: "complete",
+          };
+          updateAgentTask(data.agentId, update);
+          if (data.error) {
+            recordActivity({
+              agentId: data.agentId,
+              message: data.error,
+              type: "task_error",
+            });
+          }
+          break;
+        }
+        case "agent_error": {
+          const data = payload as AgentErrorPayload;
+          if (!data.agentId) {
+            return;
+          }
+          updateAgentStatus(data.agentId, "error");
+          recordActivity({
+            agentId: data.agentId,
+            message:
+              typeof data.error === "string" ? data.error : "Agent reported an error",
+            metadata:
+              typeof data.error === "object" && data.error !== null
+                ? (data.error as Record<string, unknown>)
+                : undefined,
+            type: "error",
+          });
+          break;
+        }
+        default:
+          break;
       }
+    },
+    [recordActivity, resolveStatus, updateAgentStatus, updateAgentTask]
+  );
+
+  const handleStatusChange = useCallback(
+    (status: RealtimeConnectionStatus) => {
+      if (status === "subscribed") {
+        retryCounterRef.current = 0;
+      } else if (status === "error") {
+        retryCounterRef.current += 1;
+      }
+      setAgentStatusConnection({
+        error: null,
+        retryCount: retryCounterRef.current,
+        status,
+        topic,
+      });
+    },
+    [setAgentStatusConnection, topic]
+  );
+
+  const { connectionStatus, error, sendBroadcast, unsubscribe } =
+    useRealtimeChannel<AgentRealtimePayload>(shouldSubscribe ? topic : null, {
+      backoff: BACKOFF_CONFIG,
+      events: [...AGENT_EVENTS],
+      onMessage: handleMessage,
+      onStatusChange: handleStatusChange,
     });
 
-    channelRef.current = channel;
-    return Promise.resolve();
-  }, [
-    disconnect,
-    handleAgentError,
-    handleStatusUpdate,
-    handleTaskComplete,
-    handleTaskProgress,
-    handleTaskStart,
-    startSession,
-    supabase,
-    user?.id,
-    reconnectAttempts,
-  ]);
-
-  const startAgentMonitoring = useCallback(() => {
-    connect();
-  }, [connect]);
-
-  const stopAgentMonitoring = useCallback(() => {
-    disconnect();
-    if (currentSession) {
-      endSession(currentSession.id);
+  useEffect(() => {
+    if (error) {
+      setAgentStatusConnection({ error: error.message });
     }
-  }, [currentSession, disconnect, endSession]);
+  }, [error, setAgentStatusConnection]);
+
+  useEffect(() => {
+    if (user?.id) {
+      setMonitoring(true);
+      return;
+    }
+    setMonitoring(false);
+    resetAgentStatusState();
+  }, [resetAgentStatusState, setMonitoring, user?.id]);
+
+  const pause = useCallback(() => {
+    setMonitoring(false);
+    unsubscribe();
+  }, [setMonitoring, unsubscribe]);
+
+  const resume = useCallback(() => {
+    if (!topic) {
+      return;
+    }
+    setMonitoring(true);
+  }, [setMonitoring, topic]);
+
+  const reconnect = useCallback(() => {
+    if (!topic) {
+      return;
+    }
+    setMonitoring(false);
+    queueMicrotask(() => {
+      setMonitoring(true);
+    });
+  }, [setMonitoring, topic]);
 
   const reportResourceUsage = useCallback(
-    async (agentId: string, cpu: number, memory: number, tokens: number) => {
-      if (!channelRef.current || !isConnected) {
-        return;
-      }
-
-      const usageUpdate: Omit<ResourceUsage, "timestamp"> = {
-        activeAgents: 1,
+    async ({
+      agentId,
+      cpu,
+      memory,
+      tokens,
+    }: {
+      agentId: string;
+      cpu: number;
+      memory: number;
+      tokens: number;
+    }) => {
+      recordResourceUsage({
+        activeAgents: Math.max(1, useAgentStatusStore.getState().activeAgents.length),
         cpuUsage: cpu,
         memoryUsage: memory,
         networkRequests: tokens,
-      };
-      updateResourceUsage(usageUpdate);
-
-      await channelRef.current.send({
-        event: "resource_usage",
-        payload: {
-          agentId,
-          cpu,
-          memory,
-          tokens,
-        },
-        type: "broadcast",
       });
+      try {
+        await sendBroadcast("resource_usage", { agentId, cpu, memory, tokens });
+      } catch {
+        // Ignore send failures; local store already recorded usage.
+      }
     },
-    [isConnected, updateResourceUsage]
+    [recordResourceUsage, sendBroadcast]
   );
 
-  useEffect(() => {
-    if (!user?.id) {
-      if (currentSession) {
-        endSession(currentSession.id);
-      }
-      disconnect();
-      return;
-    }
-
-    connect();
-
-    return () => {
-      if (reconnectTimerRef.current) {
-        clearTimeout(reconnectTimerRef.current);
-        reconnectTimerRef.current = null;
-      }
-      disconnect();
-    };
-  }, [connect, currentSession, disconnect, endSession, user?.id]);
-
   return {
-    connect,
-    connectionError,
-    disconnect,
-    isConnected,
-    reconnectAttempts,
+    connectionError: connection.error,
+    connectionStatus,
+    pause,
+    reconnect,
     reportResourceUsage,
-    startAgentMonitoring,
-    stopAgentMonitoring,
-    wsClient: channelRef.current,
+    resume,
+    retryCount: connection.retryCount,
+    topic,
   };
 }

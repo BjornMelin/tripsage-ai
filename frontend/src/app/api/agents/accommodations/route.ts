@@ -9,22 +9,14 @@
 import "server-only";
 
 import type { NextRequest } from "next/server";
-import type { z } from "zod";
 import { runAccommodationAgent } from "@/lib/agents/accommodation-agent";
 import { createErrorHandler } from "@/lib/agents/error-recovery";
-import {
-  errorResponse,
-  getTrustedRateLimitIdentifier,
-  withRequestSpan,
-} from "@/lib/next/route-helpers";
+import { withApiGuards } from "@/lib/api/factory";
+import { getTrustedRateLimitIdentifier } from "@/lib/next/route-helpers";
 import { resolveProvider } from "@/lib/providers/registry";
-import { enforceRouteRateLimit } from "@/lib/ratelimit/config";
-import { getRedis } from "@/lib/redis";
 import type { AccommodationSearchRequest } from "@/lib/schemas/agents";
 import { agentSchemas } from "@/lib/schemas/agents";
-import { createServerSupabase } from "@/lib/supabase/server";
 
-export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const RequestSchema = agentSchemas.accommodationSearchRequestSchema;
@@ -34,63 +26,18 @@ const RequestSchema = agentSchemas.accommodationSearchRequestSchema;
  *
  * Validates request, resolves provider, and streams ToolLoop response.
  */
-export async function POST(req: NextRequest): Promise<Response> {
-  try {
-    const supabase = await createServerSupabase();
-    const user = (await supabase.auth.getUser()).data.user;
+export const POST = withApiGuards({
+  auth: true,
+  rateLimit: "agents:accommodations",
+  schema: RequestSchema,
+  telemetry: "agent.accommodationSearch",
+})(async (req: NextRequest, { user }, body: AccommodationSearchRequest) => {
+  const identifier = user?.id ?? getTrustedRateLimitIdentifier(req);
+  const modelHint = new URL(req.url).searchParams.get("model") ?? undefined;
+  const { model, modelId } = await resolveProvider(user?.id ?? "anon", modelHint);
 
-    const raw = (await req.json().catch(() => ({}))) as unknown;
-    let body: AccommodationSearchRequest;
-    try {
-      body = RequestSchema.parse(raw);
-    } catch (err) {
-      const zerr = err as z.ZodError;
-      return errorResponse({
-        err: zerr,
-        error: "invalid_request",
-        issues: zerr.issues,
-        reason: "Request validation failed",
-        status: 400,
-      });
-    }
-
-    const identifier = user?.id ?? getTrustedRateLimitIdentifier(req);
-
-    // Route-level rate limiting using centralized config
-    const rateLimitError = await enforceRouteRateLimit(
-      "accommodationSearch",
-      identifier,
-      getRedis
-    );
-    if (rateLimitError) {
-      return errorResponse(rateLimitError);
-    }
-
-    const modelHint = new URL(req.url).searchParams.get("model") ?? undefined;
-    const { model, modelId } = await resolveProvider(user?.id ?? "anon", modelHint);
-
-    return await withRequestSpan(
-      "agent.accommodationSearch",
-      {
-        identifier_type: user?.id ? "user" : "ip",
-        modelId,
-        workflow: "accommodationSearch",
-      },
-      (): Promise<Response> => {
-        const result = runAccommodationAgent({ identifier, model }, body);
-        return Promise.resolve(
-          result.toUIMessageStreamResponse({
-            onError: createErrorHandler(),
-          })
-        );
-      }
-    );
-  } catch (err) {
-    return errorResponse({
-      err,
-      error: "internal",
-      reason: "Internal server error",
-      status: 500,
-    });
-  }
-}
+  const result = runAccommodationAgent({ identifier, model, modelId }, body);
+  return result.toUIMessageStreamResponse({
+    onError: createErrorHandler(),
+  });
+});

@@ -12,19 +12,16 @@ import type { NextRequest } from "next/server";
 import type { z } from "zod";
 import { createErrorHandler } from "@/lib/agents/error-recovery";
 import { runMemoryAgent } from "@/lib/agents/memory-agent";
+import { withApiGuards } from "@/lib/api/factory";
 import {
   errorResponse,
   getTrustedRateLimitIdentifier,
-  withRequestSpan,
+  parseJsonBody,
 } from "@/lib/next/route-helpers";
 import { resolveProvider } from "@/lib/providers/registry";
-import { enforceRouteRateLimit } from "@/lib/ratelimit/config";
-import { getRedis } from "@/lib/redis";
 import type { MemoryUpdateRequest } from "@/lib/schemas/agents";
 import { agentSchemas } from "@/lib/schemas/agents";
-import { createServerSupabase } from "@/lib/supabase/server";
 
-export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const RequestSchema = agentSchemas.memoryUpdateRequestSchema;
@@ -34,62 +31,36 @@ const RequestSchema = agentSchemas.memoryUpdateRequestSchema;
  *
  * Validates request, resolves provider, and streams ToolLoop response.
  */
-export async function POST(req: NextRequest): Promise<Response> {
+export const POST = withApiGuards({
+  auth: true,
+  rateLimit: "agents:memory",
+  telemetry: "agent.memoryUpdate",
+})(async (req: NextRequest, { user }) => {
+  const parsed = await parseJsonBody(req);
+  if ("error" in parsed) {
+    return parsed.error;
+  }
+
+  let body: MemoryUpdateRequest;
   try {
-    const supabase = await createServerSupabase();
-    const user = (await supabase.auth.getUser()).data.user;
-
-    const raw = (await req.json().catch(() => ({}))) as unknown;
-    let body: MemoryUpdateRequest;
-    try {
-      body = RequestSchema.parse(raw);
-    } catch (err) {
-      const zerr = err as z.ZodError;
-      return errorResponse({
-        err: zerr,
-        error: "invalid_request",
-        issues: zerr.issues,
-        reason: "Request validation failed",
-        status: 400,
-      });
-    }
-
-    const identifier = user?.id ?? getTrustedRateLimitIdentifier(req);
-
-    const rateLimitError = await enforceRouteRateLimit(
-      "memoryUpdate",
-      identifier,
-      getRedis
-    );
-    if (rateLimitError) {
-      return errorResponse(rateLimitError);
-    }
-
-    const modelHint = new URL(req.url).searchParams.get("model") ?? undefined;
-    const { model, modelId } = await resolveProvider(user?.id ?? "anon", modelHint);
-
-    return await withRequestSpan(
-      "agent.memoryUpdate",
-      {
-        identifier_type: user?.id ? "user" : "ip",
-        modelId,
-        workflow: "memoryUpdate",
-      },
-      async (): Promise<Response> => {
-        const result = await runMemoryAgent({ identifier, model }, body);
-        return Promise.resolve(
-          result.toUIMessageStreamResponse({
-            onError: createErrorHandler(),
-          })
-        );
-      }
-    );
+    body = RequestSchema.parse(parsed.body);
   } catch (err) {
+    const zerr = err as z.ZodError;
     return errorResponse({
-      err,
-      error: "internal",
-      reason: "Internal server error",
-      status: 500,
+      err: zerr,
+      error: "invalid_request",
+      issues: zerr.issues,
+      reason: "Request validation failed",
+      status: 400,
     });
   }
-}
+
+  const identifier = user?.id ?? getTrustedRateLimitIdentifier(req);
+  const modelHint = new URL(req.url).searchParams.get("model") ?? undefined;
+  const { model, modelId } = await resolveProvider(user?.id ?? "anon", modelHint);
+
+  const result = await runMemoryAgent({ identifier, model, modelId }, body);
+  return result.toUIMessageStreamResponse({
+    onError: createErrorHandler(),
+  });
+});

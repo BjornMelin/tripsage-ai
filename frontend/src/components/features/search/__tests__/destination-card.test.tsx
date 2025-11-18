@@ -1,7 +1,6 @@
 /** @vitest-environment jsdom */
 
-import { screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { fireEvent, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Destination } from "@/lib/schemas/search";
 import { render } from "@/test/test-utils";
@@ -88,32 +87,29 @@ describe("DestinationCard", () => {
     expect(screen.getByText("Popularity: 95/100")).toBeInTheDocument();
   });
 
-  it("handles select button click", async () => {
-    const user = userEvent.setup();
+  it("handles select button click", () => {
     render(<DestinationCard destination={MockDestination} {...MockHandlers} />);
 
     const selectButton = screen.getByText("Select");
-    await user.click(selectButton);
+    fireEvent.click(selectButton);
 
     expect(MockHandlers.onSelect).toHaveBeenCalledWith(MockDestination);
   });
 
-  it("handles compare button click", async () => {
-    const user = userEvent.setup();
+  it("handles compare button click", () => {
     render(<DestinationCard destination={MockDestination} {...MockHandlers} />);
 
     const compareButton = screen.getByText("Compare");
-    await user.click(compareButton);
+    fireEvent.click(compareButton);
 
     expect(MockHandlers.onCompare).toHaveBeenCalledWith(MockDestination);
   });
 
-  it("handles view details button click", async () => {
-    const user = userEvent.setup();
+  it("handles view details button click", () => {
     render(<DestinationCard destination={MockDestination} {...MockHandlers} />);
 
     const detailsButton = screen.getByText("Details");
-    await user.click(detailsButton);
+    fireEvent.click(detailsButton);
 
     expect(MockHandlers.onViewDetails).toHaveBeenCalledWith(MockDestination);
   });

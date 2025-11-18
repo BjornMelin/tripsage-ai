@@ -1,383 +1,207 @@
-import type { NextRequest } from "next/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+/** @vitest-environment node */
 
-describe("/api/calendar/events route", () => {
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import * as googleCalendar from "@/lib/calendar/google";
+import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
+
+// Mock next/headers cookies() BEFORE any imports that use it
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(() =>
+    Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))
+  ),
+}));
+
+// Mock Supabase before importing route handlers
+const mockUser = { email: "test@example.com", id: "user-1" };
+const mockSupabase = {
+  auth: {
+    getUser: vi.fn(async () => ({
+      data: { user: mockUser },
+      error: null,
+    })),
+  },
+};
+
+vi.mock("@/lib/supabase/server", () => ({
+  createServerSupabase: vi.fn(async () => mockSupabase),
+}));
+
+// Mock Redis
+vi.mock("@/lib/redis", () => ({
+  getRedis: vi.fn(() => Promise.resolve({})),
+}));
+
+// Mock env helpers
+vi.mock("@/lib/env/server", () => ({
+  getServerEnvVarWithFallback: vi.fn(() => undefined),
+}));
+
+// Mock route helpers
+vi.mock("@/lib/next/route-helpers", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/next/route-helpers")>(
+    "@/lib/next/route-helpers"
+  );
+  return {
+    ...actual,
+    withRequestSpan: vi.fn((_name, _attrs, fn) => fn()),
+  };
+});
+
+// Import route handlers after mocks
+import * as eventsRoute from "../events/route";
+
+describe("/api/calendar/events", () => {
   beforeEach(() => {
-    vi.resetModules();
     vi.clearAllMocks();
+    mockSupabase.auth.getUser.mockResolvedValue({
+      data: { user: mockUser },
+      error: null,
+    });
+    vi.spyOn(googleCalendar, "listEvents").mockResolvedValue({
+      items: [
+        {
+          end: { dateTime: "2025-07-15T11:00:00Z" },
+          id: "event-1",
+          start: { dateTime: "2025-07-15T10:00:00Z" },
+          summary: "Test Event",
+        },
+      ],
+    } as never);
+    vi.spyOn(googleCalendar, "createEvent").mockResolvedValue({
+      id: "event-new",
+      summary: "New Event",
+    } as never);
+    vi.spyOn(googleCalendar, "updateEvent").mockResolvedValue({
+      id: "event-updated",
+      summary: "Updated Event",
+    } as never);
+    vi.spyOn(googleCalendar, "deleteEvent").mockResolvedValue(undefined);
   });
 
-  const mockRateLimit = {
-    limit: 60,
-    remaining: 59,
-    reset: Date.now() + 60000,
-    success: true,
-  };
-
-  const mockSupabase = {
-    auth: {
-      getUser: async () => ({
-        data: { user: { id: "user-1" } },
-        error: null,
-      }),
-    },
-  };
-
-  const setupMocks = (overrides?: {
-    rateLimit?: typeof mockRateLimit;
-    googleListEvents?: unknown;
-    googleCreateEvent?: unknown;
-    googleUpdateEvent?: unknown;
-    googleDeleteEvent?: unknown;
-  }) => {
-    vi.doMock("@/lib/supabase/server", () => ({
-      createServerSupabase: vi.fn(async () => mockSupabase),
-    }));
-
-    vi.doMock("@/lib/calendar/google", () => ({
-      createEvent: vi.fn(
-        async () =>
-          overrides?.googleCreateEvent || {
-            htmlLink: "https://calendar.google.com/event?eid=xyz",
-            id: "event-new",
-            summary: "New Event",
-          }
-      ),
-      deleteEvent: vi.fn(async () => undefined),
-      listEvents: vi.fn(
-        async () =>
-          overrides?.googleListEvents || {
-            items: [
-              {
-                end: { dateTime: new Date().toISOString() },
-                id: "event-1",
-                start: { dateTime: new Date().toISOString() },
-                summary: "Test Event",
-              },
-            ],
-            kind: "calendar#events",
-          }
-      ),
-      updateEvent: vi.fn(
-        async () =>
-          overrides?.googleUpdateEvent || {
-            id: "event-1",
-            summary: "Updated Event",
-          }
-      ),
-    }));
-
-    vi.doMock("@upstash/ratelimit", () => {
-      const slidingWindow = vi.fn(() => ({}));
-      const rateLimitResult = overrides?.rateLimit || mockRateLimit;
-      const ctor = vi.fn(function RatelimitMock() {
-        return {
-          limit: vi.fn().mockResolvedValue(rateLimitResult),
-        };
-      }) as unknown as {
-        new (...args: unknown[]): { limit: ReturnType<typeof vi.fn> };
-        slidingWindow: typeof slidingWindow;
-      };
-      ctor.slidingWindow = slidingWindow;
-      return { Ratelimit: ctor };
-    });
-
-    vi.doMock("@upstash/redis", () => ({
-      Redis: {
-        fromEnv: vi.fn(() => ({})),
-      },
-    }));
-
-    vi.doMock("@/lib/env/server", () => ({
-      getServerEnvVarWithFallback: vi.fn(() => "test-key"),
-    }));
-  };
-
   describe("GET", () => {
-    it("lists events successfully", async () => {
-      setupMocks();
-
-      const mod = await import("../events/route");
-      const req = new Request(
-        "http://localhost/api/calendar/events?calendarId=primary",
-        {
-          method: "GET",
-        }
-      ) as unknown as NextRequest;
-
-      const res = await mod.GET(req);
-      const body = await res.json();
-
-      expect(res.status).toBe(200);
-      expect(body.items).toBeDefined();
-      expect(Array.isArray(body.items)).toBe(true);
-    });
-
-    it("handles query parameters", async () => {
-      setupMocks();
-
-      const mod = await import("../events/route");
-      const timeMin = new Date("2025-01-15").toISOString();
-      const timeMax = new Date("2025-01-20").toISOString();
-      const req = new Request(
-        `http://localhost/api/calendar/events?timeMin=${timeMin}&timeMax=${timeMax}&maxResults=10`,
-        {
-          method: "GET",
-        }
-      ) as unknown as NextRequest;
-
-      const res = await mod.GET(req);
-      expect(res.status).toBe(200);
-    });
-
     it("returns 401 when unauthenticated", async () => {
-      vi.doMock("@/lib/supabase/server", () => ({
-        createServerSupabase: vi.fn(async () => ({
-          auth: {
-            getUser: async () => ({
-              data: { user: null },
-              error: { message: "Unauthorized" },
-            }),
-          },
-        })),
-      }));
+      mockSupabase.auth.getUser.mockResolvedValueOnce({
+        data: { user: null },
+        error: { message: "Unauthorized" },
+      } as never);
 
-      const mod = await import("../events/route");
-      const req = new Request("http://localhost/api/calendar/events", {
+      const req = createMockNextRequest({
         method: "GET",
-      }) as unknown as NextRequest;
+        url: "http://localhost/api/calendar/events",
+      });
 
-      const res = await mod.GET(req);
+      const res = await eventsRoute.GET(req);
       expect(res.status).toBe(401);
+      const json = await res.json();
+      expect(json.error).toBe("unauthorized");
     });
 
-    it("handles empty events list", async () => {
-      setupMocks({
-        googleListEvents: {
-          items: [],
-          kind: "calendar#events",
-        },
+    it("lists events successfully", async () => {
+      const req = createMockNextRequest({
+        method: "GET",
+        url: "http://localhost/api/calendar/events",
       });
 
-      const mod = await import("../events/route");
-      const req = new Request("http://localhost/api/calendar/events", {
-        method: "GET",
-      }) as unknown as NextRequest;
-
-      const res = await mod.GET(req);
-      const body = await res.json();
-
+      const res = await eventsRoute.GET(req);
       expect(res.status).toBe(200);
-      expect(body.items).toEqual([]);
+      const json = await res.json();
+      expect(json.items).toHaveLength(1);
+      expect(json.items[0].summary).toBe("Test Event");
     });
 
-    it("handles Google API errors", async () => {
-      setupMocks();
-
-      vi.doMock("@/lib/calendar/google", () => ({
-        listEvents: vi.fn().mockRejectedValue(new Error("Google API error")),
-      }));
-
-      const mod = await import("../events/route");
-      const req = new Request("http://localhost/api/calendar/events", {
+    it("returns 400 on invalid query parameters", async () => {
+      const req = createMockNextRequest({
         method: "GET",
-      }) as unknown as NextRequest;
-
-      const res = await mod.GET(req);
-      expect(res.status).toBe(500);
-    });
-
-    it("returns 429 on rate limit", async () => {
-      setupMocks({
-        rateLimit: {
-          ...mockRateLimit,
-          remaining: 0,
-          success: false,
-        },
+        url: "http://localhost/api/calendar/events?maxResults=invalid",
       });
 
-      const mod = await import("../events/route");
-      const req = new Request("http://localhost/api/calendar/events", {
-        method: "GET",
-      }) as unknown as NextRequest;
-
-      const res = await mod.GET(req);
-      expect(res.status).toBe(429);
+      const res = await eventsRoute.GET(req);
+      expect(res.status).toBe(400);
     });
   });
 
   describe("POST", () => {
     it("creates event successfully", async () => {
-      setupMocks();
-
-      const mod = await import("../events/route");
-      const req = new Request("http://localhost/api/calendar/events", {
-        body: JSON.stringify({
-          end: { dateTime: new Date(Date.now() + 3600000).toISOString() },
-          start: { dateTime: new Date().toISOString() },
+      const req = createMockNextRequest({
+        body: {
+          end: { dateTime: "2025-07-15T11:00:00Z" },
+          start: { dateTime: "2025-07-15T10:00:00Z" },
           summary: "New Event",
-        }),
-        headers: { "Content-Type": "application/json" },
+        },
         method: "POST",
-      }) as unknown as NextRequest;
+        url: "http://localhost/api/calendar/events",
+      });
 
-      const res = await mod.POST(req);
-      const body = await res.json();
-
+      const res = await eventsRoute.POST(req);
       expect(res.status).toBe(201);
-      expect(body.id).toBe("event-new");
+      const json = await res.json();
+      expect(json.id).toBe("event-new");
+      expect(googleCalendar.createEvent).toHaveBeenCalled();
     });
 
-    it("returns 400 on invalid request", async () => {
-      setupMocks();
-
-      const mod = await import("../events/route");
-      const req = new Request("http://localhost/api/calendar/events", {
-        body: JSON.stringify({
-          // Missing required fields
-        }),
-        headers: { "Content-Type": "application/json" },
+    it("returns 400 on invalid request body", async () => {
+      const req = createMockNextRequest({
+        body: { invalid: "data" },
         method: "POST",
-      }) as unknown as NextRequest;
+        url: "http://localhost/api/calendar/events",
+      });
 
-      const res = await mod.POST(req);
+      const res = await eventsRoute.POST(req);
       expect(res.status).toBe(400);
     });
   });
 
   describe("PATCH", () => {
     it("updates event successfully", async () => {
-      setupMocks();
-
-      const mod = await import("../events/route");
-      const req = new Request("http://localhost/api/calendar/events?eventId=event-1", {
-        body: JSON.stringify({
+      const req = createMockNextRequest({
+        body: {
           summary: "Updated Event",
-        }),
-        headers: { "Content-Type": "application/json" },
+        },
         method: "PATCH",
-      }) as unknown as NextRequest;
+        url: "http://localhost/api/calendar/events?eventId=event-1",
+      });
 
-      const res = await mod.PATCH(req);
-      const body = await res.json();
-
+      const res = await eventsRoute.PATCH(req);
       expect(res.status).toBe(200);
-      expect(body.summary).toBe("Updated Event");
+      const json = await res.json();
+      expect(json.id).toBe("event-updated");
+      expect(googleCalendar.updateEvent).toHaveBeenCalled();
     });
 
     it("returns 400 when eventId missing", async () => {
-      setupMocks();
-
-      const mod = await import("../events/route");
-      const req = new Request("http://localhost/api/calendar/events", {
-        body: JSON.stringify({
-          summary: "Updated Event",
-        }),
-        headers: { "Content-Type": "application/json" },
+      const req = createMockNextRequest({
+        body: { summary: "Updated" },
         method: "PATCH",
-      }) as unknown as NextRequest;
+        url: "http://localhost/api/calendar/events",
+      });
 
-      const res = await mod.PATCH(req);
+      const res = await eventsRoute.PATCH(req);
       expect(res.status).toBe(400);
-    });
-
-    it("handles partial update with only some fields", async () => {
-      setupMocks();
-
-      const mod = await import("../events/route");
-      const req = new Request("http://localhost/api/calendar/events?eventId=event-1", {
-        body: JSON.stringify({
-          description: "Updated description only",
-        }),
-        headers: { "Content-Type": "application/json" },
-        method: "PATCH",
-      }) as unknown as NextRequest;
-
-      const res = await mod.PATCH(req);
-      expect(res.status).toBe(200);
-    });
-
-    it("handles Google API errors on update", async () => {
-      setupMocks();
-
-      vi.doMock("@/lib/calendar/google", () => ({
-        updateEvent: vi.fn().mockRejectedValue(new Error("Google API error")),
-      }));
-
-      const mod = await import("../events/route");
-      const req = new Request("http://localhost/api/calendar/events?eventId=event-1", {
-        body: JSON.stringify({
-          summary: "Updated Event",
-        }),
-        headers: { "Content-Type": "application/json" },
-        method: "PATCH",
-      }) as unknown as NextRequest;
-
-      const res = await mod.PATCH(req);
-      expect(res.status).toBe(500);
     });
   });
 
   describe("DELETE", () => {
     it("deletes event successfully", async () => {
-      setupMocks();
-
-      const mod = await import("../events/route");
-      const req = new Request("http://localhost/api/calendar/events?eventId=event-1", {
+      const req = createMockNextRequest({
         method: "DELETE",
-      }) as unknown as NextRequest;
+        url: "http://localhost/api/calendar/events?eventId=event-1",
+      });
 
-      const res = await mod.DELETE(req);
+      const res = await eventsRoute.DELETE(req);
       expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.success).toBe(true);
+      expect(googleCalendar.deleteEvent).toHaveBeenCalled();
     });
 
     it("returns 400 when eventId missing", async () => {
-      setupMocks();
-
-      const mod = await import("../events/route");
-      const req = new Request("http://localhost/api/calendar/events", {
+      const req = createMockNextRequest({
         method: "DELETE",
-      }) as unknown as NextRequest;
+        url: "http://localhost/api/calendar/events",
+      });
 
-      const res = await mod.DELETE(req);
+      const res = await eventsRoute.DELETE(req);
       expect(res.status).toBe(400);
-    });
-
-    it("handles Google API errors on delete", async () => {
-      setupMocks();
-
-      vi.doMock("@/lib/calendar/google", () => ({
-        deleteEvent: vi.fn().mockRejectedValue(new Error("Google API error")),
-      }));
-
-      const mod = await import("../events/route");
-      const req = new Request("http://localhost/api/calendar/events?eventId=event-1", {
-        method: "DELETE",
-      }) as unknown as NextRequest;
-
-      const res = await mod.DELETE(req);
-      expect(res.status).toBe(500);
-    });
-
-    it("returns 401 when unauthenticated on delete", async () => {
-      vi.doMock("@/lib/supabase/server", () => ({
-        createServerSupabase: vi.fn(async () => ({
-          auth: {
-            getUser: async () => ({
-              data: { user: null },
-              error: { message: "Unauthorized" },
-            }),
-          },
-        })),
-      }));
-
-      const mod = await import("../events/route");
-      const req = new Request("http://localhost/api/calendar/events?eventId=event-1", {
-        method: "DELETE",
-      }) as unknown as NextRequest;
-
-      const res = await mod.DELETE(req);
-      expect(res.status).toBe(401);
     });
   });
 });

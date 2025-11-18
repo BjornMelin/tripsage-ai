@@ -25,3 +25,26 @@ export const notifyJobSchema = z.object({
 
 /** TypeScript type inferred from notifyJobSchema. */
 export type NotifyJob = z.infer<typeof notifyJobSchema>;
+
+/** Zod schema for memory sync job validation. */
+export const memorySyncJobSchema = z.object({
+  idempotencyKey: z.string().min(8),
+  payload: z.object({
+    conversationMessages: z
+      .array(
+        z.object({
+          content: z.string(),
+          metadata: z.record(z.string(), z.unknown()).optional(),
+          role: z.enum(["user", "assistant", "system"]),
+          timestamp: z.string(),
+        })
+      )
+      .optional(),
+    sessionId: z.string(),
+    syncType: z.enum(["full", "incremental", "conversation"]),
+    userId: z.string(),
+  }),
+});
+
+/** TypeScript type inferred from memorySyncJobSchema. */
+export type MemorySyncJob = z.infer<typeof memorySyncJobSchema>;

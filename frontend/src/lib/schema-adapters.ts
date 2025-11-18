@@ -5,7 +5,15 @@
  * - Backend snake_case vs Frontend camelCase
  * - Legacy field names vs current schema
  * - Missing field defaults
+ *
+ * Canonical DTO shape: The backend API consistently uses snake_case
+ * (start_date, end_date, user_id, created_at, updated_at). The frontend
+ * maintains both formats for compatibility during migration. Future
+ * contributors should prefer camelCase for new frontend code and use
+ * these adapters to convert from backend snake_case.
  */
+
+// TODO: Consolidate schema adapters with centralized Zod schemas from @/lib/schemas once migration complete.
 
 import type { Destination, Trip } from "@/stores/trip-store";
 

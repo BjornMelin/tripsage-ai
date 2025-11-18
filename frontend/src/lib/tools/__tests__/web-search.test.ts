@@ -1,8 +1,20 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
+import { TOOL_ERROR_CODES } from "@/lib/tools/errors";
 
 vi.mock("@/lib/redis", () => ({
   getRedis: vi.fn(),
+}));
+
+const ratelimitLimit = vi.fn(async () => ({ success: true }));
+vi.mock("@upstash/ratelimit", () => ({
+  Ratelimit: class {
+    static slidingWindow(limit: number, window: string) {
+      return { limit, window };
+    }
+
+    limit = ratelimitLimit;
+  },
 }));
 
 // Telemetry shim: execute callback immediately and capture attrs via spy
@@ -30,6 +42,7 @@ vi.mock("@/lib/env/server", () => ({
 
 beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn());
+  ratelimitLimit.mockClear();
 });
 
 afterEach(() => {
@@ -138,7 +151,7 @@ describe("webSearch", () => {
     const { webSearch } = await import("@/lib/tools/web-search");
     await expect(
       webSearch.execute?.({ fresh: false, limit: 5, query: "test" }, mockContext)
-    ).rejects.toThrow(/web_search_not_configured/);
+    ).rejects.toMatchObject({ code: TOOL_ERROR_CODES.webSearchNotConfigured });
     // Restore mock
     (getServerEnvVar as ReturnType<typeof vi.fn>).mockReturnValue("test_key");
     vi.resetModules();
@@ -156,7 +169,7 @@ describe("webSearch", () => {
     (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockRes);
     await expect(
       webSearch.execute?.({ fresh: true, limit: 5, query: "test" }, mockContext)
-    ).rejects.toThrow(/web_search_rate_limited/);
+    ).rejects.toMatchObject({ code: TOOL_ERROR_CODES.webSearchRateLimited });
   });
 
   test("handles unauthorized errors", async () => {
@@ -171,7 +184,7 @@ describe("webSearch", () => {
     (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockRes);
     await expect(
       webSearch.execute?.({ fresh: true, limit: 5, query: "test" }, mockContext)
-    ).rejects.toThrow(/web_search_unauthorized/);
+    ).rejects.toMatchObject({ code: TOOL_ERROR_CODES.webSearchUnauthorized });
   });
 
   test("handles payment required errors", async () => {
@@ -186,7 +199,7 @@ describe("webSearch", () => {
     (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockRes);
     await expect(
       webSearch.execute?.({ fresh: true, limit: 5, query: "test" }, mockContext)
-    ).rejects.toThrow(/web_search_payment_required/);
+    ).rejects.toMatchObject({ code: TOOL_ERROR_CODES.webSearchPaymentRequired });
   });
 
   test("handles generic API errors", async () => {
@@ -201,7 +214,7 @@ describe("webSearch", () => {
     (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockRes);
     await expect(
       webSearch.execute?.({ fresh: true, limit: 5, query: "test" }, mockContext)
-    ).rejects.toThrow(/web_search_failed/);
+    ).rejects.toMatchObject({ code: TOOL_ERROR_CODES.webSearchFailed });
   });
 
   test("uses custom base URL when configured", async () => {
@@ -467,16 +480,21 @@ describe("webSearch caching behavior", () => {
   test("normalizes cached results with extra fields", async () => {
     const { getRedis } = await import("@/lib/redis");
     const mockRedis = {
-      get: vi.fn().mockResolvedValue({
-        results: [
-          {
-            content: "extra",
-            score: 0.8,
-            title: "Cached",
-            url: "https://cached.com",
-          },
-        ],
-      }),
+      get: vi.fn().mockResolvedValue(
+        JSON.stringify({
+          fromCache: false,
+          results: [
+            {
+              content: "extra",
+              score: 0.8,
+              title: "Cached",
+              url: "https://cached.com",
+            },
+          ],
+          tookMs: 42,
+        })
+      ),
+      set: vi.fn(),
     };
     (getRedis as ReturnType<typeof vi.fn>).mockReturnValue(mockRedis);
     const { webSearch } = await import("@/lib/tools/web-search");
@@ -509,7 +527,11 @@ describe("webSearch caching behavior", () => {
   test("returns cached result when available and fresh=false with metadata", async () => {
     const { getRedis } = await import("@/lib/redis");
     const mockRedis = {
-      get: vi.fn().mockResolvedValue({ cached: true, results: [] }),
+      get: vi
+        .fn()
+        .mockResolvedValue(
+          JSON.stringify({ fromCache: false, results: [], tookMs: 10 })
+        ),
       set: vi.fn(),
     };
     (getRedis as ReturnType<typeof vi.fn>).mockReturnValue(mockRedis);
@@ -545,40 +567,11 @@ describe("webSearch caching behavior", () => {
   });
 
   test("rate limiting calls Upstash when configured", async () => {
-    // Provide Upstash envs to construct limiter
-    const { getServerEnvVarWithFallback } = await import("@/lib/env/server");
-    (getServerEnvVarWithFallback as ReturnType<typeof vi.fn>).mockImplementation(
-      (key: string, fallback?: string) => {
-        if (key === "UPSTASH_REDIS_REST_URL") return "https://upstash.example";
-        if (key === "UPSTASH_REDIS_REST_TOKEN") return "token";
-        if (key === "FIRECRAWL_API_KEY") return "test_key";
-        if (key === "FIRECRAWL_BASE_URL")
-          return fallback || "https://api.firecrawl.dev/v2";
-        return fallback;
-      }
-    );
-
-    vi.doMock("@upstash/redis", () => ({
-      Redis: { fromEnv: () => ({}) },
-    }));
-
-    const limitSpy = vi.fn(async () => ({
-      limit: 20,
-      remaining: 19,
-      reset: Math.floor(Date.now() / 1000) + 60,
-      success: true,
-    }));
-    const ctorSpy = vi.fn().mockImplementation(function () {
-      // @ts-expect-error - attach instance method dynamically for test
-      this.limit = limitSpy;
-    });
-    vi.resetModules();
-    vi.doMock("@upstash/ratelimit", () => ({
-      Ratelimit: Object.assign(ctorSpy, { slidingWindow: () => ({}) }),
-    }));
-
     const { getRedis } = await import("@/lib/redis");
-    (getRedis as ReturnType<typeof vi.fn>).mockReturnValue(null);
+    (getRedis as ReturnType<typeof vi.fn>).mockReturnValue({
+      get: vi.fn(),
+      set: vi.fn(),
+    });
     const { webSearch } = await import("@/lib/tools/web-search");
     const mockRes = { json: async () => ({ results: [] }), ok: true } as Response;
     (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockRes);
@@ -586,8 +579,7 @@ describe("webSearch caching behavior", () => {
       { fresh: true, limit: 1, query: "foo", userId: "u1" },
       mockContext
     );
-    expect(ctorSpy).toHaveBeenCalled();
-    expect(limitSpy).toHaveBeenCalledWith("u1");
+    expect(ratelimitLimit).toHaveBeenCalledWith("u1");
   });
 
   test("bypasses cache when fresh=true", async () => {
@@ -624,10 +616,15 @@ describe("webSearch caching behavior", () => {
     (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockRes);
     await webSearch.execute?.({ fresh: false, limit: 5, query: "test" }, mockContext);
     expect(mockRedis.set).toHaveBeenCalledWith(
-      expect.stringContaining("ws:"),
-      mockData,
+      expect.stringContaining("tool:webSearch:ws"),
+      expect.any(String),
       { ex: 3600 }
     );
+    const [, payload] = mockRedis.set.mock.calls[0];
+    expect(JSON.parse(payload as string)).toMatchObject({
+      fromCache: false,
+      results: [{ url: "https://example.com" }],
+    });
   });
 
   test("handles missing Redis gracefully", async () => {

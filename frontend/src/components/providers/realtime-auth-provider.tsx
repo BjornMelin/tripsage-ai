@@ -6,8 +6,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { getBrowserClient } from "@/lib/supabase/client";
-import { getAccessToken } from "@/lib/supabase/token";
+import { getBrowserClient } from "@/lib/supabase";
 
 /**
  * Keeps Supabase Realtime authorized with the latest access token, reacting to
@@ -24,7 +23,10 @@ export function RealtimeAuthProvider(): null {
     // biome-ignore lint/style/useNamingConvention: Not a React hook
     async function initializeRealtimeAuthHandler(): Promise<void> {
       try {
-        const token = await getAccessToken(supabase);
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const token = session?.access_token ?? null;
         if (!isMounted) {
           return;
         }

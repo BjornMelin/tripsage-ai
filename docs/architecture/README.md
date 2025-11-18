@@ -1,8 +1,12 @@
 # TripSage System Architecture
 
-> **Target Audience**: Technical architects, senior developers, technical stakeholders, integration partners
+> **Target Audience**: Technical architects, senior developers, technical
+> stakeholders, integration partners
 
-This section contains high-level system design and architectural documentation for TripSage. Architecture documentation focuses on system design decisions, component interactions, and technology stack choices rather than implementation details.
+This section contains high-level system design and architectural
+documentation for TripSage. The focus is on system design decisions,
+component interactions, and technology stack choices rather than
+implementation details.
 
 ## Documentation Scope
 
@@ -18,22 +22,33 @@ This section contains high-level system design and architectural documentation f
 
 **Architecture Documentation Excludes:**
 
-- Implementation details and code examples → See [`docs/developers/`](../developers/)
-- Deployment procedures and operations → See [`docs/operators/`](../operators/)
-- API specifications and endpoints → See [`docs/api-reference/`](../api-reference/)
-- Configuration and setup guides → See [`docs/configuration/`](../configuration/)
+- Implementation details and code examples → See
+  [`docs/developers/`](../developers/)
+- Deployment procedures and operations → See
+  [`docs/operators/`](../operators/)
+- API specifications and endpoints → See
+  [`docs/api-reference/`](../api-reference/)
+- Configuration and setup guides → See
+  [`docs/configuration/`](../configuration/)
 
 ## Architecture Documents
 
 ### Core System Architecture
 
-- **[System Overview](system-overview.md)** - Complete system architecture with component interactions, data flow, and technology stack
-- **[Data Architecture](data-architecture.md)** - Database design patterns, storage decisions, and vector search optimization
-- **[Frontend Architecture](frontend-architecture.md)** - Next.js application structure, AI SDK v6 integration, component organization, and data flows
+- **[System Overview](system-overview.md)** - Complete system architecture
+  with component interactions, data flow, and technology stack
+- **[Data Architecture](data-architecture.md)** - Database design patterns,
+  storage decisions, and vector search optimization
+- **[Frontend Architecture](frontend-architecture.md)** - Next.js
+  application structure, AI SDK v6 integration, component organization,
+  and data flows
 
 ### Specialized Architecture
 
-- **[Storage Architecture](storage-architecture.md)** - File storage, bucket organization, and security patterns
+- **[Storage Architecture](storage-architecture.md)** - File storage,
+  bucket organization, and security patterns
+- **[Route Exceptions](route-exceptions.md)** - Exception criteria for API
+  factory bypass
 
 ## Architecture Principles
 
@@ -41,23 +56,30 @@ TripSage follows these core architectural principles:
 
 ### 1. **Unified Data Architecture**
 
-Single source of truth with Supabase PostgreSQL, eliminating complex multi-database patterns while supporting real-time features and vector operations.
+Single source of truth with Supabase PostgreSQL, eliminating complex
+multi-database patterns while supporting real-time features and vector
+operations.
 
 ### 2. **Consumer-Aware API Design**
 
-API layer adapts responses and behavior based on consumer type (frontend applications vs AI agents).
+API layer adapts responses and behavior based on consumer type (frontend
+applications vs AI agents).
 
 ### 3. **Serverless Caching**
 
-Serverless caching with Upstash Redis (HTTP), integrated via Vercel environment variables, eliminating local cache containers and connection pooling.
+Serverless caching with Upstash Redis (HTTP), integrated via Vercel
+environment variables, eliminating local cache containers and connection
+pooling.
 
 ### 4. **Service Consolidation**
 
-Direct SDK integrations replacing complex abstraction layers, reducing latency and improving maintainability while preserving functionality.
+Direct SDK integrations replace complex abstraction layers, reducing
+latency and improving maintainability while preserving functionality.
 
 ### 5. **Real-time Collaboration**
 
-Supabase Realtime-based architecture for live trip planning, agent status updates, and multi-user collaboration.
+Supabase Realtime-based architecture for live trip planning, agent
+status updates, and multi-user collaboration.
 
 ## Project Structure
 
@@ -66,7 +88,7 @@ tripsage-ai/
 ├── tripsage/                   # API application (FastAPI)
 ├── tripsage_core/              # Core business logic and services
 ├── frontend/                   # Next.js application
-├── tests/                      # Test suite (unit, integration, e2e, performance, security)
+├── tests/                      # Test suite (unit, integration, e2e, perf, security)
 ├── scripts/                    # Database and deployment scripts
 ├── docker/                     # Runtime compose files and Dockerfiles
 ├── docs/                       # Documentation
@@ -77,7 +99,8 @@ tripsage-ai/
 
 #### `tripsage/api/`
 
-FastAPI application entry point and core API logic with consumer-aware design.
+FastAPI application entry point and core API logic with consumer-aware
+design.
 
 #### `tripsage_core/`
 
@@ -88,11 +111,14 @@ Core business logic, services, models, and shared utilities:
 - `models/` - Pydantic models and Supabase schemas
 - `services/business/` - Business logic services
 - `services/external_apis/` - Direct SDK integrations
-- `services/infrastructure/` - Database, cache, Supabase Realtime integration
+- `services/infrastructure/` - Database, cache, Supabase Realtime
+  integration
 
 #### `frontend/`
 
-Next.js 16 application with App Router and React 19. See [Frontend Architecture](frontend-architecture.md) for detailed structure, AI SDK v6 integration, and component organization.
+Next.js 16 application with App Router and React 19. See
+[Frontend Architecture](frontend-architecture.md) for detailed
+structure, AI SDK v6 integration, and component organization.
 
 #### `tests/`
 
@@ -106,10 +132,14 @@ Test suite with 90%+ coverage:
 
 ## Related Documentation
 
-- **[Developers Guide](../developers/)** - Implementation details, code examples, testing
-- **[API Documentation](../api/)** - REST specifications and Supabase Realtime guide
-- **[Testing Guide](../../tests/README.md)** - Test organization and best practices
-- **[Deployment](../operators/)** - Infrastructure, monitoring, and operations
+- **[Developers Guide](../developers/)** - Implementation details, code
+  examples, testing
+- **[API Documentation](../api/)** - REST specifications and Supabase
+  Realtime guide
+- **[Testing Guide](../../tests/README.md)** - Test organization and best
+  practices
+- **[Deployment](../operators/)** - Infrastructure, monitoring, and
+  operations
 
 ## Architecture Metrics
 
@@ -142,4 +172,6 @@ Current architecture metrics:
 
 ---
 
-*For questions about system architecture or design decisions, please refer to the specific architecture documents or contact the technical architecture team.*
+*For questions about system architecture or design decisions, refer to
+the specific architecture documents or contact the technical
+architecture team.*

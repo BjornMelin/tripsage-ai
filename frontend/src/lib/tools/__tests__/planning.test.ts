@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { getMockCookiesForTest } from "@/test/route-helpers";
 import {
   RATE_CREATE_PER_DAY,
   RATE_UPDATE_PER_MIN,
@@ -13,6 +14,13 @@ import {
   updateTravelPlan,
 } from "../planning";
 import { planSchema } from "../planning.schema";
+
+// Mock next/headers cookies() before any imports that use it
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(() =>
+    Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))
+  ),
+}));
 
 type RedisMock = {
   data: Map<string, unknown>;
@@ -54,36 +62,40 @@ vi.mock("@/lib/redis", () => {
   return { getRedis: () => store };
 });
 
-vi.mock("@/lib/supabase/server", () => {
-  let currentUserId = "u1";
-  return {
-    // biome-ignore lint/style/useNamingConvention: test-only helper
-    __setUserIdForTests: (id: string) => {
-      currentUserId = id;
-    },
-    createServerSupabase: async () => ({
-      auth: {
-        getUser: async () => ({
-          data: {
-            user: {
-              app_metadata: {},
-              aud: "authenticated",
-              created_at: new Date(0).toISOString(),
-              id: currentUserId,
-              user_metadata: {},
-            },
+let currentUserId = "u1";
+const mockCreateServerSupabase = vi.hoisted(() =>
+  vi.fn(async () => ({
+    auth: {
+      getUser: async () => ({
+        data: {
+          user: {
+            app_metadata: {},
+            aud: "authenticated",
+            created_at: new Date(0).toISOString(),
+            id: currentUserId,
+            user_metadata: {},
           },
-          error: null,
-        }),
-      },
-      from: () => ({
-        insert: () => ({
-          select: () => ({ single: async () => ({ data: { id: 1 } }) }),
-        }),
+        },
+        error: null,
+      }),
+    },
+    from: () => ({
+      insert: () => ({
+        select: () => ({ single: async () => ({ data: { id: 1 } }) }),
       }),
     }),
-  };
+  }))
+);
+
+const setUserIdForTests = vi.hoisted(() => (id: string) => {
+  currentUserId = id;
 });
+
+vi.mock("@/lib/supabase/server", () => ({
+  // biome-ignore lint/style/useNamingConvention: test-only helper
+  __setUserIdForTests: setUserIdForTests,
+  createServerSupabase: mockCreateServerSupabase,
+}));
 
 describe("planning tools", () => {
   let redis: RedisMock;

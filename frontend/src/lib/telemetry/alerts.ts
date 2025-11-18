@@ -3,7 +3,7 @@
  */
 
 import "server-only";
-import { TELEMETRY_SERVICE_NAME } from "@/lib/telemetry/tracer";
+import { TELEMETRY_SERVICE_NAME } from "@/lib/telemetry/constants";
 
 export type AlertSeverity = "info" | "warning" | "error";
 

@@ -13,6 +13,7 @@ import { Navbar } from "@/components/layouts/navbar";
 import { PerformanceMonitor } from "@/components/providers/performance-provider";
 import { TanStackQueryProvider } from "@/components/providers/query-provider";
 import { RealtimeAuthProvider } from "@/components/providers/realtime-auth-provider";
+import { TelemetryProvider } from "@/components/providers/telemetry-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
 
@@ -78,6 +79,8 @@ export default function RootLayout({
       <body
         className={`${GEIST_SANS.variable} ${GEIST_MONO.variable} font-sans antialiased min-h-screen`}
       >
+        {/* Initialize client-side OpenTelemetry tracing */}
+        <TelemetryProvider />
         <PerformanceMonitor>
           <TanStackQueryProvider>
             <ThemeProvider

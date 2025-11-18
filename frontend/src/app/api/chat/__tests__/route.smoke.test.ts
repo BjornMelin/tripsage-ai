@@ -1,62 +1,112 @@
-import type { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { unstubAllEnvs } from "@/test/env-helpers";
+import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
 
-/**
- * Builds a NextRequest object for testing API routes.
- *
- * @param body - Request body to be JSON stringified.
- * @param headers - Additional headers to include in the request.
- * @returns NextRequest object for testing.
- */
-function buildReq(body: unknown, headers: Record<string, string> = {}): NextRequest {
-  return new Request("http://localhost/api/chat", {
-    body: JSON.stringify(body),
-    headers: { "content-type": "application/json", ...headers },
-    method: "POST",
-  }) as unknown as NextRequest;
-}
+// Mock next/headers cookies() BEFORE any imports that use it
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(() =>
+    Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))
+  ),
+}));
+
+const mockGetUser = vi.fn();
+const mockFrom = vi.fn();
+const mockResolveProvider = vi.fn();
+const mockGenerateText = vi.fn();
+
+vi.mock("@/lib/supabase/server", () => ({
+  createServerSupabase: vi.fn(async () => ({
+    auth: { getUser: mockGetUser },
+    from: mockFrom,
+  })),
+}));
+
+vi.mock("@/lib/providers/registry", () => ({
+  resolveProvider: mockResolveProvider,
+}));
+
+vi.mock("ai", () => ({
+  convertToModelMessages: (x: unknown) => x,
+  generateText: mockGenerateText,
+}));
+
+vi.mock("@upstash/ratelimit", () => ({
+  Ratelimit: vi.fn(() => ({
+    limit: vi.fn().mockResolvedValue({
+      limit: 40,
+      remaining: 39,
+      reset: Date.now() + 60000,
+      success: true,
+    }),
+  })),
+  slidingWindow: vi.fn(),
+}));
+
+vi.mock("@upstash/redis", () => ({
+  Redis: {
+    fromEnv: vi.fn(() => ({})),
+  },
+}));
+
+vi.mock("@/lib/env/server", () => ({
+  getServerEnvVarWithFallback: vi.fn(() => undefined),
+}));
+
+// Mock route helpers
+vi.mock("@/lib/next/route-helpers", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/next/route-helpers")>(
+    "@/lib/next/route-helpers"
+  );
+  return {
+    ...actual,
+    getClientIpFromHeaders: vi.fn(() => "127.0.0.1"),
+    withRequestSpan: vi.fn((_name, _attrs, fn) => fn()),
+  };
+});
 
 describe("/api/chat route smoke", () => {
   beforeEach(() => {
-    vi.resetModules();
+    vi.clearAllMocks();
     unstubAllEnvs();
+    mockGetUser.mockReset();
+    mockFrom.mockReset();
+    mockResolveProvider.mockReset();
+    mockGenerateText.mockReset();
   });
 
   it("returns 401 unauthenticated", async () => {
-    vi.doMock("@/lib/supabase/server", () => ({
-      createServerSupabase: vi.fn(async () => ({
-        auth: { getUser: vi.fn(async () => ({ data: { user: null } })) },
-      })),
-    }));
+    mockGetUser.mockResolvedValue({ data: { user: null } });
     const mod = await import("../route");
-    const res = await mod.POST(buildReq({ messages: [] }));
+    const req = createMockNextRequest({
+      body: { messages: [] },
+      method: "POST",
+      url: "http://localhost/api/chat",
+    });
+    const res = await mod.POST(req);
     expect(res.status).toBe(401);
   });
 
   it("returns 200 on success", async () => {
-    vi.doMock("@/lib/supabase/server", () => ({
-      createServerSupabase: vi.fn(async () => ({
-        auth: { getUser: vi.fn(async () => ({ data: { user: { id: "u1" } } })) },
-        from: vi.fn(() => ({ insert: vi.fn(async () => ({ error: null })) })),
-      })),
-    }));
-    vi.doMock("@/lib/providers/registry", () => ({
-      resolveProvider: vi.fn(async () => ({
-        model: {},
-        modelId: "gpt-4o-mini",
-        provider: "openai",
-      })),
-    }));
-    vi.doMock("ai", () => ({
-      convertToModelMessages: (x: unknown) => x,
-      generateText: vi.fn(async () => ({
-        text: "ok",
-        usage: { inputTokens: 1, outputTokens: 2, totalTokens: 3 },
-      })),
-    }));
+    mockGetUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+    mockFrom.mockReturnValue({
+      insert: vi.fn(async () => ({ error: null })),
+    });
+    mockResolveProvider.mockResolvedValue({
+      model: {},
+      modelId: "gpt-4o-mini",
+      provider: "openai",
+    });
+    mockGenerateText.mockResolvedValue({
+      text: "ok",
+      usage: { inputTokens: 1, outputTokens: 2, totalTokens: 3 },
+    });
     const mod = await import("../route");
-    const res = await mod.POST(buildReq({ messages: [] }));
+    const req = createMockNextRequest({
+      body: { messages: [] },
+      method: "POST",
+      url: "http://localhost/api/chat",
+    });
+    const res = await mod.POST(req);
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.content).toBe("ok");

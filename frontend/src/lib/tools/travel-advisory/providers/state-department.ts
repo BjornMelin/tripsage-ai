@@ -5,6 +5,7 @@
  * official travel advisories API.
  */
 
+import { createServerLogger } from "@/lib/telemetry/logger";
 import type { AdvisoryProvider, SafetyResult } from "../providers";
 import {
   extractSafetyCategories,
@@ -207,7 +208,10 @@ export class StateDepartmentProvider implements AdvisoryProvider {
       return this.normalizeAdvisory(advisory, countryCode);
     } catch (error) {
       // Log error but don't throw - let caller handle fallback
-      console.error(`State Department API error for ${countryCode}:`, error);
+      stateDepartmentLogger.error("api_request_failed", {
+        countryCode,
+        error: error instanceof Error ? error.message : "unknown_error",
+      });
       return null;
     }
   }
@@ -222,3 +226,5 @@ export function createStateDepartmentProvider(): AdvisoryProvider {
   const provider = new StateDepartmentProvider();
   return provider;
 }
+
+const stateDepartmentLogger = createServerLogger("tools.travel_advisory.state_dept");

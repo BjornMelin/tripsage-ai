@@ -1,3 +1,5 @@
+/** @vitest-environment jsdom */
+
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Budget } from "@/lib/schemas/budget";
@@ -8,13 +10,21 @@ import {
   selectRecentExpensesFrom,
   useBudgetStore,
 } from "@/stores/budget-store";
-import { resetBudgetStore } from "./_shared";
 
 // Note: persist middleware is already mocked globally in test-setup.ts
 
 describe("Budget Store - Budget Calculation", () => {
   beforeEach(() => {
-    resetBudgetStore();
+    act(() => {
+      useBudgetStore.setState({
+        activeBudgetId: null,
+        alerts: {},
+        baseCurrency: "USD",
+        budgets: {},
+        currencies: {},
+        expenses: {},
+      });
+    });
   });
 
   describe("Computed Properties", () => {

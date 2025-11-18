@@ -5,10 +5,10 @@
 
 import { z } from "zod";
 
-// Common validation patterns
-const TIMESTAMP_SCHEMA = z.string().datetime();
-const UUID_SCHEMA = z.string().uuid();
-const EMAIL_SCHEMA = z.string().email();
+// Common validation patterns (Zod v4 top-level validators)
+const TIMESTAMP_SCHEMA = z.iso.datetime();
+const UUID_SCHEMA = z.uuid();
+const EMAIL_SCHEMA = z.email();
 const POSITIVE_NUMBER_SCHEMA = z.number().positive();
 const NON_NEGATIVE_NUMBER_SCHEMA = z.number().nonnegative();
 
@@ -27,6 +27,89 @@ const PAGINATION_STATE_SCHEMA = z.object({
   total: NON_NEGATIVE_NUMBER_SCHEMA,
 });
 
+// Auth schemas (reusable across auth store slices)
+// Note: These are auth-specific user preferences (UI settings), distinct from
+// memory.ts USER_PREFERENCES_SCHEMA which is for travel preferences
+export const AUTH_USER_PREFERENCES_SCHEMA = z.object({
+  analytics: z.boolean().optional(),
+  autoSaveSearches: z.boolean().optional(),
+  dateFormat: z.enum(["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"]).optional(),
+  language: z.string().optional(),
+  locationServices: z.boolean().optional(),
+  notifications: z
+    .object({
+      email: z.boolean().optional(),
+      marketing: z.boolean().optional(),
+      priceAlerts: z.boolean().optional(),
+      tripReminders: z.boolean().optional(),
+    })
+    .optional(),
+  smartSuggestions: z.boolean().optional(),
+  theme: z.enum(["light", "dark", "system"]).optional(),
+  timeFormat: z.enum(["12h", "24h"]).optional(),
+  timezone: z.string().optional(),
+  units: z.enum(["metric", "imperial"]).optional(),
+});
+
+export const AUTH_USER_SECURITY_SCHEMA = z.object({
+  lastPasswordChange: z.string().optional(),
+  securityQuestions: z
+    .array(
+      z.object({
+        answer: z.string(), // This would be hashed in real implementation
+        question: z.string(),
+      })
+    )
+    .optional(),
+  twoFactorEnabled: z.boolean().optional(),
+});
+
+export const AUTH_USER_SCHEMA = z.object({
+  avatarUrl: z.url().optional(),
+  bio: z.string().optional(),
+  createdAt: z.string(),
+  displayName: z.string().optional(),
+  email: EMAIL_SCHEMA,
+  firstName: z.string().optional(),
+  id: z.string(),
+  isEmailVerified: z.boolean(),
+  lastName: z.string().optional(),
+  location: z.string().optional(),
+  preferences: AUTH_USER_PREFERENCES_SCHEMA.optional(),
+  security: AUTH_USER_SECURITY_SCHEMA.optional(),
+  updatedAt: z.string(),
+  website: z.url().optional(),
+});
+
+export const AUTH_TOKEN_INFO_SCHEMA = z.object({
+  accessToken: z.string(),
+  expiresAt: z.string(),
+  refreshToken: z.string().optional(),
+  tokenType: z.string().default("Bearer"),
+});
+
+export const AUTH_SESSION_SCHEMA = z.object({
+  createdAt: z.string(),
+  deviceInfo: z
+    .object({
+      deviceId: z.string().optional(),
+      ipAddress: z.string().optional(),
+      userAgent: z.string().optional(),
+    })
+    .optional(),
+  expiresAt: z.string(),
+  id: z.string(),
+  lastActivity: z.string(),
+  userId: z.string(),
+});
+
+// Auth type exports
+export type AuthUser = z.infer<typeof AUTH_USER_SCHEMA>;
+export type AuthUserPreferences = z.infer<typeof AUTH_USER_PREFERENCES_SCHEMA>;
+export type AuthUserSecurity = z.infer<typeof AUTH_USER_SECURITY_SCHEMA>;
+export type AuthTokenInfo = z.infer<typeof AUTH_TOKEN_INFO_SCHEMA>;
+export type AuthSession = z.infer<typeof AUTH_SESSION_SCHEMA>;
+
 // Auth store schema
 export const authStoreStateSchema = z.object({
   error: z.string().nullable(),
@@ -42,7 +125,7 @@ export const authStoreStateSchema = z.object({
     .nullable(),
   user: z
     .object({
-      avatar: z.string().url().optional(),
+      avatar: z.url().optional(),
       email: EMAIL_SCHEMA,
       emailVerified: z.boolean(),
       firstName: z.string(),
@@ -65,24 +148,25 @@ export const authStoreActionsSchema = z.object({
 });
 
 // User store schema
-export const userStoreStateSchema = z.object({
-  profile: z
-    .object({
-      avatar: z.string().url().optional(),
-      bio: z.string().optional(),
-      currency: z.string().length(3).optional(),
-      displayName: z.string().optional(),
-      email: EMAIL_SCHEMA,
-      firstName: z.string(),
-      id: UUID_SCHEMA,
-      language: z.string().optional(),
-      lastName: z.string(),
-      preferences: z.record(z.string(), z.unknown()).optional(),
-      timezone: z.string().optional(),
-    })
-    .nullable(),
-  ...LOADING_STATE_SCHEMA.shape,
-});
+export const userStoreStateSchema = z
+  .object({
+    profile: z
+      .object({
+        avatar: z.url().optional(),
+        bio: z.string().optional(),
+        currency: z.string().length(3).optional(),
+        displayName: z.string().optional(),
+        email: EMAIL_SCHEMA,
+        firstName: z.string(),
+        id: UUID_SCHEMA,
+        language: z.string().optional(),
+        lastName: z.string(),
+        preferences: z.record(z.string(), z.unknown()).optional(),
+        timezone: z.string().optional(),
+      })
+      .nullable(),
+  })
+  .merge(LOADING_STATE_SCHEMA);
 
 export const userStoreActionsSchema = z.object({
   deleteAccount: z.function(),
@@ -94,45 +178,46 @@ export const userStoreActionsSchema = z.object({
 });
 
 // Search store schema
-export const searchStoreStateSchema = z.object({
-  currentParams: z.record(z.string(), z.unknown()).nullable(),
-  currentSearchType: z
-    .enum(["flight", "accommodation", "activity", "destination"])
-    .nullable(),
-  filters: z.record(z.string(), z.unknown()),
-  pagination: PAGINATION_STATE_SCHEMA.optional(),
-  recentSearches: z.array(
-    z.object({
-      id: z.string(),
-      params: z.record(z.string(), z.unknown()),
-      timestamp: TIMESTAMP_SCHEMA,
-      type: z.enum(["flight", "accommodation", "activity", "destination"]),
-    })
-  ),
-  results: z.object({
-    accommodations: z.array(z.unknown()).optional(),
-    activities: z.array(z.unknown()).optional(),
-    destinations: z.array(z.unknown()).optional(),
-    flights: z.array(z.unknown()).optional(),
-  }),
-  savedSearches: z.array(
-    z.object({
-      createdAt: TIMESTAMP_SCHEMA,
-      id: z.string(),
-      lastUsed: TIMESTAMP_SCHEMA.optional(),
-      name: z.string(),
-      params: z.record(z.string(), z.unknown()),
-      type: z.enum(["flight", "accommodation", "activity", "destination"]),
-    })
-  ),
-  sorting: z
-    .object({
-      direction: z.enum(["asc", "desc"]),
-      field: z.string(),
-    })
-    .optional(),
-  ...LOADING_STATE_SCHEMA.shape,
-});
+export const searchStoreStateSchema = z
+  .object({
+    currentParams: z.record(z.string(), z.unknown()).nullable(),
+    currentSearchType: z
+      .enum(["flight", "accommodation", "activity", "destination"])
+      .nullable(),
+    filters: z.record(z.string(), z.unknown()),
+    pagination: PAGINATION_STATE_SCHEMA.optional(),
+    recentSearches: z.array(
+      z.object({
+        id: z.string(),
+        params: z.record(z.string(), z.unknown()),
+        timestamp: TIMESTAMP_SCHEMA,
+        type: z.enum(["flight", "accommodation", "activity", "destination"]),
+      })
+    ),
+    results: z.object({
+      accommodations: z.array(z.unknown()).optional(),
+      activities: z.array(z.unknown()).optional(),
+      destinations: z.array(z.unknown()).optional(),
+      flights: z.array(z.unknown()).optional(),
+    }),
+    savedSearches: z.array(
+      z.object({
+        createdAt: TIMESTAMP_SCHEMA,
+        id: z.string(),
+        lastUsed: TIMESTAMP_SCHEMA.optional(),
+        name: z.string(),
+        params: z.record(z.string(), z.unknown()),
+        type: z.enum(["flight", "accommodation", "activity", "destination"]),
+      })
+    ),
+    sorting: z
+      .object({
+        direction: z.enum(["asc", "desc"]),
+        field: z.string(),
+      })
+      .optional(),
+  })
+  .merge(LOADING_STATE_SCHEMA);
 
 export const searchStoreActionsSchema = z.object({
   addToRecentSearches: z.function(),
@@ -151,74 +236,75 @@ export const searchStoreActionsSchema = z.object({
 });
 
 // Trip store schema
-export const tripStoreStateSchema = z.object({
-  currentTrip: z
-    .object({
-      budget: z
-        .object({
-          currency: z.string().length(3),
-          spent: NON_NEGATIVE_NUMBER_SCHEMA,
-          total: POSITIVE_NUMBER_SCHEMA,
-        })
-        .optional(),
-      destination: z.string(),
-      endDate: z.string().date(),
-      id: UUID_SCHEMA,
-      itinerary: z.array(z.unknown()),
-      startDate: z.string().date(),
-      status: z.enum(["planning", "booked", "active", "completed", "cancelled"]),
-      title: z.string(),
-      travelers: z.array(z.unknown()),
-    })
-    .nullable(),
-  filters: z.object({
-    dateRange: z
+export const tripStoreStateSchema = z
+  .object({
+    currentTrip: z
       .object({
-        end: z.string().date(),
-        start: z.string().date(),
+        budget: z
+          .object({
+            currency: z.string().length(3),
+            spent: NON_NEGATIVE_NUMBER_SCHEMA,
+            total: POSITIVE_NUMBER_SCHEMA,
+          })
+          .optional(),
+        destination: z.string(),
+        endDate: z.iso.date(),
+        id: UUID_SCHEMA,
+        itinerary: z.array(z.unknown()),
+        startDate: z.iso.date(),
+        status: z.enum(["planning", "booked", "active", "completed", "cancelled"]),
+        title: z.string(),
+        travelers: z.array(z.unknown()),
       })
-      .optional(),
-    search: z.string().optional(),
-    status: z
-      .array(z.enum(["planning", "booked", "active", "completed", "cancelled"]))
-      .optional(),
-  }),
-  sorting: z.object({
-    direction: z.enum(["asc", "desc"]),
-    field: z.enum(["createdAt", "startDate", "title", "status"]),
-  }),
-  trips: z.array(
-    z.object({
-      budget: z
+      .nullable(),
+    filters: z.object({
+      dateRange: z
         .object({
-          currency: z.string().length(3),
-          spent: NON_NEGATIVE_NUMBER_SCHEMA,
-          total: POSITIVE_NUMBER_SCHEMA,
+          end: z.iso.date(),
+          start: z.iso.date(),
         })
         .optional(),
-      createdAt: TIMESTAMP_SCHEMA,
-      description: z.string().optional(),
-      destination: z.string(),
-      endDate: z.string().date(),
-      id: UUID_SCHEMA,
-      itinerary: z.array(z.unknown()),
-      startDate: z.string().date(),
-      status: z.enum(["planning", "booked", "active", "completed", "cancelled"]),
-      title: z.string(),
-      travelers: z.array(
-        z.object({
-          email: EMAIL_SCHEMA.optional(),
-          id: UUID_SCHEMA.optional(),
-          name: z.string(),
-          role: z.enum(["owner", "collaborator", "viewer"]),
-        })
-      ),
-      updatedAt: TIMESTAMP_SCHEMA,
-    })
-  ),
-  ...LOADING_STATE_SCHEMA.shape,
-  pagination: PAGINATION_STATE_SCHEMA,
-});
+      search: z.string().optional(),
+      status: z
+        .array(z.enum(["planning", "booked", "active", "completed", "cancelled"]))
+        .optional(),
+    }),
+    pagination: PAGINATION_STATE_SCHEMA,
+    sorting: z.object({
+      direction: z.enum(["asc", "desc"]),
+      field: z.enum(["createdAt", "startDate", "title", "status"]),
+    }),
+    trips: z.array(
+      z.object({
+        budget: z
+          .object({
+            currency: z.string().length(3),
+            spent: NON_NEGATIVE_NUMBER_SCHEMA,
+            total: POSITIVE_NUMBER_SCHEMA,
+          })
+          .optional(),
+        createdAt: TIMESTAMP_SCHEMA,
+        description: z.string().optional(),
+        destination: z.string(),
+        endDate: z.iso.date(),
+        id: UUID_SCHEMA,
+        itinerary: z.array(z.unknown()),
+        startDate: z.iso.date(),
+        status: z.enum(["planning", "booked", "active", "completed", "cancelled"]),
+        title: z.string(),
+        travelers: z.array(
+          z.object({
+            email: EMAIL_SCHEMA.optional(),
+            id: UUID_SCHEMA.optional(),
+            name: z.string(),
+            role: z.enum(["owner", "collaborator", "viewer"]),
+          })
+        ),
+        updatedAt: TIMESTAMP_SCHEMA,
+      })
+    ),
+  })
+  .merge(LOADING_STATE_SCHEMA);
 
 export const tripStoreActionsSchema = z.object({
   clearCurrentTrip: z.function(),
@@ -237,38 +323,39 @@ export const tripStoreActionsSchema = z.object({
 });
 
 // Chat store schema
-export const chatStoreStateSchema = z.object({
-  connectionStatus: z.enum(["connected", "connecting", "disconnected", "error"]),
-  conversations: z.array(
-    z.object({
-      createdAt: TIMESTAMP_SCHEMA,
-      id: UUID_SCHEMA,
-      messages: z.array(
-        z.object({
-          content: z.string(),
-          id: UUID_SCHEMA,
-          metadata: z.record(z.string(), z.unknown()).optional(),
-          role: z.enum(["user", "assistant", "system"]),
-          timestamp: TIMESTAMP_SCHEMA,
-        })
-      ),
-      status: z.enum(["active", "archived", "deleted"]),
-      title: z.string(),
-      updatedAt: TIMESTAMP_SCHEMA,
-    })
-  ),
-  currentConversation: z
-    .object({
-      id: UUID_SCHEMA,
-      messages: z.array(z.unknown()),
-      status: z.enum(["active", "archived", "deleted"]),
-      title: z.string(),
-    })
-    .nullable(),
-  isTyping: z.boolean(),
-  typingUsers: z.array(z.string()),
-  ...LOADING_STATE_SCHEMA.shape,
-});
+export const chatStoreStateSchema = z
+  .object({
+    connectionStatus: z.enum(["connected", "connecting", "disconnected", "error"]),
+    conversations: z.array(
+      z.object({
+        createdAt: TIMESTAMP_SCHEMA,
+        id: UUID_SCHEMA,
+        messages: z.array(
+          z.object({
+            content: z.string(),
+            id: UUID_SCHEMA,
+            metadata: z.record(z.string(), z.unknown()).optional(),
+            role: z.enum(["user", "assistant", "system"]),
+            timestamp: TIMESTAMP_SCHEMA,
+          })
+        ),
+        status: z.enum(["active", "archived", "deleted"]),
+        title: z.string(),
+        updatedAt: TIMESTAMP_SCHEMA,
+      })
+    ),
+    currentConversation: z
+      .object({
+        id: UUID_SCHEMA,
+        messages: z.array(z.unknown()),
+        status: z.enum(["active", "archived", "deleted"]),
+        title: z.string(),
+      })
+      .nullable(),
+    isTyping: z.boolean(),
+    typingUsers: z.array(z.string()),
+  })
+  .merge(LOADING_STATE_SCHEMA);
 
 export const chatStoreActionsSchema = z.object({
   addTypingUser: z.function(),
@@ -366,48 +453,49 @@ export const uiStoreActionsSchema = z.object({
 });
 
 // Budget store schema
-export const budgetStoreStateSchema = z.object({
-  budgets: z.record(
-    z.string(),
-    z.object({
-      categories: z.record(
-        z.string(),
-        z.object({
-          allocated: NON_NEGATIVE_NUMBER_SCHEMA,
-          spent: NON_NEGATIVE_NUMBER_SCHEMA,
-        })
-      ),
-      currency: z.string().length(3),
-      expenses: z.array(
-        z.object({
-          amount: POSITIVE_NUMBER_SCHEMA,
-          category: z.string(),
-          createdAt: TIMESTAMP_SCHEMA,
-          currency: z.string().length(3),
-          date: z.string().date(),
-          description: z.string(),
-          id: UUID_SCHEMA,
-        })
-      ),
-      spent: NON_NEGATIVE_NUMBER_SCHEMA,
-      total: POSITIVE_NUMBER_SCHEMA,
-      tripId: UUID_SCHEMA,
-      updatedAt: TIMESTAMP_SCHEMA,
-    })
-  ),
-  currentBudget: z
-    .object({
-      categories: z.record(z.string(), z.unknown()),
-      currency: z.string().length(3),
-      expenses: z.array(z.unknown()),
-      spent: NON_NEGATIVE_NUMBER_SCHEMA,
-      total: POSITIVE_NUMBER_SCHEMA,
-      tripId: UUID_SCHEMA,
-    })
-    .nullable(),
-  exchangeRates: z.record(z.string(), z.number().positive()),
-  ...LOADING_STATE_SCHEMA.shape,
-});
+export const budgetStoreStateSchema = z
+  .object({
+    budgets: z.record(
+      z.string(),
+      z.object({
+        categories: z.record(
+          z.string(),
+          z.object({
+            allocated: NON_NEGATIVE_NUMBER_SCHEMA,
+            spent: NON_NEGATIVE_NUMBER_SCHEMA,
+          })
+        ),
+        currency: z.string().length(3),
+        expenses: z.array(
+          z.object({
+            amount: POSITIVE_NUMBER_SCHEMA,
+            category: z.string(),
+            createdAt: TIMESTAMP_SCHEMA,
+            currency: z.string().length(3),
+            date: z.iso.date(),
+            description: z.string(),
+            id: UUID_SCHEMA,
+          })
+        ),
+        spent: NON_NEGATIVE_NUMBER_SCHEMA,
+        total: POSITIVE_NUMBER_SCHEMA,
+        tripId: UUID_SCHEMA,
+        updatedAt: TIMESTAMP_SCHEMA,
+      })
+    ),
+    currentBudget: z
+      .object({
+        categories: z.record(z.string(), z.unknown()),
+        currency: z.string().length(3),
+        expenses: z.array(z.unknown()),
+        spent: NON_NEGATIVE_NUMBER_SCHEMA,
+        total: POSITIVE_NUMBER_SCHEMA,
+        tripId: UUID_SCHEMA,
+      })
+      .nullable(),
+    exchangeRates: z.record(z.string(), z.number().positive()),
+  })
+  .merge(LOADING_STATE_SCHEMA);
 
 export const budgetStoreActionsSchema = z.object({
   addExpense: z.function(),
@@ -424,30 +512,31 @@ export const budgetStoreActionsSchema = z.object({
 });
 
 // API Key store schema
-export const apiKeyStoreStateSchema = z.object({
-  keys: z.array(
-    z.object({
-      createdAt: TIMESTAMP_SCHEMA,
-      id: UUID_SCHEMA,
-      isActive: z.boolean(),
-      key: z.string(),
-      lastUsed: TIMESTAMP_SCHEMA.optional(),
-      name: z.string(),
-      service: z.enum(["openai", "anthropic", "google", "amadeus", "skyscanner"]),
-      usageCount: NON_NEGATIVE_NUMBER_SCHEMA,
-    })
-  ),
-  services: z.record(
-    z.string(),
-    z.object({
-      description: z.string(),
-      lastCheck: TIMESTAMP_SCHEMA.optional(),
-      name: z.string(),
-      status: z.enum(["connected", "disconnected", "error"]),
-    })
-  ),
-  ...LOADING_STATE_SCHEMA.shape,
-});
+export const apiKeyStoreStateSchema = z
+  .object({
+    keys: z.array(
+      z.object({
+        createdAt: TIMESTAMP_SCHEMA,
+        id: UUID_SCHEMA,
+        isActive: z.boolean(),
+        key: z.string(),
+        lastUsed: TIMESTAMP_SCHEMA.optional(),
+        name: z.string(),
+        service: z.enum(["openai", "anthropic", "google", "amadeus", "skyscanner"]),
+        usageCount: NON_NEGATIVE_NUMBER_SCHEMA,
+      })
+    ),
+    services: z.record(
+      z.string(),
+      z.object({
+        description: z.string(),
+        lastCheck: TIMESTAMP_SCHEMA.optional(),
+        name: z.string(),
+        status: z.enum(["connected", "disconnected", "error"]),
+      })
+    ),
+  })
+  .merge(LOADING_STATE_SCHEMA);
 
 export const apiKeyStoreActionsSchema = z.object({
   checkServiceStatus: z.function(),

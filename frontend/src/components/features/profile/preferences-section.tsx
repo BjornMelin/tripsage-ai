@@ -8,7 +8,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Globe, Zap } from "lucide-react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -35,20 +34,9 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import type { CurrencyCode } from "@/lib/schemas/currency";
+import { type PreferencesFormData, preferencesFormSchema } from "@/lib/schemas/forms";
 import { useCurrencyStore } from "@/stores/currency-store";
 import { useUserProfileStore } from "@/stores/user-store";
-
-const PreferencesSchema = z.object({
-  currency: z.string().min(1, "Please select a currency"),
-  dateFormat: z.enum(["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"]),
-  language: z.string().min(1, "Please select a language"),
-  theme: z.enum(["light", "dark", "system"]),
-  timeFormat: z.enum(["12h", "24h"]),
-  timezone: z.string().min(1, "Please select a timezone"),
-  units: z.enum(["metric", "imperial"]),
-});
-
-type PreferencesFormData = z.infer<typeof PreferencesSchema>;
 
 export function PreferencesSection() {
   const { profile: _profile } = useUserProfileStore();
@@ -65,7 +53,7 @@ export function PreferencesSection() {
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       units: "metric",
     },
-    resolver: zodResolver(PreferencesSchema),
+    resolver: zodResolver(preferencesFormSchema),
   });
 
   const onSubmit = async (data: PreferencesFormData) => {

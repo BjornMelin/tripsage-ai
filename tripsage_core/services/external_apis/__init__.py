@@ -16,15 +16,11 @@ from .playwright_service import (
     create_playwright_service,
     get_playwright_service,
 )
-from .webcrawl_service import (
-    WebCrawlService,
-)
 
 
 __all__ = [
     "DocumentAnalyzer",
     "PlaywrightService",
-    "WebCrawlService",
     "close_document_analyzer",
     "close_playwright_service",
     "create_playwright_service",

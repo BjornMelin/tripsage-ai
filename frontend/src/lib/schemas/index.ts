@@ -3,14 +3,6 @@
  * All Zod schemas for runtime type safety
  */
 
-// Re-export validation utilities (selective)
-export type { ValidationResult } from "../validation";
-export {
-  ValidationContext,
-  validate,
-  validateFormData,
-  validateStrict,
-} from "../validation";
 export * from "./accommodations";
 export * from "./agent-status";
 export * from "./api";
@@ -108,10 +100,30 @@ export {
 export type { SkeletonProps } from "./loading";
 export { skeletonPropsSchema } from "./loading";
 export * from "./memory";
+// Export schema registry (Zod v4 centralized schemas)
+export {
+  type Email,
+  type IsoDateTime,
+  primitiveSchemas,
+  refinedSchemas,
+  schemaRegistry,
+  type Timestamp,
+  transformSchemas,
+  type Url,
+  type Uuid,
+} from "./registry";
 // search schemas should be imported directly to avoid name collisions
 export * from "./stores";
+export * from "./supabase";
 export * from "./temporal";
 export * from "./theme-provider";
+export * from "./trips";
+// Re-export validation types from schemas (not utilities)
+export type {
+  ValidationContext,
+  ValidationError,
+  ValidationResult,
+} from "./validation";
 export * from "./weather";
 export * from "./web-search";
 
@@ -128,8 +140,10 @@ import * as errorBoundarySchemas from "./error-boundary";
 import * as formSchemas from "./forms";
 import * as loadingSchemas from "./loading";
 import * as memorySchemas from "./memory";
+import * as registrySchemas from "./registry";
 import * as searchSchemas from "./search";
 import * as storeSchemas from "./stores";
+import * as supabaseSchemas from "./supabase";
 
 // Central schema registry
 export const schemas = {
@@ -142,8 +156,10 @@ export const schemas = {
   forms: formSchemas,
   loading: loadingSchemas,
   memory: memorySchemas,
+  registry: registrySchemas,
   search: searchSchemas,
   stores: storeSchemas,
+  supabase: supabaseSchemas,
 } as const;
 
 // Commonly used validation patterns
@@ -211,41 +227,132 @@ export const errorMessages = {
   [validationCodes.serviceUnavailable]: "Service temporarily unavailable",
 } as const;
 
-// Schema validation utilities
+// Schema validation utilities using Zod native patterns
 import { z } from "zod";
-import { ValidationContext, type ValidationResult, validate } from "../validation";
+import { primitiveSchemas, refinedSchemas } from "./registry";
+import type { ValidationResult } from "./validation";
 
-// Quick validation helpers
+// Quick validation helpers using Zod native safeParse
 export const quickValidate = {
-  date: (value: unknown): ValidationResult<string> =>
-    validate(z.string().date(), value, ValidationContext.Form),
-  email: (value: unknown): ValidationResult<string> =>
-    validate(z.string().email(), value, ValidationContext.Form),
-
-  nonEmptyString: (value: unknown): ValidationResult<string> =>
-    validate(z.string().min(1), value, ValidationContext.Form),
-
-  password: (value: unknown): ValidationResult<string> =>
-    validate(
-      z
-        .string()
-        .min(8, "Password must be at least 8 characters")
-        .regex(/^(?=.*[a-z])/, "Must contain lowercase letter")
-        .regex(/^(?=.*[A-Z])/, "Must contain uppercase letter")
-        .regex(/^(?=.*\d)/, "Must contain number")
-        .regex(/^(?=.*[@$!%*?&])/, "Must contain special character"),
-      value,
-      ValidationContext.Form
-    ),
-
-  positiveNumber: (value: unknown): ValidationResult<number> =>
-    validate(z.number().positive(), value, ValidationContext.Form),
-
-  url: (value: unknown): ValidationResult<string> =>
-    validate(z.string().url(), value, ValidationContext.Form),
-
-  uuid: (value: unknown): ValidationResult<string> =>
-    validate(z.string().uuid(), value, ValidationContext.Form),
+  date: (value: unknown): ValidationResult<string> => {
+    const result = z.iso.date().safeParse(value);
+    return result.success
+      ? { data: result.data, success: true }
+      : {
+          errors: result.error.issues.map((issue) => ({
+            code: issue.code,
+            context: "form" as const,
+            field: issue.path.join(".") || undefined,
+            message: issue.message,
+            path: issue.path.map(String),
+            timestamp: new Date(),
+            value: issue.input,
+          })),
+          success: false,
+        };
+  },
+  email: (value: unknown): ValidationResult<string> => {
+    const result = primitiveSchemas.email.safeParse(value);
+    return result.success
+      ? { data: result.data, success: true }
+      : {
+          errors: result.error.issues.map((issue) => ({
+            code: issue.code,
+            context: "form" as const,
+            field: issue.path.join(".") || undefined,
+            message: issue.message,
+            path: issue.path.map(String),
+            timestamp: new Date(),
+            value: issue.input,
+          })),
+          success: false,
+        };
+  },
+  nonEmptyString: (value: unknown): ValidationResult<string> => {
+    const result = primitiveSchemas.nonEmptyString.safeParse(value);
+    return result.success
+      ? { data: result.data, success: true }
+      : {
+          errors: result.error.issues.map((issue) => ({
+            code: issue.code,
+            context: "form" as const,
+            field: issue.path.join(".") || undefined,
+            message: issue.message,
+            path: issue.path.map(String),
+            timestamp: new Date(),
+            value: issue.input,
+          })),
+          success: false,
+        };
+  },
+  password: (value: unknown): ValidationResult<string> => {
+    const result = refinedSchemas.strongPassword.safeParse(value);
+    return result.success
+      ? { data: result.data, success: true }
+      : {
+          errors: result.error.issues.map((issue) => ({
+            code: issue.code,
+            context: "form" as const,
+            field: issue.path.join(".") || undefined,
+            message: issue.message,
+            path: issue.path.map(String),
+            timestamp: new Date(),
+            value: issue.input,
+          })),
+          success: false,
+        };
+  },
+  positiveNumber: (value: unknown): ValidationResult<number> => {
+    const result = primitiveSchemas.positiveNumber.safeParse(value);
+    return result.success
+      ? { data: result.data, success: true }
+      : {
+          errors: result.error.issues.map((issue) => ({
+            code: issue.code,
+            context: "form" as const,
+            field: issue.path.join(".") || undefined,
+            message: issue.message,
+            path: issue.path.map(String),
+            timestamp: new Date(),
+            value: issue.input,
+          })),
+          success: false,
+        };
+  },
+  url: (value: unknown): ValidationResult<string> => {
+    const result = primitiveSchemas.url.safeParse(value);
+    return result.success
+      ? { data: result.data, success: true }
+      : {
+          errors: result.error.issues.map((issue) => ({
+            code: issue.code,
+            context: "form" as const,
+            field: issue.path.join(".") || undefined,
+            message: issue.message,
+            path: issue.path.map(String),
+            timestamp: new Date(),
+            value: issue.input,
+          })),
+          success: false,
+        };
+  },
+  uuid: (value: unknown): ValidationResult<string> => {
+    const result = primitiveSchemas.uuid.safeParse(value);
+    return result.success
+      ? { data: result.data, success: true }
+      : {
+          errors: result.error.issues.map((issue) => ({
+            code: issue.code,
+            context: "form" as const,
+            field: issue.path.join(".") || undefined,
+            message: issue.message,
+            path: issue.path.map(String),
+            timestamp: new Date(),
+            value: issue.input,
+          })),
+          success: false,
+        };
+  },
 };
 
 // Schema metadata for documentation

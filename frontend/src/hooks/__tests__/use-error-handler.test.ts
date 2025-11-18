@@ -1,3 +1,5 @@
+/** @vitest-environment jsdom */
+
 import { act, renderHook } from "@testing-library/react";
 import type { MockInstance } from "vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -15,24 +17,38 @@ vi.mock("@/lib/error-service", () => ({
 // Console spy setup moved to beforeEach to avoid global suppression issues
 let consoleSpy: MockInstance;
 
-// Mock sessionStorage
-const MOCK_SESSION_STORAGE = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
+// Mock sessionStorage - setup in beforeEach to avoid issues in node env
+let mockSessionStorage: {
+  getItem: ReturnType<typeof vi.fn>;
+  setItem: ReturnType<typeof vi.fn>;
 };
-Object.defineProperty(window, "sessionStorage", {
-  value: MOCK_SESSION_STORAGE,
-});
 
 describe("useErrorHandler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // Setup sessionStorage mock in beforeEach (only in jsdom environment)
+    if (typeof window !== "undefined") {
+      mockSessionStorage = {
+        getItem: vi.fn(),
+        setItem: vi.fn(),
+      };
+      Object.defineProperty(window, "sessionStorage", {
+        configurable: true,
+        value: mockSessionStorage,
+        writable: true,
+      });
+    }
+
     // Create fresh spy for each test
     consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
       // Empty implementation for mocking
     });
-    MOCK_SESSION_STORAGE.getItem.mockClear();
-    MOCK_SESSION_STORAGE.setItem.mockClear();
+
+    if (mockSessionStorage) {
+      mockSessionStorage.getItem.mockClear();
+      mockSessionStorage.setItem.mockClear();
+    }
 
     // Mock createErrorReport to return a valid report
     vi.mocked(errorService.createErrorReport).mockReturnValue({
@@ -138,7 +154,7 @@ describe("useErrorHandler", () => {
     });
 
     it("should generate session ID when not present", () => {
-      MOCK_SESSION_STORAGE.getItem.mockReturnValue(null);
+      mockSessionStorage.getItem.mockReturnValue(null);
 
       const { result } = renderHook(() => useErrorHandler());
       const testError = new Error("Test error");
@@ -147,14 +163,14 @@ describe("useErrorHandler", () => {
         result.current.handleError(testError);
       });
 
-      expect(MOCK_SESSION_STORAGE.setItem).toHaveBeenCalledWith(
+      expect(mockSessionStorage.setItem).toHaveBeenCalledWith(
         "session_id",
         expect.stringMatching(/^session_[A-Za-z0-9-]+$/)
       );
     });
 
     it("should use existing session ID", () => {
-      MOCK_SESSION_STORAGE.getItem.mockReturnValue("existing_session_123");
+      mockSessionStorage.getItem.mockReturnValue("existing_session_123");
 
       const { result } = renderHook(() => useErrorHandler());
       const testError = new Error("Test error");
@@ -316,7 +332,7 @@ describe("useErrorHandler", () => {
 
   describe("error handling edge cases", () => {
     it("should handle sessionStorage errors gracefully", () => {
-      MOCK_SESSION_STORAGE.getItem.mockImplementation(() => {
+      mockSessionStorage.getItem.mockImplementation(() => {
         throw new Error("SessionStorage error");
       });
 

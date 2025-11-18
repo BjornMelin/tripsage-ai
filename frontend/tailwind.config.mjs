@@ -5,9 +5,8 @@
  */
 export default {
   content: ["./src/**/*.{ts,tsx,mdx}"],
+  plugins: [],
   theme: {
     extend: {},
   },
-  plugins: [],
 };
-

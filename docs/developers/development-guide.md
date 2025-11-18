@@ -173,7 +173,10 @@ def get_supabase_client() -> Client:
 
 ```python
 # tripsage_core/services/infrastructure/vector_service.py
-async def search_similar_conversations(query_embedding: list[float], limit: int = 5):
+async def search_similar_conversations(
+    query_embedding: list[float],
+    limit: int = 5,
+):
     """Find similar conversations using vector similarity."""
     async with get_db_session() as session:
         result = await session.execute(
@@ -391,7 +394,8 @@ export async function POST(request: NextRequest) {
 
 #### Frontend AI Agents
 
-Flight and accommodation operations are handled by frontend-only AI agents using Vercel AI SDK v6:
+Flight and accommodation operations are handled by frontend-only AI
+agents using Vercel AI SDK v6:
 
 ```typescript
 // app/api/agents/flights/route.ts
@@ -611,7 +615,7 @@ async def create_trip(
     return await service.create_trip(principal.id, trip_data)
 ```
 
-### Error Handling
+### FastAPI Error Handling
 
 ```python
 # tripsage_core/exceptions/exceptions.py
@@ -662,17 +666,133 @@ async def chat_stream(
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache"}
     )
+
 ```
+
+## Next.js API Routes
+
+TripSage uses Next.js API routes with a centralized factory pattern for
+consistent authentication, rate limiting, error handling, and telemetry.
+
+### Factory Pattern
+
+All standard API routes use the `withApiGuards` factory:
+
+```typescript
+import { withApiGuards } from "@/lib/api/factory";
+import { NextResponse } from "next/server";
+
+export const GET = withApiGuards({
+  auth: true,                    // Require authentication
+  rateLimit: "myroute:read",     // Rate limit key from ROUTE_RATE_LIMITS
+  telemetry: "myroute.get"       // Telemetry span name
+})(async (req, { supabase, user }) => {
+  // Handler logic only - auth/errors handled by factory
+  const data = await fetchData(user!.id);
+  return NextResponse.json(data);
+});
+```
+
+### Configuration Options
+
+- **auth**: `true` for required authentication, `false` for public routes
+- **rateLimit**: Key from `ROUTE_RATE_LIMITS` registry for rate limiting
+- **telemetry**: Span name for observability and tracing
+
+### Rate Limiting Setup
+
+Add route configurations to `src/lib/ratelimit/routes.ts`:
+
+```typescript
+export const ROUTE_RATE_LIMITS = {
+  // ... existing routes
+  "myroute:read": { limit: 60, window: "1 m" },
+  "myroute:write": { limit: 10, window: "1 m" },
+} as const;
+```
+
+### Factory Error Handling
+
+The factory automatically handles:
+
+- **401 Unauthorized**: Authentication required but user not found
+- **429 Rate Limited**: Rate limit exceeded with `Retry-After` header
+- **500 Internal Error**: Handler exceptions with telemetry logging
+
+For custom errors, throw or return `NextResponse`:
+
+```typescript
+export const POST = withApiGuards({ auth: true })(
+  async (req, { supabase, user }) => {
+    const body = await req.json();
+    if (!body.requiredField) {
+      return NextResponse.json(
+        { error: "Required field missing" },
+        { status: 400 }
+      );
+    }
+    // ... handler logic
+  }
+);
+```
+
+### Route Exceptions
+
+Some routes cannot use the factory due to special requirements:
+
+- **Webhooks** (`/api/hooks/*`): Require signature verification before
+  processing
+- **Background jobs** (`/api/jobs/*`): Custom authentication patterns
+- **Complex requirements**: When the factory cannot support the pattern
+
+See `docs/architecture/route-exceptions.md` for details.
+
+### Testing API Routes
+
+Use centralized test helpers:
+
+```typescript
+import { setupApiTestMocks, createMockRequest } from "@/test/api-helpers";
+
+describe("GET /api/myroute", () => {
+  let cleanup: () => void;
+
+  beforeEach(() => {
+    cleanup = setupApiTestMocks();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("returns data", async () => {
+    const req = createMockRequest({ method: "GET" });
+    const res = await GET(req);
+    expect(res.status).toBe(200);
+  });
+});
+```
+
+### Benefits
+
+- Reduces inline authentication and rate limiting code
+- Keeps security patterns consistent across routes
+- Centralizes error handling and telemetry
+- Simplifies testing with standardized mocks
+- Applies rate limiting and authentication by configuration
 
 ## Observability
 
 ### Structured Logging
 
-The project uses OpenTelemetry trace correlation to inject `trace_id` and `span_id` into Python log records for correlating logs with traces in observability backends.
+The project uses OpenTelemetry trace correlation to inject `trace_id`
+and `span_id` into Python log records so logs can be correlated with
+traces in observability backends.
 
 #### Enable Trace Correlation
 
-The application automatically installs trace correlation at startup in `tripsage/api/main.py`. For custom services, call:
+Trace correlation is installed at startup in `tripsage/api/main.py`. For
+custom services, call:
 
 ```python
 from tripsage_core.observability.log_correlation import install_trace_log_correlation
@@ -698,23 +818,30 @@ logging.basicConfig(
 This produces log lines like:
 
 ```text
-2025-10-22 10:14:32,123 INFO f1ab... 9cde... tripsage.api.routers.trips: Creating trip for user: 123
+2025-10-22 10:14:32 INFO f1ab... 9cde... tripsage.api.trips: Creating trip
 ```
 
-If no span is active, the `trace_id` and `span_id` fields are empty strings.
+If no span is active, the `trace_id` and `span_id` fields are empty
+strings.
 
 #### Notes
 
-- The filter is safe: if OpenTelemetry isn't installed or no span is active, logging continues normally
-- Prefer a single OTEL pipeline (OTLP) and avoid enabling multiple exporters in the same process
+- The filter is safe: if OpenTelemetry is unavailable or no span is
+  active, logging continues normally
+- Prefer a single OTEL pipeline (OTLP) and avoid enabling multiple
+  exporters in the same process
 
 ### Metrics Collection
 
-The API emits duration metrics via OpenTelemetry, including request and operation histograms. Duration histogram bucket boundaries can be tuned at runtime using the `TRIPSAGE_DURATION_BUCKETS` environment variable.
+The API emits duration metrics via OpenTelemetry, including request and
+operation histograms. Duration histogram bucket boundaries can be tuned
+at runtime using the `TRIPSAGE_DURATION_BUCKETS` environment variable.
 
 #### Duration Histogram Buckets
 
-The application reads `TRIPSAGE_DURATION_BUCKETS` during OTEL setup in `tripsage_core/observability/otel.py`. If set, the value is parsed as a comma-separated list of bucket boundaries in seconds.
+The application reads `TRIPSAGE_DURATION_BUCKETS` during OTEL setup in
+`tripsage_core/observability/otel.py`. If set, the value is parsed as a
+comma-separated list of bucket boundaries in seconds.
 
 **Default buckets:**
 
@@ -766,10 +893,13 @@ class MetricsMiddleware(BaseHTTPMiddleware):
 
 #### Duration Histogram Considerations
 
-- Buckets are global for the process; keep them consistent across services for simpler dashboards and SLOs
-- Avoid excessive bucket counts; they increase exporter payload size and cardinality
+- Buckets are global for the process; keep them consistent across
+  services for simpler dashboards and SLOs
+- Avoid excessive bucket counts; they increase exporter payload size and
+  cardinality
 - Start with ≤ 10-12 buckets and adjust based on latency profiles
-- If the OTEL SDK doesn't expose the optional view API, the application falls back to provider defaults
+- If the OTEL SDK does not expose the optional view API, the application
+  falls back to provider defaults
 
 ## Performance Optimization
 

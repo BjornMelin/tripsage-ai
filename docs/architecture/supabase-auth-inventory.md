@@ -14,15 +14,11 @@ TripSage monorepo ahead of migrating fully to Supabase-managed auth flows.
     Supabase-managed signup/sign-in. Prevents regressions into legacy flows.
 - `tripsage/api/routers/*`
   - All protected routers rely on the middleware + dependency injection helpers
-    from `tripsage_core.services.business.auth_service` for per-request user
+    from `tripsage.api.core.dependencies` (Principal-based) for per-request user
     context rather than local credential checks.
 - `tripsage_core/services/infrastructure/supabase_client.py`
   - Owns creation of Supabase admin/public async clients and JWT verification
     helpers used by both middleware and domain services.
-- `tripsage_core/services/business/auth_service.py`
-  - FastAPI dependency returning validated token metadata (`TokenData`) and
-    admin client access for RPCs. Wraps the middleware capabilities for
-    endpoint-level usage.
 - `tripsage_core/services/business/*`
   - No remaining password hashing or local user stores. All user lifecycle
     logic delegates to Supabase-admin clients fetched above.

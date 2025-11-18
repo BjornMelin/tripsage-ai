@@ -6,6 +6,7 @@
 
 import "server-only";
 
+import type { ToolCallOptions } from "ai";
 import { tool } from "ai";
 import { z } from "zod";
 import { getRedis } from "@/lib/redis";
@@ -289,7 +290,7 @@ export const crawlUrl = tool({
     "Scrape a single URL via Firecrawl v2.5. Supports multiple formats " +
     "(markdown, html, links, screenshot, summary, json), cost-safe defaults, " +
     "and optional page interactions.",
-  execute: async ({ url, fresh, scrapeOptions }) =>
+  execute: async ({ url, fresh, scrapeOptions }, _callOptions?: ToolCallOptions) =>
     withTelemetrySpan(
       "tool.web_crawl.scrape",
       {
@@ -356,7 +357,7 @@ export const crawlUrl = tool({
   inputSchema: z.object({
     fresh: z.boolean().default(false),
     scrapeOptions: scrapeOptionsSchema,
-    url: z.string().url(),
+    url: z.url(),
   }),
 });
 
@@ -372,7 +373,7 @@ export const crawlSiteInputSchema = z.object({
   scrapeOptions: scrapeOptionsSchema,
   sitemap: z.enum(["include", "skip", "only"]).optional(),
   timeoutMs: z.number().int().positive().default(120000).optional(),
-  url: z.string().url(),
+  url: z.url(),
 });
 
 export const crawlSite = tool({
@@ -380,20 +381,23 @@ export const crawlSite = tool({
     "Crawl a site (limited) via Firecrawl v2.5. Supports path filtering " +
     "(includePaths, excludePaths), sitemap control, scrape options per page, " +
     "and client-side polling with limits.",
-  execute: async ({
-    url,
-    limit,
-    fresh,
-    includePaths,
-    excludePaths,
-    sitemap,
-    scrapeOptions,
-    pollInterval,
-    timeoutMs,
-    maxPages,
-    maxResults,
-    maxWaitTime,
-  }) =>
+  execute: async (
+    {
+      url,
+      limit,
+      fresh,
+      includePaths,
+      excludePaths,
+      sitemap,
+      scrapeOptions,
+      pollInterval,
+      timeoutMs,
+      maxPages,
+      maxResults,
+      maxWaitTime,
+    },
+    _callOptions?: ToolCallOptions
+  ) =>
     withTelemetrySpan(
       "tool.web_crawl.crawl",
       {

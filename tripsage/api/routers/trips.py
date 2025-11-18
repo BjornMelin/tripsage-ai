@@ -15,7 +15,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import ValidationError
 
 from tripsage.api.core.dependencies import (
-    MemoryServiceDep,
     RequiredPrincipalDep,
     TripServiceDep,
 )
@@ -62,10 +61,6 @@ from tripsage_core.services.business.audit_logging_service import (
     AuditEventType,
     AuditSeverity,
     audit_security_event,
-)
-from tripsage_core.services.business.memory_service import (
-    MemorySearchRequest,
-    MemorySearchResult,
 )
 
 # Import core service and models
@@ -1226,21 +1221,19 @@ async def export_trip(
 # Core endpoints
 @router.get("/suggestions", response_model=list[TripSuggestionResponse])
 async def get_trip_suggestions(
-    memory_service: MemoryServiceDep,
     principal: RequiredPrincipalDep,
     *,
     limit: int = Query(20, ge=1, le=100, description="Number of suggestions to return"),
     budget_max: float | None = Query(None, description="Maximum budget filter"),
     category: str | None = Query(None, description="Filter by category"),
 ):
-    """Get personalized trip suggestions based on user preferences and history.
+    """Get trip suggestions with optional filters.
 
     Args:
         limit: Maximum number of suggestions to return
         budget_max: Optional maximum budget filter
         category: Optional category filter
         principal: Current authenticated principal
-        memory_service: Injected memory service
 
     Returns:
         List of trip suggestions
@@ -1349,31 +1342,8 @@ async def get_trip_suggestions(
         ),
     ]
 
-    suggestions = base_suggestions
-
-    try:
-        memory_search = MemorySearchRequest(
-            query="travel preferences destinations budget",
-            limit=10,
-            filters=None,
-        )
-        search_memories = cast(
-            Callable[[str, MemorySearchRequest], Awaitable[list[MemorySearchResult]]],
-            memory_service.search_memories,
-        )
-        user_memories = await search_memories(principal.user_id, memory_search)
-
-        if user_memories:
-            logger.info(
-                "Personalizing suggestions based on %s user memories",
-                len(user_memories),
-            )
-
-    except (ValueError, KeyError, CoreServiceError):
-        logger.exception("Failed to get personalized suggestions")
-        suggestions = base_suggestions
-
     # Apply filters with proper validation
+    suggestions = base_suggestions
     filtered_suggestions = suggestions
 
     if budget_max:

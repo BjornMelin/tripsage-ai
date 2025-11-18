@@ -90,24 +90,49 @@ conversational AI applications.
 - **Providers**: OpenAI, Anthropic, xAI, OpenRouter (BYOK multi-provider)
 - **Language**: TypeScript 5.9 with strict mode
 - **Styling**: Tailwind CSS v4 with CSS-first config
-- **Data/Auth**: Supabase SSR auth with pgvector for embeddings
+- **Data/Auth**: Supabase SSR auth with pgvector for embeddings (see
+  `docs/architecture/supabase-ssr-frontend.md` for factory and client usage)
 - **Ratelimit & Cache**: Upstash Redis for distributed rate limiting and
   caching
 - **Types & Schemas**: Zod v3 for runtime validation
 - **UI Components**: Radix UI primitives with Tailwind styling
 - **State Management**: Zustand for client state
-- **Data Fetching**: TanStack Query v5 for server state management. All data fetching hooks use `useQuery` and `useMutation` directly with the unified `apiClient` from `useAuthenticatedApi()`.
+- **Data Fetching**: TanStack Query v5 for server state management. All data
+  fetching hooks use `useQuery` and `useMutation` with the unified
+  `apiClient` from `useAuthenticatedApi()`.
 - **Testing**: Vitest (unit + integration) + Playwright (e2e)
 - **Code Quality**: Biome (single gate for linting/formatting)
 - **Observability**: OpenTelemetry with Trace Drains
 - **Package Manager**: pnpm ≥9.0.0
 - **Runtime**: Node.js ≥24
 
+## Code Quality & Patterns
+
+This project follows strict DRY principles and established patterns:
+
+- **API Routes**: Use `withApiGuards` factory
+  ([guide](../docs/developers/development-guide.md#next-js-api-routes))
+- **State Management**: Zustand with composition pattern
+  ([guide](../docs/developers/stores.md))
+- **Testing**: Centralized utilities in `src/test/`
+  ([guide](../docs/developers/testing-guide.md#frontend-testing))
+
+### Key Metrics
+
+- Factory adoption: 35/38 routes
+- Inline auth patterns remaining: 4 routes
+- Test suite status: failing (see [`docs/metrics.md`](../docs/metrics.md))
+
+See [metrics](../docs/metrics.md) and
+[performance](../docs/performance.md) for current status.
+
 ## Quick Start
 
 ```bash
 pnpm install  # Install dependencies
 pnpm dev      # Start development server
+pnpm test     # Run Vitest suite locally
+pnpm test:ci  # Run sharded Vitest suite (CI configuration)
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to view the app.

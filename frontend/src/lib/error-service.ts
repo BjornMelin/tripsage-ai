@@ -1,8 +1,13 @@
+/**
+ * @fileoverview Error service for logging, reporting, and telemetry integration.
+ */
+
 import {
   ERROR_REPORT_SCHEMA,
   type ErrorReport,
   type ErrorServiceConfig,
 } from "@/lib/schemas/errors";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 
 /**
  * Error service for logging and reporting errors
@@ -23,6 +28,23 @@ class ErrorService {
     try {
       // Validate the error report using Zod
       const validatedReport = ERROR_REPORT_SCHEMA.parse(report);
+
+      // Record exception to active OpenTelemetry span if available.
+      // This links the error to the distributed trace for better observability.
+      if (validatedReport.error) {
+        try {
+          // Create Error object from report for span recording
+          const error = new Error(validatedReport.error.message);
+          error.name = validatedReport.error.name || "Error";
+          if (validatedReport.error.stack) {
+            error.stack = validatedReport.error.stack;
+          }
+          recordClientErrorOnActiveSpan(error);
+        } catch (otelError) {
+          // Don't fail error reporting if OTel recording fails
+          console.warn("Failed to record error to OpenTelemetry span:", otelError);
+        }
+      }
 
       if (!this.config.enabled) {
         console.error("Error reported:", validatedReport);

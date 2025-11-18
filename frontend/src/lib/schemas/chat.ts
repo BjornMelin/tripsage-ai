@@ -78,33 +78,58 @@ export type Attachment = z.infer<typeof ATTACHMENT_SCHEMA>;
 /**
  * Zod schema for chat messages with tool calls, attachments, and metadata.
  */
-export const MESSAGE_SCHEMA = z.object({
-  annotations: z.record(z.string(), z.unknown()).optional(),
+export const MESSAGE_SCHEMA = z.strictObject({
   attachments: z.array(ATTACHMENT_SCHEMA).optional(),
-  content: z.string().optional(),
-  createdAt: z.date().or(z.string().datetime()),
-  handledBy: z.string().optional(),
+  content: z.string(),
   id: z.string(),
-  intentDetected: z.record(z.string(), z.unknown()).optional(),
-  parts: z.array(MESSAGE_PART_SCHEMA).optional(),
+  isStreaming: z.boolean().optional(),
   role: MESSAGE_ROLE_SCHEMA,
-  routedTo: z.string().optional(),
-  routingConfidence: z.number().optional(),
+  timestamp: z.iso.datetime(),
   toolCalls: z.array(TOOL_CALL_SCHEMA).optional(),
   toolResults: z.array(TOOL_RESULT_SCHEMA).optional(),
-  updatedAt: z.date().or(z.string().datetime()).optional(),
 });
 /** TypeScript type for chat messages. */
 export type Message = z.infer<typeof MESSAGE_SCHEMA>;
 
+/** Zod schema for connection status enumeration. */
+export const CONNECTION_STATUS_SCHEMA = z.enum([
+  "connecting",
+  "connected",
+  "disconnected",
+  "reconnecting",
+  "error",
+]);
+/** TypeScript type for connection status. */
+export type ConnectionStatus = z.infer<typeof CONNECTION_STATUS_SCHEMA>;
+
+/** Zod schema for agent status information (chat-specific). */
+export const AGENT_STATUS_SCHEMA = z.object({
+  currentTask: z.string().optional(),
+  isActive: z.boolean(),
+  progress: z.number().int().min(0).max(100),
+  statusMessage: z.string().optional(),
+});
+/** TypeScript type for agent status. */
+export type AgentStatus = z.infer<typeof AGENT_STATUS_SCHEMA>;
+
 /** Zod schema for chat session metadata and message history. */
-export const CHAT_SESSION_SCHEMA = z.object({
-  createdAt: z.date().or(z.string().datetime()),
+export const CHAT_SESSION_SCHEMA = z.strictObject({
+  agentStatus: AGENT_STATUS_SCHEMA.optional(),
+  createdAt: z.iso.datetime(),
   id: z.string(),
+  lastMemorySync: z.iso.datetime().optional(),
+  memoryContext: z
+    .object({
+      context: z.string(),
+      score: z.number().min(0).max(1),
+      source: z.string().optional(),
+    })
+    .optional(),
   messages: z.array(MESSAGE_SCHEMA).optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
   title: z.string(),
-  updatedAt: z.date().or(z.string().datetime()),
+  updatedAt: z.iso.datetime(),
+  userId: z.string().optional(),
 });
 /** TypeScript type for chat sessions. */
 export type ChatSession = z.infer<typeof CHAT_SESSION_SCHEMA>;
@@ -119,27 +144,21 @@ export const CHAT_STORE_STATE_SCHEMA = z.object({
 /** TypeScript type for chat store state. */
 export type ChatStoreState = z.infer<typeof CHAT_STORE_STATE_SCHEMA>;
 
-/** Zod schema for agent status information. */
-export const AGENT_STATUS_SCHEMA = z.object({
-  active: z.boolean(),
-  lastUpdated: z.string().datetime().optional(),
-  message: z.string().optional(),
-});
-/** TypeScript type for agent status. */
-export type AgentStatus = z.infer<typeof AGENT_STATUS_SCHEMA>;
-
 /** Zod schema for conversation messages with agent status. */
 export const CONVERSATION_MESSAGE_SCHEMA = z.object({
   agentStatus: AGENT_STATUS_SCHEMA.optional(),
   attachments: z.array(ATTACHMENT_SCHEMA).optional(),
   content: z.string().optional(),
-  createdAt: z.date().or(z.string().datetime()),
+  createdAt: z.iso.datetime().or(z.date().transform((d) => d.toISOString())),
   id: z.string(),
   parts: z.array(MESSAGE_PART_SCHEMA).optional(),
   role: MESSAGE_ROLE_SCHEMA,
   toolCalls: z.array(TOOL_CALL_SCHEMA).optional(),
   toolResults: z.array(TOOL_RESULT_SCHEMA).optional(),
-  updatedAt: z.date().or(z.string().datetime()).optional(),
+  updatedAt: z.iso
+    .datetime()
+    .or(z.date().transform((d) => d.toISOString()))
+    .optional(),
 });
 /** TypeScript type for conversation messages. */
 export type ConversationMessage = z.infer<typeof CONVERSATION_MESSAGE_SCHEMA>;
@@ -166,7 +185,6 @@ export type ChatCompletionRequest = z.infer<typeof CHAT_COMPLETION_REQUEST_SCHEM
 export const CHAT_COMPLETION_RESPONSE_SCHEMA = z.object({
   choices: z.array(
     z.object({
-      // biome-ignore lint/style/useNamingConvention: External API field name
       finish_reason: z.string().optional(),
       index: z.number(),
       message: MESSAGE_SCHEMA,
@@ -178,3 +196,17 @@ export const CHAT_COMPLETION_RESPONSE_SCHEMA = z.object({
 });
 /** TypeScript type for chat completion responses. */
 export type ChatCompletionResponse = z.infer<typeof CHAT_COMPLETION_RESPONSE_SCHEMA>;
+
+/** Zod schema for send message options. */
+export const SEND_MESSAGE_OPTIONS_SCHEMA = z.object({
+  /** Optional file attachments to include with the message */
+  attachments: z.array(z.instanceof(File)).optional(),
+  /** Custom system prompt to override defaults */
+  systemPrompt: z.string().optional(),
+  /** AI temperature parameter for response creativity */
+  temperature: z.number().min(0).max(2).optional(),
+  /** Available tools/functions for the AI to use */
+  tools: z.array(z.record(z.string(), z.unknown())).optional(),
+});
+/** TypeScript type for send message options. */
+export type SendMessageOptions = z.infer<typeof SEND_MESSAGE_OPTIONS_SCHEMA>;

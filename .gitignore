@@ -106,6 +106,7 @@ htmlcov/
 lcov.info
 *.lcov
 coverage.json
+frontend/coverage-report.json
 # JUnit reports generated locally (kept as CI artifacts, not source)
 frontend/junit-*.xml
 # Playwright specific
@@ -165,6 +166,7 @@ worktrees/
 ARCHIVED_DOCS/
 docs/archive/
 repomix-output.*
+docs/prompts/mcp/**
 
 # Temporary documentation files
 *_SUMMARY.md
@@ -332,6 +334,8 @@ scan-results/
 supabase/.temp/
 docs/prompts/database-provider-research
 docs/prompts/tools/
+frontend/docs/prompts/complete
+
 # Frontend workspace (consolidated from frontend/.gitignore)
 next-env.d.ts
 .vercel/

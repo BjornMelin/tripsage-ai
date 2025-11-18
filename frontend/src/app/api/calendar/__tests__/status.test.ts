@@ -1,79 +1,45 @@
-import type { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  enableApiRouteRateLimit,
+  mockApiRouteRateLimitOnce,
+  resetApiRouteMocks,
+} from "@/test/api-route-helpers";
+import { createMockNextRequest } from "@/test/route-helpers";
+
+const mockCalendars = {
+  items: [
+    {
+      accessRole: "owner",
+      description: "My primary calendar",
+      id: "primary",
+      primary: true,
+      summary: "Primary Calendar",
+      timeZone: "America/New_York",
+    },
+  ],
+  kind: "calendar#calendarList",
+};
+
+vi.mock("@/lib/calendar/google", () => ({
+  listCalendars: vi.fn(async () => mockCalendars),
+}));
+
+vi.mock("@/lib/calendar/auth", () => ({
+  hasGoogleCalendarScopes: vi.fn(async () => true),
+}));
 
 describe("/api/calendar/status route", () => {
   beforeEach(() => {
-    vi.resetModules();
+    resetApiRouteMocks();
     vi.clearAllMocks();
   });
 
   it("returns connected status with calendars", async () => {
-    const mockCalendars = {
-      items: [
-        {
-          accessRole: "owner",
-          description: "My primary calendar",
-          id: "primary",
-          primary: true,
-          summary: "Primary Calendar",
-          timeZone: "America/New_York",
-        },
-      ],
-      kind: "calendar#calendarList",
-    };
-
-    vi.doMock("@/lib/supabase/server", () => ({
-      createServerSupabase: vi.fn(async () => ({
-        auth: {
-          getUser: async () => ({
-            data: { user: { id: "user-1" } },
-            error: null,
-          }),
-        },
-      })),
-    }));
-
-    vi.doMock("@/lib/calendar/google", () => ({
-      listCalendars: vi.fn(async () => mockCalendars),
-    }));
-
-    vi.doMock("@/lib/calendar/auth", () => ({
-      hasGoogleCalendarScopes: vi.fn(async () => true),
-    }));
-
-    vi.doMock("@upstash/ratelimit", () => {
-      const slidingWindow = vi.fn(() => ({}));
-      const ctor = vi.fn(function RatelimitMock() {
-        return {
-          limit: vi.fn().mockResolvedValue({
-            limit: 60,
-            remaining: 59,
-            reset: Date.now() + 60000,
-            success: true,
-          }),
-        };
-      }) as unknown as {
-        new (...args: unknown[]): { limit: ReturnType<typeof vi.fn> };
-        slidingWindow: typeof slidingWindow;
-      };
-      ctor.slidingWindow = slidingWindow;
-      return { Ratelimit: ctor };
-    });
-
-    vi.doMock("@upstash/redis", () => ({
-      Redis: {
-        fromEnv: vi.fn(() => ({})),
-      },
-    }));
-
-    vi.doMock("@/lib/env/server", () => ({
-      getServerEnvVarWithFallback: vi.fn(() => "test-key"),
-    }));
-
     const mod = await import("../status/route");
-    const req = new Request("http://localhost/api/calendar/status", {
+    const req = createMockNextRequest({
       method: "GET",
-    }) as unknown as NextRequest;
+      url: "http://localhost/api/calendar/status",
+    });
 
     const res = await mod.GET(req);
     const body = await res.json();
@@ -85,60 +51,17 @@ describe("/api/calendar/status route", () => {
   });
 
   it("returns not connected when no token", async () => {
-    vi.doMock("@/lib/supabase/server", () => ({
-      createServerSupabase: vi.fn(async () => ({
-        auth: {
-          getUser: async () => ({
-            data: { user: { id: "user-1" } },
-            error: null,
-          }),
-        },
-      })),
-    }));
+    const { listCalendars } = await import("@/lib/calendar/google");
+    const { hasGoogleCalendarScopes } = await import("@/lib/calendar/auth");
 
-    vi.doMock("@/lib/calendar/google", () => ({
-      listCalendars: vi.fn(() => {
-        throw new Error("No token");
-      }),
-    }));
-
-    vi.doMock("@/lib/calendar/auth", () => ({
-      hasGoogleCalendarScopes: vi.fn(async () => false),
-    }));
-
-    vi.doMock("@upstash/ratelimit", () => {
-      const slidingWindow = vi.fn(() => ({}));
-      const ctor = vi.fn(function RatelimitMock() {
-        return {
-          limit: vi.fn().mockResolvedValue({
-            limit: 60,
-            remaining: 59,
-            reset: Date.now() + 60000,
-            success: true,
-          }),
-        };
-      }) as unknown as {
-        new (...args: unknown[]): { limit: ReturnType<typeof vi.fn> };
-        slidingWindow: typeof slidingWindow;
-      };
-      ctor.slidingWindow = slidingWindow;
-      return { Ratelimit: ctor };
-    });
-
-    vi.doMock("@upstash/redis", () => ({
-      Redis: {
-        fromEnv: vi.fn(() => ({})),
-      },
-    }));
-
-    vi.doMock("@/lib/env/server", () => ({
-      getServerEnvVarWithFallback: vi.fn(() => "test-key"),
-    }));
+    vi.mocked(listCalendars).mockRejectedValueOnce(new Error("No token"));
+    vi.mocked(hasGoogleCalendarScopes).mockResolvedValueOnce(false);
 
     const mod = await import("../status/route");
-    const req = new Request("http://localhost/api/calendar/status", {
+    const req = createMockNextRequest({
       method: "GET",
-    }) as unknown as NextRequest;
+      url: "http://localhost/api/calendar/status",
+    });
 
     const res = await mod.GET(req);
     expect(res.status).toBe(200);
@@ -147,50 +70,17 @@ describe("/api/calendar/status route", () => {
   });
 
   it("returns 429 on rate limit exceeded", async () => {
-    vi.doMock("@/lib/supabase/server", () => ({
-      createServerSupabase: vi.fn(async () => ({
-        auth: {
-          getUser: async () => ({
-            data: { user: { id: "user-1" } },
-            error: null,
-          }),
-        },
-      })),
-    }));
-
-    vi.doMock("@upstash/ratelimit", () => {
-      const slidingWindow = vi.fn(() => ({}));
-      const ctor = vi.fn(function RatelimitMock() {
-        return {
-          limit: vi.fn().mockResolvedValue({
-            limit: 60,
-            remaining: 0,
-            reset: Date.now() + 60000,
-            success: false,
-          }),
-        };
-      }) as unknown as {
-        new (...args: unknown[]): { limit: ReturnType<typeof vi.fn> };
-        slidingWindow: typeof slidingWindow;
-      };
-      ctor.slidingWindow = slidingWindow;
-      return { Ratelimit: ctor };
+    enableApiRouteRateLimit();
+    mockApiRouteRateLimitOnce({
+      remaining: 0,
+      success: false,
     });
 
-    vi.doMock("@upstash/redis", () => ({
-      Redis: {
-        fromEnv: vi.fn(() => ({})),
-      },
-    }));
-
-    vi.doMock("@/lib/env/server", () => ({
-      getServerEnvVarWithFallback: vi.fn(() => "test-key"),
-    }));
-
     const mod = await import("../status/route");
-    const req = new Request("http://localhost/api/calendar/status", {
+    const req = createMockNextRequest({
       method: "GET",
-    }) as unknown as NextRequest;
+      url: "http://localhost/api/calendar/status",
+    });
 
     const res = await mod.GET(req);
     expect(res.status).toBe(429);

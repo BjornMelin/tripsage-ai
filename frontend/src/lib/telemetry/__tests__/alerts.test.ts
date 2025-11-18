@@ -2,7 +2,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { emitOperationalAlert } from "@/lib/telemetry/alerts";
-import { TELEMETRY_SERVICE_NAME } from "@/lib/telemetry/tracer";
+import { TELEMETRY_SERVICE_NAME } from "@/lib/telemetry/constants";
 
 describe("emitOperationalAlert", () => {
   beforeEach(() => {

@@ -1,36 +1,43 @@
 /**
- * @fileoverview Chat-centric Supabase Realtime hook with Google-style documentation.
+ * @fileoverview Chat-centric Supabase Realtime hook.
+ *
+ * Provides realtime chat capabilities backed by Supabase broadcast channels.
+ * This hook wraps useRealtimeChannel with domain-specific chat event handling.
  */
 
 "use client";
 
-import type { RealtimeChannel } from "@supabase/supabase-js";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { nowIso, secureUuid } from "@/lib/security/random";
-import { getBrowserClient } from "@/lib/supabase/client";
-import { useAuthStore } from "@/stores";
+import { useCallback, useEffect, useMemo } from "react";
+import { nowIso } from "@/lib/security/random";
+import { useAuthCore } from "@/stores/auth/auth-core";
+import { useChatRealtime } from "@/stores/chat/chat-realtime";
+import { useRealtimeChannel } from "./use-realtime-channel";
 
 type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
-
-type ChannelSendRequest = Parameters<RealtimeChannel["send"]>[0];
 
 /**
  * Payload for chat message broadcast events.
  */
-type ChatMessageBroadcastPayload = {
+export interface ChatMessageBroadcastPayload {
+  /** Optional message identifier. */
   id?: string;
+  /** Message content (Markdown/plain text). */
   content: string;
+  /** ISO timestamp when the message was created. */
   timestamp?: string;
+  /** Sender information. */
   sender?: { id: string; name: string; avatar?: string };
-};
+}
 
 /**
  * Payload for chat typing broadcast events.
  */
-type ChatTypingBroadcastPayload = {
+export interface ChatTypingBroadcastPayload {
+  /** User ID of the typing user. */
   userId: string;
+  /** Whether the user is currently typing. */
   isTyping: boolean;
-};
+}
 
 /**
  * Represents a chat message exchanged through the realtime channel.
@@ -97,187 +104,199 @@ export function useWebSocketChat({
   topicType = "user",
   sessionId,
 }: WebSocketChatOptions = {}): UseWebSocketChatReturn {
-  const supabase = useMemo(() => getBrowserClient(), []);
-  const { user } = useAuthStore();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [typingUsers, setTypingUsers] = useState<string[]>([]);
-  const [status, setStatus] = useState<ConnectionStatus>("disconnected");
-  const [_reconnectVersion, setReconnectVersion] = useState(0);
-  const channelRef = useRef<RealtimeChannel | null>(null);
-  const reconnectAttemptsRef = useRef(0);
-  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { user } = useAuthCore();
+  const {
+    connectionStatus: sliceConnectionStatus,
+    typingUsers: sliceTypingUsers,
+    pendingMessages,
+    setChatConnectionStatus,
+    setUserTyping,
+    removeUserTyping,
+    handleRealtimeMessage,
+    handleTypingUpdate,
+  } = useChatRealtime();
 
-  useEffect(() => {
+  const topic = useMemo(() => {
     if (!autoConnect) {
-      return;
+      return null;
     }
     const userId = user?.id;
-    const topic =
-      topicType === "session"
-        ? sessionId
-          ? `session:${sessionId}`
-          : null
-        : userId
-          ? `user:${userId}`
-          : null;
-    if (!topic) {
-      return;
+    if (topicType === "session") {
+      return sessionId ? `session:${sessionId}` : null;
     }
+    return userId ? `user:${userId}` : null;
+  }, [autoConnect, sessionId, topicType, user?.id]);
 
-    setStatus("connecting");
-    const channel = supabase.channel(topic, { config: { private: true } });
-    channelRef.current = channel;
+  // Handle incoming chat messages and typing events via onMessage callback
+  const handleMessage = useCallback(
+    (
+      payload: ChatMessageBroadcastPayload | ChatTypingBroadcastPayload,
+      event: string
+    ) => {
+      if (!sessionId && topicType === "session") {
+        return;
+      }
+      const effectiveSessionId = sessionId ?? `user:${user?.id}`;
 
-    channel
-      .on("broadcast", { event: "chat:message" }, (payload) => {
-        const data = payload.payload as ChatMessageBroadcastPayload | undefined;
+      if (event === "chat:message") {
+        const data = payload as ChatMessageBroadcastPayload;
         if (!data?.content) {
           return;
         }
-        setMessages((prev) => [
-          ...prev,
-          {
-            content: data.content,
-            id: data.id ?? secureUuid(),
-            sender: data.sender ?? { id: user?.id ?? "unknown", name: "You" },
-            status: "sent",
-            timestamp: new Date(data.timestamp ?? Date.now()),
-          },
-        ]);
-      })
-      .on("broadcast", { event: "chat:typing" }, (payload) => {
-        const data = payload.payload as ChatTypingBroadcastPayload | undefined;
+        handleRealtimeMessage(effectiveSessionId, {
+          content: data.content,
+          id: data.id,
+          sender: data.sender,
+          timestamp: data.timestamp,
+        } as ChatMessageBroadcastPayload);
+      } else if (event === "chat:typing") {
+        const data = payload as ChatTypingBroadcastPayload;
         if (!data?.userId) {
           return;
         }
-        setTypingUsers((prev) => {
-          const filtered = prev.filter((usr) => usr !== data.userId);
-          return data.isTyping ? [...filtered, data.userId] : filtered;
-        });
-      });
+        handleTypingUpdate(effectiveSessionId, {
+          isTyping: data.isTyping,
+          userId: data.userId,
+        } as ChatTypingBroadcastPayload);
+      }
+    },
+    [handleRealtimeMessage, handleTypingUpdate, sessionId, topicType, user?.id]
+  );
 
-    channel.subscribe((state, err) => {
-      if (state === "SUBSCRIBED") {
-        setStatus("connected");
-        reconnectAttemptsRef.current = 0;
+  const { sendBroadcast } = useRealtimeChannel<
+    ChatMessageBroadcastPayload | ChatTypingBroadcastPayload
+  >(topic, {
+    events: ["chat:message", "chat:typing"],
+    onMessage: handleMessage,
+    onStatusChange: (newStatus) => {
+      // Map channel status to slice connection status
+      if (newStatus === "subscribed") {
+        setChatConnectionStatus("connected");
+      } else if (newStatus === "error") {
+        setChatConnectionStatus("error");
+      } else if (newStatus === "closed") {
+        setChatConnectionStatus("disconnected");
+      } else {
+        setChatConnectionStatus("connecting");
       }
-      if (
-        state === "TIMED_OUT" ||
-        state === "CHANNEL_ERROR" ||
-        state === "CLOSED" ||
-        err
-      ) {
-        setStatus("error");
-        // clear current channel
-        if (channelRef.current === channel) {
-          channelRef.current = null;
-        }
-        // schedule reconnect with simple exponential backoff
-        if (autoConnect) {
-          const attempt = ++reconnectAttemptsRef.current;
-          const delay = Math.min(30000, 1000 * 2 ** Math.min(5, attempt));
-          if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
-          reconnectTimerRef.current = setTimeout(() => {
-            setReconnectVersion((v) => v + 1);
-          }, delay);
-        }
-      }
-    });
+    },
+    private: true,
+  });
 
-    return () => {
-      channel.unsubscribe();
-      if (reconnectTimerRef.current) {
-        clearTimeout(reconnectTimerRef.current);
-        reconnectTimerRef.current = null;
-      }
-      if (channelRef.current === channel) {
-        channelRef.current = null;
-      }
-      setStatus("disconnected");
-    };
-  }, [autoConnect, supabase, user?.id, topicType, sessionId]);
+  // Reset state when topic becomes null
+  useEffect(() => {
+    if (!topic) {
+      setChatConnectionStatus("disconnected");
+    }
+  }, [topic, setChatConnectionStatus]);
 
   /**
-   * Sends a chat message through the websocket channel.
+   * Sends a chat message through the realtime channel.
    *
    * @param content - The message content to send.
    * @returns Promise that resolves when the message is sent.
    */
   const sendMessage = useCallback(
     async (content: string) => {
-      const channel = channelRef.current;
-      if (!content || !user?.id || !channel) {
+      if (!content || !user?.id || !topic) {
         return;
       }
 
-      const request: ChannelSendRequest = {
-        event: "chat:message",
-        payload: {
-          content,
-          sender: { id: user.id, name: "You" },
-          timestamp: nowIso(),
-        },
-        type: "broadcast",
-      };
-      await channel.send(request);
+      await sendBroadcast("chat:message", {
+        content,
+        sender: { id: user.id, name: "You" },
+        timestamp: nowIso(),
+      } as ChatMessageBroadcastPayload);
     },
-    [user?.id]
+    [sendBroadcast, topic, user?.id]
   );
 
   /**
    * Starts typing indicator for the current user.
-   *
-   * @returns {void}
    */
   const startTyping = useCallback(() => {
-    const channel = channelRef.current;
-    if (!user?.id || !channel) {
+    if (!user?.id || !topic) {
       return;
     }
-    const request: ChannelSendRequest = {
-      event: "chat:typing",
-      payload: { isTyping: true, userId: user.id },
-      type: "broadcast",
-    };
-    channel.send(request);
-  }, [user?.id]);
+    const effectiveSessionId = sessionId ?? `user:${user.id}`;
+    setUserTyping(effectiveSessionId, user.id, user.email);
+    sendBroadcast("chat:typing", {
+      isTyping: true,
+      userId: user.id,
+    } as ChatTypingBroadcastPayload).catch(() => {
+      // Best-effort typing indicator; ignore failures.
+    });
+  }, [sendBroadcast, sessionId, setUserTyping, topic, user?.id, user?.email]);
 
   /**
    * Stops typing indicator for the current user.
-   *
-   * @returns {void}
    */
   const stopTyping = useCallback(() => {
-    const channel = channelRef.current;
-    if (!user?.id || !channel) {
+    if (!user?.id || !topic) {
       return;
     }
-    const request: ChannelSendRequest = {
-      event: "chat:typing",
-      payload: { isTyping: false, userId: user.id },
-      type: "broadcast",
-    };
-    channel.send(request);
-  }, [user?.id]);
+    const effectiveSessionId = sessionId ?? `user:${user.id}`;
+    removeUserTyping(effectiveSessionId, user.id);
+    sendBroadcast("chat:typing", {
+      isTyping: false,
+      userId: user.id,
+    } as ChatTypingBroadcastPayload).catch(() => {
+      // Best-effort typing indicator; ignore failures.
+    });
+  }, [removeUserTyping, sendBroadcast, sessionId, topic, user?.id]);
 
   /**
-   * Reconnects to the websocket.
+   * Reconnects to the realtime channel.
    *
-   * @returns {void}
+   * Note: Supabase Realtime handles reconnection automatically via useRealtimeChannel's
+   * backoff logic. This method exists to maintain the hook's API contract.
    */
   const reconnect = useCallback(() => {
-    setStatus("connecting");
-    setReconnectVersion((version) => version + 1);
-  }, []);
+    // Reconnection is handled automatically by useRealtimeChannel's backoff logic
+    if (sliceConnectionStatus !== "connected") {
+      setChatConnectionStatus("connecting");
+    }
+  }, [setChatConnectionStatus, sliceConnectionStatus]);
+
+  // Map slice connection status to hook's ConnectionStatus type
+  const connectionStatus: ConnectionStatus = useMemo(() => {
+    if (sliceConnectionStatus === "connected") return "connected";
+    if (sliceConnectionStatus === "error") return "error";
+    if (sliceConnectionStatus === "disconnected") return "disconnected";
+    return "connecting";
+  }, [sliceConnectionStatus]);
+
+  // Convert slice typing users to array of user IDs
+  const typingUsersArray = useMemo(() => {
+    const effectiveSessionId = sessionId ?? `user:${user?.id}`;
+    const users: string[] = [];
+    for (const [key, typing] of Object.entries(sliceTypingUsers)) {
+      if (key.startsWith(`${effectiveSessionId}_`)) {
+        users.push(typing.userId);
+      }
+    }
+    return users;
+  }, [sessionId, sliceTypingUsers, user?.id]);
+
+  // Convert pending messages to ChatMessage format
+  const messages = useMemo(() => {
+    return pendingMessages.map((msg) => ({
+      content: msg.content,
+      id: msg.id,
+      sender: { id: "system", name: "System" },
+      status: "sent" as const,
+      timestamp: new Date(msg.timestamp),
+    }));
+  }, [pendingMessages]);
 
   return {
-    connectionStatus: status,
-    isConnected: status === "connected",
+    connectionStatus,
+    isConnected: sliceConnectionStatus === "connected",
     messages,
     reconnect,
     sendMessage,
     startTyping,
     stopTyping,
-    typingUsers,
+    typingUsers: typingUsersArray,
   };
 }

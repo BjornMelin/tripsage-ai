@@ -5,40 +5,12 @@
  * retrieval. The Next.js route adapters handle SSR-only concerns and pass in
  * typed dependencies.
  */
-import { z } from "zod";
+
+import type { PostKeyBody } from "@/lib/schemas/api";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 
 /** Set of allowed API service providers for key storage. */
 const ALLOWED = new Set(["openai", "openrouter", "anthropic", "xai", "gateway"]);
-
-/**
- * Maximum allowed request body size in bytes (64KB).
- *
- * This limit prevents memory exhaustion from oversized payloads while allowing
- * reasonable API key lengths.
- */
-export const MAX_BODY_SIZE_BYTES = 64 * 1024;
-
-/**
- * Zod schema for POST /api/keys request body.
- *
- * Validates service name and API key with length constraints and trimming.
- */
-// biome-ignore lint/style/useNamingConvention: Schema names use PascalCase
-export const PostKeyBodySchema = z.object({
-  apiKey: z.string().min(1, "API key is required").max(2048, "API key too long").trim(),
-  // Optional base URL for per-user Gateway. Must be https when provided.
-  baseUrl: z
-    .string()
-    .url("Invalid URL")
-    .startsWith("https://", "baseUrl must start with https://")
-    .optional(),
-  service: z
-    .string()
-    .min(1, "Service name is required")
-    .max(50, "Service name too long")
-    .trim(),
-});
 
 /**
  * Dependencies interface for keys handlers.
@@ -50,14 +22,9 @@ export interface KeysDeps {
 }
 
 /**
- * Type inferred from PostKeyBodySchema for validated request bodies.
- */
-export type PostKeyBody = z.infer<typeof PostKeyBodySchema>;
-
-/**
  * Insert or replace a user's provider API key.
  *
- * Expects a validated body from PostKeyBodySchema. Service normalization and
+ * Expects a validated body from postKeyBodySchema. Service normalization and
  * validation are performed here before calling the RPC.
  *
  * @param deps Collaborators with a typed Supabase client and RPC inserter.
@@ -116,7 +83,7 @@ export async function getKeys(deps: {
     // Align with table column names used across codebase/tests
     .select("service_name, created_at, last_used_at")
     .eq("user_id", user.id)
-    .order("service", { ascending: true });
+    .order("service_name", { ascending: true });
   if (error) {
     return new Response(
       JSON.stringify({ code: "DB_ERROR", error: "Failed to fetch keys" }),

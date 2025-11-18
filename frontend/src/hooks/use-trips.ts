@@ -12,7 +12,8 @@ import { useEffect, useRef, useState } from "react";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
 import { type AppError, handleApiError, isApiError } from "@/lib/api/error-types";
 import { cacheTimes, queryKeys, staleTimes } from "@/lib/query-keys";
-import { useSupabase } from "@/lib/supabase/client";
+import { useSupabase } from "@/lib/supabase";
+import type { UpdateTables } from "@/lib/supabase/database.types";
 import type { Trip } from "@/stores/trip-store";
 
 /** Represents a trip suggestion from the API. */
@@ -186,25 +187,18 @@ export function useCreateTrip() {
   });
 }
 
+type TripTableUpdate = Omit<UpdateTables<"trips">, "id">;
+
 /** Data structure for updating a trip. */
-interface UpdateTripData {
-  /** Title of the trip. */
+export type UpdateTripData = TripTableUpdate & {
+  /** Optional camelCase or additional metadata fields supported by API */
   readonly title?: string;
-  /** Destination location. */
-  readonly destination?: string;
-  /** Detailed description. */
   readonly description?: string;
-  /** Start date of the trip. */
   readonly startDate?: string;
-  /** End date of the trip. */
   readonly endDate?: string;
-  /** Budget for the trip. */
-  readonly budget?: number;
-  /** Currency code for the budget. */
   readonly currency?: string;
-  /** Additional metadata. */
   readonly metadata?: Record<string, unknown>;
-}
+};
 
 /**
  * Hook to update an existing trip.

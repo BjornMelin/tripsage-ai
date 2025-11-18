@@ -3,14 +3,15 @@
  */
 
 import { z } from "zod";
+import { primitiveSchemas } from "./registry";
 
-// Common validation patterns
-const TIMESTAMP_SCHEMA = z.string().datetime();
-const UUID_SCHEMA = z.string().uuid();
-const EMAIL_SCHEMA = z.string().email();
-const URL_SCHEMA = z.string().url();
-const POSITIVE_NUMBER_SCHEMA = z.number().positive();
-const NON_NEGATIVE_NUMBER_SCHEMA = z.number().nonnegative();
+// Common validation patterns using registry primitives
+const TIMESTAMP_SCHEMA = primitiveSchemas.isoDateTime;
+const UUID_SCHEMA = primitiveSchemas.uuid;
+const EMAIL_SCHEMA = primitiveSchemas.email;
+const URL_SCHEMA = primitiveSchemas.url;
+const POSITIVE_NUMBER_SCHEMA = primitiveSchemas.positiveNumber;
+const NON_NEGATIVE_NUMBER_SCHEMA = primitiveSchemas.nonNegativeNumber;
 
 // Generic API response wrapper
 export const apiResponseSchema = <T extends z.ZodTypeAny>(dataSchema: T) =>
@@ -56,19 +57,24 @@ export const loginRequestSchema = z.object({
 
 export const registerRequestSchema = z.object({
   acceptTerms: z.boolean().refine((val) => val === true, {
-    message: "You must accept the terms and conditions",
+    error: "You must accept the terms and conditions",
   }),
   email: EMAIL_SCHEMA.max(255),
-  firstName: z.string().min(1).max(50),
-  lastName: z.string().min(1).max(50),
+  firstName: z
+    .string()
+    .min(1, { error: "First name is required" })
+    .max(50, { error: "First name too long" }),
+  lastName: z
+    .string()
+    .min(1, { error: "Last name is required" })
+    .max(50, { error: "Last name too long" }),
   password: z
     .string()
-    .min(8, "Password must be at least 8 characters")
-    .max(128, "Password too long")
-    .regex(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-      "Password must contain uppercase, lowercase, and number"
-    ),
+    .min(8, { error: "Password must be at least 8 characters" })
+    .max(128, { error: "Password too long" })
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, {
+      error: "Password must contain uppercase, lowercase, and number",
+    }),
 });
 
 export const authResponseSchema = z.object({
@@ -219,7 +225,7 @@ export const tripSchema = z.object({
   createdAt: TIMESTAMP_SCHEMA,
   description: z.string().max(1000).optional(),
   destination: z.string().min(1),
-  endDate: z.string().date(),
+  endDate: z.iso.date(),
   id: UUID_SCHEMA,
   itinerary: z.array(
     z.object({
@@ -249,12 +255,12 @@ export const tripSchema = z.object({
           ]),
         })
       ),
-      date: z.string().date(),
+      date: z.iso.date(),
       day: z.number().int().positive(),
       id: UUID_SCHEMA,
     })
   ),
-  startDate: z.string().date(),
+  startDate: z.iso.date(),
   status: z.enum(["planning", "booked", "active", "completed", "cancelled"]),
   title: z.string().min(1).max(200),
   travelers: z.array(
@@ -279,18 +285,18 @@ export const createTripRequestSchema = z.object({
     .optional(),
   description: z.string().max(1000).optional(),
   destination: z.string().min(1),
-  endDate: z.string().date(),
-  startDate: z.string().date(),
+  endDate: z.iso.date(),
+  startDate: z.iso.date(),
   title: z.string().min(1).max(200),
   travelers: z
     .array(
       z.object({
         ageGroup: z.enum(["adult", "child", "infant"]).optional(),
         email: EMAIL_SCHEMA.optional(),
-        name: z.string().min(1),
+        name: z.string().min(1, { error: "Traveler name is required" }),
       })
     )
-    .min(1, "At least one traveler is required"),
+    .min(1, { error: "At least one traveler is required" }),
 });
 
 export const updateTripRequestSchema = createTripRequestSchema.partial();
@@ -324,6 +330,150 @@ export const updateApiKeyRequestSchema = z.object({
   isActive: z.boolean().optional(),
   key: z.string().min(1).max(500).optional(),
   name: z.string().min(1).max(100).optional(),
+});
+
+/**
+ * Zod schema for POST /api/keys request body.
+ *
+ * Validates service name and API key with length constraints and trimming.
+ * Used for BYOK (Bring Your Own Key) provider key storage.
+ */
+export const postKeyBodySchema = z.object({
+  apiKey: z
+    .string()
+    .min(1, { error: "API key is required" })
+    .max(2048, { error: "API key too long" })
+    .trim(),
+  // Optional base URL for per-user Gateway. Must be https when provided.
+  baseUrl: z
+    .url({ error: "Invalid URL" })
+    .startsWith("https://", { error: "baseUrl must start with https://" })
+    .optional(),
+  service: z
+    .string()
+    .min(1, { error: "Service name is required" })
+    .max(50, { error: "Service name too long" })
+    .trim(),
+});
+
+// Google Maps/Places API schemas
+/**
+ * Zod schema for POST /api/routes request body.
+ *
+ * Validates Google Maps Routes API computeRoutes request parameters.
+ */
+export const computeRoutesRequestSchema = z.object({
+  destination: z.object({
+    location: z.object({
+      latLng: z.object({
+        latitude: z.number(),
+        longitude: z.number(),
+      }),
+    }),
+  }),
+  origin: z.object({
+    location: z.object({
+      latLng: z.object({
+        latitude: z.number(),
+        longitude: z.number(),
+      }),
+    }),
+  }),
+  routingPreference: z.enum(["TRAFFIC_AWARE", "TRAFFIC_UNAWARE"]).optional(),
+  travelMode: z.enum(["DRIVE", "WALK", "BICYCLE", "TRANSIT"]).optional(),
+});
+
+/**
+ * Zod schema for POST /api/route-matrix request body.
+ *
+ * Validates Google Maps Routes API computeRouteMatrix request parameters.
+ */
+export const routeMatrixRequestSchema = z.object({
+  destinations: z.array(
+    z.object({
+      waypoint: z.object({
+        location: z.object({
+          latLng: z.object({
+            latitude: z.number(),
+            longitude: z.number(),
+          }),
+        }),
+      }),
+    })
+  ),
+  origins: z.array(
+    z.object({
+      waypoint: z.object({
+        location: z.object({
+          latLng: z.object({
+            latitude: z.number(),
+            longitude: z.number(),
+          }),
+        }),
+      }),
+    })
+  ),
+  travelMode: z.enum(["DRIVE", "WALK", "BICYCLE", "TRANSIT"]).optional(),
+});
+
+/**
+ * Zod schema for POST /api/geocode request body.
+ *
+ * Validates geocoding request parameters for forward or reverse geocoding.
+ */
+export const geocodeRequestSchema = z.object({
+  address: z.string().optional(),
+  lat: z.number().optional(),
+  lng: z.number().optional(),
+});
+
+/**
+ * Zod schema for GET /api/timezone query parameters.
+ *
+ * Validates timezone lookup request parameters.
+ */
+export const timezoneRequestSchema = z.object({
+  lat: z.number(),
+  lng: z.number(),
+  timestamp: z.number().optional(),
+});
+
+/**
+ * Zod schema for POST /api/places/search request body.
+ *
+ * Validates Google Places API (New) Text Search request parameters.
+ */
+export const placesSearchRequestSchema = z.object({
+  locationBias: z
+    .object({
+      lat: z.number(),
+      lon: z.number(),
+      radiusMeters: z.number().int().positive(),
+    })
+    .optional(),
+  maxResultCount: z.number().int().positive().max(20).default(20),
+  textQuery: z.string().min(1),
+});
+
+/**
+ * Zod schema for GET /api/places/details/[id] query parameters.
+ *
+ * Validates Google Places API (New) Place Details request parameters.
+ */
+export const placesDetailsRequestSchema = z.object({
+  sessionToken: z.string().optional(),
+});
+
+/**
+ * Zod schema for GET /api/places/photo query parameters.
+ *
+ * Validates Google Places API (New) Photo Media request parameters.
+ */
+export const placesPhotoRequestSchema = z.object({
+  maxHeightPx: z.number().int().positive().optional(),
+  maxWidthPx: z.number().int().positive().optional(),
+  name: z.string().min(1),
+  skipHttpRedirect: z.boolean().optional(),
 });
 
 // Error schemas
@@ -418,6 +568,14 @@ export type UpdateTripRequest = z.infer<typeof updateTripRequestSchema>;
 export type ApiKey = z.infer<typeof apiKeySchema>;
 export type CreateApiKeyRequest = z.infer<typeof createApiKeyRequestSchema>;
 export type UpdateApiKeyRequest = z.infer<typeof updateApiKeyRequestSchema>;
+export type PostKeyBody = z.infer<typeof postKeyBodySchema>;
+export type ComputeRoutesRequest = z.infer<typeof computeRoutesRequestSchema>;
+export type RouteMatrixRequest = z.infer<typeof routeMatrixRequestSchema>;
+export type GeocodeRequest = z.infer<typeof geocodeRequestSchema>;
+export type TimezoneRequest = z.infer<typeof timezoneRequestSchema>;
+export type PlacesSearchRequest = z.infer<typeof placesSearchRequestSchema>;
+export type PlacesDetailsRequest = z.infer<typeof placesDetailsRequestSchema>;
+export type PlacesPhotoRequest = z.infer<typeof placesPhotoRequestSchema>;
 export type ApiError = z.infer<typeof apiErrorSchema>;
 export type ValidationError = z.infer<typeof validationErrorSchema>;
 export type WebSocketMessage = z.infer<typeof websocketMessageSchema>;

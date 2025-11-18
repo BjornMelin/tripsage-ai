@@ -2,6 +2,7 @@
 
 import type { LanguageModel, UIMessage } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ProviderId } from "@/lib/schemas/providers";
 import type { ChatDeps, ChatPayload, ProviderResolver } from "../_handler";
 
 let handleChatStream: (deps: ChatDeps, payload: ChatPayload) => Promise<Response>;
@@ -11,7 +12,7 @@ const createResolver =
   async () => ({
     model: {} as LanguageModel,
     modelId,
-    provider: "openai",
+    provider: "openai" as ProviderId,
   });
 
 /**
@@ -262,5 +263,137 @@ describe("handleChatStream", () => {
     );
     expect(res.status).toBe(400);
     await res.text();
+  });
+
+  it("respects model override in payload", async () => {
+    const resolveProvider = vi.fn((_userId: string, modelHint?: string) => {
+      expect(modelHint).toBe("claude-3.5-sonnet");
+      return Promise.resolve({
+        model: {} as LanguageModel,
+        modelId: "claude-3.5-sonnet",
+        provider: "anthropic" as ProviderId,
+      });
+    });
+    const streamText = vi.fn(() => ({
+      toUIMessageStreamResponse: () => new Response("ok", { status: 200 }),
+    }));
+    const res = await handleChatStream(
+      {
+        resolveProvider,
+        stream: streamText as unknown as ChatDeps["stream"],
+        supabase: fakeSupabase("u5"),
+      },
+      {
+        messages: [
+          {
+            id: "m1",
+            parts: [{ text: "hi", type: "text" }],
+            role: "user",
+          } satisfies UIMessage,
+        ],
+        model: "claude-3.5-sonnet",
+      }
+    );
+    expect(res.status).toBe(200);
+    expect(resolveProvider).toHaveBeenCalledWith("u5", "claude-3.5-sonnet");
+    expect(streamText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: expect.anything(),
+      })
+    );
+  });
+
+  it("calls streamText with correct arguments", async () => {
+    const streamText = vi.fn(() => ({
+      toUIMessageStreamResponse: () => new Response("ok", { status: 200 }),
+    }));
+    const messages: UIMessage[] = [
+      {
+        id: "m1",
+        parts: [{ text: "test message", type: "text" }],
+        role: "user",
+      },
+    ];
+    await handleChatStream(
+      {
+        config: { defaultMaxTokens: 512 },
+        resolveProvider: createResolver("gpt-4o-mini"),
+        stream: streamText as unknown as ChatDeps["stream"],
+        supabase: fakeSupabase("u6"),
+      },
+      {
+        desiredMaxTokens: 256,
+        messages,
+      }
+    );
+    expect(streamText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        maxOutputTokens: expect.any(Number),
+        messages: expect.anything(),
+        model: expect.anything(),
+        stopWhen: expect.any(Function),
+        system: expect.stringContaining("travel planning assistant"),
+        toolChoice: "auto",
+        tools: expect.anything(),
+      })
+    );
+    const callArgs = (streamText as ReturnType<typeof vi.fn>).mock.calls[0]?.[0];
+    expect(callArgs?.maxOutputTokens).toBeLessThanOrEqual(256);
+    expect(callArgs?.system).toBeTruthy();
+  });
+
+  it("handles provider resolution failure", async () => {
+    const resolveProvider = vi.fn(() => {
+      throw new Error("Provider resolution failed");
+    });
+    await expect(
+      handleChatStream(
+        {
+          resolveProvider,
+          supabase: fakeSupabase("u7"),
+        },
+        {
+          messages: [
+            {
+              id: "m1",
+              parts: [{ text: "hi", type: "text" }],
+              role: "user",
+            } satisfies UIMessage,
+          ],
+        }
+      )
+    ).rejects.toThrow("Provider resolution failed");
+  });
+
+  it("onError returns user-friendly message", async () => {
+    const streamText = vi.fn(() => ({
+      toUIMessageStreamResponse: ({
+        onError,
+      }: {
+        onError?: (err: unknown) => string;
+      }) => {
+        const errorMsg = onError?.(new Error("Test error"));
+        return new Response(JSON.stringify({ error: errorMsg }), { status: 200 });
+      },
+    }));
+    const res = await handleChatStream(
+      {
+        logger: { error: vi.fn(), info: vi.fn() },
+        resolveProvider: createResolver("gpt-4o-mini"),
+        stream: streamText as unknown as ChatDeps["stream"],
+        supabase: fakeSupabase("u8"),
+      },
+      {
+        messages: [
+          {
+            id: "m1",
+            parts: [{ text: "hi", type: "text" }],
+            role: "user",
+          } satisfies UIMessage,
+        ],
+      }
+    );
+    const body = await res.json();
+    expect(body.error).toBe("An error occurred while processing your request.");
   });
 });

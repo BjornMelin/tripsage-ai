@@ -40,7 +40,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { useTrip } from "@/hooks/use-trips";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase";
 
 /**
  * Represents a collaborator on a trip with their permissions and status.

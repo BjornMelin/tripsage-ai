@@ -13,7 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { useSearchResultsStore } from "@/stores/search-store";
+import { useSearchResultsStore } from "@/stores/search-results-store";
 
 export default function FlightResultsPage() {
   const searchParams = useSearchParams();

@@ -1,3 +1,5 @@
+/** @vitest-environment jsdom */
+
 import { zodResolver } from "@hookform/resolvers/zod";
 import { render } from "@testing-library/react";
 import React from "react";
@@ -6,7 +8,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
 function FormHarness() {
-  const schema = z.object({ email: z.string().email() });
+  const schema = z.object({ email: z.email() });
   const { handleSubmit, register } = useForm<{ email: string }>({
     resolver: zodResolver(schema),
   });

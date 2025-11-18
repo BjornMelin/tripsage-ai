@@ -1,33 +1,63 @@
 /**
  * @fileoverview Vitest global setup for the TripSage frontend.
- * Configures environment-wide mocks, testing-library cleanup, and helper wiring
- * to keep unit and integration tests deterministic and isolated.
+ * Provides essential platform polyfills, DOM APIs, and minimal Next.js mocks.
+ * Feature-specific mocks (React Query, AI SDK, Supabase) should be imported
+ * from @/test/mocks/* in individual test files.
  */
 
 import { cleanup } from "@testing-library/react";
 import React from "react";
-import { afterEach, vi } from "vitest";
+import { afterEach, beforeEach, vi } from "vitest";
 import "@testing-library/jest-dom";
 import {
   ReadableStream as NodeReadableStream,
   TransformStream as NodeTransformStream,
   WritableStream as NodeWritableStream,
 } from "node:stream/web";
-import { createMockSupabaseClient } from "./test/mock-helpers";
 import { resetTestQueryClient } from "./test/test-utils";
 
-type UnknownRecord = Record<string, unknown>;
+(
+  globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }
+).IS_REACT_ACT_ENVIRONMENT = true;
 
-/**
- * Mock implementation for toast helpers.
- * @param _props Optional toast properties that are ignored by the mock.
- * @returns A toast handle containing dismiss and update spies.
- */
+// Minimal toast mock (used by many components)
+type UnknownRecord = Record<string, unknown>;
 const MOCK_TOAST = vi.fn((_props?: UnknownRecord) => ({
   dismiss: vi.fn(),
   id: `toast-${Date.now()}`,
   update: vi.fn(),
 }));
+
+const LOCATION_ORIGIN = "http://localhost";
+const HAS_WINDOW = typeof window !== "undefined";
+const withWindow = <T>(fn: (win: Window & typeof globalThis) => T) =>
+  HAS_WINDOW ? fn(window as Window & typeof globalThis) : undefined;
+const locationMock: Location = {
+  ancestorOrigins: {
+    contains: vi.fn(() => false),
+    item: vi.fn(() => null),
+    length: 0,
+  } as unknown as DOMStringList,
+  assign: vi.fn(),
+  hash: "",
+  host: "localhost",
+  hostname: "localhost",
+  href: `${LOCATION_ORIGIN}/`,
+  origin: LOCATION_ORIGIN,
+  pathname: "/",
+  port: "",
+  protocol: "http:",
+  reload: vi.fn(),
+  replace: vi.fn(),
+  search: "",
+};
+
+withWindow((win) =>
+  Object.defineProperty(win, "location", {
+    configurable: true,
+    value: locationMock,
+  })
+);
 
 vi.mock("@/components/ui/use-toast", () => ({
   toast: MOCK_TOAST,
@@ -38,13 +68,7 @@ vi.mock("@/components/ui/use-toast", () => ({
   })),
 }));
 
-vi.mock("@/lib/embeddings/generate", () => ({
-  generateEmbedding: vi.fn(async () =>
-    Array.from({ length: 1536 }, (_, index) => (index + 1) / 1000)
-  ),
-  getEmbeddingsApiUrl: vi.fn(() => "http://localhost:3000/api/embeddings"),
-}));
-
+// Zustand middleware mocks (used by stores)
 vi.mock("zustand/middleware", () => ({
   combine: <T>(fn: T) => fn,
   devtools: <T>(fn: T) => fn,
@@ -52,13 +76,8 @@ vi.mock("zustand/middleware", () => ({
   subscribeWithSelector: <T>(fn: T) => fn,
 }));
 
-const MOCK_SUPABASE = createMockSupabaseClient();
-vi.mock("@/lib/supabase/client", () => ({
-  createClient: () => MOCK_SUPABASE,
-  getBrowserClient: () => MOCK_SUPABASE,
-  useSupabase: () => MOCK_SUPABASE,
-}));
-
+// React Query and Supabase mocks migrated to @/test/mocks/react-query.ts and supabase.ts
+// Import/use in individual test files: import { mockReactQuery, mockSupabase } from '@/test/mocks/*'; mockReactQuery();
 vi.mock("next/navigation", () => {
   const push = vi.fn();
   const replace = vi.fn();
@@ -164,7 +183,7 @@ class MockIntersectionObserver implements IntersectionObserver {
  * Helper constant to check if we're in a JSDOM environment.
  * Used to conditionally apply window-specific mocks.
  */
-const IS_JSDOM_ENVIRONMENT = typeof window !== "undefined";
+const IS_JSDOM_ENVIRONMENT = HAS_WINDOW;
 
 if (IS_JSDOM_ENVIRONMENT) {
   const WINDOW_REF = globalThis.window as Window & typeof globalThis;
@@ -233,9 +252,22 @@ if (!GLOBAL_STREAMS.TransformStream) {
     NodeTransformStream as unknown as TS;
 }
 
-// Console is NOT mocked globally to allow real errors to surface during testing.
+// Suppress React act() warnings during test runs to prevent console flooding and OOM.
+// These warnings are being addressed systematically in a separate effort.
 // Tests that expect specific console output should use vi.spyOn(console, "error")
 // locally and restore it after the test.
+const originalConsoleError = console.error;
+console.error = (...args: unknown[]) => {
+  const firstArg = args[0];
+  if (
+    typeof firstArg === "string" &&
+    (firstArg.includes("not wrapped in act") ||
+      firstArg.includes("Warning: An update to"))
+  ) {
+    return;
+  }
+  originalConsoleError.call(console, ...args);
+};
 
 if (typeof process !== "undefined" && process.env) {
   const ORIGINAL_ENV = process.env;
@@ -261,10 +293,21 @@ if (typeof process !== "undefined" && process.env) {
   }
 }
 
+beforeEach(() => {
+  if (!vi.isFakeTimers()) {
+    vi.useFakeTimers();
+  }
+});
+
 afterEach(() => {
+  if (vi.isFakeTimers()) {
+    vi.runOnlyPendingTimers();
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  } else {
+    vi.useRealTimers();
+  }
   cleanup();
   resetTestQueryClient();
   vi.restoreAllMocks();
 });
-
-// Timers are configured per-suite in store tests when needed.

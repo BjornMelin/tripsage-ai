@@ -1,28 +1,51 @@
 import { describe, expect, it, vi } from "vitest";
+import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
+
+// Mock next/headers cookies() before any imports that use it
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(() =>
+    Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))
+  ),
+}));
+
+// Mock Supabase server client
+vi.mock("@/lib/supabase/server", () => ({
+  createServerSupabase: vi.fn(async () => ({
+    auth: {
+      getUser: async () => ({
+        data: { user: { id: "user-1" } },
+      }),
+    },
+  })),
+}));
+
+// Mock provider registry
+vi.mock("@/lib/providers/registry", () => ({
+  resolveProvider: vi.fn(async () => ({ model: {} })),
+}));
+
+// Mock budget agent
+vi.mock("@/lib/agents/budget-agent", () => ({
+  runBudgetAgent: vi.fn(() => ({
+    toUIMessageStreamResponse: () => new Response("ok", { status: 200 }),
+  })),
+}));
+
+// Mock Redis
+vi.mock("@/lib/redis", () => ({
+  getRedis: vi.fn(() => Promise.resolve({})),
+}));
 
 describe("/api/agents/budget validation", () => {
   it("returns 400 on invalid body", async () => {
-    vi.doMock("@/lib/supabase/server", () => ({
-      createServerSupabase: vi.fn(async () => ({
-        auth: { getUser: async () => ({ data: { user: { id: "user-1" } } }) },
-      })),
-    }));
-    vi.doMock("@/lib/providers/registry", () => ({
-      resolveProvider: vi.fn(async () => ({ model: {} })),
-    }));
-    vi.doMock("@/lib/agents/budget-agent", () => ({
-      runBudgetAgent: vi.fn(() => ({
-        toUIMessageStreamResponse: () => new Response("ok", { status: 200 }),
-      })),
-    }));
-
     const mod = await import("../route");
     // Missing required fields like destination/durationDays
-    const req = new Request("http://localhost/api/agents/budget", {
-      body: JSON.stringify({ travelers: 2 }),
+    const req = createMockNextRequest({
+      body: { travelers: 2 },
       method: "POST",
+      url: "http://localhost/api/agents/budget",
     });
-    const res = await mod.POST(req as unknown as import("next/server").NextRequest);
+    const res = await mod.POST(req);
     expect(res.status).toBe(400);
     const data = await res.json();
     expect(data.error).toBe("invalid_request");

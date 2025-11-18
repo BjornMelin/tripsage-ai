@@ -5,6 +5,7 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { getServerEnvVar, getServerEnvVarWithFallback } from "@/lib/env/server";
+import { recordTelemetryEvent } from "@/lib/telemetry/span";
 
 const RATELIMIT_PREFIX = "ratelimit:keys";
 
@@ -46,10 +47,13 @@ export function buildRateLimiter(): KeyRateLimiter | undefined {
       const errorMessage =
         "Rate limiter configuration missing: UPSTASH_REDIS_REST_URL and " +
         "UPSTASH_REDIS_REST_TOKEN must be set in production";
-      console.error("/api/keys rate limiter configuration error:", {
-        hasToken: Boolean(token),
-        hasUrl: Boolean(url),
-        message: errorMessage,
+      recordTelemetryEvent("api.keys.rate_limit_config_error", {
+        attributes: {
+          hasToken: Boolean(token),
+          hasUrl: Boolean(url),
+          message: errorMessage,
+        },
+        level: "error",
       });
       throw new RateLimiterConfigurationError(errorMessage);
     }

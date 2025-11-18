@@ -38,21 +38,18 @@ export const getTestQueryClient = (): QueryClient => {
  * Called automatically after each test to ensure test isolation.
  */
 export const resetTestQueryClient = (): void => {
-  sharedQueryClient?.clear();
-};
+  if (!sharedQueryClient) {
+    return;
+  }
 
-/**
- * Creates a test QueryClient with disabled retries and caching.
- * @deprecated Use getTestQueryClient() instead for better performance.
- * @returns A configured QueryClient for testing.
- */
-export const createTestQueryClient = () =>
-  new QueryClient({
-    defaultOptions: {
-      mutations: { retry: false },
-      queries: { gcTime: 0, retry: false, staleTime: 0 },
-    },
-  });
+  if (typeof sharedQueryClient.clear === "function") {
+    sharedQueryClient.clear();
+    return;
+  }
+
+  sharedQueryClient.getQueryCache?.().clear?.();
+  sharedQueryClient.getMutationCache?.().clear?.();
+};
 
 // Props for the AllTheProviders component.
 export interface ProvidersProps {

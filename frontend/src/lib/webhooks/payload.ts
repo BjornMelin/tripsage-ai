@@ -4,10 +4,12 @@
 
 import "server-only";
 import { createHash } from "node:crypto";
-import { trace } from "@opentelemetry/api";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
+import type { WebhookPayload } from "@/lib/schemas/webhooks";
+import { webhookPayloadSchema } from "@/lib/schemas/webhooks";
 import { verifyRequestHmac } from "@/lib/security/webhook";
 import { emitOperationalAlert } from "@/lib/telemetry/alerts";
+import { addEventToActiveSpan } from "@/lib/telemetry/span";
 
 const OLD_RECORD_KEY = "old_record" as const;
 const OCCURRED_AT_KEY = "occurred_at" as const;
@@ -23,24 +25,17 @@ type RawWebhookPayload = {
   [OCCURRED_AT_KEY]?: string;
 };
 
-/** Normalized webhook payload structure for internal use. */
-export type WebhookPayload = {
-  type: "INSERT" | "UPDATE" | "DELETE";
-  table: string;
-  schema?: string;
-  record: Record<string, unknown> | null;
-  oldRecord: Record<string, unknown> | null;
-  occurredAt?: string;
-};
+// Re-export type from schemas
+export type { WebhookPayload };
 
 /**
  * Normalizes raw webhook payload to internal structure.
  *
  * @param raw - The raw webhook payload from external source.
- * @return Normalized webhook payload.
+ * @return Normalized webhook payload (validated via Zod schema).
  */
 function normalizeWebhookPayload(raw: RawWebhookPayload): WebhookPayload {
-  return {
+  const normalized = {
     occurredAt: raw[OCCURRED_AT_KEY],
     oldRecord: raw[OLD_RECORD_KEY] ?? null,
     record: raw.record ?? null,
@@ -48,10 +43,12 @@ function normalizeWebhookPayload(raw: RawWebhookPayload): WebhookPayload {
     table: raw.table,
     type: raw.type,
   };
+  // Validate using Zod schema
+  return webhookPayloadSchema.parse(normalized);
 }
 
 function recordVerificationFailure(reason: string): void {
-  trace.getActiveSpan()?.addEvent("webhook_verification_failed", { reason });
+  addEventToActiveSpan("webhook_verification_failed", { reason });
   emitOperationalAlert("webhook.verification_failed", {
     attributes: { reason },
   });
@@ -83,7 +80,13 @@ export async function parseAndVerify(
     recordVerificationFailure("invalid_json");
     return { ok: false };
   }
-  const payload = normalizeWebhookPayload(raw);
+  let payload: WebhookPayload;
+  try {
+    payload = normalizeWebhookPayload(raw);
+  } catch {
+    recordVerificationFailure("invalid_payload_shape");
+    return { ok: false };
+  }
   if (!payload?.type || !payload?.table) {
     recordVerificationFailure("invalid_payload_shape");
     return { ok: false };

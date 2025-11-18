@@ -1,4 +1,6 @@
-import { render } from "@testing-library/react";
+/** @vitest-environment jsdom */
+
+import { act, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 // Stub CSS and Streamdown imports used by downstream components
@@ -9,7 +11,7 @@ vi.mock("streamdown", () => ({
   ),
 }));
 
-vi.mock("@/lib/supabase/client", () => {
+vi.mock("@/lib/supabase", () => {
   return {
     useSupabase: () => ({
       auth: {
@@ -58,7 +60,9 @@ describe("ChatPage resume wiring", () => {
   it("passes resume:true and transport with prepareReconnectToStreamRequest", async () => {
     const mod = await import("../../chat/page");
     const Page = mod.default;
-    render(<Page />);
+    act(() => {
+      render(<Page />);
+    });
     expect(USE_CHAT_SPY).toHaveBeenCalledTimes(1);
     const opts = USE_CHAT_SPY.mock.calls[0][0] as UseChatOptions;
     expect(opts.resume).toBe(true);

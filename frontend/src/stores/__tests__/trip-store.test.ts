@@ -1,6 +1,8 @@
+/** @vitest-environment jsdom */
+
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { resetTripStoreMockData } from "@/test/trip-store-test-helpers.test";
+import { resetTripStoreMockData } from "@/test/trip-store-test-helpers";
 import { type Destination, type Trip, useTripStore } from "../trip-store";
 
 // Accelerate store async flows in this suite only
@@ -243,8 +245,8 @@ describe("Trip Store", () => {
       expect(updatedTrip.budget).toBe(2000);
       // Updated timestamp should be the same or newer; exact inequality is not required
       if (updatedTrip.updatedAt && originalUpdatedAt) {
-        expect(new Date(updatedTrip.updatedAt).getTime()).toBeGreaterThanOrEqual(
-          new Date(originalUpdatedAt).getTime()
+        expect(new Date(updatedTrip.updatedAt).valueOf()).toBeGreaterThanOrEqual(
+          new Date(originalUpdatedAt).valueOf()
         );
       }
 

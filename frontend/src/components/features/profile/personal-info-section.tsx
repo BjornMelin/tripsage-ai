@@ -9,7 +9,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Camera, Upload } from "lucide-react";
 import { useId, useState } from "react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,27 +30,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
+import { type PersonalInfoFormData, personalInfoFormSchema } from "@/lib/schemas/forms";
 import { useUserProfileStore } from "@/stores/user-store";
-
-const PersonalInfoSchema = z.object({
-  bio: z.string().max(500, "Bio must be less than 500 characters").optional(),
-  displayName: z
-    .string()
-    .min(1, "Display name is required")
-    .max(50, "Display name must be less than 50 characters"),
-  firstName: z
-    .string()
-    .min(1, "First name is required")
-    .max(50, "First name must be less than 50 characters"),
-  lastName: z
-    .string()
-    .min(1, "Last name is required")
-    .max(50, "Last name must be less than 50 characters"),
-  location: z.string().max(100, "Location must be less than 100 characters").optional(),
-  website: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
-});
-
-type PersonalInfoFormData = z.infer<typeof PersonalInfoSchema>;
 
 export function PersonalInfoSection() {
   const avatarInputId = useId();
@@ -68,7 +48,7 @@ export function PersonalInfoSection() {
       location: profile?.personalInfo?.location || "",
       website: profile?.personalInfo?.website || "",
     },
-    resolver: zodResolver(PersonalInfoSchema),
+    resolver: zodResolver(personalInfoFormSchema),
   });
 
   const onSubmit = async (data: PersonalInfoFormData) => {

@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTrips } from "@/hooks/use-trips";
+import { DateUtils } from "@/lib/dates/unified-date-utils";
 import type { Trip } from "@/stores/trip-store";
 
 interface RecentTripsProps {
@@ -52,7 +53,7 @@ function TripCardSkeleton() {
 
 /**
  * Render a single trip card.
- * @param trip Trip object to render.
+ * @param trip - Trip object to render.
  */
 function TripCard({ trip }: { trip: Trip }) {
   /**
@@ -60,12 +61,8 @@ function TripCard({ trip }: { trip: Trip }) {
    */
   const formatDate = (dateString?: string) => {
     if (!dateString) return "Not set";
-    return new Date(dateString).toLocaleDateString("en-US", {
-      day: "numeric",
-      month: "short",
-      timeZone: "UTC",
-      year: "numeric",
-    });
+    const date = DateUtils.parse(dateString);
+    return DateUtils.format(date, "MMM d, yyyy");
   };
 
   /**
@@ -82,10 +79,9 @@ function TripCard({ trip }: { trip: Trip }) {
    */
   const getTripDuration = () => {
     if (!trip.startDate || !trip.endDate) return null;
-    const start = new Date(trip.startDate);
-    const end = new Date(trip.endDate);
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const start = DateUtils.parse(trip.startDate);
+    const end = DateUtils.parse(trip.endDate);
+    const diffDays = Math.max(1, Math.abs(DateUtils.difference(end, start, "days")));
     return `${diffDays} day${diffDays !== 1 ? "s" : ""}`;
   };
 
@@ -95,12 +91,17 @@ function TripCard({ trip }: { trip: Trip }) {
   const getTripStatus = () => {
     if (!trip.startDate || !trip.endDate) return "draft";
     const now = new Date();
-    const start = new Date(trip.startDate);
-    const end = new Date(trip.endDate);
+    const start = DateUtils.parse(trip.startDate);
+    const end = DateUtils.parse(trip.endDate);
+    const nowTs = now.getTime();
 
-    if (now < start) return "upcoming";
-    if (now >= start && now <= end) return "ongoing";
-    return "completed";
+    if (start.getTime() > nowTs) {
+      return "upcoming";
+    }
+    if (end.getTime() < nowTs) {
+      return "completed";
+    }
+    return "ongoing";
   };
 
   const status = getTripStatus();
@@ -176,14 +177,11 @@ function EmptyState() {
 }
 
 /**
- * RecentTrips dashboard widget component.
+ * Renders a dashboard widget listing the most recently updated trips.
  *
- * Displays recent trip cards with resilient parsing for different data shapes,
- * includes accessible links, and stable date formatting with loading states.
- *
- * @param limit - Maximum number of trips to display.
- * @param showEmpty - Whether to show empty state when no trips available.
- * @returns The RecentTrips component.
+ * @param props - Component configuration including list limit and whether to
+ * show the empty state.
+ * @returns Recent trip grid with skeleton fallback.
  */
 export function RecentTrips({ limit = 5, showEmpty = true }: RecentTripsProps) {
   const { data: tripsResponse, isLoading } = useTrips();

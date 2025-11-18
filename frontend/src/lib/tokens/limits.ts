@@ -3,16 +3,18 @@
  * Maintains per-model context limits for safe clamping in AI SDK calls.
  */
 
-export type ModelLimitsTable = Record<string, number>;
+import type { ModelLimitsTable } from "@/lib/schemas/tokens";
+
+// Re-export type from schemas
+export type { ModelLimitsTable };
 
 /**
  * Canonical context window limits (tokens) for known models.
  * Keys are normalized lowercase substrings matched against model names.
  */
 export const MODEL_LIMITS: ModelLimitsTable = {
-  "claude-3.5-haiku": 200_000,
-
   // Anthropic
+  "claude-3.5-haiku": 200_000,
   "claude-3.5-sonnet": 200_000,
   "gpt-4o": 128_000,
   "gpt-4o-mini": 128_000,

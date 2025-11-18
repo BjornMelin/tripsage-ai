@@ -1,6 +1,10 @@
+/**
+ * @fileoverview Trip details dashboard page that renders itinerary, budget,
+ * and export actions for a specific trip id sourced from the store.
+ */
+
 "use client";
 
-import { differenceInDays, format } from "date-fns";
 import {
   ArrowLeft,
   Calendar,
@@ -31,8 +35,15 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { exportTripToIcs } from "@/lib/calendar/trip-export";
+import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { useTripStore } from "@/stores/trip-store";
 
+/**
+ * Renders the trip dashboard for the requested trip id sourced from the URL.
+ *
+ * @returns Structured trip overview including itinerary views and calendar
+ * export controls.
+ */
 export default function TripDetailsPage() {
   const params = useParams();
   const router = useRouter();
@@ -59,24 +70,24 @@ export default function TripDetailsPage() {
   const getTripStatus = () => {
     if (!currentTrip?.startDate || !currentTrip?.endDate) return "draft";
     const now = new Date();
-    const startDate = new Date(currentTrip.startDate);
-    const endDate = new Date(currentTrip.endDate);
+    const startDate = DateUtils.parse(currentTrip.startDate);
+    const endDate = DateUtils.parse(currentTrip.endDate);
 
-    if (now < startDate) return "upcoming";
-    if (now > endDate) return "completed";
+    if (DateUtils.isBefore(now, startDate)) return "upcoming";
+    if (DateUtils.isAfter(now, endDate)) return "completed";
     return "active";
   };
 
   const getTripDuration = () => {
     if (!currentTrip?.startDate || !currentTrip?.endDate) return null;
-    const startDate = new Date(currentTrip.startDate);
-    const endDate = new Date(currentTrip.endDate);
-    return differenceInDays(endDate, startDate) + 1;
+    const startDate = DateUtils.parse(currentTrip.startDate);
+    const endDate = DateUtils.parse(currentTrip.endDate);
+    return DateUtils.difference(endDate, startDate, "days") + 1;
   };
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return "Not set";
-    return format(new Date(dateString), "MMMM dd, yyyy");
+    return DateUtils.format(DateUtils.parse(dateString), "MMMM dd, yyyy");
   };
 
   const getStatusColor = (status: string) => {

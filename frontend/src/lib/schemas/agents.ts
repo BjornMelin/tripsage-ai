@@ -29,7 +29,7 @@ export const agentSourceSchema = z
     publishedAt: z.string().optional(),
     snippet: z.string().optional(),
     title: z.string().optional(),
-    url: z.string().url(),
+    url: z.url(),
   })
   .describe("Source citation with URL and optional metadata");
 /** TypeScript type for agent source citations. */
@@ -40,7 +40,7 @@ const destinationItemSchema = z.object({
   description: z.string().optional(),
   tags: z.array(z.string()).optional(),
   title: z.string(),
-  url: z.string().url().optional(),
+  url: z.url().optional(),
 });
 
 /** Zod schema for destination research requests. */
@@ -99,7 +99,7 @@ const itineraryDaySchema = z.object({
         location: z.string().optional(),
         name: z.string(),
         time: z.string().optional(),
-        url: z.string().url().optional(),
+        url: z.url().optional(),
       })
     )
     .default([]),
@@ -167,7 +167,7 @@ export const flightSearchResultSchema = z
     currency: z.string().default("USD"),
     itineraries: z.array(
       z.object({
-        bookingUrl: z.string().url().optional(),
+        bookingUrl: z.url().optional(),
         id: z.string(),
         price: z.number().positive(),
         segments: z.array(flightSegmentSchema),
@@ -191,7 +191,7 @@ const stayOptionSchema = z.object({
   name: z.string(),
   nightlyRate: z.number().positive().optional(),
   rating: z.number().min(0).max(5).optional(),
-  url: z.string().url().optional(),
+  url: z.url().optional(),
 });
 
 /** Zod schema for accommodation search requests. */
@@ -272,11 +272,20 @@ export type MemoryRecord = z.infer<typeof memoryRecordSchema>;
 export const memoryUpdateRequestSchema = z
   .object({
     records: z.array(memoryRecordSchema),
-    userId: z.string().uuid().optional(),
+    userId: z.uuid().optional(),
   })
   .describe("Input for updating user memories");
 /** TypeScript type for memory update requests. */
 export type MemoryUpdateRequest = z.infer<typeof memoryUpdateRequestSchema>;
+
+/** Zod schema for router classification requests. */
+export const routerRequestSchema = z
+  .object({
+    message: z.string().min(1, { error: "message is required" }),
+  })
+  .describe("Router classification request");
+/** TypeScript type for router requests. */
+export type RouterRequest = z.infer<typeof routerRequestSchema>;
 
 /** Zod schema for router workflow classification results. */
 export const routerClassificationSchema = z
@@ -303,6 +312,7 @@ export const agentSchemas = {
   itineraryPlanResultSchema,
   memoryUpdateRequestSchema,
   routerClassificationSchema,
+  routerRequestSchema,
 };
 /** TypeScript type for the agent schemas collection. */
 export type AgentSchemas = typeof agentSchemas;

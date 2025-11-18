@@ -11,11 +11,24 @@ http://localhost:8000 (development)
 
 ## Authentication
 
+> **⚠️ Legacy Python Backend API**  
+> This document describes the legacy Python FastAPI backend endpoints.  
+> **Authentication is now handled by the Next.js frontend via Supabase SSR routes (`/auth/*`).**  
+> The Python backend middleware validates JWT tokens but does not provide auth endpoints.
+
 All endpoints require a Bearer JWT token obtained through Supabase authentication:
 
 ```http
 Authorization: Bearer <jwt_token>
 ```
+
+**Frontend Auth Routes (Next.js):**
+
+- `POST /auth/login` - Email/password login
+- `POST /auth/register` - User registration
+- `GET /auth/callback` - OAuth callback handler
+- `POST /auth/logout` - Logout and session cleanup
+- `GET /auth/confirm` - Email confirmation
 
 ## Health & System
 
@@ -35,14 +48,6 @@ Response:
   "environment": "development"
 }
 ```
-
-### User Registration
-
-```http
-POST /api/auth/register
-```
-
-**Note**: Registration is handled by Supabase. Use Supabase client SDK or hosted UI.
 
 ## Trip Management
 

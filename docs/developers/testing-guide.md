@@ -302,7 +302,9 @@ uv run pytest --setup-show
 uv run pytest --fixtures
 
 # Run specific test with verbose output
-uv run pytest tests/unit/services/test_trip_service.py::TestTripService::test_create_trip -v
+uv run pytest \
+  tests/unit/services/test_trip_service.py::TestTripService::test_create_trip \
+  -v
 
 # Run tests matching pattern
 uv run pytest -k "trip" -v
@@ -525,3 +527,211 @@ def test_with_mcp(mock_mcp_manager):
 3. Use `yield` for proper cleanup
 4. Keep fixtures focused and composable
 5. Document fixture purpose and dependencies
+
+## Frontend Testing (App Router)
+
+TripSage uses centralized test utilities for consistent, maintainable
+frontend testing.
+
+### Test Utilities Location
+
+All test utilities are centralized in `src/test/`:
+
+- `store-helpers.ts` - Store testing utilities
+- `api-helpers.ts` - API route testing utilities
+- `component-helpers.tsx` - React component testing utilities
+- `factories.ts` - Mock data factories
+- `test-utils.tsx` - General testing utilities
+
+### Store Testing
+
+Use centralized helpers for consistent store testing:
+
+```typescript
+import { resetStore, setupTimeoutMock } from "@/test/store-helpers";
+import { createMockUser } from "@/test/factories";
+
+describe("AuthStore", () => {
+  let timeoutSpy: { mockRestore: () => void };
+
+  beforeEach(() => {
+    resetStore(useAuthStore, { user: null, isLoading: false, error: null });
+    timeoutSpy = setupTimeoutMock();
+  });
+
+  afterEach(() => {
+    timeoutSpy.mockRestore();
+  });
+
+  it("sets user on login", async () => {
+    const mockUser = createMockUser();
+    await useAuthStore.getState().login({
+      email: "test@test.com",
+      password: "pass",
+    });
+
+    expect(useAuthStore.getState().user).toEqual(mockUser);
+  });
+});
+```
+
+### API Route Testing
+
+Use factory pattern helpers for API route testing:
+
+```typescript
+import { setupApiTestMocks, createMockRequest } from "@/test/api-helpers";
+
+describe("GET /api/user/profile", () => {
+  let cleanup: () => void;
+
+  beforeEach(() => {
+    cleanup = setupApiTestMocks();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("returns user profile", async () => {
+    const req = createMockRequest({ method: "GET" });
+    const res = await GET(req);
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.email).toBe("test@example.com");
+  });
+
+  it("handles authentication errors", async () => {
+    const req = createMockRequest({ method: "GET" });
+    const res = await GET(req);
+
+    expect(res.status).toBe(401);
+  });
+});
+```
+
+### Component Testing Patterns
+
+Use provider wrappers for component testing:
+
+```typescript
+import { renderWithProviders } from "@/test/component-helpers";
+
+describe("UserProfile", () => {
+  it("displays user information", () => {
+    const { getByText } = renderWithProviders(<UserProfile />);
+
+    expect(getByText("John Doe")).toBeInTheDocument();
+    expect(getByText("john@example.com")).toBeInTheDocument();
+  });
+
+  it("handles loading state", () => {
+    const { getByText } = renderWithProviders(<UserProfile />);
+    expect(getByText("Loading...")).toBeInTheDocument();
+  });
+});
+```
+
+### Mock Data Factories
+
+Use factories for consistent test data:
+
+```typescript
+import { createMockUser, createMockTrip } from "@/test/factories";
+
+describe("TripCard", () => {
+  it("displays trip details", () => {
+    const mockTrip = createMockTrip({
+      name: "Paris Adventure",
+      budget: 2500,
+    });
+
+    render(<TripCard trip={mockTrip} />);
+
+    expect(screen.getByText("Paris Adventure")).toBeInTheDocument();
+    expect(screen.getByText("$2,500.00")).toBeInTheDocument();
+  });
+});
+```
+
+### Frontend Test Organization
+
+#### Recommended File Structure
+
+```text
+src/
+├── components/
+│   └── feature/
+│       ├── Component.tsx
+│       └── __tests__/
+│           ├── Component.test.tsx
+│           └── Component.integration.test.tsx
+├── stores/
+│   └── feature-store.ts
+│   └── __tests__/
+│       └── feature-store.test.ts
+└── app/api/
+    └── endpoint/
+        ├── route.ts
+        └── __tests__/
+            └── route.test.ts
+```
+
+#### Test Naming
+
+- `*.test.ts` - Unit tests
+- `*.spec.ts` - Integration tests
+- `*.integration.test.ts` - End-to-end tests
+
+### Frontend Testing Patterns
+
+#### Setup and Teardown
+
+```typescript
+describe("Feature", () => {
+  beforeAll(() => {
+    // One-time setup
+  });
+
+  beforeEach(() => {
+    // Per-test setup
+  });
+
+  afterEach(() => {
+    // Per-test cleanup
+  });
+
+  afterAll(() => {
+    // One-time cleanup
+  });
+});
+```
+
+#### Async Testing
+
+```typescript
+it("handles async operations", async () => {
+  const promise = someAsyncOperation();
+  await expect(promise).resolves.toEqual(expectedValue);
+});
+
+it("handles rejections", async () => {
+  await expect(failingOperation()).rejects.toThrow("Error message");
+});
+```
+
+#### Custom Matchers
+
+```typescript
+expect(result).toBeValidUser();
+expect(response).toHaveStatusCode(200);
+expect(store.getState()).toHaveUser(user);
+```
+
+### Benefits
+
+- Consistent testing patterns across the codebase
+- Centralized mock management and data factories
+- Easier maintenance with shared utilities
+- Standardized approaches for better reliability

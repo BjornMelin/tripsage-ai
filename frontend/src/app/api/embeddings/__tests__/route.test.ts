@@ -1,5 +1,42 @@
+/** @vitest-environment node */
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as route from "@/app/api/embeddings/route";
+import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
+
+// Mock next/headers cookies() BEFORE any imports that use it
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(() =>
+    Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))
+  ),
+}));
+
+// Mock Supabase server client
+vi.mock("@/lib/supabase/server", () => ({
+  createServerSupabase: vi.fn(async () => ({
+    auth: {
+      getUser: async () => ({
+        data: { user: { id: "user-1" } },
+      }),
+    },
+  })),
+}));
+
+// Mock Redis
+vi.mock("@/lib/redis", () => ({
+  getRedis: vi.fn(() => Promise.resolve({})),
+}));
+
+// Mock route helpers
+vi.mock("@/lib/next/route-helpers", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/next/route-helpers")>(
+    "@/lib/next/route-helpers"
+  );
+  return {
+    ...actual,
+    withRequestSpan: vi.fn((_name, _attrs, fn) => fn()),
+  };
+});
 
 vi.mock("ai", () => ({
   embed: vi.fn(async () => ({
@@ -17,18 +54,19 @@ vi.mock("@/lib/supabase/admin", () => ({
   })),
 }));
 
-beforeEach(() => {
-  UPSERT.mockReset();
-  FROM.mockClear();
-  UPSERT.mockResolvedValue({ error: null });
-});
-
-describe("POST /api/embeddings", () => {
+describe("/api/embeddings", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    UPSERT.mockReset();
+    FROM.mockClear();
+    UPSERT.mockResolvedValue({ error: null });
+  });
   it("returns 400 on missing input", async () => {
     const res = await route.POST(
-      new Request("http://localhost/api/embeddings", {
-        body: JSON.stringify({ text: "" }),
+      createMockNextRequest({
+        body: { text: "" },
         method: "POST",
+        url: "http://localhost/api/embeddings",
       })
     );
     expect(res.status).toBe(400);
@@ -36,9 +74,10 @@ describe("POST /api/embeddings", () => {
 
   it("returns 1536-d embedding", async () => {
     const res = await route.POST(
-      new Request("http://localhost/api/embeddings", {
-        body: JSON.stringify({ text: "hello world" }),
+      createMockNextRequest({
+        body: { text: "hello world" },
         method: "POST",
+        url: "http://localhost/api/embeddings",
       })
     );
     expect(res.status).toBe(200);
@@ -52,8 +91,8 @@ describe("POST /api/embeddings", () => {
 
   it("persists accommodation embeddings when property metadata present", async () => {
     const res = await route.POST(
-      new Request("http://localhost/api/embeddings", {
-        body: JSON.stringify({
+      createMockNextRequest({
+        body: {
           property: {
             amenities: ["pool", "wifi"],
             description: "Beautiful stay",
@@ -61,8 +100,9 @@ describe("POST /api/embeddings", () => {
             name: "Test Property",
             source: "hotel",
           },
-        }),
+        },
         method: "POST",
+        url: "http://localhost/api/embeddings",
       })
     );
 
@@ -85,14 +125,15 @@ describe("POST /api/embeddings", () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     const res = await route.POST(
-      new Request("http://localhost/api/embeddings", {
-        body: JSON.stringify({
+      createMockNextRequest({
+        body: {
           property: {
             id: "prop-999",
             name: "fail",
           },
-        }),
+        },
         method: "POST",
+        url: "http://localhost/api/embeddings",
       })
     );
 

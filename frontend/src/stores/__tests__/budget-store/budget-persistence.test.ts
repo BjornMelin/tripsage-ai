@@ -1,8 +1,9 @@
+/** @vitest-environment jsdom */
+
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Budget, BudgetCategory, Expense } from "@/lib/schemas/budget";
 import { useBudgetStore } from "@/stores/budget-store";
-import { resetBudgetStore } from "./_shared";
 
 // Mock the store to avoid persistence issues in tests
 vi.mock("zustand/middleware", () => ({
@@ -12,7 +13,16 @@ vi.mock("zustand/middleware", () => ({
 
 describe("Budget Store - Budget Persistence", () => {
   beforeEach(() => {
-    resetBudgetStore();
+    act(() => {
+      useBudgetStore.setState({
+        activeBudgetId: null,
+        alerts: {},
+        baseCurrency: "USD",
+        budgets: {},
+        currencies: {},
+        expenses: {},
+      });
+    });
   });
 
   describe("Budget Management", () => {
