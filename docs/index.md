@@ -115,8 +115,7 @@ TripSage uses a modern, unified architecture:
 - **Cache**: Upstash Redis (HTTP) for serverless caching
 - **Frontend**: Next.js 16 with React 19 and TypeScript
 - **Real-Time**: Supabase Realtime with private channels
-- **AI**: Vercel AI SDK v6 with frontend-only agents (flights,
-  accommodations, destinations, itineraries)
+- **AI**: Vercel AI SDK v6 with complete streaming chat (`/api/chat/*`), memory sync (`/api/memory/sync`), and agent tool calling
 
 ## Support & Community
 

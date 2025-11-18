@@ -65,8 +65,9 @@ TripSage development maintenance checklist and procedures.
 - [ ] Use composition helpers from `@/lib/stores`
 - [ ] Include devtools middleware
 - [ ] Add persistence if state needs to survive reloads
-- [ ] Use centralized test helpers
+- [ ] Use centralized test helpers from `@/test/store-helpers.ts`
 - [ ] Export from appropriate index
+- [ ] For chat/memory stores: Use orchestrator hooks for cross-slice coordination
 
 ### New Component
 
@@ -77,11 +78,27 @@ TripSage development maintenance checklist and procedures.
 - [ ] Use centralized test helpers
 - [ ] Follow design system patterns
 
+### New AI SDK Integration
+
+- [ ] Implement AI operations in API route handlers, not client slices
+- [ ] Use `convertToModelMessages()` for message transformation
+- [ ] Use `streamText()`/`generateText()` for completions
+- [ ] Return `toUIMessageStreamResponse()` for streaming responses
+- [ ] Client-side: Use `@/lib/chat/api-client.ts` for AI API calls
+- [ ] Construct `UIMessage` with `parts` array (not `content` property)
+- [ ] Parse SSE streams for `text-delta` chunks on client
+- [ ] Include proper error handling and abort signal support
+
 ### New Test
 
-- [ ] Use centralized utilities from `@/test/*`
-- [ ] No `_shared.ts` files in feature directories
-- [ ] Include proper setup and teardown
+- [ ] Use centralized utilities from `@/test/*`:
+  - `@/test/store-helpers.ts` - Zustand store testing
+  - `@/test/factories.ts` - Mock data creation
+  - `@/test/api-helpers.ts` - API testing utilities
+  - `@/test/schema-helpers.ts` - Zod validation testing
+  - `@/test/component-helpers.tsx` - React component testing
+- [ ] No `_shared.ts` files in feature directories (all utilities centralized)
+- [ ] Include proper setup and teardown with centralized helpers
 - [ ] Test behavior, not implementation
 - [ ] Maintain >90% coverage target
 

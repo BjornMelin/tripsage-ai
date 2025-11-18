@@ -262,7 +262,7 @@ This section documents the architectural invariants that govern how Supabase Rea
 
 The following files violate the "Single Low-Level Hook" invariant and should be refactored in later phases:
 
-- `frontend/src/stores/chat-store.ts` (line 461): Direct `supabase.channel()` call
+- `frontend/src/stores/chat/chat-messages.ts` and `chat-memory.ts`: No direct Supabase calls (uses API endpoints and orchestrator hooks)
 - `frontend/src/hooks/use-agent-status-websocket.ts` (line 261): Direct `supabase.channel()` call  
 - `frontend/src/hooks/use-trips.ts` (lines 415, 574): Direct `supabase.channel()` calls for Postgres changes
 
