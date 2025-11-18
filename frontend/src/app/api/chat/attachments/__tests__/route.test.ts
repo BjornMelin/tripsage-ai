@@ -22,9 +22,33 @@ vi.mock("@/lib/supabase/server", () => ({
   })),
 }));
 
-// Mock Redis
+// Mock Upstash Redis and Ratelimit
+vi.mock("@upstash/redis", () => ({
+  Redis: {
+    fromEnv: vi.fn(() => ({
+      evalsha: vi.fn().mockResolvedValue({}),
+      get: vi.fn(),
+      set: vi.fn(),
+    })),
+  },
+}));
+
+vi.mock("@upstash/ratelimit", () => {
+  const mockSlidingWindow = vi.fn(() => ({}));
+  class RatelimitMock {
+    limit = vi.fn().mockResolvedValue({ success: true, remaining: 10, reset: Date.now() + 60000 });
+    static slidingWindow = mockSlidingWindow;
+  }
+  return { Ratelimit: RatelimitMock };
+});
+
+// Mock Redis helper
 vi.mock("@/lib/redis", () => ({
-  getRedis: vi.fn(() => Promise.resolve({})),
+  getRedis: vi.fn(() => ({
+    evalsha: vi.fn().mockResolvedValue({}),
+    get: vi.fn(),
+    set: vi.fn(),
+  })),
 }));
 
 // Mock route helpers
@@ -75,9 +99,10 @@ describe("/api/chat/attachments", () => {
 
   it("should reject empty form data", async () => {
     const mod = await import("../route");
-    // Create a FormData with no files - append an empty string to ensure FormData is valid
+    // Create a FormData with a non-file entry to ensure it's parseable
+    // The route filters out non-File entries, so this should result in no files
     const emptyFormData = new FormData();
-    // FormData needs at least one entry to be parseable, but we filter out non-File entries
+    emptyFormData.append("text", "not-a-file");
     const req = new NextRequest("http://localhost/api/chat/attachments", {
       body: emptyFormData,
       headers: { "content-type": "multipart/form-data" },
