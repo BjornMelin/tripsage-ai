@@ -1,12 +1,14 @@
 /** @vitest-environment node */
 
 import { describe, expect, it, vi } from "vitest";
-import { getMockCookiesForTest, createMockNextRequest } from "@/test/route-helpers";
 import { stubRateLimitDisabled } from "@/test/env-helpers";
+import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
 
 // Mock next/headers cookies() BEFORE any imports that use it
 vi.mock("next/headers", () => ({
-  cookies: vi.fn(() => Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))),
+  cookies: vi.fn(() =>
+    Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))
+  ),
 }));
 
 // Mock Supabase server client
@@ -56,8 +58,8 @@ describe("/api/trips/suggestions route", () => {
     } as any);
 
     const req = createMockNextRequest({
-      url: "http://localhost/api/trips/suggestions",
       method: "GET",
+      url: "http://localhost/api/trips/suggestions",
     });
 
     const res = await getSuggestions(req);
@@ -70,8 +72,8 @@ describe("/api/trips/suggestions route", () => {
     stubRateLimitDisabled();
 
     const req = createMockNextRequest({
-      url: "http://localhost/api/trips/suggestions?limit=3",
       method: "GET",
+      url: "http://localhost/api/trips/suggestions?limit=3",
     });
 
     const res = await getSuggestions(req);

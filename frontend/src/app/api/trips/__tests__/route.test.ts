@@ -2,12 +2,14 @@
 
 import { NextRequest } from "next/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getMockCookiesForTest, createMockNextRequest } from "@/test/route-helpers";
 import { stubRateLimitDisabled } from "@/test/env-helpers";
+import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
 
 // Mock next/headers cookies() BEFORE any imports that use it
 vi.mock("next/headers", () => ({
-  cookies: vi.fn(() => Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))),
+  cookies: vi.fn(() =>
+    Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))
+  ),
 }));
 
 // Mock Supabase server client
@@ -48,8 +50,8 @@ describe("/api/trips route", () => {
     stubRateLimitDisabled();
 
     const req = createMockNextRequest({
-      url: "http://localhost/api/trips?status=invalid&limit=not-a-number",
       method: "GET",
+      url: "http://localhost/api/trips?status=invalid&limit=not-a-number",
     });
 
     const res = await getTrips(req);
