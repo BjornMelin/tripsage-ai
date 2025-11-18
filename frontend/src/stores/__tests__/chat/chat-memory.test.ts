@@ -1,6 +1,10 @@
+/** @vitest-environment jsdom */
+
+import { act } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useChatMemory } from "@/stores/chat/chat-memory";
-import { resetChatSlices } from "./_shared";
+import { useChatMessages } from "@/stores/chat/chat-messages";
+import { useChatRealtime } from "@/stores/chat/chat-realtime";
 
 // Mock QStash enqueue functions
 vi.mock("@/lib/qstash/memory-sync", () => ({
@@ -20,7 +24,28 @@ vi.mock("@/lib/qstash/memory-sync", () => ({
 
 describe("ChatMemory", () => {
   beforeEach(() => {
-    resetChatSlices();
+    act(() => {
+      useChatMessages.setState({
+        currentSessionId: null,
+        error: null,
+        isLoading: false,
+        isStreaming: false,
+        sessions: [],
+      });
+      useChatRealtime.setState({
+        agentStatuses: {},
+        connectionStatus: "disconnected",
+        isRealtimeEnabled: true,
+        pendingMessages: [],
+        typingUsers: {},
+      });
+      useChatMemory.setState({
+        autoSyncMemory: true,
+        lastMemorySyncs: {},
+        memoryContexts: {},
+        memoryEnabled: true,
+      });
+    });
   });
 
   describe("setMemoryEnabled", () => {

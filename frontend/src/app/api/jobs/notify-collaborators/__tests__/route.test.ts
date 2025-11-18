@@ -1,3 +1,5 @@
+/** @vitest-environment node */
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { NotifyJob } from "@/lib/schemas/webhooks";
 import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";

@@ -1,16 +1,26 @@
+/** @vitest-environment jsdom */
+
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { AuthSession } from "@/lib/schemas/stores";
 import { useAuthSession, useSessionTimeRemaining } from "@/stores/auth/auth-session";
+import { resetAuthState } from "@/stores/auth/reset-auth";
 import { setupReactQueryMocks } from "@/test/mocks/react-query";
-import { resetAuthSlices, setupAuthSliceTests } from "./_shared";
+import { setupTimeoutMock } from "@/test/store-helpers";
 
 setupReactQueryMocks();
-setupAuthSliceTests();
 
 describe("AuthSession", () => {
+  let timeoutCleanup: (() => void) | null = null;
+
   beforeEach(() => {
-    resetAuthSlices();
+    const timeoutMock = setupTimeoutMock();
+    timeoutCleanup = timeoutMock.mockRestore;
+    resetAuthState();
+  });
+
+  afterEach(() => {
+    timeoutCleanup?.();
   });
 
   describe("Initial State", () => {

@@ -1,3 +1,5 @@
+/** @vitest-environment jsdom */
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setupSupabaseMocks } from "@/test/mocks/supabase";
 import type { PersonalInfo, UserProfile } from "../user-store";

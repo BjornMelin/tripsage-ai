@@ -1,14 +1,24 @@
+/** @vitest-environment jsdom */
+
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { TravelDocument } from "@/stores/user-store";
 import { useUserProfileStore } from "@/stores/user-store";
-import { resetUserProfileStore, setupUserProfileStoreTests } from "./_shared";
-
-setupUserProfileStoreTests();
+import { setupTimeoutMock } from "@/test/store-helpers";
 
 describe("User Profile Store - Preferences", () => {
+  let timeoutCleanup: (() => void) | null = null;
+
   beforeEach(() => {
-    resetUserProfileStore();
+    const timeoutMock = setupTimeoutMock();
+    timeoutCleanup = timeoutMock.mockRestore;
+    act(() => {
+      useUserProfileStore.getState().reset();
+    });
+  });
+
+  afterEach(() => {
+    timeoutCleanup?.();
   });
 
   describe("Avatar Management", () => {
