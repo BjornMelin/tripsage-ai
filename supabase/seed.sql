@@ -247,27 +247,43 @@ INSERT INTO chat_messages (
 );
 
 -- ===========================
--- SAMPLE MEMORY DATA
+-- SAMPLE MEMORY DATA (memories schema)
 -- ===========================
 
--- Insert sample user memories (without embeddings for simplicity)
-INSERT INTO memories (
+-- Insert sample memory session and turns (without embeddings for simplicity)
+INSERT INTO memories.sessions (
+    id,
     user_id,
-    memory_type,
+    title,
+    metadata
+) VALUES 
+(
+    '00000000-0000-0000-0000-000000000100'::UUID,
+    '00000000-0000-0000-0000-000000000001'::UUID,
+    'Sample conversation session',
+    '{"source": "seed_data"}'::jsonb
+);
+
+INSERT INTO memories.turns (
+    session_id,
+    user_id,
+    role,
     content,
     metadata
 ) VALUES 
 (
+    '00000000-0000-0000-0000-000000000100'::UUID,
     '00000000-0000-0000-0000-000000000001'::UUID,
-    'user_preference',
-    'User prefers economy class flights and values authentic cultural experiences over luxury accommodations.',
-    '{"confidence": 0.8, "source": "trip_history"}'
+    'user',
+    '"User prefers economy class flights and values authentic cultural experiences over luxury accommodations."'::jsonb,
+    '{}'::jsonb
 ),
 (
+    '00000000-0000-0000-0000-000000000100'::UUID,
     '00000000-0000-0000-0000-000000000001'::UUID,
-    'trip_history',
-    'Previously traveled to Europe and Southeast Asia, enjoys planning trips 3-6 months in advance.',
-    '{"confidence": 0.9, "source": "conversation_analysis"}'
+    'assistant',
+    '"Noted your preferences for economy flights and authentic cultural experiences."'::jsonb,
+    '{}'::jsonb
 );
 
 -- ===========================
@@ -285,7 +301,7 @@ BEGIN
     RAISE NOTICE '- 🏨 2 accommodation options';
     RAISE NOTICE '- 💬 1 chat session with sample messages';
     RAISE NOTICE '- 🔑 2 API key entries (dummy data)';
-    RAISE NOTICE '- 🧠 2 memory entries for personalization';
+    RAISE NOTICE '- 🧠 1 memory session with 2 turns for personalization';
     RAISE NOTICE '';
     RAISE NOTICE 'Ready for development and testing! 🚀';
     RAISE NOTICE 'Access demo account: demo@tripsage.ai';

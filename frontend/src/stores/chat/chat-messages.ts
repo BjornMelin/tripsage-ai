@@ -13,10 +13,6 @@ import { generateId, getCurrentTimestamp } from "@/lib/stores/helpers";
 
 // Memory sync handled server-side via orchestrator - no client-side memory store needed
 
-type AddMessageOptions = {
-  syncMemory?: boolean;
-};
-
 /** Chat messages state interface. */
 export interface ChatMessagesState {
   // State
@@ -36,11 +32,7 @@ export interface ChatMessagesState {
   renameSession: (sessionId: string, title: string) => void;
 
   // Message actions
-  addMessage: (
-    sessionId: string,
-    message: Omit<Message, "id" | "timestamp">,
-    options?: AddMessageOptions
-  ) => string;
+  addMessage: (sessionId: string, message: Omit<Message, "id" | "timestamp">) => string;
   updateMessage: (
     sessionId: string,
     messageId: string,
@@ -90,27 +82,8 @@ const deriveCurrentSession = (
 export const useChatMessages = create<ChatMessagesState>()(
   persist(
     (set, get) => {
-      const findSession = (sessionId: string) =>
-        get().sessions.find((session) => session.id === sessionId);
-
-      const storeMessageInMemory = (
-        _sessionId: string,
-        message: Message,
-        syncMemory: boolean
-      ) => {
-        if (!syncMemory || message.role === "system" || message.isStreaming) {
-          return;
-        }
-      };
-
-      const syncSessionMemory = (sessionId: string) => {
-        const session = findSession(sessionId);
-        const userId = session?.userId;
-        if (!userId) return;
-      };
-
       return {
-        addMessage: (sessionId, message, options) => {
+        addMessage: (sessionId, message) => {
           const timestamp = getCurrentTimestamp();
           const messageId = generateId();
 
@@ -136,9 +109,6 @@ export const useChatMessages = create<ChatMessagesState>()(
               sessions,
             };
           });
-
-          const shouldSyncMemory = options?.syncMemory ?? true;
-          storeMessageInMemory(sessionId, newMessage, shouldSyncMemory);
 
           return messageId;
         },
@@ -394,8 +364,6 @@ export const useChatMessages = create<ChatMessagesState>()(
             // Add assistant response
             get().addMessage(sessionId, assistantMessage);
 
-            syncSessionMemory(sessionId);
-
             set({ isLoading: false });
           } catch (error) {
             set({
@@ -403,15 +371,11 @@ export const useChatMessages = create<ChatMessagesState>()(
               isLoading: false,
             });
 
-            get().addMessage(
-              sessionId,
-              {
-                content:
-                  "Sorry, there was an error processing your request. Please try again.",
-                role: "system",
-              },
-              { syncMemory: false }
-            );
+            get().addMessage(sessionId, {
+              content:
+                "Sorry, there was an error processing your request. Please try again.",
+              role: "system",
+            });
           }
         },
         sessions: [],
@@ -466,15 +430,11 @@ export const useChatMessages = create<ChatMessagesState>()(
           });
 
           // Create a placeholder message for streaming
-          const assistantMessageId = get().addMessage(
-            sessionId,
-            {
-              content: "",
-              isStreaming: true,
-              role: "assistant",
-            },
-            { syncMemory: false }
-          );
+          const assistantMessageId = get().addMessage(sessionId, {
+            content: "",
+            isStreaming: true,
+            role: "assistant",
+          });
 
           set({ error: null, isStreaming: true });
           abortController = new AbortController();
@@ -505,8 +465,6 @@ export const useChatMessages = create<ChatMessagesState>()(
             get().updateMessage(sessionId, assistantMessageId, {
               isStreaming: false,
             });
-
-            syncSessionMemory(sessionId);
           } catch (error) {
             if (!(error instanceof DOMException && error.name === "AbortError")) {
               set({

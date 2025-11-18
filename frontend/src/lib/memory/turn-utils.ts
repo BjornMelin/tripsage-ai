@@ -14,7 +14,7 @@ type ConversationRole = Extract<MessageRole, "assistant" | "user">;
 
 /**
  * Checks if a value is a record.
- * 
+ *
  * @param value - The value to check.
  * @returns True if the value is a record, false otherwise.
  */
@@ -53,7 +53,7 @@ function flattenTextParts(value: unknown): string {
 
 /**
  * Creates a memory turn from a text.
- * 
+ *
  * @param role - The role of the turn.
  * @param content - The content of the turn.
  * @param overrides - The overrides to apply to the turn.
@@ -82,7 +82,7 @@ function createMemoryTurn(
 
 /**
  * Converts a UI message to a memory turn.
- * 
+ *
  * @param message - The UI message to convert.
  * @returns A memory turn or null if the message is not a user or assistant message.
  */
@@ -97,7 +97,7 @@ export function uiMessageToMemoryTurn(message: UIMessage): Message | null {
 
 /**
  * Creates a memory turn from a text.
- * 
+ *
  * @param role - The role of the turn.
  * @param content - The content of the turn.
  * @returns A memory turn.
@@ -111,7 +111,7 @@ export function createTextMemoryTurn(
 
 /**
  * Converts a list of messages to a memory turn.
- * 
+ *
  * @param messages - The messages to convert.
  * @returns A memory turn or null if no assistant messages are found.
  */
@@ -136,7 +136,7 @@ export function assistantResponseToMemoryTurn(messages: unknown[]): Message | nu
 
 /**
  * Persists a memory turn to the database.
- * 
+ *
  * @param logger - The logger to use.
  * @param sessionId - The session ID.
  * @param turn - The turn to persist.
@@ -161,8 +161,8 @@ export async function persistMemoryTurn({
   try {
     await handleMemoryIntent({
       sessionId,
-      type: "onTurnCommitted",
       turn,
+      type: "onTurnCommitted",
       userId,
     });
   } catch (error) {
