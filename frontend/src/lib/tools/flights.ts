@@ -4,6 +4,7 @@
 
 import "server-only";
 
+import type { ToolCallOptions } from "ai";
 import { tool } from "ai";
 import { z } from "zod";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
@@ -38,15 +39,10 @@ export const searchFlightsInputSchema = z.object({
 export const searchFlights = tool({
   description:
     "Search flights using Duffel Offer Requests (simple one-way or round-trip).",
-  execute: async ({
-    origin,
-    destination,
-    departureDate,
-    returnDate,
-    passengers,
-    cabin,
-    currency,
-  }) =>
+  execute: async (
+    { origin, destination, departureDate, returnDate, passengers, cabin, currency },
+    _callOptions?: ToolCallOptions
+  ) =>
     withTelemetrySpan(
       "tool.flights.search",
       {

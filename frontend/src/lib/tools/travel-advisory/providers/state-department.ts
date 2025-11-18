@@ -5,7 +5,7 @@
  * official travel advisories API.
  */
 
-import { createServerLogger } from "@/lib/logging/server";
+import { createServerLogger } from "@/lib/telemetry/logger";
 import type { AdvisoryProvider, SafetyResult } from "../providers";
 import {
   extractSafetyCategories,

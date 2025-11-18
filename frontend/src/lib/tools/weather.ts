@@ -5,6 +5,7 @@
  * retry logic, and standardized error handling.
  */
 
+import type { ToolCallOptions } from "ai";
 import { tool } from "ai";
 import { z } from "zod";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
@@ -169,7 +170,7 @@ export const getCurrentWeather = tool({
     "Returns temperature (with min/max), humidity, wind (with gusts), pressure, visibility, " +
     "clouds, precipitation (rain/snow), sunrise/sunset times, and weather icon. " +
     "Results cached for 10 minutes.",
-  execute: async (params): Promise<WeatherResult> =>
+  execute: async (params, _callOptions?: ToolCallOptions): Promise<WeatherResult> =>
     withTelemetrySpan(
       "tool.weather.current",
       {

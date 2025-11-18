@@ -7,6 +7,7 @@
 
 import "server-only";
 
+import type { ToolCallOptions } from "ai";
 import { tool } from "ai";
 import { z } from "zod";
 import { handleMemoryIntent } from "@/lib/memory/orchestrator";
@@ -38,7 +39,7 @@ export const addConversationMemoryInputSchema = z.object({
  */
 export const addConversationMemory = tool({
   description: "Store a short memory snippet for the current user.",
-  execute: async ({ content, category }) => {
+  execute: async ({ content, category }, _callOptions?: ToolCallOptions) => {
     const supabase = await createServerSupabase();
     const { data: auth } = await supabase.auth.getUser();
     const userId = auth?.user?.id;
@@ -124,7 +125,7 @@ export const addConversationMemory = tool({
  */
 export const searchUserMemories = tool({
   description: "Search recent user memories by keyword.",
-  execute: async ({ query, limit }) => {
+  execute: async ({ query, limit }, _callOptions?: ToolCallOptions) => {
     const supabase = await createServerSupabase();
     const { data: auth } = await supabase.auth.getUser();
     const userId = auth?.user?.id;

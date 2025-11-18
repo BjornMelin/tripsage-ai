@@ -63,8 +63,8 @@ vi.mock("@/lib/env/client", () => ({
 }));
 
 vi.mock("@/lib/telemetry/tracer", () => ({
-  TELEMETRY_SERVICE_NAME: "tripsage-frontend",
   getTelemetryTracer: () => trace.getTracer("tripsage-frontend"),
+  TELEMETRY_SERVICE_NAME: "tripsage-frontend",
 }));
 
 describe("Supabase Factory", () => {

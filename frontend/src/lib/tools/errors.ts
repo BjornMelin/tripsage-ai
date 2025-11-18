@@ -40,6 +40,8 @@ export const TOOL_ERROR_CODES = {
 
   // Approval errors
   approvalRequired: "approval_required",
+  // General tool errors
+  toolRateLimited: "tool_rate_limited",
   webSearchError: "web_search_error",
   webSearchFailed: "web_search_failed",
   // Web search errors

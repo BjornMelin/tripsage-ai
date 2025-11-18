@@ -12,7 +12,6 @@ import { Ratelimit } from "@upstash/ratelimit";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import type { z } from "zod";
-import { createServerLogger } from "@/lib/logging/server";
 import {
   checkAuthentication,
   errorResponse,
@@ -24,6 +23,7 @@ import { ROUTE_RATE_LIMITS, type RouteRateLimitKey } from "@/lib/ratelimit/route
 import { getRedis } from "@/lib/redis";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { createServerLogger } from "@/lib/telemetry/logger";
 
 const apiFactoryLogger = createServerLogger("api.factory");
 
