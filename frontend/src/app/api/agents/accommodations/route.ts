@@ -9,15 +9,10 @@
 import "server-only";
 
 import type { NextRequest } from "next/server";
-import type { z } from "zod";
 import { runAccommodationAgent } from "@/lib/agents/accommodation-agent";
 import { createErrorHandler } from "@/lib/agents/error-recovery";
 import { withApiGuards } from "@/lib/api/factory";
-import {
-  errorResponse,
-  getTrustedRateLimitIdentifier,
-  parseJsonBody,
-} from "@/lib/next/route-helpers";
+import { getTrustedRateLimitIdentifier } from "@/lib/next/route-helpers";
 import { resolveProvider } from "@/lib/providers/registry";
 import type { AccommodationSearchRequest } from "@/lib/schemas/agents";
 import { agentSchemas } from "@/lib/schemas/agents";
@@ -34,27 +29,9 @@ const RequestSchema = agentSchemas.accommodationSearchRequestSchema;
 export const POST = withApiGuards({
   auth: true,
   rateLimit: "agents:accommodations",
+  schema: RequestSchema,
   telemetry: "agent.accommodationSearch",
-})(async (req: NextRequest, { user }) => {
-  const parsed = await parseJsonBody(req);
-  if ("error" in parsed) {
-    return parsed.error;
-  }
-
-  let body: AccommodationSearchRequest;
-  try {
-    body = RequestSchema.parse(parsed.body);
-  } catch (err) {
-    const zerr = err as z.ZodError;
-    return errorResponse({
-      err: zerr,
-      error: "invalid_request",
-      issues: zerr.issues,
-      reason: "Request validation failed",
-      status: 400,
-    });
-  }
-
+})(async (req: NextRequest, { user }, body: AccommodationSearchRequest) => {
   const identifier = user?.id ?? getTrustedRateLimitIdentifier(req);
   const modelHint = new URL(req.url).searchParams.get("model") ?? undefined;
   const { model, modelId } = await resolveProvider(user?.id ?? "anon", modelHint);

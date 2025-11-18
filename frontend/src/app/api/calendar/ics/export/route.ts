@@ -13,18 +13,10 @@ import "server-only";
 import ical from "ical-generator";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
 import { RecurringDateGenerator } from "@/lib/dates/recurring-rules";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
-import { parseJsonBody, validateSchema } from "@/lib/next/route-helpers";
-import { calendarEventSchema } from "@/lib/schemas/calendar";
-
-const exportRequestSchema = z.object({
-  calendarName: z.string().default("TripSage Calendar"),
-  events: z.array(calendarEventSchema).min(1, "At least one event is required"),
-  timezone: z.string().optional(),
-});
+import { type IcsExportRequest, icsExportRequestSchema } from "@/lib/schemas/calendar";
 
 /**
  * Converts an attendee response status to the canonical iCal constant.
@@ -73,94 +65,90 @@ function reminderMethodToIcal(method: string): "display" | "email" | "audio" {
 export const POST = withApiGuards({
   auth: true,
   rateLimit: "calendar:ics:export",
+  schema: icsExportRequestSchema,
   telemetry: "calendar.ics.export",
-})(async (req: NextRequest): Promise<NextResponse> => {
-  const parsed = await parseJsonBody(req);
-  if ("error" in parsed) {
-    return parsed.error;
-  }
+})(
+  async (
+    req: NextRequest,
+    _context,
+    validated: IcsExportRequest
+  ): Promise<NextResponse> => {
+    // Create calendar
+    const calendar = ical({
+      name: validated.calendarName,
+      timezone: validated.timezone || "UTC",
+    });
 
-  const validation = validateSchema(exportRequestSchema, parsed.body);
-  if ("error" in validation) {
-    return validation.error;
-  }
-  const validated = validation.data;
+    // Add events
+    for (const event of validated.events) {
+      const startDate =
+        event.start.dateTime instanceof Date
+          ? event.start.dateTime
+          : event.start.date
+            ? DateUtils.parse(event.start.date)
+            : new Date();
 
-  // Create calendar
-  const calendar = ical({
-    name: validated.calendarName,
-    timezone: validated.timezone || "UTC",
-  });
+      const endDate =
+        event.end.dateTime instanceof Date
+          ? event.end.dateTime
+          : event.end.date
+            ? DateUtils.parse(event.end.date)
+            : DateUtils.add(startDate, 1, "hours"); // Default 1 hour
 
-  // Add events
-  for (const event of validated.events) {
-    const startDate =
-      event.start.dateTime instanceof Date
-        ? event.start.dateTime
-        : event.start.date
-          ? DateUtils.parse(event.start.date)
-          : new Date();
+      const eventData = {
+        description: event.description,
+        end: endDate,
+        location: event.location,
+        start: startDate,
+        summary: event.summary,
+        ...(event.recurrence?.length
+          ? {
+              recurrence: [
+                RecurringDateGenerator.toRRule(
+                  RecurringDateGenerator.parseRRule(event.recurrence[0])
+                ),
+              ],
+            }
+          : {}),
+        ...(event.iCalUID ? { uid: event.iCalUID } : {}),
+        ...(event.created ? { created: event.created } : {}),
+        ...(event.updated ? { lastModified: event.updated } : {}),
+      };
 
-    const endDate =
-      event.end.dateTime instanceof Date
-        ? event.end.dateTime
-        : event.end.date
-          ? DateUtils.parse(event.end.date)
-          : DateUtils.add(startDate, 1, "hours"); // Default 1 hour
+      const ev = calendar.createEvent(eventData);
 
-    const eventData = {
-      description: event.description,
-      end: endDate,
-      location: event.location,
-      start: startDate,
-      summary: event.summary,
-      ...(event.recurrence?.length
-        ? {
-            recurrence: [
-              RecurringDateGenerator.toRRule(
-                RecurringDateGenerator.parseRRule(event.recurrence[0])
-              ),
-            ],
-          }
-        : {}),
-      ...(event.iCalUID ? { uid: event.iCalUID } : {}),
-      ...(event.created ? { created: event.created } : {}),
-      ...(event.updated ? { lastModified: event.updated } : {}),
-    };
+      if (event.attendees?.length) {
+        for (const att of event.attendees) {
+          ev.createAttendee({
+            email: att.email,
+            name: att.displayName,
+            rsvp: !att.optional,
+            // biome-ignore lint/suspicious/noExplicitAny: third-party type casting for ical types
+            status: eventAttendeeStatusToIcal(att.responseStatus) as unknown as any,
+          });
+        }
+      }
 
-    const ev = calendar.createEvent(eventData);
-
-    if (event.attendees?.length) {
-      for (const att of event.attendees) {
-        ev.createAttendee({
-          email: att.email,
-          name: att.displayName,
-          rsvp: !att.optional,
-          // biome-ignore lint/suspicious/noExplicitAny: third-party type casting for ical types
-          status: eventAttendeeStatusToIcal(att.responseStatus) as unknown as any,
-        });
+      if (event.reminders?.overrides?.length) {
+        for (const rem of event.reminders.overrides) {
+          ev.createAlarm({
+            trigger: rem.minutes * 60, // seconds
+            // biome-ignore lint/suspicious/noExplicitAny: third-party type casting for ical types
+            type: reminderMethodToIcal(rem.method) as unknown as any,
+          });
+        }
       }
     }
 
-    if (event.reminders?.overrides?.length) {
-      for (const rem of event.reminders.overrides) {
-        ev.createAlarm({
-          trigger: rem.minutes * 60, // seconds
-          // biome-ignore lint/suspicious/noExplicitAny: third-party type casting for ical types
-          type: reminderMethodToIcal(rem.method) as unknown as any,
-        });
-      }
-    }
+    // Generate ICS string
+    const icsString = calendar.toString();
+
+    return new NextResponse(icsString, {
+      headers: {
+        "Content-Disposition": `attachment; filename="${validated.calendarName.replace(/[^a-z0-9]/gi, "_")}.ics"`,
+        "Content-Type": "text/calendar; charset=utf-8",
+      },
+      status: 200,
+    });
   }
-
-  // Generate ICS string
-  const icsString = calendar.toString();
-
-  return new NextResponse(icsString, {
-    headers: {
-      "Content-Disposition": `attachment; filename="${validated.calendarName.replace(/[^a-z0-9]/gi, "_")}.ics"`,
-      "Content-Type": "text/calendar; charset=utf-8",
-    },
-    status: 200,
-  });
-});
+);

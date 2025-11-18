@@ -7,38 +7,9 @@
 import "server-only";
 
 import { type NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
-import { parseJsonBody, validateSchema } from "@/lib/next/route-helpers";
-
-const routeMatrixRequestSchema = z.object({
-  destinations: z.array(
-    z.object({
-      waypoint: z.object({
-        location: z.object({
-          latLng: z.object({
-            latitude: z.number(),
-            longitude: z.number(),
-          }),
-        }),
-      }),
-    })
-  ),
-  origins: z.array(
-    z.object({
-      waypoint: z.object({
-        location: z.object({
-          latLng: z.object({
-            latitude: z.number(),
-            longitude: z.number(),
-          }),
-        }),
-      }),
-    })
-  ),
-  travelMode: z.enum(["DRIVE", "WALK", "BICYCLE", "TRANSIT"]).optional(),
-});
+import { type RouteMatrixRequest, routeMatrixRequestSchema } from "@/lib/schemas/api";
 
 /**
  * POST /api/route-matrix
@@ -52,19 +23,9 @@ const routeMatrixRequestSchema = z.object({
 export const POST = withApiGuards({
   auth: false,
   rateLimit: "route-matrix",
+  schema: routeMatrixRequestSchema,
   telemetry: "route-matrix.compute",
-})(async (req: NextRequest) => {
-  const parsed = await parseJsonBody(req);
-  if ("error" in parsed) {
-    return parsed.error;
-  }
-
-  const validation = validateSchema(routeMatrixRequestSchema, parsed.body);
-  if ("error" in validation) {
-    return validation.error;
-  }
-  const validated = validation.data;
-
+})(async (req: NextRequest, _context, validated: RouteMatrixRequest) => {
   // Quota-aware batching: limit origins/destinations
   if (validated.origins.length > 25 || validated.destinations.length > 25) {
     return NextResponse.json(

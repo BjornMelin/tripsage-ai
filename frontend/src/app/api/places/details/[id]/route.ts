@@ -8,14 +8,13 @@
 import "server-only";
 
 import { type NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
-import { validateSchema } from "@/lib/next/route-helpers";
-
-const detailsRequestSchema = z.object({
-  sessionToken: z.string().optional(),
-});
+import { errorResponse } from "@/lib/next/route-helpers";
+import {
+  type PlacesDetailsRequest,
+  placesDetailsRequestSchema,
+} from "@/lib/schemas/api";
 
 /**
  * GET /api/places/details/[id]
@@ -37,15 +36,21 @@ export function GET(req: NextRequest, context: { params: Promise<{ id: string }>
     const { searchParams } = new URL(req.url);
     const sessionToken = searchParams.get("sessionToken");
 
-    const params = {
+    const params: PlacesDetailsRequest = {
       sessionToken: sessionToken ?? undefined,
     };
 
-    const validation = validateSchema(detailsRequestSchema, params);
-    if ("error" in validation) {
-      return validation.error;
+    const parseResult = placesDetailsRequestSchema.safeParse(params);
+    if (!parseResult.success) {
+      return errorResponse({
+        err: parseResult.error,
+        error: "invalid_request",
+        issues: parseResult.error.issues,
+        reason: "Request validation failed",
+        status: 400,
+      });
     }
-    const validated = validation.data;
+    const validated = parseResult.data;
 
     const apiKey = getGoogleMapsServerKey();
 

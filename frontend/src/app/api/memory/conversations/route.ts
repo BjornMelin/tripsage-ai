@@ -8,24 +8,12 @@
 import "server-only";
 
 import { type NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
-import { parseJsonBody, validateSchema } from "@/lib/next/route-helpers";
+import {
+  type MemoryAddConversationRequest,
+  memoryAddConversationSchema,
+} from "@/lib/schemas/memory";
 import { addConversationMemory } from "@/lib/tools/memory";
-
-const addConversationMemorySchema = z.object({
-  category: z
-    .enum([
-      "user_preference",
-      "trip_history",
-      "search_pattern",
-      "conversation_context",
-      "other",
-    ])
-    .default("conversation_context"),
-  content: z.string().min(1),
-  sessionId: z.string().optional(),
-});
 
 /**
  * POST /api/memory/conversations
@@ -35,22 +23,14 @@ const addConversationMemorySchema = z.object({
 export const POST = withApiGuards({
   auth: true,
   rateLimit: "memory:conversations",
+  schema: memoryAddConversationSchema,
   telemetry: "memory.conversations",
-})(async (req: NextRequest, { user }) => {
+})(async (req: NextRequest, { user }, validated: MemoryAddConversationRequest) => {
   if (!user?.id) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const parsed = await parseJsonBody(req);
-  if ("error" in parsed) {
-    return parsed.error;
-  }
-
-  const validation = validateSchema(addConversationMemorySchema, parsed.body);
-  if ("error" in validation) {
-    return validation.error;
-  }
-  const { category, content } = validation.data;
+  const { category, content } = validated;
 
   try {
     if (!addConversationMemory.execute) {

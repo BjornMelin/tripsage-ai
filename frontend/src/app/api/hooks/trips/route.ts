@@ -8,6 +8,7 @@ import { Client as QStash } from "@upstash/qstash";
 import { after, type NextRequest, NextResponse } from "next/server";
 import { getServerEnvVar, getServerEnvVarWithFallback } from "@/lib/env/server";
 import { tryReserveKey } from "@/lib/idempotency/redis";
+import { createServerLogger } from "@/lib/logging/server";
 import { sendCollaboratorNotifications } from "@/lib/notifications/collaborators";
 import type { Database } from "@/lib/supabase/database.types";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
@@ -33,6 +34,7 @@ function createAdminSupabase() {
  * @return Response indicating success or error.
  */
 export async function POST(req: NextRequest) {
+  const logger = createServerLogger("webhook.trips");
   return await withTelemetrySpan(
     "webhook.trips",
     { attributes: { route: "/api/hooks/trips" } },
@@ -101,7 +103,10 @@ export async function POST(req: NextRequest) {
           );
         } catch (err) {
           // Swallow to avoid rethrowing inside after(); telemetry span captures the error
-          console.error("webhook.trips.fallback failed", err);
+          logger.error("fallback_failed", {
+            error: err instanceof Error ? err.message : "unknown_error",
+            eventKey,
+          });
         }
       });
       return NextResponse.json({ enqueued: false, fallback: true, ok: true });

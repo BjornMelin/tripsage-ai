@@ -254,8 +254,12 @@ export async function handleChatStream(
           input: JSON.stringify(repairedArgs),
         };
       } catch (repairError) {
-        // If repair fails, return null to let the error propagate
-        console.error(`Failed to repair tool call ${toolCall.toolName}:`, repairError);
+        // If repair fails, return null to let the error propagate but record telemetry
+        deps.logger?.error?.("chat_stream:tool_call_repair_failed", {
+          error:
+            repairError instanceof Error ? repairError.message : String(repairError),
+          toolName: toolCall.toolName,
+        });
         return null;
       }
     },

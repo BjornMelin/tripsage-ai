@@ -8,26 +8,12 @@
 import "server-only";
 
 import { type NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
 import { handleMemoryIntent } from "@/lib/memory/orchestrator";
-import { parseJsonBody, validateSchema } from "@/lib/next/route-helpers";
-
-const searchRequestSchema = z.object({
-  filters: z
-    .object({
-      category: z.string().optional(),
-      dateRange: z
-        .object({
-          end: z.string().optional(),
-          start: z.string().optional(),
-        })
-        .optional(),
-      query: z.string().optional(),
-    })
-    .optional(),
-  limit: z.number().int().min(1).max(50).default(10),
-});
+import {
+  type MemorySearchRequest,
+  memorySearchRequestSchema,
+} from "@/lib/schemas/memory";
 
 /**
  * POST /api/memory/search
@@ -37,22 +23,14 @@ const searchRequestSchema = z.object({
 export const POST = withApiGuards({
   auth: true,
   rateLimit: "memory:search",
+  schema: memorySearchRequestSchema,
   telemetry: "memory.search",
-})(async (req: NextRequest, { user }) => {
+})(async (req: NextRequest, { user }, validated: MemorySearchRequest) => {
   if (!user?.id) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const parsed = await parseJsonBody(req);
-  if ("error" in parsed) {
-    return parsed.error;
-  }
-
-  const validation = validateSchema(searchRequestSchema, parsed.body);
-  if ("error" in validation) {
-    return validation.error;
-  }
-  const { filters, limit } = validation.data;
+  const { filters, limit } = validated;
 
   try {
     const memoryResult = await handleMemoryIntent({

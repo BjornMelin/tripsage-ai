@@ -8,22 +8,9 @@
 import "server-only";
 
 import { type NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
-import { parseJsonBody, validateSchema } from "@/lib/next/route-helpers";
-
-const searchRequestSchema = z.object({
-  locationBias: z
-    .object({
-      lat: z.number(),
-      lon: z.number(),
-      radiusMeters: z.number().int().positive(),
-    })
-    .optional(),
-  maxResultCount: z.number().int().positive().max(20).default(20),
-  textQuery: z.string().min(1),
-});
+import { type PlacesSearchRequest, placesSearchRequestSchema } from "@/lib/schemas/api";
 
 /**
  * POST /api/places/search
@@ -37,19 +24,9 @@ const searchRequestSchema = z.object({
 export const POST = withApiGuards({
   auth: false,
   rateLimit: "places:search",
+  schema: placesSearchRequestSchema,
   telemetry: "places.search",
-})(async (req: NextRequest) => {
-  const parsed = await parseJsonBody(req);
-  if ("error" in parsed) {
-    return parsed.error;
-  }
-
-  const validation = validateSchema(searchRequestSchema, parsed.body);
-  if ("error" in validation) {
-    return validation.error;
-  }
-  const validated = validation.data;
-
+})(async (req: NextRequest, _context, validated: PlacesSearchRequest) => {
   const apiKey = getGoogleMapsServerKey();
 
   const requestBody: {

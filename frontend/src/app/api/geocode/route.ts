@@ -8,17 +8,11 @@
 import "server-only";
 
 import { type NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
 import { cacheLatLng, getCachedLatLng } from "@/lib/google/caching";
-import { errorResponse, parseJsonBody, validateSchema } from "@/lib/next/route-helpers";
-
-const geocodeRequestSchema = z.object({
-  address: z.string().optional(),
-  lat: z.number().optional(),
-  lng: z.number().optional(),
-});
+import { errorResponse } from "@/lib/next/route-helpers";
+import { type GeocodeRequest, geocodeRequestSchema } from "@/lib/schemas/api";
 
 /**
  * POST /api/geocode
@@ -32,19 +26,9 @@ const geocodeRequestSchema = z.object({
 export const POST = withApiGuards({
   auth: false,
   rateLimit: "geocode",
+  schema: geocodeRequestSchema,
   telemetry: "geocode.lookup",
-})(async (req: NextRequest) => {
-  const parsed = await parseJsonBody(req);
-  if ("error" in parsed) {
-    return parsed.error;
-  }
-
-  const validation = validateSchema(geocodeRequestSchema, parsed.body);
-  if ("error" in validation) {
-    return validation.error;
-  }
-  const validated = validation.data;
-
+})(async (req: NextRequest, _context, validated: GeocodeRequest) => {
   const apiKey = getGoogleMapsServerKey();
 
   // Forward geocoding: address -> lat/lng

@@ -8,31 +8,12 @@
 import "server-only";
 
 import { type NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
-import { parseJsonBody, validateSchema } from "@/lib/next/route-helpers";
-
-const computeRoutesRequestSchema = z.object({
-  destination: z.object({
-    location: z.object({
-      latLng: z.object({
-        latitude: z.number(),
-        longitude: z.number(),
-      }),
-    }),
-  }),
-  origin: z.object({
-    location: z.object({
-      latLng: z.object({
-        latitude: z.number(),
-        longitude: z.number(),
-      }),
-    }),
-  }),
-  routingPreference: z.enum(["TRAFFIC_AWARE", "TRAFFIC_UNAWARE"]).optional(),
-  travelMode: z.enum(["DRIVE", "WALK", "BICYCLE", "TRANSIT"]).optional(),
-});
+import {
+  type ComputeRoutesRequest,
+  computeRoutesRequestSchema,
+} from "@/lib/schemas/api";
 
 /**
  * POST /api/routes
@@ -46,19 +27,9 @@ const computeRoutesRequestSchema = z.object({
 export const POST = withApiGuards({
   auth: false,
   rateLimit: "routes",
+  schema: computeRoutesRequestSchema,
   telemetry: "routes.compute",
-})(async (req: NextRequest) => {
-  const parsed = await parseJsonBody(req);
-  if ("error" in parsed) {
-    return parsed.error;
-  }
-
-  const validation = validateSchema(computeRoutesRequestSchema, parsed.body);
-  if ("error" in validation) {
-    return validation.error;
-  }
-  const validated = validation.data;
-
+})(async (req: NextRequest, _context, validated: ComputeRoutesRequest) => {
   const apiKey = getGoogleMapsServerKey();
 
   // Field mask: only fields we render

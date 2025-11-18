@@ -8,15 +8,12 @@
 import "server-only";
 
 import { type NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
-import { parseJsonBody, validateSchema } from "@/lib/next/route-helpers";
+import {
+  type MemoryUpdatePreferencesRequest,
+  memoryUpdatePreferencesSchema,
+} from "@/lib/schemas/memory";
 import { addConversationMemory } from "@/lib/tools/memory";
-
-const updatePreferencesSchema = z.object({
-  merge_strategy: z.enum(["merge", "replace"]).default("merge"),
-  preferences: z.record(z.string(), z.unknown()),
-});
 
 /**
  * POST /api/memory/preferences/[userId]
@@ -26,22 +23,14 @@ const updatePreferencesSchema = z.object({
 export const POST = withApiGuards({
   auth: true,
   rateLimit: "memory:preferences",
+  schema: memoryUpdatePreferencesSchema,
   telemetry: "memory.preferences",
-})(async (req: NextRequest, { user }) => {
+})(async (req: NextRequest, { user }, validated: MemoryUpdatePreferencesRequest) => {
   if (!user?.id) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const parsed = await parseJsonBody(req);
-  if ("error" in parsed) {
-    return parsed.error;
-  }
-
-  const validation = validateSchema(updatePreferencesSchema, parsed.body);
-  if ("error" in validation) {
-    return validation.error;
-  }
-  const { preferences } = validation.data;
+  const { preferences } = validated;
 
   try {
     if (!addConversationMemory.execute) {

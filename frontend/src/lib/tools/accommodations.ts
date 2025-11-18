@@ -17,6 +17,7 @@ import {
   getEmbeddingsApiUrl,
   getEmbeddingsRequestHeaders,
 } from "@/lib/embeddings/generate";
+import { createServerLogger } from "@/lib/logging/server";
 import { processBookingPayment } from "@/lib/payments/booking-payment";
 import { getRedis } from "@/lib/redis";
 import {
@@ -45,6 +46,8 @@ import type {
 } from "@/lib/travel-api/expedia-types";
 import { requireApproval } from "./approvals";
 import { ACCOM_SEARCH_CACHE_TTL_SECONDS } from "./constants";
+
+const accommodationsLogger = createServerLogger("tools.accommodations");
 
 /**
  * Zod input schema for accommodation search tool.
@@ -153,13 +156,16 @@ export const searchAccommodations = tool({
         if (!ragError && ragResults && Array.isArray(ragResults)) {
           propertyIds = (ragResults as Array<{ id: string }>).map((item) => item.id);
           if (propertyIds.length > 0) {
-            console.log(
-              `[RAG] Found ${propertyIds.length} semantic matches for: ${validated.semanticQuery}`
-            );
+            accommodationsLogger.info("rag_semantic_matches", {
+              matchCount: propertyIds.length,
+              query: validated.semanticQuery,
+            });
           }
         }
       } catch (ragErr) {
-        console.error("[RAG] Semantic search error:", ragErr);
+        accommodationsLogger.error("rag_semantic_search_failed", {
+          error: ragErr instanceof Error ? ragErr.message : "unknown_error",
+        });
         // Continue without RAG filtering if it fails
       }
     }
@@ -273,7 +279,10 @@ export const searchAccommodations = tool({
         })
           .then(() => undefined)
           .catch((err) => {
-            console.error(`Failed to trigger embedding for ${property.id}:`, err);
+            accommodationsLogger.error("embedding_trigger_failed", {
+              error: err instanceof Error ? err.message : "unknown_error",
+              propertyId: property.id,
+            });
           });
       }
     }
@@ -514,11 +523,15 @@ export const bookAccommodation = tool({
       });
 
       if (insertError) {
-        console.error("Failed to save booking to database:", insertError);
+        accommodationsLogger.error("booking_insert_failed", {
+          error: insertError instanceof Error ? insertError.message : "unknown_error",
+        });
         // Don't fail the booking if DB save fails - booking is already confirmed
       }
     } catch (dbError) {
-      console.error("Database error saving booking:", dbError);
+      accommodationsLogger.error("booking_database_error", {
+        error: dbError instanceof Error ? dbError.message : "unknown_error",
+      });
       // Don't fail the booking if DB save fails
     }
 

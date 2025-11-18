@@ -293,6 +293,33 @@ export const eventsListResponseSchema = z.object({
 /** TypeScript type for events list responses. */
 export type EventsListResponse = z.infer<typeof eventsListResponseSchema>;
 
+// ICS operation schemas
+/**
+ * Zod schema for POST /api/calendar/ics/import request body.
+ *
+ * Validates ICS import request parameters.
+ */
+export const icsImportRequestSchema = z.object({
+  icsData: z.string().min(1, { error: "ICS data is required" }),
+  validateOnly: z.boolean().default(true),
+});
+
+/**
+ * Zod schema for POST /api/calendar/ics/export request body.
+ *
+ * Validates ICS export request parameters.
+ */
+export const icsExportRequestSchema = z.object({
+  calendarName: z.string().default("TripSage Calendar"),
+  events: z.array(calendarEventSchema).min(1, "At least one event is required"),
+  timezone: z.string().optional(),
+});
+
+/** TypeScript type for ICS import requests. */
+export type IcsImportRequest = z.infer<typeof icsImportRequestSchema>;
+/** TypeScript type for ICS export requests. */
+export type IcsExportRequest = z.infer<typeof icsExportRequestSchema>;
+
 /**
  * Calendar connection status response type.
  * Used by calendar status API and components.
