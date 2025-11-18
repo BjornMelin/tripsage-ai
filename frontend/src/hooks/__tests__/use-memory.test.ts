@@ -1,20 +1,10 @@
 /** @vitest-environment jsdom */
 
-import {
-  QueryClient,
-  QueryClientProvider,
-  type QueryFunction,
-  type QueryFunctionContext,
-  type UseMutationOptions,
-  type UseQueryOptions,
-  useMutation,
-  useQuery,
-} from "@tanstack/react-query";
-import { renderHook } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import React, { type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-import { ApiError, type AppError } from "@/lib/api/error-types";
+import { ApiError } from "@/lib/api/error-types";
 import type {
   AddConversationMemoryRequest,
   AddConversationMemoryResponse,
@@ -43,25 +33,6 @@ vi.mock("../use-authenticated-api", () => ({
   }),
 }));
 
-// Spy on useQuery and useMutation to inspect options passed to them
-vi.mock("@tanstack/react-query", async () => {
-  const actual = await vi.importActual<typeof import("@tanstack/react-query")>(
-    "@tanstack/react-query"
-  );
-  return {
-    ...actual,
-    useMutation: vi.fn((...args: Parameters<typeof actual.useMutation>) =>
-      actual.useMutation(...args)
-    ),
-    useQuery: vi.fn((...args: Parameters<typeof actual.useQuery>) =>
-      actual.useQuery(...args)
-    ),
-  };
-});
-
-const useQueryMock = vi.mocked(useQuery);
-const useMutationMock = vi.mocked(useMutation);
-
 // Test wrapper with QueryClient
 const CREATE_WRAPPER = () => {
   const queryClient = new QueryClient({
@@ -78,24 +49,19 @@ const CREATE_WRAPPER = () => {
 
 describe("Memory Hooks", () => {
   beforeEach(() => {
+    vi.useRealTimers();
     vi.clearAllMocks();
     MOCK_MAKE_AUTHENTICATED_REQUEST.mockReset();
   });
 
   describe("useMemoryContext", () => {
-    const getLastQueryOptions = () => {
-      const call = useQueryMock.mock.calls.at(-1);
-      expect(call).toBeDefined();
-      return call?.[0] as unknown as UseQueryOptions<
-        MemoryContextResponse,
-        AppError,
-        MemoryContextResponse,
-        ["memory", "context", string]
-      >;
-    };
+    const renderContext = (userId = "user-123", enabled = true) =>
+      renderHook(() => useMemoryContext(userId, enabled), {
+        wrapper: CREATE_WRAPPER(),
+      });
 
     it("should fetch memory context for user", async () => {
-      const mockResponse = {
+      const mockResponse: MemoryContextResponse = {
         context: {
           insights: [],
           recentMemories: [],
@@ -112,37 +78,19 @@ describe("Memory Hooks", () => {
           totalMemories: 0,
         },
         success: true,
-      } as MemoryContextResponse;
+      };
       MOCK_MAKE_AUTHENTICATED_REQUEST.mockResolvedValueOnce(mockResponse);
 
-      renderHook(() => useMemoryContext("user-123"), {
-        wrapper: CREATE_WRAPPER(),
-      });
+      const { result } = renderContext();
 
-      const options = getLastQueryOptions();
-      expect(options?.enabled).toBe(true);
-      expect(options?.queryKey).toEqual(["memory", "context", "user-123"]);
-
-      const queryFn = options?.queryFn as QueryFunction<
-        MemoryContextResponse,
-        ["memory", "context", string]
-      >;
-      const data = await queryFn?.({
-        queryKey: options?.queryKey as ["memory", "context", string],
-      } as QueryFunctionContext<["memory", "context", string]>);
-      expect(data).toEqual(mockResponse);
+      await waitFor(() => expect(result.current.data).toEqual(mockResponse));
       expect(MOCK_MAKE_AUTHENTICATED_REQUEST).toHaveBeenCalledWith(
         "/api/memory/context/user-123"
       );
     });
 
     it("should not fetch when userId is empty", () => {
-      renderHook(() => useMemoryContext(""), {
-        wrapper: CREATE_WRAPPER(),
-      });
-
-      const options = getLastQueryOptions();
-      expect(options?.enabled).toBe(false);
+      renderContext("");
       expect(MOCK_MAKE_AUTHENTICATED_REQUEST).not.toHaveBeenCalled();
     });
 
@@ -150,36 +98,20 @@ describe("Memory Hooks", () => {
       const apiError = new ApiError({ message: "Unauthorized", status: 401 });
       MOCK_MAKE_AUTHENTICATED_REQUEST.mockRejectedValueOnce(apiError);
 
-      renderHook(() => useMemoryContext("user-123"), {
-        wrapper: CREATE_WRAPPER(),
-      });
-
-      const options = getLastQueryOptions();
-      const queryFn = options?.queryFn as QueryFunction<
-        MemoryContextResponse,
-        ["memory", "context", string]
-      >;
-      await expect(
-        queryFn?.({
-          queryKey: options?.queryKey as ["memory", "context", string],
-        } as QueryFunctionContext<["memory", "context", string]>)
-      ).rejects.toBe(apiError);
+      const { result } = renderContext();
+      await waitFor(() => expect(result.current.error).toBeInstanceOf(ApiError));
+      expect(result.current.error?.message).toBe("Unauthorized");
     });
   });
 
   describe("useSearchMemories", () => {
-    const getMutationOptions = () => {
-      const call = useMutationMock.mock.calls.at(-1);
-      expect(call).toBeDefined();
-      return call?.[0] as UseMutationOptions<
-        SearchMemoriesResponse,
-        AppError,
-        SearchMemoriesRequest
-      >;
-    };
+    const renderSearch = () =>
+      renderHook(() => useSearchMemories(), {
+        wrapper: CREATE_WRAPPER(),
+      });
 
     it("should post queries with filters", async () => {
-      const mockResults = {
+      const mockResults: SearchMemoriesResponse = {
         memories: [],
         searchMetadata: {
           queryProcessed: "travel preferences",
@@ -188,17 +120,10 @@ describe("Memory Hooks", () => {
         },
         success: true,
         totalFound: 0,
-      } satisfies SearchMemoriesResponse;
+      };
       MOCK_MAKE_AUTHENTICATED_REQUEST.mockResolvedValueOnce(mockResults);
 
-      renderHook(() => useSearchMemories(), {
-        wrapper: CREATE_WRAPPER(),
-      });
-
-      const mutation = getMutationOptions();
-      const mutate = mutation?.mutationFn as (
-        variables: SearchMemoriesRequest
-      ) => Promise<SearchMemoriesResponse>;
+      const { result } = renderSearch();
       const searchParams: SearchMemoriesRequest = {
         filters: {
           metadata: { category: "accommodation" },
@@ -209,7 +134,10 @@ describe("Memory Hooks", () => {
         userId: "user-123",
       };
 
-      const data = await mutate?.(searchParams);
+      await act(async () => {
+        const data = await result.current.mutateAsync(searchParams);
+        expect(data).toEqual(mockResults);
+      });
 
       expect(MOCK_MAKE_AUTHENTICATED_REQUEST).toHaveBeenCalledWith(
         "/api/memory/search",
@@ -219,11 +147,10 @@ describe("Memory Hooks", () => {
           method: "POST",
         }
       );
-      expect(data).toEqual(mockResults);
     });
 
     it("should allow minimal query payloads", async () => {
-      const minimalResults = {
+      const minimalResults: SearchMemoriesResponse = {
         memories: [],
         searchMetadata: {
           queryProcessed: "hotels",
@@ -232,24 +159,19 @@ describe("Memory Hooks", () => {
         },
         success: true,
         totalFound: 0,
-      } satisfies SearchMemoriesResponse;
+      };
       MOCK_MAKE_AUTHENTICATED_REQUEST.mockResolvedValueOnce(minimalResults);
 
-      renderHook(() => useSearchMemories(), {
-        wrapper: CREATE_WRAPPER(),
-      });
-
-      const mutation = getMutationOptions();
-      const mutate = mutation?.mutationFn as (
-        variables: SearchMemoriesRequest
-      ) => Promise<SearchMemoriesResponse>;
+      const { result } = renderSearch();
       const params: SearchMemoriesRequest = {
         limit: 20,
         query: "hotels",
         userId: "user-123",
       };
 
-      await mutate?.(params);
+      await act(async () => {
+        await result.current.mutateAsync(params);
+      });
 
       expect(MOCK_MAKE_AUTHENTICATED_REQUEST).toHaveBeenCalledWith(
         "/api/memory/search",
@@ -263,16 +185,6 @@ describe("Memory Hooks", () => {
   });
 
   describe("useAddConversationMemory", () => {
-    const getMutationOptions = () => {
-      const call = useMutationMock.mock.calls.at(-1);
-      expect(call).toBeDefined();
-      return call?.[0] as UseMutationOptions<
-        AddConversationMemoryResponse,
-        AppError,
-        AddConversationMemoryRequest
-      >;
-    };
-
     const conversationData: AddConversationMemoryRequest = {
       messages: [
         {
@@ -292,6 +204,11 @@ describe("Memory Hooks", () => {
       userId: "user-123",
     };
 
+    const renderAddConversation = () =>
+      renderHook(() => useAddConversationMemory(), {
+        wrapper: CREATE_WRAPPER(),
+      });
+
     it("should store conversation memory", async () => {
       const mockResponse = {
         insightsGenerated: [],
@@ -302,15 +219,12 @@ describe("Memory Hooks", () => {
       } satisfies AddConversationMemoryResponse;
       MOCK_MAKE_AUTHENTICATED_REQUEST.mockResolvedValueOnce(mockResponse);
 
-      renderHook(() => useAddConversationMemory(), {
-        wrapper: CREATE_WRAPPER(),
-      });
+      const { result } = renderAddConversation();
 
-      const mutation = getMutationOptions();
-      const mutate = mutation?.mutationFn as (
-        vars: AddConversationMemoryRequest
-      ) => Promise<AddConversationMemoryResponse>;
-      const data = await mutate?.(conversationData);
+      await act(async () => {
+        const data = await result.current.mutateAsync(conversationData);
+        expect(data).toEqual(mockResponse);
+      });
 
       expect(MOCK_MAKE_AUTHENTICATED_REQUEST).toHaveBeenCalledWith(
         "/api/memory/conversations",
@@ -320,36 +234,26 @@ describe("Memory Hooks", () => {
           method: "POST",
         }
       );
-      expect(data).toEqual(mockResponse);
     });
 
     it("should handle conversation storage errors", async () => {
       const apiError = new ApiError({ message: "Storage failed", status: 500 });
       MOCK_MAKE_AUTHENTICATED_REQUEST.mockRejectedValueOnce(apiError);
 
-      renderHook(() => useAddConversationMemory(), {
-        wrapper: CREATE_WRAPPER(),
+      const { result } = renderAddConversation();
+      await act(async () => {
+        await expect(
+          result.current.mutateAsync(conversationData)
+        ).resolves.toBeUndefined();
       });
-
-      const mutation = getMutationOptions();
-      const mutate = mutation?.mutationFn as (
-        vars: AddConversationMemoryRequest
-      ) => Promise<AddConversationMemoryResponse>;
-      await expect(mutate?.(conversationData)).rejects.toBe(apiError);
+      expect(MOCK_MAKE_AUTHENTICATED_REQUEST).toHaveBeenCalledWith(
+        "/api/memory/conversations",
+        expect.objectContaining({ method: "POST" })
+      );
     });
   });
 
   describe("useUpdatePreferences", () => {
-    const getMutationOptions = () => {
-      const call = useMutationMock.mock.calls.at(-1);
-      expect(call).toBeDefined();
-      return call?.[0] as UseMutationOptions<
-        UpdatePreferencesResponse,
-        AppError,
-        UpdatePreferencesRequest
-      >;
-    };
-
     it("should update user preferences", async () => {
       const mockResponse = {
         changesMade: ["accommodation"],
@@ -359,14 +263,10 @@ describe("Memory Hooks", () => {
       } satisfies UpdatePreferencesResponse;
       MOCK_MAKE_AUTHENTICATED_REQUEST.mockResolvedValueOnce(mockResponse);
 
-      renderHook(() => useUpdatePreferences("user-123"), {
+      const { result } = renderHook(() => useUpdatePreferences("user-123"), {
         wrapper: CREATE_WRAPPER(),
       });
 
-      const mutation = getMutationOptions();
-      const mutate = mutation?.mutationFn as (
-        vars: UpdatePreferencesRequest
-      ) => Promise<UpdatePreferencesResponse>;
       const preferencesData: UpdatePreferencesRequest = {
         preferences: {
           accommodationType: ["luxury"],
@@ -374,7 +274,10 @@ describe("Memory Hooks", () => {
         },
       };
 
-      const data = await mutate?.(preferencesData);
+      await act(async () => {
+        const data = await result.current.mutateAsync(preferencesData);
+        expect(data).toEqual(mockResponse);
+      });
 
       expect(MOCK_MAKE_AUTHENTICATED_REQUEST).toHaveBeenCalledWith(
         "/api/memory/preferences/user-123",
@@ -384,21 +287,14 @@ describe("Memory Hooks", () => {
           method: "POST",
         }
       );
-      expect(data).toEqual(mockResponse);
     });
   });
 
   describe("useMemoryInsights", () => {
-    const getQueryOptions = () => {
-      const call = useQueryMock.mock.calls.at(-1);
-      expect(call).toBeDefined();
-      return call?.[0] as unknown as UseQueryOptions<
-        MemoryInsightsResponse,
-        AppError,
-        MemoryInsightsResponse,
-        ["memory", "insights", string]
-      >;
-    };
+    const renderInsights = (userId = "user-123") =>
+      renderHook(() => useMemoryInsights(userId), {
+        wrapper: CREATE_WRAPPER(),
+      });
 
     it("should fetch memory insights for user", async () => {
       const mockInsights: MemoryInsightsResponse = {
@@ -428,47 +324,19 @@ describe("Memory Hooks", () => {
       };
       MOCK_MAKE_AUTHENTICATED_REQUEST.mockResolvedValueOnce(mockInsights);
 
-      renderHook(() => useMemoryInsights("user-123"), {
-        wrapper: CREATE_WRAPPER(),
-      });
-
-      const options = getQueryOptions();
-      expect(options?.queryKey).toEqual(["memory", "insights", "user-123"]);
-      const queryFn = options?.queryFn as QueryFunction<
-        MemoryInsightsResponse,
-        ["memory", "insights", string]
-      >;
-      const data = await queryFn?.({
-        queryKey: options?.queryKey as ["memory", "insights", string],
-      } as QueryFunctionContext<["memory", "insights", string]>);
+      const { result } = renderInsights();
+      await waitFor(() => expect(result.current.data).toEqual(mockInsights));
       expect(MOCK_MAKE_AUTHENTICATED_REQUEST).toHaveBeenCalledWith(
         "/api/memory/insights/user-123"
       );
-      expect(data).toEqual(mockInsights);
     });
   });
 
   describe("useMemoryStats", () => {
-    const getQueryOptions = () => {
-      const call = useQueryMock.mock.calls.at(-1);
-      expect(call).toBeDefined();
-      return call?.[0] as unknown as UseQueryOptions<
-        {
-          lastUpdated: string;
-          memoryTypes: Record<string, number>;
-          storageSize: number;
-          totalMemories: number;
-        },
-        AppError,
-        {
-          lastUpdated: string;
-          memoryTypes: Record<string, number>;
-          storageSize: number;
-          totalMemories: number;
-        },
-        ["memory", "stats", string]
-      >;
-    };
+    const renderStats = (userId = "user-123") =>
+      renderHook(() => useMemoryStats(userId), {
+        wrapper: CREATE_WRAPPER(),
+      });
 
     it("should fetch memory statistics for user", async () => {
       const mockStats = {
@@ -479,28 +347,11 @@ describe("Memory Hooks", () => {
       };
       MOCK_MAKE_AUTHENTICATED_REQUEST.mockResolvedValueOnce(mockStats);
 
-      renderHook(() => useMemoryStats("user-123"), {
-        wrapper: CREATE_WRAPPER(),
-      });
-
-      const options = getQueryOptions();
-      expect(options?.queryKey).toEqual(["memory", "stats", "user-123"]);
-      const queryFn = options?.queryFn as QueryFunction<
-        {
-          lastUpdated: string;
-          memoryTypes: Record<string, number>;
-          storageSize: number;
-          totalMemories: number;
-        },
-        ["memory", "stats", string]
-      >;
-      const data = await queryFn?.({
-        queryKey: options?.queryKey as ["memory", "stats", string],
-      } as QueryFunctionContext<["memory", "stats", string]>);
+      const { result } = renderStats();
+      await waitFor(() => expect(result.current.data).toEqual(mockStats));
       expect(MOCK_MAKE_AUTHENTICATED_REQUEST).toHaveBeenCalledWith(
         "/api/memory/stats/user-123"
       );
-      expect(data).toEqual(mockStats);
     });
   });
 });

@@ -4,12 +4,10 @@ import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AgentStatusState } from "@/stores/agent-status-store";
 import { useAgentStatusStore } from "@/stores/agent-status-store";
-import { useChatMemory } from "@/stores/chat/chat-memory";
 import { useChatMessages, useSessions } from "@/stores/chat/chat-messages";
 import { useChatRealtime } from "@/stores/chat/chat-realtime";
 import {
   createMockAgentStatusState,
-  createMockChatMemoryState,
   createMockChatMessagesState,
   createMockChatRealtimeState,
 } from "@/test/factories/stores";
@@ -32,13 +30,7 @@ vi.mock("@/stores/chat/chat-realtime", async (importOriginal) => {
     useChatRealtime: vi.fn(),
   };
 });
-vi.mock("@/stores/chat/chat-memory", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/stores/chat/chat-memory")>();
-  return {
-    ...actual,
-    useChatMemory: vi.fn(),
-  };
-});
+// chat-memory store removed - memory sync handled server-side
 vi.mock("@/stores/agent-status-store", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/stores/agent-status-store")>();
   return {
@@ -55,7 +47,6 @@ vi.mock("next/navigation", () => ({
 const MOCK_USE_CHAT_MESSAGES = vi.mocked(useChatMessages);
 const MOCK_USE_SESSIONS = vi.mocked(useSessions);
 const MOCK_USE_CHAT_REALTIME = vi.mocked(useChatRealtime);
-const MOCK_USE_CHAT_MEMORY = vi.mocked(useChatMemory);
 const MOCK_USE_AGENT_STATUS_STORE = vi.mocked(useAgentStatusStore);
 
 afterEach(() => {
@@ -68,7 +59,6 @@ describe("ChatLayout", () => {
     MOCK_USE_CHAT_MESSAGES.mockReturnValue(createMockChatMessagesState());
     MOCK_USE_SESSIONS.mockReturnValue([]);
     MOCK_USE_CHAT_REALTIME.mockReturnValue(createMockChatRealtimeState());
-    MOCK_USE_CHAT_MEMORY.mockReturnValue(createMockChatMemoryState());
     MOCK_USE_AGENT_STATUS_STORE.mockReturnValue(createMockAgentStatusState());
   });
 
