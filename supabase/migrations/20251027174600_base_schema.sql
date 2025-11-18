@@ -22,7 +22,8 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- Enable pgvector extension for AI/ML embeddings and semantic search
 -- Note: This extension provides vector data types and operations for storing
 -- and querying high-dimensional vectors (embeddings) efficiently
-CREATE EXTENSION IF NOT EXISTS "vector";
+-- Use extensions schema per Supabase best practices
+CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA extensions;
 
 -- ===========================
 -- AUTOMATION EXTENSIONS
@@ -352,34 +353,44 @@ CREATE TABLE IF NOT EXISTS chat_tool_calls (
 );
 
 -- ===========================
--- MEMORY SYSTEM TABLES (Mem0 + pgvector)
+-- MEMORY SYSTEM SCHEMA (Supabase Memory Orchestrator - SPEC-0026, ADR-0042)
 -- ===========================
 
--- Create memories table (for long-term user preferences and history)
-CREATE TABLE IF NOT EXISTS memories (
-    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+-- Dedicated schema for conversational memory
+CREATE SCHEMA IF NOT EXISTS memories;
+
+-- Session-level metadata for conversational memory
+CREATE TABLE IF NOT EXISTS memories.sessions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    memory_type TEXT NOT NULL DEFAULT 'user_preference',
-    content TEXT NOT NULL,
-    embedding vector(1536),
-    metadata JSONB DEFAULT '{}',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    
-    CONSTRAINT memories_type_check CHECK (memory_type IN ('user_preference', 'trip_history', 'search_pattern', 'conversation_context', 'other'))
+    title TEXT NOT NULL,
+    last_synced_at TIMESTAMPTZ,
+    metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Create session_memories table (temporary conversation context)
-CREATE TABLE IF NOT EXISTS session_memories (
-    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    session_id UUID NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
+-- Individual conversational turns with rich metadata
+CREATE TABLE IF NOT EXISTS memories.turns (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    session_id UUID NOT NULL REFERENCES memories.sessions(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    content TEXT NOT NULL,
-    embedding vector(1536),
-    metadata JSONB DEFAULT '{}',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    
-    CONSTRAINT session_memories_content_length CHECK (length(content) <= 8192)
+    role TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
+    content JSONB NOT NULL,
+    attachments JSONB NOT NULL DEFAULT '[]'::jsonb,
+    tool_calls JSONB NOT NULL DEFAULT '[]'::jsonb,
+    tool_results JSONB NOT NULL DEFAULT '[]'::jsonb,
+    pii_scrubbed BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Embeddings for memory turns (pgvector-backed)
+-- Note: vector type from extensions schema is available via search_path
+CREATE TABLE IF NOT EXISTS memories.turn_embeddings (
+    turn_id UUID PRIMARY KEY REFERENCES memories.turns(id) ON DELETE CASCADE,
+    embedding vector(1536) NOT NULL,
+    model TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- ===========================
@@ -610,31 +621,24 @@ CREATE INDEX IF NOT EXISTS idx_chat_tool_calls_created_at ON chat_tool_calls(cre
 -- Composite index for key lookup (most common pattern)
 
 -- ===========================
--- MEMORY SYSTEM INDEXES (pgvector optimized)
+-- MEMORY SYSTEM INDEXES (memories schema - pgvector optimized)
 -- ===========================
 
--- Memory table user indexes for RLS performance
-CREATE INDEX IF NOT EXISTS idx_memories_user_id ON memories(user_id);
-CREATE INDEX IF NOT EXISTS idx_memories_memory_type ON memories(memory_type);
-CREATE INDEX IF NOT EXISTS idx_memories_created_at ON memories(created_at DESC);
+-- Sessions: lookup by user and recency
+CREATE INDEX IF NOT EXISTS idx_memories_sessions_user_created_at
+    ON memories.sessions(user_id, created_at DESC);
 
--- Vector index for semantic search (IVFFlat with cosine distance)
--- Using 100 lists as recommended for initial deployment, can be tuned based on data size
-CREATE INDEX IF NOT EXISTS idx_memories_embedding ON memories 
-USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+-- Turns: lookup by session/user and recency
+CREATE INDEX IF NOT EXISTS idx_memories_turns_session_created_at
+    ON memories.turns(session_id, created_at DESC);
 
--- Session memory indexes
-CREATE INDEX IF NOT EXISTS idx_session_memories_user_id ON session_memories(user_id);
-CREATE INDEX IF NOT EXISTS idx_session_memories_session_id ON session_memories(session_id);
-CREATE INDEX IF NOT EXISTS idx_session_memories_created_at ON session_memories(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_memories_turns_user_created_at
+    ON memories.turns(user_id, created_at DESC);
 
--- Vector index for session memory search
-CREATE INDEX IF NOT EXISTS idx_session_memories_embedding ON session_memories 
-USING ivfflat (embedding vector_cosine_ops) WITH (lists = 50);
-
--- Composite index for memory retrieval patterns
-CREATE INDEX IF NOT EXISTS idx_memories_user_type ON memories(user_id, memory_type);
-CREATE INDEX IF NOT EXISTS idx_session_memories_session_user ON session_memories(session_id, user_id);
+-- Embeddings: vector index for similarity search
+CREATE INDEX IF NOT EXISTS idx_memories_turn_embeddings_vector
+    ON memories.turn_embeddings
+    USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
 
 -- ===========================
 -- PERFORMANCE MONITORING INDEXES
@@ -648,13 +652,7 @@ WHERE created_at > '2024-01-01'::timestamp with time zone;
 CREATE INDEX IF NOT EXISTS idx_trip_collaborators_active ON trip_collaborators(added_at DESC, permission_level)
 WHERE permission_level IN ('edit', 'admin');
 
--- Memory cleanup index for maintenance functions
--- Removed volatile partial index (NOW()) not allowed; rely on created_at index
-CREATE INDEX IF NOT EXISTS idx_memories_created_at_user ON memories(created_at, user_id);
-
--- Session cleanup index
-CREATE INDEX IF NOT EXISTS idx_session_memories_created_at ON session_memories(created_at);
--- Removed volatile partial index (NOW()) not allowed
+-- Memory cleanup indexes are handled within the memories schema tables above
 
 -- ===========================
 -- COMPOSITE COLLABORATION INDEXES
@@ -713,7 +711,7 @@ WHERE expires_at IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_trips_search_metadata_gin ON trips USING gin(search_metadata);
 CREATE INDEX IF NOT EXISTS idx_flights_metadata_gin ON flights USING gin(metadata);
 CREATE INDEX IF NOT EXISTS idx_accommodations_metadata_gin ON accommodations USING gin(metadata);
-CREATE INDEX IF NOT EXISTS idx_memories_metadata_gin ON memories USING gin(metadata);
+-- Memory metadata GIN index moved to memories schema (if needed, add to memories.turns.metadata)
 CREATE INDEX IF NOT EXISTS idx_chat_sessions_metadata_gin ON chat_sessions USING gin(metadata);
 
 -- ===========================
@@ -737,15 +735,13 @@ WHERE booking_status = 'available';
 -- INDEX COMMENTS (Documentation)
 -- ===========================
 
-COMMENT ON INDEX idx_memories_embedding IS 'IVFFlat vector index for semantic memory search using cosine distance. Optimized for 1536-dimension embeddings (OpenAI compatible).';
+COMMENT ON INDEX idx_memories_turn_embeddings_vector IS 'IVFFlat vector index for semantic memory search using cosine distance. Optimized for 1536-dimension embeddings (OpenAI compatible).';
 
 COMMENT ON INDEX idx_trip_collaborators_user_trip IS 'Composite index optimizing RLS policies for collaborative trip access. Critical for performance.';
 
 COMMENT ON INDEX idx_chat_messages_session_created IS 'Optimized for get_recent_messages() function - most common chat query pattern.';
 
 COMMENT ON INDEX idx_trips_collaboration_access IS 'Optimized for get_user_accessible_trips() function in collaboration workflows.';
-
-COMMENT ON INDEX idx_session_memories_embedding IS 'Vector index for session-specific memory search. Smaller lists parameter due to shorter-lived data.';
 
 -- ===========================
 -- FILE ATTACHMENTS INDEXES
@@ -842,128 +838,8 @@ $$ LANGUAGE plpgsql;
 -- MEMORY SYSTEM FUNCTIONS
 -- ===========================
 
--- Function for optimized hybrid search (vector + metadata filtering)
-CREATE OR REPLACE FUNCTION search_memories(
-    query_embedding vector(1536),
-    query_user_id UUID,
-    match_count INT DEFAULT 5,
-    metadata_filter JSONB DEFAULT '{}',
-    memory_type_filter TEXT DEFAULT NULL,
-    similarity_threshold FLOAT DEFAULT 0.3
-)
-RETURNS TABLE (
-    id BIGINT,
-    content TEXT,
-    metadata JSONB,
-    memory_type TEXT,
-    similarity FLOAT,
-    created_at TIMESTAMP WITH TIME ZONE
-)
-LANGUAGE plpgsql AS $$
-BEGIN
-    RETURN QUERY
-    SELECT 
-        m.id,
-        m.content,
-        m.metadata,
-        m.memory_type,
-        1 - (m.embedding <=> query_embedding) AS similarity,
-        m.created_at
-    FROM memories m
-    WHERE 
-        m.user_id = query_user_id
-        AND (1 - (m.embedding <=> query_embedding)) >= similarity_threshold
-        AND (metadata_filter = '{}' OR m.metadata @> metadata_filter)
-        AND (memory_type_filter IS NULL OR m.memory_type = memory_type_filter)
-    ORDER BY m.embedding <=> query_embedding
-    LIMIT match_count;
-END;
-$$;
-
--- Function for session memory search
-CREATE OR REPLACE FUNCTION search_session_memories(
-    query_embedding vector(1536),
-    query_session_id UUID,
-    match_count INT DEFAULT 5,
-    similarity_threshold FLOAT DEFAULT 0.3
-)
-RETURNS TABLE (
-    id BIGINT,
-    content TEXT,
-    metadata JSONB,
-    similarity FLOAT,
-    created_at TIMESTAMP WITH TIME ZONE
-)
-LANGUAGE plpgsql AS $$
-BEGIN
-    RETURN QUERY
-    SELECT 
-        sm.id,
-        sm.content,
-        sm.metadata,
-        1 - (sm.embedding <=> query_embedding) AS similarity,
-        sm.created_at
-    FROM session_memories sm
-    WHERE 
-        sm.session_id = query_session_id
-        AND (1 - (sm.embedding <=> query_embedding)) >= similarity_threshold
-    ORDER BY sm.embedding <=> query_embedding
-    LIMIT match_count;
-END;
-$$;
-
--- Function to clean up old memories (maintenance)
-CREATE OR REPLACE FUNCTION cleanup_old_memories(
-    days_old INT DEFAULT 365,
-    max_memories_per_user INT DEFAULT 1000
-)
-RETURNS INT AS $$
-DECLARE
-    deleted_count INT := 0;
-    _rc INT := 0;
-BEGIN
-    -- Delete very old memories
-    DELETE FROM memories 
-    WHERE created_at < NOW() - INTERVAL '1 day' * days_old;
-    
-    GET DIAGNOSTICS _rc = ROW_COUNT;
-    deleted_count := deleted_count + _rc;
-    
-    -- Keep only the most recent memories per user if exceeding limit
-    WITH ranked_memories AS (
-        SELECT id, ROW_NUMBER() OVER (
-            PARTITION BY user_id 
-            ORDER BY created_at DESC
-        ) as rn
-        FROM memories 
-    )
-    DELETE FROM memories 
-    WHERE id IN (
-        SELECT id FROM ranked_memories WHERE rn > max_memories_per_user
-    );
-    
-    GET DIAGNOSTICS _rc = ROW_COUNT;
-    deleted_count := deleted_count + _rc;
-    
-    RETURN deleted_count;
-END;
-$$ LANGUAGE plpgsql;
-
--- Function to clean up expired session memories
-CREATE OR REPLACE FUNCTION cleanup_expired_session_memories(
-    hours_old INT DEFAULT 24
-)
-RETURNS INT AS $$
-DECLARE
-    deleted_count INT;
-BEGIN
-    DELETE FROM session_memories 
-    WHERE created_at < NOW() - INTERVAL '1 hour' * hours_old;
-    
-    GET DIAGNOSTICS deleted_count = ROW_COUNT;
-    RETURN deleted_count;
-END;
-$$ LANGUAGE plpgsql;
+-- Memory functions are handled by the orchestrator adapters and job handlers.
+-- No legacy search/cleanup functions needed for the new memories schema.
 
 -- ===========================
 -- CHAT SESSION FUNCTIONS
@@ -1042,25 +918,15 @@ BEGIN
     ANALYZE chat_sessions;
     ANALYZE chat_messages;
     ANALYZE chat_tool_calls;
-    ANALYZE memories;
-    ANALYZE session_memories;
+    ANALYZE memories.sessions;
+    ANALYZE memories.turns;
+    ANALYZE memories.turn_embeddings;
     
-    -- Cleanup expired sessions and old data
-    PERFORM cleanup_expired_session_memories();
+    -- Cleanup expired sessions
     PERFORM expire_inactive_sessions();
     
-    -- Optimize vector indexes
-    PERFORM optimize_vector_indexes();
-    
-    -- Log maintenance completion
-    INSERT INTO session_memories (
-        session_id, user_id, content, metadata
-    ) VALUES (
-        '00000000-0000-0000-0000-000000000000'::UUID, 
-        '00000000-0000-0000-0000-000000000001'::UUID, 
-        'Database maintenance completed', 
-        jsonb_build_object('type', 'maintenance', 'timestamp', NOW())
-    );
+    -- Optimize vector indexes (if optimize_vector_indexes function exists)
+    -- Note: Vector index optimization for memories schema handled separately if needed
 END;
 $$ LANGUAGE plpgsql;
 
@@ -1177,36 +1043,25 @@ $$ LANGUAGE plpgsql;
 -- ===========================
 
 -- Function to optimize vector indexes for better performance
+-- Updated for memories schema
 CREATE OR REPLACE FUNCTION optimize_vector_indexes()
 RETURNS TEXT AS $$
 DECLARE
-    v_memories_count BIGINT;
-    v_session_memories_count BIGINT;
+    v_turn_embeddings_count BIGINT;
     v_result TEXT := '';
 BEGIN
-    -- Get current record counts
-    SELECT COUNT(*) INTO v_memories_count FROM memories;
-    SELECT COUNT(*) INTO v_session_memories_count FROM session_memories;
+    -- Get current record count for turn embeddings
+    SELECT COUNT(*) INTO v_turn_embeddings_count FROM memories.turn_embeddings;
     
-    -- Optimize memories vector index if we have significant data
-    IF v_memories_count > 1000 THEN
+    -- Optimize turn_embeddings vector index if we have significant data
+    IF v_turn_embeddings_count > 1000 THEN
         -- Reindex with optimized list count based on data size
-        EXECUTE 'DROP INDEX IF EXISTS idx_memories_embedding';
+        EXECUTE 'DROP INDEX IF EXISTS idx_memories_turn_embeddings_vector';
         EXECUTE format(
-            'CREATE INDEX idx_memories_embedding ON memories USING ivfflat (embedding vector_cosine_ops) WITH (lists = %s)',
-            GREATEST(LEAST(v_memories_count / 1000, 1000), 10)
+            'CREATE INDEX idx_memories_turn_embeddings_vector ON memories.turn_embeddings USING ivfflat (embedding vector_cosine_ops) WITH (lists = %s)',
+            GREATEST(LEAST(v_turn_embeddings_count / 1000, 1000), 10)
         );
-        v_result := v_result || format('Optimized memories index for %s records. ', v_memories_count);
-    END IF;
-    
-    -- Optimize session_memories vector index
-    IF v_session_memories_count > 500 THEN
-        EXECUTE 'DROP INDEX IF EXISTS idx_session_memories_embedding';
-        EXECUTE format(
-            'CREATE INDEX idx_session_memories_embedding ON session_memories USING ivfflat (embedding vector_cosine_ops) WITH (lists = %s)',
-            GREATEST(LEAST(v_session_memories_count / 500, 500), 10)
-        );
-        v_result := v_result || format('Optimized session_memories index for %s records. ', v_session_memories_count);
+        v_result := v_result || format('Optimized memories.turn_embeddings index for %s records. ', v_turn_embeddings_count);
     END IF;
     
     IF v_result = '' THEN
@@ -1782,25 +1637,8 @@ BEGIN
             );
         END IF;
         
-        -- Store audit record
-        INSERT INTO session_memories (
-            session_id,
-            user_id,
-            content,
-            metadata
-        ) VALUES (
-            '00000000-0000-0000-0000-000000000000'::UUID,
-            NEW.added_by,
-            format('Collaboration updated for trip %s', NEW.trip_id),
-            jsonb_build_object(
-                'type', 'collaboration_audit',
-                'operation', 'UPDATE',
-                'trip_id', NEW.trip_id,
-                'user_id', NEW.user_id,
-                'changes', v_changes,
-                'timestamp', NOW()
-            )
-        );
+        -- Audit records can be stored in a dedicated audit table or system_metrics if needed
+        -- Removed session_memories audit logging (legacy table)
     END IF;
     
     RETURN NEW;
@@ -1833,31 +1671,8 @@ BEGIN
     SELECT SUM(deleted_count) INTO v_expired_cache
     FROM cleanup_expired_search_cache();
     
-    -- Clean up old session memories
-    SELECT cleanup_expired_session_memories(168) INTO v_old_memories; -- 7 days
-    
-    -- Log cleanup results
-    INSERT INTO session_memories (
-        session_id,
-        user_id,
-        content,
-        metadata
-    ) VALUES (
-        '00000000-0000-0000-0000-000000000000'::UUID,
-        '00000000-0000-0000-0000-000000000001'::UUID,
-        'Daily cleanup completed',
-        jsonb_build_object(
-            'type', 'maintenance',
-            'job', 'daily_cleanup',
-            'results', jsonb_build_object(
-                'expired_sessions', v_expired_sessions,
-                'orphaned_attachments', v_orphaned_attachments,
-                'expired_cache', v_expired_cache,
-                'old_memories', v_old_memories
-            ),
-            'timestamp', NOW()
-        )
-    );
+    -- Memory cleanup handled by orchestrator adapters and job handlers
+    -- Removed legacy session_memories cleanup and logging
 END;
 $$ LANGUAGE plpgsql;
 
@@ -1874,22 +1689,7 @@ BEGIN
     -- Optimize indexes if needed
     PERFORM optimize_vector_indexes();
     
-    -- Log completion
-    INSERT INTO session_memories (
-        session_id,
-        user_id,
-        content,
-        metadata
-    ) VALUES (
-        '00000000-0000-0000-0000-000000000000'::UUID,
-        '00000000-0000-0000-0000-000000000001'::UUID,
-        'Weekly maintenance completed',
-        jsonb_build_object(
-            'type', 'maintenance',
-            'job', 'weekly_maintenance',
-            'timestamp', NOW()
-        )
-    );
+    -- Maintenance logging handled by system_metrics or dedicated audit table
 END;
 $$ LANGUAGE plpgsql;
 
@@ -1897,40 +1697,13 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION monthly_cleanup_job()
 RETURNS VOID AS $$
 DECLARE
-    v_old_memories INT;
     v_collaboration_stats RECORD;
 BEGIN
-    -- Deep clean old memories (keep last year only)
-    SELECT cleanup_old_memories(365, 1000) INTO v_old_memories;
-    
-    -- Get collaboration statistics before cleanup
+    -- Get collaboration statistics
     SELECT * INTO v_collaboration_stats FROM get_collaboration_statistics();
     
-    -- Clean up old audit logs (keep 6 months)
-    DELETE FROM session_memories
-    WHERE metadata->>'type' IN ('collaboration_audit', 'maintenance')
-    AND created_at < NOW() - INTERVAL '6 months';
-    
-    -- Log results
-    INSERT INTO session_memories (
-        session_id,
-        user_id,
-        content,
-        metadata
-    ) VALUES (
-        '00000000-0000-0000-0000-000000000000'::UUID,
-        '00000000-0000-0000-0000-000000000001'::UUID,
-        'Monthly deep cleanup completed',
-        jsonb_build_object(
-            'type', 'maintenance',
-            'job', 'monthly_cleanup',
-            'results', jsonb_build_object(
-                'old_memories_cleaned', v_old_memories,
-                'collaboration_stats', to_jsonb(v_collaboration_stats)
-            ),
-            'timestamp', NOW()
-        )
-    );
+    -- Memory cleanup handled by orchestrator adapters and job handlers
+    -- Audit logs can be stored in system_metrics or dedicated audit table if needed
 END;
 $$ LANGUAGE plpgsql;
 
@@ -1970,8 +1743,8 @@ CREATE TRIGGER update_chat_sessions_updated_at
     FOR EACH ROW 
     EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_memories_updated_at 
-    BEFORE UPDATE ON memories 
+CREATE TRIGGER update_memories_sessions_updated_at 
+    BEFORE UPDATE ON memories.sessions 
     FOR EACH ROW 
     EXECUTE FUNCTION update_updated_at_column();
 
@@ -2199,22 +1972,47 @@ ALTER TABLE chat_tool_calls ENABLE ROW LEVEL SECURITY;
 
 -- User management tables
 
--- Memory tables (now using UUID user_id with proper foreign key constraints)
-ALTER TABLE memories ENABLE ROW LEVEL SECURITY;
-ALTER TABLE session_memories ENABLE ROW LEVEL SECURITY;
+-- ===========================
+-- MEMORY SYSTEM ROW LEVEL SECURITY
+-- ===========================
+
+-- Enable RLS on all memories schema tables
+ALTER TABLE memories.sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE memories.turns ENABLE ROW LEVEL SECURITY;
+ALTER TABLE memories.turn_embeddings ENABLE ROW LEVEL SECURITY;
+
+-- Users can manage only their own sessions
+CREATE POLICY IF NOT EXISTS memories_sessions_user_is_owner
+ON memories.sessions
+FOR ALL
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
+
+-- Users can manage only their own turns
+CREATE POLICY IF NOT EXISTS memories_turns_user_is_owner
+ON memories.turns
+FOR ALL
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
+
+-- Users can read embeddings for their own turns
+CREATE POLICY IF NOT EXISTS memories_turn_embeddings_select_by_owner
+ON memories.turn_embeddings
+FOR SELECT
+USING (
+    EXISTS (
+        SELECT 1
+        FROM memories.turns t
+        WHERE t.id = turn_id
+          AND t.user_id = auth.uid()
+    )
+);
 
 -- ===========================
 -- CORE BUSINESS LOGIC POLICIES
 -- ===========================
 
 -- API Keys: Users can only manage their own API keys
-    FOR ALL USING (auth.uid() = user_id);
-
--- Memory System: Users can only access their own memories
-CREATE POLICY "Users can only access their own memories" ON memories
-    FOR ALL USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can only access their own session memories" ON session_memories
     FOR ALL USING (auth.uid() = user_id);
 
 -- Chat Sessions: Users can access sessions for owned and shared trips
@@ -2820,19 +2618,20 @@ GROUP BY user_id;
 -- MEMORY SYSTEM VIEWS
 -- ===========================
 
--- Create view for memory statistics by user
+-- Create view for memory statistics by user (using new memories schema)
 CREATE OR REPLACE VIEW user_memory_stats AS
 SELECT 
-    user_id,
-    COUNT(*) as total_memories,
-    COUNT(CASE WHEN memory_type = 'user_preference' THEN 1 END) as preference_memories,
-    COUNT(CASE WHEN memory_type = 'trip_history' THEN 1 END) as trip_history_memories,
-    COUNT(CASE WHEN memory_type = 'search_pattern' THEN 1 END) as search_pattern_memories,
-    COUNT(CASE WHEN memory_type = 'conversation_context' THEN 1 END) as conversation_memories,
-    MIN(created_at) as first_memory,
-    MAX(updated_at) as last_memory_update
-FROM memories
-GROUP BY user_id;
+    t.user_id,
+    COUNT(DISTINCT t.session_id) as total_sessions,
+    COUNT(*) as total_turns,
+    COUNT(DISTINCT CASE WHEN t.role = 'user' THEN t.id END) as user_turns,
+    COUNT(DISTINCT CASE WHEN t.role = 'assistant' THEN t.id END) as assistant_turns,
+    MIN(t.created_at) as first_turn,
+    MAX(t.created_at) as last_turn,
+    COUNT(DISTINCT te.turn_id) as turns_with_embeddings
+FROM memories.turns t
+LEFT JOIN memories.turn_embeddings te ON t.id = te.turn_id
+GROUP BY t.user_id;
 
 -- ===========================
 -- VIEW COMMENTS
@@ -2842,7 +2641,7 @@ COMMENT ON VIEW active_chat_sessions IS 'Active chat sessions with message count
 COMMENT ON VIEW trip_summaries IS 'Trip overview with associated bookings count and total costs';
 COMMENT ON VIEW user_trip_stats IS 'User-level trip statistics and spending patterns';
 COMMENT ON VIEW upcoming_bookings IS 'All upcoming confirmed bookings (flights and accommodations)';
-COMMENT ON VIEW user_memory_stats IS 'User memory system usage and categorization statistics';
+COMMENT ON VIEW user_memory_stats IS 'User memory system usage statistics from memories schema (sessions, turns, embeddings)';
 
 -- ===========================
 -- 07_automation.sql
@@ -2868,15 +2667,8 @@ SELECT cron.schedule(
     $$
 );
 
--- Clean up old session memories (older than 30 days)
-SELECT cron.schedule(
-    'cleanup-old-session-memories',
-    '0 3 * * *', -- Run at 3 AM daily
-    $$
-    DELETE FROM session_memories 
-    WHERE created_at < NOW() - INTERVAL '30 days';
-    $$
-);
+-- Memory cleanup handled by orchestrator adapters and job handlers
+-- Removed legacy session_memories cleanup cron job
 
 -- Archive completed trips older than 1 year
 SELECT cron.schedule(
@@ -2903,7 +2695,9 @@ SELECT cron.schedule(
     ANALYZE flights;
     ANALYZE accommodations;
     ANALYZE chat_messages;
-    ANALYZE memories;
+    ANALYZE memories.sessions;
+    ANALYZE memories.turns;
+    ANALYZE memories.turn_embeddings;
     ANALYZE search_destinations;
     ANALYZE search_activities;
     ANALYZE search_flights;
@@ -2920,7 +2714,9 @@ SELECT cron.schedule(
     VACUUM ANALYZE flights;
     VACUUM ANALYZE accommodations;
     VACUUM ANALYZE chat_messages;
-    VACUUM ANALYZE memories;
+    VACUUM ANALYZE memories.sessions;
+    VACUUM ANALYZE memories.turns;
+    VACUUM ANALYZE memories.turn_embeddings;
     $$
 );
 
@@ -3041,23 +2837,8 @@ SELECT cron.schedule(
     $$
 );
 
--- Generate memory embeddings for new content
-SELECT cron.schedule(
-    'generate-memory-embeddings',
-    '*/30 * * * *', -- Run every 30 minutes
-    $$
-    -- This would typically call an Edge Function to generate embeddings
-    -- For now, we'll mark memories that need embedding
-    UPDATE memories 
-    SET metadata = jsonb_set(
-        COALESCE(metadata, '{}'),
-        '{needs_embedding}',
-        'true'
-    )
-    WHERE embedding IS NULL
-    AND created_at > NOW() - INTERVAL '1 hour';
-    $$
-);
+-- Memory embedding generation handled by orchestrator adapters and job handlers
+-- Removed legacy memory embeddings cron job
 
 -- ===========================
 -- HEALTH CHECK JOBS
