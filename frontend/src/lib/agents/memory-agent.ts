@@ -10,13 +10,15 @@ import "server-only";
 
 import type { LanguageModel } from "ai";
 import { streamText } from "ai";
+import type { z } from "zod";
 
-import { runWithGuardrails } from "@/lib/agents/runtime";
+import { createAiTool } from "@/lib/ai/tool-factory";
 import { buildRateLimit } from "@/lib/ratelimit/config";
 import type { MemoryUpdateRequest } from "@/lib/schemas/agents";
 import type { ChatMessage } from "@/lib/tokens/budget";
 import { clampMaxTokens } from "@/lib/tokens/budget";
 import { toolRegistry } from "@/lib/tools";
+import { TOOL_ERROR_CODES } from "@/lib/tools/errors";
 import { addConversationMemoryInputSchema } from "@/lib/tools/memory";
 
 // Note: no wrapped tools are exposed here; we execute persistence directly with guardrails.
@@ -42,13 +44,51 @@ export function runMemoryAgent(
   return persistAndSummarize(deps, input);
 }
 
+/** Result of a memory persistence operation. */
 type PersistOutcome = {
   successes: Array<{ id: string; createdAt: string; category: string }>;
   failures: Array<{ index: number; error: string }>;
 };
 
+/** Type alias for the input schema of the addConversationMemory tool. */
+type AddConversationMemoryInput = z.infer<typeof addConversationMemoryInputSchema>;
+
+/** Valid memory category values accepted by the schema. */
+const MEMORY_CATEGORY_VALUES: readonly AddConversationMemoryInput["category"][] = [
+  "user_preference",
+  "trip_history",
+  "search_pattern",
+  "conversation_context",
+  "other",
+] as const;
+
 /**
- * Persist all memory records deterministically, then stream a short summary.
+ * Normalizes a memory category string to a valid schema value.
+ *
+ * Validates the category against allowed values and defaults to "other"
+ * if the provided category is invalid or undefined.
+ *
+ * @param category - Raw category string from user input.
+ * @returns Validated category value or "other" as fallback.
+ */
+function normalizeMemoryCategory(
+  category?: string
+): AddConversationMemoryInput["category"] {
+  if (category && (MEMORY_CATEGORY_VALUES as readonly string[]).includes(category)) {
+    return category as AddConversationMemoryInput["category"];
+  }
+  return "other";
+}
+
+/**
+ * Persists memory records and streams a summary of the operation.
+ *
+ * Executes persistence operations in parallel, aggregates statistics by category,
+ * and streams model-generated summary. Uses token budgeting for concise summaries.
+ *
+ * @param deps - Language model and request-scoped dependencies.
+ * @param input - Validated memory update request with records to persist.
+ * @returns AI SDK stream result with memory operation summary.
  */
 async function persistAndSummarize(
   deps: { model: LanguageModel; modelId: string; identifier: string },
@@ -93,8 +133,15 @@ async function persistAndSummarize(
 }
 
 /**
- * Persist memory records with guardrails and return per-record outcomes.
- * Exported for unit testing.
+ * Persists multiple memory records with guardrails applied.
+ *
+ * Creates guardrailed tools for each record, executes operations in parallel,
+ * collects outcomes. Validates limits, normalizes categories, handles errors gracefully.
+ *
+ * @param identifier - User or session identifier for rate limiting.
+ * @param input - Validated memory update request with records to persist.
+ * @returns Promise resolving to operation outcomes (successes and failures).
+ * @throws {Error} When record count exceeds maximum allowed (25).
  */
 export async function persistMemoryRecords(
   identifier: string,
@@ -108,37 +155,68 @@ export async function persistMemoryRecords(
   const failures: PersistOutcome["failures"] = [];
   const successes: PersistOutcome["successes"] = [];
 
-  const memoryTool = toolRegistry.addConversationMemory as unknown as {
-    execute: (params: unknown) => Promise<unknown>;
+  type ToolBinding = {
+    description?: string;
+    execute?: (params: unknown, callOptions?: unknown) => Promise<unknown> | unknown;
   };
+  const memoryTool = toolRegistry.addConversationMemory as ToolBinding | undefined;
+  if (!memoryTool?.execute) {
+    throw new Error("Tool addConversationMemory missing execute binding");
+  }
 
-  // Guardrailed executor similar to buildMemoryTools but direct
-  const executeAddMemory = async (params: unknown) => {
-    const { result } = await runWithGuardrails(
-      {
-        cache: { hashInput: true, key: "agent:memory:add", ttlSeconds: 60 * 5 },
-        parametersSchema: addConversationMemoryInputSchema,
-        rateLimit: buildRateLimit("memoryUpdate", identifier),
-        tool: "addConversationMemory",
+  const rateLimit = buildRateLimit("memoryUpdate", identifier);
+  const guardrailedAddMemory = createAiTool({
+    description: memoryTool.description ?? "Add conversation memory",
+    execute: async (params, callOptions) => {
+      if (typeof memoryTool.execute !== "function") {
+        throw new Error("Tool addConversationMemory missing execute binding");
+      }
+      return (await memoryTool.execute(params, callOptions)) as {
+        createdAt: string;
+        id: string;
+      };
+    },
+    guardrails: {
+      cache: {
+        hashInput: true,
+        key: () => "agent:memory:add",
+        namespace: "",
+        ttlSeconds: 60 * 5,
+      },
+      rateLimit: {
+        errorCode: TOOL_ERROR_CODES.toolRateLimited,
+        identifier: () => rateLimit.identifier,
+        limit: rateLimit.limit,
+        prefix: "ratelimit:agent:memory:add",
+        window: rateLimit.window,
+      },
+      telemetry: {
         workflow: "memoryUpdate",
       },
-      params,
-      async (validated) => memoryTool.execute(validated)
-    );
-    return result as { id: string; createdAt: string };
-  };
+    },
+    inputSchema: addConversationMemoryInputSchema,
+    name: "addConversationMemory",
+  });
+
+  const guardrailedExecute = guardrailedAddMemory.execute;
+  if (!guardrailedExecute) {
+    throw new Error("Guarded addConversationMemory tool missing execute binding");
+  }
 
   await Promise.all(
     records.map(async (r, index) => {
       try {
-        const payload = {
-          // default category enforcement handled by schema
-          category: r.category,
+        const normalizedCategory = normalizeMemoryCategory(r.category);
+        const payload: AddConversationMemoryInput = {
+          category: normalizedCategory,
           content: r.content,
         };
-        const res = await executeAddMemory(payload);
+        const res = (await guardrailedExecute(payload, {
+          messages: [],
+          toolCallId: `memory-add-${index}`,
+        })) as { createdAt: string; id: string };
         successes.push({
-          category: r.category ?? "other",
+          category: normalizedCategory,
           createdAt: res.createdAt,
           id: res.id,
         });

@@ -1,19 +1,24 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+
 import { persistMemoryRecords } from "@/lib/agents/memory-agent";
 import type { MemoryUpdateRequest } from "@/lib/schemas/agents";
 
-vi.mock("@/lib/cache/upstash", () => ({
-  getCachedJson: vi.fn().mockResolvedValue(null),
-  setCachedJson: vi.fn().mockResolvedValue(undefined),
-}));
+const createAiToolMock = vi.hoisted(() =>
+  vi
+    .fn()
+    .mockImplementation(
+      ({ execute }: { execute: (...args: unknown[]) => Promise<unknown> }) => ({
+        description: "mock tool",
+        execute,
+        inputSchema: z.object({}),
+        name: "mock",
+      })
+    )
+);
 
-vi.mock("@/lib/telemetry/agents", () => ({
-  recordAgentToolEvent: vi.fn().mockResolvedValue(undefined),
-}));
-
-vi.mock("@/lib/redis", () => ({
-  getRedis: () => undefined,
+vi.mock("@/lib/ai/tool-factory", () => ({
+  createAiTool: createAiToolMock,
 }));
 
 // Hoist spies so they are available to vi.mock factory
@@ -44,6 +49,11 @@ vi.mock("@/lib/tools", () => ({
 }));
 
 describe("persistMemoryRecords", () => {
+  beforeEach(() => {
+    createAiToolMock.mockClear();
+    hoisted.executeSpy.mockClear();
+  });
+
   it("writes one call per record with correct payloads", async () => {
     const req: MemoryUpdateRequest = {
       records: [
@@ -60,11 +70,13 @@ describe("persistMemoryRecords", () => {
       expect.objectContaining({
         category: "user_preference",
         content: "I prefer window seats",
-      })
+      }),
+      expect.objectContaining({ toolCallId: "memory-add-0" })
     );
     expect(hoisted.executeSpy).toHaveBeenNthCalledWith(
       2,
-      expect.objectContaining({ content: "Allergies: peanuts" })
+      expect.objectContaining({ content: "Allergies: peanuts" }),
+      expect.objectContaining({ toolCallId: "memory-add-1" })
     );
   });
 
