@@ -216,7 +216,7 @@ export class GoogleCalendarProvider implements CalendarProvider {
   private apiKey: string;
   private calendarId: string;
 
-  private assertServer() {
+  assertServer() {
     if (typeof window !== "undefined") {
       throw new Error("GoogleCalendarProvider can only be used on the server.");
     }

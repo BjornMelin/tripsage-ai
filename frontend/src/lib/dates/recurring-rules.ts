@@ -61,7 +61,7 @@ export class RecurringDateGenerator {
     return occurrences;
   }
 
-  private static generateWeeklyWithDays(
+  static generateWeeklyWithDays(
     startDate: Date,
     rule: RecurringRule,
     limit: number
@@ -106,11 +106,7 @@ export class RecurringDateGenerator {
    * @param rule - The recurrence rule to match against.
    * @returns True if the date matches the rule, false otherwise.
    */
-  private static matchesRule(
-    date: Date,
-    _startDate: Date,
-    rule: RecurringRule
-  ): boolean {
+  static matchesRule(date: Date, _startDate: Date, rule: RecurringRule): boolean {
     if (rule.frequency === "weekly" && rule.daysOfWeek) {
       return rule.daysOfWeek.includes(date.getDay());
     }
@@ -143,7 +139,7 @@ export class RecurringDateGenerator {
    * @param rule - The recurrence rule to apply.
    * @returns The next date that should be checked.
    */
-  private static nextOccurrence(date: Date, rule: RecurringRule): Date {
+  static nextOccurrence(date: Date, rule: RecurringRule): Date {
     switch (rule.frequency) {
       case "daily":
         return DateUtils.add(date, rule.interval, "days");

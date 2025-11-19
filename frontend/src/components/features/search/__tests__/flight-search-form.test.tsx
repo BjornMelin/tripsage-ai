@@ -85,4 +85,25 @@ describe("FlightSearchForm", () => {
       tripType: "round-trip",
     });
   });
+
+  it("keeps placeholders intact when autocomplete-like selections occur", () => {
+    render(<FlightSearchForm onSearch={MockOnSearch} />);
+
+    const originInput = screen.getByPlaceholderText(
+      "Departure city or airport"
+    ) as HTMLInputElement;
+    const destinationInput = screen.getByPlaceholderText(
+      "Destination city or airport"
+    ) as HTMLInputElement;
+
+    fireEvent.change(originInput, {
+      target: { value: "San Francisco International (SFO)" },
+    });
+    fireEvent.change(destinationInput, {
+      target: { value: "Heathrow (LHR)" },
+    });
+
+    expect(originInput.placeholder).toBe("Departure city or airport");
+    expect(destinationInput.placeholder).toBe("Destination city or airport");
+  });
 });

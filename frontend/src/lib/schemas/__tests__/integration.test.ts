@@ -6,21 +6,18 @@ import { primitiveSchemas } from "../registry";
 
 describe("schema integration", () => {
   describe("API and form schema consistency", () => {
-    it.concurrent(
-      "should validate login data consistently between API and form schemas",
-      () => {
-        const loginData = {
-          email: "test@example.com",
-          password: "password123",
-        };
+    it.concurrent("should validate login data consistently between API and form schemas", () => {
+      const loginData = {
+        email: "test@example.com",
+        password: "password123",
+      };
 
-        const apiResult = loginRequestSchema.safeParse(loginData);
-        const formResult = loginFormSchema.safeParse(loginData);
+      const apiResult = loginRequestSchema.safeParse(loginData);
+      const formResult = loginFormSchema.safeParse(loginData);
 
-        expect(apiResult.success).toBe(true);
-        expect(formResult.success).toBe(true);
-      }
-    );
+      expect(apiResult.success).toBe(true);
+      expect(formResult.success).toBe(true);
+    });
   });
 
   describe("registry primitive usage", () => {
@@ -54,15 +51,12 @@ describe("schema integration", () => {
   });
 
   describe("error message consistency", () => {
-    it.concurrent(
-      "should provide consistent error messages using unified error option",
-      () => {
-        const result = primitiveSchemas.email.safeParse("invalid-email");
-        expect(result.success).toBe(false);
-        if (!result.success) {
-          expect(result.error.issues[0]?.message).toBeDefined();
-        }
+    it.concurrent("should provide consistent error messages using unified error option", () => {
+      const result = primitiveSchemas.email.safeParse("invalid-email");
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0]?.message).toBeDefined();
       }
-    );
+    });
   });
 });

@@ -188,9 +188,9 @@ export const createMockSupabaseAuthClient = (): SupabaseAuthMock => {
  */
 class MockQueryBuilder<T, S = T> {
   /** Mock data returned by single() and maybeSingle() methods. */
-  private singleData: S;
+  singleData: S;
   /** Mock error returned by query methods. */
-  private error: unknown;
+  error: unknown;
 
   /** Mock select method - chains to allow further filtering. */
   readonly select = vi.fn(() => this);
@@ -229,7 +229,7 @@ class MockQueryBuilder<T, S = T> {
    */
   constructor(
     initialData: T,
-    private readonly toSingle: (data: T) => S,
+    readonly toSingle: (data: T) => S,
     error: unknown = null
   ) {
     this.singleData = toSingle(initialData);

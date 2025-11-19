@@ -6,7 +6,6 @@
  * withApiGuards. Per ADR-0032.
  */
 
-import type { GuardrailRateLimit } from "@/lib/agents/runtime";
 import type { AgentWorkflow } from "@/lib/schemas/agents";
 
 /**
@@ -33,7 +32,16 @@ const TOOL_RATE_LIMIT_CONFIG: Record<AgentWorkflow, { limit: number }> = {
 };
 
 /**
- * Builds a GuardrailRateLimit configuration for a specific workflow.
+ * Workflow-specific rate limit metadata shared across guardrails.
+ */
+export type WorkflowRateLimit = {
+  identifier: string;
+  limit: number;
+  window: typeof RATE_LIMIT_WINDOW;
+};
+
+/**
+ * Builds a workflow-specific rate limit configuration.
  *
  * Returns a rate limit configuration object with the workflow-specific limit
  * and the default window. Uses the AgentWorkflow enum for type safety.
@@ -46,7 +54,7 @@ const TOOL_RATE_LIMIT_CONFIG: Record<AgentWorkflow, { limit: number }> = {
 export function buildRateLimit(
   workflow: AgentWorkflow,
   identifier: string
-): GuardrailRateLimit {
+): WorkflowRateLimit {
   const config = TOOL_RATE_LIMIT_CONFIG[workflow];
   if (!config) {
     throw new Error(`Rate limit configuration not found for workflow: ${workflow}`);
