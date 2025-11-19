@@ -319,4 +319,33 @@ describe("createAiTool", () => {
     await tool.execute?.({ payload: "demo" }, { messages: [], toolCallId: "call-3" });
     expect(ratelimitLimit).toHaveBeenCalledWith("unknown");
   });
+
+  test("rejects invalid x-forwarded-for IP addresses to prevent spoofing", async () => {
+    setMockHeaders({
+      "x-forwarded-for": "not-an-ip-address, 198.51.100.25",
+    });
+    ratelimitLimit.mockResolvedValue({
+      limit: 2,
+      remaining: 1,
+      success: true,
+    });
+
+    const tool = createAiTool({
+      description: "rate limited tool with invalid IP",
+      execute: async () => ({ ok: true }),
+      guardrails: {
+        rateLimit: {
+          errorCode: TOOL_ERROR_CODES.toolRateLimited,
+          limit: 2,
+          window: "1 m",
+        },
+      },
+      inputSchema: z.object({ payload: z.string() }),
+      name: "headerToolInvalidIp",
+    });
+
+    // Should fall back to "unknown" when IP is invalid
+    await tool.execute?.({ payload: "demo" }, { messages: [], toolCallId: "call-4" });
+    expect(ratelimitLimit).toHaveBeenCalledWith("unknown");
+  });
 });

@@ -145,6 +145,10 @@ export class ExpediaClient {
   /**
    * Make authenticated request to EPS API.
    *
+   * SECURITY NOTE: If adding logging/telemetry to this method, ensure the
+   * Authorization and X-API-Key headers are redacted to prevent credential
+   * exposure. The headers object contains sensitive authentication data.
+   *
    * @param endpoint - API endpoint path (relative to baseUrl)
    * @param options - Fetch options (method, body, etc.)
    * @returns Parsed JSON response
