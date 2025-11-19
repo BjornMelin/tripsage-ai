@@ -45,7 +45,7 @@ const expediaState = vi.hoisted(() => ({
 
 const secureUuidMock = vi.hoisted(() => vi.fn(() => "uuid-123"));
 
-vi.mock("@/lib/travel-api/expedia-client", () => {
+vi.mock("@domain/expedia/client", () => {
   class ExpediaApiError extends Error {
     code: string;
     statusCode?: number;

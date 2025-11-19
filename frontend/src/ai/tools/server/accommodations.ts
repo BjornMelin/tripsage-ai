@@ -16,6 +16,11 @@ import {
   type ToolErrorCode,
 } from "@ai/tools/server/errors";
 import {
+  ExpediaApiError,
+  type ExpediaRequestContext,
+  getExpediaClient,
+} from "@domain/expedia/client";
+import {
   ACCOMMODATION_BOOKING_INPUT_SCHEMA,
   ACCOMMODATION_BOOKING_OUTPUT_SCHEMA,
   ACCOMMODATION_CHECK_AVAILABILITY_INPUT_SCHEMA,
@@ -33,6 +38,14 @@ import {
   type AccommodationSearchParams,
   type AccommodationSearchResult,
 } from "@schemas/accommodations";
+import type {
+  EpsCheckAvailabilityResponse,
+  EpsCreateBookingRequest,
+  RapidAvailabilityResponse,
+  RapidPropertyContent,
+  RapidRate,
+} from "@schemas/expedia";
+import { extractInclusiveTotal } from "@schemas/expedia";
 import { headers } from "next/headers";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 import {
@@ -44,19 +57,6 @@ import { processBookingPayment } from "@/lib/payments/booking-payment";
 import { secureUuid } from "@/lib/security/random";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createServerLogger } from "@/lib/telemetry/logger";
-import {
-  ExpediaApiError,
-  type ExpediaRequestContext,
-  getExpediaClient,
-} from "@/lib/travel-api/expedia-client";
-import type {
-  EpsCheckAvailabilityResponse,
-  EpsCreateBookingRequest,
-  RapidAvailabilityResponse,
-  RapidPropertyContent,
-  RapidRate,
-} from "@/lib/travel-api/expedia-types";
-import { extractInclusiveTotal } from "@/lib/travel-api/expedia-types";
 import { requireApproval } from "./approvals";
 import { ACCOM_SEARCH_CACHE_TTL_SECONDS } from "./constants";
 

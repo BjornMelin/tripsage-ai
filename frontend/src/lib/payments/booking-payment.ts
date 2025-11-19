@@ -7,10 +7,10 @@
  * 3. Refund on booking failure
  */
 
+import { getExpediaClient } from "@domain/expedia/client";
+import type { EpsCreateBookingRequest } from "@schemas/expedia";
 import { secureUuid } from "@/lib/security/random";
 import { createServerLogger } from "@/lib/telemetry/logger";
-import { getExpediaClient } from "@/lib/travel-api/expedia-client";
-import type { EpsCreateBookingRequest } from "@/lib/travel-api/expedia-types";
 import { createPaymentIntent, getPaymentIntent, refundPayment } from "./stripe-client";
 
 const logger = createServerLogger("booking-payment");
