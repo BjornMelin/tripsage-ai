@@ -152,9 +152,7 @@ export async function resolveProvider(
     if (provider === "anthropic") {
       const a = createAnthropic({ apiKey });
       // Fire-and-forget: update last used timestamp (ignore errors)
-      touchUserApiKey(userId, provider).catch(() => {
-        // Ignore errors for fire-and-forget operation
-      });
+      touchUserApiKey(userId, provider).catch(() => undefined);
       return await withTelemetrySpan(
         "providers.resolve",
         { attributes: { modelId, path: "user-provider", provider } },
@@ -168,9 +166,7 @@ export async function resolveProvider(
     if (provider === "xai") {
       const client = createXai({ apiKey });
       // Fire-and-forget: update last used timestamp (ignore errors)
-      touchUserApiKey(userId, provider).catch(() => {
-        // Ignore errors for fire-and-forget operation
-      });
+      touchUserApiKey(userId, provider).catch(() => undefined);
       return await withTelemetrySpan(
         "providers.resolve",
         { attributes: { modelId, path: "user-provider", provider } },

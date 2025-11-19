@@ -28,9 +28,9 @@ describe("accommodations helper utilities", () => {
       number: "1234567",
     });
     expect(normalizePhoneForRapid("442071234567")).toEqual({
-      areaCode: "071",
-      countryCode: "442",
-      number: "234567",
+      areaCode: "207",
+      countryCode: "44",
+      number: "1234567",
     });
     expect(normalizePhoneForRapid(undefined)).toEqual({
       countryCode: "1",

@@ -46,6 +46,7 @@ import type {
   RapidRate,
 } from "@schemas/expedia";
 import { extractInclusiveTotal } from "@schemas/expedia";
+import { parsePhoneNumberFromString } from "libphonenumber-js/min";
 import { headers } from "next/headers";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 import {
@@ -657,13 +658,33 @@ export function splitGuestName(name: string): {
 }
 
 export function normalizePhoneForRapid(phone?: string) {
-  if (!phone) {
+  if (!phone?.trim()) {
     return { countryCode: "1", number: "0000000" };
   }
-  const digits = phone.replace(/[^0-9]/g, "");
-  if (digits.length <= 7) {
-    return { countryCode: "1", number: digits || "0000000" };
+
+  const parsed = parsePhoneNumberFromString(phone);
+  if (parsed?.isValid()) {
+    const nationalNumber = parsed.nationalNumber;
+    const areaCode =
+      nationalNumber.length > 7 ? nationalNumber.slice(0, -7) : undefined;
+    const number = nationalNumber.slice(-7).padStart(7, "0");
+
+    return {
+      areaCode,
+      countryCode: String(parsed.countryCallingCode),
+      number,
+    };
   }
+
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length === 0) {
+    return { countryCode: "1", number: "0000000" };
+  }
+
+  if (digits.length <= 7) {
+    return { countryCode: "1", number: digits.padStart(7, "0") };
+  }
+
   if (digits.length <= 10) {
     return {
       areaCode: digits.slice(0, digits.length - 7),
@@ -671,6 +692,7 @@ export function normalizePhoneForRapid(phone?: string) {
       number: digits.slice(-7),
     };
   }
+
   return {
     areaCode: digits.slice(digits.length - 10, digits.length - 7),
     countryCode: digits.slice(0, digits.length - 10),
