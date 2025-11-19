@@ -16,7 +16,6 @@ export type {
   AccommodationSearchParams,
   AccommodationSearchResult,
 } from "../schemas/accommodations";
-
 // agent-status.ts
 export type {
   Agent,
@@ -39,7 +38,6 @@ export type {
   UpdateWorkflowRequest,
   WorkflowConnection,
 } from "../schemas/agent-status";
-
 // api.ts
 export type {
   ApiError,
@@ -74,7 +72,6 @@ export type {
   WebSocketMessage,
   WebSocketSubscription,
 } from "../schemas/api";
-
 // auth.ts
 export type {
   ChangePasswordFormData,
@@ -83,7 +80,6 @@ export type {
   RegisterFormData,
   ResetPasswordFormData,
 } from "../schemas/auth";
-
 // budget.ts
 export type {
   Budget,
@@ -92,13 +88,11 @@ export type {
   Expense,
   ExpenseCategory,
 } from "../schemas/budget";
-
 // calendar.ts
 export type {
   CalendarEvent,
   EventDateTime,
 } from "../schemas/calendar";
-
 // chat.ts
 export type {
   Attachment,
@@ -119,7 +113,6 @@ export type {
   ToolCallStatus,
   ToolResult,
 } from "../schemas/chat";
-
 // components.ts
 export type {
   BudgetTrackerProps,
@@ -145,7 +138,6 @@ export type {
   TripCardProps,
   TypingIndicatorProps,
 } from "../schemas/components";
-
 // configuration.ts
 export type {
   AgentConfig as AppAgentConfig,
@@ -155,6 +147,21 @@ export type {
   ModelName,
   VersionId,
 } from "../schemas/configuration";
+// Expedia Rapid
+export type {
+  EpsCheckAvailabilityRequest,
+  EpsCheckAvailabilityResponse,
+  EpsCreateBookingRequest,
+  EpsCreateBookingResponse,
+  EpsPropertyDetailsRequest,
+  EpsPropertyDetailsResponse,
+  EpsSearchRequest,
+  EpsSearchResponse,
+  RapidAvailabilityResponse,
+  RapidPriceCheckResponse,
+  RapidPropertyContent,
+  RapidRate,
+} from "../schemas/expedia";
 
 // contact.ts
 // (No types exported from contact.ts yet, only schemas)

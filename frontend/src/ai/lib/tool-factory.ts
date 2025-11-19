@@ -187,10 +187,7 @@ function extractUserContextFromMessages(
 }
 
 /**
- * Creates an AI SDK tool with optional guardrails for caching, rate limiting, and telemetry.
- *
- * Wraps tools with Redis caching, Upstash rate limiting, and OpenTelemetry spans.
- * Compatible with AI SDK v6 streaming and non-streaming contexts.
+ * Creates an AI SDK tool with optional guardrails.
  *
  * @template InputValue - Input schema type for the tool.
  * @template OutputValue - Output type returned by the tool.

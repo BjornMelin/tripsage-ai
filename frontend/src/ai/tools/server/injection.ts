@@ -27,7 +27,6 @@ type ToolWithExecute = {
  * @param sessionId Optional session identifier to inject.
  * @returns Record of wrapped tools with injected context.
  */
-// biome-ignore lint/style/useNamingConvention: Generic type alias is conventional.
 export function wrapToolsWithUserId(
   tools: Record<string, unknown>,
   userId: string,

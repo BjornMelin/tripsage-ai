@@ -18,10 +18,7 @@ import { createEvent, queryFreeBusy } from "@/lib/calendar/google";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 
 /**
- * Tool for creating calendar events in Google Calendar.
- *
- * Accepts event details and calendar ID, creates the event via Google Calendar API,
- * returns event metadata including confirmation link and timing.
+ * Creates calendar events in Google Calendar.
  */
 export const createCalendarEvent = createAiTool({
   description: "Create a calendar event in the user's Google Calendar.",
@@ -56,10 +53,7 @@ export const createCalendarEvent = createAiTool({
 });
 
 /**
- * Tool for checking calendar availability and free/busy status.
- *
- * Queries Google Calendar free/busy API for specified calendar IDs and time range,
- * returns busy periods and availability windows for each calendar.
+ * Checks calendar availability and free/busy status.
  */
 export const getAvailability = createAiTool({
   description: "Check calendar availability (free/busy) for specified calendars.",
@@ -94,10 +88,7 @@ export const getAvailability = createAiTool({
 });
 
 /**
- * Tool for exporting calendar events to ICS (iCalendar) format.
- *
- * Converts event list to ICS format via internal API endpoint, returns calendar content
- * and metadata for importing into calendar applications.
+ * Exports calendar events to ICS format.
  */
 export const exportItineraryToIcs = createAiTool({
   description: "Export a list of calendar events to ICS (iCalendar) format.",
