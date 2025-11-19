@@ -14,7 +14,7 @@ import {
   searchUserMemoriesInputSchema,
 } from "@schemas/memory";
 import { handleMemoryIntent } from "@/lib/memory/orchestrator";
-import type { Database } from "@/lib/supabase/database.types";
+import type { Database, Json } from "@/lib/supabase/database.types";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 /**
@@ -68,8 +68,7 @@ export const addConversationMemory = createAiTool({
 
     const turnInsert: Database["memories"]["Tables"]["turns"]["Insert"] = {
       attachments: [],
-      // biome-ignore lint/suspicious/noExplicitAny: Database schema type
-      content: { text: content } as any,
+      content: { text: content } as Json,
       // biome-ignore lint/style/useNamingConvention: Database field name
       pii_scrubbed: false,
       role: "user",

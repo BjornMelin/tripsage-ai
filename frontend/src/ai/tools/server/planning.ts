@@ -16,6 +16,7 @@ import {
 } from "@/ai/tools/schemas/planning";
 import { getRedis } from "@/lib/redis";
 import { nowIso, secureUuid } from "@/lib/security/random";
+import type { Database, Json } from "@/lib/supabase/database.types";
 import { createServerSupabase } from "@/lib/supabase/server";
 import {
   RATE_CREATE_PER_DAY,
@@ -25,7 +26,7 @@ import {
 } from "./constants";
 import { type Plan, planSchema } from "./planning.schema";
 
-const UUI_DV4 = z.uuid();
+const UUID_V4 = z.uuid();
 
 /** Generate Redis key for travel plan. */
 function redisKeyForPlan(planId: string): string {
@@ -80,8 +81,7 @@ async function recordPlanMemory(opts: {
         .from("sessions")
         .insert({
           id: sessionId,
-          // biome-ignore lint/suspicious/noExplicitAny: Database schema type
-          metadata: opts.metadata as any,
+          metadata: (opts.metadata ?? null) as Json | null,
           title: "Travel Plan",
           // biome-ignore lint/style/useNamingConvention: Database field name
           user_id: opts.userId,
@@ -92,21 +92,20 @@ async function recordPlanMemory(opts: {
       .schema("memories")
       .from("turns")
       .insert({
-        // biome-ignore lint/suspicious/noExplicitAny: Database schema type
-        attachments: [] as any,
-        // biome-ignore lint/suspicious/noExplicitAny: Database schema type
-        content: { text: opts.content } as any,
+        attachments:
+          [] as Database["memories"]["Tables"]["turns"]["Insert"]["attachments"],
+        content: { text: opts.content } as Json,
         // biome-ignore lint/style/useNamingConvention: Database field name
         pii_scrubbed: false,
         role: "user",
         // biome-ignore lint/style/useNamingConvention: Database field names
         session_id: sessionId,
-        // biome-ignore lint/suspicious/noExplicitAny: Database schema type
         // biome-ignore lint/style/useNamingConvention: Database field name
-        tool_calls: [] as any,
-        // biome-ignore lint/suspicious/noExplicitAny: Database schema type
+        tool_calls:
+          [] as Database["memories"]["Tables"]["turns"]["Insert"]["tool_calls"],
         // biome-ignore lint/style/useNamingConvention: Database field name
-        tool_results: [] as any,
+        tool_results:
+          [] as Database["memories"]["Tables"]["turns"]["Insert"]["tool_results"],
         // biome-ignore lint/style/useNamingConvention: Database field name
         user_id: opts.userId,
       });
@@ -443,6 +442,6 @@ export const deleteTravelPlan = createAiTool({
     await redis.del(key);
     return { message: "deleted", planId, success: true } as const;
   },
-  inputSchema: z.object({ planId: UUI_DV4, userId: z.string().optional() }),
+  inputSchema: z.object({ planId: UUID_V4, userId: z.string().optional() }),
   name: "deleteTravelPlan",
 });

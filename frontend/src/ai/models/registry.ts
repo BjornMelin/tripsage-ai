@@ -67,6 +67,19 @@ const DEFAULT_MODEL_MAPPER: ModelMapper = (
   return modelHint;
 };
 
+function toLanguageModel(
+  model: unknown,
+  provider: ProviderId,
+  modelId: string
+): import("ai").LanguageModel {
+  if (!model || (typeof model !== "function" && typeof model !== "object")) {
+    throw new Error(
+      `Resolved model for ${provider}:${modelId} is not a language model`
+    );
+  }
+  return model as import("ai").LanguageModel;
+}
+
 /**
  * Resolve user's preferred provider and return a ready AI SDK model.
  *
@@ -102,7 +115,7 @@ export async function resolveProvider(
         },
       },
       async () => ({
-        model: client(modelId) as unknown as import("ai").LanguageModel,
+        model: toLanguageModel(client(modelId), "openai", modelId),
         modelId,
         provider: "openai",
       })
@@ -125,7 +138,7 @@ export async function resolveProvider(
         "providers.resolve",
         { attributes: { modelId, path: "user-provider", provider } },
         async () => ({
-          model: openai(modelId) as unknown as import("ai").LanguageModel,
+          model: toLanguageModel(openai(modelId), provider, modelId),
           modelId,
           provider,
         })
@@ -143,7 +156,7 @@ export async function resolveProvider(
         "providers.resolve",
         { attributes: { modelId, path: "user-provider", provider } },
         async () => ({
-          model: openrouter(modelId) as unknown as import("ai").LanguageModel,
+          model: toLanguageModel(openrouter(modelId), provider, modelId),
           modelId,
           provider,
         })
@@ -157,7 +170,7 @@ export async function resolveProvider(
         "providers.resolve",
         { attributes: { modelId, path: "user-provider", provider } },
         async () => ({
-          model: a(modelId) as unknown as import("ai").LanguageModel,
+          model: toLanguageModel(a(modelId), provider, modelId),
           modelId,
           provider,
         })
@@ -171,7 +184,7 @@ export async function resolveProvider(
         "providers.resolve",
         { attributes: { modelId, path: "user-provider", provider } },
         async () => ({
-          model: client(modelId) as unknown as import("ai").LanguageModel,
+          model: toLanguageModel(client(modelId), provider, modelId),
           modelId,
           provider,
         })
@@ -254,7 +267,7 @@ export async function resolveProvider(
         },
       },
       async () => ({
-        model: gateway(modelId) as unknown as import("ai").LanguageModel,
+        model: toLanguageModel(gateway(modelId), "openai", modelId),
         modelId,
         provider: "openai",
       })

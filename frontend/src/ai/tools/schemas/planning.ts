@@ -7,7 +7,7 @@
 
 import { z } from "zod";
 
-const UUI_DV4 = z.uuid().describe("Unique identifier for travel plans");
+const UUID_V4 = z.uuid().describe("Unique identifier for travel plans");
 const ISO_DATE = z
   .string()
   .date({ error: "must be YYYY-MM-DD" })
@@ -73,13 +73,13 @@ export const saveTravelPlanInputSchema = z.strictObject({
     .default(false)
     .nullable()
     .describe("Whether to finalize and lock the plan"),
-  planId: UUI_DV4.describe("Unique identifier of the plan to save"),
+  planId: UUID_V4.describe("Unique identifier of the plan to save"),
   userId: z.string().min(1).nullable().describe("User identifier for authorization"),
 });
 
 /** Schema for updateTravelPlan tool input. */
 export const updateTravelPlanInputSchema = z.strictObject({
-  planId: UUI_DV4.describe("Unique identifier of the plan to update"),
+  planId: UUID_V4.describe("Unique identifier of the plan to update"),
   updates: z.record(z.string(), z.unknown()).describe("Fields to update in the plan"),
   userId: z.string().min(1).nullable().describe("User identifier for authorization"),
 });
