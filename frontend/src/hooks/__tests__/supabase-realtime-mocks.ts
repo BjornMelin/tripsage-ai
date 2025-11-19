@@ -147,7 +147,7 @@ export class MockRealtimeConnection {
     this.setupChannelBehavior();
   }
 
-  private setupChannelBehavior() {
+  setupChannelBehavior() {
     // Mock the 'on' method to store event handlers
     this.channel.on.mockImplementation(
       (event: string, config: unknown, handler: (...args: unknown[]) => void) => {

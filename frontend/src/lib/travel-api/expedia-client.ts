@@ -91,7 +91,14 @@ export class ExpediaClient {
     // TODO: Implement actual OAuth 2.0 flow or API key auth per EPS docs
     // For now, using simple API key header format (common pattern)
     // Real implementation should follow EPS API authentication spec
-    return `Bearer ${this.apiKey}`;
+    // return `Bearer ${this.apiKey}`;
+
+    // Placeholder: EPS typically requires Basic auth or OAuth; encode key+secret for now.
+    const credentials = Buffer.from(
+      `${this.apiKey}:${this.apiSecret}`,
+      "utf-8"
+    ).toString("base64");
+    return `Basic ${credentials}`;
   }
 
   private buildHeaders(
