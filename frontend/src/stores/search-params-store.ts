@@ -1,14 +1,14 @@
-import { z } from "zod";
-import { create } from "zustand";
-import { devtools, persist } from "zustand/middleware";
 import type {
-  AccommodationSearchParams,
   ActivitySearchParams,
   DestinationSearchParams,
   FlightSearchParams,
+  SearchAccommodationParams,
   SearchParams,
   SearchType,
-} from "@/lib/schemas/search";
+} from "@schemas/search";
+import { z } from "zod";
+import { create } from "zustand";
+import { devtools, persist } from "zustand/middleware";
 
 // Validation schemas for search parameters
 const SEARCH_TYPE_SCHEMA = z.enum([
@@ -279,7 +279,7 @@ export const useSearchParamsStore = create<SearchParamsState>()(
             case "flight":
               return flightParams as FlightSearchParams;
             case "accommodation":
-              return accommodationParams as AccommodationSearchParams;
+              return accommodationParams as SearchAccommodationParams;
             case "activity":
               return activityParams as ActivitySearchParams;
             case "destination":
@@ -306,9 +306,9 @@ export const useSearchParamsStore = create<SearchParamsState>()(
               );
             case "accommodation":
               return (
-                !!(currentParams as AccommodationSearchParams).destination &&
-                !!(currentParams as AccommodationSearchParams).checkIn &&
-                !!(currentParams as AccommodationSearchParams).checkOut
+                !!(currentParams as SearchAccommodationParams).destination &&
+                !!(currentParams as SearchAccommodationParams).checkIn &&
+                !!(currentParams as SearchAccommodationParams).checkOut
               );
             case "activity":
               return !!(currentParams as ActivitySearchParams).destination;
@@ -739,7 +739,7 @@ export const selectCurrentParamsFrom = (
     case "flight":
       return state.flightParams as FlightSearchParams;
     case "accommodation":
-      return state.accommodationParams as AccommodationSearchParams;
+      return state.accommodationParams as SearchAccommodationParams;
     case "activity":
       return state.activityParams as ActivitySearchParams;
     case "destination":

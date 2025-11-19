@@ -1,10 +1,5 @@
 /** @vitest-environment jsdom */
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, renderHook, waitFor } from "@testing-library/react";
-import React, { type ReactNode } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiError } from "@/lib/api/error-types";
 import type {
   AddConversationMemoryRequest,
   AddConversationMemoryResponse,
@@ -14,7 +9,12 @@ import type {
   SearchMemoriesResponse,
   UpdatePreferencesRequest,
   UpdatePreferencesResponse,
-} from "@/lib/schemas/memory";
+} from "@schemas/memory";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import React, { type ReactNode } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiError } from "@/lib/api/error-types";
 import {
   useAddConversationMemory,
   useMemoryContext,

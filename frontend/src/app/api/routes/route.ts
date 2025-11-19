@@ -7,13 +7,10 @@
 
 import "server-only";
 
+import { type ComputeRoutesRequest, computeRoutesRequestSchema } from "@schemas/api";
 import { type NextRequest, NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
-import {
-  type ComputeRoutesRequest,
-  computeRoutesRequestSchema,
-} from "@/lib/schemas/api";
 
 /**
  * POST /api/routes

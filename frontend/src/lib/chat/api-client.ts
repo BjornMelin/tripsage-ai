@@ -5,8 +5,8 @@
  * Handles request/response transformation and error handling.
  */
 
+import type { Message, SendMessageOptions } from "@schemas/chat";
 import type { UIMessage } from "ai";
-import type { Message, SendMessageOptions } from "@/lib/schemas/chat";
 
 /**
  * Options for sending a chat message.

@@ -6,7 +6,7 @@
  * withApiGuards. Per ADR-0032.
  */
 
-import type { AgentWorkflow } from "@/lib/schemas/agents";
+import type { AgentWorkflow } from "@schemas/agents";
 
 /**
  * Default rate limit window for all workflows.

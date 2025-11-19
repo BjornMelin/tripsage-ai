@@ -1,8 +1,8 @@
 /** @vitest-environment jsdom */
 
+import type { Destination } from "@schemas/search";
 import { fireEvent, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Destination } from "@/lib/schemas/search";
 import { render } from "@/test/test-utils";
 import { DestinationCard } from "../destination-card";
 

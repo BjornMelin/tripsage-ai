@@ -3,8 +3,6 @@
  * and currency conversion functionality using Zustand with persistence.
  */
 
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import {
   CONVERSION_RESULT_SCHEMA,
   type ConversionResult,
@@ -17,7 +15,9 @@ import {
   type CurrencyState,
   EXCHANGE_RATE_SCHEMA,
   type ExchangeRate,
-} from "@/lib/schemas/currency";
+} from "@schemas/currency";
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 // Common currencies with symbols and decimal places
 // ISO 4217 defines currency codes in UPPER_CASE (international standard)

@@ -1,9 +1,9 @@
 /** @vitest-environment jsdom */
 
+import type { Budget } from "@schemas/budget";
 import { screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { type TripSuggestion, useTripSuggestions } from "@/hooks/use-trips";
-import type { Budget } from "@/lib/schemas/budget";
 import { render } from "@/test/test-utils";
 import { TripSuggestions } from "../trip-suggestions";
 

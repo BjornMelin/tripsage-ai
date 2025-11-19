@@ -1,9 +1,9 @@
 /** @vitest-environment jsdom */
 
+import type { ActivitySearchParams } from "@schemas/search";
 import { renderHook } from "@testing-library/react";
 import React, { type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ActivitySearchParams } from "@/lib/schemas/search";
 import { AllTheProviders } from "@/test/test-utils";
 import { useActivitySearch } from "../use-activity-search";
 

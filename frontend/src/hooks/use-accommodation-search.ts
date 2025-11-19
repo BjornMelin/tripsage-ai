@@ -7,10 +7,10 @@
 
 "use client";
 
+import type { Accommodation, SearchAccommodationParams } from "@schemas/search";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { apiClient } from "@/lib/api/api-client";
-import type { Accommodation, AccommodationSearchParams } from "@/lib/schemas/search";
 import { useSearchParamsStore } from "@/stores/search-params-store";
 import { useSearchResultsStore } from "@/stores/search-results-store";
 
@@ -37,9 +37,9 @@ export function useAccommodationSearch() {
   const currentSearchIdRef = useRef<string | null>(null);
 
   const searchMutation = useMutation({
-    mutationFn: async (params: AccommodationSearchParams) => {
+    mutationFn: async (params: SearchAccommodationParams) => {
       const response = await apiClient.post<
-        AccommodationSearchParams,
+        SearchAccommodationParams,
         AccommodationSearchResponse
       >("/accommodations/search", params);
       return response;

@@ -4,6 +4,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import type { ActivitySearchParams } from "@schemas/search";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import type { ActivitySearchParams } from "@/lib/schemas/search";
 
 const ActivitySearchFormSchema = z.object({
   adults: z

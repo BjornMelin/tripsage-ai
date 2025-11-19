@@ -8,7 +8,7 @@ import {
   DEAL_SCHEMA,
   type Deal,
   type DealAlert,
-} from "@/lib/schemas/deals";
+} from "@schemas/deals";
 import { nowIso, secureId } from "@/lib/security/random";
 
 /**

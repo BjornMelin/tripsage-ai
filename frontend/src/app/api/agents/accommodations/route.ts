@@ -8,14 +8,14 @@
 
 import "server-only";
 
+import type { AccommodationSearchRequest } from "@schemas/agents";
+import { agentSchemas } from "@schemas/agents";
 import type { NextRequest } from "next/server";
 import { runAccommodationAgent } from "@/lib/agents/accommodation-agent";
 import { createErrorHandler } from "@/lib/agents/error-recovery";
 import { withApiGuards } from "@/lib/api/factory";
 import { getTrustedRateLimitIdentifier } from "@/lib/next/route-helpers";
 import { resolveProvider } from "@/lib/providers/registry";
-import type { AccommodationSearchRequest } from "@/lib/schemas/agents";
-import { agentSchemas } from "@/lib/schemas/agents";
 
 export const maxDuration = 60;
 

@@ -6,7 +6,7 @@
  * implemented in the future.
  */
 
-import type { Activity, ActivitySearchParams, SavedSearch } from "@/lib/schemas/search";
+import type { Activity, ActivitySearchParams, SavedSearch } from "@schemas/search";
 
 export type { ActivitySearchParams };
 

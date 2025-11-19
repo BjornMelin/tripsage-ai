@@ -5,14 +5,14 @@
  * schema versions for rendering appropriate UI components.
  */
 
-import type { z } from "zod";
 import {
   accommodationSearchResultSchema,
   budgetPlanResultSchema,
   destinationResearchResultSchema,
   flightSearchResultSchema,
   itineraryPlanResultSchema,
-} from "@/lib/schemas/agents";
+} from "@schemas/agents";
+import type { z } from "zod";
 
 type FlightSearchResult = z.infer<typeof flightSearchResultSchema>;
 type AccommodationSearchResult = z.infer<typeof accommodationSearchResultSchema>;

@@ -2,9 +2,9 @@
  * @fileoverview Auth core slice - login, register, user management.
  */
 
+import type { AuthUser } from "@schemas/stores";
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
-import type { AuthUser } from "@/lib/schemas/stores";
 import { getDisplayName } from "@/lib/stores/helpers";
 import { useAuthSession } from "@/stores/auth/auth-session";
 

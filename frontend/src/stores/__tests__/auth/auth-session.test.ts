@@ -1,8 +1,8 @@
 /** @vitest-environment jsdom */
 
+import type { AuthSession } from "@schemas/stores";
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { AuthSession } from "@/lib/schemas/stores";
 import { useAuthSession, useSessionTimeRemaining } from "@/stores/auth/auth-session";
 import { resetAuthState } from "@/stores/auth/reset-auth";
 import { setupReactQueryMocks } from "@/test/mocks/react-query";

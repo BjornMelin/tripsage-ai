@@ -1,8 +1,8 @@
 /** @vitest-environment jsdom */
 
+import type { Budget, BudgetCategory, Expense } from "@schemas/budget";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Budget, BudgetCategory, Expense } from "@/lib/schemas/budget";
 import { useBudgetStore } from "@/stores/budget-store";
 
 // Mock the store to avoid persistence issues in tests

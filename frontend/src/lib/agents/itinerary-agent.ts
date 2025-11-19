@@ -9,23 +9,22 @@
 
 import "server-only";
 
-import type { LanguageModel, ToolSet } from "ai";
-import { stepCountIs, streamText } from "ai";
-
-import { createAiTool } from "@/lib/ai/tool-factory";
-import { buildRateLimit } from "@/lib/ratelimit/config";
-import type { ItineraryPlanRequest } from "@/lib/schemas/agents";
-import type { ChatMessage } from "@/lib/tokens/budget";
-import { clampMaxTokens } from "@/lib/tokens/budget";
-import { toolRegistry } from "@/lib/tools";
-import { TOOL_ERROR_CODES } from "@/lib/tools/errors";
-import { lookupPoiInputSchema } from "@/lib/tools/google-places";
+import { createAiTool } from "@ai/lib/tool-factory";
+import { toolRegistry } from "@ai/tools";
+import { lookupPoiInputSchema } from "@ai/tools/schemas/google-places";
 import {
   createTravelPlanInputSchema,
   saveTravelPlanInputSchema,
-} from "@/lib/tools/planning";
-import { webSearchInputSchema } from "@/lib/tools/web-search";
-import { webSearchBatchInputSchema } from "@/lib/tools/web-search-batch";
+} from "@ai/tools/schemas/planning";
+import { webSearchInputSchema } from "@ai/tools/schemas/web-search";
+import { webSearchBatchInputSchema } from "@ai/tools/schemas/web-search-batch";
+import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
+import type { ItineraryPlanRequest } from "@schemas/agents";
+import type { LanguageModel, ToolSet } from "ai";
+import { stepCountIs, streamText } from "ai";
+import { buildRateLimit } from "@/lib/ratelimit/config";
+import type { ChatMessage } from "@/lib/tokens/budget";
+import { clampMaxTokens } from "@/lib/tokens/budget";
 import { buildItineraryPrompt } from "@/prompts/agents";
 
 /**

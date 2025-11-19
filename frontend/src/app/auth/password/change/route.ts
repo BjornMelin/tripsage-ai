@@ -8,10 +8,10 @@
 
 import "server-only";
 
+import { changePasswordFormSchema } from "@schemas/auth";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth/server";
-import { changePasswordFormSchema } from "@/lib/schemas/forms";
 
 interface ChangePasswordPayload {
   confirmPassword?: unknown;

@@ -6,14 +6,14 @@
 
 import "server-only";
 
+import type { TripsInsert, TripsRow } from "@schemas/supabase";
+import { tripsInsertSchema, tripsRowSchema } from "@schemas/supabase";
+import type { TripCreateInput } from "@schemas/trips";
+import { tripCreateSchema, tripFiltersSchema } from "@schemas/trips";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse } from "@/lib/next/route-helpers";
-import type { TripsInsert, TripsRow } from "@/lib/schemas/supabase";
-import { tripsInsertSchema, tripsRowSchema } from "@/lib/schemas/supabase";
-import type { TripCreateInput } from "@/lib/schemas/trips";
-import { tripCreateSchema, tripFiltersSchema } from "@/lib/schemas/trips";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 
 /**

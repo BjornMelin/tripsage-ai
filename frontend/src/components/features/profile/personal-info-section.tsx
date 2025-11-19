@@ -6,6 +6,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { type PersonalInfoFormData, personalInfoFormSchema } from "@schemas/profile";
 import { Camera, Upload } from "lucide-react";
 import { useId, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -30,7 +31,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
-import { type PersonalInfoFormData, personalInfoFormSchema } from "@/lib/schemas/forms";
 import { useUserProfileStore } from "@/stores/user-store";
 
 export function PersonalInfoSection() {

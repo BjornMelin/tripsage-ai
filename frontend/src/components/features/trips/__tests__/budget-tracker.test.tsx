@@ -1,8 +1,8 @@
 /** @vitest-environment jsdom */
 
+import type { Budget } from "@schemas/budget";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Budget } from "@/lib/schemas/budget";
 import { useBudgetStore } from "@/stores/budget-store";
 import { BudgetTracker } from "../budget-tracker";
 

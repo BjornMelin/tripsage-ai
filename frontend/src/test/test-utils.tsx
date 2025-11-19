@@ -6,7 +6,7 @@ import { ThemeProvider } from "@/components/providers/theme-provider";
 import {
   type ValidatedThemeProviderProps,
   validateThemeProviderProps,
-} from "@/lib/schemas/theme-provider";
+} from "@/domain/schemas/theme-provider";
 
 // Type for next-themes provider props.
 type NextThemesProviderProps = ComponentProps<typeof ThemeProvider>;

@@ -7,6 +7,8 @@
 
 import "server-only";
 
+import type { RouterRequest } from "@schemas/agents";
+import { agentSchemas } from "@schemas/agents";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import type { z } from "zod";
@@ -14,8 +16,6 @@ import { classifyUserMessage } from "@/lib/agents/router-agent";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse, parseJsonBody } from "@/lib/next/route-helpers";
 import { resolveProvider } from "@/lib/providers/registry";
-import type { RouterRequest } from "@/lib/schemas/agents";
-import { agentSchemas } from "@/lib/schemas/agents";
 
 export const maxDuration = 30;
 

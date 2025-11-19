@@ -7,8 +7,8 @@
 
 import "server-only";
 
+import { loginFormSchema } from "@schemas/auth";
 import { redirect } from "next/navigation";
-import { loginFormSchema } from "@/lib/schemas/forms";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 /** State returned by login server actions. */

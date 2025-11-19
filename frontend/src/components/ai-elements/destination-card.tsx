@@ -4,6 +4,7 @@
 
 "use client";
 
+import type { DestinationResearchResult } from "@schemas/agents";
 import type { ComponentProps } from "react";
 import {
   Card,
@@ -12,7 +13,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type { DestinationResearchResult } from "@/lib/schemas/agents";
 import { Source, Sources, SourcesContent, SourcesTrigger } from "./sources";
 
 /**
@@ -23,13 +23,18 @@ export type DestinationCardProps = ComponentProps<typeof Card> & {
   result: DestinationResearchResult;
 };
 
+type DestinationItem = NonNullable<DestinationResearchResult["highlights"]>[number];
+type SafetyScore = NonNullable<
+  NonNullable<DestinationResearchResult["safety"]>["scores"]
+>[number];
+
 /**
  * Render a destination research result with overview, highlights, and sources.
  */
 export function DestinationCard({ result, ...props }: DestinationCardProps) {
-  const highlights = result.highlights ?? [];
-  const attractions = result.attractions ?? [];
-  const activities = result.activities ?? [];
+  const highlights: DestinationItem[] = result.highlights ?? [];
+  const attractions: DestinationItem[] = result.attractions ?? [];
+  const activities: DestinationItem[] = result.activities ?? [];
 
   return (
     <Card {...props}>
@@ -45,8 +50,8 @@ export function DestinationCard({ result, ...props }: DestinationCardProps) {
           <div className="mb-4">
             <div className="mb-2 text-sm font-medium">Highlights</div>
             <ul className="list-disc space-y-1 pl-5 text-xs opacity-80">
-              {highlights.slice(0, 5).map((h) => (
-                <li key={h.title}>{h.title}</li>
+              {highlights.slice(0, 5).map((highlight: DestinationItem) => (
+                <li key={highlight.title}>{highlight.title}</li>
               ))}
             </ul>
           </div>
@@ -55,15 +60,18 @@ export function DestinationCard({ result, ...props }: DestinationCardProps) {
           <div className="mb-4">
             <div className="mb-2 text-sm font-medium">Top Attractions</div>
             <div className="space-y-2">
-              {attractions.slice(0, 5).map((a) => (
-                <div key={a.title ?? a.url ?? String(a)} className="text-xs">
-                  <div className="font-medium">{a.title}</div>
-                  {a.description ? (
-                    <div className="opacity-80">{a.description}</div>
+              {attractions.slice(0, 5).map((attraction: DestinationItem) => (
+                <div
+                  key={attraction.title ?? attraction.url ?? String(attraction)}
+                  className="text-xs"
+                >
+                  <div className="font-medium">{attraction.title}</div>
+                  {attraction.description ? (
+                    <div className="opacity-80">{attraction.description}</div>
                   ) : null}
-                  {a.url ? (
+                  {attraction.url ? (
                     <a
-                      href={a.url}
+                      href={attraction.url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="mt-1 block underline"
@@ -80,8 +88,8 @@ export function DestinationCard({ result, ...props }: DestinationCardProps) {
           <div className="mb-4">
             <div className="mb-2 text-sm font-medium">Activities</div>
             <ul className="list-disc space-y-1 pl-5 text-xs opacity-80">
-              {activities.slice(0, 5).map((a) => (
-                <li key={a.title}>{a.title}</li>
+              {activities.slice(0, 5).map((activity: DestinationItem) => (
+                <li key={activity.title}>{activity.title}</li>
               ))}
             </ul>
           </div>
@@ -94,7 +102,7 @@ export function DestinationCard({ result, ...props }: DestinationCardProps) {
             ) : null}
             {Array.isArray(result.safety.scores) && result.safety.scores.length > 0 ? (
               <div className="space-y-1">
-                {result.safety.scores.map((score) => (
+                {result.safety.scores.map((score: SafetyScore) => (
                   <div
                     key={score.category}
                     className="flex items-center justify-between text-xs"
@@ -113,9 +121,9 @@ export function DestinationCard({ result, ...props }: DestinationCardProps) {
               <SourcesTrigger count={result.sources.length} />
               <SourcesContent>
                 <div className="space-y-1">
-                  {result.sources.map((s) => (
-                    <Source key={s.url} href={s.url}>
-                      {s.title ?? s.url}
+                  {result.sources.map((source) => (
+                    <Source key={source.url} href={source.url}>
+                      {source.title ?? source.url}
                     </Source>
                   ))}
                 </div>

@@ -2,10 +2,10 @@
  * @fileoverview Zustand store for managing search history, saved searches, and analytics.
  */
 
+import type { SearchParams, SearchType } from "@schemas/search";
 import { z } from "zod";
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
-import type { SearchParams, SearchType } from "@/lib/schemas/search";
 import { nowIso, secureId } from "@/lib/security/random";
 
 // Validation schemas for search history

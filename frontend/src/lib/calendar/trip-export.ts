@@ -2,9 +2,9 @@
  * @fileoverview Utilities for exporting trip itineraries to calendar events.
  */
 
+import type { CalendarEvent } from "@schemas/calendar";
+import { calendarEventSchema } from "@schemas/calendar";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
-import type { CalendarEvent } from "@/lib/schemas/calendar";
-import { calendarEventSchema } from "@/lib/schemas/calendar";
 import type { Trip } from "@/stores/trip-store";
 
 /**

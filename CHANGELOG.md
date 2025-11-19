@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Removed `frontend/src/domain/schemas/index.ts` barrel and updated all imports to use file-scoped schema modules via `@schemas/*`, eliminating circular dependencies and improving Next.js tree-shaking.
+- Renamed aliased exports referenced from the old schema barrel to canonical symbol names in their source files (for example, configuration and validation error schemas in `frontend/src/domain/schemas/*.ts`) so all callers import the final names directly.
+- Rewired higher-level agents in `frontend/src/lib/agents/*` to consume tools from the centralized `@ai/tools` registry and its `toolRegistry` export, replacing the previous `@/lib/tools` indirection.
+- Migrated all AI tool tests from `frontend/src/lib/tools/__tests__` into `frontend/src/ai/tools/server/__tests__`, aligning test locations with the canonical tool implementations in `frontend/src/ai/tools/server/*.ts`.
 - Derive rate-limit identifiers inside `createAiTool` via `headers()` with `x-user-id` → `x-forwarded-for` fallback, sanitize overrides, and expand unit tests to cover the new helper (`frontend/src/lib/ai/tool-factory*.ts`).
 - Remove `runWithGuardrails` runtime + tests, rewrap memory writes through `createAiTool`, and normalize memory categories before caching/telemetry (`frontend/src/lib/agents/memory-agent.ts`, `frontend/src/lib/agents/__tests__/memory-agent.test.ts`, `frontend/src/lib/agents/runtime.ts`).
 - **React 19 login form modernization**: Refactored email/password login to use server actions with `useActionState`/`useFormStatus` for progressive enhancement, replacing route-based redirects with inline error handling and pending states. Created `loginAction` server action in `frontend/src/app/(auth)/login/actions.ts` with Zod validation, Supabase SSR authentication, and safe redirect logic. Updated `frontend/src/components/auth/login-form.tsx` to use React 19 hooks with field-specific error rendering and `SubmitButton` component. Converted `/auth/login` route to thin wrapper for external API compatibility while maintaining all security safeguards. Added comprehensive tests in `frontend/src/app/(auth)/login/__tests__/actions.test.ts` covering validation, authentication, and redirect scenarios.
@@ -22,6 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Configuration and dependency updates**: Enabled React Compiler and Cache Components in Next.js 16; updated Zod schemas to v4 APIs (z.uuid(), z.email(), z.int()); migrated user settings to Server Actions with useActionState; consolidated Supabase client imports to @/lib/supabase; unified Next.js config files into single next.config.ts with conditional bundle analyzer; added jsdom environment declarations for tests; removed deprecated Next.js config keys and custom webpack splitChunks.
 - **Chat memory syncing (frontend)**: Rewired `frontend/src/stores/chat/chat-messages.ts` to call `useChatMemory` whenever messages are persisted, trigger `/api/memory/sync` after assistant responses, skip system/placeholder entries, and keep `currentSession` derived from store state; updated slice tests (`frontend/src/stores/__tests__/chat/chat-messages.test.ts`) accordingly.
 - **Tool guardrails unification**: Replaced bespoke wrappers with `createAiTool` for Firecrawl web search (`frontend/src/lib/tools/web-search.ts`) and accommodation agent helpers (`frontend/src/lib/agents/accommodation-agent.ts`), consolidating caching, rate limiting, and telemetry. Updated `frontend/src/lib/tools/__tests__/web-search.test.ts` plus shared test utilities (`frontend/src/test/api-test-helpers.ts`) to exercise the new factory behavior.
+- Refactored flight and weather tooling to static `createAiTool` exports with guardrails, schema-aligned inputs, updated agents, and refreshed unit tests (`frontend/src/lib/tools/{flights,weather}.ts`, `frontend/src/lib/agents/{flight,destination}-agent.ts`, `frontend/src/lib/tools/__tests__/{flights,weather}.test.ts`).
+- Centralized agent workflow schemas in `frontend/src/domain/schemas/agents.ts` and updated all agent, tool, route, prompt, and UI imports to use the `@schemas/agents` alias instead of the removed `frontend/src/lib/schemas` registry.
+- Co-located weather tool input and result schemas in `frontend/src/ai/tools/schemas/weather.ts` and updated `frontend/src/ai/tools/server/weather.ts` to consume these types directly, removing the legacy `@/lib/schemas/weather` dependency.
+- Tightened TypeScript coverage for agent result UI components (`BudgetChart`, `DestinationCard`, `FlightOfferCard`, `StayCard`, and `ItineraryTimeline`) and `frontend/src/lib/agents/memory-agent.ts` by replacing implicit `any` usage with precise types derived from domain and tool schemas.
 
 - **Auth store security hardening (Supabase SSR-aligned)**
   - Removed client-side persistence of access/refresh tokens from `frontend/src/stores/auth/auth-session.ts`; the slice now exposes only session view state (`session`, `sessionTimeRemaining`) with `setSession` / `resetSession`, treating Supabase SSR cookies as the sole session authority.
@@ -54,6 +62,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Client error reporting telemetry**: Added `frontend/src/lib/telemetry/client-errors.ts` and rewired `frontend/src/lib/error-service.ts` so browser error reports record exceptions on the active OpenTelemetry span via `recordClientErrorOnActiveSpan` instead of reading `trace.getActiveSpan()` inline.
 
 ### Removed
+
+- Deleted legacy schema and tool barrels `frontend/src/lib/schemas/index.ts` and `frontend/src/lib/tools/index.ts`, plus unused compatibility helpers and tests under `frontend/src/lib/tools/{constants.ts,__tests__}`, as part of the final migration to `src/domain` and `src/ai` as the single sources of truth for validation and tooling.
 
 - **Backend AI SDK v5 Legacy Code (FINAL-ONLY Cleanup)**
 
@@ -111,6 +121,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Accommodation tool guardrails now keep the original provider on cache hits and emit dedicated availability error codes, so downstream JSON never shows "cache" sources and rate-limit/404 responses are surfaced correctly (`frontend/src/lib/tools/accommodations.ts`, `frontend/src/lib/tools/errors.ts`, `frontend/src/lib/schemas/tools.ts`).
+- Accommodation booking confirmations fall back to the generated booking reference when Expedia omits a confirmation number, and the test suite covers the new cache/error paths (`frontend/src/lib/tools/accommodations.ts`, `frontend/src/lib/tools/__tests__/accommodations.test.ts`).
 - **Accommodation booking**: `bookAccommodation` now uses the real amount and currency from check-availability input, and returns the same `bookingId` that is stored in Supabase.
 - **Upcoming flights pricing**: `UpcomingFlights` renders prices using the flight currency instead of always prefixing USD.
 - **Vitest stability**: Frontend Vitest config now clamps CI workers and adds a sharded `test:ci` script that runs the full suite in smaller batches to avoid jsdom/V8 heap pressure.
@@ -267,7 +279,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Enforces strict structured outputs via Zod schemas; all code paths (cache hits, API responses, error fallbacks) return validated shapes matching `WEB_SEARCH_OUTPUT_SCHEMA`.
   - Normalizes Firecrawl responses to strip extra fields (content, score, source) before validation; stores normalized data in cache for consistency.
 - Web search batch tool (`frontend/src/lib/tools/web-search-batch.ts`): Enforces strict structured outputs via `WEB_SEARCH_BATCH_OUTPUT_SCHEMA`; per-query success/error shapes validated at execution boundaries. Normalizes results from both primary execution and HTTP fallback paths.
-- Accommodation tools (`frontend/src/lib/tools/accommodations.ts`): Enforce strict structured outputs via Zod schemas (`ACCOMMODATION_SEARCH_OUTPUT_SCHEMA`, `ACCOMMODATION_DETAILS_OUTPUT_SCHEMA`, `ACCOMMODATION_BOOKING_OUTPUT_SCHEMA`); all code paths return validated shapes. Session context injection via `wrapToolsWithUserId` for booking approval flow. Centralized error taxonomy (`frontend/src/lib/tools/errors.ts`) with `TOOL_ERROR_CODES` and `createToolError` helper adopted across accommodation tools.
+- Accommodation tools (`frontend/src/ai/tools/server/accommodations.ts`): Enforce strict structured outputs via Zod schemas (`ACCOMMODATION_SEARCH_OUTPUT_SCHEMA`, `ACCOMMODATION_DETAILS_OUTPUT_SCHEMA`, `ACCOMMODATION_BOOKING_OUTPUT_SCHEMA`); all code paths return validated shapes. Session context injection via `wrapToolsWithUserId` for booking approval flow. Centralized error taxonomy (`frontend/src/ai/tools/server/errors.ts`) with `TOOL_ERROR_CODES` and `createToolError` helper adopted across accommodation tools.
 - Chat UI renders web search results as cards with title/snippet/URL, citations via AI Elements `Sources`, and displays `fromCache` + `tookMs`.
 - Env: `.env.example` simplified — require only `FIRECRAWL_API_KEY`; `FIRECRAWL_BASE_URL` optional for self‑hosted Firecrawl.
 - Env: frontend `.env.example` extended with notification and webhook variables (`RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `RESEND_FROM_NAME`, `QSTASH_TOKEN`, `QSTASH_CURRENT_SIGNING_KEY`, `QSTASH_NEXT_SIGNING_KEY`, `COLLAB_WEBHOOK_URL`, `HMAC_SECRET`) and wired through `frontend/src/lib/env/schema.ts`.

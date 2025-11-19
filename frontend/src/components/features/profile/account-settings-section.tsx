@@ -5,6 +5,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { type EmailUpdateFormData, emailUpdateFormSchema } from "@schemas/profile";
 import { Check, Mail, Trash2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import {
@@ -39,7 +40,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
-import { type EmailUpdateFormData, emailUpdateFormSchema } from "@/lib/schemas/forms";
 import { useUserProfileStore } from "@/stores/user-store";
 
 /**

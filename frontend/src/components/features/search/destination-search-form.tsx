@@ -4,6 +4,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import type { DestinationSearchParams } from "@schemas/search";
 import { Clock, MapPin, Star, TrendingUp } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -29,7 +30,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useMemoryContext } from "@/hooks/use-memory";
-import type { DestinationSearchParams } from "@/lib/schemas/search";
 
 const DestinationSearchFormSchema = z.object({
   language: z.string().optional(),
