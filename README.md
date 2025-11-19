@@ -18,7 +18,7 @@
 
 ---
 
-TripSage AI is an travel planning platform that combines the power of modern AI agents with rich
+TripSage AI is a travel planning platform that combines the power of modern AI agents with rich
 all-in-one travel services. Built with FastAPI, Next.js, LangGraph, Supabase, and Upstash Redis, with multi-agent AI orchestration, it provides personalized travel recommendations,
 real-time booking capabilities, and intelligent memory management.
 
@@ -28,7 +28,7 @@ real-time booking capabilities, and intelligent memory management.
   trip recommendations
 - **Flight Integration**: Direct Duffel API integration for real-time
   flight search and booking
-- **Accommodation Search**: Accommodation discovery and booking
+- **Accommodation Search**: Accommodation discovery and booking via Expedia Rapid (domain client + AI tools)
 - **Intelligent Memory**: Mem0-powered user preference learning and context
 - **Ultra-Fast Caching**: Upstash Redis (HTTP) for low-latency serverless caching
 - **Enterprise Security**: RLS policies and JWT authentication

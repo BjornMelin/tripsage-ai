@@ -6,10 +6,10 @@
 
 import "server-only";
 
+import { type TimezoneRequest, timezoneRequestSchema } from "@schemas/api";
 import { type NextRequest, NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
-import { type TimezoneRequest, timezoneRequestSchema } from "@/lib/schemas/api";
 
 /**
  * POST /api/timezone

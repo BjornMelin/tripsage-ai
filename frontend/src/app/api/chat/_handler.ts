@@ -186,21 +186,15 @@ export async function handleChatNonStream(
 
   const generate = deps.generate ?? defaultGenerateText;
   const tools = await (async (): Promise<Record<string, unknown>> => {
-    // Lazy import only the planning tools to avoid pulling unrelated tool modules in tests
-    // that mock the `ai` package without a `tool` export.
+    // Import tools from the centralized registry
     let local: Record<string, unknown> = {};
     try {
-      const planning = (await import("@/lib/tools/planning")) as unknown as {
-        createTravelPlan?: unknown;
-        updateTravelPlan?: unknown;
-        saveTravelPlan?: unknown;
-        deleteTravelPlan?: unknown;
-      };
+      const toolsModule = await import("@/ai/tools");
       local = {
-        createTravelPlan: planning.createTravelPlan,
-        deleteTravelPlan: planning.deleteTravelPlan,
-        saveTravelPlan: planning.saveTravelPlan,
-        updateTravelPlan: planning.updateTravelPlan,
+        createTravelPlan: toolsModule.createTravelPlan,
+        deleteTravelPlan: toolsModule.deleteTravelPlan,
+        saveTravelPlan: toolsModule.saveTravelPlan,
+        updateTravelPlan: toolsModule.updateTravelPlan,
       } as Record<string, unknown>;
     } catch {
       // If tools cannot be imported (e.g., AI SDK mocked without `tool`), proceed without tools.

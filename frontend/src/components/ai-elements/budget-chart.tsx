@@ -4,6 +4,7 @@
 
 "use client";
 
+import type { BudgetPlanResult } from "@schemas/agents";
 import type { ComponentProps } from "react";
 import {
   Card,
@@ -12,7 +13,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type { BudgetPlanResult } from "@/lib/schemas/agents";
 import { Source, Sources, SourcesContent, SourcesTrigger } from "./sources";
 
 /**
@@ -23,12 +23,17 @@ export type BudgetChartProps = ComponentProps<typeof Card> & {
   result: BudgetPlanResult;
 };
 
+type BudgetAllocation = BudgetPlanResult["allocations"][number];
+
 /**
  * Render a budget plan with category allocations and tips.
  */
 export function BudgetChart({ result, ...props }: BudgetChartProps) {
-  const allocations = result.allocations ?? [];
-  const total = allocations.reduce((sum, a) => sum + a.amount, 0);
+  const allocations: BudgetAllocation[] = result.allocations ?? [];
+  const total = allocations.reduce(
+    (sum: number, allocation: BudgetAllocation) => sum + allocation.amount,
+    0
+  );
   const currency = result.currency ?? "USD";
 
   return (
@@ -45,11 +50,11 @@ export function BudgetChart({ result, ...props }: BudgetChartProps) {
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {allocations.map((allocation, i) => {
+          {allocations.map((allocation: BudgetAllocation, index: number) => {
             const percentage =
               total > 0 ? Math.round((allocation.amount / total) * 100) : 0;
             return (
-              <div key={`${allocation.category}-${i}`} className="space-y-1">
+              <div key={`${allocation.category}-${index}`} className="space-y-1">
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-medium">{allocation.category}</span>
                   <span className="font-semibold">
@@ -76,7 +81,7 @@ export function BudgetChart({ result, ...props }: BudgetChartProps) {
           <div className="mt-4 space-y-1 rounded border p-3">
             <div className="text-sm font-medium">Tips</div>
             <ul className="list-disc space-y-1 pl-5 text-xs opacity-80">
-              {result.tips.map((tip) => (
+              {result.tips.map((tip: string) => (
                 <li key={tip}>{tip}</li>
               ))}
             </ul>
@@ -88,9 +93,9 @@ export function BudgetChart({ result, ...props }: BudgetChartProps) {
               <SourcesTrigger count={result.sources.length} />
               <SourcesContent>
                 <div className="space-y-1">
-                  {result.sources.map((s) => (
-                    <Source key={s.url} href={s.url}>
-                      {s.title ?? s.url}
+                  {result.sources.map((source) => (
+                    <Source key={source.url} href={source.url}>
+                      {source.title ?? source.url}
                     </Source>
                   ))}
                 </div>

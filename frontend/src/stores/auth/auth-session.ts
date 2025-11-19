@@ -5,9 +5,9 @@
  * This slice intentionally does not persist or manage access/refresh tokens.
  */
 
+import type { AuthSession } from "@schemas/stores";
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import type { AuthSession } from "@/lib/schemas/stores";
 import { timeUntil } from "@/lib/stores/helpers";
 
 /**

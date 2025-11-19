@@ -1,215 +1,222 @@
-# Zod Schema Guide
+# Zod Schema Reference
 
-Shared Zod v4 schemas for validation. Contains primitives, transforms, and refined schemas.
+Zod v4 schemas for TripSage AI validation. Provides compile-time types and runtime validation in one declarative API.
 
-## Overview
+## Organization
 
-Common validation patterns defined as reusable Zod v4 schemas. All schemas use:
+**Domain Schemas** (`frontend/src/domain/schemas/`): Core business entities independent of AI
+**AI Tool Schemas** (`frontend/src/ai/tools/schemas/`): Vercel AI SDK v6 tool input/output contracts
+**Registry** (`frontend/src/domain/schemas/registry.ts`): Shared primitives and transforms
 
-- **Top-level helpers**: `z.email()`, `z.uuid()`, `z.url()`, `z.iso.datetime()`
-- **Unified error option**: `{ error: "..." }` format (not deprecated `message:`)
-- **Registry primitives**: Shared schemas for common types
+### Directory Structure
 
-## Usage
+```text
+frontend/src/domain/schemas/
+├── index.ts              # Central exports
+├── registry.ts           # Shared primitives and transforms
+├── chat.ts              # Messages and conversations
+├── budget.ts            # Financial entities
+└── ...
 
-### Importing Schemas
-
-```typescript
-import { primitiveSchemas, transformSchemas, refinedSchemas } from "@/lib/schemas/registry";
+frontend/src/ai/tools/schemas/
+├── tools.ts              # Core tool schemas
+├── web-search.ts         # Web search validation
+├── planning.ts           # Trip planning AI schemas
+└── ...
 ```
 
-### Primitive Schemas
+### File Structure
 
-Basic validation patterns:
+Use clear section headers:
 
 ```typescript
-// UUID validation
-const userId = primitiveSchemas.uuid.parse("123e4567-e89b-12d3-a456-426614174000");
+// ===== CORE SCHEMAS =====
+// ===== FORM SCHEMAS =====
+// ===== API SCHEMAS =====
+// ===== UTILITY FUNCTIONS =====
+```
 
-// Email validation
+## Export Patterns
+
+Pair schema and type together in immediate exports:
+
+```typescript
+/** Zod schema for user profile data with validation rules. */
+export const userSchema = z.object({
+  id: z.string().uuid(),
+  email: z.string().email(),
+  name: z.string().min(1).max(100),
+});
+
+/** TypeScript type for user profile data. */
+export type User = z.infer<typeof userSchema>;
+```
+
+**Why?** Keeps schema and type co-located for better maintainability and IDE support.
+
+**Avoid:** Collecting exports at bottom, separating schema/type definitions, type-only exports.
+
+## Documentation & Naming
+
+Document all top-level exports following Google TypeScript Style Guide:
+
+```typescript
+/**
+ * Zod schema for chat messages with tool calls, attachments, and metadata.
+ * Validates message structure, content requirements, and attachment constraints.
+ * Used for both API communication and client-side state management.
+ */
+export const messageSchema = z.strictObject({...});
+export type Message = z.infer<typeof messageSchema>;
+```
+
+**Include:** Purpose, constraints, usage, business rules.
+**Naming:** Schema constants use `camelCase`, types use `UpperCamelCase`.
+
+## Registry Usage
+
+Shared validation patterns in `frontend/src/domain/schemas/registry.ts`:
+
+```typescript
+import { primitiveSchemas, transformSchemas, refinedSchemas } from "@schemas/registry";
+
+// Primitives: uuid, email, url, isoDateTime, isoCurrency, positiveNumber, percentage
+const userId = primitiveSchemas.uuid.parse("123e4567-e89b-12d3-a456-426614174000");
 const email = primitiveSchemas.email.parse("user@example.com");
 
-// URL validation
-const url = primitiveSchemas.url.parse("https://example.com");
-
-// ISO datetime validation
-const timestamp = primitiveSchemas.isoDateTime.parse("2024-01-01T12:00:00Z");
-
-// Non-empty string
-const name = primitiveSchemas.nonEmptyString.parse("John Doe");
-
-// Slug validation
-const slug = primitiveSchemas.slug.parse("hello-world-123");
-
-// IATA code (3 uppercase letters)
-const airportCode = primitiveSchemas.iataCode.parse("JFK");
-
-// ISO currency code (3 uppercase letters)
-const currency = primitiveSchemas.isoCurrency.parse("USD");
-
-// Positive number
-const amount = primitiveSchemas.positiveNumber.parse(42);
-
-// Percentage (0-100)
-const discount = primitiveSchemas.percentage.parse(25);
-
-// Non-negative number
-const count = primitiveSchemas.nonNegativeNumber.parse(0);
-```
-
-### Transform Schemas
-
-Schemas that normalize data:
-
-```typescript
-// Trim whitespace
+// Transforms: trimmedString, lowercaseEmail, normalizedUrl
 const trimmed = transformSchemas.trimmedString.parse("  hello  ");
-// Result: "hello"
-
-// Lowercase email
 const normalizedEmail = transformSchemas.lowercaseEmail.parse("Test@Example.COM");
-// Result: "test@example.com"
 
-// Normalized URL
-const normalizedUrl = transformSchemas.normalizedUrl.parse("  HTTPS://EXAMPLE.COM  ");
-// Result: "https://example.com"
-```
-
-### Refined Schemas
-
-Schemas with complex validation logic:
-
-```typescript
-// Future date validation
+// Refined: futureDate, adultAge, strongPassword
 const futureDate = refinedSchemas.futureDate.parse("2025-12-31T12:00:00Z");
-
-// Adult age validation (18+)
-const age = refinedSchemas.adultAge.parse(25);
-
-// Strong password validation
 const password = refinedSchemas.strongPassword.parse("Test123!Password");
-// Validates: min 8 chars, max 128 chars, contains uppercase, lowercase, and numbers
 ```
 
-## Using in Form Schemas
+## AI Tool Schemas
+
+Vercel AI SDK v6 tool schemas require specific patterns for reliable LLM function calling.
+
+**Requirements:**
+
+- `z.strictObject()` for tool inputs
+- `.describe()` on all fields for LLM comprehension
+- `.nullable()` instead of `.optional()` for OpenAI strict mode
 
 ```typescript
-import { z } from "zod";
-import { primitiveSchemas, refinedSchemas, transformSchemas } from "@/lib/schemas/registry";
+// Tool Input Schema
+export const toolInputSchema = z.strictObject({
+  field: z.string().describe("Field description for LLM"),
+  optionalField: z.number().nullable().describe("Nullable field for strict mode"),
+});
 
+// Tool Output Schema
+export const toolOutputSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("success"), data: z.unknown() }),
+  z.object({ type: z.literal("error"), message: z.string() }),
+]);
+```
+
+**Server vs Client Tools:**
+
+- **Server** (`frontend/src/ai/tools/server/`): External APIs, `import 'server-only'`, secrets access
+- **Client** (`frontend/src/ai/tools/client/`): UI interactions, no external APIs
+- **Patterns**: Query tools (Server), Action tools (Server), UI tools (Client)
+
+### Using Schemas
+
+```typescript
+// Form validation
 export const userFormSchema = z.object({
   email: transformSchemas.lowercaseEmail.max(255),
   password: refinedSchemas.strongPassword,
   userId: primitiveSchemas.uuid,
-  website: primitiveSchemas.url.optional(),
 });
-```
 
-## Using in API Schemas
-
-```typescript
-import { z } from "zod";
-import { primitiveSchemas } from "@/lib/schemas/registry";
-
+// API validation
 export const apiRequestSchema = z.object({
   id: primitiveSchemas.uuid,
   email: primitiveSchemas.email,
-  timestamp: primitiveSchemas.isoDateTime,
   amount: primitiveSchemas.positiveNumber,
+});
+
+// Error handling
+const result = schema.safeParse(data);
+if (!result.success) {
+  result.error.issues.forEach(issue =>
+    console.log(`${issue.path.join(".")}: ${issue.message}`)
+  );
+}
+```
+
+## AI SDK v6 & Zod v4 Patterns
+
+### Tool Definition
+
+```typescript
+import { tool } from "ai";
+
+export const webSearchTool = tool({
+  description: "Search the web for current information",
+  parameters: webSearchSchema,
+  execute: async (args) => {
+    // Use temperature: 0 for deterministic tool outputs
+    return await callAIWithTool({ ...args, temperature: 0 });
+  },
 });
 ```
 
-## Migration from Custom Validation
+**Temperature:** Tool calls use `temperature: 0`, creative tasks use `temperature: 0.7-1.0`
 
-The custom validation utility (`validation.ts`) has been removed. Use Zod native patterns instead:
+**Zod v4 Migration:** `z.iso.datetime()` → `z.string().datetime()`, `message:` → `error:`, avoid deprecated APIs
 
-### Before (Custom Validation)
+## Testing & Checklist
 
-```typescript
-import { validate, ValidationContext } from "@/lib/validation";
+**Test Locations:**
 
-const result = validate(schema, data, ValidationContext.Form);
-if (!result.success) {
-  // Handle errors
-}
-```
+- `frontend/src/domain/schemas/__tests__/` - Domain schema tests
+- `frontend/src/ai/tools/__tests__/` - AI tool schema tests
 
-### After (Zod Native)
+**Run Tests:** `pnpm test:run frontend/src/domain/schemas/__tests__ frontend/src/ai/tools/__tests__`
 
-```typescript
-import { z } from "zod";
+### Schema Creation Checklist
 
-const result = schema.safeParse(data);
-if (!result.success) {
-  // Handle errors via result.error.issues
-  result.error.issues.forEach((issue) => {
-    console.error(`${issue.path.join(".")}: ${issue.message}`);
-  });
-}
-```
+- [ ] Single responsibility principle
+- [ ] Correct directory (domain vs AI tools)
+- [ ] Clear section headers
+- [ ] Server tools: `import 'server-only'`
+- [ ] Standard export pattern (schema + type together)
+- [ ] JSDoc documentation for all exports
+- [ ] camelCase naming
+- [ ] Registry primitives used
+- [ ] `{ error: "..." }` for custom messages
+- [ ] AI tools: `z.strictObject()`, `.describe()`, `.nullable()`
+- [ ] Comprehensive tests and TypeScript compilation
 
-## Error Handling
+### Templates
 
-All schemas use Zod's unified error format:
+**Domain Schema:**
 
 ```typescript
-const result = primitiveSchemas.email.safeParse("invalid-email");
-if (!result.success) {
-  result.error.issues.forEach((issue) => {
-    console.log({
-      code: issue.code,
-      path: issue.path,
-      message: issue.message,
-    });
-  });
-}
+// ===== CORE SCHEMAS =====
+export const entitySchema = z.object({...});
+export type Entity = z.infer<typeof entitySchema>;
+
+// ===== FORM SCHEMAS =====
+export const entityFormSchema = z.object({...});
+export type EntityFormData = z.infer<typeof entityFormSchema>;
 ```
 
-## Type Exports
-
-The registry exports TypeScript types for common primitives:
+**AI Tool Schema:**
 
 ```typescript
-import type { Uuid, Email, Url, IsoDateTime, Timestamp } from "@/lib/schemas/registry";
-
-const userId: Uuid = "123e4567-e89b-12d3-a456-426614174000";
-const email: Email = "user@example.com";
-const url: Url = "https://example.com";
-const dateTime: IsoDateTime = "2024-01-01T12:00:00Z";
-const timestamp: Timestamp = 1704110400;
+// Tool input schema
+export const toolInputSchema = z.strictObject({
+  field: z.string().describe("Field description for LLM"),
+});
 ```
 
-## Performance
+## References
 
-Performance benchmarks in `frontend/src/lib/schemas/__tests__/performance.test.ts`.
-
-## Zod v4 Compliance
-
-Schemas follow Zod v4 patterns:
-
-- Top-level helpers (`z.email()`, not `z.string().email()`)
-- Unified error option (`{ error: "..." }`, not `message:`)
-- No deprecated APIs (`z.nativeEnum`, `z.record(schema)`, `.merge()`)
-- Proper enum usage (`z.enum()`, not `z.nativeEnum()`)
-- Two-argument `z.record()` (`z.record(keySchema, valueSchema)`)
-
-## Schema Files
-
-- `frontend/src/lib/schemas/registry.ts` - Core registry with primitives, transforms, and refined schemas
-- `frontend/src/lib/schemas/api.ts` - API request/response schemas
-- `frontend/src/lib/schemas/forms.ts` - Form validation schemas
-- `frontend/src/lib/schemas/budget.ts` - Budget and expense schemas
-- `frontend/src/lib/schemas/validation.ts` - Validation error types and result schemas
-
-## Testing
-
-Tests in `frontend/src/lib/schemas/__tests__/`:
-
-- `registry.test.ts` - Schema validation tests
-- `performance.test.ts` - Performance benchmarks
-
-Run with:
-
-```bash
-pnpm test:run frontend/src/lib/schemas/__tests__
-```
+- [Google TypeScript Style Guide](https://google.github.io/styleguide/tsguide.html)
+- [Zod v4 Documentation](https://zod.dev/)

@@ -5,9 +5,9 @@
 
 import "server-only";
 
+import type { Message, MessageRole } from "@schemas/chat";
 import type { UIMessage } from "ai";
 import { handleMemoryIntent } from "@/lib/memory/orchestrator";
-import type { Message, MessageRole } from "@/lib/schemas/chat";
 import { nowIso, secureUuid } from "@/lib/security/random";
 
 type ConversationRole = Extract<MessageRole, "assistant" | "user">;

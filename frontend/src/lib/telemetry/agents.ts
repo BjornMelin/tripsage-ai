@@ -5,7 +5,7 @@
  * workflow tool execution, including cache hits, durations, and errors.
  */
 
-import type { AgentWorkflow } from "@/lib/schemas/agents";
+import type { AgentWorkflow } from "@schemas/agents";
 import { withTelemetrySpan } from "./span";
 
 /**

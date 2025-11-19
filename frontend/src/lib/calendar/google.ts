@@ -16,7 +16,7 @@ import type {
   FreeBusyRequest,
   FreeBusyResponse,
   UpdateEventRequest,
-} from "@/lib/schemas/calendar";
+} from "@schemas/calendar";
 import { getGoogleProviderToken } from "./auth";
 
 const GOOGLE_CALENDAR_API_BASE = "https://www.googleapis.com/calendar/v3";

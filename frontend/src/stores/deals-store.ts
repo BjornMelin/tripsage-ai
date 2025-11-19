@@ -2,8 +2,6 @@
  * @fileoverview Zustand store for managing travel deals, alerts, and filters.
  */
 
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import {
   DEAL_ALERT_SCHEMA,
   DEAL_SCHEMA,
@@ -12,7 +10,9 @@ import {
   type DealState,
   type DealStats,
   type DealType,
-} from "@/lib/schemas/deals";
+} from "@schemas/deals";
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import { nowIso, secureId } from "@/lib/security/random";
 
 interface DealsStore extends DealState {

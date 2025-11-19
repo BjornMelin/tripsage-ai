@@ -1,6 +1,6 @@
 "use client";
 
-// import type { UserPreferences } from "@/lib/schemas/memory"; // Future implementation
+// import type { UserPreferences } from "@schemas/memory"; // Future implementation
 import {
   BarChart3,
   Brain,

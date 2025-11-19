@@ -7,10 +7,10 @@
 
 import "server-only";
 
+import type { RouterClassification } from "@schemas/agents";
+import { routerClassificationSchema } from "@schemas/agents";
 import type { LanguageModel } from "ai";
 import { generateObject } from "ai";
-import type { RouterClassification } from "@/lib/schemas/agents";
-import { routerClassificationSchema } from "@/lib/schemas/agents";
 import { buildRouterPrompt } from "@/prompts/agents";
 
 /**

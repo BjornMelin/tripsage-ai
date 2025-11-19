@@ -1,14 +1,13 @@
 /** @vitest-environment node */
 
+import type { ProviderId } from "@schemas/providers";
 import type { LanguageModel } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
 import type {
   NonStreamDeps,
   NonStreamPayload,
   ProviderResolver,
 } from "@/app/api/chat/_handler";
-import type { ProviderId } from "@/lib/schemas/providers";
 
 let handleChatNonStream: (
   deps: NonStreamDeps,

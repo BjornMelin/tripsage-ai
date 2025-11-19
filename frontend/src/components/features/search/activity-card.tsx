@@ -1,11 +1,11 @@
 "use client";
 
+import type { Activity } from "@schemas/search";
 import { Clock, MapPin, Star } from "lucide-react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import type { Activity } from "@/lib/schemas/search";
 
 interface ActivityCardProps {
   activity: Activity;

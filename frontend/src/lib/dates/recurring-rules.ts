@@ -4,8 +4,8 @@
  * date sequences and parsing RRULE strings without external dependencies.
  */
 
-import type { RecurrenceFrequency, RecurringRule } from "@/lib/schemas/temporal";
-import { recurringRuleSchema } from "@/lib/schemas/temporal";
+import type { RecurrenceFrequency, RecurringRule } from "@schemas/temporal";
+import { recurringRuleSchema } from "@schemas/temporal";
 import { DateUtils } from "./unified-date-utils";
 
 // Re-export types from schemas

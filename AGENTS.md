@@ -95,6 +95,15 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 - **Defaults and transforms:** `.default()` for output defaults; `.prefault()` when default must be parsed by schema.
 - **Functions and promises:** Prefer `z.function({ input: [...], output }).implement(...)` / `.implementAsync(...)`. Avoid `z.promise()` and `z.function().args().returns()` in new code.
 
+### 4.5 Schema organization
+
+- **Consolidated structure:** Each domain has a single schema file containing both core business schemas and tool input validation schemas.
+- **File naming:** Use domain names (e.g., `calendar.ts`, `memory.ts`) without `.schema` suffix.
+- **Section separation:** Use clear comments (`// ===== CORE SCHEMAS =====`, `// ===== TOOL INPUT SCHEMAS =====`) to separate concerns within files.
+- **Import path:** Always use `@schemas/domain-name` (no `.schema` suffix).
+- **No barrel file:** Import schemas directly from their domain module; `lib/schemas/index.ts` has been removed in favor of module-based aliases.
+- **Reference:** See `docs/developers/zod-schema-guide.md` for comprehensive Zod schema standards and patterns.
+
 ---
 
 ## 5. Frontend Architecture and Patterns

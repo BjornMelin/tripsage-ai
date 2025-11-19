@@ -5,11 +5,11 @@
 
 "use client";
 
+import type { Destination } from "@schemas/search";
 import { Calendar, CloudRain, Globe, MapPin, Star, Thermometer } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { Destination } from "@/lib/schemas/search";
 
 /**
  * Props interface for the DestinationCard component.

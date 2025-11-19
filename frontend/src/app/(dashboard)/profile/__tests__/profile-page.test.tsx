@@ -1,8 +1,8 @@
 /** @vitest-environment jsdom */
 
+import type { AuthUser as User } from "@schemas/stores";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { AuthUser as User } from "@/lib/schemas/stores";
 import { useAuthCore } from "@/stores/auth/auth-core";
 import type { UserProfile } from "@/stores/user-store";
 import { useUserProfileStore } from "@/stores/user-store";

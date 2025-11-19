@@ -11,16 +11,16 @@ import "server-only";
 // Using withApiGuards({ auth: true }) ensures this route uses cookies/headers,
 // making it dynamic and preventing caching of user-specific data.
 
+import {
+  calendarEventSchema,
+  type IcsImportRequest,
+  icsImportRequestSchema,
+} from "@schemas/calendar";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { RecurringDateGenerator } from "@/lib/dates/recurring-rules";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
-import {
-  calendarEventSchema,
-  type IcsImportRequest,
-  icsImportRequestSchema,
-} from "@/lib/schemas/calendar";
 
 type ParsedIcsEvent = {
   type: "VEVENT";

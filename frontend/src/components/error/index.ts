@@ -3,10 +3,6 @@
  * error boundaries, fallback UI components, and the error reporting service.
  */
 
-export { useErrorHandler } from "@/hooks/use-error-handler";
-// Re-export error service utilities
-export { ErrorService, errorService } from "@/lib/error-service";
-
 // Re-export types for convenience
 export type {
   ErrorBoundaryProps,
@@ -15,7 +11,10 @@ export type {
   ErrorInfo,
   ErrorReport,
   ErrorServiceConfig,
-} from "@/lib/schemas/errors";
+} from "@schemas/errors";
+export { useErrorHandler } from "@/hooks/use-error-handler";
+// Re-export error service utilities
+export { ErrorService, errorService } from "@/lib/error-service";
 export { ErrorBoundary, WithErrorBoundary } from "./error-boundary";
 export {
   ErrorFallback,

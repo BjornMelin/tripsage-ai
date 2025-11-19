@@ -6,14 +6,14 @@
 
 import "server-only";
 
+import type { TripSuggestion } from "@schemas/trips";
+import { tripSuggestionSchema } from "@schemas/trips";
 import { generateObject } from "ai";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
 import { resolveProvider } from "@/lib/providers/registry";
-import type { TripSuggestion } from "@/lib/schemas/trips";
-import { tripSuggestionSchema } from "@/lib/schemas/trips";
 
 /**
  * Request query parameters for trip suggestion generation.

@@ -4,6 +4,7 @@
 
 "use client";
 
+import type { AccommodationSearchResult } from "@schemas/agents";
 import type { ComponentProps } from "react";
 import {
   Card,
@@ -12,7 +13,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type { AccommodationSearchResult } from "@/lib/schemas/agents";
 import { Source, Sources, SourcesContent, SourcesTrigger } from "./sources";
 
 /**
@@ -23,11 +23,14 @@ export type StayCardProps = ComponentProps<typeof Card> & {
   result: AccommodationSearchResult;
 };
 
+type Stay = AccommodationSearchResult["stays"][number];
+type StaySource = NonNullable<AccommodationSearchResult["sources"]>[number];
+
 /**
  * Render a compact list of stays with price and links.
  */
 export function StayCard({ result, ...props }: StayCardProps) {
-  const stays = (result.stays ?? []).slice(0, 3);
+  const stays: Stay[] = (result.stays ?? []).slice(0, 3);
   return (
     <Card {...props}>
       <CardHeader>
@@ -36,27 +39,27 @@ export function StayCard({ result, ...props }: StayCardProps) {
       </CardHeader>
       <CardContent>
         <div className="grid gap-3">
-          {stays.map((s, i) => (
-            <div key={`${s.name}-${i}`} className="rounded border p-3">
+          {stays.map((stay: Stay, index: number) => (
+            <div key={`${stay.name}-${index}`} className="rounded border p-3">
               <div className="flex items-center justify-between text-sm">
-                <div className="font-medium">{s.name}</div>
-                {typeof s.nightlyRate === "number" && s.currency ? (
+                <div className="font-medium">{stay.name}</div>
+                {typeof stay.nightlyRate === "number" && stay.currency ? (
                   <div className="font-semibold">
                     {new Intl.NumberFormat(undefined, {
-                      currency: s.currency,
+                      currency: stay.currency,
                       style: "currency",
-                    }).format(s.nightlyRate)}
+                    }).format(stay.nightlyRate)}
                     <span className="ml-1 text-xs opacity-70">/night</span>
                   </div>
                 ) : null}
               </div>
-              {s.address ? (
-                <div className="mt-1 text-xs opacity-80">{s.address}</div>
+              {stay.address ? (
+                <div className="mt-1 text-xs opacity-80">{stay.address}</div>
               ) : null}
-              {s.url ? (
+              {stay.url ? (
                 <div className="mt-2 text-xs">
                   <a
-                    href={s.url}
+                    href={stay.url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="underline"
@@ -74,9 +77,9 @@ export function StayCard({ result, ...props }: StayCardProps) {
               <SourcesTrigger count={result.sources.length} />
               <SourcesContent>
                 <div className="space-y-1">
-                  {result.sources.map((s) => (
-                    <Source key={s.url} href={s.url}>
-                      {s.title ?? s.url}
+                  {result.sources.map((source: StaySource) => (
+                    <Source key={source.url} href={source.url}>
+                      {source.title ?? source.url}
                     </Source>
                   ))}
                 </div>

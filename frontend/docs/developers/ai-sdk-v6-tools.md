@@ -4,7 +4,7 @@ This guide documents the canonical patterns for creating AI SDK v6 tools with gu
 
 ## Overview
 
-All tools in TripSage AI use the `createAiTool` factory from `@/lib/ai/tool-factory`. This factory provides:
+All tools in TripSage AI use the `createAiTool` factory from `@ai/lib/tool-factory`. This factory provides:
 
 - **Type-safe tool creation** compatible with AI SDK v6 `Tool<InputValue, OutputValue>` types
 - **Built-in guardrails**: caching, rate limiting, and telemetry
@@ -39,8 +39,8 @@ import "server-only";
 
 import type { ToolCallOptions } from "ai";
 import { z } from "zod";
-import { createAiTool } from "@/lib/ai/tool-factory";
-import { TOOL_ERROR_CODES } from "@/lib/tools/errors";
+import { createAiTool } from "@ai/lib/tool-factory";
+import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
 
 export const myTool = createAiTool({
   description: "A tool with guardrails",
@@ -187,8 +187,8 @@ telemetry: {
 When creating agent-specific tool wrappers, use `createAiTool` to add workflow telemetry:
 
 ```typescript
-import { createAiTool } from "@/lib/ai/tool-factory";
-import { toolRegistry } from "@/lib/tools";
+import { createAiTool } from "@ai/lib/tool-factory";
+import { toolRegistry } from "@ai/tools";
 
 function buildMyAgentTools(identifier: string): ToolSet {
   const baseTool = toolRegistry.myTool as unknown as {

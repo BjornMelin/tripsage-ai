@@ -1,8 +1,5 @@
 "use client";
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type {
   Accommodation,
   Activity,
@@ -10,7 +7,10 @@ import type {
   SearchResult,
   SearchResults as SearchResultsType,
   SearchType,
-} from "@/lib/schemas/search";
+} from "@schemas/search";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AccommodationCard } from "./accommodation-card";
 
 interface SearchResultsProps {

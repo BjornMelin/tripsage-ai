@@ -8,6 +8,7 @@
 
 "use client";
 
+import type { CalendarStatusResponse } from "@schemas/calendar";
 import { AlertCircle, Calendar, CalendarCheck, CalendarX } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -21,7 +22,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { CalendarStatusResponse } from "@/lib/schemas/calendar";
 import { CalendarConnectClient } from "./calendar-connect-client";
 
 /**

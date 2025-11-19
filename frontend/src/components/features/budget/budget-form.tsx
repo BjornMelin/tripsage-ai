@@ -6,6 +6,11 @@
 "use client";
 
 import {
+  budgetFormSchema,
+  type ExpenseCategory,
+  expenseCategorySchema,
+} from "@schemas/budget";
+import {
   AlertCircle,
   Calculator,
   DollarSign,
@@ -40,11 +45,6 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useZodForm } from "@/lib/hooks/use-zod-form";
-import {
-  budgetFormSchema,
-  type ExpenseCategory,
-  expenseCategorySchema,
-} from "@/lib/schemas/budget";
 import { secureUuid } from "@/lib/security/random";
 import { cn } from "@/lib/utils";
 

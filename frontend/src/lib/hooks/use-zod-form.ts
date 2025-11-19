@@ -13,7 +13,7 @@ import {
   useForm,
 } from "react-hook-form";
 import { ZodError, type z } from "zod";
-import type { ValidationResult } from "../schemas/validation";
+import type { ValidationResult } from "@/domain/types";
 
 // Form options - using a data type parameter to avoid complex generic constraints
 interface UseZodFormOptions<Data extends FieldValues>

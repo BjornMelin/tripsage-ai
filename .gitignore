@@ -334,7 +334,7 @@ scan-results/
 supabase/.temp/
 docs/prompts/database-provider-research
 docs/prompts/tools/
-frontend/docs/prompts/complete
+frontend/docs/prompts/
 
 # Frontend workspace (consolidated from frontend/.gitignore)
 next-env.d.ts

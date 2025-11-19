@@ -6,9 +6,9 @@
 
 "use client";
 
+import type { AgentStatusType, AgentTask } from "@schemas/agent-status";
 import { useCallback, useEffect, useRef } from "react";
 import type { BackoffConfig } from "@/lib/realtime/backoff";
-import type { AgentStatusType, AgentTask } from "@/lib/schemas/agent-status";
 import { type AgentTaskUpdate, useAgentStatusStore } from "@/stores/agent-status-store";
 import { useAuthCore } from "@/stores/auth/auth-core";
 import {

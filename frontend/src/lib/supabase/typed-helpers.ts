@@ -4,8 +4,8 @@
  * compile-time shapes using the generated `Database` types.
  */
 
+import { getSupabaseSchema } from "@schemas/supabase";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getSupabaseSchema } from "@/lib/schemas/supabase";
 import type { Database, InsertTables, Tables, UpdateTables } from "./database.types";
 
 export type TypedClient = SupabaseClient<Database>;

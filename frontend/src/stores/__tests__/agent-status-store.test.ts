@@ -1,8 +1,8 @@
 /** @vitest-environment jsdom */
 
+import type { Agent } from "@schemas/agent-status";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
-import type { Agent } from "@/lib/schemas/agent-status";
 import { useAgentStatusStore } from "../agent-status-store";
 
 const mockAgent = (overrides: Partial<Agent> = {}): Agent => ({
