@@ -52,7 +52,7 @@ Rejected because it does not provide hotel/Vrbo breadth, and MCP outages are out
 
 ### Build Aggregated Proxy Service
 
-Considered a custom backend proxy (Python/FastAPI) that wraps Rapid. Rejected for now: adds latency, duplicates logic across stacks, and violates frontal-first mandate unless future constraints require backend-side caching.
+Considered a custom backend proxy (Python/FastAPI) that wraps Rapid. Rejected for now: adds latency, duplicates logic across stacks, and violates frontend-first mandate unless future constraints require backend-side caching.
 
 ## References
 
