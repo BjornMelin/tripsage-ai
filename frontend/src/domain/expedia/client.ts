@@ -98,12 +98,14 @@ export class ExpediaClient {
    */
   private getAuthHeader(): string {
     const timestamp = Math.floor(Date.now() / 1000).toString();
-    const toBeHashed = `${this.apiKey}${this.apiSecret}${timestamp}`;
-    // Per Expedia Rapid authentication spec: SHA-512(apiKey + secret + timestamp).
-    // Not used for password storage; suppress CodeQL false positive.
+    const signatureInput = `${this.apiKey}${this.apiSecret}${timestamp}`;
+    // Per Expedia Rapid auth: SHA-512(apiKey + secret + timestamp). This is a
+    // request-signing token, not credential storage.
     const signature =
-      /* codeql[js/insufficient-password-hash] */
-      createHash("sha512").update(toBeHashed, "utf-8").digest("hex");
+      /* codeql[js/insufficient-password-hash]: SHA-512 is mandated by Expedia for request signatures, and no passwords are stored. */
+      createHash("sha512")
+        .update(signatureInput, "utf-8")
+        .digest("hex");
     return `EAN APIKey=${this.apiKey},Signature=${signature},timestamp=${timestamp}`;
   }
 

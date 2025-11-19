@@ -101,7 +101,7 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 - **File naming:** Use domain names (e.g., `calendar.ts`, `memory.ts`) without `.schema` suffix.
 - **Section separation:** Use clear comments (`// ===== CORE SCHEMAS =====`, `// ===== TOOL INPUT SCHEMAS =====`) to separate concerns within files.
 - **Import path:** Always use `@schemas/domain-name` (no `.schema` suffix).
-- **Central exports:** All schemas are exported via `lib/schemas/index.ts` for discoverability.
+- **No barrel file:** Import schemas directly from their domain module; `lib/schemas/index.ts` has been removed in favor of module-based aliases.
 - **Reference:** See `docs/developers/zod-schema-guide.md` for comprehensive Zod schema standards and patterns.
 
 ---
