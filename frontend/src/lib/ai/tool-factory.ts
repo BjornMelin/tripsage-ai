@@ -518,10 +518,29 @@ function sanitizeRateLimitIdentifier(identifier?: string | null): string | undef
 }
 
 /**
+ * Validates if a string is a valid IPv4 or IPv6 address.
+ *
+ * @param ip - String to validate as IP address
+ * @returns True if valid IPv4 or IPv6 format, false otherwise
+ */
+function isValidIpAddress(ip: string): boolean {
+  // IPv4 regex: 4 octets (0-255) separated by dots
+  const ipv4Regex =
+    /^(?:(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)$/;
+
+  // IPv6 regex: supports full, compressed, and IPv4-mapped forms
+  const ipv6Regex =
+    /^(?:(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,7}:|(?:[0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,5}(?::[0-9a-fA-F]{1,4}){1,2}|(?:[0-9a-fA-F]{1,4}:){1,4}(?::[0-9a-fA-F]{1,4}){1,3}|(?:[0-9a-fA-F]{1,4}:){1,3}(?::[0-9a-fA-F]{1,4}){1,4}|(?:[0-9a-fA-F]{1,4}:){1,2}(?::[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:(?:(?::[0-9a-fA-F]{1,4}){1,6})|:(?:(?::[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(?::[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]+|::(?:ffff(?::0{1,4})?:)?(?:(?:25[0-5]|(?:2[0-4]|1?\d)?\d)\.){3}(?:25[0-5]|(?:2[0-4]|1?\d)?\d)|(?:[0-9a-fA-F]{1,4}:){1,4}:(?:(?:25[0-5]|(?:2[0-4]|1?\d)?\d)\.){3}(?:25[0-5]|(?:2[0-4]|1?\d)?\d))$/;
+
+  return ipv4Regex.test(ip) || ipv6Regex.test(ip);
+}
+
+/**
  * Derives a rate limit identifier from request headers.
  *
  * Extracts user ID from x-user-id header first, then falls back to first IP
- * from x-forwarded-for. Returns "unknown" if no valid identifier found.
+ * from x-forwarded-for (after validating IP format to prevent spoofing).
+ * Returns "unknown" if no valid identifier found.
  *
  * @returns Rate limit identifier in format "user:{id}", "ip:{ip}", or "unknown".
  */
@@ -539,7 +558,8 @@ async function getRateLimitIdentifier(): Promise<string> {
     const forwardedFor = requestHeaders.get("x-forwarded-for");
     if (forwardedFor) {
       const primaryIp = forwardedFor.split(",")[0]?.trim();
-      if (primaryIp) {
+      // Validate IP format to prevent spoofing attacks
+      if (primaryIp && isValidIpAddress(primaryIp)) {
         return `ip:${primaryIp}`;
       }
     }
