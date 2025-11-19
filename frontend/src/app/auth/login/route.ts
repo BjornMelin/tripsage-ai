@@ -1,9 +1,9 @@
 /**
  * @fileoverview Supabase email/password login route handler.
  *
- * Handles POST submissions from the /login page using Supabase SSR. This route
- * uses cookie-based sessions via createServerSupabase and never exposes access
- * or refresh tokens to the client.
+ * Thin wrapper around shared login logic for external POST clients. The UI now
+ * uses React 19 server actions, but this route remains available for API clients
+ * that submit form data via HTTP POST. Uses cookie-based sessions via createServerSupabase.
  */
 
 import "server-only";
@@ -62,8 +62,9 @@ function redirectWithError(
 /**
  * Handles POST /auth/login form submissions for email/password login.
  *
- * Uses Supabase SSR client to perform signInWithPassword and relies on
- * cookie-based sessions (no token persistence on the client).
+ * Thin wrapper for external POST clients. The UI now uses server actions,
+ * but this route remains for backward compatibility. Uses shared validation
+ * and authentication logic with Supabase SSR and cookie-based sessions.
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const formData = await request.formData();

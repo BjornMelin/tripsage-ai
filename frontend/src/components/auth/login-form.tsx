@@ -2,15 +2,17 @@
  * @fileoverview Authentication component for user login with email/password and
  * Supabase social OAuth (GitHub, Google).
  *
- * Email/password login submits to the server-side /auth/login route, which
- * uses Supabase SSR (cookies) as the single source of truth for auth. Social
- * providers continue to use Supabase OAuth with a server-side callback.
+ * Email/password login uses React 19 server actions with useActionState/useFormStatus
+ * for progressive enhancement. Supabase SSR (cookies) remains the single source of
+ * truth for auth. Social providers continue to use Supabase OAuth with server-side callback.
  */
 
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useId, useMemo } from "react";
+import { useActionState, useId, useMemo } from "react";
+import { useFormStatus } from "react-dom";
+import { loginAction } from "@/app/(auth)/login/actions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,7 +31,7 @@ interface LoginFormProps {
 /**
  * Login form with email/password and social providers.
  *
- * - Submits credentials via `supabase.auth.signInWithPassword`.
+ * - Submits credentials via React 19 server action with useActionState/useFormStatus.
  * - Initiates OAuth with `supabase.auth.signInWithOAuth` for GitHub/Google.
  * - Redirects authenticated users to `redirectTo`.
  *
@@ -40,7 +42,11 @@ interface LoginFormProps {
 export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormProps) {
   const search = useSearchParams();
   const nextParam = search?.get("next") || search?.get("from") || "";
-  const error = search?.get("error");
+  const urlError = search?.get("error"); // Fallback for OAuth flows
+
+  const [state, formAction, _isPending] = useActionState(loginAction, {
+    success: false,
+  });
   const emailId = useId();
   const passwordId = useId();
 
@@ -69,13 +75,13 @@ export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormPro
         <CardTitle className="text-2xl font-bold text-center">Sign in</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {error && (
+        {(state.error || urlError) && (
           <Alert variant="destructive" role="status" aria-label="authentication error">
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>{state.error || urlError}</AlertDescription>
           </Alert>
         )}
 
-        <form action="/auth/login" method="post" className="space-y-3">
+        <form action={formAction} className="space-y-3">
           <input type="hidden" name="redirectTo" value={redirectTo} />
           {nextParam ? <input type="hidden" name="next" value={nextParam} /> : null}
           <div className="space-y-2">
@@ -86,7 +92,20 @@ export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormPro
               name="email"
               autoComplete="email"
               required
+              aria-invalid={!!state.fieldErrors?.email}
+              aria-describedby={
+                state.fieldErrors?.email ? `${emailId}-error` : undefined
+              }
             />
+            {state.fieldErrors?.email && (
+              <p
+                id={`${emailId}-error`}
+                className="text-sm text-destructive"
+                role="alert"
+              >
+                {state.fieldErrors.email}
+              </p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor={passwordId}>Password</Label>
@@ -96,11 +115,22 @@ export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormPro
               name="password"
               autoComplete="current-password"
               required
+              aria-invalid={!!state.fieldErrors?.password}
+              aria-describedby={
+                state.fieldErrors?.password ? `${passwordId}-error` : undefined
+              }
             />
+            {state.fieldErrors?.password && (
+              <p
+                id={`${passwordId}-error`}
+                className="text-sm text-destructive"
+                role="alert"
+              >
+                {state.fieldErrors.password}
+              </p>
+            )}
           </div>
-          <Button type="submit" className="w-full">
-            Sign in
-          </Button>
+          <SubmitButton />
         </form>
 
         <div className="relative py-2 text-center text-xs text-muted-foreground">
@@ -125,6 +155,21 @@ export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormPro
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * Submit button component that uses useFormStatus for pending state.
+ *
+ * Must be a child component of the form to access useFormStatus.
+ */
+function SubmitButton() {
+  const { pending } = useFormStatus();
+
+  return (
+    <Button type="submit" className="w-full" disabled={pending} aria-disabled={pending}>
+      {pending ? "Signing in..." : "Sign in"}
+    </Button>
   );
 }
 

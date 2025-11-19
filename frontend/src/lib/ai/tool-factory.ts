@@ -12,6 +12,7 @@ import type { Span } from "@opentelemetry/api";
 import { Ratelimit } from "@upstash/ratelimit";
 import type { FlexibleSchema, ModelMessage, Tool, ToolCallOptions } from "ai";
 import { tool } from "ai";
+import { headers } from "next/headers";
 import { hashInputForCache } from "@/lib/cache/hash";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 import { getRedis } from "@/lib/redis";
@@ -21,8 +22,18 @@ import { rateLimitResultSchema } from "@/lib/schemas/tools";
 import { type TelemetrySpanAttributes, withTelemetrySpan } from "@/lib/telemetry/span";
 import { createToolError, type ToolErrorCode } from "@/lib/tools/errors";
 
+/**Maximum length for rate limit identifiers to prevent abuse. */
+const MAX_RATE_LIMIT_IDENTIFIER_LENGTH = 128;
+
+/** Type alias for rate limit window duration accepted by Upstash Ratelimit. */
 type RateLimitWindow = Parameters<typeof Ratelimit.slidingWindow>[1];
 
+/**
+ * Signature for tool execution functions that receive validated input and call options.
+ *
+ * @template InputValue - The validated input type for the tool.
+ * @template OutputValue - The output type returned by the tool.
+ */
 type ToolExecute<InputValue, OutputValue> = (
   params: InputValue,
   callOptions: ToolCallOptions
@@ -78,8 +89,8 @@ export type CacheOptions<InputValue, OutputValue> = {
 export type RateLimitOptions<InputValue> = {
   /** Error code to emit when the limit is exceeded. */
   errorCode: ToolErrorCode;
-  /** Build identifier (user/session/IP) for rate limiting. Can use params and/or ToolCallOptions. */
-  identifier: (
+  /** Optional identifier override using params and/or ToolCallOptions. */
+  identifier?: (
     params: InputValue,
     callOptions?: ToolCallOptions
   ) => string | undefined | null;
@@ -91,12 +102,24 @@ export type RateLimitOptions<InputValue> = {
   prefix?: string;
 };
 
+/**
+ * Configuration options for tool guardrails including caching, rate limiting, and telemetry.
+ *
+ * @template InputValue - The input type for the tool.
+ * @template OutputValue - The output type for the tool.
+ */
 export type GuardrailOptions<InputValue, OutputValue> = {
   cache?: CacheOptions<InputValue, OutputValue>;
   rateLimit?: RateLimitOptions<InputValue>;
   telemetry?: TelemetryOptions<InputValue>;
 };
 
+/**
+ * Complete configuration for creating an AI tool with optional guardrails.
+ *
+ * @template InputValue - The input type for the tool.
+ * @template OutputValue - The output type for the tool.
+ */
 export type CreateAiToolOptions<InputValue, OutputValue> = ToolOptions<
   InputValue,
   OutputValue
@@ -104,6 +127,11 @@ export type CreateAiToolOptions<InputValue, OutputValue> = ToolOptions<
   guardrails?: GuardrailOptions<InputValue, OutputValue>;
 };
 
+/**
+ * Result of a cache lookup operation indicating whether a cached value was found.
+ *
+ * @template OutputValue - The cached value type.
+ */
 type CacheLookupResult<OutputValue> =
   | { hit: true; value: OutputValue }
   | { hit: false };
@@ -159,7 +187,15 @@ function extractUserContextFromMessages(
 }
 
 /**
- * Canonical AI tool factory with optional guardrails.
+ * Creates an AI SDK tool with optional guardrails for caching, rate limiting, and telemetry.
+ *
+ * Wraps tools with Redis caching, Upstash rate limiting, and OpenTelemetry spans.
+ * Compatible with AI SDK v6 streaming and non-streaming contexts.
+ *
+ * @template InputValue - Input schema type for the tool.
+ * @template OutputValue - Output type returned by the tool.
+ * @param options - Tool configuration including guardrails.
+ * @returns AI SDK tool instance with guardrails applied.
  */
 export function createAiTool<InputValue, OutputValue>(
   options: CreateAiToolOptions<InputValue, OutputValue>
@@ -234,6 +270,17 @@ export function createAiTool<InputValue, OutputValue>(
   } as any) as Tool<InputValue, OutputValue>;
 }
 
+/**
+ * Builds telemetry attributes for an OpenTelemetry span.
+ *
+ * Combines base tool attributes with custom attributes from telemetry configuration.
+ *
+ * @template InputValue - Input type for the tool.
+ * @param toolName - Name of the tool being executed.
+ * @param telemetry - Optional telemetry configuration.
+ * @param params - Input parameters for attribute generation.
+ * @returns Attributes object for the telemetry span.
+ */
 function buildTelemetryAttributes<InputValue>(
   toolName: string,
   telemetry: TelemetryOptions<InputValue> | undefined,
@@ -251,6 +298,21 @@ function buildTelemetryAttributes<InputValue>(
   };
 }
 
+/**
+ * Attempts to read a cached result from Redis.
+ *
+ * Resolves cache key, checks for cached data, applies deserialization if configured.
+ * Records cache events and handles Redis/deserialization errors gracefully.
+ *
+ * @template InputValue - Input type for the tool.
+ * @template OutputValue - Output type for the tool.
+ * @param cache - Cache configuration options.
+ * @param toolName - Tool name for key namespacing.
+ * @param params - Input parameters for key resolution and deserialization.
+ * @param span - OpenTelemetry span for event recording.
+ * @param startedAt - Request start timestamp for cache hit metadata.
+ * @returns Cache lookup result with hit status and value if found.
+ */
 async function readFromCache<InputValue, OutputValue>(
   cache: CacheOptions<InputValue, OutputValue>,
   toolName: string,
@@ -281,6 +343,20 @@ async function readFromCache<InputValue, OutputValue>(
   }
 }
 
+/**
+ * Writes a tool execution result to Redis cache.
+ *
+ * Resolves cache key, applies serialization if configured, stores result with TTL.
+ * Records cache events and handles Redis/serialization errors gracefully.
+ *
+ * @template InputValue - Input type for the tool.
+ * @template OutputValue - Output type for the tool.
+ * @param cache - Cache configuration options.
+ * @param toolName - Tool name for key namespacing.
+ * @param params - Input parameters for key resolution and serialization.
+ * @param result - Execution result to cache.
+ * @param span - OpenTelemetry span for event recording.
+ */
 async function writeToCache<InputValue, OutputValue>(
   cache: CacheOptions<InputValue, OutputValue>,
   toolName: string,
@@ -315,6 +391,18 @@ async function writeToCache<InputValue, OutputValue>(
   }
 }
 
+/**
+ * Resolves the full Redis cache key from cache configuration and parameters.
+ *
+ * Applies bypass logic, key generation, input hashing if enabled, and namespacing.
+ *
+ * @template InputValue - Input type for the tool.
+ * @template OutputValue - Output type for the tool.
+ * @param cache - Cache configuration options.
+ * @param toolName - Tool name for default namespacing.
+ * @param params - Input parameters for key generation.
+ * @returns Full Redis key string or null if caching is bypassed.
+ */
 function resolveCacheKey<InputValue, OutputValue>(
   cache: CacheOptions<InputValue, OutputValue>,
   toolName: string,
@@ -336,6 +424,20 @@ function resolveCacheKey<InputValue, OutputValue>(
   return namespace ? `${namespace}:${suffix}` : suffix;
 }
 
+/**
+ * Enforces rate limiting using Upstash Ratelimit.
+ *
+ * Resolves identifier, creates cached limiter instance, checks limit, throws if exceeded.
+ * Records events and handles Redis unavailability gracefully.
+ *
+ * @template InputValue - Input type for the tool.
+ * @param config - Rate limit configuration options.
+ * @param toolName - Tool name for limiter namespacing.
+ * @param params - Input parameters for identifier resolution.
+ * @param callOptions - Tool call options for identifier resolution.
+ * @param span - OpenTelemetry span for event recording.
+ * @throws {ToolError} When rate limit is exceeded.
+ */
 async function enforceRateLimit<InputValue>(
   config: RateLimitOptions<InputValue>,
   toolName: string,
@@ -343,8 +445,9 @@ async function enforceRateLimit<InputValue>(
   callOptions: ToolCallOptions,
   span: Span
 ): Promise<void> {
-  const identifier = config.identifier(params, callOptions);
-  if (!identifier) return;
+  const identifier =
+    sanitizeRateLimitIdentifier(config.identifier?.(params, callOptions)) ??
+    (await getRateLimitIdentifier());
 
   const redis = getRedis();
   if (!redis) {
@@ -388,4 +491,81 @@ async function enforceRateLimit<InputValue>(
     reset: validatedResult.reset,
     retryAfter,
   });
+}
+
+/**
+ * Sanitizes a rate limit identifier by trimming whitespace and validating length.
+ *
+ * Returns undefined if the identifier is null, undefined, or empty after trimming.
+ *
+ * @param identifier - Raw identifier string from configuration or headers.
+ * @returns Sanitized identifier or undefined if invalid.
+ */
+function sanitizeRateLimitIdentifier(identifier?: string | null): string | undefined {
+  if (typeof identifier !== "string") {
+    return undefined;
+  }
+
+  const trimmed = identifier.trim();
+  if (trimmed.length === 0) {
+    return undefined;
+  }
+  if (trimmed.length > MAX_RATE_LIMIT_IDENTIFIER_LENGTH) {
+    // Truncate overly long identifiers
+    return trimmed.slice(0, MAX_RATE_LIMIT_IDENTIFIER_LENGTH);
+  }
+  return trimmed;
+}
+
+/**
+ * Validates if a string is a valid IPv4 or IPv6 address.
+ *
+ * @param ip - String to validate as IP address
+ * @returns True if valid IPv4 or IPv6 format, false otherwise
+ */
+function isValidIpAddress(ip: string): boolean {
+  // IPv4 regex: 4 octets (0-255) separated by dots
+  const ipv4Regex =
+    /^(?:(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)$/;
+
+  // IPv6 regex: supports full, compressed, and IPv4-mapped forms
+  const ipv6Regex =
+    /^(?:(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,7}:|(?:[0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,5}(?::[0-9a-fA-F]{1,4}){1,2}|(?:[0-9a-fA-F]{1,4}:){1,4}(?::[0-9a-fA-F]{1,4}){1,3}|(?:[0-9a-fA-F]{1,4}:){1,3}(?::[0-9a-fA-F]{1,4}){1,4}|(?:[0-9a-fA-F]{1,4}:){1,2}(?::[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:(?:(?::[0-9a-fA-F]{1,4}){1,6})|:(?:(?::[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(?::[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]+|::(?:ffff(?::0{1,4})?:)?(?:(?:25[0-5]|(?:2[0-4]|1?\d)?\d)\.){3}(?:25[0-5]|(?:2[0-4]|1?\d)?\d)|(?:[0-9a-fA-F]{1,4}:){1,4}:(?:(?:25[0-5]|(?:2[0-4]|1?\d)?\d)\.){3}(?:25[0-5]|(?:2[0-4]|1?\d)?\d))$/;
+
+  return ipv4Regex.test(ip) || ipv6Regex.test(ip);
+}
+
+/**
+ * Derives a rate limit identifier from request headers.
+ *
+ * Extracts user ID from x-user-id header first, then falls back to first IP
+ * from x-forwarded-for (after validating IP format to prevent spoofing).
+ * Returns "unknown" if no valid identifier found.
+ *
+ * @returns Rate limit identifier in format "user:{id}", "ip:{ip}", or "unknown".
+ */
+async function getRateLimitIdentifier(): Promise<string> {
+  try {
+    const requestHeaders = await headers();
+    const userId = requestHeaders.get("x-user-id");
+    if (userId) {
+      const trimmed = userId.trim();
+      if (trimmed) {
+        return `user:${trimmed}`;
+      }
+    }
+
+    const forwardedFor = requestHeaders.get("x-forwarded-for");
+    if (forwardedFor) {
+      const primaryIp = forwardedFor.split(",")[0]?.trim();
+      // Validate IP format to prevent spoofing attacks
+      if (primaryIp && isValidIpAddress(primaryIp)) {
+        return `ip:${primaryIp}`;
+      }
+    }
+  } catch {
+    // headers() throws when executed outside of a request context. Fall through.
+  }
+
+  return "unknown";
 }

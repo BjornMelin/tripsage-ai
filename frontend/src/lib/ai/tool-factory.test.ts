@@ -7,6 +7,24 @@ import { z } from "zod";
 import { createAiTool } from "@/lib/ai/tool-factory";
 import { TOOL_ERROR_CODES } from "@/lib/tools/errors";
 
+const headerStore = new Map<string, string>();
+
+const setMockHeaders = (values: Record<string, string | undefined>) => {
+  headerStore.clear();
+  for (const [key, value] of Object.entries(values)) {
+    if (typeof value === "string") {
+      headerStore.set(key.toLowerCase(), value);
+    }
+  }
+};
+
+vi.mock("next/headers", () => ({
+  headers: () =>
+    Promise.resolve({
+      get: (key: string) => headerStore.get(key.toLowerCase()) ?? null,
+    }),
+}));
+
 const telemetrySpan = {
   addEvent: vi.fn(),
   setAttribute: vi.fn(),
@@ -68,6 +86,7 @@ beforeEach(() => {
   ratelimitLimit.mockClear();
   telemetrySpan.addEvent.mockClear();
   telemetrySpan.setAttribute.mockClear();
+  setMockHeaders({});
 });
 
 describe("createAiTool", () => {
@@ -216,5 +235,117 @@ describe("createAiTool", () => {
     expect(capturedCallOptions).toHaveProperty("messages");
     const options = capturedCallOptions as ToolCallOptions | null;
     expect(options?.messages).toHaveLength(1);
+  });
+
+  test("prefers x-user-id header when deriving rate-limit identifier", async () => {
+    setMockHeaders({
+      "x-forwarded-for": "203.0.113.10, 203.0.113.11",
+      "x-user-id": "user-abc",
+    });
+    ratelimitLimit.mockResolvedValue({
+      limit: 5,
+      remaining: 4,
+      success: true,
+    });
+
+    const tool = createAiTool({
+      description: "rate limited tool",
+      execute: async () => ({ ok: true }),
+      guardrails: {
+        rateLimit: {
+          errorCode: TOOL_ERROR_CODES.toolRateLimited,
+          limit: 5,
+          window: "1 m",
+        },
+      },
+      inputSchema: z.object({ payload: z.string() }),
+      name: "headerTool",
+    });
+
+    await tool.execute?.({ payload: "demo" }, { messages: [], toolCallId: "call-1" });
+    expect(ratelimitLimit).toHaveBeenCalledWith("user:user-abc");
+  });
+
+  test("falls back to x-forwarded-for header when user header missing", async () => {
+    setMockHeaders({
+      "x-forwarded-for": "198.51.100.25, 198.51.100.26",
+    });
+    ratelimitLimit.mockResolvedValue({
+      limit: 3,
+      remaining: 2,
+      success: true,
+    });
+
+    const tool = createAiTool({
+      description: "rate limited tool fallback",
+      execute: async () => ({ ok: true }),
+      guardrails: {
+        rateLimit: {
+          errorCode: TOOL_ERROR_CODES.toolRateLimited,
+          limit: 3,
+          window: "1 m",
+        },
+      },
+      inputSchema: z.object({ payload: z.string() }),
+      name: "headerToolFallback",
+    });
+
+    await tool.execute?.({ payload: "demo" }, { messages: [], toolCallId: "call-2" });
+    expect(ratelimitLimit).toHaveBeenCalledWith("ip:198.51.100.25");
+  });
+
+  test("defaults to unknown identifier when headers missing", async () => {
+    setMockHeaders({});
+    ratelimitLimit.mockResolvedValue({
+      limit: 2,
+      remaining: 1,
+      success: true,
+    });
+
+    const tool = createAiTool({
+      description: "rate limited tool default",
+      execute: async () => ({ ok: true }),
+      guardrails: {
+        rateLimit: {
+          errorCode: TOOL_ERROR_CODES.toolRateLimited,
+          limit: 2,
+          window: "1 m",
+        },
+      },
+      inputSchema: z.object({ payload: z.string() }),
+      name: "headerToolUnknown",
+    });
+
+    await tool.execute?.({ payload: "demo" }, { messages: [], toolCallId: "call-3" });
+    expect(ratelimitLimit).toHaveBeenCalledWith("unknown");
+  });
+
+  test("rejects invalid x-forwarded-for IP addresses to prevent spoofing", async () => {
+    setMockHeaders({
+      "x-forwarded-for": "not-an-ip-address, 198.51.100.25",
+    });
+    ratelimitLimit.mockResolvedValue({
+      limit: 2,
+      remaining: 1,
+      success: true,
+    });
+
+    const tool = createAiTool({
+      description: "rate limited tool with invalid IP",
+      execute: async () => ({ ok: true }),
+      guardrails: {
+        rateLimit: {
+          errorCode: TOOL_ERROR_CODES.toolRateLimited,
+          limit: 2,
+          window: "1 m",
+        },
+      },
+      inputSchema: z.object({ payload: z.string() }),
+      name: "headerToolInvalidIp",
+    });
+
+    // Should fall back to "unknown" when IP is invalid
+    await tool.execute?.({ payload: "demo" }, { messages: [], toolCallId: "call-4" });
+    expect(ratelimitLimit).toHaveBeenCalledWith("unknown");
   });
 });
