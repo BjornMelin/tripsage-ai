@@ -1,8 +1,7 @@
+import type { MemoryUpdateRequest } from "@schemas/agents";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-
 import { persistMemoryRecords } from "@/lib/agents/memory-agent";
-import type { MemoryUpdateRequest } from "@/lib/schemas/agents";
 
 const createAiToolMock = vi.hoisted(() =>
   vi
@@ -17,7 +16,7 @@ const createAiToolMock = vi.hoisted(() =>
     )
 );
 
-vi.mock("@/lib/ai/tool-factory", () => ({
+vi.mock("@ai/lib/tool-factory", () => ({
   createAiTool: createAiToolMock,
 }));
 
@@ -30,15 +29,14 @@ const hoisted = vi.hoisted(() => ({
 }));
 
 // Keep actual schema exports from the real module (needed by guardrails)
-vi.mock("@/lib/tools/memory", async () => {
-  const actual =
-    await vi.importActual<typeof import("@/lib/tools/memory")>("@/lib/tools/memory");
+vi.mock("@ai/tools/memory", async () => {
+  const actual = await vi.importActual<typeof import("@ai/tools")>("@ai/tools");
   return {
     ...actual,
   };
 });
 
-vi.mock("@/lib/tools", () => ({
+vi.mock("@ai/tools", () => ({
   toolRegistry: {
     addConversationMemory: {
       description: "mocked addConversationMemory",

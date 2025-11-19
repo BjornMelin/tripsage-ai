@@ -7,17 +7,17 @@
 
 "use client";
 
+import type {
+  ConversionResult,
+  CurrencyCode,
+  UpdateExchangeRatesResponse,
+} from "@schemas/currency";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect } from "react";
 import { z } from "zod";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
 import { type AppError, handleApiError, isApiError } from "@/lib/api/error-types";
 import { staleTimes } from "@/lib/query-keys";
-import type {
-  ConversionResult,
-  CurrencyCode,
-  UpdateExchangeRatesResponse,
-} from "@/lib/schemas/currency";
 import { useCurrencyStore } from "@/stores/currency-store";
 
 /**
@@ -141,7 +141,7 @@ export function useFetchExchangeRates() {
   const responseSchema = z.object({
     baseCurrency: z.string().length(3),
     rates: z.record(z.string().length(3), z.number().positive()),
-    timestamp: z.string().datetime(),
+    timestamp: z.iso.datetime(),
   });
 
   const query = useQuery<UpdateExchangeRatesResponse, AppError>({

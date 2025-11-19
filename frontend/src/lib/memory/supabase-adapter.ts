@@ -8,8 +8,8 @@
 
 import "server-only";
 
+import type { MemoryContextResponse } from "@schemas/chat";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { MemoryContextResponse } from "@/lib/schemas/chat";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
 import type {

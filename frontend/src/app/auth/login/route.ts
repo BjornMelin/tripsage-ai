@@ -8,9 +8,9 @@
 
 import "server-only";
 
+import { loginFormSchema } from "@schemas/auth";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { loginFormSchema } from "@/lib/schemas/forms";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 /**

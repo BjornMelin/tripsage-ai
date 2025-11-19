@@ -16,6 +16,9 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "@ai": path.resolve(__dirname, "./src/ai"),
+      "@domain": path.resolve(__dirname, "./src/domain"),
+      "@schemas": path.resolve(__dirname, "./src/domain/schemas"),
       // Shim problematic ESM/CJS package in test runners
       "rehype-harden": path.resolve(__dirname, "./src/test/mocks/rehype-harden.ts"),
       "rehype-harden/dist/index.js": path.resolve(
@@ -58,16 +61,6 @@ export default defineConfig({
     hookTimeout: 8000,
     include: ["src/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
     passWithNoTests: false,
-    restoreMocks: true,
-    server: {
-      deps: {
-        inline: ["rehype-harden"],
-      },
-    },
-    setupFiles: ["./src/test-setup.ts"],
-    teardownTimeout: 6000,
-    testTimeout: 5000,
-    unstubEnvs: true,
     // Pool and parallelism controlled via CLI flags
     // Projects: schemas, integration, api, component, unit (ordered by specificity)
     projects: [
@@ -75,79 +68,83 @@ export default defineConfig({
         // Schema tests: pure validation, no DOM, no isolation (most specific)
         extends: true,
         test: {
-          name: "schemas",
-          include: ["src/lib/schemas/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
-          isolate: false,
-          environment: "node",
           deps: {
             web: {
               transformCss: false,
             },
           },
+          environment: "node",
+          include: ["src/lib/schemas/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
+          isolate: false,
+          name: "schemas",
         },
       },
       {
         // Integration tests: end-to-end flows (must come before api/component to catch .integration.* files)
         extends: true,
         test: {
-          name: "integration",
-          include: [
-            "src/**/*.integration.{test,spec}.?(c|m)[jt]s?(x)",
-            "src/**/*.int.{test,spec}.?(c|m)[jt]s?(x)",
-            "src/**/*-integration.{test,spec}.?(c|m)[jt]s?(x)",
-          ],
-          exclude: [
-            // Exclude browser-dependent integration tests that need jsdom
-            "src/app/__tests__/error-boundaries-integration.test.tsx",
-          ],
-          environment: "node",
           deps: {
             web: {
               transformCss: false,
             },
           },
+          environment: "node",
+          exclude: [
+            // Exclude browser-dependent integration tests that need jsdom
+            "src/app/__tests__/error-boundaries-integration.test.tsx",
+          ],
+          include: [
+            "src/**/*.integration.{test,spec}.?(c|m)[jt]s?(x)",
+            "src/**/*.int.{test,spec}.?(c|m)[jt]s?(x)",
+            "src/**/*-integration.{test,spec}.?(c|m)[jt]s?(x)",
+          ],
+          name: "integration",
         },
       },
       {
         // API route tests: server-side handlers in app/api
         extends: true,
         test: {
-          name: "api",
-          include: ["src/app/api/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
-          environment: "node",
           deps: {
             web: {
               transformCss: false,
             },
           },
+          environment: "node",
+          include: ["src/app/api/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
+          name: "api",
         },
       },
       {
         // Component tests: React components, hooks, app pages, stores (jsdom environment)
         extends: true,
         test: {
-          name: "component",
+          deps: {
+            web: {
+              transformCss: true,
+            },
+          },
+          environment: "jsdom",
+          exclude: ["src/app/api/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
           include: [
             "src/components/**/*.{test,spec}.?(c|m)[jt]s?(x)",
             "src/app/**/*.{test,spec}.?(c|m)[jt]s?(x)",
             "src/hooks/**/*.{test,spec}.?(c|m)[jt]s?(x)",
             "src/stores/**/*.{test,spec}.?(c|m)[jt]s?(x)",
           ],
-          exclude: ["src/app/api/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
-          environment: "jsdom",
-          deps: {
-            web: {
-              transformCss: true,
-            },
-          },
+          name: "component",
         },
       },
       {
         // Unit tests: lib utilities, stores, pure functions (catch-all for remaining)
         extends: true,
         test: {
-          name: "unit",
-          include: ["src/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
+          deps: {
+            web: {
+              transformCss: false,
+            },
+          },
+          environment: "node",
           exclude: [
             "src/lib/schemas/**/*.{test,spec}.?(c|m)[jt]s?(x)",
             "src/**/*.integration.{test,spec}.?(c|m)[jt]s?(x)",
@@ -161,14 +158,20 @@ export default defineConfig({
             // Exclude browser-dependent lib tests that need jsdom
             "src/lib/__tests__/error-service.test.ts",
           ],
-          environment: "node",
-          deps: {
-            web: {
-              transformCss: false,
-            },
-          },
+          include: ["src/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
+          name: "unit",
         },
       },
     ],
+    restoreMocks: true,
+    server: {
+      deps: {
+        inline: ["rehype-harden"],
+      },
+    },
+    setupFiles: ["./src/test-setup.ts"],
+    teardownTimeout: 6000,
+    testTimeout: 5000,
+    unstubEnvs: true,
   },
 });

@@ -5,15 +5,15 @@
 
 "use client";
 
-import { create } from "zustand";
-import type { RealtimeConnectionStatus } from "@/hooks/use-realtime-channel";
 import type {
   Agent,
   AgentActivity,
   AgentStatusType,
   AgentTask,
   ResourceUsage,
-} from "@/lib/schemas/agent-status";
+} from "@schemas/agent-status";
+import { create } from "zustand";
+import type { RealtimeConnectionStatus } from "@/hooks/use-realtime-channel";
 import { nowIso, secureId } from "@/lib/security/random";
 
 /**

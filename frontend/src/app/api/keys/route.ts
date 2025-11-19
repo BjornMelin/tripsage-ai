@@ -10,13 +10,13 @@ import "server-only";
 // Using withApiGuards({ auth: true }) ensures this route uses cookies/headers,
 // making it dynamic and preventing caching. No 'use cache' directives are present.
 
+import { type PostKeyBody, postKeyBodySchema } from "@schemas/api";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import type { RateLimitResult } from "@/app/api/keys/_rate-limiter";
 import { buildKeySpanAttributes } from "@/app/api/keys/_telemetry";
 import { withApiGuards } from "@/lib/api/factory";
 import { API_CONSTANTS } from "@/lib/next/route-helpers";
-import { type PostKeyBody, postKeyBodySchema } from "@/lib/schemas/api";
 import { insertUserApiKey, upsertUserGatewayBaseUrl } from "@/lib/supabase/rpc";
 import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
 import { getKeys, postKey } from "./_handlers";

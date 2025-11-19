@@ -1,8 +1,8 @@
 /** @vitest-environment jsdom */
 
+import type { DealType } from "@schemas/deals";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { DealType } from "@/lib/schemas/deals";
 import {
   createDealAlertFixture,
   createDealFixture,

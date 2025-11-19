@@ -5,8 +5,8 @@
  */
 
 import type { z } from "zod";
+import type { ValidationResult } from "@/domain/types";
 import { getClientEnvVarWithFallback } from "../env/client";
-import type { ValidationResult } from "../schemas/validation";
 
 /**
  * Error class for API client operations with validation context and structured error information.

@@ -3,10 +3,10 @@
  */
 
 import {
-  ERROR_REPORT_SCHEMA,
   type ErrorReport,
   type ErrorServiceConfig,
-} from "@/lib/schemas/errors";
+  errorReportSchema,
+} from "@schemas/errors";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 
 /**
@@ -27,7 +27,7 @@ class ErrorService {
   async reportError(report: ErrorReport): Promise<void> {
     try {
       // Validate the error report using Zod
-      const validatedReport = ERROR_REPORT_SCHEMA.parse(report);
+      const validatedReport = errorReportSchema.parse(report);
 
       // Record exception to active OpenTelemetry span if available.
       // This links the error to the distributed trace for better observability.

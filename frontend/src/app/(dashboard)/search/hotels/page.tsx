@@ -3,6 +3,7 @@
  */
 "use client";
 
+import type { SearchAccommodationParams } from "@schemas/search";
 import { useState } from "react";
 import { HotelSearchForm } from "@/components/features/search/hotel-search-form";
 import { SearchLayout } from "@/components/layouts/search-layout";
@@ -17,7 +18,6 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAccommodationSearch } from "@/hooks/use-accommodation-search";
-import type { AccommodationSearchParams } from "@/lib/schemas/search";
 import { useSearchStore } from "@/stores/search-store";
 
 /**
@@ -30,7 +30,7 @@ export default function HotelSearchPage() {
   const { hasResults } = useSearchStore();
   const [hasSearched, setHasSearched] = useState(false);
 
-  const handleSearch = async (params: AccommodationSearchParams) => {
+  const handleSearch = async (params: SearchAccommodationParams) => {
     setHasSearched(true);
     try {
       await search(params);

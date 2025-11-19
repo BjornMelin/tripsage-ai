@@ -1,8 +1,8 @@
 /** @vitest-environment jsdom */
 
+import type { Deal, DealType } from "@schemas/deals";
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Deal, DealType } from "@/lib/schemas/deals";
 import { useDealAlerts, useDeals, useFeaturedDeals, useSavedDeals } from "../use-deals";
 
 // Mock current timestamp for consistent testing

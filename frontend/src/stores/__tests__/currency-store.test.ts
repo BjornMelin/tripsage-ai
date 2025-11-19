@@ -1,8 +1,8 @@
 /** @vitest-environment jsdom */
 
+import type { Currency } from "@schemas/currency";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Currency } from "@/lib/schemas/currency";
 import { useCurrencyStore } from "../currency-store";
 
 // Mock the store to avoid persistence issues in tests

@@ -5,6 +5,7 @@
  * streaming. It is fully dependency-injected to ensure deterministic tests.
  */
 
+import { wrapToolsWithUserId } from "@ai/tools/server/injection";
 import type { UIMessage } from "ai";
 import {
   convertToModelMessages,
@@ -13,6 +14,7 @@ import {
   NoSuchToolError,
   stepCountIs,
 } from "ai";
+import * as tools from "@/ai/tools";
 import { extractTexts, validateImageAttachments } from "@/app/api/_helpers/attachments";
 import { handleMemoryIntent } from "@/lib/memory/orchestrator";
 import {
@@ -30,8 +32,6 @@ import {
   countTokens,
 } from "@/lib/tokens/budget";
 import { getModelContextLimit } from "@/lib/tokens/limits";
-import { toolRegistry } from "@/lib/tools";
-import { wrapToolsWithUserId } from "@/lib/tools/injection";
 
 /**
  * Function type for resolving AI provider configurations.
@@ -273,7 +273,7 @@ export async function handleChatStream(
     toolChoice: "auto",
     tools: (() => {
       const local = wrapToolsWithUserId(
-        { ...toolRegistry },
+        { ...tools },
         user.id,
         [
           "createTravelPlan",

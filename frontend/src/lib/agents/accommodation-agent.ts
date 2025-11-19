@@ -9,117 +9,25 @@
 
 import "server-only";
 
-import type { FlexibleSchema, LanguageModel, ToolSet } from "ai";
-import { stepCountIs, streamText } from "ai";
-
-import { createAiTool } from "@/lib/ai/tool-factory";
-import { hashInputForCache } from "@/lib/cache/hash";
-import { buildRateLimit } from "@/lib/ratelimit/config";
-import type { AccommodationSearchRequest } from "@/lib/schemas/agents";
+import {
+  bookAccommodation,
+  checkAvailability,
+  getAccommodationDetails,
+  searchAccommodations,
+} from "@ai/tools";
+import type { AccommodationSearchRequest } from "@schemas/agents";
+import type { LanguageModel, ToolSet } from "ai";
+import { streamText } from "ai";
 import type { ChatMessage } from "@/lib/tokens/budget";
 import { clampMaxTokens } from "@/lib/tokens/budget";
-import { toolRegistry } from "@/lib/tools";
-import { searchAccommodationsInputSchema } from "@/lib/tools/accommodations";
-import { TOOL_ERROR_CODES } from "@/lib/tools/errors";
-import { lookupPoiInputSchema } from "@/lib/tools/google-places";
-import { geocodeInputSchema } from "@/lib/tools/maps";
 import { buildAccommodationPrompt } from "@/prompts/agents";
 
-/**
- * Create wrapped tools for accommodation agent with guardrails.
- *
- * @param identifier Stable identifier for rate limiting.
- * @returns AI SDK ToolSet for use with streamText.
- */
-function buildAccommodationTools(identifier: string): ToolSet {
-  // Access tool registry with proper typing; runtime guardrails perform validation.
-  // Tools are typed as unknown in registry, so we use type assertions for safe access.
-  type ToolLike = {
-    description?: string;
-    execute?: (params: unknown, callOptions?: unknown) => Promise<unknown> | unknown;
-  };
-
-  const searchTool = toolRegistry.searchAccommodations as unknown as ToolLike;
-  const geocodeTool = toolRegistry.geocode as unknown as ToolLike;
-  const poiTool = toolRegistry.lookupPoiContext as unknown as ToolLike;
-
-  const rateLimit = buildRateLimit("accommodationSearch", identifier);
-
-  const makeAgentTool = <SchemaType extends FlexibleSchema<unknown>>(options: {
-    baseTool: ToolLike;
-    cacheNamespace: string;
-    cacheTtlSeconds: number;
-    descriptionFallback: string;
-    name: string;
-    rateLimitPrefix: string;
-    schema: SchemaType;
-  }) =>
-    createAiTool({
-      description: options.baseTool.description ?? options.descriptionFallback,
-      execute: (params, callOptions) => {
-        if (typeof options.baseTool.execute !== "function") {
-          throw new Error(`Tool ${options.name} missing execute binding`);
-        }
-        const result = options.baseTool.execute(params, callOptions);
-        return result instanceof Promise ? result : Promise.resolve(result);
-      },
-      guardrails: {
-        cache: {
-          key: (params) => hashAgentCacheKey(params),
-          namespace: options.cacheNamespace,
-          ttlSeconds: options.cacheTtlSeconds,
-        },
-        rateLimit: {
-          errorCode: TOOL_ERROR_CODES.accomSearchRateLimited,
-          identifier: () => rateLimit.identifier,
-          limit: rateLimit.limit,
-          prefix: options.rateLimitPrefix,
-          window: rateLimit.window,
-        },
-        telemetry: {
-          workflow: "accommodationSearch",
-        },
-      },
-      inputSchema: options.schema,
-      name: options.name,
-    });
-
-  const searchAccommodations = makeAgentTool({
-    baseTool: searchTool,
-    cacheNamespace: "agent:accom:search",
-    cacheTtlSeconds: 60 * 30,
-    descriptionFallback: "Search stays",
-    name: "agentSearchAccommodations",
-    rateLimitPrefix: "ratelimit:agent:accom:search",
-    schema: searchAccommodationsInputSchema,
-  });
-
-  const geocode = makeAgentTool({
-    baseTool: geocodeTool,
-    cacheNamespace: "agent:accom:geocode",
-    cacheTtlSeconds: 60 * 60,
-    descriptionFallback: "Geocode address",
-    name: "agentGeocode",
-    rateLimitPrefix: "ratelimit:agent:accom:geocode",
-    schema: geocodeInputSchema,
-  });
-
-  const lookupPoiContext = makeAgentTool({
-    baseTool: poiTool,
-    cacheNamespace: "agent:accom:poi",
-    cacheTtlSeconds: 60 * 10,
-    descriptionFallback: "Lookup POIs",
-    name: "agentLookupPoiContext",
-    rateLimitPrefix: "ratelimit:agent:accom:poi",
-    schema: lookupPoiInputSchema,
-  });
-
-  return { geocode, lookupPoiContext, searchAccommodations } satisfies ToolSet;
-}
-
-function hashAgentCacheKey(input: unknown): string {
-  return hashInputForCache(input);
-}
+const ACCOMMODATION_TOOLS = {
+  bookAccommodation,
+  checkAvailability,
+  getAccommodationDetails,
+  searchAccommodations,
+} satisfies ToolSet;
 
 /**
  * Execute the accommodation agent with AI SDK v6 streaming.
@@ -149,15 +57,19 @@ export function runAccommodationAgent(
   const desiredMaxTokens = 4096; // Default for agent responses
   const { maxTokens } = clampMaxTokens(messages, desiredMaxTokens, deps.modelId);
 
-  return streamText({
+  const callOptions = {
     maxOutputTokens: maxTokens,
     messages: [
       { content: instructions, role: "system" },
       { content: userPrompt, role: "user" },
     ],
     model: deps.model,
-    stopWhen: stepCountIs(10),
     temperature: 0.3,
-    tools: buildAccommodationTools(deps.identifier),
-  });
+    tools: ACCOMMODATION_TOOLS,
+  } satisfies Parameters<typeof streamText>[0];
+
+  return streamText({
+    maxSteps: 10,
+    ...callOptions,
+  } as Parameters<typeof streamText>[0] & { maxSteps: number });
 }

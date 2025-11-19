@@ -7,10 +7,6 @@
 
 "use client";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
-import { type AppError, handleApiError, isApiError } from "@/lib/api/error-types";
-import { staleTimes } from "@/lib/query-keys";
 import type {
   AddConversationMemoryRequest,
   AddConversationMemoryResponse,
@@ -21,7 +17,11 @@ import type {
   SearchMemoriesResponse,
   UpdatePreferencesRequest,
   UpdatePreferencesResponse,
-} from "@/lib/schemas/memory";
+} from "@schemas/memory";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
+import { type AppError, handleApiError, isApiError } from "@/lib/api/error-types";
+import { staleTimes } from "@/lib/query-keys";
 
 /**
  * Hook for fetching user memory context.

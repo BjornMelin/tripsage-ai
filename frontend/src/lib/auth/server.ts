@@ -8,9 +8,9 @@
 
 import "server-only";
 
+import type { AuthUser } from "@schemas/stores";
 import type { User } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
-import type { AuthUser } from "@/lib/schemas/stores";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { createServerSupabase, getCurrentUser } from "@/lib/supabase/server";
 

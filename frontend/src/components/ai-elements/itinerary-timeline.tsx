@@ -4,6 +4,7 @@
 
 "use client";
 
+import type { ItineraryPlanResult } from "@schemas/agents";
 import type { ComponentProps } from "react";
 import {
   Card,
@@ -12,7 +13,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type { ItineraryPlanResult } from "@/lib/schemas/agents";
 import { Source, Sources, SourcesContent, SourcesTrigger } from "./sources";
 
 /**
@@ -23,11 +23,18 @@ export type ItineraryTimelineProps = ComponentProps<typeof Card> & {
   result: ItineraryPlanResult;
 };
 
+type ItineraryDay = ItineraryPlanResult["days"][number];
+type ItineraryActivity = NonNullable<ItineraryDay["activities"]>[number];
+type ItineraryRecommendation = NonNullable<
+  ItineraryPlanResult["recommendations"]
+>[number];
+type ItinerarySource = NonNullable<ItineraryPlanResult["sources"]>[number];
+
 /**
  * Render an itinerary plan with day-by-day timeline.
  */
 export function ItineraryTimeline({ result, ...props }: ItineraryTimelineProps) {
-  const days = result.days ?? [];
+  const days: ItineraryDay[] = result.days ?? [];
 
   return (
     <Card {...props}>
@@ -42,7 +49,7 @@ export function ItineraryTimeline({ result, ...props }: ItineraryTimelineProps) 
           <div className="mb-4 text-sm opacity-90">{result.overview}</div>
         ) : null}
         <div className="space-y-4">
-          {days.map((day) => (
+          {days.map((day: ItineraryDay) => (
             <div key={`day-${day.day}`} className="border-l-2 border-primary pl-4">
               <div className="mb-2">
                 <div className="text-sm font-semibold">
@@ -56,7 +63,7 @@ export function ItineraryTimeline({ result, ...props }: ItineraryTimelineProps) 
               </div>
               {Array.isArray(day.activities) && day.activities.length > 0 ? (
                 <div className="mt-2 space-y-2">
-                  {day.activities.map((activity) => (
+                  {day.activities.map((activity: ItineraryActivity) => (
                     <div
                       key={activity.name ?? activity.url ?? String(activity)}
                       className="rounded border p-2 text-xs"
@@ -94,8 +101,8 @@ export function ItineraryTimeline({ result, ...props }: ItineraryTimelineProps) 
           <div className="mt-4">
             <div className="mb-2 text-sm font-medium">Recommendations</div>
             <ul className="list-disc space-y-1 pl-5 text-xs opacity-80">
-              {result.recommendations.map((rec) => (
-                <li key={rec.title}>{rec.title}</li>
+              {result.recommendations.map((recommendation: ItineraryRecommendation) => (
+                <li key={recommendation.title}>{recommendation.title}</li>
               ))}
             </ul>
           </div>
@@ -106,9 +113,9 @@ export function ItineraryTimeline({ result, ...props }: ItineraryTimelineProps) 
               <SourcesTrigger count={result.sources.length} />
               <SourcesContent>
                 <div className="space-y-1">
-                  {result.sources.map((s) => (
-                    <Source key={s.url} href={s.url}>
-                      {s.title ?? s.url}
+                  {result.sources.map((source: ItinerarySource) => (
+                    <Source key={source.url} href={source.url}>
+                      {source.title ?? source.url}
                     </Source>
                   ))}
                 </div>

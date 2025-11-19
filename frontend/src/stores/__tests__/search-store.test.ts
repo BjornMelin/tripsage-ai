@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 
+import type { FlightSearchParams } from "@schemas/search";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { FlightSearchParams } from "@/lib/schemas/search";
 import { useSearchFiltersStore } from "../search-filters-store";
 import { useSearchHistoryStore } from "../search-history-store";
 import { useSearchParamsStore } from "../search-params-store";

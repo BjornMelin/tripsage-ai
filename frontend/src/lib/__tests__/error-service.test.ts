@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 
+import type { ErrorReport, ErrorServiceConfig } from "@schemas/errors";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ErrorReport, ErrorServiceConfig } from "@/lib/schemas/errors";
 import * as telemetryClientErrors from "@/lib/telemetry/client-errors";
 import { ErrorService } from "../error-service";
 

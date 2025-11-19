@@ -1,9 +1,9 @@
 "use client";
 
+import type { ErrorBoundaryProps } from "@schemas/errors";
 import type React from "react";
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { errorService } from "@/lib/error-service";
-import type { ErrorBoundaryProps } from "@/lib/schemas/errors";
 import { ErrorFallback } from "./error-fallback";
 
 interface ErrorBoundaryState {

@@ -7,11 +7,6 @@
 
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
-import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
-import { type AppError, handleApiError, isApiError } from "@/lib/api/error-types";
-import { queryKeys, staleTimes } from "@/lib/query-keys";
 import type {
   AddExpenseRequest,
   Budget,
@@ -21,7 +16,12 @@ import type {
   Expense,
   UpdateBudgetRequest,
   UpdateExpenseRequest,
-} from "@/lib/schemas/budget";
+} from "@schemas/budget";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
+import { type AppError, handleApiError, isApiError } from "@/lib/api/error-types";
+import { queryKeys, staleTimes } from "@/lib/query-keys";
 import { useBudgetStore } from "@/stores/budget-store";
 
 /**

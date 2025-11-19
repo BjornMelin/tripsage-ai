@@ -4,8 +4,6 @@
  * with cross-store synchronization and workflow management.
  */
 
-import { create } from "zustand";
-import { devtools } from "zustand/middleware";
 import type {
   Accommodation,
   Activity,
@@ -14,7 +12,9 @@ import type {
   SearchParams,
   SearchResults,
   SearchType,
-} from "@/lib/schemas/search";
+} from "@schemas/search";
+import { create } from "zustand";
+import { devtools } from "zustand/middleware";
 
 import { useSearchFiltersStore } from "./search-filters-store";
 import { useSearchHistoryStore } from "./search-history-store";

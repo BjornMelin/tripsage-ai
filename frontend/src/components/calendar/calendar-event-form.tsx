@@ -5,6 +5,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { createEventRequestSchema } from "@schemas/calendar";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -15,7 +16,6 @@ import { Label } from "@/components/ui/label";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
-import { createEventRequestSchema } from "@/lib/schemas/calendar";
 
 const EVENT_FORM_SCHEMA = createEventRequestSchema.extend({
   calendarId: z.string().default("primary"),

@@ -1,8 +1,8 @@
 /** @vitest-environment node */
 
+import type { ProviderId } from "@schemas/providers";
 import type { LanguageModel, UIMessage } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ProviderId } from "@/lib/schemas/providers";
 import type { ChatDeps, ChatPayload, ProviderResolver } from "../_handler";
 
 let handleChatStream: (deps: ChatDeps, payload: ChatPayload) => Promise<Response>;

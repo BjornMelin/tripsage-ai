@@ -3,7 +3,7 @@
  * Maintains per-model context limits for safe clamping in AI SDK calls.
  */
 
-import type { ModelLimitsTable } from "@/lib/schemas/tokens";
+import type { ModelLimitsTable } from "@schemas/tokens";
 
 // Re-export type from schemas
 export type { ModelLimitsTable };

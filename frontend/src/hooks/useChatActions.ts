@@ -6,8 +6,8 @@
  * have been removed.
  */
 
+import type { Message, SendMessageOptions } from "@schemas/chat";
 import { useCallback } from "react";
-import type { Message, SendMessageOptions } from "@/lib/schemas/chat";
 import { useChatMessages } from "@/stores/chat/chat-messages";
 
 /**

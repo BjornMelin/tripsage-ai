@@ -7,9 +7,9 @@
 
 import "server-only";
 
+import { resetPasswordFormSchema } from "@schemas/auth";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { resetPasswordFormSchema } from "@/lib/schemas/forms";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 interface ResetRequestPayload {

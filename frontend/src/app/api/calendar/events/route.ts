@@ -11,6 +11,11 @@ import "server-only";
 // Using withApiGuards({ auth: true }) ensures this route uses cookies/headers,
 // making it dynamic and preventing caching of user-specific data.
 
+import {
+  createEventRequestSchema,
+  eventsListRequestSchema,
+  updateEventRequestSchema,
+} from "@schemas/calendar";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
@@ -21,11 +26,6 @@ import {
   updateEvent,
 } from "@/lib/calendar/google";
 import { parseJsonBody, validateSchema } from "@/lib/next/route-helpers";
-import {
-  createEventRequestSchema,
-  eventsListRequestSchema,
-  updateEventRequestSchema,
-} from "@/lib/schemas/calendar";
 
 /**
  * Extracts calendar ID from body or query params with default fallback.

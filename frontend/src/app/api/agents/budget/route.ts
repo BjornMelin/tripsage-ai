@@ -8,6 +8,8 @@
 
 import "server-only";
 
+import type { BudgetPlanRequest } from "@schemas/agents";
+import { agentSchemas } from "@schemas/agents";
 import type { NextRequest } from "next/server";
 import type { z } from "zod";
 import { runBudgetAgent } from "@/lib/agents/budget-agent";
@@ -19,8 +21,6 @@ import {
   parseJsonBody,
 } from "@/lib/next/route-helpers";
 import { resolveProvider } from "@/lib/providers/registry";
-import type { BudgetPlanRequest } from "@/lib/schemas/agents";
-import { agentSchemas } from "@/lib/schemas/agents";
 
 export const maxDuration = 60;
 

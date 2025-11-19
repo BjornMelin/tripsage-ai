@@ -6,9 +6,9 @@
 
 import "server-only";
 
+import type { MemorySyncJob } from "@schemas/webhooks";
 import { Client } from "@upstash/qstash";
 import { getServerEnvVar } from "@/lib/env/server";
-import type { MemorySyncJob } from "@/lib/schemas/webhooks";
 import { secureUuid } from "@/lib/security/random";
 
 /**
