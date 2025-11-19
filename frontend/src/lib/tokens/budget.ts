@@ -4,14 +4,13 @@
  * fallback estimation and safe max token clamping.
  */
 
+import type { ClampResult, TokenChatMessage } from "@schemas/tokens";
 import { Tiktoken } from "js-tiktoken/lite";
 import cl100kBase from "js-tiktoken/ranks/cl100k_base";
 // Prefer lite ranks to avoid bundling all encodings.
 // o200k_base matches modern OpenAI models (e.g., gpt-4o, gpt-5 families).
 // cl100k_base covers older OpenAI models; retained as a fallback.
 import o200kBase from "js-tiktoken/ranks/o200k_base";
-
-import type { ClampResult, TokenChatMessage } from "@/lib/schemas/tokens";
 import { getModelContextLimit } from "./limits";
 
 /**

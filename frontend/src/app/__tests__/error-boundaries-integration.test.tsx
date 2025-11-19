@@ -1,9 +1,9 @@
 /** @vitest-environment jsdom */
 
+import type { ErrorReport } from "@schemas/errors";
 import { screen } from "@testing-library/react";
 import type { MockInstance } from "vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ErrorReport } from "@/lib/schemas/errors";
 import { render } from "@/test/test-utils";
 
 import AuthError from "../(auth)/error";

@@ -7,10 +7,10 @@
 
 import "server-only";
 
+import { type PlacesSearchRequest, placesSearchRequestSchema } from "@schemas/api";
 import { type NextRequest, NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
-import { type PlacesSearchRequest, placesSearchRequestSchema } from "@/lib/schemas/api";
 
 /**
  * POST /api/places/search

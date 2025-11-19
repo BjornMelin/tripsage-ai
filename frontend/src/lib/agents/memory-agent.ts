@@ -8,18 +8,17 @@
 
 import "server-only";
 
+import { createAiTool } from "@ai/lib/tool-factory";
+import { toolRegistry } from "@ai/tools";
+import type { MemoryUpdateRequest } from "@schemas/agents";
 import type { LanguageModel } from "ai";
 import { streamText } from "ai";
 import type { z } from "zod";
-
-import { createAiTool } from "@/lib/ai/tool-factory";
+import { TOOL_ERROR_CODES } from "@/ai/tools/server/errors";
+import { addConversationMemoryInputSchema } from "@/domain/schemas/memory";
 import { buildRateLimit } from "@/lib/ratelimit/config";
-import type { MemoryUpdateRequest } from "@/lib/schemas/agents";
 import type { ChatMessage } from "@/lib/tokens/budget";
 import { clampMaxTokens } from "@/lib/tokens/budget";
-import { toolRegistry } from "@/lib/tools";
-import { TOOL_ERROR_CODES } from "@/lib/tools/errors";
-import { addConversationMemoryInputSchema } from "@/lib/tools/memory";
 
 // Note: no wrapped tools are exposed here; we execute persistence directly with guardrails.
 
@@ -52,6 +51,9 @@ type PersistOutcome = {
 
 /** Type alias for the input schema of the addConversationMemory tool. */
 type AddConversationMemoryInput = z.infer<typeof addConversationMemoryInputSchema>;
+
+/** Type alias for individual memory records from the update request. */
+type MemoryRecordInput = MemoryUpdateRequest["records"][number];
 
 /** Valid memory category values accepted by the schema. */
 const MEMORY_CATEGORY_VALUES: readonly AddConversationMemoryInput["category"][] = [
@@ -204,12 +206,12 @@ export async function persistMemoryRecords(
   }
 
   await Promise.all(
-    records.map(async (r, index) => {
+    records.map(async (record: MemoryRecordInput, index: number) => {
       try {
-        const normalizedCategory = normalizeMemoryCategory(r.category);
+        const normalizedCategory = normalizeMemoryCategory(record.category);
         const payload: AddConversationMemoryInput = {
           category: normalizedCategory,
-          content: r.content,
+          content: record.content,
         };
         const res = (await guardrailedExecute(payload, {
           messages: [],

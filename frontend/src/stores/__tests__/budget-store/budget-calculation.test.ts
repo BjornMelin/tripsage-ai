@@ -1,8 +1,8 @@
 /** @vitest-environment jsdom */
 
+import type { Budget } from "@schemas/budget";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
-import type { Budget } from "@/lib/schemas/budget";
 import {
   selectActiveBudgetFrom,
   selectBudgetSummaryFrom,

@@ -2,8 +2,6 @@
  * @fileoverview Zustand store for budget state and actions.
  */
 
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import type {
   Budget,
   BudgetAlert,
@@ -12,8 +10,10 @@ import type {
   CurrencyRate,
   Expense,
   ExpenseCategory,
-} from "@/lib/schemas/budget";
-import type { CurrencyCode } from "@/lib/schemas/currency";
+} from "@schemas/budget";
+import type { CurrencyCode } from "@schemas/currency";
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import { nowIso, secureId } from "@/lib/security/random";
 
 // Helper functions

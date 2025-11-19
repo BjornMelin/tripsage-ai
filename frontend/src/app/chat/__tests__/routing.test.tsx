@@ -1,10 +1,10 @@
-import type { UIMessage } from "ai";
-import { DefaultChatTransport } from "ai";
-import { describe, expect, it } from "vitest";
 import {
   accommodationSearchResultSchema,
   flightSearchResultSchema,
-} from "@/lib/schemas/agents";
+} from "@schemas/agents";
+import type { UIMessage } from "ai";
+import { DefaultChatTransport } from "ai";
+import { describe, expect, it } from "vitest";
 
 describe("Chat routing logic", () => {
   it("routes to flight agent when metadata contains flightSearch", () => {

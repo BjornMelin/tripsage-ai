@@ -1,9 +1,9 @@
 /** @vitest-environment jsdom */
 
+import type { FilterOption } from "@schemas/search";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SearchFilters } from "@/components/features/search/search-filters";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import type { FilterOption } from "@/lib/schemas/search";
 import { render } from "@/test/test-utils";
 
 let warningMessages: string[] = [];

@@ -8,7 +8,7 @@
 
 import "server-only";
 
-import type { MemoryContextResponse, Message } from "@/lib/schemas/chat";
+import type { MemoryContextResponse, Message } from "@schemas/chat";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import { createMem0Adapter } from "./mem0-adapter";
 import { createSupabaseMemoryAdapter } from "./supabase-adapter";

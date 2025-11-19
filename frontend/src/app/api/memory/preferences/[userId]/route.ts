@@ -7,13 +7,13 @@
 
 import "server-only";
 
-import { type NextRequest, NextResponse } from "next/server";
-import { withApiGuards } from "@/lib/api/factory";
+import { addConversationMemory } from "@ai/tools";
 import {
   type MemoryUpdatePreferencesRequest,
   memoryUpdatePreferencesSchema,
-} from "@/lib/schemas/memory";
-import { addConversationMemory } from "@/lib/tools/memory";
+} from "@schemas/memory";
+import { type NextRequest, NextResponse } from "next/server";
+import { withApiGuards } from "@/lib/api/factory";
 
 /**
  * POST /api/memory/preferences/[userId]

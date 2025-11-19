@@ -7,13 +7,10 @@
 
 import "server-only";
 
+import { type MemorySearchRequest, memorySearchRequestSchema } from "@schemas/memory";
 import { type NextRequest, NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { handleMemoryIntent } from "@/lib/memory/orchestrator";
-import {
-  type MemorySearchRequest,
-  memorySearchRequestSchema,
-} from "@/lib/schemas/memory";
 
 /**
  * POST /api/memory/search

@@ -10,12 +10,12 @@ import "server-only";
 // Using withApiGuards({ auth: true }) ensures this route uses cookies/headers,
 // making it dynamic and preventing caching of user-specific data.
 
+import { freeBusyRequestSchema } from "@schemas/calendar";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { queryFreeBusy } from "@/lib/calendar/google";
 import { parseJsonBody, validateSchema } from "@/lib/next/route-helpers";
-import { freeBusyRequestSchema } from "@/lib/schemas/calendar";
 
 /**
  * POST /api/calendar/freebusy

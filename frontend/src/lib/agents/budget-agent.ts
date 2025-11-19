@@ -9,20 +9,19 @@
 
 import "server-only";
 
+import { createAiTool } from "@ai/lib/tool-factory";
+import { toolRegistry } from "@ai/tools";
+import { lookupPoiInputSchema } from "@ai/tools/schemas/google-places";
+import { combineSearchResultsInputSchema } from "@ai/tools/schemas/planning";
+import { travelAdvisoryInputSchema } from "@ai/tools/schemas/travel-advisory";
+import { webSearchBatchInputSchema } from "@ai/tools/schemas/web-search-batch";
+import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
+import type { BudgetPlanRequest } from "@schemas/agents";
 import type { LanguageModel, ToolSet } from "ai";
 import { stepCountIs, streamText } from "ai";
-
-import { createAiTool } from "@/lib/ai/tool-factory";
 import { buildRateLimit } from "@/lib/ratelimit/config";
-import type { BudgetPlanRequest } from "@/lib/schemas/agents";
 import type { ChatMessage } from "@/lib/tokens/budget";
 import { clampMaxTokens } from "@/lib/tokens/budget";
-import { toolRegistry } from "@/lib/tools";
-import { TOOL_ERROR_CODES } from "@/lib/tools/errors";
-import { lookupPoiInputSchema } from "@/lib/tools/google-places";
-import { combineSearchResultsInputSchema } from "@/lib/tools/planning";
-import { travelAdvisoryInputSchema } from "@/lib/tools/travel-advisory";
-import { webSearchBatchInputSchema } from "@/lib/tools/web-search-batch";
 import { buildBudgetPrompt } from "@/prompts/agents";
 
 /**

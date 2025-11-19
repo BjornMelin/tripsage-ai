@@ -1,5 +1,6 @@
 "use client";
 
+import type { Activity } from "@schemas/search";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ActivityCard } from "@/components/features/search/activity-card";
@@ -9,7 +10,6 @@ import {
   type ActivitySearchParams,
   useActivitySearch,
 } from "@/hooks/use-activity-search";
-import type { Activity } from "@/lib/schemas/search";
 import { useSearchStore } from "@/stores/search-store";
 
 // URL search parameters are handled inline
@@ -36,9 +36,7 @@ export default function ActivitiesSearchPage() {
     }
   }, [searchParams, searchActivities]);
 
-  const handleSearch = (
-    params: import("@/lib/schemas/search").ActivitySearchParams
-  ) => {
+  const handleSearch = (params: import("@schemas/search").ActivitySearchParams) => {
     // Convert the params to the hook's expected format
     if (params.destination) {
       const hookParams: ActivitySearchParams = {

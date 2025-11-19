@@ -7,10 +7,10 @@
 
 import "server-only";
 
+import type { AuthUser } from "@schemas/stores";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getOptionalUser, mapSupabaseUserToAuthUser } from "@/lib/auth/server";
-import type { AuthUser } from "@/lib/schemas/stores";
 
 interface MeResponse {
   user: AuthUser | null;

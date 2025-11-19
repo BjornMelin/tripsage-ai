@@ -1,10 +1,8 @@
-/**
- * @vitest-environment node
- */
+/** @vitest-environment node */
 
+import type { CalendarEvent } from "@schemas/calendar";
+import { calendarEventSchema } from "@schemas/calendar";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { CalendarEvent } from "@/lib/schemas/calendar";
-import { calendarEventSchema } from "@/lib/schemas/calendar";
 import type { DateRange } from "../../dates/unified-date-utils";
 import { DateUtils } from "../../dates/unified-date-utils";
 import type { CalendarProvider } from "../calendar-integration";

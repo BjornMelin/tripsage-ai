@@ -1,6 +1,5 @@
+import type { AgentWorkflow } from "@schemas/agents";
 import { describe, expect, it } from "vitest";
-
-import type { AgentWorkflow } from "@/lib/schemas/agents";
 
 import { buildRateLimit } from "../config";
 

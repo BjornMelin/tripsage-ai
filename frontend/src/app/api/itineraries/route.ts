@@ -6,13 +6,13 @@
 
 import "server-only";
 
+import type { Json } from "@schemas/supabase";
+import type { ItineraryItemCreateInput } from "@schemas/trips";
+import { itineraryItemCreateSchema } from "@schemas/trips";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { validateSchema } from "@/lib/next/route-helpers";
-import type { Json } from "@/lib/schemas/supabase";
-import type { ItineraryItemCreateInput } from "@/lib/schemas/trips";
-import { itineraryItemCreateSchema } from "@/lib/schemas/trips";
 import type { Database } from "@/lib/supabase/database.types";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 

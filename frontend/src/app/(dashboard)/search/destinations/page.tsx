@@ -2,6 +2,7 @@
 
 // Client-side search screen; no cache directive
 
+import type { Destination, DestinationSearchParams } from "@schemas/search";
 import { AlertCircle, MapPin, Search, Star } from "lucide-react";
 import { useState } from "react";
 import { DestinationCard } from "@/components/features/search/destination-card";
@@ -18,7 +19,6 @@ import {
 } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useDestinationSearch } from "@/hooks/use-destination-search";
-import type { Destination, DestinationSearchParams } from "@/lib/schemas/search";
 import { useSearchStore } from "@/stores/search-store";
 
 export default function DestinationsSearchPage() {

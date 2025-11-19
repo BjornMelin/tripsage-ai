@@ -6,10 +6,10 @@
 
 import "server-only";
 
+import { type RouteMatrixRequest, routeMatrixRequestSchema } from "@schemas/api";
 import { type NextRequest, NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
-import { type RouteMatrixRequest, routeMatrixRequestSchema } from "@/lib/schemas/api";
 
 /**
  * POST /api/route-matrix

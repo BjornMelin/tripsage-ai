@@ -7,11 +7,11 @@
 
 import "server-only";
 
+import { placesPhotoRequestSchema } from "@schemas/api";
 import { type NextRequest, NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
 import { errorResponse } from "@/lib/next/route-helpers";
-import { placesPhotoRequestSchema } from "@/lib/schemas/api";
 
 /**
  * GET /api/places/photo

@@ -6,11 +6,11 @@
 
 import "server-only";
 
+import { memorySyncJobSchema } from "@schemas/webhooks";
 import { Receiver } from "@upstash/qstash";
 import { NextResponse } from "next/server";
 import { getServerEnvVar, getServerEnvVarWithFallback } from "@/lib/env/server";
 import { tryReserveKey } from "@/lib/idempotency/redis";
-import { memorySyncJobSchema } from "@/lib/schemas/webhooks";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
 import { withTelemetrySpan } from "@/lib/telemetry/span";

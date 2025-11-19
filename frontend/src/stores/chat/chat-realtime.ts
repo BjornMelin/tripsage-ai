@@ -6,14 +6,15 @@
  * stays in hooks/route handlers.
  */
 
+import { CONNECTION_STATUS_SCHEMA } from "@schemas/realtime";
 import { create } from "zustand";
-import type { AgentStatus, ConnectionStatus, Message } from "@/lib/schemas/chat";
-import { CONNECTION_STATUS_SCHEMA } from "@/lib/schemas/chat";
 import type {
   AgentStatusBroadcastPayload,
   ChatMessageBroadcastPayload,
   ChatTypingBroadcastPayload,
-} from "@/lib/schemas/realtime";
+  ConnectionStatus,
+  Message,
+} from "@/domain/types";
 import { getCurrentTimestamp } from "@/lib/stores/helpers";
 
 /**
@@ -25,7 +26,7 @@ export interface ChatRealtimeState {
   isRealtimeEnabled: boolean;
   typingUsers: Record<string, { userId: string; username?: string; timestamp: string }>;
   pendingMessages: Message[];
-  agentStatuses: Record<string, AgentStatus>; // sessionId -> status
+  agentStatuses: Record<string, AgentStatusBroadcastPayload>; // sessionId -> status
 
   // Connection actions
   setChatConnectionStatus: (status: ConnectionStatus) => void;
@@ -42,7 +43,10 @@ export interface ChatRealtimeState {
   removePendingMessage: (messageId: string) => void;
 
   // Agent status
-  updateAgentStatus: (sessionId: string, status: Partial<AgentStatus>) => void;
+  updateAgentStatus: (
+    sessionId: string,
+    status: Partial<AgentStatusBroadcastPayload>
+  ) => void;
 
   // Broadcast handlers
   handleRealtimeMessage: (

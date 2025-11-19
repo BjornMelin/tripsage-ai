@@ -5,8 +5,8 @@
  * Extends existing factories in @/test/factories/* where applicable.
  */
 
-import type { ChatSession, Message } from "@/lib/schemas/chat";
-import type { AuthUser } from "@/lib/schemas/stores";
+import type { ChatSession, Message } from "@schemas/chat";
+import type { AuthUser } from "@schemas/stores";
 import type {
   SearchHistoryItem,
   ValidatedSavedSearch,
@@ -45,6 +45,7 @@ export function createMockUser(overrides: Partial<AuthUser> = {}): AuthUser {
  */
 export function createMockSession(overrides: Partial<ChatSession> = {}): ChatSession {
   return {
+    agentId: "agent-1",
     createdAt: "2025-01-01T00:00:00Z",
     id: "session-1",
     messages: [],

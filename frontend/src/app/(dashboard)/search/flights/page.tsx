@@ -4,6 +4,7 @@
 
 "use client";
 
+import type { FlightSearchParams } from "@schemas/search";
 import { useRouter, useSearchParams } from "next/navigation";
 import React from "react";
 import { FlightSearchForm } from "@/components/features/search/flight-search-form";
@@ -16,7 +17,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import type { FlightSearchParams } from "@/lib/schemas/search";
 import { useSearchStore } from "@/stores/search-store";
 
 // URL search parameters are handled inline

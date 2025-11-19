@@ -5,10 +5,10 @@
  * Client-only slice - no direct Supabase clients or server logic.
  */
 
+import type { ChatSession, Message, SendMessageOptions } from "@schemas/chat";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { sendChatMessage, streamChatMessage } from "@/lib/chat/api-client";
-import type { ChatSession, Message, SendMessageOptions } from "@/lib/schemas/chat";
 import { generateId, getCurrentTimestamp } from "@/lib/stores/helpers";
 
 // Memory sync handled server-side via orchestrator - no client-side memory store needed
@@ -26,7 +26,7 @@ export interface ChatMessagesState {
   currentSession: ChatSession | null;
 
   // Session actions
-  createSession: (title?: string, userId?: string) => string;
+  createSession: (title?: string, userId?: string, agentId?: string) => string;
   setCurrentSession: (sessionId: string) => void;
   deleteSession: (sessionId: string) => void;
   renameSession: (sessionId: string, title: string) => void;
@@ -177,11 +177,12 @@ export const useChatMessages = create<ChatMessagesState>()(
           });
         },
 
-        createSession: (title, userId) => {
+        createSession: (title, userId, agentId) => {
           const timestamp = getCurrentTimestamp();
           const sessionId = generateId();
 
           const newSession: ChatSession = {
+            agentId: agentId || "default-agent",
             createdAt: timestamp,
             id: sessionId,
             messages: [],

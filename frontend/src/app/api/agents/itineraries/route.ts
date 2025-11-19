@@ -8,6 +8,8 @@
 
 import "server-only";
 
+import type { ItineraryPlanRequest } from "@schemas/agents";
+import { agentSchemas } from "@schemas/agents";
 import type { NextRequest } from "next/server";
 import type { z } from "zod";
 import { createErrorHandler } from "@/lib/agents/error-recovery";
@@ -15,8 +17,6 @@ import { runItineraryAgent } from "@/lib/agents/itinerary-agent";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse, parseJsonBody } from "@/lib/next/route-helpers";
 import { resolveProvider } from "@/lib/providers/registry";
-import type { ItineraryPlanRequest } from "@/lib/schemas/agents";
-import { agentSchemas } from "@/lib/schemas/agents";
 
 export const maxDuration = 60;
 

@@ -6,7 +6,7 @@
  * typed dependencies.
  */
 
-import type { PostKeyBody } from "@/lib/schemas/api";
+import type { PostKeyBody } from "@schemas/api";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 
 /** Set of allowed API service providers for key storage. */

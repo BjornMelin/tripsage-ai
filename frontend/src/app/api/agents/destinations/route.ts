@@ -8,19 +8,15 @@
 
 import "server-only";
 
+import type { DestinationResearchRequest } from "@schemas/agents";
+import { agentSchemas } from "@schemas/agents";
 import type { NextRequest } from "next/server";
 import type { z } from "zod";
 import { runDestinationAgent } from "@/lib/agents/destination-agent";
 import { createErrorHandler } from "@/lib/agents/error-recovery";
 import { withApiGuards } from "@/lib/api/factory";
-import {
-  errorResponse,
-  getTrustedRateLimitIdentifier,
-  parseJsonBody,
-} from "@/lib/next/route-helpers";
+import { errorResponse, parseJsonBody } from "@/lib/next/route-helpers";
 import { resolveProvider } from "@/lib/providers/registry";
-import type { DestinationResearchRequest } from "@/lib/schemas/agents";
-import { agentSchemas } from "@/lib/schemas/agents";
 
 export const maxDuration = 60;
 
@@ -55,11 +51,10 @@ export const POST = withApiGuards({
     });
   }
 
-  const identifier = user?.id ?? getTrustedRateLimitIdentifier(req);
   const modelHint = new URL(req.url).searchParams.get("model") ?? undefined;
   const { model, modelId } = await resolveProvider(user?.id ?? "anon", modelHint);
 
-  const result = runDestinationAgent({ identifier, model, modelId }, body);
+  const result = runDestinationAgent({ model, modelId }, body);
   return result.toUIMessageStreamResponse({
     onError: createErrorHandler(),
   });

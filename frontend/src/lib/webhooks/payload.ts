@@ -4,9 +4,9 @@
 
 import "server-only";
 import { createHash } from "node:crypto";
+import type { WebhookPayload } from "@schemas/webhooks";
+import { webhookPayloadSchema } from "@schemas/webhooks";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
-import type { WebhookPayload } from "@/lib/schemas/webhooks";
-import { webhookPayloadSchema } from "@/lib/schemas/webhooks";
 import { verifyRequestHmac } from "@/lib/security/webhook";
 import { emitOperationalAlert } from "@/lib/telemetry/alerts";
 import { addEventToActiveSpan } from "@/lib/telemetry/span";

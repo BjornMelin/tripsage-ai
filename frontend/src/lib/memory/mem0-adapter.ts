@@ -10,7 +10,7 @@
 
 import "server-only";
 
-import type { MemoryContextResponse } from "@/lib/schemas/chat";
+import type { MemoryContextResponse } from "@schemas/chat";
 import type {
   MemoryAdapter,
   MemoryAdapterContext,

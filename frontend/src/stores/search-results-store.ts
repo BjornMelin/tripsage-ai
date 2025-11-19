@@ -2,10 +2,10 @@
  * @fileoverview Zustand store for managing search results, pagination, and performance metrics.
  */
 
+import type { SearchResults, SearchType } from "@schemas/search";
 import { z } from "zod";
 import { create, type StateCreator } from "zustand";
 import { devtools, persist } from "zustand/middleware";
-import type { SearchResults, SearchType } from "@/lib/schemas/search";
 import { nowIso, secureId } from "@/lib/security/random";
 
 // Validation schemas for search results

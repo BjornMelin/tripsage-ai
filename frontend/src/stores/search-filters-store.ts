@@ -2,10 +2,10 @@
  * @fileoverview Zustand store for managing search filters, sort options, and presets.
  */
 
+import type { SearchType } from "@schemas/search";
 import { z } from "zod";
 import { create, type StateCreator } from "zustand";
 import { devtools, persist } from "zustand/middleware";
-import type { SearchType } from "@/lib/schemas/search";
 import { nowIso, secureId } from "@/lib/security/random";
 
 // Validation schemas for filters and sorting

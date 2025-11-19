@@ -4,10 +4,10 @@
  * consolidates ICS import/export functionality using date-fns v4.
  */
 
+import { calendarEventSchema } from "@schemas/calendar";
+import type { CalendarEvent, EventDateTime } from "@/domain/types";
 import type { DateRange } from "../dates/unified-date-utils";
 import { DateUtils } from "../dates/unified-date-utils";
-import type { CalendarEvent, EventDateTime } from "../schemas/calendar";
-import { calendarEventSchema } from "../schemas/calendar";
 
 const resolveDateTimeValue = (value: EventDateTime): Date => {
   if (value.dateTime instanceof Date) {

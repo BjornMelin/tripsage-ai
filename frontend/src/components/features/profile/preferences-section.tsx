@@ -6,6 +6,8 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import type { CurrencyCode } from "@schemas/currency";
+import { type PreferencesFormData, preferencesFormSchema } from "@schemas/profile";
 import { Globe, Zap } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -33,8 +35,6 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
-import type { CurrencyCode } from "@/lib/schemas/currency";
-import { type PreferencesFormData, preferencesFormSchema } from "@/lib/schemas/forms";
 import { useCurrencyStore } from "@/stores/currency-store";
 import { useUserProfileStore } from "@/stores/user-store";
 

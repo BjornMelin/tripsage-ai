@@ -7,14 +7,8 @@
 
 "use client";
 
+import type { Deal, DealAlert, DealFilters, DealState, DealType } from "@schemas/deals";
 import { useCallback, useEffect, useMemo } from "react";
-import type {
-  Deal,
-  DealAlert,
-  DealFilters,
-  DealState,
-  DealType,
-} from "@/lib/schemas/deals";
 import { useDealsStore } from "@/stores/deals-store";
 
 /**

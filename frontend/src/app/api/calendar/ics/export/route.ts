@@ -10,13 +10,13 @@ import "server-only";
 // Using withApiGuards({ auth: true }) ensures this route uses cookies/headers,
 // making it dynamic and preventing caching of user-specific data.
 
+import { type IcsExportRequest, icsExportRequestSchema } from "@schemas/calendar";
 import ical from "ical-generator";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { RecurringDateGenerator } from "@/lib/dates/recurring-rules";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
-import { type IcsExportRequest, icsExportRequestSchema } from "@/lib/schemas/calendar";
 
 /**
  * Converts an attendee response status to the canonical iCal constant.

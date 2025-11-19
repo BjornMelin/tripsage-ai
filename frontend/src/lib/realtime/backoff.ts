@@ -3,8 +3,8 @@
  * Pure, deterministic utility with no React or Supabase dependencies.
  */
 
-import type { BackoffConfig } from "@/lib/schemas/realtime";
-import { backoffConfigSchema } from "@/lib/schemas/realtime";
+import type { BackoffConfig } from "@schemas/realtime";
+import { backoffConfigSchema } from "@schemas/realtime";
 
 // Re-export type from schemas
 export type { BackoffConfig };

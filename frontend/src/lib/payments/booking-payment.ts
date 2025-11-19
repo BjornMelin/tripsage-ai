@@ -7,6 +7,7 @@
  * 3. Refund on booking failure
  */
 
+import { secureUuid } from "@/lib/security/random";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { getExpediaClient } from "@/lib/travel-api/expedia-client";
 import type { EpsCreateBookingRequest } from "@/lib/travel-api/expedia-types";
@@ -25,8 +26,7 @@ const logger = createServerLogger("booking-payment");
  * @throws {Error} On payment or booking failures
  */
 export async function processBookingPayment(params: {
-  bookingToken: string;
-  amount: number; // Amount in cents
+  amount: number;
   currency: string;
   paymentMethodId: string;
   customerId?: string;
@@ -35,11 +35,11 @@ export async function processBookingPayment(params: {
     name: string;
     phone?: string;
   };
-  specialRequests?: string;
+  expediaRequest: EpsCreateBookingRequest;
 }): Promise<{
-  paymentIntentId: string;
-  bookingId: string;
   confirmationNumber: string;
+  itineraryId: string;
+  paymentIntentId: string;
 }> {
   const expediaClient = getExpediaClient();
 
@@ -50,7 +50,7 @@ export async function processBookingPayment(params: {
     customerId: params.customerId,
     metadata: {
       // biome-ignore lint/style/useNamingConvention: Stripe metadata uses snake_case
-      booking_token: params.bookingToken,
+      booking_token: params.expediaRequest.bookingToken,
       // biome-ignore lint/style/useNamingConvention: Stripe metadata uses snake_case
       user_email: params.user.email,
     },
@@ -65,24 +65,21 @@ export async function processBookingPayment(params: {
     );
   }
 
-  let bookingId: string;
   let confirmationNumber: string;
+  let itineraryId: string;
 
   try {
-    // Phase 2: Create Expedia booking
-    const bookingRequest: EpsCreateBookingRequest = {
-      bookingToken: params.bookingToken,
-      payment: {
-        paymentIntentId: paymentIntent.id,
-        paymentMethodId: params.paymentMethodId,
-      },
-      specialRequests: params.specialRequests,
-      user: params.user,
-    };
-
-    const bookingResponse = await expediaClient.createBooking(bookingRequest);
-    bookingId = bookingResponse.id;
-    confirmationNumber = bookingResponse.confirmationNumber;
+    const bookingResponse = await expediaClient.createBooking(params.expediaRequest);
+    itineraryId =
+      bookingResponse.itinerary_id ??
+      params.expediaRequest.affiliateReferenceId ??
+      secureUuid();
+    const roomConfirmation = bookingResponse.rooms?.[0]?.confirmation_id;
+    confirmationNumber =
+      roomConfirmation?.expedia ??
+      roomConfirmation?.property ??
+      itineraryId ??
+      paymentIntent.id;
   } catch (bookingError) {
     // Phase 3: Refund payment on booking failure
     try {
@@ -107,8 +104,8 @@ export async function processBookingPayment(params: {
   }
 
   return {
-    bookingId,
     confirmationNumber,
+    itineraryId,
     paymentIntentId: paymentIntent.id,
   };
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { type FlightSearchFormData, flightSearchFormSchema } from "@schemas/search";
 import {
   AlertCircle,
   ArrowRight,
@@ -38,7 +39,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { type FlightSearchFormData, flightSearchFormSchema } from "@/lib/schemas/forms";
 import { cn } from "@/lib/utils";
 
 // Use validated flight search params from schemas
