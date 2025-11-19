@@ -22,9 +22,10 @@ import { rateLimitResultSchema } from "@/lib/schemas/tools";
 import { type TelemetrySpanAttributes, withTelemetrySpan } from "@/lib/telemetry/span";
 import { createToolError, type ToolErrorCode } from "@/lib/tools/errors";
 
-/**
- * Type alias for rate limit window duration accepted by Upstash Ratelimit.
- */
+/**Maximum length for rate limit identifiers to prevent abuse. */
+const MAX_RATE_LIMIT_IDENTIFIER_LENGTH = 128;
+
+/** Type alias for rate limit window duration accepted by Upstash Ratelimit. */
 type RateLimitWindow = Parameters<typeof Ratelimit.slidingWindow>[1];
 
 /**
@@ -506,7 +507,14 @@ function sanitizeRateLimitIdentifier(identifier?: string | null): string | undef
   }
 
   const trimmed = identifier.trim();
-  return trimmed.length > 0 ? trimmed : undefined;
+  if (trimmed.length === 0) {
+    return undefined;
+  }
+  if (trimmed.length > MAX_RATE_LIMIT_IDENTIFIER_LENGTH) {
+    // Truncate overly long identifiers
+    return trimmed.slice(0, MAX_RATE_LIMIT_IDENTIFIER_LENGTH);
+  }
+  return trimmed;
 }
 
 /**
