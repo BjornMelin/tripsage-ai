@@ -8,6 +8,7 @@
 
 import "server-only";
 
+import { resolveProvider } from "@ai/models/registry";
 import type { AccommodationSearchRequest } from "@schemas/agents";
 import { agentSchemas } from "@schemas/agents";
 import type { NextRequest } from "next/server";
@@ -15,7 +16,6 @@ import { runAccommodationAgent } from "@/lib/agents/accommodation-agent";
 import { createErrorHandler } from "@/lib/agents/error-recovery";
 import { withApiGuards } from "@/lib/api/factory";
 import { getTrustedRateLimitIdentifier } from "@/lib/next/route-helpers";
-import { resolveProvider } from "@/lib/providers/registry";
 
 export const maxDuration = 60;
 

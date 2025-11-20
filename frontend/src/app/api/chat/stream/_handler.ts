@@ -5,6 +5,7 @@
  * streaming. It is fully dependency-injected to ensure deterministic tests.
  */
 
+import type { ProviderResolution } from "@ai/models/registry";
 import * as tools from "@ai/tools";
 import { wrapToolsWithUserId } from "@ai/tools/server/injection";
 import type { UIMessage } from "ai";
@@ -22,7 +23,6 @@ import {
   persistMemoryTurn,
   uiMessageToMemoryTurn,
 } from "@/lib/memory/turn-utils";
-import type { ProviderResolution } from "@/lib/providers/types";
 import { secureUuid } from "@/lib/security/random";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { insertSingle } from "@/lib/supabase/typed-helpers";

@@ -45,7 +45,7 @@ describe("resolveProvider telemetry", () => {
   });
 
   it("emits attributes for user-gateway path", async () => {
-    const { resolveProvider } = await import("../registry");
+    const { resolveProvider } = await import("@ai/models/registry");
     await resolveProvider("u1", "openai/gpt-4o-mini");
     const span = CAPTURED.find((c) => c.name === "providers.resolve");
     expect(span?.attrs).toMatchObject({
@@ -64,7 +64,7 @@ describe("resolveProvider telemetry", () => {
     ).getUserApiKey = vi.fn(async () => null);
     vi.stubEnv("AI_GATEWAY_API_KEY", "team-key");
     vi.stubEnv("AI_GATEWAY_URL", "https://ai-gateway.vercel.sh/v1");
-    const { resolveProvider } = await import("../registry");
+    const { resolveProvider } = await import("@ai/models/registry");
     await resolveProvider("u2", "openai/gpt-4o-mini");
     const span = CAPTURED.filter((c) => c.name === "providers.resolve").pop();
     expect(span?.attrs).toMatchObject({

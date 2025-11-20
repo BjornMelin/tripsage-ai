@@ -50,7 +50,7 @@ describe("resolveProvider", () => {
     (getUserApiKey as unknown as Mock).mockImplementation(
       async (_uid: string, svc: string) => (svc === "openai" ? "sk-openai" : null)
     );
-    const { resolveProvider } = await import("../registry");
+    const { resolveProvider } = await import("@ai/models/registry");
     const result = await resolveProvider("user-1", "gpt-4o-mini");
     expect(result.provider).toBe("openai");
     expect(result.model).toContain("openai(");
@@ -62,7 +62,7 @@ describe("resolveProvider", () => {
     (getUserApiKey as unknown as Mock).mockImplementation(
       async (_uid: string, svc: string) => (svc === "gateway" ? "gw-user-key" : null)
     );
-    const { resolveProvider } = await import("../registry");
+    const { resolveProvider } = await import("@ai/models/registry");
     const result = await resolveProvider("user-gw", "openai/gpt-4o-mini");
     expect(result.provider).toBe("openai");
     expect(String(result.model)).toContain(
@@ -75,7 +75,7 @@ describe("resolveProvider", () => {
     (getUserApiKey as unknown as Mock).mockImplementation(
       async (_uid: string, svc: string) => (svc === "openrouter" ? "sk-or" : null)
     );
-    const { resolveProvider } = await import("../registry");
+    const { resolveProvider } = await import("@ai/models/registry");
     const result = await resolveProvider(
       "user-2",
       "anthropic/claude-3.7-sonnet:thinking"
@@ -104,7 +104,7 @@ describe("resolveProvider", () => {
     (getUserApiKey as unknown as Mock).mockImplementation(
       async (_uid: string, svc: string) => (svc === "openrouter" ? "sk-or" : null)
     );
-    const { resolveProvider } = await import("../registry");
+    const { resolveProvider } = await import("@ai/models/registry");
     const result = await resolveProvider("user-6", "openai/gpt-4o-mini");
     expect(result.provider).toBe("openrouter");
     expect(String(result.model)).toContain(
@@ -119,7 +119,7 @@ describe("resolveProvider", () => {
     (getUserApiKey as unknown as Mock).mockImplementation(
       async (_uid: string, svc: string) => (svc === "anthropic" ? "sk-ant" : null)
     );
-    const { resolveProvider } = await import("../registry");
+    const { resolveProvider } = await import("@ai/models/registry");
     const result = await resolveProvider("user-3", "claude-3-5-sonnet-20241022");
     expect(result.provider).toBe("anthropic");
     expect(result.model).toContain("anthropic::key::claude-3-5-sonnet-20241022");
@@ -130,7 +130,7 @@ describe("resolveProvider", () => {
     (getUserApiKey as unknown as Mock).mockImplementation(
       async (_uid: string, svc: string) => (svc === "xai" ? "sk-xai" : null)
     );
-    const { resolveProvider } = await import("../registry");
+    const { resolveProvider } = await import("@ai/models/registry");
     const result = await resolveProvider("user-4", "grok-3");
     expect(result.provider).toBe("xai");
     expect(String(result.model)).toContain("xai::key::grok-3");
@@ -150,7 +150,7 @@ describe("resolveProvider", () => {
 
     const { getUserApiKey } = await import("@/lib/supabase/rpc");
     (getUserApiKey as unknown as Mock).mockResolvedValue(null);
-    const { resolveProvider } = await import("../registry");
+    const { resolveProvider } = await import("@ai/models/registry");
 
     await expect(resolveProvider("user-5")).rejects.toThrow(/No provider key found/);
 

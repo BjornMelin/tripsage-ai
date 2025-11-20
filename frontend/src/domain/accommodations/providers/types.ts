@@ -46,7 +46,7 @@ export interface AccommodationProviderAdapter {
 
   /**
    * Search for available accommodations matching criteria.
-   * 
+   *
    * @param params - Search criteria including dates, guests, and property IDs
    * @param ctx - Optional context for the operation
    * @returns Search results or error with retry count
@@ -58,7 +58,7 @@ export interface AccommodationProviderAdapter {
 
   /**
    * Get detailed information for a specific property.
-   * 
+   *
    * @param params - Property identifier and optional language preference
    * @param ctx - Optional context for the operation
    * @returns Property details or error with retry count
@@ -70,7 +70,7 @@ export interface AccommodationProviderAdapter {
 
   /**
    * Verify room availability and get booking token.
-   * 
+   *
    * @param params - Availability check parameters with property, room, and rate IDs
    * @param ctx - Optional context for the operation
    * @returns Availability confirmation with token or error with retry count
@@ -82,7 +82,7 @@ export interface AccommodationProviderAdapter {
 
   /**
    * Check current pricing for a room/rate combination.
-   * 
+   *
    * @param params - Pricing check parameters including token from availability check
    * @param ctx - Optional context for the operation
    * @returns Current pricing information or error with retry count
@@ -94,7 +94,7 @@ export interface AccommodationProviderAdapter {
 
   /**
    * Create a booking reservation.
-   * 
+   *
    * @param params - Complete booking request with guest and payment information
    * @param ctx - Optional context for the operation
    * @returns Booking confirmation or error with retry count
