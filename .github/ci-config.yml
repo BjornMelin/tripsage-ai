@@ -1,65 +1,31 @@
-# Shared CI Configuration for TripSage AI
-# This file contains centralized configuration values used across GitHub Actions workflows
-# https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/store-information-in-variables
+# Shared CI Configuration for TripSage AI (Next.js + AI SDK v6 only)
 
-# Version definitions
 versions:
-  # Language versions
-  python: "3.13"
-  python-minor: "3.13.9"
   node: "24"
   node-full: "24.x"
-  
-  # Tool versions
-  uv: "0.9.7"
-  ruff: "0.14.3"
-  mypy: "1.18.2"
   pnpm: "10.20.0"
   biome: "2.3.2"
   playwright: "1.56.1"
   vitest: "4.0.6"
   typescript: "5.9.3"
-  
-  # Docker versions
   docker-buildx: "0.29.1"
   docker-compose: "2.40.3"
 
-# Coverage thresholds
 coverage:
-  # Backend Python coverage
-  backend:
-    minimum: 85
-    target: 90
-    fail_under: 80
-    precision: 2
-    
-  # Frontend JavaScript/TypeScript coverage
   frontend:
     minimum: 85
     target: 90
     fail_under: 80
     precision: 2
-    
-  # E2E test coverage
-  e2e:
-    minimum: 70
-    target: 80
-    fail_under: 65
 
-# Security policies
 security:
-  # Vulnerability scanning
   vulnerability_scan:
     enabled: true
     fail_on_severity: "high"
     ignore_unfixed: false
-    
-  # Secret scanning
   secret_scan:
     enabled: true
     fail_on_detection: true
-    
-  # Dependency review
   dependency_review:
     enabled: true
     fail_on_severity: "moderate"
@@ -69,54 +35,27 @@ security:
       - "BSD-3-Clause"
       - "BSD-2-Clause"
       - "ISC"
-      - "Python-2.0"
     deny_licenses:
       - "GPL-3.0"
       - "AGPL-3.0"
       - "LGPL-3.0"
-    
-  # SAST (Static Application Security Testing)
   sast:
     enabled: true
     tools:
-      - bandit  # Python
-      - semgrep # Multi-language
-      - trivy   # Container scanning
+      - semgrep
+      - trivy
 
-# Performance benchmarks
 performance:
-  # API response time thresholds (ms)
-  api:
-    p50_threshold: 100
-    p95_threshold: 500
-    p99_threshold: 1000
-    
-  # Frontend performance
   frontend:
     lighthouse_score: 90
-    first_contentful_paint: 1800  # ms
-    time_to_interactive: 3800      # ms
+    first_contentful_paint: 1800
+    time_to_interactive: 3800
     cumulative_layout_shift: 0.1
-    
-  # Build time limits
   build:
-    backend_timeout: 300   # 5 minutes
-    frontend_timeout: 600  # 10 minutes
-    docker_timeout: 900    # 15 minutes
+    frontend_timeout: 600
+    docker_timeout: 900
 
-# Cache configuration
 cache:
-  # Python cache keys
-  python:
-    key_prefix: "python-uv"
-    restore_keys:
-      - "python-uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}"
-      - "python-uv-${{ runner.os }}-"
-    paths:
-      - "~/.cache/uv"
-      - ".venv"
-    
-  # Node.js cache keys
   node:
     key_prefix: "node-pnpm"
     restore_keys:
@@ -126,59 +65,37 @@ cache:
       - "~/.pnpm-store"
       - "frontend/node_modules"
       - "frontend/.next/cache"
-    
-  # Docker cache
   docker:
     key_prefix: "docker-buildx"
     registry: "ghcr.io"
     mode: "max"
     compression: "zstd"
 
-# Matrix strategy configurations
 matrix:
-  # Operating systems for testing
   os:
     default: ["ubuntu-latest"]
     full: ["ubuntu-latest", "macos-latest", "windows-latest"]
-    
-  # Python versions for compatibility testing
-  python_versions:
-    default: ["3.13"]
-    full: ["3.11", "3.12", "3.13"]
-    
-  # Node versions for compatibility testing
   node_versions:
     default: ["24"]
     full: ["20", "22", "24"]
 
-# Workflow concurrency settings
 concurrency:
-  # Cancel in-progress runs on new push
   cancel_in_progress: true
-  
-  # Group patterns
   groups:
     pr: "ci-${{ github.workflow }}-${{ github.event.pull_request.number }}"
     push: "ci-${{ github.workflow }}-${{ github.ref }}"
-    release: "release-${{ github.ref }}"
 
-# Artifact retention
 artifacts:
-  # Retention days
   retention_days:
     test_results: 30
     coverage_reports: 90
     build_artifacts: 7
     logs: 14
-    
-  # Size limits (MB)
   size_limits:
     single_file: 100
     total_upload: 500
 
-# Notification settings
 notifications:
-  # Slack webhook (stored as secret)
   slack:
     enabled: true
     webhook_secret: "SLACK_WEBHOOK_URL"
@@ -186,33 +103,24 @@ notifications:
       success: "#ci-success"
       failure: "#ci-alerts"
       security: "#security-alerts"
-    
-  # GitHub status checks
   status_checks:
     required:
-      - "Backend Tests"
       - "Frontend Tests"
       - "Type Check"
       - "Lint"
       - "Security Scan"
       - "Build"
 
-# Environment configurations
 environments:
-  # Development
   development:
     url: "https://dev.tripsage.ai"
     protection_rules:
       required_reviewers: 0
-      
-  # Staging
   staging:
     url: "https://staging.tripsage.ai"
     protection_rules:
       required_reviewers: 1
       dismiss_stale_reviews: true
-      
-  # Production
   production:
     url: "https://tripsage.ai"
     protection_rules:
@@ -224,27 +132,13 @@ environments:
         - "Security Scan"
         - "Build"
 
-# Secret requirements
 secrets:
-  deploy:
-    - name: "PRIMARY_DATABASE_URL"
-      description: >
-        Writable Supabase connection string used by deploy.yml to run
-        scripts/operators/verify_webhook_secret.sh. Falls back to DATABASE_URL
-        but PRIMARY_DATABASE_URL is required for production parity.
-    - name: "HMAC_SECRET"
-      description: >
-        Shared secret for webhook verification; must match app.webhook_hmac_secret
-        in the primary database or the deploy workflow will fail.
+  deploy: []
 
-# Release configuration
 release:
-  # Semantic versioning
   versioning:
     schema: "semantic"
     initial_version: "0.1.0"
-    
-  # Changelog generation
   changelog:
     enabled: true
     categories:
@@ -265,7 +159,6 @@ release:
       - title: "Maintenance"
         labels: ["chore", "build", "ci"]
 
-# Timeout settings (minutes)
 timeouts:
   default: 30
   test: 20

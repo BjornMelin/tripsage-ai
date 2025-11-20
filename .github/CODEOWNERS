@@ -19,31 +19,9 @@
 /.github/CODEOWNERS @BjornMelin
 /.github/ci-config.yml @BjornMelin
 
-# Backend Python code ownership
-/tripsage/ @BjornMelin
+# Tooling and scripts
 /scripts/ @BjornMelin
-/tests/ @BjornMelin
-pyproject.toml @BjornMelin
-uv.lock @BjornMelin
-.python-version @BjornMelin
-
-# API specific ownership
-/tripsage/api/ @BjornMelin
-/tripsage/api/endpoints/ @BjornMelin
-/tripsage/api/middleware/ @BjornMelin
-
-# Core business logic
-/tripsage/agents/ @BjornMelin
-/tripsage/planning/ @BjornMelin
-/tripsage/tools/ @BjornMelin
-/tripsage/memory/ @BjornMelin
-
-# Database and migrations
-/tripsage/db/ @BjornMelin
-/scripts/database/ @BjornMelin
 /supabase/migrations/ @BjornMelin
-/tripsage/db/migrations/ @BjornMelin
-/scripts/database/migrations/ @BjornMelin
 
 # Frontend Next.js code ownership
 /frontend/ @BjornMelin
@@ -83,8 +61,6 @@ docker-compose*.yml @BjornMelin
 .env* @BjornMelin
 **/secrets/ @BjornMelin
 **/credentials/ @BjornMelin
-/tripsage/config/ @BjornMelin
-/tripsage/auth/ @BjornMelin
 
 # Development tools configuration
 .gitignore @BjornMelin
