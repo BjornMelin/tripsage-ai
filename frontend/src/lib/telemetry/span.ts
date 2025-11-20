@@ -33,15 +33,13 @@ function executeSpan<T>(
   isAsync: boolean
 ): T | Promise<T> {
   let exceptionRecorded = false;
-  // Wrap recordException to track if it was called
+  // Wrap recordException to track if it was called while preserving span prototype methods
   const originalRecordException = span.recordException.bind(span);
-  const wrappedSpan = {
-    ...span,
-    recordException: (exception: Error) => {
-      exceptionRecorded = true;
-      originalRecordException(exception);
-    },
-  } as Span;
+  const wrappedSpan = span as Span & { recordException: Span["recordException"] };
+  wrappedSpan.recordException = (exception: Error) => {
+    exceptionRecorded = true;
+    originalRecordException(exception);
+  };
 
   const handleResult = (result: T): T => {
     // Only set status to OK if no exception was recorded

@@ -70,7 +70,7 @@ describe("/api/calendar/ics/export", () => {
     const res = await icsExportRoute.POST(req);
     expect(res.status).toBe(400);
     const json = await res.json();
-    expect(json.error).toBe("BAD_REQUEST");
+    expect(json.error).toBe("invalid_request");
   });
 
   it("returns 400 on empty events array", async () => {

@@ -8,13 +8,24 @@ setupReactQueryMocks();
 import type { z } from "zod";
 import { errorResponse, withRequestSpan } from "@/lib/next/route-helpers";
 
+const infoSpy = vi.hoisted(() => vi.fn());
+const errorSpy = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/telemetry/logger", () => ({
+  createServerLogger: () => ({
+    error: errorSpy,
+    info: infoSpy,
+    warn: vi.fn(),
+  }),
+  errorMock: errorSpy,
+  infoMock: infoSpy,
+}));
+
 type ValidationIssue = z.core.$ZodIssue;
 
 describe("withRequestSpan", () => {
   beforeEach(() => {
-    vi.spyOn(console, "debug").mockImplementation(() => {
-      /* noop */
-    });
+    infoSpy.mockClear();
   });
 
   it("executes function and logs span", async () => {
@@ -27,7 +38,7 @@ describe("withRequestSpan", () => {
 
     expect(result).toBe("result");
     expect(fn).toHaveBeenCalledTimes(1);
-    expect(console.debug).toHaveBeenCalledWith(
+    expect(infoSpy).toHaveBeenCalledWith(
       "agent.span",
       expect.objectContaining({
         count: 42,
@@ -53,7 +64,7 @@ describe("withRequestSpan", () => {
 
     await withRequestSpan("slow.operation", {}, fn);
 
-    const call = (console.debug as ReturnType<typeof vi.fn>).mock.calls[0]?.[1];
+    const call = infoSpy.mock.calls[0]?.[1];
     expect(call?.durationMs).toBeCloseTo(10, 5);
 
     hrtimeBigintStub.mockRestore();
@@ -67,7 +78,7 @@ describe("withRequestSpan", () => {
       "Test error"
     );
 
-    expect(console.debug).toHaveBeenCalled();
+    expect(infoSpy).toHaveBeenCalled();
   });
 
   it("logs span even when function throws", async () => {
@@ -78,7 +89,7 @@ describe("withRequestSpan", () => {
       withRequestSpan("failing.operation", { attr: "test" }, fn)
     ).rejects.toThrow();
 
-    expect(console.debug).toHaveBeenCalledWith(
+    expect(infoSpy).toHaveBeenCalledWith(
       "agent.span",
       expect.objectContaining({
         attr: "test",
@@ -90,9 +101,7 @@ describe("withRequestSpan", () => {
 
 describe("errorResponse", () => {
   beforeEach(() => {
-    vi.spyOn(console, "error").mockImplementation(() => {
-      /* noop */
-    });
+    errorSpy.mockClear();
   });
 
   it("returns standardized error response", () => {
@@ -156,14 +165,14 @@ describe("errorResponse", () => {
       status: 500,
     });
 
-    expect(console.error).toHaveBeenCalledWith(
+    expect(errorSpy).toHaveBeenCalledWith(
       "agent.error",
       expect.objectContaining({
         error: "internal",
         reason: "Server error",
       })
     );
-    const logCall = (console.error as ReturnType<typeof vi.fn>).mock.calls[0];
+    const logCall = errorSpy.mock.calls[0];
     const message = logCall?.[1]?.message as string;
     expect(message).toBeDefined();
     expect(message).toContain("[REDACTED]");
@@ -177,7 +186,7 @@ describe("errorResponse", () => {
       status: 404,
     });
 
-    expect(console.error).not.toHaveBeenCalled();
+    expect(errorSpy).not.toHaveBeenCalled();
   });
 
   it("redacts sensitive information from error messages", () => {
@@ -189,7 +198,7 @@ describe("errorResponse", () => {
       status: 401,
     });
 
-    const logCall = (console.error as ReturnType<typeof vi.fn>).mock.calls[0];
+    const logCall = errorSpy.mock.calls[0];
     expect(logCall?.[1]?.message).not.toContain("abc123secret");
     expect(logCall?.[1]?.message).toContain("[REDACTED]");
   });
@@ -202,6 +211,6 @@ describe("errorResponse", () => {
       status: 500,
     });
 
-    expect(console.error).toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalled();
   });
 });

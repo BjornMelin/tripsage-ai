@@ -27,6 +27,17 @@ vi.mock("@/lib/redis", () => ({
   getRedis: vi.fn(() => Promise.resolve({})),
 }));
 
+const loggerErrorMock = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/telemetry/logger", () => ({
+  createServerLogger: vi.fn(() => ({
+    debug: vi.fn(),
+    error: loggerErrorMock,
+    info: vi.fn(),
+    warn: vi.fn(),
+  })),
+}));
+
 // Mock route helpers
 vi.mock("@/lib/next/route-helpers", async () => {
   const actual = await vi.importActual<typeof import("@/lib/next/route-helpers")>(
@@ -122,7 +133,6 @@ describe("/api/embeddings", () => {
 
   it("logs and continues when persistence fails", async () => {
     UPSERT.mockResolvedValueOnce({ error: { message: "boom" } });
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     const res = await route.POST(
       createMockNextRequest({
@@ -140,7 +150,9 @@ describe("/api/embeddings", () => {
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.persisted).toBe(false);
-    expect(consoleError).toHaveBeenCalled();
-    consoleError.mockRestore();
+    expect(loggerErrorMock).toHaveBeenCalledWith("persist_failed", {
+      error: "boom",
+      propertyId: "prop-999",
+    });
   });
 });

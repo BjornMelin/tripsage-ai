@@ -9,6 +9,7 @@ const MockOnSearch = vi.fn();
 
 describe("ActivitySearchForm", () => {
   beforeEach(() => {
+    vi.useRealTimers();
     vi.clearAllMocks();
   });
 
@@ -53,30 +54,12 @@ describe("ActivitySearchForm", () => {
 
     fireEvent.click(submitButton);
 
-    await waitFor(
-      () => {
-        expect(screen.getByText("Location is required")).toBeInTheDocument();
-      },
-      { timeout: 1000 }
-    );
-
-    await waitFor(
-      () => {
-        expect(screen.getByText("Start date is required")).toBeInTheDocument();
-      },
-      { timeout: 1000 }
-    );
-
-    await waitFor(
-      () => {
-        expect(screen.getByText("End date is required")).toBeInTheDocument();
-      },
-      { timeout: 1000 }
-    );
+    expect(await screen.findByText("Location is required")).toBeInTheDocument();
+    expect(await screen.findByText("Start date is required")).toBeInTheDocument();
+    expect(await screen.findByText("End date is required")).toBeInTheDocument();
   });
 
-  // TODO: Wire to real search pipeline; confirm payload shape.
-  it.skip("handles form submission with valid data", () => {
+  it("handles form submission with valid data", async () => {
     renderWithProviders(<ActivitySearchForm onSearch={MockOnSearch} />);
 
     // Fill in required fields
@@ -111,24 +94,18 @@ describe("ActivitySearchForm", () => {
     const submitButton = screen.getByRole("button", {
       name: /search activities/i,
     });
-    act(() => {
-      fireEvent.click(submitButton);
-    });
+    fireEvent.click(submitButton);
 
-    expect(MockOnSearch).toHaveBeenCalledWith({
-      adults: 1,
-      categories: ["outdoor", "cultural"],
-      children: 0,
-      destination: "New York",
-      duration: 4,
-      endDate: "2024-07-03",
-      infants: 0,
-      priceRange: {
-        max: 200,
-        min: 50,
-      },
-      rating: 4,
-      startDate: "2024-07-01",
+    await waitFor(() => {
+      expect(MockOnSearch).toHaveBeenCalledWith({
+        adults: 1,
+        category: "outdoor",
+        children: 0,
+        date: "2024-07-01",
+        destination: "New York",
+        duration: { max: 4, min: 0 },
+        infants: 0,
+      });
     });
   });
 
@@ -155,19 +132,16 @@ describe("ActivitySearchForm", () => {
 
     fireEvent.click(submitButton);
 
-    await waitFor(
-      () => {
-        expect(MockOnSearch).toHaveBeenCalledWith(
-          expect.objectContaining({
-            adults: 2,
-            children: 1,
-            destination: "Paris",
-            infants: 1,
-          })
-        );
-      },
-      { timeout: 1000 }
-    );
+    await waitFor(() => {
+      expect(MockOnSearch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          adults: 2,
+          children: 1,
+          destination: "Paris",
+          infants: 1,
+        })
+      );
+    });
   });
 
   it("accepts fractional rating values", async () => {

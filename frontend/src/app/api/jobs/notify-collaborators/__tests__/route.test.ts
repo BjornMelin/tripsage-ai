@@ -71,7 +71,19 @@ vi.mock("@/lib/next/route-helpers", async () => {
   );
   return {
     ...actual,
-    withRequestSpan: vi.fn((_name, _attrs, fn) => fn()),
+    withRequestSpan: vi.fn(async (_name, _attrs, fn) => {
+      const span = {
+        recordException: vi.fn(),
+        setAttribute: vi.fn(),
+      };
+      try {
+        return await fn(span);
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error("withRequestSpan error", error);
+        throw error;
+      }
+    }),
   };
 });
 
@@ -147,6 +159,8 @@ describe("POST /api/jobs/notify-collaborators", () => {
     const { POST } = await loadRoute();
     const res = await POST(makeRequest(validJob));
     const json = await res.json();
+    // eslint-disable-next-line no-console
+    console.log("notify duplicate status", res.status, json);
     expect(res.status).toBe(200);
     expect(json.duplicate).toBe(true);
     expect(sendNotificationsMock).not.toHaveBeenCalled();
@@ -156,6 +170,8 @@ describe("POST /api/jobs/notify-collaborators", () => {
     const { POST } = await loadRoute();
     const res = await POST(makeRequest(validJob));
     const json = await res.json();
+    // eslint-disable-next-line no-console
+    console.log("notify success status", res.status, json);
     expect(res.status).toBe(200);
     expect(json.ok).toBe(true);
     expect(sendNotificationsMock).toHaveBeenCalledWith(

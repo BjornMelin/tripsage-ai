@@ -24,6 +24,7 @@ const MockToast = toast as unknown as ReturnType<typeof vi.fn>;
 
 describe("AccountSettingsSection", () => {
   beforeEach(() => {
+    vi.useRealTimers();
     vi.clearAllMocks();
     vi.mocked(useUserProfileStore).mockReturnValue({
       profile: MockProfile,

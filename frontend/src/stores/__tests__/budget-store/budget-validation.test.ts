@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 
 import { act } from "@testing-library/react";
-import { beforeEach, describe } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { useBudgetStore } from "@/stores/budget-store";
 
 describe("Budget Store - Budget Validation", () => {
@@ -18,5 +18,9 @@ describe("Budget Store - Budget Validation", () => {
     });
   });
 
-  // Validation tests will be added here when validation logic is implemented
+  it("resets budgets state before validation flows", () => {
+    const state = useBudgetStore.getState();
+    expect(state.budgets).toEqual({});
+    expect(state.activeBudgetId).toBeNull();
+  });
 });
