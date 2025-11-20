@@ -4,7 +4,7 @@
  * behavior suitable for browser runtimes.
  */
 
-import type { ValidationResult } from "@domain/types";
+import type { ValidationResult } from "@schemas/validation";
 import type { z } from "zod";
 import { getClientEnvVarWithFallback } from "../env/client";
 

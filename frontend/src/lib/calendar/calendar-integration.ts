@@ -4,7 +4,7 @@
  * consolidates ICS import/export functionality using date-fns v4.
  */
 
-import type { CalendarEvent, EventDateTime } from "@domain/types";
+import type { CalendarEvent, EventDateTime } from "@schemas/calendar";
 import { calendarEventSchema } from "@schemas/calendar";
 import type { DateRange } from "../dates/unified-date-utils";
 import { DateUtils } from "../dates/unified-date-utils";

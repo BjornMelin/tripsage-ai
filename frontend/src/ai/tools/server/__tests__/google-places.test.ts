@@ -14,9 +14,9 @@ vi.mock("@/lib/google/caching", () => ({
 }));
 
 vi.mock("@/lib/env/server", () => ({
+  getGoogleMapsServerKey: vi.fn().mockReturnValue("test-server-key"),
   getServerEnvVar: vi.fn(() => undefined),
   getServerEnvVarWithFallback: vi.fn((_key: string, fallback?: string) => fallback),
-  getGoogleMapsServerKey: vi.fn().mockReturnValue("test-server-key"),
 }));
 
 vi.mock("@/lib/telemetry/span", () => ({

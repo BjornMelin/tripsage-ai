@@ -1,7 +1,7 @@
 # ADR-0004: FastAPI as Backend Framework
 
 **Version**: 1.0.0
-**Status**: Accepted
+**Status**: Superseded by ADR-0013 and ADR-0023 (frontend-only Next.js 16 + AI SDK v6)
 **Date**: 2025-06-17
 **Category**: backend
 **Domain**: FastAPI

@@ -38,7 +38,7 @@ import type { AccommodationSearchParams } from "@schemas/accommodations";
 
 // ✅ CORRECT: Domain logic from outside domain
 import { AccommodationsService } from "@domain/accommodations/service";
-import type { CalendarEvent } from "@domain/types";
+import type { CalendarEvent } from "@schemas/calendar";
 
 // ✅ CORRECT: AI tooling from outside AI
 import { createAiTool } from "@ai/lib/tool-factory";
@@ -112,7 +112,7 @@ import { webSearchInputSchema } from "@ai/tools/schemas/web-search";
 import { AccommodationsService } from "@domain/accommodations/service";
 
 // Domain types
-import type { CalendarEvent, EventDateTime } from "@domain/types";
+import type { CalendarEvent, EventDateTime } from "@schemas/calendar";
 
 // Domain utilities
 import { ExpediaApiError } from "@domain/expedia/client";

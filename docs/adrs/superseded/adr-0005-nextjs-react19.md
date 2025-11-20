@@ -1,7 +1,7 @@
 # ADR-0005: Next.js 15 with React 19 for Frontend
 
 **Version**: 1.0.0
-**Status**: Accepted
+**Status**: Superseded by ADR-0013 (Next.js 16 proxy/async APIs)
 **Date**: 2025-06-17
 **Category**: frontend
 **Domain**: Next.js / React 19

@@ -1,7 +1,7 @@
 # ADR-0011: Adopt Tenacity-Only Resilience, Remove Circuit Breaker
 
 **Version**: 1.0.0
-**Status**: Accepted
+**Status**: Superseded by ADR-0032 (Upstash rate limiting) and frontend-only stack
 **Date**: 2025-10-21
 **Category**: backend
 **Domain**: Tenacity / Resilience

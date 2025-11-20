@@ -30,53 +30,50 @@ describe("AI Demo Page", () => {
     "submits prompt and streams response successfully",
     { timeout: 10000 },
     async () => {
-    // Mock successful streaming response with minimal chunks
-    const mockReader = {
-      read: vi
-        .fn()
-        .mockResolvedValueOnce({
-          done: false,
-          value: new TextEncoder().encode('data: {"type":"text","text":"Hello"}\n\n'),
-        })
-        .mockResolvedValueOnce({ done: true, value: null }),
-    };
+      // Mock successful streaming response with minimal chunks
+      const mockReader = {
+        read: vi
+          .fn()
+          .mockResolvedValueOnce({
+            done: false,
+            value: new TextEncoder().encode('data: {"type":"text","text":"Hello"}\n\n'),
+          })
+          .mockResolvedValueOnce({ done: true, value: null }),
+      };
 
-    MOCK_FETCH.mockResolvedValueOnce({
-      body: {
-        getReader: () => mockReader,
-      },
-      ok: true,
-    } as unknown as Response);
+      MOCK_FETCH.mockResolvedValueOnce({
+        body: {
+          getReader: () => mockReader,
+        },
+        ok: true,
+      } as unknown as Response);
 
-    render(<Page />);
-    const textarea = screen.getByPlaceholderText(/say hello to ai sdk v6/i);
-    const submit = screen.getByRole("button", { name: /submit/i });
+      render(<Page />);
+      const textarea = screen.getByPlaceholderText(/say hello to ai sdk v6/i);
+      const submit = screen.getByRole("button", { name: /submit/i });
 
-    await act(async () => {
-      fireEvent.change(textarea, { target: { value: "Test input" } });
-      fireEvent.click(submit);
-    });
+      act(() => {
+        fireEvent.change(textarea, { target: { value: "Test input" } });
+        fireEvent.click(submit);
+      });
 
-    await waitFor(
-      () => {
-        expect(screen.getByText(/Hello/)).toBeInTheDocument();
-      },
-      { timeout: 2000 }
-    );
+      await waitFor(
+        () => {
+          expect(screen.getByText(/Hello/)).toBeInTheDocument();
+        },
+        { timeout: 2000 }
+      );
     }
   );
 
-  it(
-    "handles fetch errors gracefully",
-    { timeout: 10000 },
-    async () => {
+  it("handles fetch errors gracefully", { timeout: 10000 }, async () => {
     MOCK_FETCH.mockRejectedValueOnce(new Error("Network error"));
 
     render(<Page />);
     const textarea = screen.getByPlaceholderText(/say hello to ai sdk v6/i);
     const submit = screen.getByRole("button", { name: /submit/i });
 
-    await act(async () => {
+    act(() => {
       fireEvent.change(textarea, { target: { value: "Test input" } });
       fireEvent.click(submit);
     });
@@ -88,13 +85,9 @@ describe("AI Demo Page", () => {
       },
       { timeout: 2000 }
     );
-    }
-  );
+  });
 
-  it(
-    "handles HTTP error responses",
-    { timeout: 10000 },
-    async () => {
+  it("handles HTTP error responses", { timeout: 10000 }, async () => {
     MOCK_FETCH.mockResolvedValueOnce({
       ok: false,
       status: 500,
@@ -105,7 +98,7 @@ describe("AI Demo Page", () => {
     const textarea = screen.getByPlaceholderText(/say hello to ai sdk v6/i);
     const submit = screen.getByRole("button", { name: /submit/i });
 
-    await act(async () => {
+    act(() => {
       fireEvent.change(textarea, { target: { value: "Test input" } });
       fireEvent.click(submit);
     });
@@ -117,6 +110,5 @@ describe("AI Demo Page", () => {
       },
       { timeout: 2000 }
     );
-    }
-  );
+  });
 });

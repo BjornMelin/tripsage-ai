@@ -5,6 +5,33 @@ vi.mock("@/lib/redis", () => ({
   getRedis: vi.fn(),
 }));
 
+vi.mock("@ai/tools/server/web-search", () => ({
+  webSearch: {
+    execute: vi.fn(async () => ({
+      fromCache: false,
+      results: [{ title: "Example", url: "https://example.com" }],
+      tookMs: 25,
+    })),
+  },
+}));
+
+const envStore = vi.hoisted(() => ({
+  FIRECRAWL_API_KEY: "test-key",
+  FIRECRAWL_BASE_URL: "https://api.firecrawl.dev/v2",
+}));
+
+vi.mock("@/lib/env/server", () => ({
+  getServerEnvVar: (key: string) => {
+    const value = envStore[key as keyof typeof envStore];
+    if (!value) {
+      throw new Error(`Missing env ${key}`);
+    }
+    return value;
+  },
+  getServerEnvVarWithFallback: (key: string, fallback?: string) =>
+    envStore[key as keyof typeof envStore] ?? fallback,
+}));
+
 beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn());
 });
@@ -52,13 +79,17 @@ describe("webSearchBatch", () => {
     const outAny = out as unknown as {
       results: Array<{
         query: string;
-        results: Array<{ url: string; title?: string; snippet?: string }>;
+        ok: boolean;
+        value?: {
+          results: Array<{ url: string; title?: string; snippet?: string }>;
+          fromCache: boolean;
+          tookMs: number;
+        };
       }>;
-      fromCache: boolean;
       tookMs: number;
     };
     expect(outAny.results[0].query).toBe("q1");
-    expect(outAny.results[0].results[0].url).toBe("https://example.com");
+    expect(outAny.results[0].value?.results[0]?.url).toBe("https://example.com");
   });
 });
 

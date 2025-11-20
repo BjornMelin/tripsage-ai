@@ -125,10 +125,10 @@ describe("Memory Schemas", () => {
         content: "User likes Paris",
         createdAt: "2024-01-01T10:00:00Z",
         id: memoryId,
+        sessionId,
         type: "destination",
         updatedAt: "2024-01-01T10:00:00Z",
         userId,
-        sessionId,
       };
 
       const result = MEMORY_SCHEMA.safeParse(minimalMemory);
