@@ -78,6 +78,7 @@ export type Message = z.infer<typeof messageSchema>;
 Shared validation patterns in `frontend/src/domain/schemas/registry.ts`:
 
 ```typescript
+// Use @schemas/* alias for all schema imports
 import { primitiveSchemas, transformSchemas, refinedSchemas } from "@schemas/registry";
 
 // Primitives: uuid, email, url, isoDateTime, isoCurrency, positiveNumber, percentage

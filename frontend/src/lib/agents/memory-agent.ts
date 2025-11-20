@@ -10,12 +10,12 @@ import "server-only";
 
 import { createAiTool } from "@ai/lib/tool-factory";
 import { toolRegistry } from "@ai/tools";
+import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
 import type { MemoryUpdateRequest } from "@schemas/agents";
+import { addConversationMemoryInputSchema } from "@schemas/memory";
 import type { LanguageModel } from "ai";
 import { streamText } from "ai";
 import type { z } from "zod";
-import { TOOL_ERROR_CODES } from "@/ai/tools/server/errors";
-import { addConversationMemoryInputSchema } from "@/domain/schemas/memory";
 import { buildRateLimit } from "@/lib/ratelimit/config";
 import type { ChatMessage } from "@/lib/tokens/budget";
 import { clampMaxTokens } from "@/lib/tokens/budget";

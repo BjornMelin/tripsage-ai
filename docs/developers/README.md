@@ -8,6 +8,7 @@ Resources and guidelines for TripSage development.
 |-------|---------|
 | [Quick Start](quick-start.md) | Project setup and development environment |
 | [Code Standards](code-standards.md) | Coding guidelines and conventions |
+| [Import Paths](import-paths.md) | TypeScript import path aliases and conventions |
 | [Development Guide](development-guide.md) | API routes, state management, and patterns |
 | [Stores](stores.md) | Zustand store patterns and composition |
 | [Zod Schema Guide](zod-schema-guide.md) | Schema validation and type inference patterns |

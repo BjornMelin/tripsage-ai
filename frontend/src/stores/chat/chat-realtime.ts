@@ -6,15 +6,15 @@
  * stays in hooks/route handlers.
  */
 
-import { CONNECTION_STATUS_SCHEMA } from "@schemas/realtime";
-import { create } from "zustand";
 import type {
   AgentStatusBroadcastPayload,
   ChatMessageBroadcastPayload,
   ChatTypingBroadcastPayload,
   ConnectionStatus,
   Message,
-} from "@/domain/types";
+} from "@domain/types";
+import { CONNECTION_STATUS_SCHEMA } from "@schemas/realtime";
+import { create } from "zustand";
 import { getCurrentTimestamp } from "@/lib/stores/helpers";
 
 /**

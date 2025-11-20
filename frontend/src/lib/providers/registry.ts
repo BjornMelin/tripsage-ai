@@ -3,4 +3,4 @@
  * LEGACY: Re-exports from new ai/models location for backward compatibility.
  */
 
-export * from "@/ai/models/registry";
+export * from "@ai/models/registry";

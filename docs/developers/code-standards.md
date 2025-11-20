@@ -64,6 +64,16 @@ def create_trip(name: str, destinations: List[str]) -> Trip:
 
 ## TypeScript Standards
 
+### Import Paths
+
+Follow the [Import Path Standards](import-paths.md) for all imports:
+
+- Use `@schemas/*` for Zod schemas
+- Use `@domain/*` for domain logic
+- Use `@ai/*` for AI tooling
+- Use `@/*` for generic src-root (lib, components, stores)
+- Use relative imports (`./`, `../`) within the same feature directory
+
 ### Type Definitions
 
 Use explicit types for all variables and function parameters:
@@ -134,7 +144,9 @@ function useTrips() {
 - You need strong schema versioning and stable import paths across multiple layers
 - The schema exceeds ~150 LOC or has multiple discriminated unions that benefit from dedicated file organization
 
-**Type definitions**: Keep derived TypeScript types (`z.infer<typeof Schema>`) in `frontend/src/types/<domain>.ts` for ergonomic imports without pulling Zod at call sites.
+**Type definitions**: Keep derived TypeScript types (`z.infer<typeof Schema>`) in `frontend/src/domain/types/index.ts` for ergonomic imports without pulling Zod at call sites.
+
+**Import paths**: Use `@schemas/*` alias for all schema imports. See [Import Paths](import-paths.md) for details.
 
 **Best practices**:
 
@@ -145,20 +157,16 @@ function useTrips() {
 Example:
 
 ```typescript
-// frontend/src/lib/tools/accommodations.ts - schema co-located with tool
-const searchSchema = z.object({
-  checkin: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  checkout: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  // ...
-}).refine((data) => new Date(data.checkout) > new Date(data.checkin), 
-  "checkout must be after checkin");
+// frontend/src/ai/tools/server/accommodations.ts - schema co-located with tool
+import { ACCOMMODATION_SEARCH_INPUT_SCHEMA } from "@schemas/accommodations";
 
-// frontend/src/types/accommodations.ts - types for ergonomic imports
-export type AccommodationSearchParams = {
-  checkin: string;
-  checkout: string;
-  // ...
-};
+const searchSchema = ACCOMMODATION_SEARCH_INPUT_SCHEMA.refine(
+  (data) => new Date(data.checkout) > new Date(data.checkin), 
+  "checkout must be after checkin"
+);
+
+// frontend/src/domain/types/index.ts - types for ergonomic imports
+export type AccommodationSearchParams = z.infer<typeof ACCOMMODATION_SEARCH_INPUT_SCHEMA>;
 ```
 
 ## Code Formatting

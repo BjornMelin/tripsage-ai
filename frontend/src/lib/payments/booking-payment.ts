@@ -1,31 +1,19 @@
 /**
  * @fileoverview Booking payment processing utilities.
  *
- * Handles two-phase commit for accommodation bookings:
- * 1. Charge customer via Stripe
- * 2. Create booking via Expedia API
- * 3. Refund on booking failure
+ * Handles payment authorization/charge and refunds for accommodation bookings.
  */
 
-import { getExpediaClient } from "@domain/expedia/client";
-import type { EpsCreateBookingRequest } from "@schemas/expedia";
-import { secureUuid } from "@/lib/security/random";
-import { createServerLogger } from "@/lib/telemetry/logger";
 import { createPaymentIntent, getPaymentIntent, refundPayment } from "./stripe-client";
-
-const logger = createServerLogger("booking-payment");
 
 /**
  * Process booking payment and create Expedia booking.
  *
- * Implements two-phase commit: charge customer first, then create booking.
- * If booking fails, payment is automatically refunded.
- *
  * @param params - Booking payment parameters
- * @returns Booking confirmation with payment and booking IDs
- * @throws {Error} On payment or booking failures
+ * @returns Payment confirmation details
+ * @throws {Error} On payment failures
  */
-export async function processBookingPayment(params: {
+export type ProcessBookingParams = {
   amount: number;
   currency: string;
   paymentMethodId: string;
@@ -35,29 +23,26 @@ export async function processBookingPayment(params: {
     name: string;
     phone?: string;
   };
-  expediaRequest: EpsCreateBookingRequest;
-}): Promise<{
-  confirmationNumber: string;
-  itineraryId: string;
-  paymentIntentId: string;
-}> {
-  const expediaClient = getExpediaClient();
+};
 
-  // Phase 1: Create and confirm Stripe payment intent
+export type ProcessedPayment = {
+  paymentIntentId: string;
+};
+
+export async function processBookingPayment(
+  params: ProcessBookingParams
+): Promise<ProcessedPayment> {
   const paymentIntent = await createPaymentIntent({
     amount: params.amount,
     currency: params.currency,
     customerId: params.customerId,
     metadata: {
       // biome-ignore lint/style/useNamingConvention: Stripe metadata uses snake_case
-      booking_token: params.expediaRequest.bookingToken,
-      // biome-ignore lint/style/useNamingConvention: Stripe metadata uses snake_case
       user_email: params.user.email,
     },
     paymentMethodId: params.paymentMethodId,
   });
 
-  // Verify payment succeeded
   if (paymentIntent.status !== "succeeded") {
     throw new Error(
       `Payment failed: ${paymentIntent.status}. ` +
@@ -65,47 +50,7 @@ export async function processBookingPayment(params: {
     );
   }
 
-  let confirmationNumber: string;
-  let itineraryId: string;
-
-  try {
-    const bookingResponse = await expediaClient.createBooking(params.expediaRequest);
-    itineraryId =
-      bookingResponse.itinerary_id ??
-      params.expediaRequest.affiliateReferenceId ??
-      secureUuid();
-    const roomConfirmation = bookingResponse.rooms?.[0]?.confirmation_id;
-    confirmationNumber =
-      roomConfirmation?.expedia ??
-      roomConfirmation?.property ??
-      itineraryId ??
-      paymentIntent.id;
-  } catch (bookingError) {
-    // Phase 3: Refund payment on booking failure
-    try {
-      await refundPayment(paymentIntent.id);
-      logger.info("Refunded payment after booking failure", {
-        paymentIntentId: paymentIntent.id,
-      });
-    } catch (refundError) {
-      logger.error("Failed to refund payment after booking failure", {
-        errorMessage:
-          refundError instanceof Error ? refundError.message : "Unknown refund error",
-        paymentIntentId: paymentIntent.id,
-      });
-      // Log but don't throw - booking failure is the primary error
-    }
-
-    const errorMessage =
-      bookingError instanceof Error ? bookingError.message : "Unknown booking error";
-    throw new Error(
-      `Booking failed after payment: ${errorMessage}. Payment has been refunded.`
-    );
-  }
-
   return {
-    confirmationNumber,
-    itineraryId,
     paymentIntentId: paymentIntent.id,
   };
 }

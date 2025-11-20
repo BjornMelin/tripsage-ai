@@ -24,7 +24,7 @@ Define and implement a simple, environment-gated rate limiting approach for:
 
 - Library: `slowapi` with limits backends. Storage URI derived from env; falls back to memory.
 - Decorators used on chat endpoints (e.g., `@limiter.limit('20/minute')`).
-- Redis/TLS URLs (`REDIS_URL`, `UPSTASH_REDIS_URL|TLS`) mapped to `async+redis(s)` URI when present.
+- Upstash REST credentials (`UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`) enable rate limiting; no TCP Redis URLs are used in the current frontend.
 
 ## Compatibility
 

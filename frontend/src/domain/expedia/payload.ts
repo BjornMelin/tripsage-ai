@@ -5,7 +5,7 @@
  * Rapid API, converting TripSage data structures to API-compatible formats.
  */
 
-import type { EpsCreateBookingRequest } from "@/domain/schemas/expedia";
+import type { EpsCreateBookingRequest } from "@schemas/expedia";
 
 /**
  * Builds Rapid API itinerary creation payload from booking request.

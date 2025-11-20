@@ -2,7 +2,7 @@
  * @fileoverview Central export point for all domain types.
  *
  * This file re-exports all TypeScript types inferred from Zod schemas
- * in the @/domain/schemas directory.
+ * in the @schemas directory.
  */
 
 // Accommodations

@@ -8,6 +8,7 @@
 
 import "server-only";
 
+import { travelAdvisoryInputSchema } from "@ai/tools/schemas/travel-advisory";
 import type { SafetyResult } from "@ai/tools/server/travel-advisory/providers";
 import {
   getDefaultProvider,
@@ -17,7 +18,6 @@ import { createStateDepartmentProvider } from "@ai/tools/server/travel-advisory/
 import { mapToCountryCode } from "@ai/tools/server/travel-advisory/utils";
 import type { ToolCallOptions } from "ai";
 import { tool } from "ai";
-import { travelAdvisoryInputSchema } from "@/ai/tools/schemas/travel-advisory";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";

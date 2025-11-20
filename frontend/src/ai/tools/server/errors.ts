@@ -8,8 +8,8 @@
 
 import "server-only";
 
-import type { ToolError, ToolErrorCode } from "@/ai/tools/schemas/tools";
-import { toolErrorSchema } from "@/ai/tools/schemas/tools";
+import type { ToolError, ToolErrorCode } from "@ai/tools/schemas/tools";
+import { toolErrorSchema } from "@ai/tools/schemas/tools";
 
 // Re-export types from schemas so callers only depend on this runtime module.
 export type { ToolError, ToolErrorCode };

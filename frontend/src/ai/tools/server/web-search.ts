@@ -8,6 +8,10 @@ import "server-only";
 
 import { createAiTool } from "@ai/lib/tool-factory";
 import {
+  WEB_SEARCH_OUTPUT_SCHEMA,
+  webSearchInputSchema,
+} from "@ai/tools/schemas/web-search";
+import {
   createToolError,
   isToolError,
   TOOL_ERROR_CODES,
@@ -15,10 +19,6 @@ import {
 import { normalizeWebSearchResults } from "@ai/tools/server/web-search-normalize";
 import type { ToolCallOptions } from "ai";
 import { z } from "zod";
-import {
-  WEB_SEARCH_OUTPUT_SCHEMA,
-  webSearchInputSchema,
-} from "@/ai/tools/schemas/web-search";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 import { getServerEnvVar, getServerEnvVarWithFallback } from "@/lib/env/server";
 import { fetchWithRetry } from "@/lib/http/fetch-retry";

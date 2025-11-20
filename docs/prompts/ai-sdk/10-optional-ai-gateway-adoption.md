@@ -22,17 +22,15 @@
 
 ## Plan (overview)
 
-1) Add feature flag `ENABLE_AI_GATEWAY`
-2) If enabled, configure AI SDK to point to Gateway endpoint; include app attribution headers (where appropriate)
-3) Vitest tests: config-based routing switch
+1) Configure AI SDK providers to use Gateway base URL when Gateway keys exist
+2) Include app attribution headers where appropriate
+3) Vitest tests: routing switch based on presence of Gateway config
 4) Configure budgets and provider order in Gateway dashboard; document order
 5) Add minimal telemetry attribute (provider/model) without PII
 
 ## Checklist (mark off; add notes under each)
 
-- [ ] Add `ENABLE_AI_GATEWAY` feature flag to settings
-  - Notes:
-- [ ] Configure provider creation to use Gateway endpoint when flag enabled
+- [ ] Configure provider creation to use Gateway endpoint when Gateway API key is present
   - Notes:
 - [ ] Ensure app attribution headers are passed via Gateway
   - Notes:

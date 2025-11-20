@@ -4,8 +4,8 @@
  * behavior suitable for browser runtimes.
  */
 
+import type { ValidationResult } from "@domain/types";
 import type { z } from "zod";
-import type { ValidationResult } from "@/domain/types";
 import { getClientEnvVarWithFallback } from "../env/client";
 
 /**

@@ -78,6 +78,13 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 - **JSDoc:** Use `/** ... */` for public APIs; `//` for notes. Document top‑level exports and non‑obvious functions. Avoid repeating types or TS‑duplicated tags (`@private`, `@implements`).
 - **IDs/timestamps:** Use `@/lib/security/random` (`secureUuid`, `secureId`, `nowIso`). Never `Math.random` or `crypto.randomUUID` directly.
 - **Imports/exports:** Import directly from slice modules (e.g., `@/stores/auth/auth-core`, not `@/stores`). No barrel files or `export *` for stores/selectors. Exception: `lib/schemas/index.ts`.
+- **Path aliases:** Use semantic aliases for architectural boundaries:
+  - `@schemas/*` → `./src/domain/schemas/*` (canonical for all Zod/domain schemas)
+  - `@domain/*` → `./src/domain/*` (domain logic: accommodations, expedia, types)
+  - `@ai/*` → `./src/ai/*` (AI SDK tooling, models, helpers)
+  - `@/*` → `./src/*` (generic src-root: `@/lib/*`, `@/components/*`, `@/stores/*`, etc.)
+  - **Disallowed patterns:** Never use `@/domain/*`, `@/ai/*`, or `@/domain/schemas/*`; use `@domain/*`, `@ai/*`, and `@schemas/*` respectively.
+  - **Relative imports:** Prefer relative imports (`./client-types`, `../utils`) within local feature slices (e.g., inside `src/domain/expedia/*` or `src/ai/tools/server/*`). Use aliases when crossing architectural boundaries.
 
 ### 4.3 State management (frontend)
 

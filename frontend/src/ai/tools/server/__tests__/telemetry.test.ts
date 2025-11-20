@@ -1,6 +1,6 @@
+import { RATE_CREATE_PER_DAY, RATE_UPDATE_PER_MIN } from "@ai/tools/server/constants";
+import { createTravelPlan, updateTravelPlan } from "@ai/tools/server/planning";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { RATE_CREATE_PER_DAY, RATE_UPDATE_PER_MIN } from "@/ai/tools/server/constants";
-import { createTravelPlan, updateTravelPlan } from "@/ai/tools/server/planning";
 import { getMockCookiesForTest } from "@/test/route-helpers";
 
 // Mock Next.js cookies() before any imports that use it
