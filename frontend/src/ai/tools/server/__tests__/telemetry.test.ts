@@ -1,4 +1,3 @@
-import { RATE_CREATE_PER_DAY, RATE_UPDATE_PER_MIN } from "@ai/tools/server/constants";
 import { createTravelPlan, updateTravelPlan } from "@ai/tools/server/planning";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getMockCookiesForTest } from "@/test/route-helpers";
@@ -40,10 +39,14 @@ vi.mock("@upstash/ratelimit", () => {
       }
       private count = 0;
       private readonly max: number;
-      constructor(opts: { limiter: { limit: number }; prefix?: string; redis?: unknown }) {
+      constructor(opts: {
+        limiter: { limit: number };
+        prefix?: string;
+        redis?: unknown;
+      }) {
         this.max = opts.limiter.limit;
       }
-      async limit() {
+      limit() {
         this.count += 1;
         const shouldFail = ratelimitFailNext.fail;
         if (shouldFail) {
@@ -258,10 +261,10 @@ describe("planning tool telemetry", () => {
     const updateCallArgs = mockWithTelemetrySpan.mock.calls[0];
     expect(updateCallArgs[0]).toBe("tool.updateTravelPlan");
     expect(updateCallArgs[1]).toMatchObject({
-        attributes: expect.objectContaining({
-          "tool.name": "updateTravelPlan",
-        }),
-      });
+      attributes: expect.objectContaining({
+        "tool.name": "updateTravelPlan",
+      }),
+    });
 
     // Simulate rate limit breach
     ratelimitFailNext.fail = true;

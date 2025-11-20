@@ -7,15 +7,15 @@ import { PersonalInfoSection } from "../personal-info-section";
 
 vi.mock("@/stores/user-store");
 
-const toastSpy = vi.fn();
+const TOAST_SPY = vi.fn();
 vi.mock("@/components/ui/use-toast", () => ({
-  useToast: () => ({ toast: toastSpy }),
+  useToast: () => ({ toast: TOAST_SPY }),
 }));
 
-const mockUploadAvatar = vi.fn();
-const mockUpdatePersonalInfo = vi.fn();
+const MOCK_UPLOAD_AVATAR = vi.fn();
+const MOCK_UPDATE_PERSONAL_INFO = vi.fn();
 
-const baseProfile = {
+const BASE_PROFILE = {
   avatarUrl: "https://example.com/avatar.jpg",
   email: "test@example.com",
   personalInfo: {
@@ -32,12 +32,12 @@ describe("PersonalInfoSection", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.clearAllMocks();
-    mockUploadAvatar.mockResolvedValue("https://cdn.example.com/new-avatar.jpg");
-    mockUpdatePersonalInfo.mockResolvedValue(true);
+    MOCK_UPLOAD_AVATAR.mockResolvedValue("https://cdn.example.com/new-avatar.jpg");
+    MOCK_UPDATE_PERSONAL_INFO.mockResolvedValue(true);
     vi.mocked(useUserProfileStore).mockReturnValue({
-      profile: baseProfile,
-      updatePersonalInfo: mockUpdatePersonalInfo,
-      uploadAvatar: mockUploadAvatar,
+      profile: BASE_PROFILE,
+      updatePersonalInfo: MOCK_UPDATE_PERSONAL_INFO,
+      uploadAvatar: MOCK_UPLOAD_AVATAR,
     });
   });
 
@@ -61,7 +61,7 @@ describe("PersonalInfoSection", () => {
 
     await vi.runAllTimersAsync();
     await Promise.resolve();
-    expect(mockUpdatePersonalInfo).not.toHaveBeenCalled();
+    expect(MOCK_UPDATE_PERSONAL_INFO).not.toHaveBeenCalled();
   });
 
   it("validates website URL format", async () => {
@@ -73,7 +73,7 @@ describe("PersonalInfoSection", () => {
 
     await vi.runAllTimersAsync();
     await Promise.resolve();
-    expect(mockUpdatePersonalInfo).not.toHaveBeenCalled();
+    expect(MOCK_UPDATE_PERSONAL_INFO).not.toHaveBeenCalled();
   });
 
   it("submits form successfully", async () => {
@@ -84,7 +84,7 @@ describe("PersonalInfoSection", () => {
     await vi.runAllTimersAsync();
     await Promise.resolve();
 
-    expect(mockUpdatePersonalInfo).toHaveBeenCalledWith({
+    expect(MOCK_UPDATE_PERSONAL_INFO).toHaveBeenCalledWith({
       bio: "Travel enthusiast",
       displayName: "John Doe",
       firstName: "John",
@@ -92,19 +92,19 @@ describe("PersonalInfoSection", () => {
       location: "New York, USA",
       website: "https://johndoe.com",
     });
-    expect(toastSpy).toHaveBeenCalledWith({
+    expect(TOAST_SPY).toHaveBeenCalledWith({
       description: "Your personal information has been successfully updated.",
       title: "Profile updated",
     });
   });
 
-  it("handles avatar upload validations", async () => {
+  it("handles avatar upload validations", () => {
     const { container } = render(<PersonalInfoSection />);
     const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
 
     const invalidFile = new File(["content"], "test.txt", { type: "text/plain" });
     fireEvent.change(fileInput, { target: { files: [invalidFile] } });
-    expect(toastSpy).toHaveBeenCalledWith(
+    expect(TOAST_SPY).toHaveBeenCalledWith(
       expect.objectContaining({ title: "Invalid file type" })
     );
 
@@ -112,7 +112,7 @@ describe("PersonalInfoSection", () => {
       type: "image/jpeg",
     });
     fireEvent.change(fileInput, { target: { files: [largeFile] } });
-    expect(toastSpy).toHaveBeenCalledWith(
+    expect(TOAST_SPY).toHaveBeenCalledWith(
       expect.objectContaining({ title: "File too large" })
     );
   });
@@ -126,8 +126,8 @@ describe("PersonalInfoSection", () => {
 
     await Promise.resolve();
 
-    expect(mockUploadAvatar).toHaveBeenCalledWith(validFile);
-    expect(toastSpy).toHaveBeenCalledWith({
+    expect(MOCK_UPLOAD_AVATAR).toHaveBeenCalledWith(validFile);
+    expect(TOAST_SPY).toHaveBeenCalledWith({
       description: "Your profile picture has been successfully updated.",
       title: "Avatar updated",
     });

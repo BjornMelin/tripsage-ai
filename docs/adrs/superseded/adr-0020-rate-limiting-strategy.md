@@ -1,7 +1,7 @@
 # ADR-0020: Rate Limiting Strategy (Frontend @upstash/ratelimit + Backend SlowAPI)
 
 **Version**: 1.0.0
-**Status**: Accepted
+**Status**: Superseded by ADR-0032 (Centralized Upstash rate limiting)
 **Date**: 2025-10-24
 **Category**: security
 **Domain**: Rate Limiting (Upstash/SlowAPI)

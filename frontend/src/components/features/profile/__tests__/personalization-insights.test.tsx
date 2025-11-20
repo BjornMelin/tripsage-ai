@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMemoryInsights, useMemoryStats } from "@/hooks/use-memory";
 import { PersonalizationInsights } from "../personalization-insights";
@@ -126,7 +126,7 @@ describe("PersonalizationInsights", () => {
     expect(screen.getByText(/Tokyo/i)).toBeInTheDocument();
   });
 
-  it("displays recommendations when recommendations tab is clicked and showRecommendations is true", async () => {
+  it("displays recommendations when recommendations tab is clicked and showRecommendations is true", () => {
     render(<PersonalizationInsights userId="user-123" showRecommendations={true} />, {
       wrapper: CreateTestWrapper(),
     });

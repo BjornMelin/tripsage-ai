@@ -112,7 +112,11 @@ vi.mock("@/lib/next/route-helpers", async () => {
 });
 
 vi.mock("@/lib/telemetry/span", () => ({
-  withTelemetrySpan: (_name: string, _opts: unknown, fn: (span: Record<string, unknown>) => unknown) =>
+  withTelemetrySpan: (
+    _name: string,
+    _opts: unknown,
+    fn: (span: Record<string, unknown>) => unknown
+  ) =>
     fn({
       addEvent: vi.fn(),
       recordException: vi.fn(),

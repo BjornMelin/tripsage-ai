@@ -1,7 +1,7 @@
 # ADR-0022: Standardize Python Test Suite Foundations
 
 **Version**: 1.0.0
-**Status**: Accepted
+**Status**: Superseded by ADR-0007 (Vitest/Playwright) and frontend-only stack
 **Date**: 2025-10-24
 **Category**: ops
 **Domain**: Backend Testing

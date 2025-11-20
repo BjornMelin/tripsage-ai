@@ -10,7 +10,7 @@
 import "server-only";
 
 import { distanceMatrix, geocode, lookupPoiContext, searchFlights } from "@ai/tools";
-import type { FlightSearchRequest } from "@schemas/agents";
+import type { FlightSearchRequest } from "@schemas/flights";
 import type { LanguageModel, ToolSet } from "ai";
 import { stepCountIs, streamText } from "ai";
 import type { ChatMessage } from "@/lib/tokens/budget";

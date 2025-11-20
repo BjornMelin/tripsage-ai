@@ -1,4 +1,4 @@
-# ADR-0020: AI SDK v6 Tool Registry and MCP Integration
+# ADR-0044: AI SDK v6 Tool Registry and MCP Integration
 
 **Date:** 2025-11-11
 **Status:** Accepted

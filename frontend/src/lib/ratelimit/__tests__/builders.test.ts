@@ -1,4 +1,4 @@
-import type { AgentWorkflow } from "@schemas/agents";
+import type { AgentWorkflowKind } from "@schemas/agents";
 import { describe, expect, it } from "vitest";
 
 import { buildRateLimit } from "../config";
@@ -70,7 +70,7 @@ describe("buildRateLimit", () => {
   });
 
   it("uses consistent window across all workflows", () => {
-    const workflows: AgentWorkflow[] = [
+    const workflows: AgentWorkflowKind[] = [
       "flightSearch",
       "accommodationSearch",
       "budgetPlanning",
@@ -91,7 +91,7 @@ describe("buildRateLimit", () => {
   });
 
   it("preserves identifier across different workflows", () => {
-    const workflows: AgentWorkflow[] = [
+    const workflows: AgentWorkflowKind[] = [
       "flightSearch",
       "accommodationSearch",
       "budgetPlanning",

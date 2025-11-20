@@ -1,8 +1,7 @@
 /** @vitest-environment node */
 
 import { NextRequest } from "next/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { POST } from "../route";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock external dependencies
 vi.mock("@upstash/qstash", () => {
@@ -153,6 +152,15 @@ vi.mock("@/lib/telemetry/span", () => ({
   }),
 }));
 
+let post: typeof import("../route").POST;
+let tryReserveKeyMock: ReturnType<typeof vi.fn>;
+
+beforeAll(async () => {
+  ({ POST: post } = await import("../route"));
+  const { tryReserveKey } = await import("@/lib/idempotency/redis");
+  tryReserveKeyMock = tryReserveKey as unknown as ReturnType<typeof vi.fn>;
+});
+
 describe("POST /api/jobs/memory-sync", () => {
   const mockRequest = (body: unknown, signature = "valid-sig") => {
     return new NextRequest("http://localhost/api/jobs/memory-sync", {
@@ -168,6 +176,7 @@ describe("POST /api/jobs/memory-sync", () => {
   beforeEach(() => {
     // Reset MOCK_FROM to default implementation before each test
     MOCK_FROM.mockImplementation(createDefaultFromMock);
+    tryReserveKeyMock.mockResolvedValue(true);
   });
 
   it("processes valid memory sync job successfully", async () => {
@@ -188,7 +197,7 @@ describe("POST /api/jobs/memory-sync", () => {
     };
 
     const req = mockRequest(payload);
-    const response = await POST(req);
+    const response = await post(req);
     const result = await response.json();
 
     expect(response.status).toBe(200);
@@ -211,7 +220,7 @@ describe("POST /api/jobs/memory-sync", () => {
     mockVerify.mockResolvedValueOnce(false);
 
     const req = mockRequest(payload, "invalid-sig");
-    const response = await POST(req);
+    const response = await post(req);
     const result = await response.json();
 
     expect(response.status).toBe(401);
@@ -224,7 +233,7 @@ describe("POST /api/jobs/memory-sync", () => {
     };
 
     const req = mockRequest(invalidPayload);
-    const response = await POST(req);
+    const response = await post(req);
     const result = await response.json();
 
     expect(response.status).toBe(400);
@@ -245,7 +254,7 @@ describe("POST /api/jobs/memory-sync", () => {
     };
 
     const req = mockRequest(payload);
-    const response = await POST(req);
+    const response = await post(req);
     const result = await response.json();
 
     expect(response.status).toBe(200);
@@ -269,7 +278,9 @@ describe("POST /api/jobs/memory-sync", () => {
           })),
         } as unknown as ReturnType<typeof createDefaultFromMock>;
       }
-      return {} as unknown as ReturnType<typeof createDefaultFromMock>;
+      return createDefaultFromMock(table as string) as unknown as ReturnType<
+        typeof createDefaultFromMock
+      >;
     });
 
     const payload = {
@@ -282,7 +293,8 @@ describe("POST /api/jobs/memory-sync", () => {
     };
 
     const req = mockRequest(payload);
-    const response = await POST(req);
+    const response = await post(req);
+    const _result = await response.json();
 
     expect(response.status).toBe(500);
   });
@@ -323,7 +335,9 @@ describe("POST /api/jobs/memory-sync", () => {
           })),
         } as unknown as ReturnType<typeof createDefaultFromMock>;
       }
-      return {} as unknown as ReturnType<typeof createDefaultFromMock>;
+      return createDefaultFromMock(table as string) as unknown as ReturnType<
+        typeof createDefaultFromMock
+      >;
     });
 
     const messages = Array.from({ length: 60 }, (_, i) => ({
@@ -343,7 +357,7 @@ describe("POST /api/jobs/memory-sync", () => {
     };
 
     const req = mockRequest(payload);
-    const response = await POST(req);
+    const response = await post(req);
     const result = await response.json();
 
     expect(response.status).toBe(200);
@@ -361,11 +375,12 @@ describe("POST /api/jobs/memory-sync", () => {
     };
 
     const req = mockRequest(payload);
-    const response = await POST(req);
+    const response = await post(req);
     const result = await response.json();
 
     expect(response.status).toBe(200);
     expect(result.contextUpdated).toBe(true);
     expect(result.syncType).toBe("incremental");
+    expect(result.memoriesStored).toBe(0);
   });
 });

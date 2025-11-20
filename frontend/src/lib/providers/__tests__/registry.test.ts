@@ -132,7 +132,9 @@ describe("resolveProvider", () => {
     const { resolveProvider } = await import("@ai/models/registry");
     const result = await resolveProvider("user-3", "claude-3-5-sonnet-20241022");
     expect(result.provider).toBe("anthropic");
-    expect(String(result.model)).toContain("anthropic::key::claude-3-5-sonnet-20241022");
+    expect(String(result.model)).toContain(
+      "anthropic::key::claude-3-5-sonnet-20241022"
+    );
   });
 
   it("uses xAI when only xai key exists", async () => {

@@ -1,12 +1,73 @@
 /** @vitest-environment jsdom */
 
 import type { AuthUser as User } from "@schemas/stores";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAuthCore } from "@/stores/auth/auth-core";
 import type { UserProfile } from "@/stores/user-store";
 import { useUserProfileStore } from "@/stores/user-store";
 import ProfilePage from "../page";
+
+vi.mock("@/components/ui/tabs", () => {
+  const React = require("react");
+  type TabsCtx = { value: string; setValue: (v: string) => void };
+  const TabsContext = React.createContext(null) as React.Context<TabsCtx | null>;
+
+  const Tabs = ({
+    defaultValue,
+    children,
+  }: {
+    defaultValue: string;
+    children: React.ReactNode;
+  }) => {
+    const [value, setValue] = React.useState(defaultValue);
+    return React.createElement(
+      TabsContext.Provider,
+      { value: { setValue, value } },
+      children
+    );
+  };
+
+  const TabsList = ({ children }: { children: React.ReactNode }) =>
+    React.createElement("div", { role: "tablist" }, children);
+
+  const TabsTrigger = ({
+    value,
+    children,
+    ...props
+  }: {
+    value: string;
+    children: React.ReactNode;
+  }) => {
+    const ctx = React.useContext(TabsContext);
+    const active = ctx?.value === value;
+    return React.createElement(
+      "button",
+      {
+        "aria-selected": active,
+        "data-state": active ? "active" : "inactive",
+        onClick: () => ctx?.setValue(value),
+        role: "tab",
+        ...props,
+      },
+      children
+    );
+  };
+
+  const TabsContent = ({
+    value,
+    children,
+  }: {
+    value: string;
+    children: React.ReactNode;
+  }) => {
+    const ctx = React.useContext(TabsContext);
+    if (ctx?.value !== value) return null;
+    return React.createElement("div", { role: "tabpanel" }, children);
+  };
+
+  return { Tabs, TabsContent, TabsList, TabsTrigger };
+});
 
 /**
  * Type definition for auth store return values.
@@ -97,6 +158,7 @@ vi.mock("@/components/features/profile/security-section", () => ({
 
 describe("ProfilePage", () => {
   beforeEach(() => {
+    vi.useRealTimers();
     vi.clearAllMocks();
   });
 
@@ -211,6 +273,7 @@ describe("ProfilePage", () => {
       fireEvent.click(accountTab);
     });
 
+    await waitFor(() => expect(accountTab).toHaveAttribute("data-state", "active"));
     expect(await screen.findByTestId("account-settings-section")).toBeInTheDocument();
   });
 
@@ -237,6 +300,7 @@ describe("ProfilePage", () => {
       fireEvent.click(preferencesTab);
     });
 
+    await waitFor(() => expect(preferencesTab).toHaveAttribute("data-state", "active"));
     expect(await screen.findByTestId("preferences-section")).toBeInTheDocument();
   });
 
@@ -263,6 +327,7 @@ describe("ProfilePage", () => {
       fireEvent.click(securityTab);
     });
 
+    await waitFor(() => expect(securityTab).toHaveAttribute("data-state", "active"));
     expect(await screen.findByTestId("security-section")).toBeInTheDocument();
   });
 
@@ -320,6 +385,7 @@ describe("ProfilePage", () => {
       fireEvent.click(preferencesTab);
     });
 
+    await waitFor(() => expect(preferencesTab).toHaveAttribute("data-state", "active"));
     expect(await screen.findByTestId("preferences-section")).toBeInTheDocument();
 
     // Switch back to personal tab
@@ -328,6 +394,7 @@ describe("ProfilePage", () => {
       fireEvent.click(personalTab);
     });
 
+    await waitFor(() => expect(personalTab).toHaveAttribute("data-state", "active"));
     expect(await screen.findByTestId("personal-info-section")).toBeInTheDocument();
   });
 
