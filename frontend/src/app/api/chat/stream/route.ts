@@ -10,9 +10,9 @@
 
 import "server-only";
 
+import { resolveProvider } from "@ai/models/registry";
 import type { UIMessage } from "ai";
 import type { NextRequest } from "next/server";
-import { resolveProvider } from "@/ai/models/registry";
 import { withApiGuards } from "@/lib/api/factory";
 import { getClientIpFromHeaders, parseJsonBody } from "@/lib/next/route-helpers";
 import { createServerLogger } from "@/lib/telemetry/logger";

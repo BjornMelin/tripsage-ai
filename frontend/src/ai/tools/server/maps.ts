@@ -5,8 +5,8 @@
 import "server-only";
 
 import { createAiTool } from "@ai/lib/tool-factory";
+import { distanceMatrixInputSchema, geocodeInputSchema } from "@ai/tools/schemas/maps";
 import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
-import { distanceMatrixInputSchema, geocodeInputSchema } from "@/ai/tools/schemas/maps";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
 
 /** Get Google Maps server API key or null if not configured. */

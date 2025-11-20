@@ -12,8 +12,8 @@
 import "server-only";
 
 import { createAiTool } from "@ai/lib/tool-factory";
+import { lookupPoiInputSchema } from "@ai/tools/schemas/google-places";
 import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
-import { lookupPoiInputSchema } from "@/ai/tools/schemas/google-places";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
 import { cacheLatLng, getCachedLatLng } from "@/lib/google/caching";
 

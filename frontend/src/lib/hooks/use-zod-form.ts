@@ -2,6 +2,7 @@
  * @fileoverview Form helpers that integrate Zod validation with React Hook Form.
  */
 
+import type { ValidationResult } from "@domain/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCallback, useMemo, useState } from "react";
 import {
@@ -13,7 +14,6 @@ import {
   useForm,
 } from "react-hook-form";
 import { ZodError, type z } from "zod";
-import type { ValidationResult } from "@/domain/types";
 
 // Form options - using a data type parameter to avoid complex generic constraints
 interface UseZodFormOptions<Data extends FieldValues>

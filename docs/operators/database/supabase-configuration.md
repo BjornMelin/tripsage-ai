@@ -282,7 +282,7 @@ DELETE FROM public.api_gateway_configs;
 
 ```typescript
 // Test from application perspective
-import { resolveProvider } from '@/lib/providers/registry';
+import { resolveProvider } from '@ai/models/registry';
 
 // Should use BYOK key if available
 const provider = await resolveProvider(userId, 'gpt-4o-mini');

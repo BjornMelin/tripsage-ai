@@ -48,8 +48,8 @@
   - Notes: `getProviderSettings()` surfaces the ordered array consumed by the registry; defaults match the required order and can be updated via the central settings module (frontend/src/lib/settings.ts:9).
 - [x] Fetch BYOK via Supabase RPC wrappers; never expose keys client-side
   - Notes: Registry exclusively uses `getUserApiKey` from the Supabase RPC wrapper to read Vault-stored keys server-side (frontend/src/lib/supabase/rpc.ts:52).
-- [x] Attach OpenRouter `http-referer` and `x-title` headers when applicable
-  - Notes: OpenRouter branch maps `OPENROUTER_REFERER`/`OPENROUTER_TITLE` into outbound headers and returns them with the resolution payload (frontend/src/lib/providers/registry.ts:74).
+- [x] Attach OpenRouter attribution headers when applicable
+  - Notes: OpenRouter branch sets `http-referer` and `x-title` based on request metadata and site defaults (frontend/src/lib/providers/registry.ts:74).
 - [x] Export narrow helpers to keep downstream code simple
   - Notes: Registry exposes only `resolveProvider` and `ProviderResolution`, while associated configuration lives in `getProviderSettings()`; downstream routes consume a single helper (frontend/src/lib/providers/registry.ts:1, frontend/src/lib/providers/types.ts:7).
 - [x] Vitest tests: mock Supabase + providers; assert attribution headers and precedence
@@ -101,7 +101,7 @@
 ## Additional context & assumptions
 
 - Supported services: `openai`, `openrouter`, `anthropic`, `xai`. Configurable preference order via a settings module.
-- OpenRouter attribution headers: `http-referer` and `x-title` can be sourced from `OPENROUTER_REFERER` and `OPENROUTER_TITLE` (or project settings). Defaults should be sensible (e.g., site URL and app title).
+- OpenRouter attribution headers: inferred from site URL and title; no dedicated env vars are required.
 - xAI base URL (if using OpenAI-compatible): `https://api.x.ai/v1` (or via Gateway). Feature-gate enablement.
 - Returned object example:
   - `{ model, headers?: Record<string,string>, maxTokens?: number }`

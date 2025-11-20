@@ -189,7 +189,7 @@ export async function handleChatNonStream(
     // Import tools from the centralized registry
     let local: Record<string, unknown> = {};
     try {
-      const toolsModule = await import("@/ai/tools");
+      const toolsModule = await import("@ai/tools");
       local = {
         createTravelPlan: toolsModule.createTravelPlan,
         deleteTravelPlan: toolsModule.deleteTravelPlan,

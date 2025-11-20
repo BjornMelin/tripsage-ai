@@ -1,12 +1,12 @@
+import {
+  type ValidatedThemeProviderProps,
+  validateThemeProviderProps,
+} from "@schemas/theme-provider";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { RenderOptions } from "@testing-library/react";
 import { render } from "@testing-library/react";
 import type { ComponentProps, ReactElement, ReactNode } from "react";
 import { ThemeProvider } from "@/components/providers/theme-provider";
-import {
-  type ValidatedThemeProviderProps,
-  validateThemeProviderProps,
-} from "@/domain/schemas/theme-provider";
 
 // Type for next-themes provider props.
 type NextThemesProviderProps = ComponentProps<typeof ThemeProvider>;

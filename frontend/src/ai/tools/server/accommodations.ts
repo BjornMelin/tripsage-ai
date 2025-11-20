@@ -10,6 +10,13 @@ import {
   TOOL_ERROR_CODES,
   type ToolErrorCode,
 } from "@ai/tools/server/errors";
+import { getAccommodationsService } from "@domain/accommodations/container";
+import { ProviderError } from "@domain/accommodations/errors";
+import {
+  extractTokenFromHref,
+  normalizePhoneForRapid,
+  splitGuestName,
+} from "@domain/accommodations/service";
 import {
   ACCOMMODATION_BOOKING_INPUT_SCHEMA,
   ACCOMMODATION_CHECK_AVAILABILITY_INPUT_SCHEMA,
@@ -24,43 +31,17 @@ import {
   type AccommodationSearchParams,
   type AccommodationSearchResult,
 } from "@schemas/accommodations";
-import { Ratelimit } from "@upstash/ratelimit";
 import { headers } from "next/headers";
-import { ProviderError } from "@/domain/accommodations/errors";
-import { ExpediaProviderAdapter } from "@/domain/accommodations/providers/expedia-adapter";
-import {
-  AccommodationsService,
-  extractTokenFromHref,
-  normalizePhoneForRapid,
-  splitGuestName,
-} from "@/domain/accommodations/service";
 import { processBookingPayment } from "@/lib/payments/booking-payment";
-import { getRedis } from "@/lib/redis";
 import { secureUuid } from "@/lib/security/random";
-import { createServerSupabase } from "@/lib/supabase/server";
 import { requireApproval } from "./approvals";
-import { ACCOM_SEARCH_CACHE_TTL_SECONDS } from "./constants";
 
-const redis = getRedis();
-const rateLimiter = redis
-  ? new Ratelimit({
-      analytics: false,
-      limiter: Ratelimit.slidingWindow(10, "1 m"),
-      prefix: "ratelimit:accommodations:service",
-      redis,
-    })
-  : undefined;
-
-const provider = new ExpediaProviderAdapter();
-const accommodationsService = new AccommodationsService({
-  cacheTtlSeconds: ACCOM_SEARCH_CACHE_TTL_SECONDS,
-  provider,
-  rateLimiter,
-  supabase: createServerSupabase,
-});
+/** Accommodations service instance for tool execution. */
+const accommodationsService = getAccommodationsService();
 
 export { ACCOMMODATION_SEARCH_INPUT_SCHEMA as searchAccommodationsInputSchema };
 
+/** Search for accommodations using Expedia Partner Solutions API. */
 export const searchAccommodations = createAiTool<
   AccommodationSearchParams,
   AccommodationSearchResult
@@ -76,6 +57,7 @@ export const searchAccommodations = createAiTool<
   name: "searchAccommodations",
 });
 
+/** Retrieve comprehensive details for a specific accommodation property from Expedia Rapid. */
 export const getAccommodationDetails = createAiTool<
   AccommodationDetailsParams,
   AccommodationDetailsResult
@@ -98,6 +80,7 @@ export const getAccommodationDetails = createAiTool<
   name: "getAccommodationDetails",
 });
 
+/** Check final availability and lock pricing for a specific rate. Returns a booking token that must be used quickly to finalize the booking. */
 export const checkAvailability = createAiTool<
   AccommodationCheckAvailabilityParams,
   AccommodationCheckAvailabilityResult
@@ -126,6 +109,7 @@ export const checkAvailability = createAiTool<
   name: "checkAvailability",
 });
 
+/** Complete an accommodation booking via Expedia Partner Solutions. Requires a bookingToken from checkAvailability, payment method, and prior approval. */
 export const bookAccommodation = createAiTool<
   AccommodationBookingRequest,
   AccommodationBookingResult
@@ -177,6 +161,7 @@ export const bookAccommodation = createAiTool<
   name: "bookAccommodation",
 });
 
+/** Extract user identifier from request headers or return undefined if not found. */
 async function maybeGetUserIdentifier(): Promise<string | undefined> {
   try {
     const requestHeaders = await headers();
@@ -193,6 +178,7 @@ async function maybeGetUserIdentifier(): Promise<string | undefined> {
   return undefined;
 }
 
+/** Get user identifier from request headers or throw an error if not found. */
 async function getUserIdFromHeadersOrThrow(errorCode: ToolErrorCode): Promise<string> {
   const identifier = await maybeGetUserIdentifier();
   if (identifier) {
@@ -201,6 +187,13 @@ async function getUserIdFromHeadersOrThrow(errorCode: ToolErrorCode): Promise<st
   throw createToolError(errorCode);
 }
 
+/**
+ * Map provider errors to tool errors.
+ *
+ * @param error Provider error to map.
+ * @param codes Error code mappings for different provider error types.
+ * @returns ToolError instance with appropriate error code and message.
+ */
 function mapProviderError(
   error: unknown,
   codes: {

@@ -6,10 +6,10 @@
 
 import "server-only";
 
+import { crawlSiteInputSchema } from "@ai/tools/schemas/web-crawl";
 import type { ToolCallOptions } from "ai";
 import { tool } from "ai";
 import { z } from "zod";
-import { crawlSiteInputSchema } from "@/ai/tools/schemas/web-crawl";
 import { getRedis } from "@/lib/redis";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 

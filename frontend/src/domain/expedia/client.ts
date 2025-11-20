@@ -31,7 +31,7 @@ import {
   extractInclusiveTotal,
   type RapidPriceCheckResponse,
   type RapidPropertyContentMap,
-} from "@/domain/schemas/expedia";
+} from "@schemas/expedia";
 import { getServerEnvVar, getServerEnvVarWithFallback } from "@/lib/env/server";
 import { secureUuid } from "@/lib/security/random";
 import { ExpediaApiError, type ExpediaRequestContext } from "./client-types";

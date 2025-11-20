@@ -1,5 +1,5 @@
+import { getTravelAdvisory } from "@ai/tools/server/travel-advisory";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getTravelAdvisory } from "@/ai/tools/server/travel-advisory";
 
 const mockContext = {
   messages: [],

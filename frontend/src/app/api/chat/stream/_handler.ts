@@ -5,6 +5,7 @@
  * streaming. It is fully dependency-injected to ensure deterministic tests.
  */
 
+import * as tools from "@ai/tools";
 import { wrapToolsWithUserId } from "@ai/tools/server/injection";
 import type { UIMessage } from "ai";
 import {
@@ -14,7 +15,6 @@ import {
   NoSuchToolError,
   stepCountIs,
 } from "ai";
-import * as tools from "@/ai/tools";
 import { extractTexts, validateImageAttachments } from "@/app/api/_helpers/attachments";
 import { handleMemoryIntent } from "@/lib/memory/orchestrator";
 import {
