@@ -9,9 +9,14 @@ vi.mock("@upstash/qstash", () => {
   const mockVerify = vi.fn().mockResolvedValue(true);
   // Mock Receiver as a class constructor
   class MockReceiver {
-    verify = mockVerify;
+    // Prototype method so tests can override via prototype or mockVerify
+    async verify(...args: unknown[]) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+      return await mockVerify(...args);
+    }
   }
   return {
+    mockVerify,
     Receiver: MockReceiver,
   };
 });
@@ -27,6 +32,7 @@ vi.mock("@/lib/idempotency/redis", () => ({
 
 // Hoist mock functions so they can be accessed and modified in tests
 const createDefaultFromMock = vi.hoisted(() => {
+  const sessionId = "123e4567-e89b-12d3-a456-426614174000";
   // Create query builder that supports chaining with .eq().eq().single()
   const createSelectBuilder = () => {
     const builder: {
@@ -35,7 +41,7 @@ const createDefaultFromMock = vi.hoisted(() => {
     } = {
       eq: vi.fn(),
       single: vi.fn().mockResolvedValue({
-        data: { id: "session-123" },
+        data: { id: sessionId },
         error: null,
       }),
     };
@@ -51,6 +57,42 @@ const createDefaultFromMock = vi.hoisted(() => {
         update: vi.fn(() => ({
           eq: vi.fn().mockResolvedValue({
             data: null,
+            error: null,
+          }),
+        })),
+      };
+    }
+    if (table === "sessions") {
+      return {
+        insert: vi.fn(() => ({
+          select: vi.fn().mockResolvedValue({
+            data: [{ id: sessionId }],
+            error: null,
+          }),
+        })),
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              single: vi.fn().mockResolvedValue({
+                data: { id: sessionId },
+                error: null,
+              }),
+            })),
+          })),
+        })),
+        update: vi.fn(() => ({
+          eq: vi.fn().mockResolvedValue({
+            data: null,
+            error: null,
+          }),
+        })),
+      };
+    }
+    if (table === "turns") {
+      return {
+        insert: vi.fn(() => ({
+          select: vi.fn().mockResolvedValue({
+            data: [{ id: 1 }],
             error: null,
           }),
         })),
@@ -82,14 +124,33 @@ vi.mock("@/lib/supabase/server", () => {
   };
 });
 
+vi.mock("@/lib/supabase/admin", () => {
+  return {
+    createAdminSupabase: vi.fn(() => ({
+      from: MOCK_FROM,
+      schema: () => ({
+        from: MOCK_FROM,
+      }),
+    })),
+  };
+});
+
 vi.mock("@/lib/telemetry/span", () => ({
-  withTelemetrySpan: vi.fn((_name, _opts, fn) =>
-    fn({
+  withTelemetrySpan: vi.fn((_name, _opts, fn) => {
+    const span = {
       end: vi.fn(),
       recordException: vi.fn(),
+      setAttribute: vi.fn(),
       setStatus: vi.fn(),
-    })
-  ),
+    };
+    try {
+      return fn(span);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error("withTelemetrySpan error", error);
+      throw error;
+    }
+  }),
 }));
 
 describe("POST /api/jobs/memory-sync", () => {
@@ -120,9 +181,9 @@ describe("POST /api/jobs/memory-sync", () => {
             timestamp: "2024-01-01T00:00:00Z",
           },
         ],
-        sessionId: "session-123",
+        sessionId: "123e4567-e89b-12d3-a456-426614174000",
         syncType: "conversation" as const,
-        userId: "user-456",
+        userId: "11111111-1111-4111-8111-111111111111",
       },
     };
 
@@ -140,23 +201,18 @@ describe("POST /api/jobs/memory-sync", () => {
     const payload = {
       idempotencyKey: "test-key-123",
       payload: {
-        sessionId: "session-123",
+        sessionId: "123e4567-e89b-12d3-a456-426614174000",
         syncType: "conversation" as const,
-        userId: "user-456",
+        userId: "11111111-1111-4111-8111-111111111111",
       },
     };
 
-    // Mock receiver to reject signature - override the verify method
-    const { Receiver } = await import("@upstash/qstash");
-    const originalVerify = Receiver.prototype.verify;
-    Receiver.prototype.verify = vi.fn().mockResolvedValue(false);
+    const { mockVerify } = await import("@upstash/qstash");
+    mockVerify.mockResolvedValueOnce(false);
 
     const req = mockRequest(payload, "invalid-sig");
     const response = await POST(req);
     const result = await response.json();
-
-    // Restore original verify
-    Receiver.prototype.verify = originalVerify;
 
     expect(response.status).toBe(401);
     expect(result.error).toBe("invalid qstash signature");
@@ -182,9 +238,9 @@ describe("POST /api/jobs/memory-sync", () => {
     const payload = {
       idempotencyKey: "test-key-123",
       payload: {
-        sessionId: "session-123",
+        sessionId: "123e4567-e89b-12d3-a456-426614174000",
         syncType: "conversation" as const,
-        userId: "user-456",
+        userId: "11111111-1111-4111-8111-111111111111",
       },
     };
 
@@ -219,9 +275,9 @@ describe("POST /api/jobs/memory-sync", () => {
     const payload = {
       idempotencyKey: "test-key-123",
       payload: {
-        sessionId: "invalid-session",
+        sessionId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
         syncType: "conversation" as const,
-        userId: "user-456",
+        userId: "11111111-1111-4111-8111-111111111111",
       },
     };
 
@@ -280,9 +336,9 @@ describe("POST /api/jobs/memory-sync", () => {
       idempotencyKey: "test-key-123",
       payload: {
         conversationMessages: messages,
-        sessionId: "session-123",
+        sessionId: "123e4567-e89b-12d3-a456-426614174000",
         syncType: "conversation" as const,
-        userId: "user-456",
+        userId: "11111111-1111-4111-8111-111111111111",
       },
     };
 
@@ -298,9 +354,9 @@ describe("POST /api/jobs/memory-sync", () => {
     const payload = {
       idempotencyKey: "test-key-123",
       payload: {
-        sessionId: "session-123",
+        sessionId: "123e4567-e89b-12d3-a456-426614174000",
         syncType: "incremental" as const,
-        userId: "user-456",
+        userId: "11111111-1111-4111-8111-111111111111",
       },
     };
 

@@ -74,6 +74,8 @@ export function createToolError(
   meta?: Record<string, unknown>
 ): ToolError {
   const error = new Error(message ?? code) as ToolError;
+  // Normalize name to satisfy tooling/schema expectations.
+  error.name = "ToolError";
   error.code = code;
   if (meta) {
     error.meta = meta;
