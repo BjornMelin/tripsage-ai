@@ -116,21 +116,21 @@ export function mapToCountryCode(input: string | string[]): string | null {
   }
 
   // Try fuzzy matching with common variations.
-  const variations: Record<string, string> = {
-    "CZECH REPUBLIC": "CZ",
-    "NORTH KOREA": "KP",
-    RUSSIA: "RU",
-    "SOUTH AFRICA": "ZA",
-    "SOUTH KOREA": "KR",
-    UK: "GB",
-    "UNITED KINGDOM": "GB",
-    "UNITED STATES": "US",
-    USA: "US",
-  };
+  const variations = new Map<string, string>([
+    ["CZECH REPUBLIC", "CZ"],
+    ["NORTH KOREA", "KP"],
+    ["RUSSIA", "RU"],
+    ["SOUTH AFRICA", "ZA"],
+    ["SOUTH KOREA", "KR"],
+    ["UK", "GB"],
+    ["UNITED KINGDOM", "GB"],
+    ["UNITED STATES", "US"],
+    ["USA", "US"],
+  ]);
 
   const upperInput = normalized.toUpperCase();
-  if (upperInput in variations) {
-    return variations[upperInput] ?? null;
+  if (variations.has(upperInput)) {
+    return variations.get(upperInput) ?? null;
   }
 
   return null;
