@@ -1,9 +1,11 @@
 # 🌟 TripSage AI
 
-[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com)
-[![Next.js](https://img.shields.io/badge/Next.js-15+-black.svg)](https://nextjs.org)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.3+-blue.svg)](https://typescriptlang.org)
+[![Next.js 16](https://img.shields.io/badge/Next.js-16-black.svg)](https://nextjs.org)
+[![AI SDK v6](https://img.shields.io/badge/Vercel%20AI%20SDK-v6-blue.svg)](https://v6.ai-sdk.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.4+-blue.svg)](https://typescriptlang.org)
+[![Supabase](https://img.shields.io/badge/Supabase-SSR-3fcf8e?logo=supabase)](https://supabase.com)
+[![Upstash](https://img.shields.io/badge/Upstash-Redis%20%7C%20QStash-00E9A3?logo=upstash)](https://upstash.com)
+[![Vercel](https://img.shields.io/badge/Vercel-AI%20Gateway-black?logo=vercel)](https://vercel.com)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 <!-- markdownlint-disable MD033 -->
@@ -19,28 +21,51 @@
 ---
 
 TripSage AI is a travel planning platform that combines the power of modern AI agents with rich
-all-in-one travel services. Built with FastAPI, Next.js, LangGraph, Supabase, and Upstash Redis, with multi-agent AI orchestration, it provides personalized travel recommendations,
-real-time booking capabilities, and intelligent memory management.
+all-in-one travel services. The legacy Python/FastAPI backend has been fully removed; the **Next.js 16 + Vercel AI SDK v6** stack (in `frontend/`) is the sole backend surface.
 
 ## ✨ Key Features
 
-- **AI-Powered Planning**: LangGraph agents with GPT-5 for intelligent
-  trip recommendations
-- **Flight Integration**: Direct Duffel API integration for real-time
-  flight search and booking
-- **Accommodation Search**: Accommodation discovery and booking via Expedia Rapid (domain client + AI tools)
-- **Intelligent Memory**: Mem0-powered user preference learning and context
-- **Ultra-Fast Caching**: Upstash Redis (HTTP) for low-latency serverless caching
-- **Enterprise Security**: RLS policies and JWT authentication
-- **Modern Frontend**: Next.js 16 with App Router, React 19, TypeScript, and Vercel AI SDK v6
-- **Real-time Collaboration**: Supabase Realtime (private channels + RLS)
+### AI & Intelligence
+
+- **Multi-Provider AI Routing**: Vercel AI Gateway with automatic fallback across OpenAI, Anthropic, xAI, and OpenRouter—BYOK support with encrypted key storage
+- **Agentic Tool Orchestration**: 15+ production-ready tools via AI SDK v6 with Zod validation—flights (Duffel), accommodations (MCP), weather, maps, planning, and memory
+- **Hybrid RAG Pipeline**: Vector similarity search with Supabase pgvector + keyword fusion, Cohere Rerank v3.5 for optimal retrieval accuracy
+- **Structured Outputs**: Schema-first LLM responses with `generateObject` for deterministic parsing and type-safe validation
+- **Streaming Intelligence**: Real-time SSE streaming with interleaved tool calls and generative UI components
+
+### Data & Infrastructure
+
+- **Supabase PostgreSQL + pgvector**: Managed database with HNSW indexes for semantic search, embeddings storage, and vector similarity queries
+- **Supabase Auth & Vault**: Server-side authentication with SSR clients (`@supabase/ssr`), encrypted BYOK secrets in Vault with RLS-gated access
+- **Supabase Realtime**: Private channels with Row Level Security for multi-user collaboration, presence tracking, and broadcast events
+- **Supabase Storage**: File uploads with signed URL access, metadata persistence, and server-enforced access control
+
+### Performance & Scalability
+
+- **Upstash Redis**: Serverless HTTP Redis for sub-10ms global caching, sliding-window rate limiting, and deduplication keys
+- **Upstash QStash**: Webhook-driven background jobs with signature verification, Redis idempotency gates, and batch processing (memory sync, async tasks)
+- **Edge-First Architecture**: Next.js 16 Edge runtime support, Vercel deployment with global CDN, optimized for low-latency responses
+- **React Compiler**: Automatic memoization and zero-overhead reactive rendering for optimal performance
+
+### Security & Compliance
+
+- **Zero-Trust Architecture**: BYOK keys never touch client; server-only routes with `"server-only"` imports and dynamic execution
+- **Row Level Security**: Supabase RLS policies enforce per-user data isolation; security-definer RPCs guard Vault access
+- **Rate Limiting**: Upstash Ratelimit with tiered budgets (40 req/min streaming, 20 req/min validation) per user/IP
+- **OpenTelemetry**: Distributed tracing with PII redaction, span instrumentation, and Trace Drains for observability without data leakage
+- **Tool Approval Flows**: Sensitive operations (bookings, payments) pause streaming and require explicit user consent
+
+### Modern Frontend
+
+- **Next.js 16 + React 19**: App Router with RSC-first architecture, Server Components by default, React Compiler enabled
+- **TypeScript 5.9**: Strict mode with end-to-end type safety, Zod schemas as single source of truth
+- **AI SDK v6 Native**: Complete TypeScript migration from Python—unified provider API, native streaming, edge runtime support
 
 ## Quick Start
 
 ### Prerequisites
 
-- **Python 3.12+** with uv package manager
-- **Node.js 24+** with pnpm
+- **Node.js 24+** with pnpm 10.20.0
 - **PostgreSQL 15+** (or Supabase account)
 - **Upstash Redis** for caching (via Vercel integration)
 
@@ -51,168 +76,73 @@ real-time booking capabilities, and intelligent memory management.
 git clone https://github.com/BjornMelin/tripsage-ai.git
 cd tripsage-ai
 
-# Backend setup
-uv sync                                    # Install Python dependencies
-cp .env.example .env                       # Configure environment
-uv run python scripts/database/setup.py   # Initialize database
-
-# Frontend setup
+# Frontend setup (only stack)
 cd frontend
-pnpm install                              # Install Node.js dependencies
+pnpm install --frozen-lockfile            # Install Node.js dependencies
 cp .env.local.example .env.local          # Configure frontend environment
 
-# Start development servers
-uv run python -m tripsage.api.main       # Backend (port 8000)
-pnpm dev                                  # Frontend (port 3000)
+# Start development server (includes API routes)
+pnpm dev                                  # Next.js app + API routes (port 3000)
 ```
 
 ### Verification
 
 ```bash
-# Health check
-curl http://localhost:8000/api/health
-
 # Frontend access
 open http://localhost:3000
 ```
 
-## 🏗️ Architecture
+## Architecture
 
-TripSage is built on a modern, unified architecture optimized for performance
-and scalability:
+Single-runtime, server-first stack optimized for edge deployment:
 
-- **Backend**: FastAPI with Python 3.12+ and async/await patterns
-- **Database**: Supabase PostgreSQL with pgvector for embeddings
-- **AI**: OpenAI GPT-4 with LangGraph for agent orchestration
-- **Cache**: Upstash Redis (HTTP) for low-latency operations
-- **Memory**: Mem0 for intelligent user preference learning
-- **Frontend**: Next.js 15 with TypeScript and Tailwind CSS
+- **Backend & UI**: Next.js 16 App Router (React 19) with Vercel AI SDK v6 RSC/actions and React Compiler
+- **AI Routing**: Vercel AI Gateway for multi-provider orchestration with automatic fallback, BYOK support via Supabase Vault
+- **Database & Auth**: Supabase PostgreSQL with pgvector (HNSW indexes), SSR clients (`@supabase/ssr`), Realtime channels, Storage buckets
+- **Cache & Rate Limiting**: Upstash Redis (HTTP) for serverless caching and Upstash Ratelimit for sliding-window throttling
+- **Background Jobs**: Upstash QStash for webhook-driven async tasks with idempotency guarantees
+- **Observability**: OpenTelemetry with Vercel Trace Drains, span instrumentation, and PII redaction
 
----
+## Development
 
-## 📚 Documentation
+```bash
+# Frontend / API (single app)
+cd frontend
+pnpm install --frozen-lockfile
+pnpm dev            # Next.js dev server (includes API routes)
+pnpm type-check
+pnpm biome:check
+pnpm test:run       # Vitest
+pnpm test:e2e       # Playwright
 
-| Guide | Description |
-|-------|-------------|
-| **[Complete Documentation](docs/README.md)** | **Organized documentation hub** |
-| **[User Guide](docs/users/README.md)** | Complete user manual with API usage examples |
-| **[Developer Guide](docs/developers/README.md)** | Development setup, architecture, and best practices |
-| **[API Reference](docs/api/README.md)** | Complete REST API and Supabase Realtime documentation |
-| **[Security Guide](docs/operators/security-guide.md)** | Security implementation and best practices |
-| **[Architecture Guide](docs/architecture/README.md)** | System design and technical architecture |
+# Supabase tooling (optional)
+cd ..
+make supa.link PROJECT_REF=...
+make supa.db.push
+```
 
-### Interactive Documentation
-
-- **API Docs**: `http://localhost:8000/docs` (Swagger UI)
-- **ReDoc**: `http://localhost:8000/redoc` (Alternative API documentation)
-- **Health Check**: `http://localhost:8000/api/health`
-
----
-
-## 🏗️ Project Structure
-
-For detailed information about the project structure and module organization, see [docs/architecture/project-structure.md](docs/architecture/project-structure.md).
+## Project Structure
 
 ```text
 tripsage-ai/
-├── tripsage/                   # API application (FastAPI)
-├── tripsage_core/              # Core business logic and services
-├── frontend/                   # Next.js application
-├── tests/                      # test suite
-├── scripts/                    # Database and deployment scripts
-├── docker/                     # Runtime compose files and Dockerfiles
-├── docs/                       # Documentation
-└── supabase/                   # Supabase configuration
+├── frontend/        # Next.js 16 + AI SDK v6 (sole backend + UI)
+├── supabase/        # Supabase migrations/config
+├── docker/          # OTEL/Jaeger compose
+├── .github/         # CI/CD
+└── Makefile         # Supabase ops shortcuts
 ```
 
----
+## Conventions
 
-## 🛠️ Development
-
-### Essential Commands
-
-```bash
-# Backend Development
-uv run python -m tripsage.api.main     # Start API server
-uv run pytest                          # Run tests
-ruff check . --fix && ruff format .    # Lint and format
-
-# Frontend Development
-cd frontend
-pnpm dev                               # Start Next.js development server
-pnpm test                              # Run Vitest tests (85-90% coverage)
-pnpm test:ci                           # Run sharded Vitest suite (CI-optimized)
-pnpm test:e2e                         # Run Playwright E2E tests
-npx biome lint --apply .               # Format TypeScript
-
-# Database Operations
-uv run python scripts/database/run_migrations.py    # Run migrations
-uv run python scripts/verification/verify_setup.py  # Verify installation
-```
-
-## Development Standards
-
-See [Testing Guide](docs/developers/testing-guide.md) and [Code Standards](docs/developers/code-standards.md) for details on testing, linting, and quality gates.
+- Server-first: Route handlers and Server Actions own data fetching and AI calls. Use `createAI`/`streamText` with Zod v4 validation.
+- Auth/DB: `@supabase/ssr` only; no auth-helpers.
+- Cache/jobs: Upstash HTTP clients only (`Redis.fromEnv`, QStash SDK).
+- Logging: OTEL exporters; no `console.log` in server code.
+- Tests: Vitest/Playwright only (no pytest/ruff/uv).
 
 ---
 
-## Repository Conventions
-
-- Pre-commit: Ruff (lint/format), Bandit, and Pyright (`uv run pyright`). No MyPy or Black hooks.
-- Frontend gates: Biome (`pnpm biome:check`), strict TS (`pnpm type-check`), Vitest (`pnpm test:run`).
-
-## Dependency Injection
-
-TripSage standardises dependency injection on FastAPI `app.state` singletons managed by
-[`tripsage/app_state.py`](tripsage/app_state.py).
-
-- Lifespan-managed services: `initialise_app_state()` builds an `AppServiceContainer`
-  that wires the database, caches, external providers, and domain services. The
-  container is stored on `app.state.services` and cleaned up on shutdown.
-- Typed accessors: call `services.get_required_service("flight_service", expected_type=FlightService)`
-  for safe retrieval and better type-checking.
-- API dependencies: `tripsage/api/core/dependencies.py` exposes `Annotated` helpers
-  (e.g. `TripServiceDep`, `MemoryServiceDep`) that resolve services from the container.
-- Request handlers: use `request: Request` to access `request.app.state.services` when
-  needed. Prefer dependency helpers to keep handlers declarative.
-- Rate limiting (SlowAPI): any endpoint decorated with `@limiter.limit(...)` must accept
-  `request: Request` (and `response: Response` if headers are injected). For unit tests,
-  either invoke via HTTP client or unwrap decorators and pass a synthetic `Request`.
-  Example snippet used by tests:
-
-  ```py
-  from fastapi import Request
-
-  def build_request(method: str, path: str) -> Request:
-      scope = {
-          "type": "http", "method": method, "path": path, "scheme": "http",
-          "headers": [], "client": ("127.0.0.1", 12345), "server": ("test", 80),
-          "query_string": b"",
-      }
-      async def receive():
-          return {"type": "http.request", "body": b"", "more_body": False}
-      return Request(scope, receive)
-  ```
-
-- Orchestration tools: LangGraph tools call `set_tool_services(container)` during startup
-  so shared utilities reuse the same singletons (no ad-hoc instantiation inside tools).
-- Testing: pytest fixtures construct lightweight containers with typed mocks. See
-  `tests/unit/orchestration/test_utils.py::create_mock_services`.
-
-The legacy `ServiceRegistry` abstraction has been removed. All new modules and tests use
-the `AppServiceContainer` pattern to keep DI consistent and explicit.
-
-Schema policy (routers vs. schemas):
-
-- Routers must not declare Pydantic `BaseModel` classes. Place request/response
-  models under `tripsage/api/schemas/requests|responses` (or `schemas/*.py` when shared).
-- Every endpoint declares a `response_model` and returns instances/serializable
-  shapes matching the schema. Prefer enum types and validated fields.
-- Centralized schemas avoid drift and enable accurate OpenAPI for client codegen.
-
----
-
-## 🚢 Deployment
+## Deployment
 
 ### Docker Deployment
 
@@ -307,13 +237,14 @@ We welcome contributions! See the [Developer Contributing Guide](docs/developers
 
 ## 📈 Performance
 
-TripSage AI is optimized for high performance and scalability:
+TripSage AI is optimized for high performance and global scalability:
 
-- **Response Times**: Sub-200ms for cached requests
-- **Throughput**: 1000+ requests/second on standard hardware
-- **Caching**: Upstash Redis provides managed serverless caching
-- **Database**: pgvector enables fast similarity search for recommendations
-- **AI**: Optimized LangGraph agents with streaming responses
+- **Response Times**: Sub-200ms for cached requests via Upstash Redis HTTP API
+- **Edge Performance**: Sub-10ms global latency with Vercel Edge runtime and Upstash Redis distributed caching
+- **Throughput**: 1000+ requests/second on standard hardware with Upstash serverless scaling
+- **Vector Search**: Supabase pgvector with HNSW indexes for sub-50ms semantic similarity queries
+- **Streaming**: Real-time SSE with AI SDK v6, interleaved tool calls, and progressive UI rendering
+- **Background Processing**: Upstash QStash handles async jobs (memory sync, batch operations) with guaranteed delivery
 
 ### Benchmarks
 
@@ -330,13 +261,15 @@ uv run python scripts/verification/verify_upstash.py
 
 ## 🔒 Security
 
-Security is a top priority for TripSage AI:
+Zero-trust architecture with defense-in-depth security:
 
-- **Authentication**: JWT tokens with configurable expiration
-- **Authorization**: Role-based access control (RBAC)
-- **Data Protection**: Encrypted sensitive data at rest
-- **API Security**: Rate limiting and request validation
-- **Dependency Security**: Automated vulnerability scanning
+- **BYOK Architecture**: User API keys encrypted in Supabase Vault, accessed only via SECURITY DEFINER RPCs with PostgREST JWT claims validation—keys never reach client
+- **Row Level Security**: Supabase RLS policies enforce per-user data isolation; all tables protected by default
+- **Rate Limiting**: Upstash Ratelimit with sliding-window counters, tiered budgets (40 req/min streaming, 20 req/min validation) per user/IP
+- **Server-Only Secrets**: BYOK routes import `"server-only"` and run with `dynamic = "force-dynamic"` to ensure secrets processed per-request
+- **PII Redaction**: OpenTelemetry spans automatically redact sensitive data; structured logging with correlation IDs
+- **Tool Approval Gates**: Critical operations (bookings, payments) pause streaming and require explicit user consent
+- **Dependency Security**: Automated vulnerability scanning and dependency updates
 
 ### Security Testing
 
