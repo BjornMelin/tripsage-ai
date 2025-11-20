@@ -14,11 +14,19 @@ vi.mock("@/lib/google/caching", () => ({
 }));
 
 vi.mock("@/lib/env/server", () => ({
+  getServerEnvVar: vi.fn(() => undefined),
+  getServerEnvVarWithFallback: vi.fn((_key: string, fallback?: string) => fallback),
   getGoogleMapsServerKey: vi.fn().mockReturnValue("test-server-key"),
 }));
 
 vi.mock("@/lib/telemetry/span", () => ({
-  withTelemetrySpan: vi.fn((_name: string, _options, fn) => fn()),
+  withTelemetrySpan: vi.fn((_name: string, _options, fn) =>
+    fn({
+      addEvent: vi.fn(),
+      recordException: vi.fn(),
+      setAttribute: vi.fn(),
+    })
+  ),
 }));
 
 describe("lookupPoiContext", () => {

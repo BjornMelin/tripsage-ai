@@ -86,6 +86,7 @@ describe("PersonalizationInsights", () => {
   };
 
   beforeEach(() => {
+    vi.useRealTimers();
     vi.clearAllMocks();
     MockUseMemoryInsights.mockReturnValue({
       data: minimalInsightsData,
@@ -136,9 +137,7 @@ describe("PersonalizationInsights", () => {
     });
     fireEvent.click(recommendationsButton);
 
-    await waitFor(() => {
-      expect(screen.getByText(/luxury eco-lodges/i)).toBeInTheDocument();
-    });
+    expect(screen.getByText(/luxury eco-lodges/i)).toBeInTheDocument();
   });
 
   it("switches between views correctly", () => {

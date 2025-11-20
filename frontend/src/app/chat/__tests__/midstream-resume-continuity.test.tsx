@@ -77,6 +77,10 @@ vi.mock("@ai-sdk/react", () => {
 });
 
 describe("mid-stream resume continuity", () => {
+  beforeEach(() => {
+    vi.useRealTimers();
+  });
+
   it("retains existing messages after resume", async () => {
     const mod = await import("../../chat/page");
     const Page = mod.default;

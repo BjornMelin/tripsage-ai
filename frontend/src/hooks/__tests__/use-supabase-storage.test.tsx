@@ -86,6 +86,7 @@ function FileCount() {
 
 describe("useSupabaseStorage", () => {
   beforeEach(() => {
+    vi.useRealTimers();
     FROM_MOCK.mockReset();
   });
 
@@ -99,11 +100,8 @@ describe("useSupabaseStorage", () => {
 
     const { getByTestId } = render(<FileCount />);
 
-    await waitFor(
-      () => {
-        expect(getByTestId("files")).toHaveTextContent("1");
-      },
-      { timeout: 3000 }
-    );
-  }, 10000);
+    await waitFor(() => {
+      expect(getByTestId("files")).toHaveTextContent("1");
+    });
+  });
 });

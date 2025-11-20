@@ -12,6 +12,10 @@ import {
 
 /** Test suite for PromptInput component */
 describe("ai-elements/prompt-input", () => {
+  beforeEach(() => {
+    vi.useRealTimers();
+  });
+
   /** Test that onSubmit is called with typed text when submitted */
   it("calls onSubmit with typed text when submitted", async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
@@ -40,14 +44,10 @@ describe("ai-elements/prompt-input", () => {
 
     fireEvent.submit(form);
 
-    await waitFor(
-      () => {
-        expect(onSubmit).toHaveBeenCalled();
-      },
-      { timeout: 2000 }
-    );
+    await Promise.resolve();
+    expect(onSubmit).toHaveBeenCalledTimes(1);
 
     const payload = onSubmit.mock.calls[0]?.[0];
     expect(payload?.text).toBe("Hello AI");
-  }, 10000);
+  });
 });

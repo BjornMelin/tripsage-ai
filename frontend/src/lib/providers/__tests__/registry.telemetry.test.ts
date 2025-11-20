@@ -25,8 +25,12 @@ vi.mock("@/lib/supabase/rpc", () => ({
 }));
 
 vi.mock("ai", () => ({
-  createGateway: (opts: { apiKey?: string; baseURL?: string }) => (id: string) =>
-    `gateway(${opts.baseURL ?? "https://ai-gateway.vercel.sh/v1"})::${opts.apiKey ? "key" : "no-key"}::${id}`,
+  createGateway: (opts: { apiKey?: string; baseURL?: string }) => (id: string) => ({
+    baseURL: opts.baseURL ?? "https://ai-gateway.vercel.sh/v1",
+    id,
+    kind: "gateway-mock",
+    withKey: Boolean(opts.apiKey),
+  }),
 }));
 
 vi.mock("@/lib/env/server", () => ({

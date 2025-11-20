@@ -156,6 +156,15 @@ describe("handleChatStream", () => {
     let startMeta: MetadataResult | undefined;
     let finishMeta: MetadataResult | undefined;
     const fauxStream = vi.fn(() => ({
+      response: Promise.resolve({
+        messages: [
+          {
+            content: [{ text: "hello", type: "text" }],
+            id: "assistant-1",
+            role: "assistant",
+          },
+        ],
+      }),
       toUIMessageStreamResponse: ({
         messageMetadata,
       }: {

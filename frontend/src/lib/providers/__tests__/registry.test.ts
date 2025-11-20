@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 
+const makeModel = (label: string) => {
+  const fn = vi.fn();
+  fn.toString = () => label;
+  return fn;
+};
+
 vi.mock("@/lib/supabase/rpc", () => ({
   getUserAllowGatewayFallback: vi.fn(async () => true),
   getUserApiKey: vi.fn(),
@@ -10,25 +16,29 @@ vi.mock("@/lib/supabase/rpc", () => ({
 // Mock provider factories to return simple tagged model ids for assertions.
 vi.mock("@ai-sdk/openai", () => ({
   createOpenAI: (opts: { apiKey?: string; baseURL?: string }) => (id: string) =>
-    `openai(${opts.baseURL ?? "api.openai.com"})::${opts.apiKey ? "key" : "no-key"}::${id}`,
+    makeModel(
+      `openai(${opts.baseURL ?? "api.openai.com"})::${opts.apiKey ? "key" : "no-key"}::${id}`
+    ),
 }));
 
 vi.mock("@ai-sdk/anthropic", () => ({
-  anthropic: (id: string) => `anthropic::${id}`,
+  anthropic: (id: string) => makeModel(`anthropic::${id}`),
   createAnthropic: (opts: { apiKey?: string }) => (id: string) =>
-    `anthropic::${opts.apiKey ? "key" : "no-key"}::${id}`,
+    makeModel(`anthropic::${opts.apiKey ? "key" : "no-key"}::${id}`),
 }));
 
 // OpenRouter now uses OpenAI-compatible provider with baseURL pointing to OpenRouter.
 
 vi.mock("ai", () => ({
   createGateway: (opts: { apiKey?: string; baseURL?: string }) => (id: string) =>
-    `gateway(${opts.baseURL ?? "https://ai-gateway.vercel.sh/v1"})::${opts.apiKey ? "key" : "no-key"}::${id}`,
+    makeModel(
+      `gateway(${opts.baseURL ?? "https://ai-gateway.vercel.sh/v1"})::${opts.apiKey ? "key" : "no-key"}::${id}`
+    ),
 }));
 
 vi.mock("@ai-sdk/xai", () => ({
   createXai: (opts: { apiKey?: string }) => (id: string) =>
-    `xai::${opts.apiKey ? "key" : "no-key"}::${id}`,
+    makeModel(`xai::${opts.apiKey ? "key" : "no-key"}::${id}`),
 }));
 
 describe("resolveProvider", () => {
@@ -53,7 +63,7 @@ describe("resolveProvider", () => {
     const { resolveProvider } = await import("@ai/models/registry");
     const result = await resolveProvider("user-1", "gpt-4o-mini");
     expect(result.provider).toBe("openai");
-    expect(result.model).toContain("openai(");
+    expect(String(result.model)).toContain("openai(");
     expect(result.modelId).toBe("gpt-4o-mini");
   });
 
@@ -122,7 +132,7 @@ describe("resolveProvider", () => {
     const { resolveProvider } = await import("@ai/models/registry");
     const result = await resolveProvider("user-3", "claude-3-5-sonnet-20241022");
     expect(result.provider).toBe("anthropic");
-    expect(result.model).toContain("anthropic::key::claude-3-5-sonnet-20241022");
+    expect(String(result.model)).toContain("anthropic::key::claude-3-5-sonnet-20241022");
   });
 
   it("uses xAI when only xai key exists", async () => {

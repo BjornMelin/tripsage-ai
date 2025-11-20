@@ -86,6 +86,10 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: true, ...result });
       } catch (error) {
         span.recordException(error as Error);
+        if (process.env.NODE_ENV === "test") {
+          // eslint-disable-next-line no-console
+          console.error("notify-collaborators error", error);
+        }
         return NextResponse.json({ error: "internal error" }, { status: 500 });
       }
     }

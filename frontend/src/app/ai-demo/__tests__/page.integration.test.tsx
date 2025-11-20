@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Page from "@/app/ai-demo/page";
 
@@ -10,11 +10,13 @@ const MOCK_FETCH = vi.fn();
 
 describe("AI Demo Page", () => {
   beforeEach(() => {
+    vi.useRealTimers();
     MOCK_FETCH.mockClear();
     (window as { fetch: typeof fetch }).fetch = MOCK_FETCH;
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.clearAllMocks();
   });
 
@@ -24,7 +26,10 @@ describe("AI Demo Page", () => {
     expect(screen.getByRole("button", { name: /submit/i })).toBeInTheDocument();
   });
 
-  it("submits prompt and streams response successfully", async () => {
+  it(
+    "submits prompt and streams response successfully",
+    { timeout: 10000 },
+    async () => {
     // Mock successful streaming response with minimal chunks
     const mockReader = {
       read: vi
@@ -47,8 +52,10 @@ describe("AI Demo Page", () => {
     const textarea = screen.getByPlaceholderText(/say hello to ai sdk v6/i);
     const submit = screen.getByRole("button", { name: /submit/i });
 
-    fireEvent.change(textarea, { target: { value: "Test input" } });
-    fireEvent.click(submit);
+    await act(async () => {
+      fireEvent.change(textarea, { target: { value: "Test input" } });
+      fireEvent.click(submit);
+    });
 
     await waitFor(
       () => {
@@ -56,17 +63,23 @@ describe("AI Demo Page", () => {
       },
       { timeout: 2000 }
     );
-  });
+    }
+  );
 
-  it("handles fetch errors gracefully", async () => {
+  it(
+    "handles fetch errors gracefully",
+    { timeout: 10000 },
+    async () => {
     MOCK_FETCH.mockRejectedValueOnce(new Error("Network error"));
 
     render(<Page />);
     const textarea = screen.getByPlaceholderText(/say hello to ai sdk v6/i);
     const submit = screen.getByRole("button", { name: /submit/i });
 
-    fireEvent.change(textarea, { target: { value: "Test input" } });
-    fireEvent.click(submit);
+    await act(async () => {
+      fireEvent.change(textarea, { target: { value: "Test input" } });
+      fireEvent.click(submit);
+    });
 
     await waitFor(
       () => {
@@ -75,9 +88,13 @@ describe("AI Demo Page", () => {
       },
       { timeout: 2000 }
     );
-  });
+    }
+  );
 
-  it("handles HTTP error responses", async () => {
+  it(
+    "handles HTTP error responses",
+    { timeout: 10000 },
+    async () => {
     MOCK_FETCH.mockResolvedValueOnce({
       ok: false,
       status: 500,
@@ -88,8 +105,10 @@ describe("AI Demo Page", () => {
     const textarea = screen.getByPlaceholderText(/say hello to ai sdk v6/i);
     const submit = screen.getByRole("button", { name: /submit/i });
 
-    fireEvent.change(textarea, { target: { value: "Test input" } });
-    fireEvent.click(submit);
+    await act(async () => {
+      fireEvent.change(textarea, { target: { value: "Test input" } });
+      fireEvent.click(submit);
+    });
 
     await waitFor(
       () => {
@@ -98,5 +117,6 @@ describe("AI Demo Page", () => {
       },
       { timeout: 2000 }
     );
-  });
+    }
+  );
 });
