@@ -2,66 +2,6 @@
 
 Coding guidelines and conventions for TripSage development.
 
-## Python Standards
-
-### Type Hints
-
-Use complete type hints for all function parameters and return values:
-
-```python
-from typing import List, Optional, Dict
-
-def create_trip(name: str, destinations: List[str], budget: Optional[float] = None) -> Dict[str, str]:
-    # Implementation
-    pass
-```
-
-### Error Handling
-
-Use custom exception classes derived from `CoreTripSageError`:
-
-```python
-from tripsage_core.exceptions import CoreTripSageError
-
-class TripNotFoundError(CoreTripSageError):
-    pass
-
-# Usage
-raise TripNotFoundError("Trip not found", status_code=404)
-```
-
-### Async Operations
-
-Use async/await for all I/O operations:
-
-```python
-async def get_trip(trip_id: str) -> Trip:
-    async with db_session() as session:
-        result = await session.execute(select(Trip).where(Trip.id == trip_id))
-        return result.scalar_one()
-```
-
-### Docstrings
-
-Use Google-style docstrings:
-
-```python
-def create_trip(name: str, destinations: List[str]) -> Trip:
-    """Create a new trip with destinations.
-
-    Args:
-        name: Trip name
-        destinations: List of destination names
-
-    Returns:
-        Created trip instance
-
-    Raises:
-        ValidationError: If trip data is invalid
-    """
-    pass
-```
-
 ## TypeScript Standards
 
 ### Import Paths
@@ -171,86 +111,85 @@ export type AccommodationSearchParams = z.infer<typeof ACCOMMODATION_SEARCH_INPU
 
 ## Code Formatting
 
-### Python (Ruff)
-
-```bash
-# Lint and fix issues
-ruff check . --fix
-
-# Format code
-ruff format .
-```
-
 ### TypeScript (Biome)
 
 ```bash
 # Lint and fix issues
-npx biome lint --apply .
+pnpm biome:fix
 
 # Format code
-npx biome format . --write
+pnpm format:biome
+
+# Check only (no fixes)
+pnpm biome:check
 ```
 
 ## Architecture Patterns
 
 ### Service Layer
 
-Keep business logic in dedicated service classes:
+Keep business logic in dedicated service classes with dependency injection:
 
-```python
-class TripService:
-    def __init__(self, db, cache, external_api):
-        self.db = db
-        self.cache = cache
-        self.external_api = external_api
+```typescript
+import { withTelemetrySpan } from "@/lib/telemetry/span";
 
-    async def create_trip(self, trip_data, user_id):
-        # Business logic here
-        pass
-```
+interface ServiceDeps {
+  db: DatabaseService;
+  cache: CacheService;
+  externalApi: ExternalApiService;
+  rateLimiter?: RateLimiter;
+}
 
-### Repository Pattern
+export class TripService {
+  constructor(private readonly deps: ServiceDeps) {}
 
-Abstract data access behind repository interfaces:
-
-```python
-class TripRepository:
-    async def get_by_id(self, trip_id: str) -> Trip:
-        # Database query
-        pass
-
-    async def create(self, trip: Trip) -> Trip:
-        # Insert operation
-        pass
+  async createTrip(tripData: TripData, userId: string): Promise<Trip> {
+    return await withTelemetrySpan(
+      "trip.create",
+      { attributes: { userId } },
+      async () => {
+        // Business logic here
+      }
+    );
+  }
+}
 ```
 
 ## Security Guidelines
 
 ### Input Validation
 
-Validate all inputs using Pydantic models:
+Validate all inputs using Zod schemas:
 
-```python
-from pydantic import BaseModel, Field
+```typescript
+import { z } from "zod";
+import { primitiveSchemas } from "@schemas/registry";
 
-class TripCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=100)
-    destinations: List[str] = Field(min_items=1)
+const tripCreateSchema = z.strictObject({
+  title: primitiveSchemas.nonEmptyString.max(200),
+  destination: primitiveSchemas.nonEmptyString.max(200),
+  startDate: z.string(),
+  endDate: z.string(),
+  budget: primitiveSchemas.nonNegativeNumber.optional(),
+  travelers: primitiveSchemas.positiveNumber.int().default(1),
+});
+
+type TripCreateInput = z.infer<typeof tripCreateSchema>;
 ```
 
 ### Authentication
 
-Use JWT tokens for API authentication:
+Use proper authentication patterns for Next.js API routes:
 
-```python
-from fastapi.security import HTTPBearer
+```typescript
+import type { NextRequest } from "next/server";
+import { withApiGuards } from "@/lib/api/factory";
 
-security = HTTPBearer()
-
-@app.get("/protected")
-async def protected_route(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    # Validate token
-    pass
+export const GET = withApiGuards(async (req: NextRequest) => {
+  // Authentication handled by withApiGuards
+  // Protected route logic here
+  return Response.json({ message: "Success" });
+});
 ```
 
 ## Performance Guidelines
@@ -271,7 +210,7 @@ async def protected_route(credentials: HTTPAuthorizationCredentials = Depends(se
 
 - Use async/await for all I/O operations
 - Avoid blocking calls in async functions
-- Use async context managers for resource management
+- Use proper error handling with try/catch
 
 ## Code Review Checklist
 
@@ -289,4 +228,4 @@ async def protected_route(credentials: HTTPAuthorizationCredentials = Depends(se
 - [ ] Error handling is appropriate
 - [ ] Performance considerations addressed
 - [ ] Security vulnerabilities checked
-- [ ] Tests are comprehensive and meaningful
+- [ ] Tests are meaningful and provide valuable insights
