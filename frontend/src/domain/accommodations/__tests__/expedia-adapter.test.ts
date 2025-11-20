@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test, vi, type Mock } from "vitest";
+import { beforeEach, describe, expect, type Mock, test, vi } from "vitest";
 
 vi.mock("@/lib/telemetry/span", () => ({
   withTelemetrySpan: (

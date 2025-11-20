@@ -1,7 +1,7 @@
 import type { AccommodationProviderAdapter } from "@domain/accommodations/providers/types";
 import { AccommodationsService } from "@domain/accommodations/service";
 import { ACCOMMODATION_SEARCH_OUTPUT_SCHEMA } from "@schemas/accommodations";
-import { beforeEach, describe, expect, test, vi, type Mock } from "vitest";
+import { beforeEach, describe, expect, type Mock, test, vi } from "vitest";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 
 vi.mock("@/lib/telemetry/span", () => ({
