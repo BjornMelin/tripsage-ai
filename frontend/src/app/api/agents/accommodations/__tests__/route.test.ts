@@ -40,7 +40,7 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 // Mock provider registry
-vi.mock("@/lib/providers/registry", () => ({
+vi.mock("@ai/models/registry", () => ({
   resolveProvider: vi.fn(async () => ({ model: {}, modelId: "gpt-4o" })),
 }));
 

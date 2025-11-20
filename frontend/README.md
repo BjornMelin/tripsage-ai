@@ -666,7 +666,7 @@ Server example with Gateway providerOptions (optional):
 
 ```typescript
 import type { NextRequest } from "next/server";
-import { resolveProvider } from "@/lib/providers/registry";
+import { resolveProvider } from "@ai/models/registry";
 import { convertToModelMessages, streamText } from "ai";
 
 export async function POST(req: NextRequest) {

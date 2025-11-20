@@ -8,6 +8,7 @@
 
 import "server-only";
 
+import { resolveProvider } from "@ai/models/registry";
 import type { BudgetPlanRequest } from "@schemas/agents";
 import { agentSchemas } from "@schemas/agents";
 import type { NextRequest } from "next/server";
@@ -20,7 +21,6 @@ import {
   getTrustedRateLimitIdentifier,
   parseJsonBody,
 } from "@/lib/next/route-helpers";
-import { resolveProvider } from "@/lib/providers/registry";
 
 export const maxDuration = 60;
 

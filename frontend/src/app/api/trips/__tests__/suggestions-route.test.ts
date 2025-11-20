@@ -29,7 +29,7 @@ vi.mock("@/lib/redis", () => ({
 }));
 
 // Mock AI provider registry
-vi.mock("@/lib/providers/registry", () => ({
+vi.mock("@ai/models/registry", () => ({
   resolveProvider: vi.fn(async () => ({ model: "test-model" })),
 }));
 

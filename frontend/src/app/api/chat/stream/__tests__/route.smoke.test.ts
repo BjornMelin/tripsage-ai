@@ -1,10 +1,8 @@
-/**
- * @vitest-environment node
- */
+/** @vitest-environment node */
 
+import type { ProviderResolution } from "@ai/models/registry";
 import type { UIMessage } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ProviderResolution } from "@/lib/providers/types";
 import type { ChatDeps } from "../_handler";
 import { handleChatStream } from "../_handler";
 

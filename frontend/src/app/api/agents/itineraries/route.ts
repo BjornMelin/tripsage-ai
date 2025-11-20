@@ -8,6 +8,7 @@
 
 import "server-only";
 
+import { resolveProvider } from "@ai/models/registry";
 import type { ItineraryPlanRequest } from "@schemas/agents";
 import { agentSchemas } from "@schemas/agents";
 import type { NextRequest } from "next/server";
@@ -16,7 +17,6 @@ import { createErrorHandler } from "@/lib/agents/error-recovery";
 import { runItineraryAgent } from "@/lib/agents/itinerary-agent";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse, parseJsonBody } from "@/lib/next/route-helpers";
-import { resolveProvider } from "@/lib/providers/registry";
 
 export const maxDuration = 60;
 
