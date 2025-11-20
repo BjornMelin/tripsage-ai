@@ -10,7 +10,6 @@ TripSage uses minimal CI/CD with GitHub Actions for quality gates:
 
 **Jobs:**
 
-- **Backend**: Python linting, type checking, unit tests
 - **Frontend**: TypeScript checking, linting, unit tests
 
 **Triggers:**
@@ -22,22 +21,17 @@ TripSage uses minimal CI/CD with GitHub Actions for quality gates:
 ### Quality Gates
 
 ```bash
-# Python checks
-ruff check . --fix    # Lint and auto-fix
-ruff format .         # Format code
-uv run pytest         # Run tests with coverage
-
 # TypeScript checks
-cd frontend && pnpm lint     # Lint and auto-fix
-cd frontend && pnpm format   # Format code
-cd frontend && pnpm test     # Run tests
+cd frontend && pnpm biome:check    # Lint and auto-fix
+cd frontend && pnpm biome:fix      # Format code
+cd frontend && pnpm type-check     # Type checking
+cd frontend && pnpm test           # Run tests
 ```
 
 ### Path-Based Execution
 
 CI jobs run only when relevant files change:
 
-- Backend: `tripsage/**`, `tripsage_core/**`, `scripts/**`, `pyproject.toml`, etc.
 - Frontend: `frontend/**`
 - Config: `.github/workflows/**`
 
@@ -92,39 +86,9 @@ refactor: simplify trip creation logic
 
 ## Debugging Techniques
 
-### Logging
-
-TripSage uses structured JSON logging throughout:
-
-```python
-# tripsage_core/observability/otel.py
-import logging
-
-logger = logging.getLogger(__name__)
-
-def log_api_request(method: str, path: str, status: int, duration: float):
-    logger.info(
-        "API request completed",
-        extra={
-            "method": method,
-            "path": path,
-            "status_code": status,
-            "duration_ms": round(duration * 1000, 2)
-        }
-    )
-```
-
 ### Common Issues
 
 #### Authentication Problems
-
-**JWT Token Issues:**
-
-```python
-# Check token validity
-from tripsage.api.middlewares.authentication import verify_jwt
-is_valid = await verify_jwt(token)
-```
 
 **Supabase Auth Errors:**
 
@@ -133,15 +97,6 @@ is_valid = await verify_jwt(token)
 - Confirm redirect URIs match
 
 #### Database Connection Issues
-
-**Connection Pool Exhaustion:**
-
-```python
-# Check connection status
-from tripsage_core.services.infrastructure.database_service import DatabaseService
-db = DatabaseService()
-status = await db.health_check()
-```
 
 **Query Performance:**
 
@@ -153,25 +108,6 @@ SET log_duration = 'on';
 -- Check slow queries
 SELECT * FROM pg_stat_activity
 WHERE state = 'active' AND now() - query_start > interval '1 second';
-```
-
-#### API Performance Issues
-
-**Rate Limiting:**
-
-```python
-# Check rate limit status
-from tripsage.api.limiting import limiter
-remaining = await limiter.get_remaining_requests(request)
-```
-
-**Caching Problems:**
-
-```python
-# Verify cache connectivity
-from tripsage_core.services.infrastructure.cache_service import CacheService
-cache = CacheService()
-is_connected = await cache.ping()
 ```
 
 ### Frontend Debugging
@@ -198,9 +134,6 @@ console.log('Auth state:', state);
 **Run Specific Tests:**
 
 ```bash
-# Backend: Run specific test file
-uv run pytest tests/unit/api/test_trips.py -v
-
 # Frontend: Run specific test
 cd frontend && pnpm test TripCard.test.tsx
 ```
@@ -208,9 +141,6 @@ cd frontend && pnpm test TripCard.test.tsx
 **Debug Test Failures:**
 
 ```bash
-# Backend: Run with debugging
-uv run pytest --pdb --tb=short
-
 # Frontend: Run with watch mode
 cd frontend && pnpm test --watch
 ```
@@ -230,56 +160,14 @@ SELECT * FROM pg_stat_user_indexes
 WHERE relname = 'trips';
 ```
 
-**Connection Pooling:**
-
-```python
-# Monitor pool status
-from tripsage_core.config import get_settings
-settings = get_settings()
-pool_size = settings.db_max_connections
-```
-
 ### Caching Strategies
-
-**Cache Hit Analysis:**
-
-```python
-# Check cache effectiveness
-cache_stats = await cache.get_stats()
-hit_rate = cache_stats.hits / (cache_stats.hits + cache_stats.misses)
-```
 
 **Cache Invalidation:**
 
-```python
-# Clear specific cache entries
-await cache.delete("user:123:trips")
-await cache.delete_pattern("trip:*")
-```
+Cache invalidation is handled automatically by Next.js and Supabase. For manual cache clearing during development:
 
-### Memory Management
-
-**Monitor Memory Usage:**
-
-```python
-import psutil
-import os
-
-process = psutil.Process(os.getpid())
-memory_usage = process.memory_info().rss / 1024 / 1024  # MB
-```
-
-**Profile Memory Leaks:**
-
-```python
-# Use memory_profiler
-from memory_profiler import profile
-
-@profile
-def memory_intensive_function():
-    # Code to profile
-    pass
-```
+- Restart the development server to clear Next.js cache
+- Use Supabase dashboard to clear database caches if needed
 
 ## Deployment Issues
 
@@ -311,19 +199,13 @@ docker inspect tripsage-container | grep -A 10 "Health"
 **Missing Environment Variables:**
 
 ```bash
-# Validate configuration
-python scripts/config/config_manager.py validate
-
 # Check environment
-env | grep -E "(SUPABASE|DATABASE|REDIS)"
+env | grep -E "(SUPABASE|DATABASE|REDIS|AI_GATEWAY)"
 ```
 
 **Configuration Conflicts:**
 
-```bash
-# Compare environments
-python scripts/config/config_manager.py check-env production
-```
+Compare environment variables across deployment environments using your deployment platform's configuration management.
 
 ## Monitoring and Alerts
 
@@ -385,17 +267,6 @@ LIMIT 10;
 
 ### Dependency Problems
 
-**Python Dependencies:**
-
-```bash
-# Reinstall dependencies
-rm -rf .venv
-uv sync
-
-# Check for conflicts
-uv pip check
-```
-
 **Node Dependencies:**
 
 ```bash
@@ -415,16 +286,6 @@ cd frontend && rm -rf .next
 pnpm build  # Rebuild to check types
 ```
 
-**Python Type Checking:**
-
-```bash
-# Run mypy or pyright
-uv run pyright .
-
-# Check import issues
-python -c "import tripsage.api.main; print('Import successful')"
-```
-
 ## Getting Help
 
 ### Internal Resources
@@ -436,8 +297,9 @@ python -c "import tripsage.api.main; print('Import successful')"
 ### External Resources
 
 - Supabase documentation and community forums
-- Next.js and FastAPI documentation
+- Next.js documentation
 - PostgreSQL and Redis documentation
+- Vercel AI SDK documentation
 
 ### Escalation Process
 
