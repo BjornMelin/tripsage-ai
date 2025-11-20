@@ -1,5 +1,15 @@
 # Expedia Rapid Integration Research
 
+## Architecture Snapshot (2025-11-19)
+
+- **Provider adapter:** `frontend/src/domain/accommodations/providers/expedia-adapter.ts` adds retry + jitter backoff and an in-memory circuit breaker (default 4 failures, 30s cool-down). All Rapid calls flow through here and normalize errors to domain codes.
+- **Service layer:** `frontend/src/domain/accommodations/service.ts` owns search, details, availability, and booking orchestration wiring (RAG property resolution, cache-aside via Upstash, rate limiting via Upstash Ratelimit, Supabase persistence).
+- **Booking orchestrator:** `frontend/src/domain/accommodations/booking-orchestrator.ts` sequences approval → payment → provider booking → Supabase persist, with refund on provider failure and operational alert on persistence failure.
+- **AI tool surface unchanged:** `frontend/src/ai/tools/server/accommodations.ts` delegates to the service/orchestrator; cache/rate-limit moved out of tool guardrails.
+- **Payment:** `frontend/src/lib/payments/booking-payment.ts` now solely handles Stripe payment intent creation/refund (no provider calls).
+
+Telemetry: all service/provider/orchestrator calls are wrapped with `withTelemetrySpan`; PII keys are redacted; operational alerts emitted on persistence/refund failures.
+
 ## Internal References
 
 - `docs/prompts/tools/accommodation-details-tool-migration.md` (line 263) lists Expedia as an alternative accommodation detail provider beside Airbnb MCP and Booking.com; no dedicated ADR/SPEC currently defines an Expedia implementation.

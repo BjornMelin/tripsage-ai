@@ -33,6 +33,8 @@ Complete technical documentation for TripSage AI, an AI-powered travel planning 
 
 - **[Operators Reference](operators/operators-reference.md)** -
   Deployment, configuration, and operations
+- **[Database Operations](operators/database/)** - Supabase setup
+  and configuration
 - **[Security Guide](operators/security-guide.md)** - Security
   implementation and best practices
 - **[Deployment Guide](operators/deployment-guide.md)** - Production
@@ -115,7 +117,7 @@ TripSage uses a modern, unified architecture:
 - **Cache**: Upstash Redis (HTTP) for serverless caching
 - **Frontend**: Next.js 16 with React 19 and TypeScript
 - **Real-Time**: Supabase Realtime with private channels
-- **AI**: Vercel AI SDK v6 with complete streaming chat (`/api/chat/*`), memory sync (`/api/memory/sync`), and agent tool calling
+- **AI**: Vercel AI SDK v6 with streaming chat and agent tool calling
 
 ## Support & Community
 
