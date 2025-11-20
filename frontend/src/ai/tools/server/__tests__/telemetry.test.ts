@@ -30,6 +30,43 @@ vi.mock("@/lib/telemetry/span", () => ({
   withTelemetrySpan: mockWithTelemetrySpan,
 }));
 
+const ratelimitFailNext = vi.hoisted(() => ({ fail: false }));
+
+vi.mock("@upstash/ratelimit", () => {
+  return {
+    Ratelimit: class {
+      static slidingWindow(limit: number, window: string) {
+        return { limit, window };
+      }
+      private count = 0;
+      private readonly max: number;
+      constructor(opts: { limiter: { limit: number }; prefix?: string; redis?: unknown }) {
+        this.max = opts.limiter.limit;
+      }
+      async limit() {
+        this.count += 1;
+        const shouldFail = ratelimitFailNext.fail;
+        if (shouldFail) {
+          ratelimitFailNext.fail = false;
+          return {
+            limit: this.max,
+            remaining: 0,
+            reset: Math.floor(Date.now() / 1000) + 60,
+            success: false,
+          };
+        }
+        const success = this.count <= this.max;
+        return {
+          limit: this.max,
+          remaining: Math.max(0, this.max - this.count),
+          reset: Math.floor(Date.now() / 1000) + 60,
+          success,
+        };
+      }
+    },
+  };
+});
+
 type RedisMock = {
   data: Map<string, unknown>;
   ttl: Map<string, number>;
@@ -128,69 +165,74 @@ describe("planning tool telemetry", () => {
   });
 
   it("createTravelPlan wraps execution in withTelemetrySpan and emits rate_limited event on RL breach", async () => {
+    const callOptions = { messages: [], toolCallId: "call-1" };
     // Setup: create a plan first to get a valid planId
     const created = (await (
       createTravelPlan as unknown as {
         execute?: (a: unknown, c?: unknown) => Promise<unknown>;
       }
-    ).execute?.({
-      destinations: ["AMS"],
-      endDate: "2025-07-10",
-      startDate: "2025-07-01",
-      title: "Test Plan",
-      travelers: 2,
-    })) as { success: boolean; planId?: string };
+    ).execute?.(
+      {
+        destinations: ["AMS"],
+        endDate: "2025-07-10",
+        startDate: "2025-07-01",
+        title: "Test Plan",
+        travelers: 2,
+      },
+      callOptions
+    )) as { success: boolean; planId?: string };
 
     expect(created.success).toBe(true);
-    expect(mockWithTelemetrySpan).toHaveBeenCalledWith(
-      "planning.createTravelPlan",
-      expect.objectContaining({
-        attributes: expect.objectContaining({
-          destinationsCount: 1,
-          travelers: 2,
-        }),
+    expect(mockWithTelemetrySpan).toHaveBeenCalled();
+    const callArgs = mockWithTelemetrySpan.mock.calls[0];
+    expect(callArgs[0]).toBe("tool.createTravelPlan");
+    expect(callArgs[1]).toMatchObject({
+      attributes: expect.objectContaining({
+        "tool.name": "createTravelPlan",
       }),
-      expect.any(Function)
-    );
+    });
 
     // Simulate rate limit breach
-    const day = new Date().toISOString().slice(0, 10).replaceAll("-", "");
-    const rlKey = `travel_plan:rate:create:u1:${day}`;
-    // Set count to exceed limit
-    redis.data.set(rlKey, RATE_CREATE_PER_DAY + 1);
+    ratelimitFailNext.fail = true;
 
     vi.clearAllMocks();
 
-    const result = (await (
-      createTravelPlan as unknown as {
-        execute?: (a: unknown, c?: unknown) => Promise<unknown>;
-      }
-    ).execute?.({
-      destinations: ["ZRH"],
-      endDate: "2025-08-10",
-      startDate: "2025-08-01",
-      title: "Another Plan",
-      travelers: 1,
-    })) as { success: boolean; error?: string };
-
-    expect(result.success).toBe(false);
-    expect(result.error).toBe("rate_limited_plan_create");
+    await expect(
+      (
+        createTravelPlan as unknown as {
+          execute?: (a: unknown, c?: unknown) => Promise<unknown>;
+        }
+      ).execute?.(
+        {
+          destinations: ["ZRH"],
+          endDate: "2025-08-10",
+          startDate: "2025-08-01",
+          title: "Another Plan",
+          travelers: 1,
+        },
+        callOptions
+      )
+    ).rejects.toMatchObject({ code: "tool_rate_limited" });
     expect(mockWithTelemetrySpan).toHaveBeenCalled();
   });
 
   it("updateTravelPlan wraps execution in withTelemetrySpan and emits rate_limited event on RL breach", async () => {
+    const callOptions = { messages: [], toolCallId: "call-2" };
     // Setup: create a plan first
     const created = (await (
       createTravelPlan as unknown as {
         execute?: (a: unknown, c?: unknown) => Promise<unknown>;
       }
-    ).execute?.({
-      destinations: ["ROM"],
-      endDate: "2025-09-10",
-      startDate: "2025-09-01",
-      title: "Update Test Plan",
-      travelers: 1,
-    })) as { success: boolean; planId?: string };
+    ).execute?.(
+      {
+        destinations: ["ROM"],
+        endDate: "2025-09-10",
+        startDate: "2025-09-01",
+        title: "Update Test Plan",
+        travelers: 1,
+      },
+      callOptions
+    )) as { success: boolean; planId?: string };
 
     expect(created.success).toBe(true);
     expect(created.planId).toBeDefined();
@@ -203,39 +245,42 @@ describe("planning tool telemetry", () => {
       updateTravelPlan as unknown as {
         execute?: (a: unknown, c?: unknown) => Promise<unknown>;
       }
-    ).execute?.({
-      planId,
-      updates: { title: "Updated Title" },
-    })) as { success: boolean };
+    ).execute?.(
+      {
+        planId,
+        updates: { title: "Updated Title" },
+      },
+      callOptions
+    )) as { success: boolean };
 
     expect(updated.success).toBe(true);
-    expect(mockWithTelemetrySpan).toHaveBeenCalledWith(
-      "planning.updateTravelPlan",
-      expect.objectContaining({
+    expect(mockWithTelemetrySpan).toHaveBeenCalled();
+    const updateCallArgs = mockWithTelemetrySpan.mock.calls[0];
+    expect(updateCallArgs[0]).toBe("tool.updateTravelPlan");
+    expect(updateCallArgs[1]).toMatchObject({
         attributes: expect.objectContaining({
-          planId,
+          "tool.name": "updateTravelPlan",
         }),
-      }),
-      expect.any(Function)
-    );
+      });
 
     // Simulate rate limit breach
-    const rlKey = `travel_plan:rate:update:${planId}`;
-    redis.data.set(rlKey, RATE_UPDATE_PER_MIN + 1);
+    ratelimitFailNext.fail = true;
 
     vi.clearAllMocks();
 
-    const result = (await (
-      updateTravelPlan as unknown as {
-        execute?: (a: unknown, c?: unknown) => Promise<unknown>;
-      }
-    ).execute?.({
-      planId,
-      updates: { title: "Another Update" },
-    })) as { success: boolean; error?: string };
-
-    expect(result.success).toBe(false);
-    expect(result.error).toBe("rate_limited_plan_update");
+    await expect(
+      (
+        updateTravelPlan as unknown as {
+          execute?: (a: unknown, c?: unknown) => Promise<unknown>;
+        }
+      ).execute?.(
+        {
+          planId,
+          updates: { title: "Another Update" },
+        },
+        callOptions
+      )
+    ).rejects.toMatchObject({ code: "tool_rate_limited" });
     expect(mockWithTelemetrySpan).toHaveBeenCalled();
   });
 });
