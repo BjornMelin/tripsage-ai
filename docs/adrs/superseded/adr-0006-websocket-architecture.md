@@ -1,7 +1,7 @@
 # ADR-0006 (Superseded): Real-time Communication via WebSockets
 
 **Version**: 1.0.0
-**Status**: Superseded (by Supabase Realtime private channels, 2025-10-27)
+**Status**: Superseded (by Supabase Realtime private channels; replaced by ADR-0040)
 **Date**: 2025-06-17
 **Category**: backend
 **Domain**: WebSocket
