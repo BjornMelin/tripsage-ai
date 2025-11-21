@@ -35,6 +35,14 @@ import type {
 
 const DEFAULT_RETRYABLE_CODES = new Set([429, 408, 500, 502, 503, 504]);
 
+export function mapStatusToProviderCode(statusCode?: number): ProviderError["code"] {
+  if (statusCode === 401 || statusCode === 403) return "unauthorized";
+  if (statusCode === 404) return "not_found";
+  if (statusCode === 429) return "rate_limited";
+  if (statusCode && statusCode >= 500) return "provider_failed";
+  return "provider_failed";
+}
+
 export class AmadeusProviderAdapter implements AccommodationProviderAdapter {
   readonly name = "amadeus" as const;
 
@@ -263,12 +271,15 @@ export class AmadeusProviderAdapter implements AccommodationProviderAdapter {
           });
           return { ok: true as const, retries, value: result };
         } catch (error) {
+          const statusCode = this.getStatusCode(error);
+          const code = mapStatusToProviderCode(statusCode);
           const providerError =
             error instanceof ProviderError
               ? error
-              : new ProviderError("provider_failed", "amadeus adapter error", {
+              : new ProviderError(code, "amadeus adapter error", {
                   operation,
                   provider: this.name,
+                  statusCode,
                 });
           span.recordException(providerError);
           return { error: providerError, ok: false as const, retries };
@@ -279,11 +290,15 @@ export class AmadeusProviderAdapter implements AccommodationProviderAdapter {
 
   /** Determines if an error is retryable based on HTTP status codes. */
   private isRetryable(error: unknown): boolean {
+    const status = this.getStatusCode(error);
+    return status !== undefined && DEFAULT_RETRYABLE_CODES.has(status);
+  }
+
+  /** Extract status code from Amadeus SDK error shape. */
+  private getStatusCode(error: unknown): number | undefined {
     if (typeof error === "object" && error && "response" in error) {
-      const status = (error as { response?: { statusCode?: number } }).response
-        ?.statusCode;
-      return status !== undefined && DEFAULT_RETRYABLE_CODES.has(status);
+      return (error as { response?: { statusCode?: number } }).response?.statusCode;
     }
-    return false;
+    return undefined;
   }
 }

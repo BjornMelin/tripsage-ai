@@ -80,6 +80,7 @@ Related: `adr-0050-amadeus-google-places-stripe-hybrid.md`, `0027-spec-accommoda
 
 - [x] Ensure Stripe PaymentIntents flow remains unchanged. (Pending: align Amadeus booking payload with Stripe payments/virtual card.)
   - Payment now reuses cached availability price, ignoring client-provided amounts; provider payload embeds Stripe PaymentIntent reference and amount/currency and is covered by adapter unit test. Remaining risk: production validation against Amadeus `/v1/booking/hotel-bookings` response requirements.
+  - Added orchestrator unit tests to ensure refunds occur on provider failure and provider_booking_id is persisted.
 
 ## Phase 5 – AI Tools & Agent
 

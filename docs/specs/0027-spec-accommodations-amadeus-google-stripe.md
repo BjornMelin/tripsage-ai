@@ -574,10 +574,9 @@ Scope:
 - [ ] Service search:
 
   - Normal path covered by integration test; add assertions for cache hits and rate limiting.
-- [ ] Booking orchestrator:
+- [x] Booking orchestrator:
 
-  - Refunds on provider error.
-  - Persists booking with normalized provider IDs.
+  - Refunds on provider error (unit test covers refund pathway and providerBookingId persistence).
 
 ### 10.2 Integration tests
 
@@ -586,7 +585,7 @@ Using Vitest + MSW:
 - [ ] Mock Amadeus HTTP endpoints (or SDK calls) to simulate:
 
   - Normal responses (covered).
-  - 401, 404, 429, 500 error conditions (pending).
+  - 401, 404, 429, 500 error conditions (mapped via adapter unit test; add MSW coverage).
 - [x] Mock Google Places endpoints under `/api/places/*`.
 - [x] End-to-end tests for:
 

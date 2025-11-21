@@ -146,7 +146,7 @@
     "jscodeshift": "^17.3.0",
     "jsdom": "^27.2.0",
     "jsondiffpatch": "^0.7.3",
-    "msw": "2.4.6",
+    "msw": "2.12.2",
     "tailwindcss": "^4.1.17",
     "tailwindcss-animate": "^1.0.7",
     "tsx": "^4.20.6",
