@@ -1,7 +1,11 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
+import {
+  createMockNextRequest,
+  createRouteParamsContext,
+  getMockCookiesForTest,
+} from "@/test/route-helpers";
 
 // Mock next/headers cookies() BEFORE any imports that use it
 vi.mock("next/headers", () => ({
@@ -65,7 +69,7 @@ describe("/api/attachments/files", () => {
       url: "http://localhost/api/attachments/files?limit=10&offset=0",
     });
 
-    const res = await mod.GET(req);
+    const res = await mod.GET(req, createRouteParamsContext());
     expect(res.status).toBe(200);
     expect(MOCK_FETCH).toHaveBeenCalledTimes(1);
     const [calledUrl, options] = MOCK_FETCH.mock.calls[0] as [

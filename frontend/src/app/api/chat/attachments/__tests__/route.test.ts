@@ -3,7 +3,7 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockApiRouteAuthUser, resetApiRouteMocks } from "@/test/api-route-helpers";
-import { createMockNextRequest } from "@/test/route-helpers";
+import { createMockNextRequest, createRouteParamsContext } from "@/test/route-helpers";
 
 // Mock global fetch
 const MOCK_FETCH = vi.fn();
@@ -35,7 +35,7 @@ describe("/api/chat/attachments", () => {
       method: "POST",
       url: "http://localhost/api/chat/attachments",
     });
-    const res = await mod.POST(req);
+    const res = await mod.POST(req, createRouteParamsContext());
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toBe("Invalid content type");
@@ -53,7 +53,7 @@ describe("/api/chat/attachments", () => {
       method: "POST",
     });
     const req = new NextRequest(request);
-    const res = await mod.POST(req);
+    const res = await mod.POST(req, createRouteParamsContext());
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toBe("No files uploaded");
@@ -72,7 +72,7 @@ describe("/api/chat/attachments", () => {
       method: "POST",
     });
 
-    const res = await mod.POST(req);
+    const res = await mod.POST(req, createRouteParamsContext());
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.files).toHaveLength(1);
@@ -128,7 +128,7 @@ describe("/api/chat/attachments", () => {
       method: "POST",
     });
 
-    const res = await mod.POST(req);
+    const res = await mod.POST(req, createRouteParamsContext());
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.files).toHaveLength(2);
@@ -154,7 +154,7 @@ describe("/api/chat/attachments", () => {
       method: "POST",
     });
 
-    const res = await mod.POST(req);
+    const res = await mod.POST(req, createRouteParamsContext());
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toContain("exceeds maximum size");
@@ -178,7 +178,7 @@ describe("/api/chat/attachments", () => {
       method: "POST",
     });
 
-    const res = await mod.POST(req);
+    const res = await mod.POST(req, createRouteParamsContext());
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toContain("Maximum 5 files allowed");
@@ -200,7 +200,7 @@ describe("/api/chat/attachments", () => {
       method: "POST",
     });
 
-    const res = await mod.POST(req);
+    const res = await mod.POST(req, createRouteParamsContext());
     expect(res.status).toBe(500);
     const body = await res.json();
     expect(body.error).toBe("Backend error");
@@ -220,7 +220,7 @@ describe("/api/chat/attachments", () => {
       method: "POST",
     });
 
-    const res = await mod.POST(req);
+    const res = await mod.POST(req, createRouteParamsContext());
     expect(res.status).toBe(500);
     const body = await res.json();
     // withApiGuards returns error: "internal" for caught errors
@@ -240,7 +240,7 @@ describe("/api/chat/attachments", () => {
       method: "POST",
     });
 
-    await mod.POST(req);
+    await mod.POST(req, createRouteParamsContext());
 
     expect(MOCK_FETCH).toHaveBeenCalledWith(
       "http://localhost:8001/api/attachments/upload",

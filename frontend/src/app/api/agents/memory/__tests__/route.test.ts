@@ -1,7 +1,11 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
+import {
+  createMockNextRequest,
+  createRouteParamsContext,
+  getMockCookiesForTest,
+} from "@/test/route-helpers";
 
 // Mock next/headers cookies() before any imports that use it
 vi.mock("next/headers", () => ({
@@ -57,7 +61,7 @@ describe("/api/agents/memory route", () => {
       method: "POST",
       url: "http://localhost/api/agents/memory",
     });
-    const res = await mod.POST(req);
+    const res = await mod.POST(req, createRouteParamsContext());
     expect(res.status).toBe(200);
   });
 });

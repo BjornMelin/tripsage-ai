@@ -2,7 +2,7 @@
 
 import { beforeEach, describe, expect, it } from "vitest";
 import { mockApiRouteAuthUser, resetApiRouteMocks } from "@/test/api-route-helpers";
-import { createMockNextRequest } from "@/test/route-helpers";
+import { createMockNextRequest, createRouteParamsContext } from "@/test/route-helpers";
 import * as icsExportRoute from "../ics/export/route";
 
 describe("/api/calendar/ics/export", () => {
@@ -29,7 +29,7 @@ describe("/api/calendar/ics/export", () => {
       url: "http://localhost/api/calendar/ics/export",
     });
 
-    const res = await icsExportRoute.POST(req);
+    const res = await icsExportRoute.POST(req, createRouteParamsContext());
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toBe("text/calendar; charset=utf-8");
     expect(res.headers.get("Content-Disposition")).toContain("Test_Calendar.ics");
@@ -51,7 +51,7 @@ describe("/api/calendar/ics/export", () => {
       url: "http://localhost/api/calendar/ics/export",
     });
 
-    const res = await icsExportRoute.POST(req);
+    const res = await icsExportRoute.POST(req, createRouteParamsContext());
     expect(res.status).toBe(401);
   });
 
@@ -65,7 +65,7 @@ describe("/api/calendar/ics/export", () => {
       url: "http://localhost/api/calendar/ics/export",
     });
 
-    const res = await icsExportRoute.POST(req);
+    const res = await icsExportRoute.POST(req, createRouteParamsContext());
     expect(res.status).toBe(400);
     const json = await res.json();
     expect(json.error).toBe("invalid_request");
@@ -81,7 +81,7 @@ describe("/api/calendar/ics/export", () => {
       url: "http://localhost/api/calendar/ics/export",
     });
 
-    const res = await icsExportRoute.POST(req);
+    const res = await icsExportRoute.POST(req, createRouteParamsContext());
     expect(res.status).toBe(400);
   });
 
@@ -96,7 +96,7 @@ describe("/api/calendar/ics/export", () => {
       url: "http://localhost/api/calendar/ics/export",
     });
 
-    const res = await icsExportRoute.POST(req);
+    const res = await icsExportRoute.POST(req, createRouteParamsContext());
     expect(res.status).toBe(200);
     const text = await res.text();
     expect(text).toContain("America/New_York");
@@ -120,7 +120,7 @@ describe("/api/calendar/ics/export", () => {
       url: "http://localhost/api/calendar/ics/export",
     });
 
-    const res = await icsExportRoute.POST(req);
+    const res = await icsExportRoute.POST(req, createRouteParamsContext());
     expect(res.status).toBe(200);
     const text = await res.text();
     const eventMatches = text.match(/BEGIN:VEVENT/g);

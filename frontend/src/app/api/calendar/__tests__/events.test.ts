@@ -2,7 +2,11 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as googleCalendar from "@/lib/calendar/google";
-import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
+import {
+  createMockNextRequest,
+  createRouteParamsContext,
+  getMockCookiesForTest,
+} from "@/test/route-helpers";
 
 // Mock next/headers cookies() BEFORE any imports that use it
 vi.mock("next/headers", () => ({
@@ -90,7 +94,7 @@ describe("/api/calendar/events", () => {
         url: "http://localhost/api/calendar/events",
       });
 
-      const res = await eventsRoute.GET(req);
+      const res = await eventsRoute.GET(req, createRouteParamsContext());
       expect(res.status).toBe(401);
       const json = await res.json();
       expect(json.error).toBe("unauthorized");
@@ -102,7 +106,7 @@ describe("/api/calendar/events", () => {
         url: "http://localhost/api/calendar/events",
       });
 
-      const res = await eventsRoute.GET(req);
+      const res = await eventsRoute.GET(req, createRouteParamsContext());
       expect(res.status).toBe(200);
       const json = await res.json();
       expect(json.items).toHaveLength(1);
@@ -115,7 +119,7 @@ describe("/api/calendar/events", () => {
         url: "http://localhost/api/calendar/events?maxResults=invalid",
       });
 
-      const res = await eventsRoute.GET(req);
+      const res = await eventsRoute.GET(req, createRouteParamsContext());
       expect(res.status).toBe(400);
     });
   });
@@ -132,7 +136,7 @@ describe("/api/calendar/events", () => {
         url: "http://localhost/api/calendar/events",
       });
 
-      const res = await eventsRoute.POST(req);
+      const res = await eventsRoute.POST(req, createRouteParamsContext());
       expect(res.status).toBe(201);
       const json = await res.json();
       expect(json.id).toBe("event-new");
@@ -146,7 +150,7 @@ describe("/api/calendar/events", () => {
         url: "http://localhost/api/calendar/events",
       });
 
-      const res = await eventsRoute.POST(req);
+      const res = await eventsRoute.POST(req, createRouteParamsContext());
       expect(res.status).toBe(400);
     });
   });
@@ -161,7 +165,7 @@ describe("/api/calendar/events", () => {
         url: "http://localhost/api/calendar/events?eventId=event-1",
       });
 
-      const res = await eventsRoute.PATCH(req);
+      const res = await eventsRoute.PATCH(req, createRouteParamsContext());
       expect(res.status).toBe(200);
       const json = await res.json();
       expect(json.id).toBe("event-updated");
@@ -175,7 +179,7 @@ describe("/api/calendar/events", () => {
         url: "http://localhost/api/calendar/events",
       });
 
-      const res = await eventsRoute.PATCH(req);
+      const res = await eventsRoute.PATCH(req, createRouteParamsContext());
       expect(res.status).toBe(400);
     });
   });
@@ -187,7 +191,7 @@ describe("/api/calendar/events", () => {
         url: "http://localhost/api/calendar/events?eventId=event-1",
       });
 
-      const res = await eventsRoute.DELETE(req);
+      const res = await eventsRoute.DELETE(req, createRouteParamsContext());
       expect(res.status).toBe(200);
       const json = await res.json();
       expect(json.success).toBe(true);
@@ -200,7 +204,7 @@ describe("/api/calendar/events", () => {
         url: "http://localhost/api/calendar/events",
       });
 
-      const res = await eventsRoute.DELETE(req);
+      const res = await eventsRoute.DELETE(req, createRouteParamsContext());
       expect(res.status).toBe(400);
     });
   });

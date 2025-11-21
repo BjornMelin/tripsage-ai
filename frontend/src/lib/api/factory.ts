@@ -52,6 +52,11 @@ export interface RouteContext {
 }
 
 /**
+ * Next.js route params context. Always present per Next.js 16 route handler signature.
+ */
+export type RouteParamsContext = { params: Promise<Record<string, string>> };
+
+/**
  * Route handler function signature.
  *
  * Supports static routes (req only) and dynamic routes (req + route params).
@@ -62,7 +67,7 @@ export type RouteHandler<Data = unknown> = (
   req: NextRequest,
   context: RouteContext,
   data: Data,
-  routeContext?: { params: Promise<Record<string, string>> }
+  routeContext: RouteParamsContext
 ) => Promise<Response> | Response;
 
 /**
@@ -170,26 +175,17 @@ export function withApiGuards<SchemaType extends z.ZodType>(
   config: GuardsConfig<SchemaType> & { schema: SchemaType }
 ): (
   handler: RouteHandler<z.infer<SchemaType>>
-) => (
-  req: NextRequest,
-  routeContext?: { params: Promise<Record<string, string>> }
-) => Promise<Response>;
+) => (req: NextRequest, routeContext: RouteParamsContext) => Promise<Response>;
 export function withApiGuards(
   config: GuardsConfig
 ): (
   handler: RouteHandler<unknown>
-) => (
-  req: NextRequest,
-  routeContext?: { params: Promise<Record<string, string>> }
-) => Promise<Response>;
+) => (req: NextRequest, routeContext: RouteParamsContext) => Promise<Response>;
 export function withApiGuards<SchemaType extends z.ZodType>(
   config: GuardsConfig<SchemaType>
 ): (
   handler: RouteHandler<SchemaType extends z.ZodType ? z.infer<SchemaType> : unknown>
-) => (
-  req: NextRequest,
-  routeContext?: { params: Promise<Record<string, string>> }
-) => Promise<Response> {
+) => (req: NextRequest, routeContext: RouteParamsContext) => Promise<Response> {
   const { auth = false, rateLimit, telemetry, schema } = config;
 
   // Validate rate limit key exists if provided
@@ -202,7 +198,7 @@ export function withApiGuards<SchemaType extends z.ZodType>(
   ) => {
     return async (
       req: NextRequest,
-      routeContext?: { params: Promise<Record<string, string>> }
+      routeContext: RouteParamsContext
     ): Promise<Response> => {
       // Create Supabase client
       const supabase = await createServerSupabase();
