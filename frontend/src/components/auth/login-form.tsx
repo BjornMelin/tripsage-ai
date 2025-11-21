@@ -108,9 +108,12 @@ export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormPro
       const result: LoginState = await response.json();
 
       if (result.success) {
-        // Redirect to the sanitized destination
-        const sanitizedRedirect = nextParam || redirectTo;
-        router.push(sanitizedRedirect);
+        // Redirect to a sanitized destination on the same origin
+        const safeNext =
+          nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//")
+            ? nextParam
+            : redirectTo;
+        router.push(safeNext);
         router.refresh(); // Refresh to update server components
       } else {
         setState(result);

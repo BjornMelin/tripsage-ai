@@ -20,7 +20,18 @@ import { recordTelemetryEvent } from "@/lib/telemetry/span";
  */
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        {
+          error: "Invalid JSON payload",
+          success: false,
+        },
+        { status: 400 }
+      );
+    }
     const parsed = loginFormSchema.safeParse(body);
 
     if (!parsed.success) {
