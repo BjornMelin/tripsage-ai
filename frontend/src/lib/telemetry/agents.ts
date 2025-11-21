@@ -5,7 +5,7 @@
  * workflow tool execution, including cache hits, durations, and errors.
  */
 
-import type { AgentWorkflow } from "@schemas/agents";
+import type { AgentWorkflowKind } from "@schemas/agents";
 import { withTelemetrySpan } from "./span";
 
 /**
@@ -15,7 +15,7 @@ import { withTelemetrySpan } from "./span";
  * cache hit status, and optional error message for observability.
  */
 export type AgentToolEvent = {
-  workflow: AgentWorkflow;
+  workflow: AgentWorkflowKind;
   tool: string;
   status: "success" | "error";
   durationMs: number;

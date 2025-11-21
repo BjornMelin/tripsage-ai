@@ -1,7 +1,7 @@
 import {
   type ValidatedThemeProviderProps,
   validateThemeProviderProps,
-} from "@schemas/theme-provider";
+} from "@schemas/ui/theme-provider";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { RenderOptions } from "@testing-library/react";
 import { render } from "@testing-library/react";

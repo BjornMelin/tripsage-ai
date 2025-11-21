@@ -12,7 +12,7 @@ import type { RateLimitResult } from "@ai/tools/schemas/tools";
 import { rateLimitResultSchema } from "@ai/tools/schemas/tools";
 import { createToolError, type ToolErrorCode } from "@ai/tools/server/errors";
 import type { Span } from "@opentelemetry/api";
-import type { AgentWorkflow } from "@schemas/agents";
+import type { AgentWorkflowKind } from "@schemas/agents";
 import { Ratelimit } from "@upstash/ratelimit";
 import type { FlexibleSchema, ModelMessage, Tool, ToolCallOptions } from "ai";
 import { tool } from "ai";
@@ -58,7 +58,7 @@ export type TelemetryOptions<InputValue> = {
   /** Keys whose values should be redacted on the span. */
   redactKeys?: string[];
   /** Optional agent workflow identifier for workflow-specific telemetry. */
-  workflow?: AgentWorkflow;
+  workflow?: AgentWorkflowKind;
 };
 
 export type CacheHitMeta = {
