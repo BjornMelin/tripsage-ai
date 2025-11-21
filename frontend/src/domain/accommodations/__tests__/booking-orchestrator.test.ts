@@ -1,14 +1,72 @@
 import { runBookingOrchestrator } from "@domain/accommodations/booking-orchestrator";
+import { ProviderError } from "@domain/accommodations/errors";
 import type { AccommodationProviderAdapter } from "@domain/accommodations/providers/types";
-import { describe, expect, it, vi } from "vitest";
-import type { TypedServerSupabase } from "@/lib/supabase/server";
+import { vi } from "vitest";
 
 vi.mock("@/lib/payments/booking-payment", () => ({
-  refundBookingPayment: vi.fn().mockResolvedValue(undefined),
+  refundBookingPayment: vi.fn().mockResolvedValue({ amount: 0, refundId: "rf_1" }),
 }));
 
+import { refundBookingPayment } from "@/lib/payments/booking-payment";
+
+const baseCommand = {
+  amount: 10000,
+  approvalKey: "bookAccommodation",
+  bookingToken: "tok_1",
+  currency: "USD",
+  guest: { email: "ada@example.com", name: "Ada" },
+  idempotencyKey: "idem-1",
+  paymentMethodId: "pm_1",
+  providerPayload: {},
+  requestApproval: vi.fn(),
+  sessionId: "sess-1",
+  stay: {
+    checkin: "2025-12-01",
+    checkout: "2025-12-03",
+    guests: 2,
+    listingId: "H1",
+    tripId: "42",
+  },
+  userId: "user-1",
+};
+
 describe("runBookingOrchestrator", () => {
-  it("processes booking and persists provider booking id", async () => {
+  it("refunds payment when provider booking fails", async () => {
+    const provider: AccommodationProviderAdapter = {
+      buildBookingPayload: vi.fn(),
+      checkAvailability: vi.fn(),
+      createBooking: vi.fn().mockResolvedValue({
+        error: new ProviderError("provider_failed", "failed"),
+        ok: false,
+        retries: 0,
+      }),
+      getDetails: vi.fn(),
+      name: "amadeus",
+      search: vi.fn(),
+    };
+
+    const supabase = {
+      from: vi
+        .fn()
+        .mockReturnValue({ insert: vi.fn().mockResolvedValue({ error: null }) }),
+    } as unknown as import("@/lib/supabase/server").TypedServerSupabase;
+
+    await expect(
+      runBookingOrchestrator(
+        { provider, supabase },
+        {
+          ...baseCommand,
+          persistBooking: vi.fn(),
+          processPayment: vi.fn().mockResolvedValue({ paymentIntentId: "pi_fail" }),
+        }
+      )
+    ).rejects.toBeInstanceOf(ProviderError);
+
+    expect(refundBookingPayment).toHaveBeenCalledWith("pi_fail");
+  });
+
+  it("persists provider booking ids on success", async () => {
+    const persistBooking = vi.fn().mockResolvedValue(undefined);
     const provider: AccommodationProviderAdapter = {
       buildBookingPayload: vi.fn(),
       checkAvailability: vi.fn(),
@@ -16,9 +74,8 @@ describe("runBookingOrchestrator", () => {
         ok: true,
         retries: 0,
         value: {
-          confirmationNumber: "CONF123",
-          itineraryId: "ITIN123",
-          providerBookingId: "PB123",
+          confirmationNumber: "CONF-1",
+          providerBookingId: "PB-1",
         },
       }),
       getDetails: vi.fn(),
@@ -27,37 +84,25 @@ describe("runBookingOrchestrator", () => {
     };
 
     const supabase = {
-      from: () => ({
-        insert: async () => ({ error: null }),
-      }),
-    } as unknown as TypedServerSupabase;
+      from: vi
+        .fn()
+        .mockReturnValue({ insert: vi.fn().mockResolvedValue({ error: null }) }),
+    } as unknown as import("@/lib/supabase/server").TypedServerSupabase;
 
-    const result = await runBookingOrchestrator(
+    await runBookingOrchestrator(
       { provider, supabase },
       {
-        amount: 10000,
-        approvalKey: "bookAccommodation",
-        bookingToken: "token",
-        currency: "USD",
-        guest: { email: "test@example.com", name: "Test User" },
-        idempotencyKey: "idem",
-        paymentMethodId: "pm_123",
-        persistBooking: vi.fn().mockResolvedValue(undefined),
-        processPayment: async () => ({ paymentIntentId: "pi_123" }),
-        providerPayload: {},
-        requestApproval: vi.fn().mockResolvedValue(undefined),
-        sessionId: "sess",
-        stay: {
-          checkin: "2025-12-01",
-          checkout: "2025-12-02",
-          guests: 1,
-          listingId: "H1",
-        },
-        userId: "user-1",
+        ...baseCommand,
+        persistBooking,
+        processPayment: vi.fn().mockResolvedValue({ paymentIntentId: "pi_success" }),
       }
     );
 
-    expect(result.providerBookingId).toBe("ITIN123");
-    expect(result.reference).toContain("CONF");
+    expect(persistBooking).toHaveBeenCalledTimes(1);
+    expect(persistBooking.mock.calls[0][0]).toMatchObject({
+      confirmationNumber: "CONF-1",
+      providerBookingId: "PB-1",
+      stripePaymentIntentId: "pi_success",
+    });
   });
 });
