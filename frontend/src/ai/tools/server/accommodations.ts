@@ -27,6 +27,7 @@ import {
   type AccommodationSearchResult,
 } from "@schemas/accommodations";
 import { headers } from "next/headers";
+import { createServerSupabase } from "@/lib/supabase/server";
 import { processBookingPayment } from "@/lib/payments/booking-payment";
 import { secureUuid } from "@/lib/security/random";
 import { requireApproval } from "./approvals";
@@ -93,7 +94,7 @@ export const checkAvailability = createAiTool<
   description:
     "Check final availability and lock pricing for a specific rate. Returns a booking token that must be used quickly to finalize the booking.",
   execute: async (params) => {
-    const userId = await getUserIdFromHeadersOrThrow(
+    const userId = await getAuthenticatedUserId(
       TOOL_ERROR_CODES.accomBookingSessionRequired
     );
     try {
@@ -126,7 +127,7 @@ export const bookAccommodation = createAiTool<
     if (!sessionId) {
       throw createToolError(TOOL_ERROR_CODES.accomBookingSessionRequired);
     }
-    const userId = await getUserIdFromHeadersOrThrow(
+    const userId = await getAuthenticatedUserId(
       TOOL_ERROR_CODES.accomBookingSessionRequired
     );
     const idempotencyKey = params.idempotencyKey ?? secureUuid();
@@ -184,10 +185,13 @@ async function maybeGetUserIdentifier(): Promise<string | undefined> {
 }
 
 /** Get user identifier from request headers or throw an error if not found. */
-async function getUserIdFromHeadersOrThrow(errorCode: ToolErrorCode): Promise<string> {
-  const identifier = await maybeGetUserIdentifier();
-  if (identifier) {
-    return identifier;
+async function getAuthenticatedUserId(errorCode: ToolErrorCode): Promise<string> {
+  const supabase = await createServerSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user?.id) {
+    return user.id;
   }
   throw createToolError(errorCode);
 }
