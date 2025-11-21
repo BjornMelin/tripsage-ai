@@ -88,11 +88,8 @@ export function initTelemetry(): void {
     const fetchInstrumentation = new FetchInstrumentation({
       // Clear timing resources after span ends to prevent memory leaks
       clearTimingResources: true,
-      // Propagate trace headers to same-origin requests and configured CORS URLs
-      propagateTraceHeaderCorsUrls: [
-        // Match same-origin requests (our API routes)
-        new RegExp(`^${window.location.origin}`),
-      ],
+      // Propagate trace headers only to exact same-origin requests
+      propagateTraceHeaderCorsUrls: [window.location.origin],
     });
 
     // Register instrumentations
