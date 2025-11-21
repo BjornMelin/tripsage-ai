@@ -1,9 +1,9 @@
 /**
- * @fileoverview Client-side telemetry utilities.
+ * @fileoverview Client-side OpenTelemetry initialization.
  *
- * Provides WebTracerProvider setup for browser tracing and client-safe
- * telemetry utilities that mirror the server API but don't perform actual
- * telemetry operations to avoid server-only import errors.
+ * Provides WebTracerProvider setup for browser tracing with automatic
+ * fetch instrumentation to enable distributed tracing from client to server.
+ * Client-side error recording is handled separately in `client-errors.ts`.
  */
 
 "use client";
@@ -14,14 +14,6 @@ import { FetchInstrumentation } from "@opentelemetry/instrumentation-fetch";
 import { BatchSpanProcessor, type SpanProcessor } from "@opentelemetry/sdk-trace-base";
 import { WebTracerProvider } from "@opentelemetry/sdk-trace-web";
 import { getClientEnvVarWithFallback } from "@/lib/env/client";
-import type {
-  TelemetryLogOptions,
-  TelemetrySpanAttributes,
-  WithTelemetrySpanOptions,
-} from "./core";
-
-// Re-export types for convenience
-export type { TelemetrySpanAttributes, TelemetryLogOptions, WithTelemetrySpanOptions };
 
 /**
  * Module-level flag to prevent double-initialization.
@@ -110,73 +102,4 @@ export function initTelemetry(): void {
   } catch {
     // Telemetry is optional on the client; swallow errors to avoid impacting UX.
   }
-}
-
-/**
- * No-op span wrapper for client-side usage.
- * Simply executes the function without telemetry overhead.
- */
-export function withTelemetrySpanSync<T>(
-  name: string,
-  options: WithTelemetrySpanOptions,
-  execute: (span: any) => T
-): T {
-  return execute(null as any);
-}
-
-/**
- * No-op async span wrapper for client-side usage.
- * Simply executes the async function without telemetry overhead.
- */
-export async function withTelemetrySpan<T>(
-  name: string,
-  options: WithTelemetrySpanOptions,
-  execute: (span: any) => Promise<T> | T
-): Promise<T> {
-  return execute(null as any);
-}
-
-/**
- * No-op attribute sanitizer for client-side usage.
- */
-export function sanitizeAttributes(
-  attributes?: TelemetrySpanAttributes,
-  redactKeys: string[] = []
-): TelemetrySpanAttributes | undefined {
-  return attributes;
-}
-
-/**
- * No-op event recorder for client-side usage.
- */
-export function recordTelemetryEvent(
-  eventName: string,
-  options: TelemetryLogOptions = {}
-): void {
-  // Client telemetry events are no-ops in this lightweight shim.
-}
-
-/**
- * No-op active span event adder for client-side usage.
- */
-export function addEventToActiveSpan(
-  eventName: string,
-  attributes?: TelemetrySpanAttributes,
-  redactKeys: string[] = []
-): void {
-  // No-op on client
-}
-
-/**
- * No-op error recorder for specific span.
- */
-export function recordErrorOnSpan(span: any, error: Error): void {
-  // Client telemetry is a no-op shim.
-}
-
-/**
- * No-op error recorder for active span.
- */
-export function recordErrorOnActiveSpan(error: Error): void {
-  // Client telemetry is a no-op shim.
 }
