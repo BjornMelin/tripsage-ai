@@ -6,6 +6,7 @@
 import { z } from "zod";
 import { AGENT_STATUS_BROADCAST_PAYLOAD_SCHEMA } from "./realtime";
 import { primitiveSchemas } from "./registry";
+import { ATTACHMENT_SCHEMA } from "./shared/media";
 
 // ===== CORE SCHEMAS =====
 // Core business logic schemas for chat functionality
@@ -78,13 +79,7 @@ export const messagePartSchema = z.discriminatedUnion("type", [textPartSchema]);
 export type MessagePart = z.infer<typeof messagePartSchema>;
 
 /** Zod schema for file attachments in messages with metadata. */
-export const attachmentSchema = z.object({
-  contentType: z.string().optional(),
-  id: z.string(),
-  name: z.string().optional(),
-  size: z.number().optional(),
-  url: z.string(),
-});
+export const attachmentSchema = ATTACHMENT_SCHEMA;
 
 /** TypeScript type for attachments. */
 export type Attachment = z.infer<typeof attachmentSchema>;

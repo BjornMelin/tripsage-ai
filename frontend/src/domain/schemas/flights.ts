@@ -111,6 +111,16 @@ export const flightSearchResultSchema = z
     offers: z.array(FLIGHT_OFFER_SCHEMA).default([]),
     provider: z.enum(["duffel", "expedia", "cache"]).default("duffel"),
     schemaVersion: z.literal("flight.v2").default("flight.v2"),
+    sources: z
+      .array(
+        z.object({
+          publishedAt: z.string().optional(),
+          snippet: z.string().optional(),
+          title: z.string().optional(),
+          url: z.url().optional(),
+        })
+      )
+      .default([]),
   })
   .describe("Normalized flight search results");
 

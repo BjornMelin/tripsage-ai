@@ -4,21 +4,10 @@
  */
 
 import { z } from "zod";
-import { primitiveSchemas, refinedSchemas } from "./registry";
+import { EMAIL_SCHEMA, NAME_SCHEMA, PASSWORD_SCHEMA } from "./shared/person";
 
 // ===== FORM SCHEMAS =====
 // UI form validation schemas with user-friendly error messages
-
-// Common validation patterns
-const PASSWORD_SCHEMA = refinedSchemas.strongPassword;
-const EMAIL_SCHEMA = primitiveSchemas.email.max(255);
-const NAME_SCHEMA = z
-  .string()
-  .min(1, { error: "Name is required" })
-  .max(50, { error: "Name too long" })
-  .regex(/^[a-zA-Z\s\-'.]+$/, {
-    error: "Name can only contain letters, spaces, hyphens, apostrophes, and periods",
-  });
 
 /**
  * Zod schema for login form validation.
