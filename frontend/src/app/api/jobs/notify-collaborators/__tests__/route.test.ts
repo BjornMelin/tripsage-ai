@@ -159,8 +159,6 @@ describe("POST /api/jobs/notify-collaborators", () => {
     const { POST } = await loadRoute();
     const res = await POST(makeRequest(validJob));
     const json = await res.json();
-    // eslint-disable-next-line no-console
-    console.log("notify duplicate status", res.status, json);
     expect(res.status).toBe(200);
     expect(json.duplicate).toBe(true);
     expect(sendNotificationsMock).not.toHaveBeenCalled();
@@ -170,8 +168,6 @@ describe("POST /api/jobs/notify-collaborators", () => {
     const { POST } = await loadRoute();
     const res = await POST(makeRequest(validJob));
     const json = await res.json();
-    // eslint-disable-next-line no-console
-    console.log("notify success status", res.status, json);
     expect(res.status).toBe(200);
     expect(json.ok).toBe(true);
     expect(sendNotificationsMock).toHaveBeenCalledWith(
