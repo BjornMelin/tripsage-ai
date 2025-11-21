@@ -95,7 +95,13 @@ export class AccommodationsService {
           span.addEvent("cache.miss", { key: cacheKey });
         }
 
-        const coords = await resolveCoordinates(params.location);
+        let coords: { lat: number; lon: number } | null = null;
+        try {
+          coords = await resolveCoordinates(params.location);
+        } catch (error) {
+          span.recordException(error as Error);
+          throw error;
+        }
         if (!coords) {
           throw new Error("location_not_found");
         }
@@ -365,7 +371,9 @@ async function resolveCoordinates(
       )
   );
 
-  if (!response.ok) return null;
+  if (!response.ok) {
+    throw new Error(`places_geocode_failed:${response.status}`);
+  }
   const data = await response.json();
   const place = (data.places ?? [])[0];
   const coords =
