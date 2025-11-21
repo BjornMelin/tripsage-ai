@@ -51,7 +51,7 @@ vi.mock("@ai/models/registry", () => ({
 // Mock accommodation agent
 vi.mock("@/lib/agents/accommodation-agent", () => ({
   runAccommodationAgent: vi.fn(() => ({
-    toUIMessageStreamResponse: () => new Response("ok", { status: 200 }),
+    toTextStreamResponse: () => new Response("ok", { status: 200 }),
   })),
 }));
 
