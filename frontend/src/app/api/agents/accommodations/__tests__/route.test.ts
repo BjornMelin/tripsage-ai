@@ -1,7 +1,11 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
+import {
+  createMockNextRequest,
+  createRouteParamsContext,
+  getMockCookiesForTest,
+} from "@/test/route-helpers";
 
 const mockLimitFn = vi.fn().mockResolvedValue({
   limit: 30,
@@ -95,7 +99,7 @@ describe("/api/agents/accommodations route", () => {
       method: "POST",
       url: "http://localhost/api/agents/accommodations",
     });
-    const res = await mod.POST(req);
+    const res = await mod.POST(req, createRouteParamsContext());
     expect(res.status).toBe(200);
   });
 
@@ -119,7 +123,7 @@ describe("/api/agents/accommodations route", () => {
       url: "http://localhost/api/agents/accommodations",
     });
 
-    const res = await mod.POST(req);
+    const res = await mod.POST(req, createRouteParamsContext());
     expect(res.status).toBe(429);
     expect(await res.json()).toEqual({
       error: "rate_limit_exceeded",

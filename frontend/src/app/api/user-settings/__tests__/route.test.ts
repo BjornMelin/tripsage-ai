@@ -1,7 +1,11 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
+import {
+  createMockNextRequest,
+  createRouteParamsContext,
+  getMockCookiesForTest,
+} from "@/test/route-helpers";
 
 // Mock next/headers cookies() before any imports that use it
 vi.mock("next/headers", () => ({
@@ -50,7 +54,7 @@ describe("/api/user-settings", () => {
       method: "GET",
       url: "http://localhost/api/user-settings",
     });
-    const res = await GET(req);
+    const res = await GET(req, createRouteParamsContext());
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toEqual({ allowGatewayFallback: true });
@@ -66,7 +70,7 @@ describe("/api/user-settings", () => {
       method: "GET",
       url: "http://localhost/api/user-settings",
     });
-    const res = await GET(req);
+    const res = await GET(req, createRouteParamsContext());
     expect(res.status).toBe(401);
   });
 
@@ -78,7 +82,7 @@ describe("/api/user-settings", () => {
       method: "POST",
       url: "http://localhost/api/user-settings",
     });
-    const res = await POST(req);
+    const res = await POST(req, createRouteParamsContext());
     expect(res.status).toBe(200);
     expect(upsert).toHaveBeenCalledWith(
       { allow_gateway_fallback: false, user_id: "u1" },
@@ -93,7 +97,7 @@ describe("/api/user-settings", () => {
       method: "POST",
       url: "http://localhost/api/user-settings",
     });
-    const res = await POST(req);
+    const res = await POST(req, createRouteParamsContext());
     expect(res.status).toBe(400);
   });
 });
