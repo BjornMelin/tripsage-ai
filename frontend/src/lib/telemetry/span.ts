@@ -1,5 +1,8 @@
 /**
- * @fileoverview Minimal OpenTelemetry span helper with attribute redaction and logging.
+ * @fileoverview Server-side telemetry span utilities.
+ *
+ * Canonical server-only OpenTelemetry span helper with attribute redaction and logging.
+ * Client components should import from ./client instead.
  */
 
 import "server-only";
@@ -7,13 +10,22 @@ import "server-only";
 import { type Span, SpanStatusCode, trace } from "@opentelemetry/api";
 import { getTelemetryTracer } from "@/lib/telemetry/tracer";
 
+/**
+ * Telemetry span attributes are key-value pairs attached to spans.
+ */
 export type TelemetrySpanAttributes = Record<string, string | number | boolean>;
 
+/**
+ * Options for wrapping operations in telemetry spans.
+ */
 export type WithTelemetrySpanOptions = {
   attributes?: TelemetrySpanAttributes;
   redactKeys?: string[];
 };
 
+/**
+ * Options for recording telemetry events.
+ */
 export type TelemetryLogOptions = {
   attributes?: TelemetrySpanAttributes;
   level?: "info" | "warning" | "error";
@@ -33,15 +45,13 @@ function executeSpan<T>(
   isAsync: boolean
 ): T | Promise<T> {
   let exceptionRecorded = false;
-  // Wrap recordException to track if it was called
+  // Wrap recordException to track if it was called while preserving span prototype methods
   const originalRecordException = span.recordException.bind(span);
-  const wrappedSpan = {
-    ...span,
-    recordException: (exception: Error) => {
-      exceptionRecorded = true;
-      originalRecordException(exception);
-    },
-  } as Span;
+  const wrappedSpan = span as Span & { recordException: Span["recordException"] };
+  wrappedSpan.recordException = (exception: Error) => {
+    exceptionRecorded = true;
+    originalRecordException(exception);
+  };
 
   const handleResult = (result: T): T => {
     // Only set status to OK if no exception was recorded

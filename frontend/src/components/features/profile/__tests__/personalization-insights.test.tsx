@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMemoryInsights, useMemoryStats } from "@/hooks/use-memory";
 import { PersonalizationInsights } from "../personalization-insights";
@@ -86,6 +86,7 @@ describe("PersonalizationInsights", () => {
   };
 
   beforeEach(() => {
+    vi.useRealTimers();
     vi.clearAllMocks();
     MockUseMemoryInsights.mockReturnValue({
       data: minimalInsightsData,
@@ -125,7 +126,7 @@ describe("PersonalizationInsights", () => {
     expect(screen.getByText(/Tokyo/i)).toBeInTheDocument();
   });
 
-  it("displays recommendations when recommendations tab is clicked and showRecommendations is true", async () => {
+  it("displays recommendations when recommendations tab is clicked and showRecommendations is true", () => {
     render(<PersonalizationInsights userId="user-123" showRecommendations={true} />, {
       wrapper: CreateTestWrapper(),
     });
@@ -136,9 +137,7 @@ describe("PersonalizationInsights", () => {
     });
     fireEvent.click(recommendationsButton);
 
-    await waitFor(() => {
-      expect(screen.getByText(/luxury eco-lodges/i)).toBeInTheDocument();
-    });
+    expect(screen.getByText(/luxury eco-lodges/i)).toBeInTheDocument();
   });
 
   it("switches between views correctly", () => {

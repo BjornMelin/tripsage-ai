@@ -1,8 +1,23 @@
+import { TTL_DRAFT_SECONDS, TTL_FINAL_SECONDS } from "@ai/tools/server/constants";
+import { createTravelPlan, saveTravelPlan } from "@ai/tools/server/planning";
+import { planSchema } from "@ai/tools/server/planning.schema";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { TTL_DRAFT_SECONDS, TTL_FINAL_SECONDS } from "@/ai/tools/server/constants";
-import { createTravelPlan, saveTravelPlan } from "@/ai/tools/server/planning";
-import { planSchema } from "@/ai/tools/server/planning.schema";
 import { getMockCookiesForTest } from "@/test/route-helpers";
+
+vi.mock("@upstash/ratelimit", () => ({
+  Ratelimit: class {
+    limit = vi.fn(async () => ({
+      limit: 10,
+      remaining: 9,
+      reset: Math.floor(Date.now() / 1000) + 60,
+      success: true,
+    }));
+
+    static slidingWindow(limit: number, window: string) {
+      return { limit, window } as const;
+    }
+  },
+}));
 
 // Mock next/headers cookies() before any imports that use it
 vi.mock("next/headers", () => ({

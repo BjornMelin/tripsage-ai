@@ -1,7 +1,11 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
+import {
+  createMockNextRequest,
+  createRouteParamsContext,
+  getMockCookiesForTest,
+} from "@/test/route-helpers";
 
 const mockLimitFn = vi.fn().mockResolvedValue({
   limit: 30,
@@ -40,7 +44,7 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 // Mock provider registry
-vi.mock("@/lib/providers/registry", () => ({
+vi.mock("@ai/models/registry", () => ({
   resolveProvider: vi.fn(async () => ({ model: {}, modelId: "gpt-4o" })),
 }));
 
@@ -95,7 +99,7 @@ describe("/api/agents/flights route", () => {
       method: "POST",
       url: "http://localhost/api/agents/flights",
     });
-    const res = await mod.POST(req);
+    const res = await mod.POST(req, createRouteParamsContext());
     expect(res.status).toBe(200);
   });
 
@@ -119,7 +123,7 @@ describe("/api/agents/flights route", () => {
       url: "http://localhost/api/agents/flights",
     });
 
-    const res = await mod.POST(req);
+    const res = await mod.POST(req, createRouteParamsContext());
     expect(res.status).toBe(429);
     const payload = await res.json();
     expect(payload.error).toBe("rate_limit_exceeded");

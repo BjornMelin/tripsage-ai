@@ -1,32 +1,60 @@
 # Testing Guide
 
-Testing strategies and patterns for TripSage development.
+Testing strategies and patterns for TripSage frontend development.
 
 ## Core Principles
 
-### Test Behavior, Not Implementation
+- **Test behavior, not implementation:** Focus on user-observable outcomes and avoid coupling to internal details.
+- **Deterministic runs:** No random data/timing; use consistent fixtures and clean up shared state.
+- **Right level of coverage:** Mix unit, integration, and E2E tests; reserve E2E for critical flows.
 
-- Focus on user outcomes, not internal code structure
-- Test what matters to users
-- Avoid coupling to implementation details
+## Vitest Configuration
 
-### Keep Tests Deterministic
+TripSage uses a multi-project Vitest setup (see `frontend/vitest.config.ts`). Key traits:
 
-- No random data or timing dependencies
-- Consistent test data across runs
-- Proper cleanup between tests
+- Five projects: `schemas`, `integration`, `api`, `component`, `unit`.
+- `jsdom` for React-facing code; `node` for server-only code.
+- Parallelized execution, project-scoped includes/excludes, and coverage thresholds per project.
 
-### Test Organization
+**Environment directives (MANDATORY):** place at the top of the file.
 
-- Unit tests for individual functions and classes
-- Integration tests for component interactions
-- End-to-end tests for critical user flows
+```ts
+/** @vitest-environment jsdom */ // React components, DOM APIs, browser-only hooks
+/** @vitest-environment node */  // API routes and pure server utilities
+```
 
-## Frontend Testing
+## Global Test Setup
 
-### Component Testing
+Configured in `frontend/src/test-setup.ts` and applied across projects.
 
-```typescript
+- Platform polyfills: Web Streams, ResizeObserver, IntersectionObserver.
+- DOM mocks: location, storage APIs, matchMedia.
+- Next.js mocks: navigation, image, headers, toast helpers.
+- Framework mocks: React Query, Zustand middleware, Supabase.
+- Automatic cleanup: timers, React Testing Library, React Query cache reset.
+
+Timer lifecycle enforced for every test:
+
+```ts
+beforeEach(() => {
+  vi.useFakeTimers();
+});
+
+afterEach(() => {
+  vi.runOnlyPendingTimers();
+  vi.clearAllTimers();
+  vi.useRealTimers();
+  cleanup();
+  resetTestQueryClient();
+  vi.restoreAllMocks();
+});
+```
+
+## Patterns by Area
+
+### React Components
+
+```ts
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -45,11 +73,10 @@ describe("TripCard", () => {
 });
 ```
 
-### Custom Hook Testing
+### Custom Hooks
 
-```typescript
+```ts
 import { renderHook, waitFor } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
 
 describe("useTrips", () => {
   it("loads trips on mount", async () => {
@@ -59,497 +86,67 @@ describe("useTrips", () => {
 });
 ```
 
-## Backend Testing
+### API Route Handlers
 
-### Unit Testing
-
-Unit tests validate individual functions, classes, and modules in isolation.
-
-#### Isolation Principles
-
-- No external dependencies (all mocked)
-- No database access (mocked)
-- No network calls (mocked)
-- Fast execution (<100ms per test)
-- Deterministic results
-
-#### Mocking Strategies
-
-- Use `unittest.mock` for service dependencies
-- Use `AsyncMock` for async operations
-- Leverage pytest fixtures for reusable mocks
-- Use `@patch` for targeted mocking
-
-#### Service Testing Example
-
-```python
-import pytest
-from tripsage_core.services.trip_service import TripService
-
-class TestTripService:
-    @pytest.mark.asyncio
-    async def test_create_trip_success(self, trip_service, mock_db):
-        trip_data = {"name": "Paris Trip", "destinations": ["Paris"]}
-        result = await trip_service.create_trip(trip_data)
-        assert result.name == "Paris Trip"
-        assert len(result.destinations) == 1
-
-    @pytest.mark.asyncio
-    async def test_create_trip_validation_error(self, trip_service):
-        with pytest.raises(ValueError, match="name.*required"):
-            await trip_service.create_trip({})
+```ts
+/** @vitest-environment node */
 ```
 
-### API Testing
+Mock order (critical):
 
-```python
-import pytest
-from httpx import AsyncClient
-from tripsage.api.main import app
+1. Mock `next/headers` **before** any imports:
 
-@pytest.mark.asyncio
-async def test_create_trip_endpoint():
-    async with AsyncClient(app=app, base_url="http://test") as client:
-        trip_data = {"name": "Test Trip", "destinations": ["NYC"]}
-        response = await client.post("/api/trips", json=trip_data)
-        assert response.status_code == 201
-        data = response.json()
-        assert data["name"] == "Test Trip"
-        assert "id" in data
+    ```ts
+    vi.mock("next/headers", () => ({
+      cookies: vi.fn(() => Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))),
+    }));
+    ```
+
+2. Hoisted mocks (before `vi.mock`):
+
+    ```ts
+    const LIMIT_SPY = vi.hoisted(() => vi.fn());
+    const MOCK_GET_REDIS = vi.hoisted(() => vi.fn<() => Redis | undefined>(() => undefined));
+    ```
+
+3. Module mocks (`vi.mock("@/lib/...")`).
+4. Dynamic import after mocks:
+
+```ts
+const { POST } = await import("@/app/api/keys/validate/route");
 ```
 
-## Integration Testing
+Rate limiting helpers:
 
-### Security Tests
+```ts
+stubRateLimitEnabled();
+MOCK_GET_REDIS.mockReturnValue({} as Redis);
 
-Validate authentication, authorization, and database security.
-
-```bash
-# Security integration tests
-uv run pytest tests/integration/test_*security*.py -v
-uv run pytest tests/integration/test_trip_security_integration.py -v
-uv run pytest tests/integration/test_api_security_endpoints.py -v
+stubRateLimitDisabled();
+MOCK_GET_REDIS.mockReturnValue(undefined);
 ```
 
-### Schema Tests
+Request creation:
 
-Validate database schema, RLS policies, and constraints.
+```ts
+import { createMockNextRequest } from "@/test/route-helpers";
 
-```bash
-# Schema integration tests
-uv run pytest tests/integration/test_supabase_collaboration_schema.py -v
-uv run pytest tests/performance/test_collaboration_performance.py --durations=10
+const req = createMockNextRequest({
+  body: { keyName: "test-key" },
+  cookies: { "sb-access-token": "test-token" },
+  headers: { "x-forwarded-for": "127.0.0.1" },
+  method: "POST",
+});
+
+const res = await POST(req);
 ```
 
-## End-to-End Testing
+### Zustand Stores
 
-E2E tests validate complete user workflows from start to finish.
+Store reset + timeout helpers:
 
-### Test Structure - E2E
-
-```text
-tests/e2e/
-├── conftest.py              # E2E-specific fixtures
-├── test_api.py              # API workflow tests
-├── test_chat_sessions.py    # Chat session tests
-└── test_trip_planning_journey.py # Trip planning tests
-```
-
-### Prerequisites
-
-**Required Services:**
-
-- PostgreSQL/Supabase database
-- Redis cache
-- AI service APIs (OpenAI or mocked)
-- External APIs (weather, maps, flights or mocked)
-
-**Environment Variables:**
-
-```bash
-export DATABASE_URL="postgresql://..."
-export REDIS_URL="redis://localhost:6379/1"
-export OPENAI_API_KEY="sk-..."
-export TEST_USER_EMAIL="test@example.com"
-export TEST_USER_PASSWORD="testpassword123"
-```
-
-### Running E2E Tests
-
-```bash
-# All E2E tests (may take several minutes)
-uv run pytest tests/e2e/
-
-# Specific workflow tests
-uv run pytest tests/e2e/test_api.py -v
-uv run pytest tests/e2e/test_chat_sessions.py -v
-
-# Run against different environments
-uv run pytest tests/e2e/ --env=local
-uv run pytest tests/e2e/ --env=staging -m "e2e and not mocked"
-```
-
-## Running Tests
-
-### Test Suite Organization
-
-```text
-tests/
-├── unit/           # Unit tests (fast, isolated)
-├── integration/    # Integration tests (component interaction)
-├── e2e/           # End-to-end tests (full workflows)
-├── performance/   # Performance and benchmark tests
-├── security/      # Security and compliance tests
-└── fixtures/      # Test data and fixtures
-```
-
-### Complete Test Suite
-
-```bash
-# Run all tests
-uv run pytest
-
-# Run with coverage report
-uv run pytest --cov=tripsage --cov=tripsage_core --cov-report=html
-
-# Run with parallel execution
-uv run pytest -n auto
-```
-
-### By Test Type
-
-```bash
-# Unit tests only (fastest, most isolated)
-uv run pytest tests/unit/ -v
-
-# Integration tests only
-uv run pytest tests/integration/ -v
-
-# End-to-end tests only (slowest, most comprehensive)
-uv run pytest tests/e2e/ -v
-
-# Performance tests
-uv run pytest tests/performance/ -v
-
-# Security tests
-uv run pytest tests/security/ -v
-```
-
-### By Component
-
-```bash
-# Memory system tests
-uv run pytest tests/unit/services/test_memory_service*.py tests/integration/memory/
-
-# API tests
-uv run pytest tests/unit/api/ tests/integration/test_api*.py
-
-# Agent tests
-uv run pytest tests/unit/agents/ tests/integration/agents/
-
-# Model validation tests
-uv run pytest tests/unit/models/ -v
-
-# Service tests
-uv run pytest tests/unit/services/ -v
-```
-
-### Using Markers
-
-```bash
-# Run only unit tests
-uv run pytest -m unit
-
-# Run integration tests
-uv run pytest -m integration
-
-# Run E2E tests
-uv run pytest -m e2e
-
-# Run tests that don't require database
-uv run pytest -m "not database"
-
-# Run fast tests only (skip slow tests)
-uv run pytest -m "not slow"
-
-# Run tests requiring external services
-uv run pytest -m external
-```
-
-### Coverage Analysis
-
-```bash
-# Generate terminal coverage report
-uv run pytest --cov=tripsage --cov-report=term-missing
-
-# Generate HTML coverage report
-uv run pytest --cov=tripsage --cov-report=html
-
-# Generate XML for CI tools
-uv run pytest --cov=tripsage --cov-report=xml
-
-# Check coverage threshold (fails if below 90%)
-uv run pytest --cov=tripsage --cov-fail-under=90
-```
-
-### Debugging Tests
-
-```bash
-# Show test execution order and fixtures
-uv run pytest --setup-show
-
-# List all available fixtures
-uv run pytest --fixtures
-
-# Run specific test with verbose output
-uv run pytest \
-  tests/unit/services/test_trip_service.py::TestTripService::test_create_trip \
-  -v
-
-# Run tests matching pattern
-uv run pytest -k "trip" -v
-
-# Show slowest tests
-uv run pytest --durations=10
-```
-
-## Development Workflow
-
-### Setup and Bootstrap
-
-```bash
-# Install Python dependencies
-uv sync
-
-# Install frontend dependencies
-cd frontend && pnpm install
-
-# Run quality gates before committing
-ruff format . && ruff check . --fix
-uv run pyright
-uv run pylint tripsage tripsage_core
-```
-
-### Pre-commit Quality Checks
-
-```bash
-# Format code
-uv run ruff format .
-
-# Lint and fix issues
-uv run ruff check . --fix
-
-# Type checking
-uv run pyright
-
-# Code quality analysis
-uv run pylint tripsage tripsage_core
-```
-
-### Running Tests in Development
-
-```bash
-# Quick unit test run during development
-uv run pytest tests/unit/ -x --tb=short
-
-# Run specific test file
-uv run pytest tests/unit/services/test_trip_service.py -v
-
-# Run tests with coverage (development)
-uv run pytest --cov=tripsage --cov-report=term-missing -x
-```
-
-## Test Coverage Requirements
-
-- Backend: 90%+ coverage required (CI enforced)
-- Frontend: 85%+ coverage target
-- Critical paths: 100% coverage for business logic
-
-## Test Fixtures Reference
-
-### Root Fixtures (`tests/conftest.py`)
-
-#### Environment & Configuration
-
-- `setup_test_environment` (session, autouse): Sets test environment variables
-- `mock_cache_globally` (session, autouse): Mocks Redis globally
-- `mock_settings`: Mock settings object with test values
-- `mock_database_service`: Mock database service for unit tests
-- `mock_cache_service`: Mock cache service for unit tests
-
-#### Test Data
-
-- `sample_user_id`: Generates UUID for user ID
-- `sample_trip_id`: Generates UUID for trip ID
-- `sample_timestamp`: Returns current UTC timestamp
-- `sample_user_data`: Dict with user fields (id, email, username, etc.)
-- `sample_trip_data`: Dict with trip fields (id, user_id, name, dates, etc.)
-
-#### Validation & Serialization
-
-- `validation_helper`: Utilities for Pydantic validation testing
-- `serialization_helper`: Utilities for model serialization testing
-- `edge_case_data`: Edge case inputs for security testing
-
-### API Key Fixtures (`tests/fixtures/api_key_fixtures.py`)
-
-#### Core Data
-
-- `sample_user_id`: UUID string
-- `sample_key_id`: UUID string
-- `mock_principal`: Authenticated user principal
-- `multiple_principals`: List of principals for concurrent testing
-
-#### API Key Objects
-
-- `sample_api_key_create`: ApiKeyCreate request
-- `sample_api_key_create_request`: ApiKeyCreateRequest for service layer
-- `sample_api_key_response`: ApiKeyResponse object
-- `multiple_api_key_responses`: List of responses for bulk testing
-
-#### Validation
-
-- `sample_validation_result`: ValidationResult object
-- `validation_results_various`: Dict of different validation scenarios
-
-#### Database
-
-- `sample_db_result`: Dict representing DB row
-- `multiple_db_results`: List of DB results for bulk testing
-
-#### Services
-
-- `mock_key_monitoring_service`: Mock KeyMonitoringService
-- `mock_database_service`: Mock database operations
-- `mock_cache_service`: Mock cache operations
-- `mock_audit_service`: Mock audit logging
-
-#### Requests
-
-- `sample_rotate_request`: ApiKeyRotateRequest
-- `sample_validate_request`: ApiKeyValidateRequest
-
-#### Monitoring
-
-- `monitoring_data_samples`: Health monitoring data
-- `audit_log_samples`: Audit log entries
-
-#### Testing Data
-
-- `error_scenarios`: Various error conditions
-- `performance_test_data`: Data for performance testing
-- `security_test_inputs`: Security test inputs
-
-#### Property-Based Testing
-
-- `service_type_strategy`: Strategy for ServiceType enum
-- `user_id_strategy`: Strategy for user IDs
-- `key_name_strategy`: Strategy for key names
-- `description_strategy`: Strategy for descriptions
-- `timestamp_strategy`: Strategy for timestamps
-
-### Trip Fixtures (`tests/fixtures/trip_fixtures.py`)
-
-#### Core Objects
-
-- `core_trip_response`: CoreTripResponse with minimal valid fields
-
-#### Mocks
-
-- `mock_audit_service`: Mock audit service for trip operations
-
-### Integration Fixtures (`tests/integration/conftest.py`)
-
-#### MCP Mocks
-
-- `mock_mcp_manager`: Mock MCPBridge for external service calls
-- `mock_mcp_registry`: Mock MCPClientRegistry
-- `mock_mcp_wrapper`: Generic mock MCP wrapper
-
-#### Responses
-
-- `mock_successful_response`: TestResponse with success data
-- `mock_error_response`: TestResponse with error data
-
-#### Async
-
-- `event_loop`: Asyncio event loop for tests
-
-#### Web Cache
-
-- `mock_web_operations_cache`: Mock WebOperationsCache
-
-#### Environment
-
-- `mock_settings_and_redis`: Mocks settings and Redis client
-
-### E2E Fixtures (`tests/e2e/conftest.py`)
-
-#### Client
-
-- `test_client`: AsyncClient with FastAPI app and mocked dependencies
-
-### Usage Examples
-
-#### Basic Unit Test
-
-```python
-    assert result.is_valid
-```
-
-#### Integration Test
-
-```python
-async def test_api_endpoint(test_client):
-    response = await test_client.get("/api/v1/health")
-    assert response.status_code == 200
-```
-
-#### With Mocks
-
-```python
-def test_with_mcp(mock_mcp_manager):
-    mock_mcp_manager.invoke.return_value = {"weather": "sunny"}
-    result = await call_weather_service()
-    assert result["weather"] == "sunny"
-```
-
-### Scopes
-
-- `session`: Once per test run (expensive setup)
-- `module`: Once per test file
-- `function`: Once per test (default)
-
-### Best Practices
-
-1. Use appropriate scope to avoid unnecessary setup
-2. Mock external dependencies in unit tests
-3. Use `yield` for proper cleanup
-4. Keep fixtures focused and composable
-5. Document fixture purpose and dependencies
-
-## Frontend Testing (App Router)
-
-TripSage uses centralized test utilities for consistent, maintainable
-frontend testing.
-
-### Test Utilities Location
-
-All test utilities are centralized in `src/test/`:
-
-- `store-helpers.ts` - Store testing utilities
-- `api-helpers.ts` - API route testing utilities
-- `component-helpers.tsx` - React component testing utilities
-- `factories.ts` - Mock data factories
-- `test-utils.tsx` - General testing utilities
-
-### Store Testing
-
-Use centralized helpers for consistent store testing:
-
-```typescript
+```ts
 import { resetStore, setupTimeoutMock } from "@/test/store-helpers";
-import { createMockUser } from "@/test/factories";
 
 describe("AuthStore", () => {
   let timeoutSpy: { mockRestore: () => void };
@@ -562,102 +159,83 @@ describe("AuthStore", () => {
   afterEach(() => {
     timeoutSpy.mockRestore();
   });
-
-  it("sets user on login", async () => {
-    const mockUser = createMockUser();
-    await useAuthStore.getState().login({
-      email: "test@test.com",
-      password: "pass",
-    });
-
-    expect(useAuthStore.getState().user).toEqual(mockUser);
-  });
 });
 ```
 
-### API Route Testing
+Waiting on store state:
 
-Use factory pattern helpers for API route testing:
+```ts
+import { waitForStoreState } from "@/test/store-helpers";
 
-```typescript
-import { setupApiTestMocks, createMockRequest } from "@/test/api-helpers";
-
-describe("GET /api/user/profile", () => {
-  let cleanup: () => void;
-
-  beforeEach(() => {
-    cleanup = setupApiTestMocks();
-  });
-
-  afterEach(() => {
-    cleanup();
-  });
-
-  it("returns user profile", async () => {
-    const req = createMockRequest({ method: "GET" });
-    const res = await GET(req);
-
-    expect(res.status).toBe(200);
-    const data = await res.json();
-    expect(data.email).toBe("test@example.com");
-  });
-
-  it("handles authentication errors", async () => {
-    const req = createMockRequest({ method: "GET" });
-    const res = await GET(req);
-
-    expect(res.status).toBe(401);
-  });
-});
+await waitForStoreState(useAuthStore, (state) => !state.isLoading, 5000);
+expect(useAuthStore.getState().user).toBeDefined();
 ```
 
-### Component Testing Patterns
+## Test Utilities
 
-Use provider wrappers for component testing:
+- Provider wrappers: `renderWithProviders` from `@/test/component-helpers`.
+- Factories: `@/test/factories` for consistent mock data.
+- React Query: `mockReactQuery` from `@/test/mocks/react-query`.
+- Centralized directory: `frontend/src/test/` (helpers, mocks, factories, test-utils, route helpers).
 
-```typescript
-import { renderWithProviders } from "@/test/component-helpers";
+## Running & Debugging Tests
 
-describe("UserProfile", () => {
-  it("displays user information", () => {
-    const { getByText } = renderWithProviders(<UserProfile />);
+Scripts (see `frontend/package.json` for full list): `test`, `test:run`, `test:unit`, `test:components`, `test:api`, `test:integration`, `test:e2e`, `test:coverage`.
 
-    expect(getByText("John Doe")).toBeInTheDocument();
-    expect(getByText("john@example.com")).toBeInTheDocument();
-  });
+Common commands:
 
-  it("handles loading state", () => {
-    const { getByText } = renderWithProviders(<UserProfile />);
-    expect(getByText("Loading...")).toBeInTheDocument();
-  });
-});
+```bash
+# Targeted project runs
+pnpm test:unit
+pnpm test:components
+pnpm test:api
+pnpm test:integration
+pnpm test:e2e
+
+# Single file with explicit project
+pnpm test:run --project=api src/app/api/keys/validate/route.test.ts
+
+# Pattern or verbose output
+pnpm test -- -t "trip"
+pnpm test -- --reporter=verbose
+
+# Coverage
+pnpm test -- --coverage --collectCoverageFrom="src/components/TripCard.tsx"
+pnpm test:coverage
+
+# Changed files only
+pnpm test:changed
 ```
 
-### Mock Data Factories
+## End-to-End (Playwright)
 
-Use factories for consistent test data:
+Config: `frontend/playwright.config.ts`. Example structure:
 
-```typescript
-import { createMockUser, createMockTrip } from "@/test/factories";
-
-describe("TripCard", () => {
-  it("displays trip details", () => {
-    const mockTrip = createMockTrip({
-      name: "Paris Adventure",
-      budget: 2500,
-    });
-
-    render(<TripCard trip={mockTrip} />);
-
-    expect(screen.getByText("Paris Adventure")).toBeInTheDocument();
-    expect(screen.getByText("$2,500.00")).toBeInTheDocument();
-  });
-});
+```text
+e2e/
+├── agents-budget-memory.spec.ts
+├── calendar-integration.spec.ts
+├── dashboard-functionality.spec.ts
+├── error-boundaries-loading.spec.ts
 ```
 
-### Frontend Test Organization
+Commands:
 
-#### Recommended File Structure
+```bash
+pnpm test:e2e
+pnpm test:e2e --project=chromium
+pnpm test:e2e --headed
+pnpm test:e2e --reporter=html
+```
+
+## Coverage and Quality Gates
+
+- Target: 85%+ overall; branches 85%, functions 90%, lines 90%, statements 90%; critical paths at 100%.
+- Pre-commit checks: `pnpm biome:check`, `pnpm biome:fix`, `pnpm type-check`.
+
+## Organization & Naming
+
+Recommended layout:
 
 ```text
 src/
@@ -678,60 +256,23 @@ src/
             └── route.test.ts
 ```
 
-#### Test Naming
+Naming:
 
-- `*.test.ts` - Unit tests
-- `*.spec.ts` - Integration tests
-- `*.integration.test.ts` - End-to-end tests
+- `*.test.ts(x)` – unit tests.
+- `*.spec.ts(x)` – integration tests.
+- `*.integration.test.ts(x)` – end-to-end integration.
+- `*.e2e.*` – Playwright.
 
-### Frontend Testing Patterns
+## Examples
 
-#### Setup and Teardown
+Real implementations to reference:
 
-```typescript
-describe("Feature", () => {
-  beforeAll(() => {
-    // One-time setup
-  });
+- Store: `frontend/src/stores/auth/__tests__/auth-store.test.ts`.
+- Component: `frontend/src/components/trip-card/__tests__/trip-card.test.tsx`.
+- API route: `frontend/src/app/api/chat/__tests__/_handler.test.ts`.
 
-  beforeEach(() => {
-    // Per-test setup
-  });
+## Why This Setup
 
-  afterEach(() => {
-    // Per-test cleanup
-  });
-
-  afterAll(() => {
-    // One-time cleanup
-  });
-});
-```
-
-#### Async Testing
-
-```typescript
-it("handles async operations", async () => {
-  const promise = someAsyncOperation();
-  await expect(promise).resolves.toEqual(expectedValue);
-});
-
-it("handles rejections", async () => {
-  await expect(failingOperation()).rejects.toThrow("Error message");
-});
-```
-
-#### Custom Matchers
-
-```typescript
-expect(result).toBeValidUser();
-expect(response).toHaveStatusCode(200);
-expect(store.getState()).toHaveUser(user);
-```
-
-### Benefits
-
-- Consistent testing patterns across the codebase
-- Centralized mock management and data factories
-- Easier maintenance with shared utilities
-- Standardized approaches for better reliability
+- Consistent patterns and centralized mocks reduce maintenance.
+- Shared helpers improve reliability and speed authoring.
+- Multi-project Vitest configuration keeps tests isolated and performant while covering React, Next.js, and external API interactions.

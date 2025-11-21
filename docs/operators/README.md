@@ -4,18 +4,19 @@
 
 ### Essential Operations
 
-- **[Operators Reference](./operators-reference.md)** - Complete setup, deployment, and operational procedures
-- **[Security Guide](./security-guide.md)** - Security implementation and best practices
+- **[Operators Reference](./operators-reference.md)** - Setup, deployment, and operations
+- **[Security Guide](./security-guide.md)** - Security implementation
 - **[Deployment Guide](./deployment-guide.md)** - Production deployment procedures
 
 ### Specialized Guides
 
 - **[Admin Guide](./admin-guide.md)** - Agent configuration and system monitoring
-- **[OAuth Provider Setup](./oauth-provider-setup-guide.md)** - OAuth configuration with Supabase
+- **[Database Operations](./database/)** - Supabase setup and configuration
+- **[OAuth Provider Setup](./oauth-provider-setup-guide.md)** - OAuth configuration
 
 ### Operations Bulletins
 
-- **[API Keys Route Migration](./api-keys-route-migration.md)** - Migration notice for `/api/keys` rollout
+- **[API Keys Route Migration](./api-keys-route-migration.md)** - `/api/keys` migration
 
 ## Quick Start Tasks
 
@@ -28,4 +29,4 @@
 
 ## Notes
 
-This section focuses on deployment and operations. See `../developers/` for development topics and `../api/` for API documentation.
+This section focuses on deployment and operations.

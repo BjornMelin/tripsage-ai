@@ -199,9 +199,10 @@ describe("Chat routing logic", () => {
 });
 
 describe("JSON parsing for structured results", () => {
-  it("parses flight.v1 JSON from text", () => {
+  it("parses flight.v2 JSON from text", () => {
     const jsonText = JSON.stringify({
       currency: "USD",
+      fromCache: false,
       itineraries: [
         {
           id: "flight-1",
@@ -217,17 +218,18 @@ describe("JSON parsing for structured results", () => {
           ],
         },
       ],
-      schemaVersion: "flight.v1",
-      sources: [],
+      offers: [],
+      provider: "duffel",
+      schemaVersion: "flight.v2",
     });
 
     const parsed = JSON.parse(jsonText);
     const result = flightSearchResultSchema.safeParse(parsed);
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.schemaVersion).toBe("flight.v1");
-      expect(result.data.itineraries).toHaveLength(1);
+    if (!result.success) {
+      throw new Error(result.error.toString());
     }
+    expect(result.data.schemaVersion).toBe("flight.v2");
+    expect(result.data.itineraries).toHaveLength(1);
   });
 
   it("parses stay.v1 JSON from text", () => {
@@ -259,10 +261,12 @@ describe("JSON parsing for structured results", () => {
 
 \`\`\`json
 {
-  "schemaVersion": "flight.v1",
+  "schemaVersion": "flight.v2",
   "currency": "USD",
-  "itineraries": [],
-  "sources": []
+  "provider": "duffel",
+  "fromCache": false,
+  "offers": [],
+  "itineraries": []
 }
 \`\`\``;
 
@@ -271,7 +275,7 @@ describe("JSON parsing for structured results", () => {
     );
     const jsonStr = jsonMatch?.[1] ?? jsonMatch?.[2] ?? markdownText;
     const parsed = JSON.parse(jsonStr);
-    expect(parsed.schemaVersion).toBe("flight.v1");
+    expect(parsed.schemaVersion).toBe("flight.v2");
   });
 
   it("handles invalid JSON gracefully", () => {

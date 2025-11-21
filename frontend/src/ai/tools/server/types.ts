@@ -8,7 +8,7 @@ import type {
   RateLimitResult,
   ToolExecutionContext,
   UserContext,
-} from "@/ai/tools/schemas/tools";
+} from "@ai/tools/schemas/tools";
 
 // Re-export types from schemas
 export type {

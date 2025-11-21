@@ -4,6 +4,7 @@
  */
 
 import { z } from "zod";
+import { messageRoleSchema } from "./chat";
 import { primitiveSchemas } from "./registry";
 
 // ===== CORE SCHEMAS =====
@@ -430,7 +431,7 @@ export const chatStoreStateSchema = z
             content: z.string(),
             id: UUID_SCHEMA,
             metadata: z.record(z.string(), z.unknown()).optional(),
-            role: z.enum(["user", "assistant", "system"]),
+            role: messageRoleSchema,
             timestamp: TIMESTAMP_SCHEMA,
           })
         ),

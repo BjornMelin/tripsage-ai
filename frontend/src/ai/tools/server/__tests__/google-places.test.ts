@@ -1,5 +1,5 @@
+import { lookupPoiContext } from "@ai/tools/server/google-places";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { lookupPoiContext } from "@/ai/tools/server/google-places";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
 import { cacheLatLng, getCachedLatLng } from "@/lib/google/caching";
 
@@ -15,10 +15,18 @@ vi.mock("@/lib/google/caching", () => ({
 
 vi.mock("@/lib/env/server", () => ({
   getGoogleMapsServerKey: vi.fn().mockReturnValue("test-server-key"),
+  getServerEnvVar: vi.fn(() => undefined),
+  getServerEnvVarWithFallback: vi.fn((_key: string, fallback?: string) => fallback),
 }));
 
 vi.mock("@/lib/telemetry/span", () => ({
-  withTelemetrySpan: vi.fn((_name: string, _options, fn) => fn()),
+  withTelemetrySpan: vi.fn((_name: string, _options, fn) =>
+    fn({
+      addEvent: vi.fn(),
+      recordException: vi.fn(),
+      setAttribute: vi.fn(),
+    })
+  ),
 }));
 
 describe("lookupPoiContext", () => {

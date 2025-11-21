@@ -8,7 +8,11 @@ import {
   stubRateLimitEnabled,
   unstubAllEnvs,
 } from "@/test/env-helpers";
-import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
+import {
+  createMockNextRequest,
+  createRouteParamsContext,
+  getMockCookiesForTest,
+} from "@/test/route-helpers";
 
 // Mock next/headers cookies() BEFORE any imports that use it
 vi.mock("next/headers", () => ({
@@ -158,7 +162,7 @@ describe("/api/keys/validate route", () => {
       url: "http://localhost/api/keys/validate",
     });
 
-    const res = await POST(req);
+    const res = await POST(req, createRouteParamsContext());
     const body = await res.json();
 
     expect(fetchMock).toHaveBeenCalledWith("https://provider.test/models", {
@@ -184,7 +188,7 @@ describe("/api/keys/validate route", () => {
       url: "http://localhost/api/keys/validate",
     });
 
-    const res = await POST(req);
+    const res = await POST(req, createRouteParamsContext());
     const body = await res.json();
 
     expect({ body, status: res.status }).toEqual({
@@ -206,7 +210,7 @@ describe("/api/keys/validate route", () => {
       url: "http://localhost/api/keys/validate",
     });
 
-    const res = await POST(req);
+    const res = await POST(req, createRouteParamsContext());
     const body = await res.json();
 
     expect({ body, status: res.status }).toEqual({
@@ -235,7 +239,7 @@ describe("/api/keys/validate route", () => {
       url: "http://localhost/api/keys/validate",
     });
 
-    const res = await POST(req);
+    const res = await POST(req, createRouteParamsContext());
 
     expect(LIMIT_SPY).toHaveBeenCalledWith("validate-user");
     expect(res.status).toBe(429);
@@ -274,7 +278,7 @@ describe("/api/keys/validate route", () => {
       url: "http://localhost/api/keys/validate",
     });
 
-    const res = await POST(req);
+    const res = await POST(req, createRouteParamsContext());
 
     // When auth: true and user is null, authentication fails before rate limiting
     // Rate limiting only happens after successful authentication

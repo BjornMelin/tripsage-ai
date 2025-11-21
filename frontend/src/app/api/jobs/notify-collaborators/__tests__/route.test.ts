@@ -71,7 +71,19 @@ vi.mock("@/lib/next/route-helpers", async () => {
   );
   return {
     ...actual,
-    withRequestSpan: vi.fn((_name, _attrs, fn) => fn()),
+    withRequestSpan: vi.fn(async (_name, _attrs, fn) => {
+      const span = {
+        recordException: vi.fn(),
+        setAttribute: vi.fn(),
+      };
+      try {
+        return await fn(span);
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error("withRequestSpan error", error);
+        throw error;
+      }
+    }),
   };
 });
 

@@ -131,15 +131,32 @@ export function getMockCookiesForTest(cookieMap: Record<string, string> = {}) {
 }
 
 /**
+ * Create a Next.js route params context matching app router handler signature.
+ *
+ * @param params Route params key/value map.
+ * @returns Context with params promise.
+ */
+export function createRouteParamsContext(params: Record<string, string> = {}): {
+  params: Promise<Record<string, string>>;
+} {
+  return { params: Promise.resolve(params) };
+}
+
+/**
  * Helper to run a route handler function with proper request context.
  *
  * @param handler Route handler function (POST, GET, etc.).
  * @param request Mock NextRequest.
+ * @param context Route params context (defaults to empty params).
  * @returns Response from the handler.
  */
 export function runRouteHandler(
-  handler: (req: NextRequest) => Promise<Response>,
-  request: NextRequest
+  handler: (
+    req: NextRequest,
+    context: { params: Promise<Record<string, string>> }
+  ) => Promise<Response>,
+  request: NextRequest,
+  context: { params: Promise<Record<string, string>> } = createRouteParamsContext()
 ): Promise<Response> {
-  return handler(request);
+  return handler(request, context);
 }

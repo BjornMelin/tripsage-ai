@@ -4,6 +4,7 @@
  * validation, provider resolution, token clamping, and usage metadata.
  */
 
+import type { ProviderResolution } from "@ai/models/registry";
 import type { ToolSet, UIMessage } from "ai";
 import { convertToModelMessages, generateText as defaultGenerateText } from "ai";
 import { extractTexts, validateImageAttachments } from "@/app/api/_helpers/attachments";
@@ -13,7 +14,6 @@ import {
   persistMemoryTurn,
   uiMessageToMemoryTurn,
 } from "@/lib/memory/turn-utils";
-import type { ProviderResolution } from "@/lib/providers/types";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { insertSingle } from "@/lib/supabase/typed-helpers";
 import {
@@ -189,7 +189,7 @@ export async function handleChatNonStream(
     // Import tools from the centralized registry
     let local: Record<string, unknown> = {};
     try {
-      const toolsModule = await import("@/ai/tools");
+      const toolsModule = await import("@ai/tools");
       local = {
         createTravelPlan: toolsModule.createTravelPlan,
         deleteTravelPlan: toolsModule.deleteTravelPlan,

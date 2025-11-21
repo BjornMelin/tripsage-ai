@@ -5,7 +5,7 @@ describe("parseSchemaCard", () => {
   it("should parse codefenced JSON with flight schema", () => {
     const text = `\`\`\`json
 {
-  "schemaVersion": "flight.v1",
+  "schemaVersion": "flight.v2",
   "itineraries": []
 }
 \`\`\``;
@@ -80,7 +80,7 @@ describe("parseSchemaCard", () => {
   it("should handle JSON with extra whitespace in codefence", () => {
     const text = `\`\`\`json
     {
-      "schemaVersion": "flight.v1",
+      "schemaVersion": "flight.v2",
       "itineraries": []
     }
     \`\`\``;

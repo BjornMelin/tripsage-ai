@@ -9,9 +9,9 @@
 import type {
   BudgetPlanRequest,
   DestinationResearchRequest,
-  FlightSearchRequest,
   ItineraryPlanRequest,
 } from "@schemas/agents";
+import type { FlightSearchRequest } from "@schemas/flights";
 
 /**
  * Base context shared across prompt builders.

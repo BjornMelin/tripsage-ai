@@ -5,7 +5,7 @@ import {
   mockApiRouteRateLimitOnce,
   resetApiRouteMocks,
 } from "@/test/api-route-helpers";
-import { createMockNextRequest } from "@/test/route-helpers";
+import { createMockNextRequest, createRouteParamsContext } from "@/test/route-helpers";
 
 const mockQueryFreeBusy = vi.fn();
 vi.mock("@/lib/calendar/google", () => ({
@@ -46,7 +46,7 @@ describe("/api/calendar/freebusy route", () => {
       url: "http://localhost/api/calendar/freebusy",
     });
 
-    const res = await mod.POST(req);
+    const res = await mod.POST(req, createRouteParamsContext());
     const body = await res.json();
 
     expect(res.status).toBe(200);
@@ -64,7 +64,7 @@ describe("/api/calendar/freebusy route", () => {
       url: "http://localhost/api/calendar/freebusy",
     });
 
-    const res = await mod.POST(req);
+    const res = await mod.POST(req, createRouteParamsContext());
     expect(res.status).toBe(400);
   });
 
@@ -80,7 +80,7 @@ describe("/api/calendar/freebusy route", () => {
       url: "http://localhost/api/calendar/freebusy",
     });
 
-    const res = await mod.POST(req);
+    const res = await mod.POST(req, createRouteParamsContext());
     expect(res.status).toBe(400);
   });
 
@@ -98,7 +98,7 @@ describe("/api/calendar/freebusy route", () => {
       url: "http://localhost/api/calendar/freebusy",
     });
 
-    const res = await mod.POST(req);
+    const res = await mod.POST(req, createRouteParamsContext());
     expect(res.status).toBe(401);
   });
 
@@ -125,7 +125,7 @@ describe("/api/calendar/freebusy route", () => {
       url: "http://localhost/api/calendar/freebusy",
     });
 
-    const res = await mod.POST(req);
+    const res = await mod.POST(req, createRouteParamsContext());
     const body = await res.json();
 
     expect(res.status).toBe(200);
@@ -150,7 +150,7 @@ describe("/api/calendar/freebusy route", () => {
       url: "http://localhost/api/calendar/freebusy",
     });
 
-    const res = await mod.POST(req);
+    const res = await mod.POST(req, createRouteParamsContext());
     expect(res.status).toBe(429);
   });
 });

@@ -2,17 +2,15 @@
  * @fileoverview Authentication component for user login with email/password and
  * Supabase social OAuth (GitHub, Google).
  *
- * Email/password login uses React 19 server actions with useActionState/useFormStatus
- * for progressive enhancement. Supabase SSR (cookies) remains the single source of
- * truth for auth. Social providers continue to use Supabase OAuth with server-side callback.
+ * Email/password login uses API route with fetch for authentication.
+ * Social providers continue to use Supabase OAuth with server-side callback.
  */
 
 "use client";
 
-import { useSearchParams } from "next/navigation";
-import { useActionState, useId, useMemo } from "react";
-import { useFormStatus } from "react-dom";
-import { loginAction } from "@/app/(auth)/login/actions";
+import { type LoginFormData, loginFormSchema } from "@schemas/auth";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useId, useMemo, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,10 +26,20 @@ interface LoginFormProps {
   className?: string;
 }
 
+/** State returned by the login API. */
+interface LoginState {
+  success: boolean;
+  error?: string;
+  fieldErrors?: {
+    email?: string;
+    password?: string;
+  };
+}
+
 /**
  * Login form with email/password and social providers.
  *
- * - Submits credentials via React 19 server action with useActionState/useFormStatus.
+ * - Submits credentials via API route with fetch.
  * - Initiates OAuth with `supabase.auth.signInWithOAuth` for GitHub/Google.
  * - Redirects authenticated users to `redirectTo`.
  *
@@ -41,12 +49,12 @@ interface LoginFormProps {
  */
 export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormProps) {
   const search = useSearchParams();
+  const router = useRouter();
   const nextParam = search?.get("next") || search?.get("from") || "";
   const urlError = search?.get("error"); // Fallback for OAuth flows
 
-  const [state, formAction, _isPending] = useActionState(loginAction, {
-    success: false,
-  });
+  const [state, setState] = useState<LoginState>({ success: false });
+  const [isLoading, setIsLoading] = useState(false);
   const emailId = useId();
   const passwordId = useId();
 
@@ -54,6 +62,71 @@ export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormPro
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const nextSuffix = nextParam ? `?next=${encodeURIComponent(nextParam)}` : "";
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsLoading(true);
+    setState({ success: false });
+
+    const formData = new FormData(event.currentTarget);
+    const data: LoginFormData = {
+      email: formData.get("email") as string,
+      password: formData.get("password") as string,
+      rememberMe: formData.get("rememberMe") === "on",
+    };
+
+    // Validate client-side first
+    const parsed = loginFormSchema.safeParse(data);
+    if (!parsed.success) {
+      const fieldErrors: Record<string, string> = {};
+      for (const issue of parsed.error.issues) {
+        const field = issue.path[0];
+        if (field === "email") {
+          fieldErrors.email = issue.message;
+        } else if (field === "password") {
+          fieldErrors.password = issue.message;
+        }
+      }
+      setState({
+        error: "Please check your input and try again",
+        fieldErrors,
+        success: false,
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/auth/login", {
+        body: JSON.stringify(parsed.data),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+
+      const result: LoginState = await response.json();
+
+      if (result.success) {
+        // Redirect to a sanitized destination on the same origin
+        const safeNext =
+          nextParam?.startsWith("/") && !nextParam.startsWith("//")
+            ? nextParam
+            : redirectTo;
+        router.push(safeNext);
+        router.refresh(); // Refresh to update server components
+      } else {
+        setState(result);
+      }
+    } catch {
+      setState({
+        error: "An unexpected error occurred",
+        success: false,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSocialLogin = async (provider: "github" | "google") => {
     const { error: oAuthError } = await supabase.auth.signInWithOAuth({
@@ -63,9 +136,10 @@ export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormPro
       provider,
     });
     if (oAuthError) {
-      // Best-effort surface of social login issues; detailed handling is done server-side.
-      // eslint-disable-next-line no-console
-      console.error("Social login failed:", oAuthError.message);
+      setState({
+        error: "Social login failed. Please try again.",
+        success: false,
+      });
     }
   };
 
@@ -81,7 +155,7 @@ export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormPro
           </Alert>
         )}
 
-        <form action={formAction} className="space-y-3">
+        <form onSubmit={handleSubmit} className="space-y-3">
           <input type="hidden" name="redirectTo" value={redirectTo} />
           {nextParam ? <input type="hidden" name="next" value={nextParam} /> : null}
           <div className="space-y-2">
@@ -130,7 +204,7 @@ export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormPro
               </p>
             )}
           </div>
-          <SubmitButton />
+          <SubmitButton isLoading={isLoading} />
         </form>
 
         <div className="relative py-2 text-center text-xs text-muted-foreground">
@@ -159,16 +233,17 @@ export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormPro
 }
 
 /**
- * Submit button component that uses useFormStatus for pending state.
- *
- * Must be a child component of the form to access useFormStatus.
+ * Submit button component with loading state.
  */
-function SubmitButton() {
-  const { pending } = useFormStatus();
-
+function SubmitButton({ isLoading }: { isLoading: boolean }) {
   return (
-    <Button type="submit" className="w-full" disabled={pending} aria-disabled={pending}>
-      {pending ? "Signing in..." : "Sign in"}
+    <Button
+      type="submit"
+      className="w-full"
+      disabled={isLoading}
+      aria-disabled={isLoading}
+    >
+      {isLoading ? "Signing in..." : "Sign in"}
     </Button>
   );
 }

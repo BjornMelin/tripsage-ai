@@ -4,24 +4,23 @@ Zod v4 schemas for TripSage AI validation. Provides compile-time types and runti
 
 ## Organization
 
-**Domain Schemas** (`frontend/src/domain/schemas/`): Core business entities independent of AI
-**AI Tool Schemas** (`frontend/src/ai/tools/schemas/`): Vercel AI SDK v6 tool input/output contracts
-**Registry** (`frontend/src/domain/schemas/registry.ts`): Shared primitives and transforms
+**Domain Schemas** (`frontend/src/domain/schemas/`): Core business entities independent of AI  
+**AI Tool Schemas** (`frontend/src/ai/tools/schemas/`): Vercel AI SDK v6 tool input/output contracts  
+**Registry** (`frontend/src/domain/schemas/registry.ts`): Shared primitives and transforms  
 
 ### Directory Structure
 
 ```text
 frontend/src/domain/schemas/
-├── index.ts              # Central exports
-├── registry.ts           # Shared primitives and transforms
-├── chat.ts              # Messages and conversations
-├── budget.ts            # Financial entities
+├── registry.ts        # Shared primitives and transforms
+├── chat.ts            # Messages and conversations
+├── budget.ts          # Financial entities
 └── ...
 
 frontend/src/ai/tools/schemas/
-├── tools.ts              # Core tool schemas
-├── web-search.ts         # Web search validation
-├── planning.ts           # Trip planning AI schemas
+├── tools.ts           # Core tool schemas
+├── web-search.ts      # Web search validation
+├── planning.ts        # Trip planning AI schemas
 └── ...
 ```
 
@@ -38,7 +37,7 @@ Use clear section headers:
 
 ## Export Patterns
 
-Pair schema and type together in immediate exports:
+Pair schema and type together in the same module (no central type barrel):
 
 ```typescript
 /** Zod schema for user profile data with validation rules. */
@@ -78,6 +77,7 @@ export type Message = z.infer<typeof messageSchema>;
 Shared validation patterns in `frontend/src/domain/schemas/registry.ts`:
 
 ```typescript
+// Use @schemas/* alias for all schema imports
 import { primitiveSchemas, transformSchemas, refinedSchemas } from "@schemas/registry";
 
 // Primitives: uuid, email, url, isoDateTime, isoCurrency, positiveNumber, percentage

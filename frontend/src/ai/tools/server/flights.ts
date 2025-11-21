@@ -6,117 +6,39 @@ import "server-only";
 
 import { createAiTool } from "@ai/lib/tool-factory";
 import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
-import type { FlightSearchRequest } from "@schemas/agents";
-import { flightSearchRequestSchema } from "@schemas/agents";
+import { searchFlightsService } from "@domain/flights/service";
+import type { FlightSearchRequest, FlightSearchResult } from "@schemas/flights";
+import { flightSearchRequestSchema } from "@schemas/flights";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
-import { getServerEnvVarWithFallback } from "@/lib/env/server";
-
-// Prefer DUFFEL_ACCESS_TOKEN (commonly used in templates), fall back to DUFFEL_API_KEY.
-function getDuffelKey(): string | undefined {
-  return (
-    getServerEnvVarWithFallback("DUFFEL_ACCESS_TOKEN", undefined) ||
-    getServerEnvVarWithFallback("DUFFEL_API_KEY", undefined)
-  );
-}
 
 export const searchFlightsInputSchema = flightSearchRequestSchema;
 
 type SearchFlightsInput = FlightSearchRequest;
-type SearchFlightsResult = {
-  currency: string;
-  offers: unknown[];
-};
+type SearchFlightsResult = FlightSearchResult;
 
 export const searchFlights = createAiTool<SearchFlightsInput, SearchFlightsResult>({
   description:
     "Search flights using Duffel Offer Requests (simple one-way or round-trip).",
   execute: async (params) => {
-    const {
-      cabinClass,
-      currency,
-      departureDate,
-      destination,
-      origin,
-      passengers,
-      returnDate,
-    } = searchFlightsInputSchema.parse(params);
-
-    const DuffelKey = getDuffelKey();
-    if (!DuffelKey) throw new Error("duffel_not_configured");
-
-    type CamelSlice = {
-      origin: string;
-      destination: string;
-      departureDate: string;
-    };
-    const slicesCamel: CamelSlice[] = [{ departureDate, destination, origin }];
-    if (returnDate) {
-      slicesCamel.push({
-        departureDate: returnDate,
-        destination: origin,
-        origin: destination,
-      });
-    }
-
-    const camel = {
-      cabinClass,
-      maxConnections: 1,
-      passengers: Array.from({ length: passengers }, () => ({ type: "adult" })),
-      paymentCurrency: currency,
-      returnOffers: true,
-      slices: slicesCamel,
-    };
-
-    const snake = (value: unknown): unknown => {
-      if (Array.isArray(value)) return value.map(snake);
-      if (value && typeof value === "object") {
-        return Object.fromEntries(
-          Object.entries(value as Record<string, unknown>).map(([key, val]) => [
-            key
-              .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
-              .replace(/__/g, "_")
-              .toLowerCase(),
-            snake(val),
-          ])
-        );
+    try {
+      return await searchFlightsService(params);
+    } catch (err) {
+      // Map provider errors to tool error codes for consistency
+      const message = err instanceof Error ? err.message : "unknown_error";
+      if (message.includes("duffel_not_configured")) {
+        const error = new Error(message);
+        (error as Error & { code?: string }).code =
+          TOOL_ERROR_CODES.toolExecutionFailed;
+        throw error;
       }
-      return value;
-    };
-
-    const body = snake(camel) as Record<string, unknown>;
-    const endpoint = "https://api.duffel.com/air/offer_requests";
-    const res = await fetch(endpoint, {
-      body: JSON.stringify(body),
-      headers: {
-        authorization: `Bearer ${DuffelKey}`,
-        "content-type": "application/json",
-        "duffel-version": "v2",
-      },
-      method: "POST",
-    });
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`duffel_offer_request_failed:${res.status}:${text}`);
+      if (message.startsWith("duffel_offer_request_failed")) {
+        const error = new Error(message);
+        (error as Error & { code?: string }).code =
+          TOOL_ERROR_CODES.toolExecutionFailed;
+        throw error;
+      }
+      throw err;
     }
-    const json = await res.json();
-    const offers: unknown[] = Array.isArray(json?.data?.offers)
-      ? json.data.offers
-      : Array.isArray(json?.data)
-        ? json.data
-        : [];
-    const resolvedCurrency =
-      offers
-        .map((offer) => {
-          if (typeof offer !== "object" || offer === null) return null;
-          // biome-ignore lint/complexity/useLiteralKeys: Duffel responses use snake_case fields
-          const totalCurrency = (offer as Record<string, unknown>)["total_currency"];
-          return typeof totalCurrency === "string" ? totalCurrency : null;
-        })
-        .find((value): value is string => typeof value === "string") ?? currency;
-    return {
-      currency: resolvedCurrency,
-      offers,
-    };
   },
   guardrails: {
     cache: {
@@ -145,6 +67,7 @@ export const searchFlights = createAiTool<SearchFlightsInput, SearchFlightsResul
         cabinClass: params.cabinClass,
         hasReturn: Boolean(params.returnDate),
         passengers: params.passengers,
+        provider: "duffel",
       }),
       redactKeys: ["origin", "destination"],
       workflow: "flightSearch",

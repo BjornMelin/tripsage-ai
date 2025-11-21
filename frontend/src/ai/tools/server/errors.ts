@@ -8,8 +8,8 @@
 
 import "server-only";
 
-import type { ToolError, ToolErrorCode } from "@/ai/tools/schemas/tools";
-import { toolErrorSchema } from "@/ai/tools/schemas/tools";
+import type { ToolError, ToolErrorCode } from "@ai/tools/schemas/tools";
+import { toolErrorSchema } from "@ai/tools/schemas/tools";
 
 // Re-export types from schemas so callers only depend on this runtime module.
 export type { ToolError, ToolErrorCode };
@@ -49,6 +49,7 @@ export const TOOL_ERROR_CODES = {
   approvalRequired: "approval_required",
 
   // General tool errors
+  toolExecutionFailed: "tool_execution_failed",
   toolRateLimited: "tool_rate_limited",
   webSearchError: "web_search_error",
   webSearchFailed: "web_search_failed",
@@ -74,6 +75,8 @@ export function createToolError(
   meta?: Record<string, unknown>
 ): ToolError {
   const error = new Error(message ?? code) as ToolError;
+  // Normalize name to satisfy tooling/schema expectations.
+  error.name = "ToolError";
   error.code = code;
   if (meta) {
     error.meta = meta;

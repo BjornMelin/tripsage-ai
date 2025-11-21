@@ -4,33 +4,27 @@ on:
   push:
     branches: [main, develop]
     paths:
-      - 'tripsage/**'
-      - 'tripsage_core/**'
-      - 'scripts/**'
-      - 'supabase/**'
-      - 'tests/**'
       - 'frontend/**'
-      - 'uv.lock'
-      - 'pyproject.toml'
-      - 'ruff.toml'
-      - 'pyrightconfig.json'
-      - 'setup.cfg'
+      - 'docs/**'
+      - 'docs/review/**'
       - '.github/workflows/**'
+      - '.github/ci-config.yml'
+      - '.pre-commit-config.yaml'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'README.md'
   pull_request:
     branches: [main, develop]
     paths:
-      - 'tripsage/**'
-      - 'tripsage_core/**'
-      - 'scripts/**'
-      - 'supabase/**'
-      - 'tests/**'
       - 'frontend/**'
-      - 'uv.lock'
-      - 'pyproject.toml'
-      - 'ruff.toml'
-      - 'pyrightconfig.json'
-      - 'setup.cfg'
+      - 'docs/**'
+      - 'docs/review/**'
       - '.github/workflows/**'
+      - '.github/ci-config.yml'
+      - '.pre-commit-config.yaml'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'README.md'
   workflow_dispatch: {}
 
 permissions:
@@ -42,50 +36,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  backend:
-    name: Backend (lint, type, unit)
-    runs-on: ubuntu-latest
-    if: >-
-      contains(github.event_name, 'pull_request') ||
-      contains(github.event_name, 'push') ||
-      contains(github.event_name, 'workflow_dispatch')
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 2
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.12'
-
-      - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y libxml2-dev libxslt1-dev
-
-      - name: Install dependencies (uv + ruff)
-        run: |
-          pip install uv ruff
-          uv sync --frozen
-
-      - name: Ruff lint
-        run: ruff check . --output-format=github
-
-      - name: Pyright (soft fail during stabilization)
-        continue-on-error: true
-        run: |
-          uv run pyright || true
-
-      - name: Unit tests (soft fail during stabilization)
-        continue-on-error: true
-        run: |
-          uv run pytest tests/unit/ -q || true
-
-      - name: Summary
-        run: |
-          echo "## Backend CI Summary" >> $GITHUB_STEP_SUMMARY
-          echo "Ruff lint: completed" >> $GITHUB_STEP_SUMMARY
-          echo "Pyright + unit tests are temporarily soft-fail while the codebase stabilizes." >> $GITHUB_STEP_SUMMARY
-
   frontend:
     name: Frontend (lint, type, unit - quick)
     runs-on: ubuntu-latest

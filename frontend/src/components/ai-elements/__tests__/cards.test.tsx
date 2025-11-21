@@ -11,6 +11,7 @@ describe("AI Elements Cards", () => {
       <FlightOfferCard
         result={{
           currency: "USD",
+          fromCache: false,
           itineraries: [
             {
               id: "it-1",
@@ -26,7 +27,9 @@ describe("AI Elements Cards", () => {
               ],
             },
           ],
-          schemaVersion: "flight.v1",
+          offers: [],
+          provider: "duffel",
+          schemaVersion: "flight.v2",
           sources: [{ title: "Example", url: "https://example.com" }],
         }}
       />

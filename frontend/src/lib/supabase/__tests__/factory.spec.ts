@@ -483,6 +483,7 @@ describe("Supabase Factory", () => {
         setAttribute: vi.fn(),
         setStatus: vi.fn(),
       };
+      const recordExceptionSpy = mockSpan.recordException;
 
       await callbackFn(mockSpan);
 
@@ -490,7 +491,7 @@ describe("Supabase Factory", () => {
         code: SpanStatusCode.ERROR,
         message: "Auth error",
       });
-      expect(mockSpan.recordException).toHaveBeenCalledWith(mockError);
+      expect(recordExceptionSpy).toHaveBeenCalledWith(mockError);
     });
 
     it("should handle unknown errors", async () => {

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getMockCookiesForTest } from "@/test/route-helpers";
+import { createRouteParamsContext, getMockCookiesForTest } from "@/test/route-helpers";
 
 // Mock next/headers cookies() BEFORE any imports that use it
 vi.mock("next/headers", () => ({
@@ -107,7 +107,7 @@ describe("ai stream route", () => {
       url: "http://localhost",
     });
 
-    const response = await POST(request);
+    const response = await POST(request, createRouteParamsContext());
 
     expect(response).toBeInstanceOf(Response);
     expect(response.status).toBe(200);
@@ -139,7 +139,7 @@ describe("ai stream route", () => {
       url: "http://localhost",
     });
 
-    const response = await POST(request);
+    const response = await POST(request, createRouteParamsContext());
 
     expect(response.status).toBe(200);
     expect(MOCK_STREAM_TEXT).toHaveBeenCalledWith(
@@ -168,7 +168,7 @@ describe("ai stream route", () => {
       url: "http://localhost",
     });
 
-    const response = await POST(request);
+    const response = await POST(request, createRouteParamsContext());
 
     expect(response.status).toBe(200);
     expect(MOCK_STREAM_TEXT).toHaveBeenCalledWith(
@@ -197,7 +197,7 @@ describe("ai stream route", () => {
       url: "http://localhost",
     });
 
-    const response = await POST(request);
+    const response = await POST(request, createRouteParamsContext());
     expect(response.status).toBe(200);
     expect(MOCK_STREAM_TEXT).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -215,7 +215,7 @@ describe("ai stream route", () => {
 
     // The route handler should handle this appropriately
     // Note: Next.js route handlers typically only respond to their defined methods
-    const response = await POST(request);
+    const response = await POST(request, createRouteParamsContext());
     expect(response).toBeDefined();
   });
 
@@ -237,7 +237,7 @@ describe("ai stream route", () => {
       url: "http://localhost",
     });
 
-    const response = await POST(request);
+    const response = await POST(request, createRouteParamsContext());
 
     expect(response.status).toBe(200);
   });
@@ -260,7 +260,7 @@ describe("ai stream route", () => {
       url: "http://localhost",
     });
 
-    await POST(request);
+    await POST(request, createRouteParamsContext());
 
     // Verify the route uses the expected model and configuration
     expect(MOCK_STREAM_TEXT).toHaveBeenCalledWith(
@@ -284,7 +284,7 @@ describe("ai stream route", () => {
     });
 
     // withApiGuards catches errors and returns error responses
-    const response = await POST(request);
+    const response = await POST(request, createRouteParamsContext());
     expect(response.status).toBe(500);
     const body = await response.json();
     expect(body.error).toBe("internal");
@@ -309,7 +309,7 @@ describe("ai stream route", () => {
     });
 
     // withApiGuards catches errors and returns error responses
-    const response = await POST(request);
+    const response = await POST(request, createRouteParamsContext());
     expect(response.status).toBe(500);
     const body = await response.json();
     expect(body.error).toBe("internal");
@@ -334,7 +334,7 @@ describe("ai stream route", () => {
       url: "http://localhost",
     });
 
-    const response = await POST(request);
+    const response = await POST(request, createRouteParamsContext());
 
     expect(response.status).toBe(200);
     expect(MOCK_STREAM_TEXT).toHaveBeenCalledWith(

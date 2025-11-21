@@ -9,7 +9,7 @@ import {
   resetApiRouteMocks,
 } from "@/test/api-route-helpers";
 import { unstubAllEnvs } from "@/test/env-helpers";
-import { createMockNextRequest } from "@/test/route-helpers";
+import { createMockNextRequest, createRouteParamsContext } from "@/test/route-helpers";
 
 const MOCK_INSERT = vi.hoisted(() => vi.fn());
 const MOCK_DELETE = vi.hoisted(() => vi.fn());
@@ -33,6 +33,7 @@ vi.mock("@/lib/supabase/rpc", () => ({
 
 vi.mock("@/lib/telemetry/span", () => ({
   recordTelemetryEvent: vi.fn(),
+  sanitizeAttributes: (attrs: unknown) => attrs,
   withTelemetrySpan: TELEMETRY_SPY,
 }));
 
@@ -54,7 +55,7 @@ describe("/api/keys routes", () => {
       method: "POST",
       url: "http://localhost/api/keys",
     });
-    const res = await POST(req);
+    const res = await POST(req, createRouteParamsContext());
     expect(res.status).toBe(400);
   });
 
@@ -66,7 +67,7 @@ describe("/api/keys routes", () => {
       method: "POST",
       url: "http://localhost/api/keys",
     });
-    const res = await POST(req);
+    const res = await POST(req, createRouteParamsContext());
     expect(res.status).toBe(204);
     expect(MOCK_INSERT).toHaveBeenCalledWith("test-user", "openai", "abc123");
   });
@@ -85,7 +86,7 @@ describe("/api/keys routes", () => {
       method: "POST",
       url: "http://localhost/api/keys",
     });
-    const res = await POST(req);
+    const res = await POST(req, createRouteParamsContext());
     expect(apiRouteRateLimitSpy).toHaveBeenCalledWith("test-user");
     expect(res.status).toBe(429);
     expect(res.headers.get("X-RateLimit-Limit")).toBe("10");
@@ -101,7 +102,7 @@ describe("/api/keys routes", () => {
       method: "POST",
       url: "http://localhost/api/keys",
     });
-    const res = await POST(req);
+    const res = await POST(req, createRouteParamsContext());
     expect(res.status).toBe(401);
     expect(MOCK_INSERT).not.toHaveBeenCalled();
   });

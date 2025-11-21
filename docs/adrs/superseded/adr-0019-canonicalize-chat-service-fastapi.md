@@ -1,7 +1,7 @@
 # ADR-0019: Canonicalize chat service via FastAPI backend
 
 **Version**: 1.1.0
-**Status**: Superseded by ADR-0031 (2025-11-02)
+**Status**: Superseded by ADR-0031 (Next.js Chat API AI SDK v6)
 **Date**: 2025-10-24
 **Category**: backend
 **Domain**: Chat Service / Streaming

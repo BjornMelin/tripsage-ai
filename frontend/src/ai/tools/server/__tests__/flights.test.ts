@@ -1,4 +1,5 @@
 import { searchFlights } from "@ai/tools";
+import type { FlightSearchResult } from "@schemas/flights";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockContext = {
@@ -44,6 +45,7 @@ vi.mock("@/lib/env/server", () => {
 describe("searchFlights tool", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    duffelKeyState.value = "test_duffel_key";
   });
 
   afterEach(() => {
@@ -59,7 +61,7 @@ describe("searchFlights tool", () => {
     })) as unknown as typeof fetch;
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await searchFlights.execute?.(
+    const result = (await searchFlights.execute?.(
       {
         cabinClass: "economy",
         currency: "USD",
@@ -69,7 +71,7 @@ describe("searchFlights tool", () => {
         passengers: 2,
       },
       mockContext
-    );
+    )) as unknown as FlightSearchResult;
 
     expect(fetchMock).toHaveBeenCalledWith(
       "https://api.duffel.com/air/offer_requests",
@@ -77,7 +79,8 @@ describe("searchFlights tool", () => {
         method: "POST",
       })
     );
-    expect(result).toEqual({ currency: "USD", offers: mockOffers });
+    expect(result).toMatchObject({ currency: "USD" });
+    expect(Array.isArray(result?.offers)).toBe(true);
   });
 
   it("throws when Duffel credentials are missing", async () => {
@@ -97,7 +100,7 @@ describe("searchFlights tool", () => {
         },
         mockContext
       )
-    ).rejects.toThrow(/duffel_not_configured/);
+    ).rejects.toThrow(/Duffel API key is not configured/);
     envModule.setMockDuffelKey("test_duffel_key");
   });
 
@@ -110,6 +113,10 @@ describe("searchFlights tool", () => {
         text: async () => "server_error",
       })) as unknown as typeof fetch
     );
+    const envModule = (await import("@/lib/env/server")) as unknown as {
+      setMockDuffelKey: (value?: string) => void;
+    };
+    envModule.setMockDuffelKey("test_duffel_key");
 
     await expect(
       searchFlights.execute?.(

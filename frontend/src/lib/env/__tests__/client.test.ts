@@ -41,6 +41,11 @@ describe("env/client", () => {
       vi.stubEnv("NODE_ENV", "development");
       // Missing required vars
 
+      // Suppress console.error output for this test
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        // Swallow expected validation error logs
+      });
+
       vi.resetModules();
       const { getClientEnv: freshGetClientEnv } = await import("../client");
 
@@ -48,6 +53,8 @@ describe("env/client", () => {
       expect(env.NEXT_PUBLIC_APP_NAME).toBe("TripSage");
       expect(env.NEXT_PUBLIC_SUPABASE_ANON_KEY).toBe("");
       expect(env.NEXT_PUBLIC_SUPABASE_URL).toBe("");
+
+      consoleErrorSpy.mockRestore();
     });
   });
 

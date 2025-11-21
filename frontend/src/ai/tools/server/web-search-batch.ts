@@ -7,14 +7,14 @@
 
 import "server-only";
 
+import { WEB_SEARCH_BATCH_OUTPUT_SCHEMA } from "@ai/tools/schemas/web-search";
+import { webSearchBatchInputSchema } from "@ai/tools/schemas/web-search-batch";
 import { normalizeWebSearchResults } from "@ai/tools/server/web-search-normalize";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import type { ToolCallOptions } from "ai";
 import { tool } from "ai";
 import type { z } from "zod";
-import { WEB_SEARCH_BATCH_OUTPUT_SCHEMA } from "@/ai/tools/schemas/web-search";
-import { webSearchBatchInputSchema } from "@/ai/tools/schemas/web-search-batch";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";

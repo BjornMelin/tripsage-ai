@@ -2,6 +2,8 @@
 
 TripSage development patterns, architecture, and implementation details.
 
+**Import Paths**: All TypeScript imports must follow the [Import Path Standards](import-paths.md). Use semantic aliases (`@schemas/*`, `@domain/*`, `@ai/*`) for architectural boundaries and `@/*` for generic src-root imports.
+
 ## Backend Architecture
 
 ### Technology Stack
@@ -402,7 +404,7 @@ agents using Vercel AI SDK v6:
 import "server-only";
 import type { NextRequest } from "next/server";
 import { runFlightAgent } from "@/lib/agents/flight-agent";
-import { resolveProvider } from "@/lib/providers/registry";
+import { resolveProvider } from "@ai/models/registry";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";

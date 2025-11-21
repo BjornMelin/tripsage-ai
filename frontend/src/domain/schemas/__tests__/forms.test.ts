@@ -463,10 +463,12 @@ describe("forms schemas", () => {
     it.concurrent("should validate expense form", () => {
       const result = expenseFormSchema.safeParse({
         amount: 100,
+        budgetId: "123e4567-e89b-12d3-a456-426614174000",
         category: "food",
         currency: "USD",
         date: "2024-06-01",
         description: "Dinner",
+        isShared: false,
       });
       expect(result.success).toBe(true);
     });
@@ -474,9 +476,12 @@ describe("forms schemas", () => {
     it.concurrent("should reject negative amount", () => {
       const result = expenseFormSchema.safeParse({
         amount: -100,
+        budgetId: "123e4567-e89b-12d3-a456-426614174000",
         category: "food",
         currency: "USD",
         date: "2024-06-01",
+        description: "Dinner",
+        isShared: false,
       });
       expect(result.success).toBe(false);
     });

@@ -29,6 +29,7 @@
     "test:coverage:shard": "vitest run --coverage.enabled --coverage.provider=v8 --reporter=blob",
     "test:merge": "vitest run --merge-reports",
     "test:e2e": "playwright test",
+    "ops": "tsx scripts/ops.ts",
     "boundary:check": "node ../scripts/check-boundaries.js",
     "codemod:ai-route:dry": "npx jscodeshift -t ../scripts/codemods/ai-route-v6-upgrade.js \"src/app/**/route.ts\" --parser=ts -d -p",
     "codemod:ai-route": "npx jscodeshift -t ../scripts/codemods/ai-route-v6-upgrade.js \"src/app/**/route.ts\" --parser=ts",
