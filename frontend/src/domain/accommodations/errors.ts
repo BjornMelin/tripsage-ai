@@ -8,6 +8,7 @@ export type ProviderErrorCode =
   | "rate_limited"
   | "unauthorized"
   | "provider_failed"
+  | "provider_timeout"
   | "validation_failed"
   | "circuit_open";
 

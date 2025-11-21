@@ -258,7 +258,15 @@ export class ExpediaProviderAdapter implements AccommodationProviderAdapter {
     return await Promise.race([
       fn(),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("provider_timeout")), this.timeoutMs)
+        setTimeout(
+          () =>
+            reject(
+              new ProviderError("provider_timeout", "expedia adapter timeout", {
+                provider: this.name,
+              })
+            ),
+          this.timeoutMs
+        )
       ),
     ]);
   }

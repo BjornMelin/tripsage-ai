@@ -45,6 +45,7 @@ vi.mock("@/lib/env/server", () => {
 describe("searchFlights tool", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    duffelKeyState.value = "test_duffel_key";
   });
 
   afterEach(() => {
@@ -99,7 +100,7 @@ describe("searchFlights tool", () => {
         },
         mockContext
       )
-    ).rejects.toThrow(/duffel_not_configured/);
+    ).rejects.toThrow(/Duffel API key is not configured/);
     envModule.setMockDuffelKey("test_duffel_key");
   });
 
@@ -112,6 +113,10 @@ describe("searchFlights tool", () => {
         text: async () => "server_error",
       })) as unknown as typeof fetch
     );
+    const envModule = (await import("@/lib/env/server")) as unknown as {
+      setMockDuffelKey: (value?: string) => void;
+    };
+    envModule.setMockDuffelKey("test_duffel_key");
 
     await expect(
       searchFlights.execute?.(

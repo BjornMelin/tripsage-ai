@@ -43,6 +43,18 @@ function toSnakeCase(value: unknown): unknown {
 }
 
 /**
+ * Error thrown when Duffel configuration is missing or invalid.
+ */
+class DuffelConfigError extends Error {
+  readonly code = "duffel_not_configured";
+
+  constructor(message = "Duffel API key is not configured") {
+    super(message);
+    this.name = "DuffelConfigError";
+  }
+}
+
+/**
  * Execute a Duffel offer request.
  *
  * @param params - The flight search request parameters.
@@ -55,9 +67,7 @@ export async function fetchDuffelOffers(
   const parsed = flightSearchRequestSchema.parse(params);
   const duffelKey = getDuffelKey();
   if (!duffelKey) {
-    const err = new Error("duffel_not_configured");
-    (err as Error & { code?: string }).code = "duffel_not_configured";
-    throw err;
+    throw new DuffelConfigError();
   }
 
   type CamelSlice = {
