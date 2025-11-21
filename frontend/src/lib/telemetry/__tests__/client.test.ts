@@ -2,15 +2,37 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const WEB_TRACER_PROVIDER = vi.hoisted(() =>
-  vi.fn().mockImplementation(() => ({
-    addSpanProcessor: vi.fn(),
-    register: vi.fn(),
-  }))
-);
-const OTLP_TRACE_EXPORTER = vi.hoisted(() => vi.fn().mockImplementation(() => ({})));
-const BATCH_SPAN_PROCESSOR = vi.hoisted(() => vi.fn().mockImplementation(() => ({})));
-const FETCH_INSTRUMENTATION = vi.hoisted(() => vi.fn().mockImplementation(() => ({})));
+const WEB_TRACER_PROVIDER = vi.hoisted(() => {
+  // Use a proper constructor function to avoid vi.fn() warnings
+  function WebTracerProvider() {
+    return {
+      addSpanProcessor: vi.fn(),
+      register: vi.fn(),
+    };
+  }
+  return vi.fn(WebTracerProvider);
+});
+const OTLP_TRACE_EXPORTER = vi.hoisted(() => {
+  // Use a proper constructor function to avoid vi.fn() warnings
+  function OTLPTraceExporter() {
+    return {};
+  }
+  return vi.fn(OTLPTraceExporter);
+});
+const BATCH_SPAN_PROCESSOR = vi.hoisted(() => {
+  // Use a proper constructor function to avoid vi.fn() warnings
+  function BatchSpanProcessor() {
+    return {};
+  }
+  return vi.fn(BatchSpanProcessor);
+});
+const FETCH_INSTRUMENTATION = vi.hoisted(() => {
+  // Use a proper constructor function to avoid vi.fn() warnings
+  function FetchInstrumentation() {
+    return {};
+  }
+  return vi.fn(FetchInstrumentation);
+});
 const REGISTER_INSTRUMENTATIONS = vi.hoisted(() => vi.fn());
 
 // Mock OpenTelemetry modules
@@ -94,7 +116,7 @@ describe("initTelemetry", () => {
 
   it("should handle initialization errors gracefully", async () => {
     // Make WebTracerProvider throw an error
-    WEB_TRACER_PROVIDER.mockImplementationOnce(() => {
+    WEB_TRACER_PROVIDER.mockImplementationOnce(function ErrorThrowingProvider() {
       throw new Error("Initialization failed");
     });
 
@@ -113,9 +135,14 @@ describe("initTelemetry", () => {
     initTelemetry();
 
     expect(OTLP_TRACE_EXPORTER).toHaveBeenCalled();
-    const exporterCall = OTLP_TRACE_EXPORTER.mock.calls[0];
-    expect(exporterCall[0]).toHaveProperty("url");
-    expect(typeof exporterCall[0].url).toBe("string");
+    // Access mock calls with proper type assertion
+    const mockCalls = OTLP_TRACE_EXPORTER.mock.calls as unknown as Array<
+      [{ url: string }]
+    >;
+    expect(mockCalls[0]).toBeDefined();
+    const exporterConfig = mockCalls[0]?.[0];
+    expect(exporterConfig).toHaveProperty("url");
+    expect(typeof exporterConfig?.url).toBe("string");
   });
 
   // Note: BatchSpanProcessor wiring is validated via code-level review;
