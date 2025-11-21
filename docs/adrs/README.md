@@ -53,7 +53,8 @@ architectural decision made along with its context and consequences.
 | [ADR-0040](adr-0040-consolidate-supabase-edge-to-vercel-webhooks.md) | Consolidate Supabase Edge (Deno) to Vercel Route Handlers + Database Webhooks | Accepted | 2025-11-13 |
 | [ADR-0041](adr-0041-webhook-notifications-qstash-and-resend.md) | Webhook Notifications via QStash and Resend | Accepted | 2025-11-13 |
 | [ADR-0042](adr-0042-supabase-memory-orchestrator.md) | Supabase-Centric Memory Orchestrator | Accepted | 2025-11-18 |
-| [ADR-0043](adr-0043-expedia-rapid-integration.md) | Expedia Rapid API Integration for Lodging Search/Booking | Proposed | 2025-11-19 |
+| [ADR-0043](superseded/adr-0043-expedia-rapid-integration.md) | Expedia Rapid API Integration for Lodging Search/Booking | Superseded | 2025-11-19 |
+| [ADR-0050](adr-0050-amadeus-google-places-stripe-hybrid.md) | Replace Expedia Rapid with Amadeus + Google Places + Stripe | Accepted | 2025-11-20 |
 | [ADR-0044](adr-0044-tool-registry-ts.md) | AI SDK v6 Tool Registry and MCP Integration | Accepted | 2025-11-11 |
 | [ADR-0045](adr-0045-flights-dto-frontend-zod.md) | Flights DTOs in Frontend (Next.js 16 + Zod v4) | Accepted | 2025-11-20 |
 | [ADR-0046](adr-0046-otel-tracing-frontend.md) | OTEL Tracing for Next.js 16 Route Handlers | Proposed | 2025-11-20 |
@@ -79,6 +80,8 @@ The following ADRs have been superseded by newer decisions:
 | [ADR-0020](superseded/adr-0020-rate-limiting-strategy.md) | Rate limiting strategy (Next + SlowAPI) | ADR-0032 | 2025-10-24 |
 | [ADR-0021](superseded/adr-0021-slowapi-aiolimiter-migration-historic.md) | SlowAPI + Aiolimiter Migration (Historic) | - | 2025-10-24 |
 | [ADR-0022](superseded/adr-0022-python-pytest-foundation.md) | Standardize Python Test Suite Foundations | ADR-0007 | 2025-10-24 |
+| [ADR-0043](superseded/adr-0043-expedia-rapid-integration.md) | Expedia Rapid API Integration for Lodging Search/Booking | ADR-0050 | 2025-11-20 |
+| [ADR-0049](superseded/adr-0049-expedia-rapid.md) | Expedia Rapid Integration Research | ADR-0050 | 2025-11-20 |
 
 ## By Category
 

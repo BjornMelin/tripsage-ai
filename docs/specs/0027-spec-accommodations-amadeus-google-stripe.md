@@ -197,9 +197,9 @@ Responsibilities:
 
 Implementation notes for AI agent:
 
-- [ ] Add `amadeus` to `frontend/package.json` dependencies.
+- [x] Add `amadeus` to `frontend/package.json` dependencies.
 
-- [ ] Create a singleton Amadeus client using env vars:
+- [x] Create a singleton Amadeus client using env vars:
 
   ```ts
   import Amadeus from "amadeus";
@@ -217,7 +217,7 @@ Implementation notes for AI agent:
   }
   ```
 
-- [ ] Implement wrappers (for example):
+- [x] Implement wrappers (for example):
 
   ```ts
   export async function listHotelsByGeocode(params: {
@@ -251,8 +251,8 @@ Responsibilities:
 
 Tasks:
 
-- [ ] Define `amadeusHotelSchema`, `amadeusOfferSchema`, `amadeusBookingSchema` using Zod.
-- [ ] Export TS types:
+- [x] Define `amadeusHotelSchema`, `amadeusOfferSchema`, `amadeusBookingSchema` using Zod.
+- [x] Export TS types:
 
   - `AmadeusHotel`, `AmadeusHotelOffer`, `AmadeusHotelBooking`.
 
@@ -277,8 +277,8 @@ Considerations:
 
 Tasks:
 
-- [ ] Implement `mapAmadeusHotelToAccommodationCard(hotel, offers, placesData?)`.
-- [ ] Ensure `AccommodationSearchResult` remains valid per `ACCOMMODATION_SEARCH_OUTPUT_SCHEMA`.
+- [x] Implement `mapAmadeusHotelToAccommodationCard(hotel, offers, placesData?)`.
+- [x] Ensure `AccommodationSearchResult` remains valid per `ACCOMMODATION_SEARCH_OUTPUT_SCHEMA`.
 
 ---
 
@@ -302,12 +302,12 @@ Target:
 
 Tasks:
 
-- [ ] Remove direct imports from `@schemas/expedia` in `service.ts`.
-- [ ] Introduce provider-agnostic DTOs for:
+- [x] Remove direct imports from `@schemas/expedia` in `service.ts`.
+- [x] Introduce provider-agnostic DTOs for:
 
   - `ProviderAvailabilityResult` (`bookingToken`, `expiresAt`, price, propertyId, rateId).
   - `ProviderBookingPayload` (opaque `unknown` mapped inside adapter).
-- [ ] Let `AccommodationsService` call:
+- [x] Let `AccommodationsService` call:
 
   - `this.deps.provider.search(params, ctx)`
   - `this.deps.provider.getDetails(params, ctx)`
@@ -318,21 +318,21 @@ Tasks:
 
 Tasks:
 
-- [ ] Replace use of Rapid search with Amadeus:
+- [x] Replace use of Rapid search with Amadeus:
 
   - Input: `AccommodationSearchParams` has `location`, `lat`, `lng`, `checkIn`, `checkOut`, `guests`.
   - Use geocode-based search:
 
     - If lat/lng present → Amadeus by-geocode.
     - Else, resolve via [Google Places Text Search](https://developers.google.com/maps/documentation/places/web-service) to lat/lng (`/api/places/search`).
-- [ ] Combine:
+- [x] Combine:
 
   - `AmadeusHotel` list.
   - For detail enrichment, later calls to Google Places via Place Details API using either:
 
     - `hotel.name + hotel.address` and Text Search, or
     - `hotel.geo` (lat/lng) and `type=lodging`.([Google for Developers](https://developers.google.com/maps/documentation/places/web-service))
-- [ ] Use Upstash caching for search results under the same `CACHE_NAMESPACE`:
+- [x] Use Upstash caching for search results under the same `CACHE_NAMESPACE`:
 
   - Key: `service:accom:search:${canonicalizeParamsForCache(params)}`.
 
@@ -340,8 +340,8 @@ Tasks:
 
 Tasks:
 
-- [ ] Update `checkAvailability` implementation to call `this.deps.provider.checkAvailability(...)` and map provider-agnostic result into `ACCOMMODATION_CHECK_AVAILABILITY_OUTPUT_SCHEMA`.
-- [ ] Update `book` implementation:
+- [x] Update `checkAvailability` implementation to call `this.deps.provider.checkAvailability(...)` and map provider-agnostic result into `ACCOMMODATION_CHECK_AVAILABILITY_OUTPUT_SCHEMA`.
+- [x] Update `book` implementation:
 
   - Remove `buildExpediaBookingPayload`.
   - Introduce `buildProviderBookingPayload` that delegates to `this.deps.provider.buildBookingPayload(params)`.
@@ -359,7 +359,7 @@ File: `frontend/src/domain/accommodations/providers/types.ts`
 
 Tasks:
 
-- [ ] Ensure `AccommodationProviderAdapter` has the following signature (simplified):
+- [x] Ensure `AccommodationProviderAdapter` has the following signature (simplified):
 
   ```ts
   export interface AccommodationProviderAdapter {
@@ -391,13 +391,13 @@ Tasks:
   }
   ```
 
-- [ ] `ProviderResult<T>` remains the same: `{ ok: true; value: T } | { ok: false; error: ProviderError }`.
+- [x] `ProviderResult<T>` remains the same: `{ ok: true; value: T } | { ok: false; error: ProviderError }`.
 
 ### 6.2 Implementation details
 
 Tasks:
 
-- [ ] Implement `AmadeusProviderAdapter` that:
+- [x] Implement `AmadeusProviderAdapter` that:
 
   - Wraps [Amadeus SDK](https://developers.amadeus.com/sdks-and-libraries) calls for search and booking. ([AI SDK v6](https://v6.ai-sdk.dev/docs/introduction))
   - Uses existing retry and circuit-breaker utilities (`retryWithBackoff` + `CircuitBreaker`) as seen in `ExpediaProviderAdapter`.
@@ -408,7 +408,7 @@ Tasks:
     - HTTP 429 → `rate_limited`.
     - 5xx → `provider_failed`.
 
-- [ ] Keep telemetry:
+- [x] Keep telemetry:
 
   - Wrap each operation in `withTelemetrySpan("provider.amadeus.operation")` with attributes:
 
@@ -429,11 +429,11 @@ Current state:
 
 Tasks:
 
-- [ ] Replace `EpsCreateBookingResponse` generic with `ProviderBookingResult`.
+- [x] Replace `EpsCreateBookingResponse` generic with `ProviderBookingResult`.
 
-- [ ] Move Expedia-specific extraction logic into `ExpediaProviderAdapter` (and later delete that adapter).
+- [x] Move Expedia-specific extraction logic into `ExpediaProviderAdapter` (and later delete that adapter).
 
-- [ ] Update `runBookingOrchestrator`:
+- [x] Update `runBookingOrchestrator`:
 
   - Do not inspect provider result for Expedia-specific fields.
   - Expect `providerResult.value` to be normalized:
@@ -446,13 +446,13 @@ Tasks:
     };
     ```
 
-- [ ] Map:
+- [x] Map:
 
   - `itineraryId` → `epsBookingId` (for backward DB compatibility).
   - `confirmationNumber` → `reference` and message text.
   - Keep `bookingId`, `stripePaymentIntentId`, `guest*`, `tripId` unchanged.
 
-- [ ] Make `PersistPayload` provider-agnostic:
+- [x] Make `PersistPayload` provider-agnostic:
 
   ```ts
   type PersistPayload = {
@@ -464,7 +464,7 @@ Tasks:
   };
   ```
 
-- [ ] Update Supabase insert in `AccommodationsService.book`:
+- [x] Update Supabase insert in `AccommodationsService.book`:
 
   - Continue writing to `bookings` with existing snake_case columns (`eps_booking_id`, etc.) for now, but treat it logically as `provider_booking_id`.
 
@@ -478,14 +478,14 @@ File: `frontend/src/ai/tools/server/accommodations.ts`
 
 Tasks:
 
-- [ ] Update tool descriptions:
+- [x] Update tool descriptions:
 
   - Replace “Expedia Partner Solutions” / “Expedia Rapid” with “Amadeus Self-Service APIs for hotels” and “Google Places API for enrichment”.
-- [ ] Remove `normalizePhoneForRapid` and `extractTokenFromHref` from this file:
+- [x] Remove `normalizePhoneForRapid` and `extractTokenFromHref` from this file:
 
   - If still needed, they should live inside provider adapters.
-- [ ] Keep input/output schemas unchanged (`ACCOMMODATION_*`).
-- [ ] Ensure `searchAccommodations`, `getAccommodationDetails`,
+- [x] Keep input/output schemas unchanged (`ACCOMMODATION_*`).
+- [x] Ensure `searchAccommodations`, `getAccommodationDetails`,
   `checkAvailability`, `bookAccommodation` still call the same service methods.
 
 ### 8.2 Agent
@@ -494,10 +494,10 @@ File: `frontend/src/lib/agents/accommodation-agent.ts`
 
 Tasks:
 
-- [ ] Keep tool list unchanged:
+- [x] Keep tool list unchanged:
 
   - `ACCOMMODATION_TOOLS = { searchAccommodations, getAccommodationDetails, checkAvailability, bookAccommodation }`
-- [ ] Update internal instructions/prompts:
+- [x] Update internal instructions/prompts:
 
   - Avoid hard-coding the word “Expedia”.
   - Clarify that the agent is using “real-time hotel offers and bookings via Amadeus and enriches with Google Places hotel data”.
@@ -565,16 +565,15 @@ Add/Update:
 
 Scope:
 
-- [ ] Amadeus client wrappers:
+- [x] Amadeus client wrappers:
 
   - Mock `amadeus` SDK; verify correct params and error mapping.
-- [ ] Mappers:
+- [x] Mappers:
 
   - Given sample Amadeus responses, ensure `Accommodation` object shapes match schemas.
 - [ ] Service search:
 
-  - Caches results with Upstash.
-  - Respects rate limiting when `rateLimiter` is configured.
+  - Normal path covered by integration test; add assertions for cache hits and rate limiting.
 - [ ] Booking orchestrator:
 
   - Refunds on provider error.
@@ -586,10 +585,10 @@ Using Vitest + MSW:
 
 - [ ] Mock Amadeus HTTP endpoints (or SDK calls) to simulate:
 
-  - Normal responses.
-  - 401, 404, 429, 500 error conditions.
-- [ ] Mock Google Places endpoints under `/api/places/*`.
-- [ ] End-to-end tests for:
+  - Normal responses (covered).
+  - 401, 404, 429, 500 error conditions (pending).
+- [x] Mock Google Places endpoints under `/api/places/*`.
+- [x] End-to-end tests for:
 
   - `searchAccommodations` tool.
   - `getAccommodationDetails` combining Amadeus & Google Places.
@@ -626,22 +625,29 @@ Using Vitest + MSW:
 
 ### Phase 5 – UI & UX
 
-- [ ] Re-enable `ModernHotelResults` and ensure it renders new data.
-- [ ] Update `AccommodationCard` to use Google Places ratings/photos when available.
-- [ ] Validate responsive behavior and A11y (labels, alt tags).
+- [x] Re-enable `ModernHotelResults` and ensure it renders new data.
+- [x] Update `AccommodationCard` to use Google Places ratings/photos when available.
+- [x] Validate responsive behavior and A11y (labels, alt tags).
 
 ### Phase 6 – Decommission Expedia
 
-- [ ] Remove `domain/expedia` folder and references.
-- [ ] Remove `@schemas/expedia.ts` usage.
-- [ ] Strip Expedia env vars from `.env.example` and code.
-- [ ] Mark old Expedia ADRs/specs as `Superseded`.
+- [x] Remove `domain/expedia` folder and references.
+- [x] Remove `@schemas/expedia.ts` usage.
+- [x] Strip Expedia env vars from `.env.example` and code.
+- [x] Mark old Expedia ADRs/specs as `Superseded`.
 
 ### Phase 7 – Regression & Load
 
 - [ ] Run full test suite (unit + integration).
 - [ ] Add light load testing of hotel search (e.g., 100 consecutive searches).
 - [ ] Verify Amadeus and Google quotas are not exceeded (Amadeus free tier; Google usage dashboard).([Amadeus IT Group SA](https://developers.amadeus.com/self-service))
+
+### Phase 8 – Telemetry & Security Hardening
+
+- [x] Add OTEL span coverage for Places enrichment, server actions, and booking flows (no console logging).
+- [x] Ensure accommodation external API calls remain server-side or use public browser-safe keys; proxy photo fetches if required.
+- [ ] Align Amadeus booking payload `payments` structure and currency/amount with Stripe PaymentIntent values.
+- [x] Replace non-secure random usage in accommodations feature with `secureUuid`/`secureId` where applicable.
 
 ---
 
