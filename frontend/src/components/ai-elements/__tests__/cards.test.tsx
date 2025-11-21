@@ -10,10 +10,8 @@ describe("AI Elements Cards", () => {
     render(
       <FlightOfferCard
         result={{
-          fromCache: false,
-          provider: "duffel",
-          offers: [],
           currency: "USD",
+          fromCache: false,
           itineraries: [
             {
               id: "it-1",
@@ -29,6 +27,8 @@ describe("AI Elements Cards", () => {
               ],
             },
           ],
+          offers: [],
+          provider: "duffel",
           schemaVersion: "flight.v2",
           sources: [{ title: "Example", url: "https://example.com" }],
         }}
