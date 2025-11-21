@@ -122,7 +122,7 @@ export const GET = withApiGuards({
   auth: true,
   rateLimit: "trips:suggestions",
   telemetry: "trips.suggestions",
-})((req, { user }) => {
+})(async (req, { user }) => {
   const userId = user?.id;
   if (!userId) {
     return NextResponse.json(
@@ -131,5 +131,5 @@ export const GET = withApiGuards({
     );
   }
 
-  return generateSuggestions(req, userId);
+  return await generateSuggestions(req, userId);
 });

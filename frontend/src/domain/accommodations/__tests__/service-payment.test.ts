@@ -3,7 +3,13 @@ import { AccommodationsService } from "@domain/accommodations/service";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/cache/upstash", () => ({
-  getCachedJson: vi.fn().mockResolvedValue({ currency: "USD", total: "123.45" }),
+  getCachedJson: vi.fn().mockResolvedValue({
+    bookingToken: "token-123",
+    price: { currency: "USD", total: "123.45" },
+    propertyId: "H1",
+    rateId: "token-123",
+    userId: "user-1",
+  }),
   setCachedJson: vi.fn(),
 }));
 
@@ -30,8 +36,18 @@ describe("AccommodationsService booking payments", () => {
     };
 
     const supabase = {
-      from: () => ({
+      from: (table: string) => ({
         insert: async () => ({ error: null }),
+        select: () => ({
+          eq: () => ({
+            eq: () => ({
+              single: async () =>
+                table === "trips"
+                  ? { data: { id: 1, user_id: "user-1" }, error: null }
+                  : { data: null, error: null },
+            }),
+          }),
+        }),
       }),
     };
 

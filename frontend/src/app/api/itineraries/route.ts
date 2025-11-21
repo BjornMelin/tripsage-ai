@@ -55,6 +55,21 @@ async function createItineraryItem(
     return validation.error;
   }
 
+  if (validation.data.tripId) {
+    const { data: trip, error: tripError } = await supabase
+      .from("trips")
+      .select("id, user_id")
+      .eq("id", validation.data.tripId)
+      .eq("user_id", userId)
+      .single();
+    if (tripError || !trip) {
+      return NextResponse.json(
+        { error: "forbidden", reason: "Trip not found for user" },
+        { status: 403 }
+      );
+    }
+  }
+
   const insertPayload = mapCreatePayloadToInsert(validation.data, userId);
 
   const { data, error } = await supabase
@@ -75,14 +90,30 @@ async function createItineraryItem(
 /** Lists itinerary items, optionally filtered by trip ID. */
 async function listItineraryItems(
   supabase: TypedServerSupabase,
+  userId: string,
   req: NextRequest
 ): Promise<NextResponse> {
   const url = new URL(req.url);
   const tripIdParam = url.searchParams.get("tripId");
   const tripId = tripIdParam ? Number.parseInt(tripIdParam, 10) : undefined;
 
-  let query = supabase.from("itinerary_items").select("*");
-  if (Number.isFinite(tripId)) {
+  const { data: trips, error: tripsError } = await supabase
+    .from("trips")
+    .select("id")
+    .eq("user_id", userId);
+  if (tripsError) {
+    return NextResponse.json({ error: "Failed to load trips" }, { status: 500 });
+  }
+  const allowedTripIds = (trips ?? []).map((t) => t.id);
+  if (allowedTripIds.length === 0) {
+    return NextResponse.json([], { status: 200 });
+  }
+
+  let query = supabase
+    .from("itinerary_items")
+    .select("*")
+    .in("trip_id", allowedTripIds);
+  if (Number.isFinite(tripId) && allowedTripIds.includes(tripId as number)) {
     query = query.eq("trip_id", tripId as number);
   }
 
@@ -106,7 +137,16 @@ export const GET = withApiGuards({
   auth: true,
   rateLimit: "itineraries:list",
   telemetry: "itineraries.list",
-})((req, { supabase }) => listItineraryItems(supabase, req));
+})(async (req, { supabase, user }) => {
+  const userId = user?.id;
+  if (!userId) {
+    return NextResponse.json(
+      { error: "unauthorized", reason: "Authentication required" },
+      { status: 401 }
+    );
+  }
+  return await listItineraryItems(supabase, userId, req);
+});
 
 /**
  * POST /api/itineraries
@@ -117,7 +157,7 @@ export const POST = withApiGuards({
   auth: true,
   rateLimit: "itineraries:create",
   telemetry: "itineraries.create",
-})((req, { supabase, user }) => {
+})(async (req, { supabase, user }) => {
   const userId = user?.id;
   if (!userId) {
     return NextResponse.json(
@@ -126,5 +166,5 @@ export const POST = withApiGuards({
     );
   }
 
-  return createItineraryItem(supabase, userId, req);
+  return await createItineraryItem(supabase, userId, req);
 });

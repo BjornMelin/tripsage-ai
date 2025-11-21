@@ -108,9 +108,9 @@ export function AccommodationCard({
                 <span className="capitalize">{amenity.replace("_", " ")}</span>
               </div>
             ))}
-            {accommodation.amenities.length > 6 && (
+            {(accommodation.amenities?.length ?? 0) > 6 && (
               <span className="text-xs text-muted-foreground">
-                +{accommodation.amenities.length - 6} more
+                +{(accommodation.amenities?.length ?? 0) - 6} more
               </span>
             )}
           </div>
