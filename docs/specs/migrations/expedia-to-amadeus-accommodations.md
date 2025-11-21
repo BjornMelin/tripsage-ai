@@ -51,6 +51,9 @@ Related: `adr-0050-amadeus-google-places-stripe-hybrid.md`, `0027-spec-accommoda
 - Architecture (zen.analyze):
   - Identified risks: Places geocoding/enrichment lacked retries/telemetry; Amadeus booking payload used placeholder card; persistence still writes to `eps_booking_id`.
   - Actions taken: added retry/backoff + telemetry spans for Places geocode/details; normalized geocode cache keys. Payment alignment and persistence column rename remain open.
+- Code Review (zen.codereview):
+  - Issues: hard-coded Amadeus card payload; empty-hotel search path; geocode failures surfacing as location_not_found; legacy `eps_booking_id` field.
+  - Fixes applied: removed hard-coded payment card (bookings now pay-at-property/agency hold), short-circuit when no hotels, geocode now throws on provider errors with telemetry, maintained note to migrate bookings persistence to provider-neutral field.
 
 ## Phase 3 – Migrate Search & Details
 
