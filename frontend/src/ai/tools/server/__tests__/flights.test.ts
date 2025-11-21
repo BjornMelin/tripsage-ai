@@ -1,4 +1,5 @@
 import { searchFlights } from "@ai/tools";
+import type { FlightSearchResult } from "@schemas/flights";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockContext = {
@@ -69,7 +70,7 @@ describe("searchFlights tool", () => {
         passengers: 2,
       },
       mockContext
-    )) as any;
+    )) as unknown as FlightSearchResult;
 
     expect(fetchMock).toHaveBeenCalledWith(
       "https://api.duffel.com/air/offer_requests",

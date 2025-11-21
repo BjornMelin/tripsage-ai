@@ -84,7 +84,7 @@ function useTrips() {
 - You need strong schema versioning and stable import paths across multiple layers
 - The schema exceeds ~150 LOC or has multiple discriminated unions that benefit from dedicated file organization
 
-**Type definitions**: Keep derived TypeScript types (`z.infer<typeof Schema>`) in `frontend/src/domain/types/index.ts` for ergonomic imports without pulling Zod at call sites.
+**Type definitions**: Import types directly from the defining schema module (`frontend/src/domain/schemas/<feature>.ts`) to keep schemas and inferred types co-located. Avoid separate type barrel files.
 
 **Import paths**: Use `@schemas/*` alias for all schema imports. See [Import Paths](import-paths.md) for details.
 
@@ -105,7 +105,6 @@ const searchSchema = ACCOMMODATION_SEARCH_INPUT_SCHEMA.refine(
   "checkout must be after checkin"
 );
 
-// frontend/src/domain/types/index.ts - types for ergonomic imports
 export type AccommodationSearchParams = z.infer<typeof ACCOMMODATION_SEARCH_INPUT_SCHEMA>;
 ```
 
