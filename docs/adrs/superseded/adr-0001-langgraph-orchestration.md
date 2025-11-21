@@ -1,7 +1,7 @@
 # ADR-0001: Use LangGraph for Agent Orchestration
 
 **Version**: 1.0.0
-**Status**: Accepted
+**Status**: Superseded by ADR-0039 (Frontend Agent Modernization)
 **Date**: 2025-06-17
 **Category**: backend
 **Domain**: LangGraph

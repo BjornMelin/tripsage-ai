@@ -1,7 +1,7 @@
 # ADR-0012: Canonical Flights DTOs and Service Convergence
 
 **Version**: 1.0.0  
-**Status**: Superseded by ADR-0045 (frontend Zod v4 DTOs)  
+**Status**: Superseded by ADR-0045 (frontend Zod v4 DTOs)
 **Date**: 2025-10-21  
 **Category**: data  
 **Domain**: Flights DTO
