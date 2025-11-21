@@ -36,7 +36,17 @@ import { processBookingPayment } from "@/lib/payments/booking-payment";
 import { secureUuid } from "@/lib/security/random";
 import { requireApproval } from "./approvals";
 
-/** Accommodations service instance for tool execution. */
+/**
+ * Accommodations service instance for tool execution.
+ *
+ * This service is initialized at module scope, creating a singleton instance.
+ * Singleton initialization is appropriate here because:
+ * - The service manages connection pooling and shared adapters.
+ * - Avoids redundant creation of service instances for each tool execution.
+ * - The service is lightweight and always needed for all exported tools.
+ *
+ * If future requirements change and lazy initialization is needed, refactor accordingly.
+ */
 const accommodationsService = getAccommodationsService();
 
 export { ACCOMMODATION_SEARCH_INPUT_SCHEMA as searchAccommodationsInputSchema };

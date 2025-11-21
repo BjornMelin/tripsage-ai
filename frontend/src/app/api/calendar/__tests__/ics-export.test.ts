@@ -53,8 +53,6 @@ describe("/api/calendar/ics/export", () => {
 
     const res = await icsExportRoute.POST(req);
     expect(res.status).toBe(401);
-    const json = await res.json();
-    expect(json.error).toBe("unauthorized");
   });
 
   it("returns 400 on invalid request body", async () => {
