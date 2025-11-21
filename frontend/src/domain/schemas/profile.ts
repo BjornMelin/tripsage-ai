@@ -46,7 +46,7 @@ export const personalInfoFormSchema = z.object({
     .string()
     .max(100, { error: "Location must be less than 100 characters" })
     .optional(),
-  phoneNumber: PHONE_SCHEMA,
+  phoneNumber: PHONE_SCHEMA.optional(),
   timezone: z.string().optional(),
   website: primitiveSchemas.url.optional().or(z.literal("")),
 });
