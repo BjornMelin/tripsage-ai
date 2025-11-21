@@ -56,7 +56,7 @@ describe("runBookingOrchestrator", () => {
       }
     );
 
-    expect(result.epsBookingId).toBe("ITIN123");
+    expect(result.providerBookingId).toBe("ITIN123");
     expect(result.reference).toContain("CONF");
   });
 });

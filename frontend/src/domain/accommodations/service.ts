@@ -53,6 +53,7 @@ export type ServiceContext = ProviderContext & {
 };
 
 const CACHE_NAMESPACE = "service:accom:search";
+const BOOKING_CACHE_NAMESPACE = "service:accom:booking";
 
 /** Accommodations service class. */
 export class AccommodationsService {
@@ -183,6 +184,12 @@ export class AccommodationsService {
       ctx
     );
 
+    await setCachedJson(
+      `${BOOKING_CACHE_NAMESPACE}:${availability.value.bookingToken}`,
+      availability.value.price,
+      10 * 60
+    );
+
     return ACCOMMODATION_CHECK_AVAILABILITY_OUTPUT_SCHEMA.parse({
       bookingToken: availability.value.bookingToken,
       expiresAt: availability.value.expiresAt,
@@ -206,13 +213,25 @@ export class AccommodationsService {
     const providerPayload = this.deps.provider.buildBookingPayload(params);
     const idempotencyKey = params.idempotencyKey ?? secureUuid();
 
-    const result = await runBookingOrchestrator(
-      { provider: this.deps.provider, supabase },
-      {
-        amount: params.amount,
-        approvalKey: "bookAccommodation",
+    const cachedPrice = await getCachedJson<{
+      currency: string;
+      total: string;
+    }>(`${BOOKING_CACHE_NAMESPACE}:${params.bookingToken}`);
+    if (!cachedPrice) {
+      throw new Error("booking_price_not_cached");
+    }
+    const amountCents = Math.round(Number.parseFloat(cachedPrice.total) * 100);
+    if (!Number.isFinite(amountCents) || amountCents <= 0) {
+      throw new Error("booking_price_invalid");
+    }
+
+        const result = await runBookingOrchestrator(
+          { provider: this.deps.provider, supabase },
+          {
+            amount: amountCents,
+            approvalKey: "bookAccommodation",
         bookingToken: params.bookingToken,
-        currency: params.currency,
+        currency: cachedPrice.currency,
         guest: {
           email: params.guestEmail,
           name: params.guestName,
@@ -233,7 +252,7 @@ export class AccommodationsService {
             checkin: params.checkin,
             checkout: params.checkout,
             // biome-ignore lint/style/useNamingConvention: database columns use snake_case
-            eps_booking_id: payload.providerBookingId,
+            provider_booking_id: payload.providerBookingId,
             // biome-ignore lint/style/useNamingConvention: database columns use snake_case
             guest_email: params.guestEmail,
             // biome-ignore lint/style/useNamingConvention: database columns use snake_case
