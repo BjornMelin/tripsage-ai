@@ -110,7 +110,7 @@ export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormPro
       if (result.success) {
         // Redirect to a sanitized destination on the same origin
         const safeNext =
-          nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//")
+          nextParam?.startsWith("/") && !nextParam.startsWith("//")
             ? nextParam
             : redirectTo;
         router.push(safeNext);
