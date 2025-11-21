@@ -96,11 +96,16 @@ vi.mock("next/navigation", () => {
 // Simplify Next/Image for tests to avoid overhead and ESM/DOM quirks
 vi.mock("next/image", () => {
   return {
-    default: (props: Record<string, unknown> & { src?: string; alt?: string }) => {
-      const { src, alt, ...rest } = props ?? {};
+    default: (props: Record<string, unknown> & { src?: string; alt?: string; fill?: boolean }) => {
+      const { src, alt, fill, ...rest } = props ?? {};
+      // Convert fill prop to style for img element (fill makes image fill parent container)
+      const style = fill
+        ? { position: "absolute", inset: 0, width: "100%", height: "100%" }
+        : undefined;
       return React.createElement("img", {
         alt: alt ?? "",
         src: typeof src === "string" ? src : "",
+        style,
         ...rest,
       } as Record<string, unknown>);
     },
