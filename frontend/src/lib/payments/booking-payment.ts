@@ -7,7 +7,7 @@
 import { createPaymentIntent, getPaymentIntent, refundPayment } from "./stripe-client";
 
 /**
- * Process booking payment and create Expedia booking.
+ * Process booking payment and create accommodation booking.
  *
  * @param params - Booking payment parameters
  * @returns Payment confirmation details
