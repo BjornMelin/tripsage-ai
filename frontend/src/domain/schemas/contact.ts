@@ -4,20 +4,10 @@
  */
 
 import { z } from "zod";
-import { primitiveSchemas } from "./registry";
+import { EMAIL_SCHEMA, NAME_SCHEMA } from "./shared/person";
 
 // ===== FORM SCHEMAS =====
 // UI form validation schemas with user-friendly error messages
-
-// Common validation patterns
-const EMAIL_SCHEMA = primitiveSchemas.email.max(255);
-const NAME_SCHEMA = z
-  .string()
-  .min(1, { error: "Name is required" })
-  .max(50, { error: "Name too long" })
-  .regex(/^[a-zA-Z\s\-'.]+$/, {
-    error: "Name can only contain letters, spaces, hyphens, apostrophes, and periods",
-  });
 
 /**
  * Zod schema for contact form validation.
@@ -52,7 +42,7 @@ export const feedbackFormSchema = z.object({
     .string()
     .min(10, { error: "Please provide more details" })
     .max(1000, { error: "Description too long" }),
-  email: primitiveSchemas.email.optional(),
+  email: EMAIL_SCHEMA.optional(),
   rating: z
     .number()
     .int()

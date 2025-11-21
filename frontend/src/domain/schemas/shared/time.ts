@@ -18,8 +18,8 @@ export const FUTURE_DATE_STRING = ISO_DATE_STRING.refine(
 
 export const DATE_RANGE_SCHEMA = z
   .strictObject({
-    start: ISO_DATE_STRING,
     end: ISO_DATE_STRING,
+    start: ISO_DATE_STRING,
   })
   .refine((d) => new Date(d.end) > new Date(d.start), {
     error: "End date must be after start date",

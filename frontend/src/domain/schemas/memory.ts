@@ -4,6 +4,7 @@
  */
 
 import { z } from "zod";
+import { messageRoleSchema } from "./chat";
 import { primitiveSchemas } from "./registry";
 
 // ===== CORE SCHEMAS =====
@@ -81,7 +82,7 @@ export type MemoryInsight = z.infer<typeof MEMORY_INSIGHT_SCHEMA>;
 export const CONVERSATION_MESSAGE_SCHEMA = z.object({
   content: z.string(),
   metadata: z.record(z.string(), z.unknown()).optional(),
-  role: z.enum(["user", "assistant", "system"]),
+  role: messageRoleSchema,
   timestamp: primitiveSchemas.isoDateTime.optional(),
 });
 

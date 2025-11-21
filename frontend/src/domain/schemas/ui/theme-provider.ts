@@ -5,9 +5,6 @@
 
 import { z } from "zod";
 
-// ===== CORE SCHEMAS =====
-// Core business logic schemas for theme provider
-
 const ATTRIBUTE_SCHEMA = z.union([
   z.literal("class"),
   z.string().regex(/^data-/, { error: "Must be a data attribute (data-*)" }),
@@ -15,10 +12,7 @@ const ATTRIBUTE_SCHEMA = z.union([
 
 const VALUE_OBJECT_SCHEMA = z.record(z.string(), z.string());
 
-/**
- * Zod schema for ThemeProvider props aligned with next-themes.
- * Validates theme provider configuration including attributes, themes, and storage settings.
- */
+/** Zod schema for ThemeProvider props aligned with next-themes. */
 export const themeProviderPropsSchema = z.object({
   attribute: z.union([ATTRIBUTE_SCHEMA, z.array(ATTRIBUTE_SCHEMA)]).optional(),
   defaultTheme: z.string().optional(),
@@ -32,30 +26,11 @@ export const themeProviderPropsSchema = z.object({
   value: VALUE_OBJECT_SCHEMA.optional(),
 });
 
-/** TypeScript type for validated theme provider props. */
 export type ValidatedThemeProviderProps = z.infer<typeof themeProviderPropsSchema>;
 
-// ===== UTILITY FUNCTIONS =====
-// Validation helpers for theme provider props
-
-/**
- * Validates theme provider props without throwing.
- * Returns a result object with success/error information.
- *
- * @param props - Props to validate
- * @returns SafeParse result with success/error information
- */
 export const validateThemeProviderProps = (props: unknown) =>
   themeProviderPropsSchema.safeParse(props);
 
-/**
- * Parses and validates theme provider props, throwing on validation failure.
- * Throws an error with detailed validation messages if validation fails.
- *
- * @param props - Props to parse and validate
- * @returns Validated theme provider props
- * @throws {Error} When validation fails with detailed error messages
- */
 export const parseThemeProviderProps = (
   props: unknown
 ): ValidatedThemeProviderProps => {
@@ -69,10 +44,6 @@ export const parseThemeProviderProps = (
   return result.data;
 };
 
-/**
- * Default theme provider configuration with sensible defaults.
- * Provides standard configuration for theme management.
- */
 export const DEFAULT_THEME_CONFIG = parseThemeProviderProps({
   attribute: "class",
   defaultTheme: "system",
