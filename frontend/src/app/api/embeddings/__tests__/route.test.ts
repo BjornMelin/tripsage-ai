@@ -2,7 +2,11 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as route from "@/app/api/embeddings/route";
-import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
+import {
+  createMockNextRequest,
+  createRouteParamsContext,
+  getMockCookiesForTest,
+} from "@/test/route-helpers";
 
 // Mock next/headers cookies() BEFORE any imports that use it
 vi.mock("next/headers", () => ({
@@ -78,7 +82,8 @@ describe("/api/embeddings", () => {
         body: { text: "" },
         method: "POST",
         url: "http://localhost/api/embeddings",
-      })
+      }),
+      createRouteParamsContext()
     );
     expect(res.status).toBe(400);
   });
@@ -89,7 +94,8 @@ describe("/api/embeddings", () => {
         body: { text: "hello world" },
         method: "POST",
         url: "http://localhost/api/embeddings",
-      })
+      }),
+      createRouteParamsContext()
     );
     expect(res.status).toBe(200);
     const json = await res.json();
@@ -114,7 +120,8 @@ describe("/api/embeddings", () => {
         },
         method: "POST",
         url: "http://localhost/api/embeddings",
-      })
+      }),
+      createRouteParamsContext()
     );
 
     expect(res.status).toBe(200);
@@ -144,7 +151,8 @@ describe("/api/embeddings", () => {
         },
         method: "POST",
         url: "http://localhost/api/embeddings",
-      })
+      }),
+      createRouteParamsContext()
     );
 
     expect(res.status).toBe(200);

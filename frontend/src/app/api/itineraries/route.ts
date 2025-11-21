@@ -106,7 +106,7 @@ export const GET = withApiGuards({
   auth: true,
   rateLimit: "itineraries:list",
   telemetry: "itineraries.list",
-})(async (req, { supabase }) => listItineraryItems(supabase, req));
+})((req, { supabase }) => listItineraryItems(supabase, req));
 
 /**
  * POST /api/itineraries
