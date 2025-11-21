@@ -50,11 +50,12 @@ export function AccommodationCard({
           googleKey ? `&key=${googleKey}` : ""
         }`
       : undefined);
-  const nights = Math.ceil(
+  const rawNights = Math.ceil(
     (new Date(accommodation.checkOut).getTime() -
       new Date(accommodation.checkIn).getTime()) /
       (1000 * 60 * 60 * 24)
   );
+  const nights = Math.max(1, rawNights);
 
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">

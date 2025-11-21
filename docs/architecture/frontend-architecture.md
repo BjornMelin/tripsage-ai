@@ -63,7 +63,7 @@ src/
   app/                 # App Router (pages, layouts, API route handlers)
     api/**/route.ts    # Server-only handlers; no module-scope state
   components/          # UI primitives and features (client/server as needed)
-  domain/              # Domain logic (e.g., accommodations, expedia)
+  domain/              # Domain logic (e.g., accommodations, amadeus)
   hooks/               # Reusable React hooks (client)
   lib/                 # Providers, telemetry, supabase, tools, security, etc.
   ai/                  # AI-specific helpers/models

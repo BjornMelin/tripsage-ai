@@ -1,4 +1,4 @@
-# ADR-0049: Replace Expedia Rapid with Amadeus + Google Places + Stripe
+# ADR-0050: Replace Expedia Rapid with Amadeus + Google Places + Stripe
 
 **Version**: 1.0.0  
 **Status**: Accepted  

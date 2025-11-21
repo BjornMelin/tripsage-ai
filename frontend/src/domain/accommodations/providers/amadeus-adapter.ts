@@ -188,6 +188,21 @@ export class AmadeusProviderAdapter implements AccommodationProviderAdapter {
         ? (options.totalCents / 100).toFixed(2)
         : undefined;
 
+    const payments =
+      options?.paymentIntentId && options?.currency && amountValue
+        ? [
+            {
+              amount: {
+                amount: amountValue,
+                currencyCode: options.currency,
+              },
+              method: "external_prepaid",
+              reference: options.paymentIntentId,
+              vendorCode: "STRIPE",
+            },
+          ]
+        : [];
+
     return {
       data: {
         guests: [
@@ -201,7 +216,7 @@ export class AmadeusProviderAdapter implements AccommodationProviderAdapter {
           },
         ],
         hotelOffers: [{ id: params.bookingToken }],
-        payments: [],
+        payments,
         remarks: {
           general: [
             {
