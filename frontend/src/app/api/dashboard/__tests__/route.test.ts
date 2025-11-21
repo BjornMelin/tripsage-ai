@@ -23,7 +23,7 @@ describe("/api/dashboard route", () => {
     apiRouteSupabaseMock.from.mockReturnValue({ select: selectMock } as never);
     const mod = await import("../route");
     const req = createMockRequest("http://localhost/api/dashboard");
-    const res = await mod.GET(req);
+    const res = await mod.GET(req, { params: Promise.resolve({}) });
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
