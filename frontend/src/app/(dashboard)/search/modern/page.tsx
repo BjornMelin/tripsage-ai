@@ -30,6 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { searchHotelsAction } from "./actions";
 
 // Mock data uses the Modern types directly
 
@@ -233,6 +234,7 @@ export default function ModernSearchPage() {
   const [activeTab, setActiveTab] = useState<"flights" | "hotels">("flights");
   const [showResults, setShowResults] = useState(false);
   const [_searchData, setSearchData] = useState<Record<string, unknown> | null>(null);
+  const [hotelResults, setHotelResults] = useState<ModernHotelResult[]>([]);
 
   const handleFlightSearch = async (params: ModernFlightSearchParams) => {
     await new Promise<void>((resolve) => {
@@ -248,19 +250,23 @@ export default function ModernSearchPage() {
     });
   };
 
-  const handleHotelSearch = async (params: ModernHotelSearchParams) => {
-    await new Promise<void>((resolve) => {
-      startTransition(() => {
+  const handleHotelSearch = (params: ModernHotelSearchParams) =>
+    new Promise<void>((resolve) => {
+      startTransition(async () => {
         setSearchData(params as unknown as Record<string, unknown>);
-        setShowResults(true);
-        // Simulate API call
-        setTimeout(() => {
+        try {
+          const results = await searchHotelsAction(params);
+          setHotelResults(results);
           setShowResults(true);
+        } catch (error) {
+          console.error("Hotel search failed", error);
+          setHotelResults([]);
+          setShowResults(true);
+        } finally {
           resolve();
-        }, 1500);
+        }
       });
     });
-  };
 
   const handleFlightSelect = async (_flight: ModernFlightResult) => {
     // Handle flight selection
@@ -367,7 +373,7 @@ export default function ModernSearchPage() {
                     </Badge>
                   </div>
                   <ModernHotelResults
-                    results={MOCK_HOTEL_RESULTS}
+                    results={hotelResults.length ? hotelResults : MOCK_HOTEL_RESULTS}
                     loading={isPending}
                     onSelect={handleHotelSelect}
                     onSaveToWishlist={handleSaveToWishlist}

@@ -1,7 +1,8 @@
 # ADR-0043: Expedia Rapid API Integration for Lodging Search/Booking
 
-**Version**: 1.0.0
-**Status**: Proposed
+**Version**: 1.0.1
+**Status**: Superseded
+**Superseded by**: ADR-0050 (Amadeus + Google Places + Stripe hybrid)
 **Date**: 2025-11-19
 **Category**: Architecture
 **Domain**: Travel Supply Integrations

@@ -38,7 +38,8 @@ const DEFAULT_RETRYABLE_CODES = new Set([429, 408, 500, 502, 503, 504]);
 export class AmadeusProviderAdapter implements AccommodationProviderAdapter {
   readonly name = "amadeus" as const;
 
-  async search(
+  /** Search hotels via Amadeus for the provided coordinates and dates. */
+  search(
     params: AccommodationSearchParams,
     ctx?: ProviderContext
   ): Promise<ProviderResult<ProviderSearchResult>> {
@@ -89,7 +90,8 @@ export class AmadeusProviderAdapter implements AccommodationProviderAdapter {
     });
   }
 
-  async getDetails(
+  /** Fetch hotel details and offers for a listing. */
+  getDetails(
     params: AccommodationDetailsParams,
     ctx?: ProviderContext
   ): Promise<ProviderResult<ProviderDetailsResult>> {
@@ -115,7 +117,8 @@ export class AmadeusProviderAdapter implements AccommodationProviderAdapter {
     });
   }
 
-  async checkAvailability(
+  /** Check room availability and get booking token. */
+  checkAvailability(
     params: AccommodationCheckAvailabilityParams,
     ctx?: ProviderContext
   ): Promise<ProviderResult<ProviderAvailabilityResult>> {
@@ -152,7 +155,8 @@ export class AmadeusProviderAdapter implements AccommodationProviderAdapter {
     });
   }
 
-  async createBooking(
+  /** Create a booking reservation. */
+  createBooking(
     payload: ProviderBookingPayload,
     ctx?: ProviderContext
   ): Promise<ProviderResult<ProviderBookingResult>> {
@@ -170,11 +174,20 @@ export class AmadeusProviderAdapter implements AccommodationProviderAdapter {
     });
   }
 
-  buildBookingPayload(params: AccommodationBookingRequest): ProviderBookingPayload {
+  /** Build Amadeus-specific booking payload. */
+  buildBookingPayload(
+    params: AccommodationBookingRequest,
+    options?: { paymentIntentId?: string; currency?: string; totalCents?: number }
+  ): ProviderBookingPayload {
     const travelerName = params.guestName.trim().split(/\s+/);
     const givenName = travelerName[0] ?? params.guestName;
     const familyName =
       travelerName.slice(1).join(" ") || travelerName[0] || params.guestName;
+    const amountValue =
+      options?.totalCents !== undefined
+        ? (options.totalCents / 100).toFixed(2)
+        : undefined;
+
     return {
       data: {
         guests: [
@@ -188,12 +201,16 @@ export class AmadeusProviderAdapter implements AccommodationProviderAdapter {
           },
         ],
         hotelOffers: [{ id: params.bookingToken }],
-        // Payments are captured via Stripe upstream; Amadeus booking is treated as agency-hold / pay-at-property.
         payments: [],
         remarks: {
           general: [
             {
-              text: `StripePaymentIntent=${params.paymentMethodId ?? "not-set"}`,
+              text: `StripePaymentIntent=${options?.paymentIntentId ?? "not-set"}`,
+            },
+            {
+              text: `PrepaidAmount=${amountValue ?? "unknown"} ${
+                options?.currency ?? params.currency
+              }`,
             },
           ],
         },
@@ -202,9 +219,10 @@ export class AmadeusProviderAdapter implements AccommodationProviderAdapter {
     };
   }
 
-  private async execute<T>(
+  /** Execute a provider operation with telemetry and retry semantics. */
+  private execute<T>(
     operation: string,
-    ctx: ProviderContext | undefined,
+    _ctx: ProviderContext | undefined,
     fn: () => Promise<T>
   ): Promise<ProviderResult<T>> {
     return withTelemetrySpan(
@@ -244,6 +262,7 @@ export class AmadeusProviderAdapter implements AccommodationProviderAdapter {
     );
   }
 
+  /** Determines if an error is retryable based on HTTP status codes. */
   private isRetryable(error: unknown): boolean {
     if (typeof error === "object" && error && "response" in error) {
       const status = (error as { response?: { statusCode?: number } }).response

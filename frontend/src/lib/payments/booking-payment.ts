@@ -14,7 +14,7 @@ import { createPaymentIntent, getPaymentIntent, refundPayment } from "./stripe-c
  * @throws {Error} On payment failures
  */
 export type ProcessBookingParams = {
-  amount: number;
+  amount: number; // amount in smallest currency unit (e.g., cents)
   currency: string;
   paymentMethodId: string;
   customerId?: string;

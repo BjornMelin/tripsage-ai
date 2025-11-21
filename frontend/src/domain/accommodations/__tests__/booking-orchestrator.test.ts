@@ -1,7 +1,7 @@
 import { runBookingOrchestrator } from "@domain/accommodations/booking-orchestrator";
 import type { AccommodationProviderAdapter } from "@domain/accommodations/providers/types";
-import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { describe, expect, it, vi } from "vitest";
+import type { TypedServerSupabase } from "@/lib/supabase/server";
 
 vi.mock("@/lib/payments/booking-payment", () => ({
   refundBookingPayment: vi.fn().mockResolvedValue(undefined),

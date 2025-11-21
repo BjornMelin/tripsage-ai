@@ -523,15 +523,15 @@ Files:
 
 Tasks:
 
-- [ ] Ensure `AccommodationCard` reads `provider = "amadeus"` and renders:
+- [x] Ensure `AccommodationCard` reads `provider = "amadeus"` and renders:
 
   - Price from `accommodation.price.total` and `currency`.
   - Rating and reviews from Google Places data included in `AccommodationDetailsResult`.
-- [ ] Implement `ModernHotelResults` that:
+- [x] Implement `ModernHotelResults` that:
 
   - Uses shadcn `Card`, `Skeleton`, `Badge`, `Tabs` for filtering.
   - Shows map integration via Google Maps JS SDK or @vis.gl/react-google-maps (optional).
-- [ ] Wire `ModernHotelResults` back into the pages where results are currently commented out.
+- [x] Wire `ModernHotelResults` back into the pages where results are currently commented out.
 
 ### 9.2 Next.js 16 compatibility
 
@@ -540,7 +540,7 @@ improved caching/turbopack capabilities.([Next.js](https://nextjs.org/docs))
 
 Guidelines:
 
-- [ ] Ensure all Amadeus and Stripe code runs server-side only:
+- [x] Ensure all Amadeus and Stripe code runs server-side only:
 
   - Use `"use server"` or `import "server-only"` where needed.([Amadeus IT Group SA](https://developers.amadeus.com/self-service))
 - [ ] Keep external API calls inside:

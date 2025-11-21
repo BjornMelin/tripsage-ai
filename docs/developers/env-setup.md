@@ -76,10 +76,12 @@ Copy `.env.example` to `.env`, then follow the checklists below to populate ever
 - Duffel (<https://app.duffel.com/developers>):
   - `DUFFEL_ACCESS_TOKEN` (preferred)
   - `DUFFEL_API_KEY` (fallback)
-- Expedia Rapid:
-  - Apply: <https://partner.expediagroup.com/en-us/join-us/rapid-api>
-  - Keys portal: <https://developers.expediagroup.com/rapid/setup>
-  - Variables: `EPS_API_KEY`, `EPS_API_SECRET`, optional `EPS_BASE_URL` (default `https://api.ean.com/2/rapid`)
+- Amadeus Self-Service:
+  - <https://developers.amadeus.com/get-started>
+  - Variables: `AMADEUS_CLIENT_ID`, `AMADEUS_CLIENT_SECRET`, `AMADEUS_ENV` (`test`|`production`)
+- Google Places (New):
+  - Enable Places API (New) + Photos
+  - Variables: `GOOGLE_MAPS_API_KEY` / `GOOGLE_PLACES_API_KEY`
 
 ## Optional analytics
 
