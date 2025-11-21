@@ -5,11 +5,9 @@
 
 import { z } from "zod";
 import { primitiveSchemas } from "./registry";
+import { apiResponseSchema, paginatedResponseSchema } from "./validation";
+export { apiResponseSchema, paginatedResponseSchema };
 
-// ===== CORE SCHEMAS =====
-// Core API response wrappers and common patterns
-
-// Common validation patterns using registry primitives
 const TIMESTAMP_SCHEMA = primitiveSchemas.isoDateTime;
 const UUID_SCHEMA = primitiveSchemas.uuid;
 const EMAIL_SCHEMA = primitiveSchemas.email;
@@ -17,57 +15,10 @@ const URL_SCHEMA = primitiveSchemas.url;
 const POSITIVE_NUMBER_SCHEMA = primitiveSchemas.positiveNumber;
 const NON_NEGATIVE_NUMBER_SCHEMA = primitiveSchemas.nonNegativeNumber;
 
-/**
- * Generic API response wrapper schema factory.
- * Creates a standardized response schema with data, error, and metadata fields.
- *
- * @param dataSchema - Schema for the response data payload
- * @returns Zod schema for API response structure
- */
-export const apiResponseSchema = <T extends z.ZodTypeAny>(dataSchema: T) =>
-  z.object({
-    data: dataSchema.optional(),
-    error: z
-      .object({
-        code: z.string(),
-        details: z.unknown().optional(),
-        message: z.string(),
-      })
-      .optional(),
-    metadata: z
-      .object({
-        requestId: z.string().optional(),
-        timestamp: TIMESTAMP_SCHEMA,
-        version: z.string().optional(),
-      })
-      .optional(),
-    success: z.boolean(),
-  });
-
 /** TypeScript type for generic API responses. */
 export type ApiResponse<T = unknown> = z.infer<
   ReturnType<typeof apiResponseSchema<z.ZodSchema<T>>>
 >;
-
-/**
- * Paginated response wrapper schema factory.
- * Creates a standardized paginated response schema with items and pagination metadata.
- *
- * @param itemSchema - Schema for individual items in the paginated list
- * @returns Zod schema for paginated response structure
- */
-export const paginatedResponseSchema = <T extends z.ZodTypeAny>(itemSchema: T) =>
-  z.object({
-    items: z.array(itemSchema),
-    pagination: z.object({
-      hasNext: z.boolean(),
-      hasPrevious: z.boolean(),
-      page: z.number().int().positive(),
-      pageSize: z.number().int().positive().max(100),
-      total: NON_NEGATIVE_NUMBER_SCHEMA,
-      totalPages: z.number().int().nonnegative(),
-    }),
-  });
 
 /** TypeScript type for paginated API responses. */
 export type PaginatedResponse<T = unknown> = z.infer<

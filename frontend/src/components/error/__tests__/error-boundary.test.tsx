@@ -43,6 +43,7 @@ const NormalComponent = () => <div>Normal component</div>;
 
 describe("ErrorBoundary", () => {
   beforeEach(() => {
+    vi.useRealTimers();
     vi.clearAllMocks();
 
     // Setup fresh console spies for each test

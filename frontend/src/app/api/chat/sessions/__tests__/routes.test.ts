@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
+import {
+  createMockNextRequest,
+  createRouteParamsContext,
+  getMockCookiesForTest,
+} from "@/test/route-helpers";
 import { GET as MSG_GET, POST as MSG_POST } from "../[id]/messages/route";
 import { DELETE as SESS_ID_DELETE, GET as SESS_ID_GET } from "../[id]/route";
 import { GET as SESS_GET, POST as SESS_POST } from "../route";
@@ -92,7 +96,8 @@ describe("/api/chat/sessions", () => {
         body: { title: "Trip" },
         method: "POST",
         url: "http://x/sessions",
-      })
+      }),
+      createRouteParamsContext()
     );
     expect(resCreate.status).toBe(201);
     const { id } = (await resCreate.json()) as { id: string };
@@ -102,7 +107,8 @@ describe("/api/chat/sessions", () => {
       createMockNextRequest({
         method: "GET",
         url: "http://x/sessions",
-      })
+      }),
+      createRouteParamsContext()
     );
     expect(resList.status).toBe(200);
     const list = (await resList.json()) as Array<{ id: string }>;
@@ -117,7 +123,8 @@ describe("/api/chat/sessions", () => {
         body: {},
         method: "POST",
         url: "http://x/sessions",
-      })
+      }),
+      createRouteParamsContext()
     );
     const { id } = (await resCreate.json()) as { id: string };
     // get
@@ -151,7 +158,8 @@ describe("/api/chat/sessions", () => {
         body: {},
         method: "POST",
         url: "http://x/sessions",
-      })
+      }),
+      createRouteParamsContext()
     );
     const { id } = (await resCreate.json()) as { id: string };
 

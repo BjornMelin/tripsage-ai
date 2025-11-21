@@ -66,7 +66,7 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 - **Library‑first:** Prefer maintained libraries covering ≥80 % of needs with ≤30 % custom code.
 - **KISS / DRY / YAGNI:** Keep solutions straightforward; remove duplication via small focused helpers; implement only what's needed now—no speculative APIs or feature flags (unless requested).
 - **Final‑only:** Remove superseded code/tests immediately after new behavior lands; no partial migrations.
-- **Telemetry/logging:** Server code must use helpers from `@/lib/telemetry/span` and `@/lib/logging/server`: `withTelemetrySpan()` (async), `withTelemetrySpanSync()` (sync), `recordTelemetryEvent()` (events), `createServerLogger()` (structured logs), `emitOperationalAlert()` (critical alerts). Never use `console.*` in server modules except tests, client-only UI, or `lib/telemetry/alerts.ts`. Direct `@opentelemetry/api` usage allowed only in `lib/telemetry/*` and `lib/supabase/factory.ts`. See `docs/developers/observability.md`.
+- **Telemetry/logging:** Server code must use helpers from `@/lib/telemetry/span` (server-only) and `@/lib/telemetry/logger`: `withTelemetrySpan()` (async), `withTelemetrySpanSync()` (sync), `recordTelemetryEvent()` (events), `createServerLogger()` (structured logs), `emitOperationalAlert()` (critical alerts). Never use `console.*` in server modules except tests, client-only UI, or `lib/telemetry/alerts.ts`. Direct `@opentelemetry/api` usage allowed only in `lib/telemetry/*` and `lib/supabase/factory.ts`. Client components should use `@/lib/telemetry/client` for client-side telemetry initialization. See `docs/developers/observability.md`.
 
 ### 4.2 TypeScript and frontend style
 
@@ -78,6 +78,13 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 - **JSDoc:** Use `/** ... */` for public APIs; `//` for notes. Document top‑level exports and non‑obvious functions. Avoid repeating types or TS‑duplicated tags (`@private`, `@implements`).
 - **IDs/timestamps:** Use `@/lib/security/random` (`secureUuid`, `secureId`, `nowIso`). Never `Math.random` or `crypto.randomUUID` directly.
 - **Imports/exports:** Import directly from slice modules (e.g., `@/stores/auth/auth-core`, not `@/stores`). No barrel files or `export *` for stores/selectors. Exception: `lib/schemas/index.ts`.
+- **Path aliases:** Use semantic aliases for architectural boundaries:
+  - `@schemas/*` → `./src/domain/schemas/*` (canonical for all Zod/domain schemas)
+  - `@domain/*` → `./src/domain/*` (domain logic: accommodations, expedia, types)
+  - `@ai/*` → `./src/ai/*` (AI SDK tooling, models, helpers)
+  - `@/*` → `./src/*` (generic src-root: `@/lib/*`, `@/components/*`, `@/stores/*`, etc.)
+  - **Disallowed patterns:** Never use `@/domain/*`, `@/ai/*`, or `@/domain/schemas/*`; use `@domain/*`, `@ai/*`, and `@schemas/*` respectively.
+  - **Relative imports:** Prefer relative imports (`./client-types`, `../utils`) within local feature slices (e.g., inside `src/domain/expedia/*` or `src/ai/tools/server/*`). Use aliases when crossing architectural boundaries.
 
 ### 4.3 State management (frontend)
 

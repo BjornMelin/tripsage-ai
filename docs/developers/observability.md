@@ -20,7 +20,7 @@ Server code must use these helpers exclusively. Direct usage of `@opentelemetry/
 
 ## OpenTelemetry spans
 
-Use `withTelemetrySpan` (`frontend/src/lib/telemetry/span.ts`) for async operations:
+Use `withTelemetrySpan` from `@/lib/telemetry/span` (server-only) for async operations:
 
 ```typescript
 import { withTelemetrySpan } from "@/lib/telemetry/span";
@@ -46,6 +46,18 @@ const result = await withTelemetrySpan(
 - The helper automatically handles `SpanStatusCode.OK/ERROR`, exception recording, and span cleanup.
 - All spans share the tracer exported by `getTelemetryTracer()` and group under the `tripsage-frontend` service name.
 - If you call `span.recordException()` or `span.setStatus({ code: SpanStatusCode.ERROR })` inside the callback, `withTelemetrySpan` will preserve that status instead of overwriting it with OK.
+- **Note:** `@/lib/telemetry/span` is server-only (marked with `"server-only"`). Client-side telemetry is handled separately (see Client-side telemetry section below).
+
+## Client-side telemetry
+
+Client-side OpenTelemetry is minimal and focused on distributed tracing and error reporting:
+
+- **Initialization:** `initTelemetry()` from `@/lib/telemetry/client` sets up WebTracerProvider and FetchInstrumentation. This is automatically called via `TelemetryProvider` in the root layout. It enables:
+  - Automatic tracing of fetch requests to API routes
+  - Trace context propagation via `traceparent` headers (distributed tracing from client → server)
+- **Error recording:** `recordClientErrorOnActiveSpan()` from `@/lib/telemetry/client-errors` records client-side errors on active spans, linking errors to traces.
+
+**Important:** Client-side telemetry does not provide span helpers (`withTelemetrySpan`, etc.). All span creation and event recording happens server-side. Client telemetry only initializes the OTEL Web SDK and records errors.
 
 ## Structured logging
 

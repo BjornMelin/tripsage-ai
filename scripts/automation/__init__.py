@@ -1,1 +1,0 @@
-"""Automation scripts package."""

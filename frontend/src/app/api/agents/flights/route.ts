@@ -8,19 +8,19 @@
 
 import "server-only";
 
-import type { FlightSearchRequest } from "@schemas/agents";
-import { agentSchemas } from "@schemas/agents";
+import { resolveProvider } from "@ai/models/registry";
+import type { FlightSearchRequest } from "@schemas/flights";
+import { flightSearchRequestSchema } from "@schemas/flights";
 import type { NextRequest } from "next/server";
 import type { z } from "zod";
 import { createErrorHandler } from "@/lib/agents/error-recovery";
 import { runFlightAgent } from "@/lib/agents/flight-agent";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse, parseJsonBody } from "@/lib/next/route-helpers";
-import { resolveProvider } from "@/lib/providers/registry";
 
 export const maxDuration = 60;
 
-const RequestSchema = agentSchemas.flightSearchRequestSchema;
+const RequestSchema = flightSearchRequestSchema;
 
 /**
  * POST /api/agents/flights

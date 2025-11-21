@@ -37,16 +37,21 @@ implementation details.
 
 - **[System Overview](system-overview.md)** - Complete system architecture
   with component interactions, data flow, and technology stack
-- **[Data Architecture](data-architecture.md)** - Database design patterns,
-  storage decisions, and vector search optimization
 - **[Frontend Architecture](frontend-architecture.md)** - Next.js
   application structure, AI SDK v6 integration, component organization,
   and data flows
 
-### Specialized Architecture
+### Database & Storage Architecture
 
+- **[Database Architecture](database/)** - Supabase PostgreSQL design, schema patterns, and data models
+  - **[Supabase Schema](database/supabase-schema.md)** - Canonical database schema and migration strategy
+  - **[Supabase Integration](database/supabase-integration.md)** - Authentication, SSR patterns, and client configurations
+  - **[Supabase Operations](database/supabase-operations.md)** - Webhooks, real-time features, and operational patterns
 - **[Storage Architecture](storage-architecture.md)** - File storage,
   bucket organization, and security patterns
+
+### Specialized Architecture
+
 - **[Route Exceptions](route-exceptions.md)** - Exception criteria for API
   factory bypass
 
@@ -132,6 +137,7 @@ Test suite with 90%+ coverage:
 
 ## Related Documentation
 
+- **[Database Operations](../operators/database/)** - Database operations and Supabase configuration
 - **[Developers Guide](../developers/)** - Implementation details, code
   examples, testing
 - **[API Documentation](../api/)** - REST specifications and Supabase

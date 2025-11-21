@@ -7,9 +7,15 @@
  */
 
 import { z } from "zod";
+import {
+  type FlightSearchRequest,
+  type FlightSearchResult,
+  flightSearchRequestSchema,
+  flightSearchResultSchema,
+} from "./flights";
 
-/** Zod schema for supported agent workflow types. */
-export const agentWorkflowSchema = z
+/** Zod schema for supported agent workflow types (routing-level kinds). */
+export const agentWorkflowKindSchema = z
   .enum([
     "destinationResearch",
     "itineraryPlanning",
@@ -21,8 +27,8 @@ export const agentWorkflowSchema = z
   ])
   .describe("Supported agent workflows");
 
-/** TypeScript type for agent workflows. */
-export type AgentWorkflow = z.infer<typeof agentWorkflowSchema>;
+/** TypeScript type for agent workflow kinds. */
+export type AgentWorkflowKind = z.infer<typeof agentWorkflowKindSchema>;
 
 /** Zod schema for source citations in agent research results. */
 export const agentSourceSchema = z
@@ -142,54 +148,9 @@ export type ItineraryPlanRequest = z.infer<typeof itineraryPlanRequestSchema>;
 /** TypeScript type for itinerary planning results. */
 export type ItineraryPlanResult = z.infer<typeof itineraryPlanResultSchema>;
 
-// Flight search
-const flightSegmentSchema = z.object({
-  arrival: z.string(),
-  carrier: z.string(),
-  departure: z.string(),
-  destination: z.string(),
-  flightNumber: z.string().optional(),
-  operatingCarrier: z.string().optional(),
-  origin: z.string(),
-});
-
-/** Zod schema for flight search requests. */
-const cabinClassSchema = z.enum(["economy", "premium_economy", "business", "first"]);
-
-export const flightSearchRequestSchema = z
-  .object({
-    cabinClass: cabinClassSchema.default("economy"),
-    currency: z.string().default("USD"),
-    departureDate: z.string(),
-    destination: z.string().min(3),
-    origin: z.string().min(3),
-    passengers: z.number().int().positive().default(1),
-    returnDate: z.string().optional(),
-  })
-  .describe("Input for flight search");
-
-/** Zod schema for flight search results. */
-export const flightSearchResultSchema = z
-  .object({
-    currency: z.string().default("USD"),
-    itineraries: z.array(
-      z.object({
-        bookingUrl: z.url().optional(),
-        id: z.string(),
-        price: z.number().positive(),
-        segments: z.array(flightSegmentSchema),
-      })
-    ),
-    schemaVersion: z.literal("flight.v1").default("flight.v1"),
-    sources: z.array(agentSourceSchema).default([]),
-  })
-  .describe("Flight search output");
-
-/** TypeScript type for flight search requests. */
-export type FlightSearchRequest = z.infer<typeof flightSearchRequestSchema>;
-
-/** TypeScript type for flight search results. */
-export type FlightSearchResult = z.infer<typeof flightSearchResultSchema>;
+// Flight search (delegated to domain/schemas/flights)
+export { flightSearchRequestSchema, flightSearchResultSchema };
+export type { FlightSearchRequest, FlightSearchResult };
 
 // Accommodation search
 const stayOptionSchema = z.object({
@@ -303,7 +264,7 @@ export type RouterRequest = z.infer<typeof routerRequestSchema>;
 /** Zod schema for router workflow classification results. */
 export const routerClassificationSchema = z
   .object({
-    agent: agentWorkflowSchema,
+    agent: agentWorkflowKindSchema,
     confidence: z.number().min(0).max(1),
     reasoning: z.string().optional(),
   })

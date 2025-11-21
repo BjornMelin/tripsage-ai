@@ -5,7 +5,7 @@
 
 import "server-only";
 
-import type { ApprovalStatus } from "@/ai/tools/schemas/tools";
+import type { ApprovalStatus } from "@ai/tools/schemas/tools";
 import { getRedis } from "@/lib/redis";
 import type { ToolExecutionContext } from "./types";
 

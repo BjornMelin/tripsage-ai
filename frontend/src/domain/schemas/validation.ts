@@ -58,6 +58,44 @@ export const validationResultSchema = <T extends z.ZodTypeAny>(dataSchema: T) =>
     warnings: z.array(z.string()).optional(),
   });
 
+/**
+ * Generic API response wrapper schema.
+ * Standardizes success + optional data/error/metadata.
+ */
+export const apiResponseSchema = <T extends z.ZodTypeAny>(dataSchema: T) =>
+  z.object({
+    data: dataSchema.optional(),
+    error: z
+      .object({
+        code: z.string(),
+        details: z.unknown().optional(),
+        message: z.string(),
+      })
+      .optional(),
+    metadata: z
+      .object({
+        requestId: z.string().optional(),
+        timestamp: z.string().optional(),
+        version: z.string().optional(),
+      })
+      .optional(),
+    success: z.boolean(),
+  });
+
+/** Paginated response wrapper schema. */
+export const paginatedResponseSchema = <T extends z.ZodTypeAny>(itemSchema: T) =>
+  z.object({
+    items: z.array(itemSchema),
+    pagination: z.object({
+      hasNext: z.boolean(),
+      hasPrevious: z.boolean(),
+      page: z.number().int().positive(),
+      pageSize: z.number().int().positive().max(100),
+      total: z.number().int().nonnegative(),
+      totalPages: z.number().int().nonnegative(),
+    }),
+  });
+
 /** TypeScript type for validation results. */
 export type ValidationResult<T = unknown> = {
   data?: T;

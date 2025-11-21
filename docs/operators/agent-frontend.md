@@ -22,13 +22,11 @@ All streaming endpoints return UI-compatible responses via `toUIMessageStreamRes
 - Supabase SSR:
   - `NEXT_PUBLIC_SUPABASE_URL`
   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- Model provider BYOK/Gateway: configured in `frontend/src/lib/providers/registry.ts`.
-- Flights provider (Duffel): prefer `DUFFEL_ACCESS_TOKEN` (fallback `DUFFEL_API_KEY`).
-- Google Places API (required for POI lookups): `GOOGLE_MAPS_SERVER_API_KEY` for Places and Geocoding APIs. Browser key: `NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY` for Maps JS.
-- GeoSure safety provider (optional): `GEOSURE_API_KEY` for travel advisories.
-- Vercel AI Gateway (optional): `AI_GATEWAY_API_KEY` and `AI_GATEWAY_URL` for unified routing.
-- Accommodation search (optional): `ACCOM_SEARCH_URL`/`ACCOM_SEARCH_TOKEN` or `AIRBNB_MCP_URL`/`AIRBNB_MCP_API_KEY`.
-- Weather (optional): `OPENWEATHERMAP_API_KEY` for weather queries.
+- QStash webhooks: `QSTASH_TOKEN`, `QSTASH_CURRENT_SIGNING_KEY`, `QSTASH_NEXT_SIGNING_KEY`
+- Model providers: BYOK or gateway keys (`OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, `XAI_API_KEY`, `AI_GATEWAY_API_KEY`, `AI_GATEWAY_URL`)
+- Flights provider (Duffel): prefer `DUFFEL_ACCESS_TOKEN` (fallback `DUFFEL_API_KEY`)
+- Google Maps: server key `GOOGLE_MAPS_SERVER_API_KEY`; browser key `NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY`
+- Weather (optional): `OPENWEATHERMAP_API_KEY`
 
 Temperatures are hard-coded per agent (default 0.3). Adjust via code near each agent orchestrator.
 

@@ -2,7 +2,7 @@
 
 import { beforeEach, describe, expect, it } from "vitest";
 import { mockApiRouteAuthUser, resetApiRouteMocks } from "@/test/api-route-helpers";
-import { createMockNextRequest } from "@/test/route-helpers";
+import { createMockNextRequest, createRouteParamsContext } from "@/test/route-helpers";
 
 describe("/api/calendar/ics/import", () => {
   beforeEach(() => {
@@ -32,7 +32,7 @@ END:VCALENDAR`;
       url: "http://localhost/api/calendar/ics/import",
     });
 
-    const res = await mod.POST(req);
+    const res = await mod.POST(req, createRouteParamsContext());
     const body = await res.json();
 
     expect(res.status).toBe(200);
@@ -52,7 +52,7 @@ END:VCALENDAR`;
       url: "http://localhost/api/calendar/ics/import",
     });
 
-    const res = await mod.POST(req);
+    const res = await mod.POST(req, createRouteParamsContext());
     // node-ical may parse some invalid content, so check for either 400 or empty events
     expect([400, 200]).toContain(res.status);
     if (res.status === 200) {
@@ -71,7 +71,7 @@ END:VCALENDAR`;
       url: "http://localhost/api/calendar/ics/import",
     });
 
-    const res = await mod.POST(req);
+    const res = await mod.POST(req, createRouteParamsContext());
     expect(res.status).toBe(400);
   });
 
@@ -86,7 +86,7 @@ END:VCALENDAR`;
       url: "http://localhost/api/calendar/ics/import",
     });
 
-    const res = await mod.POST(req);
+    const res = await mod.POST(req, createRouteParamsContext());
     expect(res.status).toBe(400);
   });
 
@@ -118,7 +118,7 @@ END:VCALENDAR`;
       url: "http://localhost/api/calendar/ics/import",
     });
 
-    const res = await mod.POST(req);
+    const res = await mod.POST(req, createRouteParamsContext());
     const body = await res.json();
 
     expect(res.status).toBe(200);
@@ -154,7 +154,7 @@ END:VCALENDAR`;
       url: "http://localhost/api/calendar/ics/import",
     });
 
-    const res = await mod.POST(req);
+    const res = await mod.POST(req, createRouteParamsContext());
     const body = await res.json();
 
     expect(res.status).toBe(200);
@@ -193,7 +193,7 @@ END:VCALENDAR`;
       url: "http://localhost/api/calendar/ics/import",
     });
 
-    const res = await mod.POST(req);
+    const res = await mod.POST(req, createRouteParamsContext());
     const body = await res.json();
 
     expect(res.status).toBe(200);

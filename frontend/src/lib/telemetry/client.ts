@@ -1,9 +1,9 @@
 /**
- * @fileoverview Client-side OpenTelemetry initialization for browser tracing.
+ * @fileoverview Client-side OpenTelemetry initialization.
  *
- * Provides WebTracerProvider setup with FetchInstrumentation to automatically
- * trace fetch requests and inject traceparent headers for distributed tracing.
- * Uses singleton pattern to prevent double-initialization in React Strict Mode.
+ * Provides WebTracerProvider setup for browser tracing with automatic
+ * fetch instrumentation to enable distributed tracing from client to server.
+ * Client-side error recording is handled separately in `client-errors.ts`.
  */
 
 "use client";
@@ -88,21 +88,15 @@ export function initTelemetry(): void {
     const fetchInstrumentation = new FetchInstrumentation({
       // Clear timing resources after span ends to prevent memory leaks
       clearTimingResources: true,
-      // Propagate trace headers to same-origin requests and configured CORS URLs
-      propagateTraceHeaderCorsUrls: [
-        // Match same-origin requests (our API routes)
-        new RegExp(`^${window.location.origin}`),
-      ],
+      // Propagate trace headers only to exact same-origin requests
+      propagateTraceHeaderCorsUrls: [window.location.origin],
     });
 
     // Register instrumentations
     registerInstrumentations({
       instrumentations: [fetchInstrumentation],
     });
-  } catch (error) {
-    // Log error but don't throw to prevent breaking the app
-    // Telemetry is non-critical functionality
-    // Flag remains true to prevent retry attempts
-    console.error("[Telemetry] Failed to initialize client-side tracing:", error);
+  } catch {
+    // Telemetry is optional on the client; swallow errors to avoid impacting UX.
   }
 }

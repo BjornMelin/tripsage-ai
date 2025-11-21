@@ -1,7 +1,7 @@
 # ADR-0021: SlowAPI + Aiolimiter Migration (Historic)
 
 **Version**: 1.0.0
-**Status**: Superseded
+**Status**: Superseded by ADR-0032 (Centralized Upstash rate limiting)
 **Date**: 2025-10-24
 **Category**: backend
 **Domain**: SlowAPI / Aiolimiter

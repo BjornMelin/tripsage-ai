@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { unstubAllEnvs } from "@/test/env-helpers";
-import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
+import {
+  createMockNextRequest,
+  createRouteParamsContext,
+  getMockCookiesForTest,
+} from "@/test/route-helpers";
 
 // Mock next/headers cookies() BEFORE any imports that use it
 vi.mock("next/headers", () => ({
@@ -21,7 +25,7 @@ vi.mock("@/lib/supabase/server", () => ({
   })),
 }));
 
-vi.mock("@/lib/providers/registry", () => ({
+vi.mock("@ai/models/registry", () => ({
   resolveProvider: mockResolveProvider,
 }));
 
@@ -82,7 +86,7 @@ describe("/api/chat route smoke", () => {
       method: "POST",
       url: "http://localhost/api/chat",
     });
-    const res = await mod.POST(req);
+    const res = await mod.POST(req, createRouteParamsContext());
     expect(res.status).toBe(401);
   });
 
@@ -106,7 +110,7 @@ describe("/api/chat route smoke", () => {
       method: "POST",
       url: "http://localhost/api/chat",
     });
-    const res = await mod.POST(req);
+    const res = await mod.POST(req, createRouteParamsContext());
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.content).toBe("ok");

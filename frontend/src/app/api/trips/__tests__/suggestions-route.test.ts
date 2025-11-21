@@ -2,7 +2,11 @@
 
 import { describe, expect, it, vi } from "vitest";
 import { stubRateLimitDisabled } from "@/test/env-helpers";
-import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
+import {
+  createMockNextRequest,
+  createRouteParamsContext,
+  getMockCookiesForTest,
+} from "@/test/route-helpers";
 
 // Mock next/headers cookies() BEFORE any imports that use it
 vi.mock("next/headers", () => ({
@@ -29,7 +33,7 @@ vi.mock("@/lib/redis", () => ({
 }));
 
 // Mock AI provider registry
-vi.mock("@/lib/providers/registry", () => ({
+vi.mock("@ai/models/registry", () => ({
   resolveProvider: vi.fn(async () => ({ model: "test-model" })),
 }));
 
@@ -62,7 +66,7 @@ describe("/api/trips/suggestions route", () => {
       url: "http://localhost/api/trips/suggestions",
     });
 
-    const res = await getSuggestions(req);
+    const res = await getSuggestions(req, createRouteParamsContext());
 
     expect(res.status).toBe(401);
   });
@@ -76,7 +80,7 @@ describe("/api/trips/suggestions route", () => {
       url: "http://localhost/api/trips/suggestions?limit=3",
     });
 
-    const res = await getSuggestions(req);
+    const res = await getSuggestions(req, createRouteParamsContext());
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as unknown[];

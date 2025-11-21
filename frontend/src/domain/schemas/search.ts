@@ -4,7 +4,11 @@
  */
 
 import { z } from "zod";
+import { PROPERTY_TYPE_ENUM } from "./accommodations";
+import { CABIN_CLASS_ENUM } from "./flights";
 import { primitiveSchemas } from "./registry";
+import { CURRENCY_CODE_SCHEMA } from "./shared/money";
+import { ISO_DATE_STRING } from "./shared/time";
 
 // ===== CORE SCHEMAS =====
 // Core business logic schemas for search functionality
@@ -15,7 +19,7 @@ const COORDINATES_SCHEMA = z.object({
   lng: z.number().min(-180).max(180),
 });
 
-const DATE_STRING_SCHEMA = z.iso.datetime().or(z.iso.date());
+const DATE_STRING_SCHEMA = ISO_DATE_STRING;
 const POSITIVE_INT_SCHEMA = z.number().int().positive();
 const NON_NEGATIVE_INT_SCHEMA = z.number().int().nonnegative();
 
@@ -41,7 +45,7 @@ export type BaseSearchParams = z.infer<typeof baseSearchParamsSchema>;
  */
 export const flightSearchParamsSchema = z.object({
   adults: POSITIVE_INT_SCHEMA.max(20).optional(),
-  cabinClass: z.enum(["economy", "premium_economy", "business", "first"]).optional(),
+  cabinClass: CABIN_CLASS_ENUM.optional(),
   children: NON_NEGATIVE_INT_SCHEMA.max(20).optional(),
   departureDate: DATE_STRING_SCHEMA.optional(),
   destination: z.string().optional(),
@@ -50,6 +54,13 @@ export const flightSearchParamsSchema = z.object({
   infants: NON_NEGATIVE_INT_SCHEMA.max(20).optional(),
   maxStops: z.number().int().nonnegative().max(3).optional(),
   origin: z.string().optional(),
+  passengers: z
+    .object({
+      adults: POSITIVE_INT_SCHEMA.max(20),
+      children: NON_NEGATIVE_INT_SCHEMA.max(20),
+      infants: NON_NEGATIVE_INT_SCHEMA.max(20),
+    })
+    .optional(),
   preferredAirlines: z.array(z.string()).optional(),
   returnDate: DATE_STRING_SCHEMA.optional(),
 });
@@ -67,6 +78,7 @@ export const searchAccommodationParamsSchema = z.object({
   checkIn: DATE_STRING_SCHEMA.optional(),
   checkOut: DATE_STRING_SCHEMA.optional(),
   children: NON_NEGATIVE_INT_SCHEMA.max(20).optional(),
+  currency: CURRENCY_CODE_SCHEMA.optional(),
   destination: z.string().optional(),
   infants: NON_NEGATIVE_INT_SCHEMA.max(20).optional(),
   minRating: z.number().min(0).max(5).optional(),
@@ -79,7 +91,8 @@ export const searchAccommodationParamsSchema = z.object({
       error: "Min price must be less than or equal to max price",
     })
     .optional(),
-  propertyType: z.enum(["hotel", "apartment", "villa", "hostel", "resort"]).optional(),
+  propertyType: z.enum(PROPERTY_TYPE_ENUM.options as [string, ...string[]]).optional(),
+  propertyTypes: z.array(PROPERTY_TYPE_ENUM).optional(),
   rooms: POSITIVE_INT_SCHEMA.max(20, { error: "Too many rooms" }).optional(),
 });
 

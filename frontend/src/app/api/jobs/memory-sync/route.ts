@@ -183,7 +183,7 @@ async function processMemorySync(payload: {
         user_id: payload.userId,
       }));
 
-    const { data: insertedTurns, error: insertError } = await supabase
+    const { error: insertError } = await supabase
       .schema("memories")
       .from("turns")
       .insert(turnInserts)
@@ -200,11 +200,15 @@ async function processMemorySync(payload: {
       .update({ last_synced_at: new Date().toISOString() })
       .eq("id", payload.sessionId);
 
-    memoriesStored = insertedTurns?.length ?? 0;
+    memoriesStored = messagesToStore.length;
   }
 
   // Update memory context summary (simplified - could be enhanced with AI)
-  if (payload.syncType === "conversation" || payload.syncType === "full") {
+  if (
+    payload.syncType === "conversation" ||
+    payload.syncType === "full" ||
+    payload.syncType === "incremental"
+  ) {
     const { error: updateError } = await supabase
       .from("chat_sessions")
       .update({

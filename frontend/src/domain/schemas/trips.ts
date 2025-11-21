@@ -5,6 +5,7 @@
 
 import { z } from "zod";
 import { primitiveSchemas } from "./registry";
+import { EMAIL_SCHEMA, NAME_SCHEMA } from "./shared/person";
 import { tripStatusSchema, tripTypeSchema } from "./supabase";
 
 // ===== CORE SCHEMAS =====
@@ -133,14 +134,6 @@ export type ItineraryItemUpdateInput = z.infer<typeof itineraryItemUpdateSchema>
 // UI form validation schemas with user-friendly error messages
 
 // Common form validation patterns
-const EMAIL_SCHEMA = primitiveSchemas.email.max(255);
-const NAME_SCHEMA = z
-  .string()
-  .min(1, { error: "Name is required" })
-  .max(50, { error: "Name too long" })
-  .regex(/^[a-zA-Z\s\-'.]+$/, {
-    error: "Name can only contain letters, spaces, hyphens, apostrophes, and periods",
-  });
 const CURRENCY_SCHEMA = primitiveSchemas.isoCurrency;
 const FUTURE_DATE_SCHEMA = z
   .string()

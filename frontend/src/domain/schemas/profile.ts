@@ -5,23 +5,11 @@
 
 import { z } from "zod";
 import { primitiveSchemas } from "./registry";
+import { EMAIL_SCHEMA, NAME_SCHEMA, PHONE_SCHEMA } from "./shared/person";
 
 // ===== FORM SCHEMAS =====
 // UI form validation schemas with user-friendly error messages
 
-// Common validation patterns
-const EMAIL_SCHEMA = primitiveSchemas.email.max(255);
-const PHONE_SCHEMA = z
-  .string()
-  .regex(/^\+?[\d\s\-()]{10,20}$/, { error: "Please enter a valid phone number" })
-  .optional();
-const NAME_SCHEMA = z
-  .string()
-  .min(1, { error: "Name is required" })
-  .max(50, { error: "Name too long" })
-  .regex(/^[a-zA-Z\s\-'.]+$/, {
-    error: "Name can only contain letters, spaces, hyphens, apostrophes, and periods",
-  });
 const CURRENCY_SCHEMA = primitiveSchemas.isoCurrency;
 
 /**
@@ -58,7 +46,7 @@ export const personalInfoFormSchema = z.object({
     .string()
     .max(100, { error: "Location must be less than 100 characters" })
     .optional(),
-  phoneNumber: PHONE_SCHEMA,
+  phoneNumber: PHONE_SCHEMA.optional(),
   timezone: z.string().optional(),
   website: primitiveSchemas.url.optional().or(z.literal("")),
 });

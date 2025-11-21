@@ -1,18 +1,9 @@
-import type { NextConfig } from "next";
 import withBundleAnalyzer from "@next/bundle-analyzer";
+import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Deployment optimization
-  output: "standalone",
-
   // Enable Cache Components (required for "use cache" directives in codebase)
   cacheComponents: true,
-
-  // React Compiler is supported in Next 16
-  reactCompiler: true,
-
-  // Strict mode recommended for dev
-  reactStrictMode: true,
 
   compiler: {
     // Remove console.log statements in production
@@ -37,8 +28,8 @@ const nextConfig: NextConfig = {
       "zod",
       "ai",
       "@ai-sdk/openai",
-      "@ai-sdk/anthropic"
-    ]
+      "@ai-sdk/anthropic",
+    ],
   },
 
   // Headers for security and performance
@@ -104,9 +95,17 @@ const nextConfig: NextConfig = {
       // },
     ],
   },
+  // Deployment optimization
+  output: "standalone",
 
   // Output configuration
   poweredByHeader: false, // Remove X-Powered-By header
+
+  // React Compiler is supported in Next 16
+  reactCompiler: true,
+
+  // Strict mode recommended for dev
+  reactStrictMode: true,
 
   // Redirects for authentication
   redirects() {
@@ -131,8 +130,13 @@ const nextConfig: NextConfig = {
 
   // Enable static exports optimization
   trailingSlash: false,
+
+  // Turbopack config to avoid webpack conflicts
+  turbopack: {
+    // Empty config for now
+  },
 };
 
 export default withBundleAnalyzer({
-  enabled: process.env.ANALYZE === "true"
+  enabled: process.env.ANALYZE === "true",
 })(nextConfig);

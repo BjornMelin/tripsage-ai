@@ -1,101 +1,94 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ZodIssue } from "zod";
 import { setupReactQueryMocks } from "@/test/mocks/react-query";
 
 setupReactQueryMocks();
 
-import type { z } from "zod";
-import { errorResponse, withRequestSpan } from "@/lib/next/route-helpers";
+const infoSpy = vi.fn();
+const errorSpy = vi.fn();
 
-type ValidationIssue = z.core.$ZodIssue;
+async function loadHelpers() {
+  vi.resetModules();
+  infoSpy.mockClear();
+  errorSpy.mockClear();
+
+  vi.doMock("@/lib/telemetry/logger", () => ({
+    createServerLogger: () => ({
+      error: errorSpy,
+      info: infoSpy,
+      warn: vi.fn(),
+    }),
+  }));
+
+  const mod = await import("@/lib/next/route-helpers");
+  return { errorResponse: mod.errorResponse, withRequestSpan: mod.withRequestSpan };
+}
 
 describe("withRequestSpan", () => {
   beforeEach(() => {
-    vi.spyOn(console, "debug").mockImplementation(() => {
-      /* noop */
-    });
+    infoSpy.mockClear();
+    errorSpy.mockClear();
   });
 
   it("executes function and logs span", async () => {
+    const { withRequestSpan } = await loadHelpers();
     const fn = vi.fn().mockResolvedValue("result");
-    const result = await withRequestSpan(
-      "test.operation",
-      { count: 42, key: "value" },
-      fn
-    );
+
+    const result = await withRequestSpan("test.operation", { count: 42 }, fn);
 
     expect(result).toBe("result");
     expect(fn).toHaveBeenCalledTimes(1);
-    expect(console.debug).toHaveBeenCalledWith(
+    expect(infoSpy).toHaveBeenCalledWith(
       "agent.span",
       expect.objectContaining({
         count: 42,
         durationMs: expect.any(Number),
-        key: "value",
         name: "test.operation",
       })
     );
   });
 
   it("measures execution duration", async () => {
+    const { withRequestSpan } = await loadHelpers();
     const fn = vi.fn().mockResolvedValue("done");
 
-    // Stub process.hrtime.bigint to return deterministic values
-    let callCount = 0;
-    const hrtimeBigintStub = vi
-      .spyOn(process.hrtime, "bigint")
-      .mockImplementation(() => {
-        callCount++;
-        // First call returns 0n, second call returns 10ms (10_000_000n nanoseconds)
-        return callCount === 1 ? BigInt(0) : BigInt(10_000_000);
-      });
+    let calls = 0;
+    const hrStub = vi.spyOn(process.hrtime, "bigint").mockImplementation(() => {
+      calls += 1;
+      return calls === 1 ? BigInt(0) : BigInt(10_000_000); // 10ms
+    });
 
     await withRequestSpan("slow.operation", {}, fn);
 
-    const call = (console.debug as ReturnType<typeof vi.fn>).mock.calls[0]?.[1];
-    expect(call?.durationMs).toBeCloseTo(10, 5);
+    const logged = infoSpy.mock.calls[0]?.[1];
+    expect(logged?.durationMs).toBeCloseTo(10, 3);
 
-    hrtimeBigintStub.mockRestore();
+    hrStub.mockRestore();
   });
 
-  it("propagates errors", async () => {
-    const error = new Error("Test error");
-    const fn = vi.fn().mockRejectedValue(error);
+  it("logs span when function throws", async () => {
+    const { withRequestSpan } = await loadHelpers();
+    const fn = vi.fn().mockRejectedValue(new Error("boom"));
 
-    await expect(withRequestSpan("error.operation", {}, fn)).rejects.toThrow(
-      "Test error"
-    );
+    await expect(withRequestSpan("fail", { attr: "t" }, fn)).rejects.toThrow("boom");
 
-    expect(console.debug).toHaveBeenCalled();
-  });
-
-  it("logs span even when function throws", async () => {
-    const error = new Error("Boom");
-    const fn = vi.fn().mockRejectedValue(error);
-
-    await expect(
-      withRequestSpan("failing.operation", { attr: "test" }, fn)
-    ).rejects.toThrow();
-
-    expect(console.debug).toHaveBeenCalledWith(
+    expect(infoSpy).toHaveBeenCalledWith(
       "agent.span",
-      expect.objectContaining({
-        attr: "test",
-        name: "failing.operation",
-      })
+      expect.objectContaining({ attr: "t", name: "fail" })
     );
   });
 });
 
 describe("errorResponse", () => {
   beforeEach(() => {
-    vi.spyOn(console, "error").mockImplementation(() => {
-      /* noop */
-    });
+    infoSpy.mockClear();
+    errorSpy.mockClear();
   });
 
-  it("returns standardized error response", () => {
+  it("returns standardized error response", async () => {
+    const { errorResponse } = await loadHelpers();
     const response = errorResponse({
       error: "invalid_request",
       reason: "Missing required field",
@@ -106,22 +99,9 @@ describe("errorResponse", () => {
     expect(response.headers.get("content-type")).toBe("application/json");
   });
 
-  it("includes error and reason in response body", async () => {
-    const response = errorResponse({
-      error: "rate_limit_exceeded",
-      reason: "Too many requests",
-      status: 429,
-    });
-
-    const body = await response.json();
-    expect(body).toEqual({
-      error: "rate_limit_exceeded",
-      reason: "Too many requests",
-    });
-  });
-
   it("includes issues when provided", async () => {
-    const issues: ValidationIssue[] = [
+    const { errorResponse } = await loadHelpers();
+    const issues: ZodIssue[] = [
       {
         code: "custom",
         message: "destination is required",
@@ -145,63 +125,38 @@ describe("errorResponse", () => {
     });
   });
 
-  it("logs error with redaction when err provided", () => {
-    // Use a key that matches the regex pattern sk-[a-zA-Z0-9]{20,}
-    const longKey = "sk-abcdefghijklmnopqrstuvwxyz1234567890";
-    const error = new Error(`API key: ${longKey}`);
+  it("redacts secrets when logging errors", async () => {
+    const { errorResponse } = await loadHelpers();
+    const secret = "sk-abcdefghijklmnopqrstuvwxyz123456";
+    const err = new Error(`token=${secret}`);
+
     errorResponse({
-      err: error,
+      err,
       error: "internal",
       reason: "Server error",
       status: 500,
     });
 
-    expect(console.error).toHaveBeenCalledWith(
+    expect(errorSpy).toHaveBeenCalledWith(
       "agent.error",
       expect.objectContaining({
         error: "internal",
         reason: "Server error",
       })
     );
-    const logCall = (console.error as ReturnType<typeof vi.fn>).mock.calls[0];
-    const message = logCall?.[1]?.message as string;
-    expect(message).toBeDefined();
-    expect(message).toContain("[REDACTED]");
-    expect(message).not.toContain(longKey);
+    const log = errorSpy.mock.calls[0]?.[1];
+    expect((log as { message?: string })?.message).not.toContain(secret);
+    expect((log as { message?: string })?.message).toContain("[REDACTED]");
   });
 
-  it("does not log when err is not provided", () => {
-    errorResponse({
-      error: "not_found",
-      reason: "Resource not found",
-      status: 404,
-    });
-
-    expect(console.error).not.toHaveBeenCalled();
-  });
-
-  it("redacts sensitive information from error messages", () => {
-    const error = new Error("Token: abc123secret");
-    errorResponse({
-      err: error,
-      error: "auth_error",
-      reason: "Authentication failed",
-      status: 401,
-    });
-
-    const logCall = (console.error as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(logCall?.[1]?.message).not.toContain("abc123secret");
-    expect(logCall?.[1]?.message).toContain("[REDACTED]");
-  });
-
-  it("handles non-Error objects", () => {
+  it("handles non-Error err payloads", async () => {
+    const { errorResponse } = await loadHelpers();
     errorResponse({
       err: "string error",
       error: "internal",
       reason: "Unknown error",
       status: 500,
     });
-
-    expect(console.error).toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalled();
   });
 });

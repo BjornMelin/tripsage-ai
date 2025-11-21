@@ -5,9 +5,9 @@
  * URLs and response objects.
  */
 
-import type { RapidLink } from "@/domain/schemas/expedia";
-import { ExpediaApiError } from "./client-types";
-import { RAPID_PROD_DEFAULT_BASE_URL } from "./constants";
+import { ExpediaApiError } from "@domain/expedia/client-types";
+import { RAPID_PROD_DEFAULT_BASE_URL } from "@domain/expedia/constants";
+import type { RapidLink } from "@schemas/expedia";
 
 /**
  * Extracts booking token from Rapid API link.

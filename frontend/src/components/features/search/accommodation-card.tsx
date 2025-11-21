@@ -47,7 +47,7 @@ export function AccommodationCard({
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
       <div className="flex">
-        <div className="w-1/3 h-48 bg-muted flex items-center justify-center">
+        <div className="relative w-1/3 h-48 bg-muted flex items-center justify-center">
           {accommodation.images?.[0] ? (
             <Image
               src={accommodation.images[0]}

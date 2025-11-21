@@ -2,6 +2,7 @@
 
 **Date:** 2025-11-11
 **Version:** 1.0.0
+**Status:** Superseded by ADR-0044 (AI SDK v6 Tool Registry and MCP Integration)
 **Category:** frontend
 **Domain:** AI SDK v6
 

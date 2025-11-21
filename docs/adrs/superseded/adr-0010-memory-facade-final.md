@@ -1,7 +1,7 @@
 # ADR-0010: Final Memory Facade with LangGraph Alignment
 
 **Version**: 1.0.0
-**Status**: Accepted
+**Status**: Superseded by ADR-0042 (Supabase-Centric Memory Orchestrator)
 **Date**: 2025-10-21
 **Category**: backend
 **Domain**: Memory / LangGraph

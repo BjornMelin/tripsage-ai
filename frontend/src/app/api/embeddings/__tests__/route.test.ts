@@ -2,7 +2,11 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as route from "@/app/api/embeddings/route";
-import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
+import {
+  createMockNextRequest,
+  createRouteParamsContext,
+  getMockCookiesForTest,
+} from "@/test/route-helpers";
 
 // Mock next/headers cookies() BEFORE any imports that use it
 vi.mock("next/headers", () => ({
@@ -25,6 +29,17 @@ vi.mock("@/lib/supabase/server", () => ({
 // Mock Redis
 vi.mock("@/lib/redis", () => ({
   getRedis: vi.fn(() => Promise.resolve({})),
+}));
+
+const loggerErrorMock = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/telemetry/logger", () => ({
+  createServerLogger: vi.fn(() => ({
+    debug: vi.fn(),
+    error: loggerErrorMock,
+    info: vi.fn(),
+    warn: vi.fn(),
+  })),
 }));
 
 // Mock route helpers
@@ -67,7 +82,8 @@ describe("/api/embeddings", () => {
         body: { text: "" },
         method: "POST",
         url: "http://localhost/api/embeddings",
-      })
+      }),
+      createRouteParamsContext()
     );
     expect(res.status).toBe(400);
   });
@@ -78,7 +94,8 @@ describe("/api/embeddings", () => {
         body: { text: "hello world" },
         method: "POST",
         url: "http://localhost/api/embeddings",
-      })
+      }),
+      createRouteParamsContext()
     );
     expect(res.status).toBe(200);
     const json = await res.json();
@@ -103,7 +120,8 @@ describe("/api/embeddings", () => {
         },
         method: "POST",
         url: "http://localhost/api/embeddings",
-      })
+      }),
+      createRouteParamsContext()
     );
 
     expect(res.status).toBe(200);
@@ -122,7 +140,6 @@ describe("/api/embeddings", () => {
 
   it("logs and continues when persistence fails", async () => {
     UPSERT.mockResolvedValueOnce({ error: { message: "boom" } });
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     const res = await route.POST(
       createMockNextRequest({
@@ -134,13 +151,16 @@ describe("/api/embeddings", () => {
         },
         method: "POST",
         url: "http://localhost/api/embeddings",
-      })
+      }),
+      createRouteParamsContext()
     );
 
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.persisted).toBe(false);
-    expect(consoleError).toHaveBeenCalled();
-    consoleError.mockRestore();
+    expect(loggerErrorMock).toHaveBeenCalledWith("persist_failed", {
+      error: "boom",
+      propertyId: "prop-999",
+    });
   });
 });

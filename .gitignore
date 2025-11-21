@@ -1,58 +1,6 @@
-**/.claude/settings.local.json
 .env
 .env-*
-!scripts/templates/.env-*
 
-# Python
-__pycache__/
-*.py[cod]
-*.egg-info/
-*.so
-*.manifest
-*.spec
-pip-log.txt
-pip-delete-this-directory.txt
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.log
-.hypothesis/
-.pytest_cache/
-.mypy_cache/
-env/
-!frontend/src/lib/env/
-venv/
-.venv/
-ENV/
-VENV/
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-# Python lib directories (but not frontend/src/lib)
-/lib/
-/lib64/
-frontend/lib/
-!frontend/src/lib/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-.installed.cfg
-*.egg
-MANIFEST
-instance/
-local_settings.py
 
 # Node
 node_modules/
@@ -83,6 +31,7 @@ Thumbs.db
 .roomodes
 .lovable/
 .claude/
+**/.claude/settings.local.json
 *.local.md
 CLAUDE.local.md
 
@@ -280,7 +229,6 @@ benchmark-*.json
 **/*-test-results.*
 **/junit.xml
 **/xunit.xml
-**/.pytest_cache/
 **/.vitest/
 **/vitest-*.json
 **/vitest-*.log
@@ -335,6 +283,8 @@ supabase/.temp/
 docs/prompts/database-provider-research
 docs/prompts/tools/
 frontend/docs/prompts/
+docs/prompts/
+docs/review/
 
 # Frontend workspace (consolidated from frontend/.gitignore)
 next-env.d.ts

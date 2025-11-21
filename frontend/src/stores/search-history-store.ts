@@ -974,8 +974,9 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
           set({ isSyncing: true, syncError: null });
 
           try {
-            // Mock sync operation - replace with actual implementation
-            await new Promise((resolve) => setTimeout(resolve, 1000));
+            // Mock sync operation - keep fast to avoid test flakiness while
+            // still exercising the async path.
+            await new Promise((resolve) => setTimeout(resolve, 20));
 
             set({
               isSyncing: false,

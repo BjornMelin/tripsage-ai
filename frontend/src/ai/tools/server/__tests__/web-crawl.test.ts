@@ -9,6 +9,23 @@ vi.mock("@/lib/redis", () => ({
   getRedis: vi.fn(() => undefined),
 }));
 
+const envStore = vi.hoisted(() => ({
+  FIRECRAWL_API_KEY: "test-key",
+  FIRECRAWL_BASE_URL: "https://api.firecrawl.dev/v2",
+}));
+
+vi.mock("@/lib/env/server", () => ({
+  getServerEnvVar: (key: string) => {
+    const value = envStore[key as keyof typeof envStore];
+    if (!value) {
+      throw new Error(`Missing env ${key}`);
+    }
+    return value;
+  },
+  getServerEnvVarWithFallback: (key: string, fallback?: string) =>
+    envStore[key as keyof typeof envStore] ?? fallback,
+}));
+
 vi.mock("@/lib/telemetry/span", () => ({
   withTelemetrySpan: vi.fn((_name: string, _options, fn) =>
     fn({

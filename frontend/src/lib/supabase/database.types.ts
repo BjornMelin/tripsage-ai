@@ -54,6 +54,67 @@ export type Database = {
         };
       };
       // Core Trip Management
+      bookings: {
+        Row: {
+          booking_token: string;
+          checkin: string;
+          checkout: string;
+          eps_booking_id: string;
+          guest_email: string;
+          guest_name: string;
+          guest_phone: string | null;
+          guests: number;
+          id: string;
+          property_id: string;
+          special_requests: string | null;
+          status: string;
+          stripe_payment_intent_id: string;
+          trip_id: number | null;
+          user_id: string;
+        };
+        Insert: {
+          booking_token: string;
+          checkin: string;
+          checkout: string;
+          eps_booking_id: string;
+          guest_email: string;
+          guest_name: string;
+          guest_phone?: string | null;
+          guests: number;
+          id: string;
+          property_id: string;
+          special_requests?: string | null;
+          status: string;
+          stripe_payment_intent_id: string;
+          trip_id?: number | null;
+          user_id: string;
+        };
+        Update: {
+          booking_token?: string;
+          checkin?: string;
+          checkout?: string;
+          eps_booking_id?: string;
+          guest_email?: string;
+          guest_name?: string;
+          guest_phone?: string | null;
+          guests?: number;
+          id?: string;
+          property_id?: string;
+          special_requests?: string | null;
+          status?: string;
+          stripe_payment_intent_id?: string;
+          trip_id?: number | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "bookings_trip_id_fkey";
+            columns: ["trip_id"];
+            referencedRelation: "trips";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       trips: {
         Row: {
           id: number;

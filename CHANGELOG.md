@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Migrated all AI tool tests from `frontend/src/lib/tools/__tests__` into `frontend/src/ai/tools/server/__tests__`, aligning test locations with the canonical tool implementations in `frontend/src/ai/tools/server/*.ts`.
 - Derive rate-limit identifiers inside `createAiTool` via `headers()` with `x-user-id` → `x-forwarded-for` fallback, sanitize overrides, and expand unit tests to cover the new helper (`frontend/src/lib/ai/tool-factory*.ts`).
 - Remove `runWithGuardrails` runtime + tests, rewrap memory writes through `createAiTool`, and normalize memory categories before caching/telemetry (`frontend/src/lib/agents/memory-agent.ts`, `frontend/src/lib/agents/__tests__/memory-agent.test.ts`, `frontend/src/lib/agents/runtime.ts`).
+- Centralized tool error helpers in `frontend/src/ai/tools/server/errors.ts` and updated all tools and agents to import `TOOL_ERROR_CODES` / `createToolError` from `@ai/tools/server/errors`; removed the legacy `frontend/src/lib/tools/errors.ts` module.
+- Moved travel planning tools and schemas to `frontend/src/ai/tools/server/planning.ts` and `frontend/src/ai/tools/server/planning.schema.ts`, and migrated their tests to `frontend/src/ai/tools/server/__tests__/planning.test.ts`; deleted the old `frontend/src/lib/tools/planning*.ts` files.
+- Replaced `frontend/src/lib/tools/travel-advisory.ts` and its helpers with `frontend/src/ai/tools/server/travel-advisory.ts` plus `frontend/src/ai/tools/server/travel-advisory/**` (providers, utilities, tests) backed by the U.S. State Department Travel Advisories API.
+- Replaced `frontend/src/lib/tools/injection.ts` with `frontend/src/ai/tools/server/injection.ts` and updated the chat stream handler to inject `userId`/`sessionId` via `wrapToolsWithUserId` from `@ai/tools/server/injection`.
 - **React 19 login form modernization**: Refactored email/password login to use server actions with `useActionState`/`useFormStatus` for progressive enhancement, replacing route-based redirects with inline error handling and pending states. Created `loginAction` server action in `frontend/src/app/(auth)/login/actions.ts` with Zod validation, Supabase SSR authentication, and safe redirect logic. Updated `frontend/src/components/auth/login-form.tsx` to use React 19 hooks with field-specific error rendering and `SubmitButton` component. Converted `/auth/login` route to thin wrapper for external API compatibility while maintaining all security safeguards. Added comprehensive tests in `frontend/src/app/(auth)/login/__tests__/actions.test.ts` covering validation, authentication, and redirect scenarios.
 - **AI SDK v6 Tool Migration**: Complete refactoring of tool architecture to fully leverage AI SDK v6 capabilities. Migrated `createAiTool` factory to remove type assertions, properly integrate ToolCallOptions with user context extraction from messages, consolidate guardrails into single source of truth, eliminate double-wrapping in agent tools, and update all 18+ tool definitions to use consistent patterns. Enhanced type safety with strict TypeScript compliance, improved test coverage using AI SDK patterns, and eliminated code duplication between tool-factory and guarded-tool implementations. Added comprehensive documentation in `docs/developers/ai-sdk-v6-tools.md` for future tool development.
 - **Configuration and dependency updates**: Enabled React Compiler and Cache Components in Next.js 16; updated Zod schemas to v4 APIs (z.uuid(), z.email(), z.int()); migrated user settings to Server Actions with useActionState; consolidated Supabase client imports to @/lib/supabase; unified Next.js config files into single next.config.ts with conditional bundle analyzer; added jsdom environment declarations for tests; removed deprecated Next.js config keys and custom webpack splitChunks.
@@ -136,6 +140,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Supabase Realtime hooks now provide stable runtime behaviour: `useTripRealtime` memoizes its error instance to avoid unnecessary error object churn; `useWebSocketChat` now delegates channel subscription to the shared `useRealtimeChannel` helper and uses Supabase's built-in reconnection, removing duplicated backoff logic.
 - Agent status WebSocket reconnect backoff in `frontend/src/hooks/use-agent-status-websocket.ts` now increments attempts via a state updater and derives delays from the updated value, so retry intervals grow exponentially and reset only on successful subscription instead of remaining fixed.
 - Chat store realtime lifecycle is guarded by tests: `disconnectRealtime` in `frontend/src/stores/chat-store.ts` is covered by `frontend/src/stores/__tests__/chat-store-realtime.test.ts` to ensure connection status, pending messages, channel reference, and typing state are reset consistently when the UI tears down the realtime connection.
+- Login form now sanitizes `next`/`from` redirects to same-origin paths only, blocking protocol-relative and off-origin redirects (`frontend/src/components/auth/login-form.tsx`).
+- `POST /api/auth/login` returns 400 for malformed JSON bodies instead of 500, improving client feedback and telemetry accuracy (`frontend/src/app/api/auth/login/route.ts`).
+- Client OTEL fetch instrumentation narrows `propagateTraceHeaderCorsUrls` to the exact origin to prevent trace header leakage to attacker-controlled hosts (`frontend/src/lib/telemetry/client.ts`).
 
 ## [1.0.0] - 2025-11-14
 
@@ -220,14 +227,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Schema test edge cases: invalid date formats, missing required fields, length validation (summary ≤1024, description ≤8192), email format validation, `timeMax > timeMin` validation for free/busy requests.
   - Trip export tests: empty destinations, missing dates/activities, partial trip data, metadata structure validation.
   - E2E test optimizations: parallel assertions via `Promise.all()`, optimized wait strategies (`domcontentloaded`), explicit timeouts for CI stability.
-  - Test documentation: `frontend/src/app/api/calendar/__tests__/README.md` with usage examples and best practices.
+- Test documentation: `frontend/src/app/api/calendar/__tests__/README.md` with usage examples and best practices.
 - Travel Planning tools (AI SDK v6, TypeScript):
-  - Server-only tools: `createTravelPlan`, `updateTravelPlan`, `combineSearchResults`, `saveTravelPlan`, `deleteTravelPlan` in `frontend/src/lib/tools/planning.ts`.
-  - Zod schema for persisted plans: `frontend/src/lib/tools/planning.schema.ts` with camelCase fields.
+  - Server-only tools: `createTravelPlan`, `updateTravelPlan`, `combineSearchResults`, `saveTravelPlan`, `deleteTravelPlan` in `frontend/src/ai/tools/server/planning.ts`.
+  - Zod schema for persisted plans: `frontend/src/ai/tools/server/planning.schema.ts` with camelCase fields.
   - Upstash Redis persistence: keys `travel_plan:{planId}` with 7d default TTL, 30d for finalized plans.
-  - User injection: `wrapToolsWithUserId()` in `frontend/src/lib/tools/injection.ts` for authenticated tool calls.
+  - User injection: `wrapToolsWithUserId()` in `frontend/src/ai/tools/server/injection.ts` for authenticated tool calls.
   - Rate limits: create 20/day per user; update 60/min per plan.
-  - Tests: `frontend/src/lib/tools/__tests__/planning.test.ts` covers schema validation, Redis fallbacks, rate limits.
+  - Tests: `frontend/src/ai/tools/server/__tests__/planning.test.ts` covers schema validation, Redis fallbacks, rate limits.
 - Agent endpoints (P1-P4 complete):
   - `frontend/src/app/api/agents/flights/route.ts` (P1)
   - `frontend/src/app/api/agents/accommodations/route.ts` (P1)
@@ -242,8 +249,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `frontend/src/lib/ratelimit/config.ts` with `buildRateLimit(workflow, identifier)` factory replacing per-workflow builders
   - All agents use unified rate limit config with consistent 1-minute windows
 - Provider tools:
-  - `frontend/src/lib/tools/google-places.ts` for POI lookups using Google Places API (New). Uses Google Maps Geocoding API for destination-based lookups with 30-day max cached results per policy.
-  - `frontend/src/lib/tools/travel-advisory.ts` for GeoSure safety scores
+  - `frontend/src/ai/tools/server/google-places.ts` for POI lookups using Google Places API (New). Uses Google Maps Geocoding API for destination-based lookups with 30-day max cached results per policy.
+  - `frontend/src/ai/tools/server/travel-advisory.ts` for travel advisories and safety scores based on the U.S. State Department Travel Advisories API with cached responses.
 - UI components for agent results:
   - `BudgetChart` for budget planning visualization
   - `DestinationCard` for destination research results

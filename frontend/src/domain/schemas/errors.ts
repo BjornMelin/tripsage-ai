@@ -3,6 +3,7 @@
  * Includes error boundary information, error details, error reports, and component props.
  */
 
+import type React from "react";
 import { z } from "zod";
 import { primitiveSchemas } from "./registry";
 

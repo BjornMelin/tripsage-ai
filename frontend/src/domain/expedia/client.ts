@@ -31,7 +31,7 @@ import {
   extractInclusiveTotal,
   type RapidPriceCheckResponse,
   type RapidPropertyContentMap,
-} from "@/domain/schemas/expedia";
+} from "@schemas/expedia";
 import { getServerEnvVar, getServerEnvVarWithFallback } from "@/lib/env/server";
 import { secureUuid } from "@/lib/security/random";
 import { ExpediaApiError, type ExpediaRequestContext } from "./client-types";
@@ -73,7 +73,9 @@ export class ExpediaClient {
    * from environment variables with fallback defaults.
    */
   constructor() {
+    // codeql[js/insufficient-password-hash]: apiKey is an API credential for request signing, not a password
     this.apiKey = ensureEnv(getServerEnvVar("EPS_API_KEY"), "EPS_API_KEY");
+    // codeql[js/insufficient-password-hash]: apiSecret is an API credential for request signing, not a password
     this.apiSecret = ensureEnv(getServerEnvVar("EPS_API_SECRET"), "EPS_API_SECRET");
     this.baseUrl =
       getServerEnvVarWithFallback("EPS_BASE_URL", RAPID_PROD_DEFAULT_BASE_URL) ??
@@ -90,7 +92,7 @@ export class ExpediaClient {
   /**
    * Generates Expedia API authentication header.
    *
-   * Creates HMAC-SHA512 signature using API key, secret, and timestamp
+   * Creates SHA-512 signature using API key, secret, and timestamp
    * as required by Rapid API authentication specification.
    *
    * @returns Authentication header string.
@@ -101,11 +103,10 @@ export class ExpediaClient {
     const signatureInput = `${this.apiKey}${this.apiSecret}${timestamp}`;
     // Per Expedia Rapid auth: SHA-512(apiKey + secret + timestamp). This is a
     // request-signing token, not credential storage.
-    const signature =
-      /* codeql[js/insufficient-password-hash]: SHA-512 is mandated by Expedia for request signatures, and no passwords are stored. */
-      createHash("sha512")
-        .update(signatureInput, "utf-8")
-        .digest("hex");
+    // codeql[js/insufficient-password-hash]: SHA-512 is mandated by Expedia Rapid API specification for request signatures. This is not password hashing - it's request signing for API authentication.
+    const signature = createHash("sha512")
+      .update(signatureInput, "utf-8")
+      .digest("hex");
     return `EAN APIKey=${this.apiKey},Signature=${signature},timestamp=${timestamp}`;
   }
 

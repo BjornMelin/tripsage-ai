@@ -16,16 +16,16 @@ const { mockEncode, MOCK_TIKTOKEN } = vi.hoisted(() => {
   });
 
   // Mock Tiktoken class that always succeeds regardless of rank input
-  const TiktokenClass = vi.fn().mockImplementation((_rank: unknown) => {
-    // Return mock instance immediately, don't validate rank
+  // Use a proper constructor function wrapped in vi.fn() to avoid warnings
+  function TiktokenConstructor(_rank: unknown) {
     return {
       encode: encodeFn,
       free: vi.fn(),
     };
-  });
+  }
 
   return {
-    MOCK_TIKTOKEN: TiktokenClass,
+    MOCK_TIKTOKEN: vi.fn(TiktokenConstructor),
     mockEncode: encodeFn,
   };
 });

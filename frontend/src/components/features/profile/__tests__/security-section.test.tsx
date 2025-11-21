@@ -69,6 +69,7 @@ vi.mock("@/stores/user-store", () => ({
 
 describe("SecuritySection", () => {
   beforeEach(() => {
+    vi.useRealTimers();
     vi.clearAllMocks();
     MockUserStore.user = { ...DefaultUser };
     MockUpdateUser.mockResolvedValue({});

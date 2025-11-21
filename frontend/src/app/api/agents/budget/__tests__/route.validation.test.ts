@@ -1,7 +1,11 @@
 /** @vitest-environment node */
 
 import { describe, expect, it, vi } from "vitest";
-import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
+import {
+  createMockNextRequest,
+  createRouteParamsContext,
+  getMockCookiesForTest,
+} from "@/test/route-helpers";
 
 // Mock next/headers cookies() before any imports that use it
 vi.mock("next/headers", () => ({
@@ -22,7 +26,7 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 // Mock provider registry
-vi.mock("@/lib/providers/registry", () => ({
+vi.mock("@ai/models/registry", () => ({
   resolveProvider: vi.fn(async () => ({ model: {} })),
 }));
 
@@ -47,7 +51,7 @@ describe("/api/agents/budget validation", () => {
       method: "POST",
       url: "http://localhost/api/agents/budget",
     });
-    const res = await mod.POST(req);
+    const res = await mod.POST(req, createRouteParamsContext());
     expect(res.status).toBe(400);
     const data = await res.json();
     expect(data.error).toBe("invalid_request");

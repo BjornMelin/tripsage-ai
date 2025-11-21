@@ -4,7 +4,7 @@ import {
   mockApiRouteRateLimitOnce,
   resetApiRouteMocks,
 } from "@/test/api-route-helpers";
-import { createMockNextRequest } from "@/test/route-helpers";
+import { createMockNextRequest, createRouteParamsContext } from "@/test/route-helpers";
 
 const mockCalendars = {
   items: [
@@ -41,7 +41,7 @@ describe("/api/calendar/status route", () => {
       url: "http://localhost/api/calendar/status",
     });
 
-    const res = await mod.GET(req);
+    const res = await mod.GET(req, createRouteParamsContext());
     const body = await res.json();
 
     expect(res.status).toBe(200);
@@ -63,7 +63,7 @@ describe("/api/calendar/status route", () => {
       url: "http://localhost/api/calendar/status",
     });
 
-    const res = await mod.GET(req);
+    const res = await mod.GET(req, createRouteParamsContext());
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.connected).toBe(false);
@@ -82,7 +82,7 @@ describe("/api/calendar/status route", () => {
       url: "http://localhost/api/calendar/status",
     });
 
-    const res = await mod.GET(req);
+    const res = await mod.GET(req, createRouteParamsContext());
     expect(res.status).toBe(429);
   });
 });
