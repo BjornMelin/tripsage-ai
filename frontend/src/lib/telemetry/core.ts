@@ -25,4 +25,3 @@ export type TelemetryLogOptions = {
   attributes?: TelemetrySpanAttributes;
   level?: "info" | "warning" | "error";
 };
-

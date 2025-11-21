@@ -10,8 +10,8 @@ import "server-only";
 import { type Span, SpanStatusCode, trace } from "@opentelemetry/api";
 import { getTelemetryTracer } from "@/lib/telemetry/tracer";
 import type {
-  TelemetrySpanAttributes,
   TelemetryLogOptions,
+  TelemetrySpanAttributes,
   WithTelemetrySpanOptions,
 } from "./core";
 

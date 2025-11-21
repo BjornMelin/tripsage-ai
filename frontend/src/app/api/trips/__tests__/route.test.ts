@@ -2,7 +2,11 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { stubRateLimitDisabled } from "@/test/env-helpers";
-import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
+import {
+  createMockNextRequest,
+  createRouteParamsContext,
+  getMockCookiesForTest,
+} from "@/test/route-helpers";
 
 // Mock next/headers cookies() BEFORE any imports that use it
 vi.mock("next/headers", () => ({
@@ -53,7 +57,7 @@ describe("/api/trips route", () => {
       url: "http://localhost/api/trips?status=invalid&limit=not-a-number",
     });
 
-    const res = await getTrips(req);
+    const res = await getTrips(req, createRouteParamsContext());
 
     expect(res.status).toBe(400);
   });
