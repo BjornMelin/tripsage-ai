@@ -240,8 +240,7 @@ export class AccommodationsService {
         idempotencyKey,
         paymentMethodId: params.paymentMethodId,
         persistBooking: async (payload) => {
-          // biome-ignore lint/suspicious/noExplicitAny: Supabase types may not include table
-          const { error } = await (supabase as any).from("bookings").insert({
+          const { error } = await supabase.from("bookings").insert({
             // biome-ignore lint/style/useNamingConvention: database columns use snake_case
             booking_token: params.bookingToken,
             checkin: params.checkin,
@@ -264,7 +263,7 @@ export class AccommodationsService {
             // biome-ignore lint/style/useNamingConvention: database columns use snake_case
             stripe_payment_intent_id: payload.stripePaymentIntentId,
             // biome-ignore lint/style/useNamingConvention: database columns use snake_case
-            trip_id: params.tripId ?? null,
+            trip_id: params.tripId ? Number.parseInt(params.tripId, 10) : null,
             // biome-ignore lint/style/useNamingConvention: database columns use snake_case
             user_id: ctx.userId,
           });

@@ -80,9 +80,9 @@ export type BookingCommand = {
  */
 type PersistPayload = {
   bookingId: string;
-  epsItineraryId?: string;
+  epsItineraryId: string;
   stripePaymentIntentId: string;
-  confirmationNumber?: string;
+  confirmationNumber: string;
   command: BookingCommand;
 };
 
