@@ -61,31 +61,31 @@ Related: `adr-0050-amadeus-google-places-stripe-hybrid.md`, `0027-spec-accommoda
 
 ## Phase 3 – Migrate Search & Details
 
-- [ ] Remove `@schemas/expedia` usage from `service.ts`.
+- [x] Remove `@schemas/expedia` usage from `service.ts`.
 
-- [ ] Implement Amadeus-based search with Upstash caching and rate limiting.
+- [x] Implement Amadeus-based search with Upstash caching and rate limiting.
 
-- [ ] Implement details enrichment with Google Places Place Details for hotels.
+- [x] Implement details enrichment with Google Places Place Details for hotels.
 
-- [ ] Update unit tests for search and details.
+- [x] Update unit tests for search and details.
 
 ## Phase 4 – Migrate Availability & Booking
 
-- [ ] Update `checkAvailability` to use provider adapter and Amadeus.
+- [x] Update `checkAvailability` to use provider adapter and Amadeus.
 
-- [ ] Generalize `runBookingOrchestrator` to provider-agnostic `ProviderBookingResult`.
+- [x] Generalize `runBookingOrchestrator` to provider-agnostic `ProviderBookingResult`.
 
-- [ ] Update Supabase booking persistence mapping.
+- [x] Update Supabase booking persistence mapping.
 
-- [ ] Ensure Stripe PaymentIntents flow remains unchanged.
+- [ ] Ensure Stripe PaymentIntents flow remains unchanged. (Pending: align Amadeus booking payload with Stripe payments/virtual card.)
 
 ## Phase 5 – AI Tools & Agent
 
-- [ ] Update `ai/tools/server/accommodations.ts` descriptions and remove Rapid-specific helpers.
+- [x] Update `ai/tools/server/accommodations.ts` descriptions and remove Rapid-specific helpers.
 
-- [ ] Ensure all tools remain schema-compatible with `@schemas/accommodations`.
+- [x] Ensure all tools remain schema-compatible with `@schemas/accommodations`.
 
-- [ ] Validate `runAccommodationAgent` still runs with updated tools.
+- [x] Validate `runAccommodationAgent` still runs with updated tools.
 
 ## Phase 6 – UI & UX
 

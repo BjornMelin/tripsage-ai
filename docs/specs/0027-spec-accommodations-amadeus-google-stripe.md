@@ -614,15 +614,15 @@ Using Vitest + MSW:
 
 ### Phase 3 – Service & Orchestrator
 
-- [ ] Remove direct `@schemas/expedia` imports from `service.ts`.
-- [ ] Implement new search/availability/book flows using provider adapter.
-- [ ] Update `booking-orchestrator.ts` to be provider-agnostic.
+- [x] Remove direct `@schemas/expedia` imports from `service.ts`.
+- [x] Implement new search/availability/book flows using provider adapter.
+- [x] Update `booking-orchestrator.ts` to be provider-agnostic.
 
 ### Phase 4 – AI Tools & Agent
 
-- [ ] Update `ai/tools/server/accommodations.ts` descriptions and any Rapid-specific helpers.
-- [ ] Confirm `searchAccommodationsInputSchema` export is unchanged.
-- [ ] Confirm `runAccommodationAgent` still composes tools correctly.
+- [x] Update `ai/tools/server/accommodations.ts` descriptions and any Rapid-specific helpers.
+- [x] Confirm `searchAccommodationsInputSchema` export is unchanged.
+- [x] Confirm `runAccommodationAgent` still composes tools correctly.
 
 ### Phase 5 – UI & UX
 
