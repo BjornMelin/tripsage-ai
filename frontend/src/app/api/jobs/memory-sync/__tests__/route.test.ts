@@ -216,6 +216,7 @@ describe("POST /api/jobs/memory-sync", () => {
       },
     };
 
+    // @ts-expect-error test helper is added via vi.mock in setup
     const { mockVerify } = await import("@upstash/qstash");
     mockVerify.mockResolvedValueOnce(false);
 

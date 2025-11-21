@@ -174,7 +174,7 @@ export type WorkflowConnection = z.infer<typeof workflowConnectionSchema>;
  * Zod schema for agent workflow entities.
  * Validates workflow configuration including agents and connections.
  */
-export const agentWorkflowSchema = z.object({
+export const agentWorkflowEntitySchema = z.object({
   agents: z
     .array(primitiveSchemas.uuid)
     .min(1, { error: "At least one agent is required" }),
@@ -190,7 +190,7 @@ export const agentWorkflowSchema = z.object({
 });
 
 /** TypeScript type for agent workflows. */
-export type AgentWorkflow = z.infer<typeof agentWorkflowSchema>;
+export type AgentWorkflowEntity = z.infer<typeof agentWorkflowEntitySchema>;
 
 /**
  * Zod schema for agent runtime configuration.
@@ -250,7 +250,7 @@ export const agentStateSchema = z.object({
   metrics: z.record(primitiveSchemas.uuid, agentMetricsSchema),
   resourceUsage: resourceUsageSchema.nullable(),
   sessions: z.record(primitiveSchemas.uuid, agentSessionSchema),
-  workflows: z.record(primitiveSchemas.uuid, agentWorkflowSchema),
+  workflows: z.record(primitiveSchemas.uuid, agentWorkflowEntitySchema),
 });
 
 /** TypeScript type for agent state. */
@@ -538,8 +538,8 @@ export const validateAgentTask = (data: unknown): AgentTask => {
  * @returns Parsed and validated workflow data
  * @throws {ZodError} When validation fails with detailed error information
  */
-export const validateWorkflow = (data: unknown): AgentWorkflow => {
-  return agentWorkflowSchema.parse(data);
+export const validateWorkflow = (data: unknown): AgentWorkflowEntity => {
+  return agentWorkflowEntitySchema.parse(data);
 };
 
 /**
@@ -569,7 +569,7 @@ export const safeValidateTask = (data: unknown) => {
  * @returns Validation result with success/error information
  */
 export const safeValidateWorkflow = (data: unknown) => {
-  return agentWorkflowSchema.safeParse(data);
+  return agentWorkflowEntitySchema.safeParse(data);
 };
 
 /**

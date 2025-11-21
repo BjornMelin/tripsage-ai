@@ -90,6 +90,7 @@ export const toolErrorCodeSchema = z.enum([
   "approval_backend_unavailable",
   "approval_missing_session",
   "approval_required",
+  "tool_execution_failed",
   "tool_rate_limited",
   "web_search_error",
   "web_search_failed",

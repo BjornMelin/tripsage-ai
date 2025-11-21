@@ -6,7 +6,7 @@
  * withApiGuards. Per ADR-0032.
  */
 
-import type { AgentWorkflow } from "@schemas/agents";
+import type { AgentWorkflowKind } from "@schemas/agents";
 
 /**
  * Default rate limit window for all workflows.
@@ -21,7 +21,7 @@ const RATE_LIMIT_WINDOW = "1 m" as const;
  * Defines the maximum number of tool calls allowed per window for each
  * workflow. Limits are chosen based on workflow complexity and resource usage.
  */
-const TOOL_RATE_LIMIT_CONFIG: Record<AgentWorkflow, { limit: number }> = {
+const TOOL_RATE_LIMIT_CONFIG: Record<AgentWorkflowKind, { limit: number }> = {
   accommodationSearch: { limit: 10 },
   budgetPlanning: { limit: 6 },
   destinationResearch: { limit: 8 },
@@ -44,15 +44,15 @@ export type WorkflowRateLimit = {
  * Builds a workflow-specific rate limit configuration.
  *
  * Returns a rate limit configuration object with the workflow-specific limit
- * and the default window. Uses the AgentWorkflow enum for type safety.
+ * and the default window. Uses the AgentWorkflowKind enum for type safety.
  *
- * @param workflow The agent workflow identifier from AgentWorkflow enum.
+ * @param workflow The agent workflow identifier from AgentWorkflowKind enum.
  * @param identifier Stable user or IP-based identifier (already hashed if needed).
  * @returns Rate limit configuration with workflow-specific limit and default window.
  * @throws {Error} If workflow is not found in configuration (should not happen due to Record type).
  */
 export function buildRateLimit(
-  workflow: AgentWorkflow,
+  workflow: AgentWorkflowKind,
   identifier: string
 ): WorkflowRateLimit {
   const config = TOOL_RATE_LIMIT_CONFIG[workflow];

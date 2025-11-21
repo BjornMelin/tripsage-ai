@@ -5,7 +5,7 @@ import {
   errorLoadingStateSchema as loadingStateSchema,
   routeErrorPropsSchema,
   errorSkeletonPropsSchema as skeletonPropsSchema,
-} from "@schemas/error-boundary";
+} from "@schemas/ui/error-boundary";
 import { describe, expect, it } from "vitest";
 
 describe("errorBoundaryPropsSchema", () => {

@@ -59,7 +59,7 @@ describe("searchFlights tool", () => {
     })) as unknown as typeof fetch;
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await searchFlights.execute?.(
+    const result = (await searchFlights.execute?.(
       {
         cabinClass: "economy",
         currency: "USD",
@@ -69,7 +69,7 @@ describe("searchFlights tool", () => {
         passengers: 2,
       },
       mockContext
-    );
+    )) as any;
 
     expect(fetchMock).toHaveBeenCalledWith(
       "https://api.duffel.com/air/offer_requests",
