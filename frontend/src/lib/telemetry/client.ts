@@ -15,8 +15,8 @@ import { BatchSpanProcessor, type SpanProcessor } from "@opentelemetry/sdk-trace
 import { WebTracerProvider } from "@opentelemetry/sdk-trace-web";
 import { getClientEnvVarWithFallback } from "@/lib/env/client";
 import type {
-  TelemetrySpanAttributes,
   TelemetryLogOptions,
+  TelemetrySpanAttributes,
   WithTelemetrySpanOptions,
 } from "./core";
 
