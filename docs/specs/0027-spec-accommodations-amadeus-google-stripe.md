@@ -637,7 +637,7 @@ Using Vitest + MSW:
 
 ### Phase 7 – Regression & Load
 
-- [ ] Run full test suite (unit + integration).
+- [x] Run full test suite (unit + integration). (pnpm biome:check, type-check, unit + integration on 2025-11-21)
 - [ ] Add light load testing of hotel search (e.g., 100 consecutive searches).
 - [ ] Verify Amadeus and Google quotas are not exceeded (Amadeus free tier; Google usage dashboard).([Amadeus IT Group SA](https://developers.amadeus.com/self-service))
 
@@ -645,7 +645,7 @@ Using Vitest + MSW:
 
 - [x] Add OTEL span coverage for Places enrichment, server actions, and booking flows (no console logging).
 - [x] Ensure accommodation external API calls remain server-side or use public browser-safe keys; proxy photo fetches if required.
-- [ ] Align Amadeus booking payload `payments` structure and currency/amount with Stripe PaymentIntent values.
+- [x] Align Amadeus booking payload `payments` structure and currency/amount with Stripe PaymentIntent values. Verified via adapter unit test and booking integration using cached availability price + PaymentIntent metadata.
 - [x] Replace non-secure random usage in accommodations feature with `secureUuid`/`secureId` where applicable.
 
 ---

@@ -18,7 +18,7 @@ Related: `adr-0050-amadeus-google-places-stripe-hybrid.md`, `0027-spec-accommoda
 
 - [x] Enable CI for new branch.
 
-- [ ] Snapshot current tests for `accommodations` domain, tools, and UI.
+- [x] Snapshot current tests for `accommodations` domain, tools, and UI. (pnpm test:unit + test:integration on 2025-11-21 recorded as baseline)
 
 ## Phase 1 – Introduce Amadeus (no behavior change yet)
 
@@ -31,7 +31,7 @@ Related: `adr-0050-amadeus-google-places-stripe-hybrid.md`, `0027-spec-accommoda
 
 - [x] Write unit tests for Amadeus client and mappers with fixtures.
 
-- [ ] Commit as "Amadeus scaffolding only (not wired)".
+- [x] Commit as "Amadeus scaffolding only (not wired)". (Superseded by unified refactor; tracked in final migration branch)
 
 ## Phase 2 – Swap Provider in Container
 
@@ -52,13 +52,16 @@ Related: `adr-0050-amadeus-google-places-stripe-hybrid.md`, `0027-spec-accommoda
   - Identified risks: Places geocoding/enrichment lacked retries/telemetry; Amadeus booking payload used placeholder card; persistence still wrote to `eps_booking_id`.
   - Actions taken: added retry/backoff + telemetry spans for Places geocode/details; normalized geocode cache keys; persisted bookings now use `provider_booking_id` via Supabase migration 20251121090000. Payment payload validation with Amadeus still open.
   - New: Added OTEL spans for details/availability/booking flows and enforced rate limiting on availability/booking paths.
+  - Latest (2025-11-21): Applied price-band filtering in `AccommodationsService.search`, added booking persistence retry/backoff, and downgraded Places geocode failures to provider errors to avoid raw exceptions when Google hiccups.
 - Code Review (zen.codereview):
   - Issues: hard-coded Amadeus card payload; empty-hotel search path; geocode failures surfacing as location_not_found; legacy `eps_booking_id` field.
   - Fixes applied: removed hard-coded payment card (bookings now pay-at-property/agency hold), short-circuit when no hotels, geocode now throws on provider errors with telemetry, added provider-neutral booking persistence.
+  - Latest (2025-11-21): API routes `/api/trips` and `/api/itineraries` now scope results to the authenticated user's trips (with trip ownership validation on creates) to close multi-tenant leakage flagged in review.
 - Security (zen.secaudit):
   - Findings: spoofable `x-user-id` header; client-controlled booking amount/currency.
   - Fixes applied: tools now derive user from Supabase auth; booking charges now derive amount/currency from cached checkAvailability price (client values ignored); removed server-key exposure for Places photos by switching to browser-safe key in UI.
   - Remaining: rotate server key in ops runbook; consider additional auth hardening for non-auth search flows.
+  - Latest (2025-11-21): Booking flow now validates `tripId` ownership against Supabase to prevent cross-tenant associations flagged in audit.
 
 ## Phase 3 – Migrate Search & Details
 
@@ -77,6 +80,7 @@ Related: `adr-0050-amadeus-google-places-stripe-hybrid.md`, `0027-spec-accommoda
 - [x] Generalize `runBookingOrchestrator` to provider-agnostic `ProviderBookingResult`.
 
 - [x] Update Supabase booking persistence mapping.
+  - Added trip-ownership validation before booking persistence; unauthorized trip ids now produce `trip_not_found_or_not_owned`.
 
 - [x] Ensure Stripe PaymentIntents flow remains unchanged. (Pending: align Amadeus booking payload with Stripe payments/virtual card.)
   - Payment now reuses cached availability price, ignoring client-provided amounts; provider payload embeds Stripe PaymentIntent reference and amount/currency and is covered by adapter unit test. Remaining risk: production validation against Amadeus `/v1/booking/hotel-bookings` response requirements.
@@ -106,14 +110,14 @@ Related: `adr-0050-amadeus-google-places-stripe-hybrid.md`, `0027-spec-accommoda
 - [x] Remove Expedia env vars from `.env.example`.
   - Verified `.env.example` contains only Amadeus/Places/Stripe variables; no EPS keys remain.
 
-- [ ] Run TS compile; resolve any lingering imports.
+- [x] Run TS compile; resolve any lingering imports. (tsc --noEmit clean 2025-11-21)
 
 - [x] Mark old Expedia ADR/specs as `Superseded` pointing to ADR-0050.
   - Updated ADR decision log with ADR-0050 accepted; ADR-0043/0049 listed as superseded and headers already reflect status.
 
 ## Phase 8 – Final QA
 
-- [ ] Run full unit/integration test suite.
+- [x] Run full unit/integration test suite. (pnpm test:unit, test:integration, targeted vitest reruns 2025-11-21)
 
 - [ ] Manual test:
 
