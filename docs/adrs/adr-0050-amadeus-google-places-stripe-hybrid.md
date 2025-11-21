@@ -6,7 +6,7 @@
 **Category**: Architecture  
 **Domain**: Travel Supply Integrations  
 **Related ADRs**: ADR-0020, ADR-0024, ADR-0026, ADR-0031, ADR-0036, ADR-0039, ADR-0042  
-**Related Specs**: SPEC-001, SPEC-0010, SPEC-0015  
+**Related Specs**: SPEC-0027, SPEC-001, SPEC-0010, SPEC-0015  
 **Supersedes**: ADR-0043, ADR-0049
 
 - Any Expedia Rapid–focused ADRs under `docs/adrs/` (e.g. `adr-00N-expedia-rapid-hotel-provider.md`)  
@@ -28,7 +28,7 @@
 3. Update navigation / index docs (if present) to:
    - Remove Expedia as “current provider”.
    - Point “Accommodations provider” to ADR-00X and the new spec:
-     `docs/specs/accommodations-amadeus-google-stripe.md`.
+     `docs/specs/0027-spec-accommodations-amadeus-google-stripe.md`.
 
 ## 2. Context
 

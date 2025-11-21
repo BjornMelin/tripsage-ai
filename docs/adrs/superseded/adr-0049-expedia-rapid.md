@@ -1,4 +1,11 @@
-# Expedia Rapid Integration Research
+# ADR-0049: Expedia Rapid Integration Research
+
+**Version**: 1.0  
+**Status**: Superseded  
+**Date**: 2025-11-19  
+**Category**: Architecture  
+**Domain**: Travel Supply Integrations  
+**Superseded By**: ADR-0050  
 
 ## Architecture Snapshot (2025-11-19)
 
