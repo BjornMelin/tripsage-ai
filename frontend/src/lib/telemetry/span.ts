@@ -1,23 +1,22 @@
 /**
- * @fileoverview Minimal OpenTelemetry span helper with attribute redaction and logging.
+ * @fileoverview Server-side telemetry span utilities.
+ *
+ * Canonical server-only OpenTelemetry span helper with attribute redaction and logging.
+ * Client components should import from ./client instead.
  */
 
 import "server-only";
 
 import { type Span, SpanStatusCode, trace } from "@opentelemetry/api";
 import { getTelemetryTracer } from "@/lib/telemetry/tracer";
+import type {
+  TelemetrySpanAttributes,
+  TelemetryLogOptions,
+  WithTelemetrySpanOptions,
+} from "./core";
 
-export type TelemetrySpanAttributes = Record<string, string | number | boolean>;
-
-export type WithTelemetrySpanOptions = {
-  attributes?: TelemetrySpanAttributes;
-  redactKeys?: string[];
-};
-
-export type TelemetryLogOptions = {
-  attributes?: TelemetrySpanAttributes;
-  level?: "info" | "warning" | "error";
-};
+// Re-export types for convenience
+export type { TelemetrySpanAttributes, TelemetryLogOptions, WithTelemetrySpanOptions };
 
 const REDACTED_VALUE = "[REDACTED]";
 const tracer = getTelemetryTracer();

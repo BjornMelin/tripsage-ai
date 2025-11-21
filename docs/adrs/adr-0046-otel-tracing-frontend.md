@@ -11,8 +11,9 @@
 ## Context
 
 - OTEL dependencies are present (`@opentelemetry/api`, `@vercel/otel`), but no ADR defines frontend route tracing standards.  
-- Project rule: server code must use `withTelemetrySpan()`/`withTelemetrySpanSync()` from `@/lib/telemetry/span` and `createServerLogger()` from `@/lib/logging/server`; `console.*` is discouraged.  
+- Project rule: server code must use `withTelemetrySpan()`/`withTelemetrySpanSync()` from `@/lib/telemetry/span` (server-only) and `createServerLogger()` from `@/lib/telemetry/logger`; `console.*` is discouraged.  
 - We need consistent span attributes for AI SDK routes, Supabase SSR, and Upstash/QStash calls.
+- Client components use `@/lib/telemetry/client` for client-side OTEL Web initialization and no-op helpers that match the server API surface.
 
 ## Decision
 
