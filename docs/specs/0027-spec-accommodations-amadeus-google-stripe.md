@@ -18,9 +18,9 @@
 This document is the **implementation guide** for migrating TripSage’s
 accommodations features from **Expedia Rapid** to a hybrid of:
 
-- **Amadeus Self-Service APIs** (hotels search and booking).:contentReference[oaicite:37]{index=37}  
-- **Google Places API (New)** for hotel discovery, photos, and ratings.:contentReference[oaicite:38]{index=38}  
-- **Stripe** for card payments via PaymentIntents.:contentReference[oaicite:39]{index=39}  
+- **Amadeus Self-Service APIs** (hotels search and booking).
+- **Google Places API (New)** for hotel discovery, photos, and ratings.
+- **Stripe** for card payments via PaymentIntents.
 
 This spec is intended to be fed directly to an AI coding agent. All tasks are
 broken into phases with checklists and concrete file paths.
@@ -54,7 +54,7 @@ broken into phases with checklists and concrete file paths.
 
 2. `AmadeusProviderAdapter` (new):
 
-   - Wraps the **Amadeus Node SDK**.:contentReference[oaicite:46]{index=46}  
+   - Wraps the **Amadeus Node SDK**.
    - Implements `AccommodationProviderAdapter` with methods:
      - `search(params, ctx)`
      - `getDetails(params, ctx)`
@@ -64,27 +64,27 @@ broken into phases with checklists and concrete file paths.
 3. `AccommodationsService`:
 
    - Uses Amadeus endpoints:
-     - Geocode → `reference-data/locations/hotels/by-geocode` for hotels near a lat/lng.:contentReference[oaicite:47]{index=47}  
-     - Offers → `/v3/shopping/hotel-offers` for real-time prices and availability.:contentReference[oaicite:48]{index=48}  
+     - Geocode → `reference-data/locations/hotels/by-geocode` for hotels near a lat/lng.
+     - Offers → `/v3/shopping/hotel-offers` for real-time prices and availability.
    - When enriching details:
-     - Calls Google Places API (New) Place Details & Photos with `type=lodging`.:contentReference[oaicite:49]{index=49}  
+     - Calls Google Places API (New) Place Details & Photos with `type=lodging`.
 
 4. Booking flow:
 
    - AI `bookAccommodation` tool:
      - Ensures user/approval context.
-     - Triggers Stripe `PaymentIntent` creation via `processBookingPayment`.:contentReference[oaicite:50]{index=50}  
+     - Triggers Stripe `PaymentIntent` creation via `processBookingPayment`.
    - `runBookingOrchestrator`:
      - Calls `AmadeusProviderAdapter.createBooking(...)`.
      - Persists booking to Supabase (same `bookings` table).
-     - Uses Amadeus `id/confirmationId` fields for booking reference.:contentReference[oaicite:51]{index=51}  
+     - Uses Amadeus `id/confirmationId` fields for booking reference.
 
 5. UI:
 
    - Hotel search pages in `app/(dashboard)/trips/[tripId]/stay/page.tsx` and
      `app/(marketing)/stays/page.tsx` are wired to `useAccommodationSearch` and
      render results using new shadcn/ui components:
-     `ModernHotelResults` + `AccommodationCard`.:contentReference[oaicite:52]{index=52}  
+     `ModernHotelResults` + `AccommodationCard`.
 
 ---
 
@@ -601,16 +601,16 @@ Using Vitest + MSW:
 
 ### Phase 1 – Setup & Skeleton
 
-- [ ] Add Amadeus env vars and `amadeus` dependency.
-- [ ] Create `frontend/src/domain/amadeus/client.ts`.
-- [ ] Create `frontend/src/domain/amadeus/schemas.ts`.
-- [ ] Create `frontend/src/domain/amadeus/mappers.ts`.
+- [x] Add Amadeus env vars and `amadeus` dependency.
+- [x] Create `frontend/src/domain/amadeus/client.ts`.
+- [x] Create `frontend/src/domain/amadeus/schemas.ts`.
+- [x] Create `frontend/src/domain/amadeus/mappers.ts`.
 
 ### Phase 2 – Provider Adapter & Container
 
-- [ ] Implement `AccommodationProviderAdapter` updates in `providers/types.ts`.
-- [ ] Implement `AmadeusProviderAdapter` in `providers/amadeus-adapter.ts`.
-- [ ] Update `accommodations/container.ts` to construct `AmadeusProviderAdapter` instead of `ExpediaProviderAdapter`.
+- [x] Implement `AccommodationProviderAdapter` updates in `providers/types.ts`.
+- [x] Implement `AmadeusProviderAdapter` in `providers/amadeus-adapter.ts`.
+- [x] Update `accommodations/container.ts` to construct `AmadeusProviderAdapter` instead of `ExpediaProviderAdapter`.
 
 ### Phase 3 – Service & Orchestrator
 

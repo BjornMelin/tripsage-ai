@@ -7,11 +7,8 @@
 import {
   bookAccommodation,
   checkAvailability,
-  extractTokenFromHref,
   getAccommodationDetails,
-  normalizePhoneForRapid,
   searchAccommodations,
-  splitGuestName,
 } from "./server/accommodations";
 import {
   denyApproval,
@@ -55,7 +52,6 @@ export {
   denyApproval,
   distanceMatrix,
   exportItineraryToIcs,
-  extractTokenFromHref,
   geocode,
   getAccommodationDetails,
   getApprovalStatus,
@@ -64,13 +60,11 @@ export {
   getTravelAdvisory,
   grantApproval,
   lookupPoiContext,
-  normalizePhoneForRapid,
   requireApproval,
   saveTravelPlan,
   searchAccommodations,
   searchFlights,
   searchUserMemories,
-  splitGuestName,
   updateTravelPlan,
   webSearch,
   webSearchBatch,

@@ -155,7 +155,7 @@ export async function handleChatStream(
   // Memory hydration: prepend system prompt with a short memory summary if present
   let systemPrompt =
     "You are a helpful travel planning assistant with access to accommodation booking " +
-    "via Expedia Partner Solutions (hotels and Vrbo vacation rentals). " +
+    "via Amadeus Self-Service hotels enriched with Google Places data. " +
     "Use searchAccommodations to find properties, getAccommodationDetails for more info, " +
     "checkAvailability to get booking tokens, and bookAccommodation to complete reservations. " +
     "Always guide users through the complete booking flow when they want to book accommodations.";

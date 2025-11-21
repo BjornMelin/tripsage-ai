@@ -72,6 +72,8 @@ export const ACCOMMODATION_SEARCH_INPUT_SCHEMA = z
     infants: z.number().int().min(0).max(16).optional(),
     instantBook: z.boolean().optional(),
     location: z.string().min(2),
+    lat: z.number().optional(),
+    lng: z.number().optional(),
     maxDistanceKm: z.number().nonnegative().optional(),
     minRating: z.number().min(0).max(5).optional(),
     priceMax: z.number().nonnegative().optional(),
@@ -108,7 +110,7 @@ export const ACCOMMODATION_SEARCH_OUTPUT_SCHEMA = z.strictObject({
   listings: z.array(z.unknown()).default([]),
   maxPrice: z.number().optional(),
   minPrice: z.number().optional(),
-  provider: z.enum(["expedia", "cache"]),
+  provider: z.enum(["amadeus", "cache"]),
   resultsReturned: z.number(),
   searchId: z.string(),
   searchParameters: z.record(z.string(), z.unknown()),
@@ -152,7 +154,7 @@ export type AccommodationDetailsParams = z.infer<
  */
 export const ACCOMMODATION_DETAILS_OUTPUT_SCHEMA = z.strictObject({
   listing: z.unknown(),
-  provider: z.enum(["expedia"]),
+  provider: z.enum(["amadeus"]),
   status: z.literal("success"),
 });
 
