@@ -9,14 +9,27 @@ import "server-only";
 
 import { type Span, SpanStatusCode, trace } from "@opentelemetry/api";
 import { getTelemetryTracer } from "@/lib/telemetry/tracer";
-import type {
-  TelemetryLogOptions,
-  TelemetrySpanAttributes,
-  WithTelemetrySpanOptions,
-} from "./core";
 
-// Re-export types for convenience
-export type { TelemetrySpanAttributes, TelemetryLogOptions, WithTelemetrySpanOptions };
+/**
+ * Telemetry span attributes are key-value pairs attached to spans.
+ */
+export type TelemetrySpanAttributes = Record<string, string | number | boolean>;
+
+/**
+ * Options for wrapping operations in telemetry spans.
+ */
+export type WithTelemetrySpanOptions = {
+  attributes?: TelemetrySpanAttributes;
+  redactKeys?: string[];
+};
+
+/**
+ * Options for recording telemetry events.
+ */
+export type TelemetryLogOptions = {
+  attributes?: TelemetrySpanAttributes;
+  level?: "info" | "warning" | "error";
+};
 
 const REDACTED_VALUE = "[REDACTED]";
 const tracer = getTelemetryTracer();
