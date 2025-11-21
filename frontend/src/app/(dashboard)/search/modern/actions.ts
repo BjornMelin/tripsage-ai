@@ -9,7 +9,8 @@ import "server-only";
 import { getAccommodationsService } from "@domain/accommodations/container";
 import type { ModernHotelSearchParams } from "@/components/features/search/hotel-search-form";
 import type { ModernHotelResult } from "@/components/features/search/modern-hotel-results";
-import { getGoogleMapsServerKey } from "@/lib/env/server";
+import { getGoogleMapsBrowserKey } from "@/lib/env/client";
+import { secureUuid } from "@/lib/security/random";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 /** Search parameters. */
@@ -18,12 +19,9 @@ type SearchParams = ModernHotelSearchParams & { currency?: string };
 /** Build photo URL. */
 function buildPhotoUrl(photoName?: string): string | undefined {
   if (!photoName) return undefined;
-  try {
-    const apiKey = getGoogleMapsServerKey();
-    return `https://places.googleapis.com/v1/${photoName}/media?maxHeightPx=800&maxWidthPx=1200&key=${apiKey}`;
-  } catch {
-    return undefined;
-  }
+  const apiKey = getGoogleMapsBrowserKey();
+  if (!apiKey) return undefined;
+  return `https://places.googleapis.com/v1/${photoName}/media?maxHeightPx=800&maxWidthPx=1200&key=${apiKey}`;
 }
 
 /** Search hotels. */
@@ -46,7 +44,7 @@ export async function searchHotelsAction(
           semanticQuery: params.location,
         },
         {
-          sessionId: params.location,
+          sessionId: secureUuid(),
         }
       )
   );
@@ -122,7 +120,7 @@ export async function searchHotelsAction(
         recentMentions: [],
         vibe: "business",
       },
-      id: String(hotel.id ?? providerHotel?.hotelId ?? crypto.randomUUID()),
+      id: String(hotel.id ?? providerHotel?.hotelId ?? secureUuid()),
       images: {
         count: 1,
         gallery: mainImage ? [mainImage] : [],

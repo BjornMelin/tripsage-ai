@@ -139,6 +139,13 @@ describe("AccommodationsService end-to-end (Amadeus + Places + Stripe mocks)", (
               supabaseInserts.push(payload);
               return Promise.resolve({ error: null });
             },
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  single: async () => ({ data: { id: 11, user_id: "user-1" }, error: null }),
+                }),
+              }),
+            }),
           }),
         }) as unknown as import("@/lib/supabase/server").TypedServerSupabase,
     });
@@ -180,10 +187,10 @@ describe("AccommodationsService end-to-end (Amadeus + Places + Stripe mocks)", (
 
     const booking = await service.book(
       {
+        amount: 19900,
         bookingToken: availability.bookingToken,
         checkin: "2025-12-01",
         checkout: "2025-12-03",
-        amount: 19900,
         currency: "USD",
         guestEmail: "ada@example.com",
         guestName: "Ada Lovelace",

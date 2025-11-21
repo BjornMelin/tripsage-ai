@@ -40,7 +40,9 @@ describe("AmadeusProviderAdapter.buildBookingPayload", () => {
     );
 
     const data = payload.data as {
-      guests: Array<{ name: { firstName?: string; lastName?: string; title?: string } }>;
+      guests: Array<{
+        name: { firstName?: string; lastName?: string; title?: string };
+      }>;
       hotelOffers: Array<{ id: string }>;
       payments?: Array<{
         amount: { amount: string; currencyCode: string };

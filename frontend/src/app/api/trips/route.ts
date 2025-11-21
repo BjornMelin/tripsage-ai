@@ -79,6 +79,7 @@ function mapTripRowToUi(row: TripsRow) {
  */
 async function listTripsHandler(
   supabase: TypedServerSupabase,
+  userId: string,
   req: NextRequest
 ): Promise<NextResponse> {
   const url = new URL(req.url);
@@ -104,6 +105,7 @@ async function listTripsHandler(
   let query = supabase
     .from("trips")
     .select("*")
+    .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
   if (filters.destination) {
@@ -205,8 +207,15 @@ export const GET = withApiGuards({
   auth: true,
   rateLimit: "trips:list",
   telemetry: "trips.list",
-})((req, { supabase }) => {
-  return listTripsHandler(supabase, req);
+})(async (req, { supabase, user }) => {
+  const userId = user?.id;
+  if (!userId) {
+    return NextResponse.json(
+      { error: "unauthorized", reason: "Authentication required" },
+      { status: 401 }
+    );
+  }
+  return await listTripsHandler(supabase, userId, req);
 });
 
 /**
@@ -219,7 +228,7 @@ export const POST = withApiGuards({
   auth: true,
   rateLimit: "trips:create",
   telemetry: "trips.create",
-})((req, { supabase, user }) => {
+})(async (req, { supabase, user }) => {
   const userId = user?.id;
   if (!userId) {
     return NextResponse.json(
@@ -228,5 +237,5 @@ export const POST = withApiGuards({
     );
   }
 
-  return createTripHandler(supabase, userId, req);
+  return await createTripHandler(supabase, userId, req);
 });
