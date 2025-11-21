@@ -48,7 +48,10 @@ export type AccommodationsServiceDeps = {
 /** Context for the accommodations service. */
 export type ServiceContext = ProviderContext & {
   rateLimitKey?: string;
-  processPayment?: () => Promise<ProcessedPayment>;
+  processPayment?: (params: {
+    amountCents: number;
+    currency: string;
+  }) => Promise<ProcessedPayment>;
   requestApproval?: () => Promise<void>;
 };
 
@@ -210,9 +213,6 @@ export class AccommodationsService {
     }
     const supabase = await this.deps.supabase();
 
-    const providerPayload = this.deps.provider.buildBookingPayload(params);
-    const idempotencyKey = params.idempotencyKey ?? secureUuid();
-
     const cachedPrice = await getCachedJson<{
       currency: string;
       total: string;
@@ -225,11 +225,19 @@ export class AccommodationsService {
       throw new Error("booking_price_invalid");
     }
 
-        const result = await runBookingOrchestrator(
-          { provider: this.deps.provider, supabase },
-          {
-            amount: amountCents,
-            approvalKey: "bookAccommodation",
+    const providerPayloadBuilder = (payment: ProcessedPayment) =>
+      this.deps.provider.buildBookingPayload(params, {
+        currency: cachedPrice.currency,
+        paymentIntentId: payment.paymentIntentId,
+        totalCents: amountCents,
+      });
+    const idempotencyKey = params.idempotencyKey ?? secureUuid();
+
+    const result = await runBookingOrchestrator(
+      { provider: this.deps.provider, supabase },
+      {
+        amount: amountCents,
+        approvalKey: "bookAccommodation",
         bookingToken: params.bookingToken,
         currency: cachedPrice.currency,
         guest: {
@@ -252,8 +260,6 @@ export class AccommodationsService {
             checkin: params.checkin,
             checkout: params.checkout,
             // biome-ignore lint/style/useNamingConvention: database columns use snake_case
-            provider_booking_id: payload.providerBookingId,
-            // biome-ignore lint/style/useNamingConvention: database columns use snake_case
             guest_email: params.guestEmail,
             // biome-ignore lint/style/useNamingConvention: database columns use snake_case
             guest_name: params.guestName,
@@ -263,6 +269,8 @@ export class AccommodationsService {
             id: payload.bookingId,
             // biome-ignore lint/style/useNamingConvention: database columns use snake_case
             property_id: params.listingId,
+            // biome-ignore lint/style/useNamingConvention: database columns use snake_case
+            provider_booking_id: payload.providerBookingId,
             // biome-ignore lint/style/useNamingConvention: database columns use snake_case
             special_requests: params.specialRequests ?? null,
             status: "CONFIRMED",
@@ -277,8 +285,16 @@ export class AccommodationsService {
             throw error;
           }
         },
-        processPayment: ctx.processPayment,
-        providerPayload,
+        processPayment: () => {
+          if (!ctx.processPayment) {
+            throw new Error("processPayment handler missing");
+          }
+          return ctx.processPayment({
+            amountCents,
+            currency: cachedPrice.currency,
+          });
+        },
+        providerPayload: providerPayloadBuilder,
         requestApproval: ctx.requestApproval,
         sessionId: ctx.sessionId ?? secureUuid(),
         stay: {

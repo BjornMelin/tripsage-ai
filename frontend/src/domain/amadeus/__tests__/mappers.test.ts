@@ -24,16 +24,18 @@ describe("mapHotelsToListings", () => {
       ],
     };
 
-    const listings = mapHotelsToListings(hotels as any, offersByHotel, {
+    const listings = mapHotelsToListings(hotels, offersByHotel, {
       checkin: "2025-12-01",
       checkout: "2025-12-05",
       guests: 2,
     });
 
     expect(listings).toHaveLength(1);
-    const listing = listings[0] as any;
+    const listing = listings[0] as Record<string, unknown>;
     expect(listing.id).toBe("H1");
     expect(listing.provider).toBe("amadeus");
-    expect(listing.rooms[0].rates[0].price.total).toBe("500.00");
+    const rooms = listing.rooms as Array<Record<string, unknown>>;
+    const rates = rooms[0].rates as Array<{ price: { total: string } }>;
+    expect(rates[0].price.total).toBe("500.00");
   });
 });

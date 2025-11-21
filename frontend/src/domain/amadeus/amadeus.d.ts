@@ -10,18 +10,21 @@
  */
 
 declare module "amadeus" {
+  /** Configuration for the Amadeus client. */
   interface AmadeusConfig {
     clientId: string;
     clientSecret: string;
     hostname?: string;
   }
 
+  /** Response from the Amadeus API. */
   interface AmadeusResponse<T = unknown> {
     data?: T;
     result?: T;
     [key: string]: unknown;
   }
 
+  /** Amadeus client interface. */
   interface AmadeusClient {
     referenceData: {
       locations: {
@@ -56,6 +59,7 @@ declare module "amadeus" {
     };
   }
 
+  /** Amadeus client class. */
   class Amadeus implements AmadeusClient {
     constructor(config: AmadeusConfig);
     referenceData: AmadeusClient["referenceData"];
@@ -63,6 +67,6 @@ declare module "amadeus" {
     booking: AmadeusClient["booking"];
   }
 
+  /** Export the Amadeus client class. */
   export default Amadeus;
 }
-

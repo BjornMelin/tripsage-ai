@@ -27,9 +27,9 @@ import {
   type AccommodationSearchResult,
 } from "@schemas/accommodations";
 import { headers } from "next/headers";
-import { createServerSupabase } from "@/lib/supabase/server";
 import { processBookingPayment } from "@/lib/payments/booking-payment";
 import { secureUuid } from "@/lib/security/random";
+import { createServerSupabase } from "@/lib/supabase/server";
 import { requireApproval } from "./approvals";
 
 /**
@@ -134,10 +134,10 @@ export const bookAccommodation = createAiTool<
 
     try {
       return await accommodationsService.book(params, {
-        processPayment: () =>
+        processPayment: ({ amountCents, currency }) =>
           processBookingPayment({
-            amount: params.amount,
-            currency: params.currency,
+            amount: amountCents,
+            currency,
             customerId: userId,
             paymentMethodId: params.paymentMethodId,
             user: {
@@ -170,13 +170,21 @@ export const bookAccommodation = createAiTool<
 /** Extract user identifier from request headers or return undefined if not found. */
 async function maybeGetUserIdentifier(): Promise<string | undefined> {
   try {
+    const supabase = await createServerSupabase();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user?.id) return user.id;
+  } catch {
+    // Fall back to header inspection below.
+  }
+
+  try {
     const requestHeaders = await headers();
     const userId = requestHeaders.get("x-user-id");
-    if (userId) {
-      const trimmed = userId.trim();
-      if (trimmed) {
-        return trimmed;
-      }
+    const trimmed = userId?.trim();
+    if (trimmed) {
+      return trimmed;
     }
   } catch {
     // headers() can throw outside of a request context.

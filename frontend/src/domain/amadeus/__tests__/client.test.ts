@@ -12,6 +12,7 @@ vi.mock("amadeus", () => {
     shopping = { hotelOffersSearch: { get: offersGetMock } };
   }
   return {
+    // biome-ignore lint/style/useNamingConvention: required by mock interop
     __esModule: true,
     default: AmadeusMock,
   };

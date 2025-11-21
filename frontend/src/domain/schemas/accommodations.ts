@@ -251,7 +251,6 @@ export const ACCOMMODATION_BOOKING_OUTPUT_SCHEMA = z.strictObject({
   bookingStatus: z.enum(["hold_created", "pending_confirmation", "confirmed"]),
   checkin: z.string(),
   checkout: z.string(),
-  providerBookingId: z.string().optional(), // Provider booking confirmation ID
   guestEmail: z.string(),
   guestName: z.string(),
   guestPhone: z.string().optional(),
@@ -261,6 +260,7 @@ export const ACCOMMODATION_BOOKING_OUTPUT_SCHEMA = z.strictObject({
   listingId: z.string(),
   message: z.string(),
   paymentMethod: z.string().optional(),
+  providerBookingId: z.string().optional(), // Provider booking confirmation ID
   reference: z.string(),
   specialRequests: z.string().optional(),
   status: z.literal("success"),

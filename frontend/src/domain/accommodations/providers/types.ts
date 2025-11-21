@@ -114,5 +114,12 @@ export interface AccommodationProviderAdapter {
   /**
    * Build provider-specific booking payload from normalized request.
    */
-  buildBookingPayload(params: AccommodationBookingRequest): ProviderBookingPayload;
+  buildBookingPayload(
+    params: AccommodationBookingRequest,
+    options?: {
+      paymentIntentId?: string;
+      currency?: string;
+      totalCents?: number;
+    }
+  ): ProviderBookingPayload;
 }

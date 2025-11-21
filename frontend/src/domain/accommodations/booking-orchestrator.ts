@@ -59,17 +59,21 @@ export type BookingCommand = {
     specialRequests?: string;
     tripId?: string;
   };
-  providerPayload: Record<string, unknown>;
+  providerPayload: ProviderPayloadBuilder;
   processPayment: () => Promise<ProcessedPayment>;
   persistBooking: (payload: PersistPayload) => Promise<void>;
   requestApproval: () => Promise<void>;
 };
 
+type ProviderPayloadBuilder =
+  | Record<string, unknown>
+  | ((payment: ProcessedPayment) => Record<string, unknown>);
+
 /**
  * Payload for persisting a booking transaction.
  *
  * @param bookingId - ID of the booking.
- * @param epsItineraryId - ID of the itinerary.
+ * @param providerBookingId - Provider-specific booking identifier.
  * @param stripePaymentIntentId - ID of the Stripe payment intent.
  * @param confirmationNumber - Confirmation number for the booking.
  * @param command - Booking command.
@@ -132,8 +136,18 @@ export function runBookingOrchestrator(
         confirmationNumber?: string;
         providerBookingId?: string;
       }>;
+      let providerPayload: Record<string, unknown>;
+      if (typeof command.providerPayload === "function") {
+        if (!payment) {
+          throw new Error("payment_missing");
+        }
+        providerPayload = command.providerPayload(payment);
+      } else {
+        providerPayload = command.providerPayload;
+      }
+
       try {
-        providerResult = await deps.provider.createBooking(command.providerPayload, {
+        providerResult = await deps.provider.createBooking(providerPayload, {
           sessionId: command.sessionId,
           userId: command.userId,
         });
@@ -181,7 +195,6 @@ export function runBookingOrchestrator(
         bookingStatus: "confirmed",
         checkin: command.stay.checkin,
         checkout: command.stay.checkout,
-        providerBookingId: itineraryId,
         guestEmail: command.guest.email,
         guestName: command.guest.name,
         guestPhone: command.guest.phone,
@@ -193,6 +206,7 @@ export function runBookingOrchestrator(
           ? `Booking confirmed! Confirmation number: ${confirmation}`
           : "Booking confirmed, confirmation number pending persistence",
         paymentMethod: command.paymentMethodId,
+        providerBookingId: itineraryId,
         reference,
         specialRequests: command.stay.specialRequests,
         status: "success",
