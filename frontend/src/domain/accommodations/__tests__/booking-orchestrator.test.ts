@@ -1,5 +1,6 @@
 import { runBookingOrchestrator } from "@domain/accommodations/booking-orchestrator";
 import type { AccommodationProviderAdapter } from "@domain/accommodations/providers/types";
+import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/payments/booking-payment", () => ({
@@ -29,7 +30,7 @@ describe("runBookingOrchestrator", () => {
       from: () => ({
         insert: async () => ({ error: null }),
       }),
-    } as any;
+    } as unknown as TypedServerSupabase;
 
     const result = await runBookingOrchestrator(
       { provider, supabase },
@@ -42,7 +43,7 @@ describe("runBookingOrchestrator", () => {
         idempotencyKey: "idem",
         paymentMethodId: "pm_123",
         persistBooking: vi.fn().mockResolvedValue(undefined),
-        processPayment: async () => ({ paymentIntentId: "pi_123" }) as any,
+        processPayment: async () => ({ paymentIntentId: "pi_123" }),
         providerPayload: {},
         requestApproval: vi.fn().mockResolvedValue(undefined),
         sessionId: "sess",

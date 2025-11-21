@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, type MockedFunction, vi } from "vitest";
 
 // Hoist mock so it can be accessed and modified in tests
 const fetchMock = vi.hoisted(() => vi.fn());
@@ -29,7 +29,6 @@ describe("AccommodationsService (Amadeus)", () => {
       }),
       ok: true,
     });
-    // @ts-expect-error assign global
     global.fetch = fetchMock;
   });
 
@@ -79,7 +78,7 @@ describe("AccommodationsService (Amadeus)", () => {
       location: "Paris",
     });
 
-    expect((provider.search as vi.Mock).mock.calls[0][0]).toMatchObject({
+    expect((provider.search as MockedFunction<typeof provider.search>).mock.calls[0][0]).toMatchObject({
       lat: 1.234,
       lng: 2.345,
     });
@@ -120,10 +119,13 @@ describe("AccommodationsService (Amadeus)", () => {
       cacheTtlSeconds: 0,
       provider,
       rateLimiter: undefined,
-      supabase: async () => ({}) as any,
+      supabase: async () => ({} as Record<string, unknown> as any),
     });
 
-    const details = await service.details({ listingId: "H1" } as any, {});
+    const details = await service.details(
+      { listingId: "H1" } as Record<string, unknown> as any,
+      {}
+    );
 
     expect(details.listing).toMatchObject({
       place: expect.any(Object),
