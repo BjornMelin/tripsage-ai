@@ -14,15 +14,15 @@ Related: `adr-0050-amadeus-google-places-stripe-hybrid.md`, `0027-spec-accommoda
 
 ## Phase 0 – Safety & Branching
 
-- [ ] Create feature branch: `feat/amadeus-accommodations`.
+- [x] Create feature branch: `feat/amadeus-accommodations`.
 
-- [ ] Enable CI for new branch.
+- [x] Enable CI for new branch.
 
 - [ ] Snapshot current tests for `accommodations` domain, tools, and UI.
 
 ## Phase 1 – Introduce Amadeus (no behavior change yet)
 
-- [ ] Add `amadeus` dependency to `frontend/package.json`.
+- [x] Add `amadeus` dependency to `frontend/package.json`.
 
 - [ ] Create `src/domain/amadeus/client.ts`, `schemas.ts`, `mappers.ts`.
 
