@@ -181,7 +181,7 @@ export function runBookingOrchestrator(
         bookingStatus: "confirmed",
         checkin: command.stay.checkin,
         checkout: command.stay.checkout,
-        epsBookingId: itineraryId,
+        providerBookingId: itineraryId,
         guestEmail: command.guest.email,
         guestName: command.guest.name,
         guestPhone: command.guest.phone,

@@ -59,7 +59,7 @@ export type Database = {
           booking_token: string;
           checkin: string;
           checkout: string;
-          eps_booking_id: string;
+          provider_booking_id: string;
           guest_email: string;
           guest_name: string;
           guest_phone: string | null;
@@ -76,7 +76,7 @@ export type Database = {
           booking_token: string;
           checkin: string;
           checkout: string;
-          eps_booking_id: string;
+          provider_booking_id: string;
           guest_email: string;
           guest_name: string;
           guest_phone?: string | null;
@@ -93,7 +93,7 @@ export type Database = {
           booking_token?: string;
           checkin?: string;
           checkout?: string;
-          eps_booking_id?: string;
+          provider_booking_id?: string;
           guest_email?: string;
           guest_name?: string;
           guest_phone?: string | null;

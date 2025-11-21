@@ -54,6 +54,10 @@ Related: `adr-0050-amadeus-google-places-stripe-hybrid.md`, `0027-spec-accommoda
 - Code Review (zen.codereview):
   - Issues: hard-coded Amadeus card payload; empty-hotel search path; geocode failures surfacing as location_not_found; legacy `eps_booking_id` field.
   - Fixes applied: removed hard-coded payment card (bookings now pay-at-property/agency hold), short-circuit when no hotels, geocode now throws on provider errors with telemetry, maintained note to migrate bookings persistence to provider-neutral field.
+- Security (zen.secaudit):
+  - Findings: spoofable `x-user-id` header; client-controlled booking amount/currency.
+  - Fixes applied: tools now derive user from Supabase auth; booking charges now derive amount/currency from cached checkAvailability price (client values ignored).
+  - Remaining: persist provider-neutral booking identifiers in database; consider additional auth hardening for non-auth search flows.
 
 ## Phase 3 – Migrate Search & Details
 
