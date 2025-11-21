@@ -10,10 +10,6 @@ import type {
   ProviderResult,
 } from "@domain/accommodations/providers/types";
 import type { AccommodationBookingResult } from "@schemas/accommodations";
-import type {
-  EpsCreateBookingRequest,
-  EpsCreateBookingResponse,
-} from "@schemas/expedia";
 import {
   type ProcessedPayment,
   refundBookingPayment,
@@ -63,7 +59,7 @@ export type BookingCommand = {
     specialRequests?: string;
     tripId?: string;
   };
-  providerPayload: EpsCreateBookingRequest;
+  providerPayload: Record<string, unknown>;
   processPayment: () => Promise<ProcessedPayment>;
   persistBooking: (payload: PersistPayload) => Promise<void>;
   requestApproval: () => Promise<void>;
@@ -80,7 +76,7 @@ export type BookingCommand = {
  */
 type PersistPayload = {
   bookingId: string;
-  epsItineraryId: string;
+  providerBookingId?: string;
   stripePaymentIntentId: string;
   confirmationNumber: string;
   command: BookingCommand;
@@ -131,7 +127,11 @@ export function runBookingOrchestrator(
         throw error;
       }
 
-      let providerResult: ProviderResult<EpsCreateBookingResponse>;
+      let providerResult: ProviderResult<{
+        itineraryId?: string;
+        confirmationNumber?: string;
+        providerBookingId?: string;
+      }>;
       try {
         providerResult = await deps.provider.createBooking(command.providerPayload, {
           sessionId: command.sessionId,
@@ -149,18 +149,15 @@ export function runBookingOrchestrator(
       }
 
       const itineraryId =
-        providerResult.value.itinerary_id ?? command.stay.tripId ?? bookingId;
-      const confirmation =
-        providerResult.value.rooms?.[0]?.confirmation_id?.expedia ??
-        providerResult.value.rooms?.[0]?.confirmation_id?.property ??
-        itineraryId;
+        providerResult.value.itineraryId ?? command.stay.tripId ?? bookingId;
+      const confirmation = providerResult.value.confirmationNumber ?? itineraryId;
 
       try {
         await command.persistBooking({
           bookingId,
           command,
           confirmationNumber: confirmation,
-          epsItineraryId: itineraryId,
+          providerBookingId: providerResult.value.providerBookingId ?? itineraryId,
           stripePaymentIntentId: payment.paymentIntentId,
         });
       } catch (dbError) {

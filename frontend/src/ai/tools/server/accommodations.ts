@@ -13,11 +13,6 @@ import {
 import { getAccommodationsService } from "@domain/accommodations/container";
 import { ProviderError } from "@domain/accommodations/errors";
 import {
-  extractTokenFromHref,
-  normalizePhoneForRapid,
-  splitGuestName,
-} from "@domain/accommodations/service";
-import {
   ACCOMMODATION_BOOKING_INPUT_SCHEMA,
   ACCOMMODATION_CHECK_AVAILABILITY_INPUT_SCHEMA,
   ACCOMMODATION_DETAILS_INPUT_SCHEMA,
@@ -51,13 +46,13 @@ const accommodationsService = getAccommodationsService();
 
 export { ACCOMMODATION_SEARCH_INPUT_SCHEMA as searchAccommodationsInputSchema };
 
-/** Search for accommodations using Expedia Partner Solutions API. */
+/** Search for accommodations using Amadeus Self-Service API with Google Places enrichment. */
 export const searchAccommodations = createAiTool<
   AccommodationSearchParams,
   AccommodationSearchResult
 >({
   description:
-    "Search for accommodations (hotels and Vrbo vacation rentals) using Expedia Partner Solutions API. Supports semantic search via RAG for natural language queries.",
+    "Search for accommodations (hotels and stays) using Amadeus Self-Service APIs with Google Places enrichment. Supports semantic search via RAG for natural language queries.",
   execute: async (params) => {
     return accommodationsService.search(params, {
       sessionId: await maybeGetUserIdentifier(),
@@ -67,13 +62,13 @@ export const searchAccommodations = createAiTool<
   name: "searchAccommodations",
 });
 
-/** Retrieve comprehensive details for a specific accommodation property from Expedia Rapid. */
+/** Retrieve comprehensive details for a specific accommodation property from Amadeus and Google Places. */
 export const getAccommodationDetails = createAiTool<
   AccommodationDetailsParams,
   AccommodationDetailsResult
 >({
   description:
-    "Retrieve comprehensive details for a specific accommodation property from Expedia Rapid.",
+    "Retrieve comprehensive details for a specific accommodation property from Amadeus hotel offers and Google Places content.",
   execute: async (params) => {
     try {
       return await accommodationsService.details(params);
@@ -119,13 +114,13 @@ export const checkAvailability = createAiTool<
   name: "checkAvailability",
 });
 
-/** Complete an accommodation booking via Expedia Partner Solutions. Requires a bookingToken from checkAvailability, payment method, and prior approval. */
+/** Complete an accommodation booking via Amadeus. Requires a bookingToken from checkAvailability, payment method, and prior approval. */
 export const bookAccommodation = createAiTool<
   AccommodationBookingRequest,
   AccommodationBookingResult
 >({
   description:
-    "Complete an accommodation booking via Expedia Partner Solutions. Requires a bookingToken from checkAvailability, payment method, and prior approval.",
+    "Complete an accommodation booking via Amadeus Self-Service APIs. Requires a bookingToken from checkAvailability, payment method, and prior approval.",
   execute: async (params) => {
     const sessionId = params.sessionId ?? (await maybeGetUserIdentifier());
     if (!sessionId) {
@@ -228,5 +223,3 @@ function mapProviderError(
     error: error instanceof Error ? error.message : "Unknown error",
   });
 }
-
-export { extractTokenFromHref, normalizePhoneForRapid, splitGuestName };

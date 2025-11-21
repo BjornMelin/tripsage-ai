@@ -1,10 +1,10 @@
 /**
- * @fileoverview Accommodations domain service orchestrating provider calls, RAG lookup, caching, and booking.
+ * @fileoverview Accommodations domain service orchestrating provider calls, caching, and booking.
  *
- * This service centralizes accommodation operations: search, details, availability, and booking.
- * It applies cache-aside via Upstash, optional rate limiting, RAG property ID resolution, and
- * funnels bookings through the booking orchestrator for approvals, payments, and persistence.
+ * Provider-neutral implementation for Amadeus + Google Places hybrid stack.
  */
+
+import "server-only";
 
 import { runBookingOrchestrator } from "@domain/accommodations/booking-orchestrator";
 import type {
@@ -26,17 +26,12 @@ import {
   type AccommodationSearchParams,
   type AccommodationSearchResult,
 } from "@schemas/accommodations";
-import type {
-  EpsCheckAvailabilityRequest,
-  EpsCreateBookingRequest,
-  RapidAvailabilityResponse,
-  RapidRate,
-} from "@schemas/expedia";
-import { extractInclusiveTotal } from "@schemas/expedia";
 import type { Ratelimit } from "@upstash/ratelimit";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
-import { generateEmbedding } from "@/lib/embeddings/generate";
+import { getGoogleMapsServerKey } from "@/lib/env/server";
+import { cacheLatLng, getCachedLatLng } from "@/lib/google/caching";
+import { retryWithBackoff } from "@/lib/http/retry";
 import type { ProcessedPayment } from "@/lib/payments/booking-payment";
 import { secureUuid } from "@/lib/security/random";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
@@ -63,7 +58,7 @@ const CACHE_NAMESPACE = "service:accom:search";
 export class AccommodationsService {
   constructor(private readonly deps: AccommodationsServiceDeps) {}
 
-  /** Executes an availability search, optionally using semantic RAG IDs and cache-aside. */
+  /** Executes an availability search with cache-aside. */
   async search(
     params: AccommodationSearchParams,
     ctx?: ServiceContext
@@ -100,34 +95,23 @@ export class AccommodationsService {
           span.addEvent("cache.miss", { key: cacheKey });
         }
 
-        const supabase = await this.deps.supabase();
-        const propertyIds = await resolvePropertyIds(params, supabase);
+        const coords = await resolveCoordinates(params.location);
+        if (!coords) {
+          throw new Error("location_not_found");
+        }
 
-        const availability = await this.callProvider(
-          (providerCtx) =>
-            this.deps.provider.searchAvailability(
-              {
-                checkIn: params.checkin,
-                checkOut: params.checkout,
-                currency: params.currency ?? "USD",
-                guests: params.guests,
-                include: ["rooms.rates.current_refundability"],
-                language: "en-US",
-                propertyIds: propertyIds ?? [],
-                ratePlanCount: params.propertyTypes ? 6 : 4,
-              },
-              providerCtx
-            ),
-          { ...ctx, sessionId: ctx?.sessionId }
+        const enrichedParams = {
+          ...params,
+          lat: coords?.lat,
+          lng: coords?.lon,
+        };
+
+        const providerResult = await this.callProvider(
+          (providerCtx) => this.deps.provider.search(enrichedParams, providerCtx),
+          ctx
         );
 
-        const listings = mapAvailabilityToListings(availability.value, {
-          checkin: params.checkin,
-          checkout: params.checkout,
-          guests: params.guests,
-          propertyIds,
-        });
-        const prices = collectListingPrices(listings);
+        const prices = collectPrices(providerResult.value.listings);
 
         const result = ACCOMMODATION_SEARCH_OUTPUT_SCHEMA.parse({
           avgPrice:
@@ -135,22 +119,25 @@ export class AccommodationsService {
               ? prices.reduce((sum, value) => sum + value, 0) / prices.length
               : undefined,
           fromCache: false,
-          listings,
+          listings: providerResult.value.listings,
           maxPrice: prices.length > 0 ? Math.max(...prices) : undefined,
           minPrice: prices.length > 0 ? Math.min(...prices) : undefined,
-          provider: "expedia" as const,
-          resultsReturned: listings.length,
+          provider: "amadeus" as const,
+          resultsReturned: providerResult.value.listings.length,
           searchId: secureUuid(),
           searchParameters: {
             checkin: params.checkin,
             checkout: params.checkout,
             guests: params.guests,
+            lat: coords.lat,
+            lng: coords.lon,
             location: params.location,
             semanticQuery: params.semanticQuery,
           },
           status: "success" as const,
           tookMs: Date.now() - startedAt,
-          totalResults: availability.value.total ?? listings.length,
+          totalResults:
+            providerResult.value.total ?? providerResult.value.listings.length,
         });
 
         if (cacheKey) {
@@ -161,44 +148,32 @@ export class AccommodationsService {
     );
   }
 
-  /** Retrieve details for a specific accommodation property from Expedia Rapid. */
+  /** Retrieve details for a specific accommodation property. */
   async details(
     params: AccommodationDetailsParams,
     ctx?: ServiceContext
   ): Promise<AccommodationDetailsResult> {
     const result = await this.callProvider(
-      (providerCtx) =>
-        this.deps.provider.getPropertyDetails(
-          {
-            language: "en-US",
-            propertyId: params.listingId,
-          },
-          providerCtx
-        ),
+      (providerCtx) => this.deps.provider.getDetails(params, providerCtx),
       ctx
     );
 
+    const enriched = await enrichWithGooglePlaces(result.value.listing);
+
     return ACCOMMODATION_DETAILS_OUTPUT_SCHEMA.parse({
-      listing: result.value,
-      provider: "expedia" as const,
+      listing: enriched,
+      provider: "amadeus" as const,
       status: "success" as const,
     });
   }
 
-  /** Check final availability and lock pricing for a specific rate. */
+  /** Check final availability and pricing. */
   async checkAvailability(
     params: AccommodationCheckAvailabilityParams,
     ctx: ServiceContext
   ): Promise<AccommodationCheckAvailabilityResult> {
-    const request: EpsCheckAvailabilityRequest = {
-      propertyId: params.propertyId,
-      rateId: params.rateId,
-      roomId: params.roomId,
-      token: params.priceCheckToken,
-    };
-
     const availability = await this.callProvider(
-      (providerCtx) => this.deps.provider.checkAvailability(request, providerCtx),
+      (providerCtx) => this.deps.provider.checkAvailability(params, providerCtx),
       ctx
     );
 
@@ -212,7 +187,7 @@ export class AccommodationsService {
     });
   }
 
-  /** Complete an accommodation booking via Expedia Partner Solutions. */
+  /** Complete an accommodation booking. */
   async book(
     params: AccommodationBookingRequest,
     ctx: ServiceContext & { userId: string }
@@ -222,7 +197,7 @@ export class AccommodationsService {
     }
     const supabase = await this.deps.supabase();
 
-    const providerPayload = this.buildExpediaBookingPayload(params);
+    const providerPayload = this.deps.provider.buildBookingPayload(params);
     const idempotencyKey = params.idempotencyKey ?? secureUuid();
 
     const result = await runBookingOrchestrator(
@@ -240,13 +215,19 @@ export class AccommodationsService {
         idempotencyKey,
         paymentMethodId: params.paymentMethodId,
         persistBooking: async (payload) => {
+          // bookingToken is required by ACCOMMODATION_BOOKING_INPUT_SCHEMA but TypeScript
+          // infers it as optional. Runtime check ensures it's defined.
+          if (!params.bookingToken) {
+            throw new Error("bookingToken is required for booking persistence");
+          }
+          // @ts-expect-error - bookingToken is required by schema but TS infers as optional
           const { error } = await supabase.from("bookings").insert({
             // biome-ignore lint/style/useNamingConvention: database columns use snake_case
             booking_token: params.bookingToken,
             checkin: params.checkin,
             checkout: params.checkout,
             // biome-ignore lint/style/useNamingConvention: database columns use snake_case
-            eps_booking_id: payload.epsItineraryId,
+            eps_booking_id: payload.providerBookingId,
             // biome-ignore lint/style/useNamingConvention: database columns use snake_case
             guest_email: params.guestEmail,
             // biome-ignore lint/style/useNamingConvention: database columns use snake_case
@@ -312,147 +293,21 @@ export class AccommodationsService {
       CACHE_NAMESPACE
     );
   }
-
-  /** Build a Expedia Partner Solutions booking payload. */
-  private buildExpediaBookingPayload(
-    params: AccommodationBookingRequest
-  ): EpsCreateBookingRequest {
-    const traveler = splitGuestName(params.guestName);
-    const normalizedPhone = normalizePhoneForRapid(params.guestPhone);
-
-    return {
-      affiliateReferenceId: params.tripId ?? params.listingId,
-      billingContact: {
-        address: {
-          city: "Unknown",
-          countryCode: normalizedPhone.countryCode ?? "US",
-          line1: "Not Provided",
-        },
-        familyName: traveler.familyName,
-        givenName: traveler.givenName,
-      },
-      bookingToken: params.bookingToken,
-      contact: {
-        email: params.guestEmail,
-        phoneAreaCode: normalizedPhone.areaCode,
-        phoneCountryCode: normalizedPhone.countryCode,
-        phoneNumber: normalizedPhone.number,
-      },
-      specialRequests: params.specialRequests,
-      stay: {
-        adults: params.guests,
-        checkIn: params.checkin,
-        checkOut: params.checkout,
-      },
-      traveler,
-    };
-  }
 }
 
-/** Resolve property IDs using semantic RAG matching. */
-async function resolvePropertyIds(
-  params: AccommodationSearchParams,
-  supabase: TypedServerSupabase
-): Promise<string[] | undefined> {
-  if (!params.semanticQuery || params.semanticQuery.trim().length === 0) {
-    return undefined;
-  }
-
-  // biome-ignore lint/suspicious/noExplicitAny: Supabase RPC types are not fully generated
-  const { data: ragResults } = await (supabase as any).rpc(
-    "match_accommodation_embeddings",
-    {
-      // biome-ignore lint/style/useNamingConvention: Supabase function arguments use snake_case
-      match_count: 20,
-      // biome-ignore lint/style/useNamingConvention: Supabase function arguments use snake_case
-      match_threshold: 0.75,
-      // biome-ignore lint/style/useNamingConvention: Supabase function arguments use snake_case
-      query_embedding: await generateEmbedding(params.semanticQuery),
-    }
-  );
-
-  if (!ragResults || !Array.isArray(ragResults)) {
-    return undefined;
-  }
-
-  const ids = (ragResults as Array<{ id: string }>).map((item) => item.id);
-  return ids.length > 0 ? ids : undefined;
-}
-
-/** Map availability response to a list of listings. */
-function mapAvailabilityToListings(
-  response: RapidAvailabilityResponse,
-  meta: Record<string, unknown>
-): Array<Record<string, unknown>> {
-  return (response.properties ?? []).map((property) => {
-    const rooms = (property.rooms ?? []).map((room) => ({
-      description: room.description,
-      id: room.id,
-      rates: (room.rates ?? []).map((rate) =>
-        normalizeRate(property.property_id ?? "", room.id ?? "", rate)
-      ),
-      roomName: room.room_name,
-    }));
-
-    return {
-      address: property.address ?? property.summary?.location?.address,
-      amenities: property.amenities,
-      coordinates: property.summary?.location?.coordinates,
-      id: property.property_id,
-      links: property.links,
-      name: property.summary?.name ?? property.name,
-      propertyType: property.property_type,
-      provider: "expedia" as const,
-      rooms,
-      score: property.score,
-      searchMeta: meta,
-      starRating: property.summary?.star_rating?.value ?? property.star_rating,
-      status: property.status,
-      summary: property.summary,
-    };
-  });
-}
-
-/** Normalize a rate object. */
-function normalizeRate(propertyId: string, roomId: string, rate: RapidRate) {
-  const totals = extractInclusiveTotal(rate.pricing);
-  const numeric = totals?.total ? Number.parseFloat(totals.total) : undefined;
-  const priceCheckLink = rate.links?.price_check;
-  const token = extractTokenFromHref(priceCheckLink?.href);
-
-  return {
-    availableRooms: rate.available_rooms,
-    id: rate.id,
-    original: rate,
-    price: totals
-      ? {
-          currency: totals.currency,
-          numeric: Number.isFinite(numeric) ? numeric : undefined,
-          total: totals.total,
-        }
-      : undefined,
-    priceCheck: priceCheckLink
-      ? {
-          href: priceCheckLink.href,
-          propertyId,
-          rateId: rate.id ?? "",
-          roomId,
-          token,
-        }
-      : undefined,
-    refundability: rate.current_refundability,
-    refundable: rate.refundable,
-  };
-}
-
-/** Collect prices from a list of listings. */
-function collectListingPrices(listings: Array<Record<string, unknown>>): number[] {
+/**
+ * Extracts numeric price values from accommodation listings.
+ *
+ * @param listings - Array of accommodation listing objects with nested rooms and rates.
+ * @returns Array of numeric price values found in the listings.
+ */
+function collectPrices(listings: Array<Record<string, unknown>>): number[] {
   const values: number[] = [];
   for (const listing of listings) {
     const rooms = (listing.rooms as Array<Record<string, unknown>> | undefined) ?? [];
     for (const room of rooms) {
       const rates =
-        (room.rates as Array<Record<string, { numeric?: number }>> | undefined) ?? [];
+        (room.rates as Array<{ price?: { numeric?: number } }> | undefined) ?? [];
       for (const rate of rates) {
         const numeric = rate.price?.numeric;
         if (typeof numeric === "number" && Number.isFinite(numeric)) {
@@ -464,58 +319,137 @@ function collectListingPrices(listings: Array<Record<string, unknown>>): number[
   return values;
 }
 
-/** Extract a token from a href. */
-export function extractTokenFromHref(href?: string | null): string | undefined {
-  if (!href) return undefined;
+/**
+ * Resolves a location string to geographic coordinates using Google Places API.
+ *
+ * Uses cached results when available to reduce API calls. Caches successful
+ * lookups for 30 days.
+ *
+ * @param location - Location string to geocode (e.g., "New York, NY").
+ * @returns Coordinates object with lat/lon, or null if location not found or API unavailable.
+ */
+async function resolveCoordinates(
+  location: string
+): Promise<{ lat: number; lon: number } | null> {
+  const normalized = location.trim().toLowerCase().replace(/\s+/g, " ");
+  const cacheKey = `googleplaces:geocode:${normalized}`;
+  const cached = await getCachedLatLng(cacheKey);
+  if (cached) return cached;
+
+  let apiKey: string;
   try {
-    const url = new URL(href, "https://test.ean.com");
-    return url.searchParams.get("token") ?? undefined;
+    apiKey = getGoogleMapsServerKey();
   } catch {
-    return undefined;
+    return null;
   }
+
+  const response = await withTelemetrySpan(
+    "places.geocode",
+    {
+      attributes: { location: normalized },
+      redactKeys: ["location"],
+    },
+    async () =>
+      await retryWithBackoff(
+        () =>
+          fetch("https://places.googleapis.com/v1/places:searchText", {
+            body: JSON.stringify({ maxResultCount: 1, textQuery: location }),
+            headers: {
+              "Content-Type": "application/json",
+              "X-Goog-Api-Key": apiKey,
+              "X-Goog-FieldMask": "places.id,places.location",
+            },
+            method: "POST",
+          }),
+        { attempts: 3, baseDelayMs: 200, maxDelayMs: 1000 }
+      )
+  );
+
+  if (!response.ok) return null;
+  const data = await response.json();
+  const place = (data.places ?? [])[0];
+  const coords =
+    place?.location?.latitude !== undefined && place?.location?.longitude !== undefined
+      ? { lat: place.location.latitude, lon: place.location.longitude }
+      : null;
+  if (coords) {
+    await cacheLatLng(cacheKey, coords, 30 * 24 * 60 * 60);
+  }
+  return coords;
 }
 
-/** Split a guest name into given and family names. */
-export function splitGuestName(name: string): {
-  givenName: string;
-  familyName: string;
-} {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) {
-    return { familyName: parts[0], givenName: parts[0] };
-  }
-  return {
-    familyName: parts.slice(-1)[0],
-    givenName: parts.slice(0, -1).join(" "),
-  };
-}
-
-/** Normalize a phone number for Rapid API. */
-export function normalizePhoneForRapid(phone?: string) {
-  if (!phone?.trim()) {
-    return { countryCode: "1", number: "0000000" };
-  }
-
-  const digits = phone.replace(/\D/g, "");
-  if (digits.length === 0) {
-    return { countryCode: "1", number: "0000000" };
+/**
+ * Enriches an accommodation listing with Google Places data.
+ *
+ * Searches for the property by name and address, then fetches detailed place
+ * information including ratings, photos, and contact details. Returns the
+ * original listing if enrichment fails or API is unavailable.
+ *
+ * @param listing - Accommodation listing object from provider (expected hotel.name and hotel.address).
+ * @returns Enriched listing with place and placeDetails properties, or original listing if enrichment fails.
+ */
+async function enrichWithGooglePlaces(
+  listing: Record<string, unknown>
+): Promise<Record<string, unknown>> {
+  let apiKey: string;
+  try {
+    apiKey = getGoogleMapsServerKey();
+  } catch {
+    return listing;
   }
 
-  if (digits.length <= 7) {
-    return { countryCode: "1", number: digits.padStart(7, "0") };
-  }
+  const name = (listing as { hotel?: { name?: string } }).hotel?.name;
+  const address = (
+    listing as { hotel?: { address?: { cityName?: string; lines?: string[] } } }
+  ).hotel?.address;
+  const query = name
+    ? `${name} ${address?.cityName ?? ""} ${(address?.lines ?? []).join(" ")}`
+    : undefined;
+  if (!query) return listing;
 
-  if (digits.length <= 10) {
-    return {
-      areaCode: digits.slice(0, digits.length - 7),
-      countryCode: "1",
-      number: digits.slice(-7),
-    };
-  }
+  const searchRes = await withTelemetrySpan(
+    "places.enrich.search",
+    { attributes: { query } },
+    async () =>
+      await retryWithBackoff(
+        () =>
+          fetch("https://places.googleapis.com/v1/places:searchText", {
+            body: JSON.stringify({ maxResultCount: 1, textQuery: query }),
+            headers: {
+              "Content-Type": "application/json",
+              "X-Goog-Api-Key": apiKey,
+              "X-Goog-FieldMask":
+                "places.id,places.displayName,places.rating,places.userRatingCount,places.photos.name,places.internationalPhoneNumber,places.formattedAddress,places.location",
+            },
+            method: "POST",
+          }),
+        { attempts: 3, baseDelayMs: 200, maxDelayMs: 1000 }
+      )
+  );
+  if (!searchRes.ok) return listing;
+  const searchData = await searchRes.json();
+  const place = (searchData.places ?? [])[0];
+  if (!place?.id) return listing;
 
-  return {
-    areaCode: digits.slice(digits.length - 10, digits.length - 7),
-    countryCode: digits.slice(0, digits.length - 10),
-    number: digits.slice(-7),
-  };
+  const detailsRes = await withTelemetrySpan(
+    "places.enrich.details",
+    { attributes: { placeId: place.id } },
+    async () =>
+      await retryWithBackoff(
+        () =>
+          fetch(`https://places.googleapis.com/v1/${place.id}`, {
+            headers: {
+              "Content-Type": "application/json",
+              "X-Goog-Api-Key": apiKey,
+              "X-Goog-FieldMask":
+                "id,displayName,formattedAddress,location,rating,userRatingCount,internationalPhoneNumber,photos.name,googleMapsUri",
+            },
+            method: "GET",
+          }),
+        { attempts: 3, baseDelayMs: 200, maxDelayMs: 1000 }
+      )
+  );
+  if (!detailsRes.ok) return { ...listing, place };
+  const details = await detailsRes.json();
+  return { ...listing, place, placeDetails: details };
 }

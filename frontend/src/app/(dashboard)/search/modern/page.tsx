@@ -442,7 +442,7 @@ export default function ModernSearchPage() {
               <div>
                 <h4 className="font-semibold mb-2">2025 UX Patterns:</h4>
                 <ul className="text-sm space-y-1 text-muted-foreground">
-                  <li>• Smart Bundle savings (Expedia 2025 pattern)</li>
+                  <li>• Smart Bundle savings (Amadeus hybrid pattern)</li>
                   <li>• All-Inclusive Era highlighting</li>
                   <li>• AI price prediction with confidence</li>
                   <li>• Progressive disclosure for complexity</li>

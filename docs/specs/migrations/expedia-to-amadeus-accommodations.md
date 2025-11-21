@@ -24,19 +24,33 @@ Related: `adr-0050-amadeus-google-places-stripe-hybrid.md`, `0027-spec-accommoda
 
 - [x] Add `amadeus` dependency to `frontend/package.json`.
 
-- [ ] Create `src/domain/amadeus/client.ts`, `schemas.ts`, `mappers.ts`.
+- [x] Create `src/domain/amadeus/client.ts`, `schemas.ts`, `mappers.ts`.
+- Notes:
+  - Implemented lazy singleton client with env validation.
+  - Added base schemas for hotel, offer, booking plus mapping helpers.
 
-- [ ] Write unit tests for Amadeus client and mappers with fixtures.
+- [x] Write unit tests for Amadeus client and mappers with fixtures.
 
 - [ ] Commit as "Amadeus scaffolding only (not wired)".
 
 ## Phase 2 – Swap Provider in Container
 
-- [ ] Ensure `AmadeusProviderAdapter` implements `AccommodationProviderAdapter`.
+- [x] Ensure `AmadeusProviderAdapter` implements `AccommodationProviderAdapter`.
 
-- [ ] Update `src/domain/accommodations/container.ts` to use `new AmadeusProviderAdapter()`.
+- [x] Update `src/domain/accommodations/container.ts` to use `new AmadeusProviderAdapter()`.
+- Notes:
+  - Provider types rewritten to be provider-agnostic.
+  - Container now builds Amadeus adapter with Upstash rate limiter defaults.
 
-- [ ] Run tests; fix any type errors in service and booking orchestrator.
+- [x] Run tests; fix any type errors in service and booking orchestrator.
+  - Tests: `pnpm test:unit --project=unit` (frontend) – passes after adding Amadeus client/mappers/service/orchestrator specs.
+  - Addressed: updated provider-agnostic booking orchestrator, fixed TypeScript errors, and ensured service uses Amadeus adapter.
+
+## Global Reviews, Security Notes, and Cross-Cutting Changes
+
+- Architecture (zen.analyze):
+  - Identified risks: Places geocoding/enrichment lacked retries/telemetry; Amadeus booking payload used placeholder card; persistence still writes to `eps_booking_id`.
+  - Actions taken: added retry/backoff + telemetry spans for Places geocode/details; normalized geocode cache keys. Payment alignment and persistence column rename remain open.
 
 ## Phase 3 – Migrate Search & Details
 
