@@ -14,19 +14,14 @@ import { FetchInstrumentation } from "@opentelemetry/instrumentation-fetch";
 import { BatchSpanProcessor, type SpanProcessor } from "@opentelemetry/sdk-trace-base";
 import { WebTracerProvider } from "@opentelemetry/sdk-trace-web";
 import { getClientEnvVarWithFallback } from "@/lib/env/client";
+import type {
+  TelemetrySpanAttributes,
+  TelemetryLogOptions,
+  WithTelemetrySpanOptions,
+} from "./core";
 
-// Types matching server API
-export type TelemetrySpanAttributes = Record<string, string | number | boolean>;
-
-export type WithTelemetrySpanOptions = {
-  attributes?: TelemetrySpanAttributes;
-  redactKeys?: string[];
-};
-
-export type TelemetryLogOptions = {
-  attributes?: TelemetrySpanAttributes;
-  level?: "info" | "warning" | "error";
-};
+// Re-export types for convenience
+export type { TelemetrySpanAttributes, TelemetryLogOptions, WithTelemetrySpanOptions };
 
 /**
  * Module-level flag to prevent double-initialization.

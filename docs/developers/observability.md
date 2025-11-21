@@ -20,7 +20,7 @@ Server code must use these helpers exclusively. Direct usage of `@opentelemetry/
 
 ## OpenTelemetry spans
 
-Use `withTelemetrySpan` (`frontend/src/lib/telemetry/span.ts`) for async operations:
+Use `withTelemetrySpan` from `@/lib/telemetry/span` (server-only) for async operations:
 
 ```typescript
 import { withTelemetrySpan } from "@/lib/telemetry/span";
@@ -46,6 +46,7 @@ const result = await withTelemetrySpan(
 - The helper automatically handles `SpanStatusCode.OK/ERROR`, exception recording, and span cleanup.
 - All spans share the tracer exported by `getTelemetryTracer()` and group under the `tripsage-frontend` service name.
 - If you call `span.recordException()` or `span.setStatus({ code: SpanStatusCode.ERROR })` inside the callback, `withTelemetrySpan` will preserve that status instead of overwriting it with OK.
+- **Note:** `@/lib/telemetry/span` is server-only (marked with `"server-only"`). Client components should use `@/lib/telemetry/client` for client-side telemetry initialization and no-op helpers that match the server API surface.
 
 ## Structured logging
 
