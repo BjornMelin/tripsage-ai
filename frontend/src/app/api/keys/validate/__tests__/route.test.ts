@@ -2,7 +2,11 @@
 
 import type { Redis } from "@upstash/redis";
 import type { NextRequest } from "next/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  setRateLimitFactoryForTests,
+  setSupabaseFactoryForTests,
+} from "@/lib/api/factory";
 import {
   stubRateLimitDisabled,
   stubRateLimitEnabled,
@@ -35,6 +39,17 @@ const mockCreateOpenAI = vi.hoisted(() => vi.fn());
 const mockCreateAnthropic = vi.hoisted(() => vi.fn());
 const MOCK_GET_REDIS = vi.hoisted(() =>
   vi.fn<() => Redis | undefined>(() => undefined)
+);
+const RATE_LIMIT_FACTORY = vi.hoisted(() =>
+  vi.fn(async (_key: string, identifier: string) => {
+    LIMIT_SPY(identifier);
+    return {
+      limit: 20,
+      remaining: 0,
+      reset: Date.now() + 1_000,
+      success: false,
+    };
+  })
 );
 
 vi.mock("@/lib/next/route-helpers", async () => {
@@ -86,6 +101,8 @@ vi.mock("@ai-sdk/anthropic", () => ({
 
 vi.mock("@/lib/telemetry/span", () => ({
   recordTelemetryEvent: vi.fn(),
+  sanitizeAttributes: vi.fn((attributes) => attributes),
+  withTelemetrySpan: vi.fn((_name, _attrs, fn) => fn()),
 }));
 
 vi.mock("@/lib/env/server", () => ({
@@ -125,6 +142,7 @@ describe("/api/keys/validate route", () => {
     vi.clearAllMocks();
     unstubAllEnvs();
     stubRateLimitDisabled();
+    setSupabaseFactoryForTests(async () => CREATE_SUPABASE() as never);
     MOCK_ROUTE_HELPERS.getClientIpFromHeaders.mockReturnValue("127.0.0.1");
     mockCreateOpenAI.mockReset();
     mockCreateAnthropic.mockReset();
@@ -147,6 +165,11 @@ describe("/api/keys/validate route", () => {
     // Ensure Supabase SSR client does not throw when real module is imported
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "anon-test-key");
+  });
+
+  afterEach(() => {
+    setSupabaseFactoryForTests(null);
+    setRateLimitFactoryForTests(null);
   });
 
   it("returns isValid true on successful provider response", async () => {
@@ -221,16 +244,18 @@ describe("/api/keys/validate route", () => {
 
   it("throttles per user id and returns headers", async () => {
     stubRateLimitEnabled();
+    setRateLimitFactoryForTests(RATE_LIMIT_FACTORY);
     // Return mock Redis instance when rate limiting enabled (getRedis checks env vars via mocked getServerEnvVarWithFallback)
     MOCK_GET_REDIS.mockReturnValue({} as Redis);
     MOCK_SUPABASE.auth.getUser.mockResolvedValue({
       data: { user: { id: "validate-user" } },
       error: null,
     });
-    LIMIT_SPY.mockResolvedValueOnce({
+    const resetAt = Date.now() + 5000;
+    RATE_LIMIT_FACTORY.mockResolvedValueOnce({
       limit: 20,
       remaining: 0,
-      reset: 789,
+      reset: resetAt,
       success: false,
     });
     const { POST } = await import("@/app/api/keys/validate/route");
@@ -241,11 +266,11 @@ describe("/api/keys/validate route", () => {
 
     const res = await POST(req, createRouteParamsContext());
 
-    expect(LIMIT_SPY).toHaveBeenCalledWith("validate-user");
+    expect(RATE_LIMIT_FACTORY).toHaveBeenCalledWith("keys:validate", "validate-user");
     expect(res.status).toBe(429);
     expect(res.headers.get("X-RateLimit-Limit")).toBe("20");
     expect(res.headers.get("X-RateLimit-Remaining")).toBe("0");
-    expect(res.headers.get("X-RateLimit-Reset")).toBe("789");
+    expect(res.headers.get("X-RateLimit-Reset")).toBe(String(resetAt));
   });
 
   it("returns 401 when user is missing (auth required)", async () => {

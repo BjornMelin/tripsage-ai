@@ -36,7 +36,7 @@ describe("useAuthenticatedApi", () => {
 
     expect(MOCKED_API_GET).toHaveBeenCalledTimes(1);
     const [endpoint] = MOCKED_API_GET.mock.calls[0] ?? [];
-    expect(endpoint).toBe("/ping");
+    expect(endpoint).toBe("ping");
   });
 
   it("propagates ApiError instances from the underlying client", async () => {

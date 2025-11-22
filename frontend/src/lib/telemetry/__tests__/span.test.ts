@@ -19,11 +19,8 @@ vi.mock("@/lib/telemetry/tracer", () => ({
   TELEMETRY_SERVICE_NAME: "tripsage-frontend",
 }));
 
-const {
-  withTelemetrySpan,
-  resetTelemetryTracerForTests,
-  setTelemetryTracerForTests,
-} = await import("@/lib/telemetry/span");
+const { withTelemetrySpan, resetTelemetryTracerForTests, setTelemetryTracerForTests } =
+  await import("@/lib/telemetry/span");
 
 describe("withTelemetrySpan", () => {
   beforeEach(() => {

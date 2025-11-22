@@ -83,7 +83,7 @@ vi.mock("@/lib/next/route-helpers", async () => {
 describe("/api/agents/accommodations route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    setRateLimitFactoryForTests(null);
+    setRateLimitFactoryForTests(async (_key, _identifier) => mockLimitFn());
     setSupabaseFactoryForTests(
       async () =>
         ({
@@ -104,6 +104,7 @@ describe("/api/agents/accommodations route", () => {
   });
 
   afterEach(() => {
+    setRateLimitFactoryForTests(null);
     setSupabaseFactoryForTests(null);
   });
 

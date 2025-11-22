@@ -14,12 +14,29 @@ vi.mock("next/headers", () => ({
   ),
 }));
 
+vi.mock("@/lib/next/route-helpers", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/next/route-helpers")>(
+    "@/lib/next/route-helpers"
+  );
+  return {
+    ...actual,
+    checkAuthentication: vi.fn(async () => ({
+      error: null,
+      isAuthenticated: true,
+      user: { id: "user-1" },
+    })),
+    getTrustedRateLimitIdentifier: vi.fn(() => "anon:test"),
+    withRequestSpan: vi.fn((_name, _attrs, fn) => fn()),
+  };
+});
+
 // Mock Supabase server client
 vi.mock("@/lib/supabase/server", () => ({
   createServerSupabase: vi.fn(async () => ({
     auth: {
       getUser: async () => ({
         data: { user: { id: "user-1" } },
+        error: null,
       }),
     },
   })),
