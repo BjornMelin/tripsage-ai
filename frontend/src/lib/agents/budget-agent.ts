@@ -202,6 +202,7 @@ export function runBudgetAgent(
     modelId: string;
     identifier: string;
   },
+  config: import("@schemas/configuration").AgentConfig,
   input: BudgetPlanRequest
 ) {
   const instructions = buildBudgetPrompt(input);
@@ -214,7 +215,7 @@ export function runBudgetAgent(
     { content: instructions, role: "system" },
     { content: userPrompt, role: "user" },
   ];
-  const desiredMaxTokens = 4096; // Default for agent responses
+  const desiredMaxTokens = config.parameters.maxTokens ?? 4096;
   const { maxTokens } = clampMaxTokens(messages, desiredMaxTokens, deps.modelId);
 
   return streamText({
@@ -225,7 +226,8 @@ export function runBudgetAgent(
     ],
     model: deps.model,
     stopWhen: stepCountIs(10),
-    temperature: 0.3,
+    temperature: config.parameters.temperature ?? 0.3,
     tools: buildBudgetTools(deps.identifier),
+    topP: config.parameters.topP,
   });
 }

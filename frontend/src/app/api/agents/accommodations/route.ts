@@ -13,6 +13,7 @@ import type { AccommodationSearchRequest } from "@schemas/agents";
 import { agentSchemas } from "@schemas/agents";
 import type { NextRequest } from "next/server";
 import { runAccommodationAgent } from "@/lib/agents/accommodation-agent";
+import { resolveAgentConfig } from "@/lib/agents/config-resolver";
 import { withApiGuards } from "@/lib/api/factory";
 import { getTrustedRateLimitIdentifier } from "@/lib/next/route-helpers";
 
@@ -33,10 +34,16 @@ export const POST = withApiGuards({
 })(async (req: NextRequest, context, body: AccommodationSearchRequest) => {
   const { user } = context;
   const identifier = user?.id ?? getTrustedRateLimitIdentifier(req);
-  const modelHint = new URL(req.url).searchParams.get("model") ?? undefined;
+  const config = await resolveAgentConfig("accommodationAgent");
+  const modelHint =
+    config.config.model ?? new URL(req.url).searchParams.get("model") ?? undefined;
   const { model, modelId } = await resolveProvider(user?.id ?? "anon", modelHint);
 
-  const result = runAccommodationAgent({ identifier, model, modelId }, body);
+  const result = runAccommodationAgent(
+    { identifier, model, modelId },
+    config.config,
+    body
+  );
   return result.toTextStreamResponse({
     headers: { "Content-Type": "text/event-stream" },
   });

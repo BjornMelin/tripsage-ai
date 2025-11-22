@@ -233,6 +233,7 @@ export function runItineraryAgent(
     modelId: string;
     identifier: string;
   },
+  config: import("@schemas/configuration").AgentConfig,
   input: ItineraryPlanRequest
 ) {
   const instructions = buildItineraryPrompt(input);
@@ -245,7 +246,7 @@ export function runItineraryAgent(
     { content: instructions, role: "system" },
     { content: userPrompt, role: "user" },
   ];
-  const desiredMaxTokens = 4096; // Default for agent responses
+  const desiredMaxTokens = config.parameters.maxTokens ?? 4096;
   const { maxTokens } = clampMaxTokens(messages, desiredMaxTokens, deps.modelId);
 
   return streamText({
@@ -256,7 +257,8 @@ export function runItineraryAgent(
     ],
     model: deps.model,
     stopWhen: stepCountIs(15),
-    temperature: 0.3,
+    temperature: config.parameters.temperature ?? 0.3,
     tools: buildItineraryTools(deps.identifier),
+    topP: config.parameters.topP,
   });
 }

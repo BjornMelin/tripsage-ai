@@ -40,6 +40,7 @@ export function runFlightAgent(
     model: LanguageModel;
     modelId: string;
   },
+  config: import("@schemas/configuration").AgentConfig,
   input: FlightSearchRequest
 ) {
   const instructions = buildFlightPrompt(input);
@@ -52,7 +53,7 @@ export function runFlightAgent(
     { content: instructions, role: "system" },
     { content: userPrompt, role: "user" },
   ];
-  const desiredMaxTokens = 4096; // Default for agent responses
+  const desiredMaxTokens = config.parameters.maxTokens ?? 4096;
   const { maxTokens } = clampMaxTokens(messages, desiredMaxTokens, deps.modelId);
 
   return streamText({
@@ -63,7 +64,8 @@ export function runFlightAgent(
     ],
     model: deps.model,
     stopWhen: stepCountIs(10),
-    temperature: 0.3,
+    temperature: config.parameters.temperature ?? 0.3,
     tools: FLIGHT_TOOLS,
+    topP: config.parameters.topP,
   });
 }

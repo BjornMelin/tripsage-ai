@@ -37,6 +37,7 @@ const ACCOMMODATION_TOOLS = {
  */
 export function runAccommodationAgent(
   deps: { model: LanguageModel; modelId: string; identifier: string },
+  config: import("@schemas/configuration").AgentConfig,
   input: AccommodationSearchRequest
 ) {
   const instructions = buildAccommodationPrompt({
@@ -54,7 +55,7 @@ export function runAccommodationAgent(
     { content: instructions, role: "system" },
     { content: userPrompt, role: "user" },
   ];
-  const desiredMaxTokens = 4096; // Default for agent responses
+  const desiredMaxTokens = config.parameters.maxTokens ?? 4096;
   const { maxTokens } = clampMaxTokens(messages, desiredMaxTokens, deps.modelId);
 
   const callOptions = {
@@ -64,8 +65,9 @@ export function runAccommodationAgent(
       { content: userPrompt, role: "user" },
     ],
     model: deps.model,
-    temperature: 0.3,
+    temperature: config.parameters.temperature ?? 0.3,
     tools: ACCOMMODATION_TOOLS,
+    topP: config.parameters.topP,
   } satisfies Parameters<typeof streamText>[0];
 
   return streamText({

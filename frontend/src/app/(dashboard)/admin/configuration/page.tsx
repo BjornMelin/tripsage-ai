@@ -5,8 +5,10 @@
  * Provides access to the ConfigurationManager component with proper authentication.
  */
 
+import type { AgentType } from "@schemas/configuration";
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { fetchAgentBundle } from "@/components/admin/configuration-actions";
 import ConfigurationManager from "@/components/admin/configuration-manager";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
@@ -16,7 +18,11 @@ export const metadata: Metadata = {
   title: "Agent Configuration - TripSage Admin",
 };
 
-export default function ConfigurationPage() {
+const DEFAULT_AGENT: AgentType = "budgetAgent";
+
+export default async function ConfigurationPage() {
+  const initial = await fetchAgentBundle(DEFAULT_AGENT);
+
   return (
     <div className="container mx-auto py-6">
       <Suspense
@@ -26,7 +32,12 @@ export default function ConfigurationPage() {
           </div>
         }
       >
-        <ConfigurationManager />
+        <ConfigurationManager
+          initialAgent={DEFAULT_AGENT}
+          initialConfig={initial.config}
+          initialMetrics={initial.metrics}
+          initialVersions={initial.versions}
+        />
       </Suspense>
     </div>
   );
