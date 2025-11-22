@@ -1,12 +1,17 @@
 # Supabase Configuration for TripSage
 # This file configures the Supabase CLI and local development environment
+# Reference: https://supabase.com/docs/guides/cli/config
+
+# Project identifier (required)
+# Used to distinguish different Supabase projects on the same host
+project_id = "tripsage-ai"
 
 [api]
-# API server configuration
+# API server configuration (PostgREST)
 enabled = true
 port = 54321
 schemas = ["public", "auth", "storage", "graphql_public"]
-extra_search_path = ["public", "auth"]
+extra_search_path = ["public", "extensions"]
 max_rows = 1000
 
 [db]
@@ -22,25 +27,49 @@ pool_mode = "transaction"
 default_pool_size = 20
 max_client_conn = 100
 
+[db.seed]
+# Database seeding configuration
+enabled = true
+sql_paths = ["./seed.sql"]
+
 [realtime]
 enabled = true
+# Use IPv4 for WSL2 compatibility (default is IPv6)
 ip_version = "IPv4"
 
 [studio]
 enabled = true
 port = 54323
 api_url = "http://localhost:54321"
+# Optional: Enable AI features in Studio (requires OPENAI_API_KEY in .env)
+# openai_api_key = "env(OPENAI_API_KEY)"
 
 [inbucket]
+# Local email testing server
 enabled = true
-port = 54325
-smtp_port = 54326
-pop3_port = 54327
+port = 54324
+smtp_port = 54325
+pop3_port = 54326
 
 [storage]
 enabled = true
 file_size_limit = "50MiB"
-image_transformation = { enabled = true }
+
+[storage.buckets.attachments]
+# Storage bucket for trip attachments and files
+public = false
+file_size_limit = "50MiB"
+allowed_mime_types = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "application/pdf",
+  "text/plain",
+  "text/csv",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-excel",
+]
 
 [auth]
 enabled = true
@@ -54,7 +83,7 @@ enable_signup = true
 double_confirm_changes = true
 enable_confirmations = true
 
-# OAuth providers (configure in Supabase Dashboard)
+# OAuth providers (configure in Supabase Dashboard or via environment variables)
 [auth.external.google]
 enabled = false
 client_id = "env(GOOGLE_CLIENT_ID)"
@@ -69,8 +98,7 @@ redirect_uri = "http://localhost:54321/auth/v1/callback"
 
 [edge_runtime]
 enabled = true
-inspector_port = 54331
-
-# Project-specific settings
-[experimental]
-# Enable experimental features for development
+# Use "oneshot" for development with hot reload (default)
+# Use "per_worker" for load testing or background tasks
+policy = "oneshot"
+inspector_port = 8083
