@@ -63,6 +63,23 @@ Related: `adr-0050-amadeus-google-places-stripe-hybrid.md`, `0027-spec-accommoda
   - Remaining: rotate server key in ops runbook; consider additional auth hardening for non-auth search flows.
   - Latest (2025-11-21): Booking flow now validates `tripId` ownership against Supabase to prevent cross-tenant associations flagged in audit.
 
+- Code Review (zen.codereview, 2025-11-22):
+  - Fixed missing `user_id` derivation in `trip-store` create/update flows to avoid invalid inserts and RLS failures.
+  - Guarded assistant memory persistence on null `sessionId` and sanitized chat metadata to remove full assistant content.
+  - Updated agent config route tests to use `NextRequest` shapes and tightened API guard mocks.
+- Architecture (zen.analyze, 2025-11-22):
+  - Added vault stubs in consolidated base schema to keep local/CI migrations runnable without the extension.
+  - Normalized chat metadata to avoid `undefined` in JSON payloads and added sanitized inserts.
+  - Trip mutations now source owner IDs from state instead of `currentTrip` to align with RLS.
+- Security (zen.secaudit, 2025-11-22):
+  - Identified privilege escalation via `public.is_admin` trusting `user_metadata`. Mitigated by changing admin check to `app_metadata.is_admin`/JWT claim only in `20251122000000_base_schema.sql`.
+  - Recommendation logged: monitor admin metadata changes and regenerate tokens for legitimate admins once roles are stored in app_metadata.
+
+- Supabase bootstrap (one-command flow, 2025-11-22):
+  - Consolidated migrations into `supabase/migrations/20251122000000_base_schema.sql` (includes agent_config backend).
+  - Local reset sequence: `npx supabase start --debug`, `npx supabase db reset --debug`, `npx supabase gen types typescript --local --schema public,auth,storage,memories > ../frontend/src/lib/supabase/database.types.ts`, then `npx supabase stop`.
+  - Notes: vault extension is stubbed when unavailable; production must use real vault extension.
+
 ## Phase 3 – Migrate Search & Details
 
 - [x] Remove `@schemas/expedia` usage from `service.ts`.

@@ -543,7 +543,7 @@ Guidelines:
 - [x] Ensure all Amadeus and Stripe code runs server-side only:
 
   - Use `"use server"` or `import "server-only"` where needed.([Amadeus IT Group SA](https://developers.amadeus.com/self-service))
-- [ ] Keep external API calls inside:
+- [x] Keep external API calls inside:
 
   - Route handlers.
   - Server actions.
