@@ -23,6 +23,7 @@ import {
   getAmadeusClient,
   listHotelsByGeocode,
   searchHotelOffers,
+  setAmadeusClientForTests,
 } from "../client";
 
 describe("Amadeus client wrapper", () => {
@@ -33,6 +34,11 @@ describe("Amadeus client wrapper", () => {
     getMock.mockReset();
     offersGetMock.mockReset();
     bookingPostMock.mockReset();
+    setAmadeusClientForTests({
+      booking: { hotelBookings: { post: bookingPostMock } },
+      referenceData: { locations: { hotels: { byGeocode: { get: getMock } } } },
+      shopping: { hotelOffersSearch: { get: offersGetMock } },
+    } as never);
   });
 
   it("creates singleton client using env vars", () => {

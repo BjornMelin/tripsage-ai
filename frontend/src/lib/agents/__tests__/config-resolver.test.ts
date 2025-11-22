@@ -4,11 +4,11 @@ import type { AgentConfig } from "@schemas/configuration";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { resolveAgentConfig } from "@/lib/agents/config-resolver";
 
-const mockGetCachedJson = vi.fn();
-const mockSetCachedJson = vi.fn();
-const mockVersionedKey = vi.fn();
-const mockEmitAlert = vi.fn();
-const mockRecordEvent = vi.fn();
+const mockGetCachedJson = vi.hoisted(() => vi.fn());
+const mockSetCachedJson = vi.hoisted(() => vi.fn());
+const mockVersionedKey = vi.hoisted(() => vi.fn());
+const mockEmitAlert = vi.hoisted(() => vi.fn());
+const mockRecordEvent = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/cache/upstash", () => ({
   getCachedJson: mockGetCachedJson,
@@ -39,8 +39,8 @@ vi.mock("@/lib/telemetry/span", async () => {
   };
 });
 
-const supabaseSelect = vi.fn();
-const supabaseMaybeSingle = vi.fn();
+const supabaseSelect = vi.hoisted(() => vi.fn());
+const supabaseMaybeSingle = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/supabase/server", () => ({
   createServerSupabase: vi.fn(async () => ({

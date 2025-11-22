@@ -30,8 +30,8 @@ vi.mock("@/lib/calendar/auth", () => ({
 
 describe("/api/calendar/status route", () => {
   beforeEach(() => {
-    resetApiRouteMocks();
     vi.clearAllMocks();
+    resetApiRouteMocks();
   });
 
   it("returns connected status with calendars", async () => {

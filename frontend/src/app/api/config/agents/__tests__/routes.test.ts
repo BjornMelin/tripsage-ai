@@ -47,6 +47,8 @@ const supabaseMaybeSingle = vi.fn();
 const supabaseInsert = vi.fn();
 
 vi.mock("@/lib/api/factory", () => ({
+  setRateLimitFactoryForTests: vi.fn(),
+  setSupabaseFactoryForTests: vi.fn(),
   withApiGuards:
     (_config: unknown) =>
     (handler: (req: Request, routeContext: { params?: unknown }) => unknown) =>

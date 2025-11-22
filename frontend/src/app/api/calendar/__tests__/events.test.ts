@@ -1,7 +1,8 @@
 /** @vitest-environment node */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as googleCalendar from "@/lib/calendar/google";
+import { setSupabaseFactoryForTests } from "@/lib/api/factory";
 import {
   createMockNextRequest,
   createRouteParamsContext,
@@ -57,6 +58,7 @@ import * as eventsRoute from "../events/route";
 describe("/api/calendar/events", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    setSupabaseFactoryForTests(async () => mockSupabase as never);
     mockSupabase.auth.getUser.mockResolvedValue({
       data: { user: mockUser },
       error: null,
@@ -208,4 +210,8 @@ describe("/api/calendar/events", () => {
       expect(res.status).toBe(400);
     });
   });
+});
+
+afterEach(() => {
+  setSupabaseFactoryForTests(null);
 });

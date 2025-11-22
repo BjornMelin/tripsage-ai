@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { setSupabaseFactoryForTests } from "@/lib/api/factory";
 import { stubRateLimitDisabled } from "@/test/env-helpers";
 import {
   createMockNextRequest,
@@ -46,20 +47,36 @@ vi.mock("ai", () => ({
 import { GET as getSuggestions } from "../suggestions/route";
 
 describe("/api/trips/suggestions route", () => {
+  const supabaseClient = {
+    auth: {
+      getUser: vi.fn(async () => ({
+        data: { user: { id: "user-1" } },
+        error: null,
+      })),
+    },
+  };
+
+  beforeEach(() => {
+    setSupabaseFactoryForTests(async () => supabaseClient as never);
+    supabaseClient.auth.getUser.mockResolvedValue({
+      data: { user: { id: "user-1" } },
+      error: null,
+    });
+  });
+
+  afterEach(() => {
+    setSupabaseFactoryForTests(null);
+  });
+
   it("returns 401 when user is missing", async () => {
     // Disable rate limiting for this test
     stubRateLimitDisabled();
 
     // Mock unauthenticated user
-    const { createServerSupabase } = await import("@/lib/supabase/server");
-    vi.mocked(createServerSupabase).mockResolvedValueOnce({
-      auth: {
-        getUser: async () => ({
-          data: { user: null },
-          error: new Error("Unauthorized"),
-        }),
-      },
-    } as unknown as Awaited<ReturnType<typeof createServerSupabase>>);
+    supabaseClient.auth.getUser.mockResolvedValueOnce({
+      data: { user: null },
+      error: new Error("Unauthorized"),
+    } as never);
 
     const req = createMockNextRequest({
       method: "GET",

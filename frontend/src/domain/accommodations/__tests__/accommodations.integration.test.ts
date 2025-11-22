@@ -142,7 +142,10 @@ describe("AccommodationsService end-to-end (Amadeus + Places + Stripe mocks)", (
             select: () => ({
               eq: () => ({
                 eq: () => ({
-                  single: async () => ({ data: { id: 11, user_id: "user-1" }, error: null }),
+                  single: async () => ({
+                    data: { id: 11, user_id: "user-1" },
+                    error: null,
+                  }),
                 }),
               }),
             }),

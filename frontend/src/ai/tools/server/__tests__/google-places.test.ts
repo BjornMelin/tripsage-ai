@@ -19,15 +19,21 @@ vi.mock("@/lib/env/server", () => ({
   getServerEnvVarWithFallback: vi.fn((_key: string, fallback?: string) => fallback),
 }));
 
-vi.mock("@/lib/telemetry/span", () => ({
-  withTelemetrySpan: vi.fn((_name: string, _options, fn) =>
-    fn({
-      addEvent: vi.fn(),
-      recordException: vi.fn(),
-      setAttribute: vi.fn(),
-    })
-  ),
-}));
+vi.mock("@/lib/telemetry/span", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/telemetry/span")>(
+    "@/lib/telemetry/span"
+  );
+  return {
+    ...actual,
+    withTelemetrySpan: vi.fn((_name: string, _options, fn) =>
+      fn({
+        addEvent: vi.fn(),
+        recordException: vi.fn(),
+        setAttribute: vi.fn(),
+      })
+    ),
+  };
+});
 
 describe("lookupPoiContext", () => {
   beforeEach(() => {

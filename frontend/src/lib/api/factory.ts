@@ -56,6 +56,33 @@ export interface RouteContext {
  */
 export type RouteParamsContext = { params: Promise<Record<string, string>> };
 
+type RateLimitResult = {
+  limit: number;
+  remaining: number;
+  reset: number;
+  success: boolean;
+};
+
+type RateLimitFactory = (
+  key: RouteRateLimitKey,
+  identifier: string
+) => Promise<RateLimitResult>;
+
+let rateLimitFactory: RateLimitFactory | null = null;
+let supabaseFactory: () => Promise<TypedServerSupabase> = createServerSupabase;
+
+// Test-only override to inject deterministic rate limiting behaviour.
+export function setRateLimitFactoryForTests(factory: RateLimitFactory | null): void {
+  rateLimitFactory = factory;
+}
+
+// Test-only override for Supabase factory to avoid Next.js request-store dependencies.
+export function setSupabaseFactoryForTests(
+  factory: (() => Promise<TypedServerSupabase>) | null
+): void {
+  supabaseFactory = factory ?? createServerSupabase;
+}
+
 /**
  * Route handler function signature.
  *
@@ -102,11 +129,38 @@ async function enforceRateLimit(
   }
 
   const redis = getRedis();
-  if (!redis) {
-    return null; // Graceful degradation when Redis unavailable
+  if (!redis && !rateLimitFactory) {
+    return null; // Graceful degradation when Redis unavailable and no override set
   }
 
   try {
+    if (rateLimitFactory) {
+      const { success, remaining, reset, limit } = await rateLimitFactory(
+        rateLimitKey,
+        identifier
+      );
+      if (!success) {
+        return NextResponse.json(
+          { error: "rate_limit_exceeded", reason: "Too many requests" },
+          {
+            headers: {
+              "Retry-After": String(Math.ceil((reset - Date.now()) / 1000)),
+              "X-RateLimit-Limit": String(limit),
+              "X-RateLimit-Remaining": String(remaining),
+              "X-RateLimit-Reset": String(reset),
+            },
+            status: 429,
+          }
+        );
+      }
+      return null;
+    }
+
+    // At this point, rateLimitFactory is falsy, so redis must be defined
+    if (!redis) {
+      return null; // Should not reach here due to earlier check, but satisfy TypeScript
+    }
+
     const limiter = new Ratelimit({
       analytics: false,
       limiter: Ratelimit.slidingWindow(
@@ -201,7 +255,7 @@ export function withApiGuards<SchemaType extends z.ZodType>(
       routeContext: RouteParamsContext
     ): Promise<Response> => {
       // Create Supabase client
-      const supabase = await createServerSupabase();
+      const supabase = await supabaseFactory();
 
       // Handle authentication if required
       let user: User | null = null;
