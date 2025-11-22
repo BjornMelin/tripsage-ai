@@ -13,6 +13,7 @@ import type { ItineraryPlanRequest } from "@schemas/agents";
 import { agentSchemas } from "@schemas/agents";
 import type { NextRequest } from "next/server";
 import type { z } from "zod";
+import { resolveAgentConfig } from "@/lib/agents/config-resolver";
 import { createErrorHandler } from "@/lib/agents/error-recovery";
 import { runItineraryAgent } from "@/lib/agents/itinerary-agent";
 import { withApiGuards } from "@/lib/api/factory";
@@ -56,10 +57,15 @@ export const POST = withApiGuards({
   }
 
   const modelHint = new URL(req.url).searchParams.get("model") ?? undefined;
-  const { model, modelId } = await resolveProvider(user?.id ?? "anon", modelHint);
+  const config = await resolveAgentConfig("itineraryAgent");
+  const resolvedModelHint = config.config.model ?? modelHint;
+  const { model, modelId } = await resolveProvider(
+    user?.id ?? "anon",
+    resolvedModelHint
+  );
 
   const identifier = user?.id ?? "anon";
-  const result = runItineraryAgent({ identifier, model, modelId }, body);
+  const result = runItineraryAgent({ identifier, model, modelId }, config.config, body);
   return result.toUIMessageStreamResponse({
     onError: createErrorHandler(),
   });

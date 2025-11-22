@@ -38,9 +38,10 @@ export function runMemoryAgent(
     modelId: string;
     identifier: string;
   },
+  config: import("@schemas/configuration").AgentConfig,
   input: MemoryUpdateRequest
 ) {
-  return persistAndSummarize(deps, input);
+  return persistAndSummarize(deps, config, input);
 }
 
 /** Result of a memory persistence operation. */
@@ -94,6 +95,7 @@ function normalizeMemoryCategory(
  */
 async function persistAndSummarize(
   deps: { model: LanguageModel; modelId: string; identifier: string },
+  config: import("@schemas/configuration").AgentConfig,
   input: MemoryUpdateRequest
 ) {
   const outcome = await persistMemoryRecords(deps.identifier, input);
@@ -130,7 +132,8 @@ async function persistAndSummarize(
       { content: userPrompt, role: "user" },
     ],
     model: deps.model,
-    temperature: 0.1,
+    temperature: config.parameters.temperature ?? 0.1,
+    topP: config.parameters.topP,
   });
 }
 

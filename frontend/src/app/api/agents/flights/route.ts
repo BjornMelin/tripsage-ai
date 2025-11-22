@@ -13,6 +13,7 @@ import type { FlightSearchRequest } from "@schemas/flights";
 import { flightSearchRequestSchema } from "@schemas/flights";
 import type { NextRequest } from "next/server";
 import type { z } from "zod";
+import { resolveAgentConfig } from "@/lib/agents/config-resolver";
 import { createErrorHandler } from "@/lib/agents/error-recovery";
 import { runFlightAgent } from "@/lib/agents/flight-agent";
 import { withApiGuards } from "@/lib/api/factory";
@@ -51,10 +52,12 @@ export const POST = withApiGuards({
     });
   }
 
-  const modelHint = new URL(req.url).searchParams.get("model") ?? undefined;
+  const config = await resolveAgentConfig("flightAgent");
+  const modelHint =
+    config.config.model ?? new URL(req.url).searchParams.get("model") ?? undefined;
   const { model, modelId } = await resolveProvider(user?.id ?? "anon", modelHint);
 
-  const result = runFlightAgent({ model, modelId }, body);
+  const result = runFlightAgent({ model, modelId }, config.config, body);
   return result.toUIMessageStreamResponse({
     onError: createErrorHandler(),
   });
