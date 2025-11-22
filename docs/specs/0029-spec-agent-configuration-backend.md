@@ -248,6 +248,8 @@ Focusing on `AgentConfigurationManager`:
   `emitOperationalAlert`, including:
   - `event`: `agent_config.updated` or `agent_config.rollback`.
   - Attributes: `agentType`, `scope`, `versionId`, `userId`.
+- Deployment note: Pre-production is always-on for the resolver; feature flag
+  is unnecessary. Legacy hard-coded paths are removed in agent routes.
 - Consider using OpenTelemetry spans around:
   - Supabase read/write operations related to configuration.
   - Cache lookups and misses.

@@ -94,11 +94,7 @@ export async function getKeys(deps: {
   }
   const rows = data ?? [];
   const payload = rows.map(
-    (r: {
-      service: string;
-      created_at: string | null;
-      last_used: string | null;
-    }) => ({
+    (r: { service: string; created_at: string | null; last_used: string | null }) => ({
       createdAt: r.created_at ? String(r.created_at) : null,
       hasKey: true,
       isValid: true,

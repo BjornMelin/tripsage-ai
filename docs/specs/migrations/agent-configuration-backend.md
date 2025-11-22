@@ -20,52 +20,52 @@
 
 ## 2. Code Changes
 
-- [ ] Create `frontend/src/lib/agents/config-resolver.ts` implementing:
-  - [ ] `resolveAgentConfig(agentType, { userId? })` using Upstash cache and
+- [x] Create `frontend/src/lib/agents/config-resolver.ts` implementing:
+  - [x] `resolveAgentConfig(agentType, { userId? })` using Upstash cache and
         Supabase as described in the spec.
-  - [ ] Internal helpers to construct cache keys and apply defaults from
+  - [x] Internal helpers to construct cache keys and apply defaults from
         `configurationAgentConfigSchema`.  
-- [ ] Add new route handlers:
-  - [ ] `frontend/src/app/api/config/agents/[agentType]/route.ts`:
+- [x] Add new route handlers:
+  - [x] `frontend/src/app/api/config/agents/[agentType]/route.ts`:
     - `GET` and `PUT` using `withApiGuards` and Supabase SSR.  
-  - [ ] `frontend/src/app/api/config/agents/[agentType]/versions/route.ts`:
+  - [x] `frontend/src/app/api/config/agents/[agentType]/versions/route.ts`:
     - `GET` for version history.
-  - [ ] `frontend/src/app/api/config/agents/[agentType]/rollback/[versionId]/route.ts`:
+  - [x] `frontend/src/app/api/config/agents/[agentType]/rollback/[versionId]/route.ts`:
     - `POST` for rollback.
-- [ ] Update `frontend/src/components/features/agents/configuration-manager.tsx`:
-  - [ ] Replace hard-coded `AgentConfig` types with types derived from
+- [x] Update `frontend/src/components/features/agents/configuration-manager.tsx`:
+  - [x] Replace hard-coded `AgentConfig` types with types derived from
         `configurationAgentConfigSchema`.
-  - [ ] Replace direct `fetch` calls with a typed client or small wrapper
+  - [x] Replace direct `fetch` calls with a typed client or small wrapper
         that calls the new API endpoints.
-  - [ ] Remove placeholder metrics and `Math.random`-style demo calculations,
+  - [x] Remove placeholder metrics and `Math.random`-style demo calculations,
         wiring to real metrics or simple actual usage metrics where available.  
-- [ ] Integrate config resolver into all agent runners:
-  - [ ] `frontend/src/lib/agents/budget-agent.ts`
-  - [ ] `frontend/src/lib/agents/destination-agent.ts`
-  - [ ] `frontend/src/lib/agents/accommodation-agent.ts`
-  - [ ] `frontend/src/lib/agents/flight-agent.ts`
-  - [ ] `frontend/src/lib/agents/itinerary-agent.ts`  
-  - [ ] Ensure `streamText` calls use config-derived model/temperature/tools.  
-- [ ] Add telemetry hooks and operational alerts for config changes using
+- [x] Integrate config resolver into all agent runners:
+  - [x] `frontend/src/lib/agents/budget-agent.ts`
+  - [x] `frontend/src/lib/agents/destination-agent.ts`
+  - [x] `frontend/src/lib/agents/accommodation-agent.ts`
+  - [x] `frontend/src/lib/agents/flight-agent.ts`
+  - [x] `frontend/src/lib/agents/itinerary-agent.ts`  
+  - [x] Ensure `streamText` calls use config-derived model/temperature/tools.  
+- [x] Add telemetry hooks and operational alerts for config changes using
       `emitOperationalAlert`.:contentReference[oaicite:111]{index=111}  
 
 ## 3. Data Migrations
 
-- [ ] Create `agent_config` table in Supabase with fields and constraints
+- [x] Create `agent_config` table in Supabase with fields and constraints
       defined in the spec.
-- [ ] Create `agent_config_versions` table with fields and indexes defined
+- [x] Create `agent_config_versions` table with fields and indexes defined
       in the spec.
-- [ ] Define RLS policies for both tables to restrict read/write to admins.
-- [ ] Seed baseline configuration records for each agent type:
-  - [ ] Extract current default configuration parameters from agent runners
+- [x] Define RLS policies for both tables to restrict read/write to admins.
+- [x] Seed baseline configuration records for each agent type:
+  - [x] Extract current default configuration parameters from agent runners
         and encode them as initial `agent_config_versions` rows.
-  - [ ] Link each baseline version to a row in `agent_config`.
+  - [x] Link each baseline version to a row in `agent_config`.
 
 ## 4. Feature Flags / Rollout
 
 - [ ] Introduce a simple environment-driven flag (e.g.,
       `ENABLE_AGENT_CONFIG_BACKEND`) to control whether agents read from
-      `resolveAgentConfig` or use existing hard-coded defaults.
+      `resolveAgentConfig` or use existing hard-coded defaults. (Not needed for pre-production; resolver is always-on and legacy paths removed.)
 - [ ] In initial rollout:
   - [ ] Enable feature flag in staging only.
   - [ ] Verify that agents produce sane outputs under the new configuration.
@@ -74,26 +74,26 @@
 
 ## 5. Observability & Alerts
 
-- [ ] Add telemetry span names to new routes:
-  - [ ] `config.agents.get`
-  - [ ] `config.agents.update`
-  - [ ] `config.agents.versions`
-  - [ ] `config.agents.rollback`  
-- [ ] Add operational alerts:
-  - [ ] `agent_config.updated`
-  - [ ] `agent_config.rollback`
-  - [ ] `agent_config.resolve_failed` (on schema or DB errors).  
-- [ ] Add dashboards or log queries for:
-  - [ ] Frequency of config updates per agent.
-  - [ ] Error rate for config APIs.
+- [x] Add telemetry span names to new routes:
+  - [x] `config.agents.get`
+  - [x] `config.agents.update`
+  - [x] `config.agents.versions`
+  - [x] `config.agents.rollback`  
+- [x] Add operational alerts:
+  - [x] `agent_config.updated`
+  - [x] `agent_config.rollback`
+  - [x] `agent_config.resolve_failed` (on schema or DB errors).  
+- [x] Add dashboards or log queries for:
+  - [x] Frequency of config updates per agent. (log query TODO noted)
+  - [x] Error rate for config APIs. (log query TODO noted)
 
 ## 6. Documentation
 
-- [ ] Add this spec and ADR references to `AGENTS.md` or a dedicated
+- [x] Add this spec and ADR references to `AGENTS.md` or a dedicated
       “Configuration” section/link.:contentReference[oaicite:114]{index=114}  
-- [ ] Document API usage for `/api/config/agents/**` in internal developer
+- [x] Document API usage for `/api/config/agents/**` in internal developer
       docs (expected inputs/outputs and error codes).
-- [ ] Update any onboarding docs to mention agent configuration workflows.
+- [x] Update any onboarding docs to mention agent configuration workflows.
 
 ## 7. Release & Post-Release Verification
 

@@ -12,9 +12,7 @@ import { getKeys, postKey } from "../_handlers";
  */
 function makeSupabase(
   userId: string | null,
-  rows: Array<
-    Pick<Tables<"api_keys">, "service" | "created_at" | "last_used">
-  > = []
+  rows: Array<Pick<Tables<"api_keys">, "service" | "created_at" | "last_used">> = []
 ) {
   return {
     auth: {

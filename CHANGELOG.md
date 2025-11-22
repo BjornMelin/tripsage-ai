@@ -9,17 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Supabase local config: added `project_id`, `[db.seed]` configuration, and `[storage.buckets.attachments]` bucket definition with MIME type restrictions in `supabase/config.toml`.
 - Supabase-backed agent configuration control plane: new `agent_config` and `agent_config_versions` tables with admin-only RLS, upsert RPC, and schema types wired into the codebase.
 - Configuration resolver with Upstash cache + Zod validation and coverage, plus authenticated API routes (`GET/PUT /api/config/agents/:agentType`, versions listing, rollback) using `withApiGuards`, telemetry, and cache-tag invalidation.
 - Admin Configuration Manager rebuilt to server-first data access; displays live config, version history, and rollback via the new APIs.
 - All AI agents (budget, destination, flight, itinerary, accommodation, memory) now load model/temperature/token limits from centralized configuration before calling `streamText`.
-
 - Document Supabase memory orchestrator architecture and implementation plan (ADR-0042, SPEC-0026, database/memory prompt).
 - Add Next.js 16 trip domain API routes (`/api/trips`, `/api/trips/suggestions`, `/api/itineraries`, `/api/dashboard`) backed by Supabase SSR, Zod v4 schemas, unified `withApiGuards` auth/rate limiting, and AI SDK v6 structured trip suggestions.
 - Add `src/lib/ai/tool-factory.ts` with typed telemetry/cache/rate-limit guardrails plus coverage in `src/lib/ai/tool-factory.test.ts`, establishing a single `createAiTool` entrypoint for all tools.
 
 ### Changed
 
+- Supabase config modernization: removed deprecated `storage.image_transformation`, fixed Inbucket ports to defaults (54324-54326), updated `api.extra_search_path` to `["public", "extensions"]`, set `edge_runtime.policy` to `"oneshot"` for development hot reload, and fixed `edge_runtime.inspector_port` to default 8083 in `supabase/config.toml`.
+- Supabase dependencies: upgraded `@supabase/supabase-js` and `@supabase/postgrest-js` from `2.80.0` to `2.84.0`; verified type compatibility and API usage patterns remain unchanged.
 - Removed `frontend/src/domain/schemas/index.ts` barrel and updated all imports to use file-scoped schema modules via `@schemas/*`, eliminating circular dependencies and improving Next.js tree-shaking.
 - Renamed aliased exports referenced from the old schema barrel to canonical symbol names in their source files (for example, configuration and validation error schemas in `frontend/src/domain/schemas/*.ts`) so all callers import the final names directly.
 - Rewired higher-level agents in `frontend/src/lib/agents/*` to consume tools from the centralized `@ai/tools` registry and its `toolRegistry` export, replacing the previous `@/lib/tools` indirection.
