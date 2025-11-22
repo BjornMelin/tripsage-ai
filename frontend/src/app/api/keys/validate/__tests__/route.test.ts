@@ -41,14 +41,14 @@ const MOCK_GET_REDIS = vi.hoisted(() =>
   vi.fn<() => Redis | undefined>(() => undefined)
 );
 const RATE_LIMIT_FACTORY = vi.hoisted(() =>
-  vi.fn(async (_key: string, identifier: string) => {
+  vi.fn((_key: string, identifier: string) => {
     LIMIT_SPY(identifier);
-    return {
+    return Promise.resolve({
       limit: 20,
       remaining: 0,
       reset: Date.now() + 1_000,
       success: false,
-    };
+    });
   })
 );
 
