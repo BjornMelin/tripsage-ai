@@ -62,7 +62,8 @@ async function persistAccommodationEmbedding(
   const payload: InsertTables<"accommodation_embeddings"> = {
     amenities: normalizeAmenities(property.amenities),
     description: property.description ?? null,
-    embedding,
+    // Supabase CLI types surface pgvector as string; cast to satisfy client types while sending number[].
+    embedding: embedding as unknown as string,
     id: property.id,
     name: property.name ?? null,
     source: normalizeSource(property.source),

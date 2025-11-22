@@ -87,9 +87,9 @@ describe("/api/keys routes", () => {
       url: "http://localhost/api/keys",
     });
     const res = await POST(req, createRouteParamsContext());
-    expect(apiRouteRateLimitSpy).toHaveBeenCalledWith("test-user");
+    expect(apiRouteRateLimitSpy).toHaveBeenCalledWith("keys:create", "test-user");
     expect(res.status).toBe(429);
-    expect(res.headers.get("X-RateLimit-Limit")).toBe("10");
+    expect(res.headers.get("X-RateLimit-Limit")).toBe("5");
     expect(res.headers.get("X-RateLimit-Remaining")).toBe("0");
     expect(res.headers.get("X-RateLimit-Reset")).toBe("999");
   });
@@ -132,7 +132,7 @@ describe("/api/keys routes", () => {
     const res = await route.DELETE(req, {
       params: Promise.resolve({ service: "openai" }),
     });
-    expect(apiRouteRateLimitSpy).toHaveBeenCalledWith("test-user");
+    expect(apiRouteRateLimitSpy).toHaveBeenCalledWith("keys:delete", "test-user");
     expect(res.status).toBe(429);
   });
 

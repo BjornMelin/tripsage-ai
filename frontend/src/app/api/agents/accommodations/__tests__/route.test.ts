@@ -1,29 +1,33 @@
 /** @vitest-environment node */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  setRateLimitFactoryForTests,
+  setSupabaseFactoryForTests,
+} from "@/lib/api/factory";
+import type { TypedServerSupabase } from "@/lib/supabase/server";
 import {
   createMockNextRequest,
   createRouteParamsContext,
   getMockCookiesForTest,
 } from "@/test/route-helpers";
 
-const mockLimitFn = vi.fn().mockResolvedValue({
-  limit: 30,
-  remaining: 29,
-  reset: Date.now() + 60000,
-  success: true,
+vi.mock("@/lib/agents/config-resolver", () => ({
+  resolveAgentConfig: vi.fn(async () => ({ config: { model: "gpt-4o-mini" } })),
+}));
+
+const mockLimitFn = vi.hoisted(() => vi.fn());
+const mockSlidingWindow = vi.hoisted(() => vi.fn(() => ({})));
+
+const RATELIMIT_MOCK = vi.hoisted(() => {
+  class MockRatelimit {
+    static slidingWindow(...args: Parameters<typeof mockSlidingWindow>) {
+      return mockSlidingWindow(...args);
+    }
+    limit = mockLimitFn;
+  }
+  return MockRatelimit;
 });
-const mockSlidingWindow = vi.fn(() => ({}));
-const RATELIMIT_MOCK = vi.fn(function RatelimitMock() {
-  return {
-    limit: mockLimitFn,
-  };
-}) as unknown as {
-  new (...args: unknown[]): { limit: typeof mockLimitFn };
-  slidingWindow: typeof mockSlidingWindow;
-};
-(RATELIMIT_MOCK as { slidingWindow: typeof mockSlidingWindow }).slidingWindow =
-  mockSlidingWindow;
 
 // Mock next/headers cookies() before any imports that use it
 vi.mock("next/headers", () => ({
@@ -79,12 +83,28 @@ vi.mock("@/lib/next/route-helpers", async () => {
 describe("/api/agents/accommodations route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    setRateLimitFactoryForTests(null);
+    setSupabaseFactoryForTests(
+      async () =>
+        ({
+          auth: {
+            getUser: async () => ({
+              data: { user: { id: "user-1" } },
+              error: null,
+            }),
+          },
+        }) as unknown as TypedServerSupabase
+    );
     mockLimitFn.mockResolvedValue({
       limit: 30,
       remaining: 29,
       reset: Date.now() + 60000,
       success: true,
     });
+  });
+
+  afterEach(() => {
+    setSupabaseFactoryForTests(null);
   });
 
   it("streams when valid and enabled", async () => {

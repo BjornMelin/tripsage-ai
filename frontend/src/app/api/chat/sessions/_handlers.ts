@@ -131,11 +131,15 @@ export async function createMessage(
   if (!user) return json({ error: "unauthorized" }, 401);
   if (!payload?.role || typeof payload.role !== "string")
     return json({ error: "bad_request" }, 400);
+  const normalizedRole = payload.role.toLowerCase();
+  if (!["user", "assistant", "system"].includes(normalizedRole)) {
+    return json({ error: "bad_request" }, 400);
+  }
   const content = JSON.stringify(payload.parts ?? []);
   const { error } = await insertSingle(deps.supabase, "chat_messages", {
     content,
     metadata: {},
-    role: payload.role as "user" | "system" | "assistant",
+    role: normalizedRole as "user" | "system" | "assistant",
     // biome-ignore lint/style/useNamingConvention: Database field name
     session_id: id,
     // biome-ignore lint/style/useNamingConvention: Database field name

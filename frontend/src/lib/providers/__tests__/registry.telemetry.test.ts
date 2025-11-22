@@ -4,6 +4,8 @@ type SpanCapture = { attrs: Record<string, unknown> | undefined; name: string };
 const CAPTURED: SpanCapture[] = [];
 
 vi.mock("@/lib/telemetry/span", () => ({
+  recordTelemetryEvent: vi.fn(),
+  sanitizeAttributes: (attrs: Record<string, unknown>) => attrs,
   withTelemetrySpan: async (
     name: string,
     options: { attributes?: Record<string, unknown> },

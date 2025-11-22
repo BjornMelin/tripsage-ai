@@ -31,13 +31,20 @@ vi.mock("@opentelemetry/api", () => ({
       setStatus: vi.fn(),
     }),
     getTracer: () => ({
-      startActiveSpan: (_name: string, cb: (span: unknown) => unknown) =>
-        cb({
+      startActiveSpan: (
+        _name: string,
+        maybeOptions: unknown,
+        maybeCb?: (span: unknown) => unknown
+      ) => {
+        const cb = typeof maybeOptions === "function" ? maybeOptions : maybeCb;
+        const span = {
           addEvent: vi.fn(),
           end: vi.fn(),
           recordException: vi.fn(),
           setStatus: vi.fn(),
-        }),
+        };
+        return cb ? cb(span) : undefined;
+      },
     }),
   },
 }));

@@ -7,6 +7,10 @@ import {
   getMockCookiesForTest,
 } from "@/test/route-helpers";
 
+vi.mock("@/lib/agents/config-resolver", () => ({
+  resolveAgentConfig: vi.fn(async () => ({ config: { model: "gpt-4o-mini" } })),
+}));
+
 const mockLimitFn = vi.fn().mockResolvedValue({
   limit: 30,
   remaining: 29,

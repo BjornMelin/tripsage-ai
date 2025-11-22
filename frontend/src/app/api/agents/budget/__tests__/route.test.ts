@@ -7,6 +7,10 @@ import {
   getMockCookiesForTest,
 } from "@/test/route-helpers";
 
+vi.mock("@/lib/agents/config-resolver", () => ({
+  resolveAgentConfig: vi.fn(async () => ({ config: { model: "gpt-4o-mini" } })),
+}));
+
 // Mock next/headers cookies() before any imports that use it
 vi.mock("next/headers", () => ({
   cookies: vi.fn(() =>

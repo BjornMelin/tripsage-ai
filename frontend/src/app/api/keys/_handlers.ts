@@ -92,16 +92,21 @@ export async function getKeys(deps: {
       }
     );
   }
-  const rows = data ?? [];
-  const payload = rows.map(
-    (r: { service: string; created_at: string | null; last_used: string | null }) => ({
-      createdAt: r.created_at ? String(r.created_at) : null,
-      hasKey: true,
-      isValid: true,
-      lastUsed: r.last_used ?? null,
-      service: String(r.service),
-    })
-  );
+  type ApiKeyRow = {
+    // biome-ignore lint/style/useNamingConvention: mirrors DB columns
+    created_at: string | null;
+    // biome-ignore lint/style/useNamingConvention: mirrors DB columns
+    last_used: string | null;
+    service: string;
+  };
+  const rows: ApiKeyRow[] = (data ?? []) as ApiKeyRow[];
+  const payload = rows.map((r) => ({
+    createdAt: r.created_at ? String(r.created_at) : null,
+    hasKey: true,
+    isValid: true,
+    lastUsed: r.last_used ?? null,
+    service: String(r.service),
+  }));
   return new Response(JSON.stringify(payload), {
     headers: { "content-type": "application/json" },
     status: 200,

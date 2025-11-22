@@ -12,6 +12,13 @@ type AmadeusClient = InstanceType<typeof Amadeus>;
 let singleton: AmadeusClient | undefined;
 
 /**
+ * Test-only setter to inject a mock Amadeus client and reset the singleton.
+ */
+export function setAmadeusClientForTests(client: AmadeusClient | null): void {
+  singleton = client ?? undefined;
+}
+
+/**
  * Retrieves a required environment variable value.
  *
  * @param name - Environment variable name

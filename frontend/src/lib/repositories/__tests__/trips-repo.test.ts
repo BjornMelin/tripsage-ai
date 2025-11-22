@@ -1,6 +1,6 @@
+import type { TripsRow } from "@schemas/supabase";
 import { describe, expect, it, vi } from "vitest";
 import { createTrip, mapTripRowToUi, updateTrip } from "@/lib/repositories/trips-repo";
-import type { Tables } from "@/lib/supabase/database.types";
 import * as helpers from "@/lib/supabase/typed-helpers";
 
 vi.mock("@/lib/supabase", () => ({
@@ -10,7 +10,7 @@ vi.mock("@/lib/supabase", () => ({
 describe("trips-repo", () => {
   it("mapTripRowToUI shapes core fields", () => {
     const userId = "123e4567-e89b-12d3-a456-426614174010";
-    const row: Tables<"trips"> = {
+    const row: TripsRow = {
       budget: 1200,
       created_at: "2025-03-01T00:00:00Z",
       destination: "LON",
@@ -35,7 +35,7 @@ describe("trips-repo", () => {
 
   it("createTrip uses insertSingle and returns UI mapping", async () => {
     const userId = "123e4567-e89b-12d3-a456-426614174011";
-    const row: Tables<"trips"> = {
+    const row: TripsRow = {
       budget: 100,
       created_at: "2025-01-01T00:00:00Z",
       destination: "NYC",
@@ -68,7 +68,7 @@ describe("trips-repo", () => {
 
   it("updateTrip uses updateSingle and returns UI mapping", async () => {
     const userId = "123e4567-e89b-12d3-a456-426614174012";
-    const row: Tables<"trips"> = {
+    const row: TripsRow = {
       budget: 300,
       created_at: "2025-02-01T00:00:00Z",
       destination: "SFO",

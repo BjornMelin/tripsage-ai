@@ -13,12 +13,22 @@ export const lookupPoiInputSchema = z
     destination: z
       .string()
       .nullable()
+      .optional()
       .describe("Destination city or place name to search near"),
-    lat: z.number().nullable().describe("Latitude coordinate for location search"),
-    lon: z.number().nullable().describe("Longitude coordinate for location search"),
+    lat: z
+      .number()
+      .nullable()
+      .optional()
+      .describe("Latitude coordinate for location search"),
+    lon: z
+      .number()
+      .nullable()
+      .optional()
+      .describe("Longitude coordinate for location search"),
     query: z
       .string()
       .nullable()
+      .optional()
       .describe("Specific place or business name to search for"),
     radiusMeters: z
       .number()

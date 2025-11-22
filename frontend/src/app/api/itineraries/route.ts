@@ -25,7 +25,7 @@ import type { TypedServerSupabase } from "@/lib/supabase/server";
  */
 function mapCreatePayloadToInsert(
   payload: ItineraryItemCreateInput,
-  _userId: string
+  userId: string
 ): Database["public"]["Tables"]["itinerary_items"]["Insert"] {
   return {
     booking_status: payload.bookingStatus,
@@ -40,6 +40,7 @@ function mapCreatePayloadToInsert(
     start_time: payload.startTime ?? null,
     title: payload.title,
     trip_id: payload.tripId,
+    user_id: userId,
   };
 }
 

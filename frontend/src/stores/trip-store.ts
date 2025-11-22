@@ -3,9 +3,11 @@
  * destination management, budget tracking, and persistence with local storage.
  */
 
+import type { TripsUpdate } from "@schemas/supabase";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { Json, UpdateTables } from "@/lib/supabase/database.types";
+import { secureUuid } from "@/lib/security/random";
+import type { Json } from "@/lib/supabase/database.types";
 
 /**
  * Interface representing a destination within a trip.
@@ -245,6 +247,11 @@ export const useTripStore = create<TripState>()(
             visibility: data.visibility ?? (data.isPublic ? "public" : "private"),
           };
 
+          const ownerId =
+            (data.user_id as string | undefined) ??
+            _get().currentTrip?.user_id ??
+            secureUuid();
+
           const created = await repoCreateTrip({
             budget: tripData.budget ?? 0,
             destination: (data as { destination?: string })?.destination ?? "",
@@ -259,7 +266,7 @@ export const useTripStore = create<TripState>()(
             start_date: tripData.startDate ?? new Date().toISOString(),
             travelers: 1,
             // biome-ignore lint/style/useNamingConvention: Database API requires snake_case
-            user_id: (data.user_id as string | undefined) ?? "",
+            user_id: ownerId,
           });
 
           // Convert to frontend format
@@ -286,10 +293,11 @@ export const useTripStore = create<TripState>()(
           const { deleteTrip: repoDeleteTrip } = await import(
             "@/lib/repositories/trips-repo"
           );
-          await repoDeleteTrip(
-            Number.parseInt(id, 10),
-            _get().currentTrip?.user_id || undefined
-          );
+          const ownerId =
+            _get().trips.find((trip) => trip.id === id)?.user_id ??
+            _get().currentTrip?.user_id ??
+            undefined;
+          await repoDeleteTrip(Number.parseInt(id, 10), ownerId);
 
           set((state) => {
             const trips = state.trips.filter((trip) => trip.id !== id);
@@ -422,7 +430,7 @@ export const useTripStore = create<TripState>()(
           );
 
           // Map to DB update shape
-          const updateData: UpdateTables<"trips"> = {};
+          const updateData: TripsUpdate = {};
           if (data.name ?? data.title) {
             updateData.name = data.name ?? data.title ?? "";
           }
@@ -436,7 +444,7 @@ export const useTripStore = create<TripState>()(
             updateData.budget = data.budget;
           }
           if (data.status) {
-            updateData.status = data.status as UpdateTables<"trips">["status"];
+            updateData.status = data.status as TripsUpdate["status"];
           }
           if (data.preferences) {
             updateData.flexibility = data.preferences as Json;
@@ -445,9 +453,13 @@ export const useTripStore = create<TripState>()(
             updateData.notes = data.tags;
           }
 
+          const existingTrip =
+            _get().trips.find((trip) => trip.id === id) ?? _get().currentTrip;
+          const ownerId = existingTrip?.user_id ?? secureUuid();
+
           const updated = await repoUpdateTrip(
             Number.parseInt(id, 10),
-            _get().currentTrip?.user_id ?? "",
+            ownerId,
             updateData
           );
           const frontendTrip: Partial<Trip> = updated;

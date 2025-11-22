@@ -19,11 +19,20 @@ vi.mock("@/lib/telemetry/tracer", () => ({
   TELEMETRY_SERVICE_NAME: "tripsage-frontend",
 }));
 
-const { withTelemetrySpan } = await import("@/lib/telemetry/span");
+const {
+  withTelemetrySpan,
+  resetTelemetryTracerForTests,
+  setTelemetryTracerForTests,
+} = await import("@/lib/telemetry/span");
 
 describe("withTelemetrySpan", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetTelemetryTracerForTests();
+    setTelemetryTracerForTests({
+      startActiveSpan: (...args: Parameters<typeof START_ACTIVE_SPAN>) =>
+        START_ACTIVE_SPAN(...args),
+    } as never);
     START_ACTIVE_SPAN.mockImplementation((...args: unknown[]) => {
       const callback = args.at(-1) as (span: unknown) => unknown;
       return callback({

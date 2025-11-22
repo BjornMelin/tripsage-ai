@@ -24,6 +24,7 @@ import {
   uiMessageToMemoryTurn,
 } from "@/lib/memory/turn-utils";
 import { secureUuid } from "@/lib/security/random";
+import type { Json } from "@/lib/supabase/database.types";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { insertSingle } from "@/lib/supabase/typed-helpers";
 import {
@@ -331,14 +332,14 @@ export async function handleChatStream(
         } as const;
       }
       if (part.type === "finish") {
-        const meta = {
+        const meta: Json = {
           durationMs: (deps.clock?.now?.() ?? Date.now()) - startedAt,
-          inputTokens: part.totalUsage?.inputTokens ?? undefined,
+          inputTokens: part.totalUsage?.inputTokens ?? null,
           model: provider.modelId,
-          outputTokens: part.totalUsage?.outputTokens ?? undefined,
+          outputTokens: part.totalUsage?.outputTokens ?? null,
           provider: provider.provider,
           requestId: reqId,
-          totalTokens: part.totalUsage?.totalTokens ?? undefined,
+          totalTokens: part.totalUsage?.totalTokens ?? null,
         } as const;
         deps.logger?.info?.("chat_stream:finish", meta);
         if (sessionId) {
@@ -349,6 +350,8 @@ export async function handleChatStream(
               role: "assistant",
               // biome-ignore lint/style/useNamingConvention: Database field name
               session_id: sessionId,
+              // biome-ignore lint/style/useNamingConvention: Database field name
+              user_id: user.id,
             });
           } catch {
             /* ignore */

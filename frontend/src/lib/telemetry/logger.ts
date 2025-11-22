@@ -73,7 +73,8 @@ function emitLog(
   redactKeys: string[] = []
 ) {
   const attributes = normalizeAttributes(scope, message, metadata);
-  const sanitizedAttributes = sanitizeAttributes(attributes, redactKeys);
+  const sanitizer = sanitizeAttributes ?? ((attrs: TelemetrySpanAttributes) => attrs);
+  const sanitizedAttributes = sanitizer(attributes, redactKeys);
   recordTelemetryEvent(`log.${scope}`, {
     attributes: sanitizedAttributes,
     level,
