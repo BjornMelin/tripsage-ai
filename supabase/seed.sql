@@ -244,21 +244,27 @@ INSERT INTO memories.turns (
     user_id,
     role,
     content,
-    metadata
+    attachments,
+    tool_calls,
+    tool_results
 ) VALUES 
 (
     '00000000-0000-0000-0000-000000000100'::UUID,
     '00000000-0000-0000-0000-000000000001'::UUID,
     'user',
     '"User prefers economy class flights and values authentic cultural experiences over luxury accommodations."'::jsonb,
-    '{}'::jsonb
+    '[]'::jsonb,
+    '[]'::jsonb,
+    '[]'::jsonb
 ),
 (
     '00000000-0000-0000-0000-000000000100'::UUID,
     '00000000-0000-0000-0000-000000000001'::UUID,
     'assistant',
     '"Noted your preferences for economy flights and authentic cultural experiences."'::jsonb,
-    '{}'::jsonb
+    '[]'::jsonb,
+    '[]'::jsonb,
+    '[]'::jsonb
 );
 
 -- ===========================

@@ -7,28 +7,15 @@ and database webhooks post signed HTTP events to Vercel Route Handlers.
 
 ```text
 supabase/
-├── schemas/                    # Legacy reference SQL (do not apply directly)
-│   ├── 00_extensions.sql      # PostgreSQL extensions
-│   ├── 01_tables.sql          # Core table definitions
-│   ├── 02_indexes.sql         # Performance indexes
-│   ├── 03_functions.sql       # Stored procedures
-│   ├── 04_triggers.sql        # Database triggers
-│   ├── 05_policies.sql        # Row Level Security
-│   └── README.md              # Schema documentation
-├── migrations/                 # Version-controlled migrations
-│   ├── 20250609_*.sql         # Production schema
-│   ├── 20250611_*.sql         # Feature additions
-│   └── README.md              # Migration guide
-├── (removed) edge-functions/  # Legacy (replaced by DB → Vercel webhooks)
-├── (removed) functions/       # Legacy (replaced by DB → Vercel webhooks)
-├── storage/                   # Legacy storage SQL (superseded by migrations)
-│   ├── buckets.sql           # Bucket definitions
-│   ├── policies.sql          # Storage RLS
-│   └── README.md             # Storage guide
-├── config.toml               # Supabase CLI config
-├── seed.sql                  # Development data
-├── .env.example              # Environment template
-└── TROUBLESHOOTING.md        # Common issues
+├── migrations/
+│   ├── 00000000000000_init.sql   # Squashed canonical schema (apply this)
+│   └── archive/                  # Archived legacy migrations (read-only)
+├── schemas/                      # Legacy reference SQL (do not apply)
+├── storage/                      # Legacy storage SQL (superseded)
+├── config.toml                   # Supabase CLI config
+├── seed.sql                      # Development data
+├── .env.example                  # Environment template
+└── TROUBLESHOOTING.md            # Common issues
 ```
 
 ## Documentation Index
@@ -67,18 +54,16 @@ nano .env
 ### 2. Local Development (migrations are authoritative)
 
 ```bash
-# Initialize Supabase
+# Initialize Supabase (if not already done)
 supabase init
 
 # Start local Supabase stack
+# This will use config.toml for all service configuration
 supabase start
 
-# Apply database schema
-supabase db reset --debug
-
-# Run local Supabase stack and test migrations
-supabase start
-supabase db reset --debug
+# Apply database schema and seed data
+# The db.seed configuration in config.toml enables automatic seeding
+supabase db reset --debug  # applies migrations and runs seed.sql
 ```
 
 ### 3. Production Deployment (CLI migrations)
@@ -89,6 +74,9 @@ supabase link --project-ref your-project-ref
 
 # Push database changes
 supabase db push
+
+# Push configuration changes (if config.toml was modified)
+supabase config push
 
 # Webhooks use Postgres settings (GUCs). See docs/operators/supabase-webhooks.md
 ```
@@ -115,9 +103,50 @@ python3 test_database_integration.py
 
 ## Configuration
 
-### Environment Variables / Settings
+### config.toml
 
-See [.env.example](./.env.example) for a complete list. Key variables:
+The `supabase/config.toml` file configures all local Supabase services. Key sections:
+
+- **`[api]`**: PostgREST API server (port 54321, schemas, max rows)
+- **`[db]`**: PostgreSQL database (port 54322, major version 17)
+- **`[db.seed]`**: Database seeding configuration (enabled by default, uses `./seed.sql`)
+- **`[storage]`**: Storage service with file size limits
+- **`[storage.buckets.attachments]`**: Pre-configured attachments bucket (private, 50MiB limit)
+- **`[auth]`**: Authentication service with OAuth providers
+- **`[realtime]`**: Realtime service (IPv4 for WSL2 compatibility)
+- **`[edge_runtime]`**: Edge Functions runtime (oneshot policy for hot reload)
+- **`[studio]`**: Supabase Studio dashboard (port 54323)
+- **`[inbucket]`**: Local email testing server (ports 54324-54326)
+
+See the [Supabase CLI config reference](https://supabase.com/docs/guides/cli/config) for all available options.
+
+### Environment Variables
+
+Create a `.env` file in the `supabase/` directory for local development secrets:
+
+```bash
+# OAuth Provider Credentials (optional, for local OAuth testing)
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+GITHUB_CLIENT_ID=your_github_client_id
+GITHUB_CLIENT_SECRET=your_github_client_secret
+
+# OpenAI API Key (optional, for Studio AI features)
+OPENAI_API_KEY=your_openai_api_key
+
+# SMTP Configuration (optional, for custom email sending)
+# If not set, local development uses Inbucket for email testing
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=your_smtp_user
+SMTP_PASSWORD=your_smtp_password
+SMTP_ADMIN_EMAIL=admin@example.com
+SMTP_SENDER_NAME=Your App Name
+```
+
+### Production Environment Variables
+
+For production deployments, configure these in your Supabase Dashboard or via environment variables:
 
 ```bash
 # Supabase Core
