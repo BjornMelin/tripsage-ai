@@ -20,6 +20,7 @@ import { type UpdateTripData, useTripRealtime, useUpdateTrip } from "@/hooks";
 import type { Trip, UpdateTables } from "@/lib/supabase/database.types";
 
 type TripUpdate = UpdateTables<"trips">;
+type TripUpdateKey = keyof TripUpdate;
 
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -111,10 +112,10 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
    * @returns A promise that resolves to the optimistic update.
    */
   const handleOptimisticUpdate = async (
-    field: keyof TripUpdate,
-    value: TripUpdate[keyof TripUpdate]
+    field: TripUpdateKey,
+    value: TripUpdate[TripUpdateKey]
   ) => {
-    `${field}-${Date.now()}`; // Generate update ID for future tracking
+    const updateKey = String(field);
 
     // Snapshot current state for rollback
     prevTripRef.current = trip;
@@ -123,7 +124,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
     // Apply optimistic update to local state
     setOptimisticUpdates((prev) => ({
       ...prev,
-      [field]: {
+      [updateKey]: {
         status: "pending",
         timestamp: new Date(),
         value,
@@ -149,8 +150,8 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
       // Mark as successful and clear snapshots
       setOptimisticUpdates((prev) => ({
         ...prev,
-        [field]: {
-          ...prev[field],
+        [updateKey]: {
+          ...prev[updateKey],
           status: "success",
         },
       }));
@@ -160,7 +161,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
       // Clear the optimistic update after a delay
       setTimeout(() => {
         setOptimisticUpdates((prev) => {
-          const { [field]: _removed, ...rest } = prev;
+          const { [updateKey]: _removed, ...rest } = prev;
           return rest;
         });
       }, 2000);
@@ -195,8 +196,8 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
        */
       setOptimisticUpdates((prev) => ({
         ...prev,
-        [field]: {
-          ...prev[field],
+        [updateKey]: {
+          ...prev[updateKey],
           status: "error",
         },
       }));
@@ -220,8 +221,8 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
    * @returns A promise that resolves to the input change.
    */
   const handleInputChange = (
-    field: keyof TripUpdate,
-    value: TripUpdate[keyof TripUpdate]
+    field: TripUpdateKey,
+    value: TripUpdate[TripUpdateKey]
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
