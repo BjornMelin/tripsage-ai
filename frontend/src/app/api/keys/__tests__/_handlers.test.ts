@@ -13,7 +13,7 @@ import { getKeys, postKey } from "../_handlers";
 function makeSupabase(
   userId: string | null,
   rows: Array<
-    Pick<Tables<"api_keys">, "service_name" | "created_at" | "last_used_at">
+    Pick<Tables<"api_keys">, "service" | "created_at" | "last_used">
   > = []
 ) {
   return {
@@ -62,7 +62,7 @@ describe("keys _handlers", () => {
 
   it("getKeys returns 200 for authenticated users", async () => {
     const supabase = makeSupabase("u3", [
-      { created_at: "2025-11-01", last_used_at: null, service_name: "openai" },
+      { created_at: "2025-11-01", last_used: null, service: "openai" },
     ]);
     const res = await getKeys({ supabase });
     expect(res.status).toBe(200);

@@ -138,6 +138,8 @@ export async function createMessage(
     role: payload.role as "user" | "system" | "assistant",
     // biome-ignore lint/style/useNamingConvention: Database field name
     session_id: id,
+    // biome-ignore lint/style/useNamingConvention: Database field name
+    user_id: user.id,
   });
   if (error) return json({ error: "db_error" }, 500);
   return new Response(null, { status: 201 });
