@@ -1,7 +1,7 @@
 import type { AccommodationProviderAdapter } from "@domain/accommodations/providers/types";
 import { AccommodationsService } from "@domain/accommodations/service";
-import { getCachedJson } from "@/lib/cache/upstash";
 import { describe, expect, it, vi } from "vitest";
+import { getCachedJson } from "@/lib/cache/upstash";
 
 vi.mock("@/lib/cache/upstash", () => ({
   getCachedJson: vi.fn().mockResolvedValue({
