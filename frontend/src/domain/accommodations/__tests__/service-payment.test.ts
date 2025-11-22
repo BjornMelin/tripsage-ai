@@ -1,5 +1,6 @@
 import type { AccommodationProviderAdapter } from "@domain/accommodations/providers/types";
 import { AccommodationsService } from "@domain/accommodations/service";
+import { getCachedJson } from "@/lib/cache/upstash";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/cache/upstash", () => ({
@@ -20,6 +21,13 @@ vi.mock("@/lib/google/caching", () => ({
 
 describe("AccommodationsService booking payments", () => {
   it("uses cached availability price for payment processing", async () => {
+    vi.mocked(getCachedJson).mockResolvedValue({
+      bookingToken: "token-123",
+      price: { currency: "USD", total: "123.45" },
+      propertyId: "H1",
+      rateId: "token-123",
+      userId: "user-1",
+    });
     const processPayment = vi.fn().mockResolvedValue({ paymentIntentId: "pi_test" });
     const providerPayload = { data: { sample: true } };
     const provider: AccommodationProviderAdapter = {

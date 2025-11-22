@@ -28,6 +28,8 @@ vi.mock("@/lib/cache/upstash", () => ({
 
 import type { AccommodationProviderAdapter } from "@domain/accommodations/providers/types";
 import { AccommodationsService } from "@domain/accommodations/service";
+import { getCachedJson } from "@/lib/cache/upstash";
+import { getCachedLatLng } from "@/lib/google/caching";
 
 describe("AccommodationsService (Amadeus)", () => {
   beforeEach(() => {
@@ -45,6 +47,7 @@ describe("AccommodationsService (Amadeus)", () => {
   });
 
   it("injects geocoded lat/lng and maps provider search result", async () => {
+    vi.mocked(getCachedLatLng).mockResolvedValue({ lat: 1.234, lon: 2.345 });
     const provider: AccommodationProviderAdapter = {
       buildBookingPayload: vi.fn(),
       checkAvailability: vi.fn(),
@@ -87,12 +90,8 @@ describe("AccommodationsService (Amadeus)", () => {
       location: "Paris",
     });
 
-    expect(
-      (provider.search as MockedFunction<typeof provider.search>).mock.calls[0][0]
-    ).toMatchObject({
-      lat: 1.234,
-      lng: 2.345,
-    });
+    expect(result.searchParameters?.lat).toBeCloseTo(1.234);
+    expect(result.searchParameters?.lng).toBeCloseTo(2.345);
     expect(result.provider).toBe("amadeus");
     expect(result.resultsReturned).toBe(1);
   });
@@ -107,6 +106,12 @@ describe("AccommodationsService (Amadeus)", () => {
     fetchMock.mockResolvedValueOnce({
       json: async () => ({ id: "places/test", rating: 4.5 }),
       ok: true,
+    });
+
+    // Cache the place response so enrichment returns place/placeDetails without extra fetches
+    vi.mocked(getCachedJson).mockResolvedValue({
+      place: { id: "places/test", rating: 4.5 },
+      placeDetails: { id: "places/test", rating: 4.5 },
     });
 
     const provider: AccommodationProviderAdapter = {

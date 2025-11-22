@@ -1,4 +1,3 @@
-import { lookupPoiContext } from "@ai/tools/server/google-places";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
 import { cacheLatLng, getCachedLatLng } from "@/lib/google/caching";
@@ -20,9 +19,10 @@ vi.mock("@/lib/env/server", () => ({
 }));
 
 vi.mock("@/lib/telemetry/span", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/telemetry/span")>(
-    "@/lib/telemetry/span"
-  );
+  const actual =
+    await vi.importActual<typeof import("@/lib/telemetry/span")>(
+      "@/lib/telemetry/span"
+    );
   return {
     ...actual,
     withTelemetrySpan: vi.fn((_name: string, _options, fn) =>
@@ -43,11 +43,15 @@ describe("lookupPoiContext", () => {
     vi.mocked(getGoogleMapsServerKey).mockReturnValue("test-server-key");
   });
 
+  const loadTool = async () =>
+    (await import("@/ai/tools/server/google-places")).lookupPoiContext;
+
   it("returns stub when API key not configured", async () => {
     vi.mocked(getGoogleMapsServerKey).mockImplementation(() => {
       throw new Error("API key required");
     });
 
+    const lookupPoiContext = await loadTool();
     const exec = lookupPoiContext.execute as
       | ((params: unknown, ctx: unknown) => Promise<unknown>)
       | undefined;
@@ -68,6 +72,7 @@ describe("lookupPoiContext", () => {
   });
 
   it("validates input schema", async () => {
+    const lookupPoiContext = await loadTool();
     const exec = lookupPoiContext.execute as
       | ((params: unknown, ctx: unknown) => Promise<unknown>)
       | undefined;
@@ -100,6 +105,7 @@ describe("lookupPoiContext", () => {
       ok: true,
     });
 
+    const lookupPoiContext = await loadTool();
     const exec = lookupPoiContext.execute as
       | ((params: unknown, ctx: unknown) => Promise<unknown>)
       | undefined;

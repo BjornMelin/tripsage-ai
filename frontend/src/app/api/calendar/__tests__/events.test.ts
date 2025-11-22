@@ -1,8 +1,8 @@
 /** @vitest-environment node */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import * as googleCalendar from "@/lib/calendar/google";
 import { setSupabaseFactoryForTests } from "@/lib/api/factory";
+import * as googleCalendar from "@/lib/calendar/google";
 import {
   createMockNextRequest,
   createRouteParamsContext,

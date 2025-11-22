@@ -34,11 +34,16 @@ export function useAuthenticatedApi() {
     params?: Record<string, string | number | boolean>;
   };
 
-  const normalizeEndpoint = useCallback(
-    (endpoint: string): string =>
-      endpoint.startsWith("/api/") ? endpoint.slice(4) : endpoint,
-    []
-  );
+  const normalizeEndpoint = useCallback((endpoint: string): string => {
+    const withoutApiPrefix = endpoint.startsWith("/api/")
+      ? endpoint.slice("/api/".length)
+      : endpoint.startsWith("api/")
+        ? endpoint.slice("api/".length)
+        : endpoint;
+    return withoutApiPrefix.startsWith("/")
+      ? withoutApiPrefix.slice(1)
+      : withoutApiPrefix;
+  }, []);
 
   const dispatch = useCallback(
     async <T = unknown>(

@@ -183,9 +183,21 @@ export class ApiClient {
     const publicApiUrl = getClientEnvVarWithFallback("NEXT_PUBLIC_API_URL", undefined);
     const nodeEnv =
       typeof process !== "undefined" ? process.env.NODE_ENV : "development";
+    const origin =
+      typeof window !== "undefined" && typeof window.location?.origin === "string"
+        ? window.location.origin
+        : "http://localhost:3000";
+    const rawBase =
+      (config.baseUrl as string | undefined) ??
+      (publicApiUrl ? `${publicApiUrl.replace(/\/$/, "")}/api` : "/api");
+    const absoluteBase = rawBase.startsWith("http")
+      ? rawBase
+      : `${origin}${rawBase.startsWith("/") ? "" : "/"}${rawBase}`;
+    const normalizedBase = absoluteBase.endsWith("/")
+      ? absoluteBase
+      : `${absoluteBase}/`;
     this.config = {
       authHeaderName: "Authorization",
-      baseUrl: publicApiUrl ? `${publicApiUrl}/api` : "/api",
       defaultHeaders: {
         "Content-Type": "application/json",
       },
@@ -194,6 +206,7 @@ export class ApiClient {
       validateRequests: true,
       validateResponses: nodeEnv !== "production",
       ...config,
+      baseUrl: normalizedBase,
     };
   }
 
