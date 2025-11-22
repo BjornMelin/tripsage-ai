@@ -45,8 +45,8 @@ describe("GET /api/keys route", () => {
       data: [
         {
           created_at: "2025-11-01T00:00:00Z",
-          last_used_at: null,
-          service_name: "openai",
+          last_used: null,
+          service: "openai",
         },
       ],
       error: null,

@@ -53,6 +53,82 @@ export type Database = {
           allow_gateway_fallback?: boolean;
         };
       };
+
+      // Agent configuration (Supabase-backed, admin-only)
+      agent_config: {
+        Row: {
+          id: string;
+          agent_type: string;
+          scope: string;
+          config: Json;
+          version_id: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          agent_type: string;
+          scope?: string;
+          config: Json;
+          version_id: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          agent_type?: string;
+          scope?: string;
+          config?: Json;
+          version_id?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "agent_config_version_id_fkey";
+            columns: ["version_id"];
+            referencedRelation: "agent_config_versions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      agent_config_versions: {
+        Row: {
+          id: string;
+          agent_type: string;
+          scope: string;
+          config: Json;
+          created_at: string;
+          created_by: string | null;
+          summary: string | null;
+        };
+        Insert: {
+          id?: string;
+          agent_type: string;
+          scope?: string;
+          config: Json;
+          created_at?: string;
+          created_by?: string | null;
+          summary?: string | null;
+        };
+        Update: {
+          id?: string;
+          agent_type?: string;
+          scope?: string;
+          config?: Json;
+          created_at?: string;
+          created_by?: string | null;
+          summary?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "agent_config_versions_created_by_fkey";
+            columns: ["created_by"];
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       // Core Trip Management
       bookings: {
         Row: {
@@ -68,7 +144,7 @@ export type Database = {
           property_id: string;
           special_requests: string | null;
           status: string;
-          stripe_payment_intent_id: string;
+          stripe_payment_intent_id: string | null;
           trip_id: number | null;
           user_id: string;
         };
@@ -85,7 +161,7 @@ export type Database = {
           property_id: string;
           special_requests?: string | null;
           status: string;
-          stripe_payment_intent_id: string;
+          stripe_payment_intent_id?: string | null;
           trip_id?: number | null;
           user_id: string;
         };
@@ -102,7 +178,7 @@ export type Database = {
           property_id?: string;
           special_requests?: string | null;
           status?: string;
-          stripe_payment_intent_id?: string;
+          stripe_payment_intent_id?: string | null;
           trip_id?: number | null;
           user_id?: string;
         };
@@ -262,33 +338,60 @@ export type Database = {
 
       accommodations: {
         Row: {
-          id: string;
-          amenities: string | null;
+          id: number;
+          trip_id: number;
+          name: string;
+          address: string | null;
+          check_in_date: string;
+          check_out_date: string;
+          room_type: string | null;
+          price_per_night: number;
+          total_price: number;
+          currency: string;
+          rating: number | null;
+          amenities: string[] | null;
+          booking_status: "available" | "reserved" | "booked" | "cancelled";
+          external_id: string | null;
+          metadata: Json;
           created_at: string;
-          description: string | null;
-          embedding: number[] | null;
-          name: string | null;
-          source: "hotel" | "vrbo";
           updated_at: string;
         };
         Insert: {
-          id: string;
-          amenities?: string | null;
+          id?: number;
+          trip_id: number;
+          name: string;
+          address?: string | null;
+          check_in_date: string;
+          check_out_date: string;
+          room_type?: string | null;
+          price_per_night: number;
+          total_price: number;
+          currency?: string;
+          rating?: number | null;
+          amenities?: string[] | null;
+          booking_status?: "available" | "reserved" | "booked" | "cancelled";
+          external_id?: string | null;
+          metadata?: Json;
           created_at?: string;
-          description?: string | null;
-          embedding?: number[] | null;
-          name?: string | null;
-          source: "hotel" | "vrbo";
           updated_at?: string;
         };
         Update: {
-          id?: string;
-          amenities?: string | null;
+          id?: number;
+          trip_id?: number;
+          name?: string;
+          address?: string | null;
+          check_in_date?: string;
+          check_out_date?: string;
+          room_type?: string | null;
+          price_per_night?: number;
+          total_price?: number;
+          currency?: string;
+          rating?: number | null;
+          amenities?: string[] | null;
+          booking_status?: "available" | "reserved" | "booked" | "cancelled";
+          external_id?: string | null;
+          metadata?: Json;
           created_at?: string;
-          description?: string | null;
-          embedding?: number[] | null;
-          name?: string | null;
-          source?: "hotel" | "vrbo";
           updated_at?: string;
         };
       };
@@ -463,6 +566,7 @@ export type Database = {
         Row: {
           id: number;
           session_id: string;
+          user_id: string;
           role: "user" | "assistant" | "system";
           content: string;
           created_at: string;
@@ -471,6 +575,7 @@ export type Database = {
         Insert: {
           id?: never;
           session_id: string;
+          user_id: string;
           role: "user" | "assistant" | "system";
           content: string;
           created_at?: string;
@@ -479,6 +584,7 @@ export type Database = {
         Update: {
           id?: never;
           session_id?: string;
+          user_id?: string;
           role?: "user" | "assistant" | "system";
           content?: string;
           created_at?: string;
@@ -489,6 +595,12 @@ export type Database = {
             foreignKeyName: "chat_messages_session_id_fkey";
             columns: ["session_id"];
             referencedRelation: "chat_sessions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "chat_messages_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "users";
             referencedColumns: ["id"];
           },
         ];
@@ -546,44 +658,41 @@ export type Database = {
         Row: {
           id: number;
           user_id: string;
-          service_name: string;
-          key_name: string;
-          encrypted_key: string;
-          key_hash: string;
-          is_active: boolean;
-          last_used_at: string | null;
-          expires_at: string | null;
-          metadata: Json;
-          created_at: string;
-          updated_at: string;
+          service: string;
+          vault_secret_name: string;
+          created_at: string | null;
+          last_used: string | null;
         };
         Insert: {
-          id?: never;
+          id?: number;
           user_id: string;
-          service_name: string;
-          key_name: string;
-          encrypted_key: string;
-          key_hash: string;
-          is_active?: boolean;
-          last_used_at?: string | null;
-          expires_at?: string | null;
-          metadata?: Json;
-          created_at?: string;
-          updated_at?: string;
+          service: string;
+          vault_secret_name: string;
+          created_at?: string | null;
+          last_used?: string | null;
         };
         Update: {
-          id?: never;
+          id?: number;
           user_id?: string;
-          service_name?: string;
-          key_name?: string;
-          encrypted_key?: string;
-          key_hash?: string;
-          is_active?: boolean;
-          last_used_at?: string | null;
-          expires_at?: string | null;
-          metadata?: Json;
-          created_at?: string;
-          updated_at?: string;
+          service?: string;
+          vault_secret_name?: string;
+          created_at?: string | null;
+          last_used?: string | null;
+        };
+      };
+
+      api_gateway_configs: {
+        Row: {
+          user_id: string;
+          base_url: string | null;
+        };
+        Insert: {
+          user_id: string;
+          base_url?: string | null;
+        };
+        Update: {
+          user_id?: string;
+          base_url?: string | null;
         };
       };
 
@@ -823,7 +932,7 @@ export type Database = {
           query_parameters: Json;
           query_hash: string;
           results: Json;
-          source: "booking" | "expedia" | "airbnb_mcp" | "external_api" | "cached";
+          source: "amadeus" | "external_api" | "cached";
           search_metadata: Json;
           expires_at: string;
           created_at: string;
@@ -839,7 +948,7 @@ export type Database = {
           query_parameters: Json;
           query_hash: string;
           results: Json;
-          source: "booking" | "expedia" | "airbnb_mcp" | "external_api" | "cached";
+          source: "amadeus" | "external_api" | "cached";
           search_metadata?: Json;
           expires_at: string;
           created_at?: string;
@@ -855,7 +964,7 @@ export type Database = {
           query_parameters?: Json;
           query_hash?: string;
           results?: Json;
-          source?: "booking" | "expedia" | "airbnb_mcp" | "external_api" | "cached";
+          source?: "amadeus" | "external_api" | "cached";
           search_metadata?: Json;
           expires_at?: string;
           created_at?: string;
