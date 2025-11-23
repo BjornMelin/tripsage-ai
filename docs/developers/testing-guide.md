@@ -31,24 +31,9 @@ Configured in `frontend/src/test-setup.ts` and applied across projects.
 - DOM mocks: location, storage APIs, matchMedia.
 - Next.js mocks: navigation, image, headers, toast helpers.
 - Framework mocks: React Query, Zustand middleware, Supabase.
-- Automatic cleanup: timers, React Testing Library, React Query cache reset.
-
-Timer lifecycle enforced for every test:
-
-```ts
-beforeEach(() => {
-  vi.useFakeTimers();
-});
-
-afterEach(() => {
-  vi.runOnlyPendingTimers();
-  vi.clearAllTimers();
-  vi.useRealTimers();
-  cleanup();
-  resetTestQueryClient();
-  vi.restoreAllMocks();
-});
-```
+- MSW server lifecycle: starts once with `onUnhandledRequest: "warn"`, resets after each test.
+- Timers: **opt-in** via `withFakeTimers` (`frontend/src/test/utils/with-fake-timers.ts`); global tests run on real timers by default.
+- Cleanup: React Testing Library `cleanup()`, React Query cache reset, MSW handler reset.
 
 ## Patterns by Area
 

@@ -33,6 +33,8 @@ export default defineConfig({
     noExternal: ["rehype-harden"],
   },
   test: {
+    // Use threads pool for better performance with CPU-bound tests
+    pool: 'threads',
     // Shared defaults
     bail: isCi ? 5 : 0,
     clearMocks: true,
@@ -59,13 +61,12 @@ export default defineConfig({
     exclude: ["**/node_modules/**", "**/e2e/**", "**/*.e2e.*"],
     globals: true,
     hookTimeout: 8000,
-    include: ["src/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
     passWithNoTests: false,
     // Pool and parallelism controlled via CLI flags
     // Projects: schemas, integration, api, component, unit (ordered by specificity)
     projects: [
       {
-        // Schema tests: pure validation, no DOM, no isolation (most specific)
+        // Schema tests: pure validation, no DOM (most specific)
         extends: true,
         test: {
           deps: {
@@ -75,8 +76,8 @@ export default defineConfig({
           },
           environment: "node",
           include: ["src/lib/schemas/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
-          isolate: false,
           name: "schemas",
+          pool: 'threads',
         },
       },
       {
@@ -99,6 +100,7 @@ export default defineConfig({
             "src/**/*-integration.{test,spec}.?(c|m)[jt]s?(x)",
           ],
           name: "integration",
+          pool: 'threads',
         },
       },
       {
@@ -113,6 +115,7 @@ export default defineConfig({
           environment: "node",
           include: ["src/app/api/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
           name: "api",
+          pool: 'threads',
         },
       },
       {
@@ -133,6 +136,7 @@ export default defineConfig({
             "src/stores/**/*.{test,spec}.?(c|m)[jt]s?(x)",
           ],
           name: "component",
+          pool: 'threads',
         },
       },
       {
@@ -160,6 +164,7 @@ export default defineConfig({
           ],
           include: ["src/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
           name: "unit",
+          pool: 'threads',
         },
       },
     ],
