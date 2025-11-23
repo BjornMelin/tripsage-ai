@@ -7,7 +7,7 @@
 
 import { cleanup } from "@testing-library/react";
 import React from "react";
-import { afterEach, beforeEach, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, vi } from "vitest";
 import "@testing-library/jest-dom";
 import {
   ReadableStream as NodeReadableStream,
@@ -15,6 +15,7 @@ import {
   WritableStream as NodeWritableStream,
 } from "node:stream/web";
 import { resetTestQueryClient } from "./test/test-utils";
+import { server } from "./test/msw/server";
 
 (
   globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }
@@ -300,18 +301,27 @@ if (typeof process !== "undefined" && process.env) {
   }
 }
 
-beforeEach(() => {
-  if (!vi.isFakeTimers()) {
-    vi.useFakeTimers();
-  }
+// MSW server lifecycle
+beforeAll(() => {
+  // Start MSW server to intercept HTTP requests
+  // onUnhandledRequest: 'error' ensures we catch any unmocked requests
+  server.listen({ onUnhandledRequest: 'warn' });
+});
+
+afterAll(() => {
+  // Stop MSW server and clean up
+  server.close();
 });
 
 afterEach(() => {
+  // Reset MSW handlers after each test to ensure test isolation
+  server.resetHandlers();
+
+  // Only restore timers if they were explicitly enabled in the test
+  // Tests that need fake timers should use withFakeTimers() utility
   if (vi.isFakeTimers()) {
     vi.runOnlyPendingTimers();
     vi.clearAllTimers();
-    vi.useRealTimers();
-  } else {
     vi.useRealTimers();
   }
   cleanup();
