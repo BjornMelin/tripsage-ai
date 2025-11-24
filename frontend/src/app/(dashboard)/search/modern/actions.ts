@@ -50,17 +50,17 @@ export async function searchHotelsAction(
       )
   );
 
-  /** Calculate nights. */
-  const nights =
-    params.checkIn && params.checkOut
-      ? Math.max(
-          1,
-          Math.ceil(
-            (new Date(params.checkOut).getTime() - new Date(params.checkIn).getTime()) /
-              (1000 * 60 * 60 * 24)
-          )
-        )
-      : 1;
+  /** Calculate nights with guards. */
+  const calculateNights = (): number => {
+    if (!params.checkIn || !params.checkOut) return 1;
+    const start = new Date(params.checkIn);
+    const end = new Date(params.checkOut);
+    const diffMs = end.getTime() - start.getTime();
+    const rawNights = diffMs / (1000 * 60 * 60 * 24);
+    if (!Number.isFinite(rawNights)) return 1;
+    return Math.max(1, Math.ceil(rawNights));
+  };
+  const nights = calculateNights();
 
   /** Map search results to modern hotel results. */
   return (searchResult.listings ?? []).slice(0, 10).map((listing) => {

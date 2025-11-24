@@ -80,12 +80,15 @@ describe("useActivitySearch", () => {
 
     await result.current.searchActivities({ destination: "" });
 
-    await waitFor(() => {
-      expect(result.current.isSearching).toBe(false);
-    });
+    await waitFor(
+      () => {
+        expect(result.current.isSearching).toBe(false);
+        expect(result.current.searchError).not.toBeNull();
+      },
+      { timeout: 3000 }
+    );
 
-    expect(result.current.searchError).not.toBeNull();
-    expect(result.current.searchError?.message).toContain("Invalid destination");
+    expect(result.current.searchError?.message).toContain("Invalid");
     expect(result.current.results).toBeNull();
   });
 

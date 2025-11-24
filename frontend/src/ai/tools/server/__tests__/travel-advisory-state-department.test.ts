@@ -5,6 +5,8 @@ import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { server } from "@/test/msw/server";
 
+const TRAVEL_ADVISORIES_URL = "https://cadataapi.state.gov/api/TravelAdvisories";
+
 const mockAdvisoryResponse = [
   {
     Category: ["US"],
@@ -36,9 +38,7 @@ describe("StateDepartmentProvider", () => {
   beforeEach(() => {
     provider = new StateDepartmentProvider();
     server.use(
-      http.get("https://cadataapi.state.gov/api/TravelAdvisories", () =>
-        HttpResponse.json(mockAdvisoryResponse)
-      )
+      http.get(TRAVEL_ADVISORIES_URL, () => HttpResponse.json(mockAdvisoryResponse))
     );
   });
 
@@ -69,18 +69,14 @@ describe("StateDepartmentProvider", () => {
     });
 
     test("handles API errors gracefully", async () => {
-      server.use(
-        http.get("https://cadataapi.state.gov/api/TravelAdvisories", () =>
-          HttpResponse.error()
-        )
-      );
+      server.use(http.get(TRAVEL_ADVISORIES_URL, () => HttpResponse.error()));
       const result = await provider.getCountryAdvisory("US");
       expect(result).toBeNull();
     });
 
     test("handles non-OK API responses", async () => {
       server.use(
-        http.get("https://cadataapi.state.gov/api/TravelAdvisories", () =>
+        http.get(TRAVEL_ADVISORIES_URL, () =>
           HttpResponse.json({ error: "fail" }, { status: 500 })
         )
       );
@@ -90,18 +86,25 @@ describe("StateDepartmentProvider", () => {
 
     test("handles invalid API response format", async () => {
       server.use(
-        http.get("https://cadataapi.state.gov/api/TravelAdvisories", () =>
-          HttpResponse.json({ invalid: "format" })
-        )
+        http.get(TRAVEL_ADVISORIES_URL, () => HttpResponse.json({ invalid: "format" }))
       );
       const result = await provider.getCountryAdvisory("US");
       expect(result).toBeNull();
     });
 
     test("caches feed for subsequent requests", async () => {
+      let requestCount = 0;
+
+      server.use(
+        http.get(TRAVEL_ADVISORIES_URL, () => {
+          requestCount += 1;
+          return HttpResponse.json(mockAdvisoryResponse);
+        })
+      );
+
       await provider.getCountryAdvisory("US");
       await provider.getCountryAdvisory("FR");
-      expect(true).toBe(true); // cache handled internally; no fetch count assertions
+      expect(requestCount).toBe(1);
     });
 
     test("normalizes Level 2 advisory correctly", async () => {
@@ -146,9 +149,7 @@ describe("StateDepartmentProvider", () => {
       ];
 
       server.use(
-        http.get("https://cadataapi.state.gov/api/TravelAdvisories", () =>
-          HttpResponse.json(advisoryWithDirectCode)
-        )
+        http.get(TRAVEL_ADVISORIES_URL, () => HttpResponse.json(advisoryWithDirectCode))
       );
 
       const result = await provider.getCountryAdvisory("US");
@@ -158,9 +159,7 @@ describe("StateDepartmentProvider", () => {
 
     test("handles timeout errors without cache", async () => {
       server.use(
-        http.get("https://cadataapi.state.gov/api/TravelAdvisories", () =>
-          HttpResponse.json({}, { status: 504 })
-        )
+        http.get(TRAVEL_ADVISORIES_URL, () => HttpResponse.json({}, { status: 504 }))
       );
 
       const result = await provider.getCountryAdvisory("US");
@@ -171,9 +170,7 @@ describe("StateDepartmentProvider", () => {
       await provider.getCountryAdvisory("US");
 
       server.use(
-        http.get("https://cadataapi.state.gov/api/TravelAdvisories", () =>
-          HttpResponse.json({}, { status: 504 })
-        )
+        http.get(TRAVEL_ADVISORIES_URL, () => HttpResponse.json({}, { status: 504 }))
       );
 
       const result = await provider.getCountryAdvisory("US");
@@ -181,11 +178,7 @@ describe("StateDepartmentProvider", () => {
     });
 
     test("handles malformed JSON response", async () => {
-      server.use(
-        http.get("https://cadataapi.state.gov/api/TravelAdvisories", () =>
-          HttpResponse.text("not-json")
-        )
-      );
+      server.use(http.get(TRAVEL_ADVISORIES_URL, () => HttpResponse.text("not-json")));
 
       const result = await provider.getCountryAdvisory("US");
       expect(result).toBeNull();

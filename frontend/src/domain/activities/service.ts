@@ -7,6 +7,7 @@
 
 import "server-only";
 
+import { NotFoundError } from "@domain/activities/errors";
 import type { ActivitySearchResult, ServiceContext } from "@domain/activities/types";
 import type { Activity, ActivitySearchParams } from "@schemas/search";
 import { activitySearchParamsSchema } from "@schemas/search";
@@ -415,7 +416,7 @@ export class ActivitiesService {
         const activity = await getActivityDetailsFromPlaces(placeId);
 
         if (!activity) {
-          throw new Error(`Activity not found for Place ID: ${placeId}`);
+          throw new NotFoundError(`Activity not found for Place ID: ${placeId}`);
         }
 
         return activity;

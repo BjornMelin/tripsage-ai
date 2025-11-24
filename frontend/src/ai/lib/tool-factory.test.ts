@@ -21,39 +21,57 @@ const telemetrySpan = {
   setAttribute: vi.fn(),
 };
 
-const upstashCacheStore = new Map<string, string>();
-const getCachedJson = vi.fn(<T>(key: string): Promise<T | null> => {
-  const raw = upstashCacheStore.get(key);
-  if (!raw) return Promise.resolve(null);
-  try {
-    return Promise.resolve(JSON.parse(raw) as T);
-  } catch {
-    return Promise.resolve(null);
-  }
+const {
+  deleteCachedJson,
+  deleteCachedJsonMany,
+  getCachedJson,
+  getUpstashCache,
+  setCachedJson,
+} = vi.hoisted(() => {
+  const upstashCacheStore = new Map<string, string>();
+  const getCachedJsonFn = vi.fn(<T>(key: string): Promise<T | null> => {
+    const raw = upstashCacheStore.get(key);
+    if (!raw) return Promise.resolve(null);
+    try {
+      return Promise.resolve(JSON.parse(raw) as T);
+    } catch {
+      return Promise.resolve(null);
+    }
+  });
+  const setCachedJsonFn = vi.fn((key: string, value: unknown): Promise<void> => {
+    upstashCacheStore.set(key, JSON.stringify(value));
+    return Promise.resolve();
+  });
+  const deleteCachedJsonFn = vi.fn((key: string): Promise<void> => {
+    upstashCacheStore.delete(key);
+    return Promise.resolve();
+  });
+  const deleteCachedJsonManyFn = vi.fn((keys: string[]): Promise<number> => {
+    let deleted = 0;
+    for (const key of keys) {
+      if (upstashCacheStore.delete(key)) deleted += 1;
+    }
+    return Promise.resolve(deleted);
+  });
+  const resetUpstashCache = () => {
+    upstashCacheStore.clear();
+    getCachedJsonFn.mockClear();
+    setCachedJsonFn.mockClear();
+    deleteCachedJsonFn.mockClear();
+    deleteCachedJsonManyFn.mockClear();
+  };
+  const getUpstashCacheFn = () => ({
+    reset: resetUpstashCache,
+    store: upstashCacheStore,
+  });
+  return {
+    deleteCachedJson: deleteCachedJsonFn,
+    deleteCachedJsonMany: deleteCachedJsonManyFn,
+    getCachedJson: getCachedJsonFn,
+    getUpstashCache: getUpstashCacheFn,
+    setCachedJson: setCachedJsonFn,
+  };
 });
-const setCachedJson = vi.fn((key: string, value: unknown): Promise<void> => {
-  upstashCacheStore.set(key, JSON.stringify(value));
-  return Promise.resolve();
-});
-const deleteCachedJson = vi.fn((key: string): Promise<void> => {
-  upstashCacheStore.delete(key);
-  return Promise.resolve();
-});
-const deleteCachedJsonMany = vi.fn((keys: string[]): Promise<number> => {
-  let deleted = 0;
-  for (const key of keys) {
-    if (upstashCacheStore.delete(key)) deleted += 1;
-  }
-  return Promise.resolve(deleted);
-});
-const resetUpstashCache = () => {
-  upstashCacheStore.clear();
-  getCachedJson.mockClear();
-  setCachedJson.mockClear();
-  deleteCachedJson.mockClear();
-  deleteCachedJsonMany.mockClear();
-};
-const getUpstashCache = () => ({ reset: resetUpstashCache, store: upstashCacheStore });
 
 const redisClient = {
   get: vi.fn(),

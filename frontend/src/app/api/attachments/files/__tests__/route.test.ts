@@ -46,17 +46,16 @@ vi.mock("@/lib/next/route-helpers", async () => {
 
 describe("/api/attachments/files", () => {
   let recordedHeaders: Headers | undefined;
+  let recordedUrl: string | undefined;
 
   beforeEach(() => {
     vi.clearAllMocks();
     recordedHeaders = undefined;
+    recordedUrl = undefined;
     server.use(
       http.get(`${attachmentsBase}/files`, ({ request }) => {
         recordedHeaders = request.headers;
-        const url = new URL(request.url);
-        expect(url.searchParams.get("limit")).toBe("10");
-        expect(url.searchParams.get("offset")).toBe("0");
-        expect(request.headers.get("authorization")).toBe("Bearer token");
+        recordedUrl = request.url;
         return HttpResponse.json({
           files: [{ filename: "test.pdf", id: "1" }],
           limit: 50,
@@ -76,7 +75,21 @@ describe("/api/attachments/files", () => {
     });
 
     const res = await mod.GET(req, createRouteParamsContext());
+
+    // Assert response status
     expect(res.status).toBe(200);
+
+    // Assert request URL query parameters
+    expect(recordedUrl).toBeDefined();
+    if (!recordedUrl) {
+      throw new Error("recordedUrl should be defined");
+    }
+    const url = new URL(recordedUrl);
+    expect(url.searchParams.get("limit")).toBe("10");
+    expect(url.searchParams.get("offset")).toBe("0");
+
+    // Assert request headers
+    expect(recordedHeaders).toBeDefined();
     expect(recordedHeaders?.get("authorization")).toBe("Bearer token");
   });
 });

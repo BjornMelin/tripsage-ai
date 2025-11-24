@@ -94,8 +94,12 @@ export default function ActivitiesSearchPage() {
               </div>
 
               {searchMetadata?.notes && searchMetadata.notes.length > 0 && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <p className="text-sm text-blue-800">{searchMetadata.notes[0]}</p>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-1">
+                  {searchMetadata.notes.map((note) => (
+                    <p key={note} className="text-sm text-blue-800">
+                      {note}
+                    </p>
+                  ))}
                 </div>
               )}
 

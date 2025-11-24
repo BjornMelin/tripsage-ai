@@ -9,7 +9,26 @@ import {
 } from "@/test/route-helpers";
 
 vi.mock("@/lib/agents/config-resolver", () => ({
-  resolveAgentConfig: vi.fn(async () => ({ config: { model: "gpt-4o-mini" } })),
+  resolveAgentConfig: vi.fn(async () => ({
+    config: {
+      agentType: "flightAgent",
+      createdAt: "2025-01-01T00:00:00Z",
+      id: "v1700000000_deadbeef",
+      model: "gpt-4o-mini",
+      parameters: {
+        description: "Flight search agent",
+        maxTokens: 4096,
+        model: "gpt-4o-mini",
+        temperature: 0.7,
+        timeoutSeconds: 30,
+        topKTools: 4,
+        topP: 0.9,
+      },
+      scope: "global",
+      updatedAt: "2025-01-01T00:00:00Z",
+    },
+    versionId: "v1700000000_deadbeef",
+  })),
 }));
 
 const mockLimitFn = vi.fn().mockResolvedValue({
