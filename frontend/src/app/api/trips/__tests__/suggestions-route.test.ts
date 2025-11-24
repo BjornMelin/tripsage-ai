@@ -8,6 +8,9 @@ import {
   createRouteParamsContext,
   getMockCookiesForTest,
 } from "@/test/route-helpers";
+import { setupUpstashMocks } from "@/test/setup/upstash";
+
+const { redis, ratelimit } = setupUpstashMocks();
 
 // Mock next/headers cookies() BEFORE any imports that use it
 vi.mock("next/headers", () => ({
@@ -28,9 +31,9 @@ vi.mock("@/lib/supabase/server", () => ({
   })),
 }));
 
-// Mock Redis for rate limiting
+// Mock local Redis wrapper to return undefined (skip caching in tests)
 vi.mock("@/lib/redis", () => ({
-  getRedis: vi.fn(() => Promise.resolve({})),
+  getRedis: vi.fn(() => undefined),
 }));
 
 // Mock AI provider registry
@@ -56,16 +59,20 @@ describe("/api/trips/suggestions route", () => {
     },
   };
 
-  beforeEach(() => {
+  beforeEach(async () => {
     setSupabaseFactoryForTests(async () => supabaseClient as never);
     supabaseClient.auth.getUser.mockResolvedValue({
       data: { user: { id: "user-1" } },
       error: null,
     });
+    // Reset Upstash mocks
+    redis.__reset?.();
+    ratelimit.__reset?.();
   });
 
   afterEach(() => {
     setSupabaseFactoryForTests(null);
+    vi.clearAllMocks();
   });
 
   it("returns 401 when user is missing", async () => {

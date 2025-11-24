@@ -9,6 +9,9 @@ import {
   createRouteParamsContext,
   getMockCookiesForTest,
 } from "@/test/route-helpers";
+import { setupUpstashMocks } from "@/test/setup/upstash";
+
+const { redis, ratelimit } = setupUpstashMocks();
 
 // Mock next/headers cookies() BEFORE any imports that use it
 vi.mock("next/headers", () => ({
@@ -28,9 +31,9 @@ vi.mock("@/lib/supabase/server", () => ({
   })),
 }));
 
-// Mock Redis
+// Mock local Redis wrapper to return undefined (skip caching in tests)
 vi.mock("@/lib/redis", () => ({
-  getRedis: vi.fn(() => Promise.resolve({})),
+  getRedis: vi.fn(() => undefined),
 }));
 
 // Mock route helpers
@@ -48,8 +51,12 @@ describe("/api/attachments/files", () => {
   let recordedHeaders: Headers | undefined;
   let recordedUrl: string | undefined;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    // Reset Upstash mocks (SPEC-0032 pattern)
+    redis.__reset?.();
+    ratelimit.__reset?.();
+
     recordedHeaders = undefined;
     recordedUrl = undefined;
     server.use(

@@ -72,6 +72,16 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
   const budgetInputId = useId();
   const travelersInputId = useId();
 
+  // TODO: Replace mock trip data with real trip data from hook or API.
+  //
+  // Requirements:
+  // - Use `useTrip(tripId)` hook if available, or fetch trip data from `/api/trips/[id]`
+  // - Load trip data on component mount using tripId prop
+  // - Handle loading and error states for trip data fetching
+  // - Update trip state when real-time updates are received via Supabase Realtime
+  // - Ensure trip data is properly typed and validated
+  // - Add proper cleanup for subscriptions/listeners
+  //
   // Mock trip data - in real implementation, this would come from useTrip(tripId)
   const [trip, setTrip] = useState<Trip>({
     budget: 5000,

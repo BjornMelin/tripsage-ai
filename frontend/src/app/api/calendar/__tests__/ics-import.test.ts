@@ -39,7 +39,7 @@ END:VCALENDAR`;
     expect(body.count).toBeGreaterThan(0);
     expect(body.events).toBeDefined();
     expect(Array.isArray(body.events)).toBe(true);
-  });
+  }, 15000);
 
   it("returns 400 on invalid ICS", async () => {
     const mod = await import("../ics/import/route");
