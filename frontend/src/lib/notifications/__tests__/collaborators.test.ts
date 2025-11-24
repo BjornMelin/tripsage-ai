@@ -1,3 +1,5 @@
+/** @vitest-environment node */
+
 import * as supabaseModule from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { sendCollaboratorNotifications } from "@/lib/notifications/collaborators";

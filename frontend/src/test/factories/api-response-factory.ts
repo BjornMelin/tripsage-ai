@@ -133,3 +133,20 @@ export function createMockPaginatedResponse<T = unknown>(
     totalPages,
   };
 }
+
+/**
+ * Create mock Response object for testing.
+ *
+ * @param data - Response data
+ * @param status - HTTP status code (default: 200)
+ * @returns Mock Response object
+ */
+export function createMockResponse<T>(data: T, status = 200): Response {
+  return {
+    headers: new Headers(),
+    json: async () => data,
+    ok: status >= 200 && status < 300,
+    status,
+    text: async () => JSON.stringify(data),
+  } as Response;
+}

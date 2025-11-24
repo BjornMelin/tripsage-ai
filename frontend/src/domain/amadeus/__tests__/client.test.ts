@@ -1,3 +1,5 @@
+/** @vitest-environment node */
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Hoist mocks so they are available to vi.mock factory

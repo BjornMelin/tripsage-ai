@@ -1,3 +1,5 @@
+/** @vitest-environment node */
+
 import { searchFlights } from "@ai/tools";
 import type { FlightSearchResult } from "@schemas/flights";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

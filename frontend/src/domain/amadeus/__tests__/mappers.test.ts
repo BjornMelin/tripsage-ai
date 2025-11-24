@@ -1,3 +1,5 @@
+/** @vitest-environment node */
+
 import { describe, expect, it } from "vitest";
 import { mapHotelsToListings } from "../mappers";
 import type { AmadeusHotelOffer } from "../schemas";

@@ -1,3 +1,5 @@
+/** @vitest-environment node */
+
 import { loginRequestSchema } from "@schemas/api";
 import { loginFormSchema } from "@schemas/auth";
 import { budgetFormSchema } from "@schemas/budget";

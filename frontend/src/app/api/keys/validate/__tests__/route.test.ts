@@ -148,6 +148,16 @@ describe("/api/keys/validate route", () => {
     mockCreateAnthropic.mockReset();
     CREATE_SUPABASE.mockReset();
     CREATE_SUPABASE.mockResolvedValue(MOCK_SUPABASE);
+    RATE_LIMIT_FACTORY.mockReset();
+    RATE_LIMIT_FACTORY.mockImplementation((_key: string, identifier: string) => {
+      LIMIT_SPY(identifier);
+      return Promise.resolve({
+        limit: 20,
+        remaining: 19,
+        reset: Date.now() + 60000,
+        success: true,
+      });
+    });
     LIMIT_SPY.mockReset();
     LIMIT_SPY.mockResolvedValue({
       limit: 20,

@@ -1,10 +1,7 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ZodIssue } from "zod";
-import { setupReactQueryMocks } from "@/test/mocks/react-query";
-
-setupReactQueryMocks();
+import type { z } from "zod";
 
 const infoSpy = vi.fn();
 const errorSpy = vi.fn();
@@ -101,7 +98,7 @@ describe("errorResponse", () => {
 
   it("includes issues when provided", async () => {
     const { errorResponse } = await loadHelpers();
-    const issues: ZodIssue[] = [
+    const issues: z.core.$ZodIssue[] = [
       {
         code: "custom",
         message: "destination is required",

@@ -1,3 +1,5 @@
+/** @vitest-environment node */
+
 import { runBookingOrchestrator } from "@domain/accommodations/booking-orchestrator";
 import { ProviderError } from "@domain/accommodations/errors";
 import type { AccommodationProviderAdapter } from "@domain/accommodations/providers/types";
@@ -104,5 +106,43 @@ describe("runBookingOrchestrator", () => {
       providerBookingId: "PB-1",
       stripePaymentIntentId: "pi_success",
     });
+  });
+
+  it("refunds payment if persistence fails after provider booking success", async () => {
+    const persistBooking = vi.fn().mockRejectedValue(new Error("db down"));
+    const provider: AccommodationProviderAdapter = {
+      buildBookingPayload: vi.fn(),
+      checkAvailability: vi.fn(),
+      createBooking: vi.fn().mockResolvedValue({
+        ok: true,
+        retries: 0,
+        value: {
+          confirmationNumber: "CONF-2",
+          providerBookingId: "PB-2",
+        },
+      }),
+      getDetails: vi.fn(),
+      name: "amadeus",
+      search: vi.fn(),
+    };
+
+    const supabase = {
+      from: vi.fn().mockReturnValue({
+        insert: vi.fn().mockResolvedValue({ error: null }),
+      }),
+    } as unknown as import("@/lib/supabase/server").TypedServerSupabase;
+
+    await expect(
+      runBookingOrchestrator(
+        { provider, supabase },
+        {
+          ...baseCommand,
+          persistBooking,
+          processPayment: vi.fn().mockResolvedValue({ paymentIntentId: "pi_persist" }),
+        }
+      )
+    ).rejects.toThrow("db down");
+
+    expect(refundBookingPayment).toHaveBeenCalledWith("pi_persist");
   });
 });

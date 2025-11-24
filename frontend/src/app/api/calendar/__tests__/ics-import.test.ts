@@ -204,9 +204,9 @@ END:VCALENDAR`;
     // Check attendees with parameters are parsed
     expect(body.events[0].attendees).toHaveLength(2);
     expect(body.events[0].attendees[0].displayName).toBe("John Doe");
-    expect(body.events[0].attendees[0].email).toBe("mailto:john@example.com");
+    expect(body.events[0].attendees[0].email).toBe("john@example.com");
     expect(body.events[0].attendees[1].displayName).toBe("Jane Smith"); // Has CN parameter
-    expect(body.events[0].attendees[1].email).toBe("mailto:jane@example.com");
+    expect(body.events[0].attendees[1].email).toBe("jane@example.com");
 
     // Check recurrence rule is parsed
     expect(body.events[0].recurrence).toHaveLength(1);

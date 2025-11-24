@@ -1,3 +1,5 @@
+/** @vitest-environment node */
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createRouteParamsContext, getMockCookiesForTest } from "@/test/route-helpers";
 

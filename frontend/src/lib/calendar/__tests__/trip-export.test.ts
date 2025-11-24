@@ -1,3 +1,5 @@
+/** @vitest-environment node */
+
 import { describe, expect, it } from "vitest";
 import type { Trip } from "@/stores/trip-store";
 import { tripToCalendarEvents } from "../trip-export";

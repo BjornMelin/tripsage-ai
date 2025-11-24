@@ -1,3 +1,5 @@
+/** @vitest-environment node */
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Hoist mock so it can be accessed and modified in tests
@@ -86,6 +88,110 @@ describe("AccommodationsService (Amadeus)", () => {
     expect(result.searchParameters?.lng).toBeCloseTo(2.345);
     expect(result.provider).toBe("amadeus");
     expect(result.resultsReturned).toBe(1);
+    const searchMock = provider.search as unknown as ReturnType<typeof vi.fn>;
+    const [searchCallArgs] = searchMock.mock.calls[0] ?? [];
+    expect(searchCallArgs?.lat).toBeCloseTo(1.234);
+    expect(searchCallArgs?.lng).toBeCloseTo(2.345);
+  });
+
+  it("keeps listings when cheaper rates are not first", async () => {
+    vi.mocked(getCachedLatLng).mockResolvedValue({ lat: 1, lon: 1 });
+    const provider: AccommodationProviderAdapter = {
+      buildBookingPayload: vi.fn(),
+      checkAvailability: vi.fn(),
+      createBooking: vi.fn(),
+      getDetails: vi.fn(),
+      name: "amadeus",
+      search: vi.fn().mockResolvedValue({
+        ok: true,
+        retries: 0,
+        value: {
+          currency: "USD",
+          listings: [
+            {
+              rooms: [
+                {
+                  rates: [
+                    { price: { currency: "USD", numeric: 400, total: "400.00" } },
+                  ],
+                },
+                {
+                  rates: [
+                    { price: { currency: "USD", numeric: 150, total: "150.00" } },
+                  ],
+                },
+              ],
+            },
+          ],
+          total: 1,
+        },
+      }),
+    };
+
+    const service = new AccommodationsService({
+      cacheTtlSeconds: 0,
+      provider,
+      rateLimiter: undefined,
+      supabase: async () =>
+        ({}) as unknown as import("@/lib/supabase/server").TypedServerSupabase,
+    });
+
+    const result = await service.search(
+      {
+        checkin: "2025-12-01",
+        checkout: "2025-12-02",
+        guests: 1,
+        location: "Paris",
+        priceMax: 200,
+      },
+      {
+        sessionId: "sess-1",
+      }
+    );
+
+    expect(result.resultsReturned).toBe(1);
+  });
+
+  it("propagates a deterministic sessionId derived from userId when missing", async () => {
+    vi.mocked(getCachedLatLng).mockResolvedValue({ lat: 1, lon: 1 });
+    const provider: AccommodationProviderAdapter = {
+      buildBookingPayload: vi.fn(),
+      checkAvailability: vi.fn(),
+      createBooking: vi.fn(),
+      getDetails: vi.fn(),
+      name: "amadeus",
+      search: vi.fn().mockResolvedValue({
+        ok: true,
+        retries: 0,
+        value: { currency: "USD", listings: [], total: 0 },
+      }),
+    };
+
+    const service = new AccommodationsService({
+      cacheTtlSeconds: 0,
+      provider,
+      rateLimiter: undefined,
+      supabase: async () =>
+        ({}) as unknown as import("@/lib/supabase/server").TypedServerSupabase,
+    });
+
+    await service.search(
+      {
+        checkin: "2025-12-01",
+        checkout: "2025-12-02",
+        guests: 1,
+        location: "Paris",
+      },
+      {
+        rateLimitKey: "ip:1.1.1.1",
+        userId: "user-123",
+      }
+    );
+
+    const searchMock = provider.search as unknown as ReturnType<typeof vi.fn>;
+    const [, providerCtx] = searchMock.mock.calls[0] ?? [];
+    expect(providerCtx?.sessionId).toBe("user-123");
+    expect(providerCtx?.userId).toBe("user-123");
   });
 
   it("enriches details with Google Places when available", async () => {
@@ -133,8 +239,18 @@ describe("AccommodationsService (Amadeus)", () => {
 
     const details = await service.details({ listingId: "H1" }, {});
 
-    expect(details.listing).toMatchObject({
-      place: expect.any(Object),
+    const listing = details.listing as {
+      hotel?: { address?: { cityName?: string }; name?: string };
+      place?: { id?: string; rating?: number };
+    };
+
+    expect(listing.hotel).toMatchObject({
+      address: { cityName: "Paris" },
+      name: "Test Hotel",
+    });
+    expect(listing.place).toMatchObject({
+      id: "places/test",
+      rating: 4.5,
     });
   });
 });
