@@ -25,9 +25,9 @@ vi.mock("@/lib/cache/upstash", () => ({
 
 vi.mock("@/lib/google/caching", () => ({
   cacheLatLng: vi.fn(),
+  cachePlaceId: vi.fn(),
   getCachedLatLng: vi.fn().mockResolvedValue(null),
   getCachedPlaceId: vi.fn().mockResolvedValue(null),
-  cachePlaceId: vi.fn(),
 }));
 
 vi.mock("@/lib/env/server", async (orig) => {

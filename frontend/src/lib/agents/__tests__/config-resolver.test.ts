@@ -55,9 +55,11 @@ vi.mock("@/lib/env/server", () => ({
   }),
 }));
 
-const mockCreateAdminSupabase = vi.hoisted(() => vi.fn(() => ({
-  from: () => ({ select: supabaseSelect }),
-})));
+const mockCreateAdminSupabase = vi.hoisted(() =>
+  vi.fn(() => ({
+    from: () => ({ select: supabaseSelect }),
+  }))
+);
 
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminSupabase: mockCreateAdminSupabase,
