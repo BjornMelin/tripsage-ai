@@ -16,6 +16,7 @@ import { attachmentHandlers } from "./handlers/attachments";
 import { authHandlers } from "./handlers/auth";
 import { authRouteHandlers } from "./handlers/auth-routes";
 import { chatHandlers } from "./handlers/chat";
+import { errorReportingHandlers } from "./handlers/error-reporting";
 import { externalApiHandlers } from "./handlers/external-apis";
 import { googlePlacesHandlers } from "./handlers/google-places";
 import { providersHandlers } from "./handlers/providers";
@@ -31,6 +32,7 @@ const handlers = [
   ...chatHandlers,
   ...amadeusHandlers,
   ...externalApiHandlers,
+  ...errorReportingHandlers,
   ...googlePlacesHandlers,
   ...providersHandlers,
   ...stripeHandlers,
