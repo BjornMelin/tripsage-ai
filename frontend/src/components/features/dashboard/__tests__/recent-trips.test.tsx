@@ -85,7 +85,7 @@ describe.sequential("RecentTrips", () => {
   });
 
   it("renders loading state correctly", async () => {
-    await DoMockTrips(null, true);
+    DoMockTrips(null, true);
     const { RecentTrips } = await import("../recent-trips");
     renderWithProviders(<RecentTrips />);
     expect(screen.getByText("Recent Trips")).toBeInTheDocument();
@@ -94,9 +94,9 @@ describe.sequential("RecentTrips", () => {
   });
 
   it("renders empty state when no trips exist", async () => {
-    await DoMockTrips([]);
+    DoMockTrips([]);
     const { RecentTrips } = await import("../recent-trips");
-    const { container } = renderWithProviders(<RecentTrips />);
+    renderWithProviders(<RecentTrips />);
     const emptyMessages = screen.getAllByText("No recent trips yet.");
     expect(emptyMessages.length).toBeGreaterThan(0);
     expect(emptyMessages[0]).toBeInTheDocument();
@@ -106,7 +106,7 @@ describe.sequential("RecentTrips", () => {
   });
 
   it("renders trip cards for existing trips", async () => {
-    await DoMockTrips(MockTrips);
+    DoMockTrips(MockTrips);
     const { RecentTrips } = await import("../recent-trips");
     renderWithProviders(<RecentTrips />);
     expect(screen.getByText("Tokyo Adventure")).toBeInTheDocument();
@@ -117,7 +117,7 @@ describe.sequential("RecentTrips", () => {
   it("displays trip details correctly", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2024-01-10T00:00:00Z"));
-    await DoMockTrips([MockTrips[0], MockTrips[1]]);
+    DoMockTrips([MockTrips[0], MockTrips[1]]);
     const { RecentTrips } = await import("../recent-trips");
     const { container } = renderWithProviders(<RecentTrips />);
     const tokyoLink = within(container).getByRole("link", { name: /Tokyo Adventure/i });
@@ -131,7 +131,7 @@ describe.sequential("RecentTrips", () => {
   });
 
   it("handles trips with multiple destinations", async () => {
-    await DoMockTrips([MockTrips[0], MockTrips[1]]);
+    DoMockTrips([MockTrips[0], MockTrips[1]]);
     const { RecentTrips } = await import("../recent-trips");
     const { container } = renderWithProviders(<RecentTrips />);
     const europeanLink = within(container).getByRole("link", {
@@ -143,7 +143,7 @@ describe.sequential("RecentTrips", () => {
   });
 
   it("limits the number of trips displayed", async () => {
-    await DoMockTrips(MockTrips);
+    DoMockTrips(MockTrips);
     const { RecentTrips } = await import("../recent-trips");
     renderWithProviders(<RecentTrips limit={2} />);
     expect(screen.getByText("European Tour")).toBeInTheDocument();
@@ -152,7 +152,7 @@ describe.sequential("RecentTrips", () => {
   });
 
   it("sorts trips by updated date in descending order", async () => {
-    await DoMockTrips(MockTrips);
+    DoMockTrips(MockTrips);
     const { RecentTrips } = await import("../recent-trips");
     renderWithProviders(<RecentTrips />);
     const tripCards = screen.getAllByRole("link");
@@ -161,7 +161,7 @@ describe.sequential("RecentTrips", () => {
   });
 
   it("navigates to trip details when card is clicked", async () => {
-    await DoMockTrips([MockTrips[0], MockTrips[1]]);
+    DoMockTrips([MockTrips[0], MockTrips[1]]);
     const { RecentTrips } = await import("../recent-trips");
     const { container } = renderWithProviders(<RecentTrips />);
     const { getByRole } = within(container);
@@ -170,7 +170,7 @@ describe.sequential("RecentTrips", () => {
   });
 
   it("handles showEmpty prop correctly", async () => {
-    await DoMockTrips([]);
+    DoMockTrips([]);
     const { RecentTrips } = await import("../recent-trips");
     const { rerender } = renderWithProviders(<RecentTrips showEmpty={false} />);
     expect(screen.queryByText("Create your first trip")).not.toBeInTheDocument();
@@ -192,7 +192,7 @@ describe.sequential("RecentTrips", () => {
       id: "ongoing-trip",
       startDate: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     };
-    await DoMockTrips([pastTrip, ongoingTrip]);
+    DoMockTrips([pastTrip, ongoingTrip]);
     const { RecentTrips } = await import("../recent-trips");
     renderWithProviders(<RecentTrips />);
     expect(screen.getByText("completed")).toBeInTheDocument();
@@ -200,7 +200,7 @@ describe.sequential("RecentTrips", () => {
   });
 
   it("formats dates correctly", async () => {
-    await DoMockTrips([MockTrips[0]]);
+    DoMockTrips([MockTrips[0]]);
     const { RecentTrips } = await import("../recent-trips");
     const { container } = renderWithProviders(<RecentTrips limit={1} />);
     // Assert US short month format regardless of specific dates present
@@ -213,7 +213,7 @@ describe.sequential("RecentTrips", () => {
       ...MockTrips[0],
       description: undefined,
     };
-    await DoMockTrips([tripWithoutDescription]);
+    DoMockTrips([tripWithoutDescription]);
     const { RecentTrips } = await import("../recent-trips");
     const { container } = renderWithProviders(<RecentTrips limit={1} />);
     // Assert that the known description text does not render when missing
