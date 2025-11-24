@@ -40,14 +40,11 @@ export function mapHotelsToListings(
     return {
       address: hotel.address,
       amenities: [],
-      coordinates: hotel.geoCode,
       id: hotel.hotelId,
       name: hotel.name,
-      provider: "amadeus" as const,
       rooms,
       searchMeta: meta,
       starRating: undefined,
-      status: "AVAILABLE",
     };
   });
 }

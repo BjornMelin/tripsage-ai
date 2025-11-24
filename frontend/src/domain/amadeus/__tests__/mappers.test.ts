@@ -35,7 +35,7 @@ describe("mapHotelsToListings", () => {
     expect(listings).toHaveLength(1);
     const listing = listings[0] as Record<string, unknown>;
     expect(listing.id).toBe("H1");
-    expect(listing.provider).toBe("amadeus");
+    expect(listing.name).toBe("Hotel One");
     const rooms = listing.rooms as Array<Record<string, unknown>>;
     const rates = rooms[0].rates as Array<{ price: { total: string } }>;
     expect(rates[0].price.total).toBe("500.00");

@@ -25,8 +25,8 @@ describe("/api/chat/attachments", () => {
     const res = await mod.POST(req, createRouteParamsContext());
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.message).toBe("Invalid content type");
-    expect(body.code).toBe("INVALID_CONTENT_TYPE");
+    expect(body.reason).toBe("Invalid content type");
+    expect(body.error).toBe("invalid_request");
   });
 
   it("should reject empty form data", async () => {
@@ -41,8 +41,8 @@ describe("/api/chat/attachments", () => {
     const res = await mod.POST(req, createRouteParamsContext());
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.message).toBe("No files uploaded");
-    expect(body.code).toBe("NO_FILES");
+    expect(body.reason).toBe("No files uploaded");
+    expect(body.error).toBe("NO_FILES");
   });
 
   it("should handle valid single file upload", async () => {
@@ -150,8 +150,8 @@ describe("/api/chat/attachments", () => {
     const res = await mod.POST(req, createRouteParamsContext());
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.message).toContain("exceeds maximum size");
-    expect(body.code).toBe("FILE_TOO_LARGE");
+    expect(body.reason).toContain("exceeds maximum size");
+    expect(body.error).toBe("FILE_TOO_LARGE");
   });
 
   it("should reject more than 5 files", async () => {
@@ -174,8 +174,8 @@ describe("/api/chat/attachments", () => {
     const res = await mod.POST(req, createRouteParamsContext());
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.message).toContain("Maximum 5 files allowed");
-    expect(body.code).toBe("TOO_MANY_FILES");
+    expect(body.reason).toContain("Maximum 5 files allowed");
+    expect(body.error).toBe("TOO_MANY_FILES");
   });
 
   it("should handle backend errors", async () => {
@@ -198,8 +198,8 @@ describe("/api/chat/attachments", () => {
     const res = await mod.POST(req, createRouteParamsContext());
     expect(res.status).toBe(500);
     const body = await res.json();
-    expect(body.message).toBe("Backend error");
-    expect(body.code).toBe("UPLOAD_ERROR");
+    expect(body.reason).toBe("File upload failed");
+    expect(body.error).toBe("internal");
   });
 
   it("should handle network errors", async () => {

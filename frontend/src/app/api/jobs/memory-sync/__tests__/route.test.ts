@@ -135,6 +135,8 @@ vi.mock("@/lib/supabase/admin", () => {
 });
 
 vi.mock("@/lib/telemetry/span", () => ({
+  recordTelemetryEvent: vi.fn(),
+  sanitizeAttributes: vi.fn((attrs) => attrs),
   withTelemetrySpan: vi.fn((_name, _opts, fn) => {
     const span = {
       end: vi.fn(),
