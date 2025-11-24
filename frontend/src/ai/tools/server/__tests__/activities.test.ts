@@ -183,17 +183,18 @@ describe("activities tools", () => {
 
     it("should validate placeId is required", async () => {
       const { getActivityDetails } = await import("@ai/tools/server/activities");
-      const { z } = await import("zod");
 
       // Validate input schema directly (AI SDK validation happens at tool call level)
-      const inputSchema = getActivityDetails.inputSchema as z.ZodSchema;
+      const inputSchema = getActivityDetails.inputSchema as z.ZodType;
       const result = inputSchema.safeParse({ placeId: "" });
 
       expect(result.success).toBe(false);
       if (!result.success && result.error) {
-        const errorMessages = result.error.issues.map((issue: z.core.$ZodIssue) => issue.message);
+        const errorMessages = result.error.issues.map(
+          (issue: z.core.$ZodIssue) => issue.message
+        );
         expect(
-          errorMessages.some((msg) => msg.toLowerCase().includes("required"))
+          errorMessages.some((msg: string) => msg.toLowerCase().includes("required"))
         ).toBe(true);
       }
 
