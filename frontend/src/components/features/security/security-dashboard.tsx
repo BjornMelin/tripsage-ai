@@ -26,6 +26,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/components/ui/use-toast";
 
 /**
  * Represents a security-related event in the user's account.
@@ -106,6 +107,7 @@ export function SecurityDashboard() {
   const [sessions, setSessions] = useState<ActiveSession[]>([]);
   const [metrics, setMetrics] = useState<SecurityMetrics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
   // TODO: Replace mock data with real API integration.
   //
@@ -593,43 +595,30 @@ export function SecurityDashboard() {
    *
    * @param sessionId - ID of the session to terminate
    */
-  const handleTerminateSession = (sessionId: string) => {
-    // TODO: Implement session termination via API endpoint.
-    //
-    // IMPLEMENTATION PLAN:
-    // --------------------
-    // 1. Call DELETE `/api/security/sessions/[sessionId]` endpoint
-    // 2. On success, remove session from local state
-    // 3. Show success toast notification
-    // 4. Handle errors gracefully with error toast
-    //
-    // Example implementation:
-    // ```typescript
-    // try {
-    //   const response = await fetch(`/api/security/sessions/${sessionId}`, {
-    //     method: "DELETE",
-    //   });
-    //   if (!response.ok) throw new Error("Failed to terminate session");
-    //   setSessions((prev) => prev.filter((s) => s.id !== sessionId));
-    //   toast({
-    //     description: "Session terminated successfully",
-    //     title: "Success",
-    //     variant: "default",
-    //   });
-    // } catch (error) {
-    //   toast({
-    //     description: "Failed to terminate session. Please try again.",
-    //     title: "Error",
-    //     variant: "destructive",
-    //   });
-    // }
-    // ```
-    //
+  const handleTerminateSession = async (sessionId: string) => {
     try {
-      // TODO: Replace with actual API call
+      const response = await fetch(`/api/security/sessions/${sessionId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to terminate session");
+      }
+
       setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+
+      toast({
+        description: "Session terminated successfully",
+        title: "Success",
+        variant: "default",
+      });
     } catch (error) {
       console.error("Failed to terminate session:", error);
+      toast({
+        description: "Failed to terminate session. Please try again.",
+        title: "Error",
+        variant: "destructive",
+      });
     }
   };
 

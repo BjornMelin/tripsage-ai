@@ -1,7 +1,12 @@
+/**
+ * @fileoverview Flight search form component for searching flights.
+ */
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { type FlightSearchFormData, flightSearchFormSchema } from "@schemas/search";
+import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircle,
   ArrowRight,
@@ -53,6 +58,24 @@ interface SearchSuggestion {
   popular?: boolean;
 }
 
+interface PopularDestination {
+  code: string;
+  name: string;
+  savings?: string;
+  country?: string;
+}
+
+const POPULAR_DESTINATIONS_QUERY_KEY = ["flights", "popular-destinations"] as const;
+
+const FALLBACK_POPULAR_DESTINATIONS: PopularDestination[] = [
+  { code: "NYC", name: "New York", savings: "$127" },
+  { code: "LAX", name: "Los Angeles", savings: "$89" },
+  { code: "LHR", name: "London", savings: "$234" },
+  { code: "NRT", name: "Tokyo", savings: "$298" },
+];
+
+const POPULAR_DESTINATION_SKELETON_KEYS = ["one", "two", "three", "four"] as const;
+
 interface FlightSearchFormProps {
   onSearch: (params: ModernFlightSearchParams) => Promise<void>;
   suggestions?: SearchSuggestion[];
@@ -61,6 +84,7 @@ interface FlightSearchFormProps {
   initialParams?: Partial<ModernFlightSearchParams>;
 }
 
+/** Flight search form with validation and popular destination shortcuts. */
 export function FlightSearchForm({
   onSearch,
   suggestions: _suggestions = [],
@@ -105,141 +129,27 @@ export function FlightSearchForm({
     (_state, isSearching: boolean) => isSearching
   );
 
-  // TODO: Replace mock popular destinations with real data from backend.
-  //
-  // IMPLEMENTATION PLAN (Decision Framework Score: 9.0/10.0)
-  // ===========================================================
-  //
-  // ARCHITECTURE DECISIONS:
-  // -----------------------
-  // 1. Data Source: Create `/api/flights/popular-destinations` endpoint
-  //    - Endpoint: `frontend/src/app/api/flights/popular-destinations/route.ts` (new)
-  //    - Data: Aggregate from user search history, flight booking trends, or external API
-  //    - Rationale: Centralized endpoint allows caching and personalization
-  //
-  // 2. Data Fetching: Use TanStack Query with `useQuery` hook
-  //    - Hook: `useQuery` from `@tanstack/react-query`
-  //    - Query key: `["flights", "popular-destinations"]`
-  //    - Stale time: 1 hour (destinations don't change frequently)
-  //    - Rationale: Automatic caching, refetching, and error handling
-  //
-  // 3. Personalization: Optional user-specific popular destinations
-  //    - Use user's search history if authenticated
-  //    - Fall back to global popular destinations if no history
-  //    - Rationale: Improves user experience with relevant suggestions
-  //
-  // IMPLEMENTATION STEPS:
-  // ---------------------
-  //
-  // Step 1: Create Popular Destinations API Endpoint
-  //   File: `frontend/src/app/api/flights/popular-destinations/route.ts` (new)
-  //   ```typescript
-  //   import "server-only";
-  //   import { NextResponse } from "next/server";
-  //   import { withApiGuards } from "@/lib/api/factory";
-  //   import { createServerSupabase } from "@/lib/supabase/server";
-  //   import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
-  //
-  //   interface PopularDestination {
-  //     code: string;
-  //     name: string;
-  //     savings?: string;
-  //     country?: string;
-  //   }
-  //
-  //   export const GET = withApiGuards({
-  //     auth: false, // Public endpoint
-  //     rateLimit: "flights:popular-destinations",
-  //     telemetry: "flights.popular_destinations",
-  //   })(async (_req, { user }) => {
-  //     // Check cache first
-  //     const cacheKey = user?.id
-  //       ? `popular-destinations:user:${user.id}`
-  //       : "popular-destinations:global";
-  //     const cached = await getCachedJson<PopularDestination[]>(cacheKey);
-  //     if (cached) return NextResponse.json(cached);
-  //
-  //     const supabase = await createServerSupabase();
-  //
-  //     // If authenticated, try to get personalized destinations from search history
-  //     if (user?.id) {
-  //       const { data: searchHistory } = await supabase
-  //         .from("flight_searches")
-  //         .select("destination, destination_code, count")
-  //         .eq("user_id", user.id)
-  //         .order("count", { ascending: false })
-  //         .limit(10);
-  //
-  //       if (searchHistory && searchHistory.length > 0) {
-  //         const destinations: PopularDestination[] = searchHistory.map((search) => ({
-  //           code: search.destination_code ?? "",
-  //           name: search.destination ?? "",
-  //         }));
-  //         await setCachedJson(cacheKey, destinations, 3600); // 1 hour TTL
-  //         return NextResponse.json(destinations);
-  //       }
-  //     }
-  //
-  //     // Fall back to global popular destinations
-  //     const globalDestinations: PopularDestination[] = [
-  //       { code: "NYC", name: "New York", savings: "$127", country: "USA" },
-  //       { code: "LAX", name: "Los Angeles", savings: "$89", country: "USA" },
-  //       { code: "LHR", name: "London", savings: "$234", country: "UK" },
-  //       { code: "NRT", name: "Tokyo", savings: "$298", country: "Japan" },
-  //       { code: "CDG", name: "Paris", savings: "$156", country: "France" },
-  //       { code: "DXB", name: "Dubai", savings: "$312", country: "UAE" },
-  //     ];
-  //
-  //     await setCachedJson(cacheKey, globalDestinations, 3600);
-  //     return NextResponse.json(globalDestinations);
-  //   });
-  //   ```
-  //
-  // Step 2: Update Component to Use useQuery
-  //   ```typescript
-  //   import { useQuery } from "@tanstack/react-query";
-  //
-  //   const { data: popularDestinations = [], isLoading: isLoadingDestinations } = useQuery({
-  //     queryKey: ["flights", "popular-destinations"],
-  //     queryFn: async () => {
-  //       const response = await fetch("/api/flights/popular-destinations");
-  //       if (!response.ok) throw new Error("Failed to fetch popular destinations");
-  //       return response.json() as Promise<PopularDestination[]>;
-  //     },
-  //     staleTime: 60 * 60 * 1000, // 1 hour
-  //     gcTime: 2 * 60 * 60 * 1000, // 2 hours
-  //   });
-  //   ```
-  //
-  // INTEGRATION POINTS:
-  // -------------------
-  // - API Endpoint: Create `/api/flights/popular-destinations` route
-  // - Data Fetching: Use `useQuery` from `@tanstack/react-query`
-  // - Caching: Use Upstash Redis cache (`@/lib/cache/upstash`) for API endpoint
-  // - Personalization: Use user search history from Supabase if authenticated
-  // - Error Handling: Handle loading/error states in UI
-  // - Telemetry: Automatic via `withApiGuards` telemetry option
-  //
-  // PERFORMANCE CONSIDERATIONS:
-  // ---------------------------
-  // - Cache popular destinations for 1 hour (destinations don't change frequently)
-  // - Use TanStack Query caching to avoid redundant API calls
-  // - Consider pre-fetching on page load for better UX
-  //
-  // FUTURE ENHANCEMENTS:
-  // -------------------
-  // - Add savings calculation based on historical flight prices
-  // - Add trending destinations (destinations with increasing search volume)
-  // - Add seasonal destinations (destinations popular for current season)
-  // - Add AI-powered personalized recommendations
-  //
-  // Mock data for demo - would come from backend
-  const popularDestinations = [
-    { code: "NYC", name: "New York", savings: "$127" },
-    { code: "LAX", name: "Los Angeles", savings: "$89" },
-    { code: "LHR", name: "London", savings: "$234" },
-    { code: "NRT", name: "Tokyo", savings: "$298" },
-  ];
+  const {
+    data: popularDestinations = [],
+    isLoading: isLoadingPopularDestinations,
+    isError: isPopularDestinationsError,
+  } = useQuery<PopularDestination[]>({
+    gcTime: 2 * 60 * 60 * 1000, // 2 hours
+    queryFn: async () => {
+      const response = await fetch("/api/flights/popular-destinations");
+      if (!response.ok) {
+        throw new Error("Failed to fetch popular destinations");
+      }
+      return (await response.json()) as PopularDestination[];
+    },
+    queryKey: POPULAR_DESTINATIONS_QUERY_KEY,
+    staleTime: 60 * 60 * 1000, // 1 hour
+  });
+
+  const destinationsToRender =
+    popularDestinations.length > 0
+      ? popularDestinations
+      : FALLBACK_POPULAR_DESTINATIONS;
 
   const smartBundles = {
     car: "$89",
@@ -577,19 +487,43 @@ export function FlightSearchForm({
                 <span className="text-sm font-medium">Popular destinations</span>
               </div>
               <div className="flex flex-wrap gap-2">
-                {popularDestinations.map((dest) => (
-                  <Button
-                    key={dest.code}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleQuickFill(dest)}
-                    className="h-auto py-2 px-3 flex flex-col items-start"
-                  >
-                    <span className="font-medium">{dest.name}</span>
-                    <span className="text-xs text-green-600">Save {dest.savings}</span>
-                  </Button>
-                ))}
+                {isLoadingPopularDestinations
+                  ? POPULAR_DESTINATION_SKELETON_KEYS.map((key) => (
+                      <Button
+                        key={`popular-destination-skeleton-${key}`}
+                        variant="outline"
+                        size="sm"
+                        disabled
+                        className="h-auto py-2 px-3 flex flex-col items-start animate-pulse"
+                      >
+                        <span className="font-medium text-muted-foreground">
+                          Loading…
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          Fetching deals
+                        </span>
+                      </Button>
+                    ))
+                  : destinationsToRender.map((dest) => (
+                      <Button
+                        key={dest.code}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleQuickFill(dest)}
+                        className="h-auto py-2 px-3 flex flex-col items-start"
+                      >
+                        <span className="font-medium">{dest.name}</span>
+                        <span className="text-xs text-green-600">
+                          {dest.savings ? `Save ${dest.savings}` : "Popular now"}
+                        </span>
+                      </Button>
+                    ))}
               </div>
+              {isPopularDestinationsError && (
+                <p className="text-xs text-muted-foreground">
+                  Showing recent favorites while we refresh destination data.
+                </p>
+              )}
             </div>
 
             {/* Smart Bundle Preview */}

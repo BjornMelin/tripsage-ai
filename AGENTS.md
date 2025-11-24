@@ -161,6 +161,13 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 
 - Run `pnpm biome:check`, `pnpm biome:fix`, `pnpm type-check`, and relevant `pnpm test*` on changed areas only.
 
+### Upstash testing (must follow)
+
+- Mock via `setupUpstashMocks()` (`frontend/src/test/setup/upstash.ts`); call `__reset()` in `beforeEach`. MSW handlers (`frontend/src/test/msw/handlers/upstash.ts`) cover Redis/QStash; no per-suite mocks.
+- Emulator (optional): `UPSTASH_USE_EMULATOR=1` + `UPSTASH_EMULATOR_URL`, `UPSTASH_QSTASH_DEV_URL`; see `frontend/src/test/upstash/emulator.ts`.
+- Commands: `pnpm -C frontend test:upstash:unit|int|smoke`. Live smoke runs only with `UPSTASH_SMOKE=1` and valid creds; contracts in `frontend/src/__tests__/contracts/`.
+- Fit tests to this structure; do not add hoisted ad-hoc mocks.
+
 ---
 
 ## 7. Security and Secrets

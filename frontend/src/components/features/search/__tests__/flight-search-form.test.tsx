@@ -1,20 +1,52 @@
 /** @vitest-environment jsdom */
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FlightSearchForm } from "../flight-search-form";
 
 // Mock the onSearch function
 const MockOnSearch = vi.fn();
 
+function RenderWithQueryClient(ui: React.ReactElement) {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+}
+
 describe("FlightSearchForm", () => {
   beforeEach(() => {
     // Clear mock calls between tests
     MockOnSearch.mockClear();
+    vi.restoreAllMocks();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify([
+              { code: "NYC", name: "New York", savings: "$127" },
+              { code: "LAX", name: "Los Angeles", savings: "$89" },
+            ]),
+            { status: 200 }
+          )
+      ) as unknown as typeof fetch
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("renders the form correctly (aligned with current UI)", () => {
-    render(<FlightSearchForm onSearch={MockOnSearch} />);
+    RenderWithQueryClient(<FlightSearchForm onSearch={MockOnSearch} />);
 
     // Title and trip type buttons
     expect(screen.getByText("Find Flights")).toBeInTheDocument();
@@ -40,7 +72,7 @@ describe("FlightSearchForm", () => {
   });
 
   it("handles form submission with valid data", async () => {
-    render(<FlightSearchForm onSearch={MockOnSearch} />);
+    RenderWithQueryClient(<FlightSearchForm onSearch={MockOnSearch} />);
 
     // Fill in required fields matching current placeholders/labels
     fireEvent.change(screen.getByPlaceholderText("Departure city or airport"), {
@@ -87,7 +119,7 @@ describe("FlightSearchForm", () => {
   });
 
   it("keeps placeholders intact when autocomplete-like selections occur", () => {
-    render(<FlightSearchForm onSearch={MockOnSearch} />);
+    RenderWithQueryClient(<FlightSearchForm onSearch={MockOnSearch} />);
 
     const originInput = screen.getByPlaceholderText(
       "Departure city or airport"
@@ -105,5 +137,18 @@ describe("FlightSearchForm", () => {
 
     expect(originInput.placeholder).toBe("Departure city or airport");
     expect(destinationInput.placeholder).toBe("Destination city or airport");
+  });
+
+  it("fills destination when selecting a popular destination chip", async () => {
+    RenderWithQueryClient(<FlightSearchForm onSearch={MockOnSearch} />);
+
+    const destinationChip = await screen.findByText("New York");
+    fireEvent.click(destinationChip);
+
+    const destinationInput = screen.getByPlaceholderText(
+      "Destination city or airport"
+    ) as HTMLInputElement;
+
+    await waitFor(() => expect(destinationInput.value).toBe("NYC"));
   });
 });

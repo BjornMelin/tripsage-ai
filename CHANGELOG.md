@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Destination search implemented against Google Places Text Search with debounced queries, normalized limits, and shared results store; updated destination search form to use the new hook.
 - Activities search page now uses the real activity search hook, shows loading/error states, and opens booking targets via `openActivityBooking`.
 - Security dashboard and MFA flows: added security dashboard UI plus MFA setup/verification and backup-code components, along with realtime connection status monitor.
+- Flights: new `/api/flights/popular-destinations` route with Supabase-personalized results, Upstash caching (1h TTL), and route rate limiting.
+- Authenticated account deletion route `/auth/delete` uses Supabase admin `deleteUser` with service-role guardrails.
 
 ### Changed
 
@@ -79,6 +81,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Simplified `frontend/src/hooks/use-authenticated-api.ts` to use the shared `apiClient` directly without Supabase JWT or refresh-session management, relying on Supabase SSR cookie sessions and `withApiGuards` as the sole authentication mechanism for `/api/*` routes.
 - **Telemetry helpers consolidation (frontend)**: Extended `frontend/src/lib/telemetry/span.ts` with `addEventToActiveSpan`, `recordErrorOnSpan`, and `recordErrorOnActiveSpan` helpers, and updated webhook payload handling (`frontend/src/lib/webhooks/payload.ts`) and file webhook route (`frontend/src/app/api/hooks/files/route.ts`) to use these helpers instead of calling `@opentelemetry/api` directly.
 - **Client error reporting telemetry**: Added `frontend/src/lib/telemetry/client-errors.ts` and rewired `frontend/src/lib/error-service.ts` so browser error reports record exceptions on the active OpenTelemetry span via `recordClientErrorOnActiveSpan` instead of reading `trace.getActiveSpan()` inline.
+- Flight search form now fetches popular destinations via TanStack Query from `/api/flights/popular-destinations`, shows loading/error states, and uses real backend data instead of inline mocks.
+- Destination search form: removed large inline implementation-plan comment block; now relies on the implemented `/api/places/search` hook with debounced queries and mapped suggestions.
+- Security dashboard: cleaned up terminate-session handler placeholder to a concise doc comment, keeping the component free of unused async scaffolding.
+- Account settings now calls Supabase Auth for email updates, surfaces verification state with resend support, and persists notification toggles to user metadata with optimistic UI updates.
 
 ### Removed
 

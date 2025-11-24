@@ -3,11 +3,19 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "@/components/ui/use-toast";
+import { useAuthCore } from "@/stores/auth/auth-core";
 import { useUserProfileStore } from "@/stores/user-store";
 import { AccountSettingsSection } from "../account-settings-section";
 
 // Mock the stores and hooks
 vi.mock("@/stores/user-store");
+vi.mock("@/stores/auth/auth-core");
+vi.mock("@/lib/supabase", () => {
+  const updateUser = vi.fn().mockResolvedValue({ data: { user: {} }, error: null });
+  return {
+    getBrowserClient: () => ({ auth: { updateUser } }),
+  };
+});
 // use-toast is fully mocked in test-setup.ts; avoid overriding here.
 
 const MockProfile = {
@@ -21,6 +29,15 @@ const MockProfile = {
 
 const MockUpdatePersonalInfo = vi.fn();
 const MockToast = toast as unknown as ReturnType<typeof vi.fn>;
+const MockLogout = vi.fn();
+const MockSetUser = vi.fn();
+const MockAuthUser = {
+  createdAt: "",
+  email: "test@example.com",
+  id: "user-1",
+  isEmailVerified: true,
+  updatedAt: "",
+};
 
 describe("AccountSettingsSection", () => {
   beforeEach(() => {
@@ -29,6 +46,11 @@ describe("AccountSettingsSection", () => {
     vi.mocked(useUserProfileStore).mockReturnValue({
       profile: MockProfile,
       updatePersonalInfo: MockUpdatePersonalInfo,
+    });
+    vi.mocked(useAuthCore).mockReturnValue({
+      logout: MockLogout,
+      setUser: MockSetUser,
+      user: MockAuthUser,
     });
     // toast is mocked in global test setup; nothing to rewire here.
   });
@@ -39,6 +61,21 @@ describe("AccountSettingsSection", () => {
     expect(screen.getByText("Email Settings")).toBeInTheDocument();
     expect(screen.getByText("test@example.com")).toBeInTheDocument();
     expect(screen.getByText("Verified")).toBeInTheDocument();
+  });
+
+  it("shows verification banner when email is unverified", () => {
+    vi.mocked(useAuthCore).mockReturnValueOnce({
+      logout: MockLogout,
+      setUser: MockSetUser,
+      user: { ...MockAuthUser, isEmailVerified: false },
+    });
+
+    render(<AccountSettingsSection />);
+
+    expect(screen.getByText(/Email verification required/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /send verification/i })
+    ).toBeInTheDocument();
   });
 
   // Unverified flow UI is currently disabled in component (behind false && ...). Omit.
