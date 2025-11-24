@@ -4,6 +4,7 @@ import type { ErrorBoundaryProps } from "@schemas/errors";
 import type React from "react";
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { errorService } from "@/lib/error-service";
+import { secureId } from "@/lib/security/random";
 import { ErrorFallback } from "./error-fallback";
 
 interface ErrorBoundaryState {
@@ -84,10 +85,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   private getSessionId(): string | undefined {
     try {
-      // Generate or retrieve session ID
+      // Generate or retrieve session ID using cryptographically secure random
       let sessionId = sessionStorage.getItem("session_id");
       if (!sessionId) {
-        sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        sessionId = `session_${secureId(16)}`;
         sessionStorage.setItem("session_id", sessionId);
       }
       return sessionId;

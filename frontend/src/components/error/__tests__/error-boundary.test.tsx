@@ -358,7 +358,7 @@ describe("ErrorBoundary", () => {
       });
     });
 
-    it("should generate session ID", () => {
+    it("should generate session ID using secureId", () => {
       vi.mocked(window.sessionStorage.getItem).mockReturnValue(null);
 
       renderWithProviders(
@@ -369,8 +369,13 @@ describe("ErrorBoundary", () => {
 
       expect(window.sessionStorage.setItem).toHaveBeenCalledWith(
         "session_id",
-        expect.stringMatching(/^session_\d+_[a-z0-9]+$/)
+        expect.stringMatching(/^session_[a-z0-9]+$/)
       );
+      // Verify session ID has deterministic length (secureId(16) = 16 chars)
+      const setItemCalls = vi.mocked(window.sessionStorage.setItem).mock.calls;
+      const sessionId = setItemCalls.find((call) => call[0] === "session_id")?.[1];
+      expect(sessionId).toBeDefined();
+      expect(sessionId?.replace("session_", "")).toHaveLength(16);
     });
 
     it("should use existing session ID", () => {
