@@ -11,7 +11,7 @@ This guide replaces the legacy FastAPI backend material. TripSage now runs as a 
 
 ## Required environment variables
 
-Copy `.env.example` to the target environment and fill the values (see links in `docs/developers/env-setup.md` for how to obtain each key):
+Copy the root `.env.example` to the target environment and fill the values (see links in `docs/developers/env-setup.md` for how to obtain each key):
 
 - **Core URLs**: `APP_BASE_URL`, `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_APP_NAME`, `NODE_ENV`
 - **Supabase**: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_JWT_SECRET` (Dashboard → Settings → API)
@@ -22,7 +22,7 @@ Copy `.env.example` to the target environment and fill the values (see links in 
 - **Email/Notifications**: `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `RESEND_FROM_NAME`, `HMAC_SECRET`
 - **Travel APIs**: `DUFFEL_ACCESS_TOKEN`, `AMADEUS_CLIENT_ID`, `AMADEUS_CLIENT_SECRET`, `AMADEUS_ENV`, `GOOGLE_MAPS_API_KEY`
 
-Keep `.env.test.example` aligned for CI.
+Keep root `.env.test.example` aligned for CI.
 
 ## Supabase setup
 
