@@ -9,7 +9,7 @@
 "use client";
 
 import { useCallback, useMemo, useRef } from "react";
-import { apiClient } from "@/lib/api/api-client";
+import { ApiClientError, apiClient } from "@/lib/api/api-client";
 import { ApiError } from "@/lib/api/error-types";
 
 /**
@@ -145,6 +145,14 @@ export function useAuthenticatedApi() {
       } catch (error) {
         if (error instanceof ApiError) {
           throw error;
+        }
+        // Convert ApiClientError to ApiError
+        if (error instanceof ApiClientError) {
+          throw new ApiError({
+            code: error.code,
+            message: error.message,
+            status: error.status,
+          });
         }
         if (error instanceof DOMException && error.name === "AbortError") {
           throw new ApiError({

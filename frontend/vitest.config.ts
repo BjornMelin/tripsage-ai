@@ -159,8 +159,6 @@ export default defineConfig({
             "src/app/**/*.{test,spec}.?(c|m)[jt]s?(x)",
             "src/hooks/**/*.{test,spec}.?(c|m)[jt]s?(x)",
             "src/stores/**/*.{test,spec}.?(c|m)[jt]s?(x)",
-            // Exclude browser-dependent lib tests that need jsdom
-            "src/lib/__tests__/error-service.test.ts",
           ],
           include: ["src/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
           name: "unit",
