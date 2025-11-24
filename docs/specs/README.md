@@ -54,6 +54,7 @@ specific features or components.
 | [SPEC-0029](0029-spec-agent-configuration-backend.md) | Agent Configuration Backend | Accepted | 2025-11-21 |
 | [SPEC-0030](0030-spec-activity-search-google-places.md) | Activity Search & Booking via Google Places (Hybrid + Web Fallback) | Proposed | 2025-01-15 |
 | [SPEC-0031](0031-spec-rate-limiting.md) | Rate Limiting Strategy | Accepted | 2025-10-24 |
+| [SPEC-0032](0032-spec-upstash-testing-harness.md) | Upstash Testing Harness (Mocks, Emulators, Smoke) | Proposed | 2025-11-24 |
 
 ## Superseded Specs
 
