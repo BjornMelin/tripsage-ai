@@ -2,24 +2,53 @@
 
 import { getTravelAdvisory } from "@ai/tools/server/travel-advisory";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { buildUpstashCacheMock } from "@/test/mocks";
 
 const mockContext = {
   messages: [],
   toolCallId: "test-call-id",
 };
 
-let upstashCache: ReturnType<typeof buildUpstashCacheMock>;
-const cacheFactory = vi.hoisted(() => {
-  return () => {
-    if (!upstashCache) {
-      upstashCache = buildUpstashCacheMock();
-    }
-    return upstashCache.module;
+function createUpstashModule() {
+  const store = new Map<string, string>();
+  const getCachedJson = vi.fn(async (key: string) => {
+    const val = store.get(key);
+    return val ? (JSON.parse(val) as unknown) : null;
+  });
+  const setCachedJson = vi.fn(async (key: string, value: unknown) => {
+    store.set(key, JSON.stringify(value));
+  });
+  const deleteCachedJson = vi.fn(async (key: string) => {
+    store.delete(key);
+  });
+  const deleteCachedJsonMany = vi.fn(async (keys: string[]) => {
+    let deleted = 0;
+    keys.forEach((k) => {
+      if (store.delete(k)) deleted += 1;
+    });
+    return deleted;
+  });
+  const reset = () => {
+    store.clear();
+    getCachedJson.mockReset();
+    setCachedJson.mockReset();
+    deleteCachedJson.mockReset();
+    deleteCachedJsonMany.mockReset();
   };
-});
+  return {
+    __reset: reset,
+    deleteCachedJson,
+    deleteCachedJsonMany,
+    getCachedJson,
+    setCachedJson,
+  };
+}
 
-vi.mock("@/lib/cache/upstash", () => cacheFactory());
+var upstashModule: ReturnType<typeof createUpstashModule>;
+
+vi.mock("@/lib/cache/upstash", () => {
+  upstashModule = createUpstashModule();
+  return upstashModule;
+});
 
 vi.mock("@/lib/telemetry/span", () => ({
   withTelemetrySpan: vi.fn((_name: string, _options, fn) => fn()),
@@ -27,12 +56,8 @@ vi.mock("@/lib/telemetry/span", () => ({
 
 describe("getTravelAdvisory", () => {
   beforeEach(() => {
-    // Initialize cache if not already done
-    if (!upstashCache) {
-      upstashCache = buildUpstashCacheMock();
-    }
     vi.clearAllMocks();
-    upstashCache.reset();
+    upstashModule?.__reset?.();
   });
 
   it("returns stub for unmappable destinations", async () => {

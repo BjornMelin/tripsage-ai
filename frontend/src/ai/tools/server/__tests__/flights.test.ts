@@ -3,24 +3,56 @@
 import { searchFlights } from "@ai/tools";
 import type { FlightSearchResult } from "@schemas/flights";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { buildUpstashCacheMock } from "@/test/mocks";
 
 const mockContext = {
   messages: [],
   toolCallId: "test-call-id",
 };
 
-let upstashCache: ReturnType<typeof buildUpstashCacheMock>;
-const cacheFactory = vi.hoisted(() => {
-  return () => {
-    if (!upstashCache) {
-      upstashCache = buildUpstashCacheMock();
-    }
-    return upstashCache.module;
-  };
-});
+var upstashModule: {
+  __reset?: () => void;
+  deleteCachedJson: unknown;
+  deleteCachedJsonMany: unknown;
+  getCachedJson: unknown;
+  setCachedJson: unknown;
+};
 
-vi.mock("@/lib/cache/upstash", () => cacheFactory());
+vi.mock("@/lib/cache/upstash", () => {
+  const store = new Map<string, string>();
+  const getCachedJson = vi.fn(async (key: string) => {
+    const val = store.get(key);
+    return val ? (JSON.parse(val) as unknown) : null;
+  });
+  const setCachedJson = vi.fn(async (key: string, value: unknown) => {
+    store.set(key, JSON.stringify(value));
+  });
+  const deleteCachedJson = vi.fn(async (key: string) => {
+    store.delete(key);
+  });
+  const deleteCachedJsonMany = vi.fn(async (keys: string[]) => {
+    let deleted = 0;
+    keys.forEach((k) => {
+      if (store.delete(k)) deleted += 1;
+    });
+    return deleted;
+  });
+  const reset = () => {
+    store.clear();
+    getCachedJson.mockReset();
+    setCachedJson.mockReset();
+    deleteCachedJson.mockReset();
+    deleteCachedJsonMany.mockReset();
+  };
+  const module = {
+    __reset: reset,
+    deleteCachedJson,
+    deleteCachedJsonMany,
+    getCachedJson,
+    setCachedJson,
+  };
+  upstashModule = module;
+  return module;
+});
 
 vi.mock("@/lib/telemetry/span", () => ({
   withTelemetrySpan: vi.fn((_name, _options, fn) =>
@@ -54,13 +86,9 @@ vi.mock("@/lib/env/server", () => {
 
 describe("searchFlights tool", () => {
   beforeEach(() => {
-    // Initialize cache if not already done
-    if (!upstashCache) {
-      upstashCache = buildUpstashCacheMock();
-    }
     vi.clearAllMocks();
     duffelKeyState.value = "test_duffel_key";
-    upstashCache.reset();
+    upstashModule?.__reset?.();
   });
 
   afterEach(() => {

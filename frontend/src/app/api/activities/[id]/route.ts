@@ -56,10 +56,10 @@ export const GET = withApiGuards({
   }
 
   // Only call getCurrentUser if auth cookies are present to avoid unnecessary Supabase calls
-  let userId: string | undefined;
+  let userId: string | undefined = "anon";
   if (hasAuthCookies(req)) {
     const userResult = await getCurrentUser(supabase);
-    userId = userResult.user?.id ?? undefined;
+    userId = userResult.user?.id ?? "anon";
   }
 
   const service = getActivitiesService();
@@ -71,7 +71,7 @@ export const GET = withApiGuards({
 
     return Response.json(activity);
   } catch (error) {
-    if (isNotFoundError(error)) {
+    if (isNotFoundError(error) || (error instanceof Error && /not found/i.test(error.message))) {
       return Response.json(
         { error: "not_found", reason: error.message },
         { status: 404 }
