@@ -34,7 +34,6 @@ specific features or components.
 | [SPEC-0006](0006-spec-zod-v4-migration.md) | Zod v3 -> v4 Migration | Completed | 2025-10-23 |
 | [SPEC-0007](0007-spec-sse-chat-streaming.md) | SSE Chat Streaming (End-to-End) | Accepted | 2025-10-24 |
 | [SPEC-0008](0008-spec-ai-sdk-v6-foundations.md) | AI SDK v6 Foundations (Next.js) | Accepted | 2025-11-04 |
-| [SPEC-0008](0008-spec-rate-limiting.md) | Rate Limiting Strategy | Accepted | 2025-10-24 |
 | [SPEC-0009](0009-spec-attachments-ssr-listing-and-cache-tags.md) | Attachments SSR Listing and Cache Tags | Accepted | 2025-10-24 |
 | [SPEC-0010](0010-spec-ai-elements-chat-ui.md) | AI Elements Chat UI | Accepted | 2025-11-01 |
 | [SPEC-0011](0011-spec-byok-routes-and-security.md) | BYOK Routes and Security (Next.js + Supabase Vault) | Accepted | 2025-11-01 |
@@ -54,6 +53,7 @@ specific features or components.
 | [SPEC-0028](0028-spec-agent-router-workflows.md) | Agent Router & Workflow HTTP API | Accepted | 2025-11-21 |
 | [SPEC-0029](0029-spec-agent-configuration-backend.md) | Agent Configuration Backend | Accepted | 2025-11-21 |
 | [SPEC-0030](0030-spec-activity-search-google-places.md) | Activity Search & Booking via Google Places (Hybrid + Web Fallback) | Proposed | 2025-01-15 |
+| [SPEC-0031](0031-spec-rate-limiting.md) | Rate Limiting Strategy | Accepted | 2025-10-24 |
 
 ## Superseded Specs
 
@@ -63,7 +63,7 @@ The following specs have been superseded by newer specifications:
 |------|-------|---------------|------|
 | [SPEC-0001](superseded/0001-spec-ai-sdk-v5.md) | AI SDK v5 Migration (Client + Route) | 0008-spec-ai-sdk-v6-foundations.md | 2025-10-24 |
 | [SPEC-0007](superseded/0007-di-schemas-finalization.md) | Final DI + Pydantic v2 Schemas Centralization | Python backend removed | 2025-11-24 |
-| [SPEC-001](superseded/spec-001-tools-contracts.md) | Tool Schemas and Execution Contracts | ADR-0044 (AI SDK v6 Tool Registry) | 2025-11-24 |
+| [SPEC-0001](superseded/0001-tools-contracts.md) | Tool Schemas and Execution Contracts | ADR-0044 (AI SDK v6 Tool Registry) | 2025-11-24 |
 | [SPEC-0010](superseded/0010-spec-python-test-suite-modernization.md) | Python Test Suite Modernization | Python backend removed (SPEC-0020) | 2025-11-24 |
 
 ## By Category
@@ -93,7 +93,6 @@ The following specs have been superseded by newer specifications:
 ### Backend
 
 - SPEC-0007: SSE Chat Streaming (End-to-End)
-- SPEC-0008: Rate Limiting Strategy
 - SPEC-0009: Attachments SSR Listing and Cache Tags
 - SPEC-0011: BYOK Routes and Security (Next.js + Supabase Vault)
 - SPEC-0017: Attachments & File Uploads Migration (Next.js) - Partial
@@ -102,6 +101,7 @@ The following specs have been superseded by newer specifications:
 - SPEC-0021: Supabase Webhooks to Vercel Consolidation
 - SPEC-0025: Trip Collaborator Notifications via QStash
 - SPEC-0026: Supabase Memory Orchestrator & Provider Adapters
+- SPEC-0031: Rate Limiting Strategy
 
 **Note:** Python backend specs (SPEC-0007 DI Schemas, SPEC-0010 Python Test Suite) have been superseded as the Python FastAPI backend has been completely removed. All functionality now runs in Next.js TypeScript.
 

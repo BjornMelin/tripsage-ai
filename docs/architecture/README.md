@@ -90,34 +90,15 @@ status updates, and multi-user collaboration.
 
 ```text
 tripsage-ai/
-├── tripsage/                   # API application (FastAPI)
-├── tripsage_core/              # Core business logic and services
-├── frontend/                   # Next.js application
-├── tests/                      # Test suite (unit, integration, e2e, perf, security)
-├── scripts/                    # Database and deployment scripts
+├── frontend/                   # Next.js 16 app (server-first routes + UI)
+├── docs/                       # Documentation (specs, ADRs, guides)
 ├── docker/                     # Runtime compose files and Dockerfiles
-├── docs/                       # Documentation
-└── supabase/                   # Supabase configuration
+├── scripts/                    # Database and deployment scripts
+├── supabase/                   # Supabase configuration
+└── worktrees/                  # Auxiliary git worktrees (if used)
 ```
 
 ### Module Organization
-
-#### `tripsage/api/`
-
-FastAPI application entry point and core API logic with consumer-aware
-design.
-
-#### `tripsage_core/`
-
-Core business logic, services, models, and shared utilities:
-
-- `config.py` - Configuration management
-- `exceptions.py` - Custom exception handling
-- `models/` - Pydantic models and Supabase schemas
-- `services/business/` - Business logic services
-- `services/external_apis/` - Direct SDK integrations
-- `services/infrastructure/` - Database, cache, Supabase Realtime
-  integration
 
 #### `frontend/`
 

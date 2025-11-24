@@ -55,7 +55,7 @@
 
 - Unit: chunking boundaries; embedding payload shape; score merge.
 - Integration: search returns stable ordering; rerank improves MRR on fixtures.
-- Perf fixtures: latency budgets (< 800ms P50 retrieval+rereank under warm cache).
+- Perf fixtures: latency budgets (< 800ms P50 retrieval+rerank under warm cache).
 
 ## Acceptance Criteria
 

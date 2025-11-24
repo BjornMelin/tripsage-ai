@@ -50,8 +50,8 @@ import { useAuthStore } from "@/stores/auth/auth-store";
 
 // ✅ CORRECT: Relative imports within same feature
 // In src/domain/amadeus/client.ts
-import { ExpediaApiError } from "./client-types";
-import { RAPID_PROD_DEFAULT_BASE_URL } from "./constants";
+import { ProviderError } from "@domain/accommodations/errors";
+import { AMADEUS_DEFAULT_BASE_URL } from "./constants";
 
 // ❌ INCORRECT: Using @/domain/ instead of @domain/
 import { AccommodationsService } from "@/domain/accommodations/service";
