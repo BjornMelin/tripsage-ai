@@ -53,6 +53,7 @@ specific features or components.
 | [SPEC-0027](0027-spec-accommodations-amadeus-google-stripe.md) | Accommodations: Amadeus + Google + Stripe | Accepted | 2025-11-21 |
 | [SPEC-0028](0028-spec-agent-router-workflows.md) | Agent Router & Workflow HTTP API | Accepted | 2025-11-21 |
 | [SPEC-0029](0029-spec-agent-configuration-backend.md) | Agent Configuration Backend | Accepted | 2025-11-21 |
+| [SPEC-0030](0030-spec-activity-search-google-places.md) | Activity Search & Booking via Google Places (Hybrid + Web Fallback) | Proposed | 2025-01-15 |
 
 ## Superseded Specs
 
@@ -86,6 +87,8 @@ The following specs have been superseded by newer specifications:
 - SPEC-0020: Multi-Agent Frontend Migration & Provider Expansion
 - SPEC-0025: Trip Collaborator Notifications via QStash
 - SPEC-0026: Supabase Memory Orchestrator & Provider Adapters
+- SPEC-0027: Accommodations: Amadeus + Google + Stripe
+- SPEC-0030: Activity Search & Booking via Google Places (Hybrid + Web Fallback)
 
 ### Backend
 
