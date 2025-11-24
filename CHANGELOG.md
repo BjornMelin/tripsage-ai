@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Flights: new `/api/flights/popular-destinations` route with Supabase-personalized results, Upstash caching (1h TTL), and route rate limiting.
 - Authenticated account deletion route `/auth/delete` uses Supabase admin `deleteUser` with service-role guardrails.
 - Security session APIs: added `GET /api/security/sessions` and `DELETE /api/security/sessions/[sessionId]` with admin Supabase access, `withApiGuards` telemetry/rate limits (`security:sessions:list`, `security:sessions:terminate`), and Vitest coverage for listing/termination flows.
+- Security events and metrics APIs: added `/api/security/events` and `/api/security/metrics` with Supabase admin queries, strict Zod schemas, OTEL telemetry, and rate limits (`security:events`, `security:metrics`) powering the dashboard.
 
 ### Changed
 
@@ -88,6 +89,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Account settings now calls Supabase Auth for email updates, surfaces verification state with resend support, and persists notification toggles to user metadata with optimistic UI updates.
 - Security dashboard now loads active sessions from the new `/api/security/sessions` endpoint, updates metrics from live data, and surfaces toast errors on load failures.
 - Destination search form now calls `/api/places/search` with abortable, debounced requests, client-side type filtering, and inline error messaging instead of mocked suggestions.
+- Security dashboard rebuilt as a server component consuming live events/metrics/sessions endpoints with no client mocks or useEffect fetching.
 
 ### Removed
 
@@ -158,6 +160,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Security dashboard again exposes terminate controls for non-current sessions and formats events, sessions, and last-login timestamps in the viewer’s locale via a client helper.
+- Added missing route rate-limit entries for `security:events` and `security:metrics` to align with the security APIs’ guardrails.
 - Chat non-stream handler now relies on `persistMemoryTurn` internal handling instead of double-logging persistence errors (`frontend/src/app/api/chat/_handler.ts`).
 - Removed unreachable trip null guard after Supabase `.single()` when creating itinerary items, simplifying error handling (`frontend/src/app/api/itineraries/route.ts`).
 - ICS import errors once again return the raw parse message in `details` (no nested `{ details }` wrapper) when validation fails (`frontend/src/app/api/calendar/ics/import/route.ts`).
