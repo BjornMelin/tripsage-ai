@@ -16,34 +16,46 @@ import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse } from "@/lib/api/route-helpers";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
-import { deleteCachedJson, getCachedJson, setCachedJson } from "@/lib/cache/upstash";
+import { bumpTag } from "@/lib/cache/tags";
+import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 
 /** Cache TTL for trip listings (5 minutes). */
 const TRIPS_CACHE_TTL = 300;
 
+/** Cache tag for trip-related caches. */
+const TRIPS_CACHE_TAG = "trips";
+
 /**
- * Builds cache key for trip listings.
+ * Builds versioned cache key for trip listings.
+ *
+ * Uses cache tag versioning to enable efficient invalidation of all
+ * filter variants when trips are created or updated.
  *
  * @param userId - Authenticated user ID.
  * @param filters - Trip filter parameters.
- * @returns Redis cache key.
+ * @returns Versioned Redis cache key.
  */
-function buildTripsCacheKey(userId: string, filters: TripFilters): string {
+async function buildTripsCacheKey(
+  userId: string,
+  filters: TripFilters
+): Promise<string> {
   const canonical = canonicalizeParamsForCache(filters as Record<string, unknown>);
-  return `trips:list:${userId}:${canonical || "all"}`;
+  const baseKey = `trips:list:${userId}:${canonical || "all"}`;
+  const { versionedKey } = await import("@/lib/cache/tags");
+  return await versionedKey(TRIPS_CACHE_TAG, baseKey);
 }
 
 /**
- * Invalidates all trip cache entries for a user.
+ * Invalidates all trip cache entries for all users.
  *
- * Uses pattern matching to clear all filter variants.
- *
- * @param userId - User ID to invalidate cache for.
+ * Uses cache tag versioning to invalidate all filter variants
+ * (e.g., "all", "status:active", "destination:paris", etc.) by
+ * bumping the tag version. Subsequent reads will generate new
+ * versioned keys, causing cache misses.
  */
-async function invalidateTripsCache(userId: string): Promise<void> {
-  // Clear the "all" filter variant as a baseline
-  await deleteCachedJson(`trips:list:${userId}:all`);
+async function invalidateTripsCache(): Promise<void> {
+  await bumpTag(TRIPS_CACHE_TAG);
 }
 
 /**
@@ -140,7 +152,7 @@ async function listTripsHandler(
   }
 
   const filters = filtersParse.data;
-  const cacheKey = buildTripsCacheKey(userId, filters);
+  const cacheKey = await buildTripsCacheKey(userId, filters);
 
   // Check cache
   const cached = await getCachedJson<ReturnType<typeof mapTripRowToUi>[]>(cacheKey);
@@ -241,8 +253,8 @@ async function createTripHandler(
     });
   }
 
-  // Invalidate trips cache for this user
-  await invalidateTripsCache(userId);
+  // Invalidate all trips cache entries (all users, all filter variants)
+  await invalidateTripsCache();
 
   const row = tripsRowSchema.parse(data);
   const uiTrip = mapTripRowToUi(row);

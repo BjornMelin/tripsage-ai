@@ -1,12 +1,15 @@
 /** @vitest-environment node */
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { stubRateLimitDisabled } from "@/test/env-helpers";
 import {
   createMockNextRequest,
   createRouteParamsContext,
   getMockCookiesForTest,
 } from "@/test/route-helpers";
+import { setupUpstashMocks } from "@/test/setup/upstash";
+
+const { redis, ratelimit } = setupUpstashMocks();
 
 // Mock next/headers cookies() BEFORE any imports that use it
 vi.mock("next/headers", () => ({
@@ -35,19 +38,24 @@ vi.mock("@/lib/supabase/server", () => ({
   })),
 }));
 
-// Mock Redis for rate limiting
+// Mock local Redis wrapper to return undefined (skip caching in tests)
 vi.mock("@/lib/redis", () => ({
-  getRedis: vi.fn(() => Promise.resolve({})),
+  getRedis: vi.fn(() => undefined),
 }));
 
 // Import after mocks are set up
 import { GET as getTrips } from "../route";
 
-afterEach(() => {
-  vi.clearAllMocks();
-});
-
 describe("/api/trips route", () => {
+  beforeEach(async () => {
+    redis.__reset?.();
+    ratelimit.__reset?.();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("returns 400 when filters are invalid", async () => {
     // Disable rate limiting for this test
     stubRateLimitDisabled();

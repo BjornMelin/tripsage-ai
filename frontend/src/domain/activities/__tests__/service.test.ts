@@ -250,9 +250,24 @@ describe("ActivitiesService", () => {
     });
 
     it("should not trigger fallback when Places returns sufficient results", async () => {
+      const placesActivitiesModule = await import("@/lib/google/places-activities");
+      vi.spyOn(placesActivitiesModule, "searchActivitiesWithPlaces").mockResolvedValue(
+        Array.from({ length: 5 }).map((_, idx) => ({
+          coordinates: { lat: idx + 1, lng: idx + 1 },
+          date: "2025-01-01",
+          description: `Activity ${idx + 1} in Address ${idx + 1}`,
+          duration: 120,
+          id: `places/${idx + 1}`,
+          location: `Address ${idx + 1}`,
+          name: `Activity ${idx + 1}`,
+          price: 2,
+          rating: 4.1,
+          type: "tourist_attraction",
+        }))
+      );
+
       const { webSearch } = await import("@ai/tools/server/web-search");
       if (webSearch.execute) {
-        // Reset mock completely to ensure no shared state from parallel tests
         vi.mocked(webSearch.execute).mockReset();
         vi.mocked(webSearch.execute).mockClear();
       }

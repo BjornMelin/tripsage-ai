@@ -60,8 +60,21 @@ export function ConnectionStatusMonitor() {
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
 
+  // TODO: Replace mock data with real Realtime connection status from Supabase.
+  //
+  // Requirements:
+  // - Monitor Supabase Realtime connection status using `supabase.realtime.status`
+  // - Track active Realtime subscriptions (trips, chat, etc.)
+  // - Display connection health (connected, disconnected, reconnecting)
+  // - Show last activity timestamp for each subscription
+  // - Add reconnection logic with exponential backoff
+  // - Use Supabase Realtime event listeners to track connection changes
+  // - Consider using a global Realtime store/context for connection state
+  // - Add telemetry tracking for connection status changes
+  //
   // Mock data for demonstration - in real implementation, this would come from a global store
   useEffect(() => {
+    // TODO: Replace with real Realtime connections: const connections = useRealtimeConnections()
     const mockConnections: RealtimeConnection[] = [
       {
         id: "trips-realtime",
