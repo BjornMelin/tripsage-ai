@@ -109,7 +109,7 @@ describe("ActivitiesService", () => {
   describe("search", () => {
     it("should validate destination is required", async () => {
       await expect(
-        service.search({} as Partial<ActivitySearchParams>, {})
+        service.search({} as unknown as ActivitySearchParams, {})
       ).rejects.toThrow("Destination is required");
     });
 
