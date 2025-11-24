@@ -16,7 +16,7 @@ Recent Vitest runs (`--pool=threads`) exposed brittle, duplicated Upstash mocks 
 
 We will adopt a three-tier Upstash testing strategy:
 
-1. **Unit-fast tier (default):** Shared in-memory stubs for `@upstash/redis` and `@upstash/ratelimit`, plus centralized MSW handlers for REST/QStash endpoints. Every suite will import the shared helper with a single `reset()` per test to avoid hoist issues.
+1. **Unit-fast tier (default):** Shared in-memory stubs for `@upstash/redis` and `@upstash/ratelimit`, plus centralized MSW handlers for REST/QStash endpoints. Every suite will import the shared helper with a single `reset()` per test; use `vi.doMock` (not `vi.mock`) to stay thread-safe with hoisted evaluation under `--pool=threads`.
 2. **Local integration tier (optional):** Deterministic emulators (`upstash-redis-local` or equivalent REST-compatible server; QStash CLI dev server) started once per Vitest worker to validate HTTP contracts (auth headers, TTL, 429s) without external network.
 3. **Live contract smoke (gated):** A tiny serialized suite that hits real Upstash (Redis, Ratelimit, QStash publish/verify) only when `UPSTASH_SMOKE=1` and secrets are present. Defaults to skipped in CI/PRs.
 

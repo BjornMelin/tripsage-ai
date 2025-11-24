@@ -103,11 +103,13 @@ Define a DRY, deterministic testing harness for all Upstash integrations (Redis,
 ## Progress
 
 - [x] Shared in-memory stubs for `@upstash/redis` and `@upstash/ratelimit` with reset helpers.
-- [x] Centralized MSW handlers for Upstash REST backed by the shared store.
-- [x] DRY cache mocks applied to repeated suites (flights, travel-advisory, service-payment).
-- [x] Emulator harness stub and integration-tier script (`test:upstash:int`).
+- [x] Centralized MSW handlers for Upstash REST backed by the shared store (coverage for Redis pipeline, ratelimit headers, and QStash publish stubs).
+- [x] DRY cache mocks applied to repeated suites (flights, travel-advisory, service-payment, trips, attachments).
+- [x] Emulator harness and integration-tier script (`test:upstash:int`).
 - [x] Gated live smoke suite (`test:upstash:smoke`).
-- [x] Documentation updates and CHANGELOG entry; CI wiring pending.
+- [x] Documentation/CHANGELOG for emulator + smoke, and CI wiring.
+
+> Note: For Vitest `--pool=threads`, use `vi.doMock` (not `vi.mock`) when registering shared Upstash mocks to avoid hoist/TDZ issues.
 
 ## Risks & Mitigations
 

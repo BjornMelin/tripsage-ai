@@ -51,7 +51,7 @@ describe("/api/attachments/files", () => {
   let recordedHeaders: Headers | undefined;
   let recordedUrl: string | undefined;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks();
     // Reset Upstash mocks (SPEC-0032 pattern)
     redis.__reset?.();

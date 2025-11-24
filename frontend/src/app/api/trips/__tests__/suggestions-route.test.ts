@@ -59,7 +59,7 @@ describe("/api/trips/suggestions route", () => {
     },
   };
 
-  beforeEach(async () => {
+  beforeEach(() => {
     setSupabaseFactoryForTests(async () => supabaseClient as never);
     supabaseClient.auth.getUser.mockResolvedValue({
       data: { user: { id: "user-1" } },

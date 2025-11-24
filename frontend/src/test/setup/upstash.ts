@@ -18,8 +18,8 @@ export function setupUpstashMocks(): UpstashMocks {
   const redis = createRedisMock();
   const ratelimit = createRatelimitMock();
 
-  vi.mock("@upstash/redis", () => redis);
-  vi.mock("@upstash/ratelimit", () => ratelimit);
+  vi.doMock("@upstash/redis", () => redis);
+  vi.doMock("@upstash/ratelimit", () => ratelimit);
 
   return { ratelimit, redis };
 }
