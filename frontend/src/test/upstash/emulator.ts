@@ -1,33 +1,48 @@
 /**
- * @fileoverview Optional Upstash emulator harness.
+ * @fileoverview Optional Upstash emulator helpers.
  *
- * For now this is a stub that simply checks required env vars and returns
- * connection info. Tests can opt-in by setting `UPSTASH_USE_EMULATOR=1` and
- * providing URLs/tokens. If env is missing, callers should skip gracefully.
+ * Reads and validates Upstash emulator config from env vars. No-op unless
+ * UPSTASH_USE_EMULATOR=1. When enabled, requires UPSTASH_EMULATOR_URL and
+ * UPSTASH_QSTASH_DEV_URL to be set; throws if missing.
  */
 
-/** Emulator configuration. */
-export type UpstashEmulatorConfig = {
-  redisUrl: string;
-  redisToken: string;
+type EmulatorConfig = {
+  enabled: boolean;
+  redisUrl?: string;
   qstashUrl?: string;
-  qstashToken?: string;
 };
 
-/**
- * Loads emulator configuration from environment variables.
- *
- * @returns Emulator configuration or null if emulator is not enabled.
- */
-export function loadEmulatorConfig(): UpstashEmulatorConfig | null {
-  if (process.env.UPSTASH_USE_EMULATOR !== "1") return null;
-  const redisUrl = process.env.UPSTASH_EMULATOR_URL;
-  const redisToken = process.env.UPSTASH_EMULATOR_TOKEN;
-  if (!redisUrl || !redisToken) return null;
+export function getEmulatorConfig(): EmulatorConfig {
+  const enabled = process.env.UPSTASH_USE_EMULATOR === "1";
   return {
-    qstashToken: process.env.UPSTASH_QSTASH_DEV_TOKEN,
+    enabled,
     qstashUrl: process.env.UPSTASH_QSTASH_DEV_URL,
-    redisToken,
-    redisUrl,
+    redisUrl: process.env.UPSTASH_EMULATOR_URL,
   };
+}
+
+export function startUpstashEmulators(): EmulatorConfig {
+  const config = getEmulatorConfig();
+  if (!config.enabled) return config;
+
+  if (!config.redisUrl) {
+    throw new Error(
+      "UPSTASH_USE_EMULATOR=1 but UPSTASH_EMULATOR_URL is not set; provide http://host:port"
+    );
+  }
+
+  if (!config.qstashUrl) {
+    throw new Error(
+      "UPSTASH_USE_EMULATOR=1 but UPSTASH_QSTASH_DEV_URL is not set; provide http://host:port"
+    );
+  }
+
+  // Real container orchestration is handled externally or by CI; this helper
+  // simply validates configuration to avoid silent misconfigurations.
+  return config;
+}
+
+export function stopUpstashEmulators(): void {
+  // No-op placeholder for symmetry; actual emulator lifecycle is managed
+  // externally (docker-compose/testcontainers) when enabled.
 }

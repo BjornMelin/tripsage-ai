@@ -47,7 +47,7 @@ vi.mock("@/lib/redis", () => ({
 import { GET as getTrips } from "../route";
 
 describe("/api/trips route", () => {
-  beforeEach(async () => {
+  beforeEach(() => {
     redis.__reset?.();
     ratelimit.__reset?.();
   });

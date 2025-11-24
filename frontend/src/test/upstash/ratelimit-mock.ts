@@ -50,6 +50,7 @@ export class RatelimitMock {
     remaining?: number;
     limit?: number;
     reset?: number;
+    retryAfter?: number;
   };
 
   constructor(
@@ -62,12 +63,14 @@ export class RatelimitMock {
       remaining: number;
       limit: number;
       reset: number;
+      retryAfter: number;
     }>
   ): void {
     this.forced = {
       limit: result.limit ?? this.config.limiter.limit,
       remaining: result.remaining ?? 0,
       reset: result.reset ?? Date.now() + this.config.limiter.intervalMs,
+      retryAfter: result.retryAfter ?? 1,
       success: result.success ?? false,
     };
   }
@@ -82,12 +85,14 @@ export class RatelimitMock {
     limit: number;
     remaining: number;
     reset: number;
+    retryAfter: number;
   }> {
     if (this.forced) {
       return Promise.resolve({
         limit: this.forced.limit ?? this.config.limiter.limit,
         remaining: this.forced.remaining ?? 0,
         reset: this.forced.reset ?? Date.now() + this.config.limiter.intervalMs,
+        retryAfter: this.forced.retryAfter ?? 1,
         success: this.forced.success,
       });
     }
@@ -105,6 +110,7 @@ export class RatelimitMock {
         limit: this.config.limiter.limit,
         remaining: next.remaining,
         reset: next.resetAt,
+        retryAfter: 0,
         success: true,
       });
     }
@@ -114,6 +120,7 @@ export class RatelimitMock {
         limit: this.config.limiter.limit,
         remaining: 0,
         reset: current.resetAt,
+        retryAfter: Math.max(1, Math.ceil((current.resetAt - now) / 1000)),
         success: false,
       });
     }
@@ -124,6 +131,7 @@ export class RatelimitMock {
       limit: this.config.limiter.limit,
       remaining: current.remaining,
       reset: current.resetAt,
+      retryAfter: 0,
       success: true,
     });
   }
