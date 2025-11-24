@@ -65,10 +65,11 @@ export const ROUTE_RATE_LIMITS = {
   "chat:sessions:messages:create": { limit: 40, window: "1 m" },
   "chat:sessions:messages:list": { limit: 60, window: "1 m" },
   "chat:stream": { limit: 40, window: "1 m" },
-  "config:agents:rollback": { limit: 10, window: "1 m" },
-
   // Configuration
+  "config:agents:read": { limit: 60, window: "1 m" },
+  "config:agents:rollback": { limit: 10, window: "1 m" },
   "config:agents:update": { limit: 20, window: "1 m" },
+  "config:agents:versions": { limit: 60, window: "1 m" },
 
   // Dashboard
   "dashboard:metrics": { limit: 30, window: "1 m" },

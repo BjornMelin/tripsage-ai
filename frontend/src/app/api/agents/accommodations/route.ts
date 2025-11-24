@@ -15,7 +15,7 @@ import type { NextRequest } from "next/server";
 import { runAccommodationAgent } from "@/lib/agents/accommodation-agent";
 import { resolveAgentConfig } from "@/lib/agents/config-resolver";
 import { withApiGuards } from "@/lib/api/factory";
-import { getTrustedRateLimitIdentifier } from "@/lib/next/route-helpers";
+import { getTrustedRateLimitIdentifier } from "@/lib/api/route-helpers";
 
 export const maxDuration = 60;
 

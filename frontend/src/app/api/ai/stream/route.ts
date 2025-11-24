@@ -3,17 +3,19 @@
  * suitable for AI Elements and AI SDK UI readers.
  */
 
+import "server-only";
+
 import { openai } from "@ai-sdk/openai";
 import { streamText } from "ai";
 import type { NextRequest } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { parseJsonBody } from "@/lib/next/route-helpers";
+import { parseJsonBody } from "@/lib/api/route-helpers";
 import {
   type ChatMessage,
   clampMaxTokens,
   countPromptTokens,
-} from "../../../../lib/tokens/budget";
-import { getModelContextLimit } from "../../../../lib/tokens/limits";
+} from "@/lib/tokens/budget";
+import { getModelContextLimit } from "@/lib/tokens/limits";
 
 // Allow streaming responses up to 30 seconds
 /** Maximum duration (seconds) to allow for streaming responses. */
@@ -76,7 +78,7 @@ export const POST = withApiGuards({
     );
   }
 
-  const result = await streamText({
+  const result = streamText({
     model: openai(model),
     // Prefer messages when available; otherwise prompt.
     ...(messages ? { messages: finalMessages } : { prompt }),

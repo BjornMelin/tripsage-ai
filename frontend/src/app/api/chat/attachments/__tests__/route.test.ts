@@ -196,7 +196,8 @@ describe("/api/chat/attachments", () => {
     });
 
     const res = await mod.POST(req, createRouteParamsContext());
-    expect(res.status).toBe(500);
+    // Backend 5xx errors are returned as 502 Bad Gateway
+    expect(res.status).toBe(502);
     const body = await res.json();
     expect(body.reason).toBe("File upload failed");
     expect(body.error).toBe("internal");

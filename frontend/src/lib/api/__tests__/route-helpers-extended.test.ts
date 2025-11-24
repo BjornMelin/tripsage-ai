@@ -19,7 +19,7 @@ async function loadHelpers() {
     }),
   }));
 
-  const mod = await import("@/lib/next/route-helpers");
+  const mod = await import("@/lib/api/route-helpers");
   return { errorResponse: mod.errorResponse, withRequestSpan: mod.withRequestSpan };
 }
 

@@ -15,7 +15,7 @@ import "server-only";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { parseJsonBody } from "@/lib/next/route-helpers";
+import { parseJsonBody } from "@/lib/api/route-helpers";
 import { getUserAllowGatewayFallback } from "@/lib/supabase/rpc";
 
 /**
