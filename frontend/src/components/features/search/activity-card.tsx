@@ -11,9 +11,16 @@ interface ActivityCardProps {
   activity: Activity;
   onSelect?: (activity: Activity) => void;
   onCompare?: (activity: Activity) => void;
+  /** Optional source label to display (e.g., "Verified via Google Places" or "AI suggestion"). */
+  sourceLabel?: string;
 }
 
-export function ActivityCard({ activity, onSelect, onCompare }: ActivityCardProps) {
+export function ActivityCard({
+  activity,
+  onSelect,
+  onCompare,
+  sourceLabel,
+}: ActivityCardProps) {
   const formatDuration = (hours: number) => {
     if (hours < 1) {
       return `${Math.round(hours * 60)} mins`;
@@ -72,10 +79,18 @@ export function ActivityCard({ activity, onSelect, onCompare }: ActivityCardProp
             <MapPin className="h-12 w-12 text-gray-400" />
           </div>
         )}
-        <div className="absolute top-2 left-2">
+        <div className="absolute top-2 left-2 flex flex-col gap-1">
           <Badge variant="secondary" className="bg-white/90">
             {activity.type}
           </Badge>
+          {sourceLabel && (
+            <Badge
+              variant={activity.id.startsWith("ai_fallback:") ? "outline" : "default"}
+              className="bg-white/90 text-xs"
+            >
+              {sourceLabel}
+            </Badge>
+          )}
         </div>
         <div className="absolute top-2 right-2">
           <Badge variant="outline" className="bg-white/90">

@@ -19,6 +19,40 @@ export const googlePlacesHandlers: HttpHandler[] = [
         // ignore parse errors; use defaults
       }
 
+      // Handle activity searches differently
+      const isActivitySearch =
+        textQuery.toLowerCase().includes("activities") ||
+        textQuery.toLowerCase().includes("things to do");
+
+      if (isActivitySearch) {
+        return HttpResponse.json({
+          places: [
+            {
+              displayName: { text: "Museum of Modern Art" },
+              formattedAddress: "11 W 53rd St, New York, NY 10019",
+              id: "ChIJN1t_tDeuEmsRUsoyG83frY4",
+              location: { latitude: 40.7614, longitude: -73.9776 },
+              photos: [{ name: defaultPhotoName }],
+              priceLevel: "PRICE_LEVEL_MODERATE",
+              rating: 4.6,
+              types: ["museum", "tourist_attraction"],
+              userRatingCount: 4523,
+            },
+            {
+              displayName: { text: "Central Park" },
+              formattedAddress: "New York, NY",
+              id: "ChIJN1t_tDeuEmsRUsoyG83frY5",
+              location: { latitude: 40.7829, longitude: -73.9654 },
+              photos: [{ name: defaultPhotoName }],
+              priceLevel: "PRICE_LEVEL_FREE",
+              rating: 4.8,
+              types: ["park", "tourist_attraction"],
+              userRatingCount: 125000,
+            },
+          ],
+        });
+      }
+
       return HttpResponse.json({
         places: [
           {

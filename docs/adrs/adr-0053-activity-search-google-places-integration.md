@@ -1,8 +1,9 @@
 # ADR-0053: Activity Search & Booking via Google Places API Integration
 
 **Version**: 1.0.0
-**Status**: Proposed
+**Status**: Accepted
 **Date**: 2025-01-15
+**Implementation Date**: 2025-11-24
 **Category**: Architecture
 **Domain**: Travel Supply Integrations
 **Related ADRs**: ADR-0050 (Amadeus + Google Places), ADR-0044 (Tool Registry), ADR-0029 (DI Route Handlers)

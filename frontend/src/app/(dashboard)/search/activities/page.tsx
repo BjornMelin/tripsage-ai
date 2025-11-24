@@ -10,22 +10,20 @@ import {
   type ActivitySearchParams,
   useActivitySearch,
 } from "@/hooks/use-activity-search";
-import { useSearchStore } from "@/stores/search-store";
+import { openActivityBooking } from "@/lib/activities/booking";
 
 // URL search parameters are handled inline
 
 export default function ActivitiesSearchPage() {
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
-  const { searchActivities, isSearching, searchError } = useActivitySearch();
-  const { hasResults, isSearching: storeIsSearching } = useSearchStore();
+  const { searchActivities, isSearching, searchError, results, searchMetadata } =
+    useActivitySearch();
   const searchParams = useSearchParams();
 
   // Initialize search with URL parameters
   useEffect(() => {
     const destination = searchParams.get("destination");
-    // const date = searchParams.get("date"); // Future use
     const category = searchParams.get("category");
-    // const maxPrice = searchParams.get("maxPrice"); // Future use
 
     if (destination) {
       const initialParams: ActivitySearchParams = {
@@ -37,30 +35,22 @@ export default function ActivitiesSearchPage() {
   }, [searchParams, searchActivities]);
 
   const handleSearch = (params: import("@schemas/search").ActivitySearchParams) => {
-    // Convert the params to the hook's expected format
     if (params.destination) {
-      const hookParams: ActivitySearchParams = {
-        category: params.category,
-        destination: params.destination,
-      };
-      searchActivities(hookParams);
+      searchActivities(params);
     }
   };
 
   const handleSelectActivity = (activity: Activity) => {
     setSelectedActivity(activity);
-    console.log("Selected activity:", activity);
     // TODO: Integrate with trip planning or booking flow
   };
 
-  const handleCompareActivity = (activity: Activity) => {
-    console.log("Compare activity:", activity);
+  const handleCompareActivity = (_activity: Activity) => {
     // TODO: Add to comparison list
   };
 
-  // Mock activities data - in real implementation, this would come from the search results
-  const activities: Activity[] = [];
-  const hasActiveResults = hasResults && activities.length > 0;
+  const activities = results ?? [];
+  const hasActiveResults = activities.length > 0;
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -77,7 +67,7 @@ export default function ActivitiesSearchPage() {
         </div>
 
         <div className="lg:col-span-2">
-          {(storeIsSearching || isSearching) && (
+          {isSearching && (
             <div className="flex items-center justify-center py-12">
               <LoadingSpinner />
               <span className="ml-2">Searching activities...</span>
@@ -92,28 +82,84 @@ export default function ActivitiesSearchPage() {
             </div>
           )}
 
-          {!storeIsSearching && !isSearching && hasActiveResults && (
+          {!isSearching && hasActiveResults && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold">
                   {activities.length} Activities Found
                 </h2>
+                {searchMetadata?.cached && (
+                  <span className="text-sm text-muted-foreground">Cached results</span>
+                )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {activities.map((activity) => (
-                  <ActivityCard
-                    key={activity.id}
-                    activity={activity}
-                    onSelect={handleSelectActivity}
-                    onCompare={handleCompareActivity}
-                  />
-                ))}
-              </div>
+              {searchMetadata?.notes && searchMetadata.notes.length > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm text-blue-800">{searchMetadata.notes[0]}</p>
+                </div>
+              )}
+
+              {searchMetadata?.primarySource === "mixed" && (
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Verified Activities</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {activities
+                        .filter(
+                          (a) =>
+                            !a.id.startsWith("ai_fallback:") &&
+                            searchMetadata.sources.includes("googleplaces")
+                        )
+                        .map((activity) => (
+                          <ActivityCard
+                            key={activity.id}
+                            activity={activity}
+                            onSelect={handleSelectActivity}
+                            onCompare={handleCompareActivity}
+                            sourceLabel="Verified via Google Places"
+                          />
+                        ))}
+                    </div>
+                  </div>
+                  {activities.some((a) => a.id.startsWith("ai_fallback:")) && (
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">
+                        More Ideas Powered by AI
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {activities
+                          .filter((a) => a.id.startsWith("ai_fallback:"))
+                          .map((activity) => (
+                            <ActivityCard
+                              key={activity.id}
+                              activity={activity}
+                              onSelect={handleSelectActivity}
+                              onCompare={handleCompareActivity}
+                              sourceLabel="AI suggestion"
+                            />
+                          ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {searchMetadata?.primarySource !== "mixed" && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {activities.map((activity) => (
+                    <ActivityCard
+                      key={activity.id}
+                      activity={activity}
+                      onSelect={handleSelectActivity}
+                      onCompare={handleCompareActivity}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
-          {!storeIsSearching && !isSearching && !hasActiveResults && !searchError && (
+          {!isSearching && !hasActiveResults && !searchError && (
             <div className="text-center py-12">
               <p className="text-muted-foreground">
                 Use the search form to find activities at your destination
@@ -141,12 +187,20 @@ export default function ActivitiesSearchPage() {
               <button
                 type="button"
                 onClick={() => {
-                  // TODO: Add to trip or proceed to booking
+                  if (selectedActivity) {
+                    const opened = openActivityBooking(selectedActivity);
+                    if (!opened) {
+                      // Fallback: show message that booking is unavailable
+                      alert(
+                        "Booking link unavailable for this activity. Please search for booking options manually."
+                      );
+                    }
+                  }
                   setSelectedActivity(null);
                 }}
                 className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-md"
               >
-                Add to Trip
+                View Booking Options
               </button>
             </div>
           </div>

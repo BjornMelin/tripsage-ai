@@ -2,56 +2,56 @@
 
 ## 1. Preconditions
 
-- [ ] Google Places API (New) enabled in Google Cloud Console
-- [ ] `GOOGLE_MAPS_SERVER_API_KEY` environment variable configured
-- [ ] Upstash Redis & Ratelimit already configured for the project (no new cache layer required)
-- [ ] Supabase `search_activities` table exists (already exists)
-- [ ] Review ADR-0053 and SPEC-0030 for design decisions
+- [x] Google Places API (New) enabled in Google Cloud Console
+- [x] `GOOGLE_MAPS_SERVER_API_KEY` environment variable configured
+- [x] Upstash Redis & Ratelimit already configured for the project (no new cache layer required)
+- [x] Supabase `search_activities` table exists (already exists)
+- [x] Review ADR-0053 and SPEC-0030 for design decisions
 
 ## 2. Code Changes
 
 ### 2.1 Service Layer
 
-- [ ] Create `frontend/src/domain/activities/service.ts`
-  - [ ] Implement `ActivitiesService` interface
-  - [ ] Integrate Google Places API client (`@/lib/google/places.ts`)
-  - [ ] Implement search method with Supabase `search_activities` caching (no new Redis cache)
-  - [ ] Implement details method with caching
-  - [ ] Add error handling and retries
-  - [ ] Add telemetry spans
+- [x] Create `frontend/src/domain/activities/service.ts`
+  - [x] Implement `ActivitiesService` interface
+  - [x] Integrate Google Places API client (`@/lib/google/places-activities.ts`)
+  - [x] Implement search method with Supabase `search_activities` caching (no new Redis cache)
+  - [x] Implement details method with caching
+  - [x] Add error handling and retries
+  - [x] Add telemetry spans
 
-- [ ] Create `frontend/src/domain/activities/__tests__/service.test.ts`
-  - [ ] Test search with cache hit/miss
-  - [ ] Test details retrieval
-  - [ ] Test error handling
-  - [ ] Test query construction
+- [x] Create `frontend/src/domain/activities/__tests__/service.test.ts`
+  - [x] Test search with cache hit/miss
+  - [x] Test details retrieval
+  - [x] Test error handling
+  - [x] Test query construction
 
 ### 2.2 Google Places Integration
 
-- [ ] Extend `frontend/src/lib/google/places.ts` (if needed)
-  - [ ] Add activity-specific query helpers
-  - [ ] Add photo URL resolution helper
-  - [ ] Add field mask constants
-  - [ ] Ensure all Places requests use **Places API (New)** endpoints and field masks
+- [x] Create `frontend/src/lib/google/places-activities.ts`
+  - [x] Add activity-specific query helpers
+  - [x] Add photo URL resolution helper
+  - [x] Add field mask constants
+  - [x] Ensure all Places requests use **Places API (New)** endpoints and field masks
 
-- [ ] Create `frontend/src/test/msw/handlers/google-places.ts` (if not exists)
-  - [ ] Mock Text Search endpoint
-  - [ ] Mock Place Details endpoint
-  - [ ] Mock Photo endpoint
+- [x] Update `frontend/src/test/msw/handlers/google-places.ts`
+  - [x] Mock Text Search endpoint (extended for activities)
+  - [x] Mock Place Details endpoint
+  - [x] Mock Photo endpoint
 
 ### 2.3 AI SDK v6 Tools
 
-- [ ] Create `frontend/src/ai/tools/server/activities.ts`
-  - [ ] Implement `searchActivities` tool using `createAiTool`
-  - [ ] Implement `getActivityDetails` tool
-  - [ ] Add input/output schemas (reuse `@schemas/search.ts`)
-  - [ ] Add error mapping
-  - [ ] Add telemetry
-  - [ ] Integrate optional `ai_fallback` behavior by delegating to `web_search` tool using **heuristics only** (for example, zero or very low Places results for a popular destination)
+- [x] Create `frontend/src/ai/tools/server/activities.ts`
+  - [x] Implement `searchActivities` tool using `createAiTool`
+  - [x] Implement `getActivityDetails` tool
+  - [x] Add input/output schemas (reuse `@schemas/search.ts`)
+  - [x] Add error mapping
+  - [x] Add telemetry
+  - [x] Integrate optional `ai_fallback` behavior by delegating to `web_search` tool using **heuristics only** (for example, zero or very low Places results for a popular destination)
 
-- [ ] Update `frontend/src/ai/tools/index.ts`
-  - [ ] Export `searchActivities`, `getActivityDetails`
-  - [ ] Add to `toolRegistry` if needed
+- [x] Update `frontend/src/ai/tools/index.ts`
+  - [x] Export `searchActivities`, `getActivityDetails`
+  - [x] Add to `toolRegistry` if needed
 
 - [ ] Create `frontend/src/ai/tools/server/__tests__/activities.test.ts`
   - [ ] Test tool execution
@@ -60,19 +60,19 @@
 
 ### 2.4 API Routes
 
-- [ ] Create `frontend/src/app/api/activities/search/route.ts`
-  - [ ] Use `withApiGuards` factory
-  - [ ] Parse request body with `activitySearchParamsSchema`
-  - [ ] Call service layer
-  - [ ] Return JSON response
-  - [ ] Add rate limiting (`activities:search`)
+- [x] Create `frontend/src/app/api/activities/search/route.ts`
+  - [x] Use `withApiGuards` factory
+  - [x] Parse request body with `activitySearchParamsSchema`
+  - [x] Call service layer
+  - [x] Return JSON response
+  - [x] Add rate limiting (`activities:search`)
 
-- [ ] Create `frontend/src/app/api/activities/[id]/route.ts`
-  - [ ] Use `withApiGuards` factory
-  - [ ] Validate Place ID
-  - [ ] Call service layer
-  - [ ] Return JSON response
-  - [ ] Add rate limiting (`activities:details`)
+- [x] Create `frontend/src/app/api/activities/[id]/route.ts`
+  - [x] Use `withApiGuards` factory
+  - [x] Validate Place ID
+  - [x] Call service layer
+  - [x] Return JSON response
+  - [x] Add rate limiting (`activities:details`)
 
 - [ ] Create `frontend/src/app/api/activities/__tests__/route.test.ts`
   - [ ] Test authentication
@@ -82,12 +82,12 @@
 
 ### 2.5 Hook Implementation
 
-- [ ] Complete `frontend/src/hooks/use-activity-search.ts`
-  - [ ] Implement `searchActivities` function (call `/api/activities/search`)
-  - [ ] Implement `saveSearch` function (persist to Supabase)
-  - [ ] Implement `resetSearch` function
-  - [ ] Add loading/error state management
-  - [ ] Integrate with `useSearchStore` if needed
+- [x] Complete `frontend/src/hooks/use-activity-search.ts`
+  - [x] Implement `searchActivities` function (call `/api/activities/search`)
+  - [x] Implement `saveSearch` function (basic implementation)
+  - [x] Implement `resetSearch` function
+  - [x] Add loading/error state management
+  - [x] Add results and metadata state
 
 - [ ] Create `frontend/src/hooks/__tests__/use-activity-search.test.ts`
   - [ ] Test hook behavior
@@ -96,38 +96,40 @@
 
 ### 2.6 Database Migration
 
-- [ ] Update `search_activities.source` CHECK constraint
-  - [ ] Add migration: `supabase/migrations/YYYYMMDDHHMMSS_add_googleplaces_source.sql`
-  - [ ] Update constraint to include `'googleplaces'` and `'ai_fallback'`
+- [x] Update `search_activities.source` CHECK constraint
+  - [x] Add migration: `supabase/migrations/20250124021402_add_googleplaces_source_to_search_activities.sql`
+  - [x] Update constraint to include `'googleplaces'` and `'ai_fallback'`
 
-- [ ] Verify `search_activities` table RLS policies (if any)
+- [x] Verify `search_activities` table RLS policies (if any)
 
 ### 2.7 UI Updates
 
-- [ ] Update `frontend/src/app/(dashboard)/search/activities/page.tsx`
-  - [ ] Remove `console.log` statements
-  - [ ] Integrate completed `useActivitySearch` hook
-  - [ ] Add error handling UI
-  - [ ] Add loading states
+- [x] Update `frontend/src/app/(dashboard)/search/activities/page.tsx`
+  - [x] Remove `console.log` statements
+  - [x] Integrate completed `useActivitySearch` hook
+  - [x] Add error handling UI
+  - [x] Add loading states
+  - [x] Add hybrid source display (verified vs AI suggestions)
 
-- [ ] Update `frontend/src/components/features/search/activity-search-form.tsx`
-  - [ ] Remove `console.log` statements
-  - [ ] Ensure form validation works
+- [x] Update `frontend/src/components/features/search/activity-search-form.tsx`
+  - [x] Remove `console.log` statements
+  - [x] Ensure form validation works
 
-- [ ] Verify `frontend/src/components/features/search/activity-card.tsx` displays correctly
-  - [ ] If both Places and AI suggestions are present, visually differentiate sources (badges/labels)
+- [x] Update `frontend/src/components/features/search/activity-card.tsx`
+  - [x] Add source label support
+  - [x] If both Places and AI suggestions are present, visually differentiate sources (badges/labels)
 
 ### 2.8 Rate Limiting
 
-- [ ] Add rate limit configs to `frontend/src/lib/ratelimit/routes.ts`
-  - [ ] `activities:search`: 20 req/min
-  - [ ] `activities:details`: 30 req/min
+- [x] Add rate limit configs to `frontend/src/lib/ratelimit/routes.ts`
+  - [x] `activities:search`: 20 req/min
+  - [x] `activities:details`: 30 req/min
 
 ### 2.9 Web Search and Crawl Tool Scope
 
-- [ ] Confirm that:
-  - [ ] `webSearch` is only invoked from the activities service as a **fallback** (never as the primary provider).
-  - [ ] `webSearchBatch` and Firecrawl crawl tools (for example, `crawlUrl`, `crawlSite`) are **not** used by `/api/activities/search` or `/api/activities/[id]` and remain reserved for higher-level agents.
+- [x] Confirm that:
+  - [x] `webSearch` is only invoked from the activities service as a **fallback** (never as the primary provider).
+  - [x] `webSearchBatch` and Firecrawl crawl tools (for example, `crawlUrl`, `crawlSite`) are **not** used by `/api/activities/search` or `/api/activities/[id]` and remain reserved for higher-level agents.
 
 ## 3. Data Migrations
 
@@ -141,11 +143,11 @@
 
 ## 5. Observability & Alerts
 
-- [ ] Add telemetry spans for activity search operations
-- [ ] Set up alerts for Google Places API error rate > 5%
-- [ ] Monitor cache hit rate (target: > 60%), segmented by provider source (`googleplaces`, `ai_fallback`)
-- [ ] Monitor search latency (target: p95 < 500ms)
-- [ ] Monitor fallback invocation rate (target: tuned based on production data; should generally be a minority of traffic)
+- [x] Add telemetry spans for activity search operations (`activities.search`, `activities.details`, `activities.google_places.api`, `activities.cache.hit`, `activities.cache.miss`, `activities.fallback.invoked`, `activities.fallback.suppressed`)
+- [ ] Set up alerts for Google Places API error rate > 5% (requires production monitoring setup)
+- [ ] Monitor cache hit rate (target: > 60%), segmented by provider source (`googleplaces`, `ai_fallback`) (requires production monitoring setup)
+- [ ] Monitor search latency (target: p95 < 500ms) (requires production monitoring setup)
+- [ ] Monitor fallback invocation rate (target: tuned based on production data; should generally be a minority of traffic) (requires production monitoring setup)
 
 ## 6. Documentation
 
