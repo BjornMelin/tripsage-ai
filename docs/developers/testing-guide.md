@@ -80,6 +80,13 @@ server.use(
 
 - **Handler Reset**: Handlers are automatically reset after each test via `test-setup.ts`. Avoid redundant `server.resetHandlers()` calls in `beforeEach` unless you need to reset handlers mid-test.
 
+### Upstash Testing Harness
+
+- **Unit/fast:** use `buildUpstashCacheMock` or the shared `@/test/upstash` stubs; always call `reset()` in `beforeEach`.
+- **HTTP layer:** MSW Upstash handler (`@/test/msw/handlers/upstash.ts`) mirrors Redis REST pipeline and shares the same in-memory store.
+- **Emulator tier (optional):** opt in with `UPSTASH_USE_EMULATOR=1` and provide `UPSTASH_EMULATOR_URL/UPSTASH_EMULATOR_TOKEN`; helper lives in `@/test/upstash/emulator.ts`.
+- **Smoke:** run `pnpm -C frontend test:upstash:smoke` with `UPSTASH_SMOKE=1` + real creds for contract checks; skips automatically when env is absent.
+
 ### React Components
 
 ```ts

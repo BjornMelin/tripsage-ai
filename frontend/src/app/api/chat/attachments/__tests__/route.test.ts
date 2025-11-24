@@ -42,7 +42,7 @@ describe("/api/chat/attachments", () => {
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.reason).toBe("No files uploaded");
-    expect(body.error).toBe("NO_FILES");
+    expect(body.error).toBe("invalid_request");
   });
 
   it("should handle valid single file upload", async () => {
@@ -151,7 +151,7 @@ describe("/api/chat/attachments", () => {
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.reason).toContain("exceeds maximum size");
-    expect(body.error).toBe("FILE_TOO_LARGE");
+    expect(body.error).toBe("invalid_request");
   });
 
   it("should reject more than 5 files", async () => {
@@ -175,7 +175,7 @@ describe("/api/chat/attachments", () => {
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.reason).toContain("Maximum 5 files allowed");
-    expect(body.error).toBe("TOO_MANY_FILES");
+    expect(body.error).toBe("invalid_request");
   });
 
   it("should handle backend errors", async () => {

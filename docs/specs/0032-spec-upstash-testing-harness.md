@@ -100,6 +100,15 @@ Define a DRY, deterministic testing harness for all Upstash integrations (Redis,
 3. Add smoke suite and gated CI job (nightly or pre-release).
 4. Update docs and CHANGELOG; remove duplicated mocks.
 
+## Progress
+
+- [x] Shared in-memory stubs for `@upstash/redis` and `@upstash/ratelimit` with reset helpers.
+- [x] Centralized MSW handlers for Upstash REST backed by the shared store.
+- [x] DRY cache mocks applied to repeated suites (flights, travel-advisory, service-payment).
+- [x] Emulator harness stub and integration-tier script (`test:upstash:int`).
+- [x] Gated live smoke suite (`test:upstash:smoke`).
+- [x] Documentation updates and CHANGELOG entry; CI wiring pending.
+
 ## Risks & Mitigations
 
 - **Emulator drift vs Upstash:** Pin emulator versions; add periodic smoke tests to detect drift.

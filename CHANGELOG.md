@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Document Supabase memory orchestrator architecture and implementation plan (ADR-0042, SPEC-0026, database/memory prompt).
 - Add Next.js 16 trip domain API routes (`/api/trips`, `/api/trips/suggestions`, `/api/itineraries`, `/api/dashboard`) backed by Supabase SSR, Zod v4 schemas, unified `withApiGuards` auth/rate limiting, and AI SDK v6 structured trip suggestions.
 - Add `src/lib/ai/tool-factory.ts` with typed telemetry/cache/rate-limit guardrails plus coverage in `src/lib/ai/tool-factory.test.ts`, establishing a single `createAiTool` entrypoint for all tools.
+- Upstash testing harness: shared Redis/ratelimit stubs, MSW handler updates, smoke-test scaffold, and ADR-0054 / SPEC-0032 documenting the tiered strategy.
+- Destination search implemented against Google Places Text Search with debounced queries, normalized limits, and shared results store; updated destination search form to use the new hook.
+- Activities search page now uses the real activity search hook, shows loading/error states, and opens booking targets via `openActivityBooking`.
+- Security dashboard and MFA flows: added security dashboard UI plus MFA setup/verification and backup-code components, along with realtime connection status monitor.
 
 ### Changed
 
