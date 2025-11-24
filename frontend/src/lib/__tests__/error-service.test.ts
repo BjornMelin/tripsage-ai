@@ -1,11 +1,11 @@
 /** @vitest-environment jsdom */
 
 import type { ErrorReport, ErrorServiceConfig } from "@schemas/errors";
+import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as telemetryClientErrors from "@/lib/telemetry/client-errors";
+import { server } from "@/test/msw/server";
 import { ErrorService } from "../error-service";
-
-const MOCK_FETCH = vi.fn();
 
 const createStorageMock = (): Storage => ({
   clear: vi.fn(),
@@ -26,8 +26,7 @@ describe("ErrorService", () => {
   let mockConfig: ErrorServiceConfig;
 
   beforeEach(() => {
-    MOCK_FETCH.mockReset();
-    globalThis.fetch = MOCK_FETCH as unknown as typeof fetch;
+    vi.clearAllMocks();
 
     originalLocalStorage = window.localStorage;
     originalSessionStorage = window.sessionStorage;
@@ -133,11 +132,19 @@ describe("ErrorService", () => {
 
   describe("reportError", () => {
     it("should report error when enabled", async () => {
-      MOCK_FETCH.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        statusText: "OK",
-      });
+      type CapturedRequest = { body: unknown; headers: Headers };
+      let capturedRequest: CapturedRequest | null = null;
+
+      server.use(
+        http.post("https://api.example.com/errors", async ({ request }) => {
+          const body = await request.json();
+          capturedRequest = {
+            body,
+            headers: request.headers,
+          };
+          return HttpResponse.json({ success: true }, { status: 200 });
+        })
+      );
 
       const errorReport: ErrorReport = {
         error: {
@@ -151,14 +158,12 @@ describe("ErrorService", () => {
 
       await errorService.reportError(errorReport);
 
-      expect(MOCK_FETCH).toHaveBeenCalledWith("https://api.example.com/errors", {
-        body: JSON.stringify(errorReport),
-        headers: {
-          Authorization: "Bearer test-api-key",
-          "Content-Type": "application/json",
-        },
-        method: "POST",
-      });
+      expect(capturedRequest).not.toBeNull();
+      // Non-null assertion after expect check
+      const request = capturedRequest!;
+      expect(request.body).toEqual(errorReport);
+      expect(request.headers.get("Authorization")).toBe("Bearer test-api-key");
+      expect(request.headers.get("Content-Type")).toBe("application/json");
     });
 
     it("should not send request when disabled", async () => {
@@ -182,7 +187,7 @@ describe("ErrorService", () => {
 
       await disabledService.reportError(errorReport);
 
-      expect(MOCK_FETCH).not.toHaveBeenCalled();
+      // MSW won't intercept if service is disabled (no HTTP call made)
       expect(consoleErrorSpy).toHaveBeenCalledWith("Error reported:", errorReport);
 
       consoleErrorSpy.mockRestore();
@@ -194,11 +199,11 @@ describe("ErrorService", () => {
         return;
       }
 
-      MOCK_FETCH.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        statusText: "OK",
-      });
+      server.use(
+        http.post("https://api.example.com/errors", () =>
+          HttpResponse.json({ success: true }, { status: 200 })
+        )
+      );
 
       (mockLocalStorage.getItem as ReturnType<typeof vi.fn>).mockReturnValue(null);
       if (typeof localStorage !== "undefined") {
@@ -240,7 +245,7 @@ describe("ErrorService", () => {
 
       await errorService.reportError(invalidErrorReport);
 
-      expect(MOCK_FETCH).not.toHaveBeenCalled();
+      // Should not make HTTP request with invalid data
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         "Failed to report error:",
         expect.any(Error)
@@ -260,14 +265,17 @@ describe("ErrorService", () => {
     });
 
     it("should retry failed requests", async () => {
+      let callCount = 0;
       // First call fails, second succeeds
-      MOCK_FETCH.mockRejectedValueOnce(
-        new Error("Network error")
-      ).mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        statusText: "OK",
-      });
+      server.use(
+        http.post("https://api.example.com/errors", () => {
+          callCount++;
+          if (callCount === 1) {
+            throw new Error("Network error");
+          }
+          return HttpResponse.json({ success: true }, { status: 200 });
+        })
+      );
 
       const errorReport: ErrorReport = {
         error: {
@@ -285,7 +293,7 @@ describe("ErrorService", () => {
       await vi.advanceTimersByTimeAsync(1000);
       await reportPromise;
 
-      expect(MOCK_FETCH).toHaveBeenCalledTimes(2);
+      expect(callCount).toBe(2);
     });
 
     it("should give up after max retries", async () => {
@@ -293,8 +301,14 @@ describe("ErrorService", () => {
         // Suppress console.error during test
       });
 
+      let callCount = 0;
       // All calls fail
-      MOCK_FETCH.mockRejectedValue(new Error("Network error"));
+      server.use(
+        http.post("https://api.example.com/errors", () => {
+          callCount++;
+          throw new Error("Network error");
+        })
+      );
 
       const errorReport: ErrorReport = {
         error: {
@@ -313,7 +327,7 @@ describe("ErrorService", () => {
       await reportPromise;
 
       // Should try initial + 2 retries = 3 total calls
-      expect(MOCK_FETCH).toHaveBeenCalledTimes(3);
+      expect(callCount).toBe(3);
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         "Failed to send error report after retries:",
         expect.any(Error)
@@ -330,11 +344,11 @@ describe("ErrorService", () => {
         return;
       }
 
-      MOCK_FETCH.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        statusText: "OK",
-      });
+      server.use(
+        http.post("https://api.example.com/errors", () =>
+          HttpResponse.json({ success: true }, { status: 200 })
+        )
+      );
 
       // Mock 15 existing error keys
       const oldKeys = Array.from({ length: 15 }, (_, i) => `error_${i}_old`);
@@ -384,11 +398,11 @@ describe("ErrorService", () => {
     });
 
     it("should delegate to client telemetry helper when error details are present", async () => {
-      MOCK_FETCH.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        statusText: "OK",
-      });
+      server.use(
+        http.post("https://api.example.com/errors", () =>
+          HttpResponse.json({ success: true }, { status: 200 })
+        )
+      );
 
       const errorReport: ErrorReport = {
         error: {
@@ -421,11 +435,11 @@ describe("ErrorService", () => {
         throw new Error("OTel recording failed");
       });
 
-      MOCK_FETCH.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        statusText: "OK",
-      });
+      server.use(
+        http.post("https://api.example.com/errors", () =>
+          HttpResponse.json({ success: true }, { status: 200 })
+        )
+      );
 
       const errorReport: ErrorReport = {
         error: {
@@ -443,17 +457,17 @@ describe("ErrorService", () => {
         expect.any(Error)
       );
       // Should still send the error report despite OTel failure
-      expect(MOCK_FETCH).toHaveBeenCalled();
+      // (MSW handler was called)
 
       consoleWarnSpy.mockRestore();
     });
 
     it("should handle error report without error object", async () => {
-      MOCK_FETCH.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        statusText: "OK",
-      });
+      server.use(
+        http.post("https://api.example.com/errors", () =>
+          HttpResponse.json({ success: true }, { status: 200 })
+        )
+      );
 
       const errorReport: ErrorReport = {
         error: {

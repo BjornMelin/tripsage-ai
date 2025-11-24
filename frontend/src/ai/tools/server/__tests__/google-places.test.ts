@@ -1,8 +1,10 @@
 /** @vitest-environment node */
 
+import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
 import { cacheLatLng, getCachedLatLng } from "@/lib/google/caching";
+import { server } from "@/test/msw/server";
 
 const mockContext = {
   messages: [],
@@ -93,19 +95,20 @@ describe("lookupPoiContext", () => {
   });
 
   it("handles coordinates input", async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      json: async () => ({
-        places: [
-          {
-            displayName: { text: "Test POI" },
-            id: "ChIJtest123",
-            location: { latitude: 35.6895, longitude: 139.6917 },
-            types: ["tourist_attraction"],
-          },
-        ],
-      }),
-      ok: true,
-    });
+    server.use(
+      http.post("https://places.googleapis.com/v1/places:searchNearby", () =>
+        HttpResponse.json({
+          places: [
+            {
+              displayName: { text: "Test POI" },
+              id: "ChIJtest123",
+              location: { latitude: 35.6895, longitude: 139.6917 },
+              types: ["tourist_attraction"],
+            },
+          ],
+        })
+      )
+    );
 
     const lookupPoiContext = await loadTool();
     const exec = lookupPoiContext.execute as
