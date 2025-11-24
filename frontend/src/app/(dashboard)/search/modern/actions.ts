@@ -134,7 +134,7 @@ export async function searchHotelsAction(
       },
       availability: {
         flexible: true,
-        roomsLeft: Number((firstRoom as { roomsLeft?: number }).roomsLeft ?? 3),
+        roomsLeft: firstRoom?.roomsLeft ?? 3,
         urgency: "medium",
       },
       category: "hotel",
