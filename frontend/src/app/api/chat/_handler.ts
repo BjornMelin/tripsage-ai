@@ -267,20 +267,12 @@ export async function handleChatNonStream(
 
   // Best-effort persistence for assistant message metadata
   if (sessionId) {
-    try {
-      await persistMemoryTurn({
-        logger: deps.logger,
-        sessionId,
-        turn: createTextMemoryTurn("assistant", result.text ?? ""),
-        userId: user.id,
-      });
-    } catch (error) {
-      deps.logger?.warn?.("chat_non_stream:persist_memory_turn_failed", {
-        error: error instanceof Error ? error.message : String(error),
-        sessionId,
-        userId: user.id,
-      });
-    }
+    await persistMemoryTurn({
+      logger: deps.logger,
+      sessionId,
+      turn: createTextMemoryTurn("assistant", result.text ?? ""),
+      userId: user.id,
+    });
   }
 
   if (sessionId) {

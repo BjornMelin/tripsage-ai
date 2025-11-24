@@ -216,6 +216,8 @@ describe("AccommodationsService end-to-end (Amadeus + Places + Stripe mocks)", (
   });
 
   it("invalid search parameters", async () => {
+    const caching = await import("@/lib/google/caching");
+    vi.mocked(caching.getCachedLatLng).mockResolvedValueOnce(null);
     const geocoding = await import("@/lib/google/places-geocoding");
     const geocodeSpy = vi
       .spyOn(geocoding, "resolveLocationToLatLng")

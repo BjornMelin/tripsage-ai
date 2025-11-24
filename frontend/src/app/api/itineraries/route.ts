@@ -79,13 +79,6 @@ async function createItineraryItem(
         status: 500,
       });
     }
-    if (!trip) {
-      return createUnifiedErrorResponse({
-        error: "forbidden",
-        reason: "Trip not found for user",
-        status: 403,
-      });
-    }
   }
 
   const insertPayload = mapCreatePayloadToInsert(validation.data, userId);
