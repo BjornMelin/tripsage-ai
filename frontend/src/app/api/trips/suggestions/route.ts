@@ -2,8 +2,6 @@
  * @fileoverview AI-generated trip suggestions API route handler.
  */
 
-"use server";
-
 import "server-only";
 
 import { resolveProvider } from "@ai/models/registry";

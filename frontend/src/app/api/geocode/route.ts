@@ -10,9 +10,9 @@ import "server-only";
 import { type GeocodeRequest, geocodeRequestSchema } from "@schemas/api";
 import { type NextRequest, NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
+import { errorResponse } from "@/lib/api/route-helpers";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
 import { cacheLatLng, getCachedLatLng } from "@/lib/google/caching";
-import { errorResponse } from "@/lib/next/route-helpers";
 
 /**
  * POST /api/geocode

@@ -52,9 +52,9 @@ const RATE_LIMIT_FACTORY = vi.hoisted(() =>
   })
 );
 
-vi.mock("@/lib/next/route-helpers", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/next/route-helpers")>(
-    "@/lib/next/route-helpers"
+vi.mock("@/lib/api/route-helpers", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/api/route-helpers")>(
+    "@/lib/api/route-helpers"
   );
   return {
     ...actual,

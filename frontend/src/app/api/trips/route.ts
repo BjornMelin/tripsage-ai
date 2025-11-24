@@ -2,8 +2,6 @@
  * @fileoverview Trip CRUD API route handlers.
  */
 
-"use server";
-
 import "server-only";
 
 import type { TripsInsert, TripsRow } from "@schemas/supabase";
@@ -13,7 +11,7 @@ import { tripCreateSchema, tripFiltersSchema } from "@schemas/trips";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { errorResponse } from "@/lib/next/route-helpers";
+import { errorResponse } from "@/lib/api/route-helpers";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 
 /**

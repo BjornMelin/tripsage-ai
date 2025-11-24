@@ -240,7 +240,8 @@ describe("POST /api/jobs/memory-sync", () => {
     const result = await response.json();
 
     expect(response.status).toBe(400);
-    expect(result.error).toBe("invalid job payload");
+    expect(result.error).toBe("invalid_request");
+    expect(result.reason).toBe("Request validation failed");
   });
 
   it("handles duplicate jobs gracefully", async () => {

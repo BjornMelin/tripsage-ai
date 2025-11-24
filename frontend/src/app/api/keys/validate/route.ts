@@ -17,8 +17,8 @@ import { createGateway } from "ai";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
+import { parseJsonBody } from "@/lib/api/route-helpers";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
-import { parseJsonBody } from "@/lib/next/route-helpers";
 import { recordTelemetryEvent } from "@/lib/telemetry/span";
 
 type ValidateResult = { isValid: boolean; reason?: string };
