@@ -27,7 +27,7 @@ export const apiRouteHandlers = [
   }),
 
   // POST /api/activities/search - Activity search endpoint (default no-op)
-  http.post("/api/activities/search", async () => {
+  http.post("/api/activities/search", () => {
     return HttpResponse.json({
       activities: [],
       metadata: {
@@ -39,7 +39,7 @@ export const apiRouteHandlers = [
       },
     });
   }),
-  http.post(`${BASE_URL}/api/activities/search`, async () => {
+  http.post(`${BASE_URL}/api/activities/search`, () => {
     return HttpResponse.json({
       activities: [],
       metadata: {
