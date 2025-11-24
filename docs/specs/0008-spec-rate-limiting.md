@@ -6,10 +6,9 @@
 
 ## Objective
 
-Define and implement a simple, environment-gated rate limiting approach for:
+Define and implement a simple, environment-gated rate limiting approach for Next.js Route Handlers using `@upstash/ratelimit` + `@upstash/redis`.
 
-- Frontend Next.js Route Handlers (attachments upload): `@upstash/ratelimit` + `@upstash/redis`.
-- Backend FastAPI routes: SlowAPI (limits) with async Redis storage when available.
+**Note:** Python FastAPI backend has been completely removed. All rate limiting now occurs in Next.js route handlers via the `withApiGuards` factory pattern.
 
 ## Frontend (Next.js) — Upstash Ratelimit
 
@@ -36,5 +35,8 @@ Define and implement a simple, environment-gated rate limiting approach for:
 
 ## Changelog
 
+- 1.1.0 (2025-11-24)
+  - Updated to reflect Next.js-only architecture (Python FastAPI backend removed).
+  - Clarified `withApiGuards` factory pattern usage.
 - 1.0.0 (2025-10-24)
   - Initial rate limiting spec covering Next.js handlers and FastAPI routes.
