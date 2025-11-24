@@ -60,6 +60,7 @@ architectural decision made along with its context and consequences.
 | [ADR-0046](adr-0046-otel-tracing-frontend.md) | OTEL Tracing for Next.js 16 Route Handlers | Proposed | 2025-11-20 |
 | [ADR-0047](adr-0047-runtime-policy-edge-vs-node.md) | Runtime Policy for AI SDK Routes (Edge vs Node) | Proposed | 2025-11-20 |
 | [ADR-0048](adr-0048-qstash-retries-and-idempotency.md) | QStash Retries and Idempotency for Webhooks/Tasks | Proposed | 2025-11-20 |
+| [ADR-0053](adr-0053-activity-search-google-places-integration.md) | Activity Search & Booking via Google Places API (Hybrid + Web Fallback) | Proposed | 2025-01-15 |
 
 ## Superseded ADRs
 
@@ -106,6 +107,8 @@ The following ADRs have been superseded by newer decisions:
 - ADR-0042: Supabase-Centric Memory Orchestrator
 - ADR-0044: AI SDK v6 Tool Registry and MCP Integration
 - ADR-0045: Flights DTOs in Frontend (Next.js 16 + Zod v4)
+- ADR-0050: Replace Expedia Rapid with Amadeus + Google Places + Stripe
+- ADR-0053: Activity Search & Booking via Google Places API (Hybrid + Web Fallback)
 
 ### Backend
 
