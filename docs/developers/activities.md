@@ -267,7 +267,7 @@ function ActivitySearchComponent() {
 **API Route Tests**: `frontend/src/app/api/activities/__tests__/route.test.ts`
 
 - Authentication and rate limiting
-- Request/response formats
+- Request-response formats
 - Error handling
 
 **Tool Tests**: `frontend/src/ai/tools/server/__tests__/activities.test.ts`

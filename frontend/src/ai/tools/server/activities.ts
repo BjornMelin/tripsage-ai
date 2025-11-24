@@ -100,12 +100,6 @@ export const getActivityDetails = createAiTool<
     "Get detailed information for a specific activity by Google Place ID. " +
     "Returns photos, ratings, descriptions, location, and other metadata.",
   execute: async (params) => {
-    if (!params.placeId?.trim()) {
-      throw createToolError(
-        TOOL_ERROR_CODES.invalidParams,
-        "placeId is required"
-      );
-    }
     try {
       const service = getActivitiesService();
       const activity = await service.details(params.placeId, {

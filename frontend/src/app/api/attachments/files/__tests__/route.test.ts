@@ -2,6 +2,7 @@
 
 import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { attachmentsBase } from "@/test/msw/handlers/attachments";
 import { server } from "@/test/msw/server";
 import {
   createMockNextRequest,
@@ -50,7 +51,7 @@ describe("/api/attachments/files", () => {
     vi.clearAllMocks();
     recordedHeaders = undefined;
     server.use(
-      http.get("http://localhost:8001/api/attachments/files", ({ request }) => {
+      http.get(`${attachmentsBase}/files`, ({ request }) => {
         recordedHeaders = request.headers;
         const url = new URL(request.url);
         expect(url.searchParams.get("limit")).toBe("10");

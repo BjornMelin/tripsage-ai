@@ -7,6 +7,7 @@ import { googlePlacesHandlers } from "@/test/msw/handlers/google-places";
 import { stripeHandlers } from "@/test/msw/handlers/stripe";
 import { composeHandlers } from "@/test/msw/handlers/utils";
 import { server } from "@/test/msw/server";
+import { createMockSupabase } from "@/test/supabase-mock-factory";
 
 const cache = new Map<string, unknown>();
 
@@ -104,25 +105,10 @@ const createService = (supabaseInserts: unknown[]) =>
     cacheTtlSeconds: 60,
     provider: new AmadeusProviderAdapter(),
     rateLimiter: undefined,
-    supabase: async () =>
-      ({
-        from: () => ({
-          insert: (payload: unknown) => {
-            supabaseInserts.push(payload);
-            return Promise.resolve({ error: null });
-          },
-          select: () => ({
-            eq: () => ({
-              eq: () => ({
-                single: async () => ({
-                  data: { id: 11, user_id: "user-1" },
-                  error: null,
-                }),
-              }),
-            }),
-          }),
-        }),
-      }) as unknown as import("@/lib/supabase/server").TypedServerSupabase,
+    supabase: createMockSupabase({
+      insertCapture: supabaseInserts,
+      selectResult: { data: { id: 11, user_id: "user-1" }, error: null },
+    }),
   });
 
 describe("AccommodationsService end-to-end (Amadeus + Places + Stripe mocks)", () => {
@@ -227,5 +213,121 @@ describe("AccommodationsService end-to-end (Amadeus + Places + Stripe mocks)", (
       provider_booking_id: "BOOK-1",
       stripe_payment_intent_id: "pi_mock",
     });
+  });
+
+  it("invalid search parameters", async () => {
+    const geocoding = await import("@/lib/google/places-geocoding");
+    const geocodeSpy = vi
+      .spyOn(geocoding, "resolveLocationToLatLng")
+      .mockRejectedValue(new Error("invalid location"));
+
+    const service = createService([]);
+
+    await expect(
+      service.search({
+        checkin: "",
+        checkout: "",
+        guests: 0,
+        location: "",
+      } as unknown as Parameters<typeof service.search>[0])
+    ).rejects.toThrow(/location_not_found|invalid location/);
+
+    geocodeSpy.mockRestore();
+  });
+
+  it("Amadeus API failure", async () => {
+    const failingProvider = {
+      buildBookingPayload: vi.fn(),
+      checkAvailability: vi.fn(),
+      getDetails: vi.fn(),
+      name: "amadeus-fail",
+      search: vi.fn(async () => ({ error: new Error("upstream failure"), ok: false })),
+    };
+
+    const service = new AccommodationsService({
+      cacheTtlSeconds: 60,
+      provider: failingProvider as unknown as AmadeusProviderAdapter,
+      rateLimiter: undefined,
+      supabase: async () =>
+        ({
+          from: () => ({
+            insert: () => ({ error: null }),
+            select: () => ({
+              eq: () => ({
+                eq: () => ({ single: async () => ({ data: null, error: null }) }),
+              }),
+            }),
+          }),
+        }) as unknown as import("@/lib/supabase/server").TypedServerSupabase,
+    });
+
+    await expect(
+      service.search({
+        checkin: "2025-12-01",
+        checkout: "2025-12-03",
+        guests: 2,
+        location: "Paris",
+      })
+    ).rejects.toThrow(/upstream failure/);
+  });
+
+  it("missing place details", async () => {
+    const enrichment = await import("@/lib/google/places-enrichment");
+    const enrichSpy = vi
+      .spyOn(enrichment, "enrichHotelListingWithPlaces")
+      .mockResolvedValue({ id: "H1" } as never);
+
+    const providerStub = {
+      buildBookingPayload: vi.fn(),
+      checkAvailability: vi.fn(),
+      getDetails: vi.fn(async () => ({
+        ok: true,
+        value: { listing: { id: "H1" } },
+      })),
+      name: "amadeus",
+      search: vi.fn(),
+    };
+
+    const service = new AccommodationsService({
+      cacheTtlSeconds: 60,
+      provider: providerStub as unknown as AmadeusProviderAdapter,
+      rateLimiter: undefined,
+      supabase: async () =>
+        ({
+          from: () => ({
+            insert: () => ({ error: null }),
+            select: () => ({
+              eq: () => ({
+                eq: () => ({ single: async () => ({ data: null, error: null }) }),
+              }),
+            }),
+          }),
+        }) as unknown as import("@/lib/supabase/server").TypedServerSupabase,
+    });
+
+    const result = await service.details({ listingId: "H1" });
+    expect((result.listing as { place?: unknown }).place).toBeUndefined();
+
+    enrichSpy.mockRestore();
+  });
+
+  it("cache error bubbles up", async () => {
+    const cache = await import("@/lib/cache/upstash");
+    const setSpy = vi
+      .spyOn(cache, "setCachedJson")
+      .mockRejectedValue(new Error("cache unavailable"));
+
+    const service = createService([]);
+
+    await expect(
+      service.search({
+        checkin: "2025-12-01",
+        checkout: "2025-12-03",
+        guests: 2,
+        location: "Paris",
+      })
+    ).rejects.toThrow(/cache unavailable/);
+
+    setSpy.mockRestore();
   });
 });

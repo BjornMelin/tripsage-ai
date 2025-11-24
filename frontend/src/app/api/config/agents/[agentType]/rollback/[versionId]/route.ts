@@ -16,22 +16,12 @@ import { z } from "zod";
 import { createUnifiedErrorResponse } from "@/lib/api/error-response";
 import { withApiGuards } from "@/lib/api/factory";
 import { bumpTag } from "@/lib/cache/tags";
+import { ensureAdmin, scopeSchema } from "@/lib/config/helpers";
 import { nowIso, secureId } from "@/lib/security/random";
-import { createServerSupabase } from "@/lib/supabase/server";
 import { emitOperationalAlert } from "@/lib/telemetry/alerts";
 import { recordTelemetryEvent } from "@/lib/telemetry/span";
 
 const uuidSchema = z.string().uuid();
-const scopeSchema = z.string().min(1).default("global");
-
-function ensureAdmin(
-  user: unknown
-): asserts user is { id: string; app_metadata?: Record<string, unknown> } {
-  const candidate = user as { app_metadata?: Record<string, unknown> } | null;
-  if (!(candidate?.app_metadata && candidate.app_metadata.is_admin === true)) {
-    throw Object.assign(new Error("forbidden"), { status: 403 });
-  }
-}
 
 function buildRollbackConfig(existing: AgentConfig, scope: string): AgentConfig {
   const now = nowIso();
@@ -48,7 +38,7 @@ export const POST = withApiGuards({
   auth: true,
   rateLimit: "config:agents:rollback",
   telemetry: "config.agents.rollback",
-})(async (req: NextRequest, { user }, _data, routeContext) => {
+})(async (req: NextRequest, { user, supabase }, _data, routeContext) => {
   try {
     ensureAdmin(user);
     const url = new URL(req.url);
@@ -65,7 +55,6 @@ export const POST = withApiGuards({
       });
     }
 
-    const supabase = await createServerSupabase();
     const { data: versionRow, error: versionError } = await supabase
       .from("agent_config_versions")
       .select("config")

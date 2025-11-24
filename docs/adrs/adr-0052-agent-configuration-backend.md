@@ -51,7 +51,10 @@ Implement a **Supabase-backed agent configuration service** with:
    - `agent_config_versions` table storing an append-only version log, including
      diffable payload, created_by, created_at, and optional description.
    - Config payloads are validated with `configurationAgentConfigSchema` at
-     write time and stored as JSONB.:contentReference[oaicite:86]{index=86}  
+     write time and stored as JSONB.:contentReference[oaicite:86]{index=86}
+   - Both tables must have RLS policies enforcing admin-only or
+     service-role-only read/write access to ensure database-level protections
+     in addition to application guards.  
 
 2. **API surface (`frontend/src/app/api/config/agents/**`):**
    - `GET /api/config/agents/:agentType` → returns the effective active config

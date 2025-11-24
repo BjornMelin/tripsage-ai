@@ -64,9 +64,23 @@ async function createItineraryItem(
       .eq("id", validation.data.tripId)
       .eq("user_id", userId)
       .single();
-    if (tripError || !trip) {
+    if (tripError) {
+      if (tripError.code === "PGRST116") {
+        return createUnifiedErrorResponse({
+          error: "forbidden",
+          reason: "Trip not found for user",
+          status: 403,
+        });
+      }
       return createUnifiedErrorResponse({
         err: tripError,
+        error: "internal",
+        reason: "Failed to verify trip ownership",
+        status: 500,
+      });
+    }
+    if (!trip) {
+      return createUnifiedErrorResponse({
         error: "forbidden",
         reason: "Trip not found for user",
         status: 403,

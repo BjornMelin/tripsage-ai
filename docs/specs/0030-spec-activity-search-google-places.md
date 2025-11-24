@@ -16,14 +16,14 @@ Implement an end-to-end **Activity Search & Booking** feature using a **hybrid p
 - **Primary deterministic layer**: Google Places API (New) Text Search + Place Details for activity discovery and metadata (name, location, rating, photos, price level).  
 - **Guarded AI/web fallback**: existing `web_search` tool (Firecrawl + AI SDK v6) when Places is insufficient (zero results / low coverage), returning clearly labeled `ai_fallback` suggestions.  
 - **Typed orchestration**: Activities service + AI SDK v6 tools (`searchActivities`, `getActivityDetails`) + Next.js route handlers with `withApiGuards`.  
-- **Caching**: Supabase `search_activities` table as durable cache; no new Redis cache layer for MVP; Upstash Redis remains used for rate limiting.
+- **Caching**: Supabase `search_activities` table as durable cache for authenticated users only; anonymous searches are not cached; no new Redis cache layer for MVP; Upstash Redis remains used for rate limiting.
 
 ## 2. Goals
 
 - Enable users to search for activities (tours, experiences, attractions) by destination, category, date, and filters
 - Provide activity details (photos, ratings, descriptions, location) via **Google Places API (New)** with field masks and ToS-compliant data usage
 - Integrate activity search into AI chat via `searchActivities` tool and existing AI SDK v6 chat/agent routes
-- Cache structured search results in Supabase `search_activities` (durable JSONB cache with RLS) and rely on existing Upstash Redis usage only for **rate limiting**
+- Cache structured search results in Supabase `search_activities` (durable JSONB cache with RLS) for authenticated users only; anonymous searches bypass caching; rely on existing Upstash Redis usage only for **rate limiting**
 - Support activity booking flow (initially via external links; Stripe integration deferred; **no partner/approval-based booking APIs**)
 - Maintain consistency with accommodations/flights patterns and reuse shared infrastructure (tool factory, route factories, Supabase SSR, OTEL)
 
@@ -51,17 +51,17 @@ Implement an end-to-end **Activity Search & Booking** feature using a **hybrid p
 3. Frontend calls `POST /api/activities/search` with search params
 4. Backend:
    - Validates input with `activitySearchParamsSchema`
-   - Computes a deterministic `query_hash` and checks Supabase `search_activities` for a matching row (`user_id`, `destination`, `activity_type`, `query_hash`, `expires_at > now()`)
-   - If cache hit: returns cached `results` with `metadata.cached = true`, `metadata.source = "googleplaces"` or `"ai_fallback"`
-   - If cache miss:
+   - **For authenticated users only**: Computes a deterministic `query_hash` and checks Supabase `search_activities` for a matching row (`user_id`, `destination`, `activity_type`, `query_hash`, `expires_at > now()`)
+   - **For authenticated users**: If cache hit, returns cached `results` with `metadata.cached = true`, `metadata.source = "googleplaces"` or `"ai_fallback"`
+   - If cache miss (or anonymous user):
      - Calls Google Places API (New) Text Search with activity-specific queries and **field masks**:
        - Search field mask: `places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.photos.name,places.types,places.priceLevel`
      - Maps Google Places results into `Activity` schema (see §6) with approximate pricing (`priceLevel` → `price` index 0–4)
-     - Persists results into `search_activities` with `source = 'googleplaces'` and appropriate TTL (e.g. 24h)
+     - **For authenticated users only**: Persists results into `search_activities` with `source = 'googleplaces'` and appropriate TTL (e.g. 24h). Anonymous searches are not cached.
      - If Places returns `ZERO_RESULTS` or clearly underperforms (e.g. very low result count in a popular destination), triggers **AI/web fallback**:
        - Invokes `web_search` tool (`frontend/src/ai/tools/server/web-search.ts`) with a query like `"things to do in {destination}"`.
        - Normalizes AI/web results into a **secondary suggestions list** shaped as `Activity[]` where possible, flagged as `source = 'ai_fallback'`.
-       - Persists fallback results in `search_activities` with shorter TTL (e.g. 6h) and `source = 'ai_fallback'`.
+       - **For authenticated users only**: Persists fallback results in `search_activities` with shorter TTL (e.g. 6h) and `source = 'ai_fallback'`. Anonymous searches are not cached.
    - Returns combined result:
      - Primary `googleplaces` activities first, then `ai_fallback` suggestions (if any), with `metadata` describing sources.
 5. UI displays activities in `ActivityCard` components
@@ -73,11 +73,11 @@ Implement an end-to-end **Activity Search & Booking** feature using a **hybrid p
 2. Frontend calls `GET /api/activities/[id]` (where `id` is Google Place ID)
 3. Backend:
    - Validates Place ID
-   - Checks cache for details (either in `search_activities` metadata or a dedicated details cache, e.g. `search_activities` row keyed by `activity_id`)
-   - If cache miss: Calls Google Places API (New) Place Details with strict field mask:
+   - **For authenticated users only**: Checks cache for details (either in `search_activities` metadata or a dedicated details cache, e.g. `search_activities` row keyed by `activity_id`)
+   - If cache miss (or anonymous user): Calls Google Places API (New) Place Details with strict field mask:
      - Details field mask: `id,displayName,formattedAddress,location,rating,userRatingCount,photos,types,editorialSummary,regularOpeningHours,priceLevel`
    - Enriches with photos, reviews, opening hours
-   - Caches details (TTL: 7 days)
+   - **For authenticated users only**: Caches details (TTL: 7 days). Anonymous requests are not cached.
    - Returns `Activity` object
 4. UI displays detailed activity view
 
@@ -329,7 +329,7 @@ export interface ActivitiesService {
 ### 9.3 Metrics
 
 - Search latency (p50, p95, p99)
-- Cache hit rate (per-provider: `googleplaces`, `ai_fallback`)
+- Cache hit rate (per-provider: `googleplaces`, `ai_fallback`) - metrics only apply to authenticated users
 - Google Places API error rate
 - Search result count distribution
 - Fallback invocation rate (% of requests requiring `ai_fallback`)
