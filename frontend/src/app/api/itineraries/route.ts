@@ -2,8 +2,6 @@
  * @fileoverview Itinerary items CRUD API route handlers.
  */
 
-"use server";
-
 import "server-only";
 
 import type { Json } from "@schemas/supabase";
@@ -11,9 +9,8 @@ import type { ItineraryItemCreateInput } from "@schemas/trips";
 import { itineraryItemCreateSchema } from "@schemas/trips";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { createUnifiedErrorResponse } from "@/lib/api/error-response";
 import { withApiGuards } from "@/lib/api/factory";
-import { validateSchema } from "@/lib/next/route-helpers";
+import { errorResponse, validateSchema } from "@/lib/api/route-helpers";
 import type { Database } from "@/lib/supabase/database.types";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 
@@ -66,13 +63,13 @@ async function createItineraryItem(
       .single();
     if (tripError) {
       if (tripError.code === "PGRST116") {
-        return createUnifiedErrorResponse({
+        return errorResponse({
           error: "forbidden",
           reason: "Trip not found for user",
           status: 403,
         });
       }
-      return createUnifiedErrorResponse({
+      return errorResponse({
         err: tripError,
         error: "internal",
         reason: "Failed to verify trip ownership",
@@ -89,7 +86,7 @@ async function createItineraryItem(
     .select("*")
     .single();
   if (error || !data) {
-    return createUnifiedErrorResponse({
+    return errorResponse({
       err: error,
       error: "internal",
       reason: "Failed to create itinerary item",
@@ -115,7 +112,7 @@ async function listItineraryItems(
     .select("id")
     .eq("user_id", userId);
   if (tripsError) {
-    return createUnifiedErrorResponse({
+    return errorResponse({
       err: tripsError,
       error: "internal",
       reason: "Failed to load trips",
@@ -137,7 +134,7 @@ async function listItineraryItems(
 
   const { data, error } = await query.order("start_time", { ascending: true });
   if (error) {
-    return createUnifiedErrorResponse({
+    return errorResponse({
       err: error,
       error: "internal",
       reason: "Failed to load itinerary items",
@@ -158,14 +155,8 @@ export const GET = withApiGuards({
   rateLimit: "itineraries:list",
   telemetry: "itineraries.list",
 })(async (req, { supabase, user }) => {
-  const userId = user?.id;
-  if (!userId) {
-    return createUnifiedErrorResponse({
-      error: "unauthorized",
-      reason: "Authentication required",
-      status: 401,
-    });
-  }
+  // user is guaranteed by auth: true
+  const userId = user?.id ?? "";
   return await listItineraryItems(supabase, userId, req);
 });
 
@@ -179,14 +170,7 @@ export const POST = withApiGuards({
   rateLimit: "itineraries:create",
   telemetry: "itineraries.create",
 })(async (req, { supabase, user }) => {
-  const userId = user?.id;
-  if (!userId) {
-    return createUnifiedErrorResponse({
-      error: "unauthorized",
-      reason: "Authentication required",
-      status: 401,
-    });
-  }
-
+  // user is guaranteed by auth: true
+  const userId = user?.id ?? "";
   return await createItineraryItem(supabase, userId, req);
 });

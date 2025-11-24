@@ -724,22 +724,22 @@ export const safeValidateApiResponse = <T>(schema: z.ZodSchema<T>, data: unknown
 
 /** Maximum file size constants (in bytes). */
 export const FILE_SIZE_LIMITS = {
+  /** 50MB - Large attachments */
+  LARGE: 50 * 1024 * 1024,
   /** 5MB - Profile pictures, small attachments */
   SMALL: 5 * 1024 * 1024,
   /** 10MB - Standard file uploads */
   STANDARD: 10 * 1024 * 1024,
-  /** 50MB - Large attachments */
-  LARGE: 50 * 1024 * 1024,
 } as const;
 
 /** Maximum number of files constants. */
 export const FILE_COUNT_LIMITS = {
+  /** Large batch upload */
+  LARGE: 10,
   /** Single file upload */
   SINGLE: 1,
   /** Standard batch upload */
   STANDARD: 5,
-  /** Large batch upload */
-  LARGE: 10,
 } as const;
 
 /**
@@ -747,12 +747,12 @@ export const FILE_COUNT_LIMITS = {
  * Validates file size limits, count limits, and allowed MIME types.
  */
 export const multipartValidationOptionsSchema = z.strictObject({
-  /** Maximum file size in bytes */
-  maxSize: z.number().int().positive(),
-  /** Maximum number of files allowed */
-  maxFiles: z.number().int().positive(),
   /** Allowed MIME types (optional) */
   allowedTypes: z.array(z.string().min(1)).optional(),
+  /** Maximum number of files allowed */
+  maxFiles: z.number().int().positive(),
+  /** Maximum file size in bytes */
+  maxSize: z.number().int().positive(),
 });
 
 /** TypeScript type for multipart validation options. */

@@ -151,7 +151,8 @@ describe("POST /api/jobs/notify-collaborators", () => {
     const res = await POST(makeRequest({}));
     expect(res.status).toBe(400);
     const json = await res.json();
-    expect(json.error).toBe("invalid job payload");
+    expect(json.error).toBe("invalid_request");
+    expect(json.reason).toBe("Request validation failed");
   });
 
   it("marks duplicates when idempotency guard fails", async () => {

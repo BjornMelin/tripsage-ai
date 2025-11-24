@@ -2,8 +2,6 @@
  * @fileoverview Dashboard metrics API route handler.
  */
 
-"use server";
-
 import "server-only";
 
 import type { NextRequest } from "next/server";

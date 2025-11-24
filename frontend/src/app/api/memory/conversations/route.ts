@@ -13,8 +13,8 @@ import {
   memoryAddConversationSchema,
 } from "@schemas/memory";
 import { type NextRequest, NextResponse } from "next/server";
-import { createUnifiedErrorResponse } from "@/lib/api/error-response";
 import { withApiGuards } from "@/lib/api/factory";
+import { errorResponse } from "@/lib/api/route-helpers";
 
 /**
  * POST /api/memory/conversations
@@ -26,15 +26,7 @@ export const POST = withApiGuards({
   rateLimit: "memory:conversations",
   schema: memoryAddConversationSchema,
   telemetry: "memory.conversations",
-})(async (_req: NextRequest, { user }, validated: MemoryAddConversationRequest) => {
-  if (!user?.id) {
-    return createUnifiedErrorResponse({
-      error: "unauthorized",
-      reason: "Authentication required",
-      status: 401,
-    });
-  }
-
+})(async (_req: NextRequest, _ctx, validated: MemoryAddConversationRequest) => {
   const { category, content } = validated;
 
   try {
@@ -67,7 +59,7 @@ export const POST = withApiGuards({
 
     throw new Error("unexpected_tool_result");
   } catch (error) {
-    return createUnifiedErrorResponse({
+    return errorResponse({
       err: error,
       error: "internal",
       reason: "Failed to add conversation memory",

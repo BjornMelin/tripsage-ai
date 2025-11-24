@@ -21,7 +21,7 @@ import {
   errorResponse,
   getTrustedRateLimitIdentifier,
   parseJsonBody,
-} from "@/lib/next/route-helpers";
+} from "@/lib/api/route-helpers";
 
 export const maxDuration = 60;
 
