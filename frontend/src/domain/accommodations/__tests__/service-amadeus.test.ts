@@ -2,7 +2,7 @@
 
 import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { buildUpstashCacheMock } from "@/test/mocks";
+import { buildUpstashCacheMock } from "@/test/mocks";
 import { server } from "@/test/msw/server";
 
 vi.mock("@/lib/env/server", () => ({
@@ -17,18 +17,15 @@ vi.mock("@/lib/google/caching", () => ({
   getCachedPlaceId: vi.fn().mockResolvedValue(null),
 }));
 
-const getUpstashCache = (): ReturnType<typeof buildUpstashCacheMock> =>
-  (globalThis as { __upstashCache?: ReturnType<typeof buildUpstashCacheMock> })
-    .__upstashCache as ReturnType<typeof buildUpstashCacheMock>;
-
-vi.mock("@/lib/cache/upstash", async () => {
-  const { buildUpstashCacheMock } = await import("@/test/mocks");
-  const cache = buildUpstashCacheMock();
-  (
-    globalThis as { __upstashCache?: ReturnType<typeof buildUpstashCacheMock> }
-  ).__upstashCache = cache;
-  return cache.module;
+let upstashCache: ReturnType<typeof buildUpstashCacheMock>;
+vi.mock("@/lib/cache/upstash", () => {
+  upstashCache = buildUpstashCacheMock();
+  return upstashCache.module;
 });
+vi.mock("@/lib/cache/tags", () => ({
+  bumpTag: vi.fn(async () => 1),
+  versionedKey: vi.fn(async (_tag: string, key: string) => `tag:v1:${key}`),
+}));
 
 import type { AccommodationProviderAdapter } from "@domain/accommodations/providers/types";
 import { AccommodationsService } from "@domain/accommodations/service";
@@ -37,7 +34,6 @@ import { getCachedLatLng } from "@/lib/google/caching";
 
 describe("AccommodationsService (Amadeus)", () => {
   beforeEach(() => {
-    getUpstashCache().reset();
     server.use(
       http.post("https://places.googleapis.com/v1/places:searchText", () =>
         HttpResponse.json({
