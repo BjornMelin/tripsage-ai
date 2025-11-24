@@ -1,8 +1,12 @@
 /** @vitest-environment node */
 
-import { describe, expect, it, beforeEach } from "vitest";
-import { createRedisMock, runUpstashPipeline, sharedUpstashStore } from "@/test/upstash/redis-mock";
+import { beforeEach, describe, expect, it } from "vitest";
 import { createRatelimitMock } from "@/test/upstash/ratelimit-mock";
+import {
+  createRedisMock,
+  runUpstashPipeline,
+  sharedUpstashStore,
+} from "@/test/upstash/redis-mock";
 
 const redis = createRedisMock(sharedUpstashStore);
 const ratelimit = createRatelimitMock();
@@ -20,14 +24,19 @@ describe("Upstash mocks", () => {
   });
 
   it("respects ratelimit forced outcomes", async () => {
-    const RL = new ratelimit.Ratelimit({ limiter: ratelimit.Ratelimit.slidingWindow(1, "1 s") });
-    const first = await RL.limit("user");
+    const Rl = new ratelimit.Ratelimit({
+      limiter: ratelimit.Ratelimit.slidingWindow(1, "1 s"),
+    });
+    const first = await Rl.limit("user");
     ratelimit.__reset();
     expect(first.limit).toBeDefined();
   });
 
   it("runs pipeline via helper", async () => {
-    const res = await runUpstashPipeline(sharedUpstashStore, [["SET", "a", "1"], ["GET", "a"]]);
+    const res = await runUpstashPipeline(sharedUpstashStore, [
+      ["SET", "a", "1"],
+      ["GET", "a"],
+    ]);
     expect(res[1]).toBe(1);
   });
 });

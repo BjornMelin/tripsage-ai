@@ -1,6 +1,6 @@
 /** @vitest-environment node */
 
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { getEmulatorConfig } from "@/test/upstash/emulator";
 
 describe("Upstash emulator contract", () => {
