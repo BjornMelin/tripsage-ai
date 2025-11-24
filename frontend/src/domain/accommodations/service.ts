@@ -29,7 +29,8 @@ import {
 } from "@schemas/accommodations";
 import type { Ratelimit } from "@upstash/ratelimit";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
-import { deleteCachedJson, getCachedJson, setCachedJson } from "@/lib/cache/upstash";
+import { bumpTag, versionedKey } from "@/lib/cache/tags";
+import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 import { enrichHotelListingWithPlaces } from "@/lib/google/places-enrichment";
 import { resolveLocationToLatLng } from "@/lib/google/places-geocoding";
 import { retryWithBackoff } from "@/lib/http/retry";
@@ -61,6 +62,8 @@ export type ServiceContext = ProviderContext & {
 
 const CACHE_NAMESPACE = "service:accom:search";
 const BOOKING_CACHE_NAMESPACE = "service:accom:booking";
+const CACHE_TAG_SEARCH = "accommodations:search";
+const CACHE_TAG_BOOKING = "accommodations:booking";
 
 /** Cached booking price data structure. */
 type CachedBookingPrice = {
@@ -106,17 +109,19 @@ export class AccommodationsService {
           }
         }
 
-        const cacheKey = this.buildCacheKey(params);
-        if (cacheKey) {
-          const cached = await getCachedJson<AccommodationSearchResult>(cacheKey);
+        const baseCacheKey = this.buildCacheKey(params);
+        if (baseCacheKey) {
+          const versionedCacheKey = await versionedKey(CACHE_TAG_SEARCH, baseCacheKey);
+          const cached =
+            await getCachedJson<AccommodationSearchResult>(versionedCacheKey);
           if (cached) {
-            span.addEvent("cache.hit", { key: cacheKey });
+            span.addEvent("cache.hit", { key: versionedCacheKey });
             return {
               ...cached,
               fromCache: true,
             };
           }
-          span.addEvent("cache.miss", { key: cacheKey });
+          span.addEvent("cache.miss", { key: versionedCacheKey });
         }
 
         let coords: { lat: number; lon: number } | null = null;
@@ -175,8 +180,9 @@ export class AccommodationsService {
           totalResults: filteredListings.length,
         });
 
-        if (cacheKey) {
-          await setCachedJson(cacheKey, result, this.deps.cacheTtlSeconds);
+        if (baseCacheKey) {
+          const versionedCacheKey = await versionedKey(CACHE_TAG_SEARCH, baseCacheKey);
+          await setCachedJson(versionedCacheKey, result, this.deps.cacheTtlSeconds);
         }
         return result;
       }
@@ -265,8 +271,13 @@ export class AccommodationsService {
           ctx
         );
 
+        const bookingCacheKey = `${BOOKING_CACHE_NAMESPACE}:${availability.value.bookingToken}`;
+        const versionedBookingKey = await versionedKey(
+          CACHE_TAG_BOOKING,
+          bookingCacheKey
+        );
         await setCachedJson(
-          `${BOOKING_CACHE_NAMESPACE}:${availability.value.bookingToken}`,
+          versionedBookingKey,
           {
             bookingToken: availability.value.bookingToken,
             price: availability.value.price,
@@ -316,9 +327,13 @@ export class AccommodationsService {
         const supabase = await this.deps.supabase();
         await this.validateTripOwnership(supabase, params.tripId, ctx.userId);
 
-        const cachedPrice = await getCachedJson<CachedBookingPrice>(
-          `${BOOKING_CACHE_NAMESPACE}:${params.bookingToken}`
+        const bookingCacheKey = `${BOOKING_CACHE_NAMESPACE}:${params.bookingToken}`;
+        const versionedBookingKey = await versionedKey(
+          CACHE_TAG_BOOKING,
+          bookingCacheKey
         );
+        const cachedPrice =
+          await getCachedJson<CachedBookingPrice>(versionedBookingKey);
 
         if (!cachedPrice) {
           throw new Error("booking_price_not_cached");
@@ -401,17 +416,10 @@ export class AccommodationsService {
           priceCents: amountCents,
         });
 
-        // Invalidate search cache for this listing and date range to prevent stale results
-        const searchCacheKey = this.buildCacheKey({
-          checkin: params.checkin,
-          checkout: params.checkout,
-          guests: params.guests,
-          location: params.listingId, // Use listingId as location hint for cache invalidation
-        });
-        if (searchCacheKey) {
-          await deleteCachedJson(searchCacheKey);
-          span.addEvent("cache.invalidated", { key: searchCacheKey });
-        }
+        // Invalidate search cache using tag-based invalidation
+        // Bumping the tag invalidates all search cache entries for this tag
+        await bumpTag(CACHE_TAG_SEARCH);
+        span.addEvent("cache.invalidated", { tag: CACHE_TAG_SEARCH });
 
         return accommodationBookingOutputSchema.parse(result);
       }
