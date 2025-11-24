@@ -2,7 +2,7 @@
 
 import type { NextRequest } from "next/server";
 import { describe, expect, it } from "vitest";
-import { buildRateLimitKey, getClientIpFromHeaders } from "@/lib/next/route-helpers";
+import { buildRateLimitKey, getClientIpFromHeaders } from "@/lib/api/route-helpers";
 
 describe("route-helpers", () => {
   it("returns the first IP from x-forwarded-for", () => {

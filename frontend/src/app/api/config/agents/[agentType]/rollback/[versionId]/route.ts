@@ -13,8 +13,8 @@ import {
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createUnifiedErrorResponse } from "@/lib/api/error-response";
 import { withApiGuards } from "@/lib/api/factory";
+import { errorResponse, validateSchema } from "@/lib/api/route-helpers";
 import { bumpTag } from "@/lib/cache/tags";
 import { ensureAdmin, scopeSchema } from "@/lib/config/helpers";
 import { nowIso, secureId } from "@/lib/security/random";
@@ -42,39 +42,34 @@ export const POST = withApiGuards({
   try {
     ensureAdmin(user);
     const url = new URL(req.url);
-    const scopeResult = scopeSchema.safeParse(
+    const scopeValidation = validateSchema(
+      scopeSchema,
       url.searchParams.get("scope") ?? undefined
     );
-    if (!scopeResult.success) {
-      return createUnifiedErrorResponse({
-        err: scopeResult.error,
-        error: "invalid_request",
-        reason: "Invalid scope parameter",
-        status: 400,
-      });
+    if ("error" in scopeValidation) {
+      return scopeValidation.error;
     }
-    const scope = scopeResult.data;
+    const scope = scopeValidation.data;
     const { agentType, versionId } = await routeContext.params;
 
-    const parsedAgent = agentTypeSchema.safeParse(agentType);
-    const parsedVersion = uuidSchema.safeParse(versionId);
-    if (!parsedAgent.success || !parsedVersion.success) {
-      return createUnifiedErrorResponse({
-        error: "invalid_request",
-        reason: "Invalid agent or version id",
-        status: 400,
-      });
+    const agentValidation = validateSchema(agentTypeSchema, agentType);
+    const versionValidation = validateSchema(uuidSchema, versionId);
+    if ("error" in agentValidation) {
+      return agentValidation.error;
+    }
+    if ("error" in versionValidation) {
+      return versionValidation.error;
     }
 
     const { data: versionRow, error: versionError } = await supabase
       .from("agent_config_versions")
       .select("config")
-      .eq("id", parsedVersion.data)
-      .eq("agent_type", parsedAgent.data)
+      .eq("id", versionValidation.data)
+      .eq("agent_type", agentValidation.data)
       .maybeSingle();
 
     if (versionError) {
-      return createUnifiedErrorResponse({
+      return errorResponse({
         err: versionError,
         error: "internal",
         reason: "Failed to load version",
@@ -82,7 +77,7 @@ export const POST = withApiGuards({
       });
     }
     if (!versionRow) {
-      return createUnifiedErrorResponse({
+      return errorResponse({
         error: "not_found",
         reason: "Version not found",
         status: 404,
@@ -93,7 +88,7 @@ export const POST = withApiGuards({
 
     const createdBy = (user as { id: string } | null)?.id ?? "system";
     const { data, error } = await supabase.rpc("agent_config_upsert", {
-      p_agent_type: parsedAgent.data,
+      p_agent_type: agentValidation.data,
       p_config: rollbackConfig,
       p_created_by: createdBy,
       p_scope: scope,
@@ -102,10 +97,10 @@ export const POST = withApiGuards({
 
     if (error) {
       recordTelemetryEvent("agent_config.rollback_failed", {
-        attributes: { agentType: parsedAgent.data, scope },
+        attributes: { agentType: agentValidation.data, scope },
         level: "error",
       });
-      return createUnifiedErrorResponse({
+      return errorResponse({
         err: error,
         error: "internal",
         reason: "Failed to rollback configuration",
@@ -118,7 +113,7 @@ export const POST = withApiGuards({
       : (data as { version_id?: string } | null | undefined)?.version_id;
 
     if (!newVersionId) {
-      return createUnifiedErrorResponse({
+      return errorResponse({
         error: "internal",
         reason: "Missing version id from rollback",
         status: 500,
@@ -129,7 +124,7 @@ export const POST = withApiGuards({
 
     emitOperationalAlert("agent_config.rollback", {
       attributes: {
-        agentType: parsedAgent.data,
+        agentType: agentValidation.data,
         scope,
         userId: (user as { id: string } | null)?.id ?? "unknown",
         versionId: newVersionId,
@@ -140,14 +135,14 @@ export const POST = withApiGuards({
     return NextResponse.json({ config: rollbackConfig, versionId: newVersionId });
   } catch (err) {
     if ((err as { status?: number }).status === 403) {
-      return createUnifiedErrorResponse({
+      return errorResponse({
         err,
         error: "forbidden",
         reason: "Admin access required",
         status: 403,
       });
     }
-    return createUnifiedErrorResponse({
+    return errorResponse({
       err,
       error: "internal",
       reason: "Failed to rollback agent configuration",

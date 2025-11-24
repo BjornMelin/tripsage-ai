@@ -1,45 +1,42 @@
 /**
  * @fileoverview Multipart form data validation utilities.
+ *
+ * Provides canonical helpers for validating and extracting files from multipart
+ * form data, consistent with the error handling pattern used in route-helpers.
  */
 
-export interface MultipartValidationOptions {
-  /** Maximum file size in bytes */
-  maxSize: number;
-  /** Maximum number of files allowed */
-  maxFiles: number;
-  /** Allowed MIME types (optional) */
-  allowedTypes?: string[];
-}
-
-export interface MultipartValidationResult {
-  /** Whether validation passed */
-  valid: boolean;
-  /** Error code if validation failed */
-  errorCode?: string;
-  /** Error message if validation failed */
-  errorMessage?: string;
-}
+import type { MultipartValidationOptions } from "@schemas/api";
+import type { NextResponse } from "next/server";
+import { errorResponse } from "@/lib/api/route-helpers";
 
 /**
- * Validates multipart form data files.
+ * Result of multipart validation: either validated files or an error response.
+ */
+export type MultipartValidationResult = { data: File[] } | { error: NextResponse };
+
+/**
+ * Validates and extracts files from multipart form data.
+ *
+ * Canonical helper for route handlers to validate multipart uploads with
+ * consistent error responses. Returns validated files or error response.
  *
  * @param formData - FormData object containing files
  * @param options - Validation options
- * @returns Validation result with error details if invalid
+ * @returns Validation result with files or error response
  *
  * @example
  * ```typescript
+ * import { FILE_COUNT_LIMITS, FILE_SIZE_LIMITS } from "@schemas/api";
+ *
  * const validation = validateMultipart(formData, {
- *   maxSize: 10 * 1024 * 1024, // 10MB
- *   maxFiles: 5,
+ *   maxSize: FILE_SIZE_LIMITS.STANDARD,
+ *   maxFiles: FILE_COUNT_LIMITS.STANDARD,
  * });
  *
- * if (!validation.valid) {
- *   return NextResponse.json(
- *     createApiError(validation.errorCode!, validation.errorMessage!),
- *     { status: 400 }
- *   );
+ * if ("error" in validation) {
+ *   return validation.error;
  * }
+ * const files = validation.data;
  * ```
  */
 export function validateMultipart(
@@ -52,26 +49,32 @@ export function validateMultipart(
 
   if (files.length === 0) {
     return {
-      errorCode: "NO_FILES",
-      errorMessage: "No files uploaded",
-      valid: false,
+      error: errorResponse({
+        error: "invalid_request",
+        reason: "No files uploaded",
+        status: 400,
+      }),
     };
   }
 
   if (files.length > options.maxFiles) {
     return {
-      errorCode: "TOO_MANY_FILES",
-      errorMessage: `Maximum ${options.maxFiles} files allowed per request`,
-      valid: false,
+      error: errorResponse({
+        error: "invalid_request",
+        reason: `Maximum ${options.maxFiles} files allowed per request`,
+        status: 400,
+      }),
     };
   }
 
   const oversizedFile = files.find((file) => file.size > options.maxSize);
   if (oversizedFile) {
     return {
-      errorCode: "FILE_TOO_LARGE",
-      errorMessage: `File "${oversizedFile.name}" exceeds maximum size of ${options.maxSize / 1024 / 1024}MB`,
-      valid: false,
+      error: errorResponse({
+        error: "invalid_request",
+        reason: `File "${oversizedFile.name}" exceeds maximum size of ${options.maxSize / 1024 / 1024}MB`,
+        status: 400,
+      }),
     };
   }
 
@@ -81,24 +84,14 @@ export function validateMultipart(
     );
     if (invalidTypeFile) {
       return {
-        errorCode: "INVALID_FILE_TYPE",
-        errorMessage: `File "${invalidTypeFile.name}" has invalid type. Allowed types: ${options.allowedTypes.join(", ")}`,
-        valid: false,
+        error: errorResponse({
+          error: "invalid_request",
+          reason: `File "${invalidTypeFile.name}" has invalid type. Allowed types: ${options.allowedTypes.join(", ")}`,
+          status: 400,
+        }),
       };
     }
   }
 
-  return { valid: true };
-}
-
-/**
- * Extracts files from FormData.
- *
- * @param formData - FormData object
- * @returns Array of File objects
- */
-export function extractFiles(formData: FormData): File[] {
-  return Array.from(formData.values()).filter(
-    (value): value is File => value instanceof File && value.size > 0
-  );
+  return { data: files };
 }

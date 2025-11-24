@@ -92,12 +92,17 @@ export class ActivitiesService {
         redactKeys: ["destination"],
       },
       async (span) => {
-        // Validate params
-        const validatedParams = activitySearchParamsSchema.parse(params);
-
-        if (!validatedParams.destination) {
-          throw new Error("Destination is required for activity search");
+        const parsedParams = activitySearchParamsSchema.safeParse(params);
+        if (!parsedParams.success) {
+          const destinationIssue = parsedParams.error.issues.find(
+            (issue) => issue.path[0] === "destination"
+          );
+          if (destinationIssue) {
+            throw new Error("Destination is required for activity search");
+          }
+          throw parsedParams.error;
         }
+        const validatedParams = parsedParams.data;
 
         const userId = ctx?.userId;
         const queryHash = this.computeQueryHash(validatedParams);

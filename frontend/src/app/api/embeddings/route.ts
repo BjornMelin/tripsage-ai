@@ -10,10 +10,9 @@ import { openai } from "@ai-sdk/openai";
 import { embed } from "ai";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { createUnifiedErrorResponse } from "@/lib/api/error-response";
 import { withApiGuards } from "@/lib/api/factory";
+import { errorResponse, parseJsonBody } from "@/lib/api/route-helpers";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
-import { parseJsonBody } from "@/lib/next/route-helpers";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import type { InsertTables } from "@/lib/supabase/database.types";
 import { createServerLogger } from "@/lib/telemetry/logger";
@@ -119,7 +118,7 @@ export const POST = withApiGuards({
   if (internalKey) {
     const provided = req.headers.get("x-internal-key");
     if (provided !== internalKey) {
-      return createUnifiedErrorResponse({
+      return errorResponse({
         error: "unauthorized",
         reason: "Authentication required",
         status: 401,
@@ -138,7 +137,7 @@ export const POST = withApiGuards({
       ? `${body.property.name ?? ""}. Description: ${body.property.description ?? ""}. Amenities: ${Array.isArray(body.property.amenities) ? body.property.amenities.join(", ") : (body.property.amenities ?? "")}`
       : "");
   if (!text || !text.trim()) {
-    return createUnifiedErrorResponse({
+    return errorResponse({
       error: "invalid_request",
       reason: "Missing text or property",
       status: 400,
@@ -146,10 +145,9 @@ export const POST = withApiGuards({
   }
 
   if (text.length > MAX_INPUT_LENGTH) {
-    return createUnifiedErrorResponse({
-      details: { maxLength: MAX_INPUT_LENGTH },
+    return errorResponse({
       error: "invalid_request",
-      reason: "Text too long",
+      reason: `Text too long (max ${MAX_INPUT_LENGTH} characters)`,
       status: 400,
     });
   }
@@ -160,11 +158,10 @@ export const POST = withApiGuards({
     value: text,
   });
   if (!Array.isArray(embedding) || embedding.length !== 1536) {
-    return createUnifiedErrorResponse({
-      details: {
-        expected: 1536,
-        length: Array.isArray(embedding) ? embedding.length : -1,
-      },
+    return errorResponse({
+      err: new Error(
+        `Embedding dimension mismatch: expected 1536, got ${Array.isArray(embedding) ? embedding.length : -1}`
+      ),
       error: "internal",
       reason: "Embedding dimension mismatch",
       status: 500,

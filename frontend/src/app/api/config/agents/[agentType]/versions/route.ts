@@ -9,8 +9,8 @@ import { agentTypeSchema } from "@schemas/configuration";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createUnifiedErrorResponse } from "@/lib/api/error-response";
 import { withApiGuards } from "@/lib/api/factory";
+import { errorResponse, validateSchema } from "@/lib/api/route-helpers";
 import { ensureAdmin, scopeSchema } from "@/lib/config/helpers";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
@@ -21,56 +21,44 @@ const paginationSchema = z.object({
 
 export const GET = withApiGuards({
   auth: true,
+  rateLimit: "config:agents:versions",
   telemetry: "config.agents.versions",
 })(async (req: NextRequest, { user, supabase }, _data, routeContext) => {
   try {
     ensureAdmin(user);
     const { agentType } = await routeContext.params;
-    const parsedAgent = agentTypeSchema.safeParse(agentType);
-    if (!parsedAgent.success) {
-      return createUnifiedErrorResponse({
-        error: "invalid_request",
-        reason: "Invalid agent type",
-        status: 400,
-      });
+    const agentValidation = validateSchema(agentTypeSchema, agentType);
+    if ("error" in agentValidation) {
+      return agentValidation.error;
     }
 
     const rawScope = req.nextUrl.searchParams.get("scope");
-    const parsedScope = scopeSchema.safeParse(
+    const scopeValidation = validateSchema(
+      scopeSchema,
       rawScope === null || rawScope.trim() === "" ? undefined : rawScope
     );
-    if (!parsedScope.success) {
-      return createUnifiedErrorResponse({
-        details: parsedScope.error.issues,
-        error: "invalid_request",
-        reason: "Invalid scope parameter",
-        status: 400,
-      });
+    if ("error" in scopeValidation) {
+      return scopeValidation.error;
     }
-    const scope = parsedScope.data;
+    const scope = scopeValidation.data;
 
-    const parsedPagination = paginationSchema.safeParse({
+    const paginationValidation = validateSchema(paginationSchema, {
       cursor: req.nextUrl.searchParams.get("cursor") ?? undefined,
       limit: req.nextUrl.searchParams.get("limit") ?? undefined,
     });
-    if (!parsedPagination.success) {
-      return createUnifiedErrorResponse({
-        details: parsedPagination.error.issues,
-        error: "invalid_request",
-        reason: "Invalid pagination parameters",
-        status: 400,
-      });
+    if ("error" in paginationValidation) {
+      return paginationValidation.error;
     }
-    const pagination = parsedPagination.data;
+    const pagination = paginationValidation.data;
 
     const result = await withTelemetrySpan(
       "agent_config.list_versions",
-      { attributes: { agentType: parsedAgent.data, scope } },
+      { attributes: { agentType: agentValidation.data, scope } },
       async () => {
         let query = supabase
           .from("agent_config_versions")
           .select("id, created_at, created_by, summary, scope")
-          .eq("agent_type", parsedAgent.data)
+          .eq("agent_type", agentValidation.data)
           .eq("scope", scope)
           .order("created_at", { ascending: false })
           .limit(pagination.limit + 1);
@@ -85,7 +73,7 @@ export const GET = withApiGuards({
 
     const { data, error } = result;
     if (error) {
-      return createUnifiedErrorResponse({
+      return errorResponse({
         err: error,
         error: "internal",
         reason: "Failed to list versions",
@@ -108,14 +96,14 @@ export const GET = withApiGuards({
     });
   } catch (err) {
     if ((err as { status?: number }).status === 403) {
-      return createUnifiedErrorResponse({
+      return errorResponse({
         err,
         error: "forbidden",
         reason: "Admin access required",
         status: 403,
       });
     }
-    return createUnifiedErrorResponse({
+    return errorResponse({
       err,
       error: "internal",
       reason: "Failed to load version history",

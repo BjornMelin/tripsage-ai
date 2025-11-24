@@ -15,7 +15,7 @@ import { NextResponse } from "next/server";
 import type { z } from "zod";
 import { classifyUserMessage } from "@/lib/agents/router-agent";
 import { withApiGuards } from "@/lib/api/factory";
-import { errorResponse, parseJsonBody } from "@/lib/next/route-helpers";
+import { errorResponse, parseJsonBody } from "@/lib/api/route-helpers";
 
 export const maxDuration = 30;
 

@@ -19,11 +19,10 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import type { z } from "zod";
 import { resolveAgentConfig } from "@/lib/agents/config-resolver";
-import { createUnifiedErrorResponse } from "@/lib/api/error-response";
 import { withApiGuards } from "@/lib/api/factory";
+import { errorResponse, parseJsonBody, validateSchema } from "@/lib/api/route-helpers";
 import { bumpTag } from "@/lib/cache/tags";
 import { ensureAdmin, scopeSchema } from "@/lib/config/helpers";
-import { parseJsonBody, validateSchema } from "@/lib/next/route-helpers";
 import { nowIso, secureId } from "@/lib/security/random";
 import { emitOperationalAlert } from "@/lib/telemetry/alerts";
 import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
@@ -60,29 +59,26 @@ function buildConfigPayload(
 
 export const GET = withApiGuards({
   auth: true,
+  rateLimit: "config:agents:read",
   telemetry: "config.agents.get",
 })(async (req: NextRequest, { user, supabase }, _data, routeContext) => {
   try {
     ensureAdmin(user);
     const { agentType } = await routeContext.params;
-    const parsedAgent = agentTypeSchema.safeParse(agentType);
-    if (!parsedAgent.success) {
-      return createUnifiedErrorResponse({
-        error: "invalid_request",
-        reason: "Invalid agent type",
-        status: 400,
-      });
+    const agentValidation = validateSchema(agentTypeSchema, agentType);
+    if ("error" in agentValidation) {
+      return agentValidation.error;
     }
     const rawScope = req.nextUrl.searchParams.get("scope");
     const scope =
       rawScope === null || rawScope.trim() === ""
         ? "global"
         : scopeSchema.parse(rawScope);
-    const result = await resolveAgentConfig(parsedAgent.data, { scope, supabase });
+    const result = await resolveAgentConfig(agentValidation.data, { scope, supabase });
     return NextResponse.json(result);
   } catch (err) {
     if ((err as { status?: number }).status === 404) {
-      return createUnifiedErrorResponse({
+      return errorResponse({
         err,
         error: "not_found",
         reason: "Agent configuration not found",
@@ -90,14 +86,14 @@ export const GET = withApiGuards({
       });
     }
     if ((err as { status?: number }).status === 403) {
-      return createUnifiedErrorResponse({
+      return errorResponse({
         err,
         error: "forbidden",
         reason: "Admin access required",
         status: 403,
       });
     }
-    return createUnifiedErrorResponse({
+    return errorResponse({
       err,
       error: "internal",
       reason: "Failed to load agent configuration",
@@ -114,13 +110,9 @@ export const PUT = withApiGuards({
   try {
     ensureAdmin(user);
     const { agentType } = await routeContext.params;
-    const parsedAgent = agentTypeSchema.safeParse(agentType);
-    if (!parsedAgent.success) {
-      return createUnifiedErrorResponse({
-        error: "invalid_request",
-        reason: "Invalid agent type",
-        status: 400,
-      });
+    const agentValidation = validateSchema(agentTypeSchema, agentType);
+    if ("error" in agentValidation) {
+      return agentValidation.error;
     }
 
     const parsedBody = await parseJsonBody(req);
@@ -136,12 +128,12 @@ export const PUT = withApiGuards({
 
     const existing = await withTelemetrySpan(
       "agent_config.load_existing",
-      { attributes: { agentType: parsedAgent.data, scope } },
+      { attributes: { agentType: agentValidation.data, scope } },
       async () => {
         const { data } = await supabase
           .from("agent_config")
           .select("config")
-          .eq("agent_type", parsedAgent.data)
+          .eq("agent_type", agentValidation.data)
           .eq("scope", scope)
           .maybeSingle();
         return data?.config as AgentConfig | undefined;
@@ -149,7 +141,7 @@ export const PUT = withApiGuards({
     );
 
     const configPayload = buildConfigPayload(
-      parsedAgent.data,
+      agentValidation.data,
       scope,
       validation.data,
       existing
@@ -157,7 +149,7 @@ export const PUT = withApiGuards({
 
     const createdBy = (user as { id: string } | null)?.id ?? "system";
     const { data, error } = await supabase.rpc("agent_config_upsert", {
-      p_agent_type: parsedAgent.data,
+      p_agent_type: agentValidation.data,
       p_config: configPayload,
       p_created_by: createdBy,
       p_scope: scope,
@@ -166,10 +158,10 @@ export const PUT = withApiGuards({
 
     if (error) {
       recordTelemetryEvent("agent_config.update_failed", {
-        attributes: { agentType: parsedAgent.data, scope },
+        attributes: { agentType: agentValidation.data, scope },
         level: "error",
       });
-      return createUnifiedErrorResponse({
+      return errorResponse({
         err: error,
         error: "internal",
         reason: "Failed to persist configuration",
@@ -182,7 +174,7 @@ export const PUT = withApiGuards({
       : (data as { version_id?: string } | null | undefined)?.version_id;
 
     if (!versionId) {
-      return createUnifiedErrorResponse({
+      return errorResponse({
         error: "internal",
         reason: "Missing version id from upsert",
         status: 500,
@@ -193,7 +185,7 @@ export const PUT = withApiGuards({
 
     emitOperationalAlert("agent_config.updated", {
       attributes: {
-        agentType: parsedAgent.data,
+        agentType: agentValidation.data,
         scope,
         userId: (user as { id: string } | null)?.id ?? "unknown",
         versionId,
@@ -204,14 +196,14 @@ export const PUT = withApiGuards({
     return NextResponse.json({ config: configPayload, versionId });
   } catch (err) {
     if ((err as { status?: number }).status === 403) {
-      return createUnifiedErrorResponse({
+      return errorResponse({
         err,
         error: "forbidden",
         reason: "Admin access required",
         status: 403,
       });
     }
-    return createUnifiedErrorResponse({
+    return errorResponse({
       err,
       error: "internal",
       reason: "Failed to update agent configuration",

@@ -17,7 +17,7 @@ import { resolveAgentConfig } from "@/lib/agents/config-resolver";
 import { createErrorHandler } from "@/lib/agents/error-recovery";
 import { runItineraryAgent } from "@/lib/agents/itinerary-agent";
 import { withApiGuards } from "@/lib/api/factory";
-import { errorResponse, parseJsonBody } from "@/lib/next/route-helpers";
+import { errorResponse, parseJsonBody } from "@/lib/api/route-helpers";
 
 export const maxDuration = 60;
 

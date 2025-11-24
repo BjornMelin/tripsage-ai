@@ -1,5 +1,12 @@
 /**
- * @fileoverview Helpers for Next.js Route Handlers (headers/ratelimit identifiers).
+ * @fileoverview Helpers for API route handlers (headers, rate limiting, validation, errors).
+ *
+ * Provides standardized utilities for Next.js API route handlers including:
+ * - Request parsing and validation
+ * - Error handling with redaction
+ * - Authentication helpers
+ * - Rate limiting identifiers
+ * - Telemetry spans
  */
 
 import { createHash } from "node:crypto";
@@ -296,10 +303,11 @@ export async function parseJsonBody(
     return { body };
   } catch {
     return {
-      error: NextResponse.json(
-        { error: "BAD_REQUEST", reason: "Malformed JSON in request body" },
-        { status: 400 }
-      ),
+      error: errorResponse({
+        error: "invalid_request",
+        reason: "Malformed JSON in request body",
+        status: 400,
+      }),
     };
   }
 }
@@ -330,10 +338,13 @@ export function validateSchema<T extends z.ZodType>(
   const parseResult = schema.safeParse(data);
   if (!parseResult.success) {
     return {
-      error: NextResponse.json(
-        { details: parseResult.error.format(), error: "BAD_REQUEST" },
-        { status: 400 }
-      ),
+      error: errorResponse({
+        err: parseResult.error,
+        error: "invalid_request",
+        issues: parseResult.error.issues,
+        reason: "Request validation failed",
+        status: 400,
+      }),
     };
   }
   return { data: parseResult.data };

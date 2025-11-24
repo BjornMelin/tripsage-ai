@@ -18,7 +18,7 @@ import {
   getTrustedRateLimitIdentifier,
   parseJsonBody,
   withRequestSpan,
-} from "@/lib/next/route-helpers";
+} from "@/lib/api/route-helpers";
 import { ROUTE_RATE_LIMITS, type RouteRateLimitKey } from "@/lib/ratelimit/routes";
 import { getRedis } from "@/lib/redis";
 import type { TypedServerSupabase } from "@/lib/supabase/server";

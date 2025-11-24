@@ -2,10 +2,12 @@
  * @fileoverview Telemetry endpoint for AI demo events.
  */
 
+import "server-only";
+
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { parseJsonBody } from "@/lib/next/route-helpers";
+import { parseJsonBody } from "@/lib/api/route-helpers";
 import { emitOperationalAlert } from "@/lib/telemetry/alerts";
 
 type TelemetryPayload = {

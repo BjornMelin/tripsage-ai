@@ -19,8 +19,8 @@ import {
 import ICAL from "ical.js";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { createApiError } from "@/lib/api/error-response";
 import { withApiGuards } from "@/lib/api/factory";
+import { errorResponse } from "@/lib/api/route-helpers";
 import { RecurringDateGenerator } from "@/lib/dates/recurring-rules";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { createServerLogger } from "@/lib/telemetry/logger";
@@ -171,12 +171,12 @@ export const POST = withApiGuards({
   try {
     parsedEvents = parseICS(validated.icsData);
   } catch (parseError) {
-    const message =
-      parseError instanceof Error ? parseError.message : "Failed to parse ICS";
-    return NextResponse.json(
-      createApiError("INVALID_ICS_FORMAT", "Invalid ICS format", message),
-      { status: 400 }
-    );
+    return errorResponse({
+      err: parseError,
+      error: "invalid_request",
+      reason: "Invalid ICS format",
+      status: 400,
+    });
   }
 
   // Convert parsed events to calendar event format
