@@ -1,8 +1,7 @@
 /**
  * @fileoverview Security dashboard component.
  *
- * Displays security metrics, active sessions, security events, OAuth accounts,
- * and security recommendations.
+ * Displays security metrics, sessions, events, OAuth accounts, and recommendations.
  */
 
 "use client";
@@ -109,353 +108,356 @@ export function SecurityDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  // TODO: Replace mock data with real API integration.
-  //
-  // IMPLEMENTATION PLAN (Decision Framework Score: 9.2/10.0)
-  // ===========================================================
-  //
-  // ARCHITECTURE DECISIONS:
-  // -----------------------
-  // 1. API Endpoints: Create three new server-side endpoints
-  //    - `/api/security/events` - Fetch security events from Supabase auth audit logs
-  //    - `/api/security/sessions` - Fetch active sessions from Supabase auth.sessions
-  //    - `/api/security/metrics` - Calculate aggregated security metrics
-  //    - Rationale: Server-side access to auth tables requires admin/service role; user-facing endpoints filter by user_id
-  //
-  // 2. Data Source: Supabase Auth tables (auth.audit_log_entries, auth.sessions, auth.mfa_factors)
-  //    - Audit logs: `auth.audit_log_entries` table (enabled by default in Supabase)
-  //    - Sessions: `auth.sessions` table (contains active user sessions)
-  //    - MFA: `auth.mfa_factors` table (contains MFA enrollment status)
-  //    - OAuth: `auth.identities` table (contains OAuth provider connections)
-  //    - Rationale: Supabase Auth provides built-in audit logging and session management
-  //
-  // 3. Security: Use service role client server-side, filter by user_id
-  //    - Create admin Supabase client using service role key (server-only)
-  //    - Filter all queries by authenticated user's ID
-  //    - Never expose admin client to client-side code
-  //    - Rationale: Audit logs require admin access; user filtering ensures privacy
-  //
-  // 4. Real-time Updates: Optional Supabase Realtime subscription
-  //    - Subscribe to `auth.audit_log_entries` changes for user
-  //    - Update events list when new events occur
-  //    - Rationale: Provides live security monitoring
-  //
-  // IMPLEMENTATION STEPS:
-  // ---------------------
-  //
-  // Step 1: Create Security Events API Endpoint
-  //   File: `frontend/src/app/api/security/events/route.ts` (new)
-  //   ```typescript
-  //   import "server-only";
-  //   import { NextResponse } from "next/server";
-  //   import { withApiGuards } from "@/lib/api/factory";
-  //   import { createAdminSupabase } from "@/lib/supabase/admin"; // New helper
-  //
-  //   export const GET = withApiGuards({
-  //     auth: true,
-  //     rateLimit: "security:events",
-  //     telemetry: "security.events",
-  //   })(async (_req, { user }) => {
-  //     if (!user?.id) {
-  //       return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  //     }
-  //
-  //     const adminSupabase = await createAdminSupabase();
-  //     const { data: auditLogs, error } = await adminSupabase
-  //       .schema("auth")
-  //       .from("audit_log_entries")
-  //       .select("id, created_at, ip_address, payload")
-  //       .eq("payload->>user_id", user.id)
-  //       .order("created_at", { ascending: false })
-  //       .limit(50);
-  //
-  //     if (error) {
-  //       return NextResponse.json({ error: "failed" }, { status: 500 });
-  //     }
-  //
-  //     // Map audit logs to SecurityEvent format
-  //     const events: SecurityEvent[] = (auditLogs ?? []).map((log) => ({
-  //       id: log.id,
-  //       type: mapActionToEventType(log.payload.action),
-  //       description: mapActionToDescription(log.payload.action),
-  //       timestamp: log.created_at,
-  //       ipAddress: log.ip_address ?? "Unknown",
-  //       location: await geocodeIp(log.ip_address), // Optional: IP geocoding
-  //       device: extractDeviceFromUserAgent(log.payload.user_agent),
-  //       riskLevel: calculateRiskLevel(log.payload.action, log.ip_address),
-  //     }));
-  //
-  //     return NextResponse.json(events);
-  //   });
-  //   ```
-  //
-  // Step 2: Create Active Sessions API Endpoint
-  //   File: `frontend/src/app/api/security/sessions/route.ts` (new)
-  //   ```typescript
-  //   import "server-only";
-  //   import { NextResponse } from "next/server";
-  //   import { withApiGuards } from "@/lib/api/factory";
-  //   import { createAdminSupabase } from "@/lib/supabase/admin";
-  //   import { cookies } from "next/headers";
-  //
-  //   export const GET = withApiGuards({
-  //     auth: true,
-  //     rateLimit: "security:sessions",
-  //     telemetry: "security.sessions",
-  //   })(async (_req, { user }) => {
-  //     if (!user?.id) {
-  //       return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  //     }
-  //
-  //     const adminSupabase = await createAdminSupabase();
-  //     const { data: sessions, error } = await adminSupabase
-  //       .schema("auth")
-  //       .from("sessions")
-  //       .select("id, created_at, updated_at, ip, user_agent")
-  //       .eq("user_id", user.id)
-  //       .eq("not_after", null); // Active sessions only
-  //
-  //     if (error) {
-  //       return NextResponse.json({ error: "failed" }, { status: 500 });
-  //     }
-  //
-  //     // Get current session ID from JWT
-  //     const cookieStore = await cookies();
-  //     const currentSessionId = extractSessionIdFromCookies(cookieStore);
-  //
-  //     // Map sessions to ActiveSession format
-  //     const mappedSessions: ActiveSession[] = (sessions ?? []).map((session) => ({
-  //       id: session.id,
-  //       device: extractDeviceFromUserAgent(session.user_agent),
-  //       browser: extractBrowserFromUserAgent(session.user_agent),
-  //       location: await geocodeIp(session.ip),
-  //       ipAddress: session.ip ?? "Unknown",
-  //       lastActivity: session.updated_at ?? session.created_at,
-  //       isCurrent: session.id === currentSessionId,
-  //     }));
-  //
-  //     return NextResponse.json(mappedSessions);
-  //   });
-  //   ```
-  //
-  // Step 3: Create Security Metrics API Endpoint
-  //   File: `frontend/src/app/api/security/metrics/route.ts` (new)
-  //   ```typescript
-  //   import "server-only";
-  //   import { NextResponse } from "next/server";
-  //   import { withApiGuards } from "@/lib/api/factory";
-  //   import { createAdminSupabase } from "@/lib/supabase/admin";
-  //
-  //   export const GET = withApiGuards({
-  //     auth: true,
-  //     rateLimit: "security:metrics",
-  //     telemetry: "security.metrics",
-  //   })(async (_req, { user }) => {
-  //     if (!user?.id) {
-  //       return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  //     }
-  //
-  //     const adminSupabase = await createAdminSupabase();
-  //
-  //     // Fetch last login from audit logs
-  //     const { data: lastLoginLog } = await adminSupabase
-  //       .schema("auth")
-  //       .from("audit_log_entries")
-  //       .select("created_at")
-  //       .eq("payload->>user_id", user.id)
-  //       .eq("payload->>action", "login")
-  //       .order("created_at", { ascending: false })
-  //       .limit(1)
-  //       .single();
-  //
-  //     // Count failed login attempts (last 24h)
-  //     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  //     const { count: failedLogins } = await adminSupabase
-  //       .schema("auth")
-  //       .from("audit_log_entries")
-  //       .select("*", { count: "exact", head: true })
-  //       .eq("payload->>user_id", user.id)
-  //       .eq("payload->>action", "login")
-  //       .lt("created_at", twentyFourHoursAgo)
-  //       .not("payload->>success", "eq", "true");
-  //
-  //     // Count active sessions
-  //     const { count: activeSessions } = await adminSupabase
-  //       .schema("auth")
-  //       .from("sessions")
-  //       .select("*", { count: "exact", head: true })
-  //       .eq("user_id", user.id)
-  //       .is("not_after", null);
-  //
-  //     // Check MFA status
-  //     const { data: mfaFactors } = await adminSupabase
-  //       .schema("auth")
-  //       .from("mfa_factors")
-  //       .select("id, status")
-  //       .eq("user_id", user.id)
-  //       .eq("status", "verified");
-  //
-  //     // Get OAuth connections
-  //     const { data: identities } = await adminSupabase
-  //       .schema("auth")
-  //       .from("identities")
-  //       .select("provider")
-  //       .eq("user_id", user.id)
-  //       .neq("provider", "email");
-  //
-  //     // Calculate security score
-  //     let score = 50; // Base score
-  //     if (mfaFactors && mfaFactors.length > 0) score += 30; // MFA enabled
-  //     if (failedLogins === 0) score += 10; // No failed logins
-  //     if (activeSessions && activeSessions <= 3) score += 10; // Reasonable session count
-  //
-  //     const metrics: SecurityMetrics = {
-  //       activeSessions: activeSessions ?? 0,
-  //       failedLoginAttempts: failedLogins ?? 0,
-  //       lastLogin: lastLoginLog?.created_at ?? new Date().toISOString(),
-  //       oauthConnections: identities?.map((i) => i.provider) ?? [],
-  //       securityScore: Math.min(score, 100),
-  //       trustedDevices: activeSessions ?? 0, // Approximate trusted devices as active sessions
-  //     };
-  //
-  //     return NextResponse.json(metrics);
-  //   });
-  //   ```
-  //
-  // Step 4: Create Admin Supabase Helper
-  //   File: `frontend/src/lib/supabase/admin.ts` (new)
-  //   ```typescript
-  //   import "server-only";
-  //   import { createClient } from "@supabase/supabase-js";
-  //   import { getServerEnvVarWithFallback } from "@/lib/env/server";
-  //   import type { Database } from "./database.types";
-  //
-  //   let adminClient: SupabaseClient<Database> | null = null;
-  //
-  //   export async function createAdminSupabase(): Promise<SupabaseClient<Database>> {
-  //     if (adminClient) return adminClient;
-  //     const url = getServerEnvVarWithFallback("NEXT_PUBLIC_SUPABASE_URL", "");
-  //     const serviceRoleKey = getServerEnvVarWithFallback("SUPABASE_SERVICE_ROLE_KEY", "");
-  //     if (!url || !serviceRoleKey) {
-  //       throw new Error("Supabase admin client requires SUPABASE_SERVICE_ROLE_KEY");
-  //     }
-  //     adminClient = createClient<Database>(url, serviceRoleKey, {
-  //       auth: { persistSession: false },
-  //     });
-  //     return adminClient;
-  //   }
-  //   ```
-  //
-  // Step 5: Update Component to Use Real APIs
-  //   ```typescript
-  //   const loadSecurityData = useCallback(async () => {
-  //     setIsLoading(true);
-  //     try {
-  //       // Fetch all data in parallel
-  //       const [eventsRes, sessionsRes, metricsRes] = await Promise.all([
-  //         fetch("/api/security/events"),
-  //         fetch("/api/security/sessions"),
-  //         fetch("/api/security/metrics"),
-  //       ]);
-  //
-  //       if (!eventsRes.ok || !sessionsRes.ok || !metricsRes.ok) {
-  //         throw new Error("Failed to load security data");
-  //       }
-  //
-  //       const [events, sessions, metrics] = await Promise.all([
-  //         eventsRes.json(),
-  //         sessionsRes.json(),
-  //         metricsRes.json(),
-  //       ]);
-  //
-  //       setEvents(events);
-  //       setSessions(sessions);
-  //       setMetrics(metrics);
-  //     } catch (error) {
-  //       console.error("Failed to load security data:", error);
-  //       toast({
-  //         description: "Failed to load security data. Please try again.",
-  //         title: "Error",
-  //         variant: "destructive",
-  //       });
-  //     } finally {
-  //       setIsLoading(false);
-  //     }
-  //   }, [toast]);
-  //
-  //   useEffect(() => {
-  //     loadSecurityData();
-  //   }, [loadSecurityData]);
-  //   ```
-  //
-  // Step 6: Add Session Termination Endpoint
-  //   File: `frontend/src/app/api/security/sessions/[sessionId]/route.ts` (new)
-  //   ```typescript
-  //   export const DELETE = withApiGuards({
-  //     auth: true,
-  //     rateLimit: "security:sessions:terminate",
-  //     telemetry: "security.sessions.terminate",
-  //   })(async (req, { user }, context) => {
-  //     const { sessionId } = await context.params;
-  //     const adminSupabase = await createAdminSupabase();
-  //     // Revoke session using admin API
-  //     const { error } = await adminSupabase.auth.admin.deleteUserSession(user.id, sessionId);
-  //     if (error) {
-  //       return NextResponse.json({ error: "failed" }, { status: 500 });
-  //     }
-  //     return NextResponse.json({ success: true });
-  //   });
-  //   ```
-  //
-  // INTEGRATION POINTS:
-  // -------------------
-  // - Supabase Auth: Use `auth.audit_log_entries`, `auth.sessions`, `auth.mfa_factors`, `auth.identities` tables
-  // - Admin Client: Create service role client for accessing auth schema (server-only)
-  // - API Routes: Create `/api/security/*` endpoints with proper authentication
-  // - Rate Limiting: Add `"security:events"`, `"security:sessions"`, `"security:metrics"` to route registry
-  // - Telemetry: Automatic via `withApiGuards` telemetry option
-  // - Error Handling: Standard try/catch with user-friendly toast messages
-  //
-  // PERFORMANCE CONSIDERATIONS:
-  // ---------------------------
-  // - Parallel API calls: Fetch events, sessions, metrics concurrently
-  // - Limit results: Use `.limit(50)` for events to avoid large payloads
-  // - Caching: Consider caching metrics (5-minute TTL) to reduce database load
-  // - IP Geocoding: Optional; can be expensive, consider caching or skipping
-  //
-  // SECURITY CONSIDERATIONS:
-  // ------------------------
-  // - Admin client: Must be server-only, never expose service role key
-  // - User filtering: Always filter by user.id to ensure users only see their own data
-  // - Rate limiting: Strict limits on security endpoints to prevent abuse
-  // - Audit logging: All security dashboard access should be logged
-  //
-  // TESTING REQUIREMENTS:
-  // ---------------------
-  // - Unit test: API endpoint handlers, data mapping functions
-  // - Integration test: End-to-end security data fetching
-  // - Mock Supabase admin client, test error handling, test user filtering
-  //
-  // FUTURE ENHANCEMENTS:
-  // -------------------
-  // - Add real-time updates via Supabase Realtime subscription
-  // - Add IP geocoding for location display
-  // - Add event filtering (type, date range, risk level)
-  // - Add pagination for events list
-  // - Add export functionality (CSV/JSON download)
-  // - Add suspicious activity detection algorithms
-  //
-  // Mock data for demonstration - replace with real API calls
+  /**
+   * TODO: Replace mock data with real API integration.
+   *
+   * IMPLEMENTATION PLAN (Decision Framework Score: 9.2/10.0)
+   * ===========================================================
+   *
+   * ARCHITECTURE DECISIONS:
+   * -----------------------
+   * 1. API Endpoints: Create three new server-side endpoints
+   *    - `/api/security/events` - Fetch security events from Supabase auth audit logs
+   *    - `/api/security/sessions` - Fetch active sessions from Supabase auth.sessions
+   *    - `/api/security/metrics` - Calculate aggregated security metrics
+   *    - Rationale: Server-side access to auth tables requires admin/service role; user-facing endpoints filter by user_id
+   *
+   * 2. Data Source: Supabase Auth tables (auth.audit_log_entries, auth.sessions, auth.mfa_factors)
+   *    - Audit logs: `auth.audit_log_entries` table (enabled by default in Supabase)
+   *    - Sessions: `auth.sessions` table (contains active user sessions)
+   *    - MFA: `auth.mfa_factors` table (contains MFA enrollment status)
+   *    - OAuth: `auth.identities` table (contains OAuth provider connections)
+   *    - Rationale: Supabase Auth provides built-in audit logging and session management
+   *
+   * 3. Security: Use service role client server-side, filter by user_id
+   *    - Create admin Supabase client using service role key (server-only)
+   *    - Filter all queries by authenticated user's ID
+   *    - Never expose admin client to client-side code
+   *    - Rationale: Audit logs require admin access; user filtering ensures privacy
+   *
+   * 4. Real-time Updates: Optional Supabase Realtime subscription
+   *    - Subscribe to `auth.audit_log_entries` changes for user
+   *    - Update events list when new events occur
+   *    - Rationale: Provides live security monitoring
+   *
+   * IMPLEMENTATION STEPS:
+   * ---------------------
+   *
+   * Step 1: Create Security Events API Endpoint
+   *   File: `frontend/src/app/api/security/events/route.ts` (new)
+   *   ```typescript
+   *   import "server-only";
+   *   import { NextResponse } from "next/server";
+   *   import { withApiGuards } from "@/lib/api/factory";
+   *   import { createAdminSupabase } from "@/lib/supabase/admin"; // New helper
+   *
+   *   export const GET = withApiGuards({
+   *     auth: true,
+   *     rateLimit: "security:events",
+   *     telemetry: "security.events",
+   *   })(async (_req, { user }) => {
+   *     if (!user?.id) {
+   *       return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+   *     }
+   *
+   *     const adminSupabase = await createAdminSupabase();
+   *     const { data: auditLogs, error } = await adminSupabase
+   *       .schema("auth")
+   *       .from("audit_log_entries")
+   *       .select("id, created_at, ip_address, payload")
+   *       .eq("payload->>user_id", user.id)
+   *       .order("created_at", { ascending: false })
+   *       .limit(50);
+   *
+   *     if (error) {
+   *       return NextResponse.json({ error: "failed" }, { status: 500 });
+   *     }
+   *
+   *     // Map audit logs to SecurityEvent format
+   *     const events: SecurityEvent[] = (auditLogs ?? []).map((log) => ({
+   *       id: log.id,
+   *       type: mapActionToEventType(log.payload.action),
+   *       description: mapActionToDescription(log.payload.action),
+   *       timestamp: log.created_at,
+   *       ipAddress: log.ip_address ?? "Unknown",
+   *       location: await geocodeIp(log.ip_address), // Optional: IP geocoding
+   *       device: extractDeviceFromUserAgent(log.payload.user_agent),
+   *       riskLevel: calculateRiskLevel(log.payload.action, log.ip_address),
+   *     }));
+   *
+   *     return NextResponse.json(events);
+   *   });
+   *   ```
+   *
+   * Step 2: Create Active Sessions API Endpoint
+   *   File: `frontend/src/app/api/security/sessions/route.ts` (new)
+   *   ```typescript
+   *   import "server-only";
+   *   import { NextResponse } from "next/server";
+   *   import { withApiGuards } from "@/lib/api/factory";
+   *   import { createAdminSupabase } from "@/lib/supabase/admin";
+   *   import { cookies } from "next/headers";
+   *
+   *   export const GET = withApiGuards({
+   *     auth: true,
+   *     rateLimit: "security:sessions",
+   *     telemetry: "security.sessions",
+   *   })(async (_req, { user }) => {
+   *     if (!user?.id) {
+   *       return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+   *     }
+   *
+   *     const adminSupabase = await createAdminSupabase();
+   *     const { data: sessions, error } = await adminSupabase
+   *       .schema("auth")
+   *       .from("sessions")
+   *       .select("id, created_at, updated_at, ip, user_agent")
+   *       .eq("user_id", user.id)
+   *       .eq("not_after", null); // Active sessions only
+   *
+   *     if (error) {
+   *       return NextResponse.json({ error: "failed" }, { status: 500 });
+   *     }
+   *
+   *     // Get current session ID from JWT
+   *     const cookieStore = await cookies();
+   *     const currentSessionId = extractSessionIdFromCookies(cookieStore);
+   *
+   *     // Map sessions to ActiveSession format
+   *     const mappedSessions: ActiveSession[] = (sessions ?? []).map((session) => ({
+   *       id: session.id,
+   *       device: extractDeviceFromUserAgent(session.user_agent),
+   *       browser: extractBrowserFromUserAgent(session.user_agent),
+   *       location: await geocodeIp(session.ip),
+   *       ipAddress: session.ip ?? "Unknown",
+   *       lastActivity: session.updated_at ?? session.created_at,
+   *       isCurrent: session.id === currentSessionId,
+   *     }));
+   *
+   *     return NextResponse.json(mappedSessions);
+   *   });
+   *   ```
+   *
+   * Step 3: Create Security Metrics API Endpoint
+   *   File: `frontend/src/app/api/security/metrics/route.ts` (new)
+   *   ```typescript
+   *   import "server-only";
+   *   import { NextResponse } from "next/server";
+   *   import { withApiGuards } from "@/lib/api/factory";
+   *   import { createAdminSupabase } from "@/lib/supabase/admin";
+   *
+   *   export const GET = withApiGuards({
+   *     auth: true,
+   *     rateLimit: "security:metrics",
+   *     telemetry: "security.metrics",
+   *   })(async (_req, { user }) => {
+   *     if (!user?.id) {
+   *       return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+   *     }
+   *
+   *     const adminSupabase = await createAdminSupabase();
+   *
+   *     // Fetch last login from audit logs
+   *     const { data: lastLoginLog } = await adminSupabase
+   *       .schema("auth")
+   *       .from("audit_log_entries")
+   *       .select("created_at")
+   *       .eq("payload->>user_id", user.id)
+   *       .eq("payload->>action", "login")
+   *       .order("created_at", { ascending: false })
+   *       .limit(1)
+   *       .single();
+   *
+   *     // Count failed login attempts (last 24h)
+   *     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+   *     const { count: failedLogins } = await adminSupabase
+   *       .schema("auth")
+   *       .from("audit_log_entries")
+   *       .select("*", { count: "exact", head: true })
+   *       .eq("payload->>user_id", user.id)
+   *       .eq("payload->>action", "login")
+   *       .lt("created_at", twentyFourHoursAgo)
+   *       .not("payload->>success", "eq", "true");
+   *
+   *     // Count active sessions
+   *     const { count: activeSessions } = await adminSupabase
+   *       .schema("auth")
+   *       .from("sessions")
+   *       .select("*", { count: "exact", head: true })
+   *       .eq("user_id", user.id)
+   *       .is("not_after", null);
+   *
+   *     // Check MFA status
+   *     const { data: mfaFactors } = await adminSupabase
+   *       .schema("auth")
+   *       .from("mfa_factors")
+   *       .select("id, status")
+   *       .eq("user_id", user.id)
+   *       .eq("status", "verified");
+   *
+   *     // Get OAuth connections
+   *     const { data: identities } = await adminSupabase
+   *       .schema("auth")
+   *       .from("identities")
+   *       .select("provider")
+   *       .eq("user_id", user.id)
+   *       .neq("provider", "email");
+   *
+   *     // Calculate security score
+   *     let score = 50; // Base score
+   *     if (mfaFactors && mfaFactors.length > 0) score += 30; // MFA enabled
+   *     if (failedLogins === 0) score += 10; // No failed logins
+   *     if (activeSessions && activeSessions <= 3) score += 10; // Reasonable session count
+   *
+   *     const metrics: SecurityMetrics = {
+   *       activeSessions: activeSessions ?? 0,
+   *       failedLoginAttempts: failedLogins ?? 0,
+   *       lastLogin: lastLoginLog?.created_at ?? new Date().toISOString(),
+   *       oauthConnections: identities?.map((i) => i.provider) ?? [],
+   *       securityScore: Math.min(score, 100),
+   *       trustedDevices: activeSessions ?? 0, // Approximate trusted devices as active sessions
+   *     };
+   *
+   *     return NextResponse.json(metrics);
+   *   });
+   *   ```
+   *
+   * Step 4: Create Admin Supabase Helper
+   *   File: `frontend/src/lib/supabase/admin.ts` (new)
+   *   ```typescript
+   *   import "server-only";
+   *   import { createClient } from "@supabase/supabase-js";
+   *   import { getServerEnvVarWithFallback } from "@/lib/env/server";
+   *   import type { Database } from "./database.types";
+   *
+   *   let adminClient: SupabaseClient<Database> | null = null;
+   *
+   *   export async function createAdminSupabase(): Promise<SupabaseClient<Database>> {
+   *     if (adminClient) return adminClient;
+   *     const url = getServerEnvVarWithFallback("NEXT_PUBLIC_SUPABASE_URL", "");
+   *     const serviceRoleKey = getServerEnvVarWithFallback("SUPABASE_SERVICE_ROLE_KEY", "");
+   *     if (!url || !serviceRoleKey) {
+   *       throw new Error("Supabase admin client requires SUPABASE_SERVICE_ROLE_KEY");
+   *     }
+   *     adminClient = createClient<Database>(url, serviceRoleKey, {
+   *       auth: { persistSession: false },
+   *     });
+   *     return adminClient;
+   *   }
+   *   ```
+   *
+   * Step 5: Update Component to Use Real APIs
+   *   ```typescript
+   *   const loadSecurityData = useCallback(async () => {
+   *     setIsLoading(true);
+   *     try {
+   *       // Fetch all data in parallel
+   *       const [eventsRes, sessionsRes, metricsRes] = await Promise.all([
+   *         fetch("/api/security/events"),
+   *         fetch("/api/security/sessions"),
+   *         fetch("/api/security/metrics"),
+   *       ]);
+   *
+   *       if (!eventsRes.ok || !sessionsRes.ok || !metricsRes.ok) {
+   *         throw new Error("Failed to load security data");
+   *       }
+   *
+   *       const [events, sessions, metrics] = await Promise.all([
+   *         eventsRes.json(),
+   *         sessionsRes.json(),
+   *         metricsRes.json(),
+   *       ]);
+   *
+   *       setEvents(events);
+   *       setSessions(sessions);
+   *       setMetrics(metrics);
+   *     } catch (error) {
+   *       console.error("Failed to load security data:", error);
+   *       toast({
+   *         description: "Failed to load security data. Please try again.",
+   *         title: "Error",
+   *         variant: "destructive",
+   *       });
+   *     } finally {
+   *       setIsLoading(false);
+   *     }
+   *   }, [toast]);
+   *
+   *   useEffect(() => {
+   *     loadSecurityData();
+   *   }, [loadSecurityData]);
+   *   ```
+   *
+   * Step 6: Add Session Termination Endpoint
+   *   File: `frontend/src/app/api/security/sessions/[sessionId]/route.ts` (new)
+   *   ```typescript
+   *   export const DELETE = withApiGuards({
+   *     auth: true,
+   *     rateLimit: "security:sessions:terminate",
+   *     telemetry: "security.sessions.terminate",
+   *   })(async (req, { user }, context) => {
+   *     const { sessionId } = await context.params;
+   *     const adminSupabase = await createAdminSupabase();
+   *     // Revoke session using admin API
+   *     const { error } = await adminSupabase.auth.admin.deleteUserSession(user.id, sessionId);
+   *     if (error) {
+   *       return NextResponse.json({ error: "failed" }, { status: 500 });
+   *     }
+   *     return NextResponse.json({ success: true });
+   *   });
+   *   ```
+   *
+   * INTEGRATION POINTS:
+   * -------------------
+   * - Supabase Auth: Use `auth.audit_log_entries`, `auth.sessions`, `auth.mfa_factors`, `auth.identities` tables
+   * - Admin Client: Create service role client for accessing auth schema (server-only)
+   * - API Routes: Create `/api/security/*` endpoints with proper authentication
+   * - Rate Limiting: Add `"security:events"`, `"security:sessions"`, `"security:metrics"` to route registry
+   * - Telemetry: Automatic via `withApiGuards` telemetry option
+   * - Error Handling: Standard try/catch with user-friendly toast messages
+   *
+   * PERFORMANCE CONSIDERATIONS:
+   * ---------------------------
+   * - Parallel API calls: Fetch events, sessions, metrics concurrently
+   * - Limit results: Use `.limit(50)` for events to avoid large payloads
+   * - Caching: Consider caching metrics (5-minute TTL) to reduce database load
+   * - IP Geocoding: Optional; can be expensive, consider caching or skipping
+   *
+   * SECURITY CONSIDERATIONS:
+   * ------------------------
+   * - Admin client: Must be server-only, never expose service role key
+   * - User filtering: Always filter by user.id to ensure users only see their own data
+   * - Rate limiting: Strict limits on security endpoints to prevent abuse
+   * - Audit logging: All security dashboard access should be logged
+   *
+   * TESTING REQUIREMENTS:
+   * ---------------------
+   * - Unit test: API endpoint handlers, data mapping functions
+   * - Integration test: End-to-end security data fetching
+   * - Mock Supabase admin client, test error handling, test user filtering
+   *
+   * FUTURE ENHANCEMENTS:
+   * -------------------
+   * - Add real-time updates via Supabase Realtime subscription
+   * - Add IP geocoding for location display
+   * - Add event filtering (type, date range, risk level)
+   * - Add pagination for events list
+   * - Add export functionality (CSV/JSON download)
+   * - Add suspicious activity detection algorithms
+   */
   useEffect(() => {
-    /**
-     * TODO: Replace with real API calls to security endpoints.
-     * Loads security data from mock API endpoints.
-     */
     const loadSecurityData = async () => {
+      setIsLoading(true);
       try {
-        // TODO: Replace with actual API call: await fetch('/api/security/events')
-        // Simulate API calls
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        const sessionsResponse = await fetch("/api/security/sessions", {
+          cache: "no-store",
+        });
+
+        if (!sessionsResponse.ok) {
+          throw new Error("Failed to load sessions");
+        }
+
+        const liveSessions: ActiveSession[] = await sessionsResponse.json();
 
         // TODO: Replace with real security events from API
         // Mock security events
@@ -492,49 +494,33 @@ export function SecurityDashboard() {
           },
         ]);
 
-        // TODO: Replace with real active sessions from API: await fetch('/api/security/sessions')
-        // Mock active sessions
-        setSessions([
-          {
-            browser: "Chrome 120.0",
-            device: "MacBook Pro",
-            id: "1",
-            ipAddress: "192.168.1.100",
-            isCurrent: true,
-            lastActivity: "2025-06-11T10:30:00Z",
-            location: "San Francisco, CA",
-          },
-          {
-            browser: "Safari Mobile",
-            device: "iPhone 15",
-            id: "2",
-            ipAddress: "192.168.1.101",
-            isCurrent: false,
-            lastActivity: "2025-06-11T09:15:00Z",
-            location: "San Francisco, CA",
-          },
-        ]);
+        setSessions(liveSessions);
 
         // TODO: Replace with real security metrics from API: await fetch('/api/security/metrics')
         // Mock security metrics
         setMetrics({
-          activeSessions: 2,
+          activeSessions: liveSessions.length,
           failedLoginAttempts: 1,
           lastLogin: "2025-06-11T10:30:00Z",
           oauthConnections: ["google", "github"],
           securityScore: 85,
-          trustedDevices: 2,
+          trustedDevices: liveSessions.length,
         });
 
         setIsLoading(false);
       } catch (error) {
         console.error("Failed to load security data:", error);
+        toast({
+          description: "Failed to load security data. Please try again.",
+          title: "Error",
+          variant: "destructive",
+        });
         setIsLoading(false);
       }
     };
 
     loadSecurityData();
-  }, []);
+  }, [toast]);
 
   /**
    * Returns CSS classes for risk level styling.
