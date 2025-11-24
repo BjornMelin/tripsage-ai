@@ -9,8 +9,8 @@ import { agentTypeSchema } from "@schemas/configuration";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { createUnifiedErrorResponse } from "@/lib/api/error-response";
 import { withApiGuards } from "@/lib/api/factory";
-import { errorResponse } from "@/lib/next/route-helpers";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
@@ -22,9 +22,9 @@ const paginationSchema = z.object({
 
 function ensureAdmin(
   user: unknown
-): asserts user is { id: string; user_metadata?: Record<string, unknown> } {
-  const candidate = user as { user_metadata?: Record<string, unknown> } | null;
-  if (!(candidate?.user_metadata && candidate.user_metadata.is_admin === true)) {
+): asserts user is { id: string; app_metadata?: Record<string, unknown> } {
+  const candidate = user as { app_metadata?: Record<string, unknown> } | null;
+  if (!(candidate?.app_metadata && candidate.app_metadata.is_admin === true)) {
     throw Object.assign(new Error("forbidden"), { status: 403 });
   }
 }
@@ -38,7 +38,7 @@ export const GET = withApiGuards({
     const { agentType } = await routeContext.params;
     const parsedAgent = agentTypeSchema.safeParse(agentType);
     if (!parsedAgent.success) {
-      return errorResponse({
+      return createUnifiedErrorResponse({
         error: "invalid_request",
         reason: "Invalid agent type",
         status: 400,
@@ -74,7 +74,7 @@ export const GET = withApiGuards({
 
     const { data, error } = result;
     if (error) {
-      return errorResponse({
+      return createUnifiedErrorResponse({
         err: error,
         error: "internal",
         reason: "Failed to list versions",
@@ -97,9 +97,14 @@ export const GET = withApiGuards({
     });
   } catch (err) {
     if ((err as { status?: number }).status === 403) {
-      return NextResponse.json({ error: "forbidden" }, { status: 403 });
+      return createUnifiedErrorResponse({
+        err,
+        error: "forbidden",
+        reason: "Admin access required",
+        status: 403,
+      });
     }
-    return errorResponse({
+    return createUnifiedErrorResponse({
       err,
       error: "internal",
       reason: "Failed to load version history",

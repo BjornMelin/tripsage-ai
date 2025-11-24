@@ -15,7 +15,7 @@ import { createAiTool } from "@ai/lib/tool-factory";
 import { lookupPoiInputSchema } from "@ai/tools/schemas/google-places";
 import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
-import { cacheLatLng, getCachedLatLng } from "@/lib/google/caching";
+import { resolveLocationToLatLng } from "@/lib/google/places-geocoding";
 
 /** Normalized POI result structure matching Google Places API (New) fields. */
 type NormalizedPoi = {
@@ -30,38 +30,6 @@ type NormalizedPoi = {
   photoName?: string;
   url?: string;
 };
-
-/**
- * Geocode a destination name to coordinates using Google Maps Geocoding API.
- *
- * Uses Google Maps Geocoding API to convert destination strings to coordinates.
- * Returns null if geocoding fails or API key is not configured.
- *
- * @param destination Destination name to geocode.
- * @param apiKey Google Maps server API key.
- * @returns Promise resolving to coordinates or null.
- */
-async function geocodeDestinationWithGoogleMaps(
-  destination: string,
-  apiKey: string
-): Promise<{ lat: number; lon: number } | null> {
-  try {
-    const url = new URL("https://maps.googleapis.com/maps/api/geocode/json");
-    url.searchParams.set("address", destination);
-    url.searchParams.set("key", apiKey);
-
-    const res = await fetch(url);
-    if (!res.ok) return null;
-
-    const data = await res.json();
-    if (data.status !== "OK" || !data.results?.[0]?.geometry?.location) return null;
-
-    const { lat, lng } = data.results[0].geometry.location;
-    return { lat, lon: lng };
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Fetch POIs from Google Places API (New) Text Search.
@@ -162,16 +130,7 @@ export const lookupPoiContext = createAiTool({
       lon = validated.lon;
       searchQuery = validated.query ?? `points of interest near ${lat},${lon}`;
     } else if (validated.destination) {
-      const normalizedDestination = validated.destination.toLowerCase().trim();
-      const geocodeCacheKey = `googleplaces:geocode:${normalizedDestination}`;
-      let coords = await getCachedLatLng(geocodeCacheKey);
-
-      if (!coords) {
-        coords = await geocodeDestinationWithGoogleMaps(validated.destination, apiKey);
-        if (coords) {
-          await cacheLatLng(geocodeCacheKey, coords, 30 * 24 * 60 * 60);
-        }
-      }
+      const coords = await resolveLocationToLatLng(validated.destination);
 
       if (!coords) {
         return {

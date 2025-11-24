@@ -14,10 +14,6 @@ import type {
   ProviderResult,
 } from "@domain/accommodations/providers/types";
 import {
-  ACCOMMODATION_BOOKING_OUTPUT_SCHEMA,
-  ACCOMMODATION_CHECK_AVAILABILITY_OUTPUT_SCHEMA,
-  ACCOMMODATION_DETAILS_OUTPUT_SCHEMA,
-  ACCOMMODATION_SEARCH_OUTPUT_SCHEMA,
   type AccommodationBookingRequest,
   type AccommodationBookingResult,
   type AccommodationCheckAvailabilityParams,
@@ -26,6 +22,10 @@ import {
   type AccommodationDetailsResult,
   type AccommodationSearchParams,
   type AccommodationSearchResult,
+  accommodationBookingOutputSchema,
+  accommodationCheckAvailabilityOutputSchema,
+  accommodationDetailsOutputSchema,
+  accommodationSearchOutputSchema,
 } from "@schemas/accommodations";
 import type { Ratelimit } from "@upstash/ratelimit";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
@@ -61,6 +61,16 @@ export type ServiceContext = ProviderContext & {
 
 const CACHE_NAMESPACE = "service:accom:search";
 const BOOKING_CACHE_NAMESPACE = "service:accom:booking";
+
+/** Cached booking price data structure. */
+type CachedBookingPrice = {
+  bookingToken: string;
+  price: { currency: string; total: string };
+  propertyId: string;
+  rateId: string;
+  sessionId?: string;
+  userId?: string;
+};
 
 /** Accommodations service class. */
 export class AccommodationsService {
@@ -139,7 +149,7 @@ export class AccommodationsService {
 
         const prices = collectPrices(filteredListings);
 
-        const result = ACCOMMODATION_SEARCH_OUTPUT_SCHEMA.parse({
+        const result = accommodationSearchOutputSchema.parse({
           avgPrice:
             prices.length > 0
               ? prices.reduce((sum, value) => sum + value, 0) / prices.length
@@ -210,7 +220,7 @@ export class AccommodationsService {
           hasPlace: Boolean((enriched as { place?: unknown }).place),
         });
 
-        return ACCOMMODATION_DETAILS_OUTPUT_SCHEMA.parse({
+        return accommodationDetailsOutputSchema.parse({
           listing: enriched,
           provider: this.deps.provider.name,
           status: "success" as const,
@@ -272,7 +282,7 @@ export class AccommodationsService {
           bookingToken: availability.value.bookingToken,
         });
 
-        return ACCOMMODATION_CHECK_AVAILABILITY_OUTPUT_SCHEMA.parse({
+        return accommodationCheckAvailabilityOutputSchema.parse({
           bookingToken: availability.value.bookingToken,
           expiresAt: availability.value.expiresAt,
           price: availability.value.price,
@@ -306,14 +316,9 @@ export class AccommodationsService {
         const supabase = await this.deps.supabase();
         await this.validateTripOwnership(supabase, params.tripId, ctx.userId);
 
-        const cachedPrice = await getCachedJson<{
-          bookingToken: string;
-          price: { currency: string; total: string };
-          propertyId: string;
-          rateId: string;
-          sessionId?: string;
-          userId?: string;
-        }>(`${BOOKING_CACHE_NAMESPACE}:${params.bookingToken}`);
+        const cachedPrice = await getCachedJson<CachedBookingPrice>(
+          `${BOOKING_CACHE_NAMESPACE}:${params.bookingToken}`
+        );
 
         if (!cachedPrice) {
           throw new Error("booking_price_not_cached");
@@ -408,7 +413,7 @@ export class AccommodationsService {
           span.addEvent("cache.invalidated", { key: searchCacheKey });
         }
 
-        return ACCOMMODATION_BOOKING_OUTPUT_SCHEMA.parse(result);
+        return accommodationBookingOutputSchema.parse(result);
       }
     );
   }
@@ -521,14 +526,7 @@ export class AccommodationsService {
    * @throws Error if validation fails
    */
   private validateCachedPrice(
-    cachedPrice: {
-      bookingToken: string;
-      price: { currency: string; total: string };
-      propertyId: string;
-      rateId: string;
-      sessionId?: string;
-      userId?: string;
-    },
+    cachedPrice: CachedBookingPrice,
     params: AccommodationBookingRequest,
     ctx: ServiceContext & { userId: string }
   ): { amountCents: number; currency: string } {

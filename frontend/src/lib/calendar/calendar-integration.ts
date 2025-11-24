@@ -6,18 +6,25 @@
 
 import type { CalendarEvent, EventDateTime } from "@schemas/calendar";
 import { calendarEventSchema } from "@schemas/calendar";
+import { getClientEnvVarWithFallback } from "@/lib/env/client";
 import type { DateRange } from "../dates/unified-date-utils";
 import { DateUtils } from "../dates/unified-date-utils";
 
-/** API origin for absolute URLs. */
-const API_ORIGIN =
-  (typeof window !== "undefined" && typeof window.location?.origin === "string"
-    ? window.location.origin
-    : process.env.NEXT_PUBLIC_BASE_URL) || "http://localhost:3000";
+/** Returns API origin for absolute URLs (client-side). */
+function getApiOrigin(): string {
+  if (typeof window !== "undefined" && typeof window.location?.origin === "string") {
+    return window.location.origin;
+  }
+  return (
+    getClientEnvVarWithFallback("NEXT_PUBLIC_SITE_URL", "") ||
+    (process.env.NEXT_PUBLIC_BASE_URL as string | undefined) ||
+    "http://localhost:3000"
+  );
+}
 
-/** Converts relative path to absolute URL. */
+/** Converts relative path to absolute URL (client-side only). */
 const toAbsoluteUrl = (path: string): string =>
-  path.startsWith("http") ? path : new URL(path, API_ORIGIN).toString();
+  path.startsWith("http") ? path : new URL(path, getApiOrigin()).toString();
 
 /** Resolves event date/time value to Date. */
 const resolveDateTimeValue = (value: EventDateTime): Date => {

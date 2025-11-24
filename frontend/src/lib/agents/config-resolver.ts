@@ -10,7 +10,8 @@ import type { AgentConfig, AgentType } from "@schemas/configuration";
 import { configurationAgentConfigSchema } from "@schemas/configuration";
 import { versionedKey } from "@/lib/cache/tags";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
-import { createServerSupabase, type TypedServerSupabase } from "@/lib/supabase/server";
+import { createAdminSupabase } from "@/lib/supabase/admin";
+import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { emitOperationalAlert } from "@/lib/telemetry/alerts";
 import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
 
@@ -54,7 +55,9 @@ export async function resolveAgentConfig(
         return cached;
       }
 
-      const supabase = options.supabase ?? (await createServerSupabase());
+      // Use admin client to bypass RLS for agent config lookup
+      // Agent configs are protected by RLS and require admin privileges
+      const supabase = options.supabase ?? createAdminSupabase();
       const { data, error } = await supabase
         .from("agent_config")
         .select("config, version_id")

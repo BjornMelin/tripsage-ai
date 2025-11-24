@@ -13,10 +13,6 @@ import {
 import { getAccommodationsService } from "@domain/accommodations/container";
 import { ProviderError } from "@domain/accommodations/errors";
 import {
-  ACCOMMODATION_BOOKING_INPUT_SCHEMA,
-  ACCOMMODATION_CHECK_AVAILABILITY_INPUT_SCHEMA,
-  ACCOMMODATION_DETAILS_INPUT_SCHEMA,
-  ACCOMMODATION_SEARCH_INPUT_SCHEMA,
   type AccommodationBookingRequest,
   type AccommodationBookingResult,
   type AccommodationCheckAvailabilityParams,
@@ -25,6 +21,10 @@ import {
   type AccommodationDetailsResult,
   type AccommodationSearchParams,
   type AccommodationSearchResult,
+  accommodationBookingInputSchema,
+  accommodationCheckAvailabilityInputSchema,
+  accommodationDetailsInputSchema,
+  accommodationSearchInputSchema,
 } from "@schemas/accommodations";
 import { headers } from "next/headers";
 import { processBookingPayment } from "@/lib/payments/booking-payment";
@@ -45,7 +45,7 @@ import { requireApproval } from "./approvals";
  */
 const accommodationsService = getAccommodationsService();
 
-export { ACCOMMODATION_SEARCH_INPUT_SCHEMA as searchAccommodationsInputSchema };
+export { accommodationSearchInputSchema as searchAccommodationsInputSchema };
 
 /** Search for accommodations using Amadeus Self-Service API with Google Places enrichment. */
 export const searchAccommodations = createAiTool<
@@ -59,7 +59,7 @@ export const searchAccommodations = createAiTool<
       sessionId: await maybeGetUserIdentifier(),
     });
   },
-  inputSchema: ACCOMMODATION_SEARCH_INPUT_SCHEMA,
+  inputSchema: accommodationSearchInputSchema,
   name: "searchAccommodations",
 });
 
@@ -82,7 +82,7 @@ export const getAccommodationDetails = createAiTool<
       });
     }
   },
-  inputSchema: ACCOMMODATION_DETAILS_INPUT_SCHEMA,
+  inputSchema: accommodationDetailsInputSchema,
   name: "getAccommodationDetails",
 });
 
@@ -111,7 +111,7 @@ export const checkAvailability = createAiTool<
       });
     }
   },
-  inputSchema: ACCOMMODATION_CHECK_AVAILABILITY_INPUT_SCHEMA,
+  inputSchema: accommodationCheckAvailabilityInputSchema,
   name: "checkAvailability",
 });
 
@@ -163,7 +163,7 @@ export const bookAccommodation = createAiTool<
       });
     }
   },
-  inputSchema: ACCOMMODATION_BOOKING_INPUT_SCHEMA,
+  inputSchema: accommodationBookingInputSchema,
   name: "bookAccommodation",
 });
 

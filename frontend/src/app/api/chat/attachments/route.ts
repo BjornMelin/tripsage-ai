@@ -9,7 +9,7 @@
 import { revalidateTag } from "next/cache";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { createApiError } from "@/lib/api/error-response";
+import { createUnifiedErrorResponse } from "@/lib/api/error-response";
 import { withApiGuards } from "@/lib/api/factory";
 import { extractFiles, validateMultipart } from "@/lib/api/guards/multipart";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
@@ -70,10 +70,12 @@ export const POST = withApiGuards({
   // Validate content type
   const contentType = req.headers.get("content-type");
   if (!contentType?.includes("multipart/form-data")) {
-    return NextResponse.json(
-      createApiError("INVALID_CONTENT_TYPE", "Invalid content type"),
-      { status: 400 }
-    );
+    return createUnifiedErrorResponse({
+      details: { contentType },
+      error: "invalid_request",
+      reason: "Invalid content type",
+      status: 400,
+    });
   }
 
   // Parse form data
@@ -86,9 +88,9 @@ export const POST = withApiGuards({
   });
 
   if (!validation.valid) {
-    const errorCode = validation.errorCode ?? "VALIDATION_ERROR";
-    const errorMessage = validation.errorMessage ?? "Validation failed";
-    return NextResponse.json(createApiError(errorCode, errorMessage), {
+    return createUnifiedErrorResponse({
+      error: validation.errorCode ?? "validation_error",
+      reason: validation.errorMessage ?? "Validation failed",
       status: 400,
     });
   }
@@ -120,7 +122,10 @@ export const POST = withApiGuards({
 
   if (!response.ok) {
     const detail = (data as { detail?: string } | undefined)?.detail ?? "Upload failed";
-    return NextResponse.json(createApiError("UPLOAD_ERROR", detail), {
+    return createUnifiedErrorResponse({
+      details: { detail },
+      error: "internal",
+      reason: "File upload failed",
       status: response.status,
     });
   }

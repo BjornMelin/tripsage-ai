@@ -7,6 +7,7 @@ import "server-only";
 import { notifyJobSchema } from "@schemas/webhooks";
 import { Receiver } from "@upstash/qstash";
 import { NextResponse } from "next/server";
+import { createUnifiedErrorResponse } from "@/lib/api/error-response";
 import { getServerEnvVar, getServerEnvVarWithFallback } from "@/lib/env/server";
 import { tryReserveKey } from "@/lib/idempotency/redis";
 import { sendCollaboratorNotifications } from "@/lib/notifications/collaborators";
@@ -86,7 +87,12 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: true, ...result });
       } catch (error) {
         span.recordException(error as Error);
-        return NextResponse.json({ error: "internal error" }, { status: 500 });
+        return createUnifiedErrorResponse({
+          err: error,
+          error: "internal",
+          reason: "Collaborator notification job failed",
+          status: 500,
+        });
       }
     }
   );

@@ -60,7 +60,7 @@ vi.mock("@/lib/supabase/server", () => ({
   createServerSupabase: vi.fn(async () => ({
     auth: {
       getUser: vi.fn(async () => ({
-        data: { user: { id: "admin-user", user_metadata: { is_admin: true } } },
+        data: { user: { app_metadata: { is_admin: true }, id: "admin-user" } },
         error: null,
       })),
     },
@@ -87,8 +87,8 @@ describe("config routes", () => {
   beforeEach(() => {
     resetApiRouteMocks();
     mockApiRouteAuthUser({
+      app_metadata: { is_admin: true },
       id: "admin-user",
-      user_metadata: { is_admin: true },
     } as never);
     supabaseSelect.mockReset();
     supabaseMaybeSingle.mockReset();
@@ -105,7 +105,7 @@ describe("config routes", () => {
       {
         params: Promise.resolve({ agentType: "budgetAgent" }),
         supabase: {} as never,
-        user: { id: "admin-user", user_metadata: { is_admin: true } } as never,
+        user: { app_metadata: { is_admin: true }, id: "admin-user" } as never,
       } as never
     );
     expect(res.status).toBe(200);
@@ -125,7 +125,7 @@ describe("config routes", () => {
       {
         params: Promise.resolve({ agentType: "budgetAgent" }),
         supabase: {} as never,
-        user: { id: "admin-user", user_metadata: { is_admin: true } } as never,
+        user: { app_metadata: { is_admin: true }, id: "admin-user" } as never,
       } as never
     );
     expect(res.status).toBe(200);
@@ -154,7 +154,7 @@ describe("config routes", () => {
       {
         params: Promise.resolve({ agentType: "budgetAgent" }),
         supabase: {} as never,
-        user: { id: "admin-user", user_metadata: { is_admin: true } } as never,
+        user: { app_metadata: { is_admin: true }, id: "admin-user" } as never,
       } as never
     );
     expect(res.status).toBe(200);
@@ -174,7 +174,7 @@ describe("config routes", () => {
           versionId: "11111111-1111-4111-8111-111111111111",
         }),
         supabase: {} as never,
-        user: { id: "admin-user", user_metadata: { is_admin: true } } as never,
+        user: { app_metadata: { is_admin: true }, id: "admin-user" } as never,
       } as never
     );
     expect(res.status).toBe(200);

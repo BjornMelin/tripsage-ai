@@ -11,6 +11,7 @@ import type { ItineraryItemCreateInput } from "@schemas/trips";
 import { itineraryItemCreateSchema } from "@schemas/trips";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { createUnifiedErrorResponse } from "@/lib/api/error-response";
 import { withApiGuards } from "@/lib/api/factory";
 import { validateSchema } from "@/lib/next/route-helpers";
 import type { Database } from "@/lib/supabase/database.types";
@@ -64,10 +65,12 @@ async function createItineraryItem(
       .eq("user_id", userId)
       .single();
     if (tripError || !trip) {
-      return NextResponse.json(
-        { error: "forbidden", reason: "Trip not found for user" },
-        { status: 403 }
-      );
+      return createUnifiedErrorResponse({
+        err: tripError,
+        error: "forbidden",
+        reason: "Trip not found for user",
+        status: 403,
+      });
     }
   }
 
@@ -79,10 +82,12 @@ async function createItineraryItem(
     .select("*")
     .single();
   if (error || !data) {
-    return NextResponse.json(
-      { error: "Failed to create itinerary item" },
-      { status: 500 }
-    );
+    return createUnifiedErrorResponse({
+      err: error,
+      error: "internal",
+      reason: "Failed to create itinerary item",
+      status: 500,
+    });
   }
 
   return NextResponse.json(data, { status: 201 });
@@ -103,7 +108,12 @@ async function listItineraryItems(
     .select("id")
     .eq("user_id", userId);
   if (tripsError) {
-    return NextResponse.json({ error: "Failed to load trips" }, { status: 500 });
+    return createUnifiedErrorResponse({
+      err: tripsError,
+      error: "internal",
+      reason: "Failed to load trips",
+      status: 500,
+    });
   }
   const allowedTripIds = (trips ?? []).map((t) => t.id);
   if (allowedTripIds.length === 0) {
@@ -120,10 +130,12 @@ async function listItineraryItems(
 
   const { data, error } = await query.order("start_time", { ascending: true });
   if (error) {
-    return NextResponse.json(
-      { error: "Failed to load itinerary items" },
-      { status: 500 }
-    );
+    return createUnifiedErrorResponse({
+      err: error,
+      error: "internal",
+      reason: "Failed to load itinerary items",
+      status: 500,
+    });
   }
 
   return NextResponse.json(data ?? []);
@@ -141,10 +153,11 @@ export const GET = withApiGuards({
 })(async (req, { supabase, user }) => {
   const userId = user?.id;
   if (!userId) {
-    return NextResponse.json(
-      { error: "unauthorized", reason: "Authentication required" },
-      { status: 401 }
-    );
+    return createUnifiedErrorResponse({
+      error: "unauthorized",
+      reason: "Authentication required",
+      status: 401,
+    });
   }
   return await listItineraryItems(supabase, userId, req);
 });
@@ -161,10 +174,11 @@ export const POST = withApiGuards({
 })(async (req, { supabase, user }) => {
   const userId = user?.id;
   if (!userId) {
-    return NextResponse.json(
-      { error: "unauthorized", reason: "Authentication required" },
-      { status: 401 }
-    );
+    return createUnifiedErrorResponse({
+      error: "unauthorized",
+      reason: "Authentication required",
+      status: 401,
+    });
   }
 
   return await createItineraryItem(supabase, userId, req);
