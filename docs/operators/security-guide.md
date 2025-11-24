@@ -12,6 +12,7 @@ TripSage implements defense-in-depth security with multiple protection layers:
 - **Input Validation** - Pydantic models for all API inputs
 - **Row Level Security** - Database-level access control
 - **Audit Logging** - Comprehensive security event logging
+- **Session Control** - User-scoped session listing and termination via `/api/security/sessions` with Supabase service-role enforcement and per-route rate limits.
 
 ## Authentication & Authorization
 
