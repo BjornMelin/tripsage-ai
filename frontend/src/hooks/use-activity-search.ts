@@ -123,7 +123,7 @@ export function useActivitySearch(): UseActivitySearchResult {
   }, []);
 
   const saveSearch = useCallback(
-    async (name: string, params: ActivitySearchParams): Promise<void> => {
+    (name: string, params: ActivitySearchParams): Promise<void> => {
       setIsSavingSearch(true);
       setSaveSearchError(null);
 
@@ -139,12 +139,14 @@ export function useActivitySearch(): UseActivitySearchResult {
           setSavedSearches((prev) => [...prev, saved]);
           setIsSavingSearch(false);
         });
+        return Promise.resolve();
       } catch (error) {
         const err = error instanceof Error ? error : new Error(String(error));
         flushSync(() => {
           setSaveSearchError(err);
           setIsSavingSearch(false);
         });
+        return Promise.resolve();
       }
     },
     []
