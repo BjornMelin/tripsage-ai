@@ -61,11 +61,11 @@ const setupBrowserEnv = (): StorageMocks => {
 };
 
 const teardownBrowserEnv = () => {
-  delete (globalThis as { window?: Window }).window;
-  delete (globalThis as { location?: Location }).location;
-  delete (globalThis as { navigator?: Navigator }).navigator;
-  delete (globalThis as { localStorage?: Storage }).localStorage;
-  delete (globalThis as { sessionStorage?: Storage }).sessionStorage;
+  (globalThis as { window?: Window }).window = undefined;
+  (globalThis as { location?: Location }).location = undefined;
+  (globalThis as { navigator?: Navigator }).navigator = undefined;
+  (globalThis as { localStorage?: Storage }).localStorage = undefined;
+  (globalThis as { sessionStorage?: Storage }).sessionStorage = undefined;
 };
 
 const buildReport = (): ErrorReport => ({
@@ -82,10 +82,10 @@ describe("ErrorService", () => {
   let errorService: ErrorService;
   let config: ErrorServiceConfig;
   let localStorageMock: Storage;
-  let sessionStorageMock: Storage;
+  let _sessionStorageMock: Storage;
 
   beforeEach(() => {
-    ({ localStorageMock, sessionStorageMock } = setupBrowserEnv());
+    ({ localStorageMock, sessionStorageMock: _sessionStorageMock } = setupBrowserEnv());
 
     config = {
       apiKey: "test-api-key",
@@ -157,7 +157,9 @@ describe("ErrorService", () => {
       const recorder = createErrorReportingRecorder(config.endpoint);
       server.use(recorder.handler);
       const disabledService = new ErrorService({ ...config, enabled: false });
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        // Suppress console.error output in tests
+      });
       const errorReport = buildReport();
 
       await disabledService.reportError(errorReport);
@@ -186,7 +188,9 @@ describe("ErrorService", () => {
     it("rejects invalid reports via Zod validation", async () => {
       const recorder = createErrorReportingRecorder(config.endpoint);
       server.use(recorder.handler);
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        // Suppress console.error output in tests
+      });
 
       const invalidReport = {
         error: { name: "Error" },
@@ -229,7 +233,9 @@ describe("ErrorService", () => {
     });
 
     it("stops retrying after exceeding maxRetries", async () => {
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        // Suppress console.error output in tests
+      });
       const flaky = createFlakyErrorReportingHandler({
         endpoint: config.endpoint,
         failTimes: 5,
@@ -321,7 +327,9 @@ describe("ErrorService", () => {
     });
 
     it("logs a warning when OpenTelemetry recording fails but still reports", async () => {
-      const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {
+        // Suppress console.warn output in tests
+      });
       recordClientErrorOnActiveSpanSpy.mockImplementation(() => {
         throw new Error("OTel recording failed");
       });
