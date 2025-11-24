@@ -246,42 +246,123 @@ Response: Streaming UI message stream (SSE) with tool calls and structured accom
 
 ## Activities
 
+Activity search and booking via Google Places API (New) with optional AI/web fallback. See SPEC-0030 and ADR-0053 for architecture details.
+
 ### Search Activities
 
 ```http
-GET /api/activities/search
+POST /api/activities/search
 ```
 
-Query parameters:
+Search for activities (tours, experiences, attractions) by destination, category, date, and filters.
 
-- `location`: Location name or coordinates
-- `categories`: Comma-separated activity categories
-- `date`: Specific date filter
-- `budget`: Maximum price per person
+**Request Body:**
 
-### Save Activity
-
-```http
-POST /api/activities/
+```json
+{
+  "destination": "Paris",
+  "category": "museums",
+  "date": "2025-06-15",
+  "adults": 2,
+  "children": 1,
+  "infants": 0,
+  "duration": {
+    "min": 60,
+    "max": 240
+  },
+  "difficulty": "easy",
+  "indoor": true
+}
 ```
 
-### List Saved Activities
+**Parameters:**
 
-```http
-GET /api/activities/
+- `destination` (string, required): Destination location name
+- `category` (string, optional): Activity category (e.g., "museums", "tours", "parks")
+- `date` (string, optional): ISO date string (YYYY-MM-DD)
+- `adults` (number, optional): Number of adults (1-20)
+- `children` (number, optional): Number of children (0-20)
+- `infants` (number, optional): Number of infants (0-20)
+- `duration` (object, optional): Duration range in minutes
+  - `min` (number, optional): Minimum duration
+  - `max` (number, optional): Maximum duration
+- `difficulty` (string, optional): One of "easy", "moderate", "challenging", "extreme"
+- `indoor` (boolean, optional): Filter for indoor activities
+
+**Response:**
+
+```json
+{
+  "activities": [
+    {
+      "id": "ChIJN1t_tDeuEmsRUsoyG83frY4",
+      "name": "Museum of Modern Art",
+      "description": "A great museum experience",
+      "location": "11 W 53rd St, New York, NY 10019",
+      "coordinates": {
+        "lat": 40.7614,
+        "lng": -73.9776
+      },
+      "rating": 4.6,
+      "price": 2,
+      "type": "museum",
+      "duration": 120,
+      "date": "2025-06-15",
+      "images": ["https://..."]
+    }
+  ],
+  "metadata": {
+    "total": 10,
+    "cached": false,
+    "primarySource": "googleplaces",
+    "sources": ["googleplaces"],
+    "notes": []
+  }
+}
 ```
+
+**Rate Limit:** 20 requests per minute
+
+**Authentication:** Optional (anonymous searches allowed)
 
 ### Get Activity Details
 
 ```http
-GET /api/activities/{activity_id}
+GET /api/activities/[id]
 ```
 
-### Delete Saved Activity
+Retrieve comprehensive details for a specific activity by its Google Place ID.
 
-```http
-DELETE /api/activities/{activity_id}
+**Path Parameters:**
+
+- `id` (string, required): Google Place ID
+
+**Response:**
+
+```json
+{
+  "id": "ChIJN1t_tDeuEmsRUsoyG83frY4",
+  "name": "Museum of Modern Art",
+  "description": "A great museum experience with modern art collections",
+  "location": "11 W 53rd St, New York, NY 10019",
+  "coordinates": {
+    "lat": 40.7614,
+    "lng": -73.9776
+  },
+  "rating": 4.6,
+  "price": 2,
+  "type": "museum",
+  "duration": 120,
+  "date": "2025-06-15",
+  "images": ["https://..."]
+}
 ```
+
+**Rate Limit:** 30 requests per minute
+
+**Authentication:** Optional (anonymous access allowed)
+
+**Note:** Legacy endpoints (`POST /api/activities/`, `GET /api/activities/`, `DELETE /api/activities/{activity_id}`) are not implemented. Activity saving and management are handled via the frontend UI and Supabase directly.
 
 ## Itineraries
 
