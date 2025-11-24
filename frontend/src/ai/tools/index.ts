@@ -10,6 +10,7 @@ import {
   getAccommodationDetails,
   searchAccommodations,
 } from "./server/accommodations";
+import { getActivityDetails, searchActivities } from "./server/activities";
 import {
   denyApproval,
   getApprovalStatus,
@@ -54,6 +55,7 @@ export {
   exportItineraryToIcs,
   geocode,
   getAccommodationDetails,
+  getActivityDetails,
   getApprovalStatus,
   getAvailability,
   getCurrentWeather,
@@ -63,6 +65,7 @@ export {
   requireApproval,
   saveTravelPlan,
   searchAccommodations,
+  searchActivities,
   searchFlights,
   searchUserMemories,
   updateTravelPlan,
@@ -79,9 +82,11 @@ export const toolRegistry = {
   addConversationMemory,
   combineSearchResults,
   createTravelPlan,
+  getActivityDetails,
   getTravelAdvisory,
   lookupPoiContext,
   saveTravelPlan,
+  searchActivities,
   webSearch,
   webSearchBatch,
 } satisfies Record<string, AiTool>;

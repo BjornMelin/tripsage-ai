@@ -26,6 +26,10 @@ export interface RouteRateLimitDefinition {
  * `chat:sessions:list`, `calendar:events:read`).
  */
 export const ROUTE_RATE_LIMITS = {
+  "activities:details": { limit: 30, window: "1 m" },
+
+  // Activities
+  "activities:search": { limit: 20, window: "1 m" },
   // Agent routes
   "agents:accommodations": { limit: 30, window: "1 m" },
   "agents:budget": { limit: 30, window: "1 m" },

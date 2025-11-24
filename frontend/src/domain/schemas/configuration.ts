@@ -19,6 +19,7 @@ export const agentTypeSchema = z.enum([
   "itineraryAgent",
   "flightAgent",
   "accommodationAgent",
+  "activityAgent",
   "memoryAgent",
 ] as const);
 
