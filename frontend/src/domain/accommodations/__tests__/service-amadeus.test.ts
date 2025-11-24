@@ -1,9 +1,8 @@
 /** @vitest-environment node */
 
+import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-// Hoist mock so it can be accessed and modified in tests
-const fetchMock = vi.hoisted(() => vi.fn());
+import { server } from "@/test/msw/server";
 
 vi.mock("@/lib/env/server", () => ({
   getGoogleMapsServerKey: () => "test-key",
@@ -29,13 +28,15 @@ import { getCachedLatLng } from "@/lib/google/caching";
 
 describe("AccommodationsService (Amadeus)", () => {
   beforeEach(() => {
-    fetchMock.mockResolvedValue({
-      json: async () => ({
-        places: [{ id: "places/abc", location: { latitude: 1.234, longitude: 2.345 } }],
-      }),
-      ok: true,
-    });
-    global.fetch = fetchMock;
+    server.use(
+      http.post("https://places.googleapis.com/v1/places:searchText", () =>
+        HttpResponse.json({
+          places: [
+            { id: "places/abc", location: { latitude: 1.234, longitude: 2.345 } },
+          ],
+        })
+      )
+    );
   });
 
   afterEach(() => {
@@ -197,16 +198,22 @@ describe("AccommodationsService (Amadeus)", () => {
   });
 
   it("enriches details with Google Places when available", async () => {
-    fetchMock.mockResolvedValueOnce({
-      json: async () => ({
-        places: [{ id: "places/test", location: { latitude: 0, longitude: 0 } }],
-      }),
-      ok: true,
-    });
-    fetchMock.mockResolvedValueOnce({
-      json: async () => ({ id: "places/test", rating: 4.5, userRatingCount: 123 }),
-      ok: true,
-    });
+    let callCount = 0;
+    server.use(
+      http.post("https://places.googleapis.com/v1/places:searchText", () => {
+        callCount++;
+        if (callCount === 1) {
+          return HttpResponse.json({
+            places: [{ id: "places/test", location: { latitude: 0, longitude: 0 } }],
+          });
+        }
+        return HttpResponse.json({
+          id: "places/test",
+          rating: 4.5,
+          userRatingCount: 123,
+        });
+      })
+    );
 
     // Cache misses; force live fetch to ensure enrichment path populates rating
     vi.mocked(getCachedJson).mockResolvedValue(null);

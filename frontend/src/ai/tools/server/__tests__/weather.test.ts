@@ -3,10 +3,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 
-vi.mock("@/lib/http/fetch-retry", () => ({
-  fetchWithRetry: vi.fn(),
-}));
-
 vi.mock("@/lib/cache/upstash", () => ({
   getCachedJson: vi.fn().mockResolvedValue(null),
   setCachedJson: vi.fn().mockResolvedValue(undefined),
