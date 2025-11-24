@@ -1,7 +1,7 @@
 /**
  * @fileoverview Calendar integration abstraction layer.
- * Provides unified interface for different calendar providers and
- * consolidates ICS import/export functionality using date-fns v4.
+ *
+ * Unified interface for calendar providers with ICS import/export.
  */
 
 import type { CalendarEvent, EventDateTime } from "@schemas/calendar";
@@ -9,6 +9,17 @@ import { calendarEventSchema } from "@schemas/calendar";
 import type { DateRange } from "../dates/unified-date-utils";
 import { DateUtils } from "../dates/unified-date-utils";
 
+/** API origin for absolute URLs. */
+const API_ORIGIN =
+  (typeof window !== "undefined" && typeof window.location?.origin === "string"
+    ? window.location.origin
+    : process.env.NEXT_PUBLIC_BASE_URL) || "http://localhost:3000";
+
+/** Converts relative path to absolute URL. */
+const toAbsoluteUrl = (path: string): string =>
+  path.startsWith("http") ? path : new URL(path, API_ORIGIN).toString();
+
+/** Resolves event date/time value to Date. */
 const resolveDateTimeValue = (value: EventDateTime): Date => {
   if (value.dateTime instanceof Date) {
     return value.dateTime;
@@ -22,6 +33,7 @@ const resolveDateTimeValue = (value: EventDateTime): Date => {
   throw new Error("Calendar event missing date/time value.");
 };
 
+/** Serializes event date/time to payload. */
 const serializeEventDateTime = (value: EventDateTime) => {
   if (value.date) {
     return { date: value.date };
@@ -33,6 +45,7 @@ const serializeEventDateTime = (value: EventDateTime) => {
   };
 };
 
+/** Normalizes remote event data to calendar event schema. */
 const normalizeRemoteEvent = (event: Record<string, unknown>): CalendarEvent =>
   calendarEventSchema.parse({
     ...event,
@@ -41,12 +54,14 @@ const normalizeRemoteEvent = (event: Record<string, unknown>): CalendarEvent =>
     summary: event.summary ?? event.title ?? "Untitled Event",
   });
 
+/** Serializes event data to payload. */
 const serializeEventPayload = (event: CalendarEvent) => ({
   ...event,
   end: serializeEventDateTime(event.end),
   start: serializeEventDateTime(event.start),
 });
 
+/** Serializes partial event data to payload. */
 const serializePartialEventPayload = (event: Partial<CalendarEvent>) => {
   const payload: Record<string, unknown> = { ...event };
   if (event.end) {
@@ -58,44 +73,38 @@ const serializePartialEventPayload = (event: Partial<CalendarEvent>) => {
   return payload;
 };
 
-/**
- * Interface for calendar provider implementations.
- *
- * Defines the contract for interacting with different calendar services.
- *
- * @interface CalendarProvider
- */
+/** Interface for calendar provider implementations. */
 export interface CalendarProvider {
   /**
-   * Retrieves events within a specified date range.
+   * Retrieves events within date range.
    *
-   * @param dateRange - The date range to fetch events for.
-   * @returns Promise resolving to an array of calendar events.
+   * @param dateRange - Date range to fetch events for.
+   * @returns Promise resolving to array of calendar events.
    */
   getEvents(dateRange: DateRange): Promise<CalendarEvent[]>;
 
   /**
-   * Creates a new calendar event.
+   * Creates new calendar event.
    *
-   * @param event - The event data (without ID).
-   * @returns Promise resolving to the created event with assigned ID.
+   * @param event - Event data without ID.
+   * @returns Promise resolving to created event with ID.
    */
   createEvent(event: Omit<CalendarEvent, "id">): Promise<CalendarEvent>;
 
   /**
-   * Updates an existing calendar event.
+   * Updates existing calendar event.
    *
-   * @param id - The ID of the event to update.
+   * @param id - Event ID to update.
    * @param event - Partial event data to update.
-   * @returns Promise resolving to the updated event.
+   * @returns Promise resolving to updated event.
    */
   updateEvent(id: string, event: Partial<CalendarEvent>): Promise<CalendarEvent>;
 
   /**
-   * Deletes a calendar event.
+   * Deletes calendar event.
    *
-   * @param id - The ID of the event to delete.
-   * @returns Promise resolving when the event is deleted.
+   * @param id - Event ID to delete.
+   * @returns Promise resolving when event is deleted.
    */
   deleteEvent(id: string): Promise<void>;
 
@@ -110,28 +119,22 @@ export interface CalendarProvider {
   /**
    * Imports events from ICS format.
    *
-   * @param icsContent - The ICS content to parse.
-   * @returns Promise resolving to an array of imported events.
+   * @param icsContent - ICS content to parse.
+   * @returns Promise resolving to array of imported events.
    */
   importFromIcs(icsContent: string): Promise<CalendarEvent[]>;
 }
 
-/**
- * Supabase-based calendar provider implementation.
- *
- * Integrates with the TripSage backend API for calendar operations.
- *
- * @class SupabaseCalendarProvider
- */
+/** Supabase-based calendar provider implementation. */
 export class SupabaseCalendarProvider implements CalendarProvider {
   /**
-   * Retrieves events from the Supabase backend within the specified date range.
+   * Retrieves events from Supabase backend within date range.
    *
-   * @param dateRange - The date range to fetch events for.
-   * @returns Promise resolving to an array of calendar events.
+   * @param dateRange - Date range to fetch events for.
+   * @returns Promise resolving to array of calendar events.
    */
   async getEvents(dateRange: DateRange): Promise<CalendarEvent[]> {
-    const response = await fetch("/api/calendar/events", {
+    const response = await fetch(toAbsoluteUrl("/api/calendar/events"), {
       body: JSON.stringify({
         end: DateUtils.formatForApi(dateRange.end),
         start: DateUtils.formatForApi(dateRange.start),
@@ -144,8 +147,14 @@ export class SupabaseCalendarProvider implements CalendarProvider {
     return list.map((event: Record<string, unknown>) => normalizeRemoteEvent(event));
   }
 
+  /**
+   * Creates event via Supabase backend API.
+   *
+   * @param event - Event data without ID.
+   * @returns Promise resolving to created event.
+   */
   async createEvent(event: Omit<CalendarEvent, "id">): Promise<CalendarEvent> {
-    const response = await fetch("/api/calendar/events", {
+    const response = await fetch(toAbsoluteUrl("/api/calendar/events"), {
       body: JSON.stringify(serializeEventPayload(event)),
       headers: { "Content-Type": "application/json" },
       method: "PUT",
@@ -154,8 +163,15 @@ export class SupabaseCalendarProvider implements CalendarProvider {
     return normalizeRemoteEvent(created);
   }
 
+  /**
+   * Updates event via Supabase backend API.
+   *
+   * @param id - Event ID to update.
+   * @param event - Partial event data.
+   * @returns Promise resolving to updated event.
+   */
   async updateEvent(id: string, event: Partial<CalendarEvent>): Promise<CalendarEvent> {
-    const response = await fetch(`/api/calendar/events/${id}`, {
+    const response = await fetch(toAbsoluteUrl(`/api/calendar/events/${id}`), {
       body: JSON.stringify(serializePartialEventPayload(event)),
       headers: { "Content-Type": "application/json" },
       method: "PATCH",
@@ -164,12 +180,23 @@ export class SupabaseCalendarProvider implements CalendarProvider {
     return normalizeRemoteEvent(updated);
   }
 
+  /**
+   * Deletes event via Supabase backend API.
+   *
+   * @param id - Event ID to delete.
+   */
   async deleteEvent(id: string): Promise<void> {
-    await fetch(`/api/calendar/events/${id}`, { method: "DELETE" });
+    await fetch(toAbsoluteUrl(`/api/calendar/events/${id}`), { method: "DELETE" });
   }
 
+  /**
+   * Exports events to ICS via Supabase backend API.
+   *
+   * @param events - Array of events to export.
+   * @returns Promise resolving to ICS string content.
+   */
   async exportToIcs(events: CalendarEvent[]): Promise<string> {
-    const response = await fetch("/api/calendar/ics/export", {
+    const response = await fetch(toAbsoluteUrl("/api/calendar/ics/export"), {
       body: JSON.stringify({
         events: events.map((event) => ({
           ...event,
@@ -183,8 +210,14 @@ export class SupabaseCalendarProvider implements CalendarProvider {
     return response.text();
   }
 
+  /**
+   * Imports events from ICS via Supabase backend API.
+   *
+   * @param icsContent - ICS content to parse.
+   * @returns Promise resolving to array of imported events.
+   */
   async importFromIcs(icsContent: string): Promise<CalendarEvent[]> {
-    const response = await fetch("/api/calendar/ics/import", {
+    const response = await fetch(toAbsoluteUrl("/api/calendar/ics/import"), {
       body: JSON.stringify({ icsContent }),
       headers: { "Content-Type": "application/json" },
       method: "POST",
@@ -195,11 +228,10 @@ export class SupabaseCalendarProvider implements CalendarProvider {
 }
 
 /**
- * Google Calendar API provider implementation.
+ * Converts EventDateTime to Google Calendar API format.
  *
- * Integrates with Google Calendar API for calendar operations.
- *
- * @class GoogleCalendarProvider
+ * @param value - Event date/time value.
+ * @returns Google Calendar date/time payload.
  */
 const toGoogleDateTimePayload = (value: EventDateTime) => {
   if (value.date) {
@@ -212,10 +244,20 @@ const toGoogleDateTimePayload = (value: EventDateTime) => {
   };
 };
 
+/**
+ * Google Calendar API provider implementation.
+ *
+ * Server-only: requires API key and must not be used in client components.
+ */
 export class GoogleCalendarProvider implements CalendarProvider {
   private apiKey: string;
   private calendarId: string;
 
+  /**
+   * Asserts provider is used server-side only.
+   *
+   * @throws Error if used in client context.
+   */
   assertServer() {
     if (typeof window !== "undefined") {
       throw new Error("GoogleCalendarProvider can only be used on the server.");
@@ -223,10 +265,10 @@ export class GoogleCalendarProvider implements CalendarProvider {
   }
 
   /**
-   * Creates a new Google Calendar provider instance.
+   * Creates Google Calendar provider instance.
    *
    * @param apiKey - Google Calendar API key.
-   * @param calendarId - Calendar ID to use. Defaults to "primary".
+   * @param calendarId - Calendar ID. Defaults to "primary".
    */
   constructor(apiKey: string, calendarId: string = "primary") {
     this.assertServer();
@@ -235,10 +277,10 @@ export class GoogleCalendarProvider implements CalendarProvider {
   }
 
   /**
-   * Retrieves events from Google Calendar within the specified date range.
+   * Retrieves events from Google Calendar within date range.
    *
-   * @param dateRange - The date range to fetch events for.
-   * @returns Promise resolving to an array of calendar events.
+   * @param dateRange - Date range to fetch events for.
+   * @returns Promise resolving to array of calendar events.
    */
   async getEvents(dateRange: DateRange): Promise<CalendarEvent[]> {
     const params = new URLSearchParams({
@@ -267,6 +309,12 @@ export class GoogleCalendarProvider implements CalendarProvider {
     );
   }
 
+  /**
+   * Creates event via Google Calendar API.
+   *
+   * @param event - Event data without ID.
+   * @returns Promise resolving to created event.
+   */
   async createEvent(event: Omit<CalendarEvent, "id">): Promise<CalendarEvent> {
     const response = await fetch(
       `https://www.googleapis.com/calendar/v3/calendars/${this.calendarId}/events?key=${this.apiKey}`,
@@ -286,6 +334,13 @@ export class GoogleCalendarProvider implements CalendarProvider {
     return normalizeRemoteEvent(created);
   }
 
+  /**
+   * Updates event via Google Calendar API.
+   *
+   * @param id - Event ID to update.
+   * @param event - Partial event data.
+   * @returns Promise resolving to updated event.
+   */
   async updateEvent(id: string, event: Partial<CalendarEvent>): Promise<CalendarEvent> {
     const response = await fetch(
       `https://www.googleapis.com/calendar/v3/calendars/${this.calendarId}/events/${id}?key=${this.apiKey}`,
@@ -305,6 +360,11 @@ export class GoogleCalendarProvider implements CalendarProvider {
     return normalizeRemoteEvent(updated);
   }
 
+  /**
+   * Deletes event via Google Calendar API.
+   *
+   * @param id - Event ID to delete.
+   */
   async deleteEvent(id: string): Promise<void> {
     await fetch(
       `https://www.googleapis.com/calendar/v3/calendars/${this.calendarId}/events/${id}?key=${this.apiKey}`,
@@ -312,6 +372,12 @@ export class GoogleCalendarProvider implements CalendarProvider {
     );
   }
 
+  /**
+   * Exports events to ICS via backend API.
+   *
+   * @param events - Array of events to export.
+   * @returns Promise resolving to ICS string content.
+   */
   async exportToIcs(events: CalendarEvent[]): Promise<string> {
     const response = await fetch("/api/calendar/ics/export", {
       body: JSON.stringify({
@@ -327,6 +393,12 @@ export class GoogleCalendarProvider implements CalendarProvider {
     return response.text();
   }
 
+  /**
+   * Imports events from ICS via backend API.
+   *
+   * @param icsContent - ICS content to parse.
+   * @returns Promise resolving to array of imported events.
+   */
   async importFromIcs(icsContent: string): Promise<CalendarEvent[]> {
     const response = await fetch("/api/calendar/ics/import", {
       body: JSON.stringify({ icsContent }),
@@ -339,7 +411,7 @@ export class GoogleCalendarProvider implements CalendarProvider {
 }
 
 /**
- * Factory helpers for creating calendar providers.
+ * Factory for creating calendar provider instances.
  */
 export const calendarFactory = {
   create(

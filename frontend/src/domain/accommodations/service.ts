@@ -29,9 +29,10 @@ import {
 } from "@schemas/accommodations";
 import type { Ratelimit } from "@upstash/ratelimit";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
-import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
+import { deleteCachedJson, getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
 import { cacheLatLng, getCachedLatLng } from "@/lib/google/caching";
+import { getPlaceDetails, postPlacesSearch } from "@/lib/google/client";
 import { retryWithBackoff } from "@/lib/http/retry";
 import type { ProcessedPayment } from "@/lib/payments/booking-payment";
 import { secureUuid } from "@/lib/security/random";
@@ -145,7 +146,7 @@ export class AccommodationsService {
           listings: filteredListings,
           maxPrice: prices.length > 0 ? Math.max(...prices) : undefined,
           minPrice: prices.length > 0 ? Math.min(...prices) : undefined,
-          provider: "amadeus" as const,
+          provider: this.deps.provider.name,
           resultsReturned: filteredListings.length,
           searchId: secureUuid(),
           searchParameters: {
@@ -209,7 +210,7 @@ export class AccommodationsService {
 
         return ACCOMMODATION_DETAILS_OUTPUT_SCHEMA.parse({
           listing: enriched,
-          provider: "amadeus" as const,
+          provider: this.deps.provider.name,
           status: "success" as const,
         });
       }
@@ -466,6 +467,18 @@ export class AccommodationsService {
           priceCents: amountCents,
         });
 
+        // Invalidate search cache for this listing and date range to prevent stale results
+        const searchCacheKey = this.buildCacheKey({
+          checkin: params.checkin,
+          checkout: params.checkout,
+          guests: params.guests,
+          location: params.listingId, // Use listingId as location hint for cache invalidation
+        });
+        if (searchCacheKey) {
+          await deleteCachedJson(searchCacheKey);
+          span.addEvent("cache.invalidated", { key: searchCacheKey });
+        }
+
         return ACCOMMODATION_BOOKING_OUTPUT_SCHEMA.parse(result);
       }
     );
@@ -476,7 +489,17 @@ export class AccommodationsService {
     fn: (ctx?: ProviderContext) => Promise<ProviderResult<T>>,
     ctx?: ServiceContext
   ): Promise<{ ok: true; value: T; retries: number }> {
-    const result = await fn(ctx);
+    const providerCtx: ProviderContext | undefined = ctx
+      ? {
+          clientIp: ctx.clientIp,
+          sessionId: ctx.sessionId ?? ctx.userId,
+          testScenario: ctx.testScenario,
+          userAgent: ctx.userAgent,
+          userId: ctx.userId,
+        }
+      : undefined;
+
+    const result = await fn(providerCtx);
     if (!result.ok) {
       throw result.error;
     }
@@ -535,19 +558,12 @@ function filterListingsByPrice(
   if (minPrice === undefined && maxPrice === undefined) return listings;
 
   return listings.filter((listing) => {
-    const rooms = (listing.rooms as Array<Record<string, unknown>> | undefined) ?? [];
-    const firstRatePrice = rooms[0]?.rates
-      ? ((rooms[0].rates as Array<Record<string, unknown>>)[0]?.price as
-          | { total?: string; numeric?: number }
-          | undefined)
-      : undefined;
-    const totalString = firstRatePrice?.total;
-    const totalNumeric =
-      firstRatePrice?.numeric ??
-      (totalString ? Number.parseFloat(totalString) : Number.NaN);
-    if (!Number.isFinite(totalNumeric)) return true;
-    if (minPrice !== undefined && totalNumeric < minPrice) return false;
-    if (maxPrice !== undefined && totalNumeric > maxPrice) return false;
+    const prices = collectPrices([listing]);
+    if (prices.length === 0) return true;
+    const minListingPrice = Math.min(...prices);
+    const maxListingPrice = Math.max(...prices);
+    if (minPrice !== undefined && maxListingPrice < minPrice) return false;
+    if (maxPrice !== undefined && minListingPrice > maxPrice) return false;
     return true;
   });
 }
@@ -583,19 +599,11 @@ async function resolveCoordinates(
       redactKeys: ["location"],
     },
     async () =>
-      await retryWithBackoff(
-        () =>
-          fetch("https://places.googleapis.com/v1/places:searchText", {
-            body: JSON.stringify({ maxResultCount: 1, textQuery: location }),
-            headers: {
-              "Content-Type": "application/json",
-              "X-Goog-Api-Key": apiKey,
-              "X-Goog-FieldMask": "places.id,places.location",
-            },
-            method: "POST",
-          }),
-        { attempts: 3, baseDelayMs: 200, maxDelayMs: 1000 }
-      )
+      await postPlacesSearch({
+        apiKey,
+        body: { maxResultCount: 1, textQuery: location },
+        fieldMask: "places.id,places.location",
+      })
   );
 
   if (!response.ok) {
@@ -659,20 +667,12 @@ async function enrichWithGooglePlaces(
     "places.enrich.search",
     { attributes: { query } },
     async () =>
-      await retryWithBackoff(
-        () =>
-          fetch("https://places.googleapis.com/v1/places:searchText", {
-            body: JSON.stringify({ maxResultCount: 1, textQuery: query }),
-            headers: {
-              "Content-Type": "application/json",
-              "X-Goog-Api-Key": apiKey,
-              "X-Goog-FieldMask":
-                "places.id,places.displayName,places.rating,places.userRatingCount,places.photos.name,places.internationalPhoneNumber,places.formattedAddress,places.location",
-            },
-            method: "POST",
-          }),
-        { attempts: 3, baseDelayMs: 200, maxDelayMs: 1000 }
-      )
+      await postPlacesSearch({
+        apiKey,
+        body: { maxResultCount: 1, textQuery: query },
+        fieldMask:
+          "places.id,places.displayName,places.rating,places.userRatingCount,places.photos.name,places.internationalPhoneNumber,places.formattedAddress,places.location",
+      })
   );
   if (!searchRes.ok) return listing;
   const searchData = await searchRes.json();
@@ -696,19 +696,12 @@ async function enrichWithGooglePlaces(
     "places.enrich.details",
     { attributes: { placeId: place.id } },
     async () =>
-      await retryWithBackoff(
-        () =>
-          fetch(`https://places.googleapis.com/v1/${place.id}`, {
-            headers: {
-              "Content-Type": "application/json",
-              "X-Goog-Api-Key": apiKey,
-              "X-Goog-FieldMask":
-                "id,displayName,formattedAddress,location,rating,userRatingCount,internationalPhoneNumber,photos.name,googleMapsUri",
-            },
-            method: "GET",
-          }),
-        { attempts: 3, baseDelayMs: 200, maxDelayMs: 1000 }
-      )
+      await getPlaceDetails({
+        apiKey,
+        fieldMask:
+          "id,displayName,formattedAddress,location,rating,userRatingCount,internationalPhoneNumber,photos.name,googleMapsUri",
+        placeId: place.id,
+      })
   );
   if (!detailsRes.ok) return { ...listing, place };
   const details = await detailsRes.json();

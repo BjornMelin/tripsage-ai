@@ -1,8 +1,7 @@
 /**
  * @fileoverview Upstash Redis caching utilities for JSON payloads.
  *
- * Provides type-safe JSON serialization/deserialization. Returns null when
- * Redis is unavailable or keys are missing.
+ * Returns null when Redis is unavailable or keys are missing.
  */
 
 import { getRedis } from "@/lib/redis";
@@ -51,4 +50,32 @@ export async function setCachedJson(
     return;
   }
   await redis.set(key, payload);
+}
+
+/**
+ * Delete a cached JSON payload from Upstash Redis.
+ *
+ * Removes the key from Redis cache. Skips if Redis is unavailable.
+ *
+ * @param key - Redis key to delete.
+ */
+export async function deleteCachedJson(key: string): Promise<void> {
+  const redis = getRedis();
+  if (!redis) return;
+  await redis.del(key);
+}
+
+/**
+ * Delete multiple cached JSON payloads from Upstash Redis.
+ *
+ * Removes multiple keys from Redis cache. Skips if Redis is unavailable.
+ *
+ * @param keys - Array of Redis keys to delete.
+ * @returns Number of keys deleted.
+ */
+export async function deleteCachedJsonMany(keys: string[]): Promise<number> {
+  const redis = getRedis();
+  if (!redis) return 0;
+  if (keys.length === 0) return 0;
+  return await redis.del(...keys);
 }

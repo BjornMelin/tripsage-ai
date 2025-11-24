@@ -1,8 +1,8 @@
 /**
- * @fileoverview Booking orchestrator sequencing approval -> payment -> provider booking -> persistence with compensation.
+ * @fileoverview Booking orchestrator with compensation.
  *
- * Executes the full booking transaction with compensation: approvals, payment capture,
- * provider booking, Supabase persistence, and refund/alert handling on failure paths.
+ * Executes booking workflow: approval -> payment -> provider booking -> persistence.
+ * Handles refunds and alerts on failure paths.
  */
 
 import type {
@@ -19,24 +19,7 @@ import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { emitOperationalAlert } from "@/lib/telemetry/alerts";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
-/**
- * Command object for preparing a booking transaction.
- *
- * @param approvalKey - Key for approving the booking.
- * @param userId - User ID for the booking.
- * @param sessionId - Session ID for the booking.
- * @param idempotencyKey - Idempotency key for the booking.
- * @param bookingToken - Booking token for the booking.
- * @param amount - Amount for the booking.
- * @param currency - Currency for the booking.
- * @param paymentMethodId - Payment method ID for the booking.
- * @param guest - Guest details for the booking.
- * @param stay - Stay details for the booking.
- * @param providerPayload - Provider payload for the booking.
- * @param processPayment - Function to process the payment.
- * @param persistBooking - Function to persist the booking.
- * @param requestApproval - Function to request approval for the booking.
- */
+/** Command object for booking transaction execution. */
 export type BookingCommand = {
   approvalKey: string;
   userId: string;
@@ -65,19 +48,12 @@ export type BookingCommand = {
   requestApproval: () => Promise<void>;
 };
 
+/** Provider payload builder function or static object. */
 type ProviderPayloadBuilder =
   | Record<string, unknown>
   | ((payment: ProcessedPayment) => Record<string, unknown>);
 
-/**
- * Payload for persisting a booking transaction.
- *
- * @param bookingId - ID of the booking.
- * @param providerBookingId - Provider-specific booking identifier.
- * @param stripePaymentIntentId - ID of the Stripe payment intent.
- * @param confirmationNumber - Confirmation number for the booking.
- * @param command - Booking command.
- */
+/** Payload for persisting booking transaction to database. */
 type PersistPayload = {
   bookingId: string;
   providerBookingId?: string;
@@ -86,23 +62,18 @@ type PersistPayload = {
   command: BookingCommand;
 };
 
-/**
- * Dependencies for the booking orchestrator.
- *
- * @param provider - Provider adapter.
- * @param supabase - Supabase client.
- */
+/** Dependencies for booking orchestrator. */
 export type BookingOrchestratorDeps = {
   provider: AccommodationProviderAdapter;
   supabase: TypedServerSupabase;
 };
 
 /**
- * Runs the booking workflow with telemetry and compensation safeguards.
+ * Executes booking workflow with telemetry and compensation.
  *
- * @param deps Provider adapter and Supabase client.
- * @param command Fully prepared booking command including approval/payment hooks.
- * @returns Confirmed booking result or propagates normalized provider/payment errors.
+ * @param deps - Provider adapter and Supabase client.
+ * @param command - Booking command with approval and payment hooks.
+ * @returns Confirmed booking result or throws provider/payment error.
  */
 export function runBookingOrchestrator(
   deps: BookingOrchestratorDeps,
@@ -175,11 +146,13 @@ export function runBookingOrchestrator(
           stripePaymentIntentId: payment.paymentIntentId,
         });
       } catch (dbError) {
+        await refundOnFailure(payment);
         emitOperationalAlert("booking.persistence_failed", {
           attributes: {
             bookingId,
             error: dbError instanceof Error ? dbError.message : "unknown",
             listingId: command.stay.listingId,
+            refundAttempted: Boolean(payment?.paymentIntentId),
             userId: command.userId,
           },
           severity: "error",
@@ -218,19 +191,20 @@ export function runBookingOrchestrator(
 }
 
 /**
- * Refund a booking payment if the payment intent ID is available.
+ * Refunds booking payment if payment intent ID is available.
  *
- * @param payment - The processed payment to refund.
- * @returns A promise that resolves when the refund is complete or rejected.
+ * @param payment - Processed payment to refund.
  */
 async function refundOnFailure(payment?: ProcessedPayment): Promise<void> {
   if (!payment?.paymentIntentId) return;
   try {
     await refundBookingPayment(payment.paymentIntentId);
-  } catch {
+  } catch (refundError) {
     emitOperationalAlert("booking.refund_failed", {
       attributes: {
         paymentIntentId: payment.paymentIntentId,
+        refundError:
+          refundError instanceof Error ? refundError.message : "unknown_refund_error",
       },
       severity: "warning",
     });

@@ -16,19 +16,23 @@ import {
   type IcsImportRequest,
   icsImportRequestSchema,
 } from "@schemas/calendar";
+import ICAL from "ical.js";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { createApiError } from "@/lib/api/error-response";
 import { withApiGuards } from "@/lib/api/factory";
 import { RecurringDateGenerator } from "@/lib/dates/recurring-rules";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
+import { createServerLogger } from "@/lib/telemetry/logger";
 
+/** Parsed ICS event structure from ical.js. */
 type ParsedIcsEvent = {
   type: "VEVENT";
   summary?: string;
   description?: string;
   location?: string;
-  start?: Date | { toJSDate?: () => Date };
-  end?: Date | { toJSDate?: () => Date };
+  start?: Date;
+  end?: Date;
   rrule?: string;
   attendees?: Array<{ val: string; params?: Record<string, string> }>;
   uid?: string;
@@ -37,144 +41,111 @@ type ParsedIcsEvent = {
 };
 
 /**
- * Unfolds RFC 5545 line folding.
- * Lines longer than 75 octets are folded by inserting CRLF followed by a single space or tab.
- *
- * @param icsData - Raw ICS document string with potential line folding.
- * @returns Unfolded ICS data string.
- */
-function unfoldLines(icsData: string): string {
-  // Normalize line endings to \n
-  const normalized = icsData.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-  const lines = normalized.split("\n");
-  const unfolded: string[] = [];
-  let currentLine = "";
-
-  for (const line of lines) {
-    // Check if this line is a continuation (starts with space or tab)
-    if (line.length > 0 && (line[0] === " " || line[0] === "\t")) {
-      // Continuation line - append to current line (without leading whitespace)
-      currentLine += line.slice(1);
-    } else {
-      // New line - save previous line and start new one
-      if (currentLine) {
-        unfolded.push(currentLine);
-      }
-      currentLine = line;
-    }
-  }
-  // Don't forget the last line
-  if (currentLine) {
-    unfolded.push(currentLine);
-  }
-
-  return unfolded.join("\n");
-}
-
-/**
- * Parses property name and parameters from an ICS line.
- * Handles properties with parameters like "DTSTART;TZID=America/New_York:20200101T120000"
- *
- * @param line - ICS content line.
- * @returns Object with property name, parameters, and value.
- */
-function parseProperty(line: string): {
-  name: string;
-  params: Record<string, string>;
-  value: string;
-} {
-  const colonIndex = line.indexOf(":");
-  if (colonIndex === -1) {
-    return { name: line, params: {}, value: "" };
-  }
-
-  const propertyPart = line.slice(0, colonIndex);
-  const value = line.slice(colonIndex + 1);
-
-  const semicolonIndex = propertyPart.indexOf(";");
-  if (semicolonIndex === -1) {
-    return { name: propertyPart, params: {}, value };
-  }
-
-  const name = propertyPart.slice(0, semicolonIndex);
-  const params: Record<string, string> = {};
-  const paramParts = propertyPart.slice(semicolonIndex + 1).split(";");
-
-  for (const paramPart of paramParts) {
-    const equalsIndex = paramPart.indexOf("=");
-    if (equalsIndex !== -1) {
-      const paramName = paramPart.slice(0, equalsIndex);
-      const paramValue = paramPart.slice(equalsIndex + 1);
-      // Unescape parameter values (RFC 5545 section 3.2)
-      params[paramName] = paramValue.replace(/\\,/g, ",").replace(/\\;/g, ";");
-    }
-  }
-
-  return { name, params, value };
-}
-
-/**
- * Parses raw ICS data into a keyed map of VEVENT entries.
- * Handles RFC 5545 line folding and property parameters.
+ * Parses raw ICS data into a keyed map of VEVENT entries using ical.js library.
+ * Handles RFC 5545 compliance, line folding, property parameters, and timezone handling.
  *
  * @param icsData - Raw ICS document string.
  * @returns Event map keyed by incremental ids.
  */
 function parseICS(icsData: string): Record<string, ParsedIcsEvent> {
   const events: Record<string, ParsedIcsEvent> = {};
-  // Unfold lines first (RFC 5545 section 3.1)
-  const unfolded = unfoldLines(icsData);
-  const lines = unfolded.split("\n");
-  let currentEvent: ParsedIcsEvent | null = null;
-  let eventId = 0;
 
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
+  try {
+    // Parse ICS data into jCal format
+    const jcal = ICAL.parse(icsData);
+    const component = new ICAL.Component(jcal);
+    const vevents = component.getAllSubcomponents("vevent");
 
-    if (trimmed === "BEGIN:VEVENT") {
-      currentEvent = { type: "VEVENT" };
+    let eventId = 0;
+    for (const veventComp of vevents) {
       eventId++;
-    } else if (trimmed === "END:VEVENT") {
-      if (currentEvent) {
-        events[`event_${eventId}`] = currentEvent;
-      }
-      currentEvent = null;
-    } else {
-      const { name, params, value } = parseProperty(trimmed);
-      currentEvent = currentEvent ?? { type: "VEVENT" };
+      const event = new ICAL.Event(veventComp);
 
-      // Handle common properties
-      if (name === "SUMMARY") {
-        currentEvent.summary = value;
-      } else if (name === "DESCRIPTION") {
-        currentEvent.description = value;
-      } else if (name === "LOCATION") {
-        currentEvent.location = value;
-      } else if (name === "DTSTART") {
-        // Parse date, handling timezone if present
-        currentEvent.start = DateUtils.parse(value);
-      } else if (name === "DTEND") {
-        currentEvent.end = DateUtils.parse(value);
-      } else if (name === "UID") {
-        currentEvent.uid = value;
-      } else if (name === "RRULE") {
-        currentEvent.rrule = value;
-      } else if (name === "CREATED") {
-        currentEvent.created = DateUtils.parse(value);
-      } else if (name === "LAST-MODIFIED") {
-        currentEvent.lastmodified = DateUtils.parse(value);
-      } else if (name === "ATTENDEE") {
-        // Parse attendee with parameters
-        if (!currentEvent.attendees) {
-          currentEvent.attendees = [];
+      const parsedEvent: ParsedIcsEvent = {
+        type: "VEVENT",
+      };
+
+      // Extract basic properties
+      if (event.summary) {
+        parsedEvent.summary = event.summary;
+      }
+      if (event.description) {
+        parsedEvent.description = event.description;
+      }
+      if (event.location) {
+        parsedEvent.location = event.location;
+      }
+      if (event.uid) {
+        parsedEvent.uid = event.uid;
+      }
+
+      // Extract dates (ical.js handles timezone conversion)
+      if (event.startDate) {
+        parsedEvent.start = event.startDate.toJSDate();
+      }
+      if (event.endDate) {
+        parsedEvent.end = event.endDate.toJSDate();
+      }
+
+      // Extract RRULE
+      const rruleProp = veventComp.getFirstProperty("rrule");
+      if (rruleProp) {
+        const rrule = rruleProp.getFirstValue();
+        if (rrule instanceof ICAL.Recur) {
+          parsedEvent.rrule = rrule.toString();
         }
-        currentEvent.attendees.push({
-          params,
-          val: value,
+      }
+
+      // Extract CREATED and LAST-MODIFIED
+      const createdProp = veventComp.getFirstProperty("created");
+      if (createdProp) {
+        const created = createdProp.getFirstValue();
+        if (created instanceof ICAL.Time) {
+          parsedEvent.created = created.toJSDate();
+        }
+      }
+
+      const lastModifiedProp = veventComp.getFirstProperty("last-modified");
+      if (lastModifiedProp) {
+        const lastModified = lastModifiedProp.getFirstValue();
+        if (lastModified instanceof ICAL.Time) {
+          parsedEvent.lastmodified = lastModified.toJSDate();
+        }
+      }
+
+      // Extract attendees with parameters
+      const attendeeProps = veventComp.getAllProperties("attendee");
+      if (attendeeProps.length > 0) {
+        parsedEvent.attendees = attendeeProps.map((prop) => {
+          const params: Record<string, string> = {};
+          // Common attendee parameters
+          const commonParams = ["cn", "cutype", "role", "partstat", "rsvp"];
+          for (const paramName of commonParams) {
+            const paramValue = prop.getParameter(paramName);
+            if (paramValue) {
+              // Parameter names are case-insensitive in ICS, normalize to uppercase
+              params[paramName.toUpperCase()] = Array.isArray(paramValue)
+                ? paramValue[0]
+                : paramValue;
+            }
+          }
+          // Convert value to string (attendee values are typically mailto: URLs)
+          const value = prop.getFirstValue();
+          const valString = typeof value === "string" ? value : String(value || "");
+          return {
+            params,
+            val: valString,
+          };
         });
       }
+
+      events[`event_${eventId}`] = parsedEvent;
     }
+  } catch (error) {
+    // If parsing fails, throw error to be caught by caller
+    throw new Error(
+      `Failed to parse ICS: ${error instanceof Error ? error.message : String(error)}`
+    );
   }
 
   return events;
@@ -194,6 +165,7 @@ export const POST = withApiGuards({
   schema: icsImportRequestSchema,
   telemetry: "calendar.ics.import",
 })((_req: NextRequest, _context, validated: IcsImportRequest): NextResponse => {
+  const logger = createServerLogger("calendar.ics.import");
   // Parse ICS data
   let parsedEvents: ReturnType<typeof parseICS>;
   try {
@@ -202,7 +174,7 @@ export const POST = withApiGuards({
     const message =
       parseError instanceof Error ? parseError.message : "Failed to parse ICS";
     return NextResponse.json(
-      { details: message, error: "Invalid ICS format" },
+      createApiError("INVALID_ICS_FORMAT", "Invalid ICS format", message),
       { status: 400 }
     );
   }
@@ -211,42 +183,14 @@ export const POST = withApiGuards({
   const events: unknown[] = [];
   for (const [_key, event] of Object.entries(parsedEvents)) {
     if (event.type === "VEVENT") {
-      const vevent = event as {
-        summary?: string;
-        description?: string;
-        location?: string;
-        start?: Date | { toJSDate?: () => Date };
-        end?: Date | { toJSDate?: () => Date };
-        rrule?: string;
-        attendees?: Array<{ val: string; params?: Record<string, string> }>;
-        uid?: string;
-        created?: Date;
-        lastmodified?: Date;
-      };
+      const vevent = event as ParsedIcsEvent;
 
-      const startDate =
-        vevent.start instanceof Date
-          ? vevent.start
-          : vevent.start &&
-              typeof vevent.start === "object" &&
-              "toJSDate" in vevent.start &&
-              typeof vevent.start.toJSDate === "function"
-            ? vevent.start.toJSDate()
-            : null;
-
-      const endDate =
-        vevent.end instanceof Date
-          ? vevent.end
-          : vevent.end &&
-              typeof vevent.end === "object" &&
-              "toJSDate" in vevent.end &&
-              typeof vevent.end.toJSDate === "function"
-            ? vevent.end.toJSDate()
-            : null;
-
-      if (!startDate || !endDate) {
+      if (!vevent.start || !vevent.end) {
         continue; // Skip events without valid dates
       }
+
+      const startDate = vevent.start;
+      const endDate = vevent.end;
 
       const eventData = {
         description: vevent.description,
@@ -269,10 +213,16 @@ export const POST = withApiGuards({
           : {}),
         ...(vevent.attendees?.length
           ? {
-              attendees: vevent.attendees.map((att) => ({
-                displayName: att.params?.CN?.replace(/^"(.*)"$/, "$1"), // Strip surrounding quotes
-                email: att.val,
-              })),
+              attendees: vevent.attendees.map((att) => {
+                // Strip mailto: prefix from email if present
+                const email = att.val.startsWith("mailto:")
+                  ? att.val.slice(7)
+                  : att.val;
+                return {
+                  displayName: att.params?.CN?.replace(/^"(.*)"$/, "$1"), // Strip surrounding quotes
+                  email,
+                };
+              }),
             }
           : {}),
         ...(vevent.uid ? { iCalUID: vevent.uid } : {}),
@@ -280,14 +230,18 @@ export const POST = withApiGuards({
         ...(vevent.lastmodified ? { updated: vevent.lastmodified } : {}),
       };
 
-      // Validate against schema (but don't fail on minor issues)
-      try {
-        calendarEventSchema.parse(eventData);
-      } catch {
-        // Continue even if validation fails - return raw data
+      // Validate against schema - use parsed result or skip invalid events
+      const parsedEvent = calendarEventSchema.safeParse(eventData);
+      if (!parsedEvent.success) {
+        // Log validation error but skip invalid events
+        logger.warn("ics_import:invalid_event_skipped", {
+          errors: parsedEvent.error.issues,
+          eventSummary: vevent.summary,
+        });
+        continue;
       }
 
-      events.push(eventData);
+      events.push(parsedEvent.data);
     }
   }
 

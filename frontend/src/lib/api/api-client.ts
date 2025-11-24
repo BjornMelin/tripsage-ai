@@ -187,8 +187,9 @@ export class ApiClient {
       typeof window !== "undefined" && typeof window.location?.origin === "string"
         ? window.location.origin
         : "http://localhost:3000";
+    const { baseUrl: baseUrlOverride, ...restConfig } = config;
     const rawBase =
-      (config.baseUrl as string | undefined) ??
+      (baseUrlOverride as string | undefined) ??
       (publicApiUrl ? `${publicApiUrl.replace(/\/$/, "")}/api` : "/api");
     const absoluteBase = rawBase.startsWith("http")
       ? rawBase
@@ -205,7 +206,7 @@ export class ApiClient {
       timeout: 10000,
       validateRequests: true,
       validateResponses: nodeEnv !== "production",
-      ...config,
+      ...restConfig,
       baseUrl: normalizedBase,
     };
   }

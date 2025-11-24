@@ -1,5 +1,5 @@
 /**
- * @fileoverview Amadeus Self-Service provider adapter with retry/backoff and telemetry.
+ * @fileoverview Amadeus provider adapter with retry and telemetry.
  */
 
 import { ProviderError } from "@domain/accommodations/errors";
@@ -33,9 +33,24 @@ import type {
   ProviderSearchResult,
 } from "./types";
 
+const DEFAULT_PROVIDER_TIMEOUT_MS = 8_000;
 const DEFAULT_RETRYABLE_CODES = new Set([429, 408, 500, 502, 503, 504]);
 
+/** Adapter configuration options. */
+type AdapterConfig = {
+  maxDelayMs: number;
+  retryAttempts: number;
+  timeoutMs: number;
+};
+
+/**
+ * Maps HTTP status code to provider error code.
+ *
+ * @param statusCode - HTTP status code.
+ * @returns Provider error code.
+ */
 export function mapStatusToProviderCode(statusCode?: number): ProviderError["code"] {
+  if (statusCode === 408) return "provider_timeout";
   if (statusCode === 401 || statusCode === 403) return "unauthorized";
   if (statusCode === 404) return "not_found";
   if (statusCode === 429) return "rate_limited";
@@ -45,8 +60,23 @@ export function mapStatusToProviderCode(statusCode?: number): ProviderError["cod
 
 export class AmadeusProviderAdapter implements AccommodationProviderAdapter {
   readonly name = "amadeus" as const;
+  private readonly config: AdapterConfig;
 
-  /** Search hotels via Amadeus for the provided coordinates and dates. */
+  constructor(config?: Partial<AdapterConfig>) {
+    this.config = {
+      maxDelayMs: config?.maxDelayMs ?? 1_000,
+      retryAttempts: config?.retryAttempts ?? 3,
+      timeoutMs: config?.timeoutMs ?? DEFAULT_PROVIDER_TIMEOUT_MS,
+    };
+  }
+
+  /**
+   * Searches hotels by coordinates and dates.
+   *
+   * @param params - Search parameters.
+   * @param ctx - Optional provider context.
+   * @returns Search results with listings.
+   */
   search(
     params: AccommodationSearchParams,
     ctx?: ProviderContext
@@ -98,7 +128,13 @@ export class AmadeusProviderAdapter implements AccommodationProviderAdapter {
     });
   }
 
-  /** Fetch hotel details and offers for a listing. */
+  /**
+   * Fetches hotel details and offers for a listing.
+   *
+   * @param params - Details parameters.
+   * @param ctx - Optional provider context.
+   * @returns Hotel details with offers.
+   */
   getDetails(
     params: AccommodationDetailsParams,
     ctx?: ProviderContext
@@ -125,7 +161,13 @@ export class AmadeusProviderAdapter implements AccommodationProviderAdapter {
     });
   }
 
-  /** Check room availability and get booking token. */
+  /**
+   * Checks room availability and returns booking token.
+   *
+   * @param params - Availability parameters.
+   * @param ctx - Optional provider context.
+   * @returns Availability result with booking token and price.
+   */
   checkAvailability(
     params: AccommodationCheckAvailabilityParams,
     ctx?: ProviderContext
@@ -163,7 +205,13 @@ export class AmadeusProviderAdapter implements AccommodationProviderAdapter {
     });
   }
 
-  /** Create a booking reservation. */
+  /**
+   * Creates booking reservation.
+   *
+   * @param payload - Booking payload.
+   * @param ctx - Optional provider context.
+   * @returns Booking result with confirmation number.
+   */
   createBooking(
     payload: ProviderBookingPayload,
     ctx?: ProviderContext
@@ -182,10 +230,21 @@ export class AmadeusProviderAdapter implements AccommodationProviderAdapter {
     });
   }
 
-  /** Build Amadeus-specific booking payload. */
+  /**
+   * Builds Amadeus-specific booking payload.
+   *
+   * @param params - Booking request parameters.
+   * @param options - Optional payment and currency options.
+   * @returns Amadeus booking payload.
+   */
   buildBookingPayload(
     params: AccommodationBookingRequest,
-    options?: { paymentIntentId?: string; currency?: string; totalCents?: number }
+    options?: {
+      currency?: string;
+      paymentIntentId?: string;
+      title?: string;
+      totalCents?: number;
+    }
   ): ProviderBookingPayload {
     const travelerName = params.guestName.trim().split(/\s+/);
     const givenName = travelerName[0] ?? params.guestName;
@@ -220,7 +279,11 @@ export class AmadeusProviderAdapter implements AccommodationProviderAdapter {
               phone: params.guestPhone ?? "",
             },
             id: 1,
-            name: { firstName: givenName, lastName: familyName, title: "MR" },
+            name: {
+              firstName: givenName,
+              lastName: familyName,
+              title: options?.title ?? "MX",
+            },
           },
         ],
         hotelOffers: [{ id: params.bookingToken }],
@@ -242,16 +305,25 @@ export class AmadeusProviderAdapter implements AccommodationProviderAdapter {
     };
   }
 
-  /** Execute a provider operation with telemetry and retry semantics. */
+  /**
+   * Executes provider operation with telemetry and retry.
+   *
+   * @param operation - Operation name for telemetry.
+   * @param ctx - Optional provider context.
+   * @param fn - Operation function to execute.
+   * @returns Provider result with success/error status.
+   */
   private execute<T>(
     operation: string,
-    _ctx: ProviderContext | undefined,
+    ctx: ProviderContext | undefined,
     fn: () => Promise<T>
   ): Promise<ProviderResult<T>> {
     return withTelemetrySpan(
       `provider.amadeus.${operation}`,
       {
         attributes: {
+          ...(ctx?.sessionId ? { "provider.session_id": ctx.sessionId } : {}),
+          ...(ctx?.userId ? { "provider.user_id": ctx.userId } : {}),
           "provider.name": this.name,
           "provider.operation": operation,
         },
@@ -259,16 +331,35 @@ export class AmadeusProviderAdapter implements AccommodationProviderAdapter {
       async (span) => {
         let retries = 0;
         try {
-          const result = await retryWithBackoff(fn, {
-            attempts: 3,
-            baseDelayMs: 200,
-            isRetryable: (error) => this.isRetryable(error),
-            maxDelayMs: 1_000,
-            onRetry: ({ delayMs }) => {
-              retries += 1;
-              span.addEvent("provider.retry", { attempt: retries, delayMs });
-            },
-          });
+          const result = await retryWithBackoff(
+            () =>
+              withTimeout(fn, this.config.timeoutMs, () => {
+                span.addEvent("provider.timeout", {
+                  operation,
+                  provider: this.name,
+                  timeoutMs: this.config.timeoutMs,
+                });
+                return new ProviderError(
+                  "provider_timeout",
+                  "amadeus request timed out",
+                  {
+                    operation,
+                    provider: this.name,
+                    statusCode: 408,
+                  }
+                );
+              }),
+            {
+              attempts: this.config.retryAttempts,
+              baseDelayMs: 200,
+              isRetryable: (error) => this.isRetryable(error, operation),
+              maxDelayMs: this.config.maxDelayMs,
+              onRetry: ({ delayMs }) => {
+                retries += 1;
+                span.addEvent("provider.retry", { attempt: retries, delayMs });
+              },
+            }
+          );
           return { ok: true as const, retries, value: result };
         } catch (error) {
           const statusCode = this.getStatusCode(error);
@@ -288,17 +379,62 @@ export class AmadeusProviderAdapter implements AccommodationProviderAdapter {
     );
   }
 
-  /** Determines if an error is retryable based on HTTP status codes. */
-  private isRetryable(error: unknown): boolean {
+  /**
+   * Determines if error is retryable based on HTTP status codes.
+   *
+   * @param error - Error to check.
+   * @param operation - Operation name.
+   * @returns True if error is retryable.
+   */
+  private isRetryable(error: unknown, operation: string): boolean {
     const status = this.getStatusCode(error);
+    if (operation === "createBooking") {
+      // Avoid retrying non-idempotent booking calls; only retry on clear server failures.
+      return status !== undefined && status >= 500;
+    }
     return status !== undefined && DEFAULT_RETRYABLE_CODES.has(status);
   }
 
-  /** Extract status code from Amadeus SDK error shape. */
+  /**
+   * Extracts HTTP status code from error.
+   *
+   * @param error - Error object.
+   * @returns HTTP status code or undefined.
+   */
   private getStatusCode(error: unknown): number | undefined {
+    if (error instanceof ProviderError && error.statusCode !== undefined) {
+      return error.statusCode;
+    }
     if (typeof error === "object" && error && "response" in error) {
       return (error as { response?: { statusCode?: number } }).response?.statusCode;
     }
     return undefined;
   }
+}
+
+/**
+ * Wraps async operation with timeout.
+ *
+ * @param operation - Operation to execute.
+ * @param timeoutMs - Timeout in milliseconds.
+ * @param onTimeout - Error factory for timeout.
+ * @returns Operation result or timeout error.
+ */
+async function withTimeout<T>(
+  operation: () => Promise<T>,
+  timeoutMs: number,
+  onTimeout: () => Error
+): Promise<T> {
+  return await new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(onTimeout()), timeoutMs);
+    operation()
+      .then((value) => {
+        clearTimeout(timer);
+        resolve(value);
+      })
+      .catch((error) => {
+        clearTimeout(timer);
+        reject(error);
+      });
+  });
 }
