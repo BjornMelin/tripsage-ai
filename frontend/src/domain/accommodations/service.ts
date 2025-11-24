@@ -30,14 +30,16 @@ import {
 import type { Ratelimit } from "@upstash/ratelimit";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 import { deleteCachedJson, getCachedJson, setCachedJson } from "@/lib/cache/upstash";
-import { getGoogleMapsServerKey } from "@/lib/env/server";
-import { cacheLatLng, getCachedLatLng } from "@/lib/google/caching";
-import { getPlaceDetails, postPlacesSearch } from "@/lib/google/client";
+import { enrichHotelListingWithPlaces } from "@/lib/google/places-enrichment";
+import { resolveLocationToLatLng } from "@/lib/google/places-geocoding";
 import { retryWithBackoff } from "@/lib/http/retry";
 import type { ProcessedPayment } from "@/lib/payments/booking-payment";
 import { secureUuid } from "@/lib/security/random";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
+
+// Extract Span type from withTelemetrySpan signature to avoid direct @opentelemetry/api import
+type TelemetrySpan = Parameters<Parameters<typeof withTelemetrySpan>[2]>[0];
 
 /** Dependencies for the accommodations service. */
 export type AccommodationsServiceDeps = {
@@ -109,7 +111,7 @@ export class AccommodationsService {
 
         let coords: { lat: number; lon: number } | null = null;
         try {
-          coords = await resolveCoordinates(params.location);
+          coords = await resolveLocationToLatLng(params.location);
         } catch (error) {
           span.recordException(error as Error);
           coords = null;
@@ -202,7 +204,7 @@ export class AccommodationsService {
           ctx
         );
 
-        const enriched = await enrichWithGooglePlaces(result.value.listing);
+        const enriched = await enrichHotelListingWithPlaces(result.value.listing);
 
         span.addEvent("details.enriched", {
           hasPlace: Boolean((enriched as { place?: unknown }).place),
@@ -299,42 +301,10 @@ export class AccommodationsService {
         redactKeys: ["userId", "sessionId"],
       },
       async (span) => {
-        if (!ctx.processPayment || !ctx.requestApproval) {
-          throw new Error("booking context missing payment or approval handlers");
-        }
-        if (this.deps.rateLimiter) {
-          const rateKey = ctx.rateLimitKey ?? ctx.userId ?? params.listingId;
-          const limit = await this.deps.rateLimiter.limit(rateKey ?? "anon");
-          span.addEvent("ratelimit.checked", {
-            key: rateKey ?? "anon",
-            remaining: limit?.remaining ?? 0,
-          });
-          if (!limit?.success) {
-            throw new ProviderError("rate_limited", "rate limit exceeded", {
-              retryAfterMs: limit?.reset,
-            });
-          }
-        }
+        await this.validateBookingContext(ctx, span, params.listingId);
 
         const supabase = await this.deps.supabase();
-
-        if (params.tripId) {
-          const tripId = /^\d+$/.test(params.tripId)
-            ? Number.parseInt(params.tripId, 10)
-            : Number.NaN;
-          if (!Number.isFinite(tripId)) {
-            throw new ProviderError("validation_failed", "invalid_trip_id");
-          }
-          const { data: trip, error: tripError } = await supabase
-            .from("trips")
-            .select("id, user_id")
-            .eq("id", tripId)
-            .eq("user_id", ctx.userId)
-            .single();
-          if (tripError || !trip) {
-            throw new ProviderError("not_found", "trip_not_found_or_not_owned");
-          }
-        }
+        await this.validateTripOwnership(supabase, params.tripId, ctx.userId);
 
         const cachedPrice = await getCachedJson<{
           bookingToken: string;
@@ -344,32 +314,20 @@ export class AccommodationsService {
           sessionId?: string;
           userId?: string;
         }>(`${BOOKING_CACHE_NAMESPACE}:${params.bookingToken}`);
+
         if (!cachedPrice) {
           throw new Error("booking_price_not_cached");
         }
-        if (cachedPrice.userId && cachedPrice.userId !== ctx.userId) {
-          throw new Error("booking_context_mismatch");
-        }
-        if (
-          cachedPrice.sessionId &&
-          ctx.sessionId &&
-          cachedPrice.sessionId !== ctx.sessionId
-        ) {
-          throw new Error("booking_context_mismatch");
-        }
-        if (cachedPrice.propertyId !== params.listingId) {
-          throw new Error("booking_price_mismatch");
-        }
-        const amountCents = Math.round(
-          Number.parseFloat(cachedPrice.price.total) * 100
+
+        const { amountCents, currency } = this.validateCachedPrice(
+          cachedPrice,
+          params,
+          ctx
         );
-        if (!Number.isFinite(amountCents) || amountCents <= 0) {
-          throw new Error("booking_price_invalid");
-        }
 
         const providerPayloadBuilder = (payment: ProcessedPayment) =>
           this.deps.provider.buildBookingPayload(params, {
-            currency: cachedPrice.price.currency,
+            currency,
             paymentIntentId: payment.paymentIntentId,
             totalCents: amountCents,
           });
@@ -381,7 +339,7 @@ export class AccommodationsService {
             amount: amountCents,
             approvalKey: "bookAccommodation",
             bookingToken: params.bookingToken,
-            currency: cachedPrice.price.currency,
+            currency,
             guest: {
               email: params.guestEmail,
               name: params.guestName,
@@ -390,41 +348,7 @@ export class AccommodationsService {
             idempotencyKey,
             paymentMethodId: params.paymentMethodId,
             persistBooking: async (payload) => {
-              // bookingToken is required by ACCOMMODATION_BOOKING_INPUT_SCHEMA but TypeScript
-              // infers it as optional. Runtime check ensures it's defined.
-              if (!params.bookingToken) {
-                throw new Error("bookingToken is required for booking persistence");
-              }
-              const bookingRow = {
-                // biome-ignore lint/style/useNamingConvention: database columns use snake_case
-                booking_token: params.bookingToken,
-                checkin: params.checkin,
-                checkout: params.checkout,
-                // biome-ignore lint/style/useNamingConvention: database columns use snake_case
-                guest_email: params.guestEmail,
-                // biome-ignore lint/style/useNamingConvention: database columns use snake_case
-                guest_name: params.guestName,
-                // biome-ignore lint/style/useNamingConvention: database columns use snake_case
-                guest_phone: params.guestPhone ?? null,
-                guests: params.guests,
-                id: payload.bookingId,
-                // biome-ignore lint/style/useNamingConvention: database columns use snake_case
-                property_id: params.listingId,
-                // biome-ignore lint/style/useNamingConvention: database columns use snake_case
-                provider_booking_id: payload.providerBookingId,
-                // biome-ignore lint/style/useNamingConvention: database columns use snake_case
-                special_requests: params.specialRequests ?? null,
-                status: "CONFIRMED",
-                // biome-ignore lint/style/useNamingConvention: database columns use snake_case
-                stripe_payment_intent_id: payload.stripePaymentIntentId ?? null,
-                // biome-ignore lint/style/useNamingConvention: database columns use snake_case
-                trip_id:
-                  params.tripId !== undefined && /^\d+$/.test(params.tripId)
-                    ? Number.parseInt(params.tripId, 10)
-                    : null,
-                // biome-ignore lint/style/useNamingConvention: database columns use snake_case
-                user_id: ctx.userId,
-              } as const;
+              const bookingRow = this.buildBookingRow(params, payload, ctx.userId);
 
               const persist = async () =>
                 await supabase.from("bookings").insert(bookingRow as never);
@@ -444,11 +368,16 @@ export class AccommodationsService {
               }
               return ctx.processPayment({
                 amountCents,
-                currency: cachedPrice.price.currency,
+                currency,
               });
             },
             providerPayload: providerPayloadBuilder,
-            requestApproval: ctx.requestApproval,
+            requestApproval: () => {
+              if (!ctx.requestApproval) {
+                throw new Error("requestApproval handler missing");
+              }
+              return ctx.requestApproval();
+            },
             sessionId: ctx.sessionId ?? secureUuid(),
             stay: {
               checkin: params.checkin,
@@ -516,7 +445,180 @@ export class AccommodationsService {
       CACHE_NAMESPACE
     );
   }
+
+  /**
+   * Validates booking context including payment/approval handlers and rate limiting.
+   *
+   * @param ctx - Service context with payment and approval handlers
+   * @param span - Telemetry span for event recording
+   * @throws Error if handlers are missing
+   * @throws ProviderError if rate limit exceeded
+   */
+  private async validateBookingContext(
+    ctx: ServiceContext & { userId: string },
+    span: TelemetrySpan,
+    listingId: string
+  ): Promise<void> {
+    if (!ctx.processPayment || !ctx.requestApproval) {
+      throw new Error("booking context missing payment or approval handlers");
+    }
+    if (this.deps.rateLimiter) {
+      const rateKey = ctx.rateLimitKey ?? ctx.userId ?? listingId;
+      const limit = await this.deps.rateLimiter.limit(rateKey ?? "anon");
+      span.addEvent("ratelimit.checked", {
+        key: rateKey ?? "anon",
+        remaining: limit?.remaining ?? 0,
+      });
+      if (!limit?.success) {
+        throw new ProviderError("rate_limited", "rate limit exceeded", {
+          retryAfterMs: limit?.reset,
+        });
+      }
+    }
+  }
+
+  /**
+   * Validates that a trip exists and belongs to the user.
+   *
+   * @param supabase - Supabase client instance
+   * @param tripId - Trip ID string to validate
+   * @param userId - User ID to verify ownership
+   * @throws ProviderError if trip ID is invalid or trip not found/not owned
+   */
+  private async validateTripOwnership(
+    supabase: TypedServerSupabase,
+    tripId: string | undefined,
+    userId: string
+  ): Promise<void> {
+    if (!tripId) return;
+
+    const parsedTripId = /^\d+$/.test(tripId)
+      ? Number.parseInt(tripId, 10)
+      : Number.NaN;
+    if (!Number.isFinite(parsedTripId)) {
+      throw new ProviderError("validation_failed", "invalid_trip_id");
+    }
+
+    const { data: trip, error: tripError } = await supabase
+      .from("trips")
+      .select("id, user_id")
+      .eq("id", parsedTripId)
+      .eq("user_id", userId)
+      .single();
+
+    if (tripError || !trip) {
+      throw new ProviderError("not_found", "trip_not_found_or_not_owned");
+    }
+  }
+
+  /**
+   * Validates cached booking price and context.
+   *
+   * @param cachedPrice - Cached price data from booking cache (must not be null)
+   * @param params - Booking request parameters
+   * @param ctx - Service context with user/session info
+   * @returns Validated amount in cents
+   * @throws Error if validation fails
+   */
+  private validateCachedPrice(
+    cachedPrice: {
+      bookingToken: string;
+      price: { currency: string; total: string };
+      propertyId: string;
+      rateId: string;
+      sessionId?: string;
+      userId?: string;
+    },
+    params: AccommodationBookingRequest,
+    ctx: ServiceContext & { userId: string }
+  ): { amountCents: number; currency: string } {
+    if (cachedPrice.userId && cachedPrice.userId !== ctx.userId) {
+      throw new Error("booking_context_mismatch");
+    }
+    if (
+      cachedPrice.sessionId &&
+      ctx.sessionId &&
+      cachedPrice.sessionId !== ctx.sessionId
+    ) {
+      throw new Error("booking_context_mismatch");
+    }
+    if (cachedPrice.propertyId !== params.listingId) {
+      throw new Error("booking_price_mismatch");
+    }
+
+    const amountCents = Math.round(Number.parseFloat(cachedPrice.price.total) * 100);
+    if (!Number.isFinite(amountCents) || amountCents <= 0) {
+      throw new Error("booking_price_invalid");
+    }
+
+    return { amountCents, currency: cachedPrice.price.currency };
+  }
+
+  /**
+   * Builds a database row for booking persistence.
+   *
+   * @param params - Booking request parameters
+   * @param payload - Booking orchestrator payload with booking ID
+   * @param userId - User ID for the booking
+   * @returns Database row object ready for insertion
+   */
+  private buildBookingRow(
+    params: AccommodationBookingRequest,
+    payload: {
+      bookingId: string;
+      providerBookingId?: string;
+      stripePaymentIntentId?: string | null;
+    },
+    userId: string
+  ): Record<string, unknown> {
+    if (!params.bookingToken) {
+      throw new Error("bookingToken is required for booking persistence");
+    }
+
+    return {
+      // biome-ignore lint/style/useNamingConvention: database columns use snake_case
+      booking_token: params.bookingToken,
+      checkin: params.checkin,
+      checkout: params.checkout,
+      // biome-ignore lint/style/useNamingConvention: database columns use snake_case
+      guest_email: params.guestEmail,
+      // biome-ignore lint/style/useNamingConvention: database columns use snake_case
+      guest_name: params.guestName,
+      // biome-ignore lint/style/useNamingConvention: database columns use snake_case
+      guest_phone: params.guestPhone ?? null,
+      guests: params.guests,
+      id: payload.bookingId,
+      // biome-ignore lint/style/useNamingConvention: database columns use snake_case
+      property_id: params.listingId,
+      // biome-ignore lint/style/useNamingConvention: database columns use snake_case
+      provider_booking_id: payload.providerBookingId ?? null,
+      // biome-ignore lint/style/useNamingConvention: database columns use snake_case
+      special_requests: params.specialRequests ?? null,
+      status: "CONFIRMED",
+      // biome-ignore lint/style/useNamingConvention: database columns use snake_case
+      stripe_payment_intent_id: payload.stripePaymentIntentId ?? null,
+      // biome-ignore lint/style/useNamingConvention: database columns use snake_case
+      trip_id:
+        params.tripId !== undefined && /^\d+$/.test(params.tripId)
+          ? Number.parseInt(params.tripId, 10)
+          : null,
+      // biome-ignore lint/style/useNamingConvention: database columns use snake_case
+      user_id: userId,
+    } as const;
+  }
 }
+
+/** Internal type for price extraction from provider listings. */
+type ProviderListingWithPrices = {
+  rooms?: Array<{
+    rates?: Array<{
+      price?: {
+        numeric?: number;
+        total?: string;
+      };
+    }>;
+  }>;
+};
 
 /**
  * Extracts numeric price values from accommodation listings.
@@ -524,15 +626,22 @@ export class AccommodationsService {
  * @param listings - Array of accommodation listing objects with nested rooms and rates.
  * @returns Array of numeric price values found in the listings.
  */
-function collectPrices(listings: Array<Record<string, unknown>>): number[] {
+function collectPrices(listings: Array<ProviderListingWithPrices>): number[] {
   const values: number[] = [];
   for (const listing of listings) {
-    const rooms = (listing.rooms as Array<Record<string, unknown>> | undefined) ?? [];
-    for (const room of rooms) {
-      const rates =
-        (room.rates as Array<{ price?: { numeric?: number } }> | undefined) ?? [];
-      for (const rate of rates) {
-        const numeric = rate.price?.numeric;
+    if (!Array.isArray(listing.rooms)) continue;
+    for (const room of listing.rooms) {
+      if (!room || typeof room !== "object") continue;
+      if (!Array.isArray(room.rates)) continue;
+      for (const rate of room.rates) {
+        if (!rate || typeof rate !== "object") continue;
+        const price = rate.price;
+        const numeric =
+          typeof price?.numeric === "number"
+            ? price.numeric
+            : price?.total
+              ? Number.parseFloat(price.total)
+              : undefined;
         if (typeof numeric === "number" && Number.isFinite(numeric)) {
           values.push(numeric);
         }
@@ -543,7 +652,7 @@ function collectPrices(listings: Array<Record<string, unknown>>): number[] {
 }
 
 /**
- * Filters listings to those whose first rate price falls within the provided bounds.
+ * Filters listings to those whose price range overlaps with the provided bounds.
  *
  * @param listings - Unfiltered provider listings.
  * @param minPrice - Optional minimum total price.
@@ -551,10 +660,10 @@ function collectPrices(listings: Array<Record<string, unknown>>): number[] {
  * @returns Listings constrained to the requested price band.
  */
 function filterListingsByPrice(
-  listings: Array<Record<string, unknown>>,
+  listings: Array<ProviderListingWithPrices>,
   minPrice?: number,
   maxPrice?: number
-): Array<Record<string, unknown>> {
+): Array<ProviderListingWithPrices> {
   if (minPrice === undefined && maxPrice === undefined) return listings;
 
   return listings.filter((listing) => {
@@ -566,145 +675,4 @@ function filterListingsByPrice(
     if (maxPrice !== undefined && minListingPrice > maxPrice) return false;
     return true;
   });
-}
-
-/**
- * Resolves a location string to geographic coordinates using Google Places API.
- *
- * Uses cached results when available to reduce API calls. Caches successful
- * lookups for 30 days.
- *
- * @param location - Location string to geocode (e.g., "New York, NY").
- * @returns Coordinates object with lat/lon, or null if location not found or API unavailable.
- */
-async function resolveCoordinates(
-  location: string
-): Promise<{ lat: number; lon: number } | null> {
-  const normalized = location.trim().toLowerCase().replace(/\s+/g, " ");
-  const cacheKey = `googleplaces:geocode:${normalized}`;
-  const cached = await getCachedLatLng(cacheKey);
-  if (cached) return cached;
-
-  let apiKey: string;
-  try {
-    apiKey = getGoogleMapsServerKey();
-  } catch {
-    return null;
-  }
-
-  const response = await withTelemetrySpan(
-    "places.geocode",
-    {
-      attributes: { location: normalized },
-      redactKeys: ["location"],
-    },
-    async () =>
-      await postPlacesSearch({
-        apiKey,
-        body: { maxResultCount: 1, textQuery: location },
-        fieldMask: "places.id,places.location",
-      })
-  );
-
-  if (!response.ok) {
-    throw new Error(`places_geocode_failed:${response.status}`);
-  }
-  const data = await response.json();
-  const place = (data.places ?? [])[0];
-  const coords =
-    place?.location?.latitude !== undefined && place?.location?.longitude !== undefined
-      ? { lat: place.location.latitude, lon: place.location.longitude }
-      : null;
-  if (coords) {
-    await cacheLatLng(cacheKey, coords, 30 * 24 * 60 * 60);
-  }
-  return coords;
-}
-
-/**
- * Enriches an accommodation listing with Google Places data.
- *
- * Searches for the property by name and address, then fetches detailed place
- * information including ratings, photos, and contact details. Returns the
- * original listing if enrichment fails or API is unavailable.
- *
- * @param listing - Accommodation listing object from provider (expected hotel.name and hotel.address).
- * @returns Enriched listing with place and placeDetails properties, or original listing if enrichment fails.
- */
-async function enrichWithGooglePlaces(
-  listing: Record<string, unknown>
-): Promise<Record<string, unknown>> {
-  let apiKey: string;
-  try {
-    apiKey = getGoogleMapsServerKey();
-  } catch {
-    return listing;
-  }
-
-  const name = (listing as { hotel?: { name?: string } }).hotel?.name;
-  const address = (
-    listing as { hotel?: { address?: { cityName?: string; lines?: string[] } } }
-  ).hotel?.address;
-  const query = name
-    ? `${name} ${address?.cityName ?? ""} ${(address?.lines ?? []).join(" ")}`
-    : undefined;
-  if (!query) return listing;
-
-  const normalizedQuery = query.trim().toLowerCase().replace(/\s+/g, " ");
-  const cachedDetails = await getCachedJson<{
-    place?: unknown;
-    placeDetails?: unknown;
-  }>(`places:details:${normalizedQuery}`);
-  if (cachedDetails) {
-    return {
-      ...listing,
-      place: cachedDetails.place,
-      placeDetails: cachedDetails.placeDetails,
-    };
-  }
-
-  const searchRes = await withTelemetrySpan(
-    "places.enrich.search",
-    { attributes: { query } },
-    async () =>
-      await postPlacesSearch({
-        apiKey,
-        body: { maxResultCount: 1, textQuery: query },
-        fieldMask:
-          "places.id,places.displayName,places.rating,places.userRatingCount,places.photos.name,places.internationalPhoneNumber,places.formattedAddress,places.location",
-      })
-  );
-  if (!searchRes.ok) return listing;
-  const searchData = await searchRes.json();
-  const place = (searchData.places ?? [])[0];
-  if (!place?.id) return listing;
-
-  const detailsCacheKey = `places:details:${place.id}`;
-  const cachedPlaceDetails = await getCachedJson<{
-    place?: unknown;
-    placeDetails?: unknown;
-  }>(detailsCacheKey);
-  if (cachedPlaceDetails) {
-    return {
-      ...listing,
-      place: cachedPlaceDetails.place,
-      placeDetails: cachedPlaceDetails.placeDetails,
-    };
-  }
-
-  const detailsRes = await withTelemetrySpan(
-    "places.enrich.details",
-    { attributes: { placeId: place.id } },
-    async () =>
-      await getPlaceDetails({
-        apiKey,
-        fieldMask:
-          "id,displayName,formattedAddress,location,rating,userRatingCount,internationalPhoneNumber,photos.name,googleMapsUri",
-        placeId: place.id,
-      })
-  );
-  if (!detailsRes.ok) return { ...listing, place };
-  const details = await detailsRes.json();
-  await setCachedJson(detailsCacheKey, { place, placeDetails: details }, 24 * 60 * 60);
-  return { ...listing, place, placeDetails: details };
 }

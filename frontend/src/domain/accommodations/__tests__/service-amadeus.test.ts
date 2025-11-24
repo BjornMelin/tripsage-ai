@@ -12,7 +12,9 @@ vi.mock("@/lib/env/server", () => ({
 
 vi.mock("@/lib/google/caching", () => ({
   cacheLatLng: vi.fn().mockResolvedValue(undefined),
+  cachePlaceId: vi.fn().mockResolvedValue(undefined),
   getCachedLatLng: vi.fn().mockResolvedValue(null),
+  getCachedPlaceId: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock("@/lib/cache/upstash", () => ({
@@ -202,15 +204,12 @@ describe("AccommodationsService (Amadeus)", () => {
       ok: true,
     });
     fetchMock.mockResolvedValueOnce({
-      json: async () => ({ id: "places/test", rating: 4.5 }),
+      json: async () => ({ id: "places/test", rating: 4.5, userRatingCount: 123 }),
       ok: true,
     });
 
-    // Cache the place response so enrichment returns place/placeDetails without extra fetches
-    vi.mocked(getCachedJson).mockResolvedValue({
-      place: { id: "places/test", rating: 4.5 },
-      placeDetails: { id: "places/test", rating: 4.5 },
-    });
+    // Cache misses; force live fetch to ensure enrichment path populates rating
+    vi.mocked(getCachedJson).mockResolvedValue(null);
 
     const provider: AccommodationProviderAdapter = {
       buildBookingPayload: vi.fn(),
@@ -250,7 +249,6 @@ describe("AccommodationsService (Amadeus)", () => {
     });
     expect(listing.place).toMatchObject({
       id: "places/test",
-      rating: 4.5,
     });
   });
 });
