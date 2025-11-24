@@ -326,8 +326,8 @@ export class ApiClient {
     }
 
     // Setup timeout and retry logic
-    const timeout = finalConfig.timeout || this.config.timeout;
-    const retries = finalConfig.retries || this.config.retries;
+    const timeout = finalConfig.timeout ?? this.config.timeout;
+    const retries = finalConfig.retries ?? this.config.retries;
 
     let lastError: Error | null = null;
     for (let attempt = 0; attempt <= retries; attempt++) {

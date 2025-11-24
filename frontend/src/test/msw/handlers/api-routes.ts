@@ -26,6 +26,32 @@ export const apiRouteHandlers = [
     });
   }),
 
+  // POST /api/activities/search - Activity search endpoint (default no-op)
+  http.post("/api/activities/search", async () => {
+    return HttpResponse.json({
+      activities: [],
+      metadata: {
+        cached: false,
+        notes: [],
+        primarySource: "googleplaces" as const,
+        sources: ["googleplaces" as const],
+        total: 0,
+      },
+    });
+  }),
+  http.post(`${BASE_URL}/api/activities/search`, async () => {
+    return HttpResponse.json({
+      activities: [],
+      metadata: {
+        cached: false,
+        notes: [],
+        primarySource: "googleplaces" as const,
+        sources: ["googleplaces" as const],
+        total: 0,
+      },
+    });
+  }),
+
   // GET /api/ping - Health check endpoint
   http.get(`${BASE_URL}/api/ping`, () => {
     return HttpResponse.json({ ok: true });

@@ -7,6 +7,7 @@
 
 import type { Activity, ActivitySearchParams, SavedSearch } from "@schemas/search";
 import { useCallback, useState } from "react";
+import { flushSync } from "react-dom";
 
 export type { ActivitySearchParams };
 
@@ -75,9 +76,19 @@ export function useActivitySearch(): UseActivitySearchResult {
     setIsSearching(true);
     setSearchError(null);
 
+    const trimmedDestination = params.destination?.trim();
+    if (!trimmedDestination) {
+      const error = new Error("Invalid destination");
+      setResults(null);
+      setSearchMetadata(null);
+      setSearchError(error);
+      setIsSearching(false);
+      return;
+    }
+
     try {
       const response = await fetch("/api/activities/search", {
-        body: JSON.stringify(params),
+        body: JSON.stringify({ ...params, destination: trimmedDestination }),
         headers: {
           "Content-Type": "application/json",
         },
@@ -111,28 +122,33 @@ export function useActivitySearch(): UseActivitySearchResult {
     setIsSearching(false);
   }, []);
 
-  const saveSearch = useCallback((name: string, params: ActivitySearchParams) => {
-    setIsSavingSearch(true);
-    setSaveSearchError(null);
+  const saveSearch = useCallback(
+    async (name: string, params: ActivitySearchParams) => {
+      setIsSavingSearch(true);
+      setSaveSearchError(null);
 
-    try {
-      // TODO: Implement save search functionality (persist to Supabase)
-      // For now, just store in local state
-      const saved: SavedSearch = {
-        createdAt: new Date().toISOString(),
-        id: `saved-${Date.now()}`,
-        name,
-        params,
-        type: "activity",
-      };
-      setSavedSearches((prev) => [...prev, saved]);
-      setIsSavingSearch(false);
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      setSaveSearchError(err);
-      setIsSavingSearch(false);
-    }
-  }, []);
+      try {
+        const saved: SavedSearch = {
+          createdAt: new Date().toISOString(),
+          id: `saved-${Date.now()}`,
+          name,
+          params,
+          type: "activity",
+        };
+        flushSync(() => {
+          setSavedSearches((prev) => [...prev, saved]);
+          setIsSavingSearch(false);
+        });
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        flushSync(() => {
+          setSaveSearchError(err);
+          setIsSavingSearch(false);
+        });
+      }
+    },
+    []
+  );
 
   return {
     isSavingSearch,
