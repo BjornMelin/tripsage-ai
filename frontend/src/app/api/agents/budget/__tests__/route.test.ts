@@ -55,7 +55,7 @@ describe("/api/agents/budget route", () => {
     vi.clearAllMocks();
     setRateLimitFactoryForTests(
       async () =>
-        mockLimitFn() ?? {
+        (await mockLimitFn()) ?? {
           limit: 30,
           remaining: 29,
           reset: Date.now() + 60_000,

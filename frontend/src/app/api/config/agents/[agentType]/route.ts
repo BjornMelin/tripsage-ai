@@ -22,25 +22,13 @@ import { resolveAgentConfig } from "@/lib/agents/config-resolver";
 import { createUnifiedErrorResponse } from "@/lib/api/error-response";
 import { withApiGuards } from "@/lib/api/factory";
 import { bumpTag } from "@/lib/cache/tags";
+import { ensureAdmin, scopeSchema } from "@/lib/config/helpers";
 import { parseJsonBody, validateSchema } from "@/lib/next/route-helpers";
 import { nowIso, secureId } from "@/lib/security/random";
 import { emitOperationalAlert } from "@/lib/telemetry/alerts";
 import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
 
-const scopeSchema = z.string().min(1).default("global");
 const configUpdateBodySchema = agentConfigRequestSchema.strict();
-
-function ensureAdmin(
-  user: unknown
-): asserts user is { id: string; app_metadata?: Record<string, unknown> } {
-  const candidate = user as { app_metadata?: Record<string, unknown> } | null;
-  const isAdmin = Boolean(
-    candidate?.app_metadata && candidate.app_metadata.is_admin === true
-  );
-  if (!isAdmin) {
-    throw Object.assign(new Error("forbidden"), { status: 403 });
-  }
-}
 
 function buildConfigPayload(
   agentType: AgentType,
@@ -85,7 +73,11 @@ export const GET = withApiGuards({
         status: 400,
       });
     }
-    const scope = scopeSchema.parse(req.nextUrl.searchParams.get("scope") ?? undefined);
+    const rawScope = req.nextUrl.searchParams.get("scope");
+    const scope =
+      rawScope === null || rawScope.trim() === ""
+        ? "global"
+        : scopeSchema.parse(rawScope);
     const result = await resolveAgentConfig(parsedAgent.data, { scope, supabase });
     return NextResponse.json(result);
   } catch (err) {
@@ -136,7 +128,11 @@ export const PUT = withApiGuards({
     const validation = validateSchema(configUpdateBodySchema, parsedBody.body);
     if ("error" in validation) return validation.error;
 
-    const scope = scopeSchema.parse(req.nextUrl.searchParams.get("scope") ?? undefined);
+    const rawScope = req.nextUrl.searchParams.get("scope");
+    const scope =
+      rawScope === null || rawScope.trim() === ""
+        ? "global"
+        : scopeSchema.parse(rawScope);
 
     const existing = await withTelemetrySpan(
       "agent_config.load_existing",

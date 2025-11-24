@@ -11,22 +11,13 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createUnifiedErrorResponse } from "@/lib/api/error-response";
 import { withApiGuards } from "@/lib/api/factory";
+import { ensureAdmin, scopeSchema } from "@/lib/config/helpers";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
-const scopeSchema = z.string().min(1).default("global");
 const paginationSchema = z.object({
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(50).default(20),
 });
-
-function ensureAdmin(
-  user: unknown
-): asserts user is { id: string; app_metadata?: Record<string, unknown> } {
-  const candidate = user as { app_metadata?: Record<string, unknown> } | null;
-  if (!(candidate?.app_metadata && candidate.app_metadata.is_admin === true)) {
-    throw Object.assign(new Error("forbidden"), { status: 403 });
-  }
-}
 
 export const GET = withApiGuards({
   auth: true,
@@ -44,8 +35,9 @@ export const GET = withApiGuards({
       });
     }
 
+    const rawScope = req.nextUrl.searchParams.get("scope");
     const parsedScope = scopeSchema.safeParse(
-      req.nextUrl.searchParams.get("scope") ?? undefined
+      rawScope === null || rawScope.trim() === "" ? undefined : rawScope
     );
     if (!parsedScope.success) {
       return createUnifiedErrorResponse({

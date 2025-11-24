@@ -136,8 +136,9 @@ export const activitySchema = z.object({
    *
    * - For Google Places: derived from `priceLevel` (0–4) where
    *   0 = free, 1 = inexpensive, 2 = moderate, 3 = expensive, 4 = very expensive.
-   * - For AI fallback suggestions: may be omitted or approximated; UI must
-   *   communicate that values are indicative only.
+   * - For AI fallback suggestions: always provide a numeric index. When
+   *   pricing is unknown, set `price` to `0` and surface "approximate" copy in
+   *   the UI; do not omit the field so validation remains consistent.
    */
   price: z.number().nonnegative(),
   rating: z.number().min(0).max(5),

@@ -12,6 +12,7 @@ export const lookupPoiInputSchema = z
   .strictObject({
     destination: z
       .string()
+      .min(1, { error: "destination must not be empty" })
       .nullable()
       .optional()
       .describe("Destination city or place name to search near"),
@@ -27,6 +28,7 @@ export const lookupPoiInputSchema = z
       .describe("Longitude coordinate for location search"),
     query: z
       .string()
+      .min(1, { error: "query must not be empty" })
       .nullable()
       .optional()
       .describe("Specific place or business name to search for"),

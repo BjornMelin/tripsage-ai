@@ -51,9 +51,14 @@ vi.mock("@/lib/api/factory", () => ({
   setSupabaseFactoryForTests: vi.fn(),
   withApiGuards:
     (_config: unknown) =>
-    (handler: (req: Request, routeContext: { params?: unknown }) => unknown) =>
+    (handler: (
+      req: Request,
+      context?: unknown,
+      data?: unknown,
+      routeContext?: { params?: unknown }
+    ) => unknown) =>
     (req: Request, routeContext: { params?: unknown }) =>
-      handler(req, routeContext),
+      handler(req, routeContext as unknown, undefined, routeContext),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({

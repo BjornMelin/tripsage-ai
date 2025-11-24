@@ -17,17 +17,6 @@ vi.mock("@/lib/agents/config-resolver", () => ({
 }));
 
 const mockLimitFn = vi.hoisted(() => vi.fn());
-const mockSlidingWindow = vi.hoisted(() => vi.fn(() => ({})));
-
-const RATELIMIT_MOCK = vi.hoisted(() => {
-  class MockRatelimit {
-    static slidingWindow(...args: Parameters<typeof mockSlidingWindow>) {
-      return mockSlidingWindow(...args);
-    }
-    limit = mockLimitFn;
-  }
-  return MockRatelimit;
-});
 
 // Mock next/headers cookies() before any imports that use it
 vi.mock("next/headers", () => ({
@@ -62,11 +51,6 @@ vi.mock("@/lib/agents/accommodation-agent", () => ({
 // Mock Redis
 vi.mock("@/lib/redis", () => ({
   getRedis: vi.fn(() => ({})),
-}));
-
-// Mock Upstash rate limiter
-vi.mock("@upstash/ratelimit", () => ({
-  Ratelimit: RATELIMIT_MOCK,
 }));
 
 // Mock route helpers

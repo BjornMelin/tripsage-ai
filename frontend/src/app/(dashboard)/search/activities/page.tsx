@@ -2,23 +2,29 @@
 
 import type { Activity } from "@schemas/search";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityCard } from "@/components/features/search/activity-card";
 import { ActivitySearchForm } from "@/components/features/search/activity-search-form";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { useToast } from "@/components/ui/use-toast";
 import {
   type ActivitySearchParams,
   useActivitySearch,
 } from "@/hooks/use-activity-search";
 import { openActivityBooking } from "@/lib/activities/booking";
 
+const AI_FALLBACK_PREFIX = "ai_fallback:";
+const GOOGLE_PLACES_SOURCE = "googleplaces";
+
 // URL search parameters are handled inline
 
 export default function ActivitiesSearchPage() {
+  const { toast } = useToast();
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const { searchActivities, isSearching, searchError, results, searchMetadata } =
     useActivitySearch();
   const searchParams = useSearchParams();
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   // Initialize search with URL parameters
   useEffect(() => {
@@ -46,11 +52,39 @@ export default function ActivitiesSearchPage() {
   };
 
   const handleCompareActivity = (_activity: Activity) => {
-    // TODO: Add to comparison list
+    // TODO: Implement add to activity comparison list
+    toast({
+      description: "Activity comparison is coming soon.",
+      title: "Comparison not available yet",
+      variant: "default",
+    });
   };
 
   const activities = results ?? [];
   const hasActiveResults = activities.length > 0;
+
+  const { verifiedActivities, aiSuggestions } = useMemo(() => {
+    if (searchMetadata?.primarySource !== "mixed") {
+      return { aiSuggestions: [] as Activity[], verifiedActivities: [] as Activity[] };
+    }
+
+    return {
+      aiSuggestions: activities.filter((activity) =>
+        activity.id.startsWith(AI_FALLBACK_PREFIX)
+      ),
+      verifiedActivities: activities.filter(
+        (activity) =>
+          !activity.id.startsWith(AI_FALLBACK_PREFIX) &&
+          (searchMetadata.sources ?? []).includes(GOOGLE_PLACES_SOURCE)
+      ),
+    };
+  }, [activities, searchMetadata?.primarySource, searchMetadata?.sources]);
+
+  useEffect(() => {
+    if (selectedActivity) {
+      dialogRef.current?.focus();
+    }
+  }, [selectedActivity]);
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -108,40 +142,32 @@ export default function ActivitiesSearchPage() {
                   <div>
                     <h3 className="text-lg font-semibold mb-2">Verified Activities</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {activities
-                        .filter(
-                          (a) =>
-                            !a.id.startsWith("ai_fallback:") &&
-                            searchMetadata.sources.includes("googleplaces")
-                        )
-                        .map((activity) => (
-                          <ActivityCard
-                            key={activity.id}
-                            activity={activity}
-                            onSelect={handleSelectActivity}
-                            onCompare={handleCompareActivity}
-                            sourceLabel="Verified via Google Places"
-                          />
-                        ))}
+                      {verifiedActivities.map((activity) => (
+                        <ActivityCard
+                          key={activity.id}
+                          activity={activity}
+                          onSelect={handleSelectActivity}
+                          onCompare={handleCompareActivity}
+                          sourceLabel="Verified via Google Places"
+                        />
+                      ))}
                     </div>
                   </div>
-                  {activities.some((a) => a.id.startsWith("ai_fallback:")) && (
+                  {aiSuggestions.length > 0 && (
                     <div>
                       <h3 className="text-lg font-semibold mb-2">
                         More Ideas Powered by AI
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {activities
-                          .filter((a) => a.id.startsWith("ai_fallback:"))
-                          .map((activity) => (
-                            <ActivityCard
-                              key={activity.id}
-                              activity={activity}
-                              onSelect={handleSelectActivity}
-                              onCompare={handleCompareActivity}
-                              sourceLabel="AI suggestion"
-                            />
-                          ))}
+                        {aiSuggestions.map((activity) => (
+                          <ActivityCard
+                            key={activity.id}
+                            activity={activity}
+                            onSelect={handleSelectActivity}
+                            onCompare={handleCompareActivity}
+                            sourceLabel="AI suggestion"
+                          />
+                        ))}
                       </div>
                     </div>
                   )}
@@ -174,9 +200,27 @@ export default function ActivitiesSearchPage() {
       </div>
 
       {selectedActivity && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-background rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-lg font-semibold mb-4">Activity Selected</h3>
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+          onClick={() => setSelectedActivity(null)}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              setSelectedActivity(null);
+            }
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="activity-modal-title"
+        >
+          <div
+            ref={dialogRef}
+            tabIndex={-1}
+            className="bg-background rounded-lg p-6 max-w-md w-full"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h3 id="activity-modal-title" className="text-lg font-semibold mb-4">
+              Activity Selected
+            </h3>
             <p className="text-sm text-muted-foreground mb-4">
               You selected: {selectedActivity.name}
             </p>
@@ -192,12 +236,25 @@ export default function ActivitiesSearchPage() {
                 type="button"
                 onClick={() => {
                   if (selectedActivity) {
-                    const opened = openActivityBooking(selectedActivity);
-                    if (!opened) {
-                      // Fallback: show message that booking is unavailable
-                      alert(
-                        "Booking link unavailable for this activity. Please search for booking options manually."
-                      );
+                    try {
+                      const opened = openActivityBooking(selectedActivity);
+                      if (!opened) {
+                        toast({
+                          description:
+                            "Booking link unavailable for this activity. Please search for booking options manually.",
+                          title: "Booking unavailable",
+                          variant: "destructive",
+                        });
+                      }
+                    } catch (error) {
+                      toast({
+                        description:
+                          error instanceof Error
+                            ? error.message
+                            : "Failed to open booking link",
+                        title: "Booking unavailable",
+                        variant: "destructive",
+                      });
                     }
                   }
                   setSelectedActivity(null);
