@@ -53,10 +53,10 @@
   - [x] Export `searchActivities`, `getActivityDetails`
   - [x] Add to `toolRegistry` if needed
 
-- [ ] Create `frontend/src/ai/tools/server/__tests__/activities.test.ts`
-  - [ ] Test tool execution
-  - [ ] Test schema validation
-  - [ ] Test error handling
+- [x] Create `frontend/src/ai/tools/server/__tests__/activities.test.ts`
+  - [x] Test tool execution
+  - [x] Test schema validation
+  - [x] Test error handling
 
 ### 2.4 API Routes
 
@@ -74,11 +74,11 @@
   - [x] Return JSON response
   - [x] Add rate limiting (`activities:details`)
 
-- [ ] Create `frontend/src/app/api/activities/__tests__/route.test.ts`
-  - [ ] Test authentication
-  - [ ] Test rate limiting
-  - [ ] Test request/response formats
-  - [ ] Test error handling
+- [x] Create `frontend/src/app/api/activities/__tests__/route.test.ts`
+  - [x] Test authentication
+  - [x] Test rate limiting
+  - [x] Test request/response formats
+  - [x] Test error handling
 
 ### 2.5 Hook Implementation
 
@@ -89,10 +89,10 @@
   - [x] Add loading/error state management
   - [x] Add results and metadata state
 
-- [ ] Create `frontend/src/hooks/__tests__/use-activity-search.test.ts`
-  - [ ] Test hook behavior
-  - [ ] Test API integration
-  - [ ] Test error handling
+- [x] Create `frontend/src/hooks/__tests__/use-activity-search.test.tsx`
+  - [x] Test hook behavior
+  - [x] Test API integration
+  - [x] Test error handling
 
 ### 2.6 Database Migration
 
@@ -133,13 +133,13 @@
 
 ## 3. Data Migrations
 
-- [ ] Run database migration for `search_activities.source` constraint
-- [ ] Verify no existing data conflicts with new constraint
+- [ ] Run database migration for `search_activities.source` constraint (operational task)
+- [ ] Verify no existing data conflicts with new constraint (operational task)
 
 ## 4. Feature Flags / Rollout
 
-- [ ] No feature flags needed (direct implementation)
-- [ ] Consider gradual rollout if Google Places API costs are concern
+- [x] No feature flags needed (direct implementation)
+- [ ] Consider gradual rollout if Google Places API costs are concern (operational decision)
 
 ## 5. Observability & Alerts
 
@@ -151,24 +151,26 @@
 
 ## 6. Documentation
 
-- [ ] Update `docs/api/api-reference.md`
-  - [ ] Document `/api/activities/search` endpoint
-  - [ ] Document `/api/activities/[id]` endpoint
-  - [ ] Remove "stub" language
+- [x] Update `docs/api/api-reference.md`
+  - [x] Document `/api/activities/search` endpoint
+  - [x] Document `/api/activities/[id]` endpoint
+  - [x] Remove "stub" language
 
-- [ ] Update `frontend/README.md`
-  - [ ] Add activity search to feature list
+- [x] Update `frontend/README.md`
+  - [x] Add activity search to feature list
+  - [x] Add activities to tools section
+  - [x] Add activities documentation section
 
-- [ ] Create `docs/developers/activities.md` (optional)
-  - [ ] Document service layer usage
-  - [ ] Document tool usage
-  - [ ] Document API usage
+- [x] Create `docs/developers/activities.md`
+  - [x] Document service layer usage
+  - [x] Document tool usage
+  - [x] Document API usage
 
 ## 7. Release & Post-Release Verification
 
-- [ ] Run full test suite: `pnpm test:run`
-- [ ] Run type check: `pnpm type-check`
-- [ ] Run linter: `pnpm biome:check`
+- [x] Run full test suite: `pnpm test:run` (all tests passing)
+- [x] Run type check: `pnpm type-check` (passes)
+- [x] Run linter: `pnpm biome:check` (passes)
 - [ ] Verify Google Places API integration in staging
 - [ ] Verify caching works correctly
 - [ ] Verify AI chat integration (test `searchActivities` tool)

@@ -29,8 +29,8 @@ conversational AI applications.
 - **Multi-Provider Routing**: Automatic provider selection across OpenAI,
   Anthropic, xAI, and OpenRouter with fallback logic
 - **Agentic Tool Calling**: 15+ production tools via AI SDK v6 with Zod
-  schemas—web search, accommodations (MCP), flights (Duffel), weather,
-  maps, planning, and memory
+  schemas—web search, accommodations (MCP), flights (Duffel), activities
+  (Google Places), weather, maps, planning, and memory
 - **Hybrid RAG Pipeline**: Vector similarity (pgvector) + keyword search
   with provider-based reranking (Cohere Rerank v3.5) for optimal
   retrieval accuracy
@@ -152,6 +152,7 @@ intent:
   `get_accommodation_details`, `book_accommodation` (requires approval)
 - **Flights**: `search_flights` (Duffel API), `book_flight` (requires
   approval)
+- **Activities**: `search_activities` (Google Places API), `get_activity_details` (with optional AI/web fallback)
 - **Calendar**: `createCalendarEvent` (Google Calendar), `getAvailability`
   (free/busy queries), `exportItineraryToICS` (ICS export)
 - **Web Research**: `web_search` (Firecrawl v2.5, cached), `crawlUrl`

@@ -13,6 +13,7 @@ Resources and guidelines for TripSage development.
 | [Stores](stores.md) | Zustand store patterns and composition |
 | [Zod Schema Guide](zod-schema-guide.md) | Schema validation and type inference patterns |
 | [Testing Guide](testing-guide.md) | Testing strategies and patterns |
+| [Activities](activities.md) | Activity search service, tools, and API usage |
 
 ## Development
 
