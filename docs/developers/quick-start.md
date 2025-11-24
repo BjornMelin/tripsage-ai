@@ -54,7 +54,7 @@ cd frontend && pnpm install && cd ..
 
 # Configure environment
 cp .env.example .env
-# Edit .env with your Supabase credentials
+# Edit the root .env with your Supabase credentials
 ```
 
 ## Environment Variables

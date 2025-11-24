@@ -1,6 +1,6 @@
 # Environment Setup Guide (local development)
 
-Copy `.env.example` to `.env`, then follow the checklists below to populate every variable. Links point directly to the provider pages where you create keys or tokens.
+Copy the root `.env.example` to `.env`, then follow the checklists below to populate every variable. Root `.env.test.example` is the template for CI/local test runs. All service-specific env files are derived from the root templates.
 
 ## Core & Supabase
 
@@ -89,7 +89,7 @@ Copy `.env.example` to `.env`, then follow the checklists below to populate ever
 
 ## Ready-to-run checklist
 
-- [ ] `.env` copied from `.env.example`
+- [ ] `.env` copied from root `.env.example`
 - [ ] Supabase URL + anon key + service role key present
 - [ ] Upstash Redis REST URL + token present
 - [ ] QStash token + signing keys present

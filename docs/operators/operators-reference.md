@@ -9,7 +9,7 @@ This supersedes legacy backend notes. All runtime is Next.js 16 with AI SDK v6 r
 - Upstash Redis + QStash
 - Model provider keys or Vercel AI Gateway
 
-## Environment variables (align with `.env.example`)
+## Environment variables (align with root `.env.example`)
 
 - Core: `NODE_ENV`, `APP_BASE_URL`, `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_APP_NAME`, `NEXT_PUBLIC_BASE_PATH`, `NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT`
 - Supabase: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_JWT_SECRET`, `DATABASE_URL` (optional local Postgres)

@@ -25,7 +25,9 @@ $$;
 -- Stub vault structures for local/CI environments without the extension
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'vault') THEN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_extension WHERE extname IN ('vault', 'supabase_vault')
+  ) THEN
     CREATE SCHEMA IF NOT EXISTS vault;
     CREATE TABLE IF NOT EXISTS vault.secrets (
       name TEXT PRIMARY KEY,
@@ -651,10 +653,11 @@ LANGUAGE plpgsql
 AS $$
 DECLARE
   v_version_id uuid;
+  v_config jsonb;
 BEGIN
   INSERT INTO public.agent_config_versions(agent_type, scope, config, created_by, summary)
   VALUES (p_agent_type, p_scope, p_config, p_created_by, p_summary)
-  RETURNING id, config INTO v_version_id, config;
+  RETURNING agent_config_versions.id, agent_config_versions.config INTO v_version_id, v_config;
 
   INSERT INTO public.agent_config(agent_type, scope, config, version_id)
   VALUES (p_agent_type, p_scope, p_config, v_version_id)
@@ -664,7 +667,7 @@ BEGIN
     version_id = v_version_id,
     updated_at = now();
 
-  RETURN QUERY SELECT v_version_id, config;
+  RETURN QUERY SELECT v_version_id, v_config;
 END;
 $$;
 
@@ -891,13 +894,13 @@ CREATE POLICY agent_config_admin_all ON public.agent_config FOR ALL TO authentic
 CREATE POLICY agent_config_versions_admin_all ON public.agent_config_versions FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
 
 -- Storage helper functions and policies for buckets
-CREATE OR REPLACE FUNCTION public.user_has_trip_access(user_id UUID, trip_id BIGINT)
+CREATE OR REPLACE FUNCTION public.user_has_trip_access(p_user_id UUID, p_trip_id BIGINT)
 RETURNS BOOLEAN AS $$
 BEGIN
     RETURN EXISTS (
-        SELECT 1 FROM public.trips t WHERE t.id = trip_id AND t.user_id = user_id
+        SELECT 1 FROM public.trips t WHERE t.id = p_trip_id AND t.user_id = p_user_id
         UNION
-        SELECT 1 FROM public.trip_collaborators tc WHERE tc.trip_id = trip_id AND tc.user_id = user_id
+        SELECT 1 FROM public.trip_collaborators tc WHERE tc.trip_id = p_trip_id AND tc.user_id = p_user_id
     );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

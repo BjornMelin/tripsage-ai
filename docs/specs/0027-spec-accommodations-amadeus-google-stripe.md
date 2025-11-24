@@ -94,8 +94,8 @@ broken into phases with checklists and concrete file paths.
 
 Files:
 
-- `frontend/.env.example`
-- `frontend/.env.local` (local only, not committed)
+- `.env.example` (root)
+- `.env.local` / `.env` (root, not committed)
 
 Add:
 
