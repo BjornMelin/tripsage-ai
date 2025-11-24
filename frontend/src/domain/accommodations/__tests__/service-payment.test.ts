@@ -4,18 +4,20 @@ import type { AccommodationProviderAdapter } from "@domain/accommodations/provid
 import { AccommodationsService } from "@domain/accommodations/service";
 import { describe, expect, it, vi } from "vitest";
 import { getCachedJson } from "@/lib/cache/upstash";
+import type { buildUpstashCacheMock } from "@/test/mocks";
 
-vi.mock("@/lib/cache/upstash", () => ({
-  deleteCachedJson: vi.fn().mockResolvedValue(undefined),
-  getCachedJson: vi.fn().mockResolvedValue({
-    bookingToken: "token-123",
-    price: { currency: "USD", total: "123.45" },
-    propertyId: "H1",
-    rateId: "token-123",
-    userId: "user-1",
-  }),
-  setCachedJson: vi.fn(),
-}));
+const getUpstashCache = (): ReturnType<typeof buildUpstashCacheMock> =>
+  (globalThis as { __upstashCache?: ReturnType<typeof buildUpstashCacheMock> })
+    .__upstashCache as ReturnType<typeof buildUpstashCacheMock>;
+
+vi.mock("@/lib/cache/upstash", async () => {
+  const { buildUpstashCacheMock } = await import("@/test/mocks");
+  const cache = buildUpstashCacheMock();
+  (
+    globalThis as { __upstashCache?: ReturnType<typeof buildUpstashCacheMock> }
+  ).__upstashCache = cache;
+  return cache.module;
+});
 
 vi.mock("@/lib/google/caching", () => ({
   cacheLatLng: vi.fn(),
@@ -23,6 +25,10 @@ vi.mock("@/lib/google/caching", () => ({
 }));
 
 describe("AccommodationsService booking payments", () => {
+  beforeEach(() => {
+    getUpstashCache().reset();
+  });
+
   it("uses cached availability price for payment processing", async () => {
     vi.mocked(getCachedJson).mockResolvedValue({
       bookingToken: "token-123",

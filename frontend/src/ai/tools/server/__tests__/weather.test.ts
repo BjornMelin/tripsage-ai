@@ -2,11 +2,13 @@
 
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
+import { buildUpstashCacheMock } from "@/test/mocks";
 
-vi.mock("@/lib/cache/upstash", () => ({
-  getCachedJson: vi.fn().mockResolvedValue(null),
-  setCachedJson: vi.fn().mockResolvedValue(undefined),
-}));
+let upstashCache: ReturnType<typeof buildUpstashCacheMock> | undefined;
+vi.mock("@/lib/cache/upstash", () => {
+  upstashCache = buildUpstashCacheMock();
+  return upstashCache.module;
+});
 
 vi.mock("@/lib/telemetry/span", () => ({
   withTelemetrySpan: vi.fn((_name: string, _options, fn) =>
@@ -76,6 +78,7 @@ beforeEach(async () => {
   vi.clearAllMocks();
   const { getServerEnvVar } = await import("@/lib/env/server");
   (getServerEnvVar as ReturnType<typeof vi.fn>).mockReturnValue("test_key");
+  upstashCache?.reset();
 });
 
 afterEach(() => {
