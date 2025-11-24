@@ -3,6 +3,8 @@
 **Date:** 2025-11-11
 **Version:** 1.0.0
 **Status:** Superseded by ADR-0044 (AI SDK v6 Tool Registry and MCP Integration)
+
+**Note:** This spec has been moved to `superseded/` as part of the 2025-01-XX specs audit. Tool contracts are now defined in ADR-0044 and implemented in `frontend/src/ai/tools/`.
 **Category:** frontend
 **Domain:** AI SDK v6
 

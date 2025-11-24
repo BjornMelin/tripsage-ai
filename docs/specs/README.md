@@ -32,9 +32,8 @@ specific features or components.
 | [SPEC-0004](0004-spec-supabase-ssr-typing.md) | Supabase SSR Typing Migration | Accepted | 2025-10-24 |
 | [SPEC-0005](0005-spec-tailwind-v4.md) | Tailwind CSS v4 Migration | Completed | 2025-10-23 |
 | [SPEC-0006](0006-spec-zod-v4-migration.md) | Zod v3 -> v4 Migration | Completed | 2025-10-23 |
-| [SPEC-0007](0007-di-schemas-finalization.md) | Final DI + Pydantic v2 Schemas Centralization | Accepted | 2025-10-24 |
 | [SPEC-0007](0007-spec-sse-chat-streaming.md) | SSE Chat Streaming (End-to-End) | Accepted | 2025-10-24 |
-| [SPEC-0008](0008-spec-ai-sdk-v6-foundations.md) | AI SDK v6 Foundations (Next.js) | Draft | 2025-11-04 |
+| [SPEC-0008](0008-spec-ai-sdk-v6-foundations.md) | AI SDK v6 Foundations (Next.js) | Accepted | 2025-11-04 |
 | [SPEC-0008](0008-spec-rate-limiting.md) | Rate Limiting Strategy | Accepted | 2025-10-24 |
 | [SPEC-0009](0009-spec-attachments-ssr-listing-and-cache-tags.md) | Attachments SSR Listing and Cache Tags | Accepted | 2025-10-24 |
 | [SPEC-0010](0010-spec-ai-elements-chat-ui.md) | AI Elements Chat UI | Accepted | 2025-11-01 |
@@ -42,15 +41,19 @@ specific features or components.
 | [SPEC-0011](0011-spec-byok-routes-and-security.md) | BYOK Routes and Security (Next.js + Supabase Vault) | Accepted | 2025-11-01 |
 | [SPEC-0012](0012-provider-registry.md) | Provider Registry | Accepted | 2025-11-01 |
 | [SPEC-0013](0013-token-budgeting-and-limits.md) | Token Budgeting & Limits | Accepted | 2025-11-01 |
-| [SPEC-0014](0014-spec-chat-api-sse-nonstream.md) | Chat API (SSE + Non-Stream) | Draft | 2025-11-04 |
+| [SPEC-0014](0014-spec-chat-api-sse-nonstream.md) | Chat API (SSE + Non-Stream) | Accepted | 2025-11-04 |
 | [SPEC-0015](0015-spec-ai-elements-response-sources.md) | AI Elements Response + Sources Integration | Accepted | 2025-11-04 |
 | [SPEC-0016](0016-spec-react-compiler-enable.md) | Enable React Compiler in Next.js 16 | Accepted | 2025-11-04 |
 | [SPEC-0017](0017-spec-attachments-migration-next.md) | Attachments & File Uploads Migration (Next.js) | Draft | 2025-11-04 |
 | [SPEC-0018](0018-spec-rag-retriever-indexer.md) | RAG Retriever & Indexer (AI SDK v6) | Draft | 2025-11-04 |
-| [SPEC-0019](0019-spec-hybrid-destination-itinerary-agents.md) | Hybrid Destination & Itinerary Agents (Frontend) | Draft | 2025-11-12 |
-| [SPEC-0020](0020-spec-multi-agent-frontend-migration.md) | Multi-Agent Frontend Migration & Provider Expansion | Draft | 2025-11-12 |
-| [SPEC-0025](0025-spec-trip-collaborator-notifications-qstash.md) | Trip Collaborator Notifications via QStash | Draft | 2025-11-12 |
+| [SPEC-0019](0019-spec-hybrid-destination-itinerary-agents.md) | Hybrid Destination & Itinerary Agents (Frontend) | Accepted | 2025-11-12 |
+| [SPEC-0020](0020-spec-multi-agent-frontend-migration.md) | Multi-Agent Frontend Migration & Provider Expansion | Accepted | 2025-11-12 |
+| [SPEC-0021](0021-spec-supabase-webhooks-vercel-consolidation.md) | Supabase Webhooks to Vercel Consolidation | Accepted | 2025-11-12 |
+| [SPEC-0025](0025-spec-trip-collaborator-notifications-qstash.md) | Trip Collaborator Notifications via QStash | Accepted | 2025-11-13 |
 | [SPEC-0026](0026-spec-supabase-memory-orchestrator.md) | Supabase Memory Orchestrator & Provider Adapters | Draft | 2025-11-18 |
+| [SPEC-0027](0027-spec-accommodations-amadeus-google-stripe.md) | Accommodations: Amadeus + Google + Stripe | Accepted | 2025-11-21 |
+| [SPEC-0028](0028-spec-agent-router-workflows.md) | Agent Router & Workflow HTTP API | Accepted | 2025-11-21 |
+| [SPEC-0029](0029-spec-agent-configuration-backend.md) | Agent Configuration Backend | Accepted | 2025-11-21 |
 
 ## Superseded Specs
 
@@ -59,6 +62,8 @@ The following specs have been superseded by newer specifications:
 | Spec | Title | Superseded By | Date |
 |------|-------|---------------|------|
 | [SPEC-0001](superseded/0001-spec-ai-sdk-v5.md) | AI SDK v5 Migration (Client + Route) | 0008-spec-ai-sdk-v6-foundations.md | 2025-10-24 |
+| [SPEC-0007](superseded/0007-di-schemas-finalization.md) | Final DI + Pydantic v2 Schemas Centralization | Backend-only spec (Python/FastAPI) | 2025-01-XX |
+| [SPEC-001](superseded/spec-001-tools-contracts.md) | Tool Schemas and Execution Contracts | ADR-0044 (AI SDK v6 Tool Registry) | 2025-01-XX |
 
 ## By Category
 
@@ -84,7 +89,6 @@ The following specs have been superseded by newer specifications:
 
 ### Backend
 
-- SPEC-0007: Final DI + Pydantic v2 Schemas Centralization
 - SPEC-0007: SSE Chat Streaming (End-to-End)
 - SPEC-0008: Rate Limiting Strategy
 - SPEC-0009: Attachments SSR Listing and Cache Tags

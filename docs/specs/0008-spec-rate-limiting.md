@@ -22,13 +22,16 @@ Define and implement a simple, environment-gated rate limiting approach for:
 
 ## Backend (FastAPI) — SlowAPI
 
-- Library: `slowapi` with limits backends. Storage URI derived from env; falls back to memory.
-- Decorators used on chat endpoints (e.g., `@limiter.limit('20/minute')`).
+**Note:** Python FastAPI backend has been removed. All rate limiting now occurs in Next.js route handlers using Upstash Ratelimit. This section is retained for historical reference only.
+
+- ~~Library: `slowapi` with limits backends. Storage URI derived from env; falls back to memory.~~
+- ~~Decorators used on chat endpoints (e.g., `@limiter.limit('20/minute')`).~~
 - Upstash REST credentials (`UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`) enable rate limiting; no TCP Redis URLs are used in the current frontend.
 
 ## Compatibility
 
-- Frontend and backend limits are complementary; frontend protects costly edge routes independently of backend.
+- All rate limiting occurs in Next.js route handlers via `withApiGuards` factory pattern.
+- Rate limiters are initialized per-request (not module-scope) for serverless compatibility.
 - No feature flags. Limits are configured by env presence only.
 
 ## Changelog

@@ -1,10 +1,12 @@
 # Spec 0007 — Final DI + Pydantic v2 Schemas Centralization (Final-Only)
 
-Status: Accepted
+Status: Superseded (Backend-only spec)
 
 Owners: Platform API
 
 Date: 2025-10-24
+
+**Superseded Note:** This spec covers Python/FastAPI backend DI and Pydantic v2 schemas. The frontend uses Next.js route handlers with TypeScript/Zod schemas. This spec remains for backend reference only and does not apply to frontend architecture.
 
 ## Executive Summary
 
