@@ -42,6 +42,27 @@ vi.mock("@/lib/telemetry/span", async () => {
 const supabaseSelect = vi.hoisted(() => vi.fn());
 const supabaseMaybeSingle = vi.hoisted(() => vi.fn());
 
+vi.mock("@/lib/env/server", () => ({
+  getServerEnvVar: vi.fn((key: string) => {
+    if (key === "NEXT_PUBLIC_SUPABASE_URL") return "https://test.supabase.co";
+    if (key === "SUPABASE_SERVICE_ROLE_KEY") return "test-service-role-key";
+    return undefined;
+  }),
+  getServerEnvVarWithFallback: vi.fn((key: string, fallback?: string) => {
+    if (key === "NEXT_PUBLIC_SUPABASE_URL") return "https://test.supabase.co";
+    if (key === "SUPABASE_SERVICE_ROLE_KEY") return "test-service-role-key";
+    return fallback;
+  }),
+}));
+
+const mockCreateAdminSupabase = vi.hoisted(() => vi.fn(() => ({
+  from: () => ({ select: supabaseSelect }),
+})));
+
+vi.mock("@/lib/supabase/admin", () => ({
+  createAdminSupabase: mockCreateAdminSupabase,
+}));
+
 vi.mock("@/lib/supabase/server", () => ({
   createServerSupabase: vi.fn(async () => ({
     from: () => ({ select: supabaseSelect }),

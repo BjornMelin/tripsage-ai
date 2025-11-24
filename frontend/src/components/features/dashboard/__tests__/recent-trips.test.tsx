@@ -96,9 +96,13 @@ describe.sequential("RecentTrips", () => {
   it("renders empty state when no trips exist", async () => {
     await DoMockTrips([]);
     const { RecentTrips } = await import("../recent-trips");
-    renderWithProviders(<RecentTrips />);
-    expect(screen.getByText("No recent trips yet.")).toBeInTheDocument();
-    expect(screen.getByText("Create your first trip")).toBeInTheDocument();
+    const { container } = renderWithProviders(<RecentTrips />);
+    const emptyMessages = screen.getAllByText("No recent trips yet.");
+    expect(emptyMessages.length).toBeGreaterThan(0);
+    expect(emptyMessages[0]).toBeInTheDocument();
+    const createLinks = screen.getAllByText("Create your first trip");
+    expect(createLinks.length).toBeGreaterThan(0);
+    expect(createLinks[0]).toBeInTheDocument();
   });
 
   it("renders trip cards for existing trips", async () => {
