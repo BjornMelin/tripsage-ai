@@ -11,7 +11,6 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createUnifiedErrorResponse } from "@/lib/api/error-response";
 import { withApiGuards } from "@/lib/api/factory";
-import { createServerSupabase } from "@/lib/supabase/server";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 const scopeSchema = z.string().min(1).default("global");
@@ -32,7 +31,7 @@ function ensureAdmin(
 export const GET = withApiGuards({
   auth: true,
   telemetry: "config.agents.versions",
-})(async (req: NextRequest, { user }, _data, routeContext) => {
+})(async (req: NextRequest, { user, supabase }, _data, routeContext) => {
   try {
     ensureAdmin(user);
     const { agentType } = await routeContext.params;
@@ -45,13 +44,33 @@ export const GET = withApiGuards({
       });
     }
 
-    const scope = scopeSchema.parse(req.nextUrl.searchParams.get("scope") ?? undefined);
-    const pagination = paginationSchema.parse({
+    const parsedScope = scopeSchema.safeParse(
+      req.nextUrl.searchParams.get("scope") ?? undefined
+    );
+    if (!parsedScope.success) {
+      return createUnifiedErrorResponse({
+        details: parsedScope.error.issues,
+        error: "invalid_request",
+        reason: "Invalid scope parameter",
+        status: 400,
+      });
+    }
+    const scope = parsedScope.data;
+
+    const parsedPagination = paginationSchema.safeParse({
       cursor: req.nextUrl.searchParams.get("cursor") ?? undefined,
       limit: req.nextUrl.searchParams.get("limit") ?? undefined,
     });
+    if (!parsedPagination.success) {
+      return createUnifiedErrorResponse({
+        details: parsedPagination.error.issues,
+        error: "invalid_request",
+        reason: "Invalid pagination parameters",
+        status: 400,
+      });
+    }
+    const pagination = parsedPagination.data;
 
-    const supabase = await createServerSupabase();
     const result = await withTelemetrySpan(
       "agent_config.list_versions",
       { attributes: { agentType: parsedAgent.data, scope } },

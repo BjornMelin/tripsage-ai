@@ -84,6 +84,10 @@ describe("/api/calendar/events", () => {
     vi.spyOn(googleCalendar, "deleteEvent").mockResolvedValue(undefined);
   });
 
+  afterEach(() => {
+    setSupabaseFactoryForTests(null);
+  });
+
   describe("GET", () => {
     it("returns 401 when unauthenticated", async () => {
       mockSupabase.auth.getUser.mockResolvedValueOnce({
@@ -210,8 +214,4 @@ describe("/api/calendar/events", () => {
       expect(res.status).toBe(400);
     });
   });
-});
-
-afterEach(() => {
-  setSupabaseFactoryForTests(null);
 });

@@ -42,7 +42,7 @@ export interface UseActivitySearchResult {
   /** Function to reset the current search state. */
   resetSearch: () => void;
   /** Function to save a search with a given name and parameters. */
-  saveSearch: (name: string, params: ActivitySearchParams) => void;
+  saveSearch: (name: string, params: ActivitySearchParams) => Promise<void>;
   /** Array of saved searches. */
   savedSearches: SavedSearch[];
   /** Array of popular activities. */

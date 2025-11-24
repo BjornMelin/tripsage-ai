@@ -1,6 +1,6 @@
 # TripSage API Reference
 
-Complete reference for the TripSage FastAPI endpoints. All endpoints require authentication via JWT tokens obtained through Supabase.
+Complete reference for the TripSage API endpoints. Most endpoints require authentication via JWT tokens obtained through Supabase; anonymous access is allowed only where explicitly noted (e.g., Activities search/details).
 
 ## Base URL
 
@@ -16,7 +16,7 @@ http://localhost:8000 (development)
 > **Authentication is now handled by the Next.js frontend via Supabase SSR routes (`/auth/*`).**  
 > The Python backend middleware validates JWT tokens but does not provide auth endpoints.
 
-All endpoints require a Bearer JWT token obtained through Supabase authentication:
+Unless an endpoint is explicitly documented as anonymous (see Activities below), requests must include a Bearer JWT token obtained through Supabase authentication:
 
 ```http
 Authorization: Bearer <jwt_token>
@@ -247,6 +247,8 @@ Response: Streaming UI message stream (SSE) with tool calls and structured accom
 ## Activities
 
 Activity search and booking via Google Places API (New) with optional AI/web fallback. See SPEC-0030 and ADR-0053 for architecture details.
+
+**Authentication note:** Activity search (`POST /api/activities/search`) and activity details (`GET /api/activities/[id]`) allow anonymous access; all other legacy FastAPI endpoints still require Bearer JWT tokens.
 
 ### Search Activities
 

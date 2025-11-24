@@ -24,7 +24,6 @@ import { withApiGuards } from "@/lib/api/factory";
 import { bumpTag } from "@/lib/cache/tags";
 import { parseJsonBody, validateSchema } from "@/lib/next/route-helpers";
 import { nowIso, secureId } from "@/lib/security/random";
-import { createServerSupabase } from "@/lib/supabase/server";
 import { emitOperationalAlert } from "@/lib/telemetry/alerts";
 import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
 
@@ -52,15 +51,16 @@ function buildConfigPayload(
   const now = nowIso();
   const baseConfigId =
     existing?.id ?? `v${Math.floor(Date.now() / 1000)}_${secureId(8)}`;
+  const effectiveModel = body.model ?? existing?.model ?? "gpt-4o";
   return configurationAgentConfigSchema.parse({
     agentType,
     createdAt: existing?.createdAt ?? now,
     id: baseConfigId,
-    model: body.model ?? existing?.model ?? "gpt-4o",
+    model: effectiveModel,
     parameters: {
       description: body.description ?? existing?.parameters.description,
       maxTokens: body.maxTokens ?? existing?.parameters.maxTokens,
-      model: body.model ?? existing?.parameters.model,
+      model: effectiveModel,
       temperature: body.temperature ?? existing?.parameters.temperature,
       timeoutSeconds: body.timeoutSeconds ?? existing?.parameters.timeoutSeconds,
       topP: body.topP ?? existing?.parameters.topP,
@@ -118,7 +118,7 @@ export const PUT = withApiGuards({
   auth: true,
   rateLimit: "config:agents:update",
   telemetry: "config.agents.update",
-})(async (req: NextRequest, { user }, _data, routeContext) => {
+})(async (req: NextRequest, { user, supabase }, _data, routeContext) => {
   try {
     ensureAdmin(user);
     const { agentType } = await routeContext.params;
@@ -137,7 +137,6 @@ export const PUT = withApiGuards({
     if ("error" in validation) return validation.error;
 
     const scope = scopeSchema.parse(req.nextUrl.searchParams.get("scope") ?? undefined);
-    const supabase = await createServerSupabase();
 
     const existing = await withTelemetrySpan(
       "agent_config.load_existing",

@@ -135,6 +135,14 @@ export async function createMessage(
   if (!["user", "assistant", "system"].includes(normalizedRole)) {
     return json({ error: "bad_request" }, 400);
   }
+  const { data: session, error: sessionError } = await deps.supabase
+    .from("chat_sessions")
+    .select("id")
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (sessionError) return json({ error: "db_error" }, 500);
+  if (!session) return json({ error: "not_found" }, 404);
   const content = JSON.stringify(payload.parts ?? []);
   const { error } = await insertSingle(deps.supabase, "chat_messages", {
     content,

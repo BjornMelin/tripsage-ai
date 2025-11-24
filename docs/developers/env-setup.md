@@ -1,6 +1,6 @@
 # Environment Setup Guide (local development)
 
-Copy the root `.env.example` to `.env`, then follow the checklists below to populate every variable. Root `.env.test.example` is the template for CI/local test runs. All service-specific env files are derived from the root templates.
+Copy the root `.env.example` to `.env`, then follow the checklists below to populate every variable. Copy root `.env.test.example` to `.env.test` for local/CI test runs. All service-specific env files are derived from the root templates.
 
 ## Core & Supabase
 
@@ -80,8 +80,10 @@ Copy the root `.env.example` to `.env`, then follow the checklists below to popu
   - <https://developers.amadeus.com/get-started>
   - Variables: `AMADEUS_CLIENT_ID`, `AMADEUS_CLIENT_SECRET`, `AMADEUS_ENV` (`test`|`production`)
 - Google Places (New):
-  - Enable Places API (New) + Photos
-  - Variables: `GOOGLE_MAPS_API_KEY` / `GOOGLE_PLACES_API_KEY`
+  - Enable Places API (New) + Photos in Google Cloud Console
+  - Uses the same Google Maps Platform API keys (no separate Places API key required)
+  - Server-side: `GOOGLE_MAPS_SERVER_API_KEY` (IP+API restricted for Places/Geocoding/Routes)
+  - Browser/client-side: `NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY` (referrer-restricted)
 
 ## Optional analytics
 
@@ -90,6 +92,7 @@ Copy the root `.env.example` to `.env`, then follow the checklists below to popu
 ## Ready-to-run checklist
 
 - [ ] `.env` copied from root `.env.example`
+- [ ] `.env.test` copied from root `.env.test.example` for local/CI test runs
 - [ ] Supabase URL + anon key + service role key present
 - [ ] Upstash Redis REST URL + token present
 - [ ] QStash token + signing keys present

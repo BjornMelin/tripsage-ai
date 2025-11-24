@@ -5,7 +5,7 @@
 import type { HttpHandler } from "msw";
 import { HttpResponse, http } from "msw";
 
-const attachmentsBase = "http://localhost:8001/api/attachments";
+export const attachmentsBase = "http://localhost:8001/api/attachments";
 
 export const attachmentHandlers: HttpHandler[] = [
   http.get(`${attachmentsBase}/files`, () =>

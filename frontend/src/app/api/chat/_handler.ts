@@ -53,6 +53,7 @@ export interface NonStreamDeps {
   logger?: {
     info: (msg: string, meta?: Record<string, unknown>) => void;
     error: (msg: string, meta?: Record<string, unknown>) => void;
+    warn?: (msg: string, meta?: Record<string, unknown>) => void;
   };
   clock?: { now: () => number };
   config?: { defaultMaxTokens?: number };
@@ -266,12 +267,20 @@ export async function handleChatNonStream(
 
   // Best-effort persistence for assistant message metadata
   if (sessionId) {
-    await persistMemoryTurn({
-      logger: deps.logger,
-      sessionId,
-      turn: createTextMemoryTurn("assistant", result.text ?? ""),
-      userId: user.id,
-    });
+    try {
+      await persistMemoryTurn({
+        logger: deps.logger,
+        sessionId,
+        turn: createTextMemoryTurn("assistant", result.text ?? ""),
+        userId: user.id,
+      });
+    } catch (error) {
+      deps.logger?.warn?.("chat_non_stream:persist_memory_turn_failed", {
+        error: error instanceof Error ? error.message : String(error),
+        sessionId,
+        userId: user.id,
+      });
+    }
   }
 
   if (sessionId) {

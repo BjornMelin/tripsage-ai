@@ -103,22 +103,31 @@ export class ActivitiesService {
         const destination = validatedParams.destination.trim();
         const activityType = validatedParams.category ?? null;
 
-        // Check Supabase cache
+        // Check Supabase cache (authenticated users only)
         // Note: Database column names use snake_case (user_id, query_hash, activity_type, expires_at, created_at)
-        const supabase = await this.deps.supabase();
-        const cacheResult = await supabase
-          .from("search_activities")
-          .select("*")
-          .eq("user_id", userId ?? "anonymous")
-          .eq("destination", destination)
-          .eq("query_hash", queryHash)
-          .eq("activity_type", activityType ?? "")
-          .gt("expires_at", new Date().toISOString())
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+        let cacheResult: {
+          data: {
+            source: string;
+            results: unknown;
+          } | null;
+          error: unknown;
+        } | null = null;
+        if (userId) {
+          const supabase = await this.deps.supabase();
+          cacheResult = await supabase
+            .from("search_activities")
+            .select("*")
+            .eq("user_id", userId)
+            .eq("destination", destination)
+            .eq("query_hash", queryHash)
+            .eq("activity_type", activityType ?? "")
+            .gt("expires_at", new Date().toISOString())
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+        }
 
-        if (cacheResult.data) {
+        if (cacheResult?.data) {
           span.addEvent("cache.hit", {
             queryHash,
             source: cacheResult.data.source,
@@ -238,32 +247,47 @@ export class ActivitiesService {
                 "Some results are AI suggestions based on web content, not live availability"
               );
 
-              // Persist fallback results separately with shorter TTL
-              const fallbackExpiresAt = new Date();
-              fallbackExpiresAt.setSeconds(
-                fallbackExpiresAt.getSeconds() + AI_FALLBACK_CACHE_TTL_SECONDS
-              );
+              // Persist fallback results separately with shorter TTL (authenticated users only)
+              if (userId) {
+                try {
+                  const fallbackExpiresAt = new Date();
+                  fallbackExpiresAt.setSeconds(
+                    fallbackExpiresAt.getSeconds() + AI_FALLBACK_CACHE_TTL_SECONDS
+                  );
 
-              await supabase.from("search_activities").insert({
-                // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
-                activity_type: activityType,
-                destination,
-                // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
-                expires_at: fallbackExpiresAt.toISOString(),
-                // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
-                query_hash: `${queryHash}:fallback`,
-                // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
-                query_parameters: { ...validatedParams, fallback: true },
-                results: fallbackActivities,
-                // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
-                search_metadata: {
-                  webResultsCount: result.results.length,
-                  webSearchQuery: fallbackQuery,
-                },
-                source: "ai_fallback",
-                // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
-                user_id: userId ?? "anonymous",
-              });
+                  const supabase = await this.deps.supabase();
+                  await supabase.from("search_activities").insert({
+                    // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
+                    activity_type: activityType,
+                    destination,
+                    // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
+                    expires_at: fallbackExpiresAt.toISOString(),
+                    // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
+                    query_hash: `${queryHash}:fallback`,
+                    // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
+                    query_parameters: { ...validatedParams, fallback: true },
+                    results: fallbackActivities,
+                    // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
+                    search_metadata: {
+                      webResultsCount: result.results.length,
+                      webSearchQuery: fallbackQuery,
+                    },
+                    source: "ai_fallback",
+                    // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
+                    user_id: userId,
+                  });
+                } catch (insertError) {
+                  logger.error("fallback_cache_insert_failed", {
+                    destination,
+                    error:
+                      insertError instanceof Error
+                        ? insertError.message
+                        : String(insertError),
+                  });
+                  span.recordException(insertError as Error);
+                  // Continue without caching - fallback results still returned
+                }
+              }
             }
           } catch (error) {
             logger.error("fallback_failed", {
@@ -280,30 +304,45 @@ export class ActivitiesService {
           });
         }
 
-        // Persist to Supabase cache
-        const expiresAt = new Date();
-        expiresAt.setSeconds(expiresAt.getSeconds() + PLACES_CACHE_TTL_SECONDS);
+        // Persist to Supabase cache (authenticated users only)
+        if (userId) {
+          try {
+            const expiresAt = new Date();
+            expiresAt.setSeconds(expiresAt.getSeconds() + PLACES_CACHE_TTL_SECONDS);
 
-        await supabase.from("search_activities").insert({
-          // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
-          activity_type: activityType,
-          destination,
-          // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
-          expires_at: expiresAt.toISOString(),
-          // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
-          query_hash: queryHash,
-          // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
-          query_parameters: validatedParams,
-          results: activities,
-          // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
-          search_metadata: {
-            fallbackTriggered: shouldTriggerFallback,
-            placesCount: placesActivities.length,
-          },
-          source: primarySource === "mixed" ? "googleplaces" : primarySource,
-          // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
-          user_id: userId ?? "anonymous",
-        });
+            const supabase = await this.deps.supabase();
+            await supabase.from("search_activities").insert({
+              // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
+              activity_type: activityType,
+              destination,
+              // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
+              expires_at: expiresAt.toISOString(),
+              // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
+              query_hash: queryHash,
+              // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
+              query_parameters: validatedParams,
+              results: activities,
+              // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
+              search_metadata: {
+                fallbackTriggered: shouldTriggerFallback,
+                placesCount: placesActivities.length,
+              },
+              source: primarySource === "mixed" ? "googleplaces" : primarySource,
+              // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
+              user_id: userId,
+            });
+          } catch (insertError) {
+            logger.error("cache_insert_failed", {
+              destination,
+              error:
+                insertError instanceof Error
+                  ? insertError.message
+                  : String(insertError),
+            });
+            span.recordException(insertError as Error);
+            // Continue without caching - results still returned
+          }
+        }
 
         return {
           activities,
@@ -342,18 +381,26 @@ export class ActivitiesService {
         const supabase = await this.deps.supabase();
         const userId = ctx?.userId;
 
-        // Try to find in recent search results
+        // Try to find in recent search results (authenticated users only)
         // Note: Database column names use snake_case (user_id, expires_at, created_at)
-        const cacheResult = await supabase
-          .from("search_activities")
-          .select("results")
-          .eq("user_id", userId ?? "anonymous")
-          .gt("expires_at", new Date().toISOString())
-          .order("created_at", { ascending: false })
-          .limit(10)
-          .maybeSingle();
+        let cacheResult: {
+          data: {
+            results: unknown;
+          } | null;
+          error: unknown;
+        } | null = null;
+        if (userId) {
+          cacheResult = await supabase
+            .from("search_activities")
+            .select("results")
+            .eq("user_id", userId)
+            .gt("expires_at", new Date().toISOString())
+            .order("created_at", { ascending: false })
+            .limit(10)
+            .maybeSingle();
+        }
 
-        if (cacheResult.data) {
+        if (cacheResult?.data) {
           const results = cacheResult.data.results as Activity[];
           const cached = results.find((a) => a.id === placeId);
           if (cached) {
