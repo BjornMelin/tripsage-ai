@@ -7,7 +7,6 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { z } from "zod";
 
 const headerStore = new Map<string, string>();
-
 const setMockHeaders = (values: Record<string, string | undefined>) => {
   headerStore.clear();
   for (const [key, value] of Object.entries(values)) {
@@ -17,17 +16,56 @@ const setMockHeaders = (values: Record<string, string | undefined>) => {
   }
 };
 
+const telemetrySpan = {
+  addEvent: vi.fn(),
+  setAttribute: vi.fn(),
+};
+
+const upstashCacheStore = new Map<string, string>();
+const getCachedJson = vi.fn(<T>(key: string): Promise<T | null> => {
+  const raw = upstashCacheStore.get(key);
+  if (!raw) return Promise.resolve(null);
+  try {
+    return Promise.resolve(JSON.parse(raw) as T);
+  } catch {
+    return Promise.resolve(null);
+  }
+});
+const setCachedJson = vi.fn((key: string, value: unknown): Promise<void> => {
+  upstashCacheStore.set(key, JSON.stringify(value));
+  return Promise.resolve();
+});
+const deleteCachedJson = vi.fn((key: string): Promise<void> => {
+  upstashCacheStore.delete(key);
+  return Promise.resolve();
+});
+const deleteCachedJsonMany = vi.fn((keys: string[]): Promise<number> => {
+  let deleted = 0;
+  for (const key of keys) {
+    if (upstashCacheStore.delete(key)) deleted += 1;
+  }
+  return Promise.resolve(deleted);
+});
+const resetUpstashCache = () => {
+  upstashCacheStore.clear();
+  getCachedJson.mockClear();
+  setCachedJson.mockClear();
+  deleteCachedJson.mockClear();
+  deleteCachedJsonMany.mockClear();
+};
+const getUpstashCache = () => ({ reset: resetUpstashCache, store: upstashCacheStore });
+
+const redisClient = {
+  get: vi.fn(),
+  set: vi.fn(),
+};
+
 vi.mock("next/headers", () => ({
   headers: () =>
     Promise.resolve({
       get: (key: string) => headerStore.get(key.toLowerCase()) ?? null,
     }),
 }));
-
-const telemetrySpan = {
-  addEvent: vi.fn(),
-  setAttribute: vi.fn(),
-};
 
 vi.mock("@/lib/telemetry/span", () => ({
   recordTelemetryEvent: vi.fn(),
@@ -39,56 +77,12 @@ vi.mock("@/lib/telemetry/span", () => ({
   ) => execute(telemetrySpan),
 }));
 
-function createUpstashMock() {
-  const cacheStore = new Map<string, string>();
-  const getCachedJson = vi.fn(<T>(key: string): Promise<T | null> => {
-    const raw = cacheStore.get(key);
-    if (!raw) return Promise.resolve(null);
-    try {
-      return Promise.resolve(JSON.parse(raw) as T);
-    } catch {
-      return Promise.resolve(null);
-    }
-  });
-  const setCachedJson = vi.fn((key: string, value: unknown): Promise<void> => {
-    cacheStore.set(key, JSON.stringify(value));
-    return Promise.resolve();
-  });
-  const deleteCachedJson = vi.fn((key: string): Promise<void> => {
-    cacheStore.delete(key);
-    return Promise.resolve();
-  });
-  const deleteCachedJsonMany = vi.fn((keys: string[]): Promise<number> => {
-    let deleted = 0;
-    for (const key of keys) {
-      if (cacheStore.delete(key)) deleted += 1;
-    }
-    return Promise.resolve(deleted);
-  });
-  var upstashCache: { reset: () => void; store: Map<string, string> };
-  const reset = () => {
-    cacheStore.clear();
-    getCachedJson.mockClear();
-    setCachedJson.mockClear();
-    deleteCachedJson.mockClear();
-    deleteCachedJsonMany.mockClear();
-  };
-  vi.mock("@/lib/cache/upstash", () => ({
-    deleteCachedJson,
-    deleteCachedJsonMany,
-    getCachedJson,
-    setCachedJson,
-  }));
-  upstashCache = { reset, store: cacheStore };
-  return () => upstashCache;
-}
-
-const getUpstashCache = createUpstashMock();
-
-const redisClient = {
-  get: vi.fn(),
-  set: vi.fn(),
-};
+vi.mock("@/lib/cache/upstash", () => ({
+  deleteCachedJson,
+  deleteCachedJsonMany,
+  getCachedJson,
+  setCachedJson,
+}));
 
 vi.mock("@/lib/redis", () => ({
   getRedis: () => redisClient,
