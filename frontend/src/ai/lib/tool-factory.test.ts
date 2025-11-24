@@ -5,7 +5,6 @@ import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
 import type { ToolCallOptions } from "ai";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { z } from "zod";
-import type { buildUpstashCacheMock } from "@/test/mocks";
 
 const headerStore = new Map<string, string>();
 
@@ -40,18 +39,51 @@ vi.mock("@/lib/telemetry/span", () => ({
   ) => execute(telemetrySpan),
 }));
 
-const getUpstashCache = (): ReturnType<typeof buildUpstashCacheMock> =>
-  (globalThis as { __upstashCache?: ReturnType<typeof buildUpstashCacheMock> })
-    .__upstashCache as ReturnType<typeof buildUpstashCacheMock>;
+function createUpstashMock() {
+  const cacheStore = new Map<string, string>();
+  const getCachedJson = vi.fn(<T>(key: string): Promise<T | null> => {
+    const raw = cacheStore.get(key);
+    if (!raw) return Promise.resolve(null);
+    try {
+      return Promise.resolve(JSON.parse(raw) as T);
+    } catch {
+      return Promise.resolve(null);
+    }
+  });
+  const setCachedJson = vi.fn((key: string, value: unknown): Promise<void> => {
+    cacheStore.set(key, JSON.stringify(value));
+    return Promise.resolve();
+  });
+  const deleteCachedJson = vi.fn((key: string): Promise<void> => {
+    cacheStore.delete(key);
+    return Promise.resolve();
+  });
+  const deleteCachedJsonMany = vi.fn((keys: string[]): Promise<number> => {
+    let deleted = 0;
+    for (const key of keys) {
+      if (cacheStore.delete(key)) deleted += 1;
+    }
+    return Promise.resolve(deleted);
+  });
+  var upstashCache: { reset: () => void; store: Map<string, string> };
+  const reset = () => {
+    cacheStore.clear();
+    getCachedJson.mockClear();
+    setCachedJson.mockClear();
+    deleteCachedJson.mockClear();
+    deleteCachedJsonMany.mockClear();
+  };
+  vi.mock("@/lib/cache/upstash", () => ({
+    deleteCachedJson,
+    deleteCachedJsonMany,
+    getCachedJson,
+    setCachedJson,
+  }));
+  upstashCache = { reset, store: cacheStore };
+  return () => upstashCache;
+}
 
-vi.mock("@/lib/cache/upstash", async () => {
-  const { buildUpstashCacheMock } = await import("@/test/mocks");
-  const cache = buildUpstashCacheMock();
-  (
-    globalThis as { __upstashCache?: ReturnType<typeof buildUpstashCacheMock> }
-  ).__upstashCache = cache;
-  return cache.module;
-});
+const getUpstashCache = createUpstashMock();
 
 const redisClient = {
   get: vi.fn(),
