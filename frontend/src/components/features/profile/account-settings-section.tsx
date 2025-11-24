@@ -2,11 +2,13 @@
  * @fileoverview Account settings section: email update, verification, and
  * notification preferences. UI only; server actions are stubbed.
  */
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { type EmailUpdateFormData, emailUpdateFormSchema } from "@schemas/profile";
 import { Check, Mail, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import {
   AlertDialog,
@@ -40,95 +42,224 @@ import {
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
+import { getBrowserClient } from "@/lib/supabase";
+import { useAuthCore } from "@/stores/auth/auth-core";
 import { useUserProfileStore } from "@/stores/user-store";
 
 /**
  * Account settings panel component.
+ *
  * @returns A settings section with email and notification controls.
  */
 export function AccountSettingsSection() {
   const { profile, updatePersonalInfo: _updatePersonalInfo } = useUserProfileStore();
+  const { user: authUser, setUser, logout } = useAuthCore();
   const { toast } = useToast();
+
+  const currentEmail = authUser?.email ?? profile?.email ?? "";
+  const isEmailVerified = authUser?.isEmailVerified ?? true;
+
+  const initialNotificationPrefs = useMemo(
+    () => ({
+      email: authUser?.preferences?.notifications?.email ?? true,
+      marketing: authUser?.preferences?.notifications?.marketing ?? false,
+      priceAlerts: authUser?.preferences?.notifications?.priceAlerts ?? true,
+      tripReminders: authUser?.preferences?.notifications?.tripReminders ?? true,
+    }),
+    [authUser?.preferences?.notifications]
+  );
+
+  const [notificationPrefs, setNotificationPrefs] = useState(initialNotificationPrefs);
+  const [isVerifyingEmail, setIsVerifyingEmail] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   const emailForm = useForm<EmailUpdateFormData>({
     defaultValues: {
-      email: profile?.email || "",
+      email: currentEmail,
     },
     resolver: zodResolver(emailUpdateFormSchema),
   });
 
-  // TODO: Wire to auth email change; reflect verification state.
-  const onEmailUpdate = async (_data: EmailUpdateFormData) => {
-    try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+  useEffect(() => {
+    emailForm.reset({ email: currentEmail });
+  }, [currentEmail, emailForm]);
 
-      // Note: In a real app, this would update the auth email, not the profile
+  useEffect(() => {
+    setNotificationPrefs(initialNotificationPrefs);
+  }, [initialNotificationPrefs]);
+
+  const resolveSupabaseClient = () => {
+    try {
+      return getBrowserClient();
+    } catch (_error) {
+      return null;
+    }
+  };
+
+  const onEmailUpdate = async (data: EmailUpdateFormData) => {
+    try {
+      const supabase = resolveSupabaseClient();
+      if (!supabase) {
+        throw new Error("Unable to access authentication client. Please try again.");
+      }
+
+      const { data: result, error } = await supabase.auth.updateUser({
+        email: data.email,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      const updatedEmail = result.user?.email ?? data.email;
+      const verified = Boolean(result.user?.email_confirmed_at);
+
+      if (authUser) {
+        setUser({
+          ...authUser,
+          email: updatedEmail,
+          isEmailVerified: verified,
+          updatedAt: result.user?.updated_at ?? authUser.updatedAt,
+        });
+      }
+
+      emailForm.reset({ email: updatedEmail });
+
       toast({
-        description: "Please check your inbox to verify your new email address.",
-        title: "Email updated",
+        description: verified
+          ? "Your email has been updated."
+          : "Please check your inbox to verify your new email address.",
+        title: verified ? "Email updated" : "Verification required",
       });
     } catch (_error) {
+      const description =
+        _error instanceof Error
+          ? _error.message
+          : "Failed to update email. Please try again.";
       toast({
-        description: "Failed to update email. Please try again.",
+        description,
         title: "Error",
         variant: "destructive",
       });
     }
   };
 
-  // TODO: Trigger verification email via auth provider.
   const handleEmailVerification = async () => {
     try {
-      // Simulate sending verification email
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      setIsVerifyingEmail(true);
+      const response = await fetch("/auth/email/resend", {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        const errorData = (await response.json().catch(() => null)) as {
+          message?: string;
+        } | null;
+        throw new Error(errorData?.message ?? "Failed to send verification email.");
+      }
 
       toast({
         description: "Please check your inbox and click the verification link.",
         title: "Verification email sent",
       });
     } catch (_error) {
+      const description =
+        _error instanceof Error
+          ? _error.message
+          : "Failed to send verification email. Please try again.";
       toast({
-        description: "Failed to send verification email. Please try again.",
+        description,
         title: "Error",
         variant: "destructive",
       });
+    } finally {
+      setIsVerifyingEmail(false);
     }
   };
 
-  // TODO: Replace with real account deletion request.
   const handleAccountDeletion = async () => {
     try {
-      // Simulate account deletion
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      setIsDeletingAccount(true);
+      const response = await fetch("/auth/delete", {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const errorData = (await response.json().catch(() => null)) as {
+          message?: string;
+        } | null;
+        throw new Error(errorData?.message ?? "Failed to delete account.");
+      }
+
+      await logout();
 
       toast({
         description: "Your account deletion request has been processed.",
         title: "Account deletion initiated",
       });
     } catch (_error) {
+      const description =
+        _error instanceof Error
+          ? _error.message
+          : "Failed to delete account. Please try again.";
       toast({
-        description: "Failed to delete account. Please try again.",
+        description,
         title: "Error",
         variant: "destructive",
       });
+    } finally {
+      setIsDeletingAccount(false);
     }
   };
 
-  // TODO: Persist notification preferences to backend.
-  const toggleNotificationSetting = async (setting: string, enabled: boolean) => {
-    try {
-      // Simulate API call to update notification settings
-      await new Promise((resolve) => setTimeout(resolve, 500));
+  const toggleNotificationSetting = async (
+    setting: keyof typeof initialNotificationPrefs,
+    enabled: boolean
+  ) => {
+    setNotificationPrefs((prev) => ({ ...prev, [setting]: enabled }));
 
-      // This would be updated when implementing real notification preferences
+    try {
+      const supabase = resolveSupabaseClient();
+      if (!supabase) {
+        throw new Error("Unable to update notifications. Please try again.");
+      }
+
+      const nextNotifications = { ...notificationPrefs, [setting]: enabled };
+      const nextPreferences = {
+        ...(authUser?.preferences ?? {}),
+        notifications: nextNotifications,
+      };
+
+      const { data, error } = await supabase.auth.updateUser({
+        data: {
+          preferences: nextPreferences,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (authUser) {
+        setUser({
+          ...authUser,
+          preferences: nextPreferences,
+          updatedAt: data.user?.updated_at ?? authUser.updatedAt,
+        });
+      }
+
       toast({
         description: `${setting} notifications ${enabled ? "enabled" : "disabled"}.`,
         title: "Settings updated",
       });
     } catch (_error) {
+      setNotificationPrefs((prev) => ({ ...prev, [setting]: !enabled }));
+      const description =
+        _error instanceof Error
+          ? _error.message
+          : "Failed to update notification settings.";
       toast({
-        description: "Failed to update notification settings.",
+        description,
         title: "Error",
         variant: "destructive",
       });
@@ -151,14 +282,20 @@ export function AccountSettingsSection() {
         <CardContent className="space-y-4">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium">Current Email:</span>
-            <span className="text-sm">{profile?.email}</span>
-            <Badge variant="default">
-              <Check className="h-3 w-3 mr-1" />
-              Verified
+            <span className="text-sm">{currentEmail}</span>
+            <Badge variant={isEmailVerified ? "default" : "secondary"}>
+              {isEmailVerified ? (
+                <>
+                  <Check className="h-3 w-3 mr-1" />
+                  Verified
+                </>
+              ) : (
+                "Unverified"
+              )}
             </Badge>
           </div>
 
-          {false && (
+          {!isEmailVerified && (
             <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
               <div className="flex justify-between items-center">
                 <div>
@@ -169,8 +306,13 @@ export function AccountSettingsSection() {
                     Please verify your email address to enable all features.
                   </p>
                 </div>
-                <Button size="sm" variant="outline" onClick={handleEmailVerification}>
-                  Send Verification
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleEmailVerification}
+                  disabled={isVerifyingEmail}
+                >
+                  {isVerifyingEmail ? "Sending..." : "Send Verification"}
                 </Button>
               </div>
             </div>
@@ -223,7 +365,7 @@ export function AccountSettingsSection() {
                 </div>
               </div>
               <Switch
-                defaultChecked={true}
+                checked={notificationPrefs.email}
                 onCheckedChange={(enabled) =>
                   toggleNotificationSetting("email", enabled)
                 }
@@ -238,7 +380,7 @@ export function AccountSettingsSection() {
                 </div>
               </div>
               <Switch
-                defaultChecked={true}
+                checked={notificationPrefs.tripReminders}
                 onCheckedChange={(enabled) =>
                   toggleNotificationSetting("tripReminders", enabled)
                 }
@@ -253,7 +395,7 @@ export function AccountSettingsSection() {
                 </div>
               </div>
               <Switch
-                defaultChecked={true}
+                checked={notificationPrefs.priceAlerts}
                 onCheckedChange={(enabled) =>
                   toggleNotificationSetting("priceAlerts", enabled)
                 }
@@ -268,7 +410,7 @@ export function AccountSettingsSection() {
                 </div>
               </div>
               <Switch
-                defaultChecked={false}
+                checked={notificationPrefs.marketing}
                 onCheckedChange={(enabled) =>
                   toggleNotificationSetting("marketing", enabled)
                 }
@@ -308,8 +450,9 @@ export function AccountSettingsSection() {
                 <AlertDialogAction
                   className="bg-red-600 hover:bg-red-700"
                   onClick={handleAccountDeletion}
+                  disabled={isDeletingAccount}
                 >
-                  Yes, delete my account
+                  {isDeletingAccount ? "Deleting..." : "Yes, delete my account"}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

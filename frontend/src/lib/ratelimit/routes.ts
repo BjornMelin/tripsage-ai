@@ -76,6 +76,9 @@ export const ROUTE_RATE_LIMITS = {
 
   // Embeddings and geocoding
   embeddings: { limit: 60, window: "1 m" },
+
+  // Flights
+  "flights:popular-destinations": { limit: 60, window: "1 m" },
   geocode: { limit: 60, window: "1 m" },
 
   // Itineraries
