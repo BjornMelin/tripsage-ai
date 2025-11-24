@@ -52,12 +52,12 @@ export const POST = withApiGuards({
     });
   }
 
-  const config = await resolveAgentConfig("destinationResearchAgent");
+  const { config: agentConfig } = await resolveAgentConfig("destinationResearchAgent");
   const modelHint =
-    config.config.model ?? new URL(req.url).searchParams.get("model") ?? undefined;
+    agentConfig.model ?? new URL(req.url).searchParams.get("model") ?? undefined;
   const { model, modelId } = await resolveProvider(user?.id ?? "anon", modelHint);
 
-  const result = runDestinationAgent({ model, modelId }, config.config, body);
+  const result = runDestinationAgent({ model, modelId }, agentConfig, body);
   return result.toUIMessageStreamResponse({
     onError: createErrorHandler(),
   });

@@ -108,7 +108,7 @@ export const activitySearchParamsSchema = z.object({
   category: z.string().optional(),
   children: NON_NEGATIVE_INT_SCHEMA.max(20).optional(),
   date: DATE_STRING_SCHEMA.optional(),
-  destination: z.string().optional(),
+  destination: z.string().min(1, { error: "destination is required" }),
   difficulty: z.enum(["easy", "moderate", "challenging", "extreme"]).optional(),
   duration: z
     .object({

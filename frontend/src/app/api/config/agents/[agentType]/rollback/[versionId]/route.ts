@@ -42,7 +42,18 @@ export const POST = withApiGuards({
   try {
     ensureAdmin(user);
     const url = new URL(req.url);
-    const scope = scopeSchema.parse(url.searchParams.get("scope") ?? undefined);
+    const scopeResult = scopeSchema.safeParse(
+      url.searchParams.get("scope") ?? undefined
+    );
+    if (!scopeResult.success) {
+      return createUnifiedErrorResponse({
+        err: scopeResult.error,
+        error: "invalid_request",
+        reason: "Invalid scope parameter",
+        status: 400,
+      });
+    }
+    const scope = scopeResult.data;
     const { agentType, versionId } = await routeContext.params;
 
     const parsedAgent = agentTypeSchema.safeParse(agentType);

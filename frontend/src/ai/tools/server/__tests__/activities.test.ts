@@ -2,20 +2,10 @@
 
 import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { z } from "zod";
 
 vi.mock("@/lib/redis", () => ({
   getRedis: vi.fn(),
-}));
-
-const ratelimitLimit = vi.fn(async () => ({ success: true }));
-vi.mock("@upstash/ratelimit", () => ({
-  Ratelimit: class {
-    static slidingWindow() {
-      return {};
-    }
-
-    limit = ratelimitLimit;
-  },
 }));
 
 const TELEMETRY_SPAN = {
@@ -43,7 +33,6 @@ describe("activities tools", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    ratelimitLimit.mockResolvedValue({ success: true });
 
     mockService = {
       details: vi.fn(),
@@ -202,7 +191,7 @@ describe("activities tools", () => {
 
       expect(result.success).toBe(false);
       if (!result.success && result.error) {
-        const errorMessages = result.error.issues.map((issue) => issue.message);
+        const errorMessages = result.error.issues.map((issue: z.core.$ZodIssue) => issue.message);
         expect(
           errorMessages.some((msg) => msg.toLowerCase().includes("required"))
         ).toBe(true);
