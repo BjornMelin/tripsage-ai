@@ -34,19 +34,21 @@ export type TelemetryLogOptions = {
 const REDACTED_VALUE = "[REDACTED]";
 
 function ensureSpanCapabilities(span: Span): Span {
-  const safeSpan = span as Span & {
-    addEvent?: Span["addEvent"];
-    setAttribute?: Span["setAttribute"];
-  };
-  if (!safeSpan.addEvent) {
-    // No-op fallback for spans without addEvent capability
-    safeSpan.addEvent = () => safeSpan;
-  }
-  if (!safeSpan.setAttribute) {
-    // No-op fallback for spans without setAttribute capability
-    safeSpan.setAttribute = () => safeSpan;
-  }
-  return safeSpan;
+  // Use Proxy to avoid mutating the original span object
+  return new Proxy(span, {
+    get(target, prop, receiver) {
+      if (prop === "addEvent" && typeof target.addEvent !== "function") {
+        // No-op fallback for spans without addEvent capability
+        return () => receiver;
+      }
+      if (prop === "setAttribute" && typeof target.setAttribute !== "function") {
+        // No-op fallback for spans without setAttribute capability
+        return () => receiver;
+      }
+      // Delegate all other properties/methods to the original span
+      return Reflect.get(target, prop, receiver);
+    },
+  }) as Span;
 }
 
 // Lazy tracer to allow tests to inject mocks before first span creation.

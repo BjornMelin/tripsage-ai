@@ -7,8 +7,8 @@ import {
   type ErrorServiceConfig,
   errorReportSchema,
 } from "@schemas/errors";
-import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { secureId } from "@/lib/security/random";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 
 /**
  * Error service for logging and reporting errors

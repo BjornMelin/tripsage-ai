@@ -3,6 +3,7 @@
 import { type AgentType, agentTypeSchema } from "@schemas/configuration";
 import { resolveAgentConfig } from "@/lib/agents/config-resolver";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { toAbsoluteUrl } from "@/lib/url/server-origin";
 
 const DEFAULT_SCOPE = "global";
 
@@ -58,7 +59,9 @@ export async function updateAgentConfigAction(
   agentType: AgentType,
   payload: Record<string, unknown>
 ) {
-  const res = await fetch(`/api/config/agents/${agentType}`, {
+  // Use absolute URL with trusted origin to prevent SSRF
+  const url = toAbsoluteUrl(`/api/config/agents/${agentType}`);
+  const res = await fetch(url, {
     body: JSON.stringify(payload),
     cache: "no-store",
     headers: { "Content-Type": "application/json" },
@@ -75,7 +78,9 @@ export async function rollbackAgentConfigAction(
   agentType: AgentType,
   versionId: string
 ) {
-  const res = await fetch(`/api/config/agents/${agentType}/rollback/${versionId}`, {
+  // Use absolute URL with trusted origin to prevent SSRF
+  const url = toAbsoluteUrl(`/api/config/agents/${agentType}/rollback/${versionId}`);
+  const res = await fetch(url, {
     cache: "no-store",
     method: "POST",
   });

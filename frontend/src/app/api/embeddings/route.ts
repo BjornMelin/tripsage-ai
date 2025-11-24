@@ -10,7 +10,7 @@ import { openai } from "@ai-sdk/openai";
 import { embed } from "ai";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { createApiError } from "@/lib/api/error-response";
+import { createUnifiedErrorResponse } from "@/lib/api/error-response";
 import { withApiGuards } from "@/lib/api/factory";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { parseJsonBody } from "@/lib/next/route-helpers";
@@ -119,7 +119,9 @@ export const POST = withApiGuards({
   if (internalKey) {
     const provided = req.headers.get("x-internal-key");
     if (provided !== internalKey) {
-      return NextResponse.json(createApiError("UNAUTHORIZED", "unauthorized"), {
+      return createUnifiedErrorResponse({
+        error: "unauthorized",
+        reason: "Authentication required",
         status: 401,
       });
     }
@@ -136,17 +138,20 @@ export const POST = withApiGuards({
       ? `${body.property.name ?? ""}. Description: ${body.property.description ?? ""}. Amenities: ${Array.isArray(body.property.amenities) ? body.property.amenities.join(", ") : (body.property.amenities ?? "")}`
       : "");
   if (!text || !text.trim()) {
-    return NextResponse.json(
-      createApiError("MISSING_TEXT", "missing text or property"),
-      { status: 400 }
-    );
+    return createUnifiedErrorResponse({
+      error: "invalid_request",
+      reason: "Missing text or property",
+      status: 400,
+    });
   }
 
   if (text.length > MAX_INPUT_LENGTH) {
-    return NextResponse.json(
-      createApiError("TEXT_TOO_LONG", "text too long", { maxLength: MAX_INPUT_LENGTH }),
-      { status: 400 }
-    );
+    return createUnifiedErrorResponse({
+      details: { maxLength: MAX_INPUT_LENGTH },
+      error: "invalid_request",
+      reason: "Text too long",
+      status: 400,
+    });
   }
 
   // Generate embedding via AI SDK v6 using OpenAI text-embedding-3-small (1536-d)
@@ -155,13 +160,15 @@ export const POST = withApiGuards({
     value: text,
   });
   if (!Array.isArray(embedding) || embedding.length !== 1536) {
-    return NextResponse.json(
-      createApiError("EMBEDDING_DIMENSION_MISMATCH", "embedding dimension mismatch", {
+    return createUnifiedErrorResponse({
+      details: {
         expected: 1536,
         length: Array.isArray(embedding) ? embedding.length : -1,
-      }),
-      { status: 500 }
-    );
+      },
+      error: "internal",
+      reason: "Embedding dimension mismatch",
+      status: 500,
+    });
   }
 
   let persisted = false;

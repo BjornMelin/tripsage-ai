@@ -7,6 +7,7 @@
 import "server-only";
 
 import { getAccommodationsService } from "@domain/accommodations/container";
+import { accommodationListingSchema } from "@schemas/accommodations";
 import type { ModernHotelSearchParams } from "@/components/features/search/hotel-search-form";
 import type { ModernHotelResult } from "@/components/features/search/modern-hotel-results";
 import { getGoogleMapsBrowserKey } from "@/lib/env/client";
@@ -63,41 +64,63 @@ export async function searchHotelsAction(
 
   /** Map search results to modern hotel results. */
   return (searchResult.listings ?? []).slice(0, 10).map((listing) => {
-    const hotel = listing as Record<string, unknown>;
-    const address = hotel.address as
-      | { lines?: string[]; cityName?: string }
-      | undefined;
-    const addressLines = address?.lines ?? [];
-    const providerHotel = hotel.hotel as
-      | { hotelId?: string; name?: string }
-      | undefined;
-    const amenities = (hotel.amenities as string[] | undefined) ?? [];
-    const rooms = (hotel.rooms as Array<Record<string, unknown>> | undefined) ?? [];
-    const firstRoom = rooms[0] ?? {};
-    const rates = (firstRoom.rates as Array<Record<string, unknown>> | undefined) ?? [];
-    const firstRate = rates[0] ?? {};
-    const ratePrice = (firstRate.price as Record<string, unknown>) ?? {};
-    const totalNumeric = Number.parseFloat(
-      (ratePrice.total as string | undefined) ??
-        (ratePrice.numeric as string | undefined) ??
-        "0"
-    );
+    // Parse listing with Zod schema for type safety
+    const parseResult = accommodationListingSchema.safeParse(listing);
+    if (!parseResult.success) {
+      // Fallback to minimal hotel result if parsing fails
+      return {
+        ai: {
+          personalizedTags: ["hybrid-amadeus", "google-places"],
+          reason: "Real-time Amadeus pricing with Places enrichment",
+          recommendation: 8,
+        },
+        amenities: { essential: [], premium: [], unique: [] },
+        availability: { flexible: true, roomsLeft: 3, urgency: "medium" },
+        category: "hotel" as const,
+        guestExperience: { highlights: [], recentMentions: [], vibe: "business" },
+        id: secureUuid(),
+        images: {
+          count: 1,
+          gallery: [],
+          main: "https://images.unsplash.com/photo-1501117716987-c8e1ecb210af?auto=format&fit=crop&w=800&q=80",
+        },
+        location: { address: "", city: "", district: "", landmarks: [] },
+        name: "Hotel",
+        pricing: {
+          basePrice: 0,
+          currency: params.currency ?? "USD",
+          priceHistory: "stable",
+          pricePerNight: 0,
+          taxes: 0,
+          totalPrice: 0,
+        },
+        reviewCount: 0,
+        starRating: 0,
+        sustainability: { certified: false, practices: [], score: 0 },
+        userRating: 0,
+      } satisfies ModernHotelResult;
+    }
+
+    const hotel = parseResult.data;
+    const addressLines = hotel.address?.lines ?? [];
+    const amenities = hotel.amenities ?? [];
+    const firstRoom = hotel.rooms?.[0];
+    const firstRate = firstRoom?.rates?.[0];
+    const ratePrice = firstRate?.price;
+
+    const totalNumeric = ratePrice
+      ? Number.parseFloat(String(ratePrice.total ?? ratePrice.numeric ?? "0"))
+      : 0;
     const pricePerNight =
       totalNumeric && nights > 0 ? Number(totalNumeric / nights).toFixed(2) : "0";
+
     const photoName =
-      ((hotel.placeDetails as { photos?: Array<{ name?: string }> } | undefined)
-        ?.photos ?? [])[0]?.name ??
-      ((hotel.place as { photos?: Array<{ name?: string }> } | undefined)?.photos ??
-        [])[0]?.name ??
-      undefined;
+      hotel.placeDetails?.photos?.[0]?.name ?? hotel.place?.photos?.[0]?.name;
     const mainImage =
       buildPhotoUrl(photoName) ??
       "https://images.unsplash.com/photo-1501117716987-c8e1ecb210af?auto=format&fit=crop&w=800&q=80";
 
-    const place = hotel.place as
-      | { rating?: number; userRatingCount?: number }
-      | undefined;
-    const starRating = (hotel.starRating as number | undefined) ?? 0;
+    const starRating = hotel.starRating ?? 0;
     return {
       ai: {
         personalizedTags: ["hybrid-amadeus", "google-places"],
@@ -120,7 +143,7 @@ export async function searchHotelsAction(
         recentMentions: [],
         vibe: "business",
       },
-      id: String(hotel.id ?? providerHotel?.hotelId ?? secureUuid()),
+      id: String(hotel.id ?? hotel.hotel?.hotelId ?? secureUuid()),
       images: {
         count: 1,
         gallery: mainImage ? [mainImage] : [],
@@ -128,37 +151,32 @@ export async function searchHotelsAction(
       },
       location: {
         address: addressLines.join(", "),
-        city:
-          address?.cityName ??
-          (hotel.searchMeta as { location?: string } | undefined)?.location ??
-          "",
+        city: hotel.address?.cityName ?? hotel.searchMeta?.location ?? "",
         district: "",
         landmarks: [],
         walkScore: undefined,
       },
-      name: (hotel.name as string | undefined) ?? providerHotel?.name ?? "Hotel",
+      name: hotel.name ?? hotel.hotel?.name ?? "Hotel",
       pricing: {
-        basePrice: Number.parseFloat(
-          (ratePrice.base as string | undefined) ?? pricePerNight ?? "0"
-        ),
-        currency:
-          (ratePrice.currency as string | undefined) ?? params.currency ?? "USD",
+        basePrice: ratePrice
+          ? Number.parseFloat(String(ratePrice.base ?? pricePerNight ?? "0"))
+          : 0,
+        currency: ratePrice?.currency ?? params.currency ?? "USD",
         priceHistory: "stable",
         pricePerNight: Number(pricePerNight),
-        taxes: Number.parseFloat(
-          (((ratePrice.taxes as Array<Record<string, string>> | undefined) ?? [])[0]
-            ?.amount ?? "0") as string
-        ),
+        taxes: ratePrice?.taxes?.[0]?.amount
+          ? Number.parseFloat(String(ratePrice.taxes[0].amount))
+          : 0,
         totalPrice: totalNumeric,
       },
-      reviewCount: place?.userRatingCount ?? 0,
+      reviewCount: hotel.place?.userRatingCount ?? 0,
       starRating,
       sustainability: {
         certified: false,
         practices: [],
         score: 0,
       },
-      userRating: place?.rating ?? 0,
+      userRating: hotel.place?.rating ?? 0,
     } satisfies ModernHotelResult;
   });
 }

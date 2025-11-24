@@ -19,9 +19,10 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { resolveAgentConfig } from "@/lib/agents/config-resolver";
+import { createUnifiedErrorResponse } from "@/lib/api/error-response";
 import { withApiGuards } from "@/lib/api/factory";
 import { bumpTag } from "@/lib/cache/tags";
-import { errorResponse, parseJsonBody, validateSchema } from "@/lib/next/route-helpers";
+import { parseJsonBody, validateSchema } from "@/lib/next/route-helpers";
 import { nowIso, secureId } from "@/lib/security/random";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { emitOperationalAlert } from "@/lib/telemetry/alerts";
@@ -32,10 +33,10 @@ const configUpdateBodySchema = agentConfigRequestSchema.strict();
 
 function ensureAdmin(
   user: unknown
-): asserts user is { id: string; user_metadata?: Record<string, unknown> } {
-  const candidate = user as { user_metadata?: Record<string, unknown> } | null;
+): asserts user is { id: string; app_metadata?: Record<string, unknown> } {
+  const candidate = user as { app_metadata?: Record<string, unknown> } | null;
   const isAdmin = Boolean(
-    candidate?.user_metadata && candidate.user_metadata.is_admin === true
+    candidate?.app_metadata && candidate.app_metadata.is_admin === true
   );
   if (!isAdmin) {
     throw Object.assign(new Error("forbidden"), { status: 403 });
@@ -78,7 +79,7 @@ export const GET = withApiGuards({
     const { agentType } = await routeContext.params;
     const parsedAgent = agentTypeSchema.safeParse(agentType);
     if (!parsedAgent.success) {
-      return errorResponse({
+      return createUnifiedErrorResponse({
         error: "invalid_request",
         reason: "Invalid agent type",
         status: 400,
@@ -89,12 +90,22 @@ export const GET = withApiGuards({
     return NextResponse.json(result);
   } catch (err) {
     if ((err as { status?: number }).status === 404) {
-      return NextResponse.json({ error: "not_found" }, { status: 404 });
+      return createUnifiedErrorResponse({
+        err,
+        error: "not_found",
+        reason: "Agent configuration not found",
+        status: 404,
+      });
     }
     if ((err as { status?: number }).status === 403) {
-      return NextResponse.json({ error: "forbidden" }, { status: 403 });
+      return createUnifiedErrorResponse({
+        err,
+        error: "forbidden",
+        reason: "Admin access required",
+        status: 403,
+      });
     }
-    return errorResponse({
+    return createUnifiedErrorResponse({
       err,
       error: "internal",
       reason: "Failed to load agent configuration",
@@ -113,7 +124,7 @@ export const PUT = withApiGuards({
     const { agentType } = await routeContext.params;
     const parsedAgent = agentTypeSchema.safeParse(agentType);
     if (!parsedAgent.success) {
-      return errorResponse({
+      return createUnifiedErrorResponse({
         error: "invalid_request",
         reason: "Invalid agent type",
         status: 400,
@@ -163,7 +174,7 @@ export const PUT = withApiGuards({
         attributes: { agentType: parsedAgent.data, scope },
         level: "error",
       });
-      return errorResponse({
+      return createUnifiedErrorResponse({
         err: error,
         error: "internal",
         reason: "Failed to persist configuration",
@@ -176,7 +187,7 @@ export const PUT = withApiGuards({
       : (data as { version_id?: string } | null | undefined)?.version_id;
 
     if (!versionId) {
-      return errorResponse({
+      return createUnifiedErrorResponse({
         error: "internal",
         reason: "Missing version id from upsert",
         status: 500,
@@ -198,9 +209,14 @@ export const PUT = withApiGuards({
     return NextResponse.json({ config: configPayload, versionId });
   } catch (err) {
     if ((err as { status?: number }).status === 403) {
-      return NextResponse.json({ error: "forbidden" }, { status: 403 });
+      return createUnifiedErrorResponse({
+        err,
+        error: "forbidden",
+        reason: "Admin access required",
+        status: 403,
+      });
     }
-    return errorResponse({
+    return createUnifiedErrorResponse({
       err,
       error: "internal",
       reason: "Failed to update agent configuration",

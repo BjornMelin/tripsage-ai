@@ -9,6 +9,7 @@ import "server-only";
 import { memorySyncJobSchema } from "@schemas/webhooks";
 import { Receiver } from "@upstash/qstash";
 import { NextResponse } from "next/server";
+import { createUnifiedErrorResponse } from "@/lib/api/error-response";
 import { getServerEnvVar, getServerEnvVarWithFallback } from "@/lib/env/server";
 import { tryReserveKey } from "@/lib/idempotency/redis";
 import { createAdminSupabase } from "@/lib/supabase/admin";
@@ -90,7 +91,12 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: true, ...result });
       } catch (error) {
         span.recordException(error as Error);
-        return NextResponse.json({ error: "internal error" }, { status: 500 });
+        return createUnifiedErrorResponse({
+          err: error,
+          error: "internal",
+          reason: "Memory sync job failed",
+          status: 500,
+        });
       }
     }
   );

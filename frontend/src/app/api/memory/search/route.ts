@@ -9,6 +9,7 @@ import "server-only";
 
 import { type MemorySearchRequest, memorySearchRequestSchema } from "@schemas/memory";
 import { type NextRequest, NextResponse } from "next/server";
+import { createUnifiedErrorResponse } from "@/lib/api/error-response";
 import { withApiGuards } from "@/lib/api/factory";
 import { handleMemoryIntent } from "@/lib/memory/orchestrator";
 
@@ -24,7 +25,11 @@ export const POST = withApiGuards({
   telemetry: "memory.search",
 })(async (_req: NextRequest, { user }, validated: MemorySearchRequest) => {
   if (!user?.id) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    return createUnifiedErrorResponse({
+      error: "unauthorized",
+      reason: "Authentication required",
+      status: 401,
+    });
   }
 
   const { filters, limit } = validated;
@@ -57,12 +62,11 @@ export const POST = withApiGuards({
       total: results.length,
     });
   } catch (error) {
-    return NextResponse.json(
-      {
-        error: "memory_search_failed",
-        message: error instanceof Error ? error.message : "Failed to search memories",
-      },
-      { status: 500 }
-    );
+    return createUnifiedErrorResponse({
+      err: error,
+      error: "internal",
+      reason: "Failed to search memories",
+      status: 500,
+    });
   }
 });
