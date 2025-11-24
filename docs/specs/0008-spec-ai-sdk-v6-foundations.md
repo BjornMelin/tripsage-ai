@@ -1,5 +1,9 @@
 # Spec 0008: AI SDK v6 Foundations (Next.js)
 
+**Version**: 1.1.0  
+**Status**: Accepted  
+**Date**: 2025-11-04
+
 ## Scope
 
 - Add a server-only streaming route using AI SDK `streamText` and return a UI Message Stream response.

@@ -1,8 +1,11 @@
 # Spec: Python Test Suite Modernization
 
-**Status**: Draft
-**Version**: 1.0.0
-**Date**: 2025-10-24
+**Status**: Superseded  
+**Version**: 1.0.0  
+**Date**: 2025-10-24  
+**Superseded By**: Python backend removed; frontend-first architecture (see SPEC-0020)
+
+**Note:** This spec applied to Python backend test suites. The Python FastAPI backend has been completely removed. All functionality now runs in Next.js TypeScript. Frontend uses Vitest + Playwright (see ADR-0007).
 
 ## Objective
 

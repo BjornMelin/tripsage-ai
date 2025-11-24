@@ -1,5 +1,9 @@
 # Spec 0019: Hybrid Destination & Itinerary Agents (Frontend)
 
+**Version**: 1.0.0  
+**Status**: Accepted  
+**Date**: 2025-11-12
+
 ## Scope
 
 Deliver feature parity for destination research and itinerary planning directly in `frontend/` using AI SDK v6 ToolLoopAgent workflows with deterministic guardrails, Supabase auth, BYOK provider registry, and Upstash caching. This spec covers:
@@ -11,7 +15,7 @@ Deliver feature parity for destination research and itinerary planning directly 
 - Operators runbook for deployment and validation (see `docs/operators/agent-frontend.md`).
 - Removal of any dependency on `tripsage/` or `tripsage_core` for these agents.
 
-Out of scope: implementing new upstream travel data providers (reuse existing tools), rewriting Supabase auth helpers, or modifying backend FastAPI services beyond deletion already in progress.
+Out of scope: implementing new upstream travel data providers (reuse existing tools), rewriting Supabase auth helpers, or modifying backend FastAPI services (Python backend has been completely removed; all functionality runs in Next.js TypeScript).
 
 ## Architecture Summary
 
