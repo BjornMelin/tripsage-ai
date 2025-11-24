@@ -1,3 +1,5 @@
+/** @vitest-environment node */
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 type SpanCapture = { attrs: Record<string, unknown> | undefined; name: string };

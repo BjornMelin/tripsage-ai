@@ -9,6 +9,8 @@
 **Related ADRs**: ADR-0020, ADR-0024, ADR-0026, ADR-0031, ADR-0036, ADR-0039, ADR-0042
 **Related Specs**: SPEC-001, SPEC-0010, SPEC-0015
 
+> Update (2025-11-24): All open items from the 2025-11-19 accommodations review—fallback search behavior, deterministic session handling, and request timeouts—are now addressed in ADR-0050 section 7. This document remains superseded.
+
 ## Context
 
 - Current accommodation tooling relies primarily on Airbnb MCP responses, which limits coverage (no Vrbo inventory, fewer hotels) and keeps us tied to third-party MCP reliability.

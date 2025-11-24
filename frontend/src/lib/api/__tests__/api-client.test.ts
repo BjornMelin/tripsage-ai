@@ -1,3 +1,5 @@
+/** @vitest-environment node */
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
@@ -62,6 +64,13 @@ describe("API client with Zod Validation", () => {
       value: MOCK_FETCH,
       writable: true,
     });
+  });
+
+  it("normalizes baseUrl without duplicating /api segments", () => {
+    const client = new ApiClient({ baseUrl: "/api" });
+    // @ts-expect-error – accessing private for test verification
+    const baseUrl: string = client.config.baseUrl;
+    expect(baseUrl).toBe("http://localhost:3000/api/");
   });
 
   describe("Request Validation", () => {
@@ -299,6 +308,7 @@ describe("API client with Zod Validation", () => {
     });
 
     it("handles network errors gracefully", async () => {
+      vi.useFakeTimers();
       MOCK_FETCH.mockRejectedValue(new Error("Network error"));
 
       // Use a fast client to avoid exceeding the per-test timeout (6s)
@@ -318,6 +328,7 @@ describe("API client with Zod Validation", () => {
       await vi.advanceTimersByTimeAsync(2000);
 
       await expect(pendingRequest).rejects.toThrow("Network error");
+      vi.useRealTimers();
     });
   });
 

@@ -3,6 +3,8 @@
  * Call resetAllFactories() in beforeEach() to ensure deterministic test data.
  */
 
+import { resetAuthUserFactory } from "./auth-user-factory";
+import { resetCalendarFactory } from "./calendar-factory";
 import { resetFilterFactory } from "./filter-factory";
 import { resetSearchFactory } from "./search-factory";
 import { resetTripFactory } from "./trip-factory";
@@ -19,7 +21,9 @@ import { resetUserFactory } from "./user-factory";
  */
 export const resetAllFactories = (): void => {
   resetUserFactory();
+  resetAuthUserFactory();
   resetTripFactory();
   resetSearchFactory();
   resetFilterFactory();
+  resetCalendarFactory();
 };

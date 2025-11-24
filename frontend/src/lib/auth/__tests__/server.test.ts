@@ -1,3 +1,5 @@
+/** @vitest-environment node */
+
 import type { User } from "@supabase/supabase-js";
 import { describe, expect, it, vi } from "vitest";
 import { getOptionalUser, requireUser } from "@/lib/auth/server";

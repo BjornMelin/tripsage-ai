@@ -1,3 +1,5 @@
+/** @vitest-environment node */
+
 import { getTravelAdvisory } from "@ai/tools/server/travel-advisory";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 

@@ -5,9 +5,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
 import { apiClient } from "@/lib/api/api-client";
 import { ApiError } from "@/lib/api/error-types";
-import { setupReactQueryMocks } from "@/test/mocks/react-query";
-
-setupReactQueryMocks();
 
 vi.mock("@/lib/api/api-client", () => ({
   apiClient: {

@@ -1,9 +1,12 @@
+/** @vitest-environment node */
+
 import type { AccommodationProviderAdapter } from "@domain/accommodations/providers/types";
 import { AccommodationsService } from "@domain/accommodations/service";
 import { describe, expect, it, vi } from "vitest";
 import { getCachedJson } from "@/lib/cache/upstash";
 
 vi.mock("@/lib/cache/upstash", () => ({
+  deleteCachedJson: vi.fn().mockResolvedValue(undefined),
   getCachedJson: vi.fn().mockResolvedValue({
     bookingToken: "token-123",
     price: { currency: "USD", total: "123.45" },

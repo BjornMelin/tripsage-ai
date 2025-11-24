@@ -1,6 +1,8 @@
 /** @vitest-environment node */
 
+import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { server } from "@/test/msw/server";
 import {
   createMockNextRequest,
   createRouteParamsContext,
@@ -41,23 +43,26 @@ vi.mock("@/lib/next/route-helpers", async () => {
   };
 });
 
-// Mock global fetch
-const MOCK_FETCH = vi.fn();
-(globalThis as { fetch: typeof fetch }).fetch = MOCK_FETCH;
-
 describe("/api/attachments/files", () => {
+  let recordedHeaders: Headers | undefined;
+
   beforeEach(() => {
     vi.clearAllMocks();
-    MOCK_FETCH.mockResolvedValue(
-      new Response(
-        JSON.stringify({
+    recordedHeaders = undefined;
+    server.use(
+      http.get("http://localhost:8001/api/attachments/files", ({ request }) => {
+        recordedHeaders = request.headers;
+        const url = new URL(request.url);
+        expect(url.searchParams.get("limit")).toBe("10");
+        expect(url.searchParams.get("offset")).toBe("0");
+        expect(request.headers.get("authorization")).toBe("Bearer token");
+        return HttpResponse.json({
           files: [{ filename: "test.pdf", id: "1" }],
           limit: 50,
           offset: 0,
           total: 1,
-        }),
-        { status: 200 }
-      )
+        });
+      })
     );
   });
 
@@ -71,14 +76,6 @@ describe("/api/attachments/files", () => {
 
     const res = await mod.GET(req, createRouteParamsContext());
     expect(res.status).toBe(200);
-    expect(MOCK_FETCH).toHaveBeenCalledTimes(1);
-    const [calledUrl, options] = MOCK_FETCH.mock.calls[0] as [
-      string,
-      RequestInit & { next?: { tags: string[] } },
-    ];
-    expect(calledUrl).toContain("/api/attachments/files?limit=10&offset=0");
-    expect(options?.method).toBe("GET");
-    expect(options?.headers).toMatchObject({ authorization: "Bearer token" });
-    expect(options?.next?.tags).toContain("attachments");
+    expect(recordedHeaders?.get("authorization")).toBe("Bearer token");
   });
 });

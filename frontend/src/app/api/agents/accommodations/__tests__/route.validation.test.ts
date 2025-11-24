@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
 import { describe, expect, it, vi } from "vitest";
+import { stubRateLimitDisabled } from "@/test/env-helpers";
 import {
   createMockNextRequest,
   createRouteParamsContext,
@@ -61,6 +62,7 @@ vi.mock("@/lib/redis", () => ({
 
 describe("/api/agents/accommodations validation", () => {
   it("returns 400 on invalid body", async () => {
+    stubRateLimitDisabled();
     const mod = await import("../route");
     // Missing required fields like destination/checkIn/checkOut
     const req = createMockNextRequest({

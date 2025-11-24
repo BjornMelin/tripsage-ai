@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Testing patterns companion guide (`docs/developers/testing-patterns.md`) with test-type decision tree plus MSW and AI SDK v6 examples.
 - Supabase local config: added `project_id`, `[db.seed]` configuration, and `[storage.buckets.attachments]` bucket definition with MIME type restrictions in `supabase/config.toml`.
 - Supabase-backed agent configuration control plane: new `agent_config` and `agent_config_versions` tables with admin-only RLS, upsert RPC, and schema types wired into the codebase.
 - Configuration resolver with Upstash cache + Zod validation and coverage, plus authenticated API routes (`GET/PUT /api/config/agents/:agentType`, versions listing, rollback) using `withApiGuards`, telemetry, and cache-tag invalidation.
@@ -44,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Co-located weather tool input and result schemas in `frontend/src/ai/tools/schemas/weather.ts` and updated `frontend/src/ai/tools/server/weather.ts` to consume these types directly, removing the legacy `@/lib/schemas/weather` dependency.
 - Tightened TypeScript coverage for agent result UI components (`BudgetChart`, `DestinationCard`, `FlightOfferCard`, `StayCard`, and `ItineraryTimeline`) and `frontend/src/lib/agents/memory-agent.ts` by replacing implicit `any` usage with precise types derived from domain and tool schemas.
 
+- Testing guide expanded with MSW, AI SDK v6, fake-timer, factory, and CI guidance; consolidated React Query helpers to `@/test/query-mocks` and removed legacy `test/mocks/react-query.ts`; `test:ci` now uses the threads pool.
 - **Auth store security hardening (Supabase SSR-aligned)**
   - Removed client-side persistence of access/refresh tokens from `frontend/src/stores/auth/auth-session.ts`; the slice now exposes only session view state (`session`, `sessionTimeRemaining`) with `setSession` / `resetSession`, treating Supabase SSR cookies as the sole session authority.
   - Updated `frontend/src/stores/auth/auth-core.ts` logout to call the session slice’s `resetSession()` action instead of manually mutating token/session fields, ensuring logout consistently clears local auth-session state.
@@ -131,9 +133,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Server code now imports `createServerSupabase` and `TypedServerSupabase` from `frontend/src/lib/supabase/index.ts` instead of internal modules
   - Middleware, calendar helpers, and BYOK API handlers use `createMiddlewareSupabase`/`getCurrentUser` from the same entrypoint for consistent SSR auth wiring
   - Tests updated to mock `@/lib/supabase` where appropriate, keeping Supabase integration details behind the barrel module
+- Vitest config now enforces `pool: "threads"` across all projects and relies on per-project includes, improving CPU-bound test throughput while keeping project-scoped patterns intact (`frontend/vitest.config.ts`).
+- Test setup starts the shared MSW server once per run and makes fake timers opt-in; unhandled requests warn by default, and timers are only restored when explicitly enabled (`frontend/src/test-setup.ts`).
+- Auth store and validation tests now rely on MSW auth route handlers with factory-backed user fixtures, and handler utilities (`composeHandlers`, `createAuthRouteHandlers`) support per-test overrides (`frontend/src/test/msw/handlers/*`, `frontend/src/stores/__tests__/auth/*`).
+- Chat attachments API tests now use MSW-backed upload/download handlers instead of global fetch mocks, covering single/batch uploads, errors, and auth header propagation (`frontend/src/app/api/chat/attachments/__tests__/route.test.ts`, `frontend/src/test/msw/handlers/attachments.ts`).
+- Attachments files API test now asserts auth forwarding via MSW handler rather than fetch spies, aligning with centralized handler library (`frontend/src/app/api/attachments/files/__tests__/route.test.ts`).
+- Calendar integration now uses absolute API base URLs and MSW handlers for Supabase and Google Calendar endpoints, improving Node test stability (`frontend/src/lib/calendar/calendar-integration.ts`, `frontend/src/lib/calendar/__tests__/calendar-integration.test.ts`).
+- Accommodations end-to-end integration mocks Amadeus/Google Places/Stripe via MSW and in-memory clients, removing fetch spies and stabilizing booking flow assertions (`frontend/src/domain/accommodations/__tests__/accommodations.integration.test.ts`).
+- State Department advisory provider tests now rely on MSW feed stubs instead of manual fetch mocks, covering cache, error, and timeout paths deterministically (`frontend/src/ai/tools/server/__tests__/travel-advisory-state-department.test.ts`).
+- Added calendar event factory for reuse in integration tests and schema-validated fixtures (`frontend/src/test/factories.ts`, `frontend/src/lib/calendar/__tests__/calendar-integration.test.ts`).
 
 ### Fixed
 
+- ICS import errors once again return the raw parse message in `details` (no nested `{ details }` wrapper) when validation fails (`frontend/src/app/api/calendar/ics/import/route.ts`).
+- Restored chat RLS so trip collaborators can read shared sessions and assistant/system messages remain visible by scoping SELECT to session access instead of message authorship (`supabase/migrations/20251122000000_base_schema.sql`).
 - Accommodation tool guardrails now keep the original provider on cache hits and emit dedicated availability error codes, so downstream JSON never shows "cache" sources and rate-limit/404 responses are surfaced correctly (`frontend/src/lib/tools/accommodations.ts`, `frontend/src/lib/tools/errors.ts`, `frontend/src/lib/schemas/tools.ts`).
 - Accommodation booking confirmations fall back to the generated booking reference when Expedia omits a confirmation number, and the test suite covers the new cache/error paths (`frontend/src/lib/tools/accommodations.ts`, `frontend/src/lib/tools/__tests__/accommodations.test.ts`).
 - **Accommodation booking**: `bookAccommodation` now uses the real amount and currency from check-availability input, and returns the same `bookingId` that is stored in Supabase.
@@ -150,6 +163,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Login form now sanitizes `next`/`from` redirects to same-origin paths only, blocking protocol-relative and off-origin redirects (`frontend/src/components/auth/login-form.tsx`).
 - `POST /api/auth/login` returns 400 for malformed JSON bodies instead of 500, improving client feedback and telemetry accuracy (`frontend/src/app/api/auth/login/route.ts`).
 - Client OTEL fetch instrumentation narrows `propagateTraceHeaderCorsUrls` to the exact origin to prevent trace header leakage to attacker-controlled hosts (`frontend/src/lib/telemetry/client.ts`).
+- ApiClient base URL normalization no longer duplicates `/api` when a relative base is supplied and has a regression test to lock the behavior (`frontend/src/lib/api/api-client.ts`, `frontend/src/lib/api/__tests__/api-client.test.ts`).
+- Fixed type-check/lint regressions in accommodations and calendar tests/factories (mocked caching module typing, calendar event factories returning Dates, MSW handler naming) and cleaned calendar export test to guard request parsing.
 
 ## [1.0.0] - 2025-11-14
 

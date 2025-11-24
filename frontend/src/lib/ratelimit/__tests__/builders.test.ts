@@ -1,3 +1,5 @@
+/** @vitest-environment node */
+
 import type { AgentWorkflowKind } from "@schemas/agents";
 import { describe, expect, it } from "vitest";
 

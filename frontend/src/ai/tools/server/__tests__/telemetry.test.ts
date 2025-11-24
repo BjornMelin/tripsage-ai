@@ -1,3 +1,5 @@
+/** @vitest-environment node */
+
 import { createTravelPlan, updateTravelPlan } from "@ai/tools/server/planning";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getMockCookiesForTest } from "@/test/route-helpers";

@@ -1,6 +1,7 @@
 /** @vitest-environment jsdom */
 
 import { act, renderHook } from "@testing-library/react";
+import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   PasswordReset,
@@ -8,10 +9,8 @@ import type {
 } from "@/stores/auth/auth-validation";
 import { useAuthValidation } from "@/stores/auth/auth-validation";
 import { resetAuthState } from "@/stores/auth/reset-auth";
+import { server } from "@/test/msw/server";
 import { setupTimeoutMock } from "@/test/store-helpers";
-
-// Mock fetch for API calls
-global.fetch = vi.fn();
 
 describe("AuthValidation", () => {
   let timeoutCleanup: (() => void) | null = null;
@@ -40,10 +39,6 @@ describe("AuthValidation", () => {
 
   describe("Password Reset Request", () => {
     it("successfully requests password reset", async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
-        ok: true,
-      } as Response);
-
       const { result } = renderHook(() => useAuthValidation());
 
       const request: PasswordResetRequest = {
@@ -77,10 +72,11 @@ describe("AuthValidation", () => {
     });
 
     it("handles password reset API error", async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
-        json: async () => ({ message: "User not found" }),
-        ok: false,
-      } as Response);
+      server.use(
+        http.post("/auth/password/reset-request", () =>
+          HttpResponse.json({ message: "User not found" }, { status: 400 })
+        )
+      );
 
       const { result } = renderHook(() => useAuthValidation());
 
@@ -100,10 +96,6 @@ describe("AuthValidation", () => {
 
   describe("Password Reset", () => {
     it("successfully resets password with valid token", async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
-        ok: true,
-      } as Response);
-
       const { result } = renderHook(() => useAuthValidation());
 
       const reset: PasswordReset = {
@@ -163,10 +155,6 @@ describe("AuthValidation", () => {
 
   describe("Change Password", () => {
     it("successfully changes password", async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
-        ok: true,
-      } as Response);
-
       const { result } = renderHook(() => useAuthValidation());
 
       let changeResult: boolean | undefined;
@@ -196,10 +184,11 @@ describe("AuthValidation", () => {
     });
 
     it("handles change password API error", async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
-        json: async () => ({ message: "Current password incorrect" }),
-        ok: false,
-      } as Response);
+      server.use(
+        http.post("/auth/password/change", () =>
+          HttpResponse.json({ message: "Current password incorrect" }, { status: 400 })
+        )
+      );
 
       const { result } = renderHook(() => useAuthValidation());
 
@@ -218,10 +207,6 @@ describe("AuthValidation", () => {
 
   describe("Email Verification", () => {
     it("successfully verifies email", async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
-        ok: true,
-      } as Response);
-
       const { result } = renderHook(() => useAuthValidation());
 
       let verifyResult: boolean | undefined;
@@ -234,10 +219,11 @@ describe("AuthValidation", () => {
     });
 
     it("handles email verification API error", async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
-        json: async () => ({ message: "Invalid token" }),
-        ok: false,
-      } as Response);
+      server.use(
+        http.post("/auth/email/verify", () =>
+          HttpResponse.json({ message: "Invalid token" }, { status: 400 })
+        )
+      );
 
       const { result } = renderHook(() => useAuthValidation());
 
@@ -251,10 +237,6 @@ describe("AuthValidation", () => {
     });
 
     it("successfully resends email verification", async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
-        ok: true,
-      } as Response);
-
       const { result } = renderHook(() => useAuthValidation());
 
       let resendResult: boolean | undefined;
@@ -267,10 +249,11 @@ describe("AuthValidation", () => {
     });
 
     it("handles resend email verification API error", async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
-        json: async () => ({ message: "Rate limit exceeded" }),
-        ok: false,
-      } as Response);
+      server.use(
+        http.post("/auth/email/resend", () =>
+          HttpResponse.json({ message: "Rate limit exceeded" }, { status: 429 })
+        )
+      );
 
       const { result } = renderHook(() => useAuthValidation());
 

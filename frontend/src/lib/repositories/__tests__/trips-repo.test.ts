@@ -1,3 +1,5 @@
+/** @vitest-environment node */
+
 import type { TripsRow } from "@schemas/supabase";
 import { describe, expect, it, vi } from "vitest";
 import { createTrip, mapTripRowToUi, updateTrip } from "@/lib/repositories/trips-repo";
