@@ -276,18 +276,15 @@ export class AccommodationsService {
           CACHE_TAG_BOOKING,
           bookingCacheKey
         );
-        await setCachedJson(
-          versionedBookingKey,
-          {
-            bookingToken: availability.value.bookingToken,
-            price: availability.value.price,
-            propertyId: availability.value.propertyId,
-            rateId: availability.value.rateId,
-            sessionId: ctx.sessionId,
-            userId: ctx.userId,
-          },
-          10 * 60
-        );
+        const cachedPriceData: CachedBookingPrice = {
+          bookingToken: availability.value.bookingToken,
+          price: availability.value.price,
+          propertyId: availability.value.propertyId,
+          rateId: availability.value.rateId,
+          sessionId: ctx.sessionId,
+          userId: ctx.userId,
+        };
+        await setCachedJson(versionedBookingKey, cachedPriceData, 10 * 60);
 
         span.addEvent("availability.cached", {
           bookingToken: availability.value.bookingToken,
