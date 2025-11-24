@@ -2,16 +2,25 @@
 
 import { getTravelAdvisory } from "@ai/tools/server/travel-advisory";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { buildUpstashCacheMock } from "@/test/mocks";
 
 const mockContext = {
   messages: [],
   toolCallId: "test-call-id",
 };
 
-vi.mock("@/lib/cache/upstash", () => ({
-  getCachedJson: vi.fn().mockResolvedValue(null),
-  setCachedJson: vi.fn().mockResolvedValue(undefined),
-}));
+const getUpstashCache = (): ReturnType<typeof buildUpstashCacheMock> =>
+  (globalThis as { __upstashCache?: ReturnType<typeof buildUpstashCacheMock> })
+    .__upstashCache as ReturnType<typeof buildUpstashCacheMock>;
+
+vi.mock("@/lib/cache/upstash", async () => {
+  const { buildUpstashCacheMock } = await import("@/test/mocks");
+  const cache = buildUpstashCacheMock();
+  (
+    globalThis as { __upstashCache?: ReturnType<typeof buildUpstashCacheMock> }
+  ).__upstashCache = cache;
+  return cache.module;
+});
 
 vi.mock("@/lib/telemetry/span", () => ({
   withTelemetrySpan: vi.fn((_name: string, _options, fn) => fn()),
@@ -20,6 +29,7 @@ vi.mock("@/lib/telemetry/span", () => ({
 describe("getTravelAdvisory", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getUpstashCache().reset();
   });
 
   it("returns stub for unmappable destinations", async () => {

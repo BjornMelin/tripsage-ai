@@ -5,6 +5,7 @@ import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
 import type { ToolCallOptions } from "ai";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { z } from "zod";
+import type { buildUpstashCacheMock } from "@/test/mocks";
 
 const headerStore = new Map<string, string>();
 
@@ -39,18 +40,18 @@ vi.mock("@/lib/telemetry/span", () => ({
   ) => execute(telemetrySpan),
 }));
 
-const cacheStorage = new Map<string, unknown>();
+const getUpstashCache = (): ReturnType<typeof buildUpstashCacheMock> =>
+  (globalThis as { __upstashCache?: ReturnType<typeof buildUpstashCacheMock> })
+    .__upstashCache as ReturnType<typeof buildUpstashCacheMock>;
 
-vi.mock("@/lib/cache/upstash", () => ({
-  // biome-ignore lint/suspicious/useAwait: Mock functions must return Promises to match real API
-  getCachedJson: vi.fn(async <T>(key: string): Promise<T | null> => {
-    return (cacheStorage.get(key) as T) ?? null;
-  }),
-  // biome-ignore lint/suspicious/useAwait: Mock functions must return Promises to match real API
-  setCachedJson: vi.fn(async (key: string, value: unknown): Promise<void> => {
-    cacheStorage.set(key, value);
-  }),
-}));
+vi.mock("@/lib/cache/upstash", async () => {
+  const { buildUpstashCacheMock } = await import("@/test/mocks");
+  const cache = buildUpstashCacheMock();
+  (
+    globalThis as { __upstashCache?: ReturnType<typeof buildUpstashCacheMock> }
+  ).__upstashCache = cache;
+  return cache.module;
+});
 
 const redisClient = {
   get: vi.fn(),
@@ -83,7 +84,7 @@ vi.mock("@upstash/ratelimit", () => ({
 // Removed unused baseCallOptions - each test creates its own callOptions
 
 beforeEach(() => {
-  cacheStorage.clear();
+  getUpstashCache().reset();
   ratelimitLimit.mockClear();
   telemetrySpan.addEvent.mockClear();
   telemetrySpan.setAttribute.mockClear();
@@ -124,18 +125,18 @@ describe("createAiTool", () => {
     expect(firstResult).toEqual({ fromCache: false, id: "abc" });
     expect(executeSpy).toHaveBeenCalledTimes(1);
     // Verify cache was written
-    expect(cacheStorage.size).toBeGreaterThan(0);
+    expect(getUpstashCache().store.size).toBeGreaterThan(0);
 
     // Set up cache hit for second call - need to check actual cache key
     // The cache key is: namespace + ":" + key(params)
     // namespace defaults to `tool:${toolName}` if not provided, or uses cache.namespace
     // So it should be "tool:test:cache:abc" (namespace:tool:test:cache, key:abc)
     const cachedValue = { fromCache: false, id: "abc" };
-    // Check what key was actually used in first call by inspecting cacheStorage
-    const cacheKeys = Array.from(cacheStorage.keys());
+    // Check what key was actually used in first call by inspecting cache store
+    const cacheKeys = Array.from(getUpstashCache().store.keys());
     expect(cacheKeys.length).toBeGreaterThan(0);
     const actualCacheKey = cacheKeys[0];
-    cacheStorage.set(actualCacheKey, cachedValue);
+    getUpstashCache().store.set(actualCacheKey, JSON.stringify(cachedValue));
     executeSpy.mockClear();
 
     // Second call - should use cache

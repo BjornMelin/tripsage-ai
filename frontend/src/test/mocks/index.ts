@@ -11,6 +11,7 @@
  *   });
  */
 
+export * from "./cache";
 export * from "./media-query";
 export * from "./observers";
 export * from "./storage";
