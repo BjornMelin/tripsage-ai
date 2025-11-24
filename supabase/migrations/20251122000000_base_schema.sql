@@ -792,17 +792,42 @@ CREATE POLICY accommodations_mutate_own ON public.accommodations FOR ALL TO auth
 );
 
 ALTER TABLE public.chat_sessions ENABLE ROW LEVEL SECURITY;
-CREATE POLICY chat_sessions_select ON public.chat_sessions FOR SELECT TO authenticated USING (user_id = auth.uid());
+CREATE POLICY chat_sessions_select ON public.chat_sessions FOR SELECT TO authenticated USING (
+  auth.uid() = user_id
+  OR trip_id IN (
+    SELECT id FROM public.trips WHERE user_id = auth.uid()
+    UNION
+    SELECT trip_id FROM public.trip_collaborators WHERE user_id = auth.uid()
+  )
+);
 CREATE POLICY chat_sessions_insert ON public.chat_sessions FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
 
 ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
-CREATE POLICY chat_messages_select ON public.chat_messages FOR SELECT TO authenticated USING (user_id = auth.uid() AND session_id IN (SELECT id FROM public.chat_sessions WHERE user_id = auth.uid()));
+CREATE POLICY chat_messages_select ON public.chat_messages FOR SELECT TO authenticated USING (
+  session_id IN (
+    SELECT id FROM public.chat_sessions
+    WHERE user_id = auth.uid()
+    OR trip_id IN (
+      SELECT id FROM public.trips WHERE user_id = auth.uid()
+      UNION
+      SELECT trip_id FROM public.trip_collaborators WHERE user_id = auth.uid()
+    )
+  )
+);
 CREATE POLICY chat_messages_insert ON public.chat_messages FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid() AND session_id IN (SELECT id FROM public.chat_sessions WHERE user_id = auth.uid()));
 
 ALTER TABLE public.chat_tool_calls ENABLE ROW LEVEL SECURITY;
 CREATE POLICY chat_tool_calls_select ON public.chat_tool_calls FOR SELECT TO authenticated USING (
   message_id IN (
-    SELECT id FROM public.chat_messages WHERE user_id = auth.uid()
+    SELECT cm.id
+    FROM public.chat_messages cm
+    JOIN public.chat_sessions cs ON cm.session_id = cs.id
+    WHERE cs.user_id = auth.uid()
+    OR cs.trip_id IN (
+      SELECT id FROM public.trips WHERE user_id = auth.uid()
+      UNION
+      SELECT trip_id FROM public.trip_collaborators WHERE user_id = auth.uid()
+    )
   )
 );
 CREATE POLICY chat_tool_calls_insert ON public.chat_tool_calls FOR INSERT TO authenticated WITH CHECK (
