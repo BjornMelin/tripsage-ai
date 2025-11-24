@@ -1,6 +1,10 @@
 "use server";
 
-import { type AgentType, agentTypeSchema } from "@schemas/configuration";
+import {
+  type AgentType,
+  agentTypeSchema,
+  versionIdSchema,
+} from "@schemas/configuration";
 import { resolveAgentConfig } from "@/lib/agents/config-resolver";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { toAbsoluteUrl } from "@/lib/url/server-origin";
@@ -59,8 +63,11 @@ export async function updateAgentConfigAction(
   agentType: AgentType,
   payload: Record<string, unknown>
 ) {
+  // SSRF prevention: validate agentType against allow-list schema
+  const parsed = agentTypeSchema.safeParse(agentType);
+  if (!parsed.success) throw new Error("invalid agent type");
   // Use absolute URL with trusted origin to prevent SSRF
-  const url = toAbsoluteUrl(`/api/config/agents/${agentType}`);
+  const url = toAbsoluteUrl(`/api/config/agents/${parsed.data}`);
   const res = await fetch(url, {
     body: JSON.stringify(payload),
     cache: "no-store",
@@ -78,8 +85,16 @@ export async function rollbackAgentConfigAction(
   agentType: AgentType,
   versionId: string
 ) {
+  // SSRF prevention: validate agentType against allow-list schema
+  const parsedAgentType = agentTypeSchema.safeParse(agentType);
+  if (!parsedAgentType.success) throw new Error("invalid agent type");
+  // SSRF prevention: validate versionId format
+  const parsedVersionId = versionIdSchema.safeParse(versionId);
+  if (!parsedVersionId.success) throw new Error("invalid version ID format");
   // Use absolute URL with trusted origin to prevent SSRF
-  const url = toAbsoluteUrl(`/api/config/agents/${agentType}/rollback/${versionId}`);
+  const url = toAbsoluteUrl(
+    `/api/config/agents/${parsedAgentType.data}/rollback/${parsedVersionId.data}`
+  );
   const res = await fetch(url, {
     cache: "no-store",
     method: "POST",
