@@ -252,12 +252,14 @@ describe("ActivitiesService", () => {
     it("should not trigger fallback when Places returns sufficient results", async () => {
       const { webSearch } = await import("@ai/tools/server/web-search");
       if (webSearch.execute) {
-        // Reset mock completely to ensure no shared state
+        // Reset mock completely to ensure no shared state from parallel tests
         vi.mocked(webSearch.execute).mockReset();
+        vi.mocked(webSearch.execute).mockClear();
       }
 
-      // Mock Places API to return 3+ results (sufficient for popular destination)
+      // Mock Places API to return 5 results (well above the 3 threshold)
       // Use a non-popular destination to avoid isPopularDestination logic affecting fallback
+      server.resetHandlers();
       server.use(
         http.post("https://places.googleapis.com/v1/places:searchText", () =>
           HttpResponse.json({
@@ -284,6 +286,22 @@ describe("ActivitiesService", () => {
                 id: "places/3",
                 location: { latitude: 3.0, longitude: 3.0 },
                 rating: 4.2,
+                types: ["tourist_attraction"],
+              },
+              {
+                displayName: { text: "Activity 4" },
+                formattedAddress: "Address 4",
+                id: "places/4",
+                location: { latitude: 4.0, longitude: 4.0 },
+                rating: 4.3,
+                types: ["tourist_attraction"],
+              },
+              {
+                displayName: { text: "Activity 5" },
+                formattedAddress: "Address 5",
+                id: "places/5",
+                location: { latitude: 5.0, longitude: 5.0 },
+                rating: 4.1,
                 types: ["tourist_attraction"],
               },
             ],
