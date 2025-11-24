@@ -1,14 +1,17 @@
 /**
- * @fileoverview API route for uploading chat attachments with rate limiting.
- * Handles multipart form data uploads, validates file sizes and types,
- * and provides rate limiting protection.
+ * @fileoverview Chat attachment upload endpoint.
+ *
+ * Handles multipart form data uploads, validates file sizes and types.
  */
 
 "use cache: private";
+
 import { revalidateTag } from "next/cache";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { createApiError } from "@/lib/api/error-response";
 import { withApiGuards } from "@/lib/api/factory";
+import { extractFiles, validateMultipart } from "@/lib/api/guards/multipart";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { forwardAuthHeaders } from "@/lib/next/route-helpers";
 
@@ -19,7 +22,9 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_FILES_PER_REQUEST = 5;
 
 /**
- * Get backend API URL for attachment operations.
+ * Returns backend API URL from environment or default.
+ *
+ * @returns Backend API URL string.
  */
 function getBackendApiUrl(): string {
   return (
@@ -28,6 +33,7 @@ function getBackendApiUrl(): string {
   );
 }
 
+/** Single file upload response from backend API. */
 interface SingleUploadResponse {
   file_id: string;
   filename: string;
@@ -36,6 +42,7 @@ interface SingleUploadResponse {
   processing_status: string;
 }
 
+/** Batch upload file response structure. */
 interface BatchUploadFileResponse {
   fileId: string;
   filename: string;
@@ -44,16 +51,16 @@ interface BatchUploadFileResponse {
   processingStatus: string;
 }
 
+/** Batch upload response from backend API. */
 interface BatchUploadResponse {
   successful_uploads: BatchUploadFileResponse[];
 }
 
 /**
- * Handles attachment uploads with validation and rate limiting.
+ * Handles multipart form data file uploads with validation.
  *
- * @param req - The Next.js request object containing multipart form data.
- * @param routeContext - Route context from withApiGuards
- * @returns A JSON response with uploaded file information or an error response.
+ * @param req - Next.js request containing multipart form data.
+ * @returns JSON response with uploaded file metadata or error.
  */
 export const POST = withApiGuards({
   auth: true,
@@ -64,46 +71,29 @@ export const POST = withApiGuards({
   const contentType = req.headers.get("content-type");
   if (!contentType?.includes("multipart/form-data")) {
     return NextResponse.json(
-      { code: "INVALID_CONTENT_TYPE", error: "Invalid content type" },
+      createApiError("INVALID_CONTENT_TYPE", "Invalid content type"),
       { status: 400 }
     );
   }
 
   // Parse form data
   const formData = await req.formData();
-  const files = Array.from(formData.values()).filter(
-    (value): value is File => value instanceof File && value.size > 0
-  );
 
   // Validate files
-  if (files.length === 0) {
-    return NextResponse.json(
-      { code: "NO_FILES", error: "No files uploaded" },
-      { status: 400 }
-    );
+  const validation = validateMultipart(formData, {
+    maxFiles: MAX_FILES_PER_REQUEST,
+    maxSize: MAX_FILE_SIZE,
+  });
+
+  if (!validation.valid) {
+    const errorCode = validation.errorCode ?? "VALIDATION_ERROR";
+    const errorMessage = validation.errorMessage ?? "Validation failed";
+    return NextResponse.json(createApiError(errorCode, errorMessage), {
+      status: 400,
+    });
   }
 
-  if (files.length > MAX_FILES_PER_REQUEST) {
-    return NextResponse.json(
-      {
-        code: "TOO_MANY_FILES",
-        error: `Maximum ${MAX_FILES_PER_REQUEST} files allowed per request`,
-      },
-      { status: 400 }
-    );
-  }
-
-  // Check file sizes
-  const oversizedFile = files.find((file) => file.size > MAX_FILE_SIZE);
-  if (oversizedFile) {
-    return NextResponse.json(
-      {
-        code: "FILE_TOO_LARGE",
-        error: `File "${oversizedFile.name}" exceeds maximum size of ${MAX_FILE_SIZE / 1024 / 1024}MB`,
-      },
-      { status: 400 }
-    );
-  }
+  const files = extractFiles(formData);
 
   // Prepare backend request
   const backendFormData = new FormData();
@@ -130,10 +120,9 @@ export const POST = withApiGuards({
 
   if (!response.ok) {
     const detail = (data as { detail?: string } | undefined)?.detail ?? "Upload failed";
-    return NextResponse.json(
-      { code: "UPLOAD_ERROR", error: detail },
-      { status: response.status }
-    );
+    return NextResponse.json(createApiError("UPLOAD_ERROR", detail), {
+      status: response.status,
+    });
   }
 
   // Transform response
