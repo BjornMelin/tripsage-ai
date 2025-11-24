@@ -14,8 +14,8 @@ import {
   TransformStream as NodeTransformStream,
   WritableStream as NodeWritableStream,
 } from "node:stream/web";
-import { resetTestQueryClient } from "./test/test-utils";
 import { server } from "./test/msw/server";
+import { resetTestQueryClient } from "./test/test-utils";
 
 (
   globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }
@@ -77,8 +77,8 @@ vi.mock("zustand/middleware", () => ({
   subscribeWithSelector: <T>(fn: T) => fn,
 }));
 
-// React Query and Supabase mocks migrated to @/test/mocks/react-query.ts and supabase.ts
-// Import/use in individual test files: import { mockReactQuery, mockSupabase } from '@/test/mocks/*'; mockReactQuery();
+// React Query helpers live in @/test/query-mocks; Supabase helpers in @/test/mocks/supabase.
+// Import per test as needed instead of global mocks.
 vi.mock("next/navigation", () => {
   const push = vi.fn();
   const replace = vi.fn();
@@ -305,7 +305,7 @@ if (typeof process !== "undefined" && process.env) {
 beforeAll(() => {
   // Start MSW server to intercept HTTP requests
   // onUnhandledRequest: 'error' ensures we catch any unmocked requests
-  server.listen({ onUnhandledRequest: 'warn' });
+  server.listen({ onUnhandledRequest: "warn" });
 });
 
 afterAll(() => {

@@ -16,8 +16,8 @@
     "no-restricted-syntax": [
       "error",
       {
-        "selector": "CallExpression[callee.object.name='NextResponse'][callee.property.name='json'][arguments.0.properties[*].key.name='error']",
-        "message": "Use errorResponse() from @/lib/next/route-helpers instead of inline NextResponse.json"
+        "message": "Use errorResponse() from @/lib/next/route-helpers instead of inline NextResponse.json",
+        "selector": "CallExpression[callee.object.name='NextResponse'][callee.property.name='json'][arguments.0.properties[*].key.name='error']"
       }
     ]
   }
