@@ -3,56 +3,25 @@
 import { searchFlights } from "@ai/tools";
 import type { FlightSearchResult } from "@schemas/flights";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { buildUpstashCacheMock } from "@/test/mocks/cache";
 
 const mockContext = {
   messages: [],
   toolCallId: "test-call-id",
 };
 
-var upstashModule: {
-  __reset?: () => void;
-  deleteCachedJson: unknown;
-  deleteCachedJsonMany: unknown;
-  getCachedJson: unknown;
-  setCachedJson: unknown;
-};
-
-vi.mock("@/lib/cache/upstash", () => {
-  const store = new Map<string, string>();
-  const getCachedJson = vi.fn(async (key: string) => {
-    const val = store.get(key);
-    return val ? (JSON.parse(val) as unknown) : null;
-  });
-  const setCachedJson = vi.fn(async (key: string, value: unknown) => {
-    store.set(key, JSON.stringify(value));
-  });
-  const deleteCachedJson = vi.fn(async (key: string) => {
-    store.delete(key);
-  });
-  const deleteCachedJsonMany = vi.fn(async (keys: string[]) => {
-    let deleted = 0;
-    keys.forEach((k) => {
-      if (store.delete(k)) deleted += 1;
-    });
-    return deleted;
-  });
-  const reset = () => {
-    store.clear();
-    getCachedJson.mockReset();
-    setCachedJson.mockReset();
-    deleteCachedJson.mockReset();
-    deleteCachedJsonMany.mockReset();
-  };
-  const module = {
-    __reset: reset,
-    deleteCachedJson,
-    deleteCachedJsonMany,
-    getCachedJson,
-    setCachedJson,
-  };
-  upstashModule = module;
-  return module;
+vi.mock("@/lib/cache/upstash", async () => {
+  const { buildUpstashCacheMock: factory } = await import("@/test/mocks/cache");
+  const cache = factory();
+  (globalThis as Record<string, unknown>).__upstashCache = cache;
+  return cache.module;
 });
+
+function getUpstashCache(): ReturnType<typeof buildUpstashCacheMock> {
+  return (globalThis as Record<string, unknown>).__upstashCache as ReturnType<
+    typeof buildUpstashCacheMock
+  >;
+}
 
 vi.mock("@/lib/telemetry/span", () => ({
   withTelemetrySpan: vi.fn((_name, _options, fn) =>
@@ -88,7 +57,7 @@ describe("searchFlights tool", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     duffelKeyState.value = "test_duffel_key";
-    upstashModule?.__reset?.();
+    getUpstashCache().reset();
   });
 
   afterEach(() => {

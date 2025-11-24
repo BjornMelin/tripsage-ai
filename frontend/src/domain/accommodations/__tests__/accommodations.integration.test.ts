@@ -238,6 +238,12 @@ describe("AccommodationsService end-to-end (Amadeus + Places + Stripe mocks)", (
   });
 
   it("Amadeus API failure", async () => {
+    const geocoding = await import("@/lib/google/places-geocoding");
+    vi.spyOn(geocoding, "resolveLocationToLatLng").mockResolvedValue({
+      lat: 48.8566,
+      lon: 2.3522,
+    });
+
     const failingProvider = {
       buildBookingPayload: vi.fn(),
       checkAvailability: vi.fn(),
@@ -318,6 +324,11 @@ describe("AccommodationsService end-to-end (Amadeus + Places + Stripe mocks)", (
     const setSpy = vi
       .spyOn(cache, "setCachedJson")
       .mockRejectedValue(new Error("cache unavailable"));
+    const geocoding = await import("@/lib/google/places-geocoding");
+    vi.spyOn(geocoding, "resolveLocationToLatLng").mockResolvedValue({
+      lat: 1,
+      lon: 2,
+    });
 
     const service = createService([]);
 

@@ -88,3 +88,22 @@ export function buildUpstashCacheMock(): UpstashCacheMock {
     store,
   };
 }
+
+/**
+ * Convenience helper for hoisted Upstash cache mocks in vitest.
+ *
+ * Usage:
+ *   const { cache, factory } = hoistedUpstashMock();
+ *   vi.mock("@/lib/cache/upstash", factory);
+ *   beforeEach(() => cache.reset());
+ */
+export function hoistedUpstashMock(): {
+  cache: UpstashCacheMock;
+  factory: () => UpstashCacheMock["module"];
+} {
+  const cache = vi.hoisted(() => buildUpstashCacheMock());
+  return {
+    cache,
+    factory: () => cache.module,
+  };
+}
