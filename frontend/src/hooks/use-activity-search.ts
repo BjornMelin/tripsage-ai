@@ -122,30 +122,33 @@ export function useActivitySearch(): UseActivitySearchResult {
     setIsSearching(false);
   }, []);
 
-  const saveSearch = useCallback((name: string, params: ActivitySearchParams) => {
-    setIsSavingSearch(true);
-    setSaveSearchError(null);
+  const saveSearch = useCallback(
+    async (name: string, params: ActivitySearchParams): Promise<void> => {
+      setIsSavingSearch(true);
+      setSaveSearchError(null);
 
-    try {
-      const saved: SavedSearch = {
-        createdAt: new Date().toISOString(),
-        id: `saved-${Date.now()}`,
-        name,
-        params,
-        type: "activity",
-      };
-      flushSync(() => {
-        setSavedSearches((prev) => [...prev, saved]);
-        setIsSavingSearch(false);
-      });
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      flushSync(() => {
-        setSaveSearchError(err);
-        setIsSavingSearch(false);
-      });
-    }
-  }, []);
+      try {
+        const saved: SavedSearch = {
+          createdAt: new Date().toISOString(),
+          id: `saved-${Date.now()}`,
+          name,
+          params,
+          type: "activity",
+        };
+        flushSync(() => {
+          setSavedSearches((prev) => [...prev, saved]);
+          setIsSavingSearch(false);
+        });
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        flushSync(() => {
+          setSaveSearchError(err);
+          setIsSavingSearch(false);
+        });
+      }
+    },
+    []
+  );
 
   return {
     isSavingSearch,

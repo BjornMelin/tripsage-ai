@@ -30,6 +30,11 @@ vi.mock("@/lib/google/caching", () => ({
   getCachedPlaceId: vi.fn().mockResolvedValue(null),
 }));
 
+vi.mock("@/lib/telemetry/redis", () => ({
+  resetRedisWarningStateForTests: vi.fn(),
+  warnRedisUnavailable: vi.fn(),
+}));
+
 vi.mock("@/lib/env/server", async (orig) => {
   const actual = (await orig()) as Record<string, unknown>;
   return {
