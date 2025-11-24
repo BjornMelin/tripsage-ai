@@ -189,6 +189,9 @@ importers:
       ical-generator:
         specifier: ^10.0.0
         version: 10.0.0(@types/luxon@3.7.1)(@types/node@24.10.1)(dayjs@1.11.19)(luxon@3.7.2)(rrule@2.8.1)
+      ical.js:
+        specifier: ^2.2.1
+        version: 2.2.1
       js-tiktoken:
         specifier: ^1.0.21
         version: 1.0.21
@@ -3838,6 +3841,9 @@ packages:
         optional: true
       rrule:
         optional: true
+
+  ical.js@2.2.1:
+    resolution: {integrity: sha512-yK/UlPbEs316igb/tjRgbFA8ZV75rCsBJp/hWOatpyaPNlgw0dGDmU+FoicOcwX4xXkeXOkYiOmCqNPFpNPkQg==}
 
   iconv-lite@0.6.3:
     resolution: {integrity: sha512-4fCk79wshMdzMp2rH06qWrJE4iolqLhCUH+OiuIgU++RB0+94NlDL81atO7GX55uUKueo0txHNtvEyI6D7WdMw==}
@@ -9625,6 +9631,8 @@ snapshots:
       dayjs: 1.11.19
       luxon: 3.7.2
       rrule: 2.8.1
+
+  ical.js@2.2.1: {}
 
   iconv-lite@0.6.3:
     dependencies:
