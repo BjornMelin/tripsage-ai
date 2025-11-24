@@ -63,14 +63,12 @@
 
 ## 4. Feature Flags / Rollout
 
-- [ ] Introduce a simple environment-driven flag (e.g.,
-      `ENABLE_AGENT_CONFIG_BACKEND`) to control whether agents read from
-      `resolveAgentConfig` or use existing hard-coded defaults. (Not needed for pre-production; resolver is always-on and legacy paths removed.)
-- [ ] In initial rollout:
-  - [ ] Enable feature flag in staging only.
-  - [ ] Verify that agents produce sane outputs under the new configuration.
-- [ ] After validation, enable feature flag in production and remove the old
-      hard-coded configuration paths.
+Feature flag steps marked N/A because the resolver shipped always-on and legacy paths were removed during implementation.
+
+- [x] N/A – always-on implementation; no `ENABLE_AGENT_CONFIG_BACKEND` flag added.
+- [x] N/A – staging flag toggle (resolver already on in all environments).
+- [x] N/A – flag-based rollout validation (covered by standard QA without flag gating).
+- [x] N/A – production flag enable/remove legacy paths (legacy paths removed at launch).
 
 ## 5. Observability & Alerts
 

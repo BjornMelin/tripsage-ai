@@ -1,6 +1,6 @@
 # TripSage API Documentation
 
-FastAPI-based REST API for the TripSage travel planning platform. Serves both frontend applications and AI agents.
+FastAPI-based REST API for the TripSage travel planning platform. **Legacy notice:** The Python/FastAPI backend has been removed in favor of Next.js 16 server route handlers (TypeScript). This document is retained for historical reference; current APIs live in `frontend/src/app/api/**` (see superseded specs SPEC-0007 and SPEC-0010).
 
 ## Quick Start
 

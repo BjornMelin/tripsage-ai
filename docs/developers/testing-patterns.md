@@ -15,7 +15,7 @@ Reference companion to `docs/developers/testing-guide.md`. Use this as a quick c
 
 ## Mocking Strategy
 
-1. **Network:** MSW 2 handlers (`frontend/src/test/msw/handlers/*`); never `vi.mock("node-fetch")`.
+1. **Network:** MSW 2 handlers (`frontend/src/test/msw/handlers/*`); never `vi.mock("node-fetch")`. Use MSW for network mocking instead of mocking fetch/HTTP libraries directly, as MSW provides request-level interception that works across test types.
 2. **AI SDK:** `MockLanguageModelV3`, `simulateReadableStream` (`frontend/src/test/ai-sdk/*`).
 3. **React Query:** `createMockQueryClient`, `createControlledQuery/Mutation` (`frontend/src/test/query-mocks.tsx`); otherwise wrap in `QueryClientProvider`.
 4. **Supabase:** `frontend/src/test/mocks/supabase.ts`; prefer MSW for REST RPCs.
@@ -37,14 +37,34 @@ server.use(http.get("https://api.example.com/items", () => HttpResponse.json({ e
 ```ts
 import { z } from "zod";
 import { streamText } from "ai";
-import { createMockModel } from "@/test/ai-sdk/mock-model";
+import { createMockModelWithTracking } from "@/test/ai-sdk/mock-model";
 
 const tools = {
-  enrich: { parameters: z.strictObject({ id: z.string() }), execute: ({ id }: { id: string }) => `ok:${id}` },
+  enrich: {
+    execute: ({ id }: { id: string }) => `ok:${id}`,
+    parameters: z.strictObject({ id: z.string() }),
+  },
 };
-const model = createMockModel();
-await streamText({ model, messages: [{ role: "user", content: "hi" }], tools });
-expect(model.calls[0]?.tools?.enrich?.parameters).toBeDefined();
+
+// Wrap the mock model so tool calls are recorded
+const { model, calls } = createMockModelWithTracking();
+
+const result = await streamText({
+  messages: [{ role: "user", content: "hi" }],
+  model,
+  tools,
+});
+
+// Assert on tracked tool call
+expect(calls[0]?.toolName).toBe("enrich");
+expect(calls[0]?.args).toEqual({ id: expect.any(String) });
+
+// Or inspect the streamed response content
+const toolCalls = result.response.messages.flatMap((m) =>
+  m.content.filter((c) => c.type === "tool-call")
+);
+expect(toolCalls[0]?.name).toBe("enrich");
+expect(toolCalls[0]?.args).toMatchObject({ id: expect.any(String) });
 ```
 
 ### React Query Controlled Query

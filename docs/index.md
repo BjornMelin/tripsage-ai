@@ -111,7 +111,7 @@ open http://localhost:8000/docs
 
 TripSage uses a modern, unified architecture:
 
-- **Backend**: FastAPI with Python 3.13+ and async operations
+- **Backend**: Next.js 16 server-first route handlers (TypeScript). Legacy Python/FastAPI backend was removed; see superseded specs SPEC-0007 and SPEC-0010.
 - **Database**: Supabase PostgreSQL with Row Level Security and vector
   extensions
 - **Cache**: Upstash Redis (HTTP) for serverless caching

@@ -87,7 +87,7 @@ Copy the root `.env.example` to `.env`, then follow the checklists below to popu
 
 ## Optional analytics
 
-- `GOOGLE_ANALYTICS_ID` (GA4), `MIXPANEL_TOKEN`, `POSTHOG_HOST`, `POSTHOG_KEY` — create per provider dashboards; safe to leave empty locally.
+- `GOOGLE_ANALYTICS_ID` (GA4), `MIXPANEL_TOKEN`, `POSTHOG_HOST`, `POSTHOG_KEY` — create per-provider dashboards; safe to leave empty locally.
 
 ## Ready-to-run checklist
 
