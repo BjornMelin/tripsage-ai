@@ -58,7 +58,7 @@ async function createItineraryItem(
   }
 
   if (validation.data.tripId) {
-    const { data: trip, error: tripError } = await supabase
+    const { error: tripError } = await supabase
       .from("trips")
       .select("id, user_id")
       .eq("id", validation.data.tripId)

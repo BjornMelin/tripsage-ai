@@ -215,8 +215,10 @@ export default function ActivitiesSearchPage() {
           <div
             ref={dialogRef}
             tabIndex={-1}
+            role="document"
             className="bg-background rounded-lg p-6 max-w-md w-full"
             onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
           >
             <h3 id="activity-modal-title" className="text-lg font-semibold mb-4">
               Activity Selected

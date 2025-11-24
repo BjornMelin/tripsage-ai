@@ -17,7 +17,7 @@ import {
 } from "@schemas/configuration";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { z } from "zod";
+import type { z } from "zod";
 import { resolveAgentConfig } from "@/lib/agents/config-resolver";
 import { createUnifiedErrorResponse } from "@/lib/api/error-response";
 import { withApiGuards } from "@/lib/api/factory";
