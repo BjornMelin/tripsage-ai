@@ -8,6 +8,7 @@ import {
   errorReportSchema,
 } from "@schemas/errors";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
+import { secureId } from "@/lib/security/random";
 
 /**
  * Error service for logging and reporting errors
@@ -135,7 +136,7 @@ class ErrorService {
    */
   private storeErrorLocally(report: ErrorReport): void {
     try {
-      const key = `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const key = `error_${Date.now()}_${secureId(9)}`;
       localStorage.setItem(key, JSON.stringify(report));
 
       // Clean up old errors (keep last 10)
