@@ -17,11 +17,20 @@ vi.mock("@/lib/google/caching", () => ({
   getCachedPlaceId: vi.fn().mockResolvedValue(null),
 }));
 
+// Create cache mock instance that will be initialized before mocks
 let upstashCache: ReturnType<typeof buildUpstashCacheMock>;
-vi.mock("@/lib/cache/upstash", () => {
-  upstashCache = buildUpstashCacheMock();
-  return upstashCache.module;
+const cacheFactory = vi.hoisted(() => {
+  // This runs before any imports, so we need to create the mock here
+  // buildUpstashCacheMock will be available when the mock factory runs
+  return () => {
+    if (!upstashCache) {
+      upstashCache = buildUpstashCacheMock();
+    }
+    return upstashCache.module;
+  };
 });
+
+vi.mock("@/lib/cache/upstash", () => cacheFactory());
 vi.mock("@/lib/cache/tags", () => ({
   bumpTag: vi.fn(async () => 1),
   versionedKey: vi.fn(async (_tag: string, key: string) => `tag:v1:${key}`),
@@ -34,6 +43,11 @@ import { getCachedLatLng } from "@/lib/google/caching";
 
 describe("AccommodationsService (Amadeus)", () => {
   beforeEach(() => {
+    // Initialize cache if not already done
+    if (!upstashCache) {
+      upstashCache = buildUpstashCacheMock();
+    }
+    upstashCache.reset();
     server.use(
       http.post("https://places.googleapis.com/v1/places:searchText", () =>
         HttpResponse.json({

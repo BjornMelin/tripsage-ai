@@ -42,7 +42,7 @@ describe("ActivitiesService", () => {
   let deps: ActivitiesServiceDeps;
   let service: ActivitiesService;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     const fromMock = vi.fn(() => ({
       insert: vi.fn(() => Promise.resolve({ data: null, error: null })),
       select: vi.fn(() => ({
@@ -73,6 +73,12 @@ describe("ActivitiesService", () => {
     };
 
     service = new ActivitiesService(deps);
+
+    // Reset webSearch mock to ensure no shared state
+    const { webSearch } = await import("@ai/tools/server/web-search");
+    if (webSearch.execute) {
+      vi.mocked(webSearch.execute).mockReset();
+    }
 
     server.use(
       http.post("https://places.googleapis.com/v1/places:searchText", () =>
@@ -246,10 +252,12 @@ describe("ActivitiesService", () => {
     it("should not trigger fallback when Places returns sufficient results", async () => {
       const { webSearch } = await import("@ai/tools/server/web-search");
       if (webSearch.execute) {
-        vi.mocked(webSearch.execute).mockClear();
+        // Reset mock completely to ensure no shared state
+        vi.mocked(webSearch.execute).mockReset();
       }
 
       // Mock Places API to return 3+ results (sufficient for popular destination)
+      // Use a non-popular destination to avoid isPopularDestination logic affecting fallback
       server.use(
         http.post("https://places.googleapis.com/v1/places:searchText", () =>
           HttpResponse.json({
@@ -296,7 +304,8 @@ describe("ActivitiesService", () => {
         select: vi.fn(() => selectChain),
       } as never);
 
-      await service.search({ destination: "Paris" }, { userId: "user-1" });
+      // Use a non-popular destination to ensure fallback logic is clear
+      await service.search({ destination: "SmallTown" }, { userId: "user-1" });
 
       if (webSearch.execute) {
         expect(webSearch.execute).not.toHaveBeenCalled();

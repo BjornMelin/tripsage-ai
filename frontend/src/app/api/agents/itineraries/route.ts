@@ -57,15 +57,16 @@ export const POST = withApiGuards({
   }
 
   const modelHint = new URL(req.url).searchParams.get("model") ?? undefined;
-  const config = await resolveAgentConfig("itineraryAgent");
-  const resolvedModelHint = config.config.model ?? modelHint;
+  const resolved = await resolveAgentConfig("itineraryAgent");
+  const agentConfig = resolved.config;
+  const resolvedModelHint = agentConfig.model ?? modelHint;
   const { model, modelId } = await resolveProvider(
     user?.id ?? "anon",
     resolvedModelHint
   );
 
   const identifier = user?.id ?? "anon";
-  const result = runItineraryAgent({ identifier, model, modelId }, config.config, body);
+  const result = runItineraryAgent({ identifier, model, modelId }, agentConfig, body);
   return result.toUIMessageStreamResponse({
     onError: createErrorHandler(),
   });

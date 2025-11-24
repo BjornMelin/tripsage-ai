@@ -10,10 +10,16 @@ const mockContext = {
 };
 
 let upstashCache: ReturnType<typeof buildUpstashCacheMock>;
-vi.mock("@/lib/cache/upstash", () => {
-  upstashCache = buildUpstashCacheMock();
-  return upstashCache.module;
+const cacheFactory = vi.hoisted(() => {
+  return () => {
+    if (!upstashCache) {
+      upstashCache = buildUpstashCacheMock();
+    }
+    return upstashCache.module;
+  };
 });
+
+vi.mock("@/lib/cache/upstash", () => cacheFactory());
 
 vi.mock("@/lib/telemetry/span", () => ({
   withTelemetrySpan: vi.fn((_name: string, _options, fn) => fn()),
@@ -21,6 +27,10 @@ vi.mock("@/lib/telemetry/span", () => ({
 
 describe("getTravelAdvisory", () => {
   beforeEach(() => {
+    // Initialize cache if not already done
+    if (!upstashCache) {
+      upstashCache = buildUpstashCacheMock();
+    }
     vi.clearAllMocks();
     upstashCache.reset();
   });

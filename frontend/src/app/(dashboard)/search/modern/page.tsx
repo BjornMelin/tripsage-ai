@@ -26,10 +26,12 @@ import { ModernFlightResults } from "@/components/features/search/modern-flight-
 import type { ModernHotelResult } from "@/components/features/search/modern-hotel-results";
 import { ModernHotelResults } from "@/components/features/search/modern-hotel-results";
 import { SearchLayout } from "@/components/layouts/search-layout";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/components/ui/use-toast";
 import { searchHotelsAction } from "./actions";
 
 // Mock data uses the Modern types directly
@@ -235,6 +237,8 @@ export default function ModernSearchPage() {
   const [showResults, setShowResults] = useState(false);
   const [_searchData, setSearchData] = useState<Record<string, unknown> | null>(null);
   const [hotelResults, setHotelResults] = useState<ModernHotelResult[]>([]);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const handleFlightSearch = async (params: ModernFlightSearchParams) => {
     await new Promise<void>((resolve) => {
@@ -254,14 +258,22 @@ export default function ModernSearchPage() {
     new Promise<void>((resolve) => {
       startTransition(async () => {
         setSearchData(params as unknown as Record<string, unknown>);
+        setErrorMessage(null);
         try {
           const results = await searchHotelsAction(params);
           setHotelResults(results);
           setShowResults(true);
+          setErrorMessage(null);
         } catch (error) {
           console.error("Hotel search failed", error);
           setHotelResults([]);
           setShowResults(true);
+          setErrorMessage("Search failed, please try again.");
+          toast({
+            description: "Search failed, please try again.",
+            title: "Search Failed",
+            variant: "destructive",
+          });
         } finally {
           resolve();
         }
@@ -315,6 +327,13 @@ export default function ModernSearchPage() {
             </div>
           </CardContent>
         </Card>
+
+        {errorMessage ? (
+          <Alert variant="destructive" role="status">
+            <AlertTitle>Search error</AlertTitle>
+            <AlertDescription>{errorMessage}</AlertDescription>
+          </Alert>
+        ) : null}
 
         {/* Search Interface */}
         <Tabs
