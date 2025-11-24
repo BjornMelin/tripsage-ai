@@ -109,6 +109,10 @@ export const ROUTE_RATE_LIMITS = {
   "route-matrix": { limit: 30, window: "1 m" },
   routes: { limit: 60, window: "1 m" },
 
+  // Security
+  "security:sessions:list": { limit: 20, window: "1 m" },
+  "security:sessions:terminate": { limit: 10, window: "1 m" },
+
   // Telemetry
   "telemetry:ai-demo": { limit: 10, window: "1 m" },
 

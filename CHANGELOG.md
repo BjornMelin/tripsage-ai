@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Security dashboard and MFA flows: added security dashboard UI plus MFA setup/verification and backup-code components, along with realtime connection status monitor.
 - Flights: new `/api/flights/popular-destinations` route with Supabase-personalized results, Upstash caching (1h TTL), and route rate limiting.
 - Authenticated account deletion route `/auth/delete` uses Supabase admin `deleteUser` with service-role guardrails.
+- Security session APIs: added `GET /api/security/sessions` and `DELETE /api/security/sessions/[sessionId]` with admin Supabase access, `withApiGuards` telemetry/rate limits (`security:sessions:list`, `security:sessions:terminate`), and Vitest coverage for listing/termination flows.
 
 ### Changed
 
@@ -85,6 +86,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Destination search form: removed large inline implementation-plan comment block; now relies on the implemented `/api/places/search` hook with debounced queries and mapped suggestions.
 - Security dashboard: cleaned up terminate-session handler placeholder to a concise doc comment, keeping the component free of unused async scaffolding.
 - Account settings now calls Supabase Auth for email updates, surfaces verification state with resend support, and persists notification toggles to user metadata with optimistic UI updates.
+- Security dashboard now loads active sessions from the new `/api/security/sessions` endpoint, updates metrics from live data, and surfaces toast errors on load failures.
+- Destination search form now calls `/api/places/search` with abortable, debounced requests, client-side type filtering, and inline error messaging instead of mocked suggestions.
 
 ### Removed
 
@@ -169,6 +172,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Agent tool error codes**: Updated rate limiting error codes from `webSearchRateLimited` to `toolRateLimited` for non-search tools (POI lookup, combine search results, travel advisory, crawl, weather, geocode, distance matrix) to match semantic purpose.
 - **Agent cache configuration**: Re-enabled `hashInput: true` on all agent tool cache guardrails so Redis keys include per-request hashes, preventing stale cross-user responses.
 
+- Security session handlers now await telemetry spans and select full auth session columns to keep Supabase responses typed and traceable.
 - Supabase SSR factory and server tests now stub `@supabase/ssr.createServerClient`, `getServerEnv()`, and `getClientEnv()` explicitly, so Zod environment validation and cookie adapters are tested deterministically in `frontend/src/lib/supabase/__tests__/factory.spec.ts` and `frontend/src/lib/supabase/__tests__/server.test.ts` without relying on process environment side effects.
 - Supabase Realtime hooks now provide stable runtime behaviour: `useTripRealtime` memoizes its error instance to avoid unnecessary error object churn; `useWebSocketChat` now delegates channel subscription to the shared `useRealtimeChannel` helper and uses Supabase's built-in reconnection, removing duplicated backoff logic.
 - Agent status WebSocket reconnect backoff in `frontend/src/hooks/use-agent-status-websocket.ts` now increments attempts via a state updater and derives delays from the updated value, so retry intervals grow exponentially and reset only on successful subscription instead of remaining fixed.
