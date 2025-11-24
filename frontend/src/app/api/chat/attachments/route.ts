@@ -4,22 +4,16 @@
  * Handles multipart form data uploads, validates file sizes and types.
  */
 
-"use cache: private";
+import "server-only";
 
+import { FILE_COUNT_LIMITS, FILE_SIZE_LIMITS } from "@schemas/api";
 import { revalidateTag } from "next/cache";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { createUnifiedErrorResponse } from "@/lib/api/error-response";
 import { withApiGuards } from "@/lib/api/factory";
-import { extractFiles, validateMultipart } from "@/lib/api/guards/multipart";
+import { validateMultipart } from "@/lib/api/guards/multipart";
+import { errorResponse, forwardAuthHeaders } from "@/lib/api/route-helpers";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
-import { forwardAuthHeaders } from "@/lib/next/route-helpers";
-
-/** Maximum file size allowed per file in bytes (10MB). */
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
-
-/** Maximum number of files allowed per upload request. */
-const MAX_FILES_PER_REQUEST = 5;
 
 /**
  * Returns backend API URL from environment or default.
@@ -70,8 +64,7 @@ export const POST = withApiGuards({
   // Validate content type
   const contentType = req.headers.get("content-type");
   if (!contentType?.includes("multipart/form-data")) {
-    return createUnifiedErrorResponse({
-      details: { contentType },
+    return errorResponse({
       error: "invalid_request",
       reason: "Invalid content type",
       status: 400,
@@ -81,21 +74,17 @@ export const POST = withApiGuards({
   // Parse form data
   const formData = await req.formData();
 
-  // Validate files
+  // Validate and extract files
   const validation = validateMultipart(formData, {
-    maxFiles: MAX_FILES_PER_REQUEST,
-    maxSize: MAX_FILE_SIZE,
+    maxFiles: FILE_COUNT_LIMITS.STANDARD,
+    maxSize: FILE_SIZE_LIMITS.STANDARD,
   });
 
-  if (!validation.valid) {
-    return createUnifiedErrorResponse({
-      error: validation.errorCode ?? "validation_error",
-      reason: validation.errorMessage ?? "Validation failed",
-      status: 400,
-    });
+  if ("error" in validation) {
+    return validation.error;
   }
 
-  const files = extractFiles(formData);
+  const files = validation.data;
 
   // Prepare backend request
   const backendFormData = new FormData();
@@ -122,11 +111,11 @@ export const POST = withApiGuards({
 
   if (!response.ok) {
     const detail = (data as { detail?: string } | undefined)?.detail ?? "Upload failed";
-    return createUnifiedErrorResponse({
-      details: { detail },
+    return errorResponse({
+      err: new Error(`File upload failed: ${detail}`),
       error: "internal",
       reason: "File upload failed",
-      status: response.status,
+      status: response.status >= 400 && response.status < 500 ? response.status : 502,
     });
   }
 

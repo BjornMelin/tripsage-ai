@@ -2,14 +2,15 @@
  * @fileoverview Calendar events CRUD endpoint.
  *
  * Handles GET (list), POST (create), PATCH (update), and DELETE operations
- * for calendar events.
+ * for calendar events via Google Calendar API.
+ *
+ * Note: Calendar data is NOT cached in Redis because:
+ * 1. Google Calendar API has its own response caching
+ * 2. Event changes can occur from multiple sources (mobile, web, etc.)
+ * 3. Staleness risk outweighs caching benefits for real-time calendar data
  */
 
 import "server-only";
-
-// Security: Route handlers are dynamic by default with Cache Components.
-// Using withApiGuards({ auth: true }) ensures this route uses cookies/headers,
-// making it dynamic and preventing caching of user-specific data.
 
 import {
   createEventRequestSchema,
@@ -30,8 +31,8 @@ import {
 /**
  * Extracts calendar ID from body or query params with default fallback.
  *
- * @param source Source object (body or searchParams).
- * @param key Key to extract (defaults to "calendarId").
+ * @param source - Source object (body or searchParams).
+ * @param key - Key to extract (defaults to "calendarId").
  * @returns Calendar ID string.
  */
 function getCalendarId(
@@ -50,16 +51,14 @@ function getCalendarId(
  *
  * List events from a calendar.
  *
- * @param req - Next.js request object
- * @param routeContext - Route context from withApiGuards
- * @returns JSON response with events list
+ * @param req - Next.js request object.
+ * @returns JSON response with events list.
  */
 export const GET = withApiGuards({
   auth: true,
   rateLimit: "calendar:events:read",
   telemetry: "calendar.events.list",
 })(async (req: NextRequest) => {
-  // Parse query parameters
   const { searchParams } = new URL(req.url);
   const params: Record<string, unknown> = {
     calendarId: searchParams.get("calendarId") || "primary",
@@ -100,8 +99,8 @@ export const GET = withApiGuards({
   if ("error" in validation) {
     return validation.error;
   }
-  const result = await listEvents(validation.data);
 
+  const result = await listEvents(validation.data);
   return NextResponse.json(result);
 });
 
@@ -110,9 +109,8 @@ export const GET = withApiGuards({
  *
  * Create a new calendar event.
  *
- * @param req - Next.js request object
- * @param routeContext - Route context from withApiGuards
- * @returns JSON response with created event
+ * @param req - Next.js request object.
+ * @returns JSON response with created event.
  */
 export const POST = withApiGuards({
   auth: true,
@@ -131,8 +129,8 @@ export const POST = withApiGuards({
   if ("error" in validation) {
     return validation.error;
   }
-  const result = await createEvent(validation.data, calendarId);
 
+  const result = await createEvent(validation.data, calendarId);
   return NextResponse.json(result, { status: 201 });
 });
 
@@ -141,9 +139,8 @@ export const POST = withApiGuards({
  *
  * Update an existing calendar event.
  *
- * @param req - Next.js request object
- * @param routeContext - Route context from withApiGuards
- * @returns JSON response with updated event
+ * @param req - Next.js request object.
+ * @returns JSON response with updated event.
  */
 export const PATCH = withApiGuards({
   auth: true,
@@ -170,8 +167,8 @@ export const PATCH = withApiGuards({
   if ("error" in validation) {
     return validation.error;
   }
-  const result = await updateEvent(eventId, validation.data, calendarId);
 
+  const result = await updateEvent(eventId, validation.data, calendarId);
   return NextResponse.json(result);
 });
 
@@ -180,9 +177,8 @@ export const PATCH = withApiGuards({
  *
  * Delete a calendar event.
  *
- * @param req - Next.js request object
- * @param routeContext - Route context from withApiGuards
- * @returns JSON response with success status
+ * @param req - Next.js request object.
+ * @returns JSON response with success status.
  */
 export const DELETE = withApiGuards({
   auth: true,
@@ -201,6 +197,5 @@ export const DELETE = withApiGuards({
   }
 
   await deleteEvent(eventId, calendarId);
-
   return NextResponse.json({ success: true }, { status: 200 });
 });
