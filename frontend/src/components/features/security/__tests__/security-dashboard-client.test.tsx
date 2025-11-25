@@ -12,17 +12,37 @@ import {
 
 vi.mock("@/components/ui/use-toast");
 
-describe("LocalTime", () => {
-  afterEach(() => {
-    vi.clearAllMocks();
-    vi.restoreAllMocks();
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.restoreAllMocks();
+});
+
+function createDeferred<T>() {
+  let resolve: ((value: T) => void) | undefined;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
   });
 
+  return {
+    promise,
+    resolve(value: T) {
+      if (!resolve) {
+        throw new Error("Deferred resolve called before initialization");
+      }
+      resolve(value);
+    },
+  };
+}
+
+describe("LocalTime", () => {
+
   it("renders a formatted timestamp for valid ISO input", () => {
-    render(<LocalTime isoString="2025-01-02T15:30:00.000Z" />);
-    const text = screen.getByText((content) => content.includes("2025"));
-    expect(text.textContent).not.toBe("—");
-    expect(text.textContent).not.toBe("Invalid date");
+    const isoString = "2025-01-02T15:30:00.000Z";
+    render(<LocalTime isoString={isoString} />);
+    const rendered = screen.getByTitle(isoString);
+    const content = rendered.textContent ?? "";
+    expect(content).not.toBe("—");
+    expect(content).not.toBe("Invalid date");
   });
 
   it("renders an error label for invalid input", () => {
@@ -89,11 +109,6 @@ describe("ActiveSessionsList", () => {
     ok: false,
     status: 500,
   } as Response;
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.restoreAllMocks();
-  });
 
   it("terminates a non-current session and removes it from the list", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(successResponse);
@@ -172,11 +187,8 @@ describe("ActiveSessionsList", () => {
   });
 
   it("disables the terminate button while the request is pending", async () => {
-    let resolveFetch!: (value: Response) => void;
-    const fetchPromise = new Promise<Response>((resolve) => {
-      resolveFetch = resolve;
-    });
-    vi.spyOn(globalThis, "fetch").mockReturnValue(fetchPromise);
+    const deferredFetch = createDeferred<Response>();
+    vi.spyOn(globalThis, "fetch").mockReturnValue(deferredFetch.promise);
 
     const sessions = [
       {
@@ -197,7 +209,7 @@ describe("ActiveSessionsList", () => {
 
     expect(terminateButton).toBeDisabled();
 
-    resolveFetch(successResponse);
+    deferredFetch.resolve(successResponse);
 
     await waitFor(() => {
       expect(

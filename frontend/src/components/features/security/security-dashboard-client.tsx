@@ -44,7 +44,11 @@ export function LocalTime({ isoString, className }: LocalTimeProps) {
     }
   }, [isoString]);
 
-  return <span className={className}>{formatted}</span>;
+  return (
+    <span className={className} title={isoString}>
+      {formatted}
+    </span>
+  );
 }
 
 /** Security events list props. */
@@ -71,7 +75,10 @@ export function SecurityEventsList({ events, riskColor }: SecurityEventsListProp
         <div key={event.id} className="border rounded-md p-3 space-y-1">
           <div className="flex items-center justify-between text-sm font-semibold">
             <span>{event.description}</span>
-            <span className={riskColor[event.riskLevel]}>{event.riskLevel}</span>
+            {(() => {
+              const riskClass = riskColor[event.riskLevel] ?? "text-muted-foreground";
+              return <span className={riskClass}>{event.riskLevel}</span>;
+            })()}
           </div>
           <div className="text-xs text-muted-foreground flex gap-3">
             <LocalTime isoString={event.timestamp} />
@@ -97,8 +104,12 @@ type ActiveSessionsListProps = {
  */
 export function ActiveSessionsList({ sessions }: ActiveSessionsListProps) {
   const [currentSessions, setCurrentSessions] = useState<ActiveSession[]>(sessions);
-  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const { toast } = useToast();
+
+  useEffect(() => {
+    setCurrentSessions(sessions);
+  }, [sessions]);
 
   const sortedSessions = useMemo(
     () =>
@@ -120,7 +131,11 @@ export function ActiveSessionsList({ sessions }: ActiveSessionsListProps) {
    */
   const handleTerminate = async (sessionId: string) => {
     try {
-      setPendingId(sessionId);
+      setPendingIds((prev) => {
+        const next = new Set(prev);
+        next.add(sessionId);
+        return next;
+      });
       const response = await fetch(`/api/security/sessions/${sessionId}`, {
         method: "DELETE",
       });
@@ -140,7 +155,11 @@ export function ActiveSessionsList({ sessions }: ActiveSessionsListProps) {
         variant: "destructive",
       });
     } finally {
-      setPendingId(null);
+      setPendingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(sessionId);
+        return next;
+      });
     }
   };
 
@@ -167,10 +186,10 @@ export function ActiveSessionsList({ sessions }: ActiveSessionsListProps) {
                 variant="destructive"
                 size="sm"
                 className="h-7 px-3 text-xs"
-                disabled={pendingId === session.id}
+                disabled={pendingIds.has(session.id)}
                 onClick={() => handleTerminate(session.id)}
               >
-                {pendingId === session.id ? "Terminating..." : "Terminate"}
+                {pendingIds.has(session.id) ? "Terminating..." : "Terminate"}
               </Button>
             )}
           </div>
