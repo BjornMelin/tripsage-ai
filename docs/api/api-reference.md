@@ -1,34 +1,31 @@
 # TripSage API Reference
 
-Complete reference for the TripSage API endpoints. Most endpoints require authentication via JWT tokens obtained through Supabase; anonymous access is allowed only where explicitly noted (e.g., Activities search/details).
+Complete reference for the TripSage API endpoints. Most endpoints require authentication via Supabase SSR; anonymous access is allowed only where explicitly noted (e.g., Activities search/details).
 
 ## Base URL
 
 ```text
-https://api.tripsage.ai (production)
-http://localhost:8000 (development)
+https://tripsage.ai/api (production)
+http://localhost:3000/api (development)
 ```
 
 ## Authentication
 
-> **⚠️ Legacy Python Backend API**  
-> This document describes the legacy Python FastAPI backend endpoints.  
-> **Authentication is now handled by the Next.js frontend via Supabase SSR routes (`/auth/*`).**  
-> The Python backend middleware validates JWT tokens but does not provide auth endpoints.
+Authentication is handled via Supabase SSR with cookie-based sessions. Route handlers use the `withApiGuards` factory:
 
-Unless an endpoint is explicitly documented as anonymous (see Activities below), requests must include a Bearer JWT token obtained through Supabase authentication:
-
-```http
-Authorization: Bearer <jwt_token>
+```typescript
+export const POST = withApiGuards({
+  auth: true, // Requires authentication
+  rateLimit: "endpoint:action",
+  telemetry: "endpoint.action",
+})(async (req, { supabase, user }) => {
+  // user is the authenticated Supabase user
+});
 ```
 
-**Frontend Auth Routes (Next.js):**
+**Auth Routes (Next.js):**
 
-- `POST /auth/login` - Email/password login
-- `POST /auth/register` - User registration
-- `GET /auth/callback` - OAuth callback handler
-- `POST /auth/logout` - Logout and session cleanup
-- `GET /auth/confirm` - Email confirmation
+- `POST /api/auth/login` - Email/password login
 
 ## Health & System
 
@@ -72,7 +69,7 @@ Request:
   "destinations": [
     {
       "name": "Paris",
-      "coordinates": {"lat": 48.8566, "lng": 2.3522}
+      "coordinates": { "lat": 48.8566, "lng": 2.3522 }
     }
   ]
 }
@@ -248,7 +245,7 @@ Response: Streaming UI message stream (SSE) with tool calls and structured accom
 
 Activity search and booking via Google Places API (New) with optional AI/web fallback. See SPEC-0030 and ADR-0053 for architecture details.
 
-**Authentication note:** Activity search (`POST /api/activities/search`) and activity details (`GET /api/activities/[id]`) allow anonymous access; all other legacy FastAPI endpoints still require Bearer JWT tokens.
+**Authentication note:** Activity search (`POST /api/activities/search`) and activity details (`GET /api/activities/[id]`) allow anonymous access. All other endpoints require authentication via Supabase SSR.
 
 ### Search Activities
 
@@ -680,18 +677,18 @@ GET /api/config/environment
 
 ### Common HTTP Status Codes
 
-| Code | Status | Description |
-|------|--------|-------------|
-| 200 | OK | Request completed successfully |
-| 201 | Created | Resource created successfully |
-| 204 | No Content | Request successful, no content returned |
-| 400 | Bad Request | Invalid request parameters |
-| 401 | Unauthorized | Missing or invalid authentication |
-| 403 | Forbidden | Insufficient permissions |
-| 404 | Not Found | Resource doesn't exist |
-| 422 | Unprocessable Entity | Validation errors |
-| 429 | Too Many Requests | Rate limit exceeded |
-| 500 | Internal Server Error | Server-side error |
+| Code | Status                | Description                             |
+| ---- | --------------------- | --------------------------------------- |
+| 200  | OK                    | Request completed successfully          |
+| 201  | Created               | Resource created successfully           |
+| 204  | No Content            | Request successful, no content returned |
+| 400  | Bad Request           | Invalid request parameters              |
+| 401  | Unauthorized          | Missing or invalid authentication       |
+| 403  | Forbidden             | Insufficient permissions                |
+| 404  | Not Found             | Resource doesn't exist                  |
+| 422  | Unprocessable Entity  | Validation errors                       |
+| 429  | Too Many Requests     | Rate limit exceeded                     |
+| 500  | Internal Server Error | Server-side error                       |
 
 ### Error Response Format
 
@@ -735,23 +732,23 @@ TripSage uses Supabase Realtime with private channels and Row Level Security. No
 ### Client Setup
 
 ```typescript
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(url, anonKey)
+const supabase = createClient(url, anonKey);
 
 // Set auth token for private channels
-supabase.realtime.setAuth(accessToken)
+supabase.realtime.setAuth(accessToken);
 
 // Join private channel
 const channel = supabase.channel(`session:${sessionId}`, {
-  config: { private: true }
-})
+  config: { private: true },
+});
 
-channel.on('broadcast', { event: 'chat:message' }, (payload) => {
-  console.log('Message received:', payload)
-})
+channel.on("broadcast", { event: "chat:message" }, (payload) => {
+  console.log("Message received:", payload);
+});
 
-channel.subscribe()
+channel.subscribe();
 ```
 
 ## Client Integration Examples
@@ -760,18 +757,18 @@ channel.subscribe()
 
 ```javascript
 // Initialize client
-const TRIPSAGE_API_URL = 'https://api.tripsage.ai';
-const API_KEY = 'your-api-key';
+const TRIPSAGE_API_URL = "https://tripsage.ai";
+const API_KEY = "your-api-key";
 
 // Create trip
 async function createTrip(tripData) {
   const response = await fetch(`${TRIPSAGE_API_URL}/api/trips/`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
-      'X-API-Key': API_KEY
+      "Content-Type": "application/json",
+      "X-API-Key": API_KEY,
     },
-    body: JSON.stringify(tripData)
+    body: JSON.stringify(tripData),
   });
 
   if (!response.ok) {
@@ -784,10 +781,10 @@ async function createTrip(tripData) {
 // Search flights using frontend agent endpoint
 async function searchFlights(searchParams) {
   const response = await fetch(`${TRIPSAGE_API_URL}/api/agents/flights`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${JWT_TOKEN}`
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${JWT_TOKEN}`,
     },
     body: JSON.stringify({
       origin: searchParams.origin,
@@ -795,8 +792,8 @@ async function searchFlights(searchParams) {
       departureDate: searchParams.departure_date,
       returnDate: searchParams.return_date,
       passengers: searchParams.passengers,
-      cabinClass: searchParams.cabin_class
-    })
+      cabinClass: searchParams.cabin_class,
+    }),
   });
 
   // Response is a streaming UI message stream (SSE)
@@ -811,7 +808,7 @@ import requests
 import json
 
 class TripSageClient:
-    def __init__(self, api_key, base_url='https://api.tripsage.ai'):
+    def __init__(self, api_key, base_url='https://tripsage.ai'):
         self.api_key = api_key
         self.base_url = base_url
         self.session = requests.Session()
@@ -866,7 +863,7 @@ trip = client.create_trip({
 
 ```bash
 # Create trip
-curl -X POST "https://api.tripsage.ai/api/trips/" \
+curl -X POST "https://tripsage.ai/api/trips" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: your-api-key" \
   -d '{
@@ -876,8 +873,8 @@ curl -X POST "https://api.tripsage.ai/api/trips/" \
     "budget": {"currency": "USD", "total_amount": 3000}
   }'
 
-# Search flights using frontend agent endpoint (streaming SSE)
-curl -X POST "https://api.tripsage.ai/api/agents/flights" \
+# Search flights using AI agent endpoint (streaming SSE)
+curl -X POST "https://tripsage.ai/api/agents/flights" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer your-jwt-token" \
   -d '{
@@ -890,12 +887,12 @@ curl -X POST "https://api.tripsage.ai/api/agents/flights" \
   }'
 
 # Get trip details
-curl -X GET "https://api.tripsage.ai/api/trips/123" \
+curl -X GET "https://tripsage.ai/api/trips/123" \
   -H "X-API-Key: your-api-key"
 ```
 
-## Interactive Documentation
+## Development Documentation
 
-- **Swagger UI**: `http://localhost:8000/docs`
-- **ReDoc**: `http://localhost:8000/redoc`
-- **OpenAPI Schema**: `http://localhost:8000/openapi.json`
+For local development, the API is available at `http://localhost:3000/api`.
+
+See the [API README](README.md) for the complete list of endpoints organized by category.

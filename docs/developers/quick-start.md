@@ -32,7 +32,7 @@ Get the TripSage development environment running quickly.
 - **State**: Zustand for client state
 - **Data**: TanStack Query for server state
 - **Testing**: Vitest 4.0.1, Playwright E2E
-- **Linting**: Biome 2.2.7, Ruff for Python
+- **Linting**: Biome 2.2.7
 
 ## Setup
 

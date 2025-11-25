@@ -4,7 +4,7 @@ All API key administration traffic has moved from `/api/user/keys` to `/api/keys
 
 ## What Changed
 
-- FastAPI now mounts the keys router at `/api/keys` only. The former `/api/user/keys` paths return `404`.
+- Next.js route handlers now serve `/api/keys` only. The former `/api/user/keys` paths return `404`.
 - Frontend hooks (`useApiKeys`, `useAddApiKey`, `useDeleteApiKey`, `useValidateApiKey`) and Vitest coverage were updated to the new base path.
 - Operator documentation (security guide, admin guide) and API usage examples reference the new endpoints.
 
@@ -36,4 +36,4 @@ TripSage Platform Team
 ## Tracking
 
 - Changelog: see the [Unreleased](../../CHANGELOG.md#unreleased) section.
-- Related tests: `frontend/src/hooks/__tests__/use-api-keys.test.ts`, `tests/integration/api/test_keys.py`.
+- Related tests: `frontend/src/hooks/__tests__/use-api-keys.test.ts`

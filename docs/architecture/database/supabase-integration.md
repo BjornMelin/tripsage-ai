@@ -7,88 +7,75 @@ This document describes TripSage's Supabase integration patterns, authentication
 ## Table of Contents
 
 - [Authentication Flow](#authentication-flow)
-- [Backend Integration](#backend-integration)
-- [Frontend Integration](#frontend-integration)
+- [Server Integration](#server-integration)
 - [BYOK (Bring Your Own Keys)](#byok-bring-your-own-keys)
 - [Realtime Features](#realtime-features)
 - [Security Patterns](#security-patterns)
+- [Webhooks Integration](#webhooks-integration)
 
 ## Authentication Flow
 
-### Backend (FastAPI)
+### Next.js 16 + Supabase SSR
 
-The backend uses Supabase-managed authentication with JWT verification:
-
-- **Middleware**: `tripsage/api/middlewares/authentication.py` validates JWTs via `verify_and_get_claims`
-- **Dependencies**: `tripsage/api/core/dependencies.py` provides `get_current_principal` for route handlers
-- **Clients**: `tripsage_core/services/infrastructure/supabase_client.py` creates async clients for database operations
-
-**Key Pattern**: All protected routes use dependency injection to access authenticated user context without re-verifying tokens.
-
-### Frontend (Next.js 16 + Supabase SSR)
-
-The frontend uses `@supabase/ssr` for cookie-based session management:
+TripSage uses `@supabase/ssr` for cookie-based session management:
 
 - **Middleware**: `middleware.ts` refreshes sessions and syncs cookies for Server Components
 - **Server Clients**: `src/lib/supabase/server.ts` wraps Next.js `cookies()` for SSR compatibility
 - **Browser Clients**: `src/lib/supabase/client.ts` provides singleton client with Realtime support
-- **Hooks**: `useSupabase()`, `useAuthenticatedApi()` for component-level access
+- **Route Handlers**: `withApiGuards` factory provides authenticated Supabase clients
 
-**Key Pattern**: Server Components get authenticated Supabase clients automatically; Client Components use hooks.
+**Key Pattern**: Server Components and route handlers get authenticated Supabase clients automatically; Client Components use hooks.
 
-## Backend Integration
+## Server Integration
 
-### Authentication Middleware
+### Route Handler Authentication
 
-```python
-# tripsage/api/middlewares/authentication.py
-from tripsage_core.services.infrastructure.supabase_client import verify_and_get_claims
+All protected routes use the `withApiGuards` factory for authentication:
 
-@app.middleware("http")
-async def authentication_middleware(request: Request, call_next):
-    token = extract_bearer_token(request)
-    if token:
-        try:
-            claims = await verify_and_get_claims(token)
-            request.state.principal = claims
-        except Exception:
-            # Handle invalid tokens
-            pass
-    return await call_next(request)
+```typescript
+// src/app/api/trips/route.ts
+import { withApiGuards } from '@/lib/api/factory';
+
+export const GET = withApiGuards({
+  auth: true,
+  rateLimit: { limit: 100, window: '1m' },
+})(async ({ supabase, user }) => {
+  const { data } = await supabase
+    .from('trips')
+    .select('*')
+    .eq('user_id', user.id);
+
+  return Response.json(data);
+});
 ```
 
-### Dependency Injection
+### Server Client Factory
 
-```python
-# tripsage/api/core/dependencies.py
-from fastapi import Depends, HTTPException
-from starlette.requests import Request
+```typescript
+// src/lib/supabase/server.ts
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
-def get_current_principal(request: Request) -> dict:
-    """Extract authenticated user from request state."""
-    if not hasattr(request.state, 'principal'):
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    return request.state.principal
+export async function createServerSupabase() {
+  const cookieStore = await cookies();
 
-def require_principal(principal: dict = Depends(get_current_principal)) -> dict:
-    """Require authentication for route."""
-    return principal
-```
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => cookieStore.getAll(),
+        setAll: (cookiesToSet) => {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options)
+          );
+        },
+      },
+    }
+  );
+}
 
-### Supabase Client Usage
-
-```python
-# tripsage_core/services/infrastructure/supabase_client.py
-from supabase import create_client, Client
-
-def postgrest_for_user(token: str) -> Client:
-    """Create Supabase client with user access token for RLS."""
-    client = create_client(url, key)
-    client.auth.set_auth(token)  # Preserves Row Level Security
-    return client
-```
-
-## Frontend Integration
+## Browser Integration
 
 ### Unified Client Factory
 
