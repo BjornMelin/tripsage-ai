@@ -74,7 +74,7 @@ export function MetricsCard({
   })();
 
   return (
-    <Card className={cn("", className)}>
+    <Card className={cn(className)}>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           {title}

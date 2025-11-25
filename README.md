@@ -20,8 +20,8 @@
 
 ---
 
-TripSage AI is a travel planning platform that combines the power of modern AI agents with rich
-all-in-one travel services. The legacy Python/FastAPI backend has been fully removed; the **Next.js 16 + Vercel AI SDK v6** stack (in `frontend/`) is the sole backend surface.
+TripSage AI is a travel planning platform that combines the power of modern
+AI agents with rich AI SDK v6 tools and all-in-one travel services.
 
 ## ✨ Key Features
 

@@ -148,8 +148,26 @@ Implement a **Supabase-backed agent configuration service** with:
     agent configs to non‑admin users.
   - Misconfigured cache invalidation could lead to stale configs in agents until
     TTL expiry.
+  - Cache invalidation edge cases (prescriptive handling):
+    - If `bumpTag("configuration")` fails (e.g., Redis unavailable), retry up to
+      3 times with a short backoff; on final failure, emit an operational alert
+      and continue serving the last cached config (stale) while marking the
+      response as degraded (do not fail the user‑visible request after a
+      successful DB write).
+    - Concurrency window: Supabase writes may be readable before the tag bump is
+      observed. Mitigation: perform the tag bump in the same transaction when
+      possible; otherwise include the version/etag in cached payloads and have
+      readers revalidate once (short backoff) when a newer version/etag is
+      detected.
+    - Maximum acceptable staleness: 5 minutes. Monitor/alert on tag bump errors
+      and on cache age >5 minutes so operators can intervene (e.g., manual tag
+      bump or cache flush).
   - Schemas for configuration need to evolve carefully; breaking changes may
-    require migration logic between versions.
+    require migration logic between versions. Mitigation: preserve backward
+    compatibility or ship a compatibility layer (version/etag on payloads), and
+    add migration tooling (schema version metadata, automated migration scripts,
+    CI validation tests) to block breaking changes without an explicit migration
+    path.
 
 ## References
 
