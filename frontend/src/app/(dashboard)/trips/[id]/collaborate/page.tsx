@@ -94,7 +94,7 @@ export default function TripCollaborationPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   useEffect(() => {
     const supabase = getBrowserClient();
-    // During SSR, supabase is null - skip auth check
+    // getBrowserClient() may return null during initial client-side initialization/hydration — skip auth check until client is available
     if (!supabase) return;
     supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
   }, []);
