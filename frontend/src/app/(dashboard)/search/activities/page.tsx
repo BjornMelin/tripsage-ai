@@ -1,8 +1,13 @@
+/**
+ * @fileoverview Activity search page with trip planning integration.
+ * Allows searching for activities and adding them to existing trips.
+ */
+
 "use client";
 
 import type { Activity } from "@schemas/search";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { ActivityCard } from "@/components/features/search/activity-card";
 import { ActivitySearchForm } from "@/components/features/search/activity-search-form";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -11,7 +16,9 @@ import {
   type ActivitySearchParams,
   useActivitySearch,
 } from "@/hooks/use-activity-search";
+import { TripSelectionModal } from "@/components/features/search/trip-selection-modal";
 import { openActivityBooking } from "@/lib/activities/booking";
+import { addActivityToTrip, getPlanningTrips } from "./actions";
 
 const AI_FALLBACK_PREFIX = "ai_fallback:";
 const GOOGLE_PLACES_SOURCE = "googleplaces";
@@ -29,6 +36,10 @@ export default function ActivitiesSearchPage() {
     id: `${note}-${index}`,
     note,
   }));
+
+  const [isTripModalOpen, setIsTripModalOpen] = useState(false);
+  const [trips, setTrips] = useState<import("@schemas/trips").UiTrip[]>([]);
+  const [isPending, startTransition] = useTransition();
 
   // Initialize search with URL parameters
   useEffect(() => {
@@ -50,164 +61,62 @@ export default function ActivitiesSearchPage() {
     }
   };
 
+  const handleAddToTripClick = () => {
+    startTransition(async () => {
+      try {
+        const fetchedTrips = await getPlanningTrips();
+        setTrips(fetchedTrips);
+        setIsTripModalOpen(true);
+      } catch (error) {
+        toast({
+          description: "Failed to load trips. Please try again.",
+          title: "Error",
+          variant: "destructive",
+        });
+      }
+    });
+  };
+
+  const handleConfirmAddToTrip = async (tripId: string) => {
+    if (!selectedActivity) return;
+
+    startTransition(async () => {
+      try {
+        await addActivityToTrip(Number(tripId), {
+          title: selectedActivity.name,
+          description: selectedActivity.description,
+          location: selectedActivity.location,
+          price: selectedActivity.price,
+          currency: "USD", // Default
+          externalId: selectedActivity.id,
+          metadata: {
+            rating: selectedActivity.rating,
+            type: selectedActivity.type,
+            images: selectedActivity.images,
+          },
+        });
+
+        toast({
+          description: `Added "${selectedActivity.name}" to your trip`,
+          title: "Activity added",
+          variant: "default",
+        });
+
+        setIsTripModalOpen(false);
+        setSelectedActivity(null);
+      } catch (error) {
+        toast({
+          description:
+            error instanceof Error ? error.message : "Failed to add activity",
+          title: "Error",
+          variant: "destructive",
+        });
+      }
+    });
+  };
+
   const handleSelectActivity = (activity: Activity) => {
     setSelectedActivity(activity);
-    /**
-     * TODO: Integrate with trip planning or booking flow.
-     *
-     * IMPLEMENTATION PLAN (Decision Framework Score: 9.1/10.0)
-     * ===========================================================
-     *
-     * ARCHITECTURE DECISIONS:
-     * -----------------------
-     * 1. API Endpoint: Use existing `/api/itineraries` POST endpoint
-     *    - Endpoint: `frontend/src/app/api/itineraries/route.ts` (already exists)
-     *    - Schema: `itineraryItemCreateSchema` from `@schemas/trips`
-     *    - Rate limited via `"itineraries:create"` key (30 req/min)
-     *    - Telemetry: `"itineraries.create"` (automatic)
-     *    - Rationale: Reuse existing infrastructure; follows ADR-0029 DI pattern
-     *
-     * 2. User Flow: Show modal with options (add to trip vs book immediately)
-     *    - Modal should allow selecting trip and day/time slot
-     *    - Support "Create new trip" option if no trips exist
-     *    - Option to open booking flow directly
-     *    - Rationale: Flexible UX; supports multiple use cases
-     *
-     * 3. Trip Context: Get user's active trips via `/api/trips` endpoint
-     *    - Fetch trips on component mount or modal open
-     *    - Filter to active/planning trips only
-     *    - Cache trip list to avoid repeated fetches
-     *
-     * IMPLEMENTATION STEPS:
-     * ---------------------
-     *
-     * Step 1: Add State for Trip Selection Modal
-     *   ```typescript
-     *   const [showTripSelectionModal, setShowTripSelectionModal] = useState(false);
-     *   const [userTrips, setUserTrips] = useState<Array<{ id: number; title: string; destination: string }>>([]);
-     *   const [isLoadingTrips, setIsLoadingTrips] = useState(false);
-     *   ```
-     *
-     * Step 2: Fetch User Trips on Modal Open
-     *   ```typescript
-     *   const fetchUserTrips = useCallback(async () => {
-     *     setIsLoadingTrips(true);
-     *     try {
-     *       const response = await fetch("/api/trips", {
-     *         headers: { "Content-Type": "application/json" },
-     *         method: "GET",
-     *       });
-     *       if (!response.ok) throw new Error("Failed to fetch trips");
-     *       const data = await response.json();
-     *       const trips = Array.isArray(data) ? data : data.trips ?? [];
-     *       // Filter to active/planning trips
-     *       setUserTrips(trips.filter((t: Trip) =>
-     *         t.status === "planning" || t.status === "active"
-     *       ));
-     *     } catch (error) {
-     *       toast({
-     *         description: "Failed to load trips. Please try again.",
-     *         title: "Error",
-     *         variant: "destructive",
-     *       });
-     *     } finally {
-     *       setIsLoadingTrips(false);
-     *     }
-     *   }, [toast]);
-     *
-     *   // Fetch trips when modal opens
-     *   useEffect(() => {
-     *     if (showTripSelectionModal && userTrips.length === 0) {
-     *       fetchUserTrips();
-     *     }
-     *   }, [showTripSelectionModal, userTrips.length, fetchUserTrips]);
-     *   ```
-     *
-     * Step 3: Implement Add Activity to Trip Function
-     *   ```typescript
-     *   const addActivityToTrip = useCallback(async (
-     *     tripId: number,
-     *     day: number,
-     *     startTime?: string,
-     *     endTime?: string
-     *   ) => {
-     *     if (!selectedActivity) return;
-     *
-     *     try {
-     *       const requestBody = {
-     *         itemType: "activity" as const,
-     *         title: selectedActivity.name,
-     *         description: selectedActivity.description,
-     *         location: selectedActivity.location,
-     *         price: selectedActivity.price,
-     *         currency: "USD", // Default, could be derived from trip
-     *         tripId,
-     *         startTime,
-     *         endTime,
-     *         bookingStatus: "planned" as const,
-     *         externalId: selectedActivity.id, // Store Google Places ID
-     *         metadata: {
-     *           rating: selectedActivity.rating,
-     *           type: selectedActivity.type,
-     *           images: selectedActivity.images,
-     *         },
-     *       };
-     *
-     *       const response = await fetch("/api/itineraries", {
-     *         body: JSON.stringify(requestBody),
-     *         headers: { "Content-Type": "application/json" },
-     *         method: "POST",
-     *       });
-     *
-     *       if (!response.ok) {
-     *         const errorData = await response.json().catch(() => ({}));
-     *         throw new Error(errorData.reason ?? `Failed to add activity: ${response.status}`);
-     *       }
-     *
-     *       toast({
-     *         description: `Added "${selectedActivity.name}" to your trip`,
-     *         title: "Activity added",
-     *         variant: "default",
-     *       });
-     *
-     *       setSelectedActivity(null);
-     *       setShowTripSelectionModal(false);
-     *     } catch (error) {
-     *       toast({
-     *         description: error instanceof Error ? error.message : "Failed to add activity",
-     *         title: "Error",
-     *         variant: "destructive",
-     *       });
-     *     }
-     *   }, [selectedActivity, toast]);
-     *   ```
-     *
-     * Step 4: Update Modal to Show Trip Selection Options
-     *   - Replace simple "Activity Selected" modal with trip selection UI
-     *   - Show list of user trips with "Add to Trip" buttons
-     *   - Include "Create New Trip" option
-     *   - Include "Book Now" option (opens booking flow)
-     *   - Allow selecting day/time slot for selected trip
-     *
-     * INTEGRATION POINTS:
-     * -------------------
-     * - API: `/api/itineraries` POST endpoint (existing, no changes needed)
-     * - API: `/api/trips` GET endpoint (existing, for fetching user trips)
-     * - Schema: `itineraryItemCreateSchema` from `@schemas/trips`
-     * - Rate Limiting: Handled server-side via `withApiGuards` + `"itineraries:create"` key
-     * - Telemetry: Automatic via FetchInstrumentation (no code needed)
-     * - Error Handling: Standard try/catch with user-friendly toast messages
-     *
-     * FUTURE ENHANCEMENTS:
-     * -------------------
-     * - Add "Create New Trip" flow directly from modal
-     * - Support drag-and-drop to add activities to specific time slots
-     * - Add activity conflict detection (overlapping times)
-     * - Support bulk adding multiple activities at once
-     * - Integrate with trip store for optimistic updates
-     *
-     * Note: Current implementation shows simple modal; replace with trip selection UI
-     */
   };
 
   const handleCompareActivity = (_activity: Activity) => {
@@ -547,6 +456,14 @@ export default function ActivitiesSearchPage() {
               </button>
               <button
                 type="button"
+                onClick={handleAddToTripClick}
+                disabled={isPending}
+                className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-md"
+              >
+                {isPending ? "Loading..." : "Add to Trip"}
+              </button>
+              <button
+                type="button"
                 onClick={() => {
                   if (selectedActivity) {
                     try {
@@ -572,13 +489,24 @@ export default function ActivitiesSearchPage() {
                   }
                   setSelectedActivity(null);
                 }}
-                className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-md"
+                className="flex-1 px-4 py-2 bg-outline border border-input hover:bg-accent hover:text-accent-foreground rounded-md"
               >
-                View Booking Options
+                Book Now
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {selectedActivity && (
+        <TripSelectionModal
+          isOpen={isTripModalOpen}
+          onClose={() => setIsTripModalOpen(false)}
+          activity={selectedActivity}
+          trips={trips}
+          onAddToTrip={handleConfirmAddToTrip}
+          isAdding={isPending}
+        />
       )}
     </div>
   );

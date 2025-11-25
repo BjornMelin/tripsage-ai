@@ -1,0 +1,135 @@
+/**
+ * @fileoverview Server Actions for trip planning integration.
+ * Handles fetching user trips and adding activities to trips.
+ */
+
+import { bumpTag } from "@/lib/cache/tags";
+import { createServerSupabase } from "@/lib/supabase/server";
+import { mapDbTripToUi } from "@/lib/trips/mappers";
+import { tripsRowSchema } from "@schemas/supabase";
+import { itineraryItemCreateSchema, type UiTrip } from "@schemas/trips";
+
+/**
+ * Fetches the authenticated user's active and planning trips.
+ *
+ * Retrieves trips with "planning" or "active" status from Supabase.
+ * Results are mapped to the UI trip format.
+ *
+ * @returns A list of UI-formatted trips.
+ * @throws Error if unauthorized or fetch fails.
+ */
+export async function getPlanningTrips(): Promise<UiTrip[]> {
+  const supabase = await createServerSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("Unauthorized");
+  }
+
+  const { data, error } = await supabase
+    .from("trips")
+    .select("*")
+    .eq("user_id", user.id)
+    .in("status", ["planning", "active"])
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error("Failed to fetch trips");
+  }
+
+  const rows = (data ?? []).map((row: unknown) => tripsRowSchema.parse(row));
+  return rows.map(mapDbTripToUi);
+}
+
+/**
+ * Adds an activity to a specific trip.
+ *
+ * Validates trip ownership and activity data before inserting into Supabase.
+ * Invalidates "trips" cache tag upon success.
+ *
+ * @param tripId - The ID of the trip to add the activity to.
+ * @param activityData - The activity details including title, price, etc.
+ * @throws Error if unauthorized, trip not found, or validation fails.
+ */
+export async function addActivityToTrip(
+  tripId: number,
+  activityData: {
+    title: string;
+    description?: string;
+    location?: string;
+    price?: number;
+    currency?: string;
+    startTime?: string;
+    endTime?: string;
+    externalId?: string;
+    metadata?: Record<string, unknown>;
+  }
+) {
+  const supabase = await createServerSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("Unauthorized");
+  }
+
+  // Validate trip ownership
+  const { error: tripError } = await supabase
+    .from("trips")
+    .select("id")
+    .eq("id", tripId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (tripError) {
+    throw new Error("Trip not found or access denied");
+  }
+
+  const payload = {
+    bookingStatus: "planned" as const,
+    currency: activityData.currency ?? "USD",
+    description: activityData.description,
+    endTime: activityData.endTime,
+    externalId: activityData.externalId,
+    itemType: "activity" as const,
+    location: activityData.location,
+    metadata: activityData.metadata,
+    price: activityData.price,
+    startTime: activityData.startTime,
+    title: activityData.title,
+    tripId,
+  };
+
+  const validation = itineraryItemCreateSchema.safeParse(payload);
+
+  if (!validation.success) {
+    throw new Error("Invalid activity data");
+  }
+
+  const { error: insertError } = await supabase
+    .from("itinerary_items")
+    .insert({
+      booking_status: validation.data.bookingStatus,
+      currency: validation.data.currency,
+      description: validation.data.description ?? null,
+      end_time: validation.data.endTime ?? null,
+      external_id: validation.data.externalId ?? null,
+      item_type: validation.data.itemType,
+      location: validation.data.location ?? null,
+      metadata: (validation.data.metadata ?? {}) as any, // Supabase expects Json
+      price: validation.data.price,
+      start_time: validation.data.startTime ?? null,
+      title: validation.data.title,
+      trip_id: validation.data.tripId,
+      user_id: user.id,
+    });
+
+  if (insertError) {
+    throw new Error("Failed to add activity to trip");
+  }
+
+  await bumpTag("trips");
+}
