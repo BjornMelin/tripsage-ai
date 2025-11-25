@@ -18,45 +18,47 @@ UI.
 We already have:
 
 - Canonical Zod schemas for agent configuration requests and records in
-  `frontend/src/domain/schemas/configuration.ts`.:contentReference[oaicite:79]{index=79}  
+  `frontend/src/domain/schemas/configuration.ts`.
 - An admin UI (`AgentConfigurationManager`) that allows choosing an agent,
-  editing configuration fields, and showing basic metrics.:contentReference[oaicite:80]{index=80}  
+  editing configuration fields, and showing basic metrics.
 - A robust Supabase SSR client (`createServerSupabase`) and route guards
-  (`withApiGuards`) used for other authenticated APIs.  
-- Upstash Redis helpers for JSON caching and cache tag versioning.  
+  (`withApiGuards`) used for other authenticated APIs.
+- Upstash Redis helpers for JSON caching and cache tag versioning.
 
 However:
 
 - There is **no backend API** for reading/writing agent configuration; the UI
-  calls `/api/config/agents/...` endpoints that do not exist.  
+  calls `/api/config/agents/...` endpoints that do not exist.
 - Configuration is not a first-class persisted concept: there are no Supabase
   tables for agent configuration or its version history.
 - Agent runners (e.g., `runBudgetAgent`, `runDestinationAgent`) use parameters
-  embedded directly in code and do not consult a central configuration source.  
+  embedded directly in code and do not consult a central configuration source.
 
 We need a single, consistent configuration backend that:
 
 - Stores per-agent configuration with versioning and auditability.
 - Exposes authenticated APIs for read/update/list/rollback.
 - Integrates with Upstash for caching and with our observability stack.
-- Is consumed by all agent runners when building `streamText` calls.  
+- Is consumed by all agent runners when building `streamText` calls.
 
 ## Decision
 
 Implement a **Supabase-backed agent configuration service** with:
 
 1. **Data model:**
+
    - `agent_config` table storing the current active configuration per
-     `(agent_type, scope)` (scope: global, environment, or tenant/user).  
+     `(agent_type, scope)` (scope: global, environment, or tenant/user).
    - `agent_config_versions` table storing an append-only version log, including
      diffable payload, created_by, created_at, and optional description.
    - Config payloads are validated with `configurationAgentConfigSchema` at
-     write time and stored as JSONB.:contentReference[oaicite:86]{index=86}
+     write time and stored as JSONB.
    - Both tables must have RLS policies enforcing admin-only or
      service-role-only read/write access to ensure database-level protections
-     in addition to application guards.  
+     in addition to application guards.
 
-2. **API surface (`frontend/src/app/api/config/agents/**`):**
+2. **API surface (`frontend/src/app/api/config/agents/**`):\*\*
+
    - `GET /api/config/agents/:agentType` → returns the effective active config
      for a given agent type and scope (global now; scope-extensible later).
    - `PUT /api/config/agents/:agentType` → validates request body against
@@ -68,20 +70,23 @@ Implement a **Supabase-backed agent configuration service** with:
      previous version as a new head version.
 
    All handlers:
+
    - Use `withApiGuards({ auth: true, telemetry: "...", rateLimit: ... })`
-     for auth, rate limiting, and tracing.  
-   - Use `createServerSupabase` for DB access per Supabase SSR guidelines.  
-   - Validate and parse JSON via `parseJsonBody` and `validateSchema`.  
+     for auth, rate limiting, and tracing.
+   - Use `createServerSupabase` for DB access per Supabase SSR guidelines.
+   - Validate and parse JSON via `parseJsonBody` and `validateSchema`.
 
 3. **Caching & invalidation:**
+
    - Agent configs are cached in Upstash Redis using `getCachedJson` /
      `setCachedJson` with a key prefix such as
-     `agent-config:{agentType}:{scope}`.:contentReference[oaicite:90]{index=90}  
+     `agent-config:{agentType}:{scope}`.
    - After a successful config update or rollback, we bump a cache tag
      `configuration` using `bumpTag("configuration")` to invalidate dependent
-     caches.:contentReference[oaicite:91]{index=91}  
+     caches.
 
 4. **Agent runtime integration:**
+
    - Introduce `@/lib/agents/config-resolver` with a function  
      `resolveAgentConfig(agentType, { userId? })` that:
      - Reads from Upstash cache (with fallback to Supabase).
@@ -89,7 +94,7 @@ Implement a **Supabase-backed agent configuration service** with:
    - Update agent runners (budget, destination, accommodations, itinerary,
      flights) to call `resolveAgentConfig` and apply the resolved config
      when constructing `streamText` call options (model, temperature, tools,
-     max tokens).  
+     max tokens).
 
 5. **Admin UI wiring:**
    - Refactor `AgentConfigurationManager` to:
@@ -100,7 +105,8 @@ Implement a **Supabase-backed agent configuration service** with:
 
 ## Options Considered
 
-- **Option A – Supabase tables + Next.js API routes + Upstash cache (chosen)**  
+- **Option A – Supabase tables + Next.js API routes + Upstash cache (chosen)**
+
   - **Pros:**
     - Leverages existing Supabase SSR integration, RLS, and observability.
     - Fits existing route handler + `withApiGuards` pattern.
@@ -109,7 +115,8 @@ Implement a **Supabase-backed agent configuration service** with:
   - **Cons:**
     - Requires DB migrations and new server code; more moving parts.
 
-- **Option B – Store configuration only in environment variables or Vercel KV**  
+- **Option B – Store configuration only in environment variables or Vercel KV**
+
   - **Pros:**
     - Simple for global, static configuration.
   - **Cons:**
@@ -117,7 +124,7 @@ Implement a **Supabase-backed agent configuration service** with:
     - Harder to manage via UI; updates require redeploys.
     - Inconsistent with current Supabase‑centric data model.
 
-- **Option C – Keep configuration purely in code (constants, prompts)**  
+- **Option C – Keep configuration purely in code (constants, prompts)**
   - **Pros:**
     - No new infrastructure; low initial implementation cost.
   - **Cons:**
@@ -128,6 +135,7 @@ Implement a **Supabase-backed agent configuration service** with:
 ## Consequences
 
 - **Positive:**
+
   - Central, type‑safe source of truth for agent configuration with clear UI.
   - Consistent behavior of agents across routes and features.
   - Easier experimentation (e.g., try new model for budget agent) with version
@@ -145,11 +153,11 @@ Implement a **Supabase-backed agent configuration service** with:
 
 ## References
 
-- `frontend/src/domain/schemas/configuration.ts` (agent configuration schemas).:contentReference[oaicite:93]{index=93}  
+- `frontend/src/domain/schemas/configuration.ts` (agent configuration schemas).
 - `frontend/src/components/features/agents/configuration-manager.tsx`
-  (current admin UI).:contentReference[oaicite:94]{index=94}  
+  (current admin UI).
 - `frontend/src/lib/supabase/server.ts`, `frontend/src/lib/supabase/factory.ts` (SSR
-  Supabase client).  
+  Supabase client).
 - `frontend/src/lib/cache/upstash.ts`, `frontend/src/lib/cache/tags.ts` (Upstash
-  JSON cache + cache tags).  
-- `frontend/src/app/api/agents/*.ts` (agent route handlers using AI SDK v6).  
+  JSON cache + cache tags).
+- `frontend/src/app/api/agents/*.ts` (agent route handlers using AI SDK v6).
