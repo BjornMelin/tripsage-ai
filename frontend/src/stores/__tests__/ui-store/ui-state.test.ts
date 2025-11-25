@@ -19,7 +19,8 @@ Object.defineProperty(window, "matchMedia", {
   writable: true,
 });
 
-import { type Theme, useUiStore } from "@/stores/ui-store";
+import type { Theme } from "@schemas/stores";
+import { useUiStore } from "@/stores/ui-store";
 
 describe("UI Store - UI State Management", () => {
   beforeEach(() => {

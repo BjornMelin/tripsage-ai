@@ -173,10 +173,7 @@ export const resetSearchFactory = (): void => {
   resultIdCounter = 1;
 };
 
-import type {
-  SearchHistoryItem,
-  ValidatedSavedSearch,
-} from "@/stores/search-history-store";
+import type { SearchHistoryItem, ValidatedSavedSearch } from "@schemas/stores";
 
 /**
  * Create mock search history item.

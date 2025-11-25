@@ -1,11 +1,8 @@
 /** @vitest-environment jsdom */
 
+import type { SearchHistoryItem, ValidatedSavedSearch } from "@schemas/stores";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
-import type {
-  SearchHistoryItem,
-  ValidatedSavedSearch,
-} from "@/stores/search-history-store";
 import {
   selectFavoriteSearchesFrom,
   selectRecentSearchesByTypeFrom,

@@ -1,8 +1,8 @@
 /** @vitest-environment jsdom */
 
+import type { TravelDocument } from "@schemas/stores";
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { TravelDocument } from "@/stores/user-store";
 import { useUserProfileStore } from "@/stores/user-store";
 import { setupTimeoutMock } from "@/test/store-helpers";
 

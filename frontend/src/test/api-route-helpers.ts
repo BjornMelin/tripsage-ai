@@ -75,7 +75,9 @@ vi.mock("@/lib/redis", () => ({
 }));
 
 const LIMIT_SPY = vi.hoisted(() =>
-  vi.fn(async (_key: string, _identifier: string) => ({ ...DEFAULT_RATE_LIMIT }))
+  vi.fn(async (_key: string, _identifier: string) => ({
+    ...DEFAULT_RATE_LIMIT,
+  }))
 );
 
 const RATELIMIT_CTOR = vi.hoisted(() => {
@@ -94,22 +96,27 @@ vi.mock("@upstash/ratelimit", () => ({
   Ratelimit: RATELIMIT_CTOR,
 }));
 
-const SUPABASE_CLIENT = vi.hoisted(() => {
-  const client = createMockSupabaseClient({ user: STATE.user });
-  // Override auth.getUser to use STATE.user
-  client.auth.getUser = vi.fn(() => {
-    if (STATE.user) {
-      return Promise.resolve({ data: { user: STATE.user }, error: null });
-    }
-    return Promise.resolve({ data: { user: null }, error: null });
-  }) as typeof client.auth.getUser;
-  return client;
-});
+// Create a lazily-initialized Supabase client holder
+// The actual client is created after imports are resolved
+let supabaseClient: ReturnType<typeof createMockSupabaseClient> | null = null;
 
-const CREATE_SUPABASE_MOCK = vi.hoisted(() => vi.fn(async () => SUPABASE_CLIENT));
+const getSupabaseClient = () => {
+  if (!supabaseClient) {
+    supabaseClient = createMockSupabaseClient({ user: STATE.user });
+    supabaseClient.auth.getUser = vi.fn(() => {
+      if (STATE.user) {
+        return Promise.resolve({ data: { user: STATE.user }, error: null });
+      }
+      return Promise.resolve({ data: { user: null }, error: null });
+    }) as typeof supabaseClient.auth.getUser;
+  }
+  return supabaseClient;
+};
+
+const CREATE_SUPABASE_MOCK = vi.fn(async () => getSupabaseClient());
 
 vi.mock("@/lib/supabase/server", () => ({
-  createServerSupabase: CREATE_SUPABASE_MOCK,
+  createServerSupabase: vi.fn(async () => getSupabaseClient()),
 }));
 
 vi.mock("@/lib/api/route-helpers", async () => {
@@ -141,20 +148,15 @@ export function resetApiRouteMocks(): void {
     Promise.resolve(getMockCookiesForTest(STATE.cookies))
   );
   COOKIES_MOCK.mockClear();
-  // Reset and recreate Supabase client with current state
-  const newClient = createMockSupabaseClient({ user: STATE.user });
-  newClient.auth.getUser = vi.fn(() => {
-    if (STATE.user) {
-      return Promise.resolve({ data: { user: STATE.user }, error: null });
-    }
-    return Promise.resolve({ data: { user: null }, error: null });
-  }) as typeof newClient.auth.getUser;
-  Object.assign(SUPABASE_CLIENT, newClient);
+  // Reset Supabase client with current state by resetting the lazy holder
+  supabaseClient = null;
+  // Recreate the client with current STATE.user
+  const client = getSupabaseClient();
   CREATE_SUPABASE_MOCK.mockReset();
-  CREATE_SUPABASE_MOCK.mockResolvedValue(SUPABASE_CLIENT);
+  CREATE_SUPABASE_MOCK.mockResolvedValue(client);
   setSupabaseFactoryForTests(
     async () =>
-      SUPABASE_CLIENT as unknown as Awaited<
+      client as unknown as Awaited<
         ReturnType<typeof import("@/lib/supabase/server").createServerSupabase>
       >
   );
@@ -204,7 +206,10 @@ export function mockApiRouteAuthUser(user: User | null | Partial<User>): void {
     // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case fields
     app_metadata: { ...baseUser.app_metadata, ...(user as User).app_metadata },
     // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case fields
-    user_metadata: { ...baseUser.user_metadata, ...(user as User).user_metadata },
+    user_metadata: {
+      ...baseUser.user_metadata,
+      ...(user as User).user_metadata,
+    },
   } as User;
 
   STATE.user = normalizedUser;
@@ -235,7 +240,8 @@ export function mockApiRouteCookies(cookies: Record<string, string>): void {
   STATE.cookies = { ...cookies };
 }
 
-export const apiRouteSupabaseMock = SUPABASE_CLIENT;
+/** Get the current Supabase client mock (lazy-initialized). */
+export const getApiRouteSupabaseMock = () => getSupabaseClient();
 export const apiRouteRateLimitSpy = LIMIT_SPY;
 export const apiRouteCookiesMock = COOKIES_MOCK;
 export const apiRouteCreateSupabaseMock = CREATE_SUPABASE_MOCK;

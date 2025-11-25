@@ -1,8 +1,8 @@
 /** @vitest-environment jsdom */
 
+import type { UserProfile } from "@schemas/stores";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { UserProfile } from "@/stores/user-store";
 
 import { SecuritySection } from "../security-section";
 
