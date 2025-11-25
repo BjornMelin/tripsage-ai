@@ -2,7 +2,7 @@
  * @fileoverview Dashboard metrics API route handler.
  *
  * Returns aggregated dashboard metrics with time window filtering.
- * Implements cache-aside pattern with Redis caching.
+ * Uses aggregation with Redis cache-aside handled inside `aggregateDashboardMetrics`.
  *
  * Auth: Required
  * Rate limit: dashboard:metrics (30 req/min)
@@ -49,35 +49,40 @@ export const GET = withApiGuards({
   auth: true,
   rateLimit: "dashboard:metrics",
   telemetry: "dashboard.metrics",
-})(async (req: NextRequest) => {
-  // Parse and validate query parameters
-  const searchParams = req.nextUrl.searchParams;
-  const queryObject = Object.fromEntries(searchParams.entries());
-  const queryResult = QuerySchema.safeParse(queryObject);
+})(
+  async (
+    req: NextRequest,
+    { supabase: _supabase, user: _user }: { supabase: unknown; user: unknown }
+  ) => {
+    // Parse and validate query parameters
+    const searchParams = req.nextUrl.searchParams;
+    const queryObject = Object.fromEntries(searchParams.entries());
+    const queryResult = QuerySchema.safeParse(queryObject);
 
-  if (!queryResult.success) {
-    return NextResponse.json(
-      {
-        error: "invalid_query",
-        issues: queryResult.error.issues,
-        reason: "Invalid query parameters",
+    if (!queryResult.success) {
+      return NextResponse.json(
+        {
+          error: "invalid_query",
+          issues: queryResult.error.issues,
+          reason: "Invalid query parameters",
+        },
+        { status: 400 }
+      );
+    }
+
+    const { window } = queryResult.data;
+    const hours = windowToHours(window);
+
+    // Aggregate metrics
+    const metrics = await aggregateDashboardMetrics(hours);
+
+    // Validate response shape (defense in depth)
+    const validated = dashboardMetricsSchema.parse(metrics);
+
+    return NextResponse.json(validated, {
+      headers: {
+        "Cache-Control": "private, max-age=0, must-revalidate",
       },
-      { status: 400 }
-    );
+    });
   }
-
-  const { window } = queryResult.data;
-  const hours = windowToHours(window);
-
-  // Aggregate metrics
-  const metrics = await aggregateDashboardMetrics(hours);
-
-  // Validate response shape (defense in depth)
-  const validated = dashboardMetricsSchema.parse(metrics);
-
-  return NextResponse.json(validated, {
-    headers: {
-      "Cache-Control": "private, max-age=0, must-revalidate",
-    },
-  });
-});
+);
