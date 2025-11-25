@@ -10,13 +10,13 @@
 
 import { type LoginFormData, loginFormSchema } from "@schemas/auth";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useId, useMemo, useState } from "react";
+import { useId, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createClient } from "@/lib/supabase";
+import { useSupabaseRequired } from "@/lib/supabase";
 
 /** Props for the LoginForm component. */
 interface LoginFormProps {
@@ -58,7 +58,7 @@ export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormPro
   const emailId = useId();
   const passwordId = useId();
 
-  const supabase = useMemo(() => createClient(), []);
+  const supabase = useSupabaseRequired();
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const nextSuffix = nextParam ? `?next=${encodeURIComponent(nextParam)}` : "";
