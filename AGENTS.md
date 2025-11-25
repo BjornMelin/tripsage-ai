@@ -7,9 +7,9 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 ## 0. Architecture, Scope, and Non-Goals
 
 - **Frontend-first architecture:** New capabilities must be implemented in `frontend/` using:
-  - Next.js `16.0.3`, React `19.2.0`
-  - AI SDK core `ai@6.0.0-beta.105` and `@ai-sdk/react@3.0.0-beta.105`
-  - Providers: `@ai-sdk/openai@3.0.0-beta.63`, `@ai-sdk/anthropic@3.0.0-beta.54`, `@ai-sdk/xai@3.0.0-beta.39`, `@ai-sdk/google`
+  - Next.js `16.0.4`, React `19.2.0`
+  - AI SDK core `ai@6.0.0-beta.116` and `@ai-sdk/react@3.0.0-beta.116`
+  - Providers: `@ai-sdk/openai@3.0.0-beta.66`, `@ai-sdk/anthropic@3.0.0-beta.60`, `@ai-sdk/xai@3.0.0-beta.41`
   - Supabase: `@supabase/ssr@0.7.0`, `@supabase/supabase-js@2.84.0`
   - Upstash: `@upstash/redis@1.35.6`, `@upstash/ratelimit@2.0.7`, `@upstash/qstash@2.8.4`
   - Observability: `@opentelemetry/api@1.9.0`

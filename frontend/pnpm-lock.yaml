@@ -13,20 +13,17 @@ importers:
   .:
     dependencies:
       '@ai-sdk/anthropic':
-        specifier: 3.0.0-beta.54
-        version: 3.0.0-beta.54(zod@4.1.12)
-      '@ai-sdk/mcp':
-        specifier: 1.0.0-beta.15
-        version: 1.0.0-beta.15(zod@4.1.12)
+        specifier: 3.0.0-beta.60
+        version: 3.0.0-beta.60(zod@4.1.12)
       '@ai-sdk/openai':
-        specifier: 3.0.0-beta.63
-        version: 3.0.0-beta.63(zod@4.1.12)
+        specifier: 3.0.0-beta.66
+        version: 3.0.0-beta.66(zod@4.1.12)
       '@ai-sdk/react':
-        specifier: 3.0.0-beta.105
-        version: 3.0.0-beta.105(react@19.2.0)(zod@4.1.12)
+        specifier: 3.0.0-beta.116
+        version: 3.0.0-beta.116(react@19.2.0)(zod@4.1.12)
       '@ai-sdk/xai':
-        specifier: 3.0.0-beta.39
-        version: 3.0.0-beta.39(zod@4.1.12)
+        specifier: 3.0.0-beta.41
+        version: 3.0.0-beta.41(zod@4.1.12)
       '@hello-pangea/dnd':
         specifier: ^18.0.1
         version: 18.0.1(@types/react@19.2.6)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -160,8 +157,8 @@ importers:
         specifier: ^2.1.0
         version: 2.1.0(@opentelemetry/api-logs@0.208.0)(@opentelemetry/api@1.9.0)(@opentelemetry/instrumentation@0.208.0(@opentelemetry/api@1.9.0))(@opentelemetry/resources@2.2.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-logs@0.208.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-metrics@2.2.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.2.0(@opentelemetry/api@1.9.0))
       ai:
-        specifier: 6.0.0-beta.105
-        version: 6.0.0-beta.105(zod@4.1.12)
+        specifier: 6.0.0-beta.116
+        version: 6.0.0-beta.116(zod@4.1.12)
       amadeus:
         specifier: ^11.0.0
         version: 11.0.0
@@ -196,8 +193,8 @@ importers:
         specifier: ^1.0.21
         version: 1.0.21
       libphonenumber-js:
-        specifier: ^1.12.27
-        version: 1.12.27
+        specifier: ^1.12.29
+        version: 1.12.29
       lucide-react:
         specifier: ^0.554.0
         version: 0.554.0(react@19.2.0)
@@ -208,8 +205,8 @@ importers:
         specifier: ^5.1.6
         version: 5.1.6
       next:
-        specifier: ^16.0.3
-        version: 16.0.3(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.56.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+        specifier: ^16.0.4
+        version: 16.0.4(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.56.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -352,38 +349,32 @@ packages:
   '@adobe/css-tools@4.4.4':
     resolution: {integrity: sha512-Elp+iwUx5rN5+Y8xLt5/GRoG20WGoDCQ/1Fb+1LiGtvwbDavuSk0jhD/eZdckHAuzcDzccnkv+rEjyWfRx18gg==}
 
-  '@ai-sdk/anthropic@3.0.0-beta.54':
-    resolution: {integrity: sha512-FwGoZxuq9aOet1xnKHfdpVQDYGUICnhWsDiW2ea0gHa9N298XWl28nr2ZDYZQnkn/MYndBOfz4WctpLp/NJ59g==}
+  '@ai-sdk/anthropic@3.0.0-beta.60':
+    resolution: {integrity: sha512-lzd+YdJnwGZ/DjsfdjAhfczpJKce01S94yEB8IBH3lE4eLu51l6y7dWYdaLWojA/EolCxS5pKcGillJbAm4rwA==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
-  '@ai-sdk/gateway@2.0.0-beta.57':
-    resolution: {integrity: sha512-ZSqa1QKKU87gY4ivgTiH+8P5EL3KfaqwK0WlwAizKS+S6mgBt0m9zuYVjg0PWRyiRhynz2zORQULGpcLEwlNag==}
+  '@ai-sdk/gateway@2.0.0-beta.61':
+    resolution: {integrity: sha512-VZ8K1GUFYsFpDe4hz/OJSlPe0EbYMvmtS7ps1ENsB150R17iwnOiW7s37u7vXW52+XwbEiGsObjKgIt4MB1tqw==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
-  '@ai-sdk/mcp@1.0.0-beta.15':
-    resolution: {integrity: sha512-/LisjXCTmTT/OIzTV+cLEqxIEBDyJBeEvnzgnrMLY/Vb0ckulp8bOhHwrC9k2DtXgLfpS7qWLd9Jyes0+eMdEA==}
+  '@ai-sdk/openai-compatible@2.0.0-beta.35':
+    resolution: {integrity: sha512-JvDNUwmt/csGu5Obfa4Fbbfo9EYMU3cW2tkevD5SeqALg8YVG0Mo+rXXmAPNLM1tpG0ltMF1v4ZMnS9Tb5PBbQ==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
-  '@ai-sdk/openai-compatible@2.0.0-beta.34':
-    resolution: {integrity: sha512-Y/9K6p4fRNq+3aoeIzs/x3136pJSpKoRavmIRsJlprIXJ7H/gkd5fX4iBKA5de1mo8l+LfwBeoPhjMnTyUCHvQ==}
+  '@ai-sdk/openai@3.0.0-beta.66':
+    resolution: {integrity: sha512-by3gWdjsbN5vpkgoLohdUmyPV4HD45A0RF89WhJ+STZs4+L5HWNu+g6fyr2nvy2k8ij26wbzDUwWuWEzNXqquA==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
-  '@ai-sdk/openai@3.0.0-beta.63':
-    resolution: {integrity: sha512-yBV2cval98KtTt+47OpWnLLTCCWrxr04UqZplfGt3ISqVmg4DpuuWMguqmZE2AfrIKddS4Vh20s7h6oa/C/0pg==}
-    engines: {node: '>=18'}
-    peerDependencies:
-      zod: ^3.25.76 || ^4.1.8
-
-  '@ai-sdk/provider-utils@4.0.0-beta.33':
-    resolution: {integrity: sha512-8UnWOiWP5Fm0X+tU0ne4X3OnbDq5mMMxympHcW5VjVmx+Mc1TgD8KGPl0XsS9l3f61qPSVn1vZC3FthRnTlvhA==}
+  '@ai-sdk/provider-utils@4.0.0-beta.34':
+    resolution: {integrity: sha512-GxLNX8xZlf2BPJaXsR39ignBVfHthBsXVqRN+S7iCx503IdJXi+mrgWQElBRbpqHucOR+3CQ6CIk8SDaCeGb/A==}
     engines: {node: '>=18'}
     peerDependencies:
       '@valibot/to-json-schema': ^1.3.0
@@ -398,18 +389,18 @@ packages:
       effect:
         optional: true
 
-  '@ai-sdk/provider@3.0.0-beta.16':
-    resolution: {integrity: sha512-R62Z0fziX467Eu6MtVhkmHm0VFtJrq4vPGo8w4mcc4LhSPncHwn+b9yoyxv3f2pkWyUAhPR4ttgWyZoFG/lXIA==}
+  '@ai-sdk/provider@3.0.0-beta.17':
+    resolution: {integrity: sha512-1Jek+B4W/8KV48Lcsnl7QBXD22fmwDISz//JRGtPRjexrwr2bSeFJ3yqWpvQo6CYttac9GYf3MTiho4iSl+V2A==}
     engines: {node: '>=18'}
 
-  '@ai-sdk/react@3.0.0-beta.105':
-    resolution: {integrity: sha512-jtpae/nRYGrPBfpYbOTJKvl88A0o5tiYm077Ev+WkCaB31JeMw62RRBQRTFlAcB0VGAMqqpLU+KvNgx18kcg3Q==}
+  '@ai-sdk/react@3.0.0-beta.116':
+    resolution: {integrity: sha512-OaUsuZi9Dr8GNB9NwD2qgwd4Spp8A+1kpp/EWOqo2fKUCp/hlHBtf15TgHhtqrPTscXzD2SmRh+mjyQJl5W9GQ==}
     engines: {node: '>=18'}
     peerDependencies:
       react: ^18 || ^19 || ^19.0.0-rc
 
-  '@ai-sdk/xai@3.0.0-beta.39':
-    resolution: {integrity: sha512-V1VfXCD2zdinYkC/ZKPWknNBeMKMQHHEpk72F5LPqYKHB+FGgL4RDaT3tINqLKcycTWKTLoiPkq55n/9YbMH7A==}
+  '@ai-sdk/xai@3.0.0-beta.41':
+    resolution: {integrity: sha512-+Qg1G5BSxRb2AIjv7cTEpBa6F/JU1iNx7+IC8KLrWDdgpZpV4MPBN4kDXNcWyouYnZQLjJqI+JFraNbKCjT6Tw==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -1189,53 +1180,53 @@ packages:
   '@next/bundle-analyzer@16.0.3':
     resolution: {integrity: sha512-6Xo8f8/ZXtASfTPa6TH1aUn+xDg9Pkyl1YHVxu+89cVdLH7MnYjxv3rPOfEJ9BwCZCU2q4Flyw5MwltfD2pGbA==}
 
-  '@next/env@16.0.3':
-    resolution: {integrity: sha512-IqgtY5Vwsm14mm/nmQaRMmywCU+yyMIYfk3/MHZ2ZTJvwVbBn3usZnjMi1GacrMVzVcAxJShTCpZlPs26EdEjQ==}
+  '@next/env@16.0.4':
+    resolution: {integrity: sha512-FDPaVoB1kYhtOz6Le0Jn2QV7RZJ3Ngxzqri7YX4yu3Ini+l5lciR7nA9eNDpKTmDm7LWZtxSju+/CQnwRBn2pA==}
 
-  '@next/swc-darwin-arm64@16.0.3':
-    resolution: {integrity: sha512-MOnbd92+OByu0p6QBAzq1ahVWzF6nyfiH07dQDez4/Nku7G249NjxDVyEfVhz8WkLiOEU+KFVnqtgcsfP2nLXg==}
+  '@next/swc-darwin-arm64@16.0.4':
+    resolution: {integrity: sha512-TN0cfB4HT2YyEio9fLwZY33J+s+vMIgC84gQCOLZOYusW7ptgjIn8RwxQt0BUpoo9XRRVVWEHLld0uhyux1ZcA==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [darwin]
 
-  '@next/swc-darwin-x64@16.0.3':
-    resolution: {integrity: sha512-i70C4O1VmbTivYdRlk+5lj9xRc2BlK3oUikt3yJeHT1unL4LsNtN7UiOhVanFdc7vDAgZn1tV/9mQwMkWOJvHg==}
+  '@next/swc-darwin-x64@16.0.4':
+    resolution: {integrity: sha512-XsfI23jvimCaA7e+9f3yMCoVjrny2D11G6H8NCcgv+Ina/TQhKPXB9P4q0WjTuEoyZmcNvPdrZ+XtTh3uPfH7Q==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [darwin]
 
-  '@next/swc-linux-arm64-gnu@16.0.3':
-    resolution: {integrity: sha512-O88gCZ95sScwD00mn/AtalyCoykhhlokxH/wi1huFK+rmiP5LAYVs/i2ruk7xST6SuXN4NI5y4Xf5vepb2jf6A==}
+  '@next/swc-linux-arm64-gnu@16.0.4':
+    resolution: {integrity: sha512-uo8X7qHDy4YdJUhaoJDMAbL8VT5Ed3lijip2DdBHIB4tfKAvB1XBih6INH2L4qIi4jA0Qq1J0ErxcOocBmUSwg==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
 
-  '@next/swc-linux-arm64-musl@16.0.3':
-    resolution: {integrity: sha512-CEErFt78S/zYXzFIiv18iQCbRbLgBluS8z1TNDQoyPi8/Jr5qhR3e8XHAIxVxPBjDbEMITprqELVc5KTfFj0gg==}
+  '@next/swc-linux-arm64-musl@16.0.4':
+    resolution: {integrity: sha512-pvR/AjNIAxsIz0PCNcZYpH+WmNIKNLcL4XYEfo+ArDi7GsxKWFO5BvVBLXbhti8Coyv3DE983NsitzUsGH5yTw==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
 
-  '@next/swc-linux-x64-gnu@16.0.3':
-    resolution: {integrity: sha512-Tc3i+nwt6mQ+Dwzcri/WNDj56iWdycGVh5YwwklleClzPzz7UpfaMw1ci7bLl6GRYMXhWDBfe707EXNjKtiswQ==}
+  '@next/swc-linux-x64-gnu@16.0.4':
+    resolution: {integrity: sha512-2hebpsd5MRRtgqmT7Jj/Wze+wG+ZEXUK2KFFL4IlZ0amEEFADo4ywsifJNeFTQGsamH3/aXkKWymDvgEi+pc2Q==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
 
-  '@next/swc-linux-x64-musl@16.0.3':
-    resolution: {integrity: sha512-zTh03Z/5PBBPdTurgEtr6nY0vI9KR9Ifp/jZCcHlODzwVOEKcKRBtQIGrkc7izFgOMuXDEJBmirwpGqdM/ZixA==}
+  '@next/swc-linux-x64-musl@16.0.4':
+    resolution: {integrity: sha512-pzRXf0LZZ8zMljH78j8SeLncg9ifIOp3ugAFka+Bq8qMzw6hPXOc7wydY7ardIELlczzzreahyTpwsim/WL3Sg==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
 
-  '@next/swc-win32-arm64-msvc@16.0.3':
-    resolution: {integrity: sha512-Jc1EHxtZovcJcg5zU43X3tuqzl/sS+CmLgjRP28ZT4vk869Ncm2NoF8qSTaL99gh6uOzgM99Shct06pSO6kA6g==}
+  '@next/swc-win32-arm64-msvc@16.0.4':
+    resolution: {integrity: sha512-7G/yJVzum52B5HOqqbQYX9bJHkN+c4YyZ2AIvEssMHQlbAWOn3iIJjD4sM6ihWsBxuljiTKJovEYlD1K8lCUHw==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [win32]
 
-  '@next/swc-win32-x64-msvc@16.0.3':
-    resolution: {integrity: sha512-N7EJ6zbxgIYpI/sWNzpVKRMbfEGgsWuOIvzkML7wxAAZhPk1Msxuo/JDu1PKjWGrAoOLaZcIX5s+/pF5LIbBBg==}
+  '@next/swc-win32-x64-msvc@16.0.4':
+    resolution: {integrity: sha512-0Vy4g8SSeVkuU89g2OFHqGKM4rxsQtihGfenjx2tRckPrge5+gtFnRWGAAwvGXr0ty3twQvcnYjEyOrLHJ4JWA==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [win32]
@@ -2780,8 +2771,8 @@ packages:
     resolution: {integrity: sha512-4I7Td01quW/RpocfNayFdFVk1qSuoh0E7JrbRJ16nH01HhKFQ88INq9Sd+nd72zqRySlr9BmDA8xlEJ6vJMrYA==}
     engines: {node: '>=8'}
 
-  ai@6.0.0-beta.105:
-    resolution: {integrity: sha512-KXnP0s5ztyUVdHRM8hQiRMXr4Afg3zr3UlX3S31pP7tWRAo962EpVRavh5wzmAzmi6EN98rcRQdbCHZ0m81ptQ==}
+  ai@6.0.0-beta.116:
+    resolution: {integrity: sha512-QXzkVzZaXZA0B/pYOjsGWeBtKPjgYYf+Mm39tiubXu3kAUO1xLdcEnNgQNaEaGwGEZ314pQ+irZ9Zj6h7Zx3jg==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -4092,8 +4083,8 @@ packages:
   leac@0.6.0:
     resolution: {integrity: sha512-y+SqErxb8h7nE/fiEX07jsbuhrpO9lL8eca7/Y1nuWV2moNlXhyd59iDGcRf6moVyDMbmTNzL40SUyrFU/yDpg==}
 
-  libphonenumber-js@1.12.27:
-    resolution: {integrity: sha512-8gHhHzzcnY1EF4BS5L/lrjv2VAZWd6ltU7c/sqoktRZSQvZl4g8hrgXtXHXGkSFKFYArFON12zUNJrNVqJ9u4g==}
+  libphonenumber-js@1.12.29:
+    resolution: {integrity: sha512-P2aLrbeqHbmh8+9P35LXQfXOKc7XJ0ymUKl7tyeyQjdRNfzunXWxQXGc4yl3fUf28fqLRfPY+vIVvFXK7KEBTw==}
 
   lightningcss-android-arm64@1.30.2:
     resolution: {integrity: sha512-BH9sEdOCahSgmkVhBLeU7Hc9DWeZ1Eb6wNS6Da8igvUwAe0sqROHddIlvU06q3WyXVEOYDZ6ykBZQnjTbmo4+A==}
@@ -4566,8 +4557,8 @@ packages:
       react: ^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc
       react-dom: ^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc
 
-  next@16.0.3:
-    resolution: {integrity: sha512-Ka0/iNBblPFcIubTA1Jjh6gvwqfjrGq1Y2MTI5lbjeLIAfmC+p5bQmojpRZqgHHVu5cG4+qdIiwXiBSm/8lZ3w==}
+  next@16.0.4:
+    resolution: {integrity: sha512-vICcxKusY8qW7QFOzTvnRL1ejz2ClTqDKtm1AcUjm2mPv/lVAdgpGNsftsPRIDJOXOjRQO68i1dM8Lp8GZnqoA==}
     engines: {node: '>=20.9.0'}
     hasBin: true
     peerDependencies:
@@ -4809,10 +4800,6 @@ packages:
   pirates@4.0.7:
     resolution: {integrity: sha512-TfySrs/5nm8fQJDcBDuUng3VOUKsd7S+zqvbOTiGXHfxX4wK31ard+hoNuvkicM/2YFzlpDgABOevKSsB4G/FA==}
     engines: {node: '>= 6'}
-
-  pkce-challenge@5.0.0:
-    resolution: {integrity: sha512-ueGLflrrnvwB3xuo/uGob5pd5FN7l0MsLf0Z87o/UQmRtwjvfylfc9MurIxRAWywCYTgrvpXBcqjV4OfCYGCIQ==}
-    engines: {node: '>=16.20.0'}
 
   pkg-dir@3.0.0:
     resolution: {integrity: sha512-/E57AYkoeQ25qkxMj5PBOVgF8Kiu/h7cYS30Z5+R7WaiCCBfLq58ZI/dSeaEKb9WVJV5n/03QwrN3IeWIFllvw==}
@@ -5923,20 +5910,20 @@ snapshots:
 
   '@adobe/css-tools@4.4.4': {}
 
-  '@ai-sdk/anthropic@3.0.0-beta.54(zod@4.1.12)':
+  '@ai-sdk/anthropic@3.0.0-beta.60(zod@4.1.12)':
     dependencies:
-      '@ai-sdk/provider': 3.0.0-beta.16
-      '@ai-sdk/provider-utils': 4.0.0-beta.33(zod@4.1.12)
+      '@ai-sdk/provider': 3.0.0-beta.17
+      '@ai-sdk/provider-utils': 4.0.0-beta.34(zod@4.1.12)
       zod: 4.1.12
     transitivePeerDependencies:
       - '@valibot/to-json-schema'
       - arktype
       - effect
 
-  '@ai-sdk/gateway@2.0.0-beta.57(zod@4.1.12)':
+  '@ai-sdk/gateway@2.0.0-beta.61(zod@4.1.12)':
     dependencies:
-      '@ai-sdk/provider': 3.0.0-beta.16
-      '@ai-sdk/provider-utils': 4.0.0-beta.33(zod@4.1.12)
+      '@ai-sdk/provider': 3.0.0-beta.17
+      '@ai-sdk/provider-utils': 4.0.0-beta.34(zod@4.1.12)
       '@vercel/oidc': 3.0.5
       zod: 4.1.12
     transitivePeerDependencies:
@@ -5944,52 +5931,41 @@ snapshots:
       - arktype
       - effect
 
-  '@ai-sdk/mcp@1.0.0-beta.15(zod@4.1.12)':
+  '@ai-sdk/openai-compatible@2.0.0-beta.35(zod@4.1.12)':
     dependencies:
-      '@ai-sdk/provider': 3.0.0-beta.16
-      '@ai-sdk/provider-utils': 4.0.0-beta.33(zod@4.1.12)
-      pkce-challenge: 5.0.0
+      '@ai-sdk/provider': 3.0.0-beta.17
+      '@ai-sdk/provider-utils': 4.0.0-beta.34(zod@4.1.12)
       zod: 4.1.12
     transitivePeerDependencies:
       - '@valibot/to-json-schema'
       - arktype
       - effect
 
-  '@ai-sdk/openai-compatible@2.0.0-beta.34(zod@4.1.12)':
+  '@ai-sdk/openai@3.0.0-beta.66(zod@4.1.12)':
     dependencies:
-      '@ai-sdk/provider': 3.0.0-beta.16
-      '@ai-sdk/provider-utils': 4.0.0-beta.33(zod@4.1.12)
+      '@ai-sdk/provider': 3.0.0-beta.17
+      '@ai-sdk/provider-utils': 4.0.0-beta.34(zod@4.1.12)
       zod: 4.1.12
     transitivePeerDependencies:
       - '@valibot/to-json-schema'
       - arktype
       - effect
 
-  '@ai-sdk/openai@3.0.0-beta.63(zod@4.1.12)':
+  '@ai-sdk/provider-utils@4.0.0-beta.34(zod@4.1.12)':
     dependencies:
-      '@ai-sdk/provider': 3.0.0-beta.16
-      '@ai-sdk/provider-utils': 4.0.0-beta.33(zod@4.1.12)
-      zod: 4.1.12
-    transitivePeerDependencies:
-      - '@valibot/to-json-schema'
-      - arktype
-      - effect
-
-  '@ai-sdk/provider-utils@4.0.0-beta.33(zod@4.1.12)':
-    dependencies:
-      '@ai-sdk/provider': 3.0.0-beta.16
+      '@ai-sdk/provider': 3.0.0-beta.17
       '@standard-schema/spec': 1.0.0
       eventsource-parser: 3.0.6
       zod: 4.1.12
 
-  '@ai-sdk/provider@3.0.0-beta.16':
+  '@ai-sdk/provider@3.0.0-beta.17':
     dependencies:
       json-schema: 0.4.0
 
-  '@ai-sdk/react@3.0.0-beta.105(react@19.2.0)(zod@4.1.12)':
+  '@ai-sdk/react@3.0.0-beta.116(react@19.2.0)(zod@4.1.12)':
     dependencies:
-      '@ai-sdk/provider-utils': 4.0.0-beta.33(zod@4.1.12)
-      ai: 6.0.0-beta.105(zod@4.1.12)
+      '@ai-sdk/provider-utils': 4.0.0-beta.34(zod@4.1.12)
+      ai: 6.0.0-beta.116(zod@4.1.12)
       react: 19.2.0
       swr: 2.3.6(react@19.2.0)
       throttleit: 2.1.0
@@ -5999,11 +5975,11 @@ snapshots:
       - effect
       - zod
 
-  '@ai-sdk/xai@3.0.0-beta.39(zod@4.1.12)':
+  '@ai-sdk/xai@3.0.0-beta.41(zod@4.1.12)':
     dependencies:
-      '@ai-sdk/openai-compatible': 2.0.0-beta.34(zod@4.1.12)
-      '@ai-sdk/provider': 3.0.0-beta.16
-      '@ai-sdk/provider-utils': 4.0.0-beta.33(zod@4.1.12)
+      '@ai-sdk/openai-compatible': 2.0.0-beta.35(zod@4.1.12)
+      '@ai-sdk/provider': 3.0.0-beta.17
+      '@ai-sdk/provider-utils': 4.0.0-beta.34(zod@4.1.12)
       zod: 4.1.12
     transitivePeerDependencies:
       - '@valibot/to-json-schema'
@@ -6764,30 +6740,30 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-  '@next/env@16.0.3': {}
+  '@next/env@16.0.4': {}
 
-  '@next/swc-darwin-arm64@16.0.3':
+  '@next/swc-darwin-arm64@16.0.4':
     optional: true
 
-  '@next/swc-darwin-x64@16.0.3':
+  '@next/swc-darwin-x64@16.0.4':
     optional: true
 
-  '@next/swc-linux-arm64-gnu@16.0.3':
+  '@next/swc-linux-arm64-gnu@16.0.4':
     optional: true
 
-  '@next/swc-linux-arm64-musl@16.0.3':
+  '@next/swc-linux-arm64-musl@16.0.4':
     optional: true
 
-  '@next/swc-linux-x64-gnu@16.0.3':
+  '@next/swc-linux-x64-gnu@16.0.4':
     optional: true
 
-  '@next/swc-linux-x64-musl@16.0.3':
+  '@next/swc-linux-x64-musl@16.0.4':
     optional: true
 
-  '@next/swc-win32-arm64-msvc@16.0.3':
+  '@next/swc-win32-arm64-msvc@16.0.4':
     optional: true
 
-  '@next/swc-win32-x64-msvc@16.0.3':
+  '@next/swc-win32-x64-msvc@16.0.4':
     optional: true
 
   '@npmcli/fs@1.1.1':
@@ -8452,11 +8428,11 @@ snapshots:
       indent-string: 4.0.0
     optional: true
 
-  ai@6.0.0-beta.105(zod@4.1.12):
+  ai@6.0.0-beta.116(zod@4.1.12):
     dependencies:
-      '@ai-sdk/gateway': 2.0.0-beta.57(zod@4.1.12)
-      '@ai-sdk/provider': 3.0.0-beta.16
-      '@ai-sdk/provider-utils': 4.0.0-beta.33(zod@4.1.12)
+      '@ai-sdk/gateway': 2.0.0-beta.61(zod@4.1.12)
+      '@ai-sdk/provider': 3.0.0-beta.17
+      '@ai-sdk/provider-utils': 4.0.0-beta.34(zod@4.1.12)
       '@opentelemetry/api': 1.9.0
       zod: 4.1.12
     transitivePeerDependencies:
@@ -9903,7 +9879,7 @@ snapshots:
 
   leac@0.6.0: {}
 
-  libphonenumber-js@1.12.27: {}
+  libphonenumber-js@1.12.29: {}
 
   lightningcss-android-arm64@1.30.2:
     optional: true
@@ -10631,9 +10607,9 @@ snapshots:
       react: 19.2.0
       react-dom: 19.2.0(react@19.2.0)
 
-  next@16.0.3(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.56.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0):
+  next@16.0.4(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.56.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0):
     dependencies:
-      '@next/env': 16.0.3
+      '@next/env': 16.0.4
       '@swc/helpers': 0.5.15
       caniuse-lite: 1.0.30001754
       postcss: 8.4.31
@@ -10641,14 +10617,14 @@ snapshots:
       react-dom: 19.2.0(react@19.2.0)
       styled-jsx: 5.1.6(@babel/core@7.28.5)(react@19.2.0)
     optionalDependencies:
-      '@next/swc-darwin-arm64': 16.0.3
-      '@next/swc-darwin-x64': 16.0.3
-      '@next/swc-linux-arm64-gnu': 16.0.3
-      '@next/swc-linux-arm64-musl': 16.0.3
-      '@next/swc-linux-x64-gnu': 16.0.3
-      '@next/swc-linux-x64-musl': 16.0.3
-      '@next/swc-win32-arm64-msvc': 16.0.3
-      '@next/swc-win32-x64-msvc': 16.0.3
+      '@next/swc-darwin-arm64': 16.0.4
+      '@next/swc-darwin-x64': 16.0.4
+      '@next/swc-linux-arm64-gnu': 16.0.4
+      '@next/swc-linux-arm64-musl': 16.0.4
+      '@next/swc-linux-x64-gnu': 16.0.4
+      '@next/swc-linux-x64-musl': 16.0.4
+      '@next/swc-win32-arm64-msvc': 16.0.4
+      '@next/swc-win32-x64-msvc': 16.0.4
       '@opentelemetry/api': 1.9.0
       '@playwright/test': 1.56.1
       babel-plugin-react-compiler: 1.0.0
@@ -10902,8 +10878,6 @@ snapshots:
   pify@4.0.1: {}
 
   pirates@4.0.7: {}
-
-  pkce-challenge@5.0.0: {}
 
   pkg-dir@3.0.0:
     dependencies:
