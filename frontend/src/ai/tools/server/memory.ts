@@ -14,7 +14,7 @@ import {
   searchUserMemoriesInputSchema,
 } from "@schemas/memory";
 import { handleMemoryIntent } from "@/lib/memory/orchestrator";
-import { secureUuid } from "@/lib/security/random";
+import { nowIso, secureUuid } from "@/lib/security/random";
 import type { Database, Json } from "@/lib/supabase/database.types";
 import { createServerSupabase } from "@/lib/supabase/server";
 
@@ -142,7 +142,7 @@ export const searchUserMemories = createAiTool({
     return filtered.map((item) => ({
       content: item.context,
       // biome-ignore lint/style/useNamingConvention: Database field name
-      created_at: new Date().toISOString(),
+      created_at: nowIso(),
       source: item.source,
     }));
   },

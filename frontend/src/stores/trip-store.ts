@@ -8,7 +8,7 @@ import type { TripDestination, UiTrip } from "@schemas/trips";
 import { storeTripSchema } from "@schemas/trips";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { secureUuid } from "@/lib/security/random";
+import { nowIso, secureUuid } from "@/lib/security/random";
 import type { Json } from "@/lib/supabase/database.types";
 
 /** Trip type for the store - uses canonical schema from @schemas/trips. */
@@ -69,7 +69,7 @@ export const useTripStore = create<TripState>()(
                 return {
                   ...trip,
                   destinations: [...trip.destinations, newDestination],
-                  updatedAt: new Date().toISOString(),
+                  updatedAt: nowIso(),
                 };
               }
               return trip;
@@ -80,7 +80,7 @@ export const useTripStore = create<TripState>()(
                 ? {
                     ...state.currentTrip,
                     destinations: [...state.currentTrip.destinations, newDestination],
-                    updatedAt: new Date().toISOString(),
+                    updatedAt: nowIso(),
                   }
                 : state.currentTrip;
 
@@ -129,14 +129,14 @@ export const useTripStore = create<TripState>()(
             budget: tripData.budget ?? 0,
             destination: tripData.destination ?? "",
             // biome-ignore lint/style/useNamingConvention: Database API requires snake_case
-            end_date: tripData.endDate ?? new Date().toISOString(),
+            end_date: tripData.endDate ?? nowIso(),
             flexibility: (tripData.preferences ?? {}) as Json,
             name: tripData.title,
             notes: tripData.tags ?? [],
             // biome-ignore lint/style/useNamingConvention: Database API requires snake_case
             search_metadata: {},
             // biome-ignore lint/style/useNamingConvention: Database API requires snake_case
-            start_date: tripData.startDate ?? new Date().toISOString(),
+            start_date: tripData.startDate ?? nowIso(),
             travelers: tripData.travelers ?? 1,
             // biome-ignore lint/style/useNamingConvention: Database API requires snake_case
             user_id: ownerId,
@@ -218,7 +218,7 @@ export const useTripStore = create<TripState>()(
                   destinations: trip.destinations.filter(
                     (dest) => dest.id !== destinationId
                   ),
-                  updatedAt: new Date().toISOString(),
+                  updatedAt: nowIso(),
                 };
               }
               return trip;
@@ -231,7 +231,7 @@ export const useTripStore = create<TripState>()(
                     destinations: state.currentTrip.destinations.filter(
                       (dest) => dest.id !== destinationId
                     ),
-                    updatedAt: new Date().toISOString(),
+                    updatedAt: nowIso(),
                   }
                 : state.currentTrip;
 
@@ -266,7 +266,7 @@ export const useTripStore = create<TripState>()(
                   destinations: trip.destinations.map((dest) =>
                     dest.id === destinationId ? { ...dest, ...data } : dest
                   ),
-                  updatedAt: new Date().toISOString(),
+                  updatedAt: nowIso(),
                 };
               }
               return trip;
@@ -279,7 +279,7 @@ export const useTripStore = create<TripState>()(
                     destinations: state.currentTrip.destinations.map((dest) =>
                       dest.id === destinationId ? { ...dest, ...data } : dest
                     ),
-                    updatedAt: new Date().toISOString(),
+                    updatedAt: nowIso(),
                   }
                 : state.currentTrip;
 
