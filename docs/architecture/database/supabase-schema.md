@@ -22,7 +22,7 @@ TripSage uses a unified Supabase PostgreSQL architecture with integrated extensi
 ```mermaid
 graph TB
     subgraph "Application Layer"
-        API[FastAPI Backend]
+        API[Next.js Route Handlers]
         FE[Next.js Frontend]
     end
 
@@ -41,7 +41,7 @@ graph TB
 
     subgraph "External Services"
         OPENAI[OpenAI API]
-        REDIS[Redis Cache]
+        REDIS[Upstash Redis]
     end
 
     API --> DB

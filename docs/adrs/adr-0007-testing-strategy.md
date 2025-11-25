@@ -34,11 +34,10 @@ We will adopt a modern testing strategy:
 - **E2E**: Playwright
 - **Visual Regression**: Playwright screenshots
 
-**Backend Testing Stack:**
+**API Testing Stack:**
 
-- **Unit/Integration**: Pytest with async support
-- **API Testing**: FastAPI test client
-- **Property-Based**: Hypothesis for complex logic
+- **Route Handlers**: Vitest with MSW for mocking
+- **Integration**: Vitest with real database (test containers)
 
 **Key Principles:**
 

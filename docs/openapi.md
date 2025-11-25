@@ -1,57 +1,64 @@
-# OpenAPI Specification
+# API Documentation
 
-The TripSage AI API is fully documented using the OpenAPI 3.0 specification. This interactive documentation allows you to explore all available endpoints, request/response formats, and authentication requirements.
+The TripSage AI API is implemented as Next.js 16 server route handlers. All API endpoints live in `frontend/src/app/api/**`.
 
-## Interactive API Explorer
+## API Explorer
 
-Below is the complete OpenAPI specification for the TripSage AI API. You can:
+For local development, the API is available at:
 
-- View detailed endpoint documentation
-- Test API calls directly from your browser
-- Download the OpenAPI JSON specification
-- Generate client SDKs in various programming languages
+- **Base URL**: `http://localhost:3000/api`
+- **API Reference**: See [API Reference](api/api-reference.md)
 
 !!! note "API Base URL"
-All endpoints are relative to the base URL: `https://api.tripsage.ai/v1`
+All endpoints are relative to the base URL: `https://tripsage.ai/api` (production) or `http://localhost:3000/api` (development)
 
 !!! tip "Authentication Required"
-Most endpoints require authentication via Bearer token. See the [Authentication guide](auth.md) for details.
+Most endpoints require authentication via Supabase SSR. See the [API Reference](api/api-reference.md#authentication) for details.
 
-## API Specification Details
+## API Structure
 
-The OpenAPI specification has been generated and is available for download and exploration. You can use external tools like Swagger UI to view the interactive documentation.
+Endpoints are organized by domain:
 
-The specification includes all endpoints, request/response schemas, authentication requirements, and examples.
+| Category      | Path                | Description                                         |
+| ------------- | ------------------- | --------------------------------------------------- |
+| AI Agents     | `/api/agents/*`     | Streaming AI agents (flights, accommodations, etc.) |
+| Chat          | `/api/chat/*`       | Conversational AI with sessions                     |
+| Trips         | `/api/trips/*`      | Trip CRUD operations                                |
+| Memory        | `/api/memory/*`     | User context and preferences                        |
+| Calendar      | `/api/calendar/*`   | Calendar integration                                |
+| Places        | `/api/places/*`     | Google Places API integration                       |
+| Activities    | `/api/activities/*` | Activity search                                     |
+| Configuration | `/api/config/*`     | Agent configuration                                 |
+| Security      | `/api/security/*`   | Session management                                  |
+| Keys          | `/api/keys/*`       | BYOK API key management                             |
 
-## Download
+## Route Handler Pattern
 
-- [Download OpenAPI JSON](openapi.json) - Raw specification file
-- [View in Swagger UI](https://petstore.swagger.io/?url=https://raw.githubusercontent.com/tripsage-ai/tripsage-ai/main/docs/openapi.json) - External Swagger UI viewer
+All route handlers use the `withApiGuards` factory for consistent authentication, rate limiting, and telemetry:
 
-## Code Generation
+```typescript
+import { withApiGuards } from "@/lib/api/factory";
 
-You can generate client libraries in various languages using the OpenAPI specification:
-
-```bash
-# Generate Python client
-openapi-generator-cli generate -i docs/openapi.json -g python -o client/python
-
-# Generate TypeScript client
-openapi-generator-cli generate -i docs/openapi.json -g typescript-axios -o client/typescript
-
-# Generate Go client
-openapi-generator-cli generate -i docs/openapi.json -g go -o client/go
+export const POST = withApiGuards({
+  auth: true, // Require Supabase SSR authentication
+  rateLimit: "trips:create", // Upstash rate limit key
+  telemetry: "trips.create", // OpenTelemetry span name
+})(async (req, { supabase, user }) => {
+  // Handler implementation with validated user
+});
 ```
 
 ## Schema Validation
 
-The API uses JSON Schema validation for all request/response bodies. The OpenAPI spec includes complete schema definitions for:
+The API uses Zod v4 for request/response validation. Schemas are defined in `frontend/src/domain/schemas/*` and imported via the `@schemas/*` path alias.
 
-- Request parameters and bodies
-- Response structures
-- Error response formats
-- Data models and enums
+```typescript
+import { tripCreateSchema } from "@schemas/trips";
+
+// Validate request body
+const body = tripCreateSchema.parse(await req.json());
+```
 
 ## Versioning
 
-This documentation reflects the current API version (v1). Breaking changes will be communicated in advance and documented in the [changelog](../../CHANGELOG.md).
+This documentation reflects the current API implementation. Breaking changes are documented in the [CHANGELOG](../CHANGELOG.md).

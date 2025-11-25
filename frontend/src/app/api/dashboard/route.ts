@@ -51,9 +51,8 @@ export const GET = withApiGuards({
 })(async (req: NextRequest) => {
   // Parse and validate query parameters
   const searchParams = req.nextUrl.searchParams;
-  const queryResult = QuerySchema.safeParse({
-    window: searchParams.get("window") ?? undefined,
-  });
+  const queryObject = Object.fromEntries(searchParams.entries());
+  const queryResult = QuerySchema.safeParse(queryObject);
 
   if (!queryResult.success) {
     return NextResponse.json(

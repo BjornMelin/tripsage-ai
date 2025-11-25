@@ -132,20 +132,20 @@ Test suite with 90%+ coverage:
 
 Current architecture metrics:
 
-| Metric | Target | Achieved | Technology |
-|--------|--------|----------|------------|
-| Cache Performance | <10ms latency | **Edge/Global** | Upstash Redis |
-| Concurrent Connections | 1000+ | **1500+** | Supabase Realtime |
-| API Response Time | <100ms | **<50ms** | FastAPI |
-| Database Connections | 500+ | **1000+** | Supabase PostgreSQL |
-| Storage Cost Reduction | 50% | **80%** | Unified Architecture |
+| Metric                 | Target        | Achieved        | Technology             |
+| ---------------------- | ------------- | --------------- | ---------------------- |
+| Cache Performance      | <10ms latency | **Edge/Global** | Upstash Redis          |
+| Concurrent Connections | 1000+         | **1500+**       | Supabase Realtime      |
+| API Response Time      | <100ms        | **<50ms**       | Next.js Route Handlers |
+| Database Connections   | 500+          | **1000+**       | Supabase PostgreSQL    |
+| Storage Cost Reduction | 50%           | **80%**         | Unified Architecture   |
 
 ## Architecture Evolution
 
 ### Current Phase (June 2025)
 
 - Unified Supabase architecture implementation
-- Upstash Redis serverless caching  
+- Upstash Redis serverless caching
 - Supabase Realtime communication
 - Service consolidation and SDK migration
 - Consumer-aware API design
@@ -159,6 +159,6 @@ Current architecture metrics:
 
 ---
 
-*For questions about system architecture or design decisions, refer to
+_For questions about system architecture or design decisions, refer to
 the specific architecture documents or contact the technical
-architecture team.*
+architecture team._

@@ -25,14 +25,12 @@ The BYOK system consists of:
 
 ### Using the Verification Script
 
-The system includes an automated verification script that tests all security components:
+The system includes verification procedures to test all security components:
 
-```bash
-# Run comprehensive BYOK security verification
-python scripts/verify_vault_hardening.py
-```
+> Run comprehensive BYOK security verification via curl commands
+> See manual verification tasks below for specific operations
 
-This script verifies:
+This verification covers:
 
 - ✅ Vault extension accessibility
 - ✅ Role hardening and access controls
@@ -148,7 +146,7 @@ SELECT insert_user_api_key('user-b', 'openai', 'key-b');
 
 ### Pre-Deployment Checklist
 
-- [ ] **Automated Verification**: `python scripts/verify_vault_hardening.py` passes all checks
+- [ ] **Automated Verification**: All manual verification tasks pass
 - [ ] **Migration Verification**: All BYOK migrations applied (`20251030000000_vault_api_keys.sql`, `20251030002000_vault_role_hardening.sql`, `20251113000000_gateway_user_byok.sql`)
 - [ ] **Environment Variables**: All required secrets configured (service role key, API keys, Gateway URL)
 - [ ] **Vault Extension**: Enabled and accessible
@@ -282,25 +280,25 @@ DELETE FROM public.api_gateway_configs;
 
 ```typescript
 // Test from application perspective
-import { resolveProvider } from '@ai/models/registry';
+import { resolveProvider } from "@ai/models/registry";
 
 // Should use BYOK key if available
-const provider = await resolveProvider(userId, 'gpt-4o-mini');
-expect(provider.provider).toBe('openai');
-expect(provider.modelId).toBe('gpt-4o-mini');
+const provider = await resolveProvider(userId, "gpt-4o-mini");
+expect(provider.provider).toBe("openai");
+expect(provider.modelId).toBe("gpt-4o-mini");
 
 // Should fallback to team Gateway
 // (remove BYOK keys and ensure Gateway configured)
-const fallbackProvider = await resolveProvider(userId, 'gpt-4o-mini');
-expect(fallbackProvider.path).toBe('team-gateway');
+const fallbackProvider = await resolveProvider(userId, "gpt-4o-mini");
+expect(fallbackProvider.path).toBe("team-gateway");
 ```
 
 ### SSR Compatibility Testing
 
 ```typescript
 // Test Next.js App Router integration
-import { createServerSupabase } from '@/lib/supabase/server';
-import { getCurrentUser } from '@/lib/supabase/factory';
+import { createServerSupabase } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/factory";
 
 // Should work in Server Components
 const supabase = await createServerSupabase();

@@ -187,7 +187,7 @@ docker logs tripsage-container
 
 ```bash
 # Test health endpoint
-curl -f http://localhost:8000/health
+curl -f http://localhost:3000/api/health
 
 # Check container health
 docker ps

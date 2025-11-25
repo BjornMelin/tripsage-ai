@@ -20,9 +20,9 @@ secrets.
 
 ## Components
 
-### Schemas (`frontend/src/schemas/`)
+### Schemas (`frontend/src/domain/schemas/`)
 
-- **`calendar.ts`**: Zod schemas aligned with Google Calendar API and `tripsage_core/models/api/calendar_models.py`
+- **`calendar.ts`**: Zod v4 schemas aligned with Google Calendar API
   - Event models: `CalendarEvent`, `CreateEventRequest`, `UpdateEventRequest`
   - List models: `CalendarList`, `EventsListRequest`, `EventsListResponse`
   - Free/busy: `FreeBusyRequest`, `FreeBusyResponse`

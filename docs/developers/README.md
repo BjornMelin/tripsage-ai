@@ -53,7 +53,7 @@ cd frontend && pnpm test
 
 ## Key Principles
 
-- **Type Safety**: Full type hints in Python, strict TypeScript
+- **Type Safety**: Strict TypeScript throughout
 - **Async First**: All I/O operations use async/await
 - **Security**: Environment variables only, JWT authentication
 - **Testing**: Comprehensive test coverage required
