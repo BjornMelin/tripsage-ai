@@ -63,6 +63,9 @@ function useCurrentUserId(): string | null {
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
+    // During SSR, supabase is null - skip auth setup
+    if (!supabase) return;
+
     let isMounted = true;
 
     supabase.auth
