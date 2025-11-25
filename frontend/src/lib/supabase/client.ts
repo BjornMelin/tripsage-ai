@@ -19,7 +19,7 @@ let client: TypedSupabaseClient | null = null;
  * Return the browser singleton Supabase client.
  * Instantiated once and reused across the app, including non-React modules
  * (e.g., Zustand stores) that share the authenticated instance.
- * 
+ *
  * @returns The browser singleton Supabase client.
  */
 export function getBrowserClient(): TypedSupabaseClient | null {
