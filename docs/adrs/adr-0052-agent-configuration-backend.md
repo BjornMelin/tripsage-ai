@@ -57,10 +57,14 @@ Implement a **Supabase-backed agent configuration service** with:
      service-role-only read/write access to ensure database-level protections
      in addition to application guards.
 
-2. **API surface (`frontend/src/app/api/config/agents/**`):\*\*
+2. **API surface (`frontend/src/app/api/config/agents/**`):**
 
    - `GET /api/config/agents/:agentType` → returns the effective active config
-     for a given agent type and scope (global now; scope-extensible later).
+     using hierarchical scope resolution (global → tenant → user). API accepts an
+     explicit `scope` (and identifier where applicable); resolvers attempt the
+     requested scope, fall back to the next broader level when not found, and
+     return a clear not-found error if nothing exists. Authorization is enforced
+     per scope (tenant/user isolation) before returning configs.
    - `PUT /api/config/agents/:agentType` → validates request body against
      `agentConfigRequestSchema`, writes a new version record, and updates the
      active config, wrapped in a Supabase transaction.
@@ -179,3 +183,5 @@ Implement a **Supabase-backed agent configuration service** with:
 - `frontend/src/lib/cache/upstash.ts`, `frontend/src/lib/cache/tags.ts` (Upstash
   JSON cache + cache tags).
 - `frontend/src/app/api/agents/*.ts` (agent route handlers using AI SDK v6).
+- `docs/specs/migrations/agent-configuration-backend.md` (migration: agent-configuration-backend).
+- `docs/specs/0029-spec-agent-configuration-backend.md` (spec: 0029 agent configuration backend).

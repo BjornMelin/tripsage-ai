@@ -25,6 +25,10 @@ export default function ActivitiesSearchPage() {
     useActivitySearch();
   const searchParams = useSearchParams();
   const dialogRef = useRef<HTMLDivElement>(null);
+  const noteItems = searchMetadata?.notes?.map((note, index) => ({
+    id: `${note}-${index}`,
+    note,
+  }));
 
   // Initialize search with URL parameters
   useEffect(() => {
@@ -434,11 +438,11 @@ export default function ActivitiesSearchPage() {
                 )}
               </div>
 
-              {searchMetadata?.notes && searchMetadata.notes.length > 0 && (
+              {noteItems && noteItems.length > 0 && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-1">
-                  {searchMetadata.notes.map((note, index) => (
-                    <p key={`${note}-${index}`} className="text-sm text-blue-800">
-                      {note}
+                  {noteItems.map((item) => (
+                    <p key={item.id} className="text-sm text-blue-800">
+                      {item.note}
                     </p>
                   ))}
                 </div>

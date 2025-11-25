@@ -25,7 +25,7 @@
 
 3. **Supabase SSR integration** (`src/lib/supabase/`) follows `@supabase/ssr` patterns correctly with proper server/client separation and factory pattern.
 
-4. **Rate limiting registry** (`src/lib/ratelimit/routes.ts`) provides a single source of truth with proper typing via `satisfies`.
+4. **Rate-limiting registry** (`src/lib/ratelimit/routes.ts`) provides a single source of truth with proper typing via `satisfies`.
 
 ### Weakest Aspects
 

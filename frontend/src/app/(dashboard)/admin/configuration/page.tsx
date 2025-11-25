@@ -11,6 +11,7 @@ import { Suspense } from "react";
 import { fetchAgentBundle } from "@/components/admin/configuration-actions";
 import ConfigurationManager from "@/components/admin/configuration-manager";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { createServerLogger } from "@/lib/telemetry/logger";
 
 export const metadata: Metadata = {
   description:
@@ -19,9 +20,29 @@ export const metadata: Metadata = {
 };
 
 const DEFAULT_AGENT: AgentType = "budgetAgent";
+const logger = createServerLogger("admin.configuration.page");
 
 export default async function ConfigurationPage() {
-  const initial = await fetchAgentBundle(DEFAULT_AGENT);
+  let initial: Awaited<ReturnType<typeof fetchAgentBundle>>;
+  try {
+    initial = await fetchAgentBundle(DEFAULT_AGENT);
+  } catch (error) {
+    logger.error("failed to fetch default agent bundle", {
+      agentType: DEFAULT_AGENT,
+      error,
+    });
+
+    return (
+      <div className="container mx-auto py-6">
+        <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-destructive-foreground">
+          <p className="font-semibold">Unable to load agent configuration.</p>
+          <p className="text-sm text-destructive-foreground/80">
+            Please try again or contact an administrator if the issue persists.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-6">
