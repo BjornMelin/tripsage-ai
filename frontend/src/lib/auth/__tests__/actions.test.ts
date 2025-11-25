@@ -22,7 +22,7 @@ vi.mock("next/navigation", () => ({
 describe("logoutAction", () => {
   it("should sign out and redirect to login", async () => {
     const { redirect } = await import("next/navigation");
-    
+
     await logoutAction();
 
     expect(mockSignOut).toHaveBeenCalled();

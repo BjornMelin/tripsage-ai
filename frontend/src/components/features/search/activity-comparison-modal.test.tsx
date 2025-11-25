@@ -1,7 +1,7 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import type { Activity } from "@schemas/search";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ActivityComparisonModal } from "./activity-comparison-modal";
-import type { Activity } from "@schemas/search";
 
 // Mock Lucide icons
 vi.mock("lucide-react", async (importOriginal) => {
@@ -21,40 +21,40 @@ vi.mock("next/image", () => ({
 
 const mockActivities: Activity[] = [
   {
-    id: "1",
-    name: "Activity 1",
+    coordinates: { lat: 0, lng: 0 },
+    date: "2023-01-01T00:00:00Z",
     description: "Description 1",
+    duration: 120, // 2 hours in minutes
+    id: "1",
+    images: ["/image1.jpg"],
     location: "Location 1",
+    name: "Activity 1",
     price: 100,
     rating: 4.5,
     type: "tour",
-    images: ["/image1.jpg"],
-    duration: 120, // 2 hours in minutes
-    coordinates: { lat: 0, lng: 0 },
-    date: "2023-01-01T00:00:00Z",
   },
   {
-    id: "2",
-    name: "Activity 2",
+    coordinates: { lat: 0, lng: 0 },
+    date: "2023-01-01T00:00:00Z",
     description: "Description 2",
+    duration: 60, // 1 hour in minutes
+    id: "2",
+    images: [], // No image
     location: "Location 2",
+    name: "Activity 2",
     price: 50,
     rating: 4.0,
     type: "museum",
-    images: [], // No image
-    duration: 60, // 1 hour in minutes
-    coordinates: { lat: 0, lng: 0 },
-    date: "2023-01-01T00:00:00Z",
   },
 ];
 
 describe("ActivityComparisonModal", () => {
   const defaultProps = {
-    isOpen: true,
-    onClose: vi.fn(),
     activities: mockActivities,
-    onRemove: vi.fn(),
+    isOpen: true,
     onAddToTrip: vi.fn(),
+    onClose: vi.fn(),
+    onRemove: vi.fn(),
   };
 
   it("should render nothing when activities list is empty", () => {
@@ -70,7 +70,7 @@ describe("ActivityComparisonModal", () => {
     expect(screen.getByText("Compare Activities")).toBeInTheDocument();
     expect(screen.getByText("Activity 1")).toBeInTheDocument();
     expect(screen.getByText("Activity 2")).toBeInTheDocument();
-    
+
     // Check details
     expect(screen.getByText("$100.00")).toBeInTheDocument();
     expect(screen.getByText("$50.00")).toBeInTheDocument();

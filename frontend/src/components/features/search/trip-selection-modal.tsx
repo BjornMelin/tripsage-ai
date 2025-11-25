@@ -4,6 +4,10 @@
 
 "use client";
 
+import type { Activity } from "@schemas/search";
+import type { UiTrip } from "@schemas/trips";
+import { Calendar, MapPin } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,10 +19,6 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { Activity } from "@schemas/search";
-import type { UiTrip } from "@schemas/trips";
-import { Calendar, MapPin } from "lucide-react";
-import { useState } from "react";
 
 interface TripSelectionModalProps {
   isOpen: boolean;
@@ -117,9 +117,7 @@ export function TripSelectionModal({
                       {trip.startDate && (
                         <div className="flex items-center text-sm text-muted-foreground gap-2">
                           <Calendar className="h-3 w-3" />
-                          <span>
-                            {new Date(trip.startDate).toLocaleDateString()}
-                          </span>
+                          <span>{new Date(trip.startDate).toLocaleDateString()}</span>
                         </div>
                       )}
                     </div>
@@ -133,10 +131,7 @@ export function TripSelectionModal({
           <Button variant="outline" onClick={onClose} disabled={isAdding}>
             Cancel
           </Button>
-          <Button
-            onClick={handleConfirm}
-            disabled={!selectedTripId || isAdding}
-          >
+          <Button onClick={handleConfirm} disabled={!selectedTripId || isAdding}>
             {isAdding ? "Adding..." : "Add to Trip"}
           </Button>
         </DialogFooter>

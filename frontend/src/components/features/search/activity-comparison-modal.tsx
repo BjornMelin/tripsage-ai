@@ -4,6 +4,9 @@
 
 "use client";
 
+import type { Activity } from "@schemas/search";
+import { MapPin, Star, X } from "lucide-react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -21,9 +24,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { Activity } from "@schemas/search";
-import { MapPin, Star, X } from "lucide-react";
-import Image from "next/image";
 
 interface ActivityComparisonModalProps {
   isOpen: boolean;
@@ -121,8 +121,8 @@ export function ActivityComparisonModal({
                     {activity.price ? (
                       <span className="font-semibold">
                         {activity.price.toLocaleString("en-US", {
-                          style: "currency",
                           currency: "USD", // Assuming USD for now, ideally from activity
+                          style: "currency",
                         })}
                       </span>
                     ) : (
@@ -175,10 +175,7 @@ export function ActivityComparisonModal({
                 <TableCell className="font-medium">Actions</TableCell>
                 {activities.map((activity) => (
                   <TableCell key={activity.id}>
-                    <Button
-                      className="w-full"
-                      onClick={() => onAddToTrip(activity)}
-                    >
+                    <Button className="w-full" onClick={() => onAddToTrip(activity)}>
                       Add to Trip
                     </Button>
                   </TableCell>

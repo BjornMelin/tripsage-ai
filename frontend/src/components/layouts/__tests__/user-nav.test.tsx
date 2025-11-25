@@ -3,8 +3,8 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { UserNav } from "../user-nav";
 import type { AuthUser } from "@/domain/schemas/stores";
+import { UserNav } from "../user-nav";
 
 // Mock logoutAction
 vi.mock("@/lib/auth/actions", () => ({
@@ -13,12 +13,12 @@ vi.mock("@/lib/auth/actions", () => ({
 
 describe("UserNav", () => {
   const mockUser: AuthUser = {
-    id: "123",
-    email: "test@example.com",
-    displayName: "Test User",
     createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    displayName: "Test User",
+    email: "test@example.com",
+    id: "123",
     isEmailVerified: true,
+    updatedAt: new Date().toISOString(),
   };
 
   it("renders user avatar and name", () => {
