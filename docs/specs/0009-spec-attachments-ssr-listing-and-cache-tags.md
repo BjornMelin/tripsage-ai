@@ -13,9 +13,11 @@ Serve a user-scoped attachments listing via a Next.js Route Handler that partici
 - `GET /api/attachments/files`
   - Forwards `Authorization` header when present.
   - Preserves `limit`/`offset` query parameters.
-  - Performs a server fetch to `${BACKEND_API_URL}/api/attachments/files` with `next: { tags: ['attachments'] }`.
+  - Uses `withApiGuards({ auth: true })` which accesses `cookies()` for authentication.
+  - Implements per-user caching via Upstash Redis (2-minute TTL) since Next.js Cache Components cannot be used when accessing `cookies()` or `headers()`.
+    See [Spec: BYOK Routes and Security (Next.js + Supabase Vault)](../specs/0011-spec-byok-routes-and-security.md).
   - Returns JSON (200) or propagates backend error status with a concise error body.
-  - Annotated with `"use cache: private"` to prevent public cache pollution.
+  - Route is dynamic by default (no `"use cache"` directive) due to `cookies()` access.
 
 ## Invalidation
 

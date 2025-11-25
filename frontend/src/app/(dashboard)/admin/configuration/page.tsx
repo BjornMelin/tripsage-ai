@@ -21,10 +21,6 @@ export const metadata: Metadata = {
 const DEFAULT_AGENT: AgentType = "budgetAgent";
 
 export default async function ConfigurationPage() {
-  // Use cache directive to prevent static generation issues with env vars
-  // This page requires server-side env vars and should not be statically generated
-  "use cache: private";
-
   const initial = await fetchAgentBundle(DEFAULT_AGENT);
 
   return (

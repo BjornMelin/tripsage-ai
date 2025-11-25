@@ -96,7 +96,14 @@ export default function TripCollaborationPage() {
     const supabase = getBrowserClient();
     // getBrowserClient() may return null during initial client-side initialization/hydration — skip auth check until client is available
     if (!supabase) return;
-    supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
+    supabase.auth
+      .getUser()
+      .then(({ data }) => setCurrentUserId(data.user?.id ?? null))
+      .catch((error) => {
+        // Best-effort: keep UI consistent even if auth lookup fails
+        console.error("Failed to fetch current user", error);
+        setCurrentUserId(null);
+      });
   }, []);
 
   // Type assertion for trip data
