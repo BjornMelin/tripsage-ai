@@ -3,6 +3,8 @@
  * application. Follows React Query v5 key composition guidance.
  */
 
+import type { TimeWindow } from "@schemas/dashboard";
+
 export const queryKeys = {
   // Agent Status & Monitoring
   agents: {
@@ -37,6 +39,13 @@ export const queryKeys = {
       [...queryKeys.chat.sessions(), { tripId }] as const,
     sessions: () => [...queryKeys.chat.all(), "sessions"] as const,
     stats: (userId: string) => [...queryKeys.chat.all(), "stats", userId] as const,
+  },
+
+  // Dashboard & Metrics
+  dashboard: {
+    all: () => ["dashboard"] as const,
+    metrics: (window?: TimeWindow) =>
+      [...queryKeys.dashboard.all(), "metrics", { window }] as const,
   },
 
   // External API Data
@@ -149,6 +158,10 @@ export const staleTimes = {
   // Very stable data
   configuration: 60 * 60 * 1000, // 1 hour
   currency: 30 * 60 * 1000, // 30 minutes
+
+  // Dashboard metrics - fast changing
+  dashboard: 30 * 1000, // 30 seconds
+
   files: 5 * 60 * 1000, // 5 minutes
   // Fast changing data
   realtime: 30 * 1000, // 30 seconds
