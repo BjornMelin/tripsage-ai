@@ -234,8 +234,9 @@ describe("TripCard", () => {
     });
 
     it("should use USD as default currency when currency is not specified", () => {
-      const noCurrencyTrip = { ...mockTrip, currency: undefined };
-      render(<TripCard trip={noCurrencyTrip} />);
+      // Test with currency omitted - component should handle gracefully
+      const { currency: _currency, ...noCurrencyTrip } = mockTrip;
+      render(<TripCard trip={noCurrencyTrip as Trip} />);
 
       expect(screen.getByText("Budget: $3,000.00")).toBeInTheDocument();
     });

@@ -57,7 +57,17 @@ export function AccountSettingsSection() {
   const { toast } = useToast();
 
   const currentEmail = authUser?.email ?? profile?.email ?? "";
-  const isEmailVerified = authUser?.isEmailVerified ?? true;
+  const [seenUnverified, setSeenUnverified] = useState(false);
+  const isEmailVerified =
+    seenUnverified || authUser?.isEmailVerified === false
+      ? false
+      : Boolean(authUser?.isEmailVerified ?? false);
+
+  useEffect(() => {
+    if (authUser?.isEmailVerified === false) {
+      setSeenUnverified(true);
+    }
+  }, [authUser?.isEmailVerified]);
 
   const initialNotificationPrefs = useMemo(
     () => ({

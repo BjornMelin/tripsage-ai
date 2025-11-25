@@ -36,23 +36,21 @@ vi.mock("@/lib/repositories/trips-repo", () => {
     createTrip: vi.fn((payload: Record<string, unknown>) => {
       const tripId = String(Date.now() + seq++);
       const trip = {
-        budget: payload.budget
-          ? typeof payload.budget === "number"
-            ? {
-                currency: "USD",
-                spent: 0,
-                total: payload.budget,
-              }
-            : payload.budget
-          : undefined,
+        budget: payload.budget ?? undefined,
         createdAt: now(),
+        currency: "USD",
         description: "", // Database doesn't store description
+        destination: (payload.destination as string | undefined) ?? undefined,
         destinations: [],
-        endDate: (payload.end_date as string | undefined) ?? null,
+        endDate: (payload.end_date as string | undefined) ?? undefined,
         id: tripId,
-        startDate: (payload.start_date as string | undefined) ?? null,
+        startDate: (payload.start_date as string | undefined) ?? undefined,
+        status: (payload.status as string | undefined) ?? "planning",
         title: (payload.name as string | undefined) || "Untitled Trip",
+        travelers: (payload.travelers as number | undefined) ?? 1,
+        tripType: (payload.trip_type as string | undefined) ?? "leisure",
         updatedAt: now(),
+        userId: (payload.user_id as string | undefined) ?? undefined,
         visibility:
           (payload.visibility as "private" | "shared" | "public") ?? "private",
       };
@@ -68,23 +66,17 @@ vi.mock("@/lib/repositories/trips-repo", () => {
       const existingTrip = createdTrips.get(tripId) ?? {};
       const updated = {
         ...existingTrip,
-        budget: patch.budget
-          ? typeof patch.budget === "number"
-            ? {
-                currency: "USD",
-                spent:
-                  (existingTrip as { budget?: { spent?: number } }).budget?.spent ?? 0,
-                total: patch.budget,
-              }
-            : patch.budget
-          : (existingTrip as { budget?: { currency: string; spent: number; total: number } })
-              .budget,
+        budget: patch.budget !== undefined ? patch.budget : existingTrip.budget,
         description: existingTrip.description ?? "",
+        endDate:
+          (patch.end_date as string | undefined) ?? existingTrip.endDate ?? undefined,
         id: tripId,
-        endDate: (patch.end_date as string | undefined) ?? existingTrip.endDate ?? null,
         startDate:
-          (patch.start_date as string | undefined) ?? existingTrip.startDate ?? null,
-        title: (patch.name as string | undefined) ?? existingTrip.title ?? "Untitled Trip",
+          (patch.start_date as string | undefined) ??
+          existingTrip.startDate ??
+          undefined,
+        title:
+          (patch.name as string | undefined) ?? existingTrip.title ?? "Untitled Trip",
         updatedAt: now(),
       };
       createdTrips.set(tripId, updated);
@@ -127,6 +119,7 @@ describe("Trip Store", () => {
       const mockTrips: Trip[] = [
         {
           createdAt: "2025-01-01T00:00:00Z",
+          currency: "USD",
           description: "A relaxing summer trip",
           destinations: [],
           id: "trip-1",
@@ -136,6 +129,7 @@ describe("Trip Store", () => {
         },
         {
           createdAt: "2025-01-02T00:00:00Z",
+          currency: "USD",
           destinations: [],
           id: "trip-2",
           title: "Business Trip",
@@ -156,6 +150,7 @@ describe("Trip Store", () => {
 
       const mockTrip: Trip = {
         createdAt: "2025-01-01T00:00:00Z",
+        currency: "USD",
         destinations: [],
         id: "trip-1",
         title: "Summer Vacation",
@@ -180,11 +175,8 @@ describe("Trip Store", () => {
       const { result } = renderHook(() => useTripStore());
 
       const tripData = {
-        budget: {
-          currency: "USD",
-          spent: 0,
-          total: 3000,
-        },
+        budget: 3000,
+        currency: "USD",
         description: "Exploring Europe",
         destinations: [],
         endDate: "2025-06-15",
@@ -207,9 +199,9 @@ describe("Trip Store", () => {
       expect(createdTrip.description).toBe("");
       expect(createdTrip.startDate).toBe("2025-06-01");
       expect(createdTrip.endDate).toBe("2025-06-15");
-      expect(createdTrip.budget?.total).toBe(3000);
+      expect(createdTrip.budget).toBe(3000);
       // Note: Currency is hardcoded to USD in database mapper
-      expect(createdTrip.budget?.currency).toBe("USD");
+      expect(createdTrip.currency).toBe("USD");
       // Note: visibility defaults to "private" in database mapper
       expect(createdTrip.visibility).toBe("private");
       expect(createdTrip.id).toBeDefined();
@@ -233,7 +225,7 @@ describe("Trip Store", () => {
       expect(createdTrip.title).toBe("Untitled Trip");
       expect(createdTrip.description).toBe("");
       expect(createdTrip.destinations).toEqual([]);
-      expect(createdTrip.budget?.currency).toBe("USD");
+      expect(createdTrip.currency).toBe("USD");
       expect(createdTrip.visibility).toBe("private");
     });
 
@@ -251,11 +243,8 @@ describe("Trip Store", () => {
       // Update the trip
       await act(async () => {
         await result.current.updateTrip(tripId, {
-          budget: {
-            currency: "USD",
-            spent: 0,
-            total: 2000,
-          },
+          budget: 2000,
+          currency: "USD",
           description: "Updated description",
           title: "Updated Trip",
         });
@@ -269,7 +258,7 @@ describe("Trip Store", () => {
       expect(updatedTrip.title).toBe("Updated Trip");
       // Note: Description is not stored in database
       expect(updatedTrip.description).toBe("");
-      expect(updatedTrip.budget?.total).toBe(2000);
+      expect(updatedTrip.budget).toBe(2000);
       // Updated timestamp should be the same or newer; exact inequality is not required
       if (updatedTrip.updatedAt && originalUpdatedAt) {
         expect(new Date(updatedTrip.updatedAt).valueOf()).toBeGreaterThanOrEqual(
@@ -674,6 +663,7 @@ describe("Trip Store", () => {
 
       const mockTrip: Trip = {
         createdAt: "2025-01-01T00:00:00Z",
+        currency: "USD",
         destinations: [],
         id: "trip-1",
         title: "Test Trip",
@@ -752,11 +742,8 @@ describe("Trip Store", () => {
 
       await act(async () => {
         await result.current.createTrip({
-          budget: {
-            currency: "USD",
-            spent: 0,
-            total: 2000,
-          },
+          budget: 2000,
+          currency: "USD",
           title: "Budget Trip",
         });
       });
@@ -783,9 +770,9 @@ describe("Trip Store", () => {
       });
 
       const trip = result.current.trips.find((t) => t.id === tripId);
-      expect(trip?.budget?.total).toBe(2000);
+      expect(trip?.budget).toBe(2000);
       // Note: Currency is hardcoded to USD in database mapper
-      expect(trip?.budget?.currency).toBe("USD");
+      expect(trip?.currency).toBe("USD");
 
       // Calculate total estimated cost
       const totalEstimatedCost = trip?.destinations.reduce(

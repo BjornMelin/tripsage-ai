@@ -4,122 +4,18 @@
  */
 
 import type { TripsUpdate } from "@schemas/supabase";
+import type { TripDestination, UiTrip } from "@schemas/trips";
+import { storeTripSchema } from "@schemas/trips";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { secureUuid } from "@/lib/security/random";
 import type { Json } from "@/lib/supabase/database.types";
 
-/**
- * Interface representing a destination within a trip.
- */
-export interface Destination {
-  id: string;
-  name: string;
-  country: string;
-  coordinates?: {
-    latitude: number;
-    longitude: number;
-  };
-  startDate?: string;
-  endDate?: string;
-  activities?: string[];
-  accommodation?: {
-    type: string;
-    name: string;
-    price?: number;
-  };
-  transportation?: {
-    type: string;
-    details: string;
-    price?: number;
-  };
-  estimatedCost?: number;
-  notes?: string;
-}
+/** Trip type for the store - uses canonical schema from @schemas/trips. */
+export type Trip = UiTrip;
 
-/**
- * Interface representing a trip budget with spending breakdown.
- */
-export interface Budget {
-  total: number;
-  currency: string;
-  spent: number;
-  breakdown: Record<string, number>;
-}
-
-/**
- * Interface representing trip preferences including budget, accommodation, transportation, etc.
- */
-export interface TripPreferences {
-  budget?: {
-    total?: number;
-    currency?: string;
-    accommodationBudget?: number;
-    transportationBudget?: number;
-    foodBudget?: number;
-    activitiesBudget?: number;
-  };
-  accommodation?: {
-    type?: string;
-    minRating?: number;
-    amenities?: string[];
-    locationPreference?: string;
-  };
-  transportation?: {
-    flightPreferences?: {
-      seatClass?: string;
-      maxStops?: number;
-      preferredAirlines?: string[];
-      timeWindow?: string;
-    };
-    localTransportation?: string[];
-  };
-  activities?: string[];
-  dietaryRestrictions?: string[];
-  accessibilityNeeds?: string[];
-  [key: string]: unknown; // Allow additional preferences
-}
-
-/**
- * Interface representing a complete trip with all associated data.
- */
-export interface Trip {
-  // ID fields - supporting both database and UI representations
-  id: string;
-  // biome-ignore lint/style/useNamingConvention: Database uses snake_case
-  uuid_id?: string;
-  // biome-ignore lint/style/useNamingConvention: Database uses snake_case
-  user_id?: string;
-
-  // Core trip information
-  title: string; // Trip title (database 'name' field mapped to 'title')
-  description?: string;
-
-  // Date fields - camelCase for frontend consistency
-  startDate?: string;
-  endDate?: string;
-
-  // Trip details
-  destinations: Destination[];
-
-  // Budget - supporting both simple and structured representations
-  budget?: number; // Simple total budget
-  // biome-ignore lint/style/useNamingConvention: Database uses snake_case
-  budget_breakdown?: Budget; // New enhanced budget
-  currency?: string;
-  // biome-ignore lint/style/useNamingConvention: Database uses snake_case
-  spent_amount?: number;
-
-  // Visibility and metadata
-  visibility?: "private" | "shared" | "public";
-  tags?: string[];
-  preferences?: TripPreferences;
-  status?: string;
-
-  // Timestamp fields - camelCase for frontend consistency
-  createdAt?: string;
-  updatedAt?: string;
-}
+/** Destination type for the store - uses canonical schema from @schemas/trips. */
+export type Destination = TripDestination;
 
 interface TripState {
   trips: Trip[];
@@ -210,41 +106,28 @@ export const useTripStore = create<TripState>()(
             "@/lib/repositories/trips-repo"
           );
 
-          const tripData = {
-            budget: data.budget,
-            budgetBreakdown: data.budget_breakdown
-              ? {
-                  breakdown: data.budget_breakdown.breakdown,
-                  spent: data.budget_breakdown.spent,
-                  total: data.budget_breakdown.total,
-                }
-              : data.budget
-                ? {
-                    breakdown: {},
-                    spent: 0,
-                    total: data.budget,
-                  }
-                : null,
-            currency: data.currency ?? "USD",
-            description: data.description ?? "",
-            endDate: data.endDate,
-            preferences: data.preferences ?? {},
-            spentAmount: 0,
-            startDate: data.startDate,
+          // Validate input data
+          const validated = storeTripSchema.safeParse({
+            ...data,
+            id: secureUuid(),
             status: data.status ?? "planning",
-            tags: data.tags ?? [],
             title: data.title ?? "Untitled Trip",
             visibility: data.visibility ?? "private",
-          };
+          });
 
-          const ownerId =
-            (data.user_id as string | undefined) ??
-            _get().currentTrip?.user_id ??
-            secureUuid();
+          if (!validated.success) {
+            throw new Error(
+              `Invalid trip data: ${validated.error.issues.map((i) => i.message).join(", ")}`
+            );
+          }
+
+          const tripData = validated.data;
+
+          const ownerId = tripData.userId ?? _get().currentTrip?.userId ?? secureUuid();
 
           const created = await repoCreateTrip({
             budget: tripData.budget ?? 0,
-            destination: (data as { destination?: string })?.destination ?? "",
+            destination: tripData.destination ?? "",
             // biome-ignore lint/style/useNamingConvention: Database API requires snake_case
             end_date: tripData.endDate ?? new Date().toISOString(),
             flexibility: (tripData.preferences ?? {}) as Json,
@@ -254,12 +137,12 @@ export const useTripStore = create<TripState>()(
             search_metadata: {},
             // biome-ignore lint/style/useNamingConvention: Database API requires snake_case
             start_date: tripData.startDate ?? new Date().toISOString(),
-            travelers: 1,
+            travelers: tripData.travelers ?? 1,
             // biome-ignore lint/style/useNamingConvention: Database API requires snake_case
             user_id: ownerId,
           });
 
-          // Convert to frontend format
+          // Convert to frontend format using mapper
           const frontendTrip: Trip = created;
 
           set((state) => ({
@@ -284,8 +167,8 @@ export const useTripStore = create<TripState>()(
             "@/lib/repositories/trips-repo"
           );
           const ownerId =
-            _get().trips.find((trip) => trip.id === id)?.user_id ??
-            _get().currentTrip?.user_id ??
+            _get().trips.find((trip) => trip.id === id)?.userId ??
+            _get().currentTrip?.userId ??
             undefined;
           await repoDeleteTrip(Number.parseInt(id, 10), ownerId);
 
@@ -430,7 +313,7 @@ export const useTripStore = create<TripState>()(
           if (data.endDate) {
             updateData.end_date = data.endDate;
           }
-          if (typeof data.budget === "number") {
+          if (data.budget !== undefined) {
             updateData.budget = data.budget;
           }
           if (data.status) {
@@ -445,7 +328,7 @@ export const useTripStore = create<TripState>()(
 
           const existingTrip =
             _get().trips.find((trip) => trip.id === id) ?? _get().currentTrip;
-          const ownerId = existingTrip?.user_id ?? secureUuid();
+          const ownerId = existingTrip?.userId ?? secureUuid();
 
           const updated = await repoUpdateTrip(
             Number.parseInt(id, 10),

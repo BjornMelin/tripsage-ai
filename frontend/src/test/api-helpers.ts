@@ -9,7 +9,6 @@
  */
 
 import type { Ratelimit } from "@upstash/ratelimit";
-import type { NextRequest } from "next/server";
 import { vi } from "vitest";
 import { createMockSupabaseClient } from "@/test/mocks/supabase";
 

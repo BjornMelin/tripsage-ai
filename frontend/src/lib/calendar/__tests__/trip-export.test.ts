@@ -6,6 +6,7 @@ import { tripToCalendarEvents } from "../trip-export";
 
 describe("trip-export", () => {
   const mockTrip: Trip = {
+    currency: "USD",
     description: "A test trip",
     destinations: [
       {

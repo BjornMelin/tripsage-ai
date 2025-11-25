@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS public.trips (
     end_date DATE NOT NULL,
     destination TEXT NOT NULL,
     budget NUMERIC NOT NULL,
+    currency TEXT NOT NULL DEFAULT 'USD',
     travelers INTEGER NOT NULL,
     status TEXT NOT NULL DEFAULT 'planning',
     trip_type TEXT NOT NULL DEFAULT 'leisure',

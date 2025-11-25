@@ -10,6 +10,7 @@ import {
 } from "@schemas/supabase";
 import { createClient, type TypedSupabaseClient } from "@/lib/supabase";
 import { insertSingle, updateSingle } from "@/lib/supabase/typed-helpers";
+import { mapDbTripToUi } from "@/lib/trips/mappers";
 
 /**
  * Gets a Supabase client, throwing if unavailable (e.g., during SSR).
@@ -29,33 +30,6 @@ function getClientOrThrow(): TypedSupabaseClient {
 export type TripRow = TripsRow;
 export type TripInsert = TripsInsert;
 export type TripUpdate = TripsUpdate;
-
-/**
- * Maps a database trip row to UI-friendly trip object format.
- *
- * Performs minimal transformation from database schema to client-side representation,
- * converting snake_case database fields to camelCase where needed.
- *
- * @param row - The raw trip row from Supabase database
- * @returns UI-formatted trip object with camelCase properties
- */
-export function mapTripRowToUi(row: TripRow) {
-  return {
-    budget: row.budget,
-    createdAt: row.created_at,
-    currency: "USD",
-    description: (row as unknown as { description?: string }).description,
-    destinations: [],
-    endDate: row.end_date,
-    id: String(row.id),
-    startDate: row.start_date,
-    status: row.status,
-    title: row.name, // Database uses 'name', frontend uses 'title'
-    updatedAt: row.updated_at,
-    user_id: row.user_id,
-    visibility: "private" as const, // Default visibility
-  };
-}
 
 /**
  * Creates a new trip in the database.
@@ -78,7 +52,7 @@ export async function createTrip(
   if (error || !row) throw error || new Error("Failed to create trip");
   // Validate response using Zod schema
   const validatedRow = tripsRowSchema.parse(row);
-  return mapTripRowToUi(validatedRow);
+  return mapDbTripToUi(validatedRow);
 }
 
 /**
@@ -107,7 +81,7 @@ export async function updateTrip(id: number, userId: string, updates: TripUpdate
   if (error || !data) throw error || new Error("Failed to update trip");
   // Validate response using Zod schema
   const validatedRow = tripsRowSchema.parse(data);
-  return mapTripRowToUi(validatedRow);
+  return mapDbTripToUi(validatedRow);
 }
 
 /**
@@ -128,7 +102,7 @@ export async function listTrips() {
   if (error) throw error;
   // Validate all rows using Zod schema
   const validatedRows = (data || []).map((row) => tripsRowSchema.parse(row));
-  return validatedRows.map(mapTripRowToUi);
+  return validatedRows.map(mapDbTripToUi);
 }
 
 /**

@@ -2,8 +2,9 @@
 
 import type { TripsRow } from "@schemas/supabase";
 import { describe, expect, it, vi } from "vitest";
-import { createTrip, mapTripRowToUi, updateTrip } from "@/lib/repositories/trips-repo";
+import { createTrip, updateTrip } from "@/lib/repositories/trips-repo";
 import * as helpers from "@/lib/supabase/typed-helpers";
+import { mapDbTripToUi } from "@/lib/trips/mappers";
 
 vi.mock("@/lib/supabase", () => ({
   createClient: () => ({}),
@@ -15,6 +16,7 @@ describe("trips-repo", () => {
     const row: TripsRow = {
       budget: 1200,
       created_at: "2025-03-01T00:00:00Z",
+      currency: "USD",
       destination: "LON",
       end_date: "2025-03-10T00:00:00Z",
       flexibility: {},
@@ -29,10 +31,11 @@ describe("trips-repo", () => {
       updated_at: "2025-03-01T00:00:00Z",
       user_id: userId,
     };
-    const ui = mapTripRowToUi(row);
+    const ui = mapDbTripToUi(row);
     expect(ui.id).toBe("42");
     expect(ui.title).toBe("Trip");
     expect(ui.startDate).toBe("2025-03-01T00:00:00Z");
+    expect(ui.currency).toBe("USD");
   });
 
   it("createTrip uses insertSingle and returns UI mapping", async () => {
@@ -40,6 +43,7 @@ describe("trips-repo", () => {
     const row: TripsRow = {
       budget: 100,
       created_at: "2025-01-01T00:00:00Z",
+      currency: "USD",
       destination: "NYC",
       end_date: "2025-01-02T00:00:00Z",
       flexibility: {},
@@ -73,6 +77,7 @@ describe("trips-repo", () => {
     const row: TripsRow = {
       budget: 300,
       created_at: "2025-02-01T00:00:00Z",
+      currency: "EUR",
       destination: "SFO",
       end_date: "2025-02-02T00:00:00Z",
       flexibility: {},
