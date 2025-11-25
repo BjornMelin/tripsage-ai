@@ -134,6 +134,7 @@ Avoid new barrels; import concrete modules.
 - Supabase PostgreSQL with pgvector for embeddings; JSONB for flexible metadata.
 - Supabase Storage for file uploads; access via signed URLs.
 - Supabase Realtime for broadcast/presence only. Do not stream LLM tokens over Realtime—AI SDK SSE handles that. All channels created via `use-realtime-channel` or thin wrappers; no direct `supabase.channel()` in new code.
+- Connection health is centralized in `useRealtimeConnectionStore` (`src/stores/realtime-connection-store.ts`), which tracks channel status/activity, errors, and exponential backoff. UI surfaces (`ConnectionStatusMonitor` / `ConnectionStatusIndicator`) read from this store; reconnection uses `reconnectAll()` (per-channel unsubscribe/resubscribe) rather than ad-hoc polling or mock state.
 
 ### Visual: client <> server data paths
 
