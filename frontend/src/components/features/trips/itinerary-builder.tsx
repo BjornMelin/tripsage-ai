@@ -47,6 +47,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { secureUuid } from "@/lib/security/random";
 import { type Destination, type Trip, useTripStore } from "@/stores/trip-store";
 
 interface ItineraryBuilderProps {
@@ -427,7 +428,7 @@ export function ItineraryBuilder({
     } else {
       await addDestination(trip.id, {
         ...destinationData,
-        id: Date.now().toString(),
+        id: secureUuid(),
       } as Destination);
       setIsAddingDestination(false);
     }

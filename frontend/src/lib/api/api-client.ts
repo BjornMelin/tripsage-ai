@@ -743,10 +743,7 @@ defaultClient.addRequestInterceptor((config) => {
 
 // Add common response interceptor for logging
 defaultClient.addResponseInterceptor((response, config) => {
-  // NODE_ENV check is acceptable here (development-only logging)
-  if (typeof process !== "undefined" && process.env.NODE_ENV === "development") {
-    console.log(`API Response [${config.method}] ${config.endpoint}:`, response);
-  }
+  // Response interceptor - telemetry/logging handled by route handlers
   return Promise.resolve(response);
 });
 
@@ -756,12 +753,5 @@ defaultClient.addResponseInterceptor((response, config) => {
  */
 export { defaultClient as apiClient };
 
-// NOTE: A previously exported `createTypedApiClient` factory was removed in the
-// Zod v4 migration because it was unused and introduced brittle generic
-// constraints. Reintroduce a typed factory when concrete endpoint schemas and
-// tests require it.
-
-/**
- * Exported types for API client configuration and interceptors.
- */
+/** Exported types for API client configuration and interceptors. */
 export type { RequestConfig, ResponseInterceptor, RequestInterceptor };

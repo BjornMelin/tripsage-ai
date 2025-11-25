@@ -12,6 +12,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse } from "@/lib/api/route-helpers";
 import { handleMemoryIntent } from "@/lib/memory/orchestrator";
+import { secureUuid } from "@/lib/security/random";
 
 /**
  * POST /api/memory/search
@@ -50,7 +51,7 @@ export const POST = withApiGuards({
       memories: results.map((item) => ({
         content: item.context,
         createdAt: new Date().toISOString(), // Approximate
-        id: crypto.randomUUID(), // Generate ID for response
+        id: secureUuid(), // Generate ID for response
         source: item.source,
       })),
       total: results.length,
