@@ -19,6 +19,7 @@ import {
   parseJsonBody,
   withRequestSpan,
 } from "@/lib/api/route-helpers";
+import { fireAndForgetMetric } from "@/lib/metrics/api-metrics";
 import { ROUTE_RATE_LIMITS, type RouteRateLimitKey } from "@/lib/ratelimit/routes";
 import { getRedis } from "@/lib/redis";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
@@ -308,9 +309,41 @@ export function withApiGuards<SchemaType extends z.ZodType>(
 
       // Execute handler with telemetry if configured
       const executeHandler = async () => {
+        const startTime = process.hrtime.bigint();
         try {
-          return await handler(req, { supabase, user }, validatedData, routeContext);
+          const response = await handler(
+            req,
+            { supabase, user },
+            validatedData,
+            routeContext
+          );
+          const durationMs = Number(process.hrtime.bigint() - startTime) / 1e6;
+
+          // Record metric (fire-and-forget)
+          fireAndForgetMetric({
+            durationMs,
+            endpoint: req.nextUrl.pathname,
+            method: req.method,
+            rateLimitKey: rateLimit,
+            statusCode: response.status,
+            userId: user?.id,
+          });
+
+          return response;
         } catch (error) {
+          const durationMs = Number(process.hrtime.bigint() - startTime) / 1e6;
+
+          // Record error metric (fire-and-forget)
+          fireAndForgetMetric({
+            durationMs,
+            endpoint: req.nextUrl.pathname,
+            errorType: error instanceof Error ? error.name : "UnknownError",
+            method: req.method,
+            rateLimitKey: rateLimit,
+            statusCode: 500,
+            userId: user?.id,
+          });
+
           return errorResponse({
             err: error,
             error: "internal",
