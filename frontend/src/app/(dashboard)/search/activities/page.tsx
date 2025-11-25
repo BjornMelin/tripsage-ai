@@ -16,6 +16,7 @@ import {
   type ActivitySearchParams,
   useActivitySearch,
 } from "@/hooks/use-activity-search";
+import { ActivityComparisonModal } from "@/components/features/search/activity-comparison-modal";
 import { TripSelectionModal } from "@/components/features/search/trip-selection-modal";
 import { openActivityBooking } from "@/lib/activities/booking";
 import { addActivityToTrip, getPlanningTrips } from "./actions";
@@ -119,166 +120,102 @@ export default function ActivitiesSearchPage() {
     setSelectedActivity(activity);
   };
 
-  const handleCompareActivity = (_activity: Activity) => {
-    /**
-     * TODO: Implement activity comparison functionality.
-     *
-     * IMPLEMENTATION PLAN (Decision Framework Score: 9.0/10.0)
-     * ===========================================================
-     *
-     * ARCHITECTURE DECISIONS:
-     * -----------------------
-     * 1. State Management: Use useState with Set for comparison list (client-side only)
-     *    - Pattern: Similar to `modern-flight-results.tsx` (uses Set for selected items)
-     *    - Max items: 3-5 activities (recommended: 3 for UI clarity)
-     *    - Rationale: Simple, lightweight; no need for global store for this feature
-     *
-     * 2. Persistence: Use sessionStorage for comparison list persistence
-     *    - Key: `activity-comparison-list`
-     *    - Store activity IDs only (re-fetch details when showing comparison)
-     *    - Rationale: Persists across page refreshes; cleared on browser close
-     *
-     * 3. Comparison UI: Modal or dedicated page with side-by-side table
-     *    - Show: Name, Price, Rating, Location, Duration, Type, Images
-     *    - Allow removing items from comparison
-     *    - Allow adding selected activity to trip from comparison view
-     *
-     * IMPLEMENTATION STEPS:
-     * ---------------------
-     *
-     * Step 1: Add Comparison State
-     *   ```typescript
-     *   const [comparisonList, setComparisonList] = useState<Set<string>>(new Set());
-     *   const [showComparisonModal, setShowComparisonModal] = useState(false);
-     *
-     *   // Load from sessionStorage on mount
-     *   useEffect(() => {
-     *     const stored = sessionStorage.getItem("activity-comparison-list");
-     *     if (stored) {
-     *       try {
-     *         const ids = JSON.parse(stored) as string[];
-     *         setComparisonList(new Set(ids));
-     *       } catch {
-     *         // Invalid storage, ignore
-     *       }
-     *     }
-     *   }, []);
-     *
-     *   // Save to sessionStorage when comparison list changes
-     *   useEffect(() => {
-     *     if (comparisonList.size > 0) {
-     *       sessionStorage.setItem(
-     *         "activity-comparison-list",
-     *         JSON.stringify(Array.from(comparisonList))
-     *       );
-     *     } else {
-     *       sessionStorage.removeItem("activity-comparison-list");
-     *     }
-     *   }, [comparisonList]);
-     *   ```
-     *
-     * Step 2: Implement Toggle Comparison Function
-     *   ```typescript
-     *   const toggleComparison = useCallback((activity: Activity) => {
-     *     setComparisonList((prev) => {
-     *       const newSet = new Set(prev);
-     *       if (newSet.has(activity.id)) {
-     *         newSet.delete(activity.id);
-     *         toast({
-     *           description: `Removed "${activity.name}" from comparison`,
-     *           title: "Removed from comparison",
-     *           variant: "default",
-     *         });
-     *       } else {
-     *         if (newSet.size >= 3) {
-     *           toast({
-     *             description: "You can compare up to 3 activities at once",
-     *             title: "Comparison limit reached",
-     *             variant: "default",
-     *           });
-     *           return prev;
-     *         }
-     *         newSet.add(activity.id);
-     *         toast({
-     *           description: `Added "${activity.name}" to comparison`,
-     *           title: "Added to comparison",
-     *           variant: "default",
-     *         });
-     *       }
-     *       return newSet;
-     *     });
-     *   }, [toast]);
-     *   ```
-     *
-     * Step 3: Create Comparison Modal Component
-     *   File: `frontend/src/components/features/search/activity-comparison-modal.tsx` (new)
-     *   ```typescript
-     *   interface ActivityComparisonModalProps {
-     *     activityIds: string[];
-     *     activities: Activity[]; // Full activity objects
-     *     onClose: () => void;
-     *     onRemove: (activityId: string) => void;
-     *   }
-     *
-     *   export function ActivityComparisonModal({
-     *     activityIds,
-     *     activities,
-     *     onClose,
-     *     onRemove,
-     *   }: ActivityComparisonModalProps) {
-     *     // Render side-by-side comparison table
-     *     // Columns: Name, Price, Rating, Location, Duration, Type, Actions
-     *     // Allow removing items, adding to trip
-     *   }
-     *   ```
-     *
-     * Step 4: Update handleCompareActivity
-     *   ```typescript
-     *   const handleCompareActivity = (activity: Activity) => {
-     *     toggleComparison(activity);
-     *     // Auto-open comparison modal if 2+ items
-     *     if (comparisonList.size >= 1 && !comparisonList.has(activity.id)) {
-     *       setShowComparisonModal(true);
-     *     }
-     *   };
-     *   ```
-     *
-     * Step 5: Add Comparison Button/Indicator
-     *   - Show floating button when comparisonList.size > 0
-     *   - Display count badge
-     *   - Open comparison modal on click
-     *
-     * INTEGRATION POINTS:
-     * -------------------
-     * - State: useState + sessionStorage (no external dependencies)
-     * - UI: Toast notifications for user feedback
-     * - Components: Create new `ActivityComparisonModal` component
-     * - Telemetry: Add `recordTelemetryEvent` calls for comparison actions
-     *
-     * PERFORMANCE CONSIDERATIONS:
-     * ---------------------------
-     * - Limit to 3 activities for UI clarity and performance
-     * - Store only IDs in sessionStorage (re-fetch details if needed)
-     * - Use Set for O(1) lookup/removal operations
-     *
-     * FUTURE ENHANCEMENTS:
-     * -------------------
-     * - Add comparison to user preferences (persist across sessions)
-     * - Support exporting comparison as PDF/image
-     * - Add comparison sharing (share comparison link)
-     * - Add filtering/sorting within comparison view
-     *
-     * Note: Current implementation shows placeholder toast; replace with full comparison feature
-     */
-    toast({
-      description: "Activity comparison is coming soon.",
-      title: "Comparison not available yet",
-      variant: "default",
+  const [comparisonList, setComparisonList] = useState<Set<string>>(new Set());
+  const [showComparisonModal, setShowComparisonModal] = useState(false);
+
+  // Load from sessionStorage on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = sessionStorage.getItem("activity-comparison-list");
+      if (stored) {
+        try {
+          const ids = JSON.parse(stored) as string[];
+          setComparisonList(new Set(ids));
+        } catch {
+          // Invalid storage, ignore
+        }
+      }
+    }
+  }, []);
+
+  // Save to sessionStorage when comparison list changes
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (comparisonList.size > 0) {
+        sessionStorage.setItem(
+          "activity-comparison-list",
+          JSON.stringify(Array.from(comparisonList))
+        );
+      } else {
+        sessionStorage.removeItem("activity-comparison-list");
+      }
+    }
+  }, [comparisonList]);
+
+  const toggleComparison = (activity: Activity) => {
+    setComparisonList((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(activity.id)) {
+        newSet.delete(activity.id);
+        toast({
+          description: `Removed "${activity.name}" from comparison`,
+          title: "Removed from comparison",
+          variant: "default",
+        });
+      } else {
+        if (newSet.size >= 3) {
+          toast({
+            description: "You can compare up to 3 activities at once",
+            title: "Comparison limit reached",
+            variant: "default",
+          });
+          return prev;
+        }
+        newSet.add(activity.id);
+        toast({
+          description: `Added "${activity.name}" to comparison`,
+          title: "Added to comparison",
+          variant: "default",
+        });
+      }
+      return newSet;
     });
+  };
+
+  const handleCompareActivity = (activity: Activity) => {
+    toggleComparison(activity);
+    // Auto-open comparison modal if 2+ items are selected and we just added one
+    if (comparisonList.size >= 1 && !comparisonList.has(activity.id)) {
+      setShowComparisonModal(true);
+    }
+  };
+
+  const handleRemoveFromComparison = (activityId: string) => {
+    setComparisonList((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(activityId);
+      return newSet;
+    });
+    if (comparisonList.size <= 1) {
+      setShowComparisonModal(false);
+    }
+  };
+
+  const handleAddFromComparison = (activity: Activity) => {
+    setShowComparisonModal(false);
+    setSelectedActivity(activity);
+    // Slight delay to allow modal transition
+    setTimeout(() => {
+      handleAddToTripClick();
+    }, 100);
   };
 
   const activities = results ?? [];
   const hasActiveResults = activities.length > 0;
+
+  const comparisonActivities = useMemo(() => {
+    return activities.filter((a) => comparisonList.has(a.id));
+  }, [activities, comparisonList]);
 
   const { verifiedActivities, aiSuggestions } = useMemo(() => {
     if (searchMetadata?.primarySource !== "mixed") {
@@ -418,6 +355,25 @@ export default function ActivitiesSearchPage() {
           )}
         </div>
       </div>
+
+      {comparisonList.size > 0 && (
+        <div className="fixed bottom-6 right-6 z-40">
+          <button
+            onClick={() => setShowComparisonModal(true)}
+            className="bg-primary text-primary-foreground px-4 py-2 rounded-full shadow-lg flex items-center gap-2 hover:bg-primary/90 transition-colors"
+          >
+            <span>Compare ({comparisonList.size})</span>
+          </button>
+        </div>
+      )}
+
+      <ActivityComparisonModal
+        isOpen={showComparisonModal}
+        onClose={() => setShowComparisonModal(false)}
+        activities={comparisonActivities}
+        onRemove={handleRemoveFromComparison}
+        onAddToTrip={handleAddFromComparison}
+      />
 
       {selectedActivity && (
         <div
