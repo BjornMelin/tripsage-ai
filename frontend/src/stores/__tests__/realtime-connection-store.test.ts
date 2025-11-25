@@ -75,6 +75,15 @@ describe("realtime connection store", () => {
     expect(updated.reconnectAttempts).toBeGreaterThan(0);
     expect(channel.unsubscribe).toHaveBeenCalled();
     expect(channel.subscribe).toHaveBeenCalled();
+
+    const unsubscribeOrder = (channel.unsubscribe as {
+      mock: { invocationCallOrder: number[] };
+    }).mock.invocationCallOrder[0];
+    const subscribeOrder = (channel.subscribe as {
+      mock: { invocationCallOrder: number[] };
+    }).mock.invocationCallOrder[0];
+
+    expect(unsubscribeOrder).toBeLessThan(subscribeOrder);
     vi.useRealTimers();
   });
 
