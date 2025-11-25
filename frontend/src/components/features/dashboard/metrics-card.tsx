@@ -21,12 +21,18 @@ export interface MetricsCardProps {
   value: number | string;
   /** Optional unit suffix (e.g., "ms", "%") */
   unit?: string;
-  /** Optional trend direction */
+ /** Optional trend direction */
   trend?: "up" | "down" | "neutral";
   /** Optional trend value text (e.g., "+5%") */
   trendValue?: string;
   /** Optional description text */
   description?: string;
+  /**
+   * Semantic for interpreting trend direction.
+   * Default treats "up" as negative (red) and "down" as positive (green).
+   * Set to "positive" when increases are good (e.g., revenue).
+   */
+  trendSemantic?: "positive" | "negative";
   /** Additional CSS classes */
   className?: string;
 }
@@ -51,16 +57,21 @@ export function MetricsCard({
   trend,
   trendValue,
   description,
+  trendSemantic = "negative",
   className,
 }: MetricsCardProps) {
   const TrendIcon = trend === "up" ? ArrowUp : trend === "down" ? ArrowDown : Minus;
 
-  const trendColor =
-    trend === "up"
-      ? "text-red-500"
-      : trend === "down"
-        ? "text-green-500"
-        : "text-muted-foreground";
+  const trendColor = (() => {
+    if (!trend || trend === "neutral") {
+      return "text-muted-foreground";
+    }
+    const isPositive = trendSemantic === "positive";
+    if (trend === "up") {
+      return isPositive ? "text-green-500" : "text-red-500";
+    }
+    return isPositive ? "text-red-500" : "text-green-500";
+  })();
 
   return (
     <Card className={cn("", className)}>
