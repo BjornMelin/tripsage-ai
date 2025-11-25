@@ -99,9 +99,8 @@ export default function TripCollaborationPage() {
     supabase.auth
       .getUser()
       .then(({ data }) => setCurrentUserId(data.user?.id ?? null))
-      .catch((error) => {
+      .catch(() => {
         // Best-effort: keep UI consistent even if auth lookup fails
-        console.error("Failed to fetch current user", error);
         setCurrentUserId(null);
       });
   }, []);
