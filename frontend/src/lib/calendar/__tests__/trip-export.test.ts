@@ -31,8 +31,8 @@ describe("trip-export", () => {
     ],
     endDate: "2025-01-20",
     id: "trip-1",
-    name: "Test Trip",
     startDate: "2025-01-15",
+    title: "Test Trip",
   };
 
   describe("tripToCalendarEvents", () => {

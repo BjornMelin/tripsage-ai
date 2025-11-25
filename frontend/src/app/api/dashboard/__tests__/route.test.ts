@@ -1,16 +1,12 @@
 /** @vitest-environment node */
 
-import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   apiRouteSupabaseMock,
   mockApiRouteAuthUser,
   resetApiRouteMocks,
 } from "@/test/api-route-helpers";
-
-function createMockRequest(url: string): NextRequest {
-  return new NextRequest(new Request(url));
-}
+import { createMockNextRequest } from "@/test/route-helpers";
 
 describe("/api/dashboard route", () => {
   beforeEach(() => {
@@ -20,9 +16,11 @@ describe("/api/dashboard route", () => {
 
   it("returns default metrics when no logs are present", async () => {
     const selectMock = vi.fn().mockResolvedValue({ data: [], error: null });
-    apiRouteSupabaseMock.from.mockReturnValue({ select: selectMock } as never);
+    vi.spyOn(apiRouteSupabaseMock, "from").mockReturnValue({
+      select: selectMock,
+    } as never);
     const mod = await import("../route");
-    const req = createMockRequest("http://localhost/api/dashboard");
+    const req = createMockNextRequest({ url: "http://localhost/api/dashboard" });
     const res = await mod.GET(req, { params: Promise.resolve({}) });
 
     expect(res.status).toBe(200);

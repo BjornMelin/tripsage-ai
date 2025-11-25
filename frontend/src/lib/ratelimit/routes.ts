@@ -110,6 +110,8 @@ export const ROUTE_RATE_LIMITS = {
   routes: { limit: 60, window: "1 m" },
 
   // Security
+  "security:events": { limit: 20, window: "1 m" },
+  "security:metrics": { limit: 20, window: "1 m" },
   "security:sessions:list": { limit: 20, window: "1 m" },
   "security:sessions:terminate": { limit: 10, window: "1 m" },
 

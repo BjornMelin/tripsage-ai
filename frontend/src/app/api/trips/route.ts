@@ -98,22 +98,18 @@ function mapCreatePayloadToInsert(
 function mapTripRowToUi(row: TripsRow) {
   return {
     budget: row.budget,
-    created_at: row.created_at,
     createdAt: row.created_at,
     currency: "USD",
     description: undefined,
     destinations: [] as unknown[],
-    end_date: row.end_date,
     endDate: row.end_date,
     id: String(row.id),
-    isPublic: false,
-    name: row.name,
-    start_date: row.start_date,
     startDate: row.start_date,
     status: row.status,
-    updated_at: row.updated_at,
+    title: row.name, // Database uses 'name', frontend uses 'title'
     updatedAt: row.updated_at,
     user_id: row.user_id,
+    visibility: "private" as const, // Default visibility
   };
 }
 

@@ -15,7 +15,7 @@ import type {
 } from "@schemas/realtime";
 import { CONNECTION_STATUS_SCHEMA } from "@schemas/realtime";
 import { create } from "zustand";
-import { getCurrentTimestamp } from "@/lib/stores/helpers";
+import { getCurrentTimestamp } from "@/stores/helpers";
 
 /**
  * Chat realtime state interface.

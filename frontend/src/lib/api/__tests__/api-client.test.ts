@@ -4,7 +4,8 @@ import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { server } from "@/test/msw/server";
-import { ApiClient, ApiClientError } from "../api-client";
+import { ApiClient } from "../api-client";
+import { ApiError } from "../error-types";
 
 /** Zod schema for validating user response data. */
 const USER_RESPONSE_SCHEMA = z.object({
@@ -293,7 +294,7 @@ describe("API client with Zod Validation", () => {
 
       await expect(
         CLIENT.getValidated("/api/users/invalid", USER_RESPONSE_SCHEMA)
-      ).rejects.toThrow(ApiClientError);
+      ).rejects.toThrow(ApiError);
     });
 
     it("handles network errors gracefully", async () => {

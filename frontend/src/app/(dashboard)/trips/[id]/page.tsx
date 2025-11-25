@@ -129,11 +129,13 @@ export default function TripDetailsPage() {
         </Button>
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold">{currentTrip.name}</h1>
+            <h1 className="text-3xl font-bold">{currentTrip.title}</h1>
             <Badge className={getStatusColor(status)}>
               {status.charAt(0).toUpperCase() + status.slice(1)}
             </Badge>
-            {currentTrip.isPublic && <Badge variant="outline">Public</Badge>}
+            {currentTrip.visibility === "public" && (
+              <Badge variant="outline">Public</Badge>
+            )}
           </div>
           {currentTrip.description && (
             <p className="text-muted-foreground mt-1">{currentTrip.description}</p>
@@ -159,7 +161,7 @@ export default function TripDetailsPage() {
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement("a");
                 a.href = url;
-                a.download = `${currentTrip.name || currentTrip.title || "trip"}.ics`;
+                a.download = `${currentTrip.title || "trip"}.ics`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);

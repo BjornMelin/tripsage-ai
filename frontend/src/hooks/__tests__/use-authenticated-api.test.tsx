@@ -1,9 +1,10 @@
 /** @vitest-environment jsdom */
 
 import { act, renderHook } from "@testing-library/react";
-import { HttpResponse, http } from "msw";
-import { beforeEach, describe, expect, it } from "vitest";
+import { HttpResponse, delay, http } from "msw";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
+import { apiClient } from "@/lib/api/api-client";
 import { ApiError } from "@/lib/api/error-types";
 import { server } from "@/test/msw/server";
 
@@ -89,6 +90,60 @@ describe("useAuthenticatedApi", () => {
     expect(error).toBeInstanceOf(ApiError);
     expect((error as ApiError).code).toBe("NETWORK_ERROR");
     expect((error as ApiError).status).toBe(0);
+  });
+
+  it("normalizes ApiError thrown by apiClient into NETWORK_ERROR with status 0", async () => {
+    const apiError = new ApiError({
+      code: "NETWORK_ERROR",
+      message: "Network request failed",
+      status: 500,
+    });
+    const getSpy = vi.spyOn(apiClient, "get").mockRejectedValueOnce(apiError);
+
+    const { result } = renderHook(() => useAuthenticatedApi());
+
+    let error: unknown;
+    try {
+      await act(async () => {
+        await result.current.authenticatedApi.get("/api/test-endpoint");
+      });
+    } catch (e) {
+      error = e;
+    }
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).code).toBe("NETWORK_ERROR");
+    expect((error as ApiError).status).toBe(0);
+
+    getSpy.mockRestore();
+  });
+
+  it("maps aborted requests to REQUEST_CANCELLED ApiError", async () => {
+    server.use(
+      http.get(`${API_BASE}/api/slow-endpoint`, async () => {
+        await delay(100);
+        return HttpResponse.json({ ok: true });
+      })
+    );
+
+    const { result } = renderHook(() => useAuthenticatedApi());
+
+    let error: unknown;
+    await act(async () => {
+      const requestPromise = result.current.authenticatedApi.get(
+        "/api/slow-endpoint"
+      );
+      result.current.cancelRequests();
+      try {
+        await requestPromise;
+      } catch (e) {
+        error = e;
+      }
+    });
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).code).toBe("REQUEST_CANCELLED");
+    expect((error as ApiError).status).toBe(499);
   });
 
   it("handles HTTP errors without code in response body", async () => {

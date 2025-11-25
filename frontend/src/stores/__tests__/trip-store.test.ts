@@ -36,17 +36,25 @@ vi.mock("@/lib/repositories/trips-repo", () => {
     createTrip: vi.fn((payload: Record<string, unknown>) => {
       const tripId = String(Date.now() + seq++);
       const trip = {
-        budget: payload.budget ?? 0,
+        budget: payload.budget
+          ? typeof payload.budget === "number"
+            ? {
+                currency: "USD",
+                spent: 0,
+                total: payload.budget,
+              }
+            : payload.budget
+          : undefined,
         createdAt: now(),
-        currency: "USD", // Database doesn't store currency, hardcoded in mapper
         description: "", // Database doesn't store description
         destinations: [],
-        endDate: payload.end_date ?? null,
+        endDate: (payload.end_date as string | undefined) ?? null,
         id: tripId,
-        isPublic: false, // Hardcoded to false in database mapper
-        name: payload.name || payload.title || "Untitled Trip",
-        startDate: payload.start_date ?? null,
+        startDate: (payload.start_date as string | undefined) ?? null,
+        title: (payload.name as string | undefined) || "Untitled Trip",
         updatedAt: now(),
+        visibility:
+          (payload.visibility as "private" | "shared" | "public") ?? "private",
       };
       createdTrips.set(tripId, trip);
       return trip;
@@ -60,11 +68,23 @@ vi.mock("@/lib/repositories/trips-repo", () => {
       const existingTrip = createdTrips.get(tripId) ?? {};
       const updated = {
         ...existingTrip,
-        budget: patch.budget ?? existingTrip.budget ?? 0,
-        currency: existingTrip.currency ?? "USD",
+        budget: patch.budget
+          ? typeof patch.budget === "number"
+            ? {
+                currency: "USD",
+                spent:
+                  (existingTrip as { budget?: { spent?: number } }).budget?.spent ?? 0,
+                total: patch.budget,
+              }
+            : patch.budget
+          : (existingTrip as { budget?: { currency: string; spent: number; total: number } })
+              .budget,
         description: existingTrip.description ?? "",
         id: tripId,
-        name: patch.name ?? existingTrip.name ?? "Untitled Trip",
+        endDate: (patch.end_date as string | undefined) ?? existingTrip.endDate ?? null,
+        startDate:
+          (patch.start_date as string | undefined) ?? existingTrip.startDate ?? null,
+        title: (patch.name as string | undefined) ?? existingTrip.title ?? "Untitled Trip",
         updatedAt: now(),
       };
       createdTrips.set(tripId, updated);
@@ -110,17 +130,17 @@ describe("Trip Store", () => {
           description: "A relaxing summer trip",
           destinations: [],
           id: "trip-1",
-          isPublic: false,
-          name: "Summer Vacation",
+          title: "Summer Vacation",
           updatedAt: "2025-01-01T00:00:00Z",
+          visibility: "private",
         },
         {
           createdAt: "2025-01-02T00:00:00Z",
           destinations: [],
           id: "trip-2",
-          isPublic: false,
-          name: "Business Trip",
+          title: "Business Trip",
           updatedAt: "2025-01-02T00:00:00Z",
+          visibility: "private",
         },
       ];
 
@@ -138,9 +158,9 @@ describe("Trip Store", () => {
         createdAt: "2025-01-01T00:00:00Z",
         destinations: [],
         id: "trip-1",
-        isPublic: false,
-        name: "Summer Vacation",
+        title: "Summer Vacation",
         updatedAt: "2025-01-01T00:00:00Z",
+        visibility: "private",
       };
 
       act(() => {
@@ -160,14 +180,17 @@ describe("Trip Store", () => {
       const { result } = renderHook(() => useTripStore());
 
       const tripData = {
-        budget: 3000,
-        currency: "EUR",
+        budget: {
+          currency: "USD",
+          spent: 0,
+          total: 3000,
+        },
         description: "Exploring Europe",
         destinations: [],
         endDate: "2025-06-15",
-        isPublic: true,
-        name: "European Adventure",
         startDate: "2025-06-01",
+        title: "European Adventure",
+        visibility: "public" as const,
       };
 
       await act(async () => {
@@ -179,16 +202,16 @@ describe("Trip Store", () => {
       expect(result.current.error).toBeNull();
 
       const createdTrip = result.current.trips[0];
-      expect(createdTrip.name).toBe("European Adventure");
+      expect(createdTrip.title).toBe("European Adventure");
       // Note: Description is not stored in database, so it's empty
       expect(createdTrip.description).toBe("");
       expect(createdTrip.startDate).toBe("2025-06-01");
       expect(createdTrip.endDate).toBe("2025-06-15");
-      expect(createdTrip.budget).toBe(3000);
+      expect(createdTrip.budget?.total).toBe(3000);
       // Note: Currency is hardcoded to USD in database mapper
-      expect(createdTrip.currency).toBe("USD");
-      // Note: isPublic is hardcoded to false in database mapper
-      expect(createdTrip.isPublic).toBe(false);
+      expect(createdTrip.budget?.currency).toBe("USD");
+      // Note: visibility defaults to "private" in database mapper
+      expect(createdTrip.visibility).toBe("private");
       expect(createdTrip.id).toBeDefined();
       expect(createdTrip.createdAt).toBeDefined();
       expect(createdTrip.updatedAt).toBeDefined();
@@ -207,11 +230,11 @@ describe("Trip Store", () => {
       expect(result.current.trips).toHaveLength(1);
 
       const createdTrip = result.current.trips[0];
-      expect(createdTrip.name).toBe("Untitled Trip");
+      expect(createdTrip.title).toBe("Untitled Trip");
       expect(createdTrip.description).toBe("");
       expect(createdTrip.destinations).toEqual([]);
-      expect(createdTrip.currency).toBe("USD");
-      expect(createdTrip.isPublic).toBe(false);
+      expect(createdTrip.budget?.currency).toBe("USD");
+      expect(createdTrip.visibility).toBe("private");
     });
 
     it("updates an existing trip", async () => {
@@ -219,7 +242,7 @@ describe("Trip Store", () => {
 
       // First create a trip
       await act(async () => {
-        await result.current.createTrip({ name: "Original Trip" });
+        await result.current.createTrip({ title: "Original Trip" });
       });
 
       const tripId = result.current.trips[0].id;
@@ -228,9 +251,13 @@ describe("Trip Store", () => {
       // Update the trip
       await act(async () => {
         await result.current.updateTrip(tripId, {
-          budget: 2000,
+          budget: {
+            currency: "USD",
+            spent: 0,
+            total: 2000,
+          },
           description: "Updated description",
-          name: "Updated Trip",
+          title: "Updated Trip",
         });
       });
 
@@ -239,10 +266,10 @@ describe("Trip Store", () => {
       expect(result.current.error).toBeNull();
 
       const updatedTrip = result.current.trips[0];
-      expect(updatedTrip.name).toBe("Updated Trip");
+      expect(updatedTrip.title).toBe("Updated Trip");
       // Note: Description is not stored in database
       expect(updatedTrip.description).toBe("");
-      expect(updatedTrip.budget).toBe(2000);
+      expect(updatedTrip.budget?.total).toBe(2000);
       // Updated timestamp should be the same or newer; exact inequality is not required
       if (updatedTrip.updatedAt && originalUpdatedAt) {
         expect(new Date(updatedTrip.updatedAt).valueOf()).toBeGreaterThanOrEqual(
@@ -251,7 +278,7 @@ describe("Trip Store", () => {
       }
 
       // Should also update current trip if it matches
-      expect(result.current.currentTrip?.name).toBe("Updated Trip");
+      expect(result.current.currentTrip?.title).toBe("Updated Trip");
     });
 
     it("updates current trip when it matches the updated trip", async () => {
@@ -259,7 +286,7 @@ describe("Trip Store", () => {
 
       // Create and set as current trip
       await act(async () => {
-        await result.current.createTrip({ name: "Current Trip" });
+        await result.current.createTrip({ title: "Current Trip" });
       });
 
       const tripId = result.current.currentTrip?.id;
@@ -267,10 +294,10 @@ describe("Trip Store", () => {
 
       // Update the trip
       await act(async () => {
-        await result.current.updateTrip(tripId, { name: "Updated Current Trip" });
+        await result.current.updateTrip(tripId, { title: "Updated Current Trip" });
       });
 
-      expect(result.current.currentTrip?.name).toBe("Updated Current Trip");
+      expect(result.current.currentTrip?.title).toBe("Updated Current Trip");
     });
 
     it("does not affect current trip when updating a different trip", async () => {
@@ -278,26 +305,26 @@ describe("Trip Store", () => {
 
       // Create first trip and set as current
       await act(async () => {
-        await result.current.createTrip({ name: "Current Trip" });
+        await result.current.createTrip({ title: "Current Trip" });
       });
 
-      const currentTripName = result.current.currentTrip?.name;
+      const currentTripName = result.current.currentTrip?.title;
 
       // Create second trip
       await act(async () => {
-        await result.current.createTrip({ name: "Other Trip" });
+        await result.current.createTrip({ title: "Other Trip" });
       });
 
       const otherTripId = result.current.trips[1].id;
 
       // Update the other trip
       await act(async () => {
-        await result.current.updateTrip(otherTripId, { name: "Updated Other Trip" });
+        await result.current.updateTrip(otherTripId, { title: "Updated Other Trip" });
       });
 
       // Current trip should remain unchanged
-      expect(result.current.currentTrip?.name).toBe("Updated Other Trip"); // Current trip is the last created
-      expect(result.current.trips[0].name).toBe(currentTripName);
+      expect(result.current.currentTrip?.title).toBe("Updated Other Trip"); // Current trip is the last created
+      expect(result.current.trips[0].title).toBe(currentTripName);
     });
 
     it("deletes a trip", async () => {
@@ -305,10 +332,10 @@ describe("Trip Store", () => {
 
       // Create two trips
       await act(async () => {
-        await result.current.createTrip({ name: "Trip 1" });
+        await result.current.createTrip({ title: "Trip 1" });
       });
       await act(async () => {
-        await result.current.createTrip({ name: "Trip 2" });
+        await result.current.createTrip({ title: "Trip 2" });
       });
 
       expect(result.current.trips).toHaveLength(2);
@@ -321,7 +348,7 @@ describe("Trip Store", () => {
       });
 
       expect(result.current.trips).toHaveLength(1);
-      expect(result.current.trips[0].name).toBe("Trip 2");
+      expect(result.current.trips[0].title).toBe("Trip 2");
       expect(result.current.isLoading).toBe(false);
       expect(result.current.error).toBeNull();
     });
@@ -331,7 +358,7 @@ describe("Trip Store", () => {
 
       // Create a trip (automatically becomes current)
       await act(async () => {
-        await result.current.createTrip({ name: "Current Trip" });
+        await result.current.createTrip({ title: "Current Trip" });
       });
 
       const currentTripId = result.current.currentTrip?.id;
@@ -351,14 +378,14 @@ describe("Trip Store", () => {
 
       // Create two trips
       await act(async () => {
-        await result.current.createTrip({ name: "Trip 1" });
+        await result.current.createTrip({ title: "Trip 1" });
       });
 
       const trip1Id = result.current.currentTrip?.id;
       if (!trip1Id) throw new Error("No current trip");
 
       await act(async () => {
-        await result.current.createTrip({ name: "Trip 2" });
+        await result.current.createTrip({ title: "Trip 2" });
       });
 
       // Trip 2 is now current, delete Trip 1
@@ -366,7 +393,7 @@ describe("Trip Store", () => {
         await result.current.deleteTrip(trip1Id);
       });
 
-      expect(result.current.currentTrip?.name).toBe("Trip 2");
+      expect(result.current.currentTrip?.title).toBe("Trip 2");
       expect(result.current.trips).toHaveLength(1);
     });
   });
@@ -378,7 +405,7 @@ describe("Trip Store", () => {
       const { result } = renderHook(() => useTripStore());
 
       await act(async () => {
-        await result.current.createTrip({ name: "Test Trip" });
+        await result.current.createTrip({ title: "Test Trip" });
       });
 
       tripId = result.current.trips[0].id;
@@ -611,7 +638,7 @@ describe("Trip Store", () => {
 
       // Test that loading state is managed correctly
       const createPromise = act(async () => {
-        await result.current.createTrip({ name: "Test Trip" });
+        await result.current.createTrip({ title: "Test Trip" });
       });
 
       await createPromise;
@@ -628,7 +655,7 @@ describe("Trip Store", () => {
       let isLoadingDuringOperation = false;
 
       const createPromise = act(async () => {
-        const promise = result.current.createTrip({ name: "Test Trip" });
+        const promise = result.current.createTrip({ title: "Test Trip" });
         isLoadingDuringOperation = result.current.isLoading;
         await promise;
       });
@@ -649,9 +676,9 @@ describe("Trip Store", () => {
         createdAt: "2025-01-01T00:00:00Z",
         destinations: [],
         id: "trip-1",
-        isPublic: false,
-        name: "Test Trip",
+        title: "Test Trip",
         updatedAt: "2025-01-01T00:00:00Z",
+        visibility: "private",
       };
 
       act(() => {
@@ -670,7 +697,7 @@ describe("Trip Store", () => {
       const { result } = renderHook(() => useTripStore());
 
       await act(async () => {
-        await result.current.createTrip({ name: "Multi-City Trip" });
+        await result.current.createTrip({ title: "Multi-City Trip" });
       });
 
       const tripId = result.current.trips[0].id;
@@ -725,9 +752,12 @@ describe("Trip Store", () => {
 
       await act(async () => {
         await result.current.createTrip({
-          budget: 2000,
-          currency: "EUR",
-          name: "Budget Trip",
+          budget: {
+            currency: "USD",
+            spent: 0,
+            total: 2000,
+          },
+          title: "Budget Trip",
         });
       });
 
@@ -753,9 +783,9 @@ describe("Trip Store", () => {
       });
 
       const trip = result.current.trips.find((t) => t.id === tripId);
-      expect(trip?.budget).toBe(2000);
+      expect(trip?.budget?.total).toBe(2000);
       // Note: Currency is hardcoded to USD in database mapper
-      expect(trip?.currency).toBe("USD");
+      expect(trip?.budget?.currency).toBe("USD");
 
       // Calculate total estimated cost
       const totalEstimatedCost = trip?.destinations.reduce(

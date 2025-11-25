@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Authenticated account deletion route `/auth/delete` uses Supabase admin `deleteUser` with service-role guardrails.
 - Security session APIs: added `GET /api/security/sessions` and `DELETE /api/security/sessions/[sessionId]` with admin Supabase access, `withApiGuards` telemetry/rate limits (`security:sessions:list`, `security:sessions:terminate`), and Vitest coverage for listing/termination flows.
 - Security events and metrics APIs: added `/api/security/events` and `/api/security/metrics` with Supabase admin queries, strict Zod schemas, OTEL telemetry, and rate limits (`security:events`, `security:metrics`) powering the dashboard.
+- Google Places autocomplete now covered by MSW handlers and Vitest component tests for happy path, type filtering, rate limit errors, and latest-query guarding in `frontend/src/components/features/search/destination-search-form`.
 
 ### Changed
 

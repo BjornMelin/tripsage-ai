@@ -1,8 +1,8 @@
 /** @vitest-environment node */
 
+import { lookupPoiContext } from "@ai/tools/server/google-places";
 import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { lookupPoiContext } from "@/ai/tools/server/google-places";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
 import { cacheLatLng, getCachedLatLng } from "@/lib/google/caching";
 import { server } from "@/test/msw/server";

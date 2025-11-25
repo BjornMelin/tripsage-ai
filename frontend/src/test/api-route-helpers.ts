@@ -6,11 +6,13 @@
  * AGENTS.md and Vitest standards documented in `.cursor/rules/vitest.mdc`.
  */
 
+import type { User } from "@supabase/supabase-js";
 import { afterEach, vi } from "vitest";
 import {
   setRateLimitFactoryForTests,
   setSupabaseFactoryForTests,
 } from "@/lib/api/factory";
+import { createMockSupabaseClient } from "@/test/mocks/supabase";
 import { getMockCookiesForTest } from "@/test/route-helpers";
 
 type RateLimitResult = {
@@ -34,7 +36,17 @@ const DEFAULT_RATE_LIMIT: RateLimitResult = {
 const STATE = vi.hoisted(() => ({
   cookies: {} as Record<string, string>,
   rateLimitEnabled: false,
-  user: { id: "test-user" } as { id: string } | null,
+  user: {
+    // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
+    app_metadata: {},
+    aud: "authenticated",
+    // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
+    created_at: new Date(0).toISOString(),
+    email: "test@example.com",
+    id: "test-user",
+    // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
+    user_metadata: {},
+  } as User | null,
 }));
 STATE.cookies = { ...DEFAULT_COOKIE_JAR };
 
@@ -82,30 +94,17 @@ vi.mock("@upstash/ratelimit", () => ({
   Ratelimit: RATELIMIT_CTOR,
 }));
 
-const createQueryBuilder = () => {
-  const builder = {
-    eq: vi.fn(() => builder),
-    gte: vi.fn(() => builder),
-    insert: vi.fn(() => builder),
-    limit: vi.fn(async () => ({ data: [], error: null })),
-    lte: vi.fn(() => builder),
-    order: vi.fn(async () => ({ data: [], error: null })),
-    select: vi.fn(() => builder),
-    single: vi.fn(async () => ({ data: null, error: null })),
-    update: vi.fn(() => builder),
-  };
-  return builder;
-};
-
-const SUPABASE_CLIENT = vi.hoisted(() => ({
-  auth: {
-    getUser: vi.fn(async () => ({
-      data: { user: STATE.user },
-      error: null,
-    })),
-  },
-  from: vi.fn(() => createQueryBuilder()),
-}));
+const SUPABASE_CLIENT = vi.hoisted(() => {
+  const client = createMockSupabaseClient({ user: STATE.user });
+  // Override auth.getUser to use STATE.user
+  client.auth.getUser = vi.fn(() => {
+    if (STATE.user) {
+      return Promise.resolve({ data: { user: STATE.user }, error: null });
+    }
+    return Promise.resolve({ data: { user: null }, error: null });
+  }) as typeof client.auth.getUser;
+  return client;
+});
 
 const CREATE_SUPABASE_MOCK = vi.hoisted(() => vi.fn(async () => SUPABASE_CLIENT));
 
@@ -126,19 +125,31 @@ vi.mock("@/lib/api/route-helpers", async () => {
 /** Reset shared mocks to their default state (call in `beforeEach`). */
 export function resetApiRouteMocks(): void {
   STATE.cookies = { ...DEFAULT_COOKIE_JAR };
-  STATE.user = { id: "test-user" };
+  STATE.user = {
+    // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
+    app_metadata: {},
+    aud: "authenticated",
+    // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
+    created_at: new Date(0).toISOString(),
+    email: "test@example.com",
+    id: "test-user",
+    // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
+    user_metadata: {},
+  } as User;
   STATE.rateLimitEnabled = false;
   COOKIES_MOCK.mockImplementation(() =>
     Promise.resolve(getMockCookiesForTest(STATE.cookies))
   );
   COOKIES_MOCK.mockClear();
-  SUPABASE_CLIENT.auth.getUser.mockReset();
-  SUPABASE_CLIENT.auth.getUser.mockImplementation(async () => ({
-    data: { user: STATE.user },
-    error: null,
-  }));
-  SUPABASE_CLIENT.from.mockReset();
-  SUPABASE_CLIENT.from.mockImplementation(() => createQueryBuilder());
+  // Reset and recreate Supabase client with current state
+  const newClient = createMockSupabaseClient({ user: STATE.user });
+  newClient.auth.getUser = vi.fn(() => {
+    if (STATE.user) {
+      return Promise.resolve({ data: { user: STATE.user }, error: null });
+    }
+    return Promise.resolve({ data: { user: null }, error: null });
+  }) as typeof newClient.auth.getUser;
+  Object.assign(SUPABASE_CLIENT, newClient);
   CREATE_SUPABASE_MOCK.mockReset();
   CREATE_SUPABASE_MOCK.mockResolvedValue(SUPABASE_CLIENT);
   setSupabaseFactoryForTests(
@@ -160,24 +171,43 @@ export function resetApiRouteMocks(): void {
   REDIS_MOCK.set.mockReset();
 }
 
-/** Override the mocked Supabase user returned by `withApiGuards`. */
-export function mockApiRouteAuthUser(user: { id: string } | null): void {
-  const augmentedUser =
-    user && "user_metadata" in user
-      ? {
-          ...user,
-          // Propagate admin flag into app_metadata to satisfy server-side checks
-          // biome-ignore lint/style/useNamingConvention: Supabase uses app_metadata casing
-          app_metadata: {
-            // biome-ignore lint/style/useNamingConvention: Supabase uses app_metadata casing
-            ...(user as { app_metadata?: Record<string, unknown> }).app_metadata,
-            // biome-ignore lint/style/useNamingConvention: Supabase uses user_metadata casing
-            ...(user as { user_metadata?: Record<string, unknown> }).user_metadata,
-          },
-        }
-      : user;
+/**
+ * Override the mocked Supabase user returned by `withApiGuards`.
+ *
+ * Accepts partial user objects for convenience in tests and merges them with a
+ * fully-populated default user to satisfy Supabase's required fields.
+ *
+ * @param user - The user to inject or null to simulate unauthenticated.
+ */
+export function mockApiRouteAuthUser(user: User | null | Partial<User>): void {
+  if (!user) {
+    STATE.user = null;
+    return;
+  }
 
-  STATE.user = augmentedUser as { id: string } | null;
+  const baseUser: User = {
+    // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case fields
+    app_metadata: {},
+    aud: "authenticated",
+    // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case fields
+    created_at: new Date(0).toISOString(),
+    email: "test@example.com",
+    id: "test-user",
+    // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case fields
+    user_metadata: {},
+  };
+
+  const normalizedUser = {
+    ...baseUser,
+    ...user,
+    // Explicitly merge metadata objects to preserve defaults
+    // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case fields
+    app_metadata: { ...baseUser.app_metadata, ...(user as User).app_metadata },
+    // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case fields
+    user_metadata: { ...baseUser.user_metadata, ...(user as User).user_metadata },
+  } as User;
+
+  STATE.user = normalizedUser;
 }
 
 /** Enable rate limiting (Redis available). */

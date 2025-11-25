@@ -58,12 +58,12 @@ describe("TripCard", () => {
     ],
     endDate: "2024-06-25",
     id: "trip-1",
-    isPublic: false,
-    name: "European Adventure",
     startDate: "2024-06-15",
     status: "planning",
     tags: ["adventure", "culture"],
+    title: "European Adventure",
     updatedAt: "2024-01-01",
+    visibility: "private",
   };
 
   beforeEach(() => {
@@ -117,7 +117,7 @@ describe("TripCard", () => {
     });
 
     it("should display public badge when trip is public", () => {
-      const publicTrip = { ...mockTrip, isPublic: true };
+      const publicTrip = { ...mockTrip, visibility: "public" as const };
       render(<TripCard trip={publicTrip} />);
 
       expect(screen.getByText("Public")).toBeInTheDocument();

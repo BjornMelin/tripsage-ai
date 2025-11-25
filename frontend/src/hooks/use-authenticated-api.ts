@@ -9,7 +9,7 @@
 "use client";
 
 import { useCallback, useMemo, useRef } from "react";
-import { ApiClientError, apiClient } from "@/lib/api/api-client";
+import { apiClient } from "@/lib/api/api-client";
 import { ApiError } from "@/lib/api/error-types";
 
 /**
@@ -159,21 +159,42 @@ export function useAuthenticatedApi() {
           { retries: requestRetries, timeout: requestTimeout }
         );
       } catch (error) {
-        if (error instanceof ApiError) {
-          throw error;
+        const controllerAborted =
+          abortControllerRef.current === null ||
+          abortControllerRef.current?.signal.aborted === true;
+
+        if (controllerAborted) {
+          throw new ApiError({
+            code: "REQUEST_CANCELLED",
+            message: "Request cancelled",
+            status: 499,
+          });
         }
-        // Convert ApiClientError to ApiError
-        if (error instanceof ApiClientError) {
+
+        if (error instanceof ApiError) {
           const errorData =
             (error.data as { message?: string; name?: string } | undefined) ?? {};
+          const isAbortError =
+            error.code === "TIMEOUT_ERROR" ||
+            error.status === 408 ||
+            error.message.toLowerCase().includes("abort");
           const isLikelyNetworkFailure =
-            error.status === 500 &&
-            ((typeof error.data === "string" && error.data.length === 0) ||
-              error.data === undefined ||
-              error.data === null ||
-              errorData.message?.toLowerCase().includes("network request failed") ===
-                true ||
-              errorData.name === "Error");
+            error.code === "NETWORK_ERROR" ||
+            (error.status === 500 &&
+              ((typeof error.data === "string" && error.data.length === 0) ||
+                error.data === undefined ||
+                error.data === null ||
+                errorData.message?.toLowerCase().includes("network request failed") ===
+                  true ||
+                errorData.name === "Error"));
+
+          if (isAbortError) {
+            throw new ApiError({
+              code: "REQUEST_CANCELLED",
+              message: "Request cancelled",
+              status: 499,
+            });
+          }
 
           if (isLikelyNetworkFailure) {
             throw new ApiError({
