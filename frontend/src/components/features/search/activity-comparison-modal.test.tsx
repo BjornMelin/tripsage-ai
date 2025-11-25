@@ -16,10 +16,12 @@ vi.mock("lucide-react", async (importOriginal) => {
 
 // Mock Next.js Image
 vi.mock("next/image", () => ({
-  default: (props: any) => <img {...props} alt={props.alt} />,
+  default: (props: { alt: string }) => (
+    <div data-testid="next-image" role="img" aria-label={props.alt} />
+  ),
 }));
 
-const mockActivities: Activity[] = [
+const MOCK_ACTIVITIES: Activity[] = [
   {
     coordinates: { lat: 0, lng: 0 },
     date: "2023-01-01T00:00:00Z",
@@ -50,7 +52,7 @@ const mockActivities: Activity[] = [
 
 describe("ActivityComparisonModal", () => {
   const defaultProps = {
-    activities: mockActivities,
+    activities: MOCK_ACTIVITIES,
     isOpen: true,
     onAddToTrip: vi.fn(),
     onClose: vi.fn(),
@@ -93,7 +95,7 @@ describe("ActivityComparisonModal", () => {
     const addButtons = screen.getAllByText("Add to Trip");
     fireEvent.click(addButtons[0]);
 
-    expect(defaultProps.onAddToTrip).toHaveBeenCalledWith(mockActivities[0]);
+    expect(defaultProps.onAddToTrip).toHaveBeenCalledWith(MOCK_ACTIVITIES[0]);
   });
 
   it("should render placeholder when no image is available", () => {

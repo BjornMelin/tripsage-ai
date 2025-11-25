@@ -22,7 +22,7 @@ vi.mock("../sidebar-nav", () => ({
 }));
 
 vi.mock("../user-nav", () => ({
-  UserNav: ({ user }: { user: any }) => (
+  UserNav: ({ user }: { user: { displayName: string } }) => (
     <div data-testid="user-nav">{user.displayName}</div>
   ),
 }));

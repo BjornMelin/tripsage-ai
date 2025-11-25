@@ -15,6 +15,7 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type BackoffConfig, computeBackoffDelay } from "@/lib/realtime/backoff";
 import { getBrowserClient, type TypedSupabaseClient } from "@/lib/supabase";
+import { useRealtimeConnectionStore } from "@/stores/realtime-connection-store";
 
 type ChannelInstance = ReturnType<TypedSupabaseClient["channel"]>;
 type ChannelSendRequest = Parameters<RealtimeChannel["send"]>[0];
@@ -121,6 +122,7 @@ export function useRealtimeChannel<TPayload = unknown>(
   const channelRef = useRef<ChannelInstance | null>(null);
   const reconnectAttemptRef = useRef(0);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const realtimeStore = useRealtimeConnectionStore.getState();
 
   const { onMessage, onStatusChange, backoff, events, private: isPrivate } = opts;
 
@@ -129,9 +131,12 @@ export function useRealtimeChannel<TPayload = unknown>(
     (status: RealtimeConnectionStatus, err: Error | null = null) => {
       setConnectionStatus(status);
       setError(err);
+      if (channelRef.current) {
+        realtimeStore.updateStatus(channelRef.current.topic, status, Boolean(err), err);
+      }
       onStatusChange?.(status);
     },
-    [onStatusChange]
+    [onStatusChange, realtimeStore]
   );
 
   // Cleanup reconnect timer
@@ -175,6 +180,7 @@ export function useRealtimeChannel<TPayload = unknown>(
       config: { private: isPrivate !== false },
     });
     channelRef.current = channel;
+    realtimeStore.registerChannel(channel);
     updateStatus("connecting", null);
 
     // Setup broadcast handlers immediately after channel creation
@@ -186,6 +192,7 @@ export function useRealtimeChannel<TPayload = unknown>(
             return;
           }
           onMessage(payload.payload, eventName);
+          realtimeStore.updateActivity(channel.topic);
         };
         // @ts-expect-error - TypeScript overload resolution issue with dynamic event names
         // The pattern is correct per Supabase docs, but TS can't infer the correct overload
@@ -231,6 +238,7 @@ export function useRealtimeChannel<TPayload = unknown>(
         if (channelRef.current === channel) {
           channelRef.current = null;
         }
+        realtimeStore.removeChannel(channel.topic);
         updateStatus("idle", null);
       }
     };
@@ -245,6 +253,7 @@ export function useRealtimeChannel<TPayload = unknown>(
     onMessage,
     events,
     isClientReady,
+    realtimeStore,
   ]);
 
   const sendBroadcast = useCallback(async (event: string, payload: TPayload) => {
