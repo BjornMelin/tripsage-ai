@@ -1,6 +1,7 @@
 /**
  * @fileoverview Connection status monitor component for real-time connections.
  */
+
 "use client";
 
 import {
@@ -12,7 +13,7 @@ import {
   WifiOff,
   XCircle,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +26,9 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
+import { type BackoffConfig, computeBackoffDelay } from "@/lib/realtime/backoff";
+import { getBrowserClient, type TypedSupabaseClient } from "@/lib/supabase";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 
 interface ConnectionStatus {
   isConnected: boolean;
@@ -39,7 +43,33 @@ interface RealtimeConnection {
   table: string;
   status: "connected" | "disconnected" | "error" | "reconnecting";
   error?: Error;
-  lastActivity?: Date;
+  lastActivity: Date | null;
+}
+
+const BACKOFF_CONFIG: BackoffConfig = {
+  factor: 2,
+  initialDelayMs: 500,
+  maxDelayMs: 8000,
+};
+
+function MapChannelStatus(state: string | undefined): RealtimeConnection["status"] {
+  switch (state) {
+    case "joined":
+      return "connected";
+    case "joining":
+      return "reconnecting";
+    case "errored":
+      return "error";
+    case "leaving":
+    case "closed":
+      return "disconnected";
+    default:
+      return "reconnecting";
+  }
+}
+
+function NormalizeTopic(topic: string): string {
+  return topic.replace(/^realtime:/i, "");
 }
 
 /**
@@ -59,75 +89,110 @@ export function ConnectionStatusMonitor() {
   const [connections, setConnections] = useState<RealtimeConnection[]>([]);
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const reconnectAttemptsRef = useRef(0);
+  const lastReconnectAtRef = useRef<Date | null>(null);
+  const previousConnectionsRef = useRef<Record<string, RealtimeConnection>>({});
 
-  // TODO: Replace mock data with real Realtime connection status from Supabase.
-  //
-  // Requirements:
-  // - Monitor Supabase Realtime connection status using `supabase.realtime.status`
-  // - Track active Realtime subscriptions (trips, chat, etc.)
-  // - Display connection health (connected, disconnected, reconnecting)
-  // - Show last activity timestamp for each subscription
-  // - Add reconnection logic with exponential backoff
-  // - Use Supabase Realtime event listeners to track connection changes
-  // - Consider using a global Realtime store/context for connection state
-  // - Add telemetry tracking for connection status changes
-  //
-  // Mock data for demonstration - in real implementation, this would come from a global store
-  useEffect(() => {
-    // TODO: Replace with real Realtime connections: const connections = useRealtimeConnections()
-    const mockConnections: RealtimeConnection[] = [
-      {
-        id: "trips-realtime",
-        lastActivity: new Date(),
-        status: "connected",
-        table: "trips",
-      },
-      {
-        id: "chat-messages-realtime",
-        lastActivity: new Date(Date.now() - 30000),
-        status: "connected",
-        table: "chat_messages",
-      },
-      {
-        error: new Error("Connection timeout"),
-        id: "trip-collaborators-realtime",
-        status: "disconnected",
-        table: "trip_collaborators",
-      },
-    ];
+  const refreshConnections = useCallback((client: TypedSupabaseClient) => {
+    const now = new Date();
+    const channels = client.realtime.getChannels();
 
-    setConnections(mockConnections);
+    const nextConnections = channels.map((channel) => {
+      const status = MapChannelStatus((channel as { state?: string }).state);
+      const id = channel.topic;
+      const previous = previousConnectionsRef.current[id];
+      const lastActivity =
+        status === "connected"
+          ? (previous?.lastActivity ?? now)
+          : (previous?.lastActivity ?? null);
+
+      const error =
+        status === "error"
+          ? (previous?.error ?? new Error(`Realtime channel ${id} errored`))
+          : undefined;
+
+      return {
+        error,
+        id,
+        lastActivity,
+        status,
+        table: NormalizeTopic(channel.topic),
+      };
+    });
+
+    previousConnectionsRef.current = Object.fromEntries(
+      nextConnections.map((conn) => [conn.id, conn])
+    );
+
+    const lastError = nextConnections.find((conn) => conn.error)?.error ?? null;
+    if (lastError) {
+      recordClientErrorOnActiveSpan(lastError);
+    }
+
+    setConnections(nextConnections);
     setConnectionStatus({
-      connectionCount: mockConnections.filter((c) => c.status === "connected").length,
-      isConnected: mockConnections.some((c) => c.status === "connected"),
-      lastError: mockConnections.find((c) => c.error)?.error || null,
-      lastReconnectAt: null,
-      reconnectAttempts: 0,
+      connectionCount: nextConnections.filter((c) => c.status === "connected").length,
+      isConnected: client.realtime.isConnected(),
+      lastError,
+      lastReconnectAt: lastReconnectAtRef.current,
+      reconnectAttempts: reconnectAttemptsRef.current,
     });
   }, []);
 
+  useEffect(() => {
+    const supabase = getBrowserClient();
+    if (!supabase) return;
+
+    refreshConnections(supabase);
+    const intervalId = window.setInterval(() => refreshConnections(supabase), 1500);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [refreshConnections]);
+
   const handleReconnectAll = async () => {
+    const supabase = getBrowserClient();
+    if (!supabase) {
+      toast({
+        description: "Supabase client is unavailable in this environment.",
+        title: "Reconnection Failed",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsReconnecting(true);
+    reconnectAttemptsRef.current += 1;
+    const attempt = reconnectAttemptsRef.current;
+    const delay = computeBackoffDelay(attempt, BACKOFF_CONFIG);
+
     try {
-      // Simulate reconnection delay
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      if (delay > 0) {
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
 
-      setConnections((prev) =>
-        prev.map((conn) => ({
-          ...conn,
-          error: undefined,
-          lastActivity: new Date(),
-          status: "connected" as const,
-        }))
-      );
+      const channels = supabase.realtime.getChannels();
+      for (const channel of channels) {
+        try {
+          await channel.unsubscribe();
+        } catch {
+          // ignore unsubscribe failures
+        }
+        channel.subscribe();
+      }
 
+      supabase.realtime.connect();
+
+      const now = new Date();
+      lastReconnectAtRef.current = now;
+
+      refreshConnections(supabase);
       setConnectionStatus((prev) => ({
         ...prev,
-        connectionCount: connections.length,
-        isConnected: true,
         lastError: null,
-        lastReconnectAt: new Date(),
-        reconnectAttempts: prev.reconnectAttempts + 1,
+        lastReconnectAt: now,
+        reconnectAttempts: attempt,
       }));
 
       toast({
@@ -135,6 +200,8 @@ export function ConnectionStatusMonitor() {
         title: "Reconnected",
       });
     } catch (_error) {
+      const error = _error as Error;
+      recordClientErrorOnActiveSpan(error);
       toast({
         description: "Failed to restore some connections. Please try again.",
         title: "Reconnection Failed",
@@ -241,6 +308,11 @@ export function ConnectionStatusMonitor() {
 
                   <div className="flex items-center space-x-2">
                     {getStatusBadge(connection.status)}
+                    <span className="text-[10px] text-muted-foreground">
+                      {connection.lastActivity
+                        ? `Last activity ${connection.lastActivity.toLocaleTimeString()}`
+                        : "Awaiting activity"}
+                    </span>
                   </div>
                 </div>
               ))}
