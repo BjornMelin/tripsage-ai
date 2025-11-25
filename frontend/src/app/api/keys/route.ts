@@ -5,6 +5,8 @@
 
 import "server-only";
 
+export const dynamic = "force-dynamic";
+
 // Security: Prevent caching of sensitive API key data per ADR-0024.
 // With Cache Components enabled, route handlers are dynamic by default.
 // Using withApiGuards({ auth: true }) ensures this route uses cookies/headers,

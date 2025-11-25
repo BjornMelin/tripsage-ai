@@ -292,7 +292,8 @@ expect(provider.modelId).toBe("gpt-4o-mini");
 // Should fallback to team Gateway
 // (remove BYOK keys and ensure Gateway configured)
 const fallbackProvider = await resolveProvider(userId, "gpt-4o-mini");
-expect(fallbackProvider.path).toBe("team-gateway");
+expect(fallbackProvider.provider).toBe("openai");
+expect(fallbackProvider.modelId).toBe("gpt-4o-mini");
 ```
 
 ### SSR Compatibility Testing

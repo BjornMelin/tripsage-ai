@@ -171,7 +171,7 @@ kubectl get pods -l app=tripsage-ai
 |----------|-------------|----------|
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | ✅ |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key | ✅ |
-| `DATABASE_SERVICE_KEY` | Supabase service role key | ✅ |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key | ✅ |
 | `AI_GATEWAY_API_KEY` | Vercel AI Gateway key | ✅ |
 | `DUFFEL_ACCESS_TOKEN` | Duffel API token for flights | ⚠️ |
 | `UPSTASH_REDIS_REST_URL` | Upstash Redis REST URL | ⚠️ |

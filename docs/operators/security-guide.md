@@ -73,8 +73,8 @@ Secure third-party API key management:
 
 - **Encryption**: Vault extension with service-role-only access
 - **Storage**: Encrypted in Supabase Vault with RLS protection
-- **Access**: Users can only access their own keys via Next.js route handlers marked `"server-only"` and `dynamic = "force-dynamic"` so responses are never cached or executed on the client
-- **Audit**: All key operations logged via OpenTelemetry spans
+- **Access**: Users can only access their own keys via server-side checks; there are no `dynamic = "force-dynamic"` API route files/exports under `frontend/src/app/api`, so enforcement relies on backend logic and Supabase RLS rather than Next.js route caching directives.
+- **Audit**: Telemetry infrastructure exists, but BYOK RPCs (`insertUserApiKey`, `deleteUserApiKey`, `getUserApiKey` in `frontend/src/lib/supabase/rpc.ts`) are not currently wrapped in OpenTelemetry spans. To enable tracing, wrap these calls with `withTelemetrySpan` in a shared helper before invoking the RPCs.
 
 ## Security Testing
 
@@ -88,7 +88,7 @@ pnpm audit
 pnpm -C frontend type-check
 
 # Run security-focused tests
-pnpm -C frontend test:run --grep security
+pnpm -C frontend test:run -t security
 
 # Secret detection (install gitleaks first)
 gitleaks detect --source . --verbose
