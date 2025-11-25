@@ -388,7 +388,7 @@ CREATE TABLE IF NOT EXISTS public.search_activities (
   query_parameters JSONB NOT NULL,
   query_hash TEXT NOT NULL,
   results JSONB NOT NULL,
-  source TEXT NOT NULL CHECK (source IN ('viator','getyourguide','external_api','cached')),
+  source TEXT NOT NULL CHECK (source IN ('viator','getyourguide','googleplaces','ai_fallback','external_api','cached')),
   search_metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   expires_at TIMESTAMPTZ NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
