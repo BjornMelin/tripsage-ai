@@ -1,5 +1,13 @@
+/**
+ * @fileoverview Dashboard Page - Displays an overview of user travel data and metrics.
+ *
+ * Utilizes React Suspense for data fetching and loading states.
+ * Composes multiple dashboard feature components.
+ */
+
 import { Suspense } from "react";
 import {
+  DashboardMetrics,
   QuickActions,
   RecentTrips,
   TripSuggestions,
@@ -122,6 +130,9 @@ async function DashboardContent() {
     <>
       {/* Top Row - Quick Actions */}
       <QuickActions compact />
+
+      {/* Dashboard Metrics */}
+      <DashboardMetrics />
 
       {/* Main Content Grid */}
       <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
