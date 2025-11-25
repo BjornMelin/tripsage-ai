@@ -36,8 +36,13 @@ We will adopt a modern testing strategy:
 
 **API Testing Stack:**
 
-- **Route Handlers**: Vitest with MSW for mocking
-- **Integration**: Vitest with real database (test containers)
+- **Route Handlers**: Vitest + MSW for unit-level route handler tests that focus on controller logic, validation, auth/guard paths, and error handling without hitting real infra.
+- **Integration**: Vitest with real database via Testcontainers to exercise full persistence, schema validation, and RLS rules end-to-end.
+
+**External Service Mocking:**
+
+- Mock Amadeus, Google Places, Stripe, and other third-party calls with MSW or recorded test doubles; use lightweight mocks for happy-path/unit coverage and promote full contract tests only for provider edge cases.
+- Provide shared mock fixtures and handlers to avoid per-suite duplication; keep secrets out of tests by using CI-safe env vars and disable live network access in CI except for controlled contract suites.
 
 **Key Principles:**
 

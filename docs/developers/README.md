@@ -39,7 +39,7 @@ cd frontend && pnpm dev
 
 ```bash
 # TypeScript / Next.js
-cd frontend && pnpm biome:check && pnpm type-check
+cd frontend && pnpm run biome:check && pnpm run type-check
 cd frontend && pnpm test
 ```
 
