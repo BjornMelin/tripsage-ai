@@ -29,10 +29,11 @@ interface RealtimeConnectionStore {
   connections: Record<string, RealtimeConnectionEntry>;
   reconnectAttempts: number;
   lastReconnectAt: Date | null;
+  isReconnecting: boolean;
   registerChannel: (channel: RealtimeChannel) => void;
   updateStatus: (
     channelId: string,
-    state: string,
+    state: "idle" | "connecting" | "subscribed" | "error" | "closed",
     hasError: boolean,
     error?: Error | null
   ) => void;
@@ -45,33 +46,46 @@ interface RealtimeConnectionStore {
 export const useRealtimeConnectionStore = create<RealtimeConnectionStore>(
   (set, get) => ({
     connections: {},
+    isReconnecting: false,
     lastReconnectAt: null,
 
     reconnectAll: async () => {
-      const attempts = get().reconnectAttempts + 1;
-      const delay = computeBackoffDelay(attempts, DEFAULT_BACKOFF_CONFIG);
-      if (delay > 0) {
-        await new Promise((resolve) => setTimeout(resolve, delay));
-      }
-
-      const channels = Object.values(get().connections)
-        .map((entry) => entry.channel)
-        .filter(Boolean) as RealtimeChannel[];
-      for (const channel of channels) {
-        try {
-          await channel.unsubscribe();
-        } catch {
-          // ignore
+      if (get().isReconnecting) return;
+      set({ isReconnecting: true });
+      try {
+        const attempts = get().reconnectAttempts + 1;
+        const delay = computeBackoffDelay(attempts, DEFAULT_BACKOFF_CONFIG);
+        if (delay > 0) {
+          await new Promise((resolve) => setTimeout(resolve, delay));
         }
-        if (typeof channel.subscribe === "function") {
-          channel.subscribe();
-        }
-      }
 
-      set({
-        lastReconnectAt: new Date(),
-        reconnectAttempts: attempts,
-      });
+        const channels = Object.values(get().connections)
+          .map((entry) => entry.channel)
+          .filter(Boolean) as RealtimeChannel[];
+        for (const channel of channels) {
+          try {
+            await channel.unsubscribe();
+          } catch {
+            // ignore
+          }
+          try {
+            if (typeof channel.subscribe === "function") {
+              await channel.subscribe();
+            }
+          } catch (subscribeError) {
+            recordClientErrorOnActiveSpan(subscribeError as Error);
+          }
+        }
+
+        set({
+          lastReconnectAt: new Date(),
+          reconnectAttempts: attempts,
+        });
+      } finally {
+        set({
+          isReconnecting: false,
+        });
+      }
     },
 
     reconnectAttempts: 0,
@@ -96,23 +110,56 @@ export const useRealtimeConnectionStore = create<RealtimeConnectionStore>(
       set((prev) => {
         const next = { ...prev.connections };
         delete next[channelId];
-        return { connections: next } as RealtimeConnectionStore;
+        return { connections: next };
       });
     },
 
-    summary: () => {
-      const connections = Object.values(get().connections);
-      const active = connections.filter((c) => c.status === "connected");
-      const lastError = connections.find((c) => c.lastError)?.lastError ?? null;
+    summary: (() => {
+      let cached: RealtimeConnectionSummary | null = null;
+      let cachedDeps: {
+        activeCount: number;
+        lastError: Error | null;
+        lastReconnectAtMs: number | null;
+        reconnectAttempts: number;
+      } | null = null;
 
-      return {
-        connectionCount: active.length,
-        isConnected: active.length > 0,
-        lastError,
-        lastReconnectAt: get().lastReconnectAt,
-        reconnectAttempts: get().reconnectAttempts,
+      return () => {
+        const connections = Object.values(get().connections);
+        const activeCount = connections.filter((c) => c.status === "connected").length;
+        const lastError = connections.find((c) => c.lastError)?.lastError ?? null;
+        const lastReconnectAtMs = get().lastReconnectAt?.getTime() ?? null;
+        const reconnectAttempts = get().reconnectAttempts;
+
+        const nextDeps = {
+          activeCount,
+          lastError,
+          lastReconnectAtMs,
+          reconnectAttempts,
+        };
+
+        if (
+          cached &&
+          cachedDeps &&
+          cachedDeps.activeCount === nextDeps.activeCount &&
+          cachedDeps.lastError === nextDeps.lastError &&
+          cachedDeps.lastReconnectAtMs === nextDeps.lastReconnectAtMs &&
+          cachedDeps.reconnectAttempts === nextDeps.reconnectAttempts
+        ) {
+          return cached;
+        }
+
+        cachedDeps = nextDeps;
+        cached = {
+          connectionCount: activeCount,
+          isConnected: activeCount > 0,
+          lastError,
+          lastReconnectAt: get().lastReconnectAt,
+          reconnectAttempts,
+        };
+
+        return cached;
       };
-    },
+    })(),
 
     updateActivity: (channelId) => {
       set((prev) => {
@@ -134,10 +181,7 @@ export const useRealtimeConnectionStore = create<RealtimeConnectionStore>(
       set((prev) => {
         const existing = prev.connections[channelId];
         if (!existing) return prev;
-        const status = mapChannelStateToStatus(
-          state as "idle" | "connecting" | "subscribed" | "error" | "closed",
-          hasError
-        );
+        const status = mapChannelStateToStatus(state, hasError);
         const lastError =
           status === "error" || hasError ? (error ?? existing.lastError ?? null) : null;
         if (lastError) {

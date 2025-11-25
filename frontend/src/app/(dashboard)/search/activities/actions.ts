@@ -10,7 +10,10 @@ import { itineraryItemCreateSchema, type UiTrip } from "@schemas/trips";
 import { bumpTag } from "@/lib/cache/tags";
 import type { Json } from "@/lib/supabase/database.types";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { createServerLogger } from "@/lib/telemetry/logger";
 import { mapDbTripToUi } from "@/lib/trips/mappers";
+
+const logger = createServerLogger("search.activities.actions");
 
 /**
  * Fetches the authenticated user's active and planning trips.
@@ -109,7 +112,8 @@ export async function addActivityToTrip(
   const validation = itineraryItemCreateSchema.safeParse(payload);
 
   if (!validation.success) {
-    throw new Error("Invalid activity data");
+    logger.warn("Invalid activity data", { issues: validation.error.format() });
+    throw new Error(`Invalid activity data: ${validation.error.message}`);
   }
 
   const insertPayload = {
@@ -140,8 +144,19 @@ export async function addActivityToTrip(
     .insert(insertPayload);
 
   if (insertError) {
-    throw new Error("Failed to add activity to trip");
+    logger.error("Failed to add activity to trip", {
+      code: insertError.code,
+      details: insertError.details,
+      message: insertError.message,
+    });
+    throw new Error(`Failed to add activity to trip: ${insertError.message}`);
   }
 
-  await bumpTag("trips");
+  try {
+    await bumpTag("trips");
+  } catch (cacheError) {
+    logger.warn("Failed to invalidate trips cache", {
+      error: cacheError instanceof Error ? cacheError.message : "unknown",
+    });
+  }
 }

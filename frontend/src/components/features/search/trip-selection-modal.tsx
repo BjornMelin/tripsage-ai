@@ -7,7 +7,8 @@
 import type { Activity } from "@schemas/search";
 import type { UiTrip } from "@schemas/trips";
 import { Calendar, MapPin } from "lucide-react";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -51,6 +52,7 @@ export function TripSelectionModal({
   onAddToTrip,
   isAdding,
 }: TripSelectionModalProps) {
+  const router = useRouter();
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
 
   const handleConfirm = async () => {
@@ -58,6 +60,11 @@ export function TripSelectionModal({
       await onAddToTrip(selectedTripId);
     }
   };
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset selection when modal or activity changes
+  useEffect(() => {
+    setSelectedTripId(null);
+  }, [activity.id, isOpen]);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -73,7 +80,14 @@ export function TripSelectionModal({
             <div className="text-center py-4 text-muted-foreground">
               No active or planning trips found.
               <br />
-              <Button variant="link" className="mt-2">
+              <Button
+                variant="link"
+                className="mt-2"
+                onClick={() => {
+                  onClose();
+                  router.push("/trips");
+                }}
+              >
                 Create a new trip
               </Button>
             </div>

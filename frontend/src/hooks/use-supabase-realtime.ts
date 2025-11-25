@@ -37,13 +37,14 @@ export interface RealtimeHookResult {
  */
 export function useSupabaseRealtime(): RealtimeHookResult {
   const summary = useRealtimeConnectionStore((state) => state.summary());
+  const reconnect = () => useRealtimeConnectionStore.getState().reconnectAll();
   return {
     connectionStatus: summary.isConnected ? "connected" : "disconnected",
     disconnect: undefined,
     error: summary.lastError,
     errors: summary.lastError ? [summary.lastError] : [],
     isConnected: summary.isConnected,
-    reconnect: useRealtimeConnectionStore.getState().reconnectAll,
+    reconnect,
   };
 }
 

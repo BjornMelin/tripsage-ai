@@ -62,7 +62,10 @@ export function MfaSetup({ onComplete, onCancel }: MfaSetupProps) {
        * - Add proper error messages for different failure scenarios
        * - Consider using `@supabase/supabase-js` auth.mfa methods
        */
-      // Mock API call - replace with actual implementation
+      if (process.env.NODE_ENV !== "development") {
+        throw new Error("MFA setup is not implemented in production.");
+      }
+      // Demo-only mock API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       /**
