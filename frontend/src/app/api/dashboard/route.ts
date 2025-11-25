@@ -40,6 +40,7 @@ const QuerySchema = z.strictObject({
  *
  * Response:
  * - 200: Dashboard metrics object
+ * - 400: Bad request (invalid query parameters)
  * - 401: Unauthorized
  * - 429: Rate limit exceeded
  * - 500: Internal server error

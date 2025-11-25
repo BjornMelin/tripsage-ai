@@ -21,7 +21,7 @@ export interface MetricsCardProps {
   value: number | string;
   /** Optional unit suffix (e.g., "ms", "%") */
   unit?: string;
- /** Optional trend direction */
+  /** Optional trend direction */
   trend?: "up" | "down" | "neutral";
   /** Optional trend value text (e.g., "+5%") */
   trendValue?: string;
