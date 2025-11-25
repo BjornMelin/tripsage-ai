@@ -1,8 +1,9 @@
 /** @vitest-environment jsdom */
 
+import type { UserProfile } from "@schemas/stores";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { type UserProfile, useUserProfileStore } from "../user-store";
+import { useUserProfileStore } from "../user-store";
 
 // Mock the store to avoid persistence issues in tests
 vi.mock("zustand/middleware", () => ({

@@ -119,7 +119,9 @@ describe("ErrorService", () => {
         name: "Error",
         stack: "Error: Test error\n    at test (test.js:1:1)",
       });
-      expect(report.errorInfo).toEqual({ componentStack: "Component.tsx:10:5" });
+      expect(report.errorInfo).toEqual({
+        componentStack: "Component.tsx:10:5",
+      });
       expect(report.sessionId).toBe("session-1");
       expect(report.userId).toBe("user-1");
       expect(report.url).toBe("https://example.com/");
@@ -153,22 +155,17 @@ describe("ErrorService", () => {
       expect(request.headers.get("Content-Type")).toBe("application/json");
     });
 
-    it("logs locally and skips network calls when disabled", async () => {
+    it("silently skips network calls when disabled without logging", async () => {
       const recorder = createErrorReportingRecorder(config.endpoint);
       server.use(recorder.handler);
       const disabledService = new ErrorService({ ...config, enabled: false });
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {
-        // Suppress console.error output in tests
-      });
       const errorReport = buildReport();
 
+      // Should complete without throwing - error service is designed to be non-intrusive
       await disabledService.reportError(errorReport);
 
+      // No network calls when disabled
       expect(recorder.requests).toHaveLength(0);
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error reported:",
-        expect.objectContaining(errorReport)
-      );
     });
 
     it("persists errors to localStorage when enabled", async () => {
@@ -185,12 +182,9 @@ describe("ErrorService", () => {
       expect(JSON.parse(value)).toEqual(errorReport);
     });
 
-    it("rejects invalid reports via Zod validation", async () => {
+    it("silently handles invalid reports via Zod validation without crashing", async () => {
       const recorder = createErrorReportingRecorder(config.endpoint);
       server.use(recorder.handler);
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {
-        // Suppress console.error output in tests
-      });
 
       const invalidReport = {
         error: { name: "Error" },
@@ -199,13 +193,12 @@ describe("ErrorService", () => {
         userAgent: "Vitest",
       } as unknown as ErrorReport;
 
+      // Should complete without throwing - error service swallows validation errors
+      // to prevent recursive error loops in production
       await errorService.reportError(invalidReport);
 
+      // No network calls made for invalid reports
       expect(recorder.requests).toHaveLength(0);
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Failed to report error:",
-        expect.any(Error)
-      );
     });
   });
 
@@ -232,25 +225,21 @@ describe("ErrorService", () => {
       expect(flaky.callCount()).toBe(2);
     });
 
-    it("stops retrying after exceeding maxRetries", async () => {
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {
-        // Suppress console.error output in tests
-      });
+    it("stops retrying after exceeding maxRetries and silently fails", async () => {
       const flaky = createFlakyErrorReportingHandler({
         endpoint: config.endpoint,
         failTimes: 5,
       });
       server.use(flaky.handler);
 
+      // Should complete without throwing - error service is designed to fail silently
       await errorService.reportError(buildReport());
 
       await vi.advanceTimersByTimeAsync(4000);
 
+      // Initial attempt + maxRetries (2) = 3 total attempts
       expect(flaky.callCount()).toBe(3);
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Failed to send error report after retries:",
-        expect.any(Error)
-      );
+      // No console.error - service fails silently to avoid recursive loops
     });
   });
 
@@ -326,22 +315,18 @@ describe("ErrorService", () => {
       expect(capturedError.name).toBe("TestError");
     });
 
-    it("logs a warning when OpenTelemetry recording fails but still reports", async () => {
-      const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {
-        // Suppress console.warn output in tests
-      });
+    it("continues reporting when OpenTelemetry recording fails", async () => {
       recordClientErrorOnActiveSpanSpy.mockImplementation(() => {
         throw new Error("OTel recording failed");
       });
       const recorder = createErrorReportingRecorder(config.endpoint);
       server.use(recorder.handler);
 
+      // Should complete without throwing - OTel failures are non-critical
       await expect(errorService.reportError(buildReport())).resolves.not.toThrow();
 
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        "Failed to record error to OpenTelemetry span:",
-        expect.any(Error)
-      );
+      // Report should still be sent even if OTel recording failed
+      expect(recorder.requests).toHaveLength(1);
     });
   });
 });

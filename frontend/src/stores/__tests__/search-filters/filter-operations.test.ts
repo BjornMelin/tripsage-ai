@@ -1,12 +1,12 @@
 /** @vitest-environment jsdom */
 
-import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
 import type {
   FilterValue,
   ValidatedFilterOption,
   ValidatedSortOption,
-} from "@/stores/search-filters-store";
+} from "@schemas/stores";
+import { act, renderHook } from "@testing-library/react";
+import { beforeEach, describe, expect, it } from "vitest";
 import { useSearchFiltersStore } from "@/stores/search-filters-store";
 
 describe("Search Filters Store - Filter Operations", () => {
