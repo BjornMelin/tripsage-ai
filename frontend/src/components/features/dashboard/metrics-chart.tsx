@@ -7,6 +7,7 @@
 
 "use client";
 
+import { useId } from "react";
 import {
   Area,
   AreaChart,
@@ -69,11 +70,12 @@ export function MetricsChart({
   height = 200,
   className,
 }: MetricsChartProps) {
-  // Generate unique gradient ID to avoid conflicts when multiple charts are rendered
-  const gradientId = `gradient-${title.replace(/\s+/g, "-").toLowerCase()}`;
+  // Generate unique gradient ID per instance to avoid collisions between charts
+  const uniqueId = useId().replace(/[:]/g, "");
+  const gradientId = `gradient-${title.replace(/\s+/g, "-").toLowerCase()}-${uniqueId}`;
 
   return (
-    <Card className={cn("", className)}>
+    <Card className={cn(className)}>
       <CardHeader>
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
       </CardHeader>

@@ -77,7 +77,7 @@ export const GET = withApiGuards({
 
   return NextResponse.json(validated, {
     headers: {
-      "Cache-Control": "s-maxage=300, stale-while-revalidate=60",
+      "Cache-Control": "private, max-age=0, must-revalidate",
     },
   });
 });
