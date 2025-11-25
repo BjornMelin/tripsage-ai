@@ -3,92 +3,21 @@
  */
 
 import type { SearchParams, SearchType } from "@schemas/search";
-import { z } from "zod";
+import {
+  type QuickSearch,
+  quickSearchSchema,
+  type SearchCollection,
+  type SearchHistoryItem,
+  savedSearchSchema,
+  searchCollectionSchema,
+  searchHistoryItemSchema,
+  type ValidatedSavedSearch,
+} from "@schemas/stores";
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 import { nowIso, secureId } from "@/lib/security/random";
 
-// Validation schemas for search history
-const SEARCH_TYPE_SCHEMA = z.enum([
-  "flight",
-  "accommodation",
-  "activity",
-  "destination",
-]);
-
-const SEARCH_HISTORY_ITEM_SCHEMA = z.object({
-  id: z.string(),
-  location: z
-    .object({
-      city: z.string().optional(),
-      coordinates: z
-        .object({
-          lat: z.number(),
-          lng: z.number(),
-        })
-        .optional(),
-      country: z.string().optional(),
-    })
-    .optional(),
-  params: z.record(z.string(), z.unknown()),
-  resultsCount: z.number().min(0).optional(),
-  searchDuration: z.number().min(0).optional(),
-  searchType: SEARCH_TYPE_SCHEMA,
-  timestamp: z.string(),
-  userAgent: z.string().optional(),
-});
-
-const SAVED_SEARCH_SCHEMA = z.object({
-  createdAt: z.string(),
-  description: z.string().max(500).optional(),
-  id: z.string(),
-  isFavorite: z.boolean().default(false),
-  isPublic: z.boolean().default(false),
-  lastUsed: z.string().optional(),
-  metadata: z
-    .object({
-      originalSearchId: z.string().optional(),
-      source: z.string().optional(), // e.g., "manual", "auto-save", "import"
-      version: z.string().default("1.0"),
-    })
-    .optional(),
-  name: z.string().min(1).max(100),
-  params: z.record(z.string(), z.unknown()),
-  searchType: SEARCH_TYPE_SCHEMA,
-  tags: z.array(z.string()).default([]),
-  updatedAt: z.string(),
-  usageCount: z.number().min(0).default(0),
-});
-
-const SEARCH_COLLECTION_SCHEMA = z.object({
-  createdAt: z.string(),
-  createdBy: z.string().optional(),
-  description: z.string().max(500).optional(),
-  id: z.string(),
-  isPublic: z.boolean().default(false),
-  name: z.string().min(1).max(100),
-  searchIds: z.array(z.string()),
-  tags: z.array(z.string()).default([]),
-  updatedAt: z.string(),
-});
-
-const QUICK_SEARCH_SCHEMA = z.object({
-  color: z.string().optional(),
-  createdAt: z.string(),
-  icon: z.string().optional(),
-  id: z.string(),
-  isVisible: z.boolean().default(true),
-  label: z.string().min(1).max(50),
-  params: z.record(z.string(), z.unknown()),
-  searchType: SEARCH_TYPE_SCHEMA,
-  sortOrder: z.number().default(0),
-});
-
-// Types derived from schemas
-export type SearchHistoryItem = z.infer<typeof SEARCH_HISTORY_ITEM_SCHEMA>;
-export type ValidatedSavedSearch = z.infer<typeof SAVED_SEARCH_SCHEMA>;
-export type SearchCollection = z.infer<typeof SEARCH_COLLECTION_SCHEMA>;
-export type QuickSearch = z.infer<typeof QUICK_SEARCH_SCHEMA>;
+// Schemas imported from @schemas/stores
 
 export interface SearchSuggestion {
   id: string;
@@ -304,7 +233,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
             ...metadata,
           };
 
-          const result = SEARCH_HISTORY_ITEM_SCHEMA.safeParse(newSearch);
+          const result = searchHistoryItemSchema.safeParse(newSearch);
           if (result.success) {
             set((state) => ({
               recentSearches: [
@@ -415,7 +344,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
               updatedAt: timestamp,
             };
 
-            const result = SEARCH_COLLECTION_SCHEMA.safeParse(newCollection);
+            const result = searchCollectionSchema.safeParse(newCollection);
             if (result.success) {
               set((state) => ({
                 isLoading: false,
@@ -451,7 +380,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
               sortOrder: options.sortOrder || get().quickSearches.length,
             };
 
-            const result = QUICK_SEARCH_SCHEMA.safeParse(newQuickSearch);
+            const result = quickSearchSchema.safeParse(newQuickSearch);
             if (result.success) {
               set((state) => ({
                 quickSearches: [...state.quickSearches, result.data],
@@ -731,7 +660,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
             if (importData.savedSearches) {
               const validatedSearches = importData.savedSearches.filter(
                 (search: unknown) => {
-                  const result = SAVED_SEARCH_SCHEMA.safeParse(search);
+                  const result = savedSearchSchema.safeParse(search);
                   return result.success;
                 }
               );
@@ -744,7 +673,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
             if (importData.searchCollections) {
               const validatedCollections = importData.searchCollections.filter(
                 (collection: unknown) => {
-                  const result = SEARCH_COLLECTION_SCHEMA.safeParse(collection);
+                  const result = searchCollectionSchema.safeParse(collection);
                   return result.success;
                 }
               );
@@ -760,7 +689,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
             if (importData.quickSearches) {
               const validatedQuickSearches = importData.quickSearches.filter(
                 (quickSearch: unknown) => {
-                  const result = QUICK_SEARCH_SCHEMA.safeParse(quickSearch);
+                  const result = quickSearchSchema.safeParse(quickSearch);
                   return result.success;
                 }
               );
@@ -905,7 +834,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
               usageCount: 0,
             };
 
-            const result = SAVED_SEARCH_SCHEMA.safeParse(newSavedSearch);
+            const result = savedSearchSchema.safeParse(newSavedSearch);
             if (result.success) {
               set((state) => ({
                 isLoading: false,
@@ -1022,7 +951,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
                     updatedAt: GET_CURRENT_TIMESTAMP(),
                   };
 
-                  const result = SEARCH_COLLECTION_SCHEMA.safeParse(updatedCollection);
+                  const result = searchCollectionSchema.safeParse(updatedCollection);
                   return result.success ? result.data : collection;
                 }
                 return collection;
@@ -1049,7 +978,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
               quickSearches: state.quickSearches.map((quickSearch) => {
                 if (quickSearch.id === quickSearchId) {
                   const updatedQuickSearch = { ...quickSearch, ...updates };
-                  const result = QUICK_SEARCH_SCHEMA.safeParse(updatedQuickSearch);
+                  const result = quickSearchSchema.safeParse(updatedQuickSearch);
                   return result.success ? result.data : quickSearch;
                 }
                 return quickSearch;
@@ -1078,7 +1007,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
                     updatedAt: GET_CURRENT_TIMESTAMP(),
                   };
 
-                  const result = SAVED_SEARCH_SCHEMA.safeParse(updatedSearch);
+                  const result = savedSearchSchema.safeParse(updatedSearch);
                   return result.success ? result.data : search;
                 }
                 return search;
