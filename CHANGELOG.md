@@ -102,10 +102,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed security dashboard import: wrapped server component in dynamic import with Suspense.
 - Fixed admin configuration page: added `"use cache: private"` directive to prevent build-time env var errors.
 - Removed unused `TripsRow` import from trips API route.
+- Trip schema consolidation: added `currency TEXT NOT NULL DEFAULT 'USD'` column to `trips` table in base migration; updated `tripsRowSchema`, `tripsInsertSchema`, `tripsUpdateSchema` to use `primitiveSchemas.isoCurrency`; updated `mapDbTripToUi` to read currency from database row instead of hardcoded value; added currency to trip creation payload mapping in `/api/trips` route handler.
+- Test factory cleanup: removed all legacy snake_case field support (`user_id`, `start_date`, `end_date`, `created_at`, `updated_at`) from `trip-factory.ts`; factory now uses camelCase fields exclusively; updated `database.types.ts` to include currency in trips Row/Insert/Update types.
 
 ### Removed
 
 - Deleted legacy schema and tool barrels `frontend/src/lib/schemas/index.ts` and `frontend/src/lib/tools/index.ts`, plus unused compatibility helpers and tests under `frontend/src/lib/tools/{constants.ts,__tests__}`, as part of the final migration to `src/domain` and `src/ai` as the single sources of truth for validation and tooling.
+- Removed deprecated `StoreTrip` type alias from `frontend/src/domain/schemas/trips.ts`; all references now use `UiTrip` directly.
+- Removed backward compatibility comments from `frontend/src/stores/trip-store.ts` and `frontend/src/hooks/use-trips.ts`; type aliases retained for convenience without compatibility messaging.
 
 - **Backend AI SDK v5 Legacy Code (FINAL-ONLY Cleanup)**
 
