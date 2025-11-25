@@ -60,7 +60,7 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 - **Library-first:** Prefer maintained libraries covering ≥80 % of needs with ≤30 % custom code.
 - **KISS / DRY / YAGNI:** Keep solutions straightforward; remove duplication via small focused helpers; implement only what's needed now—no speculative APIs or feature flags (unless requested).
 - **Final-only:** Remove superseded code/tests immediately after new behavior lands; no partial migrations.
-- **Telemetry/logging:** Server code must use helpers from `@/lib/telemetry/span` (server-only) and `@/lib/telemetry/logger`: `withTelemetrySpan()` (async), `withTelemetrySpanSync()` (sync), `recordTelemetryEvent()` (events), `createServerLogger()` (structured logs), `emitOperationalAlert()` (critical alerts). Never use `console.*` in server modules except tests, client-only UI, or `lib/telemetry/alerts.ts`. Direct `@opentelemetry/api` usage allowed only in `lib/telemetry/*` and `lib/supabase/factory.ts`. Client components should use `@/lib/telemetry/client` for client-side telemetry initialization. See `docs/developers/observability.md`.
+- **Telemetry/logging:** Use `@/lib/telemetry/{span,logger}` helpers: `withTelemetrySpan()`, `withTelemetrySpanSync()`, `recordTelemetryEvent()`, `createServerLogger()`, `emitOperationalAlert()`. No `console.*` in server code except tests/client-only UI. Direct `@opentelemetry/api` only in `lib/telemetry/*` and `lib/supabase/factory.ts`. Client: `@/lib/telemetry/client`. See `docs/developers/observability.md`.
 
 ### 4.2 TypeScript and frontend style
 
@@ -133,9 +133,9 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 
 ### 5.4 Caching, Supabase SSR, and performance
 
-- **Caching:** `cacheComponents: true` enabled. Use `'use cache'` (public) / `'use cache: private'` (user-specific). Security-sensitive routes (BYOK, auth, settings): dynamic by default; never use cache directives. Ensure `withApiGuards({ auth: true })` or `cookies()`/`headers()` access; see ADR-0024.
-- **Supabase SSR:** Use server factories (`frontend/src/lib/supabase/server.ts`); never access cookies in client components.
-- **Performance:** Use `next/font`, `next/image` (`sizes`/`priority`). Prefer Server Components. Use Suspense for slow UI; `useActionState`/`useOptimistic` for forms.
+- **Caching:** `cacheComponents: true` enabled. Cache directives (`'use cache'` / `'use cache: private'`) **cannot** access `cookies()` or `headers()`; use only for public/non-auth routes. Auth/BYOK/settings routes: dynamic by default (never cache). See ADR-0024.
+- **Supabase SSR:** Use `createServerSupabase()` from `frontend/src/lib/supabase/server.ts` (server-only); auto-dynamic. Never access cookies in Client Components.
+- **Performance:** `next/font`, `next/image` (`sizes`/`priority`), Server Components, Suspense, `useActionState`/`useOptimistic`.
 
 ### 5.5 Rate limiting and ephemeral state
 
@@ -152,10 +152,10 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 
 ### 6.1 Frontend testing
 
-- **Framework & locations:** Vitest + jsdom (unit/integration), Playwright (e2e). Tests: `frontend/src/**/__tests__`; helpers/mocks: `frontend/src/test`; pattern: `**/*.{test,spec}.ts?(x)`.
-- **Environment declarations (MANDATORY):** Add `/** @vitest-environment jsdom */` as first line **only** if file uses `@testing-library/react`, DOM APIs, or browser hooks. Skip for node-only code (pure functions, utilities, API handlers without DOM). Explicit declaration prevents misclassification.
-- **Commands:** `pnpm test:run` (full), `pnpm test` (watch), `pnpm test:e2e` (e2e). For single file, use `--project=<name>`.
-- **Coverage:** Match `frontend/vitest.config.ts` thresholds minimum; update tests when changing code.
+- **Framework & locations:** Vitest + jsdom, Playwright (e2e). Tests: `frontend/src/**/__tests__`; mocks: `frontend/src/test`; pattern: `**/*.{test,spec}.ts?(x)`.
+- **Environment declarations (MANDATORY):** Add `/** @vitest-environment jsdom */` (first line) only for `@testing-library/react`, DOM APIs, or browser hooks. Skip node-only code. Prevents misclassification.
+- **Commands:** `pnpm test:run`, `pnpm test` (watch), `pnpm test:e2e`; single file: `--project=<name>`.
+- **Coverage:** Meet `frontend/vitest.config.ts` thresholds; update tests with code changes.
 
 ### 6.2 Quality gates
 
@@ -163,16 +163,15 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 
 ### Upstash testing (must follow)
 
-- Mock via `setupUpstashMocks()` (`frontend/src/test/setup/upstash.ts`); call `__reset()` in `beforeEach`. MSW handlers (`frontend/src/test/msw/handlers/upstash.ts`) cover Redis/QStash; no per-suite mocks.
-- Emulator (optional): `UPSTASH_USE_EMULATOR=1` + `UPSTASH_EMULATOR_URL`, `UPSTASH_QSTASH_DEV_URL`; see `frontend/src/test/upstash/emulator.ts`.
-- Commands: `pnpm -C frontend test:upstash:unit|int|smoke`. Live smoke runs only with `UPSTASH_SMOKE=1` and valid creds; contracts in `frontend/src/__tests__/contracts/`.
-- Fit tests to this structure; do not add hoisted ad-hoc mocks.
+- **Mocking:** `setupUpstashMocks()` (`frontend/src/test/setup/upstash.ts`) with `__reset()` in `beforeEach`. MSW handlers at `frontend/src/test/msw/handlers/upstash.ts`; no ad-hoc mocks.
+- **Emulator (optional):** `UPSTASH_USE_EMULATOR=1` + `UPSTASH_EMULATOR_URL`, `UPSTASH_QSTASH_DEV_URL`; see `frontend/src/test/upstash/emulator.ts`.
+- **Commands:** `pnpm -C frontend test:upstash:{unit,int,smoke}`. Live smoke requires `UPSTASH_SMOKE=1` + valid creds; contracts in `frontend/src/__tests__/contracts/`.
 
 ---
 
 ## 7. Security and Secrets
 
-- Never commit secrets; use `.env` and env vaults. Never log/echo secrets.
+- Never commit/log secrets; use `.env` and env vaults.
 - Keep provider keys server‑side only; never expose to client.
 - Do not publicly cache user‑specific or cookie-dependent data.
 - Use maintained security libraries; no custom crypto/auth.
