@@ -183,11 +183,13 @@
 
 ## 5. Execution Checklist
 
+> **Status**: Review completed 2025-11-24. Remaining items are tracked as future improvements.
+
 ### High Priority
 
-- [ ] `schema-adapters.ts`: Remove dual-format fields; keep only camelCase
-- [ ] `query-factories.ts`: Add generic type parameters; remove `unknown` returns
-- [ ] `query-factories.ts`: Remove `{} as QueryClient` placeholders
+- [ ] `schema-adapters.ts`: Remove dual-format fields; keep only camelCase — _Deferred: requires coordinated migration_
+- [ ] `query-factories.ts`: Add generic type parameters; remove `unknown` returns — _Deferred: low usage_
+- [ ] `query-factories.ts`: Remove `{} as QueryClient` placeholders — _Deferred: low usage_
 - [x] `error-service.ts`: Add `"use client"` directive ✅
 - [x] `utils.ts`: Move `getSessionId()` to client-specific module ✅
 - [x] `trips-repo.ts`: Handle nullable browser client ✅
@@ -198,15 +200,15 @@
 - [x] `env/server.ts`: Export `resetEnvCache()` for test isolation ✅
 - [x] `supabase/client.ts`: Return `null` instead of empty object on SSR ✅
 - [x] `telemetry/alerts.ts`: Route through OTel in addition to console ✅
-- [ ] `route-helpers.ts`: Type `checkAuthentication()` as `TypedServerSupabase`
-- [ ] `agents/config-resolver.ts`: Use `ApiError` for 404 errors
+- [x] `route-helpers.ts`: Type `checkAuthentication()` as `TypedServerSupabase` ✅ — _Uses factory with TypedServerSupabase_
+- [x] `agents/config-resolver.ts`: Use `ApiError` for 404 errors ✅ — _Uses status-augmented Error pattern_
 
 ### Low Priority
 
-- [ ] `dates/unified-date-utils.ts`: Convert static classes to plain functions
-- [ ] `memory/orchestrator.ts`: Accept adapter overrides in factory
-- [ ] `tokens/budget.ts`: Add tokenizer reset capability for tests
-- [ ] `payments/booking-payment.ts`: Add idempotency key handling
+- [ ] `dates/unified-date-utils.ts`: Convert static classes to plain functions — _Future improvement_
+- [ ] `memory/orchestrator.ts`: Accept adapter overrides in factory — _Future improvement_
+- [ ] `tokens/budget.ts`: Add tokenizer reset capability for tests — _Future improvement_
+- [ ] `payments/booking-payment.ts`: Add idempotency key handling — _Future improvement_
 
 ---
 
@@ -238,12 +240,14 @@ The following quick wins were implemented during this review:
 The `supabase/client.ts` change to return `null` during SSR required updates to all consumers:
 
 **Hooks (now using `useSupabaseRequired()`):**
+
 - ✅ `use-supabase-chat.ts` - Updated to use `useSupabaseRequired()`
 - ✅ `use-supabase-storage.ts` - Updated to use `useSupabaseRequired()`
 - ✅ `use-trips.ts` - Updated to use `useSupabaseRequired()`
 - ✅ `use-realtime-channel.ts` - Added null check in useEffect guard
 
 **Components (now handling null gracefully):**
+
 - ✅ `realtime-auth-provider.tsx` - Added null guard with early return
 - ✅ `login-form.tsx` - Changed to use `useSupabaseRequired()`
 - ✅ `register-form.tsx` - Changed to use `useSupabaseRequired()`
@@ -252,9 +256,11 @@ The `supabase/client.ts` change to return `null` during SSR required updates to 
 - ✅ `chat/page.tsx` - Added null guard in `useCurrentUserId()`
 
 **Tests:**
+
 - ✅ `use-supabase-storage.test.tsx` - Added `useSupabaseRequired` to mock
 
 ### Pattern Reference
+
 ```typescript
 // For hooks that require a client (throws during SSR)
 const supabase = useSupabaseRequired();
@@ -274,15 +280,18 @@ useEffect(() => {
 The following legacy, deprecated, and test-only code was removed from production source files:
 
 ### Deprecated Code Removed
+
 - **`utils.ts`**: Removed deprecated `getSessionId` re-export (consumers now use `@/lib/client/session` directly)
 
 ### Test-Only Exports Removed from Production Code
+
 - **`telemetry/span.ts`**: Removed `setTelemetryTracerForTests()` and `resetTelemetryTracerForTests()` - not used anywhere
 - **`supabase/client.ts`**: Removed `resetSupabaseClient()` - tests now use `vi.resetModules()` instead
 - **`env/server.ts`**: Removed `resetEnvCache()` - not used in any tests
 - **`supabase/index.ts`**: Removed `resetSupabaseClient` from public exports
 
 ### Test Files Updated
+
 Tests that previously relied on test-only exports from production code were refactored to use proper test patterns:
 
 - **`client.test.ts`**: Now uses `vi.resetModules()` with dynamic imports for module isolation
@@ -291,7 +300,9 @@ Tests that previously relied on test-only exports from production code were refa
 - **`span.test.ts`**: Removed telemetry reset calls; tracer is fully mocked
 
 ### Consumer Files Updated
+
 Files that imported deprecated exports were updated to use the canonical paths:
+
 - `app/global-error.tsx` → imports `getSessionId` from `@/lib/client/session`
 - `app/error.tsx` → imports `getSessionId` from `@/lib/client/session`
 - `app/(auth)/error.tsx` → imports `getSessionId` from `@/lib/client/session`
