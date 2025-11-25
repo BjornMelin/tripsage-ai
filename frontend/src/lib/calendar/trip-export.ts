@@ -17,12 +17,11 @@ export function tripToCalendarEvents(trip: Trip): CalendarEvent[] {
   const events: CalendarEvent[] = [];
 
   // Trip start event
-  if (trip.startDate || trip.start_date) {
-    const startDate = DateUtils.parse(trip.startDate || trip.start_date || "");
-    const endDate =
-      trip.endDate || trip.end_date
-        ? DateUtils.parse(trip.endDate || trip.end_date || "")
-        : DateUtils.add(startDate, 1, "days");
+  if (trip.startDate) {
+    const startDate = DateUtils.parse(trip.startDate);
+    const endDate = trip.endDate
+      ? DateUtils.parse(trip.endDate)
+      : DateUtils.add(startDate, 1, "days");
 
     events.push(
       calendarEventSchema.parse({
@@ -34,7 +33,7 @@ export function tripToCalendarEvents(trip: Trip): CalendarEvent[] {
         start: {
           dateTime: startDate,
         },
-        summary: trip.name || trip.title || "Trip",
+        summary: trip.title || "Trip",
         travelMetadata: {
           tripId: trip.id,
           type: "trip",
@@ -136,7 +135,7 @@ export async function exportTripToIcs(
 
   const response = await fetch("/api/calendar/ics/export", {
     body: JSON.stringify({
-      calendarName: calendarName || trip.name || trip.title || "TripSage Itinerary",
+      calendarName: calendarName || trip.title || "TripSage Itinerary",
       events,
     }),
     headers: {

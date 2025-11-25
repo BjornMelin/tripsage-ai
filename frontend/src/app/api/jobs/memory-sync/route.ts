@@ -9,6 +9,7 @@ import "server-only";
 import { memorySyncJobSchema } from "@schemas/webhooks";
 import { Receiver } from "@upstash/qstash";
 import { NextResponse } from "next/server";
+import { errorResponse, validateSchema } from "@/lib/api/route-helpers";
 import { getServerEnvVar, getServerEnvVarWithFallback } from "@/lib/env/server";
 import { tryReserveKey } from "@/lib/idempotency/redis";
 import { createAdminSupabase } from "@/lib/supabase/admin";
@@ -66,14 +67,11 @@ export async function POST(req: Request) {
         }
 
         const json = (await req.json()) as unknown;
-        const parsed = memorySyncJobSchema.safeParse(json);
-        if (!parsed.success) {
-          return NextResponse.json(
-            { error: "invalid job payload", issues: parsed.error.flatten() },
-            { status: 400 }
-          );
+        const validation = validateSchema(memorySyncJobSchema, json);
+        if ("error" in validation) {
+          return validation.error;
         }
-        const { idempotencyKey, payload } = parsed.data;
+        const { idempotencyKey, payload } = validation.data;
         span.setAttribute("idempotency.key", idempotencyKey);
         span.setAttribute("sync.type", payload.syncType);
         span.setAttribute("session.id", payload.sessionId);
@@ -90,7 +88,12 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: true, ...result });
       } catch (error) {
         span.recordException(error as Error);
-        return NextResponse.json({ error: "internal error" }, { status: 500 });
+        return errorResponse({
+          err: error,
+          error: "internal",
+          reason: "Memory sync job failed",
+          status: 500,
+        });
       }
     }
   );

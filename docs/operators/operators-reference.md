@@ -9,7 +9,7 @@ This supersedes legacy backend notes. All runtime is Next.js 16 with AI SDK v6 r
 - Upstash Redis + QStash
 - Model provider keys or Vercel AI Gateway
 
-## Environment variables (align with `.env.example`)
+## Environment variables (align with root `.env.example`)
 
 - Core: `NODE_ENV`, `APP_BASE_URL`, `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_APP_NAME`, `NEXT_PUBLIC_BASE_PATH`, `NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT`
 - Supabase: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_JWT_SECRET`, `DATABASE_URL` (optional local Postgres)
@@ -18,7 +18,7 @@ This supersedes legacy backend notes. All runtime is Next.js 16 with AI SDK v6 r
 - Maps/Weather: `GOOGLE_MAPS_SERVER_API_KEY`, `NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY`, `OPENWEATHERMAP_API_KEY`
 - Payments: `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
 - Email/notifications: `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `RESEND_FROM_NAME`, `HMAC_SECRET`, `COLLAB_WEBHOOK_URL` (optional)
-- Travel APIs: `DUFFEL_ACCESS_TOKEN`, `DUFFEL_API_KEY` (fallback), `EPS_API_KEY`, `EPS_API_SECRET`, `EPS_BASE_URL`
+- Travel APIs: `DUFFEL_ACCESS_TOKEN`, `DUFFEL_API_KEY` (fallback), `AMADEUS_CLIENT_ID`, `AMADEUS_CLIENT_SECRET`, `AMADEUS_ENV`, `GOOGLE_MAPS_API_KEY`
 - Analytics (optional): `GOOGLE_ANALYTICS_ID`, `MIXPANEL_TOKEN`, `POSTHOG_HOST`, `POSTHOG_KEY`
 
 ## Start and verify

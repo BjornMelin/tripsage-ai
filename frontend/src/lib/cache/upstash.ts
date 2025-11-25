@@ -1,42 +1,141 @@
 /**
  * @fileoverview Upstash Redis caching utilities for JSON payloads.
  *
- * Provides type-safe JSON serialization/deserialization. Returns null when
- * Redis is unavailable or keys are missing.
+ * Provides type-safe helpers for caching JSON data in Upstash Redis.
+ * All operations gracefully handle Redis unavailability (returns null/void).
+ *
+ * @example
+ * ```ts
+ * // Store data with 5-minute TTL
+ * await setCachedJson("user:123:trips", trips, 300);
+ *
+ * // Retrieve cached data
+ * const cached = await getCachedJson<Trip[]>("user:123:trips");
+ * if (cached) return NextResponse.json(cached);
+ *
+ * // Invalidate on mutation
+ * await deleteCachedJson("user:123:trips");
+ * ```
  */
 
+import type { z } from "zod";
 import { getRedis } from "@/lib/redis";
 
 /**
- * Fetch a cached JSON payload from Upstash Redis.
+ * Result of a cache lookup with explicit status.
+ * Allows callers to distinguish cache miss from corrupted data.
+ */
+export type CacheResult<T> =
+  | { status: "hit"; data: T }
+  | { status: "miss" }
+  | { status: "invalid"; raw: unknown };
+
+/**
+ * Retrieves a cached JSON value from Upstash Redis.
  *
- * Retrieves and deserializes a JSON value from Redis. Returns null if Redis
- * is not configured, the key is missing, or deserialization fails.
+ * Deserializes the stored JSON string back to the specified type.
+ * Returns `null` if Redis is unavailable, key doesn't exist, or
+ * deserialization fails.
  *
+ * @typeParam T - Expected type of the cached value.
  * @param key - Redis key to fetch.
- * @returns Promise resolving to deserialized JSON value or null if not found/invalid.
+ * @returns Deserialized value or `null` if not found/invalid.
+ *
+ * @example
+ * ```ts
+ * const trips = await getCachedJson<Trip[]>("user:123:trips");
+ * ```
  */
 export async function getCachedJson<T>(key: string): Promise<T | null> {
   const redis = getRedis();
   if (!redis) return null;
+
+  // We store JSON strings via JSON.stringify(), so we need to parse them manually.
+  // Upstash Redis only auto-deserializes when storing objects directly, not pre-stringified JSON.
   const raw = await redis.get<string>(key);
-  if (!raw) return null;
+  if (raw === null) return null;
+
   try {
     return JSON.parse(raw) as T;
   } catch {
+    // Invalid JSON - return null to indicate cache miss/invalid data
     return null;
   }
 }
 
 /**
- * Store a JSON payload in Upstash Redis with an optional TTL.
+ * Retrieves a cached JSON value with explicit status and optional schema validation.
  *
- * Serializes the value to JSON and stores it in Redis. If TTL is provided
- * and positive, sets expiration. Skips if Redis is unavailable.
+ * Unlike `getCachedJson`, this function returns a discriminated union that lets
+ * callers distinguish between cache miss, valid hit, and corrupted/invalid data.
+ * When a schema is provided, the cached data is validated against it.
+ *
+ * @typeParam T - Expected type of the cached value.
+ * @param key - Redis key to fetch.
+ * @param schema - Optional Zod schema to validate the cached data.
+ * @returns CacheResult with status indicating hit, miss, or invalid.
+ *
+ * @example
+ * ```ts
+ * const result = await getCachedJsonSafe("config:123", configSchema);
+ * if (result.status === "hit") {
+ *   return result.data;
+ * }
+ * if (result.status === "invalid") {
+ *   logger.warn("Invalid cached config", { raw: result.raw });
+ * }
+ * // Fetch fresh data...
+ * ```
+ */
+export async function getCachedJsonSafe<T>(
+  key: string,
+  schema?: z.ZodType<T>
+): Promise<CacheResult<T>> {
+  const redis = getRedis();
+  if (!redis) return { status: "miss" };
+
+  // We store JSON strings via JSON.stringify(), so we need to parse them manually.
+  // Upstash Redis only auto-deserializes when storing objects directly, not pre-stringified JSON.
+  const raw = await redis.get<string>(key);
+  if (raw === null) return { status: "miss" };
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    // Invalid JSON - return invalid status with raw string
+    return { raw, status: "invalid" };
+  }
+
+  if (schema) {
+    const result = schema.safeParse(parsed);
+    if (!result.success) {
+      return { raw: parsed, status: "invalid" };
+    }
+    return { data: result.data, status: "hit" };
+  }
+
+  return { data: parsed as T, status: "hit" };
+}
+
+/**
+ * Stores a JSON value in Upstash Redis with optional TTL.
+ *
+ * Serializes the value to JSON before storage. If `ttlSeconds` is
+ * provided and positive, sets an expiration on the key.
  *
  * @param key - Redis key to store the value under.
  * @param value - Value to serialize and cache (must be JSON-serializable).
- * @param ttlSeconds - Optional TTL in seconds (ignored if <= 0).
+ * @param ttlSeconds - Optional TTL in seconds. Ignored if <= 0.
+ *
+ * @example
+ * ```ts
+ * // Cache for 5 minutes
+ * await setCachedJson("user:123:trips", trips, 300);
+ *
+ * // Cache indefinitely
+ * await setCachedJson("config:features", features);
+ * ```
  */
 export async function setCachedJson(
   key: string,
@@ -45,10 +144,80 @@ export async function setCachedJson(
 ): Promise<void> {
   const redis = getRedis();
   if (!redis) return;
+
   const payload = JSON.stringify(value);
   if (ttlSeconds && ttlSeconds > 0) {
     await redis.set(key, payload, { ex: ttlSeconds });
     return;
   }
   await redis.set(key, payload);
+}
+
+/**
+ * Deletes a cached JSON value from Upstash Redis.
+ *
+ * Use for cache invalidation when underlying data changes.
+ * No-op if Redis is unavailable.
+ *
+ * @param key - Redis key to delete.
+ *
+ * @example
+ * ```ts
+ * // Invalidate after trip creation
+ * await deleteCachedJson("user:123:trips");
+ * ```
+ */
+export async function deleteCachedJson(key: string): Promise<void> {
+  const redis = getRedis();
+  if (!redis) return;
+  await redis.del(key);
+}
+
+/**
+ * Deletes multiple cached JSON values from Upstash Redis.
+ *
+ * Efficient batch deletion for invalidating related cache entries.
+ * No-op if Redis is unavailable or keys array is empty.
+ *
+ * @param keys - Array of Redis keys to delete.
+ * @returns Number of keys actually deleted, or 0 if Redis unavailable.
+ *
+ * @example
+ * ```ts
+ * // Invalidate all user caches on logout
+ * const deleted = await deleteCachedJsonMany([
+ *   "user:123:trips",
+ *   "user:123:suggestions",
+ *   "user:123:attachments"
+ * ]);
+ * ```
+ */
+export async function deleteCachedJsonMany(keys: string[]): Promise<number> {
+  const redis = getRedis();
+  if (!redis) return 0;
+  if (keys.length === 0) return 0;
+  return await redis.del(...keys);
+}
+
+/**
+ * Invalidates cache entries matching a user prefix pattern.
+ *
+ * Deletes the specified cache types for a user. Uses explicit key
+ * construction rather than SCAN for predictability and safety.
+ *
+ * @param userId - User ID whose cache entries should be invalidated.
+ * @param cacheTypes - Cache type prefixes to invalidate (e.g., ["trips", "suggestions"]).
+ *
+ * @example
+ * ```ts
+ * // Invalidate all trip-related caches for user
+ * await invalidateUserCache("user-123", ["trips:list", "trips:suggestions"]);
+ * ```
+ */
+export async function invalidateUserCache(
+  userId: string,
+  cacheTypes: string[]
+): Promise<void> {
+  const keys = cacheTypes.map((type) => `${type}:${userId}:all`);
+  await deleteCachedJsonMany(keys);
 }

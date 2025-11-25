@@ -14,13 +14,14 @@ import { agentSchemas } from "@schemas/agents";
 import type { NextRequest } from "next/server";
 import type { z } from "zod";
 import { runBudgetAgent } from "@/lib/agents/budget-agent";
+import { resolveAgentConfig } from "@/lib/agents/config-resolver";
 import { createErrorHandler } from "@/lib/agents/error-recovery";
 import { withApiGuards } from "@/lib/api/factory";
 import {
   errorResponse,
   getTrustedRateLimitIdentifier,
   parseJsonBody,
-} from "@/lib/next/route-helpers";
+} from "@/lib/api/route-helpers";
 
 export const maxDuration = 60;
 
@@ -56,10 +57,12 @@ export const POST = withApiGuards({
   }
 
   const identifier = user?.id ?? getTrustedRateLimitIdentifier(req);
-  const modelHint = new URL(req.url).searchParams.get("model") ?? undefined;
+  const config = await resolveAgentConfig("budgetAgent");
+  const modelHint =
+    config.config.model ?? new URL(req.url).searchParams.get("model") ?? undefined;
   const { model, modelId } = await resolveProvider(user?.id ?? "anon", modelHint);
 
-  const result = runBudgetAgent({ identifier, model, modelId }, body);
+  const result = runBudgetAgent({ identifier, model, modelId }, config.config, body);
   return result.toUIMessageStreamResponse({
     onError: createErrorHandler(),
   });

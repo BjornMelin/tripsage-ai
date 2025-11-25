@@ -1,8 +1,8 @@
 /** @vitest-environment jsdom */
 
+import type { ValidatedFilterOption } from "@schemas/stores";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
-import type { ValidatedFilterOption } from "@/stores/search-filters-store";
 import { useSearchFiltersStore } from "@/stores/search-filters-store";
 
 describe("Search Filters Store - Filter Validation", () => {

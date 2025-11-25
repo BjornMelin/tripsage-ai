@@ -10,7 +10,9 @@ import "server-only";
 import { type MemorySearchRequest, memorySearchRequestSchema } from "@schemas/memory";
 import { type NextRequest, NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
+import { errorResponse } from "@/lib/api/route-helpers";
 import { handleMemoryIntent } from "@/lib/memory/orchestrator";
+import { nowIso, secureUuid } from "@/lib/security/random";
 
 /**
  * POST /api/memory/search
@@ -23,10 +25,11 @@ export const POST = withApiGuards({
   schema: memorySearchRequestSchema,
   telemetry: "memory.search",
 })(async (_req: NextRequest, { user }, validated: MemorySearchRequest) => {
-  if (!user?.id) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  // user is guaranteed by auth: true
+  if (!user) {
+    throw new Error("Authenticated user required for memory search");
   }
-
+  const userId = user.id;
   const { filters, limit } = validated;
 
   try {
@@ -34,7 +37,7 @@ export const POST = withApiGuards({
       limit,
       sessionId: "",
       type: "fetchContext",
-      userId: user.id,
+      userId,
     });
 
     let results = memoryResult.context ?? [];
@@ -50,19 +53,18 @@ export const POST = withApiGuards({
     return NextResponse.json({
       memories: results.map((item) => ({
         content: item.context,
-        createdAt: new Date().toISOString(), // Approximate
-        id: crypto.randomUUID(), // Generate ID for response
+        createdAt: item.createdAt ?? nowIso(),
+        id: item.id ?? secureUuid(),
         source: item.source,
       })),
       total: results.length,
     });
   } catch (error) {
-    return NextResponse.json(
-      {
-        error: "memory_search_failed",
-        message: error instanceof Error ? error.message : "Failed to search memories",
-      },
-      { status: 500 }
-    );
+    return errorResponse({
+      err: error,
+      error: "internal",
+      reason: "Failed to search memories",
+      status: 500,
+    });
   }
 });

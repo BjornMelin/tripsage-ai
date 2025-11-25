@@ -40,7 +40,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { useTrip } from "@/hooks/use-trips";
-import { createClient } from "@/lib/supabase";
+import { getBrowserClient } from "@/lib/supabase";
 
 /**
  * Represents a collaborator on a trip with their permissions and status.
@@ -93,8 +93,16 @@ export default function TripCollaborationPage() {
 
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
+    const supabase = getBrowserClient();
+    // getBrowserClient() may return null during initial client-side initialization/hydration — skip auth check until client is available
+    if (!supabase) return;
+    supabase.auth
+      .getUser()
+      .then(({ data }) => setCurrentUserId(data.user?.id ?? null))
+      .catch(() => {
+        // Best-effort: keep UI consistent even if auth lookup fails
+        setCurrentUserId(null);
+      });
   }, []);
 
   // Type assertion for trip data

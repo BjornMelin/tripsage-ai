@@ -6,7 +6,21 @@ Zod v4 schemas for TripSage AI validation. Provides compile-time types and runti
 
 **Domain Schemas** (`frontend/src/domain/schemas/`): Core business entities independent of AI  
 **AI Tool Schemas** (`frontend/src/ai/tools/schemas/`): Vercel AI SDK v6 tool input/output contracts  
-**Registry** (`frontend/src/domain/schemas/registry.ts`): Shared primitives and transforms  
+**Registry** (`frontend/src/domain/schemas/registry.ts`): Shared primitives and transforms
+
+### Canonical Type Sources
+
+**Single Source of Truth:** Each domain entity has one canonical schema and type definition in `@schemas/*`. Other modules import and re-export for convenience, but the schema file is authoritative.
+
+**Example - Trip Types:**
+
+- **Canonical:** `@schemas/trips` exports `storeTripSchema` and `UiTrip` type
+- **Store:** `@/stores/trip-store` imports `UiTrip` and re-exports as `Trip`
+- **Hooks:** `@/hooks/use-trips` imports `UiTrip` and re-exports as `Trip`
+- **Database:** `@/lib/supabase/database.types` has `Trip = Tables<"trips">` (raw DB row type, separate from UI type)
+- **Mappers:** `@/lib/trips/mappers` uses `UiTrip` from `@schemas/trips` for DB↔UI conversion
+
+**Rule:** Always import the canonical type from `@schemas/*` when possible. Store/hook re-exports are convenience aliases only.  
 
 ### Directory Structure
 
@@ -180,6 +194,8 @@ export const webSearchTool = tool({
 **Run Tests:** `pnpm test:run frontend/src/domain/schemas/__tests__ frontend/src/ai/tools/__tests__`
 
 ### Schema Creation Checklist
+
+> **Note**: This is a reusable schema review template. Copy and complete for each new schema.
 
 - [ ] Single responsibility principle
 - [ ] Correct directory (domain vs AI tools)

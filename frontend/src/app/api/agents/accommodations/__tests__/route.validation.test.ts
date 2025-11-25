@@ -1,6 +1,11 @@
 /** @vitest-environment node */
 
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  setRateLimitFactoryForTests,
+  setSupabaseFactoryForTests,
+} from "@/lib/api/factory";
+import type { TypedServerSupabase } from "@/lib/supabase/server";
 import {
   createMockNextRequest,
   createRouteParamsContext,
@@ -14,26 +19,15 @@ vi.mock("next/headers", () => ({
   ),
 }));
 
-// Mock Supabase server client
-vi.mock("@/lib/supabase/server", () => ({
-  createServerSupabase: vi.fn(async () => ({
-    auth: {
-      getUser: async () => ({
-        data: { user: { id: "user-1" } },
-      }),
-    },
-  })),
-}));
-
 // Mock provider registry
 vi.mock("@ai/models/registry", () => ({
-  resolveProvider: vi.fn(async () => ({ model: {} })),
+  resolveProvider: vi.fn(async () => ({ model: {}, modelId: "gpt-4o" })),
 }));
 
 // Mock accommodation agent
 vi.mock("@/lib/agents/accommodation-agent", () => ({
   runAccommodationAgent: vi.fn(() => ({
-    toUIMessageStreamResponse: () => new Response("ok", { status: 200 }),
+    toTextStreamResponse: () => new Response("ok", { status: 200 }),
   })),
 }));
 
@@ -42,7 +36,44 @@ vi.mock("@/lib/redis", () => ({
   getRedis: vi.fn(() => Promise.resolve({})),
 }));
 
+// Mock route helpers
+vi.mock("@/lib/api/route-helpers", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/api/route-helpers")>(
+    "@/lib/api/route-helpers"
+  );
+  return {
+    ...actual,
+    withRequestSpan: vi.fn((_name, _attrs, fn) => fn()),
+  };
+});
+
 describe("/api/agents/accommodations validation", () => {
+  beforeEach(() => {
+    const mockLimitFn = vi.fn().mockResolvedValue({
+      limit: 30,
+      remaining: 29,
+      reset: Date.now() + 60000,
+      success: true,
+    });
+    setRateLimitFactoryForTests(async (_key, _identifier) => mockLimitFn());
+    setSupabaseFactoryForTests(
+      async () =>
+        ({
+          auth: {
+            getUser: async () => ({
+              data: { user: { id: "user-1" } },
+              error: null,
+            }),
+          },
+        }) as unknown as TypedServerSupabase
+    );
+  });
+
+  afterEach(() => {
+    setRateLimitFactoryForTests(null);
+    setSupabaseFactoryForTests(null);
+  });
+
   it("returns 400 on invalid body", async () => {
     const mod = await import("../route");
     // Missing required fields like destination/checkIn/checkOut

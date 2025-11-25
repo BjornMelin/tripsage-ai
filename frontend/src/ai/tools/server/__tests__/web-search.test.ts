@@ -1,3 +1,5 @@
+/** @vitest-environment node */
+
 import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";

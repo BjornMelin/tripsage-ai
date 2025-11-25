@@ -18,9 +18,9 @@ import {
   Smartphone,
   Trash2,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useState } from "react";
-import { SecurityDashboard } from "@/components/features/security/security-dashboard";
+import { Suspense, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+
+// Dynamically import server component to avoid bundling server-only code in client
+const SECURITY_DASHBOARD = dynamic(
+  () =>
+    import("@/components/features/security/security-dashboard").then(
+      (mod) => mod.SecurityDashboard
+    ),
+  {
+    ssr: true,
+  }
+);
 
 /**
  * Interface defining security settings configuration.
@@ -144,7 +155,9 @@ export default function SecuritySettingsPage() {
       </div>
 
       {/* Security Dashboard */}
-      <SecurityDashboard />
+      <Suspense fallback={<div>Loading security dashboard...</div>}>
+        <SECURITY_DASHBOARD />
+      </Suspense>
 
       <Separator />
 

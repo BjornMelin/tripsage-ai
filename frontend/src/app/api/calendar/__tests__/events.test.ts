@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { setSupabaseFactoryForTests } from "@/lib/api/factory";
 import * as googleCalendar from "@/lib/calendar/google";
 import {
   createMockNextRequest,
@@ -41,9 +42,9 @@ vi.mock("@/lib/env/server", () => ({
 }));
 
 // Mock route helpers
-vi.mock("@/lib/next/route-helpers", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/next/route-helpers")>(
-    "@/lib/next/route-helpers"
+vi.mock("@/lib/api/route-helpers", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/api/route-helpers")>(
+    "@/lib/api/route-helpers"
   );
   return {
     ...actual,
@@ -57,6 +58,7 @@ import * as eventsRoute from "../events/route";
 describe("/api/calendar/events", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    setSupabaseFactoryForTests(async () => mockSupabase as never);
     mockSupabase.auth.getUser.mockResolvedValue({
       data: { user: mockUser },
       error: null,
@@ -80,6 +82,10 @@ describe("/api/calendar/events", () => {
       summary: "Updated Event",
     } as never);
     vi.spyOn(googleCalendar, "deleteEvent").mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    setSupabaseFactoryForTests(null);
   });
 
   describe("GET", () => {

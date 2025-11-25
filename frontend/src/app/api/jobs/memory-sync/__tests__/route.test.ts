@@ -135,6 +135,8 @@ vi.mock("@/lib/supabase/admin", () => {
 });
 
 vi.mock("@/lib/telemetry/span", () => ({
+  recordTelemetryEvent: vi.fn(),
+  sanitizeAttributes: vi.fn((attrs) => attrs),
   withTelemetrySpan: vi.fn((_name, _opts, fn) => {
     const span = {
       end: vi.fn(),
@@ -238,7 +240,8 @@ describe("POST /api/jobs/memory-sync", () => {
     const result = await response.json();
 
     expect(response.status).toBe(400);
-    expect(result.error).toBe("invalid job payload");
+    expect(result.error).toBe("invalid_request");
+    expect(result.reason).toBe("Request validation failed");
   });
 
   it("handles duplicate jobs gracefully", async () => {

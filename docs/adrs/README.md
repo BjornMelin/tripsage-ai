@@ -27,9 +27,9 @@ architectural decision made along with its context and consequences.
 | ADR | Title | Status | Date |
 |-----|-------|--------|------|
 | [ADR-0002](adr-0002-supabase-platform.md) | Adopt Supabase as Primary Database and Auth Platform | Accepted | 2025-06-17 |
-| [ADR-0003](adr-0003-upstash-redis.md) | Use Upstash Redis (HTTP) for Caching | Accepted | 2025-10-22 |
 | [ADR-0007](adr-0007-testing-strategy.md) | Modern Testing Strategy with Vitest and Playwright | Accepted | 2025-06-17 |
 | [ADR-0009](adr-0009-consolidate-ci-to-two-workflows-and-remove-custom-composites.md) | Consolidate CI to two workflows and remove custom composites | Proposed | 2025-10-18 |
+| [ADR-0003](adr-0003-upstash-redis.md) | Use Upstash Redis (HTTP) for Caching | Accepted | 2025-10-22 |
 | [ADR-0013](adr-0013-adopt-next-js-16-proxy-and-async-apis-deprecate-middleware.md) | Adopt Next.js 16 proxy and async APIs; deprecate middleware | Accepted | 2025-10-23 |
 | [ADR-0014](adr-0014-migrate-supabase-auth-to-supabase-ssr-and-deprecate-auth-helpers-react.md) | Migrate Supabase auth to @supabase/ssr; deprecate auth-helpers-react | Accepted | 2025-10-23 |
 | [ADR-0016](adr-0016-tailwind-css-v4-migration-css-first-config.md) | Tailwind CSS v4 migration (CSS-first config) | Accepted | 2025-10-23 |
@@ -38,7 +38,7 @@ architectural decision made along with its context and consequences.
 | [ADR-0023](adr-0023-adopt-ai-sdk-v6-foundations.md) | Adopt AI SDK v6 Foundations (Next.js App Router) | Accepted | 2025-11-01 |
 | [ADR-0024](adr-0024-byok-routes-and-security.md) | BYOK Routes and Security (Next.js + Supabase Vault) | Accepted | 2025-11-01 |
 | [ADR-0026](adr-0026-adopt-ai-elements-ui-chat.md) | Adopt AI Elements UI Chat | Accepted | 2025-11-01 |
-| [ADR-027](adr-027-token-budgeting-and-limits.md) | Token Budgeting & Limits (Counting + Clamping) | Accepted | 2025-11-01 |
+| [ADR-0027](adr-027-token-budgeting-and-limits.md) | Token Budgeting & Limits (Counting + Clamping) | Accepted | 2025-11-01 |
 | [ADR-0028](adr-0028-provider-registry.md) | Provider Registry & Resolution | Accepted | 2025-11-01 |
 | [ADR-0029](adr-0029-di-route-handlers-and-testing.md) | DI Route Handlers and Testing | Accepted | 2025-11-02 |
 | [ADR-0031](adr-0031-nextjs-chat-api-ai-sdk-v6.md) | Next.js Chat API AI SDK v6 | Accepted | 2025-11-02 |
@@ -48,17 +48,21 @@ architectural decision made along with its context and consequences.
 | [ADR-0035](adr-0035-react-compiler-and-component-declarations.md) | React Compiler and Component Declarations | Accepted | 2025-11-04 |
 | [ADR-0036](adr-0036-ai-elements-response-and-sources.md) | AI Elements Response and Sources | Accepted | 2025-11-04 |
 | [ADR-0037](adr-0037-reasoning-tool-codeblock-phased-adoption.md) | Reasoning/Tool/CodeBlock Phased Adoption | Accepted | 2025-11-04 |
+| [ADR-0044](adr-0044-tool-registry-ts.md) | AI SDK v6 Tool Registry and MCP Integration | Accepted | 2025-11-11 |
 | [ADR-0038](adr-0038-hybrid-frontend-agents.md) | Frontend Hybrid Agents for Destination Research & Itineraries | Accepted | 2025-11-12 |
 | [ADR-0039](adr-0039-frontend-agent-modernization.md) | Framework-First Frontend Agent Modernization | Accepted | 2025-11-12 |
 | [ADR-0040](adr-0040-consolidate-supabase-edge-to-vercel-webhooks.md) | Consolidate Supabase Edge (Deno) to Vercel Route Handlers + Database Webhooks | Accepted | 2025-11-13 |
 | [ADR-0041](adr-0041-webhook-notifications-qstash-and-resend.md) | Webhook Notifications via QStash and Resend | Accepted | 2025-11-13 |
 | [ADR-0042](adr-0042-supabase-memory-orchestrator.md) | Supabase-Centric Memory Orchestrator | Accepted | 2025-11-18 |
-| [ADR-0043](adr-0043-expedia-rapid-integration.md) | Expedia Rapid API Integration for Lodging Search/Booking | Proposed | 2025-11-19 |
-| [ADR-0044](adr-0044-tool-registry-ts.md) | AI SDK v6 Tool Registry and MCP Integration | Accepted | 2025-11-11 |
+| [ADR-0043](superseded/adr-0043-expedia-rapid-integration.md) | Expedia Rapid API Integration for Lodging Search/Booking | Superseded | 2025-11-19 |
 | [ADR-0045](adr-0045-flights-dto-frontend-zod.md) | Flights DTOs in Frontend (Next.js 16 + Zod v4) | Accepted | 2025-11-20 |
 | [ADR-0046](adr-0046-otel-tracing-frontend.md) | OTEL Tracing for Next.js 16 Route Handlers | Proposed | 2025-11-20 |
 | [ADR-0047](adr-0047-runtime-policy-edge-vs-node.md) | Runtime Policy for AI SDK Routes (Edge vs Node) | Proposed | 2025-11-20 |
+| [ADR-0054](adr-0054-upstash-testing-harness.md) | Hybrid Upstash Testing (Mocks + Local Emulators + Smoke) | Proposed | 2025-11-24 |
 | [ADR-0048](adr-0048-qstash-retries-and-idempotency.md) | QStash Retries and Idempotency for Webhooks/Tasks | Proposed | 2025-11-20 |
+| [ADR-0049](superseded/adr-0049-expedia-rapid.md) | Expedia Rapid Integration Research | Superseded | 2025-11-20 |
+| [ADR-0050](adr-0050-amadeus-google-places-stripe-hybrid.md) | Replace Expedia Rapid with Amadeus + Google Places + Stripe | Accepted | 2025-11-20 |
+| [ADR-0053](adr-0053-activity-search-google-places-integration.md) | Activity Search & Booking via Google Places API (Hybrid + Web Fallback) | Proposed | 2025-11-24 |
 
 ## Superseded ADRs
 
@@ -79,6 +83,8 @@ The following ADRs have been superseded by newer decisions:
 | [ADR-0020](superseded/adr-0020-rate-limiting-strategy.md) | Rate limiting strategy (Next + SlowAPI) | ADR-0032 | 2025-10-24 |
 | [ADR-0021](superseded/adr-0021-slowapi-aiolimiter-migration-historic.md) | SlowAPI + Aiolimiter Migration (Historic) | - | 2025-10-24 |
 | [ADR-0022](superseded/adr-0022-python-pytest-foundation.md) | Standardize Python Test Suite Foundations | ADR-0007 | 2025-10-24 |
+| [ADR-0043](superseded/adr-0043-expedia-rapid-integration.md) | Expedia Rapid API Integration for Lodging Search/Booking | ADR-0050 | 2025-11-20 |
+| [ADR-0049](superseded/adr-0049-expedia-rapid.md) | Expedia Rapid Integration Research | ADR-0050 | 2025-11-20 |
 
 ## By Category
 
@@ -103,6 +109,8 @@ The following ADRs have been superseded by newer decisions:
 - ADR-0042: Supabase-Centric Memory Orchestrator
 - ADR-0044: AI SDK v6 Tool Registry and MCP Integration
 - ADR-0045: Flights DTOs in Frontend (Next.js 16 + Zod v4)
+- ADR-0050: Replace Expedia Rapid with Amadeus + Google Places + Stripe
+- ADR-0053: Activity Search & Booking via Google Places API (Hybrid + Web Fallback)
 
 ### Backend
 

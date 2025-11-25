@@ -1,27 +1,70 @@
 /**
- * @fileoverview Trip CRUD API route handlers.
+ * @fileoverview Trip CRUD API route handlers with Upstash Redis caching.
+ *
+ * GET uses per-user caching with 5-minute TTL. POST invalidates cache.
+ * Cache key includes user ID and filter parameters for consistency.
  */
-
-"use server";
 
 import "server-only";
 
-import type { TripsInsert, TripsRow } from "@schemas/supabase";
+import type { TripsInsert } from "@schemas/supabase";
 import { tripsInsertSchema, tripsRowSchema } from "@schemas/supabase";
-import type { TripCreateInput } from "@schemas/trips";
+import type { TripCreateInput, TripFilters } from "@schemas/trips";
 import { tripCreateSchema, tripFiltersSchema } from "@schemas/trips";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { errorResponse } from "@/lib/next/route-helpers";
+import { errorResponse } from "@/lib/api/route-helpers";
+import { canonicalizeParamsForCache } from "@/lib/cache/keys";
+import { bumpTag } from "@/lib/cache/tags";
+import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
+import { mapDbTripToUi } from "@/lib/trips/mappers";
+
+/** Cache TTL for trip listings (5 minutes). */
+const TRIPS_CACHE_TTL = 300;
+
+/** Cache tag for trip-related caches. */
+const TRIPS_CACHE_TAG = "trips";
+
+/**
+ * Builds versioned cache key for trip listings.
+ *
+ * Uses cache tag versioning to enable efficient invalidation of all
+ * filter variants when trips are created or updated.
+ *
+ * @param userId - Authenticated user ID.
+ * @param filters - Trip filter parameters.
+ * @returns Versioned Redis cache key.
+ */
+async function buildTripsCacheKey(
+  userId: string,
+  filters: TripFilters
+): Promise<string> {
+  const canonical = canonicalizeParamsForCache(filters as Record<string, unknown>);
+  const baseKey = `trips:list:${userId}:${canonical || "all"}`;
+  const { versionedKey } = await import("@/lib/cache/tags");
+  return await versionedKey(TRIPS_CACHE_TAG, baseKey);
+}
+
+/**
+ * Invalidates all trip cache entries for all users.
+ *
+ * Uses cache tag versioning to invalidate all filter variants
+ * (e.g., "all", "status:active", "destination:paris", etc.) by
+ * bumping the tag version. Subsequent reads will generate new
+ * versioned keys, causing cache misses.
+ */
+async function invalidateTripsCache(): Promise<void> {
+  await bumpTag(TRIPS_CACHE_TAG);
+}
 
 /**
  * Maps validated trip creation payload to Supabase trips insert shape.
  *
- * This keeps request/response validation layered on top of the generated
- * Supabase table schemas, avoiding direct coupling between API contracts and
- * database column names.
+ * Keeps request/response validation layered on top of the generated
+ * Supabase table schemas, avoiding direct coupling between API contracts
+ * and database column names.
  */
 function mapCreatePayloadToInsert(
   payload: TripCreateInput,
@@ -29,6 +72,7 @@ function mapCreatePayloadToInsert(
 ): TripsInsert {
   return tripsInsertSchema.parse({
     budget: payload.budget ?? 0,
+    currency: payload.currency ?? "USD",
     destination: payload.destination,
     end_date: payload.endDate,
     flexibility: payload.preferences ?? null,
@@ -44,41 +88,19 @@ function mapCreatePayloadToInsert(
 }
 
 /**
- * Maps a trips Row object to the UI Trip shape used by `useTripStore` and
- * trip-related hooks. This mirrors the existing mapping in the trip
- * repository while keeping the route handler independent from browser
- * concerns.
- */
-function mapTripRowToUi(row: TripsRow) {
-  return {
-    budget: row.budget,
-    created_at: row.created_at,
-    createdAt: row.created_at,
-    currency: "USD",
-    description: undefined, // Description not stored in database
-    destinations: [] as unknown[],
-    end_date: row.end_date,
-    endDate: row.end_date,
-    id: String(row.id),
-    isPublic: false,
-    name: row.name,
-    start_date: row.start_date,
-    startDate: row.start_date,
-    status: row.status,
-    updated_at: row.updated_at,
-    updatedAt: row.updated_at,
-    user_id: row.user_id,
-  };
-}
-
-/**
  * Lists trips for the authenticated user with optional filtering.
  *
- * Applies filters from query parameters and returns UI-shaped trip objects
- * validated against the generated Supabase row schema.
+ * Checks Redis cache first, then queries Supabase if cache miss.
+ * Results cached per-user with 5-minute TTL.
+ *
+ * @param supabase - Supabase client.
+ * @param userId - Authenticated user ID.
+ * @param req - NextRequest object.
+ * @returns NextResponse object.
  */
 async function listTripsHandler(
   supabase: TypedServerSupabase,
+  userId: string,
   req: NextRequest
 ): Promise<NextResponse> {
   const url = new URL(req.url);
@@ -100,10 +122,19 @@ async function listTripsHandler(
   }
 
   const filters = filtersParse.data;
+  const cacheKey = await buildTripsCacheKey(userId, filters);
 
+  // Check cache
+  const cached = await getCachedJson<ReturnType<typeof mapDbTripToUi>[]>(cacheKey);
+  if (cached) {
+    return NextResponse.json(cached);
+  }
+
+  // Query Supabase
   let query = supabase
     .from("trips")
     .select("*")
+    .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
   if (filters.destination) {
@@ -114,7 +145,6 @@ async function listTripsHandler(
     query = query.eq("status", filters.status);
   }
 
-  // Date range filters (inclusive)
   if (filters.startDate) {
     query = query.gte("start_date", filters.startDate);
   }
@@ -134,15 +164,19 @@ async function listTripsHandler(
   }
 
   const rows = (data ?? []).map((row) => tripsRowSchema.parse(row));
-  const uiTrips = rows.map(mapTripRowToUi);
+  const uiTrips = rows.map(mapDbTripToUi);
+
+  // Cache result
+  await setCachedJson(cacheKey, uiTrips, TRIPS_CACHE_TTL);
+
   return NextResponse.json(uiTrips);
 }
 
 /**
  * Creates a new trip for the authenticated user.
  *
- * Validates the request body with {@link tripCreateSchema}, maps the payload to
- * the generated Supabase insert schema, and returns a UI-shaped trip object.
+ * Validates the request body, inserts into Supabase, and invalidates
+ * the user's trips cache.
  */
 async function createTripHandler(
   supabase: TypedServerSupabase,
@@ -189,8 +223,11 @@ async function createTripHandler(
     });
   }
 
+  // Invalidate all trips cache entries (all users, all filter variants)
+  await invalidateTripsCache();
+
   const row = tripsRowSchema.parse(data);
-  const uiTrip = mapTripRowToUi(row);
+  const uiTrip = mapDbTripToUi(row);
   return NextResponse.json(uiTrip, { status: 201 });
 }
 
@@ -198,28 +235,39 @@ async function createTripHandler(
  * GET /api/trips
  *
  * Returns the authenticated user's trips filtered by optional query params.
- * This is the primary CRUD list entrypoint used by `useTrips` and
- * dashboard widgets.
+ * Response cached in Redis with 5-minute TTL.
+ *
+ * @param req - NextRequest object.
+ * @param supabase - Supabase client.
+ * @param user - Authenticated user.
+ * @returns NextResponse object.
  */
 export const GET = withApiGuards({
   auth: true,
   rateLimit: "trips:list",
   telemetry: "trips.list",
-})((req, { supabase }) => {
-  return listTripsHandler(supabase, req);
+})(async (req, { supabase, user }) => {
+  const userId = user?.id;
+  if (!userId) {
+    return NextResponse.json(
+      { error: "unauthorized", reason: "Authentication required" },
+      { status: 401 }
+    );
+  }
+  return await listTripsHandler(supabase, userId, req);
 });
 
 /**
  * POST /api/trips
  *
  * Creates a new trip owned by the authenticated user.
- * This route is called by `useCreateTrip` and persists to the `trips` table.
+ * Invalidates trips cache on success.
  */
 export const POST = withApiGuards({
   auth: true,
   rateLimit: "trips:create",
   telemetry: "trips.create",
-})((req, { supabase, user }) => {
+})(async (req, { supabase, user }) => {
   const userId = user?.id;
   if (!userId) {
     return NextResponse.json(
@@ -228,5 +276,5 @@ export const POST = withApiGuards({
     );
   }
 
-  return createTripHandler(supabase, userId, req);
+  return await createTripHandler(supabase, userId, req);
 });

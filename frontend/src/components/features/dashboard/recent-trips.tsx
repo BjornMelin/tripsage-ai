@@ -113,7 +113,7 @@ function TripCard({ trip }: { trip: Trip }) {
       className="block p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors"
     >
       <div className="flex items-start justify-between mb-2">
-        <h4 className="font-medium text-sm truncate pr-2">{trip.name}</h4>
+        <h4 className="font-medium text-sm truncate pr-2">{trip.title}</h4>
         <Badge
           variant={
             status === "upcoming"
@@ -208,12 +208,8 @@ export function RecentTrips({ limit = 5, showEmpty = true }: RecentTripsProps) {
       const aCreated = (a as unknown as { createdAt?: string }).createdAt;
       const bUpdated = (b as unknown as { updatedAt?: string }).updatedAt;
       const bCreated = (b as unknown as { createdAt?: string }).createdAt;
-      const dateA = new Date(
-        a.updated_at || aUpdated || a.created_at || aCreated || "1970-01-01T00:00:00Z"
-      );
-      const dateB = new Date(
-        b.updated_at || bUpdated || b.created_at || bCreated || "1970-01-01T00:00:00Z"
-      );
+      const dateA = new Date(aUpdated || aCreated || "1970-01-01T00:00:00Z");
+      const dateB = new Date(bUpdated || bCreated || "1970-01-01T00:00:00Z");
       return dateB.getTime() - dateA.getTime();
     })
     .slice(0, limit);

@@ -38,19 +38,32 @@ export function AccommodationCard({
   onSelect,
   onCompare,
 }: AccommodationCardProps) {
-  const nights = Math.ceil(
+  const googleKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY;
+  const place = (accommodation as Record<string, unknown>).placeDetails as
+    | { rating?: number; userRatingCount?: number; photos?: Array<{ name?: string }> }
+    | undefined;
+  const userRating = place?.rating ?? accommodation.rating;
+  const primaryImage =
+    accommodation.images?.[0] ??
+    (place?.photos?.[0]?.name
+      ? `https://places.googleapis.com/v1/${place.photos[0].name}/media?maxHeightPx=800&maxWidthPx=1200${
+          googleKey ? `&key=${googleKey}` : ""
+        }`
+      : undefined);
+  const rawNights = Math.ceil(
     (new Date(accommodation.checkOut).getTime() -
       new Date(accommodation.checkIn).getTime()) /
       (1000 * 60 * 60 * 24)
   );
+  const nights = Math.max(1, rawNights);
 
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
       <div className="flex">
         <div className="relative w-1/3 h-48 bg-muted flex items-center justify-center">
-          {accommodation.images?.[0] ? (
+          {primaryImage ? (
             <Image
-              src={accommodation.images[0]}
+              src={primaryImage}
               alt={accommodation.name}
               fill
               className="object-cover"
@@ -75,7 +88,7 @@ export function AccommodationCard({
             <div className="text-right">
               <div className="flex items-center gap-1">
                 <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                <span className="font-medium">{accommodation.rating}</span>
+                <span className="font-medium">{userRating ?? "N/A"}</span>
               </div>
               <Badge variant="secondary" className="mt-1">
                 {accommodation.type}
@@ -95,9 +108,9 @@ export function AccommodationCard({
                 <span className="capitalize">{amenity.replace("_", " ")}</span>
               </div>
             ))}
-            {accommodation.amenities.length > 6 && (
+            {(accommodation.amenities?.length ?? 0) > 6 && (
               <span className="text-xs text-muted-foreground">
-                +{accommodation.amenities.length - 6} more
+                +{(accommodation.amenities?.length ?? 0) - 6} more
               </span>
             )}
           </div>

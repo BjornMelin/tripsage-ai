@@ -14,7 +14,7 @@ import {
 } from "@ai/tools/schemas/weather";
 import type { z } from "zod";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
-import { fetchWithRetry } from "@/lib/http/fetch-retry";
+import { fetchWithRetry } from "@/lib/http/retry";
 import { WEATHER_CACHE_TTL_SECONDS } from "./constants";
 
 /**

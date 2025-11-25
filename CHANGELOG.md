@@ -7,19 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- Replaced insecure ID generation: migrated all `Date.now().toString()` and direct `crypto.randomUUID()` usage to `secureUuid()` from `@/lib/security/random` in stores, components, API routes, and AI tools.
+- Removed `Math.random()` from production code: replaced with deterministic values in backup code verification and agent collaboration hub performance simulation.
+- Removed `console.*` statements from server modules: replaced development logging and error fallbacks in `lib/api/api-client.ts`, `lib/error-service.ts`, and `lib/cache/query-cache.ts` with telemetry helpers or silent error handling per AGENTS.md compliance.
+
 ### Added
 
+- Personalization Insights page now surfaces recent memories with localized timestamps, source/score, and copyable memory IDs using the canonical memory context feed.
+- Testing patterns companion guide (`docs/developers/testing-patterns.md`) with test-type decision tree plus MSW and AI SDK v6 examples.
+- Supabase local config: added `project_id`, `[db.seed]` configuration, and `[storage.buckets.attachments]` bucket definition with MIME type restrictions in `supabase/config.toml`.
+- Supabase-backed agent configuration control plane: new `agent_config` and `agent_config_versions` tables with admin-only RLS, upsert RPC, and schema types wired into the codebase.
+- Configuration resolver with Upstash cache + Zod validation and coverage, plus authenticated API routes (`GET/PUT /api/config/agents/:agentType`, versions listing, rollback) using `withApiGuards`, telemetry, and cache-tag invalidation.
+- Admin Configuration Manager rebuilt to server-first data access; displays live config, version history, and rollback via the new APIs.
+- All AI agents (budget, destination, flight, itinerary, accommodation, memory) now load model/temperature/token limits from centralized configuration before calling `streamText` (see ADR-0052: `docs/adrs/adr-0052-agent-configuration-backend.md` for architecture details).
 - Document Supabase memory orchestrator architecture and implementation plan (ADR-0042, SPEC-0026, database/memory prompt).
 - Add Next.js 16 trip domain API routes (`/api/trips`, `/api/trips/suggestions`, `/api/itineraries`, `/api/dashboard`) backed by Supabase SSR, Zod v4 schemas, unified `withApiGuards` auth/rate limiting, and AI SDK v6 structured trip suggestions.
 - Add `src/lib/ai/tool-factory.ts` with typed telemetry/cache/rate-limit guardrails plus coverage in `src/lib/ai/tool-factory.test.ts`, establishing a single `createAiTool` entrypoint for all tools.
+- Upstash testing harness (`frontend/src/test/setup/upstash.ts`, `frontend/src/test/msw/handlers/upstash.ts`, smoke scaffolds in `frontend/src/test/upstash/`) provides shared Redis/ratelimit stubs and MSW handlers to mock rate limiting and cache/Redis unavailability without external dependencies; includes smoke-test scaffold. See ADR-0054 and SPEC-0032 for the tiered strategy.
+- Security dashboard and MFA flows: added security dashboard UI plus MFA setup/verification and backup-code components, along with realtime connection status monitor.
+- Flights: new `/api/flights/popular-destinations` route with Supabase-personalized results, Upstash caching (1h TTL), and route rate limiting.
+- Authenticated account deletion route `/auth/delete` uses Supabase admin `deleteUser` with service-role guardrails.
+- Security session APIs: added `GET /api/security/sessions` and `DELETE /api/security/sessions/[sessionId]` with admin Supabase access, `withApiGuards` telemetry/rate limits (`security:sessions:list`, `security:sessions:terminate`), and Vitest coverage for listing/termination flows.
+- Security events and metrics APIs: added `/api/security/events` and `/api/security/metrics` with Supabase admin queries, strict Zod schemas, OTEL telemetry, and rate limits (`security:events`, `security:metrics`) powering the dashboard.
+- Google Places autocomplete now covered by MSW handlers and Vitest component tests for happy path, type filtering, rate limit errors, and latest-query guarding in `frontend/src/components/features/search/destination-search-form`.
+
+- Dashboard metrics API with Redis caching and OpenTelemetry tracing
+- Dashboard metrics visualization components using Recharts
+- API metrics recording infrastructure with Supabase persistence
+- Centralized dashboard metrics schemas
 
 ### Changed
 
+- README updated for production run port 3000, AI Gateway/Supabase env variables (`NEXT_PUBLIC_SUPABASE_*`, `DATABASE_SERVICE_KEY`, `AI_GATEWAY_API_KEY`), and security/audit commands (`pnpm audit`, `pnpm test:run --grep security`).
+- Migrated Next.js middleware to proxy: replaced `frontend/middleware.ts` with `frontend/src/proxy.ts` per Next.js 16 (ADR-0013).
+- Added Turbopack file system cache: enabled `turbopackFileSystemCacheForDev` in `next.config.ts` for faster dev builds.
+- Updated Turbopack root config: set `turbopack.root` to `"."` in `next.config.ts`.
+- Refactored trips API route: replaced inline `mapTripRowToUi` with shared `mapDbTripToUi` mapper.
+- Supabase config modernization: removed deprecated `storage.image_transformation`, fixed Inbucket ports to defaults (54324-54326), updated `api.extra_search_path` to `["public", "extensions"]`, set `edge_runtime.policy` to `"oneshot"` for development hot reload, and fixed `edge_runtime.inspector_port` to default 8083 in `supabase/config.toml`.
+- Supabase dependencies: upgraded `@supabase/supabase-js` and `@supabase/postgrest-js` from `2.80.0` to `2.84.0`; verified type compatibility and API usage patterns remain unchanged.
 - Removed `frontend/src/domain/schemas/index.ts` barrel and updated all imports to use file-scoped schema modules via `@schemas/*`, eliminating circular dependencies and improving Next.js tree-shaking.
 - Renamed aliased exports referenced from the old schema barrel to canonical symbol names in their source files (for example, configuration and validation error schemas in `frontend/src/domain/schemas/*.ts`) so all callers import the final names directly.
 - Rewired higher-level agents in `frontend/src/lib/agents/*` to consume tools from the centralized `@ai/tools` registry and its `toolRegistry` export, replacing the previous `@/lib/tools` indirection.
-- Expedia Rapid schemas consolidated into a single module `frontend/src/domain/schemas/expedia.ts` (wire + request/response + helpers); deleted split `expedia-core/requests` files while keeping the `@schemas/expedia` import surface stable.
-- Expedia Rapid integration now lives in `frontend/src/domain/expedia` with schemas in `frontend/src/domain/schemas/expedia-*.ts`; accommodations tools, booking payments, and tests now import the domain client and types, and the legacy `frontend/src/lib/travel-api` path has been removed.
+- **Provider migration: Expedia Rapid → Amadeus + Google Places + Stripe**
+  - Destination search now uses Google Places Text Search with debounced queries, normalized limits, and a shared results store; the destination search form uses the new hook.
+  - Activities search page uses the real activity search hook, surfaces loading/error states, and opens booking targets via `openActivityBooking`.
+  - Expedia schemas consolidated into `frontend/src/domain/schemas/expedia.ts` and domain paths updated; accommodations tools, booking payments, and tests now import the domain client and types, removing the legacy `frontend/src/lib/travel-api` path.
+  - Accommodation guardrails now preserve the original provider name instead of reporting `"cache"` on cached results, and surface 429/404 responses as explicit availability codes instead of cache hits—improving client clarity and error handling. Booking confirmations still fall back to generated references when Expedia omits a confirmation number.
 - Migrated all AI tool tests from `frontend/src/lib/tools/__tests__` into `frontend/src/ai/tools/server/__tests__`, aligning test locations with the canonical tool implementations in `frontend/src/ai/tools/server/*.ts`.
 - Derive rate-limit identifiers inside `createAiTool` via `headers()` with `x-user-id` → `x-forwarded-for` fallback, sanitize overrides, and expand unit tests to cover the new helper (`frontend/src/lib/ai/tool-factory*.ts`).
 - Remove `runWithGuardrails` runtime + tests, rewrap memory writes through `createAiTool`, and normalize memory categories before caching/telemetry (`frontend/src/lib/agents/memory-agent.ts`, `frontend/src/lib/agents/__tests__/memory-agent.test.ts`, `frontend/src/lib/agents/runtime.ts`).
@@ -27,6 +62,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Moved travel planning tools and schemas to `frontend/src/ai/tools/server/planning.ts` and `frontend/src/ai/tools/server/planning.schema.ts`, and migrated their tests to `frontend/src/ai/tools/server/__tests__/planning.test.ts`; deleted the old `frontend/src/lib/tools/planning*.ts` files.
 - Replaced `frontend/src/lib/tools/travel-advisory.ts` and its helpers with `frontend/src/ai/tools/server/travel-advisory.ts` plus `frontend/src/ai/tools/server/travel-advisory/**` (providers, utilities, tests) backed by the U.S. State Department Travel Advisories API.
 - Replaced `frontend/src/lib/tools/injection.ts` with `frontend/src/ai/tools/server/injection.ts` and updated the chat stream handler to inject `userId`/`sessionId` via `wrapToolsWithUserId` from `@ai/tools/server/injection`.
+- Trip Type Architecture: Unified type definitions into `@schemas/trips` as the canonical source (see Removed section at lines 130–131 for cleanup context).
+- Consolidated Trip type definitions: canonical `UiTrip` type now defined in `@schemas/trips` (`storeTripSchema`); stores and hooks import and re-export for convenience. Removed duplicate Trip type definitions from `domain/schemas/api.ts`. Database type `Trip = Tables<"trips">` remains separate in `database.types.ts` for raw DB row representation.
+- Consolidated TripSuggestion types: removed duplicate interface from `hooks/use-trips.ts`; all consumers now use `TripSuggestion` from `@schemas/trips`.
 - **React 19 login form modernization**: Refactored email/password login to use server actions with `useActionState`/`useFormStatus` for progressive enhancement, replacing route-based redirects with inline error handling and pending states. Created `loginAction` server action in `frontend/src/app/(auth)/login/actions.ts` with Zod validation, Supabase SSR authentication, and safe redirect logic. Updated `frontend/src/components/auth/login-form.tsx` to use React 19 hooks with field-specific error rendering and `SubmitButton` component. Converted `/auth/login` route to thin wrapper for external API compatibility while maintaining all security safeguards. Added comprehensive tests in `frontend/src/app/(auth)/login/__tests__/actions.test.ts` covering validation, authentication, and redirect scenarios.
 - **AI SDK v6 Tool Migration**: Complete refactoring of tool architecture to fully leverage AI SDK v6 capabilities. Migrated `createAiTool` factory to remove type assertions, properly integrate ToolCallOptions with user context extraction from messages, consolidate guardrails into single source of truth, eliminate double-wrapping in agent tools, and update all 18+ tool definitions to use consistent patterns. Enhanced type safety with strict TypeScript compliance, improved test coverage using AI SDK patterns, and eliminated code duplication between tool-factory and guarded-tool implementations. Added comprehensive documentation in `docs/developers/ai-sdk-v6-tools.md` for future tool development.
 - **Configuration and dependency updates**: Enabled React Compiler and Cache Components in Next.js 16; updated Zod schemas to v4 APIs (z.uuid(), z.email(), z.int()); migrated user settings to Server Actions with useActionState; consolidated Supabase client imports to @/lib/supabase; unified Next.js config files into single next.config.ts with conditional bundle analyzer; added jsdom environment declarations for tests; removed deprecated Next.js config keys and custom webpack splitChunks.
@@ -37,6 +75,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Co-located weather tool input and result schemas in `frontend/src/ai/tools/schemas/weather.ts` and updated `frontend/src/ai/tools/server/weather.ts` to consume these types directly, removing the legacy `@/lib/schemas/weather` dependency.
 - Tightened TypeScript coverage for agent result UI components (`BudgetChart`, `DestinationCard`, `FlightOfferCard`, `StayCard`, and `ItineraryTimeline`) and `frontend/src/lib/agents/memory-agent.ts` by replacing implicit `any` usage with precise types derived from domain and tool schemas.
 
+- Testing guide expanded with MSW, AI SDK v6, fake-timer, factory, and CI guidance; consolidated React Query helpers to `@/test/query-mocks` and removed legacy `test/mocks/react-query.ts`; `test:ci` now uses the threads pool.
 - **Auth store security hardening (Supabase SSR-aligned)**
   - Removed client-side persistence of access/refresh tokens from `frontend/src/stores/auth/auth-session.ts`; the slice now exposes only session view state (`session`, `sessionTimeRemaining`) with `setSession` / `resetSession`, treating Supabase SSR cookies as the sole session authority.
   - Updated `frontend/src/stores/auth/auth-core.ts` logout to call the session slice’s `resetSession()` action instead of manually mutating token/session fields, ensuring logout consistently clears local auth-session state.
@@ -63,13 +102,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated `frontend/src/__tests__/realtime-auth-provider.test.tsx` to rely on the Supabase browser client mock directly instead of mocking the deleted token helper.
 - **Supabase SSR auth validation and observability**
   - Added dedicated route tests for `/auth/login`, `/auth/register`, `/auth/logout`, and `/auth/me` under `frontend/src/app/auth/**/__tests__/route.test.ts` to exercise the Supabase SSR-backed flows and `lib/auth/server.ts` helpers.
-  - Simplified `frontend/src/hooks/use-authenticated-api.ts` to use the shared `apiClient` directly without Supabase JWT or refresh-session management, relying on Supabase SSR cookie sessions and `withApiGuards` as the sole authentication mechanism for `/api/*` routes.
+- Simplified `frontend/src/hooks/use-authenticated-api.ts` to use the shared `apiClient` directly without Supabase JWT or refresh-session management, relying on Supabase SSR cookie sessions and `withApiGuards` as the sole authentication mechanism for `/api/*` routes.
 - **Telemetry helpers consolidation (frontend)**: Extended `frontend/src/lib/telemetry/span.ts` with `addEventToActiveSpan`, `recordErrorOnSpan`, and `recordErrorOnActiveSpan` helpers, and updated webhook payload handling (`frontend/src/lib/webhooks/payload.ts`) and file webhook route (`frontend/src/app/api/hooks/files/route.ts`) to use these helpers instead of calling `@opentelemetry/api` directly.
 - **Client error reporting telemetry**: Added `frontend/src/lib/telemetry/client-errors.ts` and rewired `frontend/src/lib/error-service.ts` so browser error reports record exceptions on the active OpenTelemetry span via `recordClientErrorOnActiveSpan` instead of reading `trace.getActiveSpan()` inline.
+- Flight search form now fetches popular destinations via TanStack Query from `/api/flights/popular-destinations`, shows loading/error states, and uses real backend data instead of inline mocks.
+- Security dashboard: cleaned up terminate-session handler placeholder to a concise doc comment, keeping the component free of unused async scaffolding.
+- Account settings now calls Supabase Auth for email updates, surfaces verification state with resend support, and persists notification toggles to user metadata with optimistic UI updates.
+- Security dashboard now loads active sessions from the new `/api/security/sessions` endpoint, updates metrics from live data, and surfaces toast errors on load failures.
+- Security dashboard rebuilt as a server component consuming live events/metrics/sessions endpoints with no client mocks or useEffect fetching.
+- Fixed `TripSuggestion` type export: exported from `use-trips.ts` to resolve component import errors.
+- Fixed email verification state: removed invalid `profile?.isEmailVerified` reference in account settings.
+- Fixed optimistic trip updates types: changed `Trip` references to `UiTrip` from `@schemas/trips`.
+- Fixed trip export test: added missing `currency` property to mock trip data.
+- Fixed security dashboard import: wrapped server component in dynamic import with Suspense.
+- Fixed admin configuration page: added `"use cache: private"` directive to prevent build-time env var errors.
+- Removed unused `TripsRow` import from trips API route.
+- Trip schema consolidation: added `currency TEXT NOT NULL DEFAULT 'USD'` column to `trips` table in base migration; updated `tripsRowSchema`, `tripsInsertSchema`, `tripsUpdateSchema` to use `primitiveSchemas.isoCurrency`; updated `mapDbTripToUi` to read currency from database row instead of hardcoded value; added currency to trip creation payload mapping in `/api/trips` route handler.
+- Test factory cleanup: removed all legacy snake_case field support (`user_id`, `start_date`, `end_date`, `created_at`, `updated_at`) from `trip-factory.ts`; factory now uses camelCase fields exclusively; updated `database.types.ts` to include currency in trips Row/Insert/Update types.
+
+- Centralized store validation schemas to @schemas/stores
+- Updated dashboard page to include metrics visualization
+- Integrated metrics recording into API route factory
+- Updated test imports and expectations
+- Formatted activities page comments and objects
 
 ### Removed
 
+- Deleted obsolete `docs/gen_ref_pages.py` MkDocs generator script (Python reference autogen no longer used).
 - Deleted legacy schema and tool barrels `frontend/src/lib/schemas/index.ts` and `frontend/src/lib/tools/index.ts`, plus unused compatibility helpers and tests under `frontend/src/lib/tools/{constants.ts,__tests__}`, as part of the final migration to `src/domain` and `src/ai` as the single sources of truth for validation and tooling.
+- Removed deprecated `StoreTrip` type alias from `frontend/src/domain/schemas/trips.ts`; all references now use `UiTrip` directly.
+- Removed backward compatibility comments from `frontend/src/stores/trip-store.ts` and `frontend/src/hooks/use-trips.ts`; type aliases retained for convenience without compatibility messaging.
 
 - **Backend AI SDK v5 Legacy Code (FINAL-ONLY Cleanup)**
 
@@ -124,11 +186,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Server code now imports `createServerSupabase` and `TypedServerSupabase` from `frontend/src/lib/supabase/index.ts` instead of internal modules
   - Middleware, calendar helpers, and BYOK API handlers use `createMiddlewareSupabase`/`getCurrentUser` from the same entrypoint for consistent SSR auth wiring
   - Tests updated to mock `@/lib/supabase` where appropriate, keeping Supabase integration details behind the barrel module
+- Vitest config now enforces `pool: "threads"` across all projects and relies on per-project includes, improving CPU-bound test throughput while keeping project-scoped patterns intact (`frontend/vitest.config.ts`).
+- Test setup starts the shared MSW server once per run and makes fake timers opt-in; unhandled requests warn by default, and timers are only restored when explicitly enabled (`frontend/src/test-setup.ts`).
+- Auth store and validation tests now rely on MSW auth route handlers with factory-backed user fixtures, and handler utilities (`composeHandlers`, `createAuthRouteHandlers`) support per-test overrides (`frontend/src/test/msw/handlers/*`, `frontend/src/stores/__tests__/auth/*`).
+- Chat attachments API tests now use MSW-backed upload/download handlers instead of global fetch mocks, covering single/batch uploads, errors, and auth header propagation (`frontend/src/app/api/chat/attachments/__tests__/route.test.ts`, `frontend/src/test/msw/handlers/attachments.ts`).
+- Attachments files API test now asserts auth forwarding via MSW handler rather than fetch spies, aligning with centralized handler library (`frontend/src/app/api/attachments/files/__tests__/route.test.ts`).
+- Calendar integration now uses absolute API base URLs and MSW handlers for Supabase and Google Calendar endpoints, improving Node test stability (`frontend/src/lib/calendar/calendar-integration.ts`, `frontend/src/lib/calendar/__tests__/calendar-integration.test.ts`).
+- Accommodations end-to-end integration mocks Amadeus/Google Places/Stripe via MSW and in-memory clients, removing fetch spies and stabilizing booking flow assertions (`frontend/src/domain/accommodations/__tests__/accommodations.integration.test.ts`).
+- State Department advisory provider tests now rely on MSW feed stubs instead of manual fetch mocks, covering cache, error, and timeout paths deterministically (`frontend/src/ai/tools/server/__tests__/travel-advisory-state-department.test.ts`).
+- Added calendar event factory for reuse in integration tests and schema-validated fixtures (`frontend/src/test/factories.ts`, `frontend/src/lib/calendar/__tests__/calendar-integration.test.ts`).
+
+- Centralized validation schemas for stores
 
 ### Fixed
 
-- Accommodation tool guardrails now keep the original provider on cache hits and emit dedicated availability error codes, so downstream JSON never shows "cache" sources and rate-limit/404 responses are surfaced correctly (`frontend/src/lib/tools/accommodations.ts`, `frontend/src/lib/tools/errors.ts`, `frontend/src/lib/schemas/tools.ts`).
-- Accommodation booking confirmations fall back to the generated booking reference when Expedia omits a confirmation number, and the test suite covers the new cache/error paths (`frontend/src/lib/tools/accommodations.ts`, `frontend/src/lib/tools/__tests__/accommodations.test.ts`).
+- Memory context now preserves Supabase turn `created_at` and `id` through the Zod schema, Supabase adapter, `/api/memory/search` response, and AI memory search tool instead of synthesizing timestamps/UUIDs.
+- Security dashboard again exposes terminate controls for non-current sessions and formats events, sessions, and last-login timestamps in the viewer’s locale via a client helper.
+- Added missing route rate-limit entries for `security:events` and `security:metrics` to align with the security APIs’ guardrails.
+- Chat non-stream handler now relies on `persistMemoryTurn` internal handling instead of double-logging persistence errors (`frontend/src/app/api/chat/_handler.ts`).
+- Removed unreachable trip null guard after Supabase `.single()` when creating itinerary items, simplifying error handling (`frontend/src/app/api/itineraries/route.ts`).
+- ICS import errors once again return the raw parse message in `details` (no nested `{ details }` wrapper) when validation fails (`frontend/src/app/api/calendar/ics/import/route.ts`).
+- Restored chat RLS so trip collaborators can read shared sessions and assistant/system messages remain visible by scoping SELECT to session access instead of message authorship (`supabase/migrations/20251122000000_base_schema.sql`).
+- Supabase base migration now skips stub vault creation when `supabase_vault` is installed and disambiguates `agent_config_upsert`/`user_has_trip_access` parameters so `npx supabase migration up` and `npx supabase db lint` succeed locally (`supabase/migrations/20251122000000_base_schema.sql`).
 - **Accommodation booking**: `bookAccommodation` now uses the real amount and currency from check-availability input, and returns the same `bookingId` that is stored in Supabase.
 - **Upcoming flights pricing**: `UpcomingFlights` renders prices using the flight currency instead of always prefixing USD.
 - **Vitest stability**: Frontend Vitest config now clamps CI workers and adds a sharded `test:ci` script that runs the full suite in smaller batches to avoid jsdom/V8 heap pressure.
@@ -136,6 +215,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Agent tool error codes**: Updated rate limiting error codes from `webSearchRateLimited` to `toolRateLimited` for non-search tools (POI lookup, combine search results, travel advisory, crawl, weather, geocode, distance matrix) to match semantic purpose.
 - **Agent cache configuration**: Re-enabled `hashInput: true` on all agent tool cache guardrails so Redis keys include per-request hashes, preventing stale cross-user responses.
 
+- Security session handlers now await telemetry spans and select full auth session columns to keep Supabase responses typed and traceable.
 - Supabase SSR factory and server tests now stub `@supabase/ssr.createServerClient`, `getServerEnv()`, and `getClientEnv()` explicitly, so Zod environment validation and cookie adapters are tested deterministically in `frontend/src/lib/supabase/__tests__/factory.spec.ts` and `frontend/src/lib/supabase/__tests__/server.test.ts` without relying on process environment side effects.
 - Supabase Realtime hooks now provide stable runtime behaviour: `useTripRealtime` memoizes its error instance to avoid unnecessary error object churn; `useWebSocketChat` now delegates channel subscription to the shared `useRealtimeChannel` helper and uses Supabase's built-in reconnection, removing duplicated backoff logic.
 - Agent status WebSocket reconnect backoff in `frontend/src/hooks/use-agent-status-websocket.ts` now increments attempts via a state updater and derives delays from the updated value, so retry intervals grow exponentially and reset only on successful subscription instead of remaining fixed.
@@ -143,6 +223,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Login form now sanitizes `next`/`from` redirects to same-origin paths only, blocking protocol-relative and off-origin redirects (`frontend/src/components/auth/login-form.tsx`).
 - `POST /api/auth/login` returns 400 for malformed JSON bodies instead of 500, improving client feedback and telemetry accuracy (`frontend/src/app/api/auth/login/route.ts`).
 - Client OTEL fetch instrumentation narrows `propagateTraceHeaderCorsUrls` to the exact origin to prevent trace header leakage to attacker-controlled hosts (`frontend/src/lib/telemetry/client.ts`).
+- ApiClient base URL normalization no longer duplicates `/api` when a relative base is supplied and has a regression test to lock the behavior (`frontend/src/lib/api/api-client.ts`, `frontend/src/lib/api/__tests__/api-client.test.ts`).
+- Fixed type-check/lint regressions in accommodations and calendar tests/factories (mocked caching module typing, calendar event factories returning Dates, MSW handler naming) and cleaned calendar export test to guard request parsing.
 
 ## [1.0.0] - 2025-11-14
 

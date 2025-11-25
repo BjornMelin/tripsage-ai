@@ -1,3 +1,5 @@
+/** @vitest-environment node */
+
 import {
   MEMORY_SCHEMA,
   SEARCH_MEMORIES_FILTERS_SCHEMA,

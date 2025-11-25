@@ -2,24 +2,21 @@
 
 import type { CalendarEvent } from "@schemas/calendar";
 import { calendarEventSchema } from "@schemas/calendar";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { HttpResponse, http } from "msw";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createCalendarEvent } from "@/test/factories/calendar-factory";
+import { resetAllFactories } from "@/test/factories/reset";
+import { server } from "@/test/msw/server";
 import type { DateRange } from "../../dates/unified-date-utils";
 import { DateUtils } from "../../dates/unified-date-utils";
 import type { CalendarProvider } from "../calendar-integration";
 import { calendarFactory } from "../calendar-integration";
 
-// Mock fetch for all tests
-const mockFetch = vi.fn();
-global.fetch = mockFetch;
-
 describe("CalendarIntegration", () => {
   beforeEach(() => {
+    resetAllFactories();
     vi.clearAllMocks();
-    mockFetch.mockReset();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
+    server.resetHandlers();
   });
 
   describe("calendarFactory", () => {
@@ -72,21 +69,18 @@ describe("CalendarIntegration", () => {
         },
       ];
 
-      mockFetch.mockResolvedValueOnce({
-        json: async () => mockEvents,
-        ok: true,
-      });
+      server.use(
+        http.post("http://localhost:3000/api/calendar/events", async ({ request }) => {
+          const body = await request.json();
+          expect(body).toMatchObject({
+            end: DateUtils.formatForApi(mockDateRange.end),
+            start: DateUtils.formatForApi(mockDateRange.start),
+          });
+          return HttpResponse.json(mockEvents);
+        })
+      );
 
       const events = await provider.getEvents(mockDateRange);
-
-      expect(mockFetch).toHaveBeenCalledWith("/api/calendar/events", {
-        body: JSON.stringify({
-          end: DateUtils.formatForApi(mockDateRange.end),
-          start: DateUtils.formatForApi(mockDateRange.start),
-        }),
-        headers: { "Content-Type": "application/json" },
-        method: "POST",
-      });
 
       expect(events).toHaveLength(1);
       expect(events[0].id).toBe("1");
@@ -103,27 +97,18 @@ describe("CalendarIntegration", () => {
         summary: "New Event",
       };
 
-      const newEvent: Omit<CalendarEvent, "id"> = calendarEventSchema.parse({
-        end: { dateTime: new Date("2024-01-01T11:00:00Z") },
-        start: { dateTime: new Date("2024-01-01T10:00:00Z") },
-        summary: "New Event",
-      });
+      const { id: _omit, ...rest } = createCalendarEvent({ summary: "New Event" });
+      const newEvent: Omit<CalendarEvent, "id"> = rest;
 
-      mockFetch.mockResolvedValueOnce({
-        json: async () => mockEvent,
-        ok: true,
-      });
+      server.use(
+        http.put("http://localhost:3000/api/calendar/events", async ({ request }) => {
+          const body = (await request.json()) as Record<string, unknown>;
+          expect(body).toMatchObject({ summary: "New Event" });
+          return HttpResponse.json(mockEvent);
+        })
+      );
 
       const result = await provider.createEvent(newEvent);
-
-      expect(mockFetch).toHaveBeenCalledWith(
-        "/api/calendar/events",
-        expect.any(Object)
-      );
-      const [, request] = mockFetch.mock.calls[0] as [string, RequestInit];
-      expect(JSON.parse((request.body as string) ?? "{}")).toMatchObject({
-        summary: "New Event",
-      });
 
       expect(result.id).toBe("1");
       expect(result.summary).toBe("New Event");
@@ -141,30 +126,25 @@ describe("CalendarIntegration", () => {
         summary: "Updated Event",
       };
 
-      mockFetch.mockResolvedValueOnce({
-        json: async () => mockUpdatedEvent,
-        ok: true,
-      });
+      server.use(
+        http.patch("http://localhost:3000/api/calendar/events/1", () =>
+          HttpResponse.json(mockUpdatedEvent)
+        )
+      );
 
       const result = await provider.updateEvent("1", updates);
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        "/api/calendar/events/1",
-        expect.objectContaining({ method: "PATCH" })
-      );
       expect(result.summary).toBe("Updated Event");
     });
 
     it("should delete event successfully", async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-      });
+      server.use(
+        http.delete("http://localhost:3000/api/calendar/events/1", () =>
+          HttpResponse.json({}, { status: 200 })
+        )
+      );
 
       await expect(provider.deleteEvent("1")).resolves.not.toThrow();
-
-      expect(mockFetch).toHaveBeenCalledWith("/api/calendar/events/1", {
-        method: "DELETE",
-      });
     });
 
     it("should export to ICS successfully", async () => {
@@ -177,17 +157,18 @@ describe("CalendarIntegration", () => {
         }),
       ];
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        text: async () => "BEGIN:VCALENDAR\nEND:VCALENDAR",
-      });
+      server.use(
+        http.post(
+          "http://localhost:3000/api/calendar/ics/export",
+          async ({ request }) => {
+            const body = (await request.json()) as { events?: unknown };
+            expect(Array.isArray(body.events)).toBe(true);
+            return HttpResponse.text("BEGIN:VCALENDAR\nEND:VCALENDAR");
+          }
+        )
+      );
 
       const icsContent = await provider.exportToIcs(events);
-
-      expect(mockFetch).toHaveBeenCalledWith(
-        "/api/calendar/ics/export",
-        expect.objectContaining({ method: "POST" })
-      );
 
       expect(icsContent).toBe("BEGIN:VCALENDAR\nEND:VCALENDAR");
     });
@@ -204,18 +185,18 @@ describe("CalendarIntegration", () => {
 
       const icsContent = "BEGIN:VCALENDAR\nEND:VCALENDAR";
 
-      mockFetch.mockResolvedValueOnce({
-        json: async () => mockImportedEvents,
-        ok: true,
-      });
+      server.use(
+        http.post(
+          "http://localhost:3000/api/calendar/ics/import",
+          async ({ request }) => {
+            const body = await request.json();
+            expect(body).toEqual({ icsContent });
+            return HttpResponse.json(mockImportedEvents);
+          }
+        )
+      );
 
       const events = await provider.importFromIcs(icsContent);
-
-      expect(mockFetch).toHaveBeenCalledWith("/api/calendar/ics/import", {
-        body: JSON.stringify({ icsContent }),
-        headers: { "Content-Type": "application/json" },
-        method: "POST",
-      });
 
       expect(events).toHaveLength(1);
       expect(events[0].summary).toBe("Imported Event");
@@ -248,21 +229,22 @@ describe("CalendarIntegration", () => {
         ],
       };
 
-      mockFetch.mockResolvedValueOnce({
-        json: async () => mockGoogleResponse,
-        ok: true,
-      });
+      server.use(
+        http.get(
+          "https://www.googleapis.com/calendar/v3/calendars/:calendarId/events",
+          ({ request, params }) => {
+            expect(params.calendarId).toBe("test-calendar");
+            const url = new URL(request.url);
+            expect(url.searchParams.get("key")).toBe("test-api-key");
+            expect(url.searchParams.get("timeMin")).toBe(
+              DateUtils.formatForApi(mockDateRange.start)
+            );
+            return HttpResponse.json(mockGoogleResponse);
+          }
+        )
+      );
 
       const events = await provider.getEvents(mockDateRange);
-
-      expect(mockFetch).toHaveBeenCalledTimes(1);
-      const [requestUrl] = mockFetch.mock.calls[0] as [string];
-      const parsedUrl = new URL(requestUrl);
-      expect(parsedUrl.pathname).toContain("/calendars/test-calendar/events");
-      expect(parsedUrl.searchParams.get("key")).toBe("test-api-key");
-      expect(parsedUrl.searchParams.get("timeMin")).toBe(
-        DateUtils.formatForApi(mockDateRange.start)
-      );
 
       expect(events).toHaveLength(1);
       expect(events[0].summary).toBe("Google Event");
@@ -276,26 +258,24 @@ describe("CalendarIntegration", () => {
         summary: "New Google Event",
       };
 
-      const newEvent: Omit<CalendarEvent, "id"> = calendarEventSchema.parse({
-        end: { dateTime: new Date("2024-01-01T11:00:00Z") },
-        start: { dateTime: new Date("2024-01-01T10:00:00Z") },
+      const { id: _omit, ...rest } = createCalendarEvent({
         summary: "New Google Event",
       });
+      const newEvent: Omit<CalendarEvent, "id"> = rest;
 
-      mockFetch.mockResolvedValueOnce({
-        json: async () => mockCreatedEvent,
-        ok: true,
-      });
+      server.use(
+        http.post(
+          "https://www.googleapis.com/calendar/v3/calendars/:calendarId/events",
+          async ({ request, params }) => {
+            expect(params.calendarId).toBe("test-calendar");
+            const body = await request.json();
+            expect(JSON.stringify(body)).toContain("New Google Event");
+            return HttpResponse.json(mockCreatedEvent);
+          }
+        )
+      );
 
       const result = await provider.createEvent(newEvent);
-
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining("www.googleapis.com/calendar/v3/calendars"),
-        expect.objectContaining({
-          body: expect.stringContaining("New Google Event"),
-          method: "POST",
-        })
-      );
 
       expect(result.summary).toBe("New Google Event");
     });

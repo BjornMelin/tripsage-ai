@@ -1,9 +1,12 @@
+/** @vitest-environment node */
+
 import { describe, expect, it } from "vitest";
 import type { Trip } from "@/stores/trip-store";
 import { tripToCalendarEvents } from "../trip-export";
 
 describe("trip-export", () => {
   const mockTrip: Trip = {
+    currency: "USD",
     description: "A test trip",
     destinations: [
       {
@@ -29,8 +32,8 @@ describe("trip-export", () => {
     ],
     endDate: "2025-01-20",
     id: "trip-1",
-    name: "Test Trip",
     startDate: "2025-01-15",
+    title: "Test Trip",
   };
 
   describe("tripToCalendarEvents", () => {

@@ -32,13 +32,20 @@ export function useAuthenticatedApi() {
    */
   type AuthFetchOptions = RequestInit & {
     params?: Record<string, string | number | boolean>;
+    retries?: number;
+    timeout?: number;
   };
 
-  const normalizeEndpoint = useCallback(
-    (endpoint: string): string =>
-      endpoint.startsWith("/api/") ? endpoint.slice(4) : endpoint,
-    []
-  );
+  const normalizeEndpoint = useCallback((endpoint: string): string => {
+    const withoutApiPrefix = endpoint.startsWith("/api/")
+      ? endpoint.slice("/api/".length)
+      : endpoint.startsWith("api/")
+        ? endpoint.slice("api/".length)
+        : endpoint;
+    return withoutApiPrefix.startsWith("/")
+      ? withoutApiPrefix.slice(1)
+      : withoutApiPrefix;
+  }, []);
 
   const dispatch = useCallback(
     async <T = unknown>(
@@ -47,7 +54,8 @@ export function useAuthenticatedApi() {
       headers: Headers,
       params: Record<string, string | number | boolean> | undefined,
       data: unknown | FormData | undefined,
-      signal: AbortSignal | undefined
+      signal: AbortSignal | undefined,
+      requestOptions?: Pick<AuthFetchOptions, "retries" | "timeout">
     ): Promise<T> => {
       switch (method) {
         case "GET":
@@ -55,24 +63,32 @@ export function useAuthenticatedApi() {
             abortSignal: signal,
             headers: Object.fromEntries(headers.entries()),
             params,
+            retries: requestOptions?.retries ?? 0,
+            timeout: requestOptions?.timeout,
           });
         case "POST":
           return await apiClient.post<unknown, T>(endpointPath, data as unknown, {
             abortSignal: signal,
             headers: Object.fromEntries(headers.entries()),
             params,
+            retries: requestOptions?.retries ?? 0,
+            timeout: requestOptions?.timeout,
           });
         case "PUT":
           return await apiClient.put<unknown, T>(endpointPath, data as unknown, {
             abortSignal: signal,
             headers: Object.fromEntries(headers.entries()),
             params,
+            retries: requestOptions?.retries ?? 0,
+            timeout: requestOptions?.timeout,
           });
         case "PATCH":
           return await apiClient.patch<unknown, T>(endpointPath, data as unknown, {
             abortSignal: signal,
             headers: Object.fromEntries(headers.entries()),
             params,
+            retries: requestOptions?.retries ?? 0,
+            timeout: requestOptions?.timeout,
           });
         case "DELETE":
           return await apiClient.delete<unknown, T>(endpointPath, {
@@ -80,6 +96,8 @@ export function useAuthenticatedApi() {
             data: data as unknown,
             headers: Object.fromEntries(headers.entries()),
             params,
+            retries: requestOptions?.retries ?? 0,
+            timeout: requestOptions?.timeout,
           });
       }
     },
@@ -103,6 +121,8 @@ export function useAuthenticatedApi() {
           | "DELETE";
 
         const endpointPath = normalizeEndpoint(endpoint);
+        const requestRetries = options.retries ?? 0;
+        const requestTimeout = options.timeout ?? 3000;
 
         // Build headers
         const headers = new Headers(options.headers);
@@ -135,11 +155,59 @@ export function useAuthenticatedApi() {
           headers,
           params,
           data,
-          abortControllerRef.current.signal
+          abortControllerRef.current.signal,
+          { retries: requestRetries, timeout: requestTimeout }
         );
       } catch (error) {
+        const controllerAborted =
+          abortControllerRef.current === null ||
+          abortControllerRef.current?.signal.aborted === true;
+
+        if (controllerAborted) {
+          throw new ApiError({
+            code: "REQUEST_CANCELLED",
+            message: "Request cancelled",
+            status: 499,
+          });
+        }
+
         if (error instanceof ApiError) {
-          throw error;
+          const errorData =
+            (error.data as { message?: string; name?: string } | undefined) ?? {};
+          const isAbortError =
+            error.code === "TIMEOUT_ERROR" ||
+            error.status === 408 ||
+            error.message.toLowerCase().includes("abort");
+          const isLikelyNetworkFailure =
+            error.code === "NETWORK_ERROR" ||
+            (error.status === 500 &&
+              ((typeof error.data === "string" && error.data.length === 0) ||
+                error.data === undefined ||
+                error.data === null ||
+                errorData.message?.toLowerCase().includes("network request failed") ===
+                  true ||
+                errorData.name === "Error"));
+
+          if (isAbortError) {
+            throw new ApiError({
+              code: "REQUEST_CANCELLED",
+              message: "Request cancelled",
+              status: 499,
+            });
+          }
+
+          if (isLikelyNetworkFailure) {
+            throw new ApiError({
+              code: "NETWORK_ERROR",
+              message: error.message,
+              status: 0,
+            });
+          }
+          throw new ApiError({
+            code: error.code,
+            message: error.message,
+            status: error.status,
+          });
         }
         if (error instanceof DOMException && error.name === "AbortError") {
           throw new ApiError({

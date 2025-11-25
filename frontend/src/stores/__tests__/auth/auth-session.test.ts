@@ -5,10 +5,7 @@ import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { useAuthSession, useSessionTimeRemaining } from "@/stores/auth/auth-session";
 import { resetAuthState } from "@/stores/auth/reset-auth";
-import { setupReactQueryMocks } from "@/test/mocks/react-query";
 import { setupTimeoutMock } from "@/test/store-helpers";
-
-setupReactQueryMocks();
 
 describe("AuthSession", () => {
   let timeoutCleanup: (() => void) | null = null;

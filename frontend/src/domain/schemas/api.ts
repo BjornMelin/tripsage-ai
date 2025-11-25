@@ -276,115 +276,8 @@ export const sendMessageRequestSchema = z.object({
 export type SendMessageRequest = z.infer<typeof sendMessageRequestSchema>;
 
 // ===== TRIP API SCHEMAS =====
-// Request/response schemas for trip endpoints
-
-/**
- * Zod schema for trip entities.
- * Validates trip data including itinerary, budget, and travelers.
- */
-export const tripSchema = z.object({
-  budget: z
-    .object({
-      currency: primitiveSchemas.isoCurrency,
-      spent: NON_NEGATIVE_NUMBER_SCHEMA,
-      total: POSITIVE_NUMBER_SCHEMA,
-    })
-    .optional(),
-  createdAt: TIMESTAMP_SCHEMA,
-  description: z.string().max(1000).optional(),
-  destination: z.string().min(1),
-  endDate: z.iso.date(),
-  id: UUID_SCHEMA,
-  itinerary: z.array(
-    z.object({
-      activities: z.array(
-        z.object({
-          bookingReference: z.string().optional(),
-          cost: z
-            .object({
-              amount: NON_NEGATIVE_NUMBER_SCHEMA,
-              currency: primitiveSchemas.isoCurrency,
-            })
-            .optional(),
-          description: z.string().optional(),
-          endTime: z.string().time().optional(),
-          id: UUID_SCHEMA,
-          location: z.string().optional(),
-          startTime: z.string().time().optional(),
-          status: z.enum(["planned", "booked", "confirmed", "cancelled"]),
-          title: z.string().min(1),
-          type: z.enum([
-            "flight",
-            "accommodation",
-            "activity",
-            "transport",
-            "meal",
-            "other",
-          ]),
-        })
-      ),
-      date: z.iso.date(),
-      day: z.number().int().positive(),
-      id: UUID_SCHEMA,
-    })
-  ),
-  startDate: z.iso.date(),
-  status: z.enum(["planning", "booked", "active", "completed", "cancelled"]),
-  title: z.string().min(1).max(200),
-  travelers: z.array(
-    z.object({
-      ageGroup: z.enum(["adult", "child", "infant"]).optional(),
-      email: EMAIL_SCHEMA.optional(),
-      id: UUID_SCHEMA.optional(),
-      name: z.string().min(1),
-      role: z.enum(["owner", "collaborator", "viewer"]),
-    })
-  ),
-  updatedAt: TIMESTAMP_SCHEMA,
-  userId: UUID_SCHEMA,
-});
-
-/** TypeScript type for trips. */
-export type Trip = z.infer<typeof tripSchema>;
-
-/**
- * Zod schema for creating trip API requests.
- * Validates trip creation parameters including dates, destination, and travelers.
- */
-export const createTripRequestSchema = z.object({
-  budget: z
-    .object({
-      currency: primitiveSchemas.isoCurrency,
-      total: POSITIVE_NUMBER_SCHEMA,
-    })
-    .optional(),
-  description: z.string().max(1000).optional(),
-  destination: z.string().min(1),
-  endDate: z.iso.date(),
-  startDate: z.iso.date(),
-  title: z.string().min(1).max(200),
-  travelers: z
-    .array(
-      z.object({
-        ageGroup: z.enum(["adult", "child", "infant"]).optional(),
-        email: EMAIL_SCHEMA.optional(),
-        name: z.string().min(1, { error: "Traveler name is required" }),
-      })
-    )
-    .min(1, { error: "At least one traveler is required" }),
-});
-
-/** TypeScript type for trip creation requests. */
-export type CreateTripRequest = z.infer<typeof createTripRequestSchema>;
-
-/**
- * Zod schema for updating trip API requests.
- * Allows partial updates of trip properties.
- */
-export const updateTripRequestSchema = createTripRequestSchema.partial();
-
-/** TypeScript type for trip update requests. */
-export type UpdateTripRequest = z.infer<typeof updateTripRequestSchema>;
+// Trip schemas moved to @schemas/trips for consolidation
+// Import trip schemas from @schemas/trips instead
 
 // ===== API KEY MANAGEMENT SCHEMAS =====
 // Request/response schemas for API key endpoints
@@ -718,3 +611,44 @@ export const safeValidateApiResponse = <T>(schema: z.ZodSchema<T>, data: unknown
     };
   }
 };
+
+// ===== MULTIPART VALIDATION SCHEMAS =====
+// Schemas for multipart form data file validation
+
+/** Maximum file size constants (in bytes). */
+export const FILE_SIZE_LIMITS = {
+  /** 50MB - Large attachments */
+  LARGE: 50 * 1024 * 1024,
+  /** 5MB - Profile pictures, small attachments */
+  SMALL: 5 * 1024 * 1024,
+  /** 10MB - Standard file uploads */
+  STANDARD: 10 * 1024 * 1024,
+} as const;
+
+/** Maximum number of files constants. */
+export const FILE_COUNT_LIMITS = {
+  /** Large batch upload */
+  LARGE: 10,
+  /** Single file upload */
+  SINGLE: 1,
+  /** Standard batch upload */
+  STANDARD: 5,
+} as const;
+
+/**
+ * Zod schema for multipart file validation options.
+ * Validates file size limits, count limits, and allowed MIME types.
+ */
+export const multipartValidationOptionsSchema = z.strictObject({
+  /** Allowed MIME types (optional) */
+  allowedTypes: z.array(z.string().min(1)).optional(),
+  /** Maximum number of files allowed */
+  maxFiles: z.number().int().positive(),
+  /** Maximum file size in bytes */
+  maxSize: z.number().int().positive(),
+});
+
+/** TypeScript type for multipart validation options. */
+export type MultipartValidationOptions = z.infer<
+  typeof multipartValidationOptionsSchema
+>;

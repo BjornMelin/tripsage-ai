@@ -13,7 +13,7 @@ import { primitiveSchemas } from "./registry";
  * Zod schema for supported property types in accommodation search.
  * Defines available accommodation categories.
  */
-export const PROPERTY_TYPE_ENUM = z.enum([
+export const propertyTypeSchema = z.enum([
   "hotel",
   "apartment",
   "house",
@@ -26,25 +26,25 @@ export const PROPERTY_TYPE_ENUM = z.enum([
 ]);
 
 /** TypeScript type for property types. */
-export type PropertyType = z.infer<typeof PROPERTY_TYPE_ENUM>;
+export type PropertyType = z.infer<typeof propertyTypeSchema>;
 
 /**
  * Zod schema for accommodation search sort criteria.
  * Defines available sorting options for search results.
  */
-export const SORT_BY_ENUM = z.enum(["relevance", "price", "rating", "distance"]);
+export const sortBySchema = z.enum(["relevance", "price", "rating", "distance"]);
 
 /** TypeScript type for sort criteria. */
-export type SortBy = z.infer<typeof SORT_BY_ENUM>;
+export type SortBy = z.infer<typeof sortBySchema>;
 
 /**
  * Zod schema for accommodation search sort order directions.
  * Defines ascending and descending sort options.
  */
-export const SORT_ORDER_ENUM = z.enum(["asc", "desc"]);
+export const sortOrderSchema = z.enum(["asc", "desc"]);
 
 /** TypeScript type for sort order directions. */
-export type SortOrder = z.infer<typeof SORT_ORDER_ENUM>;
+export type SortOrder = z.infer<typeof sortOrderSchema>;
 
 // ===== TOOL INPUT SCHEMAS =====
 // Schemas for accommodation tool input validation and processing
@@ -54,7 +54,7 @@ export type SortOrder = z.infer<typeof SORT_ORDER_ENUM>;
  * Validates all search criteria including dates, location, guest counts, and filters.
  * Used for AI tool input validation.
  */
-export const ACCOMMODATION_SEARCH_INPUT_SCHEMA = z
+export const accommodationSearchInputSchema = z
   .strictObject({
     accessibilityFeatures: z.array(z.string()).optional(),
     adults: z.number().int().min(1).max(16).optional(),
@@ -71,15 +71,17 @@ export const ACCOMMODATION_SEARCH_INPUT_SCHEMA = z
     guests: z.number().int().min(1).max(16).default(1),
     infants: z.number().int().min(0).max(16).optional(),
     instantBook: z.boolean().optional(),
+    lat: z.number().optional(),
+    lng: z.number().optional(),
     location: z.string().min(2),
     maxDistanceKm: z.number().nonnegative().optional(),
     minRating: z.number().min(0).max(5).optional(),
     priceMax: z.number().nonnegative().optional(),
     priceMin: z.number().nonnegative().optional(),
-    propertyTypes: z.array(PROPERTY_TYPE_ENUM).optional(),
+    propertyTypes: z.array(propertyTypeSchema).optional(),
     semanticQuery: z.string().optional(), // For RAG semantic search
-    sortBy: SORT_BY_ENUM.default("relevance").optional(),
-    sortOrder: SORT_ORDER_ENUM.default("asc").optional(),
+    sortBy: sortBySchema.default("relevance").optional(),
+    sortOrder: sortOrderSchema.default("asc").optional(),
     tripId: z.string().optional(),
   })
   .refine((data) => new Date(data.checkout) > new Date(data.checkin), {
@@ -94,21 +96,87 @@ export const ACCOMMODATION_SEARCH_INPUT_SCHEMA = z
   );
 
 /** TypeScript type for accommodation search parameters. */
-export type AccommodationSearchParams = z.infer<
-  typeof ACCOMMODATION_SEARCH_INPUT_SCHEMA
->;
+export type AccommodationSearchParams = z.infer<typeof accommodationSearchInputSchema>;
+
+/**
+ * Zod schema for individual accommodation listing structure.
+ * Represents a single listing from search results, including provider data
+ * and Google Places enrichment (place, placeDetails).
+ */
+export const accommodationListingSchema = z.strictObject({
+  address: z
+    .object({
+      cityName: z.string().optional(),
+      lines: z.array(z.string()).optional(),
+    })
+    .optional(),
+  amenities: z.array(z.string()).optional(),
+  hotel: z
+    .object({
+      hotelId: z.string().optional(),
+      name: z.string().optional(),
+    })
+    .optional(),
+  id: z.union([z.string(), z.number()]).optional(),
+  name: z.string().optional(),
+  place: z
+    .object({
+      photos: z.array(z.object({ name: z.string().optional() })).optional(),
+      rating: z.number().optional(),
+      userRatingCount: z.number().optional(),
+    })
+    .optional(),
+  placeDetails: z
+    .object({
+      photos: z.array(z.object({ name: z.string().optional() })).optional(),
+    })
+    .optional(),
+  rooms: z
+    .array(
+      z.object({
+        rates: z
+          .array(
+            z.object({
+              price: z
+                .object({
+                  base: z.union([z.string(), z.number()]).optional(),
+                  currency: z.string().optional(),
+                  numeric: z.union([z.string(), z.number()]).optional(),
+                  taxes: z
+                    .array(z.object({ amount: z.union([z.string(), z.number()]) }))
+                    .optional(),
+                  total: z.union([z.string(), z.number()]).optional(),
+                })
+                .optional(),
+            })
+          )
+          .optional(),
+        roomsLeft: z.number().optional(),
+      })
+    )
+    .optional(),
+  searchMeta: z
+    .object({
+      location: z.string().optional(),
+    })
+    .optional(),
+  starRating: z.number().optional(),
+});
+
+/** TypeScript type for accommodation listing. */
+export type AccommodationListing = z.infer<typeof accommodationListingSchema>;
 
 /**
  * Zod schema for accommodation search result data.
  * Contains search results, pricing info, and metadata from providers.
  */
-export const ACCOMMODATION_SEARCH_OUTPUT_SCHEMA = z.strictObject({
+export const accommodationSearchOutputSchema = z.strictObject({
   avgPrice: z.number().optional(),
   fromCache: z.boolean(),
-  listings: z.array(z.unknown()).default([]),
+  listings: z.array(accommodationListingSchema).default([]),
   maxPrice: z.number().optional(),
   minPrice: z.number().optional(),
-  provider: z.enum(["expedia", "cache"]),
+  provider: z.enum(["amadeus", "cache"]),
   resultsReturned: z.number(),
   searchId: z.string(),
   searchParameters: z.record(z.string(), z.unknown()),
@@ -118,15 +186,13 @@ export const ACCOMMODATION_SEARCH_OUTPUT_SCHEMA = z.strictObject({
 });
 
 /** TypeScript type for accommodation search results. */
-export type AccommodationSearchResult = z.infer<
-  typeof ACCOMMODATION_SEARCH_OUTPUT_SCHEMA
->;
+export type AccommodationSearchResult = z.infer<typeof accommodationSearchOutputSchema>;
 
 /**
  * Zod schema for accommodation details request parameters.
  * Used to fetch detailed information about a specific listing.
  */
-export const ACCOMMODATION_DETAILS_INPUT_SCHEMA = z.strictObject({
+export const accommodationDetailsInputSchema = z.strictObject({
   adults: z.number().int().min(1).max(16).default(1).optional(),
   checkin: z
     .string()
@@ -143,29 +209,29 @@ export const ACCOMMODATION_DETAILS_INPUT_SCHEMA = z.strictObject({
 
 /** TypeScript type for accommodation details parameters. */
 export type AccommodationDetailsParams = z.infer<
-  typeof ACCOMMODATION_DETAILS_INPUT_SCHEMA
+  typeof accommodationDetailsInputSchema
 >;
 
 /**
  * Zod schema for accommodation details output parameters.
  * Contains detailed listing information from providers.
  */
-export const ACCOMMODATION_DETAILS_OUTPUT_SCHEMA = z.strictObject({
+export const accommodationDetailsOutputSchema = z.strictObject({
   listing: z.unknown(),
-  provider: z.enum(["expedia"]),
+  provider: z.enum(["amadeus"]),
   status: z.literal("success"),
 });
 
 /** TypeScript type for accommodation details results. */
 export type AccommodationDetailsResult = z.infer<
-  typeof ACCOMMODATION_DETAILS_OUTPUT_SCHEMA
+  typeof accommodationDetailsOutputSchema
 >;
 
 /**
  * Zod schema for accommodation availability check input parameters.
  * Validates parameters for checking property availability and pricing.
  */
-export const ACCOMMODATION_CHECK_AVAILABILITY_INPUT_SCHEMA = z.strictObject({
+export const accommodationCheckAvailabilityInputSchema = z.strictObject({
   checkIn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   checkOut: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   guests: z.number().int().min(1).max(16),
@@ -177,14 +243,14 @@ export const ACCOMMODATION_CHECK_AVAILABILITY_INPUT_SCHEMA = z.strictObject({
 
 /** TypeScript type for accommodation availability check parameters. */
 export type AccommodationCheckAvailabilityParams = z.infer<
-  typeof ACCOMMODATION_CHECK_AVAILABILITY_INPUT_SCHEMA
+  typeof accommodationCheckAvailabilityInputSchema
 >;
 
 /**
  * Zod schema for accommodation availability check output parameters.
  * Contains booking token, pricing breakdown, and expiration information.
  */
-export const ACCOMMODATION_CHECK_AVAILABILITY_OUTPUT_SCHEMA = z.strictObject({
+export const accommodationCheckAvailabilityOutputSchema = z.strictObject({
   bookingToken: z.string(),
   expiresAt: primitiveSchemas.isoDateTime, // ISO 8601 timestamp
   price: z.object({
@@ -205,14 +271,14 @@ export const ACCOMMODATION_CHECK_AVAILABILITY_OUTPUT_SCHEMA = z.strictObject({
 
 /** TypeScript type for accommodation availability check results. */
 export type AccommodationCheckAvailabilityResult = z.infer<
-  typeof ACCOMMODATION_CHECK_AVAILABILITY_OUTPUT_SCHEMA
+  typeof accommodationCheckAvailabilityOutputSchema
 >;
 
 /**
  * Zod schema for accommodation booking input parameters.
  * Validates booking parameters including guest information, dates, and payment details.
  */
-export const ACCOMMODATION_BOOKING_INPUT_SCHEMA = z
+export const accommodationBookingInputSchema = z
   .strictObject({
     amount: z.number().positive(), // Total amount in cents from checkAvailability
     bookingToken: z.string().min(1), // From checkAvailability
@@ -237,19 +303,18 @@ export const ACCOMMODATION_BOOKING_INPUT_SCHEMA = z
 
 /** TypeScript type for accommodation booking requests. */
 export type AccommodationBookingRequest = z.infer<
-  typeof ACCOMMODATION_BOOKING_INPUT_SCHEMA
+  typeof accommodationBookingInputSchema
 >;
 
 /**
  * Zod schema for accommodation booking output parameters.
  * Contains booking confirmation details including booking ID, status, and payment information.
  */
-export const ACCOMMODATION_BOOKING_OUTPUT_SCHEMA = z.strictObject({
+export const accommodationBookingOutputSchema = z.strictObject({
   bookingId: z.string(),
   bookingStatus: z.enum(["hold_created", "pending_confirmation", "confirmed"]),
   checkin: z.string(),
   checkout: z.string(),
-  epsBookingId: z.string().optional(), // EPS booking confirmation ID
   guestEmail: z.string(),
   guestName: z.string(),
   guestPhone: z.string().optional(),
@@ -259,6 +324,7 @@ export const ACCOMMODATION_BOOKING_OUTPUT_SCHEMA = z.strictObject({
   listingId: z.string(),
   message: z.string(),
   paymentMethod: z.string().optional(),
+  providerBookingId: z.string().optional(), // Provider booking confirmation ID
   reference: z.string(),
   specialRequests: z.string().optional(),
   status: z.literal("success"),
@@ -268,5 +334,5 @@ export const ACCOMMODATION_BOOKING_OUTPUT_SCHEMA = z.strictObject({
 
 /** TypeScript type for accommodation booking results. */
 export type AccommodationBookingResult = z.infer<
-  typeof ACCOMMODATION_BOOKING_OUTPUT_SCHEMA
+  typeof accommodationBookingOutputSchema
 >;

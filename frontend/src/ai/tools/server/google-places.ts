@@ -15,7 +15,7 @@ import { createAiTool } from "@ai/lib/tool-factory";
 import { lookupPoiInputSchema } from "@ai/tools/schemas/google-places";
 import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
-import { cacheLatLng, getCachedLatLng } from "@/lib/google/caching";
+import { resolveLocationToLatLng } from "@/lib/google/places-geocoding";
 
 /** Normalized POI result structure matching Google Places API (New) fields. */
 type NormalizedPoi = {
@@ -30,38 +30,6 @@ type NormalizedPoi = {
   photoName?: string;
   url?: string;
 };
-
-/**
- * Geocode a destination name to coordinates using Google Maps Geocoding API.
- *
- * Uses Google Maps Geocoding API to convert destination strings to coordinates.
- * Returns null if geocoding fails or API key is not configured.
- *
- * @param destination Destination name to geocode.
- * @param apiKey Google Maps server API key.
- * @returns Promise resolving to coordinates or null.
- */
-async function geocodeDestinationWithGoogleMaps(
-  destination: string,
-  apiKey: string
-): Promise<{ lat: number; lon: number } | null> {
-  try {
-    const url = new URL("https://maps.googleapis.com/maps/api/geocode/json");
-    url.searchParams.set("address", destination);
-    url.searchParams.set("key", apiKey);
-
-    const res = await fetch(url);
-    if (!res.ok) return null;
-
-    const data = await res.json();
-    if (data.status !== "OK" || !data.results?.[0]?.geometry?.location) return null;
-
-    const { lat, lng } = data.results[0].geometry.location;
-    return { lat, lon: lng };
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Fetch POIs from Google Places API (New) Text Search.
@@ -145,58 +113,50 @@ export const lookupPoiContext = createAiTool({
   description:
     "Lookup points of interest near a destination or coordinate using Google Places API.",
   execute: async (params) => {
+    const validated = await lookupPoiInputSchema.parseAsync(params);
     let apiKey: string;
     try {
       apiKey = getGoogleMapsServerKey();
     } catch {
-      return { inputs: params, pois: [], provider: "stub" };
+      return { inputs: validated, pois: [], provider: "stub" };
     }
 
     let lat: number;
     let lon: number;
     let searchQuery: string;
 
-    if (typeof params.lat === "number" && typeof params.lon === "number") {
-      lat = params.lat;
-      lon = params.lon;
-      searchQuery = params.query ?? `points of interest near ${lat},${lon}`;
-    } else if (params.destination) {
-      const normalizedDestination = params.destination.toLowerCase().trim();
-      const geocodeCacheKey = `googleplaces:geocode:${normalizedDestination}`;
-      let coords = await getCachedLatLng(geocodeCacheKey);
-
-      if (!coords) {
-        coords = await geocodeDestinationWithGoogleMaps(params.destination, apiKey);
-        if (coords) {
-          await cacheLatLng(geocodeCacheKey, coords, 30 * 24 * 60 * 60);
-        }
-      }
+    if (typeof validated.lat === "number" && typeof validated.lon === "number") {
+      lat = validated.lat;
+      lon = validated.lon;
+      searchQuery = validated.query ?? `points of interest near ${lat},${lon}`;
+    } else if (validated.destination) {
+      const coords = await resolveLocationToLatLng(validated.destination);
 
       if (!coords) {
         return {
           error: "Geocoding not available",
-          inputs: params,
+          inputs: validated,
           pois: [],
           provider: "googleplaces",
         };
       }
       lat = coords.lat;
       lon = coords.lon;
-      searchQuery = params.query ?? `points of interest in ${params.destination}`;
-    } else if (params.query) {
-      const pois = await fetchPoisFromPlacesApi(params.query, null, apiKey);
-      return { fromCache: false, inputs: params, pois, provider: "googleplaces" };
+      searchQuery = validated.query ?? `points of interest in ${validated.destination}`;
+    } else if (validated.query) {
+      const pois = await fetchPoisFromPlacesApi(validated.query, null, apiKey);
+      return { fromCache: false, inputs: validated, pois, provider: "googleplaces" };
     } else {
       throw new Error("Missing coordinates, destination, or query");
     }
 
     const pois = await fetchPoisFromPlacesApi(
       searchQuery,
-      { lat, lon, radiusMeters: params.radiusMeters },
+      { lat, lon, radiusMeters: validated.radiusMeters },
       apiKey
     );
 
-    return { fromCache: false, inputs: params, pois, provider: "googleplaces" };
+    return { fromCache: false, inputs: validated, pois, provider: "googleplaces" };
   },
   guardrails: {
     cache: {

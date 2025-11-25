@@ -7,92 +7,7 @@
 import type { ValidationResult } from "@schemas/validation";
 import type { z } from "zod";
 import { getClientEnvVarWithFallback } from "../env/client";
-
-/**
- * Error class for API client operations with validation context and structured error information.
- * Extends the base Error class with HTTP status codes, error codes, and validation details.
- */
-export class ApiClientError extends Error {
-  /** HTTP status code from the failed request. */
-  public readonly status: number;
-  /** Application-specific error code for categorization. */
-  public readonly code: string;
-  /** Raw response data that caused the error. */
-  public readonly data?: unknown;
-  /** API endpoint that was being called when the error occurred. */
-  public readonly endpoint?: string;
-  /** Timestamp when the error was created. */
-  public readonly timestamp: Date;
-  /** Validation errors if the error was caused by request/response validation. */
-  public readonly validationErrors?: ValidationResult<unknown>;
-
-  /**
-   * Creates a new ApiClientError instance.
-   *
-   * @param message Human-readable error message.
-   * @param status HTTP status code from the failed request.
-   * @param code Application-specific error code for categorization.
-   * @param data Raw response data that caused the error.
-   * @param endpoint API endpoint that was being called.
-   * @param validationErrors Validation errors if applicable.
-   */
-  constructor(
-    message: string,
-    status: number,
-    code: string,
-    data?: unknown,
-    endpoint?: string,
-    validationErrors?: ValidationResult<unknown>
-  ) {
-    super(message);
-    this.name = "ApiClientError";
-    this.status = status;
-    this.code = code;
-    this.data = data;
-    this.endpoint = endpoint;
-    this.timestamp = new Date();
-    this.validationErrors = validationErrors;
-  }
-
-  /**
-   * Checks if this error was caused by validation failures.
-   *
-   * @returns True if the error contains validation errors.
-   */
-  public isValidationError(): boolean {
-    return Boolean(this.validationErrors && !this.validationErrors.success);
-  }
-
-  /**
-   * Extracts validation error messages from the error.
-   *
-   * @returns Array of validation error messages, or empty array if none.
-   */
-  public getValidationErrors(): string[] {
-    if (!this.validationErrors || this.validationErrors.success) {
-      return [];
-    }
-    return this.validationErrors.errors?.map((err) => err.message) || [];
-  }
-
-  /**
-   * Converts the error to a JSON-serializable object for logging or debugging.
-   *
-   * @returns JSON representation of the error with all properties.
-   */
-  // biome-ignore lint/style/useNamingConvention: Standard method name
-  public toJSON() {
-    return {
-      code: this.code,
-      endpoint: this.endpoint,
-      message: this.message,
-      name: this.name,
-      status: this.status,
-      timestamp: this.timestamp.toISOString(),
-      validationErrors: this.getValidationErrors(),
-    };
-  }
-}
+import { ApiError } from "./error-types";
 
 /**
  * Configuration options for individual API requests.
@@ -183,9 +98,27 @@ export class ApiClient {
     const publicApiUrl = getClientEnvVarWithFallback("NEXT_PUBLIC_API_URL", undefined);
     const nodeEnv =
       typeof process !== "undefined" ? process.env.NODE_ENV : "development";
+    const origin =
+      typeof window !== "undefined" && typeof window.location?.origin === "string"
+        ? window.location.origin
+        : getClientEnvVarWithFallback(
+            "NEXT_PUBLIC_SITE_URL",
+            "http://localhost:3000"
+          ) ||
+          (process.env.NEXT_PUBLIC_BASE_URL as string | undefined) ||
+          "http://localhost:3000";
+    const { baseUrl: baseUrlOverride, ...restConfig } = config;
+    const rawBase =
+      (baseUrlOverride as string | undefined) ??
+      (publicApiUrl ? `${publicApiUrl.replace(/\/$/, "")}/api` : "/api");
+    const absoluteBase = rawBase.startsWith("http")
+      ? rawBase
+      : `${origin}${rawBase.startsWith("/") ? "" : "/"}${rawBase}`;
+    const normalizedBase = absoluteBase.endsWith("/")
+      ? absoluteBase
+      : `${absoluteBase}/`;
     this.config = {
       authHeaderName: "Authorization",
-      baseUrl: publicApiUrl ? `${publicApiUrl}/api` : "/api",
       defaultHeaders: {
         "Content-Type": "application/json",
       },
@@ -193,7 +126,8 @@ export class ApiClient {
       timeout: 10000,
       validateRequests: true,
       validateResponses: nodeEnv !== "production",
-      ...config,
+      ...restConfig,
+      baseUrl: normalizedBase,
     };
   }
 
@@ -255,12 +189,25 @@ export class ApiClient {
       if (finalConfig.validateRequest ?? this.config.validateRequests) {
         const validationResult = finalConfig.requestSchema.safeParse(finalConfig.data);
         if (!validationResult.success) {
-          throw new ApiClientError(
+          const validationErrors: ValidationResult<unknown> = {
+            errors: validationResult.error.issues.map((issue) => ({
+              code: issue.code,
+              context: "api" as const,
+              field: issue.path.join(".") || undefined,
+              message: issue.message,
+              path: issue.path.map(String),
+              timestamp: new Date(),
+              value: issue.input,
+            })),
+            success: false,
+          };
+          throw new ApiError(
             `Request validation failed: ${validationResult.error.issues.map((i) => i.message).join(", ")}`,
             400,
             "VALIDATION_ERROR",
             finalConfig.data,
-            finalConfig.endpoint
+            finalConfig.endpoint,
+            validationErrors
           );
         }
       }
@@ -307,8 +254,8 @@ export class ApiClient {
     }
 
     // Setup timeout and retry logic
-    const timeout = finalConfig.timeout || this.config.timeout;
-    const retries = finalConfig.retries || this.config.retries;
+    const timeout = finalConfig.timeout ?? this.config.timeout;
+    const retries = finalConfig.retries ?? this.config.retries;
 
     let lastError: Error | null = null;
     for (let attempt = 0; attempt <= retries; attempt++) {
@@ -344,7 +291,7 @@ export class ApiClient {
             message?: string;
             code?: string | number;
           };
-          throw new ApiClientError(
+          throw new ApiError(
             errorObject.message || `HTTP ${response.status}: ${response.statusText}`,
             response.status,
             String(errorObject.code ?? `HTTP_${response.status}`),
@@ -373,7 +320,7 @@ export class ApiClient {
                 })),
                 success: false,
               };
-              throw new ApiClientError(
+              throw new ApiError(
                 `Response validation failed: ${zodResult.error.issues.map((i) => i.message).join(", ")}`,
                 500,
                 "RESPONSE_VALIDATION_ERROR",
@@ -398,7 +345,7 @@ export class ApiClient {
 
         // Don't retry on validation errors or 4xx errors
         if (
-          error instanceof ApiClientError &&
+          error instanceof ApiError &&
           (error.isValidationError() || (error.status >= 400 && error.status < 500))
         ) {
           throw error;
@@ -406,7 +353,7 @@ export class ApiClient {
 
         // Don't retry on abort errors
         if (error instanceof DOMException && error.name === "AbortError") {
-          throw new ApiClientError(
+          throw new ApiError(
             `Request timeout after ${timeout}ms`,
             408,
             "TIMEOUT_ERROR",
@@ -795,11 +742,8 @@ defaultClient.addRequestInterceptor((config) => {
 });
 
 // Add common response interceptor for logging
-defaultClient.addResponseInterceptor((response, config) => {
-  // NODE_ENV check is acceptable here (development-only logging)
-  if (typeof process !== "undefined" && process.env.NODE_ENV === "development") {
-    console.log(`API Response [${config.method}] ${config.endpoint}:`, response);
-  }
+defaultClient.addResponseInterceptor((response, _config) => {
+  // Response interceptor - telemetry/logging handled by route handlers
   return Promise.resolve(response);
 });
 
@@ -809,12 +753,5 @@ defaultClient.addResponseInterceptor((response, config) => {
  */
 export { defaultClient as apiClient };
 
-// NOTE: A previously exported `createTypedApiClient` factory was removed in the
-// Zod v4 migration because it was unused and introduced brittle generic
-// constraints. Reintroduce a typed factory when concrete endpoint schemas and
-// tests require it.
-
-/**
- * Exported types for API client configuration and interceptors.
- */
+/** Exported types for API client configuration and interceptors. */
 export type { RequestConfig, ResponseInterceptor, RequestInterceptor };

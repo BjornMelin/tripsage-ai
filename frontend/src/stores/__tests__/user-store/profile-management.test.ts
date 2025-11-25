@@ -1,13 +1,13 @@
 /** @vitest-environment jsdom */
 
-import { act, renderHook } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type {
   PersonalInfo,
   PrivacySettings,
   TravelPreferences,
   UserProfile,
-} from "@/stores/user-store";
+} from "@schemas/stores";
+import { act, renderHook } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { useUserProfileStore } from "@/stores/user-store";
 import { setupTimeoutMock } from "@/test/store-helpers";
 

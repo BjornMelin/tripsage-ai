@@ -7,6 +7,7 @@ import "server-only";
 import { notifyJobSchema } from "@schemas/webhooks";
 import { Receiver } from "@upstash/qstash";
 import { NextResponse } from "next/server";
+import { errorResponse, validateSchema } from "@/lib/api/route-helpers";
 import { getServerEnvVar, getServerEnvVarWithFallback } from "@/lib/env/server";
 import { tryReserveKey } from "@/lib/idempotency/redis";
 import { sendCollaboratorNotifications } from "@/lib/notifications/collaborators";
@@ -63,14 +64,11 @@ export async function POST(req: Request) {
         }
 
         const json = (await req.json()) as unknown;
-        const parsed = notifyJobSchema.safeParse(json);
-        if (!parsed.success) {
-          return NextResponse.json(
-            { error: "invalid job payload", issues: parsed.error.flatten() },
-            { status: 400 }
-          );
+        const validation = validateSchema(notifyJobSchema, json);
+        if ("error" in validation) {
+          return validation.error;
         }
-        const { eventKey, payload } = parsed.data;
+        const { eventKey, payload } = validation.data;
         span.setAttribute("event.key", eventKey);
         span.setAttribute("table", payload.table);
         span.setAttribute("op", payload.type);
@@ -86,7 +84,12 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: true, ...result });
       } catch (error) {
         span.recordException(error as Error);
-        return NextResponse.json({ error: "internal error" }, { status: 500 });
+        return errorResponse({
+          err: error,
+          error: "internal",
+          reason: "Collaborator notification job failed",
+          status: 500,
+        });
       }
     }
   );

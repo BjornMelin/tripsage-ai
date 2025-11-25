@@ -6,59 +6,27 @@
 
 "use client";
 
+import type {
+  TripCreateInput,
+  TripFilters,
+  TripSuggestion,
+  TripUpdateInput,
+  UiTrip,
+} from "@schemas/trips";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
 import { type AppError, handleApiError, isApiError } from "@/lib/api/error-types";
 import { cacheTimes, queryKeys, staleTimes } from "@/lib/query-keys";
-import { useSupabase } from "@/lib/supabase";
+import { useSupabaseRequired } from "@/lib/supabase";
 import type { UpdateTables } from "@/lib/supabase/database.types";
-import type { Trip } from "@/stores/trip-store";
 
-/** Represents a trip suggestion from the API. */
-export interface TripSuggestion {
-  /** Unique identifier for the trip suggestion. */
-  readonly id: string;
-  /** Title of the trip suggestion. */
-  readonly title: string;
-  /** Destination location. */
-  readonly destination: string;
-  /** Detailed description of the trip. */
-  readonly description: string;
-  /** URL to an image representing the trip destination. */
-  readonly imageUrl?: string | null;
-  /** Estimated cost of the trip. */
-  readonly estimatedPrice: number;
-  /** Currency code for the estimated price (e.g., "USD", "EUR"). */
-  readonly currency: string;
-  /** Duration of the trip in days. */
-  readonly duration: number;
-  /** Average rating out of 5 stars. */
-  readonly rating: number;
-  /** Category of the trip. */
-  readonly category:
-    | "adventure"
-    | "relaxation"
-    | "culture"
-    | "nature"
-    | "city"
-    | "beach";
-  /** Best time of year to visit this destination. */
-  readonly bestTimeToVisit: string;
-  /** Array of key highlights or attractions. */
-  readonly highlights: readonly string[];
-  /** Difficulty level of the trip. */
-  readonly difficulty?: "easy" | "moderate" | "challenging";
-  /** Whether this trip is currently trending. */
-  readonly trending?: boolean;
-  /** Whether this trip is seasonal. */
-  readonly seasonal?: boolean;
-  /** Relevance score for search ranking. */
-  readonly relevanceScore?: number;
-  /** Additional metadata as key-value pairs. */
-  readonly metadata?: Record<string, unknown>;
-}
+/** Trip type alias using canonical schema from @schemas/trips. */
+export type Trip = UiTrip;
+
+/** Re-export TripSuggestion type for convenience. */
+export type { TripSuggestion };
 
 /** Parameters for fetching trip suggestions. */
 interface TripSuggestionsParams {
@@ -115,40 +83,6 @@ export function useTripSuggestions(params?: TripSuggestionsParams) {
   });
 }
 
-/** Data structure for creating a new trip. */
-interface CreateTripData {
-  /** Title of the trip. */
-  readonly title: string;
-  /** Destination location. */
-  readonly destination: string;
-  /** Detailed description. */
-  readonly description: string;
-  /** Start date of the trip. */
-  readonly startDate: string;
-  /** End date of the trip. */
-  readonly endDate: string;
-  /** Budget for the trip. */
-  readonly budget?: number;
-  /** Currency code for the budget. */
-  readonly currency?: string;
-  /** Additional metadata. */
-  readonly metadata?: Record<string, unknown>;
-}
-
-/** Response from creating a new trip. */
-interface TripResponse {
-  /** Unique identifier of the created trip. */
-  readonly id: string;
-  /** Title of the trip. */
-  readonly title: string;
-  /** Destination location. */
-  readonly destination: string;
-  /** Creation timestamp. */
-  readonly createdAt: string;
-  /** Last update timestamp. */
-  readonly updatedAt: string;
-}
-
 /**
  * Hook to create a new trip with optimistic updates.
  *
@@ -158,10 +92,10 @@ export function useCreateTrip() {
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const queryClient = useQueryClient();
 
-  return useMutation<TripResponse, AppError, CreateTripData>({
-    mutationFn: async (tripData: CreateTripData) => {
+  return useMutation<UiTrip, AppError, TripCreateInput>({
+    mutationFn: async (tripData: TripCreateInput) => {
       try {
-        return await makeAuthenticatedRequest<TripResponse>("/api/trips", {
+        return await makeAuthenticatedRequest<UiTrip>("/api/trips", {
           body: JSON.stringify(tripData),
           headers: { "Content-Type": "application/json" },
           method: "POST",
@@ -190,15 +124,7 @@ export function useCreateTrip() {
 type TripTableUpdate = Omit<UpdateTables<"trips">, "id">;
 
 /** Data structure for updating a trip. */
-export type UpdateTripData = TripTableUpdate & {
-  /** Optional camelCase or additional metadata fields supported by API */
-  readonly title?: string;
-  readonly description?: string;
-  readonly startDate?: string;
-  readonly endDate?: string;
-  readonly currency?: string;
-  readonly metadata?: Record<string, unknown>;
-};
+export type UpdateTripData = TripUpdateInput & TripTableUpdate;
 
 /**
  * Hook to update an existing trip.
@@ -210,7 +136,7 @@ export function useUpdateTrip() {
   const queryClient = useQueryClient();
 
   return useMutation<
-    TripResponse,
+    UiTrip,
     AppError,
     { tripId: string | number; data: UpdateTripData }
   >({
@@ -218,14 +144,11 @@ export function useUpdateTrip() {
       try {
         const numericTripId =
           typeof tripId === "string" ? Number.parseInt(tripId, 10) : tripId;
-        return await makeAuthenticatedRequest<TripResponse>(
-          `/api/trips/${numericTripId}`,
-          {
-            body: JSON.stringify(data),
-            headers: { "Content-Type": "application/json" },
-            method: "PUT",
-          }
-        );
+        return await makeAuthenticatedRequest<UiTrip>(`/api/trips/${numericTripId}`, {
+          body: JSON.stringify(data),
+          headers: { "Content-Type": "application/json" },
+          method: "PUT",
+        });
       } catch (error) {
         throw handleApiError(error);
       }
@@ -291,22 +214,6 @@ export function useDeleteTrip() {
   });
 }
 
-/** Parameters for filtering trips. */
-interface TripFilters extends Record<string, unknown> {
-  /** Filter by trip status. */
-  readonly status?: string;
-  /** Filter by destination. */
-  readonly destination?: string;
-  /** Filter by date range start. */
-  readonly startDate?: string;
-  /** Filter by date range end. */
-  readonly endDate?: string;
-  /** Maximum number of results. */
-  readonly limit?: number;
-  /** Offset for pagination. */
-  readonly offset?: number;
-}
-
 /**
  * Converts filter values to API-compatible parameters.
  *
@@ -357,7 +264,7 @@ interface TripRealtimeStatus {
  */
 export function useTrips(filters?: TripFilters) {
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
-  const supabase = useSupabase();
+  const supabase = useSupabaseRequired();
   const queryClient = useQueryClient();
   const channelRef = useRef<RealtimeChannel | null>(null);
   const [realtimeStatus, setRealtimeStatus] = useState<TripRealtimeStatus>({
@@ -498,7 +405,7 @@ export function useTrips(filters?: TripFilters) {
  */
 export function useTrip(tripId: string | number | null | undefined) {
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
-  const supabase = useSupabase();
+  const supabase = useSupabaseRequired();
   const queryClient = useQueryClient();
   const channelRef = useRef<RealtimeChannel | null>(null);
   const [realtimeStatus, setRealtimeStatus] = useState<TripRealtimeStatus>({

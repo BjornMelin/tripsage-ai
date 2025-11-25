@@ -1,24 +1,19 @@
 /**
- * @fileoverview Type definitions for accommodation provider adapters.
+ * @fileoverview Provider-agnostic accommodation adapter types.
  *
- * Defines interfaces and types for integrating with external accommodation
- * providers, including error handling and result types.
+ * Replaces Expedia-specific DTOs with neutral contracts used by Amadeus + Google Places stack.
  */
 
 import type { ProviderError } from "@domain/accommodations/errors";
 import type {
-  EpsCheckAvailabilityRequest,
-  EpsCheckAvailabilityResponse,
-  EpsCreateBookingRequest,
-  EpsCreateBookingResponse,
-  EpsPropertyDetailsResponse,
-  EpsSearchRequest,
-  EpsSearchResponse,
-  RapidPriceCheckResponse,
-} from "@schemas/expedia";
+  AccommodationBookingRequest,
+  AccommodationCheckAvailabilityParams,
+  AccommodationDetailsParams,
+  AccommodationSearchParams,
+} from "@schemas/accommodations";
 
 /** Supported accommodation provider names. */
-export type ProviderName = "expedia";
+export type ProviderName = "amadeus";
 
 /** Context information passed to provider operations. */
 export type ProviderContext = {
@@ -34,6 +29,46 @@ export type ProviderResult<T> =
   | { ok: true; value: T; retries: number }
   | { ok: false; error: ProviderError; retries: number };
 
+/** Result of a provider search operation. */
+export type ProviderSearchResult = {
+  listings: Array<Record<string, unknown>>;
+  total?: number;
+  currency?: string;
+};
+
+/** Result of a provider details operation. */
+export type ProviderDetailsResult = {
+  listing: Record<string, unknown>;
+};
+
+/** Result of a provider availability operation. */
+export type ProviderAvailabilityResult = {
+  bookingToken: string;
+  expiresAt: string;
+  price: {
+    currency: string;
+    total: string;
+    breakdown?: {
+      base?: string;
+      fees?: string;
+      taxes?: string;
+    };
+  };
+  propertyId: string;
+  rateId: string;
+};
+
+/** Payload for a provider booking operation. */
+export type ProviderBookingPayload = Record<string, unknown>;
+
+/** Result of a provider booking operation. */
+export type ProviderBookingResult = {
+  itineraryId?: string;
+  confirmationNumber?: string;
+  providerBookingId?: string;
+  message?: string;
+};
+
 /**
  * Abstraction for any accommodation supply provider.
  *
@@ -46,61 +81,45 @@ export interface AccommodationProviderAdapter {
 
   /**
    * Search for available accommodations matching criteria.
-   *
-   * @param params - Search criteria including dates, guests, and property IDs
-   * @param ctx - Optional context for the operation
-   * @returns Search results or error with retry count
    */
-  searchAvailability(
-    params: EpsSearchRequest,
+  search(
+    params: AccommodationSearchParams,
     ctx?: ProviderContext
-  ): Promise<ProviderResult<EpsSearchResponse>>;
+  ): Promise<ProviderResult<ProviderSearchResult>>;
 
   /**
    * Get detailed information for a specific property.
-   *
-   * @param params - Property identifier and optional language preference
-   * @param ctx - Optional context for the operation
-   * @returns Property details or error with retry count
    */
-  getPropertyDetails(
-    params: { propertyId: string; language?: string },
+  getDetails(
+    params: AccommodationDetailsParams,
     ctx?: ProviderContext
-  ): Promise<ProviderResult<EpsPropertyDetailsResponse>>;
+  ): Promise<ProviderResult<ProviderDetailsResult>>;
 
   /**
    * Verify room availability and get booking token.
-   *
-   * @param params - Availability check parameters with property, room, and rate IDs
-   * @param ctx - Optional context for the operation
-   * @returns Availability confirmation with token or error with retry count
    */
   checkAvailability(
-    params: EpsCheckAvailabilityRequest,
+    params: AccommodationCheckAvailabilityParams,
     ctx?: ProviderContext
-  ): Promise<ProviderResult<EpsCheckAvailabilityResponse>>;
-
-  /**
-   * Check current pricing for a room/rate combination.
-   *
-   * @param params - Pricing check parameters including token from availability check
-   * @param ctx - Optional context for the operation
-   * @returns Current pricing information or error with retry count
-   */
-  priceCheck(
-    params: { propertyId: string; roomId: string; rateId: string; token: string },
-    ctx?: ProviderContext
-  ): Promise<ProviderResult<RapidPriceCheckResponse>>;
+  ): Promise<ProviderResult<ProviderAvailabilityResult>>;
 
   /**
    * Create a booking reservation.
-   *
-   * @param params - Complete booking request with guest and payment information
-   * @param ctx - Optional context for the operation
-   * @returns Booking confirmation or error with retry count
    */
   createBooking(
-    params: EpsCreateBookingRequest,
+    payload: ProviderBookingPayload,
     ctx?: ProviderContext
-  ): Promise<ProviderResult<EpsCreateBookingResponse>>;
+  ): Promise<ProviderResult<ProviderBookingResult>>;
+
+  /**
+   * Build provider-specific booking payload from normalized request.
+   */
+  buildBookingPayload(
+    params: AccommodationBookingRequest,
+    options?: {
+      paymentIntentId?: string;
+      currency?: string;
+      totalCents?: number;
+    }
+  ): ProviderBookingPayload;
 }

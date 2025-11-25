@@ -12,6 +12,14 @@ import { withTelemetrySpan } from "@/lib/telemetry/span";
 import type { WebhookPayload } from "@/lib/webhooks/payload";
 
 type TripCollaboratorRow = Database["public"]["Tables"]["trip_collaborators"]["Row"];
+/**
+ * Extracted collaborator record fields from webhook payload.
+ */
+type CollaboratorRecord = {
+  role?: string;
+  tripId?: number;
+  userId?: string;
+};
 
 /**
  * Creates an admin Supabase client with service role credentials.
@@ -158,21 +166,13 @@ function buildBody(event: WebhookPayload, eventKey: string): string {
     case "INSERT":
       return `${tripRef}: You have been added as a collaborator.\nEvent: ${eventKey}`;
     case "UPDATE":
-      return `${tripRef}: Your collaborator permissions were updated to ${rec?.permissionLevel ?? "updated"}.\nEvent: ${eventKey}`;
+      return `${tripRef}: Your collaborator role was updated to ${rec?.role ?? "updated"}.\nEvent: ${eventKey}`;
     case "DELETE":
       return `${tripRef}: You have been removed as a collaborator.\nEvent: ${eventKey}`;
     default:
       return `${tripRef}: Collaboration updated.\nEvent: ${eventKey}`;
   }
 }
-/**
- * Extracted collaborator record fields from webhook payload.
- */
-type CollaboratorRecord = {
-  permissionLevel?: string;
-  tripId?: number;
-  userId?: string;
-};
 
 /**
  * Extracts collaborator record fields from webhook payload.
@@ -186,16 +186,15 @@ function extractCollaboratorRecord(event: WebhookPayload): CollaboratorRecord | 
   if (!source) return null;
   const tripIdValue = source.trip_id;
   const userIdValue = source.user_id;
-  const permissionLevelValue = source.permission_level;
+  const roleValue = source.role;
   const tripId = typeof tripIdValue === "number" ? tripIdValue : undefined;
   const userId = typeof userIdValue === "string" ? userIdValue : undefined;
-  const permissionLevel =
-    typeof permissionLevelValue === "string" ? permissionLevelValue : undefined;
-  if (!tripId && !userId && !permissionLevel) {
+  const role = typeof roleValue === "string" ? roleValue : undefined;
+  if (!tripId && !userId && !role) {
     return null;
   }
   return {
-    permissionLevel,
+    role,
     tripId,
     userId,
   };

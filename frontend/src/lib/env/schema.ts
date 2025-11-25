@@ -73,16 +73,14 @@ const aiServiceEnvSchema = z.object({
 
 // Travel & External API Keys
 const travelApiEnvSchema = z.object({
+  // Amadeus Self-Service API
+  AMADEUS_CLIENT_ID: z.string().optional(),
+  AMADEUS_CLIENT_SECRET: z.string().optional(),
+  AMADEUS_ENV: z.enum(["test", "production"]).optional(),
   BACKEND_API_URL: z.url().optional(),
   // Duffel flights
   DUFFEL_ACCESS_TOKEN: z.string().optional(),
   DUFFEL_API_KEY: z.string().optional(),
-  // Expedia Partner Solutions (EPS) Rapid API
-  EPS_API_KEY: z.string().optional(),
-  EPS_API_SECRET: z.string().optional(),
-  EPS_BASE_URL: z.url().optional(),
-  EPS_DEFAULT_CUSTOMER_IP: z.string().optional(),
-  EPS_DEFAULT_USER_AGENT: z.string().optional(),
   // Server routes/tools: Server key for Geocoding/Places/Routes/Time Zone (IP+API restricted)
   GOOGLE_MAPS_SERVER_API_KEY: z.string().optional(),
   // Frontend: Browser key for Maps JS (referrer-restricted)

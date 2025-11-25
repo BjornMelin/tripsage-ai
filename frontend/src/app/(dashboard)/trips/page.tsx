@@ -77,9 +77,7 @@ export default function TripsPage() {
     if (searchQuery) {
       filtered = filtered.filter(
         (trip: Trip) =>
-          (trip.title || trip.name || "")
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
+          (trip.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
           trip.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
           (trip.destinations || []).some((dest) =>
             dest.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -90,8 +88,8 @@ export default function TripsPage() {
     // Apply status filter
     if (filterBy !== "all") {
       filtered = filtered.filter((trip: Trip) => {
-        const startDate = parseTripDate(trip.startDate || trip.start_date);
-        const endDate = parseTripDate(trip.endDate || trip.end_date);
+        const startDate = parseTripDate(trip.startDate);
+        const endDate = parseTripDate(trip.endDate);
         const nowTs = Date.now();
 
         switch (filterBy) {
@@ -118,10 +116,10 @@ export default function TripsPage() {
     return filtered.sort((a: Trip, b: Trip) => {
       switch (sortBy) {
         case "name":
-          return (a.title || a.name || "").localeCompare(b.title || b.name || "");
+          return (a.title || "").localeCompare(b.title || "");
         case "date": {
-          const parsedB = parseTripDate(b.createdAt ?? b.created_at) ?? new Date(0);
-          const parsedA = parseTripDate(a.createdAt ?? a.created_at) ?? new Date(0);
+          const parsedB = parseTripDate(b.createdAt) ?? new Date(0);
+          const parsedA = parseTripDate(a.createdAt) ?? new Date(0);
           return parsedB.getTime() - parsedA.getTime();
         }
         case "budget":
@@ -138,8 +136,8 @@ export default function TripsPage() {
     await createTrip({
       description: "",
       destinations: [],
-      isPublic: false,
       title: "New Trip",
+      visibility: "private",
     });
   };
 
@@ -157,8 +155,8 @@ export default function TripsPage() {
     const now = new Date();
     return tripsArray.reduce(
       (counts: Record<string, number>, trip: Trip) => {
-        const startDate = parseTripDate(trip.startDate || trip.start_date);
-        const endDate = parseTripDate(trip.endDate || trip.end_date);
+        const startDate = parseTripDate(trip.startDate);
+        const endDate = parseTripDate(trip.endDate);
         const nowTs = now.getTime();
 
         if (!startDate || !endDate) {

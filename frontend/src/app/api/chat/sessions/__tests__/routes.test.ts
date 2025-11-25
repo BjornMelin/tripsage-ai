@@ -1,3 +1,5 @@
+/** @vitest-environment node */
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createMockNextRequest,
@@ -33,7 +35,7 @@ vi.mock("@/lib/supabase/server", () => {
   return {
     createServerSupabase: vi.fn(async () => ({
       auth: {
-        getUser: vi.fn(async () => ({ data: { user: { id: "u1" } } })),
+        getUser: vi.fn(async () => ({ data: { user: { id: "u1" } }, error: null })),
       },
       from: vi.fn((table: string) => {
         if (!store[table]) {
@@ -72,19 +74,25 @@ vi.mock("@/lib/supabase/server", () => {
 
 // Mock Redis
 vi.mock("@/lib/redis", () => ({
-  getRedis: vi.fn(() => Promise.resolve({})),
+  getRedis: vi.fn(() => ({})),
 }));
 
 // Mock route helpers
-vi.mock("@/lib/next/route-helpers", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/next/route-helpers")>(
-    "@/lib/next/route-helpers"
+vi.mock("@/lib/api/route-helpers", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/api/route-helpers")>(
+    "@/lib/api/route-helpers"
   );
   return {
     ...actual,
     withRequestSpan: vi.fn((_name, _attrs, fn) => fn()),
   };
 });
+
+vi.mock("@/lib/telemetry/span", () => ({
+  recordTelemetryEvent: vi.fn(),
+  sanitizeAttributes: vi.fn((attrs) => attrs),
+  withTelemetrySpan: vi.fn((_name, _attrs, fn) => fn()),
+}));
 
 describe("/api/chat/sessions", () => {
   beforeEach(() => {

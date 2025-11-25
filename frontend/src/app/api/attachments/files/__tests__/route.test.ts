@@ -1,11 +1,17 @@
 /** @vitest-environment node */
 
+import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { attachmentsBase } from "@/test/msw/handlers/attachments";
+import { server } from "@/test/msw/server";
 import {
   createMockNextRequest,
   createRouteParamsContext,
   getMockCookiesForTest,
 } from "@/test/route-helpers";
+import { setupUpstashMocks } from "@/test/setup/upstash";
+
+const { redis, ratelimit } = setupUpstashMocks();
 
 // Mock next/headers cookies() BEFORE any imports that use it
 vi.mock("next/headers", () => ({
@@ -25,15 +31,15 @@ vi.mock("@/lib/supabase/server", () => ({
   })),
 }));
 
-// Mock Redis
+// Mock local Redis wrapper to return undefined (skip caching in tests)
 vi.mock("@/lib/redis", () => ({
-  getRedis: vi.fn(() => Promise.resolve({})),
+  getRedis: vi.fn(() => undefined),
 }));
 
 // Mock route helpers
-vi.mock("@/lib/next/route-helpers", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/next/route-helpers")>(
-    "@/lib/next/route-helpers"
+vi.mock("@/lib/api/route-helpers", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/api/route-helpers")>(
+    "@/lib/api/route-helpers"
   );
   return {
     ...actual,
@@ -41,23 +47,29 @@ vi.mock("@/lib/next/route-helpers", async () => {
   };
 });
 
-// Mock global fetch
-const MOCK_FETCH = vi.fn();
-(globalThis as { fetch: typeof fetch }).fetch = MOCK_FETCH;
-
 describe("/api/attachments/files", () => {
+  let recordedHeaders: Headers | undefined;
+  let recordedUrl: string | undefined;
+
   beforeEach(() => {
     vi.clearAllMocks();
-    MOCK_FETCH.mockResolvedValue(
-      new Response(
-        JSON.stringify({
+    // Reset Upstash mocks (SPEC-0032 pattern)
+    redis.__reset?.();
+    ratelimit.__reset?.();
+
+    recordedHeaders = undefined;
+    recordedUrl = undefined;
+    server.use(
+      http.get(`${attachmentsBase}/files`, ({ request }) => {
+        recordedHeaders = request.headers;
+        recordedUrl = request.url;
+        return HttpResponse.json({
           files: [{ filename: "test.pdf", id: "1" }],
           limit: 50,
           offset: 0,
           total: 1,
-        }),
-        { status: 200 }
-      )
+        });
+      })
     );
   });
 
@@ -70,15 +82,21 @@ describe("/api/attachments/files", () => {
     });
 
     const res = await mod.GET(req, createRouteParamsContext());
+
+    // Assert response status
     expect(res.status).toBe(200);
-    expect(MOCK_FETCH).toHaveBeenCalledTimes(1);
-    const [calledUrl, options] = MOCK_FETCH.mock.calls[0] as [
-      string,
-      RequestInit & { next?: { tags: string[] } },
-    ];
-    expect(calledUrl).toContain("/api/attachments/files?limit=10&offset=0");
-    expect(options?.method).toBe("GET");
-    expect(options?.headers).toMatchObject({ authorization: "Bearer token" });
-    expect(options?.next?.tags).toContain("attachments");
+
+    // Assert request URL query parameters
+    expect(recordedUrl).toBeDefined();
+    if (!recordedUrl) {
+      throw new Error("recordedUrl should be defined");
+    }
+    const url = new URL(recordedUrl);
+    expect(url.searchParams.get("limit")).toBe("10");
+    expect(url.searchParams.get("offset")).toBe("0");
+
+    // Assert request headers
+    expect(recordedHeaders).toBeDefined();
+    expect(recordedHeaders?.get("authorization")).toBe("Bearer token");
   });
 });

@@ -26,10 +26,13 @@ import { ModernFlightResults } from "@/components/features/search/modern-flight-
 import type { ModernHotelResult } from "@/components/features/search/modern-hotel-results";
 import { ModernHotelResults } from "@/components/features/search/modern-hotel-results";
 import { SearchLayout } from "@/components/layouts/search-layout";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/components/ui/use-toast";
+import { searchHotelsAction } from "./actions";
 
 // Mock data uses the Modern types directly
 
@@ -233,6 +236,9 @@ export default function ModernSearchPage() {
   const [activeTab, setActiveTab] = useState<"flights" | "hotels">("flights");
   const [showResults, setShowResults] = useState(false);
   const [_searchData, setSearchData] = useState<Record<string, unknown> | null>(null);
+  const [hotelResults, setHotelResults] = useState<ModernHotelResult[]>([]);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const handleFlightSearch = async (params: ModernFlightSearchParams) => {
     await new Promise<void>((resolve) => {
@@ -248,19 +254,31 @@ export default function ModernSearchPage() {
     });
   };
 
-  const handleHotelSearch = async (params: ModernHotelSearchParams) => {
-    await new Promise<void>((resolve) => {
-      startTransition(() => {
+  const handleHotelSearch = (params: ModernHotelSearchParams) =>
+    new Promise<void>((resolve) => {
+      startTransition(async () => {
         setSearchData(params as unknown as Record<string, unknown>);
-        setShowResults(true);
-        // Simulate API call
-        setTimeout(() => {
+        setErrorMessage(null);
+        try {
+          const results = await searchHotelsAction(params);
+          setHotelResults(results);
           setShowResults(true);
+          setErrorMessage(null);
+        } catch (error) {
+          console.error("Hotel search failed", error);
+          setHotelResults([]);
+          setShowResults(true);
+          setErrorMessage("Search failed, please try again.");
+          toast({
+            description: "Search failed, please try again.",
+            title: "Search Failed",
+            variant: "destructive",
+          });
+        } finally {
           resolve();
-        }, 1500);
+        }
       });
     });
-  };
 
   const handleFlightSelect = async (_flight: ModernFlightResult) => {
     // Handle flight selection
@@ -309,6 +327,13 @@ export default function ModernSearchPage() {
             </div>
           </CardContent>
         </Card>
+
+        {errorMessage ? (
+          <Alert variant="destructive" role="status">
+            <AlertTitle>Search error</AlertTitle>
+            <AlertDescription>{errorMessage}</AlertDescription>
+          </Alert>
+        ) : null}
 
         {/* Search Interface */}
         <Tabs
@@ -367,7 +392,7 @@ export default function ModernSearchPage() {
                     </Badge>
                   </div>
                   <ModernHotelResults
-                    results={MOCK_HOTEL_RESULTS}
+                    results={hotelResults.length ? hotelResults : MOCK_HOTEL_RESULTS}
                     loading={isPending}
                     onSelect={handleHotelSelect}
                     onSaveToWishlist={handleSaveToWishlist}
@@ -442,7 +467,7 @@ export default function ModernSearchPage() {
               <div>
                 <h4 className="font-semibold mb-2">2025 UX Patterns:</h4>
                 <ul className="text-sm space-y-1 text-muted-foreground">
-                  <li>• Smart Bundle savings (Expedia 2025 pattern)</li>
+                  <li>• Smart Bundle savings (Amadeus hybrid pattern)</li>
                   <li>• All-Inclusive Era highlighting</li>
                   <li>• AI price prediction with confidence</li>
                   <li>• Progressive disclosure for complexity</li>

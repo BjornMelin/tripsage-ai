@@ -1,251 +1,148 @@
+/** @vitest-environment node */
+
 import { runBookingOrchestrator } from "@domain/accommodations/booking-orchestrator";
 import { ProviderError } from "@domain/accommodations/errors";
 import type { AccommodationProviderAdapter } from "@domain/accommodations/providers/types";
-import type {
-  EpsCreateBookingRequest,
-  EpsCreateBookingResponse,
-} from "@schemas/expedia";
-import { beforeEach, describe, expect, test, vi } from "vitest";
-import { refundBookingPayment } from "@/lib/payments/booking-payment";
-import type { TypedServerSupabase } from "@/lib/supabase/server";
+import { vi } from "vitest";
 
 vi.mock("@/lib/payments/booking-payment", () => ({
-  refundBookingPayment: vi.fn(async () => undefined),
+  refundBookingPayment: vi.fn().mockResolvedValue({ amount: 0, refundId: "rf_1" }),
 }));
 
-const providerOk: AccommodationProviderAdapter = {
-  checkAvailability: vi.fn(),
-  createBooking: vi.fn(
-    async (_params: EpsCreateBookingRequest) =>
-      ({
-        ok: true as const,
+import { refundBookingPayment } from "@/lib/payments/booking-payment";
+
+const baseCommand = {
+  amount: 10000,
+  approvalKey: "bookAccommodation",
+  bookingToken: "tok_1",
+  currency: "USD",
+  guest: { email: "ada@example.com", name: "Ada" },
+  idempotencyKey: "idem-1",
+  paymentMethodId: "pm_1",
+  providerPayload: {},
+  requestApproval: vi.fn(),
+  sessionId: "sess-1",
+  stay: {
+    checkin: "2025-12-01",
+    checkout: "2025-12-03",
+    guests: 2,
+    listingId: "H1",
+    tripId: "42",
+  },
+  userId: "user-1",
+};
+
+describe("runBookingOrchestrator", () => {
+  it("refunds payment when provider booking fails", async () => {
+    const provider: AccommodationProviderAdapter = {
+      buildBookingPayload: vi.fn(),
+      checkAvailability: vi.fn(),
+      createBooking: vi.fn().mockResolvedValue({
+        error: new ProviderError("provider_failed", "failed"),
+        ok: false,
         retries: 0,
-        value: {
-          itinerary_id: "it-1",
-          rooms: [{ confirmation_id: { expedia: "cn-1" } }],
-        } as EpsCreateBookingResponse,
-      }) satisfies ReturnType<
-        AccommodationProviderAdapter["createBooking"]
-      > extends Promise<infer R>
-        ? R
-        : never
-  ),
-  getPropertyDetails: vi.fn(),
-  name: "expedia",
-  priceCheck: vi.fn(),
-  searchAvailability: vi.fn(),
-};
-
-const providerFail: AccommodationProviderAdapter = {
-  ...providerOk,
-  createBooking: vi.fn(
-    async (_params: EpsCreateBookingRequest) =>
-      ({
-        error: new ProviderError("provider_failed", "fail"),
-        ok: false as const,
-        retries: 1,
-      }) satisfies ReturnType<
-        AccommodationProviderAdapter["createBooking"]
-      > extends Promise<infer R>
-        ? R
-        : never
-  ),
-};
-
-const supabaseStub = {} as unknown as TypedServerSupabase;
-
-describe("BookingOrchestrator", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  test("refunds when provider booking fails after payment", async () => {
-    await expect(
-      runBookingOrchestrator(
-        { provider: providerFail, supabase: supabaseStub },
-        {
-          amount: 100,
-          approvalKey: "bookAccommodation",
-          bookingToken: "tok",
-          currency: "USD",
-          guest: { email: "a@b.com", name: "Tester" },
-          idempotencyKey: "idemp",
-          paymentMethodId: "pm_1",
-          persistBooking: vi.fn(),
-          processPayment: async () => ({ paymentIntentId: "pi_123" }),
-          providerPayload: {
-            billingContact: {
-              address: { city: "Unknown", countryCode: "US", line1: "None" },
-              familyName: "t",
-              givenName: "t",
-            },
-            bookingToken: "tok",
-            contact: {
-              email: "a@b.com",
-              phoneCountryCode: "1",
-              phoneNumber: "1234567",
-            },
-            stay: { adults: 1, checkIn: "2025-01-01", checkOut: "2025-01-02" },
-            traveler: { familyName: "t", givenName: "t" },
-          },
-          requestApproval: async () => undefined,
-          sessionId: "s1",
-          stay: {
-            checkin: "2025-01-01",
-            checkout: "2025-01-02",
-            guests: 1,
-            listingId: "l1",
-          },
-          userId: "u1",
-        }
-      )
-    ).rejects.toBeTruthy();
-
-    expect(refundBookingPayment).toHaveBeenCalledWith("pi_123");
-  });
-
-  test("refunds when provider throws", async () => {
-    const throwingProvider: AccommodationProviderAdapter = {
-      ...providerOk,
-      createBooking: vi.fn(() => {
-        throw new Error("network");
       }),
+      getDetails: vi.fn(),
+      name: "amadeus",
+      search: vi.fn(),
     };
 
+    const supabase = {
+      from: vi
+        .fn()
+        .mockReturnValue({ insert: vi.fn().mockResolvedValue({ error: null }) }),
+    } as unknown as import("@/lib/supabase/server").TypedServerSupabase;
+
     await expect(
       runBookingOrchestrator(
-        { provider: throwingProvider, supabase: supabaseStub },
+        { provider, supabase },
         {
-          amount: 100,
-          approvalKey: "bookAccommodation",
-          bookingToken: "tok",
-          currency: "USD",
-          guest: { email: "a@b.com", name: "Tester" },
-          idempotencyKey: "idemp",
-          paymentMethodId: "pm_1",
+          ...baseCommand,
           persistBooking: vi.fn(),
-          processPayment: async () => ({ paymentIntentId: "pi_123" }),
-          providerPayload: {
-            billingContact: {
-              address: { city: "Unknown", countryCode: "US", line1: "None" },
-              familyName: "t",
-              givenName: "t",
-            },
-            bookingToken: "tok",
-            contact: {
-              email: "a@b.com",
-              phoneCountryCode: "1",
-              phoneNumber: "1234567",
-            },
-            stay: { adults: 1, checkIn: "2025-01-01", checkOut: "2025-01-02" },
-            traveler: { familyName: "t", givenName: "t" },
-          },
-          requestApproval: async () => undefined,
-          sessionId: "s1",
-          stay: {
-            checkin: "2025-01-01",
-            checkout: "2025-01-02",
-            guests: 1,
-            listingId: "l1",
-          },
-          userId: "u1",
+          processPayment: vi.fn().mockResolvedValue({ paymentIntentId: "pi_fail" }),
         }
       )
-    ).rejects.toBeTruthy();
+    ).rejects.toBeInstanceOf(ProviderError);
 
-    expect(refundBookingPayment).toHaveBeenCalledWith("pi_123");
+    expect(refundBookingPayment).toHaveBeenCalledWith("pi_fail");
   });
 
-  test("propagates persistence failure", async () => {
-    const persistSpy = vi.fn(() => {
-      throw new Error("db");
-    });
+  it("persists provider booking ids on success", async () => {
+    const persistBooking = vi.fn().mockResolvedValue(undefined);
+    const provider: AccommodationProviderAdapter = {
+      buildBookingPayload: vi.fn(),
+      checkAvailability: vi.fn(),
+      createBooking: vi.fn().mockResolvedValue({
+        ok: true,
+        retries: 0,
+        value: {
+          confirmationNumber: "CONF-1",
+          providerBookingId: "PB-1",
+        },
+      }),
+      getDetails: vi.fn(),
+      name: "amadeus",
+      search: vi.fn(),
+    };
 
-    await expect(
-      runBookingOrchestrator(
-        { provider: providerOk, supabase: supabaseStub },
-        {
-          amount: 100,
-          approvalKey: "bookAccommodation",
-          bookingToken: "tok",
-          currency: "USD",
-          guest: { email: "a@b.com", name: "Tester" },
-          idempotencyKey: "idemp",
-          paymentMethodId: "pm_1",
-          persistBooking: persistSpy,
-          processPayment: async () => ({ paymentIntentId: "pi_999" }),
-          providerPayload: {
-            billingContact: {
-              address: { city: "Unknown", countryCode: "US", line1: "None" },
-              familyName: "t",
-              givenName: "t",
-            },
-            bookingToken: "tok",
-            contact: {
-              email: "a@b.com",
-              phoneCountryCode: "1",
-              phoneNumber: "1234567",
-            },
-            stay: { adults: 1, checkIn: "2025-01-01", checkOut: "2025-01-02" },
-            traveler: { familyName: "t", givenName: "t" },
-          },
-          requestApproval: async () => undefined,
-          sessionId: "s1",
-          stay: {
-            checkin: "2025-01-01",
-            checkout: "2025-01-02",
-            guests: 1,
-            listingId: "l1",
-          },
-          userId: "u1",
-        }
-      )
-    ).rejects.toBeTruthy();
+    const supabase = {
+      from: vi
+        .fn()
+        .mockReturnValue({ insert: vi.fn().mockResolvedValue({ error: null }) }),
+    } as unknown as import("@/lib/supabase/server").TypedServerSupabase;
 
-    expect(persistSpy).toHaveBeenCalled();
-  });
-
-  test("returns booking result when provider succeeds", async () => {
-    const result = await runBookingOrchestrator(
-      { provider: providerOk, supabase: supabaseStub },
+    await runBookingOrchestrator(
+      { provider, supabase },
       {
-        amount: 100,
-        approvalKey: "bookAccommodation",
-        bookingToken: "tok",
-        currency: "USD",
-        guest: { email: "a@b.com", name: "Tester" },
-        idempotencyKey: "idemp",
-        paymentMethodId: "pm_1",
-        persistBooking: vi.fn(),
-        processPayment: async () => ({ paymentIntentId: "pi_123" }),
-        providerPayload: {
-          billingContact: {
-            address: { city: "Unknown", countryCode: "US", line1: "None" },
-            familyName: "t",
-            givenName: "t",
-          },
-          bookingToken: "tok",
-          contact: {
-            email: "a@b.com",
-            phoneCountryCode: "1",
-            phoneNumber: "1234567",
-          },
-          stay: { adults: 1, checkIn: "2025-01-01", checkOut: "2025-01-02" },
-          traveler: { familyName: "t", givenName: "t" },
-        },
-        requestApproval: async () => undefined,
-        sessionId: "s1",
-        stay: {
-          checkin: "2025-01-01",
-          checkout: "2025-01-02",
-          guests: 1,
-          listingId: "l1",
-        },
-        userId: "u1",
+        ...baseCommand,
+        persistBooking,
+        processPayment: vi.fn().mockResolvedValue({ paymentIntentId: "pi_success" }),
       }
     );
 
-    expect(result.status).toBe("success");
-    expect(result.bookingStatus).toBe("confirmed");
+    expect(persistBooking).toHaveBeenCalledTimes(1);
+    expect(persistBooking.mock.calls[0][0]).toMatchObject({
+      confirmationNumber: "CONF-1",
+      providerBookingId: "PB-1",
+      stripePaymentIntentId: "pi_success",
+    });
+  });
+
+  it("refunds payment if persistence fails after provider booking success", async () => {
+    const persistBooking = vi.fn().mockRejectedValue(new Error("db down"));
+    const provider: AccommodationProviderAdapter = {
+      buildBookingPayload: vi.fn(),
+      checkAvailability: vi.fn(),
+      createBooking: vi.fn().mockResolvedValue({
+        ok: true,
+        retries: 0,
+        value: {
+          confirmationNumber: "CONF-2",
+          providerBookingId: "PB-2",
+        },
+      }),
+      getDetails: vi.fn(),
+      name: "amadeus",
+      search: vi.fn(),
+    };
+
+    const supabase = {
+      from: vi.fn().mockReturnValue({
+        insert: vi.fn().mockResolvedValue({ error: null }),
+      }),
+    } as unknown as import("@/lib/supabase/server").TypedServerSupabase;
+
+    await expect(
+      runBookingOrchestrator(
+        { provider, supabase },
+        {
+          ...baseCommand,
+          persistBooking,
+          processPayment: vi.fn().mockResolvedValue({ paymentIntentId: "pi_persist" }),
+        }
+      )
+    ).rejects.toThrow("db down");
+
+    expect(refundBookingPayment).toHaveBeenCalledWith("pi_persist");
   });
 });

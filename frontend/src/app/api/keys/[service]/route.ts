@@ -5,6 +5,8 @@
 
 import "server-only";
 
+export const dynamic = "force-dynamic";
+
 // Security: Prevent caching of sensitive API key data per ADR-0024.
 // With Cache Components enabled, route handlers are dynamic by default.
 // Using withApiGuards({ auth: true }) ensures this route uses cookies/headers,
@@ -15,7 +17,7 @@ import { NextResponse } from "next/server";
 import type { RateLimitResult } from "@/app/api/keys/_rate-limiter";
 import { buildKeySpanAttributes } from "@/app/api/keys/_telemetry";
 import { withApiGuards } from "@/lib/api/factory";
-import { redactErrorForLogging } from "@/lib/next/route-helpers";
+import { redactErrorForLogging } from "@/lib/api/route-helpers";
 import { deleteUserApiKey, deleteUserGatewayBaseUrl } from "@/lib/supabase/rpc";
 import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
 

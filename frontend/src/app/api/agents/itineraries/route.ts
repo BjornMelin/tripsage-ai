@@ -13,10 +13,11 @@ import type { ItineraryPlanRequest } from "@schemas/agents";
 import { agentSchemas } from "@schemas/agents";
 import type { NextRequest } from "next/server";
 import type { z } from "zod";
+import { resolveAgentConfig } from "@/lib/agents/config-resolver";
 import { createErrorHandler } from "@/lib/agents/error-recovery";
 import { runItineraryAgent } from "@/lib/agents/itinerary-agent";
 import { withApiGuards } from "@/lib/api/factory";
-import { errorResponse, parseJsonBody } from "@/lib/next/route-helpers";
+import { errorResponse, parseJsonBody } from "@/lib/api/route-helpers";
 
 export const maxDuration = 60;
 
@@ -56,10 +57,16 @@ export const POST = withApiGuards({
   }
 
   const modelHint = new URL(req.url).searchParams.get("model") ?? undefined;
-  const { model, modelId } = await resolveProvider(user?.id ?? "anon", modelHint);
+  const resolved = await resolveAgentConfig("itineraryAgent");
+  const agentConfig = resolved.config;
+  const resolvedModelHint = agentConfig.model ?? modelHint;
+  const { model, modelId } = await resolveProvider(
+    user?.id ?? "anon",
+    resolvedModelHint
+  );
 
   const identifier = user?.id ?? "anon";
-  const result = runItineraryAgent({ identifier, model, modelId }, body);
+  const result = runItineraryAgent({ identifier, model, modelId }, agentConfig, body);
   return result.toUIMessageStreamResponse({
     onError: createErrorHandler(),
   });

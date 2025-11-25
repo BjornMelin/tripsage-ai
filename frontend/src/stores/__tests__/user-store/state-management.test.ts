@@ -1,8 +1,9 @@
 /** @vitest-environment jsdom */
 
+import type { UserProfile } from "@schemas/stores";
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { type UserProfile, useUserProfileStore } from "@/stores/user-store";
+import { useUserProfileStore } from "@/stores/user-store";
 import { setupTimeoutMock } from "@/test/store-helpers";
 
 describe("User Profile Store - State Management", () => {
@@ -111,7 +112,9 @@ describe("User Profile Store - State Management", () => {
 
       let wasUpdating = false;
       await act(async () => {
-        const promise = result.current.updatePersonalInfo({ firstName: "Test" });
+        const promise = result.current.updatePersonalInfo({
+          firstName: "Test",
+        });
         wasUpdating = result.current.isUpdatingProfile;
         await promise;
       });
@@ -140,8 +143,8 @@ describe("User Profile Store - State Management", () => {
   });
 
   describe("Utility Actions", () => {
-    const mockProfile = {
-      createdAt: "2025-01-01T00:00:00Z",
+    const mockProfile: UserProfile = {
+      createdAt: "2025-01-01T00:00:00.000Z",
       email: "test@example.com",
       favoriteDestinations: [
         {
@@ -158,15 +161,15 @@ describe("User Profile Store - State Management", () => {
       },
       travelDocuments: [
         {
-          expiryDate: "2030-12-31",
+          expiryDate: "2030-12-31T00:00:00.000Z",
           id: "doc-1",
           issuingCountry: "US",
           number: "123456789",
           type: "passport",
         },
       ],
-      updatedAt: "2025-01-01T00:00:00Z",
-    } as UserProfile;
+      updatedAt: "2025-01-01T00:00:00.000Z",
+    };
 
     it("exports profile data", () => {
       const { result } = renderHook(() => useUserProfileStore());

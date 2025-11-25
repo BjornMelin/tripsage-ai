@@ -188,13 +188,14 @@ All TripSage API errors follow a consistent JSON structure for predictable error
 ```bash
 # 1. Check your token format
 curl -H "Authorization: Bearer your_token" \
-  https://api.tripsage.ai/api/health
+  http://localhost:3000/api/dashboard
 
-# 2. Verify token expiration
+# 2. Verify token expiration (for JWTs)
 echo "your_jwt_token" | cut -d. -f2 | base64 -d | jq .exp
 
-# 3. Get a fresh token
-curl -X POST https://api.tripsage.ai/api/auth/login \
+# 3. Log in to get a fresh session
+# Sessions are managed via Supabase SSR cookies
+curl -X POST http://localhost:3000/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email": "your@email.com", "password": "password"}'
 ```

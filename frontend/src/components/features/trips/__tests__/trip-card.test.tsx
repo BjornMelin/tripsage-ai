@@ -58,12 +58,12 @@ describe("TripCard", () => {
     ],
     endDate: "2024-06-25",
     id: "trip-1",
-    isPublic: false,
-    name: "European Adventure",
     startDate: "2024-06-15",
     status: "planning",
     tags: ["adventure", "culture"],
+    title: "European Adventure",
     updatedAt: "2024-01-01",
+    visibility: "private",
   };
 
   beforeEach(() => {
@@ -117,7 +117,7 @@ describe("TripCard", () => {
     });
 
     it("should display public badge when trip is public", () => {
-      const publicTrip = { ...mockTrip, isPublic: true };
+      const publicTrip = { ...mockTrip, visibility: "public" as const };
       render(<TripCard trip={publicTrip} />);
 
       expect(screen.getByText("Public")).toBeInTheDocument();
@@ -234,8 +234,9 @@ describe("TripCard", () => {
     });
 
     it("should use USD as default currency when currency is not specified", () => {
-      const noCurrencyTrip = { ...mockTrip, currency: undefined };
-      render(<TripCard trip={noCurrencyTrip} />);
+      // Test with currency omitted - component should handle gracefully
+      const { currency: _currency, ...noCurrencyTrip } = mockTrip;
+      render(<TripCard trip={noCurrencyTrip as Trip} />);
 
       expect(screen.getByText("Budget: $3,000.00")).toBeInTheDocument();
     });

@@ -458,29 +458,13 @@ export const AgentCollaborationHub: React.FC<AgentCollaborationHubProps> = ({
   useEffect(() => {
     const interval = setInterval(() => {
       startTransition(() => {
-        // Update agent workloads and performance
+        // Update agent workloads and performance (deterministic - no randomness)
         const updatedAgents = optimisticAgents.map((agent) => ({
           ...agent,
           lastActive: agent.status === "active" ? new Date() : agent.lastActive,
-          performance: {
-            ...agent.performance,
-            accuracy: Math.max(
-              0,
-              Math.min(100, agent.performance.accuracy + (Math.random() - 0.5) * 2)
-            ),
-            efficiency: Math.max(
-              0,
-              Math.min(100, agent.performance.efficiency + (Math.random() - 0.5) * 2)
-            ),
-            speed: Math.max(
-              0,
-              Math.min(100, agent.performance.speed + (Math.random() - 0.5) * 3)
-            ),
-          },
-          workload: Math.max(
-            0,
-            Math.min(100, agent.workload + (Math.random() - 0.5) * 10)
-          ),
+          // Performance metrics remain unchanged (deterministic behavior)
+          performance: agent.performance,
+          workload: agent.workload,
         }));
         updateOptimisticAgents(updatedAgents);
       });

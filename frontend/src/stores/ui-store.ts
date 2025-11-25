@@ -7,70 +7,18 @@
  * type safety and data integrity.
  */
 
-import { z } from "zod";
+import {
+  type LoadingState,
+  type LoadingStates,
+  loadingStateSchema,
+  type Notification,
+  notificationSchema,
+  type Theme,
+  themeSchema,
+} from "@schemas/stores";
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 import { nowIso, secureId } from "@/lib/security/random";
-
-/** Zod schema for validating theme values. */
-const THEME_SCHEMA = z.enum(["light", "dark", "system"]);
-
-/** Zod schema for validating notification types. */
-const NOTIFICATION_TYPE_SCHEMA = z.enum(["info", "success", "warning", "error"]);
-
-/** Zod schema for validating loading state values. */
-const LOADING_STATE_SCHEMA = z.enum(["idle", "loading", "success", "error"]);
-
-/**
- * Zod schema for validating notification objects.
- *
- * @example
- * ```typescript
- * const notification = {
- *   title: "Success",
- *   message: "Operation completed",
- *   type: "success",
- *   duration: 5000,
- *   action: {
- *     label: "View Details",
- *     onClick: () => console.log("Action clicked")
- *   }
- * };
- * ```
- */
-export const NOTIFICATION_SCHEMA = z.object({
-  action: z
-    .object({
-      label: z.string(),
-      onClick: z.function().optional(),
-    })
-    .optional(),
-  createdAt: z.string(),
-  duration: z.number().positive().optional(),
-  id: z.string(),
-  isRead: z.boolean().default(false),
-  message: z.string().optional(),
-  title: z.string(),
-  type: NOTIFICATION_TYPE_SCHEMA,
-});
-
-/** Zod schema for validating loading states map. */
-export const LOADING_STATES_SCHEMA = z.record(z.string(), LOADING_STATE_SCHEMA);
-
-/** Type inferred from THEME_SCHEMA for theme values. */
-export type Theme = z.infer<typeof THEME_SCHEMA>;
-
-/** Type inferred from NOTIFICATION_TYPE_SCHEMA for notification types. */
-export type NotificationType = z.infer<typeof NOTIFICATION_TYPE_SCHEMA>;
-
-/** Type inferred from LOADING_STATE_SCHEMA for loading state values. */
-export type LoadingState = z.infer<typeof LOADING_STATE_SCHEMA>;
-
-/** Type inferred from NOTIFICATION_SCHEMA for notification objects. */
-export type Notification = z.infer<typeof NOTIFICATION_SCHEMA>;
-
-/** Type inferred from LOADING_STATES_SCHEMA for loading states map. */
-export type LoadingStates = z.infer<typeof LOADING_STATES_SCHEMA>;
 
 /**
  * Interface for sidebar state management.
@@ -388,7 +336,7 @@ export const useUiStore = create<UiState>()(
         // Notification actions
         addNotification: (notification) => {
           const id = GENERATE_ID();
-          const result = NOTIFICATION_SCHEMA.safeParse({
+          const result = notificationSchema.safeParse({
             ...notification,
             createdAt: GET_CURRENT_TIMESTAMP(),
             id,
@@ -575,7 +523,7 @@ export const useUiStore = create<UiState>()(
 
         // Loading state actions
         setLoadingState: (key, state) => {
-          const result = LOADING_STATE_SCHEMA.safeParse(state);
+          const result = loadingStateSchema.safeParse(state);
           if (result.success) {
             set((currentState) => ({
               loadingStates: {
@@ -617,7 +565,7 @@ export const useUiStore = create<UiState>()(
 
         // Theme actions
         setTheme: (theme) => {
-          const result = THEME_SCHEMA.safeParse(theme);
+          const result = themeSchema.safeParse(theme);
           if (result.success) {
             set({ theme: result.data });
           } else {

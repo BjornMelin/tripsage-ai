@@ -14,6 +14,7 @@ import {
   searchUserMemoriesInputSchema,
 } from "@schemas/memory";
 import { handleMemoryIntent } from "@/lib/memory/orchestrator";
+import { nowIso, secureUuid } from "@/lib/security/random";
 import type { Database, Json } from "@/lib/supabase/database.types";
 import { createServerSupabase } from "@/lib/supabase/server";
 
@@ -35,7 +36,7 @@ export const addConversationMemory = createAiTool({
     const userId = auth?.user?.id;
     if (!userId) throw new Error("unauthorized");
 
-    const sessionId = crypto.randomUUID();
+    const sessionId = secureUuid();
 
     const { data: sessionData, error: sessionError } = await supabase
       .schema("memories")
@@ -140,8 +141,10 @@ export const searchUserMemories = createAiTool({
 
     return filtered.map((item) => ({
       content: item.context,
+      // Prefer canonical timestamps/ids when present
       // biome-ignore lint/style/useNamingConvention: Database field name
-      created_at: new Date().toISOString(),
+      created_at: item.createdAt ?? nowIso(),
+      id: item.id ?? secureUuid(),
       source: item.source,
     }));
   },

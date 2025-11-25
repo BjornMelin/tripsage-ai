@@ -7,7 +7,6 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { z } from "zod";
 
 const headerStore = new Map<string, string>();
-
 const setMockHeaders = (values: Record<string, string | undefined>) => {
   headerStore.clear();
   for (const [key, value] of Object.entries(values)) {
@@ -17,6 +16,68 @@ const setMockHeaders = (values: Record<string, string | undefined>) => {
   }
 };
 
+const telemetrySpan = {
+  addEvent: vi.fn(),
+  setAttribute: vi.fn(),
+};
+
+const {
+  deleteCachedJson,
+  deleteCachedJsonMany,
+  getCachedJson,
+  getUpstashCache,
+  setCachedJson,
+} = vi.hoisted(() => {
+  const upstashCacheStore = new Map<string, string>();
+  const getCachedJsonFn = vi.fn(<T>(key: string): Promise<T | null> => {
+    const raw = upstashCacheStore.get(key);
+    if (!raw) return Promise.resolve(null);
+    try {
+      return Promise.resolve(JSON.parse(raw) as T);
+    } catch {
+      return Promise.resolve(null);
+    }
+  });
+  const setCachedJsonFn = vi.fn((key: string, value: unknown): Promise<void> => {
+    upstashCacheStore.set(key, JSON.stringify(value));
+    return Promise.resolve();
+  });
+  const deleteCachedJsonFn = vi.fn((key: string): Promise<void> => {
+    upstashCacheStore.delete(key);
+    return Promise.resolve();
+  });
+  const deleteCachedJsonManyFn = vi.fn((keys: string[]): Promise<number> => {
+    let deleted = 0;
+    for (const key of keys) {
+      if (upstashCacheStore.delete(key)) deleted += 1;
+    }
+    return Promise.resolve(deleted);
+  });
+  const resetUpstashCache = () => {
+    upstashCacheStore.clear();
+    getCachedJsonFn.mockClear();
+    setCachedJsonFn.mockClear();
+    deleteCachedJsonFn.mockClear();
+    deleteCachedJsonManyFn.mockClear();
+  };
+  const getUpstashCacheFn = () => ({
+    reset: resetUpstashCache,
+    store: upstashCacheStore,
+  });
+  return {
+    deleteCachedJson: deleteCachedJsonFn,
+    deleteCachedJsonMany: deleteCachedJsonManyFn,
+    getCachedJson: getCachedJsonFn,
+    getUpstashCache: getUpstashCacheFn,
+    setCachedJson: setCachedJsonFn,
+  };
+});
+
+const redisClient = {
+  get: vi.fn(),
+  set: vi.fn(),
+};
+
 vi.mock("next/headers", () => ({
   headers: () =>
     Promise.resolve({
@@ -24,12 +85,9 @@ vi.mock("next/headers", () => ({
     }),
 }));
 
-const telemetrySpan = {
-  addEvent: vi.fn(),
-  setAttribute: vi.fn(),
-};
-
 vi.mock("@/lib/telemetry/span", () => ({
+  recordTelemetryEvent: vi.fn(),
+  sanitizeAttributes: (attrs: unknown) => attrs,
   withTelemetrySpan: (
     _name: string,
     _opts: unknown,
@@ -37,23 +95,12 @@ vi.mock("@/lib/telemetry/span", () => ({
   ) => execute(telemetrySpan),
 }));
 
-const cacheStorage = new Map<string, unknown>();
-
 vi.mock("@/lib/cache/upstash", () => ({
-  // biome-ignore lint/suspicious/useAwait: Mock functions must return Promises to match real API
-  getCachedJson: vi.fn(async <T>(key: string): Promise<T | null> => {
-    return (cacheStorage.get(key) as T) ?? null;
-  }),
-  // biome-ignore lint/suspicious/useAwait: Mock functions must return Promises to match real API
-  setCachedJson: vi.fn(async (key: string, value: unknown): Promise<void> => {
-    cacheStorage.set(key, value);
-  }),
+  deleteCachedJson,
+  deleteCachedJsonMany,
+  getCachedJson,
+  setCachedJson,
 }));
-
-const redisClient = {
-  get: vi.fn(),
-  set: vi.fn(),
-};
 
 vi.mock("@/lib/redis", () => ({
   getRedis: () => redisClient,
@@ -81,7 +128,7 @@ vi.mock("@upstash/ratelimit", () => ({
 // Removed unused baseCallOptions - each test creates its own callOptions
 
 beforeEach(() => {
-  cacheStorage.clear();
+  getUpstashCache().reset();
   ratelimitLimit.mockClear();
   telemetrySpan.addEvent.mockClear();
   telemetrySpan.setAttribute.mockClear();
@@ -122,18 +169,18 @@ describe("createAiTool", () => {
     expect(firstResult).toEqual({ fromCache: false, id: "abc" });
     expect(executeSpy).toHaveBeenCalledTimes(1);
     // Verify cache was written
-    expect(cacheStorage.size).toBeGreaterThan(0);
+    expect(getUpstashCache().store.size).toBeGreaterThan(0);
 
     // Set up cache hit for second call - need to check actual cache key
     // The cache key is: namespace + ":" + key(params)
     // namespace defaults to `tool:${toolName}` if not provided, or uses cache.namespace
     // So it should be "tool:test:cache:abc" (namespace:tool:test:cache, key:abc)
     const cachedValue = { fromCache: false, id: "abc" };
-    // Check what key was actually used in first call by inspecting cacheStorage
-    const cacheKeys = Array.from(cacheStorage.keys());
+    // Check what key was actually used in first call by inspecting cache store
+    const cacheKeys = Array.from(getUpstashCache().store.keys());
     expect(cacheKeys.length).toBeGreaterThan(0);
     const actualCacheKey = cacheKeys[0];
-    cacheStorage.set(actualCacheKey, cachedValue);
+    getUpstashCache().store.set(actualCacheKey, JSON.stringify(cachedValue));
     executeSpy.mockClear();
 
     // Second call - should use cache

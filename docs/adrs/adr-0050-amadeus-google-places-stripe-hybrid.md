@@ -1,4 +1,4 @@
-# ADR-0049: Replace Expedia Rapid with Amadeus + Google Places + Stripe
+# ADR-0050: Replace Expedia Rapid with Amadeus + Google Places + Stripe
 
 **Version**: 1.0.0  
 **Status**: Accepted  
@@ -202,3 +202,9 @@
 - AI tool wiring.
 - UI composition using shadcn/ui and Next.js app router best practices.:contentReference[oaicite:36]{index=36}  
 - Tests and telemetry coverage.
+
+## 7. Post-acceptance Updates (2025-11-24)
+
+- **Provider timeouts:** Amadeus adapter now enforces an 8s per-attempt timeout with retry/backoff; timeouts surface as `provider_timeout` (HTTP 408) for telemetry and retry classification.
+- **Deterministic session propagation:** Service-to-provider context now normalizes `sessionId` from the caller or `userId`, preventing regenerated session identifiers and keeping availability/booking caches correlated.
+- **Outstanding review items closed:** The above changes resolve the remaining action items tracked in the 2025-11-19 accommodations review; ADR-0043 remains superseded by this ADR.

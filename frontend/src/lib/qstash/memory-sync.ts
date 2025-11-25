@@ -8,6 +8,7 @@ import "server-only";
 
 import type { MemorySyncJob } from "@schemas/webhooks";
 import { Client } from "@upstash/qstash";
+import { getClientEnvVarWithFallback } from "@/lib/env/client";
 import { getServerEnvVar } from "@/lib/env/server";
 import { secureUuid } from "@/lib/security/random";
 
@@ -52,9 +53,19 @@ export async function enqueueMemorySync(
     retries: options.retries ?? 3,
   };
 
+  // Use client env helper for NEXT_PUBLIC_ variables (safe in server context)
+  // Fallback to APP_BASE_URL from server env if available
+  let baseUrl = getClientEnvVarWithFallback("NEXT_PUBLIC_SITE_URL", "");
+  if (!baseUrl) {
+    try {
+      baseUrl = getServerEnvVar("APP_BASE_URL") as string;
+    } catch {
+      baseUrl = "http://localhost:3000";
+    }
+  }
   const result = await client.publishJSON({
     body: job,
-    url: `${process.env.NEXT_PUBLIC_APP_URL}/api/jobs/memory-sync`,
+    url: `${baseUrl}/api/jobs/memory-sync`,
     ...enqueueOptions,
   });
 

@@ -1,5 +1,9 @@
 # Spec 0020: Multi-Agent Frontend Migration & Provider Expansion
 
+**Version**: 1.0.0  
+**Status**: Accepted  
+**Date**: 2025-11-12
+
 ## Status
 
 - P0 complete (framework hardening in frontend).
@@ -7,6 +11,8 @@
 - P2 complete (budget + memory + destination + itinerary agents, tools, UI).
 - P3 complete (router + error recovery).
 - P4 complete (OpenTripMap POI + GeoSure travel advisory tools integrated).
+
+**Migration Complete:** All Python LangGraph orchestration and agents have been completely removed. All functionality now runs in TypeScript AI SDK v6 via Next.js Route Handlers.
 
 ## Goals
 

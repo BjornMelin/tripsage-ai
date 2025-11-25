@@ -12,13 +12,25 @@ export const lookupPoiInputSchema = z
   .strictObject({
     destination: z
       .string()
+      .min(1, { error: "destination must not be empty" })
       .nullable()
+      .optional()
       .describe("Destination city or place name to search near"),
-    lat: z.number().nullable().describe("Latitude coordinate for location search"),
-    lon: z.number().nullable().describe("Longitude coordinate for location search"),
+    lat: z
+      .number()
+      .nullable()
+      .optional()
+      .describe("Latitude coordinate for location search"),
+    lon: z
+      .number()
+      .nullable()
+      .optional()
+      .describe("Longitude coordinate for location search"),
     query: z
       .string()
+      .min(1, { error: "query must not be empty" })
       .nullable()
+      .optional()
       .describe("Specific place or business name to search for"),
     radiusMeters: z
       .number()

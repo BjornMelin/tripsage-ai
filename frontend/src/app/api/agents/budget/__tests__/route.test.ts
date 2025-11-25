@@ -1,11 +1,16 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { setRateLimitFactoryForTests } from "@/lib/api/factory";
 import {
   createMockNextRequest,
   createRouteParamsContext,
   getMockCookiesForTest,
 } from "@/test/route-helpers";
+
+vi.mock("@/lib/agents/config-resolver", () => ({
+  resolveAgentConfig: vi.fn(async () => ({ config: { model: "gpt-4o-mini" } })),
+}));
 
 // Mock next/headers cookies() before any imports that use it
 vi.mock("next/headers", () => ({
@@ -20,6 +25,7 @@ vi.mock("@/lib/supabase/server", () => ({
     auth: {
       getUser: async () => ({
         data: { user: { id: "user-1" } },
+        error: null,
       }),
     },
   })),
@@ -42,9 +48,30 @@ vi.mock("@/lib/redis", () => ({
   getRedis: vi.fn(() => Promise.resolve({})),
 }));
 
+const mockLimitFn = vi.hoisted(() => vi.fn());
+
 describe("/api/agents/budget route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    setRateLimitFactoryForTests(
+      async () =>
+        (await mockLimitFn()) ?? {
+          limit: 30,
+          remaining: 29,
+          reset: Date.now() + 60_000,
+          success: true,
+        }
+    );
+    mockLimitFn.mockResolvedValue({
+      limit: 30,
+      remaining: 29,
+      reset: Date.now() + 60_000,
+      success: true,
+    });
+  });
+
+  afterEach(() => {
+    setRateLimitFactoryForTests(null);
   });
 
   it("streams when valid and enabled", async () => {

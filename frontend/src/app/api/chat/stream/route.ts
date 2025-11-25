@@ -14,7 +14,7 @@ import { resolveProvider } from "@ai/models/registry";
 import type { UIMessage } from "ai";
 import type { NextRequest } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { getClientIpFromHeaders, parseJsonBody } from "@/lib/next/route-helpers";
+import { getClientIpFromHeaders, parseJsonBody } from "@/lib/api/route-helpers";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { handleChatStream } from "./_handler";
 

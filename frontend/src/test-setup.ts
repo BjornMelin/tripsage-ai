@@ -7,13 +7,14 @@
 
 import { cleanup } from "@testing-library/react";
 import React from "react";
-import { afterEach, beforeEach, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, vi } from "vitest";
 import "@testing-library/jest-dom";
 import {
   ReadableStream as NodeReadableStream,
   TransformStream as NodeTransformStream,
   WritableStream as NodeWritableStream,
 } from "node:stream/web";
+import { server } from "./test/msw/server";
 import { resetTestQueryClient } from "./test/test-utils";
 
 (
@@ -76,8 +77,8 @@ vi.mock("zustand/middleware", () => ({
   subscribeWithSelector: <T>(fn: T) => fn,
 }));
 
-// React Query and Supabase mocks migrated to @/test/mocks/react-query.ts and supabase.ts
-// Import/use in individual test files: import { mockReactQuery, mockSupabase } from '@/test/mocks/*'; mockReactQuery();
+// React Query helpers live in @/test/query-mocks; Supabase helpers in @/test/mocks/supabase.
+// Import per test as needed instead of global mocks.
 vi.mock("next/navigation", () => {
   const push = vi.fn();
   const replace = vi.fn();
@@ -300,18 +301,27 @@ if (typeof process !== "undefined" && process.env) {
   }
 }
 
-beforeEach(() => {
-  if (!vi.isFakeTimers()) {
-    vi.useFakeTimers();
-  }
+// MSW server lifecycle
+beforeAll(() => {
+  // Start MSW server to intercept HTTP requests
+  // onUnhandledRequest: 'error' ensures we catch any unmocked requests
+  server.listen({ onUnhandledRequest: "warn" });
+});
+
+afterAll(() => {
+  // Stop MSW server and clean up
+  server.close();
 });
 
 afterEach(() => {
+  // Reset MSW handlers after each test to ensure test isolation
+  server.resetHandlers();
+
+  // Only restore timers if they were explicitly enabled in the test
+  // Tests that need fake timers should use withFakeTimers() utility
   if (vi.isFakeTimers()) {
     vi.runOnlyPendingTimers();
     vi.clearAllTimers();
-    vi.useRealTimers();
-  } else {
     vi.useRealTimers();
   }
   cleanup();

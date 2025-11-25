@@ -9,7 +9,7 @@ import type { ChatSession, Message, SendMessageOptions } from "@schemas/chat";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { sendChatMessage, streamChatMessage } from "@/lib/chat/api-client";
-import { generateId, getCurrentTimestamp } from "@/lib/stores/helpers";
+import { generateId, getCurrentTimestamp } from "@/stores/helpers";
 
 // Memory sync handled server-side via orchestrator - no client-side memory store needed
 

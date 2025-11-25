@@ -21,7 +21,7 @@ import type { ToolCallOptions } from "ai";
 import { z } from "zod";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 import { getServerEnvVar, getServerEnvVarWithFallback } from "@/lib/env/server";
-import { fetchWithRetry } from "@/lib/http/fetch-retry";
+import { fetchWithRetry } from "@/lib/http/retry";
 
 const scrapeOptionsSchema = z
   .object({

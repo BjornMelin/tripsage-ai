@@ -7,14 +7,14 @@
 import { createPaymentIntent, getPaymentIntent, refundPayment } from "./stripe-client";
 
 /**
- * Process booking payment and create Expedia booking.
+ * Process booking payment and create accommodation booking.
  *
  * @param params - Booking payment parameters
  * @returns Payment confirmation details
  * @throws {Error} On payment failures
  */
 export type ProcessBookingParams = {
-  amount: number;
+  amount: number; // amount in smallest currency unit (e.g., cents)
   currency: string;
   paymentMethodId: string;
   customerId?: string;

@@ -1,11 +1,16 @@
 /** @vitest-environment node */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { setSupabaseFactoryForTests } from "@/lib/api/factory";
 import {
   createMockNextRequest,
   createRouteParamsContext,
   getMockCookiesForTest,
 } from "@/test/route-helpers";
+
+vi.mock("@/lib/agents/config-resolver", () => ({
+  resolveAgentConfig: vi.fn(async () => ({ config: { model: "gpt-4o-mini" } })),
+}));
 
 // Mock next/headers cookies() before any imports that use it
 vi.mock("next/headers", () => ({
@@ -43,8 +48,26 @@ vi.mock("@/lib/redis", () => ({
 }));
 
 describe("/api/agents/memory route", () => {
+  const supabaseClient = {
+    auth: {
+      getUser: vi.fn(async () => ({
+        data: { user: { id: "user-1" } },
+        error: null,
+      })),
+    },
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
+    setSupabaseFactoryForTests(async () => supabaseClient as never);
+    supabaseClient.auth.getUser.mockResolvedValue({
+      data: { user: { id: "user-1" } },
+      error: null,
+    });
+  });
+
+  afterEach(() => {
+    setSupabaseFactoryForTests(null);
   });
 
   it("streams when valid and enabled", async () => {

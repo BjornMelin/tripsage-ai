@@ -5,7 +5,7 @@ import type { Mock } from "vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useSupabaseStorage } from "@/hooks/use-supabase-storage";
 import type { FileAttachment } from "@/lib/supabase/database.types";
-import { createMockSupabaseClient } from "@/test/mock-helpers";
+import { createMockSupabaseClient } from "@/test/mocks/supabase";
 import { render } from "@/test/test-utils";
 
 const SUPABASE = createMockSupabaseClient();
@@ -31,6 +31,7 @@ vi.mock("@/lib/supabase", () => ({
   createClient: () => SUPABASE,
   getBrowserClient: () => SUPABASE,
   useSupabase: () => SUPABASE,
+  useSupabaseRequired: () => SUPABASE,
 }));
 
 const CREATE_QUERY_BUILDER = (rows: FileAttachment[]) => {

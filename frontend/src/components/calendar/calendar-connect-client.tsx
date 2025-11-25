@@ -4,11 +4,11 @@
 
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useToast } from "@/components/ui/use-toast";
-import { createClient } from "@/lib/supabase";
+import { useSupabaseRequired } from "@/lib/supabase";
 
 /**
  * CalendarConnectClient component.
@@ -18,7 +18,7 @@ import { createClient } from "@/lib/supabase";
 export function CalendarConnectClient() {
   const [isConnecting, setIsConnecting] = useState(false);
   const { toast } = useToast();
-  const supabase = useMemo(() => createClient(), []);
+  const supabase = useSupabaseRequired();
 
   const handleConnect = async () => {
     setIsConnecting(true);

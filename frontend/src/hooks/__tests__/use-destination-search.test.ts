@@ -1,338 +1,247 @@
 /** @vitest-environment jsdom */
 
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useSearchResultsStore } from "@/stores/search-results-store";
 import { useDestinationSearch } from "../use-destination-search";
+
+interface Place {
+  id: string;
+  displayName?: { text: string };
+  formattedAddress?: string;
+  location?: { latitude: number; longitude: number };
+  types?: string[];
+}
+
+const createFetchResponse = (
+  places: Place[] = [],
+  ok = true,
+  status = 200,
+  extra: Record<string, unknown> = {}
+) =>
+  ({
+    json: vi.fn().mockResolvedValue(ok ? { places, ...extra } : extra),
+    ok,
+    status,
+  }) as unknown as Response;
+
+const runSearch = async (
+  search: (params: {
+    query: string;
+    types?: string[];
+    limit?: number;
+  }) => Promise<void>,
+  params: { query: string; types?: string[]; limit?: number }
+) => {
+  const promise = search(params);
+  vi.runAllTimers();
+  await promise;
+};
 
 describe("useDestinationSearch", () => {
   beforeEach(() => {
+    vi.useFakeTimers();
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(createFetchResponse()));
+    useSearchResultsStore.getState().reset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
     vi.clearAllMocks();
+    useSearchResultsStore.getState().reset();
+    localStorage.clear();
   });
 
-  describe("Initial State", () => {
-    it("should initialize with correct default values", () => {
-      const { result } = renderHook(() => useDestinationSearch());
+  it("initializes with default state", () => {
+    const { result } = renderHook(() => useDestinationSearch());
 
-      expect(result.current.isSearching).toBe(false);
-      expect(result.current.searchError).toBe(null);
-      expect(typeof result.current.searchDestinations).toBe("function");
-      expect(typeof result.current.resetSearch).toBe("function");
-    });
+    expect(result.current.isSearching).toBe(false);
+    expect(result.current.searchError).toBeNull();
+    expect(result.current.results).toEqual([]);
   });
 
-  describe("searchDestinations", () => {
-    it("should set isSearching to true during search", async () => {
-      const { result } = renderHook(() => useDestinationSearch());
+  it("returns early for short queries without calling the API", async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    const { result } = renderHook(() => useDestinationSearch());
 
-      await act(async () => {
-        await result.current.searchDestinations({ query: "Paris" });
-      });
-
-      expect(result.current.isSearching).toBe(false);
+    await act(async () => {
+      await runSearch(result.current.searchDestinations, { query: "a" });
     });
 
-    it("should clear error when starting new search", async () => {
-      const { result } = renderHook(() => useDestinationSearch());
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result.current.results).toEqual([]);
+    expect(result.current.searchError).toBeNull();
+  });
 
-      // Set an initial error
-      act(() => {
-        result.current.resetSearch();
-      });
+  it("maps API response to destination results", async () => {
+    const places: Place[] = [
+      {
+        displayName: { text: "Paris" },
+        formattedAddress: "Paris, France",
+        id: "paris-1",
+        location: { latitude: 48.8566, longitude: 2.3522 },
+        types: ["city"],
+      },
+      {
+        displayName: { text: "Louvre" },
+        formattedAddress: "Rue de Rivoli, Paris",
+        id: "louvre-1",
+        location: { latitude: 48.8606, longitude: 2.3376 },
+        types: ["museum", "landmark"],
+      },
+    ];
 
-      // Start a new search
-      await act(async () => {
-        await result.current.searchDestinations({ query: "London" });
-      });
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue(createFetchResponse(places));
 
-      expect(result.current.searchError).toBe(null);
-      expect(result.current.isSearching).toBe(false);
+    const { result } = renderHook(() => useDestinationSearch());
+
+    await act(async () => {
+      await runSearch(result.current.searchDestinations, { limit: 5, query: "Paris" });
     });
 
-    it("should handle search with different parameters", async () => {
-      const { result } = renderHook(() => useDestinationSearch());
-
-      const searchParams = {
-        limit: 10,
-        query: "Tokyo",
-        types: ["city", "country"],
-      };
-
-      await act(async () => {
-        await result.current.searchDestinations(searchParams);
-      });
-
-      expect(result.current.isSearching).toBe(false);
-      expect(result.current.searchError).toBe(null);
-    });
-
-    it("should handle search with minimal parameters", async () => {
-      const { result } = renderHook(() => useDestinationSearch());
-
-      await act(async () => {
-        await result.current.searchDestinations({ query: "Rome" });
-      });
-
-      expect(result.current.isSearching).toBe(false);
-      expect(result.current.searchError).toBe(null);
-    });
-
-    it("should handle empty query", async () => {
-      const { result } = renderHook(() => useDestinationSearch());
-
-      await act(async () => {
-        await result.current.searchDestinations({ query: "" });
-      });
-
-      expect(result.current.isSearching).toBe(false);
-      expect(result.current.searchError).toBe(null);
-    });
-
-    it("should handle search with types array", async () => {
-      const { result } = renderHook(() => useDestinationSearch());
-
-      await act(async () => {
-        await result.current.searchDestinations({
-          query: "Barcelona",
-          types: ["city", "region", "country"],
-        });
-      });
-
-      expect(result.current.isSearching).toBe(false);
-      expect(result.current.searchError).toBe(null);
-    });
-
-    it("should handle search with limit parameter", async () => {
-      const { result } = renderHook(() => useDestinationSearch());
-
-      await act(async () => {
-        await result.current.searchDestinations({
-          limit: 5,
-          query: "New York",
-        });
-      });
-
-      expect(result.current.isSearching).toBe(false);
-      expect(result.current.searchError).toBe(null);
+    expect(result.current.searchError).toBeNull();
+    expect(result.current.results).toHaveLength(2);
+    expect(result.current.results[0]).toMatchObject({
+      address: "Paris, France",
+      location: { lat: 48.8566, lng: 2.3522 },
+      name: "Paris",
+      placeId: "paris-1",
+      types: ["city"],
     });
   });
 
-  describe("resetSearch", () => {
-    it("should reset search state", () => {
-      const { result } = renderHook(() => useDestinationSearch());
+  it("filters by provided types and respects limit", async () => {
+    const places: Place[] = [
+      {
+        displayName: { text: "Paris" },
+        formattedAddress: "FR",
+        id: "1",
+        types: ["city"],
+      },
+      {
+        displayName: { text: "France" },
+        formattedAddress: "FR",
+        id: "2",
+        types: ["country"],
+      },
+      {
+        displayName: { text: "Berlin" },
+        formattedAddress: "DE",
+        id: "3",
+        types: ["city"],
+      },
+    ];
 
-      act(() => {
-        result.current.resetSearch();
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue(createFetchResponse(places));
+
+    const { result } = renderHook(() => useDestinationSearch());
+
+    await act(async () => {
+      await runSearch(result.current.searchDestinations, {
+        limit: 1,
+        query: "Europe",
+        types: ["city"],
       });
-
-      expect(result.current.isSearching).toBe(false);
-      expect(result.current.searchError).toBe(null);
     });
 
-    it("should clear any existing error", () => {
-      const { result } = renderHook(() => useDestinationSearch());
+    expect(result.current.results).toHaveLength(1);
+    expect(result.current.results[0].types).toContain("city");
 
-      // Reset should clear any state
-      act(() => {
-        result.current.resetSearch();
-      });
-
-      expect(result.current.searchError).toBe(null);
-      expect(result.current.isSearching).toBe(false);
-    });
+    const body = JSON.parse(
+      (fetchMock.mock.calls[0]?.[1] as RequestInit).body as string
+    );
+    expect(body.maxResultCount).toBe(1);
   });
 
-  describe("Error Handling", () => {
-    it("should handle potential errors gracefully", async () => {
-      // Since this is a mock implementation that doesn't actually throw errors,
-      // we test that the structure supports error handling
-      const { result } = renderHook(() => useDestinationSearch());
+  it("clamps invalid limits to API constraints", async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    const { result } = renderHook(() => useDestinationSearch());
 
-      await act(async () => {
-        await result.current.searchDestinations({ query: "Test" });
-      });
-
-      // The mock implementation should not produce errors
-      expect(result.current.searchError).toBe(null);
+    await act(async () => {
+      await runSearch(result.current.searchDestinations, { limit: -5, query: "Paris" });
     });
+
+    const body = JSON.parse(
+      (fetchMock.mock.calls[0]?.[1] as RequestInit).body as string
+    );
+    expect(body.maxResultCount).toBe(1);
   });
 
-  describe("Search State Management", () => {
-    it("should maintain proper state transitions", async () => {
-      const { result } = renderHook(() => useDestinationSearch());
+  it("surfaces API errors and clears results", async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue(
+      createFetchResponse([], false, 500, { reason: "boom" })
+    );
 
-      // Initial state
-      expect(result.current.isSearching).toBe(false);
-      expect(result.current.searchError).toBe(null);
+    const { result } = renderHook(() => useDestinationSearch());
 
-      // Start search
-      const searchPromise = act(async () => {
-        await result.current.searchDestinations({ query: "Amsterdam" });
-      });
-
-      // Complete search
-      await searchPromise;
-
-      expect(result.current.isSearching).toBe(false);
-      expect(result.current.searchError).toBe(null);
+    await act(async () => {
+      await runSearch(result.current.searchDestinations, { query: "Paris" });
     });
 
-    it("should handle multiple consecutive searches", async () => {
-      const { result } = renderHook(() => useDestinationSearch());
-
-      // First search
-      await act(async () => {
-        await result.current.searchDestinations({ query: "Berlin" });
-      });
-
-      expect(result.current.isSearching).toBe(false);
-
-      // Second search
-      await act(async () => {
-        await result.current.searchDestinations({ query: "Vienna" });
-      });
-
-      expect(result.current.isSearching).toBe(false);
-      expect(result.current.searchError).toBe(null);
-    });
-
-    it("should handle reset after search", async () => {
-      const { result } = renderHook(() => useDestinationSearch());
-
-      // Complete a search
-      await act(async () => {
-        await result.current.searchDestinations({ query: "Prague" });
-      });
-
-      // Reset
-      act(() => {
-        result.current.resetSearch();
-      });
-
-      expect(result.current.isSearching).toBe(false);
-      expect(result.current.searchError).toBe(null);
-    });
+    expect(result.current.results).toEqual([]);
+    expect(result.current.searchError?.message).toContain("boom");
   });
 
-  describe("Parameter Validation", () => {
-    it("should handle various query string formats", async () => {
-      const { result } = renderHook(() => useDestinationSearch());
+  it("aborts in-flight searches when a new search starts", async () => {
+    const capturedSignals: AbortSignal[] = [];
+    const pendingResolvers: Array<() => void> = [];
 
-      const testQueries = [
-        "Simple City",
-        "City with spaces",
-        "City-with-hyphens",
-        "City123",
-        "Città with accents",
-        "東京", // Non-Latin characters
-      ];
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockImplementation((_, init: RequestInit) => {
+      const signal = init.signal as AbortSignal;
+      capturedSignals.push(signal);
 
-      for (const query of testQueries) {
-        await act(async () => {
-          await result.current.searchDestinations({ query });
-        });
-
-        expect(result.current.searchError).toBe(null);
-      }
+      return new Promise<Response>((resolve) => {
+        const complete = () => resolve(createFetchResponse([{ id: "1" } as Place]));
+        pendingResolvers.push(complete);
+        signal?.addEventListener("abort", () => complete(), { once: true });
+      });
     });
 
-    it("should handle different types arrays", async () => {
-      const { result } = renderHook(() => useDestinationSearch());
+    const { result } = renderHook(() => useDestinationSearch());
 
-      const testCases = [
-        { query: "Test", types: ["city"] },
-        { query: "Test", types: ["city", "country"] },
-        { query: "Test", types: ["city", "region", "country", "landmark"] },
-        { query: "Test", types: [] },
-      ];
+    await act(async () => {
+      const firstPromise = result.current.searchDestinations({ query: "Paris" });
+      vi.runAllTimers();
 
-      for (const testCase of testCases) {
-        await act(async () => {
-          await result.current.searchDestinations(testCase);
-        });
+      const secondPromise = result.current.searchDestinations({ query: "Berlin" });
+      vi.runAllTimers();
 
-        expect(result.current.searchError).toBe(null);
-      }
-    });
-
-    it("should handle different limit values", async () => {
-      const { result } = renderHook(() => useDestinationSearch());
-
-      const testLimits = [1, 5, 10, 20, 50, 100];
-
-      for (const limit of testLimits) {
-        await act(async () => {
-          await result.current.searchDestinations({ limit, query: "Test" });
-        });
-
-        expect(result.current.searchError).toBe(null);
-      }
-    });
-
-    it("should handle edge case limit values", async () => {
-      const { result } = renderHook(() => useDestinationSearch());
-
-      const edgeCaseLimits = [0, -1, 999999];
-
-      for (const limit of edgeCaseLimits) {
-        await act(async () => {
-          await result.current.searchDestinations({ limit, query: "Test" });
-        });
-
-        // Should not throw errors even with unusual limit values
-        expect(result.current.searchError).toBe(null);
-      }
-    });
-  });
-
-  describe("Function Stability", () => {
-    it("should provide stable function references", () => {
-      const { result, rerender } = renderHook(() => useDestinationSearch());
-
-      const initialSearchDestinations = result.current.searchDestinations;
-      const initialResetSearch = result.current.resetSearch;
-
-      rerender();
-
-      // Functions should remain stable across rerenders in this mock implementation
-      expect(result.current.searchDestinations).toBe(initialSearchDestinations);
-      expect(result.current.resetSearch).toBe(initialResetSearch);
-    });
-  });
-
-  describe("Mock Implementation Behavior", () => {
-    it("should simulate async behavior without adding noticeable delay", async () => {
-      const { result } = renderHook(() => useDestinationSearch());
-
-      const startTime = performance.now();
-
-      await act(async () => {
-        await result.current.searchDestinations({ query: "Test" });
+      pendingResolvers.forEach((resolve) => {
+        resolve();
       });
 
-      const duration = performance.now() - startTime;
-
-      // Microtask scheduling should resolve well under a visible delay.
-      expect(duration).toBeLessThan(20);
+      await Promise.all([firstPromise, secondPromise]);
     });
 
-    it("should complete search operation", async () => {
-      const { result } = renderHook(() => useDestinationSearch());
+    expect(capturedSignals[0]?.aborted).toBe(true);
+  });
 
-      let searchStarted = false;
-      let searchCompleted = false;
+  it("resets state and aborts outstanding requests", () => {
+    const { result } = renderHook(() => useDestinationSearch());
 
-      const searchPromise = act(async () => {
-        searchStarted = true;
-        await result.current.searchDestinations({ query: "Test" });
-        searchCompleted = true;
-      });
-
-      expect(searchStarted).toBe(true);
-
-      await searchPromise;
-
-      expect(searchCompleted).toBe(true);
-      expect(result.current.isSearching).toBe(false);
+    act(() => {
+      result.current.resetSearch();
     });
+
+    expect(result.current.isSearching).toBe(false);
+    expect(result.current.searchError).toBeNull();
+    expect(result.current.results).toEqual([]);
+  });
+
+  it("keeps stable function references across rerenders", () => {
+    const { result, rerender } = renderHook(() => useDestinationSearch());
+
+    const initialSearch = result.current.searchDestinations;
+    const initialReset = result.current.resetSearch;
+
+    rerender();
+
+    expect(result.current.searchDestinations).toBe(initialSearch);
+    expect(result.current.resetSearch).toBe(initialReset);
   });
 });

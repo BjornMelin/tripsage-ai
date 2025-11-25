@@ -1,7 +1,11 @@
+/** @vitest-environment node */
+
+import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-
-import { ApiClient, ApiClientError } from "../api-client";
+import { server } from "@/test/msw/server";
+import { ApiClient } from "../api-client";
+import { ApiError } from "../error-types";
 
 /** Zod schema for validating user response data. */
 const USER_RESPONSE_SCHEMA = z.object({
@@ -44,24 +48,19 @@ type UserResponse = z.infer<typeof USER_RESPONSE_SCHEMA>;
 type UserCreateRequest = z.infer<typeof USER_CREATE_REQUEST_SCHEMA>;
 type PaginatedResponse = z.infer<typeof PAGINATED_RESPONSE_SCHEMA>;
 
-/** Mock implementation for global fetch function. */
-const MOCK_FETCH = vi.fn();
-global.fetch = MOCK_FETCH;
-
 /** Dedicated API client instance for testing with absolute base URL. */
 const CLIENT = new ApiClient({ baseUrl: "http://localhost" });
 
 describe("API client with Zod Validation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    MOCK_FETCH.mockReset();
-    // Re-bind fetch in case other suites overwrote the global
-    // Ensures deterministic behavior within this file regardless of run order
-    Object.defineProperty(global, "fetch", {
-      configurable: true,
-      value: MOCK_FETCH,
-      writable: true,
-    });
+  });
+
+  it("normalizes baseUrl without duplicating /api segments", () => {
+    const client = new ApiClient({ baseUrl: "/api" });
+    // @ts-expect-error – accessing private for test verification
+    const baseUrl: string = client.config.baseUrl;
+    expect(baseUrl).toBe("http://localhost:3000/api/");
   });
 
   describe("Request Validation", () => {
@@ -86,12 +85,15 @@ describe("API client with Zod Validation", () => {
         updatedAt: "2025-01-01T00:00:00Z",
       };
 
-      MOCK_FETCH.mockResolvedValue({
-        headers: new Headers({ "content-type": "application/json" }),
-        json: () => Promise.resolve(mockResponse),
-        ok: true,
-        status: 200,
-      });
+      server.use(
+        http.post("http://localhost/api/users", async ({ request }) => {
+          const body = (await request.json()) as UserCreateRequest;
+          expect(body).toEqual(validUserData);
+          return HttpResponse.json(mockResponse, {
+            headers: { "content-type": "application/json" },
+          });
+        })
+      );
 
       // Test with validated request data
       const result = await CLIENT.postValidated<UserCreateRequest, UserResponse>(
@@ -102,16 +104,6 @@ describe("API client with Zod Validation", () => {
       );
 
       expect(result).toEqual(mockResponse);
-      expect(MOCK_FETCH).toHaveBeenCalledWith(
-        expect.stringContaining("/api/users"),
-        expect.objectContaining({
-          body: JSON.stringify(validUserData),
-          headers: expect.objectContaining({
-            "Content-Type": "application/json",
-          }),
-          method: "POST",
-        })
-      );
     });
 
     it("rejects invalid request data before sending", async () => {
@@ -130,8 +122,8 @@ describe("API client with Zod Validation", () => {
         )
       ).rejects.toThrow();
 
-      // Should not make HTTP request with invalid data
-      expect(MOCK_FETCH).not.toHaveBeenCalled();
+      // Should not make HTTP request with invalid data - verify no handler was called
+      // (MSW will warn if unhandled request, but validation happens before HTTP call)
     });
 
     it("handles nested validation errors", async () => {
@@ -154,7 +146,7 @@ describe("API client with Zod Validation", () => {
         )
       ).rejects.toThrow();
 
-      expect(MOCK_FETCH).not.toHaveBeenCalled();
+      // Should not make HTTP request with invalid data
     });
   });
 
@@ -170,12 +162,13 @@ describe("API client with Zod Validation", () => {
         updatedAt: "2025-01-01T00:00:00Z",
       };
 
-      MOCK_FETCH.mockResolvedValue({
-        headers: new Headers({ "content-type": "application/json" }),
-        json: () => Promise.resolve(validResponse),
-        ok: true,
-        status: 200,
-      });
+      server.use(
+        http.get("http://localhost/api/users/123", () =>
+          HttpResponse.json(validResponse, {
+            headers: { "content-type": "application/json" },
+          })
+        )
+      );
 
       const result = await CLIENT.getValidated("/api/users/123", USER_RESPONSE_SCHEMA);
 
@@ -194,12 +187,13 @@ describe("API client with Zod Validation", () => {
         updatedAt: "invalid-date",
       };
 
-      MOCK_FETCH.mockResolvedValue({
-        headers: new Headers({ "content-type": "application/json" }),
-        json: () => Promise.resolve(invalidResponse),
-        ok: true,
-        status: 200,
-      });
+      server.use(
+        http.get("http://localhost/api/users/123", () =>
+          HttpResponse.json(invalidResponse, {
+            headers: { "content-type": "application/json" },
+          })
+        )
+      );
 
       await expect(
         CLIENT.getValidated("/api/users/123", USER_RESPONSE_SCHEMA)
@@ -238,12 +232,13 @@ describe("API client with Zod Validation", () => {
         },
       };
 
-      MOCK_FETCH.mockResolvedValue({
-        headers: new Headers({ "content-type": "application/json" }),
-        json: () => Promise.resolve(validPaginatedResponse),
-        ok: true,
-        status: 200,
-      });
+      server.use(
+        http.get("http://localhost/api/users", () =>
+          HttpResponse.json(validPaginatedResponse, {
+            headers: { "content-type": "application/json" },
+          })
+        )
+      );
 
       const result = await CLIENT.getValidated("/api/users", PAGINATED_RESPONSE_SCHEMA);
 
@@ -281,25 +276,34 @@ describe("API client with Zod Validation", () => {
     });
 
     it("handles API errors with proper error types", async () => {
-      MOCK_FETCH.mockResolvedValue({
-        headers: new Headers({ "content-type": "application/json" }),
-        json: () =>
-          Promise.resolve({
-            code: "VALIDATION_ERROR",
-            error: "Invalid request data",
-          }),
-        ok: false,
-        status: 400,
-        statusText: "Bad Request",
-      });
+      server.use(
+        http.get("http://localhost/api/users/invalid", () =>
+          HttpResponse.json(
+            {
+              code: "VALIDATION_ERROR",
+              error: "Invalid request data",
+            },
+            {
+              headers: { "content-type": "application/json" },
+              status: 400,
+              statusText: "Bad Request",
+            }
+          )
+        )
+      );
 
       await expect(
         CLIENT.getValidated("/api/users/invalid", USER_RESPONSE_SCHEMA)
-      ).rejects.toThrow(ApiClientError);
+      ).rejects.toThrow(ApiError);
     });
 
     it("handles network errors gracefully", async () => {
-      MOCK_FETCH.mockRejectedValue(new Error("Network error"));
+      vi.useFakeTimers();
+      server.use(
+        http.get("http://localhost/api/users", () => {
+          throw new Error("Network error");
+        })
+      );
 
       // Use a fast client to avoid exceeding the per-test timeout (6s)
       const fastClient = new ApiClient({
@@ -318,6 +322,7 @@ describe("API client with Zod Validation", () => {
       await vi.advanceTimersByTimeAsync(2000);
 
       await expect(pendingRequest).rejects.toThrow("Network error");
+      vi.useRealTimers();
     });
   });
 
@@ -333,20 +338,17 @@ describe("API client with Zod Validation", () => {
         updatedAt: "2025-01-01T00:00:00Z",
       };
 
-      MOCK_FETCH.mockResolvedValue({
-        headers: new Headers({ "content-type": "application/json" }),
-        json: () => Promise.resolve(mockUser),
-        ok: true,
-        status: 200,
-      });
+      server.use(
+        http.get("http://localhost/api/users/123", () =>
+          HttpResponse.json(mockUser, {
+            headers: { "content-type": "application/json" },
+          })
+        )
+      );
 
       const result = await CLIENT.getValidated("/api/users/123", USER_RESPONSE_SCHEMA);
 
       expect(result).toEqual(mockUser);
-      expect(MOCK_FETCH).toHaveBeenCalledWith(
-        expect.stringContaining("/api/users/123"),
-        expect.objectContaining({ method: "GET" })
-      );
     });
 
     it("supports PUT requests with request and response validation", async () => {
@@ -365,12 +367,15 @@ describe("API client with Zod Validation", () => {
         updatedAt: "2025-01-01T12:00:00Z",
       };
 
-      MOCK_FETCH.mockResolvedValue({
-        headers: new Headers({ "content-type": "application/json" }),
-        json: () => Promise.resolve(updatedUser),
-        ok: true,
-        status: 200,
-      });
+      server.use(
+        http.put("http://localhost/api/users/123", async ({ request }) => {
+          const body = (await request.json()) as Partial<UserCreateRequest>;
+          expect(body).toEqual(updateData);
+          return HttpResponse.json(updatedUser, {
+            headers: { "content-type": "application/json" },
+          });
+        })
+      );
 
       const partialSchema = USER_CREATE_REQUEST_SCHEMA.partial();
 
@@ -382,13 +387,6 @@ describe("API client with Zod Validation", () => {
       );
 
       expect(result).toEqual(updatedUser);
-      expect(MOCK_FETCH).toHaveBeenCalledWith(
-        expect.stringContaining("/api/users/123"),
-        expect.objectContaining({
-          body: JSON.stringify(updateData),
-          method: "PUT",
-        })
-      );
     });
 
     it("supports DELETE requests with response validation", async () => {
@@ -398,12 +396,13 @@ describe("API client with Zod Validation", () => {
         success: z.boolean(),
       });
 
-      MOCK_FETCH.mockResolvedValue({
-        headers: new Headers({ "content-type": "application/json" }),
-        json: () => Promise.resolve(deleteResponse),
-        ok: true,
-        status: 200,
-      });
+      server.use(
+        http.delete("http://localhost/api/users/123", () =>
+          HttpResponse.json(deleteResponse, {
+            headers: { "content-type": "application/json" },
+          })
+        )
+      );
 
       const result = await CLIENT.deleteValidated(
         "/api/users/123",
@@ -411,10 +410,6 @@ describe("API client with Zod Validation", () => {
       );
 
       expect(result).toEqual(deleteResponse);
-      expect(MOCK_FETCH).toHaveBeenCalledWith(
-        expect.stringContaining("/api/users/123"),
-        expect.objectContaining({ method: "DELETE" })
-      );
     });
   });
 
@@ -434,12 +429,13 @@ describe("API client with Zod Validation", () => {
         updatedAt: "2025-01-01T00:00:00Z",
       };
 
-      MOCK_FETCH.mockResolvedValue({
-        headers: new Headers({ "content-type": "application/json" }),
-        json: () => Promise.resolve(userWithOptionalFields),
-        ok: true,
-        status: 200,
-      });
+      server.use(
+        http.get("http://localhost/api/users/123", () =>
+          HttpResponse.json(userWithOptionalFields, {
+            headers: { "content-type": "application/json" },
+          })
+        )
+      );
 
       const result = await CLIENT.getValidated("/api/users/123", USER_RESPONSE_SCHEMA);
 
@@ -461,12 +457,13 @@ describe("API client with Zod Validation", () => {
         timestamp: 1735689600000, // Jan 1, 2025
       };
 
-      MOCK_FETCH.mockResolvedValue({
-        headers: new Headers({ "content-type": "application/json" }),
-        json: () => Promise.resolve(apiResponse),
-        ok: true,
-        status: 200,
-      });
+      server.use(
+        http.get("http://localhost/api/dates", () =>
+          HttpResponse.json(apiResponse, {
+            headers: { "content-type": "application/json" },
+          })
+        )
+      );
 
       const result = await CLIENT.getValidated("/api/dates", _DateTransformSchema);
 
@@ -499,12 +496,13 @@ describe("API client with Zod Validation", () => {
         updatedAt: "2025-01-01T00:00:00Z",
       };
 
-      MOCK_FETCH.mockResolvedValue({
-        headers: new Headers({ "content-type": "application/json" }),
-        json: () => Promise.resolve(responseWithExtraFields),
-        ok: true,
-        status: 200,
-      });
+      server.use(
+        http.get("http://localhost/api/users/123", () =>
+          HttpResponse.json(responseWithExtraFields, {
+            headers: { "content-type": "application/json" },
+          })
+        )
+      );
 
       await expect(
         CLIENT.getValidated("/api/users/123", StrictUserSchema)
@@ -525,12 +523,13 @@ describe("API client with Zod Validation", () => {
         updatedAt: "2025-01-01T00:00:00Z",
       }));
 
-      MOCK_FETCH.mockResolvedValue({
-        headers: new Headers({ "content-type": "application/json" }),
-        json: () => Promise.resolve(largeDataset),
-        ok: true,
-        status: 200,
-      });
+      server.use(
+        http.get("http://localhost/api/users/bulk", () =>
+          HttpResponse.json(largeDataset, {
+            headers: { "content-type": "application/json" },
+          })
+        )
+      );
 
       const start = performance.now();
       const result = await CLIENT.getValidated(

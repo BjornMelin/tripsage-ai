@@ -102,8 +102,6 @@ export function ActivitySearchForm({
       infants: data.infants,
     };
 
-    console.log("Activity search params:", searchParams);
-
     if (onSearch) {
       onSearch(searchParams);
     }

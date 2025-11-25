@@ -24,6 +24,7 @@ import {
   uiMessageToMemoryTurn,
 } from "@/lib/memory/turn-utils";
 import { secureUuid } from "@/lib/security/random";
+import type { Json } from "@/lib/supabase/database.types";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { insertSingle } from "@/lib/supabase/typed-helpers";
 import {
@@ -155,7 +156,7 @@ export async function handleChatStream(
   // Memory hydration: prepend system prompt with a short memory summary if present
   let systemPrompt =
     "You are a helpful travel planning assistant with access to accommodation booking " +
-    "via Expedia Partner Solutions (hotels and Vrbo vacation rentals). " +
+    "via Amadeus Self-Service hotels enriched with Google Places data. " +
     "Use searchAccommodations to find properties, getAccommodationDetails for more info, " +
     "checkAvailability to get booking tokens, and bookAccommodation to complete reservations. " +
     "Always guide users through the complete booking flow when they want to book accommodations.";
@@ -331,14 +332,14 @@ export async function handleChatStream(
         } as const;
       }
       if (part.type === "finish") {
-        const meta = {
+        const meta: Json = {
           durationMs: (deps.clock?.now?.() ?? Date.now()) - startedAt,
-          inputTokens: part.totalUsage?.inputTokens ?? undefined,
+          inputTokens: part.totalUsage?.inputTokens ?? null,
           model: provider.modelId,
-          outputTokens: part.totalUsage?.outputTokens ?? undefined,
+          outputTokens: part.totalUsage?.outputTokens ?? null,
           provider: provider.provider,
           requestId: reqId,
-          totalTokens: part.totalUsage?.totalTokens ?? undefined,
+          totalTokens: part.totalUsage?.totalTokens ?? null,
         } as const;
         deps.logger?.info?.("chat_stream:finish", meta);
         if (sessionId) {
@@ -349,6 +350,8 @@ export async function handleChatStream(
               role: "assistant",
               // biome-ignore lint/style/useNamingConvention: Database field name
               session_id: sessionId,
+              // biome-ignore lint/style/useNamingConvention: Database field name
+              user_id: user.id,
             });
           } catch {
             /* ignore */
