@@ -44,11 +44,10 @@
     "codemod:check-idempotency": "pnpm codemod:ai-route:dry && pnpm codemod:ai-messages:dry && pnpm codemod:tests-env:dry && git diff --quiet"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "3.0.0-beta.54",
-    "@ai-sdk/mcp": "1.0.0-beta.15",
-    "@ai-sdk/openai": "3.0.0-beta.63",
-    "@ai-sdk/react": "3.0.0-beta.105",
-    "@ai-sdk/xai": "3.0.0-beta.39",
+    "@ai-sdk/anthropic": "3.0.0-beta.60",
+    "@ai-sdk/openai": "3.0.0-beta.66",
+    "@ai-sdk/react": "3.0.0-beta.116",
+    "@ai-sdk/xai": "3.0.0-beta.41",
     "@hello-pangea/dnd": "^18.0.1",
     "@hookform/resolvers": "^5.2.2",
     "@opentelemetry/api": "^1.9.0",
@@ -93,7 +92,7 @@
     "@upstash/ratelimit": "2.0.7",
     "@upstash/redis": "^1.35.6",
     "@vercel/otel": "^2.1.0",
-    "ai": "6.0.0-beta.105",
+    "ai": "6.0.0-beta.116",
     "amadeus": "^11.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -105,11 +104,11 @@
     "ical-generator": "^10.0.0",
     "ical.js": "^2.2.1",
     "js-tiktoken": "^1.0.21",
-    "libphonenumber-js": "^1.12.27",
+    "libphonenumber-js": "^1.12.29",
     "lucide-react": "^0.554.0",
     "mem0ai": "^2.1.38",
     "nanoid": "^5.1.6",
-    "next": "^16.0.3",
+    "next": "^16.0.4",
     "next-themes": "^0.4.6",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -166,6 +165,8 @@
       "prismjs": ">=1.30.0",
       "brace-expansion": ">=2.0.2"
     },
-    "ignoredBuiltDependencies": ["esbuild"]
+    "ignoredBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }
