@@ -7,6 +7,16 @@
  */
 
 export {
+  DashboardMetrics,
+  DashboardMetricsSkeleton,
+} from "./dashboard-metrics";
+export { MetricsCard, type MetricsCardProps } from "./metrics-card";
+export {
+  MetricsChart,
+  type MetricsChartDataPoint,
+  type MetricsChartProps,
+} from "./metrics-chart";
+export {
   QuickActions,
   QuickActionsCompact,
   QuickActionsList,
