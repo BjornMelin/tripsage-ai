@@ -8,7 +8,7 @@
 import type { AuthSession } from "@schemas/stores";
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import { timeUntil } from "@/lib/stores/helpers";
+import { timeUntil } from "@/stores/helpers";
 
 /**
  * Auth session state interface.

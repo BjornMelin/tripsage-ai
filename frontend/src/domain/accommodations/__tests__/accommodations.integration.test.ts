@@ -3,11 +3,11 @@
 import { AmadeusProviderAdapter } from "@domain/accommodations/providers/amadeus-adapter";
 import { AccommodationsService } from "@domain/accommodations/service";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createMockSupabaseFactory } from "@/test/mocks/supabase";
 import { googlePlacesHandlers } from "@/test/msw/handlers/google-places";
 import { stripeHandlers } from "@/test/msw/handlers/stripe";
 import { composeHandlers } from "@/test/msw/handlers/utils";
 import { server } from "@/test/msw/server";
-import { createMockSupabase } from "@/test/supabase-mock-factory";
 
 const cache = new Map<string, unknown>();
 
@@ -105,7 +105,7 @@ const createService = (supabaseInserts: unknown[]) =>
     cacheTtlSeconds: 60,
     provider: new AmadeusProviderAdapter(),
     rateLimiter: undefined,
-    supabase: createMockSupabase({
+    supabase: createMockSupabaseFactory({
       insertCapture: supabaseInserts,
       selectResult: { data: { id: 11, user_id: "user-1" }, error: null },
     }),

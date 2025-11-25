@@ -164,10 +164,11 @@ export function DestinationSearchForm({
       const abortController = new AbortController();
       abortControllerRef.current = abortController;
       setSuggestionsError(null);
+      const limit = form.getValues("limit") ?? 10;
 
       try {
         const requestBody = {
-          maxResultCount: form.getValues("limit") ?? 10,
+          maxResultCount: limit,
           textQuery: searchQuery,
         };
 
@@ -212,7 +213,7 @@ export function DestinationSearchForm({
             : places;
 
         const mappedSuggestions: DestinationSuggestion[] = filteredPlaces
-          .slice(0, form.getValues("limit") ?? 10)
+          .slice(0, limit)
           .map((place) => ({
             description: place.formattedAddress ?? place.displayName?.text ?? "",
             mainText: place.displayName?.text ?? "Unknown",
@@ -232,7 +233,6 @@ export function DestinationSearchForm({
         if (error instanceof Error && error.name === "AbortError") {
           return;
         }
-        console.error("Error fetching suggestions:", error);
         setSuggestionsError(
           error instanceof Error ? error.message : "Unable to fetch suggestions."
         );
@@ -453,7 +453,7 @@ export function DestinationSearchForm({
                       .map((memory) => {
                         // Extract destination names from memory content
                         const matches = memory.content.match(
-                          /\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b/g
+                          /\b[A-Z][A-Za-z]+(?:[\s-](?:[A-Z][A-Za-z]+|de|da|do|del|los|las|of|the))*\b/g
                         );
                         const destination = matches?.[0] || memory.content.slice(0, 20);
                         return (

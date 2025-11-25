@@ -91,18 +91,13 @@ export interface Trip {
   // biome-ignore lint/style/useNamingConvention: Database uses snake_case
   user_id?: string;
 
-  // Core trip information (aligned with backend)
-  name: string; // Primary field name from database
-  title?: string; // Optional secondary name
+  // Core trip information
+  title: string; // Trip title (database 'name' field mapped to 'title')
   description?: string;
 
-  // Date fields - supporting both formats
-  // biome-ignore lint/style/useNamingConvention: Database uses snake_case
-  start_date?: string; // Snake case for API compatibility
-  // biome-ignore lint/style/useNamingConvention: Database uses snake_case
-  end_date?: string; // Snake case for API compatibility
-  startDate?: string; // Camel case for frontend compatibility
-  endDate?: string; // Camel case for frontend compatibility
+  // Date fields - camelCase for frontend consistency
+  startDate?: string;
+  endDate?: string;
 
   // Trip details
   destinations: Destination[];
@@ -115,20 +110,15 @@ export interface Trip {
   // biome-ignore lint/style/useNamingConvention: Database uses snake_case
   spent_amount?: number;
 
-  // fields
+  // Visibility and metadata
   visibility?: "private" | "shared" | "public";
-  isPublic?: boolean; // Boolean mirror of visibility for older payloads
   tags?: string[];
   preferences?: TripPreferences;
   status?: string;
 
-  // Timestamp fields - supporting both formats
-  // biome-ignore lint/style/useNamingConvention: Database uses snake_case
-  created_at?: string; // Snake case for API compatibility
-  // biome-ignore lint/style/useNamingConvention: Database uses snake_case
-  updated_at?: string; // Snake case for API compatibility
-  createdAt?: string; // Camel case for frontend compatibility
-  updatedAt?: string; // Camel case for frontend compatibility
+  // Timestamp fields - camelCase for frontend consistency
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface TripState {
@@ -237,14 +227,14 @@ export const useTripStore = create<TripState>()(
                 : null,
             currency: data.currency ?? "USD",
             description: data.description ?? "",
-            endDate: data.endDate ?? data.end_date,
+            endDate: data.endDate,
             preferences: data.preferences ?? {},
             spentAmount: 0,
-            startDate: data.startDate ?? data.start_date,
+            startDate: data.startDate,
             status: data.status ?? "planning",
             tags: data.tags ?? [],
-            title: data.title ?? data.name ?? "Untitled Trip",
-            visibility: data.visibility ?? (data.isPublic ? "public" : "private"),
+            title: data.title ?? "Untitled Trip",
+            visibility: data.visibility ?? "private",
           };
 
           const ownerId =
@@ -431,14 +421,14 @@ export const useTripStore = create<TripState>()(
 
           // Map to DB update shape
           const updateData: TripsUpdate = {};
-          if (data.name ?? data.title) {
-            updateData.name = data.name ?? data.title ?? "";
+          if (data.title) {
+            updateData.name = data.title; // Database uses 'name', frontend uses 'title'
           }
-          if (data.startDate ?? data.start_date) {
-            updateData.start_date = data.startDate ?? data.start_date ?? "";
+          if (data.startDate) {
+            updateData.start_date = data.startDate;
           }
-          if (data.endDate ?? data.end_date) {
-            updateData.end_date = data.endDate ?? data.end_date ?? "";
+          if (data.endDate) {
+            updateData.end_date = data.endDate;
           }
           if (typeof data.budget === "number") {
             updateData.budget = data.budget;

@@ -44,7 +44,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { useZodForm } from "@/lib/hooks/use-zod-form";
+import { useZodForm } from "@/hooks/use-zod-form";
 import { secureUuid } from "@/lib/security/random";
 import { cn } from "@/lib/utils";
 

@@ -161,7 +161,6 @@ export const createTripFormSchema = z
     description: z.string().max(1000, { error: "Description too long" }).optional(),
     destination: z.string().min(1, { error: "Destination is required" }),
     endDate: FUTURE_DATE_SCHEMA,
-    isPublic: z.boolean(),
     startDate: FUTURE_DATE_SCHEMA,
     tags: z.array(z.string().max(50)).max(10).optional(),
     title: z
@@ -198,7 +197,6 @@ export const updateTripFormSchema = z.object({
   destination: z.string().optional(),
   endDate: z.iso.date().optional(),
   id: primitiveSchemas.uuid,
-  isPublic: z.boolean().optional(),
   maxParticipants: z.number().optional(),
   startDate: z.iso.date().optional(),
   tags: z.array(z.string()).optional(),

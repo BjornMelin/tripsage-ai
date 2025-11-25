@@ -7,12 +7,12 @@
 
 import "server-only";
 
+import { webSearch } from "@ai/tools/server/web-search";
 import { NotFoundError } from "@domain/activities/errors";
 import type { ActivitySearchResult, ServiceContext } from "@domain/activities/types";
 import type { Activity, ActivitySearchParams } from "@schemas/search";
 import { activitySearchParamsSchema } from "@schemas/search";
 import type { ToolCallOptions } from "ai";
-import { webSearch } from "@/ai/tools/server/web-search";
 import { hashInputForCache } from "@/lib/cache/hash";
 import {
   buildActivitySearchQuery,

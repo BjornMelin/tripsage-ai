@@ -5,8 +5,8 @@
 import type { AuthUser } from "@schemas/stores";
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
-import { getDisplayName } from "@/lib/stores/helpers";
 import { useAuthSession } from "@/stores/auth/auth-session";
+import { getDisplayName } from "@/stores/helpers";
 
 const computeUserDisplayName = (user: AuthUser | null): string => getDisplayName(user);
 

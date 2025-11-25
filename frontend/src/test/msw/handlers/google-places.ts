@@ -7,7 +7,36 @@ import { HttpResponse, http } from "msw";
 
 const defaultPhotoName = "places/placeholder/photos/primary";
 
+/** MSW handlers for Google Places (New) API endpoints used in tests. */
 export const googlePlacesHandlers: HttpHandler[] = [
+  http.post("/api/places/search", async ({ request }) => {
+    const fallbackQuery = "Sample Place";
+    const body = (await request.json().catch(() => ({}))) as {
+      maxResultCount?: number;
+      textQuery?: string;
+    };
+    const textQuery = body.textQuery ?? fallbackQuery;
+
+    const places = [
+      {
+        displayName: { text: textQuery },
+        formattedAddress: `${textQuery}, Example Country`,
+        id: "places/mock-1",
+        types: ["locality", "country"],
+      },
+      {
+        displayName: { text: `${textQuery} Museum` },
+        formattedAddress: `${textQuery} Arts District`,
+        id: "places/mock-2",
+        types: ["establishment"],
+      },
+    ];
+
+    return HttpResponse.json({
+      places: places.slice(0, body.maxResultCount ?? places.length),
+    });
+  }),
+
   http.post(
     "https://places.googleapis.com/v1/places:searchText",
     async ({ request }) => {

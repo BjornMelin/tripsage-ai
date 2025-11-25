@@ -110,12 +110,12 @@ describe("ItineraryBuilder", () => {
     ],
     endDate: "2024-06-25",
     id: "trip-1",
-    isPublic: false,
-    name: "European Adventure",
     startDate: "2024-06-15",
     status: "planning",
     tags: ["adventure", "culture"],
+    title: "European Adventure",
     updatedAt: "2024-01-01",
+    visibility: "private",
   };
 
   const emptyTrip: Trip = {

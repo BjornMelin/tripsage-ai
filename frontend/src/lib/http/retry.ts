@@ -2,8 +2,6 @@
  * @fileoverview Lightweight retry helper with exponential backoff and jitter.
  */
 
-import { randomInt } from "node:crypto";
-
 /**
  * Retry configuration for {@link retryWithBackoff}.
  */
@@ -86,7 +84,7 @@ function calculateDelay(params: {
   const capped = params.maxDelayMs ? Math.min(raw, params.maxDelayMs) : raw;
   const jitterRange = Math.floor(capped * params.jitterRatio);
   if (jitterRange <= 0) return capped;
-  const jitter = randomInt(0, jitterRange + 1);
+  const jitter = Math.floor(Math.random() * (jitterRange + 1));
   return capped - jitterRange / 2 + jitter;
 }
 
@@ -94,4 +92,99 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
+}
+
+/**
+ * Options for fetch retry behavior.
+ */
+export type FetchRetryOptions = {
+  /**
+   * Timeout in milliseconds. Default: 12000.
+   */
+  timeoutMs?: number;
+  /**
+   * Maximum number of retries (attempts = retries + 1). Default: 2.
+   */
+  retries?: number;
+  /**
+   * Base backoff delay in milliseconds. Actual delay is backoffMs * 2^attempt.
+   * Default: 100.
+   */
+  backoffMs?: number;
+};
+
+/**
+ * Fetch with timeout and retries.
+ *
+ * Implements exponential backoff between retry attempts using retryWithBackoff.
+ * Throws errors with `code` and `meta` properties for consistent error handling.
+ *
+ * @param url - The URL to fetch.
+ * @param init - Fetch options (RequestInit).
+ * @param options - Retry and timeout options.
+ * @returns The Response object on success.
+ * @throws {Error} Error with `code` property set to "fetch_timeout" or "fetch_failed",
+ *   and `meta` property containing attempt details.
+ */
+export function fetchWithRetry(
+  url: string,
+  init: RequestInit,
+  options: FetchRetryOptions = {}
+): Promise<Response> {
+  const { timeoutMs = 12000, retries = 2, backoffMs = 100 } = options;
+  const attempts = retries + 1;
+
+  return retryWithBackoff(
+    async (attemptNumber) => {
+      // Fresh controller and timeout for each attempt
+      const controller = new AbortController();
+      // Propagate caller aborts to our controller
+      let onCallerAbort: (() => void) | undefined;
+      if (init.signal) {
+        if (init.signal.aborted) {
+          controller.abort();
+        } else {
+          onCallerAbort = () => controller.abort();
+          init.signal.addEventListener("abort", onCallerAbort, { once: true });
+        }
+      }
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const res = await fetch(url, {
+          ...init,
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        if (init.signal && onCallerAbort) {
+          init.signal.removeEventListener("abort", onCallerAbort);
+        }
+        return res;
+      } catch (err) {
+        clearTimeout(timeoutId);
+        if (init.signal && onCallerAbort) {
+          init.signal.removeEventListener("abort", onCallerAbort);
+        }
+        const isTimeout = err instanceof Error && err.name === "AbortError";
+        const error: Error & { code?: string; meta?: Record<string, unknown> } =
+          new Error(isTimeout ? "fetch_timeout" : "fetch_failed");
+        error.code = isTimeout ? "fetch_timeout" : "fetch_failed";
+        error.meta = { attempt: attemptNumber, maxRetries: retries, url };
+        throw error;
+      }
+    },
+    {
+      attempts,
+      baseDelayMs: backoffMs,
+      isRetryable: (error) => {
+        // Don't retry on timeout errors or abort errors
+        if (error instanceof Error) {
+          const errorCode = (error as { code?: string }).code;
+          if (error.name === "AbortError" || errorCode === "fetch_timeout") {
+            return false;
+          }
+        }
+        return true;
+      },
+    }
+  );
 }

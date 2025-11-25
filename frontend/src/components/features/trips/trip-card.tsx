@@ -95,9 +95,9 @@ export function TripCard({ trip, onEdit, onDelete, className }: TripCardProps) {
           <Badge className={statusColors[status]}>
             {status.charAt(0).toUpperCase() + status.slice(1)}
           </Badge>
-          {trip.isPublic && <Badge variant="outline">Public</Badge>}
+          {trip.visibility === "public" && <Badge variant="outline">Public</Badge>}
         </div>
-        <CardTitle className="line-clamp-1">{trip.name}</CardTitle>
+        <CardTitle className="line-clamp-1">{trip.title}</CardTitle>
         {trip.description && (
           <CardDescription className="line-clamp-2">{trip.description}</CardDescription>
         )}

@@ -24,20 +24,20 @@ vi.mock("next/link", () => ({
 const MockTrips: Array<Record<string, unknown>> = [
   {
     budget: 3000,
-    created_at: "2024-01-15T00:00:00Z",
+    createdAt: "2024-01-15T00:00:00Z",
     currency: "USD",
     description: "Exploring Japan's capital city",
     destinations: [{ country: "Japan", id: "dest-1", name: "Tokyo" }],
     endDate: "2024-06-22T00:00:00Z",
     id: "trip-1",
-    isPublic: false,
-    name: "Tokyo Adventure",
     startDate: "2024-06-15T00:00:00Z",
-    updated_at: "2024-01-16T00:00:00Z",
+    title: "Tokyo Adventure",
+    updatedAt: "2024-01-16T00:00:00Z",
+    visibility: "private",
   },
   {
     budget: 5000,
-    created_at: "2024-01-10T00:00:00Z",
+    createdAt: "2024-01-10T00:00:00Z",
     currency: "USD",
     description: "Multi-city European adventure",
     destinations: [
@@ -46,18 +46,18 @@ const MockTrips: Array<Record<string, unknown>> = [
     ],
     endDate: "2024-08-15T00:00:00Z",
     id: "trip-2",
-    isPublic: true,
-    name: "European Tour",
     startDate: "2024-08-01T00:00:00Z",
+    title: "European Tour",
     updatedAt: "2024-01-20T00:00:00Z",
+    visibility: "public",
   },
   {
     createdAt: "2024-01-05T00:00:00Z",
     destinations: [],
     id: "trip-3",
-    isPublic: false,
-    name: "Beach Getaway",
+    title: "Beach Getaway",
     updatedAt: "2024-01-05T00:00:00Z",
+    visibility: "private",
   },
 ];
 

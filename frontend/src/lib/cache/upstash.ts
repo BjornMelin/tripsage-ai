@@ -50,12 +50,15 @@ export async function getCachedJson<T>(key: string): Promise<T | null> {
   const redis = getRedis();
   if (!redis) return null;
 
+  // We store JSON strings via JSON.stringify(), so we need to parse them manually.
+  // Upstash Redis only auto-deserializes when storing objects directly, not pre-stringified JSON.
   const raw = await redis.get<string>(key);
-  if (!raw) return null;
+  if (raw === null) return null;
 
   try {
     return JSON.parse(raw) as T;
   } catch {
+    // Invalid JSON - return null to indicate cache miss/invalid data
     return null;
   }
 }
@@ -91,13 +94,16 @@ export async function getCachedJsonSafe<T>(
   const redis = getRedis();
   if (!redis) return { status: "miss" };
 
+  // We store JSON strings via JSON.stringify(), so we need to parse them manually.
+  // Upstash Redis only auto-deserializes when storing objects directly, not pre-stringified JSON.
   const raw = await redis.get<string>(key);
-  if (!raw) return { status: "miss" };
+  if (raw === null) return { status: "miss" };
 
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch {
+    // Invalid JSON - return invalid status with raw string
     return { raw, status: "invalid" };
   }
 

@@ -70,11 +70,11 @@ export const POST = withApiGuards({
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    return NextResponse.json(
-      { details: errorText, error: `Places API error: ${response.status}` },
-      { status: response.status }
-    );
+    const errorMessage =
+      response.status === 429
+        ? "Upstream rate limit exceeded. Please try again shortly."
+        : "External places service error.";
+    return NextResponse.json({ error: errorMessage }, { status: response.status });
   }
 
   const data = await response.json();
