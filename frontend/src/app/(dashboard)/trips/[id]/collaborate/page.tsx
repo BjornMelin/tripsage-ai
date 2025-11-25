@@ -40,7 +40,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { useTrip } from "@/hooks/use-trips";
-import { createClient } from "@/lib/supabase";
+import { getBrowserClient } from "@/lib/supabase";
 
 /**
  * Represents a collaborator on a trip with their permissions and status.
@@ -93,7 +93,9 @@ export default function TripCollaborationPage() {
 
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   useEffect(() => {
-    const supabase = createClient();
+    const supabase = getBrowserClient();
+    // During SSR, supabase is null - skip auth check
+    if (!supabase) return;
     supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
   }, []);
 
