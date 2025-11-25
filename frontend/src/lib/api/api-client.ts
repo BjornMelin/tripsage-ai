@@ -742,7 +742,7 @@ defaultClient.addRequestInterceptor((config) => {
 });
 
 // Add common response interceptor for logging
-defaultClient.addResponseInterceptor((response, config) => {
+defaultClient.addResponseInterceptor((response, _config) => {
   // Response interceptor - telemetry/logging handled by route handlers
   return Promise.resolve(response);
 });

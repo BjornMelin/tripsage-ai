@@ -121,7 +121,7 @@ class ErrorService {
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-    } catch (error) {
+    } catch (_error) {
       if (retryCount < maxRetries) {
         // Exponential backoff
         const delay = 2 ** retryCount * 1000;
