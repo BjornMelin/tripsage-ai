@@ -48,7 +48,7 @@ export function SidebarNav({ className, items, ...props }: SidebarNavProps) {
                 : pathname?.startsWith(item.href)
             )
               ? "bg-accent text-accent-foreground"
-              : "transparent"
+              : ""
           )}
         >
           {item.icon && <span className="mr-2">{item.icon}</span>}

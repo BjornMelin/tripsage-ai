@@ -7,7 +7,7 @@
 
 import type { Activity } from "@schemas/search";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityCard } from "@/components/features/search/activity-card";
 import { ActivityComparisonModal } from "@/components/features/search/activity-comparison-modal";
 import { ActivitySearchForm } from "@/components/features/search/activity-search-form";
@@ -40,7 +40,7 @@ export default function ActivitiesSearchPage() {
 
   const [isTripModalOpen, setIsTripModalOpen] = useState(false);
   const [trips, setTrips] = useState<import("@schemas/trips").UiTrip[]>([]);
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setIsPending] = useState(false);
 
   // Initialize search with URL parameters
   useEffect(() => {
@@ -62,62 +62,59 @@ export default function ActivitiesSearchPage() {
     }
   };
 
-  const handleAddToTripClick = () => {
-    startTransition(async () => {
-      try {
-        const fetchedTrips = await getPlanningTrips();
-        setTrips(fetchedTrips);
-        setIsTripModalOpen(true);
-      } catch (_error) {
-        toast({
-          description: "Failed to load trips. Please try again.",
-          title: "Error",
-          variant: "destructive",
-        });
-      }
-    });
+  const handleAddToTripClick = async () => {
+    setIsPending(true);
+    try {
+      const fetchedTrips = await getPlanningTrips();
+      setTrips(fetchedTrips);
+      setIsTripModalOpen(true);
+    } catch (_error) {
+      toast({
+        description: "Failed to load trips. Please try again.",
+        title: "Error",
+        variant: "destructive",
+      });
+    } finally {
+      setIsPending(false);
+    }
   };
 
   const handleConfirmAddToTrip = async (tripId: string) => {
     if (!selectedActivity) return;
 
-    await new Promise<void>((resolve) => {
-      startTransition(async () => {
-        try {
-          await addActivityToTrip(Number(tripId), {
-            currency: "USD", // Default
-            description: selectedActivity.description,
-            externalId: selectedActivity.id,
-            location: selectedActivity.location,
-            metadata: {
-              images: selectedActivity.images,
-              rating: selectedActivity.rating,
-              type: selectedActivity.type,
-            },
-            price: selectedActivity.price,
-            title: selectedActivity.name,
-          });
-
-          toast({
-            description: `Added "${selectedActivity.name}" to your trip`,
-            title: "Activity added",
-            variant: "default",
-          });
-
-          setIsTripModalOpen(false);
-          setSelectedActivity(null);
-        } catch (error) {
-          toast({
-            description:
-              error instanceof Error ? error.message : "Failed to add activity",
-            title: "Error",
-            variant: "destructive",
-          });
-        } finally {
-          resolve();
-        }
+    setIsPending(true);
+    try {
+      await addActivityToTrip(Number(tripId), {
+        currency: "USD", // Default
+        description: selectedActivity.description,
+        externalId: selectedActivity.id,
+        location: selectedActivity.location,
+        metadata: {
+          images: selectedActivity.images,
+          rating: selectedActivity.rating,
+          type: selectedActivity.type,
+        },
+        price: selectedActivity.price,
+        title: selectedActivity.name,
       });
-    });
+
+      toast({
+        description: `Added "${selectedActivity.name}" to your trip`,
+        title: "Activity added",
+        variant: "default",
+      });
+
+      setIsTripModalOpen(false);
+      setSelectedActivity(null);
+    } catch (error) {
+      toast({
+        description: error instanceof Error ? error.message : "Failed to add activity",
+        title: "Error",
+        variant: "destructive",
+      });
+    } finally {
+      setIsPending(false);
+    }
   };
 
   const handleSelectActivity = (activity: Activity) => {
@@ -157,6 +154,9 @@ export default function ActivitiesSearchPage() {
   }, [comparisonList]);
 
   const toggleComparison = (activity: Activity) => {
+    let nextSize = comparisonList.size;
+    let wasAdded = false;
+
     setComparisonList((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(activity.id)) {
@@ -176,21 +176,28 @@ export default function ActivitiesSearchPage() {
           return prev;
         }
         newSet.add(activity.id);
+        wasAdded = true;
         toast({
           description: `Added "${activity.name}" to comparison`,
           title: "Added to comparison",
           variant: "default",
         });
       }
+
+      nextSize = newSet.size;
       return newSet;
     });
+
+    return { nextSize, wasAdded };
   };
 
   const handleCompareActivity = (activity: Activity) => {
-    toggleComparison(activity);
-    // Auto-open comparison modal if 2+ items are selected and we just added one
-    if (comparisonList.size >= 1 && !comparisonList.has(activity.id)) {
+    const { nextSize, wasAdded } = toggleComparison(activity);
+
+    if (wasAdded && nextSize >= 2) {
       setShowComparisonModal(true);
+    } else if (!wasAdded && nextSize <= 1) {
+      setShowComparisonModal(false);
     }
   };
 
@@ -198,11 +205,13 @@ export default function ActivitiesSearchPage() {
     setComparisonList((prev) => {
       const newSet = new Set(prev);
       newSet.delete(activityId);
+
+      if (newSet.size <= 1) {
+        setShowComparisonModal(false);
+      }
+
       return newSet;
     });
-    if (comparisonList.size <= 1) {
-      setShowComparisonModal(false);
-    }
   };
 
   const handleAddFromComparison = (activity: Activity) => {

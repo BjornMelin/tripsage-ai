@@ -87,7 +87,7 @@ export const schemaRegistry = {
   primitives: primitiveSchemas,
   refined: refinedSchemas,
   transforms: transformSchemas,
-  version: "1.0.0",
+  version: "1.1.0",
 } as const;
 
 // Export types

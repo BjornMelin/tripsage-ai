@@ -33,7 +33,8 @@ vi.mock("@/components/ui/theme-toggle", () => ({
 
 describe("DashboardLayout", () => {
   it("renders layout with user data", async () => {
-    // Since DashboardLayout is an async Server Component, we need to await it
+    // RSC note: awaiting the Server Component output here is intentional for unit coverage;
+    // integration coverage exists in page-level tests.
     const Layout = await DashboardLayout({
       children: <div data-testid="child">Child Content</div>,
     });

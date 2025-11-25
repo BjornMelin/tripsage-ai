@@ -14,6 +14,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useState } from "react";
+import { shallow } from "zustand/shallow";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,9 +46,10 @@ interface RealtimeConnection {
   lastActivity: Date | null;
 }
 
-function NormalizeTopic(topic: string): string {
+// biome-ignore lint/style/useNamingConvention: helper uses camelCase for readability
+const normalizeTopic = (topic: string): string => {
   return topic.replace(/^realtime:/i, "");
-}
+};
 
 /**
  * Component for monitoring real-time connection status
@@ -61,7 +63,7 @@ export function ConnectionStatusMonitor() {
     id: conn.id,
     lastActivity: conn.lastActivity,
     status: conn.status,
-    table: NormalizeTopic(conn.id),
+    table: normalizeTopic(conn.id),
   }));
   const connectionStatus: ConnectionStatus = realtimeStore.summary();
   const [isReconnecting, setIsReconnecting] = useState(false);
@@ -239,9 +241,10 @@ export function ConnectionStatusMonitor() {
  * Compact connection status indicator for navigation/header
  */
 export function ConnectionStatusIndicator() {
-  const { isConnected, lastError } = useRealtimeConnectionStore((state) =>
-    state.summary()
-  );
+  const { isConnected, lastError } = useRealtimeConnectionStore((state) => {
+    const summary = state.summary();
+    return { isConnected: summary.isConnected, lastError: summary.lastError };
+  }, shallow);
   const hasError = Boolean(lastError);
 
   return (

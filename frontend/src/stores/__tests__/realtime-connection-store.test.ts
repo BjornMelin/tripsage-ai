@@ -7,6 +7,7 @@ describe("realtime connection store", () => {
   beforeEach(() => {
     useRealtimeConnectionStore.setState({
       connections: {},
+      isReconnecting: false,
       lastReconnectAt: null,
       reconnectAttempts: 0,
     });
@@ -56,7 +57,7 @@ describe("realtime connection store", () => {
   it("increments reconnect attempts and applies backoff", async () => {
     vi.useFakeTimers();
     const channel = {
-      subscribe: vi.fn(),
+      subscribe: vi.fn().mockResolvedValue(undefined),
       topic: "realtime:retry",
       unsubscribe: vi.fn().mockResolvedValue(undefined),
     } as unknown as RealtimeChannel;
@@ -72,7 +73,16 @@ describe("realtime connection store", () => {
 
     const updated = useRealtimeConnectionStore.getState();
     expect(updated.reconnectAttempts).toBeGreaterThan(0);
+    expect(channel.unsubscribe).toHaveBeenCalled();
     expect(channel.subscribe).toHaveBeenCalled();
     vi.useRealTimers();
+  });
+
+  it("returns memoized summary when state is unchanged", () => {
+    const store = useRealtimeConnectionStore.getState();
+    const first = store.summary();
+    const second = store.summary();
+
+    expect(second).toBe(first);
   });
 });
