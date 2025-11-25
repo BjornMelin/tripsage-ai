@@ -61,23 +61,6 @@ function getTracer(): Tracer {
   return tracerRef;
 }
 
-// Test-only override; no effect in production code paths.
-/**
- * Injects a tracer instance for tests before the lazy tracer is resolved.
- *
- * @param tracer - Mock tracer used by tests.
- */
-export function setTelemetryTracerForTests(tracer: Tracer): void {
-  tracerRef = tracer;
-}
-
-/**
- * Resets the cached tracer (test-only).
- */
-export function resetTelemetryTracerForTests(): void {
-  tracerRef = null;
-}
-
 /**
  * Common span execution logic for both sync and async operations.
  *

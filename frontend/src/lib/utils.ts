@@ -1,12 +1,14 @@
 /**
  * @fileoverview Small DOM-agnostic utilities for formatting and timing.
  * All helpers are pure and safe for both server and browser runtimes.
+ *
+ * NOTE: For session-related utilities that use browser storage,
+ * see `@/lib/client/session.ts`.
  */
 
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
-import { secureUuid } from "@/lib/security/random";
 
 /**
  * Compose Tailwind class strings with conflict resolution.
@@ -148,27 +150,4 @@ export function fireAndForget<T>(
   };
 
   Promise.resolve(promise).catch(handleRejection);
-}
-
-/**
- * Get or create a per-session identifier for error tracking and telemetry.
- *
- * The ID is stored in `sessionStorage` under the key `session_id`. If it does
- * not exist, a new ID is generated using `secureUuid()` and persisted. When
- * called in environments without access to `sessionStorage` (e.g., server
- * rendering, certain privacy contexts), the function returns `undefined`.
- *
- * @returns A stable session identifier string or `undefined` when unavailable.
- */
-export function getSessionId(): string | undefined {
-  try {
-    let sessionId = sessionStorage.getItem("session_id");
-    if (!sessionId) {
-      sessionId = `session_${secureUuid()}`;
-      sessionStorage.setItem("session_id", sessionId);
-    }
-    return sessionId;
-  } catch {
-    return undefined;
-  }
 }
