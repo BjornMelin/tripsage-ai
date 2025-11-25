@@ -264,20 +264,22 @@ function buildPhotoUrls(photos?: PlacesPhoto[], apiKey?: string): string[] {
     return [];
   }
 
-  // TODO: Implement actual photo URL resolution
-  // Replace placeholder with:
-  // const resolvedApiKey = apiKey ?? getGoogleMapsServerKey();
-  // if (!resolvedApiKey) return [];
-  // return photos.slice(0, 5).map((photo) => {
-  //   const url = new URL(`https://places.googleapis.com/v1/${photo.name}/media`);
-  //   url.searchParams.set("maxHeightPx", "800");
-  //   url.searchParams.set("maxWidthPx", "1200");
-  //   url.searchParams.set("key", resolvedApiKey);
-  //   return url.toString();
-  // });
-  // For now, return photo names as identifiers
-  // Full URL resolution can be done via GET /v1/{photoName} if needed
-  // This is a placeholder that returns photo names
+  /**
+   * TODO: Implement actual photo URL resolution
+   * Replace placeholder with:
+   * const resolvedApiKey = apiKey ?? getGoogleMapsServerKey();
+   * if (!resolvedApiKey) return [];
+   * return photos.slice(0, 5).map((photo) => {
+   *   const url = new URL(`https://places.googleapis.com/v1/${photo.name}/media`);
+   *   url.searchParams.set("maxHeightPx", "800");
+   *   url.searchParams.set("maxWidthPx", "1200");
+   *   url.searchParams.set("key", resolvedApiKey);
+   *   return url.toString();
+   * });
+   * For now, return photo names as identifiers
+   * Full URL resolution can be done via GET /v1/{photoName} if needed
+   * This is a placeholder that returns photo names
+   */
   return photos.slice(0, 5).map((photo) => photo.name);
 }
 
