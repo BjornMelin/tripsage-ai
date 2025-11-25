@@ -15,7 +15,7 @@ import {
 } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { z } from "zod";
-import { useSupabase } from "@/lib/supabase";
+import { useSupabase, useSupabaseRequired } from "@/lib/supabase";
 import type {
   ChatMessage,
   ChatRole,
@@ -33,6 +33,9 @@ function useUserId(): string | null {
   const supabase = useSupabase();
   const [userId, setUserId] = useState<string | null>(null);
   useEffect(() => {
+    // During SSR, supabase is null - skip auth setup
+    if (!supabase) return;
+
     let isMounted = true;
     supabase.auth
       .getUser()
@@ -84,11 +87,9 @@ const CHAT_SESSION_INSERT_SCHEMA = z
   })
   .partial();
 
-/**
- * Hook for managing chat sessions and messages with Supabase.
- */
+/** Hook for managing chat sessions and messages with Supabase. */
 export function useSupabaseChat() {
-  const supabase = useSupabase();
+  const supabase = useSupabaseRequired();
   const queryClient = useQueryClient();
   const userId = useUserId();
 
@@ -573,7 +574,7 @@ export function useChatWithRealtime(sessionId: string | null) {
  * Hook for chat session statistics.
  */
 export function useChatStats() {
-  const supabase = useSupabase();
+  const supabase = useSupabaseRequired();
   const userId = useUserId();
 
   return useQuery({

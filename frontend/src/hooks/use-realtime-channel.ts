@@ -14,15 +14,12 @@
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type BackoffConfig, computeBackoffDelay } from "@/lib/realtime/backoff";
-import { getBrowserClient } from "@/lib/supabase";
+import { getBrowserClient, type TypedSupabaseClient } from "@/lib/supabase";
 
-type SupabaseChannelFactory = ReturnType<typeof getBrowserClient>;
-type ChannelInstance = ReturnType<SupabaseChannelFactory["channel"]>;
+type ChannelInstance = ReturnType<TypedSupabaseClient["channel"]>;
 type ChannelSendRequest = Parameters<RealtimeChannel["send"]>[0];
 
-/**
- * Connection status for a Realtime channel subscription.
- */
+/** Connection status for a Realtime channel subscription. */
 export type RealtimeConnectionStatus =
   | "idle"
   | "connecting"
@@ -117,6 +114,7 @@ export function useRealtimeChannel<TPayload = unknown>(
   opts: UseRealtimeChannelOptions<TPayload> = { private: true }
 ): UseRealtimeChannelResult<TPayload> {
   const supabase = useMemo(() => getBrowserClient(), []);
+  const isClientReady = supabase !== null;
   const [connectionStatus, setConnectionStatus] =
     useState<RealtimeConnectionStatus>("idle");
   const [error, setError] = useState<Error | null>(null);
@@ -164,7 +162,7 @@ export function useRealtimeChannel<TPayload = unknown>(
 
   // Main subscription effect
   useEffect(() => {
-    if (!topic) {
+    if (!topic || !isClientReady || !supabase) {
       channelRef.current = null;
       updateStatus("idle", null);
       reconnectAttemptRef.current = 0;
@@ -246,6 +244,7 @@ export function useRealtimeChannel<TPayload = unknown>(
     clearReconnectTimer,
     onMessage,
     events,
+    isClientReady,
   ]);
 
   const sendBroadcast = useCallback(async (event: string, payload: TPayload) => {

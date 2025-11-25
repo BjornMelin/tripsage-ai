@@ -10,7 +10,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { nowIso, secureUuid } from "@/lib/security/random";
-import { useSupabase } from "@/lib/supabase";
+import { useSupabase, useSupabaseRequired } from "@/lib/supabase";
 import type {
   FileAttachment,
   FileAttachmentInsert,
@@ -46,6 +46,9 @@ function useUserId(): string | null {
   const supabase = useSupabase();
   const [userId, setUserId] = useState<string | null>(null);
   useEffect(() => {
+    // During SSR, supabase is null - skip auth setup
+    if (!supabase) return;
+
     const isMounted = true;
     supabase.auth.getUser().then(({ data }) => {
       if (isMounted) setUserId(data.user?.id ?? null);
@@ -62,7 +65,7 @@ function useUserId(): string | null {
  * Hook for managing file uploads and attachments with Supabase Storage.
  */
 export function useSupabaseStorage() {
-  const supabase = useSupabase();
+  const supabase = useSupabaseRequired();
   const queryClient = useQueryClient();
   const userId = useUserId();
   const [uploadProgress, setUploadProgress] = useState<Record<string, UploadProgress>>(

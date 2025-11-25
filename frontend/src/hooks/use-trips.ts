@@ -12,7 +12,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
 import { type AppError, handleApiError, isApiError } from "@/lib/api/error-types";
 import { cacheTimes, queryKeys, staleTimes } from "@/lib/query-keys";
-import { useSupabase } from "@/lib/supabase";
+import { useSupabaseRequired } from "@/lib/supabase";
 import type { UpdateTables } from "@/lib/supabase/database.types";
 import type { Trip } from "@/stores/trip-store";
 
@@ -357,7 +357,7 @@ interface TripRealtimeStatus {
  */
 export function useTrips(filters?: TripFilters) {
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
-  const supabase = useSupabase();
+  const supabase = useSupabaseRequired();
   const queryClient = useQueryClient();
   const channelRef = useRef<RealtimeChannel | null>(null);
   const [realtimeStatus, setRealtimeStatus] = useState<TripRealtimeStatus>({
@@ -498,7 +498,7 @@ export function useTrips(filters?: TripFilters) {
  */
 export function useTrip(tripId: string | number | null | undefined) {
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
-  const supabase = useSupabase();
+  const supabase = useSupabaseRequired();
   const queryClient = useQueryClient();
   const channelRef = useRef<RealtimeChannel | null>(null);
   const [realtimeStatus, setRealtimeStatus] = useState<TripRealtimeStatus>({
