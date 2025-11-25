@@ -3,6 +3,8 @@
  * Handles fetching user trips and adding activities to trips.
  */
 
+"use server";
+
 import { tripsRowSchema } from "@schemas/supabase";
 import { itineraryItemCreateSchema, type UiTrip } from "@schemas/trips";
 import { bumpTag } from "@/lib/cache/tags";
