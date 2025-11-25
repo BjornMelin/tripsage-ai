@@ -30,6 +30,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Migrated Next.js middleware to proxy: replaced `frontend/middleware.ts` with `frontend/src/proxy.ts` per Next.js 16 (ADR-0013).
+- Added Turbopack file system cache: enabled `turbopackFileSystemCacheForDev` in `next.config.ts` for faster dev builds.
+- Updated Turbopack root config: set `turbopack.root` to `"."` in `next.config.ts`.
+- Refactored trips API route: replaced inline `mapTripRowToUi` with shared `mapDbTripToUi` mapper.
 - Supabase config modernization: removed deprecated `storage.image_transformation`, fixed Inbucket ports to defaults (54324-54326), updated `api.extra_search_path` to `["public", "extensions"]`, set `edge_runtime.policy` to `"oneshot"` for development hot reload, and fixed `edge_runtime.inspector_port` to default 8083 in `supabase/config.toml`.
 - Supabase dependencies: upgraded `@supabase/supabase-js` and `@supabase/postgrest-js` from `2.80.0` to `2.84.0`; verified type compatibility and API usage patterns remain unchanged.
 - Removed `frontend/src/domain/schemas/index.ts` barrel and updated all imports to use file-scoped schema modules via `@schemas/*`, eliminating circular dependencies and improving Next.js tree-shaking.
@@ -91,6 +95,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Security dashboard now loads active sessions from the new `/api/security/sessions` endpoint, updates metrics from live data, and surfaces toast errors on load failures.
 - Destination search form now calls `/api/places/search` with abortable, debounced requests, client-side type filtering, and inline error messaging instead of mocked suggestions.
 - Security dashboard rebuilt as a server component consuming live events/metrics/sessions endpoints with no client mocks or useEffect fetching.
+- Fixed `TripSuggestion` type export: exported from `use-trips.ts` to resolve component import errors.
+- Fixed email verification state: removed invalid `profile?.isEmailVerified` reference in account settings.
+- Fixed optimistic trip updates types: changed `Trip` references to `UiTrip` from `@schemas/trips`.
+- Fixed trip export test: added missing `currency` property to mock trip data.
+- Fixed security dashboard import: wrapped server component in dynamic import with Suspense.
+- Fixed admin configuration page: added `"use cache: private"` directive to prevent build-time env var errors.
+- Removed unused `TripsRow` import from trips API route.
 
 ### Removed
 

@@ -22,10 +22,10 @@ Upgrade the app to Next.js 16 by migrating middleware -> proxy, enforcing async 
 - [x] Audit all server components/route handlers:
   - [x] Verified `createServerSupabase()` awaits `cookies()` before auth calls in `app/auth/confirm/route.ts`.
   - [x] Confirmed route handlers (`app/api/chat/route.ts`, `app/api/chat/attachments/route.ts`) avoid synchronous Request APIs and operate on payloads only.
-- [ ] SSR auth page fixes:
+- [x] SSR auth page fixes:
   - [x] `src/lib/supabase/server.ts` exists with `createServerSupabase()` wrapper.
-  - [ ] Update `app/(auth)/reset-password/page.tsx` to server-read auth with the server client (no `useAuth` hook in server). If client interactivity is required, split into server + client child.
-  - [ ] Validate build no longer fails at prerender.
+  - [x] Verified `app/(auth)/reset-password/page.tsx` correctly uses server-side auth with `createServerSupabase()` and `getCurrentUser()` (no client hooks in server component).
+  - [x] Build validation completed - all TypeScript errors resolved, build succeeds.
 - [x] Wrap client/dynamic UI usage in `<Suspense>` where necessary to comply with Cache Components prerender rules.
 - [x] Removed legacy `dynamic`/`revalidate` segment configs that conflict with `cacheComponents`.
 - [x] Docs
@@ -48,8 +48,28 @@ Upgrade the app to Next.js 16 by migrating middleware -> proxy, enforcing async 
 - Chat: Next.js chat routes are canonical with AI SDK v6: `/api/chat/stream` (SSE) and `/api/chat` (JSON). The UI calls these routes directly; FastAPI chat endpoints are removed.
 - The attachments endpoint remains annotated with `"use cache: private"` so uploads stay user-scoped while allowing follow-up fetches to reuse cached metadata where appropriate.
 
+## Additional Optimizations Completed (2025-11-25)
+
+- [x] Added Turbopack file system cache configuration (`turbopackFileSystemCacheForDev`)
+- [x] Verified `optimizePackageImports` remains in experimental (correct for Next.js 16.0.3)
+- [x] Fixed TypeScript errors:
+  - Exported `TripSuggestion` type from `use-trips.ts`
+  - Fixed `isEmailVerified` usage in account settings (removed invalid profile reference)
+  - Fixed type errors in `optimistic-trip-updates.tsx` (changed `Trip` to `UiTrip`)
+  - Added `currency` property to trip export test mock
+- [x] Fixed security dashboard server component import issue (using dynamic import with Suspense)
+- [x] Fixed admin configuration page static generation issue (added `"use cache: private"` directive)
+- [x] All route handlers verified to use async `params` (already compliant)
+
 ## Changelog
 
+- 1.2.0 (2025-11-25)
+  - Completed middleware -> proxy migration
+  - Fixed all TypeScript errors
+  - Added Turbopack file system cache configuration
+  - Verified all route handlers use async params
+  - Fixed server component import issues
+  - Build validation completed successfully
 - 1.1.0 (2025-10-24)
   - Clarified `revalidateTag('attachments', 'max')` usage and removed ambiguous phrasing.
   - Added versioned metadata (semver) and changelog section.

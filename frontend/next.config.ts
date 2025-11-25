@@ -30,6 +30,9 @@ const nextConfig: NextConfig = {
       "@ai-sdk/openai",
       "@ai-sdk/anthropic",
     ],
+    // Enable Turbopack file system caching for faster dev builds
+    // Note: turbopackFileSystemCacheForBuild requires canary version
+    turbopackFileSystemCacheForDev: true,
   },
 
   // Headers for security and performance
@@ -131,9 +134,11 @@ const nextConfig: NextConfig = {
   // Enable static exports optimization
   trailingSlash: false,
 
-  // Turbopack config to avoid webpack conflicts
+  // Turbopack configuration for Next.js 16
+  // Set root to current directory (where pnpm-lock.yaml is located)
+  // Note: For non-monorepo setups, this is the default but explicitly set for clarity
   turbopack: {
-    // Empty config for now
+    root: ".",
   },
 };
 
