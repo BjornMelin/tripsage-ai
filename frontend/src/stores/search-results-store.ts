@@ -3,58 +3,17 @@
  */
 
 import type { SearchResults, SearchType } from "@schemas/search";
-import { z } from "zod";
+import type {
+  ErrorDetails,
+  SearchContext,
+  SearchMetrics,
+  SearchStatus,
+} from "@schemas/stores";
 import { create, type StateCreator } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 import { nowIso, secureId } from "@/lib/security/random";
 
-// Validation schemas for search results
-const SEARCH_STATUS_SCHEMA = z.enum([
-  "idle",
-  "searching",
-  "success",
-  "error",
-  "cancelled",
-]);
-const SEARCH_TYPE_SCHEMA = z.enum([
-  "flight",
-  "accommodation",
-  "activity",
-  "destination",
-]);
-
-const SEARCH_METRICS_SCHEMA = z.object({
-  currentPage: z.number().min(1).default(1),
-  hasMoreResults: z.boolean().default(false),
-  provider: z.string().optional(),
-  requestId: z.string().optional(),
-  resultsPerPage: z.number().min(1).default(20),
-  searchDuration: z.number().min(0).optional(),
-  totalResults: z.number().min(0).default(0),
-});
-
-const SEARCH_CONTEXT_SCHEMA = z.object({
-  completedAt: z.string().optional(),
-  metrics: SEARCH_METRICS_SCHEMA.optional(),
-  searchId: z.string(),
-  searchParams: z.record(z.string(), z.unknown()),
-  searchType: SEARCH_TYPE_SCHEMA,
-  startedAt: z.string(),
-});
-
-const ERROR_DETAILS_SCHEMA = z.object({
-  code: z.string().optional(),
-  details: z.record(z.string(), z.unknown()).optional(),
-  message: z.string(),
-  occurredAt: z.string(),
-  retryable: z.boolean().default(true),
-});
-
-// Types derived from schemas
-export type SearchStatus = z.infer<typeof SEARCH_STATUS_SCHEMA>;
-export type SearchMetrics = z.infer<typeof SEARCH_METRICS_SCHEMA>;
-export type SearchContext = z.infer<typeof SEARCH_CONTEXT_SCHEMA>;
-export type ErrorDetails = z.infer<typeof ERROR_DETAILS_SCHEMA>;
+// Schemas imported from @schemas/stores
 
 // Search results store interface
 interface SearchResultsState {
