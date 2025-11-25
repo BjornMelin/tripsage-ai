@@ -1,12 +1,13 @@
 /**
  * @fileoverview Destination search form component for searching destinations.
  */
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { DestinationSearchParams } from "@schemas/search";
 import { Clock, MapPin, Star, TrendingUp } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
@@ -29,8 +30,11 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/components/ui/use-toast";
 import { useMemoryContext } from "@/hooks/use-memory";
+import { initTelemetry } from "@/lib/telemetry/client";
 
+/** Zod schema for destination search form values. */
 const DestinationSearchFormSchema = z.object({
   language: z.string().optional(),
   limit: z
@@ -45,8 +49,10 @@ const DestinationSearchFormSchema = z.object({
   ),
 });
 
+/** Type for destination search form values. */
 export type DestinationSearchFormValues = z.infer<typeof DestinationSearchFormSchema>;
 
+/** Interface for destination suggestions. */
 interface DestinationSuggestion {
   placeId: string;
   description: string;
@@ -55,6 +61,14 @@ interface DestinationSuggestion {
   types: string[];
 }
 
+type PlacesApiPlace = {
+  id: string;
+  displayName?: { text: string };
+  formattedAddress?: string;
+  types?: string[];
+};
+
+/** Interface for destination search form props. */
 interface DestinationSearchFormProps {
   onSearch?: (data: DestinationSearchParams) => void;
   initialValues?: Partial<DestinationSearchFormValues>;
@@ -62,6 +76,7 @@ interface DestinationSearchFormProps {
   showMemoryRecommendations?: boolean;
 }
 
+/** Array of destination types. */
 const DestinationTypes = [
   {
     description: "Local municipalities and urban areas",
@@ -85,6 +100,7 @@ const DestinationTypes = [
   },
 ];
 
+/** Array of popular destinations. */
 const PopularDestinations = [
   "Paris, France",
   "Tokyo, Japan",
@@ -96,6 +112,16 @@ const PopularDestinations = [
   "Dubai, UAE",
 ];
 
+/**
+ * Destination search form with debounced autocomplete and optional
+ * memory suggestions.
+ *
+ * @param onSearch - Callback function to handle search submissions.
+ * @param initialValues - Initial values for the form.
+ * @param userId - User ID for memory-based recommendations.
+ * @param showMemoryRecommendations - Whether to show memory-based recommendations.
+ * @returns Destination search form component.
+ */
 export function DestinationSearchForm({
   onSearch,
   initialValues = {
@@ -114,8 +140,15 @@ export function DestinationSearchForm({
   );
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  const [suggestionsError, setSuggestionsError] = useState<string | null>(null);
   const suggestionsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const cacheRef = useRef<Map<string, { places: PlacesApiPlace[]; timestamp: number }>>(
+    new Map()
+  );
+  const { toast } = useToast();
+  const CacheTtlMs = 2 * 60_000;
 
   const form = useForm<DestinationSearchFormValues>({
     defaultValues: {
@@ -128,7 +161,137 @@ export function DestinationSearchForm({
     resolver: zodResolver(DestinationSearchFormSchema),
   });
 
+  useEffect(() => {
+    initTelemetry();
+  }, []);
+
   const query = form.watch("query");
+
+  /**
+   * Fetches autocomplete suggestions from `/api/places/search` with abort support.
+   *
+   * @param searchQuery - The query to search for.
+   * @returns Promise resolving to an array of destination suggestions.
+   * @throws Error if the search fails.
+   */
+  const fetchAutocompleteSuggestions = useCallback(
+    async (searchQuery: string) => {
+      const cacheKey = searchQuery.toLowerCase();
+      const cached = cacheRef.current.get(cacheKey);
+      const limit = form.getValues("limit") ?? 10;
+      const selectedTypes = form.getValues("types") ?? [];
+
+      if (cached && Date.now() - cached.timestamp < CacheTtlMs) {
+        const filteredCached =
+          selectedTypes.length > 0
+            ? cached.places.filter((place) =>
+                place.types?.some((type) =>
+                  selectedTypes.includes(
+                    type as DestinationSearchFormValues["types"][number]
+                  )
+                )
+              )
+            : cached.places;
+
+        const mappedCached = filteredCached.slice(0, limit).map((place) => ({
+          description: place.formattedAddress ?? place.displayName?.text ?? "",
+          mainText: place.displayName?.text ?? "Unknown",
+          placeId: place.id,
+          secondaryText: place.formattedAddress ?? "",
+          types: place.types ?? [],
+        }));
+        setSuggestions(mappedCached);
+        setShowSuggestions(true);
+        setSuggestionsError(null);
+        setIsLoadingSuggestions(false);
+        return;
+      }
+
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
+      setSuggestionsError(null);
+
+      try {
+        const requestBody = {
+          maxResultCount: limit,
+          textQuery: searchQuery,
+        };
+
+        const response = await fetch("/api/places/search", {
+          body: JSON.stringify(requestBody),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+          signal: abortController.signal,
+        });
+
+        if (!response.ok) {
+          if (response.status === 429) {
+            throw new Error("Too many requests. Please try again in a moment.");
+          }
+          const errorData = (await response.json().catch(() => ({}))) as {
+            reason?: string;
+          };
+          throw new Error(errorData.reason ?? `Search failed: ${response.status}`);
+        }
+
+        const data = (await response.json()) as { places?: PlacesApiPlace[] };
+
+        const places = data.places ?? [];
+        cacheRef.current.set(cacheKey, { places, timestamp: Date.now() });
+
+        const filteredPlaces =
+          selectedTypes.length > 0
+            ? places.filter((place) =>
+                place.types?.some((type) =>
+                  selectedTypes.includes(
+                    type as DestinationSearchFormValues["types"][number]
+                  )
+                )
+              )
+            : places;
+
+        const mappedSuggestions: DestinationSuggestion[] = filteredPlaces
+          .slice(0, limit)
+          .map((place) => ({
+            description: place.formattedAddress ?? place.displayName?.text ?? "",
+            mainText: place.displayName?.text ?? "Unknown",
+            placeId: place.id,
+            secondaryText: place.formattedAddress ?? "",
+            types: place.types ?? [],
+          }));
+
+        if (searchQuery !== form.getValues("query")) {
+          return;
+        }
+
+        setSuggestions(mappedSuggestions);
+        setSuggestionsError(null);
+        setShowSuggestions(true);
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+          return;
+        }
+        setSuggestionsError(
+          error instanceof Error ? error.message : "Unable to fetch suggestions."
+        );
+        toast({
+          description:
+            error instanceof Error ? error.message : "Unable to fetch suggestions.",
+          title: "Places search failed",
+          variant: "destructive",
+        });
+        setSuggestions([]);
+        setShowSuggestions(true);
+      } finally {
+        setIsLoadingSuggestions(false);
+        abortControllerRef.current = null;
+      }
+    },
+    [form, toast]
+  );
 
   // Debounced autocomplete suggestions
   useEffect(() => {
@@ -139,57 +302,43 @@ export function DestinationSearchForm({
     if (query && query.length >= 2) {
       suggestionsTimeoutRef.current = setTimeout(() => {
         setIsLoadingSuggestions(true);
-        try {
-          // Mock API call - replace with actual Google Places Autocomplete API
-          const mockSuggestions: DestinationSuggestion[] = [
-            {
-              description: `${query} - Popular Destination`,
-              mainText: query,
-              placeId: "ChIJD7fiBh9u5kcRYJSMaMOCCwQ",
-              secondaryText: "Tourist Destination",
-              types: ["locality", "political"],
-            },
-            {
-              description: `${query} City Center`,
-              mainText: `${query} City Center`,
-              placeId: "ChIJmysnFgZYSoYRSfPTL2YJuck",
-              secondaryText: "Urban Area",
-              types: ["establishment"],
-            },
-          ];
-
-          setSuggestions(mockSuggestions);
-          setShowSuggestions(true);
-        } catch (error) {
-          console.error("Error fetching suggestions:", error);
-          setSuggestions([]);
-        } finally {
-          setIsLoadingSuggestions(false);
-        }
+        fetchAutocompleteSuggestions(query);
       }, 300);
     } else {
       setSuggestions([]);
       setShowSuggestions(false);
+      setIsLoadingSuggestions(false);
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
     }
 
     return () => {
       if (suggestionsTimeoutRef.current) {
         clearTimeout(suggestionsTimeoutRef.current);
       }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
     };
-  }, [query]);
+  }, [fetchAutocompleteSuggestions, query]);
 
+  /** Applies a selected suggestion to the form and hides the dropdown. */
   const handleSuggestionSelect = (suggestion: DestinationSuggestion) => {
     form.setValue("query", suggestion.description);
     setShowSuggestions(false);
     setSuggestions([]);
   };
 
+  /** Prefills the query with a popular destination and focuses the input. */
   const handlePopularDestinationClick = (destination: string) => {
     form.setValue("query", destination);
     inputRef.current?.focus();
   };
 
+  /** Submits the search values to the parent callback. */
   const handleSubmit = (data: DestinationSearchFormValues) => {
     if (onSearch) {
       onSearch(mapDestinationValuesToParams(data));
@@ -237,13 +386,19 @@ export function DestinationSearchForm({
 
                         {/* Autocomplete Suggestions Dropdown */}
                         {showSuggestions &&
-                          (suggestions.length > 0 || isLoadingSuggestions) && (
+                          (suggestions.length > 0 ||
+                            isLoadingSuggestions ||
+                            (!isLoadingSuggestions && (query?.length ?? 0) >= 2)) && (
                             <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
                               {isLoadingSuggestions ? (
                                 <div className="p-3 text-sm text-gray-500">
                                   Loading suggestions...
                                 </div>
-                              ) : (
+                              ) : suggestionsError ? (
+                                <div className="p-3 text-sm text-red-600">
+                                  {suggestionsError}
+                                </div>
+                              ) : suggestions.length > 0 ? (
                                 suggestions.map((suggestion) => (
                                   <button
                                     key={suggestion.placeId}
@@ -259,6 +414,10 @@ export function DestinationSearchForm({
                                     </div>
                                   </button>
                                 ))
+                              ) : (
+                                <div className="p-3 text-sm text-gray-500">
+                                  No suggestions found.
+                                </div>
                               )}
                             </div>
                           )}
@@ -341,7 +500,7 @@ export function DestinationSearchForm({
                       .map((memory) => {
                         // Extract destination names from memory content
                         const matches = memory.content.match(
-                          /\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b/g
+                          /\b[A-Z][A-Za-z]+(?:[\s-](?:[A-Z][A-Za-z]+|de|da|do|del|los|las|of|the))*\b/g
                         );
                         const destination = matches?.[0] || memory.content.slice(0, 20);
                         return (

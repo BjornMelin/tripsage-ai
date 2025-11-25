@@ -13,10 +13,11 @@ import type { DestinationResearchRequest } from "@schemas/agents";
 import { agentSchemas } from "@schemas/agents";
 import type { NextRequest } from "next/server";
 import type { z } from "zod";
+import { resolveAgentConfig } from "@/lib/agents/config-resolver";
 import { runDestinationAgent } from "@/lib/agents/destination-agent";
 import { createErrorHandler } from "@/lib/agents/error-recovery";
 import { withApiGuards } from "@/lib/api/factory";
-import { errorResponse, parseJsonBody } from "@/lib/next/route-helpers";
+import { errorResponse, parseJsonBody } from "@/lib/api/route-helpers";
 
 export const maxDuration = 60;
 
@@ -51,10 +52,12 @@ export const POST = withApiGuards({
     });
   }
 
-  const modelHint = new URL(req.url).searchParams.get("model") ?? undefined;
+  const { config: agentConfig } = await resolveAgentConfig("destinationResearchAgent");
+  const modelHint =
+    agentConfig.model ?? new URL(req.url).searchParams.get("model") ?? undefined;
   const { model, modelId } = await resolveProvider(user?.id ?? "anon", modelHint);
 
-  const result = runDestinationAgent({ model, modelId }, body);
+  const result = runDestinationAgent({ model, modelId }, agentConfig, body);
   return result.toUIMessageStreamResponse({
     onError: createErrorHandler(),
   });

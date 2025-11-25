@@ -95,9 +95,9 @@ export function TripCard({ trip, onEdit, onDelete, className }: TripCardProps) {
           <Badge className={statusColors[status]}>
             {status.charAt(0).toUpperCase() + status.slice(1)}
           </Badge>
-          {trip.isPublic && <Badge variant="outline">Public</Badge>}
+          {trip.visibility === "public" && <Badge variant="outline">Public</Badge>}
         </div>
-        <CardTitle className="line-clamp-1">{trip.name}</CardTitle>
+        <CardTitle className="line-clamp-1">{trip.title}</CardTitle>
         {trip.description && (
           <CardDescription className="line-clamp-2">{trip.description}</CardDescription>
         )}
@@ -123,7 +123,7 @@ export function TripCard({ trip, onEdit, onDelete, className }: TripCardProps) {
           </div>
         )}
 
-        {trip.budget && (
+        {trip.budget !== undefined && trip.budget > 0 && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <DollarSign className="h-4 w-4" />
             <span>

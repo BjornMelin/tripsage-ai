@@ -18,6 +18,119 @@ export const visibilitySchema = z.enum(["private", "shared", "public"]);
 export type TripVisibility = z.infer<typeof visibilitySchema>;
 
 /**
+ * Zod schema for trip destinations (UI/store representation).
+ * Represents a destination within a trip with activities, accommodation, and transportation.
+ */
+export const tripDestinationSchema = z.strictObject({
+  accommodation: z
+    .object({
+      name: z.string(),
+      price: z.number().optional(),
+      type: z.string(),
+    })
+    .optional(),
+  activities: z.array(z.string()).optional(),
+  coordinates: z
+    .object({
+      latitude: z.number(),
+      longitude: z.number(),
+    })
+    .optional(),
+  country: z.string(),
+  endDate: z.string().optional(),
+  estimatedCost: z.number().optional(),
+  id: z.string(),
+  name: z.string(),
+  notes: z.string().optional(),
+  startDate: z.string().optional(),
+  transportation: z
+    .object({
+      details: z.string(),
+      price: z.number().optional(),
+      type: z.string(),
+    })
+    .optional(),
+});
+
+/** TypeScript type for trip destinations. */
+export type TripDestination = z.infer<typeof tripDestinationSchema>;
+
+/**
+ * Zod schema for trip preferences (UI/store representation).
+ * Includes budget breakdown, accommodation preferences, transportation, activities, etc.
+ */
+export const tripPreferencesSchema = z
+  .strictObject({
+    accessibilityNeeds: z.array(z.string()).optional(),
+    accommodation: z
+      .object({
+        amenities: z.array(z.string()).optional(),
+        locationPreference: z.string().optional(),
+        minRating: z.number().optional(),
+        type: z.string().optional(),
+      })
+      .optional(),
+    activities: z.array(z.string()).optional(),
+    budget: z
+      .object({
+        accommodationBudget: z.number().optional(),
+        activitiesBudget: z.number().optional(),
+        currency: z.string().optional(),
+        foodBudget: z.number().optional(),
+        total: z.number().optional(),
+        transportationBudget: z.number().optional(),
+      })
+      .optional(),
+    dietaryRestrictions: z.array(z.string()).optional(),
+    transportation: z
+      .object({
+        flightPreferences: z
+          .object({
+            maxStops: z.number().optional(),
+            preferredAirlines: z.array(z.string()).optional(),
+            seatClass: z.string().optional(),
+            timeWindow: z.string().optional(),
+          })
+          .optional(),
+        localTransportation: z.array(z.string()).optional(),
+      })
+      .optional(),
+  })
+  .catchall(z.unknown()); // Allow additional preferences
+
+/** TypeScript type for trip preferences. */
+export type TripPreferences = z.infer<typeof tripPreferencesSchema>;
+
+/**
+ * Zod schema for UI Trip representation.
+ * Maps database trips to UI-friendly format with camelCase fields and flat budget.
+ * This is the canonical schema for the trip store and UI components.
+ */
+export const storeTripSchema = z.strictObject({
+  budget: primitiveSchemas.nonNegativeNumber.optional(),
+  createdAt: z.string().optional(),
+  currency: primitiveSchemas.isoCurrency.default("USD"),
+  description: z.string().optional(),
+  destination: z.string().optional(),
+  destinations: z.array(tripDestinationSchema).default([]),
+  endDate: z.string().optional(),
+  id: z.string(),
+  preferences: tripPreferencesSchema.optional(),
+  startDate: z.string().optional(),
+  status: tripStatusSchema.optional(),
+  tags: z.array(z.string()).optional(),
+  title: z.string(),
+  travelers: z.number().int().optional(),
+  tripType: tripTypeSchema.optional(),
+  updatedAt: z.string().optional(),
+  userId: z.string().optional(),
+  visibility: visibilitySchema.optional(),
+});
+
+/** TypeScript type for UI Trip representation. */
+export type UiTrip = z.infer<typeof storeTripSchema>;
+
+/**
  * Zod schema for filtering trips based on various criteria.
  * Supports filtering by destination, date range, and status.
  */
@@ -161,7 +274,6 @@ export const createTripFormSchema = z
     description: z.string().max(1000, { error: "Description too long" }).optional(),
     destination: z.string().min(1, { error: "Destination is required" }),
     endDate: FUTURE_DATE_SCHEMA,
-    isPublic: z.boolean(),
     startDate: FUTURE_DATE_SCHEMA,
     tags: z.array(z.string().max(50)).max(10).optional(),
     title: z
@@ -198,7 +310,6 @@ export const updateTripFormSchema = z.object({
   destination: z.string().optional(),
   endDate: z.iso.date().optional(),
   id: primitiveSchemas.uuid,
-  isPublic: z.boolean().optional(),
   maxParticipants: z.number().optional(),
   startDate: z.iso.date().optional(),
   tags: z.array(z.string()).optional(),

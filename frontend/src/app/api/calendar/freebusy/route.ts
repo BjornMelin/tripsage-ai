@@ -14,8 +14,8 @@ import { freeBusyRequestSchema } from "@schemas/calendar";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
+import { parseJsonBody, validateSchema } from "@/lib/api/route-helpers";
 import { queryFreeBusy } from "@/lib/calendar/google";
-import { parseJsonBody, validateSchema } from "@/lib/next/route-helpers";
 
 /**
  * POST /api/calendar/freebusy

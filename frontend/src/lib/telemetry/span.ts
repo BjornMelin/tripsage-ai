@@ -7,7 +7,7 @@
 
 import "server-only";
 
-import { type Span, SpanStatusCode, trace } from "@opentelemetry/api";
+import { type Span, SpanStatusCode, type Tracer, trace } from "@opentelemetry/api";
 import { getTelemetryTracer } from "@/lib/telemetry/tracer";
 
 /**
@@ -32,7 +32,34 @@ export type TelemetryLogOptions = {
 };
 
 const REDACTED_VALUE = "[REDACTED]";
-const tracer = getTelemetryTracer();
+
+function ensureSpanCapabilities(span: Span): Span {
+  // Use Proxy to avoid mutating the original span object
+  return new Proxy(span, {
+    get(target, prop, receiver) {
+      if (prop === "addEvent" && typeof target.addEvent !== "function") {
+        // No-op fallback for spans without addEvent capability
+        return () => receiver;
+      }
+      if (prop === "setAttribute" && typeof target.setAttribute !== "function") {
+        // No-op fallback for spans without setAttribute capability
+        return () => receiver;
+      }
+      // Delegate all other properties/methods to the original span
+      return Reflect.get(target, prop, receiver);
+    },
+  }) as Span;
+}
+
+// Lazy tracer to allow tests to inject mocks before first span creation.
+let tracerRef: Tracer | null = null;
+
+function getTracer(): Tracer {
+  if (!tracerRef) {
+    tracerRef = getTelemetryTracer();
+  }
+  return tracerRef;
+}
 
 /**
  * Common span execution logic for both sync and async operations.
@@ -109,13 +136,13 @@ export function withTelemetrySpanSync<T>(
   options: WithTelemetrySpanOptions,
   execute: (span: Span) => T
 ): T {
-  const spanAttributes = sanitizeAttributes(options.attributes, options.redactKeys);
-  const runner = (span: Span): T => executeSpan(span, execute, false) as T;
+  const tracer = getTracer();
+  const spanAttributes =
+    sanitizeAttributes(options.attributes, options.redactKeys) ?? {};
+  const runner = (span: Span): T =>
+    executeSpan(ensureSpanCapabilities(span), execute, false) as T;
 
-  if (spanAttributes) {
-    return tracer.startActiveSpan(name, { attributes: spanAttributes }, runner);
-  }
-  return tracer.startActiveSpan(name, runner);
+  return tracer.startActiveSpan(name, { attributes: spanAttributes }, runner);
 }
 
 /**
@@ -132,14 +159,13 @@ export function withTelemetrySpan<T>(
   options: WithTelemetrySpanOptions,
   execute: (span: Span) => Promise<T> | T
 ): Promise<T> {
-  const spanAttributes = sanitizeAttributes(options.attributes, options.redactKeys);
+  const tracer = getTracer();
+  const spanAttributes =
+    sanitizeAttributes(options.attributes, options.redactKeys) ?? {};
   const runner = async (span: Span): Promise<T> =>
-    executeSpan(span, execute, true) as Promise<T>;
+    executeSpan(ensureSpanCapabilities(span), execute, true) as Promise<T>;
 
-  if (spanAttributes) {
-    return tracer.startActiveSpan(name, { attributes: spanAttributes }, runner);
-  }
-  return tracer.startActiveSpan(name, runner);
+  return tracer.startActiveSpan(name, { attributes: spanAttributes }, runner);
 }
 
 /**
@@ -181,20 +207,21 @@ export function recordTelemetryEvent(
   const { attributes, level = "info" } = options;
   const sanitizedAttributes = sanitizeAttributes(attributes);
 
+  const tracer = getTracer();
   tracer.startActiveSpan(`event.${eventName}`, (span) => {
-    span.setAttribute("event.level", level);
-    span.setAttribute("event.name", eventName);
+    span?.setAttribute?.("event.level", level);
+    span?.setAttribute?.("event.name", eventName);
 
     if (sanitizedAttributes) {
       Object.entries(sanitizedAttributes).forEach(([key, value]) => {
-        span.setAttribute(`event.${key}`, value);
+        span?.setAttribute?.(`event.${key}`, value);
       });
     }
 
     // Add event to span without console logging
-    span.addEvent(eventName, sanitizedAttributes);
+    span?.addEvent?.(eventName, sanitizedAttributes);
 
-    span.end();
+    span?.end?.();
   });
 }
 

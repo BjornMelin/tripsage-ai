@@ -1,12 +1,20 @@
+/** @vitest-environment node */
+
 import { lookupPoiContext } from "@ai/tools/server/google-places";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { HttpResponse, http } from "msw";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
 import { cacheLatLng, getCachedLatLng } from "@/lib/google/caching";
+import { server } from "@/test/msw/server";
 
 const mockContext = {
   messages: [],
   toolCallId: "test-call-id",
 };
+
+afterEach(() => {
+  server.resetHandlers();
+});
 
 vi.mock("@/lib/google/caching", () => ({
   cacheLatLng: vi.fn().mockResolvedValue(undefined),
@@ -19,15 +27,29 @@ vi.mock("@/lib/env/server", () => ({
   getServerEnvVarWithFallback: vi.fn((_key: string, fallback?: string) => fallback),
 }));
 
-vi.mock("@/lib/telemetry/span", () => ({
-  withTelemetrySpan: vi.fn((_name: string, _options, fn) =>
-    fn({
-      addEvent: vi.fn(),
-      recordException: vi.fn(),
-      setAttribute: vi.fn(),
-    })
-  ),
-}));
+vi.mock("@/lib/telemetry/span", async () => {
+  const actual =
+    await vi.importActual<typeof import("@/lib/telemetry/span")>(
+      "@/lib/telemetry/span"
+    );
+  type WithSpan = typeof actual.withTelemetrySpan;
+  type SpanArg = Parameters<WithSpan>[2] extends (span: infer S) => unknown ? S : never;
+  return {
+    ...actual,
+    withTelemetrySpan: vi.fn(
+      (
+        _name: Parameters<WithSpan>[0],
+        _options: Parameters<WithSpan>[1],
+        fn: Parameters<WithSpan>[2]
+      ) =>
+        fn({
+          addEvent: vi.fn(),
+          recordException: vi.fn(),
+          setAttribute: vi.fn(),
+        } as unknown as SpanArg)
+    ),
+  };
+});
 
 describe("lookupPoiContext", () => {
   beforeEach(() => {
@@ -80,19 +102,20 @@ describe("lookupPoiContext", () => {
   });
 
   it("handles coordinates input", async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      json: async () => ({
-        places: [
-          {
-            displayName: { text: "Test POI" },
-            id: "ChIJtest123",
-            location: { latitude: 35.6895, longitude: 139.6917 },
-            types: ["tourist_attraction"],
-          },
-        ],
-      }),
-      ok: true,
-    });
+    server.use(
+      http.post("https://places.googleapis.com/v1/places:searchNearby", () =>
+        HttpResponse.json({
+          places: [
+            {
+              displayName: { text: "Test POI" },
+              id: "ChIJtest123",
+              location: { latitude: 35.6895, longitude: 139.6917 },
+              types: ["tourist_attraction"],
+            },
+          ],
+        })
+      )
+    );
 
     const exec = lookupPoiContext.execute as
       | ((params: unknown, ctx: unknown) => Promise<unknown>)

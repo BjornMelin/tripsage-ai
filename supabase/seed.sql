@@ -85,6 +85,7 @@ INSERT INTO trips (
 -- Insert sample flight options
 INSERT INTO flights (
     trip_id,
+    user_id,
     origin,
     destination,
     departure_date,
@@ -99,6 +100,7 @@ INSERT INTO flights (
 ) VALUES 
 (
     1, -- Japan trip
+    '00000000-0000-0000-0000-000000000001'::UUID,
     'LAX',
     'NRT',
     '2025-07-15',
@@ -113,6 +115,7 @@ INSERT INTO flights (
 ),
 (
     2, -- NY business trip
+    '00000000-0000-0000-0000-000000000001'::UUID,
     'LAX',
     'JFK',
     '2025-08-10',
@@ -198,52 +201,24 @@ INSERT INTO chat_sessions (
 -- Insert sample chat messages
 INSERT INTO chat_messages (
     session_id,
+    user_id,
     role,
     content,
     metadata
 ) VALUES 
 (
     '10000000-0000-0000-0000-000000000001'::UUID,
+    '00000000-0000-0000-0000-000000000001'::UUID,
     'user',
     'I want to plan a trip to Japan for 2 people in July. Budget is around $5000.',
     '{"message_type": "trip_request"}'
 ),
 (
     '10000000-0000-0000-0000-000000000001'::UUID,
+    '00000000-0000-0000-0000-000000000001'::UUID,
     'assistant',
     'Great! I''d love to help you plan your trip to Japan. With a $5000 budget for 2 people in July, you''ll have wonderful options. Let me search for flights and accommodations for you.',
     '{"message_type": "trip_assistance", "tools_used": ["flight_search", "accommodation_search"]}'
-);
-
--- ===========================
--- SAMPLE API KEYS DATA
--- ===========================
-
--- Insert sample API keys (encrypted dummy data for development)
-    user_id,
-    service_name,
-    key_name,
-    encrypted_key,
-    key_hash,
-    is_active,
-    metadata
-) VALUES 
-(
-    '00000000-0000-0000-0000-000000000001'::UUID,
-    'duffel',
-    'production',
-    'encrypted_dummy_key_for_development_testing',
-    'hash_of_dummy_key',
-    true,
-    '{"environment": "sandbox", "capabilities": ["flights", "booking"]}'
-),
-(
-    '00000000-0000-0000-0000-000000000001'::UUID,
-    'google_maps',
-    'places_api',
-    'hash_of_places_key',
-    true,
-    '{"environment": "production", "capabilities": ["places", "geocoding", "directions"]}'
 );
 
 -- ===========================
@@ -269,21 +244,27 @@ INSERT INTO memories.turns (
     user_id,
     role,
     content,
-    metadata
+    attachments,
+    tool_calls,
+    tool_results
 ) VALUES 
 (
     '00000000-0000-0000-0000-000000000100'::UUID,
     '00000000-0000-0000-0000-000000000001'::UUID,
     'user',
     '"User prefers economy class flights and values authentic cultural experiences over luxury accommodations."'::jsonb,
-    '{}'::jsonb
+    '[]'::jsonb,
+    '[]'::jsonb,
+    '[]'::jsonb
 ),
 (
     '00000000-0000-0000-0000-000000000100'::UUID,
     '00000000-0000-0000-0000-000000000001'::UUID,
     'assistant',
     '"Noted your preferences for economy flights and authentic cultural experiences."'::jsonb,
-    '{}'::jsonb
+    '[]'::jsonb,
+    '[]'::jsonb,
+    '[]'::jsonb
 );
 
 -- ===========================
@@ -295,14 +276,12 @@ DO $$
 BEGIN
     RAISE NOTICE 'TripSage Development Seed Data Loaded Successfully!';
     RAISE NOTICE 'Seed data includes:';
-    RAISE NOTICE '- 👤 1 demo user (demo@tripsage.ai)';
-    RAISE NOTICE '- ✈️  2 sample trips (Japan vacation, NY business)';
-    RAISE NOTICE '- 🎫 2 flight options';
-    RAISE NOTICE '- 🏨 2 accommodation options';
-    RAISE NOTICE '- 💬 1 chat session with sample messages';
-    RAISE NOTICE '- 🔑 2 API key entries (dummy data)';
-    RAISE NOTICE '- 🧠 1 memory session with 2 turns for personalization';
-    RAISE NOTICE '';
-    RAISE NOTICE 'Ready for development and testing! 🚀';
+    RAISE NOTICE '- 1 demo user (demo@tripsage.ai)';
+    RAISE NOTICE '- 2 sample trips (Japan vacation, NY business)';
+    RAISE NOTICE '- 2 flight options';
+    RAISE NOTICE '- 2 accommodation options';
+    RAISE NOTICE '- 1 chat session with sample messages';
+    RAISE NOTICE '- 1 memory session with 2 turns for personalization';
+    RAISE NOTICE 'Ready for development and testing.';
     RAISE NOTICE 'Access demo account: demo@tripsage.ai';
 END $$;

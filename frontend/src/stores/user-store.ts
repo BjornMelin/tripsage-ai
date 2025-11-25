@@ -4,109 +4,21 @@
  * computed and stored to ensure deterministic reads in tests and UI.
  */
 
-import { z } from "zod";
+import {
+  type FavoriteDestination,
+  type PersonalInfo,
+  type PrivacySettings,
+  personalInfoSchema,
+  privacySettingsSchema,
+  type TravelDocument,
+  type TravelPreferences,
+  travelPreferencesSchema,
+  type UserProfile,
+  userProfileSchema,
+} from "@schemas/stores";
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 import { nowIso, secureId } from "@/lib/security/random";
-
-// Validation schemas for user profile
-const TRAVEL_PREFERENCES_SCHEMA = z.object({
-  accessibilityRequirements: z.array(z.string()).default([]),
-  dietaryRestrictions: z.array(z.string()).default([]),
-  excludedAirlines: z.array(z.string()).default([]),
-  maxBudgetPerNight: z.number().min(0).optional(),
-  maxLayovers: z.number().min(0).max(5).default(2),
-  preferredAccommodationType: z
-    .enum(["hotel", "apartment", "villa", "hostel", "resort"])
-    .default("hotel"),
-  preferredAirlines: z.array(z.string()).default([]),
-  preferredArrivalTime: z
-    .enum(["early_morning", "morning", "afternoon", "evening", "late_night"])
-    .optional(),
-  preferredCabinClass: z
-    .enum(["economy", "premium_economy", "business", "first"])
-    .default("economy"),
-  preferredDepartureTime: z
-    .enum(["early_morning", "morning", "afternoon", "evening", "late_night"])
-    .optional(),
-  preferredHotelChains: z.array(z.string()).default([]),
-  requireBreakfast: z.boolean().default(false),
-  requireGym: z.boolean().default(false),
-  requireParking: z.boolean().default(false),
-  requirePool: z.boolean().default(false),
-  requireWifi: z.boolean().default(true),
-});
-
-const PERSONAL_INFO_SCHEMA = z.object({
-  bio: z.string().max(500).optional(),
-  dateOfBirth: z.string().optional(),
-  displayName: z.string().optional(),
-  emergencyContact: z
-    .object({
-      email: z.email(),
-      name: z.string(),
-      phone: z.string(),
-      relationship: z.string(),
-    })
-    .optional(),
-  firstName: z.string().optional(),
-  gender: z.enum(["male", "female", "other", "prefer_not_to_say"]).optional(),
-  lastName: z.string().optional(),
-  location: z.string().optional(),
-  phoneNumber: z.string().optional(),
-  website: z.url().optional(),
-});
-
-const PRIVACY_SETTINGS_SCHEMA = z.object({
-  allowDataSharing: z.boolean().default(false),
-  enableAnalytics: z.boolean().default(true),
-  enableLocationTracking: z.boolean().default(false),
-  profileVisibility: z.enum(["public", "friends", "private"]).default("private"),
-  showTravelHistory: z.boolean().default(false),
-});
-
-export const userProfileSchema = z.object({
-  avatarUrl: z.url().optional(),
-  createdAt: z.string(),
-  email: z.email(),
-  favoriteDestinations: z
-    .array(
-      z.object({
-        country: z.string(),
-        id: z.string(),
-        lastVisited: z.string().optional(),
-        name: z.string(),
-        notes: z.string().optional(),
-        visitCount: z.number().default(0),
-      })
-    )
-    .default([]),
-  id: z.string(),
-  personalInfo: PERSONAL_INFO_SCHEMA.optional(),
-  privacySettings: PRIVACY_SETTINGS_SCHEMA.optional(),
-  travelDocuments: z
-    .array(
-      z.object({
-        expiryDate: z.string(),
-        id: z.string(),
-        issuingCountry: z.string(),
-        notes: z.string().optional(),
-        number: z.string(),
-        type: z.enum(["passport", "visa", "license", "insurance", "vaccination"]),
-      })
-    )
-    .default([]),
-  travelPreferences: TRAVEL_PREFERENCES_SCHEMA.optional(),
-  updatedAt: z.string(),
-});
-
-// Types derived from schemas
-export type TravelPreferences = z.infer<typeof TRAVEL_PREFERENCES_SCHEMA>;
-export type PersonalInfo = z.infer<typeof PERSONAL_INFO_SCHEMA>;
-export type PrivacySettings = z.infer<typeof PRIVACY_SETTINGS_SCHEMA>;
-export type UserProfile = z.infer<typeof userProfileSchema>;
-export type FavoriteDestination = UserProfile["favoriteDestinations"][0];
-export type TravelDocument = UserProfile["travelDocuments"][0];
 
 // User profile store interface (authentication is handled by auth slices)
 interface UserProfileState {
@@ -447,7 +359,7 @@ export const useUserProfileStore = create<UserProfileState>()(
           set({ error: null, isUpdatingProfile: true });
 
           try {
-            const result = PERSONAL_INFO_SCHEMA.safeParse(info);
+            const result = personalInfoSchema.safeParse(info);
             if (!result.success) {
               throw new Error("Invalid personal information");
             }
@@ -489,7 +401,7 @@ export const useUserProfileStore = create<UserProfileState>()(
           set({ error: null, isUpdatingProfile: true });
 
           try {
-            const result = PRIVACY_SETTINGS_SCHEMA.safeParse({
+            const result = privacySettingsSchema.safeParse({
               ...profile.privacySettings,
               ...settings,
             });
@@ -551,7 +463,7 @@ export const useUserProfileStore = create<UserProfileState>()(
           set({ error: null, isUpdatingProfile: true });
 
           try {
-            const result = TRAVEL_PREFERENCES_SCHEMA.safeParse({
+            const result = travelPreferencesSchema.safeParse({
               ...profile.travelPreferences,
               ...preferences,
             });

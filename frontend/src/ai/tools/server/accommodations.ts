@@ -13,15 +13,6 @@ import {
 import { getAccommodationsService } from "@domain/accommodations/container";
 import { ProviderError } from "@domain/accommodations/errors";
 import {
-  extractTokenFromHref,
-  normalizePhoneForRapid,
-  splitGuestName,
-} from "@domain/accommodations/service";
-import {
-  ACCOMMODATION_BOOKING_INPUT_SCHEMA,
-  ACCOMMODATION_CHECK_AVAILABILITY_INPUT_SCHEMA,
-  ACCOMMODATION_DETAILS_INPUT_SCHEMA,
-  ACCOMMODATION_SEARCH_INPUT_SCHEMA,
   type AccommodationBookingRequest,
   type AccommodationBookingResult,
   type AccommodationCheckAvailabilityParams,
@@ -30,10 +21,15 @@ import {
   type AccommodationDetailsResult,
   type AccommodationSearchParams,
   type AccommodationSearchResult,
+  accommodationBookingInputSchema,
+  accommodationCheckAvailabilityInputSchema,
+  accommodationDetailsInputSchema,
+  accommodationSearchInputSchema,
 } from "@schemas/accommodations";
 import { headers } from "next/headers";
 import { processBookingPayment } from "@/lib/payments/booking-payment";
 import { secureUuid } from "@/lib/security/random";
+import { createServerSupabase } from "@/lib/supabase/server";
 import { requireApproval } from "./approvals";
 
 /**
@@ -49,31 +45,31 @@ import { requireApproval } from "./approvals";
  */
 const accommodationsService = getAccommodationsService();
 
-export { ACCOMMODATION_SEARCH_INPUT_SCHEMA as searchAccommodationsInputSchema };
+export { accommodationSearchInputSchema as searchAccommodationsInputSchema };
 
-/** Search for accommodations using Expedia Partner Solutions API. */
+/** Search for accommodations using Amadeus Self-Service API with Google Places enrichment. */
 export const searchAccommodations = createAiTool<
   AccommodationSearchParams,
   AccommodationSearchResult
 >({
   description:
-    "Search for accommodations (hotels and Vrbo vacation rentals) using Expedia Partner Solutions API. Supports semantic search via RAG for natural language queries.",
+    "Search for accommodations (hotels and stays) using Amadeus Self-Service APIs with Google Places enrichment. Supports semantic search via RAG for natural language queries.",
   execute: async (params) => {
     return accommodationsService.search(params, {
       sessionId: await maybeGetUserIdentifier(),
     });
   },
-  inputSchema: ACCOMMODATION_SEARCH_INPUT_SCHEMA,
+  inputSchema: accommodationSearchInputSchema,
   name: "searchAccommodations",
 });
 
-/** Retrieve comprehensive details for a specific accommodation property from Expedia Rapid. */
+/** Retrieve comprehensive details for a specific accommodation property from Amadeus and Google Places. */
 export const getAccommodationDetails = createAiTool<
   AccommodationDetailsParams,
   AccommodationDetailsResult
 >({
   description:
-    "Retrieve comprehensive details for a specific accommodation property from Expedia Rapid.",
+    "Retrieve comprehensive details for a specific accommodation property from Amadeus hotel offers and Google Places content.",
   execute: async (params) => {
     try {
       return await accommodationsService.details(params);
@@ -86,7 +82,7 @@ export const getAccommodationDetails = createAiTool<
       });
     }
   },
-  inputSchema: ACCOMMODATION_DETAILS_INPUT_SCHEMA,
+  inputSchema: accommodationDetailsInputSchema,
   name: "getAccommodationDetails",
 });
 
@@ -98,7 +94,7 @@ export const checkAvailability = createAiTool<
   description:
     "Check final availability and lock pricing for a specific rate. Returns a booking token that must be used quickly to finalize the booking.",
   execute: async (params) => {
-    const userId = await getUserIdFromHeadersOrThrow(
+    const userId = await getAuthenticatedUserId(
       TOOL_ERROR_CODES.accomBookingSessionRequired
     );
     try {
@@ -115,33 +111,33 @@ export const checkAvailability = createAiTool<
       });
     }
   },
-  inputSchema: ACCOMMODATION_CHECK_AVAILABILITY_INPUT_SCHEMA,
+  inputSchema: accommodationCheckAvailabilityInputSchema,
   name: "checkAvailability",
 });
 
-/** Complete an accommodation booking via Expedia Partner Solutions. Requires a bookingToken from checkAvailability, payment method, and prior approval. */
+/** Complete an accommodation booking via Amadeus. Requires a bookingToken from checkAvailability, payment method, and prior approval. */
 export const bookAccommodation = createAiTool<
   AccommodationBookingRequest,
   AccommodationBookingResult
 >({
   description:
-    "Complete an accommodation booking via Expedia Partner Solutions. Requires a bookingToken from checkAvailability, payment method, and prior approval.",
+    "Complete an accommodation booking via Amadeus Self-Service APIs. Requires a bookingToken from checkAvailability, payment method, and prior approval.",
   execute: async (params) => {
     const sessionId = params.sessionId ?? (await maybeGetUserIdentifier());
     if (!sessionId) {
       throw createToolError(TOOL_ERROR_CODES.accomBookingSessionRequired);
     }
-    const userId = await getUserIdFromHeadersOrThrow(
+    const userId = await getAuthenticatedUserId(
       TOOL_ERROR_CODES.accomBookingSessionRequired
     );
     const idempotencyKey = params.idempotencyKey ?? secureUuid();
 
     try {
       return await accommodationsService.book(params, {
-        processPayment: () =>
+        processPayment: ({ amountCents, currency }) =>
           processBookingPayment({
-            amount: params.amount,
-            currency: params.currency,
+            amount: amountCents,
+            currency,
             customerId: userId,
             paymentMethodId: params.paymentMethodId,
             user: {
@@ -167,20 +163,28 @@ export const bookAccommodation = createAiTool<
       });
     }
   },
-  inputSchema: ACCOMMODATION_BOOKING_INPUT_SCHEMA,
+  inputSchema: accommodationBookingInputSchema,
   name: "bookAccommodation",
 });
 
 /** Extract user identifier from request headers or return undefined if not found. */
 async function maybeGetUserIdentifier(): Promise<string | undefined> {
   try {
+    const supabase = await createServerSupabase();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user?.id) return user.id;
+  } catch {
+    // Fall back to header inspection below.
+  }
+
+  try {
     const requestHeaders = await headers();
     const userId = requestHeaders.get("x-user-id");
-    if (userId) {
-      const trimmed = userId.trim();
-      if (trimmed) {
-        return trimmed;
-      }
+    const trimmed = userId?.trim();
+    if (trimmed) {
+      return trimmed;
     }
   } catch {
     // headers() can throw outside of a request context.
@@ -189,10 +193,13 @@ async function maybeGetUserIdentifier(): Promise<string | undefined> {
 }
 
 /** Get user identifier from request headers or throw an error if not found. */
-async function getUserIdFromHeadersOrThrow(errorCode: ToolErrorCode): Promise<string> {
-  const identifier = await maybeGetUserIdentifier();
-  if (identifier) {
-    return identifier;
+async function getAuthenticatedUserId(errorCode: ToolErrorCode): Promise<string> {
+  const supabase = await createServerSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user?.id) {
+    return user.id;
   }
   throw createToolError(errorCode);
 }
@@ -228,5 +235,3 @@ function mapProviderError(
     error: error instanceof Error ? error.message : "Unknown error",
   });
 }
-
-export { extractTokenFromHref, normalizePhoneForRapid, splitGuestName };

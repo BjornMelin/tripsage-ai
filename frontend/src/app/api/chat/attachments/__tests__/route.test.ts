@@ -1,31 +1,18 @@
 /** @vitest-environment node */
 
+import { HttpResponse, http } from "msw";
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockApiRouteAuthUser, resetApiRouteMocks } from "@/test/api-route-helpers";
+import { server } from "@/test/msw/server";
 import { createMockNextRequest, createRouteParamsContext } from "@/test/route-helpers";
-
-// Mock global fetch
-const MOCK_FETCH = vi.fn();
-global.fetch = MOCK_FETCH;
 
 describe("/api/chat/attachments", () => {
   beforeEach(() => {
     resetApiRouteMocks();
     mockApiRouteAuthUser({ id: "user-1" });
     vi.clearAllMocks();
-    MOCK_FETCH.mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          file_id: "test-uuid-1234",
-          file_size: 1000,
-          filename: "test.jpg",
-          mime_type: "image/jpeg",
-          processing_status: "completed",
-        }),
-        { status: 200 }
-      )
-    );
+    server.resetHandlers();
   });
 
   it("should validate content type header", async () => {
@@ -38,14 +25,12 @@ describe("/api/chat/attachments", () => {
     const res = await mod.POST(req, createRouteParamsContext());
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toBe("Invalid content type");
-    expect(body.code).toBe("INVALID_CONTENT_TYPE");
+    expect(body.reason).toBe("Invalid content type");
+    expect(body.error).toBe("invalid_request");
   });
 
   it("should reject empty form data", async () => {
     const mod = await import("../route");
-    // Create a FormData with a non-file entry to ensure it's parseable
-    // The route filters out non-File entries, so this should result in no files
     const emptyFormData = new FormData();
     emptyFormData.append("text", "not-a-file");
     const request = new Request("http://localhost/api/chat/attachments", {
@@ -56,13 +41,29 @@ describe("/api/chat/attachments", () => {
     const res = await mod.POST(req, createRouteParamsContext());
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toBe("No files uploaded");
-    expect(body.code).toBe("NO_FILES");
+    expect(body.reason).toBe("No files uploaded");
+    expect(body.error).toBe("invalid_request");
   });
 
   it("should handle valid single file upload", async () => {
+    server.use(
+      http.post("http://localhost:8001/api/attachments/upload", async ({ request }) => {
+        const body = await request.formData();
+        expect(body.get("file")).toBeInstanceOf(File);
+        return HttpResponse.json(
+          {
+            file_id: "test-uuid-1234",
+            file_size: 1000,
+            filename: "test.jpg",
+            mime_type: "image/jpeg",
+            processing_status: "completed",
+          },
+          { status: 200 }
+        );
+      })
+    );
+
     const mod = await import("../route");
-    // Create a real File object and FormData for testing
     const validFile = new File(["test content"], "test.jpg", { type: "image/jpeg" });
     const formData = new FormData();
     formData.append("file", validFile);
@@ -83,40 +84,39 @@ describe("/api/chat/attachments", () => {
       status: "completed",
       type: "image/jpeg",
     });
-    expect(MOCK_FETCH).toHaveBeenCalledWith(
-      "http://localhost:8001/api/attachments/upload",
-      expect.objectContaining({
-        method: "POST",
-      })
-    );
   });
 
   it("should handle multiple file upload", async () => {
-    const mod = await import("../route");
-    MOCK_FETCH.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          successful_uploads: [
-            {
-              file_id: "test-uuid-1",
-              file_size: 100,
-              filename: "file1.png",
-              mime_type: "image/png",
-              processing_status: "completed",
-            },
-            {
-              file_id: "test-uuid-2",
-              file_size: 200,
-              filename: "file2.pdf",
-              mime_type: "application/pdf",
-              processing_status: "completed",
-            },
-          ],
-        }),
-        { status: 200 }
+    server.use(
+      http.post(
+        "http://localhost:8001/api/attachments/upload/batch",
+        async ({ request }) => {
+          const body = await request.formData();
+          const files = body.getAll("files");
+          expect(files).toHaveLength(2);
+          return HttpResponse.json({
+            successful_uploads: [
+              {
+                fileId: "test-uuid-1",
+                filename: "file1.png",
+                fileSize: 100,
+                mimeType: "image/png",
+                processingStatus: "completed",
+              },
+              {
+                fileId: "test-uuid-2",
+                filename: "file2.pdf",
+                fileSize: 200,
+                mimeType: "application/pdf",
+                processingStatus: "completed",
+              },
+            ],
+          });
+        }
       )
     );
 
+    const mod = await import("../route");
     const file1 = new File(["content1"], "file1.png", { type: "image/png" });
     const file2 = new File(["content2"], "file2.pdf", { type: "application/pdf" });
     const formData = new FormData();
@@ -132,17 +132,10 @@ describe("/api/chat/attachments", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.files).toHaveLength(2);
-    expect(MOCK_FETCH).toHaveBeenCalledWith(
-      "http://localhost:8001/api/attachments/upload/batch",
-      expect.objectContaining({
-        method: "POST",
-      })
-    );
   });
 
   it("should reject files exceeding size limit", async () => {
     const mod = await import("../route");
-    // Create a file with large size - use a Blob with explicit size
     const largeContent = new Uint8Array(11 * 1024 * 1024); // 11MB
     const largeFile = new File([largeContent], "large.jpg", { type: "image/jpeg" });
 
@@ -157,8 +150,8 @@ describe("/api/chat/attachments", () => {
     const res = await mod.POST(req, createRouteParamsContext());
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toContain("exceeds maximum size");
-    expect(body.code).toBe("FILE_TOO_LARGE");
+    expect(body.reason).toContain("exceeds maximum size");
+    expect(body.error).toBe("invalid_request");
   });
 
   it("should reject more than 5 files", async () => {
@@ -181,15 +174,17 @@ describe("/api/chat/attachments", () => {
     const res = await mod.POST(req, createRouteParamsContext());
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toContain("Maximum 5 files allowed");
-    expect(body.code).toBe("TOO_MANY_FILES");
+    expect(body.reason).toContain("Maximum 5 files allowed");
+    expect(body.error).toBe("invalid_request");
   });
 
   it("should handle backend errors", async () => {
-    const mod = await import("../route");
-    MOCK_FETCH.mockResolvedValueOnce(
-      new Response(JSON.stringify({ detail: "Backend error" }), { status: 500 })
+    server.use(
+      http.post("http://localhost:8001/api/attachments/upload", () =>
+        HttpResponse.json({ detail: "Backend error" }, { status: 500 })
+      )
     );
+    const mod = await import("../route");
 
     const validFile = new File(["content"], "test.jpg", { type: "image/jpeg" });
     const formData = new FormData();
@@ -201,16 +196,20 @@ describe("/api/chat/attachments", () => {
     });
 
     const res = await mod.POST(req, createRouteParamsContext());
-    expect(res.status).toBe(500);
+    // Backend 5xx errors are returned as 502 Bad Gateway
+    expect(res.status).toBe(502);
     const body = await res.json();
-    expect(body.error).toBe("Backend error");
-    expect(body.code).toBe("UPLOAD_ERROR");
+    expect(body.reason).toBe("File upload failed");
+    expect(body.error).toBe("internal");
   });
 
   it("should handle network errors", async () => {
+    server.use(
+      http.post("http://localhost:8001/api/attachments/upload", () => {
+        return HttpResponse.error();
+      })
+    );
     const mod = await import("../route");
-    MOCK_FETCH.mockRejectedValueOnce(new Error("Network error"));
-
     const validFile = new File(["content"], "test.jpg", { type: "image/jpeg" });
     const formData = new FormData();
     formData.append("file", validFile);
@@ -223,12 +222,24 @@ describe("/api/chat/attachments", () => {
     const res = await mod.POST(req, createRouteParamsContext());
     expect(res.status).toBe(500);
     const body = await res.json();
-    // withApiGuards returns error: "internal" for caught errors
     expect(body.error).toBe("internal");
     expect(body.reason).toBe("Internal server error");
   });
 
   it("should include authorization header when provided", async () => {
+    let capturedAuth: string | null = null;
+    server.use(
+      http.post("http://localhost:8001/api/attachments/upload", ({ request }) => {
+        capturedAuth = request.headers.get("authorization");
+        return HttpResponse.json({
+          file_id: "test-uuid-1234",
+          file_size: 1000,
+          filename: "test.jpg",
+          mime_type: "image/jpeg",
+          processing_status: "completed",
+        });
+      })
+    );
     const mod = await import("../route");
     const validFile = new File(["content"], "test.jpg", { type: "image/jpeg" });
     const formData = new FormData();
@@ -241,13 +252,6 @@ describe("/api/chat/attachments", () => {
     });
 
     await mod.POST(req, createRouteParamsContext());
-
-    expect(MOCK_FETCH).toHaveBeenCalledWith(
-      "http://localhost:8001/api/attachments/upload",
-      expect.objectContaining({
-        headers: { Authorization: "Bearer token123" },
-        method: "POST",
-      })
-    );
+    expect(capturedAuth).toBe("Bearer token123");
   });
 });

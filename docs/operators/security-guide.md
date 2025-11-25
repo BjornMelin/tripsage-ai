@@ -8,10 +8,11 @@ TripSage implements defense-in-depth security with multiple protection layers:
 
 - **TLS/HTTPS Encryption** - All production traffic encrypted
 - **JWT Authentication** - Supabase-managed token validation
-- **Rate Limiting** - Distributed counters via Redis
-- **Input Validation** - Pydantic models for all API inputs
+- **Rate Limiting** - Distributed counters via Upstash Redis
+- **Input Validation** - Zod v4 schemas for all API inputs
 - **Row Level Security** - Database-level access control
-- **Audit Logging** - Comprehensive security event logging
+- **Audit Logging** - Comprehensive security event logging via OpenTelemetry
+- **Session Control** - User-scoped session listing and termination via `/api/security/sessions` with Supabase service-role enforcement and per-route rate limits.
 
 ## Authentication & Authorization
 
@@ -54,9 +55,9 @@ USING (
 
 ### Development Security
 
-- **Input Validation**: Use Pydantic models for all API inputs
+- **Input Validation**: Use Zod v4 schemas for all API inputs (see `@schemas/*`)
 - **Error Handling**: Never expose internal errors to users
-- **Dependencies**: Keep packages updated, audit regularly
+- **Dependencies**: Keep packages updated, audit regularly via `pnpm audit`
 - **Secrets**: Never commit secrets, use environment variables
 
 ### Operational Security
@@ -70,10 +71,10 @@ USING (
 
 Secure third-party API key management:
 
-- **Encryption**: AES-256 with user-specific salts
-- **Storage**: Encrypted in database with RLS protection
-- **Access**: Users can only access their own keys via Next.js route handlers marked `"server-only"` and `dynamic = "force-dynamic"` so responses are never cached or executed on the client
-- **Audit**: All key operations logged
+- **Encryption**: Vault extension with service-role-only access
+- **Storage**: Encrypted in Supabase Vault with RLS protection
+- **Access**: Users can only access their own keys via server-side checks; there are no `dynamic = "force-dynamic"` API route files/exports under `frontend/src/app/api`, so enforcement relies on backend logic and Supabase RLS rather than Next.js route caching directives.
+- **Audit**: Telemetry infrastructure exists, but BYOK RPCs (`insertUserApiKey`, `deleteUserApiKey`, `getUserApiKey` in `frontend/src/lib/supabase/rpc.ts`) are not currently wrapped in OpenTelemetry spans. To enable tracing, wrap these calls with `withTelemetrySpan` in a shared helper before invoking the RPCs.
 
 ## Security Testing
 
@@ -81,13 +82,16 @@ Secure third-party API key management:
 
 ```bash
 # Dependency vulnerability scanning
-uv run safety check
+pnpm audit
 
-# Static security analysis
-uv run bandit -r tripsage/
+# TypeScript type checking (catches schema issues)
+pnpm -C frontend type-check
 
-# Secret detection
-uv run detect-secrets scan
+# Run security-focused tests
+pnpm -C frontend test:run -t security
+
+# Secret detection (install gitleaks first)
+gitleaks detect --source . --verbose
 ```
 
 ### Manual Testing
@@ -95,12 +99,12 @@ uv run detect-secrets scan
 ```bash
 # Test authentication
 curl -H "Authorization: Bearer invalid_token" \
-     http://localhost:8000/api/trips
+     http://localhost:3000/api/trips
 # Expected: 401 Unauthorized
 
 # Test rate limiting
 for i in {1..150}; do
-  curl http://localhost:8000/api/trips
+  curl http://localhost:3000/api/trips
 done
 # Expected: 429 Too Many Requests
 ```

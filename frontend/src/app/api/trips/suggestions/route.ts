@@ -1,8 +1,10 @@
 /**
- * @fileoverview AI-generated trip suggestions API route handler.
+ * @fileoverview AI-generated trip suggestions with Upstash Redis caching.
+ *
+ * Generates trip suggestions using AI SDK v6 structured outputs.
+ * Results cached per-user in Redis with 15-minute TTL to reduce
+ * redundant AI calls while maintaining freshness.
  */
-
-"use server";
 
 import "server-only";
 
@@ -14,13 +16,14 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
+import { canonicalizeParamsForCache } from "@/lib/cache/keys";
+import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
+
+/** Cache TTL for AI suggestions (15 minutes). */
+const SUGGESTIONS_CACHE_TTL = 900;
 
 /**
  * Request query parameters for trip suggestion generation.
- *
- * @property limit - Maximum number of suggestions to return.
- * @property budgetMax - Optional maximum budget constraint.
- * @property category - Optional category filter.
  */
 interface TripSuggestionsQueryParams {
   readonly limit?: number;
@@ -29,9 +32,24 @@ interface TripSuggestionsQueryParams {
 }
 
 /**
+ * Builds cache key for trip suggestions.
+ *
+ * @param userId - Authenticated user ID.
+ * @param params - Query parameters.
+ * @returns Redis cache key.
+ */
+function buildSuggestionsCacheKey(
+  userId: string,
+  params: TripSuggestionsQueryParams
+): string {
+  const canonical = canonicalizeParamsForCache(params as Record<string, unknown>);
+  return `trips:suggestions:${userId}:${canonical || "default"}`;
+}
+
+/**
  * Parses query-string parameters into a normalized suggestion input object.
  *
- * @param req Next.js request object for this route.
+ * @param req - Next.js request object for this route.
  * @returns Parsed query parameter object.
  */
 function parseSuggestionQueryParams(req: NextRequest): TripSuggestionsQueryParams {
@@ -53,7 +71,7 @@ function parseSuggestionQueryParams(req: NextRequest): TripSuggestionsQueryParam
 /**
  * Builds a model prompt for trip suggestions based on user filters.
  *
- * @param params Parsed query parameters.
+ * @param params - Parsed query parameters.
  * @returns Prompt string for the language model.
  */
 function buildSuggestionPrompt(params: TripSuggestionsQueryParams): string {
@@ -82,19 +100,26 @@ function buildSuggestionPrompt(params: TripSuggestionsQueryParams): string {
 }
 
 /**
- * Generates trip suggestions using the configured AI provider and TripSuggestion schema.
+ * Generates trip suggestions, checking cache first.
  *
- * @param req Next.js request object.
- * @param userId Authenticated user identifier for provider resolution.
- * @returns JSON response containing an array of TripSuggestion objects.
+ * @param userId - Authenticated user ID.
+ * @param params - Parsed query parameters.
+ * @returns Array of trip suggestions.
  */
-async function generateSuggestions(
-  req: NextRequest,
-  userId: string
-): Promise<NextResponse> {
-  const params = parseSuggestionQueryParams(req);
-  const prompt = buildSuggestionPrompt(params);
+async function generateSuggestionsWithCache(
+  userId: string,
+  params: TripSuggestionsQueryParams
+): Promise<TripSuggestion[]> {
+  const cacheKey = buildSuggestionsCacheKey(userId, params);
 
+  // Check cache
+  const cached = await getCachedJson<TripSuggestion[]>(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  // Generate via AI
+  const prompt = buildSuggestionPrompt(params);
   const { model } = await resolveProvider(userId, "gpt-4o-mini");
 
   const responseSchema = z.object({
@@ -107,22 +132,25 @@ async function generateSuggestions(
     schema: responseSchema,
   });
 
-  const suggestions: TripSuggestion[] = result.object?.suggestions ?? [];
-  return NextResponse.json(suggestions);
+  const suggestions = result.object?.suggestions ?? [];
+
+  // Cache result
+  await setCachedJson(cacheKey, suggestions, SUGGESTIONS_CACHE_TTL);
+
+  return suggestions;
 }
 
 /**
  * GET /api/trips/suggestions
  *
- * Returns AI-generated trip suggestions for the authenticated user. The
- * response is a JSON array of {@link TripSuggestion} objects validated via
- * Zod and generated with AI SDK v6 structured outputs.
+ * Returns AI-generated trip suggestions for the authenticated user.
+ * Response cached in Redis with 15-minute TTL.
  */
 export const GET = withApiGuards({
   auth: true,
   rateLimit: "trips:suggestions",
   telemetry: "trips.suggestions",
-})((req, { user }) => {
+})(async (req, { user }) => {
   const userId = user?.id;
   if (!userId) {
     return NextResponse.json(
@@ -131,5 +159,7 @@ export const GET = withApiGuards({
     );
   }
 
-  return generateSuggestions(req, userId);
+  const params = parseSuggestionQueryParams(req);
+  const suggestions = await generateSuggestionsWithCache(userId, params);
+  return NextResponse.json(suggestions);
 });

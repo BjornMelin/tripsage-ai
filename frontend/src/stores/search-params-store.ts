@@ -4,94 +4,23 @@ import type {
   FlightSearchParams,
   SearchAccommodationParams,
   SearchParams,
-  SearchType,
 } from "@schemas/search";
-import { z } from "zod";
+import {
+  accommodationSearchParamsStoreSchema,
+  activitySearchParamsStoreSchema,
+  destinationSearchParamsStoreSchema,
+  flightSearchParamsStoreSchema,
+  type SearchType,
+  searchTypeSchema,
+  type ValidatedAccommodationParams,
+  type ValidatedActivityParams,
+  type ValidatedDestinationParams,
+  type ValidatedFlightParams,
+} from "@schemas/stores";
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 
-// Validation schemas for search parameters
-const SEARCH_TYPE_SCHEMA = z.enum([
-  "flight",
-  "accommodation",
-  "activity",
-  "destination",
-]);
-
-const BASE_SEARCH_PARAMS_SCHEMA = z.object({
-  adults: z.number().min(1).max(20).default(1),
-  children: z.number().min(0).max(10).default(0),
-  infants: z.number().min(0).max(5).default(0),
-});
-
-const FLIGHT_SEARCH_PARAMS_SCHEMA = BASE_SEARCH_PARAMS_SCHEMA.extend({
-  cabinClass: z
-    .enum(["economy", "premium_economy", "business", "first"])
-    .default("economy"),
-  departureDate: z.string().optional(),
-  destination: z.string().optional(),
-  directOnly: z.boolean().default(false),
-  excludedAirlines: z.array(z.string()).default([]),
-  maxStops: z.number().min(0).max(3).optional(),
-  origin: z.string().optional(),
-  preferredAirlines: z.array(z.string()).default([]),
-  returnDate: z.string().optional(),
-});
-
-const ACCOMMODATION_SEARCH_PARAMS_SCHEMA = BASE_SEARCH_PARAMS_SCHEMA.extend({
-  amenities: z.array(z.string()).default([]),
-  checkIn: z.string().optional(),
-  checkOut: z.string().optional(),
-  destination: z.string().optional(),
-  minRating: z.number().min(1).max(5).optional(),
-  priceRange: z
-    .object({
-      max: z.number().min(0).optional(),
-      min: z.number().min(0).optional(),
-    })
-    .optional(),
-  propertyType: z.enum(["hotel", "apartment", "villa", "hostel", "resort"]).optional(),
-  rooms: z.number().min(1).max(10).default(1),
-});
-
-const ACTIVITY_SEARCH_PARAMS_SCHEMA = BASE_SEARCH_PARAMS_SCHEMA.extend({
-  category: z.string().optional(),
-  date: z.string().optional(),
-  destination: z.string().optional(),
-  difficulty: z.enum(["easy", "moderate", "challenging", "extreme"]).optional(),
-  duration: z
-    .object({
-      max: z.number().min(0).optional(),
-      min: z.number().min(0).optional(),
-    })
-    .optional(),
-  indoor: z.boolean().optional(),
-});
-
-const DESTINATION_SEARCH_PARAMS_SCHEMA = z.object({
-  bounds: z
-    .object({
-      east: z.number(),
-      north: z.number(),
-      south: z.number(),
-      west: z.number(),
-    })
-    .optional(),
-  countryCode: z.string().optional(),
-  limit: z.number().min(1).max(50).default(10),
-  query: z.string().default(""),
-  types: z.array(z.string()).default(["locality", "country"]),
-});
-
-// Types derived from schemas
-export type ValidatedFlightParams = z.infer<typeof FLIGHT_SEARCH_PARAMS_SCHEMA>;
-export type ValidatedAccommodationParams = z.infer<
-  typeof ACCOMMODATION_SEARCH_PARAMS_SCHEMA
->;
-export type ValidatedActivityParams = z.infer<typeof ACTIVITY_SEARCH_PARAMS_SCHEMA>;
-export type ValidatedDestinationParams = z.infer<
-  typeof DESTINATION_SEARCH_PARAMS_SCHEMA
->;
+// Schemas are consumed directly from @schemas/stores; no local re-exports.
 
 // Search parameters store interface
 interface SearchParamsState {
@@ -209,16 +138,16 @@ const VALIDATE_SEARCH_PARAMS = (
   try {
     switch (type) {
       case "flight":
-        FLIGHT_SEARCH_PARAMS_SCHEMA.parse(params);
+        flightSearchParamsStoreSchema.parse(params);
         break;
       case "accommodation":
-        ACCOMMODATION_SEARCH_PARAMS_SCHEMA.parse(params);
+        accommodationSearchParamsStoreSchema.parse(params);
         break;
       case "activity":
-        ACTIVITY_SEARCH_PARAMS_SCHEMA.parse(params);
+        activitySearchParamsStoreSchema.parse(params);
         break;
       case "destination":
-        DESTINATION_SEARCH_PARAMS_SCHEMA.parse(params);
+        destinationSearchParamsStoreSchema.parse(params);
         break;
       default:
         throw new Error(`Unknown search type: ${type}`);
@@ -453,7 +382,7 @@ export const useSearchParamsStore = create<SearchParamsState>()(
         },
 
         setAccommodationParams: (params) => {
-          const result = ACCOMMODATION_SEARCH_PARAMS_SCHEMA.safeParse(params);
+          const result = accommodationSearchParamsStoreSchema.safeParse(params);
           if (result.success) {
             set({ accommodationParams: result.data });
           } else {
@@ -462,7 +391,7 @@ export const useSearchParamsStore = create<SearchParamsState>()(
         },
 
         setActivityParams: (params) => {
-          const result = ACTIVITY_SEARCH_PARAMS_SCHEMA.safeParse(params);
+          const result = activitySearchParamsStoreSchema.safeParse(params);
           if (result.success) {
             set({ activityParams: result.data });
           } else {
@@ -471,7 +400,7 @@ export const useSearchParamsStore = create<SearchParamsState>()(
         },
 
         setDestinationParams: (params) => {
-          const result = DESTINATION_SEARCH_PARAMS_SCHEMA.safeParse(params);
+          const result = destinationSearchParamsStoreSchema.safeParse(params);
           if (result.success) {
             set({ destinationParams: result.data });
           } else {
@@ -481,7 +410,7 @@ export const useSearchParamsStore = create<SearchParamsState>()(
 
         // Bulk operations
         setFlightParams: (params) => {
-          const result = FLIGHT_SEARCH_PARAMS_SCHEMA.safeParse(params);
+          const result = flightSearchParamsStoreSchema.safeParse(params);
           if (result.success) {
             set({ flightParams: result.data });
           } else {
@@ -491,7 +420,7 @@ export const useSearchParamsStore = create<SearchParamsState>()(
 
         // Parameter management actions
         setSearchType: (type) => {
-          const result = SEARCH_TYPE_SCHEMA.safeParse(type);
+          const result = searchTypeSchema.safeParse(type);
           if (result.success) {
             set((state) => {
               const updatedState: Partial<SearchParamsState> = {
@@ -538,7 +467,8 @@ export const useSearchParamsStore = create<SearchParamsState>()(
 
           try {
             const updatedParams = { ...get().accommodationParams, ...params };
-            const result = ACCOMMODATION_SEARCH_PARAMS_SCHEMA.safeParse(updatedParams);
+            const result =
+              accommodationSearchParamsStoreSchema.safeParse(updatedParams);
 
             if (result.success) {
               set((state) => ({
@@ -567,7 +497,7 @@ export const useSearchParamsStore = create<SearchParamsState>()(
 
           try {
             const updatedParams = { ...get().activityParams, ...params };
-            const result = ACTIVITY_SEARCH_PARAMS_SCHEMA.safeParse(updatedParams);
+            const result = activitySearchParamsStoreSchema.safeParse(updatedParams);
 
             if (result.success) {
               set((state) => ({
@@ -596,7 +526,7 @@ export const useSearchParamsStore = create<SearchParamsState>()(
 
           try {
             const updatedParams = { ...get().destinationParams, ...params };
-            const result = DESTINATION_SEARCH_PARAMS_SCHEMA.safeParse(updatedParams);
+            const result = destinationSearchParamsStoreSchema.safeParse(updatedParams);
 
             if (result.success) {
               set((state) => ({
@@ -625,7 +555,7 @@ export const useSearchParamsStore = create<SearchParamsState>()(
 
           try {
             const updatedParams = { ...get().flightParams, ...params };
-            const result = FLIGHT_SEARCH_PARAMS_SCHEMA.safeParse(updatedParams);
+            const result = flightSearchParamsStoreSchema.safeParse(updatedParams);
 
             if (result.success) {
               set((state) => ({

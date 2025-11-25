@@ -1,3 +1,5 @@
+/** @vitest-environment node */
+
 import type { AdvisoryProvider } from "@ai/tools/server/travel-advisory/providers";
 import {
   getDefaultProvider,

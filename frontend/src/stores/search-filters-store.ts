@@ -3,105 +3,24 @@
  */
 
 import type { SearchType } from "@schemas/search";
-import { z } from "zod";
+import {
+  type ActiveFilter,
+  type FilterPreset,
+  type FilterValue,
+  filterOptionSchema,
+  filterPresetSchema,
+  filterValueSchema,
+  type SortDirection,
+  searchTypeSchema,
+  sortOptionSchema,
+  type ValidatedFilterOption,
+  type ValidatedSortOption,
+} from "@schemas/stores";
 import { create, type StateCreator } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 import { nowIso, secureId } from "@/lib/security/random";
 
-// Validation schemas for filters and sorting
-const SEARCH_TYPE_SCHEMA = z.enum([
-  "flight",
-  "accommodation",
-  "activity",
-  "destination",
-]);
-const SORT_DIRECTION_SCHEMA = z.enum(["asc", "desc"]);
-
-const FILTER_VALUE_SCHEMA = z.union([
-  z.string(),
-  z.number(),
-  z.boolean(),
-  z.array(z.string()),
-  z.array(z.number()),
-  z.object({
-    max: z.number().optional(),
-    min: z.number().optional(),
-  }),
-]);
-
-const FILTER_OPTION_SCHEMA = z.object({
-  category: z.string().optional(),
-  defaultValue: FILTER_VALUE_SCHEMA.optional(),
-  dependencies: z.array(z.string()).optional(), // Filter IDs this filter depends on
-  description: z.string().optional(),
-  id: z.string(),
-  label: z.string(),
-  options: z
-    .array(
-      z.object({
-        disabled: z.boolean().optional(),
-        label: z.string(),
-        value: z.string(),
-      })
-    )
-    .optional(),
-  required: z.boolean().default(false),
-  type: z.enum([
-    "text",
-    "number",
-    "boolean",
-    "select",
-    "multiselect",
-    "range",
-    "date",
-    "daterange",
-  ]),
-  validation: z
-    .object({
-      max: z.number().optional(),
-      min: z.number().optional(),
-      pattern: z.string().optional(),
-      required: z.boolean().optional(),
-    })
-    .optional(),
-});
-
-const SORT_OPTION_SCHEMA = z.object({
-  category: z.string().optional(),
-  description: z.string().optional(),
-  direction: SORT_DIRECTION_SCHEMA.default("asc"),
-  field: z.string(),
-  id: z.string(),
-  isDefault: z.boolean().default(false),
-  label: z.string(),
-});
-
-const ACTIVE_FILTER_SCHEMA = z.object({
-  appliedAt: z.string(),
-  displayValue: z.string().optional(),
-  filterId: z.string(),
-  value: FILTER_VALUE_SCHEMA,
-});
-
-const FILTER_PRESET_SCHEMA = z.object({
-  createdAt: z.string(),
-  description: z.string().optional(),
-  filters: z.array(ACTIVE_FILTER_SCHEMA),
-  id: z.string(),
-  isBuiltIn: z.boolean().default(false),
-  name: z.string(),
-  searchType: SEARCH_TYPE_SCHEMA,
-  sortOption: SORT_OPTION_SCHEMA.optional(),
-  usageCount: z.number().default(0),
-});
-
-// Types derived from schemas
-export type FilterValue = z.infer<typeof FILTER_VALUE_SCHEMA>;
-export type ValidatedFilterOption = z.infer<typeof FILTER_OPTION_SCHEMA>;
-export type ValidatedSortOption = z.infer<typeof SORT_OPTION_SCHEMA>;
-export type ActiveFilter = z.infer<typeof ACTIVE_FILTER_SCHEMA>;
-export type FilterPreset = z.infer<typeof FILTER_PRESET_SCHEMA>;
-export type SortDirection = z.infer<typeof SORT_DIRECTION_SCHEMA>;
+// Validation schemas imported from @schemas/stores
 
 // Search filters store interface
 interface SearchFiltersState {
@@ -621,7 +540,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
         activeSortOption: null,
 
         addAvailableFilter: (searchType: SearchType, filter: ValidatedFilterOption) => {
-          const result = FILTER_OPTION_SCHEMA.safeParse(filter);
+          const result = filterOptionSchema.safeParse(filter);
           if (result.success) {
             set((state) => ({
               availableFilters: {
@@ -638,7 +557,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
         },
 
         addAvailableSortOption: (searchType, option) => {
-          const result = SORT_OPTION_SCHEMA.safeParse(option);
+          const result = sortOptionSchema.safeParse(option);
           if (result.success) {
             set((state) => ({
               availableSortOptions: {
@@ -751,7 +670,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
             usageCount: 0,
           };
 
-          const result = FILTER_PRESET_SCHEMA.safeParse(duplicatedPreset);
+          const result = filterPresetSchema.safeParse(duplicatedPreset);
           if (result.success) {
             set((state) => ({
               filterPresets: [...state.filterPresets, result.data],
@@ -958,7 +877,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
               usageCount: 0,
             };
 
-            const result = FILTER_PRESET_SCHEMA.safeParse(newPreset);
+            const result = filterPresetSchema.safeParse(newPreset);
             if (result.success) {
               set((state) => ({
                 filterPresets: [...state.filterPresets, result.data],
@@ -1010,7 +929,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
         // Sort management
         setActiveSortOption: (option) => {
           if (option) {
-            const result = SORT_OPTION_SCHEMA.safeParse(option);
+            const result = sortOptionSchema.safeParse(option);
             if (result.success) {
               set({
                 activePreset: null, // Clear active preset when sort changes
@@ -1031,7 +950,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
         ) => {
           // Validate filters
           const validatedFilters = filters.filter((filter: ValidatedFilterOption) => {
-            const result = FILTER_OPTION_SCHEMA.safeParse(filter);
+            const result = filterOptionSchema.safeParse(filter);
             if (!result.success) {
               console.error(`Invalid filter for ${searchType}:`, result.error);
               return false;
@@ -1050,7 +969,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
         // Sort options configuration
         setAvailableSortOptions: (searchType, options) => {
           const validatedOptions = options.filter((option) => {
-            const result = SORT_OPTION_SCHEMA.safeParse(option);
+            const result = sortOptionSchema.safeParse(option);
             if (!result.success) {
               console.error(`Invalid sort option for ${searchType}:`, result.error);
               return false;
@@ -1101,7 +1020,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
 
         // Search type context
         setSearchType: (searchType) => {
-          const result = SEARCH_TYPE_SCHEMA.safeParse(searchType);
+          const result = searchTypeSchema.safeParse(searchType);
           if (result.success) {
             const { availableSortOptions } = get();
             const defaultSort = availableSortOptions[searchType]?.find(
@@ -1161,7 +1080,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
             const updatedFilters = filters.map((filter: ValidatedFilterOption) => {
               if (filter.id === filterId) {
                 const updatedFilter = { ...filter, ...updates };
-                const result = FILTER_OPTION_SCHEMA.safeParse(updatedFilter);
+                const result = filterOptionSchema.safeParse(updatedFilter);
                 return result.success ? result.data : filter;
               }
               return filter;
@@ -1182,7 +1101,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
             const updatedOptions = options.map((option) => {
               if (option.id === optionId) {
                 const updatedOption = { ...option, ...updates };
-                const result = SORT_OPTION_SCHEMA.safeParse(updatedOption);
+                const result = sortOptionSchema.safeParse(updatedOption);
                 return result.success ? result.data : option;
               }
               return option;
@@ -1203,7 +1122,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
               const updatedPresets = state.filterPresets.map((preset) => {
                 if (preset.id === presetId) {
                   const updatedPreset = { ...preset, ...updates };
-                  const result = FILTER_PRESET_SCHEMA.safeParse(updatedPreset);
+                  const result = filterPresetSchema.safeParse(updatedPreset);
                   return result.success ? result.data : preset;
                 }
                 return preset;
@@ -1245,7 +1164,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
 
           try {
             // Validate value against filter configuration
-            const valueResult = FILTER_VALUE_SCHEMA.safeParse(value);
+            const valueResult = filterValueSchema.safeParse(value);
             if (!valueResult.success) {
               throw new Error("Invalid filter value format");
             }

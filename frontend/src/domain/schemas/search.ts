@@ -4,7 +4,7 @@
  */
 
 import { z } from "zod";
-import { PROPERTY_TYPE_ENUM } from "./accommodations";
+import { propertyTypeSchema } from "./accommodations";
 import { CABIN_CLASS_ENUM } from "./flights";
 import { primitiveSchemas } from "./registry";
 import { CURRENCY_CODE_SCHEMA } from "./shared/money";
@@ -91,8 +91,8 @@ export const searchAccommodationParamsSchema = z.object({
       error: "Min price must be less than or equal to max price",
     })
     .optional(),
-  propertyType: z.enum(PROPERTY_TYPE_ENUM.options as [string, ...string[]]).optional(),
-  propertyTypes: z.array(PROPERTY_TYPE_ENUM).optional(),
+  propertyType: z.enum(propertyTypeSchema.options as [string, ...string[]]).optional(),
+  propertyTypes: z.array(propertyTypeSchema).optional(),
   rooms: POSITIVE_INT_SCHEMA.max(20, { error: "Too many rooms" }).optional(),
 });
 
@@ -108,7 +108,7 @@ export const activitySearchParamsSchema = z.object({
   category: z.string().optional(),
   children: NON_NEGATIVE_INT_SCHEMA.max(20).optional(),
   date: DATE_STRING_SCHEMA.optional(),
-  destination: z.string().optional(),
+  destination: z.string().min(1, { error: "destination is required" }),
   difficulty: z.enum(["easy", "moderate", "challenging", "extreme"]).optional(),
   duration: z
     .object({

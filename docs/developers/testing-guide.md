@@ -7,6 +7,7 @@ Testing strategies and patterns for TripSage frontend development.
 - **Test behavior, not implementation:** Focus on user-observable outcomes and avoid coupling to internal details.
 - **Deterministic runs:** No random data/timing; use consistent fixtures and clean up shared state.
 - **Right level of coverage:** Mix unit, integration, and E2E tests; reserve E2E for critical flows.
+- **Choose the lightest test that proves the behavior:** See the decision tree below.
 
 ## Vitest Configuration
 
@@ -31,26 +32,60 @@ Configured in `frontend/src/test-setup.ts` and applied across projects.
 - DOM mocks: location, storage APIs, matchMedia.
 - Next.js mocks: navigation, image, headers, toast helpers.
 - Framework mocks: React Query, Zustand middleware, Supabase.
-- Automatic cleanup: timers, React Testing Library, React Query cache reset.
-
-Timer lifecycle enforced for every test:
-
-```ts
-beforeEach(() => {
-  vi.useFakeTimers();
-});
-
-afterEach(() => {
-  vi.runOnlyPendingTimers();
-  vi.clearAllTimers();
-  vi.useRealTimers();
-  cleanup();
-  resetTestQueryClient();
-  vi.restoreAllMocks();
-});
-```
+- MSW server lifecycle: starts once with `onUnhandledRequest: "warn"`, resets after each test.
+- Timers: **opt-in** via `withFakeTimers` (`frontend/src/test/utils/with-fake-timers.ts`); global tests run on real timers by default.
+- Cleanup: React Testing Library `cleanup()`, React Query cache reset, MSW handler reset.
+- Query helpers: prefer `createMockQueryClient` and controllers in `frontend/src/test/query-mocks.tsx` instead of legacy mocks.
+- Supabase helpers: use `frontend/src/test/mocks/supabase.ts` to avoid ad-hoc token stubs.
 
 ## Patterns by Area
+
+### Test Type Decision Tree
+
+1. **Unit (fastest):** Pure functions, hooks with no I/O, stores. No MSW; use factories and in-memory fakes.
+2. **Component:** DOM-facing behavior; use RTL + jsdom; mock network with MSW only.
+3. **API Route (node):** Use MSW to intercept external calls; prefer real handler code with mock NextRequest.
+4. **Integration:** Multiple modules interacting (e.g., hook + API client); MSW + real providers; avoid mocking internals.
+5. **E2E:** Playwright only when UI flow or browser APIs are required.
+
+### MSW 2 Patterns
+
+- Organize handlers by domain under `frontend/src/test/msw/handlers/*`; defaults registered in `handlers/index.ts`.
+- Override per test with `server.use(...)`; MSW server starts once in `test-setup.ts` and resets after each test.
+- Mirror real API shapes, including error responses (400/404/429/500) and auth headers; assert `FormData` contents for upload endpoints.
+- For external providers (Amadeus, Google Places, Stripe, State Dept), prefer MSW over `vi.mock()` and include minimal required fields to satisfy downstream schemas.
+- **Handler Composition**: Use `composeHandlers` utility when combining multiple handler sets:
+
+```ts
+import { composeHandlers } from "@/test/msw/handlers/utils";
+import { googlePlacesHandlers } from "@/test/msw/handlers/google-places";
+import { stripeHandlers } from "@/test/msw/handlers/stripe";
+
+const handlerSet = composeHandlers(googlePlacesHandlers, stripeHandlers);
+server.use(...handlerSet);
+```
+
+- **Single Handler Override**: For single handler overrides, use `server.use()` directly:
+
+```ts
+import { http, HttpResponse } from "msw";
+import { server } from "@/test/msw/server";
+
+server.use(
+  http.post("https://api.stripe.com/v1/payment_intents", () =>
+    HttpResponse.json({ id: "pi_test", client_secret: "cs_test" })
+  )
+);
+```
+
+- **Handler Reset**: Handlers are automatically reset after each test via `test-setup.ts`. Avoid redundant `server.resetHandlers()` calls in `beforeEach` unless you need to reset handlers mid-test.
+
+### Upstash Testing Harness
+
+- **Unit/fast:** use the shared `setupUpstashMocks()` helper from `@/test/setup/upstash` (uses `vi.doMock` for thread safety); always call `reset()` in `beforeEach`.
+- **HTTP layer:** MSW Upstash handler (`@/test/msw/handlers/upstash.ts`) mirrors Redis pipeline, ratelimit headers, and QStash publish using the shared in-memory store.
+- **Emulator tier (optional):** opt in with `UPSTASH_USE_EMULATOR=1` and provide `UPSTASH_EMULATOR_URL` / `UPSTASH_QSTASH_DEV_URL`; helper lives in `@/test/upstash/emulator.ts` (docker/testcontainers orchestrated externally).
+- **Smoke:** run `pnpm -C frontend test:upstash:smoke` with `UPSTASH_SMOKE=1` + real creds; suite skips automatically when env is absent.
 
 ### React Components
 
@@ -87,6 +122,47 @@ describe("useTrips", () => {
 ```
 
 ### API Route Handlers
+
+```ts
+/** @vitest-environment node */
+import { http, HttpResponse } from "msw";
+import { server } from "@/test/msw/server";
+import { createMockNextRequest } from "@/test/route-helpers";
+
+server.use(
+  http.post("https://example.com/upstream", () => HttpResponse.json({ ok: true }))
+);
+
+const req = createMockNextRequest({ method: "POST", body: { name: "test" } });
+const { POST } = await import("@/app/api/example/route");
+await expect(POST(req)).resolves.toMatchObject({ status: 200 });
+```
+
+### AI SDK v6 (Tests)
+
+- Use `MockLanguageModelV3` and `simulateReadableStream` from `ai/test` (see `frontend/src/test/ai-sdk/*`).
+- Define tool schemas with Zod; assert tool calls in tests via `expect(model.calls[0].tools).toEqual(...)` patterns.
+- For streaming routes, wrap responses with `toDataStreamResponse()`; in tests, consume with helper utilities to assert chunk ordering.
+- Prefer AI SDK helpers over ad-hoc mocks; avoid legacy `useChat`/`useCompletion` patterns.
+- Example tool test:
+
+```ts
+/** @vitest-environment node */
+import { z } from "zod";
+import { streamText } from "ai";
+import { createMockModel } from "@/test/ai-sdk/mock-model";
+
+const tools = {
+  summarize: {
+    parameters: z.strictObject({ text: z.string() }),
+    execute: ({ text }: { text: string }) => `Summary: ${text.slice(0, 5)}`,
+  },
+};
+
+const model = createMockModel();
+const result = await streamText({ model, messages: [{ role: "user", content: "Hello" }], tools });
+expect(model.calls[0]?.tools?.summarize?.parameters).toBeDefined();
+```
 
 ```ts
 /** @vitest-environment node */
@@ -174,8 +250,8 @@ expect(useAuthStore.getState().user).toBeDefined();
 ## Test Utilities
 
 - Provider wrappers: `renderWithProviders` from `@/test/component-helpers`.
-- Factories: `@/test/factories` for consistent mock data.
-- React Query: `mockReactQuery` from `@/test/mocks/react-query`.
+- Factories: `@/test/factories` for consistent, schema-valid data.
+- React Query: prefer `createMockQueryClient` + controllers in `@/test/query-mocks` or real `QueryClientProvider`.
 - Centralized directory: `frontend/src/test/` (helpers, mocks, factories, test-utils, route helpers).
 
 ## Running & Debugging Tests
@@ -232,6 +308,7 @@ pnpm test:e2e --reporter=html
 
 - Target: 85%+ overall; branches 85%, functions 90%, lines 90%, statements 90%; critical paths at 100%.
 - Pre-commit checks: `pnpm biome:check`, `pnpm biome:fix`, `pnpm type-check`.
+- CI: `pnpm test:ci` uses the threads pool; use `test:coverage` for v8 coverage; shard via `test:coverage:shard` when needed.
 
 ## Organization & Naming
 
@@ -276,3 +353,40 @@ Real implementations to reference:
 - Consistent patterns and centralized mocks reduce maintenance.
 - Shared helpers improve reliability and speed authoring.
 - Multi-project Vitest configuration keeps tests isolated and performant while covering React, Next.js, and external API interactions.
+- MSW + AI SDK helpers keep network and model behavior realistic without brittle `vi.mock` chains.
+
+### Fake Timers (Opt-in)
+
+- Default tests run on real timers; use `withFakeTimers` helper from `frontend/src/test/utils/with-fake-timers.ts` for timer-driven code.
+- Avoid global `vi.useFakeTimers()`; ensure timers are restored in the helper.
+- Example:
+
+```ts
+import { withFakeTimers } from "@/test/utils/with-fake-timers";
+
+it("retries after delay", withFakeTimers(async () => {
+  await doAsyncWork();
+  vi.advanceTimersByTime(1000);
+  expect(callback).toHaveBeenCalled();
+}));
+```
+
+### Factories
+
+- Use `@/test/factories` for consistent, schema-valid fixtures; reset counters when determinism is needed.
+- Calendar events: `createMockCalendarEvent` for calendar/ICS tests.
+- Supabase users/trips/search: prefer factories over inline objects.
+- Extend factories in `frontend/src/test/factories/*` to keep types close to schemas.
+
+### Performance & Anti-Patterns
+
+- Keep tests under 3s/file; profile with `vitest --inspect` when slow.
+- Prefer MSW over `vi.mock` for HTTP; avoid mocking `fetch`.
+- No global fake timers; no shared mutable singletons between tests.
+- Keep component tests small; avoid snapshot reliance for dynamic content.
+- Clean up timers, intervals, and stores in `afterEach`.
+
+### Additional References
+
+- Pattern catalog and decision tables: `docs/developers/testing-patterns.md`.
+- CI knobs: see `package.json` scripts `test:ci`, `test:coverage`, and `test:coverage:shard`.

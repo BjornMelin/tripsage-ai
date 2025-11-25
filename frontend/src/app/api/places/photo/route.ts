@@ -10,8 +10,8 @@ import "server-only";
 import { placesPhotoRequestSchema } from "@schemas/api";
 import { type NextRequest, NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
+import { errorResponse, validateSchema } from "@/lib/api/route-helpers";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
-import { errorResponse } from "@/lib/next/route-helpers";
 
 /**
  * GET /api/places/photo
@@ -40,17 +40,11 @@ export const GET = withApiGuards({
     skipHttpRedirect: skipHttpRedirect === "true" ? true : undefined,
   };
 
-  const parseResult = placesPhotoRequestSchema.safeParse(params);
-  if (!parseResult.success) {
-    return errorResponse({
-      err: parseResult.error,
-      error: "invalid_request",
-      issues: parseResult.error.issues,
-      reason: "Request validation failed",
-      status: 400,
-    });
+  const validation = validateSchema(placesPhotoRequestSchema, params);
+  if ("error" in validation) {
+    return validation.error;
   }
-  const validated = parseResult.data;
+  const validated = validation.data;
 
   const apiKey = getGoogleMapsServerKey();
 
@@ -73,11 +67,12 @@ export const GET = withApiGuards({
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    return NextResponse.json(
-      { details: errorText, error: `Places API error: ${response.status}` },
-      { status: response.status }
-    );
+    return errorResponse({
+      err: new Error(`Places API error: ${response.status}`),
+      error: "external_api_error",
+      reason: `Places API returned ${response.status}`,
+      status: response.status >= 400 && response.status < 500 ? response.status : 502,
+    });
   }
 
   // Stream photo bytes with cache-friendly headers

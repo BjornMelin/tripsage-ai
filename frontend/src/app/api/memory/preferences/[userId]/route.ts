@@ -14,6 +14,7 @@ import {
 } from "@schemas/memory";
 import { type NextRequest, NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
+import { errorResponse } from "@/lib/api/route-helpers";
 
 /**
  * POST /api/memory/preferences/[userId]
@@ -25,11 +26,7 @@ export const POST = withApiGuards({
   rateLimit: "memory:preferences",
   schema: memoryUpdatePreferencesSchema,
   telemetry: "memory.preferences",
-})(async (_req: NextRequest, { user }, validated: MemoryUpdatePreferencesRequest) => {
-  if (!user?.id) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
-
+})(async (_req: NextRequest, _ctx, validated: MemoryUpdatePreferencesRequest) => {
   const { preferences } = validated;
 
   try {
@@ -84,13 +81,11 @@ export const POST = withApiGuards({
       updated: results.length,
     });
   } catch (error) {
-    return NextResponse.json(
-      {
-        error: "preferences_update_failed",
-        message:
-          error instanceof Error ? error.message : "Failed to update preferences",
-      },
-      { status: 500 }
-    );
+    return errorResponse({
+      err: error,
+      error: "internal",
+      reason: "Failed to update preferences",
+      status: 500,
+    });
   }
 });

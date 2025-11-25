@@ -4,6 +4,8 @@
  * Reference: Supabase SSR Next.js guide (Auth confirmation).
  */
 
+import "server-only";
+
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 import type { NextRequest } from "next/server";

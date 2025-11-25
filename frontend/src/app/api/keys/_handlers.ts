@@ -80,10 +80,9 @@ export async function getKeys(deps: {
   }
   const { data, error } = await deps.supabase
     .from("api_keys")
-    // Align with table column names used across codebase/tests
-    .select("service_name, created_at, last_used_at")
+    .select("service, created_at, last_used")
     .eq("user_id", user.id)
-    .order("service_name", { ascending: true });
+    .order("service", { ascending: true });
   if (error) {
     return new Response(
       JSON.stringify({ code: "DB_ERROR", error: "Failed to fetch keys" }),
@@ -93,23 +92,21 @@ export async function getKeys(deps: {
       }
     );
   }
-  const rows = data ?? [];
-  const payload = rows.map(
-    (r: {
-      // biome-ignore lint/style/useNamingConvention: DB field names
-      service_name: string;
-      // biome-ignore lint/style/useNamingConvention: DB field names
-      created_at: string;
-      // biome-ignore lint/style/useNamingConvention: DB field names
-      last_used_at: string | null;
-    }) => ({
-      createdAt: String(r.created_at),
-      hasKey: true,
-      isValid: true,
-      lastUsed: r.last_used_at ?? null,
-      service: String(r.service_name),
-    })
-  );
+  type ApiKeyRow = {
+    // biome-ignore lint/style/useNamingConvention: mirrors DB columns
+    created_at: string | null;
+    // biome-ignore lint/style/useNamingConvention: mirrors DB columns
+    last_used: string | null;
+    service: string;
+  };
+  const rows: ApiKeyRow[] = (data ?? []) as ApiKeyRow[];
+  const payload = rows.map((r) => ({
+    createdAt: r.created_at ? String(r.created_at) : null,
+    hasKey: true,
+    isValid: true,
+    lastUsed: r.last_used ?? null,
+    service: String(r.service),
+  }));
   return new Response(JSON.stringify(payload), {
     headers: { "content-type": "application/json" },
     status: 200,

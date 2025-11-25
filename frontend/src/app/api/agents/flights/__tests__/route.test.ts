@@ -1,11 +1,35 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { setRateLimitFactoryForTests } from "@/lib/api/factory";
 import {
   createMockNextRequest,
   createRouteParamsContext,
   getMockCookiesForTest,
 } from "@/test/route-helpers";
+
+vi.mock("@/lib/agents/config-resolver", () => ({
+  resolveAgentConfig: vi.fn(async () => ({
+    config: {
+      agentType: "flightAgent",
+      createdAt: "2025-01-01T00:00:00Z",
+      id: "v1700000000_deadbeef",
+      model: "gpt-4o-mini",
+      parameters: {
+        description: "Flight search agent",
+        maxTokens: 4096,
+        model: "gpt-4o-mini",
+        temperature: 0.7,
+        timeoutSeconds: 30,
+        topKTools: 4,
+        topP: 0.9,
+      },
+      scope: "global",
+      updatedAt: "2025-01-01T00:00:00Z",
+    },
+    versionId: "v1700000000_deadbeef",
+  })),
+}));
 
 const mockLimitFn = vi.fn().mockResolvedValue({
   limit: 30,
@@ -13,17 +37,6 @@ const mockLimitFn = vi.fn().mockResolvedValue({
   reset: Date.now() + 60000,
   success: true,
 });
-const mockSlidingWindow = vi.fn(() => ({}));
-const RATELIMIT_MOCK = vi.fn(function RatelimitMock() {
-  return {
-    limit: mockLimitFn,
-  };
-}) as unknown as {
-  new (...args: unknown[]): { limit: typeof mockLimitFn };
-  slidingWindow: typeof mockSlidingWindow;
-};
-(RATELIMIT_MOCK as { slidingWindow: typeof mockSlidingWindow }).slidingWindow =
-  mockSlidingWindow;
 
 // Mock next/headers cookies() before any imports that use it
 vi.mock("next/headers", () => ({
@@ -38,6 +51,7 @@ vi.mock("@/lib/supabase/server", () => ({
     auth: {
       getUser: async () => ({
         data: { user: { id: "user-1" } },
+        error: null,
       }),
     },
   })),
@@ -60,15 +74,10 @@ vi.mock("@/lib/redis", () => ({
   getRedis: vi.fn(() => ({})),
 }));
 
-// Mock Upstash rate limiter
-vi.mock("@upstash/ratelimit", () => ({
-  Ratelimit: RATELIMIT_MOCK,
-}));
-
 // Mock route helpers
-vi.mock("@/lib/next/route-helpers", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/next/route-helpers")>(
-    "@/lib/next/route-helpers"
+vi.mock("@/lib/api/route-helpers", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/api/route-helpers")>(
+    "@/lib/api/route-helpers"
   );
   return {
     ...actual,
@@ -79,12 +88,17 @@ vi.mock("@/lib/next/route-helpers", async () => {
 describe("/api/agents/flights route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    setRateLimitFactoryForTests(async () => mockLimitFn());
     mockLimitFn.mockResolvedValue({
       limit: 30,
       remaining: 29,
       reset: Date.now() + 60000,
       success: true,
     });
+  });
+
+  afterEach(() => {
+    setRateLimitFactoryForTests(null);
   });
 
   it("streams when valid and enabled", async () => {

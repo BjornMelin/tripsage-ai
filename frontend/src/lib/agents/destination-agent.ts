@@ -49,6 +49,7 @@ export function runDestinationAgent(
     model: LanguageModel;
     modelId: string;
   },
+  config: import("@schemas/configuration").AgentConfig,
   input: DestinationResearchRequest
 ) {
   const instructions = buildDestinationPrompt(input);
@@ -61,7 +62,7 @@ export function runDestinationAgent(
     { content: instructions, role: "system" },
     { content: userPrompt, role: "user" },
   ];
-  const desiredMaxTokens = 4096; // Default for agent responses
+  const desiredMaxTokens = config.parameters.maxTokens ?? 4096;
   const { maxTokens } = clampMaxTokens(messages, desiredMaxTokens, deps.modelId);
 
   return streamText({
@@ -72,7 +73,8 @@ export function runDestinationAgent(
     ],
     model: deps.model,
     stopWhen: stepCountIs(15),
-    temperature: 0.3,
+    temperature: config.parameters.temperature ?? 0.3,
     tools: DESTINATION_TOOLS,
+    topP: config.parameters.topP,
   });
 }

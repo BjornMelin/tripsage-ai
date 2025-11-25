@@ -44,11 +44,10 @@ Complete technical documentation for TripSage AI, an AI-powered travel planning 
 
 ### Prerequisites
 
-- Python 3.13+ with uv package manager
 - Node.js ≥24 with pnpm ≥9.0.0
 - Supabase account (database and authentication)
 - Upstash Redis (caching)
-- OpenAI API key
+- AI provider API key (OpenAI, Anthropic, or xAI)
 
 ### Installation
 
@@ -58,25 +57,24 @@ git clone <repository-url>
 cd tripsage-ai
 
 # Install dependencies
-uv sync
-cd frontend && pnpm install && cd ..
+cd frontend && pnpm install
 
 # Configure environment
 cp .env.example .env
+# Edit .env with your Supabase, Upstash, and AI provider credentials
 
-# Start services
-uv run python -m tripsage.api.main    # Backend (port 8000)
-cd frontend && pnpm dev               # Frontend (port 3000)
+# Start development server
+pnpm dev
 ```
 
 ### Verification
 
 ```bash
-# Health check
-curl http://localhost:8000/api/health
+# Frontend + API available at
+open http://localhost:3000
 
-# Interactive API docs
-open http://localhost:8000/docs
+# Test API endpoint
+curl http://localhost:3000/api/dashboard
 ```
 
 ## Key Features
@@ -111,7 +109,7 @@ open http://localhost:8000/docs
 
 TripSage uses a modern, unified architecture:
 
-- **Backend**: FastAPI with Python 3.13+ and async operations
+- **Backend**: Next.js 16 server-first route handlers (TypeScript)
 - **Database**: Supabase PostgreSQL with Row Level Security and vector
   extensions
 - **Cache**: Upstash Redis (HTTP) for serverless caching

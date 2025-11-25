@@ -172,3 +172,47 @@ export const resetSearchFactory = (): void => {
   searchIdCounter = 1;
   resultIdCounter = 1;
 };
+
+import type { SearchHistoryItem, ValidatedSavedSearch } from "@schemas/stores";
+
+/**
+ * Create mock search history item.
+ *
+ * @param overrides - Partial search history item to override defaults
+ * @returns A complete search history item
+ */
+export function createMockSearchItem(
+  overrides: Partial<SearchHistoryItem> = {}
+): SearchHistoryItem {
+  return {
+    id: "test-id",
+    params: {},
+    searchType: "flight",
+    timestamp: new Date().toISOString(),
+    ...overrides,
+  };
+}
+
+/**
+ * Create mock saved search.
+ *
+ * @param overrides - Partial saved search to override defaults
+ * @returns A complete saved search
+ */
+export function createMockSavedSearch(
+  overrides: Partial<ValidatedSavedSearch> = {}
+): ValidatedSavedSearch {
+  return {
+    createdAt: new Date().toISOString(),
+    id: "test-search-id",
+    isFavorite: false,
+    isPublic: false,
+    name: "Test Search",
+    params: {},
+    searchType: "flight",
+    tags: [],
+    updatedAt: new Date().toISOString(),
+    usageCount: 0,
+    ...overrides,
+  };
+}

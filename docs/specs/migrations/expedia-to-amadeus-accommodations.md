@@ -14,79 +14,127 @@ Related: `adr-0050-amadeus-google-places-stripe-hybrid.md`, `0027-spec-accommoda
 
 ## Phase 0 – Safety & Branching
 
-- [ ] Create feature branch: `feat/amadeus-accommodations`.
+- [x] Create feature branch: `feat/amadeus-accommodations`.
 
-- [ ] Enable CI for new branch.
+- [x] Enable CI for new branch.
 
-- [ ] Snapshot current tests for `accommodations` domain, tools, and UI.
+- [x] Snapshot current tests for `accommodations` domain, tools, and UI. (pnpm test:unit + test:integration on 2025-11-21 recorded as baseline)
 
 ## Phase 1 – Introduce Amadeus (no behavior change yet)
 
-- [ ] Add `amadeus` dependency to `frontend/package.json`.
+- [x] Add `amadeus` dependency to `frontend/package.json`.
 
-- [ ] Create `src/domain/amadeus/client.ts`, `schemas.ts`, `mappers.ts`.
+- [x] Create `src/domain/amadeus/client.ts`, `schemas.ts`, `mappers.ts`.
+- Notes:
+  - Implemented lazy singleton client with env validation.
+  - Added base schemas for hotel, offer, booking plus mapping helpers.
 
-- [ ] Write unit tests for Amadeus client and mappers with fixtures.
+- [x] Write unit tests for Amadeus client and mappers with fixtures.
 
-- [ ] Commit as "Amadeus scaffolding only (not wired)".
+- [x] Commit as "Amadeus scaffolding only (not wired)". (Superseded by unified refactor; tracked in final migration branch)
 
 ## Phase 2 – Swap Provider in Container
 
-- [ ] Ensure `AmadeusProviderAdapter` implements `AccommodationProviderAdapter`.
+- [x] Ensure `AmadeusProviderAdapter` implements `AccommodationProviderAdapter`.
 
-- [ ] Update `src/domain/accommodations/container.ts` to use `new AmadeusProviderAdapter()`.
+- [x] Update `src/domain/accommodations/container.ts` to use `new AmadeusProviderAdapter()`.
+- Notes:
+  - Provider types rewritten to be provider-agnostic.
+  - Container now builds Amadeus adapter with Upstash rate limiter defaults.
 
-- [ ] Run tests; fix any type errors in service and booking orchestrator.
+- [x] Run tests; fix any type errors in service and booking orchestrator.
+  - Tests: `pnpm test:unit --project=unit` (frontend) – passes after adding Amadeus client/mappers/service/orchestrator specs.
+  - Addressed: updated provider-agnostic booking orchestrator, fixed TypeScript errors, and ensured service uses Amadeus adapter.
+
+## Global Reviews, Security Notes, and Cross-Cutting Changes
+
+- Architecture (zen.analyze):
+  - Identified risks: Places geocoding/enrichment lacked retries/telemetry; Amadeus booking payload used placeholder card; persistence still wrote to `eps_booking_id`.
+  - Actions taken: added retry/backoff + telemetry spans for Places geocode/details; normalized geocode cache keys; persisted bookings now use `provider_booking_id` via Supabase migration 20251121090000. Payment payload validation with Amadeus still open.
+  - New: Added OTEL spans for details/availability/booking flows and enforced rate limiting on availability/booking paths.
+  - Latest (2025-11-21): Applied price-band filtering in `AccommodationsService.search`, added booking persistence retry/backoff, and downgraded Places geocode failures to provider errors to avoid raw exceptions when Google hiccups.
+- Code Review (zen.codereview):
+  - Issues: hard-coded Amadeus card payload; empty-hotel search path; geocode failures surfacing as location_not_found; legacy `eps_booking_id` field.
+  - Fixes applied: removed hard-coded payment card (bookings now pay-at-property/agency hold), short-circuit when no hotels, geocode now throws on provider errors with telemetry, added provider-neutral booking persistence.
+  - Latest (2025-11-21): API routes `/api/trips` and `/api/itineraries` now scope results to the authenticated user's trips (with trip ownership validation on creates) to close multi-tenant leakage flagged in review.
+- Security (zen.secaudit):
+  - Findings: spoofable `x-user-id` header; client-controlled booking amount/currency.
+  - Fixes applied: tools now derive user from Supabase auth; booking charges now derive amount/currency from cached checkAvailability price (client values ignored); removed server-key exposure for Places photos by switching to browser-safe key in UI.
+  - Remaining: rotate server key in ops runbook; consider additional auth hardening for non-auth search flows.
+  - Latest (2025-11-21): Booking flow now validates `tripId` ownership against Supabase to prevent cross-tenant associations flagged in audit.
+
+- Code Review (zen.codereview, 2025-11-22):
+  - Fixed missing `user_id` derivation in `trip-store` create/update flows to avoid invalid inserts and RLS failures.
+  - Guarded assistant memory persistence on null `sessionId` and sanitized chat metadata to remove full assistant content.
+  - Updated agent config route tests to use `NextRequest` shapes and tightened API guard mocks.
+- Architecture (zen.analyze, 2025-11-22):
+  - Added vault stubs in consolidated base schema to keep local/CI migrations runnable without the extension.
+  - Normalized chat metadata to avoid `undefined` in JSON payloads and added sanitized inserts.
+  - Trip mutations now source owner IDs from state instead of `currentTrip` to align with RLS.
+- Security (zen.secaudit, 2025-11-22):
+  - Identified privilege escalation via `public.is_admin` trusting `user_metadata`. Mitigated by changing admin check to `app_metadata.is_admin`/JWT claim only in `20251122000000_base_schema.sql`.
+  - Recommendation logged: monitor admin metadata changes and regenerate tokens for legitimate admins once roles are stored in app_metadata.
+
+- Supabase bootstrap (one-command flow, 2025-11-22):
+  - Consolidated migrations into `supabase/migrations/20251122000000_base_schema.sql` (includes agent_config backend).
+  - Local reset sequence: `npx supabase start --debug`, `npx supabase db reset --debug`, `npx supabase gen types typescript --local --schema public,auth,storage,memories > ../frontend/src/lib/supabase/database.types.ts`, then `npx supabase stop`.
+  - Notes: vault extension is stubbed when unavailable; production must use real vault extension.
 
 ## Phase 3 – Migrate Search & Details
 
-- [ ] Remove `@schemas/expedia` usage from `service.ts`.
+- [x] Remove `@schemas/expedia` usage from `service.ts`.
 
-- [ ] Implement Amadeus-based search with Upstash caching and rate limiting.
+- [x] Implement Amadeus-based search with Upstash caching and rate limiting.
 
-- [ ] Implement details enrichment with Google Places Place Details for hotels.
+- [x] Implement details enrichment with Google Places Place Details for hotels.
 
-- [ ] Update unit tests for search and details.
+- [x] Update unit tests for search and details.
 
 ## Phase 4 – Migrate Availability & Booking
 
-- [ ] Update `checkAvailability` to use provider adapter and Amadeus.
+- [x] Update `checkAvailability` to use provider adapter and Amadeus.
 
-- [ ] Generalize `runBookingOrchestrator` to provider-agnostic `ProviderBookingResult`.
+- [x] Generalize `runBookingOrchestrator` to provider-agnostic `ProviderBookingResult`.
 
-- [ ] Update Supabase booking persistence mapping.
+- [x] Update Supabase booking persistence mapping.
+  - Added trip-ownership validation before booking persistence; unauthorized trip ids now produce `trip_not_found_or_not_owned`.
 
-- [ ] Ensure Stripe PaymentIntents flow remains unchanged.
+- [x] Ensure Stripe PaymentIntents flow remains unchanged. (Pending: align Amadeus booking payload with Stripe payments/virtual card.)
+  - Payment now reuses cached availability price, ignoring client-provided amounts; provider payload embeds Stripe PaymentIntent reference and amount/currency and is covered by adapter unit test. Remaining risk: production validation against Amadeus `/v1/booking/hotel-bookings` response requirements.
+  - Added orchestrator unit tests to ensure refunds occur on provider failure and provider_booking_id is persisted.
 
 ## Phase 5 – AI Tools & Agent
 
-- [ ] Update `ai/tools/server/accommodations.ts` descriptions and remove Rapid-specific helpers.
+- [x] Update `ai/tools/server/accommodations.ts` descriptions and remove Rapid-specific helpers.
 
-- [ ] Ensure all tools remain schema-compatible with `@schemas/accommodations`.
+- [x] Ensure all tools remain schema-compatible with `@schemas/accommodations`.
 
-- [ ] Validate `runAccommodationAgent` still runs with updated tools.
+- [x] Validate `runAccommodationAgent` still runs with updated tools.
 
 ## Phase 6 – UI & UX
 
-- [ ] Wire `ModernHotelResults` into hotel search pages.
-
-- [ ] Confirm `AccommodationCard` displays Amadeus prices and Google Places ratings.
-
-- [ ] Confirm shadcn/ui components behave correctly for loading and errors.
+- [x] Wire `ModernHotelResults` into hotel search pages.
+  - Implemented server action `searchHotelsAction` to call accommodations service and feed `ModernHotelResults` with normalized data (Amadeus pricing + Places ratings/photos). Nights calculation guarded.
+- [x] Confirm `AccommodationCard` displays Amadeus prices and Google Places ratings.
+  - Card now surfaces Places ratings/photos when present and defaults safely when enrichment missing.
+- [x] Confirm shadcn/ui components behave correctly for loading and errors.
+  - Verified skeleton states and error boundaries; client uses browser-safe photo key instead of server key to avoid leakage.
 
 ## Phase 7 – Remove Expedia
 
-- [ ] Remove `src/domain/expedia/*` and `src/domain/schemas/expedia.ts`.
+- [x] Remove `src/domain/expedia/*` and `src/domain/schemas/expedia.ts`.
+  - Deleted Expedia domain and schema modules; container now instantiates Amadeus adapter only.
+- [x] Remove Expedia env vars from `.env.example`.
+  - Verified `.env.example` contains only Amadeus/Places/Stripe variables; no EPS keys remain.
 
-- [ ] Remove Expedia env vars from `.env.example`.
+- [x] Run TS compile; resolve any lingering imports. (tsc --noEmit clean 2025-11-21)
 
-- [ ] Run TS compile; resolve any lingering imports.
-
-- [ ] Mark old Expedia ADR/specs as `Superseded` pointing to ADR-0050.
+- [x] Mark old Expedia ADR/specs as `Superseded` pointing to ADR-0050.
+  - Updated ADR decision log with ADR-0050 accepted; ADR-0043/0049 listed as superseded and headers already reflect status.
 
 ## Phase 8 – Final QA
 
-- [ ] Run full unit/integration test suite.
+- [x] Run full unit/integration test suite. (pnpm test:unit, test:integration, targeted vitest reruns 2025-11-21)
 
 - [ ] Manual test:
 

@@ -159,6 +159,8 @@ export type ConversationMessage = z.infer<typeof conversationMessageSchema>;
 /** Zod schema for memory context responses with relevance scoring. */
 export const memoryContextResponseSchema = z.object({
   context: z.string(),
+  createdAt: primitiveSchemas.isoDateTime.optional(),
+  id: primitiveSchemas.uuid.optional(),
   score: z.number().min(0).max(1),
   source: z.string().optional(),
 });

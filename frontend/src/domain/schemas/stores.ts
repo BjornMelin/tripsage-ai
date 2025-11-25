@@ -6,6 +6,8 @@
 import { z } from "zod";
 import { messageRoleSchema } from "./chat";
 import { primitiveSchemas } from "./registry";
+import { searchTypeSchema as baseSearchTypeSchema } from "./search";
+import { storeTripSchema } from "./trips";
 
 // ===== CORE SCHEMAS =====
 // Core store state patterns and reusable schemas
@@ -17,6 +19,436 @@ const EMAIL_SCHEMA = primitiveSchemas.email;
 const URL_SCHEMA = primitiveSchemas.url;
 const POSITIVE_NUMBER_SCHEMA = primitiveSchemas.positiveNumber;
 const NON_NEGATIVE_NUMBER_SCHEMA = primitiveSchemas.nonNegativeNumber;
+
+// ===== USER PROFILE STORE SCHEMAS =====
+
+export const travelPreferencesSchema = z.object({
+  accessibilityRequirements: z.array(z.string()).default([]),
+  dietaryRestrictions: z.array(z.string()).default([]),
+  excludedAirlines: z.array(z.string()).default([]),
+  maxBudgetPerNight: z.number().min(0).optional(),
+  maxLayovers: z.number().min(0).max(5).default(2),
+  preferredAccommodationType: z
+    .enum(["hotel", "apartment", "villa", "hostel", "resort"])
+    .default("hotel"),
+  preferredAirlines: z.array(z.string()).default([]),
+  preferredArrivalTime: z
+    .enum(["early_morning", "morning", "afternoon", "evening", "late_night"])
+    .optional(),
+  preferredCabinClass: z
+    .enum(["economy", "premium_economy", "business", "first"])
+    .default("economy"),
+  preferredDepartureTime: z
+    .enum(["early_morning", "morning", "afternoon", "evening", "late_night"])
+    .optional(),
+  preferredHotelChains: z.array(z.string()).default([]),
+  requireBreakfast: z.boolean().default(false),
+  requireGym: z.boolean().default(false),
+  requireParking: z.boolean().default(false),
+  requirePool: z.boolean().default(false),
+  requireWifi: z.boolean().default(true),
+});
+
+export type TravelPreferences = z.infer<typeof travelPreferencesSchema>;
+
+export const personalInfoSchema = z.object({
+  bio: z.string().max(500).optional(),
+  dateOfBirth: z.string().optional(),
+  displayName: z.string().optional(),
+  emergencyContact: z
+    .object({
+      email: primitiveSchemas.email,
+      name: z.string(),
+      phone: z.string(),
+      relationship: z.string(),
+    })
+    .optional(),
+  firstName: z.string().optional(),
+  gender: z.enum(["male", "female", "other", "prefer_not_to_say"]).optional(),
+  lastName: z.string().optional(),
+  location: z.string().optional(),
+  phoneNumber: z.string().optional(),
+  website: primitiveSchemas.url.optional(),
+});
+
+export type PersonalInfo = z.infer<typeof personalInfoSchema>;
+
+export const privacySettingsSchema = z.object({
+  allowDataSharing: z.boolean().default(false),
+  enableAnalytics: z.boolean().default(true),
+  enableLocationTracking: z.boolean().default(false),
+  profileVisibility: z.enum(["public", "friends", "private"]).default("private"),
+  showTravelHistory: z.boolean().default(false),
+});
+
+export type PrivacySettings = z.infer<typeof privacySettingsSchema>;
+
+const favoriteDestinationSchema = z.object({
+  country: z.string(),
+  id: z.string(),
+  lastVisited: TIMESTAMP_SCHEMA.optional(),
+  name: z.string(),
+  notes: z.string().optional(),
+  visitCount: z.number().default(0),
+});
+
+export type FavoriteDestination = z.infer<typeof favoriteDestinationSchema>;
+
+const travelDocumentSchema = z.object({
+  expiryDate: TIMESTAMP_SCHEMA,
+  id: z.string(),
+  issuingCountry: z.string(),
+  notes: z.string().optional(),
+  number: z.string(),
+  type: z.enum(["passport", "visa", "license", "insurance", "vaccination"]),
+});
+
+export type TravelDocument = z.infer<typeof travelDocumentSchema>;
+
+export const userProfileSchema = z.object({
+  avatarUrl: primitiveSchemas.url.optional(),
+  createdAt: TIMESTAMP_SCHEMA,
+  email: primitiveSchemas.email,
+  favoriteDestinations: z.array(favoriteDestinationSchema).default([]),
+  id: z.string(),
+  personalInfo: personalInfoSchema.optional(),
+  privacySettings: privacySettingsSchema.optional(),
+  travelDocuments: z.array(travelDocumentSchema).default([]),
+  travelPreferences: travelPreferencesSchema.optional(),
+  updatedAt: TIMESTAMP_SCHEMA,
+});
+
+export type UserProfile = z.infer<typeof userProfileSchema>;
+
+// ===== SEARCH PARAMS STORE SCHEMAS =====
+
+export const searchTypeSchema = baseSearchTypeSchema;
+export type SearchType = z.infer<typeof searchTypeSchema>;
+
+export const baseSearchParamsStoreSchema = z.object({
+  adults: z.number().min(1).max(20).default(1),
+  children: z.number().min(0).max(10).default(0),
+  infants: z.number().min(0).max(5).default(0),
+});
+
+export const flightSearchParamsStoreSchema = baseSearchParamsStoreSchema.extend({
+  cabinClass: z
+    .enum(["economy", "premium_economy", "business", "first"])
+    .default("economy"),
+  departureDate: z.string().optional(),
+  destination: z.string().optional(),
+  directOnly: z.boolean().default(false),
+  excludedAirlines: z.array(z.string()).default([]),
+  maxStops: z.number().min(0).max(3).optional(),
+  origin: z.string().optional(),
+  preferredAirlines: z.array(z.string()).default([]),
+  returnDate: z.string().optional(),
+});
+
+export type ValidatedFlightParams = z.infer<typeof flightSearchParamsStoreSchema>;
+
+export const accommodationSearchParamsStoreSchema = baseSearchParamsStoreSchema.extend({
+  amenities: z.array(z.string()).default([]),
+  checkIn: z.string().optional(),
+  checkOut: z.string().optional(),
+  destination: z.string().optional(),
+  minRating: z.number().min(1).max(5).optional(),
+  priceRange: z
+    .object({
+      max: z.number().min(0).optional(),
+      min: z.number().min(0).optional(),
+    })
+    .optional(),
+  propertyType: z.enum(["hotel", "apartment", "villa", "hostel", "resort"]).optional(),
+  rooms: z.number().min(1).max(10).default(1),
+});
+
+export type ValidatedAccommodationParams = z.infer<
+  typeof accommodationSearchParamsStoreSchema
+>;
+
+export const activitySearchParamsStoreSchema = baseSearchParamsStoreSchema.extend({
+  category: z.string().optional(),
+  date: z.string().optional(),
+  destination: z.string().optional(),
+  difficulty: z.enum(["easy", "moderate", "challenging", "extreme"]).optional(),
+  duration: z
+    .object({
+      max: z.number().min(0).optional(),
+      min: z.number().min(0).optional(),
+    })
+    .optional(),
+  indoor: z.boolean().optional(),
+});
+
+export type ValidatedActivityParams = z.infer<typeof activitySearchParamsStoreSchema>;
+
+export const destinationSearchParamsStoreSchema = z.object({
+  bounds: z
+    .object({
+      east: z.number(),
+      north: z.number(),
+      south: z.number(),
+      west: z.number(),
+    })
+    .optional(),
+  countryCode: z.string().optional(),
+  limit: z.number().min(1).max(50).default(10),
+  query: z.string().default(""),
+  types: z.array(z.string()).default(["locality", "country"]),
+});
+
+export type ValidatedDestinationParams = z.infer<
+  typeof destinationSearchParamsStoreSchema
+>;
+
+// ===== SEARCH FILTERS STORE SCHEMAS =====
+
+export const sortDirectionSchema = z.enum(["asc", "desc"]);
+
+export const filterValueSchema = z.union([
+  z.string(),
+  z.number(),
+  z.boolean(),
+  z.array(z.string()),
+  z.array(z.number()),
+  z.object({
+    max: z.number().optional(),
+    min: z.number().optional(),
+  }),
+]);
+
+export type FilterValue = z.infer<typeof filterValueSchema>;
+
+export const filterOptionSchema = z.object({
+  category: z.string().optional(),
+  defaultValue: filterValueSchema.optional(),
+  dependencies: z.array(z.string()).optional(),
+  description: z.string().optional(),
+  id: z.string(),
+  label: z.string(),
+  options: z
+    .array(
+      z.object({
+        disabled: z.boolean().optional(),
+        label: z.string(),
+        value: z.string(),
+      })
+    )
+    .optional(),
+  required: z.boolean().default(false),
+  type: z.enum([
+    "text",
+    "number",
+    "boolean",
+    "select",
+    "multiselect",
+    "range",
+    "date",
+    "daterange",
+  ]),
+  validation: z
+    .object({
+      max: z.number().optional(),
+      min: z.number().optional(),
+      pattern: z.string().optional(),
+      required: z.boolean().optional(),
+    })
+    .optional(),
+});
+
+export type ValidatedFilterOption = z.infer<typeof filterOptionSchema>;
+
+export const sortOptionSchema = z.object({
+  category: z.string().optional(),
+  description: z.string().optional(),
+  direction: sortDirectionSchema.default("asc"),
+  field: z.string(),
+  id: z.string(),
+  isDefault: z.boolean().default(false),
+  label: z.string(),
+});
+
+export type ValidatedSortOption = z.infer<typeof sortOptionSchema>;
+
+export const activeFilterSchema = z.object({
+  appliedAt: TIMESTAMP_SCHEMA,
+  displayValue: z.string().optional(),
+  filterId: z.string(),
+  value: filterValueSchema,
+});
+
+export type ActiveFilter = z.infer<typeof activeFilterSchema>;
+
+export const filterPresetSchema = z.object({
+  createdAt: TIMESTAMP_SCHEMA,
+  description: z.string().optional(),
+  filters: z.array(activeFilterSchema),
+  id: z.string(),
+  isBuiltIn: z.boolean().default(false),
+  name: z.string(),
+  searchType: searchTypeSchema,
+  sortOption: sortOptionSchema.optional(),
+  usageCount: z.number().default(0),
+});
+
+export type FilterPreset = z.infer<typeof filterPresetSchema>;
+export type SortDirection = z.infer<typeof sortDirectionSchema>;
+
+// ===== UI STORE SUPPORT SCHEMAS =====
+
+export const themeSchema = z.enum(["light", "dark", "system"]);
+export type Theme = z.infer<typeof themeSchema>;
+
+export const notificationTypeSchema = z.enum(["info", "success", "warning", "error"]);
+export type NotificationType = z.infer<typeof notificationTypeSchema>;
+
+export const loadingStateSchema = z.enum(["idle", "loading", "success", "error"]);
+export type LoadingState = z.infer<typeof loadingStateSchema>;
+
+export const notificationSchema = z.object({
+  action: z
+    .object({
+      label: z.string(),
+      onClick: z.function().optional(),
+    })
+    .optional(),
+  createdAt: TIMESTAMP_SCHEMA,
+  duration: z.number().positive().optional(),
+  id: z.string(),
+  isRead: z.boolean().default(false),
+  message: z.string().optional(),
+  title: z.string(),
+  type: notificationTypeSchema,
+});
+
+export type Notification = z.infer<typeof notificationSchema>;
+
+export const loadingStatesSchema = z.record(z.string(), loadingStateSchema);
+export type LoadingStates = z.infer<typeof loadingStatesSchema>;
+
+// ===== SEARCH HISTORY STORE SCHEMAS =====
+
+export const searchHistoryItemSchema = z.object({
+  id: z.string(),
+  location: z
+    .object({
+      city: z.string().optional(),
+      coordinates: z
+        .object({
+          lat: z.number(),
+          lng: z.number(),
+        })
+        .optional(),
+      country: z.string().optional(),
+    })
+    .optional(),
+  params: z.record(z.string(), z.unknown()),
+  resultsCount: z.number().min(0).optional(),
+  searchDuration: z.number().min(0).optional(),
+  searchType: searchTypeSchema,
+  timestamp: TIMESTAMP_SCHEMA,
+  userAgent: z.string().optional(),
+});
+
+export type SearchHistoryItem = z.infer<typeof searchHistoryItemSchema>;
+
+export const savedSearchSchema = z.object({
+  createdAt: TIMESTAMP_SCHEMA,
+  description: z.string().max(500).optional(),
+  id: z.string(),
+  isFavorite: z.boolean().default(false),
+  isPublic: z.boolean().default(false),
+  lastUsed: TIMESTAMP_SCHEMA.optional(),
+  metadata: z
+    .object({
+      originalSearchId: z.string().optional(),
+      source: z.string().optional(),
+      version: z.string().default("1.0"),
+    })
+    .optional(),
+  name: z.string().min(1).max(100),
+  params: z.record(z.string(), z.unknown()),
+  searchType: searchTypeSchema,
+  tags: z.array(z.string()).default([]),
+  updatedAt: TIMESTAMP_SCHEMA,
+  usageCount: z.number().min(0).default(0),
+});
+
+export type ValidatedSavedSearch = z.infer<typeof savedSearchSchema>;
+
+export const searchCollectionSchema = z.object({
+  createdAt: TIMESTAMP_SCHEMA,
+  createdBy: z.string().optional(),
+  description: z.string().max(500).optional(),
+  id: z.string(),
+  isPublic: z.boolean().default(false),
+  name: z.string().min(1).max(100),
+  searchIds: z.array(z.string()),
+  tags: z.array(z.string()).default([]),
+  updatedAt: TIMESTAMP_SCHEMA,
+});
+
+export type SearchCollection = z.infer<typeof searchCollectionSchema>;
+
+export const quickSearchSchema = z.object({
+  color: z.string().optional(),
+  createdAt: TIMESTAMP_SCHEMA,
+  icon: z.string().optional(),
+  id: z.string(),
+  isVisible: z.boolean().default(true),
+  label: z.string().min(1).max(50),
+  params: z.record(z.string(), z.unknown()),
+  searchType: searchTypeSchema,
+  sortOrder: z.number().default(0),
+});
+
+export type QuickSearch = z.infer<typeof quickSearchSchema>;
+
+// ===== SEARCH RESULTS STORE SCHEMAS =====
+
+export const searchStatusSchema = z.enum([
+  "idle",
+  "searching",
+  "success",
+  "error",
+  "cancelled",
+]);
+
+export type SearchStatus = z.infer<typeof searchStatusSchema>;
+
+export const searchMetricsSchema = z.object({
+  currentPage: z.number().min(1).default(1),
+  hasMoreResults: z.boolean().default(false),
+  provider: z.string().optional(),
+  requestId: z.string().optional(),
+  resultsPerPage: z.number().min(1).default(20),
+  searchDuration: z.number().min(0).optional(),
+  totalResults: z.number().min(0).default(0),
+});
+
+export type SearchMetrics = z.infer<typeof searchMetricsSchema>;
+
+export const searchContextSchema = z.object({
+  completedAt: TIMESTAMP_SCHEMA.optional(),
+  metrics: searchMetricsSchema.optional(),
+  searchId: z.string(),
+  searchParams: z.record(z.string(), z.unknown()),
+  searchType: searchTypeSchema,
+  startedAt: TIMESTAMP_SCHEMA,
+});
+
+export type SearchContext = z.infer<typeof searchContextSchema>;
+
+export const errorDetailsSchema = z.object({
+  code: z.string().optional(),
+  details: z.record(z.string(), z.unknown()).optional(),
+  message: z.string(),
+  occurredAt: TIMESTAMP_SCHEMA,
+  retryable: z.boolean().default(true),
+});
+
+export type ErrorDetails = z.infer<typeof errorDetailsSchema>;
 
 /**
  * Base loading state schema for store state.
@@ -321,25 +753,7 @@ export type SearchStoreActions = z.infer<typeof searchStoreActionsSchema>;
  */
 export const tripStoreStateSchema = z
   .object({
-    currentTrip: z
-      .object({
-        budget: z
-          .object({
-            currency: primitiveSchemas.isoCurrency,
-            spent: NON_NEGATIVE_NUMBER_SCHEMA,
-            total: POSITIVE_NUMBER_SCHEMA,
-          })
-          .optional(),
-        destination: z.string(),
-        endDate: z.iso.date(),
-        id: UUID_SCHEMA,
-        itinerary: z.array(z.unknown()),
-        startDate: z.iso.date(),
-        status: z.enum(["planning", "booked", "active", "completed", "cancelled"]),
-        title: z.string(),
-        travelers: z.array(z.unknown()),
-      })
-      .nullable(),
+    currentTrip: storeTripSchema.nullable(),
     filters: z.object({
       dateRange: z
         .object({
@@ -357,35 +771,7 @@ export const tripStoreStateSchema = z
       direction: z.enum(["asc", "desc"]),
       field: z.enum(["createdAt", "startDate", "title", "status"]),
     }),
-    trips: z.array(
-      z.object({
-        budget: z
-          .object({
-            currency: primitiveSchemas.isoCurrency,
-            spent: NON_NEGATIVE_NUMBER_SCHEMA,
-            total: POSITIVE_NUMBER_SCHEMA,
-          })
-          .optional(),
-        createdAt: TIMESTAMP_SCHEMA,
-        description: z.string().optional(),
-        destination: z.string(),
-        endDate: z.iso.date(),
-        id: UUID_SCHEMA,
-        itinerary: z.array(z.unknown()),
-        startDate: z.iso.date(),
-        status: z.enum(["planning", "booked", "active", "completed", "cancelled"]),
-        title: z.string(),
-        travelers: z.array(
-          z.object({
-            email: EMAIL_SCHEMA.optional(),
-            id: UUID_SCHEMA.optional(),
-            name: z.string(),
-            role: z.enum(["owner", "collaborator", "viewer"]),
-          })
-        ),
-        updatedAt: TIMESTAMP_SCHEMA,
-      })
-    ),
+    trips: z.array(storeTripSchema),
   })
   .merge(LOADING_STATE_SCHEMA);
 

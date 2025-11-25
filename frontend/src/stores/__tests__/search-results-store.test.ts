@@ -1,13 +1,10 @@
 /** @vitest-environment jsdom */
 
 import type { Accommodation, Flight, SearchResults } from "@schemas/search";
+import type { ErrorDetails, SearchMetrics } from "@schemas/stores";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
-import {
-  type ErrorDetails,
-  type SearchMetrics,
-  useSearchResultsStore,
-} from "../search-results-store";
+import { useSearchResultsStore } from "../search-results-store";
 
 describe("Search Results Store", () => {
   beforeEach(() => {

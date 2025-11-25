@@ -1,16 +1,15 @@
 /** @vitest-environment jsdom */
 
 import { act, renderHook } from "@testing-library/react";
+import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAuthCore } from "@/stores/auth/auth-core";
 import { useAuthSession } from "@/stores/auth/auth-session";
 import { useAuthValidation } from "@/stores/auth/auth-validation";
 import { resetAuthState } from "@/stores/auth/reset-auth";
-import { createMockUser } from "@/test/factories";
+import { createAuthUser } from "@/test/factories/auth-user-factory";
+import { server } from "@/test/msw/server";
 import { setupTimeoutMock } from "@/test/store-helpers";
-
-// Mock fetch for API calls
-global.fetch = vi.fn();
 
 describe("AuthCore", () => {
   let timeoutCleanup: (() => void) | null = null;
@@ -50,17 +49,13 @@ describe("AuthCore", () => {
 
   describe("Logout", () => {
     it("successfully logs out and clears auth state", async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
-        ok: true,
-      } as Response);
-
       const { result } = renderHook(() => useAuthCore());
 
       // Set up authenticated state
       act(() => {
         useAuthCore.setState({
           isAuthenticated: true,
-          user: createMockUser(),
+          user: createAuthUser(),
         });
       });
 
@@ -76,16 +71,12 @@ describe("AuthCore", () => {
     });
 
     it("clears persisted auth session data", async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
-        ok: true,
-      } as Response);
-
       const { result } = renderHook(() => useAuthCore());
 
       act(() => {
         useAuthCore.setState({
           isAuthenticated: true,
-          user: createMockUser(),
+          user: createAuthUser(),
         });
 
         useAuthSession.setState({
@@ -108,10 +99,6 @@ describe("AuthCore", () => {
     });
 
     it("invokes auth-session resetSession when logging out", async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
-        ok: true,
-      } as Response);
-
       const sessionState = useAuthSession.getState();
       const resetSessionSpy = vi.spyOn(sessionState, "resetSession");
 
@@ -129,7 +116,7 @@ describe("AuthCore", () => {
     it("sets user directly", () => {
       const { result } = renderHook(() => useAuthCore());
 
-      const user = createMockUser({ id: "user-1" });
+      const user = createAuthUser({ id: "user-1" });
 
       act(() => {
         result.current.setUser(user);
@@ -161,11 +148,8 @@ describe("AuthCore", () => {
     });
 
     it("initializes with valid session", async () => {
-      const mockUser = createMockUser();
-      vi.mocked(fetch).mockResolvedValueOnce({
-        json: async () => ({ user: mockUser }),
-        ok: true,
-      } as Response);
+      const mockUser = createAuthUser();
+      server.use(http.get("/auth/me", () => HttpResponse.json({ user: mockUser })));
 
       const { result } = renderHook(() => useAuthCore());
 
@@ -178,9 +162,9 @@ describe("AuthCore", () => {
     });
 
     it("initializes with invalid session clears state", async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
-        ok: false,
-      } as Response);
+      server.use(
+        http.get("/auth/me", () => HttpResponse.json({ user: null }, { status: 401 }))
+      );
 
       const { result } = renderHook(() => useAuthCore());
 
@@ -198,7 +182,7 @@ describe("AuthCore", () => {
       const { result } = renderHook(() => useAuthCore());
 
       act(() => {
-        result.current.setUser(createMockUser({ displayName: "Custom Name" }));
+        result.current.setUser(createAuthUser({ displayName: "Custom Name" }));
       });
 
       expect(result.current.userDisplayName).toBe("Custom Name");
@@ -209,7 +193,7 @@ describe("AuthCore", () => {
 
       act(() => {
         result.current.setUser(
-          createMockUser({ displayName: undefined, firstName: "John", lastName: "Doe" })
+          createAuthUser({ displayName: undefined, firstName: "John", lastName: "Doe" })
         );
       });
 
@@ -221,7 +205,7 @@ describe("AuthCore", () => {
 
       act(() => {
         result.current.setUser(
-          createMockUser({
+          createAuthUser({
             displayName: undefined,
             firstName: "Jane",
             lastName: undefined,
@@ -237,7 +221,7 @@ describe("AuthCore", () => {
 
       act(() => {
         result.current.setUser(
-          createMockUser({
+          createAuthUser({
             displayName: undefined,
             email: "username@example.com",
             firstName: undefined,
@@ -252,7 +236,7 @@ describe("AuthCore", () => {
 
   describe("Auth reset orchestration", () => {
     it("resetAuthState clears auth-core, session, and validation slices", () => {
-      const mockUser = createMockUser();
+      const mockUser = createAuthUser();
 
       act(() => {
         useAuthCore.setState({

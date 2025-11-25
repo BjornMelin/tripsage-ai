@@ -1,7 +1,12 @@
+/**
+ * @fileoverview Flight search form component for searching flights.
+ */
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { type FlightSearchFormData, flightSearchFormSchema } from "@schemas/search";
+import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircle,
   ArrowRight,
@@ -53,6 +58,24 @@ interface SearchSuggestion {
   popular?: boolean;
 }
 
+interface PopularDestination {
+  code: string;
+  name: string;
+  savings?: string;
+  country?: string;
+}
+
+const POPULAR_DESTINATIONS_QUERY_KEY = ["flights", "popular-destinations"] as const;
+
+const FALLBACK_POPULAR_DESTINATIONS: PopularDestination[] = [
+  { code: "NYC", name: "New York", savings: "$127" },
+  { code: "LAX", name: "Los Angeles", savings: "$89" },
+  { code: "LHR", name: "London", savings: "$234" },
+  { code: "NRT", name: "Tokyo", savings: "$298" },
+];
+
+const POPULAR_DESTINATION_SKELETON_KEYS = ["one", "two", "three", "four"] as const;
+
 interface FlightSearchFormProps {
   onSearch: (params: ModernFlightSearchParams) => Promise<void>;
   suggestions?: SearchSuggestion[];
@@ -61,6 +84,7 @@ interface FlightSearchFormProps {
   initialParams?: Partial<ModernFlightSearchParams>;
 }
 
+/** Flight search form with validation and popular destination shortcuts. */
 export function FlightSearchForm({
   onSearch,
   suggestions: _suggestions = [],
@@ -105,13 +129,27 @@ export function FlightSearchForm({
     (_state, isSearching: boolean) => isSearching
   );
 
-  // Mock data for demo - would come from backend
-  const popularDestinations = [
-    { code: "NYC", name: "New York", savings: "$127" },
-    { code: "LAX", name: "Los Angeles", savings: "$89" },
-    { code: "LHR", name: "London", savings: "$234" },
-    { code: "NRT", name: "Tokyo", savings: "$298" },
-  ];
+  const {
+    data: popularDestinations = [],
+    isLoading: isLoadingPopularDestinations,
+    isError: isPopularDestinationsError,
+  } = useQuery<PopularDestination[]>({
+    gcTime: 2 * 60 * 60 * 1000, // 2 hours
+    queryFn: async () => {
+      const response = await fetch("/api/flights/popular-destinations");
+      if (!response.ok) {
+        throw new Error("Failed to fetch popular destinations");
+      }
+      return (await response.json()) as PopularDestination[];
+    },
+    queryKey: POPULAR_DESTINATIONS_QUERY_KEY,
+    staleTime: 60 * 60 * 1000, // 1 hour
+  });
+
+  const destinationsToRender =
+    popularDestinations.length > 0
+      ? popularDestinations
+      : FALLBACK_POPULAR_DESTINATIONS;
 
   const smartBundles = {
     car: "$89",
@@ -449,19 +487,43 @@ export function FlightSearchForm({
                 <span className="text-sm font-medium">Popular destinations</span>
               </div>
               <div className="flex flex-wrap gap-2">
-                {popularDestinations.map((dest) => (
-                  <Button
-                    key={dest.code}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleQuickFill(dest)}
-                    className="h-auto py-2 px-3 flex flex-col items-start"
-                  >
-                    <span className="font-medium">{dest.name}</span>
-                    <span className="text-xs text-green-600">Save {dest.savings}</span>
-                  </Button>
-                ))}
+                {isLoadingPopularDestinations
+                  ? POPULAR_DESTINATION_SKELETON_KEYS.map((key) => (
+                      <Button
+                        key={`popular-destination-skeleton-${key}`}
+                        variant="outline"
+                        size="sm"
+                        disabled
+                        className="h-auto py-2 px-3 flex flex-col items-start animate-pulse"
+                      >
+                        <span className="font-medium text-muted-foreground">
+                          Loading…
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          Fetching deals
+                        </span>
+                      </Button>
+                    ))
+                  : destinationsToRender.map((dest) => (
+                      <Button
+                        key={dest.code}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleQuickFill(dest)}
+                        className="h-auto py-2 px-3 flex flex-col items-start"
+                      >
+                        <span className="font-medium">{dest.name}</span>
+                        <span className="text-xs text-green-600">
+                          {dest.savings ? `Save ${dest.savings}` : "Popular now"}
+                        </span>
+                      </Button>
+                    ))}
               </div>
+              {isPopularDestinationsError && (
+                <p className="text-xs text-muted-foreground">
+                  Showing recent favorites while we refresh destination data.
+                </p>
+              )}
             </div>
 
             {/* Smart Bundle Preview */}

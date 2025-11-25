@@ -1,9 +1,14 @@
 # Spec 0026: Supabase Memory Orchestrator & Provider Adapters
 
+**Version**: 1.0.0  
+**Status**: Accepted  
+**Date**: 2025-11-18
+
 ## Status
 
-- Draft complete; targeting full acceptance with ADR-0042 alignment.
-- Awaiting implementation kickoff for orchestrator package and Supabase schema.
+- Implementation complete. Orchestrator module (`lib/memory/orchestrator.ts`) is fully implemented with Supabase, Upstash, and Mem0 adapters.
+- Integrated into chat stream handler (`api/chat/stream/_handler.ts`) via `persistMemoryTurn()`.
+- All adapters support required intents: `onTurnCommitted`, `syncSession`, `backfillSession`, `fetchContext`.
 
 ## Goals
 

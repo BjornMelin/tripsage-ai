@@ -6,7 +6,6 @@ Get the TripSage development environment running quickly.
 
 **Core Runtime:**
 
-- Python 3.13+ with uv package manager
 - Node.js ≥24 with pnpm ≥9.0.0
 - Git
 
@@ -23,7 +22,7 @@ Get the TripSage development environment running quickly.
 
 **Tech Stack:**
 
-- **Backend**: FastAPI with async Python
+- **Backend**: Next.js 16 server-first route handlers (TypeScript) — Python/FastAPI backend removed (see superseded SPEC-0007, SPEC-0010)
 - **Frontend**: Next.js 16, React 19, TypeScript 5.9.3
 - **Database**: PostgreSQL with pgvector (via Supabase)
 - **Cache**: Upstash Redis (HTTP REST API)
@@ -33,14 +32,11 @@ Get the TripSage development environment running quickly.
 - **State**: Zustand for client state
 - **Data**: TanStack Query for server state
 - **Testing**: Vitest 4.0.1, Playwright E2E
-- **Linting**: Biome 2.2.7, Ruff for Python
+- **Linting**: Biome 2.2.7
 
 ## Setup
 
 ```bash
-# Install Python package manager
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
 # Install Node.js package manager
 npm install -g pnpm
 
@@ -48,13 +44,12 @@ npm install -g pnpm
 git clone <repository-url>
 cd tripsage-ai
 
-# Install dependencies
-uv sync
+# Install dependencies (frontend-only runtime)
 cd frontend && pnpm install && cd ..
 
 # Configure environment
 cp .env.example .env
-# Edit .env with your Supabase credentials
+# Edit the root .env with your Supabase, Maps, and travel provider credentials
 ```
 
 ## Environment Variables
@@ -75,19 +70,13 @@ UPSTASH_REDIS_REST_TOKEN=your-token
 ## Start Development
 
 ```bash
-# Backend API (port 8000)
-uv run python -m tripsage.api.main
-
-# Frontend (port 3000, separate terminal)
+# Frontend + API (Next.js, port 3000)
 cd frontend && pnpm dev
 ```
 
 ## Verify
 
 ```bash
-# Test API health
-curl http://localhost:8000/health
-
 # Test frontend
 open http://localhost:3000
 ```
@@ -97,16 +86,8 @@ open http://localhost:3000
 ### Code Quality
 
 ```bash
-# Python: lint and format
-ruff check . --fix && ruff format .
-
-# Python: test
-uv run pytest --cov=tripsage
-
-# Frontend: lint and format
-cd frontend && pnpm lint && pnpm format
-
-# Frontend: test
+# Frontend: lint, format, type-check, test
+cd frontend && pnpm biome:check && pnpm type-check
 cd frontend && pnpm test
 ```
 

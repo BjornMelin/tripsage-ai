@@ -9,13 +9,13 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useId, useMemo } from "react";
+import { useId } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createClient } from "@/lib/supabase";
+import { useSupabaseRequired } from "@/lib/supabase";
 
 /** Props for the RegisterForm component. */
 interface RegisterFormProps {
@@ -55,7 +55,7 @@ export function RegisterForm({
     status === "registered" ||
     status === "confirmation_sent";
 
-  const supabase = useMemo(() => createClient(), []);
+  const supabase = useSupabaseRequired();
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
 

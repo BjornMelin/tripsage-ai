@@ -1,17 +1,24 @@
 # Spec 0008: AI SDK v6 Foundations (Next.js)
 
+**Version**: 1.1.0  
+**Status**: Accepted  
+**Date**: 2025-11-04
+
 ## Scope
 
 - Add a server-only streaming route using AI SDK `streamText` and return a UI Message Stream response.
 - Scaffold AI Elements chat UI primitives and a simple demo page.
 - Keep changes contained to `frontend/`.
 
+**Status Update:** This spec is implemented. The route exists at `/api/ai/stream` and uses `withApiGuards` for auth/rate-limiting. AI Elements components are integrated in the chat UI.
+
 ## APIs & Routes
 
-- POST `src/app/api/_health/stream/route.ts`
-  - Request: optional JSON `{ prompt?: string }` (ignored in demo)
-  - Response: `toUIMessageStreamResponse()` from `streamText` with placeholder model id `openai/gpt-4o`
+- POST `src/app/api/ai/stream/route.ts`
+  - Request: optional JSON `{ prompt?: string, model?: string, messages?: ChatMessage[] }`
+  - Response: `toUIMessageStreamResponse()` from `streamText` with configurable model
   - Max duration: 30s
+  - Protected by `withApiGuards` with rate limiting (`ai:stream`)
 
 ## UI Components
 

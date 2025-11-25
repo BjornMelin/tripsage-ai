@@ -1,12 +1,16 @@
 /** @vitest-environment node */
 
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { setSupabaseFactoryForTests } from "@/lib/api/factory";
 import { stubRateLimitDisabled } from "@/test/env-helpers";
 import {
   createMockNextRequest,
   createRouteParamsContext,
   getMockCookiesForTest,
 } from "@/test/route-helpers";
+import { setupUpstashMocks } from "@/test/setup/upstash";
+
+const { redis, ratelimit } = setupUpstashMocks();
 
 // Mock next/headers cookies() BEFORE any imports that use it
 vi.mock("next/headers", () => ({
@@ -27,9 +31,9 @@ vi.mock("@/lib/supabase/server", () => ({
   })),
 }));
 
-// Mock Redis for rate limiting
+// Mock local Redis wrapper to return undefined (skip caching in tests)
 vi.mock("@/lib/redis", () => ({
-  getRedis: vi.fn(() => Promise.resolve({})),
+  getRedis: vi.fn(() => undefined),
 }));
 
 // Mock AI provider registry
@@ -46,20 +50,40 @@ vi.mock("ai", () => ({
 import { GET as getSuggestions } from "../suggestions/route";
 
 describe("/api/trips/suggestions route", () => {
+  const supabaseClient = {
+    auth: {
+      getUser: vi.fn(async () => ({
+        data: { user: { id: "user-1" } },
+        error: null,
+      })),
+    },
+  };
+
+  beforeEach(() => {
+    setSupabaseFactoryForTests(async () => supabaseClient as never);
+    supabaseClient.auth.getUser.mockResolvedValue({
+      data: { user: { id: "user-1" } },
+      error: null,
+    });
+    // Reset Upstash mocks
+    redis.__reset?.();
+    ratelimit.__reset?.();
+  });
+
+  afterEach(() => {
+    setSupabaseFactoryForTests(null);
+    vi.clearAllMocks();
+  });
+
   it("returns 401 when user is missing", async () => {
     // Disable rate limiting for this test
     stubRateLimitDisabled();
 
     // Mock unauthenticated user
-    const { createServerSupabase } = await import("@/lib/supabase/server");
-    vi.mocked(createServerSupabase).mockResolvedValueOnce({
-      auth: {
-        getUser: async () => ({
-          data: { user: null },
-          error: new Error("Unauthorized"),
-        }),
-      },
-    } as unknown as Awaited<ReturnType<typeof createServerSupabase>>);
+    supabaseClient.auth.getUser.mockResolvedValueOnce({
+      data: { user: null },
+      error: new Error("Unauthorized"),
+    } as never);
 
     const req = createMockNextRequest({
       method: "GET",

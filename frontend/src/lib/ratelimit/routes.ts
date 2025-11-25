@@ -26,6 +26,10 @@ export interface RouteRateLimitDefinition {
  * `chat:sessions:list`, `calendar:events:read`).
  */
 export const ROUTE_RATE_LIMITS = {
+  "activities:details": { limit: 30, window: "1 m" },
+
+  // Activities
+  "activities:search": { limit: 20, window: "1 m" },
   // Agent routes
   "agents:accommodations": { limit: 30, window: "1 m" },
   "agents:budget": { limit: 30, window: "1 m" },
@@ -61,12 +65,20 @@ export const ROUTE_RATE_LIMITS = {
   "chat:sessions:messages:create": { limit: 40, window: "1 m" },
   "chat:sessions:messages:list": { limit: 60, window: "1 m" },
   "chat:stream": { limit: 40, window: "1 m" },
+  // Configuration
+  "config:agents:read": { limit: 60, window: "1 m" },
+  "config:agents:rollback": { limit: 10, window: "1 m" },
+  "config:agents:update": { limit: 20, window: "1 m" },
+  "config:agents:versions": { limit: 60, window: "1 m" },
 
   // Dashboard
   "dashboard:metrics": { limit: 30, window: "1 m" },
 
   // Embeddings and geocoding
   embeddings: { limit: 60, window: "1 m" },
+
+  // Flights
+  "flights:popular-destinations": { limit: 60, window: "1 m" },
   geocode: { limit: 60, window: "1 m" },
 
   // Itineraries
@@ -96,6 +108,12 @@ export const ROUTE_RATE_LIMITS = {
   // Routes and directions
   "route-matrix": { limit: 30, window: "1 m" },
   routes: { limit: 60, window: "1 m" },
+
+  // Security
+  "security:events": { limit: 20, window: "1 m" },
+  "security:metrics": { limit: 20, window: "1 m" },
+  "security:sessions:list": { limit: 20, window: "1 m" },
+  "security:sessions:terminate": { limit: 10, window: "1 m" },
 
   // Telemetry
   "telemetry:ai-demo": { limit: 10, window: "1 m" },

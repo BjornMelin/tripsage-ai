@@ -22,7 +22,7 @@ TripSage uses a unified Supabase PostgreSQL architecture with integrated extensi
 ```mermaid
 graph TB
     subgraph "Application Layer"
-        API[FastAPI Backend]
+        API[Next.js Route Handlers]
         FE[Next.js Frontend]
     end
 
@@ -41,7 +41,7 @@ graph TB
 
     subgraph "External Services"
         OPENAI[OpenAI API]
-        REDIS[Redis Cache]
+        REDIS[Upstash Redis]
     end
 
     API --> DB
@@ -355,7 +355,7 @@ Establish a single-source-of-truth schema (`supabase/schema.sql`) plus optional 
 | Domain | Tables | Notes |
 | --- | --- | --- |
 | Trip Core | trips, flights, accommodations, transportation, itinerary_items, bookings, trip_collaborators | Use UUID PKs; cascade delete on trip_id/user_id. |
-| AI Memories & RAG | memories, session_memories, accommodation_embeddings | Rename RAG table to `accommodation_embeddings` (TEXT PK referencing EPS ID), store vector(1536) + metadata + optional user_id. |
+| AI Memories & RAG | memories, session_memories, accommodation_embeddings | Rename RAG table to `accommodation_embeddings` (TEXT PK referencing provider hotelId), store vector(1536) + metadata + optional user_id. |
 | Integrations / BYOK | user_gateway_configs, user_api_keys (vault-backed), api_gateway_configs, user_settings | Consolidate API key storage tables; only store vault path + hashed metadata. |
 | Storage + Files | storage bucket records (insert rows), file_versions, file_processing_queue | Seed default buckets (uploads, itinerary-assets). |
 | Telemetry / Webhooks | webhook_configs, webhook_logs, webhook_events, notifications, system_metrics | Keep only actively used ones. |

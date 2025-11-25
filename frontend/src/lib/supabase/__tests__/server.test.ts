@@ -1,3 +1,5 @@
+/** @vitest-environment node */
+
 import { createServerClient } from "@supabase/ssr";
 import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
 import { cookies } from "next/headers";

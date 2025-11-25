@@ -25,9 +25,9 @@ vi.mock("@/lib/telemetry/span", () => ({
 }));
 
 // Mock route helpers
-vi.mock("@/lib/next/route-helpers", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/next/route-helpers")>(
-    "@/lib/next/route-helpers"
+vi.mock("@/lib/api/route-helpers", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/api/route-helpers")>(
+    "@/lib/api/route-helpers"
   );
   return {
     ...actual,
@@ -45,8 +45,8 @@ describe("GET /api/keys route", () => {
       data: [
         {
           created_at: "2025-11-01T00:00:00Z",
-          last_used_at: null,
-          service_name: "openai",
+          last_used: null,
+          service: "openai",
         },
       ],
       error: null,

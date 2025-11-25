@@ -23,15 +23,17 @@ import { useSearchStore } from "@/stores/search-store";
 
 export default function DestinationsSearchPage() {
   const { hasResults, isSearching: storeIsSearching } = useSearchStore();
-  const { searchDestinations, isSearching, searchError, resetSearch } =
+  const { searchDestinations, isSearching, searchError, resetSearch, results } =
     useDestinationSearch();
 
   const [selectedDestinations, setSelectedDestinations] = useState<Destination[]>([]);
   const [showComparisonModal, setShowComparisonModal] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
 
   const handleSearch = async (params: DestinationSearchParams) => {
     try {
       await searchDestinations(params);
+      setHasSearched(true);
     } catch (error) {
       console.error("Search failed:", error);
     }
@@ -67,10 +69,29 @@ export default function DestinationsSearchPage() {
     setSelectedDestinations([]);
   };
 
-  // For now, use mock data since we're focusing on UI testing
-  const destinations: Destination[] = [];
-  const hasActiveResults = hasResults;
-  const hasSearched = false;
+  const destinations: Destination[] = results
+    .filter((result) => result.location)
+    .map((result) => ({
+      attractions: [],
+      bestTimeToVisit: undefined,
+      climate: undefined,
+      coordinates: {
+        lat: result.location?.lat ?? 0,
+        lng: result.location?.lng ?? 0,
+      },
+      country: undefined,
+      description: result.address || result.name,
+      formattedAddress: result.address || result.name,
+      id: result.placeId,
+      name: result.name,
+      photos: undefined,
+      placeId: result.placeId,
+      popularityScore: undefined,
+      rating: undefined,
+      region: undefined,
+      types: result.types,
+    }));
+  const hasActiveResults = destinations.length > 0 || hasResults;
 
   return (
     <div className="container mx-auto py-6 space-y-6">

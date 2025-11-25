@@ -20,8 +20,8 @@
 
 ---
 
-TripSage AI is a travel planning platform that combines the power of modern AI agents with rich
-all-in-one travel services. The legacy Python/FastAPI backend has been fully removed; the **Next.js 16 + Vercel AI SDK v6** stack (in `frontend/`) is the sole backend surface.
+TripSage AI is a travel planning platform that combines the power of modern
+AI agents with rich AI SDK v6 tools and all-in-one travel services.
 
 ## ✨ Key Features
 
@@ -152,7 +152,7 @@ docker-compose up -d
 
 # Production build
 docker build -t tripsage-ai .
-docker run -p 8000:8000 --env-file .env.production tripsage-ai
+docker run -p 3000:3000 --env-file .env.production tripsage-ai
 ```
 
 ### Kubernetes Deployment
@@ -169,22 +169,20 @@ kubectl get pods -l app=tripsage-ai
 
 | Variable | Description | Required |
 |----------|-------------|----------|
-| `DATABASE_URL` | PostgreSQL connection string | ✅ |
-| `SUPABASE_URL` | Supabase project URL | ✅ |
-| `SUPABASE_ANON_KEY` | Supabase anonymous key | ✅ |
-| `OPENAI_API_KEY` | OpenAI API key for AI features | ✅ |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | ✅ |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key | ✅ |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key | ✅ |
+| `AI_GATEWAY_API_KEY` | Vercel AI Gateway key | ✅ |
 | `DUFFEL_ACCESS_TOKEN` | Duffel API token for flights | ⚠️ |
-| `REDIS_URL` | Upstash Redis (TLS) URL for backend (rate limiting/cache) | ⚠️ |
-| `UPSTASH_REDIS_REST_URL` | Upstash Redis REST URL (frontend/edge) | ⚠️ |
-| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST token (frontend/edge) | ⚠️ |
-| `MEM0_API_KEY` | Mem0 API key for memory features | ⚠️ |
+| `UPSTASH_REDIS_REST_URL` | Upstash Redis REST URL | ⚠️ |
+| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST token | ⚠️ |
 
 ✅ Required | ⚠️ Optional (fallback available)
 
 **Notes:**
 
-- Backend (FastAPI) uses a TCP Redis connection for distributed rate limiting and caching. Use your Upstash Redis (TLS) URL in `REDIS_URL`.
-- Frontend/Edge (Next.js) uses Upstash REST credentials (`UPSTASH_REDIS_REST_URL`/`TOKEN`) for route-level limits or caching.
+- All routes use Upstash REST credentials for rate limiting and caching via `@upstash/redis` and `@upstash/ratelimit`.
+- BYOK keys are stored encrypted in Supabase Vault and resolved server-side only.
 
 ---
 
@@ -249,12 +247,11 @@ TripSage AI is optimized for high performance and global scalability:
 ### Benchmarks
 
 ```bash
-# Performance testing
-uv run python scripts/performance/benchmark_api.py
-uv run python scripts/performance/load_test.py
+# Performance testing via load testing tools
+pnpm -C frontend test:run --grep performance
 
-# Cache performance verification
-uv run python scripts/verification/verify_upstash.py
+# Or use external load testing
+autocannon -c 100 -d 30 http://localhost:3000/api/health
 ```
 
 ---
@@ -269,7 +266,7 @@ Zero-trust architecture with defense-in-depth security:
 - **Server-Only Secrets**: BYOK routes import `"server-only"` and run with `dynamic = "force-dynamic"` to ensure secrets processed per-request
 - **PII Redaction**: OpenTelemetry spans automatically redact sensitive data; structured logging with correlation IDs
 - **Tool Approval Gates**: Critical operations (bookings, payments) pause streaming and require explicit user consent
-- **Dependency Security**: Automated vulnerability scanning and dependency updates
+- **Dependency Security**: Dependabot provides automated vulnerability scanning in CI; `pnpm audit` is available for local/manual checks (not run in CI)
 
 ### Security Testing
 
@@ -277,8 +274,11 @@ Zero-trust architecture with defense-in-depth security:
 # Security verification (ensure no hardcoded secrets)
 git grep -i "fallback-secret\|development-only" .  # Should return empty
 
-# Run security tests
-uv run pytest tests/security/
+# Dependency audit
+pnpm -C frontend audit
+
+# Run security-focused tests
+pnpm -C frontend test:run --grep security
 ```
 
 ---

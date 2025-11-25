@@ -35,7 +35,6 @@ interface TripRow {
 }
 
 type TripInsert = Partial<TripRow> & {
-  name?: string;
   title?: string;
   startDate?: string;
   endDate?: string;
@@ -43,7 +42,7 @@ type TripInsert = Partial<TripRow> & {
   budget?: number;
   description?: string;
   destinations?: unknown;
-  isPublic?: boolean;
+  visibility?: "private" | "shared" | "public";
 };
 
 interface TripFilter {
@@ -70,7 +69,7 @@ const TO_TRIP_ROW = (input: TripInsert): TripRow => {
     // biome-ignore lint/style/useNamingConvention: Supabase row columns use snake_case.
     end_date: input.endDate ?? null,
     id: Number(Date.now() + randomInt(0, 1000)),
-    name: input.name ?? input.title ?? "Untitled Trip",
+    name: input.title ?? "Untitled Trip", // Database uses 'name', frontend uses 'title'
     preferences: {},
     // biome-ignore lint/style/useNamingConvention: Supabase row columns use snake_case.
     spent_amount: 0,
@@ -78,14 +77,14 @@ const TO_TRIP_ROW = (input: TripInsert): TripRow => {
     start_date: input.startDate ?? null,
     status: "planning",
     tags: [],
-    title: input.title ?? input.name ?? "Untitled Trip",
+    title: input.title ?? "Untitled Trip",
     // biome-ignore lint/style/useNamingConvention: Supabase row columns use snake_case.
     updated_at: now,
     // biome-ignore lint/style/useNamingConvention: Supabase row columns use snake_case.
     user_id: "test-user-id",
     // biome-ignore lint/style/useNamingConvention: Supabase row columns use snake_case.
     uuid_id: randomUUID(),
-    visibility: input.isPublic ? "public" : "private",
+    visibility: input.visibility ?? "private",
   };
 };
 

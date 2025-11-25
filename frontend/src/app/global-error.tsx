@@ -7,8 +7,9 @@
 
 import { useEffect } from "react";
 import { MinimalErrorFallback } from "@/components/error/error-fallback";
+import { getSessionId } from "@/lib/client/session";
 import { errorService } from "@/lib/error-service";
-import { fireAndForget, getSessionId } from "@/lib/utils";
+import { fireAndForget } from "@/lib/utils";
 
 /**
  * Global error boundary for the app.

@@ -18,6 +18,7 @@ export function createMockNextRequest(options: {
   cookies?: Record<string, string>;
   headers?: Record<string, string>;
   method?: string;
+  searchParams?: Record<string, string>;
   url?: string;
 }): NextRequest {
   const {
@@ -25,8 +26,17 @@ export function createMockNextRequest(options: {
     cookies: cookieMap = {},
     headers: headerMap = {},
     method = "POST",
+    searchParams,
     url = "http://localhost/api/test",
   } = options;
+
+  // Build URL with search params if provided
+  const urlObj = new URL(url);
+  if (searchParams) {
+    Object.entries(searchParams).forEach(([key, value]) => {
+      urlObj.searchParams.set(key, value);
+    });
+  }
 
   // Build cookie header string
   const cookieHeader = Object.entries(cookieMap)
@@ -57,7 +67,7 @@ export function createMockNextRequest(options: {
 
   // NextRequest constructor accepts its own RequestInit type
   return new NextRequest(
-    url,
+    urlObj.toString(),
     init as unknown as ConstructorParameters<typeof NextRequest>[1]
   );
 }

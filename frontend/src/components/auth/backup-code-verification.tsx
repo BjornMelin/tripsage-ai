@@ -43,13 +43,26 @@ export function BackupCodeVerification({
     setError(null);
 
     try {
+      // TODO: Replace mock API call with real backup code verification implementation.
+      //
+      // Requirements:
+      // - Verify backup code using Supabase Auth backup code verification
+      // - Use `supabase.auth.mfa.verify({ code: backupCode, type: 'backup' })` or equivalent
+      // - Validate backup code format before API call
+      // - On successful verification, invalidate the used backup code
+      // - Update remaining backup codes count
+      // - Handle verification failures (invalid code, already used, expired)
+      // - Show appropriate error messages
+      // - Add telemetry tracking for backup code usage
+      //
       // Mock API call - replace with actual implementation
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
+      // TODO: Replace with real backup code verification: await supabase.auth.mfa.verify({ code: backupCode, type: 'backup' })
       // Mock verification (accept any code with correct format for demo)
       if (backupCode.includes("-") && backupCode.length >= 10) {
-        // Simulate remaining backup codes
-        const remainingCodes = Math.floor(Math.random() * 8) + 1;
+        // Simulate remaining backup codes (fixed value for deterministic behavior)
+        const remainingCodes = 5;
         onVerified(remainingCodes);
       } else {
         setError("Invalid backup code. Please check and try again.");

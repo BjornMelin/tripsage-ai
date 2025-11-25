@@ -1,5 +1,7 @@
 /**
- * @fileoverview Text embedding generation API endpoint using OpenAI embeddings.
+ * @fileoverview Text embedding generation endpoint.
+ *
+ * Generates embeddings using OpenAI text-embedding-3-small model.
  */
 
 import "server-only";
@@ -9,7 +11,8 @@ import { embed } from "ai";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { parseJsonBody } from "@/lib/next/route-helpers";
+import { errorResponse, parseJsonBody } from "@/lib/api/route-helpers";
+import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import type { InsertTables } from "@/lib/supabase/database.types";
 import { createServerLogger } from "@/lib/telemetry/logger";
@@ -28,11 +31,18 @@ type EmbeddingRequest = {
   };
 };
 
+/** Property with required ID for persistence. */
 type PersistableProperty = Required<
   Pick<NonNullable<EmbeddingRequest["property"]>, "id">
 > &
   NonNullable<EmbeddingRequest["property"]>;
 
+/**
+ * Normalizes source string to "hotel" or "vrbo".
+ *
+ * @param source - Source string to normalize.
+ * @returns Normalized source type.
+ */
 function normalizeSource(source?: string): "hotel" | "vrbo" {
   if (source && source.toLowerCase() === "vrbo") {
     return "vrbo";
@@ -40,6 +50,12 @@ function normalizeSource(source?: string): "hotel" | "vrbo" {
   return "hotel";
 }
 
+/**
+ * Normalizes amenities array or string to comma-separated string.
+ *
+ * @param amenities - Amenities array or string.
+ * @returns Normalized amenities string or null.
+ */
 function normalizeAmenities(amenities?: string[] | string): string | null {
   if (!amenities) {
     return null;
@@ -54,6 +70,13 @@ function normalizeAmenities(amenities?: string[] | string): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+/**
+ * Persists accommodation embedding to Supabase.
+ *
+ * @param property - Property data with required ID.
+ * @param embedding - Embedding vector (1536 dimensions).
+ * @throws Error if database operation fails.
+ */
 async function persistAccommodationEmbedding(
   property: PersistableProperty,
   embedding: number[]
@@ -62,7 +85,8 @@ async function persistAccommodationEmbedding(
   const payload: InsertTables<"accommodation_embeddings"> = {
     amenities: normalizeAmenities(property.amenities),
     description: property.description ?? null,
-    embedding,
+    // Supabase CLI types surface pgvector as string; cast to satisfy client types while sending number[].
+    embedding: embedding as unknown as string,
     id: property.id,
     name: property.name ?? null,
     source: normalizeSource(property.source),
@@ -79,11 +103,10 @@ async function persistAccommodationEmbedding(
 }
 
 /**
- * Generates text embeddings using OpenAI's text-embedding-3-small model.
+ * Generates text embeddings using OpenAI text-embedding-3-small model.
  *
- * @param req - The incoming request containing text or property data.
- * @param routeContext - Route context from withApiGuards
- * @returns Response with embedding vector and metadata, or error response.
+ * @param req - Request containing text or property data.
+ * @returns Response with embedding vector and metadata, or error.
  */
 export const POST = withApiGuards({
   auth: false,
@@ -91,11 +114,15 @@ export const POST = withApiGuards({
   telemetry: "embeddings.generate",
 })(async (req: NextRequest) => {
   const logger = createServerLogger("embeddings.generate");
-  const internalKey = process.env.EMBEDDINGS_API_KEY;
+  const internalKey = getServerEnvVarWithFallback("EMBEDDINGS_API_KEY", undefined);
   if (internalKey) {
     const provided = req.headers.get("x-internal-key");
     if (provided !== internalKey) {
-      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+      return errorResponse({
+        error: "unauthorized",
+        reason: "Authentication required",
+        status: 401,
+      });
     }
   }
 
@@ -110,11 +137,19 @@ export const POST = withApiGuards({
       ? `${body.property.name ?? ""}. Description: ${body.property.description ?? ""}. Amenities: ${Array.isArray(body.property.amenities) ? body.property.amenities.join(", ") : (body.property.amenities ?? "")}`
       : "");
   if (!text || !text.trim()) {
-    return NextResponse.json({ error: "missing text or property" }, { status: 400 });
+    return errorResponse({
+      error: "invalid_request",
+      reason: "Missing text or property",
+      status: 400,
+    });
   }
 
   if (text.length > MAX_INPUT_LENGTH) {
-    return NextResponse.json({ error: "text too long" }, { status: 400 });
+    return errorResponse({
+      error: "invalid_request",
+      reason: `Text too long (max ${MAX_INPUT_LENGTH} characters)`,
+      status: 400,
+    });
   }
 
   // Generate embedding via AI SDK v6 using OpenAI text-embedding-3-small (1536-d)
@@ -123,13 +158,14 @@ export const POST = withApiGuards({
     value: text,
   });
   if (!Array.isArray(embedding) || embedding.length !== 1536) {
-    return NextResponse.json(
-      {
-        error: "embedding dimension mismatch",
-        length: Array.isArray(embedding) ? embedding.length : -1,
-      },
-      { status: 500 }
-    );
+    return errorResponse({
+      err: new Error(
+        `Embedding dimension mismatch: expected 1536, got ${Array.isArray(embedding) ? embedding.length : -1}`
+      ),
+      error: "internal",
+      reason: "Embedding dimension mismatch",
+      status: 500,
+    });
   }
 
   let persisted = false;

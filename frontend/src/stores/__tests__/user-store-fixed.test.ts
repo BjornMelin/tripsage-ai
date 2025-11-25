@@ -1,8 +1,8 @@
 /** @vitest-environment jsdom */
 
+import type { PersonalInfo, UserProfile } from "@schemas/stores";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setupSupabaseMocks } from "@/test/mocks/supabase";
-import type { PersonalInfo, UserProfile } from "../user-store";
 import { useUserProfileStore } from "../user-store";
 
 setupSupabaseMocks();

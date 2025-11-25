@@ -1,3 +1,5 @@
+/** @vitest-environment node */
+
 import type { MemoryUpdateRequest } from "@schemas/agents";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";

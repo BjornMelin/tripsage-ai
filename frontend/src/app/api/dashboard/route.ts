@@ -1,64 +1,88 @@
 /**
  * @fileoverview Dashboard metrics API route handler.
+ *
+ * Returns aggregated dashboard metrics with time window filtering.
+ * Uses aggregation with Redis cache-aside handled inside `aggregateDashboardMetrics`.
+ *
+ * Auth: Required
+ * Rate limit: dashboard:metrics (30 req/min)
  */
-
-"use server";
 
 import "server-only";
 
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
-import type { TypedServerSupabase } from "@/lib/supabase/server";
+import {
+  aggregateDashboardMetrics,
+  dashboardMetricsSchema,
+  timeWindowSchema,
+  windowToHours,
+} from "@/lib/metrics/aggregate";
 
 /**
- * Returns dashboard metrics based on trip statistics.
+ * Query parameter schema for dashboard metrics.
  *
- * @param supabase - Supabase client
- * @param _req - Next.js request object
- * @returns Response with dashboard metrics
+ * Zod v4 compliant with strict validation.
  */
-async function getDashboardMetrics(
-  supabase: TypedServerSupabase,
-  _req: NextRequest
-): Promise<NextResponse> {
-  // TODO: Implement proper API usage logging and metrics collection.
-  // Currently returns basic trip counts as placeholder dashboard metrics.
-  const { data: trips, error } = await supabase
-    .from("trips")
-    .select("id, status, created_at");
-
-  if (error) {
-    return NextResponse.json(
-      { error: "Failed to load dashboard metrics" },
-      { status: 500 }
-    );
-  }
-
-  const tripData = trips ?? [];
-  const totalTrips = tripData.length;
-  const completedTrips = tripData.filter((trip) => trip.status === "completed").length;
-  const activeTrips = tripData.filter(
-    (trip) => trip.status === "planning" || trip.status === "booked"
-  ).length;
-
-  return NextResponse.json({
-    activeTrips,
-    avgLatencyMs: 0,
-    completedTrips,
-    errorRate: 0,
-    totalRequests: totalTrips,
-    totalTrips,
-  });
-}
+const QuerySchema = z.strictObject({
+  window: timeWindowSchema.default("24h"),
+});
 
 /**
  * GET /api/dashboard
  *
- * Returns dashboard metrics based on trip statistics.
+ * Returns aggregated dashboard metrics.
+ *
+ * Query Parameters:
+ * - window: Time window for metrics ("24h" | "7d" | "30d" | "all")
+ *
+ * Response:
+ * - 200: Dashboard metrics object
+ * - 400: Bad request (invalid query parameters)
+ * - 401: Unauthorized
+ * - 429: Rate limit exceeded
+ * - 500: Internal server error
  */
 export const GET = withApiGuards({
   auth: true,
   rateLimit: "dashboard:metrics",
   telemetry: "dashboard.metrics",
-})(async (req, { supabase }) => getDashboardMetrics(supabase, req));
+})(
+  async (
+    req: NextRequest,
+    { supabase: _supabase, user: _user }: { supabase: unknown; user: unknown }
+  ) => {
+    // Parse and validate query parameters
+    const searchParams = req.nextUrl.searchParams;
+    const queryObject = Object.fromEntries(searchParams.entries());
+    const queryResult = QuerySchema.safeParse(queryObject);
+
+    if (!queryResult.success) {
+      return NextResponse.json(
+        {
+          error: "invalid_query",
+          issues: queryResult.error.issues,
+          reason: "Invalid query parameters",
+        },
+        { status: 400 }
+      );
+    }
+
+    const { window } = queryResult.data;
+    const hours = windowToHours(window);
+
+    // Aggregate metrics
+    const metrics = await aggregateDashboardMetrics(hours);
+
+    // Validate response shape (defense in depth)
+    const validated = dashboardMetricsSchema.parse(metrics);
+
+    return NextResponse.json(validated, {
+      headers: {
+        "Cache-Control": "private, max-age=0, must-revalidate",
+      },
+    });
+  }
+);

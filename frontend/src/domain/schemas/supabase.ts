@@ -102,6 +102,7 @@ export type UserSettingsUpdate = z.infer<typeof userSettingsUpdateSchema>;
 export const tripsRowSchema = z.object({
   budget: z.number(),
   created_at: primitiveSchemas.isoDateTime,
+  currency: primitiveSchemas.isoCurrency,
   destination: z.string(),
   end_date: primitiveSchemas.isoDateTime,
   flexibility: jsonSchema.optional(),
@@ -127,6 +128,7 @@ export type TripsRow = z.infer<typeof tripsRowSchema>;
 export const tripsInsertSchema = z.object({
   budget: z.number(),
   created_at: primitiveSchemas.isoDateTime.optional(),
+  currency: primitiveSchemas.isoCurrency.default("USD").optional(),
   destination: z.string(),
   end_date: primitiveSchemas.isoDateTime,
   flexibility: jsonSchema.optional(),
@@ -152,6 +154,7 @@ export type TripsInsert = z.infer<typeof tripsInsertSchema>;
 export const tripsUpdateSchema = z.object({
   budget: z.number().optional(),
   created_at: primitiveSchemas.isoDateTime.optional(),
+  currency: primitiveSchemas.isoCurrency.optional(),
   destination: z.string().optional(),
   end_date: primitiveSchemas.isoDateTime.optional(),
   flexibility: jsonSchema.optional(),

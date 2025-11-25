@@ -9,7 +9,7 @@ Four semantic aliases map to architectural boundaries:
 | Alias | Maps To | Use For |
 |-------|---------|---------|
 | `@schemas/*` | `./src/domain/schemas/*` | All Zod/domain schemas (validation, DTOs, tool inputs) |
-| `@domain/*` | `./src/domain/*` | Domain logic (accommodations, expedia, types) |
+| `@domain/*` | `./src/domain/*` | Domain logic (accommodations, amadeus, types) |
 | `@ai/*` | `./src/ai/*` | AI SDK tooling, models, helpers |
 | `@/*` | `./src/*` | Generic src-root (lib, components, stores, hooks, app) |
 
@@ -25,7 +25,7 @@ Four semantic aliases map to architectural boundaries:
 
 **Use relative imports** (`./`, `../`) when:
 
-- Importing within the same feature directory (e.g., `src/domain/expedia/client.ts` → `./client-types.ts`)
+- Importing within the same feature directory (e.g., `src/domain/amadeus/client.ts` → `./client-types.ts`)
 - Files are in the same small feature tree
 - The import path is short and clear (≤2 levels up)
 
@@ -49,9 +49,9 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { useAuthStore } from "@/stores/auth/auth-store";
 
 // ✅ CORRECT: Relative imports within same feature
-// In src/domain/expedia/client.ts
-import { ExpediaApiError } from "./client-types";
-import { RAPID_PROD_DEFAULT_BASE_URL } from "./constants";
+// In src/domain/amadeus/client.ts
+import { ProviderError } from "@domain/accommodations/errors";
+import { AMADEUS_DEFAULT_BASE_URL } from "./constants";
 
 // ❌ INCORRECT: Using @/domain/ instead of @domain/
 import { AccommodationsService } from "@/domain/accommodations/service";
@@ -115,7 +115,7 @@ import { AccommodationsService } from "@domain/accommodations/service";
 import type { CalendarEvent, EventDateTime } from "@schemas/calendar";
 
 // Domain utilities
-import { ExpediaApiError } from "@domain/expedia/client";
+import { ProviderError } from "@domain/accommodations/errors";
 ```
 
 ### AI Tooling Imports

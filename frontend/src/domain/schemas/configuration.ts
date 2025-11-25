@@ -17,6 +17,10 @@ export const agentTypeSchema = z.enum([
   "budgetAgent",
   "destinationResearchAgent",
   "itineraryAgent",
+  "flightAgent",
+  "accommodationAgent",
+  "activityAgent",
+  "memoryAgent",
 ] as const);
 
 /** TypeScript type for agent types. */
@@ -71,12 +75,13 @@ export type VersionId = z.infer<typeof versionIdSchema>;
  * Validates model parameters and generation settings with business rules.
  */
 export const agentConfigRequestSchema = z
-  .object({
+  .strictObject({
     description: z.string().max(500).trim().optional().nullable(),
     maxTokens: z.number().int().min(1).max(8000).optional(),
     model: modelNameSchema.optional(),
     temperature: z.number().min(0.0).max(2.0).multipleOf(0.01).optional(),
     timeoutSeconds: z.number().int().min(5).max(300).optional(),
+    topKTools: z.number().int().min(1).max(8).optional(),
     topP: z.number().min(0.0).max(1.0).multipleOf(0.01).optional(),
   })
   .refine(
@@ -102,6 +107,7 @@ export type AgentConfigRequest = z.infer<typeof agentConfigRequestSchema>;
  * Validates agent configuration including model, parameters, scope, and timestamps.
  */
 export const configurationAgentConfigSchema = z.object({
+  agentType: agentTypeSchema,
   createdAt: primitiveSchemas.isoDateTime,
   id: versionIdSchema,
   model: modelNameSchema,

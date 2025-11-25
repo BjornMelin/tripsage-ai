@@ -17,7 +17,11 @@ import { getBrowserClient } from "@/lib/supabase";
 export function RealtimeAuthProvider(): null {
   useEffect(() => {
     const supabase = getBrowserClient();
+    // During SSR, supabase is null - skip auth setup
+    if (!supabase) return;
 
+    // Capture non-null reference for use in nested functions
+    const client = supabase;
     let isMounted = true;
 
     // biome-ignore lint/style/useNamingConvention: Not a React hook
@@ -25,29 +29,27 @@ export function RealtimeAuthProvider(): null {
       try {
         const {
           data: { session },
-        } = await supabase.auth.getSession();
+        } = await client.auth.getSession();
         const token = session?.access_token ?? null;
         if (!isMounted) {
           return;
         }
-        supabase.realtime.setAuth(token ?? "");
+        client.realtime.setAuth(token ?? "");
       } catch {
         // Allow UI to operate; realtime auth will refresh when a valid token exists.
       }
     }
 
-    const { data: subscription } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        const token = session?.access_token ?? null;
-        supabase.realtime.setAuth(token ?? "");
-      }
-    );
+    const { data: subscription } = client.auth.onAuthStateChange((_event, session) => {
+      const token = session?.access_token ?? null;
+      client.realtime.setAuth(token ?? "");
+    });
 
     initializeRealtimeAuthHandler();
 
     return () => {
       isMounted = false;
-      supabase.realtime.setAuth("");
+      client.realtime.setAuth("");
       subscription?.subscription.unsubscribe();
     };
   }, []);

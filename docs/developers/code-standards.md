@@ -213,6 +213,8 @@ export const GET = withApiGuards(async (req: NextRequest) => {
 
 ## Code Review Checklist
 
+> **Note**: This is a reusable PR review template. Copy and complete for each PR.
+
 ### Before Submitting
 
 - [ ] Tests pass with >90% coverage

@@ -6,7 +6,7 @@
  */
 
 import { ACCOM_SEARCH_CACHE_TTL_SECONDS } from "@domain/accommodations/constants";
-import { ExpediaProviderAdapter } from "@domain/accommodations/providers/expedia-adapter";
+import { AmadeusProviderAdapter } from "@domain/accommodations/providers/amadeus-adapter";
 import { AccommodationsService } from "@domain/accommodations/service";
 import { Ratelimit } from "@upstash/ratelimit";
 import { getRedis } from "@/lib/redis";
@@ -15,7 +15,7 @@ import { createServerSupabase } from "@/lib/supabase/server";
 let singleton: AccommodationsService | undefined;
 
 /**
- * Returns a singleton AccommodationsService configured with Expedia adapter,
+ * Returns a singleton AccommodationsService configured with Amadeus adapter,
  * cache TTL, rate limit, and Supabase factory.
  */
 export function getAccommodationsService(): AccommodationsService {
@@ -31,7 +31,7 @@ export function getAccommodationsService(): AccommodationsService {
       })
     : undefined;
 
-  const provider = new ExpediaProviderAdapter();
+  const provider = new AmadeusProviderAdapter();
 
   singleton = new AccommodationsService({
     cacheTtlSeconds: ACCOM_SEARCH_CACHE_TTL_SECONDS,

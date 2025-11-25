@@ -70,6 +70,10 @@ vi.mock("@/lib/telemetry/tracer", () => ({
 describe("Supabase Factory", () => {
   const mockCreateServerClient = vi.mocked(createServerClient);
 
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   describe("createServerSupabase", () => {
     let mockCookieAdapter: CookieMethodsServer;
 

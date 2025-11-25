@@ -1,6 +1,6 @@
 # Environment Setup Guide (local development)
 
-Copy `.env.example` to `.env`, then follow the checklists below to populate every variable. Links point directly to the provider pages where you create keys or tokens.
+Copy the root `.env.example` to `.env`, then follow the checklists below to populate every variable. Copy root `.env.test.example` to `.env.test` for local/CI test runs. All service-specific env files are derived from the root templates.
 
 ## Core & Supabase
 
@@ -76,18 +76,25 @@ Copy `.env.example` to `.env`, then follow the checklists below to populate ever
 - Duffel (<https://app.duffel.com/developers>):
   - `DUFFEL_ACCESS_TOKEN` (preferred)
   - `DUFFEL_API_KEY` (fallback)
-- Expedia Rapid:
-  - Apply: <https://partner.expediagroup.com/en-us/join-us/rapid-api>
-  - Keys portal: <https://developers.expediagroup.com/rapid/setup>
-  - Variables: `EPS_API_KEY`, `EPS_API_SECRET`, optional `EPS_BASE_URL` (default `https://api.ean.com/2/rapid`)
+- Amadeus Self-Service:
+  - <https://developers.amadeus.com/get-started>
+  - Variables: `AMADEUS_CLIENT_ID`, `AMADEUS_CLIENT_SECRET`, `AMADEUS_ENV` (`test`|`production`)
+- Google Places (New):
+  - Enable Places API (New) + Photos in Google Cloud Console
+  - Uses the same Google Maps Platform API keys (no separate Places API key required)
+  - Server-side: `GOOGLE_MAPS_SERVER_API_KEY` (IP+API restricted for Places/Geocoding/Routes)
+  - Browser/client-side: `NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY` (referrer-restricted)
 
 ## Optional analytics
 
-- `GOOGLE_ANALYTICS_ID` (GA4), `MIXPANEL_TOKEN`, `POSTHOG_HOST`, `POSTHOG_KEY` — create per provider dashboards; safe to leave empty locally.
+- `GOOGLE_ANALYTICS_ID` (GA4), `MIXPANEL_TOKEN`, `POSTHOG_HOST`, `POSTHOG_KEY` — create per-provider dashboards; safe to leave empty locally.
 
 ## Ready-to-run checklist
 
-- [ ] `.env` copied from `.env.example`
+> **Note**: This is a reusable onboarding template. Copy and complete when setting up a new development environment.
+
+- [ ] `.env` copied from root `.env.example`
+- [ ] `.env.test` copied from root `.env.test.example` for local/CI test runs
 - [ ] Supabase URL + anon key + service role key present
 - [ ] Upstash Redis REST URL + token present
 - [ ] QStash token + signing keys present

@@ -1,13 +1,4 @@
-/**
- * @fileoverview Security test for BYOK routes.
- *
- * Ensures BYOK routes maintain security requirements per ADR-0024:
- * - No 'use cache' directives (prevents caching of sensitive API key data)
- * - Security comments documenting Cache Components dynamic behavior
- * - Routes use withApiGuards({ auth: true }) to ensure dynamic execution
- *
- * Reference: docs/adrs/adr-0024-byok-routes-and-security.md
- */
+/** @vitest-environment node */
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";

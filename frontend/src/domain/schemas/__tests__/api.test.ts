@@ -1,3 +1,5 @@
+/** @vitest-environment node */
+
 import {
   apiErrorSchema,
   apiKeySchema,
@@ -7,7 +9,6 @@ import {
   loginRequestSchema,
   paginatedResponseSchema,
   registerRequestSchema,
-  tripSchema,
   userProfileSchema,
   validationErrorSchema,
   websocketMessageSchema,
@@ -239,57 +240,6 @@ describe("api schemas", () => {
         id: "123e4567-e89b-12d3-a456-426614174000",
         role: "user",
         timestamp: "2024-01-01T00:00:00Z",
-      });
-      expect(result.success).toBe(true);
-    });
-  });
-
-  describe("tripSchema", () => {
-    it.concurrent("should validate trip", () => {
-      const result = tripSchema.safeParse({
-        createdAt: "2024-01-01T00:00:00Z",
-        destination: "Paris",
-        endDate: "2024-06-07",
-        id: "123e4567-e89b-12d3-a456-426614174000",
-        itinerary: [],
-        startDate: "2024-06-01",
-        status: "planning",
-        title: "Summer Trip",
-        travelers: [
-          {
-            name: "John Doe",
-            role: "owner",
-          },
-        ],
-        updatedAt: "2024-01-01T00:00:00Z",
-        userId: "123e4567-e89b-12d3-a456-426614174001",
-      });
-      expect(result.success).toBe(true);
-    });
-
-    it.concurrent("should validate trip with budget", () => {
-      const result = tripSchema.safeParse({
-        budget: {
-          currency: "USD",
-          spent: 2500,
-          total: 5000,
-        },
-        createdAt: "2024-01-01T00:00:00Z",
-        destination: "Paris",
-        endDate: "2024-06-07",
-        id: "123e4567-e89b-12d3-a456-426614174000",
-        itinerary: [],
-        startDate: "2024-06-01",
-        status: "planning",
-        title: "Summer Trip",
-        travelers: [
-          {
-            name: "John Doe",
-            role: "owner",
-          },
-        ],
-        updatedAt: "2024-01-01T00:00:00Z",
-        userId: "123e4567-e89b-12d3-a456-426614174001",
       });
       expect(result.success).toBe(true);
     });

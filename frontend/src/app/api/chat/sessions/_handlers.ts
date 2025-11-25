@@ -5,6 +5,7 @@
  * Adapters (route.ts files) provide SSR-only dependencies and translate the
  * HTTP details to simple POJOs used here.
  */
+import { nowIso, secureUuid } from "@/lib/security/random";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { insertSingle } from "@/lib/supabase/typed-helpers";
 
@@ -27,8 +28,8 @@ export async function createSession(
   const { data: auth } = await deps.supabase.auth.getUser();
   const user = auth?.user ?? null;
   if (!user) return json({ error: "unauthorized" }, 401);
-  const id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
-  const now = new Date().toISOString();
+  const id = secureUuid();
+  const now = nowIso();
   const { error } = await insertSingle(deps.supabase, "chat_sessions", {
     // biome-ignore lint/style/useNamingConvention: Database field name
     created_at: now,
@@ -131,13 +132,27 @@ export async function createMessage(
   if (!user) return json({ error: "unauthorized" }, 401);
   if (!payload?.role || typeof payload.role !== "string")
     return json({ error: "bad_request" }, 400);
+  const normalizedRole = payload.role.toLowerCase();
+  if (!["user", "assistant", "system"].includes(normalizedRole)) {
+    return json({ error: "bad_request" }, 400);
+  }
+  const { data: session, error: sessionError } = await deps.supabase
+    .from("chat_sessions")
+    .select("id")
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (sessionError) return json({ error: "db_error" }, 500);
+  if (!session) return json({ error: "not_found" }, 404);
   const content = JSON.stringify(payload.parts ?? []);
   const { error } = await insertSingle(deps.supabase, "chat_messages", {
     content,
     metadata: {},
-    role: payload.role as "user" | "system" | "assistant",
+    role: normalizedRole as "user" | "system" | "assistant",
     // biome-ignore lint/style/useNamingConvention: Database field name
     session_id: id,
+    // biome-ignore lint/style/useNamingConvention: Database field name
+    user_id: user.id,
   });
   if (error) return json({ error: "db_error" }, 500);
   return new Response(null, { status: 201 });

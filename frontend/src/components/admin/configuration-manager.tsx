@@ -1,28 +1,21 @@
 /**
- * @fileoverview Agent configuration management component.
- *
- * Provides a comprehensive interface for managing AI agent configurations,
- * performance monitoring, and version control. Features real-time updates,
- * configuration validation, rollback capabilities, and performance metrics
- * tracking for multiple agent types in the TripSage platform.
+ * @fileoverview Admin UI for managing agent configuration with version history.
+ * Uses server actions for data access; no client-side fetching side effects.
  */
 
 "use client";
 
+import type { AgentConfig, AgentType } from "@schemas/configuration";
 import {
-  Activity,
   AlertTriangle,
   CheckCircle,
   Clock,
-  DollarSign,
-  Eye,
   History,
   RotateCcw,
   Save,
   Settings,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useId, useState } from "react";
+import { useState, useTransition } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -65,330 +58,144 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
+import {
+  type AgentMetrics,
+  type AgentVersion,
+  fetchAgentBundle,
+  rollbackAgentConfigAction,
+  updateAgentConfigAction,
+} from "./configuration-actions";
 
-// Types
-interface AgentConfig {
-  agentType: string;
-  temperature: number;
-  maxTokens: number;
-  topP: number;
-  timeoutSeconds: number;
-  model: string;
-  updatedAt: string;
-  updatedBy?: string;
-  description?: string;
-}
-
-interface ConfigVersion {
-  versionId: string;
-  configuration: Record<string, unknown>;
-  description?: string;
-  createdAt: string;
-  createdBy: string;
-  isCurrent: boolean;
-}
-
-interface PerformanceMetrics {
-  agentType: string;
-  averageResponseTime: number;
-  successRate: number;
-  errorRate: number;
-  tokenUsage: Record<string, number>;
-  costEstimate: number;
-  sampleSize: number;
-}
-
-const AgentTypes = [
+const AGENTS: Array<{ label: string; value: AgentType; description: string }> = [
+  { description: "Budget optimization", label: "Budget Agent", value: "budgetAgent" },
   {
-    description: "Handles budget optimization and expense tracking",
-    label: "Budget Agent",
-    value: "budget_agent",
+    description: "Research destinations and attractions",
+    label: "Destination Research Agent",
+    value: "destinationResearchAgent",
   },
   {
-    description: "Researches destinations and attractions",
-    label: "Research Agent",
-    value: "destination_research_agent",
-  },
-  {
-    description: "Plans and optimizes travel itineraries",
+    description: "Plan itineraries",
     label: "Itinerary Agent",
-    value: "itinerary_agent",
+    value: "itineraryAgent",
   },
+  { description: "Search flights", label: "Flight Agent", value: "flightAgent" },
+  {
+    description: "Find stays",
+    label: "Accommodation Agent",
+    value: "accommodationAgent",
+  },
+  { description: "Persist memories", label: "Memory Agent", value: "memoryAgent" },
 ];
 
-const ModelOptions = ["gpt-4", "gpt-4-turbo", "gpt-5", "gpt-5-mini", "gpt-3.5-turbo"];
+export type ConfigurationManagerProps = {
+  initialAgent: AgentType;
+  initialConfig: AgentConfig;
+  initialVersions: AgentVersion[];
+  initialMetrics: AgentMetrics;
+};
 
-/**
- * Agent configuration management component.
- *
- * Renders a comprehensive interface for managing AI agent configurations with
- * real-time updates, versioning, and performance tracking. Supports multiple
- * agent types with configuration parameters like temperature, max tokens,
- * model selection, and timeout settings.
- *
- * Features:
- * - Agent-specific configuration management with validation
- * - Real-time performance metrics and monitoring
- * - Configuration versioning with rollback capabilities
- * - Tabbed interface for configuration, performance, and history views
- * - Form validation with cross-field constraints and model compatibility checks
- *
- * @returns The rendered configuration management interface.
- */
-export default function ConfigurationManager() {
-  useRouter(); // For potential navigation
+export default function ConfigurationManager(props: ConfigurationManagerProps) {
   const { toast } = useToast();
-
-  // State management
-  const [configs, setConfigs] = useState<Record<string, AgentConfig>>({});
-  const [versions, setVersions] = useState<Record<string, ConfigVersion[]>>({});
-  const [metrics, setMetrics] = useState<Record<string, PerformanceMetrics>>({});
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState<string | null>(null);
-  const [selectedAgent, setSelectedAgent] = useState<string>("budget_agent");
-  // Realtime live updates removed. UI refreshes after successful saves.
-
-  // Form state
-  const [editedConfig, setEditedConfig] = useState<Partial<AgentConfig>>({});
+  const [selectedAgent, setSelectedAgent] = useState<AgentType>(props.initialAgent);
+  const [config, setConfig] = useState<AgentConfig>(props.initialConfig);
+  const [edited, setEdited] = useState<Partial<AgentConfig["parameters"]>>({
+    ...props.initialConfig.parameters,
+  });
+  const [versions, setVersions] = useState<AgentVersion[]>(props.initialVersions);
+  const [metrics, setMetrics] = useState<AgentMetrics>(props.initialMetrics);
+  const [saving, startSaving] = useTransition();
+  const [loading, startLoading] = useTransition();
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const maxTokensId = useId();
-  const timeoutId = useId();
-  const descriptionId = useId();
 
-  // Live WS updates removed; consider Supabase Realtime in a future iteration.
-
-  const loadAgentConfig = useCallback(
-    async (agentType: string) => {
-      try {
-        const response = await fetch(`/api/config/agents/${agentType}`);
-        if (!response.ok) throw new Error("Failed to load config");
-
-        const config = await response.json();
-        setConfigs((prev) => ({ ...prev, [agentType]: config }));
-
-        // Initialize edited config if this is the selected agent
-        if (agentType === selectedAgent) {
-          setEditedConfig(config);
-          setHasUnsavedChanges(false);
-        }
-      } catch (error) {
-        console.error(`Error loading config for ${agentType}:`, error);
-      }
-    },
-    [selectedAgent]
-  );
-
-  const loadVersionHistory = useCallback(async (agentType: string) => {
-    try {
-      const response = await fetch(`/api/config/agents/${agentType}/versions?limit=10`);
-      if (!response.ok) throw new Error("Failed to load versions");
-
-      const versionList = await response.json();
-      setVersions((prev) => ({ ...prev, [agentType]: versionList }));
-    } catch (error) {
-      console.error(`Error loading versions for ${agentType}:`, error);
-    }
-  }, []);
-
-  const loadPerformanceMetrics = useCallback((agentType: string) => {
-    try {
-      // This would be implemented with actual metrics endpoint
-      // For now, using placeholder data
-      const mockMetrics: PerformanceMetrics = {
-        agentType: agentType,
-        averageResponseTime: Math.random() * 2000 + 500,
-        costEstimate: Math.random() * 10,
-        errorRate: Math.random() * 0.05,
-        sampleSize: Math.floor(Math.random() * 1000) + 100,
-        successRate: 0.95 + Math.random() * 0.04,
-        tokenUsage: {
-          inputTokens: Math.floor(Math.random() * 10000),
-          outputTokens: Math.floor(Math.random() * 5000),
-        },
-      };
-
-      setMetrics((prev) => ({ ...prev, [agentType]: mockMetrics }));
-    } catch (error) {
-      console.error(`Error loading metrics for ${agentType}:`, error);
-    }
-  }, []);
-
-  const loadAllConfigs = useCallback(async () => {
-    setLoading(true);
-    try {
-      // Load configurations for all agent types
-      for (const agentType of AgentTypes) {
-        await Promise.all([
-          loadAgentConfig(agentType.value),
-          loadVersionHistory(agentType.value),
-          loadPerformanceMetrics(agentType.value),
-        ]);
-      }
-    } catch (error) {
-      console.error("Error loading configurations:", error);
-      toast({
-        description: "Failed to load configurations",
-        title: "Error",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [loadAgentConfig, loadVersionHistory, loadPerformanceMetrics, toast]);
-
-  // Load initial data
-  useEffect(() => {
-    loadAllConfigs();
-  }, [loadAllConfigs]);
-
-  // Handle agent selection change
-  const handleAgentChange = (agentType: string) => {
-    if (hasUnsavedChanges) {
-      if (
-        !confirm("You have unsaved changes. Are you sure you want to switch agents?")
-      ) {
-        return;
-      }
-    }
-
-    setSelectedAgent(agentType);
-    const config = configs[agentType];
-    if (config) {
-      setEditedConfig(config);
-      setHasUnsavedChanges(false);
-    }
+  const applyAgentData = (bundle: Awaited<ReturnType<typeof fetchAgentBundle>>) => {
+    setConfig(bundle.config);
+    setEdited({ ...bundle.config.parameters });
+    setVersions(bundle.versions);
+    setMetrics(bundle.metrics);
+    setHasUnsavedChanges(false);
   };
 
-  // Handle configuration field changes
-  const handleConfigChange = (field: keyof AgentConfig, value: unknown) => {
-    setEditedConfig((prev) => ({ ...prev, [field]: value }));
+  const handleAgentChange = (value: AgentType) => {
+    startLoading(async () => {
+      try {
+        const bundle = await fetchAgentBundle(value);
+        setSelectedAgent(value);
+        applyAgentData(bundle);
+      } catch (error) {
+        toast({
+          description: error instanceof Error ? error.message : "Failed to load agent",
+          title: "Load failed",
+          variant: "destructive",
+        });
+      }
+    });
+  };
+
+  const handleSave = () => {
+    startSaving(async () => {
+      try {
+        const payload = {
+          ...edited,
+        };
+        const res = await updateAgentConfigAction(selectedAgent, payload);
+        const bundle = await fetchAgentBundle(selectedAgent);
+        applyAgentData(bundle);
+        toast({
+          description: `Saved configuration (version ${res.versionId})`,
+          title: "Configuration saved",
+        });
+      } catch (error) {
+        toast({
+          description: error instanceof Error ? error.message : "Failed to save",
+          title: "Save failed",
+          variant: "destructive",
+        });
+      }
+    });
+  };
+
+  const handleRollback = (versionId: string) => {
+    startSaving(async () => {
+      try {
+        await rollbackAgentConfigAction(selectedAgent, versionId);
+        const bundle = await fetchAgentBundle(selectedAgent);
+        applyAgentData(bundle);
+        toast({
+          description: `Rolled back to version ${versionId}`,
+          title: "Rollback successful",
+        });
+      } catch (error) {
+        toast({
+          description: error instanceof Error ? error.message : "Failed to rollback",
+          title: "Rollback failed",
+          variant: "destructive",
+        });
+      }
+    });
+  };
+
+  const onParamChange = (
+    field: keyof AgentConfig["parameters"],
+    value: number | string | null
+  ) => {
+    setEdited((prev) => ({ ...prev, [field]: value ?? undefined }));
     setHasUnsavedChanges(true);
   };
 
-  // Save configuration
-  const saveConfiguration = async () => {
-    if (!selectedAgent || !editedConfig) return;
-
-    setSaving(selectedAgent);
-    try {
-      const response = await fetch(`/api/config/agents/${selectedAgent}`, {
-        body: JSON.stringify({
-          description: editedConfig.description,
-          maxTokens: editedConfig.maxTokens,
-          model: editedConfig.model,
-          temperature: editedConfig.temperature,
-          timeoutSeconds: editedConfig.timeoutSeconds,
-          topP: editedConfig.topP,
-        }),
-        headers: {
-          "Content-Type": "application/json",
-        },
-        method: "PUT",
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to save configuration");
-      }
-
-      const updatedConfig = await response.json();
-      setConfigs((prev) => ({ ...prev, [selectedAgent]: updatedConfig }));
-      setEditedConfig(updatedConfig);
-      setHasUnsavedChanges(false);
-
-      toast({
-        description: `${selectedAgent} configuration has been updated successfully`,
-        title: "Configuration Saved",
-        variant: "default",
-      });
-
-      // Reload version history to show the new version
-      await loadVersionHistory(selectedAgent);
-    } catch (error) {
-      console.error("Error saving configuration:", error);
-      toast({
-        description:
-          error instanceof Error ? error.message : "Failed to save configuration",
-        title: "Save Failed",
-        variant: "destructive",
-      });
-    } finally {
-      setSaving(null);
-    }
-  };
-
-  // Rollback to version
-  const rollbackToVersion = async (versionId: string) => {
-    if (!selectedAgent) return;
-
-    try {
-      const response = await fetch(
-        `/api/config/agents/${selectedAgent}/rollback/${versionId}`,
-        {
-          method: "POST",
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to rollback");
-      }
-
-      await loadAgentConfig(selectedAgent);
-      await loadVersionHistory(selectedAgent);
-
-      toast({
-        description: `Configuration rolled back to version ${versionId}`,
-        title: "Rollback Successful",
-        variant: "default",
-      });
-    } catch (error) {
-      console.error("Error rolling back:", error);
-      toast({
-        description:
-          error instanceof Error ? error.message : "Failed to rollback configuration",
-        title: "Rollback Failed",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Reset to defaults
-  const resetToDefaults = () => {
-    const currentConfig = configs[selectedAgent];
-    if (currentConfig) {
-      setEditedConfig(currentConfig);
-      setHasUnsavedChanges(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
-  }
-
-  const currentConfig = configs[selectedAgent];
-  const currentVersions = versions[selectedAgent] || [];
-  const currentMetrics = metrics[selectedAgent];
+  const currentParams = { ...config.parameters, ...edited };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Agent Configuration</h1>
           <p className="text-muted-foreground">
-            Manage AI agent parameters and monitor performance
+            Manage parameters, history, and rollbacks
           </p>
         </div>
-
-        <div className="flex items-center gap-2" />
+        {loading && <LoadingSpinner size="sm" />}
       </div>
 
-      {/* Agent Selection */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -397,12 +204,15 @@ export default function ConfigurationManager() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Select value={selectedAgent} onValueChange={handleAgentChange}>
+          <Select
+            value={selectedAgent}
+            onValueChange={(v) => handleAgentChange(v as AgentType)}
+          >
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select an agent to configure" />
+              <SelectValue placeholder="Select an agent" />
             </SelectTrigger>
             <SelectContent>
-              {AgentTypes.map((agent) => (
+              {AGENTS.map((agent) => (
                 <SelectItem key={agent.value} value={agent.value}>
                   <div>
                     <div className="font-medium">{agent.label}</div>
@@ -417,347 +227,250 @@ export default function ConfigurationManager() {
         </CardContent>
       </Card>
 
-      {currentConfig && (
-        <Tabs defaultValue="configuration" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="configuration">Configuration</TabsTrigger>
-            <TabsTrigger value="performance">Performance</TabsTrigger>
-            <TabsTrigger value="history">Version History</TabsTrigger>
-          </TabsList>
+      <Tabs defaultValue="configuration" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="configuration">Configuration</TabsTrigger>
+          <TabsTrigger value="performance">Metrics</TabsTrigger>
+          <TabsTrigger value="history">Version History</TabsTrigger>
+        </TabsList>
 
-          {/* Configuration Tab */}
-          <TabsContent value="configuration" className="space-y-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Agent Parameters</CardTitle>
-                  <CardDescription>
-                    Configure the behavior and performance parameters for the selected
-                    agent
-                  </CardDescription>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={resetToDefaults}
-                    disabled={!hasUnsavedChanges}
-                  >
-                    <RotateCcw className="h-4 w-4 mr-2" />
-                    Reset
-                  </Button>
-
-                  <Button
-                    onClick={saveConfiguration}
-                    disabled={!hasUnsavedChanges || saving === selectedAgent}
-                  >
-                    {saving === selectedAgent ? (
-                      <LoadingSpinner size="sm" className="mr-2" />
-                    ) : (
-                      <Save className="h-4 w-4 mr-2" />
-                    )}
-                    Save Changes
-                  </Button>
-                </div>
-              </CardHeader>
-
-              <CardContent className="space-y-6">
-                {/* Model Selection */}
-                <div className="space-y-2">
-                  <Label htmlFor="model">Model</Label>
-                  <Select
-                    value={editedConfig.model || ""}
-                    onValueChange={(value) => handleConfigChange("model", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a model" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ModelOptions.map((model) => (
-                        <SelectItem key={model} value={model}>
-                          {model}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Temperature */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label>Temperature</Label>
-                    <span className="text-sm text-muted-foreground">
-                      {editedConfig.temperature?.toFixed(2) || "0.00"}
-                    </span>
-                  </div>
-                  <Slider
-                    value={[editedConfig.temperature || 0]}
-                    onValueChange={([value]: number[]) =>
-                      handleConfigChange("temperature", value)
-                    }
-                    min={0}
-                    max={2}
-                    step={0.01}
-                    className="w-full"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Controls randomness. Lower values = more focused, higher values =
-                    more creative
-                  </p>
-                </div>
-
-                {/* Max Tokens */}
-                <div className="space-y-2">
-                  <Label htmlFor={maxTokensId}>Max Tokens</Label>
-                  <Input
-                    id={maxTokensId}
-                    type="number"
-                    value={editedConfig.maxTokens || ""}
-                    onChange={(e) =>
-                      handleConfigChange(
-                        "maxTokens",
-                        Number.parseInt(e.target.value, 10)
-                      )
-                    }
-                    min={1}
-                    max={8000}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Maximum number of tokens in the response (1-8000)
-                  </p>
-                </div>
-
-                {/* Top P */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label>Top P</Label>
-                    <span className="text-sm text-muted-foreground">
-                      {editedConfig.topP?.toFixed(2) || "0.00"}
-                    </span>
-                  </div>
-                  <Slider
-                    value={[editedConfig.topP || 0]}
-                    onValueChange={([value]: number[]) =>
-                      handleConfigChange("topP", value)
-                    }
-                    min={0}
-                    max={1}
-                    step={0.01}
-                    className="w-full"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Nucleus sampling parameter. Controls diversity of token selection
-                  </p>
-                </div>
-
-                {/* Timeout */}
-                <div className="space-y-2">
-                  <Label htmlFor={timeoutId}>Timeout (seconds)</Label>
-                  <Input
-                    id={timeoutId}
-                    type="number"
-                    value={editedConfig.timeoutSeconds || ""}
-                    onChange={(e) =>
-                      handleConfigChange(
-                        "timeoutSeconds",
-                        Number.parseInt(e.target.value, 10)
-                      )
-                    }
-                    min={5}
-                    max={300}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Request timeout in seconds (5-300)
-                  </p>
-                </div>
-
-                {/* Description */}
-                <div className="space-y-2">
-                  <Label htmlFor={descriptionId}>Description (Optional)</Label>
-                  <Input
-                    id={descriptionId}
-                    value={editedConfig.description || ""}
-                    onChange={(e) => handleConfigChange("description", e.target.value)}
-                    placeholder="Describe this configuration..."
-                  />
-                </div>
-
-                {hasUnsavedChanges && (
-                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <div className="flex items-center gap-2 text-yellow-800">
-                      <AlertTriangle className="h-4 w-4" />
-                      <span className="text-sm font-medium">Unsaved Changes</span>
-                    </div>
-                    <p className="text-sm text-yellow-700 mt-1">
-                      You have unsaved changes. Click "Save Changes" to apply them.
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Performance Tab */}
-          <TabsContent value="performance" className="space-y-4">
-            {currentMetrics && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Response Time</CardTitle>
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">
-                      {currentMetrics.averageResponseTime.toFixed(0)}ms
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Average response time
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
-                    <CheckCircle className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">
-                      {(currentMetrics.successRate * 100).toFixed(1)}%
-                    </div>
-                    <p className="text-xs text-muted-foreground">Successful requests</p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Cost Estimate</CardTitle>
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">
-                      ${currentMetrics.costEstimate.toFixed(2)}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Estimated daily cost
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Sample Size</CardTitle>
-                    <Activity className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">
-                      {currentMetrics.sampleSize.toLocaleString()}
-                    </div>
-                    <p className="text-xs text-muted-foreground">Requests analyzed</p>
-                  </CardContent>
-                </Card>
+        <TabsContent value="configuration" className="space-y-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Agent Parameters</CardTitle>
+                <CardDescription>Configured scope: global</CardDescription>
               </div>
-            )}
-          </TabsContent>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setEdited({ ...config.parameters });
+                    setHasUnsavedChanges(false);
+                  }}
+                  disabled={!hasUnsavedChanges || saving}
+                >
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Reset
+                </Button>
+                <Button onClick={handleSave} disabled={!hasUnsavedChanges || saving}>
+                  {saving ? (
+                    <LoadingSpinner size="sm" className="mr-2" />
+                  ) : (
+                    <Save className="h-4 w-4 mr-2" />
+                  )}
+                  Save Changes
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="model">Model</Label>
+                <Input
+                  id="model"
+                  value={currentParams.model ?? ""}
+                  onChange={(e) => onParamChange("model", e.target.value)}
+                  placeholder="gpt-4o"
+                />
+              </div>
 
-          {/* History Tab */}
-          <TabsContent value="history" className="space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Temperature</Label>
+                  <span className="text-sm text-muted-foreground">
+                    {typeof currentParams.temperature === "number"
+                      ? currentParams.temperature.toFixed(2)
+                      : "0.00"}
+                  </span>
+                </div>
+                <Slider
+                  value={[currentParams.temperature ?? 0]}
+                  onValueChange={([v]) => onParamChange("temperature", v)}
+                  min={0}
+                  max={2}
+                  step={0.01}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="maxTokens">Max Tokens</Label>
+                <Input
+                  id="maxTokens"
+                  type="number"
+                  value={currentParams.maxTokens ?? ""}
+                  onChange={(e) =>
+                    onParamChange("maxTokens", Number.parseInt(e.target.value, 10))
+                  }
+                  min={1}
+                  max={8000}
+                />
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Top P</Label>
+                  <span className="text-sm text-muted-foreground">
+                    {typeof currentParams.topP === "number"
+                      ? currentParams.topP.toFixed(2)
+                      : "0.00"}
+                  </span>
+                </div>
+                <Slider
+                  value={[currentParams.topP ?? 0]}
+                  onValueChange={([v]) => onParamChange("topP", v)}
+                  min={0}
+                  max={1}
+                  step={0.01}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="timeoutSeconds">Timeout (seconds)</Label>
+                <Input
+                  id="timeoutSeconds"
+                  type="number"
+                  value={currentParams.timeoutSeconds ?? ""}
+                  onChange={(e) =>
+                    onParamChange("timeoutSeconds", Number.parseInt(e.target.value, 10))
+                  }
+                  min={5}
+                  max={300}
+                />
+              </div>
+
+              {hasUnsavedChanges && (
+                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div className="flex items-center gap-2 text-yellow-800">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span className="text-sm font-medium">Unsaved Changes</span>
+                  </div>
+                  <p className="text-sm text-yellow-700 mt-1">
+                    Save changes to update the active configuration and create a
+                    version.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="performance" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <History className="h-5 w-5" />
-                  Version History
-                </CardTitle>
-                <CardDescription>
-                  View and manage configuration versions for {selectedAgent}
-                </CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Versions</CardTitle>
+                <History className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <ScrollArea className="h-[400px]">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Version</TableHead>
-                        <TableHead>Created</TableHead>
-                        <TableHead>Created By</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {currentVersions.map((version) => (
-                        <TableRow key={version.versionId}>
-                          <TableCell className="font-mono text-sm">
-                            {version.versionId}
-                          </TableCell>
-                          <TableCell>
-                            {new Date(version.createdAt).toLocaleString()}
-                          </TableCell>
-                          <TableCell>{version.createdBy}</TableCell>
-                          <TableCell>{version.description || "-"}</TableCell>
-                          <TableCell>
-                            {version.isCurrent && (
-                              <Badge variant="default">Current</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  // TODO: Show version details
-                                  console.log("View version:", version);
-                                }}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-
-                              {!version.isCurrent && (
-                                <AlertDialog>
-                                  <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="sm">
-                                      <RotateCcw className="h-4 w-4" />
-                                    </Button>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>
-                                        Rollback Configuration
-                                      </AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                        Are you sure you want to rollback to version{" "}
-                                        {version.versionId}? This will replace the
-                                        current configuration and create a new version.
-                                      </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                      <AlertDialogAction
-                                        onClick={() =>
-                                          rollbackToVersion(version.versionId)
-                                        }
-                                      >
-                                        Rollback
-                                      </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </ScrollArea>
+                <div className="text-2xl font-bold">{metrics.versionCount}</div>
+                <p className="text-xs text-muted-foreground">Total versions stored</p>
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
-      )}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Last Updated</CardTitle>
+                <Clock className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {metrics.lastUpdatedAt
+                    ? new Date(metrics.lastUpdatedAt).toLocaleString()
+                    : "—"}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Latest configuration change
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Config Health</CardTitle>
+                <CheckCircle className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">OK</div>
+                <p className="text-xs text-muted-foreground">Schema validated</p>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="history" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <History className="h-5 w-5" />
+                Version History
+              </CardTitle>
+              <CardDescription>Recent versions for {selectedAgent}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[400px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Version</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead>Created By</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {versions.map((version, index) => (
+                      <TableRow key={version.id}>
+                        <TableCell className="font-mono text-sm">
+                          {version.id}
+                        </TableCell>
+                        <TableCell>
+                          {new Date(version.createdAt).toLocaleString()}
+                        </TableCell>
+                        <TableCell>{version.createdBy ?? "—"}</TableCell>
+                        <TableCell>{version.summary ?? "-"}</TableCell>
+                        <TableCell>
+                          {index === 0 && <Badge variant="default">Current</Badge>}
+                        </TableCell>
+                        <TableCell>
+                          {index !== 0 && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <RotateCcw className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>
+                                    Rollback Configuration
+                                  </AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Roll back to version {version.id}? A new head
+                                    version will be created.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleRollback(version.id)}
+                                  >
+                                    Rollback
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -6,7 +6,13 @@
  * AGENTS.md and Vitest standards documented in `.cursor/rules/vitest.mdc`.
  */
 
-import { vi } from "vitest";
+import type { User } from "@supabase/supabase-js";
+import { afterEach, vi } from "vitest";
+import {
+  setRateLimitFactoryForTests,
+  setSupabaseFactoryForTests,
+} from "@/lib/api/factory";
+import { createMockSupabaseClient } from "@/test/mocks/supabase";
 import { getMockCookiesForTest } from "@/test/route-helpers";
 
 type RateLimitResult = {
@@ -30,6 +36,17 @@ const DEFAULT_RATE_LIMIT: RateLimitResult = {
 const STATE = vi.hoisted(() => ({
   cookies: {} as Record<string, string>,
   rateLimitEnabled: false,
+  user: {
+    // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
+    app_metadata: {},
+    aud: "authenticated",
+    // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
+    created_at: new Date(0).toISOString(),
+    email: "test@example.com",
+    id: "test-user",
+    // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
+    user_metadata: {},
+  } as User | null,
 }));
 STATE.cookies = { ...DEFAULT_COOKIE_JAR };
 
@@ -57,7 +74,11 @@ vi.mock("@/lib/redis", () => ({
   getRedis: GET_REDIS_MOCK,
 }));
 
-const LIMIT_SPY = vi.hoisted(() => vi.fn(async () => ({ ...DEFAULT_RATE_LIMIT })));
+const LIMIT_SPY = vi.hoisted(() =>
+  vi.fn(async (_key: string, _identifier: string) => ({
+    ...DEFAULT_RATE_LIMIT,
+  }))
+);
 
 const RATELIMIT_CTOR = vi.hoisted(() => {
   const ctor = vi.fn(function MockRatelimit() {
@@ -75,40 +96,32 @@ vi.mock("@upstash/ratelimit", () => ({
   Ratelimit: RATELIMIT_CTOR,
 }));
 
-const createQueryBuilder = () => {
-  const builder = {
-    eq: vi.fn(() => builder),
-    gte: vi.fn(() => builder),
-    insert: vi.fn(() => builder),
-    limit: vi.fn(async () => ({ data: [], error: null })),
-    lte: vi.fn(() => builder),
-    order: vi.fn(async () => ({ data: [], error: null })),
-    select: vi.fn(() => builder),
-    single: vi.fn(async () => ({ data: null, error: null })),
-    update: vi.fn(() => builder),
-  };
-  return builder;
+// Create a lazily-initialized Supabase client holder
+// The actual client is created after imports are resolved
+let supabaseClient: ReturnType<typeof createMockSupabaseClient> | null = null;
+
+const getSupabaseClient = () => {
+  if (!supabaseClient) {
+    supabaseClient = createMockSupabaseClient({ user: STATE.user });
+    supabaseClient.auth.getUser = vi.fn(() => {
+      if (STATE.user) {
+        return Promise.resolve({ data: { user: STATE.user }, error: null });
+      }
+      return Promise.resolve({ data: { user: null }, error: null });
+    }) as typeof supabaseClient.auth.getUser;
+  }
+  return supabaseClient;
 };
 
-const SUPABASE_CLIENT = vi.hoisted(() => ({
-  auth: {
-    getUser: vi.fn(async () => ({
-      data: { user: { id: "test-user" } },
-      error: null,
-    })),
-  },
-  from: vi.fn(() => createQueryBuilder()),
-}));
-
-const CREATE_SUPABASE_MOCK = vi.hoisted(() => vi.fn(async () => SUPABASE_CLIENT));
+const CREATE_SUPABASE_MOCK = vi.fn(async () => getSupabaseClient());
 
 vi.mock("@/lib/supabase/server", () => ({
-  createServerSupabase: CREATE_SUPABASE_MOCK,
+  createServerSupabase: vi.fn(async () => getSupabaseClient()),
 }));
 
-vi.mock("@/lib/next/route-helpers", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/next/route-helpers")>(
-    "@/lib/next/route-helpers"
+vi.mock("@/lib/api/route-helpers", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/api/route-helpers")>(
+    "@/lib/api/route-helpers"
   );
   return {
     ...actual,
@@ -119,22 +132,37 @@ vi.mock("@/lib/next/route-helpers", async () => {
 /** Reset shared mocks to their default state (call in `beforeEach`). */
 export function resetApiRouteMocks(): void {
   STATE.cookies = { ...DEFAULT_COOKIE_JAR };
+  STATE.user = {
+    // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
+    app_metadata: {},
+    aud: "authenticated",
+    // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
+    created_at: new Date(0).toISOString(),
+    email: "test@example.com",
+    id: "test-user",
+    // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
+    user_metadata: {},
+  } as User;
   STATE.rateLimitEnabled = false;
   COOKIES_MOCK.mockImplementation(() =>
     Promise.resolve(getMockCookiesForTest(STATE.cookies))
   );
   COOKIES_MOCK.mockClear();
-  SUPABASE_CLIENT.auth.getUser.mockReset();
-  SUPABASE_CLIENT.auth.getUser.mockResolvedValue({
-    data: { user: { id: "test-user" } },
-    error: null,
-  });
-  SUPABASE_CLIENT.from.mockReset();
-  SUPABASE_CLIENT.from.mockImplementation(() => createQueryBuilder());
+  // Reset Supabase client with current state by resetting the lazy holder
+  supabaseClient = null;
+  // Recreate the client with current STATE.user
+  const client = getSupabaseClient();
   CREATE_SUPABASE_MOCK.mockReset();
-  CREATE_SUPABASE_MOCK.mockResolvedValue(SUPABASE_CLIENT);
+  CREATE_SUPABASE_MOCK.mockResolvedValue(client);
+  setSupabaseFactoryForTests(
+    async () =>
+      client as unknown as Awaited<
+        ReturnType<typeof import("@/lib/supabase/server").createServerSupabase>
+      >
+  );
   LIMIT_SPY.mockReset();
   LIMIT_SPY.mockResolvedValue({ ...DEFAULT_RATE_LIMIT });
+  setRateLimitFactoryForTests(null);
   GET_REDIS_MOCK.mockReset();
   GET_REDIS_MOCK.mockImplementation(() =>
     STATE.rateLimitEnabled ? REDIS_MOCK : undefined
@@ -145,22 +173,58 @@ export function resetApiRouteMocks(): void {
   REDIS_MOCK.set.mockReset();
 }
 
-/** Override the mocked Supabase user returned by `withApiGuards`. */
-export function mockApiRouteAuthUser(user: { id: string } | null): void {
-  SUPABASE_CLIENT.auth.getUser.mockResolvedValue({
-    data: { user },
-    error: null,
-  } as unknown as Awaited<ReturnType<typeof SUPABASE_CLIENT.auth.getUser>>);
+/**
+ * Override the mocked Supabase user returned by `withApiGuards`.
+ *
+ * Accepts partial user objects for convenience in tests and merges them with a
+ * fully-populated default user to satisfy Supabase's required fields.
+ *
+ * @param user - The user to inject or null to simulate unauthenticated.
+ */
+export function mockApiRouteAuthUser(user: User | null | Partial<User>): void {
+  if (!user) {
+    STATE.user = null;
+    return;
+  }
+
+  const baseUser: User = {
+    // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case fields
+    app_metadata: {},
+    aud: "authenticated",
+    // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case fields
+    created_at: new Date(0).toISOString(),
+    email: "test@example.com",
+    id: "test-user",
+    // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case fields
+    user_metadata: {},
+  };
+
+  const normalizedUser = {
+    ...baseUser,
+    ...user,
+    // Explicitly merge metadata objects to preserve defaults
+    // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case fields
+    app_metadata: { ...baseUser.app_metadata, ...(user as User).app_metadata },
+    // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case fields
+    user_metadata: {
+      ...baseUser.user_metadata,
+      ...(user as User).user_metadata,
+    },
+  } as User;
+
+  STATE.user = normalizedUser;
 }
 
 /** Enable rate limiting (Redis available). */
 export function enableApiRouteRateLimit(): void {
   STATE.rateLimitEnabled = true;
+  setRateLimitFactoryForTests((key, identifier) => LIMIT_SPY(key, identifier));
 }
 
 /** Disable rate limiting, simulating missing Redis configuration. */
 export function disableApiRouteRateLimit(): void {
   STATE.rateLimitEnabled = false;
+  setRateLimitFactoryForTests(null);
 }
 
 /**
@@ -176,7 +240,8 @@ export function mockApiRouteCookies(cookies: Record<string, string>): void {
   STATE.cookies = { ...cookies };
 }
 
-export const apiRouteSupabaseMock = SUPABASE_CLIENT;
+/** Get the current Supabase client mock (lazy-initialized). */
+export const getApiRouteSupabaseMock = () => getSupabaseClient();
 export const apiRouteRateLimitSpy = LIMIT_SPY;
 export const apiRouteCookiesMock = COOKIES_MOCK;
 export const apiRouteCreateSupabaseMock = CREATE_SUPABASE_MOCK;
@@ -186,3 +251,8 @@ export const apiRouteRedisMock = REDIS_MOCK;
 export function mockApiRouteRedisEvalshaOnce(result: RateLimitResult): void {
   REDIS_MOCK.evalsha.mockResolvedValueOnce(result);
 }
+
+// Ensure Supabase factory resets between tests to avoid cross-suite leakage.
+afterEach(() => {
+  setSupabaseFactoryForTests(null);
+});

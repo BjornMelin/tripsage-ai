@@ -13,12 +13,13 @@ Resources and guidelines for TripSage development.
 | [Stores](stores.md) | Zustand store patterns and composition |
 | [Zod Schema Guide](zod-schema-guide.md) | Schema validation and type inference patterns |
 | [Testing Guide](testing-guide.md) | Testing strategies and patterns |
+| [Activities](activities.md) | Activity search service, tools, and API usage |
 
 ## Development
 
 | Guide | Purpose |
 |-------|---------|
-| [Development Guide](development-guide.md) | Backend, frontend, database, API patterns, and observability |
+| [Development Guide](development-guide.md) | Next.js backend/frontends, database patterns, and observability |
 | [Observability](observability.md) | Telemetry spans, `[operational-alert]` contracts, and alerting guidance |
 | [Troubleshooting](troubleshooting.md) | Debugging, CI/CD, and workflow guidance |
 
@@ -27,38 +28,32 @@ Resources and guidelines for TripSage development.
 ### Setup
 
 ```bash
-# Install dependencies
-uv sync                                    # Python packages
-cd frontend && pnpm install               # Node packages
+# Install dependencies (frontend-first)
+cd frontend && pnpm install
 
-# Start development servers
-uv run python -m tripsage.api.main        # API server (port 8000)
-cd frontend && pnpm dev                   # Frontend (port 3000)
+# Start development server (port 3000)
+cd frontend && pnpm dev
 ```
 
 ### Code Quality
 
 ```bash
-# Python
-ruff check . --fix && ruff format .        # Lint and format
-uv run pytest --cov=tripsage              # Test with coverage
-
-# TypeScript
-cd frontend && pnpm lint && pnpm format   # Lint and format
-cd frontend && pnpm test                  # Run tests
+# TypeScript / Next.js
+cd frontend && pnpm run biome:check && pnpm run type-check
+cd frontend && pnpm test
 ```
 
 ## Architecture
 
-- **Backend**: Python 3.13, FastAPI, Pydantic
-- **Frontend**: Next.js 15, TypeScript, Tailwind CSS
+- **Backend**: Next.js 16 server route handlers (TypeScript) — Python/FastAPI backend removed (see superseded SPEC-0007, SPEC-0010)
+- **Frontend**: Next.js 16, TypeScript, Tailwind CSS
 - **Database**: PostgreSQL (Supabase) with pgvector
 - **Cache**: Upstash Redis (HTTP REST API)
 - **AI**: Vercel AI SDK v6 with frontend-only agents
 
 ## Key Principles
 
-- **Type Safety**: Full type hints in Python, strict TypeScript
+- **Type Safety**: Strict TypeScript throughout
 - **Async First**: All I/O operations use async/await
 - **Security**: Environment variables only, JWT authentication
 - **Testing**: Comprehensive test coverage required

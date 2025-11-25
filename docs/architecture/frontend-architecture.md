@@ -63,7 +63,7 @@ src/
   app/                 # App Router (pages, layouts, API route handlers)
     api/**/route.ts    # Server-only handlers; no module-scope state
   components/          # UI primitives and features (client/server as needed)
-  domain/              # Domain logic (e.g., accommodations, expedia)
+  domain/              # Domain logic (e.g., accommodations, amadeus)
   hooks/               # Reusable React hooks (client)
   lib/                 # Providers, telemetry, supabase, tools, security, etc.
   ai/                  # AI-specific helpers/models
@@ -90,17 +90,22 @@ Avoid new barrels; import concrete modules.
 - Attachments pipeline: Supabase Storage (`attachments`), Postgres metadata, signed URL access; enforced server-side.
 - Memory sync pipeline using QStash webhook `/api/jobs/memory-sync` with Upstash signature verification and Redis idempotency gates.
 - Payments/notifications via server-only Stripe/Resend helpers.
+- Security dashboard sessions: `/api/security/sessions` (list) and `/api/security/sessions/[sessionId]` (DELETE) use `withApiGuards`, Supabase service-role client on auth schema, and rate limits (`security:sessions:list`, `security:sessions:terminate`).
+- Destination search form now calls `/api/places/search` with debounced, abortable requests and client-side type filtering; autocomplete no longer uses mock data.
 
 ## Core Patterns
 
 - **RSC-first**: Server Components by default; add `"use client"` only for interactive islands.
 - **Route Handlers**: Parse `NextRequest`, create request-scoped Supabase client, Upstash limiter, and provider registry inside the handler, then delegate to a pure `_handler` function. BYOK routes import `"server-only"`. No module-scope singletons beyond config constants.
 - **AI SDK Integration**: Use `streamText`, `generateObject`, or `streamObject` with Zod schemas from `src/schemas`. UI hooks use `useChat`/`useAssistant` with `DefaultChatTransport`. No custom streaming stacks.
-- **Validation**: Zod v4 schemas kept in domain files per AGENTS rules (strictObject, enum, top-level string helpers). Structured outputs share the same schemas across server and client.
+- **Validation**: Zod v4 schemas kept in domain files per AGENTS rules (see AGENTS.md §4.4–4.5 for schema organization and helpers). Structured outputs share the same schemas across server and client. Canonical types (e.g., `UiTrip`, `TripSuggestion`) defined in `@schemas/*`; stores/hooks re-export for convenience.
 - **State**: Client UI state via Zustand slices in `src/stores`; server data via TanStack Query. Realtime channel lifecycle is encapsulated in `use-realtime-channel` and thin wrappers only.
 - **Security**: Supabase SSR auth only. Random IDs/timestamps from `@/lib/security/random`. BYOK resolution lives in `src/lib/providers/registry.ts`; keys never leave server.
 - **Provider precedence**: user gateway key → user provider key (OpenAI/Anthropic/xAI/OpenRouter) → team gateway fallback (opt-in).
-- **Caching & Limits**: Upstash Ratelimit/Redis in handlers; auth-bound routes are dynamic (no `'use cache'`). Public data may use cache directives sparingly.
+- **Caching & Limits**: Upstash Ratelimit/Redis in handlers; auth-bound routes are dynamic (no `'use cache'`).
+  Routes accessing `cookies()` or `headers()` cannot use cache directives per Next.js Cache Components restrictions.
+  See [Spec: BYOK Routes and Security (Next.js + Supabase Vault)](../specs/0011-spec-byok-routes-and-security.md).
+  Public data may use cache directives sparingly.
 - **Background Work**: QStash webhooks for async tasks (e.g., memory sync). Handlers must be idempotent and stateless.
 - **Telemetry**: Wrap server logic with `withTelemetrySpan` / `withTelemetrySpanSync` and `createServerLogger`; emit operational alerts via `emitOperationalAlert` for critical failures. Avoid `console.*` in server code.
 

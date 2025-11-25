@@ -1,3 +1,5 @@
+/** @vitest-environment node */
+
 import {
   changePasswordFormSchema,
   confirmResetPasswordFormSchema,
@@ -435,7 +437,6 @@ describe("forms schemas", () => {
         allowCollaboration: false,
         destination: "Paris",
         endDate: futureDate2,
-        isPublic: false,
         startDate: futureDate1,
         title: "Summer Trip",
         travelers: [

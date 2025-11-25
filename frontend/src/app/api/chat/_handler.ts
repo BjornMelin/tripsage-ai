@@ -14,6 +14,7 @@ import {
   persistMemoryTurn,
   uiMessageToMemoryTurn,
 } from "@/lib/memory/turn-utils";
+import type { Json } from "@/lib/supabase/database.types";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { insertSingle } from "@/lib/supabase/typed-helpers";
 import {
@@ -52,6 +53,7 @@ export interface NonStreamDeps {
   logger?: {
     info: (msg: string, meta?: Record<string, unknown>) => void;
     error: (msg: string, meta?: Record<string, unknown>) => void;
+    warn?: (msg: string, meta?: Record<string, unknown>) => void;
   };
   clock?: { now: () => number };
   config?: { defaultMaxTokens?: number };
@@ -256,23 +258,33 @@ export async function handleChatNonStream(
     reasons,
     usage,
   } as const;
+  const metadata: Json = {
+    durationMs: body.durationMs,
+    model: body.model,
+    reasons,
+    usage: usage ?? null,
+  };
 
   // Best-effort persistence for assistant message metadata
-  await persistMemoryTurn({
-    logger: deps.logger,
-    sessionId,
-    turn: createTextMemoryTurn("assistant", result.text ?? ""),
-    userId: user.id,
-  });
+  if (sessionId) {
+    await persistMemoryTurn({
+      logger: deps.logger,
+      sessionId,
+      turn: createTextMemoryTurn("assistant", result.text ?? ""),
+      userId: user.id,
+    });
+  }
 
   if (sessionId) {
     try {
       await insertSingle(deps.supabase, "chat_messages", {
         content: result.text ?? "",
-        metadata: body,
+        metadata,
         role: "assistant",
         // biome-ignore lint/style/useNamingConvention: Database field name
         session_id: sessionId,
+        // biome-ignore lint/style/useNamingConvention: Database field name
+        user_id: user.id,
       });
     } catch {
       // ignore persistence errors

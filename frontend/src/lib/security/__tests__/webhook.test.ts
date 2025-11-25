@@ -1,3 +1,5 @@
+/** @vitest-environment node */
+
 import { describe, expect, it } from "vitest";
 import { computeHmacSha256Hex, timingSafeEqualHex } from "@/lib/security/webhook";
 

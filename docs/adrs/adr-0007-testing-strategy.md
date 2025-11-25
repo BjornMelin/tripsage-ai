@@ -34,11 +34,15 @@ We will adopt a modern testing strategy:
 - **E2E**: Playwright
 - **Visual Regression**: Playwright screenshots
 
-**Backend Testing Stack:**
+**API Testing Stack:**
 
-- **Unit/Integration**: Pytest with async support
-- **API Testing**: FastAPI test client
-- **Property-Based**: Hypothesis for complex logic
+- **Route Handlers**: Vitest + MSW for unit-level route handler tests that focus on controller logic, validation, auth/guard paths, and error handling without hitting real infra.
+- **Integration**: Vitest with real database via Testcontainers to exercise full persistence, schema validation, and RLS rules end-to-end.
+
+**External Service Mocking:**
+
+- Mock Amadeus, Google Places, Stripe, and other third-party calls with MSW or recorded test doubles; use lightweight mocks for happy-path/unit coverage and promote full contract tests only for provider edge cases.
+- Provide shared mock fixtures and handlers to avoid per-suite duplication; keep secrets out of tests by using CI-safe env vars and disable live network access in CI except for controlled contract suites.
 
 **Key Principles:**
 

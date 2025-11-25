@@ -15,7 +15,7 @@ import {
 } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { z } from "zod";
-import { useSupabase } from "@/lib/supabase";
+import { useSupabase, useSupabaseRequired } from "@/lib/supabase";
 import type {
   ChatMessage,
   ChatRole,
@@ -33,6 +33,9 @@ function useUserId(): string | null {
   const supabase = useSupabase();
   const [userId, setUserId] = useState<string | null>(null);
   useEffect(() => {
+    // During SSR, supabase is null - skip auth setup
+    if (!supabase) return;
+
     let isMounted = true;
     supabase.auth
       .getUser()
@@ -84,11 +87,9 @@ const CHAT_SESSION_INSERT_SCHEMA = z
   })
   .partial();
 
-/**
- * Hook for managing chat sessions and messages with Supabase.
- */
+/** Hook for managing chat sessions and messages with Supabase. */
 export function useSupabaseChat() {
-  const supabase = useSupabase();
+  const supabase = useSupabaseRequired();
   const queryClient = useQueryClient();
   const userId = useUserId();
 
@@ -232,6 +233,7 @@ export function useSupabaseChat() {
       content: string;
       role?: ChatRole;
     }) => {
+      if (!userId) throw new Error("User not authenticated");
       try {
         // Validate inputs with Zod
         const validatedSessionId = SESSION_ID_SCHEMA.parse(sessionId);
@@ -244,6 +246,8 @@ export function useSupabaseChat() {
           role: validatedRole,
           // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
           session_id: validatedSessionId,
+          // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
+          user_id: userId,
         });
 
         if (error) throw error;
@@ -303,6 +307,8 @@ export function useSupabaseChat() {
         role,
         // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
         session_id: sessionId,
+        // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
+        user_id: userId ?? "unknown",
       };
 
       queryClient.setQueryData(
@@ -467,8 +473,6 @@ export function useSupabaseChat() {
           "chat_sessions",
           {
             // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
-            ended_at: new Date().toISOString(),
-            // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
             updated_at: new Date().toISOString(),
           },
           // biome-ignore lint/suspicious/noExplicitAny: Required for Supabase query builder typing
@@ -570,7 +574,7 @@ export function useChatWithRealtime(sessionId: string | null) {
  * Hook for chat session statistics.
  */
 export function useChatStats() {
-  const supabase = useSupabase();
+  const supabase = useSupabaseRequired();
   const userId = useUserId();
 
   return useQuery({
@@ -581,7 +585,7 @@ export function useChatStats() {
       // Get session counts
       const { data: sessions, error: sessionsError } = await supabase
         .from("chat_sessions")
-        .select("id, created_at, ended_at")
+        .select("id, created_at, updated_at")
         .eq("user_id", userId);
 
       if (sessionsError) throw sessionsError;
@@ -598,49 +602,37 @@ export function useChatStats() {
               // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
               created_at: string;
               // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
-              ended_at: string | null;
+              updated_at: string | null;
             }>
           ).map((s) => s.id)
         );
 
       if (messagesError) throw messagesError;
 
-      const activeSessions = (
-        sessions as Array<{
-          id: string;
-          // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
-          created_at: string;
-          // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
-          ended_at: string | null;
-        }>
-      ).filter((s) => !s.ended_at);
-      const completedSessions = (
-        sessions as Array<{
-          id: string;
-          // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
-          created_at: string;
-          // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
-          ended_at: string | null;
-        }>
-      ).filter((s) => s.ended_at);
-
+      const typedSessions = sessions as Array<{
+        id: string;
+        // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
+        created_at: string;
+        // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
+        updated_at: string | null;
+      }>;
+      const activeSessions = typedSessions.length;
+      const completedSessions = 0;
+      const averageSessionLength =
+        typedSessions.length > 0
+          ? typedSessions.reduce((sum, session) => {
+              const end = session.updated_at ?? session.created_at;
+              const duration =
+                new Date(end).getTime() - new Date(session.created_at).getTime();
+              return sum + duration;
+            }, 0) / typedSessions.length
+          : 0;
       return {
-        activeSessions: activeSessions.length,
-        averageSessionLength:
-          completedSessions.length > 0
-            ? completedSessions.reduce((sum, session) => {
-                if (session.ended_at) {
-                  const duration =
-                    new Date(session.ended_at).getTime() -
-                    new Date(session.created_at).getTime();
-                  return sum + duration;
-                }
-                return sum;
-              }, 0) / completedSessions.length
-            : 0,
-        completedSessions: completedSessions.length,
+        activeSessions,
+        averageSessionLength,
+        completedSessions,
         totalMessages: messageCount || 0,
-        totalSessions: sessions.length,
+        totalSessions: typedSessions.length,
       };
     },
     queryKey: ["chat-stats", userId],
