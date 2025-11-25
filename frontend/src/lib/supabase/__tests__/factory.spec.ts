@@ -6,10 +6,6 @@ import type { User } from "@supabase/supabase-js";
 import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getClientEnv } from "@/lib/env/client";
-import {
-  resetTelemetryTracerForTests,
-  setTelemetryTracerForTests,
-} from "@/lib/telemetry/span";
 import type { ServerSupabaseClient } from "../factory";
 import {
   createCookieAdapter,
@@ -75,8 +71,7 @@ describe("Supabase Factory", () => {
   const mockCreateServerClient = vi.mocked(createServerClient);
 
   beforeEach(() => {
-    resetTelemetryTracerForTests();
-    setTelemetryTracerForTests(trace.getTracer("tripsage-frontend"));
+    vi.clearAllMocks();
   });
 
   describe("createServerSupabase", () => {

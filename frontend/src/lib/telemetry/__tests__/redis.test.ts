@@ -1,10 +1,6 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  resetTelemetryTracerForTests,
-  setTelemetryTracerForTests,
-} from "@/lib/telemetry/span";
 
 const START_ACTIVE_SPAN = vi.hoisted(() => vi.fn());
 const EMIT_ALERT = vi.hoisted(() => vi.fn());
@@ -32,11 +28,6 @@ const { resetRedisWarningStateForTests, warnRedisUnavailable } = await import(
 describe("warnRedisUnavailable", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    resetTelemetryTracerForTests();
-    setTelemetryTracerForTests({
-      startActiveSpan: (...args: Parameters<typeof START_ACTIVE_SPAN>) =>
-        START_ACTIVE_SPAN(...args),
-    } as never);
     resetRedisWarningStateForTests();
     START_ACTIVE_SPAN.mockImplementation((...args: unknown[]) => {
       const callback = args.at(-1) as (span: {
