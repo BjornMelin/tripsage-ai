@@ -14,6 +14,7 @@ import {
   searchUserMemoriesInputSchema,
 } from "@schemas/memory";
 import { handleMemoryIntent } from "@/lib/memory/orchestrator";
+import { secureUuid } from "@/lib/security/random";
 import type { Database, Json } from "@/lib/supabase/database.types";
 import { createServerSupabase } from "@/lib/supabase/server";
 
@@ -35,7 +36,7 @@ export const addConversationMemory = createAiTool({
     const userId = auth?.user?.id;
     if (!userId) throw new Error("unauthorized");
 
-    const sessionId = crypto.randomUUID();
+    const sessionId = secureUuid();
 
     const { data: sessionData, error: sessionError } = await supabase
       .schema("memories")

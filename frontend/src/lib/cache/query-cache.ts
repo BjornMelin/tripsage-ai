@@ -4,15 +4,9 @@ import { QueryCache, QueryClient } from "@tanstack/react-query";
 
 // Error handling for query cache
 const QUERY_CACHE = new QueryCache({
-  onError: (error, query) => {
-    // Log errors for debugging
-    console.error(`Query failed for key: ${JSON.stringify(query.queryKey)}`, error);
-
-    // Report critical errors in production
-    if (process.env.NODE_ENV === "production") {
-      // You could send to error reporting service here
-      console.warn("Query error reported to monitoring");
-    }
+  onError: (_error, _query) => {
+    // Error handling - telemetry/logging handled by error boundaries and error service
+    // Query errors are handled by React Query's error state management
   },
 });
 

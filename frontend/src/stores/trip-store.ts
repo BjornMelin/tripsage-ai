@@ -60,7 +60,7 @@ export const useTripStore = create<TripState>()(
 
           const newDestination: Destination = {
             ...destination,
-            id: destination.id || Date.now().toString(),
+            id: destination.id || secureUuid(),
           };
 
           set((state) => {

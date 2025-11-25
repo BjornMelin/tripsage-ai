@@ -5,6 +5,7 @@
  * Adapters (route.ts files) provide SSR-only dependencies and translate the
  * HTTP details to simple POJOs used here.
  */
+import { secureUuid } from "@/lib/security/random";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { insertSingle } from "@/lib/supabase/typed-helpers";
 
@@ -27,7 +28,7 @@ export async function createSession(
   const { data: auth } = await deps.supabase.auth.getUser();
   const user = auth?.user ?? null;
   if (!user) return json({ error: "unauthorized" }, 401);
-  const id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
+  const id = secureUuid();
   const now = new Date().toISOString();
   const { error } = await insertSingle(deps.supabase, "chat_sessions", {
     // biome-ignore lint/style/useNamingConvention: Database field name

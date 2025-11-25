@@ -61,8 +61,8 @@ export function BackupCodeVerification({
       // TODO: Replace with real backup code verification: await supabase.auth.mfa.verify({ code: backupCode, type: 'backup' })
       // Mock verification (accept any code with correct format for demo)
       if (backupCode.includes("-") && backupCode.length >= 10) {
-        // Simulate remaining backup codes
-        const remainingCodes = Math.floor(Math.random() * 8) + 1;
+        // Simulate remaining backup codes (fixed value for deterministic behavior)
+        const remainingCodes = 5;
         onVerified(remainingCodes);
       } else {
         setError("Invalid backup code. Please check and try again.");

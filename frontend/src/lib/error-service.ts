@@ -44,14 +44,14 @@ class ErrorService {
             error.stack = validatedReport.error.stack;
           }
           recordClientErrorOnActiveSpan(error);
-        } catch (otelError) {
+        } catch {
           // Don't fail error reporting if OTel recording fails
-          console.warn("Failed to record error to OpenTelemetry span:", otelError);
+          // Telemetry errors are non-critical
         }
       }
 
       if (!this.config.enabled) {
-        console.error("Error reported:", validatedReport);
+        // Error reporting disabled - silently skip
         return;
       }
 
@@ -67,8 +67,8 @@ class ErrorService {
       if (!this.isProcessing) {
         await this.processQueue();
       }
-    } catch (error) {
-      console.error("Failed to report error:", error);
+    } catch {
+      // Silently fail error reporting to avoid recursive error loops
     }
   }
 
@@ -87,8 +87,8 @@ class ErrorService {
           await this.sendErrorReport(report);
         }
       }
-    } catch (error) {
-      console.error("Failed to process error queue:", error);
+    } catch {
+      // Silently fail queue processing to avoid recursive errors
     } finally {
       this.isProcessing = false;
     }
@@ -102,7 +102,7 @@ class ErrorService {
 
     try {
       if (!this.config.endpoint) {
-        console.error("Error report (no endpoint configured):", report);
+        // No endpoint configured - silently skip
         return;
       }
 
@@ -128,9 +128,8 @@ class ErrorService {
         setTimeout(() => {
           this.sendErrorReport(report, retryCount + 1);
         }, delay);
-      } else {
-        console.error("Failed to send error report after retries:", error);
       }
+      // Silently fail after max retries to avoid recursive errors
     }
   }
 
@@ -144,8 +143,8 @@ class ErrorService {
 
       // Clean up old errors (keep last 10)
       this.cleanupLocalErrors();
-    } catch (error) {
-      console.error("Failed to store error locally:", error);
+    } catch {
+      // Silently fail local storage operations
     }
   }
 
@@ -164,8 +163,8 @@ class ErrorService {
       for (const key of keysToRemove) {
         localStorage.removeItem(key);
       }
-    } catch (error) {
-      console.error("Failed to cleanup local errors:", error);
+    } catch {
+      // Silently fail cleanup operations
     }
   }
 

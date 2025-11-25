@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- Replaced insecure ID generation: migrated all `Date.now().toString()` and direct `crypto.randomUUID()` usage to `secureUuid()` from `@/lib/security/random` in stores, components, API routes, and AI tools.
+- Removed `Math.random()` from production code: replaced with deterministic values in backup code verification and agent collaboration hub performance simulation.
+- Removed `console.*` statements from server modules: replaced development logging and error fallbacks in `lib/api/api-client.ts`, `lib/error-service.ts`, and `lib/cache/query-cache.ts` with telemetry helpers or silent error handling per AGENTS.md compliance.
+
 ### Added
 
 - Testing patterns companion guide (`docs/developers/testing-patterns.md`) with test-type decision tree plus MSW and AI SDK v6 examples.
@@ -48,6 +54,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Moved travel planning tools and schemas to `frontend/src/ai/tools/server/planning.ts` and `frontend/src/ai/tools/server/planning.schema.ts`, and migrated their tests to `frontend/src/ai/tools/server/__tests__/planning.test.ts`; deleted the old `frontend/src/lib/tools/planning*.ts` files.
 - Replaced `frontend/src/lib/tools/travel-advisory.ts` and its helpers with `frontend/src/ai/tools/server/travel-advisory.ts` plus `frontend/src/ai/tools/server/travel-advisory/**` (providers, utilities, tests) backed by the U.S. State Department Travel Advisories API.
 - Replaced `frontend/src/lib/tools/injection.ts` with `frontend/src/ai/tools/server/injection.ts` and updated the chat stream handler to inject `userId`/`sessionId` via `wrapToolsWithUserId` from `@ai/tools/server/injection`.
+- Consolidated Trip type definitions: canonical `UiTrip` type now defined in `@schemas/trips` (`storeTripSchema`); stores and hooks import and re-export for convenience. Removed duplicate Trip type definitions from `domain/schemas/api.ts`. Database type `Trip = Tables<"trips">` remains separate in `database.types.ts` for raw DB row representation.
+- Consolidated TripSuggestion types: removed duplicate interface from `hooks/use-trips.ts`; all consumers now use `TripSuggestion` from `@schemas/trips`.
 - **React 19 login form modernization**: Refactored email/password login to use server actions with `useActionState`/`useFormStatus` for progressive enhancement, replacing route-based redirects with inline error handling and pending states. Created `loginAction` server action in `frontend/src/app/(auth)/login/actions.ts` with Zod validation, Supabase SSR authentication, and safe redirect logic. Updated `frontend/src/components/auth/login-form.tsx` to use React 19 hooks with field-specific error rendering and `SubmitButton` component. Converted `/auth/login` route to thin wrapper for external API compatibility while maintaining all security safeguards. Added comprehensive tests in `frontend/src/app/(auth)/login/__tests__/actions.test.ts` covering validation, authentication, and redirect scenarios.
 - **AI SDK v6 Tool Migration**: Complete refactoring of tool architecture to fully leverage AI SDK v6 capabilities. Migrated `createAiTool` factory to remove type assertions, properly integrate ToolCallOptions with user context extraction from messages, consolidate guardrails into single source of truth, eliminate double-wrapping in agent tools, and update all 18+ tool definitions to use consistent patterns. Enhanced type safety with strict TypeScript compliance, improved test coverage using AI SDK patterns, and eliminated code duplication between tool-factory and guarded-tool implementations. Added comprehensive documentation in `docs/developers/ai-sdk-v6-tools.md` for future tool development.
 - **Configuration and dependency updates**: Enabled React Compiler and Cache Components in Next.js 16; updated Zod schemas to v4 APIs (z.uuid(), z.email(), z.int()); migrated user settings to Server Actions with useActionState; consolidated Supabase client imports to @/lib/supabase; unified Next.js config files into single next.config.ts with conditional bundle analyzer; added jsdom environment declarations for tests; removed deprecated Next.js config keys and custom webpack splitChunks.

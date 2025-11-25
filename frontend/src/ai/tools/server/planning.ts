@@ -66,7 +66,7 @@ async function recordPlanMemory(opts: {
     const sessionUserId = auth?.user?.id;
     if (!sessionUserId || sessionUserId !== opts.userId) return;
 
-    const sessionId = crypto.randomUUID();
+    const sessionId = secureUuid();
     const { data: sessionData } = await supabase
       .schema("memories")
       .from("sessions")
