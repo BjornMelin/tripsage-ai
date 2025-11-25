@@ -81,21 +81,15 @@ export function TripSelectionModal({
             <ScrollArea className="h-[300px] pr-4">
               <div className="space-y-4">
                 {trips.map((trip) => (
-                  <div
+                  <button
                     key={trip.id}
-                    className={`flex items-start space-x-3 space-y-0 rounded-md border p-4 cursor-pointer transition-colors ${
+                    type="button"
+                    className={`flex w-full text-left items-start space-x-3 space-y-0 rounded-md border p-4 cursor-pointer transition-colors ${
                       selectedTripId === trip.id
                         ? "border-primary bg-accent"
                         : "hover:bg-accent/50"
                     }`}
                     onClick={() => setSelectedTripId(trip.id)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        setSelectedTripId(trip.id);
-                      }
-                    }}
                   >
                     <div
                       className={`mt-1 h-4 w-4 rounded-full border border-primary flex items-center justify-center ${
@@ -121,7 +115,7 @@ export function TripSelectionModal({
                         </div>
                       )}
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             </ScrollArea>

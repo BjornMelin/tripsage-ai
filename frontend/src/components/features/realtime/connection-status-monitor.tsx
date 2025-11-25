@@ -13,7 +13,7 @@ import {
   WifiOff,
   XCircle,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,9 +26,8 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
-import { type BackoffConfig, computeBackoffDelay } from "@/lib/realtime/backoff";
-import { getBrowserClient, type TypedSupabaseClient } from "@/lib/supabase";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
+import { useRealtimeConnectionStore } from "@/stores/realtime-connection-store";
 
 interface ConnectionStatus {
   isConnected: boolean;
@@ -41,31 +40,9 @@ interface ConnectionStatus {
 interface RealtimeConnection {
   id: string;
   table: string;
-  status: "connected" | "disconnected" | "error" | "reconnecting";
+  status: "connected" | "disconnected" | "error" | "reconnecting" | "connecting";
   error?: Error;
   lastActivity: Date | null;
-}
-
-const BACKOFF_CONFIG: BackoffConfig = {
-  factor: 2,
-  initialDelayMs: 500,
-  maxDelayMs: 8000,
-};
-
-function MapChannelStatus(state: string | undefined): RealtimeConnection["status"] {
-  switch (state) {
-    case "joined":
-      return "connected";
-    case "joining":
-      return "reconnecting";
-    case "errored":
-      return "error";
-    case "leaving":
-    case "closed":
-      return "disconnected";
-    default:
-      return "reconnecting";
-  }
 }
 
 function NormalizeTopic(topic: string): string {
@@ -78,122 +55,22 @@ function NormalizeTopic(topic: string): string {
  */
 export function ConnectionStatusMonitor() {
   const { toast } = useToast();
-  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>({
-    connectionCount: 0,
-    isConnected: false,
-    lastError: null,
-    lastReconnectAt: null,
-    reconnectAttempts: 0,
-  });
-
-  const [connections, setConnections] = useState<RealtimeConnection[]>([]);
+  const realtimeStore = useRealtimeConnectionStore();
+  const connections = Object.values(realtimeStore.connections).map((conn) => ({
+    error: conn.lastError ?? undefined,
+    id: conn.id,
+    lastActivity: conn.lastActivity,
+    status: conn.status,
+    table: NormalizeTopic(conn.id),
+  }));
+  const connectionStatus: ConnectionStatus = realtimeStore.summary();
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
-  const reconnectAttemptsRef = useRef(0);
-  const lastReconnectAtRef = useRef<Date | null>(null);
-  const previousConnectionsRef = useRef<Record<string, RealtimeConnection>>({});
-
-  const refreshConnections = useCallback((client: TypedSupabaseClient) => {
-    const now = new Date();
-    const channels = client.realtime.getChannels();
-
-    const nextConnections = channels.map((channel) => {
-      const status = MapChannelStatus((channel as { state?: string }).state);
-      const id = channel.topic;
-      const previous = previousConnectionsRef.current[id];
-      const lastActivity =
-        status === "connected"
-          ? (previous?.lastActivity ?? now)
-          : (previous?.lastActivity ?? null);
-
-      const error =
-        status === "error"
-          ? (previous?.error ?? new Error(`Realtime channel ${id} errored`))
-          : undefined;
-
-      return {
-        error,
-        id,
-        lastActivity,
-        status,
-        table: NormalizeTopic(channel.topic),
-      };
-    });
-
-    previousConnectionsRef.current = Object.fromEntries(
-      nextConnections.map((conn) => [conn.id, conn])
-    );
-
-    const lastError = nextConnections.find((conn) => conn.error)?.error ?? null;
-    if (lastError) {
-      recordClientErrorOnActiveSpan(lastError);
-    }
-
-    setConnections(nextConnections);
-    setConnectionStatus({
-      connectionCount: nextConnections.filter((c) => c.status === "connected").length,
-      isConnected: client.realtime.isConnected(),
-      lastError,
-      lastReconnectAt: lastReconnectAtRef.current,
-      reconnectAttempts: reconnectAttemptsRef.current,
-    });
-  }, []);
-
-  useEffect(() => {
-    const supabase = getBrowserClient();
-    if (!supabase) return;
-
-    refreshConnections(supabase);
-    const intervalId = window.setInterval(() => refreshConnections(supabase), 1500);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [refreshConnections]);
 
   const handleReconnectAll = async () => {
-    const supabase = getBrowserClient();
-    if (!supabase) {
-      toast({
-        description: "Supabase client is unavailable in this environment.",
-        title: "Reconnection Failed",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsReconnecting(true);
-    reconnectAttemptsRef.current += 1;
-    const attempt = reconnectAttemptsRef.current;
-    const delay = computeBackoffDelay(attempt, BACKOFF_CONFIG);
-
     try {
-      if (delay > 0) {
-        await new Promise((resolve) => setTimeout(resolve, delay));
-      }
-
-      const channels = supabase.realtime.getChannels();
-      for (const channel of channels) {
-        try {
-          await channel.unsubscribe();
-        } catch {
-          // ignore unsubscribe failures
-        }
-        channel.subscribe();
-      }
-
-      supabase.realtime.connect();
-
-      const now = new Date();
-      lastReconnectAtRef.current = now;
-
-      refreshConnections(supabase);
-      setConnectionStatus((prev) => ({
-        ...prev,
-        lastError: null,
-        lastReconnectAt: now,
-        reconnectAttempts: attempt,
-      }));
+      await realtimeStore.reconnectAll();
 
       toast({
         description: "All real-time connections have been restored.",
@@ -362,8 +239,10 @@ export function ConnectionStatusMonitor() {
  * Compact connection status indicator for navigation/header
  */
 export function ConnectionStatusIndicator() {
-  const [isConnected, _setIsConnected] = useState(true);
-  const [hasError, _setHasError] = useState(false);
+  const { isConnected, lastError } = useRealtimeConnectionStore((state) =>
+    state.summary()
+  );
+  const hasError = Boolean(lastError);
 
   return (
     <div className="flex items-center space-x-2">

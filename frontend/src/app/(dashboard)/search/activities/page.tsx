@@ -68,7 +68,7 @@ export default function ActivitiesSearchPage() {
         const fetchedTrips = await getPlanningTrips();
         setTrips(fetchedTrips);
         setIsTripModalOpen(true);
-      } catch (error) {
+      } catch (_error) {
         toast({
           description: "Failed to load trips. Please try again.",
           title: "Error",
@@ -81,38 +81,42 @@ export default function ActivitiesSearchPage() {
   const handleConfirmAddToTrip = async (tripId: string) => {
     if (!selectedActivity) return;
 
-    startTransition(async () => {
-      try {
-        await addActivityToTrip(Number(tripId), {
-          currency: "USD", // Default
-          description: selectedActivity.description,
-          externalId: selectedActivity.id,
-          location: selectedActivity.location,
-          metadata: {
-            images: selectedActivity.images,
-            rating: selectedActivity.rating,
-            type: selectedActivity.type,
-          },
-          price: selectedActivity.price,
-          title: selectedActivity.name,
-        });
+    await new Promise<void>((resolve) => {
+      startTransition(async () => {
+        try {
+          await addActivityToTrip(Number(tripId), {
+            currency: "USD", // Default
+            description: selectedActivity.description,
+            externalId: selectedActivity.id,
+            location: selectedActivity.location,
+            metadata: {
+              images: selectedActivity.images,
+              rating: selectedActivity.rating,
+              type: selectedActivity.type,
+            },
+            price: selectedActivity.price,
+            title: selectedActivity.name,
+          });
 
-        toast({
-          description: `Added "${selectedActivity.name}" to your trip`,
-          title: "Activity added",
-          variant: "default",
-        });
+          toast({
+            description: `Added "${selectedActivity.name}" to your trip`,
+            title: "Activity added",
+            variant: "default",
+          });
 
-        setIsTripModalOpen(false);
-        setSelectedActivity(null);
-      } catch (error) {
-        toast({
-          description:
-            error instanceof Error ? error.message : "Failed to add activity",
-          title: "Error",
-          variant: "destructive",
-        });
-      }
+          setIsTripModalOpen(false);
+          setSelectedActivity(null);
+        } catch (error) {
+          toast({
+            description:
+              error instanceof Error ? error.message : "Failed to add activity",
+            title: "Error",
+            variant: "destructive",
+          });
+        } finally {
+          resolve();
+        }
+      });
     });
   };
 
@@ -359,6 +363,7 @@ export default function ActivitiesSearchPage() {
       {comparisonList.size > 0 && (
         <div className="fixed bottom-6 right-6 z-40">
           <button
+            type="button"
             onClick={() => setShowComparisonModal(true)}
             className="bg-primary text-primary-foreground px-4 py-2 rounded-full shadow-lg flex items-center gap-2 hover:bg-primary/90 transition-colors"
           >

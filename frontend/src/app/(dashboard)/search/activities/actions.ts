@@ -3,11 +3,12 @@
  * Handles fetching user trips and adding activities to trips.
  */
 
-import { bumpTag } from "@/lib/cache/tags";
-import { createServerSupabase } from "@/lib/supabase/server";
-import { mapDbTripToUi } from "@/lib/trips/mappers";
 import { tripsRowSchema } from "@schemas/supabase";
 import { itineraryItemCreateSchema, type UiTrip } from "@schemas/trips";
+import { bumpTag } from "@/lib/cache/tags";
+import type { Json } from "@/lib/supabase/database.types";
+import { createServerSupabase } from "@/lib/supabase/server";
+import { mapDbTripToUi } from "@/lib/trips/mappers";
 
 /**
  * Fetches the authenticated user's active and planning trips.
@@ -109,23 +110,32 @@ export async function addActivityToTrip(
     throw new Error("Invalid activity data");
   }
 
+  const insertPayload = {
+    // biome-ignore lint/style/useNamingConvention: Supabase columns use snake_case
+    booking_status: validation.data.bookingStatus,
+    currency: validation.data.currency,
+    description: validation.data.description ?? null,
+    // biome-ignore lint/style/useNamingConvention: Supabase columns use snake_case
+    end_time: validation.data.endTime ?? null,
+    // biome-ignore lint/style/useNamingConvention: Supabase columns use snake_case
+    external_id: validation.data.externalId ?? null,
+    // biome-ignore lint/style/useNamingConvention: Supabase columns use snake_case
+    item_type: validation.data.itemType,
+    location: validation.data.location ?? null,
+    metadata: (validation.data.metadata ?? {}) as Json, // Supabase expects Json
+    price: validation.data.price,
+    // biome-ignore lint/style/useNamingConvention: Supabase columns use snake_case
+    start_time: validation.data.startTime ?? null,
+    title: validation.data.title,
+    // biome-ignore lint/style/useNamingConvention: Supabase columns use snake_case
+    trip_id: validation.data.tripId,
+    // biome-ignore lint/style/useNamingConvention: Supabase columns use snake_case
+    user_id: user.id,
+  };
+
   const { error: insertError } = await supabase
     .from("itinerary_items")
-    .insert({
-      booking_status: validation.data.bookingStatus,
-      currency: validation.data.currency,
-      description: validation.data.description ?? null,
-      end_time: validation.data.endTime ?? null,
-      external_id: validation.data.externalId ?? null,
-      item_type: validation.data.itemType,
-      location: validation.data.location ?? null,
-      metadata: (validation.data.metadata ?? {}) as any, // Supabase expects Json
-      price: validation.data.price,
-      start_time: validation.data.startTime ?? null,
-      title: validation.data.title,
-      trip_id: validation.data.tripId,
-      user_id: user.id,
-    });
+    .insert(insertPayload);
 
   if (insertError) {
     throw new Error("Failed to add activity to trip");
