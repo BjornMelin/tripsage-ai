@@ -53,8 +53,8 @@ export const POST = withApiGuards({
     return NextResponse.json({
       memories: results.map((item) => ({
         content: item.context,
-        createdAt: nowIso(), // Approximate
-        id: secureUuid(), // Generate ID for response
+        createdAt: item.createdAt ?? nowIso(),
+        id: item.id ?? secureUuid(),
         source: item.source,
       })),
       total: results.length,

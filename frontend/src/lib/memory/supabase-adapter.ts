@@ -20,6 +20,7 @@ import type {
 } from "./orchestrator";
 
 type AdminClient = SupabaseClient<Database>;
+type MemoryTurnRow = Database["memories"]["Tables"]["turns"]["Row"];
 
 const MAX_CONTEXT_ITEMS = 10;
 
@@ -33,7 +34,7 @@ async function handleFetchContext(
   let query = supabase
     .schema("memories")
     .from("turns")
-    .select("content, created_at, session_id")
+    .select("id, content, created_at, session_id")
     .eq("user_id", intent.userId)
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -58,12 +59,15 @@ async function handleFetchContext(
 
   const contextItems: MemoryContextResponse[] = data
     .map((row) => {
-      // biome-ignore lint/style/useNamingConvention: database column uses snake_case
-      const sessionId = (row as { session_id?: string })?.session_id;
+      const {
+        content: contentValue,
+        created_at: createdAt,
+        id,
+        session_id: sessionId,
+      } = row as MemoryTurnRow;
       const source = sessionId ? `supabase:memories:${sessionId}` : "supabase:memories";
 
       // Extract text content from JSONB content field
-      const contentValue = (row as { content?: unknown })?.content;
       let context = "";
       if (typeof contentValue === "string") {
         context = contentValue;
@@ -76,6 +80,8 @@ async function handleFetchContext(
 
       return {
         context,
+        createdAt,
+        id,
         score: 1,
         source,
       };

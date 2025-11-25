@@ -195,6 +195,8 @@ export const webSearchTool = tool({
 
 ### Schema Creation Checklist
 
+> **Note**: This is a reusable schema review template. Copy and complete for each new schema.
+
 - [ ] Single responsibility principle
 - [ ] Correct directory (domain vs AI tools)
 - [ ] Clear section headers

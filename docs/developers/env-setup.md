@@ -91,6 +91,8 @@ Copy the root `.env.example` to `.env`, then follow the checklists below to popu
 
 ## Ready-to-run checklist
 
+> **Note**: This is a reusable onboarding template. Copy and complete when setting up a new development environment.
+
 - [ ] `.env` copied from root `.env.example`
 - [ ] `.env.test` copied from root `.env.test.example` for local/CI test runs
 - [ ] Supabase URL + anon key + service role key present
