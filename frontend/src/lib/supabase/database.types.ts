@@ -1942,6 +1942,7 @@ export type Database = {
         Row: {
           budget: number;
           created_at: string | null;
+          currency: string;
           destination: string;
           end_date: string;
           flexibility: Json | null;
@@ -1959,6 +1960,7 @@ export type Database = {
         Insert: {
           budget: number;
           created_at?: string | null;
+          currency?: string;
           destination: string;
           end_date: string;
           flexibility?: Json | null;
@@ -1976,6 +1978,7 @@ export type Database = {
         Update: {
           budget?: number;
           created_at?: string | null;
+          currency?: string;
           destination?: string;
           end_date?: string;
           flexibility?: Json | null;

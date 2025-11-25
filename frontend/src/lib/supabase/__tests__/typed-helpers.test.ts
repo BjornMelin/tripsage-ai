@@ -63,6 +63,7 @@ describe("typed-helpers", () => {
     const row: Tables<"trips"> = {
       budget: payload.budget,
       created_at: "2025-01-01T00:00:00Z",
+      currency: "USD",
       destination: payload.destination,
       end_date: payload.end_date,
       flexibility: {},
@@ -96,6 +97,7 @@ describe("typed-helpers", () => {
     const row: Tables<"trips"> = {
       budget: 500,
       created_at: "2025-02-01T00:00:00Z",
+      currency: "USD",
       destination: "SFO",
       end_date: "2025-02-05T00:00:00Z",
       flexibility: {},

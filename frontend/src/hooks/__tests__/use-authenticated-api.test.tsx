@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 
 import { act, renderHook } from "@testing-library/react";
-import { HttpResponse, delay, http } from "msw";
+import { delay, HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
 import { apiClient } from "@/lib/api/api-client";
@@ -130,9 +130,7 @@ describe("useAuthenticatedApi", () => {
 
     let error: unknown;
     await act(async () => {
-      const requestPromise = result.current.authenticatedApi.get(
-        "/api/slow-endpoint"
-      );
+      const requestPromise = result.current.authenticatedApi.get("/api/slow-endpoint");
       result.current.cancelRequests();
       try {
         await requestPromise;

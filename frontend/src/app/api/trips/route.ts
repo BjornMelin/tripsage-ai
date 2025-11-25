@@ -7,7 +7,7 @@
 
 import "server-only";
 
-import type { TripsInsert, TripsRow } from "@schemas/supabase";
+import type { TripsInsert } from "@schemas/supabase";
 import { tripsInsertSchema, tripsRowSchema } from "@schemas/supabase";
 import type { TripCreateInput, TripFilters } from "@schemas/trips";
 import { tripCreateSchema, tripFiltersSchema } from "@schemas/trips";
@@ -19,6 +19,7 @@ import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 import { bumpTag } from "@/lib/cache/tags";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
+import { mapDbTripToUi } from "@/lib/trips/mappers";
 
 /** Cache TTL for trip listings (5 minutes). */
 const TRIPS_CACHE_TTL = 300;
@@ -71,6 +72,7 @@ function mapCreatePayloadToInsert(
 ): TripsInsert {
   return tripsInsertSchema.parse({
     budget: payload.budget ?? 0,
+    currency: payload.currency ?? "USD",
     destination: payload.destination,
     end_date: payload.endDate,
     flexibility: payload.preferences ?? null,
@@ -83,34 +85,6 @@ function mapCreatePayloadToInsert(
     trip_type: payload.tripType,
     user_id: userId,
   });
-}
-
-/**
- * Maps a trips Row object to the UI Trip shape.
- *
- * Used by `useTripStore` and trip-related hooks. Mirrors the existing
- * mapping in the trip repository while keeping the route handler
- * independent from browser concerns.
- *
- * @param row - The raw trip row from Supabase database
- * @returns UI-formatted trip object with camelCase properties
- */
-function mapTripRowToUi(row: TripsRow) {
-  return {
-    budget: row.budget,
-    createdAt: row.created_at,
-    currency: "USD",
-    description: undefined,
-    destinations: [] as unknown[],
-    endDate: row.end_date,
-    id: String(row.id),
-    startDate: row.start_date,
-    status: row.status,
-    title: row.name, // Database uses 'name', frontend uses 'title'
-    updatedAt: row.updated_at,
-    user_id: row.user_id,
-    visibility: "private" as const, // Default visibility
-  };
 }
 
 /**
@@ -151,7 +125,7 @@ async function listTripsHandler(
   const cacheKey = await buildTripsCacheKey(userId, filters);
 
   // Check cache
-  const cached = await getCachedJson<ReturnType<typeof mapTripRowToUi>[]>(cacheKey);
+  const cached = await getCachedJson<ReturnType<typeof mapDbTripToUi>[]>(cacheKey);
   if (cached) {
     return NextResponse.json(cached);
   }
@@ -190,7 +164,7 @@ async function listTripsHandler(
   }
 
   const rows = (data ?? []).map((row) => tripsRowSchema.parse(row));
-  const uiTrips = rows.map(mapTripRowToUi);
+  const uiTrips = rows.map(mapDbTripToUi);
 
   // Cache result
   await setCachedJson(cacheKey, uiTrips, TRIPS_CACHE_TTL);
@@ -253,7 +227,7 @@ async function createTripHandler(
   await invalidateTripsCache();
 
   const row = tripsRowSchema.parse(data);
-  const uiTrip = mapTripRowToUi(row);
+  const uiTrip = mapDbTripToUi(row);
   return NextResponse.json(uiTrip, { status: 201 });
 }
 

@@ -30,7 +30,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/components/ui/use-toast";
 import { useMemoryContext } from "@/hooks/use-memory";
+import { initTelemetry } from "@/lib/telemetry/client";
 
 /** Zod schema for destination search form values. */
 const DestinationSearchFormSchema = z.object({
@@ -58,6 +60,13 @@ interface DestinationSuggestion {
   secondaryText: string;
   types: string[];
 }
+
+type PlacesApiPlace = {
+  id: string;
+  displayName?: { text: string };
+  formattedAddress?: string;
+  types?: string[];
+};
 
 /** Interface for destination search form props. */
 interface DestinationSearchFormProps {
@@ -135,6 +144,11 @@ export function DestinationSearchForm({
   const suggestionsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const cacheRef = useRef<Map<string, { places: PlacesApiPlace[]; timestamp: number }>>(
+    new Map()
+  );
+  const { toast } = useToast();
+  const CacheTtlMs = 2 * 60_000;
 
   const form = useForm<DestinationSearchFormValues>({
     defaultValues: {
@@ -147,6 +161,10 @@ export function DestinationSearchForm({
     resolver: zodResolver(DestinationSearchFormSchema),
   });
 
+  useEffect(() => {
+    initTelemetry();
+  }, []);
+
   const query = form.watch("query");
 
   /**
@@ -158,13 +176,43 @@ export function DestinationSearchForm({
    */
   const fetchAutocompleteSuggestions = useCallback(
     async (searchQuery: string) => {
+      const cacheKey = searchQuery.toLowerCase();
+      const cached = cacheRef.current.get(cacheKey);
+      const limit = form.getValues("limit") ?? 10;
+      const selectedTypes = form.getValues("types") ?? [];
+
+      if (cached && Date.now() - cached.timestamp < CacheTtlMs) {
+        const filteredCached =
+          selectedTypes.length > 0
+            ? cached.places.filter((place) =>
+                place.types?.some((type) =>
+                  selectedTypes.includes(
+                    type as DestinationSearchFormValues["types"][number]
+                  )
+                )
+              )
+            : cached.places;
+
+        const mappedCached = filteredCached.slice(0, limit).map((place) => ({
+          description: place.formattedAddress ?? place.displayName?.text ?? "",
+          mainText: place.displayName?.text ?? "Unknown",
+          placeId: place.id,
+          secondaryText: place.formattedAddress ?? "",
+          types: place.types ?? [],
+        }));
+        setSuggestions(mappedCached);
+        setShowSuggestions(true);
+        setSuggestionsError(null);
+        setIsLoadingSuggestions(false);
+        return;
+      }
+
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
       const abortController = new AbortController();
       abortControllerRef.current = abortController;
       setSuggestionsError(null);
-      const limit = form.getValues("limit") ?? 10;
 
       try {
         const requestBody = {
@@ -189,17 +237,10 @@ export function DestinationSearchForm({
           throw new Error(errorData.reason ?? `Search failed: ${response.status}`);
         }
 
-        const data = (await response.json()) as {
-          places?: Array<{
-            id: string;
-            displayName?: { text: string };
-            formattedAddress?: string;
-            types?: string[];
-          }>;
-        };
+        const data = (await response.json()) as { places?: PlacesApiPlace[] };
 
         const places = data.places ?? [];
-        const selectedTypes = form.getValues("types") ?? [];
+        cacheRef.current.set(cacheKey, { places, timestamp: Date.now() });
 
         const filteredPlaces =
           selectedTypes.length > 0
@@ -236,6 +277,12 @@ export function DestinationSearchForm({
         setSuggestionsError(
           error instanceof Error ? error.message : "Unable to fetch suggestions."
         );
+        toast({
+          description:
+            error instanceof Error ? error.message : "Unable to fetch suggestions.",
+          title: "Places search failed",
+          variant: "destructive",
+        });
         setSuggestions([]);
         setShowSuggestions(true);
       } finally {
@@ -243,7 +290,7 @@ export function DestinationSearchForm({
         abortControllerRef.current = null;
       }
     },
-    [form]
+    [form, toast]
   );
 
   // Debounced autocomplete suggestions

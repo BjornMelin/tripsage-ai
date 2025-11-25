@@ -6,6 +6,7 @@
 import { z } from "zod";
 import { messageRoleSchema } from "./chat";
 import { primitiveSchemas } from "./registry";
+import { storeTripSchema } from "./trips";
 
 // ===== CORE SCHEMAS =====
 // Core store state patterns and reusable schemas
@@ -321,25 +322,7 @@ export type SearchStoreActions = z.infer<typeof searchStoreActionsSchema>;
  */
 export const tripStoreStateSchema = z
   .object({
-    currentTrip: z
-      .object({
-        budget: z
-          .object({
-            currency: primitiveSchemas.isoCurrency,
-            spent: NON_NEGATIVE_NUMBER_SCHEMA,
-            total: POSITIVE_NUMBER_SCHEMA,
-          })
-          .optional(),
-        destination: z.string(),
-        endDate: z.iso.date(),
-        id: UUID_SCHEMA,
-        itinerary: z.array(z.unknown()),
-        startDate: z.iso.date(),
-        status: z.enum(["planning", "booked", "active", "completed", "cancelled"]),
-        title: z.string(),
-        travelers: z.array(z.unknown()),
-      })
-      .nullable(),
+    currentTrip: storeTripSchema.nullable(),
     filters: z.object({
       dateRange: z
         .object({
@@ -357,35 +340,7 @@ export const tripStoreStateSchema = z
       direction: z.enum(["asc", "desc"]),
       field: z.enum(["createdAt", "startDate", "title", "status"]),
     }),
-    trips: z.array(
-      z.object({
-        budget: z
-          .object({
-            currency: primitiveSchemas.isoCurrency,
-            spent: NON_NEGATIVE_NUMBER_SCHEMA,
-            total: POSITIVE_NUMBER_SCHEMA,
-          })
-          .optional(),
-        createdAt: TIMESTAMP_SCHEMA,
-        description: z.string().optional(),
-        destination: z.string(),
-        endDate: z.iso.date(),
-        id: UUID_SCHEMA,
-        itinerary: z.array(z.unknown()),
-        startDate: z.iso.date(),
-        status: z.enum(["planning", "booked", "active", "completed", "cancelled"]),
-        title: z.string(),
-        travelers: z.array(
-          z.object({
-            email: EMAIL_SCHEMA.optional(),
-            id: UUID_SCHEMA.optional(),
-            name: z.string(),
-            role: z.enum(["owner", "collaborator", "viewer"]),
-          })
-        ),
-        updatedAt: TIMESTAMP_SCHEMA,
-      })
-    ),
+    trips: z.array(storeTripSchema),
   })
   .merge(LOADING_STATE_SCHEMA);
 

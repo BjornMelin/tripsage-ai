@@ -123,7 +123,7 @@ export function TripCard({ trip, onEdit, onDelete, className }: TripCardProps) {
           </div>
         )}
 
-        {trip.budget && (
+        {trip.budget !== undefined && trip.budget > 0 && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <DollarSign className="h-4 w-4" />
             <span>

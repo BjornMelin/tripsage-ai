@@ -5,6 +5,7 @@
 
 "use client";
 
+import type { UiTrip } from "@schemas/trips";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -17,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { type UpdateTripData, useTripRealtime, useUpdateTrip } from "@/hooks";
-import type { Trip, UpdateTables } from "@/lib/supabase/database.types";
+import type { UpdateTables } from "@/lib/supabase/database.types";
 
 type TripUpdate = UpdateTables<"trips">;
 type TripUpdateKey = keyof TripUpdate;
@@ -55,7 +56,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
 
   const [formData, setFormData] = useState<Partial<TripUpdate>>({});
   // Snapshots to support rollback when mutation fails and cache is missing
-  const prevTripRef = useRef<Trip | null>(null);
+  const prevTripRef = useRef<UiTrip | null>(null);
   const prevFormRef = useRef<Partial<TripUpdate> | null>(null);
   const [optimisticUpdates, setOptimisticUpdates] = useState<
     Record<
@@ -83,22 +84,24 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
   // - Add proper cleanup for subscriptions/listeners
   //
   // Mock trip data - in real implementation, this would come from useTrip(tripId)
-  const [trip, setTrip] = useState<Trip>({
+  const [trip, setTrip] = useState<UiTrip>({
     budget: 5000,
-    created_at: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+    currency: "USD",
     destination: "Paris, France",
-    end_date: "2024-07-15",
-    flexibility: {},
-    id: tripId,
-    name: "Summer Europe Trip",
-    notes: ["Visit Eiffel Tower", "Try local cuisine"],
-    search_metadata: {},
-    start_date: "2024-07-01",
+    destinations: [],
+    endDate: "2024-07-15",
+    id: String(tripId),
+    preferences: {},
+    startDate: "2024-07-01",
     status: "planning",
+    tags: ["Visit Eiffel Tower", "Try local cuisine"],
+    title: "Summer Europe Trip",
     travelers: 2,
-    trip_type: "leisure",
-    updated_at: new Date().toISOString(),
-    user_id: "user-123",
+    tripType: "leisure",
+    updatedAt: new Date().toISOString(),
+    userId: "user-123",
+    visibility: "private",
   });
 
   /**
@@ -109,7 +112,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
     setFormData({
       budget: trip.budget,
       destination: trip.destination,
-      name: trip.name,
+      name: trip.title,
       travelers: trip.travelers,
     });
   }, [trip]);
@@ -186,14 +189,14 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
     } catch (_error) {
       // Revert optimistic update on error using cache or snapshots
       const currentTrip = queryClient.getQueryData(["trip", tripId]) as
-        | Trip
+        | UiTrip
         | undefined;
       if (currentTrip) {
         setTrip(currentTrip);
         setFormData({
           budget: currentTrip.budget,
           destination: currentTrip.destination,
-          name: currentTrip.name,
+          name: currentTrip.title,
           travelers: currentTrip.travelers,
         });
       } else {
@@ -245,7 +248,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
    */
   const handleInputBlur = (field: keyof TripUpdate) => {
     const value = formData[field];
-    if (value !== trip[field as keyof Trip]) {
+    if (value !== trip[field as keyof UiTrip]) {
       handleOptimisticUpdate(field, value);
     }
   };
@@ -402,12 +405,12 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
             <div className="grid grid-cols-2 gap-4">
               <Input
                 type="date"
-                value={trip.start_date}
+                value={trip.startDate}
                 onChange={(e) => handleOptimisticUpdate("start_date", e.target.value)}
               />
               <Input
                 type="date"
-                value={trip.end_date}
+                value={trip.endDate}
                 onChange={(e) => handleOptimisticUpdate("end_date", e.target.value)}
               />
             </div>
