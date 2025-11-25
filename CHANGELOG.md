@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Nuclear Auth Integration (Dashboard)**:
+  - `DashboardLayout` converted to a Server Component using `@/lib/auth/server` helpers (`requireUser`, `mapSupabaseUserToAuthUser`) for secure, waterfall-free user data fetching.
+  - `logoutAction` Server Action (`src/lib/auth/actions.ts`) for secure, cookie-clearing logout flows via Supabase SSR.
+  - `SidebarNav` and `UserNav` extracted to standalone Client Components with improved active-route highlighting (nested route support) and real user data display.
+
+
 - Personalization Insights page now surfaces recent memories with localized timestamps, source/score, and copyable memory IDs using the canonical memory context feed.
 - Testing patterns companion guide (`docs/developers/testing-patterns.md`) with test-type decision tree plus MSW and AI SDK v6 examples.
 - Supabase local config: added `project_id`, `[db.seed]` configuration, and `[storage.buckets.attachments]` bucket definition with MIME type restrictions in `supabase/config.toml`.
@@ -39,6 +45,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Centralized dashboard metrics schemas
 
 ### Changed
+
+- **Dashboard Architecture**: Refactored `DashboardLayout` to a Server Component architecture, removing `use client` and eliminating client-side auth waterfalls.
 
 - README updated for production run port 3000, AI Gateway/Supabase env variables (`NEXT_PUBLIC_SUPABASE_*`, `DATABASE_SERVICE_KEY`, `AI_GATEWAY_API_KEY`), and security/audit commands (`pnpm audit`, `pnpm test:run --grep security`).
 - Migrated Next.js middleware to proxy: replaced `frontend/middleware.ts` with `frontend/src/proxy.ts` per Next.js 16 (ADR-0013).
