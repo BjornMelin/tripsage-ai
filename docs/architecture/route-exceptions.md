@@ -128,6 +128,8 @@ If the factory cannot support requirements, document:
 
 ### Monthly Review
 
+> **Note**: This is a reusable monthly review template. Copy and complete for each review cycle.
+
 - [ ] Verify exceptions are still justified
 - [ ] Check if the factory can support the requirements
 - [ ] Review for pattern consistency

@@ -146,6 +146,8 @@ SELECT insert_user_api_key('user-b', 'openai', 'key-b');
 
 ### Pre-Deployment Checklist
 
+> **Note**: This is a reusable deployment checklist template. Copy and complete for each deployment.
+
 - [ ] **Automated Verification**: All manual verification tasks pass
 - [ ] **Migration Verification**: All BYOK migrations applied (`20251030000000_vault_api_keys.sql`, `20251030002000_vault_role_hardening.sql`, `20251113000000_gateway_user_byok.sql`)
 - [ ] **Environment Variables**: All required secrets configured (service role key, API keys, Gateway URL)

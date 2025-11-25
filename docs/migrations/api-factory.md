@@ -184,6 +184,8 @@ export const POST = withApiGuards({ auth: true })(
 
 ## Migration Checklist
 
+> **Note**: This is a reusable migration template. Copy and complete for each route migration.
+
 ### Pre-Migration
 
 - [ ] Review factory documentation

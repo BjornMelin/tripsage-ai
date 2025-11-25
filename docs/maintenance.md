@@ -2,6 +2,8 @@
 
 TripSage development maintenance checklist and procedures.
 
+> **Note**: All checklists below are reusable templates for recurring reviews. Copy and complete as needed for each review cycle.
+
 ## Monthly Checks
 
 ### Code Quality

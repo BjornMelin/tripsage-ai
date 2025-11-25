@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Personalization Insights page now surfaces recent memories with localized timestamps, source/score, and copyable memory IDs using the canonical memory context feed.
 - Testing patterns companion guide (`docs/developers/testing-patterns.md`) with test-type decision tree plus MSW and AI SDK v6 examples.
 - Supabase local config: added `project_id`, `[db.seed]` configuration, and `[storage.buckets.attachments]` bucket definition with MIME type restrictions in `supabase/config.toml`.
 - Supabase-backed agent configuration control plane: new `agent_config` and `agent_config_versions` tables with admin-only RLS, upsert RPC, and schema types wired into the codebase.
@@ -41,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- README updated for production run port 3000, AI Gateway/Supabase env variables (`NEXT_PUBLIC_SUPABASE_*`, `DATABASE_SERVICE_KEY`, `AI_GATEWAY_API_KEY`), and security/audit commands (`pnpm audit`, `pnpm test:run --grep security`).
 - Migrated Next.js middleware to proxy: replaced `frontend/middleware.ts` with `frontend/src/proxy.ts` per Next.js 16 (ADR-0013).
 - Added Turbopack file system cache: enabled `turbopackFileSystemCacheForDev` in `next.config.ts` for faster dev builds.
 - Updated Turbopack root config: set `turbopack.root` to `"."` in `next.config.ts`.
@@ -127,6 +129,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- Deleted obsolete `docs/gen_ref_pages.py` MkDocs generator script (Python reference autogen no longer used).
 - Deleted legacy schema and tool barrels `frontend/src/lib/schemas/index.ts` and `frontend/src/lib/tools/index.ts`, plus unused compatibility helpers and tests under `frontend/src/lib/tools/{constants.ts,__tests__}`, as part of the final migration to `src/domain` and `src/ai` as the single sources of truth for validation and tooling.
 - Removed deprecated `StoreTrip` type alias from `frontend/src/domain/schemas/trips.ts`; all references now use `UiTrip` directly.
 - Removed backward compatibility comments from `frontend/src/stores/trip-store.ts` and `frontend/src/hooks/use-trips.ts`; type aliases retained for convenience without compatibility messaging.
@@ -198,6 +201,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Memory context now preserves Supabase turn `created_at` and `id` through the Zod schema, Supabase adapter, `/api/memory/search` response, and AI memory search tool instead of synthesizing timestamps/UUIDs.
 - Security dashboard again exposes terminate controls for non-current sessions and formats events, sessions, and last-login timestamps in the viewer’s locale via a client helper.
 - Added missing route rate-limit entries for `security:events` and `security:metrics` to align with the security APIs’ guardrails.
 - Chat non-stream handler now relies on `persistMemoryTurn` internal handling instead of double-logging persistence errors (`frontend/src/app/api/chat/_handler.ts`).

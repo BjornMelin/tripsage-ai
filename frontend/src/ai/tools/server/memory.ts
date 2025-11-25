@@ -141,8 +141,10 @@ export const searchUserMemories = createAiTool({
 
     return filtered.map((item) => ({
       content: item.context,
+      // Prefer canonical timestamps/ids when present
       // biome-ignore lint/style/useNamingConvention: Database field name
-      created_at: nowIso(),
+      created_at: item.createdAt ?? nowIso(),
+      id: item.id ?? secureUuid(),
       source: item.source,
     }));
   },

@@ -2,13 +2,18 @@
 
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useMemoryInsights, useMemoryStats } from "@/hooks/use-memory";
+import {
+  useMemoryContext,
+  useMemoryInsights,
+  useMemoryStats,
+} from "@/hooks/use-memory";
 import { PersonalizationInsights } from "../personalization-insights";
 
 vi.mock("@/hooks/use-memory");
 
 const MockUseMemoryInsights = vi.mocked(useMemoryInsights);
 const MockUseMemoryStats = vi.mocked(useMemoryStats);
+const MockUseMemoryContext = vi.mocked(useMemoryContext);
 
 function CreateTestWrapper() {
   const { QueryClient, QueryClientProvider } = require("@tanstack/react-query");
@@ -100,6 +105,21 @@ describe("PersonalizationInsights", () => {
       isError: false,
       isLoading: false,
     } as never);
+    MockUseMemoryContext.mockReturnValue({
+      data: {
+        context: [
+          {
+            context: "Booked hotel in Tokyo",
+            createdAt: "2024-03-14T12:00:00Z",
+            id: "mem-123",
+            score: 0.9,
+            source: "supabase:memories",
+          },
+        ],
+      },
+      isError: false,
+      isLoading: false,
+    } as never);
   });
 
   it("renders header with title and description", () => {
@@ -123,7 +143,7 @@ describe("PersonalizationInsights", () => {
       wrapper: CreateTestWrapper(),
     });
 
-    expect(screen.getByText(/Tokyo/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Tokyo/i).length).toBeGreaterThan(0);
   });
 
   it("displays recommendations when recommendations tab is clicked and showRecommendations is true", () => {

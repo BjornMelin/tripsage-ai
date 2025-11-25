@@ -17,7 +17,7 @@ beforeEach(() => {
   vi.restoreAllMocks();
 });
 
-function createDeferred<T>() {
+function CreateDeferred<T>() {
   let resolve: ((value: T) => void) | undefined;
   const promise = new Promise<T>((res) => {
     resolve = res;
@@ -35,7 +35,6 @@ function createDeferred<T>() {
 }
 
 describe("LocalTime", () => {
-
   it("renders a formatted timestamp for valid ISO input", () => {
     const isoString = "2025-01-02T15:30:00.000Z";
     render(<LocalTime isoString={isoString} />);
@@ -187,7 +186,7 @@ describe("ActiveSessionsList", () => {
   });
 
   it("disables the terminate button while the request is pending", async () => {
-    const deferredFetch = createDeferred<Response>();
+    const deferredFetch = CreateDeferred<Response>();
     vi.spyOn(globalThis, "fetch").mockReturnValue(deferredFetch.promise);
 
     const sessions = [

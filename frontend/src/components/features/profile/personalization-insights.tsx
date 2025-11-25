@@ -1,9 +1,11 @@
 "use client";
 
+import type { MemoryContextResponse } from "@schemas/chat";
 // import type { UserPreferences } from "@schemas/memory"; // Future implementation
 import {
   BarChart3,
   Brain,
+  Copy,
   DollarSign,
   Info,
   Lightbulb,
@@ -23,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import {
+  useMemoryContext,
   useMemoryInsights,
   useMemoryStats,
   // useUpdatePreferences, // Future implementation
@@ -55,6 +58,10 @@ export function PersonalizationInsights({
   } = useMemoryInsights(userId, !!userId);
 
   const { data: stats, isLoading: statsLoading } = useMemoryStats(userId, !!userId);
+  const { data: recentMemories, isLoading: recentMemoriesLoading } = useMemoryContext(
+    userId,
+    !!userId
+  );
 
   // const updatePreferences = useUpdatePreferences(userId); // Future implementation
 
@@ -63,6 +70,24 @@ export function PersonalizationInsights({
       currency,
       style: "currency",
     }).format(amount);
+  };
+
+  const formatTimestamp = (iso?: string) => {
+    if (!iso) return "Unknown";
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return "Unknown";
+    return new Intl.DateTimeFormat("en", {
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      month: "short",
+      year: "numeric",
+    }).format(date);
+  };
+
+  const truncateId = (id?: string) => {
+    if (!id) return "";
+    return id.length > 10 ? `${id.slice(0, 8)}…` : id;
   };
 
   const getTrendIcon = (trend: "increasing" | "decreasing" | "stable") => {
@@ -100,6 +125,8 @@ export function PersonalizationInsights({
       budgetPatterns: _budgetPatterns,
       destinationPreferences,
     } = insights.insights;
+
+    const recent = (recentMemories?.context ?? []) as MemoryContextResponse[];
 
     return (
       <div className="space-y-6">
@@ -209,6 +236,61 @@ export function PersonalizationInsights({
             </div>
           </div>
         )}
+
+        <div>
+          <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+            <Lightbulb className="h-5 w-5 text-amber-500" />
+            Recent Memories
+          </h3>
+          {recentMemoriesLoading ? (
+            <p className="text-sm text-muted-foreground">Loading recent memories…</p>
+          ) : recent.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No recent memories yet.</p>
+          ) : (
+            <div className="grid grid-cols-1 md-grid-cols-2 md:grid-cols-2 gap-4">
+              {recent.slice(0, 6).map((mem, idx) => (
+                <Card key={mem.id ?? `mem-${idx}`}>
+                  <CardContent className="pt-5 space-y-2">
+                    <div className="text-sm text-muted-foreground flex items-center justify-between gap-2">
+                      <span>{formatTimestamp(mem.createdAt)}</span>
+                      {mem.id ? (
+                        <div className="flex items-center gap-1">
+                          <span
+                            className="text-[11px] font-mono text-muted-foreground/80"
+                            title={mem.id}
+                          >
+                            {truncateId(mem.id)}
+                          </span>
+                          <button
+                            aria-label="Copy memory ID"
+                            className="text-muted-foreground hover:text-foreground transition"
+                            onClick={() =>
+                              navigator.clipboard
+                                ?.writeText(mem.id ?? "")
+                                .catch(() => undefined)
+                            }
+                            type="button"
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                    <p className="text-sm leading-relaxed">{mem.context}</p>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{mem.source ?? "unknown"}</span>
+                      {typeof mem.score === "number" ? (
+                        <span className="font-medium">
+                          {Math.round(mem.score * 100)}%
+                        </span>
+                      ) : null}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     );
   };
