@@ -10,8 +10,8 @@ import { useState, useTransition } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { logoutAction } from "@/lib/auth/actions";
 import type { AuthUser } from "@/domain/schemas/stores";
+import { logoutAction } from "@/lib/auth/actions";
 
 interface UserNavProps {
   user: AuthUser;

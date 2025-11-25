@@ -6,12 +6,14 @@ import { DashboardLayout } from "../dashboard-layout";
 
 // Mock dependencies
 vi.mock("@/lib/auth/server", () => ({
-  requireUser: vi.fn(() => Promise.resolve({ user: { id: "123", email: "test@example.com" } })),
   mapSupabaseUserToAuthUser: vi.fn((user) => ({
-    id: user.id,
-    email: user.email,
     displayName: "Test User",
+    email: user.email,
+    id: user.id,
   })),
+  requireUser: vi.fn(() =>
+    Promise.resolve({ user: { email: "test@example.com", id: "123" } })
+  ),
 }));
 
 // Mock Client Components
@@ -20,7 +22,9 @@ vi.mock("../sidebar-nav", () => ({
 }));
 
 vi.mock("../user-nav", () => ({
-  UserNav: ({ user }: { user: any }) => <div data-testid="user-nav">{user.displayName}</div>,
+  UserNav: ({ user }: { user: any }) => (
+    <div data-testid="user-nav">{user.displayName}</div>
+  ),
 }));
 
 vi.mock("@/components/ui/theme-toggle", () => ({
@@ -30,8 +34,10 @@ vi.mock("@/components/ui/theme-toggle", () => ({
 describe("DashboardLayout", () => {
   it("renders layout with user data", async () => {
     // Since DashboardLayout is an async Server Component, we need to await it
-    const Layout = await DashboardLayout({ children: <div data-testid="child">Child Content</div> });
-    
+    const Layout = await DashboardLayout({
+      children: <div data-testid="child">Child Content</div>,
+    });
+
     // In a real Server Component test environment, we might need more setup,
     // but for unit testing the logic, we can render the result.
     render(Layout);

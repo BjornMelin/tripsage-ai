@@ -4,9 +4,9 @@
  * experience.
  */
 
+import Link from "next/link";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { mapSupabaseUserToAuthUser, requireUser } from "@/lib/auth/server";
-import Link from "next/link";
 import { SidebarNav } from "./sidebar-nav";
 import { UserNav } from "./user-nav";
 

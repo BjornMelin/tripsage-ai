@@ -4,8 +4,8 @@
 
 "use server";
 
-import { createServerSupabase } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { createServerSupabase } from "@/lib/supabase/server";
 
 /**
  * Signs the user out and redirects to the login page.

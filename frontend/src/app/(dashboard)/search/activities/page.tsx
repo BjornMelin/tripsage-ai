@@ -9,15 +9,15 @@ import type { Activity } from "@schemas/search";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { ActivityCard } from "@/components/features/search/activity-card";
+import { ActivityComparisonModal } from "@/components/features/search/activity-comparison-modal";
 import { ActivitySearchForm } from "@/components/features/search/activity-search-form";
+import { TripSelectionModal } from "@/components/features/search/trip-selection-modal";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useToast } from "@/components/ui/use-toast";
 import {
   type ActivitySearchParams,
   useActivitySearch,
 } from "@/hooks/use-activity-search";
-import { ActivityComparisonModal } from "@/components/features/search/activity-comparison-modal";
-import { TripSelectionModal } from "@/components/features/search/trip-selection-modal";
 import { openActivityBooking } from "@/lib/activities/booking";
 import { addActivityToTrip, getPlanningTrips } from "./actions";
 
@@ -84,17 +84,17 @@ export default function ActivitiesSearchPage() {
     startTransition(async () => {
       try {
         await addActivityToTrip(Number(tripId), {
-          title: selectedActivity.name,
-          description: selectedActivity.description,
-          location: selectedActivity.location,
-          price: selectedActivity.price,
           currency: "USD", // Default
+          description: selectedActivity.description,
           externalId: selectedActivity.id,
+          location: selectedActivity.location,
           metadata: {
+            images: selectedActivity.images,
             rating: selectedActivity.rating,
             type: selectedActivity.type,
-            images: selectedActivity.images,
           },
+          price: selectedActivity.price,
+          title: selectedActivity.name,
         });
 
         toast({
