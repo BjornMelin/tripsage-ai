@@ -8,8 +8,22 @@ import {
   tripsRowSchema,
   tripsUpdateSchema,
 } from "@schemas/supabase";
-import { createClient } from "@/lib/supabase";
+import { createClient, type TypedSupabaseClient } from "@/lib/supabase";
 import { insertSingle, updateSingle } from "@/lib/supabase/typed-helpers";
+
+/**
+ * Gets a Supabase client, throwing if unavailable (e.g., during SSR).
+ * @internal
+ */
+function getClientOrThrow(): TypedSupabaseClient {
+  const client = createClient();
+  if (!client) {
+    throw new Error(
+      "Supabase client unavailable. trips-repo functions must be called in browser context."
+    );
+  }
+  return client;
+}
 
 // Re-export types from schemas
 export type TripRow = TripsRow;
@@ -68,7 +82,7 @@ export async function createTrip(
 ) {
   // Validate input using Zod schema
   const validated = tripsInsertSchema.parse(data);
-  const supabase = createClient();
+  const supabase = getClientOrThrow();
   const { data: row, error } = await insertSingle(supabase, "trips", validated);
   if (error || !row) throw error || new Error("Failed to create trip");
   // Validate response using Zod schema
@@ -92,7 +106,7 @@ export async function createTrip(
 export async function updateTrip(id: number, userId: string, updates: TripUpdate) {
   // Validate input using Zod schema
   const validated = tripsUpdateSchema.parse(updates);
-  const supabase = createClient();
+  const supabase = getClientOrThrow();
   const { data, error } = await updateSingle(supabase, "trips", validated, (qb) =>
     // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder types are complex
     (qb as any)
@@ -115,7 +129,7 @@ export async function updateTrip(id: number, userId: string, updates: TripUpdate
  * @throws Error if database query fails
  */
 export async function listTrips() {
-  const supabase = createClient();
+  const supabase = getClientOrThrow();
   const { data, error } = await supabase
     .from("trips")
     .select("*")
@@ -138,7 +152,7 @@ export async function listTrips() {
  * @throws Error if database deletion fails
  */
 export async function deleteTrip(id: number, userId?: string) {
-  const supabase = createClient();
+  const supabase = getClientOrThrow();
   let qb = supabase.from("trips").delete().eq("id", id);
   if (userId) qb = qb.eq("user_id", userId);
   const { error } = await qb;

@@ -1,6 +1,9 @@
 /**
  * @fileoverview Error service for logging, reporting, and telemetry integration.
+ * Client-only module - uses browser globals (localStorage, navigator, window).
  */
+
+"use client";
 
 import {
   type ErrorReport,

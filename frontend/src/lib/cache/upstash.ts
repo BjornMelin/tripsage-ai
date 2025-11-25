@@ -18,7 +18,17 @@
  * ```
  */
 
+import type { z } from "zod";
 import { getRedis } from "@/lib/redis";
+
+/**
+ * Result of a cache lookup with explicit status.
+ * Allows callers to distinguish cache miss from corrupted data.
+ */
+export type CacheResult<T> =
+  | { status: "hit"; data: T }
+  | { status: "miss" }
+  | { status: "invalid"; raw: unknown };
 
 /**
  * Retrieves a cached JSON value from Upstash Redis.
@@ -48,6 +58,58 @@ export async function getCachedJson<T>(key: string): Promise<T | null> {
   } catch {
     return null;
   }
+}
+
+/**
+ * Retrieves a cached JSON value with explicit status and optional schema validation.
+ *
+ * Unlike `getCachedJson`, this function returns a discriminated union that lets
+ * callers distinguish between cache miss, valid hit, and corrupted/invalid data.
+ * When a schema is provided, the cached data is validated against it.
+ *
+ * @typeParam T - Expected type of the cached value.
+ * @param key - Redis key to fetch.
+ * @param schema - Optional Zod schema to validate the cached data.
+ * @returns CacheResult with status indicating hit, miss, or invalid.
+ *
+ * @example
+ * ```ts
+ * const result = await getCachedJsonSafe("config:123", configSchema);
+ * if (result.status === "hit") {
+ *   return result.data;
+ * }
+ * if (result.status === "invalid") {
+ *   logger.warn("Invalid cached config", { raw: result.raw });
+ * }
+ * // Fetch fresh data...
+ * ```
+ */
+export async function getCachedJsonSafe<T>(
+  key: string,
+  schema?: z.ZodType<T>
+): Promise<CacheResult<T>> {
+  const redis = getRedis();
+  if (!redis) return { status: "miss" };
+
+  const raw = await redis.get<string>(key);
+  if (!raw) return { status: "miss" };
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return { raw, status: "invalid" };
+  }
+
+  if (schema) {
+    const result = schema.safeParse(parsed);
+    if (!result.success) {
+      return { raw: parsed, status: "invalid" };
+    }
+    return { data: result.data, status: "hit" };
+  }
+
+  return { data: parsed as T, status: "hit" };
 }
 
 /**

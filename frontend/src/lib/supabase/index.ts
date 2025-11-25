@@ -14,6 +14,7 @@ export {
   getBrowserClient,
   type TypedSupabaseClient,
   useSupabase,
+  useSupabaseRequired,
 } from "./client";
 
 // Shared types (type-only exports are safe - they don't cause server-only imports)
