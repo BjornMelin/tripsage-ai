@@ -34,6 +34,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Security events and metrics APIs: added `/api/security/events` and `/api/security/metrics` with Supabase admin queries, strict Zod schemas, OTEL telemetry, and rate limits (`security:events`, `security:metrics`) powering the dashboard.
 - Google Places autocomplete now covered by MSW handlers and Vitest component tests for happy path, type filtering, rate limit errors, and latest-query guarding in `frontend/src/components/features/search/destination-search-form`.
 
+- Dashboard metrics API with Redis caching and OpenTelemetry tracing
+- Dashboard metrics visualization components using Recharts
+- API metrics recording infrastructure with Supabase persistence
+- Centralized dashboard metrics schemas
+
 ### Changed
 
 - Migrated Next.js middleware to proxy: replaced `frontend/middleware.ts` with `frontend/src/proxy.ts` per Next.js 16 (ADR-0013).
@@ -113,6 +118,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Trip schema consolidation: added `currency TEXT NOT NULL DEFAULT 'USD'` column to `trips` table in base migration; updated `tripsRowSchema`, `tripsInsertSchema`, `tripsUpdateSchema` to use `primitiveSchemas.isoCurrency`; updated `mapDbTripToUi` to read currency from database row instead of hardcoded value; added currency to trip creation payload mapping in `/api/trips` route handler.
 - Test factory cleanup: removed all legacy snake_case field support (`user_id`, `start_date`, `end_date`, `created_at`, `updated_at`) from `trip-factory.ts`; factory now uses camelCase fields exclusively; updated `database.types.ts` to include currency in trips Row/Insert/Update types.
 
+- Centralized store validation schemas to @schemas/stores
+- Updated dashboard page to include metrics visualization
+- Integrated metrics recording into API route factory
+- Updated test imports and expectations
+- Formatted activities page comments and objects
+
 ### Removed
 
 - Deleted legacy schema and tool barrels `frontend/src/lib/schemas/index.ts` and `frontend/src/lib/tools/index.ts`, plus unused compatibility helpers and tests under `frontend/src/lib/tools/{constants.ts,__tests__}`, as part of the final migration to `src/domain` and `src/ai` as the single sources of truth for validation and tooling.
@@ -181,6 +192,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Accommodations end-to-end integration mocks Amadeus/Google Places/Stripe via MSW and in-memory clients, removing fetch spies and stabilizing booking flow assertions (`frontend/src/domain/accommodations/__tests__/accommodations.integration.test.ts`).
 - State Department advisory provider tests now rely on MSW feed stubs instead of manual fetch mocks, covering cache, error, and timeout paths deterministically (`frontend/src/ai/tools/server/__tests__/travel-advisory-state-department.test.ts`).
 - Added calendar event factory for reuse in integration tests and schema-validated fixtures (`frontend/src/test/factories.ts`, `frontend/src/lib/calendar/__tests__/calendar-integration.test.ts`).
+
+- Centralized validation schemas for stores
 
 ### Fixed
 
