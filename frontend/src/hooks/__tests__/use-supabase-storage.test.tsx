@@ -31,6 +31,7 @@ vi.mock("@/lib/supabase", () => ({
   createClient: () => SUPABASE,
   getBrowserClient: () => SUPABASE,
   useSupabase: () => SUPABASE,
+  useSupabaseRequired: () => SUPABASE,
 }));
 
 const CREATE_QUERY_BUILDER = (rows: FileAttachment[]) => {
