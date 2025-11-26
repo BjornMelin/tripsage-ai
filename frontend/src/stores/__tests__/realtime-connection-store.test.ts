@@ -56,10 +56,12 @@ describe("realtime connection store", () => {
 
   it("increments reconnect attempts and applies backoff", async () => {
     vi.useFakeTimers();
+    const subscribeMock = vi.fn().mockResolvedValue(undefined);
+    const unsubscribeMock = vi.fn().mockResolvedValue(undefined);
     const channel = {
-      subscribe: vi.fn().mockResolvedValue(undefined),
+      subscribe: subscribeMock,
       topic: "realtime:retry",
-      unsubscribe: vi.fn().mockResolvedValue(undefined),
+      unsubscribe: unsubscribeMock,
     } as unknown as RealtimeChannel;
 
     const store = useRealtimeConnectionStore.getState();
@@ -76,12 +78,8 @@ describe("realtime connection store", () => {
     expect(channel.unsubscribe).toHaveBeenCalled();
     expect(channel.subscribe).toHaveBeenCalled();
 
-    const unsubscribeOrder = (channel.unsubscribe as {
-      mock: { invocationCallOrder: number[] };
-    }).mock.invocationCallOrder[0];
-    const subscribeOrder = (channel.subscribe as {
-      mock: { invocationCallOrder: number[] };
-    }).mock.invocationCallOrder[0];
+    const unsubscribeOrder = unsubscribeMock.mock.invocationCallOrder[0];
+    const subscribeOrder = subscribeMock.mock.invocationCallOrder[0];
 
     expect(unsubscribeOrder).toBeLessThan(subscribeOrder);
     vi.useRealTimers();
