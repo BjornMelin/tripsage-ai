@@ -11,3 +11,4 @@
   - [Quick Start](developers/quick-start.md)
   - [Testing Guide](developers/testing-guide.md)
   - [Code Standards](developers/code-standards.md)
+  - [Release Automation](developers/release-automation.md)

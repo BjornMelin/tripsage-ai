@@ -63,14 +63,13 @@ git checkout -b feat/new-feature
 # Work on feature
 git commit -m "feat: implement new feature"
 git push origin feat/new-feature
-# Create PR to develop
+# Create PR to develop, then PR from develop -> main when ready
 
-# Release process
-git checkout develop
-git checkout -b release/v1.2.0
-# Final testing
-git checkout main
-git merge release/v1.2.0
+# Release process (automated)
+# Merge to main triggers semantic-release:
+# - computes next version (feat/minor, fix/patch, breaking->minor while pre-stable)
+# - updates CHANGELOG.md and frontend/package.json
+# - tags and publishes a GitHub Release
 ```
 
 ### Commit Messages
@@ -83,6 +82,12 @@ fix: resolve database connection timeout
 docs: update API documentation
 refactor: simplify trip creation logic
 ```
+
+Release automation expectations (semantic-release):
+
+- Prefix with `feat:` for minor changes, `fix:` for patches; use other prefixes (`chore:`, `docs:`, `ci:`) for non-releasing work.
+- For breaking changes, add a `BREAKING CHANGE:` footer in the commit body describing the impact.
+- While we are pre-stable, breaking changes are **downgraded to minor bumps** by configuration; majors are intentionally suppressed until we flip to the first stable major.
 
 ## Debugging Techniques
 
