@@ -1,4 +1,4 @@
-import { describe, expect, it, type Mock, vi } from "vitest";
+import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import { bumpTag } from "@/lib/cache/tags";
 import type { TypedSupabaseClient } from "@/lib/supabase";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -186,6 +186,41 @@ describe("search/activities/actions", () => {
       await expect(addActivityToTrip(1, { title: "Test" })).rejects.toThrow(
         "Unauthorized"
       );
+    });
+
+    it("should throw if activity data is invalid", async () => {
+      mockGetUser.mockResolvedValue({ data: { user: mockUser } });
+
+      const mockSelectTrip = vi.fn().mockReturnThis();
+      const mockEqTrip = vi.fn().mockReturnThis();
+      const mockSingleTrip = vi
+        .fn()
+        .mockResolvedValue({ data: { id: 1 }, error: null });
+
+      const mockInsert = vi.fn();
+
+      mockFrom.mockImplementation((table: string) => {
+        if (table === "trips") {
+          return {
+            eq: mockEqTrip,
+            select: mockSelectTrip,
+            single: mockSingleTrip,
+          } as unknown as TableClient;
+        }
+        if (table === "itinerary_items") {
+          return {
+            insert: mockInsert,
+          } as unknown as TableClient;
+        }
+        return {} as unknown as TableClient;
+      });
+
+      await expect(addActivityToTrip(1, { title: "" })).rejects.toThrow(
+        /Invalid activity data/
+      );
+
+      expect(mockInsert).not.toHaveBeenCalled();
+      expect(bumpTag).not.toHaveBeenCalled();
     });
 
     it("should throw if insert fails", async () => {
