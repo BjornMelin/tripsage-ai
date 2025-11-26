@@ -1,6 +1,7 @@
 /**
  * @fileoverview Connection status monitor component for real-time connections.
  */
+
 "use client";
 
 import {
@@ -12,7 +13,8 @@ import {
   WifiOff,
   XCircle,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,11 +27,15 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
+import { useRealtimeConnectionStore } from "@/stores/realtime-connection-store";
 
 interface ConnectionStatus {
   isConnected: boolean;
   lastError: Error | null;
-  connectionCount: number;
+  connectedCount: number;
+  totalCount: number;
+  lastErrorAt: Date | null;
   reconnectAttempts: number;
   lastReconnectAt: Date | null;
 }
@@ -37,9 +43,13 @@ interface ConnectionStatus {
 interface RealtimeConnection {
   id: string;
   table: string;
-  status: "connected" | "disconnected" | "error" | "reconnecting";
+  status: "connected" | "disconnected" | "error" | "reconnecting" | "connecting";
   error?: Error;
-  lastActivity?: Date;
+  lastActivity: Date | null;
+}
+
+function NormalizeTopic(topic: string): string {
+  return topic.replace(/^realtime:/i, "");
 }
 
 /**
@@ -48,93 +58,30 @@ interface RealtimeConnection {
  */
 export function ConnectionStatusMonitor() {
   const { toast } = useToast();
-  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>({
-    connectionCount: 0,
-    isConnected: false,
-    lastError: null,
-    lastReconnectAt: null,
-    reconnectAttempts: 0,
-  });
-
-  const [connections, setConnections] = useState<RealtimeConnection[]>([]);
+  const realtimeStore = useRealtimeConnectionStore();
+  const connections = Object.values(realtimeStore.connections).map((conn) => ({
+    error: conn.lastError ?? undefined,
+    id: conn.id,
+    lastActivity: conn.lastActivity,
+    status: conn.status,
+    table: NormalizeTopic(conn.id),
+  }));
+  const connectionStatus: ConnectionStatus = realtimeStore.summary();
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
-
-  // TODO: Replace mock data with real Realtime connection status from Supabase.
-  //
-  // Requirements:
-  // - Monitor Supabase Realtime connection status using `supabase.realtime.status`
-  // - Track active Realtime subscriptions (trips, chat, etc.)
-  // - Display connection health (connected, disconnected, reconnecting)
-  // - Show last activity timestamp for each subscription
-  // - Add reconnection logic with exponential backoff
-  // - Use Supabase Realtime event listeners to track connection changes
-  // - Consider using a global Realtime store/context for connection state
-  // - Add telemetry tracking for connection status changes
-  //
-  // Mock data for demonstration - in real implementation, this would come from a global store
-  useEffect(() => {
-    // TODO: Replace with real Realtime connections: const connections = useRealtimeConnections()
-    const mockConnections: RealtimeConnection[] = [
-      {
-        id: "trips-realtime",
-        lastActivity: new Date(),
-        status: "connected",
-        table: "trips",
-      },
-      {
-        id: "chat-messages-realtime",
-        lastActivity: new Date(Date.now() - 30000),
-        status: "connected",
-        table: "chat_messages",
-      },
-      {
-        error: new Error("Connection timeout"),
-        id: "trip-collaborators-realtime",
-        status: "disconnected",
-        table: "trip_collaborators",
-      },
-    ];
-
-    setConnections(mockConnections);
-    setConnectionStatus({
-      connectionCount: mockConnections.filter((c) => c.status === "connected").length,
-      isConnected: mockConnections.some((c) => c.status === "connected"),
-      lastError: mockConnections.find((c) => c.error)?.error || null,
-      lastReconnectAt: null,
-      reconnectAttempts: 0,
-    });
-  }, []);
 
   const handleReconnectAll = async () => {
     setIsReconnecting(true);
     try {
-      // Simulate reconnection delay
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      setConnections((prev) =>
-        prev.map((conn) => ({
-          ...conn,
-          error: undefined,
-          lastActivity: new Date(),
-          status: "connected" as const,
-        }))
-      );
-
-      setConnectionStatus((prev) => ({
-        ...prev,
-        connectionCount: connections.length,
-        isConnected: true,
-        lastError: null,
-        lastReconnectAt: new Date(),
-        reconnectAttempts: prev.reconnectAttempts + 1,
-      }));
+      await realtimeStore.reconnectAll();
 
       toast({
         description: "All real-time connections have been restored.",
         title: "Reconnected",
       });
     } catch (_error) {
+      const error = _error as Error;
+      recordClientErrorOnActiveSpan(error);
       toast({
         description: "Failed to restore some connections. Please try again.",
         title: "Reconnection Failed",
@@ -165,6 +112,10 @@ export function ConnectionStatusMonitor() {
         return <Badge variant="destructive">Error</Badge>;
       case "reconnecting":
         return <Badge variant="secondary">Reconnecting...</Badge>;
+      case "connecting":
+        return <Badge variant="secondary">Connecting...</Badge>;
+      default:
+        return null;
     }
   };
 
@@ -193,7 +144,8 @@ export function ConnectionStatusMonitor() {
         </div>
 
         <CardDescription className="text-xs">
-          {connectionStatus.connectionCount} of {connections.length} connections active
+          {connectionStatus.connectedCount} of {connectionStatus.totalCount} connections
+          active
         </CardDescription>
 
         <div className="space-y-2">
@@ -241,6 +193,11 @@ export function ConnectionStatusMonitor() {
 
                   <div className="flex items-center space-x-2">
                     {getStatusBadge(connection.status)}
+                    <span className="text-[10px] text-muted-foreground">
+                      {connection.lastActivity
+                        ? `Last activity ${connection.lastActivity.toLocaleTimeString()}`
+                        : "Awaiting activity"}
+                    </span>
                   </div>
                 </div>
               ))}
@@ -290,8 +247,13 @@ export function ConnectionStatusMonitor() {
  * Compact connection status indicator for navigation/header
  */
 export function ConnectionStatusIndicator() {
-  const [isConnected, _setIsConnected] = useState(true);
-  const [hasError, _setHasError] = useState(false);
+  const { isConnected, lastError } = useRealtimeConnectionStore(
+    useShallow((state) => {
+      const summary = state.summary();
+      return { isConnected: summary.isConnected, lastError: summary.lastError };
+    })
+  );
+  const hasError = Boolean(lastError);
 
   return (
     <div className="flex items-center space-x-2">

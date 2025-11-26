@@ -34,3 +34,12 @@ export function computeBackoffDelay(attempt: number, config: BackoffConfig): num
   const base = validated.initialDelayMs * validated.factor ** (attempt - 1);
   return Math.min(base, validated.maxDelayMs);
 }
+
+/**
+ * Default backoff configuration used across realtime reconnection flows.
+ */
+export const DEFAULT_BACKOFF_CONFIG: BackoffConfig = {
+  factor: 2,
+  initialDelayMs: 500,
+  maxDelayMs: 8000,
+};

@@ -46,6 +46,20 @@ export async function sendChatMessage(channel: ReturnType<typeof joinSessionChan
 }
 ```
 
+### Connection health (frontend)
+
+- All channel lifecycles are managed by the `useRealtimeChannel` hook. Each channel registers in `useRealtimeConnectionStore`, which records status (`connecting/connected/disconnected/reconnecting/error`), last activity, and errors.
+- The store exposes `summary()` for lightweight status badges (see `ConnectionStatusIndicator`), surfaces the most recent error/last error timestamp for telemetry, and `reconnectAll()` to unsubscribe/resubscribe with exponential backoff (default config in `src/lib/realtime/backoff.ts`).
+- UI components must not hardcode mock status; consume the store instead:
+
+```tsx
+import { ConnectionStatusIndicator } from "@/components/features/realtime/connection-status-monitor";
+
+export function HeaderRealtimeBadge() {
+  return <ConnectionStatusIndicator />;
+}
+```
+
 ## Security
 
 - Clients authenticate via `supabase.realtime.setAuth(access_token)`; tokens rotate with session changes.

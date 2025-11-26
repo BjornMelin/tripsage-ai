@@ -43,16 +43,17 @@ export function MfaVerification({
     setError(null);
 
     try {
-      // TODO: Replace mock API call with real MFA verification implementation.
-      //
-      // Requirements:
-      // - Verify TOTP code using Supabase Auth MFA verification: `supabase.auth.mfa.verify({ code: verificationCode })`
-      // - Validate code format (6 digits) before API call
-      // - Handle verification failures (invalid code, expired session, rate limiting)
-      // - On successful verification, complete login/authentication flow
-      // - Show appropriate error messages for different failure scenarios
-      // - Add telemetry tracking for MFA verification attempts
-      //
+      /**
+       * TODO: Replace mock API call with real MFA verification implementation.
+       *
+       * Requirements:
+       * - Verify TOTP code using Supabase Auth MFA verification: `supabase.auth.mfa.verify({ code: verificationCode })`
+       * - Validate code format (6 digits) before API call
+       * - Handle verification failures (invalid code, expired session, rate limiting)
+       * - On successful verification, complete login/authentication flow
+       * - Show appropriate error messages for different failure scenarios
+       * - Add telemetry tracking for MFA verification attempts
+       */
       // Mock API call - replace with actual implementation
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
@@ -99,20 +100,23 @@ export function MfaVerification({
     setError(null);
 
     try {
-      // TODO: Replace mock API call with real MFA code resend implementation.
-      //
-      // Requirements:
-      // - Call Supabase Auth MFA resend endpoint or use `supabase.auth.mfa.resend()`
-      // - Trigger new TOTP code generation or SMS/push notification
-      // - Handle rate limiting (prevent too frequent resend requests)
-      // - Show success message to user
-      // - Update countdown timer for next resend opportunity
-      // - Add telemetry tracking for resend requests
-      //
+      /**
+       * TODO: Replace mock API call with real MFA code resend implementation.
+       *
+       * Requirements:
+       * - Call Supabase Auth MFA resend endpoint or use `supabase.auth.mfa.resend()`
+       * - Trigger new TOTP code generation or SMS/push notification
+       * - Handle rate limiting (prevent too frequent resend requests)
+       * - Show success message to user
+       * - Update countdown timer for next resend opportunity
+       * - Add telemetry tracking for resend requests
+       */
       // Mock API call for resending
       await new Promise((resolve) => setTimeout(resolve, 500));
-      // TODO: Replace with real resend: await supabase.auth.mfa.resend()
-      // In real implementation, this would trigger a new SMS or push notification
+      /**
+       * TODO: Replace with real resend: await supabase.auth.mfa.resend()
+       * In real implementation, this would trigger a new SMS or push notification
+       */
       console.log("Resend request sent");
     } catch (_err) {
       setError("Failed to resend code. Please try again.");
