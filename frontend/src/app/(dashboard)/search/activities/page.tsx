@@ -7,7 +7,7 @@
 
 import type { Activity } from "@schemas/search";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityCard } from "@/components/features/search/activity-card";
 import { ActivityComparisonModal } from "@/components/features/search/activity-comparison-modal";
 import { ActivitySearchForm } from "@/components/features/search/activity-search-form";
@@ -33,6 +33,7 @@ export default function ActivitiesSearchPage() {
     useActivitySearch();
   const searchParams = useSearchParams();
   const dialogRef = useRef<HTMLDivElement>(null);
+  const [pendingAddFromComparison, setPendingAddFromComparison] = useState(false);
   const noteItems = searchMetadata?.notes?.map((note, index) => ({
     id: `${note}-${index}`,
     note,
@@ -62,7 +63,7 @@ export default function ActivitiesSearchPage() {
     }
   };
 
-  const handleAddToTripClick = async () => {
+  const handleAddToTripClick = useCallback(async () => {
     setIsPending(true);
     try {
       const fetchedTrips = await getPlanningTrips();
@@ -77,7 +78,7 @@ export default function ActivitiesSearchPage() {
     } finally {
       setIsPending(false);
     }
-  };
+  }, [toast]);
 
   const handleConfirmAddToTrip = async (tripId: string) => {
     if (!selectedActivity) return;
@@ -215,12 +216,9 @@ export default function ActivitiesSearchPage() {
   };
 
   const handleAddFromComparison = (activity: Activity) => {
-    setShowComparisonModal(false);
     setSelectedActivity(activity);
-    // Slight delay to allow modal transition
-    setTimeout(() => {
-      handleAddToTripClick();
-    }, 100);
+    setPendingAddFromComparison(true);
+    setShowComparisonModal(false);
   };
 
   const activities = results ?? [];
@@ -255,6 +253,13 @@ export default function ActivitiesSearchPage() {
       dialogRef.current?.focus();
     }
   }, [selectedActivity]);
+
+  useEffect(() => {
+    if (!showComparisonModal && pendingAddFromComparison) {
+      setPendingAddFromComparison(false);
+      handleAddToTripClick();
+    }
+  }, [handleAddToTripClick, pendingAddFromComparison, showComparisonModal]);
 
   return (
     <div className="container mx-auto py-6 space-y-6">

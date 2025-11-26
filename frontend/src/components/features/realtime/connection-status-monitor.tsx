@@ -46,10 +46,9 @@ interface RealtimeConnection {
   lastActivity: Date | null;
 }
 
-// biome-ignore lint/style/useNamingConvention: helper uses camelCase for readability
-const normalizeTopic = (topic: string): string => {
+function NormalizeTopic(topic: string): string {
   return topic.replace(/^realtime:/i, "");
-};
+}
 
 /**
  * Component for monitoring real-time connection status
@@ -63,7 +62,7 @@ export function ConnectionStatusMonitor() {
     id: conn.id,
     lastActivity: conn.lastActivity,
     status: conn.status,
-    table: normalizeTopic(conn.id),
+    table: NormalizeTopic(conn.id),
   }));
   const connectionStatus: ConnectionStatus = realtimeStore.summary();
   const [isReconnecting, setIsReconnecting] = useState(false);

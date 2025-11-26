@@ -87,7 +87,6 @@ export const useRealtimeConnectionStore = create<RealtimeConnectionStore>(
         });
       }
     },
-
     reconnectAttempts: 0,
 
     registerChannel: (channel) => {
