@@ -15,6 +15,10 @@ vi.mock("@/lib/supabase/server", () => ({
   createServerSupabase: vi.fn(() => Promise.resolve(mockSupabase)),
 }));
 
+vi.mock("next/cache", () => ({
+  revalidatePath: vi.fn(),
+}));
+
 vi.mock("next/navigation", () => ({
   redirect: vi.fn(),
 }));
