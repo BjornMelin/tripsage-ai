@@ -13,11 +13,11 @@ import { cn } from "@/lib/utils";
  */
 interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {
   /** Array of navigation items with href, title, and optional icon. */
-  items: {
+  items: ReadonlyArray<{
     href: string;
     title: string;
     icon?: React.ReactNode;
-  }[];
+  }>;
 }
 
 /**

@@ -14,7 +14,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useState } from "react";
-import { shallow } from "zustand/shallow";
+import { useShallow } from "zustand/react/shallow";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -241,10 +241,12 @@ export function ConnectionStatusMonitor() {
  * Compact connection status indicator for navigation/header
  */
 export function ConnectionStatusIndicator() {
-  const { isConnected, lastError } = useRealtimeConnectionStore((state) => {
-    const summary = state.summary();
-    return { isConnected: summary.isConnected, lastError: summary.lastError };
-  }, shallow);
+  const { isConnected, lastError } = useRealtimeConnectionStore(
+    useShallow((state) => {
+      const summary = state.summary();
+      return { isConnected: summary.isConnected, lastError: summary.lastError };
+    })
+  );
   const hasError = Boolean(lastError);
 
   return (

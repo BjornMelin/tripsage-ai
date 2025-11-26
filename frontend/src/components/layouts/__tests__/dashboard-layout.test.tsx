@@ -1,24 +1,27 @@
 /** @vitest-environment jsdom */
 
+import type { User } from "@supabase/supabase-js";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
-import { DashboardLayout } from "../dashboard-layout";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  DASHBOARD_NAV_ITEMS,
+  DashboardLayoutView,
+  fetchDashboardLayoutData,
+} from "../dashboard-layout";
 
-// Mock dependencies
+const REQUIRE_USER_MOCK = vi.hoisted(() => vi.fn());
+const MAP_SUPABASE_USER_TO_AUTH_USER_MOCK = vi.hoisted(() => vi.fn());
+
 vi.mock("@/lib/auth/server", () => ({
-  mapSupabaseUserToAuthUser: vi.fn((user) => ({
-    displayName: "Test User",
-    email: user.email,
-    id: user.id,
-  })),
-  requireUser: vi.fn(() =>
-    Promise.resolve({ user: { email: "test@example.com", id: "123" } })
-  ),
+  mapSupabaseUserToAuthUser: MAP_SUPABASE_USER_TO_AUTH_USER_MOCK,
+  requireUser: REQUIRE_USER_MOCK,
 }));
 
 // Mock Client Components
 vi.mock("../sidebar-nav", () => ({
-  SidebarNav: () => <div data-testid="sidebar-nav">SidebarNav</div>,
+  SidebarNav: ({ items }: { items: { title: string }[] }) => (
+    <div data-testid="sidebar-nav">{items.map((item) => item.title).join(",")}</div>
+  ),
 }));
 
 vi.mock("../user-nav", () => ({
@@ -31,19 +34,52 @@ vi.mock("@/components/ui/theme-toggle", () => ({
   ThemeToggle: () => <div data-testid="theme-toggle">ThemeToggle</div>,
 }));
 
-describe("DashboardLayout", () => {
-  it("renders layout with user data", async () => {
-    // RSC note: awaiting the Server Component output here is intentional for unit coverage;
-    // integration coverage exists in page-level tests.
-    const Layout = await DashboardLayout({
-      children: <div data-testid="child">Child Content</div>,
-    });
+describe("fetchDashboardLayoutData", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
-    // In a real Server Component test environment, we might need more setup,
-    // but for unit testing the logic, we can render the result.
-    render(Layout);
+  it("returns mapped user and nav items", async () => {
+    const supabaseUser = {
+      email: "test@example.com",
+      id: "123",
+    } as User;
+    const mappedUser = {
+      displayName: "Test User",
+      email: "test@example.com",
+      id: "123",
+    };
 
-    expect(screen.getByTestId("sidebar-nav")).toBeInTheDocument();
+    REQUIRE_USER_MOCK.mockResolvedValue({ user: supabaseUser });
+    MAP_SUPABASE_USER_TO_AUTH_USER_MOCK.mockReturnValue(mappedUser);
+
+    const result = await fetchDashboardLayoutData();
+
+    expect(REQUIRE_USER_MOCK).toHaveBeenCalledTimes(1);
+    expect(MAP_SUPABASE_USER_TO_AUTH_USER_MOCK).toHaveBeenCalledWith(supabaseUser);
+    expect(result.user).toEqual(mappedUser);
+    expect(result.navItems).toEqual(DASHBOARD_NAV_ITEMS);
+  });
+});
+
+describe("DashboardLayoutView", () => {
+  it("renders layout with provided data", () => {
+    const user = {
+      createdAt: "2024-01-01T00:00:00Z",
+      displayName: "Test User",
+      email: "test@example.com",
+      id: "123",
+      isEmailVerified: true,
+      updatedAt: "2024-01-02T00:00:00Z",
+    };
+
+    render(
+      <DashboardLayoutView navItems={DASHBOARD_NAV_ITEMS} user={user}>
+        <div data-testid="child">Child Content</div>
+      </DashboardLayoutView>
+    );
+
+    expect(screen.getByTestId("sidebar-nav")).toHaveTextContent("Overview");
     expect(screen.getByTestId("user-nav")).toHaveTextContent("Test User");
     expect(screen.getByTestId("theme-toggle")).toBeInTheDocument();
     expect(screen.getByTestId("child")).toBeInTheDocument();
