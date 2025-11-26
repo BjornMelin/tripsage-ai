@@ -105,7 +105,7 @@
     "ical.js": "^2.2.1",
     "js-tiktoken": "^1.0.21",
     "libphonenumber-js": "^1.12.29",
-    "lucide-react": "^0.554.0",
+    "lucide-react": "^0.555.0",
     "mem0ai": "^2.1.38",
     "nanoid": "^5.1.6",
     "next": "^16.0.4",
@@ -115,22 +115,24 @@
     "react-error-boundary": "^6.0.0",
     "react-hook-form": "^7.66.1",
     "react-syntax-highlighter": "^16.1.0",
-    "recharts": "^3.4.1",
-    "resend": "^6.5.0",
-    "streamdown": "^1.4.0",
+    "recharts": "^3.5.0",
+    "resend": "^6.5.2",
+    "streamdown": "^1.6.8",
     "stripe": "^20.0.0",
-    "tailwind-merge": "^3.3.1",
+    "tailwind-merge": "^3.4.0",
     "use-stick-to-bottom": "^1.1.1",
     "uuid": "^13.0.0",
     "vaul": "^1.1.2",
     "web-vitals": "^5.1.0",
-    "zod": "^4.1.12",
+    "zod": "^4.1.13",
     "zustand": "^5.0.8"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.3.6",
+    "@biomejs/biome": "^2.3.7",
     "@next/bundle-analyzer": "^16.0.3",
-    "@playwright/test": "^1.56.1",
+    "@playwright/test": "^1.57.0",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
     "@tailwindcss/postcss": "^4.1.17",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/user-event": "^14.6.1",
@@ -139,22 +141,23 @@
     "@types/jscodeshift": "^17.3.0",
     "@types/luxon": "^3.7.1",
     "@types/node": "24.10.1",
-    "@types/react": "^19.2.6",
+    "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
-    "@vitest/coverage-v8": "^4.0.10",
-    "@vitest/ui": "^4.0.10",
+    "@vitest/coverage-v8": "^4.0.14",
+    "@vitest/ui": "^4.0.14",
     "babel-plugin-react-compiler": "^1.0.0",
     "jose": "^6.1.2",
     "jscodeshift": "^17.3.0",
     "jsdom": "^27.2.0",
     "jsondiffpatch": "^0.7.3",
-    "msw": "2.12.2",
+    "msw": "2.12.3",
+    "semantic-release": "^25.0.2",
     "tailwindcss": "^4.1.17",
     "tailwindcss-animate": "^1.0.7",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.10"
+    "vitest": "^4.0.14"
   },
   "engines": {
     "node": "^24 || >=24",
@@ -166,7 +169,8 @@
       "brace-expansion": ">=2.0.2"
     },
     "ignoredBuiltDependencies": [
-      "esbuild"
+      "esbuild",
+      "msw"
     ]
   }
 }
