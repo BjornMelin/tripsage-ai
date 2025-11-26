@@ -60,6 +60,14 @@ describe("fetchDashboardLayoutData", () => {
     expect(result.user).toEqual(mappedUser);
     expect(result.navItems).toEqual(DASHBOARD_NAV_ITEMS);
   });
+
+  it("propagates error when user is not authenticated", async () => {
+    const authError = new Error("Not authenticated");
+    REQUIRE_USER_MOCK.mockRejectedValue(authError);
+
+    await expect(fetchDashboardLayoutData()).rejects.toThrow("Not authenticated");
+    expect(MAP_SUPABASE_USER_TO_AUTH_USER_MOCK).not.toHaveBeenCalled();
+  });
 });
 
 describe("DashboardLayoutView", () => {

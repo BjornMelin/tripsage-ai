@@ -45,7 +45,7 @@ export function SidebarNav({ className, items, ...props }: SidebarNavProps) {
             (
               item.href === "/dashboard"
                 ? pathname === "/dashboard"
-                : pathname?.startsWith(item.href)
+                : pathname === item.href || pathname?.startsWith(`${item.href}/`)
             )
               ? "bg-accent text-accent-foreground"
               : ""
