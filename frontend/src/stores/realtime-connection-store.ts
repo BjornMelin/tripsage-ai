@@ -14,13 +14,20 @@ export interface RealtimeConnectionEntry {
   status: ConnectionStatus;
   lastActivity: Date | null;
   lastError: Error | null;
+  lastErrorAt: Date | null;
   channel: RealtimeChannel | null;
 }
 
 export interface RealtimeConnectionSummary {
+  /** Number of connections currently in "connected" status. */
+  connectedCount: number;
+  /** Total number of tracked realtime connections. */
+  totalCount: number;
   isConnected: boolean;
-  connectionCount: number;
+  /** Most recent error across connections (if any). */
   lastError: Error | null;
+  /** Timestamp of the most recent error (if any). */
+  lastErrorAt: Date | null;
   reconnectAttempts: number;
   lastReconnectAt: Date | null;
 }
@@ -59,6 +66,8 @@ export const useRealtimeConnectionStore = create<RealtimeConnectionStore>(
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
 
+        let hadFailure = false;
+
         const channels = Object.values(get().connections)
           .map((entry) => entry.channel)
           .filter(Boolean) as RealtimeChannel[];
@@ -74,6 +83,7 @@ export const useRealtimeConnectionStore = create<RealtimeConnectionStore>(
             }
           } catch (subscribeError) {
             recordClientErrorOnActiveSpan(subscribeError as Error);
+            hadFailure = true;
           }
         }
 
@@ -81,6 +91,10 @@ export const useRealtimeConnectionStore = create<RealtimeConnectionStore>(
           lastReconnectAt: new Date(),
           reconnectAttempts: attempts,
         });
+
+        if (hadFailure) {
+          throw new Error("Some realtime channels failed to reconnect");
+        }
       } finally {
         set({
           isReconnecting: false,
@@ -88,7 +102,6 @@ export const useRealtimeConnectionStore = create<RealtimeConnectionStore>(
       }
     },
     reconnectAttempts: 0,
-
     registerChannel: (channel) => {
       const id = channel.topic;
       set((state) => ({
@@ -99,6 +112,7 @@ export const useRealtimeConnectionStore = create<RealtimeConnectionStore>(
             id,
             lastActivity: null,
             lastError: null,
+            lastErrorAt: null,
             status: "connecting",
           },
         },
@@ -117,7 +131,9 @@ export const useRealtimeConnectionStore = create<RealtimeConnectionStore>(
       let cached: RealtimeConnectionSummary | null = null;
       let cachedDeps: {
         activeCount: number;
+        totalCount: number;
         lastError: Error | null;
+        lastErrorAtMs: number | null;
         lastReconnectAtMs: number | null;
         reconnectAttempts: number;
       } | null = null;
@@ -125,15 +141,30 @@ export const useRealtimeConnectionStore = create<RealtimeConnectionStore>(
       return () => {
         const connections = Object.values(get().connections);
         const activeCount = connections.filter((c) => c.status === "connected").length;
-        const lastError = connections.find((c) => c.lastError)?.lastError ?? null;
+        const totalCount = connections.length;
+
+        let lastError: Error | null = null;
+        let lastErrorAtMs: number | null = null;
+        for (const connection of connections) {
+          if (connection.lastError && connection.lastErrorAt) {
+            const ts = connection.lastErrorAt.getTime();
+            if (lastErrorAtMs === null || ts > lastErrorAtMs) {
+              lastErrorAtMs = ts;
+              lastError = connection.lastError;
+            }
+          }
+        }
+
         const lastReconnectAtMs = get().lastReconnectAt?.getTime() ?? null;
         const reconnectAttempts = get().reconnectAttempts;
 
         const nextDeps = {
           activeCount,
           lastError,
+          lastErrorAtMs,
           lastReconnectAtMs,
           reconnectAttempts,
+          totalCount,
         };
 
         if (
@@ -141,19 +172,23 @@ export const useRealtimeConnectionStore = create<RealtimeConnectionStore>(
           cachedDeps &&
           cachedDeps.activeCount === nextDeps.activeCount &&
           cachedDeps.lastError === nextDeps.lastError &&
+          cachedDeps.lastErrorAtMs === nextDeps.lastErrorAtMs &&
           cachedDeps.lastReconnectAtMs === nextDeps.lastReconnectAtMs &&
-          cachedDeps.reconnectAttempts === nextDeps.reconnectAttempts
+          cachedDeps.reconnectAttempts === nextDeps.reconnectAttempts &&
+          cachedDeps.totalCount === nextDeps.totalCount
         ) {
           return cached;
         }
 
         cachedDeps = nextDeps;
         cached = {
-          connectionCount: activeCount,
+          connectedCount: activeCount,
           isConnected: activeCount > 0,
           lastError,
+          lastErrorAt: lastErrorAtMs ? new Date(lastErrorAtMs) : null,
           lastReconnectAt: get().lastReconnectAt,
           reconnectAttempts,
+          totalCount,
         };
 
         return cached;
@@ -181,17 +216,19 @@ export const useRealtimeConnectionStore = create<RealtimeConnectionStore>(
         const existing = prev.connections[channelId];
         if (!existing) return prev;
         const status = mapChannelStateToStatus(state, hasError);
-        const lastError =
+        const nextError =
           status === "error" || hasError ? (error ?? existing.lastError ?? null) : null;
-        if (lastError) {
-          recordClientErrorOnActiveSpan(lastError);
+        const nextErrorAt = nextError ? new Date() : null;
+        if (nextError && nextError !== existing.lastError) {
+          recordClientErrorOnActiveSpan(nextError);
         }
         return {
           connections: {
             ...prev.connections,
             [channelId]: {
               ...existing,
-              lastError,
+              lastError: nextError,
+              lastErrorAt: nextError ? nextErrorAt : null,
               status,
             },
           },

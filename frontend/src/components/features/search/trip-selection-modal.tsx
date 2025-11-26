@@ -55,6 +55,11 @@ export function TripSelectionModal({
   const router = useRouter();
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
 
+  const handleClose = () => {
+    setSelectedTripId(null);
+    onClose();
+  };
+
   const handleConfirm = async () => {
     if (selectedTripId) {
       await onAddToTrip(selectedTripId);
@@ -67,7 +72,7 @@ export function TripSelectionModal({
   }, [activity.id, isOpen]);
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Add to Trip</DialogTitle>
@@ -136,7 +141,7 @@ export function TripSelectionModal({
           )}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isAdding}>
+          <Button variant="outline" onClick={handleClose} disabled={isAdding}>
             Cancel
           </Button>
           <Button onClick={handleConfirm} disabled={!selectedTripId || isAdding}>

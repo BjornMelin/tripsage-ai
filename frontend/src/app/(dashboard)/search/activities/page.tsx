@@ -473,10 +473,13 @@ export default function ActivitiesSearchPage() {
         </div>
       )}
 
-      {selectedActivity && (
+      {selectedActivity && isTripModalOpen && (
         <TripSelectionModal
           isOpen={isTripModalOpen}
-          onClose={() => setIsTripModalOpen(false)}
+          onClose={() => {
+            setIsTripModalOpen(false);
+            setSelectedActivity(null);
+          }}
           activity={selectedActivity}
           trips={trips}
           onAddToTrip={handleConfirmAddToTrip}

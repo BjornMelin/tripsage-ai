@@ -33,7 +33,9 @@ import { useRealtimeConnectionStore } from "@/stores/realtime-connection-store";
 interface ConnectionStatus {
   isConnected: boolean;
   lastError: Error | null;
-  connectionCount: number;
+  connectedCount: number;
+  totalCount: number;
+  lastErrorAt: Date | null;
   reconnectAttempts: number;
   lastReconnectAt: Date | null;
 }
@@ -110,6 +112,10 @@ export function ConnectionStatusMonitor() {
         return <Badge variant="destructive">Error</Badge>;
       case "reconnecting":
         return <Badge variant="secondary">Reconnecting...</Badge>;
+      case "connecting":
+        return <Badge variant="secondary">Connecting...</Badge>;
+      default:
+        return null;
     }
   };
 
@@ -138,7 +144,8 @@ export function ConnectionStatusMonitor() {
         </div>
 
         <CardDescription className="text-xs">
-          {connectionStatus.connectionCount} of {connections.length} connections active
+          {connectionStatus.connectedCount} of {connectionStatus.totalCount} connections
+          active
         </CardDescription>
 
         <div className="space-y-2">

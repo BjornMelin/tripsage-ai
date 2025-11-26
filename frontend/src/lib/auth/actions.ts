@@ -4,6 +4,7 @@
 
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createServerLogger } from "@/lib/telemetry/logger";
@@ -20,5 +21,6 @@ export async function logoutAction(): Promise<never> {
   } catch (error) {
     logger.error("Logout error", { error });
   }
+  revalidatePath("/");
   redirect("/login");
 }
