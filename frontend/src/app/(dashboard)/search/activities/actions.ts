@@ -118,7 +118,7 @@ export async function addActivityToTrip(
     price: activityData.price,
     startTime: activityData.startTime,
     title: activityData.title,
-    tripId,
+    tripId: parsedTripId,
   };
 
   const validation = itineraryItemCreateSchema.safeParse(payload);
