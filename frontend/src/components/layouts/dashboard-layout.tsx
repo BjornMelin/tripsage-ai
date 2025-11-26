@@ -4,36 +4,63 @@
  * experience.
  */
 
+import type { AuthUser } from "@schemas/stores";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { mapSupabaseUserToAuthUser, requireUser } from "@/lib/auth/server";
 import { SidebarNav } from "./sidebar-nav";
 import { UserNav } from "./user-nav";
 
+/** Dashboard navigation link metadata used by the layout. */
+interface DashboardNavItem {
+  href: string;
+  title: string;
+  icon?: React.ReactNode;
+}
+
+export interface DashboardLayoutData {
+  navItems: ReadonlyArray<DashboardNavItem>;
+  user: AuthUser;
+}
+
+export const DASHBOARD_NAV_ITEMS: ReadonlyArray<DashboardNavItem> = [
+  { href: "/dashboard", title: "Overview" },
+  { href: "/dashboard/trips", title: "My Trips" },
+  { href: "/dashboard/search", title: "Search" },
+  { href: "/dashboard/calendar", title: "Calendar" },
+  { href: "/chat", title: "AI Assistant" },
+  { href: "/dashboard/agent-status", title: "Agent Status" },
+  { href: "/dashboard/settings", title: "Settings" },
+  { href: "/dashboard/profile", title: "Profile" },
+];
+
 /**
- * Main dashboard layout component with sidebar navigation and header.
+ * Fetches authenticated user and navigation data required by the dashboard layout.
  *
- * Provides the overall structure for dashboard pages with navigation sidebar,
- * header with user controls, and main content area.
- *
- * @param children - Content to render in the main area.
- * @returns The DashboardLayout component.
+ * Isolated from the Server Component to enable focused unit tests without RSC rendering.
  */
-export async function DashboardLayout({ children }: { children: React.ReactNode }) {
+// biome-ignore lint/style/useNamingConvention: helper function is not a React component
+export async function fetchDashboardLayoutData(): Promise<DashboardLayoutData> {
   const { user: supabaseUser } = await requireUser();
   const user = mapSupabaseUserToAuthUser(supabaseUser);
 
-  const navItems = [
-    { href: "/dashboard", title: "Overview" },
-    { href: "/dashboard/trips", title: "My Trips" },
-    { href: "/dashboard/search", title: "Search" },
-    { href: "/dashboard/calendar", title: "Calendar" },
-    { href: "/chat", title: "AI Assistant" },
-    { href: "/dashboard/agent-status", title: "Agent Status" },
-    { href: "/dashboard/settings", title: "Settings" },
-    { href: "/dashboard/profile", title: "Profile" },
-  ];
+  return { navItems: DASHBOARD_NAV_ITEMS, user };
+}
 
+interface DashboardLayoutViewProps {
+  children: React.ReactNode;
+  navItems?: ReadonlyArray<DashboardNavItem>;
+  user: AuthUser;
+}
+
+/**
+ * Pure presentational layout for the dashboard shell; expects resolved data.
+ */
+export function DashboardLayoutView({
+  children,
+  navItems = DASHBOARD_NAV_ITEMS,
+  user,
+}: DashboardLayoutViewProps) {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background px-6">
@@ -54,5 +81,21 @@ export async function DashboardLayout({ children }: { children: React.ReactNode 
         <main className="flex-1 p-6 overflow-y-auto">{children}</main>
       </div>
     </div>
+  );
+}
+
+/**
+ * Server Component wrapper that resolves auth/navigation data then renders the
+ * presentational dashboard shell.
+ *
+ * @param children - Content to render in the main content area.
+ */
+export async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const { navItems, user } = await fetchDashboardLayoutData();
+
+  return (
+    <DashboardLayoutView navItems={navItems} user={user}>
+      {children}
+    </DashboardLayoutView>
   );
 }
