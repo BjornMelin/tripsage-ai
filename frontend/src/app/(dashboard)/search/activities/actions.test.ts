@@ -162,6 +162,46 @@ describe("search/activities/actions", () => {
       expect(bumpTag).toHaveBeenCalledWith("trips");
     });
 
+    it("coerces string trip ids to numbers for validation and insert", async () => {
+      mockGetUser.mockResolvedValue({ data: { user: mockUser } });
+
+      const mockSelectTrip = vi.fn().mockReturnThis();
+      const mockEqTrip = vi.fn().mockReturnThis();
+      const mockSingleTrip = vi
+        .fn()
+        .mockResolvedValue({ data: { id: 1 }, error: null });
+
+      const mockInsert = vi.fn().mockResolvedValue({ error: null });
+
+      mockFrom.mockImplementation((table: string) => {
+        if (table === "trips") {
+          return {
+            eq: mockEqTrip,
+            select: mockSelectTrip,
+            single: mockSingleTrip,
+          } as unknown as TableClient;
+        }
+        if (table === "itinerary_items") {
+          return {
+            insert: mockInsert,
+          } as unknown as TableClient;
+        }
+        return {} as unknown as TableClient;
+      });
+
+      await addActivityToTrip("1", {
+        description: "Visit the tower",
+        price: 30,
+        title: "Eiffel Tower",
+      });
+
+      expect(mockInsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          trip_id: 1,
+        })
+      );
+    });
+
     it("should handle optional fields when adding an activity", async () => {
       mockGetUser.mockResolvedValue({ data: { user: mockUser } });
 

@@ -1,5 +1,5 @@
 import type { RealtimeChannel } from "@supabase/supabase-js";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_BACKOFF_CONFIG } from "@/lib/realtime/backoff";
 import { useRealtimeConnectionStore } from "@/stores/realtime-connection-store";
 
@@ -11,6 +11,12 @@ describe("realtime connection store", () => {
       lastReconnectAt: null,
       reconnectAttempts: 0,
     });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.clearAllTimers();
+    vi.clearAllMocks();
   });
 
   it("registers channels and updates status", () => {
@@ -53,6 +59,20 @@ describe("realtime connection store", () => {
 
     const connections = useRealtimeConnectionStore.getState().connections;
     expect(Object.keys(connections)).toEqual([channel.topic]);
+  });
+
+  it("removes channels and updates summary counts", () => {
+    const channel = { topic: "realtime:remove" } as unknown as RealtimeChannel;
+    const store = useRealtimeConnectionStore.getState();
+    store.registerChannel(channel);
+
+    expect(store.summary().totalCount).toBe(1);
+
+    store.removeChannel(channel.topic);
+
+    const updated = useRealtimeConnectionStore.getState();
+    expect(updated.summary().totalCount).toBe(0);
+    expect(updated.connections[channel.topic]).toBeUndefined();
   });
 
   it("clears lastError after recovery and updates summary health", () => {
@@ -105,7 +125,44 @@ describe("realtime connection store", () => {
     const subscribeOrder = subscribeMock.mock.invocationCallOrder[0];
 
     expect(unsubscribeOrder).toBeLessThan(subscribeOrder);
-    vi.useRealTimers();
+  });
+
+  it("prevents concurrent reconnectAll executions", async () => {
+    vi.useFakeTimers();
+    const subscribeMock = vi.fn().mockResolvedValue(undefined);
+    const unsubscribeMock = vi.fn().mockResolvedValue(undefined);
+    const channel = {
+      subscribe: subscribeMock,
+      topic: "realtime:once",
+      unsubscribe: unsubscribeMock,
+    } as unknown as RealtimeChannel;
+
+    const store = useRealtimeConnectionStore.getState();
+    store.registerChannel(channel);
+
+    const first = store.reconnectAll();
+    const second = store.reconnectAll();
+
+    await vi.advanceTimersByTimeAsync(DEFAULT_BACKOFF_CONFIG.initialDelayMs);
+    await Promise.all([first, second]);
+
+    expect(unsubscribeMock).toHaveBeenCalledTimes(1);
+    expect(subscribeMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("reconnects gracefully when no channels are registered", async () => {
+    vi.useFakeTimers();
+    const store = useRealtimeConnectionStore.getState();
+
+    expect(store.summary().totalCount).toBe(0);
+
+    const promise = store.reconnectAll();
+    await vi.advanceTimersByTimeAsync(DEFAULT_BACKOFF_CONFIG.initialDelayMs);
+    await promise;
+
+    const updated = useRealtimeConnectionStore.getState();
+    expect(updated.reconnectAttempts).toBe(1);
+    expect(updated.summary().totalCount).toBe(0);
   });
 
   it("surfaces reconnect failures when a channel subscribe throws", async () => {
@@ -132,7 +189,6 @@ describe("realtime connection store", () => {
 
     const { isReconnecting } = useRealtimeConnectionStore.getState();
     expect(isReconnecting).toBe(false);
-    vi.useRealTimers();
   });
 
   it("returns memoized summary when state is unchanged", () => {
