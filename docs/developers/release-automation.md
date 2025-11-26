@@ -58,5 +58,6 @@ If a release is incorrect:
 
 - **No release produced**: ensure the commit history since the last tag contains a `feat` or `fix` (or `breaking` with the temporary rule). Non-releasing prefixes are ignored.
 - **Permissions error**: confirm workflow permissions include `contents: write`.
+- **Branch protection blocks release commit**: allow GitHub Actions (`GITHUB_TOKEN`) to push to `main`, or add a bypass rule for the release job so `@semantic-release/git` can commit `chore(release): …` and update `CHANGELOG.md`/`package.json`.
 - **Unexpected major**: verify the `releaseRules` still map `breaking` to `minor`.
 - **Changelog not updating**: check that `@semantic-release/changelog` and `@semantic-release/git` are installed and present in the config.
