@@ -22,12 +22,7 @@ export default {
     ],
     ["@semantic-release/release-notes-generator", { preset: "conventionalcommits" }],
     ["@semantic-release/changelog", { changelogFile: "../CHANGELOG.md" }],
-    [
-      "@semantic-release/npm",
-      {
-        npmPublish: false
-      }
-    ],
+    ["@semantic-release/npm", { npmPublish: false }],
     [
       "@semantic-release/git",
       {
