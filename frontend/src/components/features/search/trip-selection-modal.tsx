@@ -98,8 +98,9 @@ export function TripSelectionModal({
             </div>
           ) : (
             <ScrollArea className="h-[300px] pr-4">
-              <div className="space-y-4">
+              <div className="space-y-4" role="radiogroup">
                 {trips.map((trip) => (
+                  // biome-ignore lint/a11y/useSemanticElements: keep button for keyboard semantics while emulating radio behavior
                   <button
                     key={trip.id}
                     type="button"
@@ -108,6 +109,8 @@ export function TripSelectionModal({
                         ? "border-primary bg-accent"
                         : "hover:bg-accent/50"
                     }`}
+                    role="radio"
+                    aria-checked={selectedTripId === trip.id}
                     onClick={() => setSelectedTripId(trip.id)}
                   >
                     <div

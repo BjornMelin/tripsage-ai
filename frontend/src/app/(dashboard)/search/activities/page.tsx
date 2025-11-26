@@ -85,7 +85,7 @@ export default function ActivitiesSearchPage() {
 
     setIsPending(true);
     try {
-      await addActivityToTrip(Number(tripId), {
+      await addActivityToTrip(tripId, {
         currency: "USD", // Default
         description: selectedActivity.description,
         externalId: selectedActivity.id,
@@ -155,41 +155,46 @@ export default function ActivitiesSearchPage() {
   }, [comparisonList]);
 
   const toggleComparison = (activity: Activity) => {
-    let nextSize = comparisonList.size;
-    let wasAdded = false;
+    const isCurrentlySelected = comparisonList.has(activity.id);
+
+    if (isCurrentlySelected) {
+      setComparisonList((prev) => {
+        const next = new Set(prev);
+        next.delete(activity.id);
+        return next;
+      });
+      toast({
+        description: `Removed "${activity.name}" from comparison`,
+        title: "Removed from comparison",
+        variant: "default",
+      });
+      const nextSize = Math.max(0, comparisonList.size - 1);
+      return { nextSize, wasAdded: false };
+    }
+
+    if (comparisonList.size >= 3) {
+      toast({
+        description: "You can compare up to 3 activities at once",
+        title: "Comparison limit reached",
+        variant: "default",
+      });
+      return { nextSize: comparisonList.size, wasAdded: false };
+    }
 
     setComparisonList((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(activity.id)) {
-        newSet.delete(activity.id);
-        toast({
-          description: `Removed "${activity.name}" from comparison`,
-          title: "Removed from comparison",
-          variant: "default",
-        });
-      } else {
-        if (newSet.size >= 3) {
-          toast({
-            description: "You can compare up to 3 activities at once",
-            title: "Comparison limit reached",
-            variant: "default",
-          });
-          return prev;
-        }
-        newSet.add(activity.id);
-        wasAdded = true;
-        toast({
-          description: `Added "${activity.name}" to comparison`,
-          title: "Added to comparison",
-          variant: "default",
-        });
-      }
-
-      nextSize = newSet.size;
-      return newSet;
+      const next = new Set(prev);
+      next.add(activity.id);
+      return next;
     });
 
-    return { nextSize, wasAdded };
+    toast({
+      description: `Added "${activity.name}" to comparison`,
+      title: "Added to comparison",
+      variant: "default",
+    });
+
+    const nextSize = comparisonList.size + 1;
+    return { nextSize, wasAdded: true };
   };
 
   const handleCompareActivity = (activity: Activity) => {
