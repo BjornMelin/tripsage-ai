@@ -316,6 +316,9 @@ importers:
       babel-plugin-react-compiler:
         specifier: ^1.0.0
         version: 1.0.0
+      conventional-changelog-conventionalcommits:
+        specifier: ^7.0.2
+        version: 7.0.2
       jose:
         specifier: ^6.1.2
         version: 6.1.2
@@ -3333,6 +3336,10 @@ packages:
   conventional-changelog-angular@8.1.0:
     resolution: {integrity: sha512-GGf2Nipn1RUCAktxuVauVr1e3r8QrLP/B0lEUsFktmGqc3ddbQkhoJZHJctVU829U1c6mTSWftrVOCHaL85Q3w==}
     engines: {node: '>=18'}
+
+  conventional-changelog-conventionalcommits@7.0.2:
+    resolution: {integrity: sha512-NKXYmMR/Hr1DevQegFB4MwfM5Vv0m4UIxKZTTYuD98lpTknaZlSRrDOG4X7wIXpGkfsYxZTghUN+Qq+T0YQI7w==}
+    engines: {node: '>=16'}
 
   conventional-changelog-writer@8.2.0:
     resolution: {integrity: sha512-Y2aW4596l9AEvFJRwFGJGiQjt2sBYTjPD18DdvxX9Vpz0Z7HQ+g1Z+6iYDAm1vR3QOJrDBkRHixHK/+FhkR6Pw==}
@@ -10316,6 +10323,10 @@ snapshots:
       simple-wcswidth: 1.1.2
 
   conventional-changelog-angular@8.1.0:
+    dependencies:
+      compare-func: 2.0.0
+
+  conventional-changelog-conventionalcommits@7.0.2:
     dependencies:
       compare-func: 2.0.0
 
