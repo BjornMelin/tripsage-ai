@@ -42,6 +42,13 @@ export async function getPlanningTrips(): Promise<UiTrip[]> {
     .order("created_at", { ascending: false });
 
   if (error) {
+    logger.error("Failed to fetch trips", {
+      data,
+      details: error.details,
+      error,
+      message: error.message,
+      userId: user.id,
+    });
     throw new Error("Failed to fetch trips");
   }
 
@@ -129,7 +136,7 @@ export async function addActivityToTrip(
     item_type: validation.data.itemType,
     location: validation.data.location ?? null,
     metadata: (validation.data.metadata ?? {}) as Json, // Supabase expects Json
-    price: validation.data.price,
+    price: validation.data.price ?? null,
     // biome-ignore lint/style/useNamingConvention: Supabase columns use snake_case
     start_time: validation.data.startTime ?? null,
     title: validation.data.title,
