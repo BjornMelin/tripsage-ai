@@ -6,7 +6,11 @@
 "use server";
 
 import { tripsRowSchema } from "@schemas/supabase";
-import { itineraryItemCreateSchema, type UiTrip } from "@schemas/trips";
+import {
+  type ItineraryItemCreateInput,
+  itineraryItemCreateSchema,
+  type UiTrip,
+} from "@schemas/trips";
 import { bumpTag } from "@/lib/cache/tags";
 import type { Json } from "@/lib/supabase/database.types";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -106,7 +110,7 @@ export async function addActivityToTrip(
     throw new Error("Trip not found or access denied");
   }
 
-  const payload = {
+  const payload: ItineraryItemCreateInput = {
     bookingStatus: "planned" as const,
     currency: activityData.currency ?? "USD",
     description: activityData.description,
