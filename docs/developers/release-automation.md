@@ -13,12 +13,12 @@ This repository uses semantic-release to automate versioning, changelog updates,
 
 File: `release.config.mjs` (root).
 
-- `pkgRoot: frontend` to bump `frontend/package.json`.
+- semantic-release runs from `frontend/` (workflow `working-directory`) but config is kept at repo root.
 - Plugins:
   - `@semantic-release/commit-analyzer` with temporary rule `{ breaking: true, release: 'minor' }`.
   - `@semantic-release/release-notes-generator` (conventional commits preset).
-  - `@semantic-release/changelog` updates `CHANGELOG.md`.
-  - `@semantic-release/git` commits `CHANGELOG.md` + `frontend/package.json` with `chore(release): <version> [skip ci]`.
+  - `@semantic-release/changelog` updates `../CHANGELOG.md` (repo root).
+  - `@semantic-release/git` commits `../CHANGELOG.md` + `frontend/package.json` with `chore(release): <version> [skip ci]`.
   - `@semantic-release/github` creates the GitHub Release.
 
 ## Temporary major suppression
@@ -34,11 +34,12 @@ When ready to ship the first stable major (e.g., `v2.0.0`):
 2. Optionally force the first stable tag:
 
    ```bash
-   git commit --allow-empty -m "chore: release 2.0.0" -m "Release-As: 2.0.0"
+   git tag v2.0.0
+   git push origin v2.0.0
    ```
 
 3. Push to `main` to run the release workflow.
-4. Update docs/CONTRIBUTING notes to state majors are enabled.
+4. Update release docs to state majors are enabled.
 
 ## Commit conventions (recap)
 
