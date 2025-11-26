@@ -360,5 +360,13 @@ describe("search/activities/actions", () => {
 
       expect(bumpTag).not.toHaveBeenCalled();
     });
+
+    it("should reject non-numeric trip ids", async () => {
+      await expect(
+        addActivityToTrip("invalid-id" as unknown as number, {
+          title: "Invalid",
+        })
+      ).rejects.toThrow("Invalid trip id");
+    });
   });
 });

@@ -67,7 +67,7 @@ export async function getPlanningTrips(): Promise<UiTrip[]> {
  * @throws Error if unauthorized, trip not found, or validation fails.
  */
 export async function addActivityToTrip(
-  tripId: number,
+  tripId: number | string,
   activityData: {
     title: string;
     description?: string;
@@ -80,6 +80,11 @@ export async function addActivityToTrip(
     metadata?: Record<string, unknown>;
   }
 ) {
+  const parsedTripId = typeof tripId === "string" ? Number(tripId) : tripId;
+  if (Number.isNaN(parsedTripId)) {
+    throw new Error("Invalid trip id");
+  }
+
   const supabase = await createServerSupabase();
   const {
     data: { user },
@@ -93,7 +98,7 @@ export async function addActivityToTrip(
   const { error: tripError } = await supabase
     .from("trips")
     .select("id")
-    .eq("id", tripId)
+    .eq("id", parsedTripId)
     .eq("user_id", user.id)
     .single();
 

@@ -122,7 +122,9 @@ describe("realtime connection store", () => {
     store.registerChannel(channel);
 
     const promise = store.reconnectAll();
-    const expectation = expect(promise).rejects.toThrow("failed to reconnect");
+    const expectation = expect(promise).rejects.toThrow(
+      "Some realtime channels failed to reconnect"
+    );
 
     await vi.advanceTimersByTimeAsync(DEFAULT_BACKOFF_CONFIG.initialDelayMs);
 
