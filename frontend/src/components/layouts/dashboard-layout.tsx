@@ -4,85 +4,64 @@
  * experience.
  */
 
-"use client";
-
-import { ChevronDown, LogOut, Settings, User as UserIcon } from "lucide-react";
+import type { AuthUser } from "@schemas/stores";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState, useTransition } from "react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-// import { logoutAction } from "@/lib/auth/server-actions"; // TODO: Replace with Supabase Auth
-import { cn } from "@/lib/utils";
+import { mapSupabaseUserToAuthUser, requireUser } from "@/lib/auth/server";
+import { SidebarNav } from "./sidebar-nav";
+import { UserNav } from "./user-nav";
+
+/** Dashboard navigation link metadata used by the layout. */
+export interface DashboardNavItem {
+  href: string;
+  title: string;
+  icon?: React.ReactNode;
+}
+
+export interface DashboardLayoutData {
+  navItems: ReadonlyArray<DashboardNavItem>;
+  user: AuthUser;
+}
+
+export const DASHBOARD_NAV_ITEMS: ReadonlyArray<DashboardNavItem> = [
+  { href: "/dashboard", title: "Overview" },
+  { href: "/dashboard/trips", title: "My Trips" },
+  { href: "/dashboard/search", title: "Search" },
+  { href: "/dashboard/calendar", title: "Calendar" },
+  // Chat is intentionally outside the dashboard namespace; keep `/chat` public.
+  { href: "/chat", title: "AI Assistant" },
+  { href: "/dashboard/agent-status", title: "Agent Status" },
+  { href: "/dashboard/settings", title: "Settings" },
+  { href: "/dashboard/profile", title: "Profile" },
+];
 
 /**
- * Props interface for the SidebarNav component.
+ * Fetches authenticated user and navigation data required by the dashboard layout.
+ *
+ * Isolated from the Server Component to enable focused unit tests without RSC rendering.
  */
-interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {
-  /** Array of navigation items with href, title, and optional icon. */
-  items: {
-    href: string;
-    title: string;
-    icon?: React.ReactNode;
-  }[];
+// biome-ignore lint/style/useNamingConvention: helper function is not a React component
+export async function fetchDashboardLayoutData(): Promise<DashboardLayoutData> {
+  const { user: supabaseUser } = await requireUser();
+  const user = mapSupabaseUserToAuthUser(supabaseUser);
+
+  return { navItems: DASHBOARD_NAV_ITEMS, user };
+}
+
+interface DashboardLayoutViewProps {
+  children: React.ReactNode;
+  navItems?: ReadonlyArray<DashboardNavItem>;
+  user: AuthUser;
 }
 
 /**
- * Navigation component for sidebar with active route highlighting.
- *
- * @param className - Additional CSS classes to apply.
- * @param items - Array of navigation items to display.
- * @param props - Additional HTML attributes.
- * @returns The SidebarNav component.
+ * Pure presentational layout for the dashboard shell; expects resolved data.
  */
-export function SidebarNav({ className, items, ...props }: SidebarNavProps) {
-  const pathname = usePathname();
-
-  return (
-    <nav
-      className={cn("flex space-x-2 lg:flex-col lg:space-x-0 lg:space-y-1", className)}
-      {...props}
-    >
-      {items.map((item) => (
-        <Link
-          key={item.href}
-          href={item.href}
-          className={cn(
-            "flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
-            pathname === item.href ? "bg-accent text-accent-foreground" : "transparent"
-          )}
-        >
-          {item.icon && <span className="mr-2">{item.icon}</span>}
-          {item.title}
-        </Link>
-      ))}
-    </nav>
-  );
-}
-
-/**
- * Main dashboard layout component with sidebar navigation and header.
- *
- * Provides the overall structure for dashboard pages with navigation sidebar,
- * header with user controls, and main content area.
- *
- * @param children - Content to render in the main area.
- * @returns The DashboardLayout component.
- */
-export function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const navItems = [
-    { href: "/dashboard", title: "Overview" },
-    { href: "/dashboard/trips", title: "My Trips" },
-    { href: "/dashboard/search", title: "Search" },
-    { href: "/dashboard/calendar", title: "Calendar" },
-    { href: "/chat", title: "AI Assistant" },
-    { href: "/dashboard/agent-status", title: "Agent Status" },
-    { href: "/dashboard/settings", title: "Settings" },
-    { href: "/dashboard/profile", title: "Profile" },
-  ];
-
+export function DashboardLayoutView({
+  children,
+  navItems = DASHBOARD_NAV_ITEMS,
+  user,
+}: DashboardLayoutViewProps) {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background px-6">
@@ -91,7 +70,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         </Link>
         <div className="ml-auto flex items-center gap-2">
           <ThemeToggle />
-          <UserNav />
+          <UserNav user={user} />
         </div>
       </header>
       <div className="flex-1 grid grid-cols-[220px_1fr]">
@@ -107,79 +86,17 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * User navigation component with profile dropdown and logout functionality.
+ * Server Component wrapper that resolves auth/navigation data then renders the
+ * presentational dashboard shell.
  *
- * Displays user avatar and provides access to profile, settings, and logout
- * options via a popover menu.
- *
- * @returns The UserNav component.
+ * @param children - Content to render in the main content area.
  */
-function UserNav() {
-  const [isPending, startTransition] = useTransition();
-  const [isOpen, setIsOpen] = useState(false);
-
-  const handleLogout = () => {
-    startTransition(() => {
-      setIsOpen(false);
-      // TODO: Replace with Supabase Auth logout
-      // await logoutAction();
-      console.log("Logout functionality to be implemented with Supabase Auth");
-    });
-  };
+export async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const { navItems, user } = await fetchDashboardLayoutData();
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" className="flex items-center gap-2 px-3 py-2">
-          <Avatar className="h-8 w-8">
-            <AvatarFallback className="bg-primary text-primary-foreground">
-              U
-            </AvatarFallback>
-          </Avatar>
-          <span className="text-sm font-medium hidden sm:block">User</span>
-          <ChevronDown className="h-4 w-4 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-56 p-0" align="end">
-        <div className="space-y-1">
-          <div className="px-3 py-2 border-b">
-            <p className="text-sm font-medium">User</p>
-            <p className="text-xs text-muted-foreground">user@example.com</p>
-          </div>
-
-          <div className="p-1">
-            <Link
-              href="/dashboard/profile"
-              className="flex items-center gap-2 px-2 py-2 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground transition-colors"
-              onClick={() => setIsOpen(false)}
-            >
-              <UserIcon className="h-4 w-4" />
-              Profile
-            </Link>
-
-            <Link
-              href="/dashboard/settings"
-              className="flex items-center gap-2 px-2 py-2 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground transition-colors"
-              onClick={() => setIsOpen(false)}
-            >
-              <Settings className="h-4 w-4" />
-              Settings
-            </Link>
-
-            <div className="border-t my-1" />
-
-            <button
-              type="button"
-              onClick={handleLogout}
-              disabled={isPending}
-              className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground transition-colors disabled:opacity-50"
-            >
-              <LogOut className="h-4 w-4" />
-              {isPending ? "Logging out..." : "Log out"}
-            </button>
-          </div>
-        </div>
-      </PopoverContent>
-    </Popover>
+    <DashboardLayoutView navItems={navItems} user={user}>
+      {children}
+    </DashboardLayoutView>
   );
 }

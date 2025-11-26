@@ -8,6 +8,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useRealtimeConnectionStore } from "@/stores/realtime-connection-store";
 import { useRealtimeChannel } from "./use-realtime-channel";
 import { useWebSocketChat } from "./use-websocket-chat";
 export interface RealtimeConnectionStatus {
@@ -35,13 +36,15 @@ export interface RealtimeHookResult {
  * more specific hooks (useTripRealtime, useChatRealtime).
  */
 export function useSupabaseRealtime(): RealtimeHookResult {
+  const summary = useRealtimeConnectionStore((state) => state.summary());
+  const reconnect = () => useRealtimeConnectionStore.getState().reconnectAll();
   return {
-    connectionStatus: "connected",
+    connectionStatus: summary.isConnected ? "connected" : "disconnected",
     disconnect: undefined,
-    error: null,
-    errors: [],
-    isConnected: true,
-    reconnect: undefined,
+    error: summary.lastError,
+    errors: summary.lastError ? [summary.lastError] : [],
+    isConnected: summary.isConnected,
+    reconnect,
   };
 }
 

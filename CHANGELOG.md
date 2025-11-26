@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_No unreleased changes yet._
+
+## [1.1.0] - 2025-11-25
+
 ### Security
 
 - Replaced insecure ID generation: migrated all `Date.now().toString()` and direct `crypto.randomUUID()` usage to `secureUuid()` from `@/lib/security/random` in stores, components, API routes, and AI tools.
@@ -14,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed `console.*` statements from server modules: replaced development logging and error fallbacks in `lib/api/api-client.ts`, `lib/error-service.ts`, and `lib/cache/query-cache.ts` with telemetry helpers or silent error handling per AGENTS.md compliance.
 
 ### Added
+
+- **Nuclear Auth Integration (Dashboard)**:
+  - `DashboardLayout` converted to a Server Component using `@/lib/auth/server` helpers (`requireUser`, `mapSupabaseUserToAuthUser`) for secure, waterfall-free user data fetching.
+  - `logoutAction` Server Action (`src/lib/auth/actions.ts`) for secure, cookie-clearing logout flows via Supabase SSR.
+  - `SidebarNav` and `UserNav` extracted to standalone Client Components with improved active-route highlighting (nested route support) and real user data display.
 
 - Personalization Insights page now surfaces recent memories with localized timestamps, source/score, and copyable memory IDs using the canonical memory context feed.
 - Testing patterns companion guide (`docs/developers/testing-patterns.md`) with test-type decision tree plus MSW and AI SDK v6 examples.
@@ -39,6 +48,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Centralized dashboard metrics schemas
 
 ### Changed
+
+- Supabase realtime store hardening: serialized `reconnectAll` with `isReconnecting`, awaited channel resubscribe/unsubscribe, memoized `summary()`, and narrowed status typing to the Supabase channel state union.
+- Connection status monitor now uses camelCase helper naming and shallow selector to avoid unnecessary re-renders.
+- Supabase realtime hook `useSupabaseRealtime` now wraps `reconnect` to pull the latest store implementation, preventing stale references.
+- Activities search page comparison flow now bases modal open/close logic on post-toggle selection counts, replaces transition-wrapped Promise with explicit pending state, and keeps trip modal add flow consistent.
+- Trip selection modal resets selection on close/activity change and makes the “Create a new trip” button navigate to `/trips`.
+- MFA setup mock path now throws in non-development environments to avoid implying production MFA enablement.
+- Logout server action uses scoped telemetry logger and catches sign-out errors before redirecting.
+- Realtime API docs now list the full status enum (`idle/connecting/subscribed/error/closed`) and architecture docs describe the app-level statuses (`connecting | connected | disconnected | reconnecting | error`).
+- **Dashboard Architecture**: Refactored `DashboardLayout` to a Server Component architecture, removing `use client` and eliminating client-side auth waterfalls.
 
 - README updated for production run port 3000, AI Gateway/Supabase env variables (`NEXT_PUBLIC_SUPABASE_*`, `DATABASE_SERVICE_KEY`, `AI_GATEWAY_API_KEY`), and security/audit commands (`pnpm audit`, `pnpm test:run --grep security`).
 - Migrated Next.js middleware to proxy: replaced `frontend/middleware.ts` with `frontend/src/proxy.ts` per Next.js 16 (ADR-0013).
@@ -200,6 +219,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Realtime reconnection test now asserts `unsubscribe` is invoked before resubscribe, covering the full reconnection flow.
+- Activities search comparison modal now closes correctly when the selection drops to one item and auto-opens only after an item is added.
 - Memory context now preserves Supabase turn `created_at` and `id` through the Zod schema, Supabase adapter, `/api/memory/search` response, and AI memory search tool instead of synthesizing timestamps/UUIDs.
 - Security dashboard again exposes terminate controls for non-current sessions and formats events, sessions, and last-login timestamps in the viewer’s locale via a client helper.
 - Added missing route rate-limit entries for `security:events` and `security:metrics` to align with the security APIs’ guardrails.
@@ -895,7 +916,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Legacy Python planning tools removed:
   - Deleted `tripsage/tools/planning_tools.py` and purged references/tests.
 
-[Unreleased]: https://github.com/BjornMelin/tripsage-ai/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/BjornMelin/tripsage-ai/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/BjornMelin/tripsage-ai/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/BjornMelin/tripsage-ai/compare/v0.2.1...v1.0.0
 [0.2.1]: https://github.com/BjornMelin/tripsage-ai/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/BjornMelin/tripsage-ai/compare/v0.1.0...v0.2.0

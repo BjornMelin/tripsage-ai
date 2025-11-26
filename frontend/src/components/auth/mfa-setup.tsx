@@ -49,22 +49,34 @@ export function MfaSetup({ onComplete, onCancel }: MfaSetupProps) {
     setError(null);
 
     try {
-      // TODO: Replace mock API call with real MFA setup implementation.
-      //
-      // Requirements:
-      // - Call Supabase Auth MFA setup endpoint or use Supabase client methods
-      // - Generate TOTP secret using Supabase Auth or compatible library
-      // - Generate QR code URL for authenticator app scanning
-      // - Generate backup codes (typically 8-10 codes)
-      // - Store backup codes securely (encrypted in database or returned to user)
-      // - Handle API errors (network failures, rate limiting, invalid requests)
-      // - Add proper error messages for different failure scenarios
-      // - Consider using `@supabase/supabase-js` auth.mfa methods
-      //
-      // Mock API call - replace with actual implementation
+      /**
+       * TODO: Replace mock API call with real MFA setup implementation.
+       *
+       * Requirements:
+       * - Call Supabase Auth MFA setup endpoint or use Supabase client methods
+       * - Generate TOTP secret using Supabase Auth or compatible library
+       * - Generate QR code URL for authenticator app scanning
+       * - Generate backup codes (typically 8-10 codes)
+       * - Store backup codes securely (encrypted in database or returned to user)
+       * - Handle API errors (network failures, rate limiting, invalid requests)
+       * - Add proper error messages for different failure scenarios
+       * - Consider using `@supabase/supabase-js` auth.mfa methods
+       */
+      if (process.env.NODE_ENV !== "development") {
+        throw new Error("MFA setup is not implemented in production.");
+      }
+      // Demo-only mock API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      // TODO: Replace with real MFA setup data from Supabase Auth
+      /**
+       * TODO: Replace with real MFA setup data from Supabase Auth
+       *
+       * Requirements:
+       * - Generate TOTP secret using Supabase Auth or compatible library
+       * - Generate QR code URL for authenticator app scanning
+       * - Generate backup codes (typically 8-10 codes)
+       * - Store backup codes securely (encrypted in database or returned to user)
+       */
       const mockSetupData: MfaSetupData = {
         backupCodes: [
           "12345-67890",
@@ -103,18 +115,19 @@ export function MfaSetup({ onComplete, onCancel }: MfaSetupProps) {
     setError(null);
 
     try {
-      // TODO: Replace mock API call with real MFA verification implementation.
-      //
-      // Requirements:
-      // - Verify TOTP code using Supabase Auth MFA verification endpoint
-      // - Use `supabase.auth.mfa.verify()` or equivalent API call
-      // - Validate code format and length before sending to API
-      // - Handle verification failures (invalid code, expired code, rate limiting)
-      // - On successful verification, enable MFA for the user account
-      // - Store MFA status in user profile/metadata
-      // - Show appropriate error messages for different failure types
-      // - Add telemetry tracking for MFA setup completion
-      //
+      /**
+       * TODO: Replace mock API call with real MFA verification implementation.
+       *
+       * Requirements:
+       * - Verify TOTP code using Supabase Auth MFA verification endpoint
+       * - Use `supabase.auth.mfa.verify()` or equivalent API call
+       * - Validate code format and length before sending to API
+       * - Handle verification failures (invalid code, expired code, rate limiting)
+       * - On successful verification, enable MFA for the user account
+       * - Store MFA status in user profile/metadata
+       * - Show appropriate error messages for different failure types
+       * - Add telemetry tracking for MFA setup completion
+       */
       // Mock API call - replace with actual implementation
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
