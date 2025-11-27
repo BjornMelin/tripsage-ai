@@ -8,26 +8,23 @@ and database webhooks post signed HTTP events to Vercel Route Handlers.
 ```text
 supabase/
 ├── migrations/
-│   ├── 00000000000000_init.sql   # Squashed canonical schema (apply this)
-│   └── archive/                  # Archived legacy migrations (read-only)
-├── schemas/                      # Legacy reference SQL (do not apply)
-├── storage/                      # Legacy storage SQL (superseded)
-├── config.toml                   # Supabase CLI config
-├── seed.sql                      # Development data
-├── .env.example                  # Environment template
-└── TROUBLESHOOTING.md            # Common issues
+│   ├── 20251122000000_base_schema.sql    # Current base schema
+│   ├── 202511220002_agent_config_seed.sql # Agent configuration seed data
+│   ├── 20251124000001_api_metrics_table.sql # API metrics tracking
+│   ├── archive/                          # Archived legacy migrations (read-only)
+│   └── README.md                         # Migration documentation
+├── config.toml                   # Supabase CLI configuration
+├── seed.sql                      # Development seed data
+├── schema.sql                    # Current schema snapshot
+└── README.md                     # This documentation
 ```
 
 ## Documentation Index
 
 | Component | Documentation | Purpose |
 |-----------|--------------|----------|
-| **Schemas** | [schemas/README.md](./schemas/README.md) | Declarative schema management guide |
 | **Migrations** | [migrations/README.md](./migrations/README.md) | Database migration best practices |
-| **Webhooks (DB→Vercel)** | [../docs/operators/supabase-webhooks.md](../docs/operators/supabase-webhooks.md) | Configure database webhooks |
-| **Storage** | [storage/README.md](./storage/README.md) | File storage and management |
-| **Functions** | [functions/README.md](./functions/README.md) | Edge function suite |
-| **Troubleshooting** | [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) | Common issues and solutions |
+| **Webhooks (DB→Vercel)** | [../docs/operations/supabase-webhooks.md](../docs/operations/supabase-webhooks.md) | Configure database webhooks |
 
 ## Setup Guide
 
@@ -44,9 +41,8 @@ supabase/
 # Clone and navigate to project
 cd supabase/
 
-# Copy environment template
-cp .env.example .env
-
+# Create .env file with your credentials
+touch .env
 # Edit .env with your credentials
 nano .env
 ```
@@ -78,27 +74,20 @@ supabase db push
 # Push configuration changes (if config.toml was modified)
 supabase config push
 
-# Webhooks use Postgres settings (GUCs). See docs/operators/supabase-webhooks.md
+# Webhooks use Postgres settings (GUCs). See ../docs/operations/supabase-webhooks.md
 ```
 
-### Notes on legacy SQL
+### Migration Strategy
 
-- The `schemas/` and `storage/` folders contain historical SQL. They are not applied
-  by the CLI and are kept for reference only while we complete migration parity.
-- All changes must be expressed as timestamped files under `supabase/migrations/`.
+- All database changes must be expressed as timestamped migration files under `supabase/migrations/`.
+- Migrations are the authoritative source of truth for database schema changes.
 
 ```bash
-# Validate schema integrity
-python3 validate_database_schema.py
+# Validate migrations (use Supabase CLI)
+supabase db reset --debug
 
-# Deploy to local environment
-python3 deploy_database_schema.py local
-
-# Deploy to production with validation
-python3 deploy_database_schema.py production --project-ref your-project-ref
-
-# Run integration tests
-python3 test_database_integration.py
+# Deploy to production (use Supabase CLI)
+supabase db push
 ```
 
 ## Configuration
@@ -154,7 +143,7 @@ SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 
-# Webhooks are configured via Postgres settings (GUCs). See docs/operators/supabase-webhooks.md.
+# Webhooks are configured via Postgres settings (GUCs). See ../docs/operations/supabase-webhooks.md.
 # Example (set in DB):
 # app.vercel_webhook_trips = 'https://<vercel>/api/hooks/trips'
 # app.vercel_webhook_cache = 'https://<vercel>/api/hooks/cache'
@@ -179,12 +168,10 @@ DATABASE_POOLER_URL=postgresql://postgres.[PROJECT-REF]:[YOUR-PASSWORD]@aws-0-[R
 
 ### Components
 
-1. **[Declarative Schemas](./schemas/README.md)** - Define database structure
-   in SQL files
-2. **[Migrations](./migrations/README.md)** - Version-controlled database changes
-3. **Webhooks (DB→Vercel)** - Signed HTTP events to Vercel Route Handlers
-4. **[Storage](./storage/README.md)** - File storage with RLS policies
-5. **[Functions](./functions/README.md)** - Serverless suite
+1. **[Migrations](./migrations/README.md)** - Version-controlled database changes
+2. **Webhooks (DB→Vercel)** - Signed HTTP events to Vercel Route Handlers
+3. **Configuration** - Supabase CLI configuration via `config.toml`
+4. **Seed Data** - Development data via `seed.sql`
 
 ### Entity Relationship Diagram
 
@@ -549,7 +536,7 @@ supabase migration list
 - **Memory management**: Automatic cleanup functions
 - **Vector indexing**: IVFFlat for efficient similarity search
 
-## Migration Strategy
+## Schema Migration Procedures
 
 ### From Existing Systems
 
@@ -595,21 +582,15 @@ GITHUB_CLIENT_ID=your-github-oauth-id
 ### Schema Validation
 
 ```bash
-# Validate schema files
-python3 validate_database_schema.py
-
 # Test migrations locally
-supabase db reset --debug --debug
+supabase db reset --debug
 ```
 
 ### Integration Testing
 
 ```bash
-# Run full test suite
-python3 test_database_integration.py
-
-# Test edge functions
-deno task test
+# Run frontend integration tests
+cd ../frontend && pnpm test:e2e
 ```
 
 ### Performance Testing
@@ -725,10 +706,9 @@ SELECT count(*) FROM pg_stat_activity;
 
 ## Getting Help
 
-- **Common Issues**: See [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)
-- **Schema Questions**: Check [schemas/README.md](./schemas/README.md)
 - **Migration Help**: See [migrations/README.md](./migrations/README.md)
-- **Function Issues**: Check [functions/README.md](./functions/README.md)
+- **Supabase CLI**: Run `supabase --help` for CLI documentation
+- **Database Issues**: Check Supabase Dashboard logs
 
 ---
 

@@ -9,12 +9,8 @@ import "server-only";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createXai } from "@ai-sdk/xai";
+import type { ModelMapper, ProviderId, ProviderResolution } from "@schemas/providers";
 import { createGateway } from "ai";
-import type {
-  ModelMapper,
-  ProviderId,
-  ProviderResolution,
-} from "@/lib/providers/types";
 import {
   getUserAllowGatewayFallback,
   getUserApiKey,
@@ -23,9 +19,18 @@ import {
 } from "@/lib/supabase/rpc";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
-/** Provider preference order for BYOK key resolution. */
+/**
+ * Provider preference order for BYOK key resolution.
+ * Earlier providers in this array take precedence when multiple keys are available.
+ */
 const PROVIDER_PREFERENCE: ProviderId[] = ["openai", "openrouter", "anthropic", "xai"];
 
+/**
+ * Extracts the host from a URL string.
+ *
+ * @param url - The URL string to parse.
+ * @returns The host portion of the URL, or undefined if parsing fails.
+ */
 function extractHost(url: string | undefined): string | undefined {
   if (!url) return undefined;
   try {
@@ -37,8 +42,11 @@ function extractHost(url: string | undefined): string | undefined {
 }
 
 /**
- * Map a generic model hint to a provider-specific id.
- * Keep conservative and simple; leave full mapping to callers/routes if needed.
+ * Maps model hints to provider-specific identifiers with sensible defaults.
+ *
+ * @param provider - The provider identifier.
+ * @param modelHint - The model hint to map.
+ * @returns The provider-specific model identifier.
  */
 const DEFAULT_MODEL_MAPPER: ModelMapper = (
   provider: ProviderId,
@@ -67,6 +75,15 @@ const DEFAULT_MODEL_MAPPER: ModelMapper = (
   return modelHint;
 };
 
+/**
+ * Type-asserts and validates that a resolved model is a valid LanguageModel.
+ *
+ * @param model - The resolved model object from a provider client.
+ * @param provider - The provider identifier for error reporting.
+ * @param modelId - The model identifier for error reporting.
+ * @returns The validated LanguageModel instance.
+ * @throws Error if the model is not a valid LanguageModel.
+ */
 function toLanguageModel(
   model: unknown,
   provider: ProviderId,
@@ -281,5 +298,3 @@ export async function resolveProvider(
       "ANTHROPIC_API_KEY, XAI_API_KEY, or AI_GATEWAY_API_KEY."
   );
 }
-
-export type { ProviderResolution };

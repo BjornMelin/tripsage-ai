@@ -4,7 +4,7 @@
  * validation, provider resolution, token clamping, and usage metadata.
  */
 
-import type { ProviderResolution } from "@ai/models/registry";
+import type { ProviderResolution } from "@schemas/providers";
 import type { ToolSet, UIMessage } from "ai";
 import { convertToModelMessages, generateText as defaultGenerateText } from "ai";
 import { extractTexts, validateImageAttachments } from "@/app/api/_helpers/attachments";
