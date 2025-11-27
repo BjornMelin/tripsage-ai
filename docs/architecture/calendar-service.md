@@ -66,13 +66,13 @@ All routes are server-only with `dynamic = "force-dynamic"`:
   - Generate ICS file from events payload
   - Rate limit: 30 req/min
 
-### AI SDK Tools (`frontend/src/lib/tools/calendar.ts`)
+### AI SDK Tools (`frontend/src/ai/tools/server/calendar.ts`)
 
 - **`createCalendarEvent`**: Create events in user's Google Calendar
 - **`getAvailability`**: Check calendar availability (free/busy)
 - **`exportItineraryToICS`**: Export events to ICS format
 
-Tools are automatically available in chat via `toolRegistry` in `frontend/src/lib/tools/index.ts`.
+Tools are automatically available in chat via `toolRegistry` in `frontend/src/ai/tools/index.ts`.
 
 ### UI Components (`frontend/src/components/calendar/`)
 

@@ -10,11 +10,11 @@ End-user guides and getting started.
 
 External developer integration and API reference.
 
-### Developers (./developers/)
+### Development (./development/)
 
 Development resources and guidelines.
 
-### Operators (./operators/)
+### Operations (./operations/)
 
 Deployment and operations.
 
@@ -22,7 +22,7 @@ Deployment and operations.
 
 System design and technical decisions.
 
-### ADRs (./adrs/)
+### Architecture Decisions (./architecture/decisions/)
 
 Architecture Decision Records documenting technical choices.
 
@@ -30,5 +30,5 @@ Architecture Decision Records documenting technical choices.
 
 - Users: ./users/user-guide.md
 - API: ./api/api-reference.md
-- Developers: ./developers/development-guide.md
-- Operators: ./operators/operators-reference.md
+- Development: ./development/development-guide.md
+- Operations: ./operations/operators-reference.md

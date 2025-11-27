@@ -65,8 +65,8 @@ src/
   components/          # UI primitives and features (client/server as needed)
   domain/              # Domain logic (e.g., accommodations, amadeus)
   hooks/               # Reusable React hooks (client)
-  lib/                 # Providers, telemetry, supabase, tools, security, etc.
-  ai/                  # AI-specific helpers/models
+  lib/                 # Providers, telemetry, supabase, security, cache, etc.
+  ai/                  # AI SDK tools, models, and helpers
   stores/              # Zustand client stores
   schemas/             # Zod schemas (shared validation/structured outputs)
   prompts/             # Prompt templates
@@ -85,7 +85,7 @@ Avoid new barrels; import concrete modules.
 
 - Streaming chat with AI SDK v6 (`/api/chat/stream`) using shared schemas for deterministic tool and output handling.
 - Agent endpoints under `/api/agents/*` (flights, accommodations, destinations, itineraries, budget, memory) with domain-specific tool registries.
-- BYOK + Gateway provider resolution with request-scoped registry in `src/lib/providers/registry.ts`.
+- BYOK + Gateway provider resolution with request-scoped registry in `src/ai/models/registry.ts`.
 - Realtime presence/broadcast via `use-realtime-channel` wrappers; no LLM tokens over Realtime.
 - Attachments pipeline: Supabase Storage (`attachments`), Postgres metadata, signed URL access; enforced server-side.
 - Memory sync pipeline using QStash webhook `/api/jobs/memory-sync` with Upstash signature verification and Redis idempotency gates.
@@ -100,7 +100,7 @@ Avoid new barrels; import concrete modules.
 - **AI SDK Integration**: Use `streamText`, `generateObject`, or `streamObject` with Zod schemas from `src/schemas`. UI hooks use `useChat`/`useAssistant` with `DefaultChatTransport`. No custom streaming stacks.
 - **Validation**: Zod v4 schemas kept in domain files per AGENTS rules (see AGENTS.md §4.4–4.5 for schema organization and helpers). Structured outputs share the same schemas across server and client. Canonical types (e.g., `UiTrip`, `TripSuggestion`) defined in `@schemas/*`; stores/hooks re-export for convenience.
 - **State**: Client UI state via Zustand slices in `src/stores`; server data via TanStack Query. Realtime channel lifecycle is encapsulated in `use-realtime-channel` and thin wrappers only.
-- **Security**: Supabase SSR auth only. Random IDs/timestamps from `@/lib/security/random`. BYOK resolution lives in `src/lib/providers/registry.ts`; keys never leave server.
+- **Security**: Supabase SSR auth only. Random IDs/timestamps from `@/lib/security/random`. BYOK resolution lives in `src/ai/models/registry.ts`; keys never leave server.
 - **Provider precedence**: user gateway key → user provider key (OpenAI/Anthropic/xAI/OpenRouter) → team gateway fallback (opt-in).
 - **Caching & Limits**: Upstash Ratelimit/Redis in handlers; auth-bound routes are dynamic (no `'use cache'`).
   Routes accessing `cookies()` or `headers()` cannot use cache directives per Next.js Cache Components restrictions.
@@ -165,7 +165,7 @@ flowchart LR
 ## AI Routes & Tools
 
 - Chat and agent endpoints live under `/api/chat/*` and `/api/agents/*`; they exclusively use AI SDK v6 and return `toUIMessageStreamResponse()` for streaming.
-- Tools are defined with AI SDK `tool()` helpers inside server modules (`src/lib/tools/**`) and validated with Zod schemas. Keep tool registration centralized (no ad-hoc exports).
+- Tools are defined with `createAiTool` factory inside server modules (`src/ai/tools/**`) and validated with Zod schemas. Keep tool registration centralized via `src/ai/tools/index.ts` (no ad-hoc exports).
 - Attachments flow: uploads go to Supabase Storage (bucket `attachments`), metadata persisted in Postgres rows with size/MIME/owner; signed URLs issued per-request.
 - Validation flow: request body parsed with shared schemas from `@schemas/*`; handler rejects on Zod failure before provider resolution.
 
