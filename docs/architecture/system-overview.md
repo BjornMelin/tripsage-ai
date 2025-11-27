@@ -57,7 +57,7 @@ graph TD
 - Key precedence (highest → lowest): user gateway key, user provider key (OpenAI/Anthropic/xAI/OpenRouter), team gateway key fallback (requires user consent flag).
 - Auth-bound routes stay dynamic; do not add `'use cache'` or static revalidation to BYOK/user-scoped handlers.
   Routes accessing `cookies()` or `headers()` (required for Supabase SSR auth) cannot use cache directives per Next.js Cache Components restrictions.
-  See [Spec: BYOK Routes and Security (Next.js + Supabase Vault)](../specs/0011-spec-byok-routes-and-security.md).
+  See [Spec: BYOK Routes and Security (Next.js + Supabase Vault)](../specs/archive/0011-spec-byok-routes-and-security.md).
 
 ### Data & Storage
 
