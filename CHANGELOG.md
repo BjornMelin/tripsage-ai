@@ -303,7 +303,7 @@ _No unreleased changes yet._
 - Provider registry and resolution (server-only) returning AI SDK v6 `LanguageModel`:
   - `frontend/src/ai/models/registry.ts` (`resolveProvider(userId, modelHint?)`)
   - `frontend/src/lib/providers/types.ts`
-  - Temporary shim added at `frontend/src/lib/providers/registry.ts` re-exporting the new path to ease downstream migrations
+  - Temporary shim that re-exported the registry has been removed; use `frontend/src/ai/models/registry.ts` directly
 - OpenRouter provider: switch to `@ai-sdk/openai` with `baseURL: https://openrouter.ai/api/v1` (remove `@openrouter/ai-sdk-provider`); attribution headers remain removed
 - Vitest unit tests for registry precedence and attribution
   - `frontend/src/lib/providers/__tests__/registry.test.ts`

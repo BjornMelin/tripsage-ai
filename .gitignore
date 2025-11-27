@@ -134,8 +134,8 @@ docs/prompts/mcp/**
 CLAUDE.md
 !KNOWLEDGE_PACK.md
 # Exception for security documentation
-!docs/operators/RLS_IMPLEMENTATION.md
-!docs/operators/INFRASTRUCTURE_UPGRADE_SUMMARY.md
+!docs/operations/RLS_IMPLEMENTATION.md
+!docs/operations/INFRASTRUCTURE_UPGRADE_SUMMARY.md
 
 # Temporary analysis scripts
 analyze_*.py
@@ -205,7 +205,7 @@ docs/**/*-backup.*
 *.development.*
 *.staging.*
 development-*
-!docs/developers/development-guide.md
+!docs/development/development-guide.md
 staging-*
 
 # Performance and profiling outputs

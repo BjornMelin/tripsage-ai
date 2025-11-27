@@ -27,7 +27,7 @@ import { z } from "zod";
 
 export const myTool = tool({
   description: "A simple tool description",
-  execute: async (params, callOptions?: ToolCallOptions) => {
+  execute: async (params, callOptions: ToolCallOptions) => {
     // Tool implementation
     return { result: "ok" };
   },
@@ -51,7 +51,7 @@ import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
 
 export const myTool = createAiTool({
   description: "A tool with guardrails",
-  execute: async (params, callOptions?: ToolCallOptions) => {
+  execute: async (params, callOptions: ToolCallOptions) => {
     // Tool implementation
     return { result: "ok" };
   },
