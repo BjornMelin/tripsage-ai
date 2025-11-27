@@ -183,5 +183,4 @@ Implement a **Supabase-backed agent configuration service** with:
 - `frontend/src/lib/cache/upstash.ts`, `frontend/src/lib/cache/tags.ts` (Upstash
   JSON cache + cache tags).
 - `frontend/src/app/api/agents/*.ts` (agent route handlers using AI SDK v6).
-- `docs/specs/migrations/agent-configuration-backend.md` (migration: agent-configuration-backend).
-- `docs/specs/0029-spec-agent-configuration-backend.md` (spec: 0029 agent configuration backend).
+- `docs/specs/archive/0029-spec-agent-configuration-backend.md` (SPEC-0029 agent configuration backend).
