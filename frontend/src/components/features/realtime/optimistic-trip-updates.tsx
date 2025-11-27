@@ -93,27 +93,26 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
 
   useEffect(() => {
     if (!fetchedTrip) return;
+
     setTrip(fetchedTrip);
-    setFormData({
-      budget: fetchedTrip.budget,
-      destination: fetchedTrip.destination,
-      name: fetchedTrip.title,
-      travelers: fetchedTrip.travelers,
+
+    setFormData((prev) => {
+      const next = {
+        budget: fetchedTrip.budget,
+        destination: fetchedTrip.destination,
+        name: fetchedTrip.title,
+        travelers: fetchedTrip.travelers,
+      } as Partial<TripUpdate>;
+
+      const hasChanged =
+        prev.budget !== next.budget ||
+        prev.destination !== next.destination ||
+        prev.name !== next.name ||
+        prev.travelers !== next.travelers;
+
+      return hasChanged ? next : prev;
     });
   }, [fetchedTrip]);
-
-  /**
-   * Initialize form data with current trip values.
-   */
-  useEffect(() => {
-    if (!trip) return;
-    setFormData({
-      budget: trip.budget,
-      destination: trip.destination,
-      name: trip.title,
-      travelers: trip.travelers,
-    });
-  }, [trip]);
 
   /**
    * Handle optimistic update.
@@ -154,7 +153,16 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
     setTrip((prev) => {
       if (!prev) return prev;
       const uiKey = fieldToUiKey[field];
-      if (!uiKey) return prev;
+      if (!uiKey) {
+        if (process.env.NODE_ENV !== "production") {
+          console.warn("Unmapped trip update field", {
+            field,
+            tripId,
+            value,
+          });
+        }
+        return prev;
+      }
       return {
         ...prev,
         [uiKey]: value as UiTrip[keyof UiTrip],

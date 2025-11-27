@@ -43,8 +43,27 @@ const baseRow: TripsRow = {
 
 const { redis, ratelimit } = setupUpstashMocks();
 
-function createSupabaseMock(rowOverride?: Partial<TripsRow>) {
+type SupabaseMockOptions = {
+  deleteResult?: { count: number; error: unknown | null };
+  getUserResult?: {
+    data: { user: { id: string } | null } | null;
+    error: unknown | null;
+  };
+  singleResult?: { data: TripsRow | null; error: unknown | null };
+  updateResult?: { data: TripsRow | null; error: unknown | null };
+};
+
+function createSupabaseMock(
+  rowOverride?: Partial<TripsRow>,
+  opts?: SupabaseMockOptions
+) {
   const row: TripsRow = { ...baseRow, ...(rowOverride ?? {}) };
+  const singleResult = opts?.singleResult ?? { data: row, error: null };
+  const updateResult = opts?.updateResult ?? {
+    data: { ...row, ...(rowOverride ?? {}) },
+    error: null,
+  };
+  const deleteResult = opts?.deleteResult ?? { count: 1, error: null };
   const builder = {
     delete() {
       this.operation = "delete";
@@ -54,6 +73,7 @@ function createSupabaseMock(rowOverride?: Partial<TripsRow>) {
       return this;
     },
     error: null as unknown,
+    maybeSingle: vi.fn(() => builder.single()),
     operation: "select" as "select" | "update" | "delete",
     select() {
       if (this.operation !== "update") {
@@ -62,11 +82,17 @@ function createSupabaseMock(rowOverride?: Partial<TripsRow>) {
       return this;
     },
     single: vi.fn(() => {
-      if (builder.operation === "select") return { data: row, error: null };
-      if (builder.operation === "update")
-        return { data: { ...row, ...builder.updatePayload }, error: null };
+      if (builder.operation === "select") return singleResult;
+      if (builder.operation === "update") return updateResult;
       return { data: null, error: null };
     }),
+    // biome-ignore lint/suspicious/noThenProperty: Mock promise-like object for testing
+    then(onFulfilled: (value: { count: number; error: unknown | null }) => unknown) {
+      if (this.operation === "delete") {
+        return Promise.resolve(deleteResult).then(onFulfilled);
+      }
+      return Promise.resolve({ count: 0, error: null }).then(onFulfilled);
+    },
     update(payload: Record<string, unknown>) {
       this.operation = "update";
       this.updatePayload = payload;
@@ -77,10 +103,10 @@ function createSupabaseMock(rowOverride?: Partial<TripsRow>) {
 
   return {
     auth: {
-      getUser: vi.fn(async () => ({
-        data: { user: { id: row.user_id } },
-        error: null,
-      })),
+      getUser: vi.fn(
+        async () =>
+          opts?.getUserResult ?? { data: { user: { id: row.user_id } }, error: null }
+      ),
     },
     from: vi.fn(() => builder),
   };
@@ -128,7 +154,12 @@ describe("/api/trips/[id]", () => {
   });
 
   it("updates a trip with validated payload", async () => {
-    const mockSupabase = createSupabaseMock();
+    const mockSupabase = createSupabaseMock(undefined, {
+      updateResult: {
+        data: { ...baseRow, destination: "Rome", name: "Updated Trip" },
+        error: null,
+      },
+    });
     setSupabaseFactoryForTests(() => Promise.resolve(mockSupabase as never));
 
     const req = createMockNextRequest({
@@ -161,5 +192,76 @@ describe("/api/trips/[id]", () => {
     }
 
     expect(res.status).toBe(204);
+  });
+
+  it("returns 404 when trip is not found", async () => {
+    const mockSupabase = createSupabaseMock(undefined, {
+      singleResult: { data: null, error: null },
+    });
+    setSupabaseFactoryForTests(() => Promise.resolve(mockSupabase as never));
+
+    const req = createMockNextRequest({
+      method: "GET",
+      url: "http://localhost/api/trips/999",
+    });
+    const res = await GET(req, createRouteParamsContext({ id: "999" }));
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 401 when user is unauthenticated", async () => {
+    const mockSupabase = createSupabaseMock(undefined, {
+      getUserResult: { data: { user: null }, error: { message: "unauthenticated" } },
+    });
+    setSupabaseFactoryForTests(() => Promise.resolve(mockSupabase as never));
+
+    const req = createMockNextRequest({
+      method: "GET",
+      url: "http://localhost/api/trips/1",
+    });
+    const res = await GET(req, createRouteParamsContext({ id: "1" }));
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 500 when Supabase returns an error on update", async () => {
+    const mockSupabase = createSupabaseMock(undefined, {
+      updateResult: { data: null, error: { message: "update failed" } },
+    });
+    setSupabaseFactoryForTests(() => Promise.resolve(mockSupabase as never));
+
+    const req = createMockNextRequest({
+      body: { destination: "Berlin" },
+      method: "PUT",
+      url: "http://localhost/api/trips/1",
+    });
+    const res = await PUT(req, createRouteParamsContext({ id: "1" }));
+    expect(res.status).toBe(500);
+  });
+
+  it("returns 404 when delete affects no rows", async () => {
+    const mockSupabase = createSupabaseMock(undefined, {
+      deleteResult: { count: 0, error: null },
+    });
+    setSupabaseFactoryForTests(() => Promise.resolve(mockSupabase as never));
+
+    const req = createMockNextRequest({
+      method: "DELETE",
+      url: "http://localhost/api/trips/999",
+    });
+    const res = await DELETE(req, createRouteParamsContext({ id: "999" }));
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 500 when delete encounters Supabase error", async () => {
+    const mockSupabase = createSupabaseMock(undefined, {
+      deleteResult: { count: 0, error: { message: "db error" } },
+    });
+    setSupabaseFactoryForTests(() => Promise.resolve(mockSupabase as never));
+
+    const req = createMockNextRequest({
+      method: "DELETE",
+      url: "http://localhost/api/trips/1",
+    });
+    const res = await DELETE(req, createRouteParamsContext({ id: "1" }));
+    expect(res.status).toBe(500);
   });
 });

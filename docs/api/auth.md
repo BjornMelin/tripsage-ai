@@ -47,6 +47,7 @@ Email/password login; returns JWT tokens and sets HttpOnly Supabase authenticati
 ### Errors
 
 - `400` - Invalid email or password format
+
   ```json
   {
     "error": "invalid_format",
@@ -55,6 +56,7 @@ Email/password login; returns JWT tokens and sets HttpOnly Supabase authenticati
   ```
 
 - `401` - Invalid credentials
+
   ```json
   {
     "error": "invalid_credentials",
@@ -63,6 +65,7 @@ Email/password login; returns JWT tokens and sets HttpOnly Supabase authenticati
   ```
 
 - `429` - Too many failed login attempts
+
   ```json
   {
     "error": "rate_limit_exceeded",
@@ -70,6 +73,7 @@ Email/password login; returns JWT tokens and sets HttpOnly Supabase authenticati
     "retryAfter": 900
   }
   ```
+
   Headers: `Retry-After: 900` (seconds)
 
 ### Examples

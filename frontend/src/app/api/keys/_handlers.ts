@@ -50,9 +50,27 @@ export async function postKey(deps: KeysDeps, body: PostKeyBody): Promise<Respon
 
   // If service is gateway and baseUrl provided, persist base URL metadata
   if (normalized === "gateway" && body.baseUrl && deps.upsertUserGatewayBaseUrl) {
-    await deps.upsertUserGatewayBaseUrl(deps.userId, body.baseUrl);
+    try {
+      await deps.upsertUserGatewayBaseUrl(deps.userId, body.baseUrl);
+    } catch (err) {
+      return errorResponse({
+        err,
+        error: "db_error",
+        reason: "Failed to persist gateway base URL",
+        status: 500,
+      });
+    }
   }
-  await deps.insertUserApiKey(deps.userId, normalized, body.apiKey);
+  try {
+    await deps.insertUserApiKey(deps.userId, normalized, body.apiKey);
+  } catch (err) {
+    return errorResponse({
+      err,
+      error: "db_error",
+      reason: "Failed to store API key",
+      status: 500,
+    });
+  }
   return new Response(null, { status: 204 });
 }
 

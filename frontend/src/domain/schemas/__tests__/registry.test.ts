@@ -375,6 +375,31 @@ describe("routeErrorSchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it.concurrent("rejects empty error or reason strings", () => {
+    const cases = [
+      { error: "", reason: "Missing error" },
+      { error: "some_error", reason: "" },
+    ];
+
+    cases.forEach((input) => {
+      const result = routeErrorSchema.safeParse(input);
+      expect(result.success).toBe(false);
+    });
+  });
+
+  it.concurrent("rejects non-array issues payloads", () => {
+    const invalidIssuesInputs = ["not-an-array", { message: "not-an-array" }];
+
+    invalidIssuesInputs.forEach((issuesValue) => {
+      const result = routeErrorSchema.safeParse({
+        error: "bad_issues",
+        issues: issuesValue,
+        reason: "Invalid issues shape",
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
   it.concurrent("should allow empty issues array", () => {
     const errorWithEmptyIssues = {
       error: "validation_error",

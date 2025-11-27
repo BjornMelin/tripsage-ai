@@ -20,6 +20,9 @@ const paginationSchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(20),
 });
 
+const parseScopeParam = (raw: string | null) =>
+  validateSchema(scopeSchema, raw ?? undefined);
+
 export const GET = withApiGuards({
   auth: true,
   rateLimit: "config:agents:versions",
@@ -41,15 +44,11 @@ export const GET = withApiGuards({
         return agentValidation.error;
       }
 
-      const rawScope = req.nextUrl.searchParams.get("scope");
-      const scopeValidation = validateSchema(
-        scopeSchema,
-        rawScope === null || rawScope.trim() === "" ? undefined : rawScope
-      );
-      if ("error" in scopeValidation) {
-        return scopeValidation.error;
+      const scopeResult = parseScopeParam(req.nextUrl.searchParams.get("scope"));
+      if ("error" in scopeResult) {
+        return scopeResult.error;
       }
-      const scope = scopeValidation.data;
+      const scope = scopeResult.data;
 
       const paginationValidation = validateSchema(paginationSchema, {
         cursor: req.nextUrl.searchParams.get("cursor") ?? undefined,
