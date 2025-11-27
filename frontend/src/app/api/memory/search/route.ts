@@ -25,11 +25,8 @@ export const POST = withApiGuards({
   schema: memorySearchRequestSchema,
   telemetry: "memory.search",
 })(async (_req: NextRequest, { user }, validated: MemorySearchRequest) => {
-  // user is guaranteed by auth: true
-  if (!user) {
-    throw new Error("Authenticated user required for memory search");
-  }
-  const userId = user.id;
+  // auth: true guarantees user is authenticated
+  const userId = user?.id ?? "";
   const { filters, limit } = validated;
 
   try {

@@ -9,6 +9,7 @@ import "server-only";
 
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
+import { errorResponse } from "@/lib/api/route-helpers";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 
 /**
@@ -21,9 +22,8 @@ export const POST = withApiGuards({
   rateLimit: "memory:delete",
   telemetry: "memory.delete",
 })(async (_req, { user }) => {
-  if (!user?.id) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
+  // auth: true guarantees user is authenticated
+  const userId = user?.id ?? "";
 
   try {
     const supabase = createAdminSupabase();
@@ -33,7 +33,7 @@ export const POST = withApiGuards({
       .schema("memories")
       .from("turns")
       .delete()
-      .eq("user_id", user.id);
+      .eq("user_id", userId);
 
     if (turnsError) {
       throw new Error(`turns_delete_failed:${turnsError.message}`);
@@ -44,7 +44,7 @@ export const POST = withApiGuards({
       .schema("memories")
       .from("sessions")
       .delete()
-      .eq("user_id", user.id);
+      .eq("user_id", userId);
 
     if (sessionsError) {
       throw new Error(`sessions_delete_failed:${sessionsError.message}`);
@@ -54,12 +54,11 @@ export const POST = withApiGuards({
       deleted: true,
     });
   } catch (error) {
-    return NextResponse.json(
-      {
-        error: "memory_delete_failed",
-        message: error instanceof Error ? error.message : "Failed to delete memories",
-      },
-      { status: 500 }
-    );
+    return errorResponse({
+      err: error,
+      error: "memory_delete_failed",
+      reason: error instanceof Error ? error.message : "Failed to delete memories",
+      status: 500,
+    });
   }
 });
