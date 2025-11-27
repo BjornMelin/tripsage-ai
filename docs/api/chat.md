@@ -6,7 +6,7 @@ Chat sessions, messaging, and attachments.
 
 Non-streaming chat completion.
 
-**Authentication**: Required  
+**Authentication**: Required (JWT via `sb-access-token` cookie or `Authorization: Bearer <token>` header)
 **Rate Limit Key**: `chat:nonstream`
 
 ### Request Body
@@ -21,6 +21,18 @@ Non-streaming chat completion.
 
 `200 OK` - Returns complete chat response
 
+```json
+{
+  "id": "chat-msg-123",
+  "content": "This is the assistant's response",
+  "role": "assistant",
+  "tokens": {
+    "input": 50,
+    "output": 25
+  }
+}
+```
+
 ### Errors
 
 - `400` - Invalid request parameters
@@ -33,8 +45,8 @@ Non-streaming chat completion.
 
 Streaming chat completion (SSE).
 
-**Authentication**: Required  
-**Rate Limit Key**: `chat:stream`  
+**Authentication**: Required (JWT via `sb-access-token` cookie or `Authorization: Bearer <token>` header)
+**Rate Limit Key**: `chat:stream`
 **Response**: `text/event-stream` (SSE)
 
 ### Request Body
@@ -75,7 +87,7 @@ curl -N -X POST "http://localhost:3000/api/chat/stream" \
 
 Send message to chat session.
 
-**Authentication**: Required  
+**Authentication**: Required (JWT via `sb-access-token` cookie or `Authorization: Bearer <token>` header)
 **Rate Limit Key**: `chat:nonstream`
 
 ### Request Body
@@ -105,7 +117,7 @@ Send message to chat session.
 
 List chat sessions for authenticated user.
 
-**Authentication**: Required  
+**Authentication**: Required (JWT via `sb-access-token` cookie or `Authorization: Bearer <token>` header)
 **Rate Limit Key**: `chat:sessions:list`
 
 #### Response
@@ -134,7 +146,7 @@ List chat sessions for authenticated user.
 
 Create a new chat session.
 
-**Authentication**: Required  
+**Authentication**: Required (JWT via `sb-access-token` cookie or `Authorization: Bearer <token>` header)
 **Rate Limit Key**: `chat:sessions:create`
 
 #### Request Body
