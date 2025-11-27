@@ -388,12 +388,12 @@ describe("routeErrorSchema", () => {
   });
 
   it.concurrent("rejects non-array issues payloads", () => {
-    const invalidIssues = ["not-an-array", { message: "not-an-array" }];
+    const invalidIssuesInputs = ["not-an-array", { message: "not-an-array" }];
 
-    invalidIssues.forEach((issues) => {
+    invalidIssuesInputs.forEach((issuesValue) => {
       const result = routeErrorSchema.safeParse({
         error: "bad_issues",
-        issues,
+        issues: issuesValue,
         reason: "Invalid issues shape",
       });
       expect(result.success).toBe(false);

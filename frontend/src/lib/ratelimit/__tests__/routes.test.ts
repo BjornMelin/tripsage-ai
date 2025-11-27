@@ -4,95 +4,24 @@ import { describe, expect, it } from "vitest";
 import { ROUTE_RATE_LIMITS } from "../routes";
 
 describe("ROUTE_RATE_LIMITS", () => {
-  describe("trips routes", () => {
-    it("defines rate limit for trips:list", () => {
-      expect(ROUTE_RATE_LIMITS["trips:list"]).toEqual({
-        limit: 60,
-        window: "1 m",
-      });
-    });
-
-    it("defines rate limit for trips:detail", () => {
-      expect(ROUTE_RATE_LIMITS["trips:detail"]).toEqual({
-        limit: 60,
-        window: "1 m",
-      });
-    });
-
-    it("defines rate limit for trips:update", () => {
-      expect(ROUTE_RATE_LIMITS["trips:update"]).toEqual({
-        limit: 30,
-        window: "1 m",
-      });
-    });
-
-    it("defines rate limit for trips:delete", () => {
-      expect(ROUTE_RATE_LIMITS["trips:delete"]).toEqual({
-        limit: 10,
-        window: "1 m",
-      });
-    });
-  });
-
-  describe("chat session routes", () => {
-    it("defines rate limit for chat:sessions:create", () => {
-      expect(ROUTE_RATE_LIMITS["chat:sessions:create"]).toEqual({
-        limit: 30,
-        window: "1 m",
-      });
-    });
-
-    it("defines rate limit for chat:sessions:list", () => {
-      expect(ROUTE_RATE_LIMITS["chat:sessions:list"]).toEqual({
-        limit: 60,
-        window: "1 m",
-      });
-    });
-
-    it("defines rate limit for chat:sessions:messages:create", () => {
-      expect(ROUTE_RATE_LIMITS["chat:sessions:messages:create"]).toEqual({
-        limit: 40,
-        window: "1 m",
-      });
-    });
-  });
-
-  describe("memory routes", () => {
-    it("defines rate limit for memory:search", () => {
-      expect(ROUTE_RATE_LIMITS["memory:search"]).toEqual({
-        limit: 60,
-        window: "1 m",
-      });
-    });
-
-    it("defines rate limit for memory:context", () => {
-      expect(ROUTE_RATE_LIMITS["memory:context"]).toEqual({
-        limit: 60,
-        window: "1 m",
-      });
-    });
-
-    it("defines rate limit for memory:stats", () => {
-      expect(ROUTE_RATE_LIMITS["memory:stats"]).toEqual({
-        limit: 30,
-        window: "1 m",
-      });
-    });
-  });
-
-  describe("security routes", () => {
-    it("defines rate limit for security:metrics", () => {
-      expect(ROUTE_RATE_LIMITS["security:metrics"]).toEqual({
-        limit: 20,
-        window: "1 m",
-      });
-    });
-
-    it("defines rate limit for security:sessions:list", () => {
-      expect(ROUTE_RATE_LIMITS["security:sessions:list"]).toEqual({
-        limit: 20,
-        window: "1 m",
-      });
+  describe("route definitions", () => {
+    it.each([
+      ["trips:list", { limit: 60, window: "1 m" }],
+      ["trips:detail", { limit: 60, window: "1 m" }],
+      ["trips:update", { limit: 30, window: "1 m" }],
+      ["trips:delete", { limit: 10, window: "1 m" }],
+      ["chat:sessions:create", { limit: 30, window: "1 m" }],
+      ["chat:sessions:list", { limit: 60, window: "1 m" }],
+      ["chat:sessions:messages:create", { limit: 40, window: "1 m" }],
+      ["memory:search", { limit: 60, window: "1 m" }],
+      ["memory:context", { limit: 60, window: "1 m" }],
+      ["memory:stats", { limit: 30, window: "1 m" }],
+      ["security:metrics", { limit: 20, window: "1 m" }],
+      ["security:sessions:list", { limit: 20, window: "1 m" }],
+    ])("defines rate limit for %s", (routeName, expected) => {
+      expect(ROUTE_RATE_LIMITS[routeName as keyof typeof ROUTE_RATE_LIMITS]).toEqual(
+        expected
+      );
     });
   });
 

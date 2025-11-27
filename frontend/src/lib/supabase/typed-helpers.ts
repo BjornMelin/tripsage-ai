@@ -80,7 +80,9 @@ export async function insertSingle<T extends keyof Database["public"]["Tables"]>
 /**
  * Updates rows in the specified table and returns a single selected row.
  * A `where` closure receives the fluent query builder to apply filters
- * (`eq`, `in`, etc.) prior to selecting the row.
+ * (`eq`, `in`, etc.) prior to selecting the row. Callers must supply filters
+ * that narrow the result to one row; this helper does not enforce uniqueness
+ * and will update all matching rows before selecting `.single()`.
  * Validates input and output using Zod schemas when available.
  *
  * @template T Table name constrained to `Database['public']['Tables']` keys
@@ -127,7 +129,9 @@ export async function updateSingle<T extends TableName>(
 /**
  * Fetches a single row from the specified table.
  * A `where` closure receives the fluent query builder to apply filters
- * (`eq`, `in`, etc.) prior to selecting the row.
+ * (`eq`, `in`, etc.) prior to selecting the row. The caller is responsible for
+ * scoping the filter to a unique row; this helper does not add additional
+ * constraints and will surface Supabase errors if multiple rows match.
  * Validates output using Zod schemas when available.
  *
  * @template T Table name constrained to `Database['public']['Tables']` keys
@@ -167,7 +171,10 @@ export async function getSingle<T extends TableName>(
 /**
  * Deletes rows from the specified table matching the given criteria.
  * A `where` closure receives the fluent query builder to apply filters
- * (`eq`, `in`, etc.) prior to deletion.
+ * (`eq`, `in`, etc.) prior to deletion. Naming follows getSingle/updateSingle;
+ * callers must provide filters that target the intended row(s). This helper
+ * does not enforce single-row deletion and will delete all rows matching the
+ * supplied filter.
  *
  * @template T Table name constrained to `Database['public']['Tables']` keys
  * @param client Typed supabase client
