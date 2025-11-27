@@ -43,6 +43,26 @@ Notification job data including:
 
 ### Errors
 
+- `400` - Bad Request. Returned when:
+  - Required fields are missing (`tripId`, `event`, `collaboratorIds`, or `message`)
+  - Invalid enum value for `event` field
+  - `collaboratorIds` is not an array or is empty
+  - Malformed JSON in request body
+
+  **Example 400 Response:**
+  ```json
+  {
+    "error": "Validation failed",
+    "details": [
+      {
+        "field": "event",
+        "message": "Invalid event type. Must be one of: trip_created, trip_updated, trip_shared, trip_deleted",
+        "code": "INVALID_ENUM_VALUE"
+      }
+    ]
+  }
+  ```
+
 - `401` - Invalid QStash signature
 - `500` - Notification delivery failed
 
@@ -77,6 +97,26 @@ Memory sync job data including:
 `200 OK`
 
 ### Errors
+
+- `400` - Bad Request. Returned when:
+  - Required fields are missing (`userId`, `conversationId`, or `syncType`)
+  - Invalid enum value for `syncType` field (must be `full` or `incremental`)
+  - Malformed JSON in request body
+  - Invalid UUID format for `userId` or `conversationId`
+
+  **Example 400 Response:**
+  ```json
+  {
+    "error": "Validation failed",
+    "details": [
+      {
+        "field": "syncType",
+        "message": "Invalid sync type. Must be 'full' or 'incremental'",
+        "code": "INVALID_ENUM_VALUE"
+      }
+    ]
+  }
+  ```
 
 - `401` - Invalid QStash signature
 - `500` - Memory sync failed

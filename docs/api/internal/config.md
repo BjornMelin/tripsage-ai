@@ -138,6 +138,7 @@ List agent configuration versions.
     {
       "versionId": "version-uuid-1",
       "createdAt": "2025-01-20T15:30:00Z",
+      "updatedAt": "2025-01-20T15:30:00Z",
       "description": "Updated temperature to 0.7",
       "config": {
         "model": "gpt-4",
@@ -147,6 +148,7 @@ List agent configuration versions.
     {
       "versionId": "version-uuid-2",
       "createdAt": "2025-01-15T10:00:00Z",
+      "updatedAt": "2025-01-15T10:00:00Z",
       "description": "Initial configuration",
       "config": {
         "model": "gpt-4",
@@ -190,7 +192,8 @@ Rollback agent configuration to a previous version.
 {
   "rolledBackToVersionId": "version-uuid-2",
   "previousVersionId": "version-uuid-1",
-  "timestamp": "2025-01-20T15:35:00Z",
+  "createdAt": "2025-01-15T10:00:00Z",
+  "updatedAt": "2025-01-20T15:35:00Z",
   "config": {
     "model": "gpt-4",
     "temperature": 0.5,
