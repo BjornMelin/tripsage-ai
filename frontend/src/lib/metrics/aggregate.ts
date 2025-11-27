@@ -8,25 +8,10 @@
 
 import "server-only";
 
-import {
-  type DashboardMetrics,
-  dashboardMetricsSchema,
-  type TimeWindow,
-  timeWindowSchema,
-  windowToHours,
-} from "@schemas/dashboard";
+import { type DashboardMetrics, dashboardMetricsSchema } from "@schemas/dashboard";
 import { getRedis } from "@/lib/redis";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
-
-// Re-export for backwards compatibility with existing consumers
-export {
-  type DashboardMetrics,
-  dashboardMetricsSchema,
-  type TimeWindow,
-  timeWindowSchema,
-  windowToHours,
-};
 
 /**
  * Aggregates dashboard metrics from Supabase with Redis caching.
