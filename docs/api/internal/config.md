@@ -25,7 +25,25 @@ Get agent configuration.
 
 ### Response
 
-`200 OK` - Returns agent configuration
+`200 OK`
+
+```json
+{
+  "agentType": "flightAgent",
+  "scope": "global",
+  "config": {
+    "model": "gpt-4",
+    "temperature": 0.7,
+    "maxTokens": 2048,
+    "topP": 0.95,
+    "timeoutSeconds": 30,
+    "description": "Flight search agent configuration"
+  },
+  "versionId": "version-uuid",
+  "createdAt": "2025-01-15T10:00:00Z",
+  "updatedAt": "2025-01-20T15:30:00Z"
+}
+```
 
 ### Errors
 
@@ -72,8 +90,19 @@ Update agent configuration.
 
 ```json
 {
-  "config": {...},
-  "versionId": "version-uuid"
+  "agentType": "flightAgent",
+  "scope": "global",
+  "config": {
+    "model": "gpt-4",
+    "temperature": 0.7,
+    "maxTokens": 2048,
+    "topP": 0.95,
+    "timeoutSeconds": 30,
+    "description": "Flight search agent configuration"
+  },
+  "versionId": "version-uuid",
+  "createdAt": "2025-01-15T10:00:00Z",
+  "updatedAt": "2025-01-20T15:30:00Z"
 }
 ```
 
@@ -101,7 +130,35 @@ List agent configuration versions.
 
 ### Response
 
-`200 OK` - Returns version list
+`200 OK`
+
+```json
+{
+  "items": [
+    {
+      "versionId": "version-uuid-1",
+      "createdAt": "2025-01-20T15:30:00Z",
+      "description": "Updated temperature to 0.7",
+      "config": {
+        "model": "gpt-4",
+        "temperature": 0.7
+      }
+    },
+    {
+      "versionId": "version-uuid-2",
+      "createdAt": "2025-01-15T10:00:00Z",
+      "description": "Initial configuration",
+      "config": {
+        "model": "gpt-4",
+        "temperature": 0.5
+      }
+    }
+  ],
+  "page": 1,
+  "pageSize": 20,
+  "totalCount": 2
+}
+```
 
 ### Errors
 
@@ -115,7 +172,7 @@ List agent configuration versions.
 
 Rollback agent configuration to a previous version.
 
-**Authentication**: Required (Admin only)  
+**Authentication**: Required (Admin only)
 **Rate Limit Key**: `config:agents:rollback`
 
 ### Path Parameters
@@ -127,7 +184,22 @@ Rollback agent configuration to a previous version.
 
 ### Response
 
-`200 OK` - Returns rollback result
+`200 OK`
+
+```json
+{
+  "rolledBackToVersionId": "version-uuid-2",
+  "previousVersionId": "version-uuid-1",
+  "timestamp": "2025-01-20T15:35:00Z",
+  "config": {
+    "model": "gpt-4",
+    "temperature": 0.5,
+    "maxTokens": 2048,
+    "topP": 0.95,
+    "timeoutSeconds": 30
+  }
+}
+```
 
 ### Errors
 

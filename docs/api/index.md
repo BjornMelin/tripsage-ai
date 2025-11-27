@@ -93,6 +93,22 @@ Rate limit keys follow the pattern `{resource}:{action}`. Common examples:
 
 See individual endpoint documentation for specific rate limit keys.
 
+### Rate Limit Thresholds
+
+The following rate limits are applied per authenticated user/IP address:
+
+| Endpoint Category | Rate Limit | Time Window | Notes |
+|-------------------|-----------|------------|-------|
+| **Read Operations** (list, get) | 100 requests | 1 minute | Standard queries, filters |
+| **Write Operations** (create, update) | 50 requests | 1 minute | CREATE, PUT, PATCH operations |
+| **Delete Operations** | 30 requests | 1 minute | Destructive operations |
+| **Search Operations** | 60 requests | 1 minute | Text search, filtering endpoints |
+| **AI Agents** (streaming) | 20 requests | 1 minute | resource-intensive agents |
+| **Anonymous Endpoints** | 100 requests | 1 hour | Places/Activities search, no auth |
+| **Admin Endpoints** | 50 requests | 1 hour | Configuration changes, admin-only |
+
+**Note**: These are global defaults. Specific endpoints may have custom limits noted in their documentation. Limits are enforced using sliding window rate limiting with Upstash Redis.
+
 ## Errors
 
 The API uses conventional HTTP response codes to indicate success or failure.
