@@ -205,7 +205,7 @@ import { toolRegistry } from "@ai/tools";
 
 function buildMyAgentTools(identifier: string): ToolSet {
   const baseTool = toolRegistry.myTool as unknown as {
-    execute?: (params: unknown, callOptions?: unknown) => Promise<unknown> | unknown;
+    execute?: (params: unknown, callOptions: unknown) => Promise<unknown> | unknown;
   };
 
   const wrappedTool = createAiTool({
