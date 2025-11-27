@@ -11,11 +11,28 @@ Add conversation memory.
 
 ### Request Body
 
-Conversation memory data including messages and context.
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `messages` | array | Yes | Array of message objects with `role` (system/user/assistant) and `content` (string) |
+| `context` | object | No | Additional context data (metadata, tags, etc.) |
+| `sessionId` | string | No | Optional session identifier for grouping conversations |
+| `metadata` | object | No | Custom metadata key-value pairs |
 
 ### Response
 
-`200 OK` - Returns memory creation result
+`200 OK`
+
+```json
+{
+  "id": "memory-uuid-123",
+  "createdAt": "2025-01-20T15:30:00Z",
+  "messagesCount": 5,
+  "result": {
+    "summary": "Conversation summary",
+    "keyTopics": ["topic1", "topic2"]
+  }
+}
+```
 
 ### Errors
 
@@ -55,8 +72,8 @@ Search memories.
 
 Get user memory data.
 
-**Authentication**: Required  
-**Rate Limit Key**: `memory:delete`
+**Authentication**: Required
+**Rate Limit Key**: `memory:read`
 
 ### Path Parameters
 
@@ -76,7 +93,7 @@ Get user memory data.
 
 ---
 
-## `POST /api/memory/user/{userId}`
+## `DELETE /api/memory/user/{userId}`
 
 Delete all memories for a user.
 

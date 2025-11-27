@@ -6,8 +6,8 @@ Bring Your Own Key (BYOK) API key management for AI providers.
 
 List stored provider API keys (metadata only, no secrets).
 
-**Authentication**: Required  
-**Rate Limit Key**: `keys:create`
+**Authentication**: Required
+**Rate Limit Key**: `keys:list`
 
 ### Response
 
@@ -43,7 +43,7 @@ Upsert a provider API key.
 |-------|------|----------|-------------|
 | `service` | string | Yes | Service name (`openai`, `openrouter`, `anthropic`, `xai`, `gateway`) |
 | `apiKey` | string | Yes | API key (max 2048 chars) |
-| `baseUrl` | string | No | Gateway base URL (must be HTTPS, for gateway service only) |
+| `baseUrl` | string | No | Gateway base URL (applies to `gateway` service only). Must be HTTPS, with valid resolvable hostname (no wildcards). Required for `gateway` service, optional for self-hosted deployments. Include trailing slash if path-based routing is used. Defaults to public gateway if omitted for `gateway` service. |
 
 ### Response
 
@@ -80,7 +80,7 @@ Delete a provider API key.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `service` | string | Yes | Service name (`openai`, `openrouter`, `anthropic`, `xai`) |
+| `service` | string | Yes | Service name (`openai`, `openrouter`, `anthropic`, `xai`, `gateway`) |
 
 ### Response
 

@@ -104,7 +104,34 @@ Same as `POST /api/activities/search`
 
 #### Response
 
-`200 OK` - Returns places array
+`200 OK`
+
+```json
+{
+  "places": [
+    {
+      "id": "places/ChIJN1t_tDeuEmsRUsoyG83frY4",
+      "displayName": {
+        "text": "Louvre Museum",
+        "languageCode": "en"
+      },
+      "formattedAddress": "Rue de Rivoli, 75001 Paris, France",
+      "location": {
+        "latitude": 48.8606,
+        "longitude": 2.3376
+      },
+      "rating": 4.7,
+      "userRatingCount": 123456,
+      "photos": [
+        {
+          "name": "places/ChIJN1t_tDeuEmsRUsoyG83frY4/photos/AW30PQh8j1lbMpA1y2j6Cmbt1wEi4hlOnwRxfv-iEkT8ctM1wENl5A"
+        }
+      ],
+      "types": ["museum", "tourist_attraction", "point_of_interest", "establishment"]
+    }
+  ]
+}
+```
 
 #### Errors
 
@@ -134,7 +161,49 @@ Get place details by Place ID.
 
 #### Response
 
-`200 OK` - Returns place details with minimal field mask
+`200 OK`
+
+```json
+{
+  "id": "places/ChIJN1t_tDeuEmsRUsoyG83frY4",
+  "displayName": {
+    "text": "Louvre Museum",
+    "languageCode": "en"
+  },
+  "formattedAddress": "Rue de Rivoli, 75001 Paris, France",
+  "location": {
+    "latitude": 48.8606,
+    "longitude": 2.3376
+  },
+  "url": "https://maps.google.com/?cid=10281119596374313554",
+  "internationalPhoneNumber": "+33 1 40 20 50 50",
+  "rating": 4.7,
+  "userRatingCount": 123456,
+  "regularOpeningHours": {
+    "openNow": true,
+    "weekdayDescriptions": [
+      "Monday: Closed",
+      "Tuesday: 9:00 AM – 6:00 PM",
+      "Wednesday: 9:00 AM – 9:45 PM",
+      "Thursday: 9:00 AM – 6:00 PM",
+      "Friday: 9:00 AM – 9:45 PM",
+      "Saturday: 9:00 AM – 6:00 PM",
+      "Sunday: 9:00 AM – 6:00 PM"
+    ]
+  },
+  "photos": [
+    {
+      "name": "places/ChIJN1t_tDeuEmsRUsoyG83frY4/photos/AW30PQh8j1lbMpA1y2j6Cmbt1wEi4hlOnwRxfv-iEkT8ctM1wENl5A"
+    }
+  ],
+  "businessStatus": "OPERATIONAL",
+  "types": ["museum", "tourist_attraction", "point_of_interest", "establishment"],
+  "editorialSummary": {
+    "text": "The Louvre, or the Louvre Museum, is a national art museum in Paris, France.",
+    "languageCode": "en"
+  }
+}
+```
 
 #### Errors
 
@@ -167,7 +236,11 @@ Get place photo by photo reference name.
 
 #### Response
 
-`200 OK` - Returns photo image data
+`200 OK`
+
+Returns binary image data (JPEG/PNG) with `Content-Type: image/jpeg` or `image/png` header.
+
+**Note**: This endpoint returns binary image data, not JSON. The response body contains the raw image bytes.
 
 #### Errors
 
@@ -252,7 +325,32 @@ Get distance/duration matrix for multiple origins and destinations.
 
 #### Response
 
-`200 OK` - Returns route matrix
+`200 OK`
+
+```json
+[
+  {
+    "originIndex": 0,
+    "destinationIndex": 0,
+    "duration": "900s",
+    "distanceMeters": 5230,
+    "status": {
+      "code": 0
+    },
+    "condition": "ROUTE_EXISTS"
+  },
+  {
+    "originIndex": 0,
+    "destinationIndex": 1,
+    "duration": "1320s",
+    "distanceMeters": 8740,
+    "status": {
+      "code": 0
+    },
+    "condition": "ROUTE_EXISTS"
+  }
+]
+```
 
 #### Errors
 
@@ -280,7 +378,27 @@ Multimodal route planner.
 
 #### Response
 
-`200 OK` - Returns route information
+`200 OK`
+
+```json
+{
+  "routes": [
+    {
+      "duration": "900s",
+      "distanceMeters": 5230,
+      "polyline": {
+        "encodedPolyline": "u{~|Fnyys@fS_DzBmO"
+      },
+      "legs": [
+        {
+          "stepCount": 12
+        }
+      ],
+      "routeLabels": ["DEFAULT_ROUTE"]
+    }
+  ]
+}
+```
 
 #### Errors
 
