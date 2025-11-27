@@ -4,7 +4,9 @@ import {
   type Email,
   type IsoDateTime,
   primitiveSchemas,
+  type RouteError,
   refinedSchemas,
+  routeErrorSchema,
   type Timestamp,
   transformSchemas,
   type Url,
@@ -323,5 +325,72 @@ describe("Error messages", () => {
     if (!result.success) {
       expect(result.error.issues[0]).toHaveProperty("message");
     }
+  });
+});
+
+describe("routeErrorSchema", () => {
+  it.concurrent("should validate valid route error with required fields", () => {
+    const validError = {
+      error: "not_found",
+      reason: "Trip not found",
+    };
+    const result = routeErrorSchema.safeParse(validError);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.error).toBe("not_found");
+      expect(result.data.reason).toBe("Trip not found");
+      expect(result.data.issues).toBeUndefined();
+    }
+  });
+
+  it.concurrent("should validate route error with optional issues array", () => {
+    const errorWithIssues = {
+      error: "invalid_request",
+      issues: [
+        { code: "invalid_type", message: "Expected string" },
+        { message: "Required", path: ["name"] },
+      ],
+      reason: "Request validation failed",
+    };
+    const result = routeErrorSchema.safeParse(errorWithIssues);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.issues).toHaveLength(2);
+    }
+  });
+
+  it.concurrent("should reject error without required error field", () => {
+    const invalidError = {
+      reason: "Some reason",
+    };
+    const result = routeErrorSchema.safeParse(invalidError);
+    expect(result.success).toBe(false);
+  });
+
+  it.concurrent("should reject error without required reason field", () => {
+    const invalidError = {
+      error: "some_error",
+    };
+    const result = routeErrorSchema.safeParse(invalidError);
+    expect(result.success).toBe(false);
+  });
+
+  it.concurrent("should allow empty issues array", () => {
+    const errorWithEmptyIssues = {
+      error: "validation_error",
+      issues: [],
+      reason: "No issues found",
+    };
+    const result = routeErrorSchema.safeParse(errorWithEmptyIssues);
+    expect(result.success).toBe(true);
+  });
+
+  it.concurrent("should export RouteError type", () => {
+    const error: RouteError = {
+      error: "unauthorized",
+      reason: "Authentication required",
+    };
+    expect(typeof error.error).toBe("string");
+    expect(typeof error.reason).toBe("string");
   });
 });
