@@ -14,7 +14,7 @@ import { tripCreateSchema, tripFiltersSchema } from "@schemas/trips";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { errorResponse } from "@/lib/api/route-helpers";
+import { errorResponse, requireUserId } from "@/lib/api/route-helpers";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 import { bumpTag } from "@/lib/cache/tags";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
@@ -247,13 +247,9 @@ export const GET = withApiGuards({
   rateLimit: "trips:list",
   telemetry: "trips.list",
 })(async (req, { supabase, user }) => {
-  const userId = user?.id;
-  if (!userId) {
-    return NextResponse.json(
-      { error: "unauthorized", reason: "Authentication required" },
-      { status: 401 }
-    );
-  }
+  const result = requireUserId(user);
+  if ("error" in result) return result.error;
+  const { userId } = result;
   return await listTripsHandler(supabase, userId, req);
 });
 
@@ -268,13 +264,8 @@ export const POST = withApiGuards({
   rateLimit: "trips:create",
   telemetry: "trips.create",
 })(async (req, { supabase, user }) => {
-  const userId = user?.id;
-  if (!userId) {
-    return NextResponse.json(
-      { error: "unauthorized", reason: "Authentication required" },
-      { status: 401 }
-    );
-  }
-
+  const result = requireUserId(user);
+  if ("error" in result) return result.error;
+  const { userId } = result;
   return await createTripHandler(supabase, userId, req);
 });

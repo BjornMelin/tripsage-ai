@@ -15,7 +15,7 @@ import { resolveAgentConfig } from "@/lib/agents/config-resolver";
 import { createErrorHandler } from "@/lib/agents/error-recovery";
 import { runFlightAgent } from "@/lib/agents/flight-agent";
 import { withApiGuards } from "@/lib/api/factory";
-import { parseJsonBody, validateSchema } from "@/lib/api/route-helpers";
+import { parseJsonBody, requireUserId, validateSchema } from "@/lib/api/route-helpers";
 
 export const maxDuration = 60;
 
@@ -31,6 +31,10 @@ export const POST = withApiGuards({
   rateLimit: "agents:flight",
   telemetry: "agent.flightSearch",
 })(async (req: NextRequest, { user }) => {
+  const userResult = requireUserId(user);
+  if ("error" in userResult) return userResult.error;
+  const { userId } = userResult;
+
   const parsed = await parseJsonBody(req);
   if ("error" in parsed) {
     return parsed.error;
@@ -45,7 +49,7 @@ export const POST = withApiGuards({
   const config = await resolveAgentConfig("flightAgent");
   const modelHint =
     config.config.model ?? new URL(req.url).searchParams.get("model") ?? undefined;
-  const { model, modelId } = await resolveProvider(user?.id ?? "anon", modelHint);
+  const { model, modelId } = await resolveProvider(userId, modelHint);
 
   const result = runFlightAgent({ model, modelId }, config.config, body);
   return result.toUIMessageStreamResponse({

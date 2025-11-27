@@ -15,7 +15,7 @@ import { resolveAgentConfig } from "@/lib/agents/config-resolver";
 import { runDestinationAgent } from "@/lib/agents/destination-agent";
 import { createErrorHandler } from "@/lib/agents/error-recovery";
 import { withApiGuards } from "@/lib/api/factory";
-import { parseJsonBody, validateSchema } from "@/lib/api/route-helpers";
+import { parseJsonBody, requireUserId, validateSchema } from "@/lib/api/route-helpers";
 
 export const maxDuration = 60;
 
@@ -31,6 +31,10 @@ export const POST = withApiGuards({
   rateLimit: "agents:destinations",
   telemetry: "agent.destinationResearch",
 })(async (req: NextRequest, { user }) => {
+  const userResult = requireUserId(user);
+  if ("error" in userResult) return userResult.error;
+  const { userId } = userResult;
+
   const parsed = await parseJsonBody(req);
   if ("error" in parsed) {
     return parsed.error;
@@ -45,7 +49,7 @@ export const POST = withApiGuards({
   const { config: agentConfig } = await resolveAgentConfig("destinationResearchAgent");
   const modelHint =
     agentConfig.model ?? new URL(req.url).searchParams.get("model") ?? undefined;
-  const { model, modelId } = await resolveProvider(user?.id ?? "anon", modelHint);
+  const { model, modelId } = await resolveProvider(userId, modelHint);
 
   const result = runDestinationAgent({ model, modelId }, agentConfig, body);
   return result.toUIMessageStreamResponse({

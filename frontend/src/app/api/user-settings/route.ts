@@ -15,7 +15,7 @@ import "server-only";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { errorResponse, parseJsonBody } from "@/lib/api/route-helpers";
+import { errorResponse, parseJsonBody, requireUserId } from "@/lib/api/route-helpers";
 import { getUserAllowGatewayFallback } from "@/lib/supabase/rpc";
 
 /**
@@ -30,8 +30,9 @@ export const GET = withApiGuards({
   rateLimit: "user-settings:get",
   telemetry: "user-settings.get",
 })(async (_req, { user }) => {
-  // auth: true guarantees user is authenticated
-  const userId = user?.id ?? "";
+  const result = requireUserId(user);
+  if ("error" in result) return result.error;
+  const { userId } = result;
   const allowGatewayFallback = await getUserAllowGatewayFallback(userId);
   return NextResponse.json({ allowGatewayFallback });
 });
@@ -69,8 +70,9 @@ export const POST = withApiGuards({
     });
   }
 
-  // auth: true guarantees user is authenticated
-  const userId = user?.id ?? "";
+  const result = requireUserId(user);
+  if ("error" in result) return result.error;
+  const { userId } = result;
 
   // Upsert row with owner RLS via SSR client
   type UserSettingsInsert = Database["public"]["Tables"]["user_settings"]["Insert"];

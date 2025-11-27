@@ -10,6 +10,7 @@ import "server-only";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
+import { requireUserId } from "@/lib/api/route-helpers";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 
@@ -49,7 +50,9 @@ export const GET = withApiGuards({
   rateLimit: "attachments:files",
   telemetry: "attachments.files.read",
 })(async (req: NextRequest, { user }) => {
-  const userId = user?.id ?? "";
+  const result = requireUserId(user);
+  if ("error" in result) return result.error;
+  const { userId } = result;
   const authHeader = req.headers.get("authorization");
   const { searchParams } = req.nextUrl;
   const qs = searchParams.toString();

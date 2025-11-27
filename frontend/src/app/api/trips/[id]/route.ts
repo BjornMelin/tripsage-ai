@@ -18,6 +18,7 @@ import {
   notFoundResponse,
   parseJsonBody,
   parseNumericId,
+  requireUserId,
   validateSchema,
 } from "@/lib/api/route-helpers";
 import { bumpTag } from "@/lib/cache/tags";
@@ -193,19 +194,14 @@ export const GET = withApiGuards({
   rateLimit: "trips:detail",
   telemetry: "trips.detail",
 })(async (_req, { supabase, user }, _data, routeContext) => {
-  // user is guaranteed by auth: true in withApiGuards
-  const userId = user?.id ?? "";
-  if (!userId)
-    return errorResponse({
-      error: "unauthorized",
-      reason: "Missing user",
-      status: 401,
-    });
+  const userResult = requireUserId(user);
+  if ("error" in userResult) return userResult.error;
+  const { userId } = userResult;
 
-  const result = await parseNumericId(routeContext);
-  if ("error" in result) return result.error;
+  const idResult = await parseNumericId(routeContext);
+  if ("error" in idResult) return idResult.error;
 
-  return getTripById(supabase, userId, result.id);
+  return getTripById(supabase, userId, idResult.id);
 });
 
 /**
@@ -216,19 +212,14 @@ export const PUT = withApiGuards({
   rateLimit: "trips:update",
   telemetry: "trips.update",
 })(async (req, { supabase, user }, _data, routeContext) => {
-  // user is guaranteed by auth: true in withApiGuards
-  const userId = user?.id ?? "";
-  if (!userId)
-    return errorResponse({
-      error: "unauthorized",
-      reason: "Missing user",
-      status: 401,
-    });
+  const userResult = requireUserId(user);
+  if ("error" in userResult) return userResult.error;
+  const { userId } = userResult;
 
-  const result = await parseNumericId(routeContext);
-  if ("error" in result) return result.error;
+  const idResult = await parseNumericId(routeContext);
+  if ("error" in idResult) return idResult.error;
 
-  return updateTripById(req, supabase, userId, result.id);
+  return updateTripById(req, supabase, userId, idResult.id);
 });
 
 /**
@@ -239,17 +230,12 @@ export const DELETE = withApiGuards({
   rateLimit: "trips:delete",
   telemetry: "trips.delete",
 })(async (_req, { supabase, user }, _data, routeContext) => {
-  // user is guaranteed by auth: true in withApiGuards
-  const userId = user?.id ?? "";
-  if (!userId)
-    return errorResponse({
-      error: "unauthorized",
-      reason: "Missing user",
-      status: 401,
-    });
+  const userResult = requireUserId(user);
+  if ("error" in userResult) return userResult.error;
+  const { userId } = userResult;
 
-  const result = await parseNumericId(routeContext);
-  if ("error" in result) return result.error;
+  const idResult = await parseNumericId(routeContext);
+  if ("error" in idResult) return idResult.error;
 
-  return deleteTripById(supabase, userId, result.id);
+  return deleteTripById(supabase, userId, idResult.id);
 });

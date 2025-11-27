@@ -15,7 +15,7 @@ import { resolveAgentConfig } from "@/lib/agents/config-resolver";
 import { createErrorHandler } from "@/lib/agents/error-recovery";
 import { runItineraryAgent } from "@/lib/agents/itinerary-agent";
 import { withApiGuards } from "@/lib/api/factory";
-import { parseJsonBody, validateSchema } from "@/lib/api/route-helpers";
+import { parseJsonBody, requireUserId, validateSchema } from "@/lib/api/route-helpers";
 
 export const maxDuration = 60;
 
@@ -35,6 +35,10 @@ export const POST = withApiGuards({
   rateLimit: "agents:itineraries",
   telemetry: "agent.itineraryPlanning",
 })(async (req: NextRequest, { user }) => {
+  const userResult = requireUserId(user);
+  if ("error" in userResult) return userResult.error;
+  const { userId } = userResult;
+
   const parsed = await parseJsonBody(req);
   if ("error" in parsed) {
     return parsed.error;
@@ -50,12 +54,9 @@ export const POST = withApiGuards({
   const resolved = await resolveAgentConfig("itineraryAgent");
   const agentConfig = resolved.config;
   const resolvedModelHint = agentConfig.model ?? modelHint;
-  const { model, modelId } = await resolveProvider(
-    user?.id ?? "anon",
-    resolvedModelHint
-  );
+  const { model, modelId } = await resolveProvider(userId, resolvedModelHint);
 
-  const identifier = user?.id ?? "anon";
+  const identifier = userId;
   const result = runItineraryAgent({ identifier, model, modelId }, agentConfig, body);
   return result.toUIMessageStreamResponse({
     onError: createErrorHandler(),

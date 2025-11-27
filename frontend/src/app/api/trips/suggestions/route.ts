@@ -16,6 +16,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
+import { requireUserId } from "@/lib/api/route-helpers";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 
@@ -151,14 +152,9 @@ export const GET = withApiGuards({
   rateLimit: "trips:suggestions",
   telemetry: "trips.suggestions",
 })(async (req, { user }) => {
-  const userId = user?.id;
-  if (!userId) {
-    return NextResponse.json(
-      { error: "unauthorized", reason: "Authentication required" },
-      { status: 401 }
-    );
-  }
-
+  const result = requireUserId(user);
+  if ("error" in result) return result.error;
+  const { userId } = result;
   const params = parseSuggestionQueryParams(req);
   const suggestions = await generateSuggestionsWithCache(userId, params);
   return NextResponse.json(suggestions);

@@ -6,6 +6,7 @@ import "server-only";
 
 import { type NextRequest, NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
+import { requireUserId } from "@/lib/api/route-helpers";
 import { getUserSecurityEvents } from "@/lib/security/service";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 
@@ -21,8 +22,9 @@ export const GET = withApiGuards({
   rateLimit: "security:events",
   telemetry: "security.events",
 })(async (_req: NextRequest, { user }) => {
-  // auth: true guarantees user is authenticated
-  const userId = user?.id ?? "";
+  const result = requireUserId(user);
+  if ("error" in result) return result.error;
+  const { userId } = result;
 
   const adminSupabase = createAdminSupabase();
   const events = await getUserSecurityEvents(adminSupabase, userId);

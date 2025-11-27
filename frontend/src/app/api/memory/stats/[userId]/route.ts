@@ -9,7 +9,7 @@ import "server-only";
 
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { errorResponse } from "@/lib/api/route-helpers";
+import { errorResponse, requireUserId } from "@/lib/api/route-helpers";
 import { handleMemoryIntent } from "@/lib/memory/orchestrator";
 
 /**
@@ -22,8 +22,9 @@ export const GET = withApiGuards({
   rateLimit: "memory:stats",
   telemetry: "memory.stats",
 })(async (_req, { user }) => {
-  // auth: true guarantees user is authenticated
-  const userId = user?.id ?? "";
+  const result = requireUserId(user);
+  if ("error" in result) return result.error;
+  const { userId } = result;
 
   try {
     const memoryResult = await handleMemoryIntent({

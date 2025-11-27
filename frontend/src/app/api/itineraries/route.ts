@@ -10,7 +10,7 @@ import { itineraryItemCreateSchema } from "@schemas/trips";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { errorResponse, validateSchema } from "@/lib/api/route-helpers";
+import { errorResponse, requireUserId, validateSchema } from "@/lib/api/route-helpers";
 import type { Database } from "@/lib/supabase/database.types";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 
@@ -155,8 +155,9 @@ export const GET = withApiGuards({
   rateLimit: "itineraries:list",
   telemetry: "itineraries.list",
 })(async (req, { supabase, user }) => {
-  // user is guaranteed by auth: true
-  const userId = user?.id ?? "";
+  const result = requireUserId(user);
+  if ("error" in result) return result.error;
+  const { userId } = result;
   return await listItineraryItems(supabase, userId, req);
 });
 
@@ -170,7 +171,8 @@ export const POST = withApiGuards({
   rateLimit: "itineraries:create",
   telemetry: "itineraries.create",
 })(async (req, { supabase, user }) => {
-  // user is guaranteed by auth: true
-  const userId = user?.id ?? "";
+  const result = requireUserId(user);
+  if ("error" in result) return result.error;
+  const { userId } = result;
   return await createItineraryItem(supabase, userId, req);
 });
