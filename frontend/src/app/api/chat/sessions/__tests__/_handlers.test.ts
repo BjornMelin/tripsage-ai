@@ -93,9 +93,9 @@ describe("sessions _handlers", () => {
   it("create/list session happy path", async () => {
     const store = { messages: [] as MessageRow[], sessions: [] as SessionRow[] };
     const s = supabase("u1", store) as unknown as TypedServerSupabase;
-    const res1 = await createSession({ supabase: s }, "Trip");
+    const res1 = await createSession({ supabase: s, userId: "u1" }, "Trip");
     expect(res1.status).toBe(201);
-    const res2 = await listSessions({ supabase: s });
+    const res2 = await listSessions({ supabase: s, userId: "u1" });
     expect(res2.status).toBe(200);
   });
 
@@ -107,9 +107,9 @@ describe("sessions _handlers", () => {
       ],
     };
     const s = supabase("u2", store) as unknown as TypedServerSupabase;
-    const g = await getSession({ supabase: s }, "s1");
+    const g = await getSession({ supabase: s, userId: "u2" }, "s1");
     expect(g.status).toBe(200);
-    const d = await deleteSession({ supabase: s }, "s1");
+    const d = await deleteSession({ supabase: s, userId: "u2" }, "s1");
     expect(d.status).toBe(204);
   });
 
@@ -119,12 +119,12 @@ describe("sessions _handlers", () => {
       sessions: [{ id: "s1", userId: "u3" }],
     };
     const s = supabase("u3", store) as unknown as TypedServerSupabase;
-    const r1 = await createMessage({ supabase: s }, "s1", {
+    const r1 = await createMessage({ supabase: s, userId: "u3" }, "s1", {
       parts: [{ text: "hi", type: "text" }],
       role: "user",
     });
     expect(r1.status).toBe(201);
-    const r2 = await listMessages({ supabase: s }, "s1");
+    const r2 = await listMessages({ supabase: s, userId: "u3" }, "s1");
     expect(r2.status).toBe(200);
   });
 });
