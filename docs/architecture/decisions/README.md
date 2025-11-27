@@ -59,6 +59,7 @@ architectural decision made along with its context and consequences.
 | [ADR-0046](adr-0046-otel-tracing-frontend.md) | OTEL Tracing for Next.js 16 Route Handlers | Proposed | 2025-11-20 |
 | [ADR-0047](adr-0047-runtime-policy-edge-vs-node.md) | Runtime Policy for AI SDK Routes (Edge vs Node) | Proposed | 2025-11-20 |
 | [ADR-0054](adr-0054-upstash-testing-harness.md) | Hybrid Upstash Testing (Mocks + Local Emulators + Smoke) | Proposed | 2025-11-24 |
+| [ADR-0055](adr-0055-flatten-frontend-root-structure.md) | Flatten Next.js App Structure to Repository Root | Proposed | 2025-11-26 |
 | [ADR-0048](adr-0048-qstash-retries-and-idempotency.md) | QStash Retries and Idempotency for Webhooks/Tasks | Proposed | 2025-11-20 |
 | [ADR-0049](superseded/adr-0049-expedia-rapid.md) | Expedia Rapid Integration Research | Superseded | 2025-11-20 |
 | [ADR-0050](adr-0050-amadeus-google-places-stripe-hybrid.md) | Replace Expedia Rapid with Amadeus + Google Places + Stripe | Accepted | 2025-11-20 |
@@ -111,6 +112,7 @@ The following ADRs have been superseded by newer decisions:
 - ADR-0045: Flights DTOs in Frontend (Next.js 16 + Zod v4)
 - ADR-0050: Replace Expedia Rapid with Amadeus + Google Places + Stripe
 - ADR-0053: Activity Search & Booking via Google Places API (Hybrid + Web Fallback)
+- ADR-0055: Flatten Next.js App Structure to Repository Root
 
 ### Backend
 
