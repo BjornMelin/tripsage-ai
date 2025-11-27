@@ -81,7 +81,7 @@ await fetch(`${base}/trips`, {
 ```
 cURL (get)
 ```bash
-curl -X GET "$BASE/api/trips/1" --cookie "sb-access-token=$JWT"
+curl -X GET "$BASE/trips/1" --cookie "sb-access-token=$JWT"
 ```
 Python (update)
 ```python
@@ -100,9 +100,9 @@ Sample responses
 - `POST /itineraries` (Auth) — Create itinerary item. Body per `itineraryItemCreateSchema` (`tripId`, `title`, `itemType`, optional times, price/currency, description, metadata, location, bookingStatus).
 
 Examples
-- cURL create:  
+- cURL create:
   ```bash
-  curl -X POST "$BASE/api/itineraries" \
+  curl -X POST "$BASE/itineraries" \
     --cookie "sb-access-token=$JWT" \
     -H "Content-Type: application/json" \
     -d '{"tripId":1,"title":"Louvre","itemType":"activity","startTime":"2025-07-02T10:00:00Z"}'
@@ -115,7 +115,7 @@ Examples
 
 Example (search)
 ```bash
-curl -X POST "$BASE/api/activities/search" \
+curl -X POST "$BASE/activities/search" \
   -H "Content-Type: application/json" \
   -d '{"textQuery":"museum near Paris","maxResultCount":5}'
 ```
@@ -128,7 +128,7 @@ Response: `200` → Places results (id, displayName, formattedAddress, location,
 
 Example (details)
 ```bash
-curl "$BASE/api/places/details/ChIJN1t_tDeuEmsRUsoyG83frY4"
+curl "$BASE/places/details/ChIJN1t_tDeuEmsRUsoyG83frY4"
 ```
 
 ### Agents (AI SDK v6, SSE stream, Auth)
@@ -168,9 +168,9 @@ Python (SSE) tip: use `sseclient-py` with `requests` streaming.
 
 Example (stream)
 ```bash
-curl -N -X POST "$BASE/api/chat/stream" \
+curl -N -X POST "$BASE/chat/stream" \
   --cookie "sb-access-token=$JWT" \
-  -H "Content-Type": "application/json" \
+  -H "Content-Type: application/json" \
   -d '{"messages":[{"role":"user","content":"Hello"}]}'
 ```
 
@@ -191,9 +191,9 @@ curl -N -X POST "$BASE/api/chat/stream" \
 
 Example (POST)
 ```bash
-curl -X POST "$BASE/api/keys" \
+curl -X POST "$BASE/keys" \
   --cookie "sb-access-token=$JWT" \
-  -H "Content-Type": "application/json" \
+  -H "Content-Type: application/json" \
   -d '{"service":"openai","apiKey":"sk-..."}'
 ```
 Response: `204` on success.

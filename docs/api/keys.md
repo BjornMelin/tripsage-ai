@@ -92,6 +92,13 @@ Delete a provider API key.
 - `401` - Not authenticated
 - `404` - Key not found
 
+### Example
+
+```bash
+curl -X DELETE "http://localhost:3000/api/keys/openai" \
+  --cookie "sb-access-token=$JWT"
+```
+
 ---
 
 ## `POST /api/keys/validate`
@@ -105,12 +112,12 @@ Validate a provider API key.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `service` | string | Yes | Service name |
+| `service` | string | Yes | Service name (`openai`, `openrouter`, `anthropic`, `xai`, `gateway`) |
 | `apiKey` | string | Yes | API key to validate |
 
 ### Response
 
-`200 OK`
+`200 OK` (Success)
 
 ```json
 {
@@ -119,8 +126,29 @@ Validate a provider API key.
 }
 ```
 
+`200 OK` (Failed Validation)
+
+```json
+{
+  "valid": false,
+  "message": "Invalid API key format or authentication failed"
+}
+```
+
 ### Errors
 
 - `400` - Invalid request
 - `401` - Not authenticated
 - `429` - Rate limit exceeded
+
+### Example
+
+```bash
+curl -X POST "http://localhost:3000/api/keys/validate" \
+  --cookie "sb-access-token=$JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "service": "openai",
+    "apiKey": "sk-..."
+  }'
+```
