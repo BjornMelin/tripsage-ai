@@ -45,21 +45,33 @@ This webhook is called by Supabase when database records change. It invalidates 
 Trip collaborators webhook for handling trip sharing events.
 
 **Authentication**: Webhook signature verification
+**Rate Limit Key**: `trips:webhook`
 
 ### Request Body
 
-Trip collaborator event data including:
-
-- Trip ID
-- Collaborator user ID
-- Event type (added, removed, role changed)
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `tripId` | string | Yes | Trip ID (UUID) |
+| `collaboratorUserId` | string | Yes | Collaborator user ID (UUID) |
+| `eventType` | string | Yes | Event type: `added`, `removed`, `role_changed` |
+| `role` | string | No | Collaborator role when `eventType` is `role_changed` (e.g., "editor", "viewer") |
+| `timestamp` | string | No | ISO 8601 timestamp of the event |
 
 ### Response
 
 `200 OK`
 
+```json
+{
+  "ok": true,
+  "processed": true,
+  "timestamp": "2025-01-20T15:30:00Z"
+}
+```
+
 ### Errors
 
+- `400` - Invalid webhook payload
 - `401` - Invalid webhook signature
 - `500` - Event processing failed
 
@@ -78,21 +90,35 @@ This webhook is triggered when trip collaboration events occur, such as:
 File webhook for handling file storage events.
 
 **Authentication**: Webhook signature verification
+**Rate Limit Key**: `files:webhook`
 
 ### Request Body
 
-File event data including:
-
-- File path
-- Event type (created, deleted, updated)
-- File metadata
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `filePath` | string | Yes | Full file path in storage |
+| `eventType` | string | Yes | Event type: `created`, `updated`, `deleted` |
+| `userId` | string | Yes | User ID who triggered the event |
+| `size` | number | No | File size in bytes (for created/updated events) |
+| `mimeType` | string | No | MIME type of the file (for created/updated events) |
+| `metadata` | object | No | Additional metadata {bucket, timestamp, checksum} |
 
 ### Response
 
 `200 OK`
 
+```json
+{
+  "ok": true,
+  "processed": true,
+  "indexed": true,
+  "timestamp": "2025-01-20T15:30:00Z"
+}
+```
+
 ### Errors
 
+- `400` - Invalid webhook payload
 - `401` - Invalid webhook signature
 - `500` - Event processing failed
 
