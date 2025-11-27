@@ -29,9 +29,10 @@ export function GET(
     auth: true,
     rateLimit: "chat:sessions:get",
     telemetry: "chat.sessions.get",
-  })(async (_req, { supabase }) => {
+  })(async (_req, { supabase, user }) => {
+    const userId = user?.id ?? "";
     const { id } = await context.params;
-    return getSession({ supabase }, id);
+    return getSession({ supabase, userId }, id);
   })(req, context);
 }
 
@@ -50,8 +51,9 @@ export function DELETE(
     auth: true,
     rateLimit: "chat:sessions:delete",
     telemetry: "chat.sessions.delete",
-  })(async (_req, { supabase }) => {
+  })(async (_req, { supabase, user }) => {
+    const userId = user?.id ?? "";
     const { id } = await context.params;
-    return deleteSession({ supabase }, id);
+    return deleteSession({ supabase, userId }, id);
   })(req, context);
 }
