@@ -6,6 +6,8 @@ All agent endpoints return Server-Sent Events (SSE) streams using AI SDK v6 UI m
 
 Agent endpoints use Server-Sent Events (SSE) for streaming responses. The stream contains AI SDK v6 UI messages that can be consumed using `ReadableStream`/`EventSource` in JavaScript or an SSE-capable library in other languages.
 
+**Authentication Note**: All agent endpoints require authentication. Use the `sb-access-token` cookie (Supabase default cookie name) or pass the JWT token via `Authorization: Bearer <token>` header.
+
 ### TypeScript Example
 
 ```typescript
