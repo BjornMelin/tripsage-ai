@@ -1,0 +1,137 @@
+# Agent Configuration
+
+Admin-only endpoints for managing AI agent configurations.
+
+> **Access**: These endpoints require admin authentication.
+
+## `GET /api/config/agents/{agentType}`
+
+Get agent configuration.
+
+**Authentication**: Required (Admin only)  
+**Rate Limit Key**: `config:agents:read`
+
+### Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `agentType` | string | Yes | Agent type (`flightAgent`, `accommodationAgent`, `destinationAgent`, `itineraryAgent`, `budgetAgent`, `memoryAgent`, `routerAgent`) |
+
+### Query Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `scope` | string | No | Configuration scope (default: "global") |
+
+### Response
+
+`200 OK` - Returns agent configuration
+
+### Errors
+
+- `401` - Not authenticated
+- `403` - Admin access required
+- `404` - Configuration not found
+- `429` - Rate limit exceeded
+
+---
+
+## `PUT /api/config/agents/{agentType}`
+
+Update agent configuration.
+
+**Authentication**: Required (Admin only)  
+**Rate Limit Key**: `config:agents:update`
+
+### Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `agentType` | string | Yes | Agent type |
+
+### Query Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `scope` | string | No | Configuration scope (default: "global") |
+
+### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `model` | string | No | Model name |
+| `temperature` | number | No | Temperature (0-2) |
+| `maxTokens` | number | No | Maximum tokens |
+| `topP` | number | No | Top P |
+| `timeoutSeconds` | number | No | Timeout in seconds |
+| `description` | string | No | Configuration description |
+
+### Response
+
+`200 OK`
+
+```json
+{
+  "config": {...},
+  "versionId": "version-uuid"
+}
+```
+
+### Errors
+
+- `400` - Validation failed
+- `401` - Not authenticated
+- `403` - Admin access required
+- `429` - Rate limit exceeded
+
+---
+
+## `GET /api/config/agents/{agentType}/versions`
+
+List agent configuration versions.
+
+**Authentication**: Required (Admin only)  
+**Rate Limit Key**: `config:agents:versions`
+
+### Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `agentType` | string | Yes | Agent type |
+
+### Response
+
+`200 OK` - Returns version list
+
+### Errors
+
+- `401` - Not authenticated
+- `403` - Admin access required
+- `429` - Rate limit exceeded
+
+---
+
+## `POST /api/config/agents/{agentType}/rollback/{versionId}`
+
+Rollback agent configuration to a previous version.
+
+**Authentication**: Required (Admin only)  
+**Rate Limit Key**: `config:agents:rollback`
+
+### Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `agentType` | string | Yes | Agent type |
+| `versionId` | string | Yes | Version ID to rollback to |
+
+### Response
+
+`200 OK` - Returns rollback result
+
+### Errors
+
+- `401` - Not authenticated
+- `403` - Admin access required
+- `404` - Version not found
+- `429` - Rate limit exceeded
