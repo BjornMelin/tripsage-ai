@@ -190,7 +190,7 @@ curl -X GET "http://localhost:3000/api/trips/1" \
 
 Update a trip (partial update supported).
 
-**Authentication**: Required
+**Authentication**: Required  
 **Rate Limit Key**: `trips:update`
 
 ### Path Parameters
@@ -236,7 +236,7 @@ const response = await fetch("http://localhost:3000/api/trips/1", {
 
 Delete a trip.
 
-**Authentication**: Required
+**Authentication**: Required  
 **Rate Limit Key**: `trips:delete`
 
 ### Path Parameters
@@ -308,14 +308,14 @@ Get AI-generated trip suggestions.
 
 ### Examples
 
-**cURL**
+#### cURL
 
 ```bash
 curl -X GET "http://localhost:3000/api/trips/suggestions?limit=5&category=culture" \
   --cookie "sb-access-token=$JWT"
 ```
 
-**TypeScript/Fetch**
+#### TypeScript/Fetch
 
 ```typescript
 const response = await fetch(
@@ -332,7 +332,7 @@ suggestions.forEach(suggestion => {
 });
 ```
 
-**Python/Requests**
+#### Python/Requests
 
 ```python
 import requests

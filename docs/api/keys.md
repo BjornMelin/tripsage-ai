@@ -43,7 +43,7 @@ Upsert a provider API key.
 |-------|------|----------|-------------|
 | `service` | string | Yes | Service name (`openai`, `openrouter`, `anthropic`, `xai`, `gateway`) |
 | `apiKey` | string | Yes | API key (max 2048 chars) |
-| `baseUrl` | string | No | Gateway base URL (applies to `gateway` service only). Must be HTTPS, with valid resolvable hostname (no wildcards). Required for `gateway` service, optional for self-hosted deployments. Include trailing slash if path-based routing is used. Defaults to public gateway if omitted for `gateway` service. |
+| `baseUrl` | string | No | Gateway base URL (applies to `gateway` service only). Must be HTTPS, with valid resolvable hostname (no wildcards). Required for self-hosted `gateway` deployments; optional when using the default public gateway where it is inferred automatically. Include trailing slash if path-based routing is used. |
 
 ### Response
 

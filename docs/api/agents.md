@@ -117,9 +117,9 @@ curl -N -X POST "http://localhost:3000/api/agents/flights" \
 
 Streaming accommodation search agent.
 
-**Authentication**: Required
-**Rate Limit Key**: `agents:accommodations`
-**Content-Type**: `application/json`
+**Authentication**: Required  
+**Rate Limit Key**: `agents:accommodations`  
+**Content-Type**: `application/json`  
 **Response**: `text/event-stream` (SSE)
 
 ### Request Body
@@ -198,8 +198,8 @@ Destination research agent.
 
 Itinerary planning agent.
 
-**Authentication**: Required
-**Rate Limit Key**: `agents:itineraries`
+**Authentication**: Required  
+**Rate Limit Key**: `agents:itineraries`  
 **Response**: `text/event-stream` (SSE)
 
 ### Request Body
@@ -361,6 +361,7 @@ Intent router agent that analyzes user queries and routes them to the appropriat
 `200 OK` - SSE stream with routed agent response
 
 The response includes:
+
 - Identified intent and selected agent
 - Streamed response from the specialized agent
 - Optional routing metadata (if `returnRoutingInfo: true`)

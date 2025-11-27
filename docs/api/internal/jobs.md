@@ -50,6 +50,7 @@ Notification job data including:
   - Malformed JSON in request body
 
   **Example 400 Response:**
+
   ```json
   {
     "error": "Validation failed",
@@ -62,6 +63,7 @@ Notification job data including:
     ]
   }
   ```
+
 
 - `401` - Invalid QStash signature
 - `500` - Notification delivery failed
@@ -104,7 +106,9 @@ Memory sync job data including:
   - Malformed JSON in request body
   - Invalid UUID format for `userId` or `conversationId`
 
+
   **Example 400 Response:**
+
   ```json
   {
     "error": "Validation failed",
@@ -117,6 +121,7 @@ Memory sync job data including:
     ]
   }
   ```
+
 
 - `401` - Invalid QStash signature
 - `500` - Memory sync failed
