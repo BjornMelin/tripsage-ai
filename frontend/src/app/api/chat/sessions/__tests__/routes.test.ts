@@ -175,7 +175,7 @@ describe("/api/chat/sessions", () => {
     const resMsg = await MSG_POST(
       createMockNextRequest({
         body: {
-          parts: [{ text: "hi", type: "text" }],
+          content: "hi",
           role: "user",
         },
         method: "POST",
@@ -200,5 +200,153 @@ describe("/api/chat/sessions", () => {
     expect(resList.status).toBe(200);
     const msgs = (await resList.json()) as Array<unknown>;
     expect(Array.isArray(msgs)).toBe(true);
+  });
+
+  describe("POST /api/chat/sessions/[id]/messages validation", () => {
+    it("rejects empty content", async () => {
+      const resCreate = await SESS_POST(
+        createMockNextRequest({
+          body: {},
+          method: "POST",
+          url: "http://x/sessions",
+        }),
+        createRouteParamsContext()
+      );
+      const { id } = (await resCreate.json()) as { id: string };
+
+      const resMsg = await MSG_POST(
+        createMockNextRequest({
+          body: {
+            content: "",
+            role: "user",
+          },
+          method: "POST",
+          url: `http://x/sessions/${id}/messages`,
+        }),
+        {
+          params: Promise.resolve({ id }),
+        }
+      );
+      expect(resMsg.status).toBe(400);
+      const error = (await resMsg.json()) as { error: string; reason: string };
+      expect(error.error).toBe("invalid_request");
+      expect(error.reason).toBe("Request validation failed");
+    });
+
+    it("rejects missing content", async () => {
+      const resCreate = await SESS_POST(
+        createMockNextRequest({
+          body: {},
+          method: "POST",
+          url: "http://x/sessions",
+        }),
+        createRouteParamsContext()
+      );
+      const { id } = (await resCreate.json()) as { id: string };
+
+      const resMsg = await MSG_POST(
+        createMockNextRequest({
+          body: {
+            role: "user",
+          },
+          method: "POST",
+          url: `http://x/sessions/${id}/messages`,
+        }),
+        {
+          params: Promise.resolve({ id }),
+        }
+      );
+      expect(resMsg.status).toBe(400);
+      const error = (await resMsg.json()) as { error: string; reason: string };
+      expect(error.error).toBe("invalid_request");
+      expect(error.reason).toBe("Request validation failed");
+    });
+
+    it("rejects invalid role", async () => {
+      const resCreate = await SESS_POST(
+        createMockNextRequest({
+          body: {},
+          method: "POST",
+          url: "http://x/sessions",
+        }),
+        createRouteParamsContext()
+      );
+      const { id } = (await resCreate.json()) as { id: string };
+
+      const resMsg = await MSG_POST(
+        createMockNextRequest({
+          body: {
+            content: "test message",
+            role: "invalid-role",
+          },
+          method: "POST",
+          url: `http://x/sessions/${id}/messages`,
+        }),
+        {
+          params: Promise.resolve({ id }),
+        }
+      );
+      expect(resMsg.status).toBe(400);
+      const error = (await resMsg.json()) as { error: string; reason: string };
+      expect(error.error).toBe("invalid_request");
+      expect(error.reason).toBe("Request validation failed");
+    });
+
+    it("accepts valid request with content and role", async () => {
+      const resCreate = await SESS_POST(
+        createMockNextRequest({
+          body: {},
+          method: "POST",
+          url: "http://x/sessions",
+        }),
+        createRouteParamsContext()
+      );
+      const { id } = (await resCreate.json()) as { id: string };
+
+      const resMsg = await MSG_POST(
+        createMockNextRequest({
+          body: {
+            content: "test message",
+            role: "user",
+          },
+          method: "POST",
+          url: `http://x/sessions/${id}/messages`,
+        }),
+        {
+          params: Promise.resolve({ id }),
+        }
+      );
+      expect(resMsg.status).toBe(201);
+    });
+
+    it("validation passes for content without role, but handler requires role", async () => {
+      const resCreate = await SESS_POST(
+        createMockNextRequest({
+          body: {},
+          method: "POST",
+          url: "http://x/sessions",
+        }),
+        createRouteParamsContext()
+      );
+      const { id } = (await resCreate.json()) as { id: string };
+
+      const resMsg = await MSG_POST(
+        createMockNextRequest({
+          body: {
+            content: "test message",
+          },
+          method: "POST",
+          url: `http://x/sessions/${id}/messages`,
+        }),
+        {
+          params: Promise.resolve({ id }),
+        }
+      );
+      // Schema validation passes (role is optional), but handler enforces role requirement
+      expect(resMsg.status).toBe(400);
+      const error = (await resMsg.json()) as { error: string; reason: string };
+      expect(error.error).toBe("bad_request");
+      expect(error.reason).toBe("Role is required");
+    });
   });
 });

@@ -197,6 +197,19 @@ export const chatNonStreamRequestSchema = z.strictObject({
 /** TypeScript type for non-streaming chat requests. */
 export type ChatNonStreamRequest = z.infer<typeof chatNonStreamRequestSchema>;
 
+/**
+ * Zod schema for creating a chat message in a session.
+ * Validates request body for POST /api/chat/sessions/[id]/messages endpoint.
+ * Ensures content is a non-empty string and role is a valid optional message role.
+ */
+export const createMessageRequestSchema = z.strictObject({
+  content: z.string().min(1, { error: "Content must be a non-empty string" }),
+  role: messageRoleSchema.optional(),
+});
+
+/** TypeScript type for create message requests. */
+export type CreateMessageRequest = z.infer<typeof createMessageRequestSchema>;
+
 /** Zod schema for chat completion API responses with choice arrays. */
 export const chatCompletionResponseSchema = z.object({
   choices: z.array(
