@@ -62,6 +62,8 @@ Update user settings.
 }
 ```
 
+Returns all settings fields with current values.
+
 #### Errors
 
 - `400` - Validation failed
@@ -90,6 +92,20 @@ Generate embeddings.
 
 `200 OK` - Returns embedding vector
 
+```json
+{
+  "embedding": [0.0234, -0.0156, 0.0423, -0.0089, 0.0312, "... (1536 dimensions total)"],
+  "modelId": "text-embedding-3-small",
+  "success": true,
+  "usage": {
+    "promptTokens": 12,
+    "totalTokens": 12
+  },
+  "id": "property-123",
+  "persisted": true
+}
+```
+
 #### Errors
 
 - `400` - Invalid request
@@ -110,6 +126,29 @@ Get popular flight destinations.
 #### Response
 
 `200 OK` - Returns popular destinations list
+
+```json
+[
+  {
+    "code": "NYC",
+    "name": "New York",
+    "country": "USA",
+    "savings": "$127"
+  },
+  {
+    "code": "LAX",
+    "name": "Los Angeles",
+    "country": "USA",
+    "savings": "$89"
+  },
+  {
+    "code": "LHR",
+    "name": "London",
+    "country": "UK",
+    "savings": "$234"
+  }
+]
+```
 
 #### Errors
 
@@ -140,6 +179,30 @@ List user files.
 #### Response
 
 `200 OK` - Returns files list
+
+```json
+{
+  "files": [
+    {
+      "id": "file-uuid-1",
+      "filename": "vacation-itinerary.pdf",
+      "type": "application/pdf",
+      "size": 245760,
+      "uploadedAt": "2025-01-20T10:30:00Z"
+    },
+    {
+      "id": "file-uuid-2",
+      "filename": "hotel-confirmation.png",
+      "type": "image/png",
+      "size": 524288,
+      "uploadedAt": "2025-01-20T11:45:00Z"
+    }
+  ],
+  "total": 42,
+  "limit": 20,
+  "offset": 0
+}
+```
 
 #### Errors
 

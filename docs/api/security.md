@@ -8,8 +8,17 @@ Security sessions, metrics, events, and dashboard.
 
 List active sessions for authenticated user.
 
-**Authentication**: Required  
+**Authentication**: Required
 **Rate Limit Key**: `security:sessions:list`
+
+#### Query Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | number | No | Page number for pagination (default: `1`) |
+| `limit` | number | No | Results per page (default: `20`, max: `100`) |
+
+**Note**: Use pagination parameters (`page`, `limit`) for bounded queries. Avoid unbounded requests for large session histories. Server enforces maximum limits to prevent excessive memory usage.
 
 #### Response
 
@@ -39,6 +48,7 @@ List active sessions for authenticated user.
 
 #### Errors
 
+- `400` - Invalid pagination parameters (e.g., invalid page or limit values)
 - `401` - Not authenticated
 - `429` - Rate limit exceeded
 
@@ -78,6 +88,12 @@ Get security metrics.
 **Authentication**: Required
 **Rate Limit Key**: `security:metrics`
 
+#### Query Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `window` | string | No | Time window: `24h`, `7d`, `30d` (default: `7d`) |
+
 #### Response
 
 `200 OK`
@@ -104,6 +120,7 @@ Get security metrics.
 
 #### Errors
 
+- `400` - Invalid window parameter (must be `24h`, `7d`, or `30d`)
 - `401` - Not authenticated
 - `429` - Rate limit exceeded
 
@@ -115,6 +132,15 @@ Get security events.
 
 **Authentication**: Required
 **Rate Limit Key**: `security:events`
+
+#### Query Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | number | No | Page number for pagination (default: `1`) |
+| `limit` | number | No | Results per page (default: `20`, max: `100`) |
+
+**Note**: Use pagination parameters (`page`, `limit`) for bounded queries. Avoid unbounded requests for large event histories. Server enforces maximum limits to prevent excessive memory usage.
 
 #### Response
 
@@ -152,8 +178,18 @@ Get security events.
 | `timestamp` | string | ISO 8601 timestamp of the event |
 | `ipAddress` | string | IP address associated with the event |
 
+**PII Handling Notice**: The `ipAddress` field may contain Personally Identifiable Information (PII) depending on jurisdiction and regulatory requirements (GDPR, CCPA, etc.). Recommended handling includes:
+
+- **Retention Policy**: Implement TTL configuration for automatic expiration of IP address data after a defined period (e.g., 90 days)
+- **Anonymization**: Consider partial redaction (e.g., `192.168.xxx.xxx`) or hashing for long-term storage
+- **Access Controls**: Apply RBAC restrictions to endpoints exposing IP addresses; limit access to security administrators only
+- **Audit Logging**: Maintain audit trails for all access to PII fields with user ID, timestamp, and purpose
+- **Compliance**: Ensure handling aligns with applicable data protection regulations (GDPR Article 6, CCPA Section 1798.100)
+- **Configuration**: Provide optional toggle to disable or mask IP addresses in API responses (`EXPOSE_FULL_IP_ADDRESSES=false`)
+
 #### Errors
 
+- `400` - Invalid pagination parameters (e.g., invalid page or limit values)
 - `401` - Not authenticated
 - `429` - Rate limit exceeded
 

@@ -283,19 +283,65 @@ Create a message in a chat session.
 
 Upload chat attachment (multipart form data).
 
-**Authentication**: Required  
+**Authentication**: Required
 **Rate Limit Key**: `chat:attachments`
 
 #### Request
 
-Multipart form data with file uploads. Validates size and count limits.
+Multipart form data with file uploads.
+
+**Form Field Names:**
+
+- Single file: `file`
+- Multiple files: `files` (can include multiple files with same field name)
+
+**File Constraints:**
+
+- **Maximum file size**: 10 MB (10,485,760 bytes)
+- **Maximum files per request**: 5 files
+- **Accepted MIME types**: All types accepted (validation performed by backend)
+- **Multiple files**: Supported - submit up to 5 files in a single request
+
+**Content-Type**: `multipart/form-data`
 
 #### Response
 
 `200 OK` - Returns attachment metadata
 
+```json
+{
+  "files": [
+    {
+      "id": "file-uuid-abc123",
+      "name": "travel-document.pdf",
+      "type": "application/pdf",
+      "size": 524288,
+      "status": "completed",
+      "url": "/api/attachments/file-uuid-abc123/download"
+    },
+    {
+      "id": "file-uuid-def456",
+      "name": "boarding-pass.png",
+      "type": "image/png",
+      "size": 245760,
+      "status": "completed",
+      "url": "/api/attachments/file-uuid-def456/download"
+    }
+  ],
+  "urls": [
+    "/api/attachments/file-uuid-abc123/download",
+    "/api/attachments/file-uuid-def456/download"
+  ]
+}
+```
+
 #### Errors
 
-- `400` - Invalid file or size limit exceeded
+- `400` - Invalid request:
+  - No files uploaded
+  - File size exceeds 10 MB limit
+  - More than 5 files submitted
+  - Invalid content type (not multipart/form-data)
 - `401` - Not authenticated
 - `429` - Rate limit exceeded
+- `502` - Backend upload service error

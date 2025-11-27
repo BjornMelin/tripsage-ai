@@ -18,9 +18,20 @@ Cache invalidation webhook for database changes.
 | `table` | string | Yes | Database table name |
 | `type` | string | Yes | Operation type (`INSERT`, `UPDATE`, `DELETE`) |
 
+**Example Request:**
+
+```json
+{
+  "table": "trips",
+  "type": "INSERT"
+}
+```
+
 ### Response
 
 `200 OK`
+
+> **Note**: This endpoint returns a simplified response without timestamp for cache invalidation operations.
 
 ```json
 {
@@ -29,10 +40,44 @@ Cache invalidation webhook for database changes.
 }
 ```
 
+**Response Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `ok` | boolean | Indicates if the webhook was processed successfully |
+| `bumped` | boolean | Indicates if the cache was invalidated |
+
 ### Errors
 
-- `401` - Invalid webhook signature
-- `500` - Cache invalidation failed
+**Error Response Schema:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `error` | string | Error type identifier |
+| `code` | number | HTTP status code |
+| `message` | string | Human-readable error message |
+
+**Error Examples:**
+
+`401 Unauthorized` - Invalid webhook signature
+
+```json
+{
+  "error": "unauthorized",
+  "code": 401,
+  "message": "Invalid webhook signature"
+}
+```
+
+`500 Internal Server Error` - Cache invalidation failed
+
+```json
+{
+  "error": "internal_server_error",
+  "code": 500,
+  "message": "Cache invalidation failed"
+}
+```
 
 ### Usage
 
@@ -57,9 +102,23 @@ Trip collaborators webhook for handling trip sharing events.
 | `role` | string | No | Collaborator role when `eventType` is `role_changed` (e.g., "editor", "viewer") |
 | `timestamp` | string | No | ISO 8601 timestamp of the event |
 
+**Example Request:**
+
+```json
+{
+  "tripId": "123e4567-e89b-12d3-a456-426614174000",
+  "collaboratorUserId": "987fcdeb-51a2-43d7-b123-456789abcdef",
+  "eventType": "added",
+  "role": "editor",
+  "timestamp": "2025-01-20T15:30:00Z"
+}
+```
+
 ### Response
 
 `200 OK`
+
+> **Note**: This endpoint returns processing status with timestamp for tracking event handling.
 
 ```json
 {
@@ -69,11 +128,55 @@ Trip collaborators webhook for handling trip sharing events.
 }
 ```
 
+**Response Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `ok` | boolean | Indicates if the webhook was processed successfully |
+| `processed` | boolean | Indicates if the event was processed |
+| `timestamp` | string | ISO 8601 timestamp when the event was processed |
+
 ### Errors
 
-- `400` - Invalid webhook payload
-- `401` - Invalid webhook signature
-- `500` - Event processing failed
+**Error Response Schema:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `error` | string | Error type identifier |
+| `code` | number | HTTP status code |
+| `message` | string | Human-readable error message |
+
+**Error Examples:**
+
+`400 Bad Request` - Invalid webhook payload
+
+```json
+{
+  "error": "bad_request",
+  "code": 400,
+  "message": "Invalid webhook payload: missing required field 'tripId'"
+}
+```
+
+`401 Unauthorized` - Invalid webhook signature
+
+```json
+{
+  "error": "unauthorized",
+  "code": 401,
+  "message": "Invalid webhook signature"
+}
+```
+
+`500 Internal Server Error` - Event processing failed
+
+```json
+{
+  "error": "internal_server_error",
+  "code": 500,
+  "message": "Event processing failed"
+}
+```
 
 ### Usage
 
@@ -103,9 +206,28 @@ File webhook for handling file storage events.
 | `mimeType` | string | No | MIME type of the file (for created/updated events) |
 | `metadata` | object | No | Additional metadata {bucket, timestamp, checksum} |
 
+**Example Request:**
+
+```json
+{
+  "filePath": "user-uploads/photos/IMG_2024.jpg",
+  "eventType": "created",
+  "userId": "123e4567-e89b-12d3-a456-426614174000",
+  "size": 2048576,
+  "mimeType": "image/jpeg",
+  "metadata": {
+    "bucket": "trip-photos",
+    "timestamp": "2025-01-20T15:30:00Z",
+    "checksum": "d41d8cd98f00b204e9800998ecf8427e"
+  }
+}
+```
+
 ### Response
 
 `200 OK`
+
+> **Note**: This endpoint includes an `indexed` field indicating whether the file was added to the search index.
 
 ```json
 {
@@ -116,11 +238,56 @@ File webhook for handling file storage events.
 }
 ```
 
+**Response Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `ok` | boolean | Indicates if the webhook was processed successfully |
+| `processed` | boolean | Indicates if the event was processed |
+| `indexed` | boolean | Indicates if the file was indexed for search |
+| `timestamp` | string | ISO 8601 timestamp when the event was processed |
+
 ### Errors
 
-- `400` - Invalid webhook payload
-- `401` - Invalid webhook signature
-- `500` - Event processing failed
+**Error Response Schema:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `error` | string | Error type identifier |
+| `code` | number | HTTP status code |
+| `message` | string | Human-readable error message |
+
+**Error Examples:**
+
+`400 Bad Request` - Invalid webhook payload
+
+```json
+{
+  "error": "bad_request",
+  "code": 400,
+  "message": "Invalid webhook payload: missing required field 'filePath'"
+}
+```
+
+`401 Unauthorized` - Invalid webhook signature
+
+```json
+{
+  "error": "unauthorized",
+  "code": 401,
+  "message": "Invalid webhook signature"
+}
+```
+
+`500 Internal Server Error` - Event processing failed
+
+```json
+{
+  "error": "internal_server_error",
+  "code": 500,
+  "message": "Event processing failed: unable to index file"
+}
+```
 
 ### Usage
 

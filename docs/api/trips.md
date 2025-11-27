@@ -366,7 +366,7 @@ List itinerary items with optional trip filter.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `tripId` | number | No | Filter by trip ID |
+| `tripId` | string | No | Filter by trip ID (numeric string, e.g., `?tripId=123`) |
 
 #### Response
 
@@ -395,6 +395,76 @@ List itinerary items with optional trip filter.
 - `401` - Not authenticated
 - `429` - Rate limit exceeded
 
+#### Examples
+
+**cURL - List all itineraries**
+
+```bash
+curl -X GET "http://localhost:3000/api/itineraries" \
+  --cookie "sb-access-token=$JWT"
+```
+
+**cURL - Filter by trip ID**
+
+```bash
+curl -X GET "http://localhost:3000/api/itineraries?tripId=123" \
+  --cookie "sb-access-token=$JWT"
+```
+
+**TypeScript/Fetch - List all itineraries**
+
+```typescript
+const response = await fetch("http://localhost:3000/api/itineraries", {
+  headers: {
+    Cookie: `sb-access-token=${jwtToken}`,
+  },
+});
+const itineraries = await response.json();
+console.log(`Found ${itineraries.length} itinerary items`);
+```
+
+**TypeScript/Fetch - Filter by trip ID**
+
+```typescript
+const response = await fetch("http://localhost:3000/api/itineraries?tripId=123", {
+  headers: {
+    Cookie: `sb-access-token=${jwtToken}`,
+  },
+});
+const itineraries = await response.json();
+itineraries.forEach(item => {
+  console.log(`${item.title} - ${item.itemType}`);
+});
+```
+
+**Python/Requests - List all itineraries**
+
+```python
+import requests
+
+response = requests.get(
+    "http://localhost:3000/api/itineraries",
+    cookies={"sb-access-token": jwt_token}
+)
+itineraries = response.json()
+print(f"Found {len(itineraries)} itinerary items")
+```
+
+**Python/Requests - Filter by trip ID**
+
+```python
+import requests
+
+response = requests.get(
+    "http://localhost:3000/api/itineraries",
+    cookies={"sb-access-token": jwt_token},
+    params={"tripId": "123"}
+)
+itineraries = response.json()
+for item in itineraries:
+    print(f"{item['title']} - {item['itemType']}")
+```
+
 ---
 
 ### `POST /api/itineraries`
@@ -408,7 +478,7 @@ Create a new itinerary item.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `tripId` | number | Yes | Trip ID |
+| `tripId` | number | Yes | Trip ID (JSON number type, parsed as integer on server) |
 | `title` | string | Yes | Item title (max 200 chars) |
 | `itemType` | string | Yes | Item type (`activity`, `meal`, `transport`, `accommodation`, `event`, `other`) |
 | `startTime` | string | No | Start time (ISO 8601) |

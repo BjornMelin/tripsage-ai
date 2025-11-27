@@ -445,10 +445,42 @@ Multimodal route planner.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `origin` | object | Yes | Origin location |
-| `destination` | object | Yes | Destination location |
-| `travelMode` | string | No | Travel mode |
+| `origin` | object | Yes | Origin location (place ID or coordinates) |
+| `origin.placeId` | string | No | Google Place ID (e.g., `places/ChIJ...`) |
+| `origin.location` | object | No | Coordinates object |
+| `origin.location.latLng` | object | No | Latitude/longitude object |
+| `origin.location.latLng.latitude` | number | No | Latitude |
+| `origin.location.latLng.longitude` | number | No | Longitude |
+| `destination` | object | Yes | Destination location (place ID or coordinates) |
+| `destination.placeId` | string | No | Google Place ID (e.g., `places/ChIJ...`) |
+| `destination.location` | object | No | Coordinates object |
+| `destination.location.latLng` | object | No | Latitude/longitude object |
+| `destination.location.latLng.latitude` | number | No | Latitude |
+| `destination.location.latLng.longitude` | number | No | Longitude |
+| `travelMode` | string | No | Travel mode (`DRIVE`, `WALK`, `BICYCLE`, `TRANSIT`) |
 | `routingPreference` | string | No | Routing preference (`TRAFFIC_AWARE`, `TRAFFIC_UNAWARE`) |
+
+**Note**: Either `placeId` or `location.latLng` must be provided for both origin and destination.
+
+#### Example Request
+
+```json
+{
+  "origin": {
+    "location": {
+      "latLng": {
+        "latitude": 48.8584,
+        "longitude": 2.2945
+      }
+    }
+  },
+  "destination": {
+    "placeId": "places/ChIJN1t_tDeuEmsRUsoyG83frY4"
+  },
+  "travelMode": "DRIVE",
+  "routingPreference": "TRAFFIC_AWARE"
+}
+```
 
 #### Response
 
