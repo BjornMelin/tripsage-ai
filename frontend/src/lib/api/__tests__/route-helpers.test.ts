@@ -14,7 +14,17 @@ import {
 
 describe("route-helpers", () => {
   describe("getClientIpFromHeaders", () => {
-    it("returns the first IP from x-forwarded-for", () => {
+    it("prefers x-real-ip (Vercel's canonical IP header)", () => {
+      const req = {
+        headers: new Headers({
+          "x-real-ip": "198.51.100.5",
+          "x-forwarded-for": "203.0.113.10, 198.51.100.2",
+        }),
+      } as unknown as NextRequest;
+      expect(getClientIpFromHeaders(req)).toBe("198.51.100.5");
+    });
+
+    it("falls back to first IP from x-forwarded-for when x-real-ip is absent", () => {
       const req = {
         headers: new Headers({
           "x-forwarded-for": "203.0.113.10, 198.51.100.2",
@@ -31,23 +41,22 @@ describe("route-helpers", () => {
       expect(buildRateLimitKey(req)).toContain("unknown");
     });
 
-    it("prefers x-vercel-ip over x-forwarded-for", () => {
+    it("trims whitespace from x-real-ip", () => {
       const req = {
         headers: new Headers({
-          "x-forwarded-for": "203.0.113.10",
-          "x-vercel-ip": "198.51.100.5",
-        }),
-      } as unknown as NextRequest;
-      expect(getClientIpFromHeaders(req)).toBe("198.51.100.5");
-    });
-
-    it("falls back to x-real-ip when x-forwarded-for is empty", () => {
-      const req = {
-        headers: new Headers({
-          "x-real-ip": "192.168.1.1",
+          "x-real-ip": "  192.168.1.1  ",
         }),
       } as unknown as NextRequest;
       expect(getClientIpFromHeaders(req)).toBe("192.168.1.1");
+    });
+
+    it("trims whitespace from x-forwarded-for entries", () => {
+      const req = {
+        headers: new Headers({
+          "x-forwarded-for": "  203.0.113.10  , 198.51.100.2",
+        }),
+      } as unknown as NextRequest;
+      expect(getClientIpFromHeaders(req)).toBe("203.0.113.10");
     });
   });
 

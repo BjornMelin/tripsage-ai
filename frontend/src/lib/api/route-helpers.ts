@@ -31,36 +31,41 @@ export const API_CONSTANTS = {
 /**
  * Extract the client IP from trusted sources with deterministic fallback.
  *
- * Priority order:
- * 1. req.ip (Next.js 16+ trusted IP from Vercel/proxy)
- * 2. x-vercel-ip header (Vercel-specific trusted IP)
- * 3. x-forwarded-for header (first IP, caller-controlled)
- * 4. x-real-ip header (caller-controlled)
- * 5. "unknown" (fallback when no IP available)
+ * Priority order (matches @vercel/functions ipAddress() behavior):
+ * 1. x-real-ip header (Vercel's canonical client IP header, set by edge)
+ * 2. x-forwarded-for header (first IP - trusted on Vercel, spoofable elsewhere)
+ * 3. "unknown" (fallback when no IP available)
+ *
+ * **Security notes:**
+ * - On Vercel: Both headers are trusted. Vercel's edge network overwrites
+ *   `x-forwarded-for` and sets `x-real-ip` to prevent IP spoofing.
+ * - Self-hosted/local: These headers are caller-controlled and CAN BE SPOOFED
+ *   to bypass rate limits. Configure your reverse proxy to strip incoming
+ *   values and set them from the actual client connection.
  *
  * The fallback of "unknown" avoids undefined identifiers when rate limiting.
  *
+ * @see https://vercel.com/docs/functions/functions-api-reference/vercel-functions-package#ipaddress
+ * @see https://vercel.com/docs/headers/request-headers
  * @param req Next.js request object.
  * @returns Client IP string or "unknown".
  */
 export function getClientIpFromHeaders(req: NextRequest): string {
-  // Prefer Vercel-specific trusted header
   const headers = req.headers;
-  const vercelIp = headers.get("x-vercel-ip");
-  if (vercelIp && vercelIp.length > 0) {
-    return vercelIp.trim();
+
+  // 1. x-real-ip: Vercel's canonical client IP header (set by edge, not caller-controlled)
+  // This matches @vercel/functions ipAddress() behavior
+  const realIp = headers.get("x-real-ip");
+  if (realIp && realIp.length > 0) {
+    return realIp.trim();
   }
 
-  // Fallback to proxy headers (caller-controlled, less trusted)
+  // 2. x-forwarded-for: Standard proxy header
+  // On Vercel: trusted (edge overwrites it). Self-hosted: SPOOFABLE without proxy config.
   const xff = headers.get("x-forwarded-for");
   if (xff && xff.length > 0) {
     const firstIp = xff.split(",")[0]?.trim();
     if (firstIp) return firstIp;
-  }
-
-  const real = headers.get("x-real-ip");
-  if (real && real.length > 0) {
-    return real.trim();
   }
 
   return "unknown";

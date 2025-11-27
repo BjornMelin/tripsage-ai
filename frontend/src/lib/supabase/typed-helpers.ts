@@ -153,7 +153,7 @@ export async function getSingle<T extends TableName>(
   if (error) return { data: null, error };
   if (!data) return { data: null, error: null };
   // Validate output if schema exists
-  if (schema?.row && data) {
+  if (schema?.row) {
     try {
       const validated = schema.row.parse(data);
       return { data: validated as Tables<T>, error: null };
@@ -222,7 +222,7 @@ export async function getMaybeSingle<T extends TableName>(
   if (error) return { data: null, error };
   if (!data) return { data: null, error: null };
   // Validate output if schema exists
-  if (schema?.row && data) {
+  if (schema?.row) {
     try {
       const validated = schema.row.parse(data);
       return { data: validated as Tables<T>, error: null };
