@@ -54,6 +54,7 @@ function createSupabaseMock(rowOverride?: Partial<TripsRow>) {
       return this;
     },
     error: null as unknown,
+    maybeSingle: vi.fn(() => builder.single()),
     operation: "select" as "select" | "update" | "delete",
     select() {
       if (this.operation !== "update") {
@@ -67,6 +68,13 @@ function createSupabaseMock(rowOverride?: Partial<TripsRow>) {
         return { data: { ...row, ...builder.updatePayload }, error: null };
       return { data: null, error: null };
     }),
+    // biome-ignore lint/suspicious/noThenProperty: Mock promise-like object for testing
+    then(onFulfilled: (value: { count: number; error: unknown | null }) => unknown) {
+      if (this.operation === "delete") {
+        return Promise.resolve({ count: 1, error: null }).then(onFulfilled);
+      }
+      return Promise.resolve({ count: 0, error: null }).then(onFulfilled);
+    },
     update(payload: Record<string, unknown>) {
       this.operation = "update";
       this.updatePayload = payload;

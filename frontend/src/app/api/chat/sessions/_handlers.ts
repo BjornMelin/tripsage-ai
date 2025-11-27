@@ -94,9 +94,9 @@ export async function getSession(deps: SessionsDeps, id: string): Promise<Respon
  * Delete a session by id (owner-only).
  */
 export async function deleteSession(deps: SessionsDeps, id: string): Promise<Response> {
-  const { error } = await deps.supabase
+  const { error, count } = await deps.supabase
     .from("chat_sessions")
-    .delete()
+    .delete({ count: "exact" })
     .eq("id", id)
     .eq("user_id", deps.userId);
   if (error)
@@ -105,6 +105,7 @@ export async function deleteSession(deps: SessionsDeps, id: string): Promise<Res
       reason: "Failed to delete session",
       status: 500,
     });
+  if (count === 0) return notFoundResponse("Session");
   return new Response(null, { status: 204 });
 }
 

@@ -216,7 +216,7 @@ Create a calendar event.
 const BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
 
 // jwtToken is the JWT obtained from the authentication/login flow
-// See docs/authentication.md for details on obtaining the access token
+// See docs/api/auth.md for details on obtaining the access token
 const response = await fetch(`${BASE_URL}/api/calendar/events`, {
   method: "POST",
   headers: {
@@ -346,7 +346,7 @@ Export calendar events to ICS format.
 
 ```bash
 # JWT is the access token returned from the authentication endpoint
-# See docs/authentication.md for details on obtaining the access token
+# See docs/api/auth.md for details on obtaining the access token
 JWT="your-access-token-here"  # Replace with your actual JWT token
 BASE_URL="http://localhost:3000"  # Set to your API URL
 

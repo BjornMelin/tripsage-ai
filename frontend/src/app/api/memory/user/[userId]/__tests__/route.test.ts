@@ -85,7 +85,7 @@ async function importRoute() {
   return mod.POST;
 }
 
-describe("/api/memory/user/[userId] DELETE route", () => {
+describe("POST /api/memory/user/[userId] (delete memories)", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     setRateLimitFactoryForTests(async () => ({

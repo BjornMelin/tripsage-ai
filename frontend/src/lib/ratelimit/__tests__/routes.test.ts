@@ -102,8 +102,7 @@ describe("ROUTE_RATE_LIMITS", () => {
       expect(keys.length).toBeGreaterThan(0);
 
       // Verify each key has the expected shape
-      for (const key of keys) {
-        const config = ROUTE_RATE_LIMITS[key];
+      for (const config of Object.values(ROUTE_RATE_LIMITS)) {
         expect(config).toHaveProperty("limit");
         expect(config).toHaveProperty("window");
         expect(typeof config.limit).toBe("number");
@@ -112,7 +111,7 @@ describe("ROUTE_RATE_LIMITS", () => {
     });
 
     it("all limits are positive integers", () => {
-      for (const [_key, config] of Object.entries(ROUTE_RATE_LIMITS)) {
+      for (const config of Object.values(ROUTE_RATE_LIMITS)) {
         expect(config.limit).toBeGreaterThan(0);
         expect(Number.isInteger(config.limit)).toBe(true);
       }

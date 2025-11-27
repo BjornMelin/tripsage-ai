@@ -44,10 +44,6 @@ describe("/api/keys routes", () => {
     vi.clearAllMocks();
     unstubAllEnvs();
     mockApiRouteAuthUser({ id: "test-user" });
-    MOCK_INSERT.mockReset();
-    MOCK_DELETE.mockReset();
-    MOCK_DELETE_GATEWAY.mockReset();
-    TELEMETRY_SPY.mockReset();
   });
 
   it("POST /api/keys returns 400 on invalid body", async () => {

@@ -36,6 +36,9 @@ import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
 
 const configUpdateBodySchema = agentConfigRequestSchema.strict();
 
+const parseScopeParam = (raw: string | null) =>
+  validateSchema(scopeSchema, raw ?? undefined);
+
 function buildConfigPayload(
   agentType: AgentType,
   scope: string,
@@ -84,11 +87,7 @@ export const GET = withApiGuards({
       if ("error" in agentValidation) {
         return agentValidation.error;
       }
-      const rawScope = req.nextUrl.searchParams.get("scope");
-      const scopeResult =
-        rawScope === null || rawScope.trim() === ""
-          ? { data: "global" as const }
-          : validateSchema(scopeSchema, rawScope);
+      const scopeResult = parseScopeParam(req.nextUrl.searchParams.get("scope"));
       if ("error" in scopeResult) return scopeResult.error;
       const scope = scopeResult.data;
       const result = await resolveAgentConfig(agentValidation.data, {
@@ -152,11 +151,7 @@ export const PUT = withApiGuards({
       const validation = validateSchema(configUpdateBodySchema, parsedBody.body);
       if ("error" in validation) return validation.error;
 
-      const rawScope = req.nextUrl.searchParams.get("scope");
-      const scopeResult =
-        rawScope === null || rawScope.trim() === ""
-          ? { data: "global" as const }
-          : validateSchema(scopeSchema, rawScope);
+      const scopeResult = parseScopeParam(req.nextUrl.searchParams.get("scope"));
       if ("error" in scopeResult) return scopeResult.error;
       const scope = scopeResult.data;
 

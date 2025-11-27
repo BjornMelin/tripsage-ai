@@ -145,9 +145,7 @@ export const POST = withApiGuards({
         });
       }
 
-      const newVersionId = Array.isArray(data)
-        ? (data[0] as { version_id?: string } | undefined)?.version_id
-        : (data as { version_id?: string } | null | undefined)?.version_id;
+      const newVersionId = Array.isArray(data) ? data[0]?.version_id : undefined;
 
       if (!newVersionId) {
         return errorResponse({

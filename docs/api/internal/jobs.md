@@ -50,6 +50,7 @@ Notification job data including:
   - Malformed JSON in request body
 
   **Example 400 Response:**
+
   ```json
   {
     "error": "Validation failed",
@@ -105,6 +106,7 @@ Memory sync job data including:
   - Invalid UUID format for `userId` or `conversationId`
 
   **Example 400 Response:**
+
   ```json
   {
     "error": "Validation failed",
