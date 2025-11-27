@@ -19,25 +19,23 @@ Complete technical documentation for TripSage AI, an AI-powered travel planning 
 
 ### Application Developers
 
-- **[Development Guide](developers/development-guide.md)** - Setup,
+- **[Development Guide](development/development-guide.md)** - Setup,
   architecture, and best practices
-- **[Quick Start](developers/quick-start.md)** - Get development environment
+- **[Quick Start](development/quick-start.md)** - Get development environment
   running
-- **[Stores](developers/stores.md)** - Zustand store patterns and composition
-- **[Testing Guide](developers/testing-guide.md)** - Testing patterns and
+- **[Stores](development/stores.md)** - Zustand store patterns and composition
+- **[Testing Guide](development/testing-guide.md)** - Testing patterns and
   coverage requirements
 - **[Metrics](metrics.md)** - Code metrics and performance benchmarks
 - **[Maintenance](maintenance.md)** - Development maintenance checklist
 
 ### Operators & DevOps
 
-- **[Operators Reference](operators/operators-reference.md)** -
+- **[Operators Reference](operations/operators-reference.md)** -
   Deployment, configuration, and operations
-- **[Database Operations](operators/database/)** - Supabase setup
-  and configuration
-- **[Security Guide](operators/security-guide.md)** - Security
+- **[Security Guide](operations/security-guide.md)** - Security
   implementation and best practices
-- **[Deployment Guide](operators/deployment-guide.md)** - Production
+- **[Deployment Guide](operations/deployment-guide.md)** - Production
   deployment procedures
 
 ## Quick Setup
