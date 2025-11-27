@@ -93,21 +93,26 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
 
   useEffect(() => {
     if (!fetchedTrip) return;
-    setTrip(fetchedTrip);
-  }, [fetchedTrip]);
 
-  /**
-   * Initialize form data with current trip values.
-   */
-  useEffect(() => {
-    if (!trip) return;
-    setFormData({
-      budget: trip.budget,
-      destination: trip.destination,
-      name: trip.title,
-      travelers: trip.travelers,
+    setTrip(fetchedTrip);
+
+    setFormData((prev) => {
+      const next = {
+        budget: fetchedTrip.budget,
+        destination: fetchedTrip.destination,
+        name: fetchedTrip.title,
+        travelers: fetchedTrip.travelers,
+      } as Partial<TripUpdate>;
+
+      const hasChanged =
+        prev.budget !== next.budget ||
+        prev.destination !== next.destination ||
+        prev.name !== next.name ||
+        prev.travelers !== next.travelers;
+
+      return hasChanged ? next : prev;
     });
-  }, [trip]);
+  }, [fetchedTrip]);
 
   /**
    * Handle optimistic update.

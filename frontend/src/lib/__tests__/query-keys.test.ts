@@ -29,6 +29,24 @@ describe("queryKeys", () => {
       ]);
     });
 
+    it("returns search key scoped by user and query string", () => {
+      expect(queryKeys.memory.search("user-123", "rome")).toEqual([
+        "memory",
+        "search",
+        "user-123",
+        "rome",
+      ]);
+    });
+
+    it("uses null marker when params are omitted", () => {
+      expect(queryKeys.memory.search("user-123")).toEqual([
+        "memory",
+        "search",
+        "user-123",
+        null,
+      ]);
+    });
+
     it("returns stats key with userId", () => {
       const userId = "user-789";
       expect(queryKeys.memory.stats(userId)).toEqual(["memory", "stats", userId]);
