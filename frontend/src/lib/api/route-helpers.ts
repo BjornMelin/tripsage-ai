@@ -349,3 +349,140 @@ export function validateSchema<T extends z.ZodType>(
   }
   return { data: parseResult.data };
 }
+
+/**
+ * Creates a standardized 404 Not Found response.
+ *
+ * Canonical helper for resource-not-found errors (Supabase PGRST116 or similar).
+ *
+ * @param entity - Name of the entity that was not found (e.g., "Trip", "User").
+ * @returns NextResponse with 404 status and consistent error shape.
+ *
+ * @example
+ * ```typescript
+ * if (error?.code === "PGRST116") {
+ *   return notFoundResponse("Trip");
+ * }
+ * ```
+ */
+export function notFoundResponse(entity: string): NextResponse {
+  return NextResponse.json(
+    { error: "not_found", reason: `${entity} not found` },
+    { status: 404 }
+  );
+}
+
+/**
+ * Parse and validate numeric ID from route params.
+ *
+ * Generic helper for `[id]/route.ts` handlers that need to extract
+ * and validate a positive integer from dynamic route parameters.
+ *
+ * @param routeContext - Next.js route context with async params.
+ * @param paramName - Name of the parameter to parse (default: "id").
+ * @returns Parsed numeric ID or error response.
+ *
+ * @example
+ * ```typescript
+ * const result = await parseNumericId(routeContext);
+ * if ("error" in result) return result.error;
+ * const tripId = result.id;
+ * ```
+ */
+export async function parseNumericId(
+  routeContext: { params: Promise<Record<string, string>> },
+  paramName = "id"
+): Promise<{ id: number } | { error: NextResponse }> {
+  const params = await routeContext.params;
+  const raw = params[paramName];
+  const id = Number.parseInt(raw, 10);
+
+  if (!Number.isFinite(id) || id <= 0) {
+    return {
+      error: errorResponse({
+        error: "invalid_request",
+        reason: `${paramName} must be a positive integer`,
+        status: 400,
+      }),
+    };
+  }
+
+  return { id };
+}
+
+/**
+ * Creates a standardized 401 Unauthorized response.
+ *
+ * Canonical helper for authentication required errors.
+ *
+ * @returns NextResponse with 401 status and consistent error shape.
+ *
+ * @example
+ * ```typescript
+ * if (!user) {
+ *   return unauthorizedResponse();
+ * }
+ * ```
+ */
+export function unauthorizedResponse(): NextResponse {
+  return NextResponse.json(
+    { error: "unauthorized", reason: "Authentication required" },
+    { status: 401 }
+  );
+}
+
+/**
+ * Creates a standardized 403 Forbidden response.
+ *
+ * Canonical helper for authorization/permission errors.
+ *
+ * @param reason - Human-readable reason string.
+ * @returns NextResponse with 403 status and consistent error shape.
+ *
+ * @example
+ * ```typescript
+ * if (!hasPermission) {
+ *   return forbiddenResponse("You do not have access to this resource");
+ * }
+ * ```
+ */
+export function forbiddenResponse(reason: string): NextResponse {
+  return NextResponse.json({ error: "forbidden", reason }, { status: 403 });
+}
+
+/**
+ * Parse and validate string ID from route params.
+ *
+ * Generic helper for `[id]/route.ts` handlers that need to extract
+ * and validate a non-empty string from dynamic route parameters.
+ *
+ * @param routeContext - Next.js route context with async params.
+ * @param paramName - Name of the parameter to parse (default: "id").
+ * @returns Parsed string ID or error response.
+ *
+ * @example
+ * ```typescript
+ * const result = await parseStringId(routeContext, "sessionId");
+ * if ("error" in result) return result.error;
+ * const sessionId = result.id;
+ * ```
+ */
+export async function parseStringId(
+  routeContext: { params: Promise<Record<string, string>> },
+  paramName = "id"
+): Promise<{ id: string } | { error: NextResponse }> {
+  const params = await routeContext.params;
+  const raw = params[paramName];
+
+  if (!raw || typeof raw !== "string" || raw.trim() === "") {
+    return {
+      error: errorResponse({
+        error: "invalid_request",
+        reason: `${paramName} must be a non-empty string`,
+        status: 400,
+      }),
+    };
+  }
+
+  return { id: raw.trim() };
+}
