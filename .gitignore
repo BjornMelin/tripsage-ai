@@ -278,6 +278,7 @@ scan-results/
 .env.staging.local
 
 # Project specific files
+!docs/development/development-guide.md
 .agent/
 supabase/.temp/
 docs/prompts/database-provider-research

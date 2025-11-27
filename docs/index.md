@@ -19,10 +19,10 @@ Complete technical documentation for TripSage AI, an AI-powered travel planning 
 
 ### Application Developers
 
-- **[Development Guide](development/development-guide.md)** - Setup,
-  architecture, and best practices
 - **[Quick Start](development/quick-start.md)** - Get development environment
   running
+- **[Development Guide](development/development-guide.md)** - Architecture
+  overview, key patterns, and documentation index
 - **[Standards](development/standards.md)** - Code style, import paths, schemas, stores
 - **[Zod Schema Guide](development/zod-schema-guide.md)** - Zod v4 schema patterns, validation, and AI SDK tool schemas
 - **[Testing](development/testing.md)** - Strategy, patterns, and templates
