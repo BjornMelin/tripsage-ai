@@ -18,24 +18,34 @@ processing.
 **Example**: Supabase webhooks with HMAC verification
 
 ```typescript
+import { errorResponse } from "@/lib/api/route-helpers";
+
 // Cannot use factory - signature verification happens first
 export async function POST(req: NextRequest) {
   const signature = req.headers.get('x-webhook-signature');
   if (!signature) {
-    return NextResponse.json({ error: 'Missing signature' }, { status: 401 });
+    return errorResponse({
+      error: "unauthorized",
+      reason: "Missing webhook signature",
+      status: 401,
+    });
   }
 
   // Verify signature before any other processing
   const body = await req.text();
   const isValid = verifyWebhookSignature(body, signature);
   if (!isValid) {
-    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+    return errorResponse({
+      error: "unauthorized",
+      reason: "Invalid webhook signature",
+      status: 401,
+    });
   }
 
   // Now process the webhook
   const payload = JSON.parse(body);
   await processWebhook(payload);
-  return NextResponse.json({ ok: true });
+  return Response.json({ ok: true });
 }
 ```
 
@@ -53,24 +63,34 @@ execution patterns.
 **Example**: QStash job processing
 
 ```typescript
+import { errorResponse } from "@/lib/api/route-helpers";
+
 // Cannot use factory - custom signature verification
 export async function POST(req: NextRequest) {
   const signature = req.headers.get('x-qstash-signature');
   if (!signature) {
-    return NextResponse.json({ error: 'Missing signature' }, { status: 401 });
+    return errorResponse({
+      error: "unauthorized",
+      reason: "Missing QStash signature",
+      status: 401,
+    });
   }
 
   // Verify QStash signature
   const body = await req.text();
   const isValid = verifyQstashSignature(body, signature);
   if (!isValid) {
-    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+    return errorResponse({
+      error: "unauthorized",
+      reason: "Invalid QStash signature",
+      status: 401,
+    });
   }
 
   // Process job without user context
   const job = JSON.parse(body);
   await processJob(job);
-  return NextResponse.json({ ok: true });
+  return Response.json({ ok: true });
 }
 ```
 
