@@ -9,14 +9,14 @@
 **Related Specs**: SPEC-0027, SPEC-001, SPEC-0010, SPEC-0015  
 **Supersedes**: ADR-0043, ADR-0049
 
-- Any Expedia Rapid–focused ADRs under `docs/adrs/` (e.g. `adr-00N-expedia-rapid-hotel-provider.md`)  
+- Any Expedia Rapid–focused ADRs under `docs/architecture/decisions/` (e.g. `adr-00N-expedia-rapid-hotel-provider.md`)  
 - Any Expedia Rapid–focused specs under `docs/specs/` (e.g. `expedia-rapid-accommodations.md`)
 
 ## 1. Supersession Instructions
 
 1. Locate existing Expedia Rapid ADRs and specs:
 
-   - `docs/adrs/adr-00N-expedia-rapid-*.md`
+   - `docs/architecture/decisions/adr-00N-expedia-rapid-*.md`
    - `docs/specs/expedia-rapid-*.md`
    - Any other Expedia Rapid–specific docs referenced from the README or `docs/`
 
