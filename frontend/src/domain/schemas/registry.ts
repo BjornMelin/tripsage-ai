@@ -81,13 +81,29 @@ export const refinedSchemas = {
 };
 
 /**
+ * Standardized API route error response schema.
+ * All route handlers should return errors in this shape for consistency.
+ * Matches the format used by errorResponse(), notFoundResponse(),
+ * unauthorizedResponse(), and forbiddenResponse() helpers.
+ */
+export const routeErrorSchema = z.object({
+  error: z.string().min(1, { error: "Error code is required" }),
+  issues: z.array(z.unknown()).optional(),
+  reason: z.string().min(1, { error: "Reason is required" }),
+});
+
+/** TypeScript type for standardized route error responses. */
+export type RouteError = z.infer<typeof routeErrorSchema>;
+
+/**
  * Schema registry combining all schema groups
  */
 export const schemaRegistry = {
   primitives: primitiveSchemas,
   refined: refinedSchemas,
+  routeError: routeErrorSchema,
   transforms: transformSchemas,
-  version: "1.1.0",
+  version: "1.2.0",
 } as const;
 
 // Export types
