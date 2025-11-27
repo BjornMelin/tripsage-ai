@@ -27,12 +27,13 @@ export const POST = withApiGuards({
   auth: true,
   rateLimit: "chat:sessions:create",
   telemetry: "chat.sessions.create",
-})(async (req: NextRequest, { supabase }) => {
+})(async (req: NextRequest, { supabase, user }) => {
+  const userId = user?.id ?? "";
   // Title is optional, so gracefully handle parsing errors
   const parsed = await parseJsonBody(req);
   const title =
     "error" in parsed ? undefined : (parsed.body as { title?: string })?.title;
-  return createSession({ supabase }, title);
+  return createSession({ supabase, userId }, title);
 });
 
 /**
@@ -44,6 +45,7 @@ export const GET = withApiGuards({
   auth: true,
   rateLimit: "chat:sessions:list",
   telemetry: "chat.sessions.list",
-})((_req, { supabase }) => {
-  return listSessions({ supabase });
+})((_req, { supabase, user }) => {
+  const userId = user?.id ?? "";
+  return listSessions({ supabase, userId });
 });
