@@ -1,12 +1,12 @@
-# Spec: Enable React Compiler in Next.js 16
+# SPEC-0016: Enable React Compiler in Next.js 16
 
 **Version**: 1.0.0
 **Status**: Accepted
 **Date**: 2025-11-04
 **Category**: frontend
 **Domain**: Next.js / React 19
-**Related ADRs**: ADR-0035
-**Related Specs**: SPEC-0002, SPEC-0005
+**Related ADRs**: [ADR-0035](../../architecture/decisions/adr-0035-react-compiler-and-component-declarations.md)
+**Related Specs**: [SPEC-0002](0002-spec-next16-migration.md), [SPEC-0005](0005-spec-tailwind-v4.md)
 
 ## Overview
 

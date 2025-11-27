@@ -1,12 +1,12 @@
-# Spec: Provider Registry
+# SPEC-0012: Provider Registry
 
 **Version**: 1.0.0
 **Status**: Accepted
 **Date**: 2025-11-01
 **Category**: frontend
 **Domain**: AI SDK / Next.js App Router
-**Related ADRs**: [ADR-0028](adr-0028-provider-registry.md)
-**Related Specs**: [SPEC-0008](spec-ai-sdk-v6-foundations.md)
+**Related ADRs**: [ADR-0028](../../architecture/decisions/adr-0028-provider-registry.md)
+**Related Specs**: [SPEC-0008](0008-spec-ai-sdk-v6-foundations.md)
 
 ## API
 

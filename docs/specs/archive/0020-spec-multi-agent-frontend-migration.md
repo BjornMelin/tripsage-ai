@@ -1,4 +1,4 @@
-# Spec 0020: Multi-Agent Frontend Migration & Provider Expansion
+# SPEC-0020: Multi-Agent Frontend Migration & Provider Expansion
 
 **Version**: 1.0.0  
 **Status**: Accepted  
@@ -16,13 +16,13 @@
 
 ## Goals
 
-- Migrate the remaining TypeScript AI SDK v6 agents (flight, accommodation, budget, memory update, router/error recovery) into Next.js Route Handlers powered by the hybrid ToolLoopAgent framework defined in SPEC-0019.
-- Adopt a framework-first wave rollout (per ADR-0039) that hardens shared infrastructure before shipping workflow waves.
+- Migrate the remaining TypeScript AI SDK v6 agents (flight, accommodation, budget, memory update, router/error recovery) into Next.js Route Handlers powered by the hybrid ToolLoopAgent framework defined in [SPEC-0019](0019-spec-hybrid-destination-itinerary-agents.md).
+- Adopt a framework-first wave rollout (per [ADR-0039](../../architecture/decisions/adr-0039-frontend-agent-modernization.md)) that hardens shared infrastructure before shipping workflow waves.
 - Integrate additional providers that unlock richer responses: OpenTripMap POI API for attractions data and GeoSure/Travel Advisory safety scores for contextual advisories.
 
 ## Phase Breakdown
 
-### P0 – Framework Hardening (Completed)
+### P0 - Framework Hardening (Completed)
 
 - **Schemas & Prompts**: Extend `frontend/src/schemas/agents.ts` with shared types for flights, accommodations, budgets, memories, and routing metadata. Update prompt builders to accept user/account context.
 - **Guardrail Middleware**: Generalize middleware to support tool budgets per workflow, caching policies, and telemetry hooks.
@@ -56,7 +56,7 @@
 
 ## Technical Requirements
 
-- **ToolLoopAgent Instances**: Each route instantiates ToolLoopAgent with tailored instructions, tool maps, and `stopWhen` constraints. Reuse guardrail middleware from SPEC-0019.
+- **ToolLoopAgent Instances**: Each route instantiates ToolLoopAgent with tailored instructions, tool maps, and `stopWhen` constraints. Reuse guardrail middleware from [SPEC-0019](0019-spec-hybrid-destination-itinerary-agents.md).
 - **Caching & Rate Limits**: Upstash buckets per workflow (`ratelimit:flight`, etc.), TTL caches for provider responses.
 - **Telemetry**: Structured events for tool calls (name, duration, cacheHit, validationResult) exported via existing logging pipeline.
 - **Testing**: Vitest suites per agent, integration tests hitting API routes with mocked providers, Playwright e2e scenarios for each workflow wave.
@@ -77,8 +77,8 @@
 
 ## References
 
-- ADR-0039 (Framework-first modernization).  
-- ADR-0038 (Hybrid agent architecture).  
+- [ADR-0039](../../architecture/decisions/adr-0039-frontend-agent-modernization.md) (Framework-first modernization).  
+- [ADR-0038](../../architecture/decisions/adr-0038-hybrid-frontend-agents.md) (Hybrid agent architecture).  
 - OpenTripMap API docs (POI data).  
 - GeoSure/Travel Advisory reference.  
 - Zen consensus log on rollout strategy.

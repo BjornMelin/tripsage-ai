@@ -1,4 +1,4 @@
-# Spec: SSE Chat Streaming (End-to-End)
+# SPEC-0007: SSE Chat Streaming (End-to-End)
 
 **Version**: 1.0.0
 **Status**: Accepted

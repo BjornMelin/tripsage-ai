@@ -1,4 +1,4 @@
-# Spec: Attachments & File Uploads Migration (Next.js)
+# SPEC-0017: Attachments & File Uploads Migration (Next.js)
 
 **Version**: 1.0.0  
 **Status**: Partial (Proxy Implementation)  

@@ -1,10 +1,10 @@
-# Spec-001: Tool Schemas and Execution Contracts
+# SPEC-0022: Tool Schemas and Execution Contracts
 
 **Date:** 2025-11-11
 **Version:** 1.0.0
-**Status:** Superseded by ADR-0044 (AI SDK v6 Tool Registry and MCP Integration)
+**Status:** Superseded by [ADR-0044](../../architecture/decisions/adr-0044-ai-sdk-v6-tool-registry-and-mcp-integration.md) (AI SDK v6 Tool Registry and MCP Integration)
 
-**Note:** This spec has been moved to `superseded/` as part of the 2025-01-XX specs audit. Tool contracts are now defined in ADR-0044 and implemented in `frontend/src/ai/tools/`.
+**Note:** This spec has been moved to `superseded/` as part of the 2025-01-XX specs audit. Tool contracts are now defined in [ADR-0044](../../architecture/decisions/adr-0044-ai-sdk-v6-tool-registry-and-mcp-integration.md) and implemented in `frontend/src/ai/tools/`.
 **Category:** frontend
 **Domain:** AI SDK v6
 

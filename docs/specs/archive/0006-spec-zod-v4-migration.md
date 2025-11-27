@@ -1,4 +1,4 @@
-# Spec: Zod v3 -> v4 Migration (Planned Branch)
+# SPEC-0006: Zod v3 -> v4 Migration (Planned Branch)
 
 Status: Completed
 Last updated: 2025-10-23

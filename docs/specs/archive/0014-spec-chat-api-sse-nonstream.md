@@ -1,4 +1,4 @@
-# Spec: Chat API (SSE + Non-Stream)
+# SPEC-0014: Chat API (SSE + Non-Stream)
 
 **Version**: 1.1.0  
 **Status**: Accepted  

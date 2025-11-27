@@ -225,7 +225,7 @@ Request and response schemas are defined using Zod v4 and located in:
 - **API**: `@schemas/api` (`placesSearchRequestSchema`, `postKeyBodySchema`, `loginRequestSchema`)
 - **Supabase**: `@schemas/supabase` (Database table schemas)
 
-All schemas use Zod v4 APIs exclusively. See `docs/development/zod-schema-guide.md` for schema organization details.
+All schemas use Zod v4 APIs exclusively. See `docs/development/standards.md` (Zod schemas) for organization details.
 
 ## Streaming Endpoints
 
@@ -288,7 +288,7 @@ curl -N -X POST "http://localhost:3000/api/chat/stream" \
 
 | Guide | Description |
 |-------|-------------|
-| [Realtime](../guides/realtime.md) | Supabase Realtime with private channels |
+| [Realtime](realtime-api.md) | Supabase Realtime with private channels |
 | [Error Codes](error-codes.md) | Detailed error reference and troubleshooting |
 
 ## Maintenance

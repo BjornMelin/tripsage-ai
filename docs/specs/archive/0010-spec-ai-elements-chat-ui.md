@@ -1,12 +1,12 @@
-# Spec: AI Elements Chat UI
+# SPEC-0010: AI Elements Chat UI
 
 **Version**: 1.0.0
 **Status**: Accepted
 **Date**: 2025-11-01
 **Category**: frontend
 **Domain**: AI SDK / Next.js App Router
-**Related ADRs**: [ADR-0026](adr-0026-adopt-ai-elements-ui-chat.md)
-**Related Specs**: [SPEC-0008](spec-ai-sdk-v6-foundations.md)
+**Related ADRs**: [ADR-0026](../../architecture/decisions/adr-0026-adopt-ai-elements-ui-chat.md)
+**Related Specs**: [SPEC-0008](0008-spec-ai-sdk-v6-foundations.md)
 
 ## Overview
 

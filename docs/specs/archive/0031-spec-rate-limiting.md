@@ -1,4 +1,4 @@
-# Spec 0031: Rate Limiting Strategy (Frontend API routes + Backend)
+# SPEC-0031: Rate Limiting Strategy (Frontend API routes + Backend)
 
 **Version**: 1.0.0
 **Status**: Accepted

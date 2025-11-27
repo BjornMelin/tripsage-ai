@@ -1,4 +1,4 @@
-# Spec 0008: AI SDK v6 Foundations (Next.js)
+# SPEC-0008: AI SDK v6 Foundations (Next.js)
 
 **Version**: 1.1.0  
 **Status**: Accepted  

@@ -1,4 +1,4 @@
-# Spec: Session Resume — TripSage Frontend
+# SPEC-0003: Session Resume (TripSage Frontend)
 
 **Version**: 1.1.0
 **Status**: Accepted
@@ -12,7 +12,7 @@ This document records the active phases, remaining tasks, and validation command
 
 - Phase 4 — Supabase typing tests: DONE (typed helpers + trips repo smoke tests)
 - Phase 5 — Tailwind v4 finalize: DONE (verification + notes recorded)
-- Phase 6 — AI SDK spec realignment: DONE (ADR-0031, spec updates, smoke test)
+- Phase 6 — AI SDK spec realignment: DONE ([ADR-0031](../../architecture/decisions/adr-0031-nextjs-chat-api-ai-sdk-v6.md), spec updates, smoke test)
 - Phase 7 — Zod v4 migration: DONE (deps upgraded; resolver smoke test)
 - Phase 8 — Final spec review + changelog: DONE (CHANGELOG updated; specs statuses set)
 

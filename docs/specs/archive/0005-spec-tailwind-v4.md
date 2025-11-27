@@ -1,4 +1,4 @@
-# Spec: Tailwind CSS v4 Migration
+# SPEC-0005: Tailwind CSS v4 Migration
 
 Status: Completed
 Last updated: 2025-10-23

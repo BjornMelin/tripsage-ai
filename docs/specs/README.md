@@ -54,4 +54,4 @@ When creating a new spec:
 ## Tools and References
 
 - [ADR Documentation](../architecture/decisions/README.md) - Related architectural decisions
-- [Project Architecture](../../docs/architecture/) - Overall system architecture
+- [Project Architecture](../architecture/) - Overall system architecture

@@ -5,7 +5,7 @@
 **Date**: 2025-11-21
 **Category**: Frontend
 **Domain**: AI Orchestration
-**Related ADRs**: [ADR-0052](adr-0052-agent-configuration-backend.md)
+**Related ADRs**: [ADR-0052](../../architecture/decisions/adr-0052-agent-configuration-backend.md)
 **Related Specs**:
 
 ## 1. Summary

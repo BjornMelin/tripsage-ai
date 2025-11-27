@@ -1,4 +1,4 @@
-# Spec 0007 — Final DI + Pydantic v2 Schemas Centralization (Final-Only)
+# SPEC-0023: Final DI + Pydantic v2 Schemas Centralization (Final-Only)
 
 Status: Superseded
 
@@ -11,9 +11,9 @@ Date: 2025-10-24
 
 ## Executive Summary
 
-This spec concludes our “final-only” migration to FastAPI `app.state` DI and Pydantic v2 schema centralization across the API layer. We removed all competing DI patterns and centralized request/response models under `tripsage/api/schemas`. This document finalizes the remaining work: dashboard realtime models, schema audit for Pydantic v2, strict response contracts, enum normalization, OpenAPI snapshot tests, and router policy tests that prevent inline `BaseModel` definitions in routers.
+This spec concludes our "final-only" migration to FastAPI `app.state` DI and Pydantic v2 schema centralization across the API layer. We removed all competing DI patterns and centralized request/response models under `tripsage/api/schemas`. This document finalizes the remaining work: dashboard realtime models, schema audit for Pydantic v2, strict response contracts, enum normalization, OpenAPI snapshot tests, and router policy tests that prevent inline `BaseModel` definitions in routers.
 
-Scope explicitly excludes anything already implemented and verified (memory/attachments/health/trips params centralization; dashboard router refactor; README/CHANGELOG updates; lifespan smoke; limiter signatures for memory/chat; targeted test fixes). This spec covers only the remaining work to reach “no legacy code, no back-compat, no dead code”.
+Scope explicitly excludes anything already implemented and verified (memory/attachments/health/trips params centralization; dashboard router refactor; README/CHANGELOG updates; lifespan smoke; limiter signatures for memory/chat; targeted test fixes). This spec covers only the remaining work to reach "no legacy code, no back-compat, no dead code".
 
 ## Decision Framework
 
@@ -107,7 +107,7 @@ Weighted score: 9.13/10. Proceed.
 - Files
   - README.md (already updated DI + schema policy)
   - CHANGELOG.md (append Phase A–E bullets under Refactor)
-  - Developers guide: add section on “No router-local BaseModel policy” and “OpenAPI snapshot workflow”.
+  - Developers guide: add section on "No router-local BaseModel policy" and "OpenAPI snapshot workflow".
 
 ## File → Task Mapping (Remaining Only)
 
@@ -150,9 +150,9 @@ Weighted score: 9.13/10. Proceed.
 
 - Single PR/branch completing Phases A–E; delete all superseded router-local models immediately.
 - Update CHANGELOG under Refactor:
-  - “Dashboard Realtime: centralized response models; added strict response_model contracts.”
-  - “Pydantic v2 audit across schemas; removed v1-only kwargs.”
-  - “Router policy and OpenAPI snapshot tests added to enforce final-only pattern.”
+  - "Dashboard Realtime: centralized response models; added strict response_model contracts."
+  - "Pydantic v2 audit across schemas; removed v1-only kwargs."
+  - "Router policy and OpenAPI snapshot tests added to enforce final-only pattern."
 
 ## Acceptance Criteria
 

@@ -1,4 +1,4 @@
-# Spec 0019: Hybrid Destination & Itinerary Agents (Frontend)
+# SPEC-0019: Hybrid Destination & Itinerary Agents (Frontend)
 
 **Version**: 1.0.0  
 **Status**: Accepted  
@@ -102,7 +102,7 @@ flowchart TD
 ## Acceptance Criteria
 
 - Backend directories contain no destination/itinerary orchestration code (already removed); frontend endpoints deliver identical or improved outputs.
-- Hybrid ToolLoop approach achieves ≥9/10 Decision Framework score (documented in ADR-0038).
+- Hybrid ToolLoop approach achieves ≥9/10 Decision Framework score (documented in [ADR-0038](../../architecture/decisions/adr-0038-hybrid-frontend-agents.md)).
 - UI renders structured cards/timelines with AI Elements, no raw JSON surfaces.
 - Guardrail middleware logs every tool invocation with result + cache metadata; Upstash limits enforced per user/workflow.
 - Automated tests cover schemas, agents, and UI; manual checklist documented for release.
@@ -111,11 +111,11 @@ flowchart TD
 
 - P0 completed (platform hardening: schemas, prompts, guardrails, telemetry, caching).
 - P1 completed (flight + accommodation agents shipped in frontend; schema-aware UI cards and route tests).
-- Next phase: P2 – Budget & Memory agents (design/implementation starting).
+- Next phase: P2 - Budget & Memory agents (design/implementation starting).
 
 ## References
 
-- ADR-0038 Hybrid Frontend Agents (decision record).  
+- [ADR-0038](../../architecture/decisions/adr-0038-hybrid-frontend-agents.md) Hybrid Frontend Agents (decision record).  
 - AI SDK v6 documentation for ToolLoopAgent, tool calling, and structured outputs.  
 - Next.js Route Handler docs (`/docs/app/building-your-application/routing/route-handlers`).  
 - AI Elements documentation for PromptInput, Conversation, and related components.
