@@ -73,10 +73,7 @@ export async function listSessions(deps: SessionsDeps): Promise<Response> {
 /**
  * Get a single session by id (owner-only).
  */
-export async function getSession(
-  deps: SessionsDeps,
-  id: string
-): Promise<Response> {
+export async function getSession(deps: SessionsDeps, id: string): Promise<Response> {
   const { data, error } = await deps.supabase
     .from("chat_sessions")
     .select("id, created_at, updated_at, metadata")
@@ -96,10 +93,7 @@ export async function getSession(
 /**
  * Delete a session by id (owner-only).
  */
-export async function deleteSession(
-  deps: SessionsDeps,
-  id: string
-): Promise<Response> {
+export async function deleteSession(deps: SessionsDeps, id: string): Promise<Response> {
   const { error } = await deps.supabase
     .from("chat_sessions")
     .delete()
@@ -117,10 +111,7 @@ export async function deleteSession(
 /**
  * List messages for a session.
  */
-export async function listMessages(
-  deps: SessionsDeps,
-  id: string
-): Promise<Response> {
+export async function listMessages(deps: SessionsDeps, id: string): Promise<Response> {
   const { data: session, error: sessionError } = await deps.supabase
     .from("chat_sessions")
     .select("id")

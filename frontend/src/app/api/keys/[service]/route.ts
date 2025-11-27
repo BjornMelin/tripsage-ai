@@ -93,11 +93,13 @@ export function DELETE(
       );
       return new NextResponse(null, { status: 204 });
     } catch (err) {
-      const { message: safeMessage, context: safeContext } =
-        redactErrorForLogging(err, {
+      const { message: safeMessage, context: safeContext } = redactErrorForLogging(
+        err,
+        {
           operation: "delete_key",
           service: serviceForLog,
-        });
+        }
+      );
       recordTelemetryEvent("api.keys.delete_error", {
         attributes: {
           message: safeMessage,

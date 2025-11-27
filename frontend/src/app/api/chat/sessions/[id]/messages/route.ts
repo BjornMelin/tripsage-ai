@@ -22,10 +22,7 @@ import { createMessage, listMessages } from "../../_handlers";
  * @param context Route context containing the session ID parameter.
  * @returns Promise resolving to Response with array of messages.
  */
-export function GET(
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
+export function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   return withApiGuards({
     auth: true,
     rateLimit: "chat:sessions:messages:list",
@@ -46,10 +43,7 @@ export function GET(
  * @param context Route context containing the session ID parameter.
  * @returns Promise resolving to Response with no content on success.
  */
-export function POST(
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
+export function POST(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   return withApiGuards({
     auth: true,
     rateLimit: "chat:sessions:messages:create",
