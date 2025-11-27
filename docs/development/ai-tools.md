@@ -304,7 +304,7 @@ export const myTool = createAiTool({
 
 ## Testing Tools
 
-Tools should be tested through AI SDK patterns. See `frontend/src/ai/lib/__tests__/tool-factory.test.ts` for examples:
+Tools should be tested through AI SDK patterns. See `frontend/src/ai/lib/tool-factory.test.ts` for examples:
 
 ```typescript
 import type { ToolCallOptions } from "ai";
