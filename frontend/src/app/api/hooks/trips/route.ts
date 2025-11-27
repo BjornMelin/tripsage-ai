@@ -3,29 +3,19 @@
  */
 
 import "server-only";
-import { createClient } from "@supabase/supabase-js";
 import { Client as QStash } from "@upstash/qstash";
 import { after, type NextRequest, NextResponse } from "next/server";
-import { getServerEnvVar, getServerEnvVarWithFallback } from "@/lib/env/server";
+import { errorResponse } from "@/lib/api/route-helpers";
+import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { tryReserveKey } from "@/lib/idempotency/redis";
 import { sendCollaboratorNotifications } from "@/lib/notifications/collaborators";
+import { createAdminSupabase } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import { buildEventKey, parseAndVerify } from "@/lib/webhooks/payload";
 
 type TripCollaboratorRow = Database["public"]["Tables"]["trip_collaborators"]["Row"];
-
-/**
- * Creates an admin Supabase client with service role credentials.
- *
- * @return Admin Supabase client instance.
- */
-function createAdminSupabase() {
-  const url = getServerEnvVar("NEXT_PUBLIC_SUPABASE_URL");
-  const serviceKey = getServerEnvVar("SUPABASE_SERVICE_ROLE_KEY") as string;
-  return createClient<Database>(url, serviceKey);
-}
 
 /**
  * Handles trip collaborator database change webhooks with async notification processing.
@@ -41,10 +31,11 @@ export async function POST(req: NextRequest) {
     async (span) => {
       const { ok, payload } = await parseAndVerify(req);
       if (!ok || !payload)
-        return NextResponse.json(
-          { error: "invalid signature or payload" },
-          { status: 401 }
-        );
+        return errorResponse({
+          error: "invalid_signature",
+          reason: "Invalid signature or payload",
+          status: 401,
+        });
       span.setAttribute("table", payload.table);
       span.setAttribute("op", payload.type);
       if (payload.table !== "trip_collaborators") {
@@ -72,7 +63,12 @@ export async function POST(req: NextRequest) {
           .limit(1);
         if (error) {
           span.recordException(error);
-          return NextResponse.json({ error: "supabase query failed" }, { status: 500 });
+          return errorResponse({
+            err: error,
+            error: "db_error",
+            reason: "Supabase query failed",
+            status: 500,
+          });
         }
       }
 

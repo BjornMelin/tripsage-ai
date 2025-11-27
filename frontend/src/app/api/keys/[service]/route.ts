@@ -16,12 +16,24 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import type { RateLimitResult } from "@/app/api/keys/_rate-limiter";
 import { buildKeySpanAttributes } from "@/app/api/keys/_telemetry";
+import type { RouteParamsContext } from "@/lib/api/factory";
 import { withApiGuards } from "@/lib/api/factory";
-import { errorResponse, redactErrorForLogging } from "@/lib/api/route-helpers";
+import {
+  errorResponse,
+  parseStringId,
+  redactErrorForLogging,
+  requireUserId,
+} from "@/lib/api/route-helpers";
 import { deleteUserApiKey, deleteUserGatewayBaseUrl } from "@/lib/supabase/rpc";
 import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
 
-const ALLOWED_SERVICES = new Set(["openai", "openrouter", "anthropic", "xai"]);
+const ALLOWED_SERVICES = new Set([
+  "openai",
+  "openrouter",
+  "anthropic",
+  "xai",
+  "gateway",
+]);
 
 type IdentifierType = "user" | "ip";
 
@@ -41,23 +53,20 @@ export function DELETE(
     auth: true,
     rateLimit: "keys:delete",
     // Custom telemetry handled below
-  })(async (_req: NextRequest, { user }) => {
+  })(async (_req: NextRequest, { user }, _data, routeContext: RouteParamsContext) => {
     let serviceForLog: string | undefined;
     try {
-      const userObj = user as { id: string } | null;
-      const identifierType: IdentifierType = userObj?.id ? "user" : "ip";
+      const result = requireUserId(user);
+      if ("error" in result) return result.error;
+      const { userId } = result;
+      const identifierType: IdentifierType = "user";
       // Rate limit metadata not available from factory, using undefined for custom telemetry
       const rateLimitMeta: RateLimitResult | undefined = undefined;
 
-      const { service } = await context.params;
+      const serviceResult = await parseStringId(routeContext, "service");
+      if ("error" in serviceResult) return serviceResult.error;
+      const { id: service } = serviceResult;
       serviceForLog = service;
-      if (!service || typeof service !== "string") {
-        return errorResponse({
-          error: "bad_request",
-          reason: "Invalid service",
-          status: 400,
-        });
-      }
       const normalizedService = service.trim().toLowerCase();
       if (!ALLOWED_SERVICES.has(normalizedService)) {
         return errorResponse({
@@ -75,15 +84,15 @@ export function DELETE(
             operation: "delete",
             rateLimit: rateLimitMeta,
             service: normalizedService,
-            userId: userObj?.id || "",
+            userId,
           }),
         },
         async (span) => {
           try {
             if (normalizedService === "gateway") {
-              await deleteUserGatewayBaseUrl(userObj?.id || "");
+              await deleteUserGatewayBaseUrl(userId);
             }
-            await deleteUserApiKey(userObj?.id || "", normalizedService);
+            await deleteUserApiKey(userId, normalizedService);
             span.setAttribute("keys.rpc.error", false);
           } catch (rpcError) {
             span.setAttribute("keys.rpc.error", true);

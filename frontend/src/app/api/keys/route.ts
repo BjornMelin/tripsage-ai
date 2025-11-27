@@ -17,7 +17,7 @@ import type { NextRequest } from "next/server";
 import type { RateLimitResult } from "@/app/api/keys/_rate-limiter";
 import { buildKeySpanAttributes } from "@/app/api/keys/_telemetry";
 import { withApiGuards } from "@/lib/api/factory";
-import { API_CONSTANTS, errorResponse } from "@/lib/api/route-helpers";
+import { API_CONSTANTS, errorResponse, requireUserId } from "@/lib/api/route-helpers";
 import { insertUserApiKey, upsertUserGatewayBaseUrl } from "@/lib/supabase/rpc";
 import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
 import { getKeys, postKey } from "./_handlers";
@@ -37,12 +37,12 @@ export const POST = withApiGuards({
   schema: postKeyBodySchema,
   // Custom telemetry handled below, factory telemetry disabled
 })(async (req: NextRequest, { user, supabase }, validated: PostKeyBody) => {
-  const userObj = user as { id: string } | null;
-  const identifierType: IdentifierType = userObj?.id ? "user" : "ip";
+  const userResult = requireUserId(user);
+  if ("error" in userResult) return userResult.error;
+  const { userId } = userResult;
+  const identifierType: IdentifierType = "user";
   // Rate limit metadata not available from factory, using undefined for custom telemetry
   const rateLimitMeta: RateLimitResult | undefined = undefined;
-
-  const userId = userObj?.id ?? "";
 
   // Check Content-Length before parsing to prevent memory exhaustion
   // Note: This check happens after withApiGuards has already parsed the body,
@@ -138,6 +138,8 @@ export const GET = withApiGuards({
   rateLimit: "keys:create", // Reuse create limit for GET
   // Custom telemetry handled in handler
 })((_req: NextRequest, { supabase, user }) => {
-  const userId = (user as { id: string } | null)?.id ?? "";
+  const result = requireUserId(user);
+  if ("error" in result) return result.error;
+  const { userId } = result;
   return getKeys({ supabase, userId });
 });

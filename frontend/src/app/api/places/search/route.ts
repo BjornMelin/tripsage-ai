@@ -10,6 +10,7 @@ import "server-only";
 import { type PlacesSearchRequest, placesSearchRequestSchema } from "@schemas/api";
 import { type NextRequest, NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
+import { errorResponse } from "@/lib/api/route-helpers";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
 
 /**
@@ -74,7 +75,11 @@ export const POST = withApiGuards({
       response.status === 429
         ? "Upstream rate limit exceeded. Please try again shortly."
         : "External places service error.";
-    return NextResponse.json({ error: errorMessage }, { status: response.status });
+    return errorResponse({
+      error: response.status === 429 ? "rate_limited" : "external_api_error",
+      reason: errorMessage,
+      status: response.status,
+    });
   }
 
   const data = await response.json();

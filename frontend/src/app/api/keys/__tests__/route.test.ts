@@ -13,6 +13,7 @@ import { createMockNextRequest, createRouteParamsContext } from "@/test/route-he
 
 const MOCK_INSERT = vi.hoisted(() => vi.fn());
 const MOCK_DELETE = vi.hoisted(() => vi.fn());
+const MOCK_DELETE_GATEWAY = vi.hoisted(() => vi.fn());
 const TELEMETRY_SPY = vi.hoisted(() =>
   vi.fn(
     (
@@ -27,7 +28,7 @@ const TELEMETRY_SPY = vi.hoisted(() =>
 
 vi.mock("@/lib/supabase/rpc", () => ({
   deleteUserApiKey: MOCK_DELETE,
-  deleteUserGatewayBaseUrl: vi.fn(),
+  deleteUserGatewayBaseUrl: MOCK_DELETE_GATEWAY,
   insertUserApiKey: MOCK_INSERT,
 }));
 
@@ -45,6 +46,7 @@ describe("/api/keys routes", () => {
     mockApiRouteAuthUser({ id: "test-user" });
     MOCK_INSERT.mockReset();
     MOCK_DELETE.mockReset();
+    MOCK_DELETE_GATEWAY.mockReset();
     TELEMETRY_SPY.mockReset();
   });
 
@@ -148,5 +150,22 @@ describe("/api/keys routes", () => {
     });
     expect(res.status).toBe(401);
     expect(MOCK_DELETE).not.toHaveBeenCalled();
+  });
+
+  it("DELETE /api/keys/[service] removes gateway key and config", async () => {
+    mockApiRouteAuthUser({ id: "user-1" });
+    MOCK_DELETE.mockResolvedValue(undefined);
+    MOCK_DELETE_GATEWAY.mockResolvedValue(undefined);
+    const route = await import("@/app/api/keys/[service]/route");
+    const req = createMockNextRequest({
+      method: "DELETE",
+      url: "http://localhost/api/keys/gateway",
+    });
+    const res = await route.DELETE(req, {
+      params: Promise.resolve({ service: "gateway" }),
+    });
+    expect(res.status).toBe(204);
+    expect(MOCK_DELETE_GATEWAY).toHaveBeenCalledWith("user-1");
+    expect(MOCK_DELETE).toHaveBeenCalledWith("user-1", "gateway");
   });
 });
