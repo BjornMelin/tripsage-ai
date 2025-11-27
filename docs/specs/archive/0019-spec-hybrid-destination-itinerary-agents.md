@@ -12,7 +12,7 @@ Deliver feature parity for destination research and itinerary planning directly 
 - TypeScript tool orchestrators, schemas, prompts, and summarizers.
 - AI Elements chat UX upgrades (quick actions, cards, timelines, progress states).
 - Telemetry, rate limiting, caching, and rollout guidance.
-- Operators runbook for deployment and validation (see `docs/operators/agent-frontend.md`).
+- Operators runbook for deployment and validation (see `docs/operations/agent-frontend.md`).
 - Removal of any dependency on `tripsage/` or `tripsage_core` for these agents.
 
 Out of scope: implementing new upstream travel data providers (reuse existing tools), rewriting Supabase auth helpers, or modifying backend FastAPI services (Python backend has been completely removed; all functionality runs in Next.js TypeScript).
@@ -57,7 +57,7 @@ flowchart TD
 
 ### 2. Provider & Infra Enhancements
 
-- **Files**: `frontend/src/lib/providers/registry.ts`, `frontend/src/lib/settings.ts`, `frontend/src/lib/cache/upstash.ts`, `frontend/src/lib/ratelimit/{destinations,itineraries}.ts`.
+- **Files**: `frontend/src/ai/models/registry.ts`, compatibility shim `frontend/src/lib/providers/registry.ts`, `frontend/src/lib/cache/upstash.ts`, `frontend/src/lib/ratelimit/{destinations,itineraries}.ts`.
 - **Requirements**:
   - Add fallback to Vercel AI Gateway when BYOK keys missing; attach metadata describing provider used.
   - Implement Upstash helper functions `withCache(key, ttl, fn)` and `takeToken(bucket, limit)`.

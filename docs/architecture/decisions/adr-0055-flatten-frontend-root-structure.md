@@ -81,5 +81,5 @@ Why not chosen: This is currently YAGNI, “You Are Not Gonna Need It”. There 
 - Next.js App directory layout recommendations【9†L58-L66】 and community examples that keep the app at repo root.
 - ADR-0013: Adopt Next.js 16 Proxy (noted the removal of old `middleware.ts`, which simplified root structure dependencies)【46†L31-L39】.
 - ADR-0016: Tailwind v4 migration, which chose a no-config approach we will uphold after flattening【46†L33-L36】.
-- Internal discussion in `docs/developers/import-paths.md` on path aliases, which will remain consistent after flattening but defined in root tsconfig【23†L73-L81】.
+- Internal discussion in `docs/development/standards.md` on path aliases, which will remain consistent after flattening but defined in root tsconfig【23†L73-L81】.
 - Changelog entry on updating Turbopack root to "."【68†L1-L4】, relevant to ensure Next’s config still points correctly post-move.

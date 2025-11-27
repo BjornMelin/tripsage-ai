@@ -86,6 +86,7 @@ Migration checklist for new imports:
 2) If same feature folder and short path, prefer relative.
 3) Verify alias exists in `tsconfig` and `vitest.config.ts`.
 4) Run `pnpm biome:check` to catch violations.
+5) Do not add new imports from `@/lib/providers/registry`; use `@ai/models/registry` (shim removal planned).
 
 Troubleshooting: restart TS server, confirm path mapping, run `pnpm type-check` for detailed errors.
 

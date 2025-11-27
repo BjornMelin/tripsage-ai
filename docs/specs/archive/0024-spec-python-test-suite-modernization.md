@@ -36,7 +36,7 @@ Modernize and reorganize the Python `tests/` hierarchy to align with the 2025 py
 - [ ] Add coverage guards and quality gates:
   - Enforce Ruff formatting/checking and Pyright strict mode for `tests/` via pre-commit or CI.
   - Document minimum backend test coverage (≥90%) and ensure `uv run pytest --maxfail=1 --durations=10` stays under 60s locally.
-- [ ] Document fixture usage and directory conventions in `docs/developers/testing-python.md` (or nearest developer guide).
+- [ ] Document fixture usage and directory conventions in `docs/development/testing-python.md` (or nearest developer guide).
 
 ## Acceptance Criteria
 

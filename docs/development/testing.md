@@ -55,7 +55,7 @@ it("retries after delay", withFakeTimers(async () => {
 4. **Supabase:** `frontend/src/test/mocks/supabase.ts`; prefer MSW for REST/RPC.
 5. **Timers:** opt-in `withFakeTimers`; avoid global `vi.useFakeTimers()`.
 6. **Mock order:** mock `next/headers` (cookies) **before** importing modules that read headers; hoist spies with `vi.hoisted`; then module mocks; finally dynamic import of route under test.
-7. **Rate limiting helpers:** use `stubRateLimitEnabled/Disabled` and Redis getters (`MOCK_GET_REDIS`) from tests; keep in-memory fakes per test.
+7. **Rate-limiting helpers:** use `stubRateLimitEnabled/Disabled` and Redis getters (`MOCK_GET_REDIS`) from tests; keep in-memory fakes per test.
 
 ## MSW Patterns
 

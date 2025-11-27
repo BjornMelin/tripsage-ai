@@ -1,13 +1,13 @@
 # AI SDK v6 Tool Creation
 
-Patterns for creating AI SDK v6 tools with guardrails (caching, rate limiting, telemetry) in TripSage AI.
+Patterns for creating AI SDK v6 tools with guardrails (caching, rate-limiting, telemetry) in TripSage AI.
 
 ## Overview
 
 TripSage tools use the `createAiTool` factory from `@ai/lib/tool-factory`:
 
 - **Type-safe tool creation** compatible with AI SDK v6 `Tool<InputValue, OutputValue>` types
-- **Built-in guardrails**: caching, rate limiting, and telemetry
+- **Built-in guardrails**: caching, rate-limiting, and telemetry
 - **Consistent error handling** via `createToolError` utilities
 - **Workflow-specific telemetry** for agent-level observability
 
@@ -39,7 +39,7 @@ export const myTool = tool({
 
 ### Tool with Guardrails (Recommended)
 
-Use `createAiTool` for production tools that need caching, rate limiting, and telemetry:
+Use `createAiTool` for production tools that need caching, rate-limiting, and telemetry:
 
 ```typescript
 import "server-only";
@@ -154,7 +154,7 @@ rateLimit: {
   // Required: error code to throw when limit exceeded
   errorCode: TOOL_ERROR_CODES.webSearchRateLimited,
   
-  // Required: function that returns identifier for rate limiting
+  // Required: function that returns identifier for rate-limiting
   // Can use params and/or callOptions.messages
   identifier: (params, callOptions) => {
     // Extract user ID from messages or params
@@ -245,7 +245,7 @@ function buildMyAgentTools(identifier: string): ToolSet {
 
 ## Best Practices
 
-1. **Use `createAiTool`** for tools that need guardrails (caching, rate limiting, telemetry)
+1. **Use `createAiTool`** for tools that need guardrails (caching, rate-limiting, telemetry)
 2. **Use `hashInput: true`** for cache keys when inputs are complex objects
 3. **Include workflow telemetry** when tools are used in agents
 4. **Accept `ToolCallOptions`** in all execute functions, even if unused
@@ -280,7 +280,7 @@ export const toolInputSchema = z.strictObject({
 ```typescript
 export const myTool = tool({
   execute: async (params) => {
-    // Manual caching, rate limiting, telemetry
+    // Manual caching, rate-limiting, telemetry
     return result;
   },
 });
@@ -325,12 +325,12 @@ test("tool caches results", async () => {
 **Test setup:**
 
 - Mock Upstash Redis using `setupUpstashMocks()` from `@/test/setup/upstash`
-- Use MSW handlers from `@/test/msw/handlers/upstash` for rate limiting
+- Use MSW handlers from `@/test/msw/handlers/upstash` for rate-limiting
 - Stub telemetry spans with `vi.mock("@/lib/telemetry/span")`
 
 ## Tool Catalog
 
-All tools are exported from `frontend/src/ai/tools/index.ts`. The `toolRegistry` object provides typed access for agents.
+All tools are exported from `frontend/src/ai/tools/index.ts`. The `toolRegistry` object provides typed access for agents. All sources below are located under `frontend/src/ai/tools/`.
 
 ### Search & Discovery
 

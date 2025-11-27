@@ -34,10 +34,10 @@ No end-user features are added or removed by this refactor. It should be entirel
 Since this is an internal refactor, users are developers and maintainers of the project.
 
 - As a developer, I want to run the development server without having to `cd` into a subdirectory so that getting the app running is quicker and less error-prone.
-- As a new contributor, I want the project structure to be intuitive, one app at root with code in `src/`, so that I can clone and navigate the repository without confusion.
-- As a DevOps engineer, I want the CI/CD pipeline to have fewer moving parts, no separate install step for a subdirectory and no path filtering for specific folders, reducing maintenance and points of failure during automated tests and deployments.
-- As a technical writer, I want to document project setup in a straightforward way so that external docs or README instructions are short and simple.
-- As a project maintainer, I want to avoid subtle bugs that arise from duplicate configs or misaligned directories, for example a tsconfig path alias not matching the build path, improving the reliability of configuration.
+- New contributors need a single-root layout with code in `src/` so cloning and navigation stay intuitive.
+- DevOps engineers want fewer CI/CD moving parts—no subdirectory installs or path filters—so pipelines remain simple and reliable.
+- Technical writers need a straightforward setup story so external docs or README instructions can stay short and clear.
+- Project maintainers want to avoid subtle bugs from duplicate configs or misaligned directories (e.g., tsconfig path aliases), improving reliability.
 
 ## 5. User Flows
 
@@ -134,15 +134,23 @@ If tests reveal a severe problem that is not quickly fixable, the change can be 
 
 ## 11. Risks & Open Questions
 
-- Risk: Overlooking a reference. We must search for any and all references to `frontend/` in the repo, code, docs, GitHub workflows, even README badges or CI config files. Missing one could cause runtime errors or broken documentation.
-- Risk: Vercel config. The production deployment environment might have specific settings, such as build command or output directory, that assume `/frontend`. We need to update the project settings, for example set root directory to `.` instead of `frontend`, and ensure the build command is `pnpm build` at root. We should schedule this change carefully to not disrupt a production deploy.
+- Risk: Overlooking a reference. We must search for all references to `frontend/` in the repo, code, docs, GitHub workflows, even README badges or CI config files. Missing one could cause runtime errors or broken documentation. Plan: run `rg "frontend/" -g"*" .`, `rg "\bfrontend\b" .github ci infra scripts`, and scan Vercel/infra repos; capture hits in a checklist PR and require two approvals before merge.
+- Risk: Vercel config. Production settings may assume `/frontend`. Update Project Settings → General → Root Directory to `.`, Build & Development → Build Command to `pnpm build`, keep default output. Apply on a preview branch first, validate, then cut production during a low-traffic window with rollback ready.
 - Risk: Local environment cache. Developers might have `node_modules` in `frontend/` and none at root. After flattening, one should delete the old `frontend/node_modules` to avoid confusion. We will note this in the migration guide.
 - Open question: Keep `src/` or not. Currently, code is in `frontend/src`. After moving to root, we plan to keep `src/`, so code is in `tripsage-ai/src/...`. Alternatively, we could eliminate the `src` folder and put `app/`, `components/`, etc. at root. However, Next.js supports having a `src/` for organizing code, and the team is already using that pattern. Decision: We will preserve the `src` directory to minimize path changes and keep things tidy.
-- Open question: What to do with `frontend/README.md`. It contains useful developer-centric info, including tech stack and metrics【4†L0-L8】【4†L119-L127】. We have a few options: merge its content into the main README.md, under a new section or linking to docs, or move it to `docs/developers/` if that info is elsewhere. Likely, we will integrate key points into docs and ensure anything redundant with the root README is resolved.
+- Open question: What to do with `frontend/README.md`. It contains useful developer-centric info, including tech stack and metrics【4†L0-L8】【4†L119-L127】. We have a few options: merge its content into the main README.md, under a new section or linking to docs, or move it to `docs/development/` if that info is elsewhere. Likely, we will integrate key points into docs and ensure anything redundant with the root README is resolved.
 - Risk: Git history and open PRs. Communicate this structural change to the team. There may be open PRs touching files under `frontend/`. We should coordinate to merge those first or prepare them to be rebased after.
-- Risk: Path alias edge case. After moving, the tsconfig path aliases like `"@/something"` now map to `src/*` at root, which is correct. But what about imports of local files that used relative paths up to `frontend`? Originally, `..` would resolve to `frontend/src/domain/schemas`. After move, `..` from the same relative location still resolves to `src/domain/schemas` since the folder structure under src did not change. So relative imports remain valid.
+- Risk: Path alias edge case. After moving, the tsconfig path aliases like `"@/something"` now map to `src/*` at root. We must verify by running `pnpm biome:check`, `pnpm type-check` (tsc --noEmit), and searching for imports that climb above `src` or point to `frontend/` (including dynamic import/require). Fix any stragglers before merge.
 - Open question: Supabase config TOML. It contains runtime sections with paths. If any path like a seed script path was set, we should confirm it is fine. The known changes in config, like `edge_runtime.policy = "oneshot"`【68†L1-L4】, are unrelated to path.
-- Risk: Documentation drift. We need to update internal docs to reflect new structure. For example, `docs/developers/quick-start.md` likely says `cd frontend`【50†L13-L18】. We must update that. Also, any code snippets in docs pointing to `frontend/src/...` need updating.
+- Risk: Documentation drift. We need to update internal docs to reflect new structure. For example, `docs/development/quick-start.md` likely says `cd frontend`【50†L13-L18】. We must update that. Also, any code snippets in docs pointing to `frontend/src/...` need updating.
 - Gain: Reduced future risk. Flattening now reduces the chance of future misconfiguration, such as forgetting to update a setting in two separate places. Addressing this now preempts that class of issues.
 
 Overall, the flattening is straightforward but requires meticulous attention to detail to avoid any service interruption. The plan and checklist aim to mitigate these risks fully.
+
+## Deployment & Rollback
+
+- Sequence: create a preview branch with the flattened layout, set Vercel Root Directory to `.`, Build Command to `pnpm build`, deploy preview, and validate.
+- Pre-cutover checklist: green `pnpm biome:check`, `pnpm type-check`, `pnpm build`, and manual smoke on the preview URL; share results in the checklist PR with two approvers.
+- Production cut: schedule a low-traffic window; flip Vercel production Root Directory to `.` after preview validation; monitor logs/metrics for 30 minutes.
+- Rollback: revert the Vercel Root Directory to `frontend` and redeploy the prior commit; announce rollback in the same channel.
+- Communication: notify #eng-ai and on-call 24h before cut, include owners and exact timing for cutover/rollback.
