@@ -286,6 +286,7 @@ frontend/docs/prompts/
 docs/prompts/
 docs/review/
 docs/implementation/
+docs/specs/migrations/
 
 # Frontend workspace (consolidated from frontend/.gitignore)
 next-env.d.ts
