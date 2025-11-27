@@ -54,11 +54,29 @@ Search memories.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `query` | string | Yes | Search query |
-| `limit` | number | No | Maximum results |
+| `limit` | number | No | Maximum results (Minimum: 1, Maximum: 100, Default: 10) |
 
 ### Response
 
 `200 OK` - Returns search results
+
+```json
+{
+  "results": [
+    {
+      "id": "memory-123",
+      "relevance": 0.95,
+      "content": "Memory content text"
+    },
+    {
+      "id": "memory-456",
+      "relevance": 0.87,
+      "content": "Another memory entry"
+    }
+  ],
+  "count": 2
+}
+```
 
 ### Errors
 
@@ -84,6 +102,16 @@ Get user memory data.
 ### Response
 
 `200 OK` - Returns user memory data
+
+```json
+{
+  "id": "memory-123",
+  "userId": "user-uuid-456",
+  "content": "User memory content",
+  "createdAt": "2025-01-15T10:00:00Z",
+  "updatedAt": "2025-01-20T15:30:00Z"
+}
+```
 
 ### Errors
 
@@ -143,9 +171,22 @@ Get memory context for a user.
 
 ```json
 {
-  "context": [...]
+  "context": [
+    {
+      "key": "user_preferences",
+      "type": "preferences",
+      "value": {"theme": "dark", "language": "en"}
+    },
+    {
+      "key": "recent_trips",
+      "type": "history",
+      "value": ["trip-1", "trip-2"]
+    }
+  ]
 }
 ```
+
+Note: Context array contents are user-defined. The structure above shows representative objects with `key`, `type`, and `value` fields.
 
 ### Errors
 
@@ -172,6 +213,16 @@ Get memory statistics for a user.
 
 `200 OK` - Returns memory statistics
 
+```json
+{
+  "totalMemories": 42,
+  "totalConversations": 15,
+  "memorySize": 256000,
+  "lastAccessedAt": "2025-01-20T15:30:00Z",
+  "createdAt": "2024-12-01T10:00:00Z"
+}
+```
+
 ### Errors
 
 - `401` - Not authenticated
@@ -197,6 +248,16 @@ Get memory preferences for a user.
 
 `200 OK` - Returns memory preferences
 
+```json
+{
+  "autoSave": true,
+  "retention": 90,
+  "privacy": "private",
+  "sharing": false,
+  "notifications": true
+}
+```
+
 ### Errors
 
 - `401` - Not authenticated
@@ -221,6 +282,21 @@ Get memory insights for a user.
 ### Response
 
 `200 OK` - Returns memory insights
+
+```json
+{
+  "insights": [
+    {
+      "summary": "User frequently asks about travel recommendations",
+      "score": 0.92
+    },
+    {
+      "summary": "Strong preference for budget-conscious trips",
+      "score": 0.87
+    }
+  ]
+}
+```
 
 ### Errors
 
