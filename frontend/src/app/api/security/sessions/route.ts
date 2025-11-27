@@ -4,7 +4,7 @@
 
 import "server-only";
 
-import { type NextRequest, NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import { getCurrentSessionId, listSessionsHandler } from "./_handlers";
@@ -15,10 +15,8 @@ export const GET = withApiGuards({
   rateLimit: "security:sessions:list",
   telemetry: "security.sessions.list",
 })(async (_req: NextRequest, { supabase, user }) => {
-  const userId = user?.id;
-  if (!userId) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
+  // auth: true guarantees user is authenticated
+  const userId = user?.id ?? "";
 
   const [adminSupabase, currentSessionId] = await Promise.all([
     Promise.resolve(createAdminSupabase()),
