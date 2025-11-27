@@ -80,7 +80,26 @@ Get activity/place details by Place ID.
 
 #### Response
 
-`200 OK` - Returns place details object
+`200 OK`
+
+```json
+{
+  "id": "places/ChIJN1t_tDeuEmsRUsoyG83frY4",
+  "displayName": "Louvre Museum",
+  "formattedAddress": "Rue de Rivoli, 75001 Paris, France",
+  "location": {
+    "latitude": 48.8606,
+    "longitude": 2.3376
+  },
+  "rating": 4.7,
+  "userRatingCount": 123456,
+  "photos": [
+    {
+      "name": "places/photo-reference"
+    }
+  ]
+}
+```
 
 #### Errors
 
@@ -100,7 +119,13 @@ Search for places using Google Places Text Search.
 
 #### Request Body
 
-Same as `POST /api/activities/search`
+Identical to `POST /api/activities/search` - see Activities section above for complete schema details.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `textQuery` | string | Yes | Search query (min 1 char) |
+| `maxResultCount` | number | No | Maximum results (default: 20, max: 20) |
+| `locationBias` | object | No | Location bias {lat, lon, radiusMeters} |
 
 #### Response
 
@@ -137,6 +162,22 @@ Same as `POST /api/activities/search`
 
 - `400` - Invalid request parameters
 - `429` - Rate limit exceeded
+
+#### Example
+
+```bash
+curl -X POST "http://localhost:3000/api/places/search" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "textQuery": "museum in Paris",
+    "maxResultCount": 5,
+    "locationBias": {
+      "lat": 48.8566,
+      "lon": 2.3522,
+      "radiusMeters": 10000
+    }
+  }'
+```
 
 ---
 
@@ -277,6 +318,27 @@ Geocode an address or reverse geocode coordinates.
 - `401` - Not authenticated
 - `429` - Rate limit exceeded
 
+#### Example
+
+```bash
+# Geocode an address
+curl -X POST "http://localhost:3000/api/geocode" \
+  --cookie "sb-access-token=$JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "address": "1 Rue de la Paix, 75002 Paris, France"
+  }'
+
+# Reverse geocode coordinates
+curl -X POST "http://localhost:3000/api/geocode" \
+  --cookie "sb-access-token=$JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "lat": 48.8606,
+    "lng": 2.3376
+  }'
+```
+
 ---
 
 ### `POST /api/timezone`
@@ -303,6 +365,18 @@ Get timezone for coordinates.
 - `400` - Invalid coordinates
 - `401` - Not authenticated
 - `429` - Rate limit exceeded
+
+#### Example
+
+```bash
+curl -X POST "http://localhost:3000/api/timezone" \
+  --cookie "sb-access-token=$JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "lat": 48.8606,
+    "lng": 2.3376
+  }'
+```
 
 ---
 
