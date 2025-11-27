@@ -147,7 +147,7 @@ If tests reveal a severe problem that is not quickly fixable, the change can be 
 
 Overall, the flattening is straightforward but requires meticulous attention to detail to avoid any service interruption. The plan and checklist aim to mitigate these risks fully.
 
-## Deployment & Rollback
+## 12. Deployment & Rollback
 
 - Sequence: create a preview branch with the flattened layout, set Vercel Root Directory to `.`, Build Command to `pnpm build`, deploy preview, and validate.
 - Pre-cutover checklist: green `pnpm biome:check`, `pnpm type-check`, `pnpm build`, and manual smoke on the preview URL; share results in the checklist PR with two approvers.

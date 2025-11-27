@@ -57,7 +57,7 @@ flowchart TD
 
 ### 2. Provider & Infra Enhancements
 
-- **Files**: `frontend/src/ai/models/registry.ts`, compatibility shim `frontend/src/lib/providers/registry.ts`, `frontend/src/lib/cache/upstash.ts`, `frontend/src/lib/ratelimit/{destinations,itineraries}.ts`.
+- **Files**: `frontend/src/ai/models/registry.ts`, `frontend/src/lib/cache/upstash.ts`, `frontend/src/lib/ratelimit/{destinations,itineraries}.ts`.
 - **Requirements**:
   - Add fallback to Vercel AI Gateway when BYOK keys missing; attach metadata describing provider used.
   - Implement Upstash helper functions `withCache(key, ttl, fn)` and `takeToken(bucket, limit)`.
