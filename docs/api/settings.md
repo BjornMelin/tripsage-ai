@@ -94,7 +94,7 @@ Generate embeddings.
 
 ```json
 {
-  "embedding": [0.0234, -0.0156, 0.0423, -0.0089, 0.0312, 0.0178 /* ...1536 dimensions total */],
+  "embedding": [0.0234, -0.0156, 0.0423, -0.0089, 0.0312, 0.0178],
   "modelId": "text-embedding-3-small",
   "success": true,
   "usage": {
@@ -105,6 +105,8 @@ Generate embeddings.
   "persisted": true
 }
 ```
+
+The `embedding` array continues to 1536 numeric values.
 
 #### Errors
 

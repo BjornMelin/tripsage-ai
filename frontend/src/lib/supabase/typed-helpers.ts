@@ -11,6 +11,11 @@ import type { Database, InsertTables, Tables, UpdateTables } from "./database.ty
 export type TypedClient = SupabaseClient<Database>;
 
 type TableName = keyof Database["public"]["Tables"];
+/**
+ * Query builder type alias using `any` intentionally.
+ * Supabase's query builder is any-based internally; precise generics cause
+ * excessive complexity and type instability. Biome rule suppressed below.
+ */
 // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing is any-based
 export type TableFilterBuilder<_T extends TableName> = any;
 

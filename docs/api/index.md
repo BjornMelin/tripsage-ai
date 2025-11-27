@@ -104,7 +104,7 @@ The following rate limits are applied per authenticated user/IP address:
 | **Write Operations** (create, update) | 50 requests | 1 minute | CREATE, PUT, PATCH operations |
 | **Delete Operations** | 30 requests | 1 minute | Destructive operations |
 | **Search Operations** | 60 requests | 1 minute | Text search, filtering endpoints |
-| **AI Agents** (streaming) | 20 requests | 1 minute | resource-intensive agents |
+| **AI Agents** (streaming) | 20 requests | 1 minute | Resource-Intensive Agents |
 | **Anonymous Endpoints** | 100 requests | 1 hour | Places/Activities search, no auth |
 | **Admin Endpoints** | 50 requests | 1 hour | Configuration changes, admin-only |
 
