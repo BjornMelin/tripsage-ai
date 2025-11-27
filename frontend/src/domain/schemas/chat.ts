@@ -181,6 +181,22 @@ export const chatCompletionRequestSchema = z.object({
 /** TypeScript type for chat completion requests. */
 export type ChatCompletionRequest = z.infer<typeof chatCompletionRequestSchema>;
 
+/**
+ * Zod schema for non-streaming chat API requests.
+ * Validates request body for /api/chat and /api/chat/send endpoints.
+ * Uses flexible validation for UIMessage array to accommodate Vercel AI SDK types.
+ * Note: messages array structure is validated at runtime by the handler.
+ */
+export const chatNonStreamRequestSchema = z.strictObject({
+  desiredMaxTokens: z.number().int().positive().optional(),
+  messages: z.array(z.unknown()).optional(),
+  model: z.string().min(1).optional(),
+  sessionId: z.string().min(1).optional(),
+});
+
+/** TypeScript type for non-streaming chat requests. */
+export type ChatNonStreamRequest = z.infer<typeof chatNonStreamRequestSchema>;
+
 /** Zod schema for chat completion API responses with choice arrays. */
 export const chatCompletionResponseSchema = z.object({
   choices: z.array(

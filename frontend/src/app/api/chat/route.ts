@@ -7,30 +7,20 @@
 import "server-only";
 
 import { resolveProvider } from "@ai/models/registry";
+import { chatNonStreamRequestSchema } from "@schemas/chat";
 import type { UIMessage } from "ai";
 import type { NextRequest } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { getClientIpFromHeaders, parseJsonBody } from "@/lib/api/route-helpers";
+import {
+  getClientIpFromHeaders,
+  parseJsonBody,
+  validateSchema,
+} from "@/lib/api/route-helpers";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { handleChatNonStream } from "./_handler";
 
 // Allow up to 30s for non-stream completion
 export const maxDuration = 30;
-
-/**
- * Type representing the incoming body for the chat route.
- *
- * @param messages - The messages.
- * @param session_id - The session ID.
- * @param model - The model.
- * @param desiredMaxTokens - The desired maximum tokens.
- */
-type IncomingBody = {
-  messages?: UIMessage[];
-  sessionId?: string;
-  model?: string;
-  desiredMaxTokens?: number;
-};
 
 /**
  * Handles POST requests for chat responses.
@@ -46,12 +36,20 @@ export const POST = withApiGuards({
 })(async (req: NextRequest, { supabase }): Promise<Response> => {
   const parsed = await parseJsonBody(req);
   if ("error" in parsed) {
-    return new Response(JSON.stringify({ error: "Malformed JSON in request body." }), {
-      headers: { "Content-Type": "application/json" },
-      status: 400,
-    });
+    return parsed.error;
   }
-  const body = parsed.body as IncomingBody;
+
+  const validation = validateSchema(chatNonStreamRequestSchema, parsed.body);
+  if ("error" in validation) {
+    return validation.error;
+  }
+  const validatedBody = validation.data;
+
+  // Type assertion for messages array - validated structure, handler validates UIMessage format
+  const body = {
+    ...validatedBody,
+    messages: validatedBody.messages as UIMessage[] | undefined,
+  };
 
   const ip = getClientIpFromHeaders(req);
   const logger = createServerLogger("chat.nonstream");
@@ -65,6 +63,6 @@ export const POST = withApiGuards({
       resolveProvider: (userId, modelHint) => resolveProvider(userId, modelHint),
       supabase,
     },
-    { ...(body || {}), ip }
+    { ...body, ip }
   );
 });
