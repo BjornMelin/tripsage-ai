@@ -17,8 +17,8 @@ describe("route-helpers", () => {
     it("prefers x-real-ip (Vercel's canonical IP header)", () => {
       const req = {
         headers: new Headers({
-          "x-real-ip": "198.51.100.5",
           "x-forwarded-for": "203.0.113.10, 198.51.100.2",
+          "x-real-ip": "198.51.100.5",
         }),
       } as unknown as NextRequest;
       expect(getClientIpFromHeaders(req)).toBe("198.51.100.5");

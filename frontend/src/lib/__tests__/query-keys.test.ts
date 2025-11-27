@@ -117,6 +117,14 @@ describe("queryKeys", () => {
     it("returns apiKeys key", () => {
       expect(queryKeys.auth.apiKeys()).toEqual(["auth", "api-keys"]);
     });
+
+    it("returns permissions key with userId", () => {
+      expect(queryKeys.auth.permissions("user-123")).toEqual([
+        "auth",
+        "permissions",
+        "user-123",
+      ]);
+    });
   });
 });
 

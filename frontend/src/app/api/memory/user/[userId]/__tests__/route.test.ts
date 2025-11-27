@@ -145,6 +145,25 @@ describe("POST /api/memory/user/[userId] (delete memories)", () => {
     expect(res.status).toBe(401);
   });
 
+  it("returns 401 when auth returns an error", async () => {
+    supabaseClient.auth.getUser.mockResolvedValue({
+      data: { user: null },
+      error: { message: "auth failed" },
+    });
+
+    const post = await importRoute();
+    const req = createMockNextRequest({
+      method: "POST",
+      url: "http://localhost/api/memory/user/user-123",
+    });
+
+    const res = await post(req, createRouteParamsContext({ userId: "user-123" }));
+    const body = (await res.json()) as { error: string };
+
+    expect(res.status).toBe(401);
+    expect(body.error).toBe("unauthorized");
+  });
+
   it("returns 400 when userId parameter is missing", async () => {
     const post = await importRoute();
     const req = createMockNextRequest({
