@@ -32,19 +32,10 @@ describe("keys _handlers", () => {
   it("postKey returns 400 for unsupported service", async () => {
     const supabase = makeSupabase("u1");
     const res = await postKey(
-      { insertUserApiKey: vi.fn(), supabase },
+      { insertUserApiKey: vi.fn(), supabase, userId: "u1" },
       { apiKey: "sk-test", service: "invalid-service" }
     );
     expect(res.status).toBe(400);
-  });
-
-  it("postKey returns 401 when unauthenticated", async () => {
-    const supabase = makeSupabase(null);
-    const res = await postKey(
-      { insertUserApiKey: vi.fn(), supabase },
-      { apiKey: "sk-test", service: "openai" }
-    );
-    expect(res.status).toBe(401);
   });
 
   it("postKey returns 204 when valid and authenticated", async () => {
@@ -53,7 +44,7 @@ describe("keys _handlers", () => {
       // Intentional no-op for successful insert mock
     });
     const res = await postKey(
-      { insertUserApiKey: insert, supabase },
+      { insertUserApiKey: insert, supabase, userId: "u2" },
       { apiKey: "sk-test", service: "openai" }
     );
     expect(res.status).toBe(204);
@@ -64,7 +55,7 @@ describe("keys _handlers", () => {
     const supabase = makeSupabase("u3", [
       { created_at: "2025-11-01", last_used: null, service: "openai" },
     ]);
-    const res = await getKeys({ supabase });
+    const res = await getKeys({ supabase, userId: "u3" });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body[0]).toMatchObject({ hasKey: true, service: "openai" });
