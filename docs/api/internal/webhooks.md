@@ -9,7 +9,7 @@ Webhook endpoints for database and file event handling.
 Cache invalidation webhook for database changes.
 
 **Authentication**: Webhook signature verification  
-**Rate Limit Key**: Not rate-limited
+**Rate Limit**: Not rate-limited
 
 ### Request Body
 

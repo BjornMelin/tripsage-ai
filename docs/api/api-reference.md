@@ -77,7 +77,7 @@ curl -X GET "http://localhost:3000/api/trips/1" --cookie "sb-access-token=<jwt>"
 TS (create)
 
 ```ts
-await fetch(`${base}/trips`, {
+await fetch(`${BASE}/trips`, {
   method: "POST",
   headers: { "Content-Type": "application/json", Cookie: `sb-access-token=${jwt}` },
   body: JSON.stringify({

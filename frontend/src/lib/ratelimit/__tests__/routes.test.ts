@@ -1,7 +1,7 @@
 /** @vitest-environment node */
 
 import { describe, expect, it } from "vitest";
-import { ROUTE_RATE_LIMITS, type RouteRateLimitKey } from "../routes";
+import { ROUTE_RATE_LIMITS } from "../routes";
 
 describe("ROUTE_RATE_LIMITS", () => {
   describe("trips routes", () => {
@@ -98,10 +98,8 @@ describe("ROUTE_RATE_LIMITS", () => {
 
   describe("type safety", () => {
     it("all keys are properly typed as RouteRateLimitKey", () => {
-      const keys = Object.keys(ROUTE_RATE_LIMITS) as RouteRateLimitKey[];
-      expect(keys.length).toBeGreaterThan(0);
+      expect(Object.values(ROUTE_RATE_LIMITS).length).toBeGreaterThan(0);
 
-      // Verify each key has the expected shape
       for (const config of Object.values(ROUTE_RATE_LIMITS)) {
         expect(config).toHaveProperty("limit");
         expect(config).toHaveProperty("window");
