@@ -73,8 +73,7 @@ export const POST = withApiGuards({
   const userId = user?.id ?? "";
 
   // Upsert row with owner RLS via SSR client
-  type UserSettingsInsert =
-    Database["public"]["Tables"]["user_settings"]["Insert"];
+  type UserSettingsInsert = Database["public"]["Tables"]["user_settings"]["Insert"];
   // DB column names use snake_case by convention
   const payload: UserSettingsInsert = {
     allow_gateway_fallback: allowGatewayFallback,

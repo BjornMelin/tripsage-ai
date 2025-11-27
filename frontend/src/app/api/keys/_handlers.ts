@@ -15,13 +15,7 @@ import { errorResponse } from "@/lib/api/route-helpers";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 
 /** Set of allowed API service providers for key storage. */
-const ALLOWED = new Set([
-  "openai",
-  "openrouter",
-  "anthropic",
-  "xai",
-  "gateway",
-]);
+const ALLOWED = new Set(["openai", "openrouter", "anthropic", "xai", "gateway"]);
 
 /**
  * Dependencies interface for keys handlers.
@@ -29,11 +23,7 @@ const ALLOWED = new Set([
 export interface KeysDeps {
   supabase: TypedServerSupabase;
   userId: string;
-  insertUserApiKey: (
-    userId: string,
-    service: string,
-    apiKey: string
-  ) => Promise<void>;
+  insertUserApiKey: (userId: string, service: string, apiKey: string) => Promise<void>;
   upsertUserGatewayBaseUrl?: (userId: string, baseUrl: string) => Promise<void>;
 }
 
@@ -47,10 +37,7 @@ export interface KeysDeps {
  * @param body Validated payload containing service and apiKey.
  * @returns 204 on success; otherwise a JSON error Response.
  */
-export async function postKey(
-  deps: KeysDeps,
-  body: PostKeyBody
-): Promise<Response> {
+export async function postKey(deps: KeysDeps, body: PostKeyBody): Promise<Response> {
   // Normalize service names once so every adapter and RPC sees the canonical lowercase id.
   const normalized = body.service.toLowerCase();
   if (!ALLOWED.has(normalized)) {
@@ -62,11 +49,7 @@ export async function postKey(
   }
 
   // If service is gateway and baseUrl provided, persist base URL metadata
-  if (
-    normalized === "gateway" &&
-    body.baseUrl &&
-    deps.upsertUserGatewayBaseUrl
-  ) {
+  if (normalized === "gateway" && body.baseUrl && deps.upsertUserGatewayBaseUrl) {
     await deps.upsertUserGatewayBaseUrl(deps.userId, body.baseUrl);
   }
   await deps.insertUserApiKey(deps.userId, normalized, body.apiKey);

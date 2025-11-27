@@ -76,8 +76,7 @@ function buildSDKRequest(options: BuildSDKRequestOptions): ProviderRequest {
   });
   const model = provider(options.modelId) as ConfigurableModel;
   const config = model.config;
-  const resolvedBaseURL =
-    trimmedBaseURL || config.baseURL || options.defaultBaseURL;
+  const resolvedBaseURL = trimmedBaseURL || config.baseURL || options.defaultBaseURL;
   const normalizedBase = resolvedBaseURL.endsWith("/")
     ? resolvedBaseURL
     : `${resolvedBaseURL}/`;
