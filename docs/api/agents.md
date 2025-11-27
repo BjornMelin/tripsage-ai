@@ -35,6 +35,10 @@ while (true) {
 
 ### Python Example
 
+**Note**: This example requires the external `sseclient-py` library. Install it with: `pip install sseclient-py`
+
+Alternatively, you can use standard library with manual SSE parsing using `requests` and `urllib`.
+
 ```python
 import requests
 import sseclient
@@ -111,13 +115,31 @@ curl -N -X POST "http://localhost:3000/api/agents/flights" \
 
 Streaming accommodation search agent.
 
-**Authentication**: Required  
-**Rate Limit Key**: `agents:accommodations`  
+**Authentication**: Required
+**Rate Limit Key**: `agents:accommodations`
+**Content-Type**: `application/json`
 **Response**: `text/event-stream` (SSE)
 
 ### Request Body
 
-Similar to flight search, with accommodation-specific parameters including location, check-in/check-out dates, guests, and property preferences.
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `location` | string/object | Yes | Location string or geocoordinates {latitude, longitude} |
+| `checkIn` | string | Yes | Check-in date (YYYY-MM-DD) |
+| `checkOut` | string | Yes | Check-out date (YYYY-MM-DD) |
+| `guests` | object | Yes | Guest composition {adults: number, children: number (optional)} |
+| `rooms` | number | No | Number of rooms (default: 1) |
+| `roomPreferences` | array | No | Preferences: bed_type, smoking_allowed, non_smoking |
+| `amenities` | array | No | Required amenities (e.g., "wifi", "parking", "gym") |
+| `priceRange` | object | No | Budget constraints {min: number, max: number} |
+| `currency` | string | No | ISO currency code (default: "USD") |
+| `propertyTypes` | array | No | Filter by type: hotel, apartment, villa, hostel, etc. |
+| `starRating` | object | No | Star rating filter {min: number, max: number} |
+| `flexibleDates` | boolean | No | Allow flexible dates (default: false) |
+| `accessibilityNeeds` | array | No | Accessibility requirements |
+| `cancellationPolicy` | string | No | Preferred cancellation policy |
+| `sortBy` | string | No | Sort results: price, rating, distance, popularity |
+| `limit` | number | No | Maximum results (default: 10) |
 
 ### Response
 
@@ -141,7 +163,22 @@ Destination research agent.
 
 ### Request Body
 
-Destination research parameters including interests, travel style, budget, and time of year preferences.
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `interests` | array | Yes | Array of interests: adventure, culture, relaxation, nature, food, history, shopping, family, beach, mountain |
+| `travelStyle` | string | No | Travel style: relaxation, adventure, culture, family (default: balanced) |
+| `budget` | object/string | No | Budget constraints: {min: number, max: number} or "low"/"medium"/"high" |
+| `timeOfYear` | string | No | Preferred time: "spring", "summer", "fall", "winter" or month range "Apr-Jun" |
+| `duration` | object/number | No | Trip duration: {minDays: number, maxDays: number} or single number for days |
+| `party` | object | No | Traveling party: {adults: number, children: number, seniors: number} |
+| `includeDestinations` | array | No | Specific destinations to include |
+| `excludeDestinations` | array | No | Specific destinations to exclude |
+| `accommodationPreferences` | array | No | Preferred accommodation types: hotel, apartment, resort, etc. |
+| `accessibilityNeeds` | array | No | Accessibility requirements |
+| `languagePreferences` | array | No | Preferred languages ISO codes |
+| `specialRequests` | string | No | Any special requests or notes |
+| `maxResults` | number | No | Maximum destinations to return (default: 10) |
+| `callbackUrl` | string | No | Optional webhook URL for async results |
 
 ### Response
 
@@ -159,13 +196,29 @@ Destination research parameters including interests, travel style, budget, and t
 
 Itinerary planning agent.
 
-**Authentication**: Required  
-**Rate Limit Key**: `agents:itineraries`  
+**Authentication**: Required
+**Rate Limit Key**: `agents:itineraries`
 **Response**: `text/event-stream` (SSE)
 
 ### Request Body
 
-Itinerary planning parameters including destination, duration, interests, and pace preferences.
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `destination` | string | Yes | Destination name or coordinates {latitude, longitude} |
+| `startDate` | string | No | Start date (YYYY-MM-DD) or ISO 8601 |
+| `endDate` | string | No | End date (YYYY-MM-DD) or ISO 8601 |
+| `durationDays` | number | No | Duration in days (use instead of startDate/endDate) |
+| `travelers` | number | Yes | Number of travelers |
+| `interests` | array | No | Array of interests for activity matching |
+| `pace` | string | No | Travel pace: relaxed, moderate, busy (default: moderate) |
+| `budget` | object/string | No | Daily or total budget: {currency: string, amount: number} or category |
+| `accommodationPreferences` | array | No | Preferred accommodation types |
+| `transportPreferences` | array | No | Preferred transport modes: car, train, bus, flight |
+| `accessibilityRequirements` | string | No | Any accessibility needs |
+| `language` | string | No | Language preference (ISO code) |
+| `timezone` | string | No | Timezone for itinerary (default: destination timezone) |
+| `maxSuggestions` | number | No | Maximum itinerary suggestions to return (default: 5) |
+| `responseFormat` | string | No | Format: itinerary, day-by-day (default: itinerary) |
 
 ### Response
 
