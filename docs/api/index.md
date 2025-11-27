@@ -40,6 +40,7 @@ curl -X GET "http://localhost:3000/api/trips" \
 ```typescript
 const response = await fetch("http://localhost:3000/api/trips", {
   headers: {
+    // Manual Cookie header construction (equivalent to credentials: "include")
     Cookie: `sb-access-token=${jwtToken}`,
   },
 });
