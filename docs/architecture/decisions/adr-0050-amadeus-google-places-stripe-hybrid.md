@@ -193,10 +193,9 @@
 
 **Implementation is described in detail in:**
 
-- `docs/specs/accommodations-amadeus-google-stripe.md`
-- `docs/specs/migrations/expedia-to-amadeus-accommodations.md`
+- `docs/specs/archive/0027-spec-accommodations-amadeus-google-stripe.md`
 
-**Those specs define:**
+**That spec defines:**
 
 - File-level changes (add/modify/remove).
 - AI tool wiring.
