@@ -388,5 +388,5 @@ it("retries after delay", withFakeTimers(async () => {
 
 ### Additional References
 
-- Pattern catalog and decision tables: `docs/developers/testing-patterns.md`.
+- Pattern catalog and decision tables: `docs/development/testing-patterns.md`.
 - CI knobs: see `package.json` scripts `test:ci`, `test:coverage`, and `test:coverage:shard`.

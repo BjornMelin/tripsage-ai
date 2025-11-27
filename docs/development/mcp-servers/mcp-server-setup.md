@@ -313,13 +313,13 @@ npx -y @apify/actors-mcp-server
 
 ## 7. Additional References
 
-- AI Elements MCP: `docs/developers/mcp-servers/ai-elements-mcp.md`
-- Browser automation overview: `docs/developers/mcp-servers/browser-automation/overview.md`
-- Browserbase MCP: `docs/developers/mcp-servers/browser-automation/browserbase-mcp.md` (export `BROWSERBASE_API_KEY` and `BROWSERBASE_PROJECT_ID` before running the server)
-- Playwright MCP: `docs/developers/mcp-servers/browser-automation/playwright-mcp.md`
-- Browser-Use MCP: `docs/developers/mcp-servers/browser-automation/browser-use-mcp.md`
-- Decision Matrix: `docs/developers/mcp-servers/browser-automation/decision-matrix.md`
-- Apify MCP: `docs/developers/mcp-servers/browser-automation/apify-mcp.md`
+- AI Elements MCP: `docs/development/mcp-servers/ai-elements-mcp.md`
+- Browser automation overview: `docs/development/mcp-servers/browser-automation/overview.md`
+- Browserbase MCP: `docs/development/mcp-servers/browser-automation/browserbase-mcp.md` (export `BROWSERBASE_API_KEY` and `BROWSERBASE_PROJECT_ID` before running the server)
+- Playwright MCP: `docs/development/mcp-servers/browser-automation/playwright-mcp.md`
+- Browser-Use MCP: `docs/development/mcp-servers/browser-automation/browser-use-mcp.md`
+- Decision Matrix: `docs/development/mcp-servers/browser-automation/decision-matrix.md`
+- Apify MCP: `docs/development/mcp-servers/browser-automation/apify-mcp.md`
 
 [^upstash]: Upstash MCP Server README. <https://raw.githubusercontent.com/upstash/mcp-server/main/README.md>
 [^playwright]: Playwright MCP README. <https://raw.githubusercontent.com/microsoft/playwright-mcp/main/README.md>

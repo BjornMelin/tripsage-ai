@@ -1,6 +1,6 @@
 # Testing Patterns and Decision Framework
 
-Reference companion to `docs/developers/testing-guide.md`. Use this as a quick chooser for patterns and helpers.
+Reference companion to `docs/development/testing-guide.md`. Use this as a quick chooser for patterns and helpers.
 
 ## Test-Type Decision Table
 

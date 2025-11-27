@@ -54,6 +54,6 @@ Supabase Realtime for live collaboration, automatic UI updates, and real-time da
 
 ## Related Documentation
 
-- **[Operators Database](../operators/database/)** - Database operations and Supabase configuration
-- **[Developers](../developers/)** - Implementation details and database client usage
+- **[Operations Database](../operations/database/)** - Database operations and Supabase configuration
+- **[Development](../development/)** - Implementation details and database client usage
 - **[API Reference](../api/)** - REST and Realtime API specifications
