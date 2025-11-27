@@ -14,11 +14,10 @@ export const dynamic = "force-dynamic";
 
 import { type PostKeyBody, postKeyBodySchema } from "@schemas/api";
 import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
 import type { RateLimitResult } from "@/app/api/keys/_rate-limiter";
 import { buildKeySpanAttributes } from "@/app/api/keys/_telemetry";
 import { withApiGuards } from "@/lib/api/factory";
-import { API_CONSTANTS } from "@/lib/api/route-helpers";
+import { API_CONSTANTS, errorResponse } from "@/lib/api/route-helpers";
 import { insertUserApiKey, upsertUserGatewayBaseUrl } from "@/lib/supabase/rpc";
 import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
 import { getKeys, postKey } from "./_handlers";
@@ -43,6 +42,8 @@ export const POST = withApiGuards({
   // Rate limit metadata not available from factory, using undefined for custom telemetry
   const rateLimitMeta: RateLimitResult | undefined = undefined;
 
+  const userId = userObj?.id ?? "";
+
   // Check Content-Length before parsing to prevent memory exhaustion
   // Note: This check happens after withApiGuards has already parsed the body,
   // but we keep it for defense-in-depth and telemetry.
@@ -51,16 +52,17 @@ export const POST = withApiGuards({
     const size = Number.parseInt(contentLength, 10);
     if (Number.isNaN(size) || size > API_CONSTANTS.maxBodySizeBytes) {
       recordTelemetryEvent("api.keys.size_limit", {
-        attributes: { limit_bytes: API_CONSTANTS.maxBodySizeBytes, size_bytes: size },
+        attributes: {
+          limit_bytes: API_CONSTANTS.maxBodySizeBytes,
+          size_bytes: size,
+        },
         level: "warning",
       });
-      return NextResponse.json(
-        {
-          code: "BAD_REQUEST",
-          error: `Request body too large (max ${API_CONSTANTS.maxBodySizeBytes} bytes)`,
-        },
-        { status: 400 }
-      );
+      return errorResponse({
+        error: "bad_request",
+        reason: `Request body too large (max ${API_CONSTANTS.maxBodySizeBytes} bytes)`,
+        status: 400,
+      });
     }
   }
 
@@ -115,6 +117,7 @@ export const POST = withApiGuards({
             }
           }
         ),
+      userId,
     },
     validated
   );
@@ -134,6 +137,7 @@ export const GET = withApiGuards({
   auth: true,
   rateLimit: "keys:create", // Reuse create limit for GET
   // Custom telemetry handled in handler
-})((_req: NextRequest, { supabase }) => {
-  return getKeys({ supabase });
+})((_req: NextRequest, { supabase, user }) => {
+  const userId = (user as { id: string } | null)?.id ?? "";
+  return getKeys({ supabase, userId });
 });
