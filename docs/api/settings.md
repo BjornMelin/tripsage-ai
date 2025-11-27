@@ -94,7 +94,7 @@ Generate embeddings.
 
 ```json
 {
-  "embedding": [0.0234, -0.0156, 0.0423, -0.0089, 0.0312, "... (1536 dimensions total)"],
+  "embedding": [0.0234, -0.0156, 0.0423, -0.0089, 0.0312, 0.0178 /* ...1536 dimensions total */],
   "modelId": "text-embedding-3-small",
   "success": true,
   "usage": {

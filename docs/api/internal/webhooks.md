@@ -90,7 +90,7 @@ This webhook is called by Supabase when database records change. It invalidates 
 Trip collaborators webhook for handling trip sharing events.
 
 **Authentication**: Webhook signature verification
-**Rate Limit Key**: `trips:webhook`
+**Rate Limit**: Not rate-limited
 
 ### Request Body
 
@@ -193,7 +193,7 @@ This webhook is triggered when trip collaboration events occur, such as:
 File webhook for handling file storage events.
 
 **Authentication**: Webhook signature verification
-**Rate Limit Key**: `files:webhook`
+**Rate Limit**: Not rate-limited
 
 ### Request Body
 

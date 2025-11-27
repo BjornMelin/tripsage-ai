@@ -19,8 +19,14 @@ describe("queryKeys", () => {
       expect(queryKeys.memory.insights(userId)).toEqual(["memory", "insights", userId]);
     });
 
-    it("returns search key", () => {
-      expect(queryKeys.memory.search()).toEqual(["memory", "search"]);
+    it("returns search key scoped by user and params", () => {
+      const params = { query: "paris" };
+      expect(queryKeys.memory.search("user-123", params)).toEqual([
+        "memory",
+        "search",
+        "user-123",
+        params,
+      ]);
     });
 
     it("returns stats key with userId", () => {
@@ -114,7 +120,7 @@ describe("staleTimes", () => {
   });
 
   it("all stale times are positive numbers", () => {
-    for (const [_key, value] of Object.entries(staleTimes)) {
+    for (const value of Object.values(staleTimes)) {
       expect(typeof value).toBe("number");
       expect(value).toBeGreaterThan(0);
     }
@@ -130,7 +136,7 @@ describe("cacheTimes", () => {
   });
 
   it("all cache times are positive numbers", () => {
-    for (const [_key, value] of Object.entries(cacheTimes)) {
+    for (const value of Object.values(cacheTimes)) {
       expect(typeof value).toBe("number");
       expect(value).toBeGreaterThan(0);
     }

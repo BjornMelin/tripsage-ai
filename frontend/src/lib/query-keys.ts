@@ -72,7 +72,8 @@ export const queryKeys = {
       [...queryKeys.memory.all(), "context", userId] as const,
     insights: (userId: string) =>
       [...queryKeys.memory.all(), "insights", userId] as const,
-    search: () => [...queryKeys.memory.all(), "search"] as const,
+    search: (userId: string, params: Record<string, unknown>) =>
+      [...queryKeys.memory.all(), "search", userId, params] as const,
     stats: (userId: string) => [...queryKeys.memory.all(), "stats", userId] as const,
   },
 

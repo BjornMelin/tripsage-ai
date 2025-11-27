@@ -155,6 +155,8 @@ All error responses follow this structure:
 - `not_found`: Resource not found
 - `internal`: Server error
 - `external_api_error`: External service error
+- `db_error`: Database operation failed (Supabase/PostgREST)
+- `external_service_unavailable`: Upstream provider unavailable
 
 For detailed error types, troubleshooting scenarios, and code examples, see the [Error Codes Reference](error-codes.md).
 

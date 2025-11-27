@@ -42,9 +42,11 @@ function mapUpdatePayloadToDb(payload: z.infer<typeof tripUpdateSchema>) {
   if (payload.currency !== undefined) updates.currency = payload.currency;
   if (payload.destination !== undefined) updates.destination = payload.destination;
   if (payload.endDate !== undefined) updates.end_date = payload.endDate;
+  // API "preferences" maps to DB "flexibility" column
   if (payload.preferences !== undefined) updates.flexibility = payload.preferences;
   if (payload.startDate !== undefined) updates.start_date = payload.startDate;
   if (payload.status !== undefined) updates.status = payload.status;
+  // API "tags" persists in DB "notes" column (legacy schema)
   if (payload.tags !== undefined) updates.notes = payload.tags ?? null;
   if (payload.title !== undefined) updates.name = payload.title;
   if (payload.travelers !== undefined) updates.travelers = payload.travelers;
@@ -69,10 +71,7 @@ async function getTripById(
   tripId: number
 ) {
   const { data, error } = await getSingle(supabase, "trips", (qb) =>
-    // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-    (qb as any)
-      .eq("id", tripId)
-      .eq("user_id", userId)
+    qb.eq("id", tripId).eq("user_id", userId)
   );
 
   if (error) {
@@ -126,10 +125,7 @@ async function updateTripById(
   const updates = mapUpdatePayloadToDb(validation.data);
 
   const { data, error } = await updateSingle(supabase, "trips", updates, (qb) =>
-    // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-    (qb as any)
-      .eq("id", tripId)
-      .eq("user_id", userId)
+    qb.eq("id", tripId).eq("user_id", userId)
   );
 
   if (error || !data) {
@@ -166,11 +162,8 @@ async function deleteTripById(
   userId: string,
   tripId: number
 ) {
-  const { error } = await deleteSingle(supabase, "trips", (qb) =>
-    // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-    (qb as any)
-      .eq("id", tripId)
-      .eq("user_id", userId)
+  const { count, error } = await deleteSingle(supabase, "trips", (qb) =>
+    qb.eq("id", tripId).eq("user_id", userId)
   );
 
   if (error) {
@@ -180,6 +173,10 @@ async function deleteTripById(
       reason: "Failed to delete trip",
       status: 500,
     });
+  }
+
+  if (count === 0) {
+    return notFoundResponse("Trip");
   }
 
   await bumpTag(TRIPS_CACHE_TAG);

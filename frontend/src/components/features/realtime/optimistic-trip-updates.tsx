@@ -94,12 +94,6 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
   useEffect(() => {
     if (!fetchedTrip) return;
     setTrip(fetchedTrip);
-    setFormData({
-      budget: fetchedTrip.budget,
-      destination: fetchedTrip.destination,
-      name: fetchedTrip.title,
-      travelers: fetchedTrip.travelers,
-    });
   }, [fetchedTrip]);
 
   /**

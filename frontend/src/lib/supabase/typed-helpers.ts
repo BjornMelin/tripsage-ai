@@ -10,6 +10,20 @@ import type { Database, InsertTables, Tables, UpdateTables } from "./database.ty
 
 export type TypedClient = SupabaseClient<Database>;
 
+type TableName = keyof Database["public"]["Tables"];
+// biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing is any-based
+export type TableFilterBuilder<_T extends TableName> = any;
+
+const SUPPORTED_TABLES = [
+  "trips",
+  "flights",
+  "accommodations",
+  "user_settings",
+] as const;
+type SupportedTable = (typeof SUPPORTED_TABLES)[number];
+const isSupportedTable = (table: TableName): table is SupportedTable =>
+  SUPPORTED_TABLES.includes(table as SupportedTable);
+
 /**
  * Inserts a row into the specified table and returns the single selected row.
  * Uses `.select().single()` to fetch the inserted record in one roundtrip.
@@ -30,20 +44,15 @@ export async function insertSingle<T extends keyof Database["public"]["Tables"]>
   values: InsertTables<T> | InsertTables<T>[]
 ): Promise<{ data: Tables<T> | null; error: unknown }> {
   // Validate input if schema exists
-  const tableName = table as string;
-  type SupportedTable = "trips" | "flights" | "accommodations" | "user_settings";
-  let schema: ReturnType<typeof getSupabaseSchema> | undefined;
-  if (["trips", "flights", "accommodations", "user_settings"].includes(tableName)) {
-    schema = getSupabaseSchema(tableName as SupportedTable);
-    if (schema?.insert && !Array.isArray(values)) {
-      schema.insert.parse(values);
-    }
+  const schema = isSupportedTable(table) ? getSupabaseSchema(table) : undefined;
+  if (schema?.insert && !Array.isArray(values)) {
+    schema.insert.parse(values);
   }
 
-  // Keep any-cast localized while ensuring compile-time payload types.
-  // biome-ignore lint/suspicious/noExplicitAny: Required for Supabase query builder typing
-  const anyClient = client as unknown as { from: (t: string) => any };
-  const insertQb = anyClient.from(tableName).insert(values as unknown);
+  // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
+  const anyClient = client as any;
+  // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
+  const insertQb = (anyClient as any).from(table as string).insert(values as unknown);
   // Some tests stub a very lightweight query builder without select/single methods.
   // Gracefully handle those by treating the insert as fire-and-forget.
   if (insertQb && typeof insertQb.select === "function") {
@@ -76,29 +85,27 @@ export async function insertSingle<T extends keyof Database["public"]["Tables"]>
  * @param where Closure to apply filters to the builder
  * @returns Selected row (validated) and error (if any)
  */
-export async function updateSingle<T extends keyof Database["public"]["Tables"]>(
+export async function updateSingle<T extends TableName>(
   client: TypedClient,
   table: T,
   updates: Partial<UpdateTables<T>>,
-  where: (qb: unknown) => unknown
+  where: (qb: TableFilterBuilder<T>) => TableFilterBuilder<T>
 ): Promise<{ data: Tables<T> | null; error: unknown }> {
   // Validate input if schema exists
-  const tableName = table as string;
-  const schema = getSupabaseSchema(
-    tableName as "trips" | "flights" | "accommodations" | "user_settings"
-  );
+  const schema = isSupportedTable(table) ? getSupabaseSchema(table) : undefined;
   if (schema?.update) {
     schema.update.parse(updates);
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: Required for Supabase query builder typing
-  const anyClient = client as unknown as { from: (t: string) => any };
-  let qb: unknown = anyClient.from(tableName).update(updates as unknown);
-  qb = where(qb);
-  // `.single()` ensures a single row is returned; adjust if multiple rows are expected
-  // biome-ignore lint/suspicious/noExplicitAny: Required for Supabase query builder typing
-  const anyQb = qb as { select: () => { single: () => Promise<any> } };
-  const { data, error } = await anyQb.select().single();
+  // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
+  const anyClient = client as any;
+  const filtered = where(
+    // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
+    (anyClient as any)
+      .from(table as string)
+      .update(updates as unknown) as TableFilterBuilder<T>
+  );
+  const { data, error } = await filtered.select().single();
   if (error) return { data: null, error };
   // Validate output if schema exists
   if (schema?.row && data) {
@@ -124,24 +131,22 @@ export async function updateSingle<T extends keyof Database["public"]["Tables"]>
  * @param where Closure to apply filters to the builder
  * @returns Selected row (validated) and error (if any)
  */
-export async function getSingle<T extends keyof Database["public"]["Tables"]>(
+export async function getSingle<T extends TableName>(
   client: TypedClient,
   table: T,
-  where: (qb: unknown) => unknown
+  where: (qb: TableFilterBuilder<T>) => TableFilterBuilder<T>
 ): Promise<{ data: Tables<T> | null; error: unknown }> {
-  const tableName = table as string;
-  const schema = getSupabaseSchema(
-    tableName as "trips" | "flights" | "accommodations" | "user_settings"
-  );
+  const schema = isSupportedTable(table) ? getSupabaseSchema(table) : undefined;
 
-  // biome-ignore lint/suspicious/noExplicitAny: Required for Supabase query builder typing
-  const anyClient = client as unknown as { from: (t: string) => any };
-  let qb: unknown = anyClient.from(tableName).select("*");
-  qb = where(qb);
-  // biome-ignore lint/suspicious/noExplicitAny: Required for Supabase query builder typing
-  const anyQb = qb as { single: () => Promise<any> };
-  const { data, error } = await anyQb.single();
+  // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
+  const anyClient = client as any;
+  const qb = where(
+    // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
+    (anyClient as any).from(table as string).select("*") as TableFilterBuilder<T>
+  );
+  const { data, error } = await qb.single();
   if (error) return { data: null, error };
+  if (!data) return { data: null, error: null };
   // Validate output if schema exists
   if (schema?.row && data) {
     try {
@@ -165,21 +170,21 @@ export async function getSingle<T extends keyof Database["public"]["Tables"]>(
  * @param where Closure to apply filters to the builder
  * @returns Error (if any)
  */
-export async function deleteSingle<T extends keyof Database["public"]["Tables"]>(
+export async function deleteSingle<T extends TableName>(
   client: TypedClient,
   table: T,
-  where: (qb: unknown) => unknown
-): Promise<{ error: unknown }> {
-  const tableName = table as string;
-
-  // biome-ignore lint/suspicious/noExplicitAny: Required for Supabase query builder typing
-  const anyClient = client as unknown as { from: (t: string) => any };
-  let qb: unknown = anyClient.from(tableName).delete();
-  qb = where(qb);
-  // biome-ignore lint/suspicious/noExplicitAny: Required for Supabase query builder typing
-  const anyQb = qb as { then: (fn: (result: any) => void) => Promise<any> };
-  const { error } = await anyQb;
-  return { error: error ?? null };
+  where: (qb: TableFilterBuilder<T>) => TableFilterBuilder<T>
+): Promise<{ count: number; error: unknown | null }> {
+  // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
+  const anyClient = client as any;
+  const qb = where(
+    // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
+    (anyClient as any)
+      .from(table as string)
+      .delete({ count: "exact" }) as TableFilterBuilder<T>
+  );
+  const { count, error } = await qb;
+  return { count: count ?? 0, error: error ?? null };
 }
 
 /**
@@ -195,23 +200,20 @@ export async function deleteSingle<T extends keyof Database["public"]["Tables"]>
  * @param where Closure to apply filters to the builder
  * @returns Selected row (validated) or null, and error (if any)
  */
-export async function getMaybeSingle<T extends keyof Database["public"]["Tables"]>(
+export async function getMaybeSingle<T extends TableName>(
   client: TypedClient,
   table: T,
-  where: (qb: unknown) => unknown
+  where: (qb: TableFilterBuilder<T>) => TableFilterBuilder<T>
 ): Promise<{ data: Tables<T> | null; error: unknown }> {
-  const tableName = table as string;
-  const schema = getSupabaseSchema(
-    tableName as "trips" | "flights" | "accommodations" | "user_settings"
-  );
+  const schema = isSupportedTable(table) ? getSupabaseSchema(table) : undefined;
 
-  // biome-ignore lint/suspicious/noExplicitAny: Required for Supabase query builder typing
-  const anyClient = client as unknown as { from: (t: string) => any };
-  let qb: unknown = anyClient.from(tableName).select("*");
-  qb = where(qb);
-  // biome-ignore lint/suspicious/noExplicitAny: Required for Supabase query builder typing
-  const anyQb = qb as { maybeSingle: () => Promise<any> };
-  const { data, error } = await anyQb.maybeSingle();
+  // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
+  const anyClient = client as any;
+  const qb = where(
+    // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
+    (anyClient as any).from(table as string).select("*") as TableFilterBuilder<T>
+  );
+  const { data, error } = await qb.maybeSingle();
   if (error) return { data: null, error };
   if (!data) return { data: null, error: null };
   // Validate output if schema exists
@@ -244,19 +246,15 @@ export async function upsertSingle<T extends keyof Database["public"]["Tables"]>
   values: InsertTables<T>,
   onConflict: string
 ): Promise<{ data: Tables<T> | null; error: unknown }> {
-  const tableName = table as string;
-  type SupportedTable = "trips" | "flights" | "accommodations" | "user_settings";
-  let schema: ReturnType<typeof getSupabaseSchema> | undefined;
-  if (["trips", "flights", "accommodations", "user_settings"].includes(tableName)) {
-    schema = getSupabaseSchema(tableName as SupportedTable);
-    if (schema?.insert) {
-      schema.insert.parse(values);
-    }
+  const schema = isSupportedTable(table) ? getSupabaseSchema(table) : undefined;
+  if (schema?.insert) {
+    schema.insert.parse(values);
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: Required for Supabase query builder typing
-  const anyClient = client as unknown as { from: (t: string) => any };
-  const upsertQb = anyClient.from(tableName).upsert(values as unknown, {
+  // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
+  const anyClient = client as any;
+  // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
+  const upsertQb = (anyClient as any).from(table as string).upsert(values as unknown, {
     ignoreDuplicates: false,
     onConflict,
   });

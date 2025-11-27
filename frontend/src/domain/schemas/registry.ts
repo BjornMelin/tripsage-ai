@@ -80,6 +80,15 @@ export const refinedSchemas = {
     }),
 };
 
+const routeIssueSchema = z.looseObject({
+  code: z.string().min(1, { error: "Issue code is required" }).optional(),
+  message: z.string().min(1, { error: "Issue message is required" }),
+  path: z
+    .array(z.union([z.string(), z.number()]))
+    .min(1, { error: "Issue path must include at least one segment" })
+    .optional(),
+});
+
 /**
  * Standardized API route error response schema.
  * All route handlers should return errors in this shape for consistency.
@@ -88,7 +97,7 @@ export const refinedSchemas = {
  */
 export const routeErrorSchema = z.object({
   error: z.string().min(1, { error: "Error code is required" }),
-  issues: z.array(z.unknown()).optional(),
+  issues: z.array(routeIssueSchema).optional(),
   reason: z.string().min(1, { error: "Reason is required" }),
 });
 

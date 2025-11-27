@@ -2,7 +2,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 import type { InsertTables, Tables, UpdateTables } from "@/lib/supabase/database.types";
-import type { TypedClient } from "@/lib/supabase/typed-helpers";
+import type { TableFilterBuilder, TypedClient } from "@/lib/supabase/typed-helpers";
 import {
   deleteSingle,
   getMaybeSingle,
@@ -15,7 +15,6 @@ import {
 /**
  * Create a chained mock object simulating a Supabase table query builder.
  *
- * @param _table Unused table name for parity with production signatures.
  * @returns A fluent mock with insert/update/select/single/eq methods.
  */
 type MockChain = {
@@ -29,7 +28,7 @@ type MockChain = {
   upsert: (values: unknown, options: unknown) => MockChain;
 };
 
-function makeMockFrom(_table: string): MockChain {
+function makeMockFrom(): MockChain {
   const chain: MockChain = {
     delete: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
@@ -49,7 +48,7 @@ function makeMockFrom(_table: string): MockChain {
  * @returns A `TypedClient` compatible mock.
  */
 function makeClient(): TypedClient {
-  const chain = makeMockFrom("trips");
+  const chain = makeMockFrom();
   return {
     // Narrow mock type to satisfy compiler while retaining runtime shape
     from(_table: string): unknown {
@@ -162,7 +161,12 @@ describe("typed-helpers", () => {
         error: { message: "Update failed" },
       });
 
-      const result = await updateSingle(client, "trips", { name: "Fail" }, (qb) => qb);
+      const result = await updateSingle(
+        client,
+        "trips",
+        { name: "Fail" },
+        (qb) => qb as unknown as TableFilterBuilder<"trips">
+      );
       expect(result.data).toBeNull();
       expect(result.error).toBeTruthy();
     });
@@ -180,7 +184,7 @@ describe("typed-helpers", () => {
 
       const { data, error } = await getSingle(client, "trips", (qb) => {
         const chain = qb as unknown as MockChain;
-        return chain.eq("id", 1);
+        return chain.eq("id", 1) as unknown as TableFilterBuilder<"trips">;
       });
       expect(error).toBeNull();
       expect(data).toBeTruthy();
@@ -197,7 +201,11 @@ describe("typed-helpers", () => {
         error: { code: "PGRST116", message: "Not found" },
       });
 
-      const { data, error } = await getSingle(client, "trips", (qb) => qb);
+      const { data, error } = await getSingle(
+        client,
+        "trips",
+        (qb) => qb as unknown as TableFilterBuilder<"trips">
+      );
       expect(data).toBeNull();
       expect(error).toBeTruthy();
     });
@@ -210,14 +218,13 @@ describe("typed-helpers", () => {
         "trips"
       );
       // Mock delete to return a thenable that resolves
-      const deleteChain = {
-        eq: vi.fn().mockReturnValue(Promise.resolve({ error: null })),
-      };
-      (chain.delete as ReturnType<typeof vi.fn>).mockReturnValue(deleteChain);
+      const deleteResult = Promise.resolve({ count: 1, error: null });
+      (chain.delete as ReturnType<typeof vi.fn>).mockReturnValue(deleteResult);
 
-      const { error } = await deleteSingle(client, "trips", (qb) => {
-        return (qb as unknown as typeof deleteChain).eq("id", 1);
+      const { count, error } = await deleteSingle(client, "trips", () => {
+        return deleteResult as unknown as TableFilterBuilder<"trips">;
       });
+      expect(count).toBe(1);
       expect(error).toBeNull();
     });
 
@@ -227,14 +234,13 @@ describe("typed-helpers", () => {
         "trips"
       );
       const deleteError = { message: "Delete failed" };
-      const deleteChain = {
-        eq: vi.fn().mockReturnValue(Promise.resolve({ error: deleteError })),
-      };
-      (chain.delete as ReturnType<typeof vi.fn>).mockReturnValue(deleteChain);
+      const deleteResult = Promise.resolve({ count: 0, error: deleteError });
+      (chain.delete as ReturnType<typeof vi.fn>).mockReturnValue(deleteResult);
 
-      const { error } = await deleteSingle(client, "trips", (qb) => {
-        return (qb as unknown as typeof deleteChain).eq("id", 999);
+      const { count, error } = await deleteSingle(client, "trips", () => {
+        return deleteResult as unknown as TableFilterBuilder<"trips">;
       });
+      expect(count).toBe(0);
       expect(error).toBeTruthy();
     });
   });
@@ -251,7 +257,7 @@ describe("typed-helpers", () => {
 
       const { data, error } = await getMaybeSingle(client, "trips", (qb) => {
         const chain = qb as unknown as MockChain;
-        return chain.eq("id", 1);
+        return chain.eq("id", 1) as unknown as TableFilterBuilder<"trips">;
       });
       expect(error).toBeNull();
       expect(data).toBeTruthy();
