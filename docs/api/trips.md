@@ -147,7 +147,7 @@ Get a specific trip by ID.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | number | Yes | Trip ID |
+| `id` | string | Yes | Trip ID |
 
 ### Response
 
@@ -190,14 +190,14 @@ curl -X GET "http://localhost:3000/api/trips/1" \
 
 Update a trip (partial update supported).
 
-**Authentication**: Required  
-**Rate Limit Key**: `trips:create`
+**Authentication**: Required
+**Rate Limit Key**: `trips:update`
 
 ### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | number | Yes | Trip ID |
+| `id` | string | Yes | Trip ID |
 
 ### Request Body
 
@@ -236,14 +236,14 @@ const response = await fetch("http://localhost:3000/api/trips/1", {
 
 Delete a trip.
 
-**Authentication**: Required  
-**Rate Limit Key**: `trips:create`
+**Authentication**: Required
+**Rate Limit Key**: `trips:delete`
 
 ### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | number | Yes | Trip ID |
+| `id` | string | Yes | Trip ID |
 
 ### Response
 
@@ -276,7 +276,7 @@ Get AI-generated trip suggestions.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `limit` | number | No | Maximum number of suggestions (default: 10) |
-| `budget_max` | number | No | Maximum budget filter |
+| `budgetMax` | number | No | Maximum budget filter |
 | `category` | string | No | Category filter (`adventure`, `relaxation`, `culture`, `nature`, `city`, `beach`) |
 
 ### Response
@@ -305,6 +305,51 @@ Get AI-generated trip suggestions.
 
 - `401` - Not authenticated
 - `429` - Rate limit exceeded
+
+### Examples
+
+**cURL**
+
+```bash
+curl -X GET "http://localhost:3000/api/trips/suggestions?limit=5&category=culture" \
+  --cookie "sb-access-token=$JWT"
+```
+
+**TypeScript/Fetch**
+
+```typescript
+const response = await fetch(
+  "http://localhost:3000/api/trips/suggestions?limit=5&category=culture&budgetMax=5000",
+  {
+    headers: {
+      Cookie: `sb-access-token=${jwtToken}`,
+    },
+  }
+);
+const suggestions = await response.json();
+suggestions.forEach(suggestion => {
+  console.log(`${suggestion.title} - $${suggestion.estimatedPrice}`);
+});
+```
+
+**Python/Requests**
+
+```python
+import requests
+
+response = requests.get(
+    "http://localhost:3000/api/trips/suggestions",
+    cookies={"sb-access-token": jwt_token},
+    params={
+        "limit": 5,
+        "category": "adventure",
+        "budgetMax": 5000
+    }
+)
+suggestions = response.json()
+for suggestion in suggestions:
+    print(f"{suggestion['title']} - ${suggestion['estimatedPrice']}")
+```
 
 ---
 
