@@ -21,7 +21,7 @@ import type {
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
 import { type AppError, handleApiError, isApiError } from "@/lib/api/error-types";
-import { staleTimes } from "@/lib/query-keys";
+import { queryKeys, staleTimes } from "@/lib/query-keys";
 
 /**
  * Hook for fetching user memory context.
@@ -44,7 +44,7 @@ export function useMemoryContext(userId: string, enabled = true) {
         throw handleApiError(error);
       }
     },
-    queryKey: ["memory", "context", userId],
+    queryKey: queryKeys.memory.context(userId),
     retry: (failureCount, error) => {
       if (isApiError(error)) {
         if (error.status === 401 || error.status === 403) return false;
@@ -141,7 +141,7 @@ export function useMemoryInsights(userId: string, enabled = true) {
         throw handleApiError(error);
       }
     },
-    queryKey: ["memory", "insights", userId],
+    queryKey: queryKeys.memory.insights(userId),
     retry: (failureCount, error) => {
       if (isApiError(error)) {
         if (error.status === 401 || error.status === 403) return false;
@@ -251,7 +251,7 @@ export function useMemoryStats(userId: string, enabled = true) {
         throw handleApiError(error);
       }
     },
-    queryKey: ["memory", "stats", userId],
+    queryKey: queryKeys.memory.stats(userId),
     retry: (failureCount, error) => {
       if (isApiError(error)) {
         if (error.status === 401 || error.status === 403) return false;

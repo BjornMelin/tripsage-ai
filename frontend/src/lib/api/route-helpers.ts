@@ -31,36 +31,41 @@ export const API_CONSTANTS = {
 /**
  * Extract the client IP from trusted sources with deterministic fallback.
  *
- * Priority order:
- * 1. req.ip (Next.js 16+ trusted IP from Vercel/proxy)
- * 2. x-vercel-ip header (Vercel-specific trusted IP)
- * 3. x-forwarded-for header (first IP, caller-controlled)
- * 4. x-real-ip header (caller-controlled)
- * 5. "unknown" (fallback when no IP available)
+ * Priority order (matches @vercel/functions ipAddress() behavior):
+ * 1. x-real-ip header (Vercel's canonical client IP header, set by edge)
+ * 2. x-forwarded-for header (first IP - trusted on Vercel, spoofable elsewhere)
+ * 3. "unknown" (fallback when no IP available)
+ *
+ * **Security notes:**
+ * - On Vercel: Both headers are trusted. Vercel's edge network overwrites
+ *   `x-forwarded-for` and sets `x-real-ip` to prevent IP spoofing.
+ * - Self-hosted/local: These headers are caller-controlled and CAN BE SPOOFED
+ *   to bypass rate limits. Configure your reverse proxy to strip incoming
+ *   values and set them from the actual client connection.
  *
  * The fallback of "unknown" avoids undefined identifiers when rate limiting.
  *
+ * @see https://vercel.com/docs/functions/functions-api-reference/vercel-functions-package#ipaddress
+ * @see https://vercel.com/docs/headers/request-headers
  * @param req Next.js request object.
  * @returns Client IP string or "unknown".
  */
 export function getClientIpFromHeaders(req: NextRequest): string {
-  // Prefer Vercel-specific trusted header
   const headers = req.headers;
-  const vercelIp = headers.get("x-vercel-ip");
-  if (vercelIp && vercelIp.length > 0) {
-    return vercelIp.trim();
+
+  // 1. x-real-ip: Vercel's canonical client IP header (set by edge, not caller-controlled)
+  // This matches @vercel/functions ipAddress() behavior
+  const realIp = headers.get("x-real-ip");
+  if (realIp && realIp.length > 0) {
+    return realIp.trim();
   }
 
-  // Fallback to proxy headers (caller-controlled, less trusted)
+  // 2. x-forwarded-for: Standard proxy header
+  // On Vercel: trusted (edge overwrites it). Self-hosted: SPOOFABLE without proxy config.
   const xff = headers.get("x-forwarded-for");
   if (xff && xff.length > 0) {
     const firstIp = xff.split(",")[0]?.trim();
     if (firstIp) return firstIp;
-  }
-
-  const real = headers.get("x-real-ip");
-  if (real && real.length > 0) {
-    return real.trim();
   }
 
   return "unknown";
@@ -348,4 +353,167 @@ export function validateSchema<T extends z.ZodType>(
     };
   }
   return { data: parseResult.data };
+}
+
+/**
+ * Creates a standardized 404 Not Found response.
+ *
+ * Canonical helper for resource-not-found errors (Supabase PGRST116 or similar).
+ *
+ * @param entity - Name of the entity that was not found (e.g., "Trip", "User").
+ * @returns NextResponse with 404 status and consistent error shape.
+ *
+ * @example
+ * ```typescript
+ * if (error?.code === "PGRST116") {
+ *   return notFoundResponse("Trip");
+ * }
+ * ```
+ */
+export function notFoundResponse(entity: string): NextResponse {
+  return NextResponse.json(
+    { error: "not_found", reason: `${entity} not found` },
+    { status: 404 }
+  );
+}
+
+/**
+ * Parse and validate numeric ID from route params.
+ *
+ * Generic helper for `[id]/route.ts` handlers that need to extract
+ * and validate a positive integer from dynamic route parameters.
+ *
+ * @param routeContext - Next.js route context with async params.
+ * @param paramName - Name of the parameter to parse (default: "id").
+ * @returns Parsed numeric ID or error response.
+ *
+ * @example
+ * ```typescript
+ * const result = await parseNumericId(routeContext);
+ * if ("error" in result) return result.error;
+ * const tripId = result.id;
+ * ```
+ */
+export async function parseNumericId(
+  routeContext: { params: Promise<Record<string, string>> },
+  paramName = "id"
+): Promise<{ id: number } | { error: NextResponse }> {
+  const params = await routeContext.params;
+  const raw = params[paramName];
+  const id = Number.parseInt(raw, 10);
+
+  if (!Number.isFinite(id) || id <= 0) {
+    return {
+      error: errorResponse({
+        error: "invalid_request",
+        reason: `${paramName} must be a positive integer`,
+        status: 400,
+      }),
+    };
+  }
+
+  return { id };
+}
+
+/**
+ * Creates a standardized 401 Unauthorized response.
+ *
+ * Canonical helper for authentication required errors.
+ *
+ * @returns NextResponse with 401 status and consistent error shape.
+ *
+ * @example
+ * ```typescript
+ * if (!user) {
+ *   return unauthorizedResponse();
+ * }
+ * ```
+ */
+export function unauthorizedResponse(): NextResponse {
+  return NextResponse.json(
+    { error: "unauthorized", reason: "Authentication required" },
+    { status: 401 }
+  );
+}
+
+/**
+ * Creates a standardized 403 Forbidden response.
+ *
+ * Canonical helper for authorization/permission errors.
+ *
+ * @param reason - Human-readable reason string.
+ * @returns NextResponse with 403 status and consistent error shape.
+ *
+ * @example
+ * ```typescript
+ * if (!hasPermission) {
+ *   return forbiddenResponse("You do not have access to this resource");
+ * }
+ * ```
+ */
+export function forbiddenResponse(reason: string): NextResponse {
+  return NextResponse.json({ error: "forbidden", reason }, { status: 403 });
+}
+
+/**
+ * Parse and validate string ID from route params.
+ *
+ * Generic helper for `[id]/route.ts` handlers that need to extract
+ * and validate a non-empty string from dynamic route parameters.
+ *
+ * @param routeContext - Next.js route context with async params.
+ * @param paramName - Name of the parameter to parse (default: "id").
+ * @returns Parsed string ID or error response.
+ *
+ * @example
+ * ```typescript
+ * const result = await parseStringId(routeContext, "sessionId");
+ * if ("error" in result) return result.error;
+ * const sessionId = result.id;
+ * ```
+ */
+export async function parseStringId(
+  routeContext: { params: Promise<Record<string, string>> },
+  paramName = "id"
+): Promise<{ id: string } | { error: NextResponse }> {
+  const params = await routeContext.params;
+  const raw = params[paramName];
+
+  if (!raw || typeof raw !== "string" || raw.trim() === "") {
+    return {
+      error: errorResponse({
+        error: "invalid_request",
+        reason: `${paramName} must be a non-empty string`,
+        status: 400,
+      }),
+    };
+  }
+
+  return { id: raw.trim() };
+}
+
+/**
+ * Extract and validate user ID from authenticated context.
+ *
+ * Canonical helper for routes with `auth: true` that need to fail fast
+ * if the user is missing. Prevents unsafe `user?.id ?? ""` patterns that
+ * could lead to authorization bypass.
+ *
+ * @param user - User object from RouteContext (may be null).
+ * @returns User ID or error response.
+ *
+ * @example
+ * ```typescript
+ * const result = requireUserId(user);
+ * if ("error" in result) return result.error;
+ * const { userId } = result;
+ * ```
+ */
+export function requireUserId(
+  user: { id: string } | null | undefined
+): { userId: string } | { error: NextResponse } {
+  if (!user?.id) {
+    return { error: unauthorizedResponse() };
+  }
+  return { userId: user.id };
 }

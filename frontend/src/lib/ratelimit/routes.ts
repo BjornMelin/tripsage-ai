@@ -123,8 +123,11 @@ export const ROUTE_RATE_LIMITS = {
 
   // Trips
   "trips:create": { limit: 30, window: "1 m" },
+  "trips:delete": { limit: 10, window: "1 m" },
+  "trips:detail": { limit: 60, window: "1 m" },
   "trips:list": { limit: 60, window: "1 m" },
   "trips:suggestions": { limit: 30, window: "1 m" },
+  "trips:update": { limit: 30, window: "1 m" },
 
   // User settings
   "user-settings:get": { limit: 60, window: "1 m" },

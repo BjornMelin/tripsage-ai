@@ -80,14 +80,39 @@ export const refinedSchemas = {
     }),
 };
 
+const routeIssueSchema = z.looseObject({
+  code: z.string().min(1, { error: "Issue code is required" }).optional(),
+  message: z.string().min(1, { error: "Issue message is required" }),
+  path: z
+    .array(z.union([z.string(), z.number()]))
+    .min(1, { error: "Issue path must include at least one segment" })
+    .optional(),
+});
+
+/**
+ * Standardized API route error response schema.
+ * All route handlers should return errors in this shape for consistency.
+ * Matches the format used by errorResponse(), notFoundResponse(),
+ * unauthorizedResponse(), and forbiddenResponse() helpers.
+ */
+export const routeErrorSchema = z.object({
+  error: z.string().min(1, { error: "Error code is required" }),
+  issues: z.array(routeIssueSchema).optional(),
+  reason: z.string().min(1, { error: "Reason is required" }),
+});
+
+/** TypeScript type for standardized route error responses. */
+export type RouteError = z.infer<typeof routeErrorSchema>;
+
 /**
  * Schema registry combining all schema groups
  */
 export const schemaRegistry = {
   primitives: primitiveSchemas,
   refined: refinedSchemas,
+  routeError: routeErrorSchema,
   transforms: transformSchemas,
-  version: "1.1.0",
+  version: "1.2.0",
 } as const;
 
 // Export types

@@ -77,7 +77,7 @@ return streamText({
 
 ### Complete API Reference
 
-**[API Reference](api-reference.md)** - Complete endpoint documentation with request/response examples
+**[API Reference](api-reference.md)** - Complete endpoint documentation with request/response examples (TS, Python, cURL) for all implemented routes.
 
 ### Supporting Documentation
 
@@ -122,6 +122,9 @@ Trip CRUD with Redis caching:
 | ------------------------ | ------ | --------------------------- |
 | `/api/trips`             | GET    | List trips with filters     |
 | `/api/trips`             | POST   | Create new trip             |
+| `/api/trips/[id]`        | GET    | Get trip details            |
+| `/api/trips/[id]`        | PUT    | Update trip fields          |
+| `/api/trips/[id]`        | DELETE | Delete a trip               |
 | `/api/trips/suggestions` | GET    | AI-powered trip suggestions |
 
 ### Authentication (`/api/auth/*`)

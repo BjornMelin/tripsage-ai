@@ -65,6 +65,18 @@ export const queryKeys = {
     stats: (userId: string) => [...queryKeys.files.all(), "stats", userId] as const,
   },
 
+  // Memory & Conversation Context
+  memory: {
+    all: () => ["memory"] as const,
+    context: (userId: string) =>
+      [...queryKeys.memory.all(), "context", userId] as const,
+    insights: (userId: string) =>
+      [...queryKeys.memory.all(), "insights", userId] as const,
+    search: (userId: string, searchParams?: string | Record<string, unknown>) =>
+      [...queryKeys.memory.all(), "search", userId, searchParams ?? null] as const,
+    stats: (userId: string) => [...queryKeys.memory.all(), "stats", userId] as const,
+  },
+
   // Supabase Real-time Subscriptions
   realtime: {
     agents: (userId: string) => ["realtime", "agents", userId] as const,

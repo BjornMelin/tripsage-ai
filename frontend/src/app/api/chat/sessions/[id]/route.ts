@@ -11,7 +11,9 @@ import "server-only";
 // making it dynamic and preventing caching of user-specific data.
 
 import type { NextRequest } from "next/server";
+import type { RouteParamsContext } from "@/lib/api/factory";
 import { withApiGuards } from "@/lib/api/factory";
+import { parseStringId, requireUserId } from "@/lib/api/route-helpers";
 import { deleteSession, getSession } from "../_handlers";
 
 /**
@@ -29,9 +31,14 @@ export function GET(
     auth: true,
     rateLimit: "chat:sessions:get",
     telemetry: "chat.sessions.get",
-  })(async (_req, { supabase }) => {
-    const { id } = await context.params;
-    return getSession({ supabase }, id);
+  })(async (_req, { supabase, user }, _data, routeContext: RouteParamsContext) => {
+    const result = requireUserId(user);
+    if ("error" in result) return result.error;
+    const { userId } = result;
+    const idResult = await parseStringId(routeContext, "id");
+    if ("error" in idResult) return idResult.error;
+    const { id } = idResult;
+    return getSession({ supabase, userId }, id);
   })(req, context);
 }
 
@@ -50,8 +57,13 @@ export function DELETE(
     auth: true,
     rateLimit: "chat:sessions:delete",
     telemetry: "chat.sessions.delete",
-  })(async (_req, { supabase }) => {
-    const { id } = await context.params;
-    return deleteSession({ supabase }, id);
+  })(async (_req, { supabase, user }, _data, routeContext: RouteParamsContext) => {
+    const result = requireUserId(user);
+    if ("error" in result) return result.error;
+    const { userId } = result;
+    const idResult = await parseStringId(routeContext, "id");
+    if ("error" in idResult) return idResult.error;
+    const { id } = idResult;
+    return deleteSession({ supabase, userId }, id);
   })(req, context);
 }

@@ -10,25 +10,16 @@
 
 import "server-only";
 
+import {
+  dashboardMetricsSchema,
+  dashboardQuerySchema,
+  windowToHours,
+} from "@schemas/dashboard";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
-import {
-  aggregateDashboardMetrics,
-  dashboardMetricsSchema,
-  timeWindowSchema,
-  windowToHours,
-} from "@/lib/metrics/aggregate";
-
-/**
- * Query parameter schema for dashboard metrics.
- *
- * Zod v4 compliant with strict validation.
- */
-const QuerySchema = z.strictObject({
-  window: timeWindowSchema.default("24h"),
-});
+import { validateSchema } from "@/lib/api/route-helpers";
+import { aggregateDashboardMetrics } from "@/lib/metrics/aggregate";
 
 /**
  * GET /api/dashboard
@@ -57,20 +48,13 @@ export const GET = withApiGuards({
     // Parse and validate query parameters
     const searchParams = req.nextUrl.searchParams;
     const queryObject = Object.fromEntries(searchParams.entries());
-    const queryResult = QuerySchema.safeParse(queryObject);
+    const validation = validateSchema(dashboardQuerySchema, queryObject);
 
-    if (!queryResult.success) {
-      return NextResponse.json(
-        {
-          error: "invalid_query",
-          issues: queryResult.error.issues,
-          reason: "Invalid query parameters",
-        },
-        { status: 400 }
-      );
+    if ("error" in validation) {
+      return validation.error;
     }
 
-    const { window } = queryResult.data;
+    const { window } = validation.data;
     const hours = windowToHours(window);
 
     // Aggregate metrics
