@@ -117,7 +117,7 @@ describe("ROUTE_RATE_LIMITS", () => {
 
     it("all windows use valid time format", () => {
       const validWindowPattern = /^\d+\s*(s|m|h|d)$/;
-      for (const [_key, config] of Object.entries(ROUTE_RATE_LIMITS)) {
+      for (const config of Object.values(ROUTE_RATE_LIMITS)) {
         expect(config.window).toMatch(validWindowPattern);
       }
     });
