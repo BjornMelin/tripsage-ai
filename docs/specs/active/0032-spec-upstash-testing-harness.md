@@ -36,7 +36,7 @@ Define a DRY, deterministic testing harness for all Upstash integrations (Redis,
 - Expose a single `reset()` API for stubs/handlers to ensure per-test isolation and thread safety.
 - Allow switching to local emulators via env (`UPSTASH_EMULATOR_URL`, `UPSTASH_QSTASH_DEV_URL`, `UPSTASH_USE_EMULATOR=1`) without code changes.
 - Add a gated live smoke suite that runs only when `UPSTASH_SMOKE=1` and secrets are present; serialize execution and keep total live calls minimal.
-- Document usage in `docs/developers/testing-guide.md` and `docs/developers/testing-patterns.md`.
+- Document usage in `docs/development/testing-guide.md` and `docs/development/testing-patterns.md`.
 
 ### Should
 
