@@ -339,5 +339,4 @@ Limits are enforced via Upstash Redis and `withApiGuards` factory.
 
 - **SPEC-0030**: Activity Search & Booking - Functional & Technical Spec
 - **ADR-0053**: Activity Search & Booking via Google Places API Integration
-- **Migration Plan**: `docs/specs/migrations/activity-search-google-places.md`
 - **API Reference**: `docs/api/api-reference.md`

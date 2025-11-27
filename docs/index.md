@@ -23,9 +23,10 @@ Complete technical documentation for TripSage AI, an AI-powered travel planning 
   architecture, and best practices
 - **[Quick Start](development/quick-start.md)** - Get development environment
   running
-- **[Stores](development/stores.md)** - Zustand store patterns and composition
-- **[Testing Guide](development/testing-guide.md)** - Testing patterns and
-  coverage requirements
+- **[Standards](development/standards.md)** - Code style, import paths, schemas, stores
+- **[Zod Schema Guide](development/zod-schema-guide.md)** - Zod v4 schema patterns, validation, and AI SDK tool schemas
+- **[Testing](development/testing.md)** - Strategy, patterns, and templates
+- **[AI Integration](development/ai-integration.md)** - Gateway/BYOK options for Vercel AI SDK v6
 - **[Metrics](metrics.md)** - Code metrics and performance benchmarks
 - **[Maintenance](maintenance.md)** - Development maintenance checklist
 

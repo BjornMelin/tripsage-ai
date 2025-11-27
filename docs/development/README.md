@@ -7,19 +7,19 @@ Resources and guidelines for TripSage development.
 | Guide | Purpose |
 |-------|---------|
 | [Quick Start](quick-start.md) | Project setup and development environment |
-| [Code Standards](code-standards.md) | Coding guidelines and conventions |
-| [Import Paths](import-paths.md) | TypeScript import path aliases and conventions |
+| [Standards](standards.md) | Coding guidelines, import paths, schemas, stores |
 | [Development Guide](development-guide.md) | API routes, state management, and patterns |
-| [Stores](stores.md) | Zustand store patterns and composition |
-| [Zod Schema Guide](zod-schema-guide.md) | Schema validation and type inference patterns |
-| [Testing Guide](testing-guide.md) | Testing strategies and patterns |
+| [Testing](testing.md) | Strategy, patterns, and templates |
+| [AI Integration](ai-integration.md) | Vercel AI SDK v6 and Gateway provider options |
 | [Activities](activities.md) | Activity search service, tools, and API usage |
+| [Environment Setup](env-setup.md) | Provider credential checklist |
 
 ## Development
 
 | Guide | Purpose |
 |-------|---------|
 | [Development Guide](development-guide.md) | Next.js backend/frontends, database patterns, and observability |
+| [Zod Schema Guide](zod-schema-guide.md) | Zod v4 schema patterns, validation, and AI SDK tool schemas |
 | [Observability](observability.md) | Telemetry spans, `[operational-alert]` contracts, and alerting guidance |
 | [Troubleshooting](troubleshooting.md) | Debugging, CI/CD, and workflow guidance |
 
@@ -62,6 +62,7 @@ cd frontend && pnpm test
 ## Finding Information
 
 - **New to the project?** → [Quick Start](quick-start.md)
-- **Writing code?** → [Code Standards](code-standards.md)
+- **Writing code?** → [Standards](standards.md)
 - **Building features?** → [Development Guide](development-guide.md)
+- **Testing changes?** → [Testing](testing.md)
 - **Having issues?** → [Troubleshooting](troubleshooting.md)
