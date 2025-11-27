@@ -1,4 +1,4 @@
-# Spec: BYOK Routes and Security (Next.js + Supabase Vault)
+# SPEC-0011: BYOK Routes and Security (Next.js + Supabase Vault)
 
 **Version**: 1.0.0
 **Status**: Accepted
@@ -50,5 +50,5 @@ Move BYOK key CRUD and validation to Next.js route handlers using Supabase Vault
 
 ## Links
 
-- ADR: `docs/adrs/adr-0024-byok-routes-and-security.md`
+- ADR: [ADR-0024](../../architecture/decisions/adr-0024-byok-routes-and-security.md)
 - PostgREST docs: <https://docs.postgrest.org/en/v10/auth.html>

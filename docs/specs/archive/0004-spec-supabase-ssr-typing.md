@@ -1,4 +1,4 @@
-# Spec: Supabase SSR + Strict Typing Cleanup
+# SPEC-0004: Supabase SSR + Strict Typing Cleanup
 
 **Version**: 1.1.0
 **Status**: Accepted
@@ -27,7 +27,7 @@ Finalize migration to `@supabase/ssr` and restore strict typing by removing temp
 
 - We centralized PostgREST calls behind `src/lib/supabase/typed-helpers.ts` to avoid scattering `any` casts and ensure compile-time shape checks. The helpers currently return `{ data, error }`; extend if PostgREST response metadata is needed.
 - PostgREST generics are strict; for direct usage prefer array form for `insert([{ ... }])` if needed.
-- Trip store requires a mapping strategy (UI model ↔ DB schema). See ADR-0018.
+- Trip store requires a mapping strategy (UI model ↔ DB schema). See [ADR-0050](../../architecture/decisions/adr-0050-amadeus-google-places-stripe-hybrid.md).
 
 ## Changelog
 

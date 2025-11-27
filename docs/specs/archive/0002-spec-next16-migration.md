@@ -1,4 +1,4 @@
-# Spec: Next.js 16 Migration (Proxy, Async APIs, Turbopack)
+# SPEC-0002: Next.js 16 Migration (Proxy, Async APIs, Turbopack)
 
 **Version**: 1.1.0
 **Status**: Accepted
@@ -48,7 +48,7 @@ Upgrade the app to Next.js 16 by migrating middleware -> proxy, enforcing async 
 - Chat: Next.js chat routes are canonical with AI SDK v6: `/api/chat/stream` (SSE) and `/api/chat` (JSON). The UI calls these routes directly; FastAPI chat endpoints are removed.
 - The attachments endpoint uses Upstash Redis caching (not Next.js Cache Components) since it accesses `cookies()` via `withApiGuards({ auth: true })`.
   Routes accessing `cookies()` or `headers()` cannot use `"use cache"` directives per Next.js Cache Components restrictions.
-  See [Spec: BYOK Routes and Security (Next.js + Supabase Vault)](../specs/0011-spec-byok-routes-and-security.md).
+  See [SPEC-0011: BYOK Routes and Security (Next.js + Supabase Vault)](0011-spec-byok-routes-and-security.md).
 
 ## Additional Optimizations Completed (2025-11-25)
 

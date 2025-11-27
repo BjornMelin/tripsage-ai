@@ -1,4 +1,4 @@
-# Activity Search & Booking – Functional & Technical Spec
+# SPEC-0030: Activity Search & Booking – Functional & Technical Spec
 
 **Version**: 1.0.0
 **Status**: Implemented
@@ -6,8 +6,8 @@
 **Implementation Date**: 2025-11-24
 **Category**: Feature Implementation
 **Domain**: Travel Supply Integrations
-**Related ADRs**: ADR-0053
-**Related Specs**: SPEC-0027 (Accommodations pattern reference)
+**Related ADRs**: [ADR-0053](../../architecture/decisions/adr-0053-activity-search-google-places-integration.md)
+**Related Specs**: [SPEC-0027](0027-spec-accommodations-amadeus-google-stripe.md) (Accommodations pattern reference)
 
 ## 1. Summary
 

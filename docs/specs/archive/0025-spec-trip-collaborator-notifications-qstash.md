@@ -5,8 +5,8 @@
 **Date**: 2025-11-13  
 **Category**: Architecture/Platform  
 **Domain**: Backend, Integrations  
-**Related ADRs**: ADR-0003, ADR-0023, ADR-0040, ADR-0041  
-**Related Specs**: SPEC-0021
+**Related ADRs**: [ADR-0051](../../architecture/decisions/adr-0051-agent-router-workflows.md), [ADR-0052](../../architecture/decisions/adr-0052-agent-configuration-backend.md)  
+**Related Specs**: [SPEC-0021](../active/0021-spec-supabase-webhooks-vercel-consolidation.md)
 
 ## Summary
 
@@ -15,7 +15,7 @@ changes to `trip_collaborators` in Supabase. Use Supabase Database Webhooks to
 POST events to Vercel, Upstash QStash for durable job delivery, and Resend for
 emails, with an optional downstream collaborator webhook.
 
-This spec extends SPEC-0021 (Supabase Database Webhooks to Vercel Route Handlers)
+This spec extends [SPEC-0021](../active/0021-spec-supabase-webhooks-vercel-consolidation.md) (Supabase Database Webhooks to Vercel Route Handlers)
 by specifying how `/api/hooks/trips` and `/api/jobs/notify-collaborators` work
 together.
 
@@ -91,7 +91,7 @@ flowchart LR
 ## Configuration
 
 - Supabase DB
-  - As defined in SPEC-0021 for webhooks and HMAC.
+  - As defined in [SPEC-0021](../active/0021-spec-supabase-webhooks-vercel-consolidation.md) for webhooks and HMAC.
 
 - Vercel env (server)
   - `HMAC_SECRET`
@@ -117,5 +117,5 @@ flowchart LR
 
 ## Supersession
 
-- This spec does **not** supersede SPEC-0021; it builds on the webhook
+- This spec does **not** supersede [SPEC-0021](../active/0021-spec-supabase-webhooks-vercel-consolidation.md); it builds on the webhook
   foundation defined there.

@@ -1,4 +1,4 @@
-# Spec 0026: Supabase Memory Orchestrator & Provider Adapters
+# SPEC-0026: Supabase Memory Orchestrator & Provider Adapters
 
 **Version**: 1.0.0  
 **Status**: Accepted  
@@ -92,7 +92,7 @@ interface MemoryAdapter {
 - PII redaction service strips emails, phone numbers, payment card patterns
   prior to non-Supabase adapters. Hashes stored in metadata for auditing.
 - Secrets: Mem0 + Upstash keys remain server-side; orchestrator obtains them via
-  existing provider registry (ADR-0028).
+  existing provider registry ([ADR-0028](../../architecture/decisions/adr-0028-provider-registry.md)).
 
 ## Observability & Retry
 
@@ -120,7 +120,7 @@ interface MemoryAdapter {
 
 ## References
 
-- ADR-0042: Supabase-Centric Memory Orchestrator.  
-- Supabase Vector documentation – <https://supabase.com/modules/vector?utm_source=openai>  
-- Upstash AI SDK article – <https://upstash.com/blog/vercel-ai-sdk?utm_source=openai>  
-- Mem0 Vercel AI SDK integration – <https://docs.mem0.ai/integrations/vercel-ai-sdk?utm_source=openai>
+- [ADR-0042](../../architecture/decisions/adr-0042-supabase-memory-orchestrator.md): Supabase-Centric Memory Orchestrator.  
+- Supabase Vector documentation - <https://supabase.com/modules/vector?utm_source=openai>  
+- Upstash AI SDK article - <https://upstash.com/blog/vercel-ai-sdk?utm_source=openai>  
+- Mem0 Vercel AI SDK integration - <https://docs.mem0.ai/integrations/vercel-ai-sdk?utm_source=openai>

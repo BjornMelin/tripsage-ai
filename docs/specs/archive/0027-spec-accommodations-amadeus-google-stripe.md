@@ -1,11 +1,11 @@
-# TripSage Accommodations Spec: Amadeus + Google Places + Stripe
+# SPEC-0027: TripSage Accommodations Spec: Amadeus + Google Places + Stripe
 
 **Version**: 1.0  
 **Status**: Final  
 **Date**: 2025-11-21  
 **Category**: Architecture  
 **Domain**: Travel Supply Integrations  
-**Related ADRs**: ADR-0050  
+**Related ADRs**: [ADR-0050](../../architecture/decisions/adr-0050-amadeus-google-places-stripe-hybrid.md)  
 
 > IMPORTANT: This spec **supersedes all Expedia Rapid–specific docs and ADRs**.  
 > Any instructions, types, or tools that mention EPS Rapid MUST be treated as
@@ -150,10 +150,6 @@ Checklist:
 - `frontend/src/domain/accommodations/providers/amadeus-adapter.ts`
 
   - Implements `AccommodationProviderAdapter` using Amadeus client + mapping.
-
-- `frontend/docs/specs/migrations/expedia-to-amadeus-accommodations.md`
-
-  - Migration checklist (see next file definition).
 
 ### 3.2 Modified files
 

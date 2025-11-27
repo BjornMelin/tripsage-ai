@@ -1,4 +1,4 @@
-# Spec 0032: Upstash Testing Harness (Mocks, Emulators, Smoke)
+# SPEC-0032: Upstash Testing Harness (Mocks, Emulators, Smoke)
 
 **Version**: 1.0.0  
 **Status**: Proposed  
@@ -36,7 +36,7 @@ Define a DRY, deterministic testing harness for all Upstash integrations (Redis,
 - Expose a single `reset()` API for stubs/handlers to ensure per-test isolation and thread safety.
 - Allow switching to local emulators via env (`UPSTASH_EMULATOR_URL`, `UPSTASH_QSTASH_DEV_URL`, `UPSTASH_USE_EMULATOR=1`) without code changes.
 - Add a gated live smoke suite that runs only when `UPSTASH_SMOKE=1` and secrets are present; serialize execution and keep total live calls minimal.
-- Document usage in `docs/development/testing-guide.md` and `docs/development/testing-patterns.md`.
+- Document usage in `docs/development/testing.md` (Upstash section).
 
 ### Should
 
@@ -91,7 +91,7 @@ Define a DRY, deterministic testing harness for all Upstash integrations (Redis,
 - `test:upstash:unit` passes without network/docker; no MSW unhandled warnings.
 - Emulator tier starts and passes on a fresh machine with Docker available; fails fast with actionable error when missing.
 - Smoke suite cleanly skips without env; passes when creds provided; total live calls remain <20.
-- Docs updated; ADR-0054 referenced from testing guide and spec README.
+- Docs updated; [ADR-0054](../../architecture/decisions/adr-0054-upstash-testing-harness.md) referenced from testing guide and spec README.
 
 ## Rollout Plan
 
@@ -119,7 +119,7 @@ Define a DRY, deterministic testing harness for all Upstash integrations (Redis,
 
 ## References
 
-- ADR-0054: Hybrid Upstash Testing (Mocks + Local Emulators + Smoke)
+- [ADR-0054](../../architecture/decisions/adr-0054-upstash-testing-harness.md): Hybrid Upstash Testing (Mocks + Local Emulators + Smoke)
 - Upstash Redis JS SDK: <https://docs.upstash.com/redis/sdks/javascriptsdk>  
 - Upstash Ratelimit: <https://docs.upstash.com/redis/tools/ratelimit>  
 - Upstash QStash CLI (dev server): <https://docs.upstash.com/qstash/cli>  

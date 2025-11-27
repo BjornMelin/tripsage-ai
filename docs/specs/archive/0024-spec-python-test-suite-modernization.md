@@ -1,11 +1,11 @@
-# Spec: Python Test Suite Modernization
+# SPEC-0024: Python Test Suite Modernization
 
 **Status**: Superseded  
 **Version**: 1.0.0  
 **Date**: 2025-10-24  
 **Superseded By**: Python backend removed; frontend-first architecture (see SPEC-0020)
 
-**Note:** This spec applied to Python backend test suites. The Python FastAPI backend has been completely removed. All functionality now runs in Next.js TypeScript. Frontend uses Vitest + Playwright (see ADR-0007).
+**Note:** This spec applied to Python backend test suites. The Python FastAPI backend has been completely removed. All functionality now runs in Next.js TypeScript. Frontend uses Vitest + Playwright (see [ADR-0007](../../architecture/decisions/adr-0007-testing-strategy.md)).
 
 ## Objective
 
@@ -15,7 +15,7 @@ Modernize and reorganize the Python `tests/` hierarchy to align with the 2025 py
 
 - Applies to all Python test suites under `tests/` (unit, integration, e2e, performance, security, docker, shared fixtures, root helpers).
 - Covers pytest configuration, directory layout, fixture strategy, data factories, async client usage, and performance guards.
-- Excludes frontend Vitest/Playwright configuration (covered by ADR-0007) and CI orchestration mechanics (covered by ADR-0009).
+- Excludes frontend Vitest/Playwright configuration (covered by [ADR-0007](../../architecture/decisions/adr-0007-testing-strategy.md)) and CI orchestration mechanics (covered by [ADR-0009](../../architecture/decisions/adr-0009-consolidate-ci-to-two-workflows-and-remove-custom-composites.md)).
 
 ## Implementation Checklist
 
@@ -49,7 +49,7 @@ Modernize and reorganize the Python `tests/` hierarchy to align with the 2025 py
 
 ## References
 
-- ADR-0007: Modern Testing Strategy with Vitest and Playwright
-- ADR-0004: FastAPI as Backend Framework
+- [ADR-0007](../../architecture/decisions/adr-0007-testing-strategy.md): Modern Testing Strategy with Vitest and Playwright
+- [ADR-0004](../../architecture/decisions/superseded/adr-0004-fastapi-backend.md): FastAPI as Backend Framework
 - ExecPlan: `.agent/execplans/tests_refactor.md`
 - Research notes: pytest-asyncio fixture guidance, fakeredis docs, Polyfactory pytest plugin, httpx ASGI transport usage

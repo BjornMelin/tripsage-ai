@@ -1,4 +1,4 @@
-# Spec: RAG Retriever & Indexer (AI SDK v6)
+# SPEC-0018: RAG Retriever & Indexer (AI SDK v6)
 
 **Version**: 1.0.0  
 **Status**: Partial (Embeddings Only)  
@@ -40,11 +40,11 @@
 - Embeddings: provider-selected; persist provider id and dims.
 - Hybrid: vector top-N plus keyword BM25 union → score normalization → rerank.
 - Reranking: AI SDK v6 Reranking page; prefer Cohere `rerank-v3.5` when available.
-- Assembly: cap total tokens via budget selector (from 03-token-budgeting-and-limits.md).
+- Assembly: cap total tokens via budget selector (from [SPEC-0013](../archive/0013-token-budgeting-and-limits.md)).
 
 ## Caching
 
-- Key: `user:{id}:rag:{hash(query)}`; TTL 30–120s depending on provider latency.
+- Key: `user:{id}:rag:{hash(query)}`; TTL 30-120s depending on provider latency.
 - Invalidate on document updates.
 
 ## Observability

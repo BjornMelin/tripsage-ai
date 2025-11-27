@@ -1,11 +1,11 @@
-# SPEC-0028: TripSage Agent Router & Workflow HTTP API – Functional & Technical Spec
+# SPEC-0028: TripSage Agent Router & Workflow HTTP API - Functional & Technical Spec
 
 **Version**: 1.0.0
 **Status**: Accepted
 **Date**: 2025-11-21
 **Category**: Frontend
 **Domain**: AI Orchestration
-**Related ADRs**: [ADR-0051](adr-0051-agent-router-workflows.md)
+**Related ADRs**: [ADR-0051](../../architecture/decisions/adr-0051-agent-router-workflows.md)
 **Related Specs**:
 
 ## 1. Summary

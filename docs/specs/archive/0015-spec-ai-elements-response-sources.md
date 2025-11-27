@@ -1,12 +1,12 @@
-# Spec: AI Elements Response + Sources Integration
+# SPEC-0015: AI Elements Response + Sources Integration
 
 **Version**: 1.0.0
 **Status**: Accepted
 **Date**: 2025-11-04
 **Category**: frontend
 **Domain**: AI SDK UI / Next.js App Router
-**Related ADRs**: ADR-0036, ADR-0037
-**Related Specs**: SPEC-0010, SPEC-0008
+**Related ADRs**: [ADR-0036](../../architecture/decisions/adr-0036-ai-elements-response-and-sources.md), [ADR-0037](../../architecture/decisions/adr-0037-reasoning-tool-codeblock-phased-adoption.md)
+**Related Specs**: [SPEC-0010](0010-spec-ai-elements-chat-ui.md), [SPEC-0008](0008-spec-ai-sdk-v6-foundations.md)
 
 ## Overview
 
