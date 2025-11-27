@@ -20,22 +20,19 @@ Use the helper in `frontend/src/lib/cache/tags.ts`:
 ## Example
 
 ```ts
-import { Redis } from "@upstash/redis";
 import { versionedKey, bumpTag } from "@/lib/cache/tags";
-
-const redis = Redis.fromEnv();
+import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 
 // Write a value under the current trip namespace version
 async function writeTripCache(tripId: string, data: unknown) {
   const key = await versionedKey("trip", `by-id:${tripId}`);
-  await redis.set(key, JSON.stringify(data), { ex: 3600 });
+  await setCachedJson(key, data, 3600); // 1 hour TTL
 }
 
 // Read the current value
-async function readTripCache(tripId: string) {
+async function readTripCache<T>(tripId: string): Promise<T | null> {
   const key = await versionedKey("trip", `by-id:${tripId}`);
-  const val = await redis.get<string>(key);
-  return val ? JSON.parse(val) : null;
+  return await getCachedJson<T>(key);
 }
 
 // Invalidate all trip cache for writes to trips (DB triggers will also call the webhook)
@@ -120,15 +117,20 @@ Some cache invalidation happens in application code:
 The accommodations service demonstrates proper tag-based caching:
 
 ```ts
+import { versionedKey, bumpTag } from "@/lib/cache/tags";
+import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
+
+const CACHE_TAG_SEARCH = "accommodations:search";
+
 // Read with versioned key
 const versionedCacheKey = await versionedKey(CACHE_TAG_SEARCH, baseCacheKey);
 const cached = await getCachedJson<AccommodationSearchResult>(versionedCacheKey);
 
 // Write with versioned key
-const versionedCacheKey = await versionedKey(CACHE_TAG_SEARCH, baseCacheKey);
-await setCachedJson(versionedCacheKey, result, this.deps.cacheTtlSeconds);
+const cacheKey = await versionedKey(CACHE_TAG_SEARCH, baseCacheKey);
+await setCachedJson(cacheKey, result, cacheTtlSeconds);
 
-// Invalidate on write
+// Invalidate on write (e.g., after booking creation)
 await bumpTag(CACHE_TAG_SEARCH);
 ```
 

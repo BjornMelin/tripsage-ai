@@ -66,7 +66,7 @@ Client-side OpenTelemetry is minimal and focused on distributed tracing and erro
 Use `createServerLogger` for route handlers, tools, and server utilities:
 
 ```typescript
-import { createServerLogger } from "@/lib/logging/server";
+import { createServerLogger } from "@/lib/telemetry/logger";
 
 const logger = createServerLogger("api.keys", {
   redactKeys: ["apiKey"], // Optional: redact sensitive metadata keys

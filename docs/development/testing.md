@@ -160,8 +160,8 @@ vi.mock("@/lib/redis", () => ({
   getRedis: vi.fn(() => Promise.resolve({})),
 }));
 
-vi.mock("@/lib/next/route-helpers", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/next/route-helpers")>("@/lib/next/route-helpers");
+vi.mock("@/lib/api/route-helpers", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/api/route-helpers")>("@/lib/api/route-helpers");
   return { ...actual, withRequestSpan: vi.fn((_name, _attrs, fn) => fn()) };
 });
 ```

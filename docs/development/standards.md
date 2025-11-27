@@ -161,10 +161,17 @@ const tripCreateSchema = z.strictObject({
 - Auth wrapper example:
 
 ```ts
-import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 
-export const GET = withApiGuards(async (_req: NextRequest) => Response.json({ message: "ok" }));
+export const GET = withApiGuards({
+  auth: true,
+  rateLimit: "trips:list",
+  telemetry: "trips.list",
+})(async (_req, { supabase, user }) => {
+  const { data } = await supabase.from("trips").select("*").eq("user_id", user!.id);
+  return NextResponse.json(data);
+});
 ```
 
 ## Zustand Stores

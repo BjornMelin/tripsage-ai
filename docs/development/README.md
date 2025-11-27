@@ -2,68 +2,60 @@
 
 Resources and guidelines for TripSage development.
 
-## Getting Started
+## Quick Reference
 
 | Guide | Purpose |
 |-------|---------|
-| [Quick Start](quick-start.md) | Project setup and development environment |
-| [Standards](standards.md) | Coding guidelines, import paths, schemas, stores |
-| [Development Guide](development-guide.md) | API routes, state management, and patterns |
-| [Testing](testing.md) | Strategy, patterns, and templates |
-| [AI Integration](ai-integration.md) | Vercel AI SDK v6 and Gateway provider options |
-| [AI Tools](ai-tools.md) | createAiTool factory, guardrails, and tool patterns |
-| [Activities](activities.md) | Activity search service, tools, and API usage |
+| [Quick Start](quick-start.md) | Project setup, environment, first run |
+| [Standards](standards.md) | TypeScript, import paths, Zod schemas, Zustand stores, security |
+| [Development Guide](development-guide.md) | Architecture overview, key patterns, documentation index |
+| [Testing](testing.md) | Strategy, patterns, templates, MSW handlers |
+| [Troubleshooting](troubleshooting.md) | Debugging, CI/CD, workflow guidance |
+
+## AI & Tools
+
+| Guide | Purpose |
+|-------|---------|
+| [AI Integration](ai-integration.md) | Vercel AI Gateway, BYOK provider configuration |
+| [AI Tools](ai-tools.md) | `createAiTool` factory, guardrails, tool patterns |
+| [Activities](activities.md) | Activity search service, tools, API usage example |
+
+## Infrastructure
+
+| Guide | Purpose |
+|-------|---------|
+| [Zod Schema Guide](zod-schema-guide.md) | Zod v4 patterns, validation, AI SDK tool schemas |
+| [Observability](observability.md) | Telemetry spans, logging, operational alerts |
+| [Cache Versioned Keys](cache-versioned-keys.md) | Tag-based cache invalidation patterns |
 | [Environment Setup](env-setup.md) | Provider credential checklist |
-
-## Development
-
-| Guide | Purpose |
-|-------|---------|
-| [Development Guide](development-guide.md) | Next.js backend/frontends, database patterns, and observability |
-| [Zod Schema Guide](zod-schema-guide.md) | Zod v4 schema patterns, validation, and AI SDK tool schemas |
-| [Observability](observability.md) | Telemetry spans, `[operational-alert]` contracts, and alerting guidance |
-| [Troubleshooting](troubleshooting.md) | Debugging, CI/CD, and workflow guidance |
 
 ## Development Workflow
 
-### Setup
-
 ```bash
-# Install dependencies (frontend-first)
-cd frontend && pnpm install
+# Install and run
+cd frontend && pnpm install && pnpm dev
 
-# Start development server (port 3000)
-cd frontend && pnpm dev
-```
-
-### Code Quality
-
-```bash
-# TypeScript / Next.js
-cd frontend && pnpm run biome:check && pnpm run type-check
-cd frontend && pnpm test
+# Quality gates
+cd frontend && pnpm biome:check && pnpm type-check && pnpm test:run
 ```
 
 ## Architecture
 
-- **Backend**: Next.js 16 server route handlers (TypeScript) — Python/FastAPI backend removed (see superseded SPEC-0007, SPEC-0010)
-- **Frontend**: Next.js 16, TypeScript, Tailwind CSS
-- **Database**: PostgreSQL (Supabase) with pgvector
-- **Cache**: Upstash Redis (HTTP REST API)
-- **AI**: Vercel AI SDK v6 with frontend-only agents
+- **Framework**: Next.js 16 (TypeScript) — server route handlers + React Server Components
+- **AI**: Vercel AI SDK v6 (`ai@6.0.0-beta.116`) with frontend-only agents
+- **Database**: Supabase PostgreSQL with pgvector, RLS, Realtime
+- **Cache**: Upstash Redis (HTTP REST API) + QStash for async jobs
+- **State**: Zustand (client) + TanStack Query (server)
 
-## Key Principles
-
-- **Type Safety**: Strict TypeScript throughout
-- **Async First**: All I/O operations use async/await
-- **Security**: Environment variables only, JWT authentication
-- **Testing**: Comprehensive test coverage required
-- **Performance**: Efficient database queries and caching
+See [Development Guide](development-guide.md) for full stack details and [Database Architecture](../architecture/database.md) for schema design.
 
 ## Finding Information
 
-- **New to the project?** → [Quick Start](quick-start.md)
-- **Writing code?** → [Standards](standards.md)
-- **Building features?** → [Development Guide](development-guide.md)
-- **Testing changes?** → [Testing](testing.md)
-- **Having issues?** → [Troubleshooting](troubleshooting.md)
+| Need | Go To |
+|------|-------|
+| New to the project | [Quick Start](quick-start.md) |
+| Writing code | [Standards](standards.md) |
+| Architecture overview | [Development Guide](development-guide.md) |
+| Testing changes | [Testing](testing.md) |
+| Having issues | [Troubleshooting](troubleshooting.md) |
+| Database design | [Database Architecture](../architecture/database.md) |
