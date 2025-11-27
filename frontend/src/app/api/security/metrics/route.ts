@@ -16,13 +16,12 @@ export const GET = withApiGuards({
   rateLimit: "security:metrics",
   telemetry: "security.metrics",
 })(async (_req: NextRequest, { user }) => {
-  if (!user?.id) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
+  // auth: true guarantees user is authenticated
+  const userId = user?.id ?? "";
 
   try {
     const adminSupabase = createAdminSupabase();
-    const metrics = await getUserSecurityMetrics(adminSupabase, user.id);
+    const metrics = await getUserSecurityMetrics(adminSupabase, userId);
     const parsed = securityMetricsSchema.safeParse(metrics);
     if (!parsed.success) {
       return NextResponse.json({ error: "invalid_metrics_shape" }, { status: 500 });

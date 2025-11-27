@@ -21,11 +21,10 @@ export const GET = withApiGuards({
   rateLimit: "security:events",
   telemetry: "security.events",
 })(async (_req: NextRequest, { user }) => {
-  if (!user?.id) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
+  // auth: true guarantees user is authenticated
+  const userId = user?.id ?? "";
 
   const adminSupabase = createAdminSupabase();
-  const events = await getUserSecurityEvents(adminSupabase, user.id);
+  const events = await getUserSecurityEvents(adminSupabase, userId);
   return NextResponse.json(events);
 });
