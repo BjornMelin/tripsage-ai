@@ -4,7 +4,12 @@
  * These handlers encapsulate CRUD operations for chat sessions and messages.
  * Adapters (route.ts files) provide SSR-only dependencies and translate the
  * HTTP details to simple POJOs used here.
+ *
+ * All handlers accept `userId` as a parameter since the route adapter already
+ * guarantees authentication via `withApiGuards({ auth: true })`.
  */
+import { NextResponse } from "next/server";
+import { errorResponse, notFoundResponse } from "@/lib/api/route-helpers";
 import { nowIso, secureUuid } from "@/lib/security/random";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { insertSingle } from "@/lib/supabase/typed-helpers";
@@ -14,20 +19,18 @@ import { insertSingle } from "@/lib/supabase/typed-helpers";
  */
 export interface SessionsDeps {
   supabase: TypedServerSupabase;
+  userId: string;
 }
 
 /**
  * Create a chat session owned by the authenticated user.
- * @param deps Collaborators with Supabase client.
+ * @param deps Collaborators with Supabase client and authenticated userId.
  * @param title Optional title (stored in metadata).
  */
 export async function createSession(
   deps: SessionsDeps,
   title?: string
 ): Promise<Response> {
-  const { data: auth } = await deps.supabase.auth.getUser();
-  const user = auth?.user ?? null;
-  if (!user) return json({ error: "unauthorized" }, 401);
   const id = secureUuid();
   const now = nowIso();
   const { error } = await insertSingle(deps.supabase, "chat_sessions", {
@@ -38,59 +41,71 @@ export async function createSession(
     // biome-ignore lint/style/useNamingConvention: Database field name
     updated_at: now,
     // biome-ignore lint/style/useNamingConvention: Database field name
-    user_id: user.id,
+    user_id: deps.userId,
   });
-  if (error) return json({ error: "db_error" }, 500);
-  return json({ id }, 201);
+  if (error)
+    return errorResponse({
+      error: "db_error",
+      reason: "Failed to create session",
+      status: 500,
+    });
+  return NextResponse.json({ id }, { status: 201 });
 }
 
 /**
  * List sessions for the authenticated user.
  */
 export async function listSessions(deps: SessionsDeps): Promise<Response> {
-  const { data: auth } = await deps.supabase.auth.getUser();
-  const user = auth?.user ?? null;
-  if (!user) return json({ error: "unauthorized" }, 401);
   const { data, error } = await deps.supabase
     .from("chat_sessions")
     .select("id, created_at, updated_at, metadata")
-    .eq("user_id", user.id)
+    .eq("user_id", deps.userId)
     .order("updated_at", { ascending: false });
-  if (error) return json({ error: "db_error" }, 500);
-  return json(data ?? [], 200);
+  if (error)
+    return errorResponse({
+      error: "db_error",
+      reason: "Failed to list sessions",
+      status: 500,
+    });
+  return NextResponse.json(data ?? [], { status: 200 });
 }
 
 /**
  * Get a single session by id (owner-only).
  */
 export async function getSession(deps: SessionsDeps, id: string): Promise<Response> {
-  const { data: auth } = await deps.supabase.auth.getUser();
-  const user = auth?.user ?? null;
-  if (!user) return json({ error: "unauthorized" }, 401);
   const { data, error } = await deps.supabase
     .from("chat_sessions")
     .select("id, created_at, updated_at, metadata")
     .eq("id", id)
-    .eq("user_id", user.id)
+    .eq("user_id", deps.userId)
     .maybeSingle();
-  if (error) return json({ error: "db_error" }, 500);
-  if (!data) return json({ error: "not_found" }, 404);
-  return json(data, 200);
+  if (error)
+    return errorResponse({
+      error: "db_error",
+      reason: "Failed to get session",
+      status: 500,
+    });
+  if (!data) return notFoundResponse("Session");
+  return NextResponse.json(data, { status: 200 });
 }
 
 /**
  * Delete a session by id (owner-only).
  */
 export async function deleteSession(deps: SessionsDeps, id: string): Promise<Response> {
-  const { data: auth } = await deps.supabase.auth.getUser();
-  const user = auth?.user ?? null;
-  if (!user) return json({ error: "unauthorized" }, 401);
-  const { error } = await deps.supabase
+  const { error, count } = await deps.supabase
     .from("chat_sessions")
-    .delete()
+    .delete({ count: "exact" })
     .eq("id", id)
-    .eq("user_id", user.id);
-  if (error) return json({ error: "db_error" }, 500);
+    .eq("user_id", deps.userId);
+  if (error)
+    return errorResponse({
+      error: "db_error",
+      reason: "Failed to delete session",
+      status: 500,
+    });
+  if (count === 0) return notFoundResponse("Session");
   return new Response(null, { status: 204 });
 }
 
@@ -98,25 +113,32 @@ export async function deleteSession(deps: SessionsDeps, id: string): Promise<Res
  * List messages for a session.
  */
 export async function listMessages(deps: SessionsDeps, id: string): Promise<Response> {
-  const { data: auth } = await deps.supabase.auth.getUser();
-  const user = auth?.user ?? null;
-  if (!user) return json({ error: "unauthorized" }, 401);
   const { data: session, error: sessionError } = await deps.supabase
     .from("chat_sessions")
     .select("id")
     .eq("id", id)
-    .eq("user_id", user.id)
+    .eq("user_id", deps.userId)
     .maybeSingle();
-  if (sessionError) return json({ error: "db_error" }, 500);
-  if (!session) return json({ error: "not_found" }, 404);
+  if (sessionError)
+    return errorResponse({
+      error: "db_error",
+      reason: "Failed to verify session",
+      status: 500,
+    });
+  if (!session) return notFoundResponse("Session");
   const { data, error } = await deps.supabase
     .from("chat_messages")
     .select("id, role, content, created_at, metadata")
     .eq("session_id", id)
-    .eq("user_id", user.id)
+    .eq("user_id", deps.userId)
     .order("id", { ascending: true });
-  if (error) return json({ error: "db_error" }, 500);
-  return json(data ?? [], 200);
+  if (error)
+    return errorResponse({
+      error: "db_error",
+      reason: "Failed to list messages",
+      status: 500,
+    });
+  return NextResponse.json(data ?? [], { status: 200 });
 }
 
 /**
@@ -127,23 +149,33 @@ export async function createMessage(
   id: string,
   payload: { role?: string; parts?: unknown[] }
 ): Promise<Response> {
-  const { data: auth } = await deps.supabase.auth.getUser();
-  const user = auth?.user ?? null;
-  if (!user) return json({ error: "unauthorized" }, 401);
   if (!payload?.role || typeof payload.role !== "string")
-    return json({ error: "bad_request" }, 400);
+    return errorResponse({
+      error: "bad_request",
+      reason: "Role is required",
+      status: 400,
+    });
   const normalizedRole = payload.role.toLowerCase();
   if (!["user", "assistant", "system"].includes(normalizedRole)) {
-    return json({ error: "bad_request" }, 400);
+    return errorResponse({
+      error: "bad_request",
+      reason: "Role must be user, assistant, or system",
+      status: 400,
+    });
   }
   const { data: session, error: sessionError } = await deps.supabase
     .from("chat_sessions")
     .select("id")
     .eq("id", id)
-    .eq("user_id", user.id)
+    .eq("user_id", deps.userId)
     .maybeSingle();
-  if (sessionError) return json({ error: "db_error" }, 500);
-  if (!session) return json({ error: "not_found" }, 404);
+  if (sessionError)
+    return errorResponse({
+      error: "db_error",
+      reason: "Failed to verify session",
+      status: 500,
+    });
+  if (!session) return notFoundResponse("Session");
   const content = JSON.stringify(payload.parts ?? []);
   const { error } = await insertSingle(deps.supabase, "chat_messages", {
     content,
@@ -152,22 +184,13 @@ export async function createMessage(
     // biome-ignore lint/style/useNamingConvention: Database field name
     session_id: id,
     // biome-ignore lint/style/useNamingConvention: Database field name
-    user_id: user.id,
+    user_id: deps.userId,
   });
-  if (error) return json({ error: "db_error" }, 500);
+  if (error)
+    return errorResponse({
+      error: "db_error",
+      reason: "Failed to create message",
+      status: 500,
+    });
   return new Response(null, { status: 201 });
-}
-
-/**
- * Creates a JSON Response with the specified status code.
- *
- * @param obj - Object to serialize as JSON.
- * @param status - HTTP status code for the response.
- * @returns Response with JSON content and appropriate headers.
- */
-function json(obj: unknown, status: number): Response {
-  return new Response(JSON.stringify(obj), {
-    headers: { "content-type": "application/json" },
-    status,
-  });
 }

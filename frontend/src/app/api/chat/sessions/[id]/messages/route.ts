@@ -10,9 +10,16 @@ import "server-only";
 // Using withApiGuards({ auth: true }) ensures this route uses cookies/headers,
 // making it dynamic and preventing caching of user-specific data.
 
+import { createMessageRequestSchema } from "@schemas/chat";
 import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
+import type { RouteParamsContext } from "@/lib/api/factory";
 import { withApiGuards } from "@/lib/api/factory";
+import {
+  parseJsonBody,
+  parseStringId,
+  requireUserId,
+  validateSchema,
+} from "@/lib/api/route-helpers";
 import { createMessage, listMessages } from "../../_handlers";
 
 /**
@@ -27,9 +34,14 @@ export function GET(req: NextRequest, context: { params: Promise<{ id: string }>
     auth: true,
     rateLimit: "chat:sessions:messages:list",
     telemetry: "chat.sessions.messages.list",
-  })(async (_req, { supabase }) => {
-    const { id: sessionId } = await context.params;
-    return listMessages({ supabase }, sessionId);
+  })(async (_req, { supabase, user }, _data, routeContext: RouteParamsContext) => {
+    const result = requireUserId(user);
+    if ("error" in result) return result.error;
+    const { userId } = result;
+    const idResult = await parseStringId(routeContext, "id");
+    if ("error" in idResult) return idResult.error;
+    const { id: sessionId } = idResult;
+    return listMessages({ supabase, userId }, sessionId);
   })(req, context);
 }
 
@@ -47,14 +59,22 @@ export function POST(req: NextRequest, context: { params: Promise<{ id: string }
     auth: true,
     rateLimit: "chat:sessions:messages:create",
     telemetry: "chat.sessions.messages.create",
-  })(async (request, { supabase }) => {
-    const { id: sessionId } = await context.params;
-    let body: { content: string; role?: string };
-    try {
-      body = await request.json();
-    } catch {
-      return NextResponse.json({ error: "bad_request" }, { status: 400 });
-    }
-    return createMessage({ supabase }, sessionId, body);
+  })(async (request, { supabase, user }, _data, routeContext: RouteParamsContext) => {
+    const result = requireUserId(user);
+    if ("error" in result) return result.error;
+    const { userId } = result;
+    const idResult = await parseStringId(routeContext, "id");
+    if ("error" in idResult) return idResult.error;
+    const { id: sessionId } = idResult;
+    const bodyResult = await parseJsonBody(request);
+    if ("error" in bodyResult) return bodyResult.error;
+    const validation = validateSchema(createMessageRequestSchema, bodyResult.body);
+    if ("error" in validation) return validation.error;
+    const validatedBody = validation.data;
+    // Transform validated content to parts format expected by handler
+    return createMessage({ supabase, userId }, sessionId, {
+      parts: [{ text: validatedBody.content, type: "text" }],
+      role: validatedBody.role,
+    });
   })(req, context);
 }

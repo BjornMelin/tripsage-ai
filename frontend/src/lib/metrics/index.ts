@@ -6,12 +6,7 @@
 
 export {
   aggregateDashboardMetrics,
-  type DashboardMetrics,
-  dashboardMetricsSchema,
   invalidateDashboardCache,
-  type TimeWindow,
-  timeWindowSchema,
-  windowToHours,
 } from "./aggregate";
 export {
   type ApiMetric,

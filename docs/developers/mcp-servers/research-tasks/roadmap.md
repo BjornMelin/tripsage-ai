@@ -3,6 +3,7 @@
 This roadmap links our MCP documentation to actionable implementation steps and the prompts under `docs/prompts/ai-sdk/`.
 
 ## Phase A — MCP Enablement
+
 - AI Elements MCP
   - Add to IDE via `mcp-remote` (registry endpoint).
   - Adopt during UI work; reference `07-ui-ai-elements-integration.md` for component selections.
@@ -15,6 +16,7 @@ This roadmap links our MCP documentation to actionable implementation steps and 
   - Configure OAuth or token as needed for catalog data ingestion.
 
 ## Phase B — AI SDK Prompts Alignment
+
 - Map prompts to implementation:
   - 00–04: Verify Next.js route handlers, SSE/non-stream, provider registry.
   - 05: Tools and MCP integration — wire `experimental_createMCPClient` where appropriate.
@@ -23,11 +25,13 @@ This roadmap links our MCP documentation to actionable implementation steps and 
   - 12: Python decommission — plan TS parity tasks.
 
 ## Phase C — Dev Workflow Integrations
+
 - IDE presets per environment (dev/stage/prod) for MCP entries.
 - Runtimes and secrets: centralize API keys and env docs.
 - Add how-to snippets to app routes for MCP tool calls (without committing secrets).
 
 ## Acceptance Checklist
+
 - MCP servers installed and verified.
 - Decision matrix reviewed and accepted.
 - Prompts check-off started; record progress inline in prompt files.

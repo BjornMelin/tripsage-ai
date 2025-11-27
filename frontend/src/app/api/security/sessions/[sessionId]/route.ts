@@ -4,8 +4,9 @@
 
 import "server-only";
 
-import { type NextRequest, NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { type RouteParamsContext, withApiGuards } from "@/lib/api/factory";
+import { parseStringId, requireUserId } from "@/lib/api/route-helpers";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import { terminateSessionHandler } from "../_handlers";
 
@@ -15,17 +16,15 @@ export const DELETE = withApiGuards({
   rateLimit: "security:sessions:terminate",
   telemetry: "security.sessions.terminate",
 })(async (_req: NextRequest, { user }, _data, routeContext: RouteParamsContext) => {
-  const userId = user?.id;
-  if (!userId) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
+  const result = requireUserId(user);
+  if ("error" in result) return result.error;
+  const { userId } = result;
 
-  const params = await routeContext.params;
-  const sessionId = params.sessionId;
-
-  if (!sessionId || typeof sessionId !== "string") {
-    return NextResponse.json({ error: "invalid_session_id" }, { status: 400 });
+  const sessionIdResult = await parseStringId(routeContext, "sessionId");
+  if ("error" in sessionIdResult) {
+    return sessionIdResult.error;
   }
+  const sessionId = sessionIdResult.id;
 
   const adminSupabase = createAdminSupabase();
   return terminateSessionHandler({

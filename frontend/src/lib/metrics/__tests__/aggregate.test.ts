@@ -43,7 +43,7 @@ describe("aggregate", () => {
 
   describe("windowToHours", () => {
     it("converts time windows correctly", async () => {
-      const { windowToHours } = await import("../aggregate");
+      const { windowToHours } = await import("@schemas/dashboard");
 
       expect(windowToHours("24h")).toBe(24);
       expect(windowToHours("7d")).toBe(168);
@@ -190,7 +190,7 @@ describe("aggregate", () => {
 
   describe("dashboardMetricsSchema", () => {
     it("validates correct metrics", async () => {
-      const { dashboardMetricsSchema } = await import("../aggregate");
+      const { dashboardMetricsSchema } = await import("@schemas/dashboard");
 
       const validMetrics = {
         activeTrips: 5,
@@ -206,7 +206,7 @@ describe("aggregate", () => {
     });
 
     it("rejects invalid metrics", async () => {
-      const { dashboardMetricsSchema } = await import("../aggregate");
+      const { dashboardMetricsSchema } = await import("@schemas/dashboard");
 
       const invalidMetrics = {
         activeTrips: -1, // negative not allowed
@@ -222,7 +222,7 @@ describe("aggregate", () => {
     });
 
     it("rejects extra properties (strict)", async () => {
-      const { dashboardMetricsSchema } = await import("../aggregate");
+      const { dashboardMetricsSchema } = await import("@schemas/dashboard");
 
       const withExtra = {
         activeTrips: 5,
@@ -241,7 +241,7 @@ describe("aggregate", () => {
 
   describe("timeWindowSchema", () => {
     it("validates allowed windows", async () => {
-      const { timeWindowSchema } = await import("../aggregate");
+      const { timeWindowSchema } = await import("@schemas/dashboard");
 
       expect(timeWindowSchema.safeParse("24h").success).toBe(true);
       expect(timeWindowSchema.safeParse("7d").success).toBe(true);
@@ -250,7 +250,7 @@ describe("aggregate", () => {
     });
 
     it("rejects invalid windows", async () => {
-      const { timeWindowSchema } = await import("../aggregate");
+      const { timeWindowSchema } = await import("@schemas/dashboard");
 
       expect(timeWindowSchema.safeParse("1h").success).toBe(false);
       expect(timeWindowSchema.safeParse("invalid").success).toBe(false);

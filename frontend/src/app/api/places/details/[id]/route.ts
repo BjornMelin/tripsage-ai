@@ -9,8 +9,9 @@ import "server-only";
 
 import { type PlacesDetailsRequest, placesDetailsRequestSchema } from "@schemas/api";
 import { type NextRequest, NextResponse } from "next/server";
+import type { RouteParamsContext } from "@/lib/api/factory";
 import { withApiGuards } from "@/lib/api/factory";
-import { errorResponse, validateSchema } from "@/lib/api/route-helpers";
+import { errorResponse, parseStringId, validateSchema } from "@/lib/api/route-helpers";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
 
 /**
@@ -28,8 +29,10 @@ export function GET(req: NextRequest, context: { params: Promise<{ id: string }>
     auth: false,
     rateLimit: "places:details",
     telemetry: "places.details",
-  })(async (req: NextRequest) => {
-    const { id } = await context.params;
+  })(async (req: NextRequest, _context, _data, routeContext: RouteParamsContext) => {
+    const idResult = await parseStringId(routeContext, "id");
+    if ("error" in idResult) return idResult.error;
+    const { id } = idResult;
     const { searchParams } = new URL(req.url);
     const sessionToken = searchParams.get("sessionToken");
 

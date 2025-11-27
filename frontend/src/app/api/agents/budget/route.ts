@@ -9,19 +9,13 @@
 import "server-only";
 
 import { resolveProvider } from "@ai/models/registry";
-import type { BudgetPlanRequest } from "@schemas/agents";
 import { agentSchemas } from "@schemas/agents";
 import type { NextRequest } from "next/server";
-import type { z } from "zod";
 import { runBudgetAgent } from "@/lib/agents/budget-agent";
 import { resolveAgentConfig } from "@/lib/agents/config-resolver";
 import { createErrorHandler } from "@/lib/agents/error-recovery";
 import { withApiGuards } from "@/lib/api/factory";
-import {
-  errorResponse,
-  getTrustedRateLimitIdentifier,
-  parseJsonBody,
-} from "@/lib/api/route-helpers";
+import { parseJsonBody, requireUserId, validateSchema } from "@/lib/api/route-helpers";
 
 export const maxDuration = 60;
 
@@ -37,32 +31,31 @@ export const POST = withApiGuards({
   rateLimit: "agents:budget",
   telemetry: "agent.budgetPlanning",
 })(async (req: NextRequest, { user }) => {
+  const userResult = requireUserId(user);
+  if ("error" in userResult) return userResult.error;
+  const { userId } = userResult;
+
   const parsed = await parseJsonBody(req);
   if ("error" in parsed) {
     return parsed.error;
   }
 
-  let body: BudgetPlanRequest;
-  try {
-    body = RequestSchema.parse(parsed.body);
-  } catch (err) {
-    const zerr = err as z.ZodError;
-    return errorResponse({
-      err: zerr,
-      error: "invalid_request",
-      issues: zerr.issues,
-      reason: "Request validation failed",
-      status: 400,
-    });
+  const validation = validateSchema(RequestSchema, parsed.body);
+  if ("error" in validation) {
+    return validation.error;
   }
+  const body = validation.data;
 
-  const identifier = user?.id ?? getTrustedRateLimitIdentifier(req);
   const config = await resolveAgentConfig("budgetAgent");
   const modelHint =
     config.config.model ?? new URL(req.url).searchParams.get("model") ?? undefined;
-  const { model, modelId } = await resolveProvider(user?.id ?? "anon", modelHint);
+  const { model, modelId } = await resolveProvider(userId, modelHint);
 
-  const result = runBudgetAgent({ identifier, model, modelId }, config.config, body);
+  const result = runBudgetAgent(
+    { identifier: userId, model, modelId },
+    config.config,
+    body
+  );
   return result.toUIMessageStreamResponse({
     onError: createErrorHandler(),
   });

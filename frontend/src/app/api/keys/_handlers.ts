@@ -4,9 +4,14 @@
  * These handlers encapsulate the business logic for API key storage and
  * retrieval. The Next.js route adapters handle SSR-only concerns and pass in
  * typed dependencies.
+ *
+ * All handlers accept `userId` as a parameter since the route adapter already
+ * guarantees authentication via `withApiGuards({ auth: true })`.
  */
 
 import type { PostKeyBody } from "@schemas/api";
+import { NextResponse } from "next/server";
+import { errorResponse } from "@/lib/api/route-helpers";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 
 /** Set of allowed API service providers for key storage. */
@@ -17,6 +22,7 @@ const ALLOWED = new Set(["openai", "openrouter", "anthropic", "xai", "gateway"])
  */
 export interface KeysDeps {
   supabase: TypedServerSupabase;
+  userId: string;
   insertUserApiKey: (userId: string, service: string, apiKey: string) => Promise<void>;
   upsertUserGatewayBaseUrl?: (userId: string, baseUrl: string) => Promise<void>;
 }
@@ -27,7 +33,7 @@ export interface KeysDeps {
  * Expects a validated body from postKeyBodySchema. Service normalization and
  * validation are performed here before calling the RPC.
  *
- * @param deps Collaborators with a typed Supabase client and RPC inserter.
+ * @param deps Collaborators with a typed Supabase client, authenticated userId, and RPC inserter.
  * @param body Validated payload containing service and apiKey.
  * @returns 204 on success; otherwise a JSON error Response.
  */
@@ -35,62 +41,61 @@ export async function postKey(deps: KeysDeps, body: PostKeyBody): Promise<Respon
   // Normalize service names once so every adapter and RPC sees the canonical lowercase id.
   const normalized = body.service.toLowerCase();
   if (!ALLOWED.has(normalized)) {
-    return new Response(
-      JSON.stringify({ code: "BAD_REQUEST", error: "Unsupported service" }),
-      {
-        headers: { "content-type": "application/json" },
-        status: 400,
-      }
-    );
-  }
-
-  const { data: auth } = await deps.supabase.auth.getUser();
-  const user = auth?.user ?? null;
-  if (!user) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      headers: { "content-type": "application/json" },
-      status: 401,
+    return errorResponse({
+      error: "bad_request",
+      reason: "Unsupported service",
+      status: 400,
     });
   }
 
   // If service is gateway and baseUrl provided, persist base URL metadata
   if (normalized === "gateway" && body.baseUrl && deps.upsertUserGatewayBaseUrl) {
-    await deps.upsertUserGatewayBaseUrl(user.id, body.baseUrl);
+    try {
+      await deps.upsertUserGatewayBaseUrl(deps.userId, body.baseUrl);
+    } catch (err) {
+      return errorResponse({
+        err,
+        error: "db_error",
+        reason: "Failed to persist gateway base URL",
+        status: 500,
+      });
+    }
   }
-  await deps.insertUserApiKey(user.id, normalized, body.apiKey);
+  try {
+    await deps.insertUserApiKey(deps.userId, normalized, body.apiKey);
+  } catch (err) {
+    return errorResponse({
+      err,
+      error: "db_error",
+      reason: "Failed to store API key",
+      status: 500,
+    });
+  }
   return new Response(null, { status: 204 });
 }
 
 /**
  * List key metadata for the authenticated user.
  *
- * @param deps Collaborators with a typed Supabase client.
+ * @param deps Collaborators with a typed Supabase client and authenticated userId.
  * @returns List of key summaries or an error Response.
  */
 export async function getKeys(deps: {
   supabase: TypedServerSupabase;
+  userId: string;
 }): Promise<Response> {
-  const { data: auth } = await deps.supabase.auth.getUser();
-  const user = auth?.user ?? null;
-  if (!user) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      headers: { "content-type": "application/json" },
-      status: 401,
-    });
-  }
   const { data, error } = await deps.supabase
     .from("api_keys")
     .select("service, created_at, last_used")
-    .eq("user_id", user.id)
+    .eq("user_id", deps.userId)
     .order("service", { ascending: true });
   if (error) {
-    return new Response(
-      JSON.stringify({ code: "DB_ERROR", error: "Failed to fetch keys" }),
-      {
-        headers: { "content-type": "application/json" },
-        status: 500,
-      }
-    );
+    return errorResponse({
+      err: error,
+      error: "db_error",
+      reason: "Failed to fetch keys",
+      status: 500,
+    });
   }
   type ApiKeyRow = {
     // biome-ignore lint/style/useNamingConvention: mirrors DB columns
@@ -107,8 +112,5 @@ export async function getKeys(deps: {
     lastUsed: r.last_used ?? null,
     service: String(r.service),
   }));
-  return new Response(JSON.stringify(payload), {
-    headers: { "content-type": "application/json" },
-    status: 200,
-  });
+  return NextResponse.json(payload, { status: 200 });
 }

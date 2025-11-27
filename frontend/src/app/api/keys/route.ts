@@ -14,11 +14,10 @@ export const dynamic = "force-dynamic";
 
 import { type PostKeyBody, postKeyBodySchema } from "@schemas/api";
 import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
 import type { RateLimitResult } from "@/app/api/keys/_rate-limiter";
 import { buildKeySpanAttributes } from "@/app/api/keys/_telemetry";
 import { withApiGuards } from "@/lib/api/factory";
-import { API_CONSTANTS } from "@/lib/api/route-helpers";
+import { API_CONSTANTS, errorResponse, requireUserId } from "@/lib/api/route-helpers";
 import { insertUserApiKey, upsertUserGatewayBaseUrl } from "@/lib/supabase/rpc";
 import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
 import { getKeys, postKey } from "./_handlers";
@@ -38,8 +37,10 @@ export const POST = withApiGuards({
   schema: postKeyBodySchema,
   // Custom telemetry handled below, factory telemetry disabled
 })(async (req: NextRequest, { user, supabase }, validated: PostKeyBody) => {
-  const userObj = user as { id: string } | null;
-  const identifierType: IdentifierType = userObj?.id ? "user" : "ip";
+  const userResult = requireUserId(user);
+  if ("error" in userResult) return userResult.error;
+  const { userId } = userResult;
+  const identifierType: IdentifierType = "user";
   // Rate limit metadata not available from factory, using undefined for custom telemetry
   const rateLimitMeta: RateLimitResult | undefined = undefined;
 
@@ -51,16 +52,17 @@ export const POST = withApiGuards({
     const size = Number.parseInt(contentLength, 10);
     if (Number.isNaN(size) || size > API_CONSTANTS.maxBodySizeBytes) {
       recordTelemetryEvent("api.keys.size_limit", {
-        attributes: { limit_bytes: API_CONSTANTS.maxBodySizeBytes, size_bytes: size },
+        attributes: {
+          limit_bytes: API_CONSTANTS.maxBodySizeBytes,
+          size_bytes: size,
+        },
         level: "warning",
       });
-      return NextResponse.json(
-        {
-          code: "BAD_REQUEST",
-          error: `Request body too large (max ${API_CONSTANTS.maxBodySizeBytes} bytes)`,
-        },
-        { status: 400 }
-      );
+      return errorResponse({
+        error: "bad_request",
+        reason: `Request body too large (max ${API_CONSTANTS.maxBodySizeBytes} bytes)`,
+        status: 400,
+      });
     }
   }
 
@@ -115,6 +117,7 @@ export const POST = withApiGuards({
             }
           }
         ),
+      userId,
     },
     validated
   );
@@ -134,6 +137,9 @@ export const GET = withApiGuards({
   auth: true,
   rateLimit: "keys:create", // Reuse create limit for GET
   // Custom telemetry handled in handler
-})((_req: NextRequest, { supabase }) => {
-  return getKeys({ supabase });
+})((_req: NextRequest, { supabase, user }) => {
+  const result = requireUserId(user);
+  if ("error" in result) return result.error;
+  const { userId } = result;
+  return getKeys({ supabase, userId });
 });

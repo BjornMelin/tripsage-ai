@@ -9,14 +9,14 @@ import "server-only";
 
 import type { User } from "@supabase/supabase-js";
 import { Ratelimit } from "@upstash/ratelimit";
-import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
+import type { NextRequest, NextResponse } from "next/server";
 import type { z } from "zod";
 import {
   checkAuthentication,
   errorResponse,
   getTrustedRateLimitIdentifier,
   parseJsonBody,
+  unauthorizedResponse,
   withRequestSpan,
 } from "@/lib/api/route-helpers";
 import { fireAndForgetMetric } from "@/lib/metrics/api-metrics";
@@ -141,18 +141,19 @@ async function enforceRateLimit(
         identifier
       );
       if (!success) {
-        return NextResponse.json(
-          { error: "rate_limit_exceeded", reason: "Too many requests" },
-          {
-            headers: {
-              "Retry-After": String(Math.ceil((reset - Date.now()) / 1000)),
-              "X-RateLimit-Limit": String(limit),
-              "X-RateLimit-Remaining": String(remaining),
-              "X-RateLimit-Reset": String(reset),
-            },
-            status: 429,
-          }
+        const response = errorResponse({
+          error: "rate_limit_exceeded",
+          reason: "Too many requests",
+          status: 429,
+        });
+        response.headers.set(
+          "Retry-After",
+          String(Math.ceil((reset - Date.now()) / 1000))
         );
+        response.headers.set("X-RateLimit-Limit", String(limit));
+        response.headers.set("X-RateLimit-Remaining", String(remaining));
+        response.headers.set("X-RateLimit-Reset", String(reset));
+        return response;
       }
       return null;
     }
@@ -174,18 +175,19 @@ async function enforceRateLimit(
 
     const { success, remaining, reset } = await limiter.limit(identifier);
     if (!success) {
-      return NextResponse.json(
-        { error: "rate_limit_exceeded", reason: "Too many requests" },
-        {
-          headers: {
-            "Retry-After": String(Math.ceil((reset - Date.now()) / 1000)),
-            "X-RateLimit-Limit": String(config.limit),
-            "X-RateLimit-Remaining": String(remaining),
-            "X-RateLimit-Reset": String(reset),
-          },
-          status: 429,
-        }
+      const response = errorResponse({
+        error: "rate_limit_exceeded",
+        reason: "Too many requests",
+        status: 429,
+      });
+      response.headers.set(
+        "Retry-After",
+        String(Math.ceil((reset - Date.now()) / 1000))
       );
+      response.headers.set("X-RateLimit-Limit", String(config.limit));
+      response.headers.set("X-RateLimit-Remaining", String(remaining));
+      response.headers.set("X-RateLimit-Reset", String(reset));
+      return response;
     }
     return null;
   } catch (error) {
@@ -263,10 +265,7 @@ export function withApiGuards<SchemaType extends z.ZodType>(
       if (auth) {
         const authResult = await checkAuthentication(supabase);
         if (!authResult.isAuthenticated) {
-          return NextResponse.json(
-            { error: "unauthorized", reason: "Authentication required" },
-            { status: 401 }
-          );
+          return unauthorizedResponse();
         }
         user = authResult.user as User | null;
       }

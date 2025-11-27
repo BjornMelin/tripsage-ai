@@ -9,6 +9,7 @@ import "server-only";
 
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
+import { errorResponse, requireUserId } from "@/lib/api/route-helpers";
 import { handleMemoryIntent } from "@/lib/memory/orchestrator";
 
 /**
@@ -21,16 +22,16 @@ export const GET = withApiGuards({
   rateLimit: "memory:stats",
   telemetry: "memory.stats",
 })(async (_req, { user }) => {
-  if (!user?.id) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
+  const result = requireUserId(user);
+  if ("error" in result) return result.error;
+  const { userId } = result;
 
   try {
     const memoryResult = await handleMemoryIntent({
       limit: 100, // Get more for stats
       sessionId: "",
       type: "fetchContext",
-      userId: user.id,
+      userId,
     });
 
     const contextItems = memoryResult.context ?? [];
@@ -51,13 +52,11 @@ export const GET = withApiGuards({
       totalMemories: contextItems.length,
     });
   } catch (error) {
-    return NextResponse.json(
-      {
-        error: "memory_stats_failed",
-        message:
-          error instanceof Error ? error.message : "Failed to fetch memory stats",
-      },
-      { status: 500 }
-    );
+    return errorResponse({
+      err: error,
+      error: "memory_stats_failed",
+      reason: error instanceof Error ? error.message : "Failed to fetch memory stats",
+      status: 500,
+    });
   }
 });

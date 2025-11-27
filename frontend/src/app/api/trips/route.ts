@@ -14,7 +14,7 @@ import { tripCreateSchema, tripFiltersSchema } from "@schemas/trips";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { errorResponse } from "@/lib/api/route-helpers";
+import { errorResponse, parseJsonBody, requireUserId } from "@/lib/api/route-helpers";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 import { bumpTag } from "@/lib/cache/tags";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
@@ -183,30 +183,22 @@ async function createTripHandler(
   userId: string,
   req: NextRequest
 ): Promise<NextResponse> {
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch (error) {
-    return errorResponse({
-      err: error instanceof Error ? error : new Error("Invalid JSON body"),
-      error: "invalid_request",
-      reason: "Malformed JSON in request body",
-      status: 400,
-    });
-  }
+  const parsed = await parseJsonBody(req);
+  if ("error" in parsed) return parsed.error;
+  const body = parsed.body;
 
-  const parsed = tripCreateSchema.safeParse(body);
-  if (!parsed.success) {
+  const validated = tripCreateSchema.safeParse(body);
+  if (!validated.success) {
     return errorResponse({
-      err: parsed.error,
+      err: validated.error,
       error: "invalid_request",
-      issues: parsed.error.issues,
+      issues: validated.error.issues,
       reason: "Trip payload validation failed",
       status: 400,
     });
   }
 
-  const insertPayload = mapCreatePayloadToInsert(parsed.data, userId);
+  const insertPayload = mapCreatePayloadToInsert(validated.data, userId);
 
   const { data, error } = await supabase
     .from("trips")
@@ -247,13 +239,9 @@ export const GET = withApiGuards({
   rateLimit: "trips:list",
   telemetry: "trips.list",
 })(async (req, { supabase, user }) => {
-  const userId = user?.id;
-  if (!userId) {
-    return NextResponse.json(
-      { error: "unauthorized", reason: "Authentication required" },
-      { status: 401 }
-    );
-  }
+  const result = requireUserId(user);
+  if ("error" in result) return result.error;
+  const { userId } = result;
   return await listTripsHandler(supabase, userId, req);
 });
 
@@ -268,13 +256,8 @@ export const POST = withApiGuards({
   rateLimit: "trips:create",
   telemetry: "trips.create",
 })(async (req, { supabase, user }) => {
-  const userId = user?.id;
-  if (!userId) {
-    return NextResponse.json(
-      { error: "unauthorized", reason: "Authentication required" },
-      { status: 401 }
-    );
-  }
-
+  const result = requireUserId(user);
+  if ("error" in result) return result.error;
+  const { userId } = result;
   return await createTripHandler(supabase, userId, req);
 });

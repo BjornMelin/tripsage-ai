@@ -12,7 +12,7 @@ import "server-only";
 
 import type { NextRequest } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { parseJsonBody } from "@/lib/api/route-helpers";
+import { parseJsonBody, requireUserId } from "@/lib/api/route-helpers";
 import { createSession, listSessions } from "./_handlers";
 
 /**
@@ -27,12 +27,15 @@ export const POST = withApiGuards({
   auth: true,
   rateLimit: "chat:sessions:create",
   telemetry: "chat.sessions.create",
-})(async (req: NextRequest, { supabase }) => {
+})(async (req: NextRequest, { supabase, user }) => {
+  const result = requireUserId(user);
+  if ("error" in result) return result.error;
+  const { userId } = result;
   // Title is optional, so gracefully handle parsing errors
   const parsed = await parseJsonBody(req);
   const title =
     "error" in parsed ? undefined : (parsed.body as { title?: string })?.title;
-  return createSession({ supabase }, title);
+  return createSession({ supabase, userId }, title);
 });
 
 /**
@@ -44,6 +47,9 @@ export const GET = withApiGuards({
   auth: true,
   rateLimit: "chat:sessions:list",
   telemetry: "chat.sessions.list",
-})((_req, { supabase }) => {
-  return listSessions({ supabase });
+})((_req, { supabase, user }) => {
+  const result = requireUserId(user);
+  if ("error" in result) return result.error;
+  const { userId } = result;
+  return listSessions({ supabase, userId });
 });

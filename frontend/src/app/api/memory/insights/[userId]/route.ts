@@ -14,7 +14,7 @@ import { MEMORY_INSIGHTS_RESPONSE_SCHEMA } from "@schemas/memory";
 import { generateObject } from "ai";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { errorResponse } from "@/lib/api/route-helpers";
+import { errorResponse, requireUserId } from "@/lib/api/route-helpers";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 import { handleMemoryIntent } from "@/lib/memory/orchestrator";
 import { nowIso } from "@/lib/security/random";
@@ -45,8 +45,9 @@ export const GET = withApiGuards({
   rateLimit: "memory:insights",
   telemetry: "memory.insights",
 })(async (_req, { user }) => {
-  // user is guaranteed by auth: true
-  const userId = user?.id ?? "";
+  const result = requireUserId(user);
+  if ("error" in result) return result.error;
+  const { userId } = result;
   try {
     const memoryResult = await handleMemoryIntent({
       limit: 20,

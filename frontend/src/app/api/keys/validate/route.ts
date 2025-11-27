@@ -17,7 +17,7 @@ import { createGateway } from "ai";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { parseJsonBody } from "@/lib/api/route-helpers";
+import { errorResponse, parseJsonBody } from "@/lib/api/route-helpers";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { recordTelemetryEvent } from "@/lib/telemetry/span";
 
@@ -200,10 +200,11 @@ export const POST = withApiGuards({
       attributes: { message: "JSON parse failed" },
       level: "error",
     });
-    return NextResponse.json(
-      { code: "BAD_REQUEST", error: "Malformed JSON in request body" },
-      { status: 400 }
-    );
+    return errorResponse({
+      error: "bad_request",
+      reason: "Malformed JSON in request body",
+      status: 400,
+    });
   }
 
   const body = parsed.body as { service?: unknown; apiKey?: unknown };
@@ -216,10 +217,11 @@ export const POST = withApiGuards({
     typeof service !== "string" ||
     typeof apiKey !== "string"
   ) {
-    return NextResponse.json(
-      { code: "BAD_REQUEST", error: "Invalid request body" },
-      { status: 400 }
-    );
+    return errorResponse({
+      error: "bad_request",
+      reason: "Invalid request body",
+      status: 400,
+    });
   }
 
   const result = await validateProviderKey(service, apiKey);

@@ -10,7 +10,7 @@ import "server-only";
 import { type MemorySearchRequest, memorySearchRequestSchema } from "@schemas/memory";
 import { type NextRequest, NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { errorResponse } from "@/lib/api/route-helpers";
+import { errorResponse, requireUserId } from "@/lib/api/route-helpers";
 import { handleMemoryIntent } from "@/lib/memory/orchestrator";
 import { nowIso, secureUuid } from "@/lib/security/random";
 
@@ -25,11 +25,9 @@ export const POST = withApiGuards({
   schema: memorySearchRequestSchema,
   telemetry: "memory.search",
 })(async (_req: NextRequest, { user }, validated: MemorySearchRequest) => {
-  // user is guaranteed by auth: true
-  if (!user) {
-    throw new Error("Authenticated user required for memory search");
-  }
-  const userId = user.id;
+  const result = requireUserId(user);
+  if ("error" in result) return result.error;
+  const { userId } = result;
   const { filters, limit } = validated;
 
   try {

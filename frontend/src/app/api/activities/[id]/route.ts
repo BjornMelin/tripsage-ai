@@ -9,12 +9,10 @@ import "server-only";
 
 import { getActivitiesService } from "@domain/activities/container";
 import { isNotFoundError } from "@domain/activities/errors";
-import { z } from "zod";
+import type { RouteParamsContext } from "@/lib/api/factory";
 import { withApiGuards } from "@/lib/api/factory";
-import { errorResponse, validateSchema } from "@/lib/api/route-helpers";
+import { errorResponse, parseStringId } from "@/lib/api/route-helpers";
 import { getCurrentUser } from "@/lib/supabase/factory";
-
-const placeIdSchema = z.string().min(1);
 
 /**
  * Determines whether the request contains Supabase authentication cookies.
@@ -60,22 +58,10 @@ export const GET = withApiGuards({
   auth: false, // Allow anonymous access
   rateLimit: "activities:details",
   telemetry: "activities.details",
-})(async (req, { supabase }, _body, routeContext) => {
-  const params = await routeContext.params;
-  const placeId = params?.id;
-  if (!placeId) {
-    return errorResponse({
-      error: "invalid_request",
-      reason: "Place ID is required",
-      status: 400,
-    });
-  }
-
-  const validation = validateSchema(placeIdSchema, placeId);
-  if ("error" in validation) {
-    return validation.error;
-  }
-  const validatedPlaceId = validation.data;
+})(async (req, { supabase }, _body, routeContext: RouteParamsContext) => {
+  const placeIdResult = await parseStringId(routeContext, "id");
+  if ("error" in placeIdResult) return placeIdResult.error;
+  const { id: validatedPlaceId } = placeIdResult;
 
   // Only call getCurrentUser if auth cookies are present to avoid unnecessary Supabase calls
   let userId: string | undefined = "anon";

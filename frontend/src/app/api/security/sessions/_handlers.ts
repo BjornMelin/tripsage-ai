@@ -2,6 +2,7 @@
  * @fileoverview Security session handlers for listing and terminating sessions.
  */
 import { NextResponse } from "next/server";
+import { errorResponse, notFoundResponse } from "@/lib/api/route-helpers";
 import type { TypedAdminSupabase } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
@@ -145,10 +146,12 @@ export async function listSessionsHandler(params: {
       if (error) {
         span.setAttribute("security.sessions.list.error", true);
         logger.error("sessions_list_failed", { error: error.message, userId });
-        return NextResponse.json(
-          { error: "failed_to_fetch_sessions" },
-          { status: 500 }
-        );
+        return errorResponse({
+          err: error,
+          error: "db_error",
+          reason: "Failed to fetch sessions",
+          status: 500,
+        });
       }
 
       const sessions = (data ?? []).map((row) => mapSessionRow(row, currentSessionId));
@@ -190,11 +193,16 @@ export async function terminateSessionHandler(params: {
           sessionId,
           userId,
         });
-        return NextResponse.json({ error: "failed_to_fetch_session" }, { status: 500 });
+        return errorResponse({
+          err: fetchError,
+          error: "db_error",
+          reason: "Failed to fetch session",
+          status: 500,
+        });
       }
 
       if (!session) {
-        return NextResponse.json({ error: "session_not_found" }, { status: 404 });
+        return notFoundResponse("Session");
       }
 
       const deleteResult = await adminSupabase
@@ -211,10 +219,12 @@ export async function terminateSessionHandler(params: {
           sessionId,
           userId,
         });
-        return NextResponse.json(
-          { error: "failed_to_terminate_session" },
-          { status: 500 }
-        );
+        return errorResponse({
+          err: deleteResult.error,
+          error: "db_error",
+          reason: "Failed to terminate session",
+          status: 500,
+        });
       }
 
       return new NextResponse(null, { status: 204 });
