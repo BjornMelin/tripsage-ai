@@ -765,11 +765,11 @@ Full-stack instrumentation without compromising privacy:
 
 ### Operations
 
-- [Deployment Guide](../docs/operators/deployment-guide.md) - Production
+- [Deployment Guide](../docs/operations/deployment-guide.md) - Production
   deployment
-- [Security Guide](../docs/operators/security-guide.md) - Security
+- [Security Guide](../docs/operations/security-guide.md) - Security
   implementation
-- [Operators Reference](../docs/operators/operators-reference.md) - DevOps
+- [Operators Reference](../docs/operations/operators-reference.md) - DevOps
   operations
 
 ### Decision Records

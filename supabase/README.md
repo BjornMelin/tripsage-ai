@@ -24,7 +24,7 @@ supabase/
 |-----------|--------------|----------|
 | **Schemas** | [schemas/README.md](./schemas/README.md) | Declarative schema management guide |
 | **Migrations** | [migrations/README.md](./migrations/README.md) | Database migration best practices |
-| **Webhooks (DB→Vercel)** | [../docs/operators/supabase-webhooks.md](../docs/operators/supabase-webhooks.md) | Configure database webhooks |
+| **Webhooks (DB→Vercel)** | [../docs/operations/supabase-webhooks.md](../docs/operations/supabase-webhooks.md) | Configure database webhooks |
 | **Storage** | [storage/README.md](./storage/README.md) | File storage and management |
 | **Functions** | [functions/README.md](./functions/README.md) | Edge function suite |
 | **Troubleshooting** | [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) | Common issues and solutions |
@@ -78,7 +78,7 @@ supabase db push
 # Push configuration changes (if config.toml was modified)
 supabase config push
 
-# Webhooks use Postgres settings (GUCs). See docs/operators/supabase-webhooks.md
+# Webhooks use Postgres settings (GUCs). See ../docs/operations/supabase-webhooks.md
 ```
 
 ### Notes on legacy SQL
@@ -154,7 +154,7 @@ SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 
-# Webhooks are configured via Postgres settings (GUCs). See docs/operators/supabase-webhooks.md.
+# Webhooks are configured via Postgres settings (GUCs). See ../docs/operations/supabase-webhooks.md.
 # Example (set in DB):
 # app.vercel_webhook_trips = 'https://<vercel>/api/hooks/trips'
 # app.vercel_webhook_cache = 'https://<vercel>/api/hooks/cache'

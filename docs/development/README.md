@@ -47,7 +47,7 @@ cd frontend && pnpm biome:check && pnpm type-check && pnpm test:run
 - **Cache**: Upstash Redis (HTTP REST API) + QStash for async jobs
 - **State**: Zustand (client) + TanStack Query (server)
 
-See [Development Guide](development-guide.md) for full stack details and [Database Architecture](../architecture/database.md) for schema design.
+See [Development Guide](development-guide.md) for full-stack details and [Database Architecture](../architecture/database.md) for schema design.
 
 ## Finding Information
 

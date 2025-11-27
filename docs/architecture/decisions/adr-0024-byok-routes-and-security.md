@@ -40,4 +40,4 @@ We are migrating BYOK key CRUD/validation from FastAPI to Next.js route handlers
 
 - PostgREST roles/claims: <https://docs.postgrest.org/en/v10/auth.html>
 - Supabase Vault RPCs: `supabase/migrations/20251030000000_vault_api_keys.sql`
-- Rate limiting ADR: `docs/architecture/decisions/adr-0020-rate-limiting-strategy.md`
+- Rate-limiting ADR: `docs/architecture/decisions/adr-0020-rate-limiting-strategy.md`

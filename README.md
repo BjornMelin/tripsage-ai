@@ -229,7 +229,7 @@ channel.subscribe()
 
 ## 🤝 Contributing
 
-We welcome contributions! See the [Development Guide](docs/development/development-guide.md) for the full workflow, code standards, and testing details.
+We welcome contributions! See the [Development Guide](docs/development/README.md) for the full workflow, code standards, and testing details.
 
 ---
 

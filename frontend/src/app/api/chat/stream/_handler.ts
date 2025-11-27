@@ -5,9 +5,9 @@
  * streaming. It is fully dependency-injected to ensure deterministic tests.
  */
 
-import type { ProviderResolution } from "@ai/models/registry";
 import * as tools from "@ai/tools";
 import { wrapToolsWithUserId } from "@ai/tools/server/injection";
+import type { ProviderResolution } from "@schemas/providers";
 import type { UIMessage } from "ai";
 import {
   convertToModelMessages,

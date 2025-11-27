@@ -26,29 +26,29 @@
 
 - **Schemas & Prompts**: Extend `frontend/src/schemas/agents.ts` with shared types for flights, accommodations, budgets, memories, and routing metadata. Update prompt builders to accept user/account context.
 - **Guardrail Middleware**: Generalize middleware to support tool budgets per workflow, caching policies, and telemetry hooks.
--(Removed) Feature flags: We are performing a complete cutover; routes are always enabled. Rollback is via deployment rollback, not flags.
+- (Removed) Feature flags: We are performing a complete cutover; routes are always enabled. Rollback is via deployment rollback, not flags.
 - **Deliverables**: Unit tests covering middleware, integration tests for caching + rate limits.
 
-### P1 – Flight & Accommodation Agents (Completed)
+### P1 - Flight & Accommodation Agents (Completed)
 
 - **Route Handlers**: `/api/agents/flights/route.ts`, `/api/agents/accommodations/route.ts` streaming ToolLoopAgent responses.
 - **Tools**: Reuse existing TypeScript `searchFlights`, `searchAccommodations`, plus new OpenTripMap POI lookup for nearby lodging context.
 - **UI**: AI Elements cards summarizing flight options (price, cabin, airline) and accommodation results.
 - **Validation**: Integration tests verifying TypeScript AI SDK v6 tool success >95%; telemetry dashboard for tool execution monitoring.
 
-### P2 – Budget & Memory Agents
+### P2 - Budget & Memory Agents
 
 - **Budget**: Add `/api/agents/budget` route that uses ToolLoopAgent to balance costs (flights, stays, activities). Integrate safety scores to adjust recommendations.
 - **Memory Update**: Route that writes conversation memories via TypeScript tool, replacing Python node. Ensure Supabase writes happen server-side only.
 - **UI/UX**: Provide budget visualizations (AI Elements charts) and memory confirmation prompts.
 
-### P3 – Router & Error Recovery
+### P3 - Router & Error Recovery
 
 - **Router**: Implement TypeScript intent router that uses AI SDK `generateObject` to classify user requests and set `currentAgent` before hitting specific route handlers.
 - **Error Recovery**: Frontend ToolLoop handles fallback messaging and escalations.
 - **Note**: Python LangGraph orchestration and agents have been completely removed; all functionality now runs in TypeScript AI SDK v6.
 
-### P4 – Provider Expansion & Enhancements
+### P4 - Provider Expansion & Enhancements
 
 - **OpenTripMap Tool**: `frontend/src/lib/tools/opentripmap.ts` calling `/places` endpoints with caching (per provider TOS allowing caching). Uses Google Maps Geocoding API for destination-based lookups with result caching.
 - **GeoSure/Travel Advisory Tool**: `frontend/src/lib/tools/travel-advisory.ts` retrieving safety scores (fallback to GeoSure API or successor).
@@ -61,7 +61,7 @@
 - **Telemetry**: Structured events for tool calls (name, duration, cacheHit, validationResult) exported via existing logging pipeline.
 - **Testing**: Vitest suites per agent, integration tests hitting API routes with mocked providers, Playwright e2e scenarios for each workflow wave.
 - **Rollout**: Full cutover (no flags). Monitor telemetry; rollback is a deploy revert.
-- **Runbook**: See `docs/operators/agent-frontend.md` for env and validation commands (full cutover; no flags).
+- **Runbook**: See `docs/operations/agent-frontend.md` for env and validation commands (full cutover; no flags).
 
 ## Non-Goals
 
