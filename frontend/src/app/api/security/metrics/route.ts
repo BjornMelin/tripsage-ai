@@ -7,6 +7,7 @@ import "server-only";
 import { securityMetricsSchema } from "@schemas/security";
 import { type NextRequest, NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
+import { requireUserId } from "@/lib/api/route-helpers";
 import { getUserSecurityMetrics } from "@/lib/security/service";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 
@@ -16,8 +17,9 @@ export const GET = withApiGuards({
   rateLimit: "security:metrics",
   telemetry: "security.metrics",
 })(async (_req: NextRequest, { user }) => {
-  // auth: true guarantees user is authenticated
-  const userId = user?.id ?? "";
+  const result = requireUserId(user);
+  if ("error" in result) return result.error;
+  const { userId } = result;
 
   try {
     const adminSupabase = createAdminSupabase();

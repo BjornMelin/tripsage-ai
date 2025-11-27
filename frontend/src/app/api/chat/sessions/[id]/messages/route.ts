@@ -12,7 +12,7 @@ import "server-only";
 
 import type { NextRequest } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { errorResponse } from "@/lib/api/route-helpers";
+import { errorResponse, requireUserId } from "@/lib/api/route-helpers";
 import { createMessage, listMessages } from "../../_handlers";
 
 /**
@@ -28,7 +28,9 @@ export function GET(req: NextRequest, context: { params: Promise<{ id: string }>
     rateLimit: "chat:sessions:messages:list",
     telemetry: "chat.sessions.messages.list",
   })(async (_req, { supabase, user }) => {
-    const userId = user?.id ?? "";
+    const result = requireUserId(user);
+    if ("error" in result) return result.error;
+    const { userId } = result;
     const { id: sessionId } = await context.params;
     return listMessages({ supabase, userId }, sessionId);
   })(req, context);
@@ -49,7 +51,9 @@ export function POST(req: NextRequest, context: { params: Promise<{ id: string }
     rateLimit: "chat:sessions:messages:create",
     telemetry: "chat.sessions.messages.create",
   })(async (request, { supabase, user }) => {
-    const userId = user?.id ?? "";
+    const result = requireUserId(user);
+    if ("error" in result) return result.error;
+    const { userId } = result;
     const { id: sessionId } = await context.params;
     let body: { content: string; role?: string };
     try {

@@ -15,7 +15,7 @@ import type { NextRequest } from "next/server";
 import { runAccommodationAgent } from "@/lib/agents/accommodation-agent";
 import { resolveAgentConfig } from "@/lib/agents/config-resolver";
 import { withApiGuards } from "@/lib/api/factory";
-import { getTrustedRateLimitIdentifier } from "@/lib/api/route-helpers";
+import { requireUserId } from "@/lib/api/route-helpers";
 
 export const maxDuration = 60;
 
@@ -33,14 +33,17 @@ export const POST = withApiGuards({
   telemetry: "agent.accommodationSearch",
 })(async (req: NextRequest, context, body: AccommodationSearchRequest) => {
   const { user } = context;
-  const identifier = user?.id ?? getTrustedRateLimitIdentifier(req);
+  const userResult = requireUserId(user);
+  if ("error" in userResult) return userResult.error;
+  const { userId } = userResult;
+
   const config = await resolveAgentConfig("accommodationAgent");
   const modelHint =
     config.config.model ?? new URL(req.url).searchParams.get("model") ?? undefined;
-  const { model, modelId } = await resolveProvider(user?.id ?? "anon", modelHint);
+  const { model, modelId } = await resolveProvider(userId, modelHint);
 
   const result = runAccommodationAgent(
-    { identifier, model, modelId },
+    { identifier: userId, model, modelId },
     config.config,
     body
   );

@@ -12,6 +12,7 @@ import "server-only";
 
 import type { NextRequest } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
+import { requireUserId } from "@/lib/api/route-helpers";
 import { deleteSession, getSession } from "../_handlers";
 
 /**
@@ -30,7 +31,9 @@ export function GET(
     rateLimit: "chat:sessions:get",
     telemetry: "chat.sessions.get",
   })(async (_req, { supabase, user }) => {
-    const userId = user?.id ?? "";
+    const result = requireUserId(user);
+    if ("error" in result) return result.error;
+    const { userId } = result;
     const { id } = await context.params;
     return getSession({ supabase, userId }, id);
   })(req, context);
@@ -52,7 +55,9 @@ export function DELETE(
     rateLimit: "chat:sessions:delete",
     telemetry: "chat.sessions.delete",
   })(async (_req, { supabase, user }) => {
-    const userId = user?.id ?? "";
+    const result = requireUserId(user);
+    if ("error" in result) return result.error;
+    const { userId } = result;
     const { id } = await context.params;
     return deleteSession({ supabase, userId }, id);
   })(req, context);

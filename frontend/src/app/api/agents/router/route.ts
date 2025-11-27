@@ -13,7 +13,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { classifyUserMessage } from "@/lib/agents/router-agent";
 import { withApiGuards } from "@/lib/api/factory";
-import { parseJsonBody, validateSchema } from "@/lib/api/route-helpers";
+import { parseJsonBody, requireUserId, validateSchema } from "@/lib/api/route-helpers";
 
 export const maxDuration = 30;
 
@@ -33,6 +33,10 @@ export const POST = withApiGuards({
   rateLimit: "agents:router",
   telemetry: "agent.router",
 })(async (req: NextRequest, { user }) => {
+  const userResult = requireUserId(user);
+  if ("error" in userResult) return userResult.error;
+  const { userId } = userResult;
+
   const parsed = await parseJsonBody(req);
   if ("error" in parsed) {
     return parsed.error;
@@ -45,7 +49,7 @@ export const POST = withApiGuards({
   const body = validation.data;
 
   const modelHint = new URL(req.url).searchParams.get("model") ?? undefined;
-  const { model } = await resolveProvider(user?.id ?? "anon", modelHint);
+  const { model } = await resolveProvider(userId, modelHint);
 
   const classification = await classifyUserMessage({ model }, body.message);
 

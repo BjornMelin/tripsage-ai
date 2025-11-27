@@ -486,3 +486,29 @@ export async function parseStringId(
 
   return { id: raw.trim() };
 }
+
+/**
+ * Extract and validate user ID from authenticated context.
+ *
+ * Canonical helper for routes with `auth: true` that need to fail fast
+ * if the user is missing. Prevents unsafe `user?.id ?? ""` patterns that
+ * could lead to authorization bypass.
+ *
+ * @param user - User object from RouteContext (may be null).
+ * @returns User ID or error response.
+ *
+ * @example
+ * ```typescript
+ * const result = requireUserId(user);
+ * if ("error" in result) return result.error;
+ * const { userId } = result;
+ * ```
+ */
+export function requireUserId(
+  user: { id: string } | null | undefined
+): { userId: string } | { error: NextResponse } {
+  if (!user?.id) {
+    return { error: unauthorizedResponse() };
+  }
+  return { userId: user.id };
+}
