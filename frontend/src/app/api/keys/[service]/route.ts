@@ -17,7 +17,7 @@ import { NextResponse } from "next/server";
 import type { RateLimitResult } from "@/app/api/keys/_rate-limiter";
 import { buildKeySpanAttributes } from "@/app/api/keys/_telemetry";
 import { withApiGuards } from "@/lib/api/factory";
-import { redactErrorForLogging } from "@/lib/api/route-helpers";
+import { errorResponse, redactErrorForLogging } from "@/lib/api/route-helpers";
 import { deleteUserApiKey, deleteUserGatewayBaseUrl } from "@/lib/supabase/rpc";
 import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
 
@@ -52,17 +52,19 @@ export function DELETE(
       const { service } = await context.params;
       serviceForLog = service;
       if (!service || typeof service !== "string") {
-        return NextResponse.json(
-          { code: "BAD_REQUEST", error: "Invalid service" },
-          { status: 400 }
-        );
+        return errorResponse({
+          error: "bad_request",
+          reason: "Invalid service",
+          status: 400,
+        });
       }
       const normalizedService = service.trim().toLowerCase();
       if (!ALLOWED_SERVICES.has(normalizedService)) {
-        return NextResponse.json(
-          { code: "BAD_REQUEST", error: "Unsupported service" },
-          { status: 400 }
-        );
+        return errorResponse({
+          error: "bad_request",
+          reason: "Unsupported service",
+          status: 400,
+        });
       }
 
       await withTelemetrySpan(
@@ -91,13 +93,11 @@ export function DELETE(
       );
       return new NextResponse(null, { status: 204 });
     } catch (err) {
-      const { message: safeMessage, context: safeContext } = redactErrorForLogging(
-        err,
-        {
+      const { message: safeMessage, context: safeContext } =
+        redactErrorForLogging(err, {
           operation: "delete_key",
           service: serviceForLog,
-        }
-      );
+        });
       recordTelemetryEvent("api.keys.delete_error", {
         attributes: {
           message: safeMessage,
@@ -106,10 +106,11 @@ export function DELETE(
         },
         level: "error",
       });
-      return NextResponse.json(
-        { code: "INTERNAL_ERROR", error: "Internal server error" },
-        { status: 500 }
-      );
+      return errorResponse({
+        error: "internal_error",
+        reason: "Internal server error",
+        status: 500,
+      });
     }
   })(req, context);
 }

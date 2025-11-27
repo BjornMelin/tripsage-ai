@@ -15,7 +15,7 @@ import "server-only";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { parseJsonBody } from "@/lib/api/route-helpers";
+import { errorResponse, parseJsonBody } from "@/lib/api/route-helpers";
 import { getUserAllowGatewayFallback } from "@/lib/supabase/rpc";
 
 /**
@@ -30,13 +30,9 @@ export const GET = withApiGuards({
   rateLimit: "user-settings:get",
   telemetry: "user-settings.get",
 })(async (_req, { user }) => {
-  if (!user) {
-    return NextResponse.json(
-      { error: "unauthorized", reason: "Authentication required" },
-      { status: 401 }
-    );
-  }
-  const allowGatewayFallback = await getUserAllowGatewayFallback(user.id);
+  // auth: true guarantees user is authenticated
+  const userId = user?.id ?? "";
+  const allowGatewayFallback = await getUserAllowGatewayFallback(userId);
   return NextResponse.json({ allowGatewayFallback });
 });
 
@@ -57,33 +53,32 @@ export const POST = withApiGuards({
 })(async (req: NextRequest, { user, supabase }) => {
   const parsed = await parseJsonBody(req);
   if ("error" in parsed) {
-    return NextResponse.json(
-      { code: "BAD_REQUEST", error: "Malformed JSON" },
-      { status: 400 }
-    );
+    return errorResponse({
+      error: "bad_request",
+      reason: "Malformed JSON",
+      status: 400,
+    });
   }
   const body = parsed.body as { allowGatewayFallback?: unknown };
   const allowGatewayFallback = body?.allowGatewayFallback;
   if (typeof allowGatewayFallback !== "boolean") {
-    return NextResponse.json(
-      { code: "BAD_REQUEST", error: "allowGatewayFallback must be boolean" },
-      { status: 400 }
-    );
+    return errorResponse({
+      error: "bad_request",
+      reason: "allowGatewayFallback must be boolean",
+      status: 400,
+    });
   }
 
-  if (!user) {
-    return NextResponse.json(
-      { error: "unauthorized", reason: "Authentication required" },
-      { status: 401 }
-    );
-  }
+  // auth: true guarantees user is authenticated
+  const userId = user?.id ?? "";
 
   // Upsert row with owner RLS via SSR client
-  type UserSettingsInsert = Database["public"]["Tables"]["user_settings"]["Insert"];
+  type UserSettingsInsert =
+    Database["public"]["Tables"]["user_settings"]["Insert"];
   // DB column names use snake_case by convention
   const payload: UserSettingsInsert = {
     allow_gateway_fallback: allowGatewayFallback,
-    user_id: user.id,
+    user_id: userId,
   };
   const { error: upsertError } = await (
     supabase as unknown as {
