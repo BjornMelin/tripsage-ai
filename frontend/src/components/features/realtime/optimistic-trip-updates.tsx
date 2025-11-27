@@ -17,7 +17,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import { type UpdateTripData, useTripRealtime, useUpdateTrip } from "@/hooks";
+import { type UpdateTripData, useTrip, useUpdateTrip } from "@/hooks";
+import { queryKeys } from "@/lib/query-keys";
 import type { UpdateTables } from "@/lib/supabase/database.types";
 
 type TripUpdate = UpdateTables<"trips">;
@@ -52,7 +53,13 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const updateTrip = useUpdateTrip();
-  const { isConnected, errors } = useTripRealtime(tripId.toString());
+  const {
+    data: fetchedTrip,
+    error: tripError,
+    isConnected,
+    isLoading,
+    realtimeStatus,
+  } = useTrip(tripId);
 
   const [formData, setFormData] = useState<Partial<TripUpdate>>({});
   // Snapshots to support rollback when mutation fails and cache is missing
@@ -73,42 +80,33 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
   const budgetInputId = useId();
   const travelersInputId = useId();
 
-  // TODO: Replace mock trip data with real trip data from hook or API.
-  //
-  // Requirements:
-  // - Use `useTrip(tripId)` hook if available, or fetch trip data from `/api/trips/[id]`
-  // - Load trip data on component mount using tripId prop
-  // - Handle loading and error states for trip data fetching
-  // - Update trip state when real-time updates are received via Supabase Realtime
-  // - Ensure trip data is properly typed and validated
-  // - Add proper cleanup for subscriptions/listeners
-  //
-  // Mock trip data - in real implementation, this would come from useTrip(tripId)
-  const [trip, setTrip] = useState<UiTrip>({
-    budget: 5000,
-    createdAt: new Date().toISOString(),
-    currency: "USD",
-    destination: "Paris, France",
-    destinations: [],
-    endDate: "2024-07-15",
-    id: String(tripId),
-    preferences: {},
-    startDate: "2024-07-01",
-    status: "planning",
-    tags: ["Visit Eiffel Tower", "Try local cuisine"],
-    title: "Summer Europe Trip",
-    travelers: 2,
-    tripType: "leisure",
-    updatedAt: new Date().toISOString(),
-    userId: "user-123",
-    visibility: "private",
-  });
+  const [trip, setTrip] = useState<UiTrip | null>(null);
+
+  const fieldToUiKey: Partial<Record<TripUpdateKey, keyof UiTrip>> = {
+    budget: "budget",
+    destination: "destination",
+    end_date: "endDate",
+    name: "title",
+    start_date: "startDate",
+    travelers: "travelers",
+  };
+
+  useEffect(() => {
+    if (!fetchedTrip) return;
+    setTrip(fetchedTrip);
+    setFormData({
+      budget: fetchedTrip.budget,
+      destination: fetchedTrip.destination,
+      name: fetchedTrip.title,
+      travelers: fetchedTrip.travelers,
+    });
+  }, [fetchedTrip]);
 
   /**
    * Initialize form data with current trip values.
    */
   useEffect(() => {
-    // Initialize form data with current trip values
+    if (!trip) return;
     setFormData({
       budget: trip.budget,
       destination: trip.destination,
@@ -128,6 +126,14 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
     field: TripUpdateKey,
     value: TripUpdate[TripUpdateKey]
   ) => {
+    if (!trip) {
+      toast({
+        description: "Trip data is still loading. Please wait and try again.",
+        title: "Loading",
+      });
+      return;
+    }
+
     const updateKey = String(field);
 
     // Snapshot current state for rollback
@@ -145,11 +151,16 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
     }));
 
     // Update local trip state optimistically
-    setTrip((prev) => ({
-      ...prev,
-      [field]: value,
-      updated_at: new Date().toISOString(),
-    }));
+    setTrip((prev) => {
+      if (!prev) return prev;
+      const uiKey = fieldToUiKey[field];
+      if (!uiKey) return prev;
+      return {
+        ...prev,
+        [uiKey]: value as UiTrip[keyof UiTrip],
+        updatedAt: new Date().toISOString(),
+      };
+    });
 
     try {
       // Perform actual update
@@ -188,9 +199,9 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
       });
     } catch (_error) {
       // Revert optimistic update on error using cache or snapshots
-      const currentTrip = queryClient.getQueryData(["trip", tripId]) as
-        | UiTrip
-        | undefined;
+      const currentTrip = queryClient.getQueryData<UiTrip | null>(
+        queryKeys.trips.detail(tripId)
+      );
       if (currentTrip) {
         setTrip(currentTrip);
         setFormData({
@@ -248,7 +259,9 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
    */
   const handleInputBlur = (field: keyof TripUpdate) => {
     const value = formData[field];
-    if (value !== trip[field as keyof UiTrip]) {
+    const uiKey = fieldToUiKey[field];
+    const currentValue = uiKey && trip ? trip[uiKey] : undefined;
+    if (value !== currentValue) {
       handleOptimisticUpdate(field, value);
     }
   };
@@ -279,6 +292,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
    * @returns The connection status.
    */
   const getConnectionStatus = () => {
+    const realtimeErrors = realtimeStatus?.errors ?? [];
     if (!isConnected) {
       return (
         <Badge variant="destructive" className="mb-4">
@@ -288,7 +302,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
       );
     }
 
-    if (errors.length > 0) {
+    if (realtimeErrors.length > 0) {
       return (
         <Badge variant="secondary" className="mb-4">
           <AlertCircle className="h-3 w-3 mr-1" />
@@ -310,6 +324,63 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
    *
    * @returns The optimistic trip updates component.
    */
+  if (tripError) {
+    return (
+      <div className="space-y-4">
+        {getConnectionStatus()}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2 text-destructive">
+              <AlertCircle className="h-5 w-5" />
+              <span>Unable to load trip</span>
+            </CardTitle>
+            <CardDescription>
+              {tripError.message ?? "Please try again later."}
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
+  if (isLoading && !trip) {
+    return (
+      <div className="space-y-4">
+        {getConnectionStatus()}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <span>Loading trip...</span>
+            </CardTitle>
+            <CardDescription>
+              Fetching the latest trip details and real-time connection status.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!trip) {
+    return (
+      <div className="space-y-4">
+        {getConnectionStatus()}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <AlertCircle className="h-5 w-5" />
+              <span>No trip found</span>
+            </CardTitle>
+            <CardDescription>
+              The requested trip could not be found. Please verify the trip ID.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {getConnectionStatus()}
@@ -405,12 +476,12 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
             <div className="grid grid-cols-2 gap-4">
               <Input
                 type="date"
-                value={trip.startDate}
+                value={trip.startDate ?? ""}
                 onChange={(e) => handleOptimisticUpdate("start_date", e.target.value)}
               />
               <Input
                 type="date"
-                value={trip.endDate}
+                value={trip.endDate ?? ""}
                 onChange={(e) => handleOptimisticUpdate("end_date", e.target.value)}
               />
             </div>
