@@ -11,6 +11,7 @@ Resources and guidelines for TripSage development.
 | [Development Guide](development-guide.md) | API routes, state management, and patterns |
 | [Testing](testing.md) | Strategy, patterns, and templates |
 | [AI Integration](ai-integration.md) | Vercel AI SDK v6 and Gateway provider options |
+| [AI Tools](ai-tools.md) | createAiTool factory, guardrails, and tool patterns |
 | [Activities](activities.md) | Activity search service, tools, and API usage |
 | [Environment Setup](env-setup.md) | Provider credential checklist |
 

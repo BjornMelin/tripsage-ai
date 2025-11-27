@@ -18,7 +18,7 @@ We are migrating to AI SDK v6 providers and removing Python-based provider wrapp
 
 ## Decision
 
-- Implement `frontend/src/lib/providers/registry.ts` with `resolveProvider(userId, modelHint?)`.
+- Implement `frontend/src/ai/models/registry.ts` with `resolveProvider(userId, modelHint?)`.
 - Use provider factories with BYOK:
   - OpenAI: `createOpenAI({ apiKey })`
   - OpenRouter: `createOpenAI({ apiKey, baseURL: 'https://openrouter.ai/api/v1' })`
