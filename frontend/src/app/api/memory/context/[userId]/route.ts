@@ -9,6 +9,7 @@ import "server-only";
 
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
+import { errorResponse } from "@/lib/api/route-helpers";
 import { handleMemoryIntent } from "@/lib/memory/orchestrator";
 
 /**
@@ -21,29 +22,26 @@ export const GET = withApiGuards({
   rateLimit: "memory:context",
   telemetry: "memory.context",
 })(async (_req, { user }) => {
-  if (!user?.id) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
+  // auth: true guarantees user is authenticated
+  const userId = user?.id ?? "";
 
   try {
     const memoryResult = await handleMemoryIntent({
       limit: 10,
       sessionId: "",
       type: "fetchContext",
-      userId: user.id,
+      userId,
     });
 
     return NextResponse.json({
       context: memoryResult.context ?? [],
     });
   } catch (error) {
-    return NextResponse.json(
-      {
-        error: "memory_fetch_failed",
-        message:
-          error instanceof Error ? error.message : "Failed to fetch memory context",
-      },
-      { status: 500 }
-    );
+    return errorResponse({
+      err: error,
+      error: "memory_fetch_failed",
+      reason: error instanceof Error ? error.message : "Failed to fetch memory context",
+      status: 500,
+    });
   }
 });
