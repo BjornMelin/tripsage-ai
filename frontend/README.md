@@ -111,11 +111,11 @@ conversational AI applications.
 This project follows strict DRY principles and established patterns:
 
 - **API Routes**: Use `withApiGuards` factory
-  ([guide](../docs/developers/development-guide.md#next-js-api-routes))
+  ([guide](../docs/development/development-guide.md#next-js-api-routes))
 - **State Management**: Zustand with composition pattern
-  ([guide](../docs/developers/stores.md))
+  ([guide](../docs/development/standards.md#zustand-stores))
 - **Testing**: Centralized utilities in `src/test/`
-  ([guide](../docs/developers/testing-guide.md#frontend-testing))
+  ([guide](../docs/development/testing.md))
 
 ### Key Metrics
 
@@ -737,11 +737,11 @@ Full-stack instrumentation without compromising privacy:
 
 ### Development
 
-- [Frontend Development Guide](../docs/developers/frontend-development.md)
+- [Development Guide](../docs/development/development-guide.md)
   - Frontend architecture & patterns
-- [Testing Guide](../docs/developers/testing-guide.md) - Testing
+- [Testing Guide](../docs/development/testing.md) - Testing
   strategies & coverage requirements
-- [Code Standards](../docs/developers/code-standards.md) - Code quality,
+- [Code Standards](../docs/development/standards.md) - Code quality,
   conventions, and Zod schema organization policy
 - [AI SDK Migration Prompts](../docs/prompts/ai-sdk/RUN-ORDER.md) -
   Complete migration guide
@@ -814,7 +814,7 @@ This frontend embodies several critical architectural decisions:
 
 ## Contributing
 
-See the [Developer Contributing Guide](../docs/developers/contributing.md)
+See the [Development Guide](../docs/development/development-guide.md)
 for code standards, testing requirements, and PR workflow.
 
 ## License
