@@ -8,14 +8,12 @@
 import "server-only";
 
 import { resolveProvider } from "@ai/models/registry";
-import type { RouterRequest } from "@schemas/agents";
 import { agentSchemas } from "@schemas/agents";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import type { z } from "zod";
 import { classifyUserMessage } from "@/lib/agents/router-agent";
 import { withApiGuards } from "@/lib/api/factory";
-import { errorResponse, parseJsonBody } from "@/lib/api/route-helpers";
+import { parseJsonBody, validateSchema } from "@/lib/api/route-helpers";
 
 export const maxDuration = 30;
 
@@ -40,19 +38,11 @@ export const POST = withApiGuards({
     return parsed.error;
   }
 
-  let body: RouterRequest;
-  try {
-    body = RequestSchema.parse(parsed.body);
-  } catch (err) {
-    const zerr = err as z.ZodError;
-    return errorResponse({
-      err: zerr,
-      error: "invalid_request",
-      issues: zerr.issues,
-      reason: "Request validation failed",
-      status: 400,
-    });
+  const validation = validateSchema(RequestSchema, parsed.body);
+  if ("error" in validation) {
+    return validation.error;
   }
+  const body = validation.data;
 
   const modelHint = new URL(req.url).searchParams.get("model") ?? undefined;
   const { model } = await resolveProvider(user?.id ?? "anon", modelHint);
