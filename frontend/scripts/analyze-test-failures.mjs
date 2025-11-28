@@ -1,10 +1,14 @@
 /**
  * @fileoverview Analyze Vitest test failures and categorize them by type.
- * Usage: node scripts/analyze-test-failures.js [project-name]
+ * Usage: node scripts/analyze-test-failures.mjs [project-name]
  */
 
-const { spawn } = require("node:child_process");
-const path = require("node:path");
+import { spawn } from "node:child_process";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const project = process.argv[2] || "all";
 const projects =
@@ -168,3 +172,4 @@ async function main() {
 }
 
 main().catch(console.error);
+
