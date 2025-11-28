@@ -7,6 +7,9 @@
  *   pnpm ops infra check supabase   -- Supabase auth health (+ storage with service role key)
  *   pnpm ops infra check upstash    -- Upstash Redis ping + QStash token probe
  *   pnpm ops ai check config        -- AI Gateway/BYOK credential presence + gateway reachability
+ *   pnpm ops check all              -- Run all checks with summary
+ *
+ * BYOK providers checked: OpenAI, OpenRouter, Anthropic, xAI
  */
 
 import process from "node:process";
@@ -36,6 +39,7 @@ const aiEnvSchema = z.object({
   aiGatewayUrl: z.string().url().optional(),
   anthropicApiKey: z.string().min(1).optional(),
   openaiApiKey: z.string().min(1).optional(),
+  openrouterApiKey: z.string().min(1).optional(),
   xaiApiKey: z.string().min(1).optional(),
 });
 
@@ -46,9 +50,10 @@ function formatError(error: unknown): string {
 
 function printUsage(): void {
   console.log("Usage:");
-  console.log("  pnpm ops infra check supabase");
-  console.log("  pnpm ops infra check upstash");
-  console.log("  pnpm ops ai check config");
+  console.log("  pnpm ops infra check supabase   -- Supabase auth health + storage");
+  console.log("  pnpm ops infra check upstash    -- Redis ping + QStash probe");
+  console.log("  pnpm ops ai check config        -- AI Gateway/BYOK credentials");
+  console.log("  pnpm ops check all              -- Run all checks");
 }
 
 async function checkSupabase(): Promise<void> {
@@ -133,17 +138,28 @@ async function checkAiConfig(): Promise<void> {
     aiGatewayUrl: process.env.AI_GATEWAY_URL,
     anthropicApiKey: process.env.ANTHROPIC_API_KEY,
     openaiApiKey: process.env.OPENAI_API_KEY,
+    openrouterApiKey: process.env.OPENROUTER_API_KEY,
     xaiApiKey: process.env.XAI_API_KEY,
   });
 
-  if (
-    !env.aiGatewayApiKey &&
-    !env.openaiApiKey &&
-    !env.anthropicApiKey &&
-    !env.xaiApiKey
-  ) {
+  const hasProviderKey =
+    env.openaiApiKey ||
+    env.openrouterApiKey ||
+    env.anthropicApiKey ||
+    env.xaiApiKey;
+
+  if (!env.aiGatewayApiKey && !hasProviderKey) {
     throw new Error("No AI credentials found (gateway or provider keys)");
   }
+
+  // Show which credentials are configured
+  const configured: string[] = [];
+  if (env.aiGatewayApiKey) configured.push("AI Gateway");
+  if (env.openaiApiKey) configured.push("OpenAI");
+  if (env.openrouterApiKey) configured.push("OpenRouter");
+  if (env.anthropicApiKey) configured.push("Anthropic");
+  if (env.xaiApiKey) configured.push("xAI");
+  console.log(`  Configured: ${configured.join(", ")}`);
 
   if (env.aiGatewayApiKey && env.aiGatewayUrl) {
     const res = await fetch(env.aiGatewayUrl, {
@@ -164,8 +180,42 @@ async function checkAiConfig(): Promise<void> {
   console.log("AI config check: OK");
 }
 
+async function checkAll(): Promise<void> {
+  const checks = [
+    { fn: checkSupabase, name: "Supabase" },
+    { fn: checkUpstash, name: "Upstash" },
+    { fn: checkAiConfig, name: "AI Config" },
+  ];
+
+  const results: Array<{ name: string; ok: boolean; error?: string }> = [];
+
+  for (const { name, fn } of checks) {
+    console.log(`\n[${name}]`);
+    try {
+      await fn();
+      results.push({ name, ok: true });
+    } catch (error) {
+      results.push({ error: formatError(error), name, ok: false });
+      console.error(`  Error: ${formatError(error)}`);
+    }
+  }
+
+  console.log("\n" + "=".repeat(40));
+  console.log("Summary:");
+  for (const r of results) {
+    console.log(`  ${r.ok ? "✅" : "❌"} ${r.name}`);
+  }
+  console.log("=".repeat(40));
+
+  const failed = results.filter((r) => !r.ok);
+  if (failed.length > 0) {
+    throw new Error(`${failed.length} check(s) failed`);
+  }
+}
+
 const commandMap: Record<string, Command> = {
   "ai:check:config": checkAiConfig,
+  "check:all": checkAll,
   "infra:check:supabase": checkSupabase,
   "infra:check:upstash": checkUpstash,
 };
