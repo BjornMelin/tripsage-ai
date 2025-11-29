@@ -22,6 +22,7 @@ import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
 import type { ItineraryPlanRequest } from "@schemas/agents";
 import type { LanguageModel, ToolSet } from "ai";
 import { stepCountIs, streamText } from "ai";
+import { getRegistryTool, invokeTool } from "@/lib/agents/registry-utils";
 import { buildRateLimit } from "@/lib/ratelimit/config";
 import type { ChatMessage } from "@/lib/tokens/budget";
 import { clampMaxTokens } from "@/lib/tokens/budget";
@@ -38,30 +39,16 @@ import { buildItineraryPrompt } from "@/prompts/agents";
  * @returns AI SDK ToolSet for use with streamText.
  */
 function buildItineraryTools(identifier: string): ToolSet {
-  // Access tool registry with proper typing; runtime guardrails perform validation.
-  // Tools are typed as unknown in registry, so we use type assertions for safe access.
-  type ToolLike = {
-    description?: string;
-    execute: (params: unknown, callOptions?: unknown) => Promise<unknown> | unknown;
-  };
-
-  const webSearchTool = toolRegistry.webSearch as unknown as ToolLike;
-  const webSearchBatchTool = toolRegistry.webSearchBatch as unknown as ToolLike;
-  const poiTool = toolRegistry.lookupPoiContext as unknown as ToolLike | undefined;
-  const createPlanTool = toolRegistry.createTravelPlan as unknown as
-    | ToolLike
-    | undefined;
-  const savePlanTool = toolRegistry.saveTravelPlan as unknown as ToolLike | undefined;
+  const webSearchTool = getRegistryTool(toolRegistry, "webSearch");
+  const webSearchBatchTool = getRegistryTool(toolRegistry, "webSearchBatch");
+  const poiTool = getRegistryTool(toolRegistry, "lookupPoiContext");
+  const createPlanTool = getRegistryTool(toolRegistry, "createTravelPlan");
+  const savePlanTool = getRegistryTool(toolRegistry, "saveTravelPlan");
   const rateLimit = buildRateLimit("itineraryPlanning", identifier);
 
   const webSearch = createAiTool({
     description: webSearchTool.description ?? "Web search",
-    execute: async (params, callOptions) => {
-      if (typeof webSearchTool.execute !== "function") {
-        throw new Error("Tool webSearch missing execute binding");
-      }
-      return (await webSearchTool.execute(params, callOptions)) as unknown;
-    },
+    execute: (params, callOptions) => invokeTool(webSearchTool, params, callOptions),
     guardrails: {
       cache: {
         hashInput: true,
@@ -86,12 +73,8 @@ function buildItineraryTools(identifier: string): ToolSet {
 
   const webSearchBatch = createAiTool({
     description: webSearchBatchTool.description ?? "Batch web search",
-    execute: async (params, callOptions) => {
-      if (typeof webSearchBatchTool.execute !== "function") {
-        throw new Error("Tool webSearchBatch missing execute binding");
-      }
-      return (await webSearchBatchTool.execute(params, callOptions)) as unknown;
-    },
+    execute: (params, callOptions) =>
+      invokeTool(webSearchBatchTool, params, callOptions),
     guardrails: {
       cache: {
         hashInput: true,
@@ -115,80 +98,8 @@ function buildItineraryTools(identifier: string): ToolSet {
   });
 
   const lookupPoiContext = createAiTool({
-    description: poiTool?.description ?? "Lookup POIs (context)",
-    execute: async (params, callOptions) => {
-      /**
-       * TODO: Ensure toolRegistry.lookupPoiContext is properly registered and functional.
-       *
-       * IMPLEMENTATION PLAN (Decision Framework Score: 9.5/10.0)
-       * ===========================================================
-       *
-       * ARCHITECTURE DECISIONS:
-       * -----------------------
-       * 1. Tool Availability: Tools are registered in toolRegistry from @ai/tools
-       *    - Tool: `lookupPoiContext` from `server/google-places.ts`
-       *    - Registry: `frontend/src/ai/tools/index.ts` exports toolRegistry
-       *    - Rationale: Tools are always available in production; stub returns are defensive fallbacks
-       *
-       * 2. Error Handling: Throw error if tool is missing (fail fast)
-       *    - Remove stub return: `if (!poiTool) return { inputs: params, pois: [], provider: "stub" };`
-       *    - Throw descriptive error: "Tool lookupPoiContext not registered in toolRegistry"
-       *    - Rationale: Fail fast in production; tests can mock toolRegistry if needed
-       *
-       * 3. Execution: Ensure proper type casting and error handling
-       *    - Verify execute function exists before calling
-       *    - Properly await async execution
-       *    - Return typed result
-       *
-       * IMPLEMENTATION STEPS:
-       * ---------------------
-       *
-       * Step 1: Remove Stub Return and Add Proper Error Handling
-       *   ```typescript
-       *   execute: async (params, callOptions) => {
-       *     if (!poiTool) {
-       *       throw new Error(
-       *         "Tool lookupPoiContext not registered in toolRegistry. " +
-       *         "Ensure @ai/tools exports lookupPoiContext in toolRegistry."
-       *       );
-       *     }
-       *     if (typeof poiTool.execute !== "function") {
-       *       throw new Error("Tool lookupPoiContext missing execute binding");
-       *     }
-       *     return (await poiTool.execute(params, callOptions)) as unknown;
-       *   },
-       *   ```
-       *
-       * INTEGRATION POINTS:
-       * -------------------
-       * - Tool Registry: `toolRegistry.lookupPoiContext` from `@ai/tools`
-       * - Tool Implementation: `frontend/src/ai/tools/server/google-places.ts`
-       * - Error Handling: Throw descriptive errors for missing tools
-       * - Telemetry: Automatic via `createAiTool` guardrails
-       *
-       * TESTING REQUIREMENTS:
-       * ---------------------
-       * - Unit test: Verify error thrown when tool is missing
-       * - Integration test: Verify tool execution with real toolRegistry
-       * - Mock toolRegistry in tests to simulate missing tools
-       *
-       * NOTES:
-       * ------
-       * - Tool is registered in toolRegistry, so stub return should never execute in production
-       * - Stub return was defensive fallback; removing it ensures proper error detection
-       * - Tests can mock toolRegistry if needed for testing error paths
-       */
-      if (!poiTool) {
-        throw new Error(
-          "Tool lookupPoiContext not registered in toolRegistry. " +
-            "Ensure @ai/tools exports lookupPoiContext in toolRegistry."
-        );
-      }
-      if (typeof poiTool.execute !== "function") {
-        throw new Error("Tool lookupPoiContext missing execute binding");
-      }
-      return (await poiTool.execute(params, callOptions)) as unknown;
-    },
+    description: poiTool.description ?? "Lookup POIs (context)",
+    execute: (params, callOptions) => invokeTool(poiTool, params, callOptions),
     guardrails: {
       cache: {
         hashInput: true,
@@ -212,20 +123,8 @@ function buildItineraryTools(identifier: string): ToolSet {
   });
 
   const createTravelPlan = createAiTool({
-    description: createPlanTool?.description ?? "Create travel plan",
-    execute: async (params, callOptions) => {
-      /**
-       * TODO: Remove stub fallback once createTravelPlan tool is fully implemented.
-       * Currently returns stub error response when tool is unavailable.
-       * Ensure toolRegistry.createTravelPlan is properly registered and functional.
-       * This tool should create structured travel plans from itinerary data.
-       */
-      if (!createPlanTool) return { error: "stub", success: false };
-      if (typeof createPlanTool.execute !== "function") {
-        throw new Error("Tool createTravelPlan missing execute binding");
-      }
-      return (await createPlanTool.execute(params, callOptions)) as unknown;
-    },
+    description: createPlanTool.description ?? "Create travel plan",
+    execute: (params, callOptions) => invokeTool(createPlanTool, params, callOptions),
     guardrails: {
       cache: {
         hashInput: true,
@@ -249,20 +148,8 @@ function buildItineraryTools(identifier: string): ToolSet {
   });
 
   const saveTravelPlan = createAiTool({
-    description: savePlanTool?.description ?? "Save travel plan",
-    execute: async (params, callOptions) => {
-      /**
-       * TODO: Remove stub fallback once saveTravelPlan tool is fully implemented.
-       * Currently returns stub error response when tool is unavailable.
-       * Ensure toolRegistry.saveTravelPlan is properly registered and functional.
-       * This tool should persist travel plans to database (Supabase trips table).
-       */
-      if (!savePlanTool) return { error: "stub", success: false };
-      if (typeof savePlanTool.execute !== "function") {
-        throw new Error("Tool saveTravelPlan missing execute binding");
-      }
-      return (await savePlanTool.execute(params, callOptions)) as unknown;
-    },
+    description: savePlanTool.description ?? "Save travel plan",
+    execute: (params, callOptions) => invokeTool(savePlanTool, params, callOptions),
     guardrails: {
       cache: {
         hashInput: true,

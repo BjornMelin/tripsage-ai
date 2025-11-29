@@ -19,6 +19,7 @@ import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
 import type { BudgetPlanRequest } from "@schemas/agents";
 import type { LanguageModel, ToolSet } from "ai";
 import { stepCountIs, streamText } from "ai";
+import { getRegistryTool, invokeTool } from "@/lib/agents/registry-utils";
 import { buildRateLimit } from "@/lib/ratelimit/config";
 import type { ChatMessage } from "@/lib/tokens/budget";
 import { clampMaxTokens } from "@/lib/tokens/budget";
@@ -35,30 +36,17 @@ import { buildBudgetPrompt } from "@/prompts/agents";
  * @returns AI SDK ToolSet for use with streamText.
  */
 function buildBudgetTools(identifier: string): ToolSet {
-  // Access tool registry with proper typing; runtime guardrails perform validation.
-  // Tools are typed as unknown in registry, so we use type assertions for safe access.
-  type ToolLike = {
-    description?: string;
-    execute: (params: unknown, callOptions?: unknown) => Promise<unknown> | unknown;
-  };
-
-  const webSearchBatchTool = toolRegistry.webSearchBatch as unknown as ToolLike;
-  const poiTool = toolRegistry.lookupPoiContext as unknown as ToolLike | undefined;
-  const combineTool = toolRegistry.combineSearchResults as unknown as
-    | ToolLike
-    | undefined;
-  const safetyTool = toolRegistry.getTravelAdvisory as unknown as ToolLike | undefined;
+  const webSearchBatchTool = getRegistryTool(toolRegistry, "webSearchBatch");
+  const poiTool = getRegistryTool(toolRegistry, "lookupPoiContext");
+  const combineTool = getRegistryTool(toolRegistry, "combineSearchResults");
+  const safetyTool = getRegistryTool(toolRegistry, "getTravelAdvisory");
 
   const rateLimit = buildRateLimit("budgetPlanning", identifier);
 
   const webSearchBatch = createAiTool({
     description: webSearchBatchTool.description ?? "Batch web search",
-    execute: async (params, callOptions) => {
-      if (typeof webSearchBatchTool.execute !== "function") {
-        throw new Error("Tool webSearchBatch missing execute binding");
-      }
-      return (await webSearchBatchTool.execute(params, callOptions)) as unknown;
-    },
+    execute: (params, callOptions) =>
+      invokeTool(webSearchBatchTool, params, callOptions),
     guardrails: {
       cache: {
         hashInput: true,
@@ -82,80 +70,8 @@ function buildBudgetTools(identifier: string): ToolSet {
   });
 
   const lookupPoiContext = createAiTool({
-    description: poiTool?.description ?? "Lookup POIs (context)",
-    execute: async (params, callOptions) => {
-      /**
-       * TODO: Ensure toolRegistry.lookupPoiContext is properly registered and functional.
-       *
-       * IMPLEMENTATION PLAN (Decision Framework Score: 9.5/10.0)
-       * ===========================================================
-       *
-       * ARCHITECTURE DECISIONS:
-       * -----------------------
-       * 1. Tool Availability: Tools are registered in toolRegistry from @ai/tools
-       *    - Tool: `lookupPoiContext` from `server/google-places.ts`
-       *    - Registry: `frontend/src/ai/tools/index.ts` exports toolRegistry
-       *    - Rationale: Tools are always available in production; stub returns are defensive fallbacks
-       *
-       * 2. Error Handling: Throw error if tool is missing (fail fast)
-       *    - Remove stub return: `if (!poiTool) return { inputs: params, pois: [], provider: "stub" };`
-       *    - Throw descriptive error: "Tool lookupPoiContext not registered in toolRegistry"
-       *    - Rationale: Fail fast in production; tests can mock toolRegistry if needed
-       *
-       * 3. Execution: Ensure proper type casting and error handling
-       *    - Verify execute function exists before calling
-       *    - Properly await async execution
-       *    - Return typed result
-       *
-       * IMPLEMENTATION STEPS:
-       * ---------------------
-       *
-       * Step 1: Remove Stub Return and Add Proper Error Handling
-       *   ```typescript
-       *   execute: async (params, callOptions) => {
-       *     if (!poiTool) {
-       *       throw new Error(
-       *         "Tool lookupPoiContext not registered in toolRegistry. " +
-       *         "Ensure @ai/tools exports lookupPoiContext in toolRegistry."
-       *       );
-       *     }
-       *     if (typeof poiTool.execute !== "function") {
-       *       throw new Error("Tool lookupPoiContext missing execute binding");
-       *     }
-       *     return (await poiTool.execute(params, callOptions)) as unknown;
-       *   },
-       *   ```
-       *
-       * INTEGRATION POINTS:
-       * -------------------
-       * - Tool Registry: `toolRegistry.lookupPoiContext` from `@ai/tools`
-       * - Tool Implementation: `frontend/src/ai/tools/server/google-places.ts`
-       * - Error Handling: Throw descriptive errors for missing tools
-       * - Telemetry: Automatic via `createAiTool` guardrails
-       *
-       * TESTING REQUIREMENTS:
-       * ---------------------
-       * - Unit test: Verify error thrown when tool is missing
-       * - Integration test: Verify tool execution with real toolRegistry
-       * - Mock toolRegistry in tests to simulate missing tools
-       *
-       * NOTES:
-       * ------
-       * - Tool is registered in toolRegistry, so stub return should never execute in production
-       * - Stub return was defensive fallback; removing it ensures proper error detection
-       * - Tests can mock toolRegistry if needed for testing error paths
-       */
-      if (!poiTool) {
-        throw new Error(
-          "Tool lookupPoiContext not registered in toolRegistry. " +
-            "Ensure @ai/tools exports lookupPoiContext in toolRegistry."
-        );
-      }
-      if (typeof poiTool.execute !== "function") {
-        throw new Error("Tool lookupPoiContext missing execute binding");
-      }
-      return (await poiTool.execute(params, callOptions)) as unknown;
-    },
+    description: poiTool.description ?? "Lookup POIs (context)",
+    execute: (params, callOptions) => invokeTool(poiTool, params, callOptions),
     guardrails: {
       cache: {
         hashInput: true,
@@ -179,84 +95,8 @@ function buildBudgetTools(identifier: string): ToolSet {
   });
 
   const combineSearchResults = createAiTool({
-    description: combineTool?.description ?? "Combine search results",
-    // biome-ignore lint/suspicious/useAwait: Tool factory requires async signature for type compatibility
-    execute: async (params, callOptions) => {
-      /**
-       * TODO: Ensure toolRegistry.combineSearchResults is properly registered and functional.
-       *
-       * IMPLEMENTATION PLAN (Decision Framework Score: 9.5/10.0)
-       * ===========================================================
-       *
-       * ARCHITECTURE DECISIONS:
-       * -----------------------
-       * 1. Tool Availability: Tools are registered in toolRegistry from @ai/tools
-       *    - Tool: `combineSearchResults` from `server/planning.ts`
-       *    - Registry: `frontend/src/ai/tools/index.ts` exports toolRegistry
-       *    - Rationale: Tools are always available in production; stub returns are defensive fallbacks
-       *
-       * 2. Error Handling: Throw error if tool is missing (fail fast)
-       *    - Remove stub return: `if (!combineTool) return { combinedResults: {}, message: "stub", success: true };`
-       *    - Throw descriptive error: "Tool combineSearchResults not registered in toolRegistry"
-       *    - Rationale: Fail fast in production; tests can mock toolRegistry if needed
-       *
-       * 3. Execution: Ensure proper type casting and error handling
-       *    - Verify execute function exists before calling
-       *    - Handle both sync and async execution (tool may return Promise or value)
-       *    - Return typed result
-       *
-       * IMPLEMENTATION STEPS:
-       * ---------------------
-       *
-       * Step 1: Remove Stub Return and Add Proper Error Handling
-       *   ```typescript
-       *   execute: async (params, callOptions) => {
-       *     if (!combineTool) {
-       *       throw new Error(
-       *         "Tool combineSearchResults not registered in toolRegistry. " +
-       *         "Ensure @ai/tools exports combineSearchResults in toolRegistry."
-       *       );
-       *     }
-       *     if (typeof combineTool.execute !== "function") {
-       *       throw new Error("Tool combineSearchResults missing execute binding");
-       *     }
-       *     const result = combineTool.execute(params, callOptions);
-       *     return result instanceof Promise ? result : Promise.resolve(result);
-       *   },
-       *   ```
-       *
-       * INTEGRATION POINTS:
-       * -------------------
-       * - Tool Registry: `toolRegistry.combineSearchResults` from `@ai/tools`
-       * - Tool Implementation: `frontend/src/ai/tools/server/planning.ts`
-       * - Error Handling: Throw descriptive errors for missing tools
-       * - Telemetry: Automatic via `createAiTool` guardrails
-       *
-       * TESTING REQUIREMENTS:
-       * ---------------------
-       * - Unit test: Verify error thrown when tool is missing
-       * - Integration test: Verify tool execution with real toolRegistry
-       * - Mock toolRegistry in tests to simulate missing tools
-       *
-       * NOTES:
-       * ------
-       * - Tool is registered in toolRegistry, so stub return should never execute in production
-       * - Stub return was defensive fallback; removing it ensures proper error detection
-       * - Tests can mock toolRegistry if needed for testing error paths
-       * - Tool may return sync or async result; handle both cases
-       */
-      if (!combineTool) {
-        throw new Error(
-          "Tool combineSearchResults not registered in toolRegistry. " +
-            "Ensure @ai/tools exports combineSearchResults in toolRegistry."
-        );
-      }
-      if (typeof combineTool.execute !== "function") {
-        throw new Error("Tool combineSearchResults missing execute binding");
-      }
-      const result = combineTool.execute(params, callOptions);
-      return result instanceof Promise ? result : Promise.resolve(result);
-    },
+    description: combineTool.description ?? "Combine search results",
+    execute: (params, callOptions) => invokeTool(combineTool, params, callOptions),
     guardrails: {
       cache: {
         hashInput: true,
@@ -280,80 +120,8 @@ function buildBudgetTools(identifier: string): ToolSet {
   });
 
   const getTravelAdvisory = createAiTool({
-    description: safetyTool?.description ?? "Get travel advisory and safety scores",
-    execute: async (params, callOptions) => {
-      /**
-       * TODO: Ensure toolRegistry.getTravelAdvisory is properly registered and functional.
-       *
-       * IMPLEMENTATION PLAN (Decision Framework Score: 9.5/10.0)
-       * ===========================================================
-       *
-       * ARCHITECTURE DECISIONS:
-       * -----------------------
-       * 1. Tool Availability: Tools are registered in toolRegistry from @ai/tools
-       *    - Tool: `getTravelAdvisory` from `server/travel-advisory.ts`
-       *    - Registry: `frontend/src/ai/tools/index.ts` exports toolRegistry
-       *    - Rationale: Tools are always available in production; stub returns are defensive fallbacks
-       *
-       * 2. Error Handling: Throw error if tool is missing (fail fast)
-       *    - Remove stub return: `if (!safetyTool) return { categories: [], destination: "", overallScore: 75, provider: "stub" };`
-       *    - Throw descriptive error: "Tool getTravelAdvisory not registered in toolRegistry"
-       *    - Rationale: Fail fast in production; tests can mock toolRegistry if needed
-       *
-       * 3. Execution: Ensure proper type casting and error handling
-       *    - Verify execute function exists before calling
-       *    - Properly await async execution
-       *    - Return typed result
-       *
-       * IMPLEMENTATION STEPS:
-       * ---------------------
-       *
-       * Step 1: Remove Stub Return and Add Proper Error Handling
-       *   ```typescript
-       *   execute: async (params, callOptions) => {
-       *     if (!safetyTool) {
-       *       throw new Error(
-       *         "Tool getTravelAdvisory not registered in toolRegistry. " +
-       *         "Ensure @ai/tools exports getTravelAdvisory in toolRegistry."
-       *       );
-       *     }
-       *     if (typeof safetyTool.execute !== "function") {
-       *       throw new Error("Tool getTravelAdvisory missing execute binding");
-       *     }
-       *     return (await safetyTool.execute(params, callOptions)) as unknown;
-       *   },
-       *   ```
-       *
-       * INTEGRATION POINTS:
-       * -------------------
-       * - Tool Registry: `toolRegistry.getTravelAdvisory` from `@ai/tools`
-       * - Tool Implementation: `frontend/src/ai/tools/server/travel-advisory.ts`
-       * - Error Handling: Throw descriptive errors for missing tools
-       * - Telemetry: Automatic via `createAiTool` guardrails
-       *
-       * TESTING REQUIREMENTS:
-       * ---------------------
-       * - Unit test: Verify error thrown when tool is missing
-       * - Integration test: Verify tool execution with real toolRegistry
-       * - Mock toolRegistry in tests to simulate missing tools
-       *
-       * NOTES:
-       * ------
-       * - Tool is registered in toolRegistry, so stub return should never execute in production
-       * - Stub return was defensive fallback; removing it ensures proper error detection
-       * - Tests can mock toolRegistry if needed for testing error paths
-       */
-      if (!safetyTool) {
-        throw new Error(
-          "Tool getTravelAdvisory not registered in toolRegistry. " +
-            "Ensure @ai/tools exports getTravelAdvisory in toolRegistry."
-        );
-      }
-      if (typeof safetyTool.execute !== "function") {
-        throw new Error("Tool getTravelAdvisory missing execute binding");
-      }
-      return (await safetyTool.execute(params, callOptions)) as unknown;
-    },
+    description: safetyTool.description ?? "Get travel advisory and safety scores",
+    execute: (params, callOptions) => invokeTool(safetyTool, params, callOptions),
     guardrails: {
       cache: {
         hashInput: true,
