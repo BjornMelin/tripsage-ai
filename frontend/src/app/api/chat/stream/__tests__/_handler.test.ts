@@ -3,9 +3,35 @@
 import type { ProviderId } from "@schemas/providers";
 import type { LanguageModel, UIMessage } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ChatDeps, ChatPayload, ProviderResolver } from "../_handler";
+import type { ChatDeps, ProviderResolver } from "../_handler";
 
-let handleChatStream: (deps: ChatDeps, payload: ChatPayload) => Promise<Response>;
+const streamTextMock = vi.hoisted(() =>
+  vi.fn(() => ({
+    response: Promise.resolve({ messages: [] as UIMessage[] }),
+    toUIMessageStreamResponse: () =>
+      new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.close();
+          },
+        })
+      ),
+  }))
+);
+
+vi.mock("ai", () => ({
+  convertToModelMessages: (x: unknown) => x,
+  generateObject: vi.fn(),
+  NoSuchToolError: class NoSuchToolError extends Error {},
+  stepCountIs: () => () => false,
+  streamText: streamTextMock,
+  tool: vi.fn((config: unknown) => ({
+    execute: vi.fn(),
+    ...(config as Record<string, unknown>),
+  })),
+}));
+
+import { handleChatStream } from "../_handler";
 
 const createResolver =
   (modelId: string): ProviderResolver =>
@@ -78,20 +104,8 @@ function fakeSupabase(
 }
 
 describe("handleChatStream", () => {
-  beforeEach(async () => {
-    vi.resetModules();
-    vi.doMock("ai", () => ({
-      convertToModelMessages: (x: unknown) => x,
-      generateObject: vi.fn(),
-      NoSuchToolError: class NoSuchToolError extends Error {},
-      stepCountIs: () => () => false,
-      streamText: vi.fn(),
-      tool: vi.fn((config: unknown) => ({
-        execute: vi.fn(),
-        ...(config as Record<string, unknown>),
-      })),
-    }));
-    ({ handleChatStream } = await import("../_handler"));
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
   it("401 when unauthenticated", async () => {
     const res = await handleChatStream(

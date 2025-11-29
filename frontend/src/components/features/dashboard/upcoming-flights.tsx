@@ -45,7 +45,7 @@ interface UpcomingFlightsProps {
  */
 function FlightCardSkeleton() {
   return (
-    <div className="p-3 border border-border rounded-lg">
+    <div className="p-3 border border-border rounded-lg" data-testid="flight-skeleton">
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2">
           <Skeleton className="h-4 w-4" />
@@ -145,7 +145,10 @@ function FlightCard({ flight }: { flight: UpcomingFlight }) {
   };
 
   return (
-    <div className="p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors">
+    <div
+      className="p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors"
+      data-testid="flight-card"
+    >
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2">
           <Plane className="h-4 w-4 text-primary" />

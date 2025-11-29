@@ -1,10 +1,22 @@
 /** @vitest-environment node */
 
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { mockApiRouteAuthUser, resetApiRouteMocks } from "@/test/api-route-helpers";
 import { createMockNextRequest, createRouteParamsContext } from "@/test/route-helpers";
 
+let route: typeof import("../ics/import/route") | null = null;
+const getRoute = () => {
+  if (!route) {
+    throw new Error("route not loaded");
+  }
+  return route;
+};
+
 describe("/api/calendar/ics/import", () => {
+  beforeAll(async () => {
+    route = await import("../ics/import/route");
+  });
+
   beforeEach(() => {
     resetApiRouteMocks();
     mockApiRouteAuthUser({ id: "user-1" });
@@ -22,7 +34,6 @@ SUMMARY:Test Event
 END:VEVENT
 END:VCALENDAR`;
 
-    const mod = await import("../ics/import/route");
     const req = createMockNextRequest({
       body: {
         icsData: icsContent,
@@ -32,7 +43,7 @@ END:VCALENDAR`;
       url: "http://localhost/api/calendar/ics/import",
     });
 
-    const res = await mod.POST(req, createRouteParamsContext());
+    const res = await getRoute().POST(req, createRouteParamsContext());
     const body = await res.json();
 
     expect(res.status).toBe(200);
@@ -42,7 +53,6 @@ END:VCALENDAR`;
   }, 15000);
 
   it("returns 400 on invalid ICS", async () => {
-    const mod = await import("../ics/import/route");
     const req = createMockNextRequest({
       body: {
         icsData: "completely invalid ics content that cannot be parsed",
@@ -52,7 +62,7 @@ END:VCALENDAR`;
       url: "http://localhost/api/calendar/ics/import",
     });
 
-    const res = await mod.POST(req, createRouteParamsContext());
+    const res = await getRoute().POST(req, createRouteParamsContext());
     // node-ical may parse some invalid content, so check for either 400 or empty events
     expect([400, 200]).toContain(res.status);
     if (res.status === 200) {
@@ -62,7 +72,6 @@ END:VCALENDAR`;
   });
 
   it("returns 400 on missing icsData", async () => {
-    const mod = await import("../ics/import/route");
     const req = createMockNextRequest({
       body: {
         validateOnly: true,
@@ -71,12 +80,11 @@ END:VCALENDAR`;
       url: "http://localhost/api/calendar/ics/import",
     });
 
-    const res = await mod.POST(req, createRouteParamsContext());
+    const res = await getRoute().POST(req, createRouteParamsContext());
     expect(res.status).toBe(400);
   });
 
   it("handles empty ICS file", async () => {
-    const mod = await import("../ics/import/route");
     const req = createMockNextRequest({
       body: {
         icsData: "",
@@ -86,7 +94,7 @@ END:VCALENDAR`;
       url: "http://localhost/api/calendar/ics/import",
     });
 
-    const res = await mod.POST(req, createRouteParamsContext());
+    const res = await getRoute().POST(req, createRouteParamsContext());
     expect(res.status).toBe(400);
   });
 
@@ -108,7 +116,6 @@ SUMMARY:Event 2
 END:VEVENT
 END:VCALENDAR`;
 
-    const mod = await import("../ics/import/route");
     const req = createMockNextRequest({
       body: {
         icsData: icsContent,
@@ -118,7 +125,7 @@ END:VCALENDAR`;
       url: "http://localhost/api/calendar/ics/import",
     });
 
-    const res = await mod.POST(req, createRouteParamsContext());
+    const res = await getRoute().POST(req, createRouteParamsContext());
     const body = await res.json();
 
     expect(res.status).toBe(200);
@@ -144,7 +151,6 @@ LOCATION:Test Location
 END:VEVENT
 END:VCALENDAR`;
 
-    const mod = await import("../ics/import/route");
     const req = createMockNextRequest({
       body: {
         icsData: icsContent,
@@ -154,7 +160,7 @@ END:VCALENDAR`;
       url: "http://localhost/api/calendar/ics/import",
     });
 
-    const res = await mod.POST(req, createRouteParamsContext());
+    const res = await getRoute().POST(req, createRouteParamsContext());
     const body = await res.json();
 
     expect(res.status).toBe(200);
@@ -183,7 +189,6 @@ RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20251231T235959Z
 END:VEVENT
 END:VCALENDAR`;
 
-    const mod = await import("../ics/import/route");
     const req = createMockNextRequest({
       body: {
         icsData: icsContent,
@@ -193,7 +198,7 @@ END:VCALENDAR`;
       url: "http://localhost/api/calendar/ics/import",
     });
 
-    const res = await mod.POST(req, createRouteParamsContext());
+    const res = await getRoute().POST(req, createRouteParamsContext());
     const body = await res.json();
 
     expect(res.status).toBe(200);

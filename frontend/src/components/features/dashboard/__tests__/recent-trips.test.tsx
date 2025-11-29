@@ -1,8 +1,10 @@
 /** @vitest-environment jsdom */
 
 import { screen, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { renderWithProviders } from "@/test/test-utils";
+import { createFakeTimersContext } from "@/test/utils/with-fake-timers";
 
 vi.mock("next/link", () => ({
   default: ({
@@ -12,14 +14,35 @@ vi.mock("next/link", () => ({
   }: {
     children: React.ReactNode;
     href: string;
-    [key: string]: unknown;
   }) => (
-    // eslint-disable-next-line jsx-a11y/anchor-is-valid
     <a href={href} {...props}>
       {children}
     </a>
   ),
 }));
+
+// Hoisted state for controlling useTrips mock behavior
+const TripsState = vi.hoisted(() => ({
+  isLoading: false,
+  items: null as Array<Record<string, unknown>> | null,
+}));
+
+vi.mock("@/hooks/use-trips", () => ({
+  useTrips: () => ({
+    data: TripsState.items,
+    error: null,
+    isConnected: true,
+    isLoading: TripsState.isLoading,
+    realtimeStatus: {
+      errors: [],
+      isConnected: true,
+    },
+    refetch: vi.fn(),
+  }),
+}));
+
+// Static import after mocks are set up - single module load
+import { RecentTrips } from "../recent-trips";
 
 const MockTrips: Array<Record<string, unknown>> = [
   {
@@ -61,41 +84,28 @@ const MockTrips: Array<Record<string, unknown>> = [
   },
 ];
 
-function DoMockTrips(items: Array<Record<string, unknown>> | null, isLoading = false) {
-  vi.resetModules();
-  vi.doMock("@/hooks/use-trips", () => ({
-    useTrips: () => ({
-      data: items === null ? null : items,
-      error: null,
-      isConnected: true,
-      isLoading,
-      realtimeStatus: {
-        errors: [],
-        isConnected: true,
-      },
-      refetch: vi.fn(),
-    }),
-  }));
+// biome-ignore lint/style/useNamingConvention: Test helper utility
+function setTrips(items: Array<Record<string, unknown>> | null, isLoading = false) {
+  TripsState.items = items;
+  TripsState.isLoading = isLoading;
 }
 
-describe.sequential("RecentTrips", () => {
+describe("RecentTrips", () => {
   beforeEach(() => {
-    vi.restoreAllMocks();
-    vi.resetModules();
+    vi.clearAllMocks();
+    setTrips(null, false);
   });
 
-  it("renders loading state correctly", async () => {
-    DoMockTrips(null, true);
-    const { RecentTrips } = await import("../recent-trips");
+  it("renders loading state correctly", () => {
+    setTrips(null, true);
     renderWithProviders(<RecentTrips />);
     expect(screen.getByText("Recent Trips")).toBeInTheDocument();
     expect(screen.getByText("Your latest travel plans")).toBeInTheDocument();
-    expect(document.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
+    expect(screen.getAllByTestId("trip-skeleton").length).toBeGreaterThan(0);
   });
 
-  it("renders empty state when no trips exist", async () => {
-    DoMockTrips([]);
-    const { RecentTrips } = await import("../recent-trips");
+  it("renders empty state when no trips exist", () => {
+    setTrips([]);
     renderWithProviders(<RecentTrips />);
     const emptyMessages = screen.getAllByText("No recent trips yet.");
     expect(emptyMessages.length).toBeGreaterThan(0);
@@ -105,34 +115,43 @@ describe.sequential("RecentTrips", () => {
     expect(createLinks[0]).toBeInTheDocument();
   });
 
-  it("renders trip cards for existing trips", async () => {
-    DoMockTrips(MockTrips);
-    const { RecentTrips } = await import("../recent-trips");
+  it("renders trip cards for existing trips", () => {
+    setTrips(MockTrips);
     renderWithProviders(<RecentTrips />);
     expect(screen.getByText("Tokyo Adventure")).toBeInTheDocument();
     expect(screen.getByText("European Tour")).toBeInTheDocument();
     expect(screen.getByText("Beach Getaway")).toBeInTheDocument();
   });
 
-  it("displays trip details correctly", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2024-01-10T00:00:00Z"));
-    DoMockTrips([MockTrips[0], MockTrips[1]]);
-    const { RecentTrips } = await import("../recent-trips");
-    const { container } = renderWithProviders(<RecentTrips />);
-    const tokyoLink = within(container).getByRole("link", { name: /Tokyo Adventure/i });
-    const scope = within(tokyoLink);
-    expect(scope.getByText("Tokyo Adventure")).toBeInTheDocument();
-    expect(scope.getByText("Tokyo")).toBeInTheDocument();
-    expect(scope.getByText("7 days")).toBeInTheDocument();
-    expect(scope.getByText(/upcoming|ongoing|completed/)).toBeInTheDocument();
-    expect(scope.getByText("Exploring Japan's capital city")).toBeInTheDocument();
-    vi.useRealTimers();
+  describe("with fixed system time", () => {
+    const timers = createFakeTimersContext();
+
+    beforeEach(() => {
+      timers.setup();
+      vi.setSystemTime(new Date("2024-01-10T00:00:00Z"));
+    });
+
+    afterEach(() => {
+      timers.teardown();
+    });
+
+    it("displays trip details correctly", () => {
+      setTrips([MockTrips[0], MockTrips[1]]);
+      const { container } = renderWithProviders(<RecentTrips />);
+      const tokyoLink = within(container).getByRole("link", {
+        name: /Tokyo Adventure/i,
+      });
+      const scope = within(tokyoLink);
+      expect(scope.getByText("Tokyo Adventure")).toBeInTheDocument();
+      expect(scope.getByText("Tokyo")).toBeInTheDocument();
+      expect(scope.getByText("7 days")).toBeInTheDocument();
+      expect(scope.getByTestId("trip-status")).toHaveTextContent("upcoming");
+      expect(scope.getByText("Exploring Japan's capital city")).toBeInTheDocument();
+    });
   });
 
-  it("handles trips with multiple destinations", async () => {
-    DoMockTrips([MockTrips[0], MockTrips[1]]);
-    const { RecentTrips } = await import("../recent-trips");
+  it("handles trips with multiple destinations", () => {
+    setTrips([MockTrips[0], MockTrips[1]]);
     const { container } = renderWithProviders(<RecentTrips />);
     const europeanLink = within(container).getByRole("link", {
       name: /European Tour/i,
@@ -142,36 +161,32 @@ describe.sequential("RecentTrips", () => {
     expect(scope.getByText("Paris (+1 more)")).toBeInTheDocument();
   });
 
-  it("limits the number of trips displayed", async () => {
-    DoMockTrips(MockTrips);
-    const { RecentTrips } = await import("../recent-trips");
+  it("limits the number of trips displayed", () => {
+    setTrips(MockTrips);
     renderWithProviders(<RecentTrips limit={2} />);
     expect(screen.getByText("European Tour")).toBeInTheDocument();
     expect(screen.getByText("Tokyo Adventure")).toBeInTheDocument();
     expect(screen.queryByText("Beach Getaway")).not.toBeInTheDocument();
   });
 
-  it("sorts trips by updated date in descending order", async () => {
-    DoMockTrips(MockTrips);
-    const { RecentTrips } = await import("../recent-trips");
+  it("sorts trips by updated date in descending order", () => {
+    setTrips(MockTrips);
     renderWithProviders(<RecentTrips />);
     const tripCards = screen.getAllByRole("link");
     const tripTitles = tripCards.map((c) => c.textContent);
     expect(tripTitles[0]).toContain("European Tour");
   });
 
-  it("navigates to trip details when card is clicked", async () => {
-    DoMockTrips([MockTrips[0], MockTrips[1]]);
-    const { RecentTrips } = await import("../recent-trips");
+  it("navigates to trip details when card is clicked", () => {
+    setTrips([MockTrips[0], MockTrips[1]]);
     const { container } = renderWithProviders(<RecentTrips />);
     const { getByRole } = within(container);
     const tripCard = getByRole("link", { name: /Tokyo Adventure/i });
     expect(tripCard).toHaveAttribute("href", "/dashboard/trips/trip-1");
   });
 
-  it("handles showEmpty prop correctly", async () => {
-    DoMockTrips([]);
-    const { RecentTrips } = await import("../recent-trips");
+  it("handles showEmpty prop correctly", () => {
+    setTrips([]);
     const { rerender } = renderWithProviders(<RecentTrips showEmpty={false} />);
     expect(screen.queryByText("Create your first trip")).not.toBeInTheDocument();
     expect(screen.getByText("No recent trips yet.")).toBeInTheDocument();
@@ -179,7 +194,7 @@ describe.sequential("RecentTrips", () => {
     expect(screen.getByText("Create your first trip")).toBeInTheDocument();
   });
 
-  it("calculates trip status correctly", async () => {
+  it("calculates trip status correctly", () => {
     const now = new Date();
     const pastTrip: Record<string, unknown> = {
       ...MockTrips[0],
@@ -192,29 +207,33 @@ describe.sequential("RecentTrips", () => {
       id: "ongoing-trip",
       startDate: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     };
-    DoMockTrips([pastTrip, ongoingTrip]);
-    const { RecentTrips } = await import("../recent-trips");
+    setTrips([pastTrip, ongoingTrip]);
     renderWithProviders(<RecentTrips />);
     expect(screen.getByText("completed")).toBeInTheDocument();
     expect(screen.getByText("ongoing")).toBeInTheDocument();
   });
 
-  it("formats dates correctly", async () => {
-    DoMockTrips([MockTrips[0]]);
-    const { RecentTrips } = await import("../recent-trips");
+  it("formats dates correctly", () => {
+    setTrips([MockTrips[0]]);
     const { container } = renderWithProviders(<RecentTrips limit={1} />);
-    // Assert US short month format regardless of specific dates present
-    const shortDatePattern = /[A-Z][a-z]{2} \d{1,2}, \d{4}/;
-    expect(within(container).getAllByText(shortDatePattern).length).toBeGreaterThan(0);
+    const expectedStart = DateUtils.format(
+      DateUtils.parse(MockTrips[0].startDate as string),
+      "MMM d, yyyy"
+    );
+    const expectedEnd = DateUtils.format(
+      DateUtils.parse(MockTrips[0].endDate as string),
+      "MMM d, yyyy"
+    );
+    const expectedRange = `${expectedStart} - ${expectedEnd}`;
+    expect(within(container).getByText(expectedRange)).toBeInTheDocument();
   });
 
-  it("handles missing trip description gracefully", async () => {
+  it("handles missing trip description gracefully", () => {
     const tripWithoutDescription: Record<string, unknown> = {
       ...MockTrips[0],
       description: undefined,
     };
-    DoMockTrips([tripWithoutDescription]);
-    const { RecentTrips } = await import("../recent-trips");
+    setTrips([tripWithoutDescription]);
     const { container } = renderWithProviders(<RecentTrips limit={1} />);
     // Assert that the known description text does not render when missing
     expect(
