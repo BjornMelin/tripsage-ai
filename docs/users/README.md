@@ -37,4 +37,4 @@
 For developers and advanced users:
 
 - **[API Documentation](../api/README.md)** - REST API reference
-- **[Developer Resources](../developers/README.md)** - Development setup and guides
+- **[Developer Resources](../development/README.md)** - Development setup and guides
