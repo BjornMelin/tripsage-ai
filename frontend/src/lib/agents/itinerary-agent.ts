@@ -35,15 +35,30 @@ import { clampMaxTokens } from "@/lib/tokens/budget";
 import { buildItineraryPrompt } from "@/prompts/agents";
 
 /**
- * Create wrapped tools for itinerary agent with guardrails.
- *
- * Applies validation, caching, and rate limits around core tool execute
- * functions. The identifier should be per-user when authenticated or a
- * hashed IP fallback.
+ * Create wrapped tools for itinerary agent with guardrails (validation, caching, rate limits).
+ * Identifier should be per-user (authenticated) or hashed IP fallback.
  *
  * @param identifier Stable identifier for rate limiting.
  * @returns AI SDK ToolSet for use with streamText.
  */
+type LookupPoiResponse =
+  | { error?: string; inputs: unknown; pois: unknown[]; provider: string }
+  | { fromCache?: boolean; inputs: unknown; pois: unknown[]; provider: string };
+
+type CreateTravelPlanResponse =
+  | { error: string; success: false }
+  | { message: string; plan: unknown; planId: string; success: true };
+
+type SaveTravelPlanResponse =
+  | { error: string; success: false }
+  | {
+      message: string;
+      planId: string;
+      status: string;
+      success: true;
+      summaryMarkdown: string;
+    };
+
 function buildItineraryTools(identifier: string): ToolSet {
   type WebSearchInput = z.infer<typeof webSearchInputSchema>;
   type WebSearchBatchInput = z.infer<typeof webSearchBatchInputSchema>;
@@ -59,15 +74,15 @@ function buildItineraryTools(identifier: string): ToolSet {
     toolRegistry,
     "webSearchBatch"
   );
-  const poiTool = getRegistryTool<LookupPoiInput, unknown>(
+  const poiTool = getRegistryTool<LookupPoiInput, LookupPoiResponse>(
     toolRegistry,
     "lookupPoiContext"
   );
-  const createPlanTool = getRegistryTool<CreateTravelPlanInput, unknown>(
-    toolRegistry,
-    "createTravelPlan"
-  );
-  const savePlanTool = getRegistryTool<SaveTravelPlanInput, unknown>(
+  const createPlanTool = getRegistryTool<
+    CreateTravelPlanInput,
+    CreateTravelPlanResponse
+  >(toolRegistry, "createTravelPlan");
+  const savePlanTool = getRegistryTool<SaveTravelPlanInput, SaveTravelPlanResponse>(
     toolRegistry,
     "saveTravelPlan"
   );
@@ -252,10 +267,7 @@ export function runItineraryAgent(
     () =>
       streamText({
         maxOutputTokens: maxTokens,
-        messages: [
-          { content: instructions, role: "system" },
-          { content: userPrompt, role: "user" },
-        ],
+        messages,
         model: deps.model,
         stopWhen: stepCountIs(15),
         temperature: config.parameters.temperature ?? 0.3,
@@ -264,3 +276,10 @@ export function runItineraryAgent(
       })
   );
 }
+
+/** Exported type for the itinerary agent's tool set. */
+export type ItineraryTools = ReturnType<typeof buildItineraryTools>;
+
+/** Exported type for typed tool results from itinerary agent. */
+export type ItineraryToolResult =
+  import("@ai/lib/tool-type-utils").ExtractToolResult<ItineraryTools>;

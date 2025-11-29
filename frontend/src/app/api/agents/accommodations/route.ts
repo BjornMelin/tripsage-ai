@@ -14,6 +14,7 @@ import { agentSchemas } from "@schemas/agents";
 import type { NextRequest } from "next/server";
 import { runAccommodationAgent } from "@/lib/agents/accommodation-agent";
 import { resolveAgentConfig } from "@/lib/agents/config-resolver";
+import { createErrorHandler } from "@/lib/agents/error-recovery";
 import { withApiGuards } from "@/lib/api/factory";
 import { requireUserId } from "@/lib/api/route-helpers";
 
@@ -47,7 +48,7 @@ export const POST = withApiGuards({
     config.config,
     body
   );
-  return result.toTextStreamResponse({
-    headers: { "Content-Type": "text/event-stream" },
+  return result.toUIMessageStreamResponse({
+    onError: createErrorHandler(),
   });
 });

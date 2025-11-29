@@ -1,6 +1,8 @@
 /**
  * Deeply clone values for tests, handling cycles via WeakMap.
- * Preserves functions and handles common built-ins (Date, Map, Set).
+ * Preserves functions; handles Date, Map, Set, arrays, and plain objects.
+ * Note: copies only own enumerable string-keyed properties; does not preserve
+ * non-enumerable/symbol properties, descriptors, or prototypes.
  */
 export function deepCloneValue<T>(value: T, seen = new WeakMap()): T {
   if (value === null || typeof value !== "object") {
@@ -12,7 +14,9 @@ export function deepCloneValue<T>(value: T, seen = new WeakMap()): T {
   }
 
   if (value instanceof Date) {
-    return new Date(value.getTime()) as unknown as T;
+    const clonedDate = new Date(value.getTime()) as unknown as T;
+    seen.set(value, clonedDate);
+    return clonedDate;
   }
 
   if (value instanceof Map) {

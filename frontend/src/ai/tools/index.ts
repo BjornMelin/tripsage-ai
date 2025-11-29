@@ -4,6 +4,7 @@
  * provides a typed registry object for higher-level agents.
  */
 
+import type { ToolSet } from "ai";
 import {
   bookAccommodation,
   checkAvailability,
@@ -38,7 +39,6 @@ import { getCurrentWeather } from "./server/weather";
 import { crawlSite, crawlUrl } from "./server/web-crawl";
 import { webSearch } from "./server/web-search";
 import { webSearchBatch } from "./server/web-search-batch";
-import type { ToolSet } from "ai";
 
 export {
   addConversationMemory,

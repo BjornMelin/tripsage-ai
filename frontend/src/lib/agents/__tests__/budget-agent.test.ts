@@ -107,7 +107,7 @@ describe("runBudgetAgent", () => {
       webSearchBatch: { description: "batch", execute: batchExecute },
     });
 
-    runBudgetAgent(
+    await runBudgetAgent(
       { identifier: "user-2", model: createMockModel(), modelId: "mock" },
       baseConfig,
       baseInput
