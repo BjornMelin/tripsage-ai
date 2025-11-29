@@ -69,7 +69,13 @@ jobs:
           UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
         run: |
-          if [ -n "$NEXT_PUBLIC_SUPABASE_URL" ]; then
+          has_supabase="${NEXT_PUBLIC_SUPABASE_URL:+1}"
+          has_upstash=""
+          if [ -n "$UPSTASH_REDIS_REST_URL" ] && [ -n "$UPSTASH_REDIS_REST_TOKEN" ]; then
+            has_upstash=1
+          fi
+
+          if [ -n "$has_supabase" ] || [ -n "$has_upstash" ]; then
             echo "Running infrastructure validation..."
             pnpm ops:check || echo "::warning::Infrastructure check failed (non-blocking)"
           else
