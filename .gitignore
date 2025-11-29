@@ -33,16 +33,14 @@ Thumbs.db
 .claude/
 **/.claude/settings.local.json
 *.local.md
-CLAUDE.local.md
+.cursorindexingignore
 
 # repomix
 repomix-output.*
 
 CLAUDE.md.old
-.archive
 
 # Logs
-logs
 dev-debug.log
 
 # Testing
@@ -80,14 +78,9 @@ out/
 dist/
 *.tsbuildinfo
 
-# Python dependency management
-.uv/
 
 # Temporary upload directories
 uploads/
-
-# Debug test scripts
-debug_tests/
 
 # Logs directory
 logs/
@@ -96,10 +89,6 @@ logs/
 *.db
 *.sqlite
 *.sqlite3
-
-# Temporary scripts
-health_check.py
-scripts/update_*.py
 
 # Git worktrees
 worktrees/
@@ -113,9 +102,6 @@ worktrees/
 
 # Archived documentation (moved out of main repo)
 ARCHIVED_DOCS/
-docs/archive/
-repomix-output.*
-docs/prompts/mcp/**
 
 # Temporary documentation files
 *_SUMMARY.md
@@ -133,8 +119,8 @@ docs/prompts/mcp/**
 CLAUDE.md
 !KNOWLEDGE_PACK.md
 # Exception for security documentation
-!docs/operators/RLS_IMPLEMENTATION.md
-!docs/operators/INFRASTRUCTURE_UPGRADE_SUMMARY.md
+!docs/operations/RLS_IMPLEMENTATION.md
+!docs/operations/INFRASTRUCTURE_UPGRADE_SUMMARY.md
 
 # Temporary analysis scripts
 analyze_*.py
@@ -172,27 +158,12 @@ frontend/*.temp.*
 frontend/frontend*.xml
 
 # Additional generated/temporary files
-**/consolidate_*.sh
-**/migrate_*.sh
-**/analyze_*.sh
-**/temp_*.py
-**/debug_*.py
 **/test_debug.*
 **/*-temp.*
 **/*.backup.*
 **/*.bak
-**/.temp/
-**/temp/
-**/debug/
 
 # Documentation generation artifacts
-site/
-docs/site/
-.mkdocs/
-docs/openapi.json
-docs/swagger.json
-docs/openapi.yaml
-docs/swagger.yaml
 docs/**/temp/
 docs/**/*.backup
 docs/**/*-backup.*
@@ -204,7 +175,7 @@ docs/**/*-backup.*
 *.development.*
 *.staging.*
 development-*
-!docs/developers/development-guide.md
+!docs/development/development-guide.md
 staging-*
 
 # Performance and profiling outputs
@@ -230,6 +201,7 @@ benchmark-*.json
 **/junit.xml
 **/xunit.xml
 **/.vitest/
+**/.vitest-reports/
 **/vitest-*.json
 **/vitest-*.log
 
@@ -278,6 +250,7 @@ scan-results/
 .env.staging.local
 
 # Project specific files
+!docs/development/development-guide.md
 .agent/
 supabase/.temp/
 docs/prompts/database-provider-research
@@ -286,6 +259,8 @@ frontend/docs/prompts/
 docs/prompts/
 docs/review/
 docs/implementation/
+docs/specs/migrations/
+docs/migrations/
 
 # Frontend workspace (consolidated from frontend/.gitignore)
 next-env.d.ts

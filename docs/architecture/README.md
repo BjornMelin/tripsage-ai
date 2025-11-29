@@ -23,11 +23,11 @@ implementation details.
 **Architecture Documentation Excludes:**
 
 - Implementation details and code examples → See
-  [`docs/developers/`](../developers/)
+  [`docs/development/`](../development/)
 - Deployment procedures and operations → See
-  [`docs/operators/`](../operators/)
+  [`docs/operations/`](../operations/)
 - API specifications and endpoints → See
-  [`docs/api-reference/`](../api-reference/)
+  [`docs/api/`](../api/)
 - Configuration and setup guides → See
   [`docs/configuration/`](../configuration/)
 
@@ -118,14 +118,14 @@ Test suite with 90%+ coverage:
 
 ## Related Documentation
 
-- **[Database Operations](../operators/database/)** - Database operations and Supabase configuration
-- **[Developers Guide](../developers/)** - Implementation details, code
+- **[Database Operations](../operations/database/)** - Database operations and Supabase configuration
+- **[Development Guide](../development/)** - Implementation details, code
   examples, testing
 - **[API Documentation](../api/)** - REST specifications and Supabase
   Realtime guide
 - **[Testing Guide](../../tests/README.md)** - Test organization and best
   practices
-- **[Deployment](../operators/)** - Infrastructure, monitoring, and
+- **[Deployment](../operations/)** - Infrastructure, monitoring, and
   operations
 
 ## Architecture Metrics
