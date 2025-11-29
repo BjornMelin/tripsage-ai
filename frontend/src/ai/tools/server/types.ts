@@ -1,24 +1,9 @@
 /**
- * @fileoverview Shared types and helpers for AI SDK v6 tool execution.
+ * @fileoverview Shared AI tool types for registry-aware agents.
+ * Keep minimal to avoid leaking schema module exports.
  */
 
-import type {
-  ApprovalContext,
-  ExecutionDeps,
-  RateLimitResult,
-  ToolExecutionContext,
-  UserContext,
-} from "@ai/tools/schemas/tools";
-import type { Tool, ToolCallOptions } from "ai";
-
-// Re-export types from schemas
-export type {
-  ApprovalContext,
-  ExecutionDeps,
-  RateLimitResult,
-  ToolExecutionContext,
-  UserContext,
-};
+import type { Tool } from "ai";
 
 /** Canonical AI tool contract used across registry-aware agents. */
 export type AiTool = Tool<unknown, unknown>;
