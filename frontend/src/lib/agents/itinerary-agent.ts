@@ -31,6 +31,7 @@ import { buildRateLimit } from "@/lib/ratelimit/config";
 import type { ChatMessage } from "@/lib/tokens/budget";
 import { clampMaxTokens } from "@/lib/tokens/budget";
 import { buildItineraryPrompt } from "@/prompts/agents";
+import { withTelemetrySpan } from "@/lib/telemetry/span";
 import { z } from "zod";
 
 /**
@@ -240,16 +241,26 @@ export function runItineraryAgent(
   const desiredMaxTokens = config.parameters.maxTokens ?? 4096;
   const { maxTokens } = clampMaxTokens(messages, desiredMaxTokens, deps.modelId);
 
-  return streamText({
-    maxOutputTokens: maxTokens,
-    messages: [
-      { content: instructions, role: "system" },
-      { content: userPrompt, role: "user" },
-    ],
-    model: deps.model,
-    stopWhen: stepCountIs(15),
-    temperature: config.parameters.temperature ?? 0.3,
-    tools: buildItineraryTools(deps.identifier),
-    topP: config.parameters.topP,
-  });
+  return withTelemetrySpan(
+    "agent.itinerary.run",
+    {
+      attributes: {
+        modelId: deps.modelId,
+        identifier: deps.identifier,
+      },
+    },
+    () =>
+      streamText({
+        maxOutputTokens: maxTokens,
+        messages: [
+          { content: instructions, role: "system" },
+          { content: userPrompt, role: "user" },
+        ],
+        model: deps.model,
+        stopWhen: stepCountIs(15),
+        temperature: config.parameters.temperature ?? 0.3,
+        tools: buildItineraryTools(deps.identifier),
+        topP: config.parameters.topP,
+      })
+  );
 }

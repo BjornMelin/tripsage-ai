@@ -1,10 +1,10 @@
 /** @vitest-environment node */
 
 import { toolRegistry } from "@ai/tools";
-import type { BudgetPlanRequest } from "@schemas/agents";
+import type { AccommodationSearchRequest } from "@schemas/agents";
 import type { AgentConfig } from "@schemas/configuration";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { runBudgetAgent } from "@/lib/agents/budget-agent";
+import { runAccommodationAgent } from "@/lib/agents/accommodation-agent";
 import { createMockModel } from "@/test/ai-sdk/mock-model";
 import { deepCloneValue } from "@/test-utils/deep-clone";
 
@@ -42,9 +42,9 @@ vi.mock("@ai/lib/tool-factory", () => ({
 }));
 
 const baseConfig: AgentConfig = {
-  agentType: "budgetAgent",
+  agentType: "accommodationAgent",
   createdAt: "2025-01-01T00:00:00.000Z",
-  id: "v1_abcdef02",
+  id: "v1_accom01",
   model: "gpt-4o",
   parameters: {
     description: null,
@@ -59,11 +59,11 @@ const baseConfig: AgentConfig = {
   updatedAt: "2025-01-01T00:00:00.000Z",
 };
 
-const baseInput: BudgetPlanRequest = {
-  budgetCap: 2500,
+const baseInput: AccommodationSearchRequest = {
+  checkIn: "2025-06-01",
+  checkOut: "2025-06-05",
   destination: "Lisbon",
-  durationDays: 5,
-  preferredCurrency: "USD",
+  guests: 2,
 };
 
 const cloneToolRegistry = (registry: typeof toolRegistry) =>
@@ -71,7 +71,7 @@ const cloneToolRegistry = (registry: typeof toolRegistry) =>
 
 const originalRegistry = cloneToolRegistry(toolRegistry);
 
-describe("runBudgetAgent", () => {
+describe("runAccommodationAgent", () => {
   beforeEach(() => {
     Object.keys(toolRegistry).forEach((key) => {
       delete (toolRegistry as Record<string, unknown>)[key];
@@ -82,33 +82,33 @@ describe("runBudgetAgent", () => {
     createAiToolMock.mockClear();
   });
 
-  it("throws when combineSearchResults tool is missing", async () => {
-    (toolRegistry as Record<string, unknown>).combineSearchResults = undefined as never;
+  it("throws when searchAccommodations tool is missing", () => {
+    (toolRegistry as Record<string, unknown>).searchAccommodations = undefined as never;
 
-    await expect(
-      runBudgetAgent(
-        { identifier: "user-2", model: createMockModel(), modelId: "mock" },
+    expect(() =>
+      runAccommodationAgent(
+        { identifier: "user-3", model: createMockModel(), modelId: "mock" },
         baseConfig,
         baseInput
       )
-    ).rejects.toThrow(/Tool combineSearchResults not registered/);
+    ).toThrow(/Tool searchAccommodations not registered/);
   });
 
-  it("wraps budget tools and delegates execution", async () => {
-    const combineExecute = vi.fn().mockResolvedValue({ combined: true });
-    const advisoryExecute = vi.fn().mockResolvedValue({ score: 80 });
-    const poiExecute = vi.fn().mockResolvedValue({ pois: [] });
-    const batchExecute = vi.fn().mockResolvedValue({ results: [] });
+  it("wraps accommodation tools and delegates execution", async () => {
+    const searchExecute = vi.fn().mockResolvedValue({ results: [] });
+    const detailsExecute = vi.fn().mockResolvedValue({ listing: {} });
+    const availabilityExecute = vi.fn().mockResolvedValue({ bookingToken: "tok" });
+    const bookingExecute = vi.fn().mockResolvedValue({ status: "ok" });
 
     Object.assign(toolRegistry, {
-      combineSearchResults: { description: "combine", execute: combineExecute },
-      getTravelAdvisory: { description: "advisory", execute: advisoryExecute },
-      lookupPoiContext: { description: "poi", execute: poiExecute },
-      webSearchBatch: { description: "batch", execute: batchExecute },
+      searchAccommodations: { description: "search", execute: searchExecute },
+      getAccommodationDetails: { description: "details", execute: detailsExecute },
+      checkAvailability: { description: "availability", execute: availabilityExecute },
+      bookAccommodation: { description: "book", execute: bookingExecute },
     });
 
-    runBudgetAgent(
-      { identifier: "user-2", model: createMockModel(), modelId: "mock" },
+    runAccommodationAgent(
+      { identifier: "user-3", model: createMockModel(), modelId: "mock" },
       baseConfig,
       baseInput
     );
@@ -122,30 +122,30 @@ describe("runBudgetAgent", () => {
     expect(call).toBeDefined();
     const tools = call.tools;
 
-    const combineInput = { combined: true };
-    const advisoryInput = { destination: "Lisbon" };
-    const poiInput = { destination: "Lisbon" };
-    const batchInput = { queries: ["q1"] };
+    const searchInput = { destination: "Lisbon" };
+    const detailsInput = { listingId: "id1" };
+    const availabilityInput = { priceCheckToken: "pct", propertyId: "p1", rateId: "r1", roomId: "room1", checkIn: "2025-06-01", checkOut: "2025-06-05", guests: 2 };
+    const bookingInput = { bookingToken: "b1" };
 
-    await tools.combineSearchResults.execute(combineInput, { toolCallId: "tc1" });
-    await tools.getTravelAdvisory.execute(advisoryInput, { toolCallId: "tc2" });
-    await tools.lookupPoiContext.execute(poiInput, { toolCallId: "tc3" });
-    await tools.webSearchBatch.execute(batchInput, { toolCallId: "tc4" });
+    await tools.searchAccommodations.execute(searchInput, { toolCallId: "tc1" });
+    await tools.getAccommodationDetails.execute(detailsInput, { toolCallId: "tc2" });
+    await tools.checkAvailability.execute(availabilityInput, { toolCallId: "tc3" });
+    await tools.bookAccommodation.execute(bookingInput, { toolCallId: "tc4" });
 
-    expect(combineExecute).toHaveBeenCalledWith(
-      combineInput,
+    expect(searchExecute).toHaveBeenCalledWith(
+      searchInput,
       expect.objectContaining({ toolCallId: "tc1" })
     );
-    expect(advisoryExecute).toHaveBeenCalledWith(
-      advisoryInput,
+    expect(detailsExecute).toHaveBeenCalledWith(
+      detailsInput,
       expect.objectContaining({ toolCallId: "tc2" })
     );
-    expect(poiExecute).toHaveBeenCalledWith(
-      poiInput,
+    expect(availabilityExecute).toHaveBeenCalledWith(
+      availabilityInput,
       expect.objectContaining({ toolCallId: "tc3" })
     );
-    expect(batchExecute).toHaveBeenCalledWith(
-      batchInput,
+    expect(bookingExecute).toHaveBeenCalledWith(
+      bookingInput,
       expect.objectContaining({ toolCallId: "tc4" })
     );
     expect(createAiToolMock).toHaveBeenCalledTimes(4);
