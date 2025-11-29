@@ -65,7 +65,52 @@ const baseInput: BudgetPlanRequest = {
   preferredCurrency: "USD",
 };
 
-const originalRegistry = { ...toolRegistry };
+function deepCloneValue<T>(value: T, seen = new Map()): T {
+  if (value === null || typeof value !== "object") {
+    return value;
+  }
+  if (seen.has(value)) {
+    return seen.get(value) as T;
+  }
+  if (Array.isArray(value)) {
+    const arr: unknown[] = [];
+    seen.set(value, arr);
+    for (const item of value) {
+      arr.push(deepCloneValue(item, seen));
+    }
+    return arr as unknown as T;
+  }
+  if (value instanceof Date) {
+    return new Date(value.getTime()) as unknown as T;
+  }
+  if (value instanceof Map) {
+    const map = new Map();
+    seen.set(value, map);
+    for (const [k, v] of value.entries()) {
+      map.set(deepCloneValue(k, seen), deepCloneValue(v, seen));
+    }
+    return map as unknown as T;
+  }
+  if (value instanceof Set) {
+    const set = new Set();
+    seen.set(value, set);
+    for (const v of value.values()) {
+      set.add(deepCloneValue(v, seen));
+    }
+    return set as unknown as T;
+  }
+  if (typeof value === "function") {
+    return value;
+  }
+  const obj: Record<string | symbol, unknown> = {};
+  seen.set(value, obj);
+  for (const key of Reflect.ownKeys(value)) {
+    obj[key] = deepCloneValue((value as Record<string | symbol, unknown>)[key], seen);
+  }
+  return obj as T;
+}
+
+const originalRegistry = deepCloneValue(toolRegistry);
 
 describe("runBudgetAgent", () => {
   beforeEach(() => {

@@ -33,7 +33,7 @@ export const invokeTool = <Params, Result>(
   tool: RegisteredTool<Params, Result>,
   params: Params,
   callOptions?: ToolCallOptions
-) => {
+): Promise<Result> => {
   const result = tool.execute(params, callOptions);
   return result instanceof Promise ? result : Promise.resolve(result);
 };
