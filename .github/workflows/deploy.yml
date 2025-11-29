@@ -49,6 +49,33 @@ jobs:
           fi
           scripts/operators/verify_webhook_secret.sh
 
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: |
+          npm install -g pnpm@10.20.0
+          pnpm install --frozen-lockfile
+
+      - name: Validate infrastructure (optional)
+        working-directory: frontend
+        continue-on-error: true
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+        run: |
+          if [ -n "$NEXT_PUBLIC_SUPABASE_URL" ]; then
+            echo "Running infrastructure validation..."
+            pnpm ops:check || echo "::warning::Infrastructure check failed (non-blocking)"
+          else
+            echo "Skipping infra check - credentials not configured"
+          fi
+
       - name: Create deployment
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         id: deployment

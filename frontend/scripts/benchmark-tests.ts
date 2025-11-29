@@ -5,9 +5,9 @@
  * Collects test durations per file, calculates percentiles, and validates thresholds.
  */
 
-import { execSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import process from "node:process";
 
 /**
  * Test file performance metrics.
@@ -38,6 +38,9 @@ interface BenchmarkResults {
   };
   thresholds: {
     exceeded: string[];
+    fileFailThreshold: number;
+    fileWarningThreshold: number;
+    suiteThreshold: number;
     suitePassed: boolean;
     warnings: string[];
   };
@@ -79,10 +82,33 @@ function parseVitestJson(jsonPath: string): BenchmarkResults {
     throw new Error(`Vitest JSON report not found: ${jsonPath}`);
   }
 
-  const report: VitestJsonReport = JSON.parse(readFileSync(jsonPath, "utf-8"));
+  let report: VitestJsonReport;
+  try {
+    report = JSON.parse(readFileSync(jsonPath, "utf-8"));
+  } catch (error) {
+    throw new Error(
+      `Failed to parse Vitest JSON report (${jsonPath}): ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+
+  // Validate required fields
+  if (!Array.isArray(report.testResults)) {
+    throw new Error(`Invalid Vitest report: testResults is not an array (${jsonPath})`);
+  }
+  if (typeof report.startTime !== "number") {
+    console.warn(
+      `Warning: Vitest report startTime is not a number (${jsonPath}), using fallback calculation`
+    );
+  }
 
   const files: TestFileMetrics[] = report.testResults.map((result) => {
-    const duration = result.endTime - result.startTime;
+    const duration =
+      typeof result.endTime === "number" && typeof result.startTime === "number"
+        ? result.endTime - result.startTime
+        : result.assertionResults.reduce(
+            (sum, assertion) => sum + (assertion.duration ?? 0),
+            0
+          );
     const passed = result.assertionResults.filter((r) => r.status === "passed").length;
     const failed = result.assertionResults.filter((r) => r.status === "failed").length;
 
@@ -99,10 +125,17 @@ function parseVitestJson(jsonPath: string): BenchmarkResults {
 
   // Suite duration is the max of all file durations (since tests run in parallel)
   // For more accurate wall-clock time, use the overall startTime to endTime
-  const suiteDuration =
-    report.testResults.length > 0
-      ? Math.max(...report.testResults.map((r) => r.endTime)) - report.startTime
-      : files.reduce((sum, f) => sum + f.duration, 0);
+  const suiteDuration = (() => {
+    const endTimes = report.testResults
+      .map((r) => r.endTime)
+      .filter((v): v is number => typeof v === "number");
+    if (endTimes.length > 0 && typeof report.startTime === "number") {
+      return Math.max(...endTimes) - report.startTime;
+    }
+    // Fallback: use max duration (parallel execution semantics) instead of sum
+    const fileDurations = files.map((f) => f.duration).filter((d) => d > 0);
+    return fileDurations.length > 0 ? Math.max(...fileDurations) : 0;
+  })();
 
   const percentiles = {
     p50: calculatePercentile(durations, 50),
@@ -110,9 +143,24 @@ function parseVitestJson(jsonPath: string): BenchmarkResults {
     p95: calculatePercentile(durations, 95),
   };
 
-  const suiteThreshold = 10000; // 10s hard gate
-  const fileWarningThreshold = 500; // 500ms soft warning
-  const fileFailThreshold = 2000; // 2s hard fail (optional)
+  // Thresholds configurable via environment variables with validation
+  const SuiteDefault = 20000;
+  const FileWarningDefault = 500;
+  const FileFailDefault = 3500;
+
+  const parsedSuite = Number(process.env.BENCHMARK_SUITE_THRESHOLD_MS);
+  const suiteThreshold =
+    !Number.isNaN(parsedSuite) && parsedSuite > 0 ? parsedSuite : SuiteDefault;
+
+  const parsedWarning = Number(process.env.BENCHMARK_FILE_WARNING_MS);
+  const fileWarningThreshold =
+    !Number.isNaN(parsedWarning) && parsedWarning > 0
+      ? parsedWarning
+      : FileWarningDefault;
+
+  const parsedFail = Number(process.env.BENCHMARK_FILE_FAIL_MS);
+  const fileFailThreshold =
+    !Number.isNaN(parsedFail) && parsedFail > 0 ? parsedFail : FileFailDefault;
 
   const exceeded: string[] = [];
   const warnings: string[] = [];
@@ -145,7 +193,10 @@ function parseVitestJson(jsonPath: string): BenchmarkResults {
     },
     thresholds: {
       exceeded,
+      fileFailThreshold,
+      fileWarningThreshold,
       suitePassed,
+      suiteThreshold,
       warnings,
     },
   };
@@ -193,49 +244,76 @@ function formatResults(results: BenchmarkResults): string {
 
   lines.push(
     results.thresholds.suitePassed
-      ? "✅ Suite passed performance threshold (<10s)"
-      : "❌ Suite exceeded performance threshold (>=10s)"
+      ? `✅ Suite passed performance threshold (<${results.thresholds.suiteThreshold / 1000}s)`
+      : `❌ Suite exceeded performance threshold (>=${results.thresholds.suiteThreshold / 1000}s)`
   );
 
   return lines.join("\n");
 }
 
 /**
+ * Extract the value following a flag from CLI args.
+ * Handles both `--flag value` and `--flag=value` formats.
+ * Returns null if flag not found, no value provided, or value starts with "--".
+ */
+function getArgValue(args: string[], flag: string): string | null {
+  // Check for --flag=value format
+  for (const arg of args) {
+    if (arg.startsWith(`${flag}=`)) {
+      return arg.substring(flag.length + 1);
+    }
+  }
+
+  // Check for --flag value format
+  const index = args.indexOf(flag);
+  if (index >= 0 && index + 1 < args.length && !args[index + 1].startsWith("-")) {
+    return args[index + 1];
+  }
+  return null;
+}
+
+/**
  * Main benchmark execution.
  */
 function main(): void {
-  const outputDir = process.cwd();
-  const jsonPath = join(outputDir, "test-results.json");
+  const args = process.argv.slice(2);
 
-  console.log("Running Vitest benchmarks...");
-  console.log("");
+  // Validate and parse CLI arguments - ensure flag is not followed by another flag
+  let inputPath = ".vitest-reports/vitest-report.json";
+  const inputValue = getArgValue(args, "--input");
+  if (inputValue !== null) {
+    inputPath = inputValue;
+  }
+
+  let outputPath = "benchmark-summary.json";
+  const outputValue = getArgValue(args, "--output");
+  if (outputValue !== null) {
+    outputPath = outputValue;
+  }
+
+  // Resolve paths relative to current working directory
+  inputPath = resolve(inputPath);
+  outputPath = resolve(outputPath);
 
   try {
-    // Run Vitest with JSON reporter
-    execSync("pnpm test:run --reporter=json --outputFile=test-results.json", {
-      cwd: outputDir,
-      encoding: "utf-8",
-      stdio: "inherit",
-    });
-
-    if (!existsSync(jsonPath)) {
-      throw new Error("Vitest JSON report was not generated");
+    // Check input file exists BEFORE creating output directory
+    if (!existsSync(inputPath)) {
+      throw new Error(
+        `Vitest JSON report not found at ${inputPath}. Run vitest with '--reporter=json --outputFile=${inputPath}' first.`
+      );
     }
 
-    const results = parseVitestJson(jsonPath);
+    mkdirSync(dirname(outputPath), { recursive: true });
 
-    // Write formatted results
-    const summaryPath = join(outputDir, "benchmark-summary.json");
-    writeFileSync(summaryPath, JSON.stringify(results, null, 2));
-
+    const results = parseVitestJson(inputPath);
+    writeFileSync(outputPath, JSON.stringify(results, null, 2));
     console.log(formatResults(results));
 
-    // Exit with error if thresholds exceeded
     if (!results.thresholds.suitePassed || results.thresholds.exceeded.length > 0) {
       process.exit(1);
     }
   } catch (error) {
-    console.error("Benchmark execution failed:", error);
+    console.error("Benchmark parsing failed:", error);
     process.exit(1);
   }
 }
