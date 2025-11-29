@@ -5,6 +5,7 @@ import type { ItineraryPlanRequest } from "@schemas/agents";
 import type { AgentConfig } from "@schemas/configuration";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { runItineraryAgent } from "@/lib/agents/itinerary-agent";
+import { deepCloneValue } from "@/test-utils/deep-clone";
 import { createMockModel } from "@/test/ai-sdk/mock-model";
 
 const streamTextImpl = (options: unknown) =>
@@ -65,58 +66,6 @@ const baseInput: ItineraryPlanRequest = {
   interests: ["food"],
   partySize: 2,
   travelDates: "2025-04-20",
-};
-
-const deepCloneValue = (value: unknown, visited = new WeakMap()): unknown => {
-  if (value === null || typeof value !== "object") {
-    return value;
-  }
-
-  if (typeof value === "function") {
-    return value;
-  }
-
-  if (visited.has(value)) {
-    return visited.get(value);
-  }
-
-  if (value instanceof Date) {
-    return new Date(value.getTime());
-  }
-
-  if (value instanceof Map) {
-    const clonedMap = new Map();
-    visited.set(value, clonedMap);
-    value.forEach((mapValue, key) => {
-      clonedMap.set(key, deepCloneValue(mapValue, visited));
-    });
-    return clonedMap;
-  }
-
-  if (value instanceof Set) {
-    const clonedSet = new Set();
-    visited.set(value, clonedSet);
-    value.forEach((setValue) => {
-      clonedSet.add(deepCloneValue(setValue, visited));
-    });
-    return clonedSet;
-  }
-
-  if (Array.isArray(value)) {
-    const clonedArray: unknown[] = [];
-    visited.set(value, clonedArray);
-    value.forEach((item, index) => {
-      clonedArray[index] = deepCloneValue(item, visited);
-    });
-    return clonedArray;
-  }
-
-  const clonedObject: Record<string, unknown> = {};
-  visited.set(value, clonedObject);
-  Object.entries(value as Record<string, unknown>).forEach(([key, val]) => {
-    clonedObject[key] = deepCloneValue(val, visited);
-  });
-  return clonedObject;
 };
 
 const cloneToolRegistry = (registry: typeof toolRegistry) =>
