@@ -38,6 +38,7 @@ import { getCurrentWeather } from "./server/weather";
 import { crawlSite, crawlUrl } from "./server/web-crawl";
 import { webSearch } from "./server/web-search";
 import { webSearchBatch } from "./server/web-search-batch";
+import type { ToolSet } from "ai";
 
 export {
   addConversationMemory,
@@ -75,6 +76,10 @@ export {
 /**
  * Typed tool registry used by higher-level agents.
  *
+ * Uses AI SDK v6 `ToolSet` type for compile-time validation that all entries
+ * are valid tools. This preserves full type inference while ensuring structural
+ * correctness for tool collections passed to generateText/streamText.
+ *
  * Only actual AI tools (not helper utilities) are included here.
  */
 export const toolRegistry = {
@@ -92,4 +97,4 @@ export const toolRegistry = {
   searchActivities,
   webSearch,
   webSearchBatch,
-};
+} satisfies ToolSet;
