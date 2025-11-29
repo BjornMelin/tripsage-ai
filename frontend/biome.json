@@ -1,0 +1,498 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.3.2/schema.json",
+
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on",
+        "useSortedKeys": "on"
+      }
+    },
+    "enabled": true
+  },
+
+  "css": {
+    "linter": {
+      "enabled": true
+    },
+    "parser": {
+      "allowWrongLineComments": false,
+      "cssModules": false,
+      "tailwindDirectives": true
+    }
+  },
+
+  "files": {
+    "experimentalScannerIgnores": [
+      "**/node_modules/**",
+      "**/.next/**",
+      "**/dist/**",
+      "**/build/**",
+      "**/coverage/**",
+      "**/.turbo/**",
+      "**/.vercel/**",
+      "**/storybook-static/**"
+    ],
+    "ignoreUnknown": false,
+    "includes": [
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.js",
+      "**/*.jsx",
+      "**/*.mjs",
+      "**/*.cjs",
+      "**/*.mts",
+      "**/*.cts",
+      "**/*.json",
+      "**/*.css",
+      "!**/out"
+    ],
+    "maxSize": 1048576
+  },
+
+  "formatter": {
+    "attributePosition": "auto",
+    "bracketSpacing": true,
+    "enabled": true,
+    "expand": "auto",
+    "formatWithErrors": false,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineEnding": "lf",
+    "lineWidth": 88
+  },
+
+  "javascript": {
+    "formatter": {
+      "arrowParentheses": "always",
+      "bracketSameLine": false,
+      "jsxQuoteStyle": "double",
+      "quoteProperties": "asNeeded",
+      "quoteStyle": "double",
+      "semicolons": "always",
+      "trailingCommas": "es5"
+    },
+    "jsxRuntime": "transparent"
+  },
+
+  "json": {
+    "formatter": {
+      "indentStyle": "space",
+      "indentWidth": 2,
+      "lineWidth": 88,
+      "trailingCommas": "none"
+    }
+  },
+
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "a11y": {
+        "noAccessKey": "error",
+        "useAltText": "error",
+        "useKeyWithClickEvents": "error",
+        "useKeyWithMouseEvents": "error",
+        "useValidAnchor": "error"
+      },
+
+      "complexity": {
+        "noBannedTypes": "error",
+        "noForEach": "off",
+        "noStaticOnlyClass": "error",
+        "noUselessConstructor": "error",
+        "noVoid": "error"
+      },
+
+      "correctness": {
+        "noConstAssign": "error",
+        "noConstantCondition": "error",
+        "noEmptyPattern": "error",
+        "noGlobalObjectCalls": "error",
+        "noInvalidConstructorSuper": "error",
+        "noInvalidUseBeforeDeclaration": "error",
+        "noSelfAssign": "error",
+        "noSetterReturn": "error",
+        "noUndeclaredVariables": "error",
+        "noUnreachable": "error",
+        "noUnreachableSuper": "error",
+        "noUnusedFunctionParameters": {
+          "level": "error",
+          "options": { "ignoreRestSiblings": false }
+        },
+        "noUnusedImports": "error",
+        "noUnusedVariables": "error",
+        "useExhaustiveDependencies": "error",
+        "useHookAtTopLevel": "error"
+      },
+
+      "performance": {
+        "noAccumulatingSpread": "warn",
+        "noDelete": "error"
+      },
+      "recommended": true,
+
+      "security": {
+        "noDangerouslySetInnerHtml": "error",
+        "noGlobalEval": "error"
+      },
+
+      "style": {
+        "noNegationElse": "error",
+        "noParameterAssign": "error",
+        "noUnusedTemplateLiteral": "error",
+        "useConst": "error",
+        "useExportType": "error",
+        "useImportType": "error",
+        "useNamingConvention": {
+          "level": "error",
+          "options": {
+            "conventions": [
+              {
+                "formats": ["CONSTANT_CASE", "camelCase"],
+                "selector": { "kind": "const", "scope": "global" }
+              },
+              {
+                "formats": ["PascalCase"],
+                "selector": { "kind": "class", "scope": "global" }
+              },
+              {
+                "formats": ["PascalCase"],
+                "selector": { "kind": "interface", "scope": "global" }
+              },
+              {
+                "formats": ["PascalCase"],
+                "selector": { "kind": "typeAlias", "scope": "global" }
+              },
+              {
+                "formats": ["camelCase", "PascalCase"],
+                "selector": { "kind": "function", "scope": "global" }
+              },
+              {
+                "formats": ["camelCase"],
+                "selector": { "kind": "variable", "scope": "global" }
+              }
+            ],
+            "requireAscii": true,
+            "strictCase": true
+          }
+        },
+        "useSingleVarDeclarator": "error",
+        "useTemplate": "error"
+      },
+
+      "suspicious": {
+        "noArrayIndexKey": "error",
+        "noAssignInExpressions": "error",
+        "noCatchAssign": "error",
+        "noConfusingVoidType": "error",
+        "noConsole": "off",
+        "noConstEnum": "error",
+        "noDebugger": "error",
+        "noDuplicateCase": "error",
+        "noDuplicateClassMembers": "error",
+        "noDuplicateObjectKeys": "error",
+        "noEmptyBlockStatements": "error",
+        "noExplicitAny": "error",
+        "noExtraNonNullAssertion": "error",
+        "noFallthroughSwitchClause": "error",
+        "noFunctionAssign": "error",
+        "noGlobalIsFinite": "error",
+        "noGlobalIsNan": "error",
+        "noImplicitAnyLet": "error",
+        "noImportAssign": "error",
+        "noMisleadingCharacterClass": "error",
+        "noMisleadingInstantiator": "error",
+        "noPrototypeBuiltins": "error",
+        "noRedeclare": "error",
+        "noShadowRestrictedNames": "error",
+        "noUnsafeNegation": "error",
+        "useAwait": "error"
+      }
+    }
+  },
+
+  "overrides": [
+    {
+      "includes": ["**/database.types.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/schemas/**/*.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/test/factories/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/test/mocks/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "**/schemas/env.ts",
+        "**/env/schema.ts",
+        "**/env/client.ts",
+        "**/env/server.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": "off"
+          }
+        }
+      }
+    },
+    {
+      "assist": {
+        "actions": {
+          "source": {
+            "useSortedKeys": "off"
+          }
+        }
+      },
+      "includes": ["package.json", "components.json", "tsconfig.json"]
+    },
+    {
+      "includes": ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": {
+              "level": "error",
+              "options": {
+                "conventions": [
+                  {
+                    "formats": ["CONSTANT_CASE", "camelCase"],
+                    "selector": { "kind": "const", "scope": "global" }
+                  },
+                  {
+                    "formats": ["PascalCase"],
+                    "selector": { "kind": "class", "scope": "global" }
+                  },
+                  {
+                    "formats": ["PascalCase", "snake_case"],
+                    "selector": { "kind": "interface", "scope": "global" }
+                  },
+                  {
+                    "formats": ["PascalCase"],
+                    "selector": { "kind": "typeAlias", "scope": "global" }
+                  },
+                  {
+                    "formats": ["camelCase", "PascalCase"],
+                    "selector": { "kind": "function", "scope": "global" }
+                  },
+                  {
+                    "formats": ["camelCase", "snake_case"],
+                    "selector": { "kind": "variable", "scope": "global" }
+                  },
+                  {
+                    "formats": [
+                      "camelCase",
+                      "snake_case",
+                      "PascalCase",
+                      "CONSTANT_CASE"
+                    ],
+                    "selector": { "kind": "objectLiteralProperty" }
+                  }
+                ],
+                "requireAscii": true,
+                "strictCase": false
+              }
+            }
+          },
+          "suspicious": {
+            "noExplicitAny": "warn"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/components/**/*.tsx", "**/components/**/*.jsx"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": {
+              "level": "error",
+              "options": {
+                "conventions": [
+                  {
+                    "formats": ["PascalCase"],
+                    "match": "[A-Z].*",
+                    "selector": { "kind": "const", "scope": "global" }
+                  },
+                  {
+                    "formats": ["camelCase"],
+                    "selector": { "kind": "const", "scope": "global" }
+                  },
+                  {
+                    "formats": ["PascalCase"],
+                    "selector": { "kind": "function", "scope": "global" }
+                  },
+                  {
+                    "formats": ["camelCase"],
+                    "match": "use[A-Z].*",
+                    "selector": { "kind": "function" }
+                  },
+                  {
+                    "formats": ["camelCase", "PascalCase", "snake_case"],
+                    "selector": { "kind": "objectLiteralProperty" }
+                  }
+                ],
+                "requireAscii": true,
+                "strictCase": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/route.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["next.config.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "**/loading-states.tsx",
+        "**/loading-spinner.tsx",
+        "**/skeleton.tsx"
+      ],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "useSemanticElements": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/loading-skeletons.tsx"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "useSemanticElements": "off"
+          },
+          "suspicious": {
+            "noArrayIndexKey": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/query-states.tsx"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noArrayIndexKey": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/input-group.tsx"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "useSemanticElements": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/test-setup.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/auth/confirm/__tests__/route.test.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": "off"
+          }
+        }
+      }
+    },
+    {
+      "css": {
+        "linter": {
+          "enabled": false
+        }
+      },
+      "includes": ["src/app/globals.css"]
+    },
+    {
+      "includes": ["**/currency-store.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": "warn"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["playwright.config.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": "off"
+          }
+        }
+      }
+    }
+  ],
+
+  "root": true,
+
+  "vcs": {
+    "clientKind": "git",
+    "enabled": true,
+    "useIgnoreFile": false
+  }
+}
