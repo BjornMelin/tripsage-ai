@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
 import type { ProviderResolution } from "@schemas/providers";
+import type { User } from "@supabase/supabase-js";
 import type { LanguageModel, UIMessage } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
@@ -8,16 +9,16 @@ import type { ChatDeps } from "../_handler";
 import { handleChatStream } from "../_handler";
 
 const MOCK_SUPABASE = vi.hoisted(() => {
-  const supabase = {
+  const mockUser = { id: "user-1" } as unknown as User;
+
+  return {
     auth: {
       getUser: vi.fn(async () => ({
-        data: { user: { id: "user-1" } },
+        data: { user: mockUser },
         error: null,
       })),
     },
-  } satisfies Pick<TypedServerSupabase, "auth">;
-
-  return supabase as unknown as TypedServerSupabase;
+  } as unknown as TypedServerSupabase;
 });
 
 const MOCK_RESOLVE_PROVIDER = vi.hoisted(() =>

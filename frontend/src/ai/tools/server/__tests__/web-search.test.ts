@@ -79,9 +79,12 @@ describe("webSearch", () => {
       })
     );
 
-    expect(typeof webSearch.execute).toBe("function");
+    const execute = webSearch.execute;
+    expect(typeof execute).toBe("function");
 
-    const out = await webSearch.execute!(
+    if (!execute) throw new Error("webSearch.execute is undefined");
+
+    const out = await execute(
       {
         categories: null,
         fresh: true,
@@ -118,8 +121,8 @@ describe("webSearch", () => {
     expect(withTelemetrySpan).toHaveBeenCalled();
     expect(receivedBody).toBeDefined();
     expect(receivedBody).toMatchObject({
-      query: "test",
       limit: 2,
+      query: "test",
     });
   });
 
@@ -129,8 +132,13 @@ describe("webSearch", () => {
       throw new Error("FIRECRAWL_API_KEY is not defined");
     });
 
+    const execute = webSearch.execute;
+    expect(typeof execute).toBe("function");
+
+    if (!execute) throw new Error("webSearch.execute is undefined");
+
     await expect(
-      webSearch.execute!(
+      execute(
         {
           categories: null,
           fresh: false,
