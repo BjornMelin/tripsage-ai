@@ -1,6 +1,6 @@
 /** @vitest-environment node */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { unstubAllEnvs } from "@/test/env-helpers";
 import {
   createMockNextRequest,
@@ -19,6 +19,14 @@ const mockGetUser = vi.fn();
 const mockFrom = vi.fn();
 const mockResolveProvider = vi.fn();
 const mockGenerateText = vi.fn();
+let mod: typeof import("../route") | null = null;
+
+const getRoute = () => {
+  if (!mod) {
+    throw new Error("route module not loaded");
+  }
+  return mod;
+};
 
 vi.mock("@/lib/supabase/server", () => ({
   createServerSupabase: vi.fn(async () => ({
@@ -71,6 +79,10 @@ vi.mock("@/lib/api/route-helpers", async () => {
 });
 
 describe("/api/chat route smoke", () => {
+  beforeAll(async () => {
+    mod = await import("../route");
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     unstubAllEnvs();
@@ -82,13 +94,12 @@ describe("/api/chat route smoke", () => {
 
   it("returns 401 unauthenticated", async () => {
     mockGetUser.mockResolvedValue({ data: { user: null } });
-    const mod = await import("../route");
     const req = createMockNextRequest({
       body: { messages: [] },
       method: "POST",
       url: "http://localhost/api/chat",
     });
-    const res = await mod.POST(req, createRouteParamsContext());
+    const res = await getRoute().POST(req, createRouteParamsContext());
     expect(res.status).toBe(401);
   });
 
@@ -106,13 +117,12 @@ describe("/api/chat route smoke", () => {
       text: "ok",
       usage: { inputTokens: 1, outputTokens: 2, totalTokens: 3 },
     });
-    const mod = await import("../route");
     const req = createMockNextRequest({
       body: { messages: [] },
       method: "POST",
       url: "http://localhost/api/chat",
     });
-    const res = await mod.POST(req, createRouteParamsContext());
+    const res = await getRoute().POST(req, createRouteParamsContext());
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.content).toBe("ok");

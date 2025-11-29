@@ -25,7 +25,7 @@ _No unreleased changes yet._
   - `SidebarNav` and `UserNav` extracted to standalone Client Components with improved active-route highlighting (nested route support) and real user data display.
 
 - Personalization Insights page now surfaces recent memories with localized timestamps, source/score, and copyable memory IDs using the canonical memory context feed.
-- Testing patterns companion guide (`docs/developers/testing-patterns.md`) with test-type decision tree plus MSW and AI SDK v6 examples.
+- Testing patterns companion guide (`docs/development/testing.md`) with test-type decision tree plus MSW and AI SDK v6 examples.
 - Supabase local config: added `project_id`, `[db.seed]` configuration, and `[storage.buckets.attachments]` bucket definition with MIME type restrictions in `supabase/config.toml`.
 - Supabase-backed agent configuration control plane: new `agent_config` and `agent_config_versions` tables with admin-only RLS, upsert RPC, and schema types wired into the codebase.
 - Configuration resolver with Upstash cache + Zod validation and coverage, plus authenticated API routes (`GET/PUT /api/config/agents/:agentType`, versions listing, rollback) using `withApiGuards`, telemetry, and cache-tag invalidation.
@@ -85,7 +85,7 @@ _No unreleased changes yet._
 - Consolidated Trip type definitions: canonical `UiTrip` type now defined in `@schemas/trips` (`storeTripSchema`); stores and hooks import and re-export for convenience. Removed duplicate Trip type definitions from `domain/schemas/api.ts`. Database type `Trip = Tables<"trips">` remains separate in `database.types.ts` for raw DB row representation.
 - Consolidated TripSuggestion types: removed duplicate interface from `hooks/use-trips.ts`; all consumers now use `TripSuggestion` from `@schemas/trips`.
 - **React 19 login form modernization**: Refactored email/password login to use server actions with `useActionState`/`useFormStatus` for progressive enhancement, replacing route-based redirects with inline error handling and pending states. Created `loginAction` server action in `frontend/src/app/(auth)/login/actions.ts` with Zod validation, Supabase SSR authentication, and safe redirect logic. Updated `frontend/src/components/auth/login-form.tsx` to use React 19 hooks with field-specific error rendering and `SubmitButton` component. Converted `/auth/login` route to thin wrapper for external API compatibility while maintaining all security safeguards. Added comprehensive tests in `frontend/src/app/(auth)/login/__tests__/actions.test.ts` covering validation, authentication, and redirect scenarios.
-- **AI SDK v6 Tool Migration**: Complete refactoring of tool architecture to fully leverage AI SDK v6 capabilities. Migrated `createAiTool` factory to remove type assertions, properly integrate ToolCallOptions with user context extraction from messages, consolidate guardrails into single source of truth, eliminate double-wrapping in agent tools, and update all 18+ tool definitions to use consistent patterns. Enhanced type safety with strict TypeScript compliance, improved test coverage using AI SDK patterns, and eliminated code duplication between tool-factory and guarded-tool implementations. Added comprehensive documentation in `docs/developers/ai-sdk-v6-tools.md` for future tool development.
+- **AI SDK v6 Tool Migration**: Complete refactoring of tool architecture to fully leverage AI SDK v6 capabilities. Migrated `createAiTool` factory to remove type assertions, properly integrate ToolCallOptions with user context extraction from messages, consolidate guardrails into single source of truth, eliminate double-wrapping in agent tools, and update all 18+ tool definitions to use consistent patterns. Enhanced type safety with strict TypeScript compliance, improved test coverage using AI SDK patterns, and eliminated code duplication between tool-factory and guarded-tool implementations. Added comprehensive documentation in `docs/development/ai-tools.md` for future tool development.
 - **Configuration and dependency updates**: Enabled React Compiler and Cache Components in Next.js 16; updated Zod schemas to v4 APIs (z.uuid(), z.email(), z.int()); migrated user settings to Server Actions with useActionState; consolidated Supabase client imports to @/lib/supabase; unified Next.js config files into single next.config.ts with conditional bundle analyzer; added jsdom environment declarations for tests; removed deprecated Next.js config keys and custom webpack splitChunks.
 - **Chat memory syncing (frontend)**: Rewired `frontend/src/stores/chat/chat-messages.ts` to call `useChatMemory` whenever messages are persisted, trigger `/api/memory/sync` after assistant responses, skip system/placeholder entries, and keep `currentSession` derived from store state; updated slice tests (`frontend/src/stores/__tests__/chat/chat-messages.test.ts`) accordingly.
 - **Tool guardrails unification**: Replaced bespoke wrappers with `createAiTool` for Firecrawl web search (`frontend/src/lib/tools/web-search.ts`) and accommodation agent helpers (`frontend/src/lib/agents/accommodation-agent.ts`), consolidating caching, rate limiting, and telemetry. Updated `frontend/src/lib/tools/__tests__/web-search.test.ts` plus shared test utilities (`frontend/src/test/api-test-helpers.ts`) to exercise the new factory behavior.
@@ -163,8 +163,7 @@ _No unreleased changes yet._
   - Backend is now a data-only layer; all AI orchestration is handled by frontend AI SDK v6
 
 - **Vault Ops Hardening Verification (Technical Debt Resolution)**
-  - Created comprehensive verification documentation: `docs/operators/supabase-configuration.md` with step-by-step security verification process
-  - Implemented automated verification script: `scripts/verify_vault_hardening.py` for continuous security validation
+- Created comprehensive verification documentation: `docs/operations/security-guide.md` with step-by-step security verification process and vault hardening checklist
   - Verified all required migrations applied: vault role hardening, API key security, Gateway BYOK configuration
   - Established operational runbook for staging/production deployment verification
   - Resolved privilege creep prevention measures for Vault RPC operations
@@ -302,8 +301,9 @@ _No unreleased changes yet._
   - `docs/adrs/adr-0031-nextjs-chat-api-ai-sdk-v6.md` (Next.js chat API canonical)
   - `docs/specs/spec-chat-api-sse-nonstream.md` (contracts and errors)
 - Provider registry and resolution (server-only) returning AI SDK v6 `LanguageModel`:
-  - `frontend/src/lib/providers/registry.ts` (`resolveProvider(userId, modelHint?)`)
-  - `frontend/src/lib/providers/types.ts`, `frontend/src/lib/settings.ts`
+  - `frontend/src/ai/models/registry.ts` (`resolveProvider(userId, modelHint?)`)
+  - `frontend/src/lib/providers/types.ts`
+  - Temporary shim that re-exported the registry has been removed; use `frontend/src/ai/models/registry.ts` directly
 - OpenRouter provider: switch to `@ai-sdk/openai` with `baseURL: https://openrouter.ai/api/v1` (remove `@openrouter/ai-sdk-provider`); attribution headers remain removed
 - Vitest unit tests for registry precedence and attribution
   - `frontend/src/lib/providers/__tests__/registry.test.ts`
@@ -365,7 +365,7 @@ _No unreleased changes yet._
   - Google Places and Travel Advisory tool tests with input validation
   - Guardrail telemetry tests: `frontend/src/lib/agents/__tests__/runtime.test.ts`
   - E2E Playwright tests: `frontend/e2e/agents-budget-memory.spec.ts`
-- Operator runbook: `docs/operators/agent-frontend.md` updated with all endpoints and env vars
+- Operator runbook: `docs/operations/agent-frontend.md` updated with all endpoints and env vars
 
 - Trip collaborator notifications via Supabase Database Webhooks, Upstash QStash, and Resend:
   - QStash-managed worker route `/api/jobs/notify-collaborators` verifies `Upstash-Signature`, validates jobs with Zod, and calls the notification adapter.
@@ -531,7 +531,7 @@ _No unreleased changes yet._
 - Removed Supabase CLI function deploy/logs targets and Deno lockfile helpers from `Makefile`.
 - Deleted legacy triggers file superseded by Database Webhooks.
 - Feature flag/wave gating for agents
-  - Deleted `docs/operators/agent-waves.md`
+- Deleted `docs/operations/agent-waves.md`
   - Removed `AGENT_WAVE_*` references from tests
 - Per-agent temperature env variables
   - Deleted `frontend/src/lib/settings/agent-config.ts`
@@ -627,8 +627,8 @@ _No unreleased changes yet._
     `supa.migration.list`, `supa.migration.repair`, `supa.functions.deploy-all`, `supa.fn.deploy`, `supa.fn.logs`.
   - Includes deploy helper to rename `deno.lock -> deno.lock.v5` for the CLI bundler.
 - Operator runbooks (developer-focused, command-first):
-  - `docs/operators/supabase-project-setup.md` — create/link/configure project; secrets; migrations; deploy; verify.
-  - `docs/operators/supabase-repro-deploy.md` — single-pass reproducible deployment sequence.
+- `docs/operations/supabase-project-setup.md` — create/link/configure project; secrets; migrations; deploy; verify.
+- `docs/operations/supabase-repro-deploy.md` — single-pass reproducible deployment sequence.
 - Per-function Deno import maps + lockfiles:
   - Added `deno.json` and generated `deno.lock.v5` for: `trip-notifications`, `file-processing`, `cache-invalidation`, `file-processor`.
 
@@ -850,8 +850,8 @@ _No unreleased changes yet._
 - Navigation: added "/attachments" link in main navbar
 - ADR index grouped By Category in docs/adrs/README.md
 - Docs: SSE client expectations note in docs/users/feature-reference.md
-- Docs: Upstash optional edge rate-limit section in docs/operators/deployment-guide-full.md
-- Upload routes: confirm Next 16 API `revalidateTag('attachments', 'max')` for Route Handlers
+- Docs: Upstash optional edge rate-limit section in docs/operations/deployment-guide.md
+- Confirm upload routes use Next 16 API `revalidateTag('attachments', 'max')` for Route Handlers
 - Frontend copy/comments updated to reference two-arg `revalidateTag` where applicable
 - Corrected `revalidateTag` usage in attachments upload handler and docs
 

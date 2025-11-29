@@ -30,7 +30,7 @@ interface RecentTripsProps {
 
 function TripCardSkeleton() {
   return (
-    <div className="p-3 border border-border rounded-lg">
+    <div className="p-3 border border-border rounded-lg" data-testid="trip-skeleton">
       <div className="flex items-start justify-between mb-2">
         <Skeleton className="h-4 w-32" />
         <Skeleton className="h-5 w-16" />
@@ -125,6 +125,7 @@ function TripCard({ trip }: { trip: Trip }) {
                   : "outline"
           }
           className="text-xs whitespace-nowrap"
+          data-testid="trip-status"
         >
           {status}
         </Badge>
