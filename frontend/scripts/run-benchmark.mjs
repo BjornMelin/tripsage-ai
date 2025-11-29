@@ -20,9 +20,19 @@ const DEFAULT_REPORT_DIR = ".vitest-reports";
 const DEFAULT_REPORT_FILE = "vitest-report.json";
 const DEFAULT_SUMMARY_FILE = "benchmark-summary.json";
 
-// Spawn timeout (30s for vitest, 10s for analysis)
-const SPAWN_TIMEOUT_VITEST = 30_000;
-const SPAWN_TIMEOUT_ANALYSIS = 10_000;
+// Spawn timeouts are configurable for CI robustness
+const SPAWN_TIMEOUT_VITEST = (() => {
+  const parsed = Number.parseInt(process.env.VITEST_BENCHMARK_TIMEOUT_MS ?? "", 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 60_000;
+})();
+
+const SPAWN_TIMEOUT_ANALYSIS = (() => {
+  const parsed = Number.parseInt(
+    process.env.VITEST_BENCHMARK_ANALYSIS_TIMEOUT_MS ?? "",
+    10
+  );
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 10_000;
+})();
 
 /**
  * Parse CLI arguments and return input/output paths
@@ -34,19 +44,25 @@ function parseArgs() {
   let outputFile = DEFAULT_SUMMARY_FILE;
 
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === "--input" && args[i + 1]) {
-      inputDir = path.dirname(args[i + 1]);
-      inputFile = path.basename(args[i + 1]);
+    const nextArg = args[i + 1];
+    if (args[i] === "--input" && nextArg && !nextArg.startsWith("--")) {
+      inputDir = path.dirname(nextArg);
+      inputFile = path.basename(nextArg);
       i++;
     } else if (args[i]?.startsWith("--input=")) {
       const value = args[i].substring("--input=".length);
-      inputDir = path.dirname(value);
-      inputFile = path.basename(value);
-    } else if (args[i] === "--output" && args[i + 1]) {
-      outputFile = args[i + 1];
+      if (value !== "") {
+        inputDir = path.dirname(value);
+        inputFile = path.basename(value);
+      }
+    } else if (args[i] === "--output" && nextArg && !nextArg.startsWith("--")) {
+      outputFile = nextArg;
       i++;
     } else if (args[i]?.startsWith("--output=")) {
-      outputFile = args[i].substring("--output=".length);
+      const value = args[i].substring("--output=".length);
+      if (value !== "") {
+        outputFile = value;
+      }
     } else if (args[i] === "--help") {
       console.log(
         "Usage: node scripts/run-benchmark.mjs [--input path] [--output path]"
@@ -90,7 +106,22 @@ function spawnWithTimeout(command, args, timeoutMs) {
       } else if (code === 0) {
         resolve(code);
       } else {
-        reject(new Error(`Process exited with code ${code}`));
+        // Distinguish between test failures and infra errors for vitest
+        if (
+          command === "pnpm" &&
+          Array.isArray(args) &&
+          args.length > 0 &&
+          args[0] === "vitest" &&
+          code === 1
+        ) {
+          reject(new Error("Vitest exited with code 1: Test failures detected."));
+        } else {
+          reject(
+            new Error(
+              `Process exited with code ${code}. This may indicate an infrastructure or environment error.`
+            )
+          );
+        }
       }
     });
 

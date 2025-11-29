@@ -123,8 +123,8 @@ function parseVitestJson(jsonPath: string): BenchmarkResults {
 
   const durations = files.map((f) => f.duration).sort((a, b) => a - b);
 
-  // Suite duration is the max of all file durations (since tests run in parallel)
-  // For more accurate wall-clock time, use the overall startTime to endTime
+  // Prefer wall-clock duration when start/end timestamps are present; otherwise
+  // fall back to the max file duration (parallel execution semantics)
   const suiteDuration = (() => {
     const endTimes = report.testResults
       .map((r) => r.endTime)
@@ -144,23 +144,26 @@ function parseVitestJson(jsonPath: string): BenchmarkResults {
   };
 
   // Thresholds configurable via environment variables with validation
-  const SuiteDefault = 20000;
-  const FileWarningDefault = 500;
-  const FileFailDefault = 3500;
+  // biome-ignore lint/style/useNamingConvention: SCREAMING_SNAKE for immutable defaults
+  const SUITE_DEFAULT = 20000;
+  // biome-ignore lint/style/useNamingConvention: SCREAMING_SNAKE for immutable defaults
+  const FILE_WARNING_DEFAULT = 500;
+  // biome-ignore lint/style/useNamingConvention: SCREAMING_SNAKE for immutable defaults
+  const FILE_FAIL_DEFAULT = 3500;
 
   const parsedSuite = Number(process.env.BENCHMARK_SUITE_THRESHOLD_MS);
   const suiteThreshold =
-    !Number.isNaN(parsedSuite) && parsedSuite > 0 ? parsedSuite : SuiteDefault;
+    !Number.isNaN(parsedSuite) && parsedSuite > 0 ? parsedSuite : SUITE_DEFAULT;
 
   const parsedWarning = Number(process.env.BENCHMARK_FILE_WARNING_MS);
   const fileWarningThreshold =
     !Number.isNaN(parsedWarning) && parsedWarning > 0
       ? parsedWarning
-      : FileWarningDefault;
+      : FILE_WARNING_DEFAULT;
 
   const parsedFail = Number(process.env.BENCHMARK_FILE_FAIL_MS);
   const fileFailThreshold =
-    !Number.isNaN(parsedFail) && parsedFail > 0 ? parsedFail : FileFailDefault;
+    !Number.isNaN(parsedFail) && parsedFail > 0 ? parsedFail : FILE_FAIL_DEFAULT;
 
   const exceeded: string[] = [];
   const warnings: string[] = [];
@@ -260,7 +263,8 @@ function getArgValue(args: string[], flag: string): string | null {
   // Check for --flag=value format
   for (const arg of args) {
     if (arg.startsWith(`${flag}=`)) {
-      return arg.substring(flag.length + 1);
+      const value = arg.substring(flag.length + 1);
+      return value.length > 0 ? value : null;
     }
   }
 

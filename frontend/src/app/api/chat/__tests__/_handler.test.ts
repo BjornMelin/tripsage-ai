@@ -69,7 +69,6 @@ function fakeSupabase(
 describe("handleChatNonStream", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    handleMemoryIntentMock.mockReset();
     handleMemoryIntentMock.mockResolvedValue({ context: [] });
   });
 

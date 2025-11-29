@@ -94,15 +94,11 @@ export interface FakeTimersOptions {
 export const createFakeTimersContext = (options: FakeTimersOptions = {}) => {
   return {
     setup: () => {
-      const fakeTimerOptions: Parameters<typeof vi.useFakeTimers>[0] = {};
-      // Copy defined option properties generically to handle future fields automatically
-      for (const key of Object.keys(options) as (keyof FakeTimersOptions)[]) {
-        const value = options[key];
-        if (value !== undefined) {
-          (fakeTimerOptions as Record<string, unknown>)[key] = value;
-        }
-      }
-      vi.useFakeTimers(fakeTimerOptions);
+      vi.useFakeTimers({
+        ...(options.shouldAdvanceTime !== undefined && {
+          shouldAdvanceTime: options.shouldAdvanceTime,
+        }),
+      });
     },
     teardown: () => {
       vi.runOnlyPendingTimers();

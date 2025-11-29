@@ -151,11 +151,9 @@ describe("UpcomingFlights", () => {
 
     render(<UpcomingFlights />);
 
-    // Component should show error or fallback UI - check for either error message or empty state
-    const errorOrEmpty =
-      screen.queryByText(/Failed to load flights|error|unable/i) ||
-      screen.queryByText(/No upcoming flights/i);
-    expect(errorOrEmpty).toBeInTheDocument();
+    // Component currently falls back to empty state when errors occur
+    expect(screen.getByText("No upcoming flights.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /search flights/i })).toBeInTheDocument();
   });
 
   it("links to trips page from empty state", () => {

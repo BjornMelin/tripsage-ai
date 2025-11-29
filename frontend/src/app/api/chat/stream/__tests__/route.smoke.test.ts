@@ -21,7 +21,10 @@ const MOCK_SUPABASE = vi.hoisted(
 const MOCK_RESOLVE_PROVIDER = vi.hoisted(() =>
   vi.fn(
     async (): Promise<ProviderResolution> => ({
-      model: {} as never,
+      model: {
+        id: "gpt-4o-mini",
+        providerId: "openai",
+      } as never,
       modelId: "gpt-4o-mini",
       provider: "openai" as const,
     })
