@@ -86,16 +86,16 @@ describe("runItineraryAgent", () => {
     createAiToolMock.mockClear();
   });
 
-  it("throws when required tool is missing", () => {
+  it("throws when required tool is missing", async () => {
     (toolRegistry as Record<string, unknown>).createTravelPlan = undefined as never;
 
-    expect(() =>
+    await expect(
       runItineraryAgent(
         { identifier: "user-1", model: createMockModel(), modelId: "mock" },
         baseConfig,
         baseInput
       )
-    ).toThrow(/Tool createTravelPlan not registered/);
+    ).rejects.toThrow(/Tool createTravelPlan not registered/);
   });
 
   it("wraps registry tools and delegates execution", async () => {

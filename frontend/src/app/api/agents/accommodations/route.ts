@@ -42,7 +42,7 @@ export const POST = withApiGuards({
     config.config.model ?? new URL(req.url).searchParams.get("model") ?? undefined;
   const { model, modelId } = await resolveProvider(userId, modelHint);
 
-  const result = runAccommodationAgent(
+  const result = await runAccommodationAgent(
     { identifier: userId, model, modelId },
     config.config,
     body

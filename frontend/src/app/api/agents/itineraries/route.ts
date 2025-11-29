@@ -57,7 +57,7 @@ export const POST = withApiGuards({
   const { model, modelId } = await resolveProvider(userId, resolvedModelHint);
 
   const identifier = userId;
-  const result = runItineraryAgent({ identifier, model, modelId }, agentConfig, body);
+  const result = await runItineraryAgent({ identifier, model, modelId }, agentConfig, body);
   return result.toUIMessageStreamResponse({
     onError: createErrorHandler(),
   });

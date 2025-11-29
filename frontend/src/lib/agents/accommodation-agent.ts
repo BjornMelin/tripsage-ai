@@ -20,6 +20,7 @@ import { clampMaxTokens } from "@/lib/tokens/budget";
 import { buildAccommodationPrompt } from "@/prompts/agents";
 import { buildRateLimit } from "@/lib/ratelimit/config";
 import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
+import { withTelemetrySpan } from "@/lib/telemetry/span";
 import {
   accommodationBookingInputSchema,
   accommodationCheckAvailabilityInputSchema,
@@ -195,8 +196,18 @@ export function runAccommodationAgent(
     topP: config.parameters.topP,
   } satisfies Parameters<typeof streamText>[0];
 
-  return streamText({
-    ...callOptions,
-    stopWhen: stepCountIs(10),
-  });
+  return withTelemetrySpan(
+    "agent.accommodation.run",
+    {
+      attributes: {
+        modelId: deps.modelId,
+        identifier: deps.identifier,
+      },
+    },
+    () =>
+      streamText({
+        ...callOptions,
+        stopWhen: stepCountIs(10),
+      })
+  );
 }

@@ -24,6 +24,7 @@ import { buildRateLimit } from "@/lib/ratelimit/config";
 import type { ChatMessage } from "@/lib/tokens/budget";
 import { clampMaxTokens } from "@/lib/tokens/budget";
 import { buildBudgetPrompt } from "@/prompts/agents";
+import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 /**
  * Create wrapped tools for budget agent with guardrails.
@@ -185,16 +186,26 @@ export function runBudgetAgent(
   const desiredMaxTokens = config.parameters.maxTokens ?? 4096;
   const { maxTokens } = clampMaxTokens(messages, desiredMaxTokens, deps.modelId);
 
-  return streamText({
-    maxOutputTokens: maxTokens,
-    messages: [
-      { content: instructions, role: "system" },
-      { content: userPrompt, role: "user" },
-    ],
-    model: deps.model,
-    stopWhen: stepCountIs(10),
-    temperature: config.parameters.temperature ?? 0.3,
-    tools: buildBudgetTools(deps.identifier),
-    topP: config.parameters.topP,
-  });
+  return withTelemetrySpan(
+    "agent.budget.run",
+    {
+      attributes: {
+        modelId: deps.modelId,
+        identifier: deps.identifier,
+      },
+    },
+    () =>
+      streamText({
+        maxOutputTokens: maxTokens,
+        messages: [
+          { content: instructions, role: "system" },
+          { content: userPrompt, role: "user" },
+        ],
+        model: deps.model,
+        stopWhen: stepCountIs(10),
+        temperature: config.parameters.temperature ?? 0.3,
+        tools: buildBudgetTools(deps.identifier),
+        topP: config.parameters.topP,
+      })
+  );
 }

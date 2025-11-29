@@ -51,7 +51,7 @@ export const POST = withApiGuards({
     config.config.model ?? new URL(req.url).searchParams.get("model") ?? undefined;
   const { model, modelId } = await resolveProvider(userId, modelHint);
 
-  const result = runBudgetAgent(
+  const result = await runBudgetAgent(
     { identifier: userId, model, modelId },
     config.config,
     body
