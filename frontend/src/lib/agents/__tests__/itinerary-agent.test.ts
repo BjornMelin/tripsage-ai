@@ -5,8 +5,8 @@ import type { ItineraryPlanRequest } from "@schemas/agents";
 import type { AgentConfig } from "@schemas/configuration";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { runItineraryAgent } from "@/lib/agents/itinerary-agent";
-import { deepCloneValue } from "@/test-utils/deep-clone";
 import { createMockModel } from "@/test/ai-sdk/mock-model";
+import { deepCloneValue } from "@/test-utils/deep-clone";
 
 const streamTextImpl = (options: unknown) =>
   ({

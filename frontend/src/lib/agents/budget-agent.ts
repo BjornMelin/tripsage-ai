@@ -21,10 +21,10 @@ import type { LanguageModel, ToolSet } from "ai";
 import { stepCountIs, streamText } from "ai";
 import { getRegistryTool, invokeTool } from "@/lib/agents/registry-utils";
 import { buildRateLimit } from "@/lib/ratelimit/config";
+import { withTelemetrySpan } from "@/lib/telemetry/span";
 import type { ChatMessage } from "@/lib/tokens/budget";
 import { clampMaxTokens } from "@/lib/tokens/budget";
 import { buildBudgetPrompt } from "@/prompts/agents";
-import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 /**
  * Create wrapped tools for budget agent with guardrails.
@@ -190,8 +190,8 @@ export function runBudgetAgent(
     "agent.budget.run",
     {
       attributes: {
-        modelId: deps.modelId,
         identifier: deps.identifier,
+        modelId: deps.modelId,
       },
     },
     () =>
