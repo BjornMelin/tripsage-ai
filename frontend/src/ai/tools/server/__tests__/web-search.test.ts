@@ -71,13 +71,17 @@ describe("webSearch", () => {
   });
 
   test("validates inputs and calls Firecrawl with metadata", async () => {
+    let receivedBody: Record<string, unknown> | undefined;
     server.use(
-      http.post("https://api.firecrawl.dev/v2/search", () =>
-        HttpResponse.json({ results: [{ url: "https://x" }] })
-      )
+      http.post("https://api.firecrawl.dev/v2/search", async ({ request }) => {
+        receivedBody = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ results: [{ url: "https://x" }] });
+      })
     );
 
-    const out = await webSearch.execute?.(
+    expect(typeof webSearch.execute).toBe("function");
+
+    const out = await webSearch.execute!(
       {
         categories: null,
         fresh: true,
@@ -112,6 +116,11 @@ describe("webSearch", () => {
     expect(typeof outAny.tookMs).toBe("number");
     expect(Object.keys(outAny).sort()).toEqual(["fromCache", "results", "tookMs"]);
     expect(withTelemetrySpan).toHaveBeenCalled();
+    expect(receivedBody).toBeDefined();
+    expect(receivedBody).toMatchObject({
+      query: "test",
+      limit: 2,
+    });
   });
 
   test("throws when not configured", async () => {
@@ -121,7 +130,7 @@ describe("webSearch", () => {
     });
 
     await expect(
-      webSearch.execute?.(
+      webSearch.execute!(
         {
           categories: null,
           fresh: false,

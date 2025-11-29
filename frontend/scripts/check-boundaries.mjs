@@ -77,11 +77,22 @@ let warningsFound = 0;
  * Excludes test directories, test utilities, and build artifacts.
  */
 function findFiles(dir, files = []) {
-  const items = fs.readdirSync(dir);
+  let items;
+  try {
+    items = fs.readdirSync(dir);
+  } catch (error) {
+    console.warn(`⚠️  Could not read directory: ${dir}`);
+    return files;
+  }
 
   for (const item of items) {
     const fullPath = path.join(dir, item);
-    const stat = fs.statSync(fullPath);
+    let stat;
+    try {
+      stat = fs.statSync(fullPath);
+    } catch (error) {
+      continue;
+    }
 
     // Skip hidden directories, node_modules, and test-related directories
     if (stat.isDirectory()) {

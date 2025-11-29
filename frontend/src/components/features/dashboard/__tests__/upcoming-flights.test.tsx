@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { UpcomingFlight } from "@/hooks/use-trips";
 import type { AppError } from "@/lib/api/error-types";
 import { render, screen } from "@/test/test-utils";
+import { UPCOMING_FLIGHT_A, UPCOMING_FLIGHT_B } from "@/test/fixtures/flights";
 import { UpcomingFlights } from "../upcoming-flights";
 
 vi.mock("@/hooks/use-trips", () => ({
@@ -59,40 +60,6 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-const FLIGHT_A: UpcomingFlight = {
-  airline: "NH",
-  airlineName: "ANA",
-  arrivalTime: "2025-01-15T14:20:00Z",
-  cabinClass: "economy",
-  currency: "USD",
-  departureTime: "2025-01-15T10:00:00Z",
-  destination: "HND",
-  duration: 420,
-  flightNumber: "NH203",
-  id: "f1",
-  origin: "NRT",
-  price: 999,
-  status: "upcoming",
-  stops: 0,
-};
-
-const FLIGHT_B: UpcomingFlight = {
-  airline: "UA",
-  airlineName: "United",
-  arrivalTime: "2025-01-10T16:30:00Z",
-  cabinClass: "business",
-  currency: "USD",
-  departureTime: "2025-01-10T12:00:00Z",
-  destination: "SFO",
-  duration: 720,
-  flightNumber: "UA837",
-  id: "f2",
-  origin: "NRT",
-  price: 1200,
-  status: "upcoming",
-  stops: 0,
-};
-
 describe("UpcomingFlights", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -125,7 +92,7 @@ describe("UpcomingFlights", () => {
 
   it("shows flights when available", () => {
     vi.mocked(useUpcomingFlights).mockReturnValue(
-      CreateFlightsReturn([FLIGHT_A, FLIGHT_B])
+      CreateFlightsReturn([UPCOMING_FLIGHT_A, UPCOMING_FLIGHT_B])
     );
 
     render(<UpcomingFlights />);
@@ -146,6 +113,7 @@ describe("UpcomingFlights", () => {
       ...CreateFlightsReturn([]),
       error: mockError,
       isError: true,
+      isSuccess: false,
       status: "error",
     } as UseUpcomingFlightsReturn);
 
