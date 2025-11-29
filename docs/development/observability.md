@@ -10,6 +10,8 @@ Server code must use these helpers exclusively. Direct usage of `@opentelemetry/
 - Telemetry infrastructure (`lib/telemetry/*`, `lib/supabase/factory.ts`)
 - Operational alert sinks (`lib/telemetry/alerts.ts`)
 
+**Client-side exception:** Development-only `console.*` is allowed in client components (`"use client"`) when guarded by `process.env.NODE_ENV === 'development'`. Bundlers (Next.js SWC, Terser) perform dead code elimination, removing these calls from production bundles entirely.
+
 **Core helpers:**
 
 - `getTelemetryTracer()` - Acquire tracer instance (use via `withTelemetrySpan`, not directly)
@@ -111,7 +113,30 @@ recordTelemetryEvent("api.keys.validation_error", {
 
 **Guidelines:**
 
-- **Logging split:** Production/server code must emit telemetry (spans/events or `createServerLogger`). Use `console.*` only in tests and client-only UI to aid local debugging; never ship console logging in backend routes, tools, or shared libs.
+- **Logging policy by context:**
+  - **Server code (route handlers, tools, shared libs):** Must use telemetry helpers (`createServerLogger`, `recordTelemetryEvent`, `withTelemetrySpan`). No `console.*`.
+  - **Client-only UI (`"use client"` components/hooks):** Development-only `console.*` is permitted when guarded:
+
+    ```typescript
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Debug info:', data);
+    }
+    ```
+
+    These calls are eliminated by Next.js compiler in production builds (dead code elimination).
+  - **Zustand stores:** Use `createStoreLogger` from `@/lib/telemetry/store-logger` for error tracking. This records errors on the active OTEL span.
+  - **Tests:** `console.*` allowed freely for debugging.
+- **Optional:** Configure `compiler.removeConsole` in `next.config.js` for additional safety:
+
+  ```javascript
+  module.exports = {
+    compiler: {
+      removeConsole: process.env.NODE_ENV === 'production',
+      // Or keep console.error: removeConsole: { exclude: ['error'] }
+    }
+  }
+  ```
+
 - Use concise event names: `api.{module}.{action}_error`
 - Include relevant context in attributes (no secrets)
 - Use appropriate severity levels: "error", "warning", "info"
