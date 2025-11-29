@@ -1,21 +1,34 @@
 /** @vitest-environment node */
 
 import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
+import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
+import { server } from "@/test/msw/server";
+
+// Hoisted mocks for all dependencies
+const mockGetRedis = vi.hoisted(() => vi.fn());
+const mockRatelimitLimit = vi.hoisted(() => vi.fn(async () => ({ success: true })));
+const mockGetServerEnvVar = vi.hoisted(() => vi.fn(() => "test_key"));
+const mockGetServerEnvVarWithFallback = vi.hoisted(() =>
+  vi.fn((key: string, fallback?: string) => {
+    if (key === "FIRECRAWL_API_KEY") return "test_key";
+    if (key === "FIRECRAWL_BASE_URL") return fallback || "https://api.firecrawl.dev/v2";
+    return fallback;
+  })
+);
 
 vi.mock("@/lib/redis", () => ({
-  getRedis: vi.fn(),
+  getRedis: mockGetRedis,
 }));
 
-const ratelimitLimit = vi.fn(async () => ({ success: true }));
 vi.mock("@upstash/ratelimit", () => ({
   Ratelimit: class {
     static slidingWindow(limit: number, window: string) {
       return { limit, window };
     }
 
-    limit = ratelimitLimit;
+    limit = mockRatelimitLimit;
   },
 }));
 
@@ -32,25 +45,13 @@ vi.mock("@/lib/telemetry/span", () => ({
 }));
 
 vi.mock("@/lib/env/server", () => ({
-  getServerEnvVar: vi.fn(() => "test_key"),
-  getServerEnvVarWithFallback: vi.fn((key: string, fallback?: string) => {
-    if (key === "FIRECRAWL_API_KEY") return "test_key";
-    if (key === "FIRECRAWL_BASE_URL") return fallback || "https://api.firecrawl.dev/v2";
-    if (key === "UPSTASH_REDIS_REST_URL") return fallback;
-    if (key === "UPSTASH_REDIS_REST_TOKEN") return fallback;
-    return fallback;
-  }),
+  getServerEnvVar: mockGetServerEnvVar,
+  getServerEnvVarWithFallback: mockGetServerEnvVarWithFallback,
 }));
 
-beforeEach(() => {
-  vi.stubGlobal("fetch", vi.fn());
-  ratelimitLimit.mockClear();
-});
-
-afterEach(() => {
-  vi.unstubAllGlobals();
-  vi.clearAllMocks();
-});
+// Static import after mocks
+import { webSearch } from "@ai/tools/server/web-search";
+import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 const mockContext = {
   messages: [],
@@ -58,16 +59,32 @@ const mockContext = {
 };
 
 describe("webSearch", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetRedis.mockReturnValue(null);
+    mockRatelimitLimit.mockResolvedValue({ success: true });
+    mockGetServerEnvVar.mockReturnValue("test_key");
+  });
+
+  afterEach(() => {
+    server.resetHandlers();
+  });
+
   test("validates inputs and calls Firecrawl with metadata", async () => {
-    const { getRedis } = await import("@/lib/redis");
-    (getRedis as ReturnType<typeof vi.fn>).mockReturnValue(null);
-    const { webSearch } = await import("@ai/tools");
-    const mockRes = {
-      json: async () => ({ results: [{ url: "https://x" }] }),
-      ok: true,
-    } as Response;
-    (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockRes);
-    const out = await webSearch.execute?.(
+    let receivedBody: Record<string, unknown> | undefined;
+    server.use(
+      http.post("https://api.firecrawl.dev/v2/search", async ({ request }) => {
+        receivedBody = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ results: [{ url: "https://x" }] });
+      })
+    );
+
+    const execute = webSearch.execute;
+    expect(typeof execute).toBe("function");
+
+    if (!execute) throw new Error("webSearch.execute is undefined");
+
+    const out = await execute(
       {
         categories: null,
         fresh: true,
@@ -84,6 +101,7 @@ describe("webSearch", () => {
       },
       mockContext
     );
+
     const outAny = out as unknown as {
       results: Array<{
         url: string;
@@ -94,26 +112,33 @@ describe("webSearch", () => {
       fromCache: boolean;
       tookMs: number;
     };
+
     expect(Array.isArray(outAny.results)).toBe(true);
     expect(outAny.results[0].url).toBe("https://x");
     expect(outAny.fromCache).toBe(false);
     expect(typeof outAny.tookMs).toBe("number");
     expect(Object.keys(outAny).sort()).toEqual(["fromCache", "results", "tookMs"]);
-    const { withTelemetrySpan } = await import("@/lib/telemetry/span");
-    expect(withTelemetrySpan as unknown as ReturnType<typeof vi.fn>).toHaveBeenCalled();
+    expect(withTelemetrySpan).toHaveBeenCalled();
+    expect(receivedBody).toBeDefined();
+    expect(receivedBody).toMatchObject({
+      limit: 2,
+      query: "test",
+    });
   });
 
   test("throws when not configured", async () => {
-    const { getRedis } = await import("@/lib/redis");
-    (getRedis as ReturnType<typeof vi.fn>).mockReturnValue(null);
-    const { getServerEnvVar } = await import("@/lib/env/server");
-    (getServerEnvVar as ReturnType<typeof vi.fn>).mockImplementation(() => {
+    // Make the env var throw to simulate missing configuration
+    mockGetServerEnvVar.mockImplementation(() => {
       throw new Error("FIRECRAWL_API_KEY is not defined");
     });
-    vi.resetModules();
-    const { webSearch } = await import("@ai/tools/server/web-search");
+
+    const execute = webSearch.execute;
+    expect(typeof execute).toBe("function");
+
+    if (!execute) throw new Error("webSearch.execute is undefined");
+
     await expect(
-      webSearch.execute?.(
+      execute(
         {
           categories: null,
           fresh: false,
@@ -131,8 +156,6 @@ describe("webSearch", () => {
         mockContext
       )
     ).rejects.toMatchObject({ code: TOOL_ERROR_CODES.webSearchNotConfigured });
-    (getServerEnvVar as ReturnType<typeof vi.fn>).mockReturnValue("test_key");
-    vi.resetModules();
   });
 });
 

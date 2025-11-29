@@ -60,7 +60,7 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 - **Library-first:** Prefer maintained libraries covering ≥80 % of needs with ≤30 % custom code.
 - **KISS / DRY / YAGNI:** Keep solutions straightforward; remove duplication via small focused helpers; implement only what's needed now—no speculative APIs or feature flags (unless requested).
 - **Final-only:** Remove superseded code/tests immediately after new behavior lands; no partial migrations.
-- **Telemetry/logging:** Use `@/lib/telemetry/{span,logger}` helpers: `withTelemetrySpan()`, `withTelemetrySpanSync()`, `recordTelemetryEvent()`, `createServerLogger()`, `emitOperationalAlert()`. No `console.*` in server code except tests/client-only UI. Direct `@opentelemetry/api` only in `lib/telemetry/*` and `lib/supabase/factory.ts`. Client: `@/lib/telemetry/client`. See `docs/developers/observability.md`.
+- **Telemetry/logging:** Use `@/lib/telemetry/{span,logger}` helpers: `withTelemetrySpan()`, `withTelemetrySpanSync()`, `recordTelemetryEvent()`, `createServerLogger()`, `emitOperationalAlert()`. No `console.*` in server code except tests/client-only UI. Direct `@opentelemetry/api` only in `lib/telemetry/*` and `lib/supabase/factory.ts`. Client: `@/lib/telemetry/client`. See `docs/development/observability.md`.
 
 ### 4.2 TypeScript and frontend style
 
@@ -101,7 +101,7 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 - **Import path:** `@schemas/domain-name` (no `.schema` suffix).
 - **Section markers:** Use `// ===== CORE SCHEMAS =====` and `// ===== TOOL INPUT SCHEMAS =====` to separate concerns.
 - **No barrel exports:** Import directly from domain modules; `lib/schemas/index.ts` removed in favor of aliases.
-- **Details:** See `docs/developers/zod-schema-guide.md`.
+- **Details:** See `docs/development/zod-schema-guide.md`.
 
 ---
 
@@ -124,7 +124,7 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 - **Vercel AI Gateway (primary):**
   - Configure via `createGateway({ baseURL: "https://ai-gateway.vercel.sh/v1", apiKey: process.env.AI_GATEWAY_API_KEY })`.
 - **BYOK registry (alternative):**
-  - Source: `frontend/src/lib/providers/registry.ts`; resolves user keys server‑side.
+  - Source: `frontend/src/ai/models/registry.ts`; resolves user keys server‑side.
   - Supported: `openai`, `openrouter`, `anthropic`, `xai`.
 - **BYOK routes:**
   - Must import `"server-only"`.

@@ -1,7 +1,6 @@
 /**
  * @fileoverview Agent monitoring dashboard page component powered by the shared
- * agent status store and realtime hook. All legacy mock data has been removed
- * per the FINAL-ONLY policy.
+ * agent status store and realtime hook.
  */
 
 "use client";

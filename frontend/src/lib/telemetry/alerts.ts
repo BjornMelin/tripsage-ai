@@ -3,7 +3,7 @@
  */
 
 import "server-only";
-import { TELEMETRY_SERVICE_NAME } from "@/lib/telemetry/constants";
+import { TELEMETRY_SERVICE_NAME, TELEMETRY_SILENT } from "@/lib/telemetry/constants";
 import { recordTelemetryEvent } from "@/lib/telemetry/span";
 
 export type AlertSeverity = "info" | "warning" | "error";
@@ -60,6 +60,11 @@ export function emitOperationalAlert(
     },
     level: severity,
   });
+
+  // Silence console sink when explicitly disabled (e.g., perf test runs)
+  if (TELEMETRY_SILENT) {
+    return;
+  }
 
   // 2. Emit to console for log drain consumption (allowed per AGENTS.md)
   const sink = severity === "error" ? console.error : console.warn;
