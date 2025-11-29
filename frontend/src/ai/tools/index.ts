@@ -79,12 +79,16 @@ export {
  * Only actual AI tools (not helper utilities) are included here.
  */
 export const toolRegistry = {
+  bookAccommodation,
+  checkAvailability,
   addConversationMemory,
+  getAccommodationDetails,
   combineSearchResults,
   createTravelPlan,
   getActivityDetails,
   getTravelAdvisory,
   lookupPoiContext,
+  searchAccommodations,
   saveTravelPlan,
   searchActivities,
   webSearch,
