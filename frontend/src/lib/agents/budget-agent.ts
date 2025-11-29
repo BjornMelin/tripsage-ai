@@ -26,6 +26,13 @@ import type { ChatMessage } from "@/lib/tokens/budget";
 import { clampMaxTokens } from "@/lib/tokens/budget";
 import { buildBudgetPrompt } from "@/prompts/agents";
 
+const TOOL_NAMES = {
+  combineResults: "combineSearchResults",
+  lookupPoi: "lookupPoiContext",
+  travelAdvisory: "getTravelAdvisory",
+  webSearchBatch: "webSearchBatch",
+} as const;
+
 /**
  * Create wrapped tools for budget agent with guardrails.
  *
@@ -37,10 +44,10 @@ import { buildBudgetPrompt } from "@/prompts/agents";
  * @returns AI SDK ToolSet for use with streamText.
  */
 function buildBudgetTools(identifier: string): ToolSet {
-  const webSearchBatchTool = getRegistryTool(toolRegistry, "webSearchBatch");
-  const poiTool = getRegistryTool(toolRegistry, "lookupPoiContext");
-  const combineTool = getRegistryTool(toolRegistry, "combineSearchResults");
-  const safetyTool = getRegistryTool(toolRegistry, "getTravelAdvisory");
+  const webSearchBatchTool = getRegistryTool(toolRegistry, TOOL_NAMES.webSearchBatch);
+  const poiTool = getRegistryTool(toolRegistry, TOOL_NAMES.lookupPoi);
+  const combineTool = getRegistryTool(toolRegistry, TOOL_NAMES.combineResults);
+  const safetyTool = getRegistryTool(toolRegistry, TOOL_NAMES.travelAdvisory);
 
   const rateLimit = buildRateLimit("budgetPlanning", identifier);
 
@@ -197,10 +204,7 @@ export function runBudgetAgent(
     () =>
       streamText({
         maxOutputTokens: maxTokens,
-        messages: [
-          { content: instructions, role: "system" },
-          { content: userPrompt, role: "user" },
-        ],
+        messages,
         model: deps.model,
         stopWhen: stepCountIs(10),
         temperature: config.parameters.temperature ?? 0.3,
@@ -209,3 +213,10 @@ export function runBudgetAgent(
       })
   );
 }
+
+/** Exported type for the budget agent's tool set. */
+export type BudgetTools = ReturnType<typeof buildBudgetTools>;
+
+/** Exported type for typed tool results from budget agent. */
+export type BudgetToolResult =
+  import("@ai/lib/tool-type-utils").ExtractToolResult<BudgetTools>;

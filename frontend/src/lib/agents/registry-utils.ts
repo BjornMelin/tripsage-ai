@@ -44,11 +44,14 @@ export const invokeTool = <Params, Result>(
       attributes: {
         hasCallOptions: Boolean(callOptions),
         toolDescription: tool.description ?? "unknown",
+        toolName: (tool as { name?: string }).name ?? "unknown",
       },
     },
     async () => {
       const result = tool.execute(params, callOptions);
-      return result instanceof Promise ? await result : result;
+      return result && typeof (result as { then?: unknown }).then === "function"
+        ? await Promise.resolve(result)
+        : result;
     }
   );
 };

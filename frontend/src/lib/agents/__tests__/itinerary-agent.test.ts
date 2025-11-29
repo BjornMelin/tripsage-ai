@@ -113,7 +113,7 @@ describe("runItineraryAgent", () => {
       webSearchBatch: { description: "batch", execute: batchExecute },
     });
 
-    runItineraryAgent(
+    await runItineraryAgent(
       { identifier: "user-1", model: createMockModel(), modelId: "mock" },
       baseConfig,
       baseInput

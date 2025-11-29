@@ -1,12 +1,17 @@
 /** @vitest-environment node */
 
 import { toolRegistry } from "@ai/tools";
+import type { AccommodationSearchParams } from "@schemas/accommodations";
 import type { AccommodationSearchRequest } from "@schemas/agents";
 import type { AgentConfig } from "@schemas/configuration";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { runAccommodationAgent } from "@/lib/agents/accommodation-agent";
 import { createMockModel } from "@/test/ai-sdk/mock-model";
 import { deepCloneValue } from "@/test-utils/deep-clone";
+
+interface StreamTextCall {
+  tools: Record<string, { execute: (params: unknown, callOpts?: unknown) => unknown }>;
+}
 
 const streamTextImpl = (options: unknown) =>
   ({
@@ -94,6 +99,43 @@ describe("runAccommodationAgent", () => {
     ).toThrow(/Tool searchAccommodations not registered/);
   });
 
+  it("throws when getAccommodationDetails tool is missing", () => {
+    (toolRegistry as Record<string, unknown>).getAccommodationDetails =
+      undefined as never;
+
+    expect(() =>
+      runAccommodationAgent(
+        { identifier: "user-3", model: createMockModel(), modelId: "mock" },
+        baseConfig,
+        baseInput
+      )
+    ).toThrow(/Tool getAccommodationDetails not registered/);
+  });
+
+  it("throws when checkAvailability tool is missing", () => {
+    (toolRegistry as Record<string, unknown>).checkAvailability = undefined as never;
+
+    expect(() =>
+      runAccommodationAgent(
+        { identifier: "user-3", model: createMockModel(), modelId: "mock" },
+        baseConfig,
+        baseInput
+      )
+    ).toThrow(/Tool checkAvailability not registered/);
+  });
+
+  it("throws when bookAccommodation tool is missing", () => {
+    (toolRegistry as Record<string, unknown>).bookAccommodation = undefined as never;
+
+    expect(() =>
+      runAccommodationAgent(
+        { identifier: "user-3", model: createMockModel(), modelId: "mock" },
+        baseConfig,
+        baseInput
+      )
+    ).toThrow(/Tool bookAccommodation not registered/);
+  });
+
   it("wraps accommodation tools and delegates execution", async () => {
     const searchExecute = vi.fn().mockResolvedValue({ results: [] });
     const detailsExecute = vi.fn().mockResolvedValue({ listing: {} });
@@ -107,20 +149,17 @@ describe("runAccommodationAgent", () => {
       searchAccommodations: { description: "search", execute: searchExecute },
     });
 
-    runAccommodationAgent(
+    await runAccommodationAgent(
       { identifier: "user-3", model: createMockModel(), modelId: "mock" },
       baseConfig,
       baseInput
     );
 
-    const call = streamTextMock.mock.calls[0]?.[0] as {
-      tools: Record<
-        string,
-        { execute: (params: unknown, callOpts?: unknown) => unknown }
-      >;
-    };
+    const call = streamTextMock.mock.calls[0]?.[0] as StreamTextCall | undefined;
     expect(call).toBeDefined();
-    const tools = call.tools;
+    expect(call?.tools).toBeDefined();
+    // biome-ignore lint/style/noNonNullAssertion: Assertion checked above with expect().toBeDefined()
+    const tools = call!.tools;
 
     const searchInput = { destination: "Lisbon" };
     const detailsInput = { listingId: "id1" };
@@ -158,5 +197,72 @@ describe("runAccommodationAgent", () => {
     );
     expect(createAiToolMock).toHaveBeenCalledTimes(4);
     expect(streamTextMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("handles tool execute throwing an error", async () => {
+    const searchExecute = vi.fn().mockRejectedValue(new Error("boom"));
+    const detailsExecute = vi.fn().mockResolvedValue({ listing: {} });
+    const availabilityExecute = vi.fn().mockResolvedValue({ bookingToken: "tok" });
+    const bookingExecute = vi.fn().mockResolvedValue({ status: "ok" });
+
+    Object.assign(toolRegistry, {
+      bookAccommodation: { description: "book", execute: bookingExecute },
+      checkAvailability: { description: "availability", execute: availabilityExecute },
+      getAccommodationDetails: { description: "details", execute: detailsExecute },
+      searchAccommodations: { description: "search", execute: searchExecute },
+    });
+
+    await runAccommodationAgent(
+      { identifier: "user-3", model: createMockModel(), modelId: "mock" },
+      baseConfig,
+      baseInput
+    );
+
+    const call = streamTextMock.mock.calls[0]?.[0] as StreamTextCall | undefined;
+    expect(call).toBeDefined();
+    expect(call?.tools).toBeDefined();
+    // biome-ignore lint/style/noNonNullAssertion: Assertion checked above with expect().toBeDefined()
+    const tools = call!.tools;
+
+    await expect(
+      tools.searchAccommodations.execute(
+        { destination: "Lisbon" },
+        { toolCallId: "tc1" }
+      )
+    ).rejects.toThrow("boom");
+    expect(streamTextMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("handles invalid input to tools", async () => {
+    const searchExecute = vi.fn().mockResolvedValue({ results: [] });
+    const detailsExecute = vi.fn().mockResolvedValue({ listing: {} });
+    const availabilityExecute = vi.fn().mockResolvedValue({ bookingToken: "tok" });
+    const bookingExecute = vi.fn().mockResolvedValue({ status: "ok" });
+
+    Object.assign(toolRegistry, {
+      bookAccommodation: { description: "book", execute: bookingExecute },
+      checkAvailability: { description: "availability", execute: availabilityExecute },
+      getAccommodationDetails: { description: "details", execute: detailsExecute },
+      searchAccommodations: { description: "search", execute: searchExecute },
+    });
+
+    await runAccommodationAgent(
+      { identifier: "user-3", model: createMockModel(), modelId: "mock" },
+      baseConfig,
+      baseInput
+    );
+
+    const call = streamTextMock.mock.calls[0]?.[0] as StreamTextCall | undefined;
+    expect(call).toBeDefined();
+    expect(call?.tools).toBeDefined();
+    // biome-ignore lint/style/noNonNullAssertion: Assertion checked above with expect().toBeDefined()
+    const tools = call!.tools;
+
+    await tools.searchAccommodations.execute(
+      { invalid: "input" } as unknown as AccommodationSearchParams,
+      { toolCallId: "tc1" }
+    );
+
+    expect(searchExecute).toHaveBeenCalled();
   });
 });

@@ -14,7 +14,7 @@ import { createToolError, type ToolErrorCode } from "@ai/tools/server/errors";
 import type { Span } from "@opentelemetry/api";
 import type { AgentWorkflowKind } from "@schemas/agents";
 import { Ratelimit } from "@upstash/ratelimit";
-import type { FlexibleSchema, ModelMessage, Tool, ToolCallOptions } from "ai";
+import type { FlexibleSchema, Tool, ToolCallOptions } from "ai";
 import { tool } from "ai";
 import { headers } from "next/headers";
 import { hashInputForCache } from "@/lib/cache/hash";
@@ -46,6 +46,8 @@ export type ToolOptions<InputValue, OutputValue> = {
   description: string;
   /** Schema accepted by AI SDK tools (supports Zod/Flexible schemas). */
   inputSchema: FlexibleSchema<InputValue>;
+  /** Optional output schema for runtime validation of tool results */
+  outputSchema?: FlexibleSchema<OutputValue>;
   /** Business logic implementation. */
   execute: ToolExecute<InputValue, OutputValue>;
 };
@@ -139,54 +141,6 @@ type CacheLookupResult<OutputValue> =
 const rateLimiterCache = new Map<string, InstanceType<typeof Ratelimit>>();
 
 /**
- * Attempts to extract user context from ToolCallOptions messages.
- *
- * AI SDK v6 ToolCallOptions provides messages[] but user context is typically
- * passed through request context (e.g., Supabase auth) rather than messages.
- * This helper checks message metadata or system messages as fallback.
- *
- * Currently unused but available for future use when tools need to extract
- * user context from ToolCallOptions.messages.
- *
- * @param messages Array of ModelMessage from ToolCallOptions.
- * @returns User context if found, undefined otherwise.
- */
-// biome-ignore lint/correctness/noUnusedVariables: Reserved for future use
-function extractUserContextFromMessages(
-  messages: ModelMessage[]
-): { userId?: string; sessionId?: string } | undefined {
-  // Check for user context in message metadata (if supported by AI SDK)
-  for (const message of messages) {
-    if (
-      message.role === "system" &&
-      typeof message.content === "string" &&
-      message.content.includes("user_id:")
-    ) {
-      // Try to extract from system message if it contains user context
-      const match = message.content.match(/user_id:([a-zA-Z0-9-]+)/);
-      if (match?.[1]) {
-        return { userId: match[1] };
-      }
-    }
-    // Check metadata if available (future-proofing for AI SDK updates)
-    if (
-      "metadata" in message &&
-      message.metadata &&
-      typeof message.metadata === "object"
-    ) {
-      const meta = message.metadata as Record<string, unknown>;
-      if (typeof meta.userId === "string") {
-        return {
-          sessionId: typeof meta.sessionId === "string" ? meta.sessionId : undefined,
-          userId: meta.userId,
-        };
-      }
-    }
-  }
-  return undefined;
-}
-
-/**
  * Creates an AI SDK tool with optional guardrails.
  *
  * @template InputValue - Input schema type for the tool.
@@ -263,6 +217,10 @@ export function createAiTool<InputValue, OutputValue>(
     },
     // biome-ignore lint/suspicious/noExplicitAny: Type assertion needed for generic wrapper
     inputSchema: options.inputSchema as any,
+    ...(options.outputSchema
+      ? // biome-ignore lint/suspicious/noExplicitAny: Type assertion needed for generic wrapper
+        { outputSchema: options.outputSchema as any }
+      : {}),
     // biome-ignore lint/suspicious/noExplicitAny: Type assertion needed for generic wrapper
   } as any) as Tool<InputValue, OutputValue>;
 }

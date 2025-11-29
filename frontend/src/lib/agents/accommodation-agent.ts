@@ -1,10 +1,9 @@
 /**
  * @fileoverview Accommodation search agent using AI SDK v6 streaming.
  *
- * Wraps accommodation search tools (search, geocode, POI lookup) with
- * guardrails (caching, rate limiting) and executes streaming text generation
- * to find and summarize accommodation options. Returns structured results
- * conforming to the accommodation search result schema.
+ * Executes accommodation search via tools (search, details, availability, booking)
+ * with rate limiting and streaming text generation. Returns structured results
+ * conforming to accommodation search schema.
  */
 
 import "server-only";
@@ -22,9 +21,13 @@ import {
   type AccommodationSearchParams,
   type AccommodationSearchResult,
   accommodationBookingInputSchema,
+  accommodationBookingOutputSchema,
   accommodationCheckAvailabilityInputSchema,
+  accommodationCheckAvailabilityOutputSchema,
   accommodationDetailsInputSchema,
+  accommodationDetailsOutputSchema,
   accommodationSearchInputSchema,
+  accommodationSearchOutputSchema,
 } from "@schemas/accommodations";
 import type { AccommodationSearchRequest } from "@schemas/agents";
 import type { LanguageModel, ToolSet } from "ai";
@@ -37,31 +40,22 @@ import { clampMaxTokens } from "@/lib/tokens/budget";
 import { buildAccommodationPrompt } from "@/prompts/agents";
 
 function buildAccommodationTools(identifier: string): ToolSet {
-  type SearchInput = AccommodationSearchParams;
-  type SearchResult = AccommodationSearchResult;
-  type DetailsInput = AccommodationDetailsParams;
-  type DetailsResult = AccommodationDetailsResult;
-  type AvailabilityInput = AccommodationCheckAvailabilityParams;
-  type AvailabilityResult = AccommodationCheckAvailabilityResult;
-  type BookingInput = AccommodationBookingRequest;
-  type BookingResult = AccommodationBookingResult;
-
-  const searchTool = getRegistryTool<SearchInput, SearchResult>(
-    toolRegistry,
-    "searchAccommodations"
-  );
-  const detailsTool = getRegistryTool<DetailsInput, DetailsResult>(
-    toolRegistry,
-    "getAccommodationDetails"
-  );
-  const availabilityTool = getRegistryTool<AvailabilityInput, AvailabilityResult>(
-    toolRegistry,
-    "checkAvailability"
-  );
-  const bookingTool = getRegistryTool<BookingInput, BookingResult>(
-    toolRegistry,
-    "bookAccommodation"
-  );
+  const searchTool = getRegistryTool<
+    AccommodationSearchParams,
+    AccommodationSearchResult
+  >(toolRegistry, "searchAccommodations");
+  const detailsTool = getRegistryTool<
+    AccommodationDetailsParams,
+    AccommodationDetailsResult
+  >(toolRegistry, "getAccommodationDetails");
+  const availabilityTool = getRegistryTool<
+    AccommodationCheckAvailabilityParams,
+    AccommodationCheckAvailabilityResult
+  >(toolRegistry, "checkAvailability");
+  const bookingTool = getRegistryTool<
+    AccommodationBookingRequest,
+    AccommodationBookingResult
+  >(toolRegistry, "bookAccommodation");
 
   const rateLimit = buildRateLimit("accommodationSearch", identifier);
 
@@ -88,6 +82,7 @@ function buildAccommodationTools(identifier: string): ToolSet {
     },
     inputSchema: accommodationSearchInputSchema,
     name: "searchAccommodations",
+    outputSchema: accommodationSearchOutputSchema,
   });
 
   const getAccommodationDetails = createAiTool({
@@ -107,6 +102,7 @@ function buildAccommodationTools(identifier: string): ToolSet {
     },
     inputSchema: accommodationDetailsInputSchema,
     name: "getAccommodationDetails",
+    outputSchema: accommodationDetailsOutputSchema,
   });
 
   const checkAvailability = createAiTool({
@@ -126,6 +122,7 @@ function buildAccommodationTools(identifier: string): ToolSet {
     },
     inputSchema: accommodationCheckAvailabilityInputSchema,
     name: "checkAvailability",
+    outputSchema: accommodationCheckAvailabilityOutputSchema,
   });
 
   const bookAccommodation = createAiTool({
@@ -145,6 +142,7 @@ function buildAccommodationTools(identifier: string): ToolSet {
     },
     inputSchema: accommodationBookingInputSchema,
     name: "bookAccommodation",
+    outputSchema: accommodationBookingOutputSchema,
   });
 
   return {
@@ -184,12 +182,14 @@ export function runAccommodationAgent(
   const desiredMaxTokens = config.parameters.maxTokens ?? 4096;
   const { maxTokens } = clampMaxTokens(messages, desiredMaxTokens, deps.modelId);
 
+  const maxSteps =
+    "maxSteps" in config.parameters && typeof config.parameters.maxSteps === "number"
+      ? config.parameters.maxSteps
+      : 10;
+
   const callOptions = {
     maxOutputTokens: maxTokens,
-    messages: [
-      { content: instructions, role: "system" },
-      { content: userPrompt, role: "user" },
-    ],
+    messages,
     model: deps.model,
     temperature: config.parameters.temperature ?? 0.3,
     tools: buildAccommodationTools(deps.identifier),
@@ -207,7 +207,14 @@ export function runAccommodationAgent(
     () =>
       streamText({
         ...callOptions,
-        stopWhen: stepCountIs(10),
+        stopWhen: stepCountIs(maxSteps),
       })
   );
 }
+
+/** Exported type for the accommodation agent's tool set. */
+export type AccommodationTools = ReturnType<typeof buildAccommodationTools>;
+
+/** Exported type for typed tool results from accommodation agent. */
+export type AccommodationToolResult =
+  import("@ai/lib/tool-type-utils").ExtractToolResult<AccommodationTools>;
