@@ -34,7 +34,6 @@ import {
 	updateTravelPlan,
 } from "./server/planning";
 import { getTravelAdvisory } from "./server/travel-advisory";
-import type { AiTool } from "./server/types";
 import { getCurrentWeather } from "./server/weather";
 import { crawlSite, crawlUrl } from "./server/web-crawl";
 import { webSearch } from "./server/web-search";
@@ -93,6 +92,4 @@ export const toolRegistry = {
 	searchActivities,
 	webSearch,
 	webSearchBatch,
-} satisfies Record<string, AiTool>;
-
-export type { AiTool };
+};
