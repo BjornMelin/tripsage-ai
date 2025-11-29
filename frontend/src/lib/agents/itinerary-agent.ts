@@ -16,6 +16,10 @@ import {
   createTravelPlanInputSchema,
   saveTravelPlanInputSchema,
 } from "@ai/tools/schemas/planning";
+import type {
+  WebSearchBatchResult,
+  WebSearchResult,
+} from "@ai/tools/schemas/web-search";
 import { webSearchInputSchema } from "@ai/tools/schemas/web-search";
 import { webSearchBatchInputSchema } from "@ai/tools/schemas/web-search-batch";
 import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
@@ -27,6 +31,7 @@ import { buildRateLimit } from "@/lib/ratelimit/config";
 import type { ChatMessage } from "@/lib/tokens/budget";
 import { clampMaxTokens } from "@/lib/tokens/budget";
 import { buildItineraryPrompt } from "@/prompts/agents";
+import { z } from "zod";
 
 /**
  * Create wrapped tools for itinerary agent with guardrails.
@@ -39,11 +44,32 @@ import { buildItineraryPrompt } from "@/prompts/agents";
  * @returns AI SDK ToolSet for use with streamText.
  */
 function buildItineraryTools(identifier: string): ToolSet {
-  const webSearchTool = getRegistryTool(toolRegistry, "webSearch");
-  const webSearchBatchTool = getRegistryTool(toolRegistry, "webSearchBatch");
-  const poiTool = getRegistryTool(toolRegistry, "lookupPoiContext");
-  const createPlanTool = getRegistryTool(toolRegistry, "createTravelPlan");
-  const savePlanTool = getRegistryTool(toolRegistry, "saveTravelPlan");
+  type WebSearchInput = z.infer<typeof webSearchInputSchema>;
+  type WebSearchBatchInput = z.infer<typeof webSearchBatchInputSchema>;
+  type LookupPoiInput = z.infer<typeof lookupPoiInputSchema>;
+  type CreateTravelPlanInput = z.infer<typeof createTravelPlanInputSchema>;
+  type SaveTravelPlanInput = z.infer<typeof saveTravelPlanInputSchema>;
+
+  const webSearchTool = getRegistryTool<WebSearchInput, WebSearchResult>(
+    toolRegistry,
+    "webSearch"
+  );
+  const webSearchBatchTool = getRegistryTool<WebSearchBatchInput, WebSearchBatchResult>(
+    toolRegistry,
+    "webSearchBatch"
+  );
+  const poiTool = getRegistryTool<LookupPoiInput, unknown>(
+    toolRegistry,
+    "lookupPoiContext"
+  );
+  const createPlanTool = getRegistryTool<CreateTravelPlanInput, unknown>(
+    toolRegistry,
+    "createTravelPlan"
+  );
+  const savePlanTool = getRegistryTool<SaveTravelPlanInput, unknown>(
+    toolRegistry,
+    "saveTravelPlan"
+  );
   const rateLimit = buildRateLimit("itineraryPlanning", identifier);
 
   const webSearch = createAiTool({

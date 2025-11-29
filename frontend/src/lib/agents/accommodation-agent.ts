@@ -22,6 +22,8 @@ import type { ChatMessage } from "@/lib/tokens/budget";
 import { clampMaxTokens } from "@/lib/tokens/budget";
 import { buildAccommodationPrompt } from "@/prompts/agents";
 
+// These tools are not part of the shared toolRegistry; keep the direct bundle
+// localized to this agent to avoid expanding the global registry surface.
 const ACCOMMODATION_TOOLS = {
   bookAccommodation,
   checkAvailability,
