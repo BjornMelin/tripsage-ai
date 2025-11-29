@@ -1,22 +1,24 @@
 /** @vitest-environment node */
 
 import type { ProviderResolution } from "@schemas/providers";
-import type { UIMessage } from "ai";
+import type { LanguageModel, UIMessage } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { TypedServerSupabase } from "@/lib/supabase/server";
 import type { ChatDeps } from "../_handler";
 import { handleChatStream } from "../_handler";
 
-const MOCK_SUPABASE = vi.hoisted(
-  () =>
-    ({
-      auth: {
-        getUser: vi.fn(async () => ({
-          data: { user: { id: "user-1" } },
-          error: null,
-        })),
-      },
-    }) as never
-);
+const MOCK_SUPABASE = vi.hoisted(() => {
+  const supabase = {
+    auth: {
+      getUser: vi.fn(async () => ({
+        data: { user: { id: "user-1" } },
+        error: null,
+      })),
+    },
+  } satisfies Pick<TypedServerSupabase, "auth">;
+
+  return supabase as unknown as TypedServerSupabase;
+});
 
 const MOCK_RESOLVE_PROVIDER = vi.hoisted(() =>
   vi.fn(
@@ -24,7 +26,8 @@ const MOCK_RESOLVE_PROVIDER = vi.hoisted(() =>
       model: {
         id: "gpt-4o-mini",
         providerId: "openai",
-      } as never,
+        // LanguageModel requires provider metadata; stream is injected in tests
+      } as unknown as LanguageModel,
       modelId: "gpt-4o-mini",
       provider: "openai" as const,
     })
@@ -35,14 +38,14 @@ const MOCK_RATE_LIMITER = vi.hoisted(() =>
   vi.fn(async () => ({
     limit: 40,
     remaining: 39,
-    reset: Date.now() + 60_000,
+    reset: 60_000,
     success: true,
   }))
 );
 
 describe("/api/chat/stream route smoke", () => {
   const createDeps = (overrides?: Partial<ChatDeps>): ChatDeps => ({
-    clock: { now: () => Date.now() },
+    clock: { now: () => 0 },
     config: { defaultMaxTokens: 1024 },
     limit: MOCK_RATE_LIMITER,
     logger: {
@@ -67,7 +70,7 @@ describe("/api/chat/stream route smoke", () => {
             error: { message: "Unauthorized" },
           })),
         },
-      } as never,
+      } as unknown as TypedServerSupabase,
     });
 
     const res = await handleChatStream(deps, { ip: "1.2.3.4", messages: [] });
@@ -79,7 +82,7 @@ describe("/api/chat/stream route smoke", () => {
       limit: vi.fn(async () => ({
         limit: 40,
         remaining: 0,
-        reset: Date.now() + 60_000,
+        reset: 60_000,
         success: false,
       })),
     });

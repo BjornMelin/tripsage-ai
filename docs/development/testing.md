@@ -239,9 +239,8 @@ await waitForStoreState(useAuthStore, (s) => !s.isLoading, 5000);
 ## Performance Benchmarks (Vitest)
 
 - Command: `pnpm -C frontend test:benchmark`
-  - Runs `vitest run --reporter=dot --reporter=json --outputFile=.vitest-reports/vitest-report.json`.
-  - Parses results via `scripts/benchmark-tests.ts` and writes `benchmark-summary.json` (used by CI thresholds).
-- Thresholds (current): suite <20s wall-clock; per-file hard fail >3.5s; warn >500ms. Adjust in `scripts/benchmark-tests.ts` if budgets change.
+  - Orchestrates `scripts/run-benchmark.mjs`, which shells to `vitest run --reporter=dot --reporter=json --outputFile=.vitest-reports/vitest-report.json` and then invokes `scripts/benchmark-tests.ts` to parse results into `benchmark-summary.json` (consumed by CI thresholds).
+- Thresholds (current defaults): suite <20s wall-clock; per-file hard fail >3.5s; warn >500ms. Override without code changes via env: `BENCHMARK_SUITE_THRESHOLD_MS`, `BENCHMARK_FILE_FAIL_MS`, `BENCHMARK_FILE_WARNING_MS` (all in milliseconds).
 - Artifacts: `.vitest-reports/vitest-report.json`, `benchmark-summary.json` (upload in CI).
 - Telemetry noise: set `TELEMETRY_SILENT=1` for ad-hoc perf runs to silence console sinks from operational alerts; default runs should leave it unset so alert tests continue to assert console output.
 - AI SDK: `MockLanguageModelV3`, `simulateReadableStream`, `createMockModelWithTracking`.
