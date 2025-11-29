@@ -5,33 +5,33 @@
  */
 
 import {
-  bookAccommodation,
-  checkAvailability,
-  getAccommodationDetails,
-  searchAccommodations,
+	bookAccommodation,
+	checkAvailability,
+	getAccommodationDetails,
+	searchAccommodations,
 } from "./server/accommodations";
 import { getActivityDetails, searchActivities } from "./server/activities";
 import {
-  denyApproval,
-  getApprovalStatus,
-  grantApproval,
-  requireApproval,
+	denyApproval,
+	getApprovalStatus,
+	grantApproval,
+	requireApproval,
 } from "./server/approvals";
 import {
-  createCalendarEvent,
-  exportItineraryToIcs,
-  getAvailability,
+	createCalendarEvent,
+	exportItineraryToIcs,
+	getAvailability,
 } from "./server/calendar";
 import { searchFlights } from "./server/flights";
 import { lookupPoiContext } from "./server/google-places";
 import { distanceMatrix, geocode } from "./server/maps";
 import { addConversationMemory, searchUserMemories } from "./server/memory";
 import {
-  combineSearchResults,
-  createTravelPlan,
-  deleteTravelPlan,
-  saveTravelPlan,
-  updateTravelPlan,
+	combineSearchResults,
+	createTravelPlan,
+	deleteTravelPlan,
+	saveTravelPlan,
+	updateTravelPlan,
 } from "./server/planning";
 import { getTravelAdvisory } from "./server/travel-advisory";
 import type { AiTool } from "./server/types";
@@ -41,36 +41,36 @@ import { webSearch } from "./server/web-search";
 import { webSearchBatch } from "./server/web-search-batch";
 
 export {
-  addConversationMemory,
-  bookAccommodation,
-  checkAvailability,
-  combineSearchResults,
-  crawlSite,
-  crawlUrl,
-  createCalendarEvent,
-  createTravelPlan,
-  deleteTravelPlan,
-  denyApproval,
-  distanceMatrix,
-  exportItineraryToIcs,
-  geocode,
-  getAccommodationDetails,
-  getActivityDetails,
-  getApprovalStatus,
-  getAvailability,
-  getCurrentWeather,
-  getTravelAdvisory,
-  grantApproval,
-  lookupPoiContext,
-  requireApproval,
-  saveTravelPlan,
-  searchAccommodations,
-  searchActivities,
-  searchFlights,
-  searchUserMemories,
-  updateTravelPlan,
-  webSearch,
-  webSearchBatch,
+	addConversationMemory,
+	bookAccommodation,
+	checkAvailability,
+	combineSearchResults,
+	crawlSite,
+	crawlUrl,
+	createCalendarEvent,
+	createTravelPlan,
+	deleteTravelPlan,
+	denyApproval,
+	distanceMatrix,
+	exportItineraryToIcs,
+	geocode,
+	getAccommodationDetails,
+	getActivityDetails,
+	getApprovalStatus,
+	getAvailability,
+	getCurrentWeather,
+	getTravelAdvisory,
+	grantApproval,
+	lookupPoiContext,
+	requireApproval,
+	saveTravelPlan,
+	searchAccommodations,
+	searchActivities,
+	searchFlights,
+	searchUserMemories,
+	updateTravelPlan,
+	webSearch,
+	webSearchBatch,
 };
 
 /**
@@ -79,20 +79,20 @@ export {
  * Only actual AI tools (not helper utilities) are included here.
  */
 export const toolRegistry = {
-  bookAccommodation,
-  checkAvailability,
-  addConversationMemory,
-  getAccommodationDetails,
-  combineSearchResults,
-  createTravelPlan,
-  getActivityDetails,
-  getTravelAdvisory,
-  lookupPoiContext,
-  searchAccommodations,
-  saveTravelPlan,
-  searchActivities,
-  webSearch,
-  webSearchBatch,
-};
+	addConversationMemory,
+	bookAccommodation,
+	checkAvailability,
+	combineSearchResults,
+	createTravelPlan,
+	getAccommodationDetails,
+	getActivityDetails,
+	getTravelAdvisory,
+	lookupPoiContext,
+	saveTravelPlan,
+	searchAccommodations,
+	searchActivities,
+	webSearch,
+	webSearchBatch,
+} satisfies Record<string, AiTool>;
 
 export type { AiTool };
