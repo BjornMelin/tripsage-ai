@@ -93,6 +93,6 @@ export const toolRegistry = {
   searchActivities,
   webSearch,
   webSearchBatch,
-} satisfies Record<string, AiTool>;
+};
 
 export type { AiTool };
