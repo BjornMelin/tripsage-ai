@@ -5,10 +5,10 @@
  * Usage: node scripts/test-memory-monitor.mjs [vitest args...]
  */
 
-import { performance } from "node:perf_hooks";
 import { spawn } from "node:child_process";
-import path from "node:path";
 import { existsSync } from "node:fs";
+import path from "node:path";
+import { performance } from "node:perf_hooks";
 
 function logMemory(tag) {
   const m = process.memoryUsage();
@@ -44,4 +44,3 @@ child.on("error", (err) => {
   console.error("[error] Failed to spawn vitest:", err);
   process.exit(1);
 });
-
