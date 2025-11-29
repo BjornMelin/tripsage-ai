@@ -1,6 +1,7 @@
 import type { AiTool, toolRegistry } from "@ai/tools";
 import type { ToolCallOptions } from "ai";
 import type { Tool } from "ai";
+import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 /** Strongly typed view of a tool from the shared registry; enforces execute presence. */
 export type RegisteredTool<Params = unknown, Result = unknown> = Tool<Params, Result> & {
@@ -35,6 +36,17 @@ export const invokeTool = <Params, Result>(
   params: Params,
   callOptions?: ToolCallOptions
 ): Promise<Result> => {
-  const result = tool.execute(params, callOptions);
-  return result instanceof Promise ? result : Promise.resolve(result);
+  return withTelemetrySpan(
+    "agent.tool.execute",
+    {
+      attributes: {
+        toolDescription: tool.description ?? "unknown",
+        hasCallOptions: Boolean(callOptions),
+      },
+    },
+    async () => {
+      const result = tool.execute(params, callOptions);
+      return result instanceof Promise ? await result : result;
+    }
+  );
 };
