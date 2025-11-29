@@ -51,4 +51,35 @@ describe("emitOperationalAlert", () => {
       severity: "warning",
     });
   });
+
+  it("suppresses console sink when TELEMETRY_SILENT=1", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const original = process.env.TELEMETRY_SILENT;
+
+    try {
+      process.env.TELEMETRY_SILENT = "1";
+
+      // Reimport to pick up the new environment variable
+      await vi.resetModules();
+      const { emitOperationalAlert: emitWithSilent } = await import(
+        "@/lib/telemetry/alerts"
+      );
+
+      emitWithSilent("redis.unavailable", {
+        attributes: { feature: "cache.tags" },
+        severity: "warning",
+      });
+
+      expect(warnSpy).not.toHaveBeenCalled();
+      expect(errorSpy).not.toHaveBeenCalled();
+    } finally {
+      // Ensure env is restored even if assertions fail
+      if (original === undefined) {
+        process.env.TELEMETRY_SILENT = undefined;
+      } else {
+        process.env.TELEMETRY_SILENT = original;
+      }
+    }
+  });
 });
