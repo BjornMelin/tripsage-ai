@@ -67,7 +67,11 @@ it("retries after delay", withFakeTimers(async () => {
 import { http, HttpResponse } from "msw";
 import { server } from "@/test/msw/server";
 
-server.use(http.get("https://api.example.com/items", () => HttpResponse.json({ error: "fail" }, { status: 500 })));
+server.use(
+  http.get("https://api.example.com/items", () =>
+    HttpResponse.json({ error: "fail" }, { status: 500 })
+  )
+);
 ```
 
 - Single handler override:
@@ -96,7 +100,12 @@ import { streamText } from "ai";
 import { createMockModelWithTracking } from "@/test/ai-sdk/mock-model";
 
 const { model, calls } = createMockModelWithTracking();
-const tools = { enrich: { parameters: z.strictObject({ id: z.string() }), execute: ({ id }: { id: string }) => `ok:${id}` } };
+const tools = {
+  enrich: {
+    parameters: z.strictObject({ id: z.string() }),
+    execute: ({ id }: { id: string }) => `ok:${id}`,
+  },
+};
 
 await streamText({ model, messages: [{ role: "user", content: "hi" }], tools });
 expect(calls[0]?.toolName).toBe("enrich");
@@ -110,10 +119,17 @@ expect(calls[0]?.toolName).toBe("enrich");
 ```ts
 /** @vitest-environment node */
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
+import {
+  createMockNextRequest,
+  getMockCookiesForTest,
+} from "@/test/route-helpers";
 
 vi.mock("next/headers", () => ({
-  cookies: vi.fn(() => Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))),
+  cookies: vi.fn(() =>
+    Promise.resolve(
+      getMockCookiesForTest({ "sb-access-token": "test-token" })
+    )
+  ),
 }));
 
 describe("/api/example", () => {
@@ -121,7 +137,11 @@ describe("/api/example", () => {
 
   it("handles request", async () => {
     const { POST } = await import("../route");
-    const req = createMockNextRequest({ method: "POST", url: "http://localhost/api/example", body: {} });
+    const req = createMockNextRequest({
+      method: "POST",
+      url: "http://localhost/api/example",
+      body: {},
+    });
     const res = await POST(req);
     expect(res.status).toBe(200);
   });
@@ -131,12 +151,21 @@ describe("/api/example", () => {
 Request creation with headers/cookies and rate-limit stubs:
 
 ```ts
-vi.mock("next/headers", () => ({ cookies: vi.fn(() => Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))) }));
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(() =>
+    Promise.resolve(
+      getMockCookiesForTest({ "sb-access-token": "test-token" })
+    )
+  ),
+}));
 
 const LIMIT_SPY = vi.hoisted(() => vi.fn());
 const MOCK_GET_REDIS = vi.hoisted(() => vi.fn());
 
-vi.mock("@/lib/rate-limit", () => ({ stubRateLimitEnabled: () => LIMIT_SPY(true), getRedisClient: MOCK_GET_REDIS }));
+vi.mock("@/lib/rate-limit", () => ({
+  stubRateLimitEnabled: () => LIMIT_SPY(true),
+  getRedisClient: MOCK_GET_REDIS,
+}));
 
 const req = createMockNextRequest({
   method: "POST",
@@ -161,8 +190,14 @@ vi.mock("@/lib/redis", () => ({
 }));
 
 vi.mock("@/lib/api/route-helpers", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/api/route-helpers")>("@/lib/api/route-helpers");
-  return { ...actual, withRequestSpan: vi.fn((_name, _attrs, fn) => fn()) };
+  const actual =
+    await vi.importActual<typeof import("@/lib/api/route-helpers")>(
+      "@/lib/api/route-helpers"
+    );
+  return {
+    ...actual,
+    withRequestSpan: vi.fn((_name, _attrs, fn) => fn()),
+  };
 });
 ```
 
@@ -183,7 +218,9 @@ Route test requirements checklist:
 ```ts
 import { resetStore, waitForStoreState } from "@/test/store-helpers";
 
-beforeEach(() => resetStore(useAuthStore, { user: null, isLoading: false, error: null }));
+beforeEach(() =>
+  resetStore(useAuthStore, { user: null, isLoading: false, error: null })
+);
 await waitForStoreState(useAuthStore, (s) => !s.isLoading, 5000);
 ```
 
@@ -198,6 +235,14 @@ await waitForStoreState(useAuthStore, (s) => !s.isLoading, 5000);
 - Query helpers: `createMockQueryClient`, `createControlledQuery/Mutation` in `@/test/query-mocks.tsx`.
 - Route helpers: `createMockNextRequest`, `getMockCookiesForTest` in `@/test/route-helpers`.
 - Upstash: `setupUpstashMocks` and `@/test/msw/handlers/upstash`.
+
+## Performance Benchmarks (Vitest)
+
+- Command: `pnpm -C frontend test:benchmark`
+  - Orchestrates `scripts/run-benchmark.mjs`, which shells to `vitest run --reporter=dot --reporter=json --outputFile=.vitest-reports/vitest-report.json` and then invokes `scripts/benchmark-tests.ts` to parse results into `benchmark-summary.json` (consumed by CI thresholds).
+- Thresholds (current defaults): suite <20s wall-clock; per-file hard fail >3.5s; warn >500ms. Override without code changes via env: `BENCHMARK_SUITE_THRESHOLD_MS`, `BENCHMARK_FILE_FAIL_MS`, `BENCHMARK_FILE_WARNING_MS` (all in milliseconds).
+- Artifacts: `.vitest-reports/vitest-report.json`, `benchmark-summary.json` (upload in CI).
+- Telemetry noise: set `TELEMETRY_SILENT=1` for ad-hoc perf runs to silence console sinks from operational alerts; default runs should leave it unset so alert tests continue to assert console output.
 - AI SDK: `MockLanguageModelV3`, `simulateReadableStream`, `createMockModelWithTracking`.
 - Factories: `@/test/factories/*` for schema-valid fixtures.
 
@@ -231,6 +276,113 @@ await waitForStoreState(useAuthStore, (s) => !s.isLoading, 5000);
 - Keep tests under ~3s/file; profile with `vitest run --project=<name> --inspect` for slow cases.
 - Prefer MSW over `vi.mock` for HTTP; avoid snapshot tests for dynamic UI; avoid shared mutable singletons; clean timers/intervals/stores in `afterEach`.
 - Do not use global fake timers; avoid mocking `fetch`; keep handler data minimal (no large fixtures).
+
+### Performance Optimization Patterns
+
+Apply these patterns to slow tests (>500ms):
+
+#### Pattern A: Hoisted Mocks (replaces `vi.resetModules`)
+
+```ts
+// Instead of vi.resetModules() + vi.doMock() in beforeEach:
+const mockFn = vi.hoisted(() => vi.fn());
+vi.mock("./module", () => ({ fn: mockFn }));
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  mockFn.mockReset();
+});
+
+// Single import after mocks
+import { handler } from "./handler";
+```
+
+#### Pattern B: Fake Timers with Network Requests
+
+When using fake timers with MSW, use `shouldAdvanceTime` to avoid
+blocking network requests. For single tests, use `withFakeTimers` (it
+creates and tears down timers around one test). For suite-level setups,
+use `createFakeTimersContext`, which applies the same options but
+exposes `setup/teardown` helpers so multiple tests can share the timer
+configuration without repeating boilerplate:
+
+```ts
+import { createFakeTimersContext } from "@/test/utils/with-fake-timers";
+
+describe("Debounced search with API calls", () => {
+  // shouldAdvanceTime allows MSW requests to complete during fake timer use
+  const timers = createFakeTimersContext({ shouldAdvanceTime: true });
+
+  beforeEach(() => {
+    timers.setup();
+  });
+
+  afterEach(() => {
+    timers.teardown();
+  });
+
+  it("debounces input and fetches results", async () => {
+    fireEvent.change(input, { target: { value: "test" } });
+    await act(async () => {
+      vi.advanceTimersByTime(350);
+      await vi.runAllTimersAsync();
+    });
+    expect(mockApi).toHaveBeenCalled();
+  });
+});
+```
+
+#### Pattern C: Static Import with State Reset
+
+```ts
+const mockState = vi.hoisted(() => ({ value: null }));
+vi.mock("@/hooks/use-data", () => ({
+  useData: () => mockState.value,
+}));
+
+import { Component } from "../component"; // Single load
+
+beforeEach(() => {
+  mockState.value = null; // Reset per test
+});
+```
+
+#### Pattern D: Shared QueryClient
+
+Use `createMockQueryClient` from `@/test/query-mocks`:
+
+```ts
+import { createMockQueryClient } from "@/test/query-mocks";
+
+const QUERY_CLIENT = createMockQueryClient();
+
+afterEach(() => {
+  QUERY_CLIENT.clear(); // Clear cache, don't recreate
+});
+```
+
+#### Pattern E: Node Environment for Export Tests
+
+Use `/** @vitest-environment node */` for tests that only verify exports
+(no DOM needed):
+
+```ts
+/** @vitest-environment node */
+import { describe, expect, it, vi } from "vitest";
+
+// Mock child components to avoid DOM dependencies
+vi.mock("../child-component", () => ({ ChildComponent: () => null }));
+
+import * as moduleExports from "../index";
+
+describe("Module exports", () => {
+  it("exports expected symbols", () => {
+    expect(moduleExports.handler).toBeDefined();
+    expect(moduleExports.config).toBeDefined();
+    expect(typeof moduleExports.handler).toBe("function");
+  });
+});
+```
 
 ## References and Examples
 
