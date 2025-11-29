@@ -655,7 +655,7 @@ export const userStoreStateSchema = z
       })
       .nullable(),
   })
-  .merge(LOADING_STATE_SCHEMA);
+  .extend(LOADING_STATE_SCHEMA.shape);
 
 /** TypeScript type for user store state. */
 export type UserStoreState = z.infer<typeof userStoreStateSchema>;
@@ -719,7 +719,7 @@ export const searchStoreStateSchema = z
       })
       .optional(),
   })
-  .merge(LOADING_STATE_SCHEMA);
+  .extend(LOADING_STATE_SCHEMA.shape);
 
 /** TypeScript type for search store state. */
 export type SearchStoreState = z.infer<typeof searchStoreStateSchema>;
@@ -773,7 +773,7 @@ export const tripStoreStateSchema = z
     }),
     trips: z.array(storeTripSchema),
   })
-  .merge(LOADING_STATE_SCHEMA);
+  .extend(LOADING_STATE_SCHEMA.shape);
 
 /** TypeScript type for trip store state. */
 export type TripStoreState = z.infer<typeof tripStoreStateSchema>;
@@ -837,7 +837,7 @@ export const chatStoreStateSchema = z
     isTyping: z.boolean(),
     typingUsers: z.array(z.string()),
   })
-  .merge(LOADING_STATE_SCHEMA);
+  .extend(LOADING_STATE_SCHEMA.shape);
 
 /** TypeScript type for chat store state. */
 export type ChatStoreState = z.infer<typeof chatStoreStateSchema>;
@@ -1003,7 +1003,7 @@ export const budgetStoreStateSchema = z
       .nullable(),
     exchangeRates: z.record(z.string(), z.number().positive()),
   })
-  .merge(LOADING_STATE_SCHEMA);
+  .extend(LOADING_STATE_SCHEMA.shape);
 
 /** TypeScript type for budget store state. */
 export type BudgetStoreState = z.infer<typeof budgetStoreStateSchema>;
@@ -1057,7 +1057,7 @@ export const apiKeyStoreStateSchema = z
       })
     ),
   })
-  .merge(LOADING_STATE_SCHEMA);
+  .extend(LOADING_STATE_SCHEMA.shape);
 
 /** TypeScript type for API key store state. */
 export type ApiKeyStoreState = z.infer<typeof apiKeyStoreStateSchema>;
