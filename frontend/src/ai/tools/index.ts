@@ -74,13 +74,8 @@ export {
 };
 
 /**
- * Typed tool registry used by higher-level agents.
- *
- * Uses AI SDK v6 `ToolSet` type for compile-time validation that all entries
- * are valid tools. This preserves full type inference while ensuring structural
- * correctness for tool collections passed to generateText/streamText.
- *
- * Only actual AI tools (not helper utilities) are included here.
+ * Typed tool registry for AI SDK v6 generateText/streamText.
+ * Satisfies ToolSet for compile-time validation; includes only executable tools.
  */
 export const toolRegistry = {
   addConversationMemory,
