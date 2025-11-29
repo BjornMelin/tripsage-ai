@@ -17,7 +17,7 @@ import {
 } from "@ai/tools";
 import type { AccommodationSearchRequest } from "@schemas/agents";
 import type { LanguageModel, ToolSet } from "ai";
-import { streamText } from "ai";
+import { stepCountIs, streamText } from "ai";
 import type { ChatMessage } from "@/lib/tokens/budget";
 import { clampMaxTokens } from "@/lib/tokens/budget";
 import { buildAccommodationPrompt } from "@/prompts/agents";
@@ -71,7 +71,7 @@ export function runAccommodationAgent(
   } satisfies Parameters<typeof streamText>[0];
 
   return streamText({
-    maxSteps: 10,
     ...callOptions,
-  } as Parameters<typeof streamText>[0] & { maxSteps: number });
+    stopWhen: stepCountIs(10),
+  });
 }
