@@ -301,9 +301,11 @@ import { handler } from "./handler";
 #### Pattern B: Fake Timers with Network Requests
 
 When using fake timers with MSW, use `shouldAdvanceTime` to avoid
-blocking network requests. For single tests, use `withFakeTimers`. For
-test suites needing fake timers throughout, use `createFakeTimersContext`
-in describe-level setup:
+blocking network requests. For single tests, use `withFakeTimers` (it
+creates and tears down timers around one test). For suite-level setups,
+use `createFakeTimersContext`, which applies the same options but
+exposes `setup/teardown` helpers so multiple tests can share the timer
+configuration without repeating boilerplate:
 
 ```ts
 import { createFakeTimersContext } from "@/test/utils/with-fake-timers";

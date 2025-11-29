@@ -64,14 +64,6 @@ describe("webSearch", () => {
     mockGetRedis.mockReturnValue(null);
     mockRatelimitLimit.mockResolvedValue({ success: true });
     mockGetServerEnvVar.mockReturnValue("test_key");
-    mockGetServerEnvVarWithFallback.mockImplementation(
-      (key: string, fallback?: string) => {
-        if (key === "FIRECRAWL_API_KEY") return "test_key";
-        if (key === "FIRECRAWL_BASE_URL")
-          return fallback || "https://api.firecrawl.dev/v2";
-        return fallback;
-      }
-    );
   });
 
   afterEach(() => {

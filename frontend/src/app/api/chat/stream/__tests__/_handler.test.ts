@@ -7,6 +7,7 @@ import type { ChatDeps, ProviderResolver } from "../_handler";
 
 const streamTextMock = vi.hoisted(() =>
   vi.fn(() => ({
+    response: Promise.resolve({ messages: [] as UIMessage[] }),
     toUIMessageStreamResponse: () =>
       new Response(
         new ReadableStream({

@@ -2,6 +2,7 @@
 
 import { screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { renderWithProviders } from "@/test/test-utils";
 import { createFakeTimersContext } from "@/test/utils/with-fake-timers";
 
@@ -215,9 +216,16 @@ describe("RecentTrips", () => {
   it("formats dates correctly", () => {
     setTrips([MockTrips[0]]);
     const { container } = renderWithProviders(<RecentTrips limit={1} />);
-    // Assert US short month format regardless of specific dates present
-    const shortDatePattern = /[A-Z][a-z]{2} \d{1,2}, \d{4}/;
-    expect(within(container).getAllByText(shortDatePattern).length).toBeGreaterThan(0);
+    const expectedStart = DateUtils.format(
+      DateUtils.parse(MockTrips[0].startDate as string),
+      "MMM d, yyyy"
+    );
+    const expectedEnd = DateUtils.format(
+      DateUtils.parse(MockTrips[0].endDate as string),
+      "MMM d, yyyy"
+    );
+    const expectedRange = `${expectedStart} - ${expectedEnd}`;
+    expect(within(container).getByText(expectedRange)).toBeInTheDocument();
   });
 
   it("handles missing trip description gracefully", () => {

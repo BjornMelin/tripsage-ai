@@ -136,6 +136,7 @@ function checkBoundaries() {
       content.includes('"use client"') || content.includes("'use client'");
 
     if (isClientComponent) {
+      const packageViolations = new Set();
       // Check for server-only imports
       for (const serverPackage of SERVER_ONLY_PACKAGES) {
         // Escape special regex characters in package name
@@ -162,17 +163,21 @@ function checkBoundaries() {
           const matches = content.match(regex);
 
           if (matches) {
-            console.error(`❌ BOUNDARY VIOLATION: ${relativePath}`);
-            console.error(
-              `   Client component imports server-only package: ${serverPackage}`
-            );
-            console.error(`   Matches: ${matches.join(", ")}`);
-            console.error("");
+            if (!packageViolations.has(serverPackage)) {
+              console.error(`❌ BOUNDARY VIOLATION: ${relativePath}`);
+              console.error(
+                `   Client component imports server-only package: ${serverPackage}`
+              );
+              console.error(`   Matches: ${matches.join(", ")}`);
+              console.error("");
 
-            violationsCount++;
+              packageViolations.add(serverPackage);
+            }
           }
         }
       }
+
+      violationsCount += packageViolations.size;
 
       // Check for direct database operations that indicate server usage
       // Use precise regex to match supabase.from() or db.from(), not Array.from()

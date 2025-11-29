@@ -4,6 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { emitOperationalAlert } from "@/lib/telemetry/alerts";
 import { TELEMETRY_SERVICE_NAME } from "@/lib/telemetry/constants";
 
+vi.mock("@/lib/telemetry/span", () => ({
+  recordTelemetryEvent: vi.fn(),
+}));
+
 describe("emitOperationalAlert", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -65,6 +69,7 @@ describe("emitOperationalAlert", () => {
       const { emitOperationalAlert: emitWithSilent } = await import(
         "@/lib/telemetry/alerts"
       );
+      const { recordTelemetryEvent } = await import("@/lib/telemetry/span");
 
       emitWithSilent("redis.unavailable", {
         attributes: { feature: "cache.tags" },
@@ -73,13 +78,19 @@ describe("emitOperationalAlert", () => {
 
       expect(warnSpy).not.toHaveBeenCalled();
       expect(errorSpy).not.toHaveBeenCalled();
+      expect(recordTelemetryEvent).toHaveBeenCalledWith(
+        "alert.redis.unavailable",
+        expect.objectContaining({ level: "warning" })
+      );
     } finally {
       // Ensure env is restored even if assertions fail
       if (original === undefined) {
-        process.env.TELEMETRY_SILENT = undefined;
+        Reflect.deleteProperty(process.env, "TELEMETRY_SILENT");
       } else {
         process.env.TELEMETRY_SILENT = original;
       }
+      // Restore module state to avoid affecting other tests
+      await vi.resetModules();
     }
   });
 });
