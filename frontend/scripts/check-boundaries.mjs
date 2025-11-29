@@ -80,7 +80,7 @@ function findFiles(dir, files = []) {
   let items;
   try {
     items = fs.readdirSync(dir);
-  } catch (error) {
+  } catch (_error) {
     console.warn(`⚠️  Could not read directory: ${dir}`);
     return files;
   }
@@ -90,7 +90,7 @@ function findFiles(dir, files = []) {
     let stat;
     try {
       stat = fs.statSync(fullPath);
-    } catch (error) {
+    } catch (_error) {
       continue;
     }
 
@@ -139,8 +139,16 @@ function checkBoundaries() {
   }
 
   for (const file of allFiles) {
-    const content = fs.readFileSync(file, "utf8");
     const relativePath = path.relative(path.join(DIRNAME, ".."), file);
+    let content;
+    try {
+      content = fs.readFileSync(file, "utf8");
+    } catch (error) {
+      console.warn(
+        `⚠️  Could not read file: ${relativePath} — ${(error instanceof Error && error.message) || error}`
+      );
+      continue;
+    }
 
     // Check if this is a client component
     const isClientComponent =
