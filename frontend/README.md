@@ -374,59 +374,53 @@ fast and maintainable:
 pnpm test:benchmark
 ```
 
-This command:
+Runs vitest with JSON output, then analyzes results:
 
-- Runs the full test suite with JSON output
 - Calculates per-file durations and percentiles (P50, P90, P95)
-- Validates performance thresholds:
-  - Suite duration: <10s (hard gate)
-  - Individual files: <500ms (soft warning), <2s (hard fail)
-- Outputs `benchmark-summary.json` with detailed metrics
+- Validates thresholds:
+  - Suite: <20s (configurable via `BENCHMARK_SUITE_THRESHOLD_MS`)
+  - Files: >500ms warning, >3.5s fail (configurable via
+    `BENCHMARK_FILE_WARNING_MS`, `BENCHMARK_FILE_FAIL_MS`)
+- Outputs `.vitest-reports/vitest-report.json` and `benchmark-summary.json`
 
-**Performance Targets:**
+#### Test Failure Analysis
 
-- Full suite: <10 seconds
-- Store tests: <3 seconds
-- Component tests: <4 seconds
-- Individual test files: <500ms (warning), <2s (fail)
+```bash
+pnpm test:analyze      # Analyze failures from vitest JSON report
+pnpm test:analyze:all  # Full analysis with performance summary
+```
 
-**Interpreting Results:**
+Categorizes failures by type (route context, browser env, schema, async,
+mocks, behavior drift) for targeted debugging. Reads from
+`.vitest-reports/vitest-report.json` by default.
 
-- **Suite duration**: Total wall-clock time for all tests (parallel
-  execution)
-- **Percentiles**: Distribution of test file durations (P90 = 90% of files
-  run faster)
-- **Slow files**: Files exceeding 500ms threshold (investigate for
-  optimization)
-- **Threshold violations**: Files exceeding 2s or suite exceeding 10s
-  (must fix)
+### Operations CLI
 
-**Investigating Performance Issues:**
+Consolidated infrastructure and AI configuration checks:
 
-1. Check `benchmark-summary.json` for slow files
-2. Review test setup/teardown for unnecessary work
-3. Look for unoptimized mocks or heavy imports
-4. Consider splitting large test files
+```bash
+pnpm ops infra check supabase  # Supabase auth health + storage
+pnpm ops infra check upstash   # Redis ping + QStash probe
+pnpm ops ai check config       # AI Gateway/BYOK credential check
+pnpm ops check all             # Run all checks with summary
+```
 
-Benchmarks are automatically run in CI and failures block merges.
+See `scripts/ops.ts` for implementation details.
+
+### Utility Scripts
+
+| Script                     | Purpose                                    |
+| -------------------------- | ------------------------------------------ |
+| `scripts/run-benchmark.mjs` | Wrapper: runs vitest + benchmark analysis |
+| `scripts/benchmark-tests.ts` | Parses vitest JSON, calculates metrics   |
+| `scripts/check-boundaries.mjs` | Detects server-only imports in client code |
+| `scripts/test-memory-monitor.mjs` | Memory/timing monitor for test runs  |
+| `scripts/ops.ts`           | Consolidated ops CLI (infra, AI, tests)   |
 
 ### Maintenance
 
-No Git hooks setup is required in the frontend. Repository-level hooks are
-managed via pre-commit in the repo root.
-
-### Code Mods (AI SDK v6 migration)
-
-```bash
-pnpm codemod:ai-route:dry     # Dry run: Update AI routes
-pnpm codemod:ai-route         # Update AI routes
-pnpm codemod:ai-messages:dry  # Dry run: Convert AI messages
-pnpm codemod:ai-messages      # Convert AI messages
-pnpm codemod:tests-env:dry    # Dry run: Update test env stubs
-pnpm codemod:tests-env        # Update test env stubs
-pnpm codemod:validate         # Validate codemod changes
-pnpm codemod:check-idempotency # Check codemod idempotency
-```
+No Git hooks required in frontend. Repository-level hooks are managed via
+pre-commit in the repo root.
 
 ## Project Structure
 
