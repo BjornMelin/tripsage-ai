@@ -5,10 +5,7 @@
 
 import "server-only";
 
-import type {
-  ApprovalStatus,
-  ToolExecutionContext,
-} from "@ai/tools/schemas/tools";
+import type { ApprovalStatus, ToolExecutionContext } from "@ai/tools/schemas/tools";
 import { getRedis } from "@/lib/redis";
 
 const KEY = (sessionId: string, action: string, idempotencyKey?: string) =>

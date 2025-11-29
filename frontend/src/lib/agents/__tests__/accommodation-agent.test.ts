@@ -101,10 +101,10 @@ describe("runAccommodationAgent", () => {
     const bookingExecute = vi.fn().mockResolvedValue({ status: "ok" });
 
     Object.assign(toolRegistry, {
-      searchAccommodations: { description: "search", execute: searchExecute },
-      getAccommodationDetails: { description: "details", execute: detailsExecute },
-      checkAvailability: { description: "availability", execute: availabilityExecute },
       bookAccommodation: { description: "book", execute: bookingExecute },
+      checkAvailability: { description: "availability", execute: availabilityExecute },
+      getAccommodationDetails: { description: "details", execute: detailsExecute },
+      searchAccommodations: { description: "search", execute: searchExecute },
     });
 
     runAccommodationAgent(
@@ -124,7 +124,15 @@ describe("runAccommodationAgent", () => {
 
     const searchInput = { destination: "Lisbon" };
     const detailsInput = { listingId: "id1" };
-    const availabilityInput = { priceCheckToken: "pct", propertyId: "p1", rateId: "r1", roomId: "room1", checkIn: "2025-06-01", checkOut: "2025-06-05", guests: 2 };
+    const availabilityInput = {
+      checkIn: "2025-06-01",
+      checkOut: "2025-06-05",
+      guests: 2,
+      priceCheckToken: "pct",
+      propertyId: "p1",
+      rateId: "r1",
+      roomId: "room1",
+    };
     const bookingInput = { bookingToken: "b1" };
 
     await tools.searchAccommodations.execute(searchInput, { toolCallId: "tc1" });

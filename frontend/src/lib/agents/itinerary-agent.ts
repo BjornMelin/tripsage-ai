@@ -26,13 +26,13 @@ import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
 import type { ItineraryPlanRequest } from "@schemas/agents";
 import type { LanguageModel, ToolSet } from "ai";
 import { stepCountIs, streamText } from "ai";
+import type { z } from "zod";
 import { getRegistryTool, invokeTool } from "@/lib/agents/registry-utils";
 import { buildRateLimit } from "@/lib/ratelimit/config";
+import { withTelemetrySpan } from "@/lib/telemetry/span";
 import type { ChatMessage } from "@/lib/tokens/budget";
 import { clampMaxTokens } from "@/lib/tokens/budget";
 import { buildItineraryPrompt } from "@/prompts/agents";
-import { withTelemetrySpan } from "@/lib/telemetry/span";
-import { z } from "zod";
 
 /**
  * Create wrapped tools for itinerary agent with guardrails.
@@ -245,8 +245,8 @@ export function runItineraryAgent(
     "agent.itinerary.run",
     {
       attributes: {
-        modelId: deps.modelId,
         identifier: deps.identifier,
+        modelId: deps.modelId,
       },
     },
     () =>
