@@ -6,41 +6,48 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ChatDeps } from "../_handler";
 import { handleChatStream } from "../_handler";
 
-describe("/api/chat/stream route smoke", () => {
-  const mockSupabase = {
-    auth: {
-      getUser: vi.fn(async () => ({
-        data: { user: { id: "user-1" } },
-        error: null,
-      })),
-    },
-  } as never;
+const MOCK_SUPABASE = vi.hoisted(
+  () =>
+    ({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: { user: { id: "user-1" } },
+          error: null,
+        })),
+      },
+    }) as never
+);
 
-  const mockResolveProvider = vi.fn(
+const MOCK_RESOLVE_PROVIDER = vi.hoisted(() =>
+  vi.fn(
     async (): Promise<ProviderResolution> => ({
       model: {} as never,
       modelId: "gpt-4o-mini",
       provider: "openai" as const,
     })
-  );
+  )
+);
 
-  const mockRateLimiter = vi.fn(async () => ({
+const MOCK_RATE_LIMITER = vi.hoisted(() =>
+  vi.fn(async () => ({
     limit: 40,
     remaining: 39,
-    reset: Date.now() + 60000,
+    reset: Date.now() + 60_000,
     success: true,
-  }));
+  }))
+);
 
+describe("/api/chat/stream route smoke", () => {
   const createDeps = (overrides?: Partial<ChatDeps>): ChatDeps => ({
     clock: { now: () => Date.now() },
     config: { defaultMaxTokens: 1024 },
-    limit: mockRateLimiter,
+    limit: MOCK_RATE_LIMITER,
     logger: {
       error: vi.fn(),
       info: vi.fn(),
     },
-    resolveProvider: mockResolveProvider,
-    supabase: mockSupabase,
+    resolveProvider: MOCK_RESOLVE_PROVIDER,
+    supabase: MOCK_SUPABASE,
     ...overrides,
   });
 
@@ -60,12 +67,7 @@ describe("/api/chat/stream route smoke", () => {
       } as never,
     });
 
-    const payload = {
-      ip: "1.2.3.4",
-      messages: [],
-    };
-
-    const res = await handleChatStream(deps, payload);
+    const res = await handleChatStream(deps, { ip: "1.2.3.4", messages: [] });
     expect(res.status).toBe(401);
   });
 
@@ -74,17 +76,12 @@ describe("/api/chat/stream route smoke", () => {
       limit: vi.fn(async () => ({
         limit: 40,
         remaining: 0,
-        reset: Date.now() + 60000,
+        reset: Date.now() + 60_000,
         success: false,
       })),
     });
 
-    const payload = {
-      ip: "1.2.3.4",
-      messages: [],
-    };
-
-    const res = await handleChatStream(deps, payload);
+    const res = await handleChatStream(deps, { ip: "1.2.3.4", messages: [] });
     expect(res.status).toBe(429);
     expect(res.headers.get("Retry-After")).toBe("60");
   });

@@ -13,7 +13,7 @@ import type {
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import React, { type ReactNode } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/api/error-types";
 import {
   useAddConversationMemory,
@@ -24,8 +24,9 @@ import {
   useUpdatePreferences,
 } from "../use-memory";
 
-// Mock the useAuthenticatedApi hook with sync responses
-const MOCK_MAKE_AUTHENTICATED_REQUEST = vi.fn();
+// Hoisted mock for authenticated API
+const MOCK_MAKE_AUTHENTICATED_REQUEST = vi.hoisted(() => vi.fn());
+
 vi.mock("../use-authenticated-api", () => ({
   useAuthenticatedApi: () => ({
     isAuthenticated: true,
@@ -33,33 +34,42 @@ vi.mock("../use-authenticated-api", () => ({
   }),
 }));
 
-// Test wrapper with QueryClient
-const CREATE_WRAPPER = () => {
-  const queryClient = new QueryClient({
+/**
+ * Creates a fresh QueryClient for each test to avoid leaking state.
+ * Using clear() alone doesn't fully reset internal observers/subscriptions.
+ */
+function createTestQueryClient() {
+  return new QueryClient({
     defaultOptions: {
       mutations: { retry: false },
-      queries: { retry: false },
+      queries: { retry: false, staleTime: 0 },
     },
   });
+}
 
+function createTestWrapper(queryClient: QueryClient) {
   return function TestWrapper({ children }: { children: ReactNode }) {
     return React.createElement(QueryClientProvider, { client: queryClient }, children);
   };
-};
+}
 
 describe("Memory Hooks", () => {
+  let queryClient: QueryClient;
+  let wrapper: ({ children }: { children: ReactNode }) => React.ReactElement;
+
   beforeEach(() => {
+    // Ensure real timers in case a previous test left fake timers enabled
     vi.useRealTimers();
     vi.clearAllMocks();
-    MOCK_MAKE_AUTHENTICATED_REQUEST.mockReset();
+    queryClient = createTestQueryClient();
+    wrapper = createTestWrapper(queryClient);
+  });
+
+  afterEach(() => {
+    queryClient.clear();
   });
 
   describe("useMemoryContext", () => {
-    const renderContext = (userId = "user-123", enabled = true) =>
-      renderHook(() => useMemoryContext(userId, enabled), {
-        wrapper: CREATE_WRAPPER(),
-      });
-
     it("should fetch memory context for user", async () => {
       const mockResponse: MemoryContextResponse = {
         context: {
@@ -81,7 +91,9 @@ describe("Memory Hooks", () => {
       };
       MOCK_MAKE_AUTHENTICATED_REQUEST.mockResolvedValueOnce(mockResponse);
 
-      const { result } = renderContext();
+      const { result } = renderHook(() => useMemoryContext("user-123", true), {
+        wrapper,
+      });
 
       await waitFor(() => expect(result.current.data).toEqual(mockResponse));
       expect(MOCK_MAKE_AUTHENTICATED_REQUEST).toHaveBeenCalledWith(
@@ -90,7 +102,7 @@ describe("Memory Hooks", () => {
     });
 
     it("should not fetch when userId is empty", () => {
-      renderContext("");
+      renderHook(() => useMemoryContext("", true), { wrapper });
       expect(MOCK_MAKE_AUTHENTICATED_REQUEST).not.toHaveBeenCalled();
     });
 
@@ -98,18 +110,15 @@ describe("Memory Hooks", () => {
       const apiError = new ApiError({ message: "Unauthorized", status: 401 });
       MOCK_MAKE_AUTHENTICATED_REQUEST.mockRejectedValueOnce(apiError);
 
-      const { result } = renderContext();
+      const { result } = renderHook(() => useMemoryContext("user-123", true), {
+        wrapper,
+      });
       await waitFor(() => expect(result.current.error).toBeInstanceOf(ApiError));
       expect(result.current.error?.message).toBe("Unauthorized");
     });
   });
 
   describe("useSearchMemories", () => {
-    const renderSearch = () =>
-      renderHook(() => useSearchMemories(), {
-        wrapper: CREATE_WRAPPER(),
-      });
-
     it("should post queries with filters", async () => {
       const mockResults: SearchMemoriesResponse = {
         memories: [],
@@ -123,7 +132,7 @@ describe("Memory Hooks", () => {
       };
       MOCK_MAKE_AUTHENTICATED_REQUEST.mockResolvedValueOnce(mockResults);
 
-      const { result } = renderSearch();
+      const { result } = renderHook(() => useSearchMemories(), { wrapper });
       const searchParams: SearchMemoriesRequest = {
         filters: {
           metadata: { category: "accommodation" },
@@ -162,7 +171,7 @@ describe("Memory Hooks", () => {
       };
       MOCK_MAKE_AUTHENTICATED_REQUEST.mockResolvedValueOnce(minimalResults);
 
-      const { result } = renderSearch();
+      const { result } = renderHook(() => useSearchMemories(), { wrapper });
       const params: SearchMemoriesRequest = {
         limit: 20,
         query: "hotels",
@@ -204,11 +213,6 @@ describe("Memory Hooks", () => {
       userId: "user-123",
     };
 
-    const renderAddConversation = () =>
-      renderHook(() => useAddConversationMemory(), {
-        wrapper: CREATE_WRAPPER(),
-      });
-
     it("should store conversation memory", async () => {
       const mockResponse = {
         insightsGenerated: [],
@@ -219,7 +223,7 @@ describe("Memory Hooks", () => {
       } satisfies AddConversationMemoryResponse;
       MOCK_MAKE_AUTHENTICATED_REQUEST.mockResolvedValueOnce(mockResponse);
 
-      const { result } = renderAddConversation();
+      const { result } = renderHook(() => useAddConversationMemory(), { wrapper });
 
       await act(async () => {
         const data = await result.current.mutateAsync(conversationData);
@@ -240,7 +244,7 @@ describe("Memory Hooks", () => {
       const apiError = new ApiError({ message: "Storage failed", status: 500 });
       MOCK_MAKE_AUTHENTICATED_REQUEST.mockRejectedValueOnce(apiError);
 
-      const { result } = renderAddConversation();
+      const { result } = renderHook(() => useAddConversationMemory(), { wrapper });
       await act(async () => {
         await expect(
           result.current.mutateAsync(conversationData)
@@ -264,7 +268,7 @@ describe("Memory Hooks", () => {
       MOCK_MAKE_AUTHENTICATED_REQUEST.mockResolvedValueOnce(mockResponse);
 
       const { result } = renderHook(() => useUpdatePreferences("user-123"), {
-        wrapper: CREATE_WRAPPER(),
+        wrapper,
       });
 
       const preferencesData: UpdatePreferencesRequest = {
@@ -291,11 +295,6 @@ describe("Memory Hooks", () => {
   });
 
   describe("useMemoryInsights", () => {
-    const renderInsights = (userId = "user-123") =>
-      renderHook(() => useMemoryInsights(userId), {
-        wrapper: CREATE_WRAPPER(),
-      });
-
     it("should fetch memory insights for user", async () => {
       const mockInsights: MemoryInsightsResponse = {
         insights: {
@@ -324,7 +323,7 @@ describe("Memory Hooks", () => {
       };
       MOCK_MAKE_AUTHENTICATED_REQUEST.mockResolvedValueOnce(mockInsights);
 
-      const { result } = renderInsights();
+      const { result } = renderHook(() => useMemoryInsights("user-123"), { wrapper });
       await waitFor(() => expect(result.current.data).toEqual(mockInsights));
       expect(MOCK_MAKE_AUTHENTICATED_REQUEST).toHaveBeenCalledWith(
         "/api/memory/insights/user-123"
@@ -333,11 +332,6 @@ describe("Memory Hooks", () => {
   });
 
   describe("useMemoryStats", () => {
-    const renderStats = (userId = "user-123") =>
-      renderHook(() => useMemoryStats(userId), {
-        wrapper: CREATE_WRAPPER(),
-      });
-
     it("should fetch memory statistics for user", async () => {
       const mockStats = {
         lastUpdated: "2024-01-01T10:00:00Z",
@@ -347,7 +341,7 @@ describe("Memory Hooks", () => {
       };
       MOCK_MAKE_AUTHENTICATED_REQUEST.mockResolvedValueOnce(mockStats);
 
-      const { result } = renderStats();
+      const { result } = renderHook(() => useMemoryStats("user-123"), { wrapper });
       await waitFor(() => expect(result.current.data).toEqual(mockStats));
       expect(MOCK_MAKE_AUTHENTICATED_REQUEST).toHaveBeenCalledWith(
         "/api/memory/stats/user-123"

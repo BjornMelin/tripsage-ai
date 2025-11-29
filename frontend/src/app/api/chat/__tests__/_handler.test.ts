@@ -3,16 +3,24 @@
 import type { ProviderId } from "@schemas/providers";
 import type { LanguageModel } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type {
-  NonStreamDeps,
-  NonStreamPayload,
-  ProviderResolver,
-} from "@/app/api/chat/_handler";
+import type { NonStreamDeps, ProviderResolver } from "@/app/api/chat/_handler";
 
-let handleChatNonStream: (
-  deps: NonStreamDeps,
-  payload: NonStreamPayload
-) => Promise<Response>;
+// Hoisted mock for memory orchestrator
+const handleMemoryIntentMock = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/memory/orchestrator", () => ({
+  handleMemoryIntent: handleMemoryIntentMock,
+}));
+
+// Hoisted mock for AI SDK - provides module-level fallback.
+// Individual tests override generateText via deps.generate parameter.
+vi.mock("ai", () => ({
+  convertToModelMessages: (x: unknown) => x,
+  generateText: vi.fn(),
+}));
+
+// Static import after mocks are set up
+import { handleChatNonStream } from "../_handler";
 
 const createResolver =
   (modelId: string): ProviderResolver =>
@@ -21,11 +29,6 @@ const createResolver =
     modelId,
     provider: "openai" as ProviderId,
   });
-
-const handleMemoryIntentMock = vi.fn();
-vi.mock("@/lib/memory/orchestrator", () => ({
-  handleMemoryIntent: handleMemoryIntentMock,
-}));
 
 /**
  * Creates a mock Supabase client for testing handleChatNonStream functionality.
@@ -64,15 +67,10 @@ function fakeSupabase(
 }
 
 describe("handleChatNonStream", () => {
-  beforeEach(async () => {
-    vi.resetModules();
+  beforeEach(() => {
+    vi.clearAllMocks();
     handleMemoryIntentMock.mockReset();
     handleMemoryIntentMock.mockResolvedValue({ context: [] });
-    vi.doMock("ai", () => ({
-      convertToModelMessages: (x: unknown) => x,
-      generateText: vi.fn(),
-    }));
-    ({ handleChatNonStream } = await import("../_handler"));
   });
 
   it("401 when unauthenticated", async () => {

@@ -53,30 +53,56 @@ export const withFakeTimers = (
 };
 
 /**
+ * Options for fake timer configuration.
+ */
+export interface FakeTimersOptions {
+  /**
+   * When true, time advances automatically during await expressions.
+   * Essential for tests that combine fake timers with async operations like MSW.
+   * @default false
+   */
+  shouldAdvanceTime?: boolean;
+}
+
+/**
  * Creates a test context with fake timers enabled.
  * Use this in beforeEach/afterEach when multiple tests in a suite need fake timers.
  *
+ * @param options - Configuration for fake timers
  * @example
  * ```typescript
  * import { createFakeTimersContext } from '@/test/utils/with-fake-timers';
  *
  * describe('Time-dependent suite', () => {
- *   const timers = createFakeTimersContext();
+ *   // Use shouldAdvanceTime when combining with async operations (MSW, fetch)
+ *   const timers = createFakeTimersContext({ shouldAdvanceTime: true });
  *
  *   beforeEach(timers.setup);
  *   afterEach(timers.teardown);
  *
- *   test('first test', () => {
- *     vi.advanceTimersByTime(1000);
- *     // test code
+ *   test('debounced search', async () => {
+ *     fireEvent.change(input, { target: { value: 'test' } });
+ *     await act(async () => {
+ *       vi.advanceTimersByTime(350);
+ *       await vi.runAllTimersAsync();
+ *     });
+ *     expect(mockSearch).toHaveBeenCalled();
  *   });
  * });
  * ```
  */
-export const createFakeTimersContext = () => {
+export const createFakeTimersContext = (options: FakeTimersOptions = {}) => {
   return {
     setup: () => {
-      vi.useFakeTimers();
+      const fakeTimerOptions: Parameters<typeof vi.useFakeTimers>[0] = {};
+      // Copy defined option properties generically to handle future fields automatically
+      for (const key of Object.keys(options) as (keyof FakeTimersOptions)[]) {
+        const value = options[key];
+        if (value !== undefined) {
+          (fakeTimerOptions as Record<string, unknown>)[key] = value;
+        }
+      }
+      vi.useFakeTimers(fakeTimerOptions);
     },
     teardown: () => {
       vi.runOnlyPendingTimers();

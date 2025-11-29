@@ -5,6 +5,7 @@ import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/test/msw/server";
 import { renderWithProviders } from "@/test/test-utils";
+import { createFakeTimersContext } from "@/test/utils/with-fake-timers";
 import { DestinationSearchForm } from "../destination-search-form";
 
 const MockOnSearch = vi.fn();
@@ -29,20 +30,32 @@ const TypeQuery = (value: string) => {
 
 const AUTOCOMPLETE_DELAY_MS = 350;
 
+/**
+ * Triggers autocomplete by typing and advancing fake timers.
+ * Uses auto-advancing timers to allow promises to settle.
+ */
 const TriggerAutocomplete = async (value: string) => {
   const input = TypeQuery(value);
+  // Advance time and allow microtasks to flush
   await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, AUTOCOMPLETE_DELAY_MS));
+    vi.advanceTimersByTime(AUTOCOMPLETE_DELAY_MS);
+    // Allow any pending microtasks/promises to resolve
+    await vi.runAllTimersAsync();
   });
   return input;
 };
 
 describe("DestinationSearchForm", () => {
+  // Use shouldAdvanceTime to allow MSW network requests to settle with fake timers
+  const timers = createFakeTimersContext({ shouldAdvanceTime: true });
+
   beforeEach(() => {
+    timers.setup();
     vi.clearAllMocks();
   });
 
   afterEach(() => {
+    timers.teardown();
     server.resetHandlers();
   });
 
@@ -127,11 +140,17 @@ describe("DestinationSearchForm", () => {
   });
 
   it("keeps latest query results when earlier requests resolve later", async () => {
+    // Track request order - use object to avoid closure issues
+    const slowRequest = { resolver: null as (() => void) | null };
+
     server.use(
       http.post("/api/places/search", async ({ request }) => {
         const body = (await request.json()) as { textQuery?: string };
         if (body.textQuery === "Pa") {
-          await new Promise((resolve) => setTimeout(resolve, 500));
+          // Hold request until manually resolved
+          await new Promise<void>((resolve) => {
+            slowRequest.resolver = resolve;
+          });
           return HttpResponse.json({
             places: [
               {
@@ -159,17 +178,33 @@ describe("DestinationSearchForm", () => {
 
     renderWithProviders(<DestinationSearchForm onSearch={MockOnSearch} />);
 
-    await TriggerAutocomplete("Pa");
+    try {
+      // First query - this will be slow
+      await TriggerAutocomplete("Pa");
 
-    await TriggerAutocomplete("Paris");
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 600));
-    });
+      // Second query - this should complete first
+      await TriggerAutocomplete("Paris");
 
-    await waitFor(() =>
-      expect(screen.getByRole("button", { name: /Paris/ })).toBeInTheDocument()
-    );
-    expect(screen.queryByText(/Old Pa/)).not.toBeInTheDocument();
+      // Wait for the fast request to render
+      await waitFor(() =>
+        expect(screen.getByRole("button", { name: /Paris/ })).toBeInTheDocument()
+      );
+
+      // Now release the slow request
+      slowRequest.resolver?.();
+
+      // Allow pending promises to flush
+      await act(async () => {
+        await vi.runAllTimersAsync();
+      });
+
+      // The old result should not replace the new one
+      expect(screen.getByRole("button", { name: /Paris/ })).toBeInTheDocument();
+      expect(screen.queryByText(/Old Pa/)).not.toBeInTheDocument();
+    } finally {
+      // Ensure the slow request is resolved even if assertions fail
+      slowRequest.resolver?.();
+    }
   });
 
   it("renders static form content", () => {
