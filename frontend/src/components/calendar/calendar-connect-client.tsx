@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useToast } from "@/components/ui/use-toast";
 import { useSupabaseRequired } from "@/lib/supabase";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 
 /**
  * CalendarConnectClient component.
@@ -36,7 +37,10 @@ export function CalendarConnectClient() {
       });
 
       if (error) {
-        console.error("OAuth error:", error);
+        recordClientErrorOnActiveSpan(new Error(error.message || "OAuth error"), {
+          action: "signInWithOAuth",
+          context: "CalendarConnectClient",
+        });
         toast({
           description: error.message || "Failed to connect Google Calendar",
           title: "Connection failed",
@@ -51,7 +55,10 @@ export function CalendarConnectClient() {
         // If successful, user will be redirected to OAuth flow
       }
     } catch (error) {
-      console.error("Connection error:", error);
+      recordClientErrorOnActiveSpan(
+        error instanceof Error ? error : new Error(String(error)),
+        { action: "handleConnect", context: "CalendarConnectClient" }
+      );
       toast({
         description: "Failed to connect calendar. Please try again.",
         title: "Connection error",

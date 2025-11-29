@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useSupabaseRequired } from "@/lib/supabase";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 
 /** Props for the RegisterForm component. */
 interface RegisterFormProps {
@@ -68,13 +69,18 @@ export function RegisterForm({
   const handleSocialLogin = async (provider: "github" | "google") => {
     const { error: oAuthError } = await supabase.auth.signInWithOAuth({
       options: {
-        redirectTo: `${origin}/auth/callback${nextParam ? `?next=${encodeURIComponent(nextParam)}` : ""}`,
+        redirectTo: `${origin}/auth/callback${
+          nextParam ? `?next=${encodeURIComponent(nextParam)}` : ""
+        }`,
       },
       provider,
     });
     if (oAuthError) {
-      // eslint-disable-next-line no-console
-      console.error("Social registration login failed:", oAuthError.message);
+      recordClientErrorOnActiveSpan(new Error(oAuthError.message), {
+        action: "handleSocialLogin",
+        context: "RegisterForm",
+        provider,
+      });
     }
   };
 

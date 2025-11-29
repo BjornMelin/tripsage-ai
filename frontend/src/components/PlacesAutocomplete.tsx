@@ -9,6 +9,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { getGoogleMapsBrowserKey } from "@/lib/env/client";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 
 declare global {
   interface Window {
@@ -65,9 +66,11 @@ export function PlacesAutocomplete({
     const apiKey = getGoogleMapsBrowserKey();
 
     if (!apiKey) {
-      console.warn(
-        "Google Maps browser API key not configured. Set NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY."
-      );
+      if (process.env.NODE_ENV === "development") {
+        console.warn(
+          "Google Maps browser API key not configured. Set NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY."
+        );
+      }
       return;
     }
 
@@ -97,7 +100,12 @@ export function PlacesAutocomplete({
       setSessionToken(newToken);
     };
 
-    initAutocomplete().catch(console.error);
+    initAutocomplete().catch((error) => {
+      recordClientErrorOnActiveSpan(
+        error instanceof Error ? error : new Error(String(error)),
+        { action: "initAutocomplete", context: "PlacesAutocomplete" }
+      );
+    });
   }, [isLoaded]);
 
   const handleInputChange = (value: string) => {
@@ -141,7 +149,10 @@ export function PlacesAutocomplete({
 
         setSuggestions(newSuggestions);
       } catch (error) {
-        console.error("Autocomplete error:", error);
+        recordClientErrorOnActiveSpan(
+          error instanceof Error ? error : new Error(String(error)),
+          { action: "fetchSuggestions", context: "PlacesAutocomplete" }
+        );
         setSuggestions([]);
       }
     }, 300); // 300ms debounce
@@ -189,7 +200,10 @@ export function PlacesAutocomplete({
       setSessionToken(newToken);
       setSuggestions([]);
     } catch (error) {
-      console.error("Place selection error:", error);
+      recordClientErrorOnActiveSpan(
+        error instanceof Error ? error : new Error(String(error)),
+        { action: "handlePlaceSelect", context: "PlacesAutocomplete" }
+      );
     }
   };
 
@@ -210,11 +224,21 @@ export function PlacesAutocomplete({
             <li
               key={suggestion.placePrediction.placeId ?? index}
               onClick={() => {
-                handlePlaceSelect(suggestion.placePrediction).catch(console.error);
+                handlePlaceSelect(suggestion.placePrediction).catch((error) => {
+                  recordClientErrorOnActiveSpan(
+                    error instanceof Error ? error : new Error(String(error)),
+                    { action: "onClick", context: "PlacesAutocomplete" }
+                  );
+                });
               }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
-                  handlePlaceSelect(suggestion.placePrediction).catch(console.error);
+                  handlePlaceSelect(suggestion.placePrediction).catch((error) => {
+                    recordClientErrorOnActiveSpan(
+                      error instanceof Error ? error : new Error(String(error)),
+                      { action: "onKeyDown", context: "PlacesAutocomplete" }
+                    );
+                  });
                 }
               }}
               className="cursor-pointer px-4 py-2 hover:bg-gray-100"

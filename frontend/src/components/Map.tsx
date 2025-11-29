@@ -9,6 +9,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { getGoogleMapsBrowserKey } from "@/lib/env/client";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 
 declare global {
   interface Window {
@@ -61,9 +62,11 @@ export function GoogleMap({
     const apiKey = getGoogleMapsBrowserKey();
 
     if (!apiKey) {
-      console.warn(
-        "Google Maps browser API key not configured. Set NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY."
-      );
+      if (process.env.NODE_ENV === "development") {
+        console.warn(
+          "Google Maps browser API key not configured. Set NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY."
+        );
+      }
       return;
     }
 
@@ -146,7 +149,12 @@ export function GoogleMap({
       setAdvancedMarkers(newMarkers);
     };
 
-    initMap().catch(console.error);
+    initMap().catch((error) => {
+      recordClientErrorOnActiveSpan(
+        error instanceof Error ? error : new Error(String(error)),
+        { action: "initMap", context: "GoogleMap" }
+      );
+    });
   }, [isLoaded, center, zoom, mapId, markers, onMarkerClick]);
 
   return (
