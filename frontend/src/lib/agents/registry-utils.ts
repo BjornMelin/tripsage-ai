@@ -1,8 +1,9 @@
 import type { AiTool, toolRegistry } from "@ai/tools";
 import type { ToolCallOptions } from "ai";
+import type { Tool } from "ai";
 
 /** Strongly typed view of a tool from the shared registry; enforces execute presence. */
-export type RegisteredTool<Params = unknown, Result = unknown> = AiTool & {
+export type RegisteredTool<Params = unknown, Result = unknown> = Tool<Params, Result> & {
   description?: string;
   inputSchema?: unknown;
   execute: (params: Params, callOptions?: ToolCallOptions) => Promise<Result> | Result;

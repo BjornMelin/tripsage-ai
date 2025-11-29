@@ -9,6 +9,7 @@ import type {
   ToolExecutionContext,
   UserContext,
 } from "@ai/tools/schemas/tools";
+import type { Tool, ToolCallOptions } from "ai";
 
 // Re-export types from schemas
 export type {
@@ -19,5 +20,5 @@ export type {
   UserContext,
 };
 
-// Keep registry as Record<string, unknown> to avoid AI SDK coupling.
-export type AiTool = unknown;
+/** Canonical AI tool contract used across registry-aware agents. */
+export type AiTool = Tool<unknown, unknown>;
