@@ -48,6 +48,7 @@ export function PlacesAutocomplete({
 }: PlacesAutocompleteProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<
     Array<{
       placePrediction: {
@@ -70,7 +71,13 @@ export function PlacesAutocomplete({
         console.warn(
           "Google Maps browser API key not configured. Set NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY."
         );
+      } else {
+        recordClientErrorOnActiveSpan(
+          new Error("Google Maps browser API key not configured"),
+          { action: "checkApiKey", context: "PlacesAutocomplete" }
+        );
       }
+      setErrorMessage("Maps configuration error. Please try again later.");
       return;
     }
 
@@ -192,6 +199,8 @@ export function PlacesAutocomplete({
         placeId: place.id ?? "",
       });
 
+      setErrorMessage(null);
+
       // Terminate session and create new token
       const placesLibrary = await window.google.maps.importLibrary("places");
       // @ts-expect-error - AutocompleteSessionToken may not be fully typed
@@ -204,6 +213,8 @@ export function PlacesAutocomplete({
         error instanceof Error ? error : new Error(String(error)),
         { action: "handlePlaceSelect", context: "PlacesAutocomplete" }
       );
+      setErrorMessage("Failed to select place. Please try again.");
+      setSuggestions([]);
     }
   };
 
@@ -218,6 +229,11 @@ export function PlacesAutocomplete({
         }}
         className="w-full rounded-md border border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
+      {errorMessage ? (
+        <p className="mt-2 text-sm text-red-600" role="alert">
+          {errorMessage}
+        </p>
+      ) : null}
       {suggestions.length > 0 && (
         <ul className="absolute z-10 mt-1 w-full rounded-md border border-gray-300 bg-white shadow-lg">
           {suggestions.map((suggestion, index) => (

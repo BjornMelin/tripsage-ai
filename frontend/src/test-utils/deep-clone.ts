@@ -23,7 +23,7 @@ export function deepCloneValue<T>(value: T, seen = new WeakMap()): T {
     const clonedMap = new Map();
     seen.set(value, clonedMap);
     value.forEach((mapValue, key) => {
-      const clonedKey = deepCloneValue(key as unknown as T, seen);
+      const clonedKey = deepCloneValue(key, seen);
       clonedMap.set(clonedKey, deepCloneValue(mapValue, seen));
     });
     return clonedMap as unknown as T;
@@ -45,6 +45,12 @@ export function deepCloneValue<T>(value: T, seen = new WeakMap()): T {
       clonedArray[index] = deepCloneValue(item, seen);
     });
     return clonedArray as unknown as T;
+  }
+
+  // Only deep-clone plain objects; return other instances as-is to preserve prototypes
+  const proto = Object.getPrototypeOf(value);
+  if (proto !== Object.prototype && proto !== null) {
+    return value;
   }
 
   const clonedObject: Record<string, unknown> = {};

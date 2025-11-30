@@ -145,7 +145,9 @@ export function createChatAgent(
   const available = Math.max(0, modelLimit - promptCount);
 
   if (available <= 0) {
-    throw new Error("No output tokens available - context limit exceeded");
+    throw new Error(
+      `Context limit exceeded: modelLimit=${modelLimit}, promptTokens=${promptCount}, available=${available}`
+    );
   }
 
   // Token budgeting: clamp max output tokens based on prompt length
@@ -189,6 +191,17 @@ export function createChatAgent(
         return null;
       }
 
+      const repairAttempts = Number(
+        (toolCall as { repairAttempts?: number }).repairAttempts ?? 0
+      );
+      if (repairAttempts >= 2) {
+        logger.warn("chat_agent:repair_attempts_exhausted", {
+          requestId,
+          toolName: toolCall.toolName,
+        });
+        return null;
+      }
+
       // Get the tool definition
       const tool = agentTools[toolCall.toolName as keyof typeof agentTools];
       if (!tool || typeof tool !== "object" || !("inputSchema" in tool)) {
@@ -228,6 +241,7 @@ export function createChatAgent(
         return {
           ...toolCall,
           input: JSON.stringify(repairedArgs),
+          repairAttempts: repairAttempts + 1,
         };
       } catch (repairError) {
         logger.error("Tool call repair failed", {
@@ -271,6 +285,9 @@ export function createChatAgent(
     modelId: deps.modelId,
   };
 }
+
+// Re-export default system prompt for external consumers (e.g., API handlers)
+export { CHAT_DEFAULT_SYSTEM_PROMPT };
 
 /**
  * Converts UI messages to model messages for agent context.

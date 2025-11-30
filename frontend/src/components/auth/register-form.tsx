@@ -68,6 +68,7 @@ export function RegisterForm({
    * @returns A promise that resolves to the social login result.
    */
   const handleSocialLogin = async (provider: "github" | "google") => {
+    setSocialError(null);
     const { error: oAuthError } = await supabase.auth.signInWithOAuth({
       options: {
         redirectTo: `${origin}/auth/callback${
@@ -86,7 +87,7 @@ export function RegisterForm({
     }
   };
 
-  const displayError = urlError ?? socialError;
+  const displayError = socialError ?? urlError;
 
   return (
     <Card className={className}>

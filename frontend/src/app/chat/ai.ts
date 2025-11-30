@@ -60,10 +60,7 @@ export async function submitChatMessage(input: ChatInput) {
       };
 
       // Cast is safe: messages come from client UIMessage[] state
-      const history: UIMessage[] = [
-        ...(input.messages as UIMessage[]),
-        userMessage,
-      ];
+      const history: UIMessage[] = [...(input.messages as UIMessage[]), userMessage];
       const provider = await resolveProvider(data.user.id, undefined);
 
       const controller = new AbortController();
@@ -91,8 +88,8 @@ export async function submitChatMessage(input: ChatInput) {
           error instanceof Error && error.name === "AbortError"
             ? "Timed out"
             : error instanceof Error
-            ? error.message
-            : "Unknown error";
+              ? error.message
+              : "Unknown error";
         throw new Error(`Chat generation failed: ${reason}`);
       } finally {
         clearTimeout(timeout);

@@ -166,7 +166,7 @@ export function createTripSageAgent<TagentTools extends ToolSet>(
 
         return {
           ...toolCall,
-          input: JSON.stringify(repairedArgs),
+          input: repairedArgs,
           repairAttempts: repairAttempts + 1,
         };
       } catch (repairError) {
