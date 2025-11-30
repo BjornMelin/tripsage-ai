@@ -411,7 +411,11 @@ export const useSearchStore = create<SearchOrchestratorState>()(
 
           return true;
         } catch (error) {
-          logger.error("Failed to load saved search", { error });
+          logger.error("Failed to load saved search", {
+            error,
+            savedSearchId,
+            searchType: savedSearch.searchType,
+          });
           return false;
         }
       },

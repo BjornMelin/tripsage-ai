@@ -106,6 +106,12 @@ function buildAccommodationTools(identifier: string): ToolSet {
     description: detailsTool.description ?? "Get accommodation details",
     execute: (params, callOptions) => invokeTool(detailsTool, params, callOptions),
     guardrails: {
+      cache: {
+        hashInput: true,
+        key: () => "agent:accommodation:details",
+        namespace: "agent:accommodation:details",
+        ttlSeconds: 60 * 30,
+      },
       rateLimit: {
         errorCode: TOOL_ERROR_CODES.toolRateLimited,
         identifier: () => rateLimit.identifier,

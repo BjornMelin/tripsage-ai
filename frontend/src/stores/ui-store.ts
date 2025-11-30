@@ -360,7 +360,14 @@ export const useUiStore = create<UiState>()(
 
             return id;
           }
-          logger.error("Invalid notification", { error: result.error });
+          logger.error("Invalid notification", {
+            error: result.error,
+            errorMessage: result.error.message,
+            issues: result.error.issues.map((issue) => ({
+              message: issue.message,
+              path: issue.path.join("."),
+            })),
+          });
           return "";
         },
 
@@ -535,7 +542,15 @@ export const useUiStore = create<UiState>()(
               },
             }));
           } else {
-            logger.error("Invalid loading state", { error: result.error });
+            logger.error("Invalid loading state", {
+              error: result.error,
+              errorMessage: result.error.message,
+              issues: result.error.issues.map((issue) => ({
+                message: issue.message,
+                path: issue.path.join("."),
+              })),
+              key,
+            });
           }
         },
 
@@ -572,7 +587,14 @@ export const useUiStore = create<UiState>()(
           if (result.success) {
             set({ theme: result.data });
           } else {
-            logger.error("Invalid theme", { error: result.error });
+            logger.error("Invalid theme", {
+              error: result.error,
+              errorMessage: result.error.message,
+              issues: result.error.issues.map((issue) => ({
+                message: issue.message,
+                path: issue.path.join("."),
+              })),
+            });
           }
         },
 

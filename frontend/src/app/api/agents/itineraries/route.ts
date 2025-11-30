@@ -54,7 +54,7 @@ export const POST = withApiGuards({
   const { model, modelId } = await resolveProvider(userId, resolvedModelHint);
 
   const { agent, defaultMessages } = createItineraryAgent(
-    { identifier: userId, model, modelId },
+    { identifier: userId, model, modelId, userId },
     agentConfig,
     body
   );

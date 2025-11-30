@@ -215,14 +215,11 @@ export function createAiTool<InputValue, OutputValue>(
         }
       );
     },
-    // biome-ignore lint/suspicious/noExplicitAny: Type assertion needed for generic wrapper
-    inputSchema: options.inputSchema as any,
+    inputSchema: options.inputSchema as FlexibleSchema<InputValue>,
     ...(options.outputSchema
-      ? // biome-ignore lint/suspicious/noExplicitAny: Type assertion needed for generic wrapper
-        { outputSchema: options.outputSchema as any }
+      ? { outputSchema: options.outputSchema as FlexibleSchema<OutputValue> }
       : {}),
-    // biome-ignore lint/suspicious/noExplicitAny: Type assertion needed for generic wrapper
-  } as any) as Tool<InputValue, OutputValue>;
+  }) as Tool<InputValue, OutputValue>;
 }
 
 /**
