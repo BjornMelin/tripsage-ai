@@ -5,6 +5,7 @@ import type React from "react";
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { errorService } from "@/lib/error-service";
 import { secureId } from "@/lib/security/random";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { ErrorFallback } from "./error-fallback";
 
 interface ErrorBoundaryState {
@@ -59,7 +60,27 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       }
     );
 
-    errorService.reportError(errorReport).catch(console.error);
+    errorService.reportError(errorReport).catch((reportError) => {
+      if (process.env.NODE_ENV === "development") {
+        console.error("Error reporting failed:", reportError);
+      }
+      try {
+        recordClientErrorOnActiveSpan(
+          reportError instanceof Error ? reportError : new Error(String(reportError)),
+          { action: "reportError", context: "ErrorBoundary" }
+        );
+      } catch (telemetryError) {
+        // Swallow telemetry errors - don't let them propagate
+        if (process.env.NODE_ENV === "development") {
+          console.warn(
+            "Failed to record telemetry error:",
+            telemetryError instanceof Error
+              ? telemetryError.message
+              : String(telemetryError)
+          );
+        }
+      }
+    });
 
     // Log to console in development
     if (process.env.NODE_ENV === "development") {
@@ -151,7 +172,9 @@ export function WithErrorBoundary<P extends object>(
     </ErrorBoundary>
   );
 
-  WrappedComponent.displayName = `WithErrorBoundary(${Component.displayName || Component.name})`;
+  WrappedComponent.displayName = `WithErrorBoundary(${
+    Component.displayName || Component.name
+  })`;
 
   return WrappedComponent;
 }

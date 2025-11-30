@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { Button } from "@/components/ui/button";
 import { getErrorMessage, isApiError, isNetworkError } from "@/lib/api/error-types";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 
 interface QueryErrorFallbackProps {
   error: Error;
@@ -203,7 +204,10 @@ export function UseQueryErrorHandler() {
   const { reset } = useQueryErrorResetBoundary();
 
   const handleError = (error: unknown) => {
-    console.error("Query error:", error);
+    recordClientErrorOnActiveSpan(
+      error instanceof Error ? error : new Error(String(error)),
+      { action: "handleError", context: "QueryErrorBoundary" }
+    );
 
     // Log to external service in production
     if (process.env.NODE_ENV === "production") {

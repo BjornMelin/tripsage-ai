@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { cn } from "@/lib/utils";
 
 // Modern flight result types with 2025 travel patterns
@@ -116,7 +117,14 @@ export function ModernFlightResults({
       try {
         await onSelect(flight);
       } catch (error) {
-        console.error("Flight selection failed:", error);
+        recordClientErrorOnActiveSpan(
+          error instanceof Error ? error : new Error(String(error)),
+          {
+            action: "handleFlightSelect",
+            context: "ModernFlightResults",
+            flightId: flight.id,
+          }
+        );
       } finally {
         setOptimisticSelecting("");
       }
@@ -345,7 +353,9 @@ export function ModernFlightResults({
                         <p className="text-xs text-muted-foreground">
                           {flight.stops.count === 0
                             ? "Direct"
-                            : `${flight.stops.count} stop${flight.stops.count > 1 ? "s" : ""}`}
+                            : `${flight.stops.count} stop${
+                                flight.stops.count > 1 ? "s" : ""
+                              }`}
                         </p>
                       </div>
                     </div>

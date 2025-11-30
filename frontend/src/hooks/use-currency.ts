@@ -13,11 +13,12 @@ import type {
   UpdateExchangeRatesResponse,
 } from "@schemas/currency";
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { z } from "zod";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
 import { type AppError, handleApiError, isApiError } from "@/lib/api/error-types";
 import { staleTimes } from "@/lib/query-keys";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { useCurrencyStore } from "@/stores/currency-store";
 
 /**
@@ -137,12 +138,16 @@ export function useFetchExchangeRates() {
   const { updateAllExchangeRates } = useCurrencyStore();
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
-  // Define response schema for better validation
-  const responseSchema = z.object({
-    baseCurrency: z.string().length(3),
-    rates: z.record(z.string().length(3), z.number().positive()),
-    timestamp: z.iso.datetime(),
-  });
+  // Define response schema for better validation (memoized to avoid recreating on each render)
+  const responseSchema = useMemo(
+    () =>
+      z.object({
+        baseCurrency: z.string().length(3),
+        rates: z.record(z.string().length(3), z.number().positive()),
+        timestamp: z.iso.datetime(),
+      }),
+    []
+  );
 
   const query = useQuery<UpdateExchangeRatesResponse, AppError>({
     queryFn: async () => {
@@ -173,7 +178,9 @@ export function useFetchExchangeRates() {
         const validated = responseSchema.parse(query.data);
         updateAllExchangeRates(validated.rates, validated.timestamp);
       } catch (error) {
-        console.error("Invalid exchange rate data:", error);
+        recordClientErrorOnActiveSpan(
+          error instanceof Error ? error : new Error("Invalid exchange rate data")
+        );
       }
     }
   }, [query.data, updateAllExchangeRates, responseSchema.parse]);
