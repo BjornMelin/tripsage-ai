@@ -7,9 +7,9 @@ describe("tool execution schemas", () => {
   describe("toolExecutionContextSchema", () => {
     it("should parse valid tool execution context", () => {
       const validContext = {
-        userId: "user-123",
-        sessionId: "session-456",
         ip: "192.168.1.1",
+        sessionId: "session-456",
+        userId: "user-123",
       };
 
       const result = toolExecutionContextSchema.safeParse(validContext);
@@ -22,10 +22,10 @@ describe("tool execution schemas", () => {
 
     it("should combine userContextSchema with executionDepsSchema and approvalContextSchema", () => {
       const context = {
-        userId: "user-123",
         now: () => Date.now(),
         redis: {},
         requireApproval: () => Promise.resolve(true),
+        userId: "user-123",
       };
 
       const result = toolExecutionContextSchema.safeParse(context);
@@ -42,4 +42,3 @@ describe("tool execution schemas", () => {
     });
   });
 });
-
