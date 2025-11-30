@@ -4,10 +4,13 @@
  */
 
 import { z } from "zod";
+import { createStoreLogger } from "@/lib/telemetry/store-logger";
 import { messageRoleSchema } from "./chat";
 import { primitiveSchemas } from "./registry";
 import { searchTypeSchema as baseSearchTypeSchema } from "./search";
 import { storeTripSchema } from "./trips";
+
+const schemaLogger = createStoreLogger({ storeName: "schema-validation" });
 
 // ===== CORE SCHEMAS =====
 // Core store state patterns and reusable schemas
@@ -1102,7 +1105,9 @@ export const validateStoreState = <T>(
     return schema.parse(state);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      console.error(`${storeName || "Store"} state validation failed:`, error.issues);
+      schemaLogger.error(`${storeName || "Store"} state validation failed`, {
+        issues: error.issues,
+      });
       throw new Error(
         `Invalid store state: ${error.issues.map((i) => i.message).join(", ")}`
       );
@@ -1127,10 +1132,9 @@ export const safeValidateStoreState = <T>(
 ) => {
   const result = schema.safeParse(state);
   if (!result.success) {
-    console.warn(
-      `${storeName || "Store"} state validation failed:`,
-      result.error.issues
-    );
+    schemaLogger.warn(`${storeName || "Store"} state validation failed`, {
+      issues: result.error.issues,
+    });
   }
   return result;
 };
@@ -1158,10 +1162,9 @@ export const storeValidationMiddleware =
           const mergedState = replace ? newState : { ...get(), ...newState };
           const result = safeValidateStoreState(schema, mergedState, storeName);
           if (!result.success) {
-            console.error(
-              `Store mutation validation failed for ${storeName}:`,
-              result.error.issues
-            );
+            schemaLogger.error(`Store mutation validation failed for ${storeName}`, {
+              issues: result.error.issues,
+            });
           }
         }
 
@@ -1175,10 +1178,9 @@ export const storeValidationMiddleware =
     if (process.env.NODE_ENV === "development") {
       const result = safeValidateStoreState(schema, store, storeName);
       if (!result.success) {
-        console.error(
-          `Initial store state validation failed for ${storeName}:`,
-          result.error.issues
-        );
+        schemaLogger.error(`Initial store state validation failed for ${storeName}`, {
+          issues: result.error.issues,
+        });
       }
     }
 

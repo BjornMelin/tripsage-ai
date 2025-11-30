@@ -14,9 +14,9 @@ describe("store state schemas", () => {
   describe("userStoreStateSchema", () => {
     it("should parse valid user store state", () => {
       const validState = {
-        profile: null,
-        isLoading: false,
         error: null,
+        isLoading: false,
+        profile: null,
       };
 
       const result = userStoreStateSchema.safeParse(validState);
@@ -30,10 +30,10 @@ describe("store state schemas", () => {
 
     it("should include loading state fields", () => {
       const state = {
-        profile: null,
-        isLoading: true,
         error: "Test error",
+        isLoading: true,
         lastUpdated: "2025-01-01T00:00:00.000Z",
+        profile: null,
       };
 
       const result = userStoreStateSchema.safeParse(state);
@@ -46,14 +46,14 @@ describe("store state schemas", () => {
 
     it("should preserve profile properties when extending with loading state", () => {
       const state = {
+        error: "Loading error",
+        isLoading: true,
         profile: {
-          id: "123e4567-e89b-12d3-a456-426614174000",
           email: "test@example.com",
           firstName: "Test",
+          id: "123e4567-e89b-12d3-a456-426614174000",
           lastName: "User",
         },
-        isLoading: true,
-        error: "Loading error",
       };
 
       const result = userStoreStateSchema.safeParse(state);
@@ -80,7 +80,9 @@ describe("store state schemas", () => {
       const validState = {
         currentParams: null,
         currentSearchType: null,
+        error: null,
         filters: {},
+        isLoading: false,
         recentSearches: [],
         results: {
           accommodations: [],
@@ -89,8 +91,6 @@ describe("store state schemas", () => {
           flights: [],
         },
         savedSearches: [],
-        isLoading: false,
-        error: null,
       };
 
       const result = searchStoreStateSchema.safeParse(validState);
@@ -106,9 +106,11 @@ describe("store state schemas", () => {
     it("should parse valid trip store state", () => {
       const validState = {
         currentTrip: null,
+        error: null,
         filters: {
           search: "",
         },
+        isLoading: false,
         pagination: {
           hasNext: false,
           hasPrevious: false,
@@ -121,8 +123,6 @@ describe("store state schemas", () => {
           field: "createdAt" as const,
         },
         trips: [],
-        isLoading: false,
-        error: null,
       };
 
       const result = tripStoreStateSchema.safeParse(validState);
@@ -140,10 +140,10 @@ describe("store state schemas", () => {
         connectionStatus: "connected" as const,
         conversations: [],
         currentConversation: null,
+        error: null,
+        isLoading: false,
         isTyping: false,
         typingUsers: [],
-        isLoading: false,
-        error: null,
       };
 
       const result = chatStoreStateSchema.safeParse(validState);
@@ -160,9 +160,9 @@ describe("store state schemas", () => {
       const validState = {
         budgets: {},
         currentBudget: null,
+        error: null,
         exchangeRates: {},
         isLoading: false,
-        error: null,
       };
 
       const result = budgetStoreStateSchema.safeParse(validState);
@@ -177,10 +177,10 @@ describe("store state schemas", () => {
   describe("apiKeyStoreStateSchema", () => {
     it("should parse valid API key store state", () => {
       const validState = {
+        error: null,
+        isLoading: false,
         keys: [],
         services: {},
-        isLoading: false,
-        error: null,
       };
 
       const result = apiKeyStoreStateSchema.safeParse(validState);
@@ -192,4 +192,3 @@ describe("store state schemas", () => {
     });
   });
 });
-
