@@ -84,8 +84,8 @@ vi.mock("@/prompts/agents", () => ({
   buildItineraryPrompt: () => "Itinerary prompt",
 }));
 
+import type { AgentWorkflowKind } from "@schemas/agents";
 import type { LanguageModel } from "ai";
-
 import {
   agentRegistry,
   createAgentForWorkflow,
@@ -299,8 +299,8 @@ describe("createAgentForWorkflow", () => {
     const deps = createTestDeps();
     expect(() => {
       createAgentForWorkflow(
-        // biome-ignore lint/suspicious/noExplicitAny: Testing runtime error handling for invalid workflow kind
-        "memoryUpdate" as any,
+        // Intentionally pass an unsupported workflow kind to verify runtime guardrails
+        "memoryUpdate" as unknown as AgentWorkflowKind,
         deps,
         createTestConfig("budgetAgent"),
         {}
@@ -312,8 +312,8 @@ describe("createAgentForWorkflow", () => {
     const deps = createTestDeps();
     expect(() => {
       createAgentForWorkflow(
-        // biome-ignore lint/suspicious/noExplicitAny: Testing runtime error handling for invalid workflow kind
-        "invalidWorkflow" as any,
+        // Intentionally pass an unsupported workflow kind to verify runtime guardrails
+        "invalidWorkflow" as unknown as AgentWorkflowKind,
         deps,
         createTestConfig("budgetAgent"),
         {}

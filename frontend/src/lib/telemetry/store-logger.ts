@@ -59,11 +59,13 @@ export function createStoreLogger(options: StoreLogOptions) {
     info(message: string, details?: StoreLogDetails) {
       if (process.env.NODE_ENV === "development") {
         try {
-          const safeDetails =
-            details && typeof details === "object"
-              ? JSON.stringify(details)
-              : String(details);
-          console.log(`[${storeName}] ${message}`, safeDetails);
+          if (details !== undefined) {
+            const safeDetails =
+              typeof details === "object" ? JSON.stringify(details) : String(details);
+            console.log(`[${storeName}] ${message}`, safeDetails);
+          } else {
+            console.log(`[${storeName}] ${message}`);
+          }
         } catch {
           // Ignore stringification errors
         }
@@ -79,11 +81,13 @@ export function createStoreLogger(options: StoreLogOptions) {
     warn(message: string, details?: StoreLogDetails) {
       if (process.env.NODE_ENV === "development") {
         try {
-          const safeDetails =
-            details && typeof details === "object"
-              ? JSON.stringify(details)
-              : String(details);
-          console.warn(`[${storeName}] ${message}`, safeDetails);
+          if (details !== undefined) {
+            const safeDetails =
+              typeof details === "object" ? JSON.stringify(details) : String(details);
+            console.warn(`[${storeName}] ${message}`, safeDetails);
+          } else {
+            console.warn(`[${storeName}] ${message}`);
+          }
         } catch {
           // Ignore stringification errors
         }

@@ -64,7 +64,8 @@ const FLIGHT_TOOLS = {
 export function createFlightAgent(
   deps: AgentDependencies,
   config: AgentConfig,
-  input: FlightSearchRequest
+  input: FlightSearchRequest,
+  contextMessages: ChatMessage[] = []
 ): TripSageAgentResult {
   const params = extractAgentParameters(config);
   const instructions = buildFlightPrompt(input);
@@ -77,6 +78,7 @@ export function createFlightAgent(
   const clampMessages: ChatMessage[] = [
     { content: instructions, role: "system" },
     schemaMessage,
+    ...contextMessages,
   ];
   const { maxTokens } = clampMaxTokens(clampMessages, params.maxTokens, deps.modelId);
 

@@ -39,6 +39,11 @@ const logger = createServerLogger("agent-factory");
 const DEFAULT_MAX_STEPS = 10;
 
 /**
+ * Maximum number of tool repair attempts to avoid runaway costs.
+ */
+const MAX_TOOL_REPAIR_ATTEMPTS = 2;
+
+/**
  * Default temperature for agent generation.
  * Slightly lower than default for more consistent planning outputs.
  */
@@ -70,11 +75,10 @@ const DEFAULT_TEMPERATURE = 0.3;
  * const stream = agent.stream({ prompt: userMessage });
  * ```
  */
-// biome-ignore lint/style/useNamingConvention: TypeScript generic convention
-export function createTripSageAgent<TTools extends ToolSet>(
+export function createTripSageAgent<TagentTools extends ToolSet>(
   deps: AgentDependencies,
-  config: TripSageAgentConfig<TTools>
-): TripSageAgentResult {
+  config: TripSageAgentConfig<TagentTools>
+): TripSageAgentResult<TagentTools> {
   const {
     agentType,
     defaultMessages,
@@ -97,7 +101,7 @@ export function createTripSageAgent<TTools extends ToolSet>(
     requestId,
   });
 
-  const agent = new ToolLoopAgent({
+  const agent = new ToolLoopAgent<never, TagentTools>({
     // Experimental: Automatic tool call repair for malformed inputs
     // biome-ignore lint/style/useNamingConvention: AI SDK property name
     experimental_repairToolCall: async ({
@@ -118,6 +122,18 @@ export function createTripSageAgent<TTools extends ToolSet>(
 
       // Only repair invalid input errors
       if (!InvalidToolInputError.isInstance(error)) {
+        return null;
+      }
+
+      const repairAttempts = Number(
+        (toolCall as { repairAttempts?: number }).repairAttempts ?? 0
+      );
+      if (repairAttempts >= MAX_TOOL_REPAIR_ATTEMPTS) {
+        logger.warn("Max repair attempts reached", {
+          agentType,
+          requestId,
+          toolName: toolCall.toolName,
+        });
         return null;
       }
 
@@ -151,6 +167,7 @@ export function createTripSageAgent<TTools extends ToolSet>(
         return {
           ...toolCall,
           input: JSON.stringify(repairedArgs),
+          repairAttempts: repairAttempts + 1,
         };
       } catch (repairError) {
         logger.error("Tool call repair failed", {
@@ -192,8 +209,7 @@ export function createTripSageAgent<TTools extends ToolSet>(
   });
 
   return {
-    // biome-ignore lint/suspicious/noExplicitAny: ToolLoopAgent requires flexible tool types
-    agent: agent as any,
+    agent,
     agentType,
     defaultMessages,
     modelId: deps.modelId,

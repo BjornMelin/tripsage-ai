@@ -16,6 +16,7 @@ import {
 import type { ProviderResolution } from "@schemas/providers";
 import type { UIMessage } from "ai";
 import { createAgentUIStreamResponse } from "ai";
+import { CHAT_DEFAULT_SYSTEM_PROMPT } from "@/ai/constants";
 import { handleMemoryIntent } from "@/lib/memory/orchestrator";
 import {
   assistantResponseToMemoryTurn,
@@ -80,15 +81,6 @@ export interface ChatPayload {
   desiredMaxTokens?: number;
   ip?: string;
 }
-
-/**
- * Default system prompt for the chat agent.
- */
-const DEFAULT_SYSTEM_PROMPT = `You are a helpful travel planning assistant with access to accommodation booking 
-via Amadeus Self-Service hotels enriched with Google Places data. 
-Use searchAccommodations to find properties, getAccommodationDetails for more info, 
-checkAvailability to get booking tokens, and bookAccommodation to complete reservations. 
-Always guide users through the complete booking flow when they want to book accommodations.`;
 
 /**
  * Handles chat streaming requests using AI SDK v6 ToolLoopAgent.
@@ -192,7 +184,7 @@ export async function handleChatStream(
       : (deps.config?.defaultMaxTokens ?? 1024),
     maxSteps: 10,
     memorySummary,
-    systemPrompt: DEFAULT_SYSTEM_PROMPT,
+    systemPrompt: CHAT_DEFAULT_SYSTEM_PROMPT,
   };
 
   deps.logger?.info?.("chat_stream:start", {
@@ -270,10 +262,7 @@ export async function handleChatStream(
         }
       }
     },
-
-    // Original messages for persistence mode (cast to match agent types)
-    // biome-ignore lint/suspicious/noExplicitAny: Agent message types are complex
-    originalMessages: messages as any,
+    originalMessages: messages,
   });
 
   return response;

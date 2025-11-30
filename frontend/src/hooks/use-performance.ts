@@ -97,7 +97,7 @@ export function useComponentPerformance(componentName: string) {
 }
 
 // No-op handler for web vitals - metrics are tracked but not logged
-const noOpVitalsHandler = (_metric: Metric) => {
+const noOpVitalsHandler: (metric: Metric) => void = () => {
   // Web vitals are captured but not logged to console
   // Override this with a custom handler for analytics integration
 };

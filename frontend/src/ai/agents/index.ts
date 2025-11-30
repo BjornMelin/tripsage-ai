@@ -55,12 +55,14 @@ export { extractAgentParameters } from "./types";
  * factory function invocation.
  */
 export interface AgentInputTypes {
+  // Supported by agentRegistry and createAgentForWorkflow
   accommodationSearch: import("@schemas/agents").AccommodationSearchRequest;
   budgetPlanning: import("@schemas/agents").BudgetPlanRequest;
   destinationResearch: import("@schemas/agents").DestinationResearchRequest;
   flightSearch: import("@schemas/flights").FlightSearchRequest;
   itineraryPlanning: import("@schemas/agents").ItineraryPlanRequest;
-  memoryUpdate: import("@schemas/agents").MemoryUpdateRequest;
+  // Special handling - not supported via agentRegistry
+  memoryUpdate: never;
   router: never; // Router uses generateObject, not ToolLoopAgent
 }
 
@@ -134,9 +136,7 @@ export function createAgentForWorkflow<TKind extends SupportedAgentKind>(
     throw new Error(`Unsupported agent kind: ${kind}`);
   }
 
-  // Type assertion needed due to input type variance
-  // biome-ignore lint/suspicious/noExplicitAny: Dynamic dispatch requires any
-  return factory(deps, config, input as any);
+  return factory(deps, config, input);
 }
 
 /**
@@ -159,10 +159,10 @@ export function getAgentName(kind: AgentWorkflowKind): string {
 }
 
 /**
- * Gets the default max steps for an agent workflow kind.
+ * Gets the minimum max steps floor for an agent workflow kind.
  *
  * @param kind - Agent workflow kind.
- * @returns Default max steps for the agent.
+ * @returns Minimum max steps enforced by the agent implementation.
  */
 export function getDefaultMaxSteps(kind: AgentWorkflowKind): number {
   const defaults: Record<AgentWorkflowKind, number> = {

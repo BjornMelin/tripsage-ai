@@ -23,7 +23,8 @@ export function deepCloneValue<T>(value: T, seen = new WeakMap()): T {
     const clonedMap = new Map();
     seen.set(value, clonedMap);
     value.forEach((mapValue, key) => {
-      clonedMap.set(key, deepCloneValue(mapValue, seen));
+      const clonedKey = deepCloneValue(key as unknown as T, seen);
+      clonedMap.set(clonedKey, deepCloneValue(mapValue, seen));
     });
     return clonedMap as unknown as T;
   }

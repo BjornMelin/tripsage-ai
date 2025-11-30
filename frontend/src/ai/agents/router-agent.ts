@@ -17,6 +17,8 @@ import type { LanguageModel } from "ai";
 import { generateObject } from "ai";
 import { buildRouterPrompt } from "@/prompts/agents";
 
+const MAX_MESSAGE_LENGTH = 10_000;
+
 /**
  * Classify a user message into an agent workflow.
  *
@@ -33,16 +35,15 @@ export async function classifyUserMessage(
   userMessage: string
 ): Promise<RouterClassification> {
   // Validate input
-  const MaxMessageLength = 10000;
   const trimmedMessage = userMessage.trim();
 
   if (!trimmedMessage) {
     throw new Error("User message cannot be empty");
   }
 
-  if (trimmedMessage.length > MaxMessageLength) {
+  if (trimmedMessage.length > MAX_MESSAGE_LENGTH) {
     throw new Error(
-      `User message exceeds maximum length of ${MaxMessageLength} characters (received ${trimmedMessage.length})`
+      `User message exceeds maximum length of ${MAX_MESSAGE_LENGTH} characters (received ${trimmedMessage.length})`
     );
   }
 
@@ -58,14 +59,9 @@ export async function classifyUserMessage(
     });
     return result.object;
   } catch (error) {
-    const messageSummary =
-      trimmedMessage.length > 100
-        ? `${trimmedMessage.slice(0, 100)}...`
-        : trimmedMessage;
-
     const errorMessage = error instanceof Error ? error.message : String(error);
-    throw new Error(
-      `Failed to classify user message: ${errorMessage} (message: "${messageSummary}")`
-    );
+    throw new Error(`Failed to classify user message: ${errorMessage}`, {
+      cause: error instanceof Error ? error : undefined,
+    });
   }
 }

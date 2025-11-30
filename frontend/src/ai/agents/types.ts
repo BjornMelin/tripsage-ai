@@ -88,10 +88,9 @@ export interface TripSageAgentConfig<TTools extends ToolSet = ToolSet> {
  *
  * Uses ToolSet as the base type for flexibility across different agent configurations.
  */
-export interface TripSageAgentResult {
+export interface TripSageAgentResult<TagentTools extends ToolSet = ToolSet> {
   /** The configured ToolLoopAgent instance. */
-  // biome-ignore lint/suspicious/noExplicitAny: ToolLoopAgent requires flexible tool types
-  agent: ToolLoopAgent<never, any>;
+  agent: ToolLoopAgent<never, TagentTools>;
 
   /** Agent type identifier for routing and logging. */
   agentType: AgentWorkflowKind;
@@ -118,11 +117,11 @@ export type InferTripSageUIMessage<TAgent extends ToolLoopAgent> =
  * @template TInput - Input type for the agent workflow.
  */
 // biome-ignore lint/style/useNamingConvention: TypeScript generic convention
-export type AgentFactory<TInput> = (
+export type AgentFactory<TInput, TagentTools extends ToolSet = ToolSet> = (
   deps: AgentDependencies,
   config: AgentConfig,
   input: TInput
-) => TripSageAgentResult;
+) => TripSageAgentResult<TagentTools>;
 
 /**
  * Metadata for agent execution tracking and observability.

@@ -59,7 +59,7 @@ export const invokeTool = <Params, Result>(
     async () => {
       const result = tool.execute(params, callOptions);
       return result && typeof (result as { then?: unknown }).then === "function"
-        ? await Promise.resolve(result)
+        ? await result
         : result;
     }
   );

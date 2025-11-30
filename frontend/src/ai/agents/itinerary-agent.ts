@@ -41,12 +41,22 @@ type LookupPoiResponse =
   | { error?: string; inputs: unknown; pois: unknown[]; provider: string }
   | { fromCache?: boolean; inputs: unknown; pois: unknown[]; provider: string };
 
-/** Response type for create travel plan tool. */
+/**
+ * Response type for create travel plan tool.
+ *
+ * TODO: consolidate with planning tool schemas when shared output typings
+ * are introduced to avoid duplication across agents.
+ */
 type CreateTravelPlanResponse =
   | { error: string; success: false }
   | { message: string; plan: unknown; planId: string; success: true };
 
-/** Response type for save travel plan tool. */
+/**
+ * Response type for save travel plan tool.
+ *
+ * TODO: consolidate with planning tool schemas when shared output typings
+ * are introduced to avoid duplication across agents.
+ */
 type SaveTravelPlanResponse =
   | { error: string; success: false }
   | {
@@ -176,12 +186,6 @@ function buildItineraryTools(identifier: string): ToolSet {
     description: createPlanTool.description ?? "Create travel plan",
     execute: (params, callOptions) => invokeTool(createPlanTool, params, callOptions),
     guardrails: {
-      cache: {
-        hashInput: true,
-        key: () => "agent:itinerary:create-plan",
-        namespace: "agent:itinerary:create-plan",
-        ttlSeconds: 60 * 5,
-      },
       rateLimit: {
         errorCode: TOOL_ERROR_CODES.toolRateLimited,
         identifier: () => rateLimit.identifier,
@@ -201,12 +205,6 @@ function buildItineraryTools(identifier: string): ToolSet {
     description: savePlanTool.description ?? "Save travel plan",
     execute: (params, callOptions) => invokeTool(savePlanTool, params, callOptions),
     guardrails: {
-      cache: {
-        hashInput: true,
-        key: () => "agent:itinerary:save-plan",
-        namespace: "agent:itinerary:save-plan",
-        ttlSeconds: 60 * 5,
-      },
       rateLimit: {
         errorCode: TOOL_ERROR_CODES.toolRateLimited,
         identifier: () => rateLimit.identifier,

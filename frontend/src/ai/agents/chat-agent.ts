@@ -19,6 +19,7 @@ import {
   stepCountIs,
   ToolLoopAgent,
 } from "ai";
+import { CHAT_DEFAULT_SYSTEM_PROMPT } from "@/ai/constants";
 import { extractTexts, validateImageAttachments } from "@/app/api/_helpers/attachments";
 import { secureUuid } from "@/lib/security/random";
 import { createServerLogger } from "@/lib/telemetry/logger";
@@ -29,18 +30,6 @@ import { getModelContextLimit } from "@/lib/tokens/limits";
 import type { AgentDependencies, TripSageAgentResult } from "./types";
 
 const logger = createServerLogger("chat-agent");
-
-/**
- * Default system prompt for the chat agent.
- *
- * Provides context about the agent's capabilities and guides
- * the model toward helpful travel planning assistance.
- */
-const DEFAULT_SYSTEM_PROMPT = `You are a helpful travel planning assistant with access to accommodation booking 
-via Amadeus Self-Service hotels enriched with Google Places data. 
-Use searchAccommodations to find properties, getAccommodationDetails for more info, 
-checkAvailability to get booking tokens, and bookAccommodation to complete reservations. 
-Always guide users through the complete booking flow when they want to book accommodations.`;
 
 /**
  * Configuration for creating the chat agent.
@@ -120,12 +109,18 @@ export function createChatAgent(
   deps: AgentDependencies,
   messages: UIMessage[],
   config: ChatAgentConfig = {}
-): TripSageAgentResult {
+): TripSageAgentResult<ToolSet> {
+  if (!deps.userId) {
+    throw new Error(
+      "Chat agent requires a valid userId for user-scoped tool operations"
+    );
+  }
+
   const {
     desiredMaxTokens = 1024,
     maxSteps = 10,
     memorySummary,
-    systemPrompt = DEFAULT_SYSTEM_PROMPT,
+    systemPrompt = CHAT_DEFAULT_SYSTEM_PROMPT,
     userScopedTools = [
       "createTravelPlan",
       "updateTravelPlan",
@@ -160,13 +155,6 @@ export function createChatAgent(
   ];
   const { maxTokens } = clampMaxTokens(clampInput, desiredMaxTokens, deps.modelId);
 
-  // Wrap tools with user ID for user-scoped operations
-  if (!deps.userId) {
-    throw new Error(
-      "Chat agent requires a valid userId for user-scoped tool operations"
-    );
-  }
-
   const chatTools = wrapToolsWithUserId(
     { ...tools },
     deps.userId,
@@ -182,7 +170,7 @@ export function createChatAgent(
     requestId,
   });
 
-  const agent = new ToolLoopAgent({
+  const agent = new ToolLoopAgent<never, ToolSet>({
     // Experimental: Automatic tool call repair for malformed inputs
     // biome-ignore lint/style/useNamingConvention: AI SDK property name
     experimental_repairToolCall: async ({
@@ -277,9 +265,7 @@ export function createChatAgent(
   });
 
   return {
-    // Type assertion required due to ToolSet complexity
-    // biome-ignore lint/suspicious/noExplicitAny: Dynamic tool set
-    agent: agent as any,
+    agent,
     agentType: "router", // Chat agent acts as the main router
     defaultMessages: [],
     modelId: deps.modelId,

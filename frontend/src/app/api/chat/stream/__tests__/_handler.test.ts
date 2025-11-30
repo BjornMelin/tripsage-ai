@@ -18,8 +18,9 @@ vi.mock("@ai/agents", () => ({
 }));
 
 // Mock createAgentUIStreamResponse
-// biome-ignore lint/suspicious/noExplicitAny: Test mock needs flexible typing
-const mockCreateAgentUIStreamResponse = vi.hoisted(() => vi.fn()) as any;
+const mockCreateAgentUIStreamResponse: ReturnType<typeof vi.fn> = vi.hoisted(() =>
+  vi.fn()
+);
 
 vi.mock("ai", () => ({
   createAgentUIStreamResponse: mockCreateAgentUIStreamResponse,

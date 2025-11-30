@@ -61,7 +61,7 @@ function buildBudgetTools(identifier: string): ToolSet {
       cache: {
         hashInput: true,
         key: () => "agent:budget:web-search",
-        namespace: "agent:budget:web-search",
+        namespace: `agent:budget:web-search:${identifier}`,
         ttlSeconds: 60 * 10,
       },
       rateLimit: {
@@ -86,7 +86,7 @@ function buildBudgetTools(identifier: string): ToolSet {
       cache: {
         hashInput: true,
         key: () => "agent:budget:poi",
-        namespace: "agent:budget:poi",
+        namespace: `agent:budget:poi:${identifier}`,
         ttlSeconds: 600,
       },
       rateLimit: {
@@ -111,7 +111,7 @@ function buildBudgetTools(identifier: string): ToolSet {
       cache: {
         hashInput: true,
         key: () => "agent:budget:combine",
-        namespace: "agent:budget:combine",
+        namespace: `agent:budget:combine:${identifier}`,
         ttlSeconds: 60 * 10,
       },
       rateLimit: {
@@ -136,7 +136,7 @@ function buildBudgetTools(identifier: string): ToolSet {
       cache: {
         hashInput: true,
         key: () => "agent:budget:safety",
-        namespace: "agent:budget:safety",
+        namespace: `agent:budget:safety:${identifier}`,
         ttlSeconds: 60 * 60 * 24 * 7,
       },
       rateLimit: {
