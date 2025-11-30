@@ -19,6 +19,9 @@ import {
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 import { nowIso, secureId } from "@/lib/security/random";
+import { createStoreLogger } from "@/lib/telemetry/store-logger";
+
+const logger = createStoreLogger({ storeName: "ui" });
 
 /**
  * Interface for sidebar state management.
@@ -357,7 +360,7 @@ export const useUiStore = create<UiState>()(
 
             return id;
           }
-          console.error("Invalid notification:", result.error);
+          logger.error("Invalid notification", { error: result.error });
           return "";
         },
 
@@ -532,7 +535,7 @@ export const useUiStore = create<UiState>()(
               },
             }));
           } else {
-            console.error("Invalid loading state:", result.error);
+            logger.error("Invalid loading state", { error: result.error });
           }
         },
 
@@ -569,7 +572,7 @@ export const useUiStore = create<UiState>()(
           if (result.success) {
             set({ theme: result.data });
           } else {
-            console.error("Invalid theme:", result.error);
+            logger.error("Invalid theme", { error: result.error });
           }
         },
 

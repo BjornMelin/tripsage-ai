@@ -84,19 +84,10 @@ describe("Deals Store", () => {
       const store = useDealsStore.getState();
       const invalidDeal = createInvalidDealFixture();
 
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
-        // Suppress console.error during test
-      });
-
+      // Store now uses OTEL-based store logger instead of console.error
       const result = store.addDeal(invalidDeal);
       expect(result).toBe(false);
       expect(store.deals.invalid1).toBeUndefined();
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "Invalid deal data:",
-        expect.any(Object) // ZodError
-      );
-
-      consoleSpy.mockRestore();
     });
 
     it("should update a deal", () => {
@@ -196,19 +187,10 @@ describe("Deals Store", () => {
       const store = useDealsStore.getState();
       const invalidAlert = createInvalidDealAlertFixture();
 
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
-        // Suppress console.error during test
-      });
-
+      // Store now uses OTEL-based store logger instead of console.error
       const result = store.addAlert(invalidAlert);
       expect(result).toBe(false);
       expect(store.alerts).toHaveLength(0);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "Invalid alert data:",
-        expect.any(Object) // ZodError
-      );
-
-      consoleSpy.mockRestore();
     });
 
     it("should update an alert", () => {
