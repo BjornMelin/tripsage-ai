@@ -1,19 +1,20 @@
 /**
- * @fileoverview Itinerary agent route handler (frontend-only).
+ * @fileoverview Itinerary agent route handler using AI SDK v6 ToolLoopAgent.
  * - Supabase SSR auth → userId
  * - Provider resolution (BYOK/Gateway)
  * - Guardrails (cache, ratelimit, telemetry) around tools
- * - AI SDK v6 streaming with tool calls
+ * - AI SDK v6 ToolLoopAgent with createAgentUIStreamResponse
  */
 
 import "server-only";
 
+import { createItineraryAgent } from "@ai/agents";
 import { resolveProvider } from "@ai/models/registry";
 import { agentSchemas } from "@schemas/agents";
+import { createAgentUIStreamResponse } from "ai";
 import type { NextRequest } from "next/server";
 import { resolveAgentConfig } from "@/lib/agents/config-resolver";
 import { createErrorHandler } from "@/lib/agents/error-recovery";
-import { runItineraryAgent } from "@/lib/agents/itinerary-agent";
 import { withApiGuards } from "@/lib/api/factory";
 import { parseJsonBody, requireUserId, validateSchema } from "@/lib/api/route-helpers";
 
@@ -24,11 +25,7 @@ const RequestSchema = agentSchemas.itineraryPlanRequestSchema;
 /**
  * POST /api/agents/itineraries
  *
- * Validates request, resolves provider, and streams ToolLoop response.
- *
- * @param req - Next.js request object
- * @param routeContext - Route context from withApiGuards
- * @returns Streaming response with itinerary plan
+ * Validates request, resolves provider, and streams ToolLoopAgent response.
  */
 export const POST = withApiGuards({
   auth: true,
@@ -56,13 +53,15 @@ export const POST = withApiGuards({
   const resolvedModelHint = agentConfig.model ?? modelHint;
   const { model, modelId } = await resolveProvider(userId, resolvedModelHint);
 
-  const identifier = userId;
-  const result = await runItineraryAgent(
-    { identifier, model, modelId },
+  const { agent, defaultMessages } = createItineraryAgent(
+    { identifier: userId, model, modelId },
     agentConfig,
     body
   );
-  return result.toUIMessageStreamResponse({
+
+  return createAgentUIStreamResponse({
+    agent,
+    messages: defaultMessages,
     onError: createErrorHandler(),
   });
 });
