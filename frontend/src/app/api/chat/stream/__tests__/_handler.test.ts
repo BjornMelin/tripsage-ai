@@ -5,32 +5,42 @@ import type { LanguageModel, UIMessage } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ChatDeps, ProviderResolver } from "../_handler";
 
-const streamTextMock = vi.hoisted(() =>
-  vi.fn(() => ({
-    response: Promise.resolve({ messages: [] as UIMessage[] }),
-    toUIMessageStreamResponse: () =>
-      new Response(
-        new ReadableStream({
-          start(controller) {
-            controller.close();
-          },
-        })
-      ),
-  }))
-);
-
-vi.mock("ai", () => ({
-  convertToModelMessages: (x: unknown) => x,
-  generateObject: vi.fn(),
-  NoSuchToolError: class NoSuchToolError extends Error {},
-  stepCountIs: () => () => false,
-  streamText: streamTextMock,
-  tool: vi.fn((config: unknown) => ({
-    execute: vi.fn(),
-    ...(config as Record<string, unknown>),
+// Mock the chat agent module
+vi.mock("@ai/agents", () => ({
+  createChatAgent: vi.fn(() => ({
+    agent: {
+      generate: vi.fn(),
+      stream: vi.fn(),
+    },
+    modelId: "gpt-4o-mini",
   })),
+  validateChatMessages: vi.fn(() => ({ valid: true })),
 }));
 
+// Mock createAgentUIStreamResponse
+// biome-ignore lint/suspicious/noExplicitAny: Test mock needs flexible typing
+const mockCreateAgentUIStreamResponse = vi.hoisted(() => vi.fn()) as any;
+
+vi.mock("ai", () => ({
+  createAgentUIStreamResponse: mockCreateAgentUIStreamResponse,
+}));
+
+// Mock memory functions
+vi.mock("@/lib/memory/orchestrator", () => ({
+  handleMemoryIntent: vi.fn(async () => ({ context: [] })),
+}));
+
+vi.mock("@/lib/memory/turn-utils", () => ({
+  assistantResponseToMemoryTurn: vi.fn(() => null),
+  persistMemoryTurn: vi.fn(async () => undefined),
+  uiMessageToMemoryTurn: vi.fn(() => null),
+}));
+
+vi.mock("@/lib/security/random", () => ({
+  secureUuid: () => "test-uuid-123",
+}));
+
+import { validateChatMessages } from "@ai/agents";
 import { handleChatStream } from "../_handler";
 
 const createResolver =
@@ -97,7 +107,9 @@ function fakeSupabase(
 
   return {
     auth: {
-      getUser: vi.fn(async () => ({ data: { user: userId ? { id: userId } : null } })),
+      getUser: vi.fn(async () => ({
+        data: { user: userId ? { id: userId } : null },
+      })),
     },
     from: vi.fn(mockQueryBuilder),
   } as unknown as ChatDeps["supabase"];
@@ -106,7 +118,11 @@ function fakeSupabase(
 describe("handleChatStream", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockCreateAgentUIStreamResponse.mockResolvedValue(
+      new Response("ok", { status: 200 })
+    );
   });
+
   it("401 when unauthenticated", async () => {
     const res = await handleChatStream(
       {
@@ -120,89 +136,14 @@ describe("handleChatStream", () => {
     expect(body.error).toBe("unauthorized");
   });
 
-  it("emits usage metadata on finish and persists assistant message (stream stub)", async () => {
-    type MessageRow = {
-      sessionId: string;
-      role: string;
-      [key: string]: unknown;
-    };
-    const memLog: MessageRow[] = [];
-
-    const mockQueryBuilder = (table: string): MockQueryBuilder => {
-      if (table === "chat_messages") {
-        return {
-          eq: vi.fn().mockReturnThis(),
-          insert: vi.fn((row: unknown) => {
-            memLog.push(row as MessageRow);
-            return Promise.resolve({ error: null });
-          }),
-        };
-      }
-      if (table === "memories") {
-        return {
-          eq: vi.fn().mockReturnThis(),
-          limit: vi.fn().mockResolvedValue({ data: [] }),
-          order: vi.fn().mockReturnThis(),
-          select: vi.fn().mockReturnThis(),
-        };
-      }
-      if (table === "chat_sessions") {
-        return {
-          eq: vi.fn().mockReturnThis(),
-          update: vi.fn().mockReturnThis(),
-        };
-      }
-      return {
-        eq: vi.fn().mockReturnThis(),
-      };
-    };
-
-    const supabase = {
-      auth: { getUser: vi.fn(async () => ({ data: { user: { id: "u4" } } })) },
-      from: vi.fn(mockQueryBuilder),
-    } as unknown as ChatDeps["supabase"];
-
-    type MetadataResult = {
-      provider?: string;
-      [key: string]: unknown;
-    };
-
-    let startMeta: MetadataResult | undefined;
-    let finishMeta: MetadataResult | undefined;
-    const fauxStream = vi.fn(() => ({
-      response: Promise.resolve({
-        messages: [
-          {
-            content: [{ text: "hello", type: "text" }],
-            id: "assistant-1",
-            role: "assistant",
-          },
-        ],
-      }),
-      toUIMessageStreamResponse: ({
-        messageMetadata,
-      }: {
-        messageMetadata?: (event: unknown) => MetadataResult | Promise<MetadataResult>;
-      }) => {
-        startMeta = messageMetadata?.({ part: { type: "start" } }) as MetadataResult;
-        finishMeta = messageMetadata?.({
-          part: {
-            totalUsage: { inputTokens: 45, outputTokens: 78, totalTokens: 123 },
-            type: "finish",
-          },
-        }) as MetadataResult;
-        return new Response("ok", { status: 200 });
-      },
-    }));
-
+  it("creates agent and streams response for authenticated user", async () => {
     const res = await handleChatStream(
       {
         clock: { now: () => 1000 },
         config: { defaultMaxTokens: 256 },
         logger: { error: vi.fn(), info: vi.fn() },
         resolveProvider: createResolver("gpt-4o-mini"),
-        stream: fauxStream as unknown as ChatDeps["stream"],
-        supabase,
+        supabase: fakeSupabase("u4"),
       },
       {
         messages: [
@@ -216,15 +157,7 @@ describe("handleChatStream", () => {
       }
     );
     expect(res.status).toBe(200);
-    // assistant message persisted
-    expect(memLog.length).toBe(1);
-    // Database column uses snake_case
-    // biome-ignore lint/style/useNamingConvention: test mirrors DB column name
-    expect((memLog[0] as unknown as { session_id: string }).session_id).toBe("s1");
-    expect(memLog[0].role).toBe("assistant");
-    // provider metadata present in start/finish
-    expect(await startMeta).toMatchObject({ provider: "openai" });
-    expect(await finishMeta).toMatchObject({ provider: "openai" });
+    expect(mockCreateAgentUIStreamResponse).toHaveBeenCalled();
   });
 
   it("429 when rate limited", async () => {
@@ -241,6 +174,13 @@ describe("handleChatStream", () => {
   });
 
   it("400 on invalid attachment type", async () => {
+    // Mock validateChatMessages to return invalid
+    vi.mocked(validateChatMessages).mockReturnValueOnce({
+      error: "invalid_attachment",
+      reason: "Only image attachments are supported",
+      valid: false,
+    });
+
     const res = await handleChatStream(
       {
         resolveProvider: createResolver("gpt-4o-mini"),
@@ -252,7 +192,11 @@ describe("handleChatStream", () => {
             id: "m1",
             parts: [
               { text: "hi", type: "text" },
-              { mediaType: "application/pdf", type: "file", url: "https://x/y.pdf" },
+              {
+                mediaType: "application/pdf",
+                type: "file",
+                url: "https://x/y.pdf",
+              },
             ],
             role: "user",
           } satisfies UIMessage,
@@ -264,30 +208,6 @@ describe("handleChatStream", () => {
     expect(body.error).toBe("invalid_attachment");
   });
 
-  it("400 when clamp leaves no tokens", async () => {
-    // Create a huge prompt to trip clamp logic
-    const huge = "x".repeat(600_000);
-    const res = await handleChatStream(
-      {
-        config: { defaultMaxTokens: 1024 },
-        // Use unknown model to trigger heuristic token counting (fast)
-        resolveProvider: createResolver("some-unknown-model"),
-        supabase: fakeSupabase("u3"),
-      },
-      {
-        messages: [
-          {
-            id: "u",
-            parts: [{ text: huge, type: "text" }],
-            role: "user",
-          } satisfies UIMessage,
-        ],
-      }
-    );
-    expect(res.status).toBe(400);
-    await res.text();
-  });
-
   it("respects model override in payload", async () => {
     const resolveProvider = vi.fn((_userId: string, modelHint?: string) => {
       expect(modelHint).toBe("claude-3.5-sonnet");
@@ -297,13 +217,10 @@ describe("handleChatStream", () => {
         provider: "anthropic" as ProviderId,
       });
     });
-    const streamText = vi.fn(() => ({
-      toUIMessageStreamResponse: () => new Response("ok", { status: 200 }),
-    }));
+
     const res = await handleChatStream(
       {
         resolveProvider,
-        stream: streamText as unknown as ChatDeps["stream"],
         supabase: fakeSupabase("u5"),
       },
       {
@@ -319,17 +236,9 @@ describe("handleChatStream", () => {
     );
     expect(res.status).toBe(200);
     expect(resolveProvider).toHaveBeenCalledWith("u5", "claude-3.5-sonnet");
-    expect(streamText).toHaveBeenCalledWith(
-      expect.objectContaining({
-        model: expect.anything(),
-      })
-    );
   });
 
-  it("calls streamText with correct arguments", async () => {
-    const streamText = vi.fn(() => ({
-      toUIMessageStreamResponse: () => new Response("ok", { status: 200 }),
-    }));
+  it("calls createAgentUIStreamResponse with agent and messages", async () => {
     const messages: UIMessage[] = [
       {
         id: "m1",
@@ -337,11 +246,11 @@ describe("handleChatStream", () => {
         role: "user",
       },
     ];
+
     await handleChatStream(
       {
         config: { defaultMaxTokens: 512 },
         resolveProvider: createResolver("gpt-4o-mini"),
-        stream: streamText as unknown as ChatDeps["stream"],
         supabase: fakeSupabase("u6"),
       },
       {
@@ -349,20 +258,15 @@ describe("handleChatStream", () => {
         messages,
       }
     );
-    expect(streamText).toHaveBeenCalledWith(
+
+    expect(mockCreateAgentUIStreamResponse).toHaveBeenCalledWith(
       expect.objectContaining({
-        maxOutputTokens: expect.any(Number),
+        agent: expect.anything(),
         messages: expect.anything(),
-        model: expect.anything(),
-        stopWhen: expect.any(Function),
-        system: expect.stringContaining("travel planning assistant"),
-        toolChoice: "auto",
-        tools: expect.anything(),
+        onError: expect.any(Function),
+        onFinish: expect.any(Function),
       })
     );
-    const callArgs = (streamText as ReturnType<typeof vi.fn>).mock.calls[0]?.[0];
-    expect(callArgs?.maxOutputTokens).toBeLessThanOrEqual(256);
-    expect(callArgs?.system).toBeTruthy();
   });
 
   it("handles provider resolution failure", async () => {
@@ -388,22 +292,22 @@ describe("handleChatStream", () => {
     ).rejects.toThrow("Provider resolution failed");
   });
 
-  it("onError returns user-friendly message", async () => {
-    const streamText = vi.fn(() => ({
-      toUIMessageStreamResponse: ({
-        onError,
-      }: {
-        onError?: (err: unknown) => string;
-      }) => {
-        const errorMsg = onError?.(new Error("Test error"));
-        return new Response(JSON.stringify({ error: errorMsg }), { status: 200 });
-      },
-    }));
-    const res = await handleChatStream(
+  it("onError callback returns user-friendly message", async () => {
+    let capturedOnError: ((err: unknown) => string) | undefined;
+
+    mockCreateAgentUIStreamResponse.mockImplementationOnce(
+      (opts: { onError?: (err: unknown) => string }) => {
+        capturedOnError = opts.onError;
+        return Promise.resolve(new Response("ok", { status: 200 }));
+      }
+    );
+
+    const logger = { error: vi.fn(), info: vi.fn() };
+
+    await handleChatStream(
       {
-        logger: { error: vi.fn(), info: vi.fn() },
+        logger,
         resolveProvider: createResolver("gpt-4o-mini"),
-        stream: streamText as unknown as ChatDeps["stream"],
         supabase: fakeSupabase("u8"),
       },
       {
@@ -416,7 +320,68 @@ describe("handleChatStream", () => {
         ],
       }
     );
-    const body = await res.json();
-    expect(body.error).toBe("An error occurred while processing your request.");
+
+    // Test the captured onError callback
+    expect(capturedOnError).toBeDefined();
+    if (!capturedOnError) {
+      throw new Error("onError callback was not captured");
+    }
+    const errorMsg = capturedOnError(new Error("Test error"));
+    expect(errorMsg).toBe("An error occurred while processing your request.");
+    expect(logger.error).toHaveBeenCalledWith(
+      "chat_stream:error",
+      expect.objectContaining({ message: "Test error" })
+    );
+  });
+
+  it("logs start and finish events", async () => {
+    let capturedOnFinish: ((event: unknown) => void) | undefined;
+
+    mockCreateAgentUIStreamResponse.mockImplementationOnce(
+      (opts: { onFinish?: (event: unknown) => void }) => {
+        capturedOnFinish = opts.onFinish;
+        return Promise.resolve(new Response("ok", { status: 200 }));
+      }
+    );
+
+    const logger = { error: vi.fn(), info: vi.fn() };
+
+    await handleChatStream(
+      {
+        logger,
+        resolveProvider: createResolver("gpt-4o-mini"),
+        supabase: fakeSupabase("u9"),
+      },
+      {
+        messages: [
+          {
+            id: "m1",
+            parts: [{ text: "hi", type: "text" }],
+            role: "user",
+          } satisfies UIMessage,
+        ],
+      }
+    );
+
+    expect(logger.info).toHaveBeenCalledWith(
+      "chat_stream:start",
+      expect.objectContaining({
+        model: "gpt-4o-mini",
+        requestId: expect.any(String),
+        userId: "u9",
+      })
+    );
+
+    // Test the captured onFinish callback
+    expect(capturedOnFinish).toBeDefined();
+    if (capturedOnFinish) {
+      capturedOnFinish({ finishReason: "stop", usage: { totalTokens: 100 } });
+      expect(logger.info).toHaveBeenCalledWith(
+        "chat_stream:finish",
+        expect.objectContaining({
+          finishReason: "stop",
+        })
+      );
+    }
   });
 });

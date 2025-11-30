@@ -1,17 +1,18 @@
 /**
- * @fileoverview Budget agent route handler (frontend-only).
+ * @fileoverview Budget agent route handler using AI SDK v6 ToolLoopAgent.
  * - Supabase SSR auth → userId
  * - Provider resolution (BYOK/Gateway)
  * - Guardrails (cache, ratelimit, telemetry) around tools
- * - AI SDK v6 streaming with tool calls
+ * - AI SDK v6 ToolLoopAgent with createAgentUIStreamResponse
  */
 
 import "server-only";
 
+import { createBudgetAgent } from "@ai/agents";
 import { resolveProvider } from "@ai/models/registry";
 import { agentSchemas } from "@schemas/agents";
+import { createAgentUIStreamResponse } from "ai";
 import type { NextRequest } from "next/server";
-import { runBudgetAgent } from "@/lib/agents/budget-agent";
 import { resolveAgentConfig } from "@/lib/agents/config-resolver";
 import { createErrorHandler } from "@/lib/agents/error-recovery";
 import { withApiGuards } from "@/lib/api/factory";
@@ -24,7 +25,7 @@ const RequestSchema = agentSchemas.budgetPlanRequestSchema;
 /**
  * POST /api/agents/budget
  *
- * Validates request, resolves provider, and streams ToolLoop response.
+ * Validates request, resolves provider, and streams ToolLoopAgent response.
  */
 export const POST = withApiGuards({
   auth: true,
@@ -51,12 +52,15 @@ export const POST = withApiGuards({
     config.config.model ?? new URL(req.url).searchParams.get("model") ?? undefined;
   const { model, modelId } = await resolveProvider(userId, modelHint);
 
-  const result = await runBudgetAgent(
+  const { agent, defaultMessages } = createBudgetAgent(
     { identifier: userId, model, modelId },
     config.config,
     body
   );
-  return result.toUIMessageStreamResponse({
+
+  return createAgentUIStreamResponse({
+    agent,
+    messages: defaultMessages,
     onError: createErrorHandler(),
   });
 });

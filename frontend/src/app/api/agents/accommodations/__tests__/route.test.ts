@@ -42,10 +42,21 @@ vi.mock("@ai/models/registry", () => ({
 }));
 
 // Mock accommodation agent
-vi.mock("@/lib/agents/accommodation-agent", () => ({
-  runAccommodationAgent: vi.fn(() => ({
-    toUIMessageStreamResponse: () => new Response("ok", { status: 200 }),
+vi.mock("@ai/agents", () => ({
+  createAccommodationAgent: vi.fn(() => ({
+    agent: {},
+    agentType: "accommodationSearch",
+    defaultMessages: [{ content: "schema", role: "user" }],
+    modelId: "gpt-4o",
   })),
+}));
+
+// Mock createAgentUIStreamResponse
+const mockCreateAgentUIStreamResponse = vi.fn(
+  () => new Response("ok", { status: 200 })
+);
+vi.mock("ai", () => ({
+  createAgentUIStreamResponse: mockCreateAgentUIStreamResponse,
 }));
 
 // Mock Redis
@@ -106,6 +117,15 @@ describe("/api/agents/accommodations route", () => {
     });
     const res = await mod.POST(req, createRouteParamsContext());
     expect(res.status).toBe(200);
+    expect(mockCreateAgentUIStreamResponse).toHaveBeenCalledTimes(1);
+
+    // Assert that createAgentUIStreamResponse was called with expected structure
+    expect(mockCreateAgentUIStreamResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        agent: expect.any(Object),
+        messages: expect.any(Array),
+      })
+    );
   });
 
   it("returns 429 when the rate limit is exceeded", async () => {

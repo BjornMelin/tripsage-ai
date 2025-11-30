@@ -7,11 +7,11 @@
 
 import "server-only";
 
+import { classifyUserMessage } from "@ai/agents/router-agent";
 import { resolveProvider } from "@ai/models/registry";
 import { agentSchemas } from "@schemas/agents";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { classifyUserMessage } from "@/lib/agents/router-agent";
 import { withApiGuards } from "@/lib/api/factory";
 import { parseJsonBody, requireUserId, validateSchema } from "@/lib/api/route-helpers";
 
