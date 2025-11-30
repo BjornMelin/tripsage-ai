@@ -455,16 +455,17 @@ export function HotelSearchForm({
             <div className="text-red-600 text-sm flex-1">
               <strong>Search failed:</strong> {searchError}
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSearchError(null)}
-              className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
-            >
-              ×
-            </Button>
-          </div>
-        )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSearchError(null)}
+            className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+            aria-label="Dismiss error"
+          >
+            ×
+          </Button>
+        </div>
+      )}
 
         {/* Search Button */}
         <div className="flex gap-3 pt-2">

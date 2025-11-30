@@ -9,7 +9,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useId } from "react";
+import { useId, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,7 +43,8 @@ export function RegisterForm({
 }: RegisterFormProps) {
   const search = useSearchParams();
   const nextParam = search?.get("next") || "";
-  const error = search?.get("error");
+  const urlError = search?.get("error");
+  const [socialError, setSocialError] = useState<string | null>(null);
   const status = search?.get("status");
   const emailId = useId();
   const passwordId = useId();
@@ -81,8 +82,11 @@ export function RegisterForm({
         context: "RegisterForm",
         provider,
       });
+      setSocialError(`Failed to sign in with ${provider}. Please try again.`);
     }
   };
+
+  const displayError = urlError ?? socialError;
 
   return (
     <Card className={className}>
@@ -92,9 +96,9 @@ export function RegisterForm({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {error && (
+        {displayError && (
           <Alert variant="destructive" role="status" aria-label="registration error">
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>{displayError}</AlertDescription>
           </Alert>
         )}
         {showSuccess && (
