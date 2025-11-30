@@ -209,10 +209,9 @@ export function UseQueryErrorHandler() {
       { action: "handleError", context: "QueryErrorBoundary" }
     );
 
-    // Log to external service in production
-    if (process.env.NODE_ENV === "production") {
-      // TODO: Integrate with error reporting service (Sentry, LogRocket, etc.)
-    }
+    // Production error reporting is handled via OTEL spans recorded above.
+    // The recordClientErrorOnActiveSpan call ensures errors are captured
+    // in the distributed tracing system for observability.
   };
 
   const retryQuery = () => {
