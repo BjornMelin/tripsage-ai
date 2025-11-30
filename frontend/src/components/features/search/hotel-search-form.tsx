@@ -35,6 +35,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { cn } from "@/lib/utils";
 
 // React 19 optimistic update types for hotel search
@@ -103,6 +104,9 @@ export function HotelSearchForm({
     rooms: 1,
   });
 
+  // Error state for user-facing error messages
+  const [searchError, setSearchError] = useState<string | null>(null);
+
   // Optimistic search state
   const [optimisticSearching, setOptimisticSearching] = useOptimistic(
     false,
@@ -146,10 +150,17 @@ export function HotelSearchForm({
   const handleSearch = () => {
     startTransition(async () => {
       setOptimisticSearching(true);
+      setSearchError(null); // Clear previous errors
       try {
         await onSearch(searchParams);
       } catch (error) {
-        console.error("Hotel search failed:", error);
+        const errorMessage =
+          error instanceof Error ? error.message : "Failed to search hotels";
+        setSearchError(errorMessage);
+        recordClientErrorOnActiveSpan(
+          error instanceof Error ? error : new Error(String(error)),
+          { action: "handleSearch", context: "HotelSearchForm" }
+        );
       } finally {
         setOptimisticSearching(false);
       }
@@ -436,6 +447,23 @@ export function HotelSearchForm({
               </p>
             </div>
           </>
+        )}
+
+        {/* Error Message */}
+        {searchError && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+            <div className="text-red-600 text-sm flex-1">
+              <strong>Search failed:</strong> {searchError}
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSearchError(null)}
+              className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+            >
+              ×
+            </Button>
+          </div>
         )}
 
         {/* Search Button */}

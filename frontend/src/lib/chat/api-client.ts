@@ -41,27 +41,34 @@ export interface SendMessageResponse {
  */
 function convertToUiMessages(messages: Message[]): UIMessage[] {
   return messages.map((msg) => {
-    const parts: Array<{ text: string; type: "text" }> = [
-      { text: msg.content, type: "text" },
-    ];
-
-    // Note: Attachments are handled separately in the API layer
-    // We include them as text references here for context
-    if (msg.attachments && msg.attachments.length > 0) {
-      for (const att of msg.attachments) {
-        parts.push({
-          text: `[Attachment: ${att.name || "file"}]`,
-          type: "text",
-        });
-      }
-    }
-
     return {
       id: msg.id,
-      parts,
+      parts: buildMessageParts(msg.content, msg.attachments),
       role: msg.role,
     } satisfies UIMessage;
   });
+}
+
+type AttachmentRef = NonNullable<Message["attachments"]>[number];
+type AttachmentInput = AttachmentRef | File;
+
+function buildMessageParts(
+  content: string,
+  attachments?: ReadonlyArray<AttachmentInput>
+): Array<{ text: string; type: "text" }> {
+  const parts: Array<{ text: string; type: "text" }> = [
+    { text: content, type: "text" },
+  ];
+  if (attachments && attachments.length > 0) {
+    for (const att of attachments) {
+      const name = "name" in att && att.name ? att.name : "file";
+      parts.push({
+        text: `[Attachment: ${name}]`,
+        type: "text",
+      });
+    }
+  }
+  return parts;
 }
 
 /**
@@ -75,24 +82,9 @@ export async function sendChatMessage(
   request: SendMessageRequest,
   existingMessages: Message[] = []
 ): Promise<Message> {
-  const userMessageParts: Array<{ text: string; type: "text" }> = [
-    { text: request.content, type: "text" },
-  ];
-
-  // Note: Attachments are handled separately in the API layer
-  // We include them as text references here for context
-  if (request.options?.attachments && request.options.attachments.length > 0) {
-    for (const file of request.options.attachments) {
-      userMessageParts.push({
-        text: `[Attachment: ${file.name || "file"}]`,
-        type: "text",
-      });
-    }
-  }
-
   const userMessage: UIMessage = {
     id: `msg-${Date.now()}`,
-    parts: userMessageParts,
+    parts: buildMessageParts(request.content, request.options?.attachments),
     role: "user",
   };
 
@@ -139,24 +131,9 @@ export async function streamChatMessage(
   onChunk: (chunk: string) => void,
   signal?: AbortSignal
 ): Promise<void> {
-  const userMessageParts: Array<{ text: string; type: "text" }> = [
-    { text: request.content, type: "text" },
-  ];
-
-  // Note: Attachments are handled separately in the API layer
-  // We include them as text references here for context
-  if (request.options?.attachments && request.options.attachments.length > 0) {
-    for (const file of request.options.attachments) {
-      userMessageParts.push({
-        text: `[Attachment: ${file.name || "file"}]`,
-        type: "text",
-      });
-    }
-  }
-
   const userMessage: UIMessage = {
     id: `msg-${Date.now()}`,
-    parts: userMessageParts,
+    parts: buildMessageParts(request.content, request.options?.attachments),
     role: "user",
   };
 
@@ -205,20 +182,14 @@ export async function streamChatMessage(
           try {
             const chunk = JSON.parse(json) as
               | { type: "text-delta"; id: string; delta: string }
-              | { type: "text"; text: string }
               | { type: "text-start"; id: string }
               | { type: "text-end"; id: string }
               | { type: "start" }
               | { type: "finish" }
               | { type: string; [key: string]: unknown };
 
-            // AI SDK v6: Handle text-delta chunks (primary format for streaming text)
             if (chunk.type === "text-delta" && typeof chunk.delta === "string") {
               onChunk(chunk.delta);
-            }
-            // Fallback: Handle legacy 'text' format (for compatibility)
-            else if (chunk.type === "text" && typeof chunk.text === "string") {
-              onChunk(chunk.text);
             }
             // Ignore other chunk types (start, finish, text-start, text-end, etc.)
           } catch {

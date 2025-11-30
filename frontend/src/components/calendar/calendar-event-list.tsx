@@ -12,6 +12,9 @@ import {
 } from "@/components/ui/card";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { getClientEnvVarWithFallback } from "@/lib/env/client";
+import { createServerLogger } from "@/lib/telemetry/logger";
+
+const CalendarEventLogger = createServerLogger("component.calendar-event-list");
 
 /** Props for CalendarEventList component. */
 export interface CalendarEventListProps {
@@ -76,7 +79,10 @@ export async function CalendarEventList({
       events = data.items || [];
     }
   } catch (error) {
-    console.error("Failed to fetch calendar events:", error);
+    CalendarEventLogger.error("Failed to fetch calendar events", {
+      calendarId,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 
   return (

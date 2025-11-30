@@ -44,11 +44,6 @@ export function useErrorHandler() {
 
       // Report error
       fireAndForget(errorService.reportError(errorReport));
-
-      // Log in development
-      if (process.env.NODE_ENV === "development") {
-        console.error("Error handled by useErrorHandler:", error, additionalInfo);
-      }
     },
     []
   );
