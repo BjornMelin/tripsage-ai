@@ -10,47 +10,38 @@ import "server-only";
 import type { ServerEnv } from "./schema";
 import { envSchema } from "./schema";
 
-// Cached validated environment (parsed once at module load)
-let cachedEnv: ServerEnv | null = null;
-let validationError: Error | null = null;
+// Single cached validated environment
+let envCache: ServerEnv | null = null;
+let parseError: Error | null = null;
 
-/**
- * Parse and validate server environment variables.
- *
- * @throws Error if validation fails
- */
-function validateServerEnv(): ServerEnv {
-  const isTest = process.env.NODE_ENV === "test";
-  // In test, do not cache validation results to respect vi.stubEnv between tests
-  if (!isTest) {
-    if (cachedEnv) {
-      return cachedEnv;
-    }
-    if (validationError) {
-      throw validationError;
-    }
+/** Test-only helper to clear cached env between runs. */
+export function __resetServerEnvCacheForTest() {
+  envCache = null;
+  parseError = null;
+}
+
+function parseServerEnv(): ServerEnv {
+  if (envCache) {
+    return envCache;
   }
-
+  if (parseError) {
+    throw parseError;
+  }
   try {
-    const parsed = envSchema.parse(process.env);
-    if (!isTest) {
-      cachedEnv = parsed;
-    }
-    return parsed;
+    envCache = envSchema.parse(process.env);
+    return envCache;
   } catch (error) {
     if (error instanceof Error && "issues" in error) {
       const zodError = error as { issues: Array<{ path: string[]; message: string }> };
-      const errors = zodError.issues.map(
+      const messages = zodError.issues.map(
         (issue) => `${issue.path.join(".")}: ${issue.message}`
       );
-      validationError = new Error(
-        `Environment validation failed:\n${errors.join("\n")}`
-      );
+      parseError = new Error(`Environment validation failed:\n${messages.join("\n")}`);
     } else {
-      validationError =
+      parseError =
         error instanceof Error ? error : new Error("Environment validation failed");
     }
-    throw validationError;
+    throw parseError;
   }
 }
 
@@ -61,24 +52,11 @@ function validateServerEnv(): ServerEnv {
  * @throws Error if validation fails or called on client
  */
 export function getServerEnv(): ServerEnv {
-  // In test environments, window may be defined by the test runner (jsdom).
-  // If tests explicitly stub a non-Window object, treat it as client and throw.
-  if (process.env.NODE_ENV === "test" && typeof window !== "undefined") {
-    const w = window as unknown as { document?: unknown };
-    if (!("document" in w)) {
-      throw new Error("getServerEnv() cannot be called on client side");
-    }
-  }
-
-  // Validate environment first so tests can assert validation failures
-  const env = validateServerEnv();
-
-  // In non-test runtime, protect against accidental client-side usage
-  if (process.env.NODE_ENV !== "test" && typeof window !== "undefined") {
+  if (typeof window !== "undefined") {
     throw new Error("getServerEnv() cannot be called on client side");
   }
 
-  return env;
+  return parseServerEnv();
 }
 
 /**
@@ -147,7 +125,6 @@ export function getGoogleMapsServerKey(): string {
 }
 
 // Export validated env object for advanced use cases (lazy getter)
-let envCache: ServerEnv | null = null;
 export const env = new Proxy({} as ServerEnv, {
   get(_target, prop) {
     if (!envCache) {

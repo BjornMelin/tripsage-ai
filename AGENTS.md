@@ -60,7 +60,10 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 - **Library-first:** Prefer maintained libraries covering ≥80 % of needs with ≤30 % custom code.
 - **KISS / DRY / YAGNI:** Keep solutions straightforward; remove duplication via small focused helpers; implement only what's needed now—no speculative APIs or feature flags (unless requested).
 - **Final-only:** Remove superseded code/tests immediately after new behavior lands; no partial migrations.
-- **Telemetry/logging:** Use `@/lib/telemetry/{span,logger}` helpers: `withTelemetrySpan()`, `withTelemetrySpanSync()`, `recordTelemetryEvent()`, `createServerLogger()`, `emitOperationalAlert()`. No `console.*` in server code except tests/client-only UI. Direct `@opentelemetry/api` only in `lib/telemetry/*` and `lib/supabase/factory.ts`. Client: `@/lib/telemetry/client`. See `docs/development/observability.md`.
+- **Telemetry/logging:** Use `@/lib/telemetry/{span,logger}` helpers: `withTelemetrySpan()`, `withTelemetrySpanSync()`, `recordTelemetryEvent()`, `createServerLogger()`, `emitOperationalAlert()`. Direct `@opentelemetry/api` only in `lib/telemetry/*` and `lib/supabase/factory.ts`. Client: `@/lib/telemetry/client`. See `docs/development/observability.md`.
+  - **Server code:** No `console.*` except test files and telemetry infra.
+  - **Client-only UI (`"use client"` modules):** Dev-only `console.*` is allowed when guarded by `process.env.NODE_ENV === 'development'`. Bundlers eliminate these calls in prod builds.
+  - **Zustand stores:** Use `createStoreLogger` from `@/lib/telemetry/store-logger` for error tracking via OTEL spans.
 
 ### 4.2 TypeScript and frontend style
 

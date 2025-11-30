@@ -4,6 +4,7 @@
  * provides a typed registry object for higher-level agents.
  */
 
+import type { ToolSet } from "ai";
 import {
   bookAccommodation,
   checkAvailability,
@@ -34,7 +35,6 @@ import {
   updateTravelPlan,
 } from "./server/planning";
 import { getTravelAdvisory } from "./server/travel-advisory";
-import type { AiTool } from "./server/types";
 import { getCurrentWeather } from "./server/weather";
 import { crawlSite, crawlUrl } from "./server/web-crawl";
 import { webSearch } from "./server/web-search";
@@ -74,21 +74,22 @@ export {
 };
 
 /**
- * Typed tool registry used by higher-level agents.
- *
- * Only actual AI tools (not helper utilities) are included here.
+ * Typed tool registry for AI SDK v6 generateText/streamText.
+ * Satisfies ToolSet for compile-time validation; includes only executable tools.
  */
 export const toolRegistry = {
   addConversationMemory,
+  bookAccommodation,
+  checkAvailability,
   combineSearchResults,
   createTravelPlan,
+  getAccommodationDetails,
   getActivityDetails,
   getTravelAdvisory,
   lookupPoiContext,
   saveTravelPlan,
+  searchAccommodations,
   searchActivities,
   webSearch,
   webSearchBatch,
-} satisfies Record<string, AiTool>;
-
-export type { AiTool };
+} satisfies ToolSet;

@@ -7,7 +7,8 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { Metric } from "web-vitals";
 
 interface PerformanceMetrics {
   loadTime: number;
@@ -62,7 +63,7 @@ export function usePerformance() {
       renderTime,
     });
 
-    // Report to console in development
+    // Development-only performance logging for local debugging
     if (process.env.NODE_ENV === "development") {
       console.log("Performance Metrics:", {
         bundleSize: `${(bundleSize / 1024).toFixed(2)}KB`,
@@ -78,7 +79,7 @@ export function usePerformance() {
 /**
  * Hook to measure component render time.
  *
- * Logs render time to console in development mode.
+ * Logs render time to console in development mode only.
  *
  * @param componentName - Name of the component for logging
  */
@@ -95,27 +96,45 @@ export function useComponentPerformance(componentName: string) {
   }, [componentName]);
 }
 
+// No-op handler for web vitals - metrics are tracked but not logged
+const noOpVitalsHandler: (metric: Metric) => void = () => {
+  // Web vitals are captured but not logged to console
+  // Override this with a custom handler for analytics integration
+};
+
 /**
  * Hook to report Web Vitals metrics.
  *
  * Dynamically imports and initializes web-vitals library to track
  * Core Web Vitals (CLS, INP, FCP, LCP, TTFB).
+ *
+ * @param handler - Optional custom handler for web vitals metrics (e.g., for analytics)
  */
-export function useWebVitals() {
+export function useWebVitals(handler?: (metric: Metric) => void) {
+  const handlerRef = useRef(handler ?? noOpVitalsHandler);
+
+  useEffect(() => {
+    handlerRef.current = handler ?? noOpVitalsHandler;
+  }, [handler]);
+
+  const stableHandler = useCallback((metric: Metric) => {
+    handlerRef.current(metric);
+  }, []);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     // Dynamically import web-vitals to avoid increasing bundle size
     import("web-vitals")
       .then(({ onCLS, onINP, onFCP, onLCP, onTTFB }) => {
-        onCLS(console.log);
-        onINP(console.log); // Replaced getFID with onINP in v5
-        onFCP(console.log);
-        onLCP(console.log);
-        onTTFB(console.log);
+        onCLS(stableHandler);
+        onINP(stableHandler);
+        onFCP(stableHandler);
+        onLCP(stableHandler);
+        onTTFB(stableHandler);
       })
       .catch(() => {
         // Silently fail if web-vitals is not available
       });
-  }, []);
+  }, [stableHandler]);
 }

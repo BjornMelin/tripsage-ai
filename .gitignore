@@ -34,11 +34,10 @@ Thumbs.db
 **/.claude/settings.local.json
 *.local.md
 .cursorindexingignore
+CLAUDE.md
 
 # repomix
 repomix-output.*
-
-CLAUDE.md.old
 
 # Logs
 dev-debug.log
@@ -116,7 +115,6 @@ ARCHIVED_DOCS/
 *_DEBUG.md
 !README.md
 !TODO.md
-CLAUDE.md
 !KNOWLEDGE_PACK.md
 # Exception for security documentation
 !docs/operations/RLS_IMPLEMENTATION.md

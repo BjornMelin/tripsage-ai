@@ -16,6 +16,9 @@ import {
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 import { nowIso, secureId } from "@/lib/security/random";
+import { createStoreLogger } from "@/lib/telemetry/store-logger";
+
+const logger = createStoreLogger({ storeName: "search-history" });
 
 // Schemas imported from @schemas/stores
 
@@ -32,11 +35,19 @@ export interface SearchAnalytics {
   totalSearches: number;
   searchesByType: Record<SearchType, number>;
   averageSearchDuration: number;
-  mostUsedSearchTypes: Array<{ type: SearchType; count: number; percentage: number }>;
+  mostUsedSearchTypes: Array<{
+    type: SearchType;
+    count: number;
+    percentage: number;
+  }>;
   searchTrends: Array<{ date: string; count: number }>;
   popularSearchTimes: Array<{ hour: number; count: number }>;
   topDestinations: Array<{ destination: string; count: number }>;
-  savedSearchUsage: Array<{ searchId: string; name: string; usageCount: number }>;
+  savedSearchUsage: Array<{
+    searchId: string;
+    name: string;
+    usageCount: number;
+  }>;
 }
 
 // Search history store interface
@@ -49,7 +60,11 @@ interface SearchHistoryState {
 
   // Search suggestions and auto-complete
   searchSuggestions: SearchSuggestion[];
-  popularSearchTerms: Array<{ term: string; count: number; searchType: SearchType }>;
+  popularSearchTerms: Array<{
+    term: string;
+    count: number;
+    searchType: SearchType;
+  }>;
 
   // Auto-save and cleanup settings
   maxRecentSearches: number;
@@ -245,7 +260,11 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
             // Update search suggestions
             get().updateSearchSuggestions();
           } else {
-            console.error("Invalid search history item:", result.error);
+            logger.error("Invalid search history item", {
+              error: result.error,
+              input: newSearch,
+            });
+            throw new Error("Failed to validate search history item");
           }
         },
 
@@ -353,6 +372,10 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
 
               return Promise.resolve(collectionId);
             }
+            logger.error("Invalid collection data", {
+              error: result.error,
+              input: newCollection,
+            });
             throw new Error("Invalid collection data");
           } catch (error) {
             const message =
@@ -388,6 +411,10 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
 
               return Promise.resolve(quickSearchId);
             }
+            logger.error("Invalid quick search data", {
+              error: result.error,
+              input: newQuickSearch,
+            });
             throw new Error("Invalid quick search data");
           } catch (error) {
             const message =
@@ -843,6 +870,10 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
 
               return Promise.resolve(searchId);
             }
+            logger.error("Invalid saved search data", {
+              error: result.error,
+              input: newSavedSearch,
+            });
             throw new Error("Invalid saved search data");
           } catch (error) {
             const message =

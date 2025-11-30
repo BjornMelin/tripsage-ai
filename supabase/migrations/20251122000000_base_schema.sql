@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS public.trips (
     status TEXT NOT NULL DEFAULT 'planning',
     trip_type TEXT NOT NULL DEFAULT 'leisure',
     flexibility JSONB DEFAULT '{}',
-    notes TEXT[],
+    tags TEXT[],
     search_metadata JSONB DEFAULT '{}',
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),

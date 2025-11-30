@@ -1,9 +1,8 @@
 /** @vitest-environment node */
 
 import type { MemoryUpdateRequest } from "@schemas/agents";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { persistMemoryRecords } from "@/lib/agents/memory-agent";
 
 const createAiToolMock = vi.hoisted(() =>
   vi
@@ -30,14 +29,6 @@ const hoisted = vi.hoisted(() => ({
   })),
 }));
 
-// Keep actual schema exports from the real module (needed by guardrails)
-vi.mock("@ai/tools/memory", async () => {
-  const actual = await vi.importActual<typeof import("@ai/tools")>("@ai/tools");
-  return {
-    ...actual,
-  };
-});
-
 vi.mock("@ai/tools", () => ({
   toolRegistry: {
     addConversationMemory: {
@@ -48,7 +39,12 @@ vi.mock("@ai/tools", () => ({
   },
 }));
 
+let persistMemoryRecords: typeof import("@ai/agents/memory-agent").persistMemoryRecords;
+
 describe("persistMemoryRecords", () => {
+  beforeAll(async () => {
+    ({ persistMemoryRecords } = await import("@ai/agents/memory-agent"));
+  });
   beforeEach(() => {
     createAiToolMock.mockClear();
     hoisted.executeSpy.mockClear();
@@ -63,7 +59,13 @@ describe("persistMemoryRecords", () => {
     };
 
     const out = await persistMemoryRecords("user-123", req);
-    expect(out.successes.length + out.failures.length).toBe(2);
+
+    // Assert successes and failures separately
+    expect(out.successes).toBeDefined();
+    expect(out.successes.length).toBe(2);
+    expect(out.failures).toBeDefined();
+    expect(out.failures.length).toBe(0);
+
     expect(hoisted.executeSpy).toHaveBeenCalledTimes(2);
     expect(hoisted.executeSpy).toHaveBeenNthCalledWith(
       1,

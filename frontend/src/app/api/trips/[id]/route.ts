@@ -46,8 +46,7 @@ function mapUpdatePayloadToDb(payload: z.infer<typeof tripUpdateSchema>) {
   if (payload.preferences !== undefined) updates.flexibility = payload.preferences;
   if (payload.startDate !== undefined) updates.start_date = payload.startDate;
   if (payload.status !== undefined) updates.status = payload.status;
-  // API "tags" persists in DB "notes" column (legacy schema)
-  if (payload.tags !== undefined) updates.notes = payload.tags ?? null;
+  if (payload.tags !== undefined) updates.tags = payload.tags ?? null;
   if (payload.title !== undefined) updates.name = payload.title;
   if (payload.travelers !== undefined) updates.travelers = payload.travelers;
   if (payload.tripType !== undefined) updates.trip_type = payload.tripType;

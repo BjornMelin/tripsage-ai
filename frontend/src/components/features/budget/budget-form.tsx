@@ -46,6 +46,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useZodForm } from "@/hooks/use-zod-form";
 import { secureUuid } from "@/lib/security/random";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { cn } from "@/lib/utils";
 
 // Augmented form schema with UI-specific state fields
@@ -126,7 +127,12 @@ const ExpenseCategories = [
     label: "Shopping",
     value: "shopping",
   },
-  { description: "Miscellaneous expenses", icon: "📝", label: "Other", value: "other" },
+  {
+    description: "Miscellaneous expenses",
+    icon: "📝",
+    label: "Other",
+    value: "other",
+  },
 ] as const;
 
 export const BudgetForm = ({
@@ -163,10 +169,16 @@ export const BudgetForm = ({
       ...initialData,
     },
     onSubmitError: (error) => {
-      console.error("Budget form submission failed:", error);
+      recordClientErrorOnActiveSpan(
+        error instanceof Error ? error : new Error(String(error)),
+        { action: "onSubmitError", context: "BudgetForm" }
+      );
     },
-    onValidationError: (errors) => {
-      console.warn("Budget form validation failed:", errors);
+    onValidationError: (_errors) => {
+      recordClientErrorOnActiveSpan(new Error("Budget form validation failed"), {
+        action: "onValidationError",
+        context: "BudgetForm",
+      });
     },
     reValidateMode: "onChange",
     schema: BudgetFormUiSchema,
@@ -240,8 +252,11 @@ export const BudgetForm = ({
         setIsSubmitting(false);
       }
     },
-    (validationErrors) => {
-      console.error("Form validation failed:", validationErrors);
+    (_validationErrors) => {
+      recordClientErrorOnActiveSpan(new Error("Form validation failed"), {
+        action: "handleSubmit",
+        context: "BudgetForm",
+      });
     }
   );
 

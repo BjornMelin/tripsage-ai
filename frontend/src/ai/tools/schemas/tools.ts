@@ -52,8 +52,8 @@ export type ApprovalContext = z.infer<typeof approvalContextSchema>;
 
 /** Zod schema for tool execution context (combines user, deps, and approval). */
 export const toolExecutionContextSchema = userContextSchema
-  .merge(executionDepsSchema)
-  .merge(approvalContextSchema);
+  .extend(executionDepsSchema.shape)
+  .extend(approvalContextSchema.shape);
 /** TypeScript type for tool execution context. */
 export type ToolExecutionContext = z.infer<typeof toolExecutionContextSchema>;
 

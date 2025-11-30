@@ -22,9 +22,13 @@ import {
   type AccommodationSearchParams,
   type AccommodationSearchResult,
   accommodationBookingInputSchema,
+  accommodationBookingOutputSchema,
   accommodationCheckAvailabilityInputSchema,
+  accommodationCheckAvailabilityOutputSchema,
   accommodationDetailsInputSchema,
+  accommodationDetailsOutputSchema,
   accommodationSearchInputSchema,
+  accommodationSearchOutputSchema,
 } from "@schemas/accommodations";
 import { headers } from "next/headers";
 import { processBookingPayment } from "@/lib/payments/booking-payment";
@@ -61,6 +65,7 @@ export const searchAccommodations = createAiTool<
   },
   inputSchema: accommodationSearchInputSchema,
   name: "searchAccommodations",
+  outputSchema: accommodationSearchOutputSchema,
 });
 
 /** Retrieve comprehensive details for a specific accommodation property from Amadeus and Google Places. */
@@ -69,7 +74,7 @@ export const getAccommodationDetails = createAiTool<
   AccommodationDetailsResult
 >({
   description:
-    "Retrieve comprehensive details for a specific accommodation property from Amadeus hotel offers and Google Places content.",
+    "Retrieve details for a specific accommodation property from Amadeus hotel offers and Google Places content.",
   execute: async (params) => {
     try {
       return await accommodationsService.details(params);
@@ -84,6 +89,7 @@ export const getAccommodationDetails = createAiTool<
   },
   inputSchema: accommodationDetailsInputSchema,
   name: "getAccommodationDetails",
+  outputSchema: accommodationDetailsOutputSchema,
 });
 
 /** Check final availability and lock pricing for a specific rate. Returns a booking token that must be used quickly to finalize the booking. */
@@ -113,6 +119,7 @@ export const checkAvailability = createAiTool<
   },
   inputSchema: accommodationCheckAvailabilityInputSchema,
   name: "checkAvailability",
+  outputSchema: accommodationCheckAvailabilityOutputSchema,
 });
 
 /** Complete an accommodation booking via Amadeus. Requires a bookingToken from checkAvailability, payment method, and prior approval. */
@@ -165,6 +172,7 @@ export const bookAccommodation = createAiTool<
   },
   inputSchema: accommodationBookingInputSchema,
   name: "bookAccommodation",
+  outputSchema: accommodationBookingOutputSchema,
 });
 
 /** Extract user identifier from request headers or return undefined if not found. */

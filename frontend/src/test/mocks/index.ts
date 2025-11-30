@@ -1,6 +1,8 @@
 /**
- * @fileoverview Centralized mock factories for tests.
- * Use these instead of global mocks in test-setup.ts for better test isolation and faster boot times.
+ * @fileoverview Test mocks barrel.
+ *
+ * Exception to barrel export policy: Test infrastructure
+ * uses barrel exports for convenience in test setup files.
  *
  * Usage:
  *   import { createMockStorage, createMockMatchMedia, createMockResizeObserver } from "@/test/mocks";

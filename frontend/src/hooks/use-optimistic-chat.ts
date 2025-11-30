@@ -9,6 +9,7 @@
 
 import { useCallback, useOptimistic, useState } from "react";
 import { secureUuid } from "@/lib/security/random";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import type { ChatMessage } from "./use-websocket-chat";
 
 export interface OptimisticChatMessage extends ChatMessage {
@@ -92,7 +93,21 @@ export function useOptimisticChat({
 
         // The optimistic message will remain in the list with error state
         // In a real implementation, you might want to update the message status
-        console.error("Failed to send message:", err);
+        try {
+          recordClientErrorOnActiveSpan(
+            err instanceof Error ? err : new Error(String(err))
+          );
+        } catch (telemetryError) {
+          // Telemetry failures should not break error handling
+          if (process.env.NODE_ENV === "development") {
+            console.warn(
+              "Failed to record telemetry error:",
+              telemetryError instanceof Error
+                ? telemetryError.message
+                : String(telemetryError)
+            );
+          }
+        }
       }
     },
     [sendMessage, currentUser, addOptimisticMessage]

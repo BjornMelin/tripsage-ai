@@ -112,7 +112,7 @@ describe("useErrorHandler", () => {
       );
     });
 
-    it("should log error in development mode", () => {
+    it("should report error via errorService in development mode", () => {
       // Mock the environment check
       const originalEnv = process.env.NODE_ENV;
       vi.stubEnv("NODE_ENV", "development");
@@ -125,17 +125,22 @@ describe("useErrorHandler", () => {
         result.current.handleError(testError, additionalInfo);
       });
 
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "Error handled by useErrorHandler:",
+      // Error is reported via errorService, not console.log
+      expect(errorService.createErrorReport).toHaveBeenCalledWith(
         testError,
-        additionalInfo
+        undefined,
+        expect.objectContaining({
+          sessionId: expect.any(String),
+          test: "info",
+        })
       );
+      expect(errorService.reportError).toHaveBeenCalled();
 
       // Restore original env
       vi.stubEnv("NODE_ENV", originalEnv);
     });
 
-    it("should not log error in production mode", () => {
+    it("should report error via errorService in production mode", () => {
       // Mock the environment check
       const originalEnv = process.env.NODE_ENV;
       vi.stubEnv("NODE_ENV", "production");
@@ -147,7 +152,9 @@ describe("useErrorHandler", () => {
         result.current.handleError(testError);
       });
 
-      expect(consoleSpy).not.toHaveBeenCalled();
+      // Error is reported via errorService in all environments
+      expect(errorService.createErrorReport).toHaveBeenCalled();
+      expect(errorService.reportError).toHaveBeenCalled();
 
       // Restore original env
       vi.stubEnv("NODE_ENV", originalEnv);

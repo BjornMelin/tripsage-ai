@@ -117,7 +117,9 @@ export function MfaVerification({
        * TODO: Replace with real resend: await supabase.auth.mfa.resend()
        * In real implementation, this would trigger a new SMS or push notification
        */
-      console.log("Resend request sent");
+      if (process.env.NODE_ENV === "development") {
+        console.log("Resend request sent");
+      }
     } catch (_err) {
       setError("Failed to resend code. Please try again.");
     }

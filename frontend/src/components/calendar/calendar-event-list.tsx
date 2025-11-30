@@ -12,6 +12,9 @@ import {
 } from "@/components/ui/card";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { getClientEnvVarWithFallback } from "@/lib/env/client";
+import { createServerLogger } from "@/lib/telemetry/logger";
+
+const CalendarEventLogger = createServerLogger("component.calendar-event-list");
 
 /** Props for CalendarEventList component. */
 export interface CalendarEventListProps {
@@ -49,6 +52,11 @@ export async function CalendarEventList({
     params.set("timeMax", DateUtils.formatForApi(timeMax));
   }
 
+  const siteUrl = getClientEnvVarWithFallback(
+    "NEXT_PUBLIC_SITE_URL",
+    "http://localhost:3000"
+  );
+
   // Fetch events
   let events: Array<{
     id: string;
@@ -61,10 +69,6 @@ export async function CalendarEventList({
   }> = [];
 
   try {
-    const siteUrl = getClientEnvVarWithFallback(
-      "NEXT_PUBLIC_SITE_URL",
-      "http://localhost:3000"
-    );
     const response = await fetch(
       `${siteUrl}/api/calendar/events?${params.toString()}`,
       {
@@ -76,7 +80,13 @@ export async function CalendarEventList({
       events = data.items || [];
     }
   } catch (error) {
-    console.error("Failed to fetch calendar events:", error);
+    CalendarEventLogger.error("Failed to fetch calendar events", {
+      calendarId,
+      error: error instanceof Error ? error.message : String(error),
+      siteUrl,
+      timeMax: timeMax?.toISOString(),
+      timeMin: timeMin?.toISOString(),
+    });
   }
 
   return (

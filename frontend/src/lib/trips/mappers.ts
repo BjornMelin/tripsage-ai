@@ -28,7 +28,7 @@ export function mapDbTripToUi(row: TripsRow): UiTrip {
     preferences: (row.flexibility as Record<string, unknown> | undefined) ?? undefined,
     startDate: row.start_date ?? undefined,
     status: row.status,
-    tags: row.notes ?? undefined,
+    tags: row.tags ?? undefined,
     title: row.name,
     travelers: row.travelers,
     tripType: row.trip_type,

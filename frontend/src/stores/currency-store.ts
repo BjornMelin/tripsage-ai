@@ -18,6 +18,9 @@ import {
 } from "@schemas/currency";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { createStoreLogger } from "@/lib/telemetry/store-logger";
+
+const logger = createStoreLogger({ storeName: "currency" });
 
 // Common currencies with symbols and decimal places
 // ISO 4217 defines currency codes in UPPER_CASE (international standard)
@@ -199,7 +202,7 @@ export const useCurrencyStore = create<CurrencyStore>()(
           }));
           return true;
         }
-        console.error("Invalid currency data:", result.error);
+        logger.error("Invalid currency data", { error: result.error });
         return false;
       },
 
@@ -208,7 +211,7 @@ export const useCurrencyStore = create<CurrencyStore>()(
         set((state) => {
           // Validate the currency code
           if (!VALIDATE_CURRENCY_CODE(code)) {
-            console.error(`Invalid currency code: ${code}`);
+            logger.error("Invalid currency code", { code });
             return state;
           }
 
@@ -232,7 +235,10 @@ export const useCurrencyStore = create<CurrencyStore>()(
           !VALIDATE_CURRENCY_CODE(fromCurrency) ||
           !VALIDATE_CURRENCY_CODE(toCurrency)
         ) {
-          console.error("Invalid conversion parameters");
+          logger.error("Invalid conversion parameters", {
+            fromCurrency,
+            toCurrency,
+          });
           return null;
         }
 
@@ -338,7 +344,7 @@ export const useCurrencyStore = create<CurrencyStore>()(
             style: "currency",
           }).format(amount);
         } catch (error) {
-          console.error(`Error formatting currency: ${error}`);
+          logger.error("Error formatting currency", { code, error });
           return `${amount} ${code}`;
         }
       },
@@ -386,7 +392,7 @@ export const useCurrencyStore = create<CurrencyStore>()(
         set((state) => {
           // Validate the currency code
           if (!VALIDATE_CURRENCY_CODE(code)) {
-            console.error(`Invalid currency code: ${code}`);
+            logger.error("Invalid currency code", { code });
             return state;
           }
 
@@ -415,7 +421,7 @@ export const useCurrencyStore = create<CurrencyStore>()(
         set((state) => {
           // Validate the currency code
           if (!VALIDATE_CURRENCY_CODE(code)) {
-            console.error(`Invalid currency code: ${code}`);
+            logger.error("Invalid currency code", { code });
             return state;
           }
 
@@ -431,7 +437,7 @@ export const useCurrencyStore = create<CurrencyStore>()(
         set((state) => {
           // Validate the currency code
           if (!VALIDATE_CURRENCY_CODE(currency)) {
-            console.error(`Invalid currency code: ${currency}`);
+            logger.error("Invalid currency code", { currency });
             return state;
           }
 
@@ -525,13 +531,13 @@ export const useCurrencyStore = create<CurrencyStore>()(
         set((state) => {
           // Validate the currency code
           if (!VALIDATE_CURRENCY_CODE(targetCurrency)) {
-            console.error(`Invalid currency code: ${targetCurrency}`);
+            logger.error("Invalid currency code", { targetCurrency });
             return state;
           }
 
           // Validate the rate
           if (typeof rate !== "number" || rate <= 0) {
-            console.error(`Invalid exchange rate: ${rate}`);
+            logger.error("Invalid exchange rate", { rate });
             return state;
           }
 
@@ -547,7 +553,7 @@ export const useCurrencyStore = create<CurrencyStore>()(
 
           const result = EXCHANGE_RATE_SCHEMA.safeParse(newExchangeRate);
           if (!result.success) {
-            console.error("Invalid exchange rate data:", result.error);
+            logger.error("Invalid exchange rate data", { error: result.error });
             return state;
           }
 

@@ -103,9 +103,6 @@ describe("UI Store - UI State Management", () => {
 
     it("handles invalid theme values gracefully", () => {
       const { result } = renderHook(() => useUiStore());
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
-        /* silence console errors during test */
-      });
       const previousTheme = result.current.theme;
 
       act(() => {
@@ -113,10 +110,8 @@ describe("UI Store - UI State Management", () => {
         result.current.setTheme("invalid-theme");
       });
 
-      expect(consoleSpy).toHaveBeenCalled();
+      // Store now uses OTEL-based store logger instead of console.error
       expect(result.current.theme).toBe(previousTheme);
-
-      consoleSpy.mockRestore();
     });
 
     it("computes isDarkMode correctly for system theme", () => {
@@ -297,19 +292,14 @@ describe("UI Store - UI State Management", () => {
 
     it("handles invalid loading state values gracefully", () => {
       const { result } = renderHook(() => useUiStore());
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
-        /* silence console errors during test */
-      });
 
       act(() => {
         // @ts-expect-error Testing invalid loading state
         result.current.setLoadingState("test", "invalid-state");
       });
 
-      expect(consoleSpy).toHaveBeenCalled();
+      // Store now uses OTEL-based store logger instead of console.error
       expect(result.current.loadingStates.test).toBeUndefined();
-
-      consoleSpy.mockRestore();
     });
   });
 
@@ -509,9 +499,6 @@ describe("UI Store - UI State Management", () => {
 
     it("handles invalid notification gracefully", () => {
       const { result } = renderHook(() => useUiStore());
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
-        /* silence console errors during test */
-      });
 
       act(() => {
         result.current.addNotification({
@@ -522,10 +509,8 @@ describe("UI Store - UI State Management", () => {
         });
       });
 
-      expect(consoleSpy).toHaveBeenCalled();
+      // Store now uses OTEL-based store logger instead of console.error
       expect(result.current.notifications).toHaveLength(0);
-
-      consoleSpy.mockRestore();
     });
   });
 

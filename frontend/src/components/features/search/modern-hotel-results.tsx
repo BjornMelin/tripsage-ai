@@ -30,6 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { cn } from "@/lib/utils";
 
 // Modern hotel result types with 2025 hospitality patterns
@@ -133,7 +134,14 @@ export function ModernHotelResults({
       try {
         await onSelect(hotel);
       } catch (error) {
-        console.error("Hotel selection failed:", error);
+        recordClientErrorOnActiveSpan(
+          error instanceof Error ? error : new Error(String(error)),
+          {
+            action: "handleHotelSelect",
+            context: "ModernHotelResults",
+            hotelId: hotel.id,
+          }
+        );
       } finally {
         setOptimisticSelecting("");
       }

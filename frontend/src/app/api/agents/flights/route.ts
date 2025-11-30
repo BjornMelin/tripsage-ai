@@ -1,19 +1,20 @@
 /**
- * @fileoverview Flight agent route handler (frontend-only).
+ * @fileoverview Flight agent route handler using AI SDK v6 ToolLoopAgent.
  * - Supabase SSR auth → userId
  * - Provider resolution (BYOK/Gateway)
  * - Guardrails (cache, ratelimit, telemetry) around tools
- * - AI SDK v6 streaming with tool calls
+ * - AI SDK v6 ToolLoopAgent with createAgentUIStreamResponse
  */
 
 import "server-only";
 
+import { createFlightAgent } from "@ai/agents";
 import { resolveProvider } from "@ai/models/registry";
 import { flightSearchRequestSchema } from "@schemas/flights";
+import { createAgentUIStreamResponse } from "ai";
 import type { NextRequest } from "next/server";
 import { resolveAgentConfig } from "@/lib/agents/config-resolver";
 import { createErrorHandler } from "@/lib/agents/error-recovery";
-import { runFlightAgent } from "@/lib/agents/flight-agent";
 import { withApiGuards } from "@/lib/api/factory";
 import { parseJsonBody, requireUserId, validateSchema } from "@/lib/api/route-helpers";
 
@@ -24,7 +25,7 @@ const RequestSchema = flightSearchRequestSchema;
 /**
  * POST /api/agents/flights
  *
- * Validates request, resolves provider, and streams ToolLoop response.
+ * Validates request, resolves provider, and streams ToolLoopAgent response.
  */
 export const POST = withApiGuards({
   auth: true,
@@ -51,8 +52,15 @@ export const POST = withApiGuards({
     config.config.model ?? new URL(req.url).searchParams.get("model") ?? undefined;
   const { model, modelId } = await resolveProvider(userId, modelHint);
 
-  const result = runFlightAgent({ model, modelId }, config.config, body);
-  return result.toUIMessageStreamResponse({
+  const { agent, defaultMessages } = createFlightAgent(
+    { identifier: userId, model, modelId },
+    config.config,
+    body
+  );
+
+  return createAgentUIStreamResponse({
+    agent,
+    messages: defaultMessages,
     onError: createErrorHandler(),
   });
 });
