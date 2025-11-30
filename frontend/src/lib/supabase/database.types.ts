@@ -1,3 +1,5 @@
+// MANUAL PATCH 2025-11-29: trips.notes removed; trips.tags text[]|null added.
+// After Supabase DB migration, regenerate via `supabase gen types typescript --local` and remove this notice.
 export type Json =
   | string
   | number
@@ -1948,7 +1950,7 @@ export type Database = {
           flexibility: Json | null;
           id: number;
           name: string;
-          notes: string[] | null;
+          tags: string[] | null;
           search_metadata: Json | null;
           start_date: string;
           status: string;
@@ -1966,7 +1968,7 @@ export type Database = {
           flexibility?: Json | null;
           id?: never;
           name: string;
-          notes?: string[] | null;
+          tags?: string[] | null;
           search_metadata?: Json | null;
           start_date: string;
           status?: string;
@@ -1984,7 +1986,7 @@ export type Database = {
           flexibility?: Json | null;
           id?: never;
           name?: string;
-          notes?: string[] | null;
+          tags?: string[] | null;
           search_metadata?: Json | null;
           start_date?: string;
           status?: string;
