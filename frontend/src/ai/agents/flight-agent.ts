@@ -8,10 +8,17 @@
 
 import "server-only";
 
-import { distanceMatrix, geocode, lookupPoiContext, searchFlights } from "@ai/tools";
+import { getRegistryTool, invokeTool } from "@ai/lib/registry-utils";
+import { createAiTool } from "@ai/lib/tool-factory";
+import { toolRegistry } from "@ai/tools";
+import { lookupPoiInputSchema } from "@ai/tools/schemas/google-places";
+import { distanceMatrixInputSchema, geocodeInputSchema } from "@ai/tools/schemas/maps";
+import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
+import { searchFlightsInputSchema } from "@ai/tools/server/flights";
 import type { AgentConfig } from "@schemas/configuration";
 import type { FlightSearchRequest } from "@schemas/flights";
 import type { ToolSet } from "ai";
+import { buildRateLimit } from "@/lib/ratelimit/config";
 import type { ChatMessage } from "@/lib/tokens/budget";
 import { clampMaxTokens } from "@/lib/tokens/budget";
 import { buildFlightPrompt } from "@/prompts/agents";
@@ -21,17 +28,91 @@ import type { AgentDependencies, TripSageAgentResult } from "./types";
 import { extractAgentParameters } from "./types";
 
 /**
- * Tools available to the flight search agent.
- *
- * Includes geocoding, distance calculation, POI lookup, and flight search
- * for comprehensive flight planning capabilities.
+ * Builds guarded tools for the flight search agent.
  */
-const FLIGHT_TOOLS = {
-  distanceMatrix,
-  geocode,
-  lookupPoiContext,
-  searchFlights,
-} satisfies ToolSet;
+function buildFlightTools(identifier: string): ToolSet {
+  const geocodeTool = getRegistryTool(toolRegistry, "geocode");
+  const distanceMatrixTool = getRegistryTool(toolRegistry, "distanceMatrix");
+  const poiTool = getRegistryTool(toolRegistry, "lookupPoiContext");
+  const searchFlightsTool = getRegistryTool(toolRegistry, "searchFlights");
+
+  const rateLimit = buildRateLimit("flightSearch", identifier);
+
+  const geocode = createAiTool({
+    description: geocodeTool.description ?? "Geocode address",
+    execute: (params, callOptions) => invokeTool(geocodeTool, params, callOptions),
+    guardrails: {
+      cache: {
+        hashInput: true,
+        key: () => "agent:flight:geocode",
+        namespace: `agent:flight:geocode:${identifier}`,
+        ttlSeconds: 60 * 30,
+      },
+      telemetry: { workflow: "flightSearch" },
+    },
+    inputSchema: geocodeInputSchema,
+    name: "geocode",
+  });
+
+  const distanceMatrix = createAiTool({
+    description: distanceMatrixTool.description ?? "Distance matrix",
+    execute: (params, callOptions) =>
+      invokeTool(distanceMatrixTool, params, callOptions),
+    guardrails: {
+      cache: {
+        hashInput: true,
+        key: () => "agent:flight:distance-matrix",
+        namespace: `agent:flight:distance-matrix:${identifier}`,
+        ttlSeconds: 60 * 15,
+      },
+      telemetry: { workflow: "flightSearch" },
+    },
+    inputSchema: distanceMatrixInputSchema,
+    name: "distanceMatrix",
+  });
+
+  const lookupPoiContext = createAiTool({
+    description: poiTool.description ?? "Lookup POIs (context)",
+    execute: (params, callOptions) => invokeTool(poiTool, params, callOptions),
+    guardrails: {
+      cache: {
+        hashInput: true,
+        key: () => "agent:flight:poi",
+        namespace: `agent:flight:poi:${identifier}`,
+        ttlSeconds: 600,
+      },
+      telemetry: { workflow: "flightSearch" },
+    },
+    inputSchema: lookupPoiInputSchema,
+    name: "lookupPoiContext",
+  });
+
+  const searchFlights = createAiTool({
+    description: searchFlightsTool.description ?? "Search flights",
+    execute: (params, callOptions) =>
+      invokeTool(searchFlightsTool, params, callOptions),
+    guardrails: {
+      cache: {
+        hashInput: true,
+        key: () => "agent:flight:search",
+        namespace: `agent:flight:search:${identifier}`,
+        ttlSeconds: 60 * 5,
+      },
+      rateLimit: {
+        errorCode: TOOL_ERROR_CODES.toolRateLimited,
+        identifier: () => rateLimit.identifier,
+        limit: rateLimit.limit,
+        prefix: "ratelimit:agent:flight:search",
+        window: rateLimit.window,
+      },
+      telemetry: { workflow: "flightSearch" },
+    },
+    inputSchema: searchFlightsInputSchema,
+    name: "searchFlights",
+  });
+
+  return { distanceMatrix, geocode, lookupPoiContext, searchFlights } satisfies ToolSet;
+}
 
 /**
  * Creates a flight search agent using AI SDK v6 ToolLoopAgent.
@@ -90,10 +171,10 @@ export function createFlightAgent(
     maxSteps: params.maxSteps,
     name: "Flight Search Agent",
     temperature: params.temperature,
-    tools: FLIGHT_TOOLS,
+    tools: buildFlightTools(deps.identifier),
     topP: params.topP,
   });
 }
 
 /** Exported type for the flight agent's tool set. */
-export type FlightAgentTools = typeof FLIGHT_TOOLS;
+export type FlightAgentTools = ReturnType<typeof buildFlightTools>;

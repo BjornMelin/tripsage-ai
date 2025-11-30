@@ -9,6 +9,7 @@
  */
 
 import {
+  CHAT_DEFAULT_SYSTEM_PROMPT,
   type ChatAgentConfig,
   createChatAgent,
   validateChatMessages,
@@ -16,7 +17,6 @@ import {
 import type { ProviderResolution } from "@schemas/providers";
 import type { UIMessage } from "ai";
 import { createAgentUIStreamResponse } from "ai";
-import { CHAT_DEFAULT_SYSTEM_PROMPT } from "@/ai/constants";
 import { handleMemoryIntent } from "@/lib/memory/orchestrator";
 import {
   assistantResponseToMemoryTurn,
@@ -179,9 +179,10 @@ export async function handleChatStream(
 
   // Configure the chat agent
   const chatConfig: ChatAgentConfig = {
-    desiredMaxTokens: Number.isFinite(payload.desiredMaxTokens)
-      ? Math.max(1, Math.floor(payload.desiredMaxTokens ?? 0))
-      : (deps.config?.defaultMaxTokens ?? 1024),
+    desiredMaxTokens:
+      Number.isFinite(payload.desiredMaxTokens) && (payload.desiredMaxTokens ?? 0) > 0
+        ? Math.floor(payload.desiredMaxTokens as number)
+        : (deps.config?.defaultMaxTokens ?? 1024),
     maxSteps: 10,
     memorySummary,
     systemPrompt: CHAT_DEFAULT_SYSTEM_PROMPT,
@@ -251,6 +252,7 @@ export async function handleChatStream(
             session_id: sessionId,
             // biome-ignore lint/style/useNamingConvention: Database field name
             user_id: user.id,
+            // request_id column is not present; requestId stored in metadata for tracing
           });
         } catch (error) {
           deps.logger?.error?.("chat_stream:memory_response_failed", {

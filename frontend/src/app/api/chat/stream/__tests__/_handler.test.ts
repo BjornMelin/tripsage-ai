@@ -375,14 +375,15 @@ describe("handleChatStream", () => {
 
     // Test the captured onFinish callback
     expect(capturedOnFinish).toBeDefined();
-    if (capturedOnFinish) {
-      capturedOnFinish({ finishReason: "stop", usage: { totalTokens: 100 } });
-      expect(logger.info).toHaveBeenCalledWith(
-        "chat_stream:finish",
-        expect.objectContaining({
-          finishReason: "stop",
-        })
-      );
+    if (!capturedOnFinish) {
+      throw new Error("onFinish callback was not captured");
     }
+    capturedOnFinish({ finishReason: "stop", usage: { totalTokens: 100 } });
+    expect(logger.info).toHaveBeenCalledWith(
+      "chat_stream:finish",
+      expect.objectContaining({
+        finishReason: "stop",
+      })
+    );
   });
 });

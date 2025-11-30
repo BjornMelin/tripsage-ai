@@ -24,6 +24,7 @@ export { createAccommodationAgent } from "./accommodation-agent";
 export { createTripSageAgent, isToolError } from "./agent-factory";
 export { createBudgetAgent } from "./budget-agent";
 export {
+  CHAT_DEFAULT_SYSTEM_PROMPT,
   type ChatAgentConfig,
   type ChatValidationResult,
   createChatAgent,
@@ -159,7 +160,10 @@ export function getAgentName(kind: AgentWorkflowKind): string {
 }
 
 /**
- * Gets the minimum max steps floor for an agent workflow kind.
+ * Gets the minimum max-step floor for an agent workflow kind.
+ *
+ * These values are used as lower bounds when agents clamp configured
+ * maxSteps (for example, itinerary/destination call Math.max with 15).
  *
  * @param kind - Agent workflow kind.
  * @returns Minimum max steps enforced by the agent implementation.

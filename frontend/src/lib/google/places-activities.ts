@@ -134,25 +134,20 @@ function extractActivityType(types?: string[]): string {
 }
 
 /**
- * Builds usable Places Photo API URLs for up to five photos.
- * Server-only: URLs embed the server API key and must not be sent to clients.
+ * Builds client-safe photo URLs via the server-side photo proxy.
  */
-function buildPhotoUrls(photos?: PlacesPhoto[], apiKey?: string): string[] {
+function buildPhotoUrls(photos?: PlacesPhoto[]): string[] {
   if (!photos || photos.length === 0) {
     return [];
   }
 
-  const resolvedApiKey = apiKey ?? getGoogleMapsServerKey();
-  if (!resolvedApiKey) {
-    return [];
-  }
-
   return photos.slice(0, 5).map((photo) => {
-    const url = new URL(`https://places.googleapis.com/v1/${photo.name}/media`);
+    const url = new URL("/api/places/photo", "http://localhost");
+    url.searchParams.set("name", photo.name);
     url.searchParams.set("maxHeightPx", "800");
     url.searchParams.set("maxWidthPx", "1200");
-    url.searchParams.set("key", resolvedApiKey);
-    return url.toString();
+    // Drop origin to keep relative path when serialized
+    return url.pathname + url.search;
   });
 }
 

@@ -84,7 +84,6 @@ vi.mock("@/prompts/agents", () => ({
   buildItineraryPrompt: () => "Itinerary prompt",
 }));
 
-import type { AgentWorkflowKind } from "@schemas/agents";
 import type { LanguageModel } from "ai";
 import {
   agentRegistry,
@@ -99,6 +98,7 @@ import type { AgentDependencies } from "../types";
  * Creates a mock LanguageModel for testing.
  */
 function createMockModel(): LanguageModel {
+  // Minimal fields used by tests; extend if LanguageModel interface adds requirements
   return {
     defaultObjectGenerationMode: "json",
     doGenerate: vi.fn(),
@@ -300,7 +300,7 @@ describe("createAgentForWorkflow", () => {
     expect(() => {
       createAgentForWorkflow(
         // Intentionally pass an unsupported workflow kind to verify runtime guardrails
-        "memoryUpdate" as unknown as AgentWorkflowKind,
+        "memoryUpdate" as unknown as "budgetPlanning",
         deps,
         createTestConfig("budgetAgent"),
         {}
@@ -313,7 +313,7 @@ describe("createAgentForWorkflow", () => {
     expect(() => {
       createAgentForWorkflow(
         // Intentionally pass an unsupported workflow kind to verify runtime guardrails
-        "invalidWorkflow" as unknown as AgentWorkflowKind,
+        "invalidWorkflow" as unknown as "budgetPlanning",
         deps,
         createTestConfig("budgetAgent"),
         {}

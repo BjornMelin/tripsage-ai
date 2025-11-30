@@ -137,7 +137,8 @@ function buildBudgetTools(identifier: string): ToolSet {
         hashInput: true,
         key: () => "agent:budget:safety",
         namespace: `agent:budget:safety:${identifier}`,
-        ttlSeconds: 60 * 60 * 24 * 7,
+        // Travel advisories update frequently; refresh daily to avoid stale guidance
+        ttlSeconds: 60 * 60 * 24,
       },
       rateLimit: {
         errorCode: TOOL_ERROR_CODES.toolRateLimited,

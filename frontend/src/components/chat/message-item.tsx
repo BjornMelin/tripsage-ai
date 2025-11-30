@@ -25,14 +25,7 @@ import { StayCard } from "@/components/ai-elements/stay-card";
 import { parseSchemaCard } from "@/lib/ui/parse-schema-card";
 
 /** Keys that must be redacted from tool output. */
-const REDACT_KEYS = new Set([
-  "apikey",
-  "apiKey",
-  "token",
-  "secret",
-  "password",
-  "id",
-]);
+const REDACT_KEYS = new Set(["apikey", "apiKey", "token", "secret", "password", "id"]);
 const MAX_STRING_LENGTH = 200;
 const MAX_DEPTH = 2;
 
@@ -50,10 +43,7 @@ function sanitizeValue(value: unknown, depth: number): unknown {
     return value.slice(0, 10).map((v) => sanitizeValue(v, depth + 1));
   }
   if (typeof value === "object") {
-    const entries = Object.entries(value as Record<string, unknown>).slice(
-      0,
-      15
-    );
+    const entries = Object.entries(value as Record<string, unknown>).slice(0, 15);
     return entries.reduce<Record<string, unknown>>((acc, [key, val]) => {
       if (REDACT_KEYS.has(key.toLowerCase())) {
         acc[key] = "[REDACTED]";
@@ -125,9 +115,7 @@ export function ChatMessageItem({ message }: { message: UIMessage }) {
                         <StayCard
                           key={`${message.id}-stay-${idx}`}
                           result={
-                            schemaCard.data as Parameters<
-                              typeof StayCard
-                            >[0]["result"]
+                            schemaCard.data as Parameters<typeof StayCard>[0]["result"]
                           }
                         />
                       );
@@ -167,11 +155,7 @@ export function ChatMessageItem({ message }: { message: UIMessage }) {
                   }
                 }
 
-                return (
-                  <Response key={`${message.id}-t-${idx}`}>
-                    {part.text}
-                  </Response>
-                );
+                return <Response key={`${message.id}-t-${idx}`}>{part.text}</Response>;
               }
               case "tool-call":
               case "tool-call-result": {
@@ -235,16 +219,13 @@ export function ChatMessageItem({ message }: { message: UIMessage }) {
                               {s.title ?? s.url}
                             </a>
                             {s.snippet ? (
-                              <div className="mt-1 text-xs opacity-80">
-                                {s.snippet}
-                              </div>
+                              <div className="mt-1 text-xs opacity-80">{s.snippet}</div>
                             ) : null}
                             {"publishedAt" in s &&
                             (s as { publishedAt?: string }).publishedAt ? (
                               <div className="mt-1 text-[10px] opacity-60">
                                 {new Date(
-                                  (s as { publishedAt?: string })
-                                    .publishedAt as string
+                                  (s as { publishedAt?: string }).publishedAt as string
                                 ).toLocaleString()}
                               </div>
                             ) : null}
@@ -258,10 +239,7 @@ export function ChatMessageItem({ message }: { message: UIMessage }) {
                             <SourcesContent>
                               <div className="space-y-1">
                                 {sources.map((s, i) => (
-                                  <Source
-                                    key={`${message.id}-src-${i}`}
-                                    href={s.url}
-                                  >
+                                  <Source key={`${message.id}-src-${i}`} href={s.url}>
                                     {s.title ?? s.url}
                                   </Source>
                                 ))}
@@ -310,10 +288,7 @@ export function ChatMessageItem({ message }: { message: UIMessage }) {
                   }
                 }
                 return (
-                  <pre
-                    key={`${message.id}-u-${idx}`}
-                    className="text-xs opacity-70"
-                  >
+                  <pre key={`${message.id}-u-${idx}`} className="text-xs opacity-70">
                     {fallback}
                   </pre>
                 );

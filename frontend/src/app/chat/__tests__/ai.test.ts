@@ -46,16 +46,14 @@ describe("submitChatMessage", () => {
 
     expect(result.userMessage.role).toBe("user");
     expect(result.assistantMessage.role).toBe("assistant");
-    const textPart = result.assistantMessage.parts?.find(
-      (p) => p.type === "text"
-    );
+    const textPart = result.assistantMessage.parts?.find((p) => p.type === "text");
     expect(textPart).toBeDefined();
     expect((textPart as { text?: string }).text).toBe("Hello world");
   });
 
   it("rejects empty input", async () => {
-    await expect(
-      submitChatMessage({ messages: [], text: " " })
-    ).rejects.toThrow(/Message is required/);
+    await expect(submitChatMessage({ messages: [], text: " " })).rejects.toThrow(
+      /Message is required/
+    );
   });
 });

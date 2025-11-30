@@ -7,7 +7,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Metric } from "web-vitals";
 
 interface PerformanceMetrics {
@@ -111,7 +111,15 @@ const noOpVitalsHandler: (metric: Metric) => void = () => {
  * @param handler - Optional custom handler for web vitals metrics (e.g., for analytics)
  */
 export function useWebVitals(handler?: (metric: Metric) => void) {
-  const vitalsHandler = handler ?? noOpVitalsHandler;
+  const handlerRef = useRef(handler ?? noOpVitalsHandler);
+
+  useEffect(() => {
+    handlerRef.current = handler ?? noOpVitalsHandler;
+  }, [handler]);
+
+  const stableHandler = useCallback((metric: Metric) => {
+    handlerRef.current(metric);
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -119,14 +127,14 @@ export function useWebVitals(handler?: (metric: Metric) => void) {
     // Dynamically import web-vitals to avoid increasing bundle size
     import("web-vitals")
       .then(({ onCLS, onINP, onFCP, onLCP, onTTFB }) => {
-        onCLS(vitalsHandler);
-        onINP(vitalsHandler);
-        onFCP(vitalsHandler);
-        onLCP(vitalsHandler);
-        onTTFB(vitalsHandler);
+        onCLS(stableHandler);
+        onINP(stableHandler);
+        onFCP(stableHandler);
+        onLCP(stableHandler);
+        onTTFB(stableHandler);
       })
       .catch(() => {
         // Silently fail if web-vitals is not available
       });
-  }, [vitalsHandler]);
+  }, [stableHandler]);
 }

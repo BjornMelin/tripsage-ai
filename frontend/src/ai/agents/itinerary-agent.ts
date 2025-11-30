@@ -36,7 +36,12 @@ import { createTripSageAgent } from "./agent-factory";
 import type { AgentDependencies, TripSageAgentResult } from "./types";
 import { extractAgentParameters } from "./types";
 
-/** Response type for POI lookup tool. */
+/**
+ * Response type for POI lookup tool.
+ *
+ * TODO: align with google-places tool output schema when shared response
+ * typings are introduced to avoid duplication across agents.
+ */
 type LookupPoiResponse =
   | { error?: string; inputs: unknown; pois: unknown[]; provider: string }
   | { fromCache?: boolean; inputs: unknown; pois: unknown[]; provider: string };
@@ -112,8 +117,8 @@ function buildItineraryTools(identifier: string): ToolSet {
     guardrails: {
       cache: {
         hashInput: true,
-        key: () => "agent:itinerary:web-search",
-        namespace: "agent:itinerary:web-search",
+        key: () => `agent:itinerary:web-search:${identifier}`,
+        namespace: `agent:itinerary:web-search:${identifier}`,
         ttlSeconds: 60 * 30,
       },
       rateLimit: {
@@ -138,8 +143,8 @@ function buildItineraryTools(identifier: string): ToolSet {
     guardrails: {
       cache: {
         hashInput: true,
-        key: () => "agent:itinerary:web-search-batch",
-        namespace: "agent:itinerary:web-search-batch",
+        key: () => `agent:itinerary:web-search-batch:${identifier}`,
+        namespace: `agent:itinerary:web-search-batch:${identifier}`,
         ttlSeconds: 60 * 30,
       },
       rateLimit: {
@@ -163,8 +168,8 @@ function buildItineraryTools(identifier: string): ToolSet {
     guardrails: {
       cache: {
         hashInput: true,
-        key: () => "agent:itinerary:poi",
-        namespace: "agent:itinerary:poi",
+        key: () => `agent:itinerary:poi:${identifier}`,
+        namespace: `agent:itinerary:poi:${identifier}`,
         ttlSeconds: 600,
       },
       rateLimit: {
@@ -276,6 +281,7 @@ export function createItineraryAgent(
   const { maxTokens } = clampMaxTokens(clampMessages, params.maxTokens, deps.modelId);
 
   // Itinerary planning may need more steps for comprehensive plans
+  // (researching POIs, creating day-by-day schedules, saving plan)
   const maxSteps = Math.max(params.maxSteps, 15);
 
   return createTripSageAgent(deps, {
