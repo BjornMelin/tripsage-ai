@@ -132,11 +132,11 @@ export const useTripStore = create<TripState>()(
             end_date: tripData.endDate ?? nowIso(),
             flexibility: (tripData.preferences ?? {}) as Json,
             name: tripData.title,
-            notes: tripData.tags ?? [],
             // biome-ignore lint/style/useNamingConvention: Database API requires snake_case
             search_metadata: {},
             // biome-ignore lint/style/useNamingConvention: Database API requires snake_case
             start_date: tripData.startDate ?? nowIso(),
+            tags: tripData.tags ?? [],
             travelers: tripData.travelers ?? 1,
             // biome-ignore lint/style/useNamingConvention: Database API requires snake_case
             user_id: ownerId,
@@ -323,7 +323,7 @@ export const useTripStore = create<TripState>()(
             updateData.flexibility = data.preferences as Json;
           }
           if (data.tags) {
-            updateData.notes = data.tags;
+            updateData.tags = data.tags;
           }
 
           const existingTrip =
