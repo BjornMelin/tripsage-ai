@@ -81,9 +81,8 @@ describe("places-activities", () => {
       expect(activity.type).toBe("museum");
       expect(activity.coordinates).toEqual({ lat: 40.7614, lng: -73.9776 });
       expect(activity.images?.[0]).toMatch(
-        /^https:\/\/places\.googleapis\.com\/v1\/places\/photo1\/media\?/
+        /^\/api\/places\/photo\?name=places%2Fphoto1&maxHeightPx=800&maxWidthPx=1200/
       );
-      expect(activity.images?.[0]).toContain("key=test-api-key");
     });
 
     it("should handle missing optional fields", async () => {
