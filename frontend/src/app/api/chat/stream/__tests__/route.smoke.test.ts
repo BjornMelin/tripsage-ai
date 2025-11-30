@@ -10,6 +10,7 @@ import { handleChatStream } from "../_handler";
 
 // Mock the chat agent module
 vi.mock("@ai/agents", () => ({
+  CHAT_DEFAULT_SYSTEM_PROMPT: "test-system-prompt",
   createChatAgent: vi.fn(() => ({
     agent: {
       generate: vi.fn(),
