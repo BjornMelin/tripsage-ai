@@ -223,22 +223,10 @@ export function PlacesAutocomplete({
           {suggestions.map((suggestion, index) => (
             <li
               key={suggestion.placePrediction.placeId ?? index}
-              onClick={() => {
-                handlePlaceSelect(suggestion.placePrediction).catch((error) => {
-                  recordClientErrorOnActiveSpan(
-                    error instanceof Error ? error : new Error(String(error)),
-                    { action: "onClick", context: "PlacesAutocomplete" }
-                  );
-                });
-              }}
+              onClick={() => handlePlaceSelect(suggestion.placePrediction)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
-                  handlePlaceSelect(suggestion.placePrediction).catch((error) => {
-                    recordClientErrorOnActiveSpan(
-                      error instanceof Error ? error : new Error(String(error)),
-                      { action: "onKeyDown", context: "PlacesAutocomplete" }
-                    );
-                  });
+                  handlePlaceSelect(suggestion.placePrediction);
                 }
               }}
               className="cursor-pointer px-4 py-2 hover:bg-gray-100"

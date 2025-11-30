@@ -52,6 +52,11 @@ export async function CalendarEventList({
     params.set("timeMax", DateUtils.formatForApi(timeMax));
   }
 
+  const siteUrl = getClientEnvVarWithFallback(
+    "NEXT_PUBLIC_SITE_URL",
+    "http://localhost:3000"
+  );
+
   // Fetch events
   let events: Array<{
     id: string;
@@ -64,10 +69,6 @@ export async function CalendarEventList({
   }> = [];
 
   try {
-    const siteUrl = getClientEnvVarWithFallback(
-      "NEXT_PUBLIC_SITE_URL",
-      "http://localhost:3000"
-    );
     const response = await fetch(
       `${siteUrl}/api/calendar/events?${params.toString()}`,
       {
@@ -82,6 +83,9 @@ export async function CalendarEventList({
     CalendarEventLogger.error("Failed to fetch calendar events", {
       calendarId,
       error: error instanceof Error ? error.message : String(error),
+      siteUrl,
+      timeMax: timeMax?.toISOString(),
+      timeMin: timeMin?.toISOString(),
     });
   }
 
