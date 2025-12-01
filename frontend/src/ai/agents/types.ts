@@ -1,25 +1,44 @@
 /**
- * @fileoverview Type definitions for TripSage AI agents using AI SDK v6 ToolLoopAgent.
+ * @fileoverview Type definitions for TripSage AI agents using ToolLoopAgent.
  *
  * Defines configuration, dependencies, and result types for agent creation
- * and execution. Agents use ToolLoopAgent for autonomous multi-step reasoning
- * with tool calling.
+ * and execution.
  */
 
 import "server-only";
 
 import type { AgentWorkflowKind } from "@schemas/agents";
 import type { AgentConfig } from "@schemas/configuration";
-import type { InferAgentUIMessage, LanguageModel, ToolLoopAgent, ToolSet } from "ai";
+import type {
+  FlexibleSchema,
+  GenerateTextOnStepFinishCallback,
+  InferAgentUIMessage,
+  LanguageModel,
+  ModelMessage,
+  Output,
+  PrepareStepFunction,
+  StopCondition,
+  ToolLoopAgent,
+  ToolSet,
+} from "ai";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import type { ChatMessage } from "@/lib/tokens/budget";
 
-/**
- * Dependencies required for agent creation and execution.
- *
- * All dependencies are injected to enable deterministic testing and
- * avoid module-scope state per AGENTS.md requirements.
- */
+// Re-export AI SDK types for downstream consumers
+export type {
+  FlexibleSchema,
+  GenerateTextOnStepFinishCallback,
+  InferAgentUIMessage,
+  ModelMessage,
+  PrepareStepFunction,
+  StopCondition,
+  ToolLoopAgent,
+  ToolSet,
+};
+
+export type StructuredOutput<OutputType> = ReturnType<typeof Output.object<OutputType>>;
+
+/** Dependencies required for agent creation and execution. */
 export interface AgentDependencies {
   /** Resolved language model for the agent. */
   model: LanguageModel;
@@ -50,13 +69,47 @@ export interface AgentDependencies {
 }
 
 /**
+ * Prepare call function signature. Called before agent execution to modify settings.
+ *
+ * @template OptionsT - Call options type from callOptionsSchema.
+ * @template ToolsT - Tool set type for the agent.
+ */
+export type PrepareCallFunction<
+  OptionsT = unknown,
+  ToolsT extends ToolSet = ToolSet,
+> = (context: {
+  options: OptionsT;
+  instructions: string;
+  tools: ToolsT;
+  model: LanguageModel;
+}) => Promise<Partial<PrepareCallResult<ToolsT>>> | Partial<PrepareCallResult<ToolsT>>;
+
+/** Result type for prepareCall function. */
+export interface PrepareCallResult<ToolsT extends ToolSet = ToolSet> {
+  /** Modified system instructions. */
+  instructions?: string;
+  /** Modified tool set. */
+  tools?: ToolsT;
+  /** Modified model. */
+  model?: LanguageModel;
+  /** Active tools subset. */
+  activeTools?: Array<keyof ToolsT & string>;
+  /** Tool choice override. */
+  toolChoice?: "auto" | "none" | "required" | { type: "tool"; toolName: string };
+}
+
+/**
  * Configuration for creating a TripSage agent.
  *
  * Combines runtime dependencies with agent-specific configuration
  * for ToolLoopAgent instantiation.
  */
-// biome-ignore lint/style/useNamingConvention: TypeScript generic convention
-export interface TripSageAgentConfig<TTools extends ToolSet = ToolSet> {
+export interface TripSageAgentConfig<
+  ToolsType extends ToolSet = ToolSet,
+  CallOptionsType = never,
+  // biome-ignore lint/correctness/noUnusedVariables: OutputType kept for documentation/future use
+  OutputType = unknown,
+> {
   /** Unique agent type identifier. */
   agentType: AgentWorkflowKind;
 
@@ -67,12 +120,12 @@ export interface TripSageAgentConfig<TTools extends ToolSet = ToolSet> {
   instructions: string;
 
   /** Tools available to the agent. */
-  tools: TTools;
+  tools: ToolsType;
 
   /**
-   * Schema-enforcing default conversation to send with the agent.
-   * Must include the user prompt that instructs the model to return
-   * the correct schemaVersion payload for downstream consumers.
+   * Default conversation messages to send with the agent.
+   * Must include the user prompt instructing the model to return
+   * the correct schemaVersion payload.
    */
   defaultMessages: ChatMessage[];
 
@@ -87,16 +140,57 @@ export interface TripSageAgentConfig<TTools extends ToolSet = ToolSet> {
 
   /** Top-p nucleus sampling parameter. */
   topP?: number;
+
+  /**
+   * Schema for type-safe call options.
+   * When provided, options are required when calling generate() or stream().
+   */
+  callOptionsSchema?: FlexibleSchema<CallOptionsType>;
+
+  /**
+   * Prepare call function for dynamic configuration.
+   * Called before agent execution to modify settings.
+   */
+  prepareCall?: PrepareCallFunction<CallOptionsType, ToolsType>;
+
+  /**
+   * Prepare step function for per-step configuration.
+   * Called before each step to modify settings.
+   */
+  prepareStep?: PrepareStepFunction<ToolsType>;
+
+  /** Callback invoked after each agent step completes. */
+  onStepFinish?: GenerateTextOnStepFinishCallback<ToolsType>;
+
+  /**
+   * Structured output specification.
+   *
+   * Stored in config but not passed to ToolLoopAgent constructor.
+   * Pass output when calling agent.generate({ output }) or agent.stream({ output }).
+   */
+  output?: ReturnType<typeof Output.object>;
+
+  /**
+   * Active tools subset for this agent.
+   * Limits which tools are available to the model.
+   */
+  activeTools?: Array<keyof ToolsType & string>;
+
+  /**
+   * Custom stop conditions beyond stepCountIs().
+   * Can be a single condition or array of conditions.
+   */
+  stopWhen?: StopCondition<ToolsType> | Array<StopCondition<ToolsType>>;
 }
 
-/**
- * Result of agent creation containing the configured ToolLoopAgent instance.
- *
- * Uses ToolSet as the base type for flexibility across different agent configurations.
- */
-export interface TripSageAgentResult<TagentTools extends ToolSet = ToolSet> {
+/** Result type for agent creation. Contains the configured ToolLoopAgent instance. */
+export interface TripSageAgentResult<
+  TagentTools extends ToolSet = ToolSet,
+  CallOptionsType = never,
+  OutputType = unknown,
+> {
   /** The configured ToolLoopAgent instance. */
-  agent: ToolLoopAgent<never, TagentTools>;
+  agent: ToolLoopAgent<CallOptionsType, TagentTools, StructuredOutput<OutputType>>;
 
   /** Agent type identifier for routing and logging. */
   agentType: AgentWorkflowKind;
@@ -108,20 +202,12 @@ export interface TripSageAgentResult<TagentTools extends ToolSet = ToolSet> {
   defaultMessages: ChatMessage[];
 }
 
-/**
- * Type helper for inferring UI message types from a TripSage agent.
- *
- * @template TAgent - The ToolLoopAgent type to infer messages from.
- */
+/** Type helper for inferring UI message types from a TripSage agent. */
 // biome-ignore lint/style/useNamingConvention: TypeScript generic convention
 export type InferTripSageUIMessage<TAgent extends ToolLoopAgent> =
   InferAgentUIMessage<TAgent>;
 
-/**
- * Factory function signature for creating workflow-specific agents.
- *
- * @template TInput - Input type for the agent workflow.
- */
+/** Factory function signature for creating workflow-specific agents. */
 // biome-ignore lint/style/useNamingConvention: TypeScript generic convention
 export type AgentFactory<TInput, TagentTools extends ToolSet = ToolSet> = (
   deps: AgentDependencies,
@@ -129,9 +215,7 @@ export type AgentFactory<TInput, TagentTools extends ToolSet = ToolSet> = (
   input: TInput
 ) => TripSageAgentResult<TagentTools>;
 
-/**
- * Metadata for agent execution tracking and observability.
- */
+/** Metadata for agent execution tracking. */
 export interface AgentExecutionMeta {
   /** Unique request identifier. */
   requestId: string;
@@ -155,9 +239,7 @@ export interface AgentExecutionMeta {
   sessionId?: string;
 }
 
-/**
- * Common agent parameters extracted from AgentConfig.
- */
+/** Common agent parameters extracted from AgentConfig. */
 export interface AgentParameters {
   /** Maximum output tokens. */
   maxTokens: number;

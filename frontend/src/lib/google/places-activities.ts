@@ -158,10 +158,10 @@ function buildPhotoUrls(photos?: PlacesPhoto[]): string[] {
  * @param date - ISO date string for the activity (defaults to today).
  * @returns Activity object.
  */
-export async function mapPlacesPlaceToActivity(
+export function mapPlacesPlaceToActivity(
   place: PlacesPlace,
   date: string = new Date().toISOString().split("T")[0]
-): Promise<Activity> {
+): Activity {
   const name = place.displayName?.text ?? "Unknown Activity";
   const location = place.formattedAddress ?? "Unknown Location";
   const rating = place.rating ?? 0;
@@ -176,7 +176,7 @@ export async function mapPlacesPlaceToActivity(
         }
       : undefined;
 
-  const images = await buildPhotoUrls(place.photos);
+  const images = buildPhotoUrls(place.photos);
 
   // Use editorialSummary if available, otherwise generate a simple description
   const description =
@@ -265,9 +265,7 @@ export async function searchActivitiesWithPlaces(
   const data = (await response.json()) as PlacesSearchResponse;
   const places = data.places ?? [];
 
-  const activities = await Promise.all(
-    places.map((place) => mapPlacesPlaceToActivity(place, undefined))
-  );
+  const activities = places.map((place) => mapPlacesPlaceToActivity(place, undefined));
 
   return activities;
 }
@@ -307,7 +305,7 @@ export async function getActivityDetailsFromPlaces(
   }
 
   const place = (await response.json()) as PlacesDetailsResponse;
-  const activity = await mapPlacesPlaceToActivity(place, undefined);
+  const activity = mapPlacesPlaceToActivity(place, undefined);
 
   return activity;
 }

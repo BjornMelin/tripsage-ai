@@ -1,9 +1,8 @@
 /**
- * @fileoverview Agent registry for TripSage AI agents using AI SDK v6 ToolLoopAgent.
+ * @fileoverview Agent registry for TripSage AI agents.
  *
  * Provides a centralized registry for all available agents with type-safe
- * lookup and factory function access. The registry maps agent workflow
- * kinds to their factory functions for dynamic agent instantiation.
+ * lookup and factory function access.
  */
 
 import "server-only";
@@ -50,12 +49,7 @@ export type {
 } from "./types";
 export { extractAgentParameters } from "./types";
 
-/**
- * Input types for each agent workflow.
- *
- * Maps agent workflow kinds to their expected input types for type-safe
- * factory function invocation.
- */
+/** Input types for each agent workflow. */
 export interface AgentInputTypes {
   // Supported by agentRegistry and createAgentForWorkflow
   accommodationSearch: import("@schemas/agents").AccommodationSearchRequest;
@@ -68,13 +62,7 @@ export interface AgentInputTypes {
   router: never; // Router uses generateObject, not ToolLoopAgent
 }
 
-/**
- * Registry of agent factory functions.
- *
- * Maps agent workflow kinds to their factory functions for dynamic
- * agent creation. Each factory returns a configured ToolLoopAgent
- * instance ready for streaming or one-shot generation.
- */
+/** Registry of agent factory functions. */
 export const agentRegistry = {
   accommodationSearch: createAccommodationAgent,
   budgetPlanning: createBudgetAgent,
@@ -83,11 +71,7 @@ export const agentRegistry = {
   itineraryPlanning: createItineraryAgent,
 } as const;
 
-/**
- * Agent workflow kinds that are supported by the registry.
- *
- * Excludes 'memoryUpdate' and 'router' which have special handling.
- */
+/** Agent workflow kinds supported by the registry. Excludes 'memoryUpdate' and 'router'. */
 export type SupportedAgentKind = keyof typeof agentRegistry;
 
 /**
@@ -105,43 +89,28 @@ export function isSupportedAgentKind(
 /**
  * Creates an agent for the specified workflow kind.
  *
- * Dynamically looks up the appropriate factory function and creates
- * a configured ToolLoopAgent instance. Throws for unsupported kinds.
- *
- * @template TKind - Agent workflow kind type.
  * @param kind - Agent workflow kind.
  * @param deps - Runtime dependencies.
  * @param config - Agent configuration.
  * @param input - Workflow-specific input.
  * @returns Configured ToolLoopAgent instance.
  * @throws Error if the agent kind is not supported.
- *
- * @example
- * ```typescript
- * const { agent } = createAgentForWorkflow(
- *   "budgetPlanning",
- *   deps,
- *   config,
- *   { destination: "Tokyo", durationDays: 7 }
- * );
- * ```
  */
-// biome-ignore lint/style/useNamingConvention: TypeScript generic convention
-export function createAgentForWorkflow<TKind extends SupportedAgentKind>(
-  kind: TKind,
+export function createAgentForWorkflow<Kind extends SupportedAgentKind>(
+  kind: Kind,
   deps: AgentDependencies,
   config: AgentConfig,
-  input: AgentInputTypes[TKind]
+  input: AgentInputTypes[Kind]
 ): TripSageAgentResult<ToolSet> {
   const factory = agentRegistry[kind];
   if (!factory) {
     throw new Error(`Unsupported agent kind: ${kind}`);
   }
 
-  // Type assertion needed because factory functions have different input types
-  // but all return TripSageAgentResult<ToolSet>
+  // Type assertion needed because factory functions have different specific tool sets
+  // but all return TripSageAgentResult. We cast through unknown to satisfy TypeScript.
   return (
-    factory as (
+    factory as unknown as (
       deps: AgentDependencies,
       config: AgentConfig,
       input: unknown
@@ -171,11 +140,8 @@ export function getAgentName(kind: AgentWorkflowKind): string {
 /**
  * Gets the minimum max-step floor for an agent workflow kind.
  *
- * These values are used as lower bounds when agents clamp configured
- * maxSteps (for example, itinerary/destination call Math.max with 15).
- *
  * @param kind - Agent workflow kind.
- * @returns Minimum max steps enforced by the agent implementation.
+ * @returns Minimum max steps enforced by the agent.
  */
 export function getMinimumMaxSteps(kind: AgentWorkflowKind): number {
   const defaults: Record<AgentWorkflowKind, number> = {

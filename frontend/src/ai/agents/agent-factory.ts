@@ -13,7 +13,7 @@
 
 import "server-only";
 
-import type { LanguageModel, ToolSet } from "ai";
+import type { LanguageModel, StopCondition, ToolSet } from "ai";
 import {
   asSchema,
   generateObject,
@@ -24,9 +24,11 @@ import {
 } from "ai";
 import { secureUuid } from "@/lib/security/random";
 import { createServerLogger } from "@/lib/telemetry/logger";
+import { recordTelemetryEvent } from "@/lib/telemetry/span";
 
 import type {
   AgentDependencies,
+  StructuredOutput,
   TripSageAgentConfig,
   TripSageAgentResult,
 } from "./types";
@@ -39,9 +41,7 @@ const logger = createServerLogger("agent-factory");
  */
 const DEFAULT_MAX_STEPS = 10;
 
-/**
- * Maximum number of tool repair attempts to avoid runaway costs.
- */
+/** Maximum number of tool repair attempts to avoid runaway costs. */
 const MAX_TOOL_REPAIR_ATTEMPTS = 2;
 
 /**
@@ -53,11 +53,16 @@ const DEFAULT_TEMPERATURE = 0.3;
 /**
  * Creates a TripSage agent using AI SDK v6 ToolLoopAgent.
  *
- * Instantiates a reusable agent capable of autonomous multi-step reasoning
- * with tool calling. The agent runs in a loop until a stop condition is met
- * (default: stepCountIs(maxSteps)).
+ * Instantiates a reusable agent for autonomous multi-step reasoning with tool calling.
+ * Runs until a stop condition is met (default: stepCountIs(maxSteps)).
+ *
+ * Supports dynamic configuration via callOptionsSchema/prepareCall, per-step
+ * tool/model selection via prepareStep, step-level telemetry via onStepFinish,
+ * structured output, tool filtering, and custom stop conditions.
  *
  * @template TTools - Tool set type for the agent.
+ * @template CallOptionsType - Call options type from callOptionsSchema.
+ * @template OutputType - Output type for structured results.
  * @param deps - Runtime dependencies including model and identifiers.
  * @param config - Agent configuration including tools and instructions.
  * @returns Configured ToolLoopAgent instance with metadata.
@@ -70,23 +75,40 @@ const DEFAULT_TEMPERATURE = 0.3;
  *   instructions: buildBudgetPrompt(input),
  *   tools: buildBudgetTools(deps.identifier),
  *   maxSteps: 10,
+ *   prepareStep: async ({ stepNumber }) => {
+ *     if (stepNumber <= 2) return { activeTools: ['webSearch'] };
+ *     return {};
+ *   },
  * });
  *
  * // Stream the agent response
  * const stream = agent.stream({ prompt: userMessage });
  * ```
  */
-export function createTripSageAgent<TagentTools extends ToolSet>(
+export function createTripSageAgent<
+  TagentTools extends ToolSet,
+  CallOptionsType = never,
+  OutputType = unknown,
+>(
   deps: AgentDependencies,
-  config: TripSageAgentConfig<TagentTools>
-): TripSageAgentResult<TagentTools> {
+  config: TripSageAgentConfig<TagentTools, CallOptionsType, OutputType>
+): TripSageAgentResult<TagentTools, CallOptionsType, OutputType> {
   const {
+    activeTools,
     agentType,
+    callOptionsSchema,
     defaultMessages,
     instructions,
     maxOutputTokens,
     maxSteps = DEFAULT_MAX_STEPS,
     name,
+    onStepFinish: configOnStepFinish,
+    // Note: output is NOT passed to ToolLoopAgent constructor.
+    // It should be passed when calling agent.generate() or agent.stream().
+    output: _,
+    prepareCall,
+    prepareStep,
+    stopWhen: customStopWhen,
     temperature = DEFAULT_TEMPERATURE,
     tools,
     topP,
@@ -102,7 +124,78 @@ export function createTripSageAgent<TagentTools extends ToolSet>(
     requestId,
   });
 
-  const agent = new ToolLoopAgent<never, TagentTools>({
+  // Build stop conditions: combine default step count with custom conditions
+  const buildStopConditions = ():
+    | StopCondition<TagentTools>
+    | StopCondition<TagentTools>[] => {
+    const defaultCondition = stepCountIs(maxSteps);
+    if (!customStopWhen) {
+      return defaultCondition;
+    }
+    const customConditions = Array.isArray(customStopWhen)
+      ? customStopWhen
+      : [customStopWhen];
+    return [defaultCondition, ...customConditions];
+  };
+
+  // Wrap onStepFinish to add telemetry
+  const wrappedOnStepFinish: typeof configOnStepFinish = configOnStepFinish
+    ? (stepResult) => {
+        // Record telemetry event for step completion
+        recordTelemetryEvent("agent.step.finish", {
+          attributes: {
+            agentType,
+            hasToolCalls: stepResult.toolCalls.length > 0,
+            modelId: deps.modelId,
+            requestId,
+            toolCallCount: stepResult.toolCalls.length,
+          },
+        });
+        return configOnStepFinish(stepResult);
+      }
+    : undefined;
+
+  const agent = new ToolLoopAgent<
+    CallOptionsType,
+    TagentTools,
+    StructuredOutput<OutputType>
+  >({
+    // Call options schema for type-safe runtime configuration
+    ...(callOptionsSchema ? { callOptionsSchema } : {}),
+
+    // Prepare call function for dynamic configuration
+    // Note: prepareCall must return the full settings object, not partial
+    ...(prepareCall
+      ? {
+          prepareCall: async (params) => {
+            const result = await prepareCall({
+              instructions: params.instructions ?? instructions,
+              model: params.model ?? deps.model,
+              options: params.options as CallOptionsType,
+              tools: params.tools ?? tools,
+            });
+            // Return merged settings - prepareCall can override any setting
+            return {
+              ...params,
+              ...(result.instructions ? { instructions: result.instructions } : {}),
+              ...(result.model ? { model: result.model } : {}),
+              ...(result.tools ? { tools: result.tools } : {}),
+              ...(result.activeTools ? { activeTools: result.activeTools } : {}),
+              ...(result.toolChoice ? { toolChoice: result.toolChoice } : {}),
+            };
+          },
+        }
+      : {}),
+
+    // Prepare step function for per-step configuration
+    ...(prepareStep ? { prepareStep } : {}),
+
+    // Step finish callback with telemetry
+    ...(wrappedOnStepFinish ? { onStepFinish: wrappedOnStepFinish } : {}),
+
+    // Active tools subset
+    ...(activeTools ? { activeTools } : {}),
+
     // Experimental: Automatic tool call repair for malformed inputs
     // biome-ignore lint/style/useNamingConvention: AI SDK property name
     experimental_repairToolCall: async ({
@@ -312,7 +405,7 @@ export function createTripSageAgent<TagentTools extends ToolSet>(
     // Generation parameters
     maxOutputTokens,
     model: deps.model,
-    stopWhen: stepCountIs(maxSteps),
+    stopWhen: buildStopConditions(),
     temperature,
     toolChoice: "auto",
     tools,

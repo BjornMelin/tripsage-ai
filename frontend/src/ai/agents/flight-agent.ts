@@ -1,9 +1,8 @@
 /**
- * @fileoverview Flight search agent using AI SDK v6 ToolLoopAgent.
+ * @fileoverview Flight search agent for travel planning.
  *
- * Creates a reusable flight search agent that autonomously searches
- * for flights, resolves airport codes, and summarizes options using
- * multi-step tool calling.
+ * Reusable ToolLoopAgent that searches flights, resolves airport codes,
+ * and summarizes options via multi-step tool calling with phased tool selection.
  */
 
 import "server-only";
@@ -32,11 +31,11 @@ const FLIGHT_TOOLS = {
 } satisfies ToolSet;
 
 /**
- * Creates a flight search agent using AI SDK v6 ToolLoopAgent.
+ * Creates a flight search agent with phased tool selection.
  *
- * The agent autonomously searches for flights, resolves airport codes
- * using geocoding and POI lookup, and computes distances between locations.
- * Returns a reusable agent instance for streaming or one-shot generation.
+ * Phases:
+ * - Phase 1: Resolve locations via geocoding and POI lookup
+ * - Phase 2: Search flights and compute distances
  *
  * @param deps - Runtime dependencies including model and identifiers.
  * @param config - Agent configuration from database.
@@ -54,12 +53,7 @@ const FLIGHT_TOOLS = {
  *   cabinClass: "economy",
  *   currency: "USD",
  * });
- *
- * // Stream the response
- * return createAgentUIStreamResponse({
- *   agent,
- *   messages: [{ role: "user", content: "Find flights" }],
- * });
+ * const stream = agent.stream({ prompt: "Find flights" });
  * ```
  */
 export function createFlightAgent(
@@ -67,7 +61,7 @@ export function createFlightAgent(
   config: AgentConfig,
   input: FlightSearchRequest,
   contextMessages: ChatMessage[] = []
-): TripSageAgentResult {
+): TripSageAgentResult<typeof FLIGHT_TOOLS> {
   const params = extractAgentParameters(config);
   const instructions = buildFlightPrompt(input);
 
@@ -82,17 +76,32 @@ export function createFlightAgent(
   ];
   const { maxTokens } = clampMaxTokens(clampMessages, params.maxTokens, deps.modelId);
 
-  return createTripSageAgent(deps, {
+  return createTripSageAgent<typeof FLIGHT_TOOLS>(deps, {
     agentType: "flightSearch",
     defaultMessages: [schemaMessage],
     instructions,
     maxOutputTokens: maxTokens,
     maxSteps: params.maxSteps,
     name: "Flight Search Agent",
+    // Note: For structured output, pass Output.object({ schema: flightSearchResultSchema })
+    // when calling agent.generate() or agent.stream()
+    // Phased tool selection for flight search workflow
+    prepareStep: ({ stepNumber }) => {
+      // Phase 1 (steps 0-2): Resolve locations
+      if (stepNumber <= 2) {
+        return {
+          activeTools: ["geocode", "lookupPoiContext"],
+        };
+      }
+      // Phase 2 (steps 3+): Search flights
+      return {
+        activeTools: ["searchFlights", "distanceMatrix"],
+      };
+    },
     temperature: params.temperature,
     tools: FLIGHT_TOOLS,
     topP: params.topP,
-  }) as unknown as TripSageAgentResult;
+  });
 }
 
 /** Exported type for the flight agent's tool set. */

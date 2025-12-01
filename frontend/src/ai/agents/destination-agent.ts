@@ -1,9 +1,9 @@
 /**
- * @fileoverview Destination research agent using AI SDK v6 ToolLoopAgent.
+ * @fileoverview Destination research agent for travel planning.
  *
- * Creates a reusable destination research agent that autonomously gathers
- * information about travel destinations including attractions, weather,
- * safety advisories, and local insights using multi-step tool calling.
+ * Reusable ToolLoopAgent that gathers destination information including attractions,
+ * weather, safety advisories, and local insights via multi-step tool calling.
+ * Uses phased tool selection for comprehensive research workflows.
  */
 
 import "server-only";
@@ -41,12 +41,12 @@ const DESTINATION_TOOLS = {
 } satisfies ToolSet;
 
 /**
- * Creates a destination research agent using AI SDK v6 ToolLoopAgent.
+ * Creates a destination research agent for travel research.
  *
- * The agent autonomously researches travel destinations, gathering
- * information about attractions, weather, safety, culture, and local
- * insights through multi-step tool calling. Returns a reusable agent
- * instance for streaming or one-shot generation.
+ * Returns a reusable ToolLoopAgent with phased tool selection:
+ * - Phase 1: Initial search and context gathering
+ * - Phase 2: Deep research via web crawling
+ * - Phase 3: Weather and advisory checks
  *
  * @param deps - Runtime dependencies including model and identifiers.
  * @param config - Agent configuration from database.
@@ -60,19 +60,14 @@ const DESTINATION_TOOLS = {
  *   travelDates: "March 2025",
  *   specificInterests: ["temples", "cherry blossoms"],
  * });
- *
- * // Stream the response
- * return createAgentUIStreamResponse({
- *   agent,
- *   messages: [{ role: "user", content: "Research this destination" }],
- * });
+ * const stream = agent.stream({ prompt: "Research this destination" });
  * ```
  */
 export function createDestinationAgent(
   deps: AgentDependencies,
   config: AgentConfig,
   input: DestinationResearchRequest
-): TripSageAgentResult {
+): TripSageAgentResult<typeof DESTINATION_TOOLS> {
   const params = extractAgentParameters(config);
   const instructions = buildDestinationPrompt(input);
 
@@ -90,17 +85,38 @@ export function createDestinationAgent(
   // Destination research may need more steps for comprehensive gathering
   const maxSteps = Math.max(params.maxSteps, 15);
 
-  return createTripSageAgent(deps, {
+  return createTripSageAgent<typeof DESTINATION_TOOLS>(deps, {
     agentType: "destinationResearch",
     defaultMessages: [schemaMessage],
     instructions,
     maxOutputTokens: maxTokens,
     maxSteps,
     name: "Destination Research Agent",
+    // Note: For structured output, pass Output.object({ schema: destinationResearchResultSchema })
+    // when calling agent.generate() or agent.stream()
+    // Phased tool selection for destination research workflow
+    prepareStep: ({ stepNumber }) => {
+      // Phase 1 (steps 0-4): Initial search and POI context
+      if (stepNumber <= 4) {
+        return {
+          activeTools: ["webSearch", "webSearchBatch", "lookupPoiContext"],
+        };
+      }
+      // Phase 2 (steps 5-9): Deep research via crawling
+      if (stepNumber <= 9) {
+        return {
+          activeTools: ["crawlSite", "webSearchBatch", "lookupPoiContext"],
+        };
+      }
+      // Phase 3 (steps 10+): Weather and safety information
+      return {
+        activeTools: ["getCurrentWeather", "getTravelAdvisory", "lookupPoiContext"],
+      };
+    },
     temperature: params.temperature,
     tools: DESTINATION_TOOLS,
     topP: params.topP,
-  }) as unknown as TripSageAgentResult;
+  });
 }
 
 /** Exported type for the destination agent's tool set. */

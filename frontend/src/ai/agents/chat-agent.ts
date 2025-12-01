@@ -1,9 +1,9 @@
 /**
- * @fileoverview Main chat agent using AI SDK v6 ToolLoopAgent.
+ * @fileoverview Chat agent for travel planning conversations.
  *
- * Creates a reusable chat agent that serves as the primary conversational
- * interface for travel planning. Provides access to all travel planning
- * tools through autonomous multi-step reasoning.
+ * Reusable AI SDK v6 ToolLoopAgent that provides autonomous multi-step reasoning
+ * over all travel planning tools. Supports dynamic memory injection, context window
+ * management, and type-safe runtime configuration via callOptionsSchema/prepareCall/prepareStep.
  */
 
 import "server-only";
@@ -11,25 +11,37 @@ import "server-only";
 import * as tools from "@ai/tools";
 import { wrapToolsWithUserId } from "@ai/tools/server/injection";
 import type { ModelMessage, ToolSet, UIMessage } from "ai";
-import {
-  convertToModelMessages,
-  generateObject,
-  InvalidToolInputError,
-  NoSuchToolError,
-  stepCountIs,
-  ToolLoopAgent,
-} from "ai";
+import { convertToModelMessages } from "ai";
+import { z } from "zod";
 import { CHAT_DEFAULT_SYSTEM_PROMPT } from "@/ai/constants";
 import { extractTexts, validateImageAttachments } from "@/app/api/_helpers/attachments";
-import { secureUuid } from "@/lib/security/random";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import type { ChatMessage } from "@/lib/tokens/budget";
 import { clampMaxTokens, countTokens } from "@/lib/tokens/budget";
 import { getModelContextLimit } from "@/lib/tokens/limits";
 
+import { createTripSageAgent } from "./agent-factory";
 import type { AgentDependencies, TripSageAgentResult } from "./types";
 
 const logger = createServerLogger("chat-agent");
+
+/**
+ * Call options schema for the chat agent (AI SDK v6).
+ *
+ * Enables type-safe runtime configuration when calling agent.generate() or agent.stream().
+ * These options are passed through prepareCall to dynamically configure the agent.
+ */
+export const chatCallOptionsSchema = z.object({
+  /** Optional memory summary to inject into system prompt. */
+  memorySummary: z.string().optional(),
+  /** Optional session ID for context tracking. */
+  sessionId: z.string().optional(),
+  /** User ID for user-scoped tool operations. */
+  userId: z.string(),
+});
+
+/** TypeScript type for chat agent call options. */
+export type ChatCallOptions = z.infer<typeof chatCallOptionsSchema>;
 
 /**
  * Configuration for creating the chat agent.
@@ -49,6 +61,9 @@ export interface ChatAgentConfig {
 
   /** Tools that require user ID injection for user-scoped operations. */
   userScopedTools?: string[];
+
+  /** Enable call options schema for dynamic configuration. */
+  useCallOptions?: boolean;
 }
 
 /**
@@ -81,11 +96,10 @@ export function validateChatMessages(messages: UIMessage[]): ChatValidationResul
 }
 
 /**
- * Creates the main chat agent using AI SDK v6 ToolLoopAgent.
+ * Creates the main chat agent for conversational travel planning.
  *
- * The chat agent serves as the primary conversational interface,
- * providing access to all travel planning tools through autonomous
- * multi-step reasoning. Returns a reusable agent instance.
+ * Returns a reusable ToolLoopAgent instance supporting dynamic configuration
+ * via callOptionsSchema, memory/context injection, and context window management.
  *
  * @param deps - Runtime dependencies including model and identifiers.
  * @param messages - UI messages for context.
@@ -97,11 +111,15 @@ export function validateChatMessages(messages: UIMessage[]): ChatValidationResul
  * const { agent } = createChatAgent(deps, messages, {
  *   memorySummary: "User prefers boutique hotels.",
  * });
+ * const stream = agent.stream({ prompt: userMessage });
+ * ```
  *
- * // Use with createAgentUIStreamResponse
- * return createAgentUIStreamResponse({
- *   agent,
- *   messages,
+ * @example With dynamic call options
+ * ```typescript
+ * const { agent } = createChatAgent(deps, messages, { useCallOptions: true });
+ * const stream = agent.stream({
+ *   prompt: userMessage,
+ *   options: { userId: "user_123", memorySummary: "..." },
  * });
  * ```
  */
@@ -109,7 +127,7 @@ export function createChatAgent(
   deps: AgentDependencies,
   messages: UIMessage[],
   config: ChatAgentConfig = {}
-): TripSageAgentResult<ToolSet> {
+): TripSageAgentResult<ToolSet, ChatCallOptions> {
   if (!deps.userId) {
     throw new Error(
       "Chat agent requires a valid userId for user-scoped tool operations"
@@ -121,6 +139,7 @@ export function createChatAgent(
     maxSteps = 10,
     memorySummary,
     systemPrompt = CHAT_DEFAULT_SYSTEM_PROMPT,
+    useCallOptions = false,
     userScopedTools = [
       "createTravelPlan",
       "updateTravelPlan",
@@ -130,9 +149,7 @@ export function createChatAgent(
     ],
   } = config;
 
-  const requestId = secureUuid();
-
-  // Build system prompt with optional memory context
+  // Build base system prompt with optional memory context
   let instructions = systemPrompt;
   if (memorySummary) {
     instructions += `\n\nUser memory (summary):\n${memorySummary}`;
@@ -157,6 +174,7 @@ export function createChatAgent(
   ];
   const { maxTokens } = clampMaxTokens(clampInput, desiredMaxTokens, deps.modelId);
 
+  // Build tools with user ID injection for user-scoped operations
   const chatTools = wrapToolsWithUserId(
     { ...tools },
     deps.userId,
@@ -169,121 +187,51 @@ export function createChatAgent(
     maxSteps,
     maxTokens,
     modelId: deps.modelId,
-    requestId,
+    useCallOptions,
   });
 
-  const agent = new ToolLoopAgent<never, ToolSet>({
-    // Experimental: Automatic tool call repair for malformed inputs
-    // biome-ignore lint/style/useNamingConvention: AI SDK property name
-    experimental_repairToolCall: async ({
-      error,
-      inputSchema,
-      toolCall,
-      tools: agentTools,
-    }) => {
-      // Don't attempt to fix invalid tool names
-      if (NoSuchToolError.isInstance(error)) {
-        return null;
-      }
-
-      // Only repair invalid input errors
-      if (!InvalidToolInputError.isInstance(error)) {
-        return null;
-      }
-
-      const repairAttempts = Number(
-        (toolCall as { repairAttempts?: number }).repairAttempts ?? 0
-      );
-      if (repairAttempts >= 2) {
-        logger.warn("chat_agent:repair_attempts_exhausted", {
-          requestId,
-          toolName: toolCall.toolName,
-        });
-        return null;
-      }
-
-      // Get the tool definition
-      const tool = agentTools[toolCall.toolName as keyof typeof agentTools];
-      if (!tool || typeof tool !== "object" || !("inputSchema" in tool)) {
-        return null;
-      }
-
-      let schema: unknown;
-      try {
-        schema = await inputSchema({ toolName: toolCall.toolName });
-      } catch (schemaError) {
-        logger.error("Failed to retrieve tool input schema", {
-          error:
-            schemaError instanceof Error ? schemaError.message : String(schemaError),
-          toolName: toolCall.toolName,
-        });
-        return null;
-      }
-
-      try {
-        const { object: repairedArgs } = await generateObject({
-          model: deps.model,
-          prompt: [
-            `The model tried to call the tool "${toolCall.toolName}" with the following inputs:`,
-            JSON.stringify(toolCall.input, null, 2),
-            "The tool accepts the following schema:",
-            JSON.stringify(schema, null, 2),
-            "Please fix the inputs to match the schema exactly.",
-          ].join("\n"),
-          schema: tool.inputSchema,
-        });
-
-        logger.info("Repaired tool call", {
-          requestId,
-          toolName: toolCall.toolName,
-        });
-
-        return {
-          ...toolCall,
-          input: JSON.stringify(repairedArgs),
-          repairAttempts: repairAttempts + 1,
-        };
-      } catch (repairError) {
-        logger.error("Tool call repair failed", {
-          error:
-            repairError instanceof Error ? repairError.message : String(repairError),
-          requestId,
-          toolName: toolCall.toolName,
-        });
-        return null;
-      }
-    },
-
-    // Telemetry settings
-    // biome-ignore lint/style/useNamingConvention: AI SDK property name
-    experimental_telemetry: {
-      functionId: "agent.chat",
-      isEnabled: true,
-      metadata: {
-        identifier: deps.identifier,
-        modelId: deps.modelId,
-        ...(deps.sessionId ? { sessionId: deps.sessionId } : {}),
-        ...(deps.userId ? { userId: deps.userId } : {}),
-      },
-    },
-    // Core configuration
-    id: `tripsage-chat-${requestId}`,
+  // Use the centralized agent factory with AI SDK v6 features
+  return createTripSageAgent<ToolSet, ChatCallOptions>(deps, {
+    agentType: "router", // Chat agent acts as the main router
+    // AI SDK v6: Call options schema for dynamic configuration
+    ...(useCallOptions ? { callOptionsSchema: chatCallOptionsSchema } : {}),
+    defaultMessages: [],
     instructions,
-
-    // Generation parameters
     maxOutputTokens: maxTokens,
-    model: deps.model,
-    stopWhen: stepCountIs(maxSteps),
-    toolChoice: "auto",
+    maxSteps,
+    name: "Chat Agent",
+    // AI SDK v6: Prepare call function for dynamic memory injection
+    ...(useCallOptions
+      ? {
+          prepareCall: ({ instructions: baseInstructions, options }) => {
+            // Inject memory summary into instructions at runtime
+            let finalInstructions = baseInstructions;
+            if (options.memorySummary) {
+              finalInstructions += `\n\nUser memory (summary):\n${options.memorySummary}`;
+            }
+            return { instructions: finalInstructions };
+          },
+        }
+      : {}),
+    // AI SDK v6: Prepare step for context management in long conversations
+    prepareStep: ({ messages: stepMessages, stepNumber }) => {
+      // Compress conversation history for longer loops to stay within context limits
+      if (stepMessages.length > 20) {
+        logger.info("Compressing chat context", {
+          originalCount: stepMessages.length,
+          stepNumber,
+        });
+        return {
+          messages: [
+            stepMessages[0], // Keep system instructions
+            ...stepMessages.slice(-15), // Keep last 15 messages
+          ],
+        };
+      }
+      return {};
+    },
     tools: chatTools,
   });
-
-  return {
-    agent,
-    agentType: "router", // Chat agent acts as the main router
-    defaultMessages: [],
-    modelId: deps.modelId,
-  };
 }
 
 // Re-export default system prompt for external consumers (e.g., API handlers)
@@ -291,8 +239,6 @@ export { CHAT_DEFAULT_SYSTEM_PROMPT };
 
 /**
  * Converts UI messages to model messages for agent context.
- *
- * Wrapper around AI SDK's convertToModelMessages for type consistency.
  *
  * @param messages - UI messages to convert.
  * @returns Model messages for agent prompt.
