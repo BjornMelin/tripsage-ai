@@ -2,7 +2,7 @@
  * @vitest-environment node
  */
 
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock server-only module before imports
 vi.mock("server-only", () => ({}));
@@ -140,6 +140,10 @@ function createTestMessages(): UIMessage[] {
 }
 
 describe("createChatAgent", () => {
+  beforeEach(() => {
+    mockToolLoopAgent.mockClear();
+  });
+
   it("should create a chat agent with required config", () => {
     const deps = createTestDeps();
     const messages = createTestMessages();
@@ -169,8 +173,6 @@ describe("createChatAgent", () => {
   it("should include memory summary in instructions when provided", () => {
     const deps = createTestDeps();
     const messages = createTestMessages();
-
-    mockToolLoopAgent.mockClear();
 
     const result = createChatAgent(deps, messages, {
       desiredMaxTokens: 2048,

@@ -213,7 +213,7 @@ erDiagram
         string status
         string trip_type
         jsonb flexibility
-        text[] notes
+        text[] tags
         jsonb search_metadata
         timestamp created_at
         timestamp updated_at

@@ -53,7 +53,7 @@ export const POST = withApiGuards({
   const { model, modelId } = await resolveProvider(userId, modelHint);
 
   const { agent, defaultMessages } = createFlightAgent(
-    { identifier: userId, model, modelId },
+    { identifier: userId, model, modelId, userId },
     config.config,
     body
   );

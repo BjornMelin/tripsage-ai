@@ -15,6 +15,7 @@ import {
   webSearch,
   webSearchBatch,
 } from "@ai/tools";
+import { wrapToolsWithUserId } from "@ai/tools/server/injection";
 import type { ItineraryPlanRequest } from "@schemas/agents";
 import type { AgentConfig } from "@schemas/configuration";
 import type { ToolSet } from "ai";
@@ -27,13 +28,13 @@ import type { AgentDependencies, TripSageAgentResult } from "./types";
 import { extractAgentParameters } from "./types";
 
 /**
- * Tools available to the itinerary planning agent.
+ * Base tools available to the itinerary planning agent.
  *
  * These tools are imported from @ai/tools where they are already
  * created with createAiTool and have built-in guardrails for caching,
  * rate limiting, and telemetry.
  */
-const ITINERARY_TOOLS = {
+const BASE_ITINERARY_TOOLS = {
   createTravelPlan,
   lookupPoiContext,
   saveTravelPlan,
@@ -68,7 +69,7 @@ export function createItineraryAgent(
   deps: AgentDependencies,
   config: AgentConfig,
   input: ItineraryPlanRequest
-): TripSageAgentResult<typeof ITINERARY_TOOLS> {
+): TripSageAgentResult<typeof BASE_ITINERARY_TOOLS> {
   const params = extractAgentParameters(config);
   const instructions = buildItineraryPrompt(input);
 
@@ -86,7 +87,24 @@ export function createItineraryAgent(
   // Itinerary planning may need more steps for comprehensive plans
   const maxSteps = Math.max(params.maxSteps, 15);
 
-  return createTripSageAgent<typeof ITINERARY_TOOLS>(deps, {
+  // Wrap tools that require userId for user-scoped operations
+  // createTravelPlan and saveTravelPlan require userId in their input schema
+  const itineraryTools = deps.userId
+    ? (wrapToolsWithUserId(
+        BASE_ITINERARY_TOOLS,
+        deps.userId,
+        ["createTravelPlan", "saveTravelPlan"],
+        deps.sessionId
+      ) as typeof BASE_ITINERARY_TOOLS)
+    : BASE_ITINERARY_TOOLS;
+
+  if (!deps.userId) {
+    throw new Error(
+      "Itinerary agent requires a valid userId for user-scoped tool operations (createTravelPlan, saveTravelPlan)"
+    );
+  }
+
+  return createTripSageAgent<typeof BASE_ITINERARY_TOOLS>(deps, {
     agentType: "itineraryPlanning",
     defaultMessages: [schemaMessage],
     instructions,
@@ -115,10 +133,10 @@ export function createItineraryAgent(
       };
     },
     temperature: params.temperature,
-    tools: ITINERARY_TOOLS,
+    tools: itineraryTools,
     topP: params.topP,
   });
 }
 
 /** Exported type for the itinerary agent's tool set. */
-export type ItineraryAgentTools = typeof ITINERARY_TOOLS;
+export type ItineraryAgentTools = typeof BASE_ITINERARY_TOOLS;
