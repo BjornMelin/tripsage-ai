@@ -5,6 +5,8 @@
  * for common patterns in our tool/agent system.
  */
 
+import type { ZodTypeAny } from "zod";
+
 export type {
   InferUITools,
   ToolSet,
@@ -20,11 +22,19 @@ export type {
  * type SearchInput = InferToolInput<typeof searchTool>;
  * ```
  */
-export type InferToolInput<T> = T extends { inputSchema: infer S }
-  ? S extends { _output: infer O }
-    ? O
-    : unknown
-  : unknown;
+export type InferToolInput<T> = T extends {
+  execute: (input: infer I, ...args: unknown[]) => unknown;
+}
+  ? I
+  : T extends { inputSchema: infer S }
+    ? S extends { _output: infer O }
+      ? O
+      : S extends ZodTypeAny
+        ? S extends import("zod").ZodType<infer I, import("zod").ZodTypeDef, unknown>
+          ? I
+          : unknown
+        : unknown
+    : unknown;
 
 /**
  * Infer tool output type from a tool definition.

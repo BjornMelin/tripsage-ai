@@ -118,7 +118,12 @@ export const lookupPoiContext = createAiTool({
     try {
       apiKey = getGoogleMapsServerKey();
     } catch {
-      return { inputs: validated, pois: [], provider: "stub", status: "success" as const };
+      return {
+        inputs: validated,
+        pois: [],
+        provider: "stub",
+        status: "success" as const,
+      };
     }
 
     let lat: number;
@@ -146,7 +151,13 @@ export const lookupPoiContext = createAiTool({
       searchQuery = validated.query ?? `points of interest in ${validated.destination}`;
     } else if (validated.query) {
       const pois = await fetchPoisFromPlacesApi(validated.query, null, apiKey);
-      return { fromCache: false, inputs: validated, pois, provider: "googleplaces", status: "success" as const };
+      return {
+        fromCache: false,
+        inputs: validated,
+        pois,
+        provider: "googleplaces",
+        status: "success" as const,
+      };
     } else {
       throw new Error("Missing coordinates, destination, or query");
     }
@@ -157,7 +168,13 @@ export const lookupPoiContext = createAiTool({
       apiKey
     );
 
-    return { fromCache: false, inputs: validated, pois, provider: "googleplaces", status: "success" as const };
+    return {
+      fromCache: false,
+      inputs: validated,
+      pois,
+      provider: "googleplaces",
+      status: "success" as const,
+    };
   },
   guardrails: {
     cache: {

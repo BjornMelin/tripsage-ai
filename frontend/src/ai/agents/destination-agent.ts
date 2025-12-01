@@ -82,8 +82,10 @@ export function createDestinationAgent(
   ];
   const { maxTokens } = clampMaxTokens(clampMessages, params.maxTokens, deps.modelId);
 
-  // Destination research may need more steps for comprehensive gathering
+  // Destination research may need more steps for gathering
   const maxSteps = Math.max(params.maxSteps, 15);
+  const phase1End = Math.max(4, Math.floor(maxSteps * 0.33));
+  const phase2End = Math.max(phase1End + 1, Math.floor(maxSteps * 0.66));
 
   return createTripSageAgent<typeof DESTINATION_TOOLS>(deps, {
     agentType: "destinationResearch",
@@ -96,19 +98,19 @@ export function createDestinationAgent(
     // when calling agent.generate() or agent.stream()
     // Phased tool selection for destination research workflow
     prepareStep: ({ stepNumber }) => {
-      // Phase 1 (steps 0-4): Initial search and POI context
-      if (stepNumber <= 4) {
+      // Phase 1: Initial search and POI context
+      if (stepNumber <= phase1End) {
         return {
           activeTools: ["webSearch", "webSearchBatch", "lookupPoiContext"],
         };
       }
-      // Phase 2 (steps 5-9): Deep research via crawling
-      if (stepNumber <= 9) {
+      // Phase 2: Deep research via crawling
+      if (stepNumber <= phase2End) {
         return {
           activeTools: ["crawlSite", "webSearchBatch", "lookupPoiContext"],
         };
       }
-      // Phase 3 (steps 10+): Weather and safety information
+      // Phase 3: Weather and safety information
       return {
         activeTools: ["getCurrentWeather", "getTravelAdvisory", "lookupPoiContext"],
       };

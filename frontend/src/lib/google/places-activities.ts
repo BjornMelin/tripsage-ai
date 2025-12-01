@@ -265,7 +265,7 @@ export async function searchActivitiesWithPlaces(
   const data = (await response.json()) as PlacesSearchResponse;
   const places = data.places ?? [];
 
-  const activities = places.map((place) => mapPlacesPlaceToActivity(place, undefined));
+  const activities = places.map((place) => mapPlacesPlaceToActivity(place));
 
   return activities;
 }
@@ -305,7 +305,7 @@ export async function getActivityDetailsFromPlaces(
   }
 
   const place = (await response.json()) as PlacesDetailsResponse;
-  const activity = mapPlacesPlaceToActivity(place, undefined);
+  const activity = mapPlacesPlaceToActivity(place);
 
   return activity;
 }
