@@ -37,16 +37,22 @@ export function ChatClient(): ReactElement {
     async (text: string) => {
       if (pending) return;
       if (!text.trim()) return;
+
       setPending(true);
       setError(null);
+
       const optimisticUserMessage: UIMessage = {
         id: secureId(),
         metadata: { createdAt: nowIso() },
         parts: [{ text, type: "text" }],
         role: "user",
       };
-      const nextMessages = [...messages, optimisticUserMessage];
-      setMessages(nextMessages);
+
+      let nextMessages: UIMessage[] = [];
+      setMessages((prev) => {
+        nextMessages = [...prev, optimisticUserMessage];
+        return nextMessages;
+      });
 
       try {
         const result = await submitChatMessage({ messages: nextMessages, text });
