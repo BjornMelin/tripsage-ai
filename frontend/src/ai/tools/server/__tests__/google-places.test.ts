@@ -80,6 +80,7 @@ describe("lookupPoiContext", () => {
     expect(result).toMatchObject({
       pois: [],
       provider: "stub",
+      status: "success",
     });
   });
 
@@ -142,6 +143,7 @@ describe("lookupPoiContext", () => {
         }),
       ]),
       provider: "googleplaces",
+      status: "success",
     });
   });
 });

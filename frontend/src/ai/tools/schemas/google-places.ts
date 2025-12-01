@@ -72,19 +72,22 @@ const poiSchema = z.strictObject({
  * Schema for lookupPoiContext tool response.
  *
  * Represents either an error response or a successful POI lookup result.
+ * Uses a discriminated union with explicit status field for unambiguous parsing.
  */
-export const lookupPoiResponseSchema = z.union([
+export const lookupPoiResponseSchema = z.discriminatedUnion("status", [
   z.strictObject({
-    error: z.string().optional().describe("Error message if lookup failed"),
+    error: z.string().describe("Error message if lookup failed"),
     inputs: z.unknown().describe("Original input parameters"),
     pois: z.array(poiSchema).describe("Empty array on error"),
     provider: z.string().describe("Provider name"),
+    status: z.literal("error"),
   }),
   z.strictObject({
     fromCache: z.boolean().optional().describe("Whether result was cached"),
     inputs: z.unknown().describe("Original input parameters"),
     pois: z.array(poiSchema).describe("Array of POI results"),
     provider: z.string().describe("Provider name"),
+    status: z.literal("success"),
   }),
 ]);
 
