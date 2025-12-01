@@ -45,11 +45,8 @@ export function ChatClient(): ReactElement {
         parts: [{ text, type: "text" }],
         role: "user",
       };
-      let nextMessages: UIMessage[] = [];
-      setMessages((prev) => {
-        nextMessages = [...prev, optimisticUserMessage];
-        return nextMessages;
-      });
+      const nextMessages = [...messages, optimisticUserMessage];
+      setMessages(nextMessages);
 
       try {
         const result = await submitChatMessage({ messages: nextMessages, text });
