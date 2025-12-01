@@ -90,7 +90,7 @@
     "@upstash/ratelimit": "2.0.7",
     "@upstash/redis": "^1.35.6",
     "@vercel/otel": "^2.1.0",
-    "ai": "6.0.0-beta.116",
+    "ai": "6.0.0-beta.125",
     "amadeus": "^11.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
