@@ -66,7 +66,7 @@ jobs:
 
       - name: Biome check (src + e2e + scripts)
         working-directory: frontend
-        run: pnpm biome:check --reporter=github
+        run: pnpm biome:check -- --reporter=github
 
       - name: TypeScript type check
         working-directory: frontend

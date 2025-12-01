@@ -14,29 +14,15 @@ import { secureUuid } from "@/lib/security/random";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
-const uiMessagePartSchema = z.strictObject({
-  text: z.string(),
-  type: z.literal("text"),
-});
-
-const uiMessageSchema = z.strictObject({
-  id: z.string(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
-  parts: z.array(uiMessagePartSchema),
-  role: z.enum(["user", "assistant", "system"]),
-});
-
 const chatInputSchema = z.strictObject({
-  messages: z.array(uiMessageSchema).default([]),
+  messages: z.array(z.unknown()).default([]),
   metadata: z.record(z.string(), z.unknown()).optional(),
   text: z.string().trim().min(1, { error: "Message is required" }).max(2000),
 });
 
-interface ChatInput {
-  text: string;
+type ChatInput = Omit<z.infer<typeof chatInputSchema>, "messages"> & {
   messages: UIMessage[];
-  metadata?: Record<string, unknown>;
-}
+};
 
 const guardModel = (model: unknown): LanguageModel => {
   if (!model || (typeof model !== "function" && typeof model !== "object")) {
@@ -50,15 +36,15 @@ const guardModel = (model: unknown): LanguageModel => {
  */
 // biome-ignore lint/suspicious/useAwait: Returns withTelemetrySpan promise which is async
 export async function submitChatMessage(input: ChatInput) {
-  const parsed = chatInputSchema.parse(input);
-
   return withTelemetrySpan(
     "chat.rsc.send",
     { attributes: { feature: "chat", route: "/chat" } },
     async () => {
+      const parsed = chatInputSchema.parse(input);
+
       const supabase = await createServerSupabase();
-      const { data } = await supabase.auth.getUser();
-      if (!data || !data.user || !data.user.id) {
+      const { data, error } = await supabase.auth.getUser();
+      if (error || !data || !data.user || !data.user.id) {
         const authError = new Error("Unauthorized");
         (authError as Error & { status?: number }).status = 401;
         throw authError;
@@ -71,7 +57,7 @@ export async function submitChatMessage(input: ChatInput) {
         role: "user",
       };
 
-      const history: UIMessage[] = [...parsed.messages, userMessage];
+      const history: UIMessage[] = [...(parsed.messages as UIMessage[]), userMessage];
       const provider = await resolveProvider(data.user.id, undefined);
 
       const controller = new AbortController();

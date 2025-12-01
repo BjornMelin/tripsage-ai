@@ -68,7 +68,7 @@ export function CalendarConnectionCard({ className }: CalendarConnectionCardProp
         setError(message);
         recordClientErrorOnActiveSpan(err instanceof Error ? err : new Error(message), {
           action: "loadCalendarStatus",
-          context: "CalendarConnectionCardWrapper",
+          context: "CalendarConnectionCard",
         });
       } finally {
         setIsLoading(false);

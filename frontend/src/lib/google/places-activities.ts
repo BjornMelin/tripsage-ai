@@ -133,21 +133,34 @@ function extractActivityType(types?: string[]): string {
   return matched ?? types[0] ?? "activity";
 }
 
+/** Maximum number of photos to include per activity. */
+const MAX_ACTIVITY_PHOTOS = 5;
+
+/** Default photo dimensions for activity images. */
+const DEFAULT_PHOTO_DIMENSIONS = {
+  maxHeightPx: 800,
+  maxWidthPx: 1200,
+} as const;
+
 /**
  * Builds client-safe photo URLs via the server-side photo proxy.
+ *
+ * Limits results to MAX_ACTIVITY_PHOTOS (5) to balance visual richness
+ * with payload size and rendering performance.
  */
 function buildPhotoUrls(photos?: PlacesPhoto[]): string[] {
   if (!photos || photos.length === 0) {
     return [];
   }
 
-  return photos.slice(0, 5).map((photo) => {
-    const url = new URL("/api/places/photo", "http://localhost");
-    url.searchParams.set("name", photo.name);
-    url.searchParams.set("maxHeightPx", "800");
-    url.searchParams.set("maxWidthPx", "1200");
-    // Drop origin to keep relative path when serialized
-    return url.pathname + url.search;
+  // Limit to MAX_ACTIVITY_PHOTOS to balance richness with performance
+  return photos.slice(0, MAX_ACTIVITY_PHOTOS).map((photo) => {
+    const params = new URLSearchParams({
+      maxHeightPx: String(DEFAULT_PHOTO_DIMENSIONS.maxHeightPx),
+      maxWidthPx: String(DEFAULT_PHOTO_DIMENSIONS.maxWidthPx),
+      name: photo.name,
+    });
+    return `/api/places/photo?${params.toString()}`;
   });
 }
 

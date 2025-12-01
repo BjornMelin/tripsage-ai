@@ -87,6 +87,16 @@ export function createItineraryAgent(
   // Itinerary planning may need more steps for comprehensive plans
   const maxSteps = Math.max(params.maxSteps, 15);
 
+  // Define phased tool sets with type safety
+  type ToolName = keyof typeof BASE_ITINERARY_TOOLS;
+  const ResearchTools: ToolName[] = ["webSearch", "webSearchBatch", "lookupPoiContext"];
+  const PlanningTools: ToolName[] = ["createTravelPlan", "lookupPoiContext"];
+  const SaveTools: ToolName[] = ["saveTravelPlan", "createTravelPlan"];
+
+  // Compute phase boundaries from maxSteps (40% research, 33% planning, 27% save)
+  const phase1End = Math.floor(maxSteps * 0.4);
+  const phase2End = Math.floor(maxSteps * 0.73);
+
   if (!deps.userId) {
     throw new Error(
       "Itinerary agent requires a valid userId for user-scoped tool operations (createTravelPlan, saveTravelPlan)"
@@ -100,7 +110,7 @@ export function createItineraryAgent(
     deps.userId,
     ["createTravelPlan", "saveTravelPlan"],
     deps.sessionId
-  ) as typeof BASE_ITINERARY_TOOLS;
+  );
 
   return createTripSageAgent<typeof BASE_ITINERARY_TOOLS>(deps, {
     agentType: "itineraryPlanning",
@@ -113,21 +123,21 @@ export function createItineraryAgent(
     // when calling agent.generate() or agent.stream()
     // Phased tool selection for itinerary workflow
     prepareStep: ({ stepNumber }) => {
-      // Phase 1 (steps 0-6): Research destination
-      if (stepNumber <= 6) {
+      // Phase 1: Research destination
+      if (stepNumber <= phase1End) {
         return {
-          activeTools: ["webSearch", "webSearchBatch", "lookupPoiContext"],
+          activeTools: ResearchTools,
         };
       }
-      // Phase 2 (steps 7-11): Create the plan
-      if (stepNumber <= 11) {
+      // Phase 2: Create the plan
+      if (stepNumber <= phase2End) {
         return {
-          activeTools: ["createTravelPlan", "lookupPoiContext"],
+          activeTools: PlanningTools,
         };
       }
-      // Phase 3 (steps 12+): Save and finalize
+      // Phase 3: Save and finalize
       return {
-        activeTools: ["saveTravelPlan", "createTravelPlan"],
+        activeTools: SaveTools,
       };
     },
     temperature: params.temperature,

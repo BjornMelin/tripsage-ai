@@ -27,7 +27,7 @@ import { nowIso, secureId } from "@/lib/security/random";
 import { emitOperationalAlert } from "@/lib/telemetry/alerts";
 import { recordTelemetryEvent } from "@/lib/telemetry/span";
 
-const uuidSchema = z.uuid();
+const uuidSchema = z.string().uuid();
 
 /**
  * Builds a rollback configuration for an agent.

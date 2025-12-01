@@ -50,7 +50,7 @@ vi.mock("@/lib/memory/turn-utils", () => ({
 }));
 
 vi.mock("@/lib/security/random", () => ({
-  secureUuid: () => "test-uuid-123",
+  secureUuid: vi.fn(() => "test-uuid-123"),
 }));
 
 const MOCK_SUPABASE = vi.hoisted(() => {

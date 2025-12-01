@@ -10,8 +10,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { listEvents } from "@/lib/calendar/google";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
-import { getClientEnvVarWithFallback } from "@/lib/env/client";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
 const CalendarEventLogger = createServerLogger("component.calendar-event-list");
@@ -40,23 +40,6 @@ export async function CalendarEventList({
   timeMax,
   className,
 }: CalendarEventListProps) {
-  // Build query parameters
-  const params = new URLSearchParams({
-    calendarId,
-  });
-
-  if (timeMin) {
-    params.set("timeMin", DateUtils.formatForApi(timeMin));
-  }
-  if (timeMax) {
-    params.set("timeMax", DateUtils.formatForApi(timeMax));
-  }
-
-  const siteUrl = getClientEnvVarWithFallback(
-    "NEXT_PUBLIC_SITE_URL",
-    "http://localhost:3000"
-  );
-
   // Fetch events
   let events: Array<{
     id: string;
@@ -69,21 +52,16 @@ export async function CalendarEventList({
   }> = [];
 
   try {
-    const response = await fetch(
-      `${siteUrl}/api/calendar/events?${params.toString()}`,
-      {
-        cache: "no-store",
-      }
-    );
-    if (response.ok) {
-      const data = await response.json();
-      events = data.items || [];
-    }
+    const result = await listEvents({
+      calendarId,
+      timeMax,
+      timeMin,
+    });
+    events = result.items || [];
   } catch (error) {
     CalendarEventLogger.error("Failed to fetch calendar events", {
       calendarId,
       error: error instanceof Error ? error.message : String(error),
-      siteUrl,
       timeMax: timeMax?.toISOString(),
       timeMin: timeMin?.toISOString(),
     });

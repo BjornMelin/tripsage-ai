@@ -204,10 +204,14 @@ export function UseQueryErrorHandler() {
   const { reset } = useQueryErrorResetBoundary();
 
   const handleError = (error: unknown) => {
-    recordClientErrorOnActiveSpan(
-      error instanceof Error ? error : new Error(String(error)),
-      { action: "handleError", context: "QueryErrorBoundary" }
-    );
+    try {
+      recordClientErrorOnActiveSpan(
+        error instanceof Error ? error : new Error(String(error)),
+        { action: "handleError", context: "QueryErrorBoundary" }
+      );
+    } catch {
+      // Silently ignore telemetry failures to prevent error handler from breaking
+    }
 
     // Production error reporting is handled via OTEL spans recorded above.
     // The recordClientErrorOnActiveSpan call ensures errors are captured

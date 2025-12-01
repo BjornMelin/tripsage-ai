@@ -77,14 +77,14 @@ const poiSchema = z.strictObject({
 export const lookupPoiResponseSchema = z.discriminatedUnion("status", [
   z.strictObject({
     error: z.string().describe("Error message if lookup failed"),
-    inputs: z.unknown().describe("Original input parameters"),
+    inputs: lookupPoiInputSchema.describe("Original input parameters"),
     pois: z.array(poiSchema).describe("Empty array on error"),
     provider: z.string().describe("Provider name"),
     status: z.literal("error"),
   }),
   z.strictObject({
     fromCache: z.boolean().optional().describe("Whether result was cached"),
-    inputs: z.unknown().describe("Original input parameters"),
+    inputs: lookupPoiInputSchema.describe("Original input parameters"),
     pois: z.array(poiSchema).describe("Array of POI results"),
     provider: z.string().describe("Provider name"),
     status: z.literal("success"),

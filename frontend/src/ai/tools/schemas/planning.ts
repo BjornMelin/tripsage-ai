@@ -99,7 +99,7 @@ export const createTravelPlanResponseSchema = z.discriminatedUnion("success", [
   z.object({
     message: z.string().describe("Success message"),
     plan: z.unknown().describe("Created plan object"),
-    planId: z.string().describe("Unique plan identifier"),
+    planId: UUID_V4,
     success: z.literal(true),
   }),
 ]);
@@ -119,7 +119,7 @@ export const saveTravelPlanResponseSchema = z.discriminatedUnion("success", [
   }),
   z.object({
     message: z.string().describe("Success message"),
-    planId: z.string().describe("Saved plan identifier"),
+    planId: UUID_V4,
     status: z.string().describe("Plan status after save"),
     success: z.literal(true),
     summaryMarkdown: z.string().describe("Markdown summary of the plan"),
