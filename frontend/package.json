@@ -43,7 +43,7 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "3.0.0-beta.60",
-    "@ai-sdk/openai": "3.0.0-beta.66",
+    "@ai-sdk/openai": "3.0.0-beta.74",
     "@ai-sdk/react": "3.0.0-beta.116",
     "@ai-sdk/xai": "3.0.0-beta.41",
     "@hello-pangea/dnd": "^18.0.1",
