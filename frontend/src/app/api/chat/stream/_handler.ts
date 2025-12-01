@@ -24,7 +24,7 @@ import {
   uiMessageToMemoryTurn,
 } from "@/lib/memory/turn-utils";
 import { secureUuid } from "@/lib/security/random";
-import type { Json } from "@/lib/supabase/database.types";
+import type { InsertTables, Json } from "@/lib/supabase/database.types";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { insertSingle } from "@/lib/supabase/typed-helpers";
 
@@ -244,7 +244,11 @@ export async function handleChatStream(
             userId: user.id,
           });
 
-          await insertSingle(deps.supabase, "chat_messages", {
+          const chatMessagePayload: InsertTables<"chat_messages"> & {
+            // Some deployments may expose request_id; keep optional to avoid schema breakage
+            // biome-ignore lint/style/useNamingConvention: Database field name
+            request_id?: string | null;
+          } = {
             content: "(streamed)",
             metadata: meta,
             role: "assistant",
@@ -252,8 +256,12 @@ export async function handleChatStream(
             session_id: sessionId,
             // biome-ignore lint/style/useNamingConvention: Database field name
             user_id: user.id,
-            // request_id column is not present; requestId stored in metadata for tracing
-          });
+          };
+
+          // Store requestId at top-level when column exists; otherwise remains in metadata
+          chatMessagePayload.request_id = requestId ?? null;
+
+          await insertSingle(deps.supabase, "chat_messages", chatMessagePayload);
         } catch (error) {
           deps.logger?.error?.("chat_stream:memory_response_failed", {
             error: error instanceof Error ? error.message : String(error),

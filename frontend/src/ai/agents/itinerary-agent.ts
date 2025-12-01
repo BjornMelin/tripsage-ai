@@ -87,22 +87,20 @@ export function createItineraryAgent(
   // Itinerary planning may need more steps for comprehensive plans
   const maxSteps = Math.max(params.maxSteps, 15);
 
-  // Wrap tools that require userId for user-scoped operations
-  // createTravelPlan and saveTravelPlan require userId in their input schema
-  const itineraryTools = deps.userId
-    ? (wrapToolsWithUserId(
-        BASE_ITINERARY_TOOLS,
-        deps.userId,
-        ["createTravelPlan", "saveTravelPlan"],
-        deps.sessionId
-      ) as typeof BASE_ITINERARY_TOOLS)
-    : BASE_ITINERARY_TOOLS;
-
   if (!deps.userId) {
     throw new Error(
       "Itinerary agent requires a valid userId for user-scoped tool operations (createTravelPlan, saveTravelPlan)"
     );
   }
+
+  // Wrap tools that require userId for user-scoped operations
+  // createTravelPlan and saveTravelPlan require userId in their input schema
+  const itineraryTools = wrapToolsWithUserId(
+    BASE_ITINERARY_TOOLS,
+    deps.userId,
+    ["createTravelPlan", "saveTravelPlan"],
+    deps.sessionId
+  ) as typeof BASE_ITINERARY_TOOLS;
 
   return createTripSageAgent<typeof BASE_ITINERARY_TOOLS>(deps, {
     agentType: "itineraryPlanning",

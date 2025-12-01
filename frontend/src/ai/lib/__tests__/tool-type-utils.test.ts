@@ -1,10 +1,16 @@
 /** @vitest-environment node */
 
 import { type ToolSet, tool } from "ai";
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import { z } from "zod";
 
-import { isStaticToolCall } from "../tool-type-utils";
+import {
+  type ExtractToolCall,
+  type ExtractToolResult,
+  type InferToolInput,
+  type InferToolOutput,
+  isStaticToolCall,
+} from "../tool-type-utils";
 
 /**
  * Create proper AI SDK v6 tools using the tool() function with Zod schemas.
@@ -19,13 +25,13 @@ const searchSchema = z.object({
 });
 
 // Create tools using AI SDK v6 tool() function
-const calculatorTool = tool({
+const calculatorTool = tool<{ a: number; b: number }, { result: number }>({
   description: "Calculate the sum of two numbers",
   execute: async ({ a, b }) => ({ result: a + b }),
   inputSchema: calculatorSchema,
 });
 
-const searchTool = tool({
+const searchTool = tool<{ query: string }, { items: string[] }>({
   description: "Search for items",
   execute: async ({ query }) => ({ items: [query] }),
   inputSchema: searchSchema,
@@ -146,39 +152,33 @@ describe("Tool type utilities integration", () => {
 });
 
 describe("Type re-exports from AI SDK", () => {
-  it("should re-export ToolSet type correctly", () => {
-    // Verify the testTools object satisfies ToolSet
+  it("should infer tool input and output types", () => {
+    type CalcInput = InferToolInput<typeof calculatorTool>;
+    type CalcOutput = InferToolOutput<typeof calculatorTool>;
+
+    expectTypeOf<{ a: number; b: number }>().toMatchTypeOf<CalcInput>();
+    expectTypeOf<{ result: number }>().toMatchTypeOf<CalcOutput>();
+
+    type SearchInput = InferToolInput<typeof searchTool>;
+    type SearchOutput = InferToolOutput<typeof searchTool>;
+
+    expectTypeOf<{ query: string }>().toMatchTypeOf<SearchInput>();
+    expectTypeOf<{ items: string[] }>().toMatchTypeOf<SearchOutput>();
+  });
+
+  it("should extract tool call/result unions from a ToolSet", () => {
+    type Calls = ExtractToolCall<typeof testTools>;
+    type Results = ExtractToolResult<typeof testTools>;
+
+    expectTypeOf<Calls>().toEqualTypeOf<import("ai").TypedToolCall<typeof testTools>>();
+    expectTypeOf<Results>().toEqualTypeOf<
+      import("ai").TypedToolResult<typeof testTools>
+    >();
+  });
+
+  it("should allow ToolSet to satisfy exported ToolSet type", () => {
     const tools: ToolSet = testTools;
     expect(tools).toBeDefined();
     expect(typeof tools).toBe("object");
-  });
-
-  it("should export InferToolInput type utility", async () => {
-    // Import and verify the type is exported
-    const { InferToolInput } = await import("../tool-type-utils").then(() => ({
-      InferToolInput: true, // Type-only export, just verify module loads
-    }));
-    expect(InferToolInput).toBe(true);
-  });
-
-  it("should export InferToolOutput type utility", async () => {
-    const { InferToolOutput } = await import("../tool-type-utils").then(() => ({
-      InferToolOutput: true,
-    }));
-    expect(InferToolOutput).toBe(true);
-  });
-
-  it("should export ExtractToolCall type utility", async () => {
-    const { ExtractToolCall } = await import("../tool-type-utils").then(() => ({
-      ExtractToolCall: true,
-    }));
-    expect(ExtractToolCall).toBe(true);
-  });
-
-  it("should export ExtractToolResult type utility", async () => {
-    const { ExtractToolResult } = await import("../tool-type-utils").then(() => ({
-      ExtractToolResult: true,
-    }));
-    expect(ExtractToolResult).toBe(true);
   });
 });

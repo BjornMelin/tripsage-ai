@@ -223,7 +223,8 @@ export function createChatAgent(
         });
         return {
           messages: [
-            stepMessages[0], // Keep system instructions
+            // Preserve earliest message to maintain conversational continuity
+            stepMessages[0],
             ...stepMessages.slice(-15), // Keep last 15 messages
           ],
         };

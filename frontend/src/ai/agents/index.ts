@@ -103,6 +103,7 @@ export function createAgentForWorkflow<Kind extends SupportedAgentKind>(
   input: AgentInputTypes[Kind]
 ): TripSageAgentResult<ToolSet> {
   const factory = agentRegistry[kind];
+  // Defensive check (compile-time constraint already guarantees presence)
   if (!factory) {
     throw new Error(`Unsupported agent kind: ${kind}`);
   }

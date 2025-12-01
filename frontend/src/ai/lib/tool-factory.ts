@@ -224,6 +224,8 @@ export function createAiTool<InputValue, OutputValue>(
               span.addEvent("output_validation_failed", {
                 error: validation.error,
               });
+              // Using "invalid_params" with validationType metadata to distinguish output errors
+              // Consider adding "invalid_output" to ToolErrorCode if this pattern is common
               throw createToolError("invalid_params", validation.error, {
                 tool: options.name,
                 validationType: "output",
