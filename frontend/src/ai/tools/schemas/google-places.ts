@@ -52,14 +52,14 @@ export const lookupPoiInputSchema = z
 /** Normalized POI shape returned by Google Places lookups. */
 const poiSchema = z.strictObject({
   formattedAddress: z.string().optional().describe("Formatted address"),
-  lat: z.number().describe("Latitude coordinate"),
-  lon: z.number().describe("Longitude coordinate"),
+  lat: z.number().min(-90).max(90).describe("Latitude coordinate"),
+  lon: z.number().min(-180).max(180).describe("Longitude coordinate"),
   name: z.string().describe("Display name of the POI"),
   photoName: z.string().optional().describe("Photo resource identifier"),
   placeId: z.string().describe("Provider place identifier"),
   rating: z.number().min(0).max(5).optional().describe("Average user rating"),
   types: z.array(z.string()).optional().describe("Place type categories"),
-  url: z.string().url().optional().describe("Canonical Maps URL if available"),
+  url: z.url().optional().describe("Canonical Maps URL if available"),
   userRatingCount: z
     .number()
     .int()

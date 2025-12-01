@@ -1,9 +1,9 @@
 /**
  * @fileoverview Budget planning agent using AI SDK v6 ToolLoopAgent.
  *
- * Creates a reusable budget planning agent that autonomously researches
- * destinations, gathers pricing data, and generates budget allocations
- * using multi-step tool calling.
+ * Autonomously researches destinations, gathers pricing data, and generates
+ * structured budget allocations through multi-step tool calling with phased
+ * tool selection (research → pricing → allocation).
  */
 
 import "server-only";
@@ -39,10 +39,9 @@ const BUDGET_TOOLS = {
 /**
  * Creates a budget planning agent using AI SDK v6 ToolLoopAgent.
  *
- * The agent autonomously researches destinations, gathers pricing data,
- * and generates structured budget allocations through multi-step tool
- * calling. Returns a reusable agent instance that can be used for
- * streaming or one-shot generation.
+ * Autonomously researches destinations, gathers pricing data, and generates
+ * structured budget allocations through phased tool calling (research → pricing → allocation).
+ * Uses Output.object() for structured results and prepareStep for dynamic tool selection.
  *
  * @param deps - Runtime dependencies including model and identifiers.
  * @param config - Agent configuration from database.
@@ -56,19 +55,14 @@ const BUDGET_TOOLS = {
  *   durationDays: 7,
  *   travelStyle: "mid-range",
  * });
- *
- * // Stream the response
- * return createAgentUIStreamResponse({
- *   agent,
- *   messages: [{ role: "user", content: "Plan my budget" }],
- * });
+ * return agent.stream({ prompt: "Plan my budget" });
  * ```
  */
 export function createBudgetAgent(
   deps: AgentDependencies,
   config: AgentConfig,
   input: BudgetPlanRequest
-): TripSageAgentResult {
+): TripSageAgentResult<typeof BUDGET_TOOLS> {
   const params = extractAgentParameters(config);
   const instructions = buildBudgetPrompt(input);
 
@@ -83,17 +77,32 @@ export function createBudgetAgent(
   ];
   const { maxTokens } = clampMaxTokens(clampMessages, params.maxTokens, deps.modelId);
 
-  return createTripSageAgent(deps, {
+  return createTripSageAgent<typeof BUDGET_TOOLS>(deps, {
     agentType: "budgetPlanning",
     defaultMessages: [schemaMessage],
     instructions,
     maxOutputTokens: maxTokens,
     maxSteps: params.maxSteps,
     name: "Budget Planning Agent",
+    // Note: For structured output, pass Output.object({ schema: budgetPlanResultSchema })
+    // when calling agent.generate() or agent.stream()
+    // Phased tool selection for budget workflow
+    prepareStep: ({ stepNumber }) => {
+      // Phase 1 (steps 0-3): Research destination costs and advisories
+      if (stepNumber <= 3) {
+        return {
+          activeTools: ["webSearchBatch", "getTravelAdvisory", "lookupPoiContext"],
+        };
+      }
+      // Phase 2 (steps 4+): Combine and finalize budget allocation
+      return {
+        activeTools: ["combineSearchResults", "lookupPoiContext"],
+      };
+    },
     temperature: params.temperature,
     tools: BUDGET_TOOLS,
     topP: params.topP,
-  }) as unknown as TripSageAgentResult;
+  });
 }
 
 /** Exported type for the budget agent's tool set. */

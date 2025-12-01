@@ -1,9 +1,9 @@
 /**
- * @fileoverview Itinerary planning agent using AI SDK v6 ToolLoopAgent.
+ * @fileoverview Itinerary planning agent for travel plans.
  *
- * Creates a reusable itinerary planning agent that autonomously researches
- * destinations, gathers POI information, and creates day-by-day travel
- * plans using multi-step tool calling.
+ * Reusable ToolLoopAgent that researches destinations, gathers POI information,
+ * and creates day-by-day travel plans via multi-step tool calling with phased
+ * tool selection for research, planning, and persistence.
  */
 
 import "server-only";
@@ -42,11 +42,12 @@ const ITINERARY_TOOLS = {
 } satisfies ToolSet;
 
 /**
- * Creates an itinerary planning agent using AI SDK v6 ToolLoopAgent.
+ * Creates an itinerary planning agent with phased tool selection.
  *
- * The agent autonomously researches destinations, gathers POI information,
- * and creates day-by-day travel plans through multi-step tool calling.
- * Returns a reusable agent instance.
+ * Phases:
+ * - Phase 1: Research destination via web search and POI lookup
+ * - Phase 2: Create the travel plan structure
+ * - Phase 3: Save and finalize the plan
  *
  * @param deps - Runtime dependencies including model and identifiers.
  * @param config - Agent configuration from database.
@@ -60,19 +61,14 @@ const ITINERARY_TOOLS = {
  *   durationDays: 5,
  *   interests: ["history", "food", "art"],
  * });
- *
- * // Stream the response
- * return createAgentUIStreamResponse({
- *   agent,
- *   messages: [{ role: "user", content: "Plan my trip" }],
- * });
+ * const stream = agent.stream({ prompt: "Plan my trip" });
  * ```
  */
 export function createItineraryAgent(
   deps: AgentDependencies,
   config: AgentConfig,
   input: ItineraryPlanRequest
-): TripSageAgentResult {
+): TripSageAgentResult<typeof ITINERARY_TOOLS> {
   const params = extractAgentParameters(config);
   const instructions = buildItineraryPrompt(input);
 
@@ -88,20 +84,40 @@ export function createItineraryAgent(
   const { maxTokens } = clampMaxTokens(clampMessages, params.maxTokens, deps.modelId);
 
   // Itinerary planning may need more steps for comprehensive plans
-  // (researching POIs, creating day-by-day schedules, saving plan)
   const maxSteps = Math.max(params.maxSteps, 15);
 
-  return createTripSageAgent(deps, {
+  return createTripSageAgent<typeof ITINERARY_TOOLS>(deps, {
     agentType: "itineraryPlanning",
     defaultMessages: [schemaMessage],
     instructions,
     maxOutputTokens: maxTokens,
     maxSteps,
     name: "Itinerary Planning Agent",
+    // Note: For structured output, pass Output.object({ schema: itineraryPlanResultSchema })
+    // when calling agent.generate() or agent.stream()
+    // Phased tool selection for itinerary workflow
+    prepareStep: ({ stepNumber }) => {
+      // Phase 1 (steps 0-6): Research destination
+      if (stepNumber <= 6) {
+        return {
+          activeTools: ["webSearch", "webSearchBatch", "lookupPoiContext"],
+        };
+      }
+      // Phase 2 (steps 7-11): Create the plan
+      if (stepNumber <= 11) {
+        return {
+          activeTools: ["createTravelPlan", "lookupPoiContext"],
+        };
+      }
+      // Phase 3 (steps 12+): Save and finalize
+      return {
+        activeTools: ["saveTravelPlan", "createTravelPlan"],
+      };
+    },
     temperature: params.temperature,
     tools: ITINERARY_TOOLS,
     topP: params.topP,
-  }) as unknown as TripSageAgentResult;
+  });
 }
 
 /** Exported type for the itinerary agent's tool set. */

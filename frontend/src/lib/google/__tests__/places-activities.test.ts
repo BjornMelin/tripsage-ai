@@ -1,7 +1,6 @@
 /** @vitest-environment node */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { server } from "@/test/msw/server";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getPlaceDetails, postPlacesSearch } from "../client";
 import {
   buildActivitySearchQuery,
@@ -31,10 +30,6 @@ vi.mock("@/lib/telemetry/span", () => ({
 describe("places-activities", () => {
   beforeEach(() => {
     vi.resetAllMocks();
-  });
-
-  afterEach(() => {
-    server.resetHandlers();
   });
 
   describe("buildActivitySearchQuery", () => {

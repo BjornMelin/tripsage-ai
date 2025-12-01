@@ -1,9 +1,9 @@
 /**
- * @fileoverview Accommodation search agent using AI SDK v6 ToolLoopAgent.
+ * @fileoverview Accommodation search agent for travel planning.
  *
- * Creates a reusable accommodation search agent that autonomously searches
- * for properties, retrieves details, checks availability, and handles
- * bookings using multi-step tool calling.
+ * Reusable ToolLoopAgent that autonomously searches for properties, retrieves
+ * details, checks availability, and handles bookings via multi-step tool calling.
+ * Uses AI SDK v6 structured output and phased tool selection.
  */
 
 import "server-only";
@@ -40,38 +40,21 @@ const ACCOMMODATION_TOOLS = {
 } satisfies ToolSet;
 
 /**
- * Creates an accommodation search agent using AI SDK v6 ToolLoopAgent.
+ * Creates an accommodation search agent for autonomous property search, availability checks, and bookings.
  *
- * The agent autonomously searches for properties, retrieves details,
- * checks availability, and can complete bookings through multi-step
- * tool calling. Returns a reusable agent instance.
+ * Uses phased tool selection: search → details → availability/booking.
+ * Returns structured AccommodationSearchResult via Output.object().
  *
- * @param deps - Runtime dependencies including model and identifiers.
+ * @param deps - Runtime dependencies (model, identifiers).
  * @param config - Agent configuration from database.
- * @param input - Validated accommodation search request.
+ * @param input - Accommodation search request (destination, dates, guests).
  * @returns Configured ToolLoopAgent for accommodation search.
- *
- * @example
- * ```typescript
- * const { agent } = createAccommodationAgent(deps, config, {
- *   destination: "Paris, France",
- *   checkIn: "2025-03-15",
- *   checkOut: "2025-03-20",
- *   guests: 2,
- * });
- *
- * // Stream the response
- * return createAgentUIStreamResponse({
- *   agent,
- *   messages: [{ role: "user", content: "Find hotels" }],
- * });
- * ```
  */
 export function createAccommodationAgent(
   deps: AgentDependencies,
   config: AgentConfig,
   input: AccommodationSearchRequest
-): TripSageAgentResult {
+): TripSageAgentResult<typeof ACCOMMODATION_TOOLS> {
   const params = extractAgentParameters(config);
   const instructions = buildAccommodationPrompt({
     checkIn: input.checkIn,
@@ -91,17 +74,42 @@ export function createAccommodationAgent(
   ];
   const { maxTokens } = clampMaxTokens(clampMessages, params.maxTokens, deps.modelId);
 
-  return createTripSageAgent(deps, {
+  return createTripSageAgent<typeof ACCOMMODATION_TOOLS>(deps, {
     agentType: "accommodationSearch",
     defaultMessages: [schemaMessage],
     instructions,
     maxOutputTokens: maxTokens,
     maxSteps: params.maxSteps,
     name: "Accommodation Search Agent",
+    // Note: For structured output, pass Output.object({ schema: accommodationSearchResultSchema })
+    // when calling agent.generate() or agent.stream()
+    // Phased tool selection for accommodation workflow
+    prepareStep: ({ stepNumber }) => {
+      // Phase 1 (steps 0-2): Search for accommodations
+      if (stepNumber <= 2) {
+        return {
+          activeTools: ["searchAccommodations"],
+        };
+      }
+      // Phase 2 (steps 3-5): Get details for promising options
+      if (stepNumber <= 5) {
+        return {
+          activeTools: ["searchAccommodations", "getAccommodationDetails"],
+        };
+      }
+      // Phase 3 (steps 6+): Check availability and allow booking
+      return {
+        activeTools: [
+          "getAccommodationDetails",
+          "checkAvailability",
+          "bookAccommodation",
+        ],
+      };
+    },
     temperature: params.temperature,
     tools: ACCOMMODATION_TOOLS,
     topP: params.topP,
-  }) as unknown as TripSageAgentResult;
+  });
 }
 
 /** Exported type for the accommodation agent's tool set. */
