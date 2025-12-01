@@ -24,8 +24,14 @@ export interface AgentDependencies {
   /** Resolved language model for the agent. */
   model: LanguageModel;
 
+  /** Optional dedicated model for structured repair tasks. */
+  repairModel?: LanguageModel;
+
   /** Model identifier for logging and token counting. */
   modelId: string;
+
+  /** Optional identifier for the repair model. */
+  repairModelId?: string;
 
   /** Stable identifier for rate limiting (user ID or hashed IP). */
   identifier: string;

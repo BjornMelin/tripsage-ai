@@ -13,8 +13,9 @@
 
 import "server-only";
 
-import type { ToolSet } from "ai";
+import type { LanguageModel, ToolSet } from "ai";
 import {
+  asSchema,
   generateObject,
   InvalidToolInputError,
   NoSuchToolError,
@@ -143,41 +144,151 @@ export function createTripSageAgent<TagentTools extends ToolSet>(
         return null;
       }
 
+      const parseRawInput = () => {
+        if (typeof toolCall.input === "string") {
+          try {
+            return JSON.parse(toolCall.input);
+          } catch {
+            return toolCall.input;
+          }
+        }
+        return toolCall.input;
+      };
+
+      const attemptLocalRepair = async () => {
+        const schema = asSchema(tool.inputSchema);
+        const rawInput = parseRawInput();
+        if (schema?.validate) {
+          const result = await schema.validate(rawInput);
+          if (result.success) {
+            return {
+              ok: true as const,
+              value: result.value,
+            };
+          }
+          return {
+            error: result.error.message,
+            ok: false as const,
+          };
+        }
+        // Without a validator, we can only return a stringified version of the raw input.
+        try {
+          return { ok: true as const, value: rawInput };
+        } catch (error) {
+          return {
+            error: error instanceof Error ? error.message : "Unknown parse error",
+            ok: false as const,
+          };
+        }
+      };
+
       try {
         const schema = await inputSchema({ toolName: toolCall.toolName });
+        const prompt = [
+          `The model tried to call the tool "${toolCall.toolName}" with the following inputs:`,
+          JSON.stringify(toolCall.input, null, 2),
+          "The tool accepts the following schema:",
+          JSON.stringify(schema, null, 2),
+          "Please fix the inputs to match the schema exactly.",
+        ].join("\n");
 
-        const { object: repairedArgs } = await generateObject({
-          model: deps.model,
-          prompt: [
-            `The model tried to call the tool "${toolCall.toolName}" with the following inputs:`,
-            JSON.stringify(toolCall.input, null, 2),
-            "The tool accepts the following schema:",
-            JSON.stringify(schema, null, 2),
-            "Please fix the inputs to match the schema exactly.",
-          ].join("\n"),
-          schema: tool.inputSchema,
-        });
+        const attemptModelRepair = async (modelId: string, model: LanguageModel) => {
+          const { object: repaired } = await generateObject({
+            model,
+            prompt,
+            schema: tool.inputSchema,
+          });
+          const schema = asSchema(tool.inputSchema);
+          if (schema?.validate) {
+            const validation = await schema.validate(repaired);
+            if (!validation.success) {
+              throw new Error(
+                `Repaired args invalid for schema using model ${modelId}: ${validation.error.message}`
+              );
+            }
+            return validation.value;
+          }
+          return repaired;
+        };
+
+        let repairedArgs: unknown;
+        try {
+          repairedArgs = await attemptModelRepair(deps.modelId, deps.model);
+        } catch (primaryError) {
+          logger.warn("Primary tool call repair failed", {
+            agentType,
+            error:
+              primaryError instanceof Error
+                ? primaryError.message
+                : String(primaryError),
+            modelId: deps.modelId,
+            requestId,
+            toolName: toolCall.toolName,
+          });
+          if (deps.repairModel) {
+            try {
+              repairedArgs = await attemptModelRepair(
+                deps.repairModelId ?? "repair-model",
+                deps.repairModel
+              );
+            } catch (fallbackError) {
+              logger.warn("Fallback repair model failed", {
+                agentType,
+                error:
+                  fallbackError instanceof Error
+                    ? fallbackError.message
+                    : String(fallbackError),
+                modelId: deps.repairModelId ?? "repair-model",
+                requestId,
+                toolName: toolCall.toolName,
+              });
+            }
+          }
+        }
+
+        if (repairedArgs === undefined || repairedArgs === null) {
+          const local = await attemptLocalRepair();
+          if (!local.ok) {
+            const message = `Deterministic repair failed: ${local.error}`;
+            logger.error("Tool call repair failed", {
+              agentType,
+              error: message,
+              modelId: deps.modelId,
+              requestId,
+              toolName: toolCall.toolName,
+            });
+            throw new Error(message);
+          }
+          repairedArgs = local.value;
+        }
+
+        const serializedInput =
+          typeof repairedArgs === "string"
+            ? repairedArgs
+            : JSON.stringify(repairedArgs);
 
         logger.info("Repaired tool call", {
           agentType,
+          modelId: deps.modelId,
           requestId,
           toolName: toolCall.toolName,
         });
 
         return {
           ...toolCall,
-          input: repairedArgs,
+          input: serializedInput,
           repairAttempts: repairAttempts + 1,
         };
       } catch (repairError) {
+        const normalizedError =
+          repairError instanceof Error ? repairError : new Error(String(repairError));
         logger.error("Tool call repair failed", {
           agentType,
-          error:
-            repairError instanceof Error ? repairError.message : String(repairError),
+          error: normalizedError.message,
           requestId,
           toolName: toolCall.toolName,
         });
-        return null;
+        throw normalizedError;
       }
     },
 

@@ -178,6 +178,10 @@ export function ChatMessageItem({ message }: { message: UIMessage }) {
 
                 return <Response key={`${message.id}-t-${idx}`}>{part.text}</Response>;
               }
+              case "source-url": {
+                // Rendered separately in the Sources section below
+                return null;
+              }
               case "tool-call":
               case "tool-call-result": {
                 type ToolResultPart = {
@@ -270,13 +274,13 @@ export function ChatMessageItem({ message }: { message: UIMessage }) {
                     </div>
                   );
                 }
-                const sanitized = sanitizeToolOutput(part);
+                const sanitized = sanitizeToolOutput(raw ?? part);
                 return (
                   <div
                     key={`${message.id}-tool-${idx}`}
                     className="my-2 rounded-md border bg-muted/30 p-3 text-xs"
                   >
-                    <div className="mb-1 font-medium">Tool</div>
+                    <div className="mb-1 font-medium">{toolName ?? "Tool"}</div>
                     <pre className="overflow-x-auto whitespace-pre-wrap">
                       {JSON.stringify(sanitized, null, 2)}
                     </pre>

@@ -156,13 +156,11 @@ function buildPhotoUrls(photos?: PlacesPhoto[]): string[] {
  *
  * @param place - Places API place object.
  * @param date - ISO date string for the activity (defaults to today).
- * @param apiKey - Optional API key for photo URL resolution.
  * @returns Activity object.
  */
 export async function mapPlacesPlaceToActivity(
   place: PlacesPlace,
-  date: string = new Date().toISOString().split("T")[0],
-  apiKey?: string
+  date: string = new Date().toISOString().split("T")[0]
 ): Promise<Activity> {
   const name = place.displayName?.text ?? "Unknown Activity";
   const location = place.formattedAddress ?? "Unknown Location";
@@ -178,7 +176,7 @@ export async function mapPlacesPlaceToActivity(
         }
       : undefined;
 
-  const images = await buildPhotoUrls(place.photos, apiKey);
+  const images = await buildPhotoUrls(place.photos);
 
   // Use editorialSummary if available, otherwise generate a simple description
   const description =
@@ -268,7 +266,7 @@ export async function searchActivitiesWithPlaces(
   const places = data.places ?? [];
 
   const activities = await Promise.all(
-    places.map((place) => mapPlacesPlaceToActivity(place, undefined, apiKey))
+    places.map((place) => mapPlacesPlaceToActivity(place, undefined))
   );
 
   return activities;
@@ -309,7 +307,7 @@ export async function getActivityDetailsFromPlaces(
   }
 
   const place = (await response.json()) as PlacesDetailsResponse;
-  const activity = await mapPlacesPlaceToActivity(place, undefined, apiKey);
+  const activity = await mapPlacesPlaceToActivity(place, undefined);
 
   return activity;
 }

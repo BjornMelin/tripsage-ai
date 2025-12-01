@@ -68,9 +68,7 @@ describe("places-activities", () => {
         userRatingCount: 4523,
       };
 
-      const { getGoogleMapsServerKey } = await import("@/lib/env/server");
-      const apiKey = getGoogleMapsServerKey();
-      const activity = await mapPlacesPlaceToActivity(place, "2025-01-01", apiKey);
+      const activity = await mapPlacesPlaceToActivity(place, "2025-01-01");
 
       expect(activity.id).toBe("ChIJN1t_tDeuEmsRUsoyG83frY4");
       expect(activity.name).toBe("Museum of Modern Art");

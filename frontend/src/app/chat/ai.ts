@@ -14,8 +14,20 @@ import { secureUuid } from "@/lib/security/random";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
+const uiMessagePartSchema = z.strictObject({
+  text: z.string(),
+  type: z.literal("text"),
+});
+
+const uiMessageSchema = z.strictObject({
+  id: z.string(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+  parts: z.array(uiMessagePartSchema),
+  role: z.enum(["user", "assistant", "system"]),
+});
+
 const chatInputSchema = z.strictObject({
-  messages: z.array(z.unknown()).default([]),
+  messages: z.array(uiMessageSchema).default([]),
   metadata: z.record(z.string(), z.unknown()).optional(),
   text: z.string().trim().min(1, { error: "Message is required" }).max(2000),
 });
@@ -59,8 +71,7 @@ export async function submitChatMessage(input: ChatInput) {
         role: "user",
       };
 
-      // Cast is safe: messages come from client UIMessage[] state
-      const history: UIMessage[] = [...(input.messages as UIMessage[]), userMessage];
+      const history: UIMessage[] = [...parsed.messages, userMessage];
       const provider = await resolveProvider(data.user.id, undefined);
 
       const controller = new AbortController();

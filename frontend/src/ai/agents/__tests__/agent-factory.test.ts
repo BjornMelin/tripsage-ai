@@ -39,7 +39,7 @@ function createMockModel(): LanguageModel {
     doStream: vi.fn(),
     modelId: "test-model",
     provider: "test-provider",
-    specificationVersion: "v3",
+    specificationVersion: "V3",
     supportsStructuredOutputs: true,
   } as unknown as LanguageModel;
 }
