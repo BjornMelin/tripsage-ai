@@ -49,22 +49,41 @@ export const lookupPoiInputSchema = z
 
 // ===== TOOL OUTPUT SCHEMAS =====
 
+/** Normalized POI shape returned by Google Places lookups. */
+const poiSchema = z.strictObject({
+  formattedAddress: z.string().optional().describe("Formatted address"),
+  lat: z.number().describe("Latitude coordinate"),
+  lon: z.number().describe("Longitude coordinate"),
+  name: z.string().describe("Display name of the POI"),
+  photoName: z.string().optional().describe("Photo resource identifier"),
+  placeId: z.string().describe("Provider place identifier"),
+  rating: z.number().min(0).max(5).optional().describe("Average user rating"),
+  types: z.array(z.string()).optional().describe("Place type categories"),
+  url: z.string().url().optional().describe("Canonical Maps URL if available"),
+  userRatingCount: z
+    .number()
+    .int()
+    .nonnegative()
+    .optional()
+    .describe("Number of user ratings"),
+});
+
 /**
  * Schema for lookupPoiContext tool response.
  *
  * Represents either an error response or a successful POI lookup result.
  */
 export const lookupPoiResponseSchema = z.union([
-  z.object({
+  z.strictObject({
     error: z.string().optional().describe("Error message if lookup failed"),
     inputs: z.unknown().describe("Original input parameters"),
-    pois: z.array(z.unknown()).describe("Empty array on error"),
+    pois: z.array(poiSchema).describe("Empty array on error"),
     provider: z.string().describe("Provider name"),
   }),
-  z.object({
+  z.strictObject({
     fromCache: z.boolean().optional().describe("Whether result was cached"),
     inputs: z.unknown().describe("Original input parameters"),
-    pois: z.array(z.unknown()).describe("Array of POI results"),
+    pois: z.array(poiSchema).describe("Array of POI results"),
     provider: z.string().describe("Provider name"),
   }),
 ]);

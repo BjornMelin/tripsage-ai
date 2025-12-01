@@ -22,6 +22,7 @@ import {
   PromptInputTextarea,
 } from "@/components/ai-elements/prompt-input";
 import { ChatMessageItem } from "@/components/chat/message-item";
+import { nowIso, secureId } from "@/lib/security/random";
 import { submitChatMessage } from "./ai";
 
 /**
@@ -38,17 +39,33 @@ export function ChatClient(): ReactElement {
       if (!text.trim()) return;
       setPending(true);
       setError(null);
+      const optimisticUserMessage: UIMessage = {
+        id: secureId(),
+        metadata: { createdAt: nowIso() },
+        parts: [{ text, type: "text" }],
+        role: "user",
+      };
+      let nextMessages: UIMessage[] = [];
+      setMessages((prev) => {
+        nextMessages = [...prev, optimisticUserMessage];
+        return nextMessages;
+      });
 
       try {
-        const result = await submitChatMessage({ messages, text });
-        setMessages((prev) => [...prev, result.userMessage, result.assistantMessage]);
+        const result = await submitChatMessage({ messages: nextMessages, text });
+        setMessages((prev) =>
+          prev
+            .map((m) => (m.id === optimisticUserMessage.id ? result.userMessage : m))
+            .concat(result.assistantMessage)
+        );
       } catch (err) {
+        setMessages((prev) => prev.filter((m) => m.id !== optimisticUserMessage.id));
         setError(err instanceof Error ? err.message : "Failed to send message.");
       } finally {
         setPending(false);
       }
     },
-    [messages, pending]
+    [pending]
   );
 
   return (

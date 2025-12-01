@@ -106,7 +106,7 @@ function createMockModel(): LanguageModel {
     doStream: vi.fn(),
     modelId: "test-model",
     provider: "test-provider",
-    specificationVersion: "v3",
+    specificationVersion: "V3",
     supportsStructuredOutputs: true,
   } as unknown as LanguageModel;
 }
@@ -188,6 +188,8 @@ describe("validateChatMessages", () => {
   });
 
   it("should return error for invalid attachments", async () => {
+    vi.resetModules();
+
     vi.doMock("@/app/api/_helpers/attachments", () => ({
       extractTexts: () => ["test message"],
       validateImageAttachments: vi.fn(() => ({
@@ -197,7 +199,6 @@ describe("validateChatMessages", () => {
       })),
     }));
 
-    vi.resetModules();
     const { validateChatMessages: validateWithInvalidMock } = await import(
       "../chat-agent"
     );
