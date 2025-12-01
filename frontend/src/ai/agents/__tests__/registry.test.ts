@@ -58,12 +58,18 @@ vi.mock("@ai/lib/tool-factory", () => ({
 vi.mock("@ai/tools", () => {
   const createMockTool = (description: string) => ({ description, execute: vi.fn() });
   const tools = {
+    bookAccommodation: createMockTool("book accommodation"),
+    checkAvailability: createMockTool("check availability"),
+    combineSearchResults: createMockTool("combine results"),
     crawlSite: createMockTool("crawl"),
+    createTravelPlan: createMockTool("create plan"),
     distanceMatrix: createMockTool("distance"),
     geocode: createMockTool("geocode"),
+    getAccommodationDetails: createMockTool("accommodation details"),
     getCurrentWeather: createMockTool("weather"),
     getTravelAdvisory: createMockTool("advisory"),
     lookupPoiContext: createMockTool("poi"),
+    saveTravelPlan: createMockTool("save plan"),
     searchAccommodations: createMockTool("accommodations"),
     searchFlights: createMockTool("flights"),
     webSearch: createMockTool("web search"),
@@ -89,7 +95,7 @@ import {
   agentRegistry,
   createAgentForWorkflow,
   getAgentName,
-  getDefaultMaxSteps,
+  getMinimumMaxSteps,
   isSupportedAgentKind,
 } from "../index";
 import type { AgentDependencies } from "../types";
@@ -164,15 +170,15 @@ describe("getAgentName", () => {
   });
 });
 
-describe("getDefaultMaxSteps", () => {
-  it("should return correct default steps for each agent kind", () => {
-    expect(getDefaultMaxSteps("budgetPlanning")).toBe(10);
-    expect(getDefaultMaxSteps("flightSearch")).toBe(10);
-    expect(getDefaultMaxSteps("accommodationSearch")).toBe(10);
-    expect(getDefaultMaxSteps("destinationResearch")).toBe(15);
-    expect(getDefaultMaxSteps("itineraryPlanning")).toBe(15);
-    expect(getDefaultMaxSteps("memoryUpdate")).toBe(5);
-    expect(getDefaultMaxSteps("router")).toBe(1);
+describe("getMinimumMaxSteps", () => {
+  it("should return correct minimum steps for each agent kind", () => {
+    expect(getMinimumMaxSteps("budgetPlanning")).toBe(10);
+    expect(getMinimumMaxSteps("flightSearch")).toBe(10);
+    expect(getMinimumMaxSteps("accommodationSearch")).toBe(10);
+    expect(getMinimumMaxSteps("destinationResearch")).toBe(15);
+    expect(getMinimumMaxSteps("itineraryPlanning")).toBe(15);
+    expect(getMinimumMaxSteps("memoryUpdate")).toBe(5);
+    expect(getMinimumMaxSteps("router")).toBe(1);
   });
 });
 
@@ -303,7 +309,7 @@ describe("createAgentForWorkflow", () => {
         "memoryUpdate" as unknown as "budgetPlanning",
         deps,
         createTestConfig("budgetAgent"),
-        {}
+        { destination: "Test", durationDays: 1 }
       );
     }).toThrow("Unsupported agent kind");
   });
@@ -316,7 +322,7 @@ describe("createAgentForWorkflow", () => {
         "invalidWorkflow" as unknown as "budgetPlanning",
         deps,
         createTestConfig("budgetAgent"),
-        {}
+        { destination: "Test", durationDays: 1 }
       );
     }).toThrow("Unsupported agent kind");
   });

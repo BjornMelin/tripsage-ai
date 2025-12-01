@@ -159,7 +159,8 @@ export function createAiTool<InputValue, OutputValue>(
   // 1. The structure matches what tool() expects (description, inputSchema, execute)
   // 2. The execute signature matches AI SDK v6 (params, ToolCallOptions)
   // 3. Runtime behavior is correct - tool() accepts our object structure
-  return tool({
+  // biome-ignore lint/suspicious/noExplicitAny: Type assertion needed for AI SDK v6 tool() generic inference
+  return (tool as any)({
     description: options.description,
     execute: (params: InputValue, callOptions: ToolCallOptions) => {
       const startedAt = Date.now();

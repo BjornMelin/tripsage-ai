@@ -8,18 +8,15 @@
 
 import "server-only";
 
-import { getRegistryTool, invokeTool } from "@ai/lib/registry-utils";
-import { createAiTool } from "@ai/lib/tool-factory";
-import { toolRegistry } from "@ai/tools";
-import { lookupPoiInputSchema } from "@ai/tools/schemas/google-places";
-import { combineSearchResultsInputSchema } from "@ai/tools/schemas/planning";
-import { travelAdvisoryInputSchema } from "@ai/tools/schemas/travel-advisory";
-import { webSearchBatchInputSchema } from "@ai/tools/schemas/web-search-batch";
-import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
+import {
+  combineSearchResults,
+  getTravelAdvisory,
+  lookupPoiContext,
+  webSearchBatch,
+} from "@ai/tools";
 import type { BudgetPlanRequest } from "@schemas/agents";
 import type { AgentConfig } from "@schemas/configuration";
 import type { ToolSet } from "ai";
-import { buildRateLimit } from "@/lib/ratelimit/config";
 import type { ChatMessage } from "@/lib/tokens/budget";
 import { clampMaxTokens } from "@/lib/tokens/budget";
 import { buildBudgetPrompt } from "@/prompts/agents";
@@ -28,140 +25,16 @@ import { createTripSageAgent } from "./agent-factory";
 import type { AgentDependencies, TripSageAgentResult } from "./types";
 import { extractAgentParameters } from "./types";
 
-const TOOL_NAMES = {
-  combineResults: "combineSearchResults",
-  lookupPoi: "lookupPoiContext",
-  travelAdvisory: "getTravelAdvisory",
-  webSearchBatch: "webSearchBatch",
-} as const;
-
 /**
- * Create wrapped tools for budget agent with guardrails.
- *
- * Applies validation, caching, and rate limits around core tool execute
- * functions. The identifier should be per-user when authenticated or a
- * hashed IP fallback.
- *
- * @param identifier - Stable identifier for rate limiting.
- * @returns AI SDK ToolSet for use with ToolLoopAgent.
+ * Tools available to the budget planning agent with built-in
+ * guardrails for caching, rate limiting, and telemetry.
  */
-function buildBudgetTools(identifier: string): ToolSet {
-  const webSearchBatchTool = getRegistryTool(toolRegistry, TOOL_NAMES.webSearchBatch);
-  const poiTool = getRegistryTool(toolRegistry, TOOL_NAMES.lookupPoi);
-  const combineTool = getRegistryTool(toolRegistry, TOOL_NAMES.combineResults);
-  const safetyTool = getRegistryTool(toolRegistry, TOOL_NAMES.travelAdvisory);
-
-  const rateLimit = buildRateLimit("budgetPlanning", identifier);
-
-  const webSearchBatch = createAiTool({
-    description: webSearchBatchTool.description ?? "Batch web search",
-    execute: (params, callOptions) =>
-      invokeTool(webSearchBatchTool, params, callOptions),
-    guardrails: {
-      cache: {
-        hashInput: true,
-        key: () => "agent:budget:web-search",
-        namespace: `agent:budget:web-search:${identifier}`,
-        ttlSeconds: 60 * 10,
-      },
-      rateLimit: {
-        errorCode: TOOL_ERROR_CODES.webSearchRateLimited,
-        identifier: () => rateLimit.identifier,
-        limit: rateLimit.limit,
-        prefix: "ratelimit:agent:budget:web-search",
-        window: rateLimit.window,
-      },
-      telemetry: {
-        workflow: "budgetPlanning",
-      },
-    },
-    inputSchema: webSearchBatchInputSchema,
-    name: "webSearchBatch",
-  });
-
-  const lookupPoiContext = createAiTool({
-    description: poiTool.description ?? "Lookup POIs (context)",
-    execute: (params, callOptions) => invokeTool(poiTool, params, callOptions),
-    guardrails: {
-      cache: {
-        hashInput: true,
-        key: () => "agent:budget:poi",
-        namespace: `agent:budget:poi:${identifier}`,
-        ttlSeconds: 600,
-      },
-      rateLimit: {
-        errorCode: TOOL_ERROR_CODES.toolRateLimited,
-        identifier: () => rateLimit.identifier,
-        limit: rateLimit.limit,
-        prefix: "ratelimit:agent:budget:poi",
-        window: rateLimit.window,
-      },
-      telemetry: {
-        workflow: "budgetPlanning",
-      },
-    },
-    inputSchema: lookupPoiInputSchema,
-    name: "lookupPoiContext",
-  });
-
-  const combineSearchResults = createAiTool({
-    description: combineTool.description ?? "Combine search results",
-    execute: (params, callOptions) => invokeTool(combineTool, params, callOptions),
-    guardrails: {
-      cache: {
-        hashInput: true,
-        key: () => "agent:budget:combine",
-        namespace: `agent:budget:combine:${identifier}`,
-        ttlSeconds: 60 * 10,
-      },
-      rateLimit: {
-        errorCode: TOOL_ERROR_CODES.toolRateLimited,
-        identifier: () => rateLimit.identifier,
-        limit: rateLimit.limit,
-        prefix: "ratelimit:agent:budget:combine",
-        window: rateLimit.window,
-      },
-      telemetry: {
-        workflow: "budgetPlanning",
-      },
-    },
-    inputSchema: combineSearchResultsInputSchema,
-    name: "combineSearchResults",
-  });
-
-  const getTravelAdvisory = createAiTool({
-    description: safetyTool.description ?? "Get travel advisory and safety scores",
-    execute: (params, callOptions) => invokeTool(safetyTool, params, callOptions),
-    guardrails: {
-      cache: {
-        hashInput: true,
-        key: () => "agent:budget:safety",
-        namespace: `agent:budget:safety:${identifier}`,
-        // Travel advisories update frequently; refresh daily to avoid stale guidance
-        ttlSeconds: 60 * 60 * 24,
-      },
-      rateLimit: {
-        errorCode: TOOL_ERROR_CODES.toolRateLimited,
-        identifier: () => rateLimit.identifier,
-        limit: rateLimit.limit,
-        prefix: "ratelimit:agent:budget:safety",
-        window: rateLimit.window,
-      },
-      telemetry: {
-        workflow: "budgetPlanning",
-      },
-    },
-    inputSchema: travelAdvisoryInputSchema,
-    name: "getTravelAdvisory",
-  });
-
-  return {
-    combineSearchResults,
-    getTravelAdvisory,
-    lookupPoiContext,
-    webSearchBatch,
-  } satisfies ToolSet;
-}
+const BUDGET_TOOLS = {
+  combineSearchResults,
+  getTravelAdvisory,
+  lookupPoiContext,
+  webSearchBatch,
+} satisfies ToolSet;
 
 /**
  * Creates a budget planning agent using AI SDK v6 ToolLoopAgent.
@@ -218,10 +91,10 @@ export function createBudgetAgent(
     maxSteps: params.maxSteps,
     name: "Budget Planning Agent",
     temperature: params.temperature,
-    tools: buildBudgetTools(deps.identifier),
+    tools: BUDGET_TOOLS,
     topP: params.topP,
-  });
+  }) as unknown as TripSageAgentResult;
 }
 
 /** Exported type for the budget agent's tool set. */
-export type BudgetAgentTools = ReturnType<typeof buildBudgetTools>;
+export type BudgetAgentTools = typeof BUDGET_TOOLS;

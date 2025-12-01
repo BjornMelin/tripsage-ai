@@ -46,3 +46,28 @@ export const lookupPoiInputSchema = z
       (typeof o.lat === "number" && typeof o.lon === "number"),
     { message: "Provide destination, query, or lat/lon" }
   );
+
+// ===== TOOL OUTPUT SCHEMAS =====
+
+/**
+ * Schema for lookupPoiContext tool response.
+ *
+ * Represents either an error response or a successful POI lookup result.
+ */
+export const lookupPoiResponseSchema = z.union([
+  z.object({
+    error: z.string().optional().describe("Error message if lookup failed"),
+    inputs: z.unknown().describe("Original input parameters"),
+    pois: z.array(z.unknown()).describe("Empty array on error"),
+    provider: z.string().describe("Provider name"),
+  }),
+  z.object({
+    fromCache: z.boolean().optional().describe("Whether result was cached"),
+    inputs: z.unknown().describe("Original input parameters"),
+    pois: z.array(z.unknown()).describe("Array of POI results"),
+    provider: z.string().describe("Provider name"),
+  }),
+]);
+
+/** TypeScript type for lookupPoiContext tool response. */
+export type LookupPoiResponse = z.infer<typeof lookupPoiResponseSchema>;

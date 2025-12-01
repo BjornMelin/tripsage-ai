@@ -187,11 +187,31 @@ describe("validateChatMessages", () => {
     expect(result.valid).toBe(true);
   });
 
-  it("should return error for invalid attachments", () => {
-    // For this test, we need to re-mock the module to return invalid
-    // Since we can't easily do that mid-test, we just verify the function returns a validation result
+  it("should return error for invalid attachments", async () => {
+    vi.doMock("@/app/api/_helpers/attachments", () => ({
+      extractTexts: () => ["test message"],
+      validateImageAttachments: vi.fn(() => ({
+        error: "Invalid attachment",
+        reason: "Unsupported format",
+        valid: false,
+      })),
+    }));
+
+    vi.resetModules();
+    const { validateChatMessages: validateWithInvalidMock } = await import(
+      "../chat-agent"
+    );
+
     const messages = createTestMessages();
-    const result = validateChatMessages(messages);
-    expect(typeof result.valid).toBe("boolean");
+    const result = validateWithInvalidMock(messages);
+
+    expect(result.valid).toBe(false);
+    if (!result.valid) {
+      expect(result.error).toBe("invalid_attachment");
+      expect(result.reason).toBe("Unsupported format");
+    }
+
+    vi.doUnmock("@/app/api/_helpers/attachments");
+    vi.resetModules();
   });
 });

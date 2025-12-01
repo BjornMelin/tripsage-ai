@@ -24,8 +24,32 @@ import {
 import { StayCard } from "@/components/ai-elements/stay-card";
 import { parseSchemaCard } from "@/lib/ui/parse-schema-card";
 
+type SourceUrlPart = {
+  type: "source-url";
+  url: string;
+  title?: string;
+};
+
+type WebSearchUiResult = {
+  results: Array<{
+    url: string;
+    title?: string;
+    snippet?: string;
+    publishedAt?: string;
+  }>;
+  fromCache?: boolean;
+  tookMs?: number;
+};
+
+// biome-ignore lint/style/useNamingConvention: Type guard helper for discriminated parts
+function isSourceUrlPart(value: unknown): value is SourceUrlPart {
+  if (typeof value !== "object" || value === null) return false;
+  const part = value as Record<string, unknown>;
+  return part.type === "source-url" && typeof part.url === "string";
+}
+
 /** Keys that must be redacted from tool output. */
-const REDACT_KEYS = new Set(["apikey", "apiKey", "token", "secret", "password", "id"]);
+const REDACT_KEYS = new Set(["apikey", "token", "secret", "password", "id"]);
 const MAX_STRING_LENGTH = 200;
 const MAX_DEPTH = 2;
 
@@ -40,11 +64,15 @@ function sanitizeValue(value: unknown, depth: number): unknown {
     return value;
   }
   if (Array.isArray(value)) {
-    return value.slice(0, 10).map((v) => sanitizeValue(v, depth + 1));
+    const truncated = value.slice(0, 10).map((v) => sanitizeValue(v, depth + 1));
+    if (value.length > 10) {
+      truncated.push(`[... ${value.length - 10} more items]`);
+    }
+    return truncated;
   }
   if (typeof value === "object") {
     const entries = Object.entries(value as Record<string, unknown>).slice(0, 15);
-    return entries.reduce<Record<string, unknown>>((acc, [key, val]) => {
+    const result = entries.reduce<Record<string, unknown>>((acc, [key, val]) => {
       if (REDACT_KEYS.has(key.toLowerCase())) {
         acc[key] = "[REDACTED]";
       } else {
@@ -52,6 +80,11 @@ function sanitizeValue(value: unknown, depth: number): unknown {
       }
       return acc;
     }, {});
+    const totalKeys = Object.keys(value as Record<string, unknown>).length;
+    if (totalKeys > 15) {
+      result.__truncated__ = `${totalKeys - 15} more keys`;
+    }
+    return result;
   }
   return value;
 }
@@ -69,19 +102,7 @@ export function sanitizeToolOutput(raw: unknown): unknown {
 export function ChatMessageItem({ message }: { message: UIMessage }) {
   const parts = message.parts ?? [];
   // Extract source-url parts for citation display
-  const sourceParts = parts
-    .filter((p): boolean => {
-      if (typeof p !== "object" || p === null) return false;
-      return (
-        (p as { type?: string; url?: unknown }).type === "source-url" &&
-        typeof (p as { url?: unknown }).url === "string"
-      );
-    })
-    .map((p) => ({
-      title: (p as { title?: string }).title,
-      type: "source-url" as const,
-      url: (p as { url: string }).url,
-    }));
+  const sourceParts: SourceUrlPart[] = (parts as unknown[]).filter(isSourceUrlPart);
 
   return (
     <Message from={message.role} data-testid={`msg-${message.id}`}>
@@ -171,15 +192,6 @@ export function ChatMessageItem({ message }: { message: UIMessage }) {
                 const p = part as ToolResultPart;
                 const toolName = p?.name ?? p?.toolName ?? p?.tool;
                 const raw = p?.result ?? p?.output ?? p?.data;
-                type WebSearchUiResult = {
-                  results: Array<{
-                    url: string;
-                    title?: string;
-                    snippet?: string;
-                  }>;
-                  fromCache?: boolean;
-                  tookMs?: number;
-                };
                 const result =
                   raw && typeof raw === "object"
                     ? (raw as WebSearchUiResult)
@@ -221,14 +233,21 @@ export function ChatMessageItem({ message }: { message: UIMessage }) {
                             {s.snippet ? (
                               <div className="mt-1 text-xs opacity-80">{s.snippet}</div>
                             ) : null}
-                            {"publishedAt" in s &&
-                            (s as { publishedAt?: string }).publishedAt ? (
-                              <div className="mt-1 text-[10px] opacity-60">
-                                {new Date(
-                                  (s as { publishedAt?: string }).publishedAt as string
-                                ).toLocaleString()}
-                              </div>
-                            ) : null}
+                            {(() => {
+                              if (
+                                !("publishedAt" in s) ||
+                                typeof s.publishedAt !== "string"
+                              ) {
+                                return null;
+                              }
+                              const published = new Date(s.publishedAt);
+                              if (Number.isNaN(published.getTime())) return null;
+                              return (
+                                <div className="mt-1 text-[10px] opacity-60">
+                                  {published.toLocaleString()}
+                                </div>
+                              );
+                            })()}
                           </div>
                         ))}
                       </div>
