@@ -8,6 +8,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 // Mock ToolLoopAgent before other mocks
+const mockToolLoopAgent = vi.fn();
 vi.mock("ai", () => {
   const mockAgent = {
     generate: vi.fn().mockResolvedValue({
@@ -21,6 +22,7 @@ vi.mock("ai", () => {
   };
 
   const MockToolLoopAgent = function (this: unknown, config: unknown) {
+    mockToolLoopAgent(config);
     Object.assign(this as object, { config, ...mockAgent });
     return this;
   };
@@ -168,6 +170,8 @@ describe("createChatAgent", () => {
     const deps = createTestDeps();
     const messages = createTestMessages();
 
+    mockToolLoopAgent.mockClear();
+
     const result = createChatAgent(deps, messages, {
       desiredMaxTokens: 2048,
       maxSteps: 10,
@@ -176,6 +180,11 @@ describe("createChatAgent", () => {
 
     expect(result).toBeDefined();
     expect(result.agent).toBeDefined();
+    expect(mockToolLoopAgent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        instructions: expect.stringContaining("User prefers boutique hotels."),
+      })
+    );
   });
 });
 
