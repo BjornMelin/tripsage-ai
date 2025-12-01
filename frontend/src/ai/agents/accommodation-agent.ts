@@ -8,36 +8,15 @@
 
 import "server-only";
 
-import { getRegistryTool, invokeTool } from "@ai/lib/registry-utils";
-import { createAiTool } from "@ai/lib/tool-factory";
-import { toolRegistry } from "@ai/tools";
-import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
-
-/** Schema version for accommodation stay responses. */
-const STAY_SCHEMA_VERSION = "stay.v1";
-
 import {
-  type AccommodationBookingRequest,
-  type AccommodationBookingResult,
-  type AccommodationCheckAvailabilityParams,
-  type AccommodationCheckAvailabilityResult,
-  type AccommodationDetailsParams,
-  type AccommodationDetailsResult,
-  type AccommodationSearchParams,
-  type AccommodationSearchResult,
-  accommodationBookingInputSchema,
-  accommodationBookingOutputSchema,
-  accommodationCheckAvailabilityInputSchema,
-  accommodationCheckAvailabilityOutputSchema,
-  accommodationDetailsInputSchema,
-  accommodationDetailsOutputSchema,
-  accommodationSearchInputSchema,
-  accommodationSearchOutputSchema,
-} from "@schemas/accommodations";
+  bookAccommodation,
+  checkAvailability,
+  getAccommodationDetails,
+  searchAccommodations,
+} from "@ai/tools";
 import type { AccommodationSearchRequest } from "@schemas/agents";
 import type { AgentConfig } from "@schemas/configuration";
 import type { ToolSet } from "ai";
-import { buildRateLimit } from "@/lib/ratelimit/config";
 import type { ChatMessage } from "@/lib/tokens/budget";
 import { clampMaxTokens } from "@/lib/tokens/budget";
 import { buildAccommodationPrompt } from "@/prompts/agents";
@@ -46,135 +25,19 @@ import { createTripSageAgent } from "./agent-factory";
 import type { AgentDependencies, TripSageAgentResult } from "./types";
 import { extractAgentParameters } from "./types";
 
+/** Schema version for accommodation stay responses. */
+const STAY_SCHEMA_VERSION = "stay.v1";
+
 /**
- * Creates wrapped tools for accommodation agent with guardrails.
- *
- * Applies validation, rate limits, and telemetry around core tool
- * execute functions. Supports the full booking flow from search
- * through reservation.
- *
- * @param identifier - Stable identifier for rate limiting.
- * @returns AI SDK ToolSet for use with ToolLoopAgent.
+ * Tools available to the accommodation search agent with built-in
+ * guardrails for caching, rate limiting, and telemetry.
  */
-function buildAccommodationTools(identifier: string): ToolSet {
-  const searchTool = getRegistryTool<
-    AccommodationSearchParams,
-    AccommodationSearchResult
-  >(toolRegistry, "searchAccommodations");
-  const detailsTool = getRegistryTool<
-    AccommodationDetailsParams,
-    AccommodationDetailsResult
-  >(toolRegistry, "getAccommodationDetails");
-  const availabilityTool = getRegistryTool<
-    AccommodationCheckAvailabilityParams,
-    AccommodationCheckAvailabilityResult
-  >(toolRegistry, "checkAvailability");
-  const bookingTool = getRegistryTool<
-    AccommodationBookingRequest,
-    AccommodationBookingResult
-  >(toolRegistry, "bookAccommodation");
-
-  const rateLimit = buildRateLimit("accommodationSearch", identifier);
-
-  const searchAccommodations = createAiTool({
-    description: searchTool.description ?? "Search accommodations",
-    execute: (params, callOptions) => invokeTool(searchTool, params, callOptions),
-    guardrails: {
-      cache: {
-        hashInput: true,
-        key: () => "agent:accommodation:search",
-        namespace: "agent:accommodation:search",
-        ttlSeconds: 60 * 10,
-      },
-      rateLimit: {
-        errorCode: TOOL_ERROR_CODES.toolRateLimited,
-        identifier: () => rateLimit.identifier,
-        limit: rateLimit.limit,
-        prefix: "ratelimit:agent:accommodation:search",
-        window: rateLimit.window,
-      },
-      telemetry: {
-        workflow: "accommodationSearch",
-      },
-    },
-    inputSchema: accommodationSearchInputSchema,
-    name: "searchAccommodations",
-    outputSchema: accommodationSearchOutputSchema,
-  });
-
-  const getAccommodationDetails = createAiTool({
-    description: detailsTool.description ?? "Get accommodation details",
-    execute: (params, callOptions) => invokeTool(detailsTool, params, callOptions),
-    guardrails: {
-      cache: {
-        hashInput: true,
-        key: () => "agent:accommodation:details",
-        namespace: "agent:accommodation:details",
-        ttlSeconds: 60 * 30,
-      },
-      rateLimit: {
-        errorCode: TOOL_ERROR_CODES.toolRateLimited,
-        identifier: () => rateLimit.identifier,
-        limit: rateLimit.limit,
-        prefix: "ratelimit:agent:accommodation:details",
-        window: rateLimit.window,
-      },
-      telemetry: {
-        workflow: "accommodationSearch",
-      },
-    },
-    inputSchema: accommodationDetailsInputSchema,
-    name: "getAccommodationDetails",
-    outputSchema: accommodationDetailsOutputSchema,
-  });
-
-  const checkAvailability = createAiTool({
-    description: availabilityTool.description ?? "Check accommodation availability",
-    execute: (params, callOptions) => invokeTool(availabilityTool, params, callOptions),
-    guardrails: {
-      rateLimit: {
-        errorCode: TOOL_ERROR_CODES.toolRateLimited,
-        identifier: () => rateLimit.identifier,
-        limit: rateLimit.limit,
-        prefix: "ratelimit:agent:accommodation:availability",
-        window: rateLimit.window,
-      },
-      telemetry: {
-        workflow: "accommodationSearch",
-      },
-    },
-    inputSchema: accommodationCheckAvailabilityInputSchema,
-    name: "checkAvailability",
-    outputSchema: accommodationCheckAvailabilityOutputSchema,
-  });
-
-  const bookAccommodation = createAiTool({
-    description: bookingTool.description ?? "Book accommodation",
-    execute: (params, callOptions) => invokeTool(bookingTool, params, callOptions),
-    guardrails: {
-      rateLimit: {
-        errorCode: TOOL_ERROR_CODES.toolRateLimited,
-        identifier: () => rateLimit.identifier,
-        limit: rateLimit.limit,
-        prefix: "ratelimit:agent:accommodation:booking",
-        window: rateLimit.window,
-      },
-      telemetry: {
-        workflow: "accommodationSearch",
-      },
-    },
-    inputSchema: accommodationBookingInputSchema,
-    name: "bookAccommodation",
-    outputSchema: accommodationBookingOutputSchema,
-  });
-
-  return {
-    bookAccommodation,
-    checkAvailability,
-    getAccommodationDetails,
-    searchAccommodations,
-  } satisfies ToolSet;
-}
+const ACCOMMODATION_TOOLS = {
+  bookAccommodation,
+  checkAvailability,
+  getAccommodationDetails,
+  searchAccommodations,
+} satisfies ToolSet;
 
 /**
  * Creates an accommodation search agent using AI SDK v6 ToolLoopAgent.
@@ -236,10 +99,10 @@ export function createAccommodationAgent(
     maxSteps: params.maxSteps,
     name: "Accommodation Search Agent",
     temperature: params.temperature,
-    tools: buildAccommodationTools(deps.identifier),
+    tools: ACCOMMODATION_TOOLS,
     topP: params.topP,
-  });
+  }) as unknown as TripSageAgentResult;
 }
 
 /** Exported type for the accommodation agent's tool set. */
-export type AccommodationAgentTools = ReturnType<typeof buildAccommodationTools>;
+export type AccommodationAgentTools = typeof ACCOMMODATION_TOOLS;

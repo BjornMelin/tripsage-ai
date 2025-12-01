@@ -28,10 +28,8 @@ import type { AgentDependencies, TripSageAgentResult } from "./types";
 import { extractAgentParameters } from "./types";
 
 /**
- * Tools available to the destination research agent.
- *
- * Includes web search, site crawling, weather lookup, travel advisory,
- * and POI discovery for comprehensive destination research.
+ * Tools available to the destination research agent with built-in
+ * guardrails for caching, rate limiting, and telemetry.
  */
 const DESTINATION_TOOLS = {
   crawlSite,
@@ -102,7 +100,7 @@ export function createDestinationAgent(
     temperature: params.temperature,
     tools: DESTINATION_TOOLS,
     topP: params.topP,
-  });
+  }) as unknown as TripSageAgentResult;
 }
 
 /** Exported type for the destination agent's tool set. */

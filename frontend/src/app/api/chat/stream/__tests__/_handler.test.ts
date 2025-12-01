@@ -5,6 +5,13 @@ import type { LanguageModel, UIMessage } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ChatDeps, ProviderResolver } from "../_handler";
 
+type AgentUIStreamOptions = {
+  agent: unknown;
+  messages: UIMessage[];
+  onError?: (err: unknown) => string;
+  onFinish?: (event: unknown) => void | Promise<void>;
+};
+
 // Mock the chat agent module
 vi.mock("@ai/agents", () => ({
   CHAT_DEFAULT_SYSTEM_PROMPT: "test-system-prompt",
@@ -19,8 +26,8 @@ vi.mock("@ai/agents", () => ({
 }));
 
 // Mock createAgentUIStreamResponse
-const mockCreateAgentUIStreamResponse: ReturnType<typeof vi.fn> = vi.hoisted(() =>
-  vi.fn()
+const mockCreateAgentUIStreamResponse = vi.hoisted(() =>
+  vi.fn<(opts: AgentUIStreamOptions) => Promise<Response>>()
 );
 
 vi.mock("ai", () => ({
@@ -43,6 +50,7 @@ vi.mock("@/lib/security/random", () => ({
 }));
 
 import { validateChatMessages } from "@ai/agents";
+import { persistMemoryTurn } from "@/lib/memory/turn-utils";
 import { handleChatStream } from "../_handler";
 
 const createResolver =
@@ -264,7 +272,7 @@ describe("handleChatStream", () => {
     expect(mockCreateAgentUIStreamResponse).toHaveBeenCalledWith(
       expect.objectContaining({
         agent: expect.anything(),
-        messages: expect.anything(),
+        messages,
         onError: expect.any(Function),
         onFinish: expect.any(Function),
       })
@@ -337,10 +345,10 @@ describe("handleChatStream", () => {
   });
 
   it("logs start and finish events", async () => {
-    let capturedOnFinish: ((event: unknown) => void) | undefined;
+    let capturedOnFinish: AgentUIStreamOptions["onFinish"] | undefined;
 
     mockCreateAgentUIStreamResponse.mockImplementationOnce(
-      (opts: { onFinish?: (event: unknown) => void }) => {
+      (opts: AgentUIStreamOptions) => {
         capturedOnFinish = opts.onFinish;
         return Promise.resolve(new Response("ok", { status: 200 }));
       }
@@ -362,6 +370,7 @@ describe("handleChatStream", () => {
             role: "user",
           } satisfies UIMessage,
         ],
+        sessionId: "s9",
       }
     );
 
@@ -369,7 +378,7 @@ describe("handleChatStream", () => {
       "chat_stream:start",
       expect.objectContaining({
         model: "gpt-4o-mini",
-        requestId: expect.any(String),
+        requestId: "test-uuid-123",
         userId: "u9",
       })
     );
@@ -379,11 +388,28 @@ describe("handleChatStream", () => {
     if (!capturedOnFinish) {
       throw new Error("onFinish callback was not captured");
     }
-    capturedOnFinish({ finishReason: "stop", usage: { totalTokens: 100 } });
+    const streamedMessages: UIMessage[] = [
+      {
+        id: "a1",
+        parts: [{ text: "hello", type: "text" }],
+        role: "assistant",
+      },
+    ];
+    await capturedOnFinish({
+      finishReason: "stop",
+      messages: streamedMessages,
+      usage: { totalTokens: 100 },
+    });
     expect(logger.info).toHaveBeenCalledWith(
       "chat_stream:finish",
       expect.objectContaining({
         finishReason: "stop",
+      })
+    );
+    expect(persistMemoryTurn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionId: "s9",
+        userId: "u9",
       })
     );
   });

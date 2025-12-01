@@ -264,7 +264,6 @@ export async function handleChatStream(
         }
       }
     },
-    originalMessages: messages,
   });
 
   return response;

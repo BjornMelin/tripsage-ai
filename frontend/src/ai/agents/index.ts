@@ -10,6 +10,7 @@ import "server-only";
 
 import type { AgentWorkflowKind } from "@schemas/agents";
 import type { AgentConfig } from "@schemas/configuration";
+import type { ToolSet } from "ai";
 
 import { createAccommodationAgent } from "./accommodation-agent";
 import { createBudgetAgent } from "./budget-agent";
@@ -131,13 +132,21 @@ export function createAgentForWorkflow<TKind extends SupportedAgentKind>(
   deps: AgentDependencies,
   config: AgentConfig,
   input: AgentInputTypes[TKind]
-): TripSageAgentResult {
+): TripSageAgentResult<ToolSet> {
   const factory = agentRegistry[kind];
   if (!factory) {
     throw new Error(`Unsupported agent kind: ${kind}`);
   }
 
-  return factory(deps, config, input);
+  // Type assertion needed because factory functions have different input types
+  // but all return TripSageAgentResult<ToolSet>
+  return (
+    factory as (
+      deps: AgentDependencies,
+      config: AgentConfig,
+      input: unknown
+    ) => TripSageAgentResult<ToolSet>
+  )(deps, config, input);
 }
 
 /**
@@ -168,7 +177,7 @@ export function getAgentName(kind: AgentWorkflowKind): string {
  * @param kind - Agent workflow kind.
  * @returns Minimum max steps enforced by the agent implementation.
  */
-export function getDefaultMaxSteps(kind: AgentWorkflowKind): number {
+export function getMinimumMaxSteps(kind: AgentWorkflowKind): number {
   const defaults: Record<AgentWorkflowKind, number> = {
     accommodationSearch: 10,
     budgetPlanning: 10,
