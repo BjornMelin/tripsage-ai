@@ -11,7 +11,9 @@ vi.mock("@/components/ai-elements/response", () => ({
   ),
 }));
 
-// Mock the ChatClient component
+// Mock the ChatClient component to avoid importing server-side dependencies
+// and AI SDK components that are not needed for this smoke test.
+// This allows us to test the page structure without full component initialization.
 vi.mock("../chat-client", () => ({
   ChatClient: () => <div data-testid="chat-client">Chat Client</div>,
 }));

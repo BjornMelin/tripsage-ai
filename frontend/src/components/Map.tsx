@@ -150,10 +150,17 @@ export function GoogleMap({
     };
 
     initMap().catch((error) => {
-      recordClientErrorOnActiveSpan(
-        error instanceof Error ? error : new Error(String(error)),
-        { action: "initMap", context: "GoogleMap" }
-      );
+      if (process.env.NODE_ENV === "development") {
+        console.error("Failed to initialize Google Map:", error);
+      }
+      try {
+        recordClientErrorOnActiveSpan(
+          error instanceof Error ? error : new Error(String(error)),
+          { action: "initMap", context: "GoogleMap" }
+        );
+      } catch {
+        // Silently ignore telemetry failures to prevent error handler from breaking
+      }
     });
   }, [isLoaded, center, zoom, mapId, markers, onMarkerClick]);
 

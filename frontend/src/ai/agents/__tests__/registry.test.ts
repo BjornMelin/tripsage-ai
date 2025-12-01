@@ -90,7 +90,7 @@ vi.mock("@/prompts/agents", () => ({
   buildItineraryPrompt: () => "Itinerary prompt",
 }));
 
-import type { LanguageModel } from "ai";
+import { MockLanguageModelV3 } from "ai/test";
 import {
   agentRegistry,
   createAgentForWorkflow,
@@ -103,17 +103,15 @@ import type { AgentDependencies } from "../types";
 /**
  * Creates a mock LanguageModel for testing.
  */
-function createMockModel(): LanguageModel {
-  // Minimal fields used by tests; extend if LanguageModel interface adds requirements
-  return {
-    defaultObjectGenerationMode: "json",
-    doGenerate: vi.fn(),
-    doStream: vi.fn(),
-    modelId: "test-model",
-    provider: "test-provider",
-    specificationVersion: "V3",
-    supportsStructuredOutputs: true,
-  } as unknown as LanguageModel;
+function createMockModel() {
+  return new MockLanguageModelV3({
+    doGenerate: async () => ({
+      content: [{ text: "Mock response", type: "text" as const }],
+      finishReason: "stop" as const,
+      usage: { inputTokens: 10, outputTokens: 20, totalTokens: 30 },
+      warnings: [],
+    }),
+  });
 }
 
 /**

@@ -41,6 +41,7 @@ describe("store state schemas", () => {
       if (result.success) {
         expect(result.data.isLoading).toBe(true);
         expect(result.data.error).toBe("Test error");
+        expect(result.data.lastUpdated).toBe("2025-01-01T00:00:00.000Z");
       }
     });
 
@@ -72,6 +73,56 @@ describe("store state schemas", () => {
 
       const result = userStoreStateSchema.safeParse(invalidState);
       expect(result.success).toBe(false);
+    });
+
+    it("should reject when isLoading is missing", () => {
+      const invalidState = {
+        error: null,
+        profile: null,
+      };
+
+      const result = userStoreStateSchema.safeParse(invalidState);
+      expect(result.success).toBe(false);
+    });
+
+    it("should reject when error is missing", () => {
+      const invalidState = {
+        isLoading: false,
+        profile: null,
+      };
+
+      const result = userStoreStateSchema.safeParse(invalidState);
+      expect(result.success).toBe(false);
+    });
+
+    it("should handle isLoading=true with error=null", () => {
+      const state = {
+        error: null,
+        isLoading: true,
+        profile: null,
+      };
+
+      const result = userStoreStateSchema.safeParse(state);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.isLoading).toBe(true);
+        expect(result.data.error).toBeNull();
+      }
+    });
+
+    it("should handle isLoading=false with error set", () => {
+      const state = {
+        error: "Failed to load",
+        isLoading: false,
+        profile: null,
+      };
+
+      const result = userStoreStateSchema.safeParse(state);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.isLoading).toBe(false);
+        expect(result.data.error).toBe("Failed to load");
+      }
     });
   });
 

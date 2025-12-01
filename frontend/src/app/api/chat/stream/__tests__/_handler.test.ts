@@ -333,9 +333,6 @@ describe("handleChatStream", () => {
 
     // Test the captured onError callback
     expect(capturedOnError).toBeDefined();
-    if (!capturedOnError) {
-      throw new Error("onError callback was not captured");
-    }
     const errorMsg = capturedOnError(new Error("Test error"));
     expect(errorMsg).toBe("An error occurred while processing your request.");
     expect(logger.error).toHaveBeenCalledWith(
@@ -385,9 +382,6 @@ describe("handleChatStream", () => {
 
     // Test the captured onFinish callback
     expect(capturedOnFinish).toBeDefined();
-    if (!capturedOnFinish) {
-      throw new Error("onFinish callback was not captured");
-    }
     const streamedMessages: UIMessage[] = [
       {
         id: "a1",

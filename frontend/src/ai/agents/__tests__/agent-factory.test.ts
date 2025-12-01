@@ -35,8 +35,21 @@ import { extractAgentParameters } from "../types";
 function createMockModel(): LanguageModel {
   return {
     defaultObjectGenerationMode: "json",
-    doGenerate: vi.fn(),
-    doStream: vi.fn(),
+    doGenerate: vi.fn(async () => ({
+      finishReason: "stop",
+      rawCall: { rawPrompt: null, rawSettings: {} },
+      response: {
+        id: "test-response-id",
+        modelId: "test-model",
+        timestamp: new Date(),
+      },
+      text: "Test response",
+      usage: { completionTokens: 10, promptTokens: 10 },
+    })),
+    doStream: vi.fn(async () => ({
+      rawCall: { rawPrompt: null, rawSettings: {} },
+      stream: new ReadableStream(),
+    })),
     modelId: "test-model",
     provider: "test-provider",
     specificationVersion: "V3",
@@ -75,6 +88,12 @@ describe("createTripSageAgent", () => {
     expect(result.agentType).toBe("budgetPlanning");
     expect(result.modelId).toBe("gpt-4");
     expect(result.agent).toBeDefined();
+    expect(result.defaultMessages).toEqual(config.defaultMessages);
+
+    // Verify agent has expected properties from config
+    expect(result.agent.id).toContain("tripsage-budgetPlanning");
+    expect(result.agent.instructions).toBe(config.instructions);
+    expect(result.agent.tools).toBe(config.tools);
   });
 
   it("should create an agent with optional parameters", () => {
@@ -118,6 +137,20 @@ describe("createTripSageAgent", () => {
     expect(result.agent).toBeDefined();
     // Agent should be created even without sessionId/userId
     expect(result.modelId).toBe("gpt-4");
+
+    // Verify telemetry metadata handles undefined sessionId/userId
+    // When undefined, these fields are not included in metadata (no fallback values)
+    const telemetryConfig = result.agent.experimental_telemetry;
+    expect(telemetryConfig).toBeDefined();
+    expect(telemetryConfig?.metadata).toBeDefined();
+    expect(telemetryConfig?.metadata).toMatchObject({
+      agentType: "destinationResearch",
+      identifier: "test-user-123",
+      modelId: "gpt-4",
+    });
+    // Verify sessionId and userId are not present in metadata when undefined
+    expect(telemetryConfig?.metadata).not.toHaveProperty("sessionId");
+    expect(telemetryConfig?.metadata).not.toHaveProperty("userId");
   });
 });
 
