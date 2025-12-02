@@ -11,11 +11,11 @@ Get user settings.
 **Authentication**: Required  
 **Rate Limit Key**: `user-settings:get`
 
-#### Response
+#### Response (GET /api/user-settings)
 
 `200 OK` - Returns user settings
 
-#### Errors
+#### Errors (GET /api/user-settings)
 
 - `401` - Not authenticated
 - `429` - Rate limit exceeded
@@ -29,18 +29,18 @@ Update user settings.
 **Authentication**: Required  
 **Rate Limit Key**: `user-settings:update`
 
-#### Request Body
+#### Request Body (POST /api/user-settings)
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `theme` | string | No | UI theme preference (`light`, `dark`, `auto`) |
 | `language` | string | No | Language preference (ISO 639-1 code) |
 | `timezone` | string | No | Timezone (IANA timezone identifier) |
-| `notifications` | object | No | Notification settings {email: boolean, push: boolean, inApp: boolean} |
-| `privacy` | object | No | Privacy settings {profileVisible: boolean, shareActivity: boolean} |
+| `notifications` | object | No | Notification settings {email, push, inApp} |
+| `privacy` | object | No | Privacy settings {profileVisible, shareActivity} |
 | `preferences` | object | No | Custom preferences (key-value pairs) |
 
-#### Response
+#### Response (POST /api/user-settings)
 
 `200 OK`
 
@@ -64,7 +64,7 @@ Update user settings.
 
 Returns all settings fields with current values.
 
-#### Errors
+#### Errors (POST /api/user-settings)
 
 - `400` - Validation failed
 - `401` - Not authenticated
@@ -81,14 +81,14 @@ Generate embeddings.
 **Authentication**: Required  
 **Rate Limit Key**: `embeddings`
 
-#### Request Body
+#### Request Body (POST /api/embeddings)
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `text` | string | Yes | Text to embed |
 | `model` | string | No | Embedding model |
 
-#### Response
+#### Response (POST /api/embeddings)
 
 `200 OK` - Returns embedding vector
 
@@ -108,7 +108,7 @@ Generate embeddings.
 
 The `embedding` array continues to 1536 numeric values.
 
-#### Errors
+#### Errors (POST /api/embeddings)
 
 - `400` - Invalid request
 - `401` - Not authenticated
@@ -125,7 +125,7 @@ Get popular flight destinations.
 **Authentication**: Required  
 **Rate Limit Key**: `flights:popular-destinations`
 
-#### Response
+#### Response (GET /api/flights/popular-destinations)
 
 `200 OK` - Returns popular destinations list
 
@@ -152,7 +152,7 @@ Get popular flight destinations.
 ]
 ```
 
-#### Errors
+#### Errors (GET /api/flights/popular-destinations)
 
 - `401` - Not authenticated
 - `429` - Rate limit exceeded
@@ -168,17 +168,17 @@ List user files.
 **Authentication**: Required  
 **Rate Limit Key**: `attachments:files`
 
-#### Query Parameters
+#### Query Parameters (GET /api/attachments/files)
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `limit` | number | No | Maximum results to return (default: 20, max: 100) |
-| `offset` | number | No | Number of results to skip for pagination (default: 0) |
-| `type` | string | No | Filter by file type (e.g., "image", "document", "pdf", "video") |
+| `limit` | number | No | Max results (default: 20, max: 100) |
+| `offset` | number | No | Results to skip (default: 0) |
+| `type` | string | No | File type filter (e.g., "image", "pdf", "video") |
 | `sort` | string | No | Sort order (`name`, `date`, `size`, default: `date`) |
 | `order` | string | No | Sort direction (`asc`, `desc`, default: `desc`) |
 
-#### Response
+#### Response (GET /api/attachments/files)
 
 `200 OK` - Returns files list
 
@@ -206,7 +206,7 @@ List user files.
 }
 ```
 
-#### Errors
+#### Errors (GET /api/attachments/files)
 
 - `401` - Not authenticated
 - `429` - Rate limit exceeded
@@ -222,11 +222,11 @@ Demo/observability endpoint for telemetry.
 **Authentication**: Required  
 **Rate Limit Key**: `telemetry:ai-demo`
 
-#### Request Body
+#### Request Body (POST /api/telemetry/ai-demo)
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `modelName` | string | Yes | AI model to use for demo (e.g., "gpt-4", "claude-3-opus") |
+| `modelName` | string | Yes | AI model (e.g., "gpt-4", "claude-3-opus") |
 | `prompt` | string | Yes | Input prompt for the AI model |
 | `temperature` | number | No | Temperature for sampling (0-2, default: 1) |
 | `maxTokens` | number | No | Maximum response tokens (default: 256) |
@@ -234,7 +234,7 @@ Demo/observability endpoint for telemetry.
 | `sessionId` | string | No | Session ID for tracking related requests |
 | `metadata` | object | No | Additional metadata for observability |
 
-#### Response
+#### Response (POST /api/telemetry/ai-demo)
 
 `200 OK`
 
@@ -253,8 +253,36 @@ Demo/observability endpoint for telemetry.
 }
 ```
 
-#### Errors
+#### Errors (POST /api/telemetry/ai-demo)
 
 - `400` - Invalid request parameters
 - `401` - Not authenticated
+- `429` - Rate limit exceeded
+
+---
+
+## Activity Booking Telemetry
+
+### `POST /api/telemetry/activities`
+
+Captures client-side booking interactions (e.g., URL resolution and fallbacks).
+
+**Authentication**: Not required  
+**Rate Limit Key**: `telemetry:post`
+
+#### Request Body (POST /api/telemetry/activities)
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `eventName` | string | Yes | Regex: `/^[a-z][a-z0-9._]{0,99}$/i` |
+| `attributes` | object | No | Up to 25 entries (string/number/boolean) |
+| `level` | string | No | One of `info`, `warning`, `error` (default: `info`) |
+
+#### Response (POST /api/telemetry/activities)
+
+`200 OK` on success.
+
+#### Errors (POST /api/telemetry/activities)
+
+- `400` - Invalid event name or attributes
 - `429` - Rate limit exceeded

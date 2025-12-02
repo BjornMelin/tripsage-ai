@@ -77,7 +77,7 @@ export const POST = withApiGuards({
   }
 
   recordTelemetryEvent(eventName, {
-    attributes: attributes ?? undefined,
+    attributes,
     level: level ?? "info",
   });
 
