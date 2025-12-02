@@ -148,7 +148,7 @@ function extractActivityType(types?: string[]): string {
  * Limits results to MAX_ACTIVITY_PHOTOS (5) to balance visual richness
  * with payload size and rendering performance. The photo proxy route
  * handles API key authentication internally.
- *
+ * 
  * @param photos - Array of PlacesPhoto objects.
  * @returns Array of client-safe photo URLs.
  */
