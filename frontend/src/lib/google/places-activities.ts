@@ -133,154 +133,35 @@ function extractActivityType(types?: string[]): string {
   return matched ?? types[0] ?? "activity";
 }
 
+/** Maximum number of photos to include per activity. */
+const MAX_ACTIVITY_PHOTOS = 5;
+
+/** Default photo dimensions for activity images. */
+const DEFAULT_PHOTO_DIMENSIONS = {
+  maxHeightPx: 800,
+  maxWidthPx: 1200,
+} as const;
+
 /**
- * TODO: Implement full photo URL resolution from Places photo names.
+ * Builds client-safe photo URLs via the server-side photo proxy.
  *
- * IMPLEMENTATION PLAN (Decision Framework Score: 9.2/10.0)
- * ===========================================================
- *
- * ARCHITECTURE DECISIONS:
- * -----------------------
- * 1. URL Format: Direct URL construction (no API call needed)
- *    - Google Places Photo API URLs are directly constructible
- *    - Format: `https://places.googleapis.com/v1/{photoName}/media?maxHeightPx={height}&maxWidthPx={width}&key={apiKey}`
- *    - Rationale: No need for actual API call; URLs can be constructed and used directly
- *
- * 2. API Key Strategy: Server-side only (this is a server-only module)
- *    - Use `getGoogleMapsServerKey()` from `@/lib/env/server` (already imported)
- *    - Fallback to provided `apiKey` parameter if available
- *    - Rationale: This module is server-only ("server-only" import), so server key is appropriate
- *
- * 3. Image Dimensions: Configurable with sensible defaults
- *    - Default: maxHeightPx=800, maxWidthPx=1200 (matches existing pattern in `actions.ts`)
- *    - Allow override via optional parameters
- *    - Rationale: Balances image quality with bandwidth; matches existing codebase patterns
- *
- * 4. Caching Strategy: Photo URLs are stable and cacheable
- *    - URLs don't change for the same photo name
- *    - Consider Redis caching if called frequently (optional optimization)
- *    - Rationale: Photo URLs are deterministic based on photo name and dimensions
- *
- * IMPLEMENTATION STEPS:
- * ---------------------
- *
- * Step 1: Update Function Signature (Optional Enhancement)
- *   - Add optional `maxHeightPx` and `maxWidthPx` parameters (default: 800, 1200)
- *   - Keep `apiKey` parameter optional (fallback to `getGoogleMapsServerKey()`)
- *
- * Step 2: Implement URL Construction
- *   ```typescript
- *   function buildPhotoUrls(
- *     photos?: PlacesPhoto[],
- *     apiKey?: string,
- *     maxHeightPx: number = 800,
- *     maxWidthPx: number = 1200
- *   ): string[] {
- *     if (!photos || photos.length === 0) {
- *       return [];
- *     }
- *
- *     // Resolve API key: use provided key or fallback to server key
- *     const resolvedApiKey = apiKey ?? getGoogleMapsServerKey();
- *     if (!resolvedApiKey) {
- *       // Log warning but return empty array (graceful degradation)
- *       recordTelemetryEvent("places.photo.missing_api_key", {
- *         level: "warning",
- *         attributes: { photoCount: photos.length },
- *       });
- *       return [];
- *     }
- *
- *     // Build URLs directly (no API call needed)
- *     return photos.slice(0, 5).map((photo) => {
- *       const url = new URL(`https://places.googleapis.com/v1/${photo.name}/media`);
- *       url.searchParams.set("maxHeightPx", String(maxHeightPx));
- *       url.searchParams.set("maxWidthPx", String(maxWidthPx));
- *       url.searchParams.set("key", resolvedApiKey);
- *       return url.toString();
- *     });
- *   }
- *   ```
- *
- * Step 3: Add Telemetry Tracking (Optional)
- *   - Track photo URL generation events using `recordTelemetryEvent`
- *   - Record: photo count, dimensions used, API key presence
- *   - Import: `import { recordTelemetryEvent } from "@/lib/telemetry/span"`
- *
- * Step 4: Update Function Call Sites
- *   - Review `mapPlacesPlaceToActivity` function (line ~202)
- *   - Ensure `apiKey` is passed correctly from parent functions
- *   - Verify `getGoogleMapsServerKey()` is available in call context
- *
- * INTEGRATION POINTS:
- * -------------------
- * - Google Maps API: Use Places Photo API URL format (New API)
- * - Environment: Use `getGoogleMapsServerKey()` from `@/lib/env/server`
- * - Telemetry: Use `recordTelemetryEvent` for tracking (optional)
- * - Error Handling: Return empty array on missing API key (graceful degradation)
- * - Caching: Photo URLs are stable; consider Redis caching if needed (optional)
- *
- * PERFORMANCE CONSIDERATIONS:
- * ---------------------------
- * - URL construction is synchronous and fast (no API calls)
- * - Limit to 5 photos per place (already implemented via `.slice(0, 5)`)
- * - Photo URLs are deterministic and cacheable at CDN level
- * - No rate limiting concerns (URLs are constructed, not fetched)
- *
- * TESTING REQUIREMENTS:
- * ---------------------
- * - Unit test: URL construction with various photo names
- * - Unit test: API key resolution (provided vs server key fallback)
- * - Unit test: Empty array return on missing photos/API key
- * - Unit test: Dimension parameter handling
- * - Integration test: Verify URLs work with actual Google Places API
- *
- * REFERENCE IMPLEMENTATIONS:
- * --------------------------
- * - See `frontend/src/app/(dashboard)/search/modern/actions.ts` line 21-26 for working example
- * - See `frontend/src/app/api/places/photo/route.ts` for server-side photo proxy pattern
- * - Google Places Photo API docs: https://developers.google.com/maps/documentation/places/web-service/place-photos
- *
- * NOTES:
- * ------
- * - Photo URLs are directly usable in `<img>` tags or Next.js Image component
- * - URLs include API key, so they should be server-side only (not exposed to client)
- * - For client-side usage, use `/api/places/photo?name={photoName}` proxy route
- * - Photo names are stable identifiers from Places API responses
- *
- * Builds photo URLs from Places photo names.
- *
- * Converts photo.name identifiers into usable URLs via Places Photo API.
- * URLs are constructed directly (no API call needed) and can be used in
- * image tags. This is a server-only function; for client-side usage, use
- * the `/api/places/photo` proxy route.
- *
- * @param photos - Array of Places photo objects.
- * @param apiKey - Optional Google Maps API key (falls back to server key).
- * @returns Array of photo URLs (max 5).
+ * Limits results to MAX_ACTIVITY_PHOTOS (5) to balance visual richness
+ * with payload size and rendering performance.
  */
-function buildPhotoUrls(photos?: PlacesPhoto[], apiKey?: string): string[] {
-  if (!photos || photos.length === 0 || !apiKey) {
+function buildPhotoUrls(photos?: PlacesPhoto[]): string[] {
+  if (!photos || photos.length === 0) {
     return [];
   }
 
-  /**
-   * TODO: Implement actual photo URL resolution
-   * Replace placeholder with:
-   * const resolvedApiKey = apiKey ?? getGoogleMapsServerKey();
-   * if (!resolvedApiKey) return [];
-   * return photos.slice(0, 5).map((photo) => {
-   *   const url = new URL(`https://places.googleapis.com/v1/${photo.name}/media`);
-   *   url.searchParams.set("maxHeightPx", "800");
-   *   url.searchParams.set("maxWidthPx", "1200");
-   *   url.searchParams.set("key", resolvedApiKey);
-   *   return url.toString();
-   * });
-   * For now, return photo names as identifiers
-   * Full URL resolution can be done via GET /v1/{photoName} if needed
-   * This is a placeholder that returns photo names
-   */
-  return photos.slice(0, 5).map((photo) => photo.name);
+  // Limit to MAX_ACTIVITY_PHOTOS to balance richness with performance
+  return photos.slice(0, MAX_ACTIVITY_PHOTOS).map((photo) => {
+    const params = new URLSearchParams({
+      maxHeightPx: String(DEFAULT_PHOTO_DIMENSIONS.maxHeightPx),
+      maxWidthPx: String(DEFAULT_PHOTO_DIMENSIONS.maxWidthPx),
+      name: photo.name,
+    });
+    return `/api/places/photo?${params.toString()}`;
+  });
 }
 
 /**
@@ -288,14 +169,12 @@ function buildPhotoUrls(photos?: PlacesPhoto[], apiKey?: string): string[] {
  *
  * @param place - Places API place object.
  * @param date - ISO date string for the activity (defaults to today).
- * @param apiKey - Optional API key for photo URL resolution.
  * @returns Activity object.
  */
-export async function mapPlacesPlaceToActivity(
+export function mapPlacesPlaceToActivity(
   place: PlacesPlace,
-  date: string = new Date().toISOString().split("T")[0],
-  apiKey?: string
-): Promise<Activity> {
+  date: string = new Date().toISOString().split("T")[0]
+): Activity {
   const name = place.displayName?.text ?? "Unknown Activity";
   const location = place.formattedAddress ?? "Unknown Location";
   const rating = place.rating ?? 0;
@@ -310,7 +189,7 @@ export async function mapPlacesPlaceToActivity(
         }
       : undefined;
 
-  const images = await buildPhotoUrls(place.photos, apiKey);
+  const images = buildPhotoUrls(place.photos);
 
   // Use editorialSummary if available, otherwise generate a simple description
   const description =
@@ -368,28 +247,6 @@ export async function searchActivitiesWithPlaces(
   query: string,
   maxResults: number = 20
 ): Promise<Activity[]> {
-  if (process.env.NODE_ENV === "test") {
-    if (query.toLowerCase().includes("new york")) {
-      return [
-        await mapPlacesPlaceToActivity(
-          {
-            displayName: { text: "Museum of Modern Art" },
-            formattedAddress: "11 W 53rd St, New York, NY 10019",
-            id: "ChIJN1t_tDeuEmsRUsoyG83frY4",
-            location: { latitude: 40.7614, longitude: -73.9776 },
-            priceLevel: "PRICE_LEVEL_MODERATE",
-            rating: 4.6,
-            types: ["museum"],
-            userRatingCount: 4523,
-          },
-          undefined,
-          undefined
-        ),
-      ].slice(0, maxResults);
-    }
-    return [];
-  }
-
   let apiKey: string;
   try {
     apiKey = getGoogleMapsServerKey();
@@ -421,9 +278,7 @@ export async function searchActivitiesWithPlaces(
   const data = (await response.json()) as PlacesSearchResponse;
   const places = data.places ?? [];
 
-  const activities = await Promise.all(
-    places.map((place) => mapPlacesPlaceToActivity(place, undefined, apiKey))
-  );
+  const activities = places.map((place) => mapPlacesPlaceToActivity(place));
 
   return activities;
 }
@@ -437,27 +292,6 @@ export async function searchActivitiesWithPlaces(
 export async function getActivityDetailsFromPlaces(
   placeId: string
 ): Promise<Activity | null> {
-  if (process.env.NODE_ENV === "test") {
-    if (placeId === "ChIJN1t_tDeuEmsRUsoyG83frY4") {
-      return await mapPlacesPlaceToActivity(
-        {
-          displayName: { text: "Museum of Modern Art" },
-          editorialSummary: { text: "A world-renowned art museum" },
-          formattedAddress: "11 W 53rd St, New York, NY 10019",
-          id: "ChIJN1t_tDeuEmsRUsoyG83frY4",
-          location: { latitude: 40.7614, longitude: -73.9776 },
-          priceLevel: "PRICE_LEVEL_MODERATE",
-          rating: 4.6,
-          types: ["museum"],
-          userRatingCount: 4523,
-        },
-        undefined,
-        undefined
-      );
-    }
-    return null;
-  }
-
   let apiKey: string;
   try {
     apiKey = getGoogleMapsServerKey();
@@ -484,7 +318,7 @@ export async function getActivityDetailsFromPlaces(
   }
 
   const place = (await response.json()) as PlacesDetailsResponse;
-  const activity = await mapPlacesPlaceToActivity(place, undefined, apiKey);
+  const activity = mapPlacesPlaceToActivity(place);
 
   return activity;
 }

@@ -46,7 +46,7 @@ INSERT INTO trips (
     status,
     trip_type,
     flexibility,
-    notes,
+    tags,
     search_metadata
 ) VALUES 
 (

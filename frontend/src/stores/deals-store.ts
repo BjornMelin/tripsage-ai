@@ -14,6 +14,9 @@ import {
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { nowIso, secureId } from "@/lib/security/random";
+import { createStoreLogger } from "@/lib/telemetry/store-logger";
+
+const logger = createStoreLogger({ storeName: "deals" });
 
 interface DealsStore extends DealState {
   // Base state fields materialized on the store
@@ -266,7 +269,7 @@ export const useDealsStore = create<DealsStore>()(
           });
           return true;
         }
-        console.error("Invalid alert data:", result.error);
+        logger.error("Invalid alert data", { error: result.error });
         return false;
       },
 
@@ -291,7 +294,7 @@ export const useDealsStore = create<DealsStore>()(
           });
           return true;
         }
-        console.error("Invalid deal data:", result.error);
+        logger.error("Invalid deal data", { error: result.error });
         return false;
       },
 
@@ -488,7 +491,7 @@ export const useDealsStore = create<DealsStore>()(
 
         const result = DEAL_ALERT_SCHEMA.safeParse(updatedAlert);
         if (!result.success) {
-          console.error("Invalid alert update:", result.error);
+          logger.error("Invalid alert update", { error: result.error });
           return false;
         }
 
@@ -514,7 +517,7 @@ export const useDealsStore = create<DealsStore>()(
 
         const result = DEAL_SCHEMA.safeParse(updatedDeal);
         if (!result.success) {
-          console.error("Invalid deal update:", result.error);
+          logger.error("Invalid deal update", { error: result.error });
           return false;
         }
 

@@ -83,3 +83,48 @@ export const updateTravelPlanInputSchema = z.strictObject({
   updates: z.record(z.string(), z.unknown()).describe("Fields to update in the plan"),
   userId: z.string().min(1).nullable().describe("User identifier for authorization"),
 });
+
+// ===== TOOL OUTPUT SCHEMAS =====
+
+/**
+ * Schema for createTravelPlan tool response.
+ *
+ * Represents either an error response or a successful plan creation result.
+ */
+export const createTravelPlanResponseSchema = z.discriminatedUnion("success", [
+  z.object({
+    error: z.string().describe("Error message"),
+    success: z.literal(false),
+  }),
+  z.object({
+    message: z.string().describe("Success message"),
+    plan: z.unknown().describe("Created plan object"),
+    planId: UUID_V4,
+    success: z.literal(true),
+  }),
+]);
+
+/** TypeScript type for createTravelPlan tool response. */
+export type CreateTravelPlanResponse = z.infer<typeof createTravelPlanResponseSchema>;
+
+/**
+ * Schema for saveTravelPlan tool response.
+ *
+ * Represents either an error response or a successful plan save result.
+ */
+export const saveTravelPlanResponseSchema = z.discriminatedUnion("success", [
+  z.object({
+    error: z.string().describe("Error message"),
+    success: z.literal(false),
+  }),
+  z.object({
+    message: z.string().describe("Success message"),
+    planId: UUID_V4,
+    status: z.string().describe("Plan status after save"),
+    success: z.literal(true),
+    summaryMarkdown: z.string().describe("Markdown summary of the plan"),
+  }),
+]);
+
+/** TypeScript type for saveTravelPlan tool response. */
+export type SaveTravelPlanResponse = z.infer<typeof saveTravelPlanResponseSchema>;

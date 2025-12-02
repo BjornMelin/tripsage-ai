@@ -36,7 +36,7 @@ vi.mock("@ai/models/registry", () => ({
 }));
 
 // Mock memory agent
-vi.mock("@/lib/agents/memory-agent", () => ({
+vi.mock("@ai/agents/memory-agent", () => ({
   runMemoryAgent: vi.fn(() => ({
     toUIMessageStreamResponse: () => new Response("ok", { status: 200 }),
   })),

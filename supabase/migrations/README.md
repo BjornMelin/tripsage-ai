@@ -171,7 +171,7 @@ ADD CONSTRAINT check_budget CHECK (budget >= 0);
 
 -- Modify column type (be careful!)
 ALTER TABLE public.trips
-ALTER COLUMN notes TYPE text[] USING string_to_array(notes, ',');
+ALTER COLUMN tags TYPE text[] USING string_to_array(tags, ',');
 ```
 
 ### Adding Indexes

@@ -27,12 +27,12 @@ type ToolWithExecute = {
  * @param sessionId Optional session identifier to inject.
  * @returns Record of wrapped tools with injected context.
  */
-export function wrapToolsWithUserId(
-  tools: Record<string, unknown>,
+export function wrapToolsWithUserId<T extends Record<string, unknown>>(
+  tools: T,
   userId: string,
   onlyKeys: string[],
   sessionId?: string
-): Record<string, unknown> {
+): T {
   const wrapped: Record<string, unknown> = { ...tools };
 
   for (const key of onlyKeys) {
@@ -67,5 +67,5 @@ export function wrapToolsWithUserId(
     (wrapped as Record<string, ToolWithExecute>)[key] = wrappedTool;
   }
 
-  return wrapped;
+  return wrapped as T;
 }

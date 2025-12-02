@@ -14,8 +14,8 @@ import { createToolError, type ToolErrorCode } from "@ai/tools/server/errors";
 import type { Span } from "@opentelemetry/api";
 import type { AgentWorkflowKind } from "@schemas/agents";
 import { Ratelimit } from "@upstash/ratelimit";
-import type { FlexibleSchema, ModelMessage, Tool, ToolCallOptions } from "ai";
-import { tool } from "ai";
+import type { FlexibleSchema, Tool, ToolCallOptions } from "ai";
+import { asSchema, tool } from "ai";
 import { headers } from "next/headers";
 import { hashInputForCache } from "@/lib/cache/hash";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
@@ -39,6 +39,9 @@ type ToolExecute<InputValue, OutputValue> = (
   callOptions: ToolCallOptions
 ) => Promise<OutputValue>;
 
+/** Transform function to convert tool output for model consumption. */
+export type ToModelOutputFn<OutputValue> = (output: OutputValue) => unknown;
+
 export type ToolOptions<InputValue, OutputValue> = {
   /** Unique tool identifier used for telemetry and cache namespacing. */
   name: string;
@@ -46,8 +49,14 @@ export type ToolOptions<InputValue, OutputValue> = {
   description: string;
   /** Schema accepted by AI SDK tools (supports Zod/Flexible schemas). */
   inputSchema: FlexibleSchema<InputValue>;
+  /** Optional output schema for runtime validation of tool results. */
+  outputSchema?: FlexibleSchema<OutputValue>;
   /** Business logic implementation. */
   execute: ToolExecute<InputValue, OutputValue>;
+  /** Transform tool output for model consumption. */
+  toModelOutput?: ToModelOutputFn<OutputValue>;
+  /** Whether to validate output against outputSchema at runtime. Defaults to false. */
+  validateOutput?: boolean;
 };
 
 export type TelemetryOptions<InputValue> = {
@@ -139,59 +148,11 @@ type CacheLookupResult<OutputValue> =
 const rateLimiterCache = new Map<string, InstanceType<typeof Ratelimit>>();
 
 /**
- * Attempts to extract user context from ToolCallOptions messages.
- *
- * AI SDK v6 ToolCallOptions provides messages[] but user context is typically
- * passed through request context (e.g., Supabase auth) rather than messages.
- * This helper checks message metadata or system messages as fallback.
- *
- * Currently unused but available for future use when tools need to extract
- * user context from ToolCallOptions.messages.
- *
- * @param messages Array of ModelMessage from ToolCallOptions.
- * @returns User context if found, undefined otherwise.
- */
-// biome-ignore lint/correctness/noUnusedVariables: Reserved for future use
-function extractUserContextFromMessages(
-  messages: ModelMessage[]
-): { userId?: string; sessionId?: string } | undefined {
-  // Check for user context in message metadata (if supported by AI SDK)
-  for (const message of messages) {
-    if (
-      message.role === "system" &&
-      typeof message.content === "string" &&
-      message.content.includes("user_id:")
-    ) {
-      // Try to extract from system message if it contains user context
-      const match = message.content.match(/user_id:([a-zA-Z0-9-]+)/);
-      if (match?.[1]) {
-        return { userId: match[1] };
-      }
-    }
-    // Check metadata if available (future-proofing for AI SDK updates)
-    if (
-      "metadata" in message &&
-      message.metadata &&
-      typeof message.metadata === "object"
-    ) {
-      const meta = message.metadata as Record<string, unknown>;
-      if (typeof meta.userId === "string") {
-        return {
-          sessionId: typeof meta.sessionId === "string" ? meta.sessionId : undefined,
-          userId: meta.userId,
-        };
-      }
-    }
-  }
-  return undefined;
-}
-
-/**
- * Creates an AI SDK tool with optional guardrails.
+ * Creates an AI SDK v6 tool with optional guardrails (caching, rate limiting, telemetry).
  *
  * @template InputValue - Input schema type for the tool.
  * @template OutputValue - Output type returned by the tool.
- * @param options - Tool configuration including guardrails.
+ * @param options - Tool configuration including guardrails and output validation.
  * @returns AI SDK tool instance with guardrails applied.
  */
 export function createAiTool<InputValue, OutputValue>(
@@ -200,12 +161,15 @@ export function createAiTool<InputValue, OutputValue>(
   const { guardrails } = options;
   const telemetryName = guardrails?.telemetry?.name ?? options.name;
 
-  // AI SDK v6 tool() infers types from the object literal, but we need generics
-  // for our guardrails system. We use a type assertion here which is safe because:
-  // 1. The structure matches what tool() expects (description, inputSchema, execute)
-  // 2. The execute signature matches AI SDK v6 (params, ToolCallOptions)
-  // 3. Runtime behavior is correct - tool() accepts our object structure
-  return tool({
+  // Build output validator if validation is requested
+  const outputValidator =
+    options.validateOutput && options.outputSchema
+      ? buildOutputValidator(options.outputSchema, options.name)
+      : null;
+
+  // AI SDK v6 tool() cannot infer generics from object literals; safe assertion since structure matches.
+  // biome-ignore lint/suspicious/noExplicitAny: Type assertion needed for AI SDK v6 tool() generic inference
+  return (tool as any)({
     description: options.description,
     execute: (params: InputValue, callOptions: ToolCallOptions) => {
       const startedAt = Date.now();
@@ -253,6 +217,22 @@ export function createAiTool<InputValue, OutputValue>(
 
           const result = await options.execute(params, callOptions);
 
+          // Validate output if requested
+          if (outputValidator) {
+            const validation = await outputValidator(result);
+            if (!validation.success) {
+              span.addEvent("output_validation_failed", {
+                error: validation.error,
+              });
+              // Using "invalid_params" with validationType metadata to distinguish output errors
+              // Consider adding "invalid_output" to ToolErrorCode if this pattern is common
+              throw createToolError("invalid_params", validation.error, {
+                tool: options.name,
+                validationType: "output",
+              });
+            }
+          }
+
           if (guardrails?.cache) {
             await writeToCache(guardrails.cache, options.name, params, result, span);
           }
@@ -261,10 +241,52 @@ export function createAiTool<InputValue, OutputValue>(
         }
       );
     },
-    // biome-ignore lint/suspicious/noExplicitAny: Type assertion needed for generic wrapper
-    inputSchema: options.inputSchema as any,
-    // biome-ignore lint/suspicious/noExplicitAny: Type assertion needed for generic wrapper
-  } as any) as Tool<InputValue, OutputValue>;
+    inputSchema: options.inputSchema as FlexibleSchema<InputValue>,
+    ...(options.outputSchema
+      ? { outputSchema: options.outputSchema as FlexibleSchema<OutputValue> }
+      : {}),
+    ...(options.toModelOutput ? { toModelOutput: options.toModelOutput } : {}),
+  }) as Tool<InputValue, OutputValue>;
+}
+
+/**
+ * Builds an output validator function from a FlexibleSchema.
+ *
+ * Uses AI SDK's asSchema to convert the schema for validation.
+ *
+ * @template OutputValue - Output type to validate.
+ * @param schema - Flexible schema for validation.
+ * @param toolName - Tool name for error messages.
+ * @returns Async validator function.
+ */
+function buildOutputValidator<OutputValue>(
+  schema: FlexibleSchema<OutputValue>,
+  toolName: string
+): (output: unknown) => Promise<{ success: true } | { success: false; error: string }> {
+  const convertedSchema = asSchema(schema);
+
+  return async (output: unknown) => {
+    if (!convertedSchema?.validate) {
+      // Schema doesn't support validation, consider it valid
+      return { success: true };
+    }
+
+    try {
+      const result = await convertedSchema.validate(output);
+      if (result.success) {
+        return { success: true };
+      }
+      return {
+        error: `Output validation failed for ${toolName}: ${result.error.message}`,
+        success: false,
+      };
+    } catch (error) {
+      return {
+        error: `Output validation error for ${toolName}: ${error instanceof Error ? error.message : "Unknown error"}`,
+        success: false,
+      };
+    }
+  };
 }
 
 /**

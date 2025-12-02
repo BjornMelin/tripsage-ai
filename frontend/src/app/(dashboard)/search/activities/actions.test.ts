@@ -24,9 +24,9 @@ const mockTrips = [
     flexibility: {},
     id: 1,
     name: "Trip to Paris",
-    notes: [],
     start_date: "2023-06-01T00:00:00Z",
     status: "planning",
+    tags: [],
     travelers: 1,
     trip_type: "leisure",
     updated_at: "2023-01-01T00:00:00Z",
@@ -43,6 +43,41 @@ describe("search/activities/actions", () => {
   } as unknown as TypedSupabaseClient;
   const mockFrom = mockSupabase.from as unknown as Mock;
   const mockGetUser = mockSupabase.auth.getUser as unknown as Mock;
+
+  const setupTripAndInsertMocks = (
+    options: {
+      tripData?: { id: number } | null;
+      tripError?: { message: string } | null;
+      insertError?: { code?: string; message: string } | null;
+    } = {}
+  ) => {
+    const { tripData = { id: 1 }, tripError = null, insertError = null } = options;
+
+    const mockSelectTrip = vi.fn().mockReturnThis();
+    const mockEqTrip = vi.fn().mockReturnThis();
+    const mockSingleTrip = vi
+      .fn()
+      .mockResolvedValue({ data: tripData, error: tripError });
+    const mockInsert = vi.fn().mockResolvedValue({ error: insertError });
+
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "trips") {
+        return {
+          eq: mockEqTrip,
+          select: mockSelectTrip,
+          single: mockSingleTrip,
+        } as unknown as TableClient;
+      }
+      if (table === "itinerary_items") {
+        return {
+          insert: mockInsert,
+        } as unknown as TableClient;
+      }
+      return {} as unknown as TableClient;
+    });
+
+    return { mockInsert, mockSingleTrip };
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -119,31 +154,7 @@ describe("search/activities/actions", () => {
     it("should add activity to trip and invalidate cache", async () => {
       mockGetUser.mockResolvedValue({ data: { user: mockUser } });
 
-      // Mock trip check
-      const mockSelectTrip = vi.fn().mockReturnThis();
-      const mockEqTrip = vi.fn().mockReturnThis();
-      const mockSingleTrip = vi
-        .fn()
-        .mockResolvedValue({ data: { id: 1 }, error: null });
-
-      // Mock insert
-      const mockInsert = vi.fn().mockResolvedValue({ error: null });
-
-      mockFrom.mockImplementation((table: string) => {
-        if (table === "trips") {
-          return {
-            eq: mockEqTrip,
-            select: mockSelectTrip,
-            single: mockSingleTrip,
-          } as unknown as TableClient;
-        }
-        if (table === "itinerary_items") {
-          return {
-            insert: mockInsert,
-          } as unknown as TableClient;
-        }
-        return {} as unknown as TableClient;
-      });
+      const { mockInsert } = setupTripAndInsertMocks();
 
       await addActivityToTrip(1, {
         description: "Visit the tower",
@@ -165,29 +176,7 @@ describe("search/activities/actions", () => {
     it("coerces string trip ids to numbers for validation and insert", async () => {
       mockGetUser.mockResolvedValue({ data: { user: mockUser } });
 
-      const mockSelectTrip = vi.fn().mockReturnThis();
-      const mockEqTrip = vi.fn().mockReturnThis();
-      const mockSingleTrip = vi
-        .fn()
-        .mockResolvedValue({ data: { id: 1 }, error: null });
-
-      const mockInsert = vi.fn().mockResolvedValue({ error: null });
-
-      mockFrom.mockImplementation((table: string) => {
-        if (table === "trips") {
-          return {
-            eq: mockEqTrip,
-            select: mockSelectTrip,
-            single: mockSingleTrip,
-          } as unknown as TableClient;
-        }
-        if (table === "itinerary_items") {
-          return {
-            insert: mockInsert,
-          } as unknown as TableClient;
-        }
-        return {} as unknown as TableClient;
-      });
+      const { mockInsert } = setupTripAndInsertMocks();
 
       await addActivityToTrip("1", {
         description: "Visit the tower",
@@ -205,29 +194,7 @@ describe("search/activities/actions", () => {
     it("should handle optional fields when adding an activity", async () => {
       mockGetUser.mockResolvedValue({ data: { user: mockUser } });
 
-      const mockSelectTrip = vi.fn().mockReturnThis();
-      const mockEqTrip = vi.fn().mockReturnThis();
-      const mockSingleTrip = vi
-        .fn()
-        .mockResolvedValue({ data: { id: 1 }, error: null });
-
-      const mockInsert = vi.fn().mockResolvedValue({ error: null });
-
-      mockFrom.mockImplementation((table: string) => {
-        if (table === "trips") {
-          return {
-            eq: mockEqTrip,
-            select: mockSelectTrip,
-            single: mockSingleTrip,
-          } as unknown as TableClient;
-        }
-        if (table === "itinerary_items") {
-          return {
-            insert: mockInsert,
-          } as unknown as TableClient;
-        }
-        return {} as unknown as TableClient;
-      });
+      const { mockInsert } = setupTripAndInsertMocks();
 
       await addActivityToTrip(1, {
         currency: "EUR",
@@ -260,29 +227,7 @@ describe("search/activities/actions", () => {
     it("should succeed even if cache invalidation fails", async () => {
       mockGetUser.mockResolvedValue({ data: { user: mockUser } });
 
-      const mockSelectTrip = vi.fn().mockReturnThis();
-      const mockEqTrip = vi.fn().mockReturnThis();
-      const mockSingleTrip = vi
-        .fn()
-        .mockResolvedValue({ data: { id: 1 }, error: null });
-
-      const mockInsert = vi.fn().mockResolvedValue({ error: null });
-
-      mockFrom.mockImplementation((table: string) => {
-        if (table === "trips") {
-          return {
-            eq: mockEqTrip,
-            select: mockSelectTrip,
-            single: mockSingleTrip,
-          } as unknown as TableClient;
-        }
-        if (table === "itinerary_items") {
-          return {
-            insert: mockInsert,
-          } as unknown as TableClient;
-        }
-        return {} as unknown as TableClient;
-      });
+      const { mockInsert } = setupTripAndInsertMocks();
 
       vi.mocked(bumpTag).mockRejectedValue(new Error("cache failure"));
 
@@ -300,18 +245,7 @@ describe("search/activities/actions", () => {
     it("should throw if trip not found", async () => {
       mockGetUser.mockResolvedValue({ data: { user: mockUser } });
 
-      // Mock trip check failure
-      const mockSelectTrip = vi.fn().mockReturnThis();
-      const mockEqTrip = vi.fn().mockReturnThis();
-      const mockSingleTrip = vi
-        .fn()
-        .mockResolvedValue({ data: null, error: { message: "Not found" } });
-
-      mockFrom.mockReturnValue({
-        eq: mockEqTrip,
-        select: mockSelectTrip,
-        single: mockSingleTrip,
-      } as unknown as TableClient);
+      setupTripAndInsertMocks({ tripData: null, tripError: { message: "Not found" } });
 
       await expect(addActivityToTrip(1, { title: "Test" })).rejects.toThrow(
         "Trip not found or access denied"
@@ -329,29 +263,7 @@ describe("search/activities/actions", () => {
     it("should throw if activity data is invalid", async () => {
       mockGetUser.mockResolvedValue({ data: { user: mockUser } });
 
-      const mockSelectTrip = vi.fn().mockReturnThis();
-      const mockEqTrip = vi.fn().mockReturnThis();
-      const mockSingleTrip = vi
-        .fn()
-        .mockResolvedValue({ data: { id: 1 }, error: null });
-
-      const mockInsert = vi.fn();
-
-      mockFrom.mockImplementation((table: string) => {
-        if (table === "trips") {
-          return {
-            eq: mockEqTrip,
-            select: mockSelectTrip,
-            single: mockSingleTrip,
-          } as unknown as TableClient;
-        }
-        if (table === "itinerary_items") {
-          return {
-            insert: mockInsert,
-          } as unknown as TableClient;
-        }
-        return {} as unknown as TableClient;
-      });
+      const { mockInsert } = setupTripAndInsertMocks();
 
       await expect(addActivityToTrip(1, { title: "" })).rejects.toThrow(
         /Invalid activity data/
@@ -364,30 +276,8 @@ describe("search/activities/actions", () => {
     it("should throw if insert fails", async () => {
       mockGetUser.mockResolvedValue({ data: { user: mockUser } });
 
-      const mockSelectTrip = vi.fn().mockReturnThis();
-      const mockEqTrip = vi.fn().mockReturnThis();
-      const mockSingleTrip = vi
-        .fn()
-        .mockResolvedValue({ data: { id: 1 }, error: null });
-
-      const mockInsert = vi
-        .fn()
-        .mockResolvedValue({ error: { code: "500", message: "insert failed" } });
-
-      mockFrom.mockImplementation((table: string) => {
-        if (table === "trips") {
-          return {
-            eq: mockEqTrip,
-            select: mockSelectTrip,
-            single: mockSingleTrip,
-          } as unknown as TableClient;
-        }
-        if (table === "itinerary_items") {
-          return {
-            insert: mockInsert,
-          } as unknown as TableClient;
-        }
-        return {} as unknown as TableClient;
+      setupTripAndInsertMocks({
+        insertError: { code: "500", message: "insert failed" },
       });
 
       await expect(

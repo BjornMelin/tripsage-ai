@@ -1,7 +1,12 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getServerEnv, getServerEnvVar, getServerEnvVarWithFallback } from "../server";
+import {
+  __resetServerEnvCacheForTest,
+  getServerEnv,
+  getServerEnvVar,
+  getServerEnvVarWithFallback,
+} from "../server";
 
 describe("env/server", () => {
   beforeEach(() => {
@@ -9,6 +14,7 @@ describe("env/server", () => {
     vi.stubEnv("NODE_ENV", "test");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key");
+    __resetServerEnvCacheForTest();
     vi.resetModules();
   });
 

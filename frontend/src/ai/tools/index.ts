@@ -1,9 +1,11 @@
 /**
- * @fileoverview Central tool registry for AI SDK v6.
+ * @fileoverview Central tool registry.
+ *
  * Exports all server-side tools for use in chat routes and agents and
  * provides a typed registry object for higher-level agents.
  */
 
+import type { ToolSet, TypedToolCall, TypedToolResult } from "ai";
 import {
   bookAccommodation,
   checkAvailability,
@@ -34,7 +36,6 @@ import {
   updateTravelPlan,
 } from "./server/planning";
 import { getTravelAdvisory } from "./server/travel-advisory";
-import type { AiTool } from "./server/types";
 import { getCurrentWeather } from "./server/weather";
 import { crawlSite, crawlUrl } from "./server/web-crawl";
 import { webSearch } from "./server/web-search";
@@ -74,21 +75,67 @@ export {
 };
 
 /**
- * Typed tool registry used by higher-level agents.
- *
- * Only actual AI tools (not helper utilities) are included here.
+ * Typed tool registry for AI SDK v6 generateText/streamText.
+ * Satisfies ToolSet for compile-time validation; includes only executable tools.
  */
 export const toolRegistry = {
   addConversationMemory,
+  bookAccommodation,
+  checkAvailability,
   combineSearchResults,
+  crawlSite,
+  crawlUrl,
+  createCalendarEvent,
   createTravelPlan,
+  deleteTravelPlan,
+  distanceMatrix,
+  exportItineraryToIcs,
+  geocode,
+  getAccommodationDetails,
   getActivityDetails,
+  getAvailability,
+  getCurrentWeather,
   getTravelAdvisory,
   lookupPoiContext,
   saveTravelPlan,
+  searchAccommodations,
   searchActivities,
+  searchFlights,
+  searchUserMemories,
+  updateTravelPlan,
   webSearch,
   webSearchBatch,
-} satisfies Record<string, AiTool>;
+} satisfies ToolSet;
 
-export type { AiTool };
+/** Type for the complete tool registry. */
+export type TripSageToolRegistry = typeof toolRegistry;
+
+/**
+ * Typed tool call for TripSage tools.
+ *
+ * Use for type-safe access to tool call inputs in step handlers.
+ *
+ * @example
+ * ```typescript
+ * const toolCall: TripSageToolCall = step.toolCalls[0];
+ * if (toolCall.toolName === 'searchFlights') {
+ *   console.log(toolCall.args.origin); // Type-safe access
+ * }
+ * ```
+ */
+export type TripSageToolCall = TypedToolCall<TripSageToolRegistry>;
+
+/**
+ * Typed tool result for TripSage tools.
+ *
+ * Use for type-safe access to tool results in step handlers.
+ *
+ * @example
+ * ```typescript
+ * const toolResult: TripSageToolResult = step.toolResults[0];
+ * if (toolResult.toolName === 'searchFlights') {
+ *   console.log(toolResult.result.flights); // Type-safe access
+ * }
+ * ```
+ */
+export type TripSageToolResult = TypedToolResult<TripSageToolRegistry>;

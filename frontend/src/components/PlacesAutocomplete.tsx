@@ -9,6 +9,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { getGoogleMapsBrowserKey } from "@/lib/env/client";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 
 declare global {
   interface Window {
@@ -47,6 +48,7 @@ export function PlacesAutocomplete({
 }: PlacesAutocompleteProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<
     Array<{
       placePrediction: {
@@ -65,9 +67,17 @@ export function PlacesAutocomplete({
     const apiKey = getGoogleMapsBrowserKey();
 
     if (!apiKey) {
-      console.warn(
-        "Google Maps browser API key not configured. Set NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY."
-      );
+      if (process.env.NODE_ENV === "development") {
+        console.warn(
+          "Google Maps browser API key not configured. Set NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY."
+        );
+      } else {
+        recordClientErrorOnActiveSpan(
+          new Error("Google Maps browser API key not configured"),
+          { action: "checkApiKey", context: "PlacesAutocomplete" }
+        );
+      }
+      setErrorMessage("Maps configuration error. Please try again later.");
       return;
     }
 
@@ -97,7 +107,12 @@ export function PlacesAutocomplete({
       setSessionToken(newToken);
     };
 
-    initAutocomplete().catch(console.error);
+    initAutocomplete().catch((error) => {
+      recordClientErrorOnActiveSpan(
+        error instanceof Error ? error : new Error(String(error)),
+        { action: "initAutocomplete", context: "PlacesAutocomplete" }
+      );
+    });
   }, [isLoaded]);
 
   const handleInputChange = (value: string) => {
@@ -141,7 +156,10 @@ export function PlacesAutocomplete({
 
         setSuggestions(newSuggestions);
       } catch (error) {
-        console.error("Autocomplete error:", error);
+        recordClientErrorOnActiveSpan(
+          error instanceof Error ? error : new Error(String(error)),
+          { action: "fetchSuggestions", context: "PlacesAutocomplete" }
+        );
         setSuggestions([]);
       }
     }, 300); // 300ms debounce
@@ -181,6 +199,8 @@ export function PlacesAutocomplete({
         placeId: place.id ?? "",
       });
 
+      setErrorMessage(null);
+
       // Terminate session and create new token
       const placesLibrary = await window.google.maps.importLibrary("places");
       // @ts-expect-error - AutocompleteSessionToken may not be fully typed
@@ -189,7 +209,12 @@ export function PlacesAutocomplete({
       setSessionToken(newToken);
       setSuggestions([]);
     } catch (error) {
-      console.error("Place selection error:", error);
+      recordClientErrorOnActiveSpan(
+        error instanceof Error ? error : new Error(String(error)),
+        { action: "handlePlaceSelect", context: "PlacesAutocomplete" }
+      );
+      setErrorMessage("Failed to select place. Please try again.");
+      setSuggestions([]);
     }
   };
 
@@ -204,17 +229,20 @@ export function PlacesAutocomplete({
         }}
         className="w-full rounded-md border border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
+      {errorMessage ? (
+        <p className="mt-2 text-sm text-red-600" role="alert">
+          {errorMessage}
+        </p>
+      ) : null}
       {suggestions.length > 0 && (
         <ul className="absolute z-10 mt-1 w-full rounded-md border border-gray-300 bg-white shadow-lg">
           {suggestions.map((suggestion, index) => (
             <li
               key={suggestion.placePrediction.placeId ?? index}
-              onClick={() => {
-                handlePlaceSelect(suggestion.placePrediction).catch(console.error);
-              }}
+              onClick={() => handlePlaceSelect(suggestion.placePrediction)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
-                  handlePlaceSelect(suggestion.placePrediction).catch(console.error);
+                  handlePlaceSelect(suggestion.placePrediction);
                 }
               }}
               className="cursor-pointer px-4 py-2 hover:bg-gray-100"

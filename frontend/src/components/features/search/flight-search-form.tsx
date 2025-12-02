@@ -44,6 +44,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { cn } from "@/lib/utils";
 
 // Use validated flight search params from schemas
@@ -181,7 +182,10 @@ export function FlightSearchForm({
         const validatedData = validationResult.data;
         await onSearch(validatedData);
       } catch (error) {
-        console.error("Search failed:", error);
+        recordClientErrorOnActiveSpan(
+          error instanceof Error ? error : new Error(String(error)),
+          { action: "handleSearch", context: "FlightSearchForm" }
+        );
         setFormError(
           error instanceof Error ? error.message : "Search failed. Please try again."
         );

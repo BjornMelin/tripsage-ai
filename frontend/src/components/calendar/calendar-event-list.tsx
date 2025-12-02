@@ -10,8 +10,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { listEvents } from "@/lib/calendar/google";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
-import { getClientEnvVarWithFallback } from "@/lib/env/client";
+import { createServerLogger } from "@/lib/telemetry/logger";
+
+const CalendarEventLogger = createServerLogger("component.calendar-event-list");
 
 /** Props for CalendarEventList component. */
 export interface CalendarEventListProps {
@@ -37,18 +40,6 @@ export async function CalendarEventList({
   timeMax,
   className,
 }: CalendarEventListProps) {
-  // Build query parameters
-  const params = new URLSearchParams({
-    calendarId,
-  });
-
-  if (timeMin) {
-    params.set("timeMin", DateUtils.formatForApi(timeMin));
-  }
-  if (timeMax) {
-    params.set("timeMax", DateUtils.formatForApi(timeMax));
-  }
-
   // Fetch events
   let events: Array<{
     id: string;
@@ -61,22 +52,41 @@ export async function CalendarEventList({
   }> = [];
 
   try {
-    const siteUrl = getClientEnvVarWithFallback(
-      "NEXT_PUBLIC_SITE_URL",
-      "http://localhost:3000"
-    );
-    const response = await fetch(
-      `${siteUrl}/api/calendar/events?${params.toString()}`,
-      {
-        cache: "no-store",
-      }
-    );
-    if (response.ok) {
-      const data = await response.json();
-      events = data.items || [];
-    }
+    const result = await listEvents({
+      alwaysIncludeEmail: false,
+      calendarId,
+      maxResults: 250,
+      showDeleted: false,
+      showHiddenInvitations: false,
+      singleEvents: false,
+      timeMax,
+      timeMin,
+    });
+    // Filter and map events, ensuring id is present
+    events = (result.items || [])
+      .filter((event): event is typeof event & { id: string } => Boolean(event.id))
+      .map((event) => ({
+        description: event.description,
+        end: {
+          date: event.end.date,
+          dateTime: event.end.dateTime?.toISOString(),
+        },
+        htmlLink: event.htmlLink?.toString(),
+        id: event.id,
+        location: event.location,
+        start: {
+          date: event.start.date,
+          dateTime: event.start.dateTime?.toISOString(),
+        },
+        summary: event.summary,
+      }));
   } catch (error) {
-    console.error("Failed to fetch calendar events:", error);
+    CalendarEventLogger.error("Failed to fetch calendar events", {
+      calendarId,
+      error: error instanceof Error ? error.message : String(error),
+      timeMax: timeMax?.toISOString(),
+      timeMin: timeMin?.toISOString(),
+    });
   }
 
   return (

@@ -19,6 +19,9 @@ import {
 } from "@schemas/stores";
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
+import { createStoreLogger } from "@/lib/telemetry/store-logger";
+
+const logger = createStoreLogger({ storeName: "search-params" });
 
 // Schemas are consumed directly from @schemas/stores; no local re-exports.
 
@@ -154,7 +157,7 @@ const VALIDATE_SEARCH_PARAMS = (
     }
     return true;
   } catch (error) {
-    console.error(`Validation failed for ${type}:`, error);
+    logger.error(`Validation failed for ${type}`, { error });
     return false;
   }
 };
@@ -314,7 +317,7 @@ export const useSearchParamsStore = create<SearchParamsState>()(
                 return false;
             }
           } catch (error) {
-            console.error("Failed to load params from template:", error);
+            logger.error("Failed to load params from template", { error });
             return false;
           }
         },
@@ -386,7 +389,9 @@ export const useSearchParamsStore = create<SearchParamsState>()(
           if (result.success) {
             set({ accommodationParams: result.data });
           } else {
-            console.error("Invalid accommodation parameters:", result.error);
+            logger.error("Invalid accommodation parameters", {
+              error: result.error,
+            });
           }
         },
 
@@ -395,7 +400,9 @@ export const useSearchParamsStore = create<SearchParamsState>()(
           if (result.success) {
             set({ activityParams: result.data });
           } else {
-            console.error("Invalid activity parameters:", result.error);
+            logger.error("Invalid activity parameters", {
+              error: result.error,
+            });
           }
         },
 
@@ -404,7 +411,9 @@ export const useSearchParamsStore = create<SearchParamsState>()(
           if (result.success) {
             set({ destinationParams: result.data });
           } else {
-            console.error("Invalid destination parameters:", result.error);
+            logger.error("Invalid destination parameters", {
+              error: result.error,
+            });
           }
         },
 
@@ -414,7 +423,7 @@ export const useSearchParamsStore = create<SearchParamsState>()(
           if (result.success) {
             set({ flightParams: result.data });
           } else {
-            console.error("Invalid flight parameters:", result.error);
+            logger.error("Invalid flight parameters", { error: result.error });
           }
         },
 
@@ -455,14 +464,17 @@ export const useSearchParamsStore = create<SearchParamsState>()(
               return updatedState;
             });
           } else {
-            console.error("Invalid search type:", result.error);
+            logger.error("Invalid search type", { error: result.error });
           }
         },
 
         updateAccommodationParams: (params) => {
           set((state) => ({
             isValidating: { ...state.isValidating, accommodation: true },
-            validationErrors: { ...state.validationErrors, accommodation: null },
+            validationErrors: {
+              ...state.validationErrors,
+              accommodation: null,
+            },
           }));
 
           try {
@@ -483,7 +495,10 @@ export const useSearchParamsStore = create<SearchParamsState>()(
               error instanceof Error ? error.message : "Validation failed";
             set((state) => ({
               isValidating: { ...state.isValidating, accommodation: false },
-              validationErrors: { ...state.validationErrors, accommodation: message },
+              validationErrors: {
+                ...state.validationErrors,
+                accommodation: message,
+              },
             }));
             return Promise.resolve(false);
           }
@@ -512,7 +527,10 @@ export const useSearchParamsStore = create<SearchParamsState>()(
               error instanceof Error ? error.message : "Validation failed";
             set((state) => ({
               isValidating: { ...state.isValidating, activity: false },
-              validationErrors: { ...state.validationErrors, activity: message },
+              validationErrors: {
+                ...state.validationErrors,
+                activity: message,
+              },
             }));
             return Promise.resolve(false);
           }
@@ -541,7 +559,10 @@ export const useSearchParamsStore = create<SearchParamsState>()(
               error instanceof Error ? error.message : "Validation failed";
             set((state) => ({
               isValidating: { ...state.isValidating, destination: false },
-              validationErrors: { ...state.validationErrors, destination: message },
+              validationErrors: {
+                ...state.validationErrors,
+                destination: message,
+              },
             }));
             return Promise.resolve(false);
           }

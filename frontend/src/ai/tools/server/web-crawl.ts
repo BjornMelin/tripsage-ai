@@ -358,7 +358,7 @@ export const crawlUrl = tool({
   inputSchema: z.strictObject({
     fresh: z.boolean().default(false).describe("Whether to bypass cached results"),
     scrapeOptions: scrapeOptionsSchema.describe("Scraping configuration options"),
-    url: z.string().url().describe("URL to crawl"),
+    url: z.url().describe("URL to crawl"),
   }),
 });
 

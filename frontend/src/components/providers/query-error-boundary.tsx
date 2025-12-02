@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { Button } from "@/components/ui/button";
 import { getErrorMessage, isApiError, isNetworkError } from "@/lib/api/error-types";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 
 interface QueryErrorFallbackProps {
   error: Error;
@@ -203,12 +204,18 @@ export function UseQueryErrorHandler() {
   const { reset } = useQueryErrorResetBoundary();
 
   const handleError = (error: unknown) => {
-    console.error("Query error:", error);
-
-    // Log to external service in production
-    if (process.env.NODE_ENV === "production") {
-      // TODO: Integrate with error reporting service (Sentry, LogRocket, etc.)
+    try {
+      recordClientErrorOnActiveSpan(
+        error instanceof Error ? error : new Error(String(error)),
+        { action: "handleError", context: "QueryErrorBoundary" }
+      );
+    } catch {
+      // Silently ignore telemetry failures to prevent error handler from breaking
     }
+
+    // Production error reporting is handled via OTEL spans recorded above.
+    // The recordClientErrorOnActiveSpan call ensures errors are captured
+    // in the distributed tracing system for observability.
   };
 
   const retryQuery = () => {
