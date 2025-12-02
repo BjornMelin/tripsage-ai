@@ -316,6 +316,10 @@ export function openActivityBooking(activity: ActivityWithMetadata): boolean {
     return false;
   }
 
+  if (!url.startsWith("http://") && !url.startsWith("https://")) {
+    return false;
+  }
+
   window.open(url, "_blank", "noopener,noreferrer");
   return true;
 }

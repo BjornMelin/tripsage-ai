@@ -19,7 +19,27 @@ type ActivityTelemetryPayload = {
   level?: "info" | "warning" | "error";
 };
 
+/** Constants for telemetry validation. */
+const MAX_ATTRIBUTE_ENTRIES = 25;
 const EVENT_NAME_PATTERN = /^[a-z][a-z0-9._]{0,99}$/i;
+
+/**
+ * Validates the attributes object to ensure it only contains primitive values.
+ *
+ * @param attributes - The attributes object to validate.
+ * @returns True if the attributes are valid, false otherwise.
+ */
+function validateAttributes(
+  attributes?: Record<string, unknown>
+): attributes is Record<string, string | number | boolean> {
+  if (!attributes) return true;
+  const entries = Object.entries(attributes);
+  if (entries.length > MAX_ATTRIBUTE_ENTRIES) return false;
+  return entries.every(([, value]) => {
+    const valueType = typeof value;
+    return valueType === "string" || valueType === "number" || valueType === "boolean";
+  });
+}
 
 /**
  * Record booking-related telemetry events from client interactions.
@@ -45,6 +65,13 @@ export const POST = withApiGuards({
   ) {
     return NextResponse.json(
       { ok: false, reason: "eventName required and must match pattern" },
+      { status: 400 }
+    );
+  }
+
+  if (!validateAttributes(attributes)) {
+    return NextResponse.json(
+      { ok: false, reason: "attributes must be primitives and <=25 entries" },
       { status: 400 }
     );
   }

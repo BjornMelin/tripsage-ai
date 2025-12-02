@@ -61,4 +61,43 @@ describe("POST /api/telemetry/activities", () => {
     expect(body.reason).toContain("pattern");
     expect(recordTelemetryEvent).not.toHaveBeenCalled();
   });
+
+  it("rejects non-primitive attributes", async () => {
+    const { POST } = await import("../route");
+
+    const request = createMockNextRequest({
+      body: { attributes: { nested: { bad: true } }, eventName: "activities.test" },
+      method: "POST",
+      url: "http://localhost/api/telemetry/activities",
+    });
+
+    const response = await POST(request, createRouteParamsContext());
+    const body = (await response.json()) as { ok: boolean; reason: string };
+
+    expect(response.status).toBe(400);
+    expect(body.ok).toBe(false);
+    expect(body.reason).toContain("attributes");
+    expect(recordTelemetryEvent).not.toHaveBeenCalled();
+  });
+
+  it("rejects excessive attribute entries", async () => {
+    const { POST } = await import("../route");
+
+    const attributes = Object.fromEntries(
+      Array.from({ length: 26 }, (_v, i) => [`k${i}`, i])
+    );
+    const request = createMockNextRequest({
+      body: { attributes, eventName: "activities.test" },
+      method: "POST",
+      url: "http://localhost/api/telemetry/activities",
+    });
+
+    const response = await POST(request, createRouteParamsContext());
+    const body = (await response.json()) as { ok: boolean; reason: string };
+
+    expect(response.status).toBe(400);
+    expect(body.ok).toBe(false);
+    expect(body.reason).toContain("attributes");
+    expect(recordTelemetryEvent).not.toHaveBeenCalled();
+  });
 });
