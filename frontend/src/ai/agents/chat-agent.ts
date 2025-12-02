@@ -8,7 +8,7 @@
 
 import "server-only";
 
-import * as tools from "@ai/tools";
+import { toolRegistry } from "@ai/tools";
 import { wrapToolsWithUserId } from "@ai/tools/server/injection";
 import type { ModelMessage, ToolSet, UIMessage } from "ai";
 import { convertToModelMessages } from "ai";
@@ -176,7 +176,7 @@ export function createChatAgent(
 
   // Build tools with user ID injection for user-scoped operations
   const chatTools = wrapToolsWithUserId(
-    { ...tools },
+    toolRegistry,
     deps.userId,
     userScopedTools,
     deps.sessionId

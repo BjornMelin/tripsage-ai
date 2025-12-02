@@ -333,12 +333,14 @@ describe("handleChatStream", () => {
 
     // Test the captured onError callback
     expect(capturedOnError).toBeDefined();
-    const errorMsg = capturedOnError(new Error("Test error"));
-    expect(errorMsg).toBe("An error occurred while processing your request.");
-    expect(logger.error).toHaveBeenCalledWith(
-      "chat_stream:error",
-      expect.objectContaining({ message: "Test error" })
-    );
+    if (capturedOnError) {
+      const errorMsg = capturedOnError(new Error("Test error"));
+      expect(errorMsg).toBe("An error occurred while processing your request.");
+      expect(logger.error).toHaveBeenCalledWith(
+        "chat_stream:error",
+        expect.objectContaining({ message: "Test error" })
+      );
+    }
   });
 
   it("logs start and finish events", async () => {
@@ -382,29 +384,31 @@ describe("handleChatStream", () => {
 
     // Test the captured onFinish callback
     expect(capturedOnFinish).toBeDefined();
-    const streamedMessages: UIMessage[] = [
-      {
-        id: "a1",
-        parts: [{ text: "hello", type: "text" }],
-        role: "assistant",
-      },
-    ];
-    await capturedOnFinish({
-      finishReason: "stop",
-      messages: streamedMessages,
-      usage: { totalTokens: 100 },
-    });
-    expect(logger.info).toHaveBeenCalledWith(
-      "chat_stream:finish",
-      expect.objectContaining({
+    if (capturedOnFinish) {
+      const streamedMessages: UIMessage[] = [
+        {
+          id: "a1",
+          parts: [{ text: "hello", type: "text" }],
+          role: "assistant",
+        },
+      ];
+      await capturedOnFinish({
         finishReason: "stop",
-      })
-    );
-    expect(persistMemoryTurn).toHaveBeenCalledWith(
-      expect.objectContaining({
-        sessionId: "s9",
-        userId: "u9",
-      })
-    );
+        messages: streamedMessages,
+        usage: { totalTokens: 100 },
+      });
+      expect(logger.info).toHaveBeenCalledWith(
+        "chat_stream:finish",
+        expect.objectContaining({
+          finishReason: "stop",
+        })
+      );
+      expect(persistMemoryTurn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sessionId: "s9",
+          userId: "u9",
+        })
+      );
+    }
   });
 });

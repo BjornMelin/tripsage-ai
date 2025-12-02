@@ -92,10 +92,16 @@ export async function submitChatMessage(input: ChatInput) {
         clearTimeout(timeout);
       }
 
+      // Handle empty buffer case with placeholder text
+      const messageText =
+        buffer.trim().length > 0
+          ? buffer
+          : "I apologize, but I couldn't generate a response. Please try again.";
+
       const assistantMessage: UIMessage = {
         id: secureUuid(),
         metadata: parsed.metadata,
-        parts: [{ text: buffer, type: "text" }],
+        parts: [{ text: messageText, type: "text" }],
         role: "assistant",
       };
 
