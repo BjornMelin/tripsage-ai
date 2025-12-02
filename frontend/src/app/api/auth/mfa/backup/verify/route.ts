@@ -29,9 +29,9 @@ export const POST = withApiGuards({
   if (!user) {
     return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
   }
+  const ip = getClientIpFromHeaders(req);
   try {
     const admin = getAdminSupabase();
-    const ip = getClientIpFromHeaders(req);
     const userAgent = req.headers.get("user-agent") ?? undefined;
     const result = await verifyBackupCode(admin, user.id, data.code, {
       ip,
@@ -41,7 +41,7 @@ export const POST = withApiGuards({
   } catch (error) {
     const invalid = error instanceof InvalidBackupCodeError;
     logger.error("backup code verification failed", {
-      ip: getClientIpFromHeaders(req),
+      ip,
       reason: invalid ? error.message : "internal_error",
       timestamp: nowIso(),
       userId: user.id,

@@ -21,13 +21,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { secureId } from "@/lib/security/random";
 import { cn } from "@/lib/utils";
 
 /** The UI message. */
-type UIMessage =
-  | { type: "info"; text: string }
-  | { type: "error"; text: string }
-  | { type: "success"; text: string };
+type UIMessage = {
+  id: string;
+  text: string;
+  type: "info" | "error" | "success";
+};
 
 /** The MFA panel props. */
 type MfaPanelProps = {
@@ -63,8 +65,9 @@ export function MfaPanel({ userEmail, initialAal, factors, loadError }: MfaPanel
   const backupInputId = useId();
 
   /** Pushes a message to the messages state. */
-  const pushMessage = (msg: UIMessage) => {
-    setMessages((prev) => [...prev.slice(-3), msg]);
+  const pushMessage = (msg: Omit<UIMessage, "id">) => {
+    const message: UIMessage = { ...msg, id: secureId() };
+    setMessages((prev) => [...prev.slice(-3), message]);
   };
 
   /** Calls the JSON API. */
@@ -119,6 +122,9 @@ export function MfaPanel({ userEmail, initialAal, factors, loadError }: MfaPanel
   /** Begins the enrollment. */
   const beginEnrollment = () => {
     startTransition(async () => {
+      setQrCode(null);
+      setChallengeId(null);
+      setFactorId(null);
       try {
         const data = await callJson<{
           challengeId: string;
@@ -133,6 +139,9 @@ export function MfaPanel({ userEmail, initialAal, factors, loadError }: MfaPanel
           type: "info",
         });
       } catch (error) {
+        setQrCode(null);
+        setChallengeId(null);
+        setFactorId(null);
         pushMessage({
           text: error instanceof Error ? error.message : "Failed to start enrollment",
           type: "error",
@@ -446,9 +455,9 @@ export function MfaPanel({ userEmail, initialAal, factors, loadError }: MfaPanel
 
           {messages.length > 0 && (
             <div className="space-y-2">
-              {messages.map((msg, idx) => (
+              {messages.map((msg) => (
                 <Alert
-                  key={`${msg.text}-${idx}`}
+                  key={msg.id}
                   variant={msg.type === "error" ? "destructive" : "default"}
                 >
                   <AlertDescription className="flex items-center gap-2">

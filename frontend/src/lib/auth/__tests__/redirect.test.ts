@@ -22,14 +22,17 @@ describe("resolveRedirectUrl", () => {
 
   it("allows hosts on the allowlist", () => {
     const prev = process.env.NEXT_PUBLIC_SITE_URL;
-    process.env.NEXT_PUBLIC_SITE_URL = "https://app.example.com";
-    expect(resolveRedirectUrl("https://app.example.com/ok")).toBe(
-      "https://app.example.com/ok"
-    );
-    if (prev === undefined) {
-      Reflect.deleteProperty(process.env, "NEXT_PUBLIC_SITE_URL");
-    } else {
-      process.env.NEXT_PUBLIC_SITE_URL = prev;
+    try {
+      process.env.NEXT_PUBLIC_SITE_URL = "https://app.example.com";
+      expect(resolveRedirectUrl("https://app.example.com/ok")).toBe(
+        "https://app.example.com/ok"
+      );
+    } finally {
+      if (prev === undefined) {
+        Reflect.deleteProperty(process.env, "NEXT_PUBLIC_SITE_URL");
+      } else {
+        process.env.NEXT_PUBLIC_SITE_URL = prev;
+      }
     }
   });
 });
