@@ -2,10 +2,211 @@
  * @fileoverview Activity booking helpers.
  *
  * Provides external booking link resolution and minimal booking flow support.
- * Per SPEC-0030 Phase 4: no partner/approval-based APIs, external links only.
  */
 
 import type { Activity } from "@schemas/search";
+
+/** Structured attributes carried with booking telemetry events. */
+type TelemetryAttributes = Record<string, string | number | boolean>;
+
+/** Known booking domains to prioritize in URL extraction. */
+const BOOKING_DOMAINS = [
+  "airbnb.com",
+  "booking.com",
+  "expedia.com",
+  "getyourguide.com",
+  "klook.com",
+  "orbitz.com",
+  "priceline.com",
+  "toursbylocals.com",
+  "travelocity.com",
+  "tripadvisor.com",
+  "viator.com",
+] as const;
+
+/** Regular expression to match valid HTTP/HTTPS URLs. */
+const URL_PATTERN = /https?:\/\/[^\s<>"']+/gi;
+
+/** Activity type with optional metadata field. */
+type ActivityWithMetadata = Activity & { metadata?: unknown };
+
+/**
+ * Return true when hostname is an IPv4/IPv6 literal (blocks all IP-based hosts).
+ *
+ * @param hostname Hostname string from a parsed URL.
+ * @returns True if hostname is any IP literal.
+ */
+function isIpAddressHost(hostname: string): boolean {
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(hostname)) {
+    return true;
+  }
+  // IPv6 (plain or bracketed)
+  if (/^\[?[0-9a-f:]+\]?$/i.test(hostname)) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Validate a URL string and return a URL object if valid.
+ *
+ * @param candidate URL string to validate.
+ * @returns URL object if valid, null otherwise.
+ */
+function validateUrl(candidate: string): URL | null {
+  try {
+    const parsed = new URL(candidate);
+    const { protocol, hostname } = parsed;
+
+    if (protocol !== "http:" && protocol !== "https:") return null;
+    if (hostname === "localhost" || hostname.endsWith(".local")) return null;
+    if (isIpAddressHost(hostname)) return null;
+
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Return true if hostname matches a known booking domain or its subdomain.
+ *
+ * @param hostname Hostname to evaluate.
+ * @returns True when hostname is within the booking allowlist.
+ */
+function hasKnownBookingDomain(hostname: string): boolean {
+  const normalized = hostname.toLowerCase().replace(/\.$/, "");
+  return BOOKING_DOMAINS.some((domain) => {
+    const normalizedDomain = domain.toLowerCase();
+    return (
+      normalized === normalizedDomain || normalized.endsWith(`.${normalizedDomain}`)
+    );
+  });
+}
+
+/**
+ * Extract valid http/https URLs from freeform text.
+ *
+ * @param text Source text to scan.
+ * @returns Array of normalized URLs.
+ */
+function extractUrlsFromText(text?: string): string[] {
+  if (!text) return [];
+  const matches = text.match(URL_PATTERN);
+  if (!matches) return [];
+
+  const seen = new Set<string>();
+  for (const raw of matches) {
+    const parsed = validateUrl(raw);
+    if (parsed) {
+      const normalized = parsed.toString();
+      if (!seen.has(normalized)) {
+        seen.add(normalized);
+      }
+    }
+  }
+
+  return Array.from(seen);
+}
+
+/**
+ * Extract and validate a booking-like URL from activity metadata.
+ *
+ * @param metadata Activity metadata object.
+ * @returns First valid URL or null.
+ */
+function extractMetadataUrl(metadata: unknown): string | null {
+  if (!metadata || typeof metadata !== "object") return null;
+  const record = metadata as Record<string, unknown>;
+  const candidates = [
+    record.bookingUrl,
+    record.url,
+    record.link,
+    record.website,
+  ].filter((value): value is string => typeof value === "string" && value.length > 0);
+
+  for (const candidate of candidates) {
+    const parsed = validateUrl(candidate);
+    if (parsed) {
+      return parsed.toString();
+    }
+  }
+  return null;
+}
+
+/**
+ * Choose best URL preferring known booking hosts; fall back to first valid.
+ *
+ * @param candidates Candidate URL strings.
+ * @returns Selected URL or null.
+ */
+function pickBestUrl(candidates: string[]): string | null {
+  const valid = candidates.map(validateUrl).filter((url): url is URL => url !== null);
+
+  if (valid.length === 0) return null;
+
+  const prioritized = valid.find((url) => hasKnownBookingDomain(url.hostname));
+  return (prioritized ?? valid[0]).toString();
+}
+
+/**
+ * Build a Google Maps search URL from coordinates or name/location as fallback.
+ *
+ * @param activity Activity containing coordinates or name/location.
+ * @returns A Google Maps search URL or null.
+ */
+function buildMapSearchUrl(activity: ActivityWithMetadata): string | null {
+  if (activity.coordinates) {
+    const { lat, lng } = activity.coordinates;
+    return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+  }
+
+  const queryParts: string[] = [];
+  if (activity.name) queryParts.push(activity.name);
+  if (activity.location) queryParts.push(activity.location);
+  if (!queryParts.length) return null;
+
+  const query = encodeURIComponent(queryParts.join(" "));
+  return `https://www.google.com/maps/search/?api=1&query=${query}`;
+}
+
+/** Emit booking telemetry (client via beacon/fetch, server via OTEL). */
+async function recordBookingEvent(
+  eventName: string,
+  attributes?: TelemetryAttributes,
+  level: "info" | "warning" | "error" = "info"
+): Promise<void> {
+  // Client: fire-and-forget to telemetry endpoint to capture real user clicks.
+  if (typeof window !== "undefined") {
+    try {
+      const payload = JSON.stringify({ attributes, eventName, level });
+      if (
+        typeof navigator !== "undefined" &&
+        typeof navigator.sendBeacon === "function"
+      ) {
+        navigator.sendBeacon("/api/telemetry/activities", payload);
+      } else {
+        fetch("/api/telemetry/activities", {
+          body: payload,
+          headers: { "Content-Type": "application/json" },
+          keepalive: true,
+          method: "POST",
+        }).catch(() => undefined);
+      }
+    } catch {
+      // Client telemetry is best-effort; ignore failures.
+    }
+    return;
+  }
+
+  // Server: record span-based telemetry.
+  try {
+    const telemetry = await import("@/lib/telemetry/span");
+    telemetry.recordTelemetryEvent(eventName, { attributes, level });
+  } catch {
+    // Telemetry is best-effort; swallow errors to avoid impacting runtime.
+  }
+}
 
 /**
  * Resolves an external booking URL for an activity.
@@ -16,222 +217,58 @@ import type { Activity } from "@schemas/search";
  * @param activity - Activity to get booking URL for.
  * @returns External booking URL or null if unavailable.
  */
-export function getActivityBookingUrl(activity: Activity): string | null {
-  // For Google Places activities, use Google Maps URL
+export function getActivityBookingUrl(activity: ActivityWithMetadata): string | null {
   if (!activity.id.startsWith("ai_fallback:")) {
-    // Google Maps place URL format: https://www.google.com/maps/place/?q=place_id:{placeId}
-    return `https://www.google.com/maps/place/?q=place_id:${activity.id}`;
+    const url = `https://www.google.com/maps/place/?q=place_id:${activity.id}`;
+    recordBookingEvent("activities.booking.url_resolved", {
+      activityId: activity.id,
+      domain: "google.com",
+      method: "place_id",
+    }).catch(() => {
+      /* telemetry is best-effort */
+    });
+    return url;
   }
 
-  /**
-   * TODO: Implement robust URL extraction from AI fallback activity descriptions.
-   *
-   * IMPLEMENTATION PLAN (Decision Framework Score: 9.0/10.0)
-   * ===========================================================
-   *
-   * ARCHITECTURE DECISIONS:
-   * -----------------------
-   * 1. URL Extraction Method: Use regex pattern matching (lightweight, no dependencies)
-   *    - Pattern: Match `https?://` URLs and common domain patterns
-   *    - Rationale: Simple, fast, no external dependencies; sufficient for most cases
-   *    - Alternative: Consider URL parsing library if validation becomes complex
-   *
-   * 2. URL Validation: Basic validation (format, domain presence)
-   *    - Check URL format using URL constructor
-   *    - Filter out obviously invalid domains (localhost, IP addresses for booking)
-   *    - Rationale: Balance between safety and simplicity
-   *
-   * 3. URL Selection: Prioritize booking-related domains
-   *    - Prefer URLs from known booking domains (viator, getyourguide, tripadvisor, etc.)
-   *    - Fall back to first valid URL if no booking domain found
-   *    - Rationale: Improves user experience by directing to booking sites
-   *
-   * IMPLEMENTATION STEPS:
-   * ---------------------
-   *
-   * Step 1: Define URL Extraction Regex Pattern
-   *   ```typescript
-   *   // Comprehensive URL regex pattern
-   *   const URL_REGEX = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9@:%_+.~#?&/=]*)/gi;
-   *
-   *   // Alternative: More permissive pattern for URLs without protocol
-   *   const URL_WITHOUT_PROTOCOL_REGEX = /(?:www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9@:%_+.~#?&/=]*)/gi;
-   *   ```
-   *
-   * Step 2: Implement URL Extraction Function
-   *   ```typescript
-   *   function extractUrlsFromText(text: string): string[] {
-   *     if (!text) return [];
-   *
-   *     const urls: string[] = [];
-   *     const matches = text.match(URL_REGEX);
-   *
-   *     if (matches) {
-   *       for (const match of matches) {
-   *         try {
-   *           // Validate URL format
-   *           const url = new URL(match);
-   *           // Filter out invalid domains
-   *           if (isValidBookingDomain(url.hostname)) {
-   *             urls.push(url.toString());
-   *           }
-   *         } catch {
-   *           // Invalid URL format, skip
-   *           continue;
-   *         }
-   *       }
-   *     }
-   *
-   *     // If no URLs with protocol found, try without protocol
-   *     if (urls.length === 0) {
-   *       const matchesWithoutProtocol = text.match(URL_WITHOUT_PROTOCOL_REGEX);
-   *       if (matchesWithoutProtocol) {
-   *         for (const match of matchesWithoutProtocol) {
-   *           try {
-   *             const url = new URL(`https://${match}`);
-   *             if (isValidBookingDomain(url.hostname)) {
-   *               urls.push(url.toString());
-   *             }
-   *           } catch {
-   *             continue;
-   *           }
-   *         }
-   *       }
-   *     }
-   *
-   *     return urls;
-   *   }
-   *   ```
-   *
-   * Step 3: Implement Domain Validation
-   *   ```typescript
-   *   const BOOKING_DOMAINS = [
-   *     "viator.com",
-   *     "getyourguide.com",
-   *     "tripadvisor.com",
-   *     "expedia.com",
-   *     "booking.com",
-   *     "klook.com",
-   *     "airbnb.com",
-   *     "toursbylocals.com",
-   *   ];
-   *
-   *   function isValidBookingDomain(hostname: string): boolean {
-   *     // Reject localhost, IP addresses, and obviously invalid domains
-   *     if (hostname === "localhost" || /^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
-   *       return false;
-   *     }
-   *
-   *     // Check if domain is a known booking domain
-   *     const isKnownBookingDomain = BOOKING_DOMAINS.some((domain) =>
-   *       hostname.includes(domain)
-   *     );
-   *
-   *     // Accept known booking domains or any valid domain (for flexibility)
-   *     return isKnownBookingDomain || hostname.includes(".");
-   *   }
-   *   ```
-   *
-   * Step 4: Implement URL Selection Logic
-   *   ```typescript
-   *   function selectBestBookingUrl(urls: string[]): string | null {
-   *     if (urls.length === 0) return null;
-   *
-   *     // Prioritize known booking domains
-   *     for (const url of urls) {
-   *       try {
-   *         const urlObj = new URL(url);
-   *         const isKnownBookingDomain = BOOKING_DOMAINS.some((domain) =>
-   *           urlObj.hostname.includes(domain)
-   *         );
-   *         if (isKnownBookingDomain) {
-   *           return url;
-   *         }
-   *       } catch {
-   *         continue;
-   *       }
-   *     }
-   *
-   *     // Fall back to first valid URL
-   *     return urls[0] ?? null;
-   *   }
-   *   ```
-   *
-   * Step 5: Update getActivityBookingUrl Function
-   *   ```typescript
-   *   // For AI fallback activities, extract URL from description
-   *   const description = activity.description ?? "";
-   *   const urls = extractUrlsFromText(description);
-   *   const selectedUrl = selectBestBookingUrl(urls);
-   *
-   *   if (selectedUrl) {
-   *     // Add telemetry for successful URL extraction
-   *     recordTelemetryEvent("activity.booking.url_extracted", {
-   *       activity_id: activity.id,
-   *       url_domain: new URL(selectedUrl).hostname,
-   *       extraction_method: "description_parsing",
-   *     });
-   *     return selectedUrl;
-   *   }
-   *
-   *   // Also check activity metadata if available
-   *   if (activity.metadata && typeof activity.metadata === "object") {
-   *     const metadataUrl = (activity.metadata as Record<string, unknown>).bookingUrl;
-   *     if (typeof metadataUrl === "string" && isValidUrl(metadataUrl)) {
-   *       return metadataUrl;
-   *     }
-   *   }
-   *
-   *   // No valid URL found
-   *   recordTelemetryEvent("activity.booking.url_not_found", {
-   *     activity_id: activity.id,
-   *   });
-   *   return null;
-   *   ```
-   *
-   * INTEGRATION POINTS:
-   * -------------------
-   * - Activity Schema: Use `activity.description` and `activity.metadata` fields
-   * - URL Validation: Use native `URL` constructor for format validation
-   * - Telemetry: Use `recordTelemetryEvent` from `@/lib/telemetry/span` for tracking
-   * - Error Handling: Gracefully handle invalid URLs, return null on failure
-   *
-   * PERFORMANCE CONSIDERATIONS:
-   * ---------------------------
-   * - Regex matching is fast for typical description lengths (< 1000 chars)
-   * - URL validation is synchronous and lightweight
-   * - Consider caching extracted URLs if same activity is accessed multiple times
-   *
-   * SECURITY CONSIDERATIONS:
-   * ------------------------
-   * - Validate all URLs before returning (prevent XSS via malicious URLs)
-   * - Filter out localhost and IP addresses (not suitable for booking)
-   * - Consider adding allowlist of trusted booking domains in production
-   * - Sanitize URLs before displaying in UI
-   *
-   * USER EXPERIENCE:
-   * ----------------
-   * - Show warning in UI when using AI-extracted URLs: "This link was extracted from activity description and may not be verified"
-   * - Prefer known booking domains for better user trust
-   * - Fall back gracefully when no URL found (show "No booking link available")
-   *
-   * TESTING REQUIREMENTS:
-   * ---------------------
-   * - Unit test: URL extraction from various description formats
-   * - Unit test: URL validation and domain filtering
-   * - Unit test: URL selection logic (prioritize booking domains)
-   * - Edge cases: Empty descriptions, malformed URLs, multiple URLs, no URLs
-   *
-   * FUTURE ENHANCEMENTS:
-   * -------------------
-   * - Add AI-powered URL extraction using LLM if regex fails
-   * - Cache extracted URLs in activity metadata to avoid re-parsing
-   * - Add URL verification (check if URL is accessible)
-   * - Support extracting URLs from activity images (OCR)
-   *
-   * For AI fallback, try to extract URL from description or return null
-   * (AI fallback activities don't have reliable booking URLs)
-   */
+  const metadataUrl = extractMetadataUrl(activity.metadata);
+  const descriptionUrls = extractUrlsFromText(activity.description);
+  const bestUrl = pickBestUrl(
+    [metadataUrl, ...descriptionUrls].filter(
+      (url): url is string => typeof url === "string"
+    )
+  );
+
+  if (bestUrl) {
+    const domain = validateUrl(bestUrl)?.hostname ?? "unknown";
+    recordBookingEvent("activities.booking.url_resolved", {
+      activityId: activity.id,
+      domain,
+      method: "ai_extracted",
+    }).catch(() => {
+      /* telemetry is best-effort */
+    });
+    return bestUrl;
+  }
+
+  const mapFallback = buildMapSearchUrl(activity);
+  if (mapFallback) {
+    recordBookingEvent("activities.booking.url_resolved", {
+      activityId: activity.id,
+      domain: "google.com",
+      method: "map_fallback",
+    }).catch(() => {
+      /* telemetry is best-effort */
+    });
+    return mapFallback;
+  }
+
+  recordBookingEvent(
+    "activities.booking.url_missing",
+    { activityId: activity.id },
+    "warning"
+  ).catch(() => {
+    /* telemetry is best-effort */
+  });
   return null;
 }
 
@@ -241,13 +278,12 @@ export function getActivityBookingUrl(activity: Activity): string | null {
  * @param activity - Activity to book.
  * @returns True if URL was opened, false if unavailable.
  */
-export function openActivityBooking(activity: Activity): boolean {
+export function openActivityBooking(activity: ActivityWithMetadata): boolean {
   const url = getActivityBookingUrl(activity);
-  if (!url) {
+  if (!url || typeof window === "undefined") {
     return false;
   }
 
-  // Open in new tab
   window.open(url, "_blank", "noopener,noreferrer");
   return true;
 }

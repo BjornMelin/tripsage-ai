@@ -25,10 +25,10 @@ describe("booking helpers", () => {
       );
     });
 
-    it("should return null for AI fallback activities", () => {
+    it("should extract booking URL from description for AI fallback activities", () => {
       const activity = {
         date: "2025-01-01",
-        description: "Test",
+        description: "Book now at https://www.getyourguide.com/awesome-tour",
         duration: 120,
         id: "ai_fallback:abc123",
         location: "Test Location",
@@ -40,7 +40,45 @@ describe("booking helpers", () => {
 
       const url = getActivityBookingUrl(activity);
 
-      expect(url).toBeNull();
+      expect(url).toBe("https://www.getyourguide.com/awesome-tour");
+    });
+
+    it("should use metadata bookingUrl when provided", () => {
+      const activity = {
+        date: "2025-01-01",
+        description: "No links here",
+        duration: 120,
+        id: "ai_fallback:meta1",
+        location: "Test Location",
+        metadata: { bookingUrl: "https://www.viator.com/some-tour" },
+        name: "AI Suggested Activity",
+        price: 2,
+        rating: 0,
+        type: "activity",
+      };
+
+      const url = getActivityBookingUrl(activity);
+
+      expect(url).toBe("https://www.viator.com/some-tour");
+    });
+
+    it("should fall back to maps search when no booking URL exists", () => {
+      const activity = {
+        coordinates: { lat: 40.0, lng: -70.0 },
+        date: "2025-01-01",
+        description: "No links here",
+        duration: 120,
+        id: "ai_fallback:nolink",
+        location: "Test Location",
+        name: "AI Suggested Activity",
+        price: 2,
+        rating: 0,
+        type: "activity",
+      };
+
+      const url = getActivityBookingUrl(activity);
+
+      expect(url).toBe("https://www.google.com/maps/search/?api=1&query=40,-70");
     });
   });
 
@@ -73,7 +111,7 @@ describe("booking helpers", () => {
       );
     });
 
-    it("should return false for AI fallback activities", () => {
+    it("should open maps search when no AI booking URL exists", () => {
       const activity = {
         date: "2025-01-01",
         description: "Test",
@@ -88,8 +126,35 @@ describe("booking helpers", () => {
 
       const result = openActivityBooking(activity);
 
-      expect(result).toBe(false);
-      expect(window.open).not.toHaveBeenCalled();
+      expect(result).toBe(true);
+      expect(window.open).toHaveBeenCalledWith(
+        expect.stringContaining("https://www.google.com/maps/search/?api=1&query="),
+        "_blank",
+        "noopener,noreferrer"
+      );
+    });
+
+    it("should open extracted AI booking URL when available", () => {
+      const activity = {
+        date: "2025-01-01",
+        description: "Check https://www.tripadvisor.com/booking-link",
+        duration: 120,
+        id: "ai_fallback:booking123",
+        location: "Test Location",
+        name: "AI Suggested Activity",
+        price: 2,
+        rating: 0,
+        type: "activity",
+      };
+
+      const result = openActivityBooking(activity);
+
+      expect(result).toBe(true);
+      expect(window.open).toHaveBeenCalledWith(
+        "https://www.tripadvisor.com/booking-link",
+        "_blank",
+        "noopener,noreferrer"
+      );
     });
   });
 });
