@@ -552,7 +552,7 @@ const basePath = getClientEnvVarWithFallback("NEXT_PUBLIC_BASE_PATH", "");
 **Never** use `process.env` directly in application code. Always use the
 env helpers.
 
-See `src/lib/env/schema.ts` for the full list of supported variables.
+See `src/domain/schemas/env.ts` for the full list of supported variables.
 
 ### HTTP Client (Unified)
 
