@@ -68,17 +68,21 @@ vi.mock("@/lib/tokens/limits", () => ({
 }));
 
 // Mock AI tools
-vi.mock("@ai/tools", () => ({
-  crawlSite: { description: "crawl", execute: vi.fn() },
-  distanceMatrix: { description: "distance", execute: vi.fn() },
-  geocode: { description: "geocode", execute: vi.fn() },
-  getCurrentWeather: { description: "weather", execute: vi.fn() },
-  getTravelAdvisory: { description: "advisory", execute: vi.fn() },
-  lookupPoiContext: { description: "poi", execute: vi.fn() },
-  searchFlights: { description: "flights", execute: vi.fn() },
-  webSearch: { description: "web search", execute: vi.fn() },
-  webSearchBatch: { description: "batch search", execute: vi.fn() },
-}));
+const mockTools = vi.hoisted(() => {
+  const tools = {
+    crawlSite: { description: "crawl", execute: vi.fn() },
+    distanceMatrix: { description: "distance", execute: vi.fn() },
+    geocode: { description: "geocode", execute: vi.fn() },
+    getCurrentWeather: { description: "weather", execute: vi.fn() },
+    getTravelAdvisory: { description: "advisory", execute: vi.fn() },
+    lookupPoiContext: { description: "poi", execute: vi.fn() },
+    searchFlights: { description: "flights", execute: vi.fn() },
+    webSearch: { description: "web search", execute: vi.fn() },
+    webSearchBatch: { description: "batch search", execute: vi.fn() },
+  };
+  return { toolRegistry: tools, tools };
+});
+vi.mock("@ai/tools", () => mockTools);
 
 // Mock tool injection
 vi.mock("@ai/tools/server/injection", () => ({

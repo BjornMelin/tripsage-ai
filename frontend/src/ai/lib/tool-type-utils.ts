@@ -45,30 +45,6 @@ export type InferToolOutput<T> = T extends {
   : unknown;
 
 /**
- * Extract tool call types from a ToolSet or tool builder function.
- *
- * @example
- * ```typescript
- * const tools = buildAgentTools();
- * type AgentToolCall = ExtractToolCall<typeof tools>;
- * ```
- */
-export type ExtractToolCall<T extends import("ai").ToolSet> =
-  import("ai").TypedToolCall<T>;
-
-/**
- * Extract tool result types from a ToolSet or tool builder function.
- *
- * @example
- * ```typescript
- * const tools = buildAgentTools();
- * type AgentToolResult = ExtractToolResult<typeof tools>;
- * ```
- */
-export type ExtractToolResult<T extends import("ai").ToolSet> =
-  import("ai").TypedToolResult<T>;
-
-/**
  * Type guard for non-dynamic tool calls.
  * Enables type narrowing in tool result processing.
  *

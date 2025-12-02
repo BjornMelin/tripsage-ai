@@ -1,12 +1,10 @@
 /** @vitest-environment node */
 
-import { type ToolSet, tool } from "ai";
+import { type ToolSet, type TypedToolCall, type TypedToolResult, tool } from "ai";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { z } from "zod";
 
 import {
-  type ExtractToolCall,
-  type ExtractToolResult,
   type InferToolInput,
   type InferToolOutput,
   isStaticToolCall,
@@ -167,13 +165,11 @@ describe("Type re-exports from AI SDK", () => {
   });
 
   it("should extract tool call/result unions from a ToolSet", () => {
-    type Calls = ExtractToolCall<typeof testTools>;
-    type Results = ExtractToolResult<typeof testTools>;
+    type Calls = TypedToolCall<typeof testTools>;
+    type Results = TypedToolResult<typeof testTools>;
 
-    expectTypeOf<Calls>().toEqualTypeOf<import("ai").TypedToolCall<typeof testTools>>();
-    expectTypeOf<Results>().toEqualTypeOf<
-      import("ai").TypedToolResult<typeof testTools>
-    >();
+    expectTypeOf<Calls>().toEqualTypeOf<TypedToolCall<typeof testTools>>();
+    expectTypeOf<Results>().toEqualTypeOf<TypedToolResult<typeof testTools>>();
   });
 
   it("should allow ToolSet to satisfy exported ToolSet type", () => {
