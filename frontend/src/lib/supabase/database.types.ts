@@ -1007,6 +1007,41 @@ export type Database = {
   };
   public: {
     Tables: {
+      auth_backup_codes: {
+        Row: {
+          code_hash: string;
+          consumed_at: string | null;
+          id: string;
+          issued_at: string;
+          label: string | null;
+          user_id: string;
+        };
+        Insert: {
+          code_hash: string;
+          consumed_at?: string | null;
+          id?: string;
+          issued_at?: string;
+          label?: string | null;
+          user_id: string;
+        };
+        Update: {
+          code_hash?: string;
+          consumed_at?: string | null;
+          id?: string;
+          issued_at?: string;
+          label?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "auth_backup_codes_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       accommodation_embeddings: {
         Row: {
           amenities: string | null;

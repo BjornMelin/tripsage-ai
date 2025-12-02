@@ -4,7 +4,7 @@
 
 "use client";
 
-import { ChevronDown, LogOut, Settings, User as UserIcon } from "lucide-react";
+import { ChevronDown, LogOut, Settings, Shield, User as UserIcon } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -87,6 +87,14 @@ export function UserNav({ user }: UserNavProps) {
             >
               <Settings className="h-4 w-4" />
               Settings
+            </Link>
+            <Link
+              href="/security" // dedicated security section
+              className="flex items-center gap-2 px-2 py-2 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+              onClick={() => setIsOpen(false)}
+            >
+              <Shield className="h-4 w-4" />
+              Security
             </Link>
 
             <div className="border-t my-1" />

@@ -8,13 +8,12 @@ export const metadata: Metadata = {
   title: "Create Account - TripSage",
 };
 
-export default async function RegisterPage({
+export default function RegisterPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string; status?: string; error?: string }>;
+  searchParams?: { from?: string; status?: string; error?: string };
 }) {
-  const params = await searchParams;
-  const redirectTo = params.from || "/dashboard";
+  const redirectTo = searchParams?.from || "/dashboard";
 
   return (
     <div className="min-h-screen flex">

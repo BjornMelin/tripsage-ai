@@ -1,10 +1,11 @@
 "use client";
 
 import { Settings, Shield, Sliders, User } from "lucide-react";
+import Link from "next/link";
 import { AccountSettingsSection } from "@/components/features/profile/account-settings-section";
 import { PersonalInfoSection } from "@/components/features/profile/personal-info-section";
 import { PreferencesSection } from "@/components/features/profile/preferences-section";
-import { SecuritySection } from "@/components/features/profile/security-section";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -68,7 +69,7 @@ export default function ProfilePage() {
       </div>
 
       <Tabs defaultValue="personal" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="personal" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             Personal
@@ -80,10 +81,6 @@ export default function ProfilePage() {
           <TabsTrigger value="preferences" className="flex items-center gap-2">
             <Sliders className="h-4 w-4" />
             Preferences
-          </TabsTrigger>
-          <TabsTrigger value="security" className="flex items-center gap-2">
-            <Shield className="h-4 w-4" />
-            Security
           </TabsTrigger>
         </TabsList>
 
@@ -98,11 +95,24 @@ export default function ProfilePage() {
         <TabsContent value="preferences" className="space-y-6">
           <PreferencesSection />
         </TabsContent>
-
-        <TabsContent value="security" className="space-y-6">
-          <SecuritySection />
-        </TabsContent>
       </Tabs>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-4 w-4" />
+            Security & MFA
+          </CardTitle>
+          <CardDescription>
+            Manage multi-factor authentication and backup codes in the security console.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild>
+            <Link href="/security">Open Security Console</Link>
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
