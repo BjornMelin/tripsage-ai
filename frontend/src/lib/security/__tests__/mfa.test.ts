@@ -9,8 +9,24 @@ import {
   verifyTotp,
 } from "@/lib/security/mfa";
 
+const mfaEnrollmentRows: {
+  // biome-ignore lint/style/useNamingConvention: mimic DB columns
+  challenge_id: string;
+  // biome-ignore lint/style/useNamingConvention: mimic DB columns
+  expires_at: string;
+  // biome-ignore lint/style/useNamingConvention: mimic DB columns
+  factor_id: string;
+  // biome-ignore lint/style/useNamingConvention: mimic DB columns
+  issued_at: string;
+  status: string;
+}[] = [];
+
 const mockSupabase = {
   auth: {
+    getUser: vi.fn(async () => ({
+      data: { user: { id: "user-1" } },
+      error: null,
+    })),
     mfa: {
       challenge: vi.fn(async () => ({ data: { id: "challenge-1" }, error: null })),
       enroll: vi.fn(async () => ({
@@ -23,6 +39,48 @@ const mockSupabase = {
       verify: vi.fn(async () => ({ data: {}, error: null })),
     },
   },
+  from: vi.fn((table: string) => {
+    if (table === "mfa_enrollments") {
+      return {
+        insert: (row: (typeof mfaEnrollmentRows)[number]) => {
+          mfaEnrollmentRows.push(row);
+          return { error: null };
+        },
+        select: (_columns: string) => {
+          const chain = {
+            eq(field: string, value: string) {
+              this.filters.push((row) => (row as never)[field] === value);
+              return this;
+            },
+            filters: [] as Array<(row: (typeof mfaEnrollmentRows)[number]) => boolean>,
+            order: (_field: string, _opts: { ascending: boolean }) => ({
+              limit: (_n: number) => ({
+                maybeSingle: () => {
+                  const filtered = mfaEnrollmentRows.filter((r) =>
+                    chain.filters.every((f) => f(r))
+                  );
+                  const sorted = filtered.sort((a, b) =>
+                    b.issued_at.localeCompare(a.issued_at)
+                  );
+                  const row = sorted[0] || null;
+                  return { data: row, error: null };
+                },
+              }),
+            }),
+          };
+          return chain;
+        },
+        update: (values: { status?: string; consumed_at?: string }) => {
+          const updateChain = {
+            eq: (_field: string, _value: string) => updateChain,
+            lt: (_field: string, _value: string) => ({ error: null }),
+          };
+          return updateChain;
+        },
+      };
+    }
+    return {};
+  }),
 } as unknown as Parameters<typeof startTotpEnrollment>[0];
 
 const backupRows: {
@@ -100,6 +158,7 @@ let currentLookupHash = "";
 describe("mfa service", () => {
   beforeEach(() => {
     backupRows.length = 0;
+    mfaEnrollmentRows.length = 0;
     currentLookupHash = "";
     vi.clearAllMocks();
   });
@@ -112,6 +171,15 @@ describe("mfa service", () => {
   });
 
   it("verifies totp code", async () => {
+    // Set up enrollment data
+    mfaEnrollmentRows.push({
+      challenge_id: "challenge-1",
+      expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      factor_id: "factor-1",
+      issued_at: new Date().toISOString(),
+      status: "pending",
+    });
+
     await expect(
       verifyTotp(mockSupabase, {
         challengeId: "challenge-1",
