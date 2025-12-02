@@ -510,6 +510,9 @@ Environment variables are managed through `src/lib/env/`:
   `NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY`, `NEXT_PUBLIC_BASE_PATH`).
 - **Supabase**: Production requires `NEXT_PUBLIC_SUPABASE_URL`,
   `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_JWT_SECRET`.
+- **MFA backup codes**: Provide `MFA_BACKUP_CODE_PEPPER` (>=16 chars). If
+  omitted, the app falls back to `SUPABASE_JWT_SECRET`, which must also be at
+  least 16 characters to enable backup-code hashing.
 - **AI/tools**: Configure provider keys as needed. Provider resolution
   follows this order: 1) User BYOK keys (from Supabase Vault), 2)
   Server-side fallback keys (`OPENAI_API_KEY`, `OPENROUTER_API_KEY`,

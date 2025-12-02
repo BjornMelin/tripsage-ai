@@ -143,6 +143,8 @@ export class TripService {
 
 - Validate all external inputs with Zod before use.
 - Use `withApiGuards` and `createServerSupabase` for authenticated routes; keep auth in handlers, not in helpers.
+- Sensitive actions (MFA backup codes, credential changes, BYOK operations) must enforce step-up MFA: call `requireAal2()` before the action and return `mfa_required` on failure.
+- Record security-sensitive recovery events: backup code regeneration/consumption must log via `mfa_backup_code_audit` (metadata only, never the code value).
 - Example input validation:
 
 ```ts
