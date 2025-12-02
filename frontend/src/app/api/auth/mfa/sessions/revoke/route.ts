@@ -18,6 +18,9 @@ export const POST = withApiGuards({
     await revokeSessions(supabase, data.scope);
     return NextResponse.json({ data: { status: "revoked" } });
   } catch (error) {
+    if (error instanceof Error && error.message === "mfa_required") {
+      return NextResponse.json({ error: "mfa_required" }, { status: 403 });
+    }
     logger.error("failed to revoke sessions", {
       error: error instanceof Error ? error.message : "unknown_error",
     });

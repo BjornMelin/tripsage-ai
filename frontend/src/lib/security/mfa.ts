@@ -64,6 +64,11 @@ function getBackupCodePepper(): string {
   }
   const env = getServerEnv();
   const value = env.MFA_BACKUP_CODE_PEPPER ?? env.SUPABASE_JWT_SECRET;
+  if (!env.MFA_BACKUP_CODE_PEPPER && env.SUPABASE_JWT_SECRET) {
+    auditLogger.warn(
+      "MFA_BACKUP_CODE_PEPPER not set; falling back to SUPABASE_JWT_SECRET. Rotating the JWT secret will invalidate existing backup codes."
+    );
+  }
   if (!value || value.trim().length < 16) {
     throw new Error(
       "MFA_BACKUP_CODE_PEPPER must be set to a non-empty secret (>=16 chars) or SUPABASE_JWT_SECRET must be provided as fallback"
