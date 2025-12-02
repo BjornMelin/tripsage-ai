@@ -10,7 +10,7 @@ import "server-only";
 
 import { toolRegistry } from "@ai/tools";
 import { wrapToolsWithUserId } from "@ai/tools/server/injection";
-import type { ModelMessage, ToolSet, UIMessage } from "ai";
+import type { ModelMessage, SystemModelMessage, ToolSet, UIMessage } from "ai";
 import { convertToModelMessages } from "ai";
 import { z } from "zod";
 import { CHAT_DEFAULT_SYSTEM_PROMPT } from "@/ai/constants";
@@ -24,6 +24,11 @@ import { createTripSageAgent } from "./agent-factory";
 import type { AgentDependencies, TripSageAgentResult } from "./types";
 
 const logger = createServerLogger("chat-agent");
+
+const normalizeInstructions = (input: string | SystemModelMessage): string => {
+  if (typeof input === "string") return input;
+  return typeof input.content === "string" ? input.content : "";
+};
 
 /**
  * Call options schema for the chat agent (AI SDK v6).
@@ -205,7 +210,7 @@ export function createChatAgent(
       ? {
           prepareCall: ({ instructions: baseInstructions, options }) => {
             // Inject memory summary into instructions at runtime
-            let finalInstructions = baseInstructions;
+            let finalInstructions = normalizeInstructions(baseInstructions);
             if (options.memorySummary) {
               finalInstructions += `\n\nUser memory (summary):\n${options.memorySummary}`;
             }
