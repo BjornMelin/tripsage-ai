@@ -38,6 +38,7 @@ describe("UserNav", () => {
     expect(screen.getByText("test@example.com")).toBeInTheDocument();
     expect(screen.getByText("Profile")).toBeInTheDocument();
     expect(screen.getByText("Settings")).toBeInTheDocument();
+    expect(screen.getByText("Security")).toBeInTheDocument();
     expect(screen.getByText("Log out")).toBeInTheDocument();
   });
 

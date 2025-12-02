@@ -49,8 +49,8 @@ export const ROUTE_RATE_LIMITS = {
   "auth:mfa:backup:regenerate": { limit: 3, window: "1 h" },
   "auth:mfa:backup:verify": { limit: 3, window: "1 m" },
   "auth:mfa:challenge": { limit: 3, window: "1 m" },
-  "auth:mfa:factors:list": { limit: 20, window: "1 m" },
-  "auth:mfa:sessions:revoke": { limit: 5, window: "1 m" },
+  "auth:mfa:factors:list": { limit: 5, window: "1 m" },
+  "auth:mfa:sessions:revoke": { limit: 5, window: "10 m" },
   "auth:mfa:setup": { limit: 3, window: "1 m" },
   "auth:mfa:verify": { limit: 3, window: "1 m" },
 

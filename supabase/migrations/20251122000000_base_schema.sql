@@ -54,6 +54,73 @@ $$;
 -- CORE TABLES
 -- ===========================
 
+-- auth_backup_codes (MFA backup codes)
+CREATE TABLE IF NOT EXISTS public.auth_backup_codes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  code_hash TEXT NOT NULL CHECK (length(code_hash) <= 256),
+  label TEXT DEFAULT 'primary' CHECK (label IN ('primary','secondary','recovery') AND length(label) <= 32),
+  issued_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+  consumed_at TIMESTAMPTZ,
+  CONSTRAINT auth_backup_codes_consumed_after_issue CHECK (consumed_at IS NULL OR consumed_at >= issued_at)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS auth_backup_codes_user_code_hash_idx
+  ON public.auth_backup_codes (user_id, code_hash);
+
+-- Ensure only one active primary code set per user at a time
+CREATE UNIQUE INDEX IF NOT EXISTS auth_backup_codes_primary_active_idx
+  ON public.auth_backup_codes (user_id)
+  WHERE label = 'primary' AND consumed_at IS NULL;
+
+ALTER TABLE public.auth_backup_codes ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their own backup codes"
+  ON public.auth_backup_codes
+  FOR SELECT
+  TO authenticated
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own backup codes"
+  ON public.auth_backup_codes
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own backup codes"
+  ON public.auth_backup_codes
+  FOR DELETE
+  TO authenticated
+  USING (auth.uid() = user_id);
+
+-- mfa_enrollments pending/consumed lifecycle
+CREATE TABLE IF NOT EXISTS public.mfa_enrollments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  factor_id VARCHAR(255) NOT NULL,
+  challenge_id VARCHAR(255) NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('pending','consumed','expired')),
+  issued_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+  expires_at TIMESTAMPTZ NOT NULL,
+  consumed_at TIMESTAMPTZ,
+  CONSTRAINT mfa_enrollments_expiry CHECK (expires_at > issued_at),
+  CONSTRAINT mfa_enrollments_consumed_after_issue CHECK (consumed_at IS NULL OR consumed_at >= issued_at)
+);
+
+CREATE INDEX IF NOT EXISTS mfa_enrollments_user_status_idx
+  ON public.mfa_enrollments (user_id, status);
+CREATE INDEX IF NOT EXISTS mfa_enrollments_challenge_idx
+  ON public.mfa_enrollments (challenge_id);
+
+ALTER TABLE public.mfa_enrollments ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can manage own mfa_enrollments"
+  ON public.mfa_enrollments
+  FOR ALL
+  TO authenticated
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
 -- trips
 CREATE TABLE IF NOT EXISTS public.trips (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

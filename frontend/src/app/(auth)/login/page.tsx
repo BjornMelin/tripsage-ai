@@ -7,13 +7,12 @@ export const metadata: Metadata = {
   title: "Sign In - TripSage",
 };
 
-export default async function LoginPage({
+export default function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string; error?: string }>;
+  searchParams?: { from?: string; error?: string };
 }) {
-  const params = await searchParams;
-  const redirectTo = params.from || "/dashboard";
+  const redirectTo = searchParams?.from || "/dashboard";
 
   return (
     <div className="min-h-screen flex">
