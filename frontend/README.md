@@ -580,7 +580,8 @@ Create a `.env.local` file:
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key  # Server-only
-SUPABASE_JWT_SECRET=your_jwt_secret  # Server-only, required in production
+SUPABASE_JWT_SECRET=your_jwt_secret  # Server-only, required in production (>=16 chars)
+MFA_BACKUP_CODE_PEPPER=your_backup_code_pepper  # Server-only, >=16 chars; falls back to SUPABASE_JWT_SECRET if unset
 
 # REQUIRED - Rate Limiting & Caching
 UPSTASH_REDIS_REST_URL=your_upstash_rest_url
