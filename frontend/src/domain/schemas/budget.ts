@@ -207,7 +207,7 @@ export const createBudgetRequestSchema = z
       return true;
     },
     {
-      message: "End date must be after start date",
+      error: "End date must be after start date",
       path: ["endDate"],
     }
   )
@@ -223,7 +223,7 @@ export const createBudgetRequestSchema = z
       return true;
     },
     {
-      message: "Total category amounts cannot exceed budget total",
+      error: "Total category amounts cannot exceed budget total",
       path: ["categories"],
     }
   );
@@ -261,7 +261,7 @@ export const updateBudgetRequestSchema = z
       return true;
     },
     {
-      message: "End date must be after start date",
+      error: "End date must be after start date",
       path: ["endDate"],
     }
   );
@@ -377,7 +377,7 @@ export const budgetFormSchema = z
       return true;
     },
     {
-      message: "End date must be after start date",
+      error: "End date must be after start date",
       path: ["endDate"],
     }
   )
@@ -390,7 +390,7 @@ export const budgetFormSchema = z
       return totalCategoryAmount <= data.totalAmount;
     },
     {
-      message: "Total category amounts cannot exceed budget total",
+      error: "Total category amounts cannot exceed budget total",
       path: ["categories"],
     }
   );
