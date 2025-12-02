@@ -2,7 +2,7 @@
  * @fileoverview Server Component for displaying calendar events list.
  */
 
-import { Calendar, Clock, MapPin } from "lucide-react";
+import { CalendarIcon, ClockIcon, MapPinIcon } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -93,7 +93,7 @@ export async function CalendarEventList({
     <Card className={className}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Calendar className="h-5 w-5" />
+          <CalendarIcon className="h-5 w-5" />
           Upcoming Events
         </CardTitle>
         <CardDescription>
@@ -132,14 +132,14 @@ export async function CalendarEventList({
                     <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                       {startDate && (
                         <div className="flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
+                          <ClockIcon className="h-4 w-4" />
                           {DateUtils.format(startDate, "MMM d, yyyy h:mm a")}
                           {endDate && ` - ${DateUtils.format(endDate, "h:mm a")}`}
                         </div>
                       )}
                       {event.location && (
                         <div className="flex items-center gap-1">
-                          <MapPin className="h-4 w-4" />
+                          <MapPinIcon className="h-4 w-4" />
                           {event.location}
                         </div>
                       )}

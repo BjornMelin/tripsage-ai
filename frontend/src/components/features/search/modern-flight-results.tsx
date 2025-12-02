@@ -1,18 +1,22 @@
+/**
+ * @fileoverview Modern flight results grid with filters, tags, and sticky summary.
+ */
+
 "use client";
 
 import {
-  ArrowUpDown,
-  Filter,
-  Heart,
-  Monitor,
-  Plane,
-  RefreshCw,
-  Shield,
-  Star,
-  TrendingUp,
-  Utensils,
-  Wifi,
-  Zap,
+  ArrowUpDownIcon,
+  FilterIcon,
+  HeartIcon,
+  MonitorIcon,
+  PlaneIcon,
+  RefreshCwIcon,
+  ShieldIcon,
+  StarIcon,
+  TrendingUpIcon,
+  UtensilsIcon,
+  WifiIcon,
+  ZapIcon,
 } from "lucide-react";
 import { useOptimistic, useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -152,8 +156,8 @@ export function ModernFlightResults({
 
   const getPriceChangeIcon = (change?: "up" | "down" | "stable") => {
     if (change === "down")
-      return <TrendingUp className="h-3 w-3 text-green-500 rotate-180" />;
-    if (change === "up") return <TrendingUp className="h-3 w-3 text-red-500" />;
+      return <TrendingUpIcon className="h-3 w-3 text-green-500 rotate-180" />;
+    if (change === "up") return <TrendingUpIcon className="h-3 w-3 text-red-500" />;
     return null;
   };
 
@@ -201,13 +205,13 @@ export function ModernFlightResults({
   if (results.length === 0) {
     return (
       <Card className="p-12 text-center">
-        <Plane className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+        <PlaneIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
         <h3 className="text-lg font-semibold mb-2">No flights found</h3>
         <p className="text-muted-foreground mb-4">
           Try adjusting your search dates or filters
         </p>
         <Button variant="outline">
-          <RefreshCw className="h-4 w-4 mr-2" />
+          <RefreshCwIcon className="h-4 w-4 mr-2" />
           Modify Search
         </Button>
       </Card>
@@ -224,11 +228,11 @@ export function ModernFlightResults({
             <Separator orientation="vertical" className="h-4" />
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm">
-                <Filter className="h-4 w-4 mr-2" />
+                <FilterIcon className="h-4 w-4 mr-2" />
                 Filters
               </Button>
               <Button variant="ghost" size="sm">
-                <ArrowUpDown className="h-4 w-4 mr-2" />
+                <ArrowUpDownIcon className="h-4 w-4 mr-2" />
                 Sort: {sortBy}
               </Button>
             </div>
@@ -298,7 +302,7 @@ export function ModernFlightResults({
               {flight.promotions && (
                 <div className="absolute top-0 left-6 transform -translate-y-1/2">
                   <Badge className="bg-red-500 text-white">
-                    <Zap className="h-3 w-3 mr-1" />
+                    <ZapIcon className="h-3 w-3 mr-1" />
                     {flight.promotions.description}
                   </Badge>
                 </div>
@@ -309,7 +313,7 @@ export function ModernFlightResults({
                 <div className="col-span-2">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center">
-                      <Plane className="h-4 w-4 text-blue-600" />
+                      <PlaneIcon className="h-4 w-4 text-blue-600" />
                     </div>
                     <div>
                       <p className="font-medium text-sm">{flight.airline}</p>
@@ -344,7 +348,7 @@ export function ModernFlightResults({
                     <div className="flex-1 mx-4">
                       <div className="relative">
                         <div className="h-0.5 bg-muted-foreground/30 w-full" />
-                        <Plane className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <PlaneIcon className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       </div>
                       <div className="text-center mt-2">
                         <p className="text-xs font-medium">
@@ -379,19 +383,19 @@ export function ModernFlightResults({
                     <div className="mt-4 flex items-center justify-center gap-4 text-xs">
                       {flight.amenities.includes("wifi") && (
                         <div className="flex items-center gap-1 text-muted-foreground">
-                          <Wifi className="h-3 w-3" />
+                          <WifiIcon className="h-3 w-3" />
                           WiFi
                         </div>
                       )}
                       {flight.amenities.includes("meals") && (
                         <div className="flex items-center gap-1 text-muted-foreground">
-                          <Utensils className="h-3 w-3" />
+                          <UtensilsIcon className="h-3 w-3" />
                           Meals
                         </div>
                       )}
                       {flight.amenities.includes("entertainment") && (
                         <div className="flex items-center gap-1 text-muted-foreground">
-                          <Monitor className="h-3 w-3" />
+                          <MonitorIcon className="h-3 w-3" />
                           Entertainment
                         </div>
                       )}
@@ -413,7 +417,7 @@ export function ModernFlightResults({
                         variant="secondary"
                         className="mb-2 bg-green-100 text-green-800"
                       >
-                        <Star className="h-3 w-3 mr-1" />
+                        <StarIcon className="h-3 w-3 mr-1" />
                         Great Deal
                       </Badge>
                     )}
@@ -441,7 +445,7 @@ export function ModernFlightResults({
                         {(flight.flexibility.changeable ||
                           flight.flexibility.refundable) && (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Shield className="h-3 w-3" />
+                            <ShieldIcon className="h-3 w-3" />
                             {flight.flexibility.refundable
                               ? "Refundable"
                               : "Changeable"}
@@ -470,12 +474,12 @@ export function ModernFlightResults({
                       >
                         {selectedForComparison.has(flight.id) ? (
                           <>
-                            <Heart className="h-3 w-3 mr-1 fill-current" />
+                            <HeartIcon className="h-3 w-3 mr-1 fill-current" />
                             Selected
                           </>
                         ) : (
                           <>
-                            <Heart className="h-3 w-3 mr-1" />
+                            <HeartIcon className="h-3 w-3 mr-1" />
                             Compare
                           </>
                         )}
@@ -500,7 +504,7 @@ export function ModernFlightResults({
                 flight.prediction.priceAlert !== "neutral" && (
                   <div className="mt-4 pt-4 border-t">
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Zap className="h-3 w-3" />
+                      <ZapIcon className="h-3 w-3" />
                       <span>AI Prediction: {flight.prediction.reason}</span>
                     </div>
                   </div>

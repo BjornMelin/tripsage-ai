@@ -1,6 +1,11 @@
+/**
+ * @fileoverview The register form component.
+ */
+
 "use client";
 
-import { Github, Loader2, Mail } from "lucide-react";
+import { SiGithub, SiGoogle } from "@icons-pack/react-simple-icons";
+import { Loader2Icon, MailIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,26 +17,20 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { resolveRedirectUrl } from "@/lib/auth/redirect";
 import { useSupabaseRequired } from "@/lib/supabase/client";
 
+/** The register form props. */
 type RegisterFormProps = {
   redirectTo?: string;
 };
 
-function GetRedirectUrl(redirectTo?: string) {
-  if (!redirectTo) return "/dashboard";
-  try {
-    if (redirectTo.startsWith("http")) return redirectTo;
-    if (typeof window !== "undefined") {
-      return new URL(redirectTo, window.location.origin).toString();
-    }
-    const base = process.env.NEXT_PUBLIC_SITE_URL;
-    return base ? new URL(redirectTo, base).toString() : redirectTo;
-  } catch {
-    return "/dashboard";
-  }
-}
-
+/**
+ * The register form component.
+ *
+ * @param redirectTo - The redirect URL.
+ * @returns The register form component.
+ */
 export function RegisterForm({ redirectTo }: RegisterFormProps) {
   const supabase = useSupabaseRequired();
   const [email, setEmail] = useState("");
@@ -39,8 +38,9 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const targetUrl = useMemo(() => GetRedirectUrl(redirectTo), [redirectTo]);
+  const targetUrl = useMemo(() => resolveRedirectUrl(redirectTo), [redirectTo]);
 
+  /** Handles the signup. */
   const handleSignup = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
@@ -62,6 +62,7 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
     window.location.assign(targetUrl);
   };
 
+  /** Handles the OAuth login. */
   const handleOAuth = async (provider: "github" | "google") => {
     setError(null);
     setLoading(true);
@@ -124,9 +125,9 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
             data-testid="password-signup"
           >
             {loading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
             ) : (
-              <Mail className="mr-2 h-4 w-4" />
+              <MailIcon className="mr-2 h-4 w-4" />
             )}
             Create account
           </Button>
@@ -139,7 +140,7 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
             disabled={loading}
             data-testid="oauth-github"
           >
-            <Github className="mr-2 h-4 w-4" /> Continue with GitHub
+            <SiGithub className="mr-2 h-4 w-4" /> Continue with GitHub
           </Button>
           <Button
             variant="outline"
@@ -148,7 +149,7 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
             disabled={loading}
             data-testid="oauth-google"
           >
-            <Mail className="mr-2 h-4 w-4" /> Continue with Google
+            <SiGoogle className="mr-2 h-4 w-4" /> Continue with Google
           </Button>
         </div>
       </CardContent>

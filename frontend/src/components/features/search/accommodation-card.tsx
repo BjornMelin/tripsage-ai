@@ -4,14 +4,14 @@
 
 import type { Accommodation } from "@schemas/search";
 import {
-  Car,
-  Coffee,
-  Dumbbell,
-  MapPin,
-  Star,
-  Utensils,
-  Waves,
-  Wifi,
+  CarIcon,
+  CoffeeIcon,
+  DumbbellIcon,
+  MapPinIcon,
+  StarIcon,
+  UtensilsIcon,
+  WavesIcon,
+  WifiIcon,
 } from "lucide-react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
@@ -25,12 +25,12 @@ interface AccommodationCardProps {
 }
 
 const AmenityIcons: Record<string, React.ReactNode> = {
-  breakfast: <Coffee className="h-4 w-4" />,
-  gym: <Dumbbell className="h-4 w-4" />,
-  parking: <Car className="h-4 w-4" />,
-  pool: <Waves className="h-4 w-4" />,
-  restaurant: <Utensils className="h-4 w-4" />,
-  wifi: <Wifi className="h-4 w-4" />,
+  breakfast: <CoffeeIcon className="h-4 w-4" />,
+  gym: <DumbbellIcon className="h-4 w-4" />,
+  parking: <CarIcon className="h-4 w-4" />,
+  pool: <WavesIcon className="h-4 w-4" />,
+  restaurant: <UtensilsIcon className="h-4 w-4" />,
+  wifi: <WifiIcon className="h-4 w-4" />,
 };
 
 export function AccommodationCard({
@@ -79,7 +79,7 @@ export function AccommodationCard({
                 {accommodation.name}
               </h3>
               <div className="flex items-center gap-2 mt-1">
-                <MapPin className="h-4 w-4 text-muted-foreground" />
+                <MapPinIcon className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground line-clamp-1">
                   {accommodation.location}
                 </span>
@@ -87,7 +87,7 @@ export function AccommodationCard({
             </div>
             <div className="text-right">
               <div className="flex items-center gap-1">
-                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                <StarIcon className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                 <span className="font-medium">{userRating ?? "N/A"}</span>
               </div>
               <Badge variant="secondary" className="mt-1">

@@ -6,7 +6,13 @@
 "use client";
 
 import type { ActiveSession, SecurityEvent, SecurityMetrics } from "@schemas/security";
-import { AlertTriangle, CheckCircle2, Monitor, Shield, Smartphone } from "lucide-react";
+import {
+  AlertTriangleIcon,
+  CheckCircle2Icon,
+  MonitorIcon,
+  ShieldIcon,
+  SmartphoneIcon,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
@@ -173,12 +179,12 @@ export function ActiveSessionsList({ sessions }: ActiveSessionsListProps) {
         <div key={session.id} className="border rounded-md p-3 space-y-1">
           <div className="flex items-center justify-between text-sm font-semibold">
             <span className="flex items-center gap-2">
-              <Smartphone className="h-4 w-4" />
+              <SmartphoneIcon className="h-4 w-4" />
               {session.device}
             </span>
             {session.isCurrent ? (
               <span className="text-green-600 text-xs flex items-center gap-1">
-                <CheckCircle2 className="h-3 w-3" />
+                <CheckCircle2Icon className="h-3 w-3" />
                 Current session
               </span>
             ) : (
@@ -219,15 +225,15 @@ export function ConnectionsSummary({ metrics }: ConnectionsSummaryProps) {
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 text-sm">
-        <Shield className="h-4 w-4" />
+        <ShieldIcon className="h-4 w-4" />
         Last login: <LocalTime isoString={metrics.lastLogin} className="font-medium" />
       </div>
       <div className="flex items-center gap-2 text-sm">
-        <Monitor className="h-4 w-4" />
+        <MonitorIcon className="h-4 w-4" />
         OAuth: {metrics.oauthConnections.join(", ") || "None"}
       </div>
       <div className="flex items-center gap-2 text-sm">
-        <AlertTriangle className="h-4 w-4 text-red-600" />
+        <AlertTriangleIcon className="h-4 w-4 text-red-600" />
         Trusted devices: {metrics.trustedDevices}
       </div>
     </div>

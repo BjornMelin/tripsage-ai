@@ -7,7 +7,7 @@
 
 "use client";
 
-import { Filter, Grid, List, Plus, Search } from "lucide-react";
+import { FilterIcon, GridIcon, ListIcon, PlusIcon, SearchIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ConnectionStatusIndicator } from "@/components/features/realtime/connection-status-monitor";
 import { TripCard } from "@/components/features/trips";
@@ -234,7 +234,7 @@ export default function TripsPage() {
           </CardHeader>
           <CardContent className="text-center">
             <Button onClick={handleCreateTrip} size="lg">
-              <Plus className="h-5 w-5 mr-2" />
+              <PlusIcon className="h-5 w-5 mr-2" />
               Create Your First Trip
             </Button>
           </CardContent>
@@ -257,7 +257,7 @@ export default function TripsPage() {
         <div className="flex items-center space-x-4">
           <ConnectionStatusIndicator />
           <Button onClick={handleCreateTrip}>
-            <Plus className="h-4 w-4 mr-2" />
+            <PlusIcon className="h-4 w-4 mr-2" />
             Create Trip
           </Button>
         </div>
@@ -300,7 +300,7 @@ export default function TripsPage() {
       {/* Filters and Search */}
       <div className="flex flex-col md:flex-row gap-4 mb-6">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search trips, destinations..."
             value={searchQuery}
@@ -314,7 +314,7 @@ export default function TripsPage() {
           onValueChange={(value) => setFilterBy(value as FilterOption)}
         >
           <SelectTrigger className="w-full md:w-40">
-            <Filter className="h-4 w-4 mr-2" />
+            <FilterIcon className="h-4 w-4 mr-2" />
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -348,7 +348,7 @@ export default function TripsPage() {
             onClick={() => setViewMode("grid")}
             className="rounded-r-none"
           >
-            <Grid className="h-4 w-4" />
+            <GridIcon className="h-4 w-4" />
           </Button>
           <Button
             variant={viewMode === "list" ? "default" : "ghost"}
@@ -356,7 +356,7 @@ export default function TripsPage() {
             onClick={() => setViewMode("list")}
             className="rounded-l-none"
           >
-            <List className="h-4 w-4" />
+            <ListIcon className="h-4 w-4" />
           </Button>
         </div>
       </div>
@@ -365,7 +365,7 @@ export default function TripsPage() {
       {filteredAndSortedTrips.length === 0 ? (
         <Card>
           <CardContent className="text-center py-12">
-            <Search className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <SearchIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No trips found</h3>
             <p className="text-muted-foreground mb-4">
               Try adjusting your search or filter criteria

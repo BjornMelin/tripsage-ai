@@ -8,17 +8,17 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { type FlightSearchFormData, flightSearchFormSchema } from "@schemas/search";
 import { useQuery } from "@tanstack/react-query";
 import {
-  AlertCircle,
-  ArrowRight,
-  Calendar,
-  Clock,
-  Loader2,
-  MapPin,
-  Plane,
-  Search,
-  Sparkles,
-  TrendingDown,
-  Users,
+  AlertCircleIcon,
+  ArrowRightIcon,
+  CalendarIcon,
+  ClockIcon,
+  Loader2Icon,
+  MapPinIcon,
+  PlaneIcon,
+  SearchIcon,
+  SparklesIcon,
+  TrendingDownIcon,
+  UsersIcon,
 } from "lucide-react";
 import React, { useOptimistic, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
@@ -223,7 +223,7 @@ export function FlightSearchForm({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-              <Plane className="h-5 w-5 text-blue-600" />
+              <PlaneIcon className="h-5 w-5 text-blue-600" />
             </div>
             <div>
               <CardTitle className="text-xl">Find Flights</CardTitle>
@@ -239,7 +239,7 @@ export function FlightSearchForm({
                 variant="secondary"
                 className="bg-green-50 text-green-700 border-green-200"
               >
-                <Sparkles className="h-3 w-3 mr-1" />
+                <SparklesIcon className="h-3 w-3 mr-1" />
                 Smart Bundle: Save up to {smartBundles.total}
               </Badge>
             </div>
@@ -253,7 +253,7 @@ export function FlightSearchForm({
             {/* Form Error Alert */}
             {formError && (
               <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
+                <AlertCircleIcon className="h-4 w-4" />
                 <AlertDescription>{formError}</AlertDescription>
               </Alert>
             )}
@@ -299,7 +299,7 @@ export function FlightSearchForm({
                       <FormLabel className="text-sm font-medium">From</FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <MapPinIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                           <Input
                             placeholder="Departure city or airport"
                             className="pl-10"
@@ -321,7 +321,7 @@ export function FlightSearchForm({
                     onClick={handleSwapAirports}
                     className="rounded-full bg-background border-2 shadow-md hover:shadow-lg transition-shadow"
                   >
-                    <ArrowRight className="h-4 w-4" />
+                    <ArrowRightIcon className="h-4 w-4" />
                   </Button>
                 </div>
 
@@ -333,7 +333,7 @@ export function FlightSearchForm({
                       <FormLabel className="text-sm font-medium">To</FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <MapPinIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                           <Input
                             placeholder="Destination city or airport"
                             className="pl-10"
@@ -357,7 +357,7 @@ export function FlightSearchForm({
                       <FormLabel className="text-sm font-medium">Departure</FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <CalendarIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                           <Input type="date" className="pl-10" {...field} />
                         </div>
                       </FormControl>
@@ -375,7 +375,7 @@ export function FlightSearchForm({
                         <FormLabel className="text-sm font-medium">Return</FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <CalendarIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                             <Input type="date" className="pl-10" {...field} />
                           </div>
                         </FormControl>
@@ -397,7 +397,7 @@ export function FlightSearchForm({
                       <FormLabel className="text-sm font-medium">Adults</FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <Users className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <UsersIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                           <Select
                             value={field.value.toString()}
                             onValueChange={(value) =>
@@ -487,7 +487,7 @@ export function FlightSearchForm({
             {/* Popular Destinations */}
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <TrendingDown className="h-4 w-4 text-muted-foreground" />
+                <TrendingDownIcon className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm font-medium">Popular destinations</span>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -537,7 +537,7 @@ export function FlightSearchForm({
                 <div className="bg-linear-to-r from-blue-50 to-green-50 p-4 rounded-lg border">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
-                      <Sparkles className="h-5 w-5 text-blue-600" />
+                      <SparklesIcon className="h-5 w-5 text-blue-600" />
                       <h3 className="font-semibold text-sm">Smart Trip Bundle</h3>
                       <Badge
                         variant="secondary"
@@ -584,19 +584,19 @@ export function FlightSearchForm({
               >
                 {isPending || optimisticSearching ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Loader2Icon className="h-4 w-4 mr-2 animate-spin" />
                     Searching flights...
                   </>
                 ) : (
                   <>
-                    <Search className="h-4 w-4 mr-2" />
+                    <SearchIcon className="h-4 w-4 mr-2" />
                     Search Flights
                   </>
                 )}
               </Button>
 
               <Button variant="outline" size="lg" className="px-6" type="button">
-                <Clock className="h-4 w-4 mr-2" />
+                <ClockIcon className="h-4 w-4 mr-2" />
                 Flexible Dates
               </Button>
             </div>

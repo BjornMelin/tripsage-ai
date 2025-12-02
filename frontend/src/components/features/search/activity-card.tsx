@@ -1,7 +1,11 @@
+/**
+ * @fileoverview Activity card component for rendering search results with actions.
+ */
+
 "use client";
 
 import type { Activity } from "@schemas/search";
-import { Clock, MapPin, Star } from "lucide-react";
+import { ClockIcon, MapPinIcon, StarIcon } from "lucide-react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -52,7 +56,7 @@ export function ActivityCard({
     const stars = [];
     for (let i = 0; i < 5; i++) {
       stars.push(
-        <Star
+        <StarIcon
           key={`star-${i}`}
           className={`h-4 w-4 ${
             i < Math.floor(rating) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
@@ -76,7 +80,7 @@ export function ActivityCard({
           />
         ) : (
           <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
-            <MapPin className="h-12 w-12 text-gray-400" />
+            <MapPinIcon className="h-12 w-12 text-gray-400" />
           </div>
         )}
         <div className="absolute top-2 left-2 flex flex-col gap-1">
@@ -112,11 +116,11 @@ export function ActivityCard({
 
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-1">
-              <Clock className="h-4 w-4" />
+              <ClockIcon className="h-4 w-4" />
               <span>{formatDuration(activity.duration)}</span>
             </div>
             <div className="flex items-center gap-1">
-              <MapPin className="h-4 w-4" />
+              <MapPinIcon className="h-4 w-4" />
               <span className="line-clamp-1">{activity.location}</span>
             </div>
           </div>

@@ -5,7 +5,7 @@
 
 "use client";
 
-import { Activity, Brain, Network, Zap } from "lucide-react";
+import { ActivityIcon, BrainIcon, NetworkIcon, ZapIcon } from "lucide-react";
 import { useMemo } from "react";
 import { AgentStatusDashboard } from "@/components/features/agent-monitoring/dashboard/agent-status-dashboard";
 import { ConnectionStatus } from "@/components/features/shared/connection-status";
@@ -91,7 +91,7 @@ export default function AgentsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Agents</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <ActivityIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{activeAgents}</div>
@@ -104,7 +104,7 @@ export default function AgentsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Avg. Health</CardTitle>
-            <Brain className="h-4 w-4 text-muted-foreground" />
+            <BrainIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{averageHealth}%</div>
@@ -117,7 +117,7 @@ export default function AgentsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Tasks Queued</CardTitle>
-            <Zap className="h-4 w-4 text-muted-foreground" />
+            <ZapIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{pendingTasks}</div>
@@ -128,7 +128,7 @@ export default function AgentsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Connection State</CardTitle>
-            <Network className="h-4 w-4 text-muted-foreground" />
+            <NetworkIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold capitalize">{connectionLabel}</div>

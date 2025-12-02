@@ -4,21 +4,21 @@
 "use client";
 
 import {
-  Bed,
-  Building2,
-  Calendar,
-  Car,
-  Coffee,
-  Dumbbell,
-  Loader2,
-  MapPin,
-  Search,
-  Sparkles,
-  Star,
-  TrendingUp,
-  Users,
-  Utensils,
-  Wifi,
+  BedIcon,
+  Building2Icon,
+  CalendarIcon,
+  CarIcon,
+  CoffeeIcon,
+  DumbbellIcon,
+  Loader2Icon,
+  MapPinIcon,
+  SearchIcon,
+  SparklesIcon,
+  StarIcon,
+  TrendingUpIcon,
+  UsersIcon,
+  UtensilsIcon,
+  WifiIcon,
 } from "lucide-react";
 import { useId, useOptimistic, useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -67,14 +67,14 @@ interface HotelSearchFormProps {
 }
 
 const Amenities = [
-  { icon: Wifi, id: "wifi", label: "Free WiFi" },
-  { icon: Coffee, id: "breakfast", label: "Free Breakfast" },
-  { icon: Car, id: "parking", label: "Free Parking" },
-  { icon: Building2, id: "pool", label: "Swimming Pool" },
-  { icon: Dumbbell, id: "gym", label: "Fitness Center" },
-  { icon: Utensils, id: "restaurant", label: "Restaurant" },
-  { icon: Sparkles, id: "spa", label: "Spa" },
-  { icon: Building2, id: "aircon", label: "Air Conditioning" },
+  { icon: WifiIcon, id: "wifi", label: "Free WiFi" },
+  { icon: CoffeeIcon, id: "breakfast", label: "Free Breakfast" },
+  { icon: CarIcon, id: "parking", label: "Free Parking" },
+  { icon: Building2Icon, id: "pool", label: "Swimming Pool" },
+  { icon: DumbbellIcon, id: "gym", label: "Fitness Center" },
+  { icon: UtensilsIcon, id: "restaurant", label: "Restaurant" },
+  { icon: SparklesIcon, id: "spa", label: "Spa" },
+  { icon: Building2Icon, id: "aircon", label: "Air Conditioning" },
 ];
 
 export function HotelSearchForm({
@@ -181,7 +181,7 @@ export function HotelSearchForm({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-              <Building2 className="h-5 w-5 text-green-600" />
+              <Building2Icon className="h-5 w-5 text-green-600" />
             </div>
             <div>
               <CardTitle className="text-xl">Find Hotels</CardTitle>
@@ -197,7 +197,7 @@ export function HotelSearchForm({
                 variant="secondary"
                 className="bg-orange-50 text-orange-700 border-orange-200"
               >
-                <TrendingUp className="h-3 w-3 mr-1" />
+                <TrendingUpIcon className="h-3 w-3 mr-1" />
                 {allInclusiveDeals.description}
               </Badge>
             </div>
@@ -212,7 +212,7 @@ export function HotelSearchForm({
             Destination
           </Label>
           <div className="relative">
-            <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <MapPinIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
               id={locationId}
               placeholder="City, hotel name, or landmark"
@@ -230,7 +230,7 @@ export function HotelSearchForm({
               Check-in
             </Label>
             <div className="relative">
-              <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <CalendarIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
                 id={checkInId}
                 type="date"
@@ -246,7 +246,7 @@ export function HotelSearchForm({
               Check-out
             </Label>
             <div className="relative">
-              <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <CalendarIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
                 id={checkOutId}
                 type="date"
@@ -261,7 +261,7 @@ export function HotelSearchForm({
             <div className="space-y-2">
               <Label className="text-sm font-medium">Duration</Label>
               <div className="flex items-center h-10 px-3 border rounded-md bg-muted">
-                <Bed className="h-4 w-4 mr-2 text-muted-foreground" />
+                <BedIcon className="h-4 w-4 mr-2 text-muted-foreground" />
                 <span className="text-sm font-medium">
                   {calculateNights()} {calculateNights() === 1 ? "night" : "nights"}
                 </span>
@@ -300,7 +300,7 @@ export function HotelSearchForm({
               Adults
             </Label>
             <div className="relative">
-              <Users className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <UsersIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Select
                 value={searchParams.adults.toString()}
                 onValueChange={(value) =>
@@ -364,7 +364,7 @@ export function HotelSearchForm({
                 ) : (
                   <>
                     {rating}{" "}
-                    <Star
+                    <StarIcon
                       className={cn(
                         "h-3 w-3",
                         searchParams.rating >= rating && "fill-current"
@@ -404,7 +404,7 @@ export function HotelSearchForm({
         {showRecommendations && (
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <TrendingUpIcon className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm font-medium">Trending destinations</span>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -431,7 +431,7 @@ export function HotelSearchForm({
             <div className="bg-linear-to-r from-orange-50 to-red-50 p-4 rounded-lg border">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-orange-600" />
+                  <SparklesIcon className="h-5 w-5 text-orange-600" />
                   <h3 className="font-semibold text-sm">All-Inclusive Hotels</h3>
                   <Badge variant="secondary" className="bg-orange-100 text-orange-700">
                     Save {allInclusiveDeals.savings}
@@ -483,12 +483,12 @@ export function HotelSearchForm({
           >
             {isPending || optimisticSearching ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2Icon className="h-4 w-4 mr-2 animate-spin" />
                 Searching hotels...
               </>
             ) : (
               <>
-                <Search className="h-4 w-4 mr-2" />
+                <SearchIcon className="h-4 w-4 mr-2" />
                 Search Hotels
               </>
             )}

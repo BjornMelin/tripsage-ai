@@ -1,7 +1,17 @@
+/**
+ * @fileoverview Budget tracker component summarizing spend and savings.
+ */
+
 "use client";
 
 import type { BudgetSummary } from "@schemas/budget";
-import { AlertTriangle, DollarSign, Plus, Target, TrendingUp } from "lucide-react";
+import {
+  AlertTriangleIcon,
+  DollarSignIcon,
+  PlusIcon,
+  TargetIcon,
+  TrendingUpIcon,
+} from "lucide-react";
 import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -86,7 +96,7 @@ export function BudgetTracker({
       <Card className={className}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Target className="h-5 w-5" />
+            <TargetIcon className="h-5 w-5" />
             Budget Tracker
           </CardTitle>
           <CardDescription>No budget found for this trip</CardDescription>
@@ -94,7 +104,7 @@ export function BudgetTracker({
         <CardContent>
           {showActions && onCreateBudget && (
             <Button onClick={onCreateBudget} className="w-full">
-              <Plus className="h-4 w-4 mr-2" />
+              <PlusIcon className="h-4 w-4 mr-2" />
               Create Budget
             </Button>
           )}
@@ -129,12 +139,12 @@ export function BudgetTracker({
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
-            <Target className="h-5 w-5" />
+            <TargetIcon className="h-5 w-5" />
             {targetBudget.name}
           </CardTitle>
           {summary.isOverBudget && (
             <Badge variant="destructive" className="gap-1">
-              <AlertTriangle className="h-3 w-3" />
+              <AlertTriangleIcon className="h-3 w-3" />
               Over Budget
             </Badge>
           )}
@@ -173,7 +183,7 @@ export function BudgetTracker({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                <TrendingUp className="h-3 w-3" />
+                <TrendingUpIcon className="h-3 w-3" />
                 Daily Average
               </div>
               <div className="text-lg font-semibold">
@@ -184,7 +194,7 @@ export function BudgetTracker({
             {summary.dailyLimit > 0 && (
               <div className="space-y-1">
                 <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <Target className="h-3 w-3" />
+                  <TargetIcon className="h-3 w-3" />
                   Daily Limit
                 </div>
                 <div className="text-lg font-semibold">
@@ -199,7 +209,7 @@ export function BudgetTracker({
         {summary.projectedTotal > summary.totalSpent && (
           <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
             <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <TrendingUpIcon className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm">Projected Total</span>
             </div>
             <span
@@ -245,7 +255,7 @@ export function BudgetTracker({
                 onClick={onAddExpense}
                 className="flex-1"
               >
-                <Plus className="h-4 w-4 mr-2" />
+                <PlusIcon className="h-4 w-4 mr-2" />
                 Add Expense
               </Button>
             )}
@@ -255,7 +265,7 @@ export function BudgetTracker({
               onClick={() => setActiveBudget(targetBudget.id)}
               className="flex-1"
             >
-              <DollarSign className="h-4 w-4 mr-2" />
+              <DollarSignIcon className="h-4 w-4 mr-2" />
               View Details
             </Button>
           </div>

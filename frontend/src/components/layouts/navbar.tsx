@@ -1,6 +1,10 @@
+/**
+ * @fileoverview App navbar with navigation links and mobile drawer toggle.
+ */
+
 "use client";
 
-import { Calendar, MapPin, Menu, Settings, X } from "lucide-react";
+import { CalendarIcon, MapPinIcon, MenuIcon, SettingsIcon, XIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -10,16 +14,16 @@ import { cn } from "@/lib/utils";
 
 const NavItems = [
   { href: "/", name: "Home" },
-  { href: "/trips", icon: <MapPin className="h-4 w-4 mr-2" />, name: "Trips" },
+  { href: "/trips", icon: <MapPinIcon className="h-4 w-4 mr-2" />, name: "Trips" },
   { href: "/attachments", name: "Attachments" },
   {
     href: "/itinerary",
-    icon: <Calendar className="h-4 w-4 mr-2" />,
+    icon: <CalendarIcon className="h-4 w-4 mr-2" />,
     name: "Itinerary",
   },
   {
     href: "/settings",
-    icon: <Settings className="h-4 w-4 mr-2" />,
+    icon: <SettingsIcon className="h-4 w-4 mr-2" />,
     name: "Settings",
   },
 ];
@@ -71,7 +75,11 @@ export function Navbar() {
             className="md:hidden"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
-            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            {mobileMenuOpen ? (
+              <XIcon className="h-5 w-5" />
+            ) : (
+              <MenuIcon className="h-5 w-5" />
+            )}
           </Button>
         </div>
       </div>

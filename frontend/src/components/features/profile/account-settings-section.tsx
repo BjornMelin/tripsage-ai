@@ -7,7 +7,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { type EmailUpdateFormData, emailUpdateFormSchema } from "@schemas/profile";
-import { Check, Mail, Trash2 } from "lucide-react";
+import { CheckIcon, MailIcon, Trash2Icon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import {
@@ -282,7 +282,7 @@ export function AccountSettingsSection() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Mail className="h-5 w-5" />
+            <MailIcon className="h-5 w-5" />
             Email Settings
           </CardTitle>
           <CardDescription>
@@ -296,7 +296,7 @@ export function AccountSettingsSection() {
             <Badge variant={isEmailVerified ? "default" : "secondary"}>
               {isEmailVerified ? (
                 <>
-                  <Check className="h-3 w-3 mr-1" />
+                  <CheckIcon className="h-3 w-3 mr-1" />
                   Verified
                 </>
               ) : (
@@ -442,7 +442,7 @@ export function AccountSettingsSection() {
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="destructive" className="flex items-center gap-2">
-                <Trash2 className="h-4 w-4" />
+                <Trash2Icon className="h-4 w-4" />
                 Delete Account
               </Button>
             </AlertDialogTrigger>

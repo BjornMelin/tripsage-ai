@@ -1,7 +1,11 @@
+/**
+ * @fileoverview Accessible checkbox component built on Radix primitives.
+ */
+
 "use client";
 
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
-import { Check } from "lucide-react";
+import { CheckIcon } from "lucide-react";
 import type * as React from "react";
 
 import { cn } from "@/lib/utils";
@@ -24,7 +28,7 @@ export function Checkbox({ className, ref, ...props }: CheckboxProps) {
       <CheckboxPrimitive.Indicator
         className={cn("flex items-center justify-center text-current")}
       >
-        <Check className="h-4 w-4" />
+        <CheckIcon className="h-4 w-4" />
       </CheckboxPrimitive.Indicator>
     </CheckboxPrimitive.Root>
   );

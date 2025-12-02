@@ -5,7 +5,7 @@
 "use client";
 
 import type { Activity } from "@schemas/search";
-import { MapPin, Star, X } from "lucide-react";
+import { MapPinIcon, StarIcon, XIcon } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
@@ -81,7 +81,7 @@ export function ActivityComparisonModal({
                         onClick={() => onRemove(activity.id)}
                         aria-label={`Remove ${activity.name} from comparison`}
                       >
-                        <X className="h-3 w-3" />
+                        <XIcon className="h-3 w-3" />
                       </Button>
                     </div>
                   </TableHead>
@@ -138,7 +138,7 @@ export function ActivityComparisonModal({
                 {activities.map((activity) => (
                   <TableCell key={activity.id}>
                     <div className="flex items-center gap-1">
-                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                      <StarIcon className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                       <span>{activity.rating ?? "N/A"}</span>
                     </div>
                   </TableCell>
@@ -151,7 +151,7 @@ export function ActivityComparisonModal({
                 {activities.map((activity) => (
                   <TableCell key={activity.id}>
                     <div className="flex items-start gap-1">
-                      <MapPin className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
+                      <MapPinIcon className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
                       <span className="text-sm line-clamp-2">
                         {activity.location ?? "Unknown location"}
                       </span>

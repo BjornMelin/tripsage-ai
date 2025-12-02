@@ -11,13 +11,13 @@ import {
   securityMetricsSchema,
 } from "@schemas/security";
 import {
-  Activity,
-  AlertTriangle,
-  CheckCircle2,
-  Lock,
-  Monitor,
-  Shield,
-  UserCheck,
+  ActivityIcon,
+  AlertTriangleIcon,
+  CheckCircle2Icon,
+  LockIcon,
+  MonitorIcon,
+  ShieldIcon,
+  UserCheckIcon,
 } from "lucide-react";
 import { cookies, headers } from "next/headers";
 import type React from "react";
@@ -106,7 +106,7 @@ export async function SecurityDashboard() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
+            <ShieldIcon className="h-5 w-5" />
             Security Overview
           </CardTitle>
         </CardHeader>
@@ -114,17 +114,17 @@ export async function SecurityDashboard() {
           <MetricTile
             label="Security Score"
             value={metrics.securityScore.toString()}
-            icon={<CheckCircle2 className="h-4 w-4" />}
+            icon={<CheckCircle2Icon className="h-4 w-4" />}
           />
           <MetricTile
             label="Active Sessions"
             value={metrics.activeSessions.toString()}
-            icon={<Monitor className="h-4 w-4" />}
+            icon={<MonitorIcon className="h-4 w-4" />}
           />
           <MetricTile
             label="Failed Logins (24h)"
             value={metrics.failedLoginAttempts.toString()}
-            icon={<AlertTriangle className="h-4 w-4" />}
+            icon={<AlertTriangleIcon className="h-4 w-4" />}
           />
         </CardContent>
       </Card>
@@ -133,7 +133,7 @@ export async function SecurityDashboard() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5" />
+              <ActivityIcon className="h-5 w-5" />
               Recent Events
             </CardTitle>
           </CardHeader>
@@ -145,7 +145,7 @@ export async function SecurityDashboard() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <UserCheck className="h-5 w-5" />
+              <UserCheckIcon className="h-5 w-5" />
               Active Sessions
             </CardTitle>
           </CardHeader>
@@ -158,7 +158,7 @@ export async function SecurityDashboard() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Lock className="h-5 w-5" />
+            <LockIcon className="h-5 w-5" />
             Connections
           </CardTitle>
         </CardHeader>

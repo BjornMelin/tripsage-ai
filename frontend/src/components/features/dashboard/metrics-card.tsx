@@ -7,7 +7,7 @@
 
 "use client";
 
-import { ArrowDown, ArrowUp, Minus } from "lucide-react";
+import { ArrowDownIcon, ArrowUpIcon, MinusIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -60,7 +60,8 @@ export function MetricsCard({
   trendSemantic = "negative",
   className,
 }: MetricsCardProps) {
-  const TrendIcon = trend === "up" ? ArrowUp : trend === "down" ? ArrowDown : Minus;
+  const TrendIcon =
+    trend === "up" ? ArrowUpIcon : trend === "down" ? ArrowDownIcon : MinusIcon;
 
   const trendColor = (() => {
     if (!trend || trend === "neutral") {

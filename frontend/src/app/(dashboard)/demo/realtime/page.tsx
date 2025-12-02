@@ -1,13 +1,17 @@
+/**
+ * @fileoverview Demo realtime page showcasing live trip collaboration.
+ */
+
 "use client";
 
 import {
-  Activity,
-  CheckCircle,
-  MessageSquare,
-  Upload,
-  Users,
-  Wifi,
-  Zap,
+  ActivityIcon,
+  CheckCircleIcon,
+  MessageSquareIcon,
+  UploadIcon,
+  UsersIcon,
+  WifiIcon,
+  ZapIcon,
 } from "lucide-react";
 import { useState } from "react";
 import { ConnectionStatusMonitor } from "@/components/features/realtime/connection-status-monitor";
@@ -42,7 +46,7 @@ export default function RealtimeDemoPage() {
         "Type-safe database operations",
         "Automatic query optimization",
       ],
-      icon: <Zap className="h-5 w-5" />,
+      icon: <ZapIcon className="h-5 w-5" />,
       id: "direct-sdk",
       status: "completed",
       title: "Direct Supabase SDK Integration",
@@ -55,7 +59,7 @@ export default function RealtimeDemoPage() {
         "Automatic conflict resolution",
         "Connection status monitoring",
       ],
-      icon: <Activity className="h-5 w-5" />,
+      icon: <ActivityIcon className="h-5 w-5" />,
       id: "realtime-subscriptions",
       status: "completed",
       title: "Real-time Subscriptions",
@@ -68,7 +72,7 @@ export default function RealtimeDemoPage() {
         "Loading state management",
         "Success/failure notifications",
       ],
-      icon: <CheckCircle className="h-5 w-5" />,
+      icon: <CheckCircleIcon className="h-5 w-5" />,
       id: "optimistic-updates",
       status: "completed",
       title: "Optimistic Updates",
@@ -81,7 +85,7 @@ export default function RealtimeDemoPage() {
         "Offline mode detection",
         "Error state handling",
       ],
-      icon: <Wifi className="h-5 w-5" />,
+      icon: <WifiIcon className="h-5 w-5" />,
       id: "connection-monitoring",
       status: "completed",
       title: "Connection Status Monitoring",
@@ -94,7 +98,7 @@ export default function RealtimeDemoPage() {
         "Message status tracking",
         "Infinite scroll pagination",
       ],
-      icon: <MessageSquare className="h-5 w-5" />,
+      icon: <MessageSquareIcon className="h-5 w-5" />,
       id: "chat-updates",
       status: "pending",
       title: "Real-time Chat Messages",
@@ -107,7 +111,7 @@ export default function RealtimeDemoPage() {
         "Multiple file uploads",
         "Storage quotas",
       ],
-      icon: <Upload className="h-5 w-5" />,
+      icon: <UploadIcon className="h-5 w-5" />,
       id: "file-storage",
       status: "completed",
       title: "File Upload & Storage",
@@ -145,7 +149,7 @@ export default function RealtimeDemoPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <Activity className="h-6 w-6" />
+            <ActivityIcon className="h-6 w-6" />
             <span>Implementation Status</span>
           </CardTitle>
           <CardDescription>
@@ -182,7 +186,7 @@ export default function RealtimeDemoPage() {
                         key={`${feature.id}-${detail}`}
                         className="flex items-start space-x-2 text-sm"
                       >
-                        <CheckCircle className="h-3 w-3 mt-0.5 text-green-500 shrink-0" />
+                        <CheckCircleIcon className="h-3 w-3 mt-0.5 text-green-500 shrink-0" />
                         <span>{detail}</span>
                       </li>
                     ))}
@@ -285,25 +289,25 @@ export default function RealtimeDemoPage() {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
-                      <Users className="h-5 w-5" />
+                      <UsersIcon className="h-5 w-5" />
                       <span>Collaboration Features</span>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="flex items-center space-x-2">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <CheckCircleIcon className="h-4 w-4 text-green-500" />
                       <span className="text-sm">Live editing indicators</span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <CheckCircleIcon className="h-4 w-4 text-green-500" />
                       <span className="text-sm">Real-time conflict resolution</span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <CheckCircleIcon className="h-4 w-4 text-green-500" />
                       <span className="text-sm">Activity feed updates</span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <CheckCircleIcon className="h-4 w-4 text-green-500" />
                       <span className="text-sm">Collaborative permissions</span>
                     </div>
                   </CardContent>
@@ -327,19 +331,19 @@ export default function RealtimeDemoPage() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <CheckCircleIcon className="h-4 w-4 text-green-500" />
                     <span className="text-sm">Real-time connectivity status</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <CheckCircleIcon className="h-4 w-4 text-green-500" />
                     <span className="text-sm">Automatic reconnection attempts</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <CheckCircleIcon className="h-4 w-4 text-green-500" />
                     <span className="text-sm">Offline mode detection</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <CheckCircleIcon className="h-4 w-4 text-green-500" />
                     <span className="text-sm">Connection health percentage</span>
                   </div>
                 </CardContent>
