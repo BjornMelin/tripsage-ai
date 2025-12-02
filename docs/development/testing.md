@@ -37,6 +37,11 @@ Unified testing standards for TripSage frontend. Follow this document as the sin
 - Prefer helpers: `createMockQueryClient`, `createMockNextRequest`, Supabase mocks in `frontend/src/test/mocks/supabase.ts`, store helpers in `frontend/src/test/store-helpers.ts`, factories in `frontend/src/test/factories/*`.
 - Fake timers (opt-in): wrap cases needing clock control with `withFakeTimers` and advance using `vi.advanceTimersByTime`; do not set global fake timers.
 
+### MFA test configuration
+
+- Backup code hashing requires a pepper secret: set `MFA_BACKUP_CODE_PEPPER` (>=16 chars) or `SUPABASE_JWT_SECRET`. `validateMfaConfig()` enforces this outside `NODE_ENV=test`; missing values will fail fast in server code.
+- When mocking admin Supabase for MFA routes, mock `getAdminSupabase` (service-role client) and stub minimal `from`/`rpc` as needed.
+
 ```ts
 import { withFakeTimers } from "@/test/utils/with-fake-timers";
 

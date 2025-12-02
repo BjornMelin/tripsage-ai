@@ -66,6 +66,10 @@ USING (
 - **CORS**: Properly configured origins
 - **Monitoring**: Log authentication failures and suspicious activity
 - **Backups**: Regular encrypted database backups
+- **MFA Ops**:
+  - Set `MFA_BACKUP_CODE_PEPPER` (>=16 chars) or `SUPABASE_JWT_SECRET` in all environments; app fails fast on missing/short values.
+  - Backup-code operations (`/api/auth/mfa/backup/verify`, `/api/auth/mfa/backup/regenerate`) require AAL2; ensure users complete MFA before support-driven recovery.
+  - Audit table `mfa_backup_code_audit` logs regeneration/consumption with IP/UA; monitor for insert errors and alert if audit writes fail.
 
 ### BYOK (Bring Your Own Key) System
 
