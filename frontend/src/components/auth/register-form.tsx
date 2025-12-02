@@ -49,14 +49,26 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
       return;
     }
     setLoading(true);
-    const { error: signUpError } = await supabase.auth.signUp({
+    const emailRedirectTo =
+      typeof window === "undefined"
+        ? undefined
+        : new URL("/auth/confirm?type=email", window.location.origin).toString();
+    const { data, error: signUpError } = await supabase.auth.signUp({
       email,
-      options: { emailRedirectTo: targetUrl },
+      options: { emailRedirectTo },
       password,
     });
     setLoading(false);
     if (signUpError) {
       setError(signUpError.message);
+      return;
+    }
+    if (!data?.session) {
+      const checkEmailUrl =
+        typeof window === "undefined"
+          ? "/register?status=check_email"
+          : new URL("/register?status=check_email", window.location.origin).toString();
+      window.location.assign(checkEmailUrl);
       return;
     }
     window.location.assign(targetUrl);

@@ -75,13 +75,14 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 - **JSDoc:** Use `/** ... */` for public APIs; `//` for notes. Document top‑level exports and non‑obvious functions. Avoid repeating types or TS‑duplicated tags.
 - **IDs/timestamps:** Use `@/lib/security/random` (`secureUuid`, `secureId`, `nowIso`). Never `Math.random` or `crypto.randomUUID` directly.
 - **Imports/exports:** Import directly from slice modules (e.g., `@/stores/auth/auth-core`, not `@/stores`). No barrel files or `export *` for stores/selectors.
-- **Path aliases:**
-  - `@schemas/*` → `./src/domain/schemas/*` (Zod/domain schemas)
-  - `@domain/*` → `./src/domain/*` (accommodations, amadeus, types)
-  - `@ai/*` → `./src/ai/*` (AI SDK tooling, models)
-  - `@/*` → `./src/*` (generic: lib, components, stores)
-  - **Disallowed:** Never use `@/domain/*`, `@/ai/*`, or `@/domain/schemas/*`; use `@domain/*`, `@ai/*`, `@schemas/*`.
-  - **Relative imports:** Within feature slices (e.g., `src/domain/amadeus/*`), prefer relative; cross-boundary, use aliases.
+  - **Path aliases:**
+    - `@schemas/*` → `./src/domain/schemas/*` (Zod/domain schemas)
+    - `@domain/*` → `./src/domain/*` (accommodations, amadeus, types)
+    - `@ai/*` → `./src/ai/*` (AI SDK tooling, models)
+    - `@/*` → `./src/*` (generic: lib, components, stores)
+    - **Disallowed:** Never use `@/domain/*`, `@/ai/*`, or `@/domain/schemas/*`; use `@domain/*`, `@ai/*`, `@schemas/*`.
+    - **Relative imports:** Within feature slices (e.g., `src/domain/amadeus/*`), prefer relative; cross-boundary, use aliases.
+  - **Icons:** `lucide-react` `*Icon` aliases (e.g., `AlertTriangleIcon`) for stability; no non-suffixed names without design system update.
 
 ### 4.3 State management (frontend)
 

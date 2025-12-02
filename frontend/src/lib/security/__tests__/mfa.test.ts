@@ -63,20 +63,24 @@ const mockSupabase = {
               return this;
             },
             filters: [] as Array<(row: (typeof mfaEnrollmentRows)[number]) => boolean>,
-            order: (_field: string, _opts: { ascending: boolean }) => ({
-              limit: (_n: number) => ({
-                maybeSingle: () => {
-                  const filtered = mfaEnrollmentRows.filter((r) =>
-                    chain.filters.every((f) => f(r))
-                  );
-                  const sorted = filtered.sort((a, b) =>
-                    b.issued_at.localeCompare(a.issued_at)
-                  );
-                  const row = sorted[0] || null;
-                  return { data: row, error: null };
+            order: (_field: string, _opts: { ascending: boolean }) => {
+              return {
+                limit: (_n: number) => {
+                  return {
+                    maybeSingle: () => {
+                      const filtered = mfaEnrollmentRows.filter((r) =>
+                        chain.filters.every((f) => f(r))
+                      );
+                      const sorted = filtered.sort((a, b) =>
+                        b.issued_at.localeCompare(a.issued_at)
+                      );
+                      const row = sorted[0] || null;
+                      return { data: row, error: null };
+                    },
+                  };
                 },
-              }),
-            }),
+              };
+            },
           };
           return chain;
         },
@@ -92,7 +96,6 @@ const mockSupabase = {
     throw new Error(`Unhandled mock table: ${table}`);
   }),
 } as unknown as Parameters<typeof startTotpEnrollment>[0];
-
 const backupRows: {
   // biome-ignore lint/style/useNamingConvention: mimic DB columns
   code_hash: string;

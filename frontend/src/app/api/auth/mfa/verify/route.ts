@@ -37,8 +37,18 @@ export const POST = withApiGuards({
   let backupCodes: string[] | undefined;
   if (userId) {
     try {
-      const regenerated = await regenerateBackupCodes(adminSupabase, userId, 10);
-      backupCodes = regenerated.codes;
+      const { count, error: existingError } = await adminSupabase
+        .from("auth_backup_codes")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .is("consumed_at", null);
+      if (existingError) {
+        throw existingError;
+      }
+      if (!count || count === 0) {
+        const regenerated = await regenerateBackupCodes(adminSupabase, userId, 10);
+        backupCodes = regenerated.codes;
+      }
     } catch (error) {
       logger.error("failed to regenerate backup codes post-verify", {
         error: error instanceof Error ? error.message : "unknown_error",
