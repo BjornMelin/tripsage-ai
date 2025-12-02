@@ -1,3 +1,7 @@
+/**
+ * @fileoverview API route returning cached popular flight destinations.
+ */
+
 import "server-only";
 
 import type { User } from "@supabase/supabase-js";

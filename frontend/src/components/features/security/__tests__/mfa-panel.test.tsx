@@ -225,7 +225,12 @@ describe("MfaPanel", () => {
           data: {
             aal: "aal2",
             factors: [
-              { friendlyName: "Key", id: "f2", status: "verified", type: "webauthn" },
+              {
+                friendlyName: "Key",
+                id: "00000000-0000-4000-8000-0000000000f2",
+                status: "verified",
+                type: "webauthn",
+              },
             ],
           },
         }),

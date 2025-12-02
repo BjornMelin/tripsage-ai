@@ -10,10 +10,10 @@ import {
 
 /** Mock lucide-react icons */
 vi.mock("lucide-react", () => ({
-  AlertTriangle: () => <div data-testid="alert-triangle-icon" />,
-  Bug: () => <div data-testid="bug-icon" />,
-  Home: () => <div data-testid="home-icon" />,
-  RefreshCw: () => <div data-testid="refresh-icon" />,
+  AlertTriangleIcon: () => <div data-testid="alert-triangle-icon" />,
+  BugIcon: () => <div data-testid="bug-icon" />,
+  HomeIcon: () => <div data-testid="home-icon" />,
+  RefreshCwIcon: () => <div data-testid="refresh-icon" />,
 }));
 
 // Avoid redefining window.location; only assert interactions do not throw

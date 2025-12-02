@@ -20,13 +20,76 @@ import {
   mfaVerificationInputSchema,
 } from "@schemas/mfa";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { secureId } from "@/lib/security/random";
-import type { TypedAdminSupabase } from "@/lib/supabase/admin";
+import { getServerEnv } from "@/lib/env/server";
+import { nowIso, secureId } from "@/lib/security/random";
+import { getAdminSupabase, type TypedAdminSupabase } from "@/lib/supabase/admin";
+import type { Database } from "@/lib/supabase/database.types";
+import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
-type TypedSupabase = SupabaseClient;
+type TypedSupabase = SupabaseClient<Database>;
+type BackupAuditMeta = { ip?: string; userAgent?: string };
 
-const BACKUP_CODE_PEPPER = "mfa-backup-code";
+const auditLogger = createServerLogger("security.mfa.audit");
+
+/** A custom error class for invalid backup codes. */
+export class InvalidBackupCodeError extends Error {
+  constructor(message = "invalid_backup_code") {
+    super(message);
+    this.name = "InvalidBackupCodeError";
+  }
+}
+
+/** A custom error class for user lookup errors. */
+class UserLookupError extends Error {
+  constructor(message = "user_not_found") {
+    super(message);
+    this.name = "UserLookupError";
+  }
+}
+
+/** The cache of the backup code pepper. */
+let backupCodePepperCache: string | null = null;
+
+/** Resets the backup code pepper for testing. */
+export function resetBackupCodePepperForTest() {
+  backupCodePepperCache = null;
+}
+
+/** Gets the backup code pepper. */
+function getBackupCodePepper(): string {
+  if (backupCodePepperCache) {
+    return backupCodePepperCache;
+  }
+  const env = getServerEnv();
+  const value = env.MFA_BACKUP_CODE_PEPPER ?? env.SUPABASE_JWT_SECRET;
+  if (!value || value.trim().length < 16) {
+    throw new Error(
+      "MFA_BACKUP_CODE_PEPPER must be set to a non-empty secret (>=16 chars) or SUPABASE_JWT_SECRET must be provided as fallback"
+    );
+  }
+  backupCodePepperCache = value.trim();
+  return backupCodePepperCache;
+}
+
+/** Validates MFA configuration; throws if required secrets are missing. */
+export function validateMfaConfig(): void {
+  getBackupCodePepper();
+}
+
+/**
+ * Gets the authenticated user ID.
+ *
+ * @param supabase - The Supabase client.
+ * @returns The authenticated user ID.
+ */
+async function getAuthenticatedUserId(supabase: TypedSupabase): Promise<string> {
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data?.user?.id) {
+    throw new UserLookupError(error?.message ?? "user_not_found");
+  }
+  return data.user.id;
+}
 
 /**
  * Generates a list of backup codes.
@@ -48,12 +111,13 @@ function generateBackupCodes(count: number): string[] {
  * @returns The enrollment result.
  */
 export async function startTotpEnrollment(
-  supabase: TypedSupabase
+  supabase: TypedSupabase,
+  deps?: { adminSupabase?: TypedAdminSupabase }
 ): Promise<MfaEnrollment> {
   return await withTelemetrySpan(
     "mfa.start_enrollment",
     { attributes: { factor: "totp", feature: "mfa" } },
-    async () => {
+    async (span) => {
       const now = new Date();
       const expiresAt = new Date(now.getTime() + 15 * 60 * 1000);
       const ttlSeconds = Math.max(
@@ -61,12 +125,15 @@ export async function startTotpEnrollment(
         Math.floor((expiresAt.getTime() - now.getTime()) / 1000)
       );
 
-      const { data: authUser } = await supabase.auth.getUser();
+      const userId = await getAuthenticatedUserId(supabase).catch((error) => {
+        span.recordException(error as Error);
+        throw error;
+      });
+
       const enrollResult = await supabase.auth.mfa.enroll({ factorType: "totp" });
       if (enrollResult.error || !enrollResult.data?.id || !enrollResult.data.totp) {
         throw new Error(enrollResult.error?.message ?? "mfa_enroll_failed");
       }
-      const userId = authUser.user?.id ?? null;
 
       const challenge = await supabase.auth.mfa.challenge({
         factorId: enrollResult.data.id,
@@ -85,16 +152,21 @@ export async function startTotpEnrollment(
         uri: enrollResult.data.totp.uri ?? undefined,
       };
       const parsed = mfaEnrollmentSchema.parse(payload);
+      const adminSupabase = deps?.adminSupabase ?? getAdminSupabase();
+      const { error: expireError } = await adminSupabase
+        .from("mfa_enrollments")
+        .update({ status: "expired" })
+        .eq("user_id", userId)
+        .eq("status", "pending")
+        .lt("expires_at", nowIso());
+      if (expireError) {
+        span.recordException(expireError);
+        throw new Error(expireError.message ?? "mfa_enrollment_expire_failed");
+      }
 
-      if (userId) {
-        await supabase
-          .from("mfa_enrollments")
-          .update({ status: "expired" })
-          .eq("user_id", userId)
-          .eq("status", "pending")
-          .lt("expires_at", now.toISOString());
-
-        await supabase.from("mfa_enrollments").insert({
+      const { error: insertError } = await adminSupabase
+        .from("mfa_enrollments")
+        .insert({
           // biome-ignore lint/style/useNamingConvention: snake_case columns
           challenge_id: parsed.challengeId,
           // biome-ignore lint/style/useNamingConvention: snake_case columns
@@ -107,7 +179,11 @@ export async function startTotpEnrollment(
           // biome-ignore lint/style/useNamingConvention: snake_case columns
           user_id: userId,
         });
+      if (insertError) {
+        span.recordException(insertError);
+        throw new Error(insertError.message ?? "mfa_enrollment_store_failed");
       }
+
       return parsed;
     }
   );
@@ -150,7 +226,8 @@ export async function challengeTotp(
  */
 export async function verifyTotp(
   supabase: TypedSupabase,
-  input: MfaVerificationInput
+  input: MfaVerificationInput,
+  deps?: { adminSupabase?: TypedAdminSupabase }
 ): Promise<void> {
   const parsed = mfaVerificationInputSchema.parse(input);
   await withTelemetrySpan(
@@ -164,6 +241,7 @@ export async function verifyTotp(
       redactKeys: ["factorId", "code"],
     },
     async (span) => {
+      const adminSupabase = deps?.adminSupabase ?? getAdminSupabase();
       const { data: pendingEnrollment, error: enrollmentError } = await supabase
         .from("mfa_enrollments")
         .select("expires_at,status")
@@ -183,11 +261,15 @@ export async function verifyTotp(
       }
 
       if (new Date(pendingEnrollment.expires_at).getTime() < Date.now()) {
-        await supabase
+        const { error: expireError } = await adminSupabase
           .from("mfa_enrollments")
           .update({ status: "expired" })
           .eq("challenge_id", parsed.challengeId)
           .eq("factor_id", parsed.factorId);
+        if (expireError) {
+          span.recordException(expireError);
+          throw new Error(expireError.message ?? "mfa_enrollment_expire_failed");
+        }
         throw new Error("mfa_enrollment_expired");
       }
 
@@ -202,20 +284,23 @@ export async function verifyTotp(
       }
 
       // Mark enrollment consumed if present
-      const { data: userData } = await supabase.auth.getUser();
-      const userId = userData.user?.id;
+      const userId = await getAuthenticatedUserId(supabase);
       if (userId) {
-        await supabase
+        const { error: consumeError } = await adminSupabase
           .from("mfa_enrollments")
           .update({
             // biome-ignore lint/style/useNamingConvention: snake_case columns
-            consumed_at: new Date().toISOString(),
+            consumed_at: nowIso(),
             status: "consumed",
           })
           .eq("user_id", userId)
           .eq("factor_id", parsed.factorId)
           .eq("challenge_id", parsed.challengeId)
           .eq("status", "pending");
+        if (consumeError) {
+          span.recordException(consumeError);
+          throw new Error(consumeError.message ?? "mfa_enrollment_update_failed");
+        }
       }
     }
   );
@@ -260,11 +345,19 @@ export async function unenrollFactor(
   supabase: TypedSupabase,
   factorId: string
 ): Promise<void> {
+  const validatedFactorId = mfaChallengeInputSchema.pick({ factorId: true }).parse({
+    factorId,
+  }).factorId;
   await withTelemetrySpan(
     "mfa.unenroll",
-    { attributes: { factorId, feature: "mfa" }, redactKeys: ["factorId"] },
+    {
+      attributes: { factorId: validatedFactorId, feature: "mfa" },
+      redactKeys: ["factorId"],
+    },
     async (span) => {
-      const { error } = await supabase.auth.mfa.unenroll({ factorId });
+      const { error } = await supabase.auth.mfa.unenroll({
+        factorId: validatedFactorId,
+      });
       if (error) {
         span.recordException(error);
         throw new Error(error.message ?? "mfa_unenroll_failed");
@@ -284,7 +377,8 @@ export async function unenrollFactor(
 export async function createBackupCodes(
   adminSupabase: TypedAdminSupabase,
   userId: string,
-  count = 10
+  count = 10,
+  meta: BackupAuditMeta = {}
 ): Promise<BackupCodeList> {
   return await withTelemetrySpan(
     "mfa.backup_codes.generate",
@@ -298,21 +392,27 @@ export async function createBackupCodes(
         user_id: userId,
       }));
 
-      const table = adminSupabase.from("auth_backup_codes");
+      const adminClient = adminSupabase as unknown as SupabaseClient<Database>;
+      const { data, error } = await adminClient.rpc(
+        "replace_backup_codes" as never,
+        {
+          // biome-ignore lint/style/useNamingConvention: RPC parameters must match SQL function names
+          p_code_hashes: rows.map((row) => row.code_hash),
+          // biome-ignore lint/style/useNamingConvention: RPC parameters must match SQL function names
+          p_user_id: userId,
+        } as never
+      );
 
-      const { error: deleteError } = await table.delete().eq("user_id", userId);
-      if (deleteError) {
-        span.recordException(deleteError);
-        throw new Error(deleteError.message ?? "backup_codes_cleanup_failed");
-      }
-
-      const { error } = await table.insert(rows);
       if (error) {
         span.recordException(error);
         throw new Error(error.message ?? "backup_codes_store_failed");
       }
 
-      return { codes, remaining: rows.length };
+      const remaining = typeof data === "number" ? data : rows.length;
+
+      await logBackupCodeAudit(adminSupabase, userId, "regenerated", remaining, meta);
+
+      return { codes, remaining };
     }
   );
 }
@@ -328,7 +428,8 @@ export async function createBackupCodes(
 export async function verifyBackupCode(
   adminSupabase: TypedAdminSupabase,
   userId: string,
-  code: string
+  code: string,
+  meta: BackupAuditMeta = {}
 ): Promise<BackupCodeList> {
   const parsedCode = backupCodeVerifyInputSchema.parse({ code }).code;
   return await withTelemetrySpan(
@@ -349,22 +450,30 @@ export async function verifyBackupCode(
         throw new Error(error.message ?? "backup_codes_lookup_failed");
       }
       if (!data) {
-        throw new Error("invalid_backup_code");
+        throw new InvalidBackupCodeError("invalid_backup_code");
       }
 
-      const { error: updateError } = await table
+      const { data: updatedRows, error: updateError } = await table
         // biome-ignore lint/style/useNamingConvention: DB column naming
-        .update({ consumed_at: new Date().toISOString() })
-        .eq("id", data.id);
+        .update({ consumed_at: nowIso() })
+        .eq("id", data.id)
+        .is("consumed_at", null)
+        .select("id");
       if (updateError) {
         span.recordException(updateError);
         throw new Error(updateError.message ?? "backup_code_consume_failed");
+      }
+      const updatedCount = updatedRows?.length ?? 0;
+      if (!updatedCount || updatedCount === 0) {
+        throw new InvalidBackupCodeError("backup_code_already_consumed");
       }
 
       const { count } = await table
         .select("id", { count: "exact", head: true })
         .eq("user_id", userId)
         .is("consumed_at", null);
+
+      await logBackupCodeAudit(adminSupabase, userId, "consumed", 1, meta);
 
       return { codes: [], remaining: count ?? 0 };
     }
@@ -392,6 +501,13 @@ export async function refreshAal(supabase: TypedSupabase): Promise<"aal1" | "aal
   );
 }
 
+export async function requireAal2(supabase: TypedSupabase): Promise<void> {
+  const level = await refreshAal(supabase);
+  if (level !== "aal2") {
+    throw new Error("mfa_required");
+  }
+}
+
 /**
  * Regenerates backup codes.
  *
@@ -403,10 +519,11 @@ export async function refreshAal(supabase: TypedSupabase): Promise<"aal1" | "aal
 export async function regenerateBackupCodes(
   adminSupabase: TypedAdminSupabase,
   userId: string,
-  count: number
+  count: number,
+  meta: BackupAuditMeta = {}
 ): Promise<BackupCodeList> {
   const parsed = backupCodeRegenerateInputSchema.parse({ count });
-  return await createBackupCodes(adminSupabase, userId, parsed.count);
+  return await createBackupCodes(adminSupabase, userId, parsed.count, meta);
 }
 
 /**
@@ -433,6 +550,33 @@ export async function revokeSessions(
   );
 }
 
+async function logBackupCodeAudit(
+  adminSupabase: TypedAdminSupabase,
+  userId: string,
+  event: "regenerated" | "consumed",
+  count: number,
+  meta: BackupAuditMeta
+) {
+  const adminClient = adminSupabase as unknown as SupabaseClient<Database>;
+  const { error } = await adminClient.from("mfa_backup_code_audit" as never).insert({
+    count,
+    event,
+    ip: meta.ip,
+    // biome-ignore lint/style/useNamingConvention: DB column naming
+    user_agent: meta.userAgent,
+    // biome-ignore lint/style/useNamingConvention: DB column naming
+    user_id: userId,
+  } as never);
+  if (error) {
+    auditLogger.error("mfa backup code audit insert failed", {
+      error: error.message,
+      event,
+      userId,
+    });
+    return;
+  }
+}
+
 /**
  * Hashes a backup code.
  *
@@ -441,8 +585,11 @@ export async function revokeSessions(
  */
 function hashBackupCode(code: string): string {
   const normalized = code.trim().toUpperCase();
+  const pepper = getBackupCodePepper();
   // Lightweight pepper to avoid plain deterministic hash reuse
-  return createHash("sha256")
-    .update(`${BACKUP_CODE_PEPPER}:${normalized}`, "utf8")
-    .digest("hex");
+  return createHash("sha256").update(`${pepper}:${normalized}`, "utf8").digest("hex");
+}
+
+if (process.env.NODE_ENV !== "test") {
+  validateMfaConfig();
 }
