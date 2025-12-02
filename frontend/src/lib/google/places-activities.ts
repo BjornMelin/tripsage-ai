@@ -70,6 +70,15 @@ type PlacesSearchResponse = {
 
 type PlacesDetailsResponse = PlacesPlace;
 
+/** Maximum number of photos to include per activity. */
+const MAX_ACTIVITY_PHOTOS = 5;
+
+/** Default photo dimensions for activity images. */
+const DEFAULT_PHOTO_DIMENSIONS = {
+  maxHeightPx: 800,
+  maxWidthPx: 1200,
+} as const;
+
 /**
  * Maps Google Places priceLevel to Activity price index (0-4).
  *
@@ -133,20 +142,15 @@ function extractActivityType(types?: string[]): string {
   return matched ?? types[0] ?? "activity";
 }
 
-/** Maximum number of photos to include per activity. */
-const MAX_ACTIVITY_PHOTOS = 5;
-
-/** Default photo dimensions for activity images. */
-const DEFAULT_PHOTO_DIMENSIONS = {
-  maxHeightPx: 800,
-  maxWidthPx: 1200,
-} as const;
-
 /**
  * Builds client-safe photo URLs via the server-side photo proxy.
  *
  * Limits results to MAX_ACTIVITY_PHOTOS (5) to balance visual richness
- * with payload size and rendering performance.
+ * with payload size and rendering performance. The photo proxy route
+ * handles API key authentication internally.
+ *
+ * @param photos - Array of PlacesPhoto objects.
+ * @returns Array of client-safe photo URLs.
  */
 function buildPhotoUrls(photos?: PlacesPhoto[]): string[] {
   if (!photos || photos.length === 0) {
