@@ -251,5 +251,24 @@ describe("booking helpers", () => {
         "noopener,noreferrer"
       );
     });
+
+    it("should refuse javascript URLs extracted from description", () => {
+      const activity = {
+        date: "2025-01-01",
+        description: "javascript:alert(1)",
+        duration: 120,
+        id: "ai_fallback:inject",
+        location: "",
+        name: "",
+        price: 0,
+        rating: 0,
+        type: "activity",
+      };
+
+      const result = openActivityBooking(activity);
+
+      expect(result).toBe(false);
+      expect(window.open).not.toHaveBeenCalled();
+    });
   });
 });
