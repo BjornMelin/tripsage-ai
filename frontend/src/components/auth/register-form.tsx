@@ -6,6 +6,7 @@
 
 import { SiGithub, SiGoogle } from "@icons-pack/react-simple-icons";
 import { Loader2Icon, MailIcon } from "lucide-react";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +16,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { resolveRedirectUrl } from "@/lib/auth/redirect";
@@ -33,9 +35,12 @@ type RegisterFormProps = {
  */
 export function RegisterForm({ redirectTo }: RegisterFormProps) {
   const supabase = useSupabaseRequired();
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const targetUrl = useMemo(() => resolveRedirectUrl(redirectTo), [redirectTo]);
@@ -44,25 +49,58 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
   const handleSignup = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
+
+    // Validate required fields
+    if (!firstName.trim()) {
+      setError("First name is required");
+      return;
+    }
+    if (!lastName.trim()) {
+      setError("Last name is required");
+      return;
+    }
+    if (!acceptTerms) {
+      setError("You must accept the terms and conditions");
+      return;
+    }
     if (password !== confirmPassword) {
       setError("Passwords do not match");
       return;
     }
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters");
+      return;
+    }
+
     setLoading(true);
+    // Build emailRedirectTo with next parameter for post-confirmation redirect
     const emailRedirectTo =
       typeof window === "undefined"
         ? undefined
-        : new URL("/auth/confirm?type=email", window.location.origin).toString();
+        : new URL("/auth/confirm", window.location.origin).toString() +
+          `?type=email&next=${encodeURIComponent(targetUrl)}`;
+
     const { data, error: signUpError } = await supabase.auth.signUp({
       email,
-      options: { emailRedirectTo },
+      options: {
+        data: {
+          email,
+          first_name: firstName.trim(),
+          full_name: `${firstName.trim()} ${lastName.trim()}`,
+          last_name: lastName.trim(),
+        },
+        emailRedirectTo,
+      },
       password,
     });
     setLoading(false);
+
     if (signUpError) {
       setError(signUpError.message);
       return;
     }
+    // When email confirmation is required, data.session is null
+    // Redirect to check_email page instead of dashboard
     if (!data?.session) {
       const checkEmailUrl =
         typeof window === "undefined"
@@ -71,6 +109,7 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
       window.location.assign(checkEmailUrl);
       return;
     }
+    // Only redirect to targetUrl if session exists (email confirmation disabled)
     window.location.assign(targetUrl);
   };
 
@@ -96,6 +135,30 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
       </CardHeader>
       <CardContent className="space-y-4">
         <form className="space-y-4" onSubmit={handleSignup}>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="firstName">First name</Label>
+              <Input
+                id="firstName"
+                type="text"
+                autoComplete="given-name"
+                required
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lastName">Last name</Label>
+              <Input
+                id="lastName"
+                type="text"
+                autoComplete="family-name"
+                required
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+              />
+            </div>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -128,6 +191,23 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
             />
+          </div>
+          <div className="flex items-start space-x-2">
+            <Checkbox
+              id="acceptTerms"
+              checked={acceptTerms}
+              onCheckedChange={(checked) => setAcceptTerms(checked === true)}
+            />
+            <Label htmlFor="acceptTerms" className="text-sm leading-tight">
+              I agree to the{" "}
+              <Link href="/terms" className="text-primary underline hover:no-underline">
+                Terms of Service
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy" className="text-primary underline hover:no-underline">
+                Privacy Policy
+              </Link>
+            </Label>
           </div>
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
           <Button

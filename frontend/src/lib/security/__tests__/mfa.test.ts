@@ -272,8 +272,8 @@ describe("mfa service", () => {
     expect(result.qrCode).toBe("qr");
   });
 
-  it("verifies totp code", async () => {
-    // Set up enrollment data
+  it("verifies totp code during initial enrollment", async () => {
+    // Set up pending enrollment data
     mfaEnrollmentRows.push({
       challenge_id: mockIds.challengeId,
       expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
@@ -282,17 +282,30 @@ describe("mfa service", () => {
       status: "pending",
     });
 
-    await expect(
-      verifyTotp(
-        mockSupabase,
-        {
-          challengeId: mockIds.challengeId,
-          code: "123456",
-          factorId: mockIds.factorId,
-        },
-        { adminSupabase: mockAdmin }
-      )
-    ).resolves.toBeUndefined();
+    const result = await verifyTotp(
+      mockSupabase,
+      {
+        challengeId: mockIds.challengeId,
+        code: "123456",
+        factorId: mockIds.factorId,
+      },
+      { adminSupabase: mockAdmin }
+    );
+    expect(result.isInitialEnrollment).toBe(true);
+  });
+
+  it("verifies totp code during subsequent challenge (no enrollment)", async () => {
+    // No pending enrollment - simulates regular MFA login challenge
+    const result = await verifyTotp(
+      mockSupabase,
+      {
+        challengeId: mockIds.challengeId,
+        code: "123456",
+        factorId: mockIds.factorId,
+      },
+      { adminSupabase: mockAdmin }
+    );
+    expect(result.isInitialEnrollment).toBe(false);
   });
 
   it("creates backup codes and stores hashed values", async () => {

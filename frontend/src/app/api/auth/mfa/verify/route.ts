@@ -24,8 +24,10 @@ export const POST = withApiGuards({
   telemetry: "api.auth.mfa.verify",
 })(async (_req, { supabase, user }, data) => {
   const adminSupabase = getAdminSupabase();
+  let isInitialEnrollment = false;
   try {
-    await verifyTotp(supabase, data, { adminSupabase });
+    const result = await verifyTotp(supabase, data, { adminSupabase });
+    isInitialEnrollment = result.isInitialEnrollment;
   } catch (error) {
     logger.error("totp verification failed", {
       error: error instanceof Error ? error.message : "unknown_error",
@@ -33,26 +35,19 @@ export const POST = withApiGuards({
     return NextResponse.json({ error: "invalid_or_expired_code" }, { status: 400 });
   }
 
-  const userId = user?.id ?? (await supabase.auth.getUser()).data.user?.id;
+  // Only generate backup codes during initial MFA enrollment, not on subsequent logins
   let backupCodes: string[] | undefined;
-  if (userId) {
-    try {
-      const { count, error: existingError } = await adminSupabase
-        .from("auth_backup_codes")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", userId)
-        .is("consumed_at", null);
-      if (existingError) {
-        throw existingError;
-      }
-      if (!count || count === 0) {
+  if (isInitialEnrollment) {
+    const userId = user?.id ?? (await supabase.auth.getUser()).data.user?.id;
+    if (userId) {
+      try {
         const regenerated = await regenerateBackupCodes(adminSupabase, userId, 10);
         backupCodes = regenerated.codes;
+      } catch (error) {
+        logger.error("failed to generate backup codes post-enrollment", {
+          error: error instanceof Error ? error.message : "unknown_error",
+        });
       }
-    } catch (error) {
-      logger.error("failed to regenerate backup codes post-verify", {
-        error: error instanceof Error ? error.message : "unknown_error",
-      });
     }
   }
 
