@@ -158,6 +158,46 @@ describe("booking helpers", () => {
       );
     });
 
+    it("should ignore localhost and .local hosts and fall back to map search", () => {
+      const activity = {
+        date: "2025-01-01",
+        description:
+          "Try http://localhost:3000/booking or https://internal.local/booking",
+        duration: 120,
+        id: "ai_fallback:localhosts",
+        location: "Test Location",
+        name: "AI Suggested Activity",
+        price: 2,
+        rating: 0,
+        type: "activity",
+      };
+
+      const url = getActivityBookingUrl(activity);
+
+      expect(url).toBe(
+        "https://www.google.com/maps/search/?api=1&query=AI%20Suggested%20Activity%20Test%20Location"
+      );
+    });
+
+    it("should select the first valid URL when no booking domains are present", () => {
+      const activity = {
+        date: "2025-01-01",
+        description:
+          "See https://example.com/first for details or https://another.test/path",
+        duration: 120,
+        id: "ai_fallback:first-valid",
+        location: "Test Location",
+        name: "AI Suggested Activity",
+        price: 2,
+        rating: 0,
+        type: "activity",
+      };
+
+      const url = getActivityBookingUrl(activity);
+
+      expect(url).toBe("https://example.com/first");
+    });
+
     it("should return null when AI activity has no booking URL and no location data", () => {
       const activity = {
         date: "2025-01-01",
