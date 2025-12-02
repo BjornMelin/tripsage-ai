@@ -68,10 +68,15 @@ CREATE TABLE IF NOT EXISTS public.auth_backup_codes (
 CREATE UNIQUE INDEX IF NOT EXISTS auth_backup_codes_user_code_hash_idx
   ON public.auth_backup_codes (user_id, code_hash);
 
--- Ensure only one active primary code set per user at a time
-CREATE UNIQUE INDEX IF NOT EXISTS auth_backup_codes_primary_active_idx
+-- Track active primary backup codes per user for fast lookup (non-unique)
+CREATE INDEX IF NOT EXISTS auth_backup_codes_primary_active_idx
   ON public.auth_backup_codes (user_id)
   WHERE label = 'primary' AND consumed_at IS NULL;
+
+-- Support cleanup/audit queries for consumed codes
+CREATE INDEX IF NOT EXISTS auth_backup_codes_consumed_at_idx
+  ON public.auth_backup_codes (user_id, consumed_at)
+  WHERE consumed_at IS NOT NULL;
 
 ALTER TABLE public.auth_backup_codes ENABLE ROW LEVEL SECURITY;
 
@@ -92,6 +97,72 @@ CREATE POLICY "Users can delete their own backup codes"
   FOR DELETE
   TO authenticated
   USING (auth.uid() = user_id);
+
+CREATE POLICY "Service role can manage backup codes"
+  ON public.auth_backup_codes
+  FOR ALL
+  TO service_role
+  USING (true)
+  WITH CHECK (true);
+
+-- Atomic replacement of MFA backup codes (service-role only)
+CREATE OR REPLACE FUNCTION public.replace_backup_codes(
+  p_user_id uuid,
+  p_code_hashes text[]
+) returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  inserted integer := 0;
+begin
+  delete from public.auth_backup_codes
+  where user_id = p_user_id;
+
+  insert into public.auth_backup_codes (user_id, code_hash)
+  select p_user_id, code_hash
+  from unnest(p_code_hashes) as t(code_hash);
+
+  get diagnostics inserted = row_count;
+  return inserted;
+end;
+$$;
+
+grant execute on function public.replace_backup_codes(uuid, text[]) to service_role;
+
+comment on function public.replace_backup_codes(uuid, text[]) is 'Atomically replaces all backup codes for a user with the provided hashed list.';
+
+-- Audit log for backup code lifecycle
+CREATE TABLE IF NOT EXISTS public.mfa_backup_code_audit (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  event TEXT NOT NULL CHECK (event IN ('regenerated','consumed')),
+  count INTEGER NOT NULL DEFAULT 0,
+  ip TEXT,
+  user_agent TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS mfa_backup_code_audit_user_created_idx
+  ON public.mfa_backup_code_audit (user_id, created_at DESC);
+
+ALTER TABLE public.mfa_backup_code_audit ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own backup code audit"
+  ON public.mfa_backup_code_audit
+  FOR SELECT
+  TO authenticated
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Service role manages backup code audit"
+  ON public.mfa_backup_code_audit
+  FOR ALL
+  TO service_role
+  USING (true)
+  WITH CHECK (true);
+
+COMMENT ON TABLE public.mfa_backup_code_audit IS 'Audit trail for MFA backup code regeneration and consumption events.';
 
 -- mfa_enrollments pending/consumed lifecycle
 CREATE TABLE IF NOT EXISTS public.mfa_enrollments (
@@ -114,12 +185,39 @@ CREATE INDEX IF NOT EXISTS mfa_enrollments_challenge_idx
 
 ALTER TABLE public.mfa_enrollments ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can manage own mfa_enrollments"
+CREATE POLICY "Users can view own mfa_enrollments"
+  ON public.mfa_enrollments
+  FOR SELECT
+  TO authenticated
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own mfa_enrollments"
+  ON public.mfa_enrollments
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Service role manages mfa_enrollments"
   ON public.mfa_enrollments
   FOR ALL
-  TO authenticated
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+  TO service_role
+  USING (true)
+  WITH CHECK (true);
+
+-- Cleanup job for expired/consumed enrollments (requires pg_cron)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
+    PERFORM cron.schedule(
+      'mfa_enrollments_cleanup_daily',
+      '0 3 * * *',
+      $$DELETE FROM public.mfa_enrollments
+          WHERE status IN ('expired','consumed')
+            AND expires_at < now() - interval '1 day';$$
+    );
+  END IF;
+END;
+$$;
 
 -- trips
 CREATE TABLE IF NOT EXISTS public.trips (
@@ -497,6 +595,69 @@ CREATE TABLE IF NOT EXISTS public.search_hotels (
   CONSTRAINT search_hotels_dates_check CHECK (check_out_date > check_in_date)
 );
 
+-- API Metrics table for dashboard metrics collection
+CREATE TABLE IF NOT EXISTS public.api_metrics (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    endpoint TEXT NOT NULL,
+    method TEXT NOT NULL,
+    status_code INTEGER NOT NULL,
+    duration_ms NUMERIC NOT NULL,
+    user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    error_type TEXT,
+    rate_limit_key TEXT,
+    CONSTRAINT api_metrics_status_code_check CHECK (status_code >= 100 AND status_code < 600),
+    CONSTRAINT api_metrics_duration_ms_check CHECK (duration_ms >= 0),
+    CONSTRAINT api_metrics_method_check CHECK (method IN ('GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'))
+);
+
+-- Indexes for query performance
+CREATE INDEX IF NOT EXISTS idx_api_metrics_created_at ON public.api_metrics(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_api_metrics_endpoint ON public.api_metrics(endpoint);
+CREATE INDEX IF NOT EXISTS idx_api_metrics_user_id ON public.api_metrics(user_id) WHERE user_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_api_metrics_status_code ON public.api_metrics(status_code);
+CREATE INDEX IF NOT EXISTS idx_api_metrics_time_status ON public.api_metrics(created_at DESC, status_code);
+
+ALTER TABLE public.api_metrics ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "admin_read_api_metrics" ON public.api_metrics
+    FOR SELECT
+    USING (
+        auth.role() = 'authenticated'
+        AND EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE profiles.id = auth.uid()
+            AND profiles.is_admin = true
+        )
+    );
+
+CREATE POLICY "service_role_all_api_metrics" ON public.api_metrics
+    FOR ALL
+    USING (auth.role() = 'service_role')
+    WITH CHECK (auth.role() = 'service_role');
+
+-- Data retention (90-day policy)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
+        PERFORM cron.schedule(
+            'cleanup_api_metrics_90d',
+            '0 3 * * *',
+            $$DELETE FROM public.api_metrics WHERE created_at < NOW() - INTERVAL '90 days'$$
+        );
+    END IF;
+END;
+$$;
+
+COMMENT ON TABLE public.api_metrics IS 'API request metrics for dashboard analytics and observability';
+COMMENT ON COLUMN public.api_metrics.endpoint IS 'API route pathname (e.g., /api/dashboard)';
+COMMENT ON COLUMN public.api_metrics.method IS 'HTTP method (GET, POST, PUT, PATCH, DELETE)';
+COMMENT ON COLUMN public.api_metrics.status_code IS 'HTTP response status code';
+COMMENT ON COLUMN public.api_metrics.duration_ms IS 'Request duration in milliseconds';
+COMMENT ON COLUMN public.api_metrics.user_id IS 'Authenticated user ID (null for anonymous requests)';
+COMMENT ON COLUMN public.api_metrics.error_type IS 'Error class name for failed requests';
+COMMENT ON COLUMN public.api_metrics.rate_limit_key IS 'Rate limit key used for this request';
+
 -- ===========================
 -- FUNCTIONS & TRIGGERS
 -- ===========================
@@ -707,6 +868,56 @@ CREATE TABLE IF NOT EXISTS public.agent_config (
 
 CREATE INDEX IF NOT EXISTS agent_config_agent_scope_idx
   ON public.agent_config(agent_type, scope);
+
+-- Seed baseline agent configuration (idempotent)
+DO $$
+DECLARE
+  agents constant text[] := array[
+    'budgetAgent',
+    'destinationResearchAgent',
+    'itineraryAgent',
+    'flightAgent',
+    'accommodationAgent',
+    'memoryAgent'
+  ];
+  agent text;
+  version_id uuid;
+  cfg jsonb;
+BEGIN
+  FOREACH agent IN ARRAY agents LOOP
+    cfg := jsonb_build_object(
+      'agentType', agent,
+      'createdAt', to_char(now(), 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+      'updatedAt', to_char(now(), 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+      'id', concat('v', extract(epoch from now())::bigint, '_seed_', agent),
+      'model', 'gpt-4o',
+      'parameters', jsonb_build_object(
+        'temperature', 0.3,
+        'maxTokens', 4096,
+        'topP', 0.9
+      ),
+      'scope', 'global'
+    );
+
+    INSERT INTO public.agent_config_versions(agent_type, scope, config, summary)
+    VALUES (agent, 'global', cfg, 'seed')
+    ON CONFLICT DO NOTHING
+    RETURNING id INTO version_id;
+
+    IF version_id IS NULL THEN
+      SELECT id INTO version_id FROM public.agent_config_versions
+      WHERE agent_type = agent AND scope = 'global'
+      ORDER BY created_at DESC LIMIT 1;
+    END IF;
+
+    INSERT INTO public.agent_config(agent_type, scope, config, version_id)
+    VALUES (agent, 'global', cfg, version_id)
+    ON CONFLICT (agent_type, scope) DO UPDATE SET
+      config = EXCLUDED.config,
+      version_id = EXCLUDED.version_id,
+      updated_at = now();
+  END LOOP;
+END$$;
 
 -- atomic upsert + version insertion
 CREATE OR REPLACE FUNCTION public.agent_config_upsert(
