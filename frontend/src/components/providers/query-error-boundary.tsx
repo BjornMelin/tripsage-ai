@@ -8,6 +8,7 @@
 import { useQueryErrorResetBoundary } from "@tanstack/react-query";
 import { AlertTriangle, RefreshCw, WifiOff } from "lucide-react";
 import type { ComponentType, ErrorInfo, JSX, ReactNode } from "react";
+import { useRef } from "react";
 import { ErrorBoundary, type FallbackProps } from "react-error-boundary";
 import { Button } from "@/components/ui/button";
 import {
@@ -219,7 +220,6 @@ function QueryErrorFallback({
           size="sm"
           className="flex items-center gap-2"
           disabled={!meta.isRetryable}
-          aria-disabled={!meta.isRetryable}
           aria-label="Try Again"
         >
           <RefreshCw className="h-4 w-4" />
@@ -290,21 +290,28 @@ export function QueryErrorBoundary({
   loginHref,
 }: QueryErrorBoundaryProps) {
   const { reset } = useQueryErrorResetBoundary();
+  const latestMetaRef = useRef<ErrorMeta | null>(null);
 
   /**
    * Handles boundary errors by emitting telemetry and delegating to injected sinks.
    */
   const handleError = (error: Error, info: ErrorInfo) => {
     const meta = ResolveMeta(error);
+    latestMetaRef.current = meta;
     RecordTelemetry(error, info, meta);
     SafeInvoke(onOperationalAlert, error, info, meta);
     SafeInvoke(onError, error, info, meta);
   };
 
+  const handleReset = () => {
+    latestMetaRef.current = null;
+    reset();
+  };
+
   return (
     <ErrorBoundary
       FallbackComponent={(props) => {
-        const meta = ResolveMeta(props.error);
+        const meta = latestMetaRef.current ?? ResolveMeta(props.error);
         return (
           <Fallback
             {...props}
@@ -314,7 +321,7 @@ export function QueryErrorBoundary({
           />
         );
       }}
-      onReset={reset}
+      onReset={handleReset}
       onError={handleError}
       resetKeys={[]}
     >
@@ -384,10 +391,8 @@ export function InlineQueryError({
           className="h-6 px-2 text-xs"
           aria-label="Try Again"
           disabled={!meta.isRetryable}
-          aria-disabled={!meta.isRetryable}
         >
           <RefreshCw className="h-3 w-3" />
-          <span className="sr-only">Retry</span>
         </Button>
       )}
     </div>
