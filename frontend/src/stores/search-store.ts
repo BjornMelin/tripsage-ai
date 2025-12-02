@@ -15,12 +15,14 @@ import type {
 } from "@schemas/search";
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-
+import { createStoreLogger } from "@/lib/telemetry/store-logger";
 import { useSearchFiltersStore } from "./search-filters-store";
 import { useSearchHistoryStore } from "./search-history-store";
 // Import the slice stores
 import { useSearchParamsStore } from "./search-params-store";
 import { useSearchResultsStore } from "./search-results-store";
+
+const logger = createStoreLogger({ storeName: "search" });
 
 // Combined search store interface that orchestrates all search operations
 interface SearchOrchestratorState {
@@ -409,7 +411,11 @@ export const useSearchStore = create<SearchOrchestratorState>()(
 
           return true;
         } catch (error) {
-          console.error("Failed to load saved search:", error);
+          logger.error("Failed to load saved search", {
+            error,
+            savedSearchId,
+            searchType: savedSearch.searchType,
+          });
           return false;
         }
       },

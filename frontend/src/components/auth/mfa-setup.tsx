@@ -22,6 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 
 interface MfaSetupProps {
   onComplete: (backupCodes: string[]) => void;
@@ -152,7 +153,10 @@ export function MfaSetup({ onComplete, onCancel }: MfaSetupProps) {
       setCopiedSecret(true);
       setTimeout(() => setCopiedSecret(false), 2000);
     } catch (err) {
-      console.error("Failed to copy to clipboard:", err);
+      recordClientErrorOnActiveSpan(
+        err instanceof Error ? err : new Error(String(err)),
+        { action: "copyToClipboard", context: "MfaSetup" }
+      );
     }
   };
 

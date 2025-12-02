@@ -1,19 +1,21 @@
 /**
- * @fileoverview Accommodation agent route handler (frontend-only).
+ * @fileoverview Accommodation agent route handler using AI SDK v6 ToolLoopAgent.
  * - Supabase SSR auth → userId
  * - Provider resolution (BYOK/Gateway)
  * - Guardrails (cache, ratelimit, telemetry) around tools
- * - AI SDK v6 streaming with tool calls
+ * - AI SDK v6 ToolLoopAgent with createAgentUIStreamResponse
  */
 
 import "server-only";
 
+import { createAccommodationAgent } from "@ai/agents";
 import { resolveProvider } from "@ai/models/registry";
 import type { AccommodationSearchRequest } from "@schemas/agents";
 import { agentSchemas } from "@schemas/agents";
+import { createAgentUIStreamResponse } from "ai";
 import type { NextRequest } from "next/server";
-import { runAccommodationAgent } from "@/lib/agents/accommodation-agent";
 import { resolveAgentConfig } from "@/lib/agents/config-resolver";
+import { createErrorHandler } from "@/lib/agents/error-recovery";
 import { withApiGuards } from "@/lib/api/factory";
 import { requireUserId } from "@/lib/api/route-helpers";
 
@@ -24,7 +26,7 @@ const RequestSchema = agentSchemas.accommodationSearchRequestSchema;
 /**
  * POST /api/agents/accommodations
  *
- * Validates request, resolves provider, and streams ToolLoop response.
+ * Validates request, resolves provider, and streams ToolLoopAgent response.
  */
 export const POST = withApiGuards({
   auth: true,
@@ -42,12 +44,15 @@ export const POST = withApiGuards({
     config.config.model ?? new URL(req.url).searchParams.get("model") ?? undefined;
   const { model, modelId } = await resolveProvider(userId, modelHint);
 
-  const result = runAccommodationAgent(
-    { identifier: userId, model, modelId },
+  const { agent, defaultMessages } = createAccommodationAgent(
+    { identifier: userId, model, modelId, userId },
     config.config,
     body
   );
-  return result.toTextStreamResponse({
-    headers: { "Content-Type": "text/event-stream" },
+
+  return createAgentUIStreamResponse({
+    agent,
+    messages: defaultMessages,
+    onError: createErrorHandler(),
   });
 });

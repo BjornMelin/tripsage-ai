@@ -115,5 +115,5 @@ export const crawlSiteInputSchema = z.strictObject({
     .default(120000)
     .nullable()
     .describe("Timeout in milliseconds"),
-  url: z.string().url().describe("Starting URL for the crawl"),
+  url: z.url().describe("Starting URL for the crawl"),
 });

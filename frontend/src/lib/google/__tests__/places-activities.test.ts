@@ -1,8 +1,7 @@
 /** @vitest-environment node */
 
-import { HttpResponse, http } from "msw";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { server } from "@/test/msw/server";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { getPlaceDetails, postPlacesSearch } from "../client";
 import {
   buildActivitySearchQuery,
   getActivityDetailsFromPlaces,
@@ -12,6 +11,11 @@ import {
 
 vi.mock("@/lib/env/server", () => ({
   getGoogleMapsServerKey: vi.fn(() => "test-api-key"),
+}));
+
+vi.mock("../client", () => ({
+  getPlaceDetails: vi.fn(),
+  postPlacesSearch: vi.fn(),
 }));
 
 vi.mock("@/lib/telemetry/span", () => ({
@@ -25,11 +29,7 @@ vi.mock("@/lib/telemetry/span", () => ({
 
 describe("places-activities", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    server.resetHandlers();
+    vi.resetAllMocks();
   });
 
   describe("buildActivitySearchQuery", () => {
@@ -63,9 +63,7 @@ describe("places-activities", () => {
         userRatingCount: 4523,
       };
 
-      const { getGoogleMapsServerKey } = await import("@/lib/env/server");
-      const apiKey = getGoogleMapsServerKey();
-      const activity = await mapPlacesPlaceToActivity(place, "2025-01-01", apiKey);
+      const activity = await mapPlacesPlaceToActivity(place, "2025-01-01");
 
       expect(activity.id).toBe("ChIJN1t_tDeuEmsRUsoyG83frY4");
       expect(activity.name).toBe("Museum of Modern Art");
@@ -75,6 +73,11 @@ describe("places-activities", () => {
       expect(activity.price).toBe(2); // PRICE_LEVEL_MODERATE maps to 2
       expect(activity.type).toBe("museum");
       expect(activity.coordinates).toEqual({ lat: 40.7614, lng: -73.9776 });
+      // URL parameter order may vary, so check that all required params are present
+      expect(activity.images?.[0]).toMatch(/^\/api\/places\/photo\?/);
+      expect(activity.images?.[0]).toContain("name=places%2Fphoto1");
+      expect(activity.images?.[0]).toContain("maxHeightPx=800");
+      expect(activity.images?.[0]).toContain("maxWidthPx=1200");
     });
 
     it("should handle missing optional fields", async () => {
@@ -147,9 +150,9 @@ describe("places-activities", () => {
     });
 
     it("should search and return activities", async () => {
-      server.use(
-        http.post("https://places.googleapis.com/v1/places:searchText", () =>
-          HttpResponse.json({
+      vi.mocked(postPlacesSearch).mockResolvedValue(
+        new Response(
+          JSON.stringify({
             places: [
               {
                 displayName: { text: "Museum of Modern Art" },
@@ -163,7 +166,8 @@ describe("places-activities", () => {
                 userRatingCount: 4523,
               },
             ],
-          })
+          }),
+          { status: 200 }
         )
       );
 
@@ -175,10 +179,8 @@ describe("places-activities", () => {
     });
 
     it("should return empty array on API error", async () => {
-      server.use(
-        http.post("https://places.googleapis.com/v1/places:searchText", () =>
-          HttpResponse.json({}, { status: 500 })
-        )
+      vi.mocked(postPlacesSearch).mockResolvedValue(
+        new Response(JSON.stringify({}), { status: 500 })
       );
 
       const result = await searchActivitiesWithPlaces("activities in Paris");
@@ -186,6 +188,7 @@ describe("places-activities", () => {
     });
 
     it("should respect maxResults parameter", async () => {
+      const maxResults = 10;
       const places = Array.from({ length: 30 }, (_, i) => ({
         displayName: { text: `Activity ${i}` },
         formattedAddress: `Address ${i}`,
@@ -195,14 +198,14 @@ describe("places-activities", () => {
         types: ["tourist_attraction"],
       }));
 
-      server.use(
-        http.post("https://places.googleapis.com/v1/places:searchText", () =>
-          HttpResponse.json({ places })
-        )
+      vi.mocked(postPlacesSearch).mockResolvedValue(
+        new Response(JSON.stringify({ places: places.slice(0, maxResults) }), {
+          status: 200,
+        })
       );
 
-      const result = await searchActivitiesWithPlaces("activities", 10);
-      expect(result.length).toBeLessThanOrEqual(10);
+      const result = await searchActivitiesWithPlaces("activities", maxResults);
+      expect(result.length).toBeLessThanOrEqual(maxResults);
     });
   });
 
@@ -218,22 +221,21 @@ describe("places-activities", () => {
     });
 
     it("should fetch and return activity details", async () => {
-      server.use(
-        http.get(
-          "https://places.googleapis.com/v1/places/ChIJN1t_tDeuEmsRUsoyG83frY4",
-          () =>
-            HttpResponse.json({
-              displayName: { text: "Museum of Modern Art" },
-              editorialSummary: { text: "A world-renowned art museum" },
-              formattedAddress: "11 W 53rd St, New York, NY 10019",
-              id: "ChIJN1t_tDeuEmsRUsoyG83frY4",
-              location: { latitude: 40.7614, longitude: -73.9776 },
-              photos: [{ name: "places/photo1" }],
-              priceLevel: "PRICE_LEVEL_MODERATE",
-              rating: 4.6,
-              types: ["museum"],
-              userRatingCount: 4523,
-            })
+      vi.mocked(getPlaceDetails).mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            displayName: { text: "Museum of Modern Art" },
+            editorialSummary: { text: "A world-renowned art museum" },
+            formattedAddress: "11 W 53rd St, New York, NY 10019",
+            id: "ChIJN1t_tDeuEmsRUsoyG83frY4",
+            location: { latitude: 40.7614, longitude: -73.9776 },
+            photos: [{ name: "places/photo1" }],
+            priceLevel: "PRICE_LEVEL_MODERATE",
+            rating: 4.6,
+            types: ["museum"],
+            userRatingCount: 4523,
+          }),
+          { status: 200 }
         )
       );
 
@@ -246,10 +248,8 @@ describe("places-activities", () => {
     });
 
     it("should return null on API error", async () => {
-      server.use(
-        http.get("https://places.googleapis.com/v1/places/invalid", () =>
-          HttpResponse.json({}, { status: 404 })
-        )
+      vi.mocked(getPlaceDetails).mockResolvedValue(
+        new Response(JSON.stringify({}), { status: 404 })
       );
 
       const result = await getActivityDetailsFromPlaces("invalid");

@@ -8,12 +8,12 @@
 
 import "server-only";
 
+import { runMemoryAgent } from "@ai/agents/memory-agent";
 import { resolveProvider } from "@ai/models/registry";
 import { agentSchemas } from "@schemas/agents";
 import type { NextRequest } from "next/server";
 import { resolveAgentConfig } from "@/lib/agents/config-resolver";
 import { createErrorHandler } from "@/lib/agents/error-recovery";
-import { runMemoryAgent } from "@/lib/agents/memory-agent";
 import { withApiGuards } from "@/lib/api/factory";
 import { parseJsonBody, requireUserId, validateSchema } from "@/lib/api/route-helpers";
 

@@ -4,6 +4,10 @@
  * Wraps memory tools (addConversationMemory) with guardrails (caching, rate
  * limiting) and executes streaming text generation to confirm memory writes.
  * Returns structured confirmation messages.
+ *
+ * Note: This agent uses streamText directly, not ToolLoopAgent, because
+ * memory persistence is a batch operation followed by a summary - not
+ * an agentic multi-step workflow.
  */
 
 import "server-only";

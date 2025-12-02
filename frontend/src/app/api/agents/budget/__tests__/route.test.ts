@@ -37,10 +37,30 @@ vi.mock("@ai/models/registry", () => ({
 }));
 
 // Mock budget agent
-vi.mock("@/lib/agents/budget-agent", () => ({
-  runBudgetAgent: vi.fn(() => ({
-    toUIMessageStreamResponse: () => new Response("ok", { status: 200 }),
+vi.mock("@ai/agents", () => ({
+  createBudgetAgent: vi.fn(() => ({
+    agent: {},
+    agentType: "budgetPlanning",
+    defaultMessages: [{ content: "schema", role: "user" }],
+    modelId: "gpt-4o",
   })),
+}));
+
+// Mock createAgentUIStreamResponse with streaming Response
+const mockCreateAgentUIStreamResponse = vi.fn(() => {
+  const stream = new ReadableStream({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode("data: test\n\n"));
+      controller.close();
+    },
+  });
+  return new Response(stream, {
+    headers: { "Content-Type": "text/event-stream" },
+    status: 200,
+  });
+});
+vi.mock("ai", () => ({
+  createAgentUIStreamResponse: mockCreateAgentUIStreamResponse,
 }));
 
 // Mock Redis
@@ -87,5 +107,14 @@ describe("/api/agents/budget route", () => {
     });
     const res = await mod.POST(req, createRouteParamsContext());
     expect(res.status).toBe(200);
+    expect(mockCreateAgentUIStreamResponse).toHaveBeenCalledTimes(1);
+
+    // Assert that createAgentUIStreamResponse was called with expected structure
+    expect(mockCreateAgentUIStreamResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        agent: expect.any(Object),
+        messages: expect.any(Array),
+      })
+    );
   });
 });

@@ -8,6 +8,51 @@ import type { TypedServerSupabase } from "@/lib/supabase/server";
 import type { ChatDeps } from "../_handler";
 import { handleChatStream } from "../_handler";
 
+// Mock the chat agent module
+vi.mock("@ai/agents", () => ({
+  CHAT_DEFAULT_SYSTEM_PROMPT: "test-system-prompt",
+  createChatAgent: vi.fn(() => ({
+    agent: {
+      generate: vi.fn(),
+      stream: vi.fn(),
+    },
+    modelId: "gpt-4o-mini",
+  })),
+  validateChatMessages: vi.fn(() => ({ valid: true })),
+}));
+
+// Mock createAgentUIStreamResponse with parameter validation
+vi.mock("ai", () => ({
+  createAgentUIStreamResponse: vi.fn((params) => {
+    // Validate mock parameters before returning Response
+    if (!params || typeof params !== "object") {
+      throw new Error("createAgentUIStreamResponse requires a parameters object");
+    }
+    if (!params.agent) {
+      throw new Error("createAgentUIStreamResponse requires an agent");
+    }
+    if (!Array.isArray(params.messages)) {
+      throw new Error("createAgentUIStreamResponse requires messages array");
+    }
+    return new Response("ok", { status: 200 });
+  }),
+}));
+
+// Mock memory functions
+vi.mock("@/lib/memory/orchestrator", () => ({
+  handleMemoryIntent: vi.fn(async () => ({ context: [] })),
+}));
+
+vi.mock("@/lib/memory/turn-utils", () => ({
+  assistantResponseToMemoryTurn: vi.fn(() => null),
+  persistMemoryTurn: vi.fn(async () => undefined),
+  uiMessageToMemoryTurn: vi.fn(() => null),
+}));
+
+vi.mock("@/lib/security/random", () => ({
+  secureUuid: vi.fn(() => "test-uuid-123"),
+}));
+
 const MOCK_SUPABASE = vi.hoisted(() => {
   const mockUser = { id: "user-1" } as unknown as User;
 
@@ -27,7 +72,6 @@ const MOCK_RESOLVE_PROVIDER = vi.hoisted(() =>
       model: {
         id: "gpt-4o-mini",
         providerId: "openai",
-        // LanguageModel requires provider metadata; stream is injected in tests
       } as unknown as LanguageModel,
       modelId: "gpt-4o-mini",
       provider: "openai" as const,
@@ -93,14 +137,8 @@ describe("/api/chat/stream route smoke", () => {
     expect(res.headers.get("Retry-After")).toBe("60");
   });
 
-  it("returns 200 on success with mocked provider and stream", async () => {
-    const mockStream = vi.fn(() => ({
-      toUIMessageStreamResponse: () => new Response("ok", { status: 200 }),
-    }));
-
-    const deps = createDeps({
-      stream: mockStream as never,
-    });
+  it("returns 200 on success with mocked agent", async () => {
+    const deps = createDeps();
 
     const payload = {
       ip: "1.2.3.4",

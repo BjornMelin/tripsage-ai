@@ -3,8 +3,9 @@ title = "TripSage gitleaks configuration"
 [allowlist]
 description = "Ignore known example env templates and test env files"
 paths = [
-  "\.env\.example$",
-  "\.env\.test$",
-  "^supabase/.env\.example$"
+  "\\.env\\.example$",
+  "\\.env\\.test$",
+  "^supabase/\\.env\\.example$",
+  "frontend/src/components/chat/__tests__/message-item.test.ts"
 ]
 

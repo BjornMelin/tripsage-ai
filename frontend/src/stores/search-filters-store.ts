@@ -19,6 +19,9 @@ import {
 import { create, type StateCreator } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 import { nowIso, secureId } from "@/lib/security/random";
+import { createStoreLogger } from "@/lib/telemetry/store-logger";
+
+const logger = createStoreLogger({ storeName: "search-filters" });
 
 // Validation schemas imported from @schemas/stores
 
@@ -470,7 +473,9 @@ const COMPUTE_DERIVED_STATE = (state: Partial<SearchFiltersState>) => {
       const valueStr = Array.isArray(activeFilter.value)
         ? activeFilter.value.join(", ")
         : typeof activeFilter.value === "object" && activeFilter.value !== null
-          ? `${(activeFilter.value as { min?: number; max?: number }).min || ""} - ${(activeFilter.value as { min?: number; max?: number }).max || ""}`
+          ? `${(activeFilter.value as { min?: number; max?: number }).min || ""} - ${
+              (activeFilter.value as { min?: number; max?: number }).max || ""
+            }`
           : String(activeFilter.value);
       summaries.push(`${filter.label}: ${valueStr}`);
     }
@@ -552,7 +557,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
               },
             }));
           } else {
-            console.error("Invalid filter:", result.error);
+            logger.error("Invalid filter", { error: result.error });
           }
         },
 
@@ -569,7 +574,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
               },
             }));
           } else {
-            console.error("Invalid sort option:", result.error);
+            logger.error("Invalid sort option", { error: result.error });
           }
         },
         appliedFilterSummary: "",
@@ -779,7 +784,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
 
             return true;
           } catch (error) {
-            console.error("Failed to load filter preset:", error);
+            logger.error("Failed to load filter preset", { error });
             set({ isApplyingFilters: false });
             return false;
           }
@@ -884,10 +889,10 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
               }));
               return presetId;
             }
-            console.error("Invalid filter preset:", result.error);
+            logger.error("Invalid filter preset", { error: result.error });
             return null;
           } catch (error) {
-            console.error("Failed to save filter preset:", error);
+            logger.error("Failed to save filter preset", { error });
             return null;
           }
         },
@@ -920,7 +925,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
 
             return true;
           } catch (error) {
-            console.error("Failed to set active filter:", error);
+            logger.error("Failed to set active filter", { error });
             set({ isApplyingFilters: false });
             return false;
           }
@@ -936,7 +941,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
                 activeSortOption: result.data,
               });
             } else {
-              console.error("Invalid sort option:", result.error);
+              logger.error("Invalid sort option", { error: result.error });
             }
           } else {
             set({ activeSortOption: null });
@@ -952,7 +957,9 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
           const validatedFilters = filters.filter((filter: ValidatedFilterOption) => {
             const result = filterOptionSchema.safeParse(filter);
             if (!result.success) {
-              console.error(`Invalid filter for ${searchType}:`, result.error);
+              logger.error(`Invalid filter for ${searchType}`, {
+                error: result.error,
+              });
               return false;
             }
             return true;
@@ -971,7 +978,9 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
           const validatedOptions = options.filter((option) => {
             const result = sortOptionSchema.safeParse(option);
             if (!result.success) {
-              console.error(`Invalid sort option for ${searchType}:`, result.error);
+              logger.error(`Invalid sort option for ${searchType}`, {
+                error: result.error,
+              });
               return false;
             }
             return true;
@@ -1012,7 +1021,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
 
             return true;
           } catch (error) {
-            console.error("Failed to set multiple filters:", error);
+            logger.error("Failed to set multiple filters", { error });
             set({ isApplyingFilters: false });
             return false;
           }
@@ -1033,7 +1042,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
               currentSearchType: result.data,
             });
           } else {
-            console.error("Invalid search type:", result.error);
+            logger.error("Invalid search type", { error: result.error });
           }
         },
 
@@ -1133,7 +1142,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
 
             return true;
           } catch (error) {
-            console.error("Failed to update filter preset:", error);
+            logger.error("Failed to update filter preset", { error });
             return false;
           }
         },

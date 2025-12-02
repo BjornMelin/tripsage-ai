@@ -22,6 +22,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { CalendarConnectClient } from "./calendar-connect-client";
 
 /**
@@ -85,7 +86,17 @@ export function CalendarConnectionCard({ className }: CalendarConnectionCardProp
       }
       const message = err instanceof Error ? err.message : "Unknown error";
       setError(message);
-      console.error("Failed to fetch calendar status:", err);
+      try {
+        recordClientErrorOnActiveSpan(err instanceof Error ? err : new Error(message), {
+          action: "loadCalendarStatus",
+          context: "CalendarConnectionCard",
+        });
+      } catch (telemetryError) {
+        // Swallow telemetry errors to avoid breaking component
+        if (process.env.NODE_ENV === "development") {
+          console.error("Failed to record telemetry error:", telemetryError);
+        }
+      }
     } finally {
       if (!abortController.signal.aborted) {
         setIsLoading(false);

@@ -9,13 +9,14 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useId } from "react";
+import { useId, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useSupabaseRequired } from "@/lib/supabase";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 
 /** Props for the RegisterForm component. */
 interface RegisterFormProps {
@@ -42,7 +43,8 @@ export function RegisterForm({
 }: RegisterFormProps) {
   const search = useSearchParams();
   const nextParam = search?.get("next") || "";
-  const error = search?.get("error");
+  const urlError = search?.get("error");
+  const [socialError, setSocialError] = useState<string | null>(null);
   const status = search?.get("status");
   const emailId = useId();
   const passwordId = useId();
@@ -66,17 +68,26 @@ export function RegisterForm({
    * @returns A promise that resolves to the social login result.
    */
   const handleSocialLogin = async (provider: "github" | "google") => {
+    setSocialError(null);
     const { error: oAuthError } = await supabase.auth.signInWithOAuth({
       options: {
-        redirectTo: `${origin}/auth/callback${nextParam ? `?next=${encodeURIComponent(nextParam)}` : ""}`,
+        redirectTo: `${origin}/auth/callback${
+          nextParam ? `?next=${encodeURIComponent(nextParam)}` : ""
+        }`,
       },
       provider,
     });
     if (oAuthError) {
-      // eslint-disable-next-line no-console
-      console.error("Social registration login failed:", oAuthError.message);
+      recordClientErrorOnActiveSpan(new Error(oAuthError.message), {
+        action: "handleSocialLogin",
+        context: "RegisterForm",
+        provider,
+      });
+      setSocialError(`Failed to sign in with ${provider}. Please try again.`);
     }
   };
+
+  const displayError = socialError ?? urlError;
 
   return (
     <Card className={className}>
@@ -86,9 +97,9 @@ export function RegisterForm({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {error && (
+        {displayError && (
           <Alert variant="destructive" role="status" aria-label="registration error">
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>{displayError}</AlertDescription>
           </Alert>
         )}
         {showSuccess && (
