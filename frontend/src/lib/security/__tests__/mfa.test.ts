@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createBackupCodes,
+  InvalidBackupCodeError,
   resetBackupCodePepperForTest,
   startTotpEnrollment,
   verifyBackupCode,
@@ -251,13 +252,10 @@ const mockAdmin = {
   }),
 } as unknown as Parameters<typeof createBackupCodes>[0];
 
-let currentLookupHash = "";
-
 describe("mfa service", () => {
   beforeEach(() => {
     backupRows.length = 0;
     mfaEnrollmentRows.length = 0;
-    currentLookupHash = "";
     process.env.MFA_BACKUP_CODE_PEPPER = "test-pepper-secret-12345";
     resetBackupCodePepperForTest();
     vi.clearAllMocks();
@@ -322,19 +320,19 @@ describe("mfa service", () => {
   it("rejects invalid backup codes", async () => {
     await expect(
       verifyBackupCode(mockAdmin, mockIds.userId, "AAAAA-BBBBB")
-    ).rejects.toThrow();
+    ).rejects.toBeInstanceOf(InvalidBackupCodeError);
   });
 
   it("consumes a valid backup code and tracks remaining", async () => {
     const generated = await createBackupCodes(mockAdmin, mockIds.userId, 1);
     const [code] = generated.codes;
-    currentLookupHash = createHash("sha256")
+    const lookupHash = createHash("sha256")
       .update(`${process.env.MFA_BACKUP_CODE_PEPPER}:${code}`, "utf8")
       .digest("hex");
 
     const result = await verifyBackupCode(mockAdmin, mockIds.userId, code);
     expect(result.remaining).toBeGreaterThanOrEqual(0);
-    const consumed = backupRows.find((r) => r.code_hash === currentLookupHash);
+    const consumed = backupRows.find((r) => r.code_hash === lookupHash);
     expect(consumed?.consumed_at).not.toBeNull();
   });
 });

@@ -20,6 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { resolveRedirectUrl } from "@/lib/auth/redirect";
+import { nowIso } from "@/lib/security/random";
 import { useSupabaseRequired } from "@/lib/supabase/client";
 
 /** The register form props. */
@@ -73,6 +74,7 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
     }
 
     setLoading(true);
+    const termsAcceptedAt = nowIso();
     // Build emailRedirectTo with next parameter for post-confirmation redirect
     const emailRedirectTo =
       typeof window === "undefined"
@@ -80,50 +82,65 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
         : new URL("/auth/confirm", window.location.origin).toString() +
           `?type=email&next=${encodeURIComponent(targetUrl)}`;
 
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email,
-      options: {
-        data: {
-          email,
-          first_name: firstName.trim(),
-          full_name: `${firstName.trim()} ${lastName.trim()}`,
-          last_name: lastName.trim(),
+    try {
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        options: {
+          data: {
+            email,
+            first_name: firstName.trim(),
+            full_name: `${firstName.trim()} ${lastName.trim()}`,
+            last_name: lastName.trim(),
+            terms_accepted: true,
+            terms_accepted_at: termsAcceptedAt,
+          },
+          emailRedirectTo,
         },
-        emailRedirectTo,
-      },
-      password,
-    });
-    setLoading(false);
+        password,
+      });
 
-    if (signUpError) {
-      setError(signUpError.message);
-      return;
+      if (signUpError) {
+        setError(signUpError.message);
+        return;
+      }
+      // When email confirmation is required, data.session is null
+      // Redirect to check_email page instead of dashboard
+      if (!data?.session) {
+        const checkEmailUrl =
+          typeof window === "undefined"
+            ? "/register?status=check_email"
+            : new URL(
+                "/register?status=check_email",
+                window.location.origin
+              ).toString();
+        window.location.assign(checkEmailUrl);
+        return;
+      }
+      // Only redirect to targetUrl if session exists (email confirmation disabled)
+      window.location.assign(targetUrl);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Signup failed. Please try again.");
+    } finally {
+      setLoading(false);
     }
-    // When email confirmation is required, data.session is null
-    // Redirect to check_email page instead of dashboard
-    if (!data?.session) {
-      const checkEmailUrl =
-        typeof window === "undefined"
-          ? "/register?status=check_email"
-          : new URL("/register?status=check_email", window.location.origin).toString();
-      window.location.assign(checkEmailUrl);
-      return;
-    }
-    // Only redirect to targetUrl if session exists (email confirmation disabled)
-    window.location.assign(targetUrl);
   };
 
   /** Handles the OAuth login. */
   const handleOAuth = async (provider: "github" | "google") => {
     setError(null);
     setLoading(true);
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({
-      options: { redirectTo: targetUrl },
-      provider,
-    });
-    setLoading(false);
-    if (oauthError) {
-      setError(oauthError.message);
+    try {
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        options: { redirectTo: targetUrl },
+        provider,
+      });
+      if (oauthError) {
+        setError(oauthError.message);
+      }
+    } catch {
+      setError("OAuth failed. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -204,7 +221,10 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
                 Terms of Service
               </Link>{" "}
               and{" "}
-              <Link href="/privacy" className="text-primary underline hover:no-underline">
+              <Link
+                href="/privacy"
+                className="text-primary underline hover:no-underline"
+              >
                 Privacy Policy
               </Link>
             </Label>

@@ -45,7 +45,7 @@ export type MfaVerificationInput = z.infer<typeof mfaVerificationInputSchema>;
 /** The backup code schema. */
 export const backupCodeSchema = z
   .string()
-  .regex(/^[A-Z0-9]{5}-[A-Z0-9]{5}$/, { error: "Invalid backup code format" });
+  .regex(/^[A-Z0-9]{6}-[A-Z0-9]{6}$/, { error: "Invalid backup code format" });
 
 /** The backup code type. */
 export type BackupCode = z.infer<typeof backupCodeSchema>;

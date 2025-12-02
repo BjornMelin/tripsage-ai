@@ -21,6 +21,7 @@ import {
 } from "@schemas/mfa";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServerEnv } from "@/lib/env/server";
+import { incrCounter } from "@/lib/redis";
 import { nowIso, secureId } from "@/lib/security/random";
 import { getAdminSupabase, type TypedAdminSupabase } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
@@ -100,7 +101,7 @@ async function getAuthenticatedUserId(supabase: TypedSupabase): Promise<string> 
 function generateBackupCodes(count: number): string[] {
   return Array.from({ length: count }, () => {
     const raw = secureId(12).toUpperCase();
-    return `${raw.slice(0, 5)}-${raw.slice(5, 10)}`;
+    return `${raw.slice(0, 6)}-${raw.slice(6, 12)}`;
   });
 }
 
@@ -301,22 +302,20 @@ export async function verifyTotp(
       // Mark enrollment consumed if this was initial enrollment
       if (isInitialEnrollment) {
         const userId = await getAuthenticatedUserId(supabase);
-        if (userId) {
-          const { error: consumeError } = await adminSupabase
-            .from("mfa_enrollments")
-            .update({
-              // biome-ignore lint/style/useNamingConvention: snake_case columns
-              consumed_at: nowIso(),
-              status: "consumed",
-            })
-            .eq("user_id", userId)
-            .eq("factor_id", parsed.factorId)
-            .eq("challenge_id", parsed.challengeId)
-            .eq("status", "pending");
-          if (consumeError) {
-            span.recordException(consumeError);
-            throw new Error(consumeError.message ?? "mfa_enrollment_update_failed");
-          }
+        const { error: consumeError } = await adminSupabase
+          .from("mfa_enrollments")
+          .update({
+            // biome-ignore lint/style/useNamingConvention: snake_case columns
+            consumed_at: nowIso(),
+            status: "consumed",
+          })
+          .eq("user_id", userId)
+          .eq("factor_id", parsed.factorId)
+          .eq("challenge_id", parsed.challengeId)
+          .eq("status", "pending");
+        if (consumeError) {
+          span.recordException(consumeError);
+          throw new Error(consumeError.message ?? "mfa_enrollment_update_failed");
         }
       }
 
@@ -450,7 +449,11 @@ export async function verifyBackupCode(
   code: string,
   meta: BackupAuditMeta = {}
 ): Promise<BackupCodeList> {
-  const parsedCode = backupCodeVerifyInputSchema.parse({ code }).code;
+  const parsed = backupCodeVerifyInputSchema.safeParse({ code });
+  if (!parsed.success) {
+    throw new InvalidBackupCodeError("invalid_backup_code");
+  }
+  const parsedCode = parsed.data.code;
   return await withTelemetrySpan(
     "mfa.backup_codes.verify",
     { attributes: { feature: "mfa", userId }, redactKeys: ["userId"] },
@@ -592,6 +595,11 @@ async function logBackupCodeAudit(
       event,
       userId,
     });
+    await Promise.allSettled([
+      incrCounter("metrics:mfa_backup_code_audit_failure"),
+      incrCounter(`metrics:mfa_backup_code_audit_failure:event:${event}`),
+      incrCounter(`metrics:mfa_backup_code_audit_failure:user:${userId}`, 3600),
+    ]);
     return;
   }
 }
