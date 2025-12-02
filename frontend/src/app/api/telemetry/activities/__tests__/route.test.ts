@@ -44,6 +44,24 @@ describe("POST /api/telemetry/activities", () => {
     });
   });
 
+  it("returns 400 when JSON body is malformed", async () => {
+    const { POST } = await import("../route");
+
+    const request = createMockNextRequest({
+      body: "not valid json",
+      headers: { "content-type": "application/json" },
+      method: "POST",
+      url: "http://localhost/api/telemetry/activities",
+    });
+
+    const response = await POST(request, createRouteParamsContext());
+    const body = (await response.json()) as { reason?: string };
+
+    expect(response.status).toBe(400);
+    expect(body.reason ?? "").toContain("Malformed JSON");
+    expect(recordTelemetryEvent).not.toHaveBeenCalled();
+  });
+
   it("rejects invalid event names", async () => {
     const { POST } = await import("../route");
 

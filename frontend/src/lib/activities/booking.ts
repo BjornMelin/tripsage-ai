@@ -250,10 +250,24 @@ async function recordBookingEvent(
  * @returns External booking URL or null if unavailable.
  */
 export function getActivityBookingUrl(activity: ActivityWithMetadata): string | null {
-  if (!activity.id.startsWith("ai_fallback:")) {
-    const url = `https://www.google.com/maps/place/?q=place_id:${activity.id}`;
+  const activityId = activity.id == null ? "" : String(activity.id);
+
+  if (!activityId) {
+    recordBookingEvent(
+      "activities.booking.url_missing",
+      { activityId: activityId || "unknown" },
+      "warning"
+    ).catch(() => {
+      /* telemetry is best-effort */
+    });
+    return null;
+  }
+
+  if (!activityId.startsWith("ai_fallback:")) {
+    const encodedPlaceId = encodeURIComponent(activityId);
+    const url = `https://www.google.com/maps/place/?q=place_id:${encodedPlaceId}`;
     recordBookingEvent("activities.booking.url_resolved", {
-      activityId: activity.id,
+      activityId,
       domain: "google.com",
       method: "place_id",
     }).catch(() => {
@@ -273,7 +287,7 @@ export function getActivityBookingUrl(activity: ActivityWithMetadata): string | 
   if (bestUrl) {
     const domain = validateUrl(bestUrl)?.hostname ?? "unknown";
     recordBookingEvent("activities.booking.url_resolved", {
-      activityId: activity.id,
+      activityId,
       domain,
       method: "ai_extracted",
     }).catch(() => {
@@ -285,7 +299,7 @@ export function getActivityBookingUrl(activity: ActivityWithMetadata): string | 
   const mapFallback = buildMapSearchUrl(activity);
   if (mapFallback) {
     recordBookingEvent("activities.booking.url_resolved", {
-      activityId: activity.id,
+      activityId,
       domain: "google.com",
       method: "map_fallback",
     }).catch(() => {
@@ -294,13 +308,11 @@ export function getActivityBookingUrl(activity: ActivityWithMetadata): string | 
     return mapFallback;
   }
 
-  recordBookingEvent(
-    "activities.booking.url_missing",
-    { activityId: activity.id },
-    "warning"
-  ).catch(() => {
-    /* telemetry is best-effort */
-  });
+  recordBookingEvent("activities.booking.url_missing", { activityId }, "warning").catch(
+    () => {
+      /* telemetry is best-effort */
+    }
+  );
   return null;
 }
 
