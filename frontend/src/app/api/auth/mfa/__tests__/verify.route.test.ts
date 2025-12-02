@@ -1,11 +1,15 @@
 /** @vitest-environment node */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { RouteParamsContext } from "@/lib/api/factory";
 import { makeJsonRequest } from "@/test/api-request-factory";
 import { resetApiRouteMocks } from "@/test/api-route-helpers";
+import { createRouteParamsContext } from "@/test/route-helpers";
 
 describe("POST /api/auth/mfa/verify", () => {
+  const ids = {
+    challengeId: "22222222-2222-4222-8222-222222222222",
+    factorId: "11111111-1111-4111-8111-111111111111",
+  };
   const mockMfa = {
     verify: vi.fn(),
   };
@@ -17,7 +21,7 @@ describe("POST /api/auth/mfa/verify", () => {
       verifyTotp: mockMfa.verify.mockImplementation(async () => Promise.resolve()),
     }));
     vi.doMock("@/lib/supabase/admin", () => ({
-      createAdminSupabase: vi.fn(),
+      getAdminSupabase: vi.fn(() => ({})),
     }));
   });
 
@@ -30,11 +34,11 @@ describe("POST /api/auth/mfa/verify", () => {
     const { POST } = await import("../verify/route");
     const res = await POST(
       makeJsonRequest("http://localhost/api/auth/mfa/verify", {
-        challengeId: "challenge-1",
+        challengeId: ids.challengeId,
         code: "123456",
-        factorId: "factor-1",
+        factorId: ids.factorId,
       }),
-      { params: {} } as unknown as RouteParamsContext
+      createRouteParamsContext()
     );
     expect(res.status).toBe(200);
     const json = await res.json();
@@ -48,12 +52,33 @@ describe("POST /api/auth/mfa/verify", () => {
     const { POST } = await import("../verify/route");
     const res = await POST(
       makeJsonRequest("http://localhost/api/auth/mfa/verify", {
-        challengeId: "challenge-1",
+        challengeId: ids.challengeId,
         code: "000000",
-        factorId: "factor-1",
+        factorId: ids.factorId,
       }),
-      { params: {} } as unknown as RouteParamsContext
+      createRouteParamsContext()
     );
     expect(res.status).toBe(400);
+  });
+
+  it("continues when backup code regeneration fails", async () => {
+    vi.doMock("@/lib/security/mfa", () => ({
+      regenerateBackupCodes: vi.fn(() => {
+        throw new Error("regen_failed");
+      }),
+      verifyTotp: mockMfa.verify.mockImplementation(async () => Promise.resolve()),
+    }));
+    const { POST } = await import("../verify/route");
+    const res = await POST(
+      makeJsonRequest("http://localhost/api/auth/mfa/verify", {
+        challengeId: ids.challengeId,
+        code: "123456",
+        factorId: ids.factorId,
+      }),
+      createRouteParamsContext()
+    );
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.data.backupCodes).toBeUndefined();
   });
 });

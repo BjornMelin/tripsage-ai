@@ -1,6 +1,11 @@
+/**
+ * @fileoverview MFA management panel showing factors, status, and actions.
+ */
+
 "use client";
 
-import { AlertCircle, CheckCircle2, Shield } from "lucide-react";
+import { type MfaFactor, mfaFactorSchema } from "@schemas/mfa";
+import { AlertCircleIcon, CheckCircle2Icon, ShieldIcon } from "lucide-react";
 import Image from "next/image";
 import { useId, useState, useTransition } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -18,25 +23,30 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
+/** The UI message. */
 type UIMessage =
   | { type: "info"; text: string }
   | { type: "error"; text: string }
   | { type: "success"; text: string };
 
-type FactorSummary = {
-  id: string;
-  status: string;
-  type: string;
-  friendlyName?: string;
-};
-
+/** The MFA panel props. */
 type MfaPanelProps = {
   userEmail: string;
   initialAal: "aal1" | "aal2";
-  factors: FactorSummary[];
+  factors: MfaFactor[];
+  loadError?: string | null;
 };
 
-export function MfaPanel({ userEmail, initialAal, factors }: MfaPanelProps) {
+/**
+ * The MFA panel component.
+ *
+ * @param userEmail - The user email.
+ * @param initialAal - The initial AAL.
+ * @param factors - The factors.
+ * @param loadError - The load error.
+ * @returns The MFA panel component.
+ */
+export function MfaPanel({ userEmail, initialAal, factors, loadError }: MfaPanelProps) {
   const [messages, setMessages] = useState<UIMessage[]>([]);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [challengeId, setChallengeId] = useState<string | null>(null);
@@ -45,16 +55,18 @@ export function MfaPanel({ userEmail, initialAal, factors }: MfaPanelProps) {
   const [backupCode, setBackupCode] = useState("");
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [status, setStatus] = useState<"aal1" | "aal2">(initialAal);
-  const [factorList, setFactorList] = useState<FactorSummary[]>(factors);
+  const [factorList, setFactorList] = useState<MfaFactor[]>(factors);
   const [isPending, startTransition] = useTransition();
   const [isRevoking, startRevoke] = useTransition();
   const totpInputId = useId();
   const backupInputId = useId();
 
+  /** Pushes a message to the messages state. */
   const pushMessage = (msg: UIMessage) => {
     setMessages((prev) => [...prev.slice(-3), msg]);
   };
 
+  /** Calls the JSON API. */
   const callJson = async <T,>(url: string, body?: unknown): Promise<T> => {
     const res = await fetch(url, {
       body: body ? JSON.stringify(body) : undefined,
@@ -69,6 +81,7 @@ export function MfaPanel({ userEmail, initialAal, factors }: MfaPanelProps) {
     return json.data;
   };
 
+  /** Refreshes the factors. */
   const refreshFactors = async () => {
     const res = await fetch("/api/auth/mfa/factors/list");
     if (!res.ok) {
@@ -76,14 +89,16 @@ export function MfaPanel({ userEmail, initialAal, factors }: MfaPanelProps) {
       throw new Error(reason?.error ?? `Request failed (${res.status})`);
     }
     const json = (await res.json()) as {
-      data?: { factors?: FactorSummary[]; aal?: string };
+      data?: { factors?: MfaFactor[]; aal?: string };
     };
-    setFactorList(json.data?.factors ?? []);
+    const parsedFactors = mfaFactorSchema.array().parse(json.data?.factors ?? []);
+    setFactorList(parsedFactors);
     if (json.data?.aal === "aal2" || json.data?.aal === "aal1") {
       setStatus(json.data.aal);
     }
   };
 
+  /** Begins the enrollment. */
   const beginEnrollment = () => {
     startTransition(async () => {
       try {
@@ -108,6 +123,7 @@ export function MfaPanel({ userEmail, initialAal, factors }: MfaPanelProps) {
     });
   };
 
+  /** Resends the challenge. */
   const resendChallenge = () => {
     if (!factorId) {
       pushMessage({ text: "Start enrollment first.", type: "error" });
@@ -135,6 +151,7 @@ export function MfaPanel({ userEmail, initialAal, factors }: MfaPanelProps) {
     });
   };
 
+  /** Verifies the code. */
   const verifyCode = () => {
     if (!factorId || !challengeId || verificationCode.length !== 6) {
       pushMessage({ text: "Enter the 6-digit code first.", type: "error" });
@@ -172,6 +189,7 @@ export function MfaPanel({ userEmail, initialAal, factors }: MfaPanelProps) {
     });
   };
 
+  /** Verifies the backup code. */
   const verifyBackup = () => {
     if (!backupCode) {
       pushMessage({ text: "Enter a backup code.", type: "error" });
@@ -187,6 +205,7 @@ export function MfaPanel({ userEmail, initialAal, factors }: MfaPanelProps) {
           text: `Backup code accepted. Remaining codes: ${data.remaining}`,
           type: "success",
         });
+        setBackupCode("");
       } catch (error) {
         pushMessage({
           text: error instanceof Error ? error.message : "Backup code invalid",
@@ -196,6 +215,7 @@ export function MfaPanel({ userEmail, initialAal, factors }: MfaPanelProps) {
     });
   };
 
+  /** Regenerates the backups. */
   const regenerateBackups = () => {
     startTransition(async () => {
       try {
@@ -214,6 +234,7 @@ export function MfaPanel({ userEmail, initialAal, factors }: MfaPanelProps) {
     });
   };
 
+  /** Revokes the other sessions. */
   const revokeOtherSessions = () => {
     startRevoke(async () => {
       try {
@@ -232,10 +253,18 @@ export function MfaPanel({ userEmail, initialAal, factors }: MfaPanelProps) {
 
   return (
     <div className="space-y-6">
+      {loadError ? (
+        <Alert variant="destructive" role="alert">
+          <div className="flex items-center gap-2">
+            <AlertCircleIcon className="h-4 w-4" />
+            <AlertDescription>{loadError}</AlertDescription>
+          </div>
+        </Alert>
+      ) : null}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
+            <ShieldIcon className="h-5 w-5" />
             Multi-factor Authentication
           </CardTitle>
           <CardDescription>
@@ -387,9 +416,9 @@ export function MfaPanel({ userEmail, initialAal, factors }: MfaPanelProps) {
                       </div>
                     </div>
                     {factor.status === "verified" ? (
-                      <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      <CheckCircle2Icon className="h-5 w-5 text-green-500" />
                     ) : (
-                      <AlertCircle className="h-5 w-5 text-amber-500" />
+                      <AlertCircleIcon className="h-5 w-5 text-amber-500" />
                     )}
                   </div>
                 ))}
@@ -408,7 +437,7 @@ export function MfaPanel({ userEmail, initialAal, factors }: MfaPanelProps) {
                 >
                   <AlertDescription className="flex items-center gap-2">
                     {msg.type === "success" ? (
-                      <CheckCircle2 className="h-4 w-4" />
+                      <CheckCircle2Icon className="h-4 w-4" />
                     ) : null}
                     {msg.text}
                   </AlertDescription>

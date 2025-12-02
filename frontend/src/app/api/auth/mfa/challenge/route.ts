@@ -1,18 +1,20 @@
+/**
+ * @fileoverview The API route for issuing a MFA challenge.
+ */
+
+import { mfaChallengeInputSchema } from "@schemas/mfa";
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
 import { challengeTotp } from "@/lib/security/mfa";
 
-const schema = z.strictObject({
-  factorId: z.string().uuid(),
-});
-
+/** The dynamic route for the MFA challenge API. */
 export const dynamic = "force-dynamic";
 
+/** The POST handler for the MFA challenge API. */
 export const POST = withApiGuards({
   auth: true,
   rateLimit: "auth:mfa:challenge",
-  schema,
+  schema: mfaChallengeInputSchema,
   telemetry: "api.auth.mfa.challenge",
 })(async (_req, { supabase }, data) => {
   const result = await challengeTotp(supabase, { factorId: data.factorId });

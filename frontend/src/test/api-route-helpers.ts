@@ -102,7 +102,7 @@ let supabaseClient: ReturnType<typeof createMockSupabaseClient> | null = null;
 
 const getSupabaseClient = () => {
   if (!supabaseClient) {
-    supabaseClient = createMockSupabaseClient({ user: STATE.user });
+    supabaseClient = ensureMfaMock(createMockSupabaseClient({ user: STATE.user }));
     supabaseClient.auth.getUser = vi.fn(() => {
       if (STATE.user) {
         return Promise.resolve({ data: { user: STATE.user }, error: null });
@@ -214,6 +214,27 @@ export function mockApiRouteAuthUser(user: User | null | Partial<User>): void {
 
   STATE.user = normalizedUser;
 }
+
+// Ensure mfa methods are available on the mocked supabase auth client
+const ensureMfaMock = (client: ReturnType<typeof createMockSupabaseClient>) => {
+  const mfa = {
+    challenge: vi.fn(async () => ({ data: { id: "challenge-mock" }, error: null })),
+    getAuthenticatorAssuranceLevel: vi.fn(async () => ({
+      data: { currentLevel: "aal2" },
+      error: null,
+    })),
+    listFactors: vi.fn(async () => ({
+      data: { phone: [], totp: [], webauthn: [] },
+      error: null,
+    })),
+    verify: vi.fn(async () => ({ data: {}, error: null })),
+  };
+  const authObj = client.auth as unknown as Record<string, unknown>;
+  // biome-ignore lint/performance/noDelete: test mock mutation
+  delete authObj.mfa;
+  authObj.mfa = mfa;
+  return client;
+};
 
 /** Enable rate limiting (Redis available). */
 export function enableApiRouteRateLimit(): void {
