@@ -109,6 +109,10 @@ const securityEnvSchema = z.object({
   COLLAB_WEBHOOK_URL: z.url().optional(),
   // HMAC secret for verifying Supabase Database Webhooks
   HMAC_SECRET: z.string().optional(),
+  MFA_BACKUP_CODE_PEPPER: z
+    .string()
+    .min(16, "MFA_BACKUP_CODE_PEPPER is required and must be at least 16 characters")
+    .optional(),
 });
 
 // Development and debugging (minimal - only ANALYZE and DEBUG used)
@@ -158,7 +162,7 @@ export const envSchema = z
       return true;
     },
     {
-      message: "Missing required environment variables for production",
+      error: "Missing required environment variables for production",
     }
   );
 
