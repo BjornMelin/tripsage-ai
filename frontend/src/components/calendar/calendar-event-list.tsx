@@ -53,11 +53,33 @@ export async function CalendarEventList({
 
   try {
     const result = await listEvents({
+      alwaysIncludeEmail: false,
       calendarId,
+      maxResults: 250,
+      showDeleted: false,
+      showHiddenInvitations: false,
+      singleEvents: false,
       timeMax,
       timeMin,
     });
-    events = result.items || [];
+    // Filter and map events, ensuring id is present
+    events = (result.items || [])
+      .filter((event): event is typeof event & { id: string } => Boolean(event.id))
+      .map((event) => ({
+        description: event.description,
+        end: {
+          date: event.end.date,
+          dateTime: event.end.dateTime?.toISOString(),
+        },
+        htmlLink: event.htmlLink?.toString(),
+        id: event.id,
+        location: event.location,
+        start: {
+          date: event.start.date,
+          dateTime: event.start.dateTime?.toISOString(),
+        },
+        summary: event.summary,
+      }));
   } catch (error) {
     CalendarEventLogger.error("Failed to fetch calendar events", {
       calendarId,

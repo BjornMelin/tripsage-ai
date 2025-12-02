@@ -111,7 +111,7 @@ export const tripsRowSchema = z.object({
   search_metadata: jsonSchema.optional(),
   start_date: primitiveSchemas.isoDateTime,
   status: tripStatusSchema,
-  tags: z.array(z.string()).nullable(),
+  tags: z.array(z.string()).nullable().optional(),
   travelers: z.number().int(),
   trip_type: tripTypeSchema,
   updated_at: primitiveSchemas.isoDateTime,
