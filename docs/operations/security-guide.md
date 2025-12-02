@@ -67,9 +67,36 @@ USING (
 - **Monitoring**: Log authentication failures and suspicious activity
 - **Backups**: Regular encrypted database backups
 - **MFA Ops**:
-  - Set `MFA_BACKUP_CODE_PEPPER` (>=16 chars) or `SUPABASE_JWT_SECRET` in all environments; app fails fast on missing/short values.
-  - Backup-code operations (`/api/auth/mfa/backup/verify`, `/api/auth/mfa/backup/regenerate`) require AAL2; ensure users complete MFA before support-driven recovery.
-  - Audit table `mfa_backup_code_audit` logs regeneration/consumption with IP/UA; monitor for insert errors and alert if audit writes fail.
+  - **Environment variables & precedence**:
+    - Configure `MFA_BACKUP_CODE_PEPPER` (>=16 chars) in every environment:
+      - Local development: `.env.local`
+      - CI: CI/CD secret store
+      - Preview/production: deployment platform secret manager
+    - Configure `SUPABASE_JWT_SECRET` (>=16 chars) as the JWT signing key.
+    - Backup-code hashing always prefers `MFA_BACKUP_CODE_PEPPER`; `SUPABASE_JWT_SECRET` is used only as a bootstrap fallback when the pepper is absent. Rotating the JWT secret while using it as a fallback pepper invalidates existing backup codes.
+    - Example generation (run once per environment): `openssl rand -hex 32`.
+  - **Relationship and intended use**:
+    - `MFA_BACKUP_CODE_PEPPER`: deterministic pepper for backup-code hashing/salting only.
+    - `SUPABASE_JWT_SECRET`: JWT signing key for Supabase auth tokens.
+    - Do **not** treat these as interchangeable secrets. Using `SUPABASE_JWT_SECRET` as a backup-code pepper is a compatibility fallback only and should be phased out by setting a dedicated `MFA_BACKUP_CODE_PEPPER`.
+  - **Support-driven recovery**:
+    - Definition: admin-initiated account recovery flows (e.g., regenerating backup codes for a locked-out user, clearing a stuck enrollment, or disabling a compromised factor).
+    - Requirements:
+      - Operator identity verified at AAL2 before performing recovery operations.
+      - All recovery operations linked to a ticket/incident ID in the support system.
+      - Every recovery operation writes an audit event and is reviewable by security/ops.
+  - **Audit trail & monitoring**:
+    - Backup-code lifecycle events are logged to the `mfa_backup_code_audit` table (see `supabase/migrations/20251122000000_base_schema.sql`) with the following fields:
+      - `id` (UUID, PK), `user_id` (UUID), `event` (`"regenerated"` | `"consumed"`), `count` (integer), `ip` (text), `user_agent` (text), `created_at` (timestamptz).
+    - Integrate failures into existing observability:
+      - On insert failure, `@/lib/security/mfa.ts` emits `mfa backup code audit insert failed` errors and increments counters; surface these via OpenTelemetry traces and logs into PagerDuty/Slack.
+      - Configure database retention or scheduled cleanup for `mfa_backup_code_audit` so PII fields (`ip`, `user_agent`) are retained only as long as needed for forensics.
+
+| Variable / Table              | Purpose                              | Min Length | Precedence / Notes                                                                                   |
+| ----------------------------- | ------------------------------------ | ---------- | ---------------------------------------------------------------------------------------------------- |
+| `MFA_BACKUP_CODE_PEPPER`      | Backup-code hashing pepper           | ≥ 16 chars | Preferred source; used for all backup-code hashing when set.                                        |
+| `SUPABASE_JWT_SECRET`         | JWT signing key (Supabase)          | ≥ 16 chars | Used as fallback pepper **only** when `MFA_BACKUP_CODE_PEPPER` is unset; rotate carefully.          |
+| `mfa_backup_code_audit` table | Backup-code regeneration/consumption | N/A        | Schema defined in `supabase/migrations/20251122000000_base_schema.sql`; used for long-lived audit.  |
 
 ### BYOK (Bring Your Own Key) System
 

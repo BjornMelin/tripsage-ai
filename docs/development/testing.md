@@ -43,13 +43,40 @@ Unified testing standards for TripSage frontend. Follow this document as the sin
 - When mocking admin Supabase for MFA routes, mock `getAdminSupabase` (service-role client) and stub minimal `from`/`rpc` as needed.
 
 ```ts
+/** @vitest-environment node */
+import { beforeEach, vi } from "vitest";
+
+beforeEach(() => {
+  vi.doMock("@/lib/supabase/admin", () => {
+    const from = vi.fn(() => ({
+      select: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      is: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn(),
+    }));
+
+    const rpc = vi.fn();
+
+    return {
+      getAdminSupabase: vi.fn(() => ({ from, rpc })),
+    };
+  });
+});
+```
+
+```ts
 import { withFakeTimers } from "@/test/utils/with-fake-timers";
 
-it("retries after delay", withFakeTimers(async () => {
-  await action();
-  vi.advanceTimersByTime(1_000);
-  expect(retrySpy).toHaveBeenCalled();
-}));
+it(
+  "retries after delay",
+  withFakeTimers(async () => {
+    await action();
+    vi.advanceTimersByTime(1_000);
+    expect(retrySpy).toHaveBeenCalled();
+  })
+);
 ```
 
 ## Mocking Strategy (order matters)
