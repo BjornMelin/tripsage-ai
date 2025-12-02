@@ -80,6 +80,101 @@ describe("booking helpers", () => {
 
       expect(url).toBe("https://www.google.com/maps/search/?api=1&query=40,-70");
     });
+
+    it("should clean trailing punctuation and return valid booking URL", () => {
+      const activity = {
+        date: "2025-01-01",
+        description: "Book at https://www.viator.com/awesome-tour).",
+        duration: 120,
+        id: "ai_fallback:punctuation",
+        location: "Test Location",
+        name: "AI Suggested Activity",
+        price: 2,
+        rating: 0,
+        type: "activity",
+      };
+
+      const url = getActivityBookingUrl(activity);
+
+      expect(url).toBe("https://www.viator.com/awesome-tour");
+    });
+
+    it("should prioritize known booking domains when multiple URLs exist", () => {
+      const activity = {
+        date: "2025-01-01",
+        description:
+          "Option A https://example.com/tour and https://booking.com/preferred-tour",
+        duration: 120,
+        id: "ai_fallback:priority",
+        location: "Test Location",
+        name: "AI Suggested Activity",
+        price: 2,
+        rating: 0,
+        type: "activity",
+      };
+
+      const url = getActivityBookingUrl(activity);
+
+      expect(url).toBe("https://booking.com/preferred-tour");
+    });
+
+    it("should ignore IPv4 URLs and fall back to map search", () => {
+      const activity = {
+        date: "2025-01-01",
+        description: "Avoid http://127.0.0.1/secret",
+        duration: 120,
+        id: "ai_fallback:ipv4",
+        location: "Test Location",
+        name: "AI Suggested Activity",
+        price: 2,
+        rating: 0,
+        type: "activity",
+      };
+
+      const url = getActivityBookingUrl(activity);
+
+      expect(url).toBe(
+        "https://www.google.com/maps/search/?api=1&query=AI%20Suggested%20Activity%20Test%20Location"
+      );
+    });
+
+    it("should ignore IPv6 URLs and fall back to map search", () => {
+      const activity = {
+        date: "2025-01-01",
+        description: "Avoid https://[2001:db8::1]/secret",
+        duration: 120,
+        id: "ai_fallback:ipv6",
+        location: "Test Location",
+        name: "AI Suggested Activity",
+        price: 2,
+        rating: 0,
+        type: "activity",
+      };
+
+      const url = getActivityBookingUrl(activity);
+
+      expect(url).toBe(
+        "https://www.google.com/maps/search/?api=1&query=AI%20Suggested%20Activity%20Test%20Location"
+      );
+    });
+
+    it("should return null when AI activity has no booking URL and no location data", () => {
+      const activity = {
+        date: "2025-01-01",
+        description: "No links",
+        duration: 120,
+        id: "ai_fallback:nodata",
+        location: "",
+        name: "",
+        price: 0,
+        rating: 0,
+        type: "activity",
+      };
+
+      const url = getActivityBookingUrl(activity);
+
+      expect(url).toBeNull();
+    });
   });
 
   describe("openActivityBooking", () => {

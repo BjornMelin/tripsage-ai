@@ -19,6 +19,8 @@ type ActivityTelemetryPayload = {
   level?: "info" | "warning" | "error";
 };
 
+const EVENT_NAME_PATTERN = /^[a-z][a-z0-9._]{0,99}$/i;
+
 /**
  * Record booking-related telemetry events from client interactions.
  *
@@ -26,6 +28,7 @@ type ActivityTelemetryPayload = {
  */
 export const POST = withApiGuards({
   auth: false,
+  rateLimit: "telemetry:post",
   telemetry: "telemetry.activities",
 })(async (req: NextRequest) => {
   const parsed = await parseJsonBody(req);
@@ -35,9 +38,13 @@ export const POST = withApiGuards({
 
   const payload = parsed.body as Partial<ActivityTelemetryPayload>;
   const { attributes, eventName, level } = payload;
-  if (!eventName || typeof eventName !== "string") {
+  if (
+    !eventName ||
+    typeof eventName !== "string" ||
+    !EVENT_NAME_PATTERN.test(eventName)
+  ) {
     return NextResponse.json(
-      { ok: false, reason: "eventName required" },
+      { ok: false, reason: "eventName required and must match pattern" },
       { status: 400 }
     );
   }

@@ -24,8 +24,8 @@ const BOOKING_DOMAINS = [
   "viator.com",
 ] as const;
 
-/** Regular expression to match valid HTTP/HTTPS URLs. */
-const URL_PATTERN = /https?:\/\/[^\s<>"']+/gi;
+/** Regular expression to match valid HTTP/HTTPS URLs, excluding trailing punctuation. */
+const URL_PATTERN = /https?:\/\/[^\s<>"')\],;:!?]+/gi;
 
 /** Activity type with optional metadata field. */
 type ActivityWithMetadata = Activity & { metadata?: unknown };
@@ -37,12 +37,42 @@ type ActivityWithMetadata = Activity & { metadata?: unknown };
  * @returns True if hostname is any IP literal.
  */
 function isIpAddressHost(hostname: string): boolean {
-  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(hostname)) {
-    return true;
+  const isValidIpv4 = (value: string): boolean => {
+    const octets = value.split(".");
+    if (octets.length !== 4) return false;
+    return octets.every((octet) => {
+      if (!/^\d{1,3}$/.test(octet)) return false;
+      const numeric = Number(octet);
+      return (
+        numeric >= 0 && numeric <= 255 && !(octet.length > 1 && octet.startsWith("0"))
+      );
+    });
+  };
+
+  const isValidIpv6 = (value: string): boolean => {
+    const trimmed =
+      value.startsWith("[") && value.endsWith("]") ? value.slice(1, -1) : value;
+    const hexGroup = /^[0-9a-fA-F]{1,4}$/;
+
+    if (trimmed.includes("::")) {
+      if (trimmed.indexOf("::") !== trimmed.lastIndexOf("::")) return false;
+      const [head, tail] = trimmed.split("::");
+      const headGroups = head.length > 0 ? head.split(":") : [];
+      const tailGroups = tail.length > 0 ? tail.split(":") : [];
+      if (headGroups.length + tailGroups.length >= 8) return false;
+      return [...headGroups, ...tailGroups].every((group) => hexGroup.test(group));
+    }
+
+    const groups = trimmed.split(":");
+    if (groups.length !== 8) return false;
+    return groups.every((group) => hexGroup.test(group));
+  };
+
+  if (hostname.includes(".")) {
+    return isValidIpv4(hostname);
   }
-  // IPv6 (plain or bracketed)
-  if (/^\[?[0-9a-f:]+\]?$/i.test(hostname)) {
-    return true;
+  if (hostname.includes(":")) {
+    return isValidIpv6(hostname);
   }
   return false;
 }
@@ -97,7 +127,8 @@ function extractUrlsFromText(text?: string): string[] {
 
   const seen = new Set<string>();
   for (const raw of matches) {
-    const parsed = validateUrl(raw);
+    const cleaned = raw.replace(/[.,;:!?)\]]+$/, "");
+    const parsed = validateUrl(cleaned);
     if (parsed) {
       const normalized = parsed.toString();
       if (!seen.has(normalized)) {
@@ -184,7 +215,8 @@ async function recordBookingEvent(
         typeof navigator !== "undefined" &&
         typeof navigator.sendBeacon === "function"
       ) {
-        navigator.sendBeacon("/api/telemetry/activities", payload);
+        const blob = new Blob([payload], { type: "application/json" });
+        navigator.sendBeacon("/api/telemetry/activities", blob);
       } else {
         fetch("/api/telemetry/activities", {
           body: payload,
