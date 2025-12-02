@@ -70,7 +70,7 @@ const mockSupabase = {
           };
           return chain;
         },
-        update: (values: { status?: string; consumed_at?: string }) => {
+        update: (_values: { status?: string; consumedAt?: string }) => {
           const updateChain = {
             eq: (_field: string, _value: string) => updateChain,
             lt: (_field: string, _value: string) => ({ error: null }),

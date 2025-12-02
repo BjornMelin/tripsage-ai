@@ -1,6 +1,7 @@
 /**
  * @fileoverview Supabase MFA service helpers (TOTP + backup codes).
  */
+
 import "server-only";
 
 import { createHash } from "node:crypto";
@@ -27,6 +28,12 @@ type TypedSupabase = SupabaseClient;
 
 const BACKUP_CODE_PEPPER = "mfa-backup-code";
 
+/**
+ * Generates a list of backup codes.
+ *
+ * @param count - The number of backup codes to generate.
+ * @returns A list of backup codes.
+ */
 function generateBackupCodes(count: number): string[] {
   return Array.from({ length: count }, () => {
     const raw = secureId(12).toUpperCase();
@@ -34,6 +41,12 @@ function generateBackupCodes(count: number): string[] {
   });
 }
 
+/**
+ * Starts a TOTP enrollment.
+ *
+ * @param supabase - The Supabase client.
+ * @returns The enrollment result.
+ */
 export async function startTotpEnrollment(
   supabase: TypedSupabase
 ): Promise<MfaEnrollment> {
@@ -100,6 +113,13 @@ export async function startTotpEnrollment(
   );
 }
 
+/**
+ * Challenges a TOTP factor.
+ *
+ * @param supabase - The Supabase client.
+ * @param input - The input to challenge the TOTP factor.
+ * @returns The challenge result.
+ */
 export async function challengeTotp(
   supabase: TypedSupabase,
   input: { factorId: string }
@@ -121,6 +141,13 @@ export async function challengeTotp(
   );
 }
 
+/**
+ * Verifies a TOTP code.
+ *
+ * @param supabase - The Supabase client.
+ * @param input - The input to verify the TOTP code.
+ * @returns The verification result.
+ */
 export async function verifyTotp(
   supabase: TypedSupabase,
   input: MfaVerificationInput
@@ -194,6 +221,12 @@ export async function verifyTotp(
   );
 }
 
+/**
+ * Lists the factors for a user.
+ *
+ * @param supabase - The Supabase client.
+ * @returns The list of factors.
+ */
 export async function listFactors(supabase: TypedSupabase): Promise<MfaFactor[]> {
   return await withTelemetrySpan(
     "mfa.list_factors",
@@ -216,6 +249,13 @@ export async function listFactors(supabase: TypedSupabase): Promise<MfaFactor[]>
   );
 }
 
+/**
+ * Unenrolls a factor.
+ *
+ * @param supabase - The Supabase client.
+ * @param factorId - The ID of the factor to unenroll.
+ * @returns The unenrollment result.
+ */
 export async function unenrollFactor(
   supabase: TypedSupabase,
   factorId: string
@@ -233,6 +273,14 @@ export async function unenrollFactor(
   );
 }
 
+/**
+ * Creates backup codes.
+ *
+ * @param adminSupabase - The Admin Supabase client.
+ * @param userId - The ID of the user to create backup codes for.
+ * @param count - The number of backup codes to create.
+ * @returns The backup codes.
+ */
 export async function createBackupCodes(
   adminSupabase: TypedAdminSupabase,
   userId: string,
@@ -269,6 +317,14 @@ export async function createBackupCodes(
   );
 }
 
+/**
+ * Verifies a backup code.
+ *
+ * @param adminSupabase - The Admin Supabase client.
+ * @param userId - The ID of the user to verify the backup code for.
+ * @param code - The code to verify.
+ * @returns The verification result.
+ */
 export async function verifyBackupCode(
   adminSupabase: TypedAdminSupabase,
   userId: string,
@@ -315,6 +371,12 @@ export async function verifyBackupCode(
   );
 }
 
+/**
+ * Refreshes the AAL for a user.
+ *
+ * @param supabase - The Supabase client.
+ * @returns The AAL.
+ */
 export async function refreshAal(supabase: TypedSupabase): Promise<"aal1" | "aal2"> {
   return await withTelemetrySpan(
     "mfa.refresh_aal",
@@ -330,6 +392,14 @@ export async function refreshAal(supabase: TypedSupabase): Promise<"aal1" | "aal
   );
 }
 
+/**
+ * Regenerates backup codes.
+ *
+ * @param adminSupabase - The Admin Supabase client.
+ * @param userId - The ID of the user to regenerate backup codes for.
+ * @param count - The number of backup codes to regenerate.
+ * @returns The regenerated backup codes.
+ */
 export async function regenerateBackupCodes(
   adminSupabase: TypedAdminSupabase,
   userId: string,
@@ -339,6 +409,13 @@ export async function regenerateBackupCodes(
   return await createBackupCodes(adminSupabase, userId, parsed.count);
 }
 
+/**
+ * Revokes sessions.
+ *
+ * @param supabase - The Supabase client.
+ * @param scope - The scope of the sessions to revoke.
+ * @returns The revocation result.
+ */
 export async function revokeSessions(
   supabase: TypedSupabase,
   scope: "others" | "global" | "local" = "others"
@@ -356,6 +433,12 @@ export async function revokeSessions(
   );
 }
 
+/**
+ * Hashes a backup code.
+ *
+ * @param code - The code to hash.
+ * @returns The hashed code.
+ */
 function hashBackupCode(code: string): string {
   const normalized = code.trim().toUpperCase();
   // Lightweight pepper to avoid plain deterministic hash reuse
