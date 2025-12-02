@@ -87,7 +87,7 @@ USING (
       - Every recovery operation writes an audit event and is reviewable by security/ops.
   - **Audit trail & monitoring**:
     - Backup-code lifecycle events are logged to the `mfa_backup_code_audit` table (see `supabase/migrations/20251122000000_base_schema.sql`) with the following fields:
-      - `id` (UUID, PK), `user_id` (UUID), `event` (`"regenerated"` | `"consumed"`), `count` (integer), `ip` (text), `user_agent` (text), `created_at` (timestamptz).
+      - `id` (UUID, PK), `user_id` (UUID), `actor_id` (UUID, optional support/admin), `event` (`"regenerated"` | `"consumed"`), `count` (integer), `ip` (text), `user_agent` (text), `request_id` (text, optional), `outcome` (text), `created_at` (timestamptz).
     - Integrate failures into existing observability:
       - On insert failure, `@/lib/security/mfa.ts` emits `mfa backup code audit insert failed` errors and increments counters; surface these via OpenTelemetry traces and logs into PagerDuty/Slack.
       - Configure database retention or scheduled cleanup for `mfa_backup_code_audit` so PII fields (`ip`, `user_agent`) are retained only as long as needed for forensics.
