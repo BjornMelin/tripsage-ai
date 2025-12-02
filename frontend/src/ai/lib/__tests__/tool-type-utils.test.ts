@@ -2,7 +2,7 @@
 
 import { type ToolSet, type TypedToolCall, type TypedToolResult, tool } from "ai";
 import { describe, expect, expectTypeOf, it } from "vitest";
-import { z } from "zod";
+import { ZodError, z } from "zod";
 
 import {
   type InferToolInput,
@@ -23,15 +23,26 @@ const searchSchema = z.object({
 });
 
 // Create tools using AI SDK v6 tool() function
+// Note: We validate inputs manually in execute to test error handling,
+// as AI SDK v6 validates inputs when parsing tool calls from the model,
+// not when execute is called directly.
 const calculatorTool = tool<{ a: number; b: number }, { result: number }>({
   description: "Calculate the sum of two numbers",
-  execute: async ({ a, b }) => ({ result: a + b }),
+  execute: async (params) => {
+    // Validate input using schema to test error handling
+    const validated = calculatorSchema.parse(params);
+    return { result: validated.a + validated.b };
+  },
   inputSchema: calculatorSchema,
 });
 
 const searchTool = tool<{ query: string }, { items: string[] }>({
   description: "Search for items",
-  execute: async ({ query }) => ({ items: [query] }),
+  execute: async (params) => {
+    // Validate input using schema to test error handling
+    const validated = searchSchema.parse(params);
+    return { items: [validated.query] };
+  },
   inputSchema: searchSchema,
 });
 
@@ -146,6 +157,103 @@ describe("Tool type utilities integration", () => {
       { messages: [], toolCallId: "test-2" }
     );
     expect(searchResult).toEqual({ items: ["hello"] });
+  });
+
+  describe("error handling for invalid inputs", () => {
+    describe("calculator tool", () => {
+      it("should reject when missing required field 'b'", async () => {
+        const calcExecute = testTools.calculator.execute;
+        expect(calcExecute).toBeDefined();
+        if (!calcExecute) return;
+
+        await expect(
+          calcExecute({ a: 1 } as unknown as { a: number; b: number }, {
+            messages: [],
+            toolCallId: "error-calc-missing-b",
+          })
+        ).rejects.toThrow(ZodError);
+      });
+
+      it("should reject when missing required field 'a'", async () => {
+        const calcExecute = testTools.calculator.execute;
+        expect(calcExecute).toBeDefined();
+        if (!calcExecute) return;
+
+        await expect(
+          calcExecute({ b: 2 } as unknown as { a: number; b: number }, {
+            messages: [],
+            toolCallId: "error-calc-missing-a",
+          })
+        ).rejects.toThrow(ZodError);
+      });
+
+      it("should reject when 'a' has wrong type (string)", async () => {
+        const calcExecute = testTools.calculator.execute;
+        expect(calcExecute).toBeDefined();
+        if (!calcExecute) return;
+
+        await expect(
+          calcExecute({ a: "x", b: 2 } as unknown as { a: number; b: number }, {
+            messages: [],
+            toolCallId: "error-calc-wrong-type-a",
+          })
+        ).rejects.toThrow(ZodError);
+      });
+
+      it("should reject when 'b' has wrong type (string)", async () => {
+        const calcExecute = testTools.calculator.execute;
+        expect(calcExecute).toBeDefined();
+        if (!calcExecute) return;
+
+        await expect(
+          calcExecute({ a: 1, b: "y" } as unknown as { a: number; b: number }, {
+            messages: [],
+            toolCallId: "error-calc-wrong-type-b",
+          })
+        ).rejects.toThrow(ZodError);
+      });
+    });
+
+    describe("search tool", () => {
+      it("should reject when missing required field 'query'", async () => {
+        const searchExecute = testTools.search.execute;
+        expect(searchExecute).toBeDefined();
+        if (!searchExecute) return;
+
+        await expect(
+          searchExecute({} as unknown as { query: string }, {
+            messages: [],
+            toolCallId: "error-search-missing-query",
+          })
+        ).rejects.toThrow(ZodError);
+      });
+
+      it("should reject when 'query' has wrong type (number)", async () => {
+        const searchExecute = testTools.search.execute;
+        expect(searchExecute).toBeDefined();
+        if (!searchExecute) return;
+
+        await expect(
+          searchExecute({ query: 123 } as unknown as { query: string }, {
+            messages: [],
+            toolCallId: "error-search-wrong-type-query",
+          })
+        ).rejects.toThrow(ZodError);
+      });
+
+      it("should reject when 'query' is null", async () => {
+        const searchExecute = testTools.search.execute;
+        expect(searchExecute).toBeDefined();
+        if (!searchExecute) return;
+
+        await expect(
+          searchExecute({ query: null } as unknown as { query: string }, {
+            messages: [],
+            toolCallId: "error-search-null-query",
+          })
+        ).rejects.toThrow(ZodError);
+      });
+    });
   });
 });
 
