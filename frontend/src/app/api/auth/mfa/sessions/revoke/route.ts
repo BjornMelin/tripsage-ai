@@ -1,7 +1,7 @@
 import { mfaSessionRevokeInputSchema } from "@schemas/mfa";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { revokeSessions } from "@/lib/security/mfa";
+import { requireAal2, revokeSessions } from "@/lib/security/mfa";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +14,7 @@ export const POST = withApiGuards({
   telemetry: "api.auth.mfa.sessions.revoke",
 })(async (_req, { supabase }, data) => {
   try {
+    await requireAal2(supabase);
     await revokeSessions(supabase, data.scope);
     return NextResponse.json({ data: { status: "revoked" } });
   } catch (error) {

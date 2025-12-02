@@ -56,6 +56,7 @@ export function MfaPanel({ userEmail, initialAal, factors, loadError }: MfaPanel
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [status, setStatus] = useState<"aal1" | "aal2">(initialAal);
   const [factorList, setFactorList] = useState<MfaFactor[]>(factors);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [isRevoking, startRevoke] = useTransition();
   const totpInputId = useId();
@@ -96,6 +97,23 @@ export function MfaPanel({ userEmail, initialAal, factors, loadError }: MfaPanel
     if (json.data?.aal === "aal2" || json.data?.aal === "aal1") {
       setStatus(json.data.aal);
     }
+  };
+
+  /** Handles refreshing factors with feedback. */
+  const handleRefreshFactors = () => {
+    setIsRefreshing(true);
+    startTransition(async () => {
+      try {
+        await refreshFactors();
+      } catch (error) {
+        pushMessage({
+          text: error instanceof Error ? error.message : "Failed to refresh factors",
+          type: "error",
+        });
+      } finally {
+        setIsRefreshing(false);
+      }
+    });
   };
 
   /** Begins the enrollment. */
@@ -343,13 +361,6 @@ export function MfaPanel({ userEmail, initialAal, factors, loadError }: MfaPanel
                   </code>
                 ))}
               </div>
-              <Button
-                variant="secondary"
-                onClick={regenerateBackups}
-                disabled={isPending}
-              >
-                Regenerate codes
-              </Button>
             </div>
           )}
 
@@ -391,8 +402,13 @@ export function MfaPanel({ userEmail, initialAal, factors, loadError }: MfaPanel
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label>Existing factors</Label>
-              <Button size="sm" variant="outline" onClick={() => refreshFactors()}>
-                Refresh
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={isPending || isRefreshing}
+                onClick={handleRefreshFactors}
+              >
+                {isRefreshing ? "Refreshing..." : "Refresh"}
               </Button>
             </div>
             {factorList.length > 0 ? (

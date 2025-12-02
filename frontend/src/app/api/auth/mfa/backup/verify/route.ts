@@ -6,11 +6,7 @@ import { backupCodeVerifyInputSchema } from "@schemas/mfa";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { getClientIpFromHeaders } from "@/lib/api/route-helpers";
-import {
-  InvalidBackupCodeError,
-  requireAal2,
-  verifyBackupCode,
-} from "@/lib/security/mfa";
+import { InvalidBackupCodeError, verifyBackupCode } from "@/lib/security/mfa";
 import { nowIso } from "@/lib/security/random";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { createServerLogger } from "@/lib/telemetry/logger";
@@ -29,13 +25,11 @@ export const POST = withApiGuards({
   rateLimit: "auth:mfa:backup:verify",
   schema: backupCodeVerifyInputSchema,
   telemetry: "api.auth.mfa.backup.verify",
-})(async (req, { user, supabase }, data) => {
+})(async (req, { user }, data) => {
   if (!user) {
     return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
   }
   try {
-    // Enforce strong auth level before backup code consumption
-    await requireAal2(supabase);
     const admin = getAdminSupabase();
     const ip = getClientIpFromHeaders(req);
     const userAgent = req.headers.get("user-agent") ?? undefined;

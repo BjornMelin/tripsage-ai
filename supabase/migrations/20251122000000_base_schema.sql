@@ -80,24 +80,6 @@ CREATE INDEX IF NOT EXISTS auth_backup_codes_consumed_at_idx
 
 ALTER TABLE public.auth_backup_codes ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can view their own backup codes"
-  ON public.auth_backup_codes
-  FOR SELECT
-  TO authenticated
-  USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can insert their own backup codes"
-  ON public.auth_backup_codes
-  FOR INSERT
-  TO authenticated
-  WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can delete their own backup codes"
-  ON public.auth_backup_codes
-  FOR DELETE
-  TO authenticated
-  USING (auth.uid() = user_id);
-
 CREATE POLICY "Service role can manage backup codes"
   ON public.auth_backup_codes
   FOR ALL
@@ -190,12 +172,6 @@ CREATE POLICY "Users can view own mfa_enrollments"
   FOR SELECT
   TO authenticated
   USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can insert own mfa_enrollments"
-  ON public.mfa_enrollments
-  FOR INSERT
-  TO authenticated
-  WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Service role manages mfa_enrollments"
   ON public.mfa_enrollments
