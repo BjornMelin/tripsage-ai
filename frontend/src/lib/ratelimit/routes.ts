@@ -126,6 +126,7 @@ export const ROUTE_RATE_LIMITS = {
 
   // Telemetry
   "telemetry:ai-demo": { limit: 10, window: "1 m" },
+  "telemetry:post": { limit: 60, window: "1 m" },
 
   // Timezone
   timezone: { limit: 60, window: "1 m" },
