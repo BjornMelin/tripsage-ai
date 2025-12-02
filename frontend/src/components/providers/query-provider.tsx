@@ -1,9 +1,19 @@
+/**
+ * @fileoverview TanStack Query provider with OTEL-backed telemetry.
+ * Refer to docs/development/observability.md for tracing and alerting standards.
+ */
+
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { type ReactNode, useState } from "react";
 
+/**
+ * Create a new QueryClient with default options.
+ *
+ * @returns QueryClient instance with default options.
+ */
 function CreateQueryClient() {
   return new QueryClient({
     defaultOptions: {
@@ -43,6 +53,12 @@ function CreateQueryClient() {
   });
 }
 
+/**
+ * TanStack Query provider component.
+ *
+ * @param children - React children to wrap with QueryProvider.
+ * @returns QueryProvider component wrapping the children.
+ */
 export function TanStackQueryProvider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(CreateQueryClient);
 
