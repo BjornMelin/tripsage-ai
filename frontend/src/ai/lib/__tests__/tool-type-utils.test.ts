@@ -28,6 +28,7 @@ const searchSchema = z.object({
 // not when execute is called directly.
 const calculatorTool = tool<{ a: number; b: number }, { result: number }>({
   description: "Calculate the sum of two numbers",
+  // biome-ignore lint/suspicious/useAwait: AI SDK v6 tool execute signature requires async
   execute: async (params) => {
     // Validate input using schema to test error handling
     const validated = calculatorSchema.parse(params);
@@ -38,6 +39,7 @@ const calculatorTool = tool<{ a: number; b: number }, { result: number }>({
 
 const searchTool = tool<{ query: string }, { items: string[] }>({
   description: "Search for items",
+  // biome-ignore lint/suspicious/useAwait: AI SDK v6 tool execute signature requires async
   execute: async (params) => {
     // Validate input using schema to test error handling
     const validated = searchSchema.parse(params);
