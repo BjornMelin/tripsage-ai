@@ -18,6 +18,7 @@ import type {
   Output,
   PrepareStepFunction,
   StopCondition,
+  SystemModelMessage,
   ToolLoopAgent,
   ToolSet,
 } from "ai";
@@ -79,7 +80,7 @@ export type PrepareCallFunction<
   ToolsT extends ToolSet = ToolSet,
 > = (context: {
   options: OptionsT;
-  instructions: string;
+  instructions: string | SystemModelMessage;
   tools: ToolsT;
   model: LanguageModel;
 }) => Promise<Partial<PrepareCallResult<ToolsT>>> | Partial<PrepareCallResult<ToolsT>>;
@@ -87,7 +88,7 @@ export type PrepareCallFunction<
 /** Result type for prepareCall function. */
 export interface PrepareCallResult<ToolsT extends ToolSet = ToolSet> {
   /** Modified system instructions. */
-  instructions?: string;
+  instructions?: string | SystemModelMessage;
   /** Modified tool set. */
   tools?: ToolsT;
   /** Modified model. */
@@ -117,7 +118,7 @@ export interface TripSageAgentConfig<
   name: string;
 
   /** System instructions for the agent. */
-  instructions: string;
+  instructions: string | SystemModelMessage;
 
   /** Tools available to the agent. */
   tools: ToolsType;
