@@ -2,6 +2,15 @@
 
 Security sessions, metrics, events, and dashboard.
 
+## MFA Recovery Endpoints (auth)
+
+| Endpoint | Purpose | Auth | Additional Requirements |
+| --- | --- | --- | --- |
+| `POST /api/auth/mfa/backup/verify` | Consume a backup code | Authenticated | AAL2 required; rate limit `auth:mfa:backup:verify`; returns `error: "internal_error"` on server faults |
+| `POST /api/auth/mfa/backup/regenerate` | Regenerate backup codes | Authenticated | AAL2 required; rate limit `auth:mfa:backup:regenerate`; writes audit trail |
+
+Environment prerequisites: set `MFA_BACKUP_CODE_PEPPER` (>=16 chars) or `SUPABASE_JWT_SECRET` for backup-code hashing; absence causes startup failure. Audit events are stored in `mfa_backup_code_audit` (includes `ip`, `user_agent`, `event`, `count`).
+
 ## Sessions
 
 ### `GET /api/security/sessions`
