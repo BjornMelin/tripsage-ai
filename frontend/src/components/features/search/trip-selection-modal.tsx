@@ -6,7 +6,7 @@
 
 import type { Activity } from "@schemas/search";
 import type { UiTrip } from "@schemas/trips";
-import { Calendar, MapPin } from "lucide-react";
+import { CalendarIcon, MapPinIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -127,12 +127,12 @@ export function TripSelectionModal({
                         {trip.title}
                       </Label>
                       <div className="flex items-center text-sm text-muted-foreground gap-2">
-                        <MapPin className="h-3 w-3" />
+                        <MapPinIcon className="h-3 w-3" />
                         <span>{trip.destination}</span>
                       </div>
                       {trip.startDate && (
                         <div className="flex items-center text-sm text-muted-foreground gap-2">
-                          <Calendar className="h-3 w-3" />
+                          <CalendarIcon className="h-3 w-3" />
                           <span>{new Date(trip.startDate).toLocaleDateString()}</span>
                         </div>
                       )}

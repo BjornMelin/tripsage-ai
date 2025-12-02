@@ -6,15 +6,15 @@
 "use client";
 
 import {
-  ArrowLeft,
-  Calendar,
-  DollarSign,
-  Download,
-  Edit,
-  MapPin,
-  Settings,
-  Share2,
-  Users,
+  ArrowLeftIcon,
+  CalendarIcon,
+  DollarSignIcon,
+  DownloadIcon,
+  EditIcon,
+  MapPinIcon,
+  SettingsIcon,
+  Share2Icon,
+  UsersIcon,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -125,7 +125,7 @@ export default function TripDetailsPage() {
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <Button variant="ghost" size="sm" onClick={handleBackToTrips} className="p-2">
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeftIcon className="h-4 w-4" />
         </Button>
         <div className="flex-1">
           <div className="flex items-center gap-3">
@@ -143,11 +143,11 @@ export default function TripDetailsPage() {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm">
-            <Edit className="h-4 w-4 mr-2" />
+            <EditIcon className="h-4 w-4 mr-2" />
             Edit
           </Button>
           <Button variant="outline" size="sm">
-            <Share2 className="h-4 w-4 mr-2" />
+            <Share2Icon className="h-4 w-4 mr-2" />
             Share
           </Button>
           <Button
@@ -172,7 +172,7 @@ export default function TripDetailsPage() {
               }
             }}
           >
-            <Download className="h-4 w-4 mr-2" />
+            <DownloadIcon className="h-4 w-4 mr-2" />
             Export to Calendar
           </Button>
         </div>
@@ -183,7 +183,7 @@ export default function TripDetailsPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-              <Calendar className="h-4 w-4" />
+              <CalendarIcon className="h-4 w-4" />
               Duration
             </div>
             <div className="font-semibold">
@@ -198,7 +198,7 @@ export default function TripDetailsPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-              <MapPin className="h-4 w-4" />
+              <MapPinIcon className="h-4 w-4" />
               Destinations
             </div>
             <div className="font-semibold">{currentTrip.destinations.length}</div>
@@ -213,7 +213,7 @@ export default function TripDetailsPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-              <DollarSign className="h-4 w-4" />
+              <DollarSignIcon className="h-4 w-4" />
               Budget
             </div>
             <div className="font-semibold">
@@ -233,7 +233,7 @@ export default function TripDetailsPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-              <Users className="h-4 w-4" />
+              <UsersIcon className="h-4 w-4" />
               Travelers
             </div>
             <div className="font-semibold">1</div>
@@ -372,7 +372,7 @@ export default function TripDetailsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Settings className="h-5 w-5" />
+                <SettingsIcon className="h-5 w-5" />
                 Trip Settings
               </CardTitle>
               <CardDescription>

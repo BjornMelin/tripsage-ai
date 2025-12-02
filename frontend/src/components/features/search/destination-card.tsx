@@ -6,7 +6,14 @@
 "use client";
 
 import type { Destination } from "@schemas/search";
-import { Calendar, CloudRain, Globe, MapPin, Star, Thermometer } from "lucide-react";
+import {
+  CalendarIcon,
+  CloudRainIcon,
+  GlobeIcon,
+  MapPinIcon,
+  StarIcon,
+  ThermometerIcon,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -74,12 +81,12 @@ export function DestinationCard({
    */
   const getDestinationIcon = (types: string[]) => {
     if (types.includes("country")) {
-      return <Globe className="h-4 w-4" />;
+      return <GlobeIcon className="h-4 w-4" />;
     }
     if (types.includes("establishment") || types.includes("tourist_attraction")) {
-      return <Star className="h-4 w-4" />;
+      return <StarIcon className="h-4 w-4" />;
     }
-    return <MapPin className="h-4 w-4" />;
+    return <MapPinIcon className="h-4 w-4" />;
   };
 
   /**
@@ -127,7 +134,7 @@ export function DestinationCard({
               </Badge>
               {destination.rating && (
                 <div className="flex items-center text-sm">
-                  <Star className="h-3 w-3 fill-yellow-400 text-yellow-400 mr-1" />
+                  <StarIcon className="h-3 w-3 fill-yellow-400 text-yellow-400 mr-1" />
                   <span className="font-medium">{destination.rating.toFixed(1)}</span>
                 </div>
               )}
@@ -148,11 +155,11 @@ export function DestinationCard({
         {destination.climate && (
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="flex items-center text-muted-foreground">
-              <Thermometer className="h-3 w-3 mr-1" />
+              <ThermometerIcon className="h-3 w-3 mr-1" />
               <span>{destination.climate.averageTemp}°C avg</span>
             </div>
             <div className="flex items-center text-muted-foreground">
-              <CloudRain className="h-3 w-3 mr-1" />
+              <CloudRainIcon className="h-3 w-3 mr-1" />
               <span>{destination.climate.rainfall}mm rain</span>
             </div>
           </div>
@@ -160,7 +167,7 @@ export function DestinationCard({
 
         {/* Best Time to Visit */}
         <div className="flex items-center text-xs text-muted-foreground">
-          <Calendar className="h-3 w-3 mr-1" />
+          <CalendarIcon className="h-3 w-3 mr-1" />
           <span>Best: {formatBestTimeToVisit(destination.bestTimeToVisit ?? [])}</span>
         </div>
 

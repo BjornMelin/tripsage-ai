@@ -1,6 +1,10 @@
+/**
+ * @fileoverview The profile page for the dashboard.
+ */
+
 "use client";
 
-import { Settings, Shield, Sliders, User } from "lucide-react";
+import { SettingsIcon, ShieldIcon, SlidersIcon, UserIcon } from "lucide-react";
 import Link from "next/link";
 import { AccountSettingsSection } from "@/components/features/profile/account-settings-section";
 import { PersonalInfoSection } from "@/components/features/profile/personal-info-section";
@@ -71,15 +75,15 @@ export default function ProfilePage() {
       <Tabs defaultValue="personal" className="space-y-6">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="personal" className="flex items-center gap-2">
-            <User className="h-4 w-4" />
+            <UserIcon className="h-4 w-4" />
             Personal
           </TabsTrigger>
           <TabsTrigger value="account" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
+            <SettingsIcon className="h-4 w-4" />
             Account
           </TabsTrigger>
           <TabsTrigger value="preferences" className="flex items-center gap-2">
-            <Sliders className="h-4 w-4" />
+            <SlidersIcon className="h-4 w-4" />
             Preferences
           </TabsTrigger>
         </TabsList>
@@ -100,7 +104,7 @@ export default function ProfilePage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Shield className="h-4 w-4" />
+            <ShieldIcon className="h-4 w-4" />
             Security & MFA
           </CardTitle>
           <CardDescription>

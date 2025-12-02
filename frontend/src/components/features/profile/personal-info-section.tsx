@@ -7,7 +7,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { type PersonalInfoFormData, personalInfoFormSchema } from "@schemas/profile";
-import { Camera, Upload } from "lucide-react";
+import { CameraIcon, UploadIcon } from "lucide-react";
 import { useId, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -161,9 +161,9 @@ export function PersonalInfoSection() {
                 disabled={isUploading}
               >
                 {isUploading ? (
-                  <Upload className="h-3 w-3 animate-spin" />
+                  <UploadIcon className="h-3 w-3 animate-spin" />
                 ) : (
-                  <Camera className="h-3 w-3" />
+                  <CameraIcon className="h-3 w-3" />
                 )}
               </Button>
             </div>

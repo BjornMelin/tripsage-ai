@@ -7,7 +7,7 @@
 
 "use client";
 
-import { Calendar, DollarSign, MapPin } from "lucide-react";
+import { CalendarIcon, DollarSignIcon, MapPinIcon } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -105,7 +105,7 @@ export function TripCard({ trip, onEdit, onDelete, className }: TripCardProps) {
 
       <CardContent className="space-y-3">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Calendar className="h-4 w-4" />
+          <CalendarIcon className="h-4 w-4" />
           <span>
             {formatDate(trip.startDate)} - {formatDate(trip.endDate)}
             {duration && <span className="ml-1">({duration} days)</span>}
@@ -114,7 +114,7 @@ export function TripCard({ trip, onEdit, onDelete, className }: TripCardProps) {
 
         {trip.destinations.length > 0 && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <MapPin className="h-4 w-4" />
+            <MapPinIcon className="h-4 w-4" />
             <span className="line-clamp-1">
               {trip.destinations.length === 1
                 ? trip.destinations[0].name
@@ -125,7 +125,7 @@ export function TripCard({ trip, onEdit, onDelete, className }: TripCardProps) {
 
         {trip.budget !== undefined && trip.budget > 0 && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <DollarSign className="h-4 w-4" />
+            <DollarSignIcon className="h-4 w-4" />
             <span>
               Budget:{" "}
               {new Intl.NumberFormat("en-US", {

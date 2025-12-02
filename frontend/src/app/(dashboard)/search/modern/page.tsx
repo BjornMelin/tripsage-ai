@@ -1,19 +1,20 @@
 /**
  * @fileoverview Client page showcasing the modern search experience for flights and hotels.
  */
+
 "use client";
 
 import {
-  Building2,
-  Clock,
-  MapPin,
-  Plane,
-  Shield,
-  Sparkles,
-  Star,
-  TrendingUp,
-  Users,
-  Zap,
+  Building2Icon,
+  ClockIcon,
+  MapPinIcon,
+  PlaneIcon,
+  ShieldIcon,
+  SparklesIcon,
+  StarIcon,
+  TrendingUpIcon,
+  UsersIcon,
+  ZapIcon,
 } from "lucide-react";
 import { type ReactNode, useState, useTransition } from "react";
 import type { ModernFlightSearchParams } from "@/components/features/search/flight-search-form";
@@ -312,15 +313,15 @@ export default function ModernSearchPage() {
               </p>
               <div className="flex items-center justify-center gap-4 text-sm">
                 <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                  <Zap className="h-3 w-3 mr-1" />
+                  <ZapIcon className="h-3 w-3 mr-1" />
                   React 19 Patterns
                 </Badge>
                 <Badge variant="secondary" className="bg-green-100 text-green-800">
-                  <Sparkles className="h-3 w-3 mr-1" />
+                  <SparklesIcon className="h-3 w-3 mr-1" />
                   AI Recommendations
                 </Badge>
                 <Badge variant="secondary" className="bg-purple-100 text-purple-800">
-                  <TrendingUp className="h-3 w-3 mr-1" />
+                  <TrendingUpIcon className="h-3 w-3 mr-1" />
                   2025 UX Patterns
                 </Badge>
               </div>
@@ -342,11 +343,11 @@ export default function ModernSearchPage() {
         >
           <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto">
             <TabsTrigger value="flights" className="flex items-center gap-2">
-              <Plane className="h-4 w-4" />
+              <PlaneIcon className="h-4 w-4" />
               Flights
             </TabsTrigger>
             <TabsTrigger value="hotels" className="flex items-center gap-2">
-              <Building2 className="h-4 w-4" />
+              <Building2Icon className="h-4 w-4" />
               Hotels
             </TabsTrigger>
           </TabsList>
@@ -361,7 +362,7 @@ export default function ModernSearchPage() {
                   <div className="flex items-center justify-between">
                     <h2 className="text-xl font-semibold">Flight Results</h2>
                     <Badge variant="outline">
-                      <Clock className="h-3 w-3 mr-1" />
+                      <ClockIcon className="h-3 w-3 mr-1" />
                       Updated {new Date().toLocaleTimeString()}
                     </Badge>
                   </div>
@@ -387,7 +388,7 @@ export default function ModernSearchPage() {
                   <div className="flex items-center justify-between">
                     <h2 className="text-xl font-semibold">Hotel Results</h2>
                     <Badge variant="outline">
-                      <Clock className="h-3 w-3 mr-1" />
+                      <ClockIcon className="h-3 w-3 mr-1" />
                       Updated {new Date().toLocaleTimeString()}
                     </Badge>
                   </div>
@@ -408,39 +409,39 @@ export default function ModernSearchPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5" />
+              <SparklesIcon className="h-5 w-5" />
               Modern Features Showcase
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               <FeatureCard
-                icon={<Zap className="h-6 w-6 text-yellow-500" />}
+                icon={<ZapIcon className="h-6 w-6 text-yellow-500" />}
                 title="React 19 Optimistic Updates"
                 description="Instant UI feedback with useOptimistic and useTransition hooks"
               />
               <FeatureCard
-                icon={<TrendingUp className="h-6 w-6 text-green-500" />}
+                icon={<TrendingUpIcon className="h-6 w-6 text-green-500" />}
                 title="AI Price Predictions"
                 description="Smart recommendations with confidence scores and timing advice"
               />
               <FeatureCard
-                icon={<Star className="h-6 w-6 text-blue-500" />}
+                icon={<StarIcon className="h-6 w-6 text-blue-500" />}
                 title="Personalized Rankings"
                 description="AI-powered hotel and flight scoring based on your preferences"
               />
               <FeatureCard
-                icon={<Users className="h-6 w-6 text-purple-500" />}
+                icon={<UsersIcon className="h-6 w-6 text-purple-500" />}
                 title="Smart Bundles"
                 description="Dynamic package deals with real savings calculations"
               />
               <FeatureCard
-                icon={<MapPin className="h-6 w-6 text-red-500" />}
+                icon={<MapPinIcon className="h-6 w-6 text-red-500" />}
                 title="Location Intelligence"
                 description="Walk scores, landmark distances, and neighborhood insights"
               />
               <FeatureCard
-                icon={<Shield className="h-6 w-6 text-orange-500" />}
+                icon={<ShieldIcon className="h-6 w-6 text-orange-500" />}
                 title="Price Protection"
                 description="Free cancellation and price matching guarantees"
               />

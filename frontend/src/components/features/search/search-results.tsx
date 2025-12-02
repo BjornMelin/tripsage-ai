@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Search results wrapper orchestrating infinite scroll and facets.
+ */
+
 "use client";
 
 import type {

@@ -6,7 +6,7 @@
 "use client";
 
 import { useQueryErrorResetBoundary } from "@tanstack/react-query";
-import { AlertTriangle, RefreshCw, WifiOff } from "lucide-react";
+import { AlertTriangleIcon, RefreshCwIcon, WifiOffIcon } from "lucide-react";
 import type { ComponentType, ErrorInfo, JSX, ReactNode } from "react";
 import { useRef } from "react";
 import { ErrorBoundary, type FallbackProps } from "react-error-boundary";
@@ -154,27 +154,27 @@ const VARIANT_DISPLAY: Record<
   { icon: JSX.Element; message: string; title: string }
 > = {
   auth: {
-    icon: <AlertTriangle className="h-8 w-8 text-yellow-500" />,
+    icon: <AlertTriangleIcon className="h-8 w-8 text-yellow-500" />,
     message: "Please log in to continue.",
     title: "Authentication Required",
   },
   default: {
-    icon: <AlertTriangle className="h-8 w-8 text-red-500" />,
+    icon: <AlertTriangleIcon className="h-8 w-8 text-red-500" />,
     message: "Something went wrong. Please try again.",
     title: "Something went wrong",
   },
   network: {
-    icon: <WifiOff className="h-8 w-8 text-orange-500" />,
+    icon: <WifiOffIcon className="h-8 w-8 text-orange-500" />,
     message: "Please check your internet connection and try again.",
     title: "Connection Error",
   },
   permission: {
-    icon: <AlertTriangle className="h-8 w-8 text-red-500" />,
+    icon: <AlertTriangleIcon className="h-8 w-8 text-red-500" />,
     message: "You don't have permission to access this resource.",
     title: "Access Denied",
   },
   server: {
-    icon: <AlertTriangle className="h-8 w-8 text-red-500" />,
+    icon: <AlertTriangleIcon className="h-8 w-8 text-red-500" />,
     message: "Our servers are experiencing issues. Please try again later.",
     title: "Server Error",
   },
@@ -222,7 +222,7 @@ function QueryErrorFallback({
           disabled={!meta.isRetryable}
           aria-label="Try Again"
         >
-          <RefreshCw className="h-4 w-4" />
+          <RefreshCwIcon className="h-4 w-4" />
           Try Again
         </Button>
 
@@ -376,9 +376,9 @@ export function InlineQueryError({
       data-error-retryable={meta.isRetryable}
     >
       {meta.variant === "network" ? (
-        <WifiOff className="h-4 w-4 shrink-0" />
+        <WifiOffIcon className="h-4 w-4 shrink-0" />
       ) : (
-        <AlertTriangle className="h-4 w-4 shrink-0" />
+        <AlertTriangleIcon className="h-4 w-4 shrink-0" />
       )}
 
       <span className="flex-1">{errorMessage}</span>
@@ -392,7 +392,7 @@ export function InlineQueryError({
           aria-label="Try Again"
           disabled={!meta.isRetryable}
         >
-          <RefreshCw className="h-3 w-3" />
+          <RefreshCwIcon className="h-3 w-3" />
         </Button>
       )}
     </div>

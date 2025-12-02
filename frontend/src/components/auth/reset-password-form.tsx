@@ -7,7 +7,13 @@
 
 "use client";
 
-import { AlertCircle, ArrowLeft, CheckCircle2, Loader2, Mail } from "lucide-react";
+import {
+  AlertCircleIcon,
+  ArrowLeftIcon,
+  CheckCircle2Icon,
+  Loader2Icon,
+  MailIcon,
+} from "lucide-react";
 import Link from "next/link";
 import React from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -92,7 +98,7 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
     <Card className={className}>
       <CardHeader className="space-y-1">
         <div className="flex items-center justify-center space-x-2">
-          <Mail className="h-6 w-6 text-primary" />
+          <MailIcon className="h-6 w-6 text-primary" />
           <CardTitle className="text-2xl">Reset your password</CardTitle>
         </div>
         <CardDescription className="text-center">
@@ -104,7 +110,7 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
         {isSuccess ? (
           <div className="space-y-4">
             <Alert className="border-green-200 bg-green-50">
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <CheckCircle2Icon className="h-4 w-4 text-green-600" />
               <AlertDescription className="text-green-800">
                 {message || "Password reset instructions have been sent to your email"}
               </AlertDescription>
@@ -124,7 +130,7 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
 
             <Button className="w-full" variant="outline" asChild>
               <Link href="/login">
-                <ArrowLeft className="mr-2 h-4 w-4" />
+                <ArrowLeftIcon className="mr-2 h-4 w-4" />
                 Return to Sign In
               </Link>
             </Button>
@@ -147,7 +153,7 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
+                <AlertCircleIcon className="h-4 w-4" />
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
@@ -177,19 +183,19 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
                   Sending instructions...
                 </>
               ) : (
                 <>
-                  <Mail className="mr-2 h-4 w-4" />
+                  <MailIcon className="mr-2 h-4 w-4" />
                   Send Reset Instructions
                 </>
               )}
             </Button>
 
             <div className="flex items-center justify-center space-x-1 text-sm text-muted-foreground">
-              <ArrowLeft className="h-3 w-3" />
+              <ArrowLeftIcon className="h-3 w-3" />
               <Link href="/login" className="text-primary hover:underline font-medium">
                 Back to sign in
               </Link>

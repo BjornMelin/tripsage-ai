@@ -6,7 +6,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { DestinationSearchParams } from "@schemas/search";
-import { Clock, MapPin, Star, TrendingUp } from "lucide-react";
+import { ClockIcon, MapPinIcon, StarIcon, TrendingUpIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -435,7 +435,7 @@ export function DestinationSearchForm({
               {showMemoryRecommendations && memoryContext?.context && (
                 <div className="space-y-3">
                   <FormLabel className="text-sm font-medium flex items-center gap-2">
-                    <Star className="h-4 w-4 text-yellow-500" />
+                    <StarIcon className="h-4 w-4 text-yellow-500" />
                     Your Favorite Destinations
                   </FormLabel>
                   <div className="flex flex-wrap gap-2">
@@ -448,7 +448,7 @@ export function DestinationSearchForm({
                           className="cursor-pointer hover:bg-yellow-50 hover:border-yellow-300 transition-colors border-yellow-200 text-yellow-700"
                           onClick={() => handlePopularDestinationClick(destination)}
                         >
-                          <Star className="h-3 w-3 mr-1" />
+                          <StarIcon className="h-3 w-3 mr-1" />
                           {destination}
                         </Badge>
                       ))}
@@ -461,7 +461,7 @@ export function DestinationSearchForm({
                 memoryContext?.context?.travelPatterns?.frequentDestinations && (
                   <div className="space-y-3">
                     <FormLabel className="text-sm font-medium flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4 text-blue-500" />
+                      <TrendingUpIcon className="h-4 w-4 text-blue-500" />
                       Your Travel Patterns
                     </FormLabel>
                     <div className="flex flex-wrap gap-2">
@@ -474,7 +474,7 @@ export function DestinationSearchForm({
                             className="cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-colors border-blue-200 text-blue-700"
                             onClick={() => handlePopularDestinationClick(destination)}
                           >
-                            <TrendingUp className="h-3 w-3 mr-1" />
+                            <TrendingUpIcon className="h-3 w-3 mr-1" />
                             {destination}
                           </Badge>
                         ))}
@@ -486,7 +486,7 @@ export function DestinationSearchForm({
               {showMemoryRecommendations && memoryContext?.context?.recentMemories && (
                 <div className="space-y-3">
                   <FormLabel className="text-sm font-medium flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-green-500" />
+                    <ClockIcon className="h-4 w-4 text-green-500" />
                     Recent Memories
                   </FormLabel>
                   <div className="flex flex-wrap gap-2">
@@ -510,7 +510,7 @@ export function DestinationSearchForm({
                             className="cursor-pointer hover:bg-green-50 hover:border-green-300 transition-colors border-green-200 text-green-700"
                             onClick={() => handlePopularDestinationClick(destination)}
                           >
-                            <Clock className="h-3 w-3 mr-1" />
+                            <ClockIcon className="h-3 w-3 mr-1" />
                             {destination}
                           </Badge>
                         );
@@ -524,7 +524,7 @@ export function DestinationSearchForm({
               {/* Popular Destinations Quick Select */}
               <div className="space-y-3">
                 <FormLabel className="text-sm font-medium flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-gray-500" />
+                  <MapPinIcon className="h-4 w-4 text-gray-500" />
                   Popular Destinations
                 </FormLabel>
                 <div className="flex flex-wrap gap-2">

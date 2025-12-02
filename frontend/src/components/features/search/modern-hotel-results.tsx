@@ -1,28 +1,32 @@
+/**
+ * @fileoverview Modern hotel results grid with filters, badges, and sorting controls.
+ */
+
 "use client";
 
 import {
-  ArrowUpDown,
-  Building2,
-  Calendar,
-  Car,
-  Coffee,
-  Dumbbell,
-  Filter,
-  Grid3X3,
-  Heart,
-  Image as ImageIcon,
-  List,
-  Map as MapIcon,
-  MapPin,
-  RefreshCw,
-  Shield,
-  Sparkles,
-  Star,
-  TrendingUp,
-  Utensils,
-  Waves,
-  Wifi,
-  Zap,
+  ArrowUpDownIcon,
+  Building2Icon,
+  CalendarIcon,
+  CarIcon,
+  CoffeeIcon,
+  DumbbellIcon,
+  FilterIcon,
+  Grid3X3Icon,
+  HeartIcon,
+  ImageIcon,
+  ListIcon,
+  MapIcon,
+  MapPinIcon,
+  RefreshCwIcon,
+  ShieldIcon,
+  SparklesIcon,
+  StarIcon,
+  TrendingUpIcon,
+  UtensilsIcon,
+  WavesIcon,
+  WifiIcon,
+  ZapIcon,
 } from "lucide-react";
 import Image from "next/image";
 import { useOptimistic, useState, useTransition } from "react";
@@ -163,15 +167,15 @@ export function ModernHotelResults({
 
   const getAmenityIcon = (amenity: string) => {
     const icons: Record<string, React.ComponentType<{ className?: string }>> = {
-      breakfast: Coffee,
-      gym: Dumbbell,
-      parking: Car,
-      pool: Waves,
-      restaurant: Utensils,
-      spa: Sparkles,
-      wifi: Wifi,
+      breakfast: CoffeeIcon,
+      gym: DumbbellIcon,
+      parking: CarIcon,
+      pool: WavesIcon,
+      restaurant: UtensilsIcon,
+      spa: SparklesIcon,
+      wifi: WifiIcon,
     };
-    return icons[amenity.toLowerCase()] || Building2;
+    return icons[amenity.toLowerCase()] || Building2Icon;
   };
 
   const getUrgencyColor = (urgency: string) => {
@@ -187,8 +191,8 @@ export function ModernHotelResults({
 
   const getPriceHistoryIcon = (trend: string) => {
     if (trend === "falling")
-      return <TrendingUp className="h-3 w-3 text-green-500 rotate-180" />;
-    if (trend === "rising") return <TrendingUp className="h-3 w-3 text-red-500" />;
+      return <TrendingUpIcon className="h-3 w-3 text-green-500 rotate-180" />;
+    if (trend === "rising") return <TrendingUpIcon className="h-3 w-3 text-red-500" />;
     return null;
   };
 
@@ -224,13 +228,13 @@ export function ModernHotelResults({
   if (results.length === 0) {
     return (
       <Card className="p-12 text-center">
-        <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+        <Building2Icon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
         <h3 className="text-lg font-semibold mb-2">No hotels found</h3>
         <p className="text-muted-foreground mb-4">
           Try adjusting your search criteria or dates
         </p>
         <Button variant="outline">
-          <RefreshCw className="h-4 w-4 mr-2" />
+          <RefreshCwIcon className="h-4 w-4 mr-2" />
           Modify Search
         </Button>
       </Card>
@@ -247,11 +251,11 @@ export function ModernHotelResults({
             <Separator orientation="vertical" className="h-4" />
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm">
-                <Filter className="h-4 w-4 mr-2" />
+                <FilterIcon className="h-4 w-4 mr-2" />
                 Filters
               </Button>
               <Button variant="ghost" size="sm">
-                <ArrowUpDown className="h-4 w-4 mr-2" />
+                <ArrowUpDownIcon className="h-4 w-4 mr-2" />
                 Sort: {sortBy === "ai" ? "AI Recommended" : sortBy}
               </Button>
             </div>
@@ -263,14 +267,14 @@ export function ModernHotelResults({
               size="sm"
               onClick={() => setViewMode("list")}
             >
-              <List className="h-4 w-4" />
+              <ListIcon className="h-4 w-4" />
             </Button>
             <Button
               variant={viewMode === "grid" ? "default" : "outline"}
               size="sm"
               onClick={() => setViewMode("grid")}
             >
-              <Grid3X3 className="h-4 w-4" />
+              <Grid3X3Icon className="h-4 w-4" />
             </Button>
             {showMap && (
               <Button
@@ -306,7 +310,7 @@ export function ModernHotelResults({
             {hotel.ai.recommendation >= 8 && (
               <div className="absolute top-3 left-3 z-10">
                 <Badge className="bg-purple-500 text-white">
-                  <Zap className="h-3 w-3 mr-1" />
+                  <ZapIcon className="h-3 w-3 mr-1" />
                   AI Pick
                 </Badge>
               </div>
@@ -319,7 +323,7 @@ export function ModernHotelResults({
               className="absolute top-3 right-3 z-10 bg-white/80 hover:bg-white"
               onClick={() => toggleWishlist(hotel.id)}
             >
-              <Heart
+              <HeartIcon
                 className={cn(
                   "h-4 w-4",
                   savedHotels.has(hotel.id)
@@ -393,7 +397,7 @@ export function ModernHotelResults({
                       <div className="flex items-center gap-2 mb-2">
                         <div className="flex items-center">
                           {[...Array(hotel.starRating)].map((_, i) => (
-                            <Star
+                            <StarIcon
                               key={`star-${i}-${hotel.name}`}
                               className="h-3 w-3 fill-yellow-400 text-yellow-400"
                             />
@@ -407,7 +411,7 @@ export function ModernHotelResults({
                         <span className="text-sm font-medium">
                           {hotel.userRating.toFixed(1)}
                         </span>
-                        <Star className="h-3 w-3 fill-current text-yellow-500" />
+                        <StarIcon className="h-3 w-3 fill-current text-yellow-500" />
                         <span className="text-xs text-muted-foreground">
                           ({hotel.reviewCount.toLocaleString()} reviews)
                         </span>
@@ -416,7 +420,7 @@ export function ModernHotelResults({
                   </div>
 
                   <div className="flex items-center gap-1 text-sm text-muted-foreground mb-3">
-                    <MapPin className="h-3 w-3" />
+                    <MapPinIcon className="h-3 w-3" />
                     <span className="truncate">
                       {hotel.location.district}, {hotel.location.city}
                     </span>
@@ -447,14 +451,14 @@ export function ModernHotelResults({
                 <div className="mb-3 space-y-2">
                   {hotel.allInclusive?.available && (
                     <Badge className="bg-orange-100 text-orange-800">
-                      <Sparkles className="h-3 w-3 mr-1" />
+                      <SparklesIcon className="h-3 w-3 mr-1" />
                       All-Inclusive {hotel.allInclusive.tier}
                     </Badge>
                   )}
 
                   {hotel.sustainability.certified && (
                     <Badge className="bg-green-100 text-green-800">
-                      <Shield className="h-3 w-3 mr-1" />
+                      <ShieldIcon className="h-3 w-3 mr-1" />
                       Eco-Certified
                     </Badge>
                   )}
@@ -505,7 +509,7 @@ export function ModernHotelResults({
                   {hotel.ai.recommendation >= 7 && (
                     <div className="mb-3 p-2 bg-purple-50 rounded text-xs">
                       <div className="flex items-center gap-1 font-medium text-purple-800">
-                        <Zap className="h-3 w-3" />
+                        <ZapIcon className="h-3 w-3" />
                         AI Recommendation: {hotel.ai.recommendation}/10
                       </div>
                       <div className="text-purple-600 mt-1">{hotel.ai.reason}</div>
@@ -526,7 +530,7 @@ export function ModernHotelResults({
 
                     {hotel.availability.flexible && (
                       <Button variant="outline" size="sm" className="w-full text-xs">
-                        <Calendar className="h-3 w-3 mr-1" />
+                        <CalendarIcon className="h-3 w-3 mr-1" />
                         Free Cancellation
                       </Button>
                     )}

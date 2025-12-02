@@ -1,9 +1,13 @@
+/**
+ * @fileoverview Destinations search page for exploring places and adding to trips.
+ */
+
 "use client";
 
 // Client-side search screen; no cache directive
 
 import type { Destination, DestinationSearchParams } from "@schemas/search";
-import { AlertCircle, MapPin, Search, Star } from "lucide-react";
+import { AlertCircleIcon, MapPinIcon, SearchIcon, StarIcon } from "lucide-react";
 import { useState } from "react";
 import { DestinationCard } from "@/components/features/search/destination-card";
 import { DestinationSearchForm } from "@/components/features/search/destination-search-form";
@@ -158,7 +162,7 @@ export default function DestinationsSearchPage() {
       {/* Error State */}
       {searchError && (
         <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
+          <AlertCircleIcon className="h-4 w-4" />
           <AlertDescription className="flex items-center justify-between">
             <span>{searchError?.message}</span>
             <Button variant="outline" size="sm" onClick={resetSearch}>
@@ -176,7 +180,7 @@ export default function DestinationsSearchPage() {
         !searchError && (
           <Card>
             <CardContent className="text-center py-12">
-              <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <SearchIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">No destinations found</h3>
               <p className="text-muted-foreground mb-4">
                 Try adjusting your search terms or destination types
@@ -196,7 +200,7 @@ export default function DestinationsSearchPage() {
               Search Results ({destinations.length} destinations)
             </h2>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <MapPin className="h-4 w-4" />
+              <MapPinIcon className="h-4 w-4" />
               <span>Click to compare destinations</span>
             </div>
           </div>
@@ -219,7 +223,7 @@ export default function DestinationsSearchPage() {
       {!hasSearched && !storeIsSearching && !isSearching && (
         <Card>
           <CardContent className="text-center py-12">
-            <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <MapPinIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2">
               Discover Amazing Destinations
             </h3>
@@ -231,25 +235,25 @@ export default function DestinationsSearchPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl mx-auto">
               <div className="text-center">
                 <div className="bg-primary/10 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-2">
-                  <MapPin className="h-6 w-6 text-primary" />
+                  <MapPinIcon className="h-6 w-6 text-primary" />
                 </div>
                 <div className="text-sm font-medium">Cities & Towns</div>
               </div>
               <div className="text-center">
                 <div className="bg-primary/10 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-2">
-                  <Star className="h-6 w-6 text-primary" />
+                  <StarIcon className="h-6 w-6 text-primary" />
                 </div>
                 <div className="text-sm font-medium">Landmarks</div>
               </div>
               <div className="text-center">
                 <div className="bg-primary/10 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-2">
-                  <MapPin className="h-6 w-6 text-primary" />
+                  <MapPinIcon className="h-6 w-6 text-primary" />
                 </div>
                 <div className="text-sm font-medium">Countries</div>
               </div>
               <div className="text-center">
                 <div className="bg-primary/10 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-2">
-                  <MapPin className="h-6 w-6 text-primary" />
+                  <MapPinIcon className="h-6 w-6 text-primary" />
                 </div>
                 <div className="text-sm font-medium">Regions</div>
               </div>

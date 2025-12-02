@@ -1,6 +1,5 @@
-/*
- * @fileoverview Optimistic trip updates component.
- * Shows real-time collaboration with instant UI feedback.
+/**
+ * @fileoverview Optimistic trip updates component for realtime collaboration UI.
  */
 
 "use client";
@@ -26,14 +25,14 @@ type TripUpdateKey = keyof TripUpdate;
 
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  AlertCircle,
-  Calendar,
-  CheckCircle,
-  Clock,
-  DollarSign,
-  Loader2,
-  MapPin,
-  Users,
+  AlertCircleIcon,
+  CalendarIcon,
+  CheckCircleIcon,
+  ClockIcon,
+  DollarSignIcon,
+  Loader2Icon,
+  MapPinIcon,
+  UsersIcon,
 } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 
@@ -286,11 +285,11 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
 
     switch (update.status) {
       case "pending":
-        return <Loader2 className="h-4 w-4 animate-spin text-blue-500" />;
+        return <Loader2Icon className="h-4 w-4 animate-spin text-blue-500" />;
       case "success":
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
+        return <CheckCircleIcon className="h-4 w-4 text-green-500" />;
       case "error":
-        return <AlertCircle className="h-4 w-4 text-red-500" />;
+        return <AlertCircleIcon className="h-4 w-4 text-red-500" />;
     }
   };
 
@@ -304,7 +303,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
     if (!isConnected) {
       return (
         <Badge variant="destructive" className="mb-4">
-          <AlertCircle className="h-3 w-3 mr-1" />
+          <AlertCircleIcon className="h-3 w-3 mr-1" />
           Offline - Changes will sync when reconnected
         </Badge>
       );
@@ -313,7 +312,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
     if (realtimeErrors.length > 0) {
       return (
         <Badge variant="secondary" className="mb-4">
-          <AlertCircle className="h-3 w-3 mr-1" />
+          <AlertCircleIcon className="h-3 w-3 mr-1" />
           Connection issues detected
         </Badge>
       );
@@ -321,7 +320,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
 
     return (
       <Badge variant="default" className="mb-4 bg-green-500">
-        <CheckCircle className="h-3 w-3 mr-1" />
+        <CheckCircleIcon className="h-3 w-3 mr-1" />
         Live updates enabled
       </Badge>
     );
@@ -339,7 +338,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2 text-destructive">
-              <AlertCircle className="h-5 w-5" />
+              <AlertCircleIcon className="h-5 w-5" />
               <span>Unable to load trip</span>
             </CardTitle>
             <CardDescription>
@@ -358,7 +357,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <Loader2 className="h-5 w-5 animate-spin" />
+              <Loader2Icon className="h-5 w-5 animate-spin" />
               <span>Loading trip...</span>
             </CardTitle>
             <CardDescription>
@@ -377,7 +376,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <AlertCircle className="h-5 w-5" />
+              <AlertCircleIcon className="h-5 w-5" />
               <span>No trip found</span>
             </CardTitle>
             <CardDescription>
@@ -396,7 +395,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <MapPin className="h-5 w-5" />
+            <MapPinIcon className="h-5 w-5" />
             <span>Trip Details</span>
           </CardTitle>
           <CardDescription>
@@ -440,7 +439,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
 
             <div className="space-y-2">
               <Label htmlFor={budgetInputId} className="flex items-center space-x-2">
-                <DollarSign className="h-4 w-4" />
+                <DollarSignIcon className="h-4 w-4" />
                 <span>Budget</span>
                 {getFieldStatus("budget")}
               </Label>
@@ -458,7 +457,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
 
             <div className="space-y-2">
               <Label htmlFor={travelersInputId} className="flex items-center space-x-2">
-                <Users className="h-4 w-4" />
+                <UsersIcon className="h-4 w-4" />
                 <span>Travelers</span>
                 {getFieldStatus("travelers")}
               </Label>
@@ -478,7 +477,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
 
           <div className="space-y-2">
             <Label className="flex items-center space-x-2">
-              <Calendar className="h-4 w-4" />
+              <CalendarIcon className="h-4 w-4" />
               <span>Trip Dates</span>
             </Label>
             <div className="grid grid-cols-2 gap-4">
@@ -501,7 +500,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <Clock className="h-5 w-5" />
+            <ClockIcon className="h-5 w-5" />
             <span>Recent Updates</span>
           </CardTitle>
         </CardHeader>
@@ -566,7 +565,7 @@ export function CollaborationIndicator({ tripId: _tripId }: { tripId: number }) 
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center space-x-2">
-          <Users className="h-5 w-5" />
+          <UsersIcon className="h-5 w-5" />
           <span>Active Collaborators</span>
         </CardTitle>
       </CardHeader>

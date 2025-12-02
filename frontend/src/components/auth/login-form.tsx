@@ -1,6 +1,11 @@
+/**
+ * @fileoverview The login form component.
+ */
+
 "use client";
 
-import { Github, Loader2, Mail } from "lucide-react";
+import { SiGithub, SiGoogle } from "@icons-pack/react-simple-icons";
+import { Loader2Icon, MailIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,34 +17,29 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { resolveRedirectUrl } from "@/lib/auth/redirect";
 import { useSupabaseRequired } from "@/lib/supabase/client";
 
+/** The login form props. */
 type LoginFormProps = {
   redirectTo?: string;
 };
 
-function GetRedirectUrl(redirectTo?: string) {
-  if (!redirectTo) return "/dashboard";
-  try {
-    if (redirectTo.startsWith("http")) return redirectTo;
-    if (typeof window !== "undefined") {
-      return new URL(redirectTo, window.location.origin).toString();
-    }
-    const base = process.env.NEXT_PUBLIC_SITE_URL;
-    return base ? new URL(redirectTo, base).toString() : redirectTo;
-  } catch {
-    return "/dashboard";
-  }
-}
-
+/**
+ * The login form component.
+ *
+ * @param redirectTo - The redirect URL.
+ * @returns The login form component.
+ */
 export function LoginForm({ redirectTo }: LoginFormProps) {
   const supabase = useSupabaseRequired();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const targetUrl = useMemo(() => GetRedirectUrl(redirectTo), [redirectTo]);
+  const targetUrl = useMemo(() => resolveRedirectUrl(redirectTo), [redirectTo]);
 
+  /** Handles the password login. */
   const handlePasswordLogin = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
@@ -56,6 +56,7 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
     window.location.assign(targetUrl);
   };
 
+  /** Handles the OAuth login. */
   const handleOAuth = async (provider: "github" | "google") => {
     setError(null);
     setLoading(true);
@@ -107,9 +108,9 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
             data-testid="password-login"
           >
             {loading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
             ) : (
-              <Mail className="mr-2 h-4 w-4" />
+              <MailIcon className="mr-2 h-4 w-4" />
             )}
             Continue with email
           </Button>
@@ -122,7 +123,7 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
             disabled={loading}
             data-testid="oauth-github"
           >
-            <Github className="mr-2 h-4 w-4" /> Continue with GitHub
+            <SiGithub className="mr-2 h-4 w-4" /> Continue with GitHub
           </Button>
           <Button
             variant="outline"
@@ -131,7 +132,7 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
             disabled={loading}
             data-testid="oauth-google"
           >
-            <Mail className="mr-2 h-4 w-4" /> Continue with Google
+            <SiGoogle className="mr-2 h-4 w-4" /> Continue with Google
           </Button>
         </div>
       </CardContent>
