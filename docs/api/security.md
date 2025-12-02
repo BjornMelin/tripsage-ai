@@ -15,6 +15,7 @@ Environment prerequisites:
 - Configure `SUPABASE_JWT_SECRET` (>=16 chars) as the Supabase JWT signing key.
 - Backup-code hashing prefers `MFA_BACKUP_CODE_PEPPER`; when it is unset, the system derives a pepper from `SUPABASE_JWT_SECRET` for bootstrap/startup compatibility. This fallback is **not** recommended for long-term use because rotating the JWT secret invalidates all existing backup codes.
 - Operators should treat `MFA_BACKUP_CODE_PEPPER` and `SUPABASE_JWT_SECRET` as distinct secrets: the pepper is only for deterministic backup-code hashing/salting, while the JWT secret is for token signing.
+- When the fallback is used, document the risk and schedule rotation to a dedicated pepper as soon as possible.
 
 Audit events for backup-code operations are stored in the `mfa_backup_code_audit` table (schema in `supabase/migrations/20251122000000_base_schema.sql`) with columns:
 
@@ -87,6 +88,7 @@ Consume a single backup code for the authenticated user.
 - `401` – Not authenticated.
 - `429` – Rate limit exceeded for `auth:mfa:backup:verify`.
 - `500` – Internal server error; response shape: `{ "error": "internal_error" }`.
+- Rate-limit responses include standard `Retry-After` and `X-RateLimit-*` headers for client backoff.
 
 ### `POST /api/auth/mfa/backup/regenerate`
 
