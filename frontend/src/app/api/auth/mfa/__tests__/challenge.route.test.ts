@@ -5,16 +5,18 @@ import { makeJsonRequest } from "@/test/api-request-factory";
 import { mockApiRouteAuthUser, resetApiRouteMocks } from "@/test/api-route-helpers";
 import { createRouteParamsContext } from "@/test/route-helpers";
 
+const challengeTotp = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/security/mfa", () => ({ challengeTotp }));
+
 describe("POST /api/auth/mfa/challenge", () => {
   beforeEach(() => {
     resetApiRouteMocks();
-    vi.doMock("@/lib/security/mfa", () => ({
-      challengeTotp: vi.fn(async () => ({ challengeId: "challenge-abc" })),
-    }));
+    challengeTotp.mockReset();
+    challengeTotp.mockResolvedValue({ challengeId: "challenge-abc" });
   });
 
   afterEach(() => {
-    vi.resetModules();
     vi.clearAllMocks();
   });
 
@@ -55,11 +57,9 @@ describe("POST /api/auth/mfa/challenge", () => {
   });
 
   it("returns 500 when challenge fails", async () => {
-    vi.doMock("@/lib/security/mfa", () => ({
-      challengeTotp: vi.fn(() => {
-        throw new Error("boom");
-      }),
-    }));
+    challengeTotp.mockImplementationOnce(() => {
+      throw new Error("boom");
+    });
     const { POST } = await import("../challenge/route");
     const res = await POST(
       makeJsonRequest("http://localhost/api/auth/mfa/challenge", {

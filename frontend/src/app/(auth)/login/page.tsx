@@ -1,18 +1,25 @@
+/**
+ * @fileoverview Login page component for the TripSage application.
+ */
+
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LoginForm } from "@/components/auth/login-form";
 
+/** The metadata for the login page. */
 export const metadata: Metadata = {
   description: "Sign in to your TripSage account to start planning your perfect trips",
   title: "Sign In - TripSage",
 };
 
-export default function LoginPage({
+/** The login page component. */
+export default async function LoginPage({
   searchParams,
 }: {
-  searchParams?: { from?: string; error?: string };
+  searchParams: Promise<{ from?: string; error?: string }>;
 }) {
-  const redirectTo = searchParams?.from || "/dashboard";
+  const params = await searchParams;
+  const redirectTo = params?.from || "/dashboard";
 
   return (
     <div className="min-h-screen flex">

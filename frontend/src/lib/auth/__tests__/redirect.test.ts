@@ -26,6 +26,10 @@ describe("resolveRedirectUrl", () => {
     expect(resolveRedirectUrl("https://app.example.com/ok")).toBe(
       "https://app.example.com/ok"
     );
-    process.env.NEXT_PUBLIC_SITE_URL = prev;
+    if (prev === undefined) {
+      Reflect.deleteProperty(process.env, "NEXT_PUBLIC_SITE_URL");
+    } else {
+      process.env.NEXT_PUBLIC_SITE_URL = prev;
+    }
   });
 });

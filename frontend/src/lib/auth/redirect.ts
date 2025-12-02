@@ -11,11 +11,19 @@ function getBaseOrigin(): string {
   }
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
   if (siteUrl) {
-    return new URL(siteUrl).origin;
+    try {
+      return new URL(siteUrl).origin;
+    } catch {
+      // ignore malformed site URL
+    }
   }
   const appBaseUrl = process.env.APP_BASE_URL;
   if (appBaseUrl) {
-    return new URL(appBaseUrl).origin;
+    try {
+      return new URL(appBaseUrl).origin;
+    } catch {
+      // ignore malformed app base URL
+    }
   }
   return "http://localhost:3000";
 }

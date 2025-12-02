@@ -1,19 +1,26 @@
+/**
+ * @fileoverview Register page component for the TripSage application.
+ */
+
 import type { Metadata } from "next";
 import Link from "next/link";
 import { RegisterForm } from "@/components/auth/register-form";
 
+/** The metadata for the register page. */
 export const metadata: Metadata = {
   description:
     "Join TripSage to start planning your perfect trips with AI-powered assistance",
   title: "Create Account - TripSage",
 };
 
-export default function RegisterPage({
+/** The register page component. */
+export default async function RegisterPage({
   searchParams,
 }: {
-  searchParams?: { from?: string; status?: string; error?: string };
+  searchParams: Promise<{ from?: string; status?: string; error?: string }>;
 }) {
-  const redirectTo = searchParams?.from || "/dashboard";
+  const params = await searchParams;
+  const redirectTo = params?.from || "/dashboard";
 
   return (
     <div className="min-h-screen flex">

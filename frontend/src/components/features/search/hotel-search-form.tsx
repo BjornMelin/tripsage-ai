@@ -18,7 +18,9 @@ import {
   TrendingUpIcon,
   UsersIcon,
   UtensilsIcon,
+  WavesIcon,
   WifiIcon,
+  WindIcon,
 } from "lucide-react";
 import { useId, useOptimistic, useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -70,11 +72,11 @@ const Amenities = [
   { icon: WifiIcon, id: "wifi", label: "Free WiFi" },
   { icon: CoffeeIcon, id: "breakfast", label: "Free Breakfast" },
   { icon: CarIcon, id: "parking", label: "Free Parking" },
-  { icon: Building2Icon, id: "pool", label: "Swimming Pool" },
+  { icon: WavesIcon, id: "pool", label: "Swimming Pool" },
   { icon: DumbbellIcon, id: "gym", label: "Fitness Center" },
   { icon: UtensilsIcon, id: "restaurant", label: "Restaurant" },
   { icon: SparklesIcon, id: "spa", label: "Spa" },
-  { icon: Building2Icon, id: "aircon", label: "Air Conditioning" },
+  { icon: WindIcon, id: "aircon", label: "Air Conditioning" },
 ];
 
 export function HotelSearchForm({
