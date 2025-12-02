@@ -50,7 +50,7 @@ describe("places-activities", () => {
   });
 
   describe("mapPlacesPlaceToActivity", () => {
-    it("should map Places place to Activity schema", async () => {
+    it("should map Places place to Activity schema", () => {
       const place = {
         displayName: { text: "Museum of Modern Art" },
         formattedAddress: "11 W 53rd St, New York, NY 10019",
@@ -63,7 +63,7 @@ describe("places-activities", () => {
         userRatingCount: 4523,
       };
 
-      const activity = await mapPlacesPlaceToActivity(place, "2025-01-01");
+      const activity = mapPlacesPlaceToActivity(place, "2025-01-01");
 
       expect(activity.id).toBe("ChIJN1t_tDeuEmsRUsoyG83frY4");
       expect(activity.name).toBe("Museum of Modern Art");
@@ -80,14 +80,14 @@ describe("places-activities", () => {
       expect(activity.images?.[0]).toContain("maxWidthPx=1200");
     });
 
-    it("should handle missing optional fields", async () => {
+    it("should handle missing optional fields", () => {
       const place = {
         displayName: { text: "Test Activity" },
         formattedAddress: "Test Address",
         id: "places/1",
       };
 
-      const activity = await mapPlacesPlaceToActivity(place);
+      const activity = mapPlacesPlaceToActivity(place);
 
       expect(activity.id).toBe("places/1");
       expect(activity.name).toBe("Test Activity");
@@ -96,7 +96,7 @@ describe("places-activities", () => {
       expect(activity.type).toBe("activity");
     });
 
-    it("should map price levels correctly", async () => {
+    it("should map price levels correctly", () => {
       const testCases = [
         { expected: 0, priceLevel: "PRICE_LEVEL_FREE" },
         { expected: 1, priceLevel: "PRICE_LEVEL_INEXPENSIVE" },
@@ -120,12 +120,12 @@ describe("places-activities", () => {
             | undefined,
         };
 
-        const activity = await mapPlacesPlaceToActivity(place);
+        const activity = mapPlacesPlaceToActivity(place);
         expect(activity.price).toBe(testCase.expected);
       }
     });
 
-    it("should extract activity type from types array", async () => {
+    it("should extract activity type from types array", () => {
       const place = {
         displayName: { text: "Park" },
         formattedAddress: "Test",
@@ -133,7 +133,7 @@ describe("places-activities", () => {
         types: ["park", "tourist_attraction"],
       };
 
-      const activity = await mapPlacesPlaceToActivity(place);
+      const activity = mapPlacesPlaceToActivity(place);
       expect(activity.type).toBe("park");
     });
   });

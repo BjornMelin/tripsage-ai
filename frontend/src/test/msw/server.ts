@@ -22,6 +22,7 @@ import { googlePlacesHandlers } from "./handlers/google-places";
 import { providersHandlers } from "./handlers/providers";
 import { stripeHandlers } from "./handlers/stripe";
 import { supabaseHandlers } from "./handlers/supabase";
+import { telemetryHandlers } from "./handlers/telemetry";
 import { upstashHandlers } from "./handlers/upstash";
 
 const handlers = [
@@ -38,6 +39,7 @@ const handlers = [
   ...stripeHandlers,
   ...supabaseHandlers,
   ...upstashHandlers,
+  ...telemetryHandlers,
 ];
 
 /**
