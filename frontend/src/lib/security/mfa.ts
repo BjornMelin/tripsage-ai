@@ -217,20 +217,30 @@ export async function challengeTotp(
   );
 }
 
+/** Result of TOTP verification indicating enrollment state. */
+export interface TotpVerificationResult {
+  /** True if this verification consumed an initial enrollment (first-time setup). */
+  isInitialEnrollment: boolean;
+}
+
 /**
  * Verifies a TOTP code.
  *
+ * Handles both initial enrollment verification (pending enrollment exists) and
+ * ongoing MFA challenge verification (no enrollment). Backup codes should only
+ * be generated when `isInitialEnrollment` is true.
+ *
  * @param supabase - The Supabase client.
  * @param input - The input to verify the TOTP code.
- * @returns The verification result.
+ * @returns Verification result with enrollment state.
  */
 export async function verifyTotp(
   supabase: TypedSupabase,
   input: MfaVerificationInput,
   deps?: { adminSupabase?: TypedAdminSupabase }
-): Promise<void> {
+): Promise<TotpVerificationResult> {
   const parsed = mfaVerificationInputSchema.parse(input);
-  await withTelemetrySpan(
+  return await withTelemetrySpan(
     "mfa.verify_totp",
     {
       attributes: {
@@ -242,6 +252,8 @@ export async function verifyTotp(
     },
     async (span) => {
       const adminSupabase = deps?.adminSupabase ?? getAdminSupabase();
+
+      // Check for pending enrollment (initial setup flow)
       const { data: pendingEnrollment, error: enrollmentError } = await supabase
         .from("mfa_enrollments")
         .select("expires_at,status")
@@ -256,23 +268,26 @@ export async function verifyTotp(
         throw new Error(enrollmentError.message ?? "mfa_enrollment_lookup_failed");
       }
 
-      if (!pendingEnrollment || pendingEnrollment.status !== "pending") {
-        throw new Error("mfa_enrollment_not_found");
-      }
+      const isInitialEnrollment =
+        pendingEnrollment !== null && pendingEnrollment.status === "pending";
 
-      if (new Date(pendingEnrollment.expires_at).getTime() < Date.now()) {
-        const { error: expireError } = await adminSupabase
-          .from("mfa_enrollments")
-          .update({ status: "expired" })
-          .eq("challenge_id", parsed.challengeId)
-          .eq("factor_id", parsed.factorId);
-        if (expireError) {
-          span.recordException(expireError);
-          throw new Error(expireError.message ?? "mfa_enrollment_expire_failed");
+      // If this is initial enrollment, validate expiration
+      if (isInitialEnrollment) {
+        if (new Date(pendingEnrollment.expires_at).getTime() < Date.now()) {
+          const { error: expireError } = await adminSupabase
+            .from("mfa_enrollments")
+            .update({ status: "expired" })
+            .eq("challenge_id", parsed.challengeId)
+            .eq("factor_id", parsed.factorId);
+          if (expireError) {
+            span.recordException(expireError);
+            throw new Error(expireError.message ?? "mfa_enrollment_expire_failed");
+          }
+          throw new Error("mfa_enrollment_expired");
         }
-        throw new Error("mfa_enrollment_expired");
       }
 
+      // Verify TOTP code with Supabase Auth (works for both enrollment and challenges)
       const result = await supabase.auth.mfa.verify({
         challengeId: parsed.challengeId,
         code: parsed.code,
@@ -283,25 +298,29 @@ export async function verifyTotp(
         throw new Error(result.error.message ?? "mfa_verify_failed");
       }
 
-      // Mark enrollment consumed if present
-      const userId = await getAuthenticatedUserId(supabase);
-      if (userId) {
-        const { error: consumeError } = await adminSupabase
-          .from("mfa_enrollments")
-          .update({
-            // biome-ignore lint/style/useNamingConvention: snake_case columns
-            consumed_at: nowIso(),
-            status: "consumed",
-          })
-          .eq("user_id", userId)
-          .eq("factor_id", parsed.factorId)
-          .eq("challenge_id", parsed.challengeId)
-          .eq("status", "pending");
-        if (consumeError) {
-          span.recordException(consumeError);
-          throw new Error(consumeError.message ?? "mfa_enrollment_update_failed");
+      // Mark enrollment consumed if this was initial enrollment
+      if (isInitialEnrollment) {
+        const userId = await getAuthenticatedUserId(supabase);
+        if (userId) {
+          const { error: consumeError } = await adminSupabase
+            .from("mfa_enrollments")
+            .update({
+              // biome-ignore lint/style/useNamingConvention: snake_case columns
+              consumed_at: nowIso(),
+              status: "consumed",
+            })
+            .eq("user_id", userId)
+            .eq("factor_id", parsed.factorId)
+            .eq("challenge_id", parsed.challengeId)
+            .eq("status", "pending");
+          if (consumeError) {
+            span.recordException(consumeError);
+            throw new Error(consumeError.message ?? "mfa_enrollment_update_failed");
+          }
         }
       }
+
+      return { isInitialEnrollment };
     }
   );
 }

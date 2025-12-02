@@ -13,12 +13,14 @@ describe("POST /api/auth/mfa/verify", () => {
   const mockMfa = {
     verify: vi.fn(),
   };
+  const mockRegenerate = vi.fn();
 
   beforeEach(() => {
     resetApiRouteMocks();
+    mockRegenerate.mockResolvedValue({ codes: ["ABCDE-FGHIJ"], remaining: 10 });
     vi.doMock("@/lib/security/mfa", () => ({
-      regenerateBackupCodes: vi.fn(async () => ({ codes: ["CODE-ONE"] })),
-      verifyTotp: mockMfa.verify.mockImplementation(async () => Promise.resolve()),
+      regenerateBackupCodes: mockRegenerate,
+      verifyTotp: mockMfa.verify.mockResolvedValue({ isInitialEnrollment: true }),
     }));
     vi.doMock("@/lib/supabase/admin", () => ({
       getAdminSupabase: vi.fn(() => ({})),
@@ -30,7 +32,8 @@ describe("POST /api/auth/mfa/verify", () => {
     vi.clearAllMocks();
   });
 
-  it("verifies code and returns backup codes", async () => {
+  it("generates backup codes only on initial enrollment", async () => {
+    mockMfa.verify.mockResolvedValueOnce({ isInitialEnrollment: true });
     const { POST } = await import("../verify/route");
     const res = await POST(
       makeJsonRequest("http://localhost/api/auth/mfa/verify", {
@@ -43,8 +46,26 @@ describe("POST /api/auth/mfa/verify", () => {
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.data.status).toBe("verified");
-    // backupCodes may be undefined if regen fails; ensure shape present
-    expect(json.data).toHaveProperty("backupCodes");
+    expect(json.data.backupCodes).toEqual(["ABCDE-FGHIJ"]);
+    expect(mockRegenerate).toHaveBeenCalled();
+  });
+
+  it("does not generate backup codes on subsequent challenges", async () => {
+    mockMfa.verify.mockResolvedValueOnce({ isInitialEnrollment: false });
+    const { POST } = await import("../verify/route");
+    const res = await POST(
+      makeJsonRequest("http://localhost/api/auth/mfa/verify", {
+        challengeId: ids.challengeId,
+        code: "123456",
+        factorId: ids.factorId,
+      }),
+      createRouteParamsContext()
+    );
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.data.status).toBe("verified");
+    expect(json.data.backupCodes).toBeUndefined();
+    expect(mockRegenerate).not.toHaveBeenCalled();
   });
 
   it("returns 400 for invalid code", async () => {
@@ -61,13 +82,9 @@ describe("POST /api/auth/mfa/verify", () => {
     expect(res.status).toBe(400);
   });
 
-  it("continues when backup code regeneration fails", async () => {
-    vi.doMock("@/lib/security/mfa", () => ({
-      regenerateBackupCodes: vi.fn(() => {
-        throw new Error("regen_failed");
-      }),
-      verifyTotp: mockMfa.verify.mockImplementation(async () => Promise.resolve()),
-    }));
+  it("continues when backup code regeneration fails on initial enrollment", async () => {
+    mockMfa.verify.mockResolvedValueOnce({ isInitialEnrollment: true });
+    mockRegenerate.mockRejectedValueOnce(new Error("regen_failed"));
     const { POST } = await import("../verify/route");
     const res = await POST(
       makeJsonRequest("http://localhost/api/auth/mfa/verify", {
@@ -79,6 +96,7 @@ describe("POST /api/auth/mfa/verify", () => {
     );
     expect(res.status).toBe(200);
     const json = await res.json();
+    expect(json.data.status).toBe("verified");
     expect(json.data.backupCodes).toBeUndefined();
   });
 });
