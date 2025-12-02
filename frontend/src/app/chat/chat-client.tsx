@@ -48,14 +48,12 @@ export function ChatClient(): ReactElement {
         role: "user",
       };
 
-      let nextMessages: UIMessage[] = [];
-      setMessages((prev) => {
-        nextMessages = [...prev, optimisticUserMessage];
-        return nextMessages;
-      });
+      const previousMessages = messages;
+      const nextMessages = [...previousMessages, optimisticUserMessage];
+      setMessages(nextMessages);
 
       try {
-        const result = await submitChatMessage({ messages: nextMessages, text });
+        const result = await submitChatMessage({ messages: previousMessages, text });
         setMessages((prev) =>
           prev
             .map((m) => (m.id === optimisticUserMessage.id ? result.userMessage : m))
@@ -64,11 +62,12 @@ export function ChatClient(): ReactElement {
       } catch (err) {
         setMessages((prev) => prev.filter((m) => m.id !== optimisticUserMessage.id));
         setError(err instanceof Error ? err.message : "Failed to send message.");
+        throw err instanceof Error ? err : new Error("Failed to send message.");
       } finally {
         setPending(false);
       }
     },
-    [pending]
+    [messages, pending]
   );
 
   return (
