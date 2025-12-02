@@ -96,7 +96,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
-    "framer-motion": "12.23.24",
+    "framer-motion": "12.23.25",
     "html-to-text": "^9.0.5",
     "i18n-iso-countries": "^7.14.0",
     "ical-generator": "^10.0.0",
