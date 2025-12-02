@@ -154,7 +154,7 @@ export const POST = withApiGuards({
 
   // Generate embedding via AI SDK v6 using OpenAI text-embedding-3-small (1536-d)
   const { embedding, usage } = await embed({
-    model: openai.textEmbeddingModel("text-embedding-3-small"),
+    model: openai.embeddingModel("text-embedding-3-small"),
     value: text,
   });
   if (!Array.isArray(embedding) || embedding.length !== 1536) {
