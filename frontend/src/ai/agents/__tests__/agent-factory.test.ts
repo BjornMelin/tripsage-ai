@@ -112,6 +112,7 @@ describe("createTripSageAgent", () => {
 
     expect(result).toBeDefined();
     expect(result.agentType).toBe("flightSearch");
+    expect(result.defaultMessages).toEqual(config.defaultMessages);
   });
 
   it("should use default values when optional parameters not provided", () => {

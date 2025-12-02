@@ -56,7 +56,7 @@ const mockCreateAgentUIStreamResponse = vi.hoisted(() =>
   vi.fn(() => new Response("ok", { status: 200 }))
 );
 vi.mock("ai", () => ({
-  createAgentUIStreamResponse: mockCreateAgentUIStreamResponse(),
+  createAgentUIStreamResponse: mockCreateAgentUIStreamResponse,
 }));
 
 // Mock Redis

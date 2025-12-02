@@ -125,6 +125,25 @@ recordTelemetryEvent("api.keys.validation_error", {
 
     These calls are eliminated by Next.js compiler in production builds (dead code elimination).
   - **Zustand stores:** Use `createStoreLogger` from `@/lib/telemetry/store-logger` for error tracking. This records errors on the active OTEL span.
+
+    ```typescript
+    import { createStoreLogger } from "@/lib/telemetry/store-logger";
+
+    // In a Zustand store action
+    const store = create((set) => ({
+      fetchData: async () => {
+        try {
+          const data = await api.getData();
+          set({ data });
+        } catch (error) {
+          const logger = createStoreLogger("store.my-store");
+          logger.error("Failed to fetch data", error);
+          throw error;
+        }
+      },
+    }));
+    ```
+
   - **Tests:** `console.*` allowed freely for debugging.
 - **Optional:** Configure `compiler.removeConsole` in `next.config.js` for additional safety:
 

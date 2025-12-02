@@ -73,9 +73,11 @@ describe("places-activities", () => {
       expect(activity.price).toBe(2); // PRICE_LEVEL_MODERATE maps to 2
       expect(activity.type).toBe("museum");
       expect(activity.coordinates).toEqual({ lat: 40.7614, lng: -73.9776 });
-      expect(activity.images?.[0]).toMatch(
-        /^\/api\/places\/photo\?name=places%2Fphoto1&maxHeightPx=800&maxWidthPx=1200/
-      );
+      // URL parameter order may vary, so check that all required params are present
+      expect(activity.images?.[0]).toMatch(/^\/api\/places\/photo\?/);
+      expect(activity.images?.[0]).toContain("name=places%2Fphoto1");
+      expect(activity.images?.[0]).toContain("maxHeightPx=800");
+      expect(activity.images?.[0]).toContain("maxWidthPx=1200");
     });
 
     it("should handle missing optional fields", async () => {
