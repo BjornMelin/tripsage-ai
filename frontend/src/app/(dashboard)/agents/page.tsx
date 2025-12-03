@@ -11,7 +11,7 @@ import { AgentStatusDashboard } from "@/components/features/agent-monitoring/das
 import { ConnectionStatus } from "@/components/features/shared/connection-status";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAgentStatusWebSocket } from "@/hooks/use-agent-status-websocket";
+import { useAgentStatusWebSocket } from "@/hooks/chat/use-agent-status-websocket";
 import { useAgentStatusStore } from "@/stores/agent-status-store";
 
 /**

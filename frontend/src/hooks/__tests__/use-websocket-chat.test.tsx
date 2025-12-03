@@ -131,7 +131,9 @@ describe("useWebSocketChat", () => {
   });
 
   it("handles connection errors", async () => {
-    const { useRealtimeChannel } = await import("@/hooks/supabase/use-realtime-channel");
+    const { useRealtimeChannel } = await import(
+      "@/hooks/supabase/use-realtime-channel"
+    );
     vi.mocked(useRealtimeChannel).mockImplementationOnce((_topic, opts) => {
       setTimeout(() => {
         opts?.onStatusChange?.("error" as RealtimeConnectionStatus);

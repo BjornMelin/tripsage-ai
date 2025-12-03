@@ -2,7 +2,10 @@
 
 import { renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { useChatRealtime, useTripRealtime } from "@/hooks/supabase/use-supabase-realtime";
+import {
+  useChatRealtime,
+  useTripRealtime,
+} from "@/hooks/supabase/use-supabase-realtime";
 
 const useRealtimeChannelMock = vi.fn();
 const useWebSocketChatMock = vi.fn();
