@@ -35,6 +35,8 @@ export interface UseActivitySearchResult {
   isSearching: boolean;
   /** Error that occurred during the last search operation, if any. */
   searchError: Error | null;
+  /** Setter to manually surface search errors. */
+  setSearchError: (error: Error | null) => void;
   /** Current search results. */
   results: Activity[] | null;
   /** Search metadata. */
@@ -164,5 +166,6 @@ export function useActivitySearch(): UseActivitySearchResult {
     searchActivities,
     searchError,
     searchMetadata,
+    setSearchError,
   };
 }

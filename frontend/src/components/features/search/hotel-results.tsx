@@ -123,8 +123,7 @@ export function HotelResults({
   const [isPending, startTransition] = useTransition();
   const [viewMode, setViewMode] = useState<"list" | "grid" | "map">("list");
   const [savedHotels, setSavedHotels] = useState<Set<string>>(new Set());
-  const [sortBy, _setSortBy] = useState<"price" | "rating" | "distance" | "ai">("ai");
-  const [_sortDirection, _setSortDirection] = useState<"asc" | "desc">("desc");
+  const sortBy: "price" | "rating" | "distance" | "ai" = "ai";
 
   // Optimistic selection state
   const [optimisticSelecting, setOptimisticSelecting] = useOptimistic(

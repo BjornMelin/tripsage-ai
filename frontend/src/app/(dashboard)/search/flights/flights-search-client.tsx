@@ -34,6 +34,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
+import { getErrorMessage } from "@/lib/api/error-types";
 import { useSearchOrchestration } from "@/hooks/search/use-search-orchestration";
 
 /** Flight search client component props. */
@@ -93,7 +94,7 @@ export default function FlightsSearchClient({
       }
     } catch (error) {
       toast({
-        description: error instanceof Error ? error.message : "An error occurred",
+        description: getErrorMessage(error),
         title: "Search Failed",
         variant: "destructive",
       });

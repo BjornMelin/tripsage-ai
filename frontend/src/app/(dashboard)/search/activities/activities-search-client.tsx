@@ -43,12 +43,14 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
+import { getErrorMessage } from "@/lib/api/error-types";
 import { useActivitySearch } from "@/hooks/search/use-activity-search";
 import { openActivityBooking } from "@/lib/activities/booking";
 import { addActivityToTrip, getPlanningTrips } from "./actions";
 
 const AI_FALLBACK_PREFIX = "ai_fallback:";
 const GOOGLE_PLACES_SOURCE = "googleplaces";
+/** Maximum number of items allowed in comparison views. */
 const MAX_COMPARISON_ITEMS = 3;
 
 /** Activity search client component props. */
@@ -62,10 +64,17 @@ export default function ActivitiesSearchClient({
 }: ActivitiesSearchClientProps) {
   const { toast } = useToast();
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
-  const { searchActivities, isSearching, searchError, results, searchMetadata } =
-    useActivitySearch();
+  const {
+    searchActivities,
+    isSearching,
+    searchError,
+    setSearchError,
+    results,
+    searchMetadata,
+  } = useActivitySearch();
   const searchParams = useSearchParams();
-  const dialogRef = useRef<HTMLDivElement>(null);
+  const primaryActionRef = useRef<HTMLButtonElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [pendingAddFromComparison, setPendingAddFromComparison] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
 
@@ -91,20 +100,29 @@ export default function ActivitiesSearchClient({
       setHasSearched(true);
       onSubmitServer(initialParams)
         .then(() => searchActivities(initialParams))
-        .catch(() => {
-          // Errors surfaced via searchError
+        .catch((error) => {
+          const message = getErrorMessage(error);
+          setSearchError(new Error(message));
         });
     }
-  }, [searchParams, searchActivities, onSubmitServer]);
+  }, [searchParams, searchActivities, onSubmitServer, setSearchError]);
 
   const handleSearch = async (params: ActivitySearchParams) => {
     if (params.destination) {
       setHasSearched(true);
       try {
         await onSubmitServer(params); // server-side telemetry and validation
+      } catch (error) {
+        const message = getErrorMessage(error);
+        setSearchError(new Error(message));
+        return;
+      }
+
+      try {
         await searchActivities(params); // client fetch/store update
-      } catch {
-        // Errors surfaced via searchError
+      } catch (error) {
+        const message = getErrorMessage(error);
+        setSearchError(new Error(message));
       }
     }
   };
@@ -154,7 +172,7 @@ export default function ActivitiesSearchClient({
       setSelectedActivity(null);
     } catch (error) {
       toast({
-        description: error instanceof Error ? error.message : "Failed to add activity",
+        description: getErrorMessage(error),
         title: "Error",
         variant: "destructive",
       });
@@ -297,9 +315,14 @@ export default function ActivitiesSearchClient({
   }, [activities, searchMetadata?.primarySource, searchMetadata?.sources]);
 
   useEffect(() => {
-    if (selectedActivity) {
-      dialogRef.current?.focus();
-    }
+    if (!selectedActivity) return;
+
+    const focusTarget =
+      (primaryActionRef.current && !primaryActionRef.current.disabled
+        ? primaryActionRef.current
+        : null) ?? closeButtonRef.current;
+
+    focusTarget?.focus();
   }, [selectedActivity]);
 
   useEffect(() => {
@@ -323,8 +346,7 @@ export default function ActivitiesSearchClient({
         }
       } catch (error) {
         toast({
-          description:
-            error instanceof Error ? error.message : "Failed to open booking link",
+          description: getErrorMessage(error),
           title: "Booking unavailable",
           variant: "destructive",
         });
@@ -607,7 +629,7 @@ export default function ActivitiesSearchClient({
             open={!!selectedActivity && !isTripModalOpen}
             onOpenChange={(open) => !open && setSelectedActivity(null)}
           >
-            <DialogContent ref={dialogRef}>
+            <DialogContent>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   <TicketIcon className="h-5 w-5" />
@@ -623,6 +645,7 @@ export default function ActivitiesSearchClient({
               <DialogFooter className="flex-col sm:flex-row gap-2">
                 <Button
                   variant="outline"
+                  ref={closeButtonRef}
                   onClick={() => setSelectedActivity(null)}
                   className="flex-1"
                 >
@@ -630,6 +653,7 @@ export default function ActivitiesSearchClient({
                   Close
                 </Button>
                 <Button
+                  ref={primaryActionRef}
                   onClick={handleAddToTripClick}
                   disabled={isPending}
                   className="flex-1"

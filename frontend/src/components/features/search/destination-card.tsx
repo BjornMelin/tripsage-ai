@@ -17,6 +17,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatDestinationTypes } from "@/lib/google/places-format";
 
 /**
  * Props interface for the DestinationCard component.
@@ -50,28 +51,6 @@ export function DestinationCard({
   onCompare,
   onViewDetails,
 }: DestinationCardProps) {
-  /**
-   * Format destination types into human-readable labels.
-   *
-   * @param types - Array of destination type identifiers.
-   * @returns Formatted string of destination types.
-   */
-  const formatDestinationType = (types: string[]) => {
-    const typeMap: Record<string, string> = {
-      administrative_area: "Region",
-      country: "Country",
-      establishment: "Landmark",
-      locality: "City",
-      natural_feature: "Natural Feature",
-      political: "Administrative",
-      tourist_attraction: "Attraction",
-    };
-
-    return types
-      .map((type) => typeMap[type] || type.replace(/_/g, " "))
-      .slice(0, 2)
-      .join(", ");
-  };
 
   /**
    * Get appropriate icon component based on destination types.
@@ -130,7 +109,7 @@ export function DestinationCard({
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="secondary" className="text-xs">
-                {formatDestinationType(destination.types)}
+                {formatDestinationTypes(destination.types)}
               </Badge>
               {destination.rating && (
                 <div className="flex items-center text-sm">

@@ -115,6 +115,7 @@ The following ADRs have been superseded by newer decisions:
 - ADR-0050: Replace Expedia Rapid with Amadeus + Google Places + Stripe
 - ADR-0053: Activity Search & Booking via Google Places API (Hybrid + Web Fallback)
 - ADR-0056: Popular Routes for Flights (Amadeus + Upstash Caching)
+- ADR-0057: Search Filter Panel System
 - ADR-0055: Flatten Next.js App Structure to Repository Root
 
 ### Backend
