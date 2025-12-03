@@ -5,7 +5,7 @@
 
 "use client";
 
-import type { Activity } from "@schemas/search";
+import type { Activity, ActivitySearchParams } from "@schemas/search";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityCard } from "@/components/features/search/activity-card";
@@ -14,10 +14,7 @@ import { ActivitySearchForm } from "@/components/features/search/activity-search
 import { TripSelectionModal } from "@/components/features/search/trip-selection-modal";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useToast } from "@/components/ui/use-toast";
-import {
-  type ActivitySearchParams,
-  useActivitySearch,
-} from "@/hooks/use-activity-search";
+import { useActivitySearch } from "@/hooks/search/use-activity-search";
 import { openActivityBooking } from "@/lib/activities/booking";
 import { addActivityToTrip, getPlanningTrips } from "./actions";
 
@@ -57,7 +54,7 @@ export default function ActivitiesSearchPage() {
     }
   }, [searchParams, searchActivities]);
 
-  const handleSearch = (params: import("@schemas/search").ActivitySearchParams) => {
+  const handleSearch = (params: ActivitySearchParams) => {
     if (params.destination) {
       searchActivities(params);
     }

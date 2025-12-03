@@ -19,7 +19,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { useSearchOrchestration } from "@/hooks/use-search-orchestration";
+import { useSearchOrchestration } from "@/hooks/search/use-search-orchestration";
 
 // URL search parameters are handled inline
 

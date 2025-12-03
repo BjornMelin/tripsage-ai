@@ -5,7 +5,7 @@
  * state update, keeping computed properties in sync.
  */
 
-import type { StateCreator, StoreApi, StoreMutatorIdentifier } from "zustand";
+import type { StateCreator, StoreMutatorIdentifier } from "zustand";
 
 /**
  * Configuration for computed state middleware.
@@ -54,40 +54,50 @@ export function withComputed<
 ): StateCreator<T, Mps, Mcs> {
   return (set, get, api) => {
     const applyComputed = (
-      nextState: Partial<T> | ((state: T) => Partial<T>),
-      replace?: boolean
+      nextState: Parameters<typeof set>[0],
+      replace?: Parameters<typeof set>[1]
     ) => {
       const partialState =
         typeof nextState === "function" ? nextState(get()) : nextState;
       const mergedState = replace ? partialState : { ...get(), ...partialState };
       const derived = config.compute(mergedState as T);
-      return { derived, partialState };
+      return { derived, partialState, replace: replace === true };
     };
 
-    const computedSet = ((
-      partial: Parameters<typeof set>[0],
-      replace?: Parameters<typeof set>[1]
-    ) => {
-      const { partialState, derived } = applyComputed(partial, replace);
-      if (replace) {
-        set({ ...(partialState as T), ...derived } as T, true);
-      } else {
-        set((state) => ({ ...state, ...partialState, ...derived }));
-      }
+    const computedSet = ((...args: Parameters<typeof set>) => {
+      const [nextState, replace] = args;
+      const { derived, partialState } = applyComputed(nextState, replace);
+      const updatedArgs = [...args] as Parameters<typeof set>;
+      updatedArgs[0] = (
+        replace
+          ? ({ ...(partialState as T), ...derived } as T)
+          : (((state) => ({ ...state, ...partialState, ...derived })) as Parameters<
+              typeof set
+            >[0])
+      ) as Parameters<typeof set>[0];
+      return (
+        set as unknown as (...setArgs: Parameters<typeof set>) => ReturnType<typeof set>
+      )(...(updatedArgs as unknown as Parameters<typeof set>));
     }) as typeof set;
 
-    const originalSetState: StoreApi<T>["setState"] = api.setState;
-    api.setState = (
-      partial: Partial<T> | ((state: T) => Partial<T>),
-      replace?: boolean
-    ) => {
-      const { partialState, derived } = applyComputed(partial, replace);
-      if (replace) {
-        originalSetState({ ...(partialState as T), ...derived } as T, true);
-      } else {
-        originalSetState((state) => ({ ...state, ...partialState, ...derived }));
-      }
-    };
+    const originalSetState = api.setState;
+    api.setState = ((...args: Parameters<typeof api.setState>) => {
+      const [nextState, replace] = args;
+      const { derived, partialState } = applyComputed(nextState, replace);
+      const updatedArgs = [...args] as Parameters<typeof api.setState>;
+      updatedArgs[0] = (
+        replace
+          ? ({ ...(partialState as T), ...derived } as T)
+          : (((state) => ({ ...state, ...partialState, ...derived })) as Parameters<
+              typeof api.setState
+            >[0])
+      ) as Parameters<typeof api.setState>[0];
+      return (
+        originalSetState as unknown as (
+          ...setArgs: Parameters<typeof api.setState>
+        ) => ReturnType<typeof api.setState>
+      )(...(updatedArgs as unknown as Parameters<typeof api.setState>));
+    }) as typeof api.setState;
 
     return stateCreator(computedSet, get, api);
   };

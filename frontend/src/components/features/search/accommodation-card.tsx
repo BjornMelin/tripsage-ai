@@ -3,20 +3,13 @@
  */
 
 import type { Accommodation } from "@schemas/search";
-import {
-  CarIcon,
-  CoffeeIcon,
-  DumbbellIcon,
-  MapPinIcon,
-  StarIcon,
-  UtensilsIcon,
-  WavesIcon,
-  WifiIcon,
-} from "lucide-react";
+import { MapPinIcon, StarIcon } from "lucide-react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { getAmenityIcon } from "./cards/amenities";
+import { formatCurrency } from "./common/format";
 
 interface AccommodationCardProps {
   accommodation: Accommodation;
@@ -25,15 +18,6 @@ interface AccommodationCardProps {
 }
 
 type AmenityKey = "breakfast" | "gym" | "parking" | "pool" | "restaurant" | "wifi";
-
-const AmenityIcons: Partial<Record<AmenityKey, React.ReactNode>> = {
-  breakfast: <CoffeeIcon className="h-4 w-4" />,
-  gym: <DumbbellIcon className="h-4 w-4" />,
-  parking: <CarIcon className="h-4 w-4" />,
-  pool: <WavesIcon className="h-4 w-4" />,
-  restaurant: <UtensilsIcon className="h-4 w-4" />,
-  wifi: <WifiIcon className="h-4 w-4" />,
-};
 
 export function AccommodationCard({
   accommodation,
@@ -58,6 +42,15 @@ export function AccommodationCard({
       (1000 * 60 * 60 * 24)
   );
   const nights = Math.max(1, rawNights);
+
+  /** Render amenity icon or fallback placeholder. */
+  const renderAmenityIcon = (amenity: string) => {
+    const Icon = getAmenityIcon(amenity);
+    if (Icon) {
+      return <Icon className="h-4 w-4" />;
+    }
+    return <span className="h-4 w-4 rounded-full bg-muted" />;
+  };
 
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
@@ -104,9 +97,7 @@ export function AccommodationCard({
                 key={amenity}
                 className="flex items-center gap-1 text-xs text-muted-foreground"
               >
-                {AmenityIcons[amenity as AmenityKey] || (
-                  <span className="h-4 w-4 rounded-full bg-muted" />
-                )}
+                {renderAmenityIcon(amenity)}
                 <span className="capitalize">{amenity.replace("_", " ")}</span>
               </div>
             ))}
@@ -120,13 +111,13 @@ export function AccommodationCard({
           <div className="flex justify-between items-end">
             <div>
               <div className="text-2xl font-bold">
-                ${accommodation.pricePerNight}
+                {formatCurrency(accommodation.pricePerNight)}
                 <span className="text-sm font-normal text-muted-foreground">
                   /night
                 </span>
               </div>
               <div className="text-sm text-muted-foreground">
-                Total: ${accommodation.totalPrice} ({nights} nights)
+                Total: {formatCurrency(accommodation.totalPrice)} ({nights} nights)
               </div>
             </div>
             <div className="flex gap-2">

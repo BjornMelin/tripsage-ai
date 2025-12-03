@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import type { AgentStatusRealtimeControls } from "@/hooks/use-agent-status-websocket";
+import type { AgentStatusRealtimeControls } from "@/hooks/chat/use-agent-status-websocket";
 import { useAgentStatusStore } from "@/stores/agent-status-store";
 import { ConnectionStatus } from "../../shared/connection-status";
 

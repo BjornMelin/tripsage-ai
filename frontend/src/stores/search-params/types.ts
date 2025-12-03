@@ -9,7 +9,7 @@
 
 import type { SearchParams } from "@schemas/search";
 import type { SearchType } from "@schemas/stores";
-import type { z } from "zod";
+import type { ZodError, z } from "zod";
 
 /**
  * Handler interface for search type-specific parameter logic.
@@ -34,13 +34,14 @@ export interface SearchParamsHandler<T = unknown> {
 
   /**
    * Validates parameters using the Zod schema.
+   * Returns fully validated parameters on success, or a ZodError on failure.
    *
    * @param params - Partial parameters to validate
-   * @returns Validation result with success/error
+   * @returns Validation result with fully validated T on success, or ZodError
    */
   validate(
     params: Partial<T>
-  ): { success: true; data: T } | { success: false; error: string };
+  ): { success: true; data: T } | { success: false; error: ZodError };
 
   /**
    * Checks if minimum required params are present for search.
@@ -59,10 +60,11 @@ export interface SearchParamsHandler<T = unknown> {
   mergeParams(current: Partial<T>, updates: Partial<T>): Partial<T>;
 
   /**
-   * Returns params as a generic SearchParams type.
-   * Used for store operations that need the union type.
+   * Converts fully validated params to the generic SearchParams union type.
+   * Called with params that have successfully passed validate().
+   * Optional method; implement only if SearchParams conversion is needed.
    */
-  toSearchParams(params: Partial<T>): SearchParams;
+  toSearchParams?(params: T): SearchParams;
 }
 
 /** Type helper for extracting the params type from a handler. */

@@ -17,8 +17,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAccommodationSearch } from "@/hooks/use-accommodation-search";
-import { useSearchOrchestration } from "@/hooks/use-search-orchestration";
+import { useAccommodationSearch } from "@/hooks/search/use-accommodation-search";
+import { useSearchOrchestration } from "@/hooks/search/use-search-orchestration";
 
 /**
  * Render the hotel search experience with simple loading and empty states.
