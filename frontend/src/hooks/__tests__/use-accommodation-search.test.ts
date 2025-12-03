@@ -11,7 +11,7 @@ import {
   createApiTestWrapper,
   resetStoreState,
 } from "@/test/api-test-helpers";
-import { useAccommodationSearch } from "../use-accommodation-search";
+import { useAccommodationSearch } from "../search/use-accommodation-search";
 
 vi.mock("@/lib/api/api-client", () => ({
   apiClient: {

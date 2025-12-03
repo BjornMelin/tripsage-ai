@@ -9,8 +9,8 @@
 
 import { useMemo } from "react";
 import { useRealtimeConnectionStore } from "@/stores/realtime-connection-store";
+import { useWebSocketChat } from "../chat/use-websocket-chat";
 import { useRealtimeChannel } from "./use-realtime-channel";
-import { useWebSocketChat } from "./use-websocket-chat";
 export interface RealtimeConnectionStatus {
   trips?: "connected" | "disconnected" | "error";
   destinations?: "connected" | "disconnected" | "error";

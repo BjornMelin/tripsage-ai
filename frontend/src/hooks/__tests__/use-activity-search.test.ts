@@ -5,7 +5,7 @@ import { renderHook } from "@testing-library/react";
 import React, { type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AllTheProviders } from "@/test/test-utils";
-import { useActivitySearch } from "../use-activity-search";
+import { useActivitySearch } from "../search/use-activity-search";
 
 // The current hook is a minimal implementation without side effects.
 // Remove legacy expectations around API calls and store updates.

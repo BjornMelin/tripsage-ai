@@ -11,7 +11,7 @@ import { useCallback, useEffect, useMemo } from "react";
 import { nowIso } from "@/lib/security/random";
 import { useAuthCore } from "@/stores/auth/auth-core";
 import { useChatRealtime } from "@/stores/chat/chat-realtime";
-import { useRealtimeChannel } from "./use-realtime-channel";
+import { useRealtimeChannel } from "../supabase/use-realtime-channel";
 
 type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
 

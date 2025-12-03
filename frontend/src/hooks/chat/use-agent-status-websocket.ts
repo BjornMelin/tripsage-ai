@@ -14,7 +14,7 @@ import { useAuthCore } from "@/stores/auth/auth-core";
 import {
   type RealtimeConnectionStatus,
   useRealtimeChannel,
-} from "./use-realtime-channel";
+} from "../supabase/use-realtime-channel";
 
 const BACKOFF_CONFIG: BackoffConfig = {
   factor: 2,
