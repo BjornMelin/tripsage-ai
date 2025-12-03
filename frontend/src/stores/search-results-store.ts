@@ -113,22 +113,19 @@ interface SearchResultsState {
 const GENERATE_SEARCH_ID = () => `search_${secureId(12)}`;
 const GET_CURRENT_TIMESTAMP = () => nowIso();
 
+// Helper to check if there are any results
+const getHasResults = (state: SearchResultsState): boolean =>
+  Object.keys(state.results || {}).some((key) => {
+    const typeResults = state.results?.[key as keyof SearchResults];
+    return Array.isArray(typeResults) && typeResults.length > 0;
+  });
+
 // Helper to compute derived state
 const computeResultsState = createComputeFn<SearchResultsState>({
   canRetry: (state) =>
     state.status === "error" && (!state.error || state.error.retryable),
-  hasResults: (state) =>
-    Object.keys(state.results || {}).some((key) => {
-      const typeResults = state.results?.[key as keyof SearchResults];
-      return Array.isArray(typeResults) && typeResults.length > 0;
-    }),
-  isEmptyResults: (state) => {
-    const hasResults = Object.keys(state.results || {}).some((key) => {
-      const typeResults = state.results?.[key as keyof SearchResults];
-      return Array.isArray(typeResults) && typeResults.length > 0;
-    });
-    return state.status === "success" && !hasResults;
-  },
+  hasResults: (state) => getHasResults(state),
+  isEmptyResults: (state) => state.status === "success" && !getHasResults(state),
   searchDuration: (state) => {
     if (state.currentContext?.completedAt) {
       const startTime = new Date(state.currentContext.startedAt).getTime();

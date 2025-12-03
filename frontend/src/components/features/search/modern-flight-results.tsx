@@ -25,6 +25,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { cn } from "@/lib/utils";
+import { formatCurrency, formatDurationMinutes } from "./common/format";
 
 // Modern flight result types with 2025 travel patterns
 export interface ModernFlightResult {
@@ -148,12 +149,6 @@ export function ModernFlightResults({
     });
   };
 
-  const formatDuration = (minutes: number) => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${hours}h ${mins}m`;
-  };
-
   const getPriceChangeIcon = (change?: "up" | "down" | "stable") => {
     if (change === "down")
       return <TrendingUpIcon className="h-3 w-3 text-green-500 rotate-180" />;
@@ -221,7 +216,7 @@ export function ModernFlightResults({
   return (
     <div className={cn("space-y-4", className)}>
       {/* Search Controls */}
-      <Card className="p-4">
+      <Card className="p-4" data-testid="flight-results-controls">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <span className="text-sm font-medium">{results.length} flights found</span>
@@ -352,7 +347,7 @@ export function ModernFlightResults({
                       </div>
                       <div className="text-center mt-2">
                         <p className="text-xs font-medium">
-                          {formatDuration(flight.duration)}
+                          {formatDurationMinutes(flight.duration)}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {flight.stops.count === 0
@@ -407,7 +402,9 @@ export function ModernFlightResults({
                 <div className="col-span-3">
                   <div className="text-right">
                     <div className="flex items-center justify-end gap-2 mb-1">
-                      <span className="text-2xl font-bold">${flight.price.total}</span>
+                      <span className="text-2xl font-bold">
+                        {formatCurrency(flight.price.total)}
+                      </span>
                       {getPriceChangeIcon(flight.price.priceChange)}
                     </div>
                     <p className="text-xs text-muted-foreground mb-2">per person</p>

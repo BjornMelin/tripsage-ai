@@ -7,7 +7,6 @@ import {
   type ActiveFilter,
   type FilterPreset,
   type FilterValue,
-  filterOptionSchema,
   filterPresetSchema,
   filterValueSchema,
   type SortDirection,
@@ -18,13 +17,11 @@ import {
 } from "@schemas/stores";
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
-import { nowIso, secureId } from "@/lib/security/random";
 import { createStoreLogger } from "@/lib/telemetry/store-logger";
+import { generateId, getCurrentTimestamp } from "./helpers";
 import { createComputeFn, withComputed } from "./middleware/computed";
 
 const logger = createStoreLogger({ storeName: "search-filters" });
-
-// Validation schemas imported from @schemas/stores
 
 // Search filters store interface
 interface SearchFiltersState {
@@ -53,31 +50,7 @@ interface SearchFiltersState {
   currentSortOptions: ValidatedSortOption[];
   appliedFilterSummary: string;
 
-  // Filter configuration actions
-  setAvailableFilters: (
-    searchType: SearchType,
-    filters: ValidatedFilterOption[]
-  ) => void;
-  addAvailableFilter: (searchType: SearchType, filter: ValidatedFilterOption) => void;
-  updateAvailableFilter: (
-    searchType: SearchType,
-    filterId: string,
-    updates: Partial<ValidatedFilterOption>
-  ) => void;
-  removeAvailableFilter: (searchType: SearchType, filterId: string) => void;
-
   // Sort options configuration
-  setAvailableSortOptions: (
-    searchType: SearchType,
-    options: ValidatedSortOption[]
-  ) => void;
-  addAvailableSortOption: (searchType: SearchType, option: ValidatedSortOption) => void;
-  updateAvailableSortOption: (
-    searchType: SearchType,
-    optionId: string,
-    updates: Partial<ValidatedSortOption>
-  ) => void;
-  removeAvailableSortOption: (searchType: SearchType, optionId: string) => void;
 
   // Active filter management
   setActiveFilter: (filterId: string, value: FilterValue) => boolean;
@@ -89,6 +62,13 @@ interface SearchFiltersState {
   // Bulk filter operations
   setMultipleFilters: (filters: Record<string, FilterValue>) => boolean;
   applyFiltersFromObject: (filterObject: Record<string, unknown>) => boolean;
+
+  // Filter insights
+  getMostUsedFilters: (
+    searchType?: SearchType,
+    limit?: number
+  ) => ValidatedFilterOption[];
+  getFilterUsageStats: () => Record<string, { count: number; lastUsed: string }>;
   resetFiltersToDefault: (searchType?: SearchType) => void;
 
   // Sort management
@@ -113,24 +93,12 @@ interface SearchFiltersState {
   // Search type context
   setSearchType: (searchType: SearchType) => void;
 
-  // Filter insights and analytics
-  getFilterUsageStats: () => Record<string, { count: number; lastUsed: string }>;
-  getMostUsedFilters: (
-    searchType?: SearchType,
-    limit?: number
-  ) => ValidatedFilterOption[];
-  getFilterDependencies: (filterId: string) => ValidatedFilterOption[];
-
   // Utility actions
   clearValidationErrors: () => void;
   clearValidationError: (filterId: string) => void;
   reset: () => void;
   softReset: () => void; // Keeps configuration but clears active state
 }
-
-// Helper functions
-const GENERATE_ID = () => secureId(12);
-const GET_CURRENT_TIMESTAMP = () => nowIso();
 
 // Default filter configurations by search type
 const GET_DEFAULT_FILTERS = (searchType: SearchType): ValidatedFilterOption[] => {
@@ -309,6 +277,7 @@ const GET_DEFAULT_FILTERS = (searchType: SearchType): ValidatedFilterOption[] =>
   }
 };
 
+/** Get default sort options for a search type */
 const GET_DEFAULT_SORT_OPTIONS = (searchType: SearchType): ValidatedSortOption[] => {
   const commonSorts = [
     {
@@ -490,6 +459,7 @@ const computeFilterState = createComputeFn<SearchFiltersState>({
   hasActiveFilters: (state) => Object.keys(state.activeFilters || {}).length > 0,
 });
 
+/** Use the search filters store */
 export const useSearchFiltersStore = create<SearchFiltersState>()(
   devtools(
     persist(
@@ -501,59 +471,38 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
         activePreset: null,
         activeSortOption: null,
 
-        addAvailableFilter: (searchType: SearchType, filter: ValidatedFilterOption) => {
-          const result = filterOptionSchema.safeParse(filter);
-          if (result.success) {
-            set((state) => ({
-              availableFilters: {
-                ...state.availableFilters,
-                [searchType]: [
-                  ...(state.availableFilters[searchType] || []),
-                  result.data,
-                ],
-              },
-            }));
-          } else {
-            logger.error("Invalid filter", { error: result.error });
-          }
-        },
-
-        addAvailableSortOption: (searchType, option) => {
-          const result = sortOptionSchema.safeParse(option);
-          if (result.success) {
-            set((state) => ({
-              availableSortOptions: {
-                ...state.availableSortOptions,
-                [searchType]: [
-                  ...(state.availableSortOptions[searchType] || []),
-                  result.data,
-                ],
-              },
-            }));
-          } else {
-            logger.error("Invalid sort option", { error: result.error });
-          }
-        },
         appliedFilterSummary: "",
 
         applyFiltersFromObject: (filterObject) => {
-          // Convert Record<string, unknown> to Record<string, FilterValue>
-          const validatedFilters: Record<string, FilterValue> = {};
-          for (const [key, value] of Object.entries(filterObject)) {
-            // Only include values that match FilterValue type
-            if (
-              typeof value === "string" ||
-              typeof value === "number" ||
-              typeof value === "boolean" ||
-              Array.isArray(value) ||
-              (typeof value === "object" &&
-                value !== null &&
-                ("min" in value || "max" in value))
-            ) {
-              validatedFilters[key] = value as FilterValue;
+          set({ isApplyingFilters: true });
+
+          try {
+            const { currentFilters } = get();
+            const validFilterIds = new Set(currentFilters.map((f) => f.id));
+            const filtersToApply: Record<string, FilterValue> = {};
+
+            for (const [key, value] of Object.entries(filterObject)) {
+              // Only apply if filter ID exists in current configuration
+              if (validFilterIds.has(key) && value !== undefined && value !== null) {
+                // Validate the value can be a FilterValue
+                const result = filterValueSchema.safeParse(value);
+                if (result.success) {
+                  filtersToApply[key] = result.data;
+                }
+              }
             }
+
+            if (Object.keys(filtersToApply).length === 0) {
+              set({ isApplyingFilters: false });
+              return false;
+            }
+
+            return get().setMultipleFilters(filtersToApply);
+          } catch (error) {
+            logger.error("Failed to apply filters from object", { error });
+            set({ isApplyingFilters: false });
+            return false;
           }
-          return get().setMultipleFilters(validatedFilters);
         },
         // Initial state
         availableFilters: {
@@ -590,7 +539,10 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
             delete newActiveFilters[filterId];
           });
 
-          set({ activeFilters: newActiveFilters });
+          set({
+            activeFilters: newActiveFilters,
+            activePreset: null,
+          });
         },
 
         clearValidationError: (filterId) => {
@@ -625,8 +577,8 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
 
           const duplicatedPreset: FilterPreset = {
             ...originalPreset,
-            createdAt: GET_CURRENT_TIMESTAMP(),
-            id: GENERATE_ID(),
+            createdAt: getCurrentTimestamp(),
+            id: generateId(),
             isBuiltIn: false,
             name: newName,
             usageCount: 0,
@@ -647,16 +599,6 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
         filterPresets: [],
         filterValidationErrors: {},
 
-        getFilterDependencies: (filterId) => {
-          const { currentFilters } = get();
-          const filter = currentFilters.find((f) => f.id === filterId);
-
-          if (!filter || !filter.dependencies) return [];
-
-          return currentFilters.filter((f) => filter.dependencies?.includes(f.id));
-        },
-
-        // Filter insights and analytics
         getFilterUsageStats: () => {
           const { filterPresets } = get();
           const stats: Record<string, { count: number; lastUsed: string }> = {};
@@ -682,9 +624,9 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
         },
 
         getMostUsedFilters: (searchType, limit = 5) => {
-          const { currentFilters } = get();
+          const { currentFilters, availableFilters } = get();
           const targetFilters = searchType
-            ? get().availableFilters[searchType] || []
+            ? availableFilters[searchType] || []
             : currentFilters;
 
           const usageStats = get().getFilterUsageStats();
@@ -692,10 +634,11 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
           return targetFilters
             .map((filter) => ({
               ...filter,
-              usageCount: usageStats[filter.id]?.count || 0,
+              _usageCount: usageStats[filter.id]?.count || 0,
             }))
-            .sort((a, b) => b.usageCount - a.usageCount)
-            .slice(0, limit);
+            .sort((a, b) => b._usageCount - a._usageCount)
+            .slice(0, limit)
+            .map(({ _usageCount, ...filter }) => filter);
         },
 
         // Computed properties (initialized by middleware)
@@ -759,28 +702,6 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
           });
         },
 
-        removeAvailableFilter: (searchType: SearchType, filterId: string) => {
-          set((state) => ({
-            availableFilters: {
-              ...state.availableFilters,
-              [searchType]: (state.availableFilters[searchType] || []).filter(
-                (f) => f.id !== filterId
-              ),
-            },
-          }));
-        },
-
-        removeAvailableSortOption: (searchType, optionId) => {
-          set((state) => ({
-            availableSortOptions: {
-              ...state.availableSortOptions,
-              [searchType]: (state.availableSortOptions[searchType] || []).filter(
-                (o) => o.id !== optionId
-              ),
-            },
-          }));
-        },
-
         reset: () => {
           set({
             activeFilters: {},
@@ -826,9 +747,9 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
           if (!currentSearchType) return null;
 
           try {
-            const presetId = GENERATE_ID();
+            const presetId = generateId();
             const newPreset: FilterPreset = {
-              createdAt: GET_CURRENT_TIMESTAMP(),
+              createdAt: getCurrentTimestamp(),
               description,
               filters: Object.values(activeFilters),
               id: presetId,
@@ -866,7 +787,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
             }
 
             const newActiveFilter: ActiveFilter = {
-              appliedAt: GET_CURRENT_TIMESTAMP(),
+              appliedAt: getCurrentTimestamp(),
               filterId,
               value,
             };
@@ -905,59 +826,13 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
           }
         },
 
-        // Filter configuration actions
-        setAvailableFilters: (
-          searchType: SearchType,
-          filters: ValidatedFilterOption[]
-        ) => {
-          // Validate filters
-          const validatedFilters = filters.filter((filter: ValidatedFilterOption) => {
-            const result = filterOptionSchema.safeParse(filter);
-            if (!result.success) {
-              logger.error(`Invalid filter for ${searchType}`, {
-                error: result.error,
-              });
-              return false;
-            }
-            return true;
-          });
-
-          set((state) => ({
-            availableFilters: {
-              ...state.availableFilters,
-              [searchType]: validatedFilters,
-            },
-          }));
-        },
-
-        // Sort options configuration
-        setAvailableSortOptions: (searchType, options) => {
-          const validatedOptions = options.filter((option) => {
-            const result = sortOptionSchema.safeParse(option);
-            if (!result.success) {
-              logger.error(`Invalid sort option for ${searchType}`, {
-                error: result.error,
-              });
-              return false;
-            }
-            return true;
-          });
-
-          set((state) => ({
-            availableSortOptions: {
-              ...state.availableSortOptions,
-              [searchType]: validatedOptions,
-            },
-          }));
-        },
-
         // Bulk filter operations
         setMultipleFilters: (filters) => {
           set({ isApplyingFilters: true });
 
           try {
             const newActiveFilters: Record<string, ActiveFilter> = {};
-            const timestamp = GET_CURRENT_TIMESTAMP();
+            const timestamp = getCurrentTimestamp();
 
             for (const [filterId, value] of Object.entries(filters)) {
               const isValid = get().validateFilter(filterId, value);
@@ -1034,52 +909,6 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
 
         updateActiveFilter: (filterId, value) => {
           return get().setActiveFilter(filterId, value);
-        },
-
-        updateAvailableFilter: (
-          searchType: SearchType,
-          filterId: string,
-          updates: Partial<ValidatedFilterOption>
-        ) => {
-          set((state) => {
-            const filters = state.availableFilters[searchType] || [];
-            const updatedFilters = filters.map((filter: ValidatedFilterOption) => {
-              if (filter.id === filterId) {
-                const updatedFilter = { ...filter, ...updates };
-                const result = filterOptionSchema.safeParse(updatedFilter);
-                return result.success ? result.data : filter;
-              }
-              return filter;
-            });
-
-            return {
-              availableFilters: {
-                ...state.availableFilters,
-                [searchType]: updatedFilters,
-              },
-            };
-          });
-        },
-
-        updateAvailableSortOption: (searchType, optionId, updates) => {
-          set((state) => {
-            const options = state.availableSortOptions[searchType] || [];
-            const updatedOptions = options.map((option) => {
-              if (option.id === optionId) {
-                const updatedOption = { ...option, ...updates };
-                const result = sortOptionSchema.safeParse(updatedOption);
-                return result.success ? result.data : option;
-              }
-              return option;
-            });
-
-            return {
-              availableSortOptions: {
-                ...state.availableSortOptions,
-                [searchType]: updatedOptions,
-              },
-            };
-          });
         },
 
         updateFilterPreset: (presetId, updates) => {

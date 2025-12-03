@@ -4,7 +4,6 @@
 
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
 import { type FlightSearchFormData, flightSearchFormSchema } from "@schemas/search";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -21,7 +20,6 @@ import {
   UsersIcon,
 } from "lucide-react";
 import React, { useOptimistic, useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -44,8 +42,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { withClientTelemetrySpan } from "@/lib/telemetry/client";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { cn } from "@/lib/utils";
+import { useSearchForm } from "./common/use-search-form";
 
 // Use validated flight search params from schemas
 export type ModernFlightSearchParams = FlightSearchFormData;
@@ -97,8 +97,9 @@ export function FlightSearchForm({
   const [formError, setFormError] = useState<string | null>(null);
 
   // React Hook Form with Zod validation
-  const form = useForm<ModernFlightSearchParams>({
-    defaultValues: {
+  const form = useSearchForm(
+    flightSearchFormSchema,
+    {
       cabinClass: "economy",
       departureDate: "",
       destination: "",
@@ -116,9 +117,8 @@ export function FlightSearchForm({
       tripType: "round-trip",
       ...initialParams,
     },
-    mode: "onChange",
-    resolver: zodResolver(flightSearchFormSchema),
-  });
+    {}
+  );
 
   // Watch form values for dynamic behavior
   const tripType = form.watch("tripType");
@@ -160,38 +160,45 @@ export function FlightSearchForm({
 
   const handleSearch = form.handleSubmit((data) => {
     startTransition(async () => {
-      setOptimisticSearching(true);
-      setFormError(null);
+      await withClientTelemetrySpan(
+        "search.flight.form.submit",
+        { searchType: "flight" },
+        async () => {
+          setOptimisticSearching(true);
+          setFormError(null);
 
-      try {
-        // Validate the data before submission using Zod native parsing
-        const validationResult = flightSearchFormSchema.safeParse(data);
+          try {
+            const validationResult = flightSearchFormSchema.safeParse(data);
 
-        if (!validationResult.success) {
-          const errorMessage = validationResult.error.issues
-            .map((issue) => {
-              const field = issue.path.length > 0 ? `${issue.path.join(".")}: ` : "";
-              return `${field}${issue.message}`;
-            })
-            .join(", ");
-          setFormError(errorMessage);
-          return;
+            if (!validationResult.success) {
+              const errorMessage = validationResult.error.issues
+                .map((issue) => {
+                  const field =
+                    issue.path.length > 0 ? `${issue.path.join(".")}: ` : "";
+                  return `${field}${issue.message}`;
+                })
+                .join(", ");
+              setFormError(errorMessage);
+              return;
+            }
+
+            const validatedData = validationResult.data;
+            await onSearch(validatedData);
+          } catch (error) {
+            recordClientErrorOnActiveSpan(
+              error instanceof Error ? error : new Error(String(error)),
+              { action: "handleSearch", context: "FlightSearchForm" }
+            );
+            setFormError(
+              error instanceof Error
+                ? error.message
+                : "Search failed. Please try again."
+            );
+          } finally {
+            setOptimisticSearching(false);
+          }
         }
-
-        // Type assertion is safe here since success=true guarantees data is present
-        const validatedData = validationResult.data;
-        await onSearch(validatedData);
-      } catch (error) {
-        recordClientErrorOnActiveSpan(
-          error instanceof Error ? error : new Error(String(error)),
-          { action: "handleSearch", context: "FlightSearchForm" }
-        );
-        setFormError(
-          error instanceof Error ? error.message : "Search failed. Please try again."
-        );
-      } finally {
-        setOptimisticSearching(false);
-      }
+      );
     });
   });
 

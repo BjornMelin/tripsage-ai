@@ -8,9 +8,6 @@ import {
   ArrowUpDownIcon,
   Building2Icon,
   CalendarIcon,
-  CarIcon,
-  CoffeeIcon,
-  DumbbellIcon,
   FilterIcon,
   Grid3X3Icon,
   HeartIcon,
@@ -23,9 +20,6 @@ import {
   SparklesIcon,
   StarIcon,
   TrendingUpIcon,
-  UtensilsIcon,
-  WavesIcon,
-  WifiIcon,
   ZapIcon,
 } from "lucide-react";
 import Image from "next/image";
@@ -36,6 +30,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { cn } from "@/lib/utils";
+import { GetAmenityIcon } from "./cards/amenities";
+import { RatingStars } from "./cards/rating-stars";
+import { formatCurrency } from "./common/format";
 
 // Modern hotel result types with 2025 hospitality patterns
 export interface ModernHotelResult {
@@ -163,19 +160,6 @@ export function ModernHotelResults({
       onSaveToWishlist(hotelId);
       return newSet;
     });
-  };
-
-  const getAmenityIcon = (amenity: string) => {
-    const icons: Record<string, React.ComponentType<{ className?: string }>> = {
-      breakfast: CoffeeIcon,
-      gym: DumbbellIcon,
-      parking: CarIcon,
-      pool: WavesIcon,
-      restaurant: UtensilsIcon,
-      spa: SparklesIcon,
-      wifi: WifiIcon,
-    };
-    return icons[amenity.toLowerCase()] || Building2Icon;
   };
 
   const getUrgencyColor = (urgency: string) => {
@@ -322,6 +306,9 @@ export function ModernHotelResults({
               size="icon"
               className="absolute top-3 right-3 z-10 bg-white/80 hover:bg-white"
               onClick={() => toggleWishlist(hotel.id)}
+              aria-label={
+                savedHotels.has(hotel.id) ? "Remove from wishlist" : "Save to wishlist"
+              }
             >
               <HeartIcon
                 className={cn(
@@ -395,14 +382,7 @@ export function ModernHotelResults({
                         {hotel.name}
                       </h3>
                       <div className="flex items-center gap-2 mb-2">
-                        <div className="flex items-center">
-                          {[...Array(hotel.starRating)].map((_, i) => (
-                            <StarIcon
-                              key={`star-${i}-${hotel.name}`}
-                              className="h-3 w-3 fill-yellow-400 text-yellow-400"
-                            />
-                          ))}
-                        </div>
+                        <RatingStars value={hotel.starRating} />
                         <span className="text-xs text-muted-foreground">
                           {hotel.category}
                         </span>
@@ -431,7 +411,7 @@ export function ModernHotelResults({
                 <div className="mb-3">
                   <div className="flex flex-wrap gap-1">
                     {hotel.amenities.essential.slice(0, 4).map((amenity) => {
-                      const Icon = getAmenityIcon(amenity);
+                      const Icon = GetAmenityIcon(amenity) ?? Building2Icon;
                       return (
                         <Badge key={amenity} variant="secondary" className="text-xs">
                           <Icon className="h-3 w-3 mr-1" />
@@ -494,13 +474,13 @@ export function ModernHotelResults({
                       )}
                       <div className="flex items-center gap-2">
                         <span className="text-xl font-bold">
-                          ${hotel.pricing.pricePerNight}
+                          {formatCurrency(hotel.pricing.pricePerNight)}
                         </span>
                         {getPriceHistoryIcon(hotel.pricing.priceHistory)}
                       </div>
                       <div className="text-xs text-muted-foreground">per night</div>
                       <div className="text-sm font-medium">
-                        ${hotel.pricing.totalPrice} total
+                        {formatCurrency(hotel.pricing.totalPrice)} total
                       </div>
                     </div>
                   </div>
