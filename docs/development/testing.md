@@ -419,4 +419,6 @@ describe("Module exports", () => {
 ## References and Examples
 
 - Real examples: `frontend/src/stores/auth/__tests__/auth-store.test.ts`, `frontend/src/components/trip-card/__tests__/trip-card.test.tsx`, `frontend/src/app/api/chat/__tests__/_handler.test.ts`.
+- Dashboard page tests: `frontend/src/app/(dashboard)/search/__tests__/page.test.tsx`, `frontend/src/app/(dashboard)/trips/__tests__/page.test.tsx`.
+- Server action tests: `frontend/src/app/(dashboard)/search/modern/__tests__/actions.test.ts`, `frontend/src/app/(dashboard)/search/activities/actions.test.ts`.
 - Pattern catalog incorporated from prior `testing-guide` and `testing-patterns`; treat this file as the authoritative merged source.
