@@ -2,7 +2,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { vi } from "vitest";
-import { type ModernHotelResult, ModernHotelResults } from "./modern-hotel-results";
+import { type ModernHotelResult, ModernHotelResults } from "../modern-hotel-results";
 
 const BASE_HOTEL: ModernHotelResult = {
   ai: {

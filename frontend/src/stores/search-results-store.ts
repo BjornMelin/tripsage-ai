@@ -9,9 +9,10 @@ import type {
   SearchMetrics,
   SearchStatus,
 } from "@schemas/stores";
-import { create, type StateCreator } from "zustand";
+import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 import { nowIso, secureId } from "@/lib/security/random";
+import { createComputeFn, withComputed } from "./middleware/computed";
 
 // Schemas imported from @schemas/stores
 
@@ -113,29 +114,30 @@ const GENERATE_SEARCH_ID = () => `search_${secureId(12)}`;
 const GET_CURRENT_TIMESTAMP = () => nowIso();
 
 // Helper to compute derived state
-const COMPUTE_DERIVED_STATE = (state: Partial<SearchResultsState>) => {
-  const hasResults = Object.keys(state.results || {}).some((key) => {
-    const typeResults = state.results?.[key as keyof SearchResults];
-    return Array.isArray(typeResults) && typeResults.length > 0;
-  });
-
-  const isEmptyResults = state.status === "success" && !hasResults;
-  const canRetry = state.status === "error" && (!state.error || state.error.retryable);
-
-  let searchDuration: number | null = null;
-  if (state.currentContext?.completedAt) {
-    const startTime = new Date(state.currentContext.startedAt).getTime();
-    const endTime = new Date(state.currentContext.completedAt).getTime();
-    searchDuration = endTime - startTime;
-  }
-
-  return {
-    canRetry,
-    hasResults,
-    isEmptyResults,
-    searchDuration,
-  };
-};
+const computeResultsState = createComputeFn<SearchResultsState>({
+  canRetry: (state) =>
+    state.status === "error" && (!state.error || state.error.retryable),
+  hasResults: (state) =>
+    Object.keys(state.results || {}).some((key) => {
+      const typeResults = state.results?.[key as keyof SearchResults];
+      return Array.isArray(typeResults) && typeResults.length > 0;
+    }),
+  isEmptyResults: (state) => {
+    const hasResults = Object.keys(state.results || {}).some((key) => {
+      const typeResults = state.results?.[key as keyof SearchResults];
+      return Array.isArray(typeResults) && typeResults.length > 0;
+    });
+    return state.status === "success" && !hasResults;
+  },
+  searchDuration: (state) => {
+    if (state.currentContext?.completedAt) {
+      const startTime = new Date(state.currentContext.startedAt).getTime();
+      const endTime = new Date(state.currentContext.completedAt).getTime();
+      return endTime - startTime;
+    }
+    return null;
+  },
+});
 
 // Default states
 const DEFAULT_PAGINATION = {
@@ -147,34 +149,10 @@ const DEFAULT_PAGINATION = {
   totalResults: 0,
 };
 
-// Custom middleware to compute derived state with proper TypeScript typing
-const WITH_COMPUTED_STATE =
-  <T extends SearchResultsState>(
-    config: StateCreator<T, [], [], T>
-  ): StateCreator<T, [], [], T> =>
-  (set, get, api) => {
-    const setState = (
-      partial: Partial<T> | ((state: T) => Partial<T>),
-      replace?: boolean | undefined
-    ) => {
-      const newState = typeof partial === "function" ? partial(get()) : partial;
-      const currentState = get();
-      const mergedState = replace ? newState : { ...currentState, ...newState };
-      const derived = COMPUTE_DERIVED_STATE(mergedState);
-      if (replace) {
-        set({ ...newState, ...derived } as T, true);
-      } else {
-        set((state) => ({ ...state, ...newState, ...derived }));
-      }
-    };
-
-    return config(setState, get, api);
-  };
-
 export const useSearchResultsStore = create<SearchResultsState>()(
   devtools(
     persist(
-      WITH_COMPUTED_STATE((set, get) => ({
+      withComputed({ compute: computeResultsState }, (set, get) => ({
         appendResults: (searchId: string, newResults: SearchResults) => {
           const { resultsBySearch, currentSearchId, results } = get();
 

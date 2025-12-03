@@ -1,7 +1,7 @@
 import type { Activity } from "@schemas/search";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { ActivityComparisonModal } from "./activity-comparison-modal";
+import { ActivityComparisonModal } from "../activity-comparison-modal";
 
 // Mock Lucide icons
 vi.mock("lucide-react", async (importOriginal) => {

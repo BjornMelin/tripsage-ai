@@ -39,12 +39,16 @@ export default function DestinationsSearchPage() {
       await searchDestinations(params);
       setHasSearched(true);
     } catch (error) {
-      console.error("Search failed:", error);
+      if (process.env.NODE_ENV === "development") {
+        console.error("Search failed:", error);
+      }
     }
   };
 
   const handleDestinationSelect = (destination: Destination) => {
-    console.log("Selected destination:", destination);
+    if (process.env.NODE_ENV === "development") {
+      console.log("Selected destination:", destination);
+    }
     // Here you could navigate to a detailed view or booking flow
     alert(`Selected: ${destination.name}`);
   };
@@ -64,7 +68,9 @@ export default function DestinationsSearchPage() {
   };
 
   const handleViewDetails = (destination: Destination) => {
-    console.log("View details for:", destination);
+    if (process.env.NODE_ENV === "development") {
+      console.log("View details for:", destination);
+    }
     // Here you could open a modal or navigate to details page
     alert(`View details for: ${destination.name}`);
   };
