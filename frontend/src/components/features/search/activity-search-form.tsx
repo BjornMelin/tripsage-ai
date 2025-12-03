@@ -4,8 +4,11 @@
 
 "use client";
 
-import type { ActivitySearchParams } from "@schemas/search";
-import { z } from "zod";
+import {
+  activitySearchFormSchema,
+  type ActivitySearchFormData,
+  type ActivitySearchParams,
+} from "@schemas/search";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -27,29 +30,9 @@ import { Input } from "@/components/ui/input";
 import { withClientTelemetrySpan } from "@/lib/telemetry/client";
 import { useSearchForm } from "./common/use-search-form";
 
-const ActivitySearchFormSchema = z.strictObject({
-  adults: z
-    .number()
-    .int()
-    .min(1, { error: "At least 1 adult required" })
-    .max(20, { error: "Too many adults" }),
-  categories: z.array(z.string()),
-  children: z.number().int().min(0).max(10, { error: "Too many children" }),
-  duration: z.number().int().min(1).max(48).optional(),
-  endDate: z.string().min(1, { error: "End date is required" }),
-  infants: z.number().int().min(0).max(5, { error: "Too many infants" }),
-  location: z.string().min(1, { error: "Location is required" }),
-  priceMax: z.number().min(0).optional(),
-  priceMin: z.number().min(0).optional(),
-  rating: z.number().min(1).max(5).optional(),
-  startDate: z.string().min(1, { error: "Start date is required" }),
-});
-
-type ActivitySearchFormValues = z.infer<typeof ActivitySearchFormSchema>;
-
 interface ActivitySearchFormProps {
   onSearch?: (data: ActivitySearchParams) => void;
-  initialValues?: Partial<ActivitySearchFormValues>;
+  initialValues?: Partial<ActivitySearchFormData>;
 }
 
 const ActivityCategories = [
@@ -72,38 +55,32 @@ export function ActivitySearchForm({
   initialValues,
 }: ActivitySearchFormProps) {
   const form = useSearchForm(
-    ActivitySearchFormSchema,
+    activitySearchFormSchema,
     {
-      adults: 1,
-      categories: [],
-      children: 0,
-      endDate: "",
-      infants: 0,
-      location: "",
-      startDate: "",
+      destination: "",
+      participants: {
+        adults: 1,
+        children: 0,
+      },
       ...initialValues,
     },
     {}
   );
 
-  const onSubmit = (data: ActivitySearchFormValues) =>
+  const onSubmit = (data: ActivitySearchFormData) =>
     withClientTelemetrySpan(
       "search.activity.form.submit",
       { searchType: "activity" },
       async () => {
         const searchParams: ActivitySearchParams = {
-          adults: data.adults,
-          category: data.categories?.[0],
-          children: data.children,
-          date: data.startDate,
-          destination: data.location,
-          duration: data.duration
-            ? {
-                max: data.duration,
-                min: 0,
-              }
-            : undefined,
-          infants: data.infants,
+          adults: data.participants.adults,
+          children: data.participants.children,
+          date: data.date,
+          destination: data.destination,
+          category: data.category,
+          difficulty: data.difficulty,
+          duration: data.duration,
+          indoor: data.indoor,
         };
 
         if (onSearch) {
@@ -126,10 +103,10 @@ export function ActivitySearchForm({
             <div className="space-y-4">
               <FormField
                 control={form.control}
-                name="location"
+                name="destination"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Location</FormLabel>
+                    <FormLabel>Destination</FormLabel>
                     <FormControl>
                       <Input placeholder="City, region, or destination" {...field} />
                     </FormControl>
@@ -144,10 +121,10 @@ export function ActivitySearchForm({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="startDate"
+                  name="date"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Start Date</FormLabel>
+                      <FormLabel>Date</FormLabel>
                       <FormControl>
                         <Input type="date" {...field} />
                       </FormControl>
@@ -158,10 +135,24 @@ export function ActivitySearchForm({
 
                 <FormField
                   control={form.control}
-                  name="endDate"
+                  name="dateRange.start"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>End Date</FormLabel>
+                      <FormLabel>Start Date (Range)</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="dateRange.end"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>End Date (Range)</FormLabel>
                       <FormControl>
                         <Input type="date" {...field} />
                       </FormControl>
@@ -171,10 +162,10 @@ export function ActivitySearchForm({
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="adults"
+                  name="participants.adults"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Adults (18+)</FormLabel>
@@ -182,7 +173,7 @@ export function ActivitySearchForm({
                         <Input
                           type="number"
                           min={1}
-                          max={20}
+                          max={50}
                           {...field}
                           value={field.value ?? 1}
                           onChange={(e) => {
@@ -201,7 +192,7 @@ export function ActivitySearchForm({
 
                 <FormField
                   control={form.control}
-                  name="children"
+                  name="participants.children"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Children (3-17)</FormLabel>
@@ -209,34 +200,7 @@ export function ActivitySearchForm({
                         <Input
                           type="number"
                           min={0}
-                          max={10}
-                          {...field}
-                          value={field.value ?? 0}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            const parsed = Number.parseInt(value, 10);
-                            field.onChange(
-                              value === "" || Number.isNaN(parsed) ? 0 : parsed
-                            );
-                          }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="infants"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Infants (0-2)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min={0}
-                          max={5}
+                          max={50}
                           {...field}
                           value={field.value ?? 0}
                           onChange={(e) => {
@@ -256,45 +220,16 @@ export function ActivitySearchForm({
 
               <FormField
                 control={form.control}
-                name="categories"
-                render={() => (
+                name="category"
+                render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Activity Categories</FormLabel>
+                    <FormLabel>Activity Category</FormLabel>
                     <FormDescription>
-                      Select the types of activities you're interested in
+                      Select the type of activity you're interested in
                     </FormDescription>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      {ActivityCategories.map((category) => (
-                        <label
-                          key={category.id}
-                          className="flex items-center space-x-2 border rounded-md p-2 cursor-pointer hover:bg-accent"
-                        >
-                          <input
-                            type="checkbox"
-                            value={category.id}
-                            checked={form.watch("categories").includes(category.id)}
-                            onChange={(e) => {
-                              const checked = e.target.checked;
-                              const categories = form.getValues("categories");
-
-                              if (checked) {
-                                form.setValue("categories", [
-                                  ...categories,
-                                  category.id,
-                                ]);
-                              } else {
-                                form.setValue(
-                                  "categories",
-                                  categories.filter((c) => c !== category.id)
-                                );
-                              }
-                            }}
-                            className="h-4 w-4"
-                          />
-                          <span className="text-sm">{category.label}</span>
-                        </label>
-                      ))}
-                    </div>
+                    <FormControl>
+                      <Input placeholder="e.g. outdoor, cultural, food" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -303,15 +238,14 @@ export function ActivitySearchForm({
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <FormField
                   control={form.control}
-                  name="duration"
+                  name="duration.min"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Duration (hours)</FormLabel>
+                      <FormLabel>Min Duration (hours)</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
                           min={1}
-                          max={48}
                           placeholder="Any"
                           {...field}
                           value={field.value ?? ""}
@@ -330,23 +264,21 @@ export function ActivitySearchForm({
 
                 <FormField
                   control={form.control}
-                  name="rating"
+                  name="duration.max"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Min Rating</FormLabel>
+                      <FormLabel>Max Duration (hours)</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
                           min={1}
-                          max={5}
-                          step={0.5}
                           placeholder="Any"
                           {...field}
                           value={field.value ?? ""}
                           onChange={(e) => {
                             const value = e.target.value;
                             field.onChange(
-                              value === "" ? undefined : Number.parseFloat(value)
+                              value === "" ? undefined : Number.parseInt(value, 10)
                             );
                           }}
                         />
@@ -358,7 +290,7 @@ export function ActivitySearchForm({
 
                 <FormField
                   control={form.control}
-                  name="priceMin"
+                  name="priceRange.min"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Min Price ($)</FormLabel>
@@ -384,7 +316,7 @@ export function ActivitySearchForm({
 
                 <FormField
                   control={form.control}
-                  name="priceMax"
+                  name="priceRange.max"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Max Price ($)</FormLabel>

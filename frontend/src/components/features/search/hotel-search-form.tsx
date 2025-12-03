@@ -23,8 +23,11 @@ import {
   WifiIcon,
   WindIcon,
 } from "lucide-react";
+import {
+  hotelSearchFormSchema,
+  type HotelSearchFormData,
+} from "@schemas/search";
 import { useId, useOptimistic, useTransition } from "react";
-import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -45,17 +48,7 @@ import { cn } from "@/lib/utils";
 import { useSearchForm } from "./common/use-search-form";
 
 // React 19 optimistic update types for hotel search
-export interface HotelSearchParams {
-  location: string;
-  checkIn: string;
-  checkOut: string;
-  rooms: number;
-  adults: number;
-  children: number;
-  rating: number;
-  priceRange: { min: number; max: number };
-  amenities: string[];
-}
+export type HotelSearchParams = HotelSearchFormData;
 
 /** Location suggestion interface. */
 interface LocationSuggestion {
@@ -86,22 +79,6 @@ const Amenities = [
   { icon: WindIcon, id: "aircon", label: "Air Conditioning" },
 ];
 
-/** Hotel search form schema. */
-const HotelSearchFormSchema = z.strictObject({
-  adults: z.number().int().min(1).max(6),
-  amenities: z.array(z.string()),
-  checkIn: z.string().min(1, { error: "Check-in is required" }),
-  checkOut: z.string().min(1, { error: "Check-out is required" }),
-  children: z.number().int().min(0).max(4),
-  location: z.string().min(1, { error: "Location is required" }),
-  priceRange: z.strictObject({
-    max: z.number().min(0),
-    min: z.number().min(0),
-  }),
-  rating: z.number().int().min(0).max(5),
-  rooms: z.number().int().min(1).max(5),
-});
-
 /** Hotel search form component. */
 export function HotelSearchForm({
   onSearch,
@@ -116,7 +93,7 @@ export function HotelSearchForm({
   );
 
   const form = useSearchForm(
-    HotelSearchFormSchema,
+    hotelSearchFormSchema,
     {
       adults: 2,
       amenities: [],

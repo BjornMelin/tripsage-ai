@@ -4,10 +4,13 @@
 
 "use client";
 
-import type { DestinationSearchParams } from "@schemas/search";
+import {
+  destinationSearchFormSchema,
+  type DestinationSearchFormData,
+  type DestinationSearchParams,
+} from "@schemas/search";
 import { ClockIcon, MapPinIcon, StarIcon, TrendingUpIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,23 +36,8 @@ import { useMemoryContext } from "@/hooks/use-memory";
 import { initTelemetry, withClientTelemetrySpan } from "@/lib/telemetry/client";
 import { useSearchForm } from "./common/use-search-form";
 
-/** Zod schema for destination search form values. */
-const DestinationSearchFormSchema = z.strictObject({
-  language: z.string().optional(),
-  limit: z
-    .number()
-    .int()
-    .min(1, { error: "Limit must be at least 1" })
-    .max(20, { error: "Limit must be at most 20" }),
-  query: z.string().min(1, { error: "Destination is required" }),
-  region: z.string().optional(),
-  types: z.array(
-    z.enum(["locality", "country", "administrative_area", "establishment"])
-  ),
-});
-
 /** Type for destination search form values. */
-export type DestinationSearchFormValues = z.infer<typeof DestinationSearchFormSchema>;
+export type DestinationSearchFormValues = DestinationSearchFormData;
 
 /** Interface for destination suggestions. */
 interface DestinationSuggestion {
@@ -150,7 +138,7 @@ export function DestinationSearchForm({
   const CacheTtlMs = 2 * 60_000;
 
   const form = useSearchForm(
-    DestinationSearchFormSchema,
+    destinationSearchFormSchema,
     {
       limit: 10,
       query: "",

@@ -4,6 +4,7 @@
 
 "use client";
 
+import { type FlightResult } from "@schemas/search";
 import {
   ArrowUpDownIcon,
   FilterIcon,
@@ -28,65 +29,6 @@ import { Separator } from "@/components/ui/separator";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { cn } from "@/lib/utils";
 import { formatCurrency, formatDurationMinutes } from "./common/format";
-
-// Flight result type
-export interface FlightResult {
-  id: string;
-  airline: string;
-  flightNumber: string;
-  aircraft: string;
-  origin: {
-    code: string;
-    city: string;
-    terminal?: string;
-  };
-  destination: {
-    code: string;
-    city: string;
-    terminal?: string;
-  };
-  departure: {
-    time: string;
-    date: string;
-  };
-  arrival: {
-    time: string;
-    date: string;
-  };
-  duration: number; // minutes
-  stops: {
-    count: number;
-    cities?: string[];
-    duration?: number;
-  };
-  price: {
-    base: number;
-    total: number;
-    currency: string;
-    priceChange?: "up" | "down" | "stable";
-    dealScore?: number; // 1-10
-  };
-  amenities: string[];
-  emissions: {
-    kg: number;
-    compared: "low" | "average" | "high";
-  };
-  flexibility: {
-    changeable: boolean;
-    refundable: boolean;
-    cost?: number;
-  };
-  prediction: {
-    priceAlert: "buy_now" | "wait" | "neutral";
-    confidence: number; // 0-100
-    reason: string;
-  };
-  promotions?: {
-    type: "flash_deal" | "early_bird" | "limited_time";
-    description: string;
-    savings: number;
-  };
-}
 
 /** Flight results component props */
 interface FlightResultsProps {

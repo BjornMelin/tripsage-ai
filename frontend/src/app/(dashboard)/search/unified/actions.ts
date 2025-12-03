@@ -8,14 +8,15 @@ import "server-only";
 
 import { getAccommodationsService } from "@domain/accommodations/container";
 import { accommodationListingSchema } from "@schemas/accommodations";
-import type { HotelResult } from "@/components/features/search/hotel-results";
-import type { HotelSearchParams } from "@/components/features/search/hotel-search-form";
+import {
+  type HotelResult,
+  type HotelSearchFormData,
+  searchAccommodationParamsSchema,
+  type SearchAccommodationParams,
+} from "@schemas/search";
 import { getGoogleMapsBrowserKey } from "@/lib/env/client";
 import { secureUuid } from "@/lib/security/random";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
-
-/** Search parameters. */
-type SearchParams = HotelSearchParams & { currency?: string };
 
 /** Build photo URL. */
 function buildPhotoUrl(photoName?: string): string | undefined {
@@ -25,22 +26,52 @@ function buildPhotoUrl(photoName?: string): string | undefined {
   return `https://places.googleapis.com/v1/${photoName}/media?maxHeightPx=800&maxWidthPx=1200&key=${apiKey}`;
 }
 
-/** Search hotels. */
-export async function searchHotelsAction(params: SearchParams): Promise<HotelResult[]> {
+/**
+ * Search hotels with schema validation.
+ *
+ * Maps component HotelSearchFormData to SearchAccommodationParams schema and validates.
+ *
+ * @param params - Hotel search parameters from component.
+ * @returns Array of hotel results.
+ * @throws Error if validation fails.
+ */
+export async function searchHotelsAction(
+  params: HotelSearchFormData
+): Promise<HotelResult[]> {
+  // Map component params to schema format
+  const schemaParams: SearchAccommodationParams = {
+    adults: params.adults,
+    amenities: params.amenities,
+    checkIn: params.checkIn,
+    checkOut: params.checkOut,
+    children: params.children,
+    destination: params.location,
+    minRating: params.rating,
+    priceRange: params.priceRange,
+  };
+
+  const validation = searchAccommodationParamsSchema.safeParse(schemaParams);
+  if (!validation.success) {
+    throw new Error(
+      `Invalid hotel search params: ${validation.error.message}`
+    );
+  }
+
+  const validatedParams = validation.data;
   const service = getAccommodationsService();
   const searchResult = await withTelemetrySpan(
     "ui.unified.searchHotels",
-    { attributes: { location: params.location } },
+    { attributes: { location: validatedParams.destination ?? "" } },
     async () =>
       await service.search(
         {
-          checkin: params.checkIn,
-          checkout: params.checkOut,
-          guests: params.adults + params.children,
-          location: params.location,
-          priceMax: params.priceRange.max,
-          priceMin: params.priceRange.min,
-          semanticQuery: params.location,
+          checkin: validatedParams.checkIn ?? new Date().toISOString().split("T")[0],
+          checkout: validatedParams.checkOut ?? new Date().toISOString().split("T")[0],
+          guests: (validatedParams.adults ?? 1) + (validatedParams.children ?? 0),
+          location: validatedParams.destination ?? "",
+          priceMax: validatedParams.priceRange?.max,
+          priceMin: validatedParams.priceRange?.min,
+          semanticQuery: validatedParams.destination ?? "",
         },
         {
           sessionId: secureUuid(),
@@ -50,9 +81,9 @@ export async function searchHotelsAction(params: SearchParams): Promise<HotelRes
 
   /** Calculate nights with guards. */
   const calculateNights = (): number => {
-    if (!params.checkIn || !params.checkOut) return 1;
-    const start = new Date(params.checkIn);
-    const end = new Date(params.checkOut);
+    if (!validatedParams.checkIn || !validatedParams.checkOut) return 1;
+    const start = new Date(validatedParams.checkIn);
+    const end = new Date(validatedParams.checkOut);
     const diffMs = end.getTime() - start.getTime();
     const rawNights = diffMs / (1000 * 60 * 60 * 24);
     if (!Number.isFinite(rawNights)) return 1;
@@ -86,7 +117,7 @@ export async function searchHotelsAction(params: SearchParams): Promise<HotelRes
         name: "Hotel",
         pricing: {
           basePrice: 0,
-          currency: params.currency ?? "USD",
+          currency: validatedParams.currency ?? "USD",
           priceHistory: "stable",
           pricePerNight: 0,
           taxes: 0,
@@ -159,7 +190,7 @@ export async function searchHotelsAction(params: SearchParams): Promise<HotelRes
         basePrice: ratePrice
           ? Number.parseFloat(String(ratePrice.base ?? pricePerNight ?? "0"))
           : 0,
-        currency: ratePrice?.currency ?? params.currency ?? "USD",
+        currency: ratePrice?.currency ?? validatedParams.currency ?? "USD",
         priceHistory: "stable",
         pricePerNight: Number(pricePerNight),
         taxes: ratePrice?.taxes?.[0]?.amount
