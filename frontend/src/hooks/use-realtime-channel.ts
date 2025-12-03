@@ -17,6 +17,14 @@ import { type BackoffConfig, computeBackoffDelay } from "@/lib/realtime/backoff"
 import { getBrowserClient, type TypedSupabaseClient } from "@/lib/supabase";
 import { useRealtimeConnectionStore } from "@/stores/realtime-connection-store";
 
+/** Supabase broadcast event payload structure. */
+interface BroadcastPayload<T> {
+  type: "broadcast";
+  event: string;
+  meta?: { replayed?: boolean; id: string };
+  payload: T;
+}
+
 type ChannelInstance = ReturnType<TypedSupabaseClient["channel"]>;
 type ChannelSendRequest = Parameters<RealtimeChannel["send"]>[0];
 
@@ -187,15 +195,17 @@ export function useRealtimeChannel<TPayload = unknown>(
     // Note: Supabase requires an event filter, so events must be specified when onMessage is provided
     if (onMessage && events && events.length > 0) {
       for (const eventName of events) {
-        const handler = (payload: { payload: TPayload }) => {
+        const handler = (payload: BroadcastPayload<TPayload>) => {
           if (disposed) {
             return;
           }
           onMessage(payload.payload, eventName);
           realtimeStore.updateActivity(channel.topic);
         };
-        // @ts-expect-error - TypeScript overload resolution issue with dynamic event names
-        // The pattern is correct per Supabase docs, but TS can't infer the correct overload
+        // TypeScript cannot resolve the correct overload when event is a runtime string.
+        // The broadcast overload in RealtimeChannel.d.ts:244-267 is correct but TS
+        // matches the system overload instead. Handler is typed via BroadcastPayload<T>.
+        // @ts-expect-error - Supabase overload resolution with dynamic event names
         channel.on("broadcast", { event: eventName }, handler);
       }
     }

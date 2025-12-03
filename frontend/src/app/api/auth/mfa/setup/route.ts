@@ -35,8 +35,16 @@ export const POST = withApiGuards({
       },
     });
   } catch (error) {
+    let userId: string | null = null;
+    try {
+      const { data } = await supabase.auth.getUser();
+      userId = data.user?.id ?? null;
+    } catch {
+      userId = null;
+    }
     logger.error("mfa setup failed", {
       error: error instanceof Error ? error.message : "unknown_error",
+      userId,
     });
     return NextResponse.json({ error: "mfa_setup_failed" }, { status: 500 });
   }

@@ -26,32 +26,33 @@ export const POST = withApiGuards({
   schema: backupCodeVerifyInputSchema,
   telemetry: "api.auth.mfa.backup.verify",
 })(async (req, { user }, data) => {
-  if (!user) {
-    return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
-  }
   const ip = getClientIpFromHeaders(req);
   try {
     const admin = getAdminSupabase();
     const userAgent = req.headers.get("user-agent") ?? undefined;
+    if (!user?.id) {
+      return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+    }
+    // Note: No requireAal2() check here - backup codes must be usable at AAL1
+    // when the primary MFA factor is unavailable (account recovery scenario)
     const result = await verifyBackupCode(admin, user.id, data.code, {
       ip,
       userAgent,
     });
-    return NextResponse.json({ data: { remaining: result.remaining, success: true } });
+    return NextResponse.json({
+      data: { remaining: result.remaining, success: true },
+    });
   } catch (error) {
     const invalid = error instanceof InvalidBackupCodeError;
     logger.error("backup code verification failed", {
       ip,
       reason: invalid ? error.message : "internal_error",
       timestamp: nowIso(),
-      userId: user.id,
+      userId: user?.id,
     });
 
     if (invalid) {
-      return NextResponse.json(
-        { data: { remaining: 0, success: false } },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "invalid_backup_code" }, { status: 400 });
     }
 
     return NextResponse.json({ error: "internal_error" }, { status: 500 });

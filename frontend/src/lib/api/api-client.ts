@@ -4,9 +4,12 @@
  * behavior suitable for browser runtimes.
  */
 
+"use client";
+
 import type { ValidationResult } from "@schemas/validation";
 import type { z } from "zod";
 import { getClientEnvVarWithFallback } from "../env/client";
+import { getClientOrigin } from "../url/client-origin";
 import { ApiError } from "./error-types";
 
 /**
@@ -98,15 +101,8 @@ export class ApiClient {
     const publicApiUrl = getClientEnvVarWithFallback("NEXT_PUBLIC_API_URL", undefined);
     const nodeEnv =
       typeof process !== "undefined" ? process.env.NODE_ENV : "development";
-    const origin =
-      typeof window !== "undefined" && typeof window.location?.origin === "string"
-        ? window.location.origin
-        : getClientEnvVarWithFallback(
-            "NEXT_PUBLIC_SITE_URL",
-            "http://localhost:3000"
-          ) ||
-          (process.env.NEXT_PUBLIC_BASE_URL as string | undefined) ||
-          "http://localhost:3000";
+    const origin = getClientOrigin();
+
     const { baseUrl: baseUrlOverride, ...restConfig } = config;
     const rawBase =
       (baseUrlOverride as string | undefined) ??

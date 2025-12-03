@@ -20,7 +20,7 @@ export default async function RegisterPage({
   searchParams: Promise<{ from?: string; status?: string; error?: string }>;
 }) {
   const params = await searchParams;
-  const redirectTo = params?.from || "/dashboard";
+  const redirectTo = params.from || "/dashboard";
 
   return (
     <div className="min-h-screen flex">

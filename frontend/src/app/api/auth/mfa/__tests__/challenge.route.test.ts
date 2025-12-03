@@ -1,6 +1,6 @@
 /** @vitest-environment node */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeJsonRequest } from "@/test/api-request-factory";
 import { mockApiRouteAuthUser, resetApiRouteMocks } from "@/test/api-route-helpers";
 import { createRouteParamsContext } from "@/test/route-helpers";
@@ -16,21 +16,20 @@ describe("POST /api/auth/mfa/challenge", () => {
     challengeTotp.mockResolvedValue({ challengeId: "challenge-abc" });
   });
 
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("issues a challenge", async () => {
     const { POST } = await import("../challenge/route");
+    const factorId = "11111111-1111-4111-8111-111111111111";
     const res = await POST(
       makeJsonRequest("http://localhost/api/auth/mfa/challenge", {
-        factorId: crypto.randomUUID(),
+        factorId,
       }),
       createRouteParamsContext()
     );
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.data.challengeId).toBe("challenge-abc");
+    expect(challengeTotp).toHaveBeenCalledTimes(1);
+    expect(challengeTotp).toHaveBeenCalledWith(expect.anything(), { factorId });
   });
 
   it("returns 400 for invalid payload", async () => {
@@ -42,6 +41,7 @@ describe("POST /api/auth/mfa/challenge", () => {
       createRouteParamsContext()
     );
     expect(res.status).toBe(400);
+    expect(challengeTotp).not.toHaveBeenCalled();
   });
 
   it("returns 401 when unauthenticated", async () => {
@@ -54,6 +54,7 @@ describe("POST /api/auth/mfa/challenge", () => {
       createRouteParamsContext()
     );
     expect(res.status).toBe(401);
+    expect(challengeTotp).not.toHaveBeenCalled();
   });
 
   it("returns 500 when challenge fails", async () => {
@@ -67,6 +68,6 @@ describe("POST /api/auth/mfa/challenge", () => {
       }),
       createRouteParamsContext()
     );
-    expect(res.status).toBeGreaterThanOrEqual(500);
+    expect(res.status).toBe(500);
   });
 });

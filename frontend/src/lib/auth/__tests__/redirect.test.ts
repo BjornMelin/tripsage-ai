@@ -34,9 +34,10 @@ describe("resolveRedirectUrl", () => {
     try {
       process.env.NEXT_PUBLIC_SITE_URL = "https://primary.example.com";
       process.env.APP_BASE_URL = "https://app.example.com";
-      expect(resolveRedirectUrl("https://app.example.com/settings")).toBe(
-        "https://app.example.com/settings"
-      );
+      expect(resolveRedirectUrl("https://app.example.com/settings")).toBe("/settings");
+      expect(
+        resolveRedirectUrl("https://app.example.com/settings", { absolute: true })
+      ).toBe("https://app.example.com/settings");
     } finally {
       if (prevSiteUrl === undefined) {
         Reflect.deleteProperty(process.env, "NEXT_PUBLIC_SITE_URL");
@@ -56,7 +57,8 @@ describe("resolveRedirectUrl", () => {
     const prev = process.env.NEXT_PUBLIC_SITE_URL;
     try {
       process.env.NEXT_PUBLIC_SITE_URL = "https://app.example.com";
-      expect(resolveRedirectUrl("https://app.example.com/ok")).toBe(
+      expect(resolveRedirectUrl("https://app.example.com/ok")).toBe("/ok");
+      expect(resolveRedirectUrl("https://app.example.com/ok", { absolute: true })).toBe(
         "https://app.example.com/ok"
       );
     } finally {
@@ -64,6 +66,22 @@ describe("resolveRedirectUrl", () => {
         Reflect.deleteProperty(process.env, "NEXT_PUBLIC_SITE_URL");
       } else {
         process.env.NEXT_PUBLIC_SITE_URL = prev;
+      }
+    }
+  });
+
+  it("returns absolute when requested for relative inputs", () => {
+    const prevSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+    try {
+      process.env.NEXT_PUBLIC_SITE_URL = "https://app.example.com";
+      expect(resolveRedirectUrl("/welcome", { absolute: true })).toBe(
+        "https://app.example.com/welcome"
+      );
+    } finally {
+      if (prevSiteUrl === undefined) {
+        Reflect.deleteProperty(process.env, "NEXT_PUBLIC_SITE_URL");
+      } else {
+        process.env.NEXT_PUBLIC_SITE_URL = prevSiteUrl;
       }
     }
   });

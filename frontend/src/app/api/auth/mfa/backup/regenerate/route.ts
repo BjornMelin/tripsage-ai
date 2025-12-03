@@ -6,7 +6,11 @@ import { backupCodeRegenerateInputSchema } from "@schemas/mfa";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { getClientIpFromHeaders } from "@/lib/api/route-helpers";
-import { regenerateBackupCodes, requireAal2 } from "@/lib/security/mfa";
+import {
+  MfaRequiredError,
+  regenerateBackupCodes,
+  requireAal2,
+} from "@/lib/security/mfa";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
@@ -25,7 +29,7 @@ export const POST = withApiGuards({
 })(async (req, { user, supabase }, data) => {
   try {
     if (!user?.id) {
-      throw new Error("user_missing");
+      return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
     }
     await requireAal2(supabase);
     const ip = getClientIpFromHeaders(req);
@@ -37,7 +41,10 @@ export const POST = withApiGuards({
     });
     return NextResponse.json({ data: { backupCodes: result.codes } });
   } catch (error) {
-    if (error instanceof Error && error.message === "mfa_required") {
+    if (
+      error instanceof MfaRequiredError ||
+      (error as { code?: string } | null)?.code === "MFA_REQUIRED"
+    ) {
       return NextResponse.json({ error: "mfa_required" }, { status: 403 });
     }
     logger.error("backup code regeneration failed", {

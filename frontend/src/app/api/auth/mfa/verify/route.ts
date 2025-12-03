@@ -5,6 +5,7 @@
 import { mfaVerificationInputSchema } from "@schemas/mfa";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
+import { getClientIpFromHeaders } from "@/lib/api/route-helpers";
 import { regenerateBackupCodes, verifyTotp } from "@/lib/security/mfa";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { createServerLogger } from "@/lib/telemetry/logger";
@@ -22,7 +23,7 @@ export const POST = withApiGuards({
   rateLimit: "auth:mfa:verify",
   schema: mfaVerificationInputSchema,
   telemetry: "api.auth.mfa.verify",
-})(async (_req, { supabase, user }, data) => {
+})(async (req, { supabase, user }, data) => {
   const adminSupabase = getAdminSupabase();
   let isInitialEnrollment = false;
   try {
@@ -38,16 +39,23 @@ export const POST = withApiGuards({
   // Only generate backup codes during initial MFA enrollment, not on subsequent logins
   let backupCodes: string[] | undefined;
   if (isInitialEnrollment) {
-    const userId = user?.id ?? (await supabase.auth.getUser()).data.user?.id;
-    if (userId) {
-      try {
-        const regenerated = await regenerateBackupCodes(adminSupabase, userId, 10);
-        backupCodes = regenerated.codes;
-      } catch (error) {
-        logger.error("failed to generate backup codes post-enrollment", {
-          error: error instanceof Error ? error.message : "unknown_error",
-        });
-      }
+    if (!user?.id) {
+      return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+    }
+    const userId = user.id;
+    const ip = getClientIpFromHeaders(req);
+    const userAgent = req.headers.get("user-agent") ?? undefined;
+    try {
+      const regenerated = await regenerateBackupCodes(adminSupabase, userId, 10, {
+        ip,
+        userAgent,
+      });
+      backupCodes = regenerated.codes;
+    } catch (error) {
+      logger.error("failed to generate backup codes post-enrollment", {
+        error: error instanceof Error ? error.message : "unknown_error",
+        userId,
+      });
     }
   }
 

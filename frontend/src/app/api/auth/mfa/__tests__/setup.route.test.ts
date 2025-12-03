@@ -6,32 +6,31 @@ import { resetApiRouteMocks } from "@/test/api-route-helpers";
 import { createRouteParamsContext } from "@/test/route-helpers";
 
 describe("POST /api/auth/mfa/setup", () => {
-  const mockMfa = {
-    startTotpEnrollment: vi.fn(),
-  };
+  const mockStartTotpEnrollment = vi.fn();
 
   beforeEach(() => {
     resetApiRouteMocks();
+    mockStartTotpEnrollment.mockReset();
+    mockStartTotpEnrollment.mockResolvedValue({
+      challengeId: "challenge-1",
+      expiresAt: new Date(Date.now() + 900_000).toISOString(),
+      factorId: "factor-1",
+      issuedAt: new Date().toISOString(),
+      qrCode: "data:image/png;base64,TEST",
+      secret: "SECRET-KEY",
+      ttlSeconds: 900,
+      uri: "otpauth://totp/TripSage:test@example.com?secret=SECRET-KEY",
+    });
     vi.doMock("@/lib/supabase/admin", () => ({
       getAdminSupabase: vi.fn(() => ({ from: vi.fn() })),
     }));
     vi.doMock("@/lib/security/mfa", () => ({
-      startTotpEnrollment: mockMfa.startTotpEnrollment.mockImplementation(async () => ({
-        challengeId: "challenge-1",
-        expiresAt: new Date(Date.now() + 900_000).toISOString(),
-        factorId: "factor-1",
-        issuedAt: new Date().toISOString(),
-        qrCode: "data:image/png;base64,TEST",
-        secret: "SECRET-KEY",
-        ttlSeconds: 900,
-        uri: "otpauth://...",
-      })),
+      startTotpEnrollment: mockStartTotpEnrollment,
     }));
   });
 
   afterEach(() => {
     vi.resetModules();
-    vi.clearAllMocks();
   });
 
   it("returns enrollment payload without secret and with ttlSeconds", async () => {
@@ -45,12 +44,20 @@ describe("POST /api/auth/mfa/setup", () => {
     expect(json.data.factorId).toBe("factor-1");
     expect(json.data.challengeId).toBe("challenge-1");
     expect(json.data.secret).toBeUndefined();
+    expect(json.data.qrCode).toBeDefined();
+    expect(typeof json.data.qrCode).toBe("string");
+    expect(json.data.uri).toBeDefined();
+    expect(typeof json.data.uri).toBe("string");
+    expect(typeof json.data.expiresAt).toBe("string");
+    expect(Date.parse(json.data.expiresAt)).not.toBeNaN();
+    expect(typeof json.data.issuedAt).toBe("string");
+    expect(Date.parse(json.data.issuedAt)).not.toBeNaN();
     expect(typeof json.data.ttlSeconds).toBe("number");
     expect(json.data.ttlSeconds).toBeGreaterThan(0);
   });
 
   it("handles enroll failure", async () => {
-    mockMfa.startTotpEnrollment.mockRejectedValueOnce(new Error("boom"));
+    mockStartTotpEnrollment.mockRejectedValueOnce(new Error("boom"));
     const { POST } = await import("../setup/route");
     const res = await POST(
       makeJsonRequest("http://localhost/api/auth/mfa/setup", {}),

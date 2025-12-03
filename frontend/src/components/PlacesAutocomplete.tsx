@@ -49,14 +49,7 @@ export function PlacesAutocomplete({
   const inputRef = useRef<HTMLInputElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [suggestions, setSuggestions] = useState<
-    Array<{
-      placePrediction: {
-        placeId: string;
-        text: string;
-      };
-    }>
-  >([]);
+  const [suggestions, setSuggestions] = useState<AutocompleteSuggestion[]>([]);
   const [sessionToken, setSessionToken] =
     useState<google.maps.places.AutocompleteSessionToken | null>(null);
   const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null);
@@ -101,8 +94,7 @@ export function PlacesAutocomplete({
 
     const initAutocomplete = async () => {
       const placesLibrary = await window.google.maps.importLibrary("places");
-      // @ts-expect-error - AutocompleteSessionToken may not be fully typed
-      const AutocompleteSessionToken = placesLibrary.AutocompleteSessionToken;
+      const { AutocompleteSessionToken } = placesLibrary;
       const newToken = new AutocompleteSessionToken();
       setSessionToken(newToken);
     };
@@ -130,12 +122,11 @@ export function PlacesAutocomplete({
 
       try {
         const placesLibrary = await window.google.maps.importLibrary("places");
-        // @ts-expect-error - AutocompleteSuggestion may not be fully typed
-        const AutocompleteSuggestion = placesLibrary.AutocompleteSuggestion;
+        const { AutocompleteSuggestion } = placesLibrary;
 
-        const request: Record<string, unknown> = {
+        const request: AutocompleteSuggestionRequest = {
           input: value,
-          sessionToken,
+          sessionToken: sessionToken ?? undefined,
         };
 
         if (locationBias) {
@@ -154,7 +145,7 @@ export function PlacesAutocomplete({
         const { suggestions: newSuggestions } =
           await AutocompleteSuggestion.fetchAutocompleteSuggestions(request);
 
-        setSuggestions(newSuggestions);
+        setSuggestions(newSuggestions ?? []);
       } catch (error) {
         recordClientErrorOnActiveSpan(
           error instanceof Error ? error : new Error(String(error)),
@@ -167,22 +158,11 @@ export function PlacesAutocomplete({
     setDebounceTimer(timer);
   };
 
-  const handlePlaceSelect = async (placePrediction: {
-    placeId: string;
-    text: string;
-    toPlace?: () => unknown;
-  }) => {
+  const handlePlaceSelect = async (placePrediction: PlacePrediction) => {
     if (!isLoaded || !window.google?.maps?.places) return;
 
     try {
-      // @ts-expect-error - toPlace may not be fully typed
-      const place = placePrediction.toPlace() as {
-        fetchFields: (options: { fields: string[] }) => Promise<void>;
-        displayName?: { text?: string };
-        formattedAddress?: string;
-        location?: { lat: () => number; lng: () => number };
-        id?: string;
-      };
+      const place = placePrediction.toPlace();
       await place.fetchFields({
         fields: ["displayName", "formattedAddress", "location"],
       });
@@ -203,8 +183,7 @@ export function PlacesAutocomplete({
 
       // Terminate session and create new token
       const placesLibrary = await window.google.maps.importLibrary("places");
-      // @ts-expect-error - AutocompleteSessionToken may not be fully typed
-      const AutocompleteSessionToken = placesLibrary.AutocompleteSessionToken;
+      const { AutocompleteSessionToken } = placesLibrary;
       const newToken = new AutocompleteSessionToken();
       setSessionToken(newToken);
       setSuggestions([]);
@@ -247,7 +226,7 @@ export function PlacesAutocomplete({
               }}
               className="cursor-pointer px-4 py-2 hover:bg-gray-100"
             >
-              {suggestion.placePrediction.text.toString()}
+              {suggestion.placePrediction.text.text}
             </li>
           ))}
         </ul>
