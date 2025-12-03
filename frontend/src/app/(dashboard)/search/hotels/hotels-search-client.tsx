@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/tooltip";
 import { HotelSkeleton } from "@/components/ui/travel-skeletons";
 import { useToast } from "@/components/ui/use-toast";
+import { getErrorMessage } from "@/lib/api/error-types";
 import { useAccommodationSearch } from "@/hooks/search/use-accommodation-search";
 import { useSearchOrchestration } from "@/hooks/search/use-search-orchestration";
 
@@ -64,7 +65,7 @@ export default function HotelsSearchClient({
       await search(params); // client fetch/store update
     } catch (error) {
       toast({
-        description: error instanceof Error ? error.message : "Search failed",
+        description: getErrorMessage(error),
         title: "Search Error",
         variant: "destructive",
       });

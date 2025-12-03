@@ -32,6 +32,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
+import { getErrorMessage } from "@/lib/api/error-types";
 
 // Mock data for demo purposes
 const MOCK_FLIGHT_RESULTS: FlightResult[] = [
@@ -265,8 +266,7 @@ export default function UnifiedSearchClient({
         } catch (error) {
           setHotelResults([]);
           setShowResults(true);
-          const message =
-            error instanceof Error ? error.message : "Search failed, please try again.";
+          const message = getErrorMessage(error) || "Search failed, please try again.";
           setErrorMessage(message);
           toast({
             description: message,

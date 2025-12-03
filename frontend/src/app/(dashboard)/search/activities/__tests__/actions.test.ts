@@ -1,6 +1,10 @@
 /** @vitest-environment node */
 
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 // Mock supabase server client
 const mockGetUser = vi.fn();
@@ -148,5 +152,17 @@ describe("Activity actions - addActivityToTrip", () => {
         title: "Beach Tour",
       })
     ).resolves.toBeUndefined();
+
+    expect(mockInsert).toHaveBeenCalledTimes(1);
+    expect(mockInsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        currency: "USD",
+        description: "A fun beach tour",
+        price: 99.99,
+        title: "Beach Tour",
+        trip_id: 123,
+        user_id: "test-user",
+      })
+    );
   });
 });

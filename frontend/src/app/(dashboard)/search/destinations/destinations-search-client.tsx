@@ -48,15 +48,19 @@ import {
 } from "@/components/ui/tooltip";
 import { DestinationSkeleton } from "@/components/ui/travel-skeletons";
 import { useToast } from "@/components/ui/use-toast";
+import type { DestinationResult } from "@/hooks/search/use-destination-search";
 import { useDestinationSearch } from "@/hooks/search/use-destination-search";
 import { useSearchOrchestration } from "@/hooks/search/use-search-orchestration";
+import { formatDestinationTypes } from "@/lib/google/places-format";
+import { getErrorMessage } from "@/lib/api/error-types";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 
 /** The destinations search client component props. */
 interface DestinationsSearchClientProps {
   onSubmitServer: (params: DestinationSearchParams) => Promise<DestinationSearchParams>;
 }
 
-/** Maximum number of destinations allowed in comparison. */
+/** Maximum number of items allowed in comparison views. */
 const MAX_COMPARISON_ITEMS = 3;
 
 /** The destinations search client component. */
@@ -78,7 +82,13 @@ export default function DestinationsSearchClient({
       await onSubmitServer(params); // server-side telemetry and validation
       await searchDestinations(params); // client fetch/store update
       setHasSearched(true);
-    } catch {
+    } catch (error) {
+      const normalizedError =
+        error instanceof Error ? error : new Error(getErrorMessage(error));
+      recordClientErrorOnActiveSpan(normalizedError, {
+        action: "handleSearch",
+        context: "DestinationsSearchClient",
+      });
       // errors surfaced via searchError/alert
       setHasSearched(true);
     }
@@ -161,14 +171,19 @@ export default function DestinationsSearchClient({
 
   /** The destinations to display. */
   const destinations: Destination[] = results
-    .filter((result) => result.location)
+    .filter(
+      (
+        result
+      ): result is DestinationResult & { location: { lat: number; lng: number } } =>
+        Number.isFinite(result.location?.lat) && Number.isFinite(result.location?.lng)
+    )
     .map((result) => ({
       attractions: [],
       bestTimeToVisit: undefined,
       climate: undefined,
       coordinates: {
-        lat: result.location?.lat ?? 0,
-        lng: result.location?.lng ?? 0,
+        lat: result.location.lat,
+        lng: result.location.lng,
       },
       country: undefined,
       description: result.address || result.name,
@@ -413,21 +428,6 @@ function DestinationComparisonModal({
 }: DestinationComparisonModalProps) {
   if (!destinations.length) return null;
 
-  /** Format destination types into human-readable labels. */
-  const formatTypes = (types: string[]) => {
-    const typeMap: Record<string, string> = {
-      // biome-ignore lint/style/useNamingConvention: API values use snake_case
-      administrative_area: "Region",
-      country: "Country",
-      establishment: "Landmark",
-      locality: "City",
-    };
-    return types
-      .map((type) => typeMap[type] || type.replace(/_/g, " "))
-      .slice(0, 2)
-      .join(", ");
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-4xl w-full max-h-[90vh] flex flex-col">
@@ -478,7 +478,9 @@ function DestinationComparisonModal({
                 </TableCell>
                 {destinations.map((destination) => (
                   <TableCell key={destination.id}>
-                    <Badge variant="secondary">{formatTypes(destination.types)}</Badge>
+                    <Badge variant="secondary">
+                      {formatDestinationTypes(destination.types)}
+                    </Badge>
                   </TableCell>
                 ))}
               </TableRow>

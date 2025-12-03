@@ -58,6 +58,7 @@ const mockSupabase = {
           return { error: null };
         },
         select: (_columns: string) => {
+          _columns;
           const chain = {
             eq(field: string, value: string) {
               this.filters.push((row) => (row as never)[field] === value);
@@ -65,8 +66,11 @@ const mockSupabase = {
             },
             filters: [] as Array<(row: (typeof mfaEnrollmentRows)[number]) => boolean>,
             order: (_field: string, _opts: { ascending: boolean }) => {
+              _field;
+              _opts;
               return {
                 limit: (_n: number) => {
+                  _n;
                   return {
                     maybeSingle: () => {
                       const filtered = mfaEnrollmentRows.filter((r) =>
@@ -86,9 +90,18 @@ const mockSupabase = {
           return chain;
         },
         update: (_values: { status?: string; consumedAt?: string }) => {
+          _values;
           const updateChain = {
-            eq: (_field: string, _value: string) => updateChain,
-            lt: (_field: string, _value: string) => ({ error: null }),
+            eq: (_field: string, _value: string) => {
+              _field;
+              _value;
+              return updateChain;
+            },
+            lt: (_field: string, _value: string) => {
+              _field;
+              _value;
+              return { error: null };
+            },
           };
           return updateChain;
         },
@@ -120,6 +133,8 @@ const mockAdmin = {
               }
               return {
                 not(_field: string, _op: string, inList: string) {
+                  _field;
+                  _op;
                   const ids = inList
                     .replace(/[()]/g, "")
                     .split(",")
@@ -147,6 +162,7 @@ const mockAdmin = {
           };
         },
         select: (_columns: string, opts?: { count?: string; head?: boolean }) => {
+          _columns;
           const filters: Array<(row: (typeof backupRows)[number]) => boolean> = [];
           const chain = {
             eq(field: string, value: string) {
@@ -185,6 +201,7 @@ const mockAdmin = {
               return chain;
             },
             select: (_cols: string, opts?: { count?: string; head?: boolean }) => {
+              _cols;
               const matching = backupRows.filter((row) => filters.every((f) => f(row)));
               matching.forEach((row) => {
                 Object.assign(row, values);
@@ -221,6 +238,8 @@ const mockAdmin = {
               return chain;
             },
             lt: (_field: string, _value: string) => {
+              _field;
+              _value;
               mfaEnrollmentRows.forEach((row) => {
                 if (filters.every((f) => f(row))) {
                   Object.assign(row, values);
