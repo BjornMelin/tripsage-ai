@@ -57,51 +57,34 @@ const mockSupabase = {
           mfaEnrollmentRows.push(row);
           return { error: null };
         },
-        select: (_columns: string) => {
-          _columns;
+        select: () => {
           const chain = {
             eq(field: string, value: string) {
               this.filters.push((row) => (row as never)[field] === value);
               return this;
             },
             filters: [] as Array<(row: (typeof mfaEnrollmentRows)[number]) => boolean>,
-            order: (_field: string, _opts: { ascending: boolean }) => {
-              _field;
-              _opts;
-              return {
-                limit: (_n: number) => {
-                  _n;
-                  return {
-                    maybeSingle: () => {
-                      const filtered = mfaEnrollmentRows.filter((r) =>
-                        chain.filters.every((f) => f(r))
-                      );
-                      const sorted = filtered.sort((a, b) =>
-                        b.issued_at.localeCompare(a.issued_at)
-                      );
-                      const row = sorted[0] || null;
-                      return { data: row, error: null };
-                    },
-                  };
+            order: () => ({
+              limit: () => ({
+                maybeSingle: () => {
+                  const filtered = mfaEnrollmentRows.filter((r) =>
+                    chain.filters.every((f) => f(r))
+                  );
+                  const sorted = filtered.sort((a, b) =>
+                    b.issued_at.localeCompare(a.issued_at)
+                  );
+                  const row = sorted[0] || null;
+                  return { data: row, error: null };
                 },
-              };
-            },
+              }),
+            }),
           };
           return chain;
         },
-        update: (_values: { status?: string; consumedAt?: string }) => {
-          _values;
+        update: () => {
           const updateChain = {
-            eq: (_field: string, _value: string) => {
-              _field;
-              _value;
-              return updateChain;
-            },
-            lt: (_field: string, _value: string) => {
-              _field;
-              _value;
-              return { error: null };
-            },
+            eq: () => updateChain,
+            lt: () => ({ error: null }),
           };
           return updateChain;
         },
@@ -132,9 +115,8 @@ const mockAdmin = {
                 state.userId = value;
               }
               return {
-                not(_field: string, _op: string, inList: string) {
-                  _field;
-                  _op;
+                not: (...args: [string, string, string]) => {
+                  const inList = args[2];
                   const ids = inList
                     .replace(/[()]/g, "")
                     .split(",")
@@ -237,9 +219,7 @@ const mockAdmin = {
               filters.push((row) => (row as never)[field] === value);
               return chain;
             },
-            lt: (_field: string, _value: string) => {
-              _field;
-              _value;
+            lt: () => {
               mfaEnrollmentRows.forEach((row) => {
                 if (filters.every((f) => f(row))) {
                   Object.assign(row, values);

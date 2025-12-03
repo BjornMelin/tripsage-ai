@@ -24,11 +24,12 @@ import {
   ZapIcon,
 } from "lucide-react";
 import Image from "next/image";
-import { useOptimistic, useState, useTransition } from "react";
+import { useMemo, useOptimistic, useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { type Coordinates, calculateDistanceKm } from "@/lib/geo";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { cn } from "@/lib/utils";
 import { GetAmenityIcon } from "./cards/amenities";
@@ -43,6 +44,8 @@ interface HotelResultsProps {
   onSaveToWishlist: (hotelId: string) => void;
   className?: string;
   showMap?: boolean;
+  /** Search center coordinates for distance calculation. */
+  searchCenter?: Coordinates;
 }
 
 /** Hotel results component */
@@ -53,11 +56,13 @@ export function HotelResults({
   onSaveToWishlist,
   className,
   showMap = true,
+  searchCenter,
 }: HotelResultsProps) {
   const [isPending, startTransition] = useTransition();
   const [viewMode, setViewMode] = useState<"list" | "grid" | "map">("list");
   const [savedHotels, setSavedHotels] = useState<Set<string>>(new Set());
-  const sortBy: "price" | "rating" | "distance" | "ai" = "ai";
+  const [sortBy, setSortBy] = useState<"ai" | "price" | "rating" | "distance">("ai");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   // Optimistic selection state
   const [optimisticSelecting, setOptimisticSelecting] = useOptimistic(
@@ -120,6 +125,49 @@ export function HotelResults({
     return null;
   };
 
+  /** Check if distance sorting is available. */
+  const canSortByDistance = searchCenter !== undefined;
+
+  const sortedResults = useMemo(() => {
+    /** Calculate distance from search center for a hotel. */
+    const getDistance = (hotel: HotelResult): number =>
+      searchCenter && hotel.location.coordinates
+        ? calculateDistanceKm(searchCenter, hotel.location.coordinates)
+        : Number.MAX_VALUE;
+
+    const clones = [...results];
+    const direction = sortDirection === "asc" ? 1 : -1;
+    const comparator = (first: HotelResult, second: HotelResult) => {
+      switch (sortBy) {
+        case "price":
+          return direction * (first.pricing.totalPrice - second.pricing.totalPrice);
+        case "rating":
+          return direction * (first.starRating - second.starRating);
+        case "distance":
+          return direction * (getDistance(first) - getDistance(second));
+        default:
+          return (
+            direction *
+            ((first.ai?.recommendation ?? 0) - (second.ai?.recommendation ?? 0))
+          );
+      }
+    };
+    return clones.sort(comparator);
+  }, [results, sortBy, sortDirection, searchCenter]);
+
+  const cycleSort = () => {
+    const order: Array<typeof sortBy> = canSortByDistance
+      ? ["ai", "price", "rating", "distance"]
+      : ["ai", "price", "rating"];
+    const currentIndex = order.indexOf(sortBy);
+    const next = order[(currentIndex + 1) % order.length];
+    setSortBy(next);
+  };
+
+  const toggleDirection = () => {
+    setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
+  };
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -178,9 +226,12 @@ export function HotelResults({
                 <FilterIcon className="h-4 w-4 mr-2" />
                 Filters
               </Button>
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" onClick={toggleDirection}>
                 <ArrowUpDownIcon className="h-4 w-4 mr-2" />
-                Sort: {sortBy === "ai" ? "AI Recommended" : sortBy}
+                Sort: {sortBy === "ai" ? "AI Recommended" : sortBy} ({sortDirection})
+              </Button>
+              <Button variant="outline" size="sm" onClick={cycleSort}>
+                Change Sort
               </Button>
             </div>
           </div>
@@ -221,7 +272,7 @@ export function HotelResults({
             : "space-y-4"
         )}
       >
-        {results.map((hotel) => (
+        {sortedResults.map((hotel) => (
           <Card
             key={hotel.id}
             className={cn(

@@ -111,6 +111,12 @@ export const accommodationListingSchema = z.strictObject({
     })
     .optional(),
   amenities: z.array(z.string()).optional(),
+  geoCode: z
+    .object({
+      latitude: z.number(),
+      longitude: z.number(),
+    })
+    .optional(),
   hotel: z
     .object({
       hotelId: z.string().optional(),

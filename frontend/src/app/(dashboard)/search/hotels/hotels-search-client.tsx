@@ -4,19 +4,19 @@
 
 "use client";
 
-import type { SearchAccommodationParams } from "@schemas/search";
+import type { HotelResult, SearchAccommodationParams } from "@schemas/search";
 import {
   AlertCircleIcon,
   Building2Icon,
   FilterIcon,
-  InfoIcon,
   LightbulbIcon,
   MapPinIcon,
   SearchIcon,
   SortAscIcon,
   StarIcon,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { HotelResults } from "@/components/features/search/hotel-results";
 import { HotelSearchForm } from "@/components/features/search/hotel-search-form";
 import { SearchLayout } from "@/components/layouts/search-layout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -39,8 +39,8 @@ import {
 import { HotelSkeleton } from "@/components/ui/travel-skeletons";
 import { useToast } from "@/components/ui/use-toast";
 import { useAccommodationSearch } from "@/hooks/search/use-accommodation-search";
-import { useSearchOrchestration } from "@/hooks/search/use-search-orchestration";
 import { getErrorMessage } from "@/lib/api/error-types";
+import { useSearchResultsStore } from "@/stores/search-results-store";
 
 /** Hotel search client component props. */
 interface HotelsSearchClientProps {
@@ -54,9 +54,112 @@ export default function HotelsSearchClient({
   onSubmitServer,
 }: HotelsSearchClientProps) {
   const { search, isSearching, searchError } = useAccommodationSearch();
-  const { hasResults } = useSearchOrchestration();
   const { toast } = useToast();
   const [hasSearched, setHasSearched] = useState(false);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const accommodationResults = useSearchResultsStore(
+    (state) => state.results.accommodations ?? []
+  );
+
+  const hotelResults: HotelResult[] = useMemo(
+    () =>
+      accommodationResults.map((accommodation) => ({
+        ai: {
+          personalizedTags: accommodation.amenities.slice(0, 3),
+          reason: "Top accommodation match",
+          recommendation: Math.max(
+            1,
+            Math.min(10, Math.round(accommodation.rating * 2))
+          ),
+        },
+        amenities: {
+          essential: accommodation.amenities.slice(0, 3),
+          premium: accommodation.amenities.slice(3, 6),
+          unique: accommodation.amenities.slice(6),
+        },
+        availability: {
+          flexible: false,
+          roomsLeft: 5,
+          urgency: "medium",
+        },
+        brand: undefined,
+        category: "hotel",
+        guestExperience: {
+          highlights: [],
+          recentMentions: [],
+          vibe: "business",
+        },
+        id: accommodation.id,
+        images: {
+          count: accommodation.images?.length ?? 0,
+          gallery: accommodation.images ?? [],
+          main: accommodation.images?.[0] ?? "/globe.svg",
+        },
+        location: {
+          address: accommodation.location,
+          city: accommodation.location,
+          district: accommodation.location,
+          landmarks: [],
+          walkScore: undefined,
+        },
+        name: accommodation.name,
+        pricing: {
+          basePrice: accommodation.pricePerNight,
+          currency: "USD",
+          priceHistory: "stable",
+          pricePerNight: accommodation.pricePerNight,
+          taxes: accommodation.pricePerNight * 0.1,
+          totalPrice: accommodation.totalPrice,
+        },
+        reviewCount: 0,
+        starRating: accommodation.rating,
+        sustainability: {
+          certified: false,
+          practices: [],
+          score: 5,
+        },
+        userRating: accommodation.rating,
+      })),
+    [accommodationResults]
+  );
+
+  const hasAccommodationResults = hotelResults.length > 0;
+
+  const sortedHotelResults = useMemo(
+    () =>
+      [...hotelResults].sort((first, second) =>
+        sortDirection === "asc"
+          ? first.pricing.totalPrice - second.pricing.totalPrice
+          : second.pricing.totalPrice - first.pricing.totalPrice
+      ),
+    [hotelResults, sortDirection]
+  );
+
+  const handleHotelSelect = (hotel: HotelResult) => {
+    toast({
+      description: `${hotel.name} selected`,
+      title: "Hotel selected",
+    });
+    return Promise.resolve();
+  };
+
+  const handleSaveToWishlist = (hotelId: string) => {
+    toast({
+      description: `Saved hotel ${hotelId}`,
+      title: "Wishlist updated",
+    });
+  };
+
+  const handleSortClick = () => {
+    setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
+  };
+
+  const handleFilterClick = () => {
+    toast({
+      description: "Filters will be added soon; using default results for now.",
+      title: "Filters coming soon",
+    });
+  };
 
   const handleSearch = async (params: SearchAccommodationParams) => {
     setHasSearched(true);
@@ -128,7 +231,7 @@ export default function HotelsSearchClient({
           )}
 
           {/* Results State */}
-          {hasSearched && !isSearching && hasResults && (
+          {hasSearched && !isSearching && hasAccommodationResults && (
             <div className="space-y-6">
               <div className="flex justify-between items-center flex-wrap gap-4">
                 <h2 className="text-2xl font-semibold flex items-center gap-2">
@@ -138,31 +241,33 @@ export default function HotelsSearchClient({
                 <div className="flex gap-2">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="outline" size="sm">
+                      <Button onClick={handleSortClick} variant="outline" size="sm">
                         <SortAscIcon className="h-4 w-4 mr-2" />
-                        Sort by Price
+                        Sort by Price (
+                        {sortDirection === "asc" ? "Low→High" : "High→Low"})
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Sort results by price</TooltipContent>
+                    <TooltipContent>Sort results by total price</TooltipContent>
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="outline" size="sm">
+                      <Button onClick={handleFilterClick} variant="outline" size="sm">
                         <FilterIcon className="h-4 w-4 mr-2" />
                         Filter
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Filter results</TooltipContent>
+                    <TooltipContent>Open filters</TooltipContent>
                   </Tooltip>
                 </div>
               </div>
 
-              <Card className="bg-muted/50">
-                <CardContent className="text-center py-8 text-muted-foreground">
-                  <InfoIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>Search results would appear here</p>
-                </CardContent>
-              </Card>
+              <HotelResults
+                loading={isSearching}
+                onSaveToWishlist={handleSaveToWishlist}
+                onSelect={handleHotelSelect}
+                results={sortedHotelResults}
+                showMap
+              />
             </div>
           )}
 
@@ -253,7 +358,7 @@ export default function HotelsSearchClient({
           )}
 
           {/* Empty State */}
-          {hasSearched && !isSearching && !hasResults && !searchError && (
+          {hasSearched && !isSearching && !hasAccommodationResults && !searchError && (
             <Card>
               <CardContent className="text-center py-12">
                 <div className="flex flex-col items-center gap-4">
@@ -294,7 +399,7 @@ function PopularDestinationCard({
   rating,
 }: PopularDestinationProps) {
   return (
-    <Card className="h-full overflow-hidden transition-colors hover:bg-accent/50 cursor-pointer group">
+    <Card className="h-full overflow-hidden transition-colors hover:bg-accent/50 group">
       <div className="h-40 bg-linear-to-br from-primary/10 to-primary/5 flex items-center justify-center relative">
         <Building2Icon className="h-16 w-16 text-primary/30" />
         <div className="absolute top-3 right-3">

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createRouteParamsContext,
   makeJsonRequest,
+  mockApiRouteAuthUser,
   resetApiRouteMocks,
 } from "@/test/api-route-helpers";
 
@@ -31,7 +32,7 @@ describe("POST /api/auth/mfa/verify", () => {
     mockRegenerate.mockReset();
     mockMfaVerify.mockReset();
     mockGetAdminSupabase.mockReset();
-    mockRegenerate.mockResolvedValue({ codes: ["ABCDE-FGHIJ"], remaining: 10 });
+    mockRegenerate.mockResolvedValue({ codes: ["ABCDE-FGHIJ"] });
     mockMfaVerify.mockResolvedValue({ isInitialEnrollment: true });
   });
 
@@ -67,6 +68,27 @@ describe("POST /api/auth/mfa/verify", () => {
     const json = await res.json();
     expect(json.data.status).toBe("verified");
     expect(json.data.backupCodes).toBeUndefined();
+    expect(mockRegenerate).not.toHaveBeenCalled();
+  });
+
+  it("returns 401 when user is not authenticated", async () => {
+    mockMfaVerify.mockResolvedValueOnce({ isInitialEnrollment: true });
+    mockApiRouteAuthUser(null);
+
+    const { POST } = await import("../verify/route");
+    const res = await POST(
+      makeJsonRequest("http://localhost/api/auth/mfa/verify", {
+        challengeId: ids.challengeId,
+        code: "123456",
+        factorId: ids.factorId,
+      }),
+      createRouteParamsContext()
+    );
+
+    // withApiGuards auth check returns "unauthorized" before handler runs
+    expect(res.status).toBe(401);
+    const json = await res.json();
+    expect(json.error).toBe("unauthorized");
     expect(mockRegenerate).not.toHaveBeenCalled();
   });
 

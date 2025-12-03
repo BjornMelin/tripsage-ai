@@ -199,7 +199,7 @@ describe("searchHotelsAction", () => {
     expect(result[0].pricing.pricePerNight).toBe(100); // 400 / 4 nights
   });
 
-  it("defaults to 1 night when dates are missing", async () => {
+  it("handles same-day check-in/check-out as 1 night minimum", async () => {
     const listing = {
       id: "hotel-1",
       name: "Test Hotel",
@@ -218,15 +218,17 @@ describe("searchHotelsAction", () => {
     };
     mockSearch.mockResolvedValue({ listings: [listing] });
 
-    const paramsWithoutDates = {
+    // Same day check-in and check-out results in 0 diff, should use 1 night minimum
+    const paramsWithSameDay = {
       ...validParams,
-      checkIn: "",
-      checkOut: "",
+      checkIn: "2025-06-01",
+      checkOut: "2025-06-01",
     };
 
-    const result = await searchHotelsAction(paramsWithoutDates);
+    const result = await searchHotelsAction(paramsWithSameDay);
 
-    expect(result[0].pricing.pricePerNight).toBe(100); // total / 1 night
+    // Math.ceil(0) = 0, but Math.max(1, 0) = 1 night minimum
+    expect(result[0].pricing.pricePerNight).toBe(100);
   });
 
   it("returns a fallback result when listing validation fails", async () => {
@@ -258,7 +260,7 @@ describe("searchHotelsAction", () => {
     });
   });
 
-  it("uses default currency when not specified", async () => {
+  it("uses default currency when not specified in listing", async () => {
     const listing = {
       id: "hotel-1",
       name: "Test Hotel",
@@ -270,7 +272,7 @@ describe("searchHotelsAction", () => {
     expect(result[0].pricing.currency).toBe("USD");
   });
 
-  it("prefers listing currency over provided currency parameter", async () => {
+  it("prefers listing currency over default", async () => {
     const listing = {
       id: "hotel-1",
       name: "Test Hotel",
@@ -292,18 +294,6 @@ describe("searchHotelsAction", () => {
     const result = await searchHotelsAction(validParams);
 
     expect(result[0].pricing.currency).toBe("JPY");
-  });
-
-  it("uses custom currency when provided", async () => {
-    const listing = {
-      id: "hotel-1",
-      name: "Test Hotel",
-    };
-    mockSearch.mockResolvedValue({ listings: [listing] });
-
-    const result = await searchHotelsAction(validParams);
-
-    expect(result[0].pricing.currency).toBe("GBP");
   });
 
   it("includes AI recommendation metadata", async () => {

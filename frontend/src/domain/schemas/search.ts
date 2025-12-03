@@ -546,13 +546,22 @@ export const activitySearchFormSchema = z.object({
   date: FUTURE_DATE_SCHEMA.optional(),
   dateRange: z
     .object({
-      end: FUTURE_DATE_SCHEMA,
-      start: FUTURE_DATE_SCHEMA,
+      end: FUTURE_DATE_SCHEMA.optional(),
+      start: FUTURE_DATE_SCHEMA.optional(),
     })
-    .refine((data) => new Date(data.end) > new Date(data.start), {
-      error: "End date must be after start date",
-      path: ["end"],
-    })
+    .refine(
+      (data) => {
+        // Only validate if both dates are present
+        if (data.start && data.end) {
+          return new Date(data.end) > new Date(data.start);
+        }
+        return true;
+      },
+      {
+        error: "End date must be after start date",
+        path: ["end"],
+      }
+    )
     .optional(),
   destination: z.string().min(1, { error: "Destination is required" }),
   difficulty: z.enum(["easy", "moderate", "challenging", "extreme"]).optional(),
@@ -713,6 +722,12 @@ export const hotelResultSchema = z.strictObject({
   location: z.strictObject({
     address: z.string(),
     city: z.string(),
+    coordinates: z
+      .strictObject({
+        lat: z.number(),
+        lng: z.number(),
+      })
+      .optional(),
     district: z.string(),
     landmarks: z.array(z.string()),
     walkScore: z.number().optional(),

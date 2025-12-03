@@ -40,6 +40,7 @@ export function mapHotelsToListings(
     return {
       address: hotel.address,
       amenities: [],
+      geoCode: hotel.geoCode,
       id: hotel.hotelId,
       name: hotel.name,
       rooms,

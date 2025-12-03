@@ -62,10 +62,22 @@ const AIRLINES_OPTIONS = [
   { label: "American Airlines", value: "AA" },
   { label: "United Airlines", value: "UA" },
   { label: "Delta Air Lines", value: "DL" },
-  { label: "Southwest Airlines", value: "SW" },
+  { label: "Southwest Airlines", value: "WN" },
   { label: "Alaska Airlines", value: "AS" },
   { label: "JetBlue Airways", value: "B6" },
 ];
+
+function GetFilterValue<T extends FilterValue>(
+  activeFilters: Record<string, { value: FilterValue }>,
+  filterId: string,
+  guard: (value: FilterValue) => value is T
+): T | undefined {
+  const entry = activeFilters[filterId];
+  if (!entry) {
+    return undefined;
+  }
+  return guard(entry.value) ? entry.value : undefined;
+}
 
 /** Get display label for an active filter. */
 function GetFilterLabel(
@@ -128,6 +140,20 @@ export function FilterPanel({
     clearAllFilters,
     clearFiltersByCategory,
   } = useSearchFiltersStore();
+
+  const isRangeObject = (value: FilterValue): value is { max: number; min: number } =>
+    typeof value === "object" &&
+    value !== null &&
+    "min" in value &&
+    "max" in value &&
+    typeof (value as { min: unknown }).min === "number" &&
+    typeof (value as { max: unknown }).max === "number";
+
+  const isStringValue = (value: FilterValue): value is string =>
+    typeof value === "string";
+
+  const isStringArray = (value: FilterValue): value is string[] =>
+    Array.isArray(value) && value.every((entry) => typeof entry === "string");
 
   // Group filters by category
   const filtersByCategory = useMemo(() => {
@@ -278,9 +304,7 @@ export function FilterPanel({
                   min={0}
                   max={2000}
                   step={10}
-                  value={
-                    activeFilters.price_range?.value as [number, number] | undefined
-                  }
+                  value={GetFilterValue(activeFilters, "price_range", isRangeObject)}
                   onChange={handleRangeChange}
                   formatValue={formatCurrency}
                 />
@@ -297,7 +321,7 @@ export function FilterPanel({
                   filterId="stops"
                   label=""
                   options={STOPS_OPTIONS}
-                  value={activeFilters.stops?.value as string | undefined}
+                  value={GetFilterValue(activeFilters, "stops", isStringValue)}
                   onChange={handleFilterChange}
                 />
               </AccordionContent>
@@ -332,7 +356,7 @@ export function FilterPanel({
                   filterId="airlines"
                   label=""
                   options={AIRLINES_OPTIONS}
-                  value={activeFilters.airlines?.value as string[] | undefined}
+                  value={GetFilterValue(activeFilters, "airlines", isStringArray)}
                   onChange={handleFilterChange}
                   maxHeight={180}
                 />
@@ -351,7 +375,7 @@ export function FilterPanel({
                   filterId="departure_time"
                   label=""
                   options={TIME_OPTIONS}
-                  value={activeFilters.departure_time?.value as string[] | undefined}
+                  value={GetFilterValue(activeFilters, "departure_time", isStringArray)}
                   onChange={handleFilterChange}
                   multiple
                 />
@@ -372,7 +396,7 @@ export function FilterPanel({
                   min={0}
                   max={1440}
                   step={30}
-                  value={activeFilters.duration?.value as [number, number] | undefined}
+                  value={GetFilterValue(activeFilters, "duration", isRangeObject)}
                   onChange={handleRangeChange}
                   formatValue={formatDurationMinutes}
                 />

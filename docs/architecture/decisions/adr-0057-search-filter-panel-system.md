@@ -19,7 +19,7 @@ The TripSage search experience currently has an incomplete filter system:
 
 ### Current State Analysis
 
-```
+```text
 search-filters-store.ts (974 lines after cleanup)
 ├── Available filters/sort options by search type ✓
 ├── Active filters and presets ✓
@@ -29,6 +29,7 @@ search-filters-store.ts (974 lines after cleanup)
 ```
 
 The filter presets workflow is broken:
+
 - Users cannot apply filters → cannot save meaningful presets → presets feature is unusable
 
 ## Decision
@@ -53,7 +54,7 @@ npx shadcn@latest add accordion toggle-group
 
 ### 3. Component Architecture
 
-```
+```text
 FilterPanel (Card)
 ├── Header
 │   ├── Title: "Filters"
@@ -78,7 +79,7 @@ FilterPanel (Card)
 
 ### 4. File Structure
 
-```
+```text
 frontend/src/components/features/search/
 ├── filter-panel.tsx              # Main filter panel component
 ├── filter-presets.tsx            # Existing - save/load presets
@@ -93,13 +94,26 @@ frontend/src/components/features/search/
 ### 5. shadcn/ui Components Mapping
 
 | Filter Type | shadcn/ui Component | Example Use |
-|-------------|--------------------|--------------| 
+|-------------|--------------------|--------------|
 | Range (min/max) | `Slider` (dual-thumb) | Price: $0-$2000 |
 | Single select | `ToggleGroup` (single) | Stops: Any/Nonstop/1/2+ |
 | Multi select | `Checkbox` + `ScrollArea` | Airlines: AA, UA, DL |
 | Toggle | `ToggleGroup` (multiple) | Time: Morning/Afternoon/Evening |
 | Active filters | `Badge` | Removable filter chips |
 | Sections | `Accordion` | Collapsible filter categories |
+
+### 5.1 Hotel Search Sort Options
+
+The `HotelResults` component supports four sort criteria:
+
+| Sort | Description | Availability |
+|------|-------------|--------------|
+| AI Recommended | Sort by AI recommendation score (1-10) | Always |
+| Price | Sort by total price | Always |
+| Rating | Sort by star rating | Always |
+| Distance | Sort by proximity to search center (Haversine) | When `searchCenter` prop provided |
+
+Distance sorting uses the Haversine formula (`@/lib/geo`) to calculate great-circle distance from the search center to each hotel's coordinates. Hotels without coordinates are sorted to the end.
 
 ### 6. Store Integration
 
@@ -179,6 +193,7 @@ Update `flights/page.tsx` sidebar:
 **Description**: Don't restore the removed store methods.
 
 **Why not chosen**: The three methods provide genuine UX value:
+
 - `clearFiltersByCategory` - Essential for filter-heavy interfaces
 - `getMostUsedFilters` - Enables personalized quick filters
 - `applyFiltersFromObject` - Required for URL deep-linking feature

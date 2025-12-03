@@ -98,14 +98,22 @@ export default function ActivitiesSearchClient({
         destination,
       };
       setHasSearched(true);
-      onSubmitServer(initialParams)
-        .then(() => searchActivities(initialParams))
-        .catch((error) => {
+      (async () => {
+        try {
+          await onSubmitServer(initialParams);
+          await searchActivities(initialParams);
+        } catch (error) {
           const message = getErrorMessage(error);
           setSearchError(new Error(message));
-        });
+          toast({
+            description: message,
+            title: "Search failed",
+            variant: "destructive",
+          });
+        }
+      })();
     }
-  }, [searchParams, searchActivities, onSubmitServer, setSearchError]);
+  }, [searchParams, searchActivities, onSubmitServer, setSearchError, toast]);
 
   const handleSearch = async (params: ActivitySearchParams) => {
     if (params.destination) {

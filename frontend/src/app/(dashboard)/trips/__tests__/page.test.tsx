@@ -81,7 +81,6 @@ import TripsPage from "../page";
 
 describe("TripsPage", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mockTrips.mockReset();
     mockIsLoading.mockReset();
     mockError.mockReset();
@@ -121,6 +120,30 @@ describe("TripsPage", () => {
 
       render(<TripsPage />);
       expect(screen.getByText("Create Your First Trip")).toBeInTheDocument();
+    });
+
+    it("calls createTrip when empty state CTA is clicked", async () => {
+      mockTrips.mockReturnValue([]);
+      mockCreateTrip.mockResolvedValue({ id: "new-empty-trip" });
+
+      render(<TripsPage />);
+      fireEvent.click(screen.getByText("Create Your First Trip"));
+
+      await waitFor(() => {
+        expect(mockCreateTrip).toHaveBeenCalledTimes(1);
+      });
+    });
+  });
+
+  describe("Error state", () => {
+    it("renders gracefully when an error occurs", () => {
+      mockError.mockReturnValue(null);
+      mockTrips.mockReturnValue([]);
+
+      render(<TripsPage />);
+
+      expect(screen.getByText("My Trips")).toBeInTheDocument();
+      expect(screen.getByText("No trips yet")).toBeInTheDocument();
     });
   });
 
@@ -208,6 +231,19 @@ describe("TripsPage", () => {
       expect(screen.getByText("Create Trip")).toBeInTheDocument();
     });
 
+    it("calls createTrip when Create Trip button is clicked", async () => {
+      mockTrips.mockReturnValue(sampleTrips);
+      mockCreateTrip.mockResolvedValue({ id: "new-trip" });
+
+      render(<TripsPage />);
+
+      fireEvent.click(screen.getByText("Create Trip"));
+
+      await waitFor(() => {
+        expect(mockCreateTrip).toHaveBeenCalledTimes(1);
+      });
+    });
+
     it("renders connection status indicator", () => {
       mockTrips.mockReturnValue(sampleTrips);
 
@@ -236,6 +272,8 @@ describe("TripsPage", () => {
         expect(mockDeleteTrip).toHaveBeenCalledTimes(1);
         expect(mockDeleteTrip).toHaveBeenCalledWith("trip-delete-id");
       });
+
+      expect(confirmSpy).toHaveBeenCalledTimes(1);
 
       confirmSpy.mockRestore();
     });
