@@ -606,6 +606,218 @@ export const activitySearchFormSchema = z.object({
 /** TypeScript type for activity search form data. */
 export type ActivitySearchFormData = z.infer<typeof activitySearchFormSchema>;
 
+/**
+ * Form schema for hotel search with validation.
+ * Includes guest details, dates, price range, amenities, and rating filters.
+ */
+export const hotelSearchFormSchema = z
+  .strictObject({
+    adults: z.number().int().min(1, { error: "At least 1 adult required" }).max(6),
+    amenities: z.array(z.string()),
+    checkIn: z.string().min(1, { error: "Check-in is required" }),
+    checkOut: z.string().min(1, { error: "Check-out is required" }),
+    children: z.number().int().min(0).max(4),
+    location: z.string().min(1, { error: "Location is required" }),
+    priceRange: z.strictObject({
+      max: z.number().min(0),
+      min: z.number().min(0),
+    }),
+    rating: z.number().int().min(0).max(5),
+    rooms: z.number().int().min(1).max(5),
+  })
+  .refine((data) => new Date(data.checkOut) > new Date(data.checkIn), {
+    error: "Check-out date must be after check-in date",
+    path: ["checkOut"],
+  })
+  .refine(
+    (data) => {
+      if (data.priceRange.min && data.priceRange.max) {
+        return data.priceRange.min <= data.priceRange.max;
+      }
+      return true;
+    },
+    {
+      error: "Minimum price must be less than or equal to maximum price",
+      path: ["priceRange", "min"],
+    }
+  );
+
+/** TypeScript type for hotel search form data. */
+export type HotelSearchFormData = z.infer<typeof hotelSearchFormSchema>;
+
+/**
+ * Form schema for destination search with validation.
+ * Includes query, types, language, region, and limit filters.
+ */
+export const destinationSearchFormSchema = z.strictObject({
+  language: z.string().optional(),
+  limit: z
+    .number()
+    .int()
+    .min(1, { error: "Limit must be at least 1" })
+    .max(20, { error: "Limit must be at most 20" }),
+  query: z.string().min(1, { error: "Destination is required" }),
+  region: z.string().optional(),
+  types: z.array(
+    z.enum(["locality", "country", "administrative_area", "establishment"])
+  ),
+});
+
+/** TypeScript type for destination search form data. */
+export type DestinationSearchFormData = z.infer<typeof destinationSearchFormSchema>;
+
+// ===== UI RESULT SCHEMAS =====
+// UI-specific result schemas for component display
+
+/**
+ * Zod schema for hotel search results displayed in UI.
+ * Includes detailed hotel information, pricing, amenities, and AI recommendations.
+ */
+export const hotelResultSchema = z.strictObject({
+  ai: z.strictObject({
+    personalizedTags: z.array(z.string()),
+    reason: z.string(),
+    recommendation: z.number().int().min(1).max(10),
+  }),
+  amenities: z.strictObject({
+    essential: z.array(z.string()),
+    premium: z.array(z.string()),
+    unique: z.array(z.string()),
+  }),
+  availability: z.strictObject({
+    flexible: z.boolean(),
+    roomsLeft: z.number().int().nonnegative(),
+    urgency: z.enum(["low", "medium", "high"]),
+  }),
+  brand: z.string().optional(),
+  category: z.enum(["hotel", "resort", "apartment", "villa", "boutique"]),
+  guestExperience: z.strictObject({
+    highlights: z.array(z.string()),
+    recentMentions: z.array(z.string()),
+    vibe: z.enum(["luxury", "business", "family", "romantic", "adventure"]),
+  }),
+  id: z.string().min(1),
+  images: z.strictObject({
+    count: z.number().int().nonnegative(),
+    gallery: z.array(z.string()),
+    main: z.string(),
+  }),
+  location: z.strictObject({
+    address: z.string(),
+    city: z.string(),
+    district: z.string(),
+    landmarks: z.array(z.string()),
+    walkScore: z.number().optional(),
+  }),
+  name: z.string().min(1),
+  pricing: z.strictObject({
+    basePrice: z.number().nonnegative(),
+    currency: z.string(),
+    deals: z
+      .strictObject({
+        description: z.string(),
+        originalPrice: z.number().nonnegative(),
+        savings: z.number().nonnegative(),
+        type: z.enum([
+          "early_bird",
+          "last_minute",
+          "extended_stay",
+          "all_inclusive",
+        ]),
+      })
+      .optional(),
+    priceHistory: z.enum(["rising", "falling", "stable"]),
+    pricePerNight: z.number().nonnegative(),
+    taxes: z.number().nonnegative(),
+    totalPrice: z.number().nonnegative(),
+  }),
+  reviewCount: z.number().int().nonnegative(),
+  starRating: z.number().min(0).max(5),
+  sustainability: z.strictObject({
+    certified: z.boolean(),
+    practices: z.array(z.string()),
+    score: z.number().int().min(1).max(10),
+  }),
+  userRating: z.number().min(0).max(5),
+  allInclusive: z
+    .strictObject({
+      available: z.boolean(),
+      inclusions: z.array(z.string()),
+      tier: z.enum(["basic", "premium", "luxury"]),
+    })
+    .optional(),
+});
+
+/** TypeScript type for hotel search results. */
+export type HotelResult = z.infer<typeof hotelResultSchema>;
+
+/**
+ * Zod schema for flight search results displayed in UI.
+ * Includes detailed flight information, pricing, emissions, and AI predictions.
+ */
+export const flightResultSchema = z.strictObject({
+  aircraft: z.string(),
+  airline: z.string().min(1),
+  amenities: z.array(z.string()),
+  arrival: z.strictObject({
+    date: z.string(),
+    time: z.string(),
+  }),
+  departure: z.strictObject({
+    date: z.string(),
+    time: z.string(),
+  }),
+  destination: z.strictObject({
+    city: z.string(),
+    code: z.string(),
+    terminal: z.string().optional(),
+  }),
+  duration: z.number().int().positive(), // minutes
+  emissions: z.strictObject({
+    compared: z.enum(["low", "average", "high"]),
+    kg: z.number().nonnegative(),
+  }),
+  flexibility: z.strictObject({
+    changeable: z.boolean(),
+    cost: z.number().nonnegative().optional(),
+    refundable: z.boolean(),
+  }),
+  flightNumber: z.string().min(1),
+  id: z.string().min(1),
+  origin: z.strictObject({
+    city: z.string(),
+    code: z.string(),
+    terminal: z.string().optional(),
+  }),
+  prediction: z.strictObject({
+    confidence: z.number().int().min(0).max(100),
+    priceAlert: z.enum(["buy_now", "wait", "neutral"]),
+    reason: z.string(),
+  }),
+  price: z.strictObject({
+    base: z.number().nonnegative(),
+    currency: z.string(),
+    dealScore: z.number().int().min(1).max(10).optional(),
+    priceChange: z.enum(["up", "down", "stable"]).optional(),
+    total: z.number().nonnegative(),
+  }),
+  promotions: z
+    .strictObject({
+      description: z.string(),
+      savings: z.number().nonnegative(),
+      type: z.enum(["flash_deal", "early_bird", "limited_time"]),
+    })
+    .optional(),
+  stops: z.strictObject({
+    cities: z.array(z.string()).optional(),
+    count: z.number().int().nonnegative(),
+    duration: z.number().int().nonnegative().optional(),
+  }),
+});
+
+/** TypeScript type for flight search results. */
+export type FlightResult = z.infer<typeof flightResultSchema>;
+
 // ===== UTILITY FUNCTIONS =====
 // Validation helpers and business logic functions
 

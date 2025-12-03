@@ -2,6 +2,11 @@
  * @fileoverview Search feature components exports.
  */
 
+import {
+  type FlightResult,
+  type HotelResult,
+} from "@schemas/search";
+
 // Results components
 export { ActivityResults } from "./activity-results";
 // Search forms
@@ -10,10 +15,13 @@ export { DestinationSearchForm } from "./destination-search-form";
 // Filter components
 export { FilterPanel } from "./filter-panel";
 export { FilterPresets } from "./filter-presets";
-export { type FlightResult, FlightResults } from "./flight-results";
+export { FlightResults } from "./flight-results";
 export { FlightSearchForm } from "./flight-search-form";
-export { type HotelResult, HotelResults } from "./hotel-results";
+export { HotelResults } from "./hotel-results";
 export { HotelSearchForm } from "./hotel-search-form";
+
+// Re-export types from schemas
+export type { FlightResult, HotelResult };
 
 // Other components
 export { SearchAnalytics } from "./search-analytics";

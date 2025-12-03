@@ -16,14 +16,16 @@ import {
   UsersIcon,
   ZapIcon,
 } from "lucide-react";
+import {
+  type FlightResult,
+  type FlightSearchFormData,
+  type HotelResult,
+  type HotelSearchFormData,
+} from "@schemas/search";
 import { type ReactNode, useState, useTransition } from "react";
-import type { FlightResult } from "@/components/features/search/flight-results";
 import { FlightResults } from "@/components/features/search/flight-results";
-import type { FlightSearchParams } from "@/components/features/search/flight-search-form";
 import { FlightSearchForm } from "@/components/features/search/flight-search-form";
-import type { HotelResult } from "@/components/features/search/hotel-results";
 import { HotelResults } from "@/components/features/search/hotel-results";
-import type { HotelSearchParams } from "@/components/features/search/hotel-search-form";
 import { HotelSearchForm } from "@/components/features/search/hotel-search-form";
 import { SearchLayout } from "@/components/layouts/search-layout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -225,7 +227,7 @@ const MOCK_HOTEL_RESULTS: HotelResult[] = [
 ];
 
 interface UnifiedSearchClientProps {
-  onSearchHotels: (params: HotelSearchParams) => Promise<HotelResult[]>;
+  onSearchHotels: (params: HotelSearchFormData) => Promise<HotelResult[]>;
 }
 
 export default function UnifiedSearchClient({
@@ -239,7 +241,7 @@ export default function UnifiedSearchClient({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const handleFlightSearch = async (params: FlightSearchParams) => {
+  const handleFlightSearch = async (params: FlightSearchFormData) => {
     await new Promise<void>((resolve) => {
       startTransition(() => {
         setSearchData(params as unknown as Record<string, unknown>);
@@ -253,7 +255,7 @@ export default function UnifiedSearchClient({
     });
   };
 
-  const handleHotelSearch = (params: HotelSearchParams) =>
+  const handleHotelSearch = (params: HotelSearchFormData) =>
     new Promise<void>((resolve) => {
       startTransition(async () => {
         setSearchData(params as unknown as Record<string, unknown>);

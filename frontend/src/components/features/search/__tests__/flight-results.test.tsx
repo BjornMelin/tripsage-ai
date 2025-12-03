@@ -1,9 +1,10 @@
 /** @vitest-environment jsdom */
 
+import { type FlightResult } from "@schemas/search";
 import { fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { render } from "@/test/test-utils";
-import { type FlightResult, FlightResults } from "../flight-results";
+import { FlightResults } from "../flight-results";
 
 const BaseFlight: FlightResult = {
   aircraft: "A320",

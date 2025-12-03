@@ -4,6 +4,7 @@
 
 "use client";
 
+import { type HotelResult } from "@schemas/search";
 import {
   ArrowUpDownIcon,
   Building2Icon,
@@ -33,73 +34,6 @@ import { cn } from "@/lib/utils";
 import { GetAmenityIcon } from "./cards/amenities";
 import { RatingStars } from "./cards/rating-stars";
 import { formatCurrency } from "./common/format";
-
-// Hotel result type
-export interface HotelResult {
-  id: string;
-  name: string;
-  brand?: string;
-  category: "hotel" | "resort" | "apartment" | "villa" | "boutique";
-  starRating: number;
-  userRating: number;
-  reviewCount: number;
-  location: {
-    address: string;
-    city: string;
-    district: string;
-    landmarks: string[];
-    walkScore?: number;
-  };
-  images: {
-    main: string;
-    gallery: string[];
-    count: number;
-  };
-  pricing: {
-    basePrice: number;
-    totalPrice: number;
-    pricePerNight: number;
-    currency: string;
-    taxes: number;
-    deals?: {
-      type: "early_bird" | "last_minute" | "extended_stay" | "all_inclusive";
-      description: string;
-      savings: number;
-      originalPrice: number;
-    };
-    priceHistory: "rising" | "falling" | "stable";
-  };
-  amenities: {
-    essential: string[];
-    premium: string[];
-    unique: string[];
-  };
-  sustainability: {
-    certified: boolean;
-    score: number; // 1-10
-    practices: string[];
-  };
-  allInclusive?: {
-    available: boolean;
-    inclusions: string[];
-    tier: "basic" | "premium" | "luxury";
-  };
-  availability: {
-    roomsLeft: number;
-    urgency: "low" | "medium" | "high";
-    flexible: boolean;
-  };
-  guestExperience: {
-    highlights: string[];
-    recentMentions: string[];
-    vibe: "luxury" | "business" | "family" | "romantic" | "adventure";
-  };
-  ai: {
-    recommendation: number; // 1-10
-    reason: string;
-    personalizedTags: string[];
-  };
-}
 
 /** Hotel results props */
 interface HotelResultsProps {
