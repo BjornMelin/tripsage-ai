@@ -8,7 +8,7 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { getAmenityIcon } from "./cards/amenities";
+import { GetAmenityIcon } from "./cards/amenities";
 import { formatCurrency } from "./common/format";
 
 interface AccommodationCardProps {
@@ -16,8 +16,6 @@ interface AccommodationCardProps {
   onSelect?: (accommodation: Accommodation) => void;
   onCompare?: (accommodation: Accommodation) => void;
 }
-
-type AmenityKey = "breakfast" | "gym" | "parking" | "pool" | "restaurant" | "wifi";
 
 export function AccommodationCard({
   accommodation,
@@ -45,7 +43,7 @@ export function AccommodationCard({
 
   /** Render amenity icon or fallback placeholder. */
   const renderAmenityIcon = (amenity: string) => {
-    const Icon = getAmenityIcon(amenity);
+    const Icon = GetAmenityIcon(amenity);
     if (Icon) {
       return <Icon className="h-4 w-4" />;
     }

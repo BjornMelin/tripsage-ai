@@ -4,7 +4,7 @@
 
 /**
  * Format a number as USD currency with no fractional digits.
- * 
+ *
  * @param value - The number to format.
  * @returns The formatted currency string.
  */
@@ -18,43 +18,47 @@ export function formatCurrency(value: number): string {
 }
 
 /**
- * Convert a duration in hours (possibly fractional) to abbreviated format string.
+ * Convert duration in hours to human-friendly text matching search UI tests.
  *
- * @param hours - The duration in hours to format.
- * Examples:
- * - 0.5 -> "30m"
- * - 1 -> "1h"
- * - 1.5 -> "1h 30m"
- * - 24 -> "24h"
- * - 26 -> "26h"
- *
- * @throws Error if hours is negative, NaN, or Infinity
+ * Rules:
+ * - < 1 hour: round to minutes, e.g., 0.5 -> "30 mins"
+ * - = 1 hour: "1 hour"
+ * - < 24 hours: show one decimal at most, e.g., 2.5 -> "2.5 hours"
+ * - >= 24 hours:
+ *     * exact days => "N days"
+ *     * otherwise => "Xd Yh" where Y is whole hours remainder
  */
 export function formatDurationHours(hours: number): string {
   if (!Number.isFinite(hours) || hours < 0) {
-    throw new Error(
-      `Invalid duration hours: ${hours}. Must be a non-negative finite number.`
-    );
+    throw new Error(`Invalid duration hours: ${hours}. Must be non-negative finite.`);
   }
 
   if (hours < 1) {
-    const mins = Math.round(hours * 60);
-    return `${mins}m`;
+    return `${Math.round(hours * 60)} mins`;
   }
 
-  const wholeHours = Math.floor(hours);
-  const mins = Math.round((hours - wholeHours) * 60);
-
-  if (mins === 0) {
-    return `${wholeHours}h`;
+  if (hours === 1) {
+    return "1 hour";
   }
 
-  return `${wholeHours}h ${mins}m`;
+  if (hours < 24) {
+    const rounded = Number.parseFloat(hours.toFixed(1));
+    return `${rounded} hours`;
+  }
+
+  const days = Math.floor(hours / 24);
+  const remainderHours = Math.floor(hours - days * 24);
+
+  if (remainderHours === 0) {
+    return `${days} ${days === 1 ? "day" : "days"}`;
+  }
+
+  return `${days}d ${remainderHours}h`;
 }
 
 /**
  * Convert minutes to `Xh Ym` representation.
- * 
+ *
  * @param minutes - The duration in minutes to format.
  * @returns The formatted duration string.
  */

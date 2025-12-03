@@ -3,9 +3,7 @@
  */
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
 import type { ActivitySearchParams } from "@schemas/search";
-import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,8 +23,10 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { withClientTelemetrySpan } from "@/lib/telemetry/client";
+import { useSearchForm } from "./common/use-search-form";
 
-const ActivitySearchFormSchema = z.object({
+const ActivitySearchFormSchema = z.strictObject({
   adults: z
     .number()
     .int()
@@ -70,8 +70,9 @@ export function ActivitySearchForm({
   onSearch,
   initialValues,
 }: ActivitySearchFormProps) {
-  const form = useForm<ActivitySearchFormValues>({
-    defaultValues: {
+  const form = useSearchForm(
+    ActivitySearchFormSchema,
+    {
       adults: 1,
       categories: [],
       children: 0,
@@ -81,31 +82,34 @@ export function ActivitySearchForm({
       startDate: "",
       ...initialValues,
     },
-    mode: "onChange",
-    resolver: zodResolver(ActivitySearchFormSchema),
-  });
+    {}
+  );
 
-  const onSubmit = (data: ActivitySearchFormValues) => {
-    // Convert form data to search params
-    const searchParams: ActivitySearchParams = {
-      adults: data.adults,
-      category: data.categories?.[0], // Use first category as main category
-      children: data.children,
-      date: data.startDate,
-      destination: data.location,
-      duration: data.duration
-        ? {
-            max: data.duration,
-            min: 0,
-          }
-        : undefined,
-      infants: data.infants,
-    };
+  const onSubmit = (data: ActivitySearchFormValues) =>
+    withClientTelemetrySpan(
+      "search.activity.form.submit",
+      { searchType: "activity" },
+      async () => {
+        const searchParams: ActivitySearchParams = {
+          adults: data.adults,
+          category: data.categories?.[0],
+          children: data.children,
+          date: data.startDate,
+          destination: data.location,
+          duration: data.duration
+            ? {
+                max: data.duration,
+                min: 0,
+              }
+            : undefined,
+          infants: data.infants,
+        };
 
-    if (onSearch) {
-      onSearch(searchParams);
-    }
-  };
+        if (onSearch) {
+          await onSearch(searchParams);
+        }
+      }
+    );
 
   return (
     <Card>

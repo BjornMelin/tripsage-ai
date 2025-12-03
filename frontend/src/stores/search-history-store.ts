@@ -15,8 +15,8 @@ import {
 } from "@schemas/stores";
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
-import { nowIso, secureId } from "@/lib/security/random";
 import { createStoreLogger } from "@/lib/telemetry/store-logger";
+import { generateId, getCurrentTimestamp } from "./helpers";
 
 const logger = createStoreLogger({ storeName: "search-history" });
 
@@ -200,10 +200,6 @@ interface SearchHistoryState {
   reset: () => void;
 }
 
-// Helper functions
-const GENERATE_ID = () => secureId(12);
-const GET_CURRENT_TIMESTAMP = () => nowIso();
-
 // Default settings
 const DEFAULT_MAX_RECENT_SEARCHES = 50;
 const DEFAULT_AUTO_CLEANUP_DAYS = 30;
@@ -215,7 +211,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
         // Recent search management
         addRecentSearch: (searchType, params, metadata = {}) => {
           const { maxRecentSearches, recentSearches } = get();
-          const timestamp = GET_CURRENT_TIMESTAMP();
+          const timestamp = getCurrentTimestamp();
 
           // Check if similar search already exists (avoid duplicates)
           const paramsString = JSON.stringify(params);
@@ -241,7 +237,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
 
           // Add new search
           const newSearch: SearchHistoryItem = {
-            id: GENERATE_ID(),
+            id: generateId(),
             params: params as Record<string, unknown>,
             searchType,
             timestamp,
@@ -295,7 +291,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
                 ? {
                     ...collection,
                     searchIds: [...new Set([...collection.searchIds, searchId])],
-                    updatedAt: GET_CURRENT_TIMESTAMP(),
+                    updatedAt: getCurrentTimestamp(),
                   }
                 : collection
             ),
@@ -349,8 +345,8 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
           set({ isLoading: true });
 
           try {
-            const collectionId = GENERATE_ID();
-            const timestamp = GET_CURRENT_TIMESTAMP();
+            const collectionId = generateId();
+            const timestamp = getCurrentTimestamp();
 
             const newCollection: SearchCollection = {
               createdAt: timestamp,
@@ -388,8 +384,8 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
         // Quick searches
         createQuickSearch: (label, searchType, params, options = {}) => {
           try {
-            const quickSearchId = GENERATE_ID();
-            const timestamp = GET_CURRENT_TIMESTAMP();
+            const quickSearchId = generateId();
+            const timestamp = getCurrentTimestamp();
 
             const newQuickSearch: QuickSearch = {
               color: options.color,
@@ -507,7 +503,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
             popularSearchTerms,
           } = get();
           const exportData = {
-            exportedAt: GET_CURRENT_TIMESTAMP(),
+            exportedAt: getCurrentTimestamp(),
             popularSearchTerms,
             quickSearches,
             savedSearches,
@@ -749,7 +745,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
               search.id === searchId
                 ? {
                     ...search,
-                    lastUsed: GET_CURRENT_TIMESTAMP(),
+                    lastUsed: getCurrentTimestamp(),
                     usageCount: search.usageCount + 1,
                   }
                 : search
@@ -795,7 +791,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
                 ? {
                     ...collection,
                     searchIds: collection.searchIds.filter((id) => id !== searchId),
-                    updatedAt: GET_CURRENT_TIMESTAMP(),
+                    updatedAt: getCurrentTimestamp(),
                   }
                 : collection
             ),
@@ -840,8 +836,8 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
           set({ isLoading: true });
 
           try {
-            const searchId = GENERATE_ID();
-            const timestamp = GET_CURRENT_TIMESTAMP();
+            const searchId = generateId();
+            const timestamp = getCurrentTimestamp();
 
             const newSavedSearch: ValidatedSavedSearch = {
               createdAt: timestamp,
@@ -940,7 +936,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
 
             set({
               isSyncing: false,
-              lastSyncAt: GET_CURRENT_TIMESTAMP(),
+              lastSyncAt: getCurrentTimestamp(),
             });
 
             return true;
@@ -979,7 +975,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
                   const updatedCollection = {
                     ...collection,
                     ...updates,
-                    updatedAt: GET_CURRENT_TIMESTAMP(),
+                    updatedAt: getCurrentTimestamp(),
                   };
 
                   const result = searchCollectionSchema.safeParse(updatedCollection);
@@ -1035,7 +1031,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
                   const updatedSearch = {
                     ...search,
                     ...updates,
-                    updatedAt: GET_CURRENT_TIMESTAMP(),
+                    updatedAt: getCurrentTimestamp(),
                   };
 
                   const result = savedSearchSchema.safeParse(updatedSearch);
@@ -1098,7 +1094,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
             suggestions.push({
               frequency: term.count,
               id: `popular_${term.term}`,
-              lastUsed: GET_CURRENT_TIMESTAMP(),
+              lastUsed: getCurrentTimestamp(),
               searchType: term.searchType,
               source: "popular",
               text: term.term,

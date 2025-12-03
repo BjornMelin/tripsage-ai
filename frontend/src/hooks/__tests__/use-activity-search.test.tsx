@@ -3,8 +3,8 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { server } from "@/test/msw/server";
-import { useActivitySearch } from "../use-activity-search";
+import { server } from "../../test/msw/server";
+import { useActivitySearch } from "../search/use-activity-search";
 
 describe("useActivitySearch", () => {
   beforeEach(() => {

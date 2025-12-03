@@ -1,6 +1,7 @@
 /**
  * @fileoverview Hotel search form component for searching hotels.
  */
+
 "use client";
 
 import {
@@ -22,7 +23,8 @@ import {
   WifiIcon,
   WindIcon,
 } from "lucide-react";
-import { useId, useOptimistic, useState, useTransition } from "react";
+import { useId, useOptimistic, useTransition } from "react";
+import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,8 +39,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { withClientTelemetrySpan } from "@/lib/telemetry/client";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { cn } from "@/lib/utils";
+import { useSearchForm } from "./common/use-search-form";
 
 // React 19 optimistic update types for hotel search
 export interface ModernHotelSearchParams {
@@ -53,6 +57,7 @@ export interface ModernHotelSearchParams {
   amenities: string[];
 }
 
+/** Location suggestion interface. */
 interface LocationSuggestion {
   id: string;
   name: string;
@@ -61,6 +66,7 @@ interface LocationSuggestion {
   deals?: number;
 }
 
+/** Hotel search form props. */
 interface HotelSearchFormProps {
   onSearch: (params: ModernHotelSearchParams) => Promise<void>;
   suggestions?: LocationSuggestion[];
@@ -68,6 +74,7 @@ interface HotelSearchFormProps {
   showRecommendations?: boolean;
 }
 
+/** Amenities array. */
 const Amenities = [
   { icon: WifiIcon, id: "wifi", label: "Free WiFi" },
   { icon: CoffeeIcon, id: "breakfast", label: "Free Breakfast" },
@@ -79,6 +86,23 @@ const Amenities = [
   { icon: WindIcon, id: "aircon", label: "Air Conditioning" },
 ];
 
+/** Hotel search form schema. */
+const HotelSearchFormSchema = z.strictObject({
+  adults: z.number().int().min(1).max(6),
+  amenities: z.array(z.string()),
+  checkIn: z.string().min(1, { error: "Check-in is required" }),
+  checkOut: z.string().min(1, { error: "Check-out is required" }),
+  children: z.number().int().min(0).max(4),
+  location: z.string().min(1, { error: "Location is required" }),
+  priceRange: z.strictObject({
+    max: z.number().min(0),
+    min: z.number().min(0),
+  }),
+  rating: z.number().int().min(0).max(5),
+  rooms: z.number().int().min(1).max(5),
+});
+
+/** Hotel search form component. */
 export function HotelSearchForm({
   onSearch,
   suggestions: _suggestions = [],
@@ -86,6 +110,27 @@ export function HotelSearchForm({
   showRecommendations = true,
 }: HotelSearchFormProps) {
   const [isPending, startTransition] = useTransition();
+  const [optimisticSearching, setOptimisticSearching] = useOptimistic(
+    false,
+    (_state, isSearching: boolean) => isSearching
+  );
+
+  const form = useSearchForm(
+    HotelSearchFormSchema,
+    {
+      adults: 2,
+      amenities: [],
+      checkIn: "",
+      checkOut: "",
+      children: 0,
+      location: "",
+      priceRange: { max: 1000, min: 0 },
+      rating: 0,
+      rooms: 1,
+    },
+    {}
+  );
+
   const locationId = useId();
   const checkInId = useId();
   const checkOutId = useId();
@@ -93,88 +138,61 @@ export function HotelSearchForm({
   const adultsId = useId();
   const childrenId = useId();
 
-  // Form state with React 19 patterns
-  const [searchParams, setSearchParams] = useState<ModernHotelSearchParams>({
-    adults: 2,
-    amenities: [],
-    checkIn: "",
-    checkOut: "",
-    children: 0,
-    location: "",
-    priceRange: { max: 1000, min: 0 },
-    rating: 0,
-    rooms: 1,
-  });
+  const calculateNights = () => {
+    const checkIn = form.getValues("checkIn");
+    const checkOut = form.getValues("checkOut");
+    if (!checkIn || !checkOut) return 0;
+    const checkInDate = new Date(checkIn);
+    const checkOutDate = new Date(checkOut);
+    const diffTime = checkOutDate.getTime() - checkInDate.getTime();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
 
-  // Error state for user-facing error messages
-  const [searchError, setSearchError] = useState<string | null>(null);
-
-  // Optimistic search state
-  const [optimisticSearching, setOptimisticSearching] = useOptimistic(
-    false,
-    (_state, isSearching: boolean) => isSearching
+  const handleSearch = form.handleSubmit((data) =>
+    startTransition(async () => {
+      await withClientTelemetrySpan(
+        "search.hotel.form.submit",
+        { searchType: "hotel" },
+        async () => {
+          setOptimisticSearching(true);
+          try {
+            await onSearch({
+              adults: data.adults,
+              amenities: data.amenities,
+              checkIn: data.checkIn,
+              checkOut: data.checkOut,
+              children: data.children,
+              location: data.location,
+              priceRange: data.priceRange,
+              rating: data.rating,
+              rooms: data.rooms,
+            });
+          } catch (error) {
+            recordClientErrorOnActiveSpan(
+              error instanceof Error ? error : new Error(String(error)),
+              { action: "handleSearch", context: "HotelSearchForm" }
+            );
+          } finally {
+            setOptimisticSearching(false);
+          }
+        }
+      );
+    })
   );
 
-  // Mock data for demo - would come from backend
-  const trendingDestinations = [
-    { deals: 234, name: "Paris", type: "city" as const },
-    { deals: 156, name: "Tokyo", type: "city" as const },
-    { deals: 298, name: "New York", type: "city" as const },
-    { deals: 187, name: "London", type: "city" as const },
-  ];
-
-  const allInclusiveDeals = {
-    avgSavings: "$127/night",
-    description: "All-Inclusive Era trending",
-    savings: "35%",
-  };
-
-  const handleInputChange = <K extends keyof ModernHotelSearchParams>(
-    field: K,
-    value: ModernHotelSearchParams[K]
-  ) => {
-    setSearchParams((prev) => ({ ...prev, [field]: value }));
-  };
+  const nights = calculateNights();
+  const values = form.watch();
 
   const handleAmenityToggle = (amenityId: string) => {
-    setSearchParams((prev) => ({
-      ...prev,
-      amenities: prev.amenities.includes(amenityId)
-        ? prev.amenities.filter((id) => id !== amenityId)
-        : [...prev.amenities, amenityId],
-    }));
+    const current = form.getValues("amenities");
+    const next = current.includes(amenityId)
+      ? current.filter((id) => id !== amenityId)
+      : [...current, amenityId];
+    form.setValue("amenities", next, { shouldDirty: true, shouldValidate: true });
   };
 
   const handleQuickLocation = (location: string) => {
-    setSearchParams((prev) => ({ ...prev, location }));
-  };
-
-  const handleSearch = () => {
-    startTransition(async () => {
-      setOptimisticSearching(true);
-      setSearchError(null); // Clear previous errors
-      try {
-        await onSearch(searchParams);
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : "Failed to search hotels";
-        setSearchError(errorMessage);
-        recordClientErrorOnActiveSpan(
-          error instanceof Error ? error : new Error(String(error)),
-          { action: "handleSearch", context: "HotelSearchForm" }
-        );
-      } finally {
-        setOptimisticSearching(false);
-      }
-    });
-  };
-
-  const calculateNights = () => {
-    if (!searchParams.checkIn || !searchParams.checkOut) return 0;
-    const checkIn = new Date(searchParams.checkIn);
-    const checkOut = new Date(searchParams.checkOut);
-    const diffTime = checkOut.getTime() - checkIn.getTime();
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    form.setValue("location", location, { shouldDirty: true, shouldValidate: true });
   };
 
   return (
@@ -200,7 +218,7 @@ export function HotelSearchForm({
                 className="bg-orange-50 text-orange-700 border-orange-200"
               >
                 <TrendingUpIcon className="h-3 w-3 mr-1" />
-                {allInclusiveDeals.description}
+                All-Inclusive Era trending
               </Badge>
             </div>
           )}
@@ -218,8 +236,7 @@ export function HotelSearchForm({
             <Input
               id={locationId}
               placeholder="City, hotel name, or landmark"
-              value={searchParams.location}
-              onChange={(e) => handleInputChange("location", e.target.value)}
+              {...form.register("location")}
               className="pl-10"
             />
           </div>
@@ -236,8 +253,7 @@ export function HotelSearchForm({
               <Input
                 id={checkInId}
                 type="date"
-                value={searchParams.checkIn}
-                onChange={(e) => handleInputChange("checkIn", e.target.value)}
+                {...form.register("checkIn")}
                 className="pl-10"
               />
             </div>
@@ -252,20 +268,19 @@ export function HotelSearchForm({
               <Input
                 id={checkOutId}
                 type="date"
-                value={searchParams.checkOut}
-                onChange={(e) => handleInputChange("checkOut", e.target.value)}
+                {...form.register("checkOut")}
                 className="pl-10"
               />
             </div>
           </div>
 
-          {calculateNights() > 0 && (
+          {nights > 0 && (
             <div className="space-y-2">
               <Label className="text-sm font-medium">Duration</Label>
               <div className="flex items-center h-10 px-3 border rounded-md bg-muted">
                 <BedIcon className="h-4 w-4 mr-2 text-muted-foreground" />
                 <span className="text-sm font-medium">
-                  {calculateNights()} {calculateNights() === 1 ? "night" : "nights"}
+                  {nights} {nights === 1 ? "night" : "nights"}
                 </span>
               </div>
             </div>
@@ -279,9 +294,12 @@ export function HotelSearchForm({
               Rooms
             </Label>
             <Select
-              value={searchParams.rooms.toString()}
+              value={values.rooms.toString()}
               onValueChange={(value) =>
-                handleInputChange("rooms", Number.parseInt(value, 10))
+                form.setValue("rooms", Number.parseInt(value, 10), {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                })
               }
             >
               <SelectTrigger>
@@ -304,9 +322,12 @@ export function HotelSearchForm({
             <div className="relative">
               <UsersIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Select
-                value={searchParams.adults.toString()}
+                value={values.adults.toString()}
                 onValueChange={(value) =>
-                  handleInputChange("adults", Number.parseInt(value, 10))
+                  form.setValue("adults", Number.parseInt(value, 10), {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  })
                 }
               >
                 <SelectTrigger className="pl-10">
@@ -328,9 +349,12 @@ export function HotelSearchForm({
               Children
             </Label>
             <Select
-              value={searchParams.children.toString()}
+              value={values.children.toString()}
               onValueChange={(value) =>
-                handleInputChange("children", Number.parseInt(value, 10))
+                form.setValue("children", Number.parseInt(value, 10), {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                })
               }
             >
               <SelectTrigger>
@@ -356,9 +380,14 @@ export function HotelSearchForm({
             {[0, 1, 2, 3, 4, 5].map((rating) => (
               <Button
                 key={rating}
-                variant={searchParams.rating === rating ? "default" : "outline"}
+                variant={values.rating === rating ? "default" : "outline"}
                 size="sm"
-                onClick={() => handleInputChange("rating", rating)}
+                onClick={() =>
+                  form.setValue("rating", rating, {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  })
+                }
                 className="flex items-center gap-1"
               >
                 {rating === 0 ? (
@@ -369,7 +398,7 @@ export function HotelSearchForm({
                     <StarIcon
                       className={cn(
                         "h-3 w-3",
-                        searchParams.rating >= rating && "fill-current"
+                        values.rating >= rating && "fill-current"
                       )}
                     />
                   </>
@@ -385,7 +414,7 @@ export function HotelSearchForm({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {Amenities.map((amenity) => {
               const Icon = amenity.icon;
-              const isSelected = searchParams.amenities.includes(amenity.id);
+              const isSelected = values.amenities.includes(amenity.id);
               return (
                 <Button
                   key={amenity.id}
@@ -410,7 +439,12 @@ export function HotelSearchForm({
               <span className="text-sm font-medium">Trending destinations</span>
             </div>
             <div className="flex flex-wrap gap-2">
-              {trendingDestinations.map((dest) => (
+              {[
+                { deals: 234, name: "Paris", type: "city" as const },
+                { deals: 156, name: "Tokyo", type: "city" as const },
+                { deals: 298, name: "New York", type: "city" as const },
+                { deals: 187, name: "London", type: "city" as const },
+              ].map((dest) => (
                 <Button
                   key={dest.name}
                   variant="outline"
@@ -436,50 +470,23 @@ export function HotelSearchForm({
                   <SparklesIcon className="h-5 w-5 text-orange-600" />
                   <h3 className="font-semibold text-sm">All-Inclusive Hotels</h3>
                   <Badge variant="secondary" className="bg-orange-100 text-orange-700">
-                    Save {allInclusiveDeals.savings}
+                    Save 35%
                   </Badge>
                 </div>
-                <span className="text-xs text-muted-foreground">
-                  avg {allInclusiveDeals.avgSavings}
-                </span>
+                <span className="text-xs text-muted-foreground">avg $127/night</span>
               </div>
               <p className="text-sm text-muted-foreground">
-                {allInclusiveDeals.description} - Everything included: meals, drinks,
-                activities, and more!
+                Everything included: meals, drinks, activities, and more.
               </p>
             </div>
           </>
-        )}
-
-        {/* Error Message */}
-        {searchError && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
-            <div className="text-red-600 text-sm flex-1">
-              <strong>Search failed:</strong> {searchError}
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSearchError(null)}
-              className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
-              aria-label="Dismiss error"
-            >
-              ×
-            </Button>
-          </div>
         )}
 
         {/* Search Button */}
         <div className="flex gap-3 pt-2">
           <Button
             onClick={handleSearch}
-            disabled={
-              isPending ||
-              optimisticSearching ||
-              !searchParams.location ||
-              !searchParams.checkIn ||
-              !searchParams.checkOut
-            }
+            disabled={isPending || optimisticSearching || !form.formState.isValid}
             className="flex-1 bg-green-600 hover:bg-green-700 text-white"
             size="lg"
           >

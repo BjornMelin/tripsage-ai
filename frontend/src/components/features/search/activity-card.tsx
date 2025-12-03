@@ -5,11 +5,13 @@
 "use client";
 
 import type { Activity } from "@schemas/search";
-import { ClockIcon, MapPinIcon, StarIcon } from "lucide-react";
+import { ClockIcon, MapPinIcon } from "lucide-react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { RatingStars } from "./cards/rating-stars";
+import { formatCurrency, formatDurationHours } from "./common/format";
 
 interface ActivityCardProps {
   activity: Activity;
@@ -25,48 +27,6 @@ export function ActivityCard({
   onCompare,
   sourceLabel,
 }: ActivityCardProps) {
-  const formatDuration = (hours: number) => {
-    if (hours < 1) {
-      return `${Math.round(hours * 60)} mins`;
-    }
-    if (hours === 1) {
-      return "1 hour";
-    }
-    if (hours < 24) {
-      return `${hours} hours`;
-    }
-    const days = Math.floor(hours / 24);
-    const remainingHours = hours % 24;
-    if (remainingHours === 0) {
-      return `${days} ${days === 1 ? "day" : "days"}`;
-    }
-    return `${days}d ${remainingHours}h`;
-  };
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-US", {
-      currency: "USD",
-      maximumFractionDigits: 0,
-      minimumFractionDigits: 0,
-      style: "currency",
-    }).format(price);
-  };
-
-  const renderStars = (rating: number) => {
-    const stars = [];
-    for (let i = 0; i < 5; i++) {
-      stars.push(
-        <StarIcon
-          key={`star-${i}`}
-          className={`h-4 w-4 ${
-            i < Math.floor(rating) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
-          }`}
-        />
-      );
-    }
-    return stars;
-  };
-
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
       <div className="relative">
@@ -98,7 +58,7 @@ export function ActivityCard({
         </div>
         <div className="absolute top-2 right-2">
           <Badge variant="outline" className="bg-white/90">
-            {formatPrice(activity.price)}
+            {formatCurrency(activity.price)}
           </Badge>
         </div>
       </div>
@@ -108,7 +68,7 @@ export function ActivityCard({
           <h3 className="font-semibold text-lg line-clamp-1">{activity.name}</h3>
 
           <div className="flex items-center gap-1">
-            {renderStars(activity.rating)}
+            <RatingStars value={activity.rating} />
             <span className="text-sm text-muted-foreground ml-1">
               ({activity.rating})
             </span>
@@ -117,7 +77,7 @@ export function ActivityCard({
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-1">
               <ClockIcon className="h-4 w-4" />
-              <span>{formatDuration(activity.duration)}</span>
+              <span>{formatDurationHours(activity.duration)}</span>
             </div>
             <div className="flex items-center gap-1">
               <MapPinIcon className="h-4 w-4" />
@@ -131,7 +91,7 @@ export function ActivityCard({
 
           <div className="pt-2">
             <div className="text-lg font-semibold text-primary">
-              {formatPrice(activity.price)}
+              {formatCurrency(activity.price)}
               <span className="text-sm font-normal text-muted-foreground">
                 {" "}
                 per person

@@ -4,11 +4,9 @@
 
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
 import type { DestinationSearchParams } from "@schemas/search";
 import { ClockIcon, MapPinIcon, StarIcon, TrendingUpIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,10 +30,11 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { useMemoryContext } from "@/hooks/use-memory";
-import { initTelemetry } from "@/lib/telemetry/client";
+import { initTelemetry, withClientTelemetrySpan } from "@/lib/telemetry/client";
+import { useSearchForm } from "./common/use-search-form";
 
 /** Zod schema for destination search form values. */
-const DestinationSearchFormSchema = z.object({
+const DestinationSearchFormSchema = z.strictObject({
   language: z.string().optional(),
   limit: z
     .number()
@@ -150,16 +149,16 @@ export function DestinationSearchForm({
   const { toast } = useToast();
   const CacheTtlMs = 2 * 60_000;
 
-  const form = useForm<DestinationSearchFormValues>({
-    defaultValues: {
+  const form = useSearchForm(
+    DestinationSearchFormSchema,
+    {
       limit: 10,
       query: "",
       types: ["locality", "country"],
       ...initialValues,
     },
-    mode: "onChange",
-    resolver: zodResolver(DestinationSearchFormSchema),
-  });
+    {}
+  );
 
   useEffect(() => {
     initTelemetry();
@@ -339,11 +338,16 @@ export function DestinationSearchForm({
   };
 
   /** Submits the search values to the parent callback. */
-  const handleSubmit = (data: DestinationSearchFormValues) => {
-    if (onSearch) {
-      onSearch(mapDestinationValuesToParams(data));
-    }
-  };
+  const handleSubmit = (data: DestinationSearchFormValues) =>
+    withClientTelemetrySpan(
+      "search.destination.form.submit",
+      { searchType: "destination" },
+      async () => {
+        if (onSearch) {
+          await onSearch(mapDestinationValuesToParams(data));
+        }
+      }
+    );
 
   return (
     <Card>

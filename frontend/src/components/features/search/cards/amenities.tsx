@@ -11,9 +11,10 @@ import {
   WavesIcon,
   WifiIcon,
 } from "lucide-react";
+import type React from "react";
 
 /** Map of amenity IDs to their corresponding icon components. */
-const amenityIconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+const AmenityIconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   breakfast: CoffeeIcon,
   gym: DumbbellIcon,
   parking: CarIcon,
@@ -37,13 +38,13 @@ const amenityIconMap: Record<string, React.ComponentType<{ className?: string }>
  *   return <BedIcon className="h-4 w-4" />;
  * }
  */
-export function getAmenityIcon(
+export function GetAmenityIcon(
   id: string
 ): React.ComponentType<{ className?: string }> | undefined {
-  if (process.env.NODE_ENV === "development" && !amenityIconMap[id]) {
+  if (process.env.NODE_ENV === "development" && !AmenityIconMap[id]) {
     console.warn(
-      `Unknown amenity ID: "${id}". Supported IDs are: ${Object.keys(amenityIconMap).join(", ")}`
+      `Unknown amenity ID: "${id}". Supported IDs are: ${Object.keys(AmenityIconMap).join(", ")}`
     );
   }
-  return amenityIconMap[id];
+  return AmenityIconMap[id];
 }

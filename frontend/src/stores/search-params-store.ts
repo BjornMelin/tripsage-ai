@@ -18,12 +18,11 @@ import {
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 import { createStoreLogger } from "@/lib/telemetry/store-logger";
+import { registerAllHandlers } from "./search-params/handlers";
 import { getHandler } from "./search-params/registry";
-// Import handlers to trigger registration (must be after registry import)
-import "./search-params/handlers/accommodation-handler";
-import "./search-params/handlers/activity-handler";
-import "./search-params/handlers/destination-handler";
-import "./search-params/handlers/flight-handler";
+
+// Ensure handlers are registered deterministically at startup
+registerAllHandlers();
 
 const logger = createStoreLogger({ storeName: "search-params" });
 
@@ -120,10 +119,10 @@ const getParamsForType = (
   type: SearchType
 ): Partial<SearchParams> => {
   const paramsMap: Record<SearchType, Partial<SearchParams>> = {
-    accommodation: state.accommodationParams,
-    activity: state.activityParams,
+    accommodation: state.accommodationParams as Partial<SearchParams>,
+    activity: state.activityParams as Partial<SearchParams>,
     destination: state.destinationParams as Partial<SearchParams>,
-    flight: state.flightParams,
+    flight: state.flightParams as Partial<SearchParams>,
   };
   return paramsMap[type];
 };
@@ -271,7 +270,6 @@ export const useSearchParamsStore = create<SearchParamsState>()(
           }
 
           const defaults = getHandler(type).getDefaults();
-          const stateUpdate: Partial<SearchParamsState> = {};
           const keyMap: Record<
             SearchType,
             keyof Pick<
@@ -288,8 +286,7 @@ export const useSearchParamsStore = create<SearchParamsState>()(
             flight: "flightParams",
           };
           const key = keyMap[type];
-          // biome-ignore lint/suspicious/noExplicitAny: Dynamic key assignment requires any
-          (stateUpdate as any)[key] = defaults;
+          const stateUpdate = { [key]: defaults } satisfies Partial<SearchParamsState>;
           set(stateUpdate);
         },
 
@@ -367,8 +364,10 @@ export const useSearchParamsStore = create<SearchParamsState>()(
               const currentParams = state[key] as Record<string, unknown>;
               if (Object.keys(currentParams).length === 0) {
                 const defaults = getHandler(result.data).getDefaults();
-                // biome-ignore lint/suspicious/noExplicitAny: Dynamic key assignment requires any
-                (updatedState as any)[key] = defaults;
+                const defaultsUpdate = {
+                  [key]: defaults,
+                } satisfies Partial<SearchParamsState>;
+                Object.assign(updatedState, defaultsUpdate);
               }
 
               return updatedState;

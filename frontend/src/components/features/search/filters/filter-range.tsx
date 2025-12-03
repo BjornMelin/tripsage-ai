@@ -22,7 +22,7 @@ export interface FilterRangeProps {
   /** Step increment */
   step?: number;
   /** Current value as [min, max] tuple */
-  value?: [number, number];
+  value?: [number, number] | { min: number; max: number };
   /** Callback when value changes */
   onChange: (filterId: string, value: { min: number; max: number }) => void;
   /** Format function for displaying values */
@@ -64,18 +64,30 @@ export function FilterRange({
   description,
   disabled = false,
 }: FilterRangeProps) {
-  // Validate range parameters
   if (min >= max || step <= 0) {
-    console.error(
+    throw new Error(
       `Invalid FilterRange props for "${filterId}": min (${min}) must be < max (${max}), and step (${step}) must be > 0`
     );
-    return null;
   }
 
-  // Clamp initial value to valid range
-  const clampedValue: [number, number] = value
-    ? [Math.max(min, Math.min(max, value[0])), Math.max(min, Math.min(max, value[1]))]
-    : [min, max];
+  const normalizeValue = useCallback(
+    (input?: [number, number] | { min: number; max: number }): [number, number] => {
+      if (!input) return [min, max];
+      if (Array.isArray(input)) {
+        return [
+          Math.max(min, Math.min(max, input[0])),
+          Math.max(min, Math.min(max, input[1])),
+        ];
+      }
+      return [
+        Math.max(min, Math.min(max, input.min)),
+        Math.max(min, Math.min(max, input.max)),
+      ];
+    },
+    [min, max]
+  );
+
+  const clampedValue = normalizeValue(value);
 
   // Internal state for smooth slider interaction
   const [internalValue, setInternalValue] = useState<[number, number]>(clampedValue);
@@ -83,9 +95,9 @@ export function FilterRange({
   // Sync with external value
   useEffect(() => {
     if (value) {
-      setInternalValue(value);
+      setInternalValue(normalizeValue(value));
     }
-  }, [value]);
+  }, [value, normalizeValue]);
 
   const handleValueChange = useCallback((newValue: number[]) => {
     const rangeValue: [number, number] = [newValue[0], newValue[1]];
