@@ -21,7 +21,7 @@ import {
   WifiIcon,
   ZapIcon,
 } from "lucide-react";
-import { useOptimistic, useState, useTransition } from "react";
+import { useMemo, useOptimistic, useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,6 +29,8 @@ import { Separator } from "@/components/ui/separator";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { cn } from "@/lib/utils";
 import { formatCurrency, formatDurationMinutes } from "./common/format";
+
+type SortField = "price" | "duration" | "departure" | "emissions";
 
 /** Flight results component props */
 interface FlightResultsProps {
@@ -51,10 +53,8 @@ export function FlightResults({
   const [selectedForComparison, setSelectedForComparison] = useState<Set<string>>(
     new Set()
   );
-  const [sortBy, _setSortBy] = useState<
-    "price" | "duration" | "departure" | "emissions"
-  >("price");
-  const [_sortDirection, _setSortDirection] = useState<"asc" | "desc">("asc");
+  const [sortBy, _setSortBy] = useState<SortField>("price");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
 
   // Optimistic selection state
@@ -62,6 +62,30 @@ export function FlightResults({
     "",
     (_state, flightId: string) => flightId
   );
+
+  const sortedResults = useMemo(() => {
+    const cloned = [...results];
+    const compare = (first: FlightResult, second: FlightResult) => {
+      const direction = sortDirection === "asc" ? 1 : -1;
+      switch (sortBy) {
+        case "price":
+          return direction * (first.price.total - second.price.total);
+        case "duration":
+          return direction * (first.duration - second.duration);
+        case "departure":
+          return (
+            direction *
+            (new Date(`${first.departure.date}T${first.departure.time}`).getTime() -
+              new Date(`${second.departure.date}T${second.departure.time}`).getTime())
+          );
+        case "emissions":
+          return direction * (first.emissions.kg - second.emissions.kg);
+        default:
+          return 0;
+      }
+    };
+    return cloned.sort(compare);
+  }, [results, sortBy, sortDirection]);
 
   /** Handle flight selection */
   const handleFlightSelect = (flight: FlightResult) => {
@@ -96,6 +120,10 @@ export function FlightResults({
       }
       return newSet;
     });
+  };
+
+  const toggleSort = () => {
+    setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
   };
 
   /** Get price change icon */
@@ -176,9 +204,9 @@ export function FlightResults({
                 <FilterIcon className="h-4 w-4 mr-2" />
                 Filters
               </Button>
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" onClick={toggleSort}>
                 <ArrowUpDownIcon className="h-4 w-4 mr-2" />
-                Sort: {sortBy}
+                Sort: {sortBy} ({sortDirection})
               </Button>
             </div>
           </div>
@@ -219,7 +247,9 @@ export function FlightResults({
                 <Button
                   size="sm"
                   onClick={() =>
-                    onCompare(results.filter((f) => selectedForComparison.has(f.id)))
+                    onCompare(
+                      sortedResults.filter((f) => selectedForComparison.has(f.id))
+                    )
                   }
                   disabled={selectedForComparison.size < 2}
                 >
@@ -233,7 +263,7 @@ export function FlightResults({
 
       {/* Flight Results */}
       <div className="space-y-3">
-        {results.map((flight) => (
+        {sortedResults.map((flight) => (
           <Card
             key={flight.id}
             className={cn(
@@ -461,7 +491,7 @@ export function FlightResults({
       </div>
 
       {/* Load More */}
-      {results.length > 0 && (
+      {sortedResults.length > 0 && (
         <Card className="p-4 text-center">
           <Button variant="outline">Load More Flights</Button>
         </Card>

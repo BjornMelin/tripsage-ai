@@ -24,7 +24,7 @@ import {
   WifiIcon,
   WindIcon,
 } from "lucide-react";
-import { useId, useOptimistic, useTransition } from "react";
+import { useId, useOptimistic, useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -88,6 +88,7 @@ export function HotelSearchForm({
     false,
     (_state, isSearching: boolean) => isSearching
   );
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const form = useSearchForm(
     hotelSearchFormSchema,
@@ -119,7 +120,11 @@ export function HotelSearchForm({
     const checkInDate = new Date(checkIn);
     const checkOutDate = new Date(checkOut);
     const diffTime = checkOutDate.getTime() - checkInDate.getTime();
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (!Number.isFinite(nights) || nights <= 0) {
+      return 0;
+    }
+    return nights;
   };
 
   const handleSearch = form.handleSubmit((data) =>
@@ -130,6 +135,7 @@ export function HotelSearchForm({
         async () => {
           setOptimisticSearching(true);
           try {
+            setSubmitError(null);
             await onSearch({
               adults: data.adults,
               amenities: data.amenities,
@@ -145,6 +151,9 @@ export function HotelSearchForm({
             recordClientErrorOnActiveSpan(
               error instanceof Error ? error : new Error(String(error)),
               { action: "handleSearch", context: "HotelSearchForm" }
+            );
+            setSubmitError(
+              error instanceof Error ? error.message : "Failed to search hotels"
             );
           } finally {
             setOptimisticSearching(false);
@@ -175,7 +184,7 @@ export function HotelSearchForm({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-              <Building2Icon className="h-5 w-5 text-green-600" />
+              <Building2Icon aria-hidden className="h-5 w-5 text-green-600" />
             </div>
             <div>
               <CardTitle className="text-xl">Find Hotels</CardTitle>
@@ -191,7 +200,7 @@ export function HotelSearchForm({
                 variant="secondary"
                 className="bg-orange-50 text-orange-700 border-orange-200"
               >
-                <TrendingUpIcon className="h-3 w-3 mr-1" />
+                <TrendingUpIcon aria-hidden className="h-3 w-3 mr-1" />
                 All-Inclusive Era trending
               </Badge>
             </div>
@@ -200,13 +209,22 @@ export function HotelSearchForm({
       </CardHeader>
 
       <CardContent className="space-y-6">
+        {submitError && (
+          <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {submitError}
+          </div>
+        )}
+
         {/* Location Search */}
         <div className="space-y-2">
           <Label htmlFor={locationId} className="text-sm font-medium">
             Destination
           </Label>
           <div className="relative">
-            <MapPinIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <MapPinIcon
+              aria-hidden
+              className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
+            />
             <Input
               id={locationId}
               placeholder="City, hotel name, or landmark"
@@ -223,7 +241,10 @@ export function HotelSearchForm({
               Check-in
             </Label>
             <div className="relative">
-              <CalendarIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <CalendarIcon
+                aria-hidden
+                className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
+              />
               <Input
                 id={checkInId}
                 type="date"
@@ -238,7 +259,10 @@ export function HotelSearchForm({
               Check-out
             </Label>
             <div className="relative">
-              <CalendarIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <CalendarIcon
+                aria-hidden
+                className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
+              />
               <Input
                 id={checkOutId}
                 type="date"
@@ -252,7 +276,7 @@ export function HotelSearchForm({
             <div className="space-y-2">
               <Label className="text-sm font-medium">Duration</Label>
               <div className="flex items-center h-10 px-3 border rounded-md bg-muted">
-                <BedIcon className="h-4 w-4 mr-2 text-muted-foreground" />
+                <BedIcon aria-hidden className="h-4 w-4 mr-2 text-muted-foreground" />
                 <span className="text-sm font-medium">
                   {nights} {nights === 1 ? "night" : "nights"}
                 </span>
@@ -294,7 +318,10 @@ export function HotelSearchForm({
               Adults
             </Label>
             <div className="relative">
-              <UsersIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <UsersIcon
+                aria-hidden
+                className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
+              />
               <Select
                 value={values.adults.toString()}
                 onValueChange={(value) =>
@@ -370,6 +397,7 @@ export function HotelSearchForm({
                   <>
                     {rating}{" "}
                     <StarIcon
+                      aria-hidden
                       className={cn(
                         "h-3 w-3",
                         values.rating >= rating && "fill-current"
@@ -397,7 +425,7 @@ export function HotelSearchForm({
                   onClick={() => handleAmenityToggle(amenity.id)}
                   className="h-auto py-3 px-3 flex flex-col items-center gap-1"
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon aria-hidden className="h-4 w-4" />
                   <span className="text-xs text-center">{amenity.label}</span>
                 </Button>
               );
@@ -409,7 +437,7 @@ export function HotelSearchForm({
         {showRecommendations && (
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <TrendingUpIcon className="h-4 w-4 text-muted-foreground" />
+              <TrendingUpIcon aria-hidden className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm font-medium">Trending destinations</span>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -441,7 +469,7 @@ export function HotelSearchForm({
             <div className="bg-linear-to-r from-orange-50 to-red-50 p-4 rounded-lg border">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <SparklesIcon className="h-5 w-5 text-orange-600" />
+                  <SparklesIcon aria-hidden className="h-5 w-5 text-orange-600" />
                   <h3 className="font-semibold text-sm">All-Inclusive Hotels</h3>
                   <Badge variant="secondary" className="bg-orange-100 text-orange-700">
                     Save 35%

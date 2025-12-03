@@ -111,7 +111,13 @@ export async function searchHotelsAction(
           gallery: [],
           main: "https://images.unsplash.com/photo-1501117716987-c8e1ecb210af?auto=format&fit=crop&w=800&q=80",
         },
-        location: { address: "", city: "", district: "", landmarks: [] },
+        location: {
+          address: "",
+          city: "",
+          coordinates: undefined,
+          district: "",
+          landmarks: [],
+        },
         name: "Hotel",
         pricing: {
           basePrice: 0,
@@ -179,6 +185,9 @@ export async function searchHotelsAction(
       location: {
         address: addressLines.join(", "),
         city: hotel.address?.cityName ?? hotel.searchMeta?.location ?? "",
+        coordinates: hotel.geoCode
+          ? { lat: hotel.geoCode.latitude, lng: hotel.geoCode.longitude }
+          : undefined,
         district: "",
         landmarks: [],
         walkScore: undefined,

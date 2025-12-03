@@ -8,9 +8,13 @@
  * @param value - The number to format.
  * @returns The formatted currency string.
  */
-export function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-US", {
-    currency: "USD",
+export function formatCurrency(
+  value: number,
+  currency = "USD",
+  locale = "en-US"
+): string {
+  return new Intl.NumberFormat(locale, {
+    currency,
     maximumFractionDigits: 0,
     minimumFractionDigits: 0,
     style: "currency",
@@ -63,6 +67,11 @@ export function formatDurationHours(hours: number): string {
  * @returns The formatted duration string.
  */
 export function formatDurationMinutes(minutes: number): string {
+  if (!Number.isFinite(minutes) || minutes < 0) {
+    throw new Error(
+      `Invalid duration minutes: ${minutes}. Must be non-negative finite.`
+    );
+  }
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
   return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;

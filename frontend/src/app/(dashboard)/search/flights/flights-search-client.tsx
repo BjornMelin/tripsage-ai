@@ -12,6 +12,7 @@ import {
   PlaneIcon,
   TrendingUpIcon,
 } from "lucide-react";
+
 import { useRouter, useSearchParams } from "next/navigation";
 import React from "react";
 import { FilterPanel } from "@/components/features/search/filter-panel";
@@ -50,6 +51,49 @@ export default function FlightsSearchClient({
   const router = useRouter();
   const { toast } = useToast();
   const searchParams = useSearchParams();
+  const nextYear = React.useMemo(() => new Date().getUTCFullYear() + 1, []);
+  // TODO(SPEC-0034): replace placeholders with API-provided popular routes.
+  const popularRoutes = React.useMemo(
+    () => [
+      {
+        date: `May 28, ${nextYear}`,
+        destination: "London",
+        origin: "New York",
+        price: 456,
+      },
+      {
+        date: `Jun 15, ${nextYear}`,
+        destination: "Tokyo",
+        origin: "Los Angeles",
+        price: 789,
+      },
+      {
+        date: `Jun 8, ${nextYear}`,
+        destination: "Paris",
+        origin: "Chicago",
+        price: 567,
+      },
+      {
+        date: `Jun 22, ${nextYear}`,
+        destination: "Barcelona",
+        origin: "Miami",
+        price: 623,
+      },
+      {
+        date: `Jul 10, ${nextYear}`,
+        destination: "Amsterdam",
+        origin: "Seattle",
+        price: 749,
+      },
+      {
+        date: `Jul 18, ${nextYear}`,
+        destination: "Sydney",
+        origin: "Dallas",
+        price: 999,
+      },
+    ],
+    [nextYear]
+  );
 
   // Initialize flight search type on mount
   React.useEffect(() => {
@@ -134,42 +178,12 @@ export default function FlightsSearchClient({
               </CardHeader>
               <CardContent>
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <PopularRouteCard
-                    origin="New York"
-                    destination="London"
-                    price={456}
-                    date="May 28, 2025"
-                  />
-                  <PopularRouteCard
-                    origin="Los Angeles"
-                    destination="Tokyo"
-                    price={789}
-                    date="Jun 15, 2025"
-                  />
-                  <PopularRouteCard
-                    origin="Chicago"
-                    destination="Paris"
-                    price={567}
-                    date="Jun 8, 2025"
-                  />
-                  <PopularRouteCard
-                    origin="Miami"
-                    destination="Barcelona"
-                    price={623}
-                    date="Jun 22, 2025"
-                  />
-                  <PopularRouteCard
-                    origin="Seattle"
-                    destination="Amsterdam"
-                    price={749}
-                    date="Jul 10, 2025"
-                  />
-                  <PopularRouteCard
-                    origin="Dallas"
-                    destination="Sydney"
-                    price={999}
-                    date="Jul 18, 2025"
-                  />
+                  {popularRoutes.map((route) => (
+                    <PopularRouteCard
+                      key={`${route.origin}-${route.destination}-${route.date}`}
+                      {...route}
+                    />
+                  ))}
                 </div>
               </CardContent>
             </Card>
@@ -235,42 +249,40 @@ function PopularRouteCard({
   date: string;
 }) {
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Card className="h-full hover:bg-accent/50 transition-colors cursor-pointer group">
-            <CardContent className="p-4">
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <h3 className="font-medium flex items-center gap-2">
-                    {origin}
-                    <ArrowRightIcon className="h-4 w-4 text-muted-foreground" />
-                    {destination}
-                  </h3>
-                  <p className="text-xs text-muted-foreground mt-1">{date}</p>
-                </div>
-                <div className="text-right">
-                  <span className="font-semibold text-lg">${price}</span>
-                  <p className="text-xs text-muted-foreground">roundtrip</p>
-                </div>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Card className="h-full hover:bg-accent/50 transition-colors cursor-pointer group">
+          <CardContent className="p-4">
+            <div className="flex justify-between items-start mb-3">
+              <div>
+                <h3 className="font-medium flex items-center gap-2">
+                  {origin}
+                  <ArrowRightIcon className="h-4 w-4 text-muted-foreground" />
+                  {destination}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">{date}</p>
               </div>
-              <div className="flex items-center justify-between">
-                <Badge variant="secondary" className="text-xs">
-                  <PlaneIcon className="h-3 w-3 mr-1" />
-                  Deal
-                </Badge>
-                <span className="text-xs text-primary font-medium group-hover:underline">
-                  View Deal →
-                </span>
+              <div className="text-right">
+                <span className="font-semibold text-lg">${price}</span>
+                <p className="text-xs text-muted-foreground">roundtrip</p>
               </div>
-            </CardContent>
-          </Card>
-        </TooltipTrigger>
-        <TooltipContent>
-          Click to search {origin} to {destination}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+            </div>
+            <div className="flex items-center justify-between">
+              <Badge variant="secondary" className="text-xs">
+                <PlaneIcon className="h-3 w-3 mr-1" />
+                Deal
+              </Badge>
+              <span className="text-xs text-primary font-medium group-hover:underline">
+                View Deal →
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      </TooltipTrigger>
+      <TooltipContent>
+        Click to search {origin} to {destination}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 

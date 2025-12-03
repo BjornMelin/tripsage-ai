@@ -38,9 +38,13 @@ describe("submitFlightSearch server action", () => {
 
     const result = await submitFlightSearch(params);
 
+    // Action validates and returns - doesn't add defaults for optional fields
     expect(result.origin).toBe("NYC");
     expect(result.destination).toBe("LAX");
     expect(result.adults).toBe(1);
+    // Optional fields remain undefined when not provided
+    expect(result.cabinClass).toBeUndefined();
+    expect(result.passengers).toBeUndefined();
   });
 
   it("throws error for invalid cabin class", async () => {

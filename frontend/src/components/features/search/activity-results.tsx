@@ -27,14 +27,19 @@ interface ActivityResultsProps {
   loading?: boolean;
   onSelect: (activity: Activity) => Promise<void>;
   onCompare?: (activities: Activity[]) => void;
+  onLoadMore?: () => Promise<void>;
+  hasMore?: boolean;
   className?: string;
 }
 
+/** Activity results component */
 export function ActivityResults({
   results,
   loading = false,
   onSelect,
   onCompare,
+  onLoadMore,
+  hasMore = false,
   className,
 }: ActivityResultsProps) {
   const [isPending, startTransition] = useTransition();
@@ -44,6 +49,7 @@ export function ActivityResults({
   const [selectedForComparison, setSelectedForComparison] = useState<Set<string>>(
     new Set()
   );
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   // Optimistic selection state
   const [optimisticSelecting, setOptimisticSelecting] = useOptimistic(
@@ -51,6 +57,7 @@ export function ActivityResults({
     (_state, activityId: string) => activityId
   );
 
+  /** Handle activity selection */
   const handleActivitySelect = (activity: Activity) => {
     startTransition(async () => {
       setOptimisticSelecting(activity.id);
@@ -65,12 +72,11 @@ export function ActivityResults({
             context: "ActivityResults",
           }
         );
-      } finally {
-        setOptimisticSelecting("");
       }
     });
   };
 
+  /** Handle activity comparison */
   const handleCompare = (activity: Activity) => {
     setSelectedForComparison((prev) => {
       const newSet = new Set(prev);
@@ -83,6 +89,7 @@ export function ActivityResults({
     });
   };
 
+  /** Sort activities by price, rating, or duration */
   const handleSort = (field: "price" | "rating" | "duration") => {
     if (sortBy === field) {
       setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
@@ -92,7 +99,18 @@ export function ActivityResults({
     }
   };
 
-  // Sort results
+  /** Load more activities */
+  const handleLoadMore = async () => {
+    if (!onLoadMore) return;
+    setIsLoadingMore(true);
+    try {
+      await onLoadMore();
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
+  /** Sort activities by price, rating, or duration */
   const sortedResults = [...results].sort((a, b) => {
     const multiplier = sortDirection === "asc" ? 1 : -1;
     switch (sortBy) {
@@ -107,6 +125,7 @@ export function ActivityResults({
     }
   });
 
+  /** Render loading state */
   if (loading) {
     return (
       <div
@@ -132,6 +151,7 @@ export function ActivityResults({
     );
   }
 
+  /** Render no activities found state */
   if (results.length === 0) {
     return (
       <Card className="p-12 text-center">
@@ -148,6 +168,7 @@ export function ActivityResults({
     );
   }
 
+  /** Render activity results */
   return (
     <div className={cn("space-y-4", className)}>
       {/* Search Controls */}
@@ -276,10 +297,14 @@ export function ActivityResults({
       </div>
 
       {/* Load More */}
-      {results.length > 0 && (
+      {hasMore && onLoadMore && (
         <Card className="p-4 text-center">
-          <Button variant="outline" disabled={isPending}>
-            Load More Activities
+          <Button
+            variant="outline"
+            disabled={isPending || isLoadingMore}
+            onClick={handleLoadMore}
+          >
+            {isLoadingMore ? "Loading more..." : "Load More Activities"}
           </Button>
         </Card>
       )}

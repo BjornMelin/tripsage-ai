@@ -9,6 +9,12 @@ beforeEach(() => {
 // Mock supabase server client
 const mockGetUser = vi.fn();
 const mockFrom = vi.fn();
+const mapDbTripToUi = vi.hoisted(() =>
+  vi.fn((row: Record<string, unknown>) => ({
+    ...row,
+    mapped: true,
+  }))
+);
 vi.mock("@/lib/supabase/server", () => ({
   createServerSupabase: vi.fn(() =>
     Promise.resolve({
@@ -36,14 +42,34 @@ vi.mock("@/lib/telemetry/logger", () => ({
 
 // Mock trip mapper
 vi.mock("@/lib/trips/mappers", () => ({
-  mapDbTripToUi: vi.fn((row) => ({
-    ...row,
-    mapped: true,
-  })),
+  mapDbTripToUi,
 }));
 
 // Dynamic import after mocks
 const { getPlanningTrips, addActivityToTrip } = await import("../actions");
+
+// Helper to create a valid trips row that passes schema validation
+function createValidTripRow(overrides: Record<string, unknown> = {}) {
+  return {
+    budget: 1000,
+    created_at: "2024-01-01T00:00:00Z",
+    currency: "USD",
+    destination: "Paris",
+    end_date: "2024-02-01T00:00:00Z",
+    flexibility: null,
+    id: 1,
+    name: "Test Trip",
+    search_metadata: null,
+    start_date: "2024-01-15T00:00:00Z",
+    status: "planning",
+    tags: null,
+    travelers: 2,
+    trip_type: "leisure",
+    updated_at: "2024-01-01T00:00:00Z",
+    user_id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+    ...overrides,
+  };
+}
 
 describe("Activity actions - getPlanningTrips", () => {
   it("throws Unauthorized when user is not authenticated", async () => {
@@ -86,6 +112,29 @@ describe("Activity actions - getPlanningTrips", () => {
     });
 
     await expect(getPlanningTrips()).rejects.toThrow("Failed to fetch trips");
+  });
+
+  it("returns mapped trips when query succeeds", async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: "test-user" } } });
+    // Create a valid trip row that passes tripsRowSchema validation
+    const validRow = createValidTripRow({ id: 1, name: "First Trip" });
+    mockFrom.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          in: vi.fn().mockReturnValue({
+            order: vi.fn().mockResolvedValue({ data: [validRow], error: null }),
+          }),
+        }),
+      }),
+    });
+
+    const result = await getPlanningTrips();
+
+    expect(result).toHaveLength(1);
+    // .map() calls with (element, index, array), so verify first argument only
+    expect(mapDbTripToUi).toHaveBeenCalled();
+    expect(mapDbTripToUi.mock.calls[0][0]).toEqual(validRow);
+    expect(result[0]).toMatchObject({ mapped: true });
   });
 });
 
@@ -164,5 +213,27 @@ describe("Activity actions - addActivityToTrip", () => {
         user_id: "test-user",
       })
     );
+  });
+
+  it("throws when activity data fails validation", async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: "test-user" } } });
+    const mockInsert = vi.fn();
+    const single = vi.fn().mockResolvedValue({ data: { id: 123 }, error: null });
+    mockFrom.mockReturnValue({
+      insert: mockInsert,
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({ single }),
+        }),
+      }),
+    });
+
+    await expect(
+      addActivityToTrip(123, {
+        title: "", // invalid per schema
+      })
+    ).rejects.toThrow("Invalid activity data");
+
+    expect(mockInsert).not.toHaveBeenCalled();
   });
 });

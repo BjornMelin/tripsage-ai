@@ -63,6 +63,8 @@ import FlightsSearchClient from "../flights-search-client";
 
 describe("FlightsSearchClient", () => {
   const mockOnSubmitServer = vi.fn().mockResolvedValue({});
+  // Calculate next year dynamically to match the component
+  const nextYear = new Date().getUTCFullYear() + 1;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -108,10 +110,10 @@ describe("FlightsSearchClient", () => {
     expect(screen.getByText("$456")).toBeInTheDocument();
     expect(screen.getByText("$789")).toBeInTheDocument();
     expect(screen.getByText("$567")).toBeInTheDocument();
-    // Check for dates
-    expect(screen.getByText("May 28, 2025")).toBeInTheDocument();
-    expect(screen.getByText("Jun 15, 2025")).toBeInTheDocument();
-    expect(screen.getByText("Jun 8, 2025")).toBeInTheDocument();
+    // Check for dates (using dynamic year)
+    expect(screen.getByText(`May 28, ${nextYear}`)).toBeInTheDocument();
+    expect(screen.getByText(`Jun 15, ${nextYear}`)).toBeInTheDocument();
+    expect(screen.getByText(`Jun 8, ${nextYear}`)).toBeInTheDocument();
   });
 
   it("renders travel tips content", () => {

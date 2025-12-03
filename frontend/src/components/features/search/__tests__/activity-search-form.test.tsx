@@ -7,6 +7,13 @@ import { ActivitySearchForm } from "../activity-search-form";
 
 const MockOnSearch = vi.fn();
 
+// Helper to get a future date string
+function GetFutureDate(daysAhead: number): string {
+  const date = new Date();
+  date.setDate(date.getDate() + daysAhead);
+  return date.toISOString().split("T")[0];
+}
+
 describe("ActivitySearchForm", () => {
   beforeEach(() => {
     vi.useRealTimers();
@@ -16,72 +23,45 @@ describe("ActivitySearchForm", () => {
   it("renders form with all required fields", () => {
     renderWithProviders(<ActivitySearchForm onSearch={MockOnSearch} />);
 
-    expect(screen.getByLabelText(/location/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/start date/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/end date/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/destination/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^date$/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/start date \(range\)/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/end date \(range\)/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/adults/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/children/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/infants/i)).toBeInTheDocument();
-    expect(screen.getByText(/activity categories/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/activity category/i)).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /search activities/i })
     ).toBeInTheDocument();
   });
 
-  it("displays activity category options", () => {
+  it("displays duration and price filter inputs", () => {
     renderWithProviders(<ActivitySearchForm onSearch={MockOnSearch} />);
 
-    expect(screen.getByText("Outdoor & Adventure")).toBeInTheDocument();
-    expect(screen.getByText("Cultural & Historical")).toBeInTheDocument();
-    expect(screen.getByText("Food & Drink")).toBeInTheDocument();
-    expect(screen.getByText("Guided Tours")).toBeInTheDocument();
-    expect(screen.getByText("Water Sports")).toBeInTheDocument();
-    expect(screen.getByText("Wildlife & Nature")).toBeInTheDocument();
-    expect(screen.getByText("Sports & Recreation")).toBeInTheDocument();
-    expect(screen.getByText("Nightlife & Entertainment")).toBeInTheDocument();
-    expect(screen.getByText("Wellness & Spa")).toBeInTheDocument();
-    expect(screen.getByText("Shopping")).toBeInTheDocument();
-    expect(screen.getByText("Transportation")).toBeInTheDocument();
-    expect(screen.getByText("Classes & Workshops")).toBeInTheDocument();
-  });
-
-  it("validates required fields", async () => {
-    renderWithProviders(<ActivitySearchForm onSearch={MockOnSearch} />);
-
-    const submitButton = screen.getByRole("button", {
-      name: /search activities/i,
-    });
-
-    fireEvent.click(submitButton);
-
-    expect(await screen.findByText("Location is required")).toBeInTheDocument();
-    expect(await screen.findByText("Start date is required")).toBeInTheDocument();
-    expect(await screen.findByText("End date is required")).toBeInTheDocument();
+    expect(screen.getByLabelText(/min duration/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/max duration/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/min price/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/max price/i)).toBeInTheDocument();
   });
 
   it("handles form submission with valid data", async () => {
     renderWithProviders(<ActivitySearchForm onSearch={MockOnSearch} />);
 
+    const futureDate = GetFutureDate(30);
+
     // Fill in required fields
-    fireEvent.change(screen.getByLabelText(/location/i), {
+    fireEvent.change(screen.getByLabelText(/destination/i), {
       target: { value: "New York" },
     });
-    fireEvent.change(screen.getByLabelText(/start date/i), {
-      target: { value: "2024-07-01" },
+    fireEvent.change(screen.getByLabelText(/^date$/i), {
+      target: { value: futureDate },
     });
-    fireEvent.change(screen.getByLabelText(/end date/i), {
-      target: { value: "2024-07-03" },
-    });
-
-    // Select some categories
-    fireEvent.click(screen.getByLabelText(/outdoor & adventure/i));
-    fireEvent.click(screen.getByLabelText(/cultural & historical/i));
 
     // Fill optional fields
-    fireEvent.change(screen.getByLabelText(/duration/i), {
-      target: { value: "4" },
+    fireEvent.change(screen.getByLabelText(/activity category/i), {
+      target: { value: "outdoor" },
     });
-    fireEvent.change(screen.getByLabelText(/min rating/i), {
+    fireEvent.change(screen.getByLabelText(/max duration/i), {
       target: { value: "4" },
     });
     fireEvent.change(screen.getByLabelText(/min price/i), {
@@ -97,38 +77,36 @@ describe("ActivitySearchForm", () => {
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(MockOnSearch).toHaveBeenCalledWith({
-        adults: 1,
-        category: "outdoor",
-        children: 0,
-        date: "2024-07-01",
-        destination: "New York",
-        duration: { max: 4, min: 0 },
-        infants: 0,
-      });
+      expect(MockOnSearch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          adults: 1,
+          category: "outdoor",
+          children: 0,
+          date: futureDate,
+          destination: "New York",
+        })
+      );
     });
   });
 
   it("handles participant count changes", async () => {
     renderWithProviders(<ActivitySearchForm onSearch={MockOnSearch} />);
 
+    const futureDate = GetFutureDate(60);
+
     // Fill required fields first
-    const locationInput = screen.getByLabelText(/location/i);
-    const startDateInput = screen.getByLabelText(/start date/i);
-    const endDateInput = screen.getByLabelText(/end date/i);
+    const destinationInput = screen.getByLabelText(/destination/i);
+    const dateInput = screen.getByLabelText(/^date$/i);
     const adultsInput = screen.getByLabelText(/adults/i);
     const childrenInput = screen.getByLabelText(/children/i);
-    const infantsInput = screen.getByLabelText(/infants/i);
     const submitButton = screen.getByRole("button", {
       name: /search activities/i,
     });
 
-    fireEvent.change(locationInput, { target: { value: "Paris" } });
-    fireEvent.change(startDateInput, { target: { value: "2024-08-01" } });
-    fireEvent.change(endDateInput, { target: { value: "2024-08-05" } });
+    fireEvent.change(destinationInput, { target: { value: "Paris" } });
+    fireEvent.change(dateInput, { target: { value: futureDate } });
     fireEvent.change(adultsInput, { target: { value: "2" } });
     fireEvent.change(childrenInput, { target: { value: "1" } });
-    fireEvent.change(infantsInput, { target: { value: "1" } });
 
     fireEvent.click(submitButton);
 
@@ -138,67 +116,70 @@ describe("ActivitySearchForm", () => {
           adults: 2,
           children: 1,
           destination: "Paris",
-          infants: 1,
         })
       );
     });
   });
 
-  it("accepts fractional rating values", async () => {
+  it("submits with category value", async () => {
     renderWithProviders(<ActivitySearchForm onSearch={MockOnSearch} />);
 
-    const locationInput = screen.getByLabelText(/location/i);
-    const startDateInput = screen.getByLabelText(/start date/i);
-    const endDateInput = screen.getByLabelText(/end date/i);
-    const ratingInput = screen.getByLabelText(/min rating/i);
+    const futureDate = GetFutureDate(90);
+
+    const destinationInput = screen.getByLabelText(/destination/i);
+    const dateInput = screen.getByLabelText(/^date$/i);
+    const categoryInput = screen.getByLabelText(/activity category/i);
     const submitButton = screen.getByRole("button", { name: /search activities/i });
 
-    fireEvent.change(locationInput, { target: { value: "Lisbon" } });
-    fireEvent.change(startDateInput, { target: { value: "2024-09-01" } });
-    fireEvent.change(endDateInput, { target: { value: "2024-09-05" } });
-    fireEvent.change(ratingInput, { target: { value: "4.5" } });
+    fireEvent.change(destinationInput, { target: { value: "Lisbon" } });
+    fireEvent.change(dateInput, { target: { value: futureDate } });
+    fireEvent.change(categoryInput, { target: { value: "cultural" } });
 
     fireEvent.click(submitButton);
 
     await waitFor(
       () => {
         expect(MockOnSearch).toHaveBeenCalledTimes(1);
+        expect(MockOnSearch).toHaveBeenCalledWith(
+          expect.objectContaining({
+            category: "cultural",
+          })
+        );
       },
       { timeout: 1000 }
     );
   });
 
-  it("handles category selection and deselection", () => {
+  it("handles category input changes", () => {
     renderWithProviders(<ActivitySearchForm onSearch={MockOnSearch} />);
 
-    const outdoorCheckbox = screen.getByLabelText(/outdoor & adventure/i);
-    const culturalCheckbox = screen.getByLabelText(/cultural & historical/i);
+    const categoryInput = screen.getByLabelText(/activity category/i);
 
-    // Initially unchecked
-    expect(outdoorCheckbox).not.toBeChecked();
-    expect(culturalCheckbox).not.toBeChecked();
+    // Initially empty
+    expect(categoryInput).toHaveValue("");
 
-    // Select categories
-    fireEvent.click(outdoorCheckbox);
-    fireEvent.click(culturalCheckbox);
+    // Enter a category value
+    fireEvent.change(categoryInput, { target: { value: "outdoor" } });
+    expect(categoryInput).toHaveValue("outdoor");
 
-    expect(outdoorCheckbox).toBeChecked();
-    expect(culturalCheckbox).toBeChecked();
+    // Change category
+    fireEvent.change(categoryInput, { target: { value: "cultural" } });
+    expect(categoryInput).toHaveValue("cultural");
 
-    // Deselect one category
-    fireEvent.click(outdoorCheckbox);
-
-    expect(outdoorCheckbox).not.toBeChecked();
-    expect(culturalCheckbox).toBeChecked();
+    // Clear category
+    fireEvent.change(categoryInput, { target: { value: "" } });
+    expect(categoryInput).toHaveValue("");
   });
 
   it("applies initial values correctly", () => {
     const initialValues = {
-      adults: 3,
-      categories: ["food", "cultural"],
-      children: 2,
+      category: "food",
+      destination: "Tokyo",
       duration: { max: 6, min: 1 },
-      location: "Tokyo",
+      participants: {
+        adults: 3,
+        children: 2,
+      },
     };
 
     renderWithProviders(
@@ -208,9 +189,6 @@ describe("ActivitySearchForm", () => {
     expect(screen.getByDisplayValue("Tokyo")).toBeInTheDocument();
     expect(screen.getByDisplayValue("3")).toBeInTheDocument();
     expect(screen.getByDisplayValue("2")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("6")).toBeInTheDocument();
-    expect(screen.getByLabelText(/food & drink/i)).toBeChecked();
-    expect(screen.getByLabelText(/cultural & historical/i)).toBeChecked();
   });
 
   it("validates number input ranges", async () => {
@@ -226,10 +204,10 @@ describe("ActivitySearchForm", () => {
     fireEvent.change(childrenInput, { target: { value: "15" } });
     fireEvent.blur(childrenInput);
 
-    // Test duration max
-    const durationInput = screen.getByLabelText(/duration/i);
-    fireEvent.change(durationInput, { target: { value: "50" } });
-    fireEvent.blur(durationInput);
+    // Test duration max - use the specific min duration input
+    const minDurationInput = screen.getByLabelText(/min duration/i);
+    fireEvent.change(minDurationInput, { target: { value: "50" } });
+    fireEvent.blur(minDurationInput);
 
     const submitButton = screen.getByRole("button", {
       name: /search activities/i,

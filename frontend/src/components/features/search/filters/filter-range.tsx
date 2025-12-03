@@ -64,11 +64,7 @@ export function FilterRange({
   description,
   disabled = false,
 }: FilterRangeProps) {
-  if (min >= max || step <= 0) {
-    throw new Error(
-      `Invalid FilterRange props for "${filterId}": min (${min}) must be < max (${max}), and step (${step}) must be > 0`
-    );
-  }
+  const hasInvalidConfig = min >= max || step <= 0;
 
   const normalizeValue = useCallback(
     (input?: [number, number] | { min: number; max: number }): [number, number] => {
@@ -110,6 +106,15 @@ export function FilterRange({
     },
     [filterId, onChange]
   );
+
+  if (hasInvalidConfig) {
+    if (process.env.NODE_ENV !== "production") {
+      console.error(
+        `Invalid FilterRange props for "${filterId}": min (${min}) must be < max (${max}), and step (${step}) must be > 0`
+      );
+    }
+    return null;
+  }
 
   return (
     <div className="space-y-3">

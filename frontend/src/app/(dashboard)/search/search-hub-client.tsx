@@ -4,6 +4,7 @@
 
 "use client";
 
+import type { SearchType } from "@schemas/search";
 import {
   ClockIcon,
   HistoryIcon,
@@ -15,6 +16,7 @@ import {
   SparklesIcon,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type React from "react";
 import { SearchAnalytics, SearchCollections } from "@/components/features/search";
 import { SearchLayout } from "@/components/layouts/search-layout";
@@ -39,9 +41,53 @@ import { useSearchHistoryStore } from "@/stores/search-history-store";
 /** Search hub client component. */
 export default function SearchHubClient() {
   const { recentSearches } = useSearchHistoryStore();
+  const router = useRouter();
 
   // Get the 6 most recent searches
   const displayedSearches = recentSearches.slice(0, 6);
+
+  /**
+   * Navigate to search page with parameters.
+   *
+   * @param searchType - The type of search to repeat.
+   * @param params - The parameters to repeat the search with.
+   * @returns A promise that resolves when the search is repeated.
+   */
+  const handleRepeatSearch = (
+    searchType: SearchType,
+    params: Record<string, unknown>
+  ) => {
+    const basePath = getSearchPath(searchType);
+    const queryParams = new URLSearchParams();
+
+    // Map params to query string based on search type
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== null && value !== "") {
+        queryParams.append(key, String(value));
+      }
+    }
+
+    const url = queryParams.toString()
+      ? `${basePath}?${queryParams.toString()}`
+      : basePath;
+    router.push(url);
+  };
+
+  /** Get the base path for a search type. */
+  const getSearchPath = (searchType: SearchType): string => {
+    switch (searchType) {
+      case "flight":
+        return "/dashboard/search/flights";
+      case "accommodation":
+        return "/dashboard/search/hotels";
+      case "activity":
+        return "/dashboard/search/activities";
+      case "destination":
+        return "/dashboard/search/destinations";
+      default:
+        return "/dashboard/search";
+    }
+  };
 
   return (
     <SearchLayout>
@@ -188,6 +234,9 @@ export default function SearchHubClient() {
                         title={getSearchTitle(search.params)}
                         type={search.searchType}
                         date={new Date(search.timestamp).toLocaleDateString()}
+                        onRepeat={() =>
+                          handleRepeatSearch(search.searchType, search.params)
+                        }
                       />
                     ))}
                   </div>
@@ -207,9 +256,7 @@ export default function SearchHubClient() {
   );
 }
 
-/**
- * Get the title of a search based on its parameters.
- */
+/** Get the title of a search based on its parameters. */
 function getSearchTitle(params: Record<string, unknown>): string {
   const origin = params.origin as string | undefined;
   const destination = params.destination as string | undefined;
@@ -231,9 +278,7 @@ function getSearchTitle(params: Record<string, unknown>): string {
   return "Search";
 }
 
-/**
- * Get the icon for a search type.
- */
+/** Get the icon for a search type. */
 function getSearchTypeIcon(type: string): React.ReactNode {
   switch (type) {
     case "flight":
@@ -249,9 +294,7 @@ function getSearchTypeIcon(type: string): React.ReactNode {
   }
 }
 
-/**
- * Quick option card for search types.
- */
+/** Quick option card for search types. */
 function SearchQuickOptionCard({
   title,
   description,
@@ -287,17 +330,17 @@ function SearchQuickOptionCard({
   );
 }
 
-/**
- * Recent search card.
- */
+/** Recent search card. */
 function RecentSearchCard({
   title,
   type,
   date,
+  onRepeat,
 }: {
   title: string;
   type: string;
   date: string;
+  onRepeat: () => Promise<void> | void;
 }) {
   return (
     <Card className="h-full hover:bg-accent/50 transition-colors cursor-pointer group">
@@ -325,6 +368,7 @@ function RecentSearchCard({
                 variant="ghost"
                 size="sm"
                 className="text-xs h-auto py-1 px-2 text-primary"
+                onClick={onRepeat}
               >
                 <RefreshCwIcon className="h-3 w-3 mr-1" />
                 Search again
