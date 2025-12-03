@@ -37,7 +37,10 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const targetUrl = useMemo(() => resolveRedirectUrl(redirectTo), [redirectTo]);
+  const targetUrl = useMemo(
+    () => resolveRedirectUrl(redirectTo, { absolute: true }),
+    [redirectTo]
+  );
 
   /** Handles the password login. */
   const handlePasswordLogin = async (event: React.FormEvent) => {

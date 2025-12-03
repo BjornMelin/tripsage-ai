@@ -19,7 +19,7 @@ export default async function LoginPage({
   searchParams: Promise<{ from?: string; error?: string }>;
 }) {
   const params = await searchParams;
-  const redirectTo = params?.from || "/dashboard";
+  const redirectTo = params.from || "/dashboard";
 
   return (
     <div className="min-h-screen flex">

@@ -44,7 +44,10 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const targetUrl = useMemo(() => resolveRedirectUrl(redirectTo), [redirectTo]);
+  const targetUrl = useMemo(
+    () => resolveRedirectUrl(redirectTo, { absolute: true }),
+    [redirectTo]
+  );
 
   /** Handles the signup. */
   const handleSignup = async (event: React.FormEvent) => {

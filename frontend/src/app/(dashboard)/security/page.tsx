@@ -28,12 +28,32 @@ export default async function SecurityPage() {
   let factors: MfaFactor[] = [];
   /** The load error. */
   let loadError: string | null = null;
-  try {
-    [aal, factors] = await Promise.all([refreshAal(supabase), listFactors(supabase)]);
-  } catch (error) {
-    loadError = error instanceof Error ? error.message : "failed to load MFA data";
-    logger.error("failed to load MFA data", {
-      error: error instanceof Error ? error.message : "unknown_error",
+  const [aalResult, factorsResult] = await Promise.allSettled([
+    refreshAal(supabase),
+    listFactors(supabase),
+  ]);
+
+  if (aalResult.status === "fulfilled") {
+    aal = aalResult.value;
+  } else {
+    const reason = aalResult.reason;
+    const message =
+      reason instanceof Error ? reason.message : "failed to load MFA assurance level";
+    loadError = message;
+    logger.error("failed to refresh MFA assurance level", {
+      error: reason instanceof Error ? reason.message : "unknown_error",
+    });
+  }
+
+  if (factorsResult.status === "fulfilled") {
+    factors = factorsResult.value;
+  } else {
+    const reason = factorsResult.reason;
+    const message =
+      reason instanceof Error ? reason.message : "failed to load MFA factors";
+    loadError = loadError ?? message;
+    logger.error("failed to load MFA factors", {
+      error: reason instanceof Error ? reason.message : "unknown_error",
     });
   }
 

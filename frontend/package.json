@@ -168,9 +168,6 @@
       "prismjs": ">=1.30.0",
       "brace-expansion": ">=2.0.2"
     },
-    "ignoredBuiltDependencies": [
-      "esbuild",
-      "msw"
-    ]
+    "ignoredBuiltDependencies": ["esbuild", "msw"]
   }
 }

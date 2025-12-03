@@ -49,6 +49,17 @@ class UserLookupError extends Error {
   }
 }
 
+/** A custom error class for AAL2 enforcement failures. */
+export class MfaRequiredError extends Error {
+  /** Stable machine-readable error code for step-up MFA requirements. */
+  readonly code = "MFA_REQUIRED" as const;
+
+  constructor(message = "mfa_required") {
+    super(message);
+    this.name = "MfaRequiredError";
+  }
+}
+
 /** The cache of the backup code pepper. */
 let backupCodePepperCache: string | null = null;
 
@@ -531,7 +542,7 @@ export async function refreshAal(supabase: TypedSupabase): Promise<"aal1" | "aal
 export async function requireAal2(supabase: TypedSupabase): Promise<void> {
   const level = await refreshAal(supabase);
   if (level !== "aal2") {
-    throw new Error("mfa_required");
+    throw new MfaRequiredError();
   }
 }
 

@@ -4,7 +4,7 @@
 
 "use client";
 
-import { type MfaFactor, mfaFactorSchema } from "@schemas/mfa";
+import type { MfaFactor } from "@schemas/mfa";
 import { AlertCircleIcon, CheckCircle2Icon, ShieldIcon } from "lucide-react";
 import Image from "next/image";
 import { useId, useState, useTransition } from "react";
@@ -21,6 +21,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import {
+  refreshMfaFactors,
+  regenerateMfaBackups,
+  resendMfaChallenge,
+  revokeOtherSessions as revokeOtherSessionsAction,
+  startMfaEnrollment,
+  verifyMfaBackup,
+  verifyMfaTotp,
+} from "@/lib/security/mfa-client";
 import { secureId } from "@/lib/security/random";
 import { cn } from "@/lib/utils";
 
@@ -55,7 +64,9 @@ export function MfaPanel({ userEmail, initialAal, factors, loadError }: MfaPanel
   const [factorId, setFactorId] = useState<string | null>(null);
   const [verificationCode, setVerificationCode] = useState("");
   const [backupCode, setBackupCode] = useState("");
-  const [backupCodes, setBackupCodes] = useState<string[]>([]);
+  const [backupCodes, setBackupCodes] = useState<Array<{ id: string; code: string }>>(
+    []
+  );
   const [status, setStatus] = useState<"aal1" | "aal2">(initialAal);
   const [factorList, setFactorList] = useState<MfaFactor[]>(factors);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -70,36 +81,11 @@ export function MfaPanel({ userEmail, initialAal, factors, loadError }: MfaPanel
     setMessages((prev) => [...prev.slice(-3), message]);
   };
 
-  /** Calls the JSON API. */
-  const callJson = async <T,>(url: string, body?: unknown): Promise<T> => {
-    const res = await fetch(url, {
-      body: body ? JSON.stringify(body) : undefined,
-      headers: { "Content-Type": "application/json" },
-      method: "POST",
-    });
-    if (!res.ok) {
-      const reason = await res.json().catch(() => ({}));
-      throw new Error(reason?.error ?? `Request failed (${res.status})`);
-    }
-    const json = (await res.json()) as { data: T };
-    return json.data;
-  };
-
   /** Refreshes the factors. */
   const refreshFactors = async () => {
-    const res = await fetch("/api/auth/mfa/factors/list");
-    if (!res.ok) {
-      const reason = await res.json().catch(() => ({}));
-      throw new Error(reason?.error ?? `Request failed (${res.status})`);
-    }
-    const json = (await res.json()) as {
-      data?: { factors?: MfaFactor[]; aal?: string };
-    };
-    const parsedFactors = mfaFactorSchema.array().parse(json.data?.factors ?? []);
-    setFactorList(parsedFactors);
-    if (json.data?.aal === "aal2" || json.data?.aal === "aal1") {
-      setStatus(json.data.aal);
-    }
+    const { aal: nextAal, factors: nextFactors } = await refreshMfaFactors();
+    setFactorList(nextFactors);
+    setStatus(nextAal);
   };
 
   /** Handles refreshing factors with feedback. */
@@ -126,11 +112,7 @@ export function MfaPanel({ userEmail, initialAal, factors, loadError }: MfaPanel
       setChallengeId(null);
       setFactorId(null);
       try {
-        const data = await callJson<{
-          challengeId: string;
-          factorId: string;
-          qrCode: string;
-        }>("/api/auth/mfa/setup");
+        const data = await startMfaEnrollment();
         setQrCode(data.qrCode ?? null);
         setChallengeId(data.challengeId ?? null);
         setFactorId(data.factorId ?? null);
@@ -158,12 +140,7 @@ export function MfaPanel({ userEmail, initialAal, factors, loadError }: MfaPanel
     }
     startTransition(async () => {
       try {
-        const data = await callJson<{ challengeId: string }>(
-          "/api/auth/mfa/challenge",
-          {
-            factorId,
-          }
-        );
+        const data = await resendMfaChallenge({ factorId });
         setChallengeId(data.challengeId);
         pushMessage({
           text: "New challenge issued. Enter the new 6-digit code.",
@@ -186,16 +163,16 @@ export function MfaPanel({ userEmail, initialAal, factors, loadError }: MfaPanel
     }
     startTransition(async () => {
       try {
-        const data = await callJson<{ status: string; backupCodes: string[] }>(
-          "/api/auth/mfa/verify",
-          {
-            challengeId,
-            code: verificationCode,
-            factorId,
-          }
+        const data = await verifyMfaTotp({
+          challengeId,
+          code: verificationCode,
+          factorId,
+        });
+        setStatus(data.aal);
+        setFactorList(data.factors);
+        setBackupCodes(
+          (data.backupCodes ?? []).map((code) => ({ code, id: secureId() }))
         );
-        setStatus("aal2");
-        setBackupCodes(data.backupCodes ?? []);
         setQrCode(null);
         setChallengeId(null);
         setFactorId(null);
@@ -224,10 +201,7 @@ export function MfaPanel({ userEmail, initialAal, factors, loadError }: MfaPanel
     }
     startTransition(async () => {
       try {
-        const data = await callJson<{ remaining: number }>(
-          "/api/auth/mfa/backup/verify",
-          { code: backupCode }
-        );
+        const data = await verifyMfaBackup(backupCode);
         pushMessage({
           text: `Backup code accepted. Remaining codes: ${data.remaining}`,
           type: "success",
@@ -244,13 +218,20 @@ export function MfaPanel({ userEmail, initialAal, factors, loadError }: MfaPanel
 
   /** Regenerates the backups. */
   const regenerateBackups = () => {
+    const confirmed =
+      typeof window !== "undefined" &&
+      window.confirm(
+        "Regenerating backup codes will invalidate your existing backup codes. Do you want to continue?"
+      );
+    if (!confirmed) {
+      return;
+    }
     startTransition(async () => {
       try {
-        const data = await callJson<{ backupCodes: string[] }>(
-          "/api/auth/mfa/backup/regenerate",
-          { count: 10 }
+        const data = await regenerateMfaBackups(10);
+        setBackupCodes(
+          (data.backupCodes ?? []).map((code) => ({ code, id: secureId() }))
         );
-        setBackupCodes(data.backupCodes ?? []);
         pushMessage({ text: "Backup codes regenerated.", type: "success" });
       } catch (error) {
         pushMessage({
@@ -265,9 +246,7 @@ export function MfaPanel({ userEmail, initialAal, factors, loadError }: MfaPanel
   const revokeOtherSessions = () => {
     startRevoke(async () => {
       try {
-        await callJson<{ status: string }>("/api/auth/mfa/sessions/revoke", {
-          scope: "others",
-        });
+        await revokeOtherSessionsAction();
         pushMessage({ text: "Other sessions revoked.", type: "success" });
       } catch (error) {
         pushMessage({
@@ -361,12 +340,12 @@ export function MfaPanel({ userEmail, initialAal, factors, loadError }: MfaPanel
             <div className="space-y-2">
               <Label>Backup codes (store securely)</Label>
               <div className="grid grid-cols-2 gap-2">
-                {backupCodes.map((code) => (
+                {backupCodes.map((item) => (
                   <code
-                    key={code}
+                    key={item.id}
                     className="text-sm rounded bg-muted px-3 py-2 text-center font-mono"
                   >
-                    {code}
+                    {item.code}
                   </code>
                 ))}
               </div>
@@ -454,7 +433,7 @@ export function MfaPanel({ userEmail, initialAal, factors, loadError }: MfaPanel
           </div>
 
           {messages.length > 0 && (
-            <div className="space-y-2">
+            <output className="space-y-2" aria-live="polite" aria-atomic="true">
               {messages.map((msg) => (
                 <Alert
                   key={msg.id}
@@ -468,7 +447,7 @@ export function MfaPanel({ userEmail, initialAal, factors, loadError }: MfaPanel
                   </AlertDescription>
                 </Alert>
               ))}
-            </div>
+            </output>
           )}
         </CardContent>
       </Card>

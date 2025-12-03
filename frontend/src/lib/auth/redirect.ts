@@ -2,39 +2,27 @@
  * @fileoverview Safe redirect URL resolver for auth flows.
  */
 
+import { getClientOrigin } from "@/lib/url/client-origin";
+
 const FALLBACK_REDIRECT = "/dashboard";
 
 /** Gets the base origin. */
 function getBaseOrigin(): string {
-  if (typeof window !== "undefined" && window.location?.origin) {
-    return window.location.origin;
-  }
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-  if (siteUrl) {
-    try {
-      return new URL(siteUrl).origin;
-    } catch {
-      // ignore malformed site URL
-    }
-  }
-  const appBaseUrl = process.env.APP_BASE_URL;
-  if (appBaseUrl) {
-    try {
-      return new URL(appBaseUrl).origin;
-    } catch {
-      // ignore malformed app base URL
-    }
-  }
-  return "http://localhost:3000";
+  return getClientOrigin();
 }
 
 /**
  * Resolves the redirect URL.
  *
  * @param redirectTo - The redirect URL.
+ * @param options - Resolution options.
  * @returns The resolved redirect URL.
  */
-export function resolveRedirectUrl(redirectTo?: string): string {
+export function resolveRedirectUrl(
+  redirectTo?: string,
+  options?: { absolute?: boolean }
+): string {
+  const shouldReturnAbsolute = options?.absolute ?? false;
   if (!redirectTo) return FALLBACK_REDIRECT;
   try {
     const trimmed = redirectTo.trim();
@@ -47,8 +35,12 @@ export function resolveRedirectUrl(redirectTo?: string): string {
     if (trimmed.startsWith("/")) {
       const baseOrigin = getBaseOrigin();
       const target = new URL(trimmed, baseOrigin);
-      const path = `${target.pathname}${target.search}${target.hash}`;
-      return path || FALLBACK_REDIRECT;
+      if (target.origin !== baseOrigin) return FALLBACK_REDIRECT;
+      const normalizedPath = target.pathname.replace(/\\/g, "/");
+      if (normalizedPath.startsWith("//")) return FALLBACK_REDIRECT;
+      const path = `${normalizedPath}${target.search}${target.hash}`;
+      if (!path) return FALLBACK_REDIRECT;
+      return shouldReturnAbsolute ? `${target.origin}${path}` : path;
     }
 
     const baseOrigin = getBaseOrigin();
@@ -70,7 +62,17 @@ export function resolveRedirectUrl(redirectTo?: string): string {
 
     const isAllowedHost = allowedHosts.has(target.host);
     const isSameOrigin = target.origin === baseOrigin;
-    return isAllowedHost || isSameOrigin ? target.toString() : FALLBACK_REDIRECT;
+    if (!isAllowedHost && !isSameOrigin) {
+      return FALLBACK_REDIRECT;
+    }
+
+    const normalizedPath = target.pathname.replace(/\\/g, "/");
+    if (normalizedPath.startsWith("//")) return FALLBACK_REDIRECT;
+
+    const path = `${normalizedPath}${target.search}${target.hash}`;
+    if (!path) return FALLBACK_REDIRECT;
+
+    return shouldReturnAbsolute ? `${target.origin}${path}` : path;
   } catch {
     return FALLBACK_REDIRECT;
   }

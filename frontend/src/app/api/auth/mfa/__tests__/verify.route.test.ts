@@ -17,10 +17,13 @@ describe("POST /api/auth/mfa/verify", () => {
 
   beforeEach(() => {
     resetApiRouteMocks();
+    mockMfa.verify.mockReset();
+    mockRegenerate.mockReset();
     mockRegenerate.mockResolvedValue({ codes: ["ABCDE-FGHIJ"], remaining: 10 });
+    mockMfa.verify.mockResolvedValue({ isInitialEnrollment: true });
     vi.doMock("@/lib/security/mfa", () => ({
       regenerateBackupCodes: mockRegenerate,
-      verifyTotp: mockMfa.verify.mockResolvedValue({ isInitialEnrollment: true }),
+      verifyTotp: mockMfa.verify,
     }));
     vi.doMock("@/lib/supabase/admin", () => ({
       getAdminSupabase: vi.fn(() => ({})),
@@ -29,7 +32,6 @@ describe("POST /api/auth/mfa/verify", () => {
 
   afterEach(() => {
     vi.resetModules();
-    vi.clearAllMocks();
   });
 
   it("generates backup codes only on initial enrollment", async () => {

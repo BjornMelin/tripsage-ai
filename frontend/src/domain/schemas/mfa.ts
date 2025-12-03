@@ -25,8 +25,13 @@ export const mfaEnrollmentSchema = z.strictObject({
   factorId: primitiveSchemas.uuid,
   issuedAt: primitiveSchemas.isoDateTime,
   qrCode: z.string().min(1),
-  ttlSeconds: z.number().int().min(0),
-  uri: z.string().optional(),
+  ttlSeconds: z.number().int().min(1),
+  uri: z
+    .string()
+    .optional()
+    .refine((value) => !value || /^otpauth:\/\/.+$/i.test(value), {
+      message: "Invalid otpauth URI",
+    }),
 });
 
 /** The MFA enrollment type. */
@@ -35,7 +40,7 @@ export type MfaEnrollment = z.infer<typeof mfaEnrollmentSchema>;
 /** The MFA verification input schema. */
 export const mfaVerificationInputSchema = z.strictObject({
   challengeId: primitiveSchemas.uuid,
-  code: z.string().regex(/^[0-9]{6}$/, { error: "Code must be a 6-digit number" }),
+  code: z.string().regex(/^[0-9]{6}$/, { message: "Code must be a 6-digit number" }),
   factorId: primitiveSchemas.uuid,
 });
 
@@ -43,9 +48,9 @@ export const mfaVerificationInputSchema = z.strictObject({
 export type MfaVerificationInput = z.infer<typeof mfaVerificationInputSchema>;
 
 /** The backup code schema. */
-export const backupCodeSchema = z
-  .string()
-  .regex(/^[A-Z0-9]{6}-[A-Z0-9]{6}$/, { error: "Invalid backup code format" });
+export const backupCodeSchema = z.string().regex(/^[A-Z0-9]{6}-[A-Z0-9]{6}$/, {
+  message: "Invalid backup code format",
+});
 
 /** The backup code type. */
 export type BackupCode = z.infer<typeof backupCodeSchema>;
