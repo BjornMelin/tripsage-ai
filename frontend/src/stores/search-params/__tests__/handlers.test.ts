@@ -130,6 +130,24 @@ describe("search-params/handlers", () => {
           })
         ).toBe(false);
       });
+
+      it("returns false when checkOut missing", () => {
+        expect(
+          handler.hasRequiredParams({
+            checkIn: "2025-07-01",
+            destination: "Paris",
+          })
+        ).toBe(false);
+      });
+
+      it("returns false when checkIn missing", () => {
+        expect(
+          handler.hasRequiredParams({
+            checkOut: "2025-07-07",
+            destination: "Paris",
+          })
+        ).toBe(false);
+      });
     });
   });
 

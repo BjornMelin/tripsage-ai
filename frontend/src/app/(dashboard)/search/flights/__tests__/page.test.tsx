@@ -25,18 +25,11 @@ vi.mock("@/components/ui/use-toast", () => ({
 // Mock stores
 const mockInitializeSearch = vi.hoisted(() => vi.fn());
 const mockExecuteSearch = vi.hoisted(() => vi.fn());
-const mockSetSearchType = vi.hoisted(() => vi.fn());
 
-vi.mock("@/stores/search-store", () => ({
-  useSearchStore: () => ({
-    executeSearch: mockExecuteSearch(),
-    initializeSearch: mockInitializeSearch(),
-  }),
-}));
-
-vi.mock("@/stores/search-filters-store", () => ({
-  useSearchFiltersStore: () => ({
-    setSearchType: mockSetSearchType(),
+vi.mock("@/hooks/use-search-orchestration", () => ({
+  useSearchOrchestration: () => ({
+    executeSearch: mockExecuteSearch,
+    initializeSearch: mockInitializeSearch,
   }),
 }));
 
@@ -66,9 +59,9 @@ import FlightSearchPage from "../page";
 describe("FlightSearchPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockInitializeSearch.mockReturnValue(vi.fn());
-    mockExecuteSearch.mockReturnValue(vi.fn().mockResolvedValue("search-123"));
-    mockSetSearchType.mockReturnValue(vi.fn());
+    mockInitializeSearch.mockReset();
+    mockExecuteSearch.mockReset();
+    mockExecuteSearch.mockResolvedValue("search-123");
   });
 
   it("renders search layout wrapper", () => {
@@ -118,14 +111,8 @@ describe("FlightSearchPage", () => {
   });
 
   it("initializes search type on mount", () => {
-    const initFn = vi.fn();
-    const setTypeFn = vi.fn();
-    mockInitializeSearch.mockReturnValue(initFn);
-    mockSetSearchType.mockReturnValue(setTypeFn);
-
     render(<FlightSearchPage />);
 
-    expect(initFn).toHaveBeenCalledWith("flight");
-    expect(setTypeFn).toHaveBeenCalledWith("flight");
+    expect(mockInitializeSearch).toHaveBeenCalledWith("flight");
   });
 });

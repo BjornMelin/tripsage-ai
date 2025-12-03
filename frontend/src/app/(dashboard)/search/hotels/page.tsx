@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAccommodationSearch } from "@/hooks/use-accommodation-search";
-import { useSearchStore } from "@/stores/search-store";
+import { useSearchOrchestration } from "@/hooks/use-search-orchestration";
 
 /**
  * Render the hotel search experience with simple loading and empty states.
@@ -27,7 +27,7 @@ import { useSearchStore } from "@/stores/search-store";
  */
 export default function HotelSearchPage() {
   const { search, isSearching } = useAccommodationSearch();
-  const { hasResults } = useSearchStore();
+  const { hasResults } = useSearchOrchestration();
   const [hasSearched, setHasSearched] = useState(false);
 
   const handleSearch = async (params: SearchAccommodationParams) => {

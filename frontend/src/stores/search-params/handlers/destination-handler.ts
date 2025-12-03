@@ -2,7 +2,6 @@
  * @fileoverview Handler for destination search parameters.
  */
 
-import type { DestinationSearchParams } from "@schemas/search";
 import {
   destinationSearchParamsStoreSchema,
   type ValidatedDestinationParams,
@@ -23,7 +22,7 @@ const DEFAULTS: Partial<ValidatedDestinationParams> = {
  */
 const destinationHandler: SearchParamsHandler<ValidatedDestinationParams> = {
   getDefaults() {
-    return { ...DEFAULTS };
+    return { ...DEFAULTS, types: [...(DEFAULTS.types ?? [])] };
   },
 
   getSchema() {
@@ -39,17 +38,12 @@ const destinationHandler: SearchParamsHandler<ValidatedDestinationParams> = {
   },
   searchType: "destination",
 
-  toSearchParams(params) {
-    return params as DestinationSearchParams;
-  },
-
   validate(params) {
     const result = destinationSearchParamsStoreSchema.safeParse(params);
     if (result.success) {
       return { data: result.data, success: true };
     }
-    const errorMessage = result.error.issues.map((issue) => issue.message).join(", ");
-    return { error: errorMessage || "Validation failed", success: false };
+    return { error: result.error, success: false };
   },
 };
 

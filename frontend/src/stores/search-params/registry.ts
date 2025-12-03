@@ -8,7 +8,7 @@
 import type { SearchType } from "@schemas/stores";
 import type { SearchParamsHandler } from "./types";
 
-const handlers = new Map<SearchType, SearchParamsHandler>();
+const handlers = new Map<SearchType, SearchParamsHandler<unknown>>();
 
 /**
  * Register a handler for a search type.
@@ -23,7 +23,7 @@ export function registerHandler<T>(handler: SearchParamsHandler<T>): void {
       `Handler already registered for search type: ${handler.searchType}`
     );
   }
-  handlers.set(handler.searchType, handler as SearchParamsHandler);
+  handlers.set(handler.searchType, handler);
 }
 
 /**

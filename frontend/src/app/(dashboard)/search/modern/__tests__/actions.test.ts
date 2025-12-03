@@ -49,6 +49,13 @@ describe("searchHotelsAction", () => {
     mockSearch.mockResolvedValue({ listings: [] });
   });
 
+  it("propagates errors from the accommodations service", async () => {
+    const error = new Error("search failed");
+    mockSearch.mockRejectedValue(error);
+
+    await expect(searchHotelsAction(validParams)).rejects.toThrow("search failed");
+  });
+
   it("returns empty array when no listings found", async () => {
     mockSearch.mockResolvedValue({ listings: [] });
 
@@ -215,6 +222,38 @@ describe("searchHotelsAction", () => {
     expect(result[0].pricing.pricePerNight).toBe(100); // total / 1 night
   });
 
+  it("returns a fallback result when listing validation fails", async () => {
+    const invalidListing = {
+      invalid: "value",
+    };
+    mockSearch.mockResolvedValue({ listings: [invalidListing] });
+
+    const result = await searchHotelsAction({
+      ...validParams,
+      currency: "EUR",
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({
+      ai: expect.objectContaining({
+        personalizedTags: ["hybrid-amadeus", "google-places"],
+        recommendation: 8,
+      }),
+      amenities: { essential: [], premium: [], unique: [] },
+      category: "hotel",
+      id: "mock-uuid-123",
+      name: "Hotel",
+      pricing: expect.objectContaining({
+        currency: "EUR",
+        pricePerNight: 0,
+        totalPrice: 0,
+      }),
+      reviewCount: 0,
+      starRating: 0,
+      userRating: 0,
+    });
+  });
+
   it("uses default currency when not specified", async () => {
     const listing = {
       id: "hotel-1",
@@ -225,6 +264,33 @@ describe("searchHotelsAction", () => {
     const result = await searchHotelsAction(validParams);
 
     expect(result[0].pricing.currency).toBe("USD");
+  });
+
+  it("prefers listing currency over provided currency parameter", async () => {
+    const listing = {
+      id: "hotel-1",
+      name: "Test Hotel",
+      rooms: [
+        {
+          rates: [
+            {
+              price: {
+                currency: "JPY",
+                total: "10000",
+              },
+            },
+          ],
+        },
+      ],
+    };
+    mockSearch.mockResolvedValue({ listings: [listing] });
+
+    const result = await searchHotelsAction({
+      ...validParams,
+      currency: "USD",
+    });
+
+    expect(result[0].pricing.currency).toBe("JPY");
   });
 
   it("uses custom currency when provided", async () => {

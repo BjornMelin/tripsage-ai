@@ -37,7 +37,7 @@ const mockDeleteTrip = vi.hoisted(() => vi.fn());
 
 vi.mock("@/hooks/use-trips", () => ({
   useDeleteTrip: () => ({
-    mutateAsync: mockDeleteTrip(),
+    mutateAsync: mockDeleteTrip,
   }),
   useTrips: () => ({
     data: mockTrips(),
@@ -51,7 +51,7 @@ vi.mock("@/hooks/use-trips", () => ({
 vi.mock("@/stores/trip-store", () => ({
   Trip: {},
   useTripStore: () => ({
-    createTrip: mockCreateTrip(),
+    createTrip: mockCreateTrip,
   }),
 }));
 
@@ -82,11 +82,14 @@ import TripsPage from "../page";
 describe("TripsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockTrips.mockReset();
+    mockIsLoading.mockReset();
+    mockError.mockReset();
+    mockCreateTrip.mockReset();
+    mockDeleteTrip.mockReset();
     mockTrips.mockReturnValue([]);
     mockIsLoading.mockReturnValue(false);
     mockError.mockReturnValue(null);
-    mockCreateTrip.mockReturnValue(vi.fn());
-    mockDeleteTrip.mockReturnValue(vi.fn());
   });
 
   describe("Loading state", () => {
@@ -210,6 +213,31 @@ describe("TripsPage", () => {
 
       render(<TripsPage />);
       expect(screen.getByTestId("connection-status")).toBeInTheDocument();
+    });
+
+    it("deletes a trip when delete button is clicked", async () => {
+      mockTrips.mockReturnValue([
+        {
+          createdAt: "2024-01-10T10:00:00Z",
+          destinations: [{ name: "Kyoto" }],
+          id: "trip-delete-id",
+          title: "Kyoto Escape",
+          visibility: "private",
+        },
+      ]);
+      mockDeleteTrip.mockResolvedValue(undefined);
+      const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+
+      render(<TripsPage />);
+
+      fireEvent.click(screen.getByText("Delete"));
+
+      await waitFor(() => {
+        expect(mockDeleteTrip).toHaveBeenCalledTimes(1);
+        expect(mockDeleteTrip).toHaveBeenCalledWith("trip-delete-id");
+      });
+
+      confirmSpy.mockRestore();
     });
   });
 
