@@ -70,7 +70,9 @@ describe("createFlightAgent", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockClampMaxTokens.mockReturnValue({ maxTokens: 1024, reasons: [] });
-    mockBuildFlightPrompt.mockReturnValue("Search for flights from {origin} to {destination}");
+    mockBuildFlightPrompt.mockReturnValue(
+      "Search for flights from {origin} to {destination}"
+    );
     mockCreateTripSageAgent.mockReturnValue({
       agent: { generate: vi.fn(), stream: vi.fn() },
       metadata: { agentType: "flightSearch" },
@@ -100,9 +102,7 @@ describe("createFlightAgent", () => {
   });
 
   it("clamps max tokens based on context messages", () => {
-    const contextMessages = [
-      { content: "Previous message", role: "user" as const },
-    ];
+    const contextMessages = [{ content: "Previous message", role: "user" as const }];
 
     createFlightAgent(mockDeps, mockConfig, mockInput, contextMessages);
 
