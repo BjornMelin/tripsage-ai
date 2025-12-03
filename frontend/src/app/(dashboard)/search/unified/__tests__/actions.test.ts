@@ -97,7 +97,7 @@ describe("searchHotelsAction", () => {
     expect(result).toHaveLength(10);
   });
 
-  it("transforms valid listing to ModernHotelResult", async () => {
+  it("transforms valid listing to HotelResult", async () => {
     const listing = {
       address: {
         cityName: "Paris",

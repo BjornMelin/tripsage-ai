@@ -26,7 +26,7 @@ vi.mock("@/components/ui/use-toast", () => ({
 const mockInitializeSearch = vi.hoisted(() => vi.fn());
 const mockExecuteSearch = vi.hoisted(() => vi.fn());
 
-vi.mock("@/hooks/use-search-orchestration", () => ({
+vi.mock("@/hooks/search/use-search-orchestration", () => ({
   useSearchOrchestration: () => ({
     executeSearch: mockExecuteSearch,
     initializeSearch: mockInitializeSearch,
@@ -36,6 +36,10 @@ vi.mock("@/hooks/use-search-orchestration", () => ({
 // Mock child components
 vi.mock("@/components/features/search/filter-presets", () => ({
   FilterPresets: () => <div data-testid="filter-presets">Filter Presets</div>,
+}));
+
+vi.mock("@/components/features/search/filter-panel", () => ({
+  FilterPanel: () => <div data-testid="filter-panel">Filter Panel</div>,
 }));
 
 vi.mock("@/components/features/search/flight-search-form", () => ({
@@ -54,39 +58,43 @@ vi.mock("@/components/layouts/search-layout", () => ({
   ),
 }));
 
-import FlightSearchPage from "../page";
+// Import the client component instead of the RSC shell
+import FlightsSearchClient from "../flights-search-client";
 
-describe("FlightSearchPage", () => {
+describe("FlightsSearchClient", () => {
+  const mockOnSubmitServer = vi.fn().mockResolvedValue({});
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockInitializeSearch.mockReset();
     mockExecuteSearch.mockReset();
     mockExecuteSearch.mockResolvedValue("search-123");
+    mockOnSubmitServer.mockClear();
   });
 
   it("renders search layout wrapper", () => {
-    render(<FlightSearchPage />);
+    render(<FlightsSearchClient onSubmitServer={mockOnSubmitServer} />);
     expect(screen.getByTestId("search-layout")).toBeInTheDocument();
   });
 
   it("renders FlightSearchForm component", () => {
-    render(<FlightSearchPage />);
+    render(<FlightsSearchClient onSubmitServer={mockOnSubmitServer} />);
     expect(screen.getByTestId("flight-search-form")).toBeInTheDocument();
   });
 
   it("renders FilterPresets sidebar component", () => {
-    render(<FlightSearchPage />);
+    render(<FlightsSearchClient onSubmitServer={mockOnSubmitServer} />);
     expect(screen.getByTestId("filter-presets")).toBeInTheDocument();
   });
 
   it("renders Popular Routes card", () => {
-    render(<FlightSearchPage />);
+    render(<FlightsSearchClient onSubmitServer={mockOnSubmitServer} />);
     expect(screen.getByText("Popular Routes")).toBeInTheDocument();
     expect(screen.getByText("Trending flight routes and deals")).toBeInTheDocument();
   });
 
   it("renders Travel Tips card", () => {
-    render(<FlightSearchPage />);
+    render(<FlightsSearchClient onSubmitServer={mockOnSubmitServer} />);
     expect(screen.getByText("Travel Tips")).toBeInTheDocument();
     expect(
       screen.getByText("Tips to help you find the best flights")
@@ -94,15 +102,20 @@ describe("FlightSearchPage", () => {
   });
 
   it("renders popular route cards", () => {
-    render(<FlightSearchPage />);
-    // Check for route combinations in popular routes (rendered as "origin to destination")
-    expect(screen.getByText(/New York to London/)).toBeInTheDocument();
-    expect(screen.getByText(/Los Angeles to Tokyo/)).toBeInTheDocument();
-    expect(screen.getByText(/Chicago to Paris/)).toBeInTheDocument();
+    render(<FlightsSearchClient onSubmitServer={mockOnSubmitServer} />);
+    // Route cards display origin → destination with an arrow icon between them
+    // Check that route information is rendered (prices indicate route cards exist)
+    expect(screen.getByText("$456")).toBeInTheDocument();
+    expect(screen.getByText("$789")).toBeInTheDocument();
+    expect(screen.getByText("$567")).toBeInTheDocument();
+    // Check for dates
+    expect(screen.getByText("May 28, 2025")).toBeInTheDocument();
+    expect(screen.getByText("Jun 15, 2025")).toBeInTheDocument();
+    expect(screen.getByText("Jun 8, 2025")).toBeInTheDocument();
   });
 
   it("renders travel tips content", () => {
-    render(<FlightSearchPage />);
+    render(<FlightsSearchClient onSubmitServer={mockOnSubmitServer} />);
     expect(
       screen.getByText("Book 1-3 months in advance for the best prices")
     ).toBeInTheDocument();
@@ -111,7 +124,7 @@ describe("FlightSearchPage", () => {
   });
 
   it("initializes search type on mount", () => {
-    render(<FlightSearchPage />);
+    render(<FlightsSearchClient onSubmitServer={mockOnSubmitServer} />);
 
     expect(mockInitializeSearch).toHaveBeenCalledWith("flight");
   });

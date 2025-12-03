@@ -1,6 +1,7 @@
 /**
  * @fileoverview Activity search form component for searching activities.
  */
+
 "use client";
 
 import type { ActivitySearchParams } from "@schemas/search";

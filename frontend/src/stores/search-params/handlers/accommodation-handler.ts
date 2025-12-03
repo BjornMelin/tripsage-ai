@@ -2,7 +2,6 @@
  * @fileoverview Handler for accommodation search parameters.
  */
 
-import type { SearchAccommodationParams } from "@schemas/search";
 import {
   accommodationSearchParamsStoreSchema,
   type ValidatedAccommodationParams,
@@ -35,11 +34,11 @@ const accommodationHandler: SearchParamsHandler<ValidatedAccommodationParams> = 
   hasRequiredParams(params) {
     return (
       typeof params.destination === "string" &&
-      params.destination.length > 0 &&
+      params.destination.trim().length > 0 &&
       typeof params.checkIn === "string" &&
-      params.checkIn.length > 0 &&
+      params.checkIn.trim().length > 0 &&
       typeof params.checkOut === "string" &&
-      params.checkOut.length > 0
+      params.checkOut.trim().length > 0
     );
   },
 
@@ -48,17 +47,12 @@ const accommodationHandler: SearchParamsHandler<ValidatedAccommodationParams> = 
   },
   searchType: "accommodation",
 
-  toSearchParams(params) {
-    return params as SearchAccommodationParams;
-  },
-
   validate(params) {
     const result = accommodationSearchParamsStoreSchema.safeParse(params);
     if (result.success) {
       return { data: result.data, success: true };
     }
-    const errorMessage = result.error.issues.map((issue) => issue.message).join(", ");
-    return { error: errorMessage || "Validation failed", success: false };
+    return { error: result.error, success: false };
   },
 };
 

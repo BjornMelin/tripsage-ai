@@ -3,9 +3,9 @@
 import { fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { render } from "@/test/test-utils";
-import { type ModernFlightResult, ModernFlightResults } from "../modern-flight-results";
+import { type FlightResult, FlightResults } from "../flight-results";
 
-const BaseFlight: ModernFlightResult = {
+const BaseFlight: FlightResult = {
   aircraft: "A320",
   airline: "Test Air",
   amenities: ["wifi", "meals"],
@@ -23,15 +23,11 @@ const BaseFlight: ModernFlightResult = {
   stops: { count: 0 },
 };
 
-describe("ModernFlightResults", () => {
+describe("FlightResults", () => {
   it("calls onSelect when Select Flight is clicked", () => {
     const onSelect = vi.fn().mockReturnValue(undefined);
     render(
-      <ModernFlightResults
-        results={[BaseFlight]}
-        onSelect={onSelect}
-        onCompare={vi.fn()}
-      />
+      <FlightResults results={[BaseFlight]} onSelect={onSelect} onCompare={vi.fn()} />
     );
 
     fireEvent.click(screen.getByRole("button", { name: /select flight/i }));
@@ -51,7 +47,7 @@ describe("ModernFlightResults", () => {
     ];
     const onCompare = vi.fn();
     render(
-      <ModernFlightResults results={flights} onSelect={vi.fn()} onCompare={onCompare} />
+      <FlightResults results={flights} onSelect={vi.fn()} onCompare={onCompare} />
     );
 
     const checkboxes = screen.getAllByRole("checkbox");
@@ -65,7 +61,7 @@ describe("ModernFlightResults", () => {
 
     expect(onCompare).toHaveBeenCalledTimes(1);
     expect(onCompare.mock.calls[0][0]).toHaveLength(2);
-    expect(onCompare.mock.calls[0][0].map((f: ModernFlightResult) => f.id)).toEqual([
+    expect(onCompare.mock.calls[0][0].map((f: FlightResult) => f.id)).toEqual([
       "f1",
       "f2",
     ]);

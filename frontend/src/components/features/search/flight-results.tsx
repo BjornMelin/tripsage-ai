@@ -1,5 +1,5 @@
 /**
- * @fileoverview Modern flight results grid with filters, tags, and sticky summary.
+ * @fileoverview Flight results grid with filters, tags, and sorting controls.
  */
 
 "use client";
@@ -7,7 +7,9 @@
 import {
   ArrowUpDownIcon,
   FilterIcon,
+  Grid3X3Icon,
   HeartIcon,
+  ListIcon,
   MonitorIcon,
   PlaneIcon,
   RefreshCwIcon,
@@ -27,8 +29,8 @@ import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { cn } from "@/lib/utils";
 import { formatCurrency, formatDurationMinutes } from "./common/format";
 
-// Modern flight result types with 2025 travel patterns
-export interface ModernFlightResult {
+// Flight result type
+export interface FlightResult {
   id: string;
   airline: string;
   flightNumber: string;
@@ -86,21 +88,23 @@ export interface ModernFlightResult {
   };
 }
 
-interface ModernFlightResultsProps {
-  results: ModernFlightResult[];
+/** Flight results component props */
+interface FlightResultsProps {
+  results: FlightResult[];
   loading?: boolean;
-  onSelect: (flight: ModernFlightResult) => Promise<void>;
-  onCompare: (flights: ModernFlightResult[]) => void;
+  onSelect: (flight: FlightResult) => Promise<void>;
+  onCompare: (flights: FlightResult[]) => void;
   className?: string;
 }
 
-export function ModernFlightResults({
+/** Flight results grid with filters, tags, and sorting controls. */
+export function FlightResults({
   results,
   loading = false,
   onSelect,
   onCompare,
   className,
-}: ModernFlightResultsProps) {
+}: FlightResultsProps) {
   const [isPending, startTransition] = useTransition();
   const [selectedForComparison, setSelectedForComparison] = useState<Set<string>>(
     new Set()
@@ -108,7 +112,8 @@ export function ModernFlightResults({
   const [sortBy, _setSortBy] = useState<
     "price" | "duration" | "departure" | "emissions"
   >("price");
-  const [viewMode, setViewMode] = useState<"comfortable" | "compact">("comfortable");
+  const [_sortDirection, _setSortDirection] = useState<"asc" | "desc">("asc");
+  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
 
   // Optimistic selection state
   const [optimisticSelecting, setOptimisticSelecting] = useOptimistic(
@@ -116,7 +121,8 @@ export function ModernFlightResults({
     (_state, flightId: string) => flightId
   );
 
-  const handleFlightSelect = (flight: ModernFlightResult) => {
+  /** Handle flight selection */
+  const handleFlightSelect = (flight: FlightResult) => {
     startTransition(async () => {
       setOptimisticSelecting(flight.id);
       try {
@@ -126,7 +132,7 @@ export function ModernFlightResults({
           error instanceof Error ? error : new Error(String(error)),
           {
             action: "handleFlightSelect",
-            context: "ModernFlightResults",
+            context: "FlightResults",
             flightId: flight.id,
           }
         );
@@ -136,6 +142,7 @@ export function ModernFlightResults({
     });
   };
 
+  /** Toggle flight for comparison */
   const toggleComparison = (flightId: string) => {
     setSelectedForComparison((prev) => {
       const newSet = new Set(prev);
@@ -149,6 +156,7 @@ export function ModernFlightResults({
     });
   };
 
+  /** Get price change icon */
   const getPriceChangeIcon = (change?: "up" | "down" | "stable") => {
     if (change === "down")
       return <TrendingUpIcon className="h-3 w-3 text-green-500 rotate-180" />;
@@ -156,7 +164,7 @@ export function ModernFlightResults({
     return null;
   };
 
-  const getPredictionBadge = (prediction: ModernFlightResult["prediction"]) => {
+  const getPredictionBadge = (prediction: FlightResult["prediction"]) => {
     const colors = {
       buy_now: "bg-green-100 text-green-800 border-green-200",
       neutral: "bg-gray-100 text-gray-800 border-gray-200",
@@ -235,18 +243,18 @@ export function ModernFlightResults({
 
           <div className="flex items-center gap-2">
             <Button
-              variant={viewMode === "comfortable" ? "default" : "outline"}
+              variant={viewMode === "list" ? "default" : "outline"}
               size="sm"
-              onClick={() => setViewMode("comfortable")}
+              onClick={() => setViewMode("list")}
             >
-              Comfortable
+              <ListIcon className="h-4 w-4" />
             </Button>
             <Button
-              variant={viewMode === "compact" ? "default" : "outline"}
+              variant={viewMode === "grid" ? "default" : "outline"}
               size="sm"
-              onClick={() => setViewMode("compact")}
+              onClick={() => setViewMode("grid")}
             >
-              Compact
+              <Grid3X3Icon className="h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -292,7 +300,7 @@ export function ModernFlightResults({
               optimisticSelecting === flight.id && "opacity-75"
             )}
           >
-            <CardContent className={cn("p-6", viewMode === "compact" && "p-4")}>
+            <CardContent className={cn("p-6", viewMode === "grid" && "p-4")}>
               {/* Promotions Banner */}
               {flight.promotions && (
                 <div className="absolute top-0 left-6 transform -translate-y-1/2">
@@ -315,7 +323,7 @@ export function ModernFlightResults({
                       <p className="text-xs text-muted-foreground">
                         {flight.flightNumber}
                       </p>
-                      {viewMode === "comfortable" && (
+                      {viewMode === "list" && (
                         <p className="text-xs text-muted-foreground">
                           {flight.aircraft}
                         </p>
@@ -333,7 +341,7 @@ export function ModernFlightResults({
                       <p className="text-xs text-muted-foreground">
                         {flight.origin.city}
                       </p>
-                      {flight.origin.terminal && viewMode === "comfortable" && (
+                      {flight.origin.terminal && viewMode === "list" && (
                         <p className="text-xs text-muted-foreground">
                           Terminal {flight.origin.terminal}
                         </p>
@@ -365,7 +373,7 @@ export function ModernFlightResults({
                       <p className="text-xs text-muted-foreground">
                         {flight.destination.city}
                       </p>
-                      {flight.destination.terminal && viewMode === "comfortable" && (
+                      {flight.destination.terminal && viewMode === "list" && (
                         <p className="text-xs text-muted-foreground">
                           Terminal {flight.destination.terminal}
                         </p>
@@ -373,8 +381,8 @@ export function ModernFlightResults({
                     </div>
                   </div>
 
-                  {/* Additional Info for Comfortable View */}
-                  {viewMode === "comfortable" && (
+                  {/* Additional Info for List View */}
+                  {viewMode === "list" && (
                     <div className="mt-4 flex items-center justify-center gap-4 text-xs">
                       {flight.amenities.includes("wifi") && (
                         <div className="flex items-center gap-1 text-muted-foreground">
@@ -419,7 +427,7 @@ export function ModernFlightResults({
                       </Badge>
                     )}
 
-                    {viewMode === "comfortable" && (
+                    {viewMode === "list" && (
                       <div className="space-y-2 mb-3">
                         {getPredictionBadge(flight.prediction)}
 
@@ -456,7 +464,7 @@ export function ModernFlightResults({
                         onClick={() => handleFlightSelect(flight)}
                         disabled={isPending || optimisticSelecting === flight.id}
                         className="w-full"
-                        size={viewMode === "compact" ? "sm" : "default"}
+                        size={viewMode === "grid" ? "sm" : "default"}
                       >
                         {optimisticSelecting === flight.id
                           ? "Selecting..."
@@ -497,15 +505,14 @@ export function ModernFlightResults({
               </div>
 
               {/* AI Prediction Details */}
-              {viewMode === "comfortable" &&
-                flight.prediction.priceAlert !== "neutral" && (
-                  <div className="mt-4 pt-4 border-t">
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <ZapIcon className="h-3 w-3" />
-                      <span>AI Prediction: {flight.prediction.reason}</span>
-                    </div>
+              {viewMode === "list" && flight.prediction.priceAlert !== "neutral" && (
+                <div className="mt-4 pt-4 border-t">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <ZapIcon className="h-3 w-3" />
+                    <span>AI Prediction: {flight.prediction.reason}</span>
                   </div>
-                )}
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}

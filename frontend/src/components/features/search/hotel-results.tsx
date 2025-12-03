@@ -1,5 +1,5 @@
 /**
- * @fileoverview Modern hotel results grid with filters, badges, and sorting controls.
+ * @fileoverview Hotel results grid with filters, badges, and sorting controls.
  */
 
 "use client";
@@ -34,8 +34,8 @@ import { GetAmenityIcon } from "./cards/amenities";
 import { RatingStars } from "./cards/rating-stars";
 import { formatCurrency } from "./common/format";
 
-// Modern hotel result types with 2025 hospitality patterns
-export interface ModernHotelResult {
+// Hotel result type
+export interface HotelResult {
   id: string;
   name: string;
   brand?: string;
@@ -101,27 +101,30 @@ export interface ModernHotelResult {
   };
 }
 
-interface ModernHotelResultsProps {
-  results: ModernHotelResult[];
+/** Hotel results props */
+interface HotelResultsProps {
+  results: HotelResult[];
   loading?: boolean;
-  onSelect: (hotel: ModernHotelResult) => Promise<void>;
+  onSelect: (hotel: HotelResult) => Promise<void>;
   onSaveToWishlist: (hotelId: string) => void;
   className?: string;
   showMap?: boolean;
 }
 
-export function ModernHotelResults({
+/** Hotel results component */
+export function HotelResults({
   results,
   loading = false,
   onSelect,
   onSaveToWishlist,
   className,
   showMap = true,
-}: ModernHotelResultsProps) {
+}: HotelResultsProps) {
   const [isPending, startTransition] = useTransition();
   const [viewMode, setViewMode] = useState<"list" | "grid" | "map">("list");
   const [savedHotels, setSavedHotels] = useState<Set<string>>(new Set());
   const [sortBy, _setSortBy] = useState<"price" | "rating" | "distance" | "ai">("ai");
+  const [_sortDirection, _setSortDirection] = useState<"asc" | "desc">("desc");
 
   // Optimistic selection state
   const [optimisticSelecting, setOptimisticSelecting] = useOptimistic(
@@ -129,7 +132,8 @@ export function ModernHotelResults({
     (_state, hotelId: string) => hotelId
   );
 
-  const handleHotelSelect = (hotel: ModernHotelResult) => {
+  /** Handle hotel selection */
+  const handleHotelSelect = (hotel: HotelResult) => {
     startTransition(async () => {
       setOptimisticSelecting(hotel.id);
       try {
@@ -139,7 +143,7 @@ export function ModernHotelResults({
           error instanceof Error ? error : new Error(String(error)),
           {
             action: "handleHotelSelect",
-            context: "ModernHotelResults",
+            context: "HotelResults",
             hotelId: hotel.id,
           }
         );
@@ -149,6 +153,7 @@ export function ModernHotelResults({
     });
   };
 
+  /** Toggle hotel for comparison */
   const toggleWishlist = (hotelId: string) => {
     setSavedHotels((prev) => {
       const newSet = new Set(prev);
@@ -162,6 +167,7 @@ export function ModernHotelResults({
     });
   };
 
+  /** Get urgency color */
   const getUrgencyColor = (urgency: string) => {
     switch (urgency) {
       case "high":
@@ -173,6 +179,7 @@ export function ModernHotelResults({
     }
   };
 
+  /** Get price history icon */
   const getPriceHistoryIcon = (trend: string) => {
     if (trend === "falling")
       return <TrendingUpIcon className="h-3 w-3 text-green-500 rotate-180" />;
