@@ -16,10 +16,11 @@ import {
   type ValidatedFilterOption,
   type ValidatedSortOption,
 } from "@schemas/stores";
-import { create, type StateCreator } from "zustand";
+import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 import { nowIso, secureId } from "@/lib/security/random";
 import { createStoreLogger } from "@/lib/telemetry/store-logger";
+import { createComputeFn, withComputed } from "./middleware/computed";
 
 const logger = createStoreLogger({ storeName: "search-filters" });
 
@@ -452,91 +453,47 @@ const GET_DEFAULT_SORT_OPTIONS = (searchType: SearchType): ValidatedSortOption[]
   }
 };
 
-// Helper to compute derived state
-const COMPUTE_DERIVED_STATE = (state: Partial<SearchFiltersState>) => {
-  const hasActiveFilters = Object.keys(state.activeFilters || {}).length > 0;
-  const activeFilterCount = Object.keys(state.activeFilters || {}).length;
-  const canClearFilters = hasActiveFilters || state.activeSortOption !== null;
-
-  const currentFilters = state.currentSearchType
-    ? state.availableFilters?.[state.currentSearchType] || []
-    : [];
-
-  const currentSortOptions = state.currentSearchType
-    ? state.availableSortOptions?.[state.currentSearchType] || []
-    : [];
-
-  const summaries: string[] = [];
-  Object.entries(state.activeFilters || {}).forEach(([filterId, activeFilter]) => {
-    const filter = currentFilters.find((f) => f.id === filterId);
-    if (filter) {
-      const valueStr = Array.isArray(activeFilter.value)
-        ? activeFilter.value.join(", ")
-        : typeof activeFilter.value === "object" && activeFilter.value !== null
-          ? `${(activeFilter.value as { min?: number; max?: number }).min || ""} - ${
-              (activeFilter.value as { min?: number; max?: number }).max || ""
-            }`
-          : String(activeFilter.value);
-      summaries.push(`${filter.label}: ${valueStr}`);
-    }
-  });
-  const appliedFilterSummary = summaries.join("; ");
-
-  return {
-    activeFilterCount,
-    appliedFilterSummary,
-    canClearFilters,
-    currentFilters,
-    currentSortOptions,
-    hasActiveFilters,
-  };
-};
-
-// Custom middleware to compute derived state with proper TypeScript typing
-const WITH_COMPUTED_STATE =
-  <T extends SearchFiltersState>(
-    config: StateCreator<T, [], [], T>
-  ): StateCreator<T, [], [], T> =>
-  (set, get, api) => {
-    const setState = (
-      partial: Partial<T> | ((state: T) => Partial<T>),
-      replace?: boolean | undefined
-    ) => {
-      const newState = typeof partial === "function" ? partial(get()) : partial;
-      const currentState = get();
-      const mergedState = replace ? newState : { ...currentState, ...newState };
-      const derived = COMPUTE_DERIVED_STATE(mergedState);
-      if (replace) {
-        set({ ...newState, ...derived } as T, true);
-      } else {
-        set((state) => ({ ...state, ...newState, ...derived }));
+// Helper to compute derived state using shared middleware
+const computeFilterState = createComputeFn<SearchFiltersState>({
+  activeFilterCount: (state) => Object.keys(state.activeFilters || {}).length,
+  appliedFilterSummary: (state) => {
+    const currentFilters = state.currentSearchType
+      ? state.availableFilters?.[state.currentSearchType] || []
+      : [];
+    const summaries: string[] = [];
+    Object.entries(state.activeFilters || {}).forEach(([filterId, activeFilter]) => {
+      const filter = currentFilters.find((f) => f.id === filterId);
+      if (filter) {
+        const valueStr = Array.isArray(activeFilter.value)
+          ? activeFilter.value.join(", ")
+          : typeof activeFilter.value === "object" && activeFilter.value !== null
+            ? `${(activeFilter.value as { min?: number; max?: number }).min || ""} - ${
+                (activeFilter.value as { min?: number; max?: number }).max || ""
+              }`
+            : String(activeFilter.value);
+        summaries.push(`${filter.label}: ${valueStr}`);
       }
-    };
-
-    // Override the setState method on the api to ensure computed state is always updated
-    const originalSetState = api.setState;
-    api.setState = (
-      partial: Partial<T> | ((state: T) => Partial<T>),
-      replace?: boolean | undefined
-    ) => {
-      const newState = typeof partial === "function" ? partial(get()) : partial;
-      const currentState = get();
-      const mergedState = replace ? newState : { ...currentState, ...newState };
-      const derived = COMPUTE_DERIVED_STATE(mergedState);
-      if (replace) {
-        originalSetState({ ...newState, ...derived } as T, true);
-      } else {
-        originalSetState((state) => ({ ...state, ...newState, ...derived }));
-      }
-    };
-
-    return config(setState, get, api);
-  };
+    });
+    return summaries.join("; ");
+  },
+  canClearFilters: (state) =>
+    Object.keys(state.activeFilters || {}).length > 0 ||
+    state.activeSortOption !== null,
+  currentFilters: (state) =>
+    state.currentSearchType
+      ? state.availableFilters?.[state.currentSearchType] || []
+      : [],
+  currentSortOptions: (state) =>
+    state.currentSearchType
+      ? state.availableSortOptions?.[state.currentSearchType] || []
+      : [],
+  hasActiveFilters: (state) => Object.keys(state.activeFilters || {}).length > 0,
+});
 
 export const useSearchFiltersStore = create<SearchFiltersState>()(
   devtools(
     persist(
-      WITH_COMPUTED_STATE((set, get) => ({
+      withComputed({ compute: computeFilterState }, (set, get) => ({
         activeFilterCount: 0,
 
         // Active filters and sorting
