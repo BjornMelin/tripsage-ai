@@ -96,7 +96,7 @@ describe("AccommodationCard", () => {
 
     render(<AccommodationCard accommodation={accommodationWithDifferentDates} />);
 
-    expect(screen.getByText("Total: $1750 (7 nights)")).toBeInTheDocument();
+    expect(screen.getByText("Total: $1,750 (7 nights)")).toBeInTheDocument();
   });
 
   it("should render without action buttons when no handlers provided", () => {
