@@ -145,7 +145,10 @@ export function fireAndForget<T>(
     }
 
     // Warn about missing error handler in development
-    if (process.env.NODE_ENV === "development") {
+    const isClientDev =
+      typeof window !== "undefined" && process.env.NODE_ENV === "development";
+
+    if (isClientDev) {
       console.warn(
         "fireAndForget called without onError handler. Errors will be silently suppressed in production.",
         {

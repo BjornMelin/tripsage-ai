@@ -167,7 +167,9 @@ export default function TripDetailsPage() {
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
               } catch (error) {
-                console.error("Failed to export trip:", error);
+                if (process.env.NODE_ENV === "development") {
+                  console.error("Failed to export trip:", error);
+                }
                 alert("Failed to export trip to calendar");
               }
             }}

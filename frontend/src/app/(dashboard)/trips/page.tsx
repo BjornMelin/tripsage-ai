@@ -180,7 +180,9 @@ export default function TripsPage() {
   // Handle error state
   useEffect(() => {
     if (error) {
-      console.error("Trips error:", error);
+      if (process.env.NODE_ENV === "development") {
+        console.error("Trips error:", error);
+      }
     }
   }, [error]);
 
