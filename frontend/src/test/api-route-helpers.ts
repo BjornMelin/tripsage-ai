@@ -1,12 +1,14 @@
 /**
- * @fileoverview Shared mocks/utilities for Next.js API route tests.
+ * @fileoverview Unified API route testing utilities for Next.js.
  *
- * Centralizes hoisted mocks for `withApiGuards` dependencies so every route test
- * follows the same contract (cookies first, auth, then rate limiting) per
- * AGENTS.md and Vitest standards documented in `.cursor/rules/vitest.mdc`.
+ * Provides:
+ * - Request factories (makeJsonRequest, createRouteParamsContext)
+ * - Hoisted mocks for withApiGuards dependencies
+ * - Auth/cookies/rate-limiting test controls
  */
 
 import type { User } from "@supabase/supabase-js";
+import { NextRequest } from "next/server";
 import { afterEach, vi } from "vitest";
 import {
   setRateLimitFactoryForTests,
@@ -14,6 +16,61 @@ import {
 } from "@/lib/api/factory";
 import { createMockSupabaseClient } from "@/test/mocks/supabase";
 import { getMockCookiesForTest } from "@/test/route-helpers";
+
+// ---- REQUEST FACTORIES ------------------------------------------------------
+
+/**
+ * Create a NextRequest with JSON body for API route tests.
+ *
+ * @param url - Request URL (can be relative or absolute)
+ * @param body - Request body (will be JSON stringified)
+ * @param init - Optional headers and method overrides
+ * @returns NextRequest instance
+ *
+ * @example
+ * ```ts
+ * const req = makeJsonRequest("/api/auth/mfa/verify", { code: "123456" });
+ * const res = await POST(req, context);
+ * ```
+ */
+export function makeJsonRequest(
+  url: string,
+  body: unknown,
+  init?: { headers?: HeadersInit; method?: string }
+): NextRequest {
+  const headers = new Headers(init?.headers);
+  headers.set("Content-Type", "application/json");
+  const method = init?.method ?? "POST";
+  const fullUrl = url.startsWith("http") ? url : `http://localhost:3000${url}`;
+  return new NextRequest(
+    new Request(fullUrl, {
+      body: body === undefined ? undefined : JSON.stringify(body),
+      cache: "no-store",
+      headers,
+      method,
+    })
+  );
+}
+
+/**
+ * Create route params context for dynamic route testing.
+ *
+ * @param params - Route parameters object
+ * @returns Context object compatible with Next.js route handlers
+ *
+ * @example
+ * ```ts
+ * const context = createRouteParamsContext({ id: "trip-123" });
+ * const res = await GET(req, context);
+ * ```
+ */
+export function createRouteParamsContext<
+  T extends Record<string, string> = Record<string, string>,
+>(params: T = {} as T): { params: Promise<T> } {
+  return { params: Promise.resolve(params) };
+}
+
+// ---- ROUTE MOCK STATE ------------------------------------------------------
 
 type RateLimitResult = {
   limit: number;
