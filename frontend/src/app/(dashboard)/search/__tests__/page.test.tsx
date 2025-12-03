@@ -42,21 +42,22 @@ vi.mock("@/components/layouts/search-layout", () => ({
   ),
 }));
 
-import SearchPage from "../page";
+// Import client component for tests (RSC shells render client components)
+import SearchHubClient from "../search-hub-client";
 
-describe("SearchPage", () => {
+describe("SearchHubClient", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockRecentSearches.mockReturnValue([]);
   });
 
   it("renders search layout wrapper", () => {
-    render(<SearchPage />);
+    render(<SearchHubClient />);
     expect(screen.getByTestId("search-layout")).toBeInTheDocument();
   });
 
   it("renders search options card with title", () => {
-    render(<SearchPage />);
+    render(<SearchHubClient />);
     expect(screen.getByText("Search Options")).toBeInTheDocument();
     expect(
       screen.getByText(
@@ -66,7 +67,7 @@ describe("SearchPage", () => {
   });
 
   it("renders all tab triggers", () => {
-    render(<SearchPage />);
+    render(<SearchHubClient />);
     expect(screen.getByRole("tab", { name: "All" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Flights" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Hotels" })).toBeInTheDocument();
@@ -74,7 +75,7 @@ describe("SearchPage", () => {
   });
 
   it("renders quick option cards with correct links", () => {
-    render(<SearchPage />);
+    render(<SearchHubClient />);
     expect(screen.getByText("Find Flights")).toBeInTheDocument();
     expect(screen.getByText("Book Hotels")).toBeInTheDocument();
     expect(screen.getByText("Discover Activities")).toBeInTheDocument();
@@ -82,13 +83,13 @@ describe("SearchPage", () => {
   });
 
   it("renders recent searches section", () => {
-    render(<SearchPage />);
+    render(<SearchHubClient />);
     expect(screen.getByText("Recent Searches")).toBeInTheDocument();
   });
 
   it("renders empty state when no recent searches", () => {
     mockRecentSearches.mockReturnValue([]);
-    render(<SearchPage />);
+    render(<SearchHubClient />);
     expect(
       screen.getByText(
         "No recent searches yet. Start exploring to build your search history!"
@@ -112,7 +113,7 @@ describe("SearchPage", () => {
       },
     ]);
 
-    render(<SearchPage />);
+    render(<SearchHubClient />);
     expect(screen.getByText("NYC to LAX")).toBeInTheDocument();
     expect(screen.getByText("Paris")).toBeInTheDocument();
     expect(screen.getByText("flight")).toBeInTheDocument();
@@ -120,12 +121,12 @@ describe("SearchPage", () => {
   });
 
   it("renders SearchAnalytics component in sidebar", () => {
-    render(<SearchPage />);
+    render(<SearchHubClient />);
     expect(screen.getByTestId("search-analytics")).toBeInTheDocument();
   });
 
   it("renders SearchCollections component in sidebar", () => {
-    render(<SearchPage />);
+    render(<SearchHubClient />);
     expect(screen.getByTestId("search-collections")).toBeInTheDocument();
   });
 
@@ -139,7 +140,7 @@ describe("SearchPage", () => {
       }))
     );
 
-    render(<SearchPage />);
+    render(<SearchHubClient />);
     // Should show exactly 6 cities (City 0 through City 5)
     expect(screen.getByText("City 0")).toBeInTheDocument();
     expect(screen.getByText("City 5")).toBeInTheDocument();

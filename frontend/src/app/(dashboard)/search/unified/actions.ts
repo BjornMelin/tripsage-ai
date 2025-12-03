@@ -1,5 +1,5 @@
 /**
- * @fileoverview Server action for modern hotel search.
+ * @fileoverview Server action for unified hotel search.
  */
 
 "use server";
@@ -8,14 +8,14 @@ import "server-only";
 
 import { getAccommodationsService } from "@domain/accommodations/container";
 import { accommodationListingSchema } from "@schemas/accommodations";
-import type { ModernHotelSearchParams } from "@/components/features/search/hotel-search-form";
-import type { ModernHotelResult } from "@/components/features/search/modern-hotel-results";
+import type { HotelResult } from "@/components/features/search/hotel-results";
+import type { HotelSearchParams } from "@/components/features/search/hotel-search-form";
 import { getGoogleMapsBrowserKey } from "@/lib/env/client";
 import { secureUuid } from "@/lib/security/random";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 /** Search parameters. */
-type SearchParams = ModernHotelSearchParams & { currency?: string };
+type SearchParams = HotelSearchParams & { currency?: string };
 
 /** Build photo URL. */
 function buildPhotoUrl(photoName?: string): string | undefined {
@@ -26,12 +26,10 @@ function buildPhotoUrl(photoName?: string): string | undefined {
 }
 
 /** Search hotels. */
-export async function searchHotelsAction(
-  params: SearchParams
-): Promise<ModernHotelResult[]> {
+export async function searchHotelsAction(params: SearchParams): Promise<HotelResult[]> {
   const service = getAccommodationsService();
   const searchResult = await withTelemetrySpan(
-    "ui.modern.searchHotels",
+    "ui.unified.searchHotels",
     { attributes: { location: params.location } },
     async () =>
       await service.search(
@@ -62,7 +60,7 @@ export async function searchHotelsAction(
   };
   const nights = calculateNights();
 
-  /** Map search results to modern hotel results. */
+  /** Map search results to unified hotel results. */
   return (searchResult.listings ?? []).slice(0, 10).map((listing) => {
     // Parse listing with Zod schema for type safety
     const parseResult = accommodationListingSchema.safeParse(listing);
@@ -98,7 +96,7 @@ export async function searchHotelsAction(
         starRating: 0,
         sustainability: { certified: false, practices: [], score: 0 },
         userRating: 0,
-      } satisfies ModernHotelResult;
+      } satisfies HotelResult;
     }
 
     const hotel = parseResult.data;
@@ -177,6 +175,6 @@ export async function searchHotelsAction(
         score: 0,
       },
       userRating: hotel.place?.rating ?? 0,
-    } satisfies ModernHotelResult;
+    } satisfies HotelResult;
   });
 }

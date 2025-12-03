@@ -47,8 +47,8 @@ import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { cn } from "@/lib/utils";
 import { useSearchForm } from "./common/use-search-form";
 
-// Use validated flight search params from schemas
-export type ModernFlightSearchParams = FlightSearchFormData;
+// Flight search params type
+export type FlightSearchParams = FlightSearchFormData;
 
 interface SearchSuggestion {
   id: string;
@@ -78,11 +78,11 @@ const FALLBACK_POPULAR_DESTINATIONS: PopularDestination[] = [
 const POPULAR_DESTINATION_SKELETON_KEYS = ["one", "two", "three", "four"] as const;
 
 interface FlightSearchFormProps {
-  onSearch: (params: ModernFlightSearchParams) => Promise<void>;
+  onSearch: (params: FlightSearchParams) => Promise<void>;
   suggestions?: SearchSuggestion[];
   className?: string;
   showSmartBundles?: boolean;
-  initialParams?: Partial<ModernFlightSearchParams>;
+  initialParams?: Partial<FlightSearchParams>;
 }
 
 /** Flight search form with validation and popular destination shortcuts. */

@@ -1,5 +1,5 @@
 /**
- * @fileoverview Client page showcasing the modern search experience for flights and hotels.
+ * @fileoverview Client-side unified search experience (renders within RSC shell).
  */
 
 "use client";
@@ -17,15 +17,14 @@ import {
   ZapIcon,
 } from "lucide-react";
 import { type ReactNode, useState, useTransition } from "react";
-import type { ModernFlightSearchParams } from "@/components/features/search/flight-search-form";
+import type { FlightResult } from "@/components/features/search/flight-results";
+import { FlightResults } from "@/components/features/search/flight-results";
+import type { FlightSearchParams } from "@/components/features/search/flight-search-form";
 import { FlightSearchForm } from "@/components/features/search/flight-search-form";
-import type { ModernHotelSearchParams } from "@/components/features/search/hotel-search-form";
+import type { HotelResult } from "@/components/features/search/hotel-results";
+import { HotelResults } from "@/components/features/search/hotel-results";
+import type { HotelSearchParams } from "@/components/features/search/hotel-search-form";
 import { HotelSearchForm } from "@/components/features/search/hotel-search-form";
-// Import the types from their source files
-import type { ModernFlightResult } from "@/components/features/search/modern-flight-results";
-import { ModernFlightResults } from "@/components/features/search/modern-flight-results";
-import type { ModernHotelResult } from "@/components/features/search/modern-hotel-results";
-import { ModernHotelResults } from "@/components/features/search/modern-hotel-results";
 import { SearchLayout } from "@/components/layouts/search-layout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -33,12 +32,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
-import { searchHotelsAction } from "./actions";
-
-// Mock data uses the Modern types directly
 
 // Mock data for demo purposes
-const MOCK_FLIGHT_RESULTS: ModernFlightResult[] = [
+const MOCK_FLIGHT_RESULTS: FlightResult[] = [
   {
     aircraft: "Boeing 787",
     airline: "Delta Airlines",
@@ -100,7 +96,7 @@ const MOCK_FLIGHT_RESULTS: ModernFlightResult[] = [
   },
 ];
 
-const MOCK_HOTEL_RESULTS: ModernHotelResult[] = [
+const MOCK_HOTEL_RESULTS: HotelResult[] = [
   {
     ai: {
       personalizedTags: ["luxury", "city-center", "business"],
@@ -227,21 +223,22 @@ const MOCK_HOTEL_RESULTS: ModernHotelResult[] = [
   },
 ];
 
-/**
- * Render the modern search experience with tabbed flight and hotel flows.
- *
- * @returns Fully composed search layout with showcase sections.
- */
-export default function ModernSearchPage() {
+interface UnifiedSearchClientProps {
+  onSearchHotels: (params: HotelSearchParams) => Promise<HotelResult[]>;
+}
+
+export default function UnifiedSearchClient({
+  onSearchHotels,
+}: UnifiedSearchClientProps) {
   const [isPending, startTransition] = useTransition();
   const [activeTab, setActiveTab] = useState<"flights" | "hotels">("flights");
   const [showResults, setShowResults] = useState(false);
   const [_searchData, setSearchData] = useState<Record<string, unknown> | null>(null);
-  const [hotelResults, setHotelResults] = useState<ModernHotelResult[]>([]);
+  const [hotelResults, setHotelResults] = useState<HotelResult[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const handleFlightSearch = async (params: ModernFlightSearchParams) => {
+  const handleFlightSearch = async (params: FlightSearchParams) => {
     await new Promise<void>((resolve) => {
       startTransition(() => {
         setSearchData(params as unknown as Record<string, unknown>);
@@ -255,23 +252,24 @@ export default function ModernSearchPage() {
     });
   };
 
-  const handleHotelSearch = (params: ModernHotelSearchParams) =>
+  const handleHotelSearch = (params: HotelSearchParams) =>
     new Promise<void>((resolve) => {
       startTransition(async () => {
         setSearchData(params as unknown as Record<string, unknown>);
         setErrorMessage(null);
         try {
-          const results = await searchHotelsAction(params);
+          const results = await onSearchHotels(params);
           setHotelResults(results);
           setShowResults(true);
           setErrorMessage(null);
         } catch (error) {
-          console.error("Hotel search failed", error);
           setHotelResults([]);
           setShowResults(true);
-          setErrorMessage("Search failed, please try again.");
+          const message =
+            error instanceof Error ? error.message : "Search failed, please try again.";
+          setErrorMessage(message);
           toast({
-            description: "Search failed, please try again.",
+            description: message,
             title: "Search Failed",
             variant: "destructive",
           });
@@ -281,17 +279,15 @@ export default function ModernSearchPage() {
       });
     });
 
-  const handleFlightSelect = async (_flight: ModernFlightResult) => {
-    // Handle flight selection
-    await Promise.resolve(); // No-op async operation to satisfy linter
+  const handleFlightSelect = async (_flight: FlightResult) => {
+    await Promise.resolve();
   };
 
-  const handleHotelSelect = async (_hotel: ModernHotelResult) => {
-    // Handle hotel selection
-    await Promise.resolve(); // No-op async operation to satisfy linter
+  const handleHotelSelect = async (_hotel: HotelResult) => {
+    await Promise.resolve();
   };
 
-  const handleCompareFlights = (_flights: ModernFlightResult[]) => {
+  const handleCompareFlights = (_flights: FlightResult[]) => {
     // Handle flight comparison
   };
 
@@ -306,7 +302,7 @@ export default function ModernSearchPage() {
         <Card className="bg-linear-to-r from-blue-50 to-green-50 border-none">
           <CardContent className="p-8">
             <div className="text-center space-y-4">
-              <h1 className="text-3xl font-bold">Modern Search Experience</h1>
+              <h1 className="text-3xl font-bold">Unified Search Experience</h1>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                 Experience the future of travel search with AI-powered recommendations,
                 real-time price tracking, and optimistic UI updates.
@@ -366,7 +362,7 @@ export default function ModernSearchPage() {
                       Updated {new Date().toLocaleTimeString()}
                     </Badge>
                   </div>
-                  <ModernFlightResults
+                  <FlightResults
                     results={MOCK_FLIGHT_RESULTS}
                     loading={isPending}
                     onSelect={handleFlightSelect}
@@ -392,7 +388,7 @@ export default function ModernSearchPage() {
                       Updated {new Date().toLocaleTimeString()}
                     </Badge>
                   </div>
-                  <ModernHotelResults
+                  <HotelResults
                     results={hotelResults.length ? hotelResults : MOCK_HOTEL_RESULTS}
                     loading={isPending}
                     onSelect={handleHotelSelect}
@@ -410,7 +406,7 @@ export default function ModernSearchPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <SparklesIcon className="h-5 w-5" />
-              Modern Features Showcase
+              Features Showcase
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -489,10 +485,7 @@ interface FeatureCardProps {
 }
 
 /**
- * Feature card highlighting modern experience capabilities.
- *
- * @param props - Icon, title, and description data to display.
- * @returns Structured feature card element.
+ * Feature card highlighting unified experience capabilities.
  */
 function FeatureCard({ icon, title, description }: FeatureCardProps) {
   return (

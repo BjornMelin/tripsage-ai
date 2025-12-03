@@ -2,7 +2,6 @@
  * @fileoverview Handler for activity search parameters.
  */
 
-import type { ActivitySearchParams } from "@schemas/search";
 import {
   activitySearchParamsStoreSchema,
   type ValidatedActivityParams,
@@ -31,7 +30,9 @@ const activityHandler: SearchParamsHandler<ValidatedActivityParams> = {
   },
 
   hasRequiredParams(params) {
-    return typeof params.destination === "string" && params.destination.length > 0;
+    return (
+      typeof params.destination === "string" && params.destination.trim().length > 0
+    );
   },
 
   mergeParams(current, updates) {
@@ -39,17 +40,12 @@ const activityHandler: SearchParamsHandler<ValidatedActivityParams> = {
   },
   searchType: "activity",
 
-  toSearchParams(params) {
-    return params as ActivitySearchParams;
-  },
-
   validate(params) {
     const result = activitySearchParamsStoreSchema.safeParse(params);
     if (result.success) {
       return { data: result.data, success: true };
     }
-    const errorMessage = result.error.issues.map((issue) => issue.message).join(", ");
-    return { error: errorMessage || "Validation failed", success: false };
+    return { error: result.error, success: false };
   },
 };
 

@@ -45,7 +45,7 @@ import { cn } from "@/lib/utils";
 import { useSearchForm } from "./common/use-search-form";
 
 // React 19 optimistic update types for hotel search
-export interface ModernHotelSearchParams {
+export interface HotelSearchParams {
   location: string;
   checkIn: string;
   checkOut: string;
@@ -68,7 +68,7 @@ interface LocationSuggestion {
 
 /** Hotel search form props. */
 interface HotelSearchFormProps {
-  onSearch: (params: ModernHotelSearchParams) => Promise<void>;
+  onSearch: (params: HotelSearchParams) => Promise<void>;
   suggestions?: LocationSuggestion[];
   className?: string;
   showRecommendations?: boolean;
