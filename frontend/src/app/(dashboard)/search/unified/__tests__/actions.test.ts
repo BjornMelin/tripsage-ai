@@ -6,8 +6,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 // Mock telemetry
+const withTelemetrySpanSpy = vi.hoisted(() => vi.fn((_name, _attrs, fn) => fn()));
 vi.mock("@/lib/telemetry/span", () => ({
-  withTelemetrySpan: vi.fn((_name, _attrs, fn) => fn()),
+  withTelemetrySpan: withTelemetrySpanSpy,
 }));
 
 // Mock secure UUID
@@ -81,6 +82,12 @@ describe("searchHotelsAction", () => {
       expect.objectContaining({
         sessionId: "mock-uuid-123",
       })
+    );
+
+    expect(withTelemetrySpanSpy).toHaveBeenCalledWith(
+      "ui.unified.searchHotels",
+      expect.any(Object),
+      expect.any(Function)
     );
   });
 
