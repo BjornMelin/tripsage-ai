@@ -7,6 +7,7 @@
 import type { FlightSearchParams } from "@schemas/search";
 import { useRouter, useSearchParams } from "next/navigation";
 import React from "react";
+import { FilterPanel } from "@/components/features/search/filter-panel";
 import { FilterPresets } from "@/components/features/search/filter-presets";
 import { FlightSearchForm } from "@/components/features/search/flight-search-form";
 import { SearchLayout } from "@/components/layouts/search-layout";
@@ -168,6 +169,7 @@ export default function FlightSearchPage() {
 
         {/* Sidebar - 1 column */}
         <div className="space-y-6">
+          <FilterPanel />
           <FilterPresets />
         </div>
       </div>
