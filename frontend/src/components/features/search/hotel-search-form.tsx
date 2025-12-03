@@ -4,6 +4,7 @@
 
 "use client";
 
+import { type HotelSearchFormData, hotelSearchFormSchema } from "@schemas/search";
 import {
   BedIcon,
   Building2Icon,
@@ -23,10 +24,6 @@ import {
   WifiIcon,
   WindIcon,
 } from "lucide-react";
-import {
-  hotelSearchFormSchema,
-  type HotelSearchFormData,
-} from "@schemas/search";
 import { useId, useOptimistic, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

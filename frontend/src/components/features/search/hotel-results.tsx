@@ -4,7 +4,7 @@
 
 "use client";
 
-import { type HotelResult } from "@schemas/search";
+import type { HotelResult } from "@schemas/search";
 import {
   ArrowUpDownIcon,
   Building2Icon,

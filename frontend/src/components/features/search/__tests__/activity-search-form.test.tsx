@@ -197,7 +197,7 @@ describe("ActivitySearchForm", () => {
       adults: 3,
       categories: ["food", "cultural"],
       children: 2,
-      duration: 6,
+      duration: { max: 6, min: 1 },
       location: "Tokyo",
     };
 

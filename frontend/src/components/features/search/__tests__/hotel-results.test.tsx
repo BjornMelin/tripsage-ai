@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 
-import { type HotelResult } from "@schemas/search";
+import type { HotelResult } from "@schemas/search";
 import { fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { render } from "@/test/test-utils";

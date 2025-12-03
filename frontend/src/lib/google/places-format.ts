@@ -20,8 +20,10 @@ export function formatDestinationTypes(types: string[]): string {
     country: "Country",
     establishment: "Landmark",
     locality: "City",
+    // biome-ignore lint/style/useNamingConvention: API values use snake_case
     natural_feature: "Natural Feature",
     political: "Administrative",
+    // biome-ignore lint/style/useNamingConvention: API values use snake_case
     tourist_attraction: "Attraction",
   };
 
@@ -30,5 +32,3 @@ export function formatDestinationTypes(types: string[]): string {
     .slice(0, 2)
     .join(", ");
 }
-
-

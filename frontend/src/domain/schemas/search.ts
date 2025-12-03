@@ -609,13 +609,14 @@ export type ActivitySearchFormData = z.infer<typeof activitySearchFormSchema>;
 /**
  * Form schema for hotel search with validation.
  * Includes guest details, dates, price range, amenities, and rating filters.
+ * Date fields use FUTURE_DATE_SCHEMA to match database DATE type (YYYY-MM-DD).
  */
 export const hotelSearchFormSchema = z
   .strictObject({
     adults: z.number().int().min(1, { error: "At least 1 adult required" }).max(6),
     amenities: z.array(z.string()),
-    checkIn: z.string().min(1, { error: "Check-in is required" }),
-    checkOut: z.string().min(1, { error: "Check-out is required" }),
+    checkIn: FUTURE_DATE_SCHEMA,
+    checkOut: FUTURE_DATE_SCHEMA,
     children: z.number().int().min(0).max(4),
     location: z.string().min(1, { error: "Location is required" }),
     priceRange: z.strictObject({
@@ -679,6 +680,13 @@ export const hotelResultSchema = z.strictObject({
     reason: z.string(),
     recommendation: z.number().int().min(1).max(10),
   }),
+  allInclusive: z
+    .strictObject({
+      available: z.boolean(),
+      inclusions: z.array(z.string()),
+      tier: z.enum(["basic", "premium", "luxury"]),
+    })
+    .optional(),
   amenities: z.strictObject({
     essential: z.array(z.string()),
     premium: z.array(z.string()),
@@ -718,12 +726,7 @@ export const hotelResultSchema = z.strictObject({
         description: z.string(),
         originalPrice: z.number().nonnegative(),
         savings: z.number().nonnegative(),
-        type: z.enum([
-          "early_bird",
-          "last_minute",
-          "extended_stay",
-          "all_inclusive",
-        ]),
+        type: z.enum(["early_bird", "last_minute", "extended_stay", "all_inclusive"]),
       })
       .optional(),
     priceHistory: z.enum(["rising", "falling", "stable"]),
@@ -739,13 +742,6 @@ export const hotelResultSchema = z.strictObject({
     score: z.number().int().min(1).max(10),
   }),
   userRating: z.number().min(0).max(5),
-  allInclusive: z
-    .strictObject({
-      available: z.boolean(),
-      inclusions: z.array(z.string()),
-      tier: z.enum(["basic", "premium", "luxury"]),
-    })
-    .optional(),
 });
 
 /** TypeScript type for hotel search results. */
@@ -817,6 +813,105 @@ export const flightResultSchema = z.strictObject({
 
 /** TypeScript type for flight search results. */
 export type FlightResult = z.infer<typeof flightResultSchema>;
+
+// ===== DATABASE ROW SCHEMAS =====
+// Schemas for database table rows matching Supabase structure
+
+/**
+ * Zod schema for search_hotels table row.
+ * Matches database structure with snake_case column names.
+ */
+export const searchHotelsRowSchema = z.strictObject({
+  check_in_date: DATE_STRING_SCHEMA,
+  check_out_date: DATE_STRING_SCHEMA,
+  created_at: z.string().nullable(),
+  destination: z.string().min(1),
+  expires_at: z.string(),
+  guests: z.number().int().positive(),
+  id: z.number().int().positive(),
+  query_hash: z.string().min(1),
+  query_parameters: z.record(z.string(), z.unknown()),
+  results: z.record(z.string(), z.unknown()),
+  rooms: z.number().int().positive(),
+  search_metadata: z.record(z.string(), z.unknown()),
+  source: z.enum(["amadeus", "external_api", "cached"]),
+  user_id: primitiveSchemas.uuid,
+});
+
+/** TypeScript type for search_hotels table row. */
+export type SearchHotelsRow = z.infer<typeof searchHotelsRowSchema>;
+
+/**
+ * Zod schema for search_flights table row.
+ * Matches database structure with snake_case column names.
+ */
+export const searchFlightsRowSchema = z.strictObject({
+  cabin_class: z.enum(["economy", "premium_economy", "business", "first"]),
+  created_at: z.string().nullable(),
+  departure_date: DATE_STRING_SCHEMA,
+  destination: z.string().min(1),
+  expires_at: z.string(),
+  id: z.number().int().positive(),
+  origin: z.string().min(1),
+  passengers: z.number().int().positive(),
+  query_hash: z.string().min(1),
+  query_parameters: z.record(z.string(), z.unknown()),
+  results: z.record(z.string(), z.unknown()),
+  return_date: DATE_STRING_SCHEMA.nullable(),
+  search_metadata: z.record(z.string(), z.unknown()),
+  source: z.enum(["duffel", "amadeus", "external_api", "cached"]),
+  user_id: primitiveSchemas.uuid,
+});
+
+/** TypeScript type for search_flights table row. */
+export type SearchFlightsRow = z.infer<typeof searchFlightsRowSchema>;
+
+/**
+ * Zod schema for search_activities table row.
+ * Matches database structure with snake_case column names.
+ */
+export const searchActivitiesRowSchema = z.strictObject({
+  activity_type: z.string().nullable(),
+  created_at: z.string().nullable(),
+  destination: z.string().min(1),
+  expires_at: z.string(),
+  id: z.number().int().positive(),
+  query_hash: z.string().min(1),
+  query_parameters: z.record(z.string(), z.unknown()),
+  results: z.record(z.string(), z.unknown()),
+  search_metadata: z.record(z.string(), z.unknown()),
+  source: z.enum([
+    "viator",
+    "getyourguide",
+    "googleplaces",
+    "ai_fallback",
+    "external_api",
+    "cached",
+  ]),
+  user_id: primitiveSchemas.uuid,
+});
+
+/** TypeScript type for search_activities table row. */
+export type SearchActivitiesRow = z.infer<typeof searchActivitiesRowSchema>;
+
+/**
+ * Zod schema for search_destinations table row.
+ * Matches database structure with snake_case column names.
+ */
+export const searchDestinationsRowSchema = z.strictObject({
+  created_at: z.string().nullable(),
+  expires_at: z.string(),
+  id: z.number().int().positive(),
+  query: z.string().min(1),
+  query_hash: z.string().min(1),
+  results: z.record(z.string(), z.unknown()),
+  search_metadata: z.record(z.string(), z.unknown()),
+  source: z.enum(["google_maps", "external_api", "cached"]),
+  user_id: primitiveSchemas.uuid,
+});
+
+/** TypeScript type for search_destinations table row. */
+export type SearchDestinationsRow = z.infer<typeof searchDestinationsRowSchema>;
 
 // ===== UTILITY FUNCTIONS =====
 // Validation helpers and business logic functions

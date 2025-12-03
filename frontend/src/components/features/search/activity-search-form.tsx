@@ -5,9 +5,9 @@
 "use client";
 
 import {
-  activitySearchFormSchema,
   type ActivitySearchFormData,
   type ActivitySearchParams,
+  activitySearchFormSchema,
 } from "@schemas/search";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,21 +35,6 @@ interface ActivitySearchFormProps {
   initialValues?: Partial<ActivitySearchFormData>;
 }
 
-const ActivityCategories = [
-  { id: "outdoor", label: "Outdoor & Adventure" },
-  { id: "cultural", label: "Cultural & Historical" },
-  { id: "food", label: "Food & Drink" },
-  { id: "tours", label: "Guided Tours" },
-  { id: "water", label: "Water Sports" },
-  { id: "wildlife", label: "Wildlife & Nature" },
-  { id: "sports", label: "Sports & Recreation" },
-  { id: "nightlife", label: "Nightlife & Entertainment" },
-  { id: "wellness", label: "Wellness & Spa" },
-  { id: "shopping", label: "Shopping" },
-  { id: "transportation", label: "Transportation" },
-  { id: "classes", label: "Classes & Workshops" },
-];
-
 export function ActivitySearchForm({
   onSearch,
   initialValues,
@@ -74,10 +59,10 @@ export function ActivitySearchForm({
       async () => {
         const searchParams: ActivitySearchParams = {
           adults: data.participants.adults,
+          category: data.category,
           children: data.participants.children,
           date: data.date,
           destination: data.destination,
-          category: data.category,
           difficulty: data.difficulty,
           duration: data.duration,
           indoor: data.indoor,

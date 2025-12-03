@@ -51,8 +51,8 @@ import { useToast } from "@/components/ui/use-toast";
 import type { DestinationResult } from "@/hooks/search/use-destination-search";
 import { useDestinationSearch } from "@/hooks/search/use-destination-search";
 import { useSearchOrchestration } from "@/hooks/search/use-search-orchestration";
-import { formatDestinationTypes } from "@/lib/google/places-format";
 import { getErrorMessage } from "@/lib/api/error-types";
+import { formatDestinationTypes } from "@/lib/google/places-format";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 
 /** The destinations search client component props. */

@@ -2,10 +2,7 @@
  * @fileoverview Search feature components exports.
  */
 
-import {
-  type FlightResult,
-  type HotelResult,
-} from "@schemas/search";
+import type { FlightResult, HotelResult } from "@schemas/search";
 
 // Results components
 export { ActivityResults } from "./activity-results";

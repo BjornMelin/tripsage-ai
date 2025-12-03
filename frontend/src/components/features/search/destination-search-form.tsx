@@ -5,9 +5,9 @@
 "use client";
 
 import {
-  destinationSearchFormSchema,
   type DestinationSearchFormData,
   type DestinationSearchParams,
+  destinationSearchFormSchema,
 } from "@schemas/search";
 import { ClockIcon, MapPinIcon, StarIcon, TrendingUpIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";

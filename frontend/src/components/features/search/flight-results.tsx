@@ -4,7 +4,7 @@
 
 "use client";
 
-import { type FlightResult } from "@schemas/search";
+import type { FlightResult } from "@schemas/search";
 import {
   ArrowUpDownIcon,
   FilterIcon,

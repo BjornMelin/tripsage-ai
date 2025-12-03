@@ -51,7 +51,6 @@ export function DestinationCard({
   onCompare,
   onViewDetails,
 }: DestinationCardProps) {
-
   /**
    * Get appropriate icon component based on destination types.
    *
