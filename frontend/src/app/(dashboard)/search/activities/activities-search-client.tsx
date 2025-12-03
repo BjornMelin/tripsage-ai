@@ -43,9 +43,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
-import { getErrorMessage } from "@/lib/api/error-types";
 import { useActivitySearch } from "@/hooks/search/use-activity-search";
 import { openActivityBooking } from "@/lib/activities/booking";
+import { getErrorMessage } from "@/lib/api/error-types";
 import { addActivityToTrip, getPlanningTrips } from "./actions";
 
 const AI_FALLBACK_PREFIX = "ai_fallback:";

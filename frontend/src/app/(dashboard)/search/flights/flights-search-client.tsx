@@ -34,8 +34,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
-import { getErrorMessage } from "@/lib/api/error-types";
 import { useSearchOrchestration } from "@/hooks/search/use-search-orchestration";
+import { getErrorMessage } from "@/lib/api/error-types";
 
 /** Flight search client component props. */
 interface FlightsSearchClientProps {

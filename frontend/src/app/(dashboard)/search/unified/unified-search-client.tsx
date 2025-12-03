@@ -4,6 +4,12 @@
 
 "use client";
 
+import type {
+  FlightResult,
+  FlightSearchFormData,
+  HotelResult,
+  HotelSearchFormData,
+} from "@schemas/search";
 import {
   Building2Icon,
   ClockIcon,
@@ -16,12 +22,6 @@ import {
   UsersIcon,
   ZapIcon,
 } from "lucide-react";
-import {
-  type FlightResult,
-  type FlightSearchFormData,
-  type HotelResult,
-  type HotelSearchFormData,
-} from "@schemas/search";
 import { type ReactNode, useState, useTransition } from "react";
 import { FlightResults } from "@/components/features/search/flight-results";
 import { FlightSearchForm } from "@/components/features/search/flight-search-form";

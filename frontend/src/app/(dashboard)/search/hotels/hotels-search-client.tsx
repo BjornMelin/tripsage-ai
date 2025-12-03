@@ -38,9 +38,9 @@ import {
 } from "@/components/ui/tooltip";
 import { HotelSkeleton } from "@/components/ui/travel-skeletons";
 import { useToast } from "@/components/ui/use-toast";
-import { getErrorMessage } from "@/lib/api/error-types";
 import { useAccommodationSearch } from "@/hooks/search/use-accommodation-search";
 import { useSearchOrchestration } from "@/hooks/search/use-search-orchestration";
+import { getErrorMessage } from "@/lib/api/error-types";
 
 /** Hotel search client component props. */
 interface HotelsSearchClientProps {

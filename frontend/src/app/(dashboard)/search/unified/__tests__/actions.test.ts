@@ -235,10 +235,7 @@ describe("searchHotelsAction", () => {
     };
     mockSearch.mockResolvedValue({ listings: [invalidListing] });
 
-    const result = await searchHotelsAction({
-      ...validParams,
-      currency: "EUR",
-    });
+    const result = await searchHotelsAction(validParams);
 
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({
@@ -251,7 +248,7 @@ describe("searchHotelsAction", () => {
       id: "mock-uuid-123",
       name: "Hotel",
       pricing: expect.objectContaining({
-        currency: "EUR",
+        currency: "USD",
         pricePerNight: 0,
         totalPrice: 0,
       }),
@@ -292,10 +289,7 @@ describe("searchHotelsAction", () => {
     };
     mockSearch.mockResolvedValue({ listings: [listing] });
 
-    const result = await searchHotelsAction({
-      ...validParams,
-      currency: "USD",
-    });
+    const result = await searchHotelsAction(validParams);
 
     expect(result[0].pricing.currency).toBe("JPY");
   });
@@ -307,10 +301,7 @@ describe("searchHotelsAction", () => {
     };
     mockSearch.mockResolvedValue({ listings: [listing] });
 
-    const result = await searchHotelsAction({
-      ...validParams,
-      currency: "GBP",
-    });
+    const result = await searchHotelsAction(validParams);
 
     expect(result[0].pricing.currency).toBe("GBP");
   });

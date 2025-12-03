@@ -11,8 +11,8 @@ import { accommodationListingSchema } from "@schemas/accommodations";
 import {
   type HotelResult,
   type HotelSearchFormData,
-  searchAccommodationParamsSchema,
   type SearchAccommodationParams,
+  searchAccommodationParamsSchema,
 } from "@schemas/search";
 import { getGoogleMapsBrowserKey } from "@/lib/env/client";
 import { secureUuid } from "@/lib/security/random";
@@ -52,9 +52,7 @@ export async function searchHotelsAction(
 
   const validation = searchAccommodationParamsSchema.safeParse(schemaParams);
   if (!validation.success) {
-    throw new Error(
-      `Invalid hotel search params: ${validation.error.message}`
-    );
+    throw new Error(`Invalid hotel search params: ${validation.error.message}`);
   }
 
   const validatedParams = validation.data;
@@ -117,7 +115,7 @@ export async function searchHotelsAction(
         name: "Hotel",
         pricing: {
           basePrice: 0,
-          currency: validatedParams.currency ?? "USD",
+          currency: "USD",
           priceHistory: "stable",
           pricePerNight: 0,
           taxes: 0,
@@ -190,7 +188,7 @@ export async function searchHotelsAction(
         basePrice: ratePrice
           ? Number.parseFloat(String(ratePrice.base ?? pricePerNight ?? "0"))
           : 0,
-        currency: ratePrice?.currency ?? validatedParams.currency ?? "USD",
+        currency: ratePrice?.currency ?? "USD",
         priceHistory: "stable",
         pricePerNight: Number(pricePerNight),
         taxes: ratePrice?.taxes?.[0]?.amount
