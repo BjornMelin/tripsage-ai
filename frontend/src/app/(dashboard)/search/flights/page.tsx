@@ -18,8 +18,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { useSearchFiltersStore } from "@/stores/search-filters-store";
-import { useSearchStore } from "@/stores/search-store";
+import { useSearchOrchestration } from "@/hooks/use-search-orchestration";
 
 // URL search parameters are handled inline
 
@@ -30,8 +29,7 @@ import { useSearchStore } from "@/stores/search-store";
  * @returns A React component that displays a flight search form and popular routes.
  */
 export default function FlightSearchPage() {
-  const { initializeSearch, executeSearch } = useSearchStore();
-  const { setSearchType } = useSearchFiltersStore();
+  const { initializeSearch, executeSearch } = useSearchOrchestration();
   const router = useRouter();
   const { toast } = useToast();
   const searchParams = useSearchParams();
@@ -39,7 +37,6 @@ export default function FlightSearchPage() {
   // Initialize flight search type on mount
   React.useEffect(() => {
     initializeSearch("flight");
-    setSearchType("flight");
 
     // Check for search parameters in URL
     const origin = searchParams.get("origin");
@@ -60,7 +57,7 @@ export default function FlightSearchPage() {
       };
       executeSearch(initialParams);
     }
-  }, [initializeSearch, executeSearch, searchParams, setSearchType]);
+  }, [initializeSearch, executeSearch, searchParams]);
 
   const handleSearch = async (params: FlightSearchParams) => {
     try {
@@ -89,88 +86,7 @@ export default function FlightSearchPage() {
         <div className="lg:col-span-3 space-y-6">
           <FlightSearchForm onSearch={handleSearch} />
 
-          {/*
-           * TODO: POPULAR ROUTES - REAL DATA IMPLEMENTATION GUIDE
-           * =====================================================
-           * Status: Using hardcoded placeholder data
-           * Priority: Medium (enhances UX but not blocking)
-           *
-           * CURRENT STATE:
-           * - `/api/flights/popular-destinations` exists but returns destinations only (no prices/routes)
-           * - Amadeus client (`domain/amadeus/client.ts`) only has hotel APIs implemented
-           * - No flight pricing/offers API is currently integrated
-           *
-           * REQUIRED BACKEND WORK:
-           *
-           * 1. Extend Amadeus Client (`domain/amadeus/client.ts`):
-           *    - Add `searchFlightOffers()` using `client.shopping.flightOffersSearch.get()`
-           *    - Add `getFlightInspirationSearch()` using `client.shopping.flightDestinations.get()`
-           *      (Returns cheapest destinations from origin - ideal for "deals")
-           *
-           * 2. Create New API Route (`/api/flights/popular-routes/route.ts`):
-           *    ```typescript
-           *    interface PopularRoute {
-           *      origin: { code: string; name: string; };
-           *      destination: { code: string; name: string; };
-           *      price: number;
-           *      currency: string;
-           *      departureDate: string;
-           *      returnDate?: string;
-           *      airline?: string;
-           *      source: 'amadeus' | 'cached' | 'user_history';
-           *    }
-           *    ```
-           *    - Cache results in Upstash (TTL: 1 hour for prices, 24h for routes)
-           *    - Support personalization based on user's search history
-           *    - Fallback to curated routes if API fails
-           *
-           * 3. Add Zod Schema (`domain/schemas/flights.ts`):
-           *    - `popularRouteSchema` for API response validation
-           *    - `popularRoutesResponseSchema` for array response
-           *
-           * 4. Create React Query Hook (`hooks/use-popular-routes.ts`):
-           *    ```typescript
-           *    export function usePopularRoutes(origin?: string) {
-           *      return useQuery({
-           *        queryKey: ['popular-routes', origin],
-           *        queryFn: () => fetch('/api/flights/popular-routes').then(r => r.json()),
-           *        staleTime: 5 * 60 * 1000, // 5 minutes
-           *        gcTime: 30 * 60 * 1000,   // 30 minutes
-           *      });
-           *    }
-           *    ```
-           *
-           * 5. Update This Component:
-           *    - Import and use `usePopularRoutes()` hook
-           *    - Add loading skeleton state
-           *    - Add error state with retry button
-           *    - Keep hardcoded fallback for offline/error scenarios
-           *
-           * AMADEUS API ENDPOINTS TO INTEGRATE:
-           * - Flight Offers Search: `GET /v2/shopping/flight-offers` (real-time pricing)
-           * - Flight Inspiration Search: `GET /v1/shopping/flight-destinations` (cheapest routes)
-           * - Flight Cheapest Date Search: `GET /v1/shopping/flight-dates` (price calendar)
-           *
-           * ENVIRONMENT VARIABLES NEEDED:
-           * - AMADEUS_CLIENT_ID (already exists)
-           * - AMADEUS_CLIENT_SECRET (already exists)
-           * - AMADEUS_ENV (already exists)
-           *
-           * TESTING CONSIDERATIONS:
-           * - Mock Amadeus responses in `test/msw/handlers/amadeus.ts`
-           * - Add `popular-routes.test.ts` for the new API route
-           * - E2E test for the flights page with mocked API
-           *
-           * COST CONSIDERATIONS:
-           * - Amadeus API has rate limits and costs per call
-           * - Implement aggressive caching to minimize API calls
-           * - Consider background refresh vs on-demand fetching
-           *
-           * SEE ALSO:
-           * - `/api/flights/popular-destinations/route.ts` - existing destinations API
-           * - `domain/amadeus/client.ts` - Amadeus client patterns
-           * - `lib/cache/upstash.ts` - caching utilities
-           */}
+          {/* TODO: Replace placeholder Popular Routes cards with real data per ADR-0056 (docs/architecture/decisions/adr-0056-popular-routes-flights.md) and SPEC-0034 (docs/specs/active/0034-spec-popular-routes-flights.md). */}
           <Card>
             <CardHeader>
               <CardTitle>Popular Routes</CardTitle>

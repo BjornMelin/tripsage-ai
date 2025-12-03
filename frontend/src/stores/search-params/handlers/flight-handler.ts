@@ -2,7 +2,6 @@
  * @fileoverview Handler for flight search parameters.
  */
 
-import type { FlightSearchParams } from "@schemas/search";
 import {
   flightSearchParamsStoreSchema,
   type ValidatedFlightParams,
@@ -27,7 +26,11 @@ const DEFAULTS: Partial<ValidatedFlightParams> = {
  */
 const flightHandler: SearchParamsHandler<ValidatedFlightParams> = {
   getDefaults() {
-    return { ...DEFAULTS };
+    return {
+      ...DEFAULTS,
+      excludedAirlines: [...(DEFAULTS.excludedAirlines ?? [])],
+      preferredAirlines: [...(DEFAULTS.preferredAirlines ?? [])],
+    };
   },
 
   getSchema() {
@@ -37,11 +40,11 @@ const flightHandler: SearchParamsHandler<ValidatedFlightParams> = {
   hasRequiredParams(params) {
     return (
       typeof params.origin === "string" &&
-      params.origin.length > 0 &&
+      params.origin.trim().length > 0 &&
       typeof params.destination === "string" &&
-      params.destination.length > 0 &&
+      params.destination.trim().length > 0 &&
       typeof params.departureDate === "string" &&
-      params.departureDate.length > 0
+      params.departureDate.trim().length > 0
     );
   },
 
@@ -50,17 +53,12 @@ const flightHandler: SearchParamsHandler<ValidatedFlightParams> = {
   },
   searchType: "flight",
 
-  toSearchParams(params) {
-    return params as FlightSearchParams;
-  },
-
   validate(params) {
     const result = flightSearchParamsStoreSchema.safeParse(params);
     if (result.success) {
       return { data: result.data, success: true };
     }
-    const errorMessage = result.error.issues.map((issue) => issue.message).join(", ");
-    return { error: errorMessage || "Validation failed", success: false };
+    return { error: result.error, success: false };
   },
 };
 

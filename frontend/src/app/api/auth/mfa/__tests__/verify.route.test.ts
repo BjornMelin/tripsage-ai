@@ -1,43 +1,41 @@
 /** @vitest-environment node */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createRouteParamsContext,
   makeJsonRequest,
   resetApiRouteMocks,
 } from "@/test/api-route-helpers";
 
+const mockMfaVerify = vi.hoisted(() => vi.fn());
+const mockRegenerate = vi.hoisted(() => vi.fn());
+const mockGetAdminSupabase = vi.hoisted(() => vi.fn(() => ({})));
+
+vi.mock("@/lib/security/mfa", () => ({
+  regenerateBackupCodes: mockRegenerate,
+  verifyTotp: mockMfaVerify,
+}));
+
+vi.mock("@/lib/supabase/admin", () => ({
+  getAdminSupabase: mockGetAdminSupabase,
+}));
+
 describe("POST /api/auth/mfa/verify", () => {
   const ids = {
     challengeId: "22222222-2222-4222-8222-222222222222",
     factorId: "11111111-1111-4111-8111-111111111111",
   };
-  const mockMfa = {
-    verify: vi.fn(),
-  };
-  const mockRegenerate = vi.fn();
 
   beforeEach(() => {
     resetApiRouteMocks();
-    mockMfa.verify.mockReset();
     mockRegenerate.mockReset();
+    mockMfaVerify.mockReset();
+    mockGetAdminSupabase.mockReset();
     mockRegenerate.mockResolvedValue({ codes: ["ABCDE-FGHIJ"], remaining: 10 });
-    mockMfa.verify.mockResolvedValue({ isInitialEnrollment: true });
-    vi.doMock("@/lib/security/mfa", () => ({
-      regenerateBackupCodes: mockRegenerate,
-      verifyTotp: mockMfa.verify,
-    }));
-    vi.doMock("@/lib/supabase/admin", () => ({
-      getAdminSupabase: vi.fn(() => ({})),
-    }));
-  });
-
-  afterEach(() => {
-    vi.resetModules();
+    mockMfaVerify.mockResolvedValue({ isInitialEnrollment: true });
   });
 
   it("generates backup codes only on initial enrollment", async () => {
-    mockMfa.verify.mockResolvedValueOnce({ isInitialEnrollment: true });
     const { POST } = await import("../verify/route");
     const res = await POST(
       makeJsonRequest("http://localhost/api/auth/mfa/verify", {
@@ -55,7 +53,7 @@ describe("POST /api/auth/mfa/verify", () => {
   });
 
   it("does not generate backup codes on subsequent challenges", async () => {
-    mockMfa.verify.mockResolvedValueOnce({ isInitialEnrollment: false });
+    mockMfaVerify.mockResolvedValueOnce({ isInitialEnrollment: false });
     const { POST } = await import("../verify/route");
     const res = await POST(
       makeJsonRequest("http://localhost/api/auth/mfa/verify", {
@@ -73,7 +71,7 @@ describe("POST /api/auth/mfa/verify", () => {
   });
 
   it("returns 400 for invalid code", async () => {
-    mockMfa.verify.mockRejectedValueOnce(new Error("bad code"));
+    mockMfaVerify.mockRejectedValueOnce(new Error("bad code"));
     const { POST } = await import("../verify/route");
     const res = await POST(
       makeJsonRequest("http://localhost/api/auth/mfa/verify", {
@@ -87,7 +85,7 @@ describe("POST /api/auth/mfa/verify", () => {
   });
 
   it("continues when backup code regeneration fails on initial enrollment", async () => {
-    mockMfa.verify.mockResolvedValueOnce({ isInitialEnrollment: true });
+    mockMfaVerify.mockResolvedValueOnce({ isInitialEnrollment: true });
     mockRegenerate.mockRejectedValueOnce(new Error("regen_failed"));
     const { POST } = await import("../verify/route");
     const res = await POST(

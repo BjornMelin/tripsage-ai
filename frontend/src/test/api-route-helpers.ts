@@ -276,6 +276,7 @@ export function mockApiRouteAuthUser(user: User | null | Partial<User>): void {
 const ensureMfaMock = (client: ReturnType<typeof createMockSupabaseClient>) => {
   const mfa = {
     challenge: vi.fn(async () => ({ data: { id: "challenge-mock" }, error: null })),
+    enroll: vi.fn(async () => ({ data: { id: "enroll-mock" }, error: null })),
     getAuthenticatorAssuranceLevel: vi.fn(async () => ({
       data: { currentLevel: "aal2" },
       error: null,
@@ -284,6 +285,7 @@ const ensureMfaMock = (client: ReturnType<typeof createMockSupabaseClient>) => {
       data: { phone: [], totp: [], webauthn: [] },
       error: null,
     })),
+    unenroll: vi.fn(async () => ({ data: { id: "unenroll-mock" }, error: null })),
     verify: vi.fn(async () => ({ data: {}, error: null })),
   };
   const authObj = client.auth as unknown as Record<string, unknown>;

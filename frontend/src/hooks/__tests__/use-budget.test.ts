@@ -303,7 +303,10 @@ describe("Budget Hooks", () => {
     });
 
     it("useDeleteBudget deletes budget via mutation", async () => {
-      mockMakeAuthenticatedRequest.mockResolvedValue({ success: true });
+      mockMakeAuthenticatedRequest.mockResolvedValue({
+        id: "budget-to-delete",
+        success: true,
+      });
 
       const queryClient = createTestQueryClient();
       const { result } = renderHook(() => useDeleteBudget(), {

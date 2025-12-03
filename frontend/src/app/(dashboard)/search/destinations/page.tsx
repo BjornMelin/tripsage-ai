@@ -23,10 +23,10 @@ import {
 } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useDestinationSearch } from "@/hooks/use-destination-search";
-import { useSearchStore } from "@/stores/search-store";
+import { useSearchOrchestration } from "@/hooks/use-search-orchestration";
 
 export default function DestinationsSearchPage() {
-  const { hasResults, isSearching: storeIsSearching } = useSearchStore();
+  const { hasResults, isSearching: storeIsSearching } = useSearchOrchestration();
   const { searchDestinations, isSearching, searchError, resetSearch, results } =
     useDestinationSearch();
 

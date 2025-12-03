@@ -1,12 +1,11 @@
 /** @vitest-environment node */
 
 import { describe, expect, it } from "vitest";
+import { registerAllHandlers } from "../handlers";
 import { getHandler, getRegisteredTypes, hasHandler } from "../registry";
-// Import handlers to trigger registration
-import "../handlers/accommodation-handler";
-import "../handlers/activity-handler";
-import "../handlers/destination-handler";
-import "../handlers/flight-handler";
+
+// Ensure handlers are registered for tests
+registerAllHandlers();
 
 describe("search-params/registry", () => {
   describe("getHandler", () => {
@@ -21,16 +20,25 @@ describe("search-params/registry", () => {
     it("returns accommodation handler", () => {
       const handler = getHandler("accommodation");
       expect(handler.searchType).toBe("accommodation");
+      expect(typeof handler.getDefaults).toBe("function");
+      expect(typeof handler.validate).toBe("function");
+      expect(typeof handler.hasRequiredParams).toBe("function");
     });
 
     it("returns activity handler", () => {
       const handler = getHandler("activity");
       expect(handler.searchType).toBe("activity");
+      expect(typeof handler.getDefaults).toBe("function");
+      expect(typeof handler.validate).toBe("function");
+      expect(typeof handler.hasRequiredParams).toBe("function");
     });
 
     it("returns destination handler", () => {
       const handler = getHandler("destination");
       expect(handler.searchType).toBe("destination");
+      expect(typeof handler.getDefaults).toBe("function");
+      expect(typeof handler.validate).toBe("function");
+      expect(typeof handler.hasRequiredParams).toBe("function");
     });
 
     it("throws for unknown search type", () => {
