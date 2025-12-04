@@ -17,7 +17,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 import { useSearchResultsStore } from "@/stores/search-results-store";
+
+/**
+ * Flight results page semantic colors.
+ * - Price display: green (indicates value/good deal)
+ */
+const FLIGHT_RESULTS_COLORS = {
+  priceDisplay: "text-green-700",
+} as const;
 
 export default function FlightResultsPage() {
   const searchParams = useSearchParams();
@@ -225,7 +234,12 @@ export default function FlightResultsPage() {
 
                     {/* Price and Book */}
                     <div className="text-right">
-                      <div className="text-2xl font-bold text-green-600">
+                      <div
+                        className={cn(
+                          "text-2xl font-bold",
+                          FLIGHT_RESULTS_COLORS.priceDisplay
+                        )}
+                      >
                         ${flight.price}
                       </div>
                       <div className="text-sm text-muted-foreground mb-3">

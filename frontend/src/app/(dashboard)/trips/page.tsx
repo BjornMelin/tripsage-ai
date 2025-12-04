@@ -31,6 +31,16 @@ import { useDeleteTrip, useTrips } from "@/hooks/use-trips";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { type Trip, useTripStore } from "@/stores/trip-store";
 
+/**
+ * Trip status count colors aligned with statusVariants.
+ * Matches trip status semantic colors.
+ */
+const TRIP_STATUS_COLORS = {
+  active: "text-green-700", // aligned with active status
+  completed: "text-gray-600", // neutral completed state
+  upcoming: "text-blue-700", // aligned with info status
+} as const;
+
 const parseTripDate = (value?: string | null): Date | null => {
   if (!value) {
     return null;
@@ -275,7 +285,7 @@ export default function TripsPage() {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-blue-600">
+            <div className={`text-2xl font-bold ${TRIP_STATUS_COLORS.upcoming}`}>
               {statusCounts.upcoming}
             </div>
             <div className="text-sm text-muted-foreground">Upcoming</div>
@@ -283,7 +293,7 @@ export default function TripsPage() {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-green-600">
+            <div className={`text-2xl font-bold ${TRIP_STATUS_COLORS.active}`}>
               {statusCounts.active}
             </div>
             <div className="text-sm text-muted-foreground">Active</div>
@@ -291,7 +301,7 @@ export default function TripsPage() {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-gray-600">
+            <div className={`text-2xl font-bold ${TRIP_STATUS_COLORS.completed}`}>
               {statusCounts.completed}
             </div>
             <div className="text-sm text-muted-foreground">Completed</div>

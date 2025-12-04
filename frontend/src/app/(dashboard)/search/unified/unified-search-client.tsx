@@ -35,6 +35,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { getErrorMessage } from "@/lib/api/error-types";
+import { statusVariants } from "@/lib/variants/status";
 
 // Mock data for demo purposes
 const MOCK_FLIGHT_RESULTS: FlightResult[] = [
@@ -307,15 +308,15 @@ export default function UnifiedSearchClient({
                 real-time price tracking, and optimistic UI updates.
               </p>
               <div className="flex items-center justify-center gap-4 text-sm">
-                <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                <Badge className={statusVariants({ status: "info" })}>
                   <ZapIcon className="h-3 w-3 mr-1" />
                   React 19 Patterns
                 </Badge>
-                <Badge variant="secondary" className="bg-green-100 text-green-800">
+                <Badge className={statusVariants({ status: "active" })}>
                   <SparklesIcon className="h-3 w-3 mr-1" />
                   AI Recommendations
                 </Badge>
-                <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+                <Badge className={statusVariants({ action: "explore" })}>
                   <TrendingUpIcon className="h-3 w-3 mr-1" />
                   2025 UX Patterns
                 </Badge>

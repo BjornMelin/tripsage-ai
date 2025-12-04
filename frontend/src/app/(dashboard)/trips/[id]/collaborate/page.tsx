@@ -41,6 +41,16 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { useTrip } from "@/hooks/use-trips";
 import { getBrowserClient } from "@/lib/supabase";
+import { statusVariants } from "@/lib/variants/status";
+
+/**
+ * Consistent color palette aligned with statusVariants for roles
+ */
+const ROLE_ICON_COLORS = {
+  editor: "text-blue-700",
+  owner: "text-amber-700",
+  viewer: "text-gray-700",
+} as const;
 
 /**
  * Represents a collaborator on a trip with their permissions and status.
@@ -203,11 +213,11 @@ export default function TripCollaborationPage() {
   const getRoleIcon = (role: string) => {
     switch (role) {
       case "owner":
-        return <CrownIcon className="h-4 w-4 text-yellow-500" />;
+        return <CrownIcon className={`h-4 w-4 ${ROLE_ICON_COLORS.owner}`} />;
       case "editor":
-        return <EditIcon className="h-4 w-4 text-blue-500" />;
+        return <EditIcon className={`h-4 w-4 ${ROLE_ICON_COLORS.editor}`} />;
       case "viewer":
-        return <EyeIcon className="h-4 w-4 text-gray-500" />;
+        return <EyeIcon className={`h-4 w-4 ${ROLE_ICON_COLORS.viewer}`} />;
       default:
         return <UsersIcon className="h-4 w-4" />;
     }
@@ -222,15 +232,11 @@ export default function TripCollaborationPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "accepted":
-        return (
-          <Badge variant="default" className="bg-green-500">
-            Active
-          </Badge>
-        );
+        return <Badge className={statusVariants({ status: "active" })}>Active</Badge>;
       case "pending":
-        return <Badge variant="secondary">Pending</Badge>;
+        return <Badge className={statusVariants({ status: "pending" })}>Pending</Badge>;
       case "declined":
-        return <Badge variant="destructive">Declined</Badge>;
+        return <Badge className={statusVariants({ status: "error" })}>Declined</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
