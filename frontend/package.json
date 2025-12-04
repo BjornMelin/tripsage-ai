@@ -29,6 +29,7 @@
     "test:upstash:int": "UPSTASH_USE_EMULATOR=1 vitest run --project=integration src/__tests__/contracts/upstash-int.integration.test.ts",
     "test:upstash:smoke": "UPSTASH_SMOKE=1 vitest run --project=integration src/__tests__/contracts/upstash.smoke.integration.test.ts",
     "test:changed": "vitest run --changed",
+    "test:affected": "vitest run --changed --passWithNoTests && vitest related $(git diff --name-only HEAD -- 'src/**/*.ts' 'src/**/*.tsx' ':!**/*.test.ts' ':!**/*.test.tsx') --run --passWithNoTests",
     "test:coverage:shard": "vitest run --coverage.enabled --coverage.provider=v8 --reporter=blob",
     "test:merge": "vitest run --merge-reports",
     "test:e2e": "playwright test",

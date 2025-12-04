@@ -4,6 +4,7 @@
 
 "use client";
 
+import type { AuthUser } from "@schemas/stores";
 import {
   ChevronDownIcon,
   LogOutIcon,
@@ -16,7 +17,6 @@ import { useState, useTransition } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import type { AuthUser } from "@/domain/schemas/stores";
 import { logoutAction } from "@/lib/auth/actions";
 
 interface UserNavProps {

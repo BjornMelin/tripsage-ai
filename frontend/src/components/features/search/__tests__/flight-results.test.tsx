@@ -26,7 +26,7 @@ const BaseFlight: FlightResult = {
 
 describe("FlightResults", () => {
   it("calls onSelect when Select Flight is clicked", () => {
-    const onSelect = vi.fn().mockReturnValue(undefined);
+    const onSelect = vi.fn().mockResolvedValue(undefined);
     render(
       <FlightResults results={[BaseFlight]} onSelect={onSelect} onCompare={vi.fn()} />
     );
@@ -48,7 +48,11 @@ describe("FlightResults", () => {
     ];
     const onCompare = vi.fn();
     render(
-      <FlightResults results={flights} onSelect={vi.fn()} onCompare={onCompare} />
+      <FlightResults
+        results={flights}
+        onSelect={vi.fn().mockResolvedValue(undefined)}
+        onCompare={onCompare}
+      />
     );
 
     const checkboxes = screen.getAllByRole("checkbox");
@@ -66,5 +70,35 @@ describe("FlightResults", () => {
       "f1",
       "f2",
     ]);
+  });
+
+  it("calls onModifySearch when provided and no results", () => {
+    const onModifySearch = vi.fn();
+
+    render(
+      <FlightResults
+        results={[]}
+        onSelect={vi.fn().mockResolvedValue(undefined)}
+        onCompare={vi.fn()}
+        onModifySearch={onModifySearch}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /modify search/i }));
+
+    expect(onModifySearch).toHaveBeenCalledTimes(1);
+  });
+
+  it("disables modify search button when handler is not provided", () => {
+    render(
+      <FlightResults
+        results={[]}
+        onSelect={vi.fn().mockResolvedValue(undefined)}
+        onCompare={vi.fn()}
+      />
+    );
+
+    const modifySearchButton = screen.getByRole("button", { name: /modify search/i });
+    expect(modifySearchButton).toBeDisabled();
   });
 });

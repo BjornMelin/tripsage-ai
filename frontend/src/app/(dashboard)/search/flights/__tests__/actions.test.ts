@@ -1,6 +1,6 @@
 /** @vitest-environment node */
 
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock telemetry span
 vi.mock("@/lib/telemetry/span", () => ({
@@ -11,7 +11,29 @@ vi.mock("@/lib/telemetry/span", () => ({
 }));
 
 // Dynamic import after mocks
+const { withTelemetrySpan } = await import("@/lib/telemetry/span");
 const { submitFlightSearch } = await import("../actions");
+
+const withTelemetrySpanMock = vi.mocked(withTelemetrySpan);
+
+const expectTelemetrySpanCalled = (origin: string, destination: string) => {
+  expect(withTelemetrySpanMock).toHaveBeenCalledWith(
+    "search.flight.server.submit",
+    expect.objectContaining({
+      attributes: expect.objectContaining({
+        destination,
+        origin,
+        searchType: "flight",
+      }),
+    }),
+    expect.any(Function)
+  );
+};
+
+// Ensure mocks reset between tests
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 describe("submitFlightSearch server action", () => {
   it("validates and returns valid flight search params", async () => {
@@ -27,6 +49,7 @@ describe("submitFlightSearch server action", () => {
     const result = await submitFlightSearch(params);
 
     expect(result).toEqual(params);
+    expectTelemetrySpanCalled("JFK", "LHR");
   });
 
   it("validates params with optional fields omitted", async () => {
@@ -45,6 +68,7 @@ describe("submitFlightSearch server action", () => {
     // Optional fields remain undefined when not provided
     expect(result.cabinClass).toBeUndefined();
     expect(result.passengers).toBeUndefined();
+    expectTelemetrySpanCalled("NYC", "LAX");
   });
 
   it("throws error for invalid cabin class", async () => {
@@ -75,5 +99,6 @@ describe("submitFlightSearch server action", () => {
     expect(result.passengers?.adults).toBe(2);
     expect(result.passengers?.children).toBe(1);
     expect(result.passengers?.infants).toBe(0);
+    expectTelemetrySpanCalled("LAX", "CDG");
   });
 });

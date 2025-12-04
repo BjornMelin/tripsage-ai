@@ -10,7 +10,12 @@ import {
 
 const mockMfaVerify = vi.hoisted(() => vi.fn());
 const mockRegenerate = vi.hoisted(() => vi.fn());
-const mockGetAdminSupabase = vi.hoisted(() => vi.fn(() => ({})));
+const mockFrom = vi.hoisted(() => vi.fn());
+const mockGetAdminSupabase = vi.hoisted(() =>
+  vi.fn(() => ({
+    from: mockFrom,
+  }))
+);
 
 vi.mock("@/lib/security/mfa", () => ({
   regenerateBackupCodes: mockRegenerate,
@@ -31,12 +36,25 @@ describe("POST /api/auth/mfa/verify", () => {
     resetApiRouteMocks();
     mockRegenerate.mockReset();
     mockMfaVerify.mockReset();
-    mockGetAdminSupabase.mockReset();
+    mockGetAdminSupabase.mockClear();
+    mockFrom.mockReset();
     mockRegenerate.mockResolvedValue({ codes: ["ABCDE-FGHIJ"] });
     mockMfaVerify.mockResolvedValue({ isInitialEnrollment: true });
+
+    // Mock backup codes check: return 0 existing codes (user has no backup codes)
+    const mockIs = vi.fn(() => ({ count: 0 }));
+    const mockEq = vi.fn(() => ({ is: mockIs }));
+    const mockSelect = vi.fn(() => ({ eq: mockEq }));
+    mockFrom.mockReturnValue({ select: mockSelect });
   });
 
-  it("generates backup codes only on initial enrollment", async () => {
+  it("generates backup codes only on initial enrollment when user has no existing codes", async () => {
+    // Mock: user has no existing backup codes (count: 0)
+    const mockIs = vi.fn(() => ({ count: 0 }));
+    const mockEq = vi.fn(() => ({ is: mockIs }));
+    const mockSelect = vi.fn(() => ({ eq: mockEq }));
+    mockFrom.mockReturnValue({ select: mockSelect });
+
     const { POST } = await import("../verify/route");
     const res = await POST(
       makeJsonRequest("http://localhost/api/auth/mfa/verify", {
@@ -51,6 +69,30 @@ describe("POST /api/auth/mfa/verify", () => {
     expect(json.data.status).toBe("verified");
     expect(json.data.backupCodes).toEqual(["ABCDE-FGHIJ"]);
     expect(mockRegenerate).toHaveBeenCalled();
+  });
+
+  it("does not generate backup codes if user already has backup codes even if isInitialEnrollment is true", async () => {
+    // Mock: user already has backup codes (count: 5)
+    const mockIs = vi.fn(() => ({ count: 5 }));
+    const mockEq = vi.fn(() => ({ is: mockIs }));
+    const mockSelect = vi.fn(() => ({ eq: mockEq }));
+    mockFrom.mockReturnValue({ select: mockSelect });
+
+    mockMfaVerify.mockResolvedValueOnce({ isInitialEnrollment: true });
+    const { POST } = await import("../verify/route");
+    const res = await POST(
+      makeJsonRequest("http://localhost/api/auth/mfa/verify", {
+        challengeId: ids.challengeId,
+        code: "123456",
+        factorId: ids.factorId,
+      }),
+      createRouteParamsContext()
+    );
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.data.status).toBe("verified");
+    expect(json.data.backupCodes).toBeUndefined();
+    expect(mockRegenerate).not.toHaveBeenCalled();
   });
 
   it("does not generate backup codes on subsequent challenges", async () => {

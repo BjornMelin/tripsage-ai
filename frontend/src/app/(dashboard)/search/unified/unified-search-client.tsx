@@ -236,15 +236,13 @@ export default function UnifiedSearchClient({
   const [isPending, startTransition] = useTransition();
   const [activeTab, setActiveTab] = useState<"flights" | "hotels">("flights");
   const [showResults, setShowResults] = useState(false);
-  const [_searchData, setSearchData] = useState<Record<string, unknown> | null>(null);
   const [hotelResults, setHotelResults] = useState<HotelResult[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const handleFlightSearch = async (params: FlightSearchFormData) => {
+  const handleFlightSearch = async (_params: FlightSearchFormData) => {
     await new Promise<void>((resolve) => {
       startTransition(() => {
-        setSearchData(params as unknown as Record<string, unknown>);
         setShowResults(true);
         // Simulate API call
         setTimeout(() => {
@@ -258,7 +256,6 @@ export default function UnifiedSearchClient({
   const handleHotelSearch = (params: HotelSearchFormData) =>
     new Promise<void>((resolve) => {
       startTransition(async () => {
-        setSearchData(params as unknown as Record<string, unknown>);
         setErrorMessage(null);
         try {
           const results = await onSearchHotels(params);

@@ -37,24 +37,41 @@ export const POST = withApiGuards({
   }
 
   // Only generate backup codes during initial MFA enrollment, not on subsequent logins
+  // Additional safeguard: verify user doesn't already have backup codes (prevents regeneration on regular challenges)
   let backupCodes: string[] | undefined;
   if (isInitialEnrollment) {
     if (!user?.id) {
       return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
     }
     const userId = user.id;
-    const ip = getClientIpFromHeaders(req);
-    const userAgent = req.headers.get("user-agent") ?? undefined;
-    try {
-      const regenerated = await regenerateBackupCodes(adminSupabase, userId, 10, {
-        ip,
-        userAgent,
-      });
-      backupCodes = regenerated.codes;
-    } catch (error) {
-      logger.error("failed to generate backup codes post-enrollment", {
-        error: error instanceof Error ? error.message : "unknown_error",
+
+    // Defensive check: only generate backup codes if user doesn't already have any
+    // This prevents regeneration during regular MFA challenges where isInitialEnrollment might be incorrectly true
+    const { count: existingBackupCodesCount } = await adminSupabase
+      .from("auth_backup_codes")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .is("consumed_at", null);
+
+    if (existingBackupCodesCount === 0) {
+      const ip = getClientIpFromHeaders(req);
+      const userAgent = req.headers.get("user-agent") ?? undefined;
+      try {
+        const regenerated = await regenerateBackupCodes(adminSupabase, userId, 10, {
+          ip,
+          userAgent,
+        });
+        backupCodes = regenerated.codes;
+      } catch (error) {
+        logger.error("failed to generate backup codes post-enrollment", {
+          error: error instanceof Error ? error.message : "unknown_error",
+          userId,
+        });
+      }
+    } else {
+      logger.warn("skipped backup code generation: user already has backup codes", {
         userId,
+        existingCount: existingBackupCodesCount,
       });
     }
   }

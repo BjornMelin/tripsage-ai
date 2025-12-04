@@ -39,6 +39,7 @@ describe("searchHotelsAction", () => {
     checkIn: "2025-06-01",
     checkOut: "2025-06-05",
     children: 0,
+    currency: "EUR",
     location: "Paris, France",
     priceRange: { max: 500, min: 100 },
     rating: 0,
@@ -48,6 +49,18 @@ describe("searchHotelsAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSearch.mockResolvedValue({ listings: [] });
+  });
+
+  it("throws on invalid params", async () => {
+    const invalidParams = {
+      ...validParams,
+      priceRange: { max: 100, min: 200 },
+    };
+
+    await expect(searchHotelsAction(invalidParams)).rejects.toThrow(
+      /Invalid hotel search params/i
+    );
+    expect(mockSearch).not.toHaveBeenCalled();
   });
 
   it("propagates errors from the accommodations service", async () => {
@@ -250,7 +263,7 @@ describe("searchHotelsAction", () => {
       id: "mock-uuid-123",
       name: "Hotel",
       pricing: expect.objectContaining({
-        currency: "USD",
+        currency: "EUR",
         pricePerNight: 0,
         totalPrice: 0,
       }),
@@ -264,12 +277,23 @@ describe("searchHotelsAction", () => {
     const listing = {
       id: "hotel-1",
       name: "Test Hotel",
+      rooms: [
+        {
+          rates: [
+            {
+              price: {
+                total: "100",
+              },
+            },
+          ],
+        },
+      ],
     };
     mockSearch.mockResolvedValue({ listings: [listing] });
 
     const result = await searchHotelsAction(validParams);
 
-    expect(result[0].pricing.currency).toBe("USD");
+    expect(result[0].pricing.currency).toBe("EUR");
   });
 
   it("prefers listing currency over default", async () => {

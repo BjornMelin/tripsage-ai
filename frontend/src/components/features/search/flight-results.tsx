@@ -38,6 +38,7 @@ interface FlightResultsProps {
   loading?: boolean;
   onSelect: (flight: FlightResult) => Promise<void>;
   onCompare: (flights: FlightResult[]) => void;
+  onModifySearch?: () => void;
   className?: string;
 }
 
@@ -47,6 +48,7 @@ export function FlightResults({
   loading = false,
   onSelect,
   onCompare,
+  onModifySearch,
   className,
 }: FlightResultsProps) {
   const [isPending, startTransition] = useTransition();
@@ -183,7 +185,14 @@ export function FlightResults({
         <p className="text-muted-foreground mb-4">
           Try adjusting your search dates or filters
         </p>
-        <Button variant="outline">
+        <Button
+          variant="outline"
+          onClick={onModifySearch}
+          disabled={!onModifySearch}
+          aria-label={onModifySearch ? "Modify search" : "Modify search unavailable"}
+          aria-disabled={!onModifySearch}
+          title={onModifySearch ? undefined : "Modify search unavailable"}
+        >
           <RefreshCwIcon className="h-4 w-4 mr-2" />
           Modify Search
         </Button>

@@ -627,6 +627,7 @@ export const hotelSearchFormSchema = z
     checkIn: FUTURE_DATE_SCHEMA,
     checkOut: FUTURE_DATE_SCHEMA,
     children: z.number().int().min(0).max(4),
+    currency: CURRENCY_CODE_SCHEMA.optional(),
     location: z.string().min(1, { error: "Location is required" }),
     priceRange: z.strictObject({
       max: z.number().min(0),

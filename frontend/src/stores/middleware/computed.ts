@@ -1,8 +1,12 @@
 /**
  * @fileoverview Zustand middleware for automatic computed state derivation.
  *
- * Provides a reusable middleware that recalculates derived values after each
- * state update, keeping computed properties in sync.
+ * Enables reactive derived properties that stay synchronized with store state
+ * without manual cache invalidation. Compute functions run automatically on
+ * every state update to recalculate derived values.
+ *
+ * @see {@link https://github.com/your-org/docs/blob/main/docs/development/zustand-computed-middleware.md | Zustand Computed Middleware Guide} for detailed architecture, patterns, and examples
+ * @see ADR-0057 for architectural rationale and filter panel integration
  */
 
 import type { StateCreator, StoreMutatorIdentifier } from "zustand";
@@ -21,28 +25,35 @@ export interface ComputedConfig<T> {
 }
 
 /**
- * Zustand middleware that automatically updates computed properties
- * after each state change.
+ * Zustand middleware that automatically updates computed properties on state changes.
  *
- * @template T - The store state type.
- * @template Mps - Mutator parameters (for middleware composition).
- * @template Mcs - Mutator constraints.
+ * @template T - Store state type (must include both base and computed properties)
+ * @template Mps - Mutator parameters (for middleware composition)
+ * @template Mcs - Mutator constraints
  *
- * @param config - Configuration with compute function.
- * @param stateCreator - Original state creator.
- * @returns Middleware-wrapped state creator for `create()`.
+ * @param config - Configuration object with compute function
+ * @param stateCreator - Zustand state creator to wrap
+ * @returns Middleware-wrapped state creator
  *
  * @example
- * const useStore = create<MyState>()(
+ * ```ts
+ * const useStore = create<State>()(
  *   withComputed(
- *     { compute: (state) => ({ total: state.items.length }) },
- *     (set, get) => ({
- *       items: [],
+ *     { compute: (state) => ({ total: state.price * state.qty }) },
+ *     (set) => ({
+ *       price: 0,
+ *       qty: 1,
  *       total: 0,
- *       addItem: (item) => set({ items: [...get().items, item] }),
+ *       setPrice: (price) => set({ price }),
  *     })
  *   )
  * );
+ * ```
+ *
+ * @remarks
+ * Compute functions run on **every state update**. Keep them pure, synchronous,
+ * and efficient (O(1) or O(n) with small n). See the Zustand Computed Middleware
+ * Guide for patterns, performance tips, and when to use vs. selectors.
  */
 export function withComputed<
   T extends object,

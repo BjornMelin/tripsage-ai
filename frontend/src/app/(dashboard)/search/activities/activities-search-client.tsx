@@ -227,6 +227,7 @@ export default function ActivitiesSearchClient({
 
   const toggleComparison = (activity: Activity) => {
     const isCurrentlySelected = comparisonList.has(activity.id);
+    const currentSize = comparisonList.size;
 
     if (isCurrentlySelected) {
       setComparisonList((prev) => {
@@ -238,17 +239,17 @@ export default function ActivitiesSearchClient({
         description: `Removed "${activity.name}" from comparison`,
         title: "Removed from comparison",
       });
-      const nextSize = Math.max(0, comparisonList.size - 1);
+      const nextSize = Math.max(0, currentSize - 1);
       return { nextSize, wasAdded: false };
     }
 
-    if (comparisonList.size >= MAX_COMPARISON_ITEMS) {
+    if (currentSize >= MAX_COMPARISON_ITEMS) {
       toast({
         description: `You can compare up to ${MAX_COMPARISON_ITEMS} activities at once`,
         title: "Comparison limit reached",
         variant: "destructive",
       });
-      return { nextSize: comparisonList.size, wasAdded: false };
+      return { nextSize: currentSize, wasAdded: false };
     }
 
     setComparisonList((prev) => {
@@ -262,7 +263,7 @@ export default function ActivitiesSearchClient({
       title: "Added to comparison",
     });
 
-    const nextSize = comparisonList.size + 1;
+    const nextSize = currentSize + 1;
     return { nextSize, wasAdded: true };
   };
 
