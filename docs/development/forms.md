@@ -226,7 +226,7 @@ const onSubmit = form.handleSubmitSafe(async (data) => {
 
 ## Schema Organization
 
-Form schemas should be co-located with domain schemas:
+Form schemas should be co-located with domain schemas. See [Form Schema Patterns](./zod-schema-guide.md#form-schema-patterns) for schema design examples that pair with these hooks.
 
 ```typescript
 // @schemas/trips.ts
