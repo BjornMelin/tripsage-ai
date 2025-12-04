@@ -18,8 +18,6 @@ describe("Search History Store - Initial State and Recent Searches", () => {
         autoSaveEnabled: true,
         error: null,
         isLoading: false,
-        isSyncing: false,
-        lastSyncAt: null,
         maxRecentSearches: 50,
         popularSearchTerms: [],
         quickSearches: [],
@@ -27,7 +25,6 @@ describe("Search History Store - Initial State and Recent Searches", () => {
         savedSearches: [],
         searchCollections: [],
         searchSuggestions: [],
-        syncError: null,
       });
     });
   });
@@ -44,7 +41,6 @@ describe("Search History Store - Initial State and Recent Searches", () => {
       expect(result.current.autoSaveEnabled).toBe(true);
       expect(result.current.autoCleanupDays).toBe(30);
       expect(result.current.isLoading).toBe(false);
-      expect(result.current.isSyncing).toBe(false);
     });
 
     it("computes totalSavedSearches correctly", () => {

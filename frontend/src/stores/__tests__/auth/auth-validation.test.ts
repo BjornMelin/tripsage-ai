@@ -9,8 +9,8 @@ import type {
 } from "@/stores/auth/auth-validation";
 import { useAuthValidation } from "@/stores/auth/auth-validation";
 import { resetAuthState } from "@/stores/auth/reset-auth";
+import { setupTimeoutMock } from "@/test/helpers/store";
 import { server } from "@/test/msw/server";
-import { setupTimeoutMock } from "@/test/store-helpers";
 
 describe("AuthValidation", () => {
   let timeoutCleanup: (() => void) | null = null;
