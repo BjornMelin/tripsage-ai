@@ -9,7 +9,6 @@ import type { UiTrip } from "@schemas/trips";
 import {
   AlertCircleIcon,
   CheckCircleIcon,
-  InfoIcon,
   SearchIcon,
   SparklesIcon,
   TicketIcon,
@@ -43,15 +42,30 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
-import { useActivitySearch } from "@/hooks/search/use-activity-search";
+import { useSearchOrchestration } from "@/hooks/search/use-search-orchestration";
 import { openActivityBooking } from "@/lib/activities/booking";
 import { getErrorMessage } from "@/lib/api/error-types";
+import { useComparisonStore } from "@/stores/comparison-store";
+import { useSearchResultsStore } from "@/stores/search-results-store";
 import { addActivityToTrip, getPlanningTrips } from "./actions";
 
 const AI_FALLBACK_PREFIX = "ai_fallback:";
-const GOOGLE_PLACES_SOURCE = "googleplaces";
 /** Maximum number of items allowed in comparison views. */
 const MAX_COMPARISON_ITEMS = 3;
+
+/**
+ * Activity search semantic colors aligned with statusVariants.
+ * - Success indicator: green (active/success)
+ * - AI suggestions: purple (distinct from verified results)
+ */
+const ACTIVITY_COLORS = {
+  aiSuggestionBadge: "bg-purple-100",
+  aiSuggestionIcon: "text-purple-500",
+  successIcon: "text-green-700",
+} as const;
+
+const isActivity = (data: unknown): data is Activity =>
+  typeof data === "object" && data !== null && "id" in data && "name" in data;
 
 /** Activity search client component props. */
 interface ActivitiesSearchClientProps {
@@ -64,28 +78,32 @@ export default function ActivitiesSearchClient({
 }: ActivitiesSearchClientProps) {
   const { toast } = useToast();
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
-  const {
-    searchActivities,
-    isSearching,
-    searchError,
-    setSearchError,
-    results,
-    searchMetadata,
-  } = useActivitySearch();
+  const { initializeSearch, executeSearch, isSearching } = useSearchOrchestration();
+  const searchError = useSearchResultsStore((state) => state.error);
+  const activities = useSearchResultsStore((state) => state.results.activities ?? []);
+  const searchMetadata = useSearchResultsStore((state) => state.metrics);
   const searchParams = useSearchParams();
   const primaryActionRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [pendingAddFromComparison, setPendingAddFromComparison] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
-
-  const noteItems = searchMetadata?.notes?.map((note, index) => ({
-    id: `note-${index}`,
-    note,
-  }));
+  const { addItem, removeItem, clearByType, hasItem, getItemsByType } =
+    useComparisonStore();
 
   const [isTripModalOpen, setIsTripModalOpen] = useState(false);
   const [trips, setTrips] = useState<UiTrip[]>([]);
   const [isPending, setIsPending] = useState(false);
+
+  // Derived state for comparison list
+  const comparisonList = useMemo(
+    () => new Set(getItemsByType("activity").map((i) => i.id)),
+    [getItemsByType]
+  );
+
+  // Initialize search type on mount
+  useEffect(() => {
+    initializeSearch("activity");
+  }, [initializeSearch]);
 
   // Initialize search with URL parameters
   useEffect(() => {
@@ -101,10 +119,9 @@ export default function ActivitiesSearchClient({
       (async () => {
         try {
           const normalizedParams = await onSubmitServer(initialParams);
-          await searchActivities(normalizedParams ?? initialParams);
+          await executeSearch(normalizedParams ?? initialParams);
         } catch (error) {
           const message = getErrorMessage(error);
-          setSearchError(new Error(message));
           toast({
             description: message,
             title: "Search failed",
@@ -113,23 +130,21 @@ export default function ActivitiesSearchClient({
         }
       })();
     }
-  }, [searchParams, searchActivities, onSubmitServer, setSearchError, toast]);
+  }, [searchParams, executeSearch, onSubmitServer, toast]);
 
   const handleSearch = async (params: ActivitySearchParams) => {
     if (params.destination) {
       setHasSearched(true);
       try {
         const normalizedParams = await onSubmitServer(params); // server-side telemetry and validation
-
-        try {
-          await searchActivities(normalizedParams ?? params); // client fetch/store update
-        } catch (error) {
-          const message = getErrorMessage(error);
-          setSearchError(new Error(message));
-        }
+        await executeSearch(normalizedParams ?? params); // client fetch/store update
       } catch (error) {
         const message = getErrorMessage(error);
-        setSearchError(new Error(message));
+        toast({
+          description: message,
+          title: "Search failed",
+          variant: "destructive",
+        });
       }
     }
   };
@@ -192,78 +207,36 @@ export default function ActivitiesSearchClient({
     setSelectedActivity(activity);
   };
 
-  const [comparisonList, setComparisonList] = useState<Set<string>>(new Set());
   const [showComparisonModal, setShowComparisonModal] = useState(false);
 
-  // Load from sessionStorage on mount
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const stored = sessionStorage.getItem("activity-comparison-list");
-      if (stored) {
-        try {
-          const ids = JSON.parse(stored) as string[];
-          setComparisonList(new Set(ids));
-        } catch {
-          // Invalid storage, ignore
-        }
-      }
-    }
-  }, []);
-
-  // Save to sessionStorage when comparison list changes
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      if (comparisonList.size > 0) {
-        sessionStorage.setItem(
-          "activity-comparison-list",
-          JSON.stringify(Array.from(comparisonList))
-        );
-      } else {
-        sessionStorage.removeItem("activity-comparison-list");
-      }
-    }
-  }, [comparisonList]);
-
   const toggleComparison = (activity: Activity) => {
-    const isCurrentlySelected = comparisonList.has(activity.id);
-    const currentSize = comparisonList.size;
+    // Read current count from store selector (not memoized Set) for accurate size
+    const currentCount = getItemsByType("activity").length;
 
-    if (isCurrentlySelected) {
-      setComparisonList((prev) => {
-        const next = new Set(prev);
-        next.delete(activity.id);
-        return next;
-      });
+    if (hasItem(activity.id)) {
+      removeItem(activity.id);
       toast({
         description: `Removed "${activity.name}" from comparison`,
         title: "Removed from comparison",
       });
-      const nextSize = Math.max(0, currentSize - 1);
-      return { nextSize, wasAdded: false };
+      return { nextSize: currentCount - 1, wasAdded: false };
     }
 
-    if (currentSize >= MAX_COMPARISON_ITEMS) {
+    if (currentCount >= MAX_COMPARISON_ITEMS) {
       toast({
         description: `You can compare up to ${MAX_COMPARISON_ITEMS} activities at once`,
         title: "Comparison limit reached",
         variant: "destructive",
       });
-      return { nextSize: currentSize, wasAdded: false };
+      return { nextSize: currentCount, wasAdded: false };
     }
 
-    setComparisonList((prev) => {
-      const next = new Set(prev);
-      next.add(activity.id);
-      return next;
-    });
-
+    addItem("activity", activity.id, activity);
     toast({
       description: `Added "${activity.name}" to comparison`,
       title: "Added to comparison",
     });
-
-    const nextSize = currentSize + 1;
-    return { nextSize, wasAdded: true };
+    return { nextSize: currentCount + 1, wasAdded: true };
   };
 
   const handleCompareActivity = (activity: Activity) => {
@@ -277,16 +250,12 @@ export default function ActivitiesSearchClient({
   };
 
   const handleRemoveFromComparison = (activityId: string) => {
-    setComparisonList((prev) => {
-      const newSet = new Set(prev);
-      newSet.delete(activityId);
-
-      if (newSet.size <= 1) {
-        setShowComparisonModal(false);
-      }
-
-      return newSet;
-    });
+    // Read current count from store selector (not memoized Set) for accurate size
+    const currentCount = getItemsByType("activity").length;
+    removeItem(activityId);
+    if (currentCount - 1 <= 1) {
+      setShowComparisonModal(false);
+    }
   };
 
   const handleAddFromComparison = (activity: Activity) => {
@@ -295,15 +264,21 @@ export default function ActivitiesSearchClient({
     setShowComparisonModal(false);
   };
 
-  const activities = results ?? [];
   const hasActiveResults = activities.length > 0;
 
   const comparisonActivities = useMemo(() => {
-    return activities.filter((a) => comparisonList.has(a.id));
-  }, [activities, comparisonList]);
+    return getItemsByType("activity")
+      .map((item) => item.data)
+      .filter(isActivity);
+  }, [getItemsByType]);
 
   const { verifiedActivities, aiSuggestions } = useMemo(() => {
-    if (searchMetadata?.primarySource !== "mixed") {
+    // Check if we have mixed results based on activity ID prefixes
+    const hasMixedResults = activities.some((activity) =>
+      activity.id.startsWith(AI_FALLBACK_PREFIX)
+    );
+
+    if (!hasMixedResults) {
       return {
         aiSuggestions: [] as Activity[],
         verifiedActivities: [] as Activity[],
@@ -315,12 +290,10 @@ export default function ActivitiesSearchClient({
         activity.id.startsWith(AI_FALLBACK_PREFIX)
       ),
       verifiedActivities: activities.filter(
-        (activity) =>
-          !activity.id.startsWith(AI_FALLBACK_PREFIX) &&
-          (searchMetadata.sources ?? []).includes(GOOGLE_PLACES_SOURCE)
+        (activity) => !activity.id.startsWith(AI_FALLBACK_PREFIX)
       ),
     };
-  }, [activities, searchMetadata?.primarySource, searchMetadata?.sources]);
+  }, [activities]);
 
   useEffect(() => {
     if (!selectedActivity) return;
@@ -418,7 +391,7 @@ export default function ActivitiesSearchClient({
                           size="sm"
                           variant="outline"
                           onClick={() => {
-                            setComparisonList(new Set());
+                            clearByType("activity");
                             toast({
                               description: "Comparison list cleared",
                               title: "Cleared",
@@ -464,37 +437,28 @@ export default function ActivitiesSearchClient({
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h2 className="text-xl font-semibold flex items-center gap-2">
-                      <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                      <CheckCircleIcon
+                        className={`h-5 w-5 ${ACTIVITY_COLORS.successIcon}`}
+                      />
                       {activities.length} Activities Found
                     </h2>
-                    {searchMetadata?.cached && (
-                      <Badge variant="outline">Cached results</Badge>
+                    {searchMetadata?.provider && (
+                      <Badge variant="outline">
+                        Provider: {searchMetadata.provider}
+                      </Badge>
                     )}
                   </div>
 
-                  {/* Notes */}
-                  {noteItems && noteItems.length > 0 && (
-                    <Alert>
-                      <InfoIcon className="h-4 w-4" />
-                      <AlertTitle>Search Notes</AlertTitle>
-                      <AlertDescription>
-                        <ul className="list-disc list-inside space-y-1">
-                          {noteItems.map((item) => (
-                            <li key={item.id}>{item.note}</li>
-                          ))}
-                        </ul>
-                      </AlertDescription>
-                    </Alert>
-                  )}
-
                   {/* Mixed Results (Verified + AI) */}
-                  {searchMetadata?.primarySource === "mixed" && (
+                  {verifiedActivities.length > 0 && (
                     <div className="space-y-6">
                       <div>
                         <div className="flex items-center gap-2 mb-4">
-                          <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                          <CheckCircleIcon
+                            className={`h-5 w-5 ${ACTIVITY_COLORS.successIcon}`}
+                          />
                           <h3 className="text-lg font-semibold">Verified Activities</h3>
-                          <Badge variant="secondary">Google Places</Badge>
+                          <Badge variant="secondary">Verified</Badge>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {verifiedActivities.map((activity) => (
@@ -503,7 +467,7 @@ export default function ActivitiesSearchClient({
                               activity={activity}
                               onSelect={handleSelectActivity}
                               onCompare={handleCompareActivity}
-                              sourceLabel="Verified via Google Places"
+                              sourceLabel="Verified"
                             />
                           ))}
                         </div>
@@ -514,11 +478,16 @@ export default function ActivitiesSearchClient({
                           <Separator />
                           <div>
                             <div className="flex items-center gap-2 mb-4">
-                              <SparklesIcon className="h-5 w-5 text-purple-500" />
+                              <SparklesIcon
+                                className={`h-5 w-5 ${ACTIVITY_COLORS.aiSuggestionIcon}`}
+                              />
                               <h3 className="text-lg font-semibold">
                                 More Ideas Powered by AI
                               </h3>
-                              <Badge variant="secondary" className="bg-purple-100">
+                              <Badge
+                                variant="secondary"
+                                className={ACTIVITY_COLORS.aiSuggestionBadge}
+                              >
                                 AI Suggestions
                               </Badge>
                             </div>
@@ -540,7 +509,7 @@ export default function ActivitiesSearchClient({
                   )}
 
                   {/* Standard Results */}
-                  {searchMetadata?.primarySource !== "mixed" && (
+                  {verifiedActivities.length === 0 && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {activities.map((activity) => (
                         <ActivityCard

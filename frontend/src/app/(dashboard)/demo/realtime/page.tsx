@@ -29,6 +29,27 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTrips } from "@/hooks/use-trips";
+import { cn } from "@/lib/utils";
+import { statusVariants } from "@/lib/variants/status";
+
+type DemoStatus = "completed" | "pending";
+
+type DemoCard = {
+  description: string;
+  details: string[];
+  icon: React.ReactNode;
+  id: string;
+  status: DemoStatus;
+  title: string;
+};
+
+/**
+ * Maps demo status to status variant props.
+ */
+const getStatusVariant = (status: DemoStatus) =>
+  status === "completed"
+    ? { status: "success" as const }
+    : { status: "pending" as const };
 
 /**
  * Demonstration page showcasing all real-time Supabase integration features
@@ -37,7 +58,7 @@ export default function RealtimeDemoPage() {
   const { data: trips, realtimeStatus } = useTrips();
   const [activeTab, setActiveTab] = useState("overview");
 
-  const features = [
+  const features: DemoCard[] = [
     {
       description: "Replaced custom API calls with direct Supabase client usage",
       details: [
@@ -118,19 +139,6 @@ export default function RealtimeDemoPage() {
     },
   ];
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "completed":
-        return "bg-green-500";
-      case "pending":
-        return "bg-yellow-500";
-      case "in-progress":
-        return "bg-blue-500";
-      default:
-        return "bg-gray-500";
-    }
-  };
-
   return (
     <div className="container mx-auto py-8 space-y-8">
       {/* Header */}
@@ -167,12 +175,8 @@ export default function RealtimeDemoPage() {
                       <span className="font-medium">{feature.title}</span>
                     </div>
                     <Badge
-                      variant={feature.status === "completed" ? "default" : "secondary"}
-                      className={
-                        feature.status === "completed"
-                          ? getStatusColor(feature.status)
-                          : ""
-                      }
+                      variant="outline"
+                      className={cn(statusVariants(getStatusVariant(feature.status)))}
                     >
                       {feature.status}
                     </Badge>
@@ -250,16 +254,24 @@ export default function RealtimeDemoPage() {
               <div className="text-center space-y-4">
                 <h3 className="text-lg font-semibold">Real-time Features Active</h3>
                 <div className="flex flex-wrap justify-center gap-2">
-                  <Badge variant="default" className="bg-green-500">
+                  <Badge
+                    className={statusVariants({ excludeRing: true, tone: "info" })}
+                  >
                     Direct Supabase SDK
                   </Badge>
-                  <Badge variant="default" className="bg-blue-500">
+                  <Badge
+                    className={statusVariants({ excludeRing: true, tone: "active" })}
+                  >
                     Real-time Subscriptions
                   </Badge>
-                  <Badge variant="default" className="bg-purple-500">
+                  <Badge
+                    className={statusVariants({ excludeRing: true, tone: "success" })}
+                  >
                     Optimistic Updates
                   </Badge>
-                  <Badge variant="default" className="bg-orange-500">
+                  <Badge
+                    className={statusVariants({ excludeRing: true, tone: "pending" })}
+                  >
                     Connection Monitoring
                   </Badge>
                 </div>

@@ -15,7 +15,7 @@ import {
   SortAscIcon,
   StarIcon,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { HotelResults } from "@/components/features/search/hotel-results";
 import { HotelSearchForm } from "@/components/features/search/hotel-search-form";
 import { SearchLayout } from "@/components/layouts/search-layout";
@@ -38,7 +38,7 @@ import {
 } from "@/components/ui/tooltip";
 import { HotelSkeleton } from "@/components/ui/travel-skeletons";
 import { useToast } from "@/components/ui/use-toast";
-import { useAccommodationSearch } from "@/hooks/search/use-accommodation-search";
+import { useSearchOrchestration } from "@/hooks/search/use-search-orchestration";
 import { getErrorMessage } from "@/lib/api/error-types";
 import { useSearchResultsStore } from "@/stores/search-results-store";
 
@@ -53,13 +53,19 @@ interface HotelsSearchClientProps {
 export default function HotelsSearchClient({
   onSubmitServer,
 }: HotelsSearchClientProps) {
-  const { search, isSearching, searchError } = useAccommodationSearch();
+  const { initializeSearch, executeSearch, isSearching } = useSearchOrchestration();
+  const searchError = useSearchResultsStore((state) => state.error);
   const { toast } = useToast();
   const [hasSearched, setHasSearched] = useState(false);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const accommodationResults = useSearchResultsStore(
     (state) => state.results.accommodations ?? []
   );
+
+  // Initialize accommodation search type on mount
+  useEffect(() => {
+    initializeSearch("accommodation");
+  }, [initializeSearch]);
 
   const hotelResults: HotelResult[] = useMemo(
     () =>
@@ -165,7 +171,7 @@ export default function HotelsSearchClient({
     setHasSearched(true);
     try {
       await onSubmitServer(params); // server-side telemetry and validation
-      await search(params); // client fetch/store update
+      await executeSearch(params); // client fetch/store update via orchestration
     } catch (error) {
       toast({
         description: getErrorMessage(error),

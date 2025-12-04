@@ -36,6 +36,8 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { exportTripToIcs } from "@/lib/calendar/trip-export";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
+import { cn } from "@/lib/utils";
+import { statusVariants } from "@/lib/variants/status";
 import { useTripStore } from "@/stores/trip-store";
 
 /**
@@ -90,18 +92,20 @@ export default function TripDetailsPage() {
     return DateUtils.format(DateUtils.parse(dateString), "MMMM dd, yyyy");
   };
 
-  const getStatusColor = (status: string) => {
+  /**
+   * Maps trip status to statusVariants with fallback for neutral states.
+   * Active/upcoming use statusVariants; draft/completed use neutral gray.
+   */
+  const getStatusClassName = (status: string) => {
     switch (status) {
-      case "draft":
-        return "bg-gray-100 text-gray-700";
-      case "upcoming":
-        return "bg-blue-100 text-blue-700";
       case "active":
-        return "bg-green-100 text-green-700";
+        return cn(statusVariants({ status: "active" }));
+      case "upcoming":
+        return cn(statusVariants({ status: "info" }));
       case "completed":
-        return "bg-gray-100 text-gray-500";
+        return "bg-gray-100 text-gray-500 ring-1 ring-inset ring-gray-500/20";
       default:
-        return "bg-gray-100 text-gray-700";
+        return "bg-gray-100 text-gray-700 ring-1 ring-inset ring-gray-600/20";
     }
   };
 
@@ -130,7 +134,7 @@ export default function TripDetailsPage() {
         <div className="flex-1">
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-bold">{currentTrip.title}</h1>
-            <Badge className={getStatusColor(status)}>
+            <Badge className={getStatusClassName(status)}>
               {status.charAt(0).toUpperCase() + status.slice(1)}
             </Badge>
             {currentTrip.visibility === "public" && (
