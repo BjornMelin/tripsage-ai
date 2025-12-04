@@ -15,6 +15,7 @@ import {
 } from "@schemas/stores";
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
+import { unique } from "@/lib/collection-utils";
 import { createStoreLogger } from "@/lib/telemetry/store-logger";
 import { generateId, getCurrentTimestamp } from "./helpers";
 
@@ -71,14 +72,11 @@ interface SearchHistoryState {
   autoSaveEnabled: boolean;
   autoCleanupDays: number;
 
-  // Loading and sync states
+  // Loading state
   isLoading: boolean;
-  isSyncing: boolean;
-  lastSyncAt: string | null;
 
-  // Error states
+  // Error state
   error: string | null;
-  syncError: string | null;
 
   // Computed properties
   totalSavedSearches: number;
@@ -157,11 +155,6 @@ interface SearchHistoryState {
   ) => SearchSuggestion[];
   updateSearchSuggestions: () => void;
   addSearchTerm: (term: string, searchType: SearchType) => void;
-
-  // Data management and sync
-  exportSearchHistory: () => string;
-  importSearchHistory: (data: string) => Promise<boolean>;
-  syncWithServer: () => Promise<boolean>;
 
   // Search and filtering
   searchSavedSearches: (
@@ -290,7 +283,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
               collection.id === collectionId
                 ? {
                     ...collection,
-                    searchIds: [...new Set([...collection.searchIds, searchId])],
+                    searchIds: unique([...collection.searchIds, searchId]),
                     updatedAt: getCurrentTimestamp(),
                   }
                 : collection
@@ -325,7 +318,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
         },
 
         clearError: () => {
-          set({ error: null, syncError: null });
+          set({ error: null });
         },
 
         clearRecentSearches: (searchType) => {
@@ -494,26 +487,6 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
         // Error states
         error: null,
 
-        // Data management and sync
-        exportSearchHistory: () => {
-          const {
-            savedSearches,
-            searchCollections,
-            quickSearches,
-            popularSearchTerms,
-          } = get();
-          const exportData = {
-            exportedAt: getCurrentTimestamp(),
-            popularSearchTerms,
-            quickSearches,
-            savedSearches,
-            searchCollections,
-            version: "1.0",
-          };
-
-          return JSON.stringify(exportData, null, 2);
-        },
-
         get favoriteSearches() {
           return get().savedSearches.filter((search) => search.isFavorite);
         },
@@ -674,70 +647,8 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
           return trends;
         },
 
-        importSearchHistory: (data) => {
-          set({ isLoading: true });
-
-          try {
-            const importData = JSON.parse(data);
-
-            if (importData.savedSearches) {
-              const validatedSearches = importData.savedSearches.filter(
-                (search: unknown) => {
-                  const result = savedSearchSchema.safeParse(search);
-                  return result.success;
-                }
-              );
-
-              set((state) => ({
-                savedSearches: [...state.savedSearches, ...validatedSearches],
-              }));
-            }
-
-            if (importData.searchCollections) {
-              const validatedCollections = importData.searchCollections.filter(
-                (collection: unknown) => {
-                  const result = searchCollectionSchema.safeParse(collection);
-                  return result.success;
-                }
-              );
-
-              set((state) => ({
-                searchCollections: [
-                  ...state.searchCollections,
-                  ...validatedCollections,
-                ],
-              }));
-            }
-
-            if (importData.quickSearches) {
-              const validatedQuickSearches = importData.quickSearches.filter(
-                (quickSearch: unknown) => {
-                  const result = quickSearchSchema.safeParse(quickSearch);
-                  return result.success;
-                }
-              );
-
-              set((state) => ({
-                quickSearches: [...state.quickSearches, ...validatedQuickSearches],
-              }));
-            }
-
-            set({ isLoading: false });
-            return Promise.resolve(true);
-          } catch (error) {
-            const message =
-              error instanceof Error
-                ? error.message
-                : "Failed to import search history";
-            set({ error: message, isLoading: false });
-            return Promise.resolve(false);
-          }
-        },
-
-        // Loading and sync states
+        // Loading state
         isLoading: false,
-        isSyncing: false,
-        lastSyncAt: null,
 
         markSearchAsUsed: (searchId) => {
           set((state) => ({
@@ -817,8 +728,6 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
             autoSaveEnabled: true,
             error: null,
             isLoading: false,
-            isSyncing: false,
-            lastSyncAt: null,
             maxRecentSearches: DEFAULT_MAX_RECENT_SEARCHES,
             popularSearchTerms: [],
             quickSearches: [],
@@ -826,7 +735,6 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
             savedSearches: [],
             searchCollections: [],
             searchSuggestions: [],
-            syncError: null,
           });
         },
         savedSearches: [],
@@ -924,31 +832,6 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
 
         // Search suggestions
         searchSuggestions: [],
-        syncError: null,
-
-        syncWithServer: async () => {
-          set({ isSyncing: true, syncError: null });
-
-          try {
-            // Mock sync operation - keep fast to avoid test flakiness while
-            // still exercising the async path.
-            await new Promise((resolve) => setTimeout(resolve, 20));
-
-            set({
-              isSyncing: false,
-              lastSyncAt: getCurrentTimestamp(),
-            });
-
-            return true;
-          } catch (error) {
-            const message = error instanceof Error ? error.message : "Sync failed";
-            set({
-              isSyncing: false,
-              syncError: message,
-            });
-            return false;
-          }
-        },
 
         toggleSearchFavorite: (searchId) => {
           set((state) => ({
@@ -1057,13 +940,25 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
 
         updateSearchSuggestions: () => {
           const { recentSearches, savedSearches, popularSearchTerms } = get();
-          const suggestions: SearchSuggestion[] = [];
+          const MaxSuggestions = 50;
+          const seen = new Map<string, SearchSuggestion>();
 
-          // Generate suggestions from recent searches
-          recentSearches.forEach((search) => {
+          // Helper to add suggestion with deduplication
+          const addSuggestion = (suggestion: SearchSuggestion): boolean => {
+            if (seen.size >= MaxSuggestions) return false;
+            const key = `${suggestion.text.toLowerCase()}_${suggestion.searchType}`;
+            const existing = seen.get(key);
+            if (!existing || existing.frequency < suggestion.frequency) {
+              seen.set(key, suggestion);
+            }
+            return true;
+          };
+
+          // Process recent searches (limit to 50 most recent)
+          for (const search of recentSearches.slice(0, 50)) {
             const text = EXTRACT_SEARCH_TEXT(search.params);
             if (text) {
-              suggestions.push({
+              addSuggestion({
                 frequency: 1,
                 id: `recent_${search.id}`,
                 lastUsed: search.timestamp,
@@ -1072,13 +967,13 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
                 text,
               });
             }
-          });
+          }
 
-          // Generate suggestions from saved searches
-          savedSearches.forEach((search) => {
+          // Process saved searches (limit to 20)
+          for (const search of savedSearches.slice(0, 20)) {
             const text = EXTRACT_SEARCH_TEXT(search.params);
             if (text) {
-              suggestions.push({
+              addSuggestion({
                 frequency: search.usageCount,
                 id: `saved_${search.id}`,
                 lastUsed: search.lastUsed || search.createdAt,
@@ -1087,35 +982,22 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
                 text,
               });
             }
-          });
+          }
 
-          // Add popular search terms
-          popularSearchTerms.forEach((term) => {
-            suggestions.push({
+          // Process popular terms (limit to 10)
+          const now = getCurrentTimestamp();
+          for (const term of popularSearchTerms.slice(0, 10)) {
+            addSuggestion({
               frequency: term.count,
               id: `popular_${term.term}`,
-              lastUsed: getCurrentTimestamp(),
+              lastUsed: now,
               searchType: term.searchType,
               source: "popular",
               text: term.term,
             });
-          });
+          }
 
-          // Deduplicate and limit
-          const uniqueSuggestions = suggestions.reduce(
-            (acc, suggestion) => {
-              const key = `${suggestion.text}_${suggestion.searchType}`;
-              if (!acc[key] || acc[key].frequency < suggestion.frequency) {
-                acc[key] = suggestion;
-              }
-              return acc;
-            },
-            {} as Record<string, SearchSuggestion>
-          );
-
-          set({
-            searchSuggestions: Object.values(uniqueSuggestions).slice(0, 100),
-          });
+          set({ searchSuggestions: Array.from(seen.values()) });
         },
 
         // Settings management
@@ -1137,7 +1019,6 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
         partialize: (state) => ({
           autoCleanupDays: state.autoCleanupDays,
           autoSaveEnabled: state.autoSaveEnabled,
-          lastSyncAt: state.lastSyncAt,
           maxRecentSearches: state.maxRecentSearches,
           popularSearchTerms: state.popularSearchTerms,
           quickSearches: state.quickSearches,
@@ -1214,8 +1095,6 @@ export const useSearchHistoryLoading = () =>
   useSearchHistoryStore((state) => ({
     error: state.error,
     isLoading: state.isLoading,
-    isSyncing: state.isSyncing,
-    syncError: state.syncError,
   }));
 
 /**

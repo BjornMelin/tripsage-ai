@@ -2,7 +2,12 @@
  * @fileoverview Search parameters store.
  */
 
-import type { SearchParams } from "@schemas/search";
+import type {
+  ActivitySearchParams,
+  FlightSearchParams,
+  SearchAccommodationParams,
+  SearchParams,
+} from "@schemas/search";
 import {
   accommodationSearchParamsStoreSchema,
   activitySearchParamsStoreSchema,
@@ -26,6 +31,25 @@ registerAllHandlers();
 
 const logger = createStoreLogger({ storeName: "search-params" });
 
+/** Schema registry for parameter validation by search type */
+const PARAM_SCHEMAS = {
+  accommodation: accommodationSearchParamsStoreSchema,
+  activity: activitySearchParamsStoreSchema,
+  destination: destinationSearchParamsStoreSchema,
+  flight: flightSearchParamsStoreSchema,
+} as const;
+
+/** Keys for params in state by search type */
+const PARAMS_KEY_MAP: Record<
+  SearchType,
+  "flightParams" | "accommodationParams" | "activityParams" | "destinationParams"
+> = {
+  accommodation: "accommodationParams",
+  activity: "activityParams",
+  destination: "destinationParams",
+  flight: "flightParams",
+};
+
 // Search parameters store interface
 interface SearchParamsState {
   // Current search context
@@ -48,6 +72,7 @@ interface SearchParamsState {
 
   // Parameter management actions
   setSearchType: (type: SearchType) => void;
+  updateParams: (type: SearchType, params: Partial<SearchParams>) => Promise<boolean>;
   updateFlightParams: (params: Partial<ValidatedFlightParams>) => Promise<boolean>;
   updateAccommodationParams: (
     params: Partial<ValidatedAccommodationParams>
@@ -127,6 +152,31 @@ const getParamsForType = (
   return paramsMap[type];
 };
 
+/** Compute derived current params and validity for the given state snapshot. */
+const computeDerivedState = (
+  state: Pick<
+    SearchParamsState,
+    | "accommodationParams"
+    | "activityParams"
+    | "currentSearchType"
+    | "destinationParams"
+    | "flightParams"
+  >
+): Pick<SearchParamsState, "currentParams" | "hasValidParams"> => {
+  if (!state.currentSearchType) {
+    return { currentParams: null, hasValidParams: false };
+  }
+
+  const currentParams = getParamsForType(
+    state,
+    state.currentSearchType
+  ) as SearchParams;
+  return {
+    currentParams,
+    hasValidParams: hasRequiredParams(currentParams, state.currentSearchType),
+  };
+};
+
 /** Create a search params store instance. */
 export const useSearchParamsStore = create<SearchParamsState>()(
   devtools(
@@ -162,23 +212,14 @@ export const useSearchParamsStore = create<SearchParamsState>()(
           const { currentParams } = get();
           return currentParams ? { ...currentParams } : null;
         },
+        currentParams: null,
 
-        /** Get current params for a search type from state. */
-        get currentParams() {
-          const state = get();
-          if (!state.currentSearchType) return null;
-          return getParamsForType(state, state.currentSearchType) as SearchParams;
-        },
         // Initial state
         currentSearchType: null,
         destinationParams: {},
         flightParams: {},
 
-        get hasValidParams() {
-          const { currentSearchType, currentParams } = get();
-          if (!currentSearchType || !currentParams) return false;
-          return hasRequiredParams(currentParams, currentSearchType);
-        },
+        hasValidParams: false,
 
         get isDirty() {
           const state = get();
@@ -232,9 +273,11 @@ export const useSearchParamsStore = create<SearchParamsState>()(
           set({
             accommodationParams: {},
             activityParams: {},
+            currentParams: null,
             currentSearchType: null,
             destinationParams: {},
             flightParams: {},
+            hasValidParams: false,
             isValidating: {
               accommodation: false,
               activity: false,
@@ -260,11 +303,15 @@ export const useSearchParamsStore = create<SearchParamsState>()(
         // Reset and validation
         resetParams: (type) => {
           if (!type) {
-            set({
-              accommodationParams: {},
-              activityParams: {},
-              destinationParams: {},
-              flightParams: {},
+            set((state) => {
+              const updates = {
+                accommodationParams: {},
+                activityParams: {},
+                destinationParams: {},
+                flightParams: {},
+              };
+              const derived = computeDerivedState({ ...state, ...updates });
+              return { ...updates, ...derived };
             });
             return;
           }
@@ -287,13 +334,21 @@ export const useSearchParamsStore = create<SearchParamsState>()(
           };
           const key = keyMap[type];
           const stateUpdate = { [key]: defaults } satisfies Partial<SearchParamsState>;
-          set(stateUpdate);
+          set((state) => {
+            const nextState = { ...state, ...stateUpdate } as SearchParamsState;
+            const derived = computeDerivedState(nextState);
+            return { ...stateUpdate, ...derived };
+          });
         },
 
         setAccommodationParams: (params) => {
           const result = accommodationSearchParamsStoreSchema.safeParse(params);
           if (result.success) {
-            set({ accommodationParams: result.data });
+            set((state) => {
+              const updates = { accommodationParams: result.data };
+              const derived = computeDerivedState({ ...state, ...updates });
+              return { ...updates, ...derived };
+            });
           } else {
             logger.error("Invalid accommodation parameters", {
               error: result.error,
@@ -305,7 +360,11 @@ export const useSearchParamsStore = create<SearchParamsState>()(
         setActivityParams: (params) => {
           const result = activitySearchParamsStoreSchema.safeParse(params);
           if (result.success) {
-            set({ activityParams: result.data });
+            set((state) => {
+              const updates = { activityParams: result.data };
+              const derived = computeDerivedState({ ...state, ...updates });
+              return { ...updates, ...derived };
+            });
           } else {
             logger.error("Invalid activity parameters", {
               error: result.error,
@@ -317,7 +376,11 @@ export const useSearchParamsStore = create<SearchParamsState>()(
         setDestinationParams: (params) => {
           const result = destinationSearchParamsStoreSchema.safeParse(params);
           if (result.success) {
-            set({ destinationParams: result.data });
+            set((state) => {
+              const updates = { destinationParams: result.data };
+              const derived = computeDerivedState({ ...state, ...updates });
+              return { ...updates, ...derived };
+            });
           } else {
             logger.error("Invalid destination parameters", {
               error: result.error,
@@ -329,7 +392,11 @@ export const useSearchParamsStore = create<SearchParamsState>()(
         setFlightParams: (params) => {
           const result = flightSearchParamsStoreSchema.safeParse(params);
           if (result.success) {
-            set({ flightParams: result.data });
+            set((state) => {
+              const updates = { flightParams: result.data };
+              const derived = computeDerivedState({ ...state, ...updates });
+              return { ...updates, ...derived };
+            });
           } else {
             logger.error("Invalid flight parameters", { error: result.error });
           }
@@ -370,141 +437,65 @@ export const useSearchParamsStore = create<SearchParamsState>()(
                 Object.assign(updatedState, defaultsUpdate);
               }
 
-              return updatedState;
+              const nextState = { ...state, ...updatedState } as SearchParamsState;
+              const derived = computeDerivedState(nextState);
+              return { ...updatedState, ...derived };
             });
           } else {
             logger.error("Invalid search type", { error: result.error });
           }
         },
 
-        /** Update accommodation parameters using the handler. */
-        updateAccommodationParams: (params) => {
+        /** Type-safe accommodation params update. */
+        updateAccommodationParams: (params: Partial<SearchAccommodationParams>) =>
+          get().updateParams("accommodation", params as Partial<SearchParams>),
+
+        /** Type-safe activity params update. */
+        updateActivityParams: (params: Partial<ActivitySearchParams>) =>
+          get().updateParams("activity", params as Partial<SearchParams>),
+
+        /** Type-safe destination params update. */
+        updateDestinationParams: (params: Partial<ValidatedDestinationParams>) =>
+          get().updateParams("destination", params as Partial<SearchParams>),
+
+        /** Type-safe flight params update. */
+        updateFlightParams: (params: Partial<FlightSearchParams>) =>
+          get().updateParams("flight", params as Partial<SearchParams>),
+
+        /** Generic parameter update with validation. */
+        updateParams: (type, params) => {
+          const paramsKey = PARAMS_KEY_MAP[type];
+          const schema = PARAM_SCHEMAS[type];
+
           set((state) => ({
-            isValidating: { ...state.isValidating, accommodation: true },
-            validationErrors: {
-              ...state.validationErrors,
-              accommodation: null,
-            },
+            isValidating: { ...state.isValidating, [type]: true },
+            validationErrors: { ...state.validationErrors, [type]: null },
           }));
 
           try {
-            const updatedParams = { ...get().accommodationParams, ...params };
-            const result =
-              accommodationSearchParamsStoreSchema.safeParse(updatedParams);
+            const currentParams = get()[paramsKey];
+            const merged = { ...currentParams, ...params };
+            const result = schema.safeParse(merged);
 
             if (result.success) {
-              set((state) => ({
-                accommodationParams: result.data,
-                isValidating: { ...state.isValidating, accommodation: false },
-              }));
+              set((state) => {
+                const updates = {
+                  [paramsKey]: result.data,
+                  isValidating: { ...state.isValidating, [type]: false },
+                } as Partial<SearchParamsState>;
+                const nextState = { ...state, ...updates } as SearchParamsState;
+                const derived = computeDerivedState(nextState);
+                return { ...updates, ...derived };
+              });
               return Promise.resolve(true);
             }
-            throw new Error("Invalid accommodation parameters");
+            throw new Error(`Invalid ${type} parameters`);
           } catch (error) {
             const message =
               error instanceof Error ? error.message : "Validation failed";
             set((state) => ({
-              isValidating: { ...state.isValidating, accommodation: false },
-              validationErrors: {
-                ...state.validationErrors,
-                accommodation: message,
-              },
-            }));
-            return Promise.resolve(false);
-          }
-        },
-
-        /** Update activity parameters using the handler. */
-        updateActivityParams: (params) => {
-          set((state) => ({
-            isValidating: { ...state.isValidating, activity: true },
-            validationErrors: { ...state.validationErrors, activity: null },
-          }));
-
-          try {
-            const updatedParams = { ...get().activityParams, ...params };
-            const result = activitySearchParamsStoreSchema.safeParse(updatedParams);
-
-            if (result.success) {
-              set((state) => ({
-                activityParams: result.data,
-                isValidating: { ...state.isValidating, activity: false },
-              }));
-              return Promise.resolve(true);
-            }
-            throw new Error("Invalid activity parameters");
-          } catch (error) {
-            const message =
-              error instanceof Error ? error.message : "Validation failed";
-            set((state) => ({
-              isValidating: { ...state.isValidating, activity: false },
-              validationErrors: {
-                ...state.validationErrors,
-                activity: message,
-              },
-            }));
-            return Promise.resolve(false);
-          }
-        },
-
-        /** Update destination parameters using the handler. */
-        updateDestinationParams: (params) => {
-          set((state) => ({
-            isValidating: { ...state.isValidating, destination: true },
-            validationErrors: { ...state.validationErrors, destination: null },
-          }));
-
-          try {
-            const updatedParams = { ...get().destinationParams, ...params };
-            const result = destinationSearchParamsStoreSchema.safeParse(updatedParams);
-
-            if (result.success) {
-              set((state) => ({
-                destinationParams: result.data,
-                isValidating: { ...state.isValidating, destination: false },
-              }));
-              return Promise.resolve(true);
-            }
-            throw new Error("Invalid destination parameters");
-          } catch (error) {
-            const message =
-              error instanceof Error ? error.message : "Validation failed";
-            set((state) => ({
-              isValidating: { ...state.isValidating, destination: false },
-              validationErrors: {
-                ...state.validationErrors,
-                destination: message,
-              },
-            }));
-            return Promise.resolve(false);
-          }
-        },
-
-        /** Update flight parameters using the handler. */
-        updateFlightParams: (params) => {
-          set((state) => ({
-            isValidating: { ...state.isValidating, flight: true },
-            validationErrors: { ...state.validationErrors, flight: null },
-          }));
-
-          try {
-            const updatedParams = { ...get().flightParams, ...params };
-            const result = flightSearchParamsStoreSchema.safeParse(updatedParams);
-
-            if (result.success) {
-              set((state) => ({
-                flightParams: result.data,
-                isValidating: { ...state.isValidating, flight: false },
-              }));
-              return Promise.resolve(true);
-            }
-            throw new Error("Invalid flight parameters");
-          } catch (error) {
-            const message =
-              error instanceof Error ? error.message : "Validation failed";
-            set((state) => ({
-              isValidating: { ...state.isValidating, flight: false },
-              validationErrors: { ...state.validationErrors, flight: message },
+              isValidating: { ...state.isValidating, [type]: false },
+              validationErrors: { ...state.validationErrors, [type]: message },
             }));
             return Promise.resolve(false);
           }
