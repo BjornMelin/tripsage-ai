@@ -19,9 +19,23 @@ import { useToast } from "@/components/ui/use-toast";
 import { type UpdateTripData, useTrip, useUpdateTrip } from "@/hooks/use-trips";
 import { queryKeys } from "@/lib/query-keys";
 import type { UpdateTables } from "@/lib/supabase/database.types";
+import { statusVariants } from "@/lib/variants/status";
 
 type TripUpdate = UpdateTables<"trips">;
 type TripUpdateKey = keyof TripUpdate;
+
+/**
+ * Consistent color palette aligned with statusVariants for update statuses
+ */
+const UPDATE_STATUS_COLORS = {
+  error: "text-red-700",
+  pending: "text-blue-700",
+  success: "text-green-700",
+} as const;
+
+const COLLABORATOR_STATUS_COLORS = {
+  active: "bg-green-700",
+} as const;
 
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -285,11 +299,17 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
 
     switch (update.status) {
       case "pending":
-        return <Loader2Icon className="h-4 w-4 animate-spin text-blue-500" />;
+        return (
+          <Loader2Icon
+            className={`h-4 w-4 animate-spin ${UPDATE_STATUS_COLORS.pending}`}
+          />
+        );
       case "success":
-        return <CheckCircleIcon className="h-4 w-4 text-green-500" />;
+        return (
+          <CheckCircleIcon className={`h-4 w-4 ${UPDATE_STATUS_COLORS.success}`} />
+        );
       case "error":
-        return <AlertCircleIcon className="h-4 w-4 text-red-500" />;
+        return <AlertCircleIcon className={`h-4 w-4 ${UPDATE_STATUS_COLORS.error}`} />;
     }
   };
 
@@ -319,7 +339,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
     }
 
     return (
-      <Badge variant="default" className="mb-4 bg-green-500">
+      <Badge className={`mb-4 ${statusVariants({ status: "active" })}`}>
         <CheckCircleIcon className="h-3 w-3 mr-1" />
         Live updates enabled
       </Badge>
@@ -578,7 +598,9 @@ export function CollaborationIndicator({ tripId: _tripId }: { tripId: number }) 
               className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
             >
               <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 rounded-full bg-green-500" />
+                <div
+                  className={`w-2 h-2 rounded-full ${COLLABORATOR_STATUS_COLORS.active}`}
+                />
                 <span className="text-sm font-medium">{collaborator.name}</span>
               </div>
 

@@ -22,8 +22,29 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import type { AgentStatusRealtimeControls } from "@/hooks/chat/use-agent-status-websocket";
+import { statusVariants, type ToneVariant } from "@/lib/variants/status";
 import { useAgentStatusStore } from "@/stores/agent-status-store";
 import { ConnectionStatus } from "../../shared/connection-status";
+
+// Status colors aligned with statusVariants tone classes (static to avoid purge)
+const CONNECTION_STATUS_CLASSES = {
+  connecting: "bg-amber-100 text-amber-800",
+  error: "bg-red-100 text-red-800",
+  idle: "bg-slate-100 text-slate-700",
+  subscribed: "bg-green-100 text-green-800",
+} as const;
+
+const AGENT_STATUS_TONE: Record<AgentStatusType, ToneVariant> = {
+  active: "active",
+  completed: "success",
+  error: "error",
+  executing: "active",
+  idle: "pending",
+  initializing: "info",
+  paused: "pending",
+  thinking: "info",
+  waiting: "pending",
+};
 
 type AgentStatusDashboardProps = Pick<
   AgentStatusRealtimeControls,
@@ -50,16 +71,16 @@ function FormatTimestamp(timestamp: string | null) {
   }
 }
 
-function DeriveConnectionBadge(status: string): { color: string; label: string } {
+function DeriveConnectionBadge(status: string): { classes: string; label: string } {
   switch (status) {
     case "subscribed":
-      return { color: "bg-green-500", label: "Connected" };
+      return { classes: CONNECTION_STATUS_CLASSES.subscribed, label: "Connected" };
     case "connecting":
-      return { color: "bg-yellow-500", label: "Connecting" };
+      return { classes: CONNECTION_STATUS_CLASSES.connecting, label: "Connecting" };
     case "error":
-      return { color: "bg-red-500", label: "Error" };
+      return { classes: CONNECTION_STATUS_CLASSES.error, label: "Error" };
     default:
-      return { color: "bg-gray-400", label: "Idle" };
+      return { classes: CONNECTION_STATUS_CLASSES.idle, label: "Idle" };
   }
 }
 
@@ -138,7 +159,7 @@ export const AgentStatusDashboard = ({
           </div>
           <div className="flex flex-col gap-3 md:flex-row md:items-center">
             <Badge className="flex items-center gap-2 w-fit">
-              <span className={`h-2 w-2 rounded-full ${connectionBadge.color}`} />
+              <span className={`h-2 w-2 rounded-full ${connectionBadge.classes}`} />
               {connectionBadge.label}
             </Badge>
             {connectionError && (
@@ -238,8 +259,12 @@ export const AgentStatusDashboard = ({
                   <p className="font-medium">{agent.name}</p>
                   <p className="text-sm text-muted-foreground">{agent.type}</p>
                 </div>
+                {/* excludeRing: true suppresses the ring for compact badge rendering */}
                 <Badge
-                  variant={ACTIVE_STATUSES.has(agent.status) ? "default" : "secondary"}
+                  className={statusVariants({
+                    excludeRing: true,
+                    tone: AGENT_STATUS_TONE[agent.status],
+                  })}
                 >
                   {agent.status}
                 </Badge>
@@ -311,15 +336,6 @@ export const AgentStatusDashboard = ({
     </div>
   );
 };
-
-const ACTIVE_STATUSES = new Set<AgentStatusType>([
-  "initializing",
-  "active",
-  "waiting",
-  "paused",
-  "thinking",
-  "executing",
-]);
 
 export default AgentStatusDashboard;
 export type { AgentStatusDashboardProps };

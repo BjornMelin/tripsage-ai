@@ -25,6 +25,19 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { type ActionVariant, statusVariants } from "@/lib/variants/status";
+
+/**
+ * Gets the tone class for an action variant, if provided.
+ *
+ * @param actionVariant - Optional action variant for status colors.
+ * @returns The status variant class string or undefined.
+ */
+function GetActionToneClass(actionVariant?: ActionVariant): string | undefined {
+  return actionVariant
+    ? statusVariants({ action: actionVariant, excludeRing: true })
+    : undefined;
+}
 
 /**
  * Interface defining a quick action item with metadata for display and navigation.
@@ -46,6 +59,8 @@ interface QuickAction {
   className?: string;
   /** Optional badge text (e.g., "AI"). */
   badge?: string;
+  /** Action variant for status colors. */
+  actionVariant?: ActionVariant;
 }
 
 /**
@@ -62,7 +77,7 @@ interface QuickActionsProps {
 
 const QUICK_ACTIONS: QuickAction[] = [
   {
-    className: "bg-blue-50 border-blue-200 hover:bg-blue-100 text-blue-700",
+    actionVariant: "search",
     description: "Find the best flight deals for your next trip",
     href: "/dashboard/search/flights",
     icon: <PlaneIcon className="h-4 w-4" />,
@@ -71,7 +86,7 @@ const QUICK_ACTIONS: QuickAction[] = [
     variant: "default",
   },
   {
-    className: "bg-green-50 border-green-200 hover:bg-green-100 text-green-700",
+    actionVariant: "create",
     description: "Discover comfortable accommodations worldwide",
     href: "/dashboard/search/hotels",
     icon: <MapPinIcon className="h-4 w-4" />,
@@ -80,7 +95,7 @@ const QUICK_ACTIONS: QuickAction[] = [
     variant: "outline",
   },
   {
-    className: "bg-purple-50 border-purple-200 hover:bg-purple-100 text-purple-700",
+    actionVariant: "explore",
     description: "Start planning your next adventure",
     href: "/dashboard/trips/create",
     icon: <PlusIcon className="h-4 w-4" />,
@@ -89,8 +104,8 @@ const QUICK_ACTIONS: QuickAction[] = [
     variant: "secondary",
   },
   {
+    actionVariant: "deals",
     badge: "AI",
-    className: "bg-orange-50 border-orange-200 hover:bg-orange-100 text-orange-700",
     description: "Get personalized travel recommendations",
     href: "/chat",
     icon: <MessageCircleIcon className="h-4 w-4" />,
@@ -99,7 +114,7 @@ const QUICK_ACTIONS: QuickAction[] = [
     variant: "outline",
   },
   {
-    className: "bg-indigo-50 border-indigo-200 hover:bg-indigo-100 text-indigo-700",
+    actionVariant: "calendar",
     description: "Discover new places to visit",
     href: "/dashboard/search/destinations",
     icon: <CompassIcon className="h-4 w-4" />,
@@ -150,12 +165,15 @@ function ActionButton({
   showDescription?: boolean;
   compact?: boolean;
 }) {
+  const actionToneClass = GetActionToneClass(action.actionVariant);
+
   return (
     <Button
       variant={action.variant || "outline"}
       className={cn(
-        "h-auto p-4 flex-col gap-2 relative",
+        "h-auto p-4 flex-col gap-2 relative border-2",
         compact ? "p-3" : "p-4",
+        actionToneClass,
         action.className
       )}
       asChild
@@ -173,7 +191,7 @@ function ActionButton({
           </span>
         </div>
         {showDescription && !compact && (
-          <p className="text-xs text-muted-foreground text-center leading-tight">
+          <p className="text-xs opacity-80 text-center leading-tight">
             {action.description}
           </p>
         )}
@@ -240,37 +258,56 @@ function ListLayout({
   return (
     <div className="space-y-2">
       {actions.map((action) => (
-        <Button
+        <ListActionButton
           key={action.id}
-          variant={action.variant || "outline"}
-          className={cn(
-            "w-full justify-start gap-3 relative",
-            compact ? "h-10 px-3" : "h-12 px-4",
-            action.className
-          )}
-          asChild
-        >
-          <Link href={action.href}>
-            {action.badge && (
-              <div className="absolute top-1 right-1 bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded-full">
-                {action.badge}
-              </div>
-            )}
-            {action.icon}
-            <div className="flex-1 text-left">
-              <div className={cn("font-medium", compact ? "text-sm" : "text-base")}>
-                {action.title}
-              </div>
-              {showDescription && !compact && (
-                <div className="text-xs text-muted-foreground">
-                  {action.description}
-                </div>
-              )}
-            </div>
-          </Link>
-        </Button>
+          action={action}
+          showDescription={showDescription}
+          compact={compact}
+        />
       ))}
     </div>
+  );
+}
+
+function ListActionButton({
+  action,
+  showDescription,
+  compact,
+}: {
+  action: QuickAction;
+  showDescription?: boolean;
+  compact?: boolean;
+}) {
+  const actionToneClass = GetActionToneClass(action.actionVariant);
+
+  return (
+    <Button
+      variant={action.variant || "outline"}
+      className={cn(
+        "w-full justify-start gap-3 relative border-2",
+        compact ? "h-10 px-3" : "h-12 px-4",
+        actionToneClass,
+        action.className
+      )}
+      asChild
+    >
+      <Link href={action.href}>
+        {action.badge && (
+          <div className="absolute top-1 right-1 bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded-full">
+            {action.badge}
+          </div>
+        )}
+        {action.icon}
+        <div className="flex-1 text-left">
+          <div className={cn("font-medium", compact ? "text-sm" : "text-base")}>
+            {action.title}
+          </div>
+          {showDescription && !compact && (
+            <div className="text-xs opacity-80">{action.description}</div>
+          )}
+        </div>
+      </Link>
+    </Button>
   );
 }
 

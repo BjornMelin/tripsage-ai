@@ -174,7 +174,7 @@ export function CalendarConnectionCard({ className }: CalendarConnectionCardProp
         <CardTitle className="flex items-center gap-2">
           {isConnected ? (
             <>
-              <CalendarCheckIcon className="h-5 w-5 text-green-600" />
+              <CalendarCheckIcon className="h-5 w-5 text-green-700" />
               Calendar Connected
             </>
           ) : (

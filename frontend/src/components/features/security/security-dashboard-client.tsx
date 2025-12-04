@@ -7,15 +7,22 @@
 
 import type { ActiveSession, SecurityEvent, SecurityMetrics } from "@schemas/security";
 import {
-  AlertTriangleIcon,
   CheckCircle2Icon,
   MonitorIcon,
+  ShieldCheckIcon,
   ShieldIcon,
   SmartphoneIcon,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
+import { cn } from "@/lib/utils";
+
+// Local status colors; consider lifting to shared tokens if reused elsewhere
+const STATUS_TEXT_COLORS = {
+  active: "text-green-600",
+  success: "text-emerald-600",
+} as const;
 
 /** Local time props. */
 type LocalTimeProps = {
@@ -183,7 +190,12 @@ export function ActiveSessionsList({ sessions }: ActiveSessionsListProps) {
               {session.device}
             </span>
             {session.isCurrent ? (
-              <span className="text-green-600 text-xs flex items-center gap-1">
+              <span
+                className={cn(
+                  "text-xs flex items-center gap-1",
+                  STATUS_TEXT_COLORS.active
+                )}
+              >
                 <CheckCircle2Icon className="h-3 w-3" />
                 Current session
               </span>
@@ -233,7 +245,7 @@ export function ConnectionsSummary({ metrics }: ConnectionsSummaryProps) {
         OAuth: {metrics.oauthConnections.join(", ") || "None"}
       </div>
       <div className="flex items-center gap-2 text-sm">
-        <AlertTriangleIcon className="h-4 w-4 text-red-600" />
+        <ShieldCheckIcon className={cn("h-4 w-4", STATUS_TEXT_COLORS.success)} />
         Trusted devices: {metrics.trustedDevices}
       </div>
     </div>
