@@ -158,7 +158,7 @@ export function FlightSearchForm({
     total: "$245",
   };
 
-  const handleSearch = form.handleSubmit((data) => {
+  const handleSearch = form.handleSubmit((data: FlightSearchFormData) => {
     startTransition(async () => {
       await withClientTelemetrySpan(
         "search.flight.form.submit",
@@ -168,22 +168,7 @@ export function FlightSearchForm({
           setFormError(null);
 
           try {
-            const validationResult = flightSearchFormSchema.safeParse(data);
-
-            if (!validationResult.success) {
-              const errorMessage = validationResult.error.issues
-                .map((issue) => {
-                  const field =
-                    issue.path.length > 0 ? `${issue.path.join(".")}: ` : "";
-                  return `${field}${issue.message}`;
-                })
-                .join(", ");
-              setFormError(errorMessage);
-              return;
-            }
-
-            const validatedData = validationResult.data;
-            await onSearch(validatedData);
+            await onSearch(data);
           } catch (error) {
             recordClientErrorOnActiveSpan(
               error instanceof Error ? error : new Error(String(error)),
