@@ -6,7 +6,7 @@ import {
   makeJsonRequest,
   mockApiRouteAuthUser,
   resetApiRouteMocks,
-} from "@/test/api-route-helpers";
+} from "@/test/helpers/api-route";
 
 const mockMfaVerify = vi.hoisted(() => vi.fn());
 const mockRegenerate = vi.hoisted(() => vi.fn());

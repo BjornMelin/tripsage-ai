@@ -7,9 +7,9 @@ import {
   mockApiRouteAuthUser,
   mockApiRouteRateLimitOnce,
   resetApiRouteMocks,
-} from "@/test/api-route-helpers";
-import { unstubAllEnvs } from "@/test/env-helpers";
-import { createMockNextRequest, createRouteParamsContext } from "@/test/route-helpers";
+} from "@/test/helpers/api-route";
+import { unstubAllEnvs } from "@/test/helpers/env";
+import { createMockNextRequest, createRouteParamsContext } from "@/test/helpers/route";
 
 const MOCK_INSERT = vi.hoisted(() => vi.fn());
 const MOCK_DELETE = vi.hoisted(() => vi.fn());

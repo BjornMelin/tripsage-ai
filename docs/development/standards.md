@@ -247,7 +247,7 @@ export const useAuthStore = create<AuthStore>()(
 );
 ```
 
-- Helpers: `resetStore`, `setupTimeoutMock`, `waitForStoreState` from `@/test/store-helpers` for tests.
+- Helpers: `resetStore`, `setupTimeoutMock`, `waitForStoreState` from `@/test/helpers/store` for tests.
 - Selectors: expose derived selectors for complex state; avoid broad subscriptions to minimize re-renders.
 
 ### Computed Middleware

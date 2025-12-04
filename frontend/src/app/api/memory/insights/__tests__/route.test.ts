@@ -12,7 +12,7 @@ import {
   createMockNextRequest,
   createRouteParamsContext,
   getMockCookiesForTest,
-} from "@/test/route-helpers";
+} from "@/test/helpers/route";
 
 const mockHandleMemoryIntent = vi.hoisted(() => vi.fn());
 const mockResolveProvider = vi.hoisted(() => vi.fn());
@@ -78,11 +78,11 @@ vi.mock("next/headers", () => ({
 }));
 
 vi.mock("@upstash/redis", async () => {
-  const { createRedisMock } = await import("@/test/upstash");
+  const { createRedisMock } = await import("@/test/upstash/redis-mock");
   return createRedisMock();
 });
 vi.mock("@upstash/ratelimit", async () => {
-  const { createRatelimitMock } = await import("@/test/upstash");
+  const { createRatelimitMock } = await import("@/test/upstash/ratelimit-mock");
   return createRatelimitMock();
 });
 

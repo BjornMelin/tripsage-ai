@@ -1,7 +1,7 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createMockNextRequest, createRouteParamsContext } from "@/test/route-helpers";
+import { createMockNextRequest, createRouteParamsContext } from "@/test/helpers/route";
 
 const recordTelemetryEvent = vi.fn();
 let capturedOptions: unknown;

@@ -11,12 +11,12 @@ import {
   stubRateLimitDisabled,
   stubRateLimitEnabled,
   unstubAllEnvs,
-} from "@/test/env-helpers";
+} from "@/test/helpers/env";
 import {
   createMockNextRequest,
   createRouteParamsContext,
   getMockCookiesForTest,
-} from "@/test/route-helpers";
+} from "@/test/helpers/route";
 
 // Mock next/headers cookies() BEFORE any imports that use it
 vi.mock("next/headers", () => ({
