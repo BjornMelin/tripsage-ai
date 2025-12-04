@@ -26,6 +26,17 @@ import { Progress } from "@/components/ui/progress";
 import { useBudgetStore } from "@/stores/budget-store";
 import { useCurrencyStore } from "@/stores/currency-store";
 
+/**
+ * Budget status colors aligned with statusVariants.
+ * Maps budget health to consistent text colors.
+ */
+const BUDGET_STATUS = {
+  caution: "text-yellow-600", // intermediate warning state
+  ok: "text-green-700", // aligned with active/low urgency
+  over: "text-red-700", // aligned with error/high urgency
+  warning: "text-amber-700", // aligned with pending/medium urgency
+} as const;
+
 interface BudgetTrackerProps {
   tripId?: string;
   budgetId?: string;
@@ -121,10 +132,10 @@ export function BudgetTracker({
   };
 
   const getStatusColor = (percentage: number) => {
-    if (percentage >= 100) return "text-destructive";
-    if (percentage >= 80) return "text-orange-600";
-    if (percentage >= 60) return "text-yellow-600";
-    return "text-green-600";
+    if (percentage >= 100) return BUDGET_STATUS.over;
+    if (percentage >= 80) return BUDGET_STATUS.warning;
+    if (percentage >= 60) return BUDGET_STATUS.caution;
+    return BUDGET_STATUS.ok;
   };
 
   // const getProgressColor = (percentage: number) => { // Future implementation
@@ -215,7 +226,7 @@ export function BudgetTracker({
             <span
               className={`font-semibold ${
                 summary.projectedTotal > summary.totalBudget
-                  ? "text-destructive"
+                  ? BUDGET_STATUS.over
                   : "text-foreground"
               }`}
             >
