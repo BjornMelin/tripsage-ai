@@ -27,6 +27,8 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
+import { statusVariants } from "@/lib/variants/status";
 
 /**
  * Props for the ResetPasswordForm component.
@@ -109,9 +111,9 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
       <CardContent>
         {isSuccess ? (
           <div className="space-y-4">
-            <Alert className="border-green-200 bg-green-50">
-              <CheckCircle2Icon className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-800">
+            <Alert className={cn(statusVariants({ status: "success" }))}>
+              <CheckCircle2Icon className="h-4 w-4" />
+              <AlertDescription>
                 {message || "Password reset instructions have been sent to your email"}
               </AlertDescription>
             </Alert>

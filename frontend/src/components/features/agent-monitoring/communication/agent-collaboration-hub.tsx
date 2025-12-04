@@ -34,6 +34,44 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
+// Status colors aligned with statusVariants color scheme
+const AGENT_STATUS_COLORS = {
+  active: "bg-green-500",
+  busy: "bg-yellow-500",
+  idle: "bg-blue-500",
+  offline: "bg-gray-500",
+} as const;
+
+const HANDOFF_STATUS_COLORS = {
+  completed: {
+    bg: "bg-green-50",
+    border: "border-green-200",
+    text: "text-green-600",
+  },
+  failed: {
+    bg: "bg-red-50",
+    border: "border-red-200",
+    text: "text-red-600",
+  },
+  pending: {
+    bg: "bg-yellow-50",
+    border: "border-yellow-200",
+    text: "text-yellow-600",
+  },
+} as const;
+
+const DEFAULT_HANDOFF_STATUS_COLOR = {
+  bg: "bg-gray-50",
+  border: "border-gray-200",
+  text: "text-gray-600",
+};
+
+const TREND_COLORS = {
+  down: "text-red-500",
+  stable: "text-blue-500",
+  up: "text-green-500",
+} as const;
+
 /** Interface for an agent */
 interface Agent {
   id: string;
@@ -182,18 +220,7 @@ const CollaborationMetrics: CollaborationMetric[] = [
 
 /** Function to get the status color for an agent */
 const GetStatusColor = (status: Agent["status"]) => {
-  switch (status) {
-    case "active":
-      return "bg-green-500";
-    case "busy":
-      return "bg-yellow-500";
-    case "idle":
-      return "bg-blue-500";
-    case "offline":
-      return "bg-gray-500";
-    default:
-      return "bg-gray-500";
-  }
+  return AGENT_STATUS_COLORS[status] ?? AGENT_STATUS_COLORS.offline;
 };
 
 /** Function to get the status icon for an agent */
@@ -330,29 +357,9 @@ const HandoffCard: React.FC<{
   const fromAgent = agents.find((a) => a.id === handoff.fromAgent);
   const toAgent = agents.find((a) => a.id === handoff.toAgent);
 
-  const getStatusConfig = () => {
-    switch (handoff.status) {
-      case "pending":
-        return {
-          bg: "bg-yellow-50",
-          border: "border-yellow-200",
-          color: "text-yellow-600",
-        };
-      case "completed":
-        return {
-          bg: "bg-green-50",
-          border: "border-green-200",
-          color: "text-green-600",
-        };
-      case "failed":
-        return { bg: "bg-red-50", border: "border-red-200", color: "text-red-600" };
-      default:
-        return { bg: "bg-gray-50", border: "border-gray-200", color: "text-gray-600" };
-    }
-  };
-
   /** Get the status configuration for a handoff */
-  const statusConfig = getStatusConfig();
+  const statusConfig =
+    HANDOFF_STATUS_COLORS[handoff.status] ?? DEFAULT_HANDOFF_STATUS_COLOR;
 
   return (
     <motion.div
@@ -366,8 +373,8 @@ const HandoffCard: React.FC<{
     >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <ArrowRightLeftIcon className={cn("h-4 w-4", statusConfig.color)} />
-          <Badge variant="outline" className={statusConfig.color}>
+          <ArrowRightLeftIcon className={cn("h-4 w-4", statusConfig.text)} />
+          <Badge variant="outline" className={statusConfig.text}>
             {handoff.status}
           </Badge>
         </div>
@@ -541,13 +548,15 @@ export const AgentCollaborationHub: React.FC<AgentCollaborationHubProps> = ({
                 <div className="text-sm text-muted-foreground">{metric.metric}</div>
                 <div className="flex items-center gap-1">
                   {metric.trend === "up" && (
-                    <TrendingUpIcon className="h-3 w-3 text-green-500" />
+                    <TrendingUpIcon className={cn("h-3 w-3", TREND_COLORS.up)} />
                   )}
                   {metric.trend === "down" && (
-                    <TrendingUpIcon className="h-3 w-3 text-red-500 rotate-180" />
+                    <TrendingUpIcon
+                      className={cn("h-3 w-3 rotate-180", TREND_COLORS.down)}
+                    />
                   )}
                   {metric.trend === "stable" && (
-                    <ActivityIcon className="h-3 w-3 text-blue-500" />
+                    <ActivityIcon className={cn("h-3 w-3", TREND_COLORS.stable)} />
                   )}
                 </div>
               </div>

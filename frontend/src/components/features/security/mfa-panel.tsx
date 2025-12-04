@@ -326,6 +326,14 @@ export function MfaPanel({ userEmail, initialAal, factors, loadError }: MfaPanel
                 onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ""))}
                 className="max-w-xs text-center tracking-widest font-mono"
                 disabled={isPending}
+                aria-invalid={
+                  verificationCode.length > 0 && verificationCode.length !== 6
+                }
+                aria-describedby={
+                  verificationCode.length > 0 && verificationCode.length !== 6
+                    ? `${totpInputId}-hint ${totpInputId}-error`
+                    : `${totpInputId}-hint`
+                }
               />
               <Button
                 onClick={verifyCode}
@@ -334,6 +342,19 @@ export function MfaPanel({ userEmail, initialAal, factors, loadError }: MfaPanel
                 Verify & Enable
               </Button>
             </div>
+            <p id={`${totpInputId}-hint`} className="text-xs text-muted-foreground">
+              Enter the 6-digit code from your authenticator app
+            </p>
+            {verificationCode.length > 0 && verificationCode.length !== 6 && (
+              <p
+                id={`${totpInputId}-error`}
+                role="alert"
+                aria-live="polite"
+                className="text-xs text-destructive"
+              >
+                Code must be exactly 6 digits
+              </p>
+            )}
           </div>
 
           {backupCodes.length > 0 && (
@@ -364,11 +385,15 @@ export function MfaPanel({ userEmail, initialAal, factors, loadError }: MfaPanel
                 onChange={(e) => setBackupCode(e.target.value.toUpperCase())}
                 className="max-w-xs text-center font-mono"
                 disabled={isPending}
+                aria-describedby={`${backupInputId}-hint`}
               />
               <Button variant="secondary" onClick={verifyBackup} disabled={isPending}>
                 Verify Backup Code
               </Button>
             </div>
+            <p id={`${backupInputId}-hint`} className="text-xs text-muted-foreground">
+              Use a backup code if you cannot access your authenticator app
+            </p>
             <div className="flex gap-2">
               <Button
                 variant="outline"

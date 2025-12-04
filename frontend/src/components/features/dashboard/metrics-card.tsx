@@ -12,6 +12,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 /**
+ * Trend colors aligned with statusVariants urgency mapping.
+ * Positive semantic: up=green (good), down=red (bad)
+ * Negative semantic: up=red (bad), down=green (good)
+ */
+// biome-ignore lint/style/useNamingConvention: Review requested camelCase naming
+const trendColors = {
+  bad: "text-red-700",
+  good: "text-green-700",
+  neutral: "text-muted-foreground",
+} as const;
+
+/**
  * Props for the MetricsCard component.
  */
 export interface MetricsCardProps {
@@ -65,13 +77,13 @@ export function MetricsCard({
 
   const trendColor = (() => {
     if (!trend || trend === "neutral") {
-      return "text-muted-foreground";
+      return trendColors.neutral;
     }
     const isPositive = trendSemantic === "positive";
     if (trend === "up") {
-      return isPositive ? "text-green-500" : "text-red-500";
+      return isPositive ? trendColors.good : trendColors.bad;
     }
-    return isPositive ? "text-red-500" : "text-green-500";
+    return isPositive ? trendColors.bad : trendColors.good;
   })();
 
   return (

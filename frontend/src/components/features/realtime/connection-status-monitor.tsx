@@ -28,6 +28,9 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
+import { cn } from "@/lib/utils";
+import type { ToneVariant } from "@/lib/variants/status";
+import { statusVariants } from "@/lib/variants/status";
 import { useRealtimeConnectionStore } from "@/stores/realtime-connection-store";
 
 interface ConnectionStatus {
@@ -99,24 +102,26 @@ export function ConnectionStatusMonitor() {
   };
 
   const getStatusBadge = (status: RealtimeConnection["status"]) => {
-    switch (status) {
-      case "connected":
-        return (
-          <Badge variant="default" className="bg-green-500">
-            Connected
-          </Badge>
-        );
-      case "disconnected":
-        return <Badge variant="destructive">Disconnected</Badge>;
-      case "error":
-        return <Badge variant="destructive">Error</Badge>;
-      case "reconnecting":
-        return <Badge variant="secondary">Reconnecting...</Badge>;
-      case "connecting":
-        return <Badge variant="secondary">Connecting...</Badge>;
-      default:
-        return null;
-    }
+    // Disconnected uses "unknown" (neutral slate) to distinguish from actual errors.
+    const statusMap: Record<
+      RealtimeConnection["status"],
+      { label: string; tone: ToneVariant }
+    > = {
+      connected: { label: "Connected", tone: "active" },
+      connecting: { label: "Connecting...", tone: "pending" },
+      disconnected: { label: "Disconnected", tone: "unknown" },
+      error: { label: "Error", tone: "error" },
+      reconnecting: { label: "Reconnecting...", tone: "pending" },
+    };
+
+    const config = statusMap[status];
+    if (!config) return null;
+
+    return (
+      <Badge className={cn(statusVariants({ excludeRing: true, tone: config.tone }))}>
+        {config.label}
+      </Badge>
+    );
   };
 
   const connectionHealthPercentage =

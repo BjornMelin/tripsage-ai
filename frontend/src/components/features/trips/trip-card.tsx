@@ -20,6 +20,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
+import { cn } from "@/lib/utils";
+import { statusVariants } from "@/lib/variants/status";
 import { useBudgetStore } from "@/stores/budget-store";
 import type { Trip } from "@/stores/trip-store";
 
@@ -79,11 +81,22 @@ export function TripCard({ trip, onEdit, onDelete, className }: TripCardProps) {
   };
 
   const status = getTripStatus();
-  const statusColors = {
-    active: "bg-green-100 text-green-700",
-    completed: "bg-gray-100 text-gray-500",
-    draft: "bg-gray-100 text-gray-700",
-    upcoming: "bg-blue-100 text-blue-700",
+
+  /**
+   * Maps trip status to statusVariants.
+   * All statuses use statusVariants for consistent styling.
+   */
+  const getStatusClassName = (status: string) => {
+    switch (status) {
+      case "active":
+        return cn(statusVariants({ status: "active" }));
+      case "upcoming":
+        return cn(statusVariants({ status: "info" }));
+      case "completed":
+        return cn(statusVariants({ status: "success" }));
+      default:
+        return cn(statusVariants({ tone: "unknown" }));
+    }
   };
 
   return (
@@ -92,7 +105,7 @@ export function TripCard({ trip, onEdit, onDelete, className }: TripCardProps) {
     >
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <Badge className={statusColors[status]}>
+          <Badge className={getStatusClassName(status)}>
             {status.charAt(0).toUpperCase() + status.slice(1)}
           </Badge>
           {trip.visibility === "public" && <Badge variant="outline">Public</Badge>}

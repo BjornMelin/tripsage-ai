@@ -43,6 +43,16 @@ export type PersonalizationInsightsProps = {
 
 import { cn } from "@/lib/utils";
 
+/**
+ * Spending trend colors with inverted semantic:
+ * increasing=red (spending more is concerning), decreasing=green (spending less is good)
+ */
+const SPENDING_TREND_COLORS = {
+  decreasing: "text-green-700",
+  increasing: "text-red-700",
+  stable: "text-gray-500",
+} as const;
+
 export function PersonalizationInsights({
   userId,
   className,
@@ -94,14 +104,24 @@ export function PersonalizationInsights({
     return id.length > 10 ? `${id.slice(0, 8)}…` : id;
   };
 
+  /**
+   * Trend colors aligned with statusVariants urgency mapping.
+   * For general trends: increasing=green, decreasing=red, stable=neutral
+   */
+  const TrendColors = {
+    decreasing: "text-red-700",
+    increasing: "text-green-700",
+    stable: "text-gray-500",
+  } as const;
+
   const getTrendIcon = (trend: "increasing" | "decreasing" | "stable") => {
     switch (trend) {
       case "increasing":
-        return <TrendingUpIcon className="h-4 w-4 text-green-500" />;
+        return <TrendingUpIcon className={`h-4 w-4 ${TrendColors.increasing}`} />;
       case "decreasing":
-        return <TrendingDownIcon className="h-4 w-4 text-red-500" />;
+        return <TrendingDownIcon className={`h-4 w-4 ${TrendColors.decreasing}`} />;
       default:
-        return <BarChart3Icon className="h-4 w-4 text-gray-500" />;
+        return <BarChart3Icon className={`h-4 w-4 ${TrendColors.stable}`} />;
     }
   };
 
@@ -364,10 +384,10 @@ export function PersonalizationInsights({
                         className={cn(
                           "font-mono text-sm",
                           trend.trend === "increasing"
-                            ? "text-red-500"
+                            ? SPENDING_TREND_COLORS.increasing
                             : trend.trend === "decreasing"
-                              ? "text-green-500"
-                              : "text-gray-500"
+                              ? SPENDING_TREND_COLORS.decreasing
+                              : SPENDING_TREND_COLORS.stable
                         )}
                       >
                         {trend.percentageChange > 0 ? "+" : ""}
