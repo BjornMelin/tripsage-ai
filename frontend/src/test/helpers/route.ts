@@ -126,7 +126,7 @@ export function createMockCookies(
  * Use this pattern in your test file:
  * ```ts
  * import { vi } from "vitest";
- * import { createMockCookies } from "@/test/route-helpers";
+ * import { createMockCookies } from "@/test/helpers/route";
  *
  * vi.mock("next/headers", () => ({
  *   cookies: vi.fn(() => Promise.resolve(createMockCookies({ "sb-access-token": "test-token" }))),
