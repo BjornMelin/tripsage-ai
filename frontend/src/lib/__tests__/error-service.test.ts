@@ -10,6 +10,7 @@ import {
   ERROR_REPORTING_ENDPOINT,
 } from "@/test/msw/handlers/error-reporting";
 import { server } from "@/test/msw/server";
+import { createFakeTimersContext } from "@/test/utils/with-fake-timers";
 import { ErrorService } from "../error-service";
 
 type StorageMocks = {
@@ -203,13 +204,9 @@ describe("ErrorService", () => {
   });
 
   describe("error reporting with retries", () => {
-    beforeEach(() => {
-      vi.useFakeTimers();
-    });
-
-    afterEach(() => {
-      vi.useRealTimers();
-    });
+    const timers = createFakeTimersContext();
+    beforeEach(timers.setup);
+    afterEach(timers.teardown);
 
     it("retries transient failures up to maxRetries", async () => {
       const flaky = createFlakyErrorReportingHandler({
