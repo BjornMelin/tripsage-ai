@@ -10,12 +10,17 @@
 import type {
   Accommodation,
   Activity,
-  Destination,
   Flight,
   SearchParams,
   SearchResults,
   SearchType,
 } from "@schemas/search";
+import type {
+  ValidatedAccommodationParams,
+  ValidatedActivityParams,
+  ValidatedDestinationParams,
+  ValidatedFlightParams,
+} from "@schemas/stores";
 import { useCallback, useMemo } from "react";
 import { createStoreLogger } from "@/lib/telemetry/store-logger";
 import { useSearchFiltersStore } from "@/stores/search-filters-store";
@@ -23,7 +28,343 @@ import { useSearchHistoryStore } from "@/stores/search-history-store";
 import { useSearchParamsStore } from "@/stores/search-params-store";
 import { useSearchResultsStore } from "@/stores/search-results-store";
 
+/** Type for params slices from the store */
+interface ParamsSlices {
+  accommodationParams: Partial<ValidatedAccommodationParams>;
+  activityParams: Partial<ValidatedActivityParams>;
+  destinationParams: Partial<ValidatedDestinationParams>;
+  flightParams: Partial<ValidatedFlightParams>;
+}
+
+/** Type-safe extraction of params from slices based on search type */
+const getParamsFromSlices = (
+  slices: ParamsSlices,
+  searchType: SearchType
+): Partial<SearchParams> | null => {
+  switch (searchType) {
+    case "flight":
+      return slices.flightParams as Partial<SearchParams>;
+    case "accommodation":
+      return slices.accommodationParams as Partial<SearchParams>;
+    case "activity":
+      return slices.activityParams as Partial<SearchParams>;
+    case "destination":
+      return slices.destinationParams as Partial<SearchParams>;
+    default:
+      return null;
+  }
+};
+
 const logger = createStoreLogger({ storeName: "search-orchestration" });
+
+// ===== API ENDPOINTS =====
+
+const SEARCH_ENDPOINTS: Record<SearchType, string> = {
+  accommodation: "/api/accommodations/search",
+  activity: "/api/activities/search",
+  destination: "/api/places/search",
+  flight: "/api/flights/search",
+};
+
+// ===== RESPONSE MAPPERS =====
+
+/**
+ * Maps flight API response (FlightSearchResult) to SearchResults format.
+ */
+function mapFlightResponse(data: {
+  currency?: string;
+  itineraries?: Array<{
+    id: string;
+    price: number;
+    segments: Array<{
+      arrival?: string;
+      carrier?: string;
+      departure?: string;
+      destination: string;
+      flightNumber?: string;
+      origin: string;
+    }>;
+  }>;
+  offers?: Array<{
+    id: string;
+    price: { amount: number; currency: string };
+    slices: Array<{
+      cabinClass: string;
+      segments: Array<{
+        arrivalTime?: string;
+        carrier?: string;
+        departureTime?: string;
+        destination: { iata: string };
+        durationMinutes?: number;
+        flightNumber?: string;
+        origin: { iata: string };
+      }>;
+    }>;
+  }>;
+}): Flight[] {
+  // Prefer itineraries if available, fall back to offers
+  if (data.itineraries && data.itineraries.length > 0) {
+    return data.itineraries.map((itinerary) => {
+      const firstSegment = itinerary.segments[0];
+      const lastSegment = itinerary.segments[itinerary.segments.length - 1];
+      const totalDuration = itinerary.segments.reduce((sum, seg) => {
+        // Estimate duration from departure/arrival if available
+        if (seg.departure && seg.arrival) {
+          const dept = new Date(seg.departure).getTime();
+          const arr = new Date(seg.arrival).getTime();
+          return sum + Math.round((arr - dept) / 60000);
+        }
+        return sum;
+      }, 0);
+
+      return {
+        airline: firstSegment?.carrier ?? "Unknown",
+        arrivalTime: lastSegment?.arrival ?? "",
+        cabinClass: "economy",
+        departureTime: firstSegment?.departure ?? "",
+        destination: lastSegment?.destination ?? "",
+        duration: totalDuration || 0,
+        flightNumber: firstSegment?.flightNumber ?? "",
+        id: itinerary.id,
+        origin: firstSegment?.origin ?? "",
+        price: itinerary.price,
+        seatsAvailable: 0,
+        stops: itinerary.segments.length - 1,
+      };
+    });
+  }
+
+  // Map offers to Flight format
+  if (data.offers && data.offers.length > 0) {
+    return data.offers.map((offer) => {
+      const firstSlice = offer.slices[0];
+      const firstSegment = firstSlice?.segments[0];
+      const lastSegment = firstSlice?.segments[firstSlice.segments.length - 1];
+      const totalDuration = firstSlice?.segments.reduce(
+        (sum, seg) => sum + (seg.durationMinutes ?? 0),
+        0
+      );
+
+      return {
+        airline: firstSegment?.carrier ?? "Unknown",
+        arrivalTime: lastSegment?.arrivalTime ?? "",
+        cabinClass: firstSlice?.cabinClass ?? "economy",
+        departureTime: firstSegment?.departureTime ?? "",
+        destination: lastSegment?.destination.iata ?? "",
+        duration: totalDuration ?? 0,
+        flightNumber: firstSegment?.flightNumber ?? "",
+        id: offer.id,
+        origin: firstSegment?.origin.iata ?? "",
+        price: offer.price.amount,
+        seatsAvailable: 0,
+        stops: (firstSlice?.segments.length ?? 1) - 1,
+      };
+    });
+  }
+
+  return [];
+}
+
+/**
+ * Maps accommodation API response to SearchResults format.
+ */
+function mapAccommodationResponse(
+  data: {
+    listings?: Array<{
+      address?: { cityName?: string; lines?: string[] };
+      amenities?: string[];
+      geoCode?: { latitude: number; longitude: number };
+      hotel?: { hotelId?: string; name?: string };
+      id?: string | number;
+      name?: string;
+      place?: { rating?: number };
+      rooms?: Array<{
+        rates?: Array<{
+          price?: { total?: string | number };
+        }>;
+      }>;
+      starRating?: number;
+    }>;
+  },
+  searchParams: SearchParams
+): Accommodation[] {
+  if (!data.listings) return [];
+
+  // Extract check-in/check-out from search params if available
+  const accommodationParams = searchParams as {
+    checkin?: string;
+    checkout?: string;
+    checkIn?: string;
+    checkOut?: string;
+  };
+  const checkIn = accommodationParams.checkin ?? accommodationParams.checkIn ?? "";
+  const checkOut = accommodationParams.checkout ?? accommodationParams.checkOut ?? "";
+
+  return data.listings
+    .filter((listing) => listing.hotel?.name || listing.name)
+    .map((listing) => {
+      const name = listing.hotel?.name ?? listing.name ?? "Unknown";
+      const id = String(listing.hotel?.hotelId ?? listing.id ?? name);
+      const addressLines = listing.address?.lines ?? [];
+      const city = listing.address?.cityName ?? "";
+      const location = [...addressLines, city].filter(Boolean).join(", ") || name;
+
+      // Extract price from first room's first rate
+      const firstRate = listing.rooms?.[0]?.rates?.[0];
+      const totalPrice = Number(firstRate?.price?.total) || 0;
+      const rating = listing.place?.rating ?? listing.starRating ?? 0;
+
+      // Calculate nights for price per night
+      let nights = 1;
+      if (checkIn && checkOut) {
+        const checkInDate = new Date(checkIn);
+        const checkOutDate = new Date(checkOut);
+        nights = Math.max(
+          1,
+          Math.ceil(
+            (checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24)
+          )
+        );
+      }
+      const pricePerNight = totalPrice > 0 ? totalPrice / nights : 0;
+
+      return {
+        amenities: listing.amenities ?? [],
+        checkIn,
+        checkOut,
+        coordinates: listing.geoCode
+          ? { lat: listing.geoCode.latitude, lng: listing.geoCode.longitude }
+          : undefined,
+        id,
+        images: [],
+        location,
+        name,
+        pricePerNight: pricePerNight || 100, // Fallback for display
+        rating,
+        totalPrice: totalPrice || pricePerNight * nights,
+        type: "hotel",
+      };
+    });
+}
+
+/**
+ * Maps activity API response to SearchResults format.
+ */
+function mapActivityResponse(data: {
+  activities?: Activity[];
+  metadata?: { total?: number };
+}): Activity[] {
+  return data.activities ?? [];
+}
+
+/**
+ * Performs the actual search request to the appropriate API endpoint.
+ */
+async function performSearchRequest(
+  searchType: SearchType,
+  params: SearchParams,
+  onProgress?: () => void
+): Promise<{ results: SearchResults; provider: string }> {
+  const endpoint = SEARCH_ENDPOINTS[searchType];
+  if (!endpoint) {
+    throw new Error(`Unknown search type: ${searchType}`);
+  }
+
+  // Destination searches are handled by a separate hook (useDestinationSearch)
+  // This orchestration hook focuses on activity, flight, and accommodation searches
+  if (searchType === "destination") {
+    return {
+      provider: "GooglePlaces",
+      results: { destinations: [] },
+    };
+  }
+
+  try {
+    onProgress?.();
+
+    const response = await fetch(endpoint, {
+      body: JSON.stringify(params),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage =
+        errorData.reason ?? errorData.message ?? `Search failed: ${response.status}`;
+
+      // Graceful failure: return empty results with warning
+      logger.warn("Search API returned error, returning empty results", {
+        endpoint,
+        errorMessage,
+        searchType,
+        status: response.status,
+      });
+
+      return {
+        provider: "Error",
+        results: getEmptyResults(searchType),
+      };
+    }
+
+    const data = await response.json();
+    onProgress?.();
+
+    // Map response to SearchResults format based on search type
+    switch (searchType) {
+      case "activity":
+        return {
+          provider: data.metadata?.primarySource ?? "GooglePlaces",
+          results: { activities: mapActivityResponse(data) },
+        };
+
+      case "flight":
+        return {
+          provider: data.provider ?? "Duffel",
+          results: { flights: mapFlightResponse(data) },
+        };
+
+      case "accommodation":
+        return {
+          provider: data.provider ?? "Amadeus",
+          results: { accommodations: mapAccommodationResponse(data, params) },
+        };
+
+      default:
+        return { provider: "Unknown", results: {} };
+    }
+  } catch (error) {
+    // Graceful failure: return empty results instead of throwing
+    logger.error("Search request failed", {
+      endpoint,
+      error: error instanceof Error ? error.message : String(error),
+      searchType,
+    });
+
+    return {
+      provider: "Error",
+      results: getEmptyResults(searchType),
+    };
+  }
+}
+
+/**
+ * Returns empty results for a search type (used for graceful failure).
+ */
+function getEmptyResults(searchType: SearchType): SearchResults {
+  switch (searchType) {
+    case "activity":
+      return { activities: [] };
+    case "flight":
+      return { flights: [] };
+    case "accommodation":
+      return { accommodations: [] };
+    case "destination":
+      return { destinations: [] };
+    default:
+      return {};
+  }
+}
 
 /**
  * Search orchestration hook result interface.
@@ -128,6 +469,34 @@ export function useSearchOrchestration(): UseSearchOrchestrationResult {
   );
 
   /**
+   * Derive current params from store slices (memoized separately to reduce executeSearch dependencies).
+   */
+  const deriveCurrentParams = useCallback((): SearchParams | null => {
+    if (!currentSearchType) return null;
+
+    if (currentParams) return currentParams;
+
+    const partialParams = getParamsFromSlices(
+      { accommodationParams, activityParams, destinationParams, flightParams },
+      currentSearchType
+    );
+
+    if (!partialParams) return null;
+
+    const hasUndefined = Object.values(partialParams).some(
+      (value) => value === undefined
+    );
+    return hasUndefined ? null : (partialParams as SearchParams);
+  }, [
+    currentSearchType,
+    currentParams,
+    flightParams,
+    accommodationParams,
+    activityParams,
+    destinationParams,
+  ]);
+
+  /**
    * Execute a search with the given or current parameters.
    */
   const executeSearch = useCallback(
@@ -136,26 +505,8 @@ export function useSearchOrchestration(): UseSearchOrchestrationResult {
         throw new Error("No search type selected");
       }
 
-      // Use provided params or derive from current state
-      let searchParams = params || currentParams;
-
-      // If computed currentParams is not available, derive from slice state
-      if (!searchParams && currentSearchType) {
-        switch (currentSearchType) {
-          case "flight":
-            searchParams = flightParams as SearchParams;
-            break;
-          case "accommodation":
-            searchParams = accommodationParams as SearchParams;
-            break;
-          case "activity":
-            searchParams = activityParams as SearchParams;
-            break;
-          case "destination":
-            searchParams = destinationParams as SearchParams;
-            break;
-        }
-      }
+      // Use provided params or derive from state
+      const searchParams = params || deriveCurrentParams();
 
       if (!searchParams) {
         throw new Error("No search parameters available");
@@ -174,34 +525,39 @@ export function useSearchOrchestration(): UseSearchOrchestrationResult {
       );
 
       try {
-        // Add to recent searches
+        const startTime = Date.now();
+
+        // Add to recent searches (will update resultsCount after search completes)
         addRecentSearch(currentSearchType, searchParams, {
           resultsCount: 0,
           searchDuration: 0,
         });
 
-        // Simulate search progress (replace with actual search implementation)
         updateSearchProgress(searchId, 25);
-        await new Promise((resolve) => setTimeout(resolve, 500));
 
-        updateSearchProgress(searchId, 50);
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        // Perform real API search based on search type
+        const { results, provider } = await performSearchRequest(
+          currentSearchType,
+          searchParams,
+          () => updateSearchProgress(searchId, 50)
+        );
 
         updateSearchProgress(searchId, 75);
-        await new Promise((resolve) => setTimeout(resolve, 500));
 
-        // Mock search results (replace with actual API calls)
-        const mockResults: SearchResults = generateMockResults(currentSearchType);
+        const searchDuration = Date.now() - startTime;
+        const totalResults = Object.values(results)
+          .filter(Array.isArray)
+          .reduce((sum, arr) => sum + arr.length, 0);
 
         // Set the results
-        setSearchResults(searchId, mockResults, {
+        setSearchResults(searchId, results, {
           currentPage: 1,
           hasMoreResults: false,
-          provider: "MockProvider",
+          provider,
           requestId: searchId,
           resultsPerPage: 20,
-          searchDuration: 1500,
-          totalResults: Object.values(mockResults).flat().length,
+          searchDuration,
+          totalResults,
         });
 
         return searchId;
@@ -219,11 +575,7 @@ export function useSearchOrchestration(): UseSearchOrchestrationResult {
     },
     [
       currentSearchType,
-      currentParams,
-      flightParams,
-      accommodationParams,
-      activityParams,
-      destinationParams,
+      deriveCurrentParams,
       validateCurrentParams,
       startSearch,
       addRecentSearch,
@@ -282,39 +634,14 @@ export function useSearchOrchestration(): UseSearchOrchestrationResult {
    */
   const duplicateCurrentSearch = useCallback(
     async (name: string): Promise<string | null> => {
-      let params = currentParams;
+      if (!currentSearchType) return null;
 
-      // Derive params from slice state if needed
-      if (currentSearchType && !params) {
-        switch (currentSearchType) {
-          case "flight":
-            params = flightParams as SearchParams;
-            break;
-          case "accommodation":
-            params = accommodationParams as SearchParams;
-            break;
-          case "activity":
-            params = activityParams as SearchParams;
-            break;
-          case "destination":
-            params = destinationParams as SearchParams;
-            break;
-        }
-      }
-
-      if (!currentSearchType || !params) return null;
+      const params = deriveCurrentParams();
+      if (!params) return null;
 
       return await saveSearch(name, currentSearchType, params);
     },
-    [
-      currentSearchType,
-      currentParams,
-      flightParams,
-      accommodationParams,
-      activityParams,
-      destinationParams,
-      saveSearch,
-    ]
+    [currentSearchType, deriveCurrentParams, saveSearch]
   );
 
   /**
@@ -418,157 +745,6 @@ export function useSearchOrchestration(): UseSearchOrchestrationResult {
       validateAndExecuteSearch,
     ]
   );
-}
-
-/**
- * TODO: Generate mock search results for a search type.
- * This should be replaced with actual API calls.
- */
-function generateMockResults(searchType: SearchType): SearchResults {
-  const mockResults: SearchResults = {};
-
-  switch (searchType) {
-    case "flight":
-      mockResults.flights = [
-        {
-          airline: "Example Airlines",
-          arrivalTime: "2025-07-15T13:30:00Z",
-          cabinClass: "economy",
-          departureTime: "2025-07-15T08:00:00Z",
-          destination: "LAX",
-          duration: 330,
-          flightNumber: "EX123",
-          id: "1",
-          origin: "NYC",
-          price: 450,
-          seatsAvailable: 10,
-          stops: 0,
-        },
-        {
-          airline: "Demo Air",
-          arrivalTime: "2025-07-15T15:15:00Z",
-          cabinClass: "economy",
-          departureTime: "2025-07-15T09:00:00Z",
-          destination: "LAX",
-          duration: 375,
-          flightNumber: "DA456",
-          id: "2",
-          origin: "NYC",
-          price: 520,
-          seatsAvailable: 5,
-          stops: 1,
-        },
-      ] as Flight[];
-      break;
-    case "accommodation":
-      mockResults.accommodations = [
-        {
-          amenities: ["wifi", "pool"],
-          checkIn: "2025-07-15",
-          checkOut: "2025-07-18",
-          coordinates: { lat: 34.0522, lng: -118.2437 },
-          id: "1",
-          images: [],
-          location: "123 Main St, Los Angeles, USA",
-          name: "Example Hotel",
-          pricePerNight: 120,
-          rating: 4.5,
-          totalPrice: 360,
-          type: "hotel",
-        },
-        {
-          amenities: ["wifi", "pool", "spa"],
-          checkIn: "2025-07-15",
-          checkOut: "2025-07-18",
-          coordinates: { lat: 34.0522, lng: -118.2437 },
-          id: "2",
-          images: [],
-          location: "456 Beach Blvd, Los Angeles, USA",
-          name: "Demo Resort",
-          pricePerNight: 180,
-          rating: 4.8,
-          totalPrice: 540,
-          type: "resort",
-        },
-      ] as Accommodation[];
-      break;
-    case "activity":
-      mockResults.activities = [
-        {
-          coordinates: { lat: 34.0522, lng: -118.2437 },
-          date: "2025-07-15",
-          description: "Explore the city",
-          duration: 180,
-          id: "1",
-          images: [],
-          location: "Downtown, Los Angeles, USA",
-          name: "City Tour",
-          price: 45,
-          rating: 4.2,
-          type: "tours",
-        },
-        {
-          coordinates: { lat: 34.0522, lng: -118.2437 },
-          date: "2025-07-15",
-          description: "Visit the local museum",
-          duration: 120,
-          id: "2",
-          images: [],
-          location: "Museum District, Los Angeles, USA",
-          name: "Museum Visit",
-          price: 25,
-          rating: 4.0,
-          type: "cultural",
-        },
-      ] as Activity[];
-      break;
-    case "destination":
-      mockResults.destinations = [
-        {
-          attractions: [],
-          bestTimeToVisit: ["spring", "fall"],
-          climate: {
-            averageTemp: 15,
-            rainfall: 50,
-            season: "temperate",
-          },
-          coordinates: { lat: 48.8566, lng: 2.3522 },
-          country: "France",
-          description: "The City of Light",
-          formattedAddress: "Paris, France",
-          id: "1",
-          name: "Paris",
-          photos: [],
-          popularityScore: 9.5,
-          rating: 4.5,
-          region: "Europe",
-          types: ["city"],
-        },
-        {
-          attractions: [],
-          bestTimeToVisit: ["spring", "fall"],
-          climate: {
-            averageTemp: 20,
-            rainfall: 80,
-            season: "humid_subtropical",
-          },
-          coordinates: { lat: 35.6762, lng: 139.6503 },
-          country: "Japan",
-          description: "A vibrant metropolis",
-          formattedAddress: "Tokyo, Japan",
-          id: "2",
-          name: "Tokyo",
-          photos: [],
-          popularityScore: 9.3,
-          rating: 4.7,
-          region: "Asia",
-          types: ["city"],
-        },
-      ] as Destination[];
-      break;
-  }
-
-  return mockResults;
 }
 
 // Re-export the hook as useSearchStore for backward compatibility

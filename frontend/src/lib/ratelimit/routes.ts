@@ -26,6 +26,8 @@ export interface RouteRateLimitDefinition {
  * `chat:sessions:list`, `calendar:events:read`).
  */
 export const ROUTE_RATE_LIMITS = {
+  // Accommodations
+  "accommodations:search": { limit: 20, window: "1 m" },
   "activities:details": { limit: 30, window: "1 m" },
 
   // Activities
@@ -88,6 +90,7 @@ export const ROUTE_RATE_LIMITS = {
 
   // Flights
   "flights:popular-destinations": { limit: 60, window: "1 m" },
+  "flights:search": { limit: 20, window: "1 m" },
   geocode: { limit: 60, window: "1 m" },
 
   // Itineraries
