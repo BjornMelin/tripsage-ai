@@ -15,7 +15,7 @@ import {
   setSupabaseFactoryForTests,
 } from "@/lib/api/factory";
 import { createMockSupabaseClient } from "@/test/mocks/supabase";
-import { getMockCookiesForTest } from "@/test/route-helpers";
+import { getMockCookiesForTest } from "./route";
 
 // ---- REQUEST FACTORIES ------------------------------------------------------
 
@@ -52,23 +52,8 @@ export function makeJsonRequest(
   );
 }
 
-/**
- * Create route params context for dynamic route testing.
- *
- * @param params - Route parameters object
- * @returns Context object compatible with Next.js route handlers
- *
- * @example
- * ```ts
- * const context = createRouteParamsContext({ id: "trip-123" });
- * const res = await GET(req, context);
- * ```
- */
-export function createRouteParamsContext<
-  T extends Record<string, string> = Record<string, string>,
->(params: T = {} as T): { params: Promise<T> } {
-  return { params: Promise.resolve(params) };
-}
+// Re-export from route.ts to avoid duplication
+export { createRouteParamsContext } from "./route";
 
 // ---- ROUTE MOCK STATE ------------------------------------------------------
 
@@ -170,10 +155,10 @@ const getSupabaseClient = () => {
   return supabaseClient;
 };
 
-const CREATE_SUPABASE_MOCK = vi.fn(async () => getSupabaseClient());
+const CREATE_SUPABASE_MOCK = vi.hoisted(() => vi.fn(async () => getSupabaseClient()));
 
 vi.mock("@/lib/supabase/server", () => ({
-  createServerSupabase: vi.fn(async () => getSupabaseClient()),
+  createServerSupabase: CREATE_SUPABASE_MOCK,
 }));
 
 vi.mock("@/lib/api/route-helpers", async () => {

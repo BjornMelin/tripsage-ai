@@ -7,6 +7,15 @@ import { HttpResponse, http } from "msw";
 
 const defaultPhotoName = "places/placeholder/photos/primary";
 
+/** Shared 404 error response for invalid resources. */
+const RESOURCE_NOT_FOUND_ERROR = {
+  error: {
+    code: 404,
+    message: "Resource not found",
+    status: "NOT_FOUND",
+  },
+} as const;
+
 /** MSW handlers for Google Places (New) API endpoints used in tests. */
 export const googlePlacesHandlers: HttpHandler[] = [
   http.post("/api/places/search", async ({ request }) => {
@@ -99,8 +108,22 @@ export const googlePlacesHandlers: HttpHandler[] = [
     }
   ),
 
-  http.get("https://places.googleapis.com/v1/places/:placeId", ({ params }) =>
-    HttpResponse.json({
+  http.get("https://places.googleapis.com/v1/places/:placeId", ({ params }) => {
+    // Handle invalid place ID
+    if (params.placeId === "invalid") {
+      return HttpResponse.json(
+        {
+          error: {
+            code: 404,
+            message: "Place not found",
+            status: "NOT_FOUND",
+          },
+        },
+        { status: 404 }
+      );
+    }
+
+    return HttpResponse.json({
       adrFormatAddress: "123 Example St, Test City",
       displayName: { text: "Sample Place" },
       id: params.placeId ?? "places/1",
@@ -111,7 +134,17 @@ export const googlePlacesHandlers: HttpHandler[] = [
       types: ["lodging"],
       userRatingCount: 256,
       websiteUri: "https://example.com",
-    })
+    });
+  }),
+
+  // Handle requests to an invalid activity path explicitly
+  http.get("https://places.googleapis.com/v1/activities/invalid", () =>
+    HttpResponse.json(RESOURCE_NOT_FOUND_ERROR, { status: 404 })
+  ),
+
+  // Backward compatibility: generic invalid path
+  http.get("https://places.googleapis.com/v1/invalid", () =>
+    HttpResponse.json(RESOURCE_NOT_FOUND_ERROR, { status: 404 })
   ),
 
   http.get("https://places.googleapis.com/v1/:photoName/media", ({ params }) => {

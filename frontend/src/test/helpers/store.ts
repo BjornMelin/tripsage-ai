@@ -37,19 +37,6 @@ export function setupTimeoutMock(): { mockRestore: () => void } {
 }
 
 /**
- * Mock async timers globally.
- * Useful for stores with debounced actions.
- *
- * @returns Cleanup function
- */
-export function mockAsyncTimers(): () => void {
-  vi.useFakeTimers();
-  return () => {
-    vi.useRealTimers();
-  };
-}
-
-/**
  * Generic store reset helper.
  * Usage: resetStore(useMyStore, { field1: value1, ... })
  *

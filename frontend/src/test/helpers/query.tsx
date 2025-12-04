@@ -9,7 +9,7 @@ import type {
 } from "@tanstack/react-query";
 import { QueryClient as TanStackQueryClient } from "@tanstack/react-query";
 import { vi } from "vitest";
-import { createMockUseQueryResult } from "@/test/mock-helpers";
+import { createMockUseQueryResult } from "./mock";
 
 type MutationState<T, E, V> = {
   data: T | undefined;
