@@ -94,11 +94,8 @@ export default function ActivitiesSearchClient({
   const [trips, setTrips] = useState<UiTrip[]>([]);
   const [isPending, setIsPending] = useState(false);
 
-  // Derived state for comparison list
-  const comparisonList = useMemo(
-    () => new Set(getItemsByType("activity").map((i) => i.id)),
-    [getItemsByType]
-  );
+  // Derived state for comparison list (computed per render to reflect store changes)
+  const comparisonList = new Set(getItemsByType("activity").map((i) => i.id));
 
   // Initialize search type on mount
   useEffect(() => {
@@ -266,11 +263,9 @@ export default function ActivitiesSearchClient({
 
   const hasActiveResults = activities.length > 0;
 
-  const comparisonActivities = useMemo(() => {
-    return getItemsByType("activity")
-      .map((item) => item.data)
-      .filter(isActivity);
-  }, [getItemsByType]);
+  const comparisonActivities = getItemsByType("activity")
+    .map((item) => item.data)
+    .filter(isActivity);
 
   const { verifiedActivities, aiSuggestions } = useMemo(() => {
     // Check if we have mixed results based on activity ID prefixes

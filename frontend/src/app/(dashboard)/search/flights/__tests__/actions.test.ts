@@ -65,12 +65,11 @@ describe("submitFlightSearch server action", () => {
 
     const result = await submitFlightSearch(params);
 
-    expect(result.origin).toBe("NYC");
-    expect(result.destination).toBe("LAX");
-    expect(result.adults).toBe(1);
-    // Defaults applied for omitted optional fields
-    expect(result.cabinClass).toBe("economy");
-    expect(result.passengers).toEqual({ adults: 1, children: 0, infants: 0 });
+    expect(result).toEqual({
+      ...params,
+      cabinClass: "economy", // schema default
+      passengers: { adults: 1, children: 0, infants: 0 }, // normalized defaults
+    });
     expectTelemetrySpanCalled("NYC", "LAX");
   });
 

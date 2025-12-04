@@ -22,7 +22,6 @@ export const POST = withApiGuards({
   const service = getAccommodationsService();
 
   const result = await service.search(body, {
-    rateLimitKey: userResult.user?.id ?? undefined,
     userId: userResult.user?.id ?? undefined,
   });
 

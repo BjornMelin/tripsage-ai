@@ -171,7 +171,7 @@ function ActionButton({
     <Button
       variant={action.variant || "outline"}
       className={cn(
-        "h-auto p-4 flex-col gap-2 relative border-2",
+        "h-auto flex-col gap-2 relative border-2",
         compact ? "p-3" : "p-4",
         actionToneClass,
         action.className

@@ -33,9 +33,9 @@ const AmenityIconMap: Record<string, React.ComponentType<{ className?: string }>
  * @returns The icon component for the amenity, or undefined if the ID is not recognized
  *
  * @example
- * const BreakfastIcon = GetAmenityIcon("breakfast");
- * if (BreakfastIcon) {
- *   return <BreakfastIcon className="h-4 w-4" />;
+ * const AmenityIcon = GetAmenityIcon("breakfast");
+ * if (AmenityIcon) {
+ *   return <AmenityIcon className="h-4 w-4" />;
  * }
  */
 export function GetAmenityIcon(

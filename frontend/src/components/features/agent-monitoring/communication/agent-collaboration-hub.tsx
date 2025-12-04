@@ -15,6 +15,7 @@ import {
   GitBranchIcon,
   NetworkIcon,
   TimerIcon,
+  TrendingDownIcon,
   TrendingUpIcon,
   UsersIcon,
   WorkflowIcon,
@@ -33,44 +34,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-
-// Status colors aligned with statusVariants color scheme
-const AGENT_STATUS_COLORS = {
-  active: "bg-green-500",
-  busy: "bg-yellow-500",
-  idle: "bg-blue-500",
-  offline: "bg-gray-500",
-} as const;
-
-const HANDOFF_STATUS_COLORS = {
-  completed: {
-    bg: "bg-green-50",
-    border: "border-green-200",
-    text: "text-green-600",
-  },
-  failed: {
-    bg: "bg-red-50",
-    border: "border-red-200",
-    text: "text-red-600",
-  },
-  pending: {
-    bg: "bg-yellow-50",
-    border: "border-yellow-200",
-    text: "text-yellow-600",
-  },
-} as const;
-
-const DEFAULT_HANDOFF_STATUS_COLOR = {
-  bg: "bg-gray-50",
-  border: "border-gray-200",
-  text: "text-gray-600",
-};
-
-const TREND_COLORS = {
-  down: "text-red-500",
-  stable: "text-blue-500",
-  up: "text-green-500",
-} as const;
+import {
+  AGENT_STATUS_COLORS,
+  DEFAULT_HANDOFF_STATUS_COLOR,
+  HANDOFF_STATUS_COLORS,
+  TREND_COLORS,
+} from "@/lib/variants/status";
 
 /** Interface for an agent */
 interface Agent {
@@ -551,9 +520,7 @@ export const AgentCollaborationHub: React.FC<AgentCollaborationHubProps> = ({
                     <TrendingUpIcon className={cn("h-3 w-3", TREND_COLORS.up)} />
                   )}
                   {metric.trend === "down" && (
-                    <TrendingUpIcon
-                      className={cn("h-3 w-3 rotate-180", TREND_COLORS.down)}
-                    />
+                    <TrendingDownIcon className={cn("h-3 w-3", TREND_COLORS.down)} />
                   )}
                   {metric.trend === "stable" && (
                     <ActivityIcon className={cn("h-3 w-3", TREND_COLORS.stable)} />

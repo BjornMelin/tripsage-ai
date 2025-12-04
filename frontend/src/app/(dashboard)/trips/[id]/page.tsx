@@ -36,6 +36,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { exportTripToIcs } from "@/lib/calendar/trip-export";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { cn } from "@/lib/utils";
 import { statusVariants } from "@/lib/variants/status";
 import { useTripStore } from "@/stores/trip-store";
@@ -96,7 +97,9 @@ export default function TripDetailsPage() {
    * Maps trip status to statusVariants with fallback for neutral states.
    * Active/upcoming use statusVariants; draft/completed use neutral gray.
    */
-  const getStatusClassName = (status: string) => {
+  type TripStatus = ReturnType<typeof getTripStatus>;
+
+  const getStatusClassName = (status: TripStatus) => {
     switch (status) {
       case "active":
         return cn(statusVariants({ status: "active" }));
@@ -174,6 +177,10 @@ export default function TripDetailsPage() {
                 if (process.env.NODE_ENV === "development") {
                   console.error("Failed to export trip:", error);
                 }
+                recordClientErrorOnActiveSpan(
+                  error instanceof Error ? error : new Error(String(error)),
+                  { action: "exportTripToIcs", context: "TripDetailsPage" }
+                );
                 alert("Failed to export trip to calendar");
               }
             }}

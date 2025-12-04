@@ -17,6 +17,11 @@ export const POST = withApiGuards({
   schema: flightSearchRequestSchema,
   telemetry: "flights.search",
 })(async (_req, _ctx, body) => {
+  // Note: The flights service performs its own validation via
+  // flightSearchRequestSchema.parse(params) because it is invoked from multiple
+  // entry points (including AI tools) that bypass withApiGuards. It also
+  // intentionally omits ServiceContext/userId and rate limiting at the service
+  // layer—unlike accommodations—by API design.
   const result = await searchFlightsService(body);
 
   return Response.json(result);

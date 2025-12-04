@@ -46,6 +46,8 @@ interface MockTrip {
 const mockTrips = vi.hoisted(() => vi.fn((): MockTrip[] => []));
 const mockIsLoading = vi.hoisted(() => vi.fn(() => false));
 const mockError = vi.hoisted(() => vi.fn((): AppError | null => null));
+const mockIsConnected = vi.hoisted(() => vi.fn(() => true));
+const mockRealtimeStatus = vi.hoisted(() => vi.fn(() => "connected" as const));
 const mockCreateTrip = vi.hoisted(() => vi.fn());
 const mockDeleteTrip = vi.hoisted(() => vi.fn());
 
@@ -56,9 +58,9 @@ vi.mock("@/hooks/use-trips", () => ({
   useTrips: () => ({
     data: mockTrips(),
     error: mockError(),
-    isConnected: true,
+    isConnected: mockIsConnected(),
     isLoading: mockIsLoading(),
-    realtimeStatus: "connected",
+    realtimeStatus: mockRealtimeStatus(),
   }),
 }));
 
@@ -98,11 +100,15 @@ describe("TripsPage", () => {
     mockTrips.mockReset();
     mockIsLoading.mockReset();
     mockError.mockReset();
+    mockIsConnected.mockReset();
+    mockRealtimeStatus.mockReset();
     mockCreateTrip.mockReset();
     mockDeleteTrip.mockReset();
     mockTrips.mockReturnValue([]);
     mockIsLoading.mockReturnValue(false);
     mockError.mockReturnValue(null);
+    mockIsConnected.mockReturnValue(true);
+    mockRealtimeStatus.mockReturnValue("connected");
   });
 
   describe("Loading state", () => {
@@ -176,6 +182,24 @@ describe("TripsPage", () => {
 
       expect(screen.getByText("My Trips")).toBeInTheDocument();
       expect(screen.getByText("No trips yet")).toBeInTheDocument();
+    });
+
+    it("renders connection indicator when realtime is disconnected", () => {
+      mockTrips.mockReturnValue([
+        {
+          createdAt: "2024-01-10T10:00:00Z",
+          destinations: [{ name: "Paris" }],
+          id: "trip-connected",
+          title: "Connected Trip",
+          visibility: "private",
+        },
+      ]);
+      mockIsConnected.mockReturnValue(false);
+      mockRealtimeStatus.mockReturnValue("connected");
+
+      render(<TripsPage />);
+
+      expect(screen.getByTestId("connection-status")).toBeInTheDocument();
     });
   });
 
@@ -290,6 +314,37 @@ describe("TripsPage", () => {
       render(<TripsPage />);
       expect(screen.getByTestId("grid-icon")).toBeInTheDocument();
       expect(screen.getByTestId("list-icon")).toBeInTheDocument();
+    });
+
+    it("sorts trips when sort option changes", async () => {
+      const tripsForSort: MockTrip[] = [
+        {
+          createdAt: "2024-01-10T10:00:00Z",
+          destinations: [],
+          id: "trip-z",
+          title: "Zebra Trip",
+          visibility: "private",
+        },
+        {
+          createdAt: "2024-01-11T10:00:00Z",
+          destinations: [],
+          id: "trip-a",
+          title: "Alpine Adventure",
+          visibility: "private",
+        },
+      ];
+      mockTrips.mockReturnValue(tripsForSort);
+
+      render(<TripsPage />);
+
+      const sortTrigger = screen.getAllByRole("combobox")[1];
+      await userEvent.click(sortTrigger);
+      const nameOption = await screen.findByRole("option", { name: "Name" });
+      await userEvent.click(nameOption);
+
+      const cards = screen.getAllByTestId(/trip-card-/);
+      expect(cards[0]).toHaveTextContent("Alpine Adventure");
+      expect(cards[1]).toHaveTextContent("Zebra Trip");
     });
 
     it("toggles view mode to list when list button is clicked", () => {
