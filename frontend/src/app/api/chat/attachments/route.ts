@@ -12,7 +12,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { validateMultipart } from "@/lib/api/guards/multipart";
-import { errorResponse, forwardAuthHeaders } from "@/lib/api/route-helpers";
+import { errorResponse } from "@/lib/api/route-helpers";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 
 /**
@@ -56,11 +56,13 @@ interface BatchUploadResponse {
  * @param req - Next.js request containing multipart form data.
  * @returns JSON response with uploaded file metadata or error.
  */
+const MAX_TOTAL_UPLOAD_BYTES = FILE_COUNT_LIMITS.STANDARD * FILE_SIZE_LIMITS.STANDARD;
+
 export const POST = withApiGuards({
   auth: true,
   rateLimit: "chat:attachments",
   telemetry: "chat.attachments.upload",
-})(async (req: NextRequest) => {
+})(async (req: NextRequest, { supabase }) => {
   // Validate content type
   const contentType = req.headers.get("content-type");
   if (!contentType?.includes("multipart/form-data")) {
@@ -69,6 +71,21 @@ export const POST = withApiGuards({
       reason: "Invalid content type",
       status: 400,
     });
+  }
+
+  // Enforce total size limit before buffering
+  const contentLengthHeader = req.headers.get("content-length");
+  if (contentLengthHeader) {
+    const contentLength = Number.parseInt(contentLengthHeader, 10);
+    if (Number.isFinite(contentLength) && contentLength > MAX_TOTAL_UPLOAD_BYTES) {
+      return errorResponse({
+        error: "invalid_request",
+        reason: `Request payload exceeds maximum total size of ${Math.floor(
+          MAX_TOTAL_UPLOAD_BYTES / (1024 * 1024)
+        )}MB`,
+        status: 413,
+      });
+    }
   }
 
   // Parse form data
@@ -99,11 +116,21 @@ export const POST = withApiGuards({
   // Call backend API
   const endpoint =
     files.length === 1 ? "/api/attachments/upload" : "/api/attachments/upload/batch";
-  const headers: HeadersInit | undefined = forwardAuthHeaders(req);
+
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError || !sessionData?.session?.access_token) {
+    return errorResponse({
+      error: "unauthenticated",
+      reason: "Missing authenticated session",
+      status: 401,
+    });
+  }
 
   const response = await fetch(`${getBackendApiUrl()}${endpoint}`, {
     body: backendFormData,
-    headers,
+    headers: {
+      Authorization: `Bearer ${sessionData.session.access_token}`,
+    },
     method: "POST",
   });
 

@@ -12,7 +12,7 @@
 
 ## Routes (Current Implementation)
 
-- `POST /api/chat/attachments` — Proxies to backend FastAPI `/api/attachments/upload` or `/api/attachments/upload/batch`. Validates multipart form data, enforces 10MB size cap, max 5 files per request. Uses `withApiGuards` for auth and rate limiting (`chat:attachments`). Revalidates `attachments` cache tag on success.
+- `POST /api/chat/attachments` — Proxies to backend FastAPI `/api/attachments/upload` or `/api/attachments/upload/batch`. Validates multipart form data, enforces 10MB per-file cap, max 5 files per request, and rejects requests advertising total payload >50MB via `Content-Length`. Auth is bound to the current Supabase session cookie (`sb-access-token`); caller `Authorization` headers are ignored and never forwarded. Uses `withApiGuards` for auth and rate limiting (`chat:attachments`). Revalidates `attachments` cache tag on success.
 - `GET /api/attachments/files` — Proxies to backend FastAPI `/api/attachments/files` with pagination. Uses `withApiGuards` with rate limiting (`attachments:files`). Participates in cache tag invalidation via `next: { tags: ['attachments'] }`.
 
 ## Routes (Target Implementation - Not Yet Migrated)

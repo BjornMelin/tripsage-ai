@@ -283,7 +283,7 @@ Create a message in a chat session.
 
 Upload chat attachment (multipart form data).
 
-**Authentication**: Required
+**Authentication**: Required — derived from Supabase session cookie (`sb-access-token`). Caller-supplied `Authorization` headers are ignored for this endpoint.
 **Rate Limit Key**: `chat:attachments`
 
 #### Request
@@ -299,6 +299,7 @@ Multipart form data with file uploads.
 
 - **Maximum file size**: 10 MB (10,485,760 bytes)
 - **Maximum files per request**: 5 files
+- **Maximum total payload (Content-Length)**: 50 MB — requests advertising a larger body are rejected with `413`
 - **Accepted MIME types**: All types accepted (validation performed by backend)
 - **Multiple files**: Supported - submit up to 5 files in a single request
 
