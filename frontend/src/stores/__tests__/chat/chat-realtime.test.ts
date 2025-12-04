@@ -4,6 +4,7 @@ import { act } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useChatMessages } from "@/stores/chat/chat-messages";
 import { useChatRealtime } from "@/stores/chat/chat-realtime";
+import { withFakeTimers } from "@/test/utils/with-fake-timers";
 
 describe("ChatRealtime", () => {
   beforeEach(() => {
@@ -68,20 +69,22 @@ describe("ChatRealtime", () => {
       expect(typingUsers["session-1_user-1"]?.username).toBe("User");
     });
 
-    it("auto-removes typing user after timeout", () => {
-      vi.useFakeTimers();
-      useChatRealtime.getState().setUserTyping("session-1", "user-1");
+    it(
+      "auto-removes typing user after timeout",
+      withFakeTimers(() => {
+        useChatRealtime.getState().setUserTyping("session-1", "user-1");
 
-      expect(useChatRealtime.getState().typingUsers["session-1_user-1"]).toBeDefined();
+        expect(
+          useChatRealtime.getState().typingUsers["session-1_user-1"]
+        ).toBeDefined();
 
-      vi.advanceTimersByTime(3000);
+        vi.advanceTimersByTime(3000);
 
-      expect(
-        useChatRealtime.getState().typingUsers["session-1_user-1"]
-      ).toBeUndefined();
-
-      vi.useRealTimers();
-    });
+        expect(
+          useChatRealtime.getState().typingUsers["session-1_user-1"]
+        ).toBeUndefined();
+      })
+    );
   });
 
   describe("removeUserTyping", () => {

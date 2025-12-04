@@ -3,9 +3,9 @@
 import { HttpResponse, http } from "msw";
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { mockApiRouteAuthUser, resetApiRouteMocks } from "@/test/api-route-helpers";
+import { mockApiRouteAuthUser, resetApiRouteMocks } from "@/test/helpers/api-route";
+import { createMockNextRequest, createRouteParamsContext } from "@/test/helpers/route";
 import { server } from "@/test/msw/server";
-import { createMockNextRequest, createRouteParamsContext } from "@/test/route-helpers";
 
 describe("/api/chat/attachments", () => {
   beforeEach(() => {

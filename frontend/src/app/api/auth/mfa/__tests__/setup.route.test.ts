@@ -5,7 +5,7 @@ import {
   createRouteParamsContext,
   makeJsonRequest,
   resetApiRouteMocks,
-} from "@/test/api-route-helpers";
+} from "@/test/helpers/api-route";
 
 describe("POST /api/auth/mfa/setup", () => {
   const mockStartTotpEnrollment = vi.fn();

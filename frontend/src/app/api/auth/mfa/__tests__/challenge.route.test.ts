@@ -6,7 +6,7 @@ import {
   makeJsonRequest,
   mockApiRouteAuthUser,
   resetApiRouteMocks,
-} from "@/test/api-route-helpers";
+} from "@/test/helpers/api-route";
 
 const challengeTotp = vi.hoisted(() => vi.fn());
 

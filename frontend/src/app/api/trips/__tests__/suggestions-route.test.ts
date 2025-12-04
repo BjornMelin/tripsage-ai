@@ -2,13 +2,13 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setSupabaseFactoryForTests } from "@/lib/api/factory";
-import { stubRateLimitDisabled } from "@/test/env-helpers";
+import { stubRateLimitDisabled } from "@/test/helpers/env";
 import {
   createMockNextRequest,
   createRouteParamsContext,
   getMockCookiesForTest,
-} from "@/test/route-helpers";
-import { setupUpstashMocks } from "@/test/setup/upstash";
+} from "@/test/helpers/route";
+import { setupUpstashMocks } from "@/test/upstash/redis-mock";
 
 const { redis, ratelimit } = setupUpstashMocks();
 

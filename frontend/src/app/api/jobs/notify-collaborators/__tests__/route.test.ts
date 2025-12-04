@@ -2,7 +2,7 @@
 
 import type { NotifyJob } from "@schemas/webhooks";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
+import { createMockNextRequest, getMockCookiesForTest } from "@/test/helpers/route";
 
 type ReceiverVerify = (args: {
   body: string;

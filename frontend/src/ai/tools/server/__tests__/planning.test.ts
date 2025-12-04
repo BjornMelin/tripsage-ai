@@ -4,7 +4,7 @@ import { TTL_DRAFT_SECONDS, TTL_FINAL_SECONDS } from "@ai/tools/server/constants
 import { createTravelPlan, saveTravelPlan } from "@ai/tools/server/planning";
 import { planSchema } from "@ai/tools/server/planning.schema";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getMockCookiesForTest } from "@/test/route-helpers";
+import { getMockCookiesForTest } from "@/test/helpers/route";
 
 vi.mock("@upstash/ratelimit", () => ({
   Ratelimit: class {

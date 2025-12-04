@@ -2,14 +2,14 @@
 
 import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { attachmentsBase } from "@/test/msw/handlers/attachments";
-import { server } from "@/test/msw/server";
 import {
   createMockNextRequest,
   createRouteParamsContext,
   getMockCookiesForTest,
-} from "@/test/route-helpers";
-import { setupUpstashMocks } from "@/test/setup/upstash";
+} from "@/test/helpers/route";
+import { attachmentsBase } from "@/test/msw/handlers/attachments";
+import { server } from "@/test/msw/server";
+import { setupUpstashMocks } from "@/test/upstash/redis-mock";
 
 const { redis, ratelimit } = setupUpstashMocks();
 

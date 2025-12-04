@@ -1,7 +1,7 @@
 /** @vitest-environment node */
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { mockApiRouteAuthUser, resetApiRouteMocks } from "@/test/api-route-helpers";
+import { mockApiRouteAuthUser, resetApiRouteMocks } from "@/test/helpers/api-route";
 
 vi.mock("@/lib/cache/tags", () => ({
   bumpTag: vi.fn(async () => 1),
@@ -85,10 +85,7 @@ vi.mock("@/lib/supabase/server", () => ({
   })),
 }));
 
-const mockBody = {
-  maxTokens: 1200,
-  temperature: 0.4,
-};
+// mockBody removed - was only used by skipped tests
 
 describe("config routes", () => {
   beforeEach(() => {
@@ -104,94 +101,8 @@ describe("config routes", () => {
     mockEmit.mockReset();
   });
 
-  it.skip("GET returns cached miss + db result", async () => {
-    const { GET } = await import("../[agentType]/route");
-    const req = new NextRequest("http://localhost/api/config/agents/budgetAgent");
-    const res = await GET(
-      req as unknown as NextRequest,
-      {
-        params: Promise.resolve({ agentType: "budgetAgent" }),
-        supabase: {} as never,
-        user: { app_metadata: { is_admin: true }, id: "admin-user" } as never,
-      } as never
-    );
-    expect(res.status).toBe(200);
-    const json = await res.json();
-    expect(json.versionId).toBe("ver-1");
-  });
-
-  it.skip("PUT upserts and emits alert", async () => {
-    const { PUT } = await import("../[agentType]/route");
-    const req = new NextRequest("http://localhost/api/config/agents/budgetAgent", {
-      body: JSON.stringify(mockBody),
-      headers: { "Content-Type": "application/json" },
-      method: "PUT",
-    } as never);
-    const res = await PUT(
-      req as unknown as NextRequest,
-      {
-        params: Promise.resolve({ agentType: "budgetAgent" }),
-        supabase: {} as never,
-        user: { app_metadata: { is_admin: true }, id: "admin-user" } as never,
-      } as never
-    );
-    expect(res.status).toBe(200);
-    expect(mockEmit).toHaveBeenCalledWith(
-      "agent_config.updated",
-      expect.objectContaining({
-        attributes: expect.objectContaining({ agentType: "budgetAgent" }),
-      })
-    );
-  });
-
-  it.skip("versions returns list", async () => {
-    supabaseSelect.mockReturnValue({
-      eq: () => ({
-        eq: () => ({
-          order: () => ({ limit: () => ({ data: [], error: null }) }),
-        }),
-      }),
-    });
-    const { GET } = await import("../[agentType]/versions/route");
-    const req = new NextRequest(
-      "http://localhost/api/config/agents/budgetAgent/versions"
-    );
-    const res = await GET(
-      req as unknown as NextRequest,
-      {
-        params: Promise.resolve({ agentType: "budgetAgent" }),
-        supabase: {} as never,
-        user: { app_metadata: { is_admin: true }, id: "admin-user" } as never,
-      } as never
-    );
-    expect(res.status).toBe(200);
-  });
-
-  it.skip("rollback emits alert", async () => {
-    supabaseMaybeSingle.mockResolvedValue({ data: supabaseData, error: null });
-    const { POST } = await import("../[agentType]/rollback/[versionId]/route");
-    const req = new NextRequest(
-      "http://localhost/api/config/agents/budgetAgent/rollback/11111111-1111-4111-8111-111111111111"
-    );
-    const res = await POST(
-      req as unknown as NextRequest,
-      {
-        params: Promise.resolve({
-          agentType: "budgetAgent",
-          versionId: "11111111-1111-4111-8111-111111111111",
-        }),
-        supabase: {} as never,
-        user: { app_metadata: { is_admin: true }, id: "admin-user" } as never,
-      } as never
-    );
-    expect(res.status).toBe(200);
-    expect(mockEmit).toHaveBeenCalledWith(
-      "agent_config.rollback",
-      expect.objectContaining({
-        attributes: expect.objectContaining({ agentType: "budgetAgent" }),
-      })
-    );
-  });
+  // TODO: Re-implement GET/PUT/versions/rollback tests with proper hoisted mocks
+  // (Legacy skipped tests removed per zero-legacy-tolerance policy)
 
   it("rejects non-admin", async () => {
     mockApiRouteAuthUser({ id: "user" } as never);

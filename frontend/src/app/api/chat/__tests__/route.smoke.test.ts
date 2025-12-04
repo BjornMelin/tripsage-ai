@@ -1,12 +1,12 @@
 /** @vitest-environment node */
 
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { unstubAllEnvs } from "@/test/env-helpers";
+import { unstubAllEnvs } from "@/test/helpers/env";
 import {
   createMockNextRequest,
   createRouteParamsContext,
   getMockCookiesForTest,
-} from "@/test/route-helpers";
+} from "@/test/helpers/route";
 
 // Mock next/headers cookies() BEFORE any imports that use it
 vi.mock("next/headers", () => ({
