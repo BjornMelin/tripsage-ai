@@ -17,6 +17,13 @@ const mockGetAdminSupabase = vi.hoisted(() =>
   }))
 );
 
+const mockBackupCodeCount = (count: number) => {
+  const mockIs = vi.fn(() => ({ count }));
+  const mockEq = vi.fn(() => ({ is: mockIs }));
+  const mockSelect = vi.fn(() => ({ eq: mockEq }));
+  mockFrom.mockReturnValue({ select: mockSelect });
+};
+
 vi.mock("@/lib/security/mfa", () => ({
   regenerateBackupCodes: mockRegenerate,
   verifyTotp: mockMfaVerify,
@@ -41,19 +48,11 @@ describe("POST /api/auth/mfa/verify", () => {
     mockRegenerate.mockResolvedValue({ codes: ["ABCDE-FGHIJ"] });
     mockMfaVerify.mockResolvedValue({ isInitialEnrollment: true });
 
-    // Mock backup codes check: return 0 existing codes (user has no backup codes)
-    const mockIs = vi.fn(() => ({ count: 0 }));
-    const mockEq = vi.fn(() => ({ is: mockIs }));
-    const mockSelect = vi.fn(() => ({ eq: mockEq }));
-    mockFrom.mockReturnValue({ select: mockSelect });
+    mockBackupCodeCount(0); // user has no existing backup codes by default
   });
 
   it("generates backup codes only on initial enrollment when user has no existing codes", async () => {
-    // Mock: user has no existing backup codes (count: 0)
-    const mockIs = vi.fn(() => ({ count: 0 }));
-    const mockEq = vi.fn(() => ({ is: mockIs }));
-    const mockSelect = vi.fn(() => ({ eq: mockEq }));
-    mockFrom.mockReturnValue({ select: mockSelect });
+    mockBackupCodeCount(0);
 
     const { POST } = await import("../verify/route");
     const res = await POST(
@@ -72,11 +71,7 @@ describe("POST /api/auth/mfa/verify", () => {
   });
 
   it("does not generate backup codes if user already has backup codes even if isInitialEnrollment is true", async () => {
-    // Mock: user already has backup codes (count: 5)
-    const mockIs = vi.fn(() => ({ count: 5 }));
-    const mockEq = vi.fn(() => ({ is: mockIs }));
-    const mockSelect = vi.fn(() => ({ eq: mockEq }));
-    mockFrom.mockReturnValue({ select: mockSelect });
+    mockBackupCodeCount(5); // user already has backup codes
 
     mockMfaVerify.mockResolvedValueOnce({ isInitialEnrollment: true });
     const { POST } = await import("../verify/route");

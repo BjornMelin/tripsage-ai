@@ -265,18 +265,20 @@ describe("TripsPage", () => {
       mockDeleteTrip.mockResolvedValue(undefined);
       const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
 
-      render(<TripsPage />);
+      try {
+        render(<TripsPage />);
 
-      fireEvent.click(screen.getByText("Delete"));
+        fireEvent.click(screen.getByText("Delete"));
 
-      await waitFor(() => {
-        expect(mockDeleteTrip).toHaveBeenCalledTimes(1);
-        expect(mockDeleteTrip).toHaveBeenCalledWith("trip-delete-id");
-      });
+        await waitFor(() => {
+          expect(mockDeleteTrip).toHaveBeenCalledTimes(1);
+          expect(mockDeleteTrip).toHaveBeenCalledWith("trip-delete-id");
+        });
 
-      expect(confirmSpy).toHaveBeenCalledTimes(1);
-
-      confirmSpy.mockRestore();
+        expect(confirmSpy).toHaveBeenCalledTimes(1);
+      } finally {
+        confirmSpy.mockRestore();
+      }
     });
   });
 
