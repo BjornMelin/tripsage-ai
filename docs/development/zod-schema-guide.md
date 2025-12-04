@@ -107,6 +107,109 @@ const futureDate = refinedSchemas.futureDate.parse("2025-12-31T12:00:00Z");
 const password = refinedSchemas.strongPassword.parse("Test123!Password");
 ```
 
+## Form Schema Patterns
+
+Schemas for React Hook Form integration with Zod v4.
+
+### Form vs API Schemas
+
+Separate form schemas from API schemas when they differ:
+
+```typescript
+// @schemas/trips.ts
+
+// ===== CORE SCHEMAS =====
+export const tripSchema = z.strictObject({
+  id: z.uuid(),
+  title: z.string().min(3).max(200),
+  destination: z.string().min(1),
+  userId: z.uuid(),
+  // ... other fields
+});
+
+// ===== FORM SCHEMAS =====
+export const tripFormSchema = tripSchema.omit({ id: true, userId: true });
+export type TripFormData = z.infer<typeof tripFormSchema>;
+```
+
+### Cross-Field Validation
+
+Use `.refine()` with `path` to show errors on the correct field:
+
+```typescript
+export const dateRangeSchema = z.strictObject({
+  checkIn: z.string().datetime(),
+  checkOut: z.string().datetime(),
+}).refine(
+  (data) => new Date(data.checkOut) > new Date(data.checkIn),
+  { error: "Checkout must be after check-in", path: ["checkOut"] }
+);
+```
+
+Multi-field conditional validation:
+
+```typescript
+const paymentSchema = z.strictObject({
+  method: z.enum(["card", "bank"]),
+  cardNumber: z.string().nullable(),
+  bankAccount: z.string().nullable(),
+}).refine(
+  (d) => (d.method === "card" ? !!d.cardNumber : !!d.bankAccount),
+  { error: "Payment details required", path: ["method"] }
+);
+```
+
+### RHF Integration
+
+Schemas work directly with `zodResolver`:
+
+```typescript
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { tripFormSchema, type TripFormData } from "@schemas/trips";
+
+const form = useForm<TripFormData>({
+  resolver: zodResolver(tripFormSchema),
+  mode: "onChange",
+  defaultValues: { title: "", destination: "" },
+});
+```
+
+Or use the `useZodForm` hook which applies the resolver internally:
+
+```typescript
+import { useZodForm } from "@/hooks/use-zod-form";
+import { tripFormSchema } from "@schemas/trips";
+
+const form = useZodForm({
+  schema: tripFormSchema,
+  defaultValues: { title: "", destination: "" },
+});
+```
+
+### Transforms for Form Input
+
+Use transforms for common input normalization:
+
+```typescript
+export const searchFormSchema = z.strictObject({
+  query: z.string().transform((s) => s.trim()),
+  email: z.string().email().transform((s) => s.toLowerCase()),
+  maxPrice: z.string().transform((s) => Number(s) || 0),
+});
+```
+
+### Partial Schemas for Wizard Steps
+
+Use `.pick()` for multi-step forms:
+
+```typescript
+// Step schemas derived from full schema
+export const step1Schema = tripSchema.pick({ title: true, destination: true });
+export const step2Schema = tripSchema.pick({ startDate: true, endDate: true });
+export const step3Schema = tripSchema.pick({ budget: true, travelers: true });
+```
+
 ## AI Tool Schemas
 
 Vercel AI SDK v6 tool schemas require specific patterns for reliable LLM function calling.

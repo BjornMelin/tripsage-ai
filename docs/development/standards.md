@@ -250,6 +250,50 @@ export const useAuthStore = create<AuthStore>()(
 - Helpers: `resetStore`, `setupTimeoutMock`, `waitForStoreState` from `@/test/store-helpers` for tests.
 - Selectors: expose derived selectors for complex state; avoid broad subscriptions to minimize re-renders.
 
+### Computed Middleware
+
+For stores with complex derived state (aggregations, validation flags, counts), use the `withComputed` middleware:
+
+```ts
+import { withComputed, createComputeFn } from '@/stores/middleware/computed';
+
+const computeFilterState = createComputeFn<FilterState>({
+  activeFilterCount: (state) => Object.keys(state.activeFilters || {}).length,
+  hasActiveFilters: (state) => Object.keys(state.activeFilters || {}).length > 0,
+});
+
+export const useFilterStore = create<FilterState>()(
+  devtools(
+    persist(
+      withComputed(
+        { compute: computeFilterState },
+        (set) => ({
+          activeFilters: {},
+          activeFilterCount: 0,
+          hasActiveFilters: false,
+          // ... actions
+        })
+      ),
+      { name: 'filter-store' }
+    )
+  )
+);
+```
+
+**When to use**:
+
+- Aggregations from collections (counts, sums, filters)
+- Multi-property derived flags (form validation, UI states)
+- Expensive computations needed by multiple components
+
+**When NOT to use**:
+
+- Simple property access (use selectors)
+- Rarely-accessed values (compute on-demand with `useMemo`)
+- Values dependent on React props/context
+
+**Performance**: Compute functions run on every state update. Keep them O(1) or O(n) with small n. See [Zustand Computed Middleware Guide](./zustand-computed-middleware.md) for detailed patterns, examples, and performance considerations.
+
 ## Performance
 
 - Databases: add indexes for frequent lookups; avoid N+1s; favor streaming/pagination.

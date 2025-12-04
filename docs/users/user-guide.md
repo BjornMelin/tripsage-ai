@@ -57,8 +57,7 @@ Find hotels, vacation rentals, and alternative accommodations:
 
 - **Location-based search**: City, neighborhood, or landmark proximity
 - **Filters**: Price range, amenities, guest ratings, property type
-- **Sorting options**: Sort by AI recommendation, price, rating, or distance from search center
-- **Distance sorting**: When available, sort hotels by proximity to your search location using precise geographic calculations
+- **Distance sorting**: Sort hotels by proximity to your search location (when available) using precise geographic calculations
 - **Comparison**: Side-by-side comparison of options
 - **Booking**: Direct booking integration
 
