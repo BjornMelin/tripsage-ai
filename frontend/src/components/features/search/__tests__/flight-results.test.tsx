@@ -68,11 +68,12 @@ describe("FlightResults", () => {
     fireEvent.click(compareButton);
 
     expect(onCompare).toHaveBeenCalledTimes(1);
-    expect(onCompare.mock.calls[0][0]).toHaveLength(2);
-    expect(onCompare.mock.calls[0][0].map((f: FlightResult) => f.id)).toEqual([
-      "f1",
-      "f2",
-    ]);
+    expect(onCompare).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "f1" }),
+        expect.objectContaining({ id: "f2" }),
+      ])
+    );
   });
 
   it("calls onModifySearch when provided and no results", () => {

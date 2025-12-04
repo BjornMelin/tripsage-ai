@@ -253,6 +253,7 @@ export function ActivityResults({
               variant={viewMode === "list" ? "default" : "outline"}
               size="sm"
               onClick={() => setViewMode("list")}
+              aria-label="List view"
             >
               <ListIcon className="h-4 w-4" />
             </Button>
@@ -260,6 +261,7 @@ export function ActivityResults({
               variant={viewMode === "grid" ? "default" : "outline"}
               size="sm"
               onClick={() => setViewMode("grid")}
+              aria-label="Grid view"
             >
               <Grid3X3Icon className="h-4 w-4" />
             </Button>
@@ -284,7 +286,9 @@ export function ActivityResults({
                 <Button
                   size="sm"
                   onClick={() =>
-                    onCompare(results.filter((a) => selectedForComparison.has(a.id)))
+                    onCompare(
+                      sortedResults.filter((a) => selectedForComparison.has(a.id))
+                    )
                   }
                   disabled={selectedForComparison.size < 2}
                 >

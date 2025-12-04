@@ -55,6 +55,21 @@ function NormalizeTopic(topic: string): string {
   return topic.replace(/^realtime:/i, "");
 }
 
+function StatusIcon({
+  isConnected,
+  hasError,
+  size = "h-4 w-4",
+}: {
+  isConnected: boolean;
+  hasError: boolean;
+  size?: string;
+}) {
+  if (hasError) return <AlertTriangleIcon className={`${size} text-amber-600`} />;
+  if (isConnected)
+    return <WifiIcon className={`${size} text-green-600 animate-pulse`} />;
+  return <WifiOffIcon className={`${size} text-red-600`} />;
+}
+
 /**
  * Component for monitoring real-time connection status
  * Shows overall connectivity, individual subscriptions, and provides reconnection controls
@@ -95,12 +110,6 @@ export function ConnectionStatusMonitor() {
     }
   };
 
-  const getStatusIcon = (isConnected: boolean, hasError: boolean) => {
-    if (hasError) return <AlertTriangleIcon className="h-4 w-4 text-yellow-500" />;
-    if (isConnected) return <WifiIcon className="h-4 w-4 text-green-500" />;
-    return <WifiOffIcon className="h-4 w-4 text-red-500" />;
-  };
-
   const getStatusBadge = (status: RealtimeConnection["status"]) => {
     // Disconnected uses "unknown" (neutral slate) to distinguish from actual errors.
     const statusMap: Record<
@@ -136,7 +145,10 @@ export function ConnectionStatusMonitor() {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            {getStatusIcon(connectionStatus.isConnected, !!connectionStatus.lastError)}
+            <StatusIcon
+              isConnected={connectionStatus.isConnected}
+              hasError={!!connectionStatus.lastError}
+            />
             <CardTitle className="text-sm">Real-time Status</CardTitle>
           </div>
           <Button
@@ -262,17 +274,10 @@ export function ConnectionStatusIndicator() {
 
   return (
     <div className="flex items-center space-x-2">
-      {GetStatusIcon(isConnected, hasError)}
+      <StatusIcon isConnected={isConnected} hasError={hasError} size="h-3 w-3" />
       <span className="text-xs text-muted-foreground">
         {isConnected ? "Live" : "Offline"}
       </span>
     </div>
   );
-}
-
-function GetStatusIcon(isConnected: boolean, hasError: boolean) {
-  if (hasError) return <AlertTriangleIcon className="h-3 w-3 text-yellow-500" />;
-  if (isConnected)
-    return <ActivityIcon className="h-3 w-3 text-green-500 animate-pulse" />;
-  return <WifiOffIcon className="h-3 w-3 text-red-500" />;
 }

@@ -90,7 +90,6 @@ export function FilterRange({
 
   // Sync with external value
   useEffect(() => {
-    if (value === undefined) return;
     const normalized = normalizeValue(value);
     if (normalized[0] !== internalValue[0] || normalized[1] !== internalValue[1]) {
       setInternalValue(normalized);

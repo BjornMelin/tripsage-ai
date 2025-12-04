@@ -1,8 +1,21 @@
 /** @vitest-environment jsdom */
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, type AppError } from "@/lib/api/error-types";
+
+if (!HTMLElement.prototype.hasPointerCapture) {
+  HTMLElement.prototype.hasPointerCapture = () => false;
+}
+
+if (!HTMLElement.prototype.releasePointerCapture) {
+  HTMLElement.prototype.releasePointerCapture = () => undefined;
+}
+
+if (!HTMLElement.prototype.scrollIntoView) {
+  HTMLElement.prototype.scrollIntoView = () => undefined;
+}
 
 // Mock Lucide icons
 vi.mock("lucide-react", async (importOriginal) => {
@@ -99,6 +112,24 @@ describe("TripsPage", () => {
 
       render(<TripsPage />);
       expect(screen.getByText("Loading your trips...")).toBeInTheDocument();
+    });
+
+    it("renders trips even when loading is true but data exists", () => {
+      mockIsLoading.mockReturnValue(true);
+      mockTrips.mockReturnValue([
+        {
+          createdAt: "2024-01-15T10:00:00Z",
+          destinations: [{ name: "Paris" }],
+          id: "trip-loaded",
+          title: "Loaded Trip",
+          visibility: "private",
+        },
+      ]);
+
+      render(<TripsPage />);
+
+      expect(screen.getByTestId("trip-card-trip-loaded")).toBeInTheDocument();
+      expect(screen.queryByText("Loading your trips...")).not.toBeInTheDocument();
     });
   });
 
@@ -217,12 +248,65 @@ describe("TripsPage", () => {
       expect(screen.getByTestId("filter-icon")).toBeInTheDocument();
     });
 
+    it("filters trips when status filter changes", async () => {
+      mockTrips.mockReturnValue([
+        {
+          createdAt: "2024-01-10T10:00:00Z",
+          destinations: [],
+          endDate: "2099-01-10",
+          id: "trip-upcoming",
+          startDate: "2099-01-01",
+          title: "Future Trip",
+          visibility: "private",
+        },
+        {
+          createdAt: "2024-01-01T10:00:00Z",
+          destinations: [],
+          id: "trip-draft",
+          title: "Draft Trip",
+          visibility: "private",
+        },
+      ]);
+
+      render(<TripsPage />);
+
+      const filterTrigger = screen.getAllByRole("combobox")[0];
+
+      await userEvent.click(filterTrigger);
+      const filterList = (await screen.findAllByRole("listbox"))[0];
+      await userEvent.click(
+        within(filterList).getByRole("option", { name: "Upcoming" })
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId("trip-card-trip-upcoming")).toBeInTheDocument();
+        expect(screen.queryByTestId("trip-card-trip-draft")).not.toBeInTheDocument();
+      });
+    });
+
     it("renders view mode toggle buttons", () => {
       mockTrips.mockReturnValue(sampleTrips);
 
       render(<TripsPage />);
       expect(screen.getByTestId("grid-icon")).toBeInTheDocument();
       expect(screen.getByTestId("list-icon")).toBeInTheDocument();
+    });
+
+    it("toggles view mode to list when list button is clicked", () => {
+      mockTrips.mockReturnValue(sampleTrips);
+
+      const { container } = render(<TripsPage />);
+
+      // Grid view by default
+      expect(container.querySelector(".grid.grid-cols-1")).toBeTruthy();
+
+      const listButton = screen.getByTestId("list-icon").closest("button");
+      expect(listButton).toBeTruthy();
+      if (!listButton) return;
+
+      fireEvent.click(listButton);
+
+      expect(container.querySelector(".space-y-4")).toBeTruthy();
     });
 
     it("renders create trip button", () => {
@@ -327,6 +411,27 @@ describe("TripsPage", () => {
         expect(
           screen.getByText("Try adjusting your search or filter criteria")
         ).toBeInTheDocument();
+      });
+    });
+
+    it("clears filters when Clear Filters is clicked after empty search", async () => {
+      mockTrips.mockReturnValue(sampleTrips);
+
+      render(<TripsPage />);
+      const searchInput = screen.getByPlaceholderText("Search trips, destinations...");
+
+      fireEvent.change(searchInput, { target: { value: "nonexistent" } });
+
+      await waitFor(() => {
+        expect(screen.getByText("No trips found")).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText("Clear Filters"));
+
+      await waitFor(() => {
+        expect(screen.queryByText("No trips found")).not.toBeInTheDocument();
+        expect(screen.getByTestId("trip-card-trip-1")).toBeInTheDocument();
+        expect(screen.getByTestId("trip-card-trip-2")).toBeInTheDocument();
       });
     });
   });

@@ -43,6 +43,7 @@ export default async function TripsPage() {
 
 import { useZodForm } from "@/hooks/use-zod-form";
 // ... form implementation
+// (See "Calling Server Actions" below for a full, working example.)
 ```
 
 ## Server Actions

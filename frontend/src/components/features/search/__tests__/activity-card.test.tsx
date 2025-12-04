@@ -59,7 +59,9 @@ describe("ActivityCard", () => {
   it("displays placeholder when no images available", () => {
     render(<ActivityCard activity={MockActivityWithoutImages} />);
 
-    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("img", { name: /central park walking tour/i })
+    ).not.toBeInTheDocument();
     expect(screen.getByText("Central Park Walking Tour")).toBeInTheDocument();
   });
 

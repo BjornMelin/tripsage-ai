@@ -177,7 +177,7 @@ export default function ActivitiesSearchClient({
         externalId: selectedActivity.id,
         location: selectedActivity.location,
         metadata: {
-          images: selectedActivity.images,
+          ...(selectedActivity.images && { images: selectedActivity.images }),
           rating: selectedActivity.rating,
           type: selectedActivity.type,
         },
@@ -298,10 +298,11 @@ export default function ActivitiesSearchClient({
   useEffect(() => {
     if (!selectedActivity) return;
 
-    const focusTarget =
-      (primaryActionRef.current && !primaryActionRef.current.disabled
-        ? primaryActionRef.current
-        : null) ?? closeButtonRef.current;
+    const canFocusPrimary =
+      primaryActionRef.current && !primaryActionRef.current.disabled;
+    const focusTarget = canFocusPrimary
+      ? primaryActionRef.current
+      : closeButtonRef.current;
 
     focusTarget?.focus();
   }, [selectedActivity]);
@@ -314,25 +315,28 @@ export default function ActivitiesSearchClient({
   }, [handleAddToTripClick, pendingAddFromComparison, showComparisonModal]);
 
   const handleBookActivity = () => {
-    if (selectedActivity) {
-      try {
-        const opened = openActivityBooking(selectedActivity);
-        if (!opened) {
-          toast({
-            description:
-              "Booking link unavailable for this activity. Please search for booking options manually.",
-            title: "Booking unavailable",
-            variant: "destructive",
-          });
-        }
-      } catch (error) {
+    if (!selectedActivity) return;
+
+    try {
+      const opened = openActivityBooking(selectedActivity);
+      if (!opened) {
         toast({
-          description: getErrorMessage(error),
+          description:
+            "Booking link unavailable for this activity. Please search for booking options manually.",
           title: "Booking unavailable",
           variant: "destructive",
         });
+        return;
       }
+    } catch (error) {
+      toast({
+        description: getErrorMessage(error),
+        title: "Booking unavailable",
+        variant: "destructive",
+      });
+      return;
     }
+
     setSelectedActivity(null);
   };
 

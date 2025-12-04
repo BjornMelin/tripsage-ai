@@ -27,6 +27,11 @@ export function ActivityCard({
   onCompare,
   sourceLabel,
 }: ActivityCardProps) {
+  const durationLabel =
+    Number.isFinite(activity.duration) && activity.duration >= 0
+      ? formatDurationHours(activity.duration)
+      : "N/A";
+
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
       <div className="relative">
@@ -77,7 +82,7 @@ export function ActivityCard({
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-1">
               <ClockIcon className="h-4 w-4" />
-              <span>{formatDurationHours(activity.duration)}</span>
+              <span>{durationLabel}</span>
             </div>
             <div className="flex items-center gap-1">
               <MapPinIcon className="h-4 w-4" />

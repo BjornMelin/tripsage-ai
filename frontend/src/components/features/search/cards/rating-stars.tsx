@@ -19,7 +19,11 @@ export function RatingStars({ value, max = 5 }: { value: number; max?: number })
   }));
 
   return (
-    <div className="flex items-center">
+    <div
+      className="flex items-center"
+      role="img"
+      aria-label={`Rating: ${roundedValue} out of ${max} stars`}
+    >
       {stars.map((star) => (
         <StarIcon
           key={star.key}

@@ -31,7 +31,7 @@ import { withClientTelemetrySpan } from "@/lib/telemetry/client";
 import { useSearchForm } from "./common/use-search-form";
 
 interface ActivitySearchFormProps {
-  onSearch?: (data: ActivitySearchParams) => void;
+  onSearch?: (data: ActivitySearchParams) => void | Promise<void>;
   initialValues?: Partial<ActivitySearchFormData>;
 }
 
@@ -62,10 +62,12 @@ export function ActivitySearchForm({
           category: data.category,
           children: data.participants.children,
           date: data.date,
+          dateRange: data.dateRange,
           destination: data.destination,
           difficulty: data.difficulty,
           duration: data.duration,
           indoor: data.indoor,
+          priceRange: data.priceRange,
         };
 
         if (onSearch) {
@@ -111,7 +113,7 @@ export function ActivitySearchForm({
                     <FormItem>
                       <FormLabel>Date</FormLabel>
                       <FormControl>
-                        <Input type="date" {...field} />
+                        <Input type="date" {...field} value={field.value ?? ""} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -125,7 +127,7 @@ export function ActivitySearchForm({
                     <FormItem>
                       <FormLabel>Start Date (Range)</FormLabel>
                       <FormControl>
-                        <Input type="date" {...field} />
+                        <Input type="date" {...field} value={field.value ?? ""} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -139,7 +141,7 @@ export function ActivitySearchForm({
                     <FormItem>
                       <FormLabel>End Date (Range)</FormLabel>
                       <FormControl>
-                        <Input type="date" {...field} />
+                        <Input type="date" {...field} value={field.value ?? ""} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

@@ -73,7 +73,7 @@ export function FlightResults({
   const [selectedForComparison, setSelectedForComparison] = useState<Set<string>>(
     new Set()
   );
-  const [sortBy, _setSortBy] = useState<SortField>("price");
+  const [sortBy, setSortBy] = useState<SortField>("price");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
 
@@ -144,6 +144,11 @@ export function FlightResults({
 
   const toggleSort = () => {
     setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
+  };
+
+  const cycleSortField = () => {
+    const fields: SortField[] = ["price", "duration", "departure", "emissions"];
+    setSortBy((current) => fields[(fields.indexOf(current) + 1) % fields.length]);
   };
 
   /** Get price change icon */
@@ -232,13 +237,32 @@ export function FlightResults({
             <span className="text-sm font-medium">{results.length} flights found</span>
             <Separator orientation="vertical" className="h-4" />
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onModifySearch}
+                disabled={!onModifySearch}
+                aria-label={onModifySearch ? "Open filters" : "Filters unavailable"}
+              >
                 <FilterIcon className="h-4 w-4 mr-2" />
                 Filters
               </Button>
-              <Button variant="ghost" size="sm" onClick={toggleSort}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={cycleSortField}
+                aria-label={`Sort flights by ${sortBy}`}
+              >
                 <ArrowUpDownIcon className="h-4 w-4 mr-2" />
-                Sort: {sortBy} ({sortDirection})
+                Sort: {sortBy}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleSort}
+                aria-label={`Sort direction ${sortDirection}`}
+              >
+                Direction: {sortDirection}
               </Button>
             </div>
           </div>

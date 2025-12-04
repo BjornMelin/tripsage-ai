@@ -52,8 +52,6 @@ describe("POST /api/auth/mfa/verify", () => {
   });
 
   it("generates backup codes only on initial enrollment when user has no existing codes", async () => {
-    mockBackupCodeCount(0);
-
     const { POST } = await import("../verify/route");
     const res = await POST(
       makeJsonRequest("http://localhost/api/auth/mfa/verify", {
@@ -129,6 +127,26 @@ describe("POST /api/auth/mfa/verify", () => {
     expect(mockRegenerate).not.toHaveBeenCalled();
   });
 
+  it("returns 401 when user id is missing during initial enrollment", async () => {
+    mockMfaVerify.mockResolvedValueOnce({ isInitialEnrollment: true });
+    mockApiRouteAuthUser({ id: undefined as unknown as string });
+
+    const { POST } = await import("../verify/route");
+    const res = await POST(
+      makeJsonRequest("http://localhost/api/auth/mfa/verify", {
+        challengeId: ids.challengeId,
+        code: "123456",
+        factorId: ids.factorId,
+      }),
+      createRouteParamsContext()
+    );
+
+    expect(res.status).toBe(401);
+    const json = await res.json();
+    expect(json.error).toBe("unauthenticated");
+    expect(mockRegenerate).not.toHaveBeenCalled();
+  });
+
   it("returns 400 for invalid code", async () => {
     mockMfaVerify.mockRejectedValueOnce(new Error("bad code"));
     const { POST } = await import("../verify/route");
@@ -159,5 +177,28 @@ describe("POST /api/auth/mfa/verify", () => {
     const json = await res.json();
     expect(json.data.status).toBe("verified");
     expect(json.data.backupCodes).toBeUndefined();
+  });
+
+  it("returns 500 when backup code count query fails during initial enrollment", async () => {
+    const mockIs = vi.fn(() => ({ count: null, error: { message: "db_error" } }));
+    const mockEq = vi.fn(() => ({ is: mockIs }));
+    const mockSelect = vi.fn(() => ({ eq: mockEq }));
+    mockFrom.mockReturnValue({ select: mockSelect });
+    mockMfaVerify.mockResolvedValueOnce({ isInitialEnrollment: true });
+
+    const { POST } = await import("../verify/route");
+    const res = await POST(
+      makeJsonRequest("http://localhost/api/auth/mfa/verify", {
+        challengeId: ids.challengeId,
+        code: "123456",
+        factorId: ids.factorId,
+      }),
+      createRouteParamsContext()
+    );
+
+    expect(res.status).toBe(500);
+    const json = await res.json();
+    expect(json.error).toBe("failed_to_fetch_backup_codes");
+    expect(mockRegenerate).not.toHaveBeenCalled();
   });
 });

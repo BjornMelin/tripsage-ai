@@ -108,6 +108,19 @@ export const activitySearchParamsSchema = z.object({
   category: z.string().optional(),
   children: NON_NEGATIVE_INT_SCHEMA.max(20).optional(),
   date: DATE_STRING_SCHEMA.optional(),
+  dateRange: z
+    .object({
+      end: DATE_STRING_SCHEMA.optional(),
+      start: DATE_STRING_SCHEMA.optional(),
+    })
+    .refine(
+      (data) => !data.start || !data.end || new Date(data.end) > new Date(data.start),
+      {
+        error: "End date must be after start date",
+        path: ["end"],
+      }
+    )
+    .optional(),
   destination: z.string().min(1, { error: "destination is required" }),
   difficulty: z.enum(["easy", "moderate", "challenging", "extreme"]).optional(),
   duration: z
@@ -121,6 +134,16 @@ export const activitySearchParamsSchema = z.object({
     .optional(),
   indoor: z.boolean().optional(),
   infants: NON_NEGATIVE_INT_SCHEMA.max(20).optional(),
+  priceRange: z
+    .object({
+      max: z.number().positive().optional(),
+      min: z.number().min(0).optional(),
+    })
+    .refine((data) => !data.min || !data.max || data.min <= data.max, {
+      error: "Min price must be less than or equal to max price",
+      path: ["min"],
+    })
+    .optional(),
 });
 
 /** TypeScript type for activity search parameters. */

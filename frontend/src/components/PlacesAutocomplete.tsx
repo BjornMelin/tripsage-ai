@@ -11,6 +11,10 @@ import { useEffect, useRef, useState } from "react";
 import { getGoogleMapsBrowserKey } from "@/lib/env/client";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 
+type AutocompleteSuggestion = google.maps.places.AutocompleteSuggestion;
+type AutocompleteRequest = google.maps.places.AutocompleteRequest;
+type PlacePrediction = google.maps.places.PlacePrediction;
+
 declare global {
   interface Window {
     google?: typeof google;
@@ -93,7 +97,8 @@ export function PlacesAutocomplete({
     if (!isLoaded || !window.google?.maps?.places) return;
 
     const initAutocomplete = async () => {
-      const placesLibrary = await window.google.maps.importLibrary("places");
+      const placesLibrary: google.maps.PlacesLibrary =
+        await window.google.maps.importLibrary("places");
       const { AutocompleteSessionToken } = placesLibrary;
       const newToken = new AutocompleteSessionToken();
       setSessionToken(newToken);
@@ -121,10 +126,11 @@ export function PlacesAutocomplete({
       if (!isLoaded || !window.google?.maps?.places || !sessionToken) return;
 
       try {
-        const placesLibrary = await window.google.maps.importLibrary("places");
+        const placesLibrary: google.maps.PlacesLibrary =
+          await window.google.maps.importLibrary("places");
         const { AutocompleteSuggestion } = placesLibrary;
 
-        const request: AutocompleteSuggestionRequest = {
+        const request: AutocompleteRequest = {
           input: value,
           sessionToken: sessionToken ?? undefined,
         };
@@ -158,8 +164,12 @@ export function PlacesAutocomplete({
     setDebounceTimer(timer);
   };
 
-  const handlePlaceSelect = async (placePrediction: PlacePrediction) => {
+  const handlePlaceSelect = async (placePrediction: PlacePrediction | null) => {
     if (!isLoaded || !window.google?.maps?.places) return;
+    if (!placePrediction) {
+      setErrorMessage("Invalid place selection. Please try again.");
+      return;
+    }
 
     try {
       const place = placePrediction.toPlace();
@@ -168,8 +178,8 @@ export function PlacesAutocomplete({
       });
 
       onPlaceSelect({
-        displayName: place.displayName?.text ?? "",
-        formattedAddress: place.formattedAddress,
+        displayName: place.displayName ?? "",
+        formattedAddress: place.formattedAddress ?? undefined,
         location: place.location
           ? {
               lat: place.location.lat(),
@@ -182,7 +192,8 @@ export function PlacesAutocomplete({
       setErrorMessage(null);
 
       // Terminate session and create new token
-      const placesLibrary = await window.google.maps.importLibrary("places");
+      const placesLibrary: google.maps.PlacesLibrary =
+        await window.google.maps.importLibrary("places");
       const { AutocompleteSessionToken } = placesLibrary;
       const newToken = new AutocompleteSessionToken();
       setSessionToken(newToken);
@@ -215,20 +226,28 @@ export function PlacesAutocomplete({
       ) : null}
       {suggestions.length > 0 && (
         <ul className="absolute z-10 mt-1 w-full rounded-md border border-gray-300 bg-white shadow-lg">
-          {suggestions.map((suggestion, index) => (
-            <li
-              key={suggestion.placePrediction.placeId ?? index}
-              onClick={() => handlePlaceSelect(suggestion.placePrediction)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  handlePlaceSelect(suggestion.placePrediction);
-                }
-              }}
-              className="cursor-pointer px-4 py-2 hover:bg-gray-100"
-            >
-              {suggestion.placePrediction.text.text}
-            </li>
-          ))}
+          {suggestions
+            .filter(
+              (
+                suggestion
+              ): suggestion is AutocompleteSuggestion & {
+                placePrediction: PlacePrediction;
+              } => suggestion.placePrediction !== null
+            )
+            .map((suggestion, index) => (
+              <li
+                key={suggestion.placePrediction.placeId ?? index}
+                onClick={() => handlePlaceSelect(suggestion.placePrediction)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    handlePlaceSelect(suggestion.placePrediction);
+                  }
+                }}
+                className="cursor-pointer px-4 py-2 hover:bg-gray-100"
+              >
+                {suggestion.placePrediction.text.text}
+              </li>
+            ))}
         </ul>
       )}
     </div>

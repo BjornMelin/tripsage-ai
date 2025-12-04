@@ -19,6 +19,7 @@ import { createServerLogger } from "@/lib/telemetry/logger";
 import { mapDbTripToUi } from "@/lib/trips/mappers";
 
 const logger = createServerLogger("search.activities.actions");
+const tripIdSchema = z.coerce.number().int().positive();
 
 /**
  * Fetches the authenticated user's active and planning trips.
@@ -97,11 +98,7 @@ export async function addActivityToTrip(
     metadata?: Record<string, unknown>;
   }
 ) {
-  // Validate tripId using Zod schema
-  const tripIdSchema = z.number().int().positive();
-  const parsedTripId =
-    typeof tripId === "string" ? Number.parseInt(tripId, 10) : tripId;
-  const tripIdValidation = tripIdSchema.safeParse(parsedTripId);
+  const tripIdValidation = tripIdSchema.safeParse(tripId);
   if (!tripIdValidation.success) {
     throw new Error(`Invalid trip id: ${tripIdValidation.error.message}`);
   }

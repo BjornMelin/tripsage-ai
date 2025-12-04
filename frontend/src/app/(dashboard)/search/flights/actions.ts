@@ -31,7 +31,23 @@ export async function submitFlightSearch(
       if (!validation.success) {
         throw new Error(`Invalid flight search params: ${validation.error.message}`);
       }
-      return validation.data;
+      const parsed = validation.data;
+
+      const normalizedPassengers = parsed.passengers
+        ? parsed.passengers
+        : parsed.adults || parsed.children || parsed.infants
+          ? {
+              adults: parsed.adults ?? 1,
+              children: parsed.children ?? 0,
+              infants: parsed.infants ?? 0,
+            }
+          : undefined;
+
+      return {
+        ...parsed,
+        cabinClass: parsed.cabinClass ?? "economy",
+        passengers: normalizedPassengers,
+      };
     }
   );
 }

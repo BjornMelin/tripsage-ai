@@ -154,6 +154,7 @@ export default function DestinationsSearchClient({
 
   /** Handles the viewing of details for a destination. */
   const handleViewDetails = (destination: Destination) => {
+    // TODO: route to destination detail page or open details modal
     toast({
       description: `Opening details for ${destination.name}...`,
       title: "Destination Details",

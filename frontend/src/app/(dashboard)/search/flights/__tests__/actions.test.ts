@@ -1,5 +1,6 @@
 /** @vitest-environment node */
 
+import type { FlightSearchParams } from "@schemas/search";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock telemetry span
@@ -48,7 +49,10 @@ describe("submitFlightSearch server action", () => {
 
     const result = await submitFlightSearch(params);
 
-    expect(result).toEqual(params);
+    expect(result).toEqual({
+      ...params,
+      passengers: { adults: 2, children: 0, infants: 0 },
+    });
     expectTelemetrySpanCalled("JFK", "LHR");
   });
 
@@ -61,26 +65,25 @@ describe("submitFlightSearch server action", () => {
 
     const result = await submitFlightSearch(params);
 
-    // Action validates and returns - doesn't add defaults for optional fields
     expect(result.origin).toBe("NYC");
     expect(result.destination).toBe("LAX");
     expect(result.adults).toBe(1);
-    // Optional fields remain undefined when not provided
-    expect(result.cabinClass).toBeUndefined();
-    expect(result.passengers).toBeUndefined();
+    // Defaults applied for omitted optional fields
+    expect(result.cabinClass).toBe("economy");
+    expect(result.passengers).toEqual({ adults: 1, children: 0, infants: 0 });
     expectTelemetrySpanCalled("NYC", "LAX");
   });
 
   it("throws error for invalid cabin class", async () => {
     const params = {
-      cabinClass: "invalid-class" as "economy",
+      cabinClass: "invalid-class",
       destination: "LHR",
       origin: "JFK",
     };
 
-    await expect(submitFlightSearch(params)).rejects.toThrow(
-      /Invalid flight search params/
-    );
+    await expect(
+      submitFlightSearch(params as unknown as FlightSearchParams)
+    ).rejects.toThrow(/Invalid flight search params/);
   });
 
   it("validates passengers with nested structure", async () => {
