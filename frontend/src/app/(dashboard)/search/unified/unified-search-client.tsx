@@ -279,12 +279,14 @@ export default function UnifiedSearchClient({
       });
     });
 
-  const handleFlightSelect = async (_flight: FlightResult) => {
-    await Promise.resolve();
+  const handleFlightSelect: (flight: FlightResult) => Promise<void> = async (
+    _flight
+  ) => {
+    /* TODO: implement flight selection */
   };
 
-  const handleHotelSelect = async (_hotel: HotelResult) => {
-    await Promise.resolve();
+  const handleHotelSelect: (hotel: HotelResult) => Promise<void> = async (_hotel) => {
+    /* TODO: implement hotel selection */
   };
 
   const handleCompareFlights = (_flights: FlightResult[]) => {

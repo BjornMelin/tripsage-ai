@@ -34,6 +34,7 @@ import {
   useMemoryStats,
   // useUpdatePreferences, // Future implementation
 } from "@/hooks/use-memory";
+import { TREND_COLORS } from "@/lib/variants/status";
 export type PersonalizationInsightsProps = {
   userId: string;
   className?: string;
@@ -108,20 +109,14 @@ export function PersonalizationInsights({
    * Trend colors aligned with statusVariants urgency mapping.
    * For general trends: increasing=green, decreasing=red, stable=neutral
    */
-  const TrendColors = {
-    decreasing: "text-red-700",
-    increasing: "text-green-700",
-    stable: "text-gray-500",
-  } as const;
-
-  const getTrendIcon = (trend: "increasing" | "decreasing" | "stable") => {
+  const renderTrendIcon = (trend: "increasing" | "decreasing" | "stable") => {
     switch (trend) {
       case "increasing":
-        return <TrendingUpIcon className={`h-4 w-4 ${TrendColors.increasing}`} />;
+        return <TrendingUpIcon className={`h-4 w-4 ${TREND_COLORS.increasing}`} />;
       case "decreasing":
-        return <TrendingDownIcon className={`h-4 w-4 ${TrendColors.decreasing}`} />;
+        return <TrendingDownIcon className={`h-4 w-4 ${TREND_COLORS.decreasing}`} />;
       default:
-        return <BarChart3Icon className={`h-4 w-4 ${TrendColors.stable}`} />;
+        return <BarChart3Icon className={`h-4 w-4 ${TREND_COLORS.stable}`} />;
     }
   };
 
@@ -371,7 +366,7 @@ export function PersonalizationInsights({
                     className="flex items-center justify-between p-3 rounded-lg bg-muted"
                   >
                     <div className="flex items-center gap-3">
-                      {getTrendIcon(trend.trend)}
+                      {renderTrendIcon(trend.trend)}
                       <div>
                         <div className="font-medium capitalize">{trend.category}</div>
                         <div className="text-sm text-muted-foreground capitalize">

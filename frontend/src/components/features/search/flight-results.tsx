@@ -25,6 +25,13 @@ import { useMemo, useOptimistic, useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { cn } from "@/lib/utils";
@@ -146,11 +153,6 @@ export function FlightResults({
     setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
   };
 
-  const cycleSortField = () => {
-    const fields: SortField[] = ["price", "duration", "departure", "emissions"];
-    setSortBy((current) => fields[(fields.indexOf(current) + 1) % fields.length]);
-  };
-
   /** Get price change icon */
   const getPriceChangeIcon = (change?: "up" | "down" | "stable") => {
     if (change === "down")
@@ -247,15 +249,23 @@ export function FlightResults({
                 <FilterIcon className="h-4 w-4 mr-2" />
                 Filters
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={cycleSortField}
-                aria-label={`Sort flights by ${sortBy}`}
+              <Select
+                value={sortBy}
+                onValueChange={(value) => setSortBy(value as SortField)}
               >
-                <ArrowUpDownIcon className="h-4 w-4 mr-2" />
-                Sort: {sortBy}
-              </Button>
+                <SelectTrigger className="w-40 h-9">
+                  <div className="flex items-center gap-2">
+                    <ArrowUpDownIcon className="h-4 w-4" />
+                    <SelectValue placeholder="Sort" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="price">Price</SelectItem>
+                  <SelectItem value="duration">Duration</SelectItem>
+                  <SelectItem value="departure">Departure</SelectItem>
+                  <SelectItem value="emissions">Emissions</SelectItem>
+                </SelectContent>
+              </Select>
               <Button
                 variant="ghost"
                 size="sm"

@@ -90,8 +90,8 @@ export default function HotelsSearchClient({
         availability: {
           // TODO: Determine flexible cancellation from provider data or booking policies
           flexible: false,
-          // TODO: Get real-time room availability from accommodation provider API
-          roomsLeft: 5, // Placeholder until providers return real inventory counts
+          // TODO (MVP placeholder): Replace with real room availability from accommodation object (accommodation.roomsLeft) or provider API before production
+          roomsLeft: accommodation.totalPrice > 0 ? 5 : 0,
           // TODO: Calculate urgency based on availability, booking trends, and date proximity
           urgency: "medium",
         },
@@ -104,8 +104,8 @@ export default function HotelsSearchClient({
           highlights: [],
           // TODO: Aggregate recent mentions from social media and review platforms
           recentMentions: [],
-          // TODO: Analyze sentiment and vibe from reviews, descriptions, and AI analysis
-          vibe: "business", // Placeholder sentiment until provider metadata is available
+          // TODO (MVP placeholder): Replace with vibe derived from reviews/AI analysis (accommodation.vibe) or classification before production
+          vibe: "business",
         },
         id: accommodation.id,
         images: {
@@ -135,16 +135,16 @@ export default function HotelsSearchClient({
           taxes: accommodation.pricePerNight * 0.1,
           totalPrice: accommodation.totalPrice,
         },
-        // TODO: Aggregate review count from review provider APIs
-        reviewCount: 0, // Placeholder until review data is wired
+        // TODO (MVP placeholder): Replace with real review count from accommodation object (accommodation.reviewCount) or review provider APIs before production
+        reviewCount: 0,
         starRating: accommodation.rating,
         sustainability: {
           // TODO: Check sustainability certifications from provider data or external databases
           certified: false,
           // TODO: Extract sustainability practices from hotel metadata
           practices: [],
-          // TODO: Calculate or fetch sustainability score from certification bodies or AI analysis
-          score: 5, // Placeholder until sustainability scores are available
+          // TODO (MVP placeholder): Replace with real sustainability score from accommodation object (accommodation.sustainabilityScore) or external certification databases before production
+          score: 5,
         },
         userRating: accommodation.rating,
       })),

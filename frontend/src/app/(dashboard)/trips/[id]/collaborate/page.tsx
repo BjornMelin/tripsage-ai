@@ -46,11 +46,11 @@ import { statusVariants } from "@/lib/variants/status";
 /**
  * Consistent color palette aligned with statusVariants for roles
  */
-const ROLE_ICON_COLORS = {
+const ROLE_ICON_COLORS: Record<Collaborator["role"], string> = {
   editor: "text-blue-700",
   owner: "text-amber-700",
   viewer: "text-gray-700",
-} as const;
+};
 
 /**
  * Represents a collaborator on a trip with their permissions and status.
@@ -210,7 +210,7 @@ export default function TripCollaborationPage() {
    * @param role - The collaborator role
    * @returns Icon component for the role
    */
-  const getRoleIcon = (role: string) => {
+  const getRoleIcon = (role: Collaborator["role"]) => {
     switch (role) {
       case "owner":
         return <CrownIcon className={`h-4 w-4 ${ROLE_ICON_COLORS.owner}`} />;
@@ -218,8 +218,10 @@ export default function TripCollaborationPage() {
         return <EditIcon className={`h-4 w-4 ${ROLE_ICON_COLORS.editor}`} />;
       case "viewer":
         return <EyeIcon className={`h-4 w-4 ${ROLE_ICON_COLORS.viewer}`} />;
-      default:
-        return <UsersIcon className="h-4 w-4" />;
+      default: {
+        const _exhaustiveCheck: never = role;
+        return _exhaustiveCheck;
+      }
     }
   };
 

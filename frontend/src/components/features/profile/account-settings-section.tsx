@@ -43,12 +43,13 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { getBrowserClient } from "@/lib/supabase";
+import { cn } from "@/lib/utils";
 import { useAuthCore } from "@/stores/auth/auth-core";
 import { useUserProfileStore } from "@/stores/user-store";
 
 /**
  * Alert colors for account status indicators.
- * Aligned with statusVariants for consistency.
+ * Deliberately distinct from statusVariants to keep lightweight, Tailwind-only tokens here.
  */
 const ALERT_COLORS = {
   danger: {
@@ -325,14 +326,18 @@ export function AccountSettingsSection() {
 
           {!isEmailVerified && (
             <div
-              className={`rounded-lg border ${ALERT_COLORS.warning.border} ${ALERT_COLORS.warning.bg} p-4`}
+              className={cn(
+                "rounded-lg border p-4",
+                ALERT_COLORS.warning.border,
+                ALERT_COLORS.warning.bg
+              )}
             >
               <div className="flex justify-between items-center">
                 <div>
-                  <h4 className={`text-sm font-medium ${ALERT_COLORS.warning.title}`}>
+                  <h4 className={cn("text-sm font-medium", ALERT_COLORS.warning.title)}>
                     Email verification required
                   </h4>
-                  <p className={`text-sm ${ALERT_COLORS.warning.text}`}>
+                  <p className={cn("text-sm", ALERT_COLORS.warning.text)}>
                     Please verify your email address to enable all features.
                   </p>
                 </div>

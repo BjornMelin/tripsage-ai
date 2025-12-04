@@ -31,7 +31,7 @@ import { withClientTelemetrySpan } from "@/lib/telemetry/client";
 import { useSearchForm } from "./common/use-search-form";
 
 interface ActivitySearchFormProps {
-  onSearch?: (data: ActivitySearchParams) => void | Promise<void>;
+  onSearch?: (data: ActivitySearchParams) => Promise<void>;
   initialValues?: Partial<ActivitySearchFormData>;
 }
 

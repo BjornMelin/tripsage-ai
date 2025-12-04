@@ -1,6 +1,6 @@
 /** @vitest-environment node */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createRouteParamsContext,
   makeJsonRequest,
@@ -17,6 +17,11 @@ describe("POST /api/auth/mfa/challenge", () => {
     resetApiRouteMocks();
     challengeTotp.mockReset();
     challengeTotp.mockResolvedValue({ challengeId: "challenge-abc" });
+  });
+
+  afterEach(() => {
+    resetApiRouteMocks();
+    challengeTotp.mockReset();
   });
 
   it("issues a challenge", async () => {
