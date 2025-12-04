@@ -280,6 +280,8 @@ export const useFilterStore = create<FilterState>()(
 );
 ```
 
+Do not persist computed fields — configure `persist` with `partialize` to omit derived keys (e.g., `activeFilterCount`, `hasActiveFilters`) so they are recomputed on hydration.
+
 **When to use**:
 
 - Aggregations from collections (counts, sums, filters)

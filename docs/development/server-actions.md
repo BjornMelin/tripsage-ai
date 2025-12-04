@@ -65,6 +65,7 @@ import "server-only";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { tripCreateSchema } from "@schemas/trips";
+import type { TripCreateData } from "@schemas/trips"; // generated from tripCreateSchema
 import { createServerSupabase } from "@/lib/supabase/server";
 
 export async function createTripAction(data: TripCreateData) {
@@ -114,10 +115,13 @@ export async function deleteTripAction(tripId: string): Promise<never> {
 ```typescript
 "use client";
 
+import { useRouter } from "next/navigation";
 import { createTripAction } from "./actions";
 import { useZodForm } from "@/hooks/use-zod-form";
+import { tripFormSchema } from "@schemas/trips";
 
 function TripForm() {
+  const router = useRouter();
   const form = useZodForm({ schema: tripFormSchema });
 
   const onSubmit = form.handleSubmitSafe(async (data) => {
@@ -137,6 +141,7 @@ For forms that work without JavaScript:
 "use client";
 
 import { useActionState } from "react";
+import { createTripAction } from "./actions";
 
 const [state, formAction, isPending] = useActionState(
   async (_prev, formData: FormData) => {
@@ -217,7 +222,8 @@ revalidateTag("trips");
 ```typescript
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
+import { deleteTripAction } from "./actions";
 
 const [isPending, startTransition] = useTransition();
 const [error, setError] = useState<string | null>(null);

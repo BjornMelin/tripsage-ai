@@ -112,6 +112,8 @@ const store = create<State>()(
 );
 ```
 
+When adding `persist`, configure `partialize` to store only base state (e.g., `count`, `multiplier`) and exclude computed fields (`doubled`, `total`) so they recompute on hydration.
+
 ### 6. Side effects
 
 Compute functions must be pure:
@@ -165,16 +167,26 @@ import { withComputed, createComputeFn } from '@/stores/middleware/computed';
 interface CounterState {
   count: number;
   multiplier: number;
+}
+
+interface CounterComputed {
   doubled: number;
   total: number;
 }
 
-const computeCounterState = createComputeFn<CounterState>({
+interface CounterActions {
+  increment: () => void;
+  setMultiplier: (multiplier: number) => void;
+}
+
+type CounterStore = CounterState & CounterComputed & CounterActions;
+
+const computeCounterState = createComputeFn<CounterStore>({
   doubled: (state) => state.count * 2,
   total: (state) => state.count * state.multiplier,
 });
 
-export const useCounterStore = create<CounterState>()(
+export const useCounterStore = create<CounterStore>()(
   withComputed(
     { compute: computeCounterState },
     (set) => ({
@@ -211,14 +223,14 @@ export const useStore = create<State>()(
         { compute: computeFn },
         (set, get) => ({ /* base state */ })
       ),
-      { name: 'my-store' }
+      { name: 'my-store', /* partialize: (state) => ({ baseOnly: state.baseOnly }) */ }
     ),
     { name: 'MyStore' }
   )
 );
 ```
 
-Order rationale: devtools logs all changes; persist can save computed values; withComputed runs innermost to ensure derived values exist before persistence. Do not persist computed values; recompute from base state on hydration.
+Order rationale: devtools logs all changes; persist saves only base state via `partialize` so computed values are excluded; withComputed runs innermost to ensure derived values exist before the persistence layer rehydrates. Do not persist computed fields—use `partialize` to drop them and recompute on hydration.
 
 ---
 

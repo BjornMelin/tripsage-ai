@@ -199,6 +199,8 @@ export const searchFormSchema = z.strictObject({
 });
 ```
 
+Note: `Number(s) || 0` collapses empty or invalid input to `0`, hiding the difference between “no value” and an explicit zero. When that distinction matters, use a nullable transform instead (e.g., `maxPrice: z.string().transform((s) => { const n = Number(s.trim()); return Number.isFinite(n) ? n : null; }).nullable()`), and treat `null` downstream as “no max price” or convert it to a default before submitting.
+
 ### Partial Schemas for Wizard Steps
 
 Use `.pick()` for multi-step forms:
