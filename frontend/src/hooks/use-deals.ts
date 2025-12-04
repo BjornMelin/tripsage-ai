@@ -7,8 +7,9 @@
 
 "use client";
 
-import type { Deal, DealAlert, DealFilters, DealState, DealType } from "@schemas/deals";
+import type { Deal, DealFilters, DealState, DealType } from "@schemas/deals";
 import { useCallback, useEffect, useMemo } from "react";
+import { groupBy, unique } from "@/lib/collection-utils";
 import { useDealsStore } from "@/stores/deals-store";
 
 /**
@@ -161,42 +162,22 @@ export function useDeals() {
 
   // Group deals by destination
   const dealsByDestination = useMemo(() => {
-    return allDeals.reduce(
-      (acc: Record<string, Deal[]>, deal: Deal) => {
-        const destination = deal.destination;
-        if (!acc[destination]) {
-          acc[destination] = [];
-        }
-        acc[destination].push(deal);
-        return acc;
-      },
-      {} as Record<string, Deal[]>
-    );
+    return groupBy(allDeals, (deal) => deal.destination);
   }, [allDeals]);
 
   // Group deals by type
   const dealsByType = useMemo(() => {
-    return allDeals.reduce(
-      (acc: Record<DealType, Deal[]>, deal: Deal) => {
-        const type = deal.type;
-        if (!acc[type]) {
-          acc[type] = [];
-        }
-        acc[type].push(deal);
-        return acc;
-      },
-      {} as Record<DealType, Deal[]>
-    );
+    return groupBy(allDeals, (deal) => deal.type);
   }, [allDeals]);
 
   // Get unique destinations
   const uniqueDestinations = useMemo(() => {
-    return [...new Set(allDeals.map((deal) => deal.destination))];
+    return unique(allDeals.map((deal) => deal.destination));
   }, [allDeals]);
 
   // Get unique providers
   const uniqueProviders = useMemo(() => {
-    return [...new Set(allDeals.map((deal) => deal.provider))];
+    return unique(allDeals.map((deal) => deal.provider));
   }, [allDeals]);
 
   return {
@@ -268,22 +249,18 @@ export function useDealAlerts() {
     [alerts]
   );
 
+  const isAlertWithDealType = useCallback(
+    (
+      alert: (typeof alerts)[number]
+    ): alert is (typeof alerts)[number] & { dealType: string } =>
+      typeof alert.dealType === "string" && alert.dealType.trim().length > 0,
+    []
+  );
+
   // Get alerts by type
   const alertsByType = useMemo(() => {
-    return alerts.reduce(
-      (acc, alert) => {
-        const type = alert.dealType;
-        if (type) {
-          if (!acc[type]) {
-            acc[type] = [];
-          }
-          acc[type].push(alert);
-        }
-        return acc;
-      },
-      {} as Record<string, DealAlert[]>
-    );
-  }, [alerts]);
+    return groupBy(alerts.filter(isAlertWithDealType), (alert) => alert.dealType);
+  }, [alerts, isAlertWithDealType]);
 
   return {
     activeAlerts,

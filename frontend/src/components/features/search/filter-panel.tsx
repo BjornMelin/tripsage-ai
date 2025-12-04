@@ -229,10 +229,12 @@ export function FilterPanel({
           </div>
           {hasActiveFilters && (
             <Button
+              type="button"
               variant="ghost"
               size="sm"
               onClick={clearAllFilters}
-              className="h-7 px-2 text-xs"
+              className="h-7 px-2 text-xs focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              aria-label="Clear all filters"
             >
               Clear All
             </Button>
@@ -258,7 +260,7 @@ export function FilterPanel({
                 <button
                   type="button"
                   onClick={() => handleRemoveFilter(filterId)}
-                  className="ml-1 hover:bg-muted rounded-full p-0.5"
+                  className="ml-1 hover:bg-muted rounded-full p-0.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                   aria-label={`Remove ${label} filter`}
                 >
                   <XIcon className="h-3 w-3" />
@@ -286,13 +288,15 @@ export function FilterPanel({
                 {filtersByCategory.pricing.some((f) => activeFilters[f.id]) && (
                   <div className="flex justify-end mb-2">
                     <Button
+                      type="button"
                       variant="ghost"
                       size="sm"
-                      className="h-6 px-2 text-xs"
+                      className="h-6 px-2 text-xs focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleClearCategory("pricing");
                       }}
+                      aria-label="Clear price range filter"
                     >
                       Clear
                     </Button>
@@ -340,13 +344,15 @@ export function FilterPanel({
                 {activeFilters.airlines && (
                   <div className="flex justify-end mb-2">
                     <Button
+                      type="button"
                       variant="ghost"
                       size="sm"
-                      className="h-6 px-2 text-xs"
+                      className="h-6 px-2 text-xs focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleClearCategory("airline");
                       }}
+                      aria-label="Clear airlines filter"
                     >
                       Clear
                     </Button>

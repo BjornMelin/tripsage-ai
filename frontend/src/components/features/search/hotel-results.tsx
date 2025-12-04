@@ -32,6 +32,7 @@ import { Separator } from "@/components/ui/separator";
 import { type Coordinates, calculateDistanceKm } from "@/lib/geo";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { cn } from "@/lib/utils";
+import { statusVariants } from "@/lib/variants/status";
 import { GetAmenityIcon } from "./cards/amenities";
 import { RatingStars } from "./cards/rating-stars";
 import { formatCurrency } from "./common/format";
@@ -103,18 +104,6 @@ export function HotelResults({
       onSaveToWishlist(hotelId);
       return newSet;
     });
-  };
-
-  /** Get urgency color */
-  const getUrgencyColor = (urgency: string) => {
-    switch (urgency) {
-      case "high":
-        return "text-red-600 bg-red-50 border-red-200";
-      case "medium":
-        return "text-orange-600 bg-orange-50 border-orange-200";
-      default:
-        return "text-green-600 bg-green-50 border-green-200";
-    }
   };
 
   /** Get price history icon */
@@ -459,7 +448,12 @@ export function HotelResults({
                   <div
                     className={cn(
                       "text-xs p-2 rounded mb-3",
-                      getUrgencyColor(hotel.availability.urgency)
+                      statusVariants({
+                        urgency: hotel.availability.urgency as
+                          | "high"
+                          | "medium"
+                          | "low",
+                      })
                     )}
                   >
                     Only {hotel.availability.roomsLeft} room
