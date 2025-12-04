@@ -204,7 +204,7 @@ describe("ActivitySearchForm", () => {
     fireEvent.change(childrenInput, { target: { value: "15" } });
     fireEvent.blur(childrenInput);
 
-    // Test duration max - use the specific min duration input
+    // Test duration min - use the specific min duration input
     const minDurationInput = screen.getByLabelText(/min duration/i);
     fireEvent.change(minDurationInput, { target: { value: "50" } });
     fireEvent.blur(minDurationInput);

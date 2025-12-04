@@ -51,12 +51,12 @@ export default function SearchHubClient() {
    *
    * @param searchType - The type of search to repeat.
    * @param params - The parameters to repeat the search with.
-   * @returns A promise that resolves when the search is repeated.
+   * @returns void
    */
   const handleRepeatSearch = (
     searchType: SearchType,
     params: Record<string, unknown>
-  ) => {
+  ): void => {
     const basePath = getSearchPath(searchType);
     const queryParams = new URLSearchParams();
 
@@ -279,11 +279,11 @@ function getSearchTitle(params: Record<string, unknown>): string {
 }
 
 /** Get the icon for a search type. */
-function getSearchTypeIcon(type: string): React.ReactNode {
+function getSearchTypeIcon(type: SearchType): React.ReactNode {
   switch (type) {
     case "flight":
       return <PlaneIcon className="h-3 w-3" />;
-    case "hotel":
+    case "accommodation":
       return <HotelIcon className="h-3 w-3" />;
     case "activity":
       return <SparklesIcon className="h-3 w-3" />;
@@ -338,7 +338,7 @@ function RecentSearchCard({
   onRepeat,
 }: {
   title: string;
-  type: string;
+  type: SearchType;
   date: string;
   onRepeat: () => Promise<void> | void;
 }) {

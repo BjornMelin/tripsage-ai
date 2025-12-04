@@ -168,6 +168,19 @@ export function HotelResults({
     setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
   };
 
+  const formatSortLabel = (sort: typeof sortBy) => {
+    const labels: Record<typeof sortBy, string> = {
+      ai: "AI Recommended",
+      distance: "Distance",
+      price: "Price",
+      rating: "Rating",
+    };
+    return labels[sort];
+  };
+
+  const formatDirectionLabel = (direction: typeof sortDirection) =>
+    direction === "asc" ? "↑" : "↓";
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -228,7 +241,7 @@ export function HotelResults({
               </Button>
               <Button variant="ghost" size="sm" onClick={toggleDirection}>
                 <ArrowUpDownIcon className="h-4 w-4 mr-2" />
-                Sort: {sortBy === "ai" ? "AI Recommended" : sortBy} ({sortDirection})
+                Sort: {formatSortLabel(sortBy)} ({formatDirectionLabel(sortDirection)})
               </Button>
               <Button variant="outline" size="sm" onClick={cycleSort}>
                 Change Sort

@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/components/ui/use-toast";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { cn } from "@/lib/utils";
 import { ActivityCard } from "./activity-card";
@@ -27,6 +28,7 @@ interface ActivityResultsProps {
   loading?: boolean;
   onSelect: (activity: Activity) => Promise<void>;
   onCompare?: (activities: Activity[]) => void;
+  onOpenFilters?: () => void;
   onLoadMore?: () => Promise<void>;
   hasMore?: boolean;
   className?: string;
@@ -38,6 +40,7 @@ export function ActivityResults({
   loading = false,
   onSelect,
   onCompare,
+  onOpenFilters,
   onLoadMore,
   hasMore = false,
   className,
@@ -50,6 +53,7 @@ export function ActivityResults({
     new Set()
   );
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const { toast } = useToast();
 
   // Optimistic selection state
   const [optimisticSelecting, setOptimisticSelecting] = useOptimistic(
@@ -105,6 +109,19 @@ export function ActivityResults({
     setIsLoadingMore(true);
     try {
       await onLoadMore();
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      recordClientErrorOnActiveSpan(err, {
+        action: "handleLoadMore",
+        context: "ActivityResults",
+      });
+      toast({
+        description:
+          err.message ||
+          "An unexpected error occurred while loading activities. Please try again.",
+        title: "Unable to load more activities",
+        variant: "destructive",
+      });
     } finally {
       setIsLoadingMore(false);
     }
@@ -180,7 +197,14 @@ export function ActivityResults({
             </span>
             <Separator orientation="vertical" className="h-4" />
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onOpenFilters}
+                disabled={!onOpenFilters}
+                aria-label="Open activity filters"
+                title={onOpenFilters ? undefined : "Filters unavailable"}
+              >
                 <FilterIcon className="h-4 w-4 mr-2" />
                 Filters
               </Button>

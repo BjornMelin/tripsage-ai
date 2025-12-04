@@ -51,7 +51,7 @@ export function formatDurationHours(hours: number): string {
   }
 
   const days = Math.floor(hours / 24);
-  const remainderHours = Math.floor(hours - days * 24);
+  const remainderHours = Math.floor(hours % 24);
 
   if (remainderHours === 0) {
     return `${days} ${days === 1 ? "day" : "days"}`;

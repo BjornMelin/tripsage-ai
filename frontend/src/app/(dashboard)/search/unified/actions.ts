@@ -45,6 +45,7 @@ export async function searchHotelsAction(
     checkIn: params.checkIn,
     checkOut: params.checkOut,
     children: params.children,
+    currency: params.currency,
     destination: params.location,
     minRating: params.rating,
     priceRange: params.priceRange,
@@ -57,14 +58,25 @@ export async function searchHotelsAction(
 
   const validatedParams = validation.data;
   const service = getAccommodationsService();
+  const formatLocalDate = (date: Date) => {
+    const year = date.getFullYear();
+    const month = `${date.getMonth() + 1}`.padStart(2, "0");
+    const day = `${date.getDate()}`.padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+  const today = new Date();
+  const todayIso = formatLocalDate(today);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+  const tomorrowIso = formatLocalDate(tomorrow);
   const searchResult = await withTelemetrySpan(
     "ui.unified.searchHotels",
     { attributes: { location: validatedParams.destination ?? "" } },
     async () =>
       await service.search(
         {
-          checkin: validatedParams.checkIn ?? new Date().toISOString().split("T")[0],
-          checkout: validatedParams.checkOut ?? new Date().toISOString().split("T")[0],
+          checkin: validatedParams.checkIn ?? todayIso,
+          checkout: validatedParams.checkOut ?? tomorrowIso,
           guests: (validatedParams.adults ?? 1) + (validatedParams.children ?? 0),
           location: validatedParams.destination ?? "",
           priceMax: validatedParams.priceRange?.max,
@@ -121,7 +133,7 @@ export async function searchHotelsAction(
         name: "Hotel",
         pricing: {
           basePrice: 0,
-          currency: "USD",
+          currency: validatedParams.currency ?? "USD",
           priceHistory: "stable",
           pricePerNight: 0,
           taxes: 0,
@@ -197,7 +209,7 @@ export async function searchHotelsAction(
         basePrice: ratePrice
           ? Number.parseFloat(String(ratePrice.base ?? pricePerNight ?? "0"))
           : 0,
-        currency: ratePrice?.currency ?? "USD",
+        currency: ratePrice?.currency ?? validatedParams.currency ?? "USD",
         priceHistory: "stable",
         pricePerNight: Number(pricePerNight),
         taxes: ratePrice?.taxes?.[0]?.amount

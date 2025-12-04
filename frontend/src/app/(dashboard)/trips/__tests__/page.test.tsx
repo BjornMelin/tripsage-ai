@@ -2,6 +2,7 @@
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiError, type AppError } from "@/lib/api/error-types";
 
 // Mock Lucide icons
 vi.mock("lucide-react", async (importOriginal) => {
@@ -31,7 +32,7 @@ interface MockTrip {
 
 const mockTrips = vi.hoisted(() => vi.fn((): MockTrip[] => []));
 const mockIsLoading = vi.hoisted(() => vi.fn(() => false));
-const mockError = vi.hoisted(() => vi.fn(() => null));
+const mockError = vi.hoisted(() => vi.fn((): AppError | null => null));
 const mockCreateTrip = vi.hoisted(() => vi.fn());
 const mockDeleteTrip = vi.hoisted(() => vi.fn());
 
@@ -137,7 +138,7 @@ describe("TripsPage", () => {
 
   describe("Error state", () => {
     it("renders gracefully when an error occurs", () => {
-      mockError.mockReturnValue(null);
+      mockError.mockReturnValue(new ApiError("Failed to load trips", 500));
       mockTrips.mockReturnValue([]);
 
       render(<TripsPage />);

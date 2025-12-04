@@ -1,17 +1,22 @@
 /** @vitest-environment node */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { emitOperationalAlert } from "@/lib/telemetry/alerts";
 import { TELEMETRY_SERVICE_NAME } from "@/lib/telemetry/constants";
 
 vi.mock("@/lib/telemetry/span", () => ({
   recordTelemetryEvent: vi.fn(),
 }));
 
+import { emitOperationalAlert } from "@/lib/telemetry/alerts";
+import { recordTelemetryEvent } from "@/lib/telemetry/span";
+
+const mockRecordTelemetryEvent = vi.mocked(recordTelemetryEvent);
+
 describe("emitOperationalAlert", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2025-11-13T00:00:00.000Z"));
+    mockRecordTelemetryEvent.mockClear();
   });
 
   afterEach(() => {
@@ -19,78 +24,87 @@ describe("emitOperationalAlert", () => {
     vi.restoreAllMocks();
   });
 
-  it("logs structured payload via console.error by default", () => {
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
-
+  it("records error severity alert via OTel with default error level", () => {
     emitOperationalAlert("redis.unavailable", {
       attributes: { feature: "cache.tags", ignored: undefined },
     });
 
-    expect(errorSpy).toHaveBeenCalledWith(
-      "[operational-alert]",
-      JSON.stringify({
-        attributes: { feature: "cache.tags" },
-        event: "redis.unavailable",
-        severity: "error",
-        source: TELEMETRY_SERVICE_NAME,
-        timestamp: "2025-11-13T00:00:00.000Z",
+    expect(mockRecordTelemetryEvent).toHaveBeenCalledWith(
+      "alert.redis.unavailable",
+      expect.objectContaining({
+        attributes: {
+          "alert.severity": "error",
+          "alert.source": TELEMETRY_SERVICE_NAME,
+          "alert.timestamp": "2025-11-13T00:00:00.000Z",
+          feature: "cache.tags",
+        },
+        level: "error",
       })
     );
   });
 
-  it("uses console.warn for non-error severities", () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
-
+  it("records warning severity alert via OTel", () => {
     emitOperationalAlert("webhook.verification_failed", {
       attributes: { reason: "missing_secret_env" },
       severity: "warning",
     });
 
-    expect(warnSpy).toHaveBeenCalledTimes(1);
-    expect(errorSpy).not.toHaveBeenCalled();
-    const loggedPayload = warnSpy.mock.calls[0]?.[1] as string;
-    expect(JSON.parse(loggedPayload)).toMatchObject({
-      event: "webhook.verification_failed",
-      severity: "warning",
-    });
+    expect(mockRecordTelemetryEvent).toHaveBeenCalledWith(
+      "alert.webhook.verification_failed",
+      expect.objectContaining({
+        attributes: expect.objectContaining({
+          "alert.severity": "warning",
+          reason: "missing_secret_env",
+        }),
+        level: "warning",
+      })
+    );
   });
 
-  it("suppresses console sink when TELEMETRY_SILENT=1", async () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    const original = process.env.TELEMETRY_SILENT;
+  it("records info severity alert via OTel", () => {
+    emitOperationalAlert("deployment.completed", {
+      attributes: { version: "1.2.3" },
+      severity: "info",
+    });
 
-    try {
-      process.env.TELEMETRY_SILENT = "1";
+    expect(mockRecordTelemetryEvent).toHaveBeenCalledWith(
+      "alert.deployment.completed",
+      expect.objectContaining({
+        attributes: expect.objectContaining({
+          "alert.severity": "info",
+          version: "1.2.3",
+        }),
+        level: "info",
+      })
+    );
+  });
 
-      // Reimport to pick up the new environment variable
-      await vi.resetModules();
-      const { emitOperationalAlert: emitWithSilent } = await import(
-        "@/lib/telemetry/alerts"
-      );
-      const { recordTelemetryEvent } = await import("@/lib/telemetry/span");
+  it("filters out undefined attributes", () => {
+    const attributesMatcher = {
+      asymmetricMatch: (value: Record<string, unknown>) =>
+        value !== null &&
+        typeof value === "object" &&
+        value.defined === "value" &&
+        value.empty === "" &&
+        value.zero === 0 &&
+        !Object.hasOwn(value, "undefined"),
+      toString: () => "attributes without undefined key",
+    };
 
-      emitWithSilent("redis.unavailable", {
-        attributes: { feature: "cache.tags" },
-        severity: "warning",
-      });
+    emitOperationalAlert("test.event", {
+      attributes: {
+        defined: "value",
+        empty: "",
+        undefined: undefined,
+        zero: 0,
+      },
+    });
 
-      expect(warnSpy).not.toHaveBeenCalled();
-      expect(errorSpy).not.toHaveBeenCalled();
-      expect(recordTelemetryEvent).toHaveBeenCalledWith(
-        "alert.redis.unavailable",
-        expect.objectContaining({ level: "warning" })
-      );
-    } finally {
-      // Ensure env is restored even if assertions fail
-      if (original === undefined) {
-        Reflect.deleteProperty(process.env, "TELEMETRY_SILENT");
-      } else {
-        process.env.TELEMETRY_SILENT = original;
-      }
-      // Restore module state to avoid affecting other tests
-      await vi.resetModules();
-    }
+    expect(mockRecordTelemetryEvent).toHaveBeenCalledWith(
+      "alert.test.event",
+      expect.objectContaining({
+        attributes: attributesMatcher,
+      })
+    );
   });
 });
