@@ -25,17 +25,54 @@ type TripUpdate = UpdateTables<"trips">;
 type TripUpdateKey = keyof TripUpdate;
 
 /**
- * Consistent color palette aligned with statusVariants for update statuses
+ * Derive text/bg tone classes from the shared statusVariants map to avoid
+ * hardcoded palette drift. Parsing is scoped here to keep icon/dot styling
+ * lightweight while still anchored to the design tokens.
  */
-const UPDATE_STATUS_COLORS = {
-  error: "text-red-700",
-  pending: "text-blue-700",
-  success: "text-green-700",
+function ToneClassFor(input: Parameters<typeof statusVariants>[0]) {
+  return statusVariants({ ...input, excludeRing: true });
+}
+
+function ExtractClass(classes: string, prefix: string) {
+  return classes.split(" ").find((cls) => cls.startsWith(prefix)) ?? "";
+}
+
+const STATUS_TONES = {
+  active: ToneClassFor({ status: "active" }),
+  error: ToneClassFor({ status: "error" }),
+  pending: ToneClassFor({ status: "pending" }),
+  success: ToneClassFor({ status: "success" }),
 } as const;
 
-const COLLABORATOR_STATUS_COLORS = {
-  active: "bg-green-700",
+const UPDATE_STATUS_COLORS = {
+  error: ExtractClass(STATUS_TONES.error, "text-"),
+  pending: ExtractClass(STATUS_TONES.pending, "text-"),
+  success: ExtractClass(STATUS_TONES.success, "text-"),
 } as const;
+
+const CONNECTION_BADGE_PROPS = {
+  active: {
+    className: statusVariants({ status: "active" }),
+    icon: CheckCircleIcon,
+    label: "Live updates enabled",
+  },
+  issues: {
+    className: statusVariants({ status: "pending" }),
+    icon: AlertCircleIcon,
+    label: "Connection issues detected",
+  },
+  offline: {
+    className: statusVariants({ status: "error" }),
+    icon: AlertCircleIcon,
+    label: "Offline - Changes will sync when reconnected",
+  },
+} as const;
+
+type ConnectionState = keyof typeof CONNECTION_BADGE_PROPS;
+
+function GetConnectionBadgeProps(state: ConnectionState) {
+  return CONNECTION_BADGE_PROPS[state];
+}
 
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -320,28 +357,18 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
    */
   const getConnectionStatus = () => {
     const realtimeErrors = realtimeStatus?.errors ?? [];
-    if (!isConnected) {
-      return (
-        <Badge variant="destructive" className="mb-4">
-          <AlertCircleIcon className="h-3 w-3 mr-1" />
-          Offline - Changes will sync when reconnected
-        </Badge>
-      );
-    }
+    const state: ConnectionState = isConnected
+      ? realtimeErrors.length > 0
+        ? "issues"
+        : "active"
+      : "offline";
 
-    if (realtimeErrors.length > 0) {
-      return (
-        <Badge variant="secondary" className="mb-4">
-          <AlertCircleIcon className="h-3 w-3 mr-1" />
-          Connection issues detected
-        </Badge>
-      );
-    }
+    const { className, icon: Icon, label } = GetConnectionBadgeProps(state);
 
     return (
-      <Badge className={`mb-4 ${statusVariants({ status: "active" })}`}>
-        <CheckCircleIcon className="h-3 w-3 mr-1" />
-        Live updates enabled
+      <Badge className={`mb-4 ${className}`}>
+        <Icon className="h-3 w-3 mr-1" />
+        {label}
       </Badge>
     );
   };
@@ -599,7 +626,7 @@ export function CollaborationIndicator({ tripId: _tripId }: { tripId: number }) 
             >
               <div className="flex items-center space-x-2">
                 <div
-                  className={`w-2 h-2 rounded-full ${COLLABORATOR_STATUS_COLORS.active}`}
+                  className={`w-2 h-2 rounded-full ${ExtractClass(STATUS_TONES.active, "bg-")}`}
                 />
                 <span className="text-sm font-medium">{collaborator.name}</span>
               </div>

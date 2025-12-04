@@ -39,10 +39,18 @@ The TripSage search domain uses three distinct hook patterns, each optimized for
 **Code pattern:**
 
 ```typescript
+// Abbreviated example: imports (React, React Query, apiClient) omitted for brevity.
 export function useAccommodationSearch() {
   const { updateAccommodationParams } = useSearchParamsStore();
   const { startSearch, setSearchResults, setSearchError, completeSearch } =
     useSearchResultsStore();
+  const currentSearchIdRef = useRef<string | null>(null);
+  const getSuggestions = useQuery({
+    queryKey: ["accommodation-suggestions"],
+    // Replace with your suggestions endpoint/client
+    queryFn: () => apiClient.get<AccommodationSuggestion[]>("/accommodations/suggestions"),
+    staleTime: 5 * 60 * 1000,
+  });
 
   const searchMutation = useMutation({
     mutationFn: async (params: SearchAccommodationParams) => {
@@ -122,11 +130,29 @@ export function useActivitySearch(): UseActivitySearchResult {
       setResults(data.activities);
       setSearchMetadata(data.metadata);
     } catch (error) {
-      setSearchError(error);
+      setSearchError(error as Error);
       setResults(null);
     } finally {
       setIsSearching(false);
     }
+  }, []);
+
+  const resetSearch = useCallback(() => {
+    setIsSearching(false);
+    setSearchError(null);
+    setResults(null);
+    setSearchMetadata(null);
+    // Optional: abort any in-flight request here.
+  }, []);
+
+  const saveSearch = useCallback((params: ActivitySearchParams) => {
+    // Persist locally; replace with API call if needed.
+    localStorage.setItem("latest-activity-search", JSON.stringify(params));
+    setSearchMetadata((prev) => ({
+      ...(prev ?? {}),
+      savedAt: new Date().toISOString(),
+      source: "local",
+    }));
   }, []);
 
   return {
@@ -137,7 +163,7 @@ export function useActivitySearch(): UseActivitySearchResult {
     searchActivities,
     resetSearch,
     saveSearch,
-    // ... other methods
+    // Add more helpers as needed (e.g., debounce, cache hydration)
   };
 }
 ```
@@ -169,22 +195,36 @@ export function useActivitySearch(): UseActivitySearchResult {
 **Code pattern:**
 
 ```typescript
+// Example assumes a Google Places API key (e.g., from env) and a normalize helper.
 export function useDestinationSearch() {
   const [results, setResults] = useState<Destination[]>([]);
+  const [error, setError] = useState<Error | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_KEY;
+
+  const normalizeGooglePlace = (place: GooglePlace): Destination => ({
+    id: place.id,
+    name: place.displayName.text,
+    country: place.addressComponents?.country,
+    formattedAddress: place.formattedAddress,
+  });
 
   const search = useCallback(async (query: string) => {
     // Cancel previous request
     abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
+    setIsSearching(true);
+    setError(null);
 
     try {
       const response = await fetch(
-        `https://places.googleapis.com/v1/places:searchText`,
+        "https://places.googleapis.com/v1/places:searchText",
         {
           body: JSON.stringify({ textQuery: query }),
           headers: {
-            "X-Goog-Api-Key": apiKey,
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": apiKey ?? "",
           },
           method: "POST",
           signal: abortControllerRef.current.signal,
@@ -193,14 +233,16 @@ export function useDestinationSearch() {
 
       const data = await response.json();
       // Normalize to internal Destination type
-      const destinations = data.places.map(normalizeGooglePlace);
+      const destinations = (data.places ?? []).map(normalizeGooglePlace);
       setResults(destinations);
     } catch (error) {
-      if (error.name !== "AbortError") {
-        setError(error);
+      if ((error as Error).name !== "AbortError") {
+        setError(error as Error);
       }
+    } finally {
+      setIsSearching(false);
     }
-  }, []);
+  }, [apiKey]);
 
   return { results, search, isSearching, error };
 }

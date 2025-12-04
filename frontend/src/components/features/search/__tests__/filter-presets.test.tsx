@@ -7,14 +7,18 @@ import { useSearchFiltersStore } from "@/stores/search-filters-store";
 import { render as renderWithProviders } from "@/test/test-utils";
 import { FilterPresets } from "../filter-presets";
 
+function ResetStore() {
+  useSearchFiltersStore.getState().reset();
+}
+
 describe("FilterPresets", () => {
   beforeEach(() => {
-    useSearchFiltersStore.getState().reset();
+    ResetStore();
     useSearchFiltersStore.getState().setSearchType("flight");
   });
 
   afterEach(() => {
-    useSearchFiltersStore.getState().reset();
+    ResetStore();
   });
 
   it("enables Save when filters are active and creates a preset", async () => {

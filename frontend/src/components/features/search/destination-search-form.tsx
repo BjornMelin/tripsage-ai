@@ -57,7 +57,7 @@ type PlacesApiPlace = {
 
 /** Interface for destination search form props. */
 interface DestinationSearchFormProps {
-  onSearch?: (data: DestinationSearchParams) => void;
+  onSearch?: (data: DestinationSearchParams) => void | Promise<void>;
   initialValues?: Partial<DestinationSearchFormValues>;
   userId?: string;
   showMemoryRecommendations?: boolean;
@@ -331,8 +331,18 @@ export function DestinationSearchForm({
       "search.destination.form.submit",
       { searchType: "destination" },
       async () => {
-        if (onSearch) {
-          await onSearch(mapDestinationValuesToParams(data));
+        try {
+          if (onSearch) {
+            await onSearch(mapDestinationValuesToParams(data));
+          }
+        } catch (error) {
+          toast({
+            description:
+              error instanceof Error ? error.message : "Destination search failed",
+            title: "Search Error",
+            variant: "destructive",
+          });
+          throw error;
         }
       }
     );

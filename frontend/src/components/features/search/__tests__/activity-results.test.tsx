@@ -140,9 +140,8 @@ describe("ActivityResults", () => {
 
     const controls = screen.getByTestId("activity-results-controls");
     const layout = controls.nextElementSibling as HTMLElement;
-    const controlButtons = within(controls).getAllByRole("button");
-    const listToggle = controlButtons[4];
-    const gridToggle = controlButtons[5];
+    const listToggle = within(controls).getByRole("button", { name: /list view/i });
+    const gridToggle = within(controls).getByRole("button", { name: /grid view/i });
 
     expect(layout.className).toContain("grid-cols-1");
 
