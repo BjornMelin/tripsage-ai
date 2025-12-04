@@ -9,7 +9,6 @@ import {
   type FilterValue,
   filterPresetSchema,
   filterValueSchema,
-  type SortDirection,
   searchTypeSchema,
   sortOptionSchema,
   type ValidatedFilterOption,
@@ -20,6 +19,11 @@ import { devtools, persist } from "zustand/middleware";
 import { createStoreLogger } from "@/lib/telemetry/store-logger";
 import { generateId, getCurrentTimestamp } from "./helpers";
 import { createComputeFn, withComputed } from "./middleware/computed";
+import {
+  FILTER_CONFIGS,
+  getDefaultSortOptions,
+  SORT_CONFIGS,
+} from "./search-filters/filter-configs";
 
 const logger = createStoreLogger({ storeName: "search-filters" });
 
@@ -63,12 +67,7 @@ interface SearchFiltersState {
   setMultipleFilters: (filters: Record<string, FilterValue>) => boolean;
   applyFiltersFromObject: (filterObject: Record<string, unknown>) => boolean;
 
-  // Filter insights
-  getMostUsedFilters: (
-    searchType?: SearchType,
-    limit?: number
-  ) => ValidatedFilterOption[];
-  getFilterUsageStats: () => Record<string, { count: number; lastUsed: string }>;
+  // Reset filters to default (optionally scoped by search type)
   resetFiltersToDefault: (searchType?: SearchType) => void;
 
   // Sort management
@@ -100,326 +99,46 @@ interface SearchFiltersState {
   softReset: () => void; // Keeps configuration but clears active state
 }
 
-// Default filter configurations by search type
-const GET_DEFAULT_FILTERS = (searchType: SearchType): ValidatedFilterOption[] => {
-  switch (searchType) {
-    case "flight":
-      return [
-        {
-          category: "pricing",
-          id: "price_range",
-          label: "Price Range",
-          required: false,
-          type: "range",
-          validation: { max: 10000, min: 0 },
-        },
-        {
-          category: "routing",
-          id: "stops",
-          label: "Number of Stops",
-          options: [
-            { label: "Direct flights only", value: "0" },
-            { label: "1 stop", value: "1" },
-            { label: "2+ stops", value: "2" },
-          ],
-          required: false,
-          type: "select",
-        },
-        {
-          category: "airline",
-          id: "airlines",
-          label: "Airlines",
-          options: [], // Would be populated dynamically
-          required: false,
-          type: "multiselect",
-        },
-        {
-          category: "timing",
-          id: "departure_time",
-          label: "Departure Time",
-          options: [
-            { label: "Early Morning (6:00-9:00)", value: "early_morning" },
-            { label: "Morning (9:00-12:00)", value: "morning" },
-            { label: "Afternoon (12:00-18:00)", value: "afternoon" },
-            { label: "Evening (18:00+)", value: "evening" },
-          ],
-          required: false,
-          type: "select",
-        },
-      ];
-    case "accommodation":
-      return [
-        {
-          category: "pricing",
-          id: "price_range",
-          label: "Price per Night",
-          required: false,
-          type: "range",
-          validation: { max: 2000, min: 0 },
-        },
-        {
-          category: "quality",
-          id: "rating",
-          label: "Minimum Rating",
-          options: [
-            { label: "3+ stars", value: "3" },
-            { label: "4+ stars", value: "4" },
-            { label: "5 stars", value: "5" },
-          ],
-          required: false,
-          type: "select",
-        },
-        {
-          category: "type",
-          id: "property_type",
-          label: "Property Type",
-          options: [
-            { label: "Hotel", value: "hotel" },
-            { label: "Apartment", value: "apartment" },
-            { label: "Villa", value: "villa" },
-            { label: "Resort", value: "resort" },
-          ],
-          required: false,
-          type: "multiselect",
-        },
-        {
-          category: "features",
-          id: "amenities",
-          label: "Amenities",
-          options: [
-            { label: "Free WiFi", value: "wifi" },
-            { label: "Free Parking", value: "parking" },
-            { label: "Swimming Pool", value: "pool" },
-            { label: "Fitness Center", value: "gym" },
-            { label: "Spa", value: "spa" },
-            { label: "Restaurant", value: "restaurant" },
-          ],
-          required: false,
-          type: "multiselect",
-        },
-      ];
-    case "activity":
-      return [
-        {
-          category: "pricing",
-          id: "price_range",
-          label: "Price Range",
-          required: false,
-          type: "range",
-          validation: { max: 500, min: 0 },
-        },
-        {
-          category: "timing",
-          id: "duration",
-          label: "Duration",
-          required: false,
-          type: "range",
-          validation: { max: 480, min: 1 }, // minutes
-        },
-        {
-          category: "experience",
-          id: "difficulty",
-          label: "Difficulty Level",
-          options: [
-            { label: "Easy", value: "easy" },
-            { label: "Moderate", value: "moderate" },
-            { label: "Challenging", value: "challenging" },
-            { label: "Extreme", value: "extreme" },
-          ],
-          required: false,
-          type: "select",
-        },
-        {
-          category: "type",
-          id: "category",
-          label: "Activity Type",
-          options: [
-            { label: "Outdoor Adventures", value: "outdoor" },
-            { label: "Cultural Experiences", value: "cultural" },
-            { label: "Food & Drink", value: "food" },
-            { label: "Sightseeing", value: "sightseeing" },
-            { label: "Sports & Recreation", value: "sports" },
-          ],
-          required: false,
-          type: "multiselect",
-        },
-      ];
-    case "destination":
-      return [
-        {
-          category: "type",
-          id: "destination_type",
-          label: "Destination Type",
-          options: [
-            { label: "Cities", value: "city" },
-            { label: "Countries", value: "country" },
-            { label: "Regions", value: "region" },
-            { label: "Landmarks", value: "landmark" },
-          ],
-          required: false,
-          type: "multiselect",
-        },
-        {
-          category: "demographics",
-          id: "population",
-          label: "Population Size",
-          options: [
-            { label: "Small (< 100k)", value: "small" },
-            { label: "Medium (100k - 1M)", value: "medium" },
-            { label: "Large (1M+)", value: "large" },
-          ],
-          required: false,
-          type: "select",
-        },
-      ];
-    default:
-      return [];
+/** Validate a range filter value against min/max constraints. */
+const validateRangeValue = (
+  value: FilterValue,
+  config: ValidatedFilterOption
+): { valid: boolean; error?: string } => {
+  if (typeof value !== "object" || value === null) {
+    return { error: "Range value must be an object with min/max", valid: false };
   }
-};
 
-/** Get default sort options for a search type */
-const GET_DEFAULT_SORT_OPTIONS = (searchType: SearchType): ValidatedSortOption[] => {
-  const commonSorts = [
-    {
-      direction: "desc" as SortDirection,
-      field: "score",
-      id: "relevance",
-      isDefault: true,
-      label: "Relevance",
-    },
-    {
-      direction: "asc" as SortDirection,
-      field: "price",
-      id: "price_low",
-      isDefault: false,
-      label: "Price: Low to High",
-    },
-    {
-      direction: "desc" as SortDirection,
-      field: "price",
-      id: "price_high",
-      isDefault: false,
-      label: "Price: High to Low",
-    },
-  ];
+  const rangeValue = value as { min?: unknown; max?: unknown };
+  const validation = config.validation;
 
-  switch (searchType) {
-    case "flight":
-      return [
-        ...commonSorts,
-        {
-          direction: "asc" as SortDirection,
-          field: "totalDuration",
-          id: "duration",
-          isDefault: false,
-          label: "Duration",
-        },
-        {
-          direction: "asc" as SortDirection,
-          field: "departureTime",
-          id: "departure",
-          isDefault: false,
-          label: "Departure Time",
-        },
-        {
-          direction: "asc" as SortDirection,
-          field: "arrivalTime",
-          id: "arrival",
-          isDefault: false,
-          label: "Arrival Time",
-        },
-        {
-          direction: "asc" as SortDirection,
-          field: "stops",
-          id: "stops",
-          isDefault: false,
-          label: "Fewest Stops",
-        },
-      ];
-    case "accommodation":
-      return [
-        ...commonSorts,
-        {
-          direction: "desc" as SortDirection,
-          field: "rating",
-          id: "rating",
-          isDefault: false,
-          label: "Highest Rated",
-        },
-        {
-          direction: "asc" as SortDirection,
-          field: "distance",
-          id: "distance",
-          isDefault: false,
-          label: "Distance",
-        },
-        {
-          direction: "desc" as SortDirection,
-          field: "reviewCount",
-          id: "reviews",
-          isDefault: false,
-          label: "Most Reviews",
-        },
-      ];
-    case "activity":
-      return [
-        ...commonSorts,
-        {
-          direction: "desc" as SortDirection,
-          field: "rating",
-          id: "rating",
-          isDefault: false,
-          label: "Highest Rated",
-        },
-        {
-          direction: "asc" as SortDirection,
-          field: "duration",
-          id: "duration",
-          isDefault: false,
-          label: "Duration",
-        },
-        {
-          direction: "desc" as SortDirection,
-          field: "bookingCount",
-          id: "popularity",
-          isDefault: false,
-          label: "Most Popular",
-        },
-      ];
-    case "destination":
-      return [
-        {
-          direction: "desc" as SortDirection,
-          field: "score",
-          id: "relevance",
-          isDefault: true,
-          label: "Relevance",
-        },
-        {
-          direction: "asc" as SortDirection,
-          field: "name",
-          id: "alphabetical",
-          isDefault: false,
-          label: "Alphabetical",
-        },
-        {
-          direction: "desc" as SortDirection,
-          field: "population",
-          id: "population",
-          isDefault: false,
-          label: "Population",
-        },
-        {
-          direction: "asc" as SortDirection,
-          field: "distance",
-          id: "distance",
-          isDefault: false,
-          label: "Distance",
-        },
-      ];
-    default:
-      return commonSorts;
+  const min = rangeValue.min;
+  const max = rangeValue.max;
+
+  if (min !== undefined && typeof min !== "number") {
+    return { error: "Minimum value must be a number", valid: false };
   }
+
+  if (max !== undefined && typeof max !== "number") {
+    return { error: "Maximum value must be a number", valid: false };
+  }
+
+  if (min !== undefined && max !== undefined && min > max) {
+    return { error: "Minimum value cannot exceed maximum", valid: false };
+  }
+
+  if (!validation) {
+    return { valid: true };
+  }
+
+  if (min !== undefined && validation.min !== undefined && min < validation.min) {
+    return { error: `Minimum value must be at least ${validation.min}`, valid: false };
+  }
+
+  if (max !== undefined && validation.max !== undefined && max > validation.max) {
+    return { error: `Maximum value must be at most ${validation.max}`, valid: false };
+  }
+
+  return { valid: true };
 };
 
 // Helper to compute derived state using shared middleware
@@ -504,19 +223,9 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
             return false;
           }
         },
-        // Initial state
-        availableFilters: {
-          accommodation: GET_DEFAULT_FILTERS("accommodation"),
-          activity: GET_DEFAULT_FILTERS("activity"),
-          destination: GET_DEFAULT_FILTERS("destination"),
-          flight: GET_DEFAULT_FILTERS("flight"),
-        },
-        availableSortOptions: {
-          accommodation: GET_DEFAULT_SORT_OPTIONS("accommodation"),
-          activity: GET_DEFAULT_SORT_OPTIONS("activity"),
-          destination: GET_DEFAULT_SORT_OPTIONS("destination"),
-          flight: GET_DEFAULT_SORT_OPTIONS("flight"),
-        },
+        // Initial state - use pre-computed config objects
+        availableFilters: FILTER_CONFIGS,
+        availableSortOptions: SORT_CONFIGS,
         canClearFilters: false,
 
         clearAllFilters: () => {
@@ -599,46 +308,8 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
         filterPresets: [],
         filterValidationErrors: {},
 
-        getFilterUsageStats: () => {
-          const { filterPresets } = get();
-          const stats: Record<string, { count: number; lastUsed: string }> = {};
-
-          filterPresets.forEach((preset) => {
-            preset.filters.forEach((filter) => {
-              const filterId = filter.filterId;
-              if (!stats[filterId]) {
-                stats[filterId] = { count: 0, lastUsed: "" };
-              }
-              stats[filterId].count += preset.usageCount;
-              if (filter.appliedAt > stats[filterId].lastUsed) {
-                stats[filterId].lastUsed = filter.appliedAt;
-              }
-            });
-          });
-
-          return stats;
-        },
-
         getFilterValidationError: (filterId) => {
           return get().filterValidationErrors[filterId] || null;
-        },
-
-        getMostUsedFilters: (searchType, limit = 5) => {
-          const { currentFilters, availableFilters } = get();
-          const targetFilters = searchType
-            ? availableFilters[searchType] || []
-            : currentFilters;
-
-          const usageStats = get().getFilterUsageStats();
-
-          return targetFilters
-            .map((filter) => ({
-              ...filter,
-              _usageCount: usageStats[filter.id]?.count || 0,
-            }))
-            .sort((a, b) => b._usageCount - a._usageCount)
-            .slice(0, limit)
-            .map(({ _usageCount, ...filter }) => filter);
         },
 
         // Computed properties (initialized by middleware)
@@ -718,8 +389,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
           const targetSearchType = searchType || get().currentSearchType;
           if (!targetSearchType) return;
 
-          GET_DEFAULT_FILTERS(targetSearchType); // Get default filters
-          const defaultSort = GET_DEFAULT_SORT_OPTIONS(targetSearchType).find(
+          const defaultSort = getDefaultSortOptions(targetSearchType).find(
             (s) => s.isDefault
           );
 
@@ -735,7 +405,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
           const targetSearchType = searchType || get().currentSearchType;
           if (!targetSearchType) return;
 
-          const defaultSort = GET_DEFAULT_SORT_OPTIONS(targetSearchType).find(
+          const defaultSort = getDefaultSortOptions(targetSearchType).find(
             (s) => s.isDefault
           );
           set({ activeSortOption: defaultSort || null });
@@ -947,90 +617,70 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
           const { currentFilters } = get();
           const filterConfig = currentFilters.find((f) => f.id === filterId);
 
-          if (!filterConfig) {
+          const setError = (error: string) => {
             set((state) => ({
               filterValidationErrors: {
                 ...state.filterValidationErrors,
-                [filterId]: "Filter configuration not found",
+                [filterId]: error,
               },
             }));
             return false;
-          }
+          };
 
-          try {
-            // Validate value against filter configuration
-            const valueResult = filterValueSchema.safeParse(value);
-            if (!valueResult.success) {
-              throw new Error("Invalid filter value format");
-            }
-
-            // Type-specific validation
-            if (filterConfig.validation) {
-              const { min, max, pattern, required } = filterConfig.validation;
-
-              if (required && (value === null || value === undefined || value === "")) {
-                throw new Error("This filter is required");
-              }
-
-              if (typeof value === "number") {
-                if (min !== undefined && value < min) {
-                  throw new Error(`Value must be at least ${min}`);
-                }
-                if (max !== undefined && value > max) {
-                  throw new Error(`Value must be at most ${max}`);
-                }
-              }
-
-              // Handle range type filters
-              if (
-                filterConfig.type === "range" &&
-                typeof value === "object" &&
-                value !== null
-              ) {
-                const rangeValue = value as { min?: number; max?: number };
-                if (
-                  rangeValue.min !== undefined &&
-                  min !== undefined &&
-                  rangeValue.min < min
-                ) {
-                  throw new Error(`Minimum value must be at least ${min}`);
-                }
-                if (
-                  rangeValue.max !== undefined &&
-                  max !== undefined &&
-                  rangeValue.max > max
-                ) {
-                  throw new Error(`Maximum value must be at most ${max}`);
-                }
-              }
-
-              if (typeof value === "string" && pattern) {
-                const regex = new RegExp(pattern);
-                if (!regex.test(value)) {
-                  throw new Error("Value format is invalid");
-                }
-              }
-            }
-
-            // Clear any existing validation error
+          const clearError = () => {
             set((state) => {
               const newErrors = { ...state.filterValidationErrors };
               delete newErrors[filterId];
               return { filterValidationErrors: newErrors };
             });
-
             return true;
-          } catch (error) {
-            const message =
-              error instanceof Error ? error.message : "Validation failed";
-            set((state) => ({
-              filterValidationErrors: {
-                ...state.filterValidationErrors,
-                [filterId]: message,
-              },
-            }));
-            return false;
+          };
+
+          if (!filterConfig) {
+            return setError("Filter configuration not found");
           }
+
+          // Zod schema validation first
+          const valueResult = filterValueSchema.safeParse(value);
+          if (!valueResult.success) {
+            return setError("Invalid filter value format");
+          }
+
+          // Type-specific validation
+          const validation = filterConfig.validation;
+          if (validation) {
+            const { min, max, pattern, required } = validation;
+
+            if (required && (value === null || value === undefined || value === "")) {
+              return setError("This filter is required");
+            }
+
+            if (typeof value === "number") {
+              if (min !== undefined && value < min) {
+                return setError(`Value must be at least ${min}`);
+              }
+              if (max !== undefined && value > max) {
+                return setError(`Value must be at most ${max}`);
+              }
+            }
+
+            // Handle range type filters using helper
+            if (filterConfig.type === "range") {
+              const rangeResult = validateRangeValue(value, filterConfig);
+              if (!rangeResult.valid) {
+                return setError(rangeResult.error ?? "Invalid range value");
+              }
+            }
+
+            if (typeof value === "string" && pattern) {
+              const regex = new RegExp(pattern);
+              if (!regex.test(value)) {
+                return setError("Value format is invalid");
+              }
+            }
+          }
+
+          return clearError();
         },
       })),
       {
