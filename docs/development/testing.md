@@ -256,6 +256,187 @@ beforeEach(() =>
 await waitForStoreState(useAuthStore, (s) => !s.isLoading, 5000);
 ```
 
+## Forms
+
+Testing React Hook Form components with Zod validation.
+
+### Validation Error Testing
+
+Trigger validation via blur events, then wait for error messages:
+
+```tsx
+/** @vitest-environment jsdom */
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+
+it("shows validation error on invalid input", async () => {
+  const user = userEvent.setup();
+  render(<TripForm />);
+
+  const titleInput = screen.getByLabelText(/title/i);
+  await user.type(titleInput, "ab"); // Too short
+  fireEvent.blur(titleInput);
+
+  await waitFor(() => {
+    expect(screen.getByText(/at least 3 characters/i)).toBeInTheDocument();
+  });
+});
+```
+
+### Form Submission Testing
+
+Fill form, submit, and assert on success behavior:
+
+```tsx
+it("submits valid form data", async () => {
+  const onSubmit = vi.fn();
+  const user = userEvent.setup();
+  render(<TripForm onSuccess={onSubmit} />);
+
+  await user.type(screen.getByLabelText(/title/i), "My Trip");
+  await user.type(screen.getByLabelText(/destination/i), "Paris");
+  await user.click(screen.getByRole("button", { name: /save/i }));
+
+  await waitFor(() => {
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "My Trip", destination: "Paris" })
+    );
+  });
+});
+```
+
+### Cross-Field Validation Testing
+
+Test date range and other cross-field validations:
+
+```tsx
+it("shows error when checkout is before checkin", async () => {
+  const user = userEvent.setup();
+  render(<DateRangeForm />);
+
+  await user.type(screen.getByLabelText(/check-in/i), "2025-12-20");
+  await user.type(screen.getByLabelText(/check-out/i), "2025-12-15");
+  await user.click(screen.getByRole("button", { name: /search/i }));
+
+  await waitFor(() => {
+    expect(screen.getByText(/checkout must be after/i)).toBeInTheDocument();
+  });
+});
+```
+
+### useZodForm Hook Testing
+
+Test the hook directly with `renderHook`:
+
+```tsx
+import { renderHook, act } from "@testing-library/react";
+import { useZodForm } from "@/hooks/use-zod-form";
+import { tripFormSchema } from "@schemas/trips";
+
+it("validates all fields", async () => {
+  const { result } = renderHook(() =>
+    useZodForm({
+      schema: tripFormSchema,
+      defaultValues: { title: "", destination: "" },
+    })
+  );
+
+  let validation: Awaited<ReturnType<typeof result.current.validateAllFields>>;
+  await act(async () => {
+    validation = await result.current.validateAllFields();
+  });
+
+  expect(validation!.success).toBe(false);
+  expect(validation!.errors).toContainEqual(
+    expect.objectContaining({ field: "title" })
+  );
+});
+```
+
+## Server Actions
+
+Testing Next.js Server Actions with Zod validation.
+
+### Environment and Mocks
+
+Server action tests run in node environment and mock navigation/supabase:
+
+```ts
+/** @vitest-environment node */
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+// Mock next/navigation before imports
+vi.mock("next/navigation", () => ({
+  redirect: vi.fn(),
+  revalidatePath: vi.fn(),
+}));
+
+vi.mock("@/lib/supabase/server", () => ({
+  createServerSupabase: vi.fn(async () => ({
+    auth: { getUser: async () => ({ data: { user: { id: "user-1" } } }) },
+    from: vi.fn(() => ({
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: { id: "trip-1" }, error: null }),
+    })),
+  })),
+}));
+```
+
+### Testing Validation
+
+```ts
+import { createTripAction } from "../actions";
+
+describe("createTripAction", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("throws on invalid input", async () => {
+    await expect(
+      createTripAction({ title: "", destination: "" })
+    ).rejects.toThrow(/validation failed/i);
+  });
+
+  it("creates trip with valid input", async () => {
+    const result = await createTripAction({
+      title: "Paris Trip",
+      destination: "Paris, France",
+    });
+
+    expect(result).toEqual(expect.objectContaining({ id: "trip-1" }));
+  });
+});
+```
+
+### Testing Revalidation and Redirect
+
+```ts
+import { redirect, revalidatePath } from "next/navigation";
+import { deleteTripAction } from "../actions";
+
+it("revalidates and redirects after delete", async () => {
+  await expect(deleteTripAction("trip-1")).rejects.toThrow();
+  // redirect throws NEXT_REDIRECT error
+
+  expect(revalidatePath).toHaveBeenCalledWith("/trips");
+  expect(redirect).toHaveBeenCalledWith("/trips");
+});
+```
+
+### Testing FormData Actions
+
+```ts
+it("parses FormData correctly", async () => {
+  const formData = new FormData();
+  formData.set("message", "Great trip!");
+  formData.set("rating", "5");
+
+  const result = await submitFeedbackAction(formData);
+
+  expect(result).toEqual({ success: true });
+});
+```
+
 ## Factories and Data
 
 - Use `@/test/factories` for schema-valid fixtures; reset counters when determinism is required.
