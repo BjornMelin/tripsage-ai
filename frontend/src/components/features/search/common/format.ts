@@ -67,9 +67,9 @@ export function formatDurationHours(hours: number): string {
  * @returns The formatted duration string.
  */
 export function formatDurationMinutes(minutes: number): string {
-  if (!Number.isFinite(minutes) || minutes < 0) {
+  if (!Number.isFinite(minutes) || minutes < 0 || !Number.isInteger(minutes)) {
     throw new Error(
-      `Invalid duration minutes: ${minutes}. Must be non-negative finite.`
+      `Invalid duration minutes: ${minutes}. Must be a non-negative finite integer.`
     );
   }
   const hours = Math.floor(minutes / 60);

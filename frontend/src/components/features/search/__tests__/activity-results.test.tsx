@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 
 import type { Activity } from "@schemas/search";
-import { fireEvent, screen } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { render } from "@/test/test-utils";
 import { ActivityResults } from "../activity-results";
@@ -90,5 +90,103 @@ describe("ActivityResults", () => {
     fireEvent.click(screen.getByRole("button", { name: /open activity filters/i }));
 
     expect(onOpenFilters).toHaveBeenCalledTimes(1);
+  });
+
+  it("reorders activities when sort controls change", () => {
+    const highRatedHighPrice: Activity = {
+      ...BaseActivity,
+      id: "activity-2",
+      name: "Luxury Tour",
+      price: 300,
+      rating: 5,
+    };
+    const lowPriceLowRating: Activity = {
+      ...BaseActivity,
+      id: "activity-3",
+      name: "Budget Walk",
+      price: 20,
+      rating: 3,
+    };
+
+    render(
+      <ActivityResults
+        results={[highRatedHighPrice, lowPriceLowRating]}
+        onSelect={vi.fn().mockResolvedValue(undefined)}
+      />
+    );
+
+    const initialOrder = screen
+      .getAllByRole("heading", { level: 3 })
+      .map((heading) => heading.textContent);
+
+    expect(initialOrder).toEqual(["Luxury Tour", "Budget Walk"]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Price" }));
+
+    const priceSortedOrder = screen
+      .getAllByRole("heading", { level: 3 })
+      .map((heading) => heading.textContent);
+
+    expect(priceSortedOrder).toEqual(["Budget Walk", "Luxury Tour"]);
+  });
+
+  it("toggles between grid and list view modes", () => {
+    render(
+      <ActivityResults
+        results={[BaseActivity]}
+        onSelect={vi.fn().mockResolvedValue(undefined)}
+      />
+    );
+
+    const controls = screen.getByTestId("activity-results-controls");
+    const layout = controls.nextElementSibling as HTMLElement;
+    const controlButtons = within(controls).getAllByRole("button");
+    const listToggle = controlButtons[4];
+    const gridToggle = controlButtons[5];
+
+    expect(layout.className).toContain("grid-cols-1");
+
+    fireEvent.click(listToggle);
+    expect(layout.className).toContain("space-y-4");
+
+    fireEvent.click(gridToggle);
+    expect(layout.className).toContain("grid-cols-1");
+  });
+
+  it("shows compare bar and handles compare and load more interactions", async () => {
+    const firstActivity: Activity = { ...BaseActivity, id: "a1", name: "First" };
+    const secondActivity: Activity = { ...BaseActivity, id: "a2", name: "Second" };
+    const onCompare = vi.fn();
+    const onLoadMore = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <ActivityResults
+        results={[firstActivity, secondActivity]}
+        onSelect={vi.fn().mockResolvedValue(undefined)}
+        onCompare={onCompare}
+        onLoadMore={onLoadMore}
+        hasMore
+      />
+    );
+
+    const compareButtons = screen.getAllByRole("button", { name: "Compare" });
+
+    fireEvent.click(compareButtons[0]);
+    expect(screen.getByText(/selected for comparison/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /compare \(1\)/i })).toBeDisabled();
+
+    fireEvent.click(compareButtons[1]);
+    const compareAction = screen.getByRole("button", { name: /compare \(2\)/i });
+    expect(compareAction).not.toBeDisabled();
+
+    fireEvent.click(compareAction);
+    expect(onCompare).toHaveBeenCalledWith([firstActivity, secondActivity]);
+
+    const loadMoreButton = screen.getByRole("button", {
+      name: /load more activities/i,
+    });
+    fireEvent.click(loadMoreButton);
+
+    await waitFor(() => expect(onLoadMore).toHaveBeenCalledTimes(1));
   });
 });

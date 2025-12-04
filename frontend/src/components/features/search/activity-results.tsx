@@ -50,7 +50,7 @@ export function ActivityResults({
   const [sortBy, setSortBy] = useState<"price" | "rating" | "duration">("rating");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [selectedForComparison, setSelectedForComparison] = useState<Set<string>>(
-    new Set()
+    () => new Set()
   );
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const { toast } = useToast();
@@ -177,7 +177,13 @@ export function ActivityResults({
         <p className="text-muted-foreground mb-4">
           Try adjusting your search criteria or dates
         </p>
-        <Button variant="outline">
+        <Button
+          variant="outline"
+          onClick={onOpenFilters}
+          disabled={!onOpenFilters}
+          aria-label="Modify search"
+          title={onOpenFilters ? undefined : "Filters unavailable"}
+        >
           <RefreshCwIcon className="h-4 w-4 mr-2" />
           Modify Search
         </Button>

@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 
 import type { FlightResult } from "@schemas/search";
-import { fireEvent, screen } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { render } from "@/test/test-utils";
 import { FlightResults } from "../flight-results";
@@ -25,15 +25,18 @@ const BaseFlight: FlightResult = {
 };
 
 describe("FlightResults", () => {
-  it("calls onSelect when Select Flight is clicked", () => {
+  it("calls onSelect when Select Flight is clicked", async () => {
     const onSelect = vi.fn().mockResolvedValue(undefined);
     render(
       <FlightResults results={[BaseFlight]} onSelect={onSelect} onCompare={vi.fn()} />
     );
 
     fireEvent.click(screen.getByRole("button", { name: /select flight/i }));
-    expect(onSelect).toHaveBeenCalledTimes(1);
-    expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ id: "f1" }));
+
+    await waitFor(() => {
+      expect(onSelect).toHaveBeenCalledTimes(1);
+      expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ id: "f1" }));
+    });
   });
 
   it("enables compare after selecting two flights and passes selected flights", () => {

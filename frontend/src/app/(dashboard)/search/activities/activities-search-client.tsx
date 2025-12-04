@@ -100,8 +100,8 @@ export default function ActivitiesSearchClient({
       setHasSearched(true);
       (async () => {
         try {
-          await onSubmitServer(initialParams);
-          await searchActivities(initialParams);
+          const normalizedParams = await onSubmitServer(initialParams);
+          await searchActivities(normalizedParams ?? initialParams);
         } catch (error) {
           const message = getErrorMessage(error);
           setSearchError(new Error(message));
@@ -119,15 +119,14 @@ export default function ActivitiesSearchClient({
     if (params.destination) {
       setHasSearched(true);
       try {
-        await onSubmitServer(params); // server-side telemetry and validation
-      } catch (error) {
-        const message = getErrorMessage(error);
-        setSearchError(new Error(message));
-        return;
-      }
+        const normalizedParams = await onSubmitServer(params); // server-side telemetry and validation
 
-      try {
-        await searchActivities(params); // client fetch/store update
+        try {
+          await searchActivities(normalizedParams ?? params); // client fetch/store update
+        } catch (error) {
+          const message = getErrorMessage(error);
+          setSearchError(new Error(message));
+        }
       } catch (error) {
         const message = getErrorMessage(error);
         setSearchError(new Error(message));

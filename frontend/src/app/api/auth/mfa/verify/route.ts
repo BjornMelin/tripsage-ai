@@ -47,11 +47,26 @@ export const POST = withApiGuards({
 
     // Defensive check: only generate backup codes if user doesn't already have any
     // This prevents regeneration during regular MFA challenges where isInitialEnrollment might be incorrectly true
-    const { count: existingBackupCodesCount } = await adminSupabase
-      .from("auth_backup_codes")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .is("consumed_at", null);
+    const { count: backupCodesCount, error: backupCodesQueryError } =
+      await adminSupabase
+        .from("auth_backup_codes")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .is("consumed_at", null);
+
+    if (backupCodesQueryError) {
+      logger.error("failed to fetch backup code count", {
+        error: backupCodesQueryError.message,
+        userId,
+      });
+      return NextResponse.json(
+        { error: "failed_to_fetch_backup_codes" },
+        { status: 500 }
+      );
+    }
+
+    const existingBackupCodesCount =
+      typeof backupCodesCount === "number" ? backupCodesCount : 0;
 
     if (existingBackupCodesCount === 0) {
       const ip = getClientIpFromHeaders(req);
@@ -70,8 +85,8 @@ export const POST = withApiGuards({
       }
     } else {
       logger.warn("skipped backup code generation: user already has backup codes", {
-        userId,
         existingCount: existingBackupCodesCount,
+        userId,
       });
     }
   }
