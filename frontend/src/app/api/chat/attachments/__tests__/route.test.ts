@@ -226,7 +226,7 @@ describe("/api/chat/attachments", () => {
     expect(body.reason).toBe("Internal server error");
   });
 
-  it("should include authorization header when provided", async () => {
+  it("should forward Supabase session access token", async () => {
     let capturedAuth: string | null = null;
     server.use(
       http.post("http://localhost:8001/api/attachments/upload", ({ request }) => {
@@ -247,11 +247,28 @@ describe("/api/chat/attachments", () => {
 
     const req = new NextRequest("http://localhost/api/chat/attachments", {
       body: formData,
-      headers: { authorization: "Bearer token123" },
       method: "POST",
     });
 
     await mod.POST(req, createRouteParamsContext());
-    expect(capturedAuth).toBe("Bearer token123");
+    expect(capturedAuth).toBe("Bearer mock-access-token");
+  });
+
+  it("rejects payloads exceeding total size budget via content-length", async () => {
+    const mod = await import("../route");
+    const oversizedBytes = 60 * 1024 * 1024; // 60MB > 5 * 10MB
+    const req = new NextRequest("http://localhost/api/chat/attachments", {
+      body: new ReadableStream(),
+      headers: {
+        "content-length": String(oversizedBytes),
+        "content-type": "multipart/form-data; boundary=boundary",
+      },
+      method: "POST",
+    });
+
+    const res = await mod.POST(req, createRouteParamsContext());
+    expect(res.status).toBe(413);
+    const body = await res.json();
+    expect(body.error).toBe("invalid_request");
   });
 });

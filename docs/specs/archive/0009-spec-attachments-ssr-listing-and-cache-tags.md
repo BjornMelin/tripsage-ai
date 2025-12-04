@@ -11,7 +11,7 @@ Serve a user-scoped attachments listing via a Next.js Route Handler that partici
 ## Route
 
 - `GET /api/attachments/files`
-  - Forwards `Authorization` header when present.
+  - Derives backend auth from the current Supabase session (`sb-access-token`); **caller-supplied Authorization headers are ignored and never forwarded**.
   - Preserves `limit`/`offset` query parameters.
   - Uses `withApiGuards({ auth: true })` which accesses `cookies()` for authentication.
   - Implements per-user caching via Upstash Redis (2-minute TTL) to keep attachment listings near real time for collaborative scenarios while still shaving backend reads; Next.js Cache Components cannot be used when accessing `cookies()` or `headers()`.
@@ -28,7 +28,7 @@ Serve a user-scoped attachments listing via a Next.js Route Handler that partici
 
 ## Testing
 
-- Unit test ensures Authorization forwarding and presence of `next.tags = ['attachments']` in fetch options.
+- Unit test ensures Supabase session token forwarding (not caller headers) and presence of `next.tags = ['attachments']` in fetch options.
 
 ## Changelog
 
