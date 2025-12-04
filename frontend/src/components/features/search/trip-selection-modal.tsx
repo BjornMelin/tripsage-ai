@@ -19,6 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface TripSelectionModalProps {
@@ -98,34 +99,32 @@ export function TripSelectionModal({
             </div>
           ) : (
             <ScrollArea className="h-[300px] pr-4">
-              <div className="space-y-4" role="radiogroup">
+              <RadioGroup
+                value={selectedTripId ?? ""}
+                onValueChange={(value) =>
+                  setSelectedTripId(value === "" ? null : value)
+                }
+                className="space-y-4"
+              >
                 {trips.map((trip) => (
-                  // biome-ignore lint/a11y/useSemanticElements: keep button for keyboard semantics while emulating radio behavior
-                  <button
+                  <div
                     key={trip.id}
-                    type="button"
-                    className={`flex w-full text-left items-start space-x-3 space-y-0 rounded-md border p-4 cursor-pointer transition-colors ${
+                    className={`flex items-start space-x-3 space-y-0 rounded-md border p-4 transition-colors ${
                       selectedTripId === trip.id
                         ? "border-primary bg-accent"
                         : "hover:bg-accent/50"
                     }`}
-                    role="radio"
-                    aria-checked={selectedTripId === trip.id}
-                    onClick={() => setSelectedTripId(trip.id)}
                   >
-                    <div
-                      className={`mt-1 h-4 w-4 rounded-full border border-primary flex items-center justify-center ${
-                        selectedTripId === trip.id ? "bg-primary" : ""
-                      }`}
+                    <RadioGroupItem
+                      value={trip.id}
+                      id={`trip-${trip.id}`}
+                      className="mt-1 cursor-pointer"
+                    />
+                    <Label
+                      htmlFor={`trip-${trip.id}`}
+                      className="flex-1 cursor-pointer grid gap-1.5"
                     >
-                      {selectedTripId === trip.id && (
-                        <div className="h-2 w-2 rounded-full bg-primary-foreground" />
-                      )}
-                    </div>
-                    <div className="grid gap-1.5 w-full">
-                      <Label className="font-semibold cursor-pointer text-base">
-                        {trip.title}
-                      </Label>
+                      <span className="font-semibold text-base">{trip.title}</span>
                       <div className="flex items-center text-sm text-muted-foreground gap-2">
                         <MapPinIcon className="h-3 w-3" />
                         <span>{trip.destination}</span>
@@ -136,10 +135,10 @@ export function TripSelectionModal({
                           <span>{new Date(trip.startDate).toLocaleDateString()}</span>
                         </div>
                       )}
-                    </div>
-                  </button>
+                    </Label>
+                  </div>
                 ))}
-              </div>
+              </RadioGroup>
             </ScrollArea>
           )}
         </div>

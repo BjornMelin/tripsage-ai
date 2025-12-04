@@ -32,6 +32,24 @@ import { formatCurrency, formatDurationMinutes } from "./common/format";
 
 type SortField = "price" | "duration" | "departure" | "emissions";
 
+/**
+ * Flight-specific semantic colors aligned with statusVariants.
+ * - Price trends: green (down/good), red (up/bad)
+ * - Deal indicators: green (success/active)
+ * - Emissions: green (low), amber (average), red (high)
+ * - UI accents: blue (info), red (urgent)
+ */
+const FLIGHT_COLORS = {
+  airlineIcon: "bg-blue-50 text-blue-700",
+  dealBadge: "bg-green-50 text-green-700",
+  emissionHigh: "bg-red-500",
+  emissionLow: "bg-green-500",
+  emissionMedium: "bg-amber-500",
+  priceTrendDown: "text-green-700",
+  priceTrendUp: "text-red-700",
+  promotionBadge: "bg-red-600 text-white",
+} as const;
+
 /** Flight results component props */
 interface FlightResultsProps {
   results: FlightResult[];
@@ -131,8 +149,13 @@ export function FlightResults({
   /** Get price change icon */
   const getPriceChangeIcon = (change?: "up" | "down" | "stable") => {
     if (change === "down")
-      return <TrendingUpIcon className="h-3 w-3 text-green-500 rotate-180" />;
-    if (change === "up") return <TrendingUpIcon className="h-3 w-3 text-red-500" />;
+      return (
+        <TrendingUpIcon
+          className={cn("h-3 w-3 rotate-180", FLIGHT_COLORS.priceTrendDown)}
+        />
+      );
+    if (change === "up")
+      return <TrendingUpIcon className={cn("h-3 w-3", FLIGHT_COLORS.priceTrendUp)} />;
     return null;
   };
 
@@ -285,7 +308,7 @@ export function FlightResults({
               {/* Promotions Banner */}
               {flight.promotions && (
                 <div className="absolute top-0 left-6 transform -translate-y-1/2">
-                  <Badge className="bg-red-500 text-white">
+                  <Badge className={FLIGHT_COLORS.promotionBadge}>
                     <ZapIcon className="h-3 w-3 mr-1" />
                     {flight.promotions.description}
                   </Badge>
@@ -296,8 +319,13 @@ export function FlightResults({
                 {/* Airline Info */}
                 <div className="col-span-2">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center">
-                      <PlaneIcon className="h-4 w-4 text-blue-600" />
+                    <div
+                      className={cn(
+                        "w-8 h-8 rounded flex items-center justify-center",
+                        FLIGHT_COLORS.airlineIcon
+                      )}
+                    >
+                      <PlaneIcon className="h-4 w-4" />
                     </div>
                     <div>
                       <p className="font-medium text-sm">{flight.airline}</p>
@@ -401,7 +429,7 @@ export function FlightResults({
                     {flight.price.dealScore && flight.price.dealScore >= 8 && (
                       <Badge
                         variant="secondary"
-                        className="mb-2 bg-green-100 text-green-800"
+                        className={cn("mb-2", FLIGHT_COLORS.dealBadge)}
                       >
                         <StarIcon className="h-3 w-3 mr-1" />
                         Great Deal
@@ -417,10 +445,10 @@ export function FlightResults({
                             className={cn(
                               "w-2 h-2 rounded-full",
                               flight.emissions.compared === "low"
-                                ? "bg-green-500"
+                                ? FLIGHT_COLORS.emissionLow
                                 : flight.emissions.compared === "average"
-                                  ? "bg-yellow-500"
-                                  : "bg-red-500"
+                                  ? FLIGHT_COLORS.emissionMedium
+                                  : FLIGHT_COLORS.emissionHigh
                             )}
                           />
                           <span className="text-muted-foreground">
