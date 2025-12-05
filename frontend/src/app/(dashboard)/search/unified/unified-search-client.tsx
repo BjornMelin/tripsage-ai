@@ -228,28 +228,44 @@ const MOCK_HOTEL_RESULTS: HotelResult[] = [
 ];
 
 interface UnifiedSearchClientProps {
+  onSearchFlights?: (params: FlightSearchFormData) => Promise<FlightResult[]>;
   onSearchHotels: (params: HotelSearchFormData) => Promise<HotelResult[]>;
 }
 
 export default function UnifiedSearchClient({
+  onSearchFlights,
   onSearchHotels,
 }: UnifiedSearchClientProps) {
   const [isPending, startTransition] = useTransition();
   const [activeTab, setActiveTab] = useState<"flights" | "hotels">("flights");
   const [showResults, setShowResults] = useState(false);
+  const [flightResults, setFlightResults] = useState<FlightResult[]>(MOCK_FLIGHT_RESULTS);
   const [hotelResults, setHotelResults] = useState<HotelResult[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const handleFlightSearch = async (_params: FlightSearchFormData) => {
+  const handleFlightSearch = async (params: FlightSearchFormData) => {
     await new Promise<void>((resolve) => {
-      startTransition(() => {
-        setShowResults(true);
-        // Simulate API call
-        setTimeout(() => {
+      startTransition(async () => {
+        setErrorMessage(null);
+        try {
+          if (onSearchFlights) {
+            const results = await onSearchFlights(params);
+            setFlightResults(results);
+          }
           setShowResults(true);
+        } catch (error) {
+          const message =
+            getErrorMessage(error) || "Unable to fetch flights. Please try again.";
+          setErrorMessage(message);
+          toast({
+            description: message,
+            title: "Search error",
+            variant: "destructive",
+          });
+        } finally {
           resolve();
-        }, 1500);
+        }
       });
     });
   };
@@ -365,7 +381,7 @@ export default function UnifiedSearchClient({
                     </Badge>
                   </div>
                   <FlightResults
-                    results={MOCK_FLIGHT_RESULTS}
+                    results={flightResults.length ? flightResults : MOCK_FLIGHT_RESULTS}
                     loading={isPending}
                     onSelect={handleFlightSelect}
                     onCompare={handleCompareFlights}

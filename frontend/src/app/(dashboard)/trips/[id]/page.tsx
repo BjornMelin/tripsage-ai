@@ -177,10 +177,14 @@ export default function TripDetailsPage() {
                 if (process.env.NODE_ENV === "development") {
                   console.error("Failed to export trip:", error);
                 }
-                recordClientErrorOnActiveSpan(
-                  error instanceof Error ? error : new Error(String(error)),
-                  { action: "exportTripToIcs", context: "TripDetailsPage" }
-                );
+                const normalizedError =
+                  error instanceof Error ? error : new Error(String(error));
+                recordClientErrorOnActiveSpan(normalizedError, {
+                  action: "exportTripToIcs",
+                  context: "TripDetailsPage",
+                  tripId: currentTrip.id,
+                  tripTitle: "[redacted]",
+                });
                 alert("Failed to export trip to calendar");
               }
             }}

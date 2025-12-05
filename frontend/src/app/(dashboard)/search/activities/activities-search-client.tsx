@@ -112,7 +112,6 @@ export default function ActivitiesSearchClient({
         category: category || undefined,
         destination,
       };
-      setHasSearched(true);
       (async () => {
         try {
           const normalizedParams = await onSubmitServer(initialParams);
@@ -124,6 +123,8 @@ export default function ActivitiesSearchClient({
             title: "Search failed",
             variant: "destructive",
           });
+        } finally {
+          setHasSearched(true);
         }
       })();
     }
@@ -131,7 +132,6 @@ export default function ActivitiesSearchClient({
 
   const handleSearch = async (params: ActivitySearchParams) => {
     if (params.destination) {
-      setHasSearched(true);
       try {
         const normalizedParams = await onSubmitServer(params); // server-side telemetry and validation
         await executeSearch(normalizedParams ?? params); // client fetch/store update
@@ -142,6 +142,8 @@ export default function ActivitiesSearchClient({
           title: "Search failed",
           variant: "destructive",
         });
+      } finally {
+        setHasSearched(true);
       }
     }
   };
@@ -267,15 +269,19 @@ export default function ActivitiesSearchClient({
     .map((item) => item.data)
     .filter(isActivity);
 
-  const { verifiedActivities, aiSuggestions } = useMemo(() => {
+  const { verifiedActivities, aiSuggestions, allAi } = useMemo(() => {
     // Check if we have mixed results based on activity ID prefixes
     const hasMixedResults = activities.some((activity) =>
+      activity.id.startsWith(AI_FALLBACK_PREFIX)
+    );
+    const allAiResults = activities.every((activity) =>
       activity.id.startsWith(AI_FALLBACK_PREFIX)
     );
 
     if (!hasMixedResults) {
       return {
         aiSuggestions: [] as Activity[],
+        allAi: allAiResults,
         verifiedActivities: [] as Activity[],
       };
     }
@@ -284,6 +290,7 @@ export default function ActivitiesSearchClient({
       aiSuggestions: activities.filter((activity) =>
         activity.id.startsWith(AI_FALLBACK_PREFIX)
       ),
+      allAi: false,
       verifiedActivities: activities.filter(
         (activity) => !activity.id.startsWith(AI_FALLBACK_PREFIX)
       ),
@@ -510,6 +517,12 @@ export default function ActivitiesSearchClient({
                   {/* Standard Results */}
                   {verifiedActivities.length === 0 && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {allAi && (
+                        <div className="col-span-full flex items-center gap-2 text-sm text-muted-foreground">
+                          <SparklesIcon className="h-4 w-4 text-purple-500" />
+                          <span>All results are AI-generated suggestions</span>
+                        </div>
+                      )}
                       {activities.map((activity) => (
                         <ActivityCard
                           key={activity.id}

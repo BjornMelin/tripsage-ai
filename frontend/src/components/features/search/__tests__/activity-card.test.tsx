@@ -56,7 +56,7 @@ describe("ActivityCard", () => {
     expect(image).toBeInTheDocument();
   });
 
-  it("displays placeholder when no images available", () => {
+  it("does not display image when no images available", () => {
     render(<ActivityCard activity={MockActivityWithoutImages} />);
 
     expect(

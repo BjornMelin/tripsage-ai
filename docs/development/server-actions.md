@@ -66,7 +66,7 @@ import "server-only";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { tripCreateSchema } from "@schemas/trips";
-import type { TripCreateData } from "@schemas/trips"; // generated from tripCreateSchema
+import type { TripCreateData } from "@schemas/trips"; // generated from tripCreateSchema (or z.infer<typeof tripCreateSchema>)
 import { createServerSupabase } from "@/lib/supabase/server";
 
 export async function createTripAction(data: TripCreateData) {
@@ -119,7 +119,7 @@ export async function deleteTripAction(tripId: string): Promise<never> {
 import { useRouter } from "next/navigation";
 import { createTripAction } from "./actions";
 import { useZodForm } from "@/hooks/use-zod-form";
-import { tripFormSchema } from "@schemas/trips";
+import { tripFormSchema } from "@schemas/trips"; // runtime schema; type via z.infer<typeof tripFormSchema>
 
 function TripForm() {
   const router = useRouter();
@@ -209,6 +209,9 @@ revalidatePath(`/trips/${tripId}`);
 
 ```typescript
 // In data fetching:
+// - Use fetch for external HTTP endpoints
+// - Use the Supabase client for DB reads/writes
+// - Fetch data first, then call revalidateTag() for affected tags
 const trips = await fetch("/api/trips", { next: { tags: ["trips"] } });
 
 // In action after mutation:

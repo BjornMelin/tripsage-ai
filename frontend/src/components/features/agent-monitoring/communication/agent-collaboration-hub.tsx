@@ -187,6 +187,19 @@ const CollaborationMetrics: CollaborationMetric[] = [
   },
 ];
 
+const STATUS_ICON_CLASS = "h-3 w-3";
+
+const AGENT_STATUS_ICONS: Record<
+  Agent["status"] | "unknown",
+  React.ComponentType<{ className?: string }>
+> = {
+  active: CheckCircle2Icon,
+  busy: ClockIcon,
+  idle: TimerIcon,
+  offline: AlertTriangleIcon,
+  unknown: ActivityIcon,
+};
+
 /** Function to get the status color for an agent */
 const GetStatusColor = (status: Agent["status"]) => {
   return AGENT_STATUS_COLORS[status] ?? AGENT_STATUS_COLORS.offline;
@@ -194,18 +207,8 @@ const GetStatusColor = (status: Agent["status"]) => {
 
 /** Function to get the status icon for an agent */
 const GetStatusIcon = (status: Agent["status"]) => {
-  switch (status) {
-    case "active":
-      return <CheckCircle2Icon className="h-3 w-3" />;
-    case "busy":
-      return <ClockIcon className="h-3 w-3" />;
-    case "idle":
-      return <TimerIcon className="h-3 w-3" />;
-    case "offline":
-      return <AlertTriangleIcon className="h-3 w-3" />;
-    default:
-      return <ActivityIcon className="h-3 w-3" />;
-  }
+  const Icon = AGENT_STATUS_ICONS[status] ?? AGENT_STATUS_ICONS.unknown;
+  return <Icon className={STATUS_ICON_CLASS} />;
 };
 
 /** Component for an agent card */

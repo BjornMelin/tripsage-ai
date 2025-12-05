@@ -47,7 +47,12 @@ const mockTrips = vi.hoisted(() => vi.fn((): MockTrip[] => []));
 const mockIsLoading = vi.hoisted(() => vi.fn(() => false));
 const mockError = vi.hoisted(() => vi.fn((): AppError | null => null));
 const mockIsConnected = vi.hoisted(() => vi.fn(() => true));
-const mockRealtimeStatus = vi.hoisted(() => vi.fn(() => "connected" as const));
+const mockRealtimeStatus = vi.hoisted(() =>
+  vi.fn<() => { errors: Error[]; isConnected: boolean }>(() => ({
+    errors: [],
+    isConnected: true,
+  }))
+);
 const mockCreateTrip = vi.hoisted(() => vi.fn());
 const mockDeleteTrip = vi.hoisted(() => vi.fn());
 
@@ -73,7 +78,9 @@ vi.mock("@/stores/trip-store", () => ({
 
 // Mock child components
 vi.mock("@/components/features/realtime/connection-status-monitor", () => ({
-  ConnectionStatusIndicator: () => <div data-testid="connection-status" />,
+  ConnectionStatusIndicator: (props: Record<string, unknown>) => (
+    <div data-testid="connection-status" {...props} />
+  ),
 }));
 
 vi.mock("@/components/features/trips", () => ({
@@ -108,7 +115,7 @@ describe("TripsPage", () => {
     mockIsLoading.mockReturnValue(false);
     mockError.mockReturnValue(null);
     mockIsConnected.mockReturnValue(true);
-    mockRealtimeStatus.mockReturnValue("connected");
+    mockRealtimeStatus.mockReturnValue({ errors: [], isConnected: true });
   });
 
   describe("Loading state", () => {
@@ -195,7 +202,7 @@ describe("TripsPage", () => {
         },
       ]);
       mockIsConnected.mockReturnValue(false);
-      mockRealtimeStatus.mockReturnValue("connected");
+      mockRealtimeStatus.mockReturnValue({ errors: [], isConnected: false });
 
       render(<TripsPage />);
 
@@ -294,10 +301,10 @@ describe("TripsPage", () => {
 
       render(<TripsPage />);
 
-      const filterTrigger = screen.getAllByRole("combobox")[0];
+      const filterTrigger = screen.getByRole("combobox", { name: /filter trips/i });
 
       await userEvent.click(filterTrigger);
-      const filterList = (await screen.findAllByRole("listbox"))[0];
+      const filterList = await screen.findByRole("listbox");
       await userEvent.click(
         within(filterList).getByRole("option", { name: "Upcoming" })
       );
@@ -337,7 +344,7 @@ describe("TripsPage", () => {
 
       render(<TripsPage />);
 
-      const sortTrigger = screen.getAllByRole("combobox")[1];
+      const sortTrigger = screen.getByRole("combobox", { name: /sort trips/i });
       await userEvent.click(sortTrigger);
       const nameOption = await screen.findByRole("option", { name: "Name" });
       await userEvent.click(nameOption);
@@ -347,13 +354,54 @@ describe("TripsPage", () => {
       expect(cards[1]).toHaveTextContent("Zebra Trip");
     });
 
+    it("supports additional sort options for budget and destinations", async () => {
+      const tripsForSort: MockTrip[] = [
+        {
+          budget: 2000,
+          createdAt: "2024-01-11T10:00:00Z",
+          destinations: [{ name: "Tokyo" }],
+          id: "trip-budget-low",
+          title: "Budget Low",
+          visibility: "private",
+        },
+        {
+          budget: 8000,
+          createdAt: "2024-01-10T10:00:00Z",
+          destinations: [{ name: "Paris" }, { name: "Lyon" }],
+          id: "trip-budget-high",
+          title: "Budget High",
+          visibility: "private",
+        },
+      ];
+      mockTrips.mockReturnValue(tripsForSort);
+
+      render(<TripsPage />);
+
+      const sortTrigger = screen.getByRole("combobox", { name: /sort trips/i });
+      await userEvent.click(sortTrigger);
+      await userEvent.click(await screen.findByRole("option", { name: "Budget" }));
+
+      await waitFor(() => {
+        const cards = screen.getAllByTestId(/trip-card-/);
+        expect(cards[0]).toHaveAttribute("data-testid", "trip-card-trip-budget-high");
+      });
+
+      await userEvent.click(sortTrigger);
+      await userEvent.click(
+        await screen.findByRole("option", { name: "Destinations" })
+      );
+
+      await waitFor(() => {
+        const cards = screen.getAllByTestId(/trip-card-/);
+        expect(cards[0]).toHaveAttribute("data-testid", "trip-card-trip-budget-high");
+        expect(cards[1]).toHaveAttribute("data-testid", "trip-card-trip-budget-low");
+      });
+    });
+
     it("toggles view mode to list when list button is clicked", () => {
       mockTrips.mockReturnValue(sampleTrips);
 
-      const { container } = render(<TripsPage />);
-
-      // Grid view by default
-      expect(container.querySelector(".grid.grid-cols-1")).toBeTruthy();
+      render(<TripsPage />);
 
       const listButton = screen.getByTestId("list-icon").closest("button");
       expect(listButton).toBeTruthy();
@@ -361,7 +409,13 @@ describe("TripsPage", () => {
 
       fireEvent.click(listButton);
 
-      expect(container.querySelector(".space-y-4")).toBeTruthy();
+      expect(listButton).toHaveAttribute("data-state", "on");
+      const gridButton = screen.getByTestId("grid-icon").closest("button");
+      expect(gridButton).toHaveAttribute("data-state", "off");
+      expect(screen.getByTestId("trips-view")).toHaveAttribute(
+        "data-view-mode",
+        "list"
+      );
     });
 
     it("renders create trip button", () => {
@@ -389,6 +443,31 @@ describe("TripsPage", () => {
 
       render(<TripsPage />);
       expect(screen.getByTestId("connection-status")).toBeInTheDocument();
+    });
+
+    it("shows connection state attributes for disconnected and error states", () => {
+      mockTrips.mockReturnValue(sampleTrips);
+      mockIsConnected.mockReturnValue(false);
+      mockRealtimeStatus.mockReturnValue({ errors: [], isConnected: false });
+
+      const { rerender } = render(<TripsPage />);
+
+      let connectionWrapper = screen.getByTestId("trips-connection");
+      let indicator = within(connectionWrapper).getByTestId("connection-status");
+      expect(indicator.parentElement).toHaveAttribute(
+        "data-connection-state",
+        "disconnected"
+      );
+
+      mockRealtimeStatus.mockReturnValue({
+        errors: [new Error("lost")],
+        isConnected: false,
+      });
+      rerender(<TripsPage />);
+
+      connectionWrapper = screen.getByTestId("trips-connection");
+      indicator = within(connectionWrapper).getByTestId("connection-status");
+      expect(indicator.parentElement).toHaveAttribute("data-connection-state", "error");
     });
 
     it("deletes a trip when delete button is clicked", async () => {
@@ -527,6 +606,111 @@ describe("TripsPage", () => {
 
       render(<TripsPage />);
       expect(screen.getByText("2 trips in your collection")).toBeInTheDocument();
+    });
+  });
+
+  describe("Additional filters", () => {
+    const baseTrips: MockTrip[] = [
+      {
+        createdAt: "2024-01-10T10:00:00Z",
+        destinations: [],
+        id: "trip-draft",
+        title: "Draft Trip",
+        visibility: "private",
+      },
+      {
+        createdAt: "2024-01-12T10:00:00Z",
+        destinations: [],
+        endDate: "2025-12-31",
+        id: "trip-active",
+        startDate: "2025-01-01",
+        title: "Active Trip",
+        visibility: "private",
+      },
+      {
+        createdAt: "2024-01-15T10:00:00Z",
+        destinations: [],
+        endDate: "2024-02-01",
+        id: "trip-completed",
+        startDate: "2024-01-01",
+        title: "Completed Trip",
+        visibility: "private",
+      },
+    ];
+
+    const selectFilter = async (name: string) => {
+      const trigger = screen.getByRole("combobox", { name: /filter trips/i });
+      await userEvent.click(trigger);
+      const list = await screen.findByRole("listbox");
+      await userEvent.click(within(list).getByRole("option", { name }));
+    };
+
+    it("filters draft trips", async () => {
+      mockTrips.mockReturnValue(baseTrips);
+
+      const nowSpy = vi
+        .spyOn(Date, "now")
+        .mockReturnValue(new Date("2025-06-15T00:00:00Z").getTime());
+
+      try {
+        render(<TripsPage />);
+
+        await selectFilter("Draft");
+
+        await waitFor(() => {
+          expect(screen.getByTestId("trip-card-trip-draft")).toBeInTheDocument();
+          expect(screen.queryByTestId("trip-card-trip-active")).not.toBeInTheDocument();
+          expect(
+            screen.queryByTestId("trip-card-trip-completed")
+          ).not.toBeInTheDocument();
+        });
+      } finally {
+        nowSpy.mockRestore();
+      }
+    });
+
+    it("filters active trips", async () => {
+      mockTrips.mockReturnValue(baseTrips);
+
+      const nowSpy = vi
+        .spyOn(Date, "now")
+        .mockReturnValue(new Date("2025-06-15T00:00:00Z").getTime());
+
+      try {
+        render(<TripsPage />);
+        await selectFilter("Active");
+
+        await waitFor(() => {
+          expect(screen.getByTestId("trip-card-trip-active")).toBeInTheDocument();
+          expect(screen.queryByTestId("trip-card-trip-draft")).not.toBeInTheDocument();
+          expect(
+            screen.queryByTestId("trip-card-trip-completed")
+          ).not.toBeInTheDocument();
+        });
+      } finally {
+        nowSpy.mockRestore();
+      }
+    });
+
+    it("filters completed trips", async () => {
+      mockTrips.mockReturnValue(baseTrips);
+
+      const nowSpy = vi
+        .spyOn(Date, "now")
+        .mockReturnValue(new Date("2025-06-15T00:00:00Z").getTime());
+
+      try {
+        render(<TripsPage />);
+        await selectFilter("Completed");
+
+        await waitFor(() => {
+          expect(screen.getByTestId("trip-card-trip-completed")).toBeInTheDocument();
+          expect(screen.queryByTestId("trip-card-trip-draft")).not.toBeInTheDocument();
+          expect(screen.queryByTestId("trip-card-trip-active")).not.toBeInTheDocument();
+        });
+      } finally {
+        nowSpy.mockRestore();
+      }
     });
   });
 });

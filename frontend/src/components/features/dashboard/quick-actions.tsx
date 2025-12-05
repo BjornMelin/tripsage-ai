@@ -86,7 +86,7 @@ const QUICK_ACTIONS: QuickAction[] = [
     variant: "default",
   },
   {
-    actionVariant: "create",
+    actionVariant: "search",
     description: "Discover comfortable accommodations worldwide",
     href: "/dashboard/search/hotels",
     icon: <MapPinIcon className="h-4 w-4" />,
@@ -95,7 +95,7 @@ const QUICK_ACTIONS: QuickAction[] = [
     variant: "outline",
   },
   {
-    actionVariant: "explore",
+    actionVariant: "create",
     description: "Start planning your next adventure",
     href: "/dashboard/trips/create",
     icon: <PlusIcon className="h-4 w-4" />,
@@ -114,7 +114,7 @@ const QUICK_ACTIONS: QuickAction[] = [
     variant: "outline",
   },
   {
-    actionVariant: "calendar",
+    actionVariant: "explore",
     description: "Discover new places to visit",
     href: "/dashboard/search/destinations",
     icon: <CompassIcon className="h-4 w-4" />,

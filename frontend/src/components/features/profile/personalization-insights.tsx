@@ -47,10 +47,11 @@ import { cn } from "@/lib/utils";
 /**
  * Spending trend colors with inverted semantic:
  * increasing=red (spending more is concerning), decreasing=green (spending less is good)
+ * Uses 500 weight to align with TREND_COLORS for consistency across cards.
  */
 const SPENDING_TREND_COLORS = {
-  decreasing: "text-green-700",
-  increasing: "text-red-700",
+  decreasing: "text-green-500",
+  increasing: "text-red-500",
   stable: "text-gray-500",
 } as const;
 
@@ -109,14 +110,17 @@ export function PersonalizationInsights({
    * Trend colors aligned with statusVariants urgency mapping.
    * For general trends: increasing=green, decreasing=red, stable=neutral
    */
-  const renderTrendIcon = (trend: "increasing" | "decreasing" | "stable") => {
+  const renderTrendIcon = (
+    trend: "increasing" | "decreasing" | "stable",
+    colorMap: typeof TREND_COLORS | typeof SPENDING_TREND_COLORS = TREND_COLORS
+  ) => {
     switch (trend) {
       case "increasing":
-        return <TrendingUpIcon className={`h-4 w-4 ${TREND_COLORS.increasing}`} />;
+        return <TrendingUpIcon className={`h-4 w-4 ${colorMap.increasing}`} />;
       case "decreasing":
-        return <TrendingDownIcon className={`h-4 w-4 ${TREND_COLORS.decreasing}`} />;
+        return <TrendingDownIcon className={`h-4 w-4 ${colorMap.decreasing}`} />;
       default:
-        return <BarChart3Icon className={`h-4 w-4 ${TREND_COLORS.stable}`} />;
+        return <BarChart3Icon className={`h-4 w-4 ${colorMap.stable}`} />;
     }
   };
 
@@ -366,7 +370,7 @@ export function PersonalizationInsights({
                     className="flex items-center justify-between p-3 rounded-lg bg-muted"
                   >
                     <div className="flex items-center gap-3">
-                      {renderTrendIcon(trend.trend)}
+                      {renderTrendIcon(trend.trend, SPENDING_TREND_COLORS)}
                       <div>
                         <div className="font-medium capitalize">{trend.category}</div>
                         <div className="text-sm text-muted-foreground capitalize">

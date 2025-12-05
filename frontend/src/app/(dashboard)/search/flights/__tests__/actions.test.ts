@@ -6,8 +6,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // Mock telemetry span
 vi.mock("@/lib/telemetry/span", () => ({
   withTelemetrySpan: vi.fn(
-    async <T>(_name: string, _options: unknown, fn: () => Promise<T>): Promise<T> =>
-      fn()
+    async <T>(_name: string, _options: unknown, fn: () => T | Promise<T>): Promise<T> =>
+      await fn()
   ),
 }));
 

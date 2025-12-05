@@ -66,8 +66,7 @@ export async function getPlanningTrips(): Promise<UiTrip[]> {
     } else {
       logger.warn("Invalid trip row skipped", {
         error: parsed.error.format(),
-        row,
-        userId: user.id,
+        tripId: (row as { id?: unknown })?.id,
       });
     }
   }
