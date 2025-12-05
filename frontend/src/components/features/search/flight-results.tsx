@@ -188,7 +188,7 @@ export function FlightResults({
 
   if (loading) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4" data-testid="flight-results-loading">
         {[1, 2, 3].map((i) => (
           <Card key={`flight-skeleton-${i}`} className="p-6">
             <div className="animate-pulse space-y-4">
@@ -231,7 +231,11 @@ export function FlightResults({
   }
 
   return (
-    <div className={cn("space-y-4", className)}>
+    <div
+      className={cn("space-y-4", className)}
+      data-view-mode={viewMode}
+      data-testid="flight-results-container"
+    >
       {/* Search Controls */}
       <Card className="p-4" data-testid="flight-results-controls">
         <div className="flex items-center justify-between">
@@ -253,7 +257,7 @@ export function FlightResults({
                 value={sortBy}
                 onValueChange={(value) => setSortBy(value as SortField)}
               >
-                <SelectTrigger className="w-40 h-9">
+                <SelectTrigger aria-label="Sort flights" className="w-40 h-9">
                   <div className="flex items-center gap-2">
                     <ArrowUpDownIcon className="h-4 w-4" />
                     <SelectValue placeholder="Sort" />
@@ -277,11 +281,14 @@ export function FlightResults({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" role="group" aria-label="View mode options">
             <Button
               variant={viewMode === "list" ? "default" : "outline"}
               size="sm"
               onClick={() => setViewMode("list")}
+              aria-pressed={viewMode === "list"}
+              data-state={viewMode === "list" ? "on" : "off"}
+              aria-label="List view"
             >
               <ListIcon className="h-4 w-4" />
             </Button>
@@ -289,6 +296,9 @@ export function FlightResults({
               variant={viewMode === "grid" ? "default" : "outline"}
               size="sm"
               onClick={() => setViewMode("grid")}
+              aria-pressed={viewMode === "grid"}
+              data-state={viewMode === "grid" ? "on" : "off"}
+              aria-label="Grid view"
             >
               <Grid3X3Icon className="h-4 w-4" />
             </Button>
@@ -332,6 +342,7 @@ export function FlightResults({
         {sortedResults.map((flight) => (
           <Card
             key={flight.id}
+            data-testid={`flight-card-${flight.id}`}
             className={cn(
               "relative transition-all duration-200 hover:shadow-md",
               selectedForComparison.has(flight.id) && "ring-2 ring-blue-500",

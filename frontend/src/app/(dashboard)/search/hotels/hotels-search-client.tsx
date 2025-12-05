@@ -69,85 +69,87 @@ export default function HotelsSearchClient({
 
   const hotelResults: HotelResult[] = useMemo(
     () =>
-      accommodationResults.map((accommodation) => ({
-        // TODO: Implement AI-powered personalized tags from user preferences and travel context
-        ai: {
-          personalizedTags: accommodation.amenities.slice(0, 3),
-          // TODO: Generate personalized recommendation reason from AI analysis of user profile and hotel features
-          reason: "Top accommodation match",
-          // TODO: Calculate recommendation score from AI model analyzing user preferences, trip context, and hotel features
-          recommendation: Math.max(
-            1,
-            Math.min(10, Math.round(accommodation.rating * 2))
-          ),
-        },
-        // TODO: Categorize amenities into essential/premium/unique based on hotel metadata and user preferences
-        amenities: {
-          essential: accommodation.amenities.slice(0, 3),
-          premium: accommodation.amenities.slice(3, 6),
-          unique: accommodation.amenities.slice(6),
-        },
-        availability: {
-          // TODO: Determine flexible cancellation from provider data or booking policies
-          flexible: false,
-          // TODO (MVP placeholder): Replace with real room availability from accommodation object (accommodation.roomsLeft) or provider API before production
-          roomsLeft: accommodation.totalPrice > 0 ? 5 : 0,
-          // TODO: Calculate urgency based on availability, booking trends, and date proximity
-          urgency: "medium",
-        },
-        // TODO: Extract brand information from accommodation provider metadata
-        brand: undefined,
-        // TODO: Determine category (hotel/resort/vacation rental) from provider data
-        category: "hotel",
-        guestExperience: {
-          // TODO: Extract guest experience highlights from reviews and provider metadata
-          highlights: [],
-          // TODO: Aggregate recent mentions from social media and review platforms
-          recentMentions: [],
-          // TODO (MVP placeholder): Replace with vibe derived from reviews/AI analysis (accommodation.vibe) or classification before production
-          vibe: "business",
-        },
-        id: accommodation.id,
-        images: {
-          count: accommodation.images?.length ?? 0,
-          gallery: accommodation.images ?? [],
-          main: accommodation.images?.[0] ?? "/globe.svg",
-        },
-        location: {
-          // TODO: Parse structured address components from provider data or geocoding service
-          address: accommodation.location,
-          city: accommodation.location,
-          district: accommodation.location,
-          // TODO: Identify nearby landmarks using geocoding or mapping services
-          landmarks: [],
-          // TODO: Calculate or fetch Walk Score from external API
-          walkScore: undefined,
-        },
-        name: accommodation.name,
-        pricing: {
-          basePrice: accommodation.pricePerNight,
-          // TODO: Determine currency from provider data or user preferences
-          currency: "USD",
-          // TODO: Analyze price history trends from historical data
-          priceHistory: "stable",
-          pricePerNight: accommodation.pricePerNight,
-          // TODO: Calculate actual taxes and fees from provider pricing breakdown
-          taxes: accommodation.pricePerNight * 0.1,
-          totalPrice: accommodation.totalPrice,
-        },
-        // TODO (MVP placeholder): Replace with real review count from accommodation object (accommodation.reviewCount) or review provider APIs before production
-        reviewCount: 0,
-        starRating: accommodation.rating,
-        sustainability: {
-          // TODO: Check sustainability certifications from provider data or external databases
-          certified: false,
-          // TODO: Extract sustainability practices from hotel metadata
-          practices: [],
-          // TODO (MVP placeholder): Replace with real sustainability score from accommodation object (accommodation.sustainabilityScore) or external certification databases before production
-          score: 5,
-        },
-        userRating: accommodation.rating,
-      })),
+      accommodationResults.map((accommodation) => {
+        return {
+          // TODO: Implement AI-powered personalized tags from user preferences and travel context
+          ai: {
+            personalizedTags: accommodation.amenities.slice(0, 3),
+            // TODO: Generate personalized recommendation reason from AI analysis of user profile and hotel features
+            reason: "Top accommodation match",
+            // TODO: Calculate recommendation score from AI model analyzing user preferences, trip context, and hotel features
+            recommendation: Math.max(
+              1,
+              Math.min(10, Math.round(accommodation.rating * 2))
+            ),
+          },
+          // TODO: Categorize amenities into essential/premium/unique based on hotel metadata and user preferences
+          amenities: {
+            essential: accommodation.amenities.slice(0, 3),
+            premium: accommodation.amenities.slice(3, 6),
+            unique: accommodation.amenities.slice(6),
+          },
+          availability: {
+            // TODO: Determine flexible cancellation from provider data or booking policies
+            flexible: false,
+            // TODO (MVP placeholder): Replace with provider availability when available
+            roomsLeft: 5,
+            // TODO: Calculate urgency based on availability, booking trends, and date proximity
+            urgency: "medium",
+          },
+          // TODO: Extract brand information from accommodation provider metadata
+          brand: undefined,
+          // TODO: Determine category (hotel/resort/vacation rental) from provider data
+          category: "hotel",
+          guestExperience: {
+            // TODO: Extract guest experience highlights from reviews and provider metadata
+            highlights: [],
+            // TODO: Aggregate recent mentions from social media and review platforms
+            recentMentions: [],
+            // TODO (MVP placeholder): Replace with vibe derived from reviews/AI analysis (accommodation.vibe) or classification before production
+            vibe: "business",
+          },
+          id: accommodation.id,
+          images: {
+            count: accommodation.images?.length ?? 0,
+            gallery: accommodation.images ?? [],
+            main: accommodation.images?.[0] ?? "/globe.svg",
+          },
+          location: {
+            // TODO: Parse structured address components from provider data or geocoding service
+            address: accommodation.location,
+            city: accommodation.location,
+            district: accommodation.location,
+            // TODO: Identify nearby landmarks using geocoding or mapping services
+            landmarks: [],
+            // TODO: Calculate or fetch Walk Score from external API
+            walkScore: undefined,
+          },
+          name: accommodation.name,
+          pricing: {
+            basePrice: accommodation.pricePerNight,
+            // TODO: Determine currency from provider data or user preferences
+            currency: "USD",
+            // TODO: Analyze price history trends from historical data
+            priceHistory: "stable",
+            pricePerNight: accommodation.pricePerNight,
+            // TODO: Calculate actual taxes and fees from provider pricing breakdown
+            taxes: accommodation.pricePerNight * 0.1,
+            totalPrice: accommodation.totalPrice,
+          },
+          // TODO (MVP placeholder): Replace with real review count from accommodation object (accommodation.reviewCount) or review provider APIs before production
+          reviewCount: 0,
+          starRating: accommodation.rating,
+          sustainability: {
+            // TODO: Check sustainability certifications from provider data or external databases
+            certified: false,
+            // TODO: Extract sustainability practices from hotel metadata
+            practices: [],
+            // TODO (MVP placeholder): Replace with real sustainability score from accommodation object (accommodation.sustainabilityScore) or external certification databases before production
+            score: 5,
+          },
+          userRating: accommodation.rating,
+        };
+      }),
     [accommodationResults]
   );
 
@@ -195,7 +197,7 @@ export default function HotelsSearchClient({
   const handleSearch = async (params: SearchAccommodationParams) => {
     try {
       const validatedParams = await onSubmitServer(params); // server-side telemetry and validation
-      await executeSearch(validatedParams ?? params); // client fetch/store update via orchestration
+      await executeSearch(validatedParams); // client fetch/store update via orchestration
       setHasSearched(true);
     } catch (error) {
       toast({

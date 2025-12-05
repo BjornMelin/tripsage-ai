@@ -35,7 +35,9 @@ export async function submitFlightSearch(
 
       const normalizedPassengers = parsed.passengers
         ? parsed.passengers
-        : parsed.adults || parsed.children || parsed.infants
+        : parsed.adults !== undefined ||
+            parsed.children !== undefined ||
+            parsed.infants !== undefined
           ? {
               adults: parsed.adults ?? 1,
               children: parsed.children ?? 0,

@@ -7,14 +7,12 @@
 import type { Destination, DestinationSearchParams } from "@schemas/search";
 import {
   AlertCircleIcon,
-  CalendarIcon,
   GlobeIcon,
   MapPinIcon,
   SearchIcon,
-  StarIcon,
-  ThermometerIcon,
   XIcon,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { DestinationCard } from "@/components/features/search/destination-card";
 import { DestinationSearchForm } from "@/components/features/search/destination-search-form";
@@ -23,23 +21,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Tooltip,
   TooltipContent,
@@ -52,8 +33,8 @@ import type { DestinationResult } from "@/hooks/search/use-destination-search";
 import { useDestinationSearch } from "@/hooks/search/use-destination-search";
 import { useSearchOrchestration } from "@/hooks/search/use-search-orchestration";
 import { getErrorMessage } from "@/lib/api/error-types";
-import { formatDestinationTypes } from "@/lib/google/places-format";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
+import { DestinationComparisonModal } from "./destination-comparison-modal";
 
 /** The destinations search client component props. */
 interface DestinationsSearchClientProps {
@@ -67,6 +48,7 @@ const MAX_COMPARISON_ITEMS = 3;
 export default function DestinationsSearchClient({
   onSubmitServer,
 }: DestinationsSearchClientProps) {
+  const router = useRouter();
   const { hasResults, isSearching: storeIsSearching } = useSearchOrchestration();
   const { searchDestinations, isSearching, searchError, resetSearch, results } =
     useDestinationSearch();
@@ -143,22 +125,32 @@ export default function DestinationsSearchClient({
     });
   };
 
+  /**
+   * Opens destination details (placeholder until detail route/modal is wired).
+   * Closes comparison modal when invoked from comparison.
+   */
+  const openDestinationDetails = (
+    destination: Destination,
+    options?: { fromComparison?: boolean }
+  ) => {
+    if (options?.fromComparison) {
+      setShowComparisonModal(false);
+    }
+
+    const url = `/dashboard/search/destinations/${destination.id}${
+      options?.fromComparison ? "?fromComparison=1" : ""
+    }`;
+    router.push(url);
+  };
+
   /** Handles viewing details for a destination from comparison. */
   const handleViewDetailsFromComparison = (destination: Destination) => {
-    setShowComparisonModal(false);
-    toast({
-      description: `Viewing details for ${destination.name}`,
-      title: "View Details",
-    });
+    openDestinationDetails(destination, { fromComparison: true });
   };
 
   /** Handles the viewing of details for a destination. */
   const handleViewDetails = (destination: Destination) => {
-    // TODO: route to destination detail page or open details modal
-    toast({
-      description: `Opening details for ${destination.name}...`,
-      title: "Destination Details",
-    });
+    openDestinationDetails(destination);
   };
 
   /** Clears the comparison of destinations. */
@@ -399,218 +391,12 @@ export default function DestinationsSearchClient({
             isOpen={showComparisonModal}
             onClose={() => setShowComparisonModal(false)}
             destinations={selectedDestinations}
+            maxItems={MAX_COMPARISON_ITEMS}
             onRemove={handleRemoveFromComparison}
             onViewDetails={handleViewDetailsFromComparison}
           />
         </div>
       </TooltipProvider>
     </SearchLayout>
-  );
-}
-
-/** Props for the DestinationComparisonModal. */
-interface DestinationComparisonModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  destinations: Destination[];
-  onRemove: (destinationId: string) => void;
-  onViewDetails: (destination: Destination) => void;
-}
-
-/**
- * Modal dialog for comparing destinations side-by-side.
- */
-function DestinationComparisonModal({
-  isOpen,
-  onClose,
-  destinations,
-  onRemove,
-  onViewDetails,
-}: DestinationComparisonModalProps) {
-  if (!destinations.length) return null;
-
-  return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl w-full max-h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <MapPinIcon className="h-5 w-5" />
-            Compare Destinations
-          </DialogTitle>
-          <DialogDescription>
-            Compare up to {MAX_COMPARISON_ITEMS} destinations side-by-side to find your
-            perfect travel spot.
-          </DialogDescription>
-        </DialogHeader>
-
-        <Separator className="my-2" />
-
-        <ScrollArea className="flex-1 mt-4">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[150px]">Feature</TableHead>
-                {destinations.map((destination) => (
-                  <TableHead key={destination.id} className="min-w-[200px]">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-bold truncate">{destination.name}</span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 rounded-full shrink-0"
-                        onClick={() => onRemove(destination.id)}
-                        aria-label={`Remove ${destination.name} from comparison`}
-                      >
-                        <XIcon className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {/* Type Row */}
-              <TableRow>
-                <TableCell className="font-medium">
-                  <div className="flex items-center gap-2">
-                    <GlobeIcon className="h-4 w-4 text-muted-foreground" />
-                    Type
-                  </div>
-                </TableCell>
-                {destinations.map((destination) => (
-                  <TableCell key={destination.id}>
-                    <Badge variant="secondary">
-                      {formatDestinationTypes(destination.types)}
-                    </Badge>
-                  </TableCell>
-                ))}
-              </TableRow>
-
-              {/* Location Row */}
-              <TableRow>
-                <TableCell className="font-medium">
-                  <div className="flex items-center gap-2">
-                    <MapPinIcon className="h-4 w-4 text-muted-foreground" />
-                    Location
-                  </div>
-                </TableCell>
-                {destinations.map((destination) => (
-                  <TableCell key={destination.id}>
-                    <span className="text-sm line-clamp-2">
-                      {destination.formattedAddress || "Unknown location"}
-                    </span>
-                  </TableCell>
-                ))}
-              </TableRow>
-
-              {/* Rating Row */}
-              <TableRow>
-                <TableCell className="font-medium">
-                  <div className="flex items-center gap-2">
-                    <StarIcon className="h-4 w-4 text-muted-foreground" />
-                    Rating
-                  </div>
-                </TableCell>
-                {destinations.map((destination) => (
-                  <TableCell key={destination.id}>
-                    {destination.rating ? (
-                      <div className="flex items-center gap-1">
-                        <StarIcon className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                        <span className="font-medium">
-                          {destination.rating.toFixed(1)}
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">N/A</span>
-                    )}
-                  </TableCell>
-                ))}
-              </TableRow>
-
-              {/* Climate Row */}
-              <TableRow>
-                <TableCell className="font-medium">
-                  <div className="flex items-center gap-2">
-                    <ThermometerIcon className="h-4 w-4 text-muted-foreground" />
-                    Climate
-                  </div>
-                </TableCell>
-                {destinations.map((destination) => (
-                  <TableCell key={destination.id}>
-                    {destination.climate ? (
-                      <span className="text-sm">
-                        {destination.climate.averageTemp}°C avg
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">N/A</span>
-                    )}
-                  </TableCell>
-                ))}
-              </TableRow>
-
-              {/* Best Time Row */}
-              <TableRow>
-                <TableCell className="font-medium">
-                  <div className="flex items-center gap-2">
-                    <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                    Best Time
-                  </div>
-                </TableCell>
-                {destinations.map((destination) => (
-                  <TableCell key={destination.id}>
-                    {destination.bestTimeToVisit?.length ? (
-                      <span className="text-sm">
-                        {destination.bestTimeToVisit.slice(0, 3).join(", ")}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">Year-round</span>
-                    )}
-                  </TableCell>
-                ))}
-              </TableRow>
-
-              {/* Popularity Row */}
-              <TableRow>
-                <TableCell className="font-medium">Popularity</TableCell>
-                {destinations.map((destination) => (
-                  <TableCell key={destination.id}>
-                    {destination.popularityScore ? (
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 flex-1 bg-muted rounded-full overflow-hidden max-w-24">
-                          <div
-                            className="h-full bg-primary transition-all"
-                            style={{ width: `${destination.popularityScore}%` }}
-                          />
-                        </div>
-                        <span className="text-xs text-muted-foreground">
-                          {destination.popularityScore}/100
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">N/A</span>
-                    )}
-                  </TableCell>
-                ))}
-              </TableRow>
-
-              {/* Actions Row */}
-              <TableRow>
-                <TableCell className="font-medium">Actions</TableCell>
-                {destinations.map((destination) => (
-                  <TableCell key={destination.id}>
-                    <Button
-                      className="w-full"
-                      onClick={() => onViewDetails(destination)}
-                    >
-                      View Details
-                    </Button>
-                  </TableCell>
-                ))}
-              </TableRow>
-            </TableBody>
-          </Table>
-        </ScrollArea>
-      </DialogContent>
-    </Dialog>
   );
 }

@@ -39,7 +39,9 @@ The TripSage search domain uses three distinct hook patterns, each optimized for
 **Code pattern:**
 
 ```typescript
-// Abbreviated example: imports (React, React Query, apiClient) omitted for brevity.
+// Example simplified for clarity; imports (React, React Query, apiClient) omitted.
+// AccommodationSearchResponse below is a sample response contract—replace with your real type.
+type AccommodationSearchResponse = { results: Accommodation[] };
 export function useAccommodationSearch() {
   const { updateAccommodationParams } = useSearchParamsStore();
   const { startSearch, setSearchResults, setSearchError, completeSearch } =
@@ -54,7 +56,10 @@ export function useAccommodationSearch() {
 
   const searchMutation = useMutation({
     mutationFn: async (params: SearchAccommodationParams) => {
-      const response = await apiClient.post<...>("/accommodations/search", params);
+      const response = await apiClient.post<AccommodationSearchResponse>(
+        "/accommodations/search",
+        params
+      );
       return response;
     },
     onMutate: (params) => {
@@ -217,6 +222,12 @@ export function useDestinationSearch() {
     setIsSearching(true);
     setError(null);
 
+    if (!apiKey) {
+      setError(new Error("Google Places API key is not configured"));
+      setIsSearching(false);
+      return;
+    }
+
     try {
       const response = await fetch(
         "https://places.googleapis.com/v1/places:searchText",
@@ -224,7 +235,7 @@ export function useDestinationSearch() {
           body: JSON.stringify({ textQuery: query }),
           headers: {
             "Content-Type": "application/json",
-            "X-Goog-Api-Key": apiKey ?? "",
+            "X-Goog-Api-Key": apiKey,
           },
           method: "POST",
           signal: abortControllerRef.current.signal,
@@ -247,6 +258,9 @@ export function useDestinationSearch() {
   return { results, search, isSearching, error };
 }
 ```
+
+If the same normalization logic is needed in other hooks, extract
+`normalizeGooglePlace` into a shared utility to avoid duplication.
 
 ## Decision Guide
 

@@ -13,7 +13,7 @@ import {
   MapPinIcon,
   RefreshCwIcon,
 } from "lucide-react";
-import { useOptimistic, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -55,16 +55,19 @@ export function ActivityResults({
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const { toast } = useToast();
 
-  // Optimistic selection state
-  const [optimisticSelecting, setOptimisticSelecting] = useOptimistic(
-    "",
-    (_state, activityId: string) => activityId
+  // Optimistic selection state (handles concurrent selections safely)
+  const [optimisticSelecting, setOptimisticSelecting] = useState<Set<string>>(
+    () => new Set()
   );
 
   /** Handle activity selection */
   const handleActivitySelect = (activity: Activity) => {
     startTransition(async () => {
-      setOptimisticSelecting(activity.id);
+      setOptimisticSelecting((prev) => {
+        const next = new Set(prev);
+        next.add(activity.id);
+        return next;
+      });
       try {
         await onSelect(activity);
       } catch (error) {
@@ -76,6 +79,12 @@ export function ActivityResults({
             context: "ActivityResults",
           }
         );
+      } finally {
+        setOptimisticSelecting((prev) => {
+          const next = new Set(prev);
+          next.delete(activity.id);
+          return next;
+        });
       }
     });
   };
@@ -315,7 +324,7 @@ export function ActivityResults({
               "relative",
               selectedForComparison.has(activity.id) &&
                 "ring-2 ring-blue-500 rounded-lg",
-              optimisticSelecting === activity.id && "opacity-75"
+              optimisticSelecting.has(activity.id) && "opacity-75"
             )}
           >
             <ActivityCard

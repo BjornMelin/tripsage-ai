@@ -41,6 +41,19 @@ const TRIP_STATUS_COLORS = {
   upcoming: "text-blue-700", // aligned with info status
 } as const;
 
+const CONNECTED_MESSAGE = "Connected — live updates enabled";
+const ERROR_MESSAGE =
+  "Disconnected — live updates paused due to sync errors. Please check your network.";
+const DISCONNECTED_MESSAGE = "Disconnected — live updates paused, please check your network.";
+
+type ConnectionState = "connected" | "error" | "disconnected";
+
+const getConnectionStatusMessage = (state: ConnectionState): string => {
+  if (state === "connected") return CONNECTED_MESSAGE;
+  if (state === "error") return ERROR_MESSAGE;
+  return DISCONNECTED_MESSAGE;
+};
+
 const parseTripDate = (value?: string | null): Date | null => {
   if (!value) {
     return null;
@@ -64,19 +77,19 @@ type FilterOption = "all" | "draft" | "upcoming" | "active" | "completed";
 export default function TripsPage() {
   const { createTrip } = useTripStore();
   const deleteTripMutation = useDeleteTrip();
-  const {
-    data: trips,
-    isLoading,
-    error,
-    isConnected: _isConnected,
-    realtimeStatus: _realtimeStatus,
-  } = useTrips();
+  const { data: trips, isLoading, error, isConnected, realtimeStatus } = useTrips();
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("date");
   const [filterBy, setFilterBy] = useState<FilterOption>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   const tripsArray = trips ?? [];
+  const realtimeErrorCount = Array.isArray(realtimeStatus?.errors)
+    ? realtimeStatus.errors.length
+    : 0;
+  const connectionState: ConnectionState =
+    realtimeErrorCount > 0 ? "error" : isConnected ? "connected" : "disconnected";
+  const connectionStatusMessage = getConnectionStatusMessage(connectionState);
 
   const filteredAndSortedTrips = useMemo(() => {
     if (tripsArray.length === 0) return [];
@@ -266,8 +279,13 @@ export default function TripsPage() {
             collection
           </p>
         </div>
-        <div className="flex items-center space-x-4">
-          <ConnectionStatusIndicator />
+        <div className="flex items-center space-x-4" data-testid="trips-connection">
+          <div data-connection-state={connectionState}>
+            <ConnectionStatusIndicator />
+            <span className="sr-only" role="status">
+              {connectionStatusMessage}
+            </span>
+          </div>
           <Button onClick={handleCreateTrip}>
             <PlusIcon className="h-4 w-4 mr-2" />
             Create Trip
@@ -325,7 +343,7 @@ export default function TripsPage() {
           value={filterBy}
           onValueChange={(value) => setFilterBy(value as FilterOption)}
         >
-          <SelectTrigger className="w-full md:w-40">
+          <SelectTrigger aria-label="Filter trips" className="w-full md:w-40">
             <FilterIcon className="h-4 w-4 mr-2" />
             <SelectValue />
           </SelectTrigger>
@@ -342,7 +360,7 @@ export default function TripsPage() {
           value={sortBy}
           onValueChange={(value) => setSortBy(value as SortOption)}
         >
-          <SelectTrigger className="w-full md:w-40">
+          <SelectTrigger aria-label="Sort trips" className="w-full md:w-40">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -355,6 +373,8 @@ export default function TripsPage() {
 
         <div className="flex border rounded-md">
           <Button
+            aria-pressed={viewMode === "grid"}
+            data-state={viewMode === "grid" ? "on" : "off"}
             variant={viewMode === "grid" ? "default" : "ghost"}
             size="sm"
             onClick={() => setViewMode("grid")}
@@ -363,6 +383,8 @@ export default function TripsPage() {
             <GridIcon className="h-4 w-4" />
           </Button>
           <Button
+            aria-pressed={viewMode === "list"}
+            data-state={viewMode === "list" ? "on" : "off"}
             variant={viewMode === "list" ? "default" : "ghost"}
             size="sm"
             onClick={() => setViewMode("list")}
@@ -395,6 +417,8 @@ export default function TripsPage() {
         </Card>
       ) : (
         <div
+          data-testid="trips-view"
+          data-view-mode={viewMode}
           className={
             viewMode === "grid"
               ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"

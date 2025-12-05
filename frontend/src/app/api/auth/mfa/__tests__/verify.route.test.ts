@@ -18,7 +18,7 @@ const mockGetAdminSupabase = vi.hoisted(() =>
 );
 
 const mockBackupCodeCount = (count: number) => {
-  const mockIs = vi.fn(() => ({ count }));
+  const mockIs = vi.fn(() => ({ count, error: undefined }));
   const mockEq = vi.fn(() => ({ is: mockIs }));
   const mockSelect = vi.fn(() => ({ eq: mockEq }));
   mockFrom.mockReturnValue({ select: mockSelect });
@@ -159,6 +159,8 @@ describe("POST /api/auth/mfa/verify", () => {
       createRouteParamsContext()
     );
     expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toBe("invalid_or_expired_code");
   });
 
   it("continues when backup code regeneration fails on initial enrollment", async () => {

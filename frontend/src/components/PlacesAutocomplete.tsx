@@ -57,6 +57,9 @@ export function PlacesAutocomplete({
   const [sessionToken, setSessionToken] =
     useState<google.maps.places.AutocompleteSessionToken | null>(null);
   const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isLoaded || typeof window === "undefined") return;
@@ -119,6 +122,7 @@ export function PlacesAutocomplete({
 
     if (!value.trim()) {
       setSuggestions([]);
+      setActiveIndex(-1);
       return;
     }
 
@@ -152,12 +156,14 @@ export function PlacesAutocomplete({
           await AutocompleteSuggestion.fetchAutocompleteSuggestions(request);
 
         setSuggestions(newSuggestions ?? []);
+        setActiveIndex(-1);
       } catch (error) {
         recordClientErrorOnActiveSpan(
           error instanceof Error ? error : new Error(String(error)),
           { action: "fetchSuggestions", context: "PlacesAutocomplete" }
         );
         setSuggestions([]);
+        setActiveIndex(-1);
       }
     }, 300); // 300ms debounce
 
@@ -177,6 +183,7 @@ export function PlacesAutocomplete({
         fields: ["displayName", "formattedAddress", "location"],
       });
 
+      setSelectedPlaceId(place.id ?? null);
       onPlaceSelect({
         displayName: place.displayName ?? "",
         formattedAddress: place.formattedAddress ?? undefined,
@@ -198,6 +205,7 @@ export function PlacesAutocomplete({
       const newToken = new AutocompleteSessionToken();
       setSessionToken(newToken);
       setSuggestions([]);
+      setActiveIndex(-1);
     } catch (error) {
       recordClientErrorOnActiveSpan(
         error instanceof Error ? error : new Error(String(error)),
@@ -205,11 +213,59 @@ export function PlacesAutocomplete({
       );
       setErrorMessage("Failed to select place. Please try again.");
       setSuggestions([]);
+      setActiveIndex(-1);
     }
   };
 
+  const selectableSuggestions = suggestions.filter(
+    (
+      suggestion
+    ): suggestion is AutocompleteSuggestion & { placePrediction: PlacePrediction } =>
+      suggestion.placePrediction != null
+  );
+
+  useEffect(() => {
+    if (!selectableSuggestions.length) {
+      setActiveIndex(-1);
+      return;
+    }
+    if (activeIndex >= selectableSuggestions.length) {
+      setActiveIndex(selectableSuggestions.length - 1);
+    }
+  }, [activeIndex, selectableSuggestions.length]);
+
+  const getOptionId = (
+    suggestion: (typeof selectableSuggestions)[number],
+    index: number
+  ) => suggestion.placePrediction.placeId ?? `places-option-${index}`;
+
+  const listboxId = "places-autocomplete-listbox";
+
+  const activeOptionId =
+    activeIndex >= 0 && selectableSuggestions[activeIndex]
+      ? getOptionId(selectableSuggestions[activeIndex], activeIndex)
+      : undefined;
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        containerRef.current &&
+        event.target instanceof Node &&
+        !containerRef.current.contains(event.target)
+      ) {
+        setSuggestions([]);
+        setActiveIndex(-1);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   return (
-    <div className={`relative ${className ?? ""}`}>
+    <div ref={containerRef} className={`relative ${className ?? ""}`}>
       <input
         ref={inputRef}
         type="text"
@@ -217,6 +273,47 @@ export function PlacesAutocomplete({
         onChange={(e) => {
           handleInputChange(e.target.value);
         }}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            setActiveIndex((prev) => {
+              const count = selectableSuggestions.length;
+              if (count === 0) return -1;
+              if (prev < 0) return 0;
+              return (prev + 1) % count;
+            });
+            return;
+          }
+          if (e.key === "ArrowUp") {
+            e.preventDefault();
+            setActiveIndex((prev) => {
+              const count = selectableSuggestions.length;
+              if (count === 0) return -1;
+              if (prev <= 0) return count - 1;
+              return prev - 1;
+            });
+            return;
+          }
+          if (e.key === "Enter" && activeIndex >= 0) {
+            e.preventDefault();
+            const selected = selectableSuggestions[activeIndex];
+            if (selected) {
+              handlePlaceSelect(selected.placePrediction);
+            }
+            return;
+          }
+          if (e.key === "Escape") {
+            setSuggestions([]);
+            setActiveIndex(-1);
+            return;
+          }
+        }}
+        aria-activedescendant={activeOptionId}
+        aria-expanded={selectableSuggestions.length > 0}
+        aria-controls={selectableSuggestions.length > 0 ? listboxId : undefined}
+        aria-autocomplete="list"
+        aria-haspopup="listbox"
+        role="combobox"
         className="w-full rounded-md border border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
       {errorMessage ? (
@@ -224,31 +321,37 @@ export function PlacesAutocomplete({
           {errorMessage}
         </p>
       ) : null}
-      {suggestions.length > 0 && (
-        <ul className="absolute z-10 mt-1 w-full rounded-md border border-gray-300 bg-white shadow-lg">
-          {suggestions
-            .filter(
-              (
-                suggestion
-              ): suggestion is AutocompleteSuggestion & {
-                placePrediction: PlacePrediction;
-              } => suggestion.placePrediction !== null
-            )
-            .map((suggestion, index) => (
-              <li
-                key={suggestion.placePrediction.placeId ?? index}
-                onClick={() => handlePlaceSelect(suggestion.placePrediction)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    handlePlaceSelect(suggestion.placePrediction);
-                  }
+      {selectableSuggestions.length > 0 && (
+        <div
+          className="absolute z-10 mt-1 w-full rounded-md border border-gray-300 bg-white shadow-lg"
+          role="listbox"
+          id={listboxId}
+          onMouseLeave={() => setActiveIndex(-1)}
+        >
+          {selectableSuggestions.map((suggestion, index) => {
+            const optionId = getOptionId(suggestion, index);
+            const isActive = index === activeIndex;
+            const isSelected = selectedPlaceId === suggestion.placePrediction.placeId;
+            return (
+              <div
+                key={optionId}
+                id={optionId}
+                role="option"
+                aria-selected={isSelected}
+                onClick={() => {
+                  setSelectedPlaceId(suggestion.placePrediction.placeId ?? null);
+                  handlePlaceSelect(suggestion.placePrediction);
                 }}
-                className="cursor-pointer px-4 py-2 hover:bg-gray-100"
+                onMouseEnter={() => setActiveIndex(index)}
+                className={`cursor-pointer px-4 py-2 hover:bg-gray-100 ${
+                  isActive ? "bg-gray-100 font-medium" : ""
+                }`}
               >
                 {suggestion.placePrediction.text.text}
-              </li>
-            ))}
-        </ul>
+              </div>
+            );
+          })}
+        </div>
       )}
     </div>
   );
