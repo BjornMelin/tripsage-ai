@@ -25,6 +25,7 @@ Resources and guidelines for TripSage development.
 | Guide | Purpose |
 |-------|---------|
 | [Zod Schema Guide](zod-schema-guide.md) | Zod v4 patterns, validation, AI SDK tool schemas |
+| [Zustand Computed Middleware](zustand-computed-middleware.md) | Automatic computed properties for Zustand stores |
 | [Observability](observability.md) | Telemetry spans, logging, operational alerts |
 | [Cache Versioned Keys](cache-versioned-keys.md) | Tag-based cache invalidation patterns |
 | [Environment Setup](env-setup.md) | Provider credential checklist |

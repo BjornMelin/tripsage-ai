@@ -1,6 +1,5 @@
-/*
- * @fileoverview Optimistic trip updates component.
- * Shows real-time collaboration with instant UI feedback.
+/**
+ * @fileoverview Optimistic trip updates component for realtime collaboration UI.
  */
 
 "use client";
@@ -20,20 +19,71 @@ import { useToast } from "@/components/ui/use-toast";
 import { type UpdateTripData, useTrip, useUpdateTrip } from "@/hooks/use-trips";
 import { queryKeys } from "@/lib/query-keys";
 import type { UpdateTables } from "@/lib/supabase/database.types";
+import { statusVariants } from "@/lib/variants/status";
 
 type TripUpdate = UpdateTables<"trips">;
 type TripUpdateKey = keyof TripUpdate;
 
+/**
+ * Derive text/bg tone classes from the shared statusVariants map to avoid
+ * hardcoded palette drift. Parsing is scoped here to keep icon/dot styling
+ * lightweight while still anchored to the design tokens.
+ */
+function ToneClassFor(input: Parameters<typeof statusVariants>[0]) {
+  return statusVariants({ ...input, excludeRing: true });
+}
+
+function ExtractClass(classes: string, prefix: string) {
+  return classes.split(" ").find((cls) => cls.startsWith(prefix)) ?? "";
+}
+
+const STATUS_TONES = {
+  active: ToneClassFor({ status: "active" }),
+  error: ToneClassFor({ status: "error" }),
+  pending: ToneClassFor({ status: "pending" }),
+  success: ToneClassFor({ status: "success" }),
+} as const;
+
+const UPDATE_STATUS_COLORS = {
+  error: ExtractClass(STATUS_TONES.error, "text-"),
+  pending: ExtractClass(STATUS_TONES.pending, "text-"),
+  success: ExtractClass(STATUS_TONES.success, "text-"),
+} as const;
+
+const CONNECTION_BADGE_PROPS = {
+  active: {
+    className: statusVariants({ status: "active" }),
+    icon: CheckCircleIcon,
+    label: "Live updates enabled",
+  },
+  issues: {
+    className: statusVariants({ status: "pending" }),
+    icon: AlertCircleIcon,
+    label: "Connection issues detected",
+  },
+  offline: {
+    className: statusVariants({ status: "error" }),
+    icon: AlertCircleIcon,
+    label: "Offline - Changes will sync when reconnected",
+  },
+} as const;
+
+type ConnectionState = keyof typeof CONNECTION_BADGE_PROPS;
+
+function GetConnectionBadgeProps(state: ConnectionState) {
+  return CONNECTION_BADGE_PROPS[state];
+}
+
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  AlertCircle,
-  Calendar,
-  CheckCircle,
-  Clock,
-  DollarSign,
-  Loader2,
-  MapPin,
-  Users,
+  AlertCircleIcon,
+  CalendarIcon,
+  CheckCircleIcon,
+  ClockIcon,
+  DollarSignIcon,
+  Loader2Icon,
+  MapPinIcon,
+  UsersIcon,
 } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 
@@ -286,11 +336,17 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
 
     switch (update.status) {
       case "pending":
-        return <Loader2 className="h-4 w-4 animate-spin text-blue-500" />;
+        return (
+          <Loader2Icon
+            className={`h-4 w-4 animate-spin ${UPDATE_STATUS_COLORS.pending}`}
+          />
+        );
       case "success":
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
+        return (
+          <CheckCircleIcon className={`h-4 w-4 ${UPDATE_STATUS_COLORS.success}`} />
+        );
       case "error":
-        return <AlertCircle className="h-4 w-4 text-red-500" />;
+        return <AlertCircleIcon className={`h-4 w-4 ${UPDATE_STATUS_COLORS.error}`} />;
     }
   };
 
@@ -301,28 +357,18 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
    */
   const getConnectionStatus = () => {
     const realtimeErrors = realtimeStatus?.errors ?? [];
-    if (!isConnected) {
-      return (
-        <Badge variant="destructive" className="mb-4">
-          <AlertCircle className="h-3 w-3 mr-1" />
-          Offline - Changes will sync when reconnected
-        </Badge>
-      );
-    }
+    const state: ConnectionState = isConnected
+      ? realtimeErrors.length > 0
+        ? "issues"
+        : "active"
+      : "offline";
 
-    if (realtimeErrors.length > 0) {
-      return (
-        <Badge variant="secondary" className="mb-4">
-          <AlertCircle className="h-3 w-3 mr-1" />
-          Connection issues detected
-        </Badge>
-      );
-    }
+    const { className, icon: Icon, label } = GetConnectionBadgeProps(state);
 
     return (
-      <Badge variant="default" className="mb-4 bg-green-500">
-        <CheckCircle className="h-3 w-3 mr-1" />
-        Live updates enabled
+      <Badge className={`mb-4 ${className}`}>
+        <Icon className="h-3 w-3 mr-1" />
+        {label}
       </Badge>
     );
   };
@@ -339,7 +385,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2 text-destructive">
-              <AlertCircle className="h-5 w-5" />
+              <AlertCircleIcon className="h-5 w-5" />
               <span>Unable to load trip</span>
             </CardTitle>
             <CardDescription>
@@ -358,7 +404,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <Loader2 className="h-5 w-5 animate-spin" />
+              <Loader2Icon className="h-5 w-5 animate-spin" />
               <span>Loading trip...</span>
             </CardTitle>
             <CardDescription>
@@ -377,7 +423,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <AlertCircle className="h-5 w-5" />
+              <AlertCircleIcon className="h-5 w-5" />
               <span>No trip found</span>
             </CardTitle>
             <CardDescription>
@@ -396,7 +442,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <MapPin className="h-5 w-5" />
+            <MapPinIcon className="h-5 w-5" />
             <span>Trip Details</span>
           </CardTitle>
           <CardDescription>
@@ -440,7 +486,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
 
             <div className="space-y-2">
               <Label htmlFor={budgetInputId} className="flex items-center space-x-2">
-                <DollarSign className="h-4 w-4" />
+                <DollarSignIcon className="h-4 w-4" />
                 <span>Budget</span>
                 {getFieldStatus("budget")}
               </Label>
@@ -458,7 +504,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
 
             <div className="space-y-2">
               <Label htmlFor={travelersInputId} className="flex items-center space-x-2">
-                <Users className="h-4 w-4" />
+                <UsersIcon className="h-4 w-4" />
                 <span>Travelers</span>
                 {getFieldStatus("travelers")}
               </Label>
@@ -478,7 +524,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
 
           <div className="space-y-2">
             <Label className="flex items-center space-x-2">
-              <Calendar className="h-4 w-4" />
+              <CalendarIcon className="h-4 w-4" />
               <span>Trip Dates</span>
             </Label>
             <div className="grid grid-cols-2 gap-4">
@@ -501,7 +547,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <Clock className="h-5 w-5" />
+            <ClockIcon className="h-5 w-5" />
             <span>Recent Updates</span>
           </CardTitle>
         </CardHeader>
@@ -566,7 +612,7 @@ export function CollaborationIndicator({ tripId: _tripId }: { tripId: number }) 
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center space-x-2">
-          <Users className="h-5 w-5" />
+          <UsersIcon className="h-5 w-5" />
           <span>Active Collaborators</span>
         </CardTitle>
       </CardHeader>
@@ -579,7 +625,9 @@ export function CollaborationIndicator({ tripId: _tripId }: { tripId: number }) 
               className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
             >
               <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 rounded-full bg-green-500" />
+                <div
+                  className={`w-2 h-2 rounded-full ${ExtractClass(STATUS_TONES.active, "bg-")}`}
+                />
                 <span className="text-sm font-medium">{collaborator.name}</span>
               </div>
 

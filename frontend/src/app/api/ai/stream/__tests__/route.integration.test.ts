@@ -1,7 +1,7 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createRouteParamsContext, getMockCookiesForTest } from "@/test/route-helpers";
+import { createRouteParamsContext, getMockCookiesForTest } from "@/test/helpers/route";
 
 // Mock next/headers cookies() BEFORE any imports that use it
 vi.mock("next/headers", () => ({
@@ -34,7 +34,7 @@ vi.mock("@/lib/tokens/budget", async (importOriginal) => {
 // Import after mocks are set up
 import { simulateReadableStream, streamText } from "ai";
 import { POST } from "@/app/api/ai/stream/route";
-import { createMockNextRequest } from "@/test/route-helpers";
+import { createMockNextRequest } from "@/test/helpers/route";
 
 const MOCK_STREAM_TEXT = vi.mocked(streamText);
 const _MOCK_SIMULATE_READABLE_STREAM = vi.mocked(simulateReadableStream);

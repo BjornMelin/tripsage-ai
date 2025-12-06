@@ -7,8 +7,8 @@
  */
 
 import "server-only";
-import type { ServerEnv } from "./schema";
-import { envSchema } from "./schema";
+import type { ServerEnv } from "@schemas/env";
+import { envSchema } from "@schemas/env";
 
 // Single cached validated environment
 let envCache: ServerEnv | null = null;

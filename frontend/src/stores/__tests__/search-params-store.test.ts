@@ -9,9 +9,11 @@ describe("Search Params Store", () => {
     useSearchParamsStore.setState({
       accommodationParams: {},
       activityParams: {},
+      currentParams: null,
       currentSearchType: null,
       destinationParams: {},
       flightParams: {},
+      hasValidParams: false,
       isValidating: {
         accommodation: false,
         activity: false,

@@ -30,9 +30,10 @@ vi.mock("ai", () => {
   return {
     convertToModelMessages: vi.fn().mockReturnValue([]),
     createAgentUIStreamResponse: vi.fn(),
-    generateObject: vi.fn(),
+    generateText: vi.fn(),
     InvalidToolInputError: { isInstance: () => false },
     NoSuchToolError: { isInstance: () => false },
+    Output: { object: vi.fn((value) => value) },
     stepCountIs: vi.fn().mockReturnValue(() => false),
     ToolLoopAgent: MockToolLoopAgent,
   };

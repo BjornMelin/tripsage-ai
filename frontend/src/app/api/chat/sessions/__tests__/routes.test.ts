@@ -5,7 +5,7 @@ import {
   createMockNextRequest,
   createRouteParamsContext,
   getMockCookiesForTest,
-} from "@/test/route-helpers";
+} from "@/test/helpers/route";
 import { GET as MSG_GET, POST as MSG_POST } from "../[id]/messages/route";
 import { DELETE as SESS_ID_DELETE, GET as SESS_ID_GET } from "../[id]/route";
 import { GET as SESS_GET, POST as SESS_POST } from "../route";

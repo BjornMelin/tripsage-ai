@@ -37,6 +37,7 @@ specific features or components.
 | [SPEC-0021](active/0021-spec-supabase-webhooks-vercel-consolidation.md) | Supabase Webhooks to Vercel Consolidation | Draft | 2025-11-12 |
 | [SPEC-0032](active/0032-spec-upstash-testing-harness.md) | Upstash Testing Harness (Mocks, Emulators, Smoke) | Proposed | 2025-11-24 |
 | [SPEC-0033](active/0033-spec-flatten-frontend-root-structure.md) | Flatten Next.js App Structure to Repository Root | Proposed | 2025-11-26 |
+| [SPEC-0034](active/0034-spec-popular-routes-flights.md) | Popular Routes for Flights (Amadeus + Upstash) | Proposed | 2025-12-03 |
 
 ## Archived Specifications
 

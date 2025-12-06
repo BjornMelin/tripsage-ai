@@ -12,8 +12,6 @@ describe("Search History Store - Saved Searches", () => {
         autoSaveEnabled: true,
         error: null,
         isLoading: false,
-        isSyncing: false,
-        lastSyncAt: null,
         maxRecentSearches: 50,
         popularSearchTerms: [],
         quickSearches: [],
@@ -21,7 +19,6 @@ describe("Search History Store - Saved Searches", () => {
         savedSearches: [],
         searchCollections: [],
         searchSuggestions: [],
-        syncError: null,
       });
     });
   });

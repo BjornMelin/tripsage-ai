@@ -6,8 +6,8 @@
  * and frozen to prevent mutation.
  */
 
-import type { ClientEnv } from "./schema";
-import { clientEnvSchema } from "./schema";
+import type { ClientEnv } from "@schemas/env";
+import { clientEnvSchema } from "@schemas/env";
 
 /**
  * Extract and validate client-safe environment variables.

@@ -128,6 +128,11 @@ const nextConfig: NextConfig = {
         permanent: true,
         source: "/auth/reset-password",
       },
+      {
+        destination: "/security",
+        permanent: true,
+        source: "/settings/security",
+      },
     ];
   },
 

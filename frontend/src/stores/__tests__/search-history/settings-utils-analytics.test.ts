@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 
 import type { SearchHistoryItem, ValidatedSavedSearch } from "@schemas/stores";
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useSearchHistoryStore } from "@/stores/search-history-store";
 
@@ -14,8 +14,6 @@ describe("Search History Store - Settings, Utils, and Analytics", () => {
         autoSaveEnabled: true,
         error: null,
         isLoading: false,
-        isSyncing: false,
-        lastSyncAt: null,
         maxRecentSearches: 50,
         popularSearchTerms: [],
         quickSearches: [],
@@ -23,86 +21,6 @@ describe("Search History Store - Settings, Utils, and Analytics", () => {
         savedSearches: [],
         searchCollections: [],
         searchSuggestions: [],
-        syncError: null,
-      });
-    });
-  });
-
-  describe("Data Management", () => {
-    it("exports search history", async () => {
-      const { result } = renderHook(() => useSearchHistoryStore());
-
-      // Add some data first
-      await act(async () => {
-        await result.current.saveSearch("Test Search", "flight", {});
-        await result.current.createCollection("Test Collection");
-        await result.current.createQuickSearch("Test Quick", "flight", {});
-      });
-
-      const exportedData = result.current.exportSearchHistory();
-      expect(exportedData).toBeTruthy();
-
-      const parsed = JSON.parse(exportedData);
-      expect(parsed.savedSearches).toHaveLength(1);
-      expect(parsed.searchCollections).toHaveLength(1);
-      expect(parsed.quickSearches).toHaveLength(1);
-      expect(parsed.exportedAt).toBeDefined();
-      expect(parsed.version).toBe("1.0");
-    });
-
-    it("imports search history", async () => {
-      const { result } = renderHook(() => useSearchHistoryStore());
-
-      const importData = {
-        exportedAt: new Date().toISOString(),
-        popularSearchTerms: [],
-        quickSearches: [],
-        savedSearches: [
-          {
-            createdAt: new Date().toISOString(),
-            id: "imported-1",
-            isFavorite: false,
-            isPublic: false,
-            name: "Imported Search",
-            params: {},
-            searchType: "flight",
-            tags: [],
-            updatedAt: new Date().toISOString(),
-            usageCount: 0,
-          },
-        ],
-        searchCollections: [],
-        version: "1.0",
-      };
-
-      await act(async () => {
-        const success = await result.current.importSearchHistory(
-          JSON.stringify(importData)
-        );
-        expect(success).toBe(true);
-      });
-
-      expect(result.current.savedSearches).toHaveLength(1);
-      expect(result.current.savedSearches[0].name).toBe("Imported Search");
-    });
-
-    it("syncs with server", async () => {
-      const { result } = renderHook(() => useSearchHistoryStore());
-
-      expect(result.current.isSyncing).toBe(false);
-      expect(result.current.lastSyncAt).toBeNull();
-
-      await act(async () => {
-        const promise = result.current.syncWithServer();
-        await waitFor(() => {
-          expect(result.current.isSyncing).toBe(false);
-        });
-        const success = await promise;
-        expect(success).toBe(true);
-      });
-
-      await waitFor(() => {
-        expect(result.current.lastSyncAt).toBeTruthy();
       });
     });
   });
@@ -286,19 +204,16 @@ describe("Search History Store - Settings, Utils, and Analytics", () => {
       act(() => {
         useSearchHistoryStore.setState({
           error: "Test error",
-          syncError: "Sync error",
         });
       });
 
       expect(result.current.error).toBe("Test error");
-      expect(result.current.syncError).toBe("Sync error");
 
       act(() => {
         result.current.clearError();
       });
 
       expect(result.current.error).toBeNull();
-      expect(result.current.syncError).toBeNull();
     });
 
     it("resets to initial state", () => {

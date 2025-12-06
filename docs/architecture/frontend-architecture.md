@@ -41,6 +41,7 @@ Audience: frontend engineers working on the Next.js application. Content is impl
   - Radix UI (`@radix-ui/react-*`): accessible primitives.
   - Tailwind CSS v4 + `shadcn/ui`: utility styling + composed components.
   - `framer-motion@12.23.24`: animation; `lucide-react@0.554.0`: icons.
+    - We intentionally import lucide components with the `*Icon` suffix (e.g., `AlertTriangleIcon`) to align with lucide's maintained alias exports and avoid churn from icon deprecations. Keep the Icon-suffixed aliases unless the design system is revised.
   - `class-variance-authority`, `tailwind-merge`: variant/class helpers.
 - **Forms / Validation**
   - `react-hook-form@7.66.1`: form state.

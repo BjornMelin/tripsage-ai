@@ -67,7 +67,7 @@ TripSage development maintenance checklist and procedures.
 - [ ] Use composition helpers from `@/lib/stores`
 - [ ] Include devtools middleware
 - [ ] Add persistence if state needs to survive reloads
-- [ ] Use centralized test helpers from `@/test/store-helpers.ts`
+- [ ] Use centralized test helpers from `@/test/helpers/store.ts`
 - [ ] Export from appropriate index
 - [ ] For chat/memory stores: Use orchestrator hooks for cross-slice coordination
 
@@ -94,11 +94,11 @@ TripSage development maintenance checklist and procedures.
 ### New Test
 
 - [ ] Use centralized utilities from `@/test/*`:
-  - `@/test/store-helpers.ts` - Zustand store testing
-  - `@/test/factories.ts` - Mock data creation
-  - `@/test/api-helpers.ts` - API testing utilities
-  - `@/test/schema-helpers.ts` - Zod validation testing
-  - `@/test/component-helpers.tsx` - React component testing
+  - `@/test/helpers/store.ts` - Zustand store testing
+  - `@/test/factories/*` - Mock data creation
+  - `@/test/helpers/api-route.ts` - API testing utilities
+  - `@/test/helpers/schema.ts` - Zod validation testing
+  - `@/test/helpers/component.tsx` - React component testing
 - [ ] No `_shared.ts` files in feature directories (all utilities centralized)
 - [ ] Include proper setup and teardown with centralized helpers
 - [ ] Test behavior, not implementation

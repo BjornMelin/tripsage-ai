@@ -13,6 +13,7 @@ import {
 } from "@schemas/deals";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { compact } from "@/lib/collection-utils";
 import { nowIso, secureId } from "@/lib/security/random";
 import { createStoreLogger } from "@/lib/telemetry/store-logger";
 
@@ -362,7 +363,7 @@ export const useDealsStore = create<DealsStore>()(
 
       getFeaturedDeals: () => {
         const state = get();
-        return state.featuredDeals.map((id) => state.deals[id]).filter(Boolean);
+        return compact(state.featuredDeals.map((id) => state.deals[id]));
       },
 
       getFilteredDeals: () => {
@@ -376,12 +377,12 @@ export const useDealsStore = create<DealsStore>()(
 
       getRecentlyViewedDeals: () => {
         const state = get();
-        return state.recentlyViewedDeals.map((id) => state.deals[id]).filter(Boolean);
+        return compact(state.recentlyViewedDeals.map((id) => state.deals[id]));
       },
 
       getSavedDeals: () => {
         const state = get();
-        return state.savedDeals.map((id) => state.deals[id]).filter(Boolean);
+        return compact(state.savedDeals.map((id) => state.deals[id]));
       },
 
       // State management

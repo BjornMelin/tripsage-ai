@@ -255,10 +255,14 @@ docs/prompts/database-provider-research
 docs/prompts/tools/
 frontend/docs/prompts/
 docs/prompts/
+# Generated review artifacts
 docs/review/
 docs/implementation/
 docs/specs/migrations/
 docs/migrations/
+# Archived docs not part of source
+docs/reviews/
+docs/archived/
 
 # Frontend workspace (consolidated from frontend/.gitignore)
 next-env.d.ts

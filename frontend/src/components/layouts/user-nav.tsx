@@ -4,13 +4,19 @@
 
 "use client";
 
-import { ChevronDown, LogOut, Settings, User as UserIcon } from "lucide-react";
+import type { AuthUser } from "@schemas/stores";
+import {
+  ChevronDownIcon,
+  LogOutIcon,
+  SettingsIcon,
+  ShieldIcon,
+  UserIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import type { AuthUser } from "@/domain/schemas/stores";
 import { logoutAction } from "@/lib/auth/actions";
 
 interface UserNavProps {
@@ -60,7 +66,7 @@ export function UserNav({ user }: UserNavProps) {
           <span className="text-sm font-medium hidden sm:block">
             {user.displayName || user.email || "User"}
           </span>
-          <ChevronDown className="h-4 w-4 opacity-50" />
+          <ChevronDownIcon className="h-4 w-4 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-56 p-0" align="end">
@@ -85,8 +91,16 @@ export function UserNav({ user }: UserNavProps) {
               className="flex items-center gap-2 px-2 py-2 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground transition-colors"
               onClick={() => setIsOpen(false)}
             >
-              <Settings className="h-4 w-4" />
+              <SettingsIcon className="h-4 w-4" />
               Settings
+            </Link>
+            <Link
+              href="/security" // dedicated security section
+              className="flex items-center gap-2 px-2 py-2 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+              onClick={() => setIsOpen(false)}
+            >
+              <ShieldIcon className="h-4 w-4" />
+              Security
             </Link>
 
             <div className="border-t my-1" />
@@ -97,7 +111,7 @@ export function UserNav({ user }: UserNavProps) {
               disabled={isPending}
               className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground transition-colors disabled:opacity-50"
             >
-              <LogOut className="h-4 w-4" />
+              <LogOutIcon className="h-4 w-4" />
               {isPending ? "Logging out..." : "Log out"}
             </button>
           </div>

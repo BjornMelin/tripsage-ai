@@ -31,6 +31,8 @@ export const DASHBOARD_NAV_ITEMS: ReadonlyArray<DashboardNavItem> = [
   // Chat is intentionally outside the dashboard namespace; keep `/chat` public.
   { href: "/chat", title: "AI Assistant" },
   { href: "/dashboard/agent-status", title: "Agent Status" },
+  // Security is mounted at /security (top-level dashboard group)
+  { href: "/security", title: "Security" },
   { href: "/dashboard/settings", title: "Settings" },
   { href: "/dashboard/profile", title: "Profile" },
 ];

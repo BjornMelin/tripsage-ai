@@ -207,3 +207,42 @@ function objectFromTuples(args: string[]): Record<string, string> {
   }
   return result;
 }
+
+// Re-export ratelimit mock for convenience
+export {
+  createRatelimitMock,
+  type RatelimitMockModule,
+} from "./ratelimit-mock";
+
+// Lazy import to avoid require() which doesn't work in vitest ESM context
+import { createRatelimitMock as createRl } from "./ratelimit-mock";
+
+export type UpstashMocks = {
+  redis: RedisMockModule;
+  ratelimit: import("./ratelimit-mock").RatelimitMockModule;
+};
+
+/**
+ * Creates Upstash mock instances (Redis + Ratelimit).
+ * Use with vi.mock() at module scope, NOT inside beforeEach.
+ *
+ * @example
+ * ```ts
+ * import { vi } from "vitest";
+ * import { setupUpstashMocks } from "@/test/upstash/redis-mock";
+ *
+ * const { redis, ratelimit } = setupUpstashMocks();
+ * vi.mock("@upstash/redis", () => redis);
+ * vi.mock("@upstash/ratelimit", () => ratelimit);
+ *
+ * beforeEach(() => {
+ *   redis.__reset();
+ *   ratelimit.__reset();
+ * });
+ * ```
+ */
+export function setupUpstashMocks(): UpstashMocks {
+  const redis = createRedisMock();
+  const ratelimit = createRl();
+  return { ratelimit, redis };
+}

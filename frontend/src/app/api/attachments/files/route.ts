@@ -49,11 +49,10 @@ export const GET = withApiGuards({
   auth: true,
   rateLimit: "attachments:files",
   telemetry: "attachments.files.read",
-})(async (req: NextRequest, { user }) => {
+})(async (req: NextRequest, { user, supabase }) => {
   const result = requireUserId(user);
   if ("error" in result) return result.error;
   const { userId } = result;
-  const authHeader = req.headers.get("authorization");
   const { searchParams } = req.nextUrl;
   const qs = searchParams.toString();
 
@@ -65,9 +64,14 @@ export const GET = withApiGuards({
   }
 
   // Fetch from backend
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError || !sessionData?.session?.access_token) {
+    return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+  }
+
   const url = `${getBackendApiUrl()}/api/attachments/files${qs ? `?${qs}` : ""}`;
   const response = await fetch(url, {
-    headers: authHeader ? { authorization: authHeader } : undefined,
+    headers: { Authorization: `Bearer ${sessionData.session.access_token}` },
     method: "GET",
   });
 

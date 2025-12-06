@@ -90,10 +90,8 @@ export function GoogleMap({
 
     const initMap = async () => {
       const mapsLibrary = await window.google.maps.importLibrary("maps");
-      // @ts-expect-error - Map may not be fully typed
-      const GoogleMap = mapsLibrary.Map;
+      const { Map: GoogleMap } = mapsLibrary;
       const markerLibrary = await window.google.maps.importLibrary("marker");
-      // @ts-expect-error - AdvancedMarkerElement and PinElement may not be fully typed
       const { AdvancedMarkerElement, PinElement } = markerLibrary;
 
       if (!mapRef.current) return;

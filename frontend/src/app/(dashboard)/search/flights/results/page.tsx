@@ -1,6 +1,10 @@
+/**
+ * @fileoverview Flight search results page with filters and CTA to book.
+ */
+
 "use client";
 
-import { ArrowRight, Filter, Plane } from "lucide-react";
+import { ArrowRightIcon, FilterIcon, PlaneIcon } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { SearchLayout } from "@/components/layouts/search-layout";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +17,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 import { useSearchResultsStore } from "@/stores/search-results-store";
+
+/**
+ * Flight results page semantic colors.
+ * - Price display: green (indicates value/good deal)
+ */
+const FLIGHT_RESULTS_COLORS = {
+  priceDisplay: "text-green-700",
+} as const;
 
 export default function FlightResultsPage() {
   const searchParams = useSearchParams();
@@ -82,7 +95,7 @@ export default function FlightResultsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Plane className="h-5 w-5" />
+              <PlaneIcon className="h-5 w-5" />
               Flight Search Results
             </CardTitle>
             <CardDescription>
@@ -131,7 +144,7 @@ export default function FlightResultsPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <Filter className="h-4 w-4" />
+                  <FilterIcon className="h-4 w-4" />
                   Filters
                 </CardTitle>
               </CardHeader>
@@ -195,7 +208,7 @@ export default function FlightResultsPage() {
                           </div>
                           <div className="flex items-center">
                             <div className="w-16 h-px bg-border" />
-                            <ArrowRight className="h-3 w-3 mx-1 text-muted-foreground" />
+                            <ArrowRightIcon className="h-3 w-3 mx-1 text-muted-foreground" />
                             <div className="w-16 h-px bg-border" />
                           </div>
                           <div className="text-xs text-muted-foreground">
@@ -221,7 +234,12 @@ export default function FlightResultsPage() {
 
                     {/* Price and Book */}
                     <div className="text-right">
-                      <div className="text-2xl font-bold text-green-600">
+                      <div
+                        className={cn(
+                          "text-2xl font-bold",
+                          FLIGHT_RESULTS_COLORS.priceDisplay
+                        )}
+                      >
                         ${flight.price}
                       </div>
                       <div className="text-sm text-muted-foreground mb-3">

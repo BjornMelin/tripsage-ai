@@ -1,225 +1,272 @@
 /**
- * @fileoverview Registration component for email/password sign-up and
- * Supabase social OAuth (GitHub, Google).
- *
- * Email/password registration submits to the server-side /auth/register route,
- * which uses Supabase SSR and sends confirmation links to `/auth/confirm`.
+ * @fileoverview The register form component.
  */
 
 "use client";
 
-import { useSearchParams } from "next/navigation";
-import { useId, useState } from "react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { SiGithub, SiGoogle } from "@icons-pack/react-simple-icons";
+import { Loader2Icon, MailIcon } from "lucide-react";
+import Link from "next/link";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useSupabaseRequired } from "@/lib/supabase";
-import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
+import { resolveRedirectUrl } from "@/lib/auth/redirect";
+import { nowIso } from "@/lib/security/random";
+import { useSupabaseRequired } from "@/lib/supabase/client";
 
-/** Props for the RegisterForm component. */
-interface RegisterFormProps {
-  /** URL to redirect after successful session detection. */
+/** The register form props. */
+type RegisterFormProps = {
   redirectTo?: string;
-  /** Additional class names for the root card. */
-  className?: string;
-}
+};
 
 /**
- * Registration form with email/password and social providers.
+ * The register form component.
  *
- * - Creates accounts via `supabase.auth.signUp` and sends a confirmation link.
- * - Initiates OAuth with `supabase.auth.signInWithOAuth` for GitHub/Google.
- * - Redirects authenticated users to `redirectTo`.
- *
- * @param redirectTo Path to redirect if already authenticated.
- * @param className Optional card class name.
- * @returns Registration form JSX element.
+ * @param redirectTo - The redirect URL.
+ * @returns The register form component.
  */
-export function RegisterForm({
-  redirectTo = "/dashboard",
-  className,
-}: RegisterFormProps) {
-  const search = useSearchParams();
-  const nextParam = search?.get("next") || "";
-  const urlError = search?.get("error");
-  const [socialError, setSocialError] = useState<string | null>(null);
-  const status = search?.get("status");
-  const emailId = useId();
-  const passwordId = useId();
-  const confirmId = useId();
-  const firstNameId = useId();
-  const lastNameId = useId();
-
-  const showSuccess =
-    status === "check_email" ||
-    status === "registered" ||
-    status === "confirmation_sent";
-
+export function RegisterForm({ redirectTo }: RegisterFormProps) {
   const supabase = useSupabaseRequired();
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const targetUrl = useMemo(
+    () => resolveRedirectUrl(redirectTo, { absolute: true }),
+    [redirectTo]
+  );
 
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  /** Handles the signup. */
+  const handleSignup = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError(null);
 
-  /**
-   * Handle social login.
-   *
-   * @param provider - The provider to login with.
-   * @returns A promise that resolves to the social login result.
-   */
-  const handleSocialLogin = async (provider: "github" | "google") => {
-    setSocialError(null);
-    const { error: oAuthError } = await supabase.auth.signInWithOAuth({
-      options: {
-        redirectTo: `${origin}/auth/callback${
-          nextParam ? `?next=${encodeURIComponent(nextParam)}` : ""
-        }`,
-      },
-      provider,
-    });
-    if (oAuthError) {
-      recordClientErrorOnActiveSpan(new Error(oAuthError.message), {
-        action: "handleSocialLogin",
-        context: "RegisterForm",
-        provider,
+    // Validate required fields
+    if (!firstName.trim()) {
+      setError("First name is required");
+      return;
+    }
+    if (!lastName.trim()) {
+      setError("Last name is required");
+      return;
+    }
+    if (!acceptTerms) {
+      setError("You must accept the terms and conditions");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters");
+      return;
+    }
+
+    setLoading(true);
+    const termsAcceptedAt = nowIso();
+    // Build emailRedirectTo with next parameter for post-confirmation redirect
+    const emailRedirectTo =
+      typeof window === "undefined"
+        ? undefined
+        : new URL("/auth/confirm", window.location.origin).toString() +
+          `?type=email&next=${encodeURIComponent(targetUrl)}`;
+
+    try {
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        options: {
+          data: {
+            email,
+            first_name: firstName.trim(),
+            full_name: `${firstName.trim()} ${lastName.trim()}`,
+            last_name: lastName.trim(),
+            terms_accepted: true,
+            terms_accepted_at: termsAcceptedAt,
+          },
+          emailRedirectTo,
+        },
+        password,
       });
-      setSocialError(`Failed to sign in with ${provider}. Please try again.`);
+
+      if (signUpError) {
+        setError(signUpError.message);
+        return;
+      }
+      // When email confirmation is required, data.session is null
+      // Redirect to check_email page instead of dashboard
+      if (!data?.session) {
+        const checkEmailUrl =
+          typeof window === "undefined"
+            ? "/register?status=check_email"
+            : new URL(
+                "/register?status=check_email",
+                window.location.origin
+              ).toString();
+        window.location.assign(checkEmailUrl);
+        return;
+      }
+      // Only redirect to targetUrl if session exists (email confirmation disabled)
+      window.location.assign(targetUrl);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Signup failed. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const displayError = socialError ?? urlError;
+  /** Handles the OAuth login. */
+  const handleOAuth = async (provider: "github" | "google") => {
+    setError(null);
+    setLoading(true);
+    try {
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        options: { redirectTo: targetUrl },
+        provider,
+      });
+      if (oauthError) {
+        setError(oauthError.message);
+      }
+    } catch {
+      setError("OAuth failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <Card className={className}>
-      <CardHeader className="space-y-2 pb-4">
-        <CardTitle className="text-2xl font-bold text-center">
-          Create your account
-        </CardTitle>
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle>Create account</CardTitle>
+        <CardDescription>Join TripSage to start planning</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {displayError && (
-          <Alert variant="destructive" role="status" aria-label="registration error">
-            <AlertDescription>{displayError}</AlertDescription>
-          </Alert>
-        )}
-        {showSuccess && (
-          <Alert role="status" aria-label="registration success">
-            <AlertDescription>
-              Check your email for a confirmation link to complete registration.
-            </AlertDescription>
-          </Alert>
-        )}
-
-        <form action="/auth/register" method="post" className="space-y-3">
-          <input type="hidden" name="redirectTo" value={redirectTo} />
-          {nextParam ? <input type="hidden" name="next" value={nextParam} /> : null}
-          <div className="space-y-2">
-            <Label htmlFor={firstNameId}>First name</Label>
-            <Input
-              id={firstNameId}
-              type="text"
-              name="firstName"
-              autoComplete="given-name"
-              required
-            />
+        <form className="space-y-4" onSubmit={handleSignup}>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="firstName">First name</Label>
+              <Input
+                id="firstName"
+                type="text"
+                autoComplete="given-name"
+                required
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lastName">Last name</Label>
+              <Input
+                id="lastName"
+                type="text"
+                autoComplete="family-name"
+                required
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+              />
+            </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor={lastNameId}>Last name</Label>
+            <Label htmlFor="email">Email</Label>
             <Input
-              id={lastNameId}
-              type="text"
-              name="lastName"
-              autoComplete="family-name"
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor={emailId}>Email</Label>
-            <Input
-              id={emailId}
+              id="email"
               type="email"
-              name="email"
               autoComplete="email"
               required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor={passwordId}>Password</Label>
+            <Label htmlFor="password">Password</Label>
             <Input
-              id={passwordId}
+              id="password"
               type="password"
-              name="password"
               autoComplete="new-password"
               required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor={confirmId}>Confirm password</Label>
+            <Label htmlFor="confirm-password">Confirm password</Label>
             <Input
-              id={confirmId}
+              id="confirm-password"
               type="password"
-              name="confirmPassword"
               autoComplete="new-password"
               required
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
             />
           </div>
-          <div className="flex items-center space-x-2">
-            <input
+          <div className="flex items-start space-x-2">
+            <Checkbox
               id="acceptTerms"
-              type="checkbox"
-              name="acceptTerms"
-              className="h-4 w-4"
-              required
+              checked={acceptTerms}
+              onCheckedChange={(checked) => setAcceptTerms(checked === true)}
             />
-            <Label htmlFor="acceptTerms" className="text-sm">
-              I agree to the Terms of Service and Privacy Policy
+            <Label htmlFor="acceptTerms" className="text-sm leading-tight">
+              I agree to the{" "}
+              <Link href="/terms" className="text-primary underline hover:no-underline">
+                Terms of Service
+              </Link>{" "}
+              and{" "}
+              <Link
+                href="/privacy"
+                className="text-primary underline hover:no-underline"
+              >
+                Privacy Policy
+              </Link>
             </Label>
           </div>
-          <Button type="submit" className="w-full">
-            Sign up
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={loading}
+            data-testid="password-signup"
+          >
+            {loading ? (
+              <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <MailIcon className="mr-2 h-4 w-4" />
+            )}
+            Create account
           </Button>
         </form>
-
-        <div className="relative py-2 text-center text-xs text-muted-foreground">
-          <span>or continue with</span>
-        </div>
-
         <div className="grid grid-cols-1 gap-2">
           <Button
-            type="button"
             variant="outline"
-            onClick={() => handleSocialLogin("github")}
+            className="w-full"
+            onClick={() => handleOAuth("github")}
+            disabled={loading}
+            data-testid="oauth-github"
           >
-            Continue with GitHub
+            <SiGithub className="mr-2 h-4 w-4" /> Continue with GitHub
           </Button>
           <Button
-            type="button"
             variant="outline"
-            onClick={() => handleSocialLogin("google")}
+            className="w-full"
+            onClick={() => handleOAuth("google")}
+            disabled={loading}
+            data-testid="oauth-google"
           >
-            Continue with Google
+            <SiGoogle className="mr-2 h-4 w-4" /> Continue with Google
           </Button>
         </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-/**
- * Skeleton loading state for the registration form.
- * Displays placeholder content while the registration form is loading.
- *
- * @returns The registration form skeleton JSX element
- */
-export function RegisterFormSkeleton() {
-  return (
-    <Card className="w-full max-w-md">
-      <CardHeader className="space-y-1">
-        <div className="h-8 bg-muted rounded animate-pulse" />
-        <div className="h-4 bg-muted rounded animate-pulse" />
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="h-28 bg-muted rounded animate-pulse" />
       </CardContent>
     </Card>
   );

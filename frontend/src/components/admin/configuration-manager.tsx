@@ -7,13 +7,13 @@
 
 import type { AgentConfig, AgentType } from "@schemas/configuration";
 import {
-  AlertTriangle,
-  CheckCircle,
-  Clock,
-  History,
-  RotateCcw,
-  Save,
-  Settings,
+  AlertTriangleIcon,
+  CheckCircleIcon,
+  ClockIcon,
+  HistoryIcon,
+  RotateCcwIcon,
+  SaveIcon,
+  SettingsIcon,
 } from "lucide-react";
 import { useState, useTransition } from "react";
 import {
@@ -199,7 +199,7 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
+            <SettingsIcon className="h-5 w-5" />
             Select Agent
           </CardTitle>
         </CardHeader>
@@ -251,14 +251,14 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
                   }}
                   disabled={!hasUnsavedChanges || saving}
                 >
-                  <RotateCcw className="h-4 w-4 mr-2" />
+                  <RotateCcwIcon className="h-4 w-4 mr-2" />
                   Reset
                 </Button>
                 <Button onClick={handleSave} disabled={!hasUnsavedChanges || saving}>
                   {saving ? (
                     <LoadingSpinner size="sm" className="mr-2" />
                   ) : (
-                    <Save className="h-4 w-4 mr-2" />
+                    <SaveIcon className="h-4 w-4 mr-2" />
                   )}
                   Save Changes
                 </Button>
@@ -342,7 +342,7 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
               {hasUnsavedChanges && (
                 <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                   <div className="flex items-center gap-2 text-yellow-800">
-                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTriangleIcon className="h-4 w-4" />
                     <span className="text-sm font-medium">Unsaved Changes</span>
                   </div>
                   <p className="text-sm text-yellow-700 mt-1">
@@ -360,7 +360,7 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Versions</CardTitle>
-                <History className="h-4 w-4 text-muted-foreground" />
+                <HistoryIcon className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{metrics.versionCount}</div>
@@ -370,7 +370,7 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Last Updated</CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
+                <ClockIcon className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
@@ -386,7 +386,7 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Config Health</CardTitle>
-                <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                <CheckCircleIcon className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">OK</div>
@@ -400,7 +400,7 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <History className="h-5 w-5" />
+                <HistoryIcon className="h-5 w-5" />
                 Version History
               </CardTitle>
               <CardDescription>Recent versions for {selectedAgent}</CardDescription>
@@ -437,7 +437,7 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button variant="ghost" size="sm">
-                                  <RotateCcw className="h-4 w-4" />
+                                  <RotateCcwIcon className="h-4 w-4" />
                                 </Button>
                               </AlertDialogTrigger>
                               <AlertDialogContent>

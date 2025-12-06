@@ -6,11 +6,27 @@
 
 "use client";
 
+import type { AgentStatusType } from "@schemas/agent-status";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { statusVariants, type ToneVariant } from "@/lib/variants/status";
 import { useAgentStatusStore } from "@/stores/agent-status-store";
 import { useChatMessages, useSessions } from "@/stores/chat/chat-messages";
+
+/** Maps agent status types to tone variants for consistent styling. */
+// biome-ignore lint/style/useNamingConvention: Review requested camelCase naming
+const statusToneMap: Record<AgentStatusType, ToneVariant> = {
+  active: "active",
+  completed: "success",
+  error: "error",
+  executing: "active",
+  idle: "pending",
+  initializing: "info",
+  paused: "pending",
+  thinking: "info",
+  waiting: "pending",
+};
 
 /**
  * Props interface for the ChatSidebar component.
@@ -185,7 +201,7 @@ function AgentStatusPanel({ className, ...props }: AgentStatusPanelProps) {
             className={cn(
               "w-2 h-2 rounded-full",
               isMonitoring
-                ? "bg-yellow-500"
+                ? "bg-amber-500"
                 : activeAgents.length > 0
                   ? "bg-green-500"
                   : "bg-gray-400"
@@ -203,7 +219,12 @@ function AgentStatusPanel({ className, ...props }: AgentStatusPanelProps) {
               <div key={agent.id} className="p-3 bg-background rounded-lg border">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium">{agent.name}</span>
-                  <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">
+                  <span
+                    className={cn(
+                      "rounded-full",
+                      statusVariants({ tone: statusToneMap[agent.status] ?? "unknown" })
+                    )}
+                  >
                     {agent.status}
                   </span>
                 </div>

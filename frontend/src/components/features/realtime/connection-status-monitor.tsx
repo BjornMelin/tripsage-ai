@@ -5,13 +5,13 @@
 "use client";
 
 import {
-  Activity,
-  AlertTriangle,
-  CheckCircle,
-  RefreshCw,
-  Wifi,
-  WifiOff,
-  XCircle,
+  ActivityIcon,
+  AlertTriangleIcon,
+  CheckCircleIcon,
+  RefreshCwIcon,
+  WifiIcon,
+  WifiOffIcon,
+  XCircleIcon,
 } from "lucide-react";
 import { useState } from "react";
 import { useShallow } from "zustand/react/shallow";
@@ -28,6 +28,9 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
+import { cn } from "@/lib/utils";
+import type { ToneVariant } from "@/lib/variants/status";
+import { statusVariants } from "@/lib/variants/status";
 import { useRealtimeConnectionStore } from "@/stores/realtime-connection-store";
 
 interface ConnectionStatus {
@@ -50,6 +53,21 @@ interface RealtimeConnection {
 
 function NormalizeTopic(topic: string): string {
   return topic.replace(/^realtime:/i, "");
+}
+
+function StatusIcon({
+  isConnected,
+  hasError,
+  size = "h-4 w-4",
+}: {
+  isConnected: boolean;
+  hasError: boolean;
+  size?: string;
+}) {
+  if (hasError) return <AlertTriangleIcon className={`${size} text-amber-600`} />;
+  if (isConnected)
+    return <WifiIcon className={`${size} text-green-600 animate-pulse`} />;
+  return <WifiOffIcon className={`${size} text-red-600`} />;
 }
 
 /**
@@ -92,31 +110,27 @@ export function ConnectionStatusMonitor() {
     }
   };
 
-  const getStatusIcon = (isConnected: boolean, hasError: boolean) => {
-    if (hasError) return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
-    if (isConnected) return <Wifi className="h-4 w-4 text-green-500" />;
-    return <WifiOff className="h-4 w-4 text-red-500" />;
-  };
-
   const getStatusBadge = (status: RealtimeConnection["status"]) => {
-    switch (status) {
-      case "connected":
-        return (
-          <Badge variant="default" className="bg-green-500">
-            Connected
-          </Badge>
-        );
-      case "disconnected":
-        return <Badge variant="destructive">Disconnected</Badge>;
-      case "error":
-        return <Badge variant="destructive">Error</Badge>;
-      case "reconnecting":
-        return <Badge variant="secondary">Reconnecting...</Badge>;
-      case "connecting":
-        return <Badge variant="secondary">Connecting...</Badge>;
-      default:
-        return null;
-    }
+    // Disconnected uses "unknown" (neutral slate) to distinguish from actual errors.
+    const statusMap: Record<
+      RealtimeConnection["status"],
+      { label: string; tone: ToneVariant }
+    > = {
+      connected: { label: "Connected", tone: "active" },
+      connecting: { label: "Connecting...", tone: "pending" },
+      disconnected: { label: "Disconnected", tone: "unknown" },
+      error: { label: "Error", tone: "error" },
+      reconnecting: { label: "Reconnecting...", tone: "pending" },
+    };
+
+    const config = statusMap[status];
+    if (!config) return null;
+
+    return (
+      <Badge className={cn(statusVariants({ excludeRing: true, tone: config.tone }))}>
+        {config.label}
+      </Badge>
+    );
   };
 
   const connectionHealthPercentage =
@@ -131,7 +145,10 @@ export function ConnectionStatusMonitor() {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            {getStatusIcon(connectionStatus.isConnected, !!connectionStatus.lastError)}
+            <StatusIcon
+              isConnected={connectionStatus.isConnected}
+              hasError={!!connectionStatus.lastError}
+            />
             <CardTitle className="text-sm">Real-time Status</CardTitle>
           </div>
           <Button
@@ -139,7 +156,7 @@ export function ConnectionStatusMonitor() {
             size="sm"
             onClick={() => setShowDetails(!showDetails)}
           >
-            <Activity className="h-4 w-4" />
+            <ActivityIcon className="h-4 w-4" />
           </Button>
         </div>
 
@@ -168,9 +185,9 @@ export function ConnectionStatusMonitor() {
                 disabled={isReconnecting}
               >
                 {isReconnecting ? (
-                  <RefreshCw className="h-3 w-3 animate-spin" />
+                  <RefreshCwIcon className="h-3 w-3 animate-spin" />
                 ) : (
-                  <RefreshCw className="h-3 w-3" />
+                  <RefreshCwIcon className="h-3 w-3" />
                 )}
                 {isReconnecting ? "Reconnecting..." : "Reconnect All"}
               </Button>
@@ -184,9 +201,9 @@ export function ConnectionStatusMonitor() {
                 >
                   <div className="flex items-center space-x-2">
                     {connection.status === "connected" ? (
-                      <CheckCircle className="h-3 w-3 text-green-500" />
+                      <CheckCircleIcon className="h-3 w-3 text-green-500" />
                     ) : (
-                      <XCircle className="h-3 w-3 text-red-500" />
+                      <XCircleIcon className="h-3 w-3 text-red-500" />
                     )}
                     <span className="text-xs font-medium">{connection.table}</span>
                   </div>
@@ -208,7 +225,7 @@ export function ConnectionStatusMonitor() {
                 <Separator />
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2">
-                    <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                    <AlertTriangleIcon className="h-4 w-4 text-yellow-500" />
                     <span className="text-sm font-medium">Last Error</span>
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -257,16 +274,10 @@ export function ConnectionStatusIndicator() {
 
   return (
     <div className="flex items-center space-x-2">
-      {GetStatusIcon(isConnected, hasError)}
+      <StatusIcon isConnected={isConnected} hasError={hasError} size="h-3 w-3" />
       <span className="text-xs text-muted-foreground">
         {isConnected ? "Live" : "Offline"}
       </span>
     </div>
   );
-}
-
-function GetStatusIcon(isConnected: boolean, hasError: boolean) {
-  if (hasError) return <AlertTriangle className="h-3 w-3 text-yellow-500" />;
-  if (isConnected) return <Activity className="h-3 w-3 text-green-500 animate-pulse" />;
-  return <WifiOff className="h-3 w-3 text-red-500" />;
 }

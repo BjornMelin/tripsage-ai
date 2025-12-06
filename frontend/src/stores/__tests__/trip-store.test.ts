@@ -2,7 +2,7 @@
 
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { resetTripStoreMockData } from "@/test/trip-store-test-helpers";
+import { resetTripStoreMockData } from "@/test/helpers/trip-store";
 import { type Destination, type Trip, useTripStore } from "../trip-store";
 
 // Accelerate store async flows in this suite only

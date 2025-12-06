@@ -1,7 +1,7 @@
 /**
  * @fileoverview Calendar page for managing Google Calendar integration.
  *
- * Provides UI for connecting Google Calendar, viewing events, creating events,
+ * Provides UI for connecting Google CalendarIcon, viewing events, creating events,
  * and exporting/importing ICS files.
  */
 

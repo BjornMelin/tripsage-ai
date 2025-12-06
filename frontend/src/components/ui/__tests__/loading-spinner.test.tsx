@@ -52,11 +52,11 @@ describe("LoadingSpinner", () => {
 
     rerender(<LoadingSpinner color="destructive" data-testid="spinner" />);
     spinner = screen.getByTestId("spinner");
-    expect(spinner).toHaveClass("text-destructive");
+    expect(spinner).toHaveClass("text-red-700");
 
     rerender(<LoadingSpinner color="success" data-testid="spinner" />);
     spinner = screen.getByTestId("spinner");
-    expect(spinner).toHaveClass("text-green-600");
+    expect(spinner).toHaveClass("text-green-700");
   });
 
   it("applies custom className", () => {

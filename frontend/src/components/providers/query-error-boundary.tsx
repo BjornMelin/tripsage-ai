@@ -6,7 +6,7 @@
 "use client";
 
 import { useQueryErrorResetBoundary } from "@tanstack/react-query";
-import { AlertTriangle, RefreshCw, WifiOff } from "lucide-react";
+import { AlertTriangleIcon, RefreshCwIcon, WifiOffIcon } from "lucide-react";
 import type { ComponentType, ErrorInfo, JSX, ReactNode } from "react";
 import { useRef } from "react";
 import { ErrorBoundary, type FallbackProps } from "react-error-boundary";
@@ -142,9 +142,9 @@ function RecordTelemetry(error: Error, info: ErrorInfo, meta: ErrorMeta) {
 }
 
 const VARIANT_STYLES: Record<ErrorVariant, string> = {
-  auth: "border-yellow-200 bg-yellow-50 text-yellow-800",
+  auth: "border-amber-200 bg-amber-50 text-amber-800",
   default: "border-gray-200 bg-gray-50 text-gray-800",
-  network: "border-orange-200 bg-orange-50 text-orange-800",
+  network: "border-amber-200 bg-amber-50 text-amber-800",
   permission: "border-red-200 bg-red-50 text-red-800",
   server: "border-red-200 bg-red-50 text-red-800",
 };
@@ -154,27 +154,27 @@ const VARIANT_DISPLAY: Record<
   { icon: JSX.Element; message: string; title: string }
 > = {
   auth: {
-    icon: <AlertTriangle className="h-8 w-8 text-yellow-500" />,
+    icon: <AlertTriangleIcon className="h-8 w-8 text-amber-700" />,
     message: "Please log in to continue.",
     title: "Authentication Required",
   },
   default: {
-    icon: <AlertTriangle className="h-8 w-8 text-red-500" />,
+    icon: <AlertTriangleIcon className="h-8 w-8 text-red-700" />,
     message: "Something went wrong. Please try again.",
     title: "Something went wrong",
   },
   network: {
-    icon: <WifiOff className="h-8 w-8 text-orange-500" />,
+    icon: <WifiOffIcon className="h-8 w-8 text-amber-700" />,
     message: "Please check your internet connection and try again.",
     title: "Connection Error",
   },
   permission: {
-    icon: <AlertTriangle className="h-8 w-8 text-red-500" />,
+    icon: <AlertTriangleIcon className="h-8 w-8 text-red-700" />,
     message: "You don't have permission to access this resource.",
     title: "Access Denied",
   },
   server: {
-    icon: <AlertTriangle className="h-8 w-8 text-red-500" />,
+    icon: <AlertTriangleIcon className="h-8 w-8 text-red-700" />,
     message: "Our servers are experiencing issues. Please try again later.",
     title: "Server Error",
   },
@@ -222,7 +222,7 @@ function QueryErrorFallback({
           disabled={!meta.isRetryable}
           aria-label="Try Again"
         >
-          <RefreshCw className="h-4 w-4" />
+          <RefreshCwIcon className="h-4 w-4" />
           Try Again
         </Button>
 
@@ -367,18 +367,16 @@ export function InlineQueryError({
     <div
       className={cn(
         "flex items-center gap-2 rounded-md border p-3 text-sm",
-        meta.variant === "network"
-          ? "border-orange-200 bg-orange-50 text-orange-800"
-          : "border-red-200 bg-red-50 text-red-800",
+        VARIANT_STYLES[meta.variant] || VARIANT_STYLES.default,
         className
       )}
       data-error-variant={meta.variant}
       data-error-retryable={meta.isRetryable}
     >
       {meta.variant === "network" ? (
-        <WifiOff className="h-4 w-4 shrink-0" />
+        <WifiOffIcon className="h-4 w-4 shrink-0" />
       ) : (
-        <AlertTriangle className="h-4 w-4 shrink-0" />
+        <AlertTriangleIcon className="h-4 w-4 shrink-0" />
       )}
 
       <span className="flex-1">{errorMessage}</span>
@@ -392,7 +390,7 @@ export function InlineQueryError({
           aria-label="Try Again"
           disabled={!meta.isRetryable}
         >
-          <RefreshCw className="h-3 w-3" />
+          <RefreshCwIcon className="h-3 w-3" />
         </Button>
       )}
     </div>

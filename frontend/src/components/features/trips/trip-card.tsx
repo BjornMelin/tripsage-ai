@@ -7,7 +7,7 @@
 
 "use client";
 
-import { Calendar, DollarSign, MapPin } from "lucide-react";
+import { CalendarIcon, DollarSignIcon, MapPinIcon } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
+import { cn } from "@/lib/utils";
+import { statusVariants } from "@/lib/variants/status";
 import { useBudgetStore } from "@/stores/budget-store";
 import type { Trip } from "@/stores/trip-store";
 
@@ -79,11 +81,22 @@ export function TripCard({ trip, onEdit, onDelete, className }: TripCardProps) {
   };
 
   const status = getTripStatus();
-  const statusColors = {
-    active: "bg-green-100 text-green-700",
-    completed: "bg-gray-100 text-gray-500",
-    draft: "bg-gray-100 text-gray-700",
-    upcoming: "bg-blue-100 text-blue-700",
+
+  /**
+   * Maps trip status to statusVariants.
+   * All statuses use statusVariants for consistent styling.
+   */
+  const getStatusClassName = (status: string) => {
+    switch (status) {
+      case "active":
+        return cn(statusVariants({ status: "active" }));
+      case "upcoming":
+        return cn(statusVariants({ status: "info" }));
+      case "completed":
+        return cn(statusVariants({ status: "success" }));
+      default:
+        return cn(statusVariants({ tone: "unknown" }));
+    }
   };
 
   return (
@@ -92,7 +105,7 @@ export function TripCard({ trip, onEdit, onDelete, className }: TripCardProps) {
     >
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <Badge className={statusColors[status]}>
+          <Badge className={getStatusClassName(status)}>
             {status.charAt(0).toUpperCase() + status.slice(1)}
           </Badge>
           {trip.visibility === "public" && <Badge variant="outline">Public</Badge>}
@@ -105,7 +118,7 @@ export function TripCard({ trip, onEdit, onDelete, className }: TripCardProps) {
 
       <CardContent className="space-y-3">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Calendar className="h-4 w-4" />
+          <CalendarIcon className="h-4 w-4" />
           <span>
             {formatDate(trip.startDate)} - {formatDate(trip.endDate)}
             {duration && <span className="ml-1">({duration} days)</span>}
@@ -114,7 +127,7 @@ export function TripCard({ trip, onEdit, onDelete, className }: TripCardProps) {
 
         {trip.destinations.length > 0 && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <MapPin className="h-4 w-4" />
+            <MapPinIcon className="h-4 w-4" />
             <span className="line-clamp-1">
               {trip.destinations.length === 1
                 ? trip.destinations[0].name
@@ -125,7 +138,7 @@ export function TripCard({ trip, onEdit, onDelete, className }: TripCardProps) {
 
         {trip.budget !== undefined && trip.budget > 0 && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <DollarSign className="h-4 w-4" />
+            <DollarSignIcon className="h-4 w-4" />
             <span>
               Budget:{" "}
               {new Intl.NumberFormat("en-US", {

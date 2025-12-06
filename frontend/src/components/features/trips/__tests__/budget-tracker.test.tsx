@@ -358,7 +358,7 @@ describe("BudgetTracker", () => {
       render(<BudgetTracker />);
 
       const projectedAmount = screen.getByText("$1,200.00");
-      expect(projectedAmount).toHaveClass("text-destructive");
+      expect(projectedAmount).toHaveClass("text-red-700");
     });
 
     it("should not display projected total when same as spent", () => {

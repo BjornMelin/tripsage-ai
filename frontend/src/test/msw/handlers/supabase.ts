@@ -2,7 +2,7 @@
  * @fileoverview MSW handlers for Supabase REST API endpoints.
  *
  * Provides default mock responses for Supabase REST API patterns.
- * For most tests, use the type-safe Supabase mock helpers from @/test/mock-helpers.ts
+ * For most tests, use the type-safe Supabase mock helpers from @/test/helpers/mock.ts
  * These handlers are for tests that need to mock HTTP-level Supabase interactions.
  */
 

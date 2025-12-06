@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Client-side itinerary builder with drag-and-drop scheduling.
+ */
+
 "use client";
 
 import {
@@ -7,16 +11,16 @@ import {
   type DropResult,
 } from "@hello-pangea/dnd";
 import {
-  Calendar,
-  Car,
-  Edit2,
-  GripVertical,
-  Hotel,
-  MapPin,
-  Plane,
-  Plus,
-  Train,
-  Trash2,
+  CalendarIcon,
+  CarIcon,
+  Edit2Icon,
+  GripVerticalIcon,
+  HotelIcon,
+  MapPinIcon,
+  PlaneIcon,
+  PlusIcon,
+  TrainIcon,
+  Trash2Icon,
 } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
 import { useCallback, useId, useState } from "react";
@@ -264,7 +268,7 @@ function DestinationDialog({
             <div className="flex items-center justify-between">
               <Label>Activities</Label>
               <Button type="button" variant="outline" size="sm" onClick={addActivity}>
-                <Plus className="h-4 w-4 mr-1" />
+                <PlusIcon className="h-4 w-4 mr-1" />
                 Add Activity
               </Button>
             </div>
@@ -282,7 +286,7 @@ function DestinationDialog({
                   size="sm"
                   onClick={() => removeActivity(index)}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2Icon className="h-4 w-4" />
                 </Button>
               </div>
             ))}
@@ -466,13 +470,13 @@ export function ItineraryBuilder({
   const getTransportationIcon = (type?: string) => {
     switch (type) {
       case "flight":
-        return <Plane className="h-4 w-4" />;
+        return <PlaneIcon className="h-4 w-4" />;
       case "car":
-        return <Car className="h-4 w-4" />;
+        return <CarIcon className="h-4 w-4" />;
       case "train":
-        return <Train className="h-4 w-4" />;
+        return <TrainIcon className="h-4 w-4" />;
       default:
-        return <MapPin className="h-4 w-4" />;
+        return <MapPinIcon className="h-4 w-4" />;
     }
   };
 
@@ -482,13 +486,13 @@ export function ItineraryBuilder({
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
-              <MapPin className="h-5 w-5" />
+              <MapPinIcon className="h-5 w-5" />
               Itinerary Builder
             </CardTitle>
             <CardDescription>Plan and organize your trip destinations</CardDescription>
           </div>
           <Button onClick={openAddDialog}>
-            <Plus className="h-4 w-4 mr-2" />
+            <PlusIcon className="h-4 w-4 mr-2" />
             Add Destination
           </Button>
         </div>
@@ -497,12 +501,12 @@ export function ItineraryBuilder({
       <CardContent>
         {trip.destinations.length === 0 ? (
           <div className="text-center py-8">
-            <MapPin className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <MapPinIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <p className="text-muted-foreground mb-4">
               No destinations added yet. Start building your itinerary!
             </p>
             <Button onClick={openAddDialog}>
-              <Plus className="h-4 w-4 mr-2" />
+              <PlusIcon className="h-4 w-4 mr-2" />
               Add First Destination
             </Button>
           </div>
@@ -533,7 +537,7 @@ export function ItineraryBuilder({
                                 {...provided.dragHandleProps}
                                 className="mt-1 cursor-grab active:cursor-grabbing"
                               >
-                                <GripVertical className="h-5 w-5 text-muted-foreground" />
+                                <GripVerticalIcon className="h-5 w-5 text-muted-foreground" />
                               </div>
 
                               <div className="flex-1 space-y-2">
@@ -552,7 +556,7 @@ export function ItineraryBuilder({
                                       size="sm"
                                       onClick={() => openEditDialog(destination)}
                                     >
-                                      <Edit2 className="h-4 w-4" />
+                                      <Edit2Icon className="h-4 w-4" />
                                     </Button>
                                     <Button
                                       variant="ghost"
@@ -562,7 +566,7 @@ export function ItineraryBuilder({
                                       }
                                       className="text-destructive hover:text-destructive"
                                     >
-                                      <Trash2 className="h-4 w-4" />
+                                      <Trash2Icon className="h-4 w-4" />
                                     </Button>
                                   </div>
                                 </div>
@@ -570,7 +574,7 @@ export function ItineraryBuilder({
                                 <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
                                   {destination.startDate && destination.endDate && (
                                     <div className="flex items-center gap-1">
-                                      <Calendar className="h-4 w-4" />
+                                      <CalendarIcon className="h-4 w-4" />
                                       <span>
                                         {destination.startDate} - {destination.endDate}
                                       </span>
@@ -588,7 +592,7 @@ export function ItineraryBuilder({
 
                                   {destination.accommodation && (
                                     <div className="flex items-center gap-1">
-                                      <Hotel className="h-4 w-4" />
+                                      <HotelIcon className="h-4 w-4" />
                                       <span>{destination.accommodation.name}</span>
                                     </div>
                                   )}

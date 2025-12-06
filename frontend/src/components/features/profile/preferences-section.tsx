@@ -8,7 +8,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { CurrencyCode } from "@schemas/currency";
 import { type PreferencesFormData, preferencesFormSchema } from "@schemas/profile";
-import { Globe, Zap } from "lucide-react";
+import { GlobeIcon, ZapIcon } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -140,7 +140,7 @@ export function PreferencesSection() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Globe className="h-5 w-5" />
+            <GlobeIcon className="h-5 w-5" />
             Regional & Language
           </CardTitle>
           <CardDescription>
@@ -335,7 +335,7 @@ export function PreferencesSection() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Zap className="h-5 w-5" />
+            <ZapIcon className="h-5 w-5" />
             Additional Settings
           </CardTitle>
           <CardDescription>

@@ -1,6 +1,9 @@
+/**
+ * @fileoverview Search parameters store.
+ */
+
 import type {
   ActivitySearchParams,
-  DestinationSearchParams,
   FlightSearchParams,
   SearchAccommodationParams,
   SearchParams,
@@ -20,10 +23,32 @@ import {
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 import { createStoreLogger } from "@/lib/telemetry/store-logger";
+import { registerAllHandlers } from "./search-params/handlers";
+import { getHandler } from "./search-params/registry";
+
+// Ensure handlers are registered deterministically at startup
+registerAllHandlers();
 
 const logger = createStoreLogger({ storeName: "search-params" });
 
-// Schemas are consumed directly from @schemas/stores; no local re-exports.
+/** Schema registry for parameter validation by search type */
+const PARAM_SCHEMAS = {
+  accommodation: accommodationSearchParamsStoreSchema,
+  activity: activitySearchParamsStoreSchema,
+  destination: destinationSearchParamsStoreSchema,
+  flight: flightSearchParamsStoreSchema,
+} as const;
+
+/** Keys for params in state by search type */
+const PARAMS_KEY_MAP: Record<
+  SearchType,
+  "flightParams" | "accommodationParams" | "activityParams" | "destinationParams"
+> = {
+  accommodation: "accommodationParams",
+  activity: "activityParams",
+  destination: "destinationParams",
+  flight: "flightParams",
+};
 
 // Search parameters store interface
 interface SearchParamsState {
@@ -47,6 +72,7 @@ interface SearchParamsState {
 
   // Parameter management actions
   setSearchType: (type: SearchType) => void;
+  updateParams: (type: SearchType, params: Partial<SearchParams>) => Promise<boolean>;
   updateFlightParams: (params: Partial<ValidatedFlightParams>) => Promise<boolean>;
   updateAccommodationParams: (
     params: Partial<ValidatedAccommodationParams>
@@ -82,86 +108,76 @@ interface SearchParamsState {
   reset: () => void;
 }
 
-// Helper functions
-// const generateId = () =>
-//   Date.now().toString(36) + Math.random().toString(36).substring(2, 5); // Future use
-// const getCurrentTimestamp = () => new Date().toISOString(); // Future use
-
-// Default parameter generators
-const GET_DEFAULT_FLIGHT_PARAMS = (): Partial<ValidatedFlightParams> => ({
-  adults: 1,
-  cabinClass: "economy",
-  children: 0,
-  directOnly: false,
-  excludedAirlines: [],
-  infants: 0,
-  preferredAirlines: [],
-});
-
-const GET_DEFAULT_ACCOMMODATION_PARAMS = (): Partial<ValidatedAccommodationParams> => ({
-  adults: 1,
-  amenities: [],
-  children: 0,
-  infants: 0,
-  rooms: 1,
-});
-
-const GET_DEFAULT_ACTIVITY_PARAMS = (): Partial<ValidatedActivityParams> => ({
-  adults: 1,
-  children: 0,
-  infants: 0,
-});
-
-const GET_DEFAULT_DESTINATION_PARAMS = (): Partial<ValidatedDestinationParams> => ({
-  limit: 10,
-  query: "",
-  types: ["locality", "country"],
-});
-
-const GET_DEFAULT_PARAMS = (type: SearchType): Partial<SearchParams> => {
-  switch (type) {
-    case "flight":
-      return GET_DEFAULT_FLIGHT_PARAMS() as Partial<SearchParams>;
-    case "accommodation":
-      return GET_DEFAULT_ACCOMMODATION_PARAMS() as Partial<SearchParams>;
-    case "activity":
-      return GET_DEFAULT_ACTIVITY_PARAMS() as Partial<SearchParams>;
-    case "destination":
-      return GET_DEFAULT_DESTINATION_PARAMS() as Partial<SearchParams>;
-    default:
-      return {};
-  }
+/** Get default parameters for a search type using the handler. */
+const getDefaultParams = (type: SearchType): Partial<SearchParams> => {
+  return getHandler(type).getDefaults() as Partial<SearchParams>;
 };
 
-// Validation helpers
-const VALIDATE_SEARCH_PARAMS = (
+/** Validate search parameters using the handler. */
+const validateSearchParams = (
   params: Partial<SearchParams>,
   type: SearchType
 ): boolean => {
-  try {
-    switch (type) {
-      case "flight":
-        flightSearchParamsStoreSchema.parse(params);
-        break;
-      case "accommodation":
-        accommodationSearchParamsStoreSchema.parse(params);
-        break;
-      case "activity":
-        activitySearchParamsStoreSchema.parse(params);
-        break;
-      case "destination":
-        destinationSearchParamsStoreSchema.parse(params);
-        break;
-      default:
-        throw new Error(`Unknown search type: ${type}`);
-    }
-    return true;
-  } catch (error) {
-    logger.error(`Validation failed for ${type}`, { error });
-    return false;
+  const result = getHandler(type).validate(params);
+  if (!result.success) {
+    logger.error(`Validation failed for ${type}`, { error: result.error });
   }
+  return result.success;
 };
 
+/** Check if required parameters are present using the handler. */
+const hasRequiredParams = (
+  params: Partial<SearchParams>,
+  type: SearchType
+): boolean => {
+  return getHandler(type).hasRequiredParams(params);
+};
+
+/** Get current params for a search type from state. */
+const getParamsForType = (
+  state: {
+    flightParams: Partial<ValidatedFlightParams>;
+    accommodationParams: Partial<ValidatedAccommodationParams>;
+    activityParams: Partial<ValidatedActivityParams>;
+    destinationParams: Partial<ValidatedDestinationParams>;
+  },
+  type: SearchType
+): Partial<SearchParams> => {
+  const paramsMap: Record<SearchType, Partial<SearchParams>> = {
+    accommodation: state.accommodationParams as Partial<SearchParams>,
+    activity: state.activityParams as Partial<SearchParams>,
+    destination: state.destinationParams as Partial<SearchParams>,
+    flight: state.flightParams as Partial<SearchParams>,
+  };
+  return paramsMap[type];
+};
+
+/** Compute derived current params and validity for the given state snapshot. */
+const computeDerivedState = (
+  state: Pick<
+    SearchParamsState,
+    | "accommodationParams"
+    | "activityParams"
+    | "currentSearchType"
+    | "destinationParams"
+    | "flightParams"
+  >
+): Pick<SearchParamsState, "currentParams" | "hasValidParams"> => {
+  if (!state.currentSearchType) {
+    return { currentParams: null, hasValidParams: false };
+  }
+
+  const currentParams = getParamsForType(
+    state,
+    state.currentSearchType
+  ) as SearchParams;
+  return {
+    currentParams,
+    hasValidParams: hasRequiredParams(currentParams, state.currentSearchType),
+  };
+};
+
+/** Create a search params store instance. */
 export const useSearchParamsStore = create<SearchParamsState>()(
   devtools(
     persist(
@@ -169,6 +185,7 @@ export const useSearchParamsStore = create<SearchParamsState>()(
         accommodationParams: {},
         activityParams: {},
 
+        /** Clear a specific validation error. */
         clearValidationError: (type) => {
           set((state) => ({
             validationErrors: {
@@ -178,7 +195,7 @@ export const useSearchParamsStore = create<SearchParamsState>()(
           }));
         },
 
-        // Utility actions
+        /** Clear all validation errors. */
         clearValidationErrors: () => {
           set({
             validationErrors: {
@@ -190,102 +207,30 @@ export const useSearchParamsStore = create<SearchParamsState>()(
           });
         },
 
+        /** Create a template of current params for a search type. */
         createParamsTemplate: () => {
           const { currentParams } = get();
           return currentParams ? { ...currentParams } : null;
         },
+        currentParams: null,
 
-        // Computed properties
-        get currentParams() {
-          const {
-            currentSearchType,
-            flightParams,
-            accommodationParams,
-            activityParams,
-            destinationParams,
-          } = get();
-
-          if (!currentSearchType) return null;
-
-          switch (currentSearchType) {
-            case "flight":
-              return flightParams as FlightSearchParams;
-            case "accommodation":
-              return accommodationParams as SearchAccommodationParams;
-            case "activity":
-              return activityParams as ActivitySearchParams;
-            case "destination":
-              return destinationParams as DestinationSearchParams;
-            default:
-              return null;
-          }
-        },
         // Initial state
         currentSearchType: null,
         destinationParams: {},
         flightParams: {},
 
-        get hasValidParams() {
-          const { currentSearchType, currentParams } = get();
-          if (!currentSearchType || !currentParams) return false;
-
-          switch (currentSearchType) {
-            case "flight":
-              return (
-                !!(currentParams as FlightSearchParams).origin &&
-                !!(currentParams as FlightSearchParams).destination &&
-                !!(currentParams as FlightSearchParams).departureDate
-              );
-            case "accommodation":
-              return (
-                !!(currentParams as SearchAccommodationParams).destination &&
-                !!(currentParams as SearchAccommodationParams).checkIn &&
-                !!(currentParams as SearchAccommodationParams).checkOut
-              );
-            case "activity":
-              return !!(currentParams as ActivitySearchParams).destination;
-            case "destination":
-              return !!(currentParams as DestinationSearchParams).query;
-            default:
-              return false;
-          }
-        },
+        hasValidParams: false,
 
         get isDirty() {
-          const {
-            currentSearchType,
-            flightParams,
-            accommodationParams,
-            activityParams,
-            destinationParams,
-          } = get();
+          const state = get();
+          if (!state.currentSearchType) return false;
 
-          if (!currentSearchType) return false;
-
-          const defaultParams = GET_DEFAULT_PARAMS(currentSearchType);
-          let currentParams: Partial<SearchParams>;
-
-          switch (currentSearchType) {
-            case "flight":
-              currentParams = flightParams;
-              break;
-            case "accommodation":
-              currentParams = accommodationParams;
-              break;
-            case "activity":
-              currentParams = activityParams;
-              break;
-            case "destination":
-              currentParams = destinationParams as Partial<SearchParams>;
-              break;
-            default:
-              return false;
-          }
-
+          const defaultParams = getDefaultParams(state.currentSearchType);
+          const currentParams = getParamsForType(state, state.currentSearchType);
           return JSON.stringify(currentParams) !== JSON.stringify(defaultParams);
         },
 
-        // Validation states
+        /** Validation states. */
         isValidating: {
           accommodation: false,
           activity: false,
@@ -293,29 +238,26 @@ export const useSearchParamsStore = create<SearchParamsState>()(
           flight: false,
         },
 
-        // Template and presets
+        /** Load params from a template for a search type. */
         loadParamsFromTemplate: async (template, type) => {
           try {
-            switch (type) {
-              case "flight":
-                return await get().updateFlightParams(
-                  template as Partial<ValidatedFlightParams>
-                );
-              case "accommodation":
-                return await get().updateAccommodationParams(
-                  template as Partial<ValidatedAccommodationParams>
-                );
-              case "activity":
-                return await get().updateActivityParams(
-                  template as Partial<ValidatedActivityParams>
-                );
-              case "destination":
-                return await get().updateDestinationParams(
-                  template as Partial<ValidatedDestinationParams>
-                );
-              default:
-                return false;
-            }
+            const updateFns: Record<
+              SearchType,
+              (params: Partial<SearchParams>) => Promise<boolean>
+            > = {
+              accommodation: (p) =>
+                get().updateAccommodationParams(
+                  p as Partial<ValidatedAccommodationParams>
+                ),
+              activity: (p) =>
+                get().updateActivityParams(p as Partial<ValidatedActivityParams>),
+              destination: (p) =>
+                get().updateDestinationParams(p as Partial<ValidatedDestinationParams>),
+              flight: (p) =>
+                get().updateFlightParams(p as Partial<ValidatedFlightParams>),
+            };
+            const updateFn = updateFns[type];
+            return updateFn ? await updateFn(template) : false;
           } catch (error) {
             logger.error("Failed to load params from template", { error });
             return false;
@@ -331,9 +273,11 @@ export const useSearchParamsStore = create<SearchParamsState>()(
           set({
             accommodationParams: {},
             activityParams: {},
+            currentParams: null,
             currentSearchType: null,
             destinationParams: {},
             flightParams: {},
+            hasValidParams: false,
             isValidating: {
               accommodation: false,
               activity: false,
@@ -359,35 +303,52 @@ export const useSearchParamsStore = create<SearchParamsState>()(
         // Reset and validation
         resetParams: (type) => {
           if (!type) {
-            set({
-              accommodationParams: {},
-              activityParams: {},
-              destinationParams: {},
-              flightParams: {},
+            set((state) => {
+              const updates = {
+                accommodationParams: {},
+                activityParams: {},
+                destinationParams: {},
+                flightParams: {},
+              };
+              const derived = computeDerivedState({ ...state, ...updates });
+              return { ...updates, ...derived };
             });
             return;
           }
 
-          switch (type) {
-            case "flight":
-              set({ flightParams: GET_DEFAULT_FLIGHT_PARAMS() });
-              break;
-            case "accommodation":
-              set({ accommodationParams: GET_DEFAULT_ACCOMMODATION_PARAMS() });
-              break;
-            case "activity":
-              set({ activityParams: GET_DEFAULT_ACTIVITY_PARAMS() });
-              break;
-            case "destination":
-              set({ destinationParams: GET_DEFAULT_DESTINATION_PARAMS() });
-              break;
-          }
+          const defaults = getHandler(type).getDefaults();
+          const keyMap: Record<
+            SearchType,
+            keyof Pick<
+              SearchParamsState,
+              | "flightParams"
+              | "accommodationParams"
+              | "activityParams"
+              | "destinationParams"
+            >
+          > = {
+            accommodation: "accommodationParams",
+            activity: "activityParams",
+            destination: "destinationParams",
+            flight: "flightParams",
+          };
+          const key = keyMap[type];
+          const stateUpdate = { [key]: defaults } satisfies Partial<SearchParamsState>;
+          set((state) => {
+            const nextState = { ...state, ...stateUpdate } as SearchParamsState;
+            const derived = computeDerivedState(nextState);
+            return { ...stateUpdate, ...derived };
+          });
         },
 
         setAccommodationParams: (params) => {
           const result = accommodationSearchParamsStoreSchema.safeParse(params);
           if (result.success) {
-            set({ accommodationParams: result.data });
+            set((state) => {
+              const updates = { accommodationParams: result.data };
+              const derived = computeDerivedState({ ...state, ...updates });
+              return { ...updates, ...derived };
+            });
           } else {
             logger.error("Invalid accommodation parameters", {
               error: result.error,
@@ -395,10 +356,15 @@ export const useSearchParamsStore = create<SearchParamsState>()(
           }
         },
 
+        /** Set activity parameters using the handler. */
         setActivityParams: (params) => {
           const result = activitySearchParamsStoreSchema.safeParse(params);
           if (result.success) {
-            set({ activityParams: result.data });
+            set((state) => {
+              const updates = { activityParams: result.data };
+              const derived = computeDerivedState({ ...state, ...updates });
+              return { ...updates, ...derived };
+            });
           } else {
             logger.error("Invalid activity parameters", {
               error: result.error,
@@ -406,10 +372,15 @@ export const useSearchParamsStore = create<SearchParamsState>()(
           }
         },
 
+        /** Set destination parameters using the handler. */
         setDestinationParams: (params) => {
           const result = destinationSearchParamsStoreSchema.safeParse(params);
           if (result.success) {
-            set({ destinationParams: result.data });
+            set((state) => {
+              const updates = { destinationParams: result.data };
+              const derived = computeDerivedState({ ...state, ...updates });
+              return { ...updates, ...derived };
+            });
           } else {
             logger.error("Invalid destination parameters", {
               error: result.error,
@@ -417,17 +388,21 @@ export const useSearchParamsStore = create<SearchParamsState>()(
           }
         },
 
-        // Bulk operations
+        /** Set flight parameters using the handler. */
         setFlightParams: (params) => {
           const result = flightSearchParamsStoreSchema.safeParse(params);
           if (result.success) {
-            set({ flightParams: result.data });
+            set((state) => {
+              const updates = { flightParams: result.data };
+              const derived = computeDerivedState({ ...state, ...updates });
+              return { ...updates, ...derived };
+            });
           } else {
             logger.error("Invalid flight parameters", { error: result.error });
           }
         },
 
-        // Parameter management actions
+        /** Set search type and initialize default parameters. */
         setSearchType: (type) => {
           const result = searchTypeSchema.safeParse(type);
           if (result.success) {
@@ -437,166 +412,96 @@ export const useSearchParamsStore = create<SearchParamsState>()(
               };
 
               // Initialize default parameters if not set yet
-              switch (result.data) {
-                case "flight":
-                  if (Object.keys(state.flightParams).length === 0) {
-                    updatedState.flightParams = GET_DEFAULT_FLIGHT_PARAMS();
-                  }
-                  break;
-                case "accommodation":
-                  if (Object.keys(state.accommodationParams).length === 0) {
-                    updatedState.accommodationParams =
-                      GET_DEFAULT_ACCOMMODATION_PARAMS();
-                  }
-                  break;
-                case "activity":
-                  if (Object.keys(state.activityParams).length === 0) {
-                    updatedState.activityParams = GET_DEFAULT_ACTIVITY_PARAMS();
-                  }
-                  break;
-                case "destination":
-                  if (Object.keys(state.destinationParams).length === 0) {
-                    updatedState.destinationParams = GET_DEFAULT_DESTINATION_PARAMS();
-                  }
-                  break;
+              const paramsKeyMap: Record<
+                SearchType,
+                keyof Pick<
+                  SearchParamsState,
+                  | "flightParams"
+                  | "accommodationParams"
+                  | "activityParams"
+                  | "destinationParams"
+                >
+              > = {
+                accommodation: "accommodationParams",
+                activity: "activityParams",
+                destination: "destinationParams",
+                flight: "flightParams",
+              };
+              const key = paramsKeyMap[result.data];
+              const currentParams = state[key] as Record<string, unknown>;
+              if (Object.keys(currentParams).length === 0) {
+                const defaults = getHandler(result.data).getDefaults();
+                const defaultsUpdate = {
+                  [key]: defaults,
+                } satisfies Partial<SearchParamsState>;
+                Object.assign(updatedState, defaultsUpdate);
               }
 
-              return updatedState;
+              const nextState = { ...state, ...updatedState } as SearchParamsState;
+              const derived = computeDerivedState(nextState);
+              return { ...updatedState, ...derived };
             });
           } else {
             logger.error("Invalid search type", { error: result.error });
           }
         },
 
-        updateAccommodationParams: (params) => {
+        /** Type-safe accommodation params update. */
+        updateAccommodationParams: (params: Partial<SearchAccommodationParams>) =>
+          get().updateParams("accommodation", params as Partial<SearchParams>),
+
+        /** Type-safe activity params update. */
+        updateActivityParams: (params: Partial<ActivitySearchParams>) =>
+          get().updateParams("activity", params as Partial<SearchParams>),
+
+        /** Type-safe destination params update. */
+        updateDestinationParams: (params: Partial<ValidatedDestinationParams>) =>
+          get().updateParams("destination", params as Partial<SearchParams>),
+
+        /** Type-safe flight params update. */
+        updateFlightParams: (params: Partial<FlightSearchParams>) =>
+          get().updateParams("flight", params as Partial<SearchParams>),
+
+        /** Generic parameter update with validation. */
+        updateParams: (type, params) => {
+          const paramsKey = PARAMS_KEY_MAP[type];
+          const schema = PARAM_SCHEMAS[type];
+
           set((state) => ({
-            isValidating: { ...state.isValidating, accommodation: true },
-            validationErrors: {
-              ...state.validationErrors,
-              accommodation: null,
-            },
+            isValidating: { ...state.isValidating, [type]: true },
+            validationErrors: { ...state.validationErrors, [type]: null },
           }));
 
           try {
-            const updatedParams = { ...get().accommodationParams, ...params };
-            const result =
-              accommodationSearchParamsStoreSchema.safeParse(updatedParams);
+            const currentParams = get()[paramsKey];
+            const merged = { ...currentParams, ...params };
+            const result = schema.safeParse(merged);
 
             if (result.success) {
-              set((state) => ({
-                accommodationParams: result.data,
-                isValidating: { ...state.isValidating, accommodation: false },
-              }));
+              set((state) => {
+                const updates = {
+                  [paramsKey]: result.data,
+                  isValidating: { ...state.isValidating, [type]: false },
+                } as Partial<SearchParamsState>;
+                const nextState = { ...state, ...updates } as SearchParamsState;
+                const derived = computeDerivedState(nextState);
+                return { ...updates, ...derived };
+              });
               return Promise.resolve(true);
             }
-            throw new Error("Invalid accommodation parameters");
+            throw new Error(`Invalid ${type} parameters`);
           } catch (error) {
             const message =
               error instanceof Error ? error.message : "Validation failed";
             set((state) => ({
-              isValidating: { ...state.isValidating, accommodation: false },
-              validationErrors: {
-                ...state.validationErrors,
-                accommodation: message,
-              },
+              isValidating: { ...state.isValidating, [type]: false },
+              validationErrors: { ...state.validationErrors, [type]: message },
             }));
             return Promise.resolve(false);
           }
         },
 
-        updateActivityParams: (params) => {
-          set((state) => ({
-            isValidating: { ...state.isValidating, activity: true },
-            validationErrors: { ...state.validationErrors, activity: null },
-          }));
-
-          try {
-            const updatedParams = { ...get().activityParams, ...params };
-            const result = activitySearchParamsStoreSchema.safeParse(updatedParams);
-
-            if (result.success) {
-              set((state) => ({
-                activityParams: result.data,
-                isValidating: { ...state.isValidating, activity: false },
-              }));
-              return Promise.resolve(true);
-            }
-            throw new Error("Invalid activity parameters");
-          } catch (error) {
-            const message =
-              error instanceof Error ? error.message : "Validation failed";
-            set((state) => ({
-              isValidating: { ...state.isValidating, activity: false },
-              validationErrors: {
-                ...state.validationErrors,
-                activity: message,
-              },
-            }));
-            return Promise.resolve(false);
-          }
-        },
-
-        updateDestinationParams: (params) => {
-          set((state) => ({
-            isValidating: { ...state.isValidating, destination: true },
-            validationErrors: { ...state.validationErrors, destination: null },
-          }));
-
-          try {
-            const updatedParams = { ...get().destinationParams, ...params };
-            const result = destinationSearchParamsStoreSchema.safeParse(updatedParams);
-
-            if (result.success) {
-              set((state) => ({
-                destinationParams: result.data,
-                isValidating: { ...state.isValidating, destination: false },
-              }));
-              return Promise.resolve(true);
-            }
-            throw new Error("Invalid destination parameters");
-          } catch (error) {
-            const message =
-              error instanceof Error ? error.message : "Validation failed";
-            set((state) => ({
-              isValidating: { ...state.isValidating, destination: false },
-              validationErrors: {
-                ...state.validationErrors,
-                destination: message,
-              },
-            }));
-            return Promise.resolve(false);
-          }
-        },
-
-        updateFlightParams: (params) => {
-          set((state) => ({
-            isValidating: { ...state.isValidating, flight: true },
-            validationErrors: { ...state.validationErrors, flight: null },
-          }));
-
-          try {
-            const updatedParams = { ...get().flightParams, ...params };
-            const result = flightSearchParamsStoreSchema.safeParse(updatedParams);
-
-            if (result.success) {
-              set((state) => ({
-                flightParams: result.data,
-                isValidating: { ...state.isValidating, flight: false },
-              }));
-              return Promise.resolve(true);
-            }
-            throw new Error("Invalid flight parameters");
-          } catch (error) {
-            const message =
-              error instanceof Error ? error.message : "Validation failed";
-            set((state) => ({
-              isValidating: { ...state.isValidating, flight: false },
-              validationErrors: { ...state.validationErrors, flight: message },
-            }));
-            return Promise.resolve(false);
-          }
-        },
-
+        /** Validate current parameters using the handler. */
         validateCurrentParams: async () => {
           const { currentSearchType } = get();
           if (!currentSearchType) return false;
@@ -604,33 +509,11 @@ export const useSearchParamsStore = create<SearchParamsState>()(
           return await get().validateParams(currentSearchType);
         },
 
+        /** Validate parameters using the handler. */
         validateParams: (type) => {
-          const {
-            flightParams,
-            accommodationParams,
-            activityParams,
-            destinationParams,
-          } = get();
-
-          let params: Partial<SearchParams>;
-          switch (type) {
-            case "flight":
-              params = flightParams;
-              break;
-            case "accommodation":
-              params = accommodationParams;
-              break;
-            case "activity":
-              params = activityParams;
-              break;
-            case "destination":
-              params = destinationParams as Partial<SearchParams>;
-              break;
-            default:
-              return Promise.resolve(false);
-          }
-
-          return Promise.resolve(VALIDATE_SEARCH_PARAMS(params, type));
+          const state = get();
+          const params = getParamsForType(state, type);
+          return Promise.resolve(validateSearchParams(params, type));
         },
         validationErrors: {
           accommodation: null,
@@ -686,16 +569,5 @@ export const selectCurrentParamsFrom = (
   state: SearchParamsState
 ): SearchParams | null => {
   if (!state.currentSearchType) return null;
-  switch (state.currentSearchType) {
-    case "flight":
-      return state.flightParams as FlightSearchParams;
-    case "accommodation":
-      return state.accommodationParams as SearchAccommodationParams;
-    case "activity":
-      return state.activityParams as ActivitySearchParams;
-    case "destination":
-      return state.destinationParams as DestinationSearchParams;
-    default:
-      return null;
-  }
+  return getParamsForType(state, state.currentSearchType) as SearchParams;
 };

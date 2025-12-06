@@ -1,9 +1,13 @@
 /**
  * @fileoverview Emits structured operational alerts for log-based monitoring.
+ *
+ * Alerts are recorded via OpenTelemetry for distributed tracing and integration
+ * with external monitoring systems. Log drains can subscribe to OTEL events
+ * to trigger alerting workflows.
  */
 
 import "server-only";
-import { TELEMETRY_SERVICE_NAME, TELEMETRY_SILENT } from "@/lib/telemetry/constants";
+import { TELEMETRY_SERVICE_NAME } from "@/lib/telemetry/constants";
 import { recordTelemetryEvent } from "@/lib/telemetry/span";
 
 export type AlertSeverity = "info" | "warning" | "error";
@@ -13,14 +17,12 @@ export type OperationalAlertOptions = {
   severity?: AlertSeverity;
 };
 
-const ALERT_PREFIX = "[operational-alert]";
-
 /**
- * Emits a structured log entry that downstream drains can convert into alerts.
+ * Emits a structured operational alert via OpenTelemetry.
  *
- * The alert is emitted to BOTH:
- * 1. Console (for log drain consumption by external monitoring)
- * 2. OpenTelemetry (for distributed tracing correlation)
+ * Alerts are recorded as telemetry events that external monitoring systems
+ * can consume to trigger alerting workflows. Downstream log drains and
+ * OTEL collectors integrate with the telemetry infrastructure.
  *
  * @param event - Stable event name (e.g., redis.unavailable).
  * @param options - Optional severity + attribute metadata.
@@ -42,15 +44,8 @@ export function emitOperationalAlert(
     : undefined;
 
   const timestamp = new Date().toISOString();
-  const payload = {
-    attributes: payloadAttributes ?? {},
-    event,
-    severity,
-    source: TELEMETRY_SERVICE_NAME,
-    timestamp,
-  };
 
-  // 1. Record to OTel for distributed tracing
+  // Record to OTel for distributed tracing and monitoring integration
   recordTelemetryEvent(`alert.${event}`, {
     attributes: {
       ...payloadAttributes,
@@ -60,13 +55,4 @@ export function emitOperationalAlert(
     },
     level: severity,
   });
-
-  // Silence console sink when explicitly disabled (e.g., perf test runs)
-  if (TELEMETRY_SILENT) {
-    return;
-  }
-
-  // 2. Emit to console for log drain consumption (allowed per AGENTS.md)
-  const sink = severity === "error" ? console.error : console.warn;
-  sink.call(console, ALERT_PREFIX, JSON.stringify(payload));
 }

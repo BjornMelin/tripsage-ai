@@ -5,7 +5,7 @@ import {
   createMockNextRequest,
   createRouteParamsContext,
   getMockCookiesForTest,
-} from "@/test/route-helpers";
+} from "@/test/helpers/route";
 
 // Mock next/headers cookies() before any imports that use it
 vi.mock("next/headers", () => ({

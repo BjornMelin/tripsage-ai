@@ -36,7 +36,7 @@ export { createFlightAgent } from "./flight-agent";
 export { createItineraryAgent } from "./itinerary-agent";
 // Memory agent (uses streamText, not ToolLoopAgent)
 export { persistMemoryRecords, runMemoryAgent } from "./memory-agent";
-// Router agent (uses generateObject, not ToolLoopAgent)
+// Router agent (uses generateText with Output.object, not ToolLoopAgent)
 export { classifyUserMessage } from "./router-agent";
 export type {
   AgentDependencies,
@@ -59,7 +59,7 @@ export interface AgentInputTypes {
   itineraryPlanning: import("@schemas/agents").ItineraryPlanRequest;
   // Special handling - not supported via agentRegistry
   memoryUpdate: never;
-  router: never; // Router uses generateObject, not ToolLoopAgent
+  router: never; // Router uses generateText with Output.object, not ToolLoopAgent
 }
 
 /** Registry of agent factory functions. */

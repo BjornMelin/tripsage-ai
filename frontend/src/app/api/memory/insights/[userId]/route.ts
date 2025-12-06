@@ -11,14 +11,18 @@ import { resolveProvider } from "@ai/models/registry";
 import type { MemoryContextResponse } from "@schemas/chat";
 import type { MemoryInsightsResponse } from "@schemas/memory";
 import { MEMORY_INSIGHTS_RESPONSE_SCHEMA } from "@schemas/memory";
-import { generateObject } from "ai";
+import { generateText, Output } from "ai";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse, requireUserId } from "@/lib/api/route-helpers";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 import { handleMemoryIntent } from "@/lib/memory/orchestrator";
+import { sanitizeWithInjectionDetection } from "@/lib/security/prompt-sanitizer";
 import { nowIso } from "@/lib/security/random";
 import { createServerLogger } from "@/lib/telemetry/logger";
+import { recordTelemetryEvent } from "@/lib/telemetry/span";
+
+const MEMORY_SANITIZE_MAX_CHARS = 500;
 
 /**
  * GET /api/memory/insights/[userId]
@@ -60,6 +64,9 @@ export const GET = withApiGuards({
     const cacheKey = `memory:insights:${userId}`;
     const cached = await getCachedJson<MemoryInsightsResponse>(cacheKey);
     if (cached) {
+      recordTelemetryEvent("cache.memory_insights", {
+        attributes: { cache: "memory.insights", status: "hit" },
+      });
       return NextResponse.json(cached);
     }
 
@@ -69,19 +76,24 @@ export const GET = withApiGuards({
     const prompt = buildInsightsPrompt(userId, contextSummary, limitedContext.length);
 
     try {
+      recordTelemetryEvent("cache.memory_insights", {
+        attributes: { cache: "memory.insights", status: "miss" },
+      });
+
       const { model } = await resolveProvider(userId, "gpt-4o-mini");
 
-      const result = await generateObject({
+      const result = await generateText({
         model,
+        output: Output.object({ schema: MEMORY_INSIGHTS_RESPONSE_SCHEMA }),
         prompt,
-        schema: MEMORY_INSIGHTS_RESPONSE_SCHEMA,
         temperature: 0.3,
       });
 
+      const structured = result.output ?? ({} as MemoryInsightsResponse);
       const insights: MemoryInsightsResponse = {
-        ...result.object,
+        ...structured,
         metadata: {
-          ...result.object.metadata,
+          ...(structured.metadata ?? {}),
           analysisDate: nowIso(),
           dataCoverageMonths: estimateDataCoverageMonths(limitedContext),
         },
@@ -116,7 +128,7 @@ export const GET = withApiGuards({
  * Formats memory context items into a human-readable summary string.
  *
  * Each memory is numbered and includes its relevance score. Items are separated
- * by dividers for clarity.
+ * by dividers for clarity. Content is sanitized to prevent prompt injection.
  *
  * @param contextItems - Array of memory context responses to summarize.
  * @returns Formatted summary string, or "No memories available." if empty.
@@ -127,7 +139,12 @@ function buildContextSummary(contextItems: MemoryContextResponse[]): string {
   return contextItems
     .map((item, idx) => {
       const score = Number.isFinite(item.score) ? item.score.toFixed(2) : "n/a";
-      return `Memory ${idx + 1} (score ${score}):\n${item.context}`;
+      // Sanitize memory content to prevent prompt injection from stored user data
+      const safeContext = sanitizeWithInjectionDetection(
+        item.context,
+        MEMORY_SANITIZE_MAX_CHARS
+      );
+      return `Memory ${idx + 1} (score ${score}):\n${safeContext}`;
     })
     .join("\n\n---\n\n");
 }

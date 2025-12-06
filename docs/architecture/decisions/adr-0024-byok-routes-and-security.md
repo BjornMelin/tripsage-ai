@@ -25,6 +25,13 @@ We are migrating BYOK key CRUD/validation from FastAPI to Next.js route handlers
 - Rate limit with Upstash: `10/min` (POST/DELETE) and `20/min` (validate).
 - Redact `api_key` in logs and never return secrets.
 
+### Failure modes & environment guardrails
+
+- **Vault availability:** Production must have `vault`/`supabase_vault` installed; migrations fail fast if missing. Local/CI may use the stubbed `vault.secrets` table but must never ship to prod.
+- **Error surfaces:** Distinguish infrastructure errors (`VAULT_UNAVAILABLE`) from user errors (`INVALID_KEY`). Service role RPCs should return consistent error codes for frontend handling.
+- **Rotation/readiness checks:** Add a lightweight health check (service role) that calls `vault.decrypted_secrets` and raises alerts if unavailable.
+- **No-secret fallback:** Never persist BYOK secrets to regular tables or environment variables; stubs are for local/CI only.
+
 ## Consequences
 
 ### Positive

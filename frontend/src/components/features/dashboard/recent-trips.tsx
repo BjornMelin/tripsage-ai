@@ -6,7 +6,7 @@
 
 "use client";
 
-import { Calendar, Clock, MapPin } from "lucide-react";
+import { CalendarIcon, ClockIcon, MapPinIcon } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -133,12 +133,12 @@ function TripCard({ trip }: { trip: Trip }) {
 
       <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
         <div className="flex items-center gap-1">
-          <MapPin className="h-3 w-3" />
+          <MapPinIcon className="h-3 w-3" />
           <span className="truncate">{getDestinationText()}</span>
         </div>
         {duration && (
           <div className="flex items-center gap-1">
-            <Clock className="h-3 w-3" />
+            <ClockIcon className="h-3 w-3" />
             <span>{duration}</span>
           </div>
         )}
@@ -146,7 +146,7 @@ function TripCard({ trip }: { trip: Trip }) {
 
       {trip.startDate && (
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <Calendar className="h-3 w-3" />
+          <CalendarIcon className="h-3 w-3" />
           <span>
             {formatDate(trip.startDate)}
             {trip.endDate && ` - ${formatDate(trip.endDate)}`}
@@ -167,7 +167,7 @@ function EmptyState() {
   return (
     <div className="text-center py-8">
       <div className="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-4">
-        <MapPin className="h-6 w-6 text-muted-foreground" />
+        <MapPinIcon className="h-6 w-6 text-muted-foreground" />
       </div>
       <p className="text-sm text-muted-foreground mb-4">No recent trips yet.</p>
       <Button asChild size="sm">

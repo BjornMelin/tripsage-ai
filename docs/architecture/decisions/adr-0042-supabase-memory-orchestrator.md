@@ -43,6 +43,21 @@ All UI/stateful layers (Zustand, hooks, route handlers) emit intents—not direc
 provider calls. Feature flags govern adapter enablement, and all requests flow
 through centralized PII filters plus OpenTelemetry spans.
 
+### Vector indexing, retention, and session reuse
+
+- **Indexes:** Use pgvector **HNSW** for latency-sensitive stores:
+  - `accommodation_embeddings.embedding` and `memories.turn_embeddings.embedding`
+    with `m=32`, `ef_construction=180` (160 acceptable on RAM-tight nodes),
+    `ef_search` default `96` (tune 64–128 per query).
+  - Fallback (if write-heavy / memory constrained): IVFFlat with `lists≈500–1000`,
+    `probes≈20`; document when chosen.
+- **Query functions:** set `hnsw.ef_search` per call (see `match_accommodation_embeddings`).
+- **Retention:** `memories.turn_embeddings` cleaned up at **180 days** via pg_cron;
+  align embeddings and sessions to the same window.
+- **Session semantics:** reuse an existing "Travel Plan" chat/memory session when
+  the planner tool is invoked, rather than creating a new session per call, to
+  reduce fragmentation and keep retrieval accuracy high.
+
 ## Consequences
 
 ### Positive

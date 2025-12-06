@@ -7,7 +7,7 @@
 
 "use client";
 
-import { Filter, Grid, List, Plus, Search } from "lucide-react";
+import { FilterIcon, GridIcon, ListIcon, PlusIcon, SearchIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ConnectionStatusIndicator } from "@/components/features/realtime/connection-status-monitor";
 import { TripCard } from "@/components/features/trips";
@@ -30,6 +30,30 @@ import {
 import { useDeleteTrip, useTrips } from "@/hooks/use-trips";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { type Trip, useTripStore } from "@/stores/trip-store";
+
+/**
+ * Trip status count colors aligned with statusVariants.
+ * Matches trip status semantic colors.
+ */
+const TRIP_STATUS_COLORS = {
+  active: "text-green-700", // aligned with active status
+  completed: "text-gray-600", // neutral completed state
+  upcoming: "text-blue-700", // aligned with info status
+} as const;
+
+const CONNECTED_MESSAGE = "Connected — live updates enabled";
+const ERROR_MESSAGE =
+  "Disconnected — live updates paused due to sync errors. Please check your network.";
+const DISCONNECTED_MESSAGE =
+  "Disconnected — live updates paused, please check your network.";
+
+type ConnectionState = "connected" | "error" | "disconnected";
+
+const getConnectionStatusMessage = (state: ConnectionState): string => {
+  if (state === "connected") return CONNECTED_MESSAGE;
+  if (state === "error") return ERROR_MESSAGE;
+  return DISCONNECTED_MESSAGE;
+};
 
 const parseTripDate = (value?: string | null): Date | null => {
   if (!value) {
@@ -54,19 +78,19 @@ type FilterOption = "all" | "draft" | "upcoming" | "active" | "completed";
 export default function TripsPage() {
   const { createTrip } = useTripStore();
   const deleteTripMutation = useDeleteTrip();
-  const {
-    data: trips,
-    isLoading,
-    error,
-    isConnected: _isConnected,
-    realtimeStatus: _realtimeStatus,
-  } = useTrips();
+  const { data: trips, isLoading, error, isConnected, realtimeStatus } = useTrips();
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("date");
   const [filterBy, setFilterBy] = useState<FilterOption>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   const tripsArray = trips ?? [];
+  const realtimeErrorCount = Array.isArray(realtimeStatus?.errors)
+    ? realtimeStatus.errors.length
+    : 0;
+  const connectionState: ConnectionState =
+    realtimeErrorCount > 0 ? "error" : isConnected ? "connected" : "disconnected";
+  const connectionStatusMessage = getConnectionStatusMessage(connectionState);
 
   const filteredAndSortedTrips = useMemo(() => {
     if (tripsArray.length === 0) return [];
@@ -180,7 +204,9 @@ export default function TripsPage() {
   // Handle error state
   useEffect(() => {
     if (error) {
-      console.error("Trips error:", error);
+      if (process.env.NODE_ENV === "development") {
+        console.error("Trips error:", error);
+      }
     }
   }, [error]);
 
@@ -234,7 +260,7 @@ export default function TripsPage() {
           </CardHeader>
           <CardContent className="text-center">
             <Button onClick={handleCreateTrip} size="lg">
-              <Plus className="h-5 w-5 mr-2" />
+              <PlusIcon className="h-5 w-5 mr-2" />
               Create Your First Trip
             </Button>
           </CardContent>
@@ -254,10 +280,18 @@ export default function TripsPage() {
             collection
           </p>
         </div>
-        <div className="flex items-center space-x-4">
-          <ConnectionStatusIndicator />
+        <div className="flex items-center space-x-4" data-testid="trips-connection">
+          <div data-connection-state={connectionState}>
+            <ConnectionStatusIndicator />
+            <output
+              aria-live={connectionState === "error" ? "assertive" : "polite"}
+              className="sr-only"
+            >
+              {connectionStatusMessage}
+            </output>
+          </div>
           <Button onClick={handleCreateTrip}>
-            <Plus className="h-4 w-4 mr-2" />
+            <PlusIcon className="h-4 w-4 mr-2" />
             Create Trip
           </Button>
         </div>
@@ -273,7 +307,7 @@ export default function TripsPage() {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-blue-600">
+            <div className={`text-2xl font-bold ${TRIP_STATUS_COLORS.upcoming}`}>
               {statusCounts.upcoming}
             </div>
             <div className="text-sm text-muted-foreground">Upcoming</div>
@@ -281,7 +315,7 @@ export default function TripsPage() {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-green-600">
+            <div className={`text-2xl font-bold ${TRIP_STATUS_COLORS.active}`}>
               {statusCounts.active}
             </div>
             <div className="text-sm text-muted-foreground">Active</div>
@@ -289,7 +323,7 @@ export default function TripsPage() {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-gray-600">
+            <div className={`text-2xl font-bold ${TRIP_STATUS_COLORS.completed}`}>
               {statusCounts.completed}
             </div>
             <div className="text-sm text-muted-foreground">Completed</div>
@@ -300,7 +334,7 @@ export default function TripsPage() {
       {/* Filters and Search */}
       <div className="flex flex-col md:flex-row gap-4 mb-6">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search trips, destinations..."
             value={searchQuery}
@@ -313,8 +347,8 @@ export default function TripsPage() {
           value={filterBy}
           onValueChange={(value) => setFilterBy(value as FilterOption)}
         >
-          <SelectTrigger className="w-full md:w-40">
-            <Filter className="h-4 w-4 mr-2" />
+          <SelectTrigger aria-label="Filter trips" className="w-full md:w-40">
+            <FilterIcon className="h-4 w-4 mr-2" />
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -330,7 +364,7 @@ export default function TripsPage() {
           value={sortBy}
           onValueChange={(value) => setSortBy(value as SortOption)}
         >
-          <SelectTrigger className="w-full md:w-40">
+          <SelectTrigger aria-label="Sort trips" className="w-full md:w-40">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -343,20 +377,24 @@ export default function TripsPage() {
 
         <div className="flex border rounded-md">
           <Button
+            aria-pressed={viewMode === "grid"}
+            data-state={viewMode === "grid" ? "on" : "off"}
             variant={viewMode === "grid" ? "default" : "ghost"}
             size="sm"
             onClick={() => setViewMode("grid")}
             className="rounded-r-none"
           >
-            <Grid className="h-4 w-4" />
+            <GridIcon className="h-4 w-4" />
           </Button>
           <Button
+            aria-pressed={viewMode === "list"}
+            data-state={viewMode === "list" ? "on" : "off"}
             variant={viewMode === "list" ? "default" : "ghost"}
             size="sm"
             onClick={() => setViewMode("list")}
             className="rounded-l-none"
           >
-            <List className="h-4 w-4" />
+            <ListIcon className="h-4 w-4" />
           </Button>
         </div>
       </div>
@@ -365,7 +403,7 @@ export default function TripsPage() {
       {filteredAndSortedTrips.length === 0 ? (
         <Card>
           <CardContent className="text-center py-12">
-            <Search className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <SearchIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No trips found</h3>
             <p className="text-muted-foreground mb-4">
               Try adjusting your search or filter criteria
@@ -383,6 +421,8 @@ export default function TripsPage() {
         </Card>
       ) : (
         <div
+          data-testid="trips-view"
+          data-view-mode={viewMode}
           className={
             viewMode === "grid"
               ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"

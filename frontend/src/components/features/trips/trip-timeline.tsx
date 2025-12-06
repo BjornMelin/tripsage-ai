@@ -7,7 +7,16 @@
 
 "use client";
 
-import { Calendar, Car, Clock, Edit2, MapPin, Plane, Plus, Train } from "lucide-react";
+import {
+  CalendarIcon,
+  CarIcon,
+  ClockIcon,
+  Edit2Icon,
+  MapPinIcon,
+  PlaneIcon,
+  PlusIcon,
+  TrainIcon,
+} from "lucide-react";
 import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -186,17 +195,17 @@ export function TripTimeline({
   const getEventIcon = (iconType: TimelineEvent["iconType"]) => {
     switch (iconType) {
       case "flight":
-        return <Plane className="h-4 w-4" />;
+        return <PlaneIcon className="h-4 w-4" />;
       case "car":
-        return <Car className="h-4 w-4" />;
+        return <CarIcon className="h-4 w-4" />;
       case "train":
-        return <Train className="h-4 w-4" />;
+        return <TrainIcon className="h-4 w-4" />;
       case "calendar":
-        return <Calendar className="h-4 w-4" />;
+        return <CalendarIcon className="h-4 w-4" />;
       case "location":
-        return <MapPin className="h-4 w-4" />;
+        return <MapPinIcon className="h-4 w-4" />;
       default:
-        return <MapPin className="h-4 w-4" />;
+        return <MapPinIcon className="h-4 w-4" />;
     }
   };
 
@@ -214,7 +223,7 @@ export function TripTimeline({
       <Card className={className}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
+            <ClockIcon className="h-5 w-5" />
             Trip Timeline
           </CardTitle>
           <CardDescription>No destinations planned yet</CardDescription>
@@ -222,7 +231,7 @@ export function TripTimeline({
         <CardContent>
           {showActions && onAddDestination && (
             <Button onClick={onAddDestination} className="w-full">
-              <Plus className="h-4 w-4 mr-2" />
+              <PlusIcon className="h-4 w-4 mr-2" />
               Add First Destination
             </Button>
           )}
@@ -235,7 +244,7 @@ export function TripTimeline({
     <Card className={className}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Clock className="h-5 w-5" />
+          <ClockIcon className="h-5 w-5" />
           Trip Timeline
         </CardTitle>
         <CardDescription>
@@ -279,7 +288,7 @@ export function TripTimeline({
 
                   <div className="mt-1 space-y-1">
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <MapPin className="h-3 w-3" />
+                      <MapPinIcon className="h-3 w-3" />
                       <span>{event.location}</span>
                     </div>
 
@@ -318,7 +327,7 @@ export function TripTimeline({
                           onClick={() => onEditDestination(event.destination)}
                           className="h-6 px-2 text-xs"
                         >
-                          <Edit2 className="h-3 w-3 mr-1" />
+                          <Edit2Icon className="h-3 w-3 mr-1" />
                           Edit
                         </Button>
                       </div>
@@ -335,7 +344,7 @@ export function TripTimeline({
           <>
             <Separator className="my-4" />
             <Button variant="outline" onClick={onAddDestination} className="w-full">
-              <Plus className="h-4 w-4 mr-2" />
+              <PlusIcon className="h-4 w-4 mr-2" />
               Add Destination
             </Button>
           </>

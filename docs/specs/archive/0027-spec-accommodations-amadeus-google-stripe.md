@@ -44,7 +44,7 @@ broken into phases with checklists and concrete file paths.
 3. `runBookingOrchestrator`:
    - Calls Stripe (`processBookingPayment` / `refundBookingPayment`) and `provider.createBooking`, then persists the booking to Supabase.  
 4. UI uses:
-   - `useAccommodationSearch` hook and `accommodation-card.tsx` to display results.  
+   - `useAccommodationSearch` hook and `cards/accommodation-card.tsx` to display results.  
 
 ### 1.2 Target pipeline
 
@@ -160,8 +160,8 @@ Checklist:
 - `frontend/src/domain/schemas/accommodations.ts`
 - `frontend/src/ai/tools/server/accommodations.ts`
 - `frontend/src/lib/agents/accommodation-agent.ts`
-- `frontend/src/components/features/search/accommodation-card.tsx`
-- `frontend/src/components/features/search/modern-hotel-results.tsx`
+- `frontend/src/components/features/search/cards/accommodation-card.tsx`
+- `frontend/src/components/features/search/results/hotel-results.tsx`
 - `frontend/src/app/(dashboard)/trips/[tripId]/stay/page.tsx`
 - `frontend/src/app/(marketing)/stays/page.tsx`
 
@@ -267,6 +267,7 @@ Considerations:
   - `id` → use `hotel.hotelId` (or composite `hotelId:offerId` if needed).
   - `name` → `hotel.name`.
   - `location` → from Amadeus address / geo.
+  - `geoCode` → pass through `hotel.geoCode` (latitude/longitude) for distance calculations.
   - `images[]` → will be primarily from Google Places, not Amadeus.
   - `price` / `pricePerNight` → derived from `offer.price.total` and nights count.([Amadeus IT Group SA](https://developers.amadeus.com/self-service))
   - `provider` → `"amadeus"`.
@@ -275,6 +276,7 @@ Tasks:
 
 - [x] Implement `mapAmadeusHotelToAccommodationCard(hotel, offers, placesData?)`.
 - [x] Ensure `AccommodationSearchResult` remains valid per `ACCOMMODATION_SEARCH_OUTPUT_SCHEMA`.
+- [x] Pass through `geoCode` from Amadeus hotels to enable client-side distance sorting.
 
 ---
 
@@ -512,8 +514,8 @@ components.([shadcn/ui](https://ui.shadcn.com))
 
 Files:
 
-- `frontend/src/components/features/search/accommodation-card.tsx`
-- `frontend/src/components/features/search/modern-hotel-results.tsx`
+- `frontend/src/components/features/search/cards/accommodation-card.tsx`
+- `frontend/src/components/features/search/results/hotel-results.tsx`
 - `frontend/src/app/(dashboard)/trips/[tripId]/stay/page.tsx`
 - `frontend/src/app/(marketing)/stays/page.tsx`
 

@@ -2,8 +2,8 @@
 
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { RealtimeConnectionStatus } from "@/hooks/use-realtime-channel";
-import { useWebSocketChat } from "@/hooks/use-websocket-chat";
+import { useWebSocketChat } from "@/hooks/chat/use-websocket-chat";
+import type { RealtimeConnectionStatus } from "@/hooks/supabase/use-realtime-channel";
 
 const mockSendBroadcast = vi.fn().mockResolvedValue(undefined);
 const mockSetChatConnectionStatus = vi.fn();
@@ -20,7 +20,7 @@ const flushTimers = () => {
   });
 };
 
-vi.mock("@/hooks/use-realtime-channel", () => ({
+vi.mock("@/hooks/supabase/use-realtime-channel", () => ({
   useRealtimeChannel: vi.fn((topic, opts) => {
     const key = topic ?? "default";
     if (topic && !firedTopics.has(key)) {
@@ -131,7 +131,9 @@ describe("useWebSocketChat", () => {
   });
 
   it("handles connection errors", async () => {
-    const { useRealtimeChannel } = await import("@/hooks/use-realtime-channel");
+    const { useRealtimeChannel } = await import(
+      "@/hooks/supabase/use-realtime-channel"
+    );
     vi.mocked(useRealtimeChannel).mockImplementationOnce((_topic, opts) => {
       setTimeout(() => {
         opts?.onStatusChange?.("error" as RealtimeConnectionStatus);

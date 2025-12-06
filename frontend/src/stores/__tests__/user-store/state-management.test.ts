@@ -4,7 +4,7 @@ import type { UserProfile } from "@schemas/stores";
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { useUserProfileStore } from "@/stores/user-store";
-import { setupTimeoutMock } from "@/test/store-helpers";
+import { setupTimeoutMock } from "@/test/helpers/store";
 
 describe("User Profile Store - State Management", () => {
   let timeoutCleanup: (() => void) | null = null;

@@ -10,7 +10,7 @@ import {
   createMockNextRequest,
   createRouteParamsContext,
   getMockCookiesForTest,
-} from "@/test/route-helpers";
+} from "@/test/helpers/route";
 
 vi.mock("@/lib/agents/config-resolver", () => ({
   resolveAgentConfig: vi.fn(async () => ({ config: { model: "gpt-4o-mini" } })),

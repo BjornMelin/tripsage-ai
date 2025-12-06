@@ -8,6 +8,7 @@
 
 "use client";
 
+import { type Span, SpanStatusCode, trace } from "@opentelemetry/api";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { registerInstrumentations } from "@opentelemetry/instrumentation";
 import { FetchInstrumentation } from "@opentelemetry/instrumentation-fetch";
@@ -20,6 +21,40 @@ import { getClientEnvVarWithFallback } from "@/lib/env/client";
  * React Strict Mode calls effects twice, so we guard against re-initialization.
  */
 let isInitialized = false;
+
+/**
+ * Runs a client-side operation inside an OTEL span. No-op safe if tracing is not initialized.
+ *
+ * @param name - The name of the span.
+ * @param attributes - The attributes to add to the span.
+ * @param fn - The function to run inside the span.
+ * @returns The result of the function.
+ */
+export async function withClientTelemetrySpan<T>(
+  name: string,
+  attributes: Record<string, string | number | boolean> | undefined,
+  fn: () => Promise<T> | T
+): Promise<T> {
+  const tracer = trace.getTracer("client");
+  let span: Span | undefined;
+  try {
+    span = tracer.startSpan(name, { attributes });
+    const result = await fn();
+    span.setStatus({ code: SpanStatusCode.OK });
+    return result;
+  } catch (error) {
+    if (span) {
+      span.recordException(error as Error);
+      span.setStatus({
+        code: SpanStatusCode.ERROR,
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+    throw error;
+  } finally {
+    span?.end();
+  }
+}
 
 /**
  * Gets the OTLP trace endpoint URL from environment or uses default.

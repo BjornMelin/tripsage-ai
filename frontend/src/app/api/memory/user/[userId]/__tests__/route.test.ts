@@ -9,7 +9,7 @@ import {
   createMockNextRequest,
   createRouteParamsContext,
   getMockCookiesForTest,
-} from "@/test/route-helpers";
+} from "@/test/helpers/route";
 
 const mockLogger = vi.hoisted(() => ({
   error: vi.fn(),
@@ -46,12 +46,12 @@ vi.mock("@/lib/env/server", () => ({
 }));
 
 vi.mock("@upstash/redis", async () => {
-  const { createRedisMock } = await import("@/test/upstash");
+  const { createRedisMock } = await import("@/test/upstash/redis-mock");
   return createRedisMock();
 });
 
 vi.mock("@upstash/ratelimit", async () => {
-  const { createRatelimitMock } = await import("@/test/upstash");
+  const { createRatelimitMock } = await import("@/test/upstash/ratelimit-mock");
   return createRatelimitMock();
 });
 

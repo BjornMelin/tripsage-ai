@@ -2,14 +2,14 @@
 
 import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { attachmentsBase } from "@/test/msw/handlers/attachments";
-import { server } from "@/test/msw/server";
 import {
   createMockNextRequest,
   createRouteParamsContext,
   getMockCookiesForTest,
-} from "@/test/route-helpers";
-import { setupUpstashMocks } from "@/test/setup/upstash";
+} from "@/test/helpers/route";
+import { attachmentsBase } from "@/test/msw/handlers/attachments";
+import { server } from "@/test/msw/server";
+import { setupUpstashMocks } from "@/test/upstash/redis-mock";
 
 const { redis, ratelimit } = setupUpstashMocks();
 
@@ -20,10 +20,18 @@ vi.mock("next/headers", () => ({
   ),
 }));
 
+let mockSessionToken: string | null = "session-token";
+
 // Mock Supabase server client
 vi.mock("@/lib/supabase/server", () => ({
   createServerSupabase: vi.fn(async () => ({
     auth: {
+      getSession: async () => ({
+        data: {
+          session: mockSessionToken ? { access_token: mockSessionToken } : null,
+        },
+        error: null,
+      }),
       getUser: async () => ({
         data: { user: { id: "user-1" } },
       }),
@@ -53,6 +61,7 @@ describe("/api/attachments/files", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSessionToken = "session-token";
     // Reset Upstash mocks (SPEC-0032 pattern)
     redis.__reset?.();
     ratelimit.__reset?.();
@@ -73,10 +82,9 @@ describe("/api/attachments/files", () => {
     );
   });
 
-  it("forwards Authorization and sets next tags", async () => {
+  it("forwards Supabase session Authorization and sets next tags", async () => {
     const mod = await import("../route");
     const req = createMockNextRequest({
-      headers: { authorization: "Bearer token" },
       method: "GET",
       url: "http://localhost/api/attachments/files?limit=10&offset=0",
     });
@@ -97,6 +105,21 @@ describe("/api/attachments/files", () => {
 
     // Assert request headers
     expect(recordedHeaders).toBeDefined();
-    expect(recordedHeaders?.get("authorization")).toBe("Bearer token");
+    expect(recordedHeaders?.get("authorization")).toBe("Bearer session-token");
+  });
+
+  it("returns 401 when Supabase session is missing", async () => {
+    mockSessionToken = null;
+    const mod = await import("../route");
+
+    const req = createMockNextRequest({
+      method: "GET",
+      url: "http://localhost/api/attachments/files",
+    });
+
+    const res = await mod.GET(req, createRouteParamsContext());
+    expect(res.status).toBe(401);
+    const body = await res.json();
+    expect(body.error).toBe("unauthenticated");
   });
 });

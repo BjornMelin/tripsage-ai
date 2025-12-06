@@ -194,7 +194,7 @@ Python (SSE) tip: use `sseclient-py` with `requests` streaming.
 - `POST /chat/send` — Send message to session.
 - `GET /chat/sessions` — List sessions.
 - `POST /chat/sessions` — Create session.
-- `POST /chat/attachments` — Multipart upload; forwards to backend; validates size/count (auth).
+- `POST /chat/attachments` — Multipart upload; auth bound to Supabase session cookie (caller Authorization headers ignored); validates size/count and total payload.
 
 Example (stream)
 

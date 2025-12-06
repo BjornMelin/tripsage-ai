@@ -61,7 +61,7 @@ These flows show a reduction in steps and potential errors. After flattening, de
 
 There are no changes to the application’s data model or database schema. Flattening the structure does not affect how data is stored or structured in Postgres, Supabase, or any in-memory store. All database tables, Supabase migrations, and pgvector indexes remain as they are.
 
-One related consideration is environment variable schemas. The project likely has a runtime check for required env vars, possibly in `src/lib/env/schema.ts`【56†L9-L17】. We must ensure that environment variables are loaded correctly after moving the `.env.local` file:
+One related consideration is environment variable schemas. The project likely has a runtime check for required env vars, possibly in `frontend/src/domain/schemas/env.ts`. We must ensure that environment variables are loaded correctly after moving the `.env.local` file:
 
 - Previously, Next.js would load `frontend/.env.local`. After flattening, it will load `.env.local` from the root by default, since Next.js searches the project root directory for env files. This is more straightforward. We should double-check any custom env loading logic, for example if there is a script pointing to `frontend/.env.local` explicitly, and update it.
 - The Zod schema for env, if any, will remain the same.

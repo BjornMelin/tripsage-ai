@@ -8,7 +8,7 @@
 
 "use client";
 
-import { Clock, Plane } from "lucide-react";
+import { ClockIcon, PlaneIcon } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -151,7 +151,7 @@ function FlightCard({ flight }: { flight: UpcomingFlight }) {
     >
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2">
-          <Plane className="h-4 w-4 text-primary" />
+          <PlaneIcon className="h-4 w-4 text-primary" />
           <span className="font-medium text-sm">
             {flight.airlineName} {flight.flightNumber}
           </span>
@@ -181,7 +181,7 @@ function FlightCard({ flight }: { flight: UpcomingFlight }) {
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1">
-            <Clock className="h-3 w-3" />
+            <ClockIcon className="h-3 w-3" />
             <span>{getDuration()}</span>
           </div>
           {flight.stops > 0 && (
@@ -239,7 +239,7 @@ function EmptyState() {
   return (
     <div className="text-center py-8">
       <div className="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-4">
-        <Plane className="h-6 w-6 text-muted-foreground" />
+        <PlaneIcon className="h-6 w-6 text-muted-foreground" />
       </div>
       <p className="text-sm text-muted-foreground mb-4">No upcoming flights.</p>
       <Button asChild size="sm">

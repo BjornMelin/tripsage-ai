@@ -83,6 +83,13 @@ frontend/src/
 | [Observability](observability.md) | Telemetry spans, logging, operational alerts |
 | [Cache Versioned Keys](cache-versioned-keys.md) | Tag-based cache invalidation patterns |
 
+### Utilities
+
+| Utility | Location | Purpose |
+|---------|----------|---------|
+| Geo/Distance | `@/lib/geo` | Haversine distance calculation for hotel/activity proximity sorting |
+| Security/Random | `@/lib/security/random` | Secure UUIDs and IDs (`secureUuid`, `secureId`, `nowIso`) |
+
 ### Quality & Testing
 
 | Guide | Purpose |

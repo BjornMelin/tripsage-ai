@@ -2,7 +2,7 @@
 
 import { createTravelPlan, updateTravelPlan } from "@ai/tools/server/planning";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getMockCookiesForTest } from "@/test/route-helpers";
+import { getMockCookiesForTest } from "@/test/helpers/route";
 
 // Mock Next.js cookies() before any imports that use it
 vi.mock("next/headers", () => ({
@@ -28,6 +28,8 @@ const { mockWithTelemetrySpan } = vi.hoisted(() => {
 });
 
 vi.mock("@/lib/telemetry/span", () => ({
+  recordTelemetryEvent: vi.fn(),
+  sanitizeAttributes: (attrs: unknown) => attrs,
   withTelemetrySpan: mockWithTelemetrySpan,
 }));
 

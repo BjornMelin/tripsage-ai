@@ -1,7 +1,11 @@
+/**
+ * @fileoverview Client error fallback boundary rendering telemetry-friendly UI.
+ */
+
 "use client";
 
 import type { ErrorFallbackProps } from "@schemas/errors";
-import { AlertTriangle, Bug, Home, RefreshCw } from "lucide-react";
+import { AlertTriangleIcon, BugIcon, HomeIcon, RefreshCwIcon } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,7 +35,7 @@ export function ErrorFallback({ error, reset, retry }: ErrorFallbackProps) {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <AlertTriangle className="h-12 w-12 text-destructive" />
+            <AlertTriangleIcon className="h-12 w-12 text-destructive" />
           </div>
           <CardTitle className="text-xl font-semibold">Something went wrong</CardTitle>
         </CardHeader>
@@ -43,7 +47,7 @@ export function ErrorFallback({ error, reset, retry }: ErrorFallbackProps) {
 
           {isDev && error.message && (
             <Alert variant="destructive">
-              <Bug className="h-4 w-4" />
+              <BugIcon className="h-4 w-4" />
               <AlertDescription className="font-mono text-xs">
                 {error.message}
               </AlertDescription>
@@ -63,13 +67,13 @@ export function ErrorFallback({ error, reset, retry }: ErrorFallbackProps) {
           <div className="flex space-x-2 w-full">
             {retry && (
               <Button onClick={retry} variant="default" className="flex-1">
-                <RefreshCw className="mr-2 h-4 w-4" />
+                <RefreshCwIcon className="mr-2 h-4 w-4" />
                 Try Again
               </Button>
             )}
             {reset && (
               <Button onClick={reset} variant="outline" className="flex-1">
-                <RefreshCw className="mr-2 h-4 w-4" />
+                <RefreshCwIcon className="mr-2 h-4 w-4" />
                 Reset
               </Button>
             )}
@@ -80,7 +84,7 @@ export function ErrorFallback({ error, reset, retry }: ErrorFallbackProps) {
               Reload Page
             </Button>
             <Button onClick={handleGoHome} variant="ghost" className="flex-1">
-              <Home className="mr-2 h-4 w-4" />
+              <HomeIcon className="mr-2 h-4 w-4" />
               Go Home
             </Button>
           </div>
@@ -97,14 +101,14 @@ export function MinimalErrorFallback({ error: _error, reset }: ErrorFallbackProp
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
       <div className="text-center space-y-4">
-        <AlertTriangle className="h-16 w-16 text-destructive mx-auto" />
+        <AlertTriangleIcon className="h-16 w-16 text-destructive mx-auto" />
         <h1 className="text-2xl font-bold">Application Error</h1>
         <p className="text-muted-foreground max-w-md">
           The application has encountered an unexpected error and needs to restart.
         </p>
         {reset && (
           <Button onClick={reset}>
-            <RefreshCw className="mr-2 h-4 w-4" />
+            <RefreshCwIcon className="mr-2 h-4 w-4" />
             Restart Application
           </Button>
         )}
@@ -120,7 +124,7 @@ export function PageErrorFallback({ error, reset }: ErrorFallbackProps) {
   return (
     <div className="container mx-auto px-4 py-16">
       <div className="max-w-2xl mx-auto text-center space-y-6">
-        <AlertTriangle className="h-20 w-20 text-destructive mx-auto" />
+        <AlertTriangleIcon className="h-20 w-20 text-destructive mx-auto" />
         <h1 className="text-3xl font-bold">Page Error</h1>
         <p className="text-lg text-muted-foreground">
           This page has encountered an error and cannot be displayed properly.
@@ -129,7 +133,7 @@ export function PageErrorFallback({ error, reset }: ErrorFallbackProps) {
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           {reset && (
             <Button onClick={reset} size="lg">
-              <RefreshCw className="mr-2 h-5 w-5" />
+              <RefreshCwIcon className="mr-2 h-5 w-5" />
               Try Again
             </Button>
           )}
@@ -140,7 +144,7 @@ export function PageErrorFallback({ error, reset }: ErrorFallbackProps) {
             variant="outline"
             size="lg"
           >
-            <Home className="mr-2 h-5 w-5" />
+            <HomeIcon className="mr-2 h-5 w-5" />
             Go to Dashboard
           </Button>
         </div>

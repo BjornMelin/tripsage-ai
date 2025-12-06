@@ -7,7 +7,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { type EmailUpdateFormData, emailUpdateFormSchema } from "@schemas/profile";
-import { Check, Mail, Trash2 } from "lucide-react";
+import { CheckIcon, MailIcon, Trash2Icon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import {
@@ -43,8 +43,27 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { getBrowserClient } from "@/lib/supabase";
+import { cn } from "@/lib/utils";
 import { useAuthCore } from "@/stores/auth/auth-core";
 import { useUserProfileStore } from "@/stores/user-store";
+
+/**
+ * Alert colors for account status indicators.
+ * Deliberately distinct from statusVariants to keep lightweight, Tailwind-only tokens here.
+ */
+const ALERT_COLORS = {
+  danger: {
+    border: "border-red-200",
+    buttonHover: "bg-red-600 hover:bg-red-700",
+    title: "text-red-600",
+  },
+  warning: {
+    bg: "bg-amber-50",
+    border: "border-amber-200",
+    text: "text-amber-700",
+    title: "text-amber-800",
+  },
+} as const;
 
 /**
  * Account settings panel component.
@@ -282,7 +301,7 @@ export function AccountSettingsSection() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Mail className="h-5 w-5" />
+            <MailIcon className="h-5 w-5" />
             Email Settings
           </CardTitle>
           <CardDescription>
@@ -296,7 +315,7 @@ export function AccountSettingsSection() {
             <Badge variant={isEmailVerified ? "default" : "secondary"}>
               {isEmailVerified ? (
                 <>
-                  <Check className="h-3 w-3 mr-1" />
+                  <CheckIcon className="h-3 w-3 mr-1" />
                   Verified
                 </>
               ) : (
@@ -306,13 +325,19 @@ export function AccountSettingsSection() {
           </div>
 
           {!isEmailVerified && (
-            <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
+            <div
+              className={cn(
+                "rounded-lg border p-4",
+                ALERT_COLORS.warning.border,
+                ALERT_COLORS.warning.bg
+              )}
+            >
               <div className="flex justify-between items-center">
                 <div>
-                  <h4 className="text-sm font-medium text-yellow-800">
+                  <h4 className={cn("text-sm font-medium", ALERT_COLORS.warning.title)}>
                     Email verification required
                   </h4>
-                  <p className="text-sm text-yellow-700">
+                  <p className={cn("text-sm", ALERT_COLORS.warning.text)}>
                     Please verify your email address to enable all features.
                   </p>
                 </div>
@@ -431,9 +456,9 @@ export function AccountSettingsSection() {
       </Card>
 
       {/* Danger Zone */}
-      <Card className="border-red-200">
+      <Card className={ALERT_COLORS.danger.border}>
         <CardHeader>
-          <CardTitle className="text-red-600">Danger Zone</CardTitle>
+          <CardTitle className={ALERT_COLORS.danger.title}>Danger Zone</CardTitle>
           <CardDescription>
             Irreversible actions that will permanently affect your account.
           </CardDescription>
@@ -442,7 +467,7 @@ export function AccountSettingsSection() {
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="destructive" className="flex items-center gap-2">
-                <Trash2 className="h-4 w-4" />
+                <Trash2Icon className="h-4 w-4" />
                 Delete Account
               </Button>
             </AlertDialogTrigger>
@@ -458,7 +483,7 @@ export function AccountSettingsSection() {
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction
-                  className="bg-red-600 hover:bg-red-700"
+                  className={ALERT_COLORS.danger.buttonHover}
                   onClick={handleAccountDeletion}
                   disabled={isDeletingAccount}
                 >

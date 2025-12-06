@@ -5,7 +5,7 @@ import {
   createMockNextRequest,
   createRouteParamsContext,
   getMockCookiesForTest,
-} from "@/test/route-helpers";
+} from "@/test/helpers/route";
 import { DELETE } from "../[sessionId]/route";
 import { GET } from "../route";
 

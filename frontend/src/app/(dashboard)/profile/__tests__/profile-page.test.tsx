@@ -113,31 +113,23 @@ vi.mock("@/stores/auth/auth-core");
 
 // Define mock components in a hoisted block so they are available to vi.mock
 // factories, which are hoisted by Vitest.
-const {
-  PERSONAL_INFO_SECTION,
-  ACCOUNT_SETTINGS_SECTION,
-  PREFERENCES_SECTION,
-  SECURITY_SECTION,
-} = vi.hoisted(() => {
-  const PersonalInfoSection = () => (
-    <div data-testid="personal-info-section">Personal Info Section</div>
-  );
-  const AccountSettingsSection = () => (
-    <div data-testid="account-settings-section">Account Settings Section</div>
-  );
-  const PreferencesSection = () => (
-    <div data-testid="preferences-section">Preferences Section</div>
-  );
-  const SecuritySection = () => (
-    <div data-testid="security-section">Security Section</div>
-  );
-  return {
-    ACCOUNT_SETTINGS_SECTION: AccountSettingsSection,
-    PERSONAL_INFO_SECTION: PersonalInfoSection,
-    PREFERENCES_SECTION: PreferencesSection,
-    SECURITY_SECTION: SecuritySection,
-  } as const;
-});
+const { PERSONAL_INFO_SECTION, ACCOUNT_SETTINGS_SECTION, PREFERENCES_SECTION } =
+  vi.hoisted(() => {
+    const PersonalInfoSection = () => (
+      <div data-testid="personal-info-section">Personal Info Section</div>
+    );
+    const AccountSettingsSection = () => (
+      <div data-testid="account-settings-section">Account Settings Section</div>
+    );
+    const PreferencesSection = () => (
+      <div data-testid="preferences-section">Preferences Section</div>
+    );
+    return {
+      ACCOUNT_SETTINGS_SECTION: AccountSettingsSection,
+      PERSONAL_INFO_SECTION: PersonalInfoSection,
+      PREFERENCES_SECTION: PreferencesSection,
+    } as const;
+  });
 
 vi.mock("@/components/features/profile/personal-info-section", () => ({
   PersonalInfoSection: PERSONAL_INFO_SECTION,
@@ -149,10 +141,6 @@ vi.mock("@/components/features/profile/account-settings-section", () => ({
 
 vi.mock("@/components/features/profile/preferences-section", () => ({
   PreferencesSection: PREFERENCES_SECTION,
-}));
-
-vi.mock("@/components/features/profile/security-section", () => ({
-  SecuritySection: SECURITY_SECTION,
 }));
 
 describe("ProfilePage", () => {
@@ -218,6 +206,9 @@ describe("ProfilePage", () => {
       screen.getByRole("heading", { level: 1, name: /profile/i })
     ).toBeInTheDocument();
     expect(
+      screen.getByRole("link", { name: /Open Security Console/i })
+    ).toHaveAttribute("href", "/security");
+    expect(
       screen.getByText("Manage your account settings and preferences.")
     ).toBeInTheDocument();
 
@@ -225,7 +216,6 @@ describe("ProfilePage", () => {
     expect(screen.getByText("Personal")).toBeInTheDocument();
     expect(screen.getByText("Account")).toBeInTheDocument();
     expect(screen.getByText("Preferences")).toBeInTheDocument();
-    expect(screen.getByText("Security")).toBeInTheDocument();
   });
 
   it("displays personal info section by default", () => {
@@ -303,33 +293,6 @@ describe("ProfilePage", () => {
     expect(await screen.findByTestId("preferences-section")).toBeInTheDocument();
   });
 
-  it("switches to security tab", async () => {
-    vi.mocked(useAuthCore).mockReturnValue({
-      isAuthenticated: true,
-      isLoading: false,
-      user: MOCK_USER as User,
-    } as AuthStoreReturn);
-    vi.mocked(useUserProfileStore).mockReturnValue({
-      isLoading: false,
-      profile: {
-        createdAt: "",
-        email: MOCK_USER.email || "",
-        id: "p1",
-        updatedAt: "",
-      } as UserProfile,
-    } as UserProfileStoreReturn);
-
-    render(<ProfilePage />);
-
-    const securityTab = screen.getByRole("tab", { name: /security/i });
-    act(() => {
-      fireEvent.click(securityTab);
-    });
-
-    await waitFor(() => expect(securityTab).toHaveAttribute("data-state", "active"));
-    expect(await screen.findByTestId("security-section")).toBeInTheDocument();
-  });
-
   it("renders tab icons correctly", () => {
     vi.mocked(useAuthCore).mockReturnValue({
       isAuthenticated: true,
@@ -352,12 +315,10 @@ describe("ProfilePage", () => {
     const personalTab = screen.getByRole("tab", { name: /personal/i });
     const accountTab = screen.getByRole("tab", { name: /account/i });
     const preferencesTab = screen.getByRole("tab", { name: /preferences/i });
-    const securityTab = screen.getByRole("tab", { name: /security/i });
 
     expect(personalTab).toBeInTheDocument();
     expect(accountTab).toBeInTheDocument();
     expect(preferencesTab).toBeInTheDocument();
-    expect(securityTab).toBeInTheDocument();
   });
 
   it("maintains tab state during navigation", async () => {
@@ -434,7 +395,7 @@ describe("ProfilePage", () => {
     const tabPanels = screen.getAllByRole("tabpanel");
 
     expect(tabList).toBeInTheDocument();
-    expect(tabs).toHaveLength(4);
+    expect(tabs).toHaveLength(3);
     expect(tabPanels).toHaveLength(1); // Only active tab panel is visible
   });
 

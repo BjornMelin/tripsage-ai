@@ -1,8 +1,8 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { mockApiRouteAuthUser, resetApiRouteMocks } from "@/test/api-route-helpers";
-import { createMockNextRequest } from "@/test/route-helpers";
+import { mockApiRouteAuthUser, resetApiRouteMocks } from "@/test/helpers/api-route";
+import { createMockNextRequest } from "@/test/helpers/route";
 
 /**
  * Dashboard route tests.

@@ -3,13 +3,13 @@
 import type { TripsRow } from "@schemas/supabase";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setSupabaseFactoryForTests } from "@/lib/api/factory";
-import { stubRateLimitDisabled, unstubAllEnvs } from "@/test/env-helpers";
+import { stubRateLimitDisabled, unstubAllEnvs } from "@/test/helpers/env";
 import {
   createMockNextRequest,
   createRouteParamsContext,
   getMockCookiesForTest,
-} from "@/test/route-helpers";
-import { setupUpstashMocks } from "@/test/setup/upstash";
+} from "@/test/helpers/route";
+import { setupUpstashMocks } from "@/test/upstash/redis-mock";
 import { DELETE, GET, PUT } from "../route";
 
 vi.mock("next/headers", () => ({

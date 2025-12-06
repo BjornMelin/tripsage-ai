@@ -13,7 +13,7 @@ import type {
   ResourceUsage,
 } from "@schemas/agent-status";
 import { create } from "zustand";
-import type { RealtimeConnectionStatus } from "@/hooks/use-realtime-channel";
+import type { RealtimeConnectionStatus } from "@/hooks/supabase/use-realtime-channel";
 import { nowIso, secureId } from "@/lib/security/random";
 
 /**

@@ -6,8 +6,8 @@ import {
   mockApiRouteAuthUser,
   mockApiRouteRateLimitOnce,
   resetApiRouteMocks,
-} from "@/test/api-route-helpers";
-import { createMockNextRequest, createRouteParamsContext } from "@/test/route-helpers";
+} from "@/test/helpers/api-route";
+import { createMockNextRequest, createRouteParamsContext } from "@/test/helpers/route";
 
 const mockQueryFreeBusy = vi.fn();
 vi.mock("@/lib/calendar/google", () => ({

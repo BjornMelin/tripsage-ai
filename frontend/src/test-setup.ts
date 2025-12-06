@@ -77,7 +77,7 @@ vi.mock("zustand/middleware", () => ({
   subscribeWithSelector: <T>(fn: T) => fn,
 }));
 
-// React Query helpers live in @/test/query-mocks; Supabase helpers in @/test/mocks/supabase.
+// React Query helpers live in @/test/helpers/query; Supabase helpers in @/test/mocks/supabase.
 // Import per test as needed instead of global mocks.
 vi.mock("next/navigation", () => {
   const push = vi.fn();
