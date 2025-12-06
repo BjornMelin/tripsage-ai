@@ -16,10 +16,10 @@ import {
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityCard } from "@/components/features/search/activity-card";
-import { ActivityComparisonModal } from "@/components/features/search/activity-comparison-modal";
-import { ActivitySearchForm } from "@/components/features/search/activity-search-form";
-import { TripSelectionModal } from "@/components/features/search/trip-selection-modal";
+import { ActivityCard } from "@/components/features/search/cards/activity-card";
+import { ActivitySearchForm } from "@/components/features/search/forms/activity-search-form";
+import { ActivityComparisonModal } from "@/components/features/search/modals/activity-comparison-modal";
+import { TripSelectionModal } from "@/components/features/search/modals/trip-selection-modal";
 import { SearchLayout } from "@/components/layouts/search-layout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";

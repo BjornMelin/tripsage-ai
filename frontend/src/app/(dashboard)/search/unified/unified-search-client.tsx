@@ -23,10 +23,10 @@ import {
   ZapIcon,
 } from "lucide-react";
 import { type ReactNode, useState, useTransition } from "react";
-import { FlightResults } from "@/components/features/search/flight-results";
-import { FlightSearchForm } from "@/components/features/search/flight-search-form";
-import { HotelResults } from "@/components/features/search/hotel-results";
-import { HotelSearchForm } from "@/components/features/search/hotel-search-form";
+import { FlightSearchForm } from "@/components/features/search/forms/flight-search-form";
+import { HotelSearchForm } from "@/components/features/search/forms/hotel-search-form";
+import { FlightResults } from "@/components/features/search/results/flight-results";
+import { HotelResults } from "@/components/features/search/results/hotel-results";
 import { SearchLayout } from "@/components/layouts/search-layout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -155,6 +155,7 @@ const MOCK_HOTEL_RESULTS: HotelResult[] = [
       priceHistory: "falling" as const,
       pricePerNight: 450,
       taxes: 85,
+      taxesEstimated: false,
       totalPrice: 1350,
     },
     reviewCount: 2847,
@@ -214,6 +215,7 @@ const MOCK_HOTEL_RESULTS: HotelResult[] = [
       priceHistory: "rising" as const,
       pricePerNight: 189,
       taxes: 35,
+      taxesEstimated: false,
       totalPrice: 567,
     },
     reviewCount: 1893,
@@ -239,7 +241,8 @@ export default function UnifiedSearchClient({
   const [isPending, startTransition] = useTransition();
   const [activeTab, setActiveTab] = useState<"flights" | "hotels">("flights");
   const [showResults, setShowResults] = useState(false);
-  const [flightResults, setFlightResults] = useState<FlightResult[]>(MOCK_FLIGHT_RESULTS);
+  const [flightResults, setFlightResults] =
+    useState<FlightResult[]>(MOCK_FLIGHT_RESULTS);
   const [hotelResults, setHotelResults] = useState<HotelResult[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { toast } = useToast();

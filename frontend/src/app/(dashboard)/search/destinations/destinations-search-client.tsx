@@ -14,8 +14,8 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { DestinationCard } from "@/components/features/search/destination-card";
-import { DestinationSearchForm } from "@/components/features/search/destination-search-form";
+import { DestinationCard } from "@/components/features/search/cards/destination-card";
+import { DestinationSearchForm } from "@/components/features/search/forms/destination-search-form";
 import { SearchLayout } from "@/components/layouts/search-layout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";

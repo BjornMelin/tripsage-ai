@@ -45,7 +45,7 @@ import { Separator } from "@/components/ui/separator";
 import { withClientTelemetrySpan } from "@/lib/telemetry/client";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { cn } from "@/lib/utils";
-import { useSearchForm } from "./common/use-search-form";
+import { useSearchForm } from "../common/use-search-form";
 
 // Flight search params type
 export type FlightSearchParams = FlightSearchFormData;

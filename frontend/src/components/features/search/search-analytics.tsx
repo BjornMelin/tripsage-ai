@@ -34,15 +34,32 @@ export function SearchAnalytics({ className, dateRange }: SearchAnalyticsProps) 
   const [activeTab, setActiveTab] = useState("overview");
 
   /** Get search analytics and trends from store */
-  const { getSearchAnalytics, getSearchTrends, recentSearches } =
-    useSearchHistoryStore();
+  const {
+    getSearchAnalytics,
+    getSearchTrends,
+    recentSearches = [],
+  } = useSearchHistoryStore();
+
+  const emptyAnalytics = {
+    averageSearchDuration: 0,
+    mostUsedSearchTypes: [],
+    popularSearchTimes: [],
+    savedSearchUsage: [],
+    totalSearches: 0,
+  };
+
+  const resolvedGetSearchAnalytics = getSearchAnalytics ?? (() => emptyAnalytics);
+  const resolvedGetSearchTrends = getSearchTrends ?? (() => []);
 
   /** Get search analytics and trends from store */
   const analytics = useMemo(
-    () => getSearchAnalytics(dateRange),
-    [getSearchAnalytics, dateRange]
+    () => resolvedGetSearchAnalytics(dateRange),
+    [resolvedGetSearchAnalytics, dateRange]
   );
-  const trends = useMemo(() => getSearchTrends(undefined, 14), [getSearchTrends]);
+  const trends = useMemo(
+    () => resolvedGetSearchTrends(undefined, 14),
+    [resolvedGetSearchTrends]
+  );
 
   /** Calculate peak search hours */
   const peakHours = useMemo(() => {
@@ -74,7 +91,7 @@ export function SearchAnalytics({ className, dateRange }: SearchAnalyticsProps) 
   /** No recent searches */
   if (recentSearches.length === 0) {
     return (
-      <Card className={className}>
+      <Card className={className} data-testid="search-analytics">
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <BarChart3Icon className="h-4 w-4" />
@@ -94,7 +111,7 @@ export function SearchAnalytics({ className, dateRange }: SearchAnalyticsProps) 
 
   /** Render search analytics */
   return (
-    <Card className={className}>
+    <Card className={className} data-testid="search-analytics">
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center gap-2">
           <BarChart3Icon className="h-4 w-4" />

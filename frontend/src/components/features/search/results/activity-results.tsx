@@ -21,7 +21,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { cn } from "@/lib/utils";
-import { ActivityCard } from "./activity-card";
+import { ActivityCard } from "../cards/activity-card";
 
 interface ActivityResultsProps {
   results: Activity[];

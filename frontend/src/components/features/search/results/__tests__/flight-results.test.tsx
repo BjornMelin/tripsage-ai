@@ -230,7 +230,11 @@ describe("FlightResults", () => {
     await waitFor(() => expect(selectButton).toHaveTextContent("Select Flight"));
     expect(telemetrySpy).toHaveBeenCalledWith(
       expect.any(Error),
-      expect.objectContaining({ action: "handleFlightSelect", flightId: "f1" })
+      expect.objectContaining({
+        action: "handleSelect",
+        context: "FlightResults",
+        itemId: "f1",
+      })
     );
   });
 });

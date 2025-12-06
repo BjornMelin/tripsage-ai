@@ -27,7 +27,7 @@ export interface FilterToggleOptionsProps {
   /** Display label for the filter */
   label: string;
   /** Available options */
-  options: ToggleOption[];
+  options: readonly ToggleOption[];
   /** Current value (single for single-select, array for multi-select) */
   value?: string | string[];
   /** Callback when selection changes */
@@ -113,7 +113,7 @@ export function FilterToggleOptions({
         <ToggleGroup
           type="multiple"
           value={Array.isArray(value) ? value : []}
-          onValueChange={handleValueChange}
+          onValueChange={handleValueChange as (value: string[]) => void}
           disabled={disabled}
           className="flex flex-wrap gap-1"
         >
@@ -134,7 +134,7 @@ export function FilterToggleOptions({
         <ToggleGroup
           type="single"
           value={typeof value === "string" ? value : undefined}
-          onValueChange={handleValueChange}
+          onValueChange={handleValueChange as (value: string) => void}
           disabled={disabled}
           className="flex flex-wrap gap-1"
         >

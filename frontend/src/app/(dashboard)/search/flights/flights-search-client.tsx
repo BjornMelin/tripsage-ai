@@ -15,9 +15,10 @@ import {
 
 import { useRouter, useSearchParams } from "next/navigation";
 import React from "react";
-import { FilterPanel } from "@/components/features/search/filter-panel";
-import { FilterPresets } from "@/components/features/search/filter-presets";
-import { FlightSearchForm } from "@/components/features/search/flight-search-form";
+import { buildFlightApiPayload } from "@/components/features/search/filters/api-payload";
+import { FilterPanel } from "@/components/features/search/filters/filter-panel";
+import { FilterPresets } from "@/components/features/search/filters/filter-presets";
+import { FlightSearchForm } from "@/components/features/search/forms/flight-search-form";
 import { SearchLayout } from "@/components/layouts/search-layout";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -37,6 +38,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { useSearchOrchestration } from "@/hooks/search/use-search-orchestration";
 import { getErrorMessage } from "@/lib/api/error-types";
+import { useSearchFiltersStore } from "@/stores/search-filters-store";
 
 /** Flight search client component props. */
 interface FlightsSearchClientProps {
@@ -51,6 +53,7 @@ export default function FlightsSearchClient({
   const router = useRouter();
   const { toast } = useToast();
   const searchParams = useSearchParams();
+  const activeFilters = useSearchFiltersStore((s) => s.activeFilters);
   const nextYear = React.useMemo(() => new Date().getUTCFullYear() + 1, []);
   // TODO(SPEC-0034): replace placeholders with API-provided popular routes.
   const popularRoutes = React.useMemo(
@@ -127,8 +130,14 @@ export default function FlightsSearchClient({
 
   const handleSearch = async (params: FlightSearchParams) => {
     try {
-      await onSubmitServer(params); // server-side telemetry and validation
-      const searchId = await executeSearch(params);
+      // Merge form params with active filter payload
+      const filterPayload = buildFlightApiPayload(activeFilters);
+      const searchWithFilters: FlightSearchParams = {
+        ...params,
+        ...filterPayload,
+      };
+      await onSubmitServer(searchWithFilters); // server-side telemetry and validation
+      const searchId = await executeSearch(searchWithFilters);
       if (searchId) {
         toast({
           description: "Searching for flights...",

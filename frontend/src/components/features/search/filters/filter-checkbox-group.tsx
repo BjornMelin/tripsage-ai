@@ -29,7 +29,7 @@ export interface FilterCheckboxGroupProps {
   /** Display label for the filter */
   label: string;
   /** Available options */
-  options: FilterOption[];
+  options: readonly FilterOption[];
   /** Currently selected values */
   value?: string[];
   /** Callback when selection changes */

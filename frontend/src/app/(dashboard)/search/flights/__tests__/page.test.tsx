@@ -33,16 +33,21 @@ vi.mock("@/hooks/search/use-search-orchestration", () => ({
   }),
 }));
 
+// Mock API payload builder
+vi.mock("@/components/features/search/filters/api-payload", () => ({
+  buildFlightApiPayload: vi.fn(() => ({})),
+}));
+
 // Mock child components
-vi.mock("@/components/features/search/filter-presets", () => ({
+vi.mock("@/components/features/search/filters/filter-presets", () => ({
   FilterPresets: () => <div data-testid="filter-presets">Filter Presets</div>,
 }));
 
-vi.mock("@/components/features/search/filter-panel", () => ({
+vi.mock("@/components/features/search/filters/filter-panel", () => ({
   FilterPanel: () => <div data-testid="filter-panel">Filter Panel</div>,
 }));
 
-vi.mock("@/components/features/search/flight-search-form", () => ({
+vi.mock("@/components/features/search/forms/flight-search-form", () => ({
   FlightSearchForm: ({ onSearch }: { onSearch: () => void }) => (
     <div data-testid="flight-search-form">
       <button type="button" onClick={onSearch}>

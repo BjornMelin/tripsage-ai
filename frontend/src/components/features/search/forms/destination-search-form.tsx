@@ -34,7 +34,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { useMemoryContext } from "@/hooks/use-memory";
 import { initTelemetry, withClientTelemetrySpan } from "@/lib/telemetry/client";
-import { useSearchForm } from "./common/use-search-form";
+import { useSearchForm } from "../common/use-search-form";
 
 /** Type for destination search form values. */
 export type DestinationSearchFormValues = DestinationSearchFormData;
