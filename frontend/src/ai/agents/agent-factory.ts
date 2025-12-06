@@ -16,9 +16,10 @@ import "server-only";
 import type { LanguageModel, StopCondition, ToolSet } from "ai";
 import {
   asSchema,
-  generateObject,
+  generateText,
   InvalidToolInputError,
   NoSuchToolError,
+  Output,
   stepCountIs,
   ToolLoopAgent,
 } from "ai";
@@ -286,10 +287,10 @@ export function createTripSageAgent<
         ].join("\n");
 
         const attemptModelRepair = async (modelId: string, model: LanguageModel) => {
-          const { object: repaired } = await generateObject({
+          const { output: repaired } = await generateText({
             model,
+            output: Output.object({ schema: tool.inputSchema }),
             prompt,
-            schema: tool.inputSchema,
           });
           const schema = asSchema(tool.inputSchema);
           if (schema?.validate) {

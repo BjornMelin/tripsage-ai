@@ -28,6 +28,8 @@ const { mockWithTelemetrySpan } = vi.hoisted(() => {
 });
 
 vi.mock("@/lib/telemetry/span", () => ({
+  recordTelemetryEvent: vi.fn(),
+  sanitizeAttributes: (attrs: unknown) => attrs,
   withTelemetrySpan: mockWithTelemetrySpan,
 }));
 

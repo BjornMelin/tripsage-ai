@@ -18,6 +18,8 @@ import { getRedis } from "@/lib/redis";
 import { nowIso, secureUuid } from "@/lib/security/random";
 import type { Database, Json } from "@/lib/supabase/database.types";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { createServerLogger } from "@/lib/telemetry/logger";
+import { requireApproval } from "./approvals";
 import {
   RATE_CREATE_PER_DAY,
   RATE_UPDATE_PER_MIN,
@@ -27,6 +29,7 @@ import {
 import { type Plan, planSchema } from "./planning.schema";
 
 const UUID_V4 = z.uuid();
+const planningLogger = createServerLogger("tools.planning");
 
 /** Generate Redis key for travel plan. */
 function redisKeyForPlan(planId: string): string {
@@ -66,16 +69,19 @@ async function recordPlanMemory(opts: {
     const sessionUserId = auth?.user?.id;
     if (!sessionUserId || sessionUserId !== opts.userId) return;
 
-    const sessionId = secureUuid();
-    const { data: sessionData } = await supabase
+    const { data: existingSession } = await supabase
       .schema("memories")
       .from("sessions")
       .select("id")
-      .eq("id", sessionId)
       .eq("user_id", opts.userId)
-      .single();
+      .eq("title", "Travel Plan")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    if (!sessionData) {
+    const sessionId = existingSession?.id ?? secureUuid();
+
+    if (!existingSession) {
       await supabase
         .schema("memories")
         .from("sessions")
@@ -110,7 +116,10 @@ async function recordPlanMemory(opts: {
         user_id: opts.userId,
       });
   } catch {
-    // no-op
+    planningLogger.warn("tools.planning.memory_record_failed", {
+      contentLength: opts.content?.length ?? 0,
+      userId: opts.userId,
+    });
   }
 }
 
@@ -416,14 +425,16 @@ export const saveTravelPlan = createAiTool({
  * Tool for deleting an existing travel plan owned by the session user.
  *
  * Deletes an existing travel plan owned by the session user.
+ * Requires user approval before deletion to prevent accidental data loss.
  * Returns the success message and plan ID.
  *
- * @param args Input parameters (planId, userId).
+ * @param args Input parameters (planId, sessionId).
  * @returns Promise resolving to travel plan deletion results.
  */
 export const deleteTravelPlan = createAiTool({
-  description: "Delete an existing travel plan owned by the session user.",
-  execute: async ({ planId }) => {
+  description:
+    "Delete an existing travel plan owned by the session user. Requires approval before execution.",
+  execute: async ({ planId, sessionId }) => {
     const redis = getRedis();
     if (!redis) return { error: "redis_unavailable", success: false } as const;
     const key = redisKeyForPlan(planId);
@@ -436,12 +447,41 @@ export const deleteTravelPlan = createAiTool({
 
     const supabase = await createServerSupabase();
     const { data: auth } = await supabase.auth.getUser();
-    if (parsed.data.userId !== auth?.user?.id)
+    const userId = auth?.user?.id;
+    if (!userId || parsed.data.userId !== userId)
       return { error: "unauthorized", success: false } as const;
 
-    await redis.del(key);
-    return { message: "deleted", planId, success: true } as const;
+    // Require user approval before deleting travel plan
+    // Uses Redis-backed approval flow - throws "approval_required" if not approved
+    const effectiveSessionId = sessionId ?? userId;
+    try {
+      await requireApproval("deleteTravelPlan", {
+        idempotencyKey: planId,
+        sessionId: effectiveSessionId,
+      });
+    } catch (err) {
+      // Convert approval exception to graceful error response for AI tool interface
+      const message = err instanceof Error ? err.message : "approval_required";
+      return { error: message, success: false } as const;
+    }
+
+    try {
+      await redis.del(key);
+      return { message: "deleted", planId, success: true } as const;
+    } catch (err) {
+      planningLogger.error("Failed to delete travel plan from redis", {
+        err,
+        key,
+        planId,
+      });
+      return { error: "delete_failed", planId, success: false } as const;
+    }
   },
-  inputSchema: z.object({ planId: UUID_V4, userId: z.string().optional() }),
+  inputSchema: z.object({
+    /** Plan ID to delete (required) */
+    planId: UUID_V4,
+    /** Session ID for approval flow (optional, defaults to user ID) */
+    sessionId: z.string().optional(),
+  }),
   name: "deleteTravelPlan",
 });
