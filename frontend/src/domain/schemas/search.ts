@@ -230,26 +230,65 @@ export const flightSchema = z.object({
 export type Flight = z.infer<typeof flightSchema>;
 
 /**
+ * Zod schema for accommodation availability info.
+ * Tracks room availability and booking urgency.
+ */
+export const accommodationAvailabilitySchema = z.object({
+  flexible: z.boolean().optional(),
+  roomsLeft: z.number().int().nonnegative().optional(),
+  urgency: z.enum(["low", "medium", "high"]).optional(),
+});
+
+/**
  * Zod schema for accommodation search results.
  * Includes property details, pricing, amenities, and location information.
+ * Extended to preserve provider data for UI enrichment.
  */
 export const accommodationSchema = z.object({
+  address: z
+    .object({
+      cityName: z.string().optional(),
+      lines: z.array(z.string()).optional(),
+    })
+    .optional(),
   amenities: z.array(z.string()),
+  availability: accommodationAvailabilitySchema.optional(),
+  category: z
+    .enum(["hotel", "resort", "apartment", "villa", "boutique", "hostel"])
+    .optional(),
+  chainCode: z.string().optional(),
   checkIn: DATE_STRING_SCHEMA,
   checkOut: DATE_STRING_SCHEMA,
   coordinates: COORDINATES_SCHEMA.optional(),
+  currency: CURRENCY_CODE_SCHEMA.optional(),
   id: z.string().min(1),
   images: z.array(primitiveSchemas.url).optional(),
   location: z.string().min(1),
   name: z.string().min(1),
-  pricePerNight: z.number().positive(),
+  policies: z
+    .object({
+      cancellation: z
+        .object({
+          deadline: DATE_STRING_SCHEMA.optional(),
+          description: z.string().optional(),
+          refundable: z.boolean().optional(),
+        })
+        .optional(),
+    })
+    .optional(),
+  pricePerNight: z.number().nonnegative(),
   rating: z.number().min(0).max(5),
-  totalPrice: z.number().positive(),
+  starRating: z.number().min(0).max(5).optional(),
+  taxes: z.number().nonnegative().optional(),
+  totalPrice: z.number().nonnegative(),
   type: z.string().min(1),
 });
 
 /** TypeScript type for accommodation search results. */
 export type Accommodation = z.infer<typeof accommodationSchema>;
+
+/** TypeScript type for accommodation availability. */
+export type AccommodationAvailability = z.infer<typeof accommodationAvailabilitySchema>;
 
 /**
  * Zod schema for activity search results.
@@ -445,6 +484,18 @@ const FUTURE_DATE_SCHEMA = z
     error: "Date must be in the future",
   });
 
+/** Optional future date schema that treats empty strings as undefined for optional form fields. */
+const OPTIONAL_FUTURE_DATE_SCHEMA = z.preprocess(
+  (value) => (value === "" ? undefined : value),
+  FUTURE_DATE_SCHEMA.optional()
+);
+
+/** Optional difficulty schema that allows empty strings to be treated as undefined. */
+const OPTIONAL_DIFFICULTY_SCHEMA = z.preprocess(
+  (value) => (value === "" ? undefined : value),
+  z.enum(["easy", "moderate", "challenging", "extreme"]).optional()
+);
+
 /**
  * Form schema for flight search with validation.
  * Includes passenger details, routing preferences, and date validation.
@@ -566,11 +617,11 @@ export type AccommodationSearchFormData = z.infer<typeof accommodationSearchForm
  */
 export const activitySearchFormSchema = z.object({
   category: z.string().optional(),
-  date: FUTURE_DATE_SCHEMA.optional(),
+  date: OPTIONAL_FUTURE_DATE_SCHEMA,
   dateRange: z
     .object({
-      end: FUTURE_DATE_SCHEMA.optional(),
-      start: FUTURE_DATE_SCHEMA.optional(),
+      end: OPTIONAL_FUTURE_DATE_SCHEMA,
+      start: OPTIONAL_FUTURE_DATE_SCHEMA,
     })
     .refine(
       (data) => {
@@ -587,7 +638,7 @@ export const activitySearchFormSchema = z.object({
     )
     .optional(),
   destination: z.string().min(1, { error: "Destination is required" }),
-  difficulty: z.enum(["easy", "moderate", "challenging", "extreme"]).optional(),
+  difficulty: OPTIONAL_DIFFICULTY_SCHEMA,
   duration: z
     .object({
       max: z.number().positive().optional(),
@@ -725,13 +776,9 @@ export const hotelResultSchema = z.strictObject({
     premium: z.array(z.string()),
     unique: z.array(z.string()),
   }),
-  availability: z.strictObject({
-    flexible: z.boolean(),
-    roomsLeft: z.number().int().nonnegative(),
-    urgency: z.enum(["low", "medium", "high"]),
-  }),
+  availability: accommodationAvailabilitySchema,
   brand: z.string().optional(),
-  category: z.enum(["hotel", "resort", "apartment", "villa", "boutique"]),
+  category: z.enum(["hotel", "resort", "apartment", "villa", "boutique", "hostel"]),
   guestExperience: z.strictObject({
     highlights: z.array(z.string()),
     recentMentions: z.array(z.string()),
@@ -744,15 +791,15 @@ export const hotelResultSchema = z.strictObject({
     main: z.string(),
   }),
   location: z.strictObject({
-    address: z.string(),
-    city: z.string(),
+    address: z.string().optional(),
+    city: z.string().optional(),
     coordinates: z
       .strictObject({
         lat: z.number(),
         lng: z.number(),
       })
       .optional(),
-    district: z.string(),
+    district: z.string().optional(),
     landmarks: z.array(z.string()),
     walkScore: z.number().optional(),
   }),
@@ -771,10 +818,11 @@ export const hotelResultSchema = z.strictObject({
     priceHistory: z.enum(["rising", "falling", "stable"]),
     pricePerNight: z.number().nonnegative(),
     taxes: z.number().nonnegative(),
+    taxesEstimated: z.boolean(),
     totalPrice: z.number().nonnegative(),
   }),
   reviewCount: z.number().int().nonnegative(),
-  starRating: z.number().min(0).max(5),
+  starRating: z.number().min(0).max(5).optional(),
   sustainability: z.strictObject({
     certified: z.boolean(),
     practices: z.array(z.string()),

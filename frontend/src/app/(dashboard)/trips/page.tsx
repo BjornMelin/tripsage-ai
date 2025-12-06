@@ -44,7 +44,8 @@ const TRIP_STATUS_COLORS = {
 const CONNECTED_MESSAGE = "Connected — live updates enabled";
 const ERROR_MESSAGE =
   "Disconnected — live updates paused due to sync errors. Please check your network.";
-const DISCONNECTED_MESSAGE = "Disconnected — live updates paused, please check your network.";
+const DISCONNECTED_MESSAGE =
+  "Disconnected — live updates paused, please check your network.";
 
 type ConnectionState = "connected" | "error" | "disconnected";
 
@@ -282,9 +283,12 @@ export default function TripsPage() {
         <div className="flex items-center space-x-4" data-testid="trips-connection">
           <div data-connection-state={connectionState}>
             <ConnectionStatusIndicator />
-            <span className="sr-only" role="status">
+            <output
+              aria-live={connectionState === "error" ? "assertive" : "polite"}
+              className="sr-only"
+            >
               {connectionStatusMessage}
-            </span>
+            </output>
           </div>
           <Button onClick={handleCreateTrip}>
             <PlusIcon className="h-4 w-4 mr-2" />

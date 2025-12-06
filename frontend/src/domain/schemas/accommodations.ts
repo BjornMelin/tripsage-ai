@@ -111,6 +111,15 @@ export const accommodationListingSchema = z.strictObject({
     })
     .optional(),
   amenities: z.array(z.string()).optional(),
+  cancellationPolicy: z
+    .object({
+      deadline: z.string().optional(),
+      description: z.string().optional(),
+      partialRefundable: z.boolean().optional(),
+      refundable: z.boolean().optional(),
+    })
+    .optional(),
+  chainCode: z.string().optional(),
   geoCode: z
     .object({
       latitude: z.number(),
@@ -167,6 +176,7 @@ export const accommodationListingSchema = z.strictObject({
     })
     .optional(),
   starRating: z.number().optional(),
+  taxes: z.number().nonnegative().optional(),
 });
 
 /** TypeScript type for accommodation listing. */

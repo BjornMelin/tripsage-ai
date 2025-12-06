@@ -495,6 +495,64 @@ export const placesPhotoRequestSchema = z.object({
 /** TypeScript type for places photo requests. */
 export type PlacesPhotoRequest = z.infer<typeof placesPhotoRequestSchema>;
 
+/**
+ * Zod schema for POST /api/places/nearby request body.
+ * Validates Google Places API (New) Nearby Search request parameters.
+ */
+export const placesNearbyRequestSchema = z.object({
+  includedTypes: z
+    .array(z.string())
+    .min(1, { error: "Must include at least one place type" })
+    .default(["tourist_attraction", "museum", "landmark"]),
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+  maxResultCount: z.number().int().positive().max(20).default(10),
+  radiusMeters: z.number().int().positive().max(50000).default(1000),
+});
+
+/** TypeScript type for places nearby requests. */
+export type PlacesNearbyRequest = z.infer<typeof placesNearbyRequestSchema>;
+
+/**
+ * Zod schema for POST /api/accommodations/personalize request body.
+ * Validates hotel personalization request parameters.
+ */
+export const hotelPersonalizeRequestSchema = z.object({
+  hotels: z
+    .array(
+      z.object({
+        amenities: z.array(z.string()).default([]),
+        brand: z.string().optional(),
+        category: z.string().optional(),
+        location: z.string().min(1).max(255),
+        name: z.string().min(1).max(100),
+        pricePerNight: z.number().nonnegative(),
+        /**
+         * Aggregated user review score normalized to 0–5.
+         */
+        rating: z.number().min(0).max(5).optional(),
+        /**
+         * Official property classification (stars), not derived from user ratings.
+         */
+        starRating: z.number().min(0).max(5).optional(),
+      })
+    )
+    .min(1, { error: "At least one hotel required per request" })
+    .max(50, { error: "Maximum 50 hotels allowed per request" }),
+  preferences: z
+    .object({
+      forBusiness: z.boolean().optional(),
+      preferredAmenities: z.array(z.string().max(100)).max(50).optional(),
+      travelStyle: z.string().max(100).optional(),
+      tripPurpose: z.string().max(100).optional(),
+      withFamily: z.boolean().optional(),
+    })
+    .default({}),
+});
+
+/** TypeScript type for hotel personalization requests. */
+export type HotelPersonalizeRequest = z.infer<typeof hotelPersonalizeRequestSchema>;
+
 // ===== ERROR SCHEMAS =====
 // Schemas for API error responses
 

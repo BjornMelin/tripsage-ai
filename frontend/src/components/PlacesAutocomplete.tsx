@@ -338,9 +338,17 @@ export function PlacesAutocomplete({
                 id={optionId}
                 role="option"
                 aria-selected={isSelected}
+                tabIndex={-1}
                 onClick={() => {
                   setSelectedPlaceId(suggestion.placePrediction.placeId ?? null);
                   handlePlaceSelect(suggestion.placePrediction);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setSelectedPlaceId(suggestion.placePrediction.placeId ?? null);
+                    handlePlaceSelect(suggestion.placePrediction);
+                  }
                 }}
                 onMouseEnter={() => setActiveIndex(index)}
                 className={`cursor-pointer px-4 py-2 hover:bg-gray-100 ${
