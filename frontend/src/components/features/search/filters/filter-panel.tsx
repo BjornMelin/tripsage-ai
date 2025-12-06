@@ -28,10 +28,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useSearchFiltersStore } from "@/stores/search-filters-store";
-import { formatCurrency, formatDurationMinutes } from "./common/format";
-import { FilterCheckboxGroup } from "./filters/filter-checkbox-group";
-import { FilterRange } from "./filters/filter-range";
-import { FilterToggleOptions } from "./filters/filter-toggle-options";
+import { formatCurrency, formatDurationMinutes } from "../common/format";
+import { AIRLINES_OPTIONS, FILTER_IDS, STOPS_OPTIONS, TIME_OPTIONS } from "./constants";
+import { FilterCheckboxGroup } from "./filter-checkbox-group";
+import { FilterRange } from "./filter-range";
+import { FilterToggleOptions } from "./filter-toggle-options";
+import { isRangeObject, isStringArray, isStringValue } from "./utils";
 
 /** Props for the FilterPanel component */
 interface FilterPanelProps {
@@ -41,33 +43,8 @@ interface FilterPanelProps {
   defaultOpenSections?: string[];
 }
 
-/** Flight stops options */
-const STOPS_OPTIONS = [
-  { label: "Any", value: "any" },
-  { label: "Nonstop", value: "0" },
-  { label: "1 Stop", value: "1" },
-  { label: "2+", value: "2+" },
-];
-
-/** Departure time options */
-const TIME_OPTIONS = [
-  { label: "Early (12a-6a)", value: "early_morning" },
-  { label: "Morning (6a-12p)", value: "morning" },
-  { label: "Afternoon (12p-6p)", value: "afternoon" },
-  { label: "Evening (6p-12a)", value: "evening" },
-];
-
-/** Airlines options (would typically come from API/store) */
-const AIRLINES_OPTIONS = [
-  { label: "American Airlines", value: "AA" },
-  { label: "United Airlines", value: "UA" },
-  { label: "Delta Air Lines", value: "DL" },
-  { label: "Southwest Airlines", value: "WN" },
-  { label: "Alaska Airlines", value: "AS" },
-  { label: "JetBlue Airways", value: "B6" },
-];
-
-function GetFilterValue<T extends FilterValue>(
+/** Get typed filter value from active filters map. */
+export function GetFilterValue<T extends FilterValue>(
   activeFilters: Record<string, { value: FilterValue }>,
   filterId: string,
   guard: (value: FilterValue) => value is T
@@ -80,7 +57,7 @@ function GetFilterValue<T extends FilterValue>(
 }
 
 /** Get display label for an active filter. */
-function GetFilterLabel(
+export function GetFilterLabel(
   filterId: string,
   value: FilterValue,
   currentFilters: ValidatedFilterOption[]
@@ -105,11 +82,11 @@ function GetFilterLabel(
 
   if (typeof value === "string") {
     // Try to find option label
-    if (filterId === "stops") {
+    if (filterId === FILTER_IDS.stops) {
       const option = STOPS_OPTIONS.find((o) => o.value === value);
       return option ? `${label}: ${option.label}` : `${label}: ${value}`;
     }
-    if (filterId.includes("time")) {
+    if (filterId === FILTER_IDS.departureTime) {
       const option = TIME_OPTIONS.find((o) => o.value === value);
       return option ? `${label}: ${option.label}` : `${label}: ${value}`;
     }
@@ -127,7 +104,7 @@ function GetFilterLabel(
  */
 export function FilterPanel({
   className,
-  defaultOpenSections = ["price_range", "stops"],
+  defaultOpenSections = [FILTER_IDS.priceRange, FILTER_IDS.stops],
 }: FilterPanelProps) {
   const {
     currentFilters,
@@ -140,20 +117,6 @@ export function FilterPanel({
     clearAllFilters,
     clearFiltersByCategory,
   } = useSearchFiltersStore();
-
-  const isRangeObject = (value: FilterValue): value is { max: number; min: number } =>
-    typeof value === "object" &&
-    value !== null &&
-    "min" in value &&
-    "max" in value &&
-    typeof (value as { min: unknown }).min === "number" &&
-    typeof (value as { max: unknown }).max === "number";
-
-  const isStringValue = (value: FilterValue): value is string =>
-    typeof value === "string";
-
-  const isStringArray = (value: FilterValue): value is string[] =>
-    Array.isArray(value) && value.every((entry) => typeof entry === "string");
 
   // Group filters by category
   const filtersByCategory = useMemo(() => {
@@ -215,7 +178,7 @@ export function FilterPanel({
   }
 
   return (
-    <Card className={className}>
+    <Card className={className} data-testid="filter-panel">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -277,8 +240,8 @@ export function FilterPanel({
           className="w-full"
         >
           {/* Price Range */}
-          {filtersByCategory.pricing?.some((f) => f.id === "price_range") && (
-            <AccordionItem value="price_range">
+          {filtersByCategory.pricing?.some((f) => f.id === FILTER_IDS.priceRange) && (
+            <AccordionItem value={FILTER_IDS.priceRange}>
               <AccordionTrigger className="py-3 text-sm">
                 <div className="flex items-center justify-between w-full pr-2">
                   <span>Price Range</span>
@@ -303,12 +266,16 @@ export function FilterPanel({
                   </div>
                 )}
                 <FilterRange
-                  filterId="price_range"
+                  filterId={FILTER_IDS.priceRange}
                   label="Price"
                   min={0}
                   max={2000}
                   step={10}
-                  value={GetFilterValue(activeFilters, "price_range", isRangeObject)}
+                  value={GetFilterValue(
+                    activeFilters,
+                    FILTER_IDS.priceRange,
+                    isRangeObject
+                  )}
                   onChange={handleRangeChange}
                   formatValue={formatCurrency}
                 />
@@ -317,15 +284,15 @@ export function FilterPanel({
           )}
 
           {/* Stops */}
-          {filtersByCategory.routing?.some((f) => f.id === "stops") && (
-            <AccordionItem value="stops">
+          {filtersByCategory.routing?.some((f) => f.id === FILTER_IDS.stops) && (
+            <AccordionItem value={FILTER_IDS.stops}>
               <AccordionTrigger className="py-3 text-sm">Stops</AccordionTrigger>
               <AccordionContent>
                 <FilterToggleOptions
-                  filterId="stops"
+                  filterId={FILTER_IDS.stops}
                   label=""
                   options={STOPS_OPTIONS}
-                  value={GetFilterValue(activeFilters, "stops", isStringValue)}
+                  value={GetFilterValue(activeFilters, FILTER_IDS.stops, isStringValue)}
                   onChange={handleFilterChange}
                 />
               </AccordionContent>
@@ -333,15 +300,15 @@ export function FilterPanel({
           )}
 
           {/* Airlines */}
-          {filtersByCategory.airline?.some((f) => f.id === "airlines") && (
-            <AccordionItem value="airlines">
+          {filtersByCategory.airline?.some((f) => f.id === FILTER_IDS.airlines) && (
+            <AccordionItem value={FILTER_IDS.airlines}>
               <AccordionTrigger className="py-3 text-sm">
                 <div className="flex items-center justify-between w-full pr-2">
                   <span>Airlines</span>
                 </div>
               </AccordionTrigger>
               <AccordionContent>
-                {activeFilters.airlines && (
+                {activeFilters[FILTER_IDS.airlines] && (
                   <div className="flex justify-end mb-2">
                     <Button
                       type="button"
@@ -359,10 +326,14 @@ export function FilterPanel({
                   </div>
                 )}
                 <FilterCheckboxGroup
-                  filterId="airlines"
+                  filterId={FILTER_IDS.airlines}
                   label=""
                   options={AIRLINES_OPTIONS}
-                  value={GetFilterValue(activeFilters, "airlines", isStringArray)}
+                  value={GetFilterValue(
+                    activeFilters,
+                    FILTER_IDS.airlines,
+                    isStringArray
+                  )}
                   onChange={handleFilterChange}
                   maxHeight={180}
                 />
@@ -371,17 +342,21 @@ export function FilterPanel({
           )}
 
           {/* Departure Time */}
-          {filtersByCategory.timing?.some((f) => f.id === "departure_time") && (
-            <AccordionItem value="departure_time">
+          {filtersByCategory.timing?.some((f) => f.id === FILTER_IDS.departureTime) && (
+            <AccordionItem value={FILTER_IDS.departureTime}>
               <AccordionTrigger className="py-3 text-sm">
                 Departure Time
               </AccordionTrigger>
               <AccordionContent>
                 <FilterToggleOptions
-                  filterId="departure_time"
+                  filterId={FILTER_IDS.departureTime}
                   label=""
                   options={TIME_OPTIONS}
-                  value={GetFilterValue(activeFilters, "departure_time", isStringArray)}
+                  value={GetFilterValue(
+                    activeFilters,
+                    FILTER_IDS.departureTime,
+                    isStringArray
+                  )}
                   onChange={handleFilterChange}
                   multiple
                 />
@@ -390,19 +365,23 @@ export function FilterPanel({
           )}
 
           {/* Duration */}
-          {filtersByCategory.timing?.some((f) => f.id === "duration") && (
-            <AccordionItem value="duration">
+          {filtersByCategory.timing?.some((f) => f.id === FILTER_IDS.duration) && (
+            <AccordionItem value={FILTER_IDS.duration}>
               <AccordionTrigger className="py-3 text-sm">
                 Flight Duration
               </AccordionTrigger>
               <AccordionContent>
                 <FilterRange
-                  filterId="duration"
+                  filterId={FILTER_IDS.duration}
                   label="Max Duration"
                   min={0}
                   max={1440}
                   step={30}
-                  value={GetFilterValue(activeFilters, "duration", isRangeObject)}
+                  value={GetFilterValue(
+                    activeFilters,
+                    FILTER_IDS.duration,
+                    isRangeObject
+                  )}
                   onChange={handleRangeChange}
                   formatValue={formatDurationMinutes}
                 />

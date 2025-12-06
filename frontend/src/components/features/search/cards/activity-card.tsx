@@ -10,8 +10,8 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { RatingStars } from "./cards/rating-stars";
-import { formatCurrency, formatDurationHours } from "./common/format";
+import { formatCurrency, formatDurationHours } from "../common/format";
+import { RatingStars } from "./rating-stars";
 
 interface ActivityCardProps {
   activity: Activity;

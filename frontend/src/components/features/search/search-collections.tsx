@@ -40,10 +40,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  useSearchCollections,
-  useSearchHistoryStore,
-} from "@/stores/search-history-store";
+import { useSearchHistoryStore } from "@/stores/search-history-store";
 
 /** Props for the search collections component */
 interface SearchCollectionsProps {
@@ -64,14 +61,15 @@ export function SearchCollections({
   );
   const [expandedCollection, setExpandedCollection] = useState<string | null>(null);
 
-  const collections = useSearchCollections();
   const {
-    savedSearches,
+    savedSearches = [],
+    searchCollections = [],
     createCollection,
     updateCollection,
     deleteCollection,
     removeSearchFromCollection,
   } = useSearchHistoryStore();
+  const collections = searchCollections;
 
   /** Get saved searches for a collection */
   const getCollectionSearches = (collection: SearchCollection) => {
@@ -132,7 +130,7 @@ export function SearchCollections({
   };
 
   return (
-    <Card className={className}>
+    <Card className={className} data-testid="search-collections">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>
@@ -375,8 +373,12 @@ export function AddToCollectionDropdown({
   searchId,
   trigger,
 }: AddToCollectionDropdownProps) {
-  const collections = useSearchCollections();
-  const { addSearchToCollection, createCollection } = useSearchHistoryStore();
+  const {
+    addSearchToCollection,
+    createCollection,
+    searchCollections = [],
+  } = useSearchHistoryStore();
+  const collections = searchCollections;
   const [isCreating, setIsCreating] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState("");
 

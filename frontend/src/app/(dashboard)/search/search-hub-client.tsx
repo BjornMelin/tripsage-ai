@@ -18,7 +18,8 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type React from "react";
-import { SearchAnalytics, SearchCollections } from "@/components/features/search";
+import { SearchAnalytics } from "@/components/features/search/search-analytics";
+import { SearchCollections } from "@/components/features/search/search-collections";
 import { SearchLayout } from "@/components/layouts/search-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

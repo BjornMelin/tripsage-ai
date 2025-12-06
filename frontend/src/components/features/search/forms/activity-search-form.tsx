@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { withClientTelemetrySpan } from "@/lib/telemetry/client";
-import { useSearchForm } from "./common/use-search-form";
+import { useSearchForm } from "../common/use-search-form";
 
 interface ActivitySearchFormProps {
   onSearch?: (data: ActivitySearchParams) => Promise<void>;
@@ -42,10 +42,26 @@ export function ActivitySearchForm({
   const form = useSearchForm(
     activitySearchFormSchema,
     {
+      category: "",
+      date: "",
+      dateRange: {
+        end: "",
+        start: "",
+      },
       destination: "",
+      difficulty: undefined,
+      duration: {
+        max: undefined,
+        min: undefined,
+      },
+      indoor: undefined,
       participants: {
         adults: 1,
         children: 0,
+      },
+      priceRange: {
+        max: undefined,
+        min: undefined,
       },
       ...initialValues,
     },

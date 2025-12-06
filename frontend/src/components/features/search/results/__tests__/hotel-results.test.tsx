@@ -29,6 +29,7 @@ function CreateHotel(overrides: Partial<HotelResult> = {}): HotelResult {
       priceHistory: "stable",
       pricePerNight: 200,
       taxes: 0,
+      taxesEstimated: false,
       totalPrice: 400,
     },
     reviewCount: 120,

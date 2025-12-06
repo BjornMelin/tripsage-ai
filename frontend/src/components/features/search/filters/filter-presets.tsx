@@ -7,6 +7,17 @@
 import type { FilterPreset } from "@schemas/stores";
 import { BookmarkIcon, CheckIcon, PencilIcon, PlusIcon, TrashIcon } from "lucide-react";
 import { useState } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -53,9 +64,11 @@ export function FilterPresets({ className }: FilterPresetsProps) {
     duplicateFilterPreset,
   } = useSearchFiltersStore();
 
+  const effectiveSearchType = currentSearchType ?? "flight";
+
   // Filter presets for current search type
   const currentPresets = filterPresets.filter(
-    (preset) => preset.searchType === currentSearchType
+    (preset) => preset.searchType === effectiveSearchType
   );
 
   /** Save a new filter preset */
@@ -108,12 +121,8 @@ export function FilterPresets({ className }: FilterPresetsProps) {
     setNewPresetDescription(preset.description || "");
   };
 
-  if (!currentSearchType) {
-    return null;
-  }
-
   return (
-    <Card className={className}>
+    <Card className={className} data-testid="filter-presets">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>
@@ -249,15 +258,36 @@ export function FilterPresets({ className }: FilterPresetsProps) {
                         <PlusIcon className="h-3 w-3 mr-2" />
                         Duplicate
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full justify-start text-destructive hover:text-destructive"
-                        onClick={() => handleDeletePreset(preset.id)}
-                      >
-                        <TrashIcon className="h-3 w-3 mr-2" />
-                        Delete
-                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full justify-start text-destructive hover:text-destructive"
+                          >
+                            <TrashIcon className="h-3 w-3 mr-2" />
+                            Delete
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Preset</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete &quot;{preset.name}&quot;?
+                              This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              onClick={() => handleDeletePreset(preset.id)}
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </PopoverContent>
                   </Popover>
                 )}

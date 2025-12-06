@@ -137,6 +137,7 @@ export async function searchHotelsAction(
           priceHistory: "stable",
           pricePerNight: 0,
           taxes: 0,
+          taxesEstimated: true,
           totalPrice: 0,
         },
         reviewCount: 0,
@@ -215,6 +216,7 @@ export async function searchHotelsAction(
         taxes: ratePrice?.taxes?.[0]?.amount
           ? Number.parseFloat(String(ratePrice.taxes[0].amount))
           : 0,
+        taxesEstimated: !ratePrice?.taxes?.[0]?.amount,
         totalPrice: totalNumeric,
       },
       reviewCount: hotel.place?.userRatingCount ?? 0,

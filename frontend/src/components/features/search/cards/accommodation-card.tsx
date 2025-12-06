@@ -8,8 +8,8 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { GetAmenityIcon } from "./cards/amenities";
-import { formatCurrency } from "./common/format";
+import { formatCurrency } from "../common/format";
+import { GetAmenityIcon } from "./amenities";
 
 interface AccommodationCardProps {
   accommodation: Accommodation;
