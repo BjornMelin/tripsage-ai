@@ -1,7 +1,7 @@
 /**
  * @fileoverview AI-powered hotel personalization service.
  *
- * Uses generateObject to produce personalized recommendations:
+ * Uses AI SDK v6 structured output to produce personalized recommendations:
  * - Personalized tags based on user preferences
  * - Recommendation reason explaining the match
  * - Recommendation score (1-10)
@@ -11,15 +11,17 @@
 import "server-only";
 
 import { resolveProvider } from "@ai/models/registry";
-import { generateObject } from "ai";
+import { generateText, Output } from "ai";
 import { z } from "zod";
 import { hashInputForCache } from "@/lib/cache/hash";
-import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
+import { deleteCachedJson, getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 import { sanitizeArray, sanitizeForPrompt } from "@/lib/security/prompt-sanitizer";
-import { withTelemetrySpan } from "@/lib/telemetry/span";
+import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
 
 /** Cache TTL for personalization results (30 minutes). */
-const PERSONALIZATION_CACHE_TTL = 1800;
+export const PERSONALIZATION_CACHE_TTL = 1800;
+
+const MAX_HOTELS_PER_REQUEST = 20;
 
 /** Hotel vibe classification */
 export type HotelVibe = "luxury" | "business" | "family" | "romantic" | "adventure";
@@ -70,29 +72,44 @@ export interface HotelPersonalization {
   vibe: HotelVibe;
 }
 
-/** Indexed personalization for caching (preserves hotel index) */
+/** Cached personalization keyed by stable hotel identifier */
 interface IndexedPersonalization extends HotelPersonalization {
-  /** Original hotel index from AI response */
-  index: number;
+  /** Stable hotel identifier used for cache lookups */
+  hotelId: string;
 }
 
 /** Schema for batch personalization response */
-const personalizationResponseSchema = z.object({
-  hotels: z.array(
-    z.object({
-      /** Hotel index in the input array */
-      index: z.number().int().nonnegative(),
-      /** Personalized tags (max 3) */
-      personalizedTags: z.array(z.string()).max(3),
-      /** Recommendation reason */
-      reason: z.string(),
-      /** Recommendation score 1-10 */
-      score: z.number().int().min(1).max(10),
-      /** Vibe classification */
-      vibe: z.enum(["luxury", "business", "family", "romantic", "adventure"]),
-    })
-  ),
+const personalizationResponseSchema = z.strictObject({
+  hotels: z
+    .array(
+      z.strictObject({
+        /** Hotel index in the input array */
+        index: z
+          .number()
+          .int()
+          .nonnegative({ error: "Index must be a non-negative integer" }),
+        /** Personalized tags (max 3) */
+        personalizedTags: z
+          .array(z.string())
+          .max(3, { error: "At most 3 tags allowed" }),
+        /** Recommendation reason */
+        reason: z.string(),
+        /** Recommendation score 1-10 */
+        score: z.number().int().min(1, { error: "Score must be at least 1" }).max(10, {
+          error: "Score must be at most 10",
+        }),
+        /** Vibe classification */
+        vibe: z.enum(["luxury", "business", "family", "romantic", "adventure"]),
+      })
+    )
+    .max(MAX_HOTELS_PER_REQUEST, {
+      error: `Cannot personalize more than ${MAX_HOTELS_PER_REQUEST} hotels`,
+    }),
 });
+
+function buildHotelIdentifiers(hotels: HotelForPersonalization[]): string[] {
+  return hotels.map((h) => `${h.name}|${h.location.slice(0, 50)}|${h.pricePerNight}`);
+}
 
 /**
  * Build cache key for personalization request.
@@ -105,7 +122,22 @@ function buildPersonalizationCacheKey(
 ): string {
   // Sort a copy to avoid mutating the input array
   const sortedIds = [...hotelIds].sort();
-  const input = JSON.stringify({ hotelIds: sortedIds, preferences });
+  const sortedPreferencesEntries = Object.entries(preferences).sort(([a], [b]) =>
+    a.localeCompare(b)
+  );
+  const canonicalPreferences = Object.fromEntries(
+    sortedPreferencesEntries.map(([key, value]) => {
+      if (key === "preferredAmenities" && Array.isArray(value)) {
+        return [key, [...value].sort()];
+      }
+      return [key, value];
+    })
+  );
+
+  const input = JSON.stringify({
+    hotelIds: sortedIds,
+    preferences: canonicalPreferences,
+  });
   const hash = hashInputForCache(input);
   return `hotel:personalize:${userId}:${hash}`;
 }
@@ -143,7 +175,9 @@ function buildPersonalizationPrompt(
     prefParts.push("Business travel");
   }
   if (preferences.preferredAmenities?.length) {
-    const safeAmenities = sanitizeArray(preferences.preferredAmenities, 10, 30).join(", ");
+    const safeAmenities = sanitizeArray(preferences.preferredAmenities, 10, 30).join(
+      ", "
+    );
     prefParts.push(`Preferred amenities: ${safeAmenities}`);
   }
 
@@ -201,44 +235,83 @@ export async function personalizeHotels(
         return new Map();
       }
 
-      // Check cache - use name+location for unique identification
-      const hotelIds = hotels.map((h) => `${h.name}|${h.location.slice(0, 50)}`);
+      if (hotels.length > MAX_HOTELS_PER_REQUEST) {
+        throw new Error(
+          `Cannot personalize more than ${MAX_HOTELS_PER_REQUEST} hotels per request`
+        );
+      }
+
+      // Check cache - use stable hotel identifier to avoid order-dependent mismatches
+      const hotelIds = buildHotelIdentifiers(hotels);
       const cacheKey = buildPersonalizationCacheKey(userId, hotelIds, preferences);
       const cached = await getCachedJson<IndexedPersonalization[]>(cacheKey);
 
       if (cached) {
+        recordTelemetryEvent("cache.hotel_personalize", {
+          attributes: { cache: "hotel.personalize", status: "hit" },
+        });
         const result = new Map<number, HotelPersonalization>();
-        for (const indexed of cached) {
-          const { index, ...personalization } = indexed;
-          result.set(index, personalization);
+        const cachedByHotelId = new Map<string, HotelPersonalization>();
+        for (const { hotelId, ...personalization } of cached) {
+          cachedByHotelId.set(hotelId, personalization);
         }
+        hotels.forEach((_hotel, index) => {
+          const hotelId = hotelIds[index];
+          const personalization = cachedByHotelId.get(hotelId);
+          if (personalization) {
+            result.set(index, personalization);
+          }
+        });
         return result;
       }
+
+      recordTelemetryEvent("cache.hotel_personalize", {
+        attributes: { cache: "hotel.personalize", status: "miss" },
+      });
 
       // Generate via AI
       const prompt = buildPersonalizationPrompt(hotels, preferences);
       const { model } = await resolveProvider(userId, "gpt-4o-mini");
 
-      const response = await generateObject({
-        model,
-        prompt,
-        schema: personalizationResponseSchema,
-      });
+      let response: Awaited<ReturnType<typeof generateText>>;
+      try {
+        response = await generateText({
+          model,
+          output: Output.object({ schema: personalizationResponseSchema }),
+          prompt,
+        });
+      } catch (error) {
+        recordTelemetryEvent("ai.hotel.personalize.failure", {
+          attributes: {
+            cache: "hotel.personalize",
+            error: error instanceof Error ? error.message : "unknown_error",
+            status: "error",
+          },
+          level: "error",
+        });
+        const fallback = new Map<number, HotelPersonalization>();
+        hotels.forEach((hotel, index) => {
+          fallback.set(index, getDefaultPersonalization(hotel));
+        });
+        return fallback;
+      }
 
       // Build result map and indexed cache array
       const result = new Map<number, HotelPersonalization>();
       const indexedPersonalizations: IndexedPersonalization[] = [];
 
-      for (const hotel of response.object?.hotels ?? []) {
+      const hotelsResponse = response.output?.hotels ?? [];
+      for (const hotel of hotelsResponse) {
         const personalization: HotelPersonalization = {
           personalizedTags: hotel.personalizedTags,
           reason: hotel.reason,
           score: hotel.score,
           vibe: hotel.vibe,
         };
+        const hotelId = hotelIds[hotel.index] ?? "";
         result.set(hotel.index, personalization);
-        // Store with index for correct cache reconstruction
-        indexedPersonalizations.push({ ...personalization, index: hotel.index });
+        // Store with hotelId for correct cache reconstruction regardless of order
+        indexedPersonalizations.push({ ...personalization, hotelId });
       }
 
       // Cache indexed results to preserve hotel indices
@@ -247,6 +320,34 @@ export async function personalizeHotels(
       return result;
     }
   );
+}
+
+/**
+ * Removes cached hotel personalization results for a specific user, hotel set, and preferences.
+ *
+ * Call this when hotel data changes (pricing, amenities, availability) to trigger fresh AI generation.
+ * The cache key combines user ID, sorted hotel identifiers, and preference hash.
+ *
+ * @param userId - Unique user identifier
+ * @param hotels - Array of hotels to invalidate cache for
+ * @param preferences - User's travel preferences affecting personalization
+ * @returns Promise resolving when cache is deleted
+ * @throws Error if hotels array exceeds maximum allowed size (10)
+ */
+export async function invalidatePersonalizationCache(
+  userId: string,
+  hotels: HotelForPersonalization[],
+  preferences: UserPreferences
+): Promise<void> {
+  if (hotels.length === 0) return;
+  if (hotels.length > MAX_HOTELS_PER_REQUEST) {
+    throw new Error(
+      `Cannot invalidate personalization cache for more than ${MAX_HOTELS_PER_REQUEST} hotels`
+    );
+  }
+  const hotelIds = buildHotelIdentifiers(hotels);
+  const cacheKey = buildPersonalizationCacheKey(userId, hotelIds, preferences);
+  await deleteCachedJson(cacheKey);
 }
 
 /**
