@@ -27,6 +27,8 @@ export interface RouteRateLimitDefinition {
  */
 export const ROUTE_RATE_LIMITS = {
   // Accommodations
+  "accommodations:personalize": { limit: 10, window: "1 m" },
+  "accommodations:popular-destinations": { limit: 30, window: "1 m" },
   "accommodations:search": { limit: 20, window: "1 m" },
   "activities:details": { limit: 30, window: "1 m" },
 
@@ -114,6 +116,7 @@ export const ROUTE_RATE_LIMITS = {
 
   // Places
   "places:details": { limit: 60, window: "1 m" },
+  "places:nearby": { limit: 60, window: "1 m" },
   "places:photo": { limit: 60, window: "1 m" },
   "places:search": { limit: 60, window: "1 m" },
 

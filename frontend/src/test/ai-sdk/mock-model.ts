@@ -28,6 +28,15 @@
 import { simulateReadableStream } from "ai";
 import { MockLanguageModelV3 } from "ai/test";
 
+type FinishReason =
+  | "stop"
+  | "length"
+  | "content-filter"
+  | "tool-calls"
+  | "error"
+  | "other"
+  | "unknown";
+
 /**
  * Options for creating a mock language model.
  */
@@ -35,14 +44,7 @@ export interface MockModelOptions {
   /** Text content to return */
   text?: string;
   /** Finish reason (default: 'stop') */
-  finishReason?:
-    | "stop"
-    | "length"
-    | "content-filter"
-    | "tool-calls"
-    | "error"
-    | "other"
-    | "unknown";
+  finishReason?: FinishReason;
   /** Token usage (default: {input: 10, output: 20}) */
   usage?: {
     inputTokens?: number;
@@ -151,18 +153,12 @@ export interface StreamingMockModelOptions {
   /** Text chunks to stream */
   chunks: string[];
   /** Finish reason (default: 'stop') */
-  finishReason?:
-    | "stop"
-    | "length"
-    | "content-filter"
-    | "tool-calls"
-    | "error"
-    | "other"
-    | "unknown";
+  finishReason?: FinishReason;
   /** Token usage (default: {inputTokens: 10, outputTokens: 20}) */
   usage?: {
     inputTokens?: number;
     outputTokens?: number;
+    totalTokens?: number;
   };
 }
 
@@ -193,6 +189,7 @@ export function createStreamingMockModel(options: StreamingMockModelOptions) {
 
   const inputTokens = usage.inputTokens ?? 10;
   const outputTokens = usage.outputTokens ?? 20;
+  const totalTokens = usage.totalTokens ?? inputTokens + outputTokens;
 
   return new MockLanguageModelV3({
     doStream: async () => ({
@@ -212,7 +209,7 @@ export function createStreamingMockModel(options: StreamingMockModelOptions) {
             usage: {
               inputTokens,
               outputTokens,
-              totalTokens: inputTokens + outputTokens,
+              totalTokens,
             },
           },
         ],
@@ -235,6 +232,14 @@ export interface StreamingToolMockModelOptions {
   textBefore?: string;
   /** Optional text to include after tool results */
   textAfter?: string;
+  /** Optional finish reason for stream completion */
+  finishReason?: FinishReason | null;
+  /** Optional token usage to surface */
+  usage?: {
+    completionTokens?: number;
+    promptTokens?: number;
+    totalTokens?: number;
+  };
 }
 
 /**
@@ -258,7 +263,13 @@ export interface StreamingToolMockModelOptions {
  * ```
  */
 export function createStreamingToolMockModel(options: StreamingToolMockModelOptions) {
-  const { toolCalls, textBefore, textAfter } = options;
+  const { toolCalls, textBefore, textAfter, finishReason, usage } = options;
+
+  if (toolCalls.length === 0) {
+    throw new Error(
+      "createStreamingToolMockModel requires a non-empty toolCalls array"
+    );
+  }
 
   // Build stream chunks using AI SDK v6 LanguageModelV3StreamPart types
   // Tool calls use tool-input-* types in v6 with `delta` field
@@ -308,11 +319,18 @@ export function createStreamingToolMockModel(options: StreamingToolMockModelOpti
   }
 
   // Add finish
+  const inputTokens = usage?.promptTokens ?? 10;
+  const outputTokens = usage?.completionTokens ?? 20;
+  const totalTokens = usage?.totalTokens ?? inputTokens + outputTokens;
+  const resolvedFinishReason: "stop" | "tool-calls" =
+    finishReason === "stop" || finishReason === "tool-calls"
+      ? finishReason
+      : "tool-calls";
   streamChunks.push({
-    finishReason: toolCalls.length > 0 ? "tool-calls" : "stop",
+    finishReason: resolvedFinishReason,
     logprobs: undefined,
     type: "finish",
-    usage: { inputTokens: 10, outputTokens: 20, totalTokens: 30 },
+    usage: { inputTokens, outputTokens, totalTokens },
   });
 
   return new MockLanguageModelV3({
