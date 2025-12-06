@@ -28,6 +28,25 @@
 - Rate limits: upload 10/min/user, list 60/min/user.
 - Observability: spans `attachments.upload`, `attachments.sign`.
 
+### Storage buckets & paths
+
+- Buckets in scope: `attachments` (chat), `trip-images` (itinerary media), `avatars` (profile images).
+- Path conventions:
+  - Trip-scoped: `trip/{trip_id}/{uuid-filename}`.
+  - User-scoped: `user/{user_id}/{uuid-filename}`.
+- Relational link: `public.file_attachments.file_path` stores the full object name; unique index on `file_path`.
+
+### RLS & ownership
+
+- RLS checks coalesce `owner_id` and legacy `owner`; `file_attachments.owner_id` is the source of truth.
+- Access is granted when the user owns the file, is the trip owner/collaborator (trip paths), or matches `user/{user_id}`.
+- Signed URL generation and deletion must validate against `file_attachments` (not just path prefixes).
+
+### Cleanup & audits
+
+- Attachments rely on the relational link for lifecycle; when a message/trip is deleted, delete the corresponding `file_attachments` row and storage object.
+- Use the storage owner audit runbook (`docs/operations/runbooks/storage-owner-audit.md`) to find path/owner mismatches or orphaned objects; run after RLS/schema changes.
+
 ## Security
 
 - Never store raw URLs; return signed URLs only.
