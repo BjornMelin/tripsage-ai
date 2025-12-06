@@ -13,7 +13,7 @@
 
 TripSage AI currently has an incomplete activity search feature:
 
-- UI components exist (`/search/activities` page, `ActivitySearchForm`, `ActivityCard`)
+- UI components exist (`/search/activities` page, `forms/activity-search-form`, `cards/activity-card`)
 - Zod schemas defined (`@schemas/search.ts`: `activitySchema`, `activitySearchParamsSchema`)
 - Database table exists (`search_activities` for durable search caching)
 - Hook placeholder exists (`useActivitySearch` with TODOs)
