@@ -81,14 +81,47 @@ FilterPanel (Card)
 
 ```text
 frontend/src/components/features/search/
-├── filter-panel.tsx              # Main filter panel component
-├── filter-presets.tsx            # Existing - save/load presets
+├── cards/                        # Card components
+│   ├── accommodation-card.tsx
+│   ├── activity-card.tsx
+│   ├── destination-card.tsx
+│   ├── flight-card.tsx
+│   ├── hotel-card.tsx
+│   ├── amenities.tsx
+│   └── rating-stars.tsx
+├── common/                       # Shared utilities
+│   └── format.ts
 ├── filters/
-│   ├── filter-range.tsx          # Reusable range slider (price, duration)
+│   ├── __tests__/
+│   ├── api-payload.ts            # Build API payloads from filter state
+│   ├── constants.ts              # FILTER_IDS and configuration
 │   ├── filter-checkbox-group.tsx # Multi-select with select all/none
+│   ├── filter-panel.tsx          # Main filter panel component
+│   ├── filter-presets.tsx        # Save/load presets
+│   ├── filter-range.tsx          # Reusable range slider (price, duration)
 │   ├── filter-toggle-options.tsx # Single/multi toggle options
-│   └── index.ts                  # Barrel exports
-└── index.ts                      # Updated exports
+│   └── utils.ts                  # Type guards for filter values
+├── forms/                        # Search form components
+│   ├── __tests__/
+│   ├── activity-search-form.tsx
+│   ├── destination-search-form.tsx
+│   ├── flight-search-form.tsx
+│   └── hotel-search-form.tsx
+├── modals/                       # Modal dialogs
+│   ├── activity-comparison-modal.tsx
+│   └── trip-selection-modal.tsx
+├── results/                      # Results display components
+│   ├── __tests__/
+│   ├── shared/
+│   │   ├── use-results-list.ts   # Shared results state hook
+│   │   ├── results-controls-bar.tsx
+│   │   ├── results-empty-state.tsx
+│   │   └── results-loading-skeleton.tsx
+│   ├── activity-results.tsx
+│   ├── flight-results.tsx
+│   └── hotel-results.tsx
+├── search-analytics.tsx          # Cross-cutting analytics
+└── search-collections.tsx        # Cross-cutting collections
 ```
 
 ### 5. shadcn/ui Components Mapping
@@ -212,4 +245,5 @@ Update `flights/page.tsx` sidebar:
 - [Zustand Slices Pattern](https://docs.pmnd.rs/zustand/guides/slices-pattern)
 - [Radix UI Primitives](https://www.radix-ui.com/primitives)
 - Existing: `frontend/src/stores/search-filters-store.ts`
-- Existing: `frontend/src/components/features/search/filter-presets.tsx`
+- Existing: `frontend/src/components/features/search/filters/filter-presets.tsx`
+- Existing: `frontend/src/components/features/search/filters/filter-panel.tsx`

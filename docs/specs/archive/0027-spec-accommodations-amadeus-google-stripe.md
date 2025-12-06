@@ -44,7 +44,7 @@ broken into phases with checklists and concrete file paths.
 3. `runBookingOrchestrator`:
    - Calls Stripe (`processBookingPayment` / `refundBookingPayment`) and `provider.createBooking`, then persists the booking to Supabase.  
 4. UI uses:
-   - `useAccommodationSearch` hook and `accommodation-card.tsx` to display results.  
+   - `useAccommodationSearch` hook and `cards/accommodation-card.tsx` to display results.  
 
 ### 1.2 Target pipeline
 
@@ -160,8 +160,8 @@ Checklist:
 - `frontend/src/domain/schemas/accommodations.ts`
 - `frontend/src/ai/tools/server/accommodations.ts`
 - `frontend/src/lib/agents/accommodation-agent.ts`
-- `frontend/src/components/features/search/accommodation-card.tsx`
-- `frontend/src/components/features/search/modern-hotel-results.tsx`
+- `frontend/src/components/features/search/cards/accommodation-card.tsx`
+- `frontend/src/components/features/search/results/hotel-results.tsx`
 - `frontend/src/app/(dashboard)/trips/[tripId]/stay/page.tsx`
 - `frontend/src/app/(marketing)/stays/page.tsx`
 
@@ -514,8 +514,8 @@ components.([shadcn/ui](https://ui.shadcn.com))
 
 Files:
 
-- `frontend/src/components/features/search/accommodation-card.tsx`
-- `frontend/src/components/features/search/modern-hotel-results.tsx`
+- `frontend/src/components/features/search/cards/accommodation-card.tsx`
+- `frontend/src/components/features/search/results/hotel-results.tsx`
 - `frontend/src/app/(dashboard)/trips/[tripId]/stay/page.tsx`
 - `frontend/src/app/(marketing)/stays/page.tsx`
 

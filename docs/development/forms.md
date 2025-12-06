@@ -63,9 +63,10 @@ Thin wrapper for search-specific forms. Simpler API for quick search implementat
 
 ```typescript
 import { useSearchForm } from "@/components/features/search/common/use-search-form";
+import { HotelSearchForm } from "@/components/features/search/forms/hotel-search-form";
 import { hotelSearchSchema } from "@schemas/search";
 
-function HotelSearchForm() {
+function HotelSearch() {
   const form = useSearchForm(hotelSearchSchema, {
     destination: "",
     checkIn: "",
