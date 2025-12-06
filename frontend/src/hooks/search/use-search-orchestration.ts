@@ -7,6 +7,7 @@
 
 "use client";
 
+import { getCategoryFromChainCode } from "@domain/amadeus/chain-codes";
 import type {
   Accommodation,
   Activity,
@@ -166,26 +167,50 @@ function mapFlightResponse(data: {
 }
 
 /**
+ * Calculate urgency level based on rooms left.
+ */
+function calculateUrgency(roomsLeft: number | undefined): "low" | "medium" | "high" {
+  if (roomsLeft === undefined) return "medium";
+  if (roomsLeft <= 2) return "high";
+  if (roomsLeft <= 5) return "medium";
+  return "low";
+}
+
+/** Listing type from API response with extended fields */
+interface AccommodationListingResponse {
+  address?: { cityName?: string; lines?: string[] };
+  amenities?: string[];
+  cancellationPolicy?: {
+    deadline?: string;
+    description?: string;
+    refundable?: boolean;
+  };
+  chainCode?: string;
+  geoCode?: { latitude: number; longitude: number };
+  hotel?: { hotelId?: string; name?: string };
+  id?: string | number;
+  name?: string;
+  place?: { rating?: number; userRatingCount?: number };
+  rooms?: Array<{
+    rates?: Array<{
+      price?: {
+        base?: string | number;
+        currency?: string;
+        total?: string | number;
+      };
+    }>;
+    roomsLeft?: number;
+  }>;
+  starRating?: number;
+  taxes?: number;
+}
+
+/**
  * Maps accommodation API response to SearchResults format.
+ * Preserves provider data for UI enrichment (availability, policies, taxes).
  */
 function mapAccommodationResponse(
-  data: {
-    listings?: Array<{
-      address?: { cityName?: string; lines?: string[] };
-      amenities?: string[];
-      geoCode?: { latitude: number; longitude: number };
-      hotel?: { hotelId?: string; name?: string };
-      id?: string | number;
-      name?: string;
-      place?: { rating?: number };
-      rooms?: Array<{
-        rates?: Array<{
-          price?: { total?: string | number };
-        }>;
-      }>;
-      starRating?: number;
-    }>;
-  },
+  data: { listings?: AccommodationListingResponse[] },
   searchParams: SearchParams
 ): Accommodation[] {
   if (!data.listings) return [];
@@ -196,6 +221,7 @@ function mapAccommodationResponse(
     checkout?: string;
     checkIn?: string;
     checkOut?: string;
+    currency?: string;
   };
   const checkIn = accommodationParams.checkin ?? accommodationParams.checkIn ?? "";
   const checkOut = accommodationParams.checkout ?? accommodationParams.checkOut ?? "";
@@ -210,9 +236,21 @@ function mapAccommodationResponse(
       const location = [...addressLines, city].filter(Boolean).join(", ") || name;
 
       // Extract price from first room's first rate
-      const firstRate = listing.rooms?.[0]?.rates?.[0];
-      const totalPrice = Number(firstRate?.price?.total) || 0;
+      const firstRoom = listing.rooms?.[0];
+      const firstRate = firstRoom?.rates?.[0];
+      const parsedTotalPrice =
+        typeof firstRate?.price?.total === "string"
+          ? Number.parseFloat(firstRate.price.total)
+          : undefined;
+      const totalPrice = Number.isFinite(parsedTotalPrice)
+        ? (parsedTotalPrice as number)
+        : 0;
+      const currency =
+        firstRate?.price?.currency ?? accommodationParams.currency ?? "USD";
       const rating = listing.place?.rating ?? listing.starRating ?? 0;
+
+      // Extract roomsLeft from first room (Amadeus provides per-room availability)
+      const roomsLeft = firstRoom?.roomsLeft;
 
       // Calculate nights for price per night
       let nights = 1;
@@ -227,21 +265,38 @@ function mapAccommodationResponse(
         );
       }
       const pricePerNight = totalPrice > 0 ? totalPrice / nights : 0;
+      const category = getCategoryFromChainCode(listing.chainCode);
 
       return {
+        address: listing.address,
         amenities: listing.amenities ?? [],
+        availability: {
+          flexible: listing.cancellationPolicy?.refundable,
+          roomsLeft,
+          urgency: calculateUrgency(roomsLeft),
+        },
+        category,
+        chainCode: listing.chainCode,
         checkIn,
         checkOut,
         coordinates: listing.geoCode
           ? { lat: listing.geoCode.latitude, lng: listing.geoCode.longitude }
           : undefined,
+        currency,
         id,
         images: [],
         location,
         name,
-        pricePerNight: pricePerNight || 100, // Fallback for display
+        policies: listing.cancellationPolicy
+          ? { cancellation: listing.cancellationPolicy }
+          : undefined,
+        pricePerNight,
         rating,
-        totalPrice: totalPrice || pricePerNight * nights,
+        starRating: listing.starRating,
+        taxes: listing.taxes,
+        totalPrice: Number.isFinite(parsedTotalPrice)
+          ? (parsedTotalPrice as number)
+          : pricePerNight * nights,
         type: "hotel",
       };
     });
