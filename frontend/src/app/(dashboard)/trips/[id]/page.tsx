@@ -183,7 +183,6 @@ export default function TripDetailsPage() {
                   action: "exportTripToIcs",
                   context: "TripDetailsPage",
                   tripId: currentTrip.id,
-                  tripTitle: currentTrip.title,
                 });
                 alert("Failed to export trip to calendar");
               }

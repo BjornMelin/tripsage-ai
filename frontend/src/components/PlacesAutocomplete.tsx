@@ -51,6 +51,7 @@ export function PlacesAutocomplete({
   className,
 }: PlacesAutocompleteProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const isMountedRef = useRef(true);
   const [isLoaded, setIsLoaded] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<AutocompleteSuggestion[]>([]);
@@ -63,6 +64,7 @@ export function PlacesAutocomplete({
 
   useEffect(() => {
     return () => {
+      isMountedRef.current = false;
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
@@ -135,7 +137,13 @@ export function PlacesAutocomplete({
     }
 
     const timer = setTimeout(async () => {
-      if (!isLoaded || !window.google?.maps?.places || !sessionToken) return;
+      if (
+        !isMountedRef.current ||
+        !isLoaded ||
+        !window.google?.maps?.places ||
+        !sessionToken
+      )
+        return;
 
       try {
         const placesLibrary: google.maps.PlacesLibrary =
@@ -163,15 +171,19 @@ export function PlacesAutocomplete({
         const { suggestions: newSuggestions } =
           await AutocompleteSuggestion.fetchAutocompleteSuggestions(request);
 
-        setSuggestions(newSuggestions ?? []);
-        setActiveIndex(-1);
+        if (isMountedRef.current) {
+          setSuggestions(newSuggestions ?? []);
+          setActiveIndex(-1);
+        }
       } catch (error) {
         recordClientErrorOnActiveSpan(
           error instanceof Error ? error : new Error(String(error)),
           { action: "fetchSuggestions", context: "PlacesAutocomplete" }
         );
-        setSuggestions([]);
-        setActiveIndex(-1);
+        if (isMountedRef.current) {
+          setSuggestions([]);
+          setActiveIndex(-1);
+        }
       }
     }, 300); // 300ms debounce
 
