@@ -15,7 +15,7 @@ Operational steps to migrate IVFFlat indexes to HNSW for `accommodation_embeddin
 
 ## Migration steps
 
-1) **Create new HNSW indexes concurrently** (keep IVFFlat online):
+### Step 1: Create new HNSW indexes concurrently (keep IVFFlat online)
 
 ```sql
 -- accommodations
@@ -29,19 +29,19 @@ CREATE INDEX CONCURRENTLY IF NOT EXISTS memories_turn_embeddings_vector_hnsw_idx
   USING hnsw (embedding vector_l2_ops) WITH (m = 32, ef_construction = 180);
 ```
 
-2) **Set per-query defaults** in functions/queries:
+### Step 2: Set per-query defaults in functions/queries
 
 ```sql
 PERFORM set_config('hnsw.ef_search', '96', true); -- adjust 64–128 if needed
 ```
 
-3) **Validate**
+### Step 3: Validate
 
 - Compare recall/latency vs IVFFlat on a sampled workload.
 - Check index usage: `SELECT * FROM pg_stat_user_indexes WHERE indexrelname LIKE '%embedding%';`
 - Confirm row estimates look sane: `ANALYZE` tables after build.
 
-4) **Cutover**
+### Step 4: Cutover
 
 - Update application/query functions to rely on HNSW (already done in `match_accommodation_embeddings`).
 - Keep IVFFlat for one validation window; then drop to reclaim disk:
@@ -54,7 +54,7 @@ DROP INDEX CONCURRENTLY IF EXISTS memories_turn_embeddings_vector_idx; -- old IV
 ALTER INDEX memories_turn_embeddings_vector_hnsw_idx RENAME TO memories_turn_embeddings_vector_idx;
 ```
 
-5) **Rollback**
+### Step 5: Rollback
 
 - If HNSW regression is detected, drop the HNSW index and keep IVFFlat:
 

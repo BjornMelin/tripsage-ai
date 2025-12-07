@@ -22,7 +22,7 @@
 - `accommodation_embeddings(id TEXT PK, source TEXT, name TEXT, description TEXT, amenities TEXT, embedding vector(1536), created_at, updated_at)` — Accommodation-specific embeddings with pgvector support.
 - `match_accommodation_embeddings(query_embedding vector(1536), match_threshold FLOAT, match_count INT)` — PostgreSQL function for semantic similarity search.
 
-**Indexing (current)**
+### Indexing (current)
 
 - `accommodation_embeddings.embedding` → pgvector **HNSW** (`m=32`, `ef_construction=180`, distance L2); per-query `hnsw.ef_search` default 96 (tune 64–128).
 - `memories.turn_embeddings.embedding` → pgvector **HNSW** (`m=32`, `ef_construction=180`). Fallback if write-heavy: IVFFlat (`lists≈500–1000`, `probes≈20`).
@@ -56,7 +56,7 @@
 ### Retention & ownership
 
 - Embeddings tied to chat turns adhere to the **180-day** cleanup job (pg_cron) and should carry `created_at` plus optional `expires_at` for enforcement.
-- All retriever/indexer writes must include `owner_id` (or tenant key) and rely on SQL RLS; `userId` is required unless content is explicitly public.
+- All retriever/indexer writes must include `owner_id` (or tenant key) and rely on SQL RLS; `userId` is required unless content is explicitly public. See RLS policies in `supabase/migrations/20251122000000_base_schema.sql` for enforcement details.
 
 ## Caching
 

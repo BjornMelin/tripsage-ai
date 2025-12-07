@@ -33,7 +33,10 @@ import {
 } from "@/components/ui/table";
 import { formatDestinationTypes } from "@/lib/google/places-format";
 
-const clampPopularity = (score: number): number => Math.max(0, Math.min(100, score));
+const clampPopularity = (score: number): number => {
+  if (!Number.isFinite(score)) return 0;
+  return Math.max(0, Math.min(100, score));
+};
 
 /**
  * Props for the destination comparison modal component.
@@ -243,7 +246,7 @@ export function DestinationComparisonModal({
                       : null;
                   return (
                     <TableCell key={destination.id}>
-                      {clampedPopularity != null ? (
+                      {clampedPopularity != null && clampedPopularity > 0 ? (
                         <div className="flex items-center gap-2">
                           <div className="h-2 flex-1 bg-muted rounded-full overflow-hidden max-w-24">
                             <div

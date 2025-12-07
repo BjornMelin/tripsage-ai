@@ -67,6 +67,12 @@ export async function classifyUserMessage(
     trimmedMessage,
     MAX_MESSAGE_LENGTH
   );
+
+  if (!sanitizedMessage.trim()) {
+    throw new Error(
+      "User message contains only invalid patterns and cannot be processed"
+    );
+  }
   const systemPrompt = buildRouterPrompt();
 
   try {

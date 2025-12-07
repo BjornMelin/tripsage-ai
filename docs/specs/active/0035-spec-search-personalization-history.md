@@ -12,6 +12,7 @@ Capture recent user search activity to personalize accommodations/flight suggest
 
 - Tables: `search_hotels`, `search_flights` (existing).
 - Fields used for personalization: `user_id`, `destination`/`origin`, `query_hash`, `created_at`, `expires_at`.
+- Query hash: computed as SHA-256 over the normalized search params: lowercased keys sorted lexicographically, values normalized (dates ISO, arrays sorted), joined with `\n`, encoded as hex. Canonical implementation: `frontend/src/lib/queries/hash-search.ts`.
 - Indexes:
   - `(user_id, created_at DESC)` for recency-based personalization.
   - `(query_hash)` for cache lookups.
@@ -20,7 +21,14 @@ Capture recent user search activity to personalize accommodations/flight suggest
 ## Retention & cleanup
 
 - `expires_at` set per entry; a pg_cron job runs daily to delete rows past `expires_at`.
-- Target window: keep only the most recent history relevant to personalization; defaults to 30–90 days depending on feature, bounded by `expires_at`.
+- Target window per feature:
+
+| Feature | Default days | Override | Notes |
+|---------|--------------|----------|-------|
+| Flight search history | 90 | `SEARCH_PERSONALIZATION_TTL_FLIGHTS_DAYS` | Longer relevance for route planning |
+| Hotel search history | 30 | `SEARCH_PERSONALIZATION_TTL_HOTELS_DAYS` | Higher turnover; shorter window |
+
+- All entries respect their `expires_at`; cleanup enforces this daily. Defaults can be tightened/extended via the env vars above (or `SEARCH_PERSONALIZATION_TTL_DAYS` as a global fallback).
 
 ## Access & caching
 
@@ -38,6 +46,13 @@ Capture recent user search activity to personalize accommodations/flight suggest
 
 - Emit telemetry span `search.personalization` with counters for `history_hit` vs `fallback_global`.
 - Monitor daily cleanup job success and row counts to detect TTL drift.
+
+## Error Handling & Edge Cases
+
+- **NULL `expires_at`**: should never be persisted; queries must filter out NULLs. Validation sets `expires_at` on insert based on feature-specific TTL.
+- **Cleanup failures**: pg_cron failures raise alerts; rerun job manually if rows accumulate (see ops runbook). Deletes are idempotent and batched to avoid long locks.
+- **Concurrent cleanup vs queries**: cleanup uses small batch deletes to minimize locking; readers may see slightly stale rows but no partial responses.
+- **Cache invalidation**: when cleanup runs, invalidate user-scoped Redis keys (e.g., `popular-hotels:user:{id}`) to avoid serving stale history-driven suggestions.
 
 ## References
 

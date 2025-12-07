@@ -38,9 +38,9 @@
 
 ### RLS & ownership
 
-- RLS checks coalesce `owner_id` and legacy `owner`; `file_attachments.owner_id` is the source of truth.
-- Access is granted when the user owns the file, is the trip owner/collaborator (trip paths), or matches `user/{user_id}`.
-- Signed URL generation and deletion must validate against `file_attachments` (not just path prefixes).
+- Table ownership: `file_attachments` currently stores `user_id` (no `owner_id` column). Table-level RLS enforces `auth.uid() = user_id`.
+- Storage bucket RLS handles trip collaboration: path-based rules (`trip/{trip_id}/...`) call `user_has_trip_access()` to allow trip owners/collaborators; user-scoped paths rely on `auth.uid()` matches.
+- Signed URL generation and deletion must validate against `file_attachments` and bucket RLS; avoid assuming a separate `owner_id` field.
 
 ### Cleanup & audits
 

@@ -56,10 +56,18 @@ export function PlacesAutocomplete({
   const [suggestions, setSuggestions] = useState<AutocompleteSuggestion[]>([]);
   const [sessionToken, setSessionToken] =
     useState<google.maps.places.AutocompleteSessionToken | null>(null);
-  const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (isLoaded || typeof window === "undefined") return;
@@ -116,8 +124,8 @@ export function PlacesAutocomplete({
   }, [isLoaded]);
 
   const handleInputChange = (value: string) => {
-    if (debounceTimer) {
-      clearTimeout(debounceTimer);
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
     }
 
     if (!value.trim()) {
@@ -167,7 +175,7 @@ export function PlacesAutocomplete({
       }
     }, 300); // 300ms debounce
 
-    setDebounceTimer(timer);
+    debounceTimerRef.current = timer;
   };
 
   const handlePlaceSelect = async (placePrediction: PlacePrediction | null) => {
@@ -344,7 +352,8 @@ export function PlacesAutocomplete({
                   handlePlaceSelect(suggestion.placePrediction);
                 }}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
+                  // Handle Space/Enter for accessibility; input handles actual navigation
+                  if (e.key === " " || e.key === "Enter") {
                     e.preventDefault();
                     setSelectedPlaceId(suggestion.placePrediction.placeId ?? null);
                     handlePlaceSelect(suggestion.placePrediction);

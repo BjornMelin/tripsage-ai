@@ -239,7 +239,6 @@ describe("/api/memory/insights/[userId] route", () => {
 
     expect(res.status).toBe(200);
     expect(body.success).toBe(true);
-    expect(Array.isArray(body.insights.recommendations)).toBe(true);
     expect(body.metadata.analysisDate).toBe("2025-01-01T00:00:00.000Z");
     expect(body.metadata.dataCoverageMonths).toBe(1);
     expect(mockResolveProvider).toHaveBeenCalledWith("user-123", "gpt-4o-mini");

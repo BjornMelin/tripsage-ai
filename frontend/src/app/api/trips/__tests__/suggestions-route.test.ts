@@ -152,8 +152,16 @@ describe("/api/trips/suggestions route", () => {
     await getSuggestions(req, createRouteParamsContext());
 
     expect(generateText).toHaveBeenCalled();
-    const call = vi.mocked(generateText).mock.calls[0][0];
-    expect(call.prompt).toContain('Focus on the "beach" category');
-    expect(call.prompt).not.toContain("[FILTERED]");
+    const firstCall = vi.mocked(generateText).mock.calls[0];
+    expect(firstCall, "generateText should be invoked at least once").toBeDefined();
+    const call = firstCall?.[0];
+    expect(call).toBeDefined();
+    const prompt =
+      typeof call?.prompt === "string"
+        ? call.prompt
+        : JSON.stringify(call?.prompt).toLowerCase();
+    expect(prompt.toLowerCase()).toContain("beach");
+    expect(prompt.toLowerCase()).toContain('"beach" category');
+    expect(prompt).not.toContain("[FILTERED]");
   });
 });

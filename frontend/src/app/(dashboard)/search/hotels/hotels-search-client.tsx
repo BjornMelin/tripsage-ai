@@ -42,6 +42,7 @@ import { HotelSkeleton } from "@/components/ui/travel-skeletons";
 import { useToast } from "@/components/ui/use-toast";
 import { useSearchOrchestration } from "@/hooks/search/use-search-orchestration";
 import { getErrorMessage } from "@/lib/api/error-types";
+import { categorizeAmenities } from "@/lib/utils/amenity-categorization";
 import { useSearchFiltersStore } from "@/stores/search-filters-store";
 import { useSearchResultsStore } from "@/stores/search-results-store";
 
@@ -51,6 +52,15 @@ interface HotelsSearchClientProps {
     params: SearchAccommodationParams
   ) => Promise<SearchAccommodationParams>;
 }
+
+const POPULAR_DESTINATIONS = [
+  { destination: "New York", priceFrom: 199, rating: 4.8 },
+  { destination: "Paris", priceFrom: 229, rating: 4.7 },
+  { destination: "Tokyo", priceFrom: 179, rating: 4.9 },
+  { destination: "London", priceFrom: 249, rating: 4.6 },
+  { destination: "Barcelona", priceFrom: 189, rating: 4.8 },
+  { destination: "Rome", priceFrom: 219, rating: 4.7 },
+] as const;
 
 /** Hotel search client component. */
 export default function HotelsSearchClient({
@@ -82,29 +92,9 @@ export default function HotelsSearchClient({
           accommodation.policies?.cancellation?.refundable ??
           false;
 
-        // Categorize amenities (essential for core needs, premium for luxury, unique for special)
         const amenityList = accommodation.amenities ?? [];
-        const normalizedAmenities = (accommodation.amenities ?? []).map((a) =>
-          a.toLowerCase().trim()
-        );
-        const essentialKeywords = [
-          "wifi",
-          "breakfast",
-          "parking",
-          "air conditioning",
-          "air-conditioned",
-          "a/c",
-        ];
-        const premiumKeywords = ["spa", "pool", "gym", "fitness", "concierge"];
-        const essential = (amenityList || []).filter((_a, idx) =>
-          essentialKeywords.some((k) => normalizedAmenities[idx]?.includes(k))
-        );
-        const premium = (amenityList || []).filter((_a, idx) =>
-          premiumKeywords.some((k) => normalizedAmenities[idx]?.includes(k))
-        );
-        const unique = amenityList.filter(
-          (a) => !essential.includes(a) && !premium.includes(a)
-        );
+        const { essential, premium, unique, normalizedString } =
+          categorizeAmenities(amenityList);
         const personalizedTags = [...essential, ...premium, ...unique].slice(0, 3);
 
         // Derive category from type or default to hotel
@@ -122,10 +112,10 @@ export default function HotelsSearchClient({
           ? (accommodation.category as (typeof allowedCategories)[number])
           : "hotel";
 
-        // Derive vibe from category and amenities heuristics
+        // Derive vibe from category and amenities heuristics using normalized string
         let vibe: "luxury" | "business" | "family" | "romantic" | "adventure" =
           "business";
-        const amenitiesLower = normalizedAmenities.join(" ");
+        const amenitiesLower = normalizedString;
         if (category === "resort" || amenitiesLower.includes("spa")) {
           vibe = "luxury";
         } else if (
@@ -406,36 +396,12 @@ export default function HotelsSearchClient({
                   <CardContent>
                     {/* TODO: Fetch popular destinations from /api/accommodations/popular-destinations or similar endpoint */}
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      <PopularDestinationCard
-                        destination="New York"
-                        priceFrom={199}
-                        rating={4.8}
-                      />
-                      <PopularDestinationCard
-                        destination="Paris"
-                        priceFrom={229}
-                        rating={4.7}
-                      />
-                      <PopularDestinationCard
-                        destination="Tokyo"
-                        priceFrom={179}
-                        rating={4.9}
-                      />
-                      <PopularDestinationCard
-                        destination="London"
-                        priceFrom={249}
-                        rating={4.6}
-                      />
-                      <PopularDestinationCard
-                        destination="Barcelona"
-                        priceFrom={189}
-                        rating={4.8}
-                      />
-                      <PopularDestinationCard
-                        destination="Rome"
-                        priceFrom={219}
-                        rating={4.7}
-                      />
+                      {POPULAR_DESTINATIONS.map((destination) => (
+                        <PopularDestinationCard
+                          key={destination.destination}
+                          {...destination}
+                        />
+                      ))}
                     </div>
                   </CardContent>
                 </Card>

@@ -63,7 +63,6 @@ export default function DestinationsSearchClient({
     try {
       await onSubmitServer(params); // server-side telemetry and validation
       await searchDestinations(params); // client fetch/store update
-      setHasSearched(true);
     } catch (error) {
       const normalizedError =
         error instanceof Error ? error : new Error(getErrorMessage(error));
@@ -71,7 +70,12 @@ export default function DestinationsSearchClient({
         action: "handleSearch",
         context: "DestinationsSearchClient",
       });
-      // errors surfaced via searchError/alert
+      toast({
+        description: normalizedError.message,
+        title: "Search failed",
+        variant: "destructive",
+      });
+    } finally {
       setHasSearched(true);
     }
   };

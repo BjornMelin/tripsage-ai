@@ -168,7 +168,7 @@ async function generateSuggestionsWithCache(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30_000);
 
-  let result: Awaited<ReturnType<typeof generateText>>;
+  let result: Awaited<ReturnType<typeof generateText>> | undefined;
   try {
     result = await generateText({
       abortSignal: controller.signal,
@@ -176,11 +176,17 @@ async function generateSuggestionsWithCache(
       output: Output.object({ schema: responseSchema }),
       prompt,
     });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      logger.warn("AI generation timed out", { cacheKey });
+      return [];
+    }
+    throw error;
   } finally {
     clearTimeout(timeout);
   }
 
-  const suggestions = result.output?.suggestions;
+  const suggestions = result?.output?.suggestions;
 
   if (!Array.isArray(suggestions)) {
     logger.warn("Model returned no suggestions", {
