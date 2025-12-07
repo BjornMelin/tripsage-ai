@@ -135,7 +135,8 @@ describe("POST /api/jobs/notify-collaborators", () => {
     const res = await POST(makeRequest(validJob));
     expect(res.status).toBe(500);
     const json = await res.json();
-    expect(json.error).toMatch(/not configured/i);
+    expect(json.error).toBe("configuration_error");
+    expect(json.reason).toBe("QStash signing keys are not configured");
   });
 
   it("returns 401 when signature verification fails", async () => {
@@ -143,7 +144,10 @@ describe("POST /api/jobs/notify-collaborators", () => {
     const { POST } = await loadRoute();
     const res = await POST(makeRequest(validJob));
     expect(res.status).toBe(401);
-    expect(await res.json()).toEqual({ error: "invalid qstash signature" });
+    const json = await res.json();
+    // unauthorizedResponse() returns standardized error format
+    expect(json.error).toBe("unauthorized");
+    expect(json.reason).toBe("Authentication required");
   });
 
   it("returns 400 on invalid job payload", async () => {

@@ -14,6 +14,8 @@ export type RetryOptions = {
   maxDelayMs?: number;
   /** Jitter ratio (0-1) to randomize delays. */
   jitterRatio?: number;
+  /** Optional jitter generator for deterministic testing; receives jitterRange. */
+  jitterFn?: (jitterRange: number) => number;
   /** Predicate to decide if an error is retryable. */
   isRetryable?: (error: unknown, attempt: number) => boolean;
   /** Hook invoked before each retry attempt. */
@@ -39,6 +41,7 @@ export async function retryWithBackoff<T>(
     baseDelayMs,
     maxDelayMs,
     jitterRatio = DEFAULT_JITTER_RATIO,
+    jitterFn,
     isRetryable = () => true,
     onRetry,
   } = options;
@@ -61,6 +64,7 @@ export async function retryWithBackoff<T>(
       const backoff = calculateDelay({
         attempt,
         baseDelayMs,
+        jitterFn,
         jitterRatio,
         maxDelayMs,
       });
@@ -79,12 +83,15 @@ function calculateDelay(params: {
   baseDelayMs: number;
   maxDelayMs?: number;
   jitterRatio: number;
+  jitterFn?: (jitterRange: number) => number;
 }): number {
   const raw = params.baseDelayMs * 2 ** (params.attempt - 1);
   const capped = params.maxDelayMs ? Math.min(raw, params.maxDelayMs) : raw;
   const jitterRange = Math.floor(capped * params.jitterRatio);
   if (jitterRange <= 0) return capped;
-  const jitter = Math.floor(Math.random() * (jitterRange + 1));
+  const jitterSource =
+    params.jitterFn ?? ((range: number) => Math.floor(Math.random() * (range + 1)));
+  const jitter = clamp(jitterSource(jitterRange), 0, jitterRange);
   return capped - jitterRange / 2 + jitter;
 }
 
@@ -92,6 +99,13 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
+}
+
+function clamp(value: number, min: number, max: number): number {
+  if (Number.isNaN(value)) return min;
+  if (value < min) return min;
+  if (value > max) return max;
+  return value;
 }
 
 /**

@@ -11,7 +11,6 @@ import "server-only";
 import type { RateLimitResult } from "@ai/tools/schemas/tools";
 import { rateLimitResultSchema } from "@ai/tools/schemas/tools";
 import { createToolError, type ToolErrorCode } from "@ai/tools/server/errors";
-import type { Span } from "@opentelemetry/api";
 import type { AgentWorkflowKind } from "@schemas/agents";
 import { Ratelimit } from "@upstash/ratelimit";
 import type { FlexibleSchema, Tool, ToolCallOptions } from "ai";
@@ -20,7 +19,11 @@ import { headers } from "next/headers";
 import { hashInputForCache } from "@/lib/cache/hash";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 import { getRedis } from "@/lib/redis";
-import { type TelemetrySpanAttributes, withTelemetrySpan } from "@/lib/telemetry/span";
+import {
+  type Span,
+  type TelemetrySpanAttributes,
+  withTelemetrySpan,
+} from "@/lib/telemetry/span";
 
 /**Maximum length for rate limit identifiers to prevent abuse. */
 const MAX_RATE_LIMIT_IDENTIFIER_LENGTH = 128;
@@ -145,7 +148,17 @@ type CacheLookupResult<OutputValue> =
   | { hit: true; value: OutputValue }
   | { hit: false };
 
+/**
+ * Cache of Ratelimit instances by configuration key.
+ *
+ * Design decision: Upstash Ratelimit instances are stateless Redis clients,
+ * so reusing them across requests is safe and reduces instantiation overhead.
+ * Each unique (prefix, limit, window) combination gets its own cached instance.
+ * The cache key format is `${namespace}:${limit}:${window}` to ensure distinct
+ * configurations don't share limiters.
+ */
 const rateLimiterCache = new Map<string, InstanceType<typeof Ratelimit>>();
+const MAX_RATE_LIMITER_CACHE_SIZE = 128;
 
 /**
  * Creates an AI SDK v6 tool with optional guardrails (caching, rate limiting, telemetry).
@@ -484,6 +497,12 @@ async function enforceRateLimit<InputValue>(
       prefix: limiterNamespace,
       redis,
     });
+    if (rateLimiterCache.size >= MAX_RATE_LIMITER_CACHE_SIZE) {
+      const oldestKey = rateLimiterCache.keys().next().value;
+      if (oldestKey) {
+        rateLimiterCache.delete(oldestKey);
+      }
+    }
     rateLimiterCache.set(limiterKey, limiter);
   }
 
