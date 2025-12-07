@@ -7,8 +7,17 @@ import "server-only";
 import { mfaVerificationInputSchema } from "@schemas/mfa";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { getClientIpFromHeaders } from "@/lib/api/route-helpers";
-import { regenerateBackupCodes, verifyTotp } from "@/lib/security/mfa";
+import {
+  errorResponse,
+  getClientIpFromHeaders,
+  unauthorizedResponse,
+} from "@/lib/api/route-helpers";
+import {
+  InvalidTotpError,
+  regenerateBackupCodes,
+  TotpVerificationInternalError,
+  verifyTotp,
+} from "@/lib/security/mfa";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
@@ -32,10 +41,38 @@ export const POST = withApiGuards({
     const result = await verifyTotp(supabase, data, { adminSupabase });
     isInitialEnrollment = result.isInitialEnrollment;
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error ?? "");
+    const status = (error as { status?: number } | null)?.status;
+    const isInternalError =
+      typeof TotpVerificationInternalError === "function" &&
+      error instanceof TotpVerificationInternalError;
+    const shouldReturnServerError =
+      isInternalError || (typeof status === "number" && status >= 500);
+    if (!shouldReturnServerError) {
+      const errorCode =
+        error instanceof InvalidTotpError
+          ? error.code
+          : ((error as { code?: string } | null)?.code ?? "invalid_or_expired_code");
+      return errorResponse({
+        error: errorCode,
+        reason: "Invalid or expired MFA code",
+        status: 400,
+      });
+    }
     logger.error("totp verification failed", {
-      error: error instanceof Error ? error.message : "unknown_error",
+      error: message || "unknown_error",
+      errorType:
+        error instanceof TotpVerificationInternalError
+          ? error.name
+          : error?.constructor?.name,
+      factorId: data.factorId,
     });
-    return NextResponse.json({ error: "invalid_or_expired_code" }, { status: 400 });
+    return errorResponse({
+      err: error,
+      error: "mfa_verification_failed",
+      reason: "TOTP verification failed",
+      status: 500,
+    });
   }
 
   // Only generate backup codes during initial MFA enrollment, not on subsequent logins
@@ -43,7 +80,7 @@ export const POST = withApiGuards({
   let backupCodes: string[] | undefined;
   if (isInitialEnrollment) {
     if (!user?.id) {
-      return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+      return unauthorizedResponse();
     }
     const userId = user.id;
 
@@ -57,14 +94,12 @@ export const POST = withApiGuards({
         .is("consumed_at", null);
 
     if (backupCodesQueryError) {
-      logger.error("failed to fetch backup code count", {
-        error: backupCodesQueryError.message,
-        userId,
+      return errorResponse({
+        err: backupCodesQueryError,
+        error: "failed_to_fetch_backup_codes",
+        reason: "Failed to check existing backup codes",
+        status: 500,
       });
-      return NextResponse.json(
-        { error: "failed_to_fetch_backup_codes" },
-        { status: 500 }
-      );
     }
 
     const existingBackupCodesCount =

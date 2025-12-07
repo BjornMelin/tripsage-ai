@@ -9,9 +9,15 @@ import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse } from "@/lib/api/route-helpers";
 import { challengeTotp } from "@/lib/security/mfa";
+import { classifyMfaError, logMfaError } from "@/lib/security/mfa-error";
+import { createServerLogger } from "@/lib/telemetry/logger";
 
 /** The dynamic route for the MFA challenge API. */
 export const dynamic = "force-dynamic";
+
+const logger = createServerLogger("api.auth.mfa.challenge", {
+  redactKeys: ["factorId", "userId"],
+});
 
 /** The POST handler for the MFA challenge API. */
 export const POST = withApiGuards({
@@ -24,11 +30,21 @@ export const POST = withApiGuards({
     const result = await challengeTotp(supabase, { factorId: data.factorId });
     return NextResponse.json({ data: result });
   } catch (error) {
+    const classification = classifyMfaError(error, "mfa_challenge_failed");
+    logMfaError(
+      logger,
+      error,
+      {
+        factorId: data.factorId,
+        operation: "challenge",
+      },
+      "mfa_challenge_failed"
+    );
     return errorResponse({
-      err: error,
-      error: "challenge_failed",
-      reason: error instanceof Error ? error.message : "Failed to create MFA challenge",
-      status: 400,
+      err: classification.reason,
+      error: classification.code,
+      reason: classification.reason,
+      status: classification.status,
     });
   }
 });

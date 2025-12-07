@@ -60,6 +60,28 @@ export class MfaRequiredError extends Error {
   }
 }
 
+/** Indicates a client-visible TOTP validation failure (bad/expired code). */
+export class InvalidTotpError extends Error {
+  readonly code = "invalid_or_expired_code" as const;
+
+  constructor(message = "invalid_or_expired_code") {
+    super(message);
+    this.name = "InvalidTotpError";
+  }
+}
+
+/** Indicates an internal failure verifying TOTP (DB/network). */
+export class TotpVerificationInternalError extends Error {
+  readonly code: string;
+  readonly status = 500;
+
+  constructor(message = "mfa_verify_failed") {
+    super(message);
+    this.name = "TotpVerificationInternalError";
+    this.code = message;
+  }
+}
+
 /** The cache of the backup code pepper. */
 let backupCodePepperCache: string | null = null;
 
@@ -282,7 +304,9 @@ export async function verifyTotp(
 
       if (enrollmentError) {
         span.recordException(enrollmentError);
-        throw new Error(enrollmentError.message ?? "mfa_enrollment_lookup_failed");
+        throw new TotpVerificationInternalError(
+          enrollmentError.message ?? "mfa_enrollment_lookup_failed"
+        );
       }
 
       const isInitialEnrollment =
@@ -298,9 +322,11 @@ export async function verifyTotp(
             .eq("factor_id", parsed.factorId);
           if (expireError) {
             span.recordException(expireError);
-            throw new Error(expireError.message ?? "mfa_enrollment_expire_failed");
+            throw new TotpVerificationInternalError(
+              expireError.message ?? "mfa_enrollment_expire_failed"
+            );
           }
-          throw new Error("mfa_enrollment_expired");
+          throw new InvalidTotpError("mfa_enrollment_expired");
         }
       }
 
@@ -312,7 +338,12 @@ export async function verifyTotp(
       });
       if (result.error) {
         span.recordException(result.error);
-        throw new Error(result.error.message ?? "mfa_verify_failed");
+        if (result.error.status && result.error.status >= 500) {
+          throw new TotpVerificationInternalError(
+            result.error.message ?? "mfa_verify_failed"
+          );
+        }
+        throw new InvalidTotpError("invalid_or_expired_code");
       }
 
       // Mark enrollment consumed if this was initial enrollment
@@ -331,7 +362,9 @@ export async function verifyTotp(
           .eq("status", "pending");
         if (consumeError) {
           span.recordException(consumeError);
-          throw new Error(consumeError.message ?? "mfa_enrollment_update_failed");
+          throw new TotpVerificationInternalError(
+            consumeError.message ?? "mfa_enrollment_update_failed"
+          );
         }
       }
 
