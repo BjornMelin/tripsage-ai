@@ -71,7 +71,8 @@ export default function DestinationsSearchClient({
         context: "DestinationsSearchClient",
       });
       toast({
-        description: normalizedError.message,
+        description:
+          "Unable to complete your search. Please try again or contact support.",
         title: "Search failed",
         variant: "destructive",
       });
