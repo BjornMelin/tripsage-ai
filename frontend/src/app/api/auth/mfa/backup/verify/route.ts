@@ -2,6 +2,8 @@
  * @fileoverview API route for verifying MFA backup codes.
  */
 
+import "server-only";
+
 import { backupCodeVerifyInputSchema } from "@schemas/mfa";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";

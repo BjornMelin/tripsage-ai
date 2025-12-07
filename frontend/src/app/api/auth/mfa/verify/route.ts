@@ -2,6 +2,8 @@
  * @fileoverview The API route for verifying a MFA code.
  */
 
+import "server-only";
+
 import { mfaVerificationInputSchema } from "@schemas/mfa";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";

@@ -2,6 +2,8 @@
  * @fileoverview The API route for listing MFA factors.
  */
 
+import "server-only";
+
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { listFactors, refreshAal } from "@/lib/security/mfa";

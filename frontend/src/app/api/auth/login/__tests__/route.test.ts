@@ -2,29 +2,30 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const signInWithPassword = vi.fn();
-
-vi.mock("@/lib/supabase/server", () => ({
-  createServerSupabase: vi.fn(async () => ({
-    auth: { signInWithPassword },
-  })),
-}));
+import {
+  createRouteParamsContext,
+  getApiRouteSupabaseMock,
+  makeJsonRequest,
+  resetApiRouteMocks,
+} from "@/test/helpers/api-route";
 
 describe("POST /api/auth/login", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    signInWithPassword.mockResolvedValue({ error: null });
+    resetApiRouteMocks();
   });
 
   it("authenticates valid credentials", async () => {
+    const supabase = getApiRouteSupabaseMock();
+    const signInWithPassword = vi.fn().mockResolvedValue({ error: null });
+    supabase.auth.signInWithPassword = signInWithPassword;
+
     const { POST } = await import("../route");
-    const request = new Request("http://localhost/api/auth/login", {
-      body: JSON.stringify({ email: "user@example.com", password: "password123" }),
-      headers: { "content-type": "application/json" },
-      method: "POST",
+    const request = makeJsonRequest("http://localhost/api/auth/login", {
+      email: "user@example.com",
+      password: "password123",
     });
 
-    const response = await POST(request);
+    const response = await POST(request, createRouteParamsContext());
     expect(response.status).toBe(200);
     expect(signInWithPassword).toHaveBeenCalledWith({
       email: "user@example.com",
@@ -35,52 +36,57 @@ describe("POST /api/auth/login", () => {
 
   it("returns validation errors for invalid payload", async () => {
     const { POST } = await import("../route");
-    const request = new Request("http://localhost/api/auth/login", {
-      body: JSON.stringify({ email: "not-an-email", password: "" }),
-      headers: { "content-type": "application/json" },
-      method: "POST",
+    const request = makeJsonRequest("http://localhost/api/auth/login", {
+      email: "not-an-email",
+      password: "",
     });
 
-    const response = await POST(request);
+    const response = await POST(request, createRouteParamsContext());
     expect(response.status).toBe(400);
     const body = await response.json();
-    expect(body.success).toBe(false);
-    expect(body.fieldErrors.email).toBeDefined();
-    expect(body.fieldErrors.password).toBeDefined();
+    // withApiGuards returns standardized validation error format
+    expect(body.error).toBe("invalid_request");
+    expect(body.reason).toBe("Request validation failed");
+    expect(body.issues).toBeDefined();
+    expect(Array.isArray(body.issues)).toBe(true);
   });
 
   it("propagates Supabase auth failures", async () => {
-    signInWithPassword.mockResolvedValueOnce({
-      error: new Error("Invalid login credentials"),
-    });
+    const supabase = getApiRouteSupabaseMock();
+    const signInWithPassword = vi
+      .fn()
+      .mockResolvedValue({ error: new Error("Invalid login credentials") });
+    supabase.auth.signInWithPassword = signInWithPassword;
+
     const { POST } = await import("../route");
-    const request = new Request("http://localhost/api/auth/login", {
-      body: JSON.stringify({ email: "user@example.com", password: "wrong" }),
-      headers: { "content-type": "application/json" },
-      method: "POST",
+    const request = makeJsonRequest("http://localhost/api/auth/login", {
+      email: "user@example.com",
+      password: "wrong",
     });
 
-    const response = await POST(request);
+    const response = await POST(request, createRouteParamsContext());
     expect(response.status).toBe(401);
-    expect(await response.json()).toEqual({
-      error: "Invalid login credentials",
-      success: false,
-    });
+    const body = await response.json();
+    expect(body.error).toBe("invalid_credentials");
+    expect(body.reason).toBe("Invalid email or password");
   });
 
   it("handles unexpected errors gracefully", async () => {
-    signInWithPassword.mockRejectedValueOnce(new Error("network down"));
+    const supabase = getApiRouteSupabaseMock();
+    const signInWithPassword = vi.fn().mockRejectedValue(new Error("network down"));
+    supabase.auth.signInWithPassword = signInWithPassword;
+
     const { POST } = await import("../route");
-    const request = new Request("http://localhost/api/auth/login", {
-      body: JSON.stringify({ email: "user@example.com", password: "password123" }),
-      headers: { "content-type": "application/json" },
-      method: "POST",
+    const request = makeJsonRequest("http://localhost/api/auth/login", {
+      email: "user@example.com",
+      password: "password123",
     });
 
-    const response = await POST(request);
+    const response = await POST(request, createRouteParamsContext());
     expect(response.status).toBe(500);
     const body = await response.json();
-    expect(body.error).toBe("An unexpected error occurred");
-    expect(body.success).toBe(false);
+    // withApiGuards catches and returns standardized internal error
+    expect(body.error).toBe("internal");
+    expect(body.reason).toBe("Internal server error");
   });
 });

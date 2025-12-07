@@ -2,6 +2,8 @@
  * @fileoverview The API route for setting up MFA.
  */
 
+import "server-only";
+
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { startTotpEnrollment } from "@/lib/security/mfa";

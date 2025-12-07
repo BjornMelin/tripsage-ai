@@ -86,7 +86,7 @@ export const GET = withApiGuards({
       return errorResponse({
         err: error,
         error: "not_found",
-        reason: error instanceof Error ? error.message : "Activity not found",
+        reason: "Activity not found",
         status: 404,
       });
     }

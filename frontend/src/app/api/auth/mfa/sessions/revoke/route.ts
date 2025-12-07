@@ -2,6 +2,8 @@
  * @fileoverview The API route handler for revoking MFA sessions.
  */
 
+import "server-only";
+
 import { mfaSessionRevokeInputSchema } from "@schemas/mfa";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";

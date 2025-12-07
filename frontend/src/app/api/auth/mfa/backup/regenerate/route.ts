@@ -2,6 +2,8 @@
  * @fileoverview API route for regenerating MFA backup codes.
  */
 
+import "server-only";
+
 import { backupCodeRegenerateInputSchema } from "@schemas/mfa";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
