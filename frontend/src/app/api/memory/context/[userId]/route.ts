@@ -41,7 +41,7 @@ export const GET = withApiGuards({
     return errorResponse({
       err: error,
       error: "memory_fetch_failed",
-      reason: error instanceof Error ? error.message : "Failed to fetch memory context",
+      reason: "Failed to fetch memory context. Please try again.",
       status: 500,
     });
   }

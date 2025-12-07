@@ -13,7 +13,12 @@ import { agentSchemas } from "@schemas/agents";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { parseJsonBody, requireUserId, validateSchema } from "@/lib/api/route-helpers";
+import {
+  errorResponse,
+  parseJsonBody,
+  requireUserId,
+  validateSchema,
+} from "@/lib/api/route-helpers";
 
 export const maxDuration = 30;
 
@@ -51,7 +56,18 @@ export const POST = withApiGuards({
   const modelHint = new URL(req.url).searchParams.get("model") ?? undefined;
   const { model } = await resolveProvider(userId, modelHint);
 
-  const classification = await classifyUserMessage({ model }, body.message);
-
-  return NextResponse.json(classification);
+  try {
+    const classification = await classifyUserMessage({ model }, body.message);
+    return NextResponse.json(classification);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("invalid patterns")) {
+      return errorResponse({
+        err: error,
+        error: "invalid_message",
+        reason: "Message contains invalid patterns and cannot be classified.",
+        status: 400,
+      });
+    }
+    throw error;
+  }
 });

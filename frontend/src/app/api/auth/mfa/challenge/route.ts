@@ -2,6 +2,8 @@
  * @fileoverview The API route for issuing a MFA challenge.
  */
 
+import "server-only";
+
 import { mfaChallengeInputSchema } from "@schemas/mfa";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";

@@ -49,7 +49,8 @@ export const ROUTE_RATE_LIMITS = {
   // Attachments
   "attachments:files": { limit: 20, window: "1 m" },
 
-  // Auth MFA (security-sensitive - tighter limits aligned with security best practices)
+  // Auth (security-sensitive - tighter limits aligned with security best practices)
+  "auth:login": { limit: 5, window: "1 m" },
   "auth:mfa:backup:regenerate": { limit: 3, window: "1 h" },
   "auth:mfa:backup:verify": { limit: 3, window: "1 m" },
   "auth:mfa:challenge": { limit: 3, window: "1 m" },
