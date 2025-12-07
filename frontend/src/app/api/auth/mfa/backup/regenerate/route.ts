@@ -7,20 +7,21 @@ import "server-only";
 import { backupCodeRegenerateInputSchema } from "@schemas/mfa";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { getClientIpFromHeaders } from "@/lib/api/route-helpers";
+import {
+  errorResponse,
+  forbiddenResponse,
+  getClientIpFromHeaders,
+  unauthorizedResponse,
+} from "@/lib/api/route-helpers";
 import {
   MfaRequiredError,
   regenerateBackupCodes,
   requireAal2,
 } from "@/lib/security/mfa";
 import { getAdminSupabase } from "@/lib/supabase/admin";
-import { createServerLogger } from "@/lib/telemetry/logger";
 
 /** The dynamic route for the MFA backup code regenerate API. */
 export const dynamic = "force-dynamic";
-
-/** The logger for the MFA backup code regenerate API. */
-const logger = createServerLogger("api.auth.mfa.backup.regenerate");
 
 /** The POST handler for the MFA backup code regenerate API. */
 export const POST = withApiGuards({
@@ -31,7 +32,7 @@ export const POST = withApiGuards({
 })(async (req, { user, supabase }, data) => {
   try {
     if (!user?.id) {
-      return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+      return unauthorizedResponse();
     }
     await requireAal2(supabase);
     const ip = getClientIpFromHeaders(req);
@@ -47,13 +48,13 @@ export const POST = withApiGuards({
       error instanceof MfaRequiredError ||
       (error as { code?: string } | null)?.code === "MFA_REQUIRED"
     ) {
-      return NextResponse.json({ error: "mfa_required" }, { status: 403 });
+      return forbiddenResponse("MFA verification required to regenerate backup codes");
     }
-    logger.error("backup code regeneration failed", {
-      count: data.count,
-      error: error instanceof Error ? error.message : "unknown_error",
-      userId: user?.id,
+    return errorResponse({
+      err: error,
+      error: "backup_regenerate_failed",
+      reason: "Failed to regenerate backup codes",
+      status: 500,
     });
-    return NextResponse.json({ error: "backup_regenerate_failed" }, { status: 500 });
   }
 });

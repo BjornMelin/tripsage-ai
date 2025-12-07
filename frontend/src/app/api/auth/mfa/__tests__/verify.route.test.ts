@@ -24,10 +24,15 @@ const mockBackupCodeCount = (count: number) => {
   mockFrom.mockReturnValue({ select: mockSelect });
 };
 
-vi.mock("@/lib/security/mfa", () => ({
-  regenerateBackupCodes: mockRegenerate,
-  verifyTotp: mockMfaVerify,
-}));
+vi.mock("@/lib/security/mfa", async () => {
+  const actual =
+    await vi.importActual<typeof import("@/lib/security/mfa")>("@/lib/security/mfa");
+  return {
+    ...actual,
+    regenerateBackupCodes: mockRegenerate,
+    verifyTotp: mockMfaVerify,
+  };
+});
 
 vi.mock("@/lib/supabase/admin", () => ({
   getAdminSupabase: mockGetAdminSupabase,
@@ -141,12 +146,13 @@ describe("POST /api/auth/mfa/verify", () => {
 
     expect(res.status).toBe(401);
     const json = await res.json();
-    expect(json.error).toBe("unauthenticated");
+    // unauthorizedResponse() returns "unauthorized" for consistency with other auth errors
+    expect(json.error).toBe("unauthorized");
     expect(mockRegenerate).not.toHaveBeenCalled();
   });
 
   it("returns 400 for invalid code", async () => {
-    mockMfaVerify.mockRejectedValueOnce(new Error("bad code"));
+    mockMfaVerify.mockRejectedValueOnce({ code: "invalid_or_expired_code" });
     const { POST } = await import("../verify/route");
     const res = await POST(
       makeJsonRequest("http://localhost/api/auth/mfa/verify", {
