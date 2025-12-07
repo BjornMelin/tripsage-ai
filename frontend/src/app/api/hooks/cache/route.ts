@@ -5,6 +5,7 @@
 import "server-only";
 
 import { type NextRequest, NextResponse } from "next/server";
+import { errorResponse, unauthorizedResponse } from "@/lib/api/route-helpers";
 import { bumpTags } from "@/lib/cache/tags";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import { parseAndVerify } from "@/lib/webhooks/payload";
@@ -50,13 +51,15 @@ export async function POST(req: NextRequest) {
     { attributes: { route: "/api/hooks/cache" } },
     async (span) => {
       const { ok, payload } = await parseAndVerify(req);
-      if (!ok || !payload)
-        return NextResponse.json(
-          { error: "invalid signature or payload" },
-          { status: 401 }
-        );
+      if (!ok || !payload) {
+        return unauthorizedResponse();
+      }
       if (!payload.table) {
-        return NextResponse.json({ error: "invalid payload" }, { status: 400 });
+        return errorResponse({
+          error: "invalid_request",
+          reason: "Missing table in webhook payload",
+          status: 400,
+        });
       }
       span.setAttribute("table", payload.table);
       span.setAttribute("op", payload.type);
