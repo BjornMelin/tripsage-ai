@@ -7,6 +7,7 @@ import "server-only";
 import { mfaChallengeInputSchema } from "@schemas/mfa";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
+import { errorResponse } from "@/lib/api/route-helpers";
 import { challengeTotp } from "@/lib/security/mfa";
 
 /** The dynamic route for the MFA challenge API. */
@@ -19,6 +20,15 @@ export const POST = withApiGuards({
   schema: mfaChallengeInputSchema,
   telemetry: "api.auth.mfa.challenge",
 })(async (_req, { supabase }, data) => {
-  const result = await challengeTotp(supabase, { factorId: data.factorId });
-  return NextResponse.json({ data: result });
+  try {
+    const result = await challengeTotp(supabase, { factorId: data.factorId });
+    return NextResponse.json({ data: result });
+  } catch (error) {
+    return errorResponse({
+      err: error,
+      error: "challenge_failed",
+      reason: error instanceof Error ? error.message : "Failed to create MFA challenge",
+      status: 400,
+    });
+  }
 });
