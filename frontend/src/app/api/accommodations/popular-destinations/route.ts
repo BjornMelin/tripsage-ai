@@ -7,7 +7,6 @@
 
 import "server-only";
 
-import type { User } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
@@ -47,23 +46,6 @@ const GLOBAL_POPULAR_DESTINATIONS: PopularDestination[] = [
 ];
 
 /**
- * Resolves the user from the context or the database.
- *
- * @param supabase - Supabase client instance
- * @param userFromContext - User from the context
- * @returns Promise resolving to the user or null if no user is found
- */
-async function resolveUser(
-  supabase: TypedServerSupabase,
-  userFromContext: User | null
-): Promise<User | null> {
-  if (userFromContext) return userFromContext;
-  const result = await supabase.auth.getUser();
-  if (result.error || !result.data?.user) return null;
-  return result.data.user;
-}
-
-/**
  * Fetches personalized hotel destinations for a user from the search_hotels table.
  *
  * @param supabase - Supabase client instance
@@ -97,11 +79,16 @@ async function fetchPersonalizedDestinations(
   const destinations = Array.from(destinationCounts.entries())
     .sort(([, countA], [, countB]) => countB - countA)
     .slice(0, 10)
-    .map(([destination]) => ({
-      avgPrice: undefined,
-      city: destination,
-      country: undefined,
-    }));
+    .map(([destination]) => {
+      const fallback = GLOBAL_POPULAR_DESTINATIONS.find(
+        (dest) => dest.city === destination
+      );
+      return {
+        avgPrice: fallback?.avgPrice,
+        city: destination,
+        country: fallback?.country,
+      } satisfies PopularDestination;
+    });
 
   return destinations.length > 0 ? destinations : null;
 }
@@ -124,7 +111,7 @@ export const GET = withApiGuards({
   rateLimit: "accommodations:popular-destinations",
   telemetry: "accommodations.popular_destinations",
 })(async (_req, { user: contextUser, supabase }) => {
-  const resolvedUser = await resolveUser(supabase, contextUser);
+  const resolvedUser = contextUser;
   const cacheKey = resolvedUser?.id
     ? `popular-hotels:user:${resolvedUser.id}`
     : "popular-hotels:global";

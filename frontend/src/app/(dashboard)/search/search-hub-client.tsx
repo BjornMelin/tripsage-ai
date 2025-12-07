@@ -56,7 +56,7 @@ export default function SearchHubClient() {
    */
   const handleRepeatSearch = (
     searchType: SearchType,
-    params: Record<string, unknown>
+    params: Record<string, string | number | boolean | null | undefined>
   ): void => {
     const basePath = getSearchPath(searchType);
     const queryParams = new URLSearchParams();
@@ -236,7 +236,13 @@ export default function SearchHubClient() {
                         type={search.searchType}
                         date={new Date(search.timestamp).toLocaleDateString()}
                         onRepeat={() =>
-                          handleRepeatSearch(search.searchType, search.params)
+                          handleRepeatSearch(
+                            search.searchType,
+                            search.params as Record<
+                              string,
+                              string | number | boolean | null | undefined
+                            >
+                          )
                         }
                       />
                     ))}
@@ -344,7 +350,7 @@ function RecentSearchCard({
   onRepeat: () => Promise<void> | void;
 }) {
   return (
-    <Card className="h-full hover:bg-accent/50 transition-colors cursor-pointer group">
+    <Card className="h-full hover:bg-accent/50 transition-colors group">
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center gap-2">
           <CardTitle className="text-base truncate flex-1">{title}</CardTitle>

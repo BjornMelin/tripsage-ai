@@ -462,7 +462,11 @@ export const deleteTravelPlan = createAiTool({
     } catch (err) {
       // Convert approval exception to graceful error response for AI tool interface
       const message = err instanceof Error ? err.message : "approval_required";
-      return { error: message, success: false } as const;
+      const approvalMeta =
+        err && typeof err === "object" && "meta" in err
+          ? (err as { meta?: unknown }).meta
+          : undefined;
+      return { approval: approvalMeta, error: message, success: false } as const;
     }
 
     try {

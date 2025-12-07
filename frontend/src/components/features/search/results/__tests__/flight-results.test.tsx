@@ -74,7 +74,7 @@ describe("FlightResults", () => {
       />
     );
 
-    const checkboxes = screen.getAllByRole("checkbox");
+    const checkboxes = screen.getAllByRole("checkbox", { name: /compare/i });
     fireEvent.click(checkboxes[0]);
     fireEvent.click(checkboxes[1]);
 
@@ -182,7 +182,7 @@ describe("FlightResults", () => {
       />
     );
 
-    const checkboxes = screen.getAllByRole("checkbox");
+    const checkboxes = screen.getAllByTestId("compare-checkbox");
     for (const checkbox of checkboxes.slice(0, 4)) {
       fireEvent.click(checkbox);
     }

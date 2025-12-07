@@ -10,6 +10,7 @@ import type {
   HotelResult,
   HotelSearchFormData,
 } from "@schemas/search";
+import { formatDistanceToNow } from "date-fns";
 import {
   Building2Icon,
   ClockIcon,
@@ -245,10 +246,11 @@ export default function UnifiedSearchClient({
     useState<FlightResult[]>(MOCK_FLIGHT_RESULTS);
   const [hotelResults, setHotelResults] = useState<HotelResult[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const { toast } = useToast();
 
-  const handleFlightSearch = async (params: FlightSearchFormData) => {
-    await new Promise<void>((resolve) => {
+  const handleFlightSearch = (params: FlightSearchFormData) =>
+    new Promise<void>((resolve) => {
       startTransition(async () => {
         setErrorMessage(null);
         try {
@@ -256,6 +258,7 @@ export default function UnifiedSearchClient({
             const results = await onSearchFlights(params);
             setFlightResults(results);
           }
+          setLastUpdated(new Date());
           setShowResults(true);
         } catch (error) {
           const message =
@@ -271,7 +274,6 @@ export default function UnifiedSearchClient({
         }
       });
     });
-  };
 
   const handleHotelSearch = (params: HotelSearchFormData) =>
     new Promise<void>((resolve) => {
@@ -280,6 +282,7 @@ export default function UnifiedSearchClient({
         try {
           const results = await onSearchHotels(params);
           setHotelResults(results);
+          setLastUpdated(new Date());
           setShowResults(true);
           setErrorMessage(null);
         } catch (error) {
@@ -380,7 +383,10 @@ export default function UnifiedSearchClient({
                     <h2 className="text-xl font-semibold">Flight Results</h2>
                     <Badge variant="outline">
                       <ClockIcon className="h-3 w-3 mr-1" />
-                      Updated {new Date().toLocaleTimeString()}
+                      Updated{" "}
+                      {lastUpdated
+                        ? formatDistanceToNow(lastUpdated, { addSuffix: true })
+                        : "just now"}
                     </Badge>
                   </div>
                   <FlightResults
@@ -406,7 +412,10 @@ export default function UnifiedSearchClient({
                     <h2 className="text-xl font-semibold">Hotel Results</h2>
                     <Badge variant="outline">
                       <ClockIcon className="h-3 w-3 mr-1" />
-                      Updated {new Date().toLocaleTimeString()}
+                      Updated{" "}
+                      {lastUpdated
+                        ? formatDistanceToNow(lastUpdated, { addSuffix: true })
+                        : "just now"}
                     </Badge>
                   </div>
                   <HotelResults

@@ -41,6 +41,10 @@ Move BYOK key CRUD and validation to Next.js route handlers using Supabase Vault
 
 - JSON error shape: `{ error: string, code?: string }` with appropriate HTTP status.
 - Validation returns `is_valid: false` and `reason` for unauthorized/network/HTTP status.
+- Standard codes (aligned with ADR-0024 and route handlers):
+  - `VAULT_UNAVAILABLE` — vault extension/service not reachable.
+  - `INVALID_KEY` — provider rejected key or validation failed.
+  - `NETWORK_ERROR` — network/transport failure when calling provider.
 
 ## Testing
 

@@ -33,12 +33,17 @@ const onSubmit = form.handleSubmitSafe(async (data) => {
 |--------|------|---------|-------------|
 | `schema` | `z.ZodType<T>` | required | Zod schema for validation |
 | `defaultValues` | `DefaultValues<T>` | `{}` | Initial form values |
-| `validateMode` | `"onChange" \| "onBlur" \| "onSubmit"` | `"onChange"` | When to validate |
+| `validateMode` | `"onChange" \| "onBlur" \| "onSubmit" \| "onTouched" \| "all"` | `"onChange"` | When to validate |
 | `reValidateMode` | `"onChange" \| "onBlur" \| "onSubmit"` | `"onChange"` | When to re-validate after error |
 | `transformSubmitData` | `(data: T) => T` | - | Transform data before submission |
 | `onValidationError` | `(errors) => void` | - | Callback on validation failure |
 | `onSubmitSuccess` | `(data) => void` | - | Callback on successful submission |
 | `onSubmitError` | `(error) => void` | - | Callback on submission error |
+| `enableAsyncValidation` | `boolean` | `false` | Turn on debounced async validation hooks |
+| `debounceValidation` | `number` | `300` | Debounce duration (ms) when async validation enabled |
+| `enableWizard` | `boolean` | `false` | Enable multi-step wizard mode |
+| `wizardSteps` | `string[]` | `[]` | Step identifiers (when wizard enabled) |
+| `stepValidationSchemas` | `z.ZodType<unknown>[]` | `[]` | Per-step schemas (wizard) |
 
 **Return Values:**
 
@@ -54,6 +59,8 @@ const onSubmit = form.handleSubmitSafe(async (data) => {
 | `getCleanData()` | Get parsed/validated data |
 | `resetToDefaults()` | Reset form to default values |
 | `validationState` | `{ isValidating, lastValidation, validationErrors }` |
+| `wizardState` | Wizard-only: `{ currentStep, totalSteps, isFirstStep, isLastStep }` |
+| `wizardActions` | Wizard-only: `{ goToNext, goToPrevious, goToStep, validateAndGoToNext }` |
 
 ### useSearchForm
 
@@ -184,7 +191,7 @@ Wrap async handlers with telemetry for observability:
 import { withClientTelemetrySpan } from "@/lib/telemetry/client";
 
 const onSubmit = form.handleSubmitSafe(async (data) => {
-  await withClientTelemetrySpan("trip.create", async () => {
+  await withClientTelemetrySpan("trip.create", {}, async () => {
     await createTrip(data);
   });
 });

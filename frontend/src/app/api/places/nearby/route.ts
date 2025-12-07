@@ -66,9 +66,11 @@ export const POST = withApiGuards({
   try {
     data = await response.json();
   } catch (jsonError) {
+    const errorMessage =
+      jsonError instanceof Error ? jsonError.message.slice(0, 200) : "parse_failed";
     recordTelemetryEvent("places.nearby.upstream_json_parse_error", {
       attributes: {
-        error: jsonError instanceof Error ? jsonError.message : "parse_failed",
+        error: errorMessage,
       },
       level: "error",
     });
@@ -98,7 +100,19 @@ export const POST = withApiGuards({
 
   const places = upstreamPlaces
     .map((place) => upstreamPlaceSchema.safeParse(place))
-    .flatMap((parsed) => (parsed.success ? [parsed.data] : []))
+    .flatMap((parsed, index) => {
+      if (!parsed.success) {
+        recordTelemetryEvent("places.nearby.validation_failed", {
+          attributes: {
+            error: parsed.error.message.slice(0, 250),
+            index,
+          },
+          level: "warning",
+        });
+        return [];
+      }
+      return [parsed.data];
+    })
     .map((place) => {
       const name = place.displayName?.text;
       if (!name) return null;

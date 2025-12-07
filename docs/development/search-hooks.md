@@ -42,6 +42,7 @@ The TripSage search domain uses three distinct hook patterns, each optimized for
 // Example simplified for clarity; imports (React, React Query, apiClient) omitted.
 // AccommodationSearchResponse below is a sample response contract—replace with your real type.
 type AccommodationSearchResponse = { results: Accommodation[] };
+type AccommodationSuggestion = { id: string; name: string };
 export function useAccommodationSearch() {
   const { updateAccommodationParams } = useSearchParamsStore();
   const { startSearch, setSearchResults, setSearchError, completeSearch } =
@@ -75,8 +76,17 @@ export function useAccommodationSearch() {
         accommodations: searchMutation.data.results,
       });
       completeSearch(currentSearchIdRef.current);
+    } else if (searchMutation.error && currentSearchIdRef.current) {
+      setSearchError(currentSearchIdRef.current, searchMutation.error);
+      completeSearch(currentSearchIdRef.current);
     }
-  }, [searchMutation.data, setSearchResults, completeSearch]);
+  }, [
+    searchMutation.data,
+    searchMutation.error,
+    setSearchResults,
+    setSearchError,
+    completeSearch,
+  ]);
 
   return {
     isSearching: searchMutation.isPending,

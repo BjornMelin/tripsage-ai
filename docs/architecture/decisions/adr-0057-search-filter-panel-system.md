@@ -15,7 +15,7 @@ The TripSage search experience currently has an incomplete filter system:
 1. **FilterPresets component exists** - Users can save/load filter presets, but there's no UI to actually apply filters in the first place
 2. **search-filters-store.ts is bloated** - Contains 1,237 lines with 13+ unused methods that were never wired to UI
 3. **No visual filter controls** - The flights page has `FilterPresets` in the sidebar but no `FilterPanel` for users to set filters
-4. **Store methods were removed as YAGNI** - Some removed methods (`clearFiltersByCategory`, `getMostUsedFilters`, `applyFiltersFromObject`) would actually improve UX
+4. **Store methods were removed as YAGNI** - Some removed methods (`clearFiltersByCategory`, `applyFiltersFromObject`) would actually improve UX; `getMostUsedFilters` is deferred pending a follow-up ADR and implementation.
 
 ### Current State Analysis
 
@@ -36,17 +36,22 @@ The filter presets workflow is broken:
 
 We will implement a complete search filter system using shadcn/ui components with the following architecture:
 
-### 1. Restore Valuable Store Methods
+### 1. Prerequisites
 
-Restore three methods that were incorrectly removed as YAGNI:
+- `shadcn/ui` is already installed and configured in the `frontend/` app (see `docs/development/ui.md`).
+- Run all shadcn commands from the `frontend/` directory so the generator picks up the Next.js workspace config.
+- Versioning: we intentionally use `@latest` for shadcn component additions to track upstream fixes. If a release pin is required, replace `@latest` with the vetted version in `package.json`.
+
+### 2. Restore Valuable Store Methods
+
+Restore two methods that were incorrectly removed as YAGNI (the previously proposed `getMostUsedFilters` is deferred to a follow-up ADR because it is not implemented in the store yet):
 
 | Method | User Value |
 |--------|-----------|
 | `clearFiltersByCategory(category)` | "Clear all pricing filters" - better UX than clearing one by one |
-| `getMostUsedFilters(searchType, limit)` | Power "Quick Filters" section showing frequently used filters |
 | `applyFiltersFromObject(filterObject)` | Enable URL deep-linking, shareable filter configurations |
 
-### 2. Install Additional shadcn/ui Components
+### 3. Install Additional shadcn/ui Components
 
 ```bash
 npx shadcn@latest add accordion toggle-group
@@ -61,7 +66,7 @@ FilterPanel (Card)
 │   ├── Active filter count (Badge)
 │   └── "Clear All" button
 ├── QuickFilters (optional)
-│   └── Badges from getMostUsedFilters()
+│   └── Badges from usage analytics (future: `getMostUsedFilters` once implemented)
 ├── Accordion
 │   ├── AccordionItem: Price Range
 │   │   └── FilterRange (Slider dual-thumb)
@@ -124,6 +129,13 @@ frontend/src/components/features/search/
 └── search-collections.tsx        # Cross-cutting collections
 ```
 
+### 4.1 Testing Strategy
+
+- **Frameworks**: Vitest + React Testing Library for component behavior; MSW for network interactions in results lists; snapshot tests only for low-change presentational pieces (skeletons, badges).
+- **Placement**: colocate tests under `filters/__tests__/`, `forms/__tests__/`, and `results/__tests__/` as shown in the structure; shared factories live in `frontend/src/test/factories`.
+- **Coverage**: target ≥85% line/branch coverage for filter panel logic, store adapters, and URL serialization helpers; critical paths (apply/clear filters, deep-linking hydration, preset save/load) must be exercised.
+- **Fixtures/mocks**: mock filter payloads and search params in `frontend/src/test/fixtures/search-filters.ts`; use MSW handlers for API payload builders in `filters/api-payload.ts`.
+
 ### 5. shadcn/ui Components Mapping
 
 | Filter Type | shadcn/ui Component | Example Use |
@@ -165,24 +177,44 @@ const {
   removeActiveFilter,
   clearAllFilters,
   clearFiltersByCategory,  // Restored
-  getMostUsedFilters,      // Restored
-  
+
   // Validation
   validateFilter,
   getFilterValidationError,
 } = useSearchFiltersStore();
 ```
 
-### 7. Page Integration
+Quick filter surfacing (`getMostUsedFilters`) will be added when the store exposes that API; until then, QuickFilters can consume analytics-provided presets via props.
+
+### 7. Deep-linking Strategy
+
+`applyFiltersFromObject` is used to hydrate the store from URL query parameters. The serialization/deserialization flow:
+
+- **Format**: `filters` query param containing `key:value` pairs separated by `|`. Example: `?filters=price:0-2000|stops:0,1|airlines:AA,UA`.
+- **Serialize**: `search-params-store` writes filters to the URL via `filtersToQueryParams()` inside a `history.replaceState` call (triggered when filters change).
+- **Deserialize**: on page load, `useEffect` in `filter-panel.tsx` parses `location.search` with `queryToFilters()` and calls `applyFiltersFromObject(parsedFilters)` on the store.
+- **Example**:
+  1. User selects filters → store emits `currentFilters` → `filtersToQueryParams` updates the URL.
+  2. User shares the link; on open, `queryToFilters` parses the `filters` param and rehydrates the store via `applyFiltersFromObject`.
+
+Deep-linking remains opt-in per page; pages without filters simply skip calling the serializer.
+
+### 8. Page Integration
 
 Update `flights/page.tsx` sidebar:
 
 ```tsx
 <div className="space-y-6">
-  <FilterPanel />      {/* NEW: Apply filters */}
-  <FilterPresets />    {/* Existing: Save/load presets */}
+  <ErrorBoundary fallback={<FilterPanelSkeleton />}>
+    <Suspense fallback={<FilterPanelSkeleton />}>
+      <FilterPanel />      {/* NEW: Apply filters */}
+    </Suspense>
+  </ErrorBoundary>
+  <FilterPresets />        {/* Existing: Save/load presets */}
 </div>
 ```
+
+`FilterPanelSkeleton` shows disabled controls while async hydration (URL → store) or analytics-powered quick filters are loading.
 
 ## Consequences
 
@@ -194,13 +226,13 @@ Update `flights/page.tsx` sidebar:
 - **Better UX** - Accordion sections, clear by category, quick filters from usage stats
 - **Type-safe** - All filter values validated through Zod schemas in store
 - **Accessible** - shadcn/ui components have built-in ARIA support
-- **Deep-linking ready** - `applyFiltersFromObject` enables shareable URLs
+- **Deep-linking ready** - URL `filters` query param → `applyFiltersFromObject` hydrates store on load
 
 ### Negative
 
-- **Additional bundle size** - ~5KB for accordion + toggle-group components
-- **Implementation effort** - ~590 new lines of code across 6 files
-- **Store complexity** - 3 methods restored (~50 lines)
+- **Additional bundle size** - Estimated +5KB for Accordion/Toggle Group (shadcn) — validate with `next build --analyze` after implementation
+- **Implementation effort** - Estimated ~590 LOC across six primary files (filter-panel.tsx, filter-presets.tsx, filter-range.tsx, filter-toggle-options.tsx, filter-checkbox-group.tsx, search-filters-store.ts); excludes existing shared components listed in File Structure (cards/forms/modals/results) which remain mostly untouched.
+- **Store complexity** - ~50 new lines from restored methods
 
 ### Neutral
 
@@ -225,11 +257,12 @@ Update `flights/page.tsx` sidebar:
 
 **Description**: Don't restore the removed store methods.
 
-**Why not chosen**: The three methods provide genuine UX value:
+**Why not chosen**: The two restored methods provide genuine UX value:
 
 - `clearFiltersByCategory` - Essential for filter-heavy interfaces
-- `getMostUsedFilters` - Enables personalized quick filters
 - `applyFiltersFromObject` - Required for URL deep-linking feature
+
+`getMostUsedFilters` remains deferred to a follow-up ADR once the store API is implemented.
 
 ### Alternative 4: Use React Query for Filter State
 

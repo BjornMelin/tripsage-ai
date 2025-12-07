@@ -299,6 +299,8 @@ export function FlightCard({
               type="checkbox"
               checked={isSelected}
               onChange={onToggleComparison}
+              aria-label="Compare this flight"
+              data-testid="compare-checkbox"
               className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
             />
           </div>

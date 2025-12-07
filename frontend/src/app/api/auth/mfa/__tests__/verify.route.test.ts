@@ -70,8 +70,6 @@ describe("POST /api/auth/mfa/verify", () => {
 
   it("does not generate backup codes if user already has backup codes even if isInitialEnrollment is true", async () => {
     mockBackupCodeCount(5); // user already has backup codes
-
-    mockMfaVerify.mockResolvedValueOnce({ isInitialEnrollment: true });
     const { POST } = await import("../verify/route");
     const res = await POST(
       makeJsonRequest("http://localhost/api/auth/mfa/verify", {

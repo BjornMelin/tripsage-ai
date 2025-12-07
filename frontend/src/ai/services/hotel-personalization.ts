@@ -108,7 +108,13 @@ const personalizationResponseSchema = z.strictObject({
 });
 
 function buildHotelIdentifiers(hotels: HotelForPersonalization[]): string[] {
-  return hotels.map((h) => `${h.name}|${h.location.slice(0, 50)}|${h.pricePerNight}`);
+  return hotels.map((h) => {
+    const locationHash = hashInputForCache({
+      location: h.location,
+      price: h.pricePerNight,
+    });
+    return `${h.name}|${locationHash}`;
+  });
 }
 
 /**
@@ -301,7 +307,29 @@ export async function personalizeHotels(
       const indexedPersonalizations: IndexedPersonalization[] = [];
 
       const hotelsResponse = response.output?.hotels ?? [];
+      const seenIndices = new Set<number>();
       for (const hotel of hotelsResponse) {
+        if (
+          !Number.isInteger(hotel.index) ||
+          hotel.index < 0 ||
+          hotel.index >= hotels.length
+        ) {
+          recordTelemetryEvent("ai.hotel.personalize.invalid_index", {
+            attributes: { hotelCount: hotels.length, index: hotel.index },
+            level: "warning",
+          });
+          continue; // Skip invalid indices from AI
+        }
+
+        if (seenIndices.has(hotel.index)) {
+          recordTelemetryEvent("ai.hotel.personalize.duplicate_index", {
+            attributes: { hotelCount: hotels.length, index: hotel.index },
+            level: "warning",
+          });
+          continue; // Skip duplicate indices to avoid overwriting earlier results
+        }
+        seenIndices.add(hotel.index);
+
         const personalization: HotelPersonalization = {
           personalizedTags: hotel.personalizedTags,
           reason: hotel.reason,
@@ -332,7 +360,7 @@ export async function personalizeHotels(
  * @param hotels - Array of hotels to invalidate cache for
  * @param preferences - User's travel preferences affecting personalization
  * @returns Promise resolving when cache is deleted
- * @throws Error if hotels array exceeds maximum allowed size (10)
+ * @throws Error if hotels array exceeds maximum allowed size (20)
  */
 export async function invalidatePersonalizationCache(
   userId: string,

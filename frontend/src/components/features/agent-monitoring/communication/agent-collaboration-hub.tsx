@@ -211,6 +211,17 @@ const GetStatusIcon = (status: Agent["status"]) => {
   return <Icon className={STATUS_ICON_CLASS} />;
 };
 
+const AgentStatusIndicator: React.FC<{ status: Agent["status"] }> = ({ status }) => (
+  <div
+    className={cn(
+      "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center",
+      GetStatusColor(status)
+    )}
+  >
+    <div className="text-white">{GetStatusIcon(status)}</div>
+  </div>
+);
+
 /** Component for an agent card */
 const AgentCard: React.FC<{
   agent: Agent;
@@ -243,14 +254,7 @@ const AgentCard: React.FC<{
               {getInitials(agent.name)}
             </AvatarFallback>
           </Avatar>
-          <div
-            className={cn(
-              "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center",
-              GetStatusColor(agent.status)
-            )}
-          >
-            <div className="text-white">{GetStatusIcon(agent.status)}</div>
-          </div>
+          <AgentStatusIndicator status={agent.status} />
         </div>
 
         <div className="flex-1 min-w-0">
@@ -330,7 +334,9 @@ const HandoffCard: React.FC<{
   const toAgent = agents.find((a) => a.id === handoff.toAgent);
 
   /** Get the status configuration for a handoff */
-  const statusConfig =
+  const statusConfig:
+    | (typeof HANDOFF_STATUS_COLORS)[keyof typeof HANDOFF_STATUS_COLORS]
+    | typeof DEFAULT_HANDOFF_STATUS_COLOR =
     HANDOFF_STATUS_COLORS[handoff.status] ?? DEFAULT_HANDOFF_STATUS_COLOR;
 
   return (

@@ -234,9 +234,13 @@ describe("hotel-personalization", () => {
 
     it("returns cached results when available", async () => {
       const { getCachedJson } = await import("@/lib/cache/upstash");
+      const { hashInputForCache } = await import("@/lib/cache/hash");
       const cachedData: Array<HotelPersonalization & { hotelId: string }> = [
         {
-          hotelId: "Test Hotel|Test City|200",
+          hotelId: `Test Hotel|${hashInputForCache({
+            location: "Test City",
+            pricePerNight: 200,
+          })}`,
           personalizedTags: ["Cached tag"],
           reason: "Cached reason",
           score: 8,
@@ -300,6 +304,7 @@ describe("hotel-personalization", () => {
     it("caches AI results after generation", async () => {
       const { generateText } = await import("ai");
       const { setCachedJson } = await import("@/lib/cache/upstash");
+      const { hashInputForCache } = await import("@/lib/cache/hash");
 
       vi.mocked(generateText).mockResolvedValueOnce({
         output: {
@@ -334,7 +339,10 @@ describe("hotel-personalization", () => {
         expect.stringContaining("hotel:personalize:"),
         expect.arrayContaining([
           expect.objectContaining({
-            hotelId: "Cache Test Hotel|Cache City|150",
+            hotelId: `Cache Test Hotel|${hashInputForCache({
+              location: "Cache City",
+              pricePerNight: 150,
+            })}`,
             reason: "Reason",
           }),
         ]),

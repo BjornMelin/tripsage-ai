@@ -232,6 +232,52 @@ it("validates all fields", async () => {
 });
 ```
 
+### Submission testing
+
+- Use `handleSubmitSafe` and `vi.fn()` to assert submits occur once for valid data and are skipped for invalid data.
+- Example:
+
+```tsx
+it("submits with telemetry span", async () => {
+  const submit = vi.fn();
+  const { result } = renderHook(() => useZodForm({ schema, defaultValues: { title: "Trip" } }));
+  // imports: useZodForm, withClientTelemetrySpan
+
+  await act(async () => {
+    await result.current.handleSubmitSafe(async (data) => {
+      await withClientTelemetrySpan("trip.create", {}, async () => submit(data));
+    })();
+  });
+
+  expect(submit).toHaveBeenCalledWith({ title: "Trip" });
+});
+```
+
+### Wizard navigation testing
+
+- With `enableWizard` or `useZodFormWizard`, assert step gating and navigation helpers.
+
+```tsx
+it("prevents advancing when step invalid", async () => {
+  const { result } = renderHook(() =>
+    useZodForm({
+      schema: fullSchema,
+      enableWizard: true,
+      wizardSteps: ["basics", "dates"],
+      stepValidationSchemas: [basicsSchema, datesSchema],
+      defaultValues: { title: "", startDate: "" },
+    })
+  );
+
+  await act(async () => result.current.wizardActions.goToNext());
+  expect(result.current.wizardState.currentStep).toBe(0);
+
+  await act(async () => result.current.setValue("title", "My Trip"));
+  await act(async () => result.current.wizardActions.validateAndGoToNext());
+  expect(result.current.wizardState.currentStep).toBe(1);
+});
+```
+
 ## Server Actions
 
 ```ts

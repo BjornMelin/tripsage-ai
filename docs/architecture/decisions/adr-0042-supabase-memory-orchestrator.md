@@ -45,18 +45,16 @@ through centralized PII filters plus OpenTelemetry spans.
 
 ### Vector indexing, retention, and session reuse
 
+- **PII handling in embeddings:** redact PII **before** embedding generation using the existing orchestrator PII filters; embeddings are created from redacted text only. User deletion requests must cascade to `memories.turn_embeddings` (ON DELETE CASCADE) and trigger explicit embedding cleanup. Embedding storage follows GDPR/CCPA: no long-term retention of identifiers inside vectors.
 - **Indexes:** Use pgvector **HNSW** for latency-sensitive stores:
   - `accommodation_embeddings.embedding` and `memories.turn_embeddings.embedding`
-    with `m=32`, `ef_construction=180` (160 acceptable on RAM-tight nodes),
-    `ef_search` default `96` (tune 64–128 per query).
+    with `m=${PGVECTOR_HNSW_M:-32}`, `ef_construction=${PGVECTOR_HNSW_EF_CONSTRUCTION:-180}` (160 acceptable on RAM-tight nodes),
+    default `ef_search=${PGVECTOR_HNSW_EF_SEARCH_DEFAULT:-96}`; target range 64–128 based on workload. These defaults balance recall/latency for 1536-d embeddings (OpenAI text-embedding-3-small) under current traffic.
   - Fallback (if write-heavy / memory constrained): IVFFlat with `lists≈500–1000`,
     `probes≈20`; document when chosen.
-- **Query functions:** set `hnsw.ef_search` per call (see `match_accommodation_embeddings`).
-- **Retention:** `memories.turn_embeddings` cleaned up at **180 days** via pg_cron;
-  align embeddings and sessions to the same window.
-- **Session semantics:** reuse an existing "Travel Plan" chat/memory session when
-  the planner tool is invoked, rather than creating a new session per call, to
-  reduce fragmentation and keep retrieval accuracy high.
+- **Query functions:** `match_accommodation_embeddings` currently sets `ef_search` via `set_config('hnsw.ef_search', PGVECTOR_HNSW_EF_SEARCH_DEFAULT)`. To tune per-call, add an optional `ef_search_override` parameter (follow-up) or adjust the env var; operators can observe recall/latency with EXPLAIN ANALYZE and `pg_stat_user_indexes`.
+- **Retention:** `memories.turn_embeddings` cleaned up at **${MEMORIES_RETENTION_DAYS:-180} days** via pg_cron; align embeddings and session records to the same window. Rationale: matches product UX (recent travel context) and privacy expectations; configurable via `MEMORIES_RETENTION_DAYS` for regulatory changes. Deploy the cron job in migrations; monitor runs via Postgres logs and Datadog alerts on failures/lag.
+- **Session semantics:** reuse the most recent "Travel Plan" chat/memory session **per user and conversation thread** when the planner tool is invoked to reduce fragmentation and improve retrieval accuracy. Concurrent planner invocations must acquire a session-level lock or queue to avoid collisions. Users can start a fresh session by clearing memory or opening a new chat thread.
 
 ## Consequences
 

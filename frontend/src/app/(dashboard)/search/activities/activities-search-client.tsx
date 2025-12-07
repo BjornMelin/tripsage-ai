@@ -270,19 +270,26 @@ export default function ActivitiesSearchClient({
     .filter(isActivity);
 
   const { verifiedActivities, aiSuggestions, allAi } = useMemo(() => {
-    // Check if we have mixed results based on activity ID prefixes
-    const hasMixedResults = activities.some((activity) =>
+    const hasAi = activities.some((activity) =>
       activity.id.startsWith(AI_FALLBACK_PREFIX)
     );
-    const allAiResults = activities.every((activity) =>
-      activity.id.startsWith(AI_FALLBACK_PREFIX)
+    const hasNonAi = activities.some(
+      (activity) => !activity.id.startsWith(AI_FALLBACK_PREFIX)
     );
 
-    if (!hasMixedResults) {
+    if (hasAi && !hasNonAi) {
+      return {
+        aiSuggestions: activities,
+        allAi: true,
+        verifiedActivities: [] as Activity[],
+      };
+    }
+
+    if (!hasAi && hasNonAi) {
       return {
         aiSuggestions: [] as Activity[],
-        allAi: allAiResults,
-        verifiedActivities: [] as Activity[],
+        allAi: false,
+        verifiedActivities: activities,
       };
     }
 
