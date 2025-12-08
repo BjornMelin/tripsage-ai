@@ -18,7 +18,7 @@ Operational checklist to detect and remediate ownership mismatches between Supab
 **Objects without a matching file_attachments row**
 
 ```sql
-SELECT o.bucket_id, o.name AS path, o.owner, o.created_at
+SELECT o.bucket_id, o.name AS path, o.owner, o.owner_id, o.created_at
 FROM storage.objects o
 LEFT JOIN public.file_attachments fa ON fa.file_path = o.name
 WHERE o.bucket_id IN ('attachments','trip-images','avatars')
@@ -29,11 +29,11 @@ ORDER BY o.created_at DESC;
 **Owner mismatch between storage.objects and file_attachments**
 
 ```sql
-SELECT o.bucket_id, o.name AS path, o.owner AS storage_owner, fa.user_id, fa.trip_id
+SELECT o.bucket_id, o.name AS path, o.owner AS storage_owner, o.owner_id AS storage_owner_id, fa.user_id, fa.trip_id
 FROM storage.objects o
 JOIN public.file_attachments fa ON fa.file_path = o.name
 WHERE o.bucket_id IN ('attachments','trip-images','avatars')
-  AND (fa.user_id IS DISTINCT FROM o.owner OR fa.user_id IS NULL);
+  AND (fa.user_id IS DISTINCT FROM coalesce(o.owner_id, o.owner) OR fa.user_id IS NULL);
 ```
 
 **file_attachments pointing to missing objects**
@@ -49,15 +49,15 @@ ORDER BY fa.created_at DESC;
 ## Remediation Steps
 
 - For orphaned objects (query 1): decide whether to delete the object or recreate the relational row. Use `storage.objects` delete via service role if the file is not referenced.
-- For owner mismatches (query 2): align `storage.objects.owner` to `fa.user_id` **or** correct `file_attachments.user_id` if the relational row is wrong. Keep `user_id` as the source of truth; update storage via service-role SQL:
+- For owner mismatches (query 2): align both `storage.objects.owner` and `storage.objects.owner_id` to `fa.user_id` **or** correct `file_attachments.user_id` if the relational row is wrong. Keep `user_id` as the source of truth; update storage via service-role SQL:
 
 ```sql
 UPDATE storage.objects o
-SET owner = fa.user_id
+SET owner = fa.user_id, owner_id = fa.user_id
 FROM public.file_attachments fa
 WHERE fa.file_path = o.name
   AND o.bucket_id IN ('attachments','trip-images','avatars')
-  AND (fa.user_id IS DISTINCT FROM o.owner OR fa.user_id IS NULL);
+  AND (fa.user_id IS DISTINCT FROM coalesce(o.owner_id, o.owner) OR fa.user_id IS NULL);
 ```
 
 - For missing objects (query 3): either remove the relational row or re-upload the file, depending on business need.
