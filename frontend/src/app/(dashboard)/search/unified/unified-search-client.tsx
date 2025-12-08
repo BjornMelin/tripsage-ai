@@ -301,13 +301,11 @@ export default function UnifiedSearchClient({
       });
     });
 
-  const handleFlightSelect: (flight: FlightResult) => Promise<void> = async (
-    _flight
-  ) => {
+  const handleFlightSelect = async (_flight: FlightResult): Promise<void> => {
     /* TODO: implement flight selection */
   };
 
-  const handleHotelSelect: (hotel: HotelResult) => Promise<void> = async (_hotel) => {
+  const handleHotelSelect = async (_hotel: HotelResult): Promise<void> => {
     /* TODO: implement hotel selection */
   };
 
