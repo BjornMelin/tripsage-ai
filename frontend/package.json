@@ -112,7 +112,7 @@
     "lucide-react": "^0.555.0",
     "mem0ai": "^2.1.38",
     "nanoid": "^5.1.6",
-    "next": "^16.0.4",
+    "next": "16.0.7",
     "next-themes": "^0.4.6",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -173,6 +173,9 @@
       "prismjs": ">=1.30.0",
       "brace-expansion": ">=2.0.2"
     },
-    "ignoredBuiltDependencies": ["esbuild", "msw"]
+    "ignoredBuiltDependencies": [
+      "esbuild",
+      "msw"
+    ]
   }
 }
