@@ -60,7 +60,7 @@ through centralized PII filters plus OpenTelemetry spans.
 
 - **Config surface** — Parameterize pgvector/HNSW + retention defaults in migrations (issue [#517](https://github.com/BjornMelin/tripsage-ai/issues/517), owner @BjornMelin, due 2025-12-22).
 - **`ef_search_override`** — Wire optional override through `match_accommodation_embeddings` and adapters (issue [#518](https://github.com/BjornMelin/tripsage-ai/issues/518), owner @BjornMelin, due 2025-12-22).
-- **Session-level locking** — Add advisory/session lock around Travel Plan session creation (issue [#519](https://github.com/BjornMelin/tripsage-ai/issues/519), owner @BjornMelin, due 2025-12-22).
+- **Session-level locking** — Implemented via Redis token lock `planner:session-lock:${userId}`.
 - **Monitoring** — Ship alerts for retention cron + HNSW maintenance jobs (issue [#520](https://github.com/BjornMelin/tripsage-ai/issues/520), owner @BjornMelin, due 2025-12-22).
 
 ## Consequences

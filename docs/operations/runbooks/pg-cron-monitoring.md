@@ -49,13 +49,13 @@ Purpose: alert when scheduled `pg_cron` jobs (especially memory retention) fail 
 6) **Escalate if**
    - Two consecutive manual runs fail, or production data at risk (unexpected deletions/retention anomalies), or locks persist >15 minutes.
    - Provide: job_run_details rows, log snippets (last error stack), lock query output, and whether staging rerun succeeded.
-   - Temporary mitigation: pause schedule `SELECT cron.unschedule('cleanup_memories_180d');` (only after approval), notify stakeholders in #ops-alerts, and create Jira incident linking this runbook.
+   - Temporary mitigation: pause schedule `SELECT cron.unschedule('cleanup_memories_180d');` **only after explicit approval** (record approver name/title, channel, timestamp in the incident ticket or #ops-alerts thread). Unscheduling is effectively irreversible without manual reschedule/rerun; document the pause, planned reschedule time, and owner.
 
 ## Gaps / next steps (actionable)
 
 - **Jira Epic OPS-2450 — pg_cron monitoring hardening** (Owner: Platform Team, Target: 2026-01-15)
   - OPS-2451 (Owner: Platform Team, Priority: P0/Blocker, Due: 2025-12-15): Enable Supabase/Postgres → Datadog log shipping and confirm `pg_cron` entries land in `service:postgres` logs.
   - OPS-2452 (Owner: SRE, Priority: P1, Due: 2025-12-18): Deploy the log alert in this doc using the enabled log pipeline; validate alert fires on a forced failure.
-  - OPS-2453 (Owner: SRE, Priority: P1, Due: 2025-12-22): Add execution-gap monitor via Datadog metrics; if logs stay unavailable, ship a synthetic heartbeat (cron job publishing a metric) and alert on missing heartbeats.
+  - OPS-2453 (Owner: SRE, Priority: P1, Due: 2025-12-22, dependent on OPS-2451): Add execution-gap monitor via Datadog metrics; if OPS-2451 slips, implement the heartbeat/synthetic metric workaround as the interim monitoring path and note the dependency/owner in the issue.
   - OPS-2454 (Owner: Product/Platform, Priority: P2, Due: 2026-01-05): Keep job name aligned with migrations (`cleanup_memories_180d` unless renamed); add a migration checklist step to update alert queries when job names change.
   - OPS-2455 (Owner: Platform Team, Priority: P2, Due: 2026-01-05): Document and automate rollout playbook (enable log shipping + monitors) for new environments; link playbook in this runbook.
