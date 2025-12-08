@@ -120,10 +120,11 @@ export const GET = withApiGuards({
   rateLimit: "accommodations:popular-destinations",
   telemetry: "accommodations.popular_destinations",
 })(async (_req, { user: contextUser, supabase }) => {
-  const resolvedUser = contextUser;
-  const userCacheKey = resolvedUser?.id
-    ? `popular-hotels:user:${resolvedUser.id}`
-    : null;
+  if (!contextUser) {
+    throw new Error("User context is required but missing");
+  }
+  const resolvedUser = contextUser; // Now guaranteed non-null
+  const userCacheKey = `popular-hotels:user:${resolvedUser.id}`;
 
   if (userCacheKey) {
     const cachedPersonalized = await getCachedJson<PopularDestination[]>(userCacheKey);
@@ -143,7 +144,7 @@ export const GET = withApiGuards({
     });
   }
 
-  if (userCacheKey && resolvedUser?.id) {
+  if (userCacheKey) {
     const personalized = await fetchPersonalizedDestinations(supabase, resolvedUser.id);
     if (personalized) {
       await setCachedJson(userCacheKey, personalized, POPULAR_DESTINATIONS_TTL_SECONDS);
