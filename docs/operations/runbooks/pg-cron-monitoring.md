@@ -1,6 +1,6 @@
 # pg_cron Monitoring (Datadog Skeleton)
 
-Purpose: alert when scheduled `pg_cron` jobs (especially memory retention) fail or stop running.
+Purpose: alert when scheduled `pg_cron` jobs (especially memory retention) fail or stop running. Job name `cleanup_memories_180d` comes from `supabase/migrations/20251122000000_base_schema.sql`; if the migration renames the job, update this runbook and the monitors below.
 
 ## What to monitor
 
