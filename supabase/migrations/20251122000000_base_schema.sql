@@ -405,9 +405,21 @@ CREATE TABLE IF NOT EXISTS public.accommodation_embeddings (
   embedding vector(1536)
 );
 
-CREATE INDEX IF NOT EXISTS accommodation_embeddings_embedding_idx
-ON public.accommodation_embeddings
-USING hnsw (embedding vector_l2_ops) WITH (m = 32, ef_construction = 180);
+DO $$
+DECLARE
+  v_hnsw_m integer := COALESCE(NULLIF(current_setting('PGVECTOR_HNSW_M', true), '')::integer, 32);
+  v_hnsw_ef_construction integer := COALESCE(
+    NULLIF(current_setting('PGVECTOR_HNSW_EF_CONSTRUCTION', true), '')::integer,
+    180
+  );
+BEGIN
+  EXECUTE format(
+    'CREATE INDEX IF NOT EXISTS accommodation_embeddings_embedding_idx ON public.accommodation_embeddings USING hnsw (embedding vector_l2_ops) WITH (m = %s, ef_construction = %s);',
+    v_hnsw_m,
+    v_hnsw_ef_construction
+  );
+END;
+$$;
 CREATE INDEX IF NOT EXISTS accommodation_embeddings_source_idx ON public.accommodation_embeddings(source);
 CREATE INDEX IF NOT EXISTS accommodation_embeddings_created_at_idx ON public.accommodation_embeddings(created_at DESC);
 
@@ -686,19 +698,29 @@ BEGIN
 END;
 $$;
 
--- Data retention for memories (limit to 180 days)
+-- Data retention for memories (interval configurable via MEMORIES_RETENTION_DAYS)
 DO $$
+DECLARE
+    v_retention_days integer := COALESCE(
+        NULLIF(current_setting('MEMORIES_RETENTION_DAYS', true), '')::integer,
+        180
+    );
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
         IF NOT EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'cleanup_memories_180d') THEN
             PERFORM cron.schedule(
                 'cleanup_memories_180d',
                 '45 3 * * *',
-                $$
-                  DELETE FROM memories.turn_embeddings WHERE created_at < now() - interval '180 days';
-                  DELETE FROM memories.turns WHERE created_at < now() - interval '180 days';
-                  DELETE FROM memories.sessions WHERE created_at < now() - interval '180 days';
-                $$
+                format(
+                    $fmt$
+                      DELETE FROM memories.turn_embeddings WHERE created_at < now() - interval '%s days';
+                      DELETE FROM memories.turns WHERE created_at < now() - interval '%s days';
+                      DELETE FROM memories.sessions WHERE created_at < now() - interval '%s days';
+                    $fmt$,
+                    v_retention_days,
+                    v_retention_days,
+                    v_retention_days
+                )
             );
         END IF;
     END IF;
@@ -789,9 +811,21 @@ CREATE INDEX IF NOT EXISTS memories_sessions_user_idx ON memories.sessions (user
 CREATE INDEX IF NOT EXISTS memories_turns_session_idx ON memories.turns (session_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS memories_turns_user_idx ON memories.turns (user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS memories_turn_embeddings_created_idx ON memories.turn_embeddings (created_at DESC);
-CREATE INDEX IF NOT EXISTS memories_turn_embeddings_vector_idx
-  ON memories.turn_embeddings
-  USING hnsw (embedding vector_l2_ops) WITH (m = 32, ef_construction = 180);
+DO $$
+DECLARE
+  v_hnsw_m integer := COALESCE(NULLIF(current_setting('PGVECTOR_HNSW_M', true), '')::integer, 32);
+  v_hnsw_ef_construction integer := COALESCE(
+    NULLIF(current_setting('PGVECTOR_HNSW_EF_CONSTRUCTION', true), '')::integer,
+    180
+  );
+BEGIN
+  EXECUTE format(
+    'CREATE INDEX IF NOT EXISTS memories_turn_embeddings_vector_idx ON memories.turn_embeddings USING hnsw (embedding vector_l2_ops) WITH (m = %s, ef_construction = %s);',
+    v_hnsw_m,
+    v_hnsw_ef_construction
+  );
+END;
+$$;
 
 -- BYOK / settings
 CREATE INDEX IF NOT EXISTS api_gateway_configs_user_idx ON public.api_gateway_configs (user_id);
@@ -1095,12 +1129,19 @@ $$;
 CREATE OR REPLACE FUNCTION public.match_accommodation_embeddings (
   query_embedding vector(1536),
   match_threshold FLOAT DEFAULT 0.75,
-  match_count INT DEFAULT 20
+  match_count INT DEFAULT 20,
+  ef_search_override INT DEFAULT NULL
 )
 RETURNS TABLE (id TEXT, similarity FLOAT)
 LANGUAGE plpgsql AS $$
+DECLARE
+  v_ef_search integer := COALESCE(
+    ef_search_override,
+    NULLIF(current_setting('PGVECTOR_HNSW_EF_SEARCH_DEFAULT', true), '')::integer,
+    96
+  );
 BEGIN
-  PERFORM set_config('hnsw.ef_search', '96', true);
+  PERFORM set_config('hnsw.ef_search', v_ef_search::text, true);
   RETURN QUERY
   SELECT accom.id, 1 - (accom.embedding <=> query_embedding) AS similarity
   FROM public.accommodation_embeddings accom

@@ -14,11 +14,11 @@ const classifyUserMessage = vi.hoisted(() => vi.fn());
 vi.mock("@ai/agents/router-agent", () => ({
   classifyUserMessage,
   InvalidPatternsError: class InvalidPatternsError extends Error {
+    readonly code = "invalid_patterns";
+
     constructor(message?: string) {
       super(message ?? "invalid patterns");
       this.name = "InvalidPatternsError";
-      // @ts-expect-error test shim
-      this.code = "invalid_patterns";
     }
   },
 }));
