@@ -131,7 +131,7 @@ export default function TripDetailsPage() {
       case "draft":
         return "bg-gray-100 text-gray-500 ring-1 ring-inset ring-gray-500/20";
       default:
-        return assertNever(status as never);
+        return assertNever(status);
     }
   };
 

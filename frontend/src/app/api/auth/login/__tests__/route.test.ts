@@ -75,6 +75,32 @@ describe("POST /api/auth/login", () => {
     expect(body.reason).toBe("Invalid email or password");
   });
 
+  it("returns 403 when MFA is required", async () => {
+    const supabase = getApiRouteSupabaseMock();
+    const signInWithPassword = vi.fn().mockResolvedValue({
+      data: { session: null, user: null },
+      error: {
+        code: "insufficient_aal",
+        message: "MFA required",
+        status: 403,
+      },
+    });
+    supabase.auth.signInWithPassword = signInWithPassword;
+
+    const { POST } = await import("../route");
+    const request = makeJsonRequest("http://localhost/api/auth/login", {
+      email: "user@example.com",
+      password: "password123",
+    });
+
+    const response = await POST(request, createRouteParamsContext());
+    expect(response.status).toBe(403);
+    const body = await response.json();
+    expect(body.error).toBe("mfa_required");
+    expect(body.reason).toBe("Multi-factor authentication required");
+    expect(body.code).toBe("insufficient_aal");
+  });
+
   it("handles unexpected errors gracefully", async () => {
     const supabase = getApiRouteSupabaseMock();
     const signInWithPassword = vi.fn().mockRejectedValue(new Error("network down"));
