@@ -163,7 +163,7 @@ describe("classifyUserMessage", () => {
     const call = mockGenerateText.mock.calls[0][0];
     // Injection patterns should be filtered
     expect(call.prompt).not.toContain("IMPORTANT:");
-    expect(call.prompt).toContain("[FILTERED]");
+    expect(call.prompt).toContain(promptSanitizer.FILTERED_MARKER);
     expect(call.prompt).toContain("Find flights.");
   });
 

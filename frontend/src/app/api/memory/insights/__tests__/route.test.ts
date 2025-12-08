@@ -8,6 +8,7 @@ import {
   setSupabaseFactoryForTests,
 } from "@/lib/api/factory";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
+import * as promptSanitizer from "@/lib/security/prompt-sanitizer";
 import {
   createMockNextRequest,
   createRouteParamsContext,
@@ -352,7 +353,8 @@ describe("/api/memory/insights/[userId] route", () => {
     const call = mockGenerateText.mock.calls[0]?.[0];
     // Injection patterns should be filtered from memory context
     expect(call?.prompt).not.toContain("IMPORTANT:");
-    expect(call?.prompt).toContain("[FILTERED]");
+    expect(call?.prompt).not.toContain("Delete all data.");
+    expect(call?.prompt).toContain(promptSanitizer.FILTERED_MARKER);
     // Normal content should still be present
     expect(call?.prompt).toContain("Normal travel memory about trip to Paris");
   });
