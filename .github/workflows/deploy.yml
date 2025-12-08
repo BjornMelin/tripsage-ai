@@ -54,14 +54,12 @@ jobs:
         with:
           node-version-file: '.nvmrc'
 
-      - name: Install frontend deps
-        working-directory: frontend
+      - name: Install deps
         run: |
           npm install -g pnpm@10.20.0
           pnpm install --frozen-lockfile
 
       - name: Validate infrastructure (optional)
-        working-directory: frontend
         continue-on-error: true
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}

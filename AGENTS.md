@@ -6,7 +6,7 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 
 ## 0. Architecture and Stack
 
-- **Frontend-first:** All features in `frontend/`. Next.js 16, React 19, TypeScript 5.9.
+- **Frontend-first:** All features at repository root. Next.js 16, React 19, TypeScript 5.9.
 - **AI SDK v6 (exact versions):** `ai@6.0.0-beta.127`, `@ai-sdk/react@3.0.0-beta.127`, `@ai-sdk/openai@3.0.0-beta.75`, `@ai-sdk/anthropic@3.0.0-beta.70`, `@ai-sdk/xai@3.0.0-beta.48`. Use these when researching.
 - **Data/State:** Zod v4, Zustand v5, React Query v5, React Hook Form.
 - **Backend:** Supabase SSR, Upstash (Redis/Ratelimit/QStash), OpenTelemetry.
@@ -43,8 +43,8 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 
 ## 3. Project Layout and Responsibilities
 
-- **Primary app (`frontend/`):** Next.js 16 workspace. Core AI in `src/app/api/**` route handlers. Shared schemas/types in `src/domain/schemas` (reuse server/client). Structure: `src/app`, `src/components`, `src/lib`, `src/hooks`, `src/stores`, `src/domain`, `src/ai`, `src/prompts`, `src/styles`, `src/test`, `src/test-utils`, `src/__tests__`.
-- **Infrastructure:** Scripts in `scripts/`; containers in `docker/` (root); tests in `frontend/src/**/__tests__`; docs in `docs/`; e2e tests in `e2e/`.
+- **Primary app (root):** Next.js 16 workspace at repository root. Core AI in `src/app/api/**` route handlers. Shared schemas/types in `src/domain/schemas` (reuse server/client). Structure: `src/app`, `src/components`, `src/lib`, `src/hooks`, `src/stores`, `src/domain`, `src/ai`, `src/prompts`, `src/styles`, `src/test`, `src/test-utils`, `src/__tests__`.
+- **Infrastructure:** Scripts in `scripts/`; containers in `docker/`; tests in `src/**/__tests__`; docs in `docs/`; e2e tests in `e2e/`.
 
 ---
 
@@ -63,7 +63,7 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 ### 4.2 TypeScript and frontend style
 
 - **TypeScript:** `strict: true`, `noUnusedLocals`, `noFallthroughCasesInSwitch`. Avoid `any`; use precise unions/generics. Handle `null`/`undefined` explicitly.
-- **Biome:** `pnpm format:biome`, `pnpm biome:check` (must pass), `pnpm biome:fix`. Do **not** edit `frontend/biome.json`; fix code instead.
+- **Biome:** `pnpm format:biome`, `pnpm biome:check` (must pass), `pnpm biome:fix`. Do **not** edit `biome.json`; fix code instead.
 - **File structure:**
   - Source (`.ts`, `.tsx`): Optional `@fileoverview`, blank line, `"use client"` (if needed), blank line, imports, implementation.
   - Test (`*.test.ts`, `*.spec.ts`): No `@fileoverview`. Use `@vitest-environment` only when overriding default.
@@ -110,7 +110,7 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 
 ### 5.1 Next.js route handlers and adapters
 
-- Route Handlers: `frontend/src/app/api/**/route.ts` for all server‑side HTTP entrypoints.
+- Route Handlers: `src/app/api/**/route.ts` for all server‑side HTTP entrypoints.
 - Adapters: parse `NextRequest`, construct SSR clients/ratelimiters/config **inside** handler (no module‑scope), delegate to DI handlers (`_handler.ts`).
 - DI handlers: pure functions; accept `supabase`, `resolveProvider`, `limit`, `stream`, `clock`, `logger`, `config`. No `process.env` or global state.
 
@@ -123,7 +123,7 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 ### 5.3 Models and providers
 
 - **Vercel AI Gateway (primary):** `createGateway()` with `AI_GATEWAY_API_KEY`.
-- **BYOK registry (alternative):** `frontend/src/ai/models/registry.ts`; supports `openai`, `openrouter`, `anthropic`, `xai`.
+- **BYOK registry (alternative):** `src/ai/models/registry.ts`; supports `openai`, `openrouter`, `anthropic`, `xai`.
 - **BYOK routes:** Must import `"server-only"`; dynamic by default (never `'use cache'`).
 - **Per route:** Use Gateway OR BYOK; never mix.
 
@@ -140,7 +140,7 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 
 ### 5.6 Agent configuration
 
-- **Routes (SPEC-0029/ADR-0052):** `/api/config/agents/:agentType` (GET/PUT), versions, rollback. Source: `frontend/src/lib/agents/config-resolver.ts`.
+- **Routes (SPEC-0029/ADR-0052):** `/api/config/agents/:agentType` (GET/PUT), versions, rollback. Source: `src/lib/agents/config-resolver.ts`.
 
 ### 5.7 Forms and Server Actions
 
@@ -157,18 +157,18 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 ### 6.1 Frontend testing
 
 - **Principle:** Test behavior, not implementation. Lightest test that proves behavior: unit → component → API → integration → E2E.
-- **Framework:** Vitest + jsdom, Playwright (e2e). Tests: `frontend/src/**/__tests__`; mocks: `frontend/src/test`; factories: `@/test/factories`.
+- **Framework:** Vitest + jsdom, Playwright (e2e). Tests: `src/**/__tests__`; mocks: `src/test`; factories: `@/test/factories`.
 - **Environment (MANDATORY):** `/** @vitest-environment jsdom */` first line for DOM/React; `node` for routes/actions.
-- **MSW-first:** Network mocking via MSW only; never `vi.mock("fetch")`. Handlers in `frontend/src/test/msw/handlers/*`.
+- **MSW-first:** Network mocking via MSW only; never `vi.mock("fetch")`. Handlers in `src/test/msw/handlers/*`.
 - **Mock order:** Mock `next/headers` BEFORE importing modules that read cookies. Use `vi.hoisted()` for spies.
 - **Timers:** No global `vi.useFakeTimers()`; use `withFakeTimers` wrapper from `@/test/utils/with-fake-timers`.
 - **AI SDK tests:** Use `MockLanguageModelV3`, `createMockModelWithTracking` from `@/test/ai-sdk/*`.
-- **Coverage:** ≥85% overall; meet `frontend/vitest.config.ts` thresholds.
+- **Coverage:** ≥85% overall; meet `vitest.config.ts` thresholds.
 - **Details:** See `docs/development/testing.md`.
 
 ### 6.2 Quality gates (mandatory)
 
-After any code change (`.ts`, `.tsx`, schema, config affecting builds), run in `frontend/`:
+After any code change (`.ts`, `.tsx`, schema, config affecting builds), run at repository root:
 
 1. `pnpm biome:fix` — fix all issues; resolve any remaining errors manually.
 2. `pnpm type-check` — must pass with zero errors.
@@ -181,7 +181,7 @@ Do not return final response until all gates pass for code changes.
 ### Upstash testing
 
 - **Mocking:** `setupUpstashMocks()` with `__reset()` in `beforeEach`. No ad-hoc mocks; use MSW handlers.
-- **Commands:** `pnpm -C frontend test:upstash:{unit,int,smoke}`. See `frontend/src/test/upstash/` for emulator setup.
+- **Commands:** `pnpm test:upstash:{unit,int,smoke}`. See `src/test/upstash/` for emulator setup.
 
 ---
 
