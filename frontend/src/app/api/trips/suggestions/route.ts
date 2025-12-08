@@ -29,42 +29,46 @@ import { createServerLogger } from "@/lib/telemetry/logger";
 const SUGGESTIONS_CACHE_TTL = 900;
 const MAX_BUDGET_LIMIT = 10_000_000;
 
-const logger = createServerLogger("api.trips.suggestions");
-
-const tripSuggestionsQuerySchema = z.strictObject({
-  budget_max: z
-    .string()
-    .optional()
-    .transform((val) => {
-      if (!val) return undefined;
-      const normalized = val.normalize("NFKC").trim();
-      const parsed = Number.parseFloat(normalized);
-      return Number.isFinite(parsed) && parsed > 0 && parsed <= MAX_BUDGET_LIMIT
-        ? parsed
-        : undefined;
-    }),
-  category: z
-    .string()
-    .optional()
-    .transform((val) => {
-      if (!val) return undefined;
-      const normalized = val.normalize("NFKC").trim();
-      return normalized.length > 0 ? normalized : undefined;
-    })
-    .refine((val) => !val || val.length <= 50, {
-      message: "Category must be 50 characters or less",
-    }),
-  limit: z
-    .string()
-    .optional()
-    .transform((val) => {
-      if (!val) return undefined;
-      const normalized = val.normalize("NFKC").trim();
-      const parsed = Number.parseInt(normalized, 10);
-      if (!Number.isFinite(parsed) || parsed <= 0) return undefined;
-      return Math.min(parsed, 10);
-    }),
+const logger = createServerLogger("api.trips.suggestions", {
+  redactKeys: ["cacheKey"],
 });
+
+const tripSuggestionsQuerySchema = z
+  .object({
+    budget_max: z
+      .string()
+      .optional()
+      .transform((val) => {
+        if (!val) return undefined;
+        const normalized = val.normalize("NFKC").trim();
+        const parsed = Number.parseFloat(normalized);
+        return Number.isFinite(parsed) && parsed > 0 && parsed <= MAX_BUDGET_LIMIT
+          ? parsed
+          : undefined;
+      }),
+    category: z
+      .string()
+      .optional()
+      .transform((val) => {
+        if (!val) return undefined;
+        const normalized = val.normalize("NFKC").trim();
+        return normalized.length > 0 ? normalized : undefined;
+      })
+      .refine((val) => !val || val.length <= 50, {
+        message: "Category must be 50 characters or less",
+      }),
+    limit: z
+      .string()
+      .optional()
+      .transform((val) => {
+        if (!val) return undefined;
+        const normalized = val.normalize("NFKC").trim();
+        const parsed = Number.parseInt(normalized, 10);
+        if (!Number.isFinite(parsed) || parsed <= 0) return undefined;
+        return Math.min(parsed, 10);
+      }),
+  })
+  .strip();
 
 /**
  * Request query parameters for trip suggestion generation.
@@ -164,7 +168,7 @@ async function generateSuggestionsWithCache(
   const prompt = buildSuggestionPrompt(params);
   const { model } = await resolveProvider(userId, "gpt-4o-mini");
 
-  const responseSchema = z.strictObject({
+  const responseSchema = z.object({
     suggestions: tripSuggestionSchema.array().nullable(),
   });
 
@@ -180,7 +184,7 @@ async function generateSuggestionsWithCache(
       prompt,
     });
   } catch (error) {
-    if (error instanceof DOMException && error.name === "AbortError") {
+    if (error instanceof Error && error.name === "AbortError") {
       logger.warn("AI generation timed out", { cacheKey });
       return [];
     }

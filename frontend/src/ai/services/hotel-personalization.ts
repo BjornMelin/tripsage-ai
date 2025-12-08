@@ -352,6 +352,25 @@ export async function personalizeHotels(
         indexedPersonalizations.push({ ...personalization, hotelId });
       }
 
+      // Fill gaps for any hotels the AI skipped to keep result and cache aligned
+      hotels.forEach((hotel, index) => {
+        if (result.has(index)) return;
+
+        const fallback = getDefaultPersonalization(hotel);
+        result.set(index, fallback);
+
+        const hotelId = hotelIds[index];
+        if (!hotelId) {
+          recordTelemetryEvent("ai.hotel.personalize.missing_hotel_id", {
+            attributes: { hotelCount: hotels.length, index },
+            level: "warning",
+          });
+          return;
+        }
+
+        indexedPersonalizations.push({ ...fallback, hotelId });
+      });
+
       // Cache indexed results to preserve hotel indices
       await setCachedJson(cacheKey, indexedPersonalizations, PERSONALIZATION_CACHE_TTL);
 

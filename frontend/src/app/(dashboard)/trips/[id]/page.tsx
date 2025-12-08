@@ -40,6 +40,25 @@ import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { statusVariants } from "@/lib/variants/status";
 import { useTripStore } from "@/stores/trip-store";
 
+const MAX_FILENAME_LENGTH = 80;
+
+const sanitizeTripTitleForFilename = (title?: string) => {
+  const base = (title ?? "").trim();
+  const replaced =
+    base.length === 0
+      ? "trip"
+      : base
+          .replace(/[\\/]/g, "-")
+          .replace(/[^a-zA-Z0-9 _.-]/g, "-")
+          .replace(/\s+/g, " ")
+          .trim();
+  const normalized = replaced.replace(/\s+/g, "-").replace(/-+/g, "-");
+  const limited = normalized
+    .slice(0, MAX_FILENAME_LENGTH)
+    .replace(/^[-.]+|[-.]+$/g, "");
+  return limited || "trip";
+};
+
 /**
  * Renders the trip dashboard for the requested trip id sourced from the URL.
  *
@@ -168,7 +187,8 @@ export default function TripDetailsPage() {
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement("a");
                 a.href = url;
-                a.download = `${trip.title || "trip"}.ics`;
+                const sanitizedFilename = `${sanitizeTripTitleForFilename(trip.title)}.ics`;
+                a.download = sanitizedFilename;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);

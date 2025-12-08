@@ -33,6 +33,7 @@ type SearchHotelsDestinationRow = Pick<
 >;
 
 const POPULAR_DESTINATIONS_TTL_SECONDS = 60 * 60; // 1 hour
+const POPULAR_HOTELS_GLOBAL_CACHE_KEY = "popular-hotels:global";
 const logger = createServerLogger("api.accommodations.popular-destinations");
 
 /** Global popular hotel destinations with typical pricing. */
@@ -120,21 +121,32 @@ export const GET = withApiGuards({
   telemetry: "accommodations.popular_destinations",
 })(async (_req, { user: contextUser, supabase }) => {
   const resolvedUser = contextUser;
-  const cacheKey = resolvedUser?.id
+  const userCacheKey = resolvedUser?.id
     ? `popular-hotels:user:${resolvedUser.id}`
-    : "popular-hotels:global";
+    : null;
 
-  const cached = await getCachedJson<PopularDestination[]>(cacheKey);
-  if (cached) {
-    return NextResponse.json(cached, {
+  if (userCacheKey) {
+    const cachedPersonalized = await getCachedJson<PopularDestination[]>(userCacheKey);
+    if (cachedPersonalized) {
+      return NextResponse.json(cachedPersonalized, {
+        headers: { "Cache-Control": "private, no-store" },
+      });
+    }
+  }
+
+  const cachedGlobal = await getCachedJson<PopularDestination[]>(
+    POPULAR_HOTELS_GLOBAL_CACHE_KEY
+  );
+  if (cachedGlobal) {
+    return NextResponse.json(cachedGlobal, {
       headers: { "Cache-Control": "private, no-store" },
     });
   }
 
-  if (resolvedUser?.id) {
+  if (userCacheKey && resolvedUser?.id) {
     const personalized = await fetchPersonalizedDestinations(supabase, resolvedUser.id);
     if (personalized) {
-      await setCachedJson(cacheKey, personalized, POPULAR_DESTINATIONS_TTL_SECONDS);
+      await setCachedJson(userCacheKey, personalized, POPULAR_DESTINATIONS_TTL_SECONDS);
       return NextResponse.json(personalized, {
         headers: { "Cache-Control": "private, no-store" },
       });
@@ -142,7 +154,7 @@ export const GET = withApiGuards({
   }
 
   await setCachedJson(
-    cacheKey,
+    POPULAR_HOTELS_GLOBAL_CACHE_KEY,
     GLOBAL_POPULAR_DESTINATIONS,
     POPULAR_DESTINATIONS_TTL_SECONDS
   );

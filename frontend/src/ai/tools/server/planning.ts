@@ -30,6 +30,35 @@ import { type Plan, planSchema } from "./planning.schema";
 
 const UUID_V4 = z.uuid();
 const planningLogger = createServerLogger("tools.planning");
+const PLANNER_SESSION_LOCK_TTL_SECONDS = 15;
+
+async function withPlannerSessionLock<T>(
+  userId: string,
+  fn: () => Promise<T>
+): Promise<T> {
+  const redis = getRedis();
+  if (!redis) return fn();
+
+  const lockKey = `planner:session-lock:${userId}`;
+  const token = secureUuid();
+  const acquired = await redis.set(lockKey, token, {
+    ex: PLANNER_SESSION_LOCK_TTL_SECONDS,
+    nx: true,
+  });
+  if (!acquired) {
+    planningLogger.warn("tools.planning.session_lock_conflict", { userId });
+    throw new Error("planner_session_locked");
+  }
+
+  try {
+    return await fn();
+  } finally {
+    const current = await redis.get<string>(lockKey);
+    if (current === token) {
+      await redis.del(lockKey);
+    }
+  }
+}
 
 /** Generate Redis key for travel plan. */
 function redisKeyForPlan(planId: string): string {
@@ -69,55 +98,58 @@ async function recordPlanMemory(opts: {
     const sessionUserId = auth?.user?.id;
     if (!sessionUserId || sessionUserId !== opts.userId) return;
 
-    const { data: existingSession } = await supabase
-      .schema("memories")
-      .from("sessions")
-      .select("id")
-      .eq("user_id", opts.userId)
-      .eq("title", "Travel Plan")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    const sessionId = existingSession?.id ?? secureUuid();
-
-    if (!existingSession) {
-      await supabase
+    await withPlannerSessionLock(sessionUserId, async () => {
+      const { data: existingSession } = await supabase
         .schema("memories")
         .from("sessions")
+        .select("id")
+        .eq("user_id", opts.userId)
+        .eq("title", "Travel Plan")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const sessionId = existingSession?.id ?? secureUuid();
+
+      if (!existingSession) {
+        await supabase
+          .schema("memories")
+          .from("sessions")
+          .insert({
+            id: sessionId,
+            metadata: (opts.metadata ?? null) as Json | null,
+            title: "Travel Plan",
+            // biome-ignore lint/style/useNamingConvention: Database field name
+            user_id: opts.userId,
+          });
+      }
+
+      await supabase
+        .schema("memories")
+        .from("turns")
         .insert({
-          id: sessionId,
-          metadata: (opts.metadata ?? null) as Json | null,
-          title: "Travel Plan",
+          attachments:
+            [] as Database["memories"]["Tables"]["turns"]["Insert"]["attachments"],
+          content: { text: opts.content } as Json,
+          // biome-ignore lint/style/useNamingConvention: Database field name
+          pii_scrubbed: false,
+          role: "user",
+          // biome-ignore lint/style/useNamingConvention: Database field names
+          session_id: sessionId,
+          // biome-ignore lint/style/useNamingConvention: Database field name
+          tool_calls:
+            [] as Database["memories"]["Tables"]["turns"]["Insert"]["tool_calls"],
+          // biome-ignore lint/style/useNamingConvention: Database field name
+          tool_results:
+            [] as Database["memories"]["Tables"]["turns"]["Insert"]["tool_results"],
           // biome-ignore lint/style/useNamingConvention: Database field name
           user_id: opts.userId,
         });
-    }
-
-    await supabase
-      .schema("memories")
-      .from("turns")
-      .insert({
-        attachments:
-          [] as Database["memories"]["Tables"]["turns"]["Insert"]["attachments"],
-        content: { text: opts.content } as Json,
-        // biome-ignore lint/style/useNamingConvention: Database field name
-        pii_scrubbed: false,
-        role: "user",
-        // biome-ignore lint/style/useNamingConvention: Database field names
-        session_id: sessionId,
-        // biome-ignore lint/style/useNamingConvention: Database field name
-        tool_calls:
-          [] as Database["memories"]["Tables"]["turns"]["Insert"]["tool_calls"],
-        // biome-ignore lint/style/useNamingConvention: Database field name
-        tool_results:
-          [] as Database["memories"]["Tables"]["turns"]["Insert"]["tool_results"],
-        // biome-ignore lint/style/useNamingConvention: Database field name
-        user_id: opts.userId,
-      });
-  } catch {
+    });
+  } catch (err) {
     planningLogger.warn("tools.planning.memory_record_failed", {
       contentLength: opts.content?.length ?? 0,
+      reason: err instanceof Error ? err.message : "unknown",
       userId: opts.userId,
     });
   }

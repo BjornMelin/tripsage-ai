@@ -2141,6 +2141,7 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean };
       match_accommodation_embeddings: {
         Args: {
+          ef_search_override?: number | null;
           match_count?: number;
           match_threshold?: number;
           query_embedding: string;

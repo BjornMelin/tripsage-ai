@@ -134,6 +134,14 @@ describe("classifyUserMessage", () => {
     ).rejects.toThrow("Failed to classify user message: API timeout");
   });
 
+  it("throws when model returns missing structured output", async () => {
+    mockGenerateText.mockResolvedValueOnce({ output: null });
+
+    await expect(
+      classifyUserMessage({ model: mockModel }, "test message")
+    ).rejects.toThrow(/Router classification missing structured output from model/);
+  });
+
   it("throws InvalidPatternsError when sanitization removes all content", async () => {
     const sanitizeSpy = vi
       .spyOn(promptSanitizer, "sanitizeWithInjectionDetection")
