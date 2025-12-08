@@ -266,6 +266,9 @@ export async function personalizeHotels(
           const personalization = cachedByHotelId.get(hotelId);
           if (personalization) {
             result.set(index, personalization);
+          } else {
+            // Cache entry missing for this hotel; fall back to deterministic default
+            result.set(index, getDefaultPersonalization(hotels[index]));
           }
         });
         return result;
@@ -336,7 +339,14 @@ export async function personalizeHotels(
           score: hotel.score,
           vibe: hotel.vibe,
         };
-        const hotelId = hotelIds[hotel.index] ?? "";
+        const hotelId = hotelIds[hotel.index];
+        if (!hotelId) {
+          recordTelemetryEvent("ai.hotel.personalize.missing_hotel_id", {
+            attributes: { hotelCount: hotels.length, index: hotel.index },
+            level: "warning",
+          });
+          continue;
+        }
         result.set(hotel.index, personalization);
         // Store with hotelId for correct cache reconstruction regardless of order
         indexedPersonalizations.push({ ...personalization, hotelId });
