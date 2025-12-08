@@ -52,16 +52,16 @@ through centralized PII filters plus OpenTelemetry spans.
     default `ef_search=${PGVECTOR_HNSW_EF_SEARCH_DEFAULT:-96}`; target range 64–128 based on workload. These defaults balance recall/latency for 1536-d embeddings (OpenAI text-embedding-3-small) under current traffic.
   - Fallback (if write-heavy / memory constrained): IVFFlat with `lists≈500–1000`,
     `probes≈20`; document when chosen.
-- **Query functions:** `match_accommodation_embeddings` currently sets `ef_search` via `set_config('hnsw.ef_search', PGVECTOR_HNSW_EF_SEARCH_DEFAULT)`. To tune per-call, add an optional `ef_search_override` parameter (follow-up) or adjust the env var; operators can observe recall/latency with EXPLAIN ANALYZE and `pg_stat_user_indexes`.
+- **Query functions:** `match_accommodation_embeddings` sets `hnsw.ef_search` from `PGVECTOR_HNSW_EF_SEARCH_DEFAULT` at runtime and accepts an optional `ef_search_override` for per-call tuning; operators can observe recall/latency with EXPLAIN ANALYZE and `pg_stat_user_indexes`.
 - **Retention:** `memories.turn_embeddings` cleaned up at **${MEMORIES_RETENTION_DAYS:-180} days** via pg_cron; align embeddings and session records to the same window. Rationale: matches product UX (recent travel context) and privacy expectations; configurable via `MEMORIES_RETENTION_DAYS` for regulatory changes. Deploy the cron job in migrations; monitor runs via Postgres logs and Datadog alerts on failures/lag.
-- **Session semantics:** reuse the most recent "Travel Plan" chat/memory session **per user and conversation thread** when the planner tool is invoked to reduce fragmentation and improve retrieval accuracy. (Session-level locking for concurrent invocations is documented below as a follow-up.) Users can start a fresh session by clearing memory or opening a new chat thread.
+- **Session semantics:** reuse the most recent "Travel Plan" chat/memory session **per user and conversation thread** when the planner tool is invoked to reduce fragmentation and improve retrieval accuracy. Session-level locking for concurrent invocations now guards session creation (Redis lock in `frontend/src/ai/tools/server/planning.ts`). Users can start a fresh session by clearing memory or opening a new chat thread.
 
 ### Implementation status & follow-ups
 
-- **Config surface:** Runtime defaults for `PGVECTOR_HNSW_M`, `PGVECTOR_HNSW_EF_CONSTRUCTION`, `PGVECTOR_HNSW_EF_SEARCH_DEFAULT`, and `MEMORIES_RETENTION_DAYS` are now documented in `.env.example` / `.env.test.example`. Migrations currently pin m=32, ef_construction=180, ef_search=96, retention=180d for determinism; follow-up to parameterize `20251122000000_base_schema.sql` with these env values.
-- **`ef_search_override`:** Not implemented in `match_accommodation_embeddings`; keep default via env for now. TODO: add optional override parameter and surface in orchestrator when tuning recall vs latency.
-- **Session-level locking (follow-up):** Planner/conversation reuse requires a session lock/queue to prevent concurrent modifications from creating duplicate sessions. Current implementation does not enforce locking. Action: add advisory locking (Postgres advisory locks or application-level queue) in the planner orchestration layer before production launch and document the implemented code path.
-- **Monitoring:** Datadog/Sentry monitors for pg_cron retention job and HNSW vacuum/REINDEX are pending; add monitors for job failures and latency anomalies before GA.
+- **Config surface:** Runtime defaults for `PGVECTOR_HNSW_M`, `PGVECTOR_HNSW_EF_CONSTRUCTION`, `PGVECTOR_HNSW_EF_SEARCH_DEFAULT`, and `MEMORIES_RETENTION_DAYS` are documented in `.env.example` / `.env.test.example`. `20251122000000_base_schema.sql` now parameterizes HNSW indexes, `hnsw.ef_search`, and retention intervals from these env vars with deterministic defaults.
+- **`ef_search_override`:** Implemented in `match_accommodation_embeddings` with env fallback; expose per-call tuning without changing global defaults.
+- **Session-level locking:** Implemented via Redis lock in planner tool (`frontend/src/ai/tools/server/planning.ts`) to serialize session creation and reuse for "Travel Plan" flows.
+- **Monitoring:** Skeleton Datadog monitor for pg_cron retention job failures documented in `docs/operations/runbooks/pg-cron-monitoring.md`; add to Datadog when log shipping is available. HNSW maintenance alerts remain TODO.
 
 ## Consequences
 
