@@ -234,13 +234,9 @@ describe("hotel-personalization", () => {
 
     it("returns cached results when available", async () => {
       const { getCachedJson } = await import("@/lib/cache/upstash");
-      const { hashInputForCache } = await import("@/lib/cache/hash");
       const cachedData: Array<HotelPersonalization & { hotelId: string }> = [
         {
-          hotelId: `Test Hotel|${hashInputForCache({
-            location: "Test City",
-            pricePerNight: 200,
-          })}`,
+          hotelId: "Test Hotel|test-hash",
           personalizedTags: ["Cached tag"],
           reason: "Cached reason",
           score: 8,
@@ -348,6 +344,11 @@ describe("hotel-personalization", () => {
         ]),
         PERSONALIZATION_CACHE_TTL
       );
+    });
+
+    it("uses expected cache TTL", async () => {
+      const { PERSONALIZATION_CACHE_TTL } = await import("../hotel-personalization");
+      expect(PERSONALIZATION_CACHE_TTL).toBe(1800);
     });
 
     it("preserves hotel indices from AI response", async () => {
