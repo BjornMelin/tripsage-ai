@@ -10,14 +10,25 @@ CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA extensions;
 CREATE EXTENSION IF NOT EXISTS "pg_cron";
 CREATE EXTENSION IF NOT EXISTS "pg_net";
 CREATE EXTENSION IF NOT EXISTS "pg_stat_statements";
+CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 CREATE EXTENSION IF NOT EXISTS "btree_gist";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 DO $$
+DECLARE
+  env TEXT := lower(coalesce(
+    current_setting('app.environment', true),
+    current_setting('app.settings.environment', true),
+    'development'
+  ));
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_available_extensions WHERE name = 'vault') THEN
     EXECUTE 'CREATE EXTENSION IF NOT EXISTS vault WITH SCHEMA vault';
   ELSE
-    RAISE NOTICE 'vault extension not available in this environment; BYOK RPCs will be stubbed';
+    IF env IN ('production', 'prod') THEN
+      RAISE EXCEPTION 'vault extension is required in production (env=%); deploy supabase_vault or vault extension before running migrations.', env;
+    ELSE
+      RAISE NOTICE 'vault extension not available in %; BYOK RPCs will be stubbed', env;
+    END IF;
   END IF;
 END;
 $$;
@@ -53,6 +64,174 @@ $$;
 -- ===========================
 -- CORE TABLES
 -- ===========================
+
+-- auth_backup_codes (MFA backup codes)
+CREATE TABLE IF NOT EXISTS public.auth_backup_codes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  code_hash TEXT NOT NULL CHECK (length(code_hash) <= 256),
+  label TEXT DEFAULT 'primary' CHECK (label IN ('primary','secondary','recovery') AND length(label) <= 32),
+  issued_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+  consumed_at TIMESTAMPTZ,
+  CONSTRAINT auth_backup_codes_consumed_after_issue CHECK (consumed_at IS NULL OR consumed_at >= issued_at)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS auth_backup_codes_user_code_hash_idx
+  ON public.auth_backup_codes (user_id, code_hash);
+
+-- Track active primary backup codes per user for fast lookup (non-unique)
+CREATE INDEX IF NOT EXISTS auth_backup_codes_primary_active_idx
+  ON public.auth_backup_codes (user_id)
+  WHERE label = 'primary' AND consumed_at IS NULL;
+
+-- Support cleanup/audit queries for consumed codes
+CREATE INDEX IF NOT EXISTS auth_backup_codes_consumed_at_idx
+  ON public.auth_backup_codes (user_id, consumed_at)
+  WHERE consumed_at IS NOT NULL;
+
+ALTER TABLE public.auth_backup_codes ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role can manage backup codes"
+  ON public.auth_backup_codes
+  FOR ALL
+  TO service_role
+  USING (true)
+  WITH CHECK (true);
+
+-- Atomic replacement of MFA backup codes (service-role only)
+CREATE OR REPLACE FUNCTION public.replace_backup_codes(
+  p_user_id uuid,
+  p_code_hashes text[]
+) returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  inserted integer := 0;
+begin
+  delete from public.auth_backup_codes
+  where user_id = p_user_id;
+
+  insert into public.auth_backup_codes (user_id, code_hash)
+  select p_user_id, code_hash
+  from unnest(p_code_hashes) as t(code_hash);
+
+  get diagnostics inserted = row_count;
+  return inserted;
+end;
+$$;
+
+grant execute on function public.replace_backup_codes(uuid, text[]) to service_role;
+
+comment on function public.replace_backup_codes(uuid, text[]) is 'Atomically replaces all backup codes for a user with the provided hashed list.';
+
+-- Audit log for backup code lifecycle
+CREATE TABLE IF NOT EXISTS public.mfa_backup_code_audit (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  event TEXT NOT NULL CHECK (event IN ('regenerated','consumed')),
+  count INTEGER NOT NULL DEFAULT 0,
+  ip TEXT,
+  user_agent TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS mfa_backup_code_audit_user_created_idx
+  ON public.mfa_backup_code_audit (user_id, created_at DESC);
+
+ALTER TABLE public.mfa_backup_code_audit ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own backup code audit"
+  ON public.mfa_backup_code_audit
+  FOR SELECT
+  TO authenticated
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Service role manages backup code audit"
+  ON public.mfa_backup_code_audit
+  FOR ALL
+  TO service_role
+  USING (true)
+  WITH CHECK (true);
+
+COMMENT ON TABLE public.mfa_backup_code_audit IS 'Audit trail for MFA backup code regeneration and consumption events.';
+
+-- mfa_enrollments pending/consumed lifecycle
+CREATE TABLE IF NOT EXISTS public.mfa_enrollments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  factor_id VARCHAR(255) NOT NULL,
+  challenge_id VARCHAR(255) NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('pending','consumed','expired')),
+  issued_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+  expires_at TIMESTAMPTZ NOT NULL,
+  consumed_at TIMESTAMPTZ,
+  CONSTRAINT mfa_enrollments_expiry CHECK (expires_at > issued_at),
+  CONSTRAINT mfa_enrollments_consumed_after_issue CHECK (consumed_at IS NULL OR consumed_at >= issued_at)
+);
+
+CREATE INDEX IF NOT EXISTS mfa_enrollments_user_status_idx
+  ON public.mfa_enrollments (user_id, status);
+CREATE INDEX IF NOT EXISTS mfa_enrollments_challenge_idx
+  ON public.mfa_enrollments (challenge_id);
+
+ALTER TABLE public.mfa_enrollments ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own mfa_enrollments"
+  ON public.mfa_enrollments
+  FOR SELECT
+  TO authenticated
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Service role manages mfa_enrollments"
+  ON public.mfa_enrollments
+  FOR ALL
+  TO service_role
+  USING (true)
+  WITH CHECK (true);
+
+-- Cleanup job for expired/consumed enrollments (requires pg_cron)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM cron.job WHERE jobname = 'mfa_enrollments_cleanup_daily'
+    ) THEN
+      PERFORM cron.schedule(
+        'mfa_enrollments_cleanup_daily',
+        '0 3 * * *',
+        $$DELETE FROM public.mfa_enrollments
+            WHERE status IN ('expired','consumed')
+              AND expires_at < now() - interval '1 day';$$
+      );
+    END IF;
+  END IF;
+END;
+$$;
+
+-- profiles (user metadata + admin flag)
+CREATE TABLE IF NOT EXISTS public.profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  full_name TEXT,
+  avatar_url TEXT,
+  is_admin BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS profiles_admin_idx ON public.profiles (is_admin) WHERE is_admin = true;
+
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Profiles owner select" ON public.profiles
+  FOR SELECT TO authenticated USING (auth.uid() = id);
+CREATE POLICY "Profiles owner update" ON public.profiles
+  FOR UPDATE TO authenticated USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
+CREATE POLICY "Profiles owner insert" ON public.profiles
+  FOR INSERT TO authenticated WITH CHECK (auth.uid() = id);
+CREATE POLICY "Profiles service all" ON public.profiles
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- trips
 CREATE TABLE IF NOT EXISTS public.trips (
@@ -226,9 +405,21 @@ CREATE TABLE IF NOT EXISTS public.accommodation_embeddings (
   embedding vector(1536)
 );
 
-CREATE INDEX IF NOT EXISTS accommodation_embeddings_embedding_idx
-ON public.accommodation_embeddings
-USING ivfflat (embedding vector_l2_ops) WITH (lists = 100);
+DO $$
+DECLARE
+  v_hnsw_m integer := COALESCE(NULLIF(current_setting('PGVECTOR_HNSW_M', true), '')::integer, 32);
+  v_hnsw_ef_construction integer := COALESCE(
+    NULLIF(current_setting('PGVECTOR_HNSW_EF_CONSTRUCTION', true), '')::integer,
+    180
+  );
+BEGIN
+  EXECUTE format(
+    'CREATE INDEX IF NOT EXISTS accommodation_embeddings_embedding_idx ON public.accommodation_embeddings USING hnsw (embedding vector_l2_ops) WITH (m = %s, ef_construction = %s);',
+    v_hnsw_m,
+    v_hnsw_ef_construction
+  );
+END;
+$$;
 CREATE INDEX IF NOT EXISTS accommodation_embeddings_source_idx ON public.accommodation_embeddings(source);
 CREATE INDEX IF NOT EXISTS accommodation_embeddings_created_at_idx ON public.accommodation_embeddings(created_at DESC);
 
@@ -337,6 +528,7 @@ CREATE TABLE IF NOT EXISTS memories.turns (
   tool_calls JSONB NOT NULL DEFAULT '[]'::jsonb,
   tool_results JSONB NOT NULL DEFAULT '[]'::jsonb,
   pii_scrubbed BOOLEAN NOT NULL DEFAULT FALSE,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -429,6 +621,218 @@ CREATE TABLE IF NOT EXISTS public.search_hotels (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   CONSTRAINT search_hotels_dates_check CHECK (check_out_date > check_in_date)
 );
+
+-- API Metrics table for dashboard metrics collection
+CREATE TABLE IF NOT EXISTS public.api_metrics (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    endpoint TEXT NOT NULL,
+    method TEXT NOT NULL,
+    status_code INTEGER NOT NULL,
+    duration_ms NUMERIC NOT NULL,
+    user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    error_type TEXT,
+    rate_limit_key TEXT,
+    CONSTRAINT api_metrics_status_code_check CHECK (status_code >= 100 AND status_code < 600),
+    CONSTRAINT api_metrics_duration_ms_check CHECK (duration_ms >= 0),
+    CONSTRAINT api_metrics_method_check CHECK (method IN ('GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'))
+);
+
+-- Indexes for query performance
+CREATE INDEX IF NOT EXISTS idx_api_metrics_created_at ON public.api_metrics(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_api_metrics_endpoint ON public.api_metrics(endpoint);
+CREATE INDEX IF NOT EXISTS idx_api_metrics_user_id ON public.api_metrics(user_id) WHERE user_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_api_metrics_status_code ON public.api_metrics(status_code);
+CREATE INDEX IF NOT EXISTS idx_api_metrics_time_status ON public.api_metrics(created_at DESC, status_code);
+
+ALTER TABLE public.api_metrics ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "admin_read_api_metrics" ON public.api_metrics
+    FOR SELECT
+    USING (
+        auth.role() = 'authenticated'
+        AND EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE profiles.id = auth.uid()
+            AND profiles.is_admin = true
+        )
+    );
+
+CREATE POLICY "service_role_all_api_metrics" ON public.api_metrics
+    FOR ALL
+    USING (auth.role() = 'service_role')
+    WITH CHECK (auth.role() = 'service_role');
+
+-- Data retention (90-day policy)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
+        IF NOT EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'cleanup_api_metrics_90d') THEN
+            PERFORM cron.schedule(
+                'cleanup_api_metrics_90d',
+                '0 3 * * *',
+                $$DELETE FROM public.api_metrics WHERE created_at < NOW() - INTERVAL '90 days'$$
+            );
+        END IF;
+    END IF;
+END;
+$$;
+
+-- Data retention for search caches (expire rows daily)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
+        IF NOT EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'cleanup_search_caches_daily') THEN
+            PERFORM cron.schedule(
+                'cleanup_search_caches_daily',
+                '15 3 * * *',
+                $$
+                  DELETE FROM public.search_destinations WHERE expires_at < now();
+                  DELETE FROM public.search_activities WHERE expires_at < now();
+                  DELETE FROM public.search_flights WHERE expires_at < now();
+                  DELETE FROM public.search_hotels WHERE expires_at < now();
+                $$
+            );
+        END IF;
+    END IF;
+END;
+$$;
+
+-- Data retention for memories (interval configurable via MEMORIES_RETENTION_DAYS)
+DO $$
+DECLARE
+    v_retention_days integer := COALESCE(
+        NULLIF(current_setting('MEMORIES_RETENTION_DAYS', true), '')::integer,
+        180
+    );
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
+        IF NOT EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'cleanup_memories_180d') THEN
+            PERFORM cron.schedule(
+                'cleanup_memories_180d',
+                '45 3 * * *',
+                format(
+                    $fmt$
+                      DELETE FROM memories.turn_embeddings WHERE created_at < now() - interval '%s days';
+                      DELETE FROM memories.turns WHERE created_at < now() - interval '%s days';
+                      DELETE FROM memories.sessions WHERE created_at < now() - interval '%s days';
+                    $fmt$,
+                    v_retention_days,
+                    v_retention_days,
+                    v_retention_days
+                )
+            );
+        END IF;
+    END IF;
+END;
+$$;
+
+COMMENT ON TABLE public.api_metrics IS 'API request metrics for dashboard analytics and observability';
+COMMENT ON COLUMN public.api_metrics.endpoint IS 'API route pathname (e.g., /api/dashboard)';
+COMMENT ON COLUMN public.api_metrics.method IS 'HTTP method (GET, POST, PUT, PATCH, DELETE)';
+COMMENT ON COLUMN public.api_metrics.status_code IS 'HTTP response status code';
+COMMENT ON COLUMN public.api_metrics.duration_ms IS 'Request duration in milliseconds';
+COMMENT ON COLUMN public.api_metrics.user_id IS 'Authenticated user ID (null for anonymous requests)';
+COMMENT ON COLUMN public.api_metrics.error_type IS 'Error class name for failed requests';
+COMMENT ON COLUMN public.api_metrics.rate_limit_key IS 'Rate limit key used for this request';
+
+-- webhook configuration and delivery logs
+CREATE TABLE IF NOT EXISTS public.webhook_configs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  endpoint TEXT NOT NULL,
+  secret TEXT,
+  enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.webhook_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  config_id UUID REFERENCES public.webhook_configs(id) ON DELETE CASCADE,
+  event_type TEXT NOT NULL,
+  payload JSONB NOT NULL,
+  delivery_status TEXT NOT NULL DEFAULT 'pending' CHECK (delivery_status IN ('pending','delivered','failed','skipped')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  delivered_at TIMESTAMPTZ,
+  last_error TEXT
+);
+
+CREATE TABLE IF NOT EXISTS public.webhook_logs (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  event_id UUID REFERENCES public.webhook_events(id) ON DELETE CASCADE,
+  attempt_number INTEGER NOT NULL DEFAULT 1,
+  status_code INTEGER,
+  response_body TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ===========================
+-- INDEXES
+-- ===========================
+
+-- Trips & collaboration
+CREATE INDEX IF NOT EXISTS trips_user_dates_idx ON public.trips (user_id, start_date, end_date);
+CREATE INDEX IF NOT EXISTS trips_status_idx ON public.trips (status);
+CREATE INDEX IF NOT EXISTS trip_collaborators_trip_idx ON public.trip_collaborators (trip_id);
+CREATE INDEX IF NOT EXISTS trip_collaborators_user_idx ON public.trip_collaborators (user_id);
+
+-- Chat
+CREATE INDEX IF NOT EXISTS chat_sessions_user_trip_idx ON public.chat_sessions (user_id, trip_id);
+CREATE INDEX IF NOT EXISTS chat_messages_session_created_idx ON public.chat_messages (session_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS chat_tool_calls_message_idx ON public.chat_tool_calls (message_id);
+
+-- Itinerary / bookings
+CREATE INDEX IF NOT EXISTS itinerary_items_trip_start_idx ON public.itinerary_items (trip_id, start_time);
+CREATE INDEX IF NOT EXISTS flights_user_date_idx ON public.flights (user_id, departure_date);
+CREATE INDEX IF NOT EXISTS accommodations_trip_dates_idx ON public.accommodations (trip_id, check_in_date, check_out_date);
+CREATE INDEX IF NOT EXISTS bookings_user_status_idx ON public.bookings (user_id, status);
+
+-- Search caches
+CREATE INDEX IF NOT EXISTS search_destinations_hash_idx ON public.search_destinations (query_hash);
+CREATE INDEX IF NOT EXISTS search_destinations_expires_idx ON public.search_destinations (expires_at);
+CREATE INDEX IF NOT EXISTS search_activities_hash_idx ON public.search_activities (query_hash);
+CREATE INDEX IF NOT EXISTS search_activities_expires_idx ON public.search_activities (expires_at);
+CREATE INDEX IF NOT EXISTS search_flights_hash_idx ON public.search_flights (query_hash);
+CREATE INDEX IF NOT EXISTS search_flights_expires_idx ON public.search_flights (expires_at);
+CREATE INDEX IF NOT EXISTS search_hotels_hash_idx ON public.search_hotels (query_hash);
+CREATE INDEX IF NOT EXISTS search_hotels_expires_idx ON public.search_hotels (expires_at);
+CREATE INDEX IF NOT EXISTS search_hotels_user_created_idx ON public.search_hotels (user_id, created_at DESC);
+
+-- Files & storage
+CREATE UNIQUE INDEX IF NOT EXISTS file_attachments_path_idx ON public.file_attachments (file_path);
+CREATE INDEX IF NOT EXISTS file_attachments_user_idx ON public.file_attachments (user_id);
+CREATE INDEX IF NOT EXISTS file_attachments_trip_idx ON public.file_attachments (trip_id);
+CREATE INDEX IF NOT EXISTS file_processing_queue_status_sched_idx ON public.file_processing_queue (status, scheduled_at);
+CREATE INDEX IF NOT EXISTS file_versions_attachment_idx ON public.file_versions (file_attachment_id, is_current);
+
+-- Memory (memories schema)
+CREATE INDEX IF NOT EXISTS memories_sessions_user_idx ON memories.sessions (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS memories_turns_session_idx ON memories.turns (session_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS memories_turns_user_idx ON memories.turns (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS memories_turn_embeddings_created_idx ON memories.turn_embeddings (created_at DESC);
+DO $$
+DECLARE
+  v_hnsw_m integer := COALESCE(NULLIF(current_setting('PGVECTOR_HNSW_M', true), '')::integer, 32);
+  v_hnsw_ef_construction integer := COALESCE(
+    NULLIF(current_setting('PGVECTOR_HNSW_EF_CONSTRUCTION', true), '')::integer,
+    180
+  );
+BEGIN
+  EXECUTE format(
+    'CREATE INDEX IF NOT EXISTS memories_turn_embeddings_vector_idx ON memories.turn_embeddings USING hnsw (embedding vector_l2_ops) WITH (m = %s, ef_construction = %s);',
+    v_hnsw_m,
+    v_hnsw_ef_construction
+  );
+END;
+$$;
+
+-- BYOK / settings
+CREATE INDEX IF NOT EXISTS api_gateway_configs_user_idx ON public.api_gateway_configs (user_id);
+CREATE INDEX IF NOT EXISTS user_settings_user_idx ON public.user_settings (user_id);
+CREATE INDEX IF NOT EXISTS webhook_configs_enabled_idx ON public.webhook_configs (enabled);
+CREATE INDEX IF NOT EXISTS webhook_events_status_idx ON public.webhook_events (delivery_status, created_at DESC);
+CREATE INDEX IF NOT EXISTS webhook_logs_event_idx ON public.webhook_logs (event_id);
 
 -- ===========================
 -- FUNCTIONS & TRIGGERS
@@ -641,6 +1045,56 @@ CREATE TABLE IF NOT EXISTS public.agent_config (
 CREATE INDEX IF NOT EXISTS agent_config_agent_scope_idx
   ON public.agent_config(agent_type, scope);
 
+-- Seed baseline agent configuration (idempotent)
+DO $$
+DECLARE
+  agents constant text[] := array[
+    'budgetAgent',
+    'destinationResearchAgent',
+    'itineraryAgent',
+    'flightAgent',
+    'accommodationAgent',
+    'memoryAgent'
+  ];
+  agent text;
+  version_id uuid;
+  cfg jsonb;
+BEGIN
+  FOREACH agent IN ARRAY agents LOOP
+    cfg := jsonb_build_object(
+      'agentType', agent,
+      'createdAt', to_char(now(), 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+      'updatedAt', to_char(now(), 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+      'id', concat('v', extract(epoch from now())::bigint, '_seed_', agent),
+      'model', 'gpt-4o',
+      'parameters', jsonb_build_object(
+        'temperature', 0.3,
+        'maxTokens', 4096,
+        'topP', 0.9
+      ),
+      'scope', 'global'
+    );
+
+    INSERT INTO public.agent_config_versions(agent_type, scope, config, summary)
+    VALUES (agent, 'global', cfg, 'seed')
+    ON CONFLICT DO NOTHING
+    RETURNING id INTO version_id;
+
+    IF version_id IS NULL THEN
+      SELECT id INTO version_id FROM public.agent_config_versions
+      WHERE agent_type = agent AND scope = 'global'
+      ORDER BY created_at DESC LIMIT 1;
+    END IF;
+
+    INSERT INTO public.agent_config(agent_type, scope, config, version_id)
+    VALUES (agent, 'global', cfg, version_id)
+    ON CONFLICT (agent_type, scope) DO UPDATE SET
+      config = EXCLUDED.config,
+      version_id = EXCLUDED.version_id,
+      updated_at = now();
+  END LOOP;
+END$$;
+
 -- atomic upsert + version insertion
 CREATE OR REPLACE FUNCTION public.agent_config_upsert(
   p_agent_type text,
@@ -675,11 +1129,19 @@ $$;
 CREATE OR REPLACE FUNCTION public.match_accommodation_embeddings (
   query_embedding vector(1536),
   match_threshold FLOAT DEFAULT 0.75,
-  match_count INT DEFAULT 20
+  match_count INT DEFAULT 20,
+  ef_search_override INT DEFAULT NULL
 )
 RETURNS TABLE (id TEXT, similarity FLOAT)
 LANGUAGE plpgsql AS $$
+DECLARE
+  v_ef_search integer := COALESCE(
+    ef_search_override,
+    NULLIF(current_setting('PGVECTOR_HNSW_EF_SEARCH_DEFAULT', true), '')::integer,
+    96
+  );
 BEGIN
+  PERFORM set_config('hnsw.ef_search', v_ef_search::text, true);
   RETURN QUERY
   SELECT accom.id, 1 - (accom.embedding <=> query_embedding) AS similarity
   FROM public.accommodation_embeddings accom
@@ -748,6 +1210,31 @@ BEGIN
   PERFORM 1 FROM pg_trigger WHERE tgname = 'trg_agent_config_updated_at';
   IF NOT FOUND THEN
     CREATE TRIGGER trg_agent_config_updated_at BEFORE UPDATE ON public.agent_config
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+  END IF;
+  PERFORM 1 FROM pg_trigger WHERE tgname = 'trg_profiles_updated_at';
+  IF NOT FOUND THEN
+    CREATE TRIGGER trg_profiles_updated_at BEFORE UPDATE ON public.profiles
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+  END IF;
+  PERFORM 1 FROM pg_trigger WHERE tgname = 'trg_webhook_configs_updated_at';
+  IF NOT FOUND THEN
+    CREATE TRIGGER trg_webhook_configs_updated_at BEFORE UPDATE ON public.webhook_configs
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+  END IF;
+  PERFORM 1 FROM pg_trigger WHERE tgname = 'trg_webhook_events_updated_at';
+  IF NOT FOUND THEN
+    CREATE TRIGGER trg_webhook_events_updated_at BEFORE UPDATE ON public.webhook_events
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+  END IF;
+  PERFORM 1 FROM pg_trigger WHERE tgname = 'trg_memories_sessions_updated_at';
+  IF NOT FOUND THEN
+    CREATE TRIGGER trg_memories_sessions_updated_at BEFORE UPDATE ON memories.sessions
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+  END IF;
+  PERFORM 1 FROM pg_trigger WHERE tgname = 'trg_memories_turns_updated_at';
+  IF NOT FOUND THEN
+    CREATE TRIGGER trg_memories_turns_updated_at BEFORE UPDATE ON memories.turns
     FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
   END IF;
 END$$;
@@ -852,6 +1339,19 @@ ALTER TABLE public.api_keys ENABLE ROW LEVEL SECURITY;
 CREATE POLICY api_keys_owner ON public.api_keys FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 CREATE POLICY api_keys_service ON public.api_keys FOR ALL TO service_role USING (true) WITH CHECK (true);
 
+ALTER TABLE public.webhook_configs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.webhook_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.webhook_logs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY webhook_configs_service_all ON public.webhook_configs FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY webhook_configs_admin_read ON public.webhook_configs FOR SELECT TO authenticated USING (public.is_admin());
+
+CREATE POLICY webhook_events_service_all ON public.webhook_events FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY webhook_events_admin_read ON public.webhook_events FOR SELECT TO authenticated USING (public.is_admin());
+
+CREATE POLICY webhook_logs_service_all ON public.webhook_logs FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY webhook_logs_admin_read ON public.webhook_logs FOR SELECT TO authenticated USING (public.is_admin());
+
 ALTER TABLE public.file_attachments ENABLE ROW LEVEL SECURITY;
 CREATE POLICY file_attachments_owner ON public.file_attachments FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 CREATE POLICY file_attachments_service ON public.file_attachments FOR ALL TO service_role USING (true) WITH CHECK (true);
@@ -896,7 +1396,12 @@ CREATE POLICY agent_config_versions_admin_all ON public.agent_config_versions FO
 
 -- Storage helper functions and policies for buckets
 CREATE OR REPLACE FUNCTION public.user_has_trip_access(p_user_id UUID, p_trip_id BIGINT)
-RETURNS BOOLEAN AS $$
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+STABLE
+SET search_path = public, pg_temp
+AS $$
 BEGIN
     RETURN EXISTS (
         SELECT 1 FROM public.trips t WHERE t.id = p_trip_id AND t.user_id = p_user_id
@@ -904,10 +1409,15 @@ BEGIN
         SELECT 1 FROM public.trip_collaborators tc WHERE tc.trip_id = p_trip_id AND tc.user_id = p_user_id
     );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 CREATE OR REPLACE FUNCTION public.extract_trip_id_from_path(file_path TEXT)
-RETURNS BIGINT AS $$
+RETURNS BIGINT
+LANGUAGE plpgsql
+SECURITY DEFINER
+STABLE
+SET search_path = public, pg_temp
+AS $$
 DECLARE trip_id_text TEXT;
 BEGIN
     trip_id_text := substring(file_path from 'trip[s]?[_/](\\d+)');
@@ -915,7 +1425,7 @@ BEGIN
     RETURN trip_id_text::BIGINT;
 EXCEPTION WHEN OTHERS THEN RETURN NULL;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 CREATE POLICY "Users can upload attachments to their trips"
 ON storage.objects FOR INSERT TO authenticated
@@ -946,14 +1456,35 @@ USING (
 
 CREATE POLICY "Users can update their own attachments"
 ON storage.objects FOR UPDATE TO authenticated
-USING (bucket_id = 'attachments' AND owner = auth.uid())
-WITH CHECK (bucket_id = 'attachments' AND owner = auth.uid());
+USING (
+  bucket_id = 'attachments' AND (
+    coalesce(owner_id, owner) = auth.uid() OR
+    EXISTS (
+      SELECT 1 FROM public.file_attachments fa
+      WHERE fa.file_path = name AND fa.user_id = auth.uid()
+    )
+  )
+)
+WITH CHECK (
+  bucket_id = 'attachments' AND (
+    coalesce(owner_id, owner) = auth.uid() OR
+    EXISTS (
+      SELECT 1 FROM public.file_attachments fa
+      WHERE fa.file_path = name AND fa.user_id = auth.uid()
+    )
+  )
+);
 
 CREATE POLICY "Users can delete their own attachments"
 ON storage.objects FOR DELETE TO authenticated
 USING (
   bucket_id = 'attachments' AND (
-    owner = auth.uid() OR public.user_has_trip_access(auth.uid(), public.extract_trip_id_from_path(name))
+    coalesce(owner_id, owner) = auth.uid() OR
+    public.user_has_trip_access(auth.uid(), public.extract_trip_id_from_path(name)) OR
+    EXISTS (
+      SELECT 1 FROM public.file_attachments fa
+      WHERE fa.file_path = name AND fa.user_id = auth.uid()
+    )
   )
 );
 
@@ -969,12 +1500,12 @@ WITH CHECK (
 
 CREATE POLICY "Users can update their own avatar"
 ON storage.objects FOR UPDATE TO authenticated
-USING (bucket_id = 'avatars' AND owner = auth.uid())
-WITH CHECK (bucket_id = 'avatars' AND owner = auth.uid());
+USING (bucket_id = 'avatars' AND coalesce(owner_id, owner) = auth.uid())
+WITH CHECK (bucket_id = 'avatars' AND coalesce(owner_id, owner) = auth.uid());
 
 CREATE POLICY "Users can delete their own avatar"
 ON storage.objects FOR DELETE TO authenticated
-USING (bucket_id = 'avatars' AND owner = auth.uid());
+USING (bucket_id = 'avatars' AND coalesce(owner_id, owner) = auth.uid());
 
 CREATE POLICY "Users can upload trip images" ON storage.objects FOR INSERT TO authenticated
 WITH CHECK (bucket_id = 'trip-images' AND public.user_has_trip_access(auth.uid(), public.extract_trip_id_from_path(name)));
@@ -985,13 +1516,24 @@ USING (
 );
 
 CREATE POLICY "Users can update their trip images" ON storage.objects FOR UPDATE TO authenticated
-USING (bucket_id = 'trip-images' AND owner = auth.uid())
-WITH CHECK (bucket_id = 'trip-images' AND owner = auth.uid());
+USING (
+  bucket_id = 'trip-images' AND (
+    coalesce(owner_id, owner) = auth.uid() OR
+    public.user_has_trip_access(auth.uid(), public.extract_trip_id_from_path(name))
+  )
+)
+WITH CHECK (
+  bucket_id = 'trip-images' AND (
+    coalesce(owner_id, owner) = auth.uid() OR
+    public.user_has_trip_access(auth.uid(), public.extract_trip_id_from_path(name))
+  )
+);
 
 CREATE POLICY "Users can delete trip images" ON storage.objects FOR DELETE TO authenticated
 USING (
   bucket_id = 'trip-images' AND (
-    owner = auth.uid() OR public.user_has_trip_access(auth.uid(), public.extract_trip_id_from_path(name))
+    coalesce(owner_id, owner) = auth.uid() OR
+    public.user_has_trip_access(auth.uid(), public.extract_trip_id_from_path(name))
   )
 );
 
@@ -1003,6 +1545,17 @@ CREATE POLICY "Service role has full access" ON storage.objects TO service_role 
 DROP PUBLICATION IF EXISTS supabase_realtime CASCADE;
 CREATE PUBLICATION supabase_realtime;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.trips, public.trip_collaborators, public.itinerary_items, public.chat_sessions, public.chat_messages, public.chat_tool_calls, public.bookings, public.flights, public.accommodations;
+
+-- ===========================
+-- DATABASE CONFIG DEFAULTS (override in ops)
+-- ===========================
+DO $$
+BEGIN
+  EXECUTE format('ALTER DATABASE %I SET app.vercel_webhook_trips = %L', current_database(), '');
+  EXECUTE format('ALTER DATABASE %I SET app.vercel_webhook_cache = %L', current_database(), '');
+  EXECUTE format('ALTER DATABASE %I SET app.webhook_hmac_secret = %L', current_database(), '');
+END;
+$$;
 
 -- ===========================
 -- COMMENTS

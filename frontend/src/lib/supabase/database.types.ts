@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Supabase generated types with manual patch notes.
+ */
+
 // MANUAL PATCH 2025-11-29: trips.notes removed; trips.tags text[]|null added.
 // After Supabase DB migration, regenerate via `supabase gen types typescript --local` and remove this notice.
 export type Json =
@@ -1007,6 +1011,41 @@ export type Database = {
   };
   public: {
     Tables: {
+      auth_backup_codes: {
+        Row: {
+          code_hash: string;
+          consumed_at: string | null;
+          id: string;
+          issued_at: string;
+          label: string | null;
+          user_id: string;
+        };
+        Insert: {
+          code_hash: string;
+          consumed_at?: string | null;
+          id?: string;
+          issued_at?: string;
+          label?: string | null;
+          user_id: string;
+        };
+        Update: {
+          code_hash?: string;
+          consumed_at?: string | null;
+          id?: string;
+          issued_at?: string;
+          label?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "auth_backup_codes_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       accommodation_embeddings: {
         Row: {
           amenities: string | null;
@@ -1767,6 +1806,47 @@ export type Database = {
         };
         Relationships: [];
       };
+      mfa_enrollments: {
+        Row: {
+          challenge_id: string;
+          consumed_at: string | null;
+          expires_at: string;
+          factor_id: string;
+          id: string;
+          issued_at: string;
+          status: string;
+          user_id: string;
+        };
+        Insert: {
+          challenge_id: string;
+          consumed_at?: string | null;
+          expires_at: string;
+          factor_id: string;
+          id?: string;
+          issued_at?: string;
+          status: string;
+          user_id: string;
+        };
+        Update: {
+          challenge_id?: string;
+          consumed_at?: string | null;
+          expires_at?: string;
+          factor_id?: string;
+          id?: string;
+          issued_at?: string;
+          status?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "mfa_enrollments_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       search_destinations: {
         Row: {
           created_at: string | null;
@@ -2061,6 +2141,7 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean };
       match_accommodation_embeddings: {
         Args: {
+          ef_search_override?: number | null;
           match_count?: number;
           match_threshold?: number;
           query_embedding: string;
@@ -2069,6 +2150,10 @@ export type Database = {
           id: string;
           similarity: number;
         }[];
+      };
+      replace_backup_codes: {
+        Args: { p_code_hashes: string[]; p_user_id: string };
+        Returns: number;
       };
       rt_is_session_member: { Args: never; Returns: boolean };
       rt_topic_prefix: { Args: never; Returns: string };

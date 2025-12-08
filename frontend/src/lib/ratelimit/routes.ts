@@ -26,6 +26,10 @@ export interface RouteRateLimitDefinition {
  * `chat:sessions:list`, `calendar:events:read`).
  */
 export const ROUTE_RATE_LIMITS = {
+  // Accommodations
+  "accommodations:personalize": { limit: 10, window: "1 m" },
+  "accommodations:popular-destinations": { limit: 30, window: "1 m" },
+  "accommodations:search": { limit: 20, window: "1 m" },
   "activities:details": { limit: 30, window: "1 m" },
 
   // Activities
@@ -45,12 +49,13 @@ export const ROUTE_RATE_LIMITS = {
   // Attachments
   "attachments:files": { limit: 20, window: "1 m" },
 
-  // Auth MFA (security-sensitive - tighter limits aligned with security best practices)
+  // Auth (security-sensitive - tighter limits aligned with security best practices)
+  "auth:login": { limit: 5, window: "1 m" },
   "auth:mfa:backup:regenerate": { limit: 3, window: "1 h" },
   "auth:mfa:backup:verify": { limit: 3, window: "1 m" },
   "auth:mfa:challenge": { limit: 3, window: "1 m" },
-  "auth:mfa:factors:list": { limit: 20, window: "1 m" },
-  "auth:mfa:sessions:revoke": { limit: 5, window: "1 m" },
+  "auth:mfa:factors:list": { limit: 5, window: "1 m" },
+  "auth:mfa:sessions:revoke": { limit: 5, window: "10 m" },
   "auth:mfa:setup": { limit: 3, window: "1 m" },
   "auth:mfa:verify": { limit: 3, window: "1 m" },
 
@@ -88,6 +93,7 @@ export const ROUTE_RATE_LIMITS = {
 
   // Flights
   "flights:popular-destinations": { limit: 60, window: "1 m" },
+  "flights:search": { limit: 20, window: "1 m" },
   geocode: { limit: 60, window: "1 m" },
 
   // Itineraries
@@ -111,6 +117,7 @@ export const ROUTE_RATE_LIMITS = {
 
   // Places
   "places:details": { limit: 60, window: "1 m" },
+  "places:nearby": { limit: 60, window: "1 m" },
   "places:photo": { limit: 60, window: "1 m" },
   "places:search": { limit: 60, window: "1 m" },
 

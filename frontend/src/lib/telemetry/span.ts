@@ -10,6 +10,9 @@ import "server-only";
 import { type Span, SpanStatusCode, type Tracer, trace } from "@opentelemetry/api";
 import { getTelemetryTracer } from "@/lib/telemetry/tracer";
 
+// Re-export Span type for use by other modules (avoids direct @opentelemetry/api imports)
+export type { Span };
+
 /**
  * Telemetry span attributes are key-value pairs attached to spans.
  */

@@ -13,6 +13,7 @@ import type { PostKeyBody } from "@schemas/api";
 import { NextResponse } from "next/server";
 import { errorResponse } from "@/lib/api/route-helpers";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
+import { vaultUnavailableResponse } from "./_error-mapping";
 
 /** Set of allowed API service providers for key storage. */
 const ALLOWED = new Set(["openai", "openrouter", "anthropic", "xai", "gateway"]);
@@ -53,23 +54,13 @@ export async function postKey(deps: KeysDeps, body: PostKeyBody): Promise<Respon
     try {
       await deps.upsertUserGatewayBaseUrl(deps.userId, body.baseUrl);
     } catch (err) {
-      return errorResponse({
-        err,
-        error: "db_error",
-        reason: "Failed to persist gateway base URL",
-        status: 500,
-      });
+      return vaultUnavailableResponse("Failed to persist gateway base URL", err);
     }
   }
   try {
     await deps.insertUserApiKey(deps.userId, normalized, body.apiKey);
   } catch (err) {
-    return errorResponse({
-      err,
-      error: "db_error",
-      reason: "Failed to store API key",
-      status: 500,
-    });
+    return vaultUnavailableResponse("Failed to store API key", err);
   }
   return new Response(null, { status: 204 });
 }
@@ -90,12 +81,7 @@ export async function getKeys(deps: {
     .eq("user_id", deps.userId)
     .order("service", { ascending: true });
   if (error) {
-    return errorResponse({
-      err: error,
-      error: "db_error",
-      reason: "Failed to fetch keys",
-      status: 500,
-    });
+    return vaultUnavailableResponse("Failed to fetch keys", error);
   }
   type ApiKeyRow = {
     // biome-ignore lint/style/useNamingConvention: mirrors DB columns

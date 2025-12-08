@@ -7,7 +7,11 @@ import "server-only";
 import { notifyJobSchema } from "@schemas/webhooks";
 import { Receiver } from "@upstash/qstash";
 import { NextResponse } from "next/server";
-import { errorResponse, validateSchema } from "@/lib/api/route-helpers";
+import {
+  errorResponse,
+  unauthorizedResponse,
+  validateSchema,
+} from "@/lib/api/route-helpers";
 import { getServerEnvVar, getServerEnvVarWithFallback } from "@/lib/env/server";
 import { tryReserveKey } from "@/lib/idempotency/redis";
 import { sendCollaboratorNotifications } from "@/lib/notifications/collaborators";
@@ -44,10 +48,12 @@ export async function POST(req: Request) {
           receiver = getQstashReceiver();
         } catch (error) {
           span.recordException(error as Error);
-          return NextResponse.json(
-            { error: "qstash signing keys are not configured" },
-            { status: 500 }
-          );
+          return errorResponse({
+            err: error,
+            error: "configuration_error",
+            reason: "QStash signing keys are misconfigured",
+            status: 500,
+          });
         }
 
         const sig = req.headers.get("Upstash-Signature");
@@ -57,10 +63,22 @@ export async function POST(req: Request) {
           ? await receiver.verify({ body, signature: sig, url })
           : false;
         if (!valid) {
-          return NextResponse.json(
-            { error: "invalid qstash signature" },
-            { status: 401 }
-          );
+          try {
+            const forwardedFor = req.headers.get("x-forwarded-for");
+            const ip =
+              forwardedFor?.split(",")[0]?.trim() ??
+              req.headers.get("cf-connecting-ip") ??
+              undefined;
+            span.addEvent("unauthorized_attempt", {
+              hasSignature: Boolean(sig),
+              ip,
+              reason: "invalid_signature",
+              url,
+            });
+          } catch (spanError) {
+            span.recordException(spanError as Error);
+          }
+          return unauthorizedResponse();
         }
 
         const json = (await req.json()) as unknown;

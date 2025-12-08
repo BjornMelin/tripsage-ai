@@ -7,8 +7,8 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { type PersonalInfoFormData, personalInfoFormSchema } from "@schemas/profile";
-import { Camera, Upload } from "lucide-react";
-import { useId, useState } from "react";
+import { CameraIcon, UploadIcon } from "lucide-react";
+import { useId, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,7 @@ import { useUserProfileStore } from "@/stores/user-store";
 
 export function PersonalInfoSection() {
   const avatarInputId = useId();
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const { profile, updatePersonalInfo, uploadAvatar } = useUserProfileStore();
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
@@ -157,18 +158,19 @@ export function PersonalInfoSection() {
                 size="sm"
                 variant="outline"
                 className="h-8 w-8 rounded-full p-0"
-                onClick={() => document.getElementById(avatarInputId)?.click()}
+                onClick={() => avatarInputRef.current?.click()}
                 disabled={isUploading}
               >
                 {isUploading ? (
-                  <Upload className="h-3 w-3 animate-spin" />
+                  <UploadIcon className="h-3 w-3 animate-spin" />
                 ) : (
-                  <Camera className="h-3 w-3" />
+                  <CameraIcon className="h-3 w-3" />
                 )}
               </Button>
             </div>
             <input
               id={avatarInputId}
+              ref={avatarInputRef}
               type="file"
               accept="image/*"
               className="hidden"

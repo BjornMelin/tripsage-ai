@@ -55,7 +55,7 @@ export const GET = withApiGuards({
     return errorResponse({
       err: error,
       error: "memory_stats_failed",
-      reason: error instanceof Error ? error.message : "Failed to fetch memory stats",
+      reason: "Failed to fetch memory stats. Please try again.",
       status: 500,
     });
   }

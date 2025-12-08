@@ -7,23 +7,25 @@ import {
   type ActiveFilter,
   type FilterPreset,
   type FilterValue,
-  filterOptionSchema,
   filterPresetSchema,
   filterValueSchema,
-  type SortDirection,
   searchTypeSchema,
   sortOptionSchema,
   type ValidatedFilterOption,
   type ValidatedSortOption,
 } from "@schemas/stores";
-import { create, type StateCreator } from "zustand";
+import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
-import { nowIso, secureId } from "@/lib/security/random";
 import { createStoreLogger } from "@/lib/telemetry/store-logger";
+import { generateId, getCurrentTimestamp } from "./helpers";
+import { createComputeFn, withComputed } from "./middleware/computed";
+import {
+  FILTER_CONFIGS,
+  getDefaultSortOptions,
+  SORT_CONFIGS,
+} from "./search-filters/filter-configs";
 
 const logger = createStoreLogger({ storeName: "search-filters" });
-
-// Validation schemas imported from @schemas/stores
 
 // Search filters store interface
 interface SearchFiltersState {
@@ -52,31 +54,7 @@ interface SearchFiltersState {
   currentSortOptions: ValidatedSortOption[];
   appliedFilterSummary: string;
 
-  // Filter configuration actions
-  setAvailableFilters: (
-    searchType: SearchType,
-    filters: ValidatedFilterOption[]
-  ) => void;
-  addAvailableFilter: (searchType: SearchType, filter: ValidatedFilterOption) => void;
-  updateAvailableFilter: (
-    searchType: SearchType,
-    filterId: string,
-    updates: Partial<ValidatedFilterOption>
-  ) => void;
-  removeAvailableFilter: (searchType: SearchType, filterId: string) => void;
-
   // Sort options configuration
-  setAvailableSortOptions: (
-    searchType: SearchType,
-    options: ValidatedSortOption[]
-  ) => void;
-  addAvailableSortOption: (searchType: SearchType, option: ValidatedSortOption) => void;
-  updateAvailableSortOption: (
-    searchType: SearchType,
-    optionId: string,
-    updates: Partial<ValidatedSortOption>
-  ) => void;
-  removeAvailableSortOption: (searchType: SearchType, optionId: string) => void;
 
   // Active filter management
   setActiveFilter: (filterId: string, value: FilterValue) => boolean;
@@ -88,6 +66,8 @@ interface SearchFiltersState {
   // Bulk filter operations
   setMultipleFilters: (filters: Record<string, FilterValue>) => boolean;
   applyFiltersFromObject: (filterObject: Record<string, unknown>) => boolean;
+
+  // Reset filters to default (optionally scoped by search type)
   resetFiltersToDefault: (searchType?: SearchType) => void;
 
   // Sort management
@@ -112,14 +92,6 @@ interface SearchFiltersState {
   // Search type context
   setSearchType: (searchType: SearchType) => void;
 
-  // Filter insights and analytics
-  getFilterUsageStats: () => Record<string, { count: number; lastUsed: string }>;
-  getMostUsedFilters: (
-    searchType?: SearchType,
-    limit?: number
-  ) => ValidatedFilterOption[];
-  getFilterDependencies: (filterId: string) => ValidatedFilterOption[];
-
   // Utility actions
   clearValidationErrors: () => void;
   clearValidationError: (filterId: string) => void;
@@ -127,416 +99,90 @@ interface SearchFiltersState {
   softReset: () => void; // Keeps configuration but clears active state
 }
 
-// Helper functions
-const GENERATE_ID = () => secureId(12);
-const GET_CURRENT_TIMESTAMP = () => nowIso();
-
-// Default filter configurations by search type
-const GET_DEFAULT_FILTERS = (searchType: SearchType): ValidatedFilterOption[] => {
-  switch (searchType) {
-    case "flight":
-      return [
-        {
-          category: "pricing",
-          id: "price_range",
-          label: "Price Range",
-          required: false,
-          type: "range",
-          validation: { max: 10000, min: 0 },
-        },
-        {
-          category: "routing",
-          id: "stops",
-          label: "Number of Stops",
-          options: [
-            { label: "Direct flights only", value: "0" },
-            { label: "1 stop", value: "1" },
-            { label: "2+ stops", value: "2" },
-          ],
-          required: false,
-          type: "select",
-        },
-        {
-          category: "airline",
-          id: "airlines",
-          label: "Airlines",
-          options: [], // Would be populated dynamically
-          required: false,
-          type: "multiselect",
-        },
-        {
-          category: "timing",
-          id: "departure_time",
-          label: "Departure Time",
-          options: [
-            { label: "Early Morning (6:00-9:00)", value: "early_morning" },
-            { label: "Morning (9:00-12:00)", value: "morning" },
-            { label: "Afternoon (12:00-18:00)", value: "afternoon" },
-            { label: "Evening (18:00+)", value: "evening" },
-          ],
-          required: false,
-          type: "select",
-        },
-      ];
-    case "accommodation":
-      return [
-        {
-          category: "pricing",
-          id: "price_range",
-          label: "Price per Night",
-          required: false,
-          type: "range",
-          validation: { max: 2000, min: 0 },
-        },
-        {
-          category: "quality",
-          id: "rating",
-          label: "Minimum Rating",
-          options: [
-            { label: "3+ stars", value: "3" },
-            { label: "4+ stars", value: "4" },
-            { label: "5 stars", value: "5" },
-          ],
-          required: false,
-          type: "select",
-        },
-        {
-          category: "type",
-          id: "property_type",
-          label: "Property Type",
-          options: [
-            { label: "Hotel", value: "hotel" },
-            { label: "Apartment", value: "apartment" },
-            { label: "Villa", value: "villa" },
-            { label: "Resort", value: "resort" },
-          ],
-          required: false,
-          type: "multiselect",
-        },
-        {
-          category: "features",
-          id: "amenities",
-          label: "Amenities",
-          options: [
-            { label: "Free WiFi", value: "wifi" },
-            { label: "Free Parking", value: "parking" },
-            { label: "Swimming Pool", value: "pool" },
-            { label: "Fitness Center", value: "gym" },
-            { label: "Spa", value: "spa" },
-            { label: "Restaurant", value: "restaurant" },
-          ],
-          required: false,
-          type: "multiselect",
-        },
-      ];
-    case "activity":
-      return [
-        {
-          category: "pricing",
-          id: "price_range",
-          label: "Price Range",
-          required: false,
-          type: "range",
-          validation: { max: 500, min: 0 },
-        },
-        {
-          category: "timing",
-          id: "duration",
-          label: "Duration",
-          required: false,
-          type: "range",
-          validation: { max: 480, min: 1 }, // minutes
-        },
-        {
-          category: "experience",
-          id: "difficulty",
-          label: "Difficulty Level",
-          options: [
-            { label: "Easy", value: "easy" },
-            { label: "Moderate", value: "moderate" },
-            { label: "Challenging", value: "challenging" },
-            { label: "Extreme", value: "extreme" },
-          ],
-          required: false,
-          type: "select",
-        },
-        {
-          category: "type",
-          id: "category",
-          label: "Activity Type",
-          options: [
-            { label: "Outdoor Adventures", value: "outdoor" },
-            { label: "Cultural Experiences", value: "cultural" },
-            { label: "Food & Drink", value: "food" },
-            { label: "Sightseeing", value: "sightseeing" },
-            { label: "Sports & Recreation", value: "sports" },
-          ],
-          required: false,
-          type: "multiselect",
-        },
-      ];
-    case "destination":
-      return [
-        {
-          category: "type",
-          id: "destination_type",
-          label: "Destination Type",
-          options: [
-            { label: "Cities", value: "city" },
-            { label: "Countries", value: "country" },
-            { label: "Regions", value: "region" },
-            { label: "Landmarks", value: "landmark" },
-          ],
-          required: false,
-          type: "multiselect",
-        },
-        {
-          category: "demographics",
-          id: "population",
-          label: "Population Size",
-          options: [
-            { label: "Small (< 100k)", value: "small" },
-            { label: "Medium (100k - 1M)", value: "medium" },
-            { label: "Large (1M+)", value: "large" },
-          ],
-          required: false,
-          type: "select",
-        },
-      ];
-    default:
-      return [];
+/** Validate a range filter value against min/max constraints. */
+const validateRangeValue = (
+  value: FilterValue,
+  config: ValidatedFilterOption
+): { valid: boolean; error?: string } => {
+  if (typeof value !== "object" || value === null) {
+    return { error: "Range value must be an object with min/max", valid: false };
   }
-};
 
-const GET_DEFAULT_SORT_OPTIONS = (searchType: SearchType): ValidatedSortOption[] => {
-  const commonSorts = [
-    {
-      direction: "desc" as SortDirection,
-      field: "score",
-      id: "relevance",
-      isDefault: true,
-      label: "Relevance",
-    },
-    {
-      direction: "asc" as SortDirection,
-      field: "price",
-      id: "price_low",
-      isDefault: false,
-      label: "Price: Low to High",
-    },
-    {
-      direction: "desc" as SortDirection,
-      field: "price",
-      id: "price_high",
-      isDefault: false,
-      label: "Price: High to Low",
-    },
-  ];
+  const rangeValue = value as { min?: unknown; max?: unknown };
+  const validation = config.validation;
 
-  switch (searchType) {
-    case "flight":
-      return [
-        ...commonSorts,
-        {
-          direction: "asc" as SortDirection,
-          field: "totalDuration",
-          id: "duration",
-          isDefault: false,
-          label: "Duration",
-        },
-        {
-          direction: "asc" as SortDirection,
-          field: "departureTime",
-          id: "departure",
-          isDefault: false,
-          label: "Departure Time",
-        },
-        {
-          direction: "asc" as SortDirection,
-          field: "arrivalTime",
-          id: "arrival",
-          isDefault: false,
-          label: "Arrival Time",
-        },
-        {
-          direction: "asc" as SortDirection,
-          field: "stops",
-          id: "stops",
-          isDefault: false,
-          label: "Fewest Stops",
-        },
-      ];
-    case "accommodation":
-      return [
-        ...commonSorts,
-        {
-          direction: "desc" as SortDirection,
-          field: "rating",
-          id: "rating",
-          isDefault: false,
-          label: "Highest Rated",
-        },
-        {
-          direction: "asc" as SortDirection,
-          field: "distance",
-          id: "distance",
-          isDefault: false,
-          label: "Distance",
-        },
-        {
-          direction: "desc" as SortDirection,
-          field: "reviewCount",
-          id: "reviews",
-          isDefault: false,
-          label: "Most Reviews",
-        },
-      ];
-    case "activity":
-      return [
-        ...commonSorts,
-        {
-          direction: "desc" as SortDirection,
-          field: "rating",
-          id: "rating",
-          isDefault: false,
-          label: "Highest Rated",
-        },
-        {
-          direction: "asc" as SortDirection,
-          field: "duration",
-          id: "duration",
-          isDefault: false,
-          label: "Duration",
-        },
-        {
-          direction: "desc" as SortDirection,
-          field: "bookingCount",
-          id: "popularity",
-          isDefault: false,
-          label: "Most Popular",
-        },
-      ];
-    case "destination":
-      return [
-        {
-          direction: "desc" as SortDirection,
-          field: "score",
-          id: "relevance",
-          isDefault: true,
-          label: "Relevance",
-        },
-        {
-          direction: "asc" as SortDirection,
-          field: "name",
-          id: "alphabetical",
-          isDefault: false,
-          label: "Alphabetical",
-        },
-        {
-          direction: "desc" as SortDirection,
-          field: "population",
-          id: "population",
-          isDefault: false,
-          label: "Population",
-        },
-        {
-          direction: "asc" as SortDirection,
-          field: "distance",
-          id: "distance",
-          isDefault: false,
-          label: "Distance",
-        },
-      ];
-    default:
-      return commonSorts;
+  const min = rangeValue.min;
+  const max = rangeValue.max;
+
+  if (min !== undefined && typeof min !== "number") {
+    return { error: "Minimum value must be a number", valid: false };
   }
+
+  if (max !== undefined && typeof max !== "number") {
+    return { error: "Maximum value must be a number", valid: false };
+  }
+
+  if (min !== undefined && max !== undefined && min > max) {
+    return { error: "Minimum value cannot exceed maximum", valid: false };
+  }
+
+  if (!validation) {
+    return { valid: true };
+  }
+
+  if (min !== undefined && validation.min !== undefined && min < validation.min) {
+    return { error: `Minimum value must be at least ${validation.min}`, valid: false };
+  }
+
+  if (max !== undefined && validation.max !== undefined && max > validation.max) {
+    return { error: `Maximum value must be at most ${validation.max}`, valid: false };
+  }
+
+  return { valid: true };
 };
 
-// Helper to compute derived state
-const COMPUTE_DERIVED_STATE = (state: Partial<SearchFiltersState>) => {
-  const hasActiveFilters = Object.keys(state.activeFilters || {}).length > 0;
-  const activeFilterCount = Object.keys(state.activeFilters || {}).length;
-  const canClearFilters = hasActiveFilters || state.activeSortOption !== null;
-
-  const currentFilters = state.currentSearchType
-    ? state.availableFilters?.[state.currentSearchType] || []
-    : [];
-
-  const currentSortOptions = state.currentSearchType
-    ? state.availableSortOptions?.[state.currentSearchType] || []
-    : [];
-
-  const summaries: string[] = [];
-  Object.entries(state.activeFilters || {}).forEach(([filterId, activeFilter]) => {
-    const filter = currentFilters.find((f) => f.id === filterId);
-    if (filter) {
-      const valueStr = Array.isArray(activeFilter.value)
-        ? activeFilter.value.join(", ")
-        : typeof activeFilter.value === "object" && activeFilter.value !== null
-          ? `${(activeFilter.value as { min?: number; max?: number }).min || ""} - ${
-              (activeFilter.value as { min?: number; max?: number }).max || ""
-            }`
-          : String(activeFilter.value);
-      summaries.push(`${filter.label}: ${valueStr}`);
-    }
-  });
-  const appliedFilterSummary = summaries.join("; ");
-
-  return {
-    activeFilterCount,
-    appliedFilterSummary,
-    canClearFilters,
-    currentFilters,
-    currentSortOptions,
-    hasActiveFilters,
-  };
-};
-
-// Custom middleware to compute derived state with proper TypeScript typing
-const WITH_COMPUTED_STATE =
-  <T extends SearchFiltersState>(
-    config: StateCreator<T, [], [], T>
-  ): StateCreator<T, [], [], T> =>
-  (set, get, api) => {
-    const setState = (
-      partial: Partial<T> | ((state: T) => Partial<T>),
-      replace?: boolean | undefined
-    ) => {
-      const newState = typeof partial === "function" ? partial(get()) : partial;
-      const currentState = get();
-      const mergedState = replace ? newState : { ...currentState, ...newState };
-      const derived = COMPUTE_DERIVED_STATE(mergedState);
-      if (replace) {
-        set({ ...newState, ...derived } as T, true);
-      } else {
-        set((state) => ({ ...state, ...newState, ...derived }));
+// Helper to compute derived state using shared middleware
+const computeFilterState = createComputeFn<SearchFiltersState>({
+  activeFilterCount: (state) => Object.keys(state.activeFilters || {}).length,
+  appliedFilterSummary: (state) => {
+    const currentFilters = state.currentSearchType
+      ? state.availableFilters?.[state.currentSearchType] || []
+      : [];
+    const summaries: string[] = [];
+    Object.entries(state.activeFilters || {}).forEach(([filterId, activeFilter]) => {
+      const filter = currentFilters.find((f) => f.id === filterId);
+      if (filter) {
+        const valueStr = Array.isArray(activeFilter.value)
+          ? activeFilter.value.join(", ")
+          : typeof activeFilter.value === "object" && activeFilter.value !== null
+            ? `${(activeFilter.value as { min?: number; max?: number }).min || ""} - ${
+                (activeFilter.value as { min?: number; max?: number }).max || ""
+              }`
+            : String(activeFilter.value);
+        summaries.push(`${filter.label}: ${valueStr}`);
       }
-    };
+    });
+    return summaries.join("; ");
+  },
+  canClearFilters: (state) =>
+    Object.keys(state.activeFilters || {}).length > 0 ||
+    state.activeSortOption !== null,
+  currentFilters: (state) =>
+    state.currentSearchType
+      ? state.availableFilters?.[state.currentSearchType] || []
+      : [],
+  currentSortOptions: (state) =>
+    state.currentSearchType
+      ? state.availableSortOptions?.[state.currentSearchType] || []
+      : [],
+  hasActiveFilters: (state) => Object.keys(state.activeFilters || {}).length > 0,
+});
 
-    // Override the setState method on the api to ensure computed state is always updated
-    const originalSetState = api.setState;
-    api.setState = (
-      partial: Partial<T> | ((state: T) => Partial<T>),
-      replace?: boolean | undefined
-    ) => {
-      const newState = typeof partial === "function" ? partial(get()) : partial;
-      const currentState = get();
-      const mergedState = replace ? newState : { ...currentState, ...newState };
-      const derived = COMPUTE_DERIVED_STATE(mergedState);
-      if (replace) {
-        originalSetState({ ...newState, ...derived } as T, true);
-      } else {
-        originalSetState((state) => ({ ...state, ...newState, ...derived }));
-      }
-    };
-
-    return config(setState, get, api);
-  };
-
+/** Use the search filters store */
 export const useSearchFiltersStore = create<SearchFiltersState>()(
   devtools(
     persist(
-      WITH_COMPUTED_STATE((set, get) => ({
+      withComputed({ compute: computeFilterState }, (set, get) => ({
         activeFilterCount: 0,
 
         // Active filters and sorting
@@ -544,73 +190,42 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
         activePreset: null,
         activeSortOption: null,
 
-        addAvailableFilter: (searchType: SearchType, filter: ValidatedFilterOption) => {
-          const result = filterOptionSchema.safeParse(filter);
-          if (result.success) {
-            set((state) => ({
-              availableFilters: {
-                ...state.availableFilters,
-                [searchType]: [
-                  ...(state.availableFilters[searchType] || []),
-                  result.data,
-                ],
-              },
-            }));
-          } else {
-            logger.error("Invalid filter", { error: result.error });
-          }
-        },
-
-        addAvailableSortOption: (searchType, option) => {
-          const result = sortOptionSchema.safeParse(option);
-          if (result.success) {
-            set((state) => ({
-              availableSortOptions: {
-                ...state.availableSortOptions,
-                [searchType]: [
-                  ...(state.availableSortOptions[searchType] || []),
-                  result.data,
-                ],
-              },
-            }));
-          } else {
-            logger.error("Invalid sort option", { error: result.error });
-          }
-        },
         appliedFilterSummary: "",
 
         applyFiltersFromObject: (filterObject) => {
-          // Convert Record<string, unknown> to Record<string, FilterValue>
-          const validatedFilters: Record<string, FilterValue> = {};
-          for (const [key, value] of Object.entries(filterObject)) {
-            // Only include values that match FilterValue type
-            if (
-              typeof value === "string" ||
-              typeof value === "number" ||
-              typeof value === "boolean" ||
-              Array.isArray(value) ||
-              (typeof value === "object" &&
-                value !== null &&
-                ("min" in value || "max" in value))
-            ) {
-              validatedFilters[key] = value as FilterValue;
+          set({ isApplyingFilters: true });
+
+          try {
+            const { currentFilters } = get();
+            const validFilterIds = new Set(currentFilters.map((f) => f.id));
+            const filtersToApply: Record<string, FilterValue> = {};
+
+            for (const [key, value] of Object.entries(filterObject)) {
+              // Only apply if filter ID exists in current configuration
+              if (validFilterIds.has(key) && value !== undefined && value !== null) {
+                // Validate the value can be a FilterValue
+                const result = filterValueSchema.safeParse(value);
+                if (result.success) {
+                  filtersToApply[key] = result.data;
+                }
+              }
             }
+
+            if (Object.keys(filtersToApply).length === 0) {
+              set({ isApplyingFilters: false });
+              return false;
+            }
+
+            return get().setMultipleFilters(filtersToApply);
+          } catch (error) {
+            logger.error("Failed to apply filters from object", { error });
+            set({ isApplyingFilters: false });
+            return false;
           }
-          return get().setMultipleFilters(validatedFilters);
         },
-        // Initial state
-        availableFilters: {
-          accommodation: GET_DEFAULT_FILTERS("accommodation"),
-          activity: GET_DEFAULT_FILTERS("activity"),
-          destination: GET_DEFAULT_FILTERS("destination"),
-          flight: GET_DEFAULT_FILTERS("flight"),
-        },
-        availableSortOptions: {
-          accommodation: GET_DEFAULT_SORT_OPTIONS("accommodation"),
-          activity: GET_DEFAULT_SORT_OPTIONS("activity"),
-          destination: GET_DEFAULT_SORT_OPTIONS("destination"),
-          flight: GET_DEFAULT_SORT_OPTIONS("flight"),
-        },
+        // Initial state - use pre-computed config objects
+        availableFilters: FILTER_CONFIGS,
+        availableSortOptions: SORT_CONFIGS,
         canClearFilters: false,
 
         clearAllFilters: () => {
@@ -633,7 +248,10 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
             delete newActiveFilters[filterId];
           });
 
-          set({ activeFilters: newActiveFilters });
+          set({
+            activeFilters: newActiveFilters,
+            activePreset: null,
+          });
         },
 
         clearValidationError: (filterId) => {
@@ -668,8 +286,8 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
 
           const duplicatedPreset: FilterPreset = {
             ...originalPreset,
-            createdAt: GET_CURRENT_TIMESTAMP(),
-            id: GENERATE_ID(),
+            createdAt: getCurrentTimestamp(),
+            id: generateId(),
             isBuiltIn: false,
             name: newName,
             usageCount: 0,
@@ -690,55 +308,8 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
         filterPresets: [],
         filterValidationErrors: {},
 
-        getFilterDependencies: (filterId) => {
-          const { currentFilters } = get();
-          const filter = currentFilters.find((f) => f.id === filterId);
-
-          if (!filter || !filter.dependencies) return [];
-
-          return currentFilters.filter((f) => filter.dependencies?.includes(f.id));
-        },
-
-        // Filter insights and analytics
-        getFilterUsageStats: () => {
-          const { filterPresets } = get();
-          const stats: Record<string, { count: number; lastUsed: string }> = {};
-
-          filterPresets.forEach((preset) => {
-            preset.filters.forEach((filter) => {
-              const filterId = filter.filterId;
-              if (!stats[filterId]) {
-                stats[filterId] = { count: 0, lastUsed: "" };
-              }
-              stats[filterId].count += preset.usageCount;
-              if (filter.appliedAt > stats[filterId].lastUsed) {
-                stats[filterId].lastUsed = filter.appliedAt;
-              }
-            });
-          });
-
-          return stats;
-        },
-
         getFilterValidationError: (filterId) => {
           return get().filterValidationErrors[filterId] || null;
-        },
-
-        getMostUsedFilters: (searchType, limit = 5) => {
-          const { currentFilters } = get();
-          const targetFilters = searchType
-            ? get().availableFilters[searchType] || []
-            : currentFilters;
-
-          const usageStats = get().getFilterUsageStats();
-
-          return targetFilters
-            .map((filter) => ({
-              ...filter,
-              usageCount: usageStats[filter.id]?.count || 0,
-            }))
-            .sort((a, b) => b.usageCount - a.usageCount)
-            .slice(0, limit);
         },
 
         // Computed properties (initialized by middleware)
@@ -802,28 +373,6 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
           });
         },
 
-        removeAvailableFilter: (searchType: SearchType, filterId: string) => {
-          set((state) => ({
-            availableFilters: {
-              ...state.availableFilters,
-              [searchType]: (state.availableFilters[searchType] || []).filter(
-                (f) => f.id !== filterId
-              ),
-            },
-          }));
-        },
-
-        removeAvailableSortOption: (searchType, optionId) => {
-          set((state) => ({
-            availableSortOptions: {
-              ...state.availableSortOptions,
-              [searchType]: (state.availableSortOptions[searchType] || []).filter(
-                (o) => o.id !== optionId
-              ),
-            },
-          }));
-        },
-
         reset: () => {
           set({
             activeFilters: {},
@@ -840,8 +389,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
           const targetSearchType = searchType || get().currentSearchType;
           if (!targetSearchType) return;
 
-          GET_DEFAULT_FILTERS(targetSearchType); // Get default filters
-          const defaultSort = GET_DEFAULT_SORT_OPTIONS(targetSearchType).find(
+          const defaultSort = getDefaultSortOptions(targetSearchType).find(
             (s) => s.isDefault
           );
 
@@ -857,7 +405,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
           const targetSearchType = searchType || get().currentSearchType;
           if (!targetSearchType) return;
 
-          const defaultSort = GET_DEFAULT_SORT_OPTIONS(targetSearchType).find(
+          const defaultSort = getDefaultSortOptions(targetSearchType).find(
             (s) => s.isDefault
           );
           set({ activeSortOption: defaultSort || null });
@@ -869,9 +417,9 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
           if (!currentSearchType) return null;
 
           try {
-            const presetId = GENERATE_ID();
+            const presetId = generateId();
             const newPreset: FilterPreset = {
-              createdAt: GET_CURRENT_TIMESTAMP(),
+              createdAt: getCurrentTimestamp(),
               description,
               filters: Object.values(activeFilters),
               id: presetId,
@@ -909,7 +457,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
             }
 
             const newActiveFilter: ActiveFilter = {
-              appliedAt: GET_CURRENT_TIMESTAMP(),
+              appliedAt: getCurrentTimestamp(),
               filterId,
               value,
             };
@@ -948,59 +496,13 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
           }
         },
 
-        // Filter configuration actions
-        setAvailableFilters: (
-          searchType: SearchType,
-          filters: ValidatedFilterOption[]
-        ) => {
-          // Validate filters
-          const validatedFilters = filters.filter((filter: ValidatedFilterOption) => {
-            const result = filterOptionSchema.safeParse(filter);
-            if (!result.success) {
-              logger.error(`Invalid filter for ${searchType}`, {
-                error: result.error,
-              });
-              return false;
-            }
-            return true;
-          });
-
-          set((state) => ({
-            availableFilters: {
-              ...state.availableFilters,
-              [searchType]: validatedFilters,
-            },
-          }));
-        },
-
-        // Sort options configuration
-        setAvailableSortOptions: (searchType, options) => {
-          const validatedOptions = options.filter((option) => {
-            const result = sortOptionSchema.safeParse(option);
-            if (!result.success) {
-              logger.error(`Invalid sort option for ${searchType}`, {
-                error: result.error,
-              });
-              return false;
-            }
-            return true;
-          });
-
-          set((state) => ({
-            availableSortOptions: {
-              ...state.availableSortOptions,
-              [searchType]: validatedOptions,
-            },
-          }));
-        },
-
         // Bulk filter operations
         setMultipleFilters: (filters) => {
           set({ isApplyingFilters: true });
 
           try {
             const newActiveFilters: Record<string, ActiveFilter> = {};
-            const timestamp = GET_CURRENT_TIMESTAMP();
+            const timestamp = getCurrentTimestamp();
 
             for (const [filterId, value] of Object.entries(filters)) {
               const isValid = get().validateFilter(filterId, value);
@@ -1079,52 +581,6 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
           return get().setActiveFilter(filterId, value);
         },
 
-        updateAvailableFilter: (
-          searchType: SearchType,
-          filterId: string,
-          updates: Partial<ValidatedFilterOption>
-        ) => {
-          set((state) => {
-            const filters = state.availableFilters[searchType] || [];
-            const updatedFilters = filters.map((filter: ValidatedFilterOption) => {
-              if (filter.id === filterId) {
-                const updatedFilter = { ...filter, ...updates };
-                const result = filterOptionSchema.safeParse(updatedFilter);
-                return result.success ? result.data : filter;
-              }
-              return filter;
-            });
-
-            return {
-              availableFilters: {
-                ...state.availableFilters,
-                [searchType]: updatedFilters,
-              },
-            };
-          });
-        },
-
-        updateAvailableSortOption: (searchType, optionId, updates) => {
-          set((state) => {
-            const options = state.availableSortOptions[searchType] || [];
-            const updatedOptions = options.map((option) => {
-              if (option.id === optionId) {
-                const updatedOption = { ...option, ...updates };
-                const result = sortOptionSchema.safeParse(updatedOption);
-                return result.success ? result.data : option;
-              }
-              return option;
-            });
-
-            return {
-              availableSortOptions: {
-                ...state.availableSortOptions,
-                [searchType]: updatedOptions,
-              },
-            };
-          });
-        },
-
         updateFilterPreset: (presetId, updates) => {
           try {
             set((state) => {
@@ -1161,90 +617,70 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
           const { currentFilters } = get();
           const filterConfig = currentFilters.find((f) => f.id === filterId);
 
-          if (!filterConfig) {
+          const setError = (error: string) => {
             set((state) => ({
               filterValidationErrors: {
                 ...state.filterValidationErrors,
-                [filterId]: "Filter configuration not found",
+                [filterId]: error,
               },
             }));
             return false;
-          }
+          };
 
-          try {
-            // Validate value against filter configuration
-            const valueResult = filterValueSchema.safeParse(value);
-            if (!valueResult.success) {
-              throw new Error("Invalid filter value format");
-            }
-
-            // Type-specific validation
-            if (filterConfig.validation) {
-              const { min, max, pattern, required } = filterConfig.validation;
-
-              if (required && (value === null || value === undefined || value === "")) {
-                throw new Error("This filter is required");
-              }
-
-              if (typeof value === "number") {
-                if (min !== undefined && value < min) {
-                  throw new Error(`Value must be at least ${min}`);
-                }
-                if (max !== undefined && value > max) {
-                  throw new Error(`Value must be at most ${max}`);
-                }
-              }
-
-              // Handle range type filters
-              if (
-                filterConfig.type === "range" &&
-                typeof value === "object" &&
-                value !== null
-              ) {
-                const rangeValue = value as { min?: number; max?: number };
-                if (
-                  rangeValue.min !== undefined &&
-                  min !== undefined &&
-                  rangeValue.min < min
-                ) {
-                  throw new Error(`Minimum value must be at least ${min}`);
-                }
-                if (
-                  rangeValue.max !== undefined &&
-                  max !== undefined &&
-                  rangeValue.max > max
-                ) {
-                  throw new Error(`Maximum value must be at most ${max}`);
-                }
-              }
-
-              if (typeof value === "string" && pattern) {
-                const regex = new RegExp(pattern);
-                if (!regex.test(value)) {
-                  throw new Error("Value format is invalid");
-                }
-              }
-            }
-
-            // Clear any existing validation error
+          const clearError = () => {
             set((state) => {
               const newErrors = { ...state.filterValidationErrors };
               delete newErrors[filterId];
               return { filterValidationErrors: newErrors };
             });
-
             return true;
-          } catch (error) {
-            const message =
-              error instanceof Error ? error.message : "Validation failed";
-            set((state) => ({
-              filterValidationErrors: {
-                ...state.filterValidationErrors,
-                [filterId]: message,
-              },
-            }));
-            return false;
+          };
+
+          if (!filterConfig) {
+            return setError("Filter configuration not found");
           }
+
+          // Zod schema validation first
+          const valueResult = filterValueSchema.safeParse(value);
+          if (!valueResult.success) {
+            return setError("Invalid filter value format");
+          }
+
+          // Type-specific validation
+          const validation = filterConfig.validation;
+          if (validation) {
+            const { min, max, pattern, required } = validation;
+
+            if (required && (value === null || value === undefined || value === "")) {
+              return setError("This filter is required");
+            }
+
+            if (typeof value === "number") {
+              if (min !== undefined && value < min) {
+                return setError(`Value must be at least ${min}`);
+              }
+              if (max !== undefined && value > max) {
+                return setError(`Value must be at most ${max}`);
+              }
+            }
+
+            // Handle range type filters using helper
+            if (filterConfig.type === "range") {
+              const rangeResult = validateRangeValue(value, filterConfig);
+              if (!rangeResult.valid) {
+                return setError(rangeResult.error ?? "Invalid range value");
+              }
+            }
+
+            if (typeof value === "string" && pattern) {
+              const regex = new RegExp(pattern);
+              if (!regex.test(value)) {
+                return setError("Value format is invalid");
+              }
+            }
+          }
+
+          return clearError();
         },
       })),
       {

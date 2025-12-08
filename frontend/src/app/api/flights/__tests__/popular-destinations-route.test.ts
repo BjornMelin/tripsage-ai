@@ -2,8 +2,8 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setSupabaseFactoryForTests } from "@/lib/api/factory";
-import { stubRateLimitDisabled } from "@/test/env-helpers";
-import { createMockNextRequest, createRouteParamsContext } from "@/test/route-helpers";
+import { stubRateLimitDisabled } from "@/test/helpers/env";
+import { createMockNextRequest, createRouteParamsContext } from "@/test/helpers/route";
 
 const redisStore = new Map<string, string>();
 const redisClient = {

@@ -8,16 +8,16 @@
 "use client";
 
 import {
-  Clock,
-  Copy,
-  Crown,
-  Edit,
-  Eye,
-  Mail,
-  Share2,
-  Trash2,
-  UserPlus,
-  Users,
+  ClockIcon,
+  CopyIcon,
+  CrownIcon,
+  EditIcon,
+  EyeIcon,
+  MailIcon,
+  Share2Icon,
+  Trash2Icon,
+  UserPlusIcon,
+  UsersIcon,
 } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useEffect, useId, useState } from "react";
@@ -41,6 +41,16 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { useTrip } from "@/hooks/use-trips";
 import { getBrowserClient } from "@/lib/supabase";
+import { statusVariants } from "@/lib/variants/status";
+
+/**
+ * Consistent color palette aligned with statusVariants for roles
+ */
+const ROLE_ICON_COLORS: Record<Collaborator["role"], string> = {
+  editor: "text-blue-700",
+  owner: "text-amber-700",
+  viewer: "text-gray-700",
+};
 
 /**
  * Represents a collaborator on a trip with their permissions and status.
@@ -200,16 +210,18 @@ export default function TripCollaborationPage() {
    * @param role - The collaborator role
    * @returns Icon component for the role
    */
-  const getRoleIcon = (role: string) => {
+  const getRoleIcon = (role: Collaborator["role"]) => {
     switch (role) {
       case "owner":
-        return <Crown className="h-4 w-4 text-yellow-500" />;
+        return <CrownIcon className={`h-4 w-4 ${ROLE_ICON_COLORS.owner}`} />;
       case "editor":
-        return <Edit className="h-4 w-4 text-blue-500" />;
+        return <EditIcon className={`h-4 w-4 ${ROLE_ICON_COLORS.editor}`} />;
       case "viewer":
-        return <Eye className="h-4 w-4 text-gray-500" />;
-      default:
-        return <Users className="h-4 w-4" />;
+        return <EyeIcon className={`h-4 w-4 ${ROLE_ICON_COLORS.viewer}`} />;
+      default: {
+        const _exhaustiveCheck: never = role;
+        return _exhaustiveCheck;
+      }
     }
   };
 
@@ -222,15 +234,11 @@ export default function TripCollaborationPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "accepted":
-        return (
-          <Badge variant="default" className="bg-green-500">
-            Active
-          </Badge>
-        );
+        return <Badge className={statusVariants({ status: "active" })}>Active</Badge>;
       case "pending":
-        return <Badge variant="secondary">Pending</Badge>;
+        return <Badge className={statusVariants({ status: "pending" })}>Pending</Badge>;
       case "declined":
-        return <Badge variant="destructive">Declined</Badge>;
+        return <Badge className={statusVariants({ status: "error" })}>Declined</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -274,7 +282,7 @@ export default function TripCollaborationPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <Edit className="h-5 w-5" />
+                <EditIcon className="h-5 w-5" />
                 <span>Live Trip Editing</span>
               </CardTitle>
               <CardDescription>
@@ -289,7 +297,7 @@ export default function TripCollaborationPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <Users className="h-5 w-5" />
+                <UsersIcon className="h-5 w-5" />
                 <span>Collaborators</span>
                 <Badge variant="secondary">{collaborators.length}</Badge>
               </CardTitle>
@@ -313,7 +321,7 @@ export default function TripCollaborationPage() {
                     }}
                   />
                   <Button onClick={handleInviteCollaborator} disabled={isInviting}>
-                    <UserPlus className="h-4 w-4 mr-2" />
+                    <UserPlusIcon className="h-4 w-4 mr-2" />
                     {isInviting ? "Inviting..." : "Invite"}
                   </Button>
                 </div>
@@ -330,7 +338,7 @@ export default function TripCollaborationPage() {
                     className="bg-muted"
                   />
                   <Button variant="outline" onClick={handleCopyShareLink}>
-                    <Copy className="h-4 w-4 mr-2" />
+                    <CopyIcon className="h-4 w-4 mr-2" />
                     Copy
                   </Button>
                 </div>
@@ -351,7 +359,7 @@ export default function TripCollaborationPage() {
                     >
                       <div className="flex items-center space-x-3">
                         <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                          <Mail className="h-4 w-4" />
+                          <MailIcon className="h-4 w-4" />
                         </div>
                         <div>
                           <div className="flex items-center space-x-2">
@@ -379,7 +387,7 @@ export default function TripCollaborationPage() {
                         {getStatusBadge(collaborator.status)}
                         {collaborator.role !== "owner" && (
                           <Button variant="ghost" size="sm">
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2Icon className="h-4 w-4" />
                           </Button>
                         )}
                       </div>
@@ -398,7 +406,7 @@ export default function TripCollaborationPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <Clock className="h-5 w-5" />
+                <ClockIcon className="h-5 w-5" />
                 <span>Recent Activity</span>
               </CardTitle>
             </CardHeader>
@@ -428,7 +436,7 @@ export default function TripCollaborationPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <Share2 className="h-5 w-5" />
+                <Share2Icon className="h-5 w-5" />
                 <span>Sharing Settings</span>
               </CardTitle>
             </CardHeader>

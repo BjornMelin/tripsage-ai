@@ -5,12 +5,13 @@
 
 "use server";
 
-import { tripsRowSchema } from "@schemas/supabase";
+import { type TripsRow, tripsRowSchema } from "@schemas/supabase";
 import {
   type ItineraryItemCreateInput,
   itineraryItemCreateSchema,
   type UiTrip,
 } from "@schemas/trips";
+import { z } from "zod";
 import { bumpTag } from "@/lib/cache/tags";
 import type { Json } from "@/lib/supabase/database.types";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -18,6 +19,7 @@ import { createServerLogger } from "@/lib/telemetry/logger";
 import { mapDbTripToUi } from "@/lib/trips/mappers";
 
 const logger = createServerLogger("search.activities.actions");
+const tripIdSchema = z.coerce.number().int().positive();
 
 /**
  * Fetches the authenticated user's active and planning trips.
@@ -56,7 +58,18 @@ export async function getPlanningTrips(): Promise<UiTrip[]> {
     throw new Error("Failed to fetch trips");
   }
 
-  const rows = (data ?? []).map((row: unknown) => tripsRowSchema.parse(row));
+  const rows: TripsRow[] = [];
+  for (const row of data ?? []) {
+    const parsed = tripsRowSchema.safeParse(row);
+    if (parsed.success) {
+      rows.push(parsed.data);
+    } else {
+      logger.warn("Invalid trip row skipped", {
+        error: parsed.error.format(),
+        tripId: (row as { id?: unknown })?.id,
+      });
+    }
+  }
   return rows.map(mapDbTripToUi);
 }
 
@@ -84,10 +97,11 @@ export async function addActivityToTrip(
     metadata?: Record<string, unknown>;
   }
 ) {
-  const parsedTripId = typeof tripId === "string" ? Number(tripId) : tripId;
-  if (Number.isNaN(parsedTripId)) {
-    throw new Error("Invalid trip id");
+  const tripIdValidation = tripIdSchema.safeParse(tripId);
+  if (!tripIdValidation.success) {
+    throw new Error(`Invalid trip id: ${tripIdValidation.error.message}`);
   }
+  const validatedTripId = tripIdValidation.data;
 
   const supabase = await createServerSupabase();
   const {
@@ -102,7 +116,7 @@ export async function addActivityToTrip(
   const { error: tripError } = await supabase
     .from("trips")
     .select("id")
-    .eq("id", parsedTripId)
+    .eq("id", validatedTripId)
     .eq("user_id", user.id)
     .single();
 
@@ -122,7 +136,7 @@ export async function addActivityToTrip(
     price: activityData.price,
     startTime: activityData.startTime,
     title: activityData.title,
-    tripId: parsedTripId,
+    tripId: validatedTripId,
   };
 
   const validation = itineraryItemCreateSchema.safeParse(payload);

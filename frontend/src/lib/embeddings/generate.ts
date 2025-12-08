@@ -8,7 +8,7 @@
 
 import "server-only";
 
-import { getServerEnvVarWithFallback } from "@/lib/env/server";
+import { getServerOrigin } from "@/lib/url/server-origin";
 
 /**
  * Generate embedding for text using the `/api/embeddings` Route Handler.
@@ -25,23 +25,10 @@ type EmbeddingsApiResponse = {
   error?: string;
 };
 
-function resolveAppBaseUrl(): string {
-  const siteUrl = getServerEnvVarWithFallback(
-    "NEXT_PUBLIC_SITE_URL",
-    "http://localhost:3000"
-  );
-  const appBaseUrl = getServerEnvVarWithFallback("APP_BASE_URL", siteUrl);
-  if (appBaseUrl && appBaseUrl.trim().length > 0) {
-    return appBaseUrl;
-  }
-  if (siteUrl && siteUrl.trim().length > 0) {
-    return siteUrl;
-  }
-  return "http://localhost:3000";
-}
+import { getServerEnvVarWithFallback } from "@/lib/env/server";
 
 export function getEmbeddingsApiUrl(): string {
-  return new URL("/api/embeddings", resolveAppBaseUrl()).toString();
+  return new URL("/api/embeddings", getServerOrigin()).toString();
 }
 
 function resolveInternalEmbeddingsKey(): string | null {

@@ -77,6 +77,7 @@ export const GET = withApiGuards({
 - **Trips & Content**: `trips`, `flights`, `accommodations`, `transportation`, `itinerary_items`, `trip_collaborators`, `bookings`.
 - **Chat & Memory**: `chat_sessions`, `chat_messages`, `chat_tool_calls`, `accommodation_embeddings`; `memories` schema tables (`memories.sessions`, `memories.turns`, `memories.turn_embeddings`).
 - **Auth & Keys**: Vault-backed `api_keys`, `user_gateway_configs`, `user_settings`; SECURITY DEFINER RPCs gate all BYOK operations.
+- **MFA & Recovery**: `mfa_enrollments` tracks TOTP enrollment lifecycle (pending/consumed/expired) with RLS; `auth_backup_codes` stores hashed backup codes (peppered) and is replaced atomically via the `replace_backup_codes` RPC; `mfa_backup_code_audit` logs regeneration/consumption metadata (user_id, event, count, ip, user_agent) for forensics.
 - **Telemetry & Webhooks**: `webhook_configs`, `webhook_logs`, `webhook_events`, `system_metrics`; helper RPCs for realtime topics.
 - **Search Cache**: `search_*` tables for cached destination/activity/flight/hotel lookups.
 - **Storage Metadata**: `file_attachments` rows store ownership, MIME, size, and storage path for Supabase buckets.

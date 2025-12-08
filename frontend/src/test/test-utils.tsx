@@ -2,11 +2,13 @@ import {
   type ValidatedThemeProviderProps,
   validateThemeProviderProps,
 } from "@schemas/ui/theme-provider";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import type { RenderOptions } from "@testing-library/react";
 import { render } from "@testing-library/react";
 import type { ComponentProps, ReactElement, ReactNode } from "react";
 import { ThemeProvider } from "@/components/providers/theme-provider";
+import { createMockQueryClient } from "./helpers/query";
 
 // Type for next-themes provider props.
 type NextThemesProviderProps = ComponentProps<typeof ThemeProvider>;
@@ -23,12 +25,7 @@ let sharedQueryClient: QueryClient | null = null;
  */
 export const getTestQueryClient = (): QueryClient => {
   if (!sharedQueryClient) {
-    sharedQueryClient = new QueryClient({
-      defaultOptions: {
-        mutations: { retry: false },
-        queries: { gcTime: 0, retry: false, staleTime: 0 },
-      },
-    });
+    sharedQueryClient = createMockQueryClient();
   }
   return sharedQueryClient;
 };

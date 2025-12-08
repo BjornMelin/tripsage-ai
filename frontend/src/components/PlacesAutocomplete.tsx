@@ -11,6 +11,10 @@ import { useEffect, useRef, useState } from "react";
 import { getGoogleMapsBrowserKey } from "@/lib/env/client";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 
+type AutocompleteSuggestion = google.maps.places.AutocompleteSuggestion;
+type AutocompleteRequest = google.maps.places.AutocompleteRequest;
+type PlacePrediction = google.maps.places.PlacePrediction;
+
 declare global {
   interface Window {
     google?: typeof google;
@@ -47,19 +51,25 @@ export function PlacesAutocomplete({
   className,
 }: PlacesAutocompleteProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const isMountedRef = useRef(true);
   const [isLoaded, setIsLoaded] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [suggestions, setSuggestions] = useState<
-    Array<{
-      placePrediction: {
-        placeId: string;
-        text: string;
-      };
-    }>
-  >([]);
+  const [suggestions, setSuggestions] = useState<AutocompleteSuggestion[]>([]);
   const [sessionToken, setSessionToken] =
     useState<google.maps.places.AutocompleteSessionToken | null>(null);
-  const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (isLoaded || typeof window === "undefined") return;
@@ -100,9 +110,9 @@ export function PlacesAutocomplete({
     if (!isLoaded || !window.google?.maps?.places) return;
 
     const initAutocomplete = async () => {
-      const placesLibrary = await window.google.maps.importLibrary("places");
-      // @ts-expect-error - AutocompleteSessionToken may not be fully typed
-      const AutocompleteSessionToken = placesLibrary.AutocompleteSessionToken;
+      const placesLibrary: google.maps.PlacesLibrary =
+        await window.google.maps.importLibrary("places");
+      const { AutocompleteSessionToken } = placesLibrary;
       const newToken = new AutocompleteSessionToken();
       setSessionToken(newToken);
     };
@@ -116,26 +126,33 @@ export function PlacesAutocomplete({
   }, [isLoaded]);
 
   const handleInputChange = (value: string) => {
-    if (debounceTimer) {
-      clearTimeout(debounceTimer);
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
     }
 
     if (!value.trim()) {
       setSuggestions([]);
+      setActiveIndex(-1);
       return;
     }
 
     const timer = setTimeout(async () => {
-      if (!isLoaded || !window.google?.maps?.places || !sessionToken) return;
+      if (
+        !isMountedRef.current ||
+        !isLoaded ||
+        !window.google?.maps?.places ||
+        !sessionToken
+      )
+        return;
 
       try {
-        const placesLibrary = await window.google.maps.importLibrary("places");
-        // @ts-expect-error - AutocompleteSuggestion may not be fully typed
-        const AutocompleteSuggestion = placesLibrary.AutocompleteSuggestion;
+        const placesLibrary: google.maps.PlacesLibrary =
+          await window.google.maps.importLibrary("places");
+        const { AutocompleteSuggestion } = placesLibrary;
 
-        const request: Record<string, unknown> = {
+        const request: AutocompleteRequest = {
           input: value,
-          sessionToken,
+          sessionToken: sessionToken ?? undefined,
         };
 
         if (locationBias) {
@@ -154,42 +171,42 @@ export function PlacesAutocomplete({
         const { suggestions: newSuggestions } =
           await AutocompleteSuggestion.fetchAutocompleteSuggestions(request);
 
-        setSuggestions(newSuggestions);
+        if (isMountedRef.current) {
+          setSuggestions(newSuggestions ?? []);
+          setActiveIndex(-1);
+        }
       } catch (error) {
         recordClientErrorOnActiveSpan(
           error instanceof Error ? error : new Error(String(error)),
           { action: "fetchSuggestions", context: "PlacesAutocomplete" }
         );
-        setSuggestions([]);
+        if (isMountedRef.current) {
+          setSuggestions([]);
+          setActiveIndex(-1);
+        }
       }
     }, 300); // 300ms debounce
 
-    setDebounceTimer(timer);
+    debounceTimerRef.current = timer;
   };
 
-  const handlePlaceSelect = async (placePrediction: {
-    placeId: string;
-    text: string;
-    toPlace?: () => unknown;
-  }) => {
+  const handlePlaceSelect = async (placePrediction: PlacePrediction | null) => {
     if (!isLoaded || !window.google?.maps?.places) return;
+    if (!placePrediction) {
+      setErrorMessage("Invalid place selection. Please try again.");
+      return;
+    }
 
     try {
-      // @ts-expect-error - toPlace may not be fully typed
-      const place = placePrediction.toPlace() as {
-        fetchFields: (options: { fields: string[] }) => Promise<void>;
-        displayName?: { text?: string };
-        formattedAddress?: string;
-        location?: { lat: () => number; lng: () => number };
-        id?: string;
-      };
+      const place = placePrediction.toPlace();
       await place.fetchFields({
         fields: ["displayName", "formattedAddress", "location"],
       });
 
+      setSelectedPlaceId(place.id ?? null);
       onPlaceSelect({
-        displayName: place.displayName?.text ?? "",
-        formattedAddress: place.formattedAddress,
+        displayName: place.displayName ?? "",
+        formattedAddress: place.formattedAddress ?? undefined,
         location: place.location
           ? {
               lat: place.location.lat(),
@@ -202,12 +219,13 @@ export function PlacesAutocomplete({
       setErrorMessage(null);
 
       // Terminate session and create new token
-      const placesLibrary = await window.google.maps.importLibrary("places");
-      // @ts-expect-error - AutocompleteSessionToken may not be fully typed
-      const AutocompleteSessionToken = placesLibrary.AutocompleteSessionToken;
+      const placesLibrary: google.maps.PlacesLibrary =
+        await window.google.maps.importLibrary("places");
+      const { AutocompleteSessionToken } = placesLibrary;
       const newToken = new AutocompleteSessionToken();
       setSessionToken(newToken);
       setSuggestions([]);
+      setActiveIndex(-1);
     } catch (error) {
       recordClientErrorOnActiveSpan(
         error instanceof Error ? error : new Error(String(error)),
@@ -215,11 +233,59 @@ export function PlacesAutocomplete({
       );
       setErrorMessage("Failed to select place. Please try again.");
       setSuggestions([]);
+      setActiveIndex(-1);
     }
   };
 
+  const selectableSuggestions = suggestions.filter(
+    (
+      suggestion
+    ): suggestion is AutocompleteSuggestion & { placePrediction: PlacePrediction } =>
+      suggestion.placePrediction != null
+  );
+
+  useEffect(() => {
+    if (!selectableSuggestions.length) {
+      setActiveIndex(-1);
+      return;
+    }
+    if (activeIndex >= selectableSuggestions.length) {
+      setActiveIndex(selectableSuggestions.length - 1);
+    }
+  }, [activeIndex, selectableSuggestions.length]);
+
+  const getOptionId = (
+    suggestion: (typeof selectableSuggestions)[number],
+    index: number
+  ) => suggestion.placePrediction.placeId ?? `places-option-${index}`;
+
+  const listboxId = "places-autocomplete-listbox";
+
+  const activeOptionId =
+    activeIndex >= 0 && selectableSuggestions[activeIndex]
+      ? getOptionId(selectableSuggestions[activeIndex], activeIndex)
+      : undefined;
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        containerRef.current &&
+        event.target instanceof Node &&
+        !containerRef.current.contains(event.target)
+      ) {
+        setSuggestions([]);
+        setActiveIndex(-1);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   return (
-    <div className={`relative ${className ?? ""}`}>
+    <div ref={containerRef} className={`relative ${className ?? ""}`}>
       <input
         ref={inputRef}
         type="text"
@@ -227,30 +293,95 @@ export function PlacesAutocomplete({
         onChange={(e) => {
           handleInputChange(e.target.value);
         }}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            setActiveIndex((prev) => {
+              const count = selectableSuggestions.length;
+              if (count === 0) return -1;
+              if (prev < 0) return 0;
+              return (prev + 1) % count;
+            });
+            return;
+          }
+          if (e.key === "ArrowUp") {
+            e.preventDefault();
+            setActiveIndex((prev) => {
+              const count = selectableSuggestions.length;
+              if (count === 0) return -1;
+              if (prev <= 0) return count - 1;
+              return prev - 1;
+            });
+            return;
+          }
+          if (e.key === "Enter" && activeIndex >= 0) {
+            e.preventDefault();
+            const selected = selectableSuggestions[activeIndex];
+            if (selected) {
+              handlePlaceSelect(selected.placePrediction);
+            }
+            return;
+          }
+          if (e.key === "Escape") {
+            setSuggestions([]);
+            setActiveIndex(-1);
+            return;
+          }
+        }}
+        aria-activedescendant={activeOptionId}
+        aria-expanded={selectableSuggestions.length > 0}
+        aria-controls={selectableSuggestions.length > 0 ? listboxId : undefined}
+        aria-autocomplete="list"
+        aria-haspopup="listbox"
+        role="combobox"
         className="w-full rounded-md border border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
       {errorMessage ? (
-        <p className="mt-2 text-sm text-red-600" role="alert">
+        <p className="mt-2 text-sm text-red-700" role="alert">
           {errorMessage}
         </p>
       ) : null}
-      {suggestions.length > 0 && (
-        <ul className="absolute z-10 mt-1 w-full rounded-md border border-gray-300 bg-white shadow-lg">
-          {suggestions.map((suggestion, index) => (
-            <li
-              key={suggestion.placePrediction.placeId ?? index}
-              onClick={() => handlePlaceSelect(suggestion.placePrediction)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  handlePlaceSelect(suggestion.placePrediction);
-                }
-              }}
-              className="cursor-pointer px-4 py-2 hover:bg-gray-100"
-            >
-              {suggestion.placePrediction.text.toString()}
-            </li>
-          ))}
-        </ul>
+      {selectableSuggestions.length > 0 && (
+        <div
+          className="absolute z-10 mt-1 w-full rounded-md border border-gray-300 bg-white shadow-lg"
+          role="listbox"
+          id={listboxId}
+          onMouseLeave={() => setActiveIndex(-1)}
+        >
+          {selectableSuggestions.map((suggestion, index) => {
+            const optionId = getOptionId(suggestion, index);
+            const isActive = index === activeIndex;
+            const isSelected = selectedPlaceId === suggestion.placePrediction.placeId;
+            const selectSuggestion = () => {
+              setSelectedPlaceId(suggestion.placePrediction.placeId ?? null);
+              handlePlaceSelect(suggestion.placePrediction);
+            };
+            return (
+              <div
+                key={optionId}
+                id={optionId}
+                role="option"
+                aria-selected={isSelected}
+                tabIndex={0}
+                onClick={selectSuggestion}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    if (event.key === " ") {
+                      event.preventDefault();
+                    }
+                    selectSuggestion();
+                  }
+                }}
+                onMouseEnter={() => setActiveIndex(index)}
+                className={`cursor-pointer px-4 py-2 hover:bg-gray-100 ${
+                  isActive ? "bg-gray-100 font-medium" : ""
+                }`}
+              >
+                {suggestion.placePrediction.text.text}
+              </div>
+            );
+          })}
+        </div>
       )}
     </div>
   );

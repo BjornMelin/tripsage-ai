@@ -6,18 +6,19 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  Activity,
-  AlertTriangle,
-  ArrowRightLeft,
-  Brain,
-  CheckCircle2,
-  Clock,
-  GitBranch,
-  Network,
-  Timer,
-  TrendingUp,
-  Users,
-  Workflow,
+  ActivityIcon,
+  AlertTriangleIcon,
+  ArrowRightLeftIcon,
+  BrainIcon,
+  CheckCircle2Icon,
+  ClockIcon,
+  GitBranchIcon,
+  NetworkIcon,
+  TimerIcon,
+  TrendingDownIcon,
+  TrendingUpIcon,
+  UsersIcon,
+  WorkflowIcon,
 } from "lucide-react";
 import type React from "react";
 import { startTransition, useEffect, useOptimistic, useState } from "react";
@@ -33,6 +34,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import {
+  AGENT_STATUS_COLORS,
+  DEFAULT_HANDOFF_STATUS_COLOR,
+  HANDOFF_STATUS_COLORS,
+  TREND_COLORS,
+} from "@/lib/variants/status";
 
 /** Interface for an agent */
 interface Agent {
@@ -180,36 +187,49 @@ const CollaborationMetrics: CollaborationMetric[] = [
   },
 ];
 
+const STATUS_ICON_CLASS = "h-3 w-3";
+
+const AGENT_STATUS_ICONS: Record<
+  Agent["status"] | "unknown",
+  React.ComponentType<{ className?: string }>
+> = {
+  active: CheckCircle2Icon,
+  busy: ClockIcon,
+  idle: TimerIcon,
+  offline: AlertTriangleIcon,
+  unknown: ActivityIcon,
+};
+
 /** Function to get the status color for an agent */
-const GetStatusColor = (status: Agent["status"]) => {
-  switch (status) {
-    case "active":
-      return "bg-green-500";
-    case "busy":
-      return "bg-yellow-500";
-    case "idle":
-      return "bg-blue-500";
-    case "offline":
-      return "bg-gray-500";
-    default:
-      return "bg-gray-500";
-  }
+const GetStatusColor = (status: Agent["status"] | "unknown") => {
+  const resolvedStatus = status === "unknown" ? "offline" : status;
+  return AGENT_STATUS_COLORS[resolvedStatus] ?? AGENT_STATUS_COLORS.offline;
 };
 
 /** Function to get the status icon for an agent */
-const GetStatusIcon = (status: Agent["status"]) => {
-  switch (status) {
-    case "active":
-      return <CheckCircle2 className="h-3 w-3" />;
-    case "busy":
-      return <Clock className="h-3 w-3" />;
-    case "idle":
-      return <Timer className="h-3 w-3" />;
-    case "offline":
-      return <AlertTriangle className="h-3 w-3" />;
-    default:
-      return <Activity className="h-3 w-3" />;
-  }
+const GetStatusIcon = (status: Agent["status"] | "unknown") => {
+  const Icon = AGENT_STATUS_ICONS[status] ?? AGENT_STATUS_ICONS.unknown;
+  return <Icon className={STATUS_ICON_CLASS} />;
+};
+
+type AgentStatusIndicatorProps = {
+  status?: Agent["status"];
+};
+
+const AgentStatusIndicator: React.FC<AgentStatusIndicatorProps> = ({ status }) => {
+  const resolvedStatus = status ?? "unknown";
+  const colorClass = GetStatusColor(resolvedStatus);
+
+  return (
+    <div
+      className={cn(
+        "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center",
+        colorClass
+      )}
+    >
+      <div className="text-white">{GetStatusIcon(resolvedStatus)}</div>
+    </div>
+  );
 };
 
 /** Component for an agent card */
@@ -244,14 +264,7 @@ const AgentCard: React.FC<{
               {getInitials(agent.name)}
             </AvatarFallback>
           </Avatar>
-          <div
-            className={cn(
-              "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center",
-              GetStatusColor(agent.status)
-            )}
-          >
-            <div className="text-white">{GetStatusIcon(agent.status)}</div>
-          </div>
+          <AgentStatusIndicator status={agent.status} />
         </div>
 
         <div className="flex-1 min-w-0">
@@ -330,29 +343,11 @@ const HandoffCard: React.FC<{
   const fromAgent = agents.find((a) => a.id === handoff.fromAgent);
   const toAgent = agents.find((a) => a.id === handoff.toAgent);
 
-  const getStatusConfig = () => {
-    switch (handoff.status) {
-      case "pending":
-        return {
-          bg: "bg-yellow-50",
-          border: "border-yellow-200",
-          color: "text-yellow-600",
-        };
-      case "completed":
-        return {
-          bg: "bg-green-50",
-          border: "border-green-200",
-          color: "text-green-600",
-        };
-      case "failed":
-        return { bg: "bg-red-50", border: "border-red-200", color: "text-red-600" };
-      default:
-        return { bg: "bg-gray-50", border: "border-gray-200", color: "text-gray-600" };
-    }
-  };
-
   /** Get the status configuration for a handoff */
-  const statusConfig = getStatusConfig();
+  const statusConfig:
+    | (typeof HANDOFF_STATUS_COLORS)[keyof typeof HANDOFF_STATUS_COLORS]
+    | typeof DEFAULT_HANDOFF_STATUS_COLOR =
+    HANDOFF_STATUS_COLORS[handoff.status] ?? DEFAULT_HANDOFF_STATUS_COLOR;
 
   return (
     <motion.div
@@ -366,8 +361,8 @@ const HandoffCard: React.FC<{
     >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <ArrowRightLeft className={cn("h-4 w-4", statusConfig.color)} />
-          <Badge variant="outline" className={statusConfig.color}>
+          <ArrowRightLeftIcon className={cn("h-4 w-4", statusConfig.text)} />
+          <Badge variant="outline" className={statusConfig.text}>
             {handoff.status}
           </Badge>
         </div>
@@ -381,7 +376,7 @@ const HandoffCard: React.FC<{
           <div className="text-xs text-muted-foreground mb-1">From</div>
           <div className="text-sm font-medium">{fromAgent?.name}</div>
         </div>
-        <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
+        <ArrowRightLeftIcon className="h-4 w-4 text-muted-foreground" />
         <div className="text-center">
           <div className="text-xs text-muted-foreground mb-1">To</div>
           <div className="text-sm font-medium">{toAgent?.name}</div>
@@ -513,7 +508,7 @@ export const AgentCollaborationHub: React.FC<AgentCollaborationHubProps> = ({
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Users className="h-6 w-6" />
+            <UsersIcon className="h-6 w-6" />
             Agent Collaboration Hub
           </h2>
           <p className="text-gray-600 mt-1">
@@ -522,11 +517,11 @@ export const AgentCollaborationHub: React.FC<AgentCollaborationHubProps> = ({
         </div>
         <div className="flex items-center gap-4">
           <Badge variant="outline" className="flex items-center gap-1">
-            <Activity className="h-3 w-3" />
+            <ActivityIcon className="h-3 w-3" />
             {activeAgents} Active
           </Badge>
           <Badge variant="outline" className="flex items-center gap-1">
-            <Clock className="h-3 w-3" />
+            <ClockIcon className="h-3 w-3" />
             {pendingHandoffs} Pending
           </Badge>
         </div>
@@ -541,13 +536,13 @@ export const AgentCollaborationHub: React.FC<AgentCollaborationHubProps> = ({
                 <div className="text-sm text-muted-foreground">{metric.metric}</div>
                 <div className="flex items-center gap-1">
                   {metric.trend === "up" && (
-                    <TrendingUp className="h-3 w-3 text-green-500" />
+                    <TrendingUpIcon className={cn("h-3 w-3", TREND_COLORS.up)} />
                   )}
                   {metric.trend === "down" && (
-                    <TrendingUp className="h-3 w-3 text-red-500 rotate-180" />
+                    <TrendingDownIcon className={cn("h-3 w-3", TREND_COLORS.down)} />
                   )}
                   {metric.trend === "stable" && (
-                    <Activity className="h-3 w-3 text-blue-500" />
+                    <ActivityIcon className={cn("h-3 w-3", TREND_COLORS.stable)} />
                   )}
                 </div>
               </div>
@@ -563,7 +558,7 @@ export const AgentCollaborationHub: React.FC<AgentCollaborationHubProps> = ({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Brain className="h-5 w-5" />
+              <BrainIcon className="h-5 w-5" />
               Active Agents
             </CardTitle>
           </CardHeader>
@@ -587,7 +582,7 @@ export const AgentCollaborationHub: React.FC<AgentCollaborationHubProps> = ({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Workflow className="h-5 w-5" />
+              <WorkflowIcon className="h-5 w-5" />
               Agent Handoffs
             </CardTitle>
           </CardHeader>
@@ -613,14 +608,14 @@ export const AgentCollaborationHub: React.FC<AgentCollaborationHubProps> = ({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Network className="h-5 w-5" />
+            <NetworkIcon className="h-5 w-5" />
             Collaboration Flow
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-8">
             <div className="text-center text-muted-foreground">
-              <GitBranch className="h-12 w-12 mx-auto mb-2 opacity-50" />
+              <GitBranchIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
               <p>Collaboration flow visualization coming soon</p>
               <p className="text-sm">Real-time agent workflow diagram</p>
             </div>

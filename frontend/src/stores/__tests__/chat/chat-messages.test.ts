@@ -4,6 +4,7 @@ import { act } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useChatMessages } from "@/stores/chat/chat-messages";
 import { useChatRealtime } from "@/stores/chat/chat-realtime";
+import { withFakeTimers } from "@/test/utils/with-fake-timers";
 
 describe("ChatMessages", () => {
   beforeEach(() => {
@@ -111,28 +112,28 @@ describe("ChatMessages", () => {
       expect(session?.messages?.[0]?.role).toBe("user");
     });
 
-    it("updates session updatedAt timestamp", () => {
-      const sessionId = useChatMessages.getState().createSession();
-      const originalUpdatedAt = useChatMessages
-        .getState()
-        .sessions.find((s) => s.id === sessionId)?.updatedAt;
+    it(
+      "updates session updatedAt timestamp",
+      withFakeTimers(() => {
+        const sessionId = useChatMessages.getState().createSession();
+        const originalUpdatedAt = useChatMessages
+          .getState()
+          .sessions.find((s) => s.id === sessionId)?.updatedAt;
 
-      // Wait a bit to ensure timestamp difference
-      vi.useFakeTimers();
-      vi.advanceTimersByTime(1000);
+        vi.advanceTimersByTime(1000);
 
-      useChatMessages.getState().addMessage(sessionId, {
-        content: "Test",
-        role: "user",
-      });
+        useChatMessages.getState().addMessage(sessionId, {
+          content: "Test",
+          role: "user",
+        });
 
-      const updatedAt = useChatMessages
-        .getState()
-        .sessions.find((s) => s.id === sessionId)?.updatedAt;
+        const updatedAt = useChatMessages
+          .getState()
+          .sessions.find((s) => s.id === sessionId)?.updatedAt;
 
-      expect(updatedAt).not.toBe(originalUpdatedAt);
-      vi.useRealTimers();
-    });
+        expect(updatedAt).not.toBe(originalUpdatedAt);
+      })
+    );
   });
 
   describe("updateMessage", () => {

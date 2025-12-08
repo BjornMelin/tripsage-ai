@@ -26,6 +26,7 @@ import {
 } from "@/lib/api/route-helpers";
 import { deleteUserApiKey, deleteUserGatewayBaseUrl } from "@/lib/supabase/rpc";
 import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
+import { vaultUnavailableResponse } from "../_error-mapping";
 
 const ALLOWED_SERVICES = new Set([
   "openai",
@@ -117,11 +118,7 @@ export function DELETE(
         },
         level: "error",
       });
-      return errorResponse({
-        error: "internal_error",
-        reason: "Internal server error",
-        status: 500,
-      });
+      return vaultUnavailableResponse("Failed to delete API key", err);
     }
   })(req, context);
 }

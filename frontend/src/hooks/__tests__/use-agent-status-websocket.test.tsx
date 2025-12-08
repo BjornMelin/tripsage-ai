@@ -2,8 +2,8 @@
 
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useAgentStatusWebSocket } from "@/hooks/use-agent-status-websocket";
-import type { RealtimeConnectionStatus } from "@/hooks/use-realtime-channel";
+import { useAgentStatusWebSocket } from "@/hooks/chat/use-agent-status-websocket";
+import type { RealtimeConnectionStatus } from "@/hooks/supabase/use-realtime-channel";
 import { useAgentStatusStore } from "@/stores/agent-status-store";
 
 const mockSendBroadcast = vi.fn().mockResolvedValue(undefined);
@@ -17,7 +17,7 @@ let lastRealtimeOptions: {
   onStatusChange?: (status: RealtimeConnectionStatus) => void;
 } | null = null;
 
-vi.mock("@/hooks/use-realtime-channel", () => ({
+vi.mock("@/hooks/supabase/use-realtime-channel", () => ({
   useRealtimeChannel: vi.fn((topic: string | null, opts) => {
     lastRealtimeOptions = opts ?? null;
     return {

@@ -2,16 +2,19 @@
 
 import { renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { useChatRealtime, useTripRealtime } from "@/hooks/use-supabase-realtime";
+import {
+  useChatRealtime,
+  useTripRealtime,
+} from "@/hooks/supabase/use-supabase-realtime";
 
 const useRealtimeChannelMock = vi.fn();
 const useWebSocketChatMock = vi.fn();
 
-vi.mock("@/hooks/use-realtime-channel", () => ({
+vi.mock("@/hooks/supabase/use-realtime-channel", () => ({
   useRealtimeChannel: (...args: unknown[]) => useRealtimeChannelMock(...args),
 }));
 
-vi.mock("@/hooks/use-websocket-chat", () => ({
+vi.mock("@/hooks/chat/use-websocket-chat", () => ({
   useWebSocketChat: (...args: unknown[]) => useWebSocketChatMock(...args),
 }));
 

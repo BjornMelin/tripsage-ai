@@ -15,8 +15,6 @@ export {
   getGoogleMapsBrowserKey,
   publicEnv,
 } from "./client";
-// Explicit exports to prevent accidental wildcard imports
-export type { ClientEnv, ServerEnv } from "./schema";
 // Server-only exports (will fail if imported in client)
 export {
   env as serverEnv,

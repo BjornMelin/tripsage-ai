@@ -2,7 +2,7 @@
 
 import { createTravelPlan, updateTravelPlan } from "@ai/tools/server/planning";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getMockCookiesForTest } from "@/test/route-helpers";
+import { getMockCookiesForTest } from "@/test/helpers/route";
 
 // Mock Next.js cookies() before any imports that use it
 vi.mock("next/headers", () => ({
@@ -27,9 +27,16 @@ const { mockWithTelemetrySpan } = vi.hoisted(() => {
   return { mockWithTelemetrySpan: withTelemetrySpan };
 });
 
-vi.mock("@/lib/telemetry/span", () => ({
-  withTelemetrySpan: mockWithTelemetrySpan,
-}));
+vi.mock("@/lib/telemetry/span", async () => {
+  const actual =
+    await vi.importActual<typeof import("@/lib/telemetry/span")>(
+      "@/lib/telemetry/span"
+    );
+  return {
+    ...actual,
+    withTelemetrySpan: mockWithTelemetrySpan,
+  };
+});
 
 const ratelimitFailNext = vi.hoisted(() => ({ fail: false }));
 

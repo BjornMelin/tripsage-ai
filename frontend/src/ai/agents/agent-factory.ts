@@ -13,19 +13,26 @@
 
 import "server-only";
 
-import type { LanguageModel, StopCondition, ToolSet } from "ai";
+import type { LanguageModel, StopCondition, SystemModelMessage, ToolSet } from "ai";
 import {
   asSchema,
-  generateObject,
+  generateText,
   InvalidToolInputError,
   NoSuchToolError,
+  Output,
   stepCountIs,
   ToolLoopAgent,
 } from "ai";
+import {
+  hasInjectionRisk,
+  isFilteredValue,
+  sanitizeWithInjectionDetection,
+} from "@/lib/security/prompt-sanitizer";
 import { secureUuid } from "@/lib/security/random";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { recordTelemetryEvent } from "@/lib/telemetry/span";
 
+import { normalizeInstructions } from "./chat-agent";
 import type {
   AgentDependencies,
   StructuredOutput,
@@ -168,16 +175,67 @@ export function createTripSageAgent<
     ...(prepareCall
       ? {
           prepareCall: async (params) => {
+            // Normalize instructions to handle potential array input
+            type InstructionValue = string | SystemModelMessage;
+            const normalizeInstructionInput = (
+              input: InstructionValue | Array<InstructionValue | undefined> | undefined
+            ): string => {
+              if (Array.isArray(input)) {
+                return input
+                  .map((instruction) => normalizeInstructions(instruction ?? ""))
+                  .join("\n");
+              }
+              return normalizeInstructions(input ?? "");
+            };
+
+            const hasParamsInstructions = Object.hasOwn(params, "instructions");
+
+            const normalizedInstructions = normalizeInstructionInput(
+              hasParamsInstructions
+                ? (params.instructions as
+                    | InstructionValue
+                    | InstructionValue[]
+                    | undefined)
+                : (instructions as InstructionValue | InstructionValue[] | undefined)
+            );
+
+            // Sanitize instructions to prevent prompt injection attacks
+            const sanitizedInstructions = sanitizeWithInjectionDetection(
+              normalizedInstructions,
+              5000 // Reasonable limit for agent instructions
+            );
+
+            // Security monitoring: log if injection patterns were detected
+            if (hasInjectionRisk(normalizedInstructions)) {
+              logger.warn("Prompt injection patterns detected in agent instructions", {
+                hasFilteredContent: isFilteredValue(sanitizedInstructions),
+                identifier: deps.identifier,
+                modelId: deps.modelId,
+              });
+              recordTelemetryEvent("security.prompt_injection_detected", {
+                attributes: {
+                  identifier: deps.identifier,
+                  modelId: deps.modelId,
+                  wasFiltered: isFilteredValue(sanitizedInstructions),
+                },
+                level: "warning",
+              });
+            }
+
             const result = await prepareCall({
-              instructions: params.instructions ?? instructions,
+              instructions: sanitizedInstructions,
               model: params.model ?? deps.model,
               options: params.options as CallOptionsType,
               tools: params.tools ?? tools,
             });
+
+            const hasResultInstructions = Object.hasOwn(result, "instructions");
             // Return merged settings - prepareCall can override any setting
             return {
               ...params,
-              ...(result.instructions ? { instructions: result.instructions } : {}),
+              instructions: hasResultInstructions
+                ? (result.instructions ?? "")
+                : sanitizedInstructions,
               ...(result.model ? { model: result.model } : {}),
               ...(result.tools ? { tools: result.tools } : {}),
               ...(result.activeTools ? { activeTools: result.activeTools } : {}),
@@ -286,10 +344,10 @@ export function createTripSageAgent<
         ].join("\n");
 
         const attemptModelRepair = async (modelId: string, model: LanguageModel) => {
-          const { object: repaired } = await generateObject({
+          const { output: repaired } = await generateText({
             model,
+            output: Output.object({ schema: tool.inputSchema }),
             prompt,
-            schema: tool.inputSchema,
           });
           const schema = asSchema(tool.inputSchema);
           if (schema?.validate) {

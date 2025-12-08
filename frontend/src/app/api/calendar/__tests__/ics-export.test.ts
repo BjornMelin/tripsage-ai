@@ -1,8 +1,8 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it } from "vitest";
-import { mockApiRouteAuthUser, resetApiRouteMocks } from "@/test/api-route-helpers";
-import { createMockNextRequest, createRouteParamsContext } from "@/test/route-helpers";
+import { mockApiRouteAuthUser, resetApiRouteMocks } from "@/test/helpers/api-route";
+import { createMockNextRequest, createRouteParamsContext } from "@/test/helpers/route";
 import * as icsExportRoute from "../ics/export/route";
 
 describe("/api/calendar/ics/export", () => {
