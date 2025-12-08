@@ -131,11 +131,14 @@ describe("/api/trips/suggestions route", () => {
     expect(firstCall, "generateText should be invoked at least once").toBeDefined();
     const call = firstCall?.[0];
     expect(call).toBeDefined();
+    const rawPrompt =
+      typeof call?.prompt === "string" ? call.prompt : JSON.stringify(call?.prompt);
+    const promptLower = rawPrompt.toLowerCase();
     // Injection patterns should be filtered, so the malicious category is excluded
-    expect(call?.prompt).not.toContain("IMPORTANT:");
-    expect(call?.prompt).not.toContain("ignore");
+    expect(promptLower).not.toContain("important:");
+    expect(promptLower).not.toContain("ignore");
     // The category line should not be included at all when injection is detected
-    expect(call?.prompt).not.toContain("Focus on the");
+    expect(promptLower).not.toContain("focus on the");
   });
 
   it("preserves legitimate category in prompt", async () => {
