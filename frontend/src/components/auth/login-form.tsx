@@ -67,9 +67,9 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
         ];
 
     // Prefer TOTP for code-based verification; WebAuthn requires different handling
-    const factor = factorsArray.find(
-      (f) => f.status === "verified" && f.factor_type === "totp"
-    ) ?? factorsArray.find((f) => f.status === "verified");
+    const factor =
+      factorsArray.find((f) => f.status === "verified" && f.factor_type === "totp") ??
+      factorsArray.find((f) => f.status === "verified");
     if (!factor) {
       throw new Error("No verified MFA factor found for this account");
     }
@@ -100,10 +100,7 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
     setLoading(false);
     if (signInError) {
       const code = (signInError as { code?: string } | null)?.code;
-      const status = (signInError as { status?: number } | null)?.status;
-      const isMfa =
-        code === "insufficient_aal" ||
-        code === "mfa_required";
+      const isMfa = code === "insufficient_aal" || code === "mfa_required";
       if (isMfa) {
         try {
           await startMfaChallenge();

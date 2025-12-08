@@ -103,7 +103,10 @@ async function fetchPersonalizedDestinations(
     .sort(([, countA], [, countB]) => countB - countA)
     .slice(0, 10)
     .map(([destLower]) => {
-      const displayName = displayNames.get(destLower)!;
+      const displayName = displayNames.get(destLower);
+      if (!displayName) {
+        throw new Error(`Display name not found for destination: ${destLower}`);
+      }
       const fallback = GLOBAL_POPULAR_DESTINATIONS_BY_CITY.get(destLower);
       return {
         avgPrice: fallback?.avgPrice,
