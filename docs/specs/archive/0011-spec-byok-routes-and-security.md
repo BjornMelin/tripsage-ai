@@ -48,6 +48,7 @@ Move BYOK key CRUD and validation to Next.js route handlers using Supabase Vault
 - Current implementation (routes in `frontend/src/app/api/keys/**`):
   - `transport_error`, `http_<status>`, `unauthorized` from validation handler
   - `db_error` for Supabase failures
+- Compatibility note: Planned codes are the GA-stable contract; current codes are legacy/unstable. Planned codes will be introduced starting **2026-01-15** with a **60-day grace period**; legacy codes will be removed no earlier than **2026-03-31** or the next major release thereafter. Clients should already handle the planned codes (forward-compatible) while keeping handlers for current codes until deprecation ends. Breaking changes will be announced via release notes, ADR-0024 updates, and the BYOK changelog.
 - **Follow-up (pre-GA):** Map current codes to planned standard set above (see mapping table below) so clients have a stable contract. This must be completed before BYOK is generally available; create a tracking issue with owner assignment and target release milestone.
   - Recommended mapping: `db_error` → `VAULT_UNAVAILABLE`; `transport_error`/`http_5xx` → `NETWORK_ERROR`; `http_4xx`/`unauthorized` → `INVALID_KEY`
   - Update all route handlers in `frontend/src/app/api/keys/**` and integration tests accordingly.

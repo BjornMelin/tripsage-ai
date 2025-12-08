@@ -23,10 +23,16 @@ import {
   stepCountIs,
   ToolLoopAgent,
 } from "ai";
+import {
+  hasInjectionRisk,
+  isFilteredValue,
+  sanitizeWithInjectionDetection,
+} from "@/lib/security/prompt-sanitizer";
 import { secureUuid } from "@/lib/security/random";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { recordTelemetryEvent } from "@/lib/telemetry/span";
 
+import { normalizeInstructions } from "./chat-agent";
 import type {
   AgentDependencies,
   StructuredOutput,
@@ -169,8 +175,44 @@ export function createTripSageAgent<
     ...(prepareCall
       ? {
           prepareCall: async (params) => {
+            // Normalize instructions to handle potential array input
+            let normalizedInstructions: string;
+            if (params.instructions) {
+              if (Array.isArray(params.instructions)) {
+                // Handle array case by taking the first message or normalizing each
+                normalizedInstructions = normalizeInstructions(params.instructions[0]);
+              } else {
+                normalizedInstructions = normalizeInstructions(params.instructions);
+              }
+            } else {
+              normalizedInstructions = normalizeInstructions(instructions);
+            }
+
+            // Sanitize instructions to prevent prompt injection attacks
+            const sanitizedInstructions = sanitizeWithInjectionDetection(
+              normalizedInstructions,
+              5000 // Reasonable limit for agent instructions
+            );
+
+            // Security monitoring: log if injection patterns were detected
+            if (hasInjectionRisk(normalizedInstructions)) {
+              logger.warn("Prompt injection patterns detected in agent instructions", {
+                hasFilteredContent: isFilteredValue(sanitizedInstructions),
+                identifier: deps.identifier,
+                modelId: deps.modelId,
+              });
+              recordTelemetryEvent("security.prompt_injection_detected", {
+                attributes: {
+                  identifier: deps.identifier,
+                  modelId: deps.modelId,
+                  wasFiltered: isFilteredValue(sanitizedInstructions),
+                },
+                level: "warning",
+              });
+            }
+
             const result = await prepareCall({
-              instructions: params.instructions ?? instructions,
+              instructions: sanitizedInstructions,
               model: params.model ?? deps.model,
               options: params.options as CallOptionsType,
               tools: params.tools ?? tools,
