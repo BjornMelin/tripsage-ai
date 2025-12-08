@@ -72,6 +72,7 @@ export default function DestinationsSearchClient({
       });
       toast({
         description:
+          normalizedError.message ||
           "Unable to complete your search. Please try again or contact support.",
         title: "Search failed",
         variant: "destructive",

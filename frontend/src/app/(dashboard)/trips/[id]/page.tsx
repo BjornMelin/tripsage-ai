@@ -161,14 +161,15 @@ export default function TripDetailsPage() {
             variant="outline"
             size="sm"
             onClick={async () => {
-              if (!currentTrip) return;
+              const trip = currentTrip;
+              if (!trip) return;
               try {
-                const icsContent = await exportTripToIcs(currentTrip);
+                const icsContent = await exportTripToIcs(trip);
                 const blob = new Blob([icsContent], { type: "text/calendar" });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement("a");
                 a.href = url;
-                a.download = `${currentTrip.title || "trip"}.ics`;
+                a.download = `${trip.title || "trip"}.ics`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
@@ -182,7 +183,8 @@ export default function TripDetailsPage() {
                 recordClientErrorOnActiveSpan(normalizedError, {
                   action: "exportTripToIcs",
                   context: "TripDetailsPage",
-                  tripId: currentTrip.id,
+                  tripId: trip.id,
+                  tripTitle: trip.title,
                 });
                 alert("Failed to export trip to calendar");
               }

@@ -34,6 +34,17 @@ export interface RouterAgentDeps {
   modelId?: string;
 }
 
+export class InvalidPatternsError extends Error {
+  readonly code = "invalid_patterns";
+
+  constructor(
+    message = "User message contains only invalid patterns and cannot be processed"
+  ) {
+    super(message);
+    this.name = "InvalidPatternsError";
+  }
+}
+
 /**
  * Classify a user message into an agent workflow.
  *
@@ -69,9 +80,7 @@ export async function classifyUserMessage(
   );
 
   if (!sanitizedMessage.trim()) {
-    throw new Error(
-      "User message contains only invalid patterns and cannot be processed"
-    );
+    throw new InvalidPatternsError();
   }
   const systemPrompt = buildRouterPrompt();
 

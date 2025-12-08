@@ -27,11 +27,16 @@ const { mockWithTelemetrySpan } = vi.hoisted(() => {
   return { mockWithTelemetrySpan: withTelemetrySpan };
 });
 
-vi.mock("@/lib/telemetry/span", () => ({
-  recordTelemetryEvent: vi.fn(),
-  sanitizeAttributes: (attrs: unknown) => attrs,
-  withTelemetrySpan: mockWithTelemetrySpan,
-}));
+vi.mock("@/lib/telemetry/span", async () => {
+  const actual =
+    await vi.importActual<typeof import("@/lib/telemetry/span")>(
+      "@/lib/telemetry/span"
+    );
+  return {
+    ...actual,
+    withTelemetrySpan: mockWithTelemetrySpan,
+  };
+});
 
 const ratelimitFailNext = vi.hoisted(() => ({ fail: false }));
 

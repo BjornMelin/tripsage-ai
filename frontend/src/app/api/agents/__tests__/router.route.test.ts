@@ -13,6 +13,14 @@ const classifyUserMessage = vi.hoisted(() => vi.fn());
 
 vi.mock("@ai/agents/router-agent", () => ({
   classifyUserMessage,
+  InvalidPatternsError: class InvalidPatternsError extends Error {
+    constructor(message?: string) {
+      super(message ?? "invalid patterns");
+      this.name = "InvalidPatternsError";
+      // @ts-expect-error test shim
+      this.code = "invalid_patterns";
+    }
+  },
 }));
 
 vi.mock("@ai/models/registry", () => ({
@@ -27,9 +35,10 @@ describe("POST /api/agents/router", () => {
   });
 
   it("returns 400 when the sanitized message is empty/invalid", async () => {
-    classifyUserMessage.mockRejectedValueOnce(
-      new Error("User message contains only invalid patterns and cannot be processed")
-    );
+    classifyUserMessage.mockRejectedValueOnce({
+      code: "invalid_patterns",
+      message: "User message contains only invalid patterns and cannot be processed",
+    });
 
     const { POST } = await import("../router/route");
     const res = await POST(

@@ -20,7 +20,8 @@ vi.mock("@/prompts/agents", () => ({
   buildRouterPrompt: mockBuildRouterPrompt,
 }));
 
-import { classifyUserMessage } from "../router-agent";
+import * as promptSanitizer from "@/lib/security/prompt-sanitizer";
+import { classifyUserMessage, InvalidPatternsError } from "../router-agent";
 
 describe("classifyUserMessage", () => {
   const mockModel = { modelId: "test-model" } as Parameters<
@@ -131,6 +132,18 @@ describe("classifyUserMessage", () => {
     await expect(
       classifyUserMessage({ model: mockModel }, "test message")
     ).rejects.toThrow("Failed to classify user message: API timeout");
+  });
+
+  it("throws InvalidPatternsError when sanitization removes all content", async () => {
+    const sanitizeSpy = vi
+      .spyOn(promptSanitizer, "sanitizeWithInjectionDetection")
+      .mockReturnValue("   ");
+
+    await expect(
+      classifyUserMessage({ model: mockModel }, "malicious content")
+    ).rejects.toBeInstanceOf(InvalidPatternsError);
+
+    sanitizeSpy.mockRestore();
   });
 
   it("handles non-Error throws", async () => {
