@@ -13,7 +13,7 @@
 
 import "server-only";
 
-import type { LanguageModel, StopCondition, ToolSet } from "ai";
+import type { LanguageModel, StopCondition, SystemModelMessage, ToolSet } from "ai";
 import {
   asSchema,
   generateText,
@@ -176,18 +176,28 @@ export function createTripSageAgent<
       ? {
           prepareCall: async (params) => {
             // Normalize instructions to handle potential array input
-            let normalizedInstructions: string;
-            if (params.instructions) {
-              if (Array.isArray(params.instructions)) {
-                normalizedInstructions = params.instructions
-                  .map((instruction) => normalizeInstructions(instruction))
+            type InstructionValue = string | SystemModelMessage;
+            const normalizeInstructionInput = (
+              input: InstructionValue | Array<InstructionValue | undefined> | undefined
+            ): string => {
+              if (Array.isArray(input)) {
+                return input
+                  .map((instruction) => normalizeInstructions(instruction ?? ""))
                   .join("\n");
-              } else {
-                normalizedInstructions = normalizeInstructions(params.instructions);
               }
-            } else {
-              normalizedInstructions = normalizeInstructions(instructions);
-            }
+              return normalizeInstructions(input ?? "");
+            };
+
+            const hasParamsInstructions = Object.hasOwn(params, "instructions");
+
+            const normalizedInstructions = normalizeInstructionInput(
+              hasParamsInstructions
+                ? (params.instructions as
+                    | InstructionValue
+                    | InstructionValue[]
+                    | undefined)
+                : (instructions as InstructionValue | InstructionValue[] | undefined)
+            );
 
             // Sanitize instructions to prevent prompt injection attacks
             const sanitizedInstructions = sanitizeWithInjectionDetection(
@@ -218,10 +228,14 @@ export function createTripSageAgent<
               options: params.options as CallOptionsType,
               tools: params.tools ?? tools,
             });
+
+            const hasResultInstructions = Object.hasOwn(result, "instructions");
             // Return merged settings - prepareCall can override any setting
             return {
               ...params,
-              ...(result.instructions ? { instructions: result.instructions } : {}),
+              instructions: hasResultInstructions
+                ? (result.instructions ?? "")
+                : sanitizedInstructions,
               ...(result.model ? { model: result.model } : {}),
               ...(result.tools ? { tools: result.tools } : {}),
               ...(result.activeTools ? { activeTools: result.activeTools } : {}),

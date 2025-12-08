@@ -190,14 +190,19 @@ export default function TripDetailsPage() {
                 const icsContent = await exportTripToIcs(trip);
                 const blob = new Blob([icsContent], { type: "text/calendar" });
                 const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                const sanitizedFilename = `${sanitizeTripTitleForFilename(trip.title)}.ics`;
-                a.download = sanitizedFilename;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
+                try {
+                  const a = document.createElement("a");
+                  a.href = url;
+                  const sanitizedFilename = `${sanitizeTripTitleForFilename(
+                    trip.title
+                  )}.ics`;
+                  a.download = sanitizedFilename;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                } finally {
+                  URL.revokeObjectURL(url);
+                }
               } catch (error) {
                 if (process.env.NODE_ENV === "development") {
                   console.error("Failed to export trip:", error);

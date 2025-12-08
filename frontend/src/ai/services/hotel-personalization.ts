@@ -18,11 +18,12 @@ import { deleteCachedJson, getCachedJson, setCachedJson } from "@/lib/cache/upst
 import { sanitizeArray, sanitizeForPrompt } from "@/lib/security/prompt-sanitizer";
 import { emitOperationalAlert } from "@/lib/telemetry/alerts";
 import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
+import packageJson from "../../../package.json";
 
 /** Cache TTL for personalization results (30 minutes). */
 export const PERSONALIZATION_CACHE_TTL = 1800;
 
-const AI_SDK_VERSION = "6.0.0-beta.138";
+const AI_SDK_VERSION = packageJson.dependencies?.ai ?? "unknown";
 
 const MAX_HOTELS_PER_REQUEST = 20;
 
@@ -148,7 +149,8 @@ function buildPersonalizationCacheKey(
     preferences: canonicalPreferences,
   });
   const hash = hashInputForCache(input);
-  return `hotel:personalize:${userId}:${hash}`;
+  const userHash = hashInputForCache(userId);
+  return `hotel:personalize:${userHash}:${hash}`;
 }
 
 /**
