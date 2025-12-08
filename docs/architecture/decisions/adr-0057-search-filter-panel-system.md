@@ -34,6 +34,8 @@ The filter presets workflow is broken:
 
 ## Decision
 
+**Status note:** This ADR is *Accepted*. Sections 4–6 describe the planned FilterPanel component/store architecture that is not yet implemented; Section 7 reflects current integration points with the existing `useSearchFiltersStore`; Sections 8–9 outline deep-linking and page wiring that remain to be built. See **Deferred Work** below for tracked follow-ups.
+
 We will implement a complete search filter system using shadcn/ui components with the following architecture:
 
 ### 1. Prerequisites
@@ -229,18 +231,14 @@ const {
 
   Until one of these is implemented, the component gracefully hides itself (e.g., `if (!getMostUsedFilters && !presets) return null`). This defers the analytics integration work while keeping the UI architecture complete.
 
-### 8. Deep-linking Strategy
+### 8. Deferred: Deep-linking Implementation
 
-`applyFiltersFromObject` is used to hydrate the store from URL query parameters. The serialization/deserialization flow:
+Deep-linking for filters is **not yet implemented**. To enable it, deliver all of the following:
 
-- **Format**: `filters` query param containing `key:value` pairs separated by `|`. Example: `?filters=price:0-2000|stops:0,1|airlines:AA,UA`.
-- **Serialize**: `search-params-store` writes filters to the URL via `filtersToQueryParams()` inside a `history.replaceState` call (triggered when filters change).
-- **Deserialize**: on page load, `useEffect` in `filter-panel.tsx` parses `location.search` with `queryToFilters()` and calls `applyFiltersFromObject(parsedFilters)` on the store.
-- **Example**:
-  1. User selects filters → store emits `currentFilters` → `filtersToQueryParams` updates the URL.
-  2. User shares the link; on open, `queryToFilters` parses the `filters` param and rehydrates the store via `applyFiltersFromObject`.
-
-Deep-linking remains opt-in per page; pages without filters simply skip calling the serializer.
+- Implement `queryToFilters` and `filtersToQueryParams` utilities (format TBD; include tests).
+- Integrate URL read/write in the filter panel flow (e.g., hydrate via `applyFiltersFromObject` on load and update URL when filters change).
+- Provide example integration points (e.g., where `applyFiltersFromObject` is invoked inside `filter-panel.tsx` or a page-level effect).
+- Add documentation and tests that cover serialization, deserialization, and no-op behavior when deep-linking is disabled.
 
 ### 9. Page Integration
 
@@ -258,6 +256,11 @@ Update `flights/page.tsx` sidebar:
 ```
 
 `FilterPanelSkeleton` shows disabled controls while async hydration (URL → store) or analytics-powered quick filters are loading.
+
+## Deferred Work
+
+- QuickFilters analytics integration (`getMostUsedFilters` store API) and activation path — Tracking: [issue draft placeholder](https://github.com/tripsage-ai/tripsage/issues/new?title=ADR-0057%3A%20QuickFilters%20analytics%20integration&labels=adr,frontend,filters).
+- Deep-linking and page wiring (Sections 8–9) for flights and other search pages — Tracking: [issue draft placeholder](https://github.com/tripsage-ai/tripsage/issues/new?title=ADR-0057%3A%20Search%20filter%20deep-linking%20and%20page%20wiring&labels=adr,frontend,filters).
 
 ## Consequences
 

@@ -56,12 +56,12 @@ through centralized PII filters plus OpenTelemetry spans.
 - **Retention:** `memories.turn_embeddings` cleaned up at **${MEMORIES_RETENTION_DAYS:-180} days** via pg_cron; align embeddings and session records to the same window. Rationale: matches product UX (recent travel context) and privacy expectations; configurable via `MEMORIES_RETENTION_DAYS` for regulatory changes. Deploy the cron job in migrations; monitor runs via Postgres logs and Datadog alerts on failures/lag.
 - **Session semantics:** reuse the most recent "Travel Plan" chat/memory session **per user and conversation thread** when the planner tool is invoked to reduce fragmentation and improve retrieval accuracy. Session-level locking for concurrent invocations now guards session creation (Redis lock in `frontend/src/ai/tools/server/planning.ts`). Users can start a fresh session by clearing memory or opening a new chat thread.
 
-### Implementation status & follow-ups
+### Implementation status & follow-ups (tracked)
 
-- **Config surface:** Runtime defaults for `PGVECTOR_HNSW_M`, `PGVECTOR_HNSW_EF_CONSTRUCTION`, `PGVECTOR_HNSW_EF_SEARCH_DEFAULT`, and `MEMORIES_RETENTION_DAYS` are documented in `.env.example` / `.env.test.example`. `20251122000000_base_schema.sql` now parameterizes HNSW indexes, `hnsw.ef_search`, and retention intervals from these env vars with deterministic defaults.
-- **`ef_search_override`:** Implemented in `match_accommodation_embeddings` with env fallback; expose per-call tuning without changing global defaults.
-- **Session-level locking:** Implemented via Redis lock in planner tool (`frontend/src/ai/tools/server/planning.ts`) to serialize session creation and reuse for "Travel Plan" flows.
-- **Monitoring:** Skeleton Datadog monitor for pg_cron retention job failures documented in `docs/operations/runbooks/pg-cron-monitoring.md`; add to Datadog when log shipping is available. HNSW maintenance alerts remain TODO.
+- **Config surface** — Parameterize pgvector/HNSW + retention defaults in migrations (issue [#517](https://github.com/BjornMelin/tripsage-ai/issues/517), owner @BjornMelin, due 2025-12-22).
+- **`ef_search_override`** — Wire optional override through `match_accommodation_embeddings` and adapters (issue [#518](https://github.com/BjornMelin/tripsage-ai/issues/518), owner @BjornMelin, due 2025-12-22).
+- **Session-level locking** — Add advisory/session lock around Travel Plan session creation (issue [#519](https://github.com/BjornMelin/tripsage-ai/issues/519), owner @BjornMelin, due 2025-12-22).
+- **Monitoring** — Ship alerts for retention cron + HNSW maintenance jobs (issue [#520](https://github.com/BjornMelin/tripsage-ai/issues/520), owner @BjornMelin, due 2025-12-22).
 
 ## Consequences
 

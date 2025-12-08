@@ -12,6 +12,10 @@ Operational checklist to detect and remediate ownership mismatches between Supab
 
 - Supabase service-role key available for SQL execution.
 - Migrations applied from `supabase/migrations/20251122000000_base_schema.sql` (RLS + owner_id/owner coalesce in storage policies).
+- Verify migration applied before running queries:
+  - Column check: `SELECT column_name FROM information_schema.columns WHERE table_schema = 'storage' AND table_name = 'objects' AND column_name = 'owner_id';` should return one row.
+  - Policy check: confirm RLS policies on `storage.objects` reference `owner`/`owner_id` (e.g., via `SELECT policyname, policydefinition FROM pg_policies WHERE schemaname = 'storage' AND tablename = 'objects';`).
+  - If either check fails, stop and apply the migration before proceeding.
 
 ## Detection Queries
 
@@ -33,7 +37,8 @@ SELECT o.bucket_id, o.name AS path, o.owner AS storage_owner, o.owner_id AS stor
 FROM storage.objects o
 JOIN public.file_attachments fa ON fa.file_path = o.name
 WHERE o.bucket_id IN ('attachments','trip-images','avatars')
-  AND (fa.user_id IS DISTINCT FROM coalesce(o.owner_id, o.owner) OR fa.user_id IS NULL);
+  AND fa.user_id IS NOT NULL -- NULL user_ids handled separately (treat as malformed attachments)
+  AND fa.user_id IS DISTINCT FROM coalesce(o.owner_id, o.owner);
 ```
 
 **file_attachments pointing to missing objects**
@@ -57,7 +62,8 @@ SET owner = fa.user_id, owner_id = fa.user_id
 FROM public.file_attachments fa
 WHERE fa.file_path = o.name
   AND o.bucket_id IN ('attachments','trip-images','avatars')
-  AND (fa.user_id IS DISTINCT FROM coalesce(o.owner_id, o.owner) OR fa.user_id IS NULL);
+  AND fa.user_id IS NOT NULL -- skip nulls; investigate these attachments manually
+  AND fa.user_id IS DISTINCT FROM coalesce(o.owner_id, o.owner);
 ```
 
 - For missing objects (query 3): either remove the relational row or re-upload the file, depending on business need.
