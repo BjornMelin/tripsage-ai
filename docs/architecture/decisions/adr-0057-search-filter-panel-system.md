@@ -40,7 +40,7 @@ We will implement a complete search filter system using shadcn/ui components wit
 
 - `shadcn/ui` is already installed and configured in the `frontend/` app (see `docs/development/ui.md`).
 - Run all shadcn commands from the `frontend/` directory so the generator picks up the Next.js workspace config.
-- Versioning: we intentionally use `@latest` for shadcn component additions to track upstream fixes. If a release pin is required, replace `@latest` with the vetted version in `package.json`.
+- **Versioning strategy**: We intentionally use `@latest` for shadcn component additions to track upstream bug fixes and improvements. Versions are pinned in `pnpm-lock.yaml` for reproducibility across environments; CI/CD and local dev will have identical locked versions. If a breaking change occurs in a shadcn release, replace `@latest` with a specific vetted version in `package.json` (e.g., `shadcn-ui@0.8.1`) and document the constraint in this ADR with the breaking change details. Team members should review shadcn changelog entries during routine `pnpm update` cycles and flag any known issues (search `github.com/shadcn-ui/ui/releases` for accordion/toggle-group breaking changes before upgrade).
 
 ### 2. Restore Valuable Store Methods
 
@@ -65,8 +65,8 @@ FilterPanel (Card)
 │   ├── Title: "Filters"
 │   ├── Active filter count (Badge)
 │   └── "Clear All" button
-├── QuickFilters (optional)
-│   └── Badges from usage analytics (future: `getMostUsedFilters` once implemented)
+├── QuickFilters (interim, see follow-ups below)
+│   └── Badges from usage analytics (deferred: `getMostUsedFilters` implementation; renders disabled/hidden until implemented or analytics presets provided via props)
 ├── Accordion
 │   ├── AccordionItem: Price Range
 │   │   └── FilterRange (Slider dual-thumb)
@@ -136,6 +136,45 @@ frontend/src/components/features/search/
 - **Coverage**: target ≥85% line/branch coverage for filter panel logic, store adapters, and URL serialization helpers; critical paths (apply/clear filters, deep-linking hydration, preset save/load) must be exercised.
 - **Fixtures/mocks**: mock filter payloads and search params in `frontend/src/test/fixtures/search-filters.ts`; use MSW handlers for API payload builders in `filters/api-payload.ts`.
 
+**Example test file structure:**
+
+```typescript
+// frontend/src/components/features/search/filters/__tests__/filter-panel.test.tsx
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { FilterPanel } from '../filter-panel';
+import { useSearchFiltersStore } from '@/stores/search-filters-store';
+
+describe('FilterPanel', () => {
+  beforeEach(() => {
+    // Reset store before each test
+    useSearchFiltersStore.getState().clearAllFilters();
+  });
+
+  it('applies price range filter', async () => {
+    render(<FilterPanel />);
+    const slider = screen.getByRole('slider', { name: /price/i });
+    await userEvent.click(slider);
+    expect(useSearchFiltersStore.getState().activeFilters).toContainEqual(
+      expect.objectContaining({ id: 'price' })
+    );
+  });
+
+  it('clears all filters on Clear All button click', async () => {
+    // Setup: apply some filters
+    useSearchFiltersStore.getState().setActiveFilter('price', { min: 0, max: 1000 });
+    render(<FilterPanel />);
+
+    const clearButton = screen.getByRole('button', { name: /clear all/i });
+    await userEvent.click(clearButton);
+
+    expect(useSearchFiltersStore.getState().hasActiveFilters()).toBe(false);
+  });
+
+  // ... more test cases ...
+});
+```
+
 ### 6. shadcn/ui Components Mapping
 
 | Filter Type | shadcn/ui Component | Example Use |
@@ -184,7 +223,11 @@ const {
 } = useSearchFiltersStore();
 ```
 
-Quick filter surfacing (`getMostUsedFilters`) will be added when the store exposes that API; until then, QuickFilters can consume analytics-provided presets via props.
+**QuickFilters interim behavior (follow-up):** The QuickFilters component will be included in FilterPanel but initially render as disabled or hidden. Two paths to activation exist:
+  1. **Store API** (deferred follow-up): Once `getMostUsedFilters` is implemented in the store, QuickFilters will call it to populate badge suggestions from usage analytics.
+  2. **Props fallback** (interim): Parent component can pass `quickFilterPresets?: FilterPreset[]` prop as a temporary source until the store API is ready.
+
+  Until one of these is implemented, the component gracefully hides itself (e.g., `if (!getMostUsedFilters && !presets) return null`). This defers the analytics integration work while keeping the UI architecture complete.
 
 ### 8. Deep-linking Strategy
 
