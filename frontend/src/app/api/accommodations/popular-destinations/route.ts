@@ -88,24 +88,26 @@ async function fetchPersonalizedDestinations(
   if (!data || data.length === 0) return null;
 
   const destinationCounts = new Map<string, number>();
+  const displayNames = new Map<string, string>();
   for (const row of data) {
-    if (!row.destination) continue;
-    destinationCounts.set(
-      row.destination,
-      (destinationCounts.get(row.destination) ?? 0) + 1
-    );
+    const dest = String(row.destination ?? "").trim();
+    if (!dest) continue;
+    const destLower = dest.toLowerCase();
+    destinationCounts.set(destLower, (destinationCounts.get(destLower) ?? 0) + 1);
+    if (!displayNames.has(destLower)) {
+      displayNames.set(destLower, dest);
+    }
   }
 
   const destinations = Array.from(destinationCounts.entries())
     .sort(([, countA], [, countB]) => countB - countA)
     .slice(0, 10)
-    .map(([destination]) => {
-      const fallback = GLOBAL_POPULAR_DESTINATIONS_BY_CITY.get(
-        destination.toLowerCase()
-      );
+    .map(([destLower]) => {
+      const displayName = displayNames.get(destLower)!;
+      const fallback = GLOBAL_POPULAR_DESTINATIONS_BY_CITY.get(destLower);
       return {
         avgPrice: fallback?.avgPrice,
-        city: destination,
+        city: displayName,
         country: fallback?.country,
       } satisfies PopularDestination;
     });

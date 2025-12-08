@@ -51,6 +51,19 @@ describe("keys _handlers", () => {
     expect(insert).toHaveBeenCalledWith("u2", "openai", "sk-test");
   });
 
+  it("postKey maps Supabase insert failures to VAULT_UNAVAILABLE", async () => {
+    const supabase = makeSupabase("u2");
+    const insert = vi.fn(() => {
+      throw new Error("vault unreachable");
+    });
+    const res = await postKey(
+      { insertUserApiKey: insert, supabase, userId: "u2" },
+      { apiKey: "sk-test", service: "openai" }
+    );
+    expect(res.status).toBe(500);
+    expect(await res.json()).toMatchObject({ error: "VAULT_UNAVAILABLE" });
+  });
+
   it("getKeys returns 200 for authenticated users", async () => {
     const supabase = makeSupabase("u3", [
       { created_at: "2025-11-01", last_used: null, service: "openai" },
@@ -59,5 +72,19 @@ describe("keys _handlers", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body[0]).toMatchObject({ hasKey: true, service: "openai" });
+  });
+
+  it("getKeys maps query errors to VAULT_UNAVAILABLE", async () => {
+    const order = vi
+      .fn()
+      .mockResolvedValue({ data: null, error: new Error("db down") });
+    const eq = vi.fn().mockReturnValue({ order });
+    const select = vi.fn().mockReturnValue({ eq });
+    const from = vi.fn().mockReturnValue({ select });
+    const supabase = { from } as unknown as TypedServerSupabase;
+
+    const res = await getKeys({ supabase, userId: "u3" });
+    expect(res.status).toBe(500);
+    expect(await res.json()).toMatchObject({ error: "VAULT_UNAVAILABLE" });
   });
 });
