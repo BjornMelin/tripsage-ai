@@ -13,7 +13,7 @@ import {
   XIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { DestinationCard } from "@/components/features/search/cards/destination-card";
 import { DestinationSearchForm } from "@/components/features/search/forms/destination-search-form";
 import { SearchLayout } from "@/components/layouts/search-layout";
@@ -49,7 +49,7 @@ export default function DestinationsSearchClient({
   onSubmitServer,
 }: DestinationsSearchClientProps) {
   const router = useRouter();
-  const { hasResults, isSearching: storeIsSearching } = useSearchOrchestration();
+  const { isSearching: storeIsSearching } = useSearchOrchestration();
   const { searchDestinations, isSearching, searchError, resetSearch, results } =
     useDestinationSearch();
   const { toast } = useToast();
@@ -57,6 +57,9 @@ export default function DestinationsSearchClient({
   const [selectedDestinations, setSelectedDestinations] = useState<Destination[]>([]);
   const [showComparisonModal, setShowComparisonModal] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const handleCloseComparisonModal = useCallback(() => {
+    setShowComparisonModal(false);
+  }, []);
 
   /** Handles the search for destinations. */
   const handleSearch = async (params: DestinationSearchParams) => {
@@ -143,7 +146,7 @@ export default function DestinationsSearchClient({
       setShowComparisonModal(false);
     }
 
-    const url = `/dashboard/search/destinations/${destination.id}${
+    const url = `/dashboard/search/destinations/${encodeURIComponent(destination.id)}${
       options?.fromComparison ? "?fromComparison=1" : ""
     }`;
     router.push(url);
@@ -198,7 +201,7 @@ export default function DestinationsSearchClient({
     }));
 
   const isLoading = storeIsSearching || isSearching;
-  const hasActiveResults = destinations.length > 0 || hasResults;
+  const hasActiveResults = destinations.length > 0;
 
   return (
     <SearchLayout>
@@ -395,7 +398,7 @@ export default function DestinationsSearchClient({
           {/* Comparison Modal */}
           <DestinationComparisonModal
             isOpen={showComparisonModal}
-            onClose={() => setShowComparisonModal(false)}
+            onClose={handleCloseComparisonModal}
             destinations={selectedDestinations}
             maxItems={MAX_COMPARISON_ITEMS}
             onRemove={handleRemoveFromComparison}

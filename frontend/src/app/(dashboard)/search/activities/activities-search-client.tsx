@@ -88,14 +88,20 @@ export default function ActivitiesSearchClient({
   const [pendingAddFromComparison, setPendingAddFromComparison] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const { addItem, removeItem, clearByType, hasItem, getItemsByType } =
-    useComparisonStore();
+    useComparisonStore((state) => ({
+      addItem: state.addItem,
+      clearByType: state.clearByType,
+      getItemsByType: state.getItemsByType,
+      hasItem: state.hasItem,
+      removeItem: state.removeItem,
+    }));
 
   const [isTripModalOpen, setIsTripModalOpen] = useState(false);
   const [trips, setTrips] = useState<UiTrip[]>([]);
   const [isPending, setIsPending] = useState(false);
 
   // Derived state for comparison list (computed per render to reflect store changes)
-  const comparisonList = new Set(getItemsByType("activity").map((i) => i.id));
+  const comparisonList = new Set(getItemsByType("activity").map((item) => item.id));
 
   // Initialize search type on mount
   useEffect(() => {
@@ -116,6 +122,7 @@ export default function ActivitiesSearchClient({
         try {
           const normalizedParams = await onSubmitServer(initialParams);
           await executeSearch(normalizedParams ?? initialParams);
+          setHasSearched(true);
         } catch (error) {
           const message = getErrorMessage(error);
           toast({
@@ -123,8 +130,6 @@ export default function ActivitiesSearchClient({
             title: "Search failed",
             variant: "destructive",
           });
-        } finally {
-          setHasSearched(true);
         }
       })();
     }
@@ -135,6 +140,7 @@ export default function ActivitiesSearchClient({
       try {
         const normalizedParams = await onSubmitServer(params); // server-side telemetry and validation
         await executeSearch(normalizedParams ?? params); // client fetch/store update
+        setHasSearched(true);
       } catch (error) {
         const message = getErrorMessage(error);
         toast({
@@ -142,8 +148,6 @@ export default function ActivitiesSearchClient({
           title: "Search failed",
           variant: "destructive",
         });
-      } finally {
-        setHasSearched(true);
       }
     }
   };
@@ -405,6 +409,7 @@ export default function ActivitiesSearchClient({
                           variant="outline"
                           onClick={() => {
                             clearByType("activity");
+                            setShowComparisonModal(false);
                             toast({
                               description: "Comparison list cleared",
                               title: "Cleared",

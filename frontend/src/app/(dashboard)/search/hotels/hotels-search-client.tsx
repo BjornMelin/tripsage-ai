@@ -203,7 +203,7 @@ export default function HotelsSearchClient({
             pricePerNight: accommodation.pricePerNight,
             taxes: accommodation.taxes ?? 0,
             taxesEstimated: accommodation.taxes === undefined,
-            totalPrice: accommodation.totalPrice,
+            totalPrice: accommodation.totalPrice ?? accommodation.pricePerNight ?? 0,
           },
           reviewCount,
           starRating:
@@ -227,11 +227,15 @@ export default function HotelsSearchClient({
 
   const sortedHotelResults = useMemo(
     () =>
-      [...hotelResults].sort((first, second) =>
-        sortDirection === "asc"
-          ? first.pricing.totalPrice - second.pricing.totalPrice
-          : second.pricing.totalPrice - first.pricing.totalPrice
-      ),
+      [...hotelResults].sort((first, second) => {
+        const firstPrice = first.pricing.totalPrice ?? first.pricing.pricePerNight ?? 0;
+        const secondPrice =
+          second.pricing.totalPrice ?? second.pricing.pricePerNight ?? 0;
+
+        return sortDirection === "asc"
+          ? firstPrice - secondPrice
+          : secondPrice - firstPrice;
+      }),
     [hotelResults, sortDirection]
   );
 

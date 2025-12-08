@@ -37,7 +37,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { exportTripToIcs } from "@/lib/calendar/trip-export";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
-import { cn } from "@/lib/utils";
 import { statusVariants } from "@/lib/variants/status";
 import { useTripStore } from "@/stores/trip-store";
 
@@ -102,9 +101,9 @@ export default function TripDetailsPage() {
   const getStatusClassName = (status: TripStatus) => {
     switch (status) {
       case "active":
-        return cn(statusVariants({ status: "active" }));
+        return statusVariants({ status: "active" });
       case "upcoming":
-        return cn(statusVariants({ status: "info" }));
+        return statusVariants({ status: "info" });
       case "completed":
         return "bg-gray-100 text-gray-500 ring-1 ring-inset ring-gray-500/20";
       default:

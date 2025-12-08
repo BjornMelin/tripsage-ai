@@ -201,8 +201,9 @@ const AGENT_STATUS_ICONS: Record<
 };
 
 /** Function to get the status color for an agent */
-const GetStatusColor = (status: Agent["status"]) => {
-  return AGENT_STATUS_COLORS[status] ?? AGENT_STATUS_COLORS.offline;
+const GetStatusColor = (status: Agent["status"] | "unknown") => {
+  const resolvedStatus = status === "unknown" ? "offline" : status;
+  return AGENT_STATUS_COLORS[resolvedStatus] ?? AGENT_STATUS_COLORS.offline;
 };
 
 /** Function to get the status icon for an agent */
@@ -211,16 +212,25 @@ const GetStatusIcon = (status: Agent["status"] | "unknown") => {
   return <Icon className={STATUS_ICON_CLASS} />;
 };
 
-const AgentStatusIndicator: React.FC<{ status: Agent["status"] }> = ({ status }) => (
-  <div
-    className={cn(
-      "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center",
-      GetStatusColor(status)
-    )}
-  >
-    <div className="text-white">{GetStatusIcon(status || "unknown")}</div>
-  </div>
-);
+type AgentStatusIndicatorProps = {
+  status?: Agent["status"];
+};
+
+const AgentStatusIndicator: React.FC<AgentStatusIndicatorProps> = ({ status }) => {
+  const resolvedStatus = status ?? "unknown";
+  const colorClass = GetStatusColor(resolvedStatus);
+
+  return (
+    <div
+      className={cn(
+        "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center",
+        colorClass
+      )}
+    >
+      <div className="text-white">{GetStatusIcon(resolvedStatus)}</div>
+    </div>
+  );
+};
 
 /** Component for an agent card */
 const AgentCard: React.FC<{
