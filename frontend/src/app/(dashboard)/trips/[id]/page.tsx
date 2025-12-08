@@ -117,6 +117,10 @@ export default function TripDetailsPage() {
    */
   type TripStatus = ReturnType<typeof getTripStatus>;
 
+  const assertNever = (value: never): never => {
+    throw new Error(`Unhandled trip status: ${value satisfies TripStatus}`);
+  };
+
   const getStatusClassName = (status: TripStatus) => {
     switch (status) {
       case "active":
@@ -124,9 +128,10 @@ export default function TripDetailsPage() {
       case "upcoming":
         return statusVariants({ status: "info" });
       case "completed":
+      case "draft":
         return "bg-gray-100 text-gray-500 ring-1 ring-inset ring-gray-500/20";
       default:
-        return "bg-gray-100 text-gray-700 ring-1 ring-inset ring-gray-600/20";
+        return assertNever(status as never);
     }
   };
 
