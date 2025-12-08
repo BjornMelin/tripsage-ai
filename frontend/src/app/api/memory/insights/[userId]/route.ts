@@ -17,7 +17,10 @@ import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse, requireUserId } from "@/lib/api/route-helpers";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 import { handleMemoryIntent } from "@/lib/memory/orchestrator";
-import { sanitizeWithInjectionDetection } from "@/lib/security/prompt-sanitizer";
+import {
+  FILTERED_MARKER,
+  sanitizeWithInjectionDetection,
+} from "@/lib/security/prompt-sanitizer";
 import { nowIso } from "@/lib/security/random";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { recordTelemetryEvent } from "@/lib/telemetry/span";
@@ -140,10 +143,13 @@ function buildContextSummary(contextItems: MemoryContextResponse[]): string {
     .map((item, idx) => {
       const score = Number.isFinite(item.score) ? item.score.toFixed(2) : "n/a";
       // Sanitize memory content to prevent prompt injection from stored user data
-      const safeContext = sanitizeWithInjectionDetection(
+      const sanitizedContext = sanitizeWithInjectionDetection(
         item.context,
         MEMORY_SANITIZE_MAX_CHARS
       );
+      const safeContext = sanitizedContext.includes(FILTERED_MARKER)
+        ? FILTERED_MARKER
+        : sanitizedContext;
       return `Memory ${idx + 1} (score ${score}):\n${safeContext}`;
     })
     .join("\n\n---\n\n");
