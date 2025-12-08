@@ -11,7 +11,7 @@ import "server-only";
 import { resolveProvider } from "@ai/models/registry";
 import type { TripSuggestion } from "@schemas/trips";
 import { tripSuggestionSchema } from "@schemas/trips";
-import { generateObject } from "ai";
+import { generateText, Output } from "ai";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -19,9 +19,56 @@ import { withApiGuards } from "@/lib/api/factory";
 import { requireUserId } from "@/lib/api/route-helpers";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
+import {
+  isFilteredValue,
+  sanitizeWithInjectionDetection,
+} from "@/lib/security/prompt-sanitizer";
+import { createServerLogger } from "@/lib/telemetry/logger";
 
 /** Cache TTL for AI suggestions (15 minutes). */
 const SUGGESTIONS_CACHE_TTL = 900;
+const MAX_BUDGET_LIMIT = 10_000_000;
+
+const logger = createServerLogger("api.trips.suggestions", {
+  redactKeys: ["cacheKey"],
+});
+
+const tripSuggestionsQuerySchema = z
+  .object({
+    budget_max: z
+      .string()
+      .optional()
+      .transform((val) => {
+        if (!val) return undefined;
+        const normalized = val.normalize("NFKC").trim();
+        const parsed = Number.parseFloat(normalized);
+        return Number.isFinite(parsed) && parsed > 0 && parsed <= MAX_BUDGET_LIMIT
+          ? parsed
+          : undefined;
+      }),
+    category: z
+      .string()
+      .optional()
+      .transform((val) => {
+        if (!val) return undefined;
+        const normalized = val.normalize("NFKC").trim();
+        return normalized.length > 0 ? normalized : undefined;
+      })
+      .refine((val) => !val || val.length <= 50, {
+        message: "Category must be 50 characters or less",
+      }),
+    limit: z
+      .string()
+      .optional()
+      .transform((val) => {
+        if (!val) return undefined;
+        const normalized = val.normalize("NFKC").trim();
+        const parsed = Number.parseInt(normalized, 10);
+        if (!Number.isFinite(parsed) || parsed <= 0) return undefined;
+        return Math.min(parsed, 10);
+      }),
+  })
+  .strip();
 
 /**
  * Request query parameters for trip suggestion generation.
@@ -55,17 +102,11 @@ function buildSuggestionsCacheKey(
  */
 function parseSuggestionQueryParams(req: NextRequest): TripSuggestionsQueryParams {
   const url = new URL(req.url);
-  const limitRaw = url.searchParams.get("limit");
-  const budgetRaw = url.searchParams.get("budget_max");
-  const category = url.searchParams.get("category") ?? undefined;
-
-  const limit = limitRaw ? Number.parseInt(limitRaw, 10) : undefined;
-  const budgetMax = budgetRaw ? Number.parseFloat(budgetRaw) : undefined;
-
+  const parsed = tripSuggestionsQuerySchema.parse(Object.fromEntries(url.searchParams));
   return {
-    budgetMax: Number.isFinite(budgetMax) ? (budgetMax as number) : undefined,
-    category,
-    limit: Number.isFinite(limit) ? (limit as number) : undefined,
+    budgetMax: parsed.budget_max,
+    category: parsed.category,
+    limit: parsed.limit,
   };
 }
 
@@ -90,7 +131,11 @@ function buildSuggestionPrompt(params: TripSuggestionsQueryParams): string {
   }
 
   if (params.category) {
-    parts.push(`Focus on the '${params.category}' category where possible.`);
+    // Sanitize category to prevent prompt injection (with injection detection)
+    const safeCategory = sanitizeWithInjectionDetection(params.category, 50);
+    if (safeCategory && !isFilteredValue(safeCategory)) {
+      parts.push(`Focus on the "${safeCategory}" category where possible.`);
+    }
   }
 
   parts.push(
@@ -127,15 +172,37 @@ async function generateSuggestionsWithCache(
     suggestions: tripSuggestionSchema.array().nullable(),
   });
 
-  const result = await generateObject({
-    model,
-    prompt,
-    schema: responseSchema,
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30_000);
 
-  const suggestions = result.object?.suggestions ?? [];
+  let result: Awaited<ReturnType<typeof generateText>> | undefined;
+  try {
+    result = await generateText({
+      abortSignal: controller.signal,
+      model,
+      output: Output.object({ schema: responseSchema }),
+      prompt,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      logger.warn("AI generation timed out", { cacheKey });
+      return [];
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 
-  // Cache result
+  const suggestions = result?.output?.suggestions;
+
+  if (!Array.isArray(suggestions)) {
+    logger.warn("Model returned no suggestions", {
+      hasOutput: Boolean(result.output),
+      keys: result.output ? Object.keys(result.output) : [],
+    });
+    return [];
+  }
+
   await setCachedJson(cacheKey, suggestions, SUGGESTIONS_CACHE_TTL);
 
   return suggestions;
@@ -152,10 +219,20 @@ export const GET = withApiGuards({
   rateLimit: "trips:suggestions",
   telemetry: "trips.suggestions",
 })(async (req, { user }) => {
-  const result = requireUserId(user);
-  if ("error" in result) return result.error;
-  const { userId } = result;
-  const params = parseSuggestionQueryParams(req);
-  const suggestions = await generateSuggestionsWithCache(userId, params);
-  return NextResponse.json(suggestions);
+  try {
+    const result = requireUserId(user);
+    if ("error" in result) return result.error;
+    const { userId } = result;
+    const params = parseSuggestionQueryParams(req);
+    const suggestions = await generateSuggestionsWithCache(userId, params);
+    return NextResponse.json(suggestions);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { details: error.issues, error: "Invalid query parameters" },
+        { status: 400 }
+      );
+    }
+    throw error;
+  }
 });

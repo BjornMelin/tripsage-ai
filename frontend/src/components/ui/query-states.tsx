@@ -11,11 +11,24 @@ import type {
   UseMutationResult,
   UseQueryResult,
 } from "@tanstack/react-query";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircleIcon, Loader2Icon } from "lucide-react";
 import type { ReactNode } from "react";
 import { InlineQueryError } from "@/components/providers/query-error-boundary";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+
+/**
+ * Aligned query state colors matching statusVariants semantics.
+ * - loading/processing: blue (info)
+ * - success: green (active/success)
+ * - error: red (error)
+ * - empty: gray (neutral)
+ */
+const QUERY_STATE_COLORS = {
+  empty: "text-gray-500",
+  loading: "text-blue-700",
+  success: "text-green-700",
+} as const;
 
 /**
  * Props for the QueryStateHandler component.
@@ -137,8 +150,10 @@ export function MutationStateHandler<
 
       {/* Loading state */}
       {isPending && (
-        <div className="flex items-center gap-2 text-sm text-blue-600">
-          <Loader2 className="h-4 w-4 animate-spin" />
+        <div
+          className={`flex items-center gap-2 text-sm ${QUERY_STATE_COLORS.loading}`}
+        >
+          <Loader2Icon className="h-4 w-4 animate-spin" />
           Processing...
         </div>
       )}
@@ -156,8 +171,10 @@ export function MutationStateHandler<
 
       {/* Success state */}
       {showSuccess && isSuccess && (
-        <div className="flex items-center gap-2 text-sm text-green-600 p-2 bg-green-50 rounded border border-green-200">
-          <AlertCircle className="h-4 w-4" />
+        <div
+          className={`flex items-center gap-2 text-sm p-2 rounded border bg-green-50 border-green-200 ${QUERY_STATE_COLORS.success}`}
+        >
+          <AlertCircleIcon className="h-4 w-4" />
           {successMessage}
         </div>
       )}
@@ -188,7 +205,7 @@ function DefaultLoadingSkeleton() {
 function DefaultEmptyState() {
   return (
     <div className="text-center py-8 text-gray-500">
-      <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+      <AlertCircleIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
       <p>No data available</p>
     </div>
   );
@@ -289,8 +306,10 @@ export function SuspenseQuery<TData = unknown, TError = Error>({
     return (
       <div className="relative opacity-75">
         {children(placeholderData)}
-        <div className="absolute inset-0 bg-white/50 flex items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+        <div
+          className={`absolute inset-0 bg-white/50 flex items-center justify-center ${QUERY_STATE_COLORS.loading}`}
+        >
+          <Loader2Icon className="h-6 w-6 animate-spin" />
         </div>
       </div>
     );
@@ -395,7 +414,7 @@ export function InfiniteQueryStateHandler<TData = unknown>({
             >
               {isFetchingNextPage ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <Loader2Icon className="h-4 w-4 animate-spin mr-2" />
                   Loading...
                 </>
               ) : (
@@ -408,8 +427,8 @@ export function InfiniteQueryStateHandler<TData = unknown>({
 
       {/* Loading indicator for next page */}
       {isFetchingNextPage && (
-        <div className="text-center">
-          <Loader2 className="h-5 w-5 animate-spin mx-auto text-blue-500" />
+        <div className={`text-center ${QUERY_STATE_COLORS.loading}`}>
+          <Loader2Icon className="h-5 w-5 animate-spin mx-auto" />
         </div>
       )}
     </div>

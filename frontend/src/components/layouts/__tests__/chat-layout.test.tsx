@@ -253,7 +253,7 @@ describe("AgentStatusPanel", () => {
 
     const statusIndicator = screen
       .getByText("Agent Status")
-      .parentElement?.querySelector(".bg-yellow-500");
+      .parentElement?.querySelector(".bg-amber-500");
     expect(statusIndicator).toBeInTheDocument();
   });
 });

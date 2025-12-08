@@ -2,7 +2,7 @@
 
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
-import { buildUpstashCacheMock } from "@/test/mocks";
+import { buildUpstashCacheMock } from "@/test/mocks/cache";
 
 let upstashCache: ReturnType<typeof buildUpstashCacheMock> | undefined;
 vi.mock("@/lib/cache/upstash", () => {

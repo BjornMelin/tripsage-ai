@@ -10,6 +10,11 @@ import { cn } from "@/lib/utils";
 
 /**
  * Loading spinner variants for different styles and sizes using class-variance-authority.
+ * Colors aligned with statusVariants semantics:
+ * - info: blue-700 (matches statusVariants info)
+ * - success: green-700 (matches statusVariants active/success)
+ * - warning: amber-700 (matches statusVariants pending/medium)
+ * - destructive: red-700 (matches statusVariants error)
  */
 const SpinnerVariants = cva("animate-spin", {
   defaultVariants: {
@@ -19,11 +24,11 @@ const SpinnerVariants = cva("animate-spin", {
   variants: {
     color: {
       default: "text-primary",
-      destructive: "text-destructive",
-      info: "text-blue-600",
+      destructive: "text-red-700",
+      info: "text-blue-700",
       muted: "text-muted-foreground",
-      success: "text-green-600",
-      warning: "text-yellow-600",
+      success: "text-green-700",
+      warning: "text-amber-700",
       white: "text-white",
     },
     size: {

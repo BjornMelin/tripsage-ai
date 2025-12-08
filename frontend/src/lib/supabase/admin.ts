@@ -35,3 +35,20 @@ export function createAdminSupabase(): TypedAdminSupabase {
     auth: { persistSession: false },
   });
 }
+
+/** Cached singleton for reuse within a request lifecycle. */
+let cachedAdminSupabase: TypedAdminSupabase | null = null;
+
+/**
+ * Returns a cached admin Supabase client, creating it if absent.
+ *
+ * Safe to use in server-only contexts; avoids per-call instantiation while
+ * still honoring serverless re-instantiation on cold starts.
+ */
+export function getAdminSupabase(): TypedAdminSupabase {
+  if (cachedAdminSupabase) {
+    return cachedAdminSupabase;
+  }
+  cachedAdminSupabase = createAdminSupabase();
+  return cachedAdminSupabase;
+}

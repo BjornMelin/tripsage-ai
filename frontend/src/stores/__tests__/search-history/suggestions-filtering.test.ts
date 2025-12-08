@@ -13,8 +13,6 @@ describe("Search History Store - Suggestions and Filtering", () => {
         autoSaveEnabled: true,
         error: null,
         isLoading: false,
-        isSyncing: false,
-        lastSyncAt: null,
         maxRecentSearches: 50,
         popularSearchTerms: [],
         quickSearches: [],
@@ -22,7 +20,6 @@ describe("Search History Store - Suggestions and Filtering", () => {
         savedSearches: [],
         searchCollections: [],
         searchSuggestions: [],
-        syncError: null,
       });
     });
   });

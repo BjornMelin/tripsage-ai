@@ -2,6 +2,137 @@
 
 Security sessions, metrics, events, and dashboard.
 
+## MFA Recovery Endpoints (auth)
+
+| Endpoint | Purpose | Auth | Additional Requirements |
+| --- | --- | --- | --- |
+| `POST /api/auth/mfa/backup/verify` | Consume a backup code | Authenticated | Rate limit `auth:mfa:backup:verify`; returns `error: "invalid_backup_code"` (400) for invalid codes and `error: "internal_error"` (500) on server faults |
+| `POST /api/auth/mfa/backup/regenerate` | Regenerate backup codes | Authenticated | AAL2 required; rate limit `auth:mfa:backup:regenerate`; returns `error: "mfa_required"` (403) when step-up MFA is not satisfied; writes audit trail |
+
+Environment prerequisites:
+
+- Set `MFA_BACKUP_CODE_PEPPER` (>=16 chars) for backup-code hashing in all environments (local `.env.local`, CI secrets, deployment secret manager).
+- Configure `SUPABASE_JWT_SECRET` (>=16 chars) as the Supabase JWT signing key.
+- Backup-code hashing prefers `MFA_BACKUP_CODE_PEPPER`; when it is unset, the system derives a pepper from `SUPABASE_JWT_SECRET` for bootstrap/startup compatibility. This fallback is **not** recommended for long-term use because rotating the JWT secret invalidates all existing backup codes.
+- Operators should treat `MFA_BACKUP_CODE_PEPPER` and `SUPABASE_JWT_SECRET` as distinct secrets: the pepper is only for deterministic backup-code hashing/salting, while the JWT secret is for token signing.
+- When the fallback is used, document the risk and schedule rotation to a dedicated pepper as soon as possible.
+
+Audit events for backup-code operations are stored in the `mfa_backup_code_audit` table (schema in `supabase/migrations/20251122000000_base_schema.sql`) with columns:
+
+- `id` (UUID, PK)
+- `user_id` (UUID)
+- `event` (`"regenerated"` or `"consumed"`)
+- `count` (integer)
+- `ip` (text)
+- `user_agent` (text)
+- `created_at` (timestamptz)
+
+### MFA audit trail: PII handling and retention
+
+`mfa_backup_code_audit` contains PII-bearing fields (`ip`, `user_agent`). Recommended handling:
+
+- **Retention policy**: configure a retention window (for example, 90–180 days) and periodically purge older records via database TTL jobs or scheduled cleanup.
+- **Anonymization / redaction**:
+  - Store truncated or hashed IP addresses for long-term retention (for example, keep full IP for 7–30 days, then hash or mask octets).
+  - Normalize or strip user-agent strings to coarse categories (browser, OS, device) instead of raw strings where possible.
+- **Access controls**:
+  - Restrict direct table access to service roles and a small set of security/ops roles via RLS and Supabase role grants.
+  - Expose audit data through dedicated endpoints or dashboards with least-privilege defaults.
+- **Audit logging**:
+  - Log every access to audit records (who accessed what and when) through OpenTelemetry spans and structured application logs.
+  - Integrate high-risk events (e.g., bulk export of audit rows) with your alerting system (PagerDuty, Slack).
+- **Compliance**:
+  - Align retention/anonymization with GDPR/CCPA and similar regulations (e.g., data minimization and storage limitation).
+  - Provide mechanisms to support data subject requests by locating and, where permitted, deleting or anonymizing records related to a given user.
+
+### `POST /api/auth/mfa/backup/verify`
+
+Consume a single backup code for the authenticated user.
+
+**Authentication**: Required  
+**Rate Limit Key**: `auth:mfa:backup:verify`
+
+#### Request Body
+
+```json
+{
+  "code": "ABCDE-12345"
+}
+```
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `code` | string | Yes | Backup code in `AAAAA-12345` format (validated with strict casing and length). |
+
+#### Successful Response
+
+`200 OK`
+
+```json
+{
+  "data": {
+    "remaining": 9,
+    "success": true
+  }
+}
+```
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `remaining` | number | Number of unused backup codes left for the user. |
+| `success` | boolean | Always `true` for a successful verification. |
+
+#### Errors
+
+- `400` – Invalid payload or backup code format/content; response shape: `{ "error": "invalid_backup_code" }`.
+- `401` – Not authenticated.
+- `429` – Rate limit exceeded for `auth:mfa:backup:verify`.
+- `500` – Internal server error; response shape: `{ "error": "internal_error" }`.
+- Rate-limit responses include standard `Retry-After` and `X-RateLimit-*` headers for client backoff.
+
+### `POST /api/auth/mfa/backup/regenerate`
+
+Regenerate a new set of backup codes for the authenticated user and invalidate existing codes.
+
+**Authentication**: Required  
+**Rate Limit Key**: `auth:mfa:backup:regenerate`  
+**Additional requirement**: Step-up MFA (AAL2) via `requireAal2()`; when not satisfied, the endpoint returns `403` with `error: "mfa_required"`.
+
+#### Request Body
+
+```json
+{
+  "count": 10
+}
+```
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `count` | number | No | Number of backup codes to generate (1–20). Defaults to 10 when omitted. |
+
+#### Successful Response
+
+`200 OK`
+
+```json
+{
+  "data": {
+    "backupCodes": ["ABCDE-12345", "FGHIJ-67890"]
+  }
+}
+```
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `backupCodes` | string[] | List of newly generated backup codes. Previous codes are invalidated. |
+
+#### Errors
+
+- `401` – Not authenticated.
+- `403` – Step-up MFA not satisfied; response shape: `{ "error": "mfa_required" }`.
+- `429` – Rate limit exceeded for `auth:mfa:backup:regenerate`.
+- `500` – Internal server error during regeneration; response shape: `{ "error": "backup_regenerate_failed" }`.
+
 ## Sessions
 
 ### `GET /api/security/sessions`

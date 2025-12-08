@@ -22,6 +22,11 @@
 - `accommodation_embeddings(id TEXT PK, source TEXT, name TEXT, description TEXT, amenities TEXT, embedding vector(1536), created_at, updated_at)` — Accommodation-specific embeddings with pgvector support.
 - `match_accommodation_embeddings(query_embedding vector(1536), match_threshold FLOAT, match_count INT)` — PostgreSQL function for semantic similarity search.
 
+### Indexing (current)
+
+- `accommodation_embeddings.embedding` → pgvector **HNSW** (`m=32`, `ef_construction=180`, distance L2); per-query `hnsw.ef_search` default 96 (tune 64–128).
+- `memories.turn_embeddings.embedding` → pgvector **HNSW** (`m=32`, `ef_construction=180`). Fallback if write-heavy: IVFFlat (`lists≈500–1000`, `probes≈20`).
+
 ## Data model (Target - Not Yet Implemented)
 
 - `documents(id, owner_id, title, source, created_at, metadata jsonb)`
@@ -41,6 +46,17 @@
 - Hybrid: vector top-N plus keyword BM25 union → score normalization → rerank.
 - Reranking: AI SDK v6 Reranking page; prefer Cohere `rerank-v3.5` when available.
 - Assembly: cap total tokens via budget selector (from [SPEC-0013](../archive/0013-token-budgeting-and-limits.md)).
+
+### Index strategy & migrations
+
+- Default new vector stores to HNSW (parameters above) unless the table is heavily write-biased, in which case IVFFlat with `lists≈500–1000`, `probes≈20` is acceptable.
+- Zero-downtime migration pattern: create new HNSW index concurrently, update query functions to set `hnsw.ef_search`, validate latency/recall, then drop the legacy IVFFlat index.
+- When embedding dimensions or providers change, dual-write to a new column/index, backfill, and version the query function before cutting over.
+
+### Retention & ownership
+
+- Embeddings tied to chat turns adhere to the **180-day** cleanup job (pg_cron) and should carry `created_at` plus optional `expires_at` for enforcement.
+- All retriever/indexer writes must include `owner_id` (or tenant key) and rely on SQL RLS; `userId` is required unless content is explicitly public. See RLS policies in `supabase/migrations/20251122000000_base_schema.sql` for enforcement details.
 
 ## Caching
 

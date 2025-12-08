@@ -11,12 +11,12 @@ import {
   stubRateLimitDisabled,
   stubRateLimitEnabled,
   unstubAllEnvs,
-} from "@/test/env-helpers";
+} from "@/test/helpers/env";
 import {
   createMockNextRequest,
   createRouteParamsContext,
   getMockCookiesForTest,
-} from "@/test/route-helpers";
+} from "@/test/helpers/route";
 
 // Mock next/headers cookies() BEFORE any imports that use it
 vi.mock("next/headers", () => ({
@@ -208,7 +208,7 @@ describe("/api/keys/validate route", () => {
     });
   });
 
-  it("returns UNAUTHORIZED when provider denies access", async () => {
+  it("returns INVALID_KEY when provider denies access", async () => {
     const fetchMock = vi
       .fn<FetchLike>()
       .mockResolvedValue(new Response(JSON.stringify({}), { status: 401 }));
@@ -225,12 +225,12 @@ describe("/api/keys/validate route", () => {
     const body = await res.json();
 
     expect({ body, status: res.status }).toEqual({
-      body: { isValid: false, reason: "UNAUTHORIZED" },
+      body: { isValid: false, reason: "INVALID_KEY" },
       status: 200,
     });
   });
 
-  it("returns TRANSPORT_ERROR when request fails", async () => {
+  it("returns NETWORK_ERROR when request fails", async () => {
     const fetchMock = vi
       .fn<FetchLike>()
       .mockRejectedValue(new TypeError("Failed to fetch"));
@@ -247,9 +247,87 @@ describe("/api/keys/validate route", () => {
     const body = await res.json();
 
     expect({ body, status: res.status }).toEqual({
-      body: { isValid: false, reason: "TRANSPORT_ERROR" },
+      body: { isValid: false, reason: "NETWORK_ERROR" },
       status: 200,
     });
+  });
+
+  it("returns NETWORK_ERROR for provider 429 responses", async () => {
+    const fetchMock = vi
+      .fn<FetchLike>()
+      .mockResolvedValue(new Response(JSON.stringify({}), { status: 429 }));
+    mockCreateOpenAI.mockImplementation(() => buildProvider(fetchMock));
+
+    const { POST } = await import("../route");
+    const req = createMockNextRequest({
+      body: { apiKey: "sk-test", service: "openai" },
+      method: "POST",
+      url: "http://localhost/api/keys/validate",
+    });
+
+    const res = await POST(req, createRouteParamsContext());
+    const body = await res.json();
+
+    expect(body).toEqual({ isValid: false, reason: "NETWORK_ERROR" });
+    expect(res.status).toBe(200);
+  });
+
+  it("returns NETWORK_ERROR on unknown error types", async () => {
+    const fetchMock = vi.fn<FetchLike>().mockRejectedValue(new Error("boom"));
+    mockCreateOpenAI.mockImplementation(() => buildProvider(fetchMock));
+
+    const { POST } = await import("../route");
+    const req = createMockNextRequest({
+      body: { apiKey: "sk-test", service: "openai" },
+      method: "POST",
+      url: "http://localhost/api/keys/validate",
+    });
+
+    const res = await POST(req, createRouteParamsContext());
+    const body = await res.json();
+
+    expect(body).toEqual({ isValid: false, reason: "NETWORK_ERROR" });
+    expect(res.status).toBe(200);
+  });
+
+  it("returns INVALID_KEY for non-429 provider 4xx responses", async () => {
+    const fetchMock = vi
+      .fn<FetchLike>()
+      .mockResolvedValue(new Response(JSON.stringify({}), { status: 418 }));
+    mockCreateOpenAI.mockImplementation(() => buildProvider(fetchMock));
+
+    const { POST } = await import("../route");
+    const req = createMockNextRequest({
+      body: { apiKey: "sk-test", service: "openai" },
+      method: "POST",
+      url: "http://localhost/api/keys/validate",
+    });
+
+    const res = await POST(req, createRouteParamsContext());
+    const body = await res.json();
+
+    expect(body).toEqual({ isValid: false, reason: "INVALID_KEY" });
+    expect(res.status).toBe(200);
+  });
+
+  it("returns NETWORK_ERROR for provider 5xx responses", async () => {
+    const fetchMock = vi
+      .fn<FetchLike>()
+      .mockResolvedValue(new Response(JSON.stringify({}), { status: 503 }));
+    mockCreateOpenAI.mockImplementation(() => buildProvider(fetchMock));
+
+    const { POST } = await import("../route");
+    const req = createMockNextRequest({
+      body: { apiKey: "sk-test", service: "openai" },
+      method: "POST",
+      url: "http://localhost/api/keys/validate",
+    });
+
+    const res = await POST(req, createRouteParamsContext());
+    const body = await res.json();
+
+    expect(body).toEqual({ isValid: false, reason: "NETWORK_ERROR" });
+    expect(res.status).toBe(200);
   });
 
   it("throttles per user id and returns headers", async () => {

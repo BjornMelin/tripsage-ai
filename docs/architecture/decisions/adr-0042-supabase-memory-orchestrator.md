@@ -43,6 +43,26 @@ All UI/stateful layers (Zustand, hooks, route handlers) emit intents—not direc
 provider calls. Feature flags govern adapter enablement, and all requests flow
 through centralized PII filters plus OpenTelemetry spans.
 
+### Vector indexing, retention, and session reuse
+
+- **PII handling in embeddings:** redact PII **before** embedding generation using the existing orchestrator PII filters; embeddings are created from redacted text only. User deletion requests must cascade to `memories.turn_embeddings` (ON DELETE CASCADE) and trigger explicit embedding cleanup. Embedding storage follows GDPR/CCPA: no long-term retention of identifiers inside vectors.
+- **Indexes:** Use pgvector **HNSW** for latency-sensitive stores:
+  - `accommodation_embeddings.embedding` and `memories.turn_embeddings.embedding`
+    with `m=${PGVECTOR_HNSW_M:-32}`, `ef_construction=${PGVECTOR_HNSW_EF_CONSTRUCTION:-180}` (160 acceptable on RAM-tight nodes),
+    default `ef_search=${PGVECTOR_HNSW_EF_SEARCH_DEFAULT:-96}`; target range 64–128 based on workload. These defaults balance recall/latency for 1536-d embeddings (OpenAI text-embedding-3-small) under current traffic.
+  - Fallback (if write-heavy / memory constrained): IVFFlat with `lists≈500–1000`,
+    `probes≈20`; document when chosen.
+- **Query functions:** `match_accommodation_embeddings` sets `hnsw.ef_search` from `PGVECTOR_HNSW_EF_SEARCH_DEFAULT` at runtime and accepts an optional `ef_search_override` for per-call tuning; operators can observe recall/latency with EXPLAIN ANALYZE and `pg_stat_user_indexes`.
+- **Retention:** `memories.turn_embeddings` cleaned up at **${MEMORIES_RETENTION_DAYS:-180} days** via pg_cron; align embeddings and session records to the same window. Rationale: matches product UX (recent travel context) and privacy expectations; configurable via `MEMORIES_RETENTION_DAYS` for regulatory changes. Deploy the cron job in migrations; monitor via Postgres logs; ship Datadog alerts in issue #520.
+- **Session semantics:** reuse the most recent "Travel Plan" chat/memory session **per user** when the planner tool is invoked to reduce fragmentation and improve retrieval accuracy. Session-level locking for concurrent invocations now guards session creation (Redis lock in `frontend/src/ai/tools/server/planning.ts`). Users can start a fresh session by clearing memory or opening a new chat thread.
+
+### Implementation status & follow-ups (tracked)
+
+- **Config surface** — Parameterize pgvector/HNSW + retention defaults in migrations (issue [#517](https://github.com/BjornMelin/tripsage-ai/issues/517), owner @BjornMelin, due 2025-12-22).
+- **`ef_search_override`** — Wire optional override through `match_accommodation_embeddings` and adapters (issue [#518](https://github.com/BjornMelin/tripsage-ai/issues/518), owner @BjornMelin, due 2025-12-22).
+- **Session-level locking** — Implemented via Redis token lock `planner:session-lock:${userId}`.
+- **Monitoring** — Ship alerts for retention cron + HNSW maintenance jobs (issue [#520](https://github.com/BjornMelin/tripsage-ai/issues/520), owner @BjornMelin, due 2025-12-22).
+
 ## Consequences
 
 ### Positive

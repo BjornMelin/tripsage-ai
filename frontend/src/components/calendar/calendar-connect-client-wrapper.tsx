@@ -8,7 +8,7 @@
 
 "use client";
 
-import { Calendar, CalendarCheck, CalendarX } from "lucide-react";
+import { CalendarCheckIcon, CalendarIcon, CalendarXIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   Card,
@@ -107,12 +107,12 @@ export function CalendarConnectionCard({ className }: CalendarConnectionCardProp
         <CardTitle className="flex items-center gap-2">
           {isConnected ? (
             <>
-              <CalendarCheck className="h-5 w-5 text-green-600" />
+              <CalendarCheckIcon className="h-5 w-5 text-green-600" />
               Calendar Connected
             </>
           ) : (
             <>
-              <CalendarX className="h-5 w-5 text-muted-foreground" />
+              <CalendarXIcon className="h-5 w-5 text-muted-foreground" />
               Calendar Not Connected
             </>
           )}
@@ -136,7 +136,7 @@ export function CalendarConnectionCard({ className }: CalendarConnectionCardProp
                       className="flex items-center justify-between p-2 border rounded"
                     >
                       <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <CalendarIcon className="h-4 w-4 text-muted-foreground" />
                         <div>
                           <p className="text-sm font-medium">{cal.summary}</p>
                           {cal.description && (

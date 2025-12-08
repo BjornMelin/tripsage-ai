@@ -5,14 +5,25 @@
 
 "use client";
 
-import { Activity, Brain, Network, Zap } from "lucide-react";
+import { ActivityIcon, BrainIcon, NetworkIcon, ZapIcon } from "lucide-react";
 import { useMemo } from "react";
 import { AgentStatusDashboard } from "@/components/features/agent-monitoring/dashboard/agent-status-dashboard";
 import { ConnectionStatus } from "@/components/features/shared/connection-status";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAgentStatusWebSocket } from "@/hooks/use-agent-status-websocket";
+import { useAgentStatusWebSocket } from "@/hooks/chat/use-agent-status-websocket";
+import { cn } from "@/lib/utils";
 import { useAgentStatusStore } from "@/stores/agent-status-store";
+
+/**
+ * Agent dashboard colors aligned with statusVariants.
+ * Active states use green (aligned with urgency.low/status.active),
+ * errors use red (aligned with urgency.high/status.error).
+ */
+const AGENT_COLORS = {
+  active: "text-green-700",
+  error: "text-red-700",
+} as const;
 
 /**
  * Renders the agent monitoring dashboard with realtime controls and metrics.
@@ -54,8 +65,8 @@ export default function AgentsPage() {
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-bold text-gray-900">Agent Monitoring</h1>
-          <p className="text-gray-600 mt-2">
+          <h1 className="text-4xl font-bold">Agent Monitoring</h1>
+          <p className="text-muted-foreground mt-2">
             Live visibility into agent execution, status transitions, and realtime
             health.
           </p>
@@ -91,10 +102,12 @@ export default function AgentsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Agents</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <ActivityIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{activeAgents}</div>
+            <div className={cn("text-2xl font-bold", AGENT_COLORS.active)}>
+              {activeAgents}
+            </div>
             <p className="text-xs text-muted-foreground">
               of {agents.length} tracked agents
             </p>
@@ -104,7 +117,7 @@ export default function AgentsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Avg. Health</CardTitle>
-            <Brain className="h-4 w-4 text-muted-foreground" />
+            <BrainIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{averageHealth}%</div>
@@ -117,7 +130,7 @@ export default function AgentsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Tasks Queued</CardTitle>
-            <Zap className="h-4 w-4 text-muted-foreground" />
+            <ZapIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{pendingTasks}</div>
@@ -128,12 +141,12 @@ export default function AgentsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Connection State</CardTitle>
-            <Network className="h-4 w-4 text-muted-foreground" />
+            <NetworkIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold capitalize">{connectionLabel}</div>
             {connectionError ? (
-              <p className="text-xs text-red-600">{connectionError}</p>
+              <p className={`text-xs ${AGENT_COLORS.error}`}>{connectionError}</p>
             ) : (
               <p className="text-xs text-muted-foreground">
                 Reconnect attempts: {retryCount}

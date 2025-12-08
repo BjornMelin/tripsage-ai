@@ -50,7 +50,13 @@ export type AccommodationsServiceDeps = {
   cacheTtlSeconds: number;
 };
 
-/** Context for the accommodations service. */
+/**
+ * Context for the accommodations service.
+ *
+ * @property rateLimitKey - Optional explicit rate limit key. If not provided, falls back to `userId` from ProviderContext.
+ * @property processPayment - Optional payment processing function for bookings.
+ * @property requestApproval - Optional approval request function for bookings.
+ */
 export type ServiceContext = ProviderContext & {
   rateLimitKey?: string;
   processPayment?: (params: {
@@ -95,11 +101,10 @@ export class AccommodationsService {
       async (span) => {
         const startedAt = Date.now();
         if (this.deps.rateLimiter) {
-          const limit = await this.deps.rateLimiter.limit(
-            ctx?.rateLimitKey ?? `anon:${params.location}`
-          );
+          const rateKey = ctx?.rateLimitKey ?? ctx?.userId ?? `anon:${params.location}`;
+          const limit = await this.deps.rateLimiter.limit(rateKey);
           span.addEvent("ratelimit.checked", {
-            key: ctx?.rateLimitKey ?? "anon",
+            key: rateKey,
             remaining: limit?.remaining ?? 0,
           });
           if (!limit?.success) {

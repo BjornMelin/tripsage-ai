@@ -3,7 +3,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useSearchResultsStore } from "@/stores/search-results-store";
-import { useDestinationSearch } from "../use-destination-search";
+import { useDestinationSearch } from "../search/use-destination-search";
 
 interface Place {
   id: string;

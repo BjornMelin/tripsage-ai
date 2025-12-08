@@ -2,16 +2,13 @@
 
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createFakeTimersContext } from "@/test/utils/with-fake-timers";
 import { useAsyncLoading, useDebouncedLoading, useLoading } from "../use-loading";
 
 describe("useLoading", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-  });
+  const timers = createFakeTimersContext();
+  beforeEach(timers.setup);
+  afterEach(timers.teardown);
 
   it("initializes with default state", () => {
     const { result } = renderHook(() => useLoading());
@@ -268,13 +265,9 @@ describe("useAsyncLoading", () => {
 });
 
 describe("useDebouncedLoading", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-  });
+  const timers = createFakeTimersContext();
+  beforeEach(timers.setup);
+  afterEach(timers.teardown);
 
   it("debounces start loading", () => {
     const { result } = renderHook(() => useDebouncedLoading(300));

@@ -23,6 +23,7 @@ import type {
   ToolSet,
 } from "ai";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
+import { createServerLogger } from "@/lib/telemetry/logger";
 import type { ChatMessage } from "@/lib/tokens/budget";
 
 // Re-export AI SDK types for downstream consumers
@@ -38,6 +39,8 @@ export type {
 };
 
 export type StructuredOutput<OutputType> = ReturnType<typeof Output.object<OutputType>>;
+
+const lifecycleLogger = createServerLogger("ai.agent.lifecycle");
 
 /** Dependencies required for agent creation and execution. */
 export interface AgentDependencies {
@@ -238,6 +241,129 @@ export interface AgentExecutionMeta {
 
   /** Optional session identifier. */
   sessionId?: string;
+}
+
+/**
+ * Tool lifecycle hook context for AI SDK v6.
+ *
+ * These hooks are passed to streamText/streamObject at call time,
+ * not to ToolLoopAgent creation. They enable observing tool input
+ * construction during streaming.
+ *
+ * @example
+ * ```typescript
+ * const result = streamText({
+ *   model: provider.model,
+ *   messages,
+ *   tools: myTools,
+ *   onInputStart: ({ toolName, toolCallId }) => {
+ *     console.log(`Tool ${toolName} input starting...`);
+ *   },
+ *   onInputDelta: ({ toolName, inputTextDelta }) => {
+ *     console.log(`Tool ${toolName} input delta: ${inputTextDelta}`);
+ *   },
+ *   onInputAvailable: ({ toolName, input }) => {
+ *     console.log(`Tool ${toolName} input ready:`, input);
+ *   },
+ * });
+ * ```
+ */
+export interface ToolLifecycleHooks {
+  /**
+   * Called when tool input parsing starts.
+   * Use for showing loading indicators.
+   */
+  onInputStart?: (context: {
+    toolName: string;
+    toolCallId: string;
+  }) => void | Promise<void>;
+
+  /**
+   * Called as tool input is streamed incrementally.
+   * Use for real-time progress indicators.
+   */
+  onInputDelta?: (context: {
+    toolName: string;
+    toolCallId: string;
+    inputTextDelta: string;
+  }) => void | Promise<void>;
+
+  /**
+   * Called when full tool input is available.
+   * Use for logging or pre-execution validation.
+   */
+  onInputAvailable?: (context: {
+    toolName: string;
+    toolCallId: string;
+    input: unknown;
+  }) => void | Promise<void>;
+}
+
+/**
+ * Creates tool lifecycle hooks with consistent interface.
+ *
+ * Wraps optional callbacks in a complete ToolLifecycleHooks object.
+ * The agentType and requestId parameters are reserved for future
+ * telemetry integration.
+ *
+ * @param _agentType - Agent type for telemetry context (reserved).
+ * @param _requestId - Request ID for telemetry context (reserved).
+ * @param hooks - Optional custom hooks to wrap.
+ * @returns Complete tool lifecycle hooks object.
+ *
+ * @example
+ * ```typescript
+ * const hooks = createToolLifecycleHooks("flightSearch", requestId, {
+ *   onInputAvailable: ({ toolName, input }) => {
+ *     logger.info(`Tool ${toolName} ready`, { input });
+ *   },
+ * });
+ *
+ * const result = streamText({
+ *   model,
+ *   messages,
+ *   tools,
+ *   ...hooks,
+ * });
+ * ```
+ */
+export function createToolLifecycleHooks(
+  _agentType: AgentWorkflowKind,
+  _requestId: string,
+  hooks?: Partial<ToolLifecycleHooks>
+): ToolLifecycleHooks {
+  return {
+    onInputAvailable: async (context) => {
+      try {
+        await hooks?.onInputAvailable?.(context);
+      } catch (error) {
+        lifecycleLogger.error("tool_lifecycle.onInputAvailable_failed", {
+          error: error instanceof Error ? error.message : String(error),
+          toolName: context.toolName,
+        });
+      }
+    },
+    onInputDelta: async (context) => {
+      try {
+        await hooks?.onInputDelta?.(context);
+      } catch (error) {
+        lifecycleLogger.error("tool_lifecycle.onInputDelta_failed", {
+          error: error instanceof Error ? error.message : String(error),
+          toolName: context.toolName,
+        });
+      }
+    },
+    onInputStart: async (context) => {
+      try {
+        await hooks?.onInputStart?.(context);
+      } catch (error) {
+        lifecycleLogger.error("tool_lifecycle.onInputStart_failed", {
+          error: error instanceof Error ? error.message : String(error),
+          toolName: context.toolName,
+        });
+      }
+    },
+  };
 }
 
 /** Common agent parameters extracted from AgentConfig. */

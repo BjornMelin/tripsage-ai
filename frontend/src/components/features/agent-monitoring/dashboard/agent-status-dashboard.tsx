@@ -7,23 +7,44 @@
 
 import type { AgentStatusType } from "@schemas/agent-status";
 import {
-  Activity,
-  AlertTriangle,
-  Cpu,
-  GaugeCircle,
-  PauseCircle,
-  PlayCircle,
-  RefreshCw,
-  Users,
+  ActivityIcon,
+  AlertTriangleIcon,
+  CpuIcon,
+  GaugeCircleIcon,
+  PauseCircleIcon,
+  PlayCircleIcon,
+  RefreshCwIcon,
+  UsersIcon,
 } from "lucide-react";
 import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import type { AgentStatusRealtimeControls } from "@/hooks/use-agent-status-websocket";
+import type { AgentStatusRealtimeControls } from "@/hooks/chat/use-agent-status-websocket";
+import { statusVariants, type ToneVariant } from "@/lib/variants/status";
 import { useAgentStatusStore } from "@/stores/agent-status-store";
 import { ConnectionStatus } from "../../shared/connection-status";
+
+// Status colors aligned with statusVariants tone classes (static to avoid purge)
+const CONNECTION_STATUS_CLASSES = {
+  connecting: "bg-amber-100 text-amber-800",
+  error: "bg-red-100 text-red-800",
+  idle: "bg-slate-100 text-slate-700",
+  subscribed: "bg-green-100 text-green-800",
+} as const;
+
+const AGENT_STATUS_TONE: Record<AgentStatusType, ToneVariant> = {
+  active: "active",
+  completed: "success",
+  error: "error",
+  executing: "active",
+  idle: "pending",
+  initializing: "info",
+  paused: "pending",
+  thinking: "info",
+  waiting: "pending",
+};
 
 type AgentStatusDashboardProps = Pick<
   AgentStatusRealtimeControls,
@@ -50,16 +71,16 @@ function FormatTimestamp(timestamp: string | null) {
   }
 }
 
-function DeriveConnectionBadge(status: string): { color: string; label: string } {
+function DeriveConnectionBadge(status: string): { classes: string; label: string } {
   switch (status) {
     case "subscribed":
-      return { color: "bg-green-500", label: "Connected" };
+      return { classes: CONNECTION_STATUS_CLASSES.subscribed, label: "Connected" };
     case "connecting":
-      return { color: "bg-yellow-500", label: "Connecting" };
+      return { classes: CONNECTION_STATUS_CLASSES.connecting, label: "Connecting" };
     case "error":
-      return { color: "bg-red-500", label: "Error" };
+      return { classes: CONNECTION_STATUS_CLASSES.error, label: "Error" };
     default:
-      return { color: "bg-gray-400", label: "Idle" };
+      return { classes: CONNECTION_STATUS_CLASSES.idle, label: "Idle" };
   }
 }
 
@@ -138,12 +159,12 @@ export const AgentStatusDashboard = ({
           </div>
           <div className="flex flex-col gap-3 md:flex-row md:items-center">
             <Badge className="flex items-center gap-2 w-fit">
-              <span className={`h-2 w-2 rounded-full ${connectionBadge.color}`} />
+              <span className={`h-2 w-2 rounded-full ${connectionBadge.classes}`} />
               {connectionBadge.label}
             </Badge>
             {connectionError && (
               <Badge variant="destructive" className="flex items-center gap-1">
-                <AlertTriangle className="h-3.5 w-3.5" />
+                <AlertTriangleIcon className="h-3.5 w-3.5" />
                 {connectionError}
               </Badge>
             )}
@@ -154,9 +175,9 @@ export const AgentStatusDashboard = ({
                 className="flex items-center gap-2"
               >
                 {isMonitoring ? (
-                  <PauseCircle className="h-4 w-4" />
+                  <PauseCircleIcon className="h-4 w-4" />
                 ) : (
-                  <PlayCircle className="h-4 w-4" />
+                  <PlayCircleIcon className="h-4 w-4" />
                 )}
                 {isMonitoring ? "Pause" : "Resume"}
               </Button>
@@ -165,7 +186,7 @@ export const AgentStatusDashboard = ({
                 variant="outline"
                 className="flex items-center gap-2"
               >
-                <RefreshCw className="h-4 w-4" /> Reconnect
+                <RefreshCwIcon className="h-4 w-4" /> Reconnect
               </Button>
             </div>
           </div>
@@ -176,7 +197,7 @@ export const AgentStatusDashboard = ({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Agents</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <ActivityIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{activeAgents.length}</div>
@@ -188,7 +209,7 @@ export const AgentStatusDashboard = ({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Avg. Progress</CardTitle>
-            <GaugeCircle className="h-4 w-4 text-muted-foreground" />
+            <GaugeCircleIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{summary.averageProgress}%</div>
@@ -198,7 +219,7 @@ export const AgentStatusDashboard = ({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Tasks In Flight</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <UsersIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{summary.inProgressTasks}</div>
@@ -208,7 +229,7 @@ export const AgentStatusDashboard = ({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Retry Count</CardTitle>
-            <RefreshCw className="h-4 w-4 text-muted-foreground" />
+            <RefreshCwIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{retryCount}</div>
@@ -222,7 +243,7 @@ export const AgentStatusDashboard = ({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" /> Agents
+            <UsersIcon className="h-5 w-5" /> Agents
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -238,8 +259,12 @@ export const AgentStatusDashboard = ({
                   <p className="font-medium">{agent.name}</p>
                   <p className="text-sm text-muted-foreground">{agent.type}</p>
                 </div>
+                {/* excludeRing: true suppresses the ring for compact badge rendering */}
                 <Badge
-                  variant={ACTIVE_STATUSES.has(agent.status) ? "default" : "secondary"}
+                  className={statusVariants({
+                    excludeRing: true,
+                    tone: AGENT_STATUS_TONE[agent.status],
+                  })}
                 >
                   {agent.status}
                 </Badge>
@@ -260,7 +285,7 @@ export const AgentStatusDashboard = ({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Cpu className="h-5 w-5" /> Recent Resource Usage
+              <CpuIcon className="h-5 w-5" /> Recent Resource Usage
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
@@ -287,7 +312,7 @@ export const AgentStatusDashboard = ({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5" /> Recent Activity
+              <ActivityIcon className="h-5 w-5" /> Recent Activity
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
@@ -311,15 +336,6 @@ export const AgentStatusDashboard = ({
     </div>
   );
 };
-
-const ACTIVE_STATUSES = new Set<AgentStatusType>([
-  "initializing",
-  "active",
-  "waiting",
-  "paused",
-  "thinking",
-  "executing",
-]);
 
 export default AgentStatusDashboard;
 export type { AgentStatusDashboardProps };

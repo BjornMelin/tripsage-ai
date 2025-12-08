@@ -44,7 +44,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const { supabase, user } = await requireUser({ redirectTo: "/settings/security" });
+  const { supabase, user } = await requireUser({ redirectTo: "/security" });
   const email = user.email;
 
   if (!email) {

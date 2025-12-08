@@ -3,7 +3,7 @@
 import { waitFor } from "@testing-library/react";
 import type { Mock } from "vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useSupabaseStorage } from "@/hooks/use-supabase-storage";
+import { useSupabaseStorage } from "@/hooks/supabase/use-supabase-storage";
 import type { FileAttachment } from "@/lib/supabase/database.types";
 import { createMockSupabaseClient } from "@/test/mocks/supabase";
 import { render } from "@/test/test-utils";

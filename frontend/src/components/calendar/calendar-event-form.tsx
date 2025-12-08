@@ -136,7 +136,7 @@ export function CalendarEventForm({
             <Label htmlFor="summary">Title</Label>
             <Input id="summary" {...register("summary")} placeholder="Event title" />
             {errors.summary && (
-              <p className="text-sm text-red-600">{errors.summary.message}</p>
+              <p className="text-sm text-red-700">{errors.summary.message}</p>
             )}
           </div>
 
@@ -149,7 +149,7 @@ export function CalendarEventForm({
               rows={3}
             />
             {errors.description && (
-              <p className="text-sm text-red-600">{errors.description.message}</p>
+              <p className="text-sm text-red-700">{errors.description.message}</p>
             )}
           </div>
 
@@ -161,7 +161,7 @@ export function CalendarEventForm({
               placeholder="Event location"
             />
             {errors.location && (
-              <p className="text-sm text-red-600">{errors.location.message}</p>
+              <p className="text-sm text-red-700">{errors.location.message}</p>
             )}
           </div>
 
@@ -184,7 +184,7 @@ export function CalendarEventForm({
                 }}
               />
               {errors.start && (
-                <p className="text-sm text-red-600">{errors.start.message}</p>
+                <p className="text-sm text-red-700">{errors.start.message}</p>
               )}
             </div>
 
@@ -206,7 +206,7 @@ export function CalendarEventForm({
                 }}
               />
               {errors.end && (
-                <p className="text-sm text-red-600">{errors.end.message}</p>
+                <p className="text-sm text-red-700">{errors.end.message}</p>
               )}
             </div>
           </div>

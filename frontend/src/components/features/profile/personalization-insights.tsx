@@ -1,22 +1,26 @@
+/**
+ * @fileoverview Personalization insights panel rendering memory summaries.
+ */
+
 "use client";
 
 import type { MemoryContextResponse } from "@schemas/chat";
 // import type { UserPreferences } from "@schemas/memory"; // Future implementation
 import {
-  BarChart3,
-  Brain,
-  Copy,
-  DollarSign,
-  Info,
-  Lightbulb,
-  MapPin,
-  RefreshCw,
-  Settings,
-  Star,
-  Target,
-  TrendingDown,
-  TrendingUp,
-  User,
+  BarChart3Icon,
+  BrainIcon,
+  CopyIcon,
+  DollarSignIcon,
+  InfoIcon,
+  LightbulbIcon,
+  MapPinIcon,
+  RefreshCwIcon,
+  SettingsIcon,
+  StarIcon,
+  TargetIcon,
+  TrendingDownIcon,
+  TrendingUpIcon,
+  UserIcon,
 } from "lucide-react";
 import { useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -30,6 +34,7 @@ import {
   useMemoryStats,
   // useUpdatePreferences, // Future implementation
 } from "@/hooks/use-memory";
+import { TREND_COLORS } from "@/lib/variants/status";
 export type PersonalizationInsightsProps = {
   userId: string;
   className?: string;
@@ -38,6 +43,17 @@ export type PersonalizationInsightsProps = {
 };
 
 import { cn } from "@/lib/utils";
+
+/**
+ * Spending trend colors with inverted semantic:
+ * increasing=red (spending more is concerning), decreasing=green (spending less is good)
+ * Uses 500 weight to align with TREND_COLORS for consistency across cards.
+ */
+const SPENDING_TREND_COLORS = {
+  decreasing: "text-green-500",
+  increasing: "text-red-500",
+  stable: "text-gray-500",
+} as const;
 
 export function PersonalizationInsights({
   userId,
@@ -90,14 +106,21 @@ export function PersonalizationInsights({
     return id.length > 10 ? `${id.slice(0, 8)}…` : id;
   };
 
-  const getTrendIcon = (trend: "increasing" | "decreasing" | "stable") => {
+  /**
+   * Trend colors aligned with statusVariants urgency mapping.
+   * For general trends: increasing=green, decreasing=red, stable=neutral
+   */
+  const renderTrendIcon = (
+    trend: "increasing" | "decreasing" | "stable",
+    colorMap: typeof TREND_COLORS | typeof SPENDING_TREND_COLORS = TREND_COLORS
+  ) => {
     switch (trend) {
       case "increasing":
-        return <TrendingUp className="h-4 w-4 text-green-500" />;
+        return <TrendingUpIcon className={`h-4 w-4 ${colorMap.increasing}`} />;
       case "decreasing":
-        return <TrendingDown className="h-4 w-4 text-red-500" />;
+        return <TrendingDownIcon className={`h-4 w-4 ${colorMap.decreasing}`} />;
       default:
-        return <BarChart3 className="h-4 w-4 text-gray-500" />;
+        return <BarChart3Icon className={`h-4 w-4 ${colorMap.stable}`} />;
     }
   };
 
@@ -134,7 +157,7 @@ export function PersonalizationInsights({
         {travelPersonality && (
           <div>
             <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-              <User className="h-5 w-5 text-blue-500" />
+              <UserIcon className="h-5 w-5 text-blue-500" />
               Travel Personality
             </h3>
             <Card>
@@ -175,7 +198,7 @@ export function PersonalizationInsights({
         {stats && (
           <div>
             <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-green-500" />
+              <BarChart3Icon className="h-5 w-5 text-green-500" />
               Memory Statistics
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -208,7 +231,7 @@ export function PersonalizationInsights({
         {destinationPreferences?.topDestinations && (
           <div>
             <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-red-500" />
+              <MapPinIcon className="h-5 w-5 text-red-500" />
               Favorite Destinations
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -224,7 +247,7 @@ export function PersonalizationInsights({
                     </div>
                     {dest.satisfactionScore && (
                       <div className="flex items-center gap-2 mt-2">
-                        <Star className="h-4 w-4 text-yellow-500" />
+                        <StarIcon className="h-4 w-4 text-yellow-500" />
                         <span className="text-sm">
                           {dest.satisfactionScore.toFixed(1)}/5
                         </span>
@@ -239,7 +262,7 @@ export function PersonalizationInsights({
 
         <div>
           <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-            <Lightbulb className="h-5 w-5 text-amber-500" />
+            <LightbulbIcon className="h-5 w-5 text-amber-500" />
             Recent Memories
           </h3>
           {recentMemoriesLoading ? (
@@ -271,7 +294,7 @@ export function PersonalizationInsights({
                             }
                             type="button"
                           >
-                            <Copy className="h-3.5 w-3.5" />
+                            <CopyIcon className="h-3.5 w-3.5" />
                           </button>
                         </div>
                       ) : null}
@@ -303,7 +326,7 @@ export function PersonalizationInsights({
     return (
       <div className="space-y-6">
         <h3 className="text-lg font-semibold flex items-center gap-2">
-          <DollarSign className="h-5 w-5 text-green-500" />
+          <DollarSignIcon className="h-5 w-5 text-green-500" />
           Budget Analysis
         </h3>
 
@@ -347,7 +370,7 @@ export function PersonalizationInsights({
                     className="flex items-center justify-between p-3 rounded-lg bg-muted"
                   >
                     <div className="flex items-center gap-3">
-                      {getTrendIcon(trend.trend)}
+                      {renderTrendIcon(trend.trend, SPENDING_TREND_COLORS)}
                       <div>
                         <div className="font-medium capitalize">{trend.category}</div>
                         <div className="text-sm text-muted-foreground capitalize">
@@ -360,10 +383,10 @@ export function PersonalizationInsights({
                         className={cn(
                           "font-mono text-sm",
                           trend.trend === "increasing"
-                            ? "text-red-500"
+                            ? SPENDING_TREND_COLORS.increasing
                             : trend.trend === "decreasing"
-                              ? "text-green-500"
-                              : "text-gray-500"
+                              ? SPENDING_TREND_COLORS.decreasing
+                              : SPENDING_TREND_COLORS.stable
                         )}
                       >
                         {trend.percentageChange > 0 ? "+" : ""}
@@ -388,7 +411,7 @@ export function PersonalizationInsights({
     return (
       <div className="space-y-6">
         <h3 className="text-lg font-semibold flex items-center gap-2">
-          <Lightbulb className="h-5 w-5 text-yellow-500" />
+          <LightbulbIcon className="h-5 w-5 text-yellow-500" />
           Personalized Recommendations
         </h3>
 
@@ -401,7 +424,7 @@ export function PersonalizationInsights({
               <CardContent className="pt-6">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <Target className="h-4 w-4 text-blue-500" />
+                    <TargetIcon className="h-4 w-4 text-blue-500" />
                     <Badge variant="outline" className="capitalize">
                       {rec.type}
                     </Badge>
@@ -452,7 +475,7 @@ export function PersonalizationInsights({
     return (
       <div className={cn("space-y-6", className)}>
         <Alert>
-          <Info className="h-4 w-4" />
+          <InfoIcon className="h-4 w-4" />
           <AlertDescription>
             Unable to load personalization insights. Please try refreshing the page.
           </AlertDescription>
@@ -467,7 +490,7 @@ export function PersonalizationInsights({
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold flex items-center gap-2">
-            <Brain className="h-6 w-6 text-purple-500" />
+            <BrainIcon className="h-6 w-6 text-purple-500" />
             Personalization Insights
           </h2>
           <p className="text-muted-foreground">
@@ -482,13 +505,13 @@ export function PersonalizationInsights({
             onClick={() => refetchInsights()}
             disabled={insightsLoading}
           >
-            <RefreshCw
+            <RefreshCwIcon
               className={cn("h-4 w-4 mr-2", insightsLoading && "animate-spin")}
             />
             Refresh
           </Button>
           <Button variant="outline" size="sm">
-            <Settings className="h-4 w-4 mr-2" />
+            <SettingsIcon className="h-4 w-4 mr-2" />
             Preferences
           </Button>
         </div>
@@ -497,10 +520,10 @@ export function PersonalizationInsights({
       {/* Navigation Tabs */}
       <div className="flex space-x-1 p-1 bg-muted rounded-lg">
         {[
-          { icon: BarChart3, id: "overview", label: "Overview" },
-          { icon: DollarSign, id: "budget", label: "Budget" },
-          { icon: MapPin, id: "destinations", label: "Destinations" },
-          { icon: Lightbulb, id: "recommendations", label: "Recommendations" },
+          { icon: BarChart3Icon, id: "overview", label: "Overview" },
+          { icon: DollarSignIcon, id: "budget", label: "Budget" },
+          { icon: MapPinIcon, id: "destinations", label: "Destinations" },
+          { icon: LightbulbIcon, id: "recommendations", label: "Recommendations" },
         ].map(({ id, label, icon: Icon }) => (
           <Button
             key={id}

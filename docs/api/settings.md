@@ -165,7 +165,7 @@ Get popular flight destinations.
 
 List user files.
 
-**Authentication**: Required  
+**Authentication**: Required — derived from Supabase session cookie (`sb-access-token`). Caller-supplied `Authorization` headers are ignored for this endpoint.  
 **Rate Limit Key**: `attachments:files`
 
 #### Query Parameters (GET /api/attachments/files)

@@ -25,6 +25,20 @@ We are migrating BYOK key CRUD/validation from FastAPI to Next.js route handlers
 - Rate limit with Upstash: `10/min` (POST/DELETE) and `20/min` (validate).
 - Redact `api_key` in logs and never return secrets.
 
+### Failure modes & environment guardrails
+
+- **Vault availability:** Production must have `vault`/`supabase_vault` installed; migrations fail fast if missing (see `supabase/migrations/20251122000000_base_schema.sql`). Local/CI may use the stubbed `vault.secrets` table but must never ship to prod.
+- **Error surfaces:** Distinguish infrastructure errors (`VAULT_UNAVAILABLE`) from user errors (`INVALID_KEY`) and transport errors (`NETWORK_ERROR`). Codes are documented in [SPEC-0011](../specs/archive/0011-spec-byok-routes-and-security.md) and returned by `/api/keys/*` handlers.
+- **Rotation/readiness checks (design):** A health check endpoint (service-role) will ping `vault.decrypted_secrets` and integrate with Sentry + Datadog monitors (HTTP 5xx or latency >5s triggers pager). **Status: not yet implemented**—see follow-up tasks below for delivery plan.
+- **No-secret fallback:** Never persist BYOK secrets to regular tables or environment variables; stubs are for local/CI only. Deployment validation should fail if the stub schema exists in production (`app.environment=prod` guard in migration).
+
+### Monitoring and operational follow-ups (deferred)
+
+The following work is required for production BYOK readiness and must be completed before a BYOK feature launch in production:
+
+- **Health endpoint delivery (follow-up):** `/api/health/byok` (service-role) is not yet implemented. Action: add a Next.js route that performs a lightweight `vault.decrypted_secrets` ping and returns 200/500; a deployment-time pre-flight check must verify this endpoint exists before allowing production deploy.
+- **Alert wiring (follow-up):** Add Datadog + Sentry alerts on `/api/health/byok` for HTTP 5xx and p95 latency > 5s (page on 3 consecutive failures, otherwise create ticket). Reuse existing incident runbook for BYOK once monitors are live.
+
 ## Consequences
 
 ### Positive

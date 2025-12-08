@@ -1,8 +1,8 @@
 /** @vitest-environment node */
 
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { mockApiRouteAuthUser, resetApiRouteMocks } from "@/test/api-route-helpers";
-import { createMockNextRequest, createRouteParamsContext } from "@/test/route-helpers";
+import { mockApiRouteAuthUser, resetApiRouteMocks } from "@/test/helpers/api-route";
+import { createMockNextRequest, createRouteParamsContext } from "@/test/helpers/route";
 
 let route: typeof import("../ics/import/route") | null = null;
 const getRoute = () => {

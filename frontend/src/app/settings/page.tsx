@@ -1,6 +1,10 @@
+/**
+ * @fileoverview Settings page wrapper for account and notification preferences.
+ */
+
 "use client";
 
-import { ArrowRight } from "lucide-react";
+import { ArrowRightIcon } from "lucide-react";
 import Link from "next/link";
 import {
   Card,
@@ -29,7 +33,7 @@ export default function SettingsPage() {
                 Add, validate, and remove API keys for services like maps, weather, and
                 more.
               </p>
-              <ArrowRight className="h-5 w-5 text-muted-foreground" />
+              <ArrowRightIcon className="h-5 w-5 text-muted-foreground" />
             </CardContent>
           </Card>
         </Link>

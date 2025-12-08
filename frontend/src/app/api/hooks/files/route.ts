@@ -6,6 +6,7 @@ import "server-only";
 
 import { createClient } from "@supabase/supabase-js";
 import { type NextRequest, NextResponse } from "next/server";
+import { errorResponse, unauthorizedResponse } from "@/lib/api/route-helpers";
 import { getServerEnvVar } from "@/lib/env/server";
 import { tryReserveKey } from "@/lib/idempotency/redis";
 import type { Database } from "@/lib/supabase/database.types";
@@ -43,11 +44,9 @@ export async function POST(req: NextRequest) {
     { attributes: { route: "/api/hooks/files" } },
     async (span) => {
       const { ok, payload } = await parseAndVerify(req);
-      if (!ok || !payload)
-        return NextResponse.json(
-          { error: "invalid signature or payload" },
-          { status: 401 }
-        );
+      if (!ok || !payload) {
+        return unauthorizedResponse();
+      }
       span.setAttribute("table", payload.table);
       span.setAttribute("op", payload.type);
       if (payload.table !== "file_attachments") {
@@ -72,7 +71,12 @@ export async function POST(req: NextRequest) {
           .single();
         if (error) {
           recordErrorOnSpan(span, error);
-          return NextResponse.json({ error: "supabase error" }, { status: 500 });
+          return errorResponse({
+            err: error,
+            error: "db_error",
+            reason: "Failed to verify file attachment",
+            status: 500,
+          });
         }
       }
       return NextResponse.json({ ok: true });

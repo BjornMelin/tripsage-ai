@@ -70,7 +70,7 @@ export const POST = withApiGuards({
     return errorResponse({
       err: error,
       error: "memory_delete_failed",
-      reason: error instanceof Error ? error.message : "Failed to delete memories",
+      reason: "Failed to delete memories. Please try again.",
       status: 500,
     });
   }

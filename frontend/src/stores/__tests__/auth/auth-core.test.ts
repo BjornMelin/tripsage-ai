@@ -8,8 +8,8 @@ import { useAuthSession } from "@/stores/auth/auth-session";
 import { useAuthValidation } from "@/stores/auth/auth-validation";
 import { resetAuthState } from "@/stores/auth/reset-auth";
 import { createAuthUser } from "@/test/factories/auth-user-factory";
+import { setupTimeoutMock } from "@/test/helpers/store";
 import { server } from "@/test/msw/server";
-import { setupTimeoutMock } from "@/test/store-helpers";
 
 describe("AuthCore", () => {
   let timeoutCleanup: (() => void) | null = null;

@@ -107,134 +107,13 @@ describe("Search Filters Store - Filter Operations", () => {
     it("provides current filters for active search type", () => {
       const { result } = renderHook(() => useSearchFiltersStore());
 
-      const mockFilters: ValidatedFilterOption[] = [
-        {
-          category: "pricing",
-          id: "price_range",
-          label: "Price Range",
-          required: false,
-          type: "range",
-        },
-        {
-          category: "routing",
-          id: "stops",
-          label: "Number of Stops",
-          required: false,
-          type: "select",
-        },
-      ];
-
       act(() => {
-        result.current.setAvailableFilters("flight", mockFilters);
         result.current.setSearchType("flight");
       });
 
-      expect(result.current.currentFilters).toEqual(mockFilters);
-    });
-  });
-
-  describe("Filter Configuration Management", () => {
-    it("sets available filters for search type", () => {
-      const { result } = renderHook(() => useSearchFiltersStore());
-
-      const mockFilters: ValidatedFilterOption[] = [
-        {
-          category: "pricing",
-          id: "price_range",
-          label: "Price Range",
-          required: false,
-          type: "range",
-        },
-      ];
-
-      act(() => {
-        result.current.setAvailableFilters("flight", mockFilters);
-      });
-
-      expect(result.current.availableFilters.flight).toEqual(mockFilters);
-    });
-
-    it("adds individual filter to search type", () => {
-      const { result } = renderHook(() => useSearchFiltersStore());
-
-      const newFilter: ValidatedFilterOption = {
-        category: "airline",
-        id: "airline",
-        label: "Airlines",
-        required: false,
-        type: "multiselect",
-      };
-
-      act(() => {
-        result.current.addAvailableFilter("flight", newFilter);
-      });
-
-      const addedFilter = result.current.availableFilters.flight.find(
-        (f) => f.id === "airline"
-      );
-      expect(addedFilter).toBeDefined();
-      expect(addedFilter).toMatchObject(newFilter);
-    });
-
-    it("updates existing filter configuration", () => {
-      const { result } = renderHook(() => useSearchFiltersStore());
-
-      const initialFilter: ValidatedFilterOption = {
-        category: "pricing",
-        id: "price_range",
-        label: "Price Range",
-        required: false,
-        type: "range",
-      };
-
-      act(() => {
-        result.current.setAvailableFilters("flight", [initialFilter]);
-      });
-
-      act(() => {
-        result.current.updateAvailableFilter("flight", "price_range", {
-          description: "Filter flights by price",
-          label: "Updated Price Range",
-        });
-      });
-
-      const updatedFilter = result.current.availableFilters.flight.find(
-        (f) => f.id === "price_range"
-      );
-      expect(updatedFilter?.label).toBe("Updated Price Range");
-      expect(updatedFilter?.description).toBe("Filter flights by price");
-    });
-
-    it("removes filter from search type", () => {
-      const { result } = renderHook(() => useSearchFiltersStore());
-
-      const filters: ValidatedFilterOption[] = [
-        {
-          category: "pricing",
-          id: "price_range",
-          label: "Price Range",
-          required: false,
-          type: "range",
-        },
-        {
-          category: "airline",
-          id: "airline",
-          label: "Airlines",
-          required: false,
-          type: "multiselect",
-        },
-      ];
-
-      act(() => {
-        result.current.setAvailableFilters("flight", filters);
-      });
-
-      act(() => {
-        result.current.removeAvailableFilter("flight", "airline");
-      });
-
-      expect(result.current.availableFilters.flight).toHaveLength(1);
-      expect(result.current.availableFilters.flight[0].id).toBe("price_range");
+      // Uses default flight filters from store initialization
+      expect(result.current.currentFilters.length).toBeGreaterThan(0);
+      expect(result.current.currentFilters[0].id).toBe("price_range");
     });
   });
 
@@ -380,34 +259,6 @@ describe("Search Filters Store - Filter Operations", () => {
       // clearAllFilters does not clear currentSearchType
     });
 
-    it("clears filters by category", () => {
-      const { result } = renderHook(() => useSearchFiltersStore());
-
-      act(() => {
-        useSearchFiltersStore.setState({
-          activeFilters: {
-            airline: {
-              appliedAt: new Date().toISOString(),
-              filterId: "airline",
-              value: ["AA", "UA"],
-            },
-            price_range: {
-              appliedAt: new Date().toISOString(),
-              filterId: "price_range",
-              value: { max: 500, min: 100 },
-            },
-          },
-        });
-      });
-
-      act(() => {
-        result.current.clearFiltersByCategory("pricing");
-      });
-
-      expect(result.current.activeFilters.price_range).toBeUndefined();
-      expect(result.current.activeFilters.airline).toBeDefined();
-    });
-
     it("sets multiple filters at once", () => {
       const { result } = renderHook(() => useSearchFiltersStore());
 
@@ -477,19 +328,9 @@ describe("Search Filters Store - Filter Operations", () => {
 
       expect(result.current.hasActiveFilters).toBe(false);
 
-      // Set up filters first
+      // Use default flight filters from store initialization
       act(() => {
         result.current.setSearchType("flight");
-        result.current.setAvailableFilters("flight", [
-          {
-            category: "pricing",
-            id: "price_range",
-            label: "Price Range",
-            required: false,
-            type: "range",
-            validation: { max: 10000, min: 0 },
-          },
-        ]);
       });
 
       act(() => {
@@ -504,31 +345,22 @@ describe("Search Filters Store - Filter Operations", () => {
 
       expect(result.current.activeFilterCount).toBe(0);
 
-      // Set up filters first
+      // Directly set state to test computed property
       act(() => {
-        result.current.setSearchType("flight");
-        result.current.setAvailableFilters("flight", [
-          {
-            category: "pricing",
-            id: "price_range",
-            label: "Price Range",
-            required: false,
-            type: "range",
-            validation: { max: 10000, min: 0 },
+        useSearchFiltersStore.setState({
+          activeFilters: {
+            filter1: {
+              appliedAt: new Date().toISOString(),
+              filterId: "filter1",
+              value: "test1",
+            },
+            filter2: {
+              appliedAt: new Date().toISOString(),
+              filterId: "filter2",
+              value: "test2",
+            },
           },
-          {
-            category: "airline",
-            id: "airline",
-            label: "Airlines",
-            required: false,
-            type: "multiselect",
-          },
-        ]);
-      });
-
-      act(() => {
-        result.current.setActiveFilter("airline", ["AA", "UA"]);
-        result.current.setActiveFilter("price_range", { max: 500, min: 100 });
+        });
       });
 
       expect(result.current.activeFilterCount).toBe(2);

@@ -20,6 +20,7 @@ import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse, parseJsonBody } from "@/lib/api/route-helpers";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { recordTelemetryEvent } from "@/lib/telemetry/span";
+import { mapProviderExceptionToCode, mapProviderStatusToCode } from "../_error-mapping";
 
 type ValidateResult = { isValid: boolean; reason?: string };
 
@@ -130,11 +131,7 @@ const PROVIDER_BUILDERS: Partial<Record<string, ProviderRequestBuilder>> = {
 };
 
 function normalizeErrorReason(error: unknown): string {
-  if (error instanceof TypeError) return "TRANSPORT_ERROR";
-  if (error instanceof Error && error.name) {
-    return error.name.toUpperCase();
-  }
-  return "UNKNOWN_ERROR";
+  return mapProviderExceptionToCode(error);
 }
 
 /**
@@ -161,10 +158,7 @@ async function validateProviderKey(
       method: "GET",
     });
     if (response.status === 200) return { isValid: true };
-    if ([401, 403].includes(response.status)) {
-      return { isValid: false, reason: "UNAUTHORIZED" };
-    }
-    return { isValid: false, reason: `HTTP_${response.status}` };
+    return { isValid: false, reason: mapProviderStatusToCode(response.status) };
   } catch (error) {
     const reason = normalizeErrorReason(error);
     const message = error instanceof Error ? error.message : "Unknown error";

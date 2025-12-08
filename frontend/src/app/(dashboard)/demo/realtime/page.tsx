@@ -1,13 +1,17 @@
+/**
+ * @fileoverview Demo realtime page showcasing live trip collaboration.
+ */
+
 "use client";
 
 import {
-  Activity,
-  CheckCircle,
-  MessageSquare,
-  Upload,
-  Users,
-  Wifi,
-  Zap,
+  ActivityIcon,
+  CheckCircleIcon,
+  MessageSquareIcon,
+  UploadIcon,
+  UsersIcon,
+  WifiIcon,
+  ZapIcon,
 } from "lucide-react";
 import { useState } from "react";
 import { ConnectionStatusMonitor } from "@/components/features/realtime/connection-status-monitor";
@@ -25,6 +29,27 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTrips } from "@/hooks/use-trips";
+import { cn } from "@/lib/utils";
+import { statusVariants } from "@/lib/variants/status";
+
+type DemoStatus = "completed" | "pending";
+
+type DemoCard = {
+  description: string;
+  details: string[];
+  icon: React.ReactNode;
+  id: string;
+  status: DemoStatus;
+  title: string;
+};
+
+/**
+ * Maps demo status to status variant props.
+ */
+const getStatusVariant = (status: DemoStatus) =>
+  status === "completed"
+    ? { status: "success" as const }
+    : { status: "pending" as const };
 
 /**
  * Demonstration page showcasing all real-time Supabase integration features
@@ -33,7 +58,7 @@ export default function RealtimeDemoPage() {
   const { data: trips, realtimeStatus } = useTrips();
   const [activeTab, setActiveTab] = useState("overview");
 
-  const features = [
+  const features: DemoCard[] = [
     {
       description: "Replaced custom API calls with direct Supabase client usage",
       details: [
@@ -42,7 +67,7 @@ export default function RealtimeDemoPage() {
         "Type-safe database operations",
         "Automatic query optimization",
       ],
-      icon: <Zap className="h-5 w-5" />,
+      icon: <ZapIcon className="h-5 w-5" />,
       id: "direct-sdk",
       status: "completed",
       title: "Direct Supabase SDK Integration",
@@ -55,7 +80,7 @@ export default function RealtimeDemoPage() {
         "Automatic conflict resolution",
         "Connection status monitoring",
       ],
-      icon: <Activity className="h-5 w-5" />,
+      icon: <ActivityIcon className="h-5 w-5" />,
       id: "realtime-subscriptions",
       status: "completed",
       title: "Real-time Subscriptions",
@@ -68,7 +93,7 @@ export default function RealtimeDemoPage() {
         "Loading state management",
         "Success/failure notifications",
       ],
-      icon: <CheckCircle className="h-5 w-5" />,
+      icon: <CheckCircleIcon className="h-5 w-5" />,
       id: "optimistic-updates",
       status: "completed",
       title: "Optimistic Updates",
@@ -81,7 +106,7 @@ export default function RealtimeDemoPage() {
         "Offline mode detection",
         "Error state handling",
       ],
-      icon: <Wifi className="h-5 w-5" />,
+      icon: <WifiIcon className="h-5 w-5" />,
       id: "connection-monitoring",
       status: "completed",
       title: "Connection Status Monitoring",
@@ -94,7 +119,7 @@ export default function RealtimeDemoPage() {
         "Message status tracking",
         "Infinite scroll pagination",
       ],
-      icon: <MessageSquare className="h-5 w-5" />,
+      icon: <MessageSquareIcon className="h-5 w-5" />,
       id: "chat-updates",
       status: "pending",
       title: "Real-time Chat Messages",
@@ -107,25 +132,12 @@ export default function RealtimeDemoPage() {
         "Multiple file uploads",
         "Storage quotas",
       ],
-      icon: <Upload className="h-5 w-5" />,
+      icon: <UploadIcon className="h-5 w-5" />,
       id: "file-storage",
       status: "completed",
       title: "File Upload & Storage",
     },
   ];
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "completed":
-        return "bg-green-500";
-      case "pending":
-        return "bg-yellow-500";
-      case "in-progress":
-        return "bg-blue-500";
-      default:
-        return "bg-gray-500";
-    }
-  };
 
   return (
     <div className="container mx-auto py-8 space-y-8">
@@ -145,7 +157,7 @@ export default function RealtimeDemoPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <Activity className="h-6 w-6" />
+            <ActivityIcon className="h-6 w-6" />
             <span>Implementation Status</span>
           </CardTitle>
           <CardDescription>
@@ -163,12 +175,8 @@ export default function RealtimeDemoPage() {
                       <span className="font-medium">{feature.title}</span>
                     </div>
                     <Badge
-                      variant={feature.status === "completed" ? "default" : "secondary"}
-                      className={
-                        feature.status === "completed"
-                          ? getStatusColor(feature.status)
-                          : ""
-                      }
+                      variant="outline"
+                      className={cn(statusVariants(getStatusVariant(feature.status)))}
                     >
                       {feature.status}
                     </Badge>
@@ -182,7 +190,7 @@ export default function RealtimeDemoPage() {
                         key={`${feature.id}-${detail}`}
                         className="flex items-start space-x-2 text-sm"
                       >
-                        <CheckCircle className="h-3 w-3 mt-0.5 text-green-500 shrink-0" />
+                        <CheckCircleIcon className="h-3 w-3 mt-0.5 text-green-500 shrink-0" />
                         <span>{detail}</span>
                       </li>
                     ))}
@@ -246,16 +254,24 @@ export default function RealtimeDemoPage() {
               <div className="text-center space-y-4">
                 <h3 className="text-lg font-semibold">Real-time Features Active</h3>
                 <div className="flex flex-wrap justify-center gap-2">
-                  <Badge variant="default" className="bg-green-500">
+                  <Badge
+                    className={statusVariants({ excludeRing: true, tone: "info" })}
+                  >
                     Direct Supabase SDK
                   </Badge>
-                  <Badge variant="default" className="bg-blue-500">
+                  <Badge
+                    className={statusVariants({ excludeRing: true, tone: "active" })}
+                  >
                     Real-time Subscriptions
                   </Badge>
-                  <Badge variant="default" className="bg-purple-500">
+                  <Badge
+                    className={statusVariants({ excludeRing: true, tone: "success" })}
+                  >
                     Optimistic Updates
                   </Badge>
-                  <Badge variant="default" className="bg-orange-500">
+                  <Badge
+                    className={statusVariants({ excludeRing: true, tone: "pending" })}
+                  >
                     Connection Monitoring
                   </Badge>
                 </div>
@@ -285,25 +301,25 @@ export default function RealtimeDemoPage() {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
-                      <Users className="h-5 w-5" />
+                      <UsersIcon className="h-5 w-5" />
                       <span>Collaboration Features</span>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="flex items-center space-x-2">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <CheckCircleIcon className="h-4 w-4 text-green-500" />
                       <span className="text-sm">Live editing indicators</span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <CheckCircleIcon className="h-4 w-4 text-green-500" />
                       <span className="text-sm">Real-time conflict resolution</span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <CheckCircleIcon className="h-4 w-4 text-green-500" />
                       <span className="text-sm">Activity feed updates</span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <CheckCircleIcon className="h-4 w-4 text-green-500" />
                       <span className="text-sm">Collaborative permissions</span>
                     </div>
                   </CardContent>
@@ -327,19 +343,19 @@ export default function RealtimeDemoPage() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <CheckCircleIcon className="h-4 w-4 text-green-500" />
                     <span className="text-sm">Real-time connectivity status</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <CheckCircleIcon className="h-4 w-4 text-green-500" />
                     <span className="text-sm">Automatic reconnection attempts</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <CheckCircleIcon className="h-4 w-4 text-green-500" />
                     <span className="text-sm">Offline mode detection</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <CheckCircleIcon className="h-4 w-4 text-green-500" />
                     <span className="text-sm">Connection health percentage</span>
                   </div>
                 </CardContent>

@@ -5,7 +5,7 @@ import {
   createMockNextRequest,
   createRouteParamsContext,
   getMockCookiesForTest,
-} from "@/test/route-helpers";
+} from "@/test/helpers/route";
 
 const mockLogger = vi.hoisted(() => ({
   error: vi.fn(),

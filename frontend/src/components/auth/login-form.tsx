@@ -1,269 +1,259 @@
 /**
- * @fileoverview Authentication component for user login with email/password and
- * Supabase social OAuth (GitHub, Google).
- *
- * Email/password login uses API route with fetch for authentication.
- * Social providers continue to use Supabase OAuth with server-side callback.
+ * @fileoverview The login form component.
  */
 
 "use client";
 
-import { type LoginFormData, loginFormSchema } from "@schemas/auth";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useId, useState } from "react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { SiGithub, SiGoogle } from "@icons-pack/react-simple-icons";
+import { Loader2Icon, MailIcon } from "lucide-react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useSupabaseRequired } from "@/lib/supabase";
+import { resolveRedirectUrl } from "@/lib/auth/redirect";
+import { useSupabaseRequired } from "@/lib/supabase/client";
 
-/** Props for the LoginForm component. */
-interface LoginFormProps {
-  /** URL to redirect after successful login. */
+/** The login form props. */
+type LoginFormProps = {
   redirectTo?: string;
-  /** Additional class names for the root card. */
-  className?: string;
-}
-
-/** State returned by the login API. */
-interface LoginState {
-  success: boolean;
-  error?: string;
-  fieldErrors?: {
-    email?: string;
-    password?: string;
-  };
-}
+};
 
 /**
- * Login form with email/password and social providers.
+ * The login form component.
  *
- * - Submits credentials via API route with fetch.
- * - Initiates OAuth with `supabase.auth.signInWithOAuth` for GitHub/Google.
- * - Redirects authenticated users to `redirectTo`.
- *
- * @param redirectTo Path to redirect after login (defaults to "/dashboard").
- * @param className Optional card class name.
- * @returns Login form JSX element.
+ * @param redirectTo - The redirect URL.
+ * @returns The login form component.
  */
-export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormProps) {
-  const search = useSearchParams();
-  const router = useRouter();
-  const nextParam = search?.get("next") || search?.get("from") || "";
-  const urlError = search?.get("error"); // Fallback for OAuth flows
-
-  const [state, setState] = useState<LoginState>({ success: false });
-  const [isLoading, setIsLoading] = useState(false);
-  const emailId = useId();
-  const passwordId = useId();
-
+export function LoginForm({ redirectTo }: LoginFormProps) {
   const supabase = useSupabaseRequired();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaStep, setMfaStep] = useState<{
+    challengeId: string;
+    factorId: string;
+  } | null>(null);
+  const [mfaError, setMfaError] = useState<string | null>(null);
+  const [mfaSubmitting, setMfaSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const targetUrl = useMemo(
+    () => resolveRedirectUrl(redirectTo, { absolute: true }),
+    [redirectTo]
+  );
 
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const nextSuffix = nextParam ? `?next=${encodeURIComponent(nextParam)}` : "";
+  /** Starts an MFA challenge for a verified factor (prefers TOTP). */
+  const startMfaChallenge = async () => {
+    setMfaError(null);
+    setMfaStep(null);
+    const factorsRes = await supabase.auth.mfa.listFactors();
+    if (factorsRes.error) {
+      throw factorsRes.error;
+    }
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    const factorsArray = Array.isArray(factorsRes.data)
+      ? factorsRes.data
+      : [
+          ...(factorsRes.data.totp ?? []),
+          ...(factorsRes.data.webauthn ?? []),
+          ...(factorsRes.data.phone ?? []),
+        ];
+
+    // Prefer TOTP for code-based verification; WebAuthn requires different handling
+    const factor =
+      factorsArray.find((f) => f.status === "verified" && f.factor_type === "totp") ??
+      factorsArray.find((f) => f.status === "verified");
+    if (!factor) {
+      throw new Error("No verified MFA factor found for this account");
+    }
+
+    if (factor.factor_type !== "totp") {
+      throw new Error("Only TOTP-based MFA is currently supported");
+    }
+
+    const challenge = await supabase.auth.mfa.challenge({ factorId: factor.id });
+    if (challenge.error || !challenge.data?.id) {
+      throw challenge.error ?? new Error("Failed to start MFA challenge");
+    }
+
+    setMfaStep({ challengeId: challenge.data.id, factorId: factor.id });
+  };
+
+  /** Handles the password login. */
+  const handlePasswordLogin = async (event: React.FormEvent) => {
     event.preventDefault();
-    setIsLoading(true);
-    setState({ success: false });
-
-    const formData = new FormData(event.currentTarget);
-    const data: LoginFormData = {
-      email: formData.get("email") as string,
-      password: formData.get("password") as string,
-      rememberMe: formData.get("rememberMe") === "on",
-    };
-
-    // Validate client-side first
-    const parsed = loginFormSchema.safeParse(data);
-    if (!parsed.success) {
-      const fieldErrors: Record<string, string> = {};
-      for (const issue of parsed.error.issues) {
-        const field = issue.path[0];
-        if (field === "email") {
-          fieldErrors.email = issue.message;
-        } else if (field === "password") {
-          fieldErrors.password = issue.message;
+    setError(null);
+    setMfaError(null);
+    setMfaStep(null);
+    setLoading(true);
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    setLoading(false);
+    if (signInError) {
+      const code = (signInError as { code?: string } | null)?.code;
+      const isMfa = code === "insufficient_aal" || code === "mfa_required";
+      if (isMfa) {
+        try {
+          await startMfaChallenge();
+        } catch (mfaStartError) {
+          const message =
+            (mfaStartError as { message?: string } | null)?.message ??
+            "MFA required but challenge could not be started";
+          setError(message);
         }
+        return;
       }
-      setState({
-        error: "Please check your input and try again",
-        fieldErrors,
-        success: false,
-      });
-      setIsLoading(false);
+      setError(signInError.message ?? "Login failed");
       return;
     }
-
-    try {
-      const response = await fetch("/api/auth/login", {
-        body: JSON.stringify(parsed.data),
-        headers: {
-          "Content-Type": "application/json",
-        },
-        method: "POST",
-      });
-
-      const result: LoginState = await response.json();
-
-      if (result.success) {
-        // Redirect to a sanitized destination on the same origin
-        const safeNext =
-          nextParam?.startsWith("/") && !nextParam.startsWith("//")
-            ? nextParam
-            : redirectTo;
-        router.push(safeNext);
-        router.refresh(); // Refresh to update server components
-      } else {
-        setState(result);
-      }
-    } catch {
-      setState({
-        error: "An unexpected error occurred",
-        success: false,
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    window.location.assign(targetUrl);
   };
 
-  const handleSocialLogin = async (provider: "github" | "google") => {
-    const { error: oAuthError } = await supabase.auth.signInWithOAuth({
-      options: {
-        redirectTo: `${origin}/auth/callback${nextSuffix}`,
-      },
+  /** Handles MFA code verification once a challenge is active. */
+  const handleMfaVerify = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!mfaStep) {
+      return;
+    }
+    setMfaSubmitting(true);
+    setMfaError(null);
+    const verifyResult = await supabase.auth.mfa.verify({
+      challengeId: mfaStep.challengeId,
+      code: mfaCode,
+      factorId: mfaStep.factorId,
+    });
+    setMfaSubmitting(false);
+    if (verifyResult.error) {
+      setMfaError(verifyResult.error.message ?? "Invalid or expired MFA code");
+      return;
+    }
+    window.location.assign(targetUrl);
+  };
+
+  /** Handles the OAuth login. */
+  const handleOAuth = async (provider: "github" | "google") => {
+    setError(null);
+    setLoading(true);
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      options: { redirectTo: targetUrl },
       provider,
     });
-    if (oAuthError) {
-      setState({
-        error: "Social login failed. Please try again.",
-        success: false,
-      });
+    setLoading(false);
+    if (oauthError) {
+      setError(oauthError.message);
     }
   };
 
   return (
-    <Card className={className}>
-      <CardHeader className="space-y-2 pb-4">
-        <CardTitle className="text-2xl font-bold text-center">Sign in</CardTitle>
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle>Sign in</CardTitle>
+        <CardDescription>Access your TripSage dashboard</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {(state.error || urlError) && (
-          <Alert variant="destructive" role="status" aria-label="authentication error">
-            <AlertDescription>{state.error || urlError}</AlertDescription>
-          </Alert>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <input type="hidden" name="redirectTo" value={redirectTo} />
-          {nextParam ? <input type="hidden" name="next" value={nextParam} /> : null}
+        <form className="space-y-4" onSubmit={handlePasswordLogin}>
           <div className="space-y-2">
-            <Label htmlFor={emailId}>Email</Label>
+            <Label htmlFor="email">Email</Label>
             <Input
-              id={emailId}
+              id="email"
               type="email"
-              name="email"
               autoComplete="email"
               required
-              aria-invalid={!!state.fieldErrors?.email}
-              aria-describedby={
-                state.fieldErrors?.email ? `${emailId}-error` : undefined
-              }
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
             />
-            {state.fieldErrors?.email && (
-              <p
-                id={`${emailId}-error`}
-                className="text-sm text-destructive"
-                role="alert"
-              >
-                {state.fieldErrors.email}
-              </p>
-            )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor={passwordId}>Password</Label>
+            <Label htmlFor="password">Password</Label>
             <Input
-              id={passwordId}
+              id="password"
               type="password"
-              name="password"
               autoComplete="current-password"
               required
-              aria-invalid={!!state.fieldErrors?.password}
-              aria-describedby={
-                state.fieldErrors?.password ? `${passwordId}-error` : undefined
-              }
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
             />
-            {state.fieldErrors?.password && (
-              <p
-                id={`${passwordId}-error`}
-                className="text-sm text-destructive"
-                role="alert"
-              >
-                {state.fieldErrors.password}
-              </p>
-            )}
           </div>
-          <SubmitButton isLoading={isLoading} />
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={loading || !!mfaStep}
+            data-testid="password-login"
+          >
+            {loading ? (
+              <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <MailIcon className="mr-2 h-4 w-4" />
+            )}
+            Continue with email
+          </Button>
         </form>
-
-        <div className="relative py-2 text-center text-xs text-muted-foreground">
-          <span>or continue with</span>
-        </div>
-
+        {mfaStep ? (
+          <form className="space-y-3" onSubmit={handleMfaVerify}>
+            <div className="space-y-2">
+              <Label htmlFor="mfa-code">Enter your 6-digit code</Label>
+              <Input
+                id="mfa-code"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                pattern="\d{6}"
+                required
+                value={mfaCode}
+                onChange={(e) => setMfaCode(e.target.value)}
+                aria-describedby={mfaError ? "mfa-error" : undefined}
+                aria-invalid={!!mfaError}
+              />
+            </div>
+            {mfaError ? (
+              <p id="mfa-error" className="text-sm text-destructive">
+                {mfaError}
+              </p>
+            ) : null}
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={mfaSubmitting}
+              data-testid="mfa-verify"
+            >
+              {mfaSubmitting ? (
+                <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              Verify code
+            </Button>
+          </form>
+        ) : null}
         <div className="grid grid-cols-1 gap-2">
           <Button
-            type="button"
             variant="outline"
-            onClick={() => handleSocialLogin("github")}
+            className="w-full"
+            onClick={() => handleOAuth("github")}
+            disabled={loading}
+            data-testid="oauth-github"
           >
-            Continue with GitHub
+            <SiGithub className="mr-2 h-4 w-4" /> Continue with GitHub
           </Button>
           <Button
-            type="button"
             variant="outline"
-            onClick={() => handleSocialLogin("google")}
+            className="w-full"
+            onClick={() => handleOAuth("google")}
+            disabled={loading}
+            data-testid="oauth-google"
           >
-            Continue with Google
+            <SiGoogle className="mr-2 h-4 w-4" /> Continue with Google
           </Button>
         </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-/**
- * Submit button component with loading state.
- */
-function SubmitButton({ isLoading }: { isLoading: boolean }) {
-  return (
-    <Button
-      type="submit"
-      className="w-full"
-      disabled={isLoading}
-      aria-disabled={isLoading}
-    >
-      {isLoading ? "Signing in..." : "Sign in"}
-    </Button>
-  );
-}
-
-/**
- * Skeleton loading state for the login form.
- *
- * Displays placeholder content while the login form is loading.
- *
- * @returns The login form skeleton JSX element
- */
-export function LoginFormSkeleton() {
-  return (
-    <Card className="w-full max-w-md">
-      <CardHeader className="space-y-1">
-        <div className="h-8 bg-muted rounded animate-pulse" />
-        <div className="h-4 bg-muted rounded animate-pulse" />
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="h-28 bg-muted rounded animate-pulse" />
       </CardContent>
     </Card>
   );

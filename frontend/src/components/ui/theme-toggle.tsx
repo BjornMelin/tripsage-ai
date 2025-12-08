@@ -1,6 +1,10 @@
+/**
+ * @fileoverview Theme toggle switch supporting light/system/dark preferences.
+ */
+
 "use client";
 
-import { Monitor, Moon, Sun } from "lucide-react";
+import { MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import * as React from "react";
 
@@ -24,7 +28,7 @@ export function ThemeToggle() {
   if (!mounted) {
     return (
       <Button variant="ghost" size="icon" disabled>
-        <Sun className="h-[1.2rem] w-[1.2rem]" />
+        <SunIcon className="h-[1.2rem] w-[1.2rem]" />
         <span className="sr-only">Loading theme toggle</span>
       </Button>
     );
@@ -34,22 +38,22 @@ export function ThemeToggle() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon">
-          <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-          <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+          <SunIcon className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+          <MoonIcon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
           <span className="sr-only">Toggle theme</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => setTheme("light")}>
-          <Sun className="mr-2 h-4 w-4" />
+          <SunIcon className="mr-2 h-4 w-4" />
           <span>Light</span>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => setTheme("dark")}>
-          <Moon className="mr-2 h-4 w-4" />
+          <MoonIcon className="mr-2 h-4 w-4" />
           <span>Dark</span>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => setTheme("system")}>
-          <Monitor className="mr-2 h-4 w-4" />
+          <MonitorIcon className="mr-2 h-4 w-4" />
           <span>System</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -69,7 +73,7 @@ export function CompactThemeToggle() {
   if (!mounted) {
     return (
       <Button variant="ghost" size="icon" disabled>
-        <Sun className="h-[1.2rem] w-[1.2rem]" />
+        <SunIcon className="h-[1.2rem] w-[1.2rem]" />
         <span className="sr-only">Loading theme toggle</span>
       </Button>
     );
@@ -81,8 +85,8 @@ export function CompactThemeToggle() {
       size="icon"
       onClick={() => setTheme(theme === "light" ? "dark" : "light")}
     >
-      <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-      <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+      <SunIcon className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+      <MoonIcon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
       <span className="sr-only">Toggle theme</span>
     </Button>
   );

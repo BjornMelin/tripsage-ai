@@ -2,7 +2,7 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { WebhookPayload } from "@/lib/webhooks/payload";
-import { createMockNextRequest, getMockCookiesForTest } from "@/test/route-helpers";
+import { createMockNextRequest, getMockCookiesForTest } from "@/test/helpers/route";
 
 type ParseAndVerify = (req: Request) => Promise<ParseResult>;
 type BuildEventKey = (payload: WebhookPayload) => string;

@@ -8,7 +8,7 @@
 "use client";
 
 import type { TimeWindow } from "@schemas/dashboard";
-import { AlertCircle } from "lucide-react";
+import { AlertCircleIcon } from "lucide-react";
 import { useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -52,7 +52,7 @@ export function DashboardMetrics({
   if (isError) {
     return (
       <Alert variant="destructive">
-        <AlertCircle className="h-4 w-4" />
+        <AlertCircleIcon className="h-4 w-4" />
         <AlertDescription className="flex items-center gap-2">
           Failed to load metrics.
           <Button
