@@ -56,6 +56,13 @@ through centralized PII filters plus OpenTelemetry spans.
 - **Retention:** `memories.turn_embeddings` cleaned up at **${MEMORIES_RETENTION_DAYS:-180} days** via pg_cron; align embeddings and session records to the same window. Rationale: matches product UX (recent travel context) and privacy expectations; configurable via `MEMORIES_RETENTION_DAYS` for regulatory changes. Deploy the cron job in migrations; monitor runs via Postgres logs and Datadog alerts on failures/lag.
 - **Session semantics:** reuse the most recent "Travel Plan" chat/memory session **per user and conversation thread** when the planner tool is invoked to reduce fragmentation and improve retrieval accuracy. Concurrent planner invocations must acquire a session-level lock or queue to avoid collisions. Users can start a fresh session by clearing memory or opening a new chat thread.
 
+### Implementation status & follow-ups
+
+- **Config surface:** Runtime defaults for `PGVECTOR_HNSW_M`, `PGVECTOR_HNSW_EF_CONSTRUCTION`, `PGVECTOR_HNSW_EF_SEARCH_DEFAULT`, and `MEMORIES_RETENTION_DAYS` are now documented in `.env.example` / `.env.test.example`. Migrations currently pin m=32, ef_construction=180, ef_search=96, retention=180d for determinism; follow-up to parameterize `20251122000000_base_schema.sql` with these env values.
+- **`ef_search_override`:** Not implemented in `match_accommodation_embeddings`; keep default via env for now. TODO: add optional override parameter and surface in orchestrator when tuning recall vs latency.
+- **Session-level locking:** Planner/conversation reuse requires a session lock/queue; current code path does not enforce a mutex. TODO: add advisory locking in the planner orchestration layer and document the code path once in place.
+- **Monitoring:** Datadog/Sentry monitors for pg_cron retention job and HNSW vacuum/REINDEX are pending; add monitors for job failures and latency anomalies before GA.
+
 ## Consequences
 
 ### Positive

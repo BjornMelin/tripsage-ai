@@ -6,7 +6,7 @@ Operational checklist to detect and remediate ownership mismatches between Supab
 
 - Buckets: `attachments`, `trip-images`, `avatars`.
 - Tables: `storage.objects`, `public.file_attachments` (path + owner metadata).
-- Purpose: ensure `owner`/`owner_id` alignment for RLS and clean up orphaned objects.
+- Purpose: ensure `owner`/`user_id` alignment for RLS and clean up orphaned objects.
 
 ## Prerequisites
 
@@ -29,17 +29,17 @@ ORDER BY o.created_at DESC;
 **Owner mismatch between storage.objects and file_attachments**
 
 ```sql
-SELECT o.bucket_id, o.name AS path, o.owner AS storage_owner, fa.owner_id, fa.user_id, fa.trip_id
+SELECT o.bucket_id, o.name AS path, o.owner AS storage_owner, fa.user_id, fa.trip_id
 FROM storage.objects o
 JOIN public.file_attachments fa ON fa.file_path = o.name
 WHERE o.bucket_id IN ('attachments','trip-images','avatars')
-  AND (fa.owner_id IS DISTINCT FROM o.owner OR fa.owner_id IS NULL);
+  AND (fa.user_id IS DISTINCT FROM o.owner OR fa.user_id IS NULL);
 ```
 
 **file_attachments pointing to missing objects**
 
 ```sql
-SELECT fa.id, fa.file_path, fa.user_id, fa.trip_id, fa.owner_id
+SELECT fa.id, fa.file_path, fa.user_id, fa.trip_id
 FROM public.file_attachments fa
 LEFT JOIN storage.objects o ON o.name = fa.file_path
 WHERE o.name IS NULL
@@ -49,15 +49,15 @@ ORDER BY fa.created_at DESC;
 ## Remediation Steps
 
 - For orphaned objects (query 1): decide whether to delete the object or recreate the relational row. Use `storage.objects` delete via service role if the file is not referenced.
-- For owner mismatches (query 2): align `storage.objects.owner` to `fa.owner_id` **or** correct `file_attachments.owner_id` if the relational row is wrong. Keep `owner_id` as the source of truth; update storage via service-role SQL:
+- For owner mismatches (query 2): align `storage.objects.owner` to `fa.user_id` **or** correct `file_attachments.user_id` if the relational row is wrong. Keep `user_id` as the source of truth; update storage via service-role SQL:
 
 ```sql
 UPDATE storage.objects o
-SET owner = fa.owner_id
+SET owner = fa.user_id
 FROM public.file_attachments fa
 WHERE fa.file_path = o.name
   AND o.bucket_id IN ('attachments','trip-images','avatars')
-  AND (fa.owner_id IS DISTINCT FROM o.owner OR fa.owner_id IS NULL);
+  AND (fa.user_id IS DISTINCT FROM o.owner OR fa.user_id IS NULL);
 ```
 
 - For missing objects (query 3): either remove the relational row or re-upload the file, depending on business need.
