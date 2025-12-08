@@ -57,7 +57,7 @@ Restore two methods that were incorrectly removed as YAGNI (the previously propo
 npx shadcn@latest add accordion toggle-group
 ```
 
-### 3. Component Architecture
+### 4. Component Architecture
 
 ```text
 FilterPanel (Card)
@@ -82,7 +82,7 @@ FilterPanel (Card)
     └── Badge chips with remove (×) buttons
 ```
 
-### 4. File Structure
+### 5. File Structure
 
 ```text
 frontend/src/components/features/search/
@@ -129,14 +129,14 @@ frontend/src/components/features/search/
 └── search-collections.tsx        # Cross-cutting collections
 ```
 
-### 4.1 Testing Strategy
+### 5.1 Testing Strategy
 
 - **Frameworks**: Vitest + React Testing Library for component behavior; MSW for network interactions in results lists; snapshot tests only for low-change presentational pieces (skeletons, badges).
 - **Placement**: colocate tests under `filters/__tests__/`, `forms/__tests__/`, and `results/__tests__/` as shown in the structure; shared factories live in `frontend/src/test/factories`.
 - **Coverage**: target ≥85% line/branch coverage for filter panel logic, store adapters, and URL serialization helpers; critical paths (apply/clear filters, deep-linking hydration, preset save/load) must be exercised.
 - **Fixtures/mocks**: mock filter payloads and search params in `frontend/src/test/fixtures/search-filters.ts`; use MSW handlers for API payload builders in `filters/api-payload.ts`.
 
-### 5. shadcn/ui Components Mapping
+### 6. shadcn/ui Components Mapping
 
 | Filter Type | shadcn/ui Component | Example Use |
 |-------------|--------------------|--------------|
@@ -147,7 +147,7 @@ frontend/src/components/features/search/
 | Active filters | `Badge` | Removable filter chips |
 | Sections | `Accordion` | Collapsible filter categories |
 
-### 5.1 Hotel Search Sort Options
+### 6.1 Hotel Search Sort Options
 
 The `HotelResults` component supports four sort criteria:
 
@@ -160,7 +160,7 @@ The `HotelResults` component supports four sort criteria:
 
 Distance sorting uses the Haversine formula (`@/lib/geo`) to calculate great-circle distance from the search center to each hotel's coordinates. Hotels without coordinates are sorted to the end.
 
-### 6. Store Integration
+### 7. Store Integration
 
 The FilterPanel will integrate with `useSearchFiltersStore`:
 
@@ -186,7 +186,7 @@ const {
 
 Quick filter surfacing (`getMostUsedFilters`) will be added when the store exposes that API; until then, QuickFilters can consume analytics-provided presets via props.
 
-### 7. Deep-linking Strategy
+### 8. Deep-linking Strategy
 
 `applyFiltersFromObject` is used to hydrate the store from URL query parameters. The serialization/deserialization flow:
 
@@ -199,7 +199,7 @@ Quick filter surfacing (`getMostUsedFilters`) will be added when the store expos
 
 Deep-linking remains opt-in per page; pages without filters simply skip calling the serializer.
 
-### 8. Page Integration
+### 9. Page Integration
 
 Update `flights/page.tsx` sidebar:
 

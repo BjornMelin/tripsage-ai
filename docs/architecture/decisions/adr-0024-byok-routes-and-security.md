@@ -32,6 +32,11 @@ We are migrating BYOK key CRUD/validation from FastAPI to Next.js route handlers
 - **Rotation/readiness checks:** Health check endpoint (service-role) pings `vault.decrypted_secrets`; integrate alerts with existing Sentry + Datadog monitors (HTTP 5xx or latency >5s triggers pager). Configure monitor on `/api/health/byok` once deployed.
 - **No-secret fallback:** Never persist BYOK secrets to regular tables or environment variables; stubs are for local/CI only. Deployment validation should fail if the stub schema exists in production (`app.environment=prod` guard in migration).
 
+### Monitoring and operational follow-ups
+
+- **Health endpoint delivery:** `/api/health/byok` (service-role) is required for readiness/rotation checks and is not yet implemented. Action: add a Next.js route that performs a lightweight `vault.decrypted_secrets` ping and returns 200/500; block production deploy of BYOK without it.
+- **Alert wiring:** Add Datadog + Sentry alerts on `/api/health/byok` for HTTP 5xx and p95 latency > 5s (page on 3 consecutive failures, otherwise create ticket). Reuse existing incident runbook once monitors are live.
+
 ## Consequences
 
 ### Positive
