@@ -81,7 +81,8 @@ async function fetchPersonalizedDestinations(
     .returns<SearchHotelsDestinationRow[]>();
 
   if (error) {
-    logger.error("popular_destinations.search_hotels_failed", { error, userId });
+    const safeError = error?.message ?? "search_hotels_query_failed";
+    logger.error("popular_destinations.search_hotels_failed", { error: safeError });
     return null;
   }
   if (!data || data.length === 0) return null;
