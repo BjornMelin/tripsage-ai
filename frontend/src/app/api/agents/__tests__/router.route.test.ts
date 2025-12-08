@@ -51,4 +51,22 @@ describe("POST /api/agents/router", () => {
     expect(body.error).toBe("invalid_message");
     expect(body.reason).toContain("invalid patterns");
   });
+
+  it("returns 400 when classifyUserMessage throws InvalidPatternsError", async () => {
+    const { InvalidPatternsError } = await import("@ai/agents/router-agent");
+    classifyUserMessage.mockRejectedValueOnce(
+      new InvalidPatternsError("patterns removed")
+    );
+
+    const { POST } = await import("../router/route");
+    const res = await POST(
+      makeJsonRequest("http://localhost/api/agents/router", { message: "noop" }),
+      createRouteParamsContext()
+    );
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("invalid_message");
+    expect(body.reason).toContain("invalid patterns");
+  });
 });

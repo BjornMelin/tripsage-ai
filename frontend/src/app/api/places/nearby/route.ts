@@ -22,6 +22,20 @@ import { recordTelemetryEvent } from "@/lib/telemetry/span";
 const NEARBY_FIELD_MASK =
   "places.id,places.displayName,places.shortFormattedAddress,places.types,places.rating,places.location";
 
+const upstreamPlaceSchema = z.strictObject({
+  displayName: z.object({ text: z.string().min(1) }).optional(),
+  id: z.string(),
+  location: z
+    .object({
+      latitude: z.number().optional(),
+      longitude: z.number().optional(),
+    })
+    .optional(),
+  rating: z.number().optional(),
+  shortFormattedAddress: z.string().optional(),
+  types: z.array(z.string()).optional(),
+});
+
 /**
  * POST /api/places/nearby
  *
@@ -75,26 +89,12 @@ export const POST = withApiGuards({
       level: "error",
     });
     return errorResponse({
+      err: jsonError,
       error: "upstream_json_parse_error",
       reason: "Failed to parse response from external places service.",
       status: 502,
     });
   }
-
-  // Transform response to simpler structure
-  const upstreamPlaceSchema = z.strictObject({
-    displayName: z.object({ text: z.string().min(1) }).optional(),
-    id: z.string(),
-    location: z
-      .object({
-        latitude: z.number().optional(),
-        longitude: z.number().optional(),
-      })
-      .optional(),
-    rating: z.number().optional(),
-    shortFormattedAddress: z.string().optional(),
-    types: z.array(z.string()).optional(),
-  });
 
   const upstreamPlaces = Array.isArray(data.places) ? data.places : [];
 

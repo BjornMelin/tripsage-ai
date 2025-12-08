@@ -10,7 +10,9 @@ import "server-only";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
+import type { Database } from "@/lib/supabase/database.types";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
+import { createServerLogger } from "@/lib/telemetry/logger";
 
 /** Popular hotel destination returned to the client. */
 interface PopularDestination {
@@ -25,11 +27,13 @@ interface PopularDestination {
 }
 
 /** Row from the search_hotels table. */
-type SearchHotelsDestinationRow = {
-  destination: string | null;
-};
+type SearchHotelsDestinationRow = Pick<
+  Database["public"]["Tables"]["search_hotels"]["Row"],
+  "destination"
+>;
 
 const POPULAR_DESTINATIONS_TTL_SECONDS = 60 * 60; // 1 hour
+const logger = createServerLogger("api.accommodations.popular-destinations");
 
 /** Global popular hotel destinations with typical pricing. */
 const GLOBAL_POPULAR_DESTINATIONS: PopularDestination[] = [
@@ -65,7 +69,11 @@ async function fetchPersonalizedDestinations(
     .limit(100)
     .returns<SearchHotelsDestinationRow[]>();
 
-  if (error || !data || data.length === 0) return null;
+  if (error) {
+    logger.error("popular_destinations.search_hotels_failed", { error, userId });
+    return null;
+  }
+  if (!data || data.length === 0) return null;
 
   const destinationCounts = new Map<string, number>();
   for (const row of data) {

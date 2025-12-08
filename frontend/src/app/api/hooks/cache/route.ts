@@ -51,8 +51,15 @@ export async function POST(req: NextRequest) {
     { attributes: { route: "/api/hooks/cache" } },
     async (span) => {
       const { ok, payload } = await parseAndVerify(req);
-      if (!ok || !payload) {
+      if (!ok) {
         return unauthorizedResponse();
+      }
+      if (!payload) {
+        return errorResponse({
+          error: "invalid_request",
+          reason: "Missing webhook payload",
+          status: 400,
+        });
       }
       if (!payload.table) {
         return errorResponse({

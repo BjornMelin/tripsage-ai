@@ -51,7 +51,7 @@ export async function POST(req: Request) {
           return errorResponse({
             err: error,
             error: "configuration_error",
-            reason: "QStash signing keys are not configured",
+            reason: "QStash signing keys are misconfigured",
             status: 500,
           });
         }
@@ -64,8 +64,9 @@ export async function POST(req: Request) {
           : false;
         if (!valid) {
           try {
+            const forwardedFor = req.headers.get("x-forwarded-for");
             const ip =
-              req.headers.get("x-forwarded-for") ??
+              forwardedFor?.split(",")[0]?.trim() ??
               req.headers.get("cf-connecting-ip") ??
               undefined;
             span.addEvent("unauthorized_attempt", {

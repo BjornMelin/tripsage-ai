@@ -156,12 +156,11 @@ describe("/api/trips/suggestions route", () => {
     expect(firstCall, "generateText should be invoked at least once").toBeDefined();
     const call = firstCall?.[0];
     expect(call).toBeDefined();
-    const prompt =
-      typeof call?.prompt === "string"
-        ? call.prompt
-        : JSON.stringify(call?.prompt).toLowerCase();
-    expect(prompt.toLowerCase()).toContain("beach");
-    expect(prompt.toLowerCase()).toContain('"beach" category');
-    expect(prompt).not.toContain("[FILTERED]");
+    const rawPrompt =
+      typeof call?.prompt === "string" ? call.prompt : JSON.stringify(call?.prompt);
+    const promptLower = rawPrompt.toLowerCase();
+    expect(promptLower).toContain("beach");
+    expect(promptLower).toContain('"beach" category');
+    expect(promptLower).not.toContain("[filtered]");
   });
 });
