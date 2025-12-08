@@ -41,7 +41,7 @@ export const POST = withApiGuards({
       "mfa_challenge_failed"
     );
     return errorResponse({
-      err: classification.reason,
+      err: error,
       error: classification.code,
       reason: classification.reason,
       status: classification.status,

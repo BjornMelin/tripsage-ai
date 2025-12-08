@@ -27,6 +27,7 @@ import { createServerLogger } from "@/lib/telemetry/logger";
 
 /** Cache TTL for AI suggestions (15 minutes). */
 const SUGGESTIONS_CACHE_TTL = 900;
+const MAX_BUDGET_LIMIT = 10_000_000;
 
 const logger = createServerLogger("api.trips.suggestions");
 
@@ -38,7 +39,9 @@ const tripSuggestionsQuerySchema = z.strictObject({
       if (!val) return undefined;
       const normalized = val.normalize("NFKC").trim();
       const parsed = Number.parseFloat(normalized);
-      return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+      return Number.isFinite(parsed) && parsed > 0 && parsed <= MAX_BUDGET_LIMIT
+        ? parsed
+        : undefined;
     }),
   category: z
     .string()

@@ -136,7 +136,7 @@ describe("POST /api/jobs/notify-collaborators", () => {
     expect(res.status).toBe(500);
     const json = await res.json();
     expect(json.error).toBe("configuration_error");
-    expect(json.reason).toBe("QStash signing keys are not configured");
+    expect(json.reason).toBe("QStash signing keys are misconfigured");
   });
 
   it("returns 401 when signature verification fails", async () => {

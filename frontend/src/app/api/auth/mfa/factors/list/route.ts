@@ -39,7 +39,7 @@ export const GET = withApiGuards({
       "mfa_factors_list_failed"
     );
     return errorResponse({
-      err: classification.reason,
+      err: error,
       error: classification.code,
       reason: "Failed to list MFA factors",
       status: classification.status,

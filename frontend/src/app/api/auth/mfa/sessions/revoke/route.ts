@@ -7,7 +7,7 @@ import "server-only";
 import { mfaSessionRevokeInputSchema } from "@schemas/mfa";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { errorResponse, forbiddenResponse } from "@/lib/api/route-helpers";
+import { errorResponse } from "@/lib/api/route-helpers";
 import { MfaRequiredError, requireAal2, revokeSessions } from "@/lib/security/mfa";
 import { classifyMfaError, logMfaError } from "@/lib/security/mfa-error";
 import { createServerLogger } from "@/lib/telemetry/logger";
@@ -36,7 +36,12 @@ export const POST = withApiGuards({
       error instanceof MfaRequiredError ||
       (error as { code?: string } | null)?.code === "MFA_REQUIRED"
     ) {
-      return forbiddenResponse("MFA verification required to revoke sessions");
+      return errorResponse({
+        err: error,
+        error: "mfa_required",
+        reason: "MFA verification required to revoke sessions",
+        status: 403,
+      });
     }
     const classification = classifyMfaError(error, "mfa_sessions_revoke_failed");
     logMfaError(
