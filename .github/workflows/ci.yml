@@ -4,7 +4,9 @@ on:
   push:
     branches: [main, develop]
     paths:
-      - 'frontend/**'
+      - 'src/**'
+      - 'e2e/**'
+      - 'scripts/**'
       - 'docs/**'
       - 'docs/review/**'
       - '.github/workflows/**'
@@ -12,11 +14,16 @@ on:
       - '.pre-commit-config.yaml'
       - 'package.json'
       - 'pnpm-lock.yaml'
+      - 'tsconfig.json'
+      - 'vitest.config.ts'
+      - 'biome.json'
       - 'README.md'
   pull_request:
     branches: [main, develop]
     paths:
-      - 'frontend/**'
+      - 'src/**'
+      - 'e2e/**'
+      - 'scripts/**'
       - 'docs/**'
       - 'docs/review/**'
       - '.github/workflows/**'
@@ -24,6 +31,9 @@ on:
       - '.pre-commit-config.yaml'
       - 'package.json'
       - 'pnpm-lock.yaml'
+      - 'tsconfig.json'
+      - 'vitest.config.ts'
+      - 'biome.json'
       - 'README.md'
   workflow_dispatch: {}
 
@@ -48,7 +58,6 @@ jobs:
           node-version-file: '.nvmrc'
 
       - name: Install deps
-        working-directory: frontend
         run: |
           npm install -g pnpm@10.20.0
           pnpm install --frozen-lockfile
@@ -56,36 +65,31 @@ jobs:
       - name: Cache Vite/Vitest/TS caches
         uses: actions/cache@v4
         with:
-          key: ${{ runner.os }}-vite-vitest-${{ hashFiles('frontend/pnpm-lock.yaml','frontend/vitest.config.ts','frontend/tsconfig.json','frontend/package.json') }}
+          key: ${{ runner.os }}-vite-vitest-${{ hashFiles('pnpm-lock.yaml','vitest.config.ts','tsconfig.json','package.json') }}
           restore-keys: |
             ${{ runner.os }}-vite-vitest-
           path: |
-            frontend/node_modules/.vite
-            frontend/node_modules/.vitest
-            frontend/tsconfig.tsbuildinfo
+            node_modules/.vite
+            node_modules/.vitest
+            tsconfig.tsbuildinfo
 
       - name: Biome check (src + e2e + scripts)
-        working-directory: frontend
         run: pnpm biome:check -- --reporter=github
 
       - name: TypeScript type check
-        working-directory: frontend
         run: pnpm type-check
 
       - name: Unit tests (quick, no coverage)
-        working-directory: frontend
         env:
           VITEST_POOL: threads
         run: pnpm test:quick
 
       - name: Performance benchmarks
-        working-directory: frontend
         continue-on-error: true
         run: pnpm test:benchmark || true
 
       - name: Analyze test failures
         if: failure()
-        working-directory: frontend
         continue-on-error: true
         run: |
           echo "## Test Failure Analysis" >> $GITHUB_STEP_SUMMARY
@@ -100,19 +104,18 @@ jobs:
         uses: actions/upload-artifact@v5
         with:
           name: benchmark-results
-          path: frontend/benchmark-summary.json
+          path: benchmark-summary.json
           if-no-files-found: ignore
 
       - name: Check performance thresholds
         if: >-
           github.event_name == 'push' && startsWith(github.ref, 'refs/heads/main')
-        working-directory: frontend
         run: |
           if [ -f benchmark-summary.json ]; then
             SUITE_DURATION=$(jq -r '.suite.duration' benchmark-summary.json)
             SUITE_PASSED=$(jq -r '.thresholds.suitePassed' benchmark-summary.json)
             EXCEEDED_COUNT=$(jq -r '.thresholds.exceeded | length' benchmark-summary.json)
-            
+
             if [ "$SUITE_PASSED" = "false" ] || [ "$EXCEEDED_COUNT" -gt 0 ]; then
               echo "❌ Performance thresholds exceeded"
               echo "Suite duration: ${SUITE_DURATION}ms (threshold: 10000ms)"
@@ -129,7 +132,7 @@ jobs:
         run: |
           echo "## Frontend CI Summary" >> $GITHUB_STEP_SUMMARY
           echo "Biome lint, TS check, and unit tests completed." >> $GITHUB_STEP_SUMMARY
-          if [ -f frontend/benchmark-summary.json ]; then
+          if [ -f benchmark-summary.json ]; then
             echo "Performance benchmarks: completed" >> $GITHUB_STEP_SUMMARY
           fi
 
@@ -154,7 +157,6 @@ jobs:
           node-version-file: '.nvmrc'
 
       - name: Install deps
-        working-directory: frontend
         run: |
           npm install -g pnpm@10.20.0
           pnpm install --frozen-lockfile
@@ -162,16 +164,15 @@ jobs:
       - name: Cache Vite/Vitest/TS caches
         uses: actions/cache@v4
         with:
-          key: ${{ runner.os }}-vite-vitest-${{ hashFiles('frontend/pnpm-lock.yaml','frontend/vitest.config.ts','frontend/tsconfig.json','frontend/package.json') }}
+          key: ${{ runner.os }}-vite-vitest-${{ hashFiles('pnpm-lock.yaml','vitest.config.ts','tsconfig.json','package.json') }}
           restore-keys: |
             ${{ runner.os }}-vite-vitest-
           path: |
-            frontend/node_modules/.vite
-            frontend/node_modules/.vitest
-            frontend/tsconfig.tsbuildinfo
+            node_modules/.vite
+            node_modules/.vitest
+            tsconfig.tsbuildinfo
 
       - name: Run sharded coverage (api+ui)
-        working-directory: frontend
         env:
           CI: '1'
         run: >-
@@ -184,8 +185,8 @@ jobs:
         with:
           name: vitest-reports-${{ matrix.shard }}
           path: |
-            frontend/.vitest
-            frontend/coverage
+            .vitest
+            coverage
           if-no-files-found: warn
 
   frontend-coverage-merge:
@@ -201,8 +202,7 @@ jobs:
         with:
           node-version-file: '.nvmrc'
 
-      - name: Install vitest (frontend)
-        working-directory: frontend
+      - name: Install vitest
         run: |
           npm install -g pnpm@10.20.0
           pnpm install --frozen-lockfile
@@ -210,10 +210,9 @@ jobs:
       - name: Download shard artifacts
         uses: actions/download-artifact@v6
         with:
-          path: frontend/.vitest-merged
+          path: .vitest-merged
 
       - name: Merge reports
-        working-directory: frontend
         run: |
           mkdir -p .vitest
           find .vitest-merged -type f -name "*.json" -exec cp {} .vitest/ \;
@@ -223,5 +222,5 @@ jobs:
         uses: actions/upload-artifact@v5
         with:
           name: coverage-merged
-          path: frontend/coverage
+          path: coverage
           if-no-files-found: error

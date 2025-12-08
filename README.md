@@ -76,10 +76,9 @@ AI agents with rich AI SDK v6 tools and all-in-one travel services.
 git clone https://github.com/BjornMelin/tripsage-ai.git
 cd tripsage-ai
 
-# Frontend setup (only stack)
-cd frontend
+# Install dependencies
 pnpm install --frozen-lockfile            # Install Node.js dependencies
-cp .env.local.example .env.local          # Configure frontend environment
+cp .env.local.example .env.local          # Configure environment
 
 # Start development server (includes API routes)
 pnpm dev                                  # Next.js app + API routes (port 3000)
@@ -106,8 +105,7 @@ Single-runtime, server-first stack optimized for edge deployment:
 ## Development
 
 ```bash
-# Frontend / API (single app)
-cd frontend
+# Frontend / API (single app at root)
 pnpm install --frozen-lockfile
 pnpm dev            # Next.js dev server (includes API routes)
 pnpm type-check
@@ -116,7 +114,6 @@ pnpm test:run       # Vitest
 pnpm test:e2e       # Playwright
 
 # Supabase tooling (optional)
-cd ..
 make supa.link PROJECT_REF=...
 make supa.db.push
 ```
@@ -125,10 +122,13 @@ make supa.db.push
 
 ```text
 tripsage-ai/
-├── frontend/        # Next.js 16 + AI SDK v6 (sole backend + UI)
+├── src/             # Next.js 16 + AI SDK v6 source code
+├── public/          # Static assets
+├── e2e/             # Playwright E2E tests
 ├── supabase/        # Supabase migrations/config
 ├── docker/          # OTEL/Jaeger compose
 ├── .github/         # CI/CD
+├── package.json     # Node.js dependencies
 └── Makefile         # Supabase ops shortcuts
 ```
 
@@ -248,7 +248,7 @@ TripSage AI is optimized for high performance and global scalability:
 
 ```bash
 # Performance testing via load testing tools
-pnpm -C frontend test:run --grep performance
+pnpm test:run --grep performance
 
 # Or use external load testing
 autocannon -c 100 -d 30 http://localhost:3000/api/health
@@ -275,10 +275,10 @@ Zero-trust architecture with defense-in-depth security:
 git grep -i "fallback-secret\|development-only" .  # Should return empty
 
 # Dependency audit
-pnpm -C frontend audit
+pnpm audit
 
 # Run security-focused tests
-pnpm -C frontend test:run --grep security
+pnpm test:run --grep security
 ```
 
 ---
