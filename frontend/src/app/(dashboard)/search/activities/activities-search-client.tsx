@@ -277,7 +277,19 @@ export default function ActivitiesSearchClient({
       (activity) => !activity.id.startsWith(AI_FALLBACK_PREFIX)
     );
 
-    if (hasAi && !hasNonAi) {
+    if (hasAi && hasNonAi) {
+      return {
+        aiSuggestions: activities.filter((activity) =>
+          activity.id.startsWith(AI_FALLBACK_PREFIX)
+        ),
+        allAi: false,
+        verifiedActivities: activities.filter(
+          (activity) => !activity.id.startsWith(AI_FALLBACK_PREFIX)
+        ),
+      };
+    }
+
+    if (hasAi) {
       return {
         aiSuggestions: activities,
         allAi: true,
@@ -285,22 +297,10 @@ export default function ActivitiesSearchClient({
       };
     }
 
-    if (!hasAi && hasNonAi) {
-      return {
-        aiSuggestions: [] as Activity[],
-        allAi: false,
-        verifiedActivities: activities,
-      };
-    }
-
     return {
-      aiSuggestions: activities.filter((activity) =>
-        activity.id.startsWith(AI_FALLBACK_PREFIX)
-      ),
+      aiSuggestions: [] as Activity[],
       allAi: false,
-      verifiedActivities: activities.filter(
-        (activity) => !activity.id.startsWith(AI_FALLBACK_PREFIX)
-      ),
+      verifiedActivities: activities,
     };
   }, [activities]);
 

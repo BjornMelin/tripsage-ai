@@ -206,7 +206,7 @@ const GetStatusColor = (status: Agent["status"]) => {
 };
 
 /** Function to get the status icon for an agent */
-const GetStatusIcon = (status: Agent["status"]) => {
+const GetStatusIcon = (status: Agent["status"] | "unknown") => {
   const Icon = AGENT_STATUS_ICONS[status] ?? AGENT_STATUS_ICONS.unknown;
   return <Icon className={STATUS_ICON_CLASS} />;
 };
@@ -218,7 +218,7 @@ const AgentStatusIndicator: React.FC<{ status: Agent["status"] }> = ({ status })
       GetStatusColor(status)
     )}
   >
-    <div className="text-white">{GetStatusIcon(status)}</div>
+    <div className="text-white">{GetStatusIcon(status || "unknown")}</div>
   </div>
 );
 

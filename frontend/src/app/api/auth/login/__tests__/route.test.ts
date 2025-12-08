@@ -35,6 +35,9 @@ describe("POST /api/auth/login", () => {
   });
 
   it("returns validation errors for invalid payload", async () => {
+    const supabase = getApiRouteSupabaseMock();
+    const signInWithPassword = supabase.auth.signInWithPassword;
+
     const { POST } = await import("../route");
     const request = makeJsonRequest("http://localhost/api/auth/login", {
       email: "not-an-email",
@@ -49,6 +52,7 @@ describe("POST /api/auth/login", () => {
     expect(body.reason).toBe("Request validation failed");
     expect(body.issues).toBeDefined();
     expect(Array.isArray(body.issues)).toBe(true);
+    expect(signInWithPassword).not.toHaveBeenCalled();
   });
 
   it("propagates Supabase auth failures", async () => {

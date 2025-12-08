@@ -7,7 +7,7 @@
 
 import "server-only";
 
-import { classifyUserMessage } from "@ai/agents/router-agent";
+import { classifyUserMessage, InvalidPatternsError } from "@ai/agents/router-agent";
 import { resolveProvider } from "@ai/models/registry";
 import { agentSchemas } from "@schemas/agents";
 import type { NextRequest } from "next/server";
@@ -60,7 +60,14 @@ export const POST = withApiGuards({
     const classification = await classifyUserMessage({ model }, body.message);
     return NextResponse.json(classification);
   } catch (error) {
-    if (error instanceof Error && error.message.includes("invalid patterns")) {
+    const isInvalidPatternError =
+      error instanceof InvalidPatternsError ||
+      (typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        (error as { code?: string }).code === "invalid_patterns");
+
+    if (isInvalidPatternError) {
       return errorResponse({
         err: error,
         error: "invalid_message",

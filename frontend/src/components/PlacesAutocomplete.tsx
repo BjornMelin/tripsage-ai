@@ -352,17 +352,25 @@ export function PlacesAutocomplete({
             const optionId = getOptionId(suggestion, index);
             const isActive = index === activeIndex;
             const isSelected = selectedPlaceId === suggestion.placePrediction.placeId;
+            const selectSuggestion = () => {
+              setSelectedPlaceId(suggestion.placePrediction.placeId ?? null);
+              handlePlaceSelect(suggestion.placePrediction);
+            };
             return (
-              // biome-ignore lint/a11y/useKeyWithClickEvents: Focus stays on input; keyboard navigation handled there
               <div
                 key={optionId}
                 id={optionId}
                 role="option"
                 aria-selected={isSelected}
-                tabIndex={-1}
-                onClick={() => {
-                  setSelectedPlaceId(suggestion.placePrediction.placeId ?? null);
-                  handlePlaceSelect(suggestion.placePrediction);
+                tabIndex={0}
+                onClick={selectSuggestion}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    if (event.key === " ") {
+                      event.preventDefault();
+                    }
+                    selectSuggestion();
+                  }
                 }}
                 onMouseEnter={() => setActiveIndex(index)}
                 className={`cursor-pointer px-4 py-2 hover:bg-gray-100 ${
