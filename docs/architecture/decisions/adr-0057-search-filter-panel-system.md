@@ -233,7 +233,7 @@ const {
 
 ### 8. Deferred: Deep-linking Implementation
 
-Deep-linking for filters is **not yet implemented**. To enable it, deliver all of the following:
+Deep-linking for filters is **not yet implemented**. To enable it, deliver all the following:
 
 - Implement `queryToFilters` and `filtersToQueryParams` utilities (format TBD; include tests).
 - Integrate URL read/write in the filter panel flow (e.g., hydrate via `applyFiltersFromObject` on load and update URL when filters change).
@@ -272,7 +272,7 @@ Update `flights/page.tsx` sidebar:
 - **Better UX** - Accordion sections, clear by category, quick filters from usage stats
 - **Type-safe** - All filter values validated through Zod schemas in store
 - **Accessible** - shadcn/ui components have built-in ARIA support
-- **Deep-linking ready** - URL `filters` query param → `applyFiltersFromObject` hydrates store on load
+- **Partial deep-linking readiness** - Plumbing identified; hydration via `applyFiltersFromObject` planned after `queryToFilters`/`filtersToQueryParams` and URL wiring land
 
 ### Negative
 

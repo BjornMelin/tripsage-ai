@@ -50,6 +50,16 @@ const GLOBAL_POPULAR_DESTINATIONS: PopularDestination[] = [
   { avgPrice: "$201", city: "Amsterdam", country: "Netherlands" },
 ];
 
+const GLOBAL_POPULAR_DESTINATIONS_BY_CITY = new Map(
+  GLOBAL_POPULAR_DESTINATIONS.map(
+    (destination) =>
+      [destination.city.toLowerCase(), destination] satisfies [
+        string,
+        PopularDestination,
+      ]
+  )
+);
+
 /**
  * Fetches personalized hotel destinations for a user from the search_hotels table.
  *
@@ -89,8 +99,8 @@ async function fetchPersonalizedDestinations(
     .sort(([, countA], [, countB]) => countB - countA)
     .slice(0, 10)
     .map(([destination]) => {
-      const fallback = GLOBAL_POPULAR_DESTINATIONS.find(
-        (dest) => dest.city === destination
+      const fallback = GLOBAL_POPULAR_DESTINATIONS_BY_CITY.get(
+        destination.toLowerCase()
       );
       return {
         avgPrice: fallback?.avgPrice,
@@ -126,13 +136,11 @@ export const GET = withApiGuards({
   const resolvedUser = contextUser; // Now guaranteed non-null
   const userCacheKey = `popular-hotels:user:${resolvedUser.id}`;
 
-  if (userCacheKey) {
-    const cachedPersonalized = await getCachedJson<PopularDestination[]>(userCacheKey);
-    if (cachedPersonalized) {
-      return NextResponse.json(cachedPersonalized, {
-        headers: { "Cache-Control": "private, no-store" },
-      });
-    }
+  const cachedPersonalized = await getCachedJson<PopularDestination[]>(userCacheKey);
+  if (cachedPersonalized) {
+    return NextResponse.json(cachedPersonalized, {
+      headers: { "Cache-Control": "private, no-store" },
+    });
   }
 
   const cachedGlobal = await getCachedJson<PopularDestination[]>(
@@ -144,14 +152,12 @@ export const GET = withApiGuards({
     });
   }
 
-  if (userCacheKey) {
-    const personalized = await fetchPersonalizedDestinations(supabase, resolvedUser.id);
-    if (personalized) {
-      await setCachedJson(userCacheKey, personalized, POPULAR_DESTINATIONS_TTL_SECONDS);
-      return NextResponse.json(personalized, {
-        headers: { "Cache-Control": "private, no-store" },
-      });
-    }
+  const personalized = await fetchPersonalizedDestinations(supabase, resolvedUser.id);
+  if (personalized) {
+    await setCachedJson(userCacheKey, personalized, POPULAR_DESTINATIONS_TTL_SECONDS);
+    return NextResponse.json(personalized, {
+      headers: { "Cache-Control": "private, no-store" },
+    });
   }
 
   await setCachedJson(

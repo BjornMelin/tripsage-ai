@@ -16,10 +16,13 @@ import { z } from "zod";
 import { hashInputForCache } from "@/lib/cache/hash";
 import { deleteCachedJson, getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 import { sanitizeArray, sanitizeForPrompt } from "@/lib/security/prompt-sanitizer";
+import { emitOperationalAlert } from "@/lib/telemetry/alerts";
 import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
 
 /** Cache TTL for personalization results (30 minutes). */
 export const PERSONALIZATION_CACHE_TTL = 1800;
+
+const AI_SDK_VERSION = "6.0.0-beta.138";
 
 const MAX_HOTELS_PER_REQUEST = 20;
 
@@ -298,6 +301,13 @@ export async function personalizeHotels(
           },
           level: "error",
         });
+        emitOperationalAlert("ai-sdk.structured-output.failure", {
+          attributes: {
+            model: (model as { modelId?: string }).modelId,
+            version: AI_SDK_VERSION,
+          },
+          severity: "warning",
+        });
         const fallback = new Map<number, HotelPersonalization>();
         hotels.forEach((hotel, index) => {
           fallback.set(index, getDefaultPersonalization(hotel));
@@ -453,7 +463,13 @@ export function getDefaultPersonalization(
   }
 
   // Default score based on rating
-  const score = Math.min(10, Math.max(1, Math.round((hotel.rating ?? 3) * 2)));
+  const score = Math.min(
+    10,
+    Math.max(
+      1,
+      Math.round((hotel.rating ?? 3) * 2) // map 0.5–5 rating to 1–10 score; default 3 → 6; clamp to bounds
+    )
+  );
 
   return {
     personalizedTags: tags.slice(0, 3),

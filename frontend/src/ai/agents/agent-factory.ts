@@ -179,8 +179,9 @@ export function createTripSageAgent<
             let normalizedInstructions: string;
             if (params.instructions) {
               if (Array.isArray(params.instructions)) {
-                // Handle array case by taking the first message or normalizing each
-                normalizedInstructions = normalizeInstructions(params.instructions[0]);
+                normalizedInstructions = params.instructions
+                  .map((instruction) => normalizeInstructions(instruction))
+                  .join("\n");
               } else {
                 normalizedInstructions = normalizeInstructions(params.instructions);
               }

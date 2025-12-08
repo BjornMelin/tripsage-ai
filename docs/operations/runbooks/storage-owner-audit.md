@@ -19,7 +19,7 @@ Operational checklist to detect and remediate ownership mismatches between Supab
 
 ## Detection Queries
 
-**Objects without a matching file_attachments row**
+### Objects without a matching file_attachments row
 
 ```sql
 SELECT o.bucket_id, o.name AS path, o.owner, o.owner_id, o.created_at
@@ -30,7 +30,7 @@ WHERE o.bucket_id IN ('attachments','trip-images','avatars')
 ORDER BY o.created_at DESC;
 ```
 
-**Owner mismatch between storage.objects and file_attachments**
+### Owner mismatch between storage.objects and file_attachments
 
 ```sql
 SELECT o.bucket_id, o.name AS path, o.owner AS storage_owner, o.owner_id AS storage_owner_id, fa.user_id, fa.trip_id
@@ -41,7 +41,7 @@ WHERE o.bucket_id IN ('attachments','trip-images','avatars')
   AND fa.user_id IS DISTINCT FROM coalesce(o.owner_id, o.owner);
 ```
 
-**file_attachments pointing to missing objects**
+### file_attachments pointing to missing objects
 
 ```sql
 SELECT fa.id, fa.file_path, fa.user_id, fa.trip_id
