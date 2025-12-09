@@ -116,8 +116,6 @@ Maintain and fix existing test suite.
 
 ## References
 
-- [Testing Strategy Guide](../04_DEVELOPMENT_GUIDE/TESTING_STRATEGY.md)
-- [Modern Test Patterns](../testing/MODERN_TEST_PATTERNS.md)
-- [Frontend Implementation Plan - Testing Section](../10_RESEARCH/frontend/comprehensive-implementation-plan-2025.md#phase-2-testing-infrastructure-revolution-weeks-5-6)
+- [Testing Guide](../../development/testing.md)
 - [Vitest Documentation](https://vitest.dev/)
 - [Playwright Documentation](https://playwright.dev/)

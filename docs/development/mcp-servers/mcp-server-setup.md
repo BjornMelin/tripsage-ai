@@ -18,7 +18,6 @@ This guide documents the required steps to attach the core MCP servers (Next.js 
 ### 1.1 Start the dev server
 
 ```bash
-cd frontend
 pnpm dev
 ```
 
@@ -291,7 +290,7 @@ npx -y @apify/actors-mcp-server
 
 ## 5. Verification Checklist
 
-1. Start the Tripsage dev server (`pnpm dev`) before opening IDE agents.
+1. Start the TripSage dev server (`pnpm dev`) before opening IDE agents.
 2. Confirm each MCP server appears in the client’s MCP list without warnings.
 3. Run a simple tool from each server:
    - Next DevTools: `get_page_metadata`
