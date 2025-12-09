@@ -11,7 +11,7 @@ Flatten the project structure by moving the Next.js application out of the `fron
 In practical terms, after this change developers will:
 
 - Run all commands, including dev server, tests, builds, from the repo root.
-- Find all source code under `/src` at the root (previously `frontend/src`).
+- Find all source code under `/src` at the root (previously housed under the `frontend` subfolder).
 - Use a single `package.json` and lockfile at root for all Node dependencies.
 - Have all config files, including Next.js, Tailwind, and Vitest, at root, simplifying toolchain setups.
 
@@ -70,7 +70,7 @@ One related consideration is environment variable schemas. The project likely ha
 - Previously, Next.js would load `.env.local` from `frontend`. After flattening, it will load `.env.local` from the root by default, since Next.js searches the project root directory for env files. This is more straightforward. We should double-check any custom env loading logic, for example if there is a script pointing to `frontend/.env.local` explicitly, and update it.
 - The Zod schema for env, if any, will remain the same.
 
-All Zod schemas for API inputs remain in `src/domain/schemas`, just now under root `src/` instead of the former `frontend/src/`. Their content does not change. No validation logic is affected by this move.
+All Zod schemas for API inputs remain in `src/domain/schemas`, just now under root `src/` (they were previously inside the `frontend` package). Their content does not change. No validation logic is affected by this move.
 
 In summary, there are no database or schema changes as part of this spec. We are only concerned with configuration and file paths.
 
@@ -141,12 +141,12 @@ If tests reveal a severe problem that is not quickly fixable, the change can be 
 - Risk: Overlooking a reference. We must search for all references to `frontend/` in the repo, code, docs, GitHub workflows, even README badges or CI config files. Missing one could cause runtime errors or broken documentation. Plan: run `rg "frontend/" -g"*" .`, `rg "\bfrontend\b" .github ci infra scripts`, and scan Vercel/infra repos; capture hits in a checklist PR and require two approvals before merge.
 - Risk: Vercel config. Production settings may assume `/frontend`. Update Project Settings → General → Root Directory to `.`, Build & Development → Build Command to `pnpm build`, keep default output. Apply on a preview branch first, validate, then cut production during a low-traffic window with rollback ready.
 - Risk: Local environment cache. Developers might have `node_modules` in `frontend/` and none at root. After flattening, one should delete the old `frontend/node_modules` to avoid confusion. We will note this in the migration guide.
-- Open question: Keep `src/` or not. Before flattening, code lived in `frontend/src`. After the move, we keep `src/`, so code is in `tripsage-ai/src/...`. Alternatively, we could eliminate the `src` folder and put `app/`, `components/`, etc. at root. However, Next.js supports having a `src/` for organizing code, and the team is already using that pattern. Decision: We will preserve the `src` directory to minimize path changes and keep things tidy.
+- Open question: Keep `src/` or not. Before flattening, code lived in `src/` under `frontend/`. After the move, we keep `src/` at the repository root, so code is in `tripsage-ai/src/...`. Alternatively, we could eliminate the `src` folder and put `app/`, `components/`, etc. at root. However, Next.js supports having a `src/` for organizing code, and the team is already using that pattern. Decision: We will preserve the `src` directory to minimize path changes and keep things tidy.
 - Open question: What to do with `frontend/README.md`. It contains useful developer-centric info, including tech stack and metrics【4†L0-L8】【4†L119-L127】. We have a few options: merge its content into the main README.md, under a new section or linking to docs, or move it to `docs/development/` if that info is elsewhere. Likely, we will integrate key points into docs and ensure anything redundant with the root README is resolved.
 - Risk: Git history and open PRs. Communicate this structural change to the team. There may be open PRs touching files under `frontend/`. We should coordinate to merge those first or prepare them to be rebased after.
 - Risk: Path alias edge case. After moving, the tsconfig path aliases like `"@/something"` now map to `src/*` at root. We must verify by running `pnpm biome:check`, `pnpm type-check` (tsc --noEmit), and searching for imports that climb above `src` or point to `frontend/` (including dynamic import/require). Fix any stragglers before merge.
 - Open question: Supabase config TOML. It contains runtime sections with paths. If any path like a seed script path was set, we should confirm it is fine. The known changes in config, like `edge_runtime.policy = "oneshot"`【68†L1-L4】, are unrelated to path.
-- Risk: Documentation drift. We need to update internal docs to reflect new structure. For example, `docs/development/quick-start.md` likely says `cd frontend`【50†L13-L18】. We must update that. Also, any code snippets in docs pointing to `frontend/src/...` need updating.
+- Risk: Documentation drift. We need to update internal docs to reflect new structure. For example, `docs/development/quick-start.md` likely says `cd frontend`【50†L13-L18】. We must update that. Also, any code snippets in docs pointing to legacy frontend-prefixed source paths need updating to `src/...`.
 - Gain: Reduced future risk. Flattening now reduces the chance of future misconfiguration, such as forgetting to update a setting in two separate places. Addressing this now preempts that class of issues.
 
 Overall, the flattening is straightforward but requires meticulous attention to detail to avoid any service interruption. The plan and checklist aim to mitigate these risks fully.
