@@ -1,0 +1,15 @@
+name: Cache Vite/Vitest/TS
+description: Reusable cache step for Vite, Vitest, and TypeScript build info
+runs:
+  using: composite
+  steps:
+    - name: Cache Vite/Vitest/TS caches
+      uses: actions/cache@v4
+      with:
+        key: ${{ runner.os }}-vite-vitest-${{ hashFiles('pnpm-lock.yaml','vitest.config.ts','tsconfig.json','package.json') }}
+        restore-keys: |
+          ${{ runner.os }}-vite-vitest-
+        path: |
+          node_modules/.vite
+          node_modules/.vitest
+          tsconfig.tsbuildinfo

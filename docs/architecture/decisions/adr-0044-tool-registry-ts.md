@@ -16,7 +16,7 @@
 - Implement a centralized tool registry `src/ai/tools/index.ts` and domain tools (`web-search`, `web-crawl`, `weather`, `flights`, `maps`, `accommodations`, `memory`).
 - Integrate optional MCP tools discovery at runtime in `src/app/api/chat/stream/_handler.ts` using `@ai-sdk/mcp@1.0.0-beta.15` SSE transport.
 - Enforce security via:
-  - Upstash Redis caching and simple rate-limit compatible patterns.
+  - Upstash Redis caching and simple rate-limit-compatible patterns.
   - Approval gating for sensitive operations (e.g., booking) in `src/ai/tools/server/approvals.ts`.
   - Timeouts and error mapping inside each tool's execute function.
 

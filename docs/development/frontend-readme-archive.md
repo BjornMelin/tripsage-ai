@@ -145,7 +145,7 @@ The chat interface automatically invokes relevant tools based on user
 intent:
 
 - **Travel Planning**: TypeScript-only tools in
-  `frontend/src/lib/tools/planning.ts` (`createTravelPlan`,
+  `src/lib/tools/planning.ts` (`createTravelPlan`,
   `updateTravelPlan`, `combineSearchResults`, `saveTravelPlan`,
   `deleteTravelPlan`)
 - **Accommodations**: `search_accommodations` (via Airbnb MCP),
@@ -419,70 +419,69 @@ See `scripts/ops.ts` for implementation details.
 
 ### Maintenance
 
-No Git hooks required in frontend. Repository-level hooks are managed via
+No Git hooks required in the app. Repository-level hooks are managed via
 pre-commit in the repo root.
 
 ## Project Structure
 
 ```text
-frontend/
-├── src/
-│   ├── app/               # Next.js App Router
-│   │   ├── (auth)/        # Authentication routes
-│   │   ├── (dashboard)/   # Protected dashboard routes
-│   │   ├── api/           # API routes & handlers
-│   │   │   ├── chat/      # Chat API (streaming + non-streaming)
-│   │   │   ├── keys/      # BYOK management routes
-│   │   │   ├── rag/       # RAG indexing routes
-│   │   │   └── tools/     # Tool execution endpoints
-│   │   ├── auth/          # Auth callbacks
-│   │   ├── chat/          # Chat interface with AI Elements
-│   │   └── settings/      # User settings & API key management
-│   ├── components/        # React components
-│   │   ├── ui/            # Reusable UI primitives (Radix + Tailwind)
-│   │   ├── features/      # Feature-specific components
-│   │   ├── layouts/       # Layout components
-│   │   ├── providers/     # React context providers
-│   │   ├── ai-elements/   # AI chat components (conversation, message, prompt)
-│   │   ├── generative/    # Generative UI components (cards, forms)
-│   │   └── error/         # Error boundaries
-│   ├── lib/               # Core utilities
-│   │   ├── api/           # API clients
-│   │   ├── supabase/      # Database integration + RPC helpers
-│   │   ├── providers/     # AI provider registry & resolution
-│   │   ├── tools/         # Tool registry with Zod schemas
-│   │   │   ├── index.ts   # Unified tool exports
-│   │   │   ├── web.ts     # Web search and crawling
-│   │   │   ├── accommodations.ts # Accommodation tools + MCP
-│   │   │   ├── flights.ts # Flight search (Duffel)
-│   │   │   ├── weather.ts # Weather API tools
-│   │   │   ├── maps.ts    # Google Maps integration
-│   │   │   ├── planning.ts # Travel planning tools
-│   │   │   └── memory.ts  # Memory and conversation tools
-│   │   ├── rag/           # RAG retriever + indexer
-│   │   ├── schemas/       # Zod validation schemas
-│   │   ├── repositories/  # Data access layer
-│   │   ├── tokens/        # Token counting + budgeting
-│   │   └── telemetry/     # OpenTelemetry instrumentation
-│   ├── hooks/             # Custom React hooks
-│   ├── stores/            # Zustand state stores
-│   ├── types/             # TypeScript definitions
-│   ├── styles/            # Global styles & CSS
-│   ├── __tests__/         # Unit tests
-│   └── test-utils/        # Testing utilities
-├── docs/                  # Documentation
-├── scripts/               # Build & utility scripts
-├── e2e/                   # End-to-end tests
-├── public/                # Static assets
-├── coverage/              # Test coverage reports
-├── test-results/          # Test artifacts
-└── *.config.*             # Configuration files
-    ├── package.json       # Dependencies & scripts
-    ├── biome.json         # Code formatting/linting
-    ├── tsconfig.json      # TypeScript configuration
-    ├── next.config.ts     # Next.js configuration
-    ├── vitest.config.ts   # Testing configuration
-    └── playwright.config.ts # E2E testing
+src/
+├── app/               # Next.js App Router
+│   ├── (auth)/        # Authentication routes
+│   ├── (dashboard)/   # Protected dashboard routes
+│   ├── api/           # API routes & handlers
+│   │   ├── chat/      # Chat API (streaming + non-streaming)
+│   │   ├── keys/      # BYOK management routes
+│   │   ├── rag/       # RAG indexing routes
+│   │   └── tools/     # Tool execution endpoints
+│   ├── auth/          # Auth callbacks
+│   ├── chat/          # Chat interface with AI Elements
+│   └── settings/      # User settings & API key management
+├── components/        # React components
+│   ├── ui/            # Reusable UI primitives (Radix + Tailwind)
+│   ├── features/      # Feature-specific components
+│   ├── layouts/       # Layout components
+│   ├── providers/     # React context providers
+│   ├── ai-elements/   # AI chat components (conversation, message, prompt)
+│   ├── generative/    # Generative UI components (cards, forms)
+│   └── error/         # Error boundaries
+├── lib/               # Core utilities
+│   ├── api/           # API clients
+│   ├── supabase/      # Database integration + RPC helpers
+│   ├── providers/     # AI provider registry & resolution
+│   ├── tools/         # Tool registry with Zod schemas
+│   │   ├── index.ts   # Unified tool exports
+│   │   ├── web.ts     # Web search and crawling
+│   │   ├── accommodations.ts # Accommodation tools + MCP
+│   │   ├── flights.ts # Flight search (Duffel)
+│   │   ├── weather.ts # Weather API tools
+│   │   ├── maps.ts    # Google Maps integration
+│   │   ├── planning.ts # Travel planning tools
+│   │   └── memory.ts  # Memory and conversation tools
+│   ├── rag/           # RAG retriever + indexer
+│   ├── schemas/       # Zod validation schemas
+│   ├── repositories/  # Data access layer
+│   ├── tokens/        # Token counting + budgeting
+│   └── telemetry/     # OpenTelemetry instrumentation
+├── hooks/             # Custom React hooks
+├── stores/            # Zustand state stores
+├── types/             # TypeScript definitions
+├── styles/            # Global styles & CSS
+├── __tests__/         # Unit tests
+└── test-utils/        # Testing utilities
+
+docs/                  # Documentation
+scripts/               # Build & utility scripts
+e2e/                   # End-to-end tests
+public/                # Static assets
+coverage/              # Test coverage reports
+test-results/          # Test artifacts
+package.json           # Dependencies & scripts
+biome.json             # Code formatting/linting
+tsconfig.json          # TypeScript configuration
+next.config.ts         # Next.js configuration
+vitest.config.ts       # Testing configuration
+playwright.config.ts   # E2E testing
 ```
 
 ## Environment configuration

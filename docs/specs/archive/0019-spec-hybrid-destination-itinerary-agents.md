@@ -49,7 +49,7 @@ flowchart TD
 
 ### 1. Schemas, Prompts, and Shared Types
 
-- **Files**: `src/schemas/agents.ts`, `src/prompts/{destination,itinerary}.ts`.
+- **Files**: `src/domain/schemas/agents.ts`, `src/prompts/agents.ts`.
 - **Requirements**:
   - Define `DestinationResearchRequest`, `DestinationResearchResult`, `ItineraryPlanRequest`, `ItineraryPlanResult` (Zod + TypeScript types). Include `schemaVersion` and `sources[]` metadata.
   - Export prompt builders that accept user context (preferences, travel dates) and output instructions for ToolLoopAgent.
