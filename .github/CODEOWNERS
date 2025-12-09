@@ -25,13 +25,6 @@
 
 # Next.js code ownership (flattened to root)
 /src/ @BjornMelin
-/src/app/ @BjornMelin
-/src/components/ @BjornMelin
-/src/lib/ @BjornMelin
-/src/hooks/ @BjornMelin
-/src/stores/ @BjornMelin
-/src/domain/ @BjornMelin
-/src/ai/ @BjornMelin
 /package.json @BjornMelin
 /pnpm-lock.yaml @BjornMelin
 /tsconfig.json @BjornMelin

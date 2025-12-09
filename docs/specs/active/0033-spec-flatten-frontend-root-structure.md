@@ -11,7 +11,7 @@ Flatten the project structure by moving the Next.js application out of the `fron
 In practical terms, after this change developers will:
 
 - Run all commands, including dev server, tests, builds, from the repo root.
-- Find all source code under `/src` at the root instead of `frontend/src`.
+- Find all source code under `/src` at the root (previously `frontend/src`).
 - Use a single `package.json` and lockfile at root for all Node dependencies.
 - Have all config files, including Next.js, Tailwind, and Vitest, at root, simplifying toolchain setups.
 
@@ -65,12 +65,12 @@ These flows show a reduction in steps and potential errors. After flattening, de
 
 There are no changes to the application’s data model or database schema. Flattening the structure does not affect how data is stored or structured in Postgres, Supabase, or any in-memory store. All database tables, Supabase migrations, and pgvector indexes remain as they are.
 
-One related consideration is environment variable schemas. The project likely has a runtime check for required env vars, possibly in `frontend/src/domain/schemas/env.ts`. We must ensure that environment variables are loaded correctly after moving the `.env.local` file:
+One related consideration is environment variable schemas. The project likely has a runtime check for required env vars, possibly in `src/domain/schemas/env.ts`. We must ensure that environment variables are loaded correctly after moving the `.env.local` file:
 
-- Previously, Next.js would load `frontend/.env.local`. After flattening, it will load `.env.local` from the root by default, since Next.js searches the project root directory for env files. This is more straightforward. We should double-check any custom env loading logic, for example if there is a script pointing to `frontend/.env.local` explicitly, and update it.
+- Previously, Next.js would load `.env.local` from `frontend`. After flattening, it will load `.env.local` from the root by default, since Next.js searches the project root directory for env files. This is more straightforward. We should double-check any custom env loading logic, for example if there is a script pointing to `frontend/.env.local` explicitly, and update it.
 - The Zod schema for env, if any, will remain the same.
 
-All Zod schemas for API inputs remain in `src/domain/schemas`, just now under root `src/` instead of `frontend/src/`. Their content does not change. No validation logic is affected by this move.
+All Zod schemas for API inputs remain in `src/domain/schemas`, just now under root `src/` instead of the former `frontend/src/`. Their content does not change. No validation logic is affected by this move.
 
 In summary, there are no database or schema changes as part of this spec. We are only concerned with configuration and file paths.
 
@@ -82,7 +82,7 @@ There are a few integration points to adjust internally:
 
 - Next.js application entry: The `app/` directory moves logically, but Next’s resolution will find `src/app` in the new location since that is where `next.config.ts` will point by default. We need to ensure `next.config.ts` is correctly placed at root so that Next picks up the app.
 - Environment configuration: Integration with Supabase and Upstash via env vars remains the same. We must verify the `.env` example file is moved and named appropriately so that all required variables, such as `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `UPSTASH_REDIS_REST_URL`, are loaded. Next.js injects `NEXT_PUBLIC_*` at build, and server-side ones are accessed via `process.env`.
-- CI scripts and caching: The CI integration with caching, keyed on lockfile and config files, needs path update. For example, the cache key currently uses `hashFiles('frontend/pnpm-lock.yaml', 'frontend/tsconfig.json', ...)`【48†L55-L63】. After flattening, it should hash `pnpm-lock.yaml` and `tsconfig.json` at root. Similarly, artifact upload/download paths, such as `frontend/.vitest` or `frontend/coverage`, should change to `.vitest` and `coverage`.
+- CI scripts and caching: The CI integration with caching, keyed on lockfile and config files, needs path update. For example, the cache key should hash `pnpm-lock.yaml`, `tsconfig.json`, etc.,【48†L55-L63】. After flattening, it should hash `pnpm-lock.yaml` and `tsconfig.json` at root. Similarly, artifact upload/download paths, such as `frontend/.vitest` or `frontend/coverage`, should change to `.vitest` and `coverage`.
 - Testing integration: The Vitest config file move means integration with any IDE or CI must point to the new location if there were any direct references. We should run `pnpm test` after move to ensure Vitest picks up the config. The Playwright config similarly should be in root and referenced accordingly.
 - Supabase CLI integration: The `Makefile` uses `supabase` CLI commands, for example `make supa.db.push`. These run from root and reference the `supabase/` directory, which remains unchanged. Flattening does not affect Supabase config paths.
 - Front-end asset references: Next’s handling of the `/public` folder requires moving any `frontend/public/` assets to `public/` at root. The Next.js app references assets relatively or via the `/` path, which will still resolve, just from the new location.
@@ -110,9 +110,9 @@ Everything should behave exactly as before.
 
 Observability should remain fully intact:
 
-- We will verify that the OpenTelemetry instrumentation still initializes. If OTEL was imported in `frontend/app/_app.tsx` or similar, we ensure the import path is updated if needed, although it should be in a server module under `src/lib/telemetry`.
+- We will verify that the OpenTelemetry instrumentation still initializes. If OTEL was imported in `src/app/layout.tsx` or a related entry file, we ensure the import path is updated if needed, although it should be in a server module under `src/lib/telemetry`.
 - Log and trace outputs should continue to go to the same sinks. Because we are not changing any environment variable names or values, the trace collector URL remains configured as before.
-- We need to update any log or error messages that include hardcoded path references. For example, a startup log that says “Loaded environment from `frontend/.env.local`” should now refer to `.env.local` at root if such a log exists.
+- We need to update any log or error messages that include hardcoded path references. For example, a startup log that says “Loaded environment from `.env.local`” should now refer to `.env.local` at root if such a log exists.
 - The Next.js build might output routes; those will naturally not include the `frontend` prefix anymore.
 
 After deployment, we should monitor that traces are coming through as before. If there is an issue, it likely stems from something like `turbopack.root` or source map locations. Since we plan to set `turbopack.root = "."` relative to the new config, we expect no issues.
@@ -123,7 +123,7 @@ No changes to metric collection or alerting thresholds are needed; flattening do
 
 Testing focus is regression-oriented. We want to ensure everything passes as it did before and that no new issues were introduced by moving files.
 
-- Unit and integration tests: We will run the full Vitest test suite after the move. We expect some path snapshots might need updating if tests assert on file paths or error messages containing paths. For example, a test might assert that a function throws “File not found in /frontend/src/...”. Such an assertion would need to change to the new path or be made path-agnostic.
+- Unit and integration tests: We will run the full Vitest test suite after the move. We expect some path snapshots might need updating if tests assert on file paths or error messages containing paths. For example, a test might assert that a function throws “File not found in /src/...”. Such an assertion would need to change to the new path or be made path-agnostic.
 - E2E tests: Run Playwright tests to ensure the application still functions end-to-end. These tests simulate user behavior, so if something like an API route was incorrectly moved or env not loaded, E2E will catch it. The Playwright config might have a baseURL set, such as `http://localhost:3000` for dev, which remains the same.
 - Manual smoke testing: Before merging, a project maintainer will run the app locally and quickly exercise key features, including login, start a chat, create a trip, etc. Because this is structural, we expect if something is broken it will be obvious.
 - CI validation: We will rely on the CI pipeline, updated for new paths, to run all checks in a clean environment. The pipeline passing will be the indicator that we did not miss any config.
@@ -141,7 +141,7 @@ If tests reveal a severe problem that is not quickly fixable, the change can be 
 - Risk: Overlooking a reference. We must search for all references to `frontend/` in the repo, code, docs, GitHub workflows, even README badges or CI config files. Missing one could cause runtime errors or broken documentation. Plan: run `rg "frontend/" -g"*" .`, `rg "\bfrontend\b" .github ci infra scripts`, and scan Vercel/infra repos; capture hits in a checklist PR and require two approvals before merge.
 - Risk: Vercel config. Production settings may assume `/frontend`. Update Project Settings → General → Root Directory to `.`, Build & Development → Build Command to `pnpm build`, keep default output. Apply on a preview branch first, validate, then cut production during a low-traffic window with rollback ready.
 - Risk: Local environment cache. Developers might have `node_modules` in `frontend/` and none at root. After flattening, one should delete the old `frontend/node_modules` to avoid confusion. We will note this in the migration guide.
-- Open question: Keep `src/` or not. Currently, code is in `frontend/src`. After moving to root, we plan to keep `src/`, so code is in `tripsage-ai/src/...`. Alternatively, we could eliminate the `src` folder and put `app/`, `components/`, etc. at root. However, Next.js supports having a `src/` for organizing code, and the team is already using that pattern. Decision: We will preserve the `src` directory to minimize path changes and keep things tidy.
+- Open question: Keep `src/` or not. Before flattening, code lived in `frontend/src`. After the move, we keep `src/`, so code is in `tripsage-ai/src/...`. Alternatively, we could eliminate the `src` folder and put `app/`, `components/`, etc. at root. However, Next.js supports having a `src/` for organizing code, and the team is already using that pattern. Decision: We will preserve the `src` directory to minimize path changes and keep things tidy.
 - Open question: What to do with `frontend/README.md`. It contains useful developer-centric info, including tech stack and metrics【4†L0-L8】【4†L119-L127】. We have a few options: merge its content into the main README.md, under a new section or linking to docs, or move it to `docs/development/` if that info is elsewhere. Likely, we will integrate key points into docs and ensure anything redundant with the root README is resolved.
 - Risk: Git history and open PRs. Communicate this structural change to the team. There may be open PRs touching files under `frontend/`. We should coordinate to merge those first or prepare them to be rebased after.
 - Risk: Path alias edge case. After moving, the tsconfig path aliases like `"@/something"` now map to `src/*` at root. We must verify by running `pnpm biome:check`, `pnpm type-check` (tsc --noEmit), and searching for imports that climb above `src` or point to `frontend/` (including dynamic import/require). Fix any stragglers before merge.
