@@ -13,8 +13,8 @@ importers:
   .:
     dependencies:
       '@ai-sdk/anthropic':
-        specifier: 3.0.0-beta.76
-        version: 3.0.0-beta.76(zod@4.1.13)
+        specifier: 3.0.0-beta.77
+        version: 3.0.0-beta.77(zod@4.1.13)
       '@ai-sdk/openai':
         specifier: 3.0.0-beta.87
         version: 3.0.0-beta.87(zod@4.1.13)
@@ -388,8 +388,8 @@ packages:
   '@adobe/css-tools@4.4.4':
     resolution: {integrity: sha512-Elp+iwUx5rN5+Y8xLt5/GRoG20WGoDCQ/1Fb+1LiGtvwbDavuSk0jhD/eZdckHAuzcDzccnkv+rEjyWfRx18gg==}
 
-  '@ai-sdk/anthropic@3.0.0-beta.76':
-    resolution: {integrity: sha512-8uLBBLYs0p3v2T0SjgT2i8vYGaEmVnwd4HbMZFeMnd9WEyaeFgTnWrBfj4uUZJwK7F5ta3v2vGsZ/rxJi4MhOA==}
+  '@ai-sdk/anthropic@3.0.0-beta.77':
+    resolution: {integrity: sha512-bRpNGEEqdmUNqV/aLtJ06BfoTAEZEK4f2G0uln4DXr0zueLhAXeE6B3qJLlitKuYI4LiXNJz7eannSUXxoqN+w==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -7201,7 +7201,7 @@ snapshots:
 
   '@adobe/css-tools@4.4.4': {}
 
-  '@ai-sdk/anthropic@3.0.0-beta.76(zod@4.1.13)':
+  '@ai-sdk/anthropic@3.0.0-beta.77(zod@4.1.13)':
     dependencies:
       '@ai-sdk/provider': 3.0.0-beta.25
       '@ai-sdk/provider-utils': 4.0.0-beta.44(zod@4.1.13)
