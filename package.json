@@ -144,7 +144,7 @@
     "@types/html-to-text": "^9.0.4",
     "@types/jscodeshift": "^17.3.0",
     "@types/luxon": "^3.7.1",
-    "@types/node": "24.10.1",
+    "@types/node": "24.10.2",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
