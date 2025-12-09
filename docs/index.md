@@ -57,7 +57,7 @@ git clone <repository-url>
 cd tripsage-ai
 
 # Install dependencies
-cd frontend && pnpm install
+pnpm install
 
 # Configure environment
 cp .env.example .env

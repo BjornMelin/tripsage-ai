@@ -1,6 +1,6 @@
 # TripSage API Reference
 
-Authoritative documentation for all Next.js route handlers in `frontend/src/app/api/**`.
+Authoritative documentation for all Next.js route handlers in `src/app/api/**`.
 
 ## Introduction
 
@@ -293,7 +293,7 @@ curl -N -X POST "http://localhost:3000/api/chat/stream" \
 
 ## Maintenance
 
-This reference mirrors the current handlers in `frontend/src/app/api/**`. Update alongside route or schema changes. When adding new endpoints:
+This reference mirrors the current handlers in `src/app/api/**`. Update alongside route or schema changes. When adding new endpoints:
 
 1. Document authentication requirements
 2. Include rate limit key

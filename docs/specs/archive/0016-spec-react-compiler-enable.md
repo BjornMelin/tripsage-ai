@@ -14,7 +14,7 @@ Enable the React Compiler for Tripsage frontend to improve render performance an
 
 ## Configuration
 
-- Set `reactCompiler: true` in `frontend/next.config.ts`.
+- Set `reactCompiler: true` in `next.config.ts`.
 - Keep existing `compiler.removeConsole` and other settings unchanged.
 
 ## Scope

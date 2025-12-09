@@ -16,7 +16,7 @@ graph TD
     FE --> RT["Supabase Realtime<br/>broadcast · presence"]
 ```
 
-## Stack Snapshot (from `frontend/package.json`)
+## Stack Snapshot (from `package.json`)
 
 - Next.js `16.0.3`, React `19.2.x`, TypeScript `5.9.x`.
 - AI SDK core `ai@6.0.0-beta.99`; React hooks `@ai-sdk/react@3.0.0-beta.99`; providers `@ai-sdk/openai`, `@ai-sdk/anthropic`, `@ai-sdk/xai`; gateway via `createGateway`.
@@ -24,14 +24,14 @@ graph TD
 - Upstash `@upstash/redis@1.35.6`, `@upstash/ratelimit@2.0.7`, `@upstash/qstash@2.8.4`.
 - UI: Radix primitives, Tailwind CSS v4, shadcn/ui compositions, Framer Motion.
 - Payments/Email: Stripe `^19.3.0`, Resend `^6.5.0`.
-- Scheduling/Calendar: `ical-generator@10.0.0`, Google Calendar integration in `frontend/src/lib/calendar`.
+- Scheduling/Calendar: `ical-generator@10.0.0`, Google Calendar integration in `src/lib/calendar`.
 - State: Server Components by default; client state with Zustand; server state with TanStack Query.
-- Observability: `@vercel/otel`, `@opentelemetry/api` with helpers in `frontend/src/lib/telemetry` and `frontend/src/lib/logging`.
+- Observability: `@vercel/otel`, `@opentelemetry/api` with helpers in `src/lib/telemetry` and `src/lib/logging`.
 - Testing/tooling: Biome format/lint, Vitest, Playwright, `tsc`.
 
 ## Key Capabilities
 
-- Streaming chat and tool calling via AI SDK v6 using shared Zod schemas in `frontend/src/schemas`.
+- Streaming chat and tool calling via AI SDK v6 using shared Zod schemas in `src/schemas`.
 - Agent routes for flights, accommodations, destinations, itineraries, budget, and memory (`/api/agents/*`) with domain-specific tool sets.
 - BYOK + Vercel AI Gateway routing with explicit precedence: user gateway → user provider (OpenAI/Anthropic/xAI/OpenRouter) → team gateway fallback (opt-in).
 - Memory pipeline backed by Supabase Postgres + pgvector; QStash jobs cap inserts to 50 messages per batch and enforce idempotency.
@@ -44,15 +44,15 @@ graph TD
 ### Next.js Application
 
 - App Router with RSC-first rendering; client components only where interactivity is required.
-- Route handlers live in `frontend/src/app/api/**/route.ts`. They parse input (Zod), create request-scoped collaborators (Supabase, rate limiter, providers), and delegate to pure handlers. No module-scope state.
-- AI SDK v6 is the only LLM transport (`streamText`, `generateObject`, `streamObject`); structured outputs use Zod schemas under `frontend/src/schemas`.
+- Route handlers live in `src/app/api/**/route.ts`. They parse input (Zod), create request-scoped collaborators (Supabase, rate limiter, providers), and delegate to pure handlers. No module-scope state.
+- AI SDK v6 is the only LLM transport (`streamText`, `generateObject`, `streamObject`); structured outputs use Zod schemas under `src/schemas`.
 - Caching and rate limiting use per-request Upstash Redis/RateLimit instances. Auth-dependent routes remain dynamic (no cache).
 - Background/async work uses QStash webhooks; handlers are stateless and idempotent.
 
 ### Identity and Security
 
-- Supabase Auth with SSR cookie handling via `frontend/src/lib/supabase/server.ts` and middleware; browser client only for Realtime/subscriptions.
-- Vault stores BYOK keys; provider resolution happens server-side through `frontend/src/ai/models/registry.ts`. BYOK routes import `"server-only"`.
+- Supabase Auth with SSR cookie handling via `src/lib/supabase/server.ts` and middleware; browser client only for Realtime/subscriptions.
+- Vault stores BYOK keys; provider resolution happens server-side through `src/ai/models/registry.ts`. BYOK routes import `"server-only"`.
 - Randomness/timestamps come from `@/lib/security/random`; no `Math.random` or `crypto.randomUUID`.
 - Key precedence (highest → lowest): user gateway key, user provider key (OpenAI/Anthropic/xAI/OpenRouter), team gateway key fallback (requires user consent flag).
 - Auth-bound routes stay dynamic; do not add `'use cache'` or static revalidation to BYOK/user-scoped handlers.
@@ -68,9 +68,9 @@ graph TD
 
 ### Observability
 
-- Use `withTelemetrySpan` / `withTelemetrySpanSync`, `recordTelemetryEvent`, and `createServerLogger` (see `frontend/src/lib/telemetry` and `frontend/src/lib/logging`). Console logging is reserved for tests/client-only code.
+- Use `withTelemetrySpan` / `withTelemetrySpanSync`, `recordTelemetryEvent`, and `createServerLogger` (see `src/lib/telemetry` and `src/lib/logging`). Console logging is reserved for tests/client-only code.
 - OpenTelemetry exporters are wired through `@vercel/otel`; spans wrap API handlers and external calls.
-- Critical-path failures should emit `emitOperationalAlert` for downstream alerting (see `frontend/src/lib/telemetry/alerts.ts`).
+- Critical-path failures should emit `emitOperationalAlert` for downstream alerting (see `src/lib/telemetry/alerts.ts`).
 
 ### External Integrations (present in repo)
 

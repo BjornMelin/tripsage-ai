@@ -61,5 +61,5 @@ const result = await streamText({
 - [AI Tools](ai-tools.md) - Tool creation with `createAiTool` factory and guardrails
 - [Zod Schema Guide](zod-schema-guide.md) - Tool input schema patterns
 - [Observability](observability.md) - Spans/events via `@/lib/telemetry/*` around AI calls
-- `frontend/src/ai/models/registry.ts` (BYOK registry)
-- `frontend/src/app/api/*` route handlers for per-request routing
+- `src/ai/models/registry.ts` (BYOK registry)
+- `src/app/api/*` route handlers for per-request routing

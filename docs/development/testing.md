@@ -11,11 +11,11 @@ Authoritative testing reference for TripSage frontend.
 
 ## Vitest Projects and Environments
 
-- Projects in `frontend/vitest.config.ts`: `schemas`, `integration`, `api`, `component`, `unit`.
+- Projects in `vitest.config.ts`: `schemas`, `integration`, `api`, `component`, `unit`.
 - Environment directive (mandatory first line):
   - `/** @vitest-environment jsdom */` — React, DOM, browser hooks
   - `/** @vitest-environment node */` — API routes, server utilities
-- Commands: `pnpm -C frontend test:run`, `test:run --project=<name>`, `test:coverage`.
+- Commands: `pnpm test:run`, `test:run --project=<name>`, `test:coverage`.
 
 ## Decision Table
 
@@ -30,7 +30,7 @@ Authoritative testing reference for TripSage frontend.
 
 ## Global Test Setup
 
-`frontend/src/test-setup.ts` provides:
+`src/test-setup.ts` provides:
 
 - Polyfills: Web Streams, ResizeObserver
 - DOM mocks: location, storage, matchMedia
@@ -90,8 +90,8 @@ beforeEach(() => {
 
 Order matters:
 
-1. **Network:** MSW only; never mock `fetch` directly. Handlers in `frontend/src/test/msw/handlers/*`.
-2. **AI SDK:** `MockLanguageModelV3`, `simulateReadableStream`, `createMockModelWithTracking` from `frontend/src/test/ai-sdk/*`.
+1. **Network:** MSW only; never mock `fetch` directly. Handlers in `src/test/msw/handlers/*`.
+2. **AI SDK:** `MockLanguageModelV3`, `simulateReadableStream`, `createMockModelWithTracking` from `src/test/ai-sdk/*`.
 3. **React Query:** `createMockQueryClient`, `createControlledQuery/Mutation` from `@/test/helpers/query`.
 4. **Supabase:** `@/test/mocks/supabase`; prefer MSW for REST/RPC.
 5. **Timers:** `withFakeTimers` or `createFakeTimersContext`; never global.
@@ -119,7 +119,7 @@ Organize handlers by domain; compose with `composeHandlers`. Cover success + err
 - **Unit:** `setupUpstashMocks()` from `@/test/upstash/redis-mock`; call `redis.__reset()` and `ratelimit.__reset()` in `beforeEach`.
 - **HTTP:** `@/test/msw/handlers/upstash.ts` for pipeline/ratelimit/QStash.
 - **Emulator:** `UPSTASH_USE_EMULATOR=1` + `UPSTASH_EMULATOR_URL` + `UPSTASH_QSTASH_DEV_URL`; helper in `@/test/upstash/emulator.ts`.
-- **Smoke:** `pnpm -C frontend test:upstash:smoke` with `UPSTASH_SMOKE=1`.
+- **Smoke:** `pnpm test:upstash:smoke` with `UPSTASH_SMOKE=1`.
 
 ## AI SDK v6 Tests
 
@@ -318,7 +318,7 @@ Use `@/test/factories/*` for schema-valid fixtures. Reset counters when determin
 
 ## Performance Benchmarks
 
-- Command: `pnpm -C frontend test:benchmark`
+- Command: `pnpm test:benchmark`
 - Thresholds: suite <20s; per-file fail >3.5s, warn >500ms
 - Override via env: `BENCHMARK_SUITE_THRESHOLD_MS`, `BENCHMARK_FILE_FAIL_MS`, `BENCHMARK_FILE_WARNING_MS`
 - Artifacts: `.vitest-reports/vitest-report.json`, `benchmark-summary.json`
@@ -327,27 +327,27 @@ Use `@/test/factories/*` for schema-valid fixtures. Reset counters when determin
 ## Running and Debugging
 
 ```bash
-pnpm -C frontend test:run                           # all tests
-pnpm -C frontend test:unit                          # unit tests only
-pnpm -C frontend test:components                    # component tests only
-pnpm -C frontend test:api                           # API route tests only
-pnpm -C frontend test:integration                   # integration tests
-pnpm -C frontend test:run --project=api             # single project
-pnpm -C frontend test:run src/path/to/file.test.ts  # single file
-pnpm -C frontend test -- -t "pattern"               # by name pattern
-pnpm -C frontend test:coverage                      # with coverage
-pnpm -C frontend test:changed                       # only changed files
+pnpm test:run                           # all tests
+pnpm test:unit                          # unit tests only
+pnpm test:components                    # component tests only
+pnpm test:api                           # API route tests only
+pnpm test:integration                   # integration tests
+pnpm test:run --project=api             # single project
+pnpm test:run src/path/to/file.test.ts  # single file
+pnpm test -- -t "pattern"               # by name pattern
+pnpm test:coverage                      # with coverage
+pnpm test:changed                       # only changed files
 ```
 
 ## CI / Quality Gates
 
-- Pre-commit: `pnpm -C frontend biome:check`, `pnpm -C frontend type-check`, targeted `test:run`
-- CI: `pnpm -C frontend test:ci`, `pnpm -C frontend test:coverage`, `test:coverage:shard`
+- Pre-commit: `pnpm biome:check`, `pnpm type-check`, targeted `test:run`
+- CI: `pnpm test:ci`, `pnpm test:coverage`, `test:coverage:shard`
 
 ## Playwright (E2E)
 
-- Config: `frontend/playwright.config.ts`; specs in `e2e/`
-- Commands: `pnpm -C frontend test:e2e`, `--project=chromium`, `--headed`
+- Config: `playwright.config.ts`; specs in `e2e/`
+- Commands: `pnpm test:e2e`, `--project=chromium`, `--headed`
 - Reserve for flows requiring real browser execution.
 
 ## Performance and Anti-Patterns
@@ -390,8 +390,8 @@ Keep tests under ~3s/file; profile slow cases with `vitest run --project=<name> 
 
 ## References
 
-- Auth store: `frontend/src/stores/auth/__tests__/auth-store.test.ts`
-- Trip card: `frontend/src/components/trip-card/__tests__/trip-card.test.tsx`
-- Chat handler: `frontend/src/app/api/chat/__tests__/_handler.test.ts`
-- Search page: `frontend/src/app/(dashboard)/search/__tests__/page.test.tsx`
-- Server actions: `frontend/src/app/(dashboard)/search/activities/actions.test.ts`
+- Auth store: `src/stores/auth/__tests__/auth-store.test.ts`
+- Trip card: `src/components/trip-card/__tests__/trip-card.test.tsx`
+- Chat handler: `src/app/api/chat/__tests__/_handler.test.ts`
+- Search page: `src/app/(dashboard)/search/__tests__/page.test.tsx`
+- Server actions: `src/app/(dashboard)/search/activities/actions.test.ts`

@@ -3,7 +3,7 @@
 /**
  * @fileoverview Consolidated ops CLI for infra, AI config, and test analysis.
  *
- * Subcommands (run from frontend/):
+ * Subcommands (run from repository root):
  *   pnpm ops infra check supabase   -- Supabase auth health (+ storage with service role key)
  *   pnpm ops infra check upstash    -- Upstash Redis ping + QStash token probe
  *   pnpm ops ai check config        -- AI Gateway/BYOK credential presence + gateway reachability

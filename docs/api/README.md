@@ -1,6 +1,6 @@
 # TripSage API Documentation
 
-Next.js 16 server route handlers (TypeScript) powering the TripSage travel planning platform. All APIs live in `frontend/src/app/api/**`.
+Next.js 16 server route handlers (TypeScript) powering the TripSage travel planning platform. All APIs live in `src/app/api/**`.
 
 ## Quick Start
 
@@ -8,7 +8,6 @@ Next.js 16 server route handlers (TypeScript) powering the TripSage travel plann
 
 ```bash
 # Start the development server
-cd frontend
 pnpm dev
 
 # API available at:
@@ -228,26 +227,26 @@ BYOK API key management:
 
 ```bash
 # Run all tests
-pnpm -C frontend test:run
+pnpm test:run
 
 # Run API route tests
-pnpm -C frontend test:api
+pnpm test:api
 
 # Run with coverage
-pnpm -C frontend test:coverage
+pnpm test:coverage
 ```
 
 ### Type Checking
 
 ```bash
-pnpm -C frontend type-check
+pnpm type-check
 ```
 
 ### Linting
 
 ```bash
-pnpm -C frontend biome:check
-pnpm -C frontend biome:fix
+pnpm biome:check
+pnpm biome:fix
 ```
 
 ## Key Dependencies

@@ -21,12 +21,12 @@ export default {
       }
     ],
     ["@semantic-release/release-notes-generator", { preset: "conventionalcommits" }],
-    ["@semantic-release/changelog", { changelogFile: "../CHANGELOG.md" }],
+    ["@semantic-release/changelog", { changelogFile: "CHANGELOG.md" }],
     ["@semantic-release/npm", { npmPublish: false }],
     [
       "@semantic-release/git",
       {
-        assets: ["../CHANGELOG.md", "package.json"],
+        assets: ["CHANGELOG.md", "package.json"],
         message: "chore(release): ${nextRelease.version} [skip ci]"
       }
     ],

@@ -27,13 +27,13 @@ Canonical path to get TripSage running locally, with the minimal commands and th
 git clone <repository-url>
 cd tripsage-ai
 
-# Frontend workspace
-cd frontend && pnpm install && cd ..
+# Install dependencies (at root)
+pnpm install
 ```
 
 ## Configure
 
-1) Copy env templates (root):
+1) Copy env templates:
 
     ```bash
     cp .env.example .env
@@ -79,7 +79,7 @@ See [Environment Setup](env-setup.md) for full provider lists (Stripe, Resend, t
 ## Run
 
 ```bash
-cd frontend && pnpm dev
+pnpm dev
 ```
 
 Visit <http://localhost:3000> and sign in via Supabase auth.
@@ -87,15 +87,14 @@ Visit <http://localhost:3000> and sign in via Supabase auth.
 ## Verify
 
 ```bash
-cd frontend
 pnpm biome:check && pnpm type-check
 pnpm test:run
 ```
 
 ## Development Workflow
 
-- **Lint/format/type:** `pnpm -C frontend biome:check`, `pnpm -C frontend biome:fix`, `pnpm -C frontend type-check`
-- **Tests:** `pnpm -C frontend test:run` (or `--project=<name>`), `pnpm -C frontend test:e2e` for Playwright
+- **Lint/format/type:** `pnpm biome:check`, `pnpm biome:fix`, `pnpm type-check`
+- **Tests:** `pnpm test:run` (or `--project=<name>`), `pnpm test:e2e` for Playwright
 - **Troubleshooting:** restart TS server, re-run `pnpm type-check`, verify env loaded (`env | grep SUPABASE`)
 
 ## Next Steps

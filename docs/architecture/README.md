@@ -90,7 +90,7 @@ status updates, and multi-user collaboration.
 
 ```text
 tripsage-ai/
-├── frontend/                   # Next.js 16 app (server-first routes + UI)
+├── src/                        # Next.js 16 app source (App Router, components, libs)
 ├── docs/                       # Documentation (specs, ADRs, guides)
 ├── docker/                     # Runtime compose files and Dockerfiles
 ├── scripts/                    # Database and deployment scripts
@@ -100,7 +100,7 @@ tripsage-ai/
 
 ### Module Organization
 
-#### `frontend/`
+#### `src/`
 
 Next.js 16 application with App Router and React 19. See
 [Frontend Architecture](frontend-architecture.md) for detailed

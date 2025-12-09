@@ -16,19 +16,19 @@
 
 ## Decision
 
-We will adopt **Option B: framework-first waves** to retire the remaining backend agents and move all orchestration into `frontend/`:
+We will adopt **Option B: framework-first waves** to retire the remaining backend agents and move all orchestration into the Next.js application:
 
 1. **Framework Hardening (P0)** – extend the hybrid ToolLoop infrastructure (schemas, guardrails, telemetry, Upstash caches) so it can host any agent type.
-2. **Wave Migrations (P1–P3)** – migrate flight & accommodation agents first, then budget + memory, and finally routing/error-handling flows. Each wave ships fully through the frontend Route Handlers and AI Elements UI before decommissioning the Python equivalent.
+2. **Wave Migrations (P1–P3)** – migrate flight & accommodation agents first, then budget + memory, and finally routing/error-handling flows. Each wave ships fully through the Next.js Route Handlers and AI Elements UI before decommissioning the Python equivalent.
 3. **Provider Expansion (P4)** – integrate OpenTripMap (POI data) and GeoSure/Travel Advisory safety scores as TypeScript tools inside the registry so all agents can leverage richer data for recommendations.
 4. **Documentation & Telemetry** – codify the migration playbook in SPEC-0020 and instrument tool-level metrics to monitor parity. For this program we use full cutover (no feature flags); rollback is a deploy revert.
 
 ## Implementation Status
 
-- P0 complete (framework hardening in `frontend/`).
-- P1 complete (flights + accommodations in `frontend/`, UI integrated).
-- P2 complete (budget + memory + destination + itinerary agents in `frontend/`, UI integrated).
-- P3 complete (router + error recovery in `frontend/`).
+- P0 complete (framework hardening in Next.js application).
+- P1 complete (flights + accommodations, UI integrated).
+- P2 complete (budget + memory + destination + itinerary agents, UI integrated).
+- P3 complete (router + error recovery).
 - P4 complete (OpenTripMap POI + GeoSure travel advisory tools integrated).
 
 ## Consequences

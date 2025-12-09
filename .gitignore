@@ -52,9 +52,9 @@ htmlcov/
 lcov.info
 *.lcov
 coverage.json
-frontend/coverage-report.json
+coverage-report.json
 # JUnit reports generated locally (kept as CI artifacts, not source)
-frontend/junit-*.xml
+junit-*.xml
 # Playwright specific
 tests-examples/
 blob-report/
@@ -142,18 +142,17 @@ backend_test_results_*.md
 analysis_results.md
 test-results.json
 
-# Frontend temporary files
-frontend/lint-*.txt
-frontend/lint-*.json
-frontend/lint-*.log
-frontend/dashboard-*.png
-frontend/test-debug.*
-frontend/*-debug.*
-frontend/*.debug.*
-frontend/debug-*
-frontend/temp-*
-frontend/*.temp.*
-frontend/frontend*.xml
+# Frontend temporary files (now at root)
+lint-*.txt
+lint-*.json
+lint-*.log
+dashboard-*.png
+test-debug.*
+*-debug.*
+*.debug.*
+debug-*
+temp-*
+*.temp.*
 
 # Additional generated/temporary files
 **/test_debug.*
@@ -253,7 +252,6 @@ scan-results/
 supabase/.temp/
 docs/prompts/database-provider-research
 docs/prompts/tools/
-frontend/docs/prompts/
 docs/prompts/
 # Generated review artifacts
 docs/review/

@@ -13,7 +13,7 @@ Audience: frontend engineers working on the Next.js application. Content is impl
 - Payments/Email: Stripe `^19.3.0`, Resend `^6.5.0`.
 - Calendar/Scheduling: `ical-generator@10.0.0` with Google Calendar REST integration in `src/lib/calendar`.
 
-## Library Details (versions from `frontend/package.json`)
+## Library Details (versions from `package.json`)
 
 - **Framework**
   - Next.js `16.0.3`: App Router, RSC-first, React Compiler enabled.
@@ -57,7 +57,7 @@ Audience: frontend engineers working on the Next.js application. Content is impl
   - Biome `^2.3.6`: lint/format; `tsx@4.20.6`: scripting.
   - `pnpm boundary:check`: enforce architecture boundaries.
 
-## Project Layout (frontend/)
+## Project Layout
 
 ```text
 src/
@@ -76,10 +76,10 @@ test/, test-utils/, __tests__/ # Vitest utilities and suites
 
 Path aliases:
 
-- `@/` → `frontend/src/*`
-- `@ai/*` → `frontend/src/ai/*`
-- `@domain/*` → `frontend/src/domain/*`
-- `@schemas/*` → `frontend/src/domain/schemas/*`
+- `@/` → `src/*`
+- `@ai/*` → `src/ai/*`
+- `@domain/*` → `src/domain/*`
+- `@schemas/*` → `src/domain/schemas/*`
 Avoid new barrels; import concrete modules.
 
 ## Feature Highlights

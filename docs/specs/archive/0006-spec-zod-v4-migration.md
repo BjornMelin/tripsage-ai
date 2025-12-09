@@ -29,8 +29,8 @@ Code changes
 Validation
 
 - [x] Added smoke test to ensure resolver + v4 interop:
-  - `frontend/src/hooks/__tests__/use-chat-ai.test.tsx` (already in suite)
-  - `frontend/src/lib/__tests__/zod-v4-resolver.test.tsx` (new; basic resolver sanity)
+  - `src/hooks/__tests__/use-chat-ai.test.tsx` (already in suite)
+  - `src/lib/__tests__/zod-v4-resolver.test.tsx` (new; basic resolver sanity)
   - Targeted test run: `pnpm vitest run src/lib/__tests__/zod-v4-resolver.test.tsx`
 
 Docs

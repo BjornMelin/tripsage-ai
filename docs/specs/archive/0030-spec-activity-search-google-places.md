@@ -59,7 +59,7 @@ Implement an end-to-end **Activity Search & Booking** feature using a **hybrid p
      - Maps Google Places results into `Activity` schema (see §6) with approximate pricing (`priceLevel` → `price` index 0–4)
      - **For authenticated users only**: Persists results into `search_activities` with `source = 'googleplaces'` and appropriate TTL (e.g. 24h). Anonymous searches are not cached.
      - If Places returns `ZERO_RESULTS` or clearly underperforms (e.g. very low result count in a popular destination), triggers **AI/web fallback**:
-       - Invokes `web_search` tool (`frontend/src/ai/tools/server/web-search.ts`) with a query like `"things to do in {destination}"`.
+       - Invokes `web_search` tool (`src/ai/tools/server/web-search.ts`) with a query like `"things to do in {destination}"`.
        - Normalizes AI/web results into a **secondary suggestions list** shaped as `Activity[]` where possible, flagged as `source = 'ai_fallback'`.
        - **For authenticated users only**: Persists fallback results in `search_activities` with shorter TTL (e.g. 6h) and `source = 'ai_fallback'`. Anonymous searches are not cached.
    - Returns combined result:
@@ -212,7 +212,7 @@ ALTER TABLE public.search_activities
 }
 ```
 
-**Implementation**: `frontend/src/app/api/activities/search/route.ts`
+**Implementation**: `src/app/api/activities/search/route.ts`
 
 #### GET /api/activities/[id]
 
@@ -220,7 +220,7 @@ ALTER TABLE public.search_activities
 
 **Response**: `Activity` object
 
-**Implementation**: `frontend/src/app/api/activities/[id]/route.ts`
+**Implementation**: `src/app/api/activities/[id]/route.ts`
 
 ### 7.2 AI SDK v6 Tools
 
@@ -228,13 +228,13 @@ ALTER TABLE public.search_activities
 
 **Input Schema**: `activitySearchParamsSchema`
 **Output Schema**: `z.object({ activities: z.array(activitySchema), metadata: z.object({ ... }) })`
-**Implementation**: `frontend/src/ai/tools/server/activities.ts`
+**Implementation**: `src/ai/tools/server/activities.ts`
 
 #### getActivityDetails
 
 **Input Schema**: `z.object({ placeId: z.string() })`
 **Output Schema**: `activitySchema`
-**Implementation**: `frontend/src/ai/tools/server/activities.ts`
+**Implementation**: `src/ai/tools/server/activities.ts`
 
 #### bookActivity (Future)
 
@@ -244,7 +244,7 @@ ALTER TABLE public.search_activities
 
 ### 7.3 Service Layer
 
-**File**: `frontend/src/domain/activities/service.ts`
+**File**: `src/domain/activities/service.ts`
 
 **Interface**:
 
@@ -258,9 +258,9 @@ export interface ActivitiesService {
 **Dependencies**:
 
 - Google Places helper stack:
-  - `frontend/src/lib/google/places-geocoding.ts` (lat/lng geocoding with 30‑day cache)
-  - `frontend/src/lib/google/client.ts` (`postPlacesSearch` wrapper)
-  - `frontend/src/lib/google/places-utils.ts` (normalization, cache keys)
+  - `src/lib/google/places-geocoding.ts` (lat/lng geocoding with 30‑day cache)
+  - `src/lib/google/client.ts` (`postPlacesSearch` wrapper)
+  - `src/lib/google/places-utils.ts` (normalization, cache keys)
 - Supabase client for `search_activities` table via `TypedServerSupabase`
 - Upstash Ratelimit via `@upstash/ratelimit` and `Redis.fromEnv()` for per-route limits (no new Redis cache for MVP)
 
@@ -340,20 +340,20 @@ export interface ActivitiesService {
 
 ### 10.1 Unit Tests
 
-- **Service Layer**: `frontend/src/domain/activities/__tests__/service.test.ts`
+- **Service Layer**: `src/domain/activities/__tests__/service.test.ts`
   - Mock Google Places API responses
   - Test cache hit/miss logic
   - Test query construction
   - Test error handling
 
-- **AI Tools**: `frontend/src/ai/tools/server/__tests__/activities.test.ts`
+- **AI Tools**: `src/ai/tools/server/__tests__/activities.test.ts`
   - Mock service layer
   - Test tool input/output schemas
   - Test error mapping
 
 ### 10.2 Integration Tests
 
-- **API Routes**: `frontend/src/app/api/activities/__tests__/route.test.ts`
+- **API Routes**: `src/app/api/activities/__tests__/route.test.ts`
   - Mock Supabase client
   - Mock Google Places API
   - Test authentication/rate limiting
@@ -369,7 +369,7 @@ export interface ActivitiesService {
 
 ### 10.4 Test Data
 
-- Use MSW handlers for Google Places API (`frontend/src/test/msw/handlers/google-places.ts`)
+- Use MSW handlers for Google Places API (`src/test/msw/handlers/google-places.ts`)
 - Mock Place IDs: `ChIJN1t_tDeuEmsRUsoyG83frY4` (Sydney Opera House), etc.
 
 ## 11. Risks & Open Questions
@@ -437,7 +437,7 @@ export interface ActivitiesService {
     - The user’s intent (in chat) clearly asks for non-standard/local/“off the beaten path” content where web articles add value.
   - Fallback queries use compact prompts such as `"things to do in {destination}"` with small limits and `fresh = false` by default to maximize cache hits.
 - **Tool scope and exclusions**:
-  - `webSearch` (`frontend/src/ai/tools/server/web-search.ts`) is the **only** Firecrawl-based tool used by the activities service, and only on the fallback path described above.
+  - `webSearch` (`src/ai/tools/server/web-search.ts`) is the **only** Firecrawl-based tool used by the activities service, and only on the fallback path described above.
   - `webSearchBatch` and crawl tools (`crawlUrl`, `crawlSite`) remain reserved for higher-level agents (for example, itinerary/budget/deep research flows) and are **not** part of the `/api/activities/search` or `/api/activities/[id]` implementations in this spec.
 - **Operational safeguards**:
   - Respect `webSearch`’s own rate limits and TTL heuristics; do not add parallel, redundant Firecrawl integrations.

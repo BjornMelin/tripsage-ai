@@ -3,9 +3,9 @@
 version: 2
 
 updates:
-  # Frontend dependencies
+  # Frontend dependencies (now at root)
   - package-ecosystem: "npm"
-    directory: "/frontend"
+    directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"

@@ -12,7 +12,7 @@ Capture recent user search activity to personalize accommodations/flight suggest
 
 - Tables: `search_hotels`, `search_flights` (existing).
 - Fields used for personalization: `user_id`, `destination`/`origin`, `query_hash`, `created_at`, `expires_at`.
-- Query hash: computed as SHA-256 over the normalized search params: lowercased keys sorted lexicographically, values normalized (dates ISO, arrays sorted), joined with `\n`, encoded as hex. Canonical implementation: `frontend/src/lib/queries/hash-search.ts`.
+- Query hash: computed as SHA-256 over the normalized search params: lowercased keys sorted lexicographically, values normalized (dates ISO, arrays sorted), joined with `\n`, encoded as hex. Canonical helper: `hashInputForCache` in `src/lib/cache/hash.ts` (used after applying the normalization above).
 - Indexes:
   - `(user_id, created_at DESC)` for recency-based personalization.
   - `(query_hash)` for cache lookups.

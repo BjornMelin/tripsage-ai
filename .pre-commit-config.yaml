@@ -22,9 +22,9 @@ repos:
     hooks:
       - id: biome-format
         name: biome-format
-        entry: bash -c 'cd frontend && pnpm format:biome'
+        entry: bash -c 'pnpm format:biome'
         language: system
-        files: ^frontend/.*\.(ts|tsx|js|jsx|json)$
+        files: ^(src|e2e|scripts)/.*\.(ts|tsx|js|jsx|json)$
         stages: [commit]
 
   # Frontend linting
@@ -32,9 +32,9 @@ repos:
     hooks:
       - id: biome-check
         name: biome-check
-        entry: bash -c 'cd frontend && pnpm biome:check'
+        entry: bash -c 'pnpm biome:check'
         language: system
-        files: ^frontend/.*\.(ts|tsx|js|jsx|json)$
+        files: ^(src|e2e|scripts)/.*\.(ts|tsx|js|jsx|json)$
         stages: [commit]
 
   # Frontend type checking
@@ -42,9 +42,9 @@ repos:
     hooks:
       - id: typescript-check
         name: typescript-check
-        entry: bash -c 'cd frontend && pnpm type-check'
+        entry: bash -c 'pnpm type-check'
         language: system
-        files: ^frontend/.*\.(ts|tsx)$
+        files: ^(src|e2e)/.*\.(ts|tsx)$
         pass_filenames: false
         stages: [commit]
 

@@ -8,7 +8,6 @@
 
 - Add a server-only streaming route using AI SDK `streamText` and return a UI Message Stream response.
 - Scaffold AI Elements chat UI primitives and a simple demo page.
-- Keep changes contained to `frontend/`.
 
 **Status Update:** This spec is implemented. The route exists at `/api/ai/stream` and uses `withApiGuards` for auth/rate-limiting. AI Elements components are integrated in the chat UI.
 
@@ -35,8 +34,8 @@
 ## Testing
 
 - Unit tests (Vitest):
-  - `frontend/tests/ai-foundations/stream-route.test.ts` mocks `ai.streamText` and asserts SSE response headers
-  - `frontend/tests/ai-foundations/demo-page.test.tsx` renders the demo page and asserts base controls
+  - `tests/ai-foundations/stream-route.test.ts` mocks `ai.streamText` and asserts SSE response headers
+  - `tests/ai-foundations/demo-page.test.tsx` renders the demo page and asserts base controls
 
 ## Non-Functional
 
