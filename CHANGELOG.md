@@ -1,3 +1,36 @@
+## [1.8.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.7.0...v1.8.0) (2025-12-09)
+
+### ⚠ BREAKING CHANGES
+
+* All frontend code moved from frontend/ to root.
+
+- Move frontend/src to src/
+- Move frontend/public to public/
+- Move frontend/e2e to e2e/
+- Move frontend/scripts to scripts/
+- Move all config files to root (package.json, tsconfig.json, next.config.ts,
+  vitest.config.ts, biome.json, playwright.config.ts, tailwind.config.mjs, etc.)
+- Update CI/CD workflows (ci.yml, deploy.yml, release.yml)
+  - Remove working-directory: frontend from all steps
+  - Update cache keys and artifact paths
+  - Update path filters
+- Update CODEOWNERS with new path patterns
+- Update dependabot.yml directory to "/"
+- Update pre-commit hooks to run from root
+- Update release.config.mjs paths
+- Update .gitignore patterns
+- Update documentation (AGENTS.md, README.md, quick-start.md)
+- Archive frontend/README.md to docs/development/frontend-readme-archive.md
+- Update migration checklist with completed items
+
+Verification: All 2826 tests pass, type-check passes, biome:check passes.
+
+Refs: ADR-0055, SPEC-0033
+
+### Code Refactoring
+
+* flatten frontend directory to repository root ([11b4f8c](https://github.com/BjornMelin/tripsage-ai/commit/11b4f8c0ab6040cd5eeb063c3acbf0531452744a))
+
 # Changelog
 
 All notable changes to TripSage will be documented in this file.
