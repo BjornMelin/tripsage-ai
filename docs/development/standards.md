@@ -45,11 +45,11 @@ function useTrips() {
 }
 ```
 
-- Commands: `pnpm -C frontend biome:check`, `pnpm -C frontend biome:fix`, `pnpm -C frontend type-check`, `pnpm -C frontend test:run`.
+- Commands: `pnpm biome:check`, `pnpm biome:fix`, `pnpm type-check`, `pnpm test:run`.
 
 ## Import Paths
 
-Semantic aliases (configured in `frontend/tsconfig.json`):
+Semantic aliases (configured in `tsconfig.json`):
 
 | Alias | Target | Use For |
 | --- | --- | --- |
@@ -255,7 +255,7 @@ export const useAuthStore = create<AuthStore>()(
 For stores with complex derived state (aggregations, validation flags, counts), use the `withComputed` middleware:
 
 ```ts
-import { withComputed, createComputeFn } from '@/stores/middleware/computed';
+import { withComputed, createComputeFn } from "@/stores/middleware/computed";
 
 const computeFilterState = createComputeFn<FilterState>({
   activeFilterCount: (state) => Object.keys(state.activeFilters || {}).length,

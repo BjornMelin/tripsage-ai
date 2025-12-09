@@ -30,32 +30,32 @@ The accommodations feature (ADR-0050) uses Amadeus + Google Places for hotel sea
 We will implement activity search and (future) booking using a **hybrid provider model**:
 
 1. **Google Places API (New)** as the **primary deterministic provider**  
-   - Use HTTP `places:searchText` + Place Details with **field masks** to limit cost and data surface.  
-   - Only request Essentials-tier fields needed for the TripSage `Activity` schema (id, displayName, location, types, rating, userRatingCount, photos metadata, price level).  
-   - Reuse existing `postPlacesSearch` and geocoding helpers (`frontend/src/lib/google/places-geocoding.ts`, `frontend/src/lib/google/client.ts`, `frontend/src/lib/google/places-utils.ts`).
+   - Use HTTP `places:searchText` + Place Details with **field masks** to limit cost and data surface.
+   - Only request Essentials-tier fields needed for the TripSage `Activity` schema (id, displayName, location, types, rating, userRatingCount, photos metadata, price level).
+   - Reuse existing `postPlacesSearch` and geocoding helpers (`src/lib/google/places-geocoding.ts`, `src/lib/google/client.ts`, `src/lib/google/places-utils.ts`).
 
-2. **Hybrid architecture with guarded AI/web fallback (Option B)**  
-   - When Google Places returns `ZERO_RESULTS`, errors, or clearly insufficient coverage for the query, call the existing `web_search` AI tool (`frontend/src/ai/tools/server/web-search.ts`) via AI SDK v6.  
+2. **Hybrid architecture with guarded AI/web fallback (Option B)**
+   - When Google Places returns `ZERO_RESULTS`, errors, or clearly insufficient coverage for the query, call the existing `web_search` AI tool (`src/ai/tools/server/web-search.ts`) via AI SDK v6.  
    - Fallback is **advisory only**: results are clearly labeled as `ai_fallback` in response metadata and are not used for in‑app booking; they serve as inspiration and long‑tail coverage.  
    - The hybrid design (deterministic primary + AI fallback) is the selected option after applying the decision framework with a weighted score **≥ 9.0/10.0**.
 
-3. **AI SDK v6 Tools** for activities  
-   - New tools in `frontend/src/ai/tools/server/activities.ts`:  
-     - `searchActivities` - wraps the activities service search (Places + cache + optional AI fallback).  
-     - `getActivityDetails` - wraps Place Details for a given Place ID.  
-     - `bookActivity` - reserved for future integration; no partner/approval‑based APIs in scope.  
-   - Tools are defined using `createAiTool` (`frontend/src/ai/lib/tool-factory.ts`) with Zod v4 input schemas from `@schemas/search.ts` and OTEL guardrails (caching, rate limiting, telemetry).
+3. **AI SDK v6 Tools** for activities
+   - New tools in `src/ai/tools/server/activities.ts`:
+     - `searchActivities` - wraps the activities service search (Places + cache + optional AI fallback).
+     - `getActivityDetails` - wraps Place Details for a given Place ID.
+     - `bookActivity` - reserved for future integration; no partner/approval‑based APIs in scope.
+   - Tools are defined using `createAiTool` (`src/ai/lib/tool-factory.ts`) with Zod v4 input schemas from `@schemas/search.ts` and OTEL guardrails (caching, rate limiting, telemetry).
 
-4. **Service Layer** (`frontend/src/domain/activities/service.ts`)  
-   - Pure, DI-friendly orchestrator that:  
-     - Accepts `ActivitySearchParams` + context (userId, locale, ip, feature flags).  
-     - Checks Supabase `search_activities` for cached results.  
-     - On cache miss, calls Google Places (New) with normalized queries and field masks.  
-     - Optionally invokes AI/web fallback when deterministic provider underperforms.  
+4. **Service Layer** (`src/domain/activities/service.ts`)
+   - Pure, DI-friendly orchestrator that:
+     - Accepts `ActivitySearchParams` + context (userId, locale, ip, feature flags).
+     - Checks Supabase `search_activities` for cached results.
+     - On cache miss, calls Google Places (New) with normalized queries and field masks.
+     - Optionally invokes AI/web fallback when deterministic provider underperforms.
      - Returns strongly-typed `ActivitySearchResult` for tools, HTTP routes, and UI.
 
-5. **API Routes** (`frontend/src/app/api/activities/*`) using `withApiGuards`  
-   - `POST /api/activities/search` → DI handler calling the activities service; reuses auth, rate limiting, telemetry, and error handling patterns from `frontend/src/lib/api/factory.ts`.  
+5. **API Routes** (`src/app/api/activities/*`) using `withApiGuards`
+   - `POST /api/activities/search` → DI handler calling the activities service; reuses auth, rate limiting, telemetry, and error handling patterns from `src/lib/api/factory.ts`.  
    - `GET /api/activities/[id]` → Place Details + enrichment via service.  
    - Rate limits wired via `@upstash/ratelimit` + `Redis.fromEnv()` and the central `ROUTE_RATE_LIMITS` registry.
 
@@ -64,8 +64,8 @@ We will implement activity search and (future) booking using a **hybrid provider
    - Store normalized request parameters, hash, provider `source` (`googleplaces` or `ai_fallback`), and search metadata.  
    - Upstash Redis is used **only for rate limiting and existing shared infra**, not as an additional cache layer for this feature to keep KISS/YAGNI.
 
-7. **Stripe integration** (deferred)  
-   - Future `bookActivity` implementation may reuse the existing booking payment orchestrator (`frontend/src/lib/payments/booking-payment.ts`) but **no partner/approval‑based activity APIs** (Viator/GetYourGuide, etc.) are in scope for this ADR.
+7. **Stripe integration** (deferred)
+   - Future `bookActivity` implementation may reuse the existing booking payment orchestrator (`src/lib/payments/booking-payment.ts`) but **no partner/approval‑based activity APIs** (Viator/GetYourGuide, etc.) are in scope for this ADR.
 
 ## Options Considered
 

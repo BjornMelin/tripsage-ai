@@ -48,7 +48,7 @@ TripSage needs a consistent, HTTP-based agent router and workflow API that:
 
 - Classifies user messages into workflow types (e.g., `destinationResearch`, `flightSearch`, `itineraryPlanning`, `accommodationSearch`, `budgetPlanning`, `memoryUpdate`).
 - Exposes separate, guardrailed route handlers per workflow under `/api/agents/*`.
-- Uses shared Zod schemas from `frontend/src/domain/schemas/agents.ts`.
+- Uses shared Zod schemas from `src/domain/schemas/agents.ts`.
 - Applies centralized auth, rate limiting, and telemetry via `withApiGuards`.
 - Streams AI responses using AI SDK v6 primitives in route handlers.
 
@@ -60,8 +60,8 @@ We will:
 
 1. **Standardize agent workflows and types**
 
-   - Use `AgentWorkflowKind` and associated Zod schemas from  
-     `frontend/src/domain/schemas/agents.ts` as the canonical source.
+   - Use `AgentWorkflowKind` and associated Zod schemas from
+     `src/domain/schemas/agents.ts` as the canonical source.
    - Supported workflows:
      - `destinationResearch`
      - `itineraryPlanning`
@@ -73,8 +73,8 @@ We will:
 
 2. **Introduce a dedicated router HTTP endpoint**
 
-   - Route: `POST /api/agents/router` implemented in  
-     `frontend/src/app/api/agents/router/route.ts`.
+   - Route: `POST /api/agents/router` implemented in
+     `src/app/api/agents/router/route.ts`.
    - Uses AI SDK v6 `generateObject` and a Zod schema (`routerClassificationSchema`)
      to classify the latest user message into one of the supported workflows with
      confidence and reasoning.
@@ -85,7 +85,7 @@ We will:
 
 3. **Expose one route per workflow with consistent guardrails**
 
-   - Route handlers (all under `frontend/src/app/api/agents/**/route.ts`):
+   - Route handlers (all under `src/app/api/agents/**/route.ts`):
      - `POST /api/agents/destinations` → destination research agent
      - `POST /api/agents/flights` → flight agent
      - `POST /api/agents/accommodations` → accommodations agent
@@ -104,12 +104,12 @@ We will:
 
 4. **Centralize rate limiting and reuse configuration**
 
-   - Route-level limits stored in `frontend/src/lib/ratelimit/routes.ts` and
+   - Route-level limits stored in `src/lib/ratelimit/routes.ts` and
      accessed by `withApiGuards`:
      - `agents:router`: higher limit (classification-only).
      - `agents:*` workflows: more conservative limits.
-   - Tool-level limits per workflow stored in  
-     `frontend/src/lib/ratelimit/config.ts` using `AgentWorkflowKind`.
+   - Tool-level limits per workflow stored in
+     `src/lib/ratelimit/config.ts` using `AgentWorkflowKind`.
    - Implementation uses Upstash Redis HTTP client:
      - <https://upstash.com/docs/redis/howto/connectwithupstashredis>
    - Ratelimit implementation uses `@upstash/ratelimit`:
@@ -117,8 +117,8 @@ We will:
 
 5. **Align all schemas on Zod v4**
 
-   - All agent-related request/response contracts live in  
-     `frontend/src/domain/schemas/agents.ts` using Zod v4.
+   - All agent-related request/response contracts live in
+     `src/domain/schemas/agents.ts` using Zod v4.
    - Route handlers import from `@schemas/agents`.
    - Client components and stores (e.g., agent monitoring dashboards) reuse the
      same schemas for validation.

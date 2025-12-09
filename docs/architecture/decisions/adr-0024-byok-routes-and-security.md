@@ -20,7 +20,7 @@ We are migrating BYOK key CRUD/validation from FastAPI to Next.js route handlers
   **Note:** Routes accessing `cookies()` or `headers()` (required for Supabase SSR auth) cannot use `"use cache"` directives per Next.js Cache Components restrictions; they are automatically dynamic.
   See [Spec: BYOK Routes and Security (Next.js + Supabase Vault)](../specs/0011-spec-byok-routes-and-security.md).
 - Add server-only Supabase admin client using `SUPABASE_SERVICE_ROLE_KEY`.
-- Centralize Vault RPC helpers in `frontend/src/lib/supabase/rpc.ts`.
+- Centralize Vault RPC helpers in `src/lib/supabase/rpc.ts`.
 - Enforce PostgREST claims guard in SQL: `request.jwt.claims->>'role'='service_role'`.
 - Rate limit with Upstash: `10/min` (POST/DELETE) and `20/min` (validate).
 - Redact `api_key` in logs and never return secrets.

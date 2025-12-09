@@ -108,7 +108,7 @@ memory workflows, using their respective schemas and agent functions.
 
 ## 6. Data Model & Schemas
 
-Canonical location: `frontend/src/domain/schemas/agents.ts`.
+Canonical location: `src/domain/schemas/agents.ts`.
 
 Key schema groups (Zod v4):
 
@@ -138,7 +138,7 @@ Schema requirements:
 
 ## 7. API Design & Integration Points
 
-All endpoints live under `frontend/src/app/api/agents/**/route.ts` and import
+All endpoints live under `src/app/api/agents/**/route.ts` and import
 `"server-only"`.
 
 ### 7.1 Router endpoint
@@ -192,7 +192,7 @@ Endpoints:
 ### 7.3 Supporting services
 
 - **Supabase SSR**
-  - `createServerSupabase` in `frontend/src/lib/supabase/server.ts` must use
+  - `createServerSupabase` in `src/lib/supabase/server.ts` must use
     `@supabase/ssr` as per:
     - <https://supabase.com/docs/guides/auth/server-side>
 - **Upstash Redis & Ratelimit**
@@ -283,9 +283,9 @@ Testing requirements:
 
 - **Coverage**
   - Target ≥ 90% coverage on:
-    - `frontend/src/app/api/agents/**/route.ts`
-    - `frontend/src/lib/agents/**`
-    - `frontend/src/domain/schemas/agents.ts` (via validation tests).
+    - `src/app/api/agents/**/route.ts`
+    - `src/lib/agents/**`
+    - `src/domain/schemas/agents.ts` (via validation tests).
 
 ## 11. Risks & Open Questions
 

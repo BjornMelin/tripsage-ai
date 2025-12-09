@@ -10,7 +10,7 @@ Define a DRY, deterministic testing harness for all Upstash integrations (Redis,
 
 ## Scope
 
-- Next.js 16 frontend code and tests under `frontend/` that depend on `@upstash/redis`, `@upstash/ratelimit`, or QStash HTTP calls.
+- Next.js 16 code and tests that depend on `@upstash/redis`, `@upstash/ratelimit`, or QStash HTTP calls.
 - Vitest unit/integration suites, MSW handlers, and test setup files.
 
 ## Non-Goals
@@ -32,7 +32,7 @@ Define a DRY, deterministic testing harness for all Upstash integrations (Redis,
 
 - Provide a shared in-memory stub for `@upstash/redis` supporting commands we use: `get`, `set`, `mset`, `del`, `incr`, `expire`, `ttl`, and pipelined `multi/exec` equivalents.
 - Provide a shared stub for `@upstash/ratelimit` (sliding window) returning realistic `{ success, limit, remaining, retryAfter, reset }` and allowing forced 429 responses.
-- Centralize MSW handlers in `frontend/src/test/msw/handlers/upstash.ts` covering Redis REST, ratelimit, and QStash publish/verify endpoints; silence on-unhandled warnings for Upstash paths only.
+- Centralize MSW handlers in `src/test/msw/handlers/upstash.ts` covering Redis REST, ratelimit, and QStash publish/verify endpoints; silence on-unhandled warnings for Upstash paths only.
 - Expose a single `reset()` API for stubs/handlers to ensure per-test isolation and thread safety.
 - Allow switching to local emulators via env (`UPSTASH_EMULATOR_URL`, `UPSTASH_QSTASH_DEV_URL`, `UPSTASH_USE_EMULATOR=1`) without code changes.
 - Add a gated live smoke suite that runs only when `UPSTASH_SMOKE=1` and secrets are present; serialize execution and keep total live calls minimal.
@@ -40,25 +40,25 @@ Define a DRY, deterministic testing harness for all Upstash integrations (Redis,
 
 ### Should
 
-- Provide helper factories under `frontend/src/test/upstash/` (TypeScript, strict) with typed return values and optional time mocking to simulate TTL expiry.
-- Supply a Vitest setup helper to register/reset stubs and MSW handlers (`frontend/src/test/setup/upstash.ts`).
-- Add npm scripts: `pnpm -C frontend test:upstash:unit`, `test:upstash:int` (emulator), `test:upstash:smoke` (gated).
+- Provide helper factories under `src/test/upstash/` (TypeScript, strict) with typed return values and optional time mocking to simulate TTL expiry.
+- Supply a Vitest setup helper to register/reset stubs and MSW handlers (`src/test/setup/upstash.ts`).
+- Add npm scripts: `pnpm test:upstash:unit`, `test:upstash:int` (emulator), `test:upstash:smoke` (gated).
 - Pin emulator container/tag versions and fail fast with clear error when emulators unavailable.
 
 ## Design
 
 ### Shared Stubs (Unit/Fast Tier)
 
-- File: `frontend/src/test/upstash/redis-mock.ts`
+- File: `src/test/upstash/redis-mock.ts`
   - Implements minimal in-memory store with TTL tracking via `Date.now()`; pipelines return array results.
   - Export factory `createRedisMock()` returning `{ module, reset }`; `module` matches `@upstash/redis` surface used in app.
-- File: `frontend/src/test/upstash/ratelimit-mock.ts`
+- File: `src/test/upstash/ratelimit-mock.ts`
   - Simulates `slidingWindow` responses; supports injected outcomes to test 429 paths.
 - Reset pattern: each suite imports the factory, calls `vi.mock('@upstash/redis', () => redisMock.module)` and `beforeEach(redisMock.reset)`.
 
 ### MSW Handlers (HTTP Layer)
 
-- Extend `frontend/src/test/msw/handlers/upstash.ts` to cover:
+- Extend `src/test/msw/handlers/upstash.ts` to cover:
   - Redis REST endpoints (`/pipeline`, `/set`, `/get`, `/del`, etc.) delegating to the same in-memory store.
   - Ratelimit endpoints returning structured headers for 429 cases.
   - QStash publish/verify endpoints with configurable responses.
@@ -68,18 +68,18 @@ Define a DRY, deterministic testing harness for all Upstash integrations (Redis,
 
 - Use `upstash-redis-local` (or `upstashdis`) container to emulate REST-compatible Redis.
 - Use QStash CLI dev server container for publish/verify.
-- Add helper `frontend/src/test/upstash/emulator.ts` to start/stop containers (testcontainers or docker CLI) once per worker; seed deterministic keys/rate buckets.
+- Add helper `src/test/upstash/emulator.ts` to start/stop containers (testcontainers or docker CLI) once per worker; seed deterministic keys/rate buckets.
 - Config via env: `UPSTASH_USE_EMULATOR=1`, `UPSTASH_EMULATOR_URL=http://127.0.0.1:8079`, `UPSTASH_QSTASH_DEV_URL=http://127.0.0.1:8081`.
 
 ### Live Smoke Tier (Gated)
 
-- File: `frontend/src/__tests__/contracts/upstash.smoke.test.ts` (skipped unless `UPSTASH_SMOKE=1`).
+- File: `src/__tests__/contracts/upstash.smoke.test.ts` (skipped unless `UPSTASH_SMOKE=1`).
 - Validates: Redis set/get with TTL, ratelimit 429 path, QStash publish + signature verify.
 - Serialized execution; low call count; surface clear skip reason when env missing.
 
 ### Tooling & Scripts
 
-- `package.json` scripts (frontend):
+- `package.json` scripts:
   - `test:upstash:unit` → Vitest with stubs only.
   - `test:upstash:int` → starts emulators, runs integration-tagged tests.
   - `test:upstash:smoke` → gated live suite.
@@ -88,7 +88,7 @@ Define a DRY, deterministic testing harness for all Upstash integrations (Redis,
 ## Acceptance Criteria
 
 - All existing Upstash-dependent suites migrate to shared stubs/handlers (no per-suite hoisted mocks).
-- `test:upstash:unit` passes without network/docker; no MSW unhandled warnings.
+- `pnpm test:upstash:unit` passes without network/docker; no MSW unhandled warnings.
 - Emulator tier starts and passes on a fresh machine with Docker available; fails fast with actionable error when missing.
 - Smoke suite cleanly skips without env; passes when creds provided; total live calls remain <20.
 - Docs updated; [ADR-0054](../../architecture/decisions/adr-0054-upstash-testing-harness.md) referenced from testing guide and spec README.

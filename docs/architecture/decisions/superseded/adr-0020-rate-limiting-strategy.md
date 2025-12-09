@@ -40,7 +40,7 @@ Negative
 
 ## References
 
-- Frontend code: `frontend/src/app/api/chat/attachments/route.ts`
+- Frontend code: `src/app/api/chat/attachments/route.ts`
 - Backend code: `tripsage/api/limiting.py`, `tripsage/api/routers/chat.py`
 
 ## Changelog

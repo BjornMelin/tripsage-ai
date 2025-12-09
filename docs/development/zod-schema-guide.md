@@ -4,9 +4,9 @@ Zod v4 schemas for TripSage AI validation. Provides compile-time types and runti
 
 ## Organization
 
-**Domain Schemas** (`frontend/src/domain/schemas/`): Core business entities independent of AI  
-**AI Tool Schemas** (`frontend/src/ai/tools/schemas/`): Vercel AI SDK v6 tool input/output contracts  
-**Registry** (`frontend/src/domain/schemas/registry.ts`): Shared primitives and transforms
+**Domain Schemas** (`src/domain/schemas/`): Core business entities independent of AI
+**AI Tool Schemas** (`src/ai/tools/schemas/`): Vercel AI SDK v6 tool input/output contracts
+**Registry** (`src/domain/schemas/registry.ts`): Shared primitives and transforms
 
 ### Canonical Type Sources
 
@@ -25,13 +25,13 @@ Zod v4 schemas for TripSage AI validation. Provides compile-time types and runti
 ### Directory Structure
 
 ```text
-frontend/src/domain/schemas/
+src/domain/schemas/
 ├── registry.ts        # Shared primitives and transforms
 ├── chat.ts            # Messages and conversations
 ├── budget.ts          # Financial entities
 └── ...
 
-frontend/src/ai/tools/schemas/
+src/ai/tools/schemas/
 ├── tools.ts           # Core tool schemas
 ├── web-search.ts      # Web search validation
 ├── planning.ts        # Trip planning AI schemas
@@ -88,7 +88,7 @@ export type Message = z.infer<typeof messageSchema>;
 
 ## Registry Usage
 
-Shared validation patterns in `frontend/src/domain/schemas/registry.ts`:
+Shared validation patterns in `src/domain/schemas/registry.ts`:
 
 ```typescript
 // Use @schemas/* alias for all schema imports
@@ -240,8 +240,8 @@ export const toolOutputSchema = z.discriminatedUnion("type", [
 
 **Server vs Client Tools:**
 
-- **Server** (`frontend/src/ai/tools/server/`): External APIs, `import 'server-only'`, secrets access
-- **Client** (`frontend/src/ai/tools/client/`): UI interactions, no external APIs
+- **Server** (`src/ai/tools/server/`): External APIs, `import 'server-only'`, secrets access
+- **Client** (`src/ai/tools/client/`): UI interactions, no external APIs
 - **Patterns**: Query tools (Server), Action tools (Server), UI tools (Client)
 
 ### Using Schemas
@@ -295,10 +295,10 @@ export const webSearchTool = tool({
 
 **Test Locations:**
 
-- `frontend/src/domain/schemas/__tests__/` - Domain schema tests
-- `frontend/src/ai/tools/__tests__/` - AI tool schema tests
+- `src/domain/schemas/__tests__/` - Domain schema tests
+- `src/ai/tools/__tests__/` - AI tool schema tests
 
-**Run Tests:** `pnpm test:run frontend/src/domain/schemas/__tests__ frontend/src/ai/tools/__tests__`
+**Run Tests:** `pnpm test:run src/domain/schemas/__tests__ src/ai/tools/__tests__`
 
 ### Schema Creation Checklist
 

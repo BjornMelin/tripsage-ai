@@ -59,12 +59,12 @@ cache:
   node:
     key_prefix: "node-pnpm"
     restore_keys:
-      - "node-pnpm-${{ runner.os }}-${{ hashFiles('frontend/pnpm-lock.yaml') }}"
+      - "node-pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}"
       - "node-pnpm-${{ runner.os }}-"
     paths:
       - "~/.pnpm-store"
-      - "frontend/node_modules"
-      - "frontend/.next/cache"
+      - "node_modules"
+      - ".next/cache"
   docker:
     key_prefix: "docker-buildx"
     registry: "ghcr.io"

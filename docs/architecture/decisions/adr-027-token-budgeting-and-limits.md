@@ -34,8 +34,8 @@ We are migrating to AI SDK v6 and must enforce safe token budgets across provide
 
 ## Implementation
 
-- `frontend/src/lib/tokens/limits.ts`: model limit table and helper.
-- `frontend/src/lib/tokens/budget.ts`: `countTokens`, `clampMaxTokens` utilities.
+- `src/lib/tokens/limits.ts`: model limit table and helper.
+- `src/lib/tokens/budget.ts`: `countTokens`, `clampMaxTokens` utilities.
 - AI route uses `clampMaxTokens` to set `maxOutputTokens`.
 - Vitest covers counting and clamping edge cases.
 

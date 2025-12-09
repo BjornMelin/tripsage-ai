@@ -18,7 +18,7 @@ We are migrating to AI SDK v6 providers and removing Python-based provider wrapp
 
 ## Decision
 
-- Implement `frontend/src/ai/models/registry.ts` with `resolveProvider(userId, modelHint?)`.
+- Implement `src/ai/models/registry.ts` with `resolveProvider(userId, modelHint?)`.
 - Use provider factories with BYOK:
   - OpenAI: `createOpenAI({ apiKey })`
   - OpenRouter: `createOpenAI({ apiKey, baseURL: 'https://openrouter.ai/api/v1' })`
@@ -47,5 +47,5 @@ We are migrating to AI SDK v6 providers and removing Python-based provider wrapp
 
 ## Testing Status
 
-- Vitest unit tests cover provider precedence and OpenRouter resolution without attribution headers in `frontend/src/lib/providers/__tests__/registry.test.ts`.
+- Vitest unit tests cover provider precedence and OpenRouter resolution without attribution headers in `src/lib/providers/__tests__/registry.test.ts`.
 - Chat streaming adds `provider` to message metadata for observability and debugging.

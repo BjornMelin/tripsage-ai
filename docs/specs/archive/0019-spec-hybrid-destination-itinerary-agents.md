@@ -6,7 +6,7 @@
 
 ## Scope
 
-Deliver feature parity for destination research and itinerary planning directly in `frontend/` using AI SDK v6 ToolLoopAgent workflows with deterministic guardrails, Supabase auth, BYOK provider registry, and Upstash caching. This spec covers:
+Deliver feature parity for destination research and itinerary planning using AI SDK v6 ToolLoopAgent workflows with deterministic guardrails, Supabase auth, BYOK provider registry, and Upstash caching. This spec covers:
 
 - Two streaming Route Handlers in Next.js (`/api/agents/destinations`, `/api/agents/itineraries`).
 - TypeScript tool orchestrators, schemas, prompts, and summarizers.
@@ -49,7 +49,7 @@ flowchart TD
 
 ### 1. Schemas, Prompts, and Shared Types
 
-- **Files**: `frontend/src/schemas/agents.ts`, `frontend/src/prompts/{destination,itinerary}.ts`.
+- **Files**: `src/domain/schemas/agents.ts`, `src/prompts/agents.ts`.
 - **Requirements**:
   - Define `DestinationResearchRequest`, `DestinationResearchResult`, `ItineraryPlanRequest`, `ItineraryPlanResult` (Zod + TypeScript types). Include `schemaVersion` and `sources[]` metadata.
   - Export prompt builders that accept user context (preferences, travel dates) and output instructions for ToolLoopAgent.
@@ -57,7 +57,7 @@ flowchart TD
 
 ### 2. Provider & Infra Enhancements
 
-- **Files**: `frontend/src/ai/models/registry.ts`, `frontend/src/lib/cache/upstash.ts`, `frontend/src/lib/ratelimit/{destinations,itineraries}.ts`.
+- **Files**: `src/ai/models/registry.ts`, `src/lib/cache/upstash.ts`, `src/lib/ratelimit/{destinations,itineraries}.ts`.
 - **Requirements**:
   - Add fallback to Vercel AI Gateway when BYOK keys missing; attach metadata describing provider used.
   - Implement Upstash helper functions `withCache(key, ttl, fn)` and `takeToken(bucket, limit)`.
@@ -65,7 +65,7 @@ flowchart TD
 
 ### 3. Tool Registry & Orchestrators
 
-- **Files**: `frontend/src/lib/tools/index.ts`, `frontend/src/lib/tools/research-destination.ts`, `frontend/src/lib/tools/generate-itinerary.ts` (new), plus updates to existing tool modules.
+- **Files**: `src/ai/tools/index.ts`, `src/ai/tools/research-destination.ts`, `src/ai/tools/generate-itinerary.ts` (new), plus updates to existing tool modules.
 - **Requirements**:
   - Compose high-level tools that call existing primitives (web search, crawl, planning) and return structured payloads defined in schemas.
   - Register new tools in `toolRegistry` with unique names (`researchDestination`, `generateItineraryPlan`).
@@ -73,7 +73,7 @@ flowchart TD
 
 ### 4. Route Handlers & Agents
 
-- **Files**: `frontend/src/app/api/agents/destinations/route.ts`, `frontend/src/app/api/agents/itineraries/route.ts`, `frontend/src/lib/agents/{destination,itinerary}-agent.ts`, `frontend/src/lib/agents/middleware.ts`, `frontend/src/lib/agents/summarizers.ts`.
+- **Files**: `src/app/api/agents/destinations/route.ts`, `src/app/api/agents/itineraries/route.ts`, `src/ai/agents/{destination,itinerary}-agent.ts`, `src/ai/agents/middleware.ts`, `src/ai/agents/summarizers.ts`.
 - **Requirements**:
   - Each route imports Supabase auth helper to resolve user ID, then obtains provider via `resolveProvider` (with optional `modelHint` query param).
   - Instantiate `ToolLoopAgent` (AI SDK v6) with:
@@ -86,7 +86,7 @@ flowchart TD
 
 ### 5. UI/UX Enhancements
 
-- **Files**: `frontend/src/app/chat/page.tsx`, `frontend/src/components/ai-elements/{destination-card,itinerary-timeline}.tsx`, optional `frontend/src/components/ai-elements/progress.tsx`.
+- **Files**: `src/app/chat/page.tsx`, `src/components/ai-elements/{destination-card,itinerary-timeline}.tsx`, optional `src/components/ai-elements/progress.tsx`.
 - **Requirements**:
   - Add PromptInput Action Menu entries to trigger research/itinerary flows (pre-seeding JSON payloads or referencing new API endpoints).
   - Render destination results using cards (title, climate, top attractions, sources) and show AI Elements `Sources` drawer for links.
@@ -95,7 +95,7 @@ flowchart TD
 
 ### 6. Telemetry, Testing, Rollout
 
-- **Telemetry Files**: `frontend/src/lib/telemetry/agents.ts`, instrumentation hooks in middleware.
+- **Telemetry Files**: `src/lib/telemetry/agents.ts`, instrumentation hooks in middleware.
 - **Testing**: Vitest (agents, tools, components), Playwright (chat flows), integration tests hitting new route handlers with mocked AI client.
 - Rollout: complete cutover with frontend-only agents (no flags). Telemetry monitors success and latency; rollback is by reverting the deploy.
 

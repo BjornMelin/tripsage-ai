@@ -24,7 +24,7 @@
 
 ### P0 - Framework Hardening (Completed)
 
-- **Schemas & Prompts**: Extend `frontend/src/schemas/agents.ts` with shared types for flights, accommodations, budgets, memories, and routing metadata. Update prompt builders to accept user/account context.
+- **Schemas & Prompts**: Extend `src/schemas/agents.ts` with shared types for flights, accommodations, budgets, memories, and routing metadata. Update prompt builders to accept user/account context.
 - **Guardrail Middleware**: Generalize middleware to support tool budgets per workflow, caching policies, and telemetry hooks.
 - (Removed) Feature flags: We are performing a complete cutover; routes are always enabled. Rollback is via deployment rollback, not flags.
 - **Deliverables**: Unit tests covering middleware, integration tests for caching + rate limits.
@@ -50,8 +50,8 @@
 
 ### P4 - Provider Expansion & Enhancements
 
-- **OpenTripMap Tool**: `frontend/src/lib/tools/opentripmap.ts` calling `/places` endpoints with caching (per provider TOS allowing caching). Uses Google Maps Geocoding API for destination-based lookups with result caching.
-- **GeoSure/Travel Advisory Tool**: `frontend/src/lib/tools/travel-advisory.ts` retrieving safety scores (fallback to GeoSure API or successor).
+- **OpenTripMap Tool**: `src/lib/tools/opentripmap.ts` calling `/places` endpoints with caching (per provider TOS allowing caching). Uses Google Maps Geocoding API for destination-based lookups with result caching.
+- **GeoSure/Travel Advisory Tool**: `src/lib/tools/travel-advisory.ts` retrieving safety scores (fallback to GeoSure API or successor).
 - **Integration**: Destination, itinerary, and budget agents consume these tools for improved recommendations; UI displays safety badges.
 
 ## Technical Requirements
@@ -66,7 +66,7 @@
 ## Non-Goals
 
 - Rewriting existing travel data services (flight/accommodation search) beyond wiring them into ToolLoop.
-- Building new backend APIs; all work stays within `frontend/` except for provider calls.
+- Building new backend APIs except for provider calls.
 
 ## Success Criteria
 

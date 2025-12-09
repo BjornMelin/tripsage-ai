@@ -11,13 +11,13 @@
 ## Interfaces
 
 ```bash
-// frontend/src/lib/tokens/limits.ts
+// src/lib/tokens/limits.ts
 export type ModelLimitsTable = Record<string, number>;
 export const MODEL_LIMITS: ModelLimitsTable;
 export const DEFAULT_CONTEXT_LIMIT: number;
 export function getModelContextLimit(modelName?: string, table?: ModelLimitsTable): number;
 
-// frontend/src/lib/tokens/budget.ts
+// src/lib/tokens/budget.ts
 export type ChatMessage = { role: 'system'|'user'|'assistant'; content: string };
 export const CHARS_PER_TOKEN_HEURISTIC = 4;
 export function countTokens(texts: string[], modelHint?: string): number;

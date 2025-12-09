@@ -10,7 +10,7 @@ This project uses versioned-tag cache keys to achieve O(1) invalidation.
 
 ## APIs
 
-Use the helper in `frontend/src/lib/cache/tags.ts`:
+Use the helper in `src/lib/cache/tags.ts`:
 
 - `getTagVersion(tag: string): Promise<number>` – read current version
 - `versionedKey(tag: string, key: string): Promise<string>` – compose a versioned key

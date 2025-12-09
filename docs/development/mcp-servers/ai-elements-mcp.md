@@ -31,7 +31,7 @@ Restart your client; verify `ai-elements` appears in the server list.
 - "List AI Elements chat components and show a code sample using PromptInput and Message."
 - "Show styling tokens and spacing guidance for AI Elements with Tailwind v4."
 
-Expected result: agent returns relevant component docs and code samples for immediate copy/paste into `frontend/src/components/ai-elements/` or pages.
+Expected result: agent returns relevant component docs and code samples for immediate copy/paste into `src/components/ai-elements/` or pages.
 
 ## Notes
 - AI Elements MCP provides documentation and examples only; it does not modify code. Use it to speed UI implementation and ensure consistency with the library’s latest guidance.

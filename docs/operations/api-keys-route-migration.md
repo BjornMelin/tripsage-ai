@@ -36,4 +36,4 @@ TripSage Platform Team
 ## Tracking
 
 - Changelog: see the [Unreleased](../../CHANGELOG.md#unreleased) section.
-- Related tests: `frontend/src/hooks/__tests__/use-api-keys.test.ts`
+- Related tests: `src/hooks/__tests__/use-api-keys.test.ts`

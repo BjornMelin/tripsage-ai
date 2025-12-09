@@ -1,6 +1,6 @@
 # TripSage API Reference (Complete)
 
-Authoritative map of all implemented Next.js route handlers in `frontend/src/app/api/**`.
+Authoritative map of all implemented Next.js route handlers in `src/app/api/**`.
 
 Base URLs
 
@@ -318,4 +318,4 @@ Endpoints under `/agents/*` and `/chat/stream` return SSE UI message streams. Us
 
 ## Maintenance
 
-This reference mirrors the current handlers in `frontend/src/app/api/**`. Update alongside route or schema changes; reuse the trip TS/Python/cURL snippets as patterns for other JSON POST/GET routes. Streaming endpoints follow the same auth and error conventions but return SSE instead of JSON bodies.
+This reference mirrors the current handlers in `src/app/api/**`. Update alongside route or schema changes; reuse the trip TS/Python/cURL snippets as patterns for other JSON POST/GET routes. Streaming endpoints follow the same auth and error conventions but return SSE instead of JSON bodies.

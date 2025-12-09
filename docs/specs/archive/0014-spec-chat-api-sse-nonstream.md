@@ -6,8 +6,8 @@
 
 ## Endpoints
 
-- POST `frontend/src/app/api/chat/route.ts` — Non-stream JSON
-- POST `frontend/src/app/api/chat/stream/route.ts` — SSE `toUIMessageStreamResponse`
+- POST `src/app/api/chat/route.ts` — Non-stream JSON
+- POST `src/app/api/chat/stream/route.ts` — SSE `toUIMessageStreamResponse`
 
 **Implementation Status:** Both endpoints are implemented. The stream endpoint integrates with memory orchestrator (`handleMemoryIntent`) for conversation persistence.
 

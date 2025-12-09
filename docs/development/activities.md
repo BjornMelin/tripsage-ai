@@ -14,7 +14,7 @@ The activities feature provides:
 
 ### Service Layer
 
-**File**: `frontend/src/domain/activities/service.ts`
+**File**: `src/domain/activities/service.ts`
 
 The `ActivitiesService` is a pure, DI-friendly orchestrator:
 
@@ -92,9 +92,9 @@ const activity = await response.json(); // Activity object
 
 ### AI SDK v6 Tools
 
-**File**: `frontend/src/ai/tools/server/activities.ts`
+**File**: `src/ai/tools/server/activities.ts`
 
-Tools are registered in `frontend/src/ai/tools/index.ts` and available to chat/agents:
+Tools are registered in `src/ai/tools/index.ts` and available to chat/agents:
 
 ```typescript
 import { searchActivities, getActivityDetails } from "@ai/tools/server/activities";
@@ -221,7 +221,7 @@ Photo names from Places API are returned as identifiers. Full URL resolution can
 
 ## React Hook
 
-**File**: `frontend/src/hooks/use-activity-search.ts`
+**File**: `src/hooks/use-activity-search.ts`
 
 ```typescript
 import { useActivitySearch } from "@/hooks/use-activity-search";
@@ -257,32 +257,32 @@ function ActivitySearchComponent() {
 
 ## Testing
 
-**Service Layer Tests**: `frontend/src/domain/activities/__tests__/service.test.ts`
+**Service Layer Tests**: `src/domain/activities/__tests__/service.test.ts`
 
 - Cache hit/miss behavior
 - Google Places integration
 - AI fallback heuristics
 - Error handling
 
-**API Route Tests**: `frontend/src/app/api/activities/__tests__/route.test.ts`
+**API Route Tests**: `src/app/api/activities/__tests__/route.test.ts`
 
 - Authentication and rate limiting
 - Request-response formats
 - Error handling
 
-**Tool Tests**: `frontend/src/ai/tools/server/__tests__/activities.test.ts`
+**Tool Tests**: `src/ai/tools/server/__tests__/activities.test.ts`
 
 - Tool execution
 - Schema validation
 - Error mapping
 
-**Hook Tests**: `frontend/src/hooks/__tests__/use-activity-search.test.tsx`
+**Hook Tests**: `src/hooks/__tests__/use-activity-search.test.tsx`
 
 - Hook behavior
 - API integration
 - State management
 
-**MSW Handlers**: `frontend/src/test/msw/handlers/google-places.ts`
+**MSW Handlers**: `src/test/msw/handlers/google-places.ts`
 
 - Mock Google Places API responses
 - Activity-specific search responses
@@ -328,7 +328,7 @@ function ActivitySearchComponent() {
 
 ## Rate Limiting
 
-Rate limits are configured in `frontend/src/lib/ratelimit/routes.ts`:
+Rate limits are configured in `src/lib/ratelimit/routes.ts`:
 
 - `activities:search`: 20 requests per minute
 - `activities:details`: 30 requests per minute

@@ -10,18 +10,18 @@
 
 ## Context
 
-- OTEL dependencies are present (`@opentelemetry/api`, `@vercel/otel`), but no ADR defines frontend route tracing standards.  
-- Project rule: server code must use `withTelemetrySpan()`/`withTelemetrySpanSync()` from `@/lib/telemetry/span` (server-only) and `createServerLogger()` from `@/lib/telemetry/logger`; `console.*` is discouraged.  
+- OTEL dependencies are present (`@opentelemetry/api`, `@vercel/otel`), but no ADR defines route tracing standards.
+- Project rule: server code must use `withTelemetrySpan()`/`withTelemetrySpanSync()` from `@/lib/telemetry/span` (server-only) and `createServerLogger()` from `@/lib/telemetry/logger`; `console.*` is discouraged.
 - We need consistent span attributes for AI SDK routes, Supabase SSR, and Upstash/QStash calls.
 - Client components use `@/lib/telemetry/client` for client-side OTEL Web initialization and no-op helpers that match the server API surface.
 
 ## Decision
 
 - All Next.js route handlers and server utilities must wrap business logic in `withTelemetrySpan` (`withTelemetrySpanSync` for sync).  
-- Standard span attributes: `svc: "frontend"`, `route`, `operation`, `provider`, `model`, `tool`, `user_tier`, `cache_hit`, `ratelimit_bucket`.  
-- Emit structured logs via `createServerLogger()` within spans; prohibit bare `console.*` outside client components/tests.  
-- Instrument external calls (Supabase, Upstash, QStash, AI Gateway) using OTEL context propagation; attach `traceparent` when supported.  
-- Sampling: default parent-based; allow per-route overrides for high-traffic endpoints (`ai.stream`, `chat.stream`) via config file in `frontend/src/lib/telemetry/config.ts`.
+- Standard span attributes: `svc: "frontend"`, `route`, `operation`, `provider`, `model`, `tool`, `user_tier`, `cache_hit`, `ratelimit_bucket`.
+- Emit structured logs via `createServerLogger()` within spans; prohibit bare `console.*` outside client components/tests.
+- Instrument external calls (Supabase, Upstash, QStash, AI Gateway) using OTEL context propagation; attach `traceparent` when supported.
+- Sampling: default parent-based; allow per-route overrides for high-traffic endpoints (`ai.stream`, `chat.stream`) via config file in `src/lib/telemetry/config.ts`.
 
 ## Consequences
 

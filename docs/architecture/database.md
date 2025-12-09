@@ -200,7 +200,7 @@ Webhook handlers use HMAC signature verification (`X-Signature-HMAC` header) wit
 
 - Single-source schema lives in `supabase/schema.sql` (plus migrations); supports bootstrapping a new project in one apply.
 - Prefer Supabase migrations for changes; keep table and function inventory aligned with above domains.
-- Regenerate TypeScript types after schema updates: `supabase gen types typescript --local > frontend/src/lib/supabase/database.types.ts`.
+- Regenerate TypeScript types after schema updates: `supabase gen types typescript --local > src/lib/supabase/database.types.ts`.
 
 ## Function / RPC Inventory (keep)
 
