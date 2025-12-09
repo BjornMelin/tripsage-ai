@@ -21,7 +21,7 @@ Task-focused guide for Supabase operations. For schema/design context, see `../.
 1. Create project in dashboard; capture `project-ref` and DB URL.
 2. Link repo: `supabase link --project-ref <project-ref>`
 3. Push schema + seed: `supabase db push --include-seed`
-4. Generate types after changes: `supabase gen types typescript --local > frontend/src/lib/supabase/database.types.ts`
+4. Generate types after changes: `supabase gen types typescript --local > src/lib/supabase/database.types.ts`
 
 ### Required Environment Variables
 

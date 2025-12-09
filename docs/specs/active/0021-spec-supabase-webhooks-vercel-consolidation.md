@@ -80,7 +80,7 @@ Decommission Supabase Edge Functions and related CLI deploy steps after dual-run
   - Validate signature via the shared HMAC helper.
   - Determine cache tags for the table (e.g., `trip`, `search`) and bump their version
     counters in Upstash Redis via `bumpTags(tags)`; consumers compose cache keys as
-    `tag:v{version}:{key}` using `frontend/src/lib/cache/tags.ts`.
+    `tag:v{version}:{key}` using `src/lib/cache/tags.ts`.
   - Return the bumped versions for observability; no Redis key deletion or downstream
     webhook forwarding occurs in the final implementation.
 

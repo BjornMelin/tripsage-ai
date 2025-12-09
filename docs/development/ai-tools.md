@@ -304,7 +304,7 @@ export const myTool = createAiTool({
 
 ## Testing Tools
 
-Tools should be tested through AI SDK patterns. See `frontend/src/ai/lib/tool-factory.test.ts` for examples:
+Tools should be tested through AI SDK patterns. See `src/ai/lib/tool-factory.test.ts` for examples:
 
 ```typescript
 import type { ToolCallOptions } from "ai";
@@ -330,7 +330,7 @@ test("tool caches results", async () => {
 
 ## Tool Catalog
 
-All tools are exported from `frontend/src/ai/tools/index.ts`. The `toolRegistry` object provides typed access for agents. All sources below are located under `frontend/src/ai/tools/`.
+All tools are exported from `src/ai/tools/index.ts`. The `toolRegistry` object provides typed access for agents. All sources below are located under `src/ai/tools/`.
 
 ### Search & Discovery
 
@@ -488,7 +488,7 @@ See [Activities Developer Guide](activities.md) for a complete implementation ex
 
 ## Source Files
 
-- Tool Factory: `frontend/src/ai/lib/tool-factory.ts`
-- Tool Registry: `frontend/src/ai/tools/index.ts`
-- Error Codes: `frontend/src/ai/tools/server/errors.ts`
+- Tool Factory: `src/ai/lib/tool-factory.ts`
+- Tool Registry: `src/ai/tools/index.ts`
+- Error Codes: `src/ai/tools/server/errors.ts`
 - AI SDK v6 Documentation: <https://sdk.vercel.ai/docs>

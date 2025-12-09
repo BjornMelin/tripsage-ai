@@ -54,13 +54,13 @@ through centralized PII filters plus OpenTelemetry spans.
     `probes≈20`; document when chosen.
 - **Query functions:** `match_accommodation_embeddings` sets `hnsw.ef_search` from `PGVECTOR_HNSW_EF_SEARCH_DEFAULT` at runtime and accepts an optional `ef_search_override` for per-call tuning; operators can observe recall/latency with EXPLAIN ANALYZE and `pg_stat_user_indexes`.
 - **Retention:** `memories.turn_embeddings` cleaned up at **${MEMORIES_RETENTION_DAYS:-180} days** via pg_cron; align embeddings and session records to the same window. Rationale: matches product UX (recent travel context) and privacy expectations; configurable via `MEMORIES_RETENTION_DAYS` for regulatory changes. Deploy the cron job in migrations; monitor via Postgres logs; ship Datadog alerts in issue #520.
-- **Session semantics:** reuse the most recent "Travel Plan" chat/memory session **per user** when the planner tool is invoked to reduce fragmentation and improve retrieval accuracy. Session-level locking for concurrent invocations now guards session creation (Redis lock in `frontend/src/ai/tools/server/planning.ts`). Users can start a fresh session by clearing memory or opening a new chat thread.
+- **Session semantics:** reuse the most recent "Travel Plan" chat/memory session **per user** when the planner tool is invoked to reduce fragmentation and improve retrieval accuracy. Session-level locking for concurrent invocations now guards session creation (Redis lock in `src/ai/tools/server/planning.ts`). Users can start a fresh session by clearing memory or opening a new chat thread.
 
 ### Implementation status & follow-ups (tracked)
 
 - **Config surface** — Parameterize pgvector/HNSW + retention defaults in migrations (issue [#517](https://github.com/BjornMelin/tripsage-ai/issues/517), owner @BjornMelin, due 2025-12-22).
 - **`ef_search_override`** — Wire optional override through `match_accommodation_embeddings` and adapters (issue [#518](https://github.com/BjornMelin/tripsage-ai/issues/518), owner @BjornMelin, due 2025-12-22).
-- **Session-level locking** — Implemented via Redis token lock `planner:session-lock:${userId}`.
+- **Session-level locking** — Implemented via Redis token lock in `src/ai/tools/server/planning.ts`.
 - **Monitoring** — Ship alerts for retention cron + HNSW maintenance jobs (issue [#520](https://github.com/BjornMelin/tripsage-ai/issues/520), owner @BjornMelin, due 2025-12-22).
 
 ## Consequences

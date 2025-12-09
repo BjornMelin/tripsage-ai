@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_No unreleased changes yet._
+### Breaking Changes
+
+- **Repository Structure Flattened** (ADR-0055): All frontend code moved from `frontend/` to repository root
+  - Source code: `frontend/src/` → `src/`
+  - Config files (package.json, tsconfig.json, etc.) moved to root
+  - Commands now run from repository root: `pnpm install`, `pnpm dev`, `pnpm test:run`
+  - Developers must delete old `frontend/node_modules` and run `pnpm install` at root
 
 ## [1.1.0] - 2025-11-25
 

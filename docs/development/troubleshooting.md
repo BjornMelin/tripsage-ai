@@ -22,17 +22,17 @@ TripSage uses minimal CI/CD with GitHub Actions for quality gates:
 
 ```bash
 # TypeScript checks
-cd frontend && pnpm biome:check    # Lint and auto-fix
-cd frontend && pnpm biome:fix      # Format code
-cd frontend && pnpm type-check     # Type checking
-cd frontend && pnpm test           # Run tests
+pnpm biome:check    # Lint and auto-fix
+pnpm biome:fix      # Format code
+pnpm type-check     # Type checking
+pnpm test           # Run tests
 ```
 
 ### Path-Based Execution
 
 CI jobs run only when relevant files change:
 
-- Frontend: `frontend/**`
+- Frontend: `src/**`, `package.json`, `tsconfig.json`, etc.
 - Config: `.github/workflows/**`
 
 ## Branch Workflow
@@ -139,15 +139,15 @@ console.log('Auth state:', state);
 **Run Specific Tests:**
 
 ```bash
-# Frontend: Run specific test
-cd frontend && pnpm test TripCard.test.tsx
+# Run specific test
+pnpm test TripCard.test.tsx
 ```
 
 **Debug Test Failures:**
 
 ```bash
-# Frontend: Run with watch mode
-cd frontend && pnpm test --watch
+# Run with watch mode
+pnpm test --watch
 ```
 
 ## Performance Optimization
@@ -276,7 +276,6 @@ LIMIT 10;
 
 ```bash
 # Clear cache and reinstall
-cd frontend
 rm -rf node_modules pnpm-lock.yaml
 pnpm install
 ```
@@ -287,7 +286,7 @@ pnpm install
 
 ```bash
 # Clear TypeScript cache
-cd frontend && rm -rf .next
+rm -rf .next
 pnpm build  # Rebuild to check types
 ```
 

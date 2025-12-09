@@ -40,8 +40,8 @@ We will implement a complete search filter system using shadcn/ui components wit
 
 ### 1. Prerequisites
 
-- `shadcn/ui` is already installed and configured in the `frontend/` app (see `docs/development/ui.md`).
-- Run all shadcn commands from the `frontend/` directory so the generator picks up the Next.js workspace config.
+- `shadcn/ui` is already installed and configured (see `docs/development/ui.md`).
+- Run all shadcn commands from the repository root so the generator picks up the Next.js workspace config.
 - **Versioning strategy**: We intentionally use `@latest` for shadcn component additions to track upstream bug fixes and improvements. Versions are pinned in `pnpm-lock.yaml` for reproducibility across environments; CI/CD and local dev will have identical locked versions. If a breaking change occurs in a shadcn release, replace `@latest` with a specific vetted version in `package.json` (e.g., `shadcn-ui@0.8.1`) and document the constraint in this ADR with the breaking change details. Team members should review shadcn changelog entries during routine `pnpm update` cycles and flag any known issues (search `github.com/shadcn-ui/ui/releases` for accordion/toggle-group breaking changes before upgrade).
 
 ### 2. Restore Valuable Store Methods
@@ -87,7 +87,7 @@ FilterPanel (Card)
 ### 5. File Structure
 
 ```text
-frontend/src/components/features/search/
+src/components/features/search/
 ├── cards/                        # Card components
 │   ├── accommodation-card.tsx
 │   ├── activity-card.tsx
@@ -134,14 +134,14 @@ frontend/src/components/features/search/
 ### 5.1 Testing Strategy
 
 - **Frameworks**: Vitest + React Testing Library for component behavior; MSW for network interactions in results lists; snapshot tests only for low-change presentational pieces (skeletons, badges).
-- **Placement**: colocate tests under `filters/__tests__/`, `forms/__tests__/`, and `results/__tests__/` as shown in the structure; shared factories live in `frontend/src/test/factories`.
+- **Placement**: colocate tests under `filters/__tests__/`, `forms/__tests__/`, and `results/__tests__/` as shown in the structure; shared factories live in `src/test/factories`.
 - **Coverage**: target ≥85% line/branch coverage for filter panel logic, store adapters, and URL serialization helpers; critical paths (apply/clear filters, deep-linking hydration, preset save/load) must be exercised.
-- **Fixtures/mocks**: mock filter payloads and search params in `frontend/src/test/fixtures/search-filters.ts`; use MSW handlers for API payload builders in `filters/api-payload.ts`.
+- **Fixtures/mocks**: mock filter payloads and search params in `src/test/fixtures/search-filters.ts`; use MSW handlers for API payload builders in `filters/api-payload.ts`.
 
 **Example test file structure:**
 
 ```typescript
-// frontend/src/components/features/search/filters/__tests__/filter-panel.test.tsx
+// src/components/features/search/filters/__tests__/filter-panel.test.tsx
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FilterPanel } from '../filter-panel';
@@ -276,7 +276,7 @@ Update `flights/page.tsx` sidebar:
 
 ### Negative
 
-- **Additional bundle size** - Estimated +5KB for Accordion/Toggle Group (shadcn) — validate with `next build --analyze` after implementation
+- **Additional bundle size** - Estimated +5KB for Accordion/Toggle Group (shadcn) — validate with `pnpm build:analyze` after implementation
 - **Implementation effort** - Estimated ~590 LOC across six primary files (filter-panel.tsx, filter-presets.tsx, filter-range.tsx, filter-toggle-options.tsx, filter-checkbox-group.tsx, search-filters-store.ts); excludes existing shared components listed in File Structure (cards/forms/modals/results) which remain mostly untouched.
 - **Store complexity** - ~50 new lines from restored methods
 
@@ -323,6 +323,6 @@ Update `flights/page.tsx` sidebar:
 - [shadcn/ui Slider](https://ui.shadcn.com/docs/components/slider)
 - [Zustand Slices Pattern](https://docs.pmnd.rs/zustand/guides/slices-pattern)
 - [Radix UI Primitives](https://www.radix-ui.com/primitives)
-- Existing: `frontend/src/stores/search-filters-store.ts`
-- Existing: `frontend/src/components/features/search/filters/filter-presets.tsx`
-- Existing: `frontend/src/components/features/search/filters/filter-panel.tsx`
+- Existing: `src/stores/search-filters-store.ts`
+- Existing: `src/components/features/search/filters/filter-presets.tsx`
+- Existing: `src/components/features/search/filters/filter-panel.tsx`

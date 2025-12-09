@@ -117,7 +117,7 @@ Checklist:
 
 ### 2.2 Confirm Google Places configuration
 
-The project already uses Google Places via routes under `frontend/src/app/api/places/*`.
+The project already uses Google Places via routes under `src/app/api/places/*`.
 
 Ensure:
 
@@ -141,36 +141,36 @@ Checklist:
 
 ### 3.1 New files
 
-- `frontend/src/domain/amadeus/`
+- `src/domain/amadeus/`
 
   - `client.ts` – thin wrapper around `amadeus` Node SDK.
   - `schemas.ts` – Zod schemas for Amadeus hotel list/offers/booking responses.
   - `mappers.ts` – mapping from Amadeus entities → `Accommodation*` schemas.
 
-- `frontend/src/domain/accommodations/providers/amadeus-adapter.ts`
+- `src/domain/accommodations/providers/amadeus-adapter.ts`
 
   - Implements `AccommodationProviderAdapter` using Amadeus client + mapping.
 
 ### 3.2 Modified files
 
-- `frontend/src/domain/accommodations/container.ts`
-- `frontend/src/domain/accommodations/service.ts`
-- `frontend/src/domain/accommodations/booking-orchestrator.ts`
-- `frontend/src/domain/accommodations/providers/types.ts`
-- `frontend/src/domain/schemas/accommodations.ts`
-- `frontend/src/ai/tools/server/accommodations.ts`
-- `frontend/src/lib/agents/accommodation-agent.ts`
-- `frontend/src/components/features/search/cards/accommodation-card.tsx`
-- `frontend/src/components/features/search/results/hotel-results.tsx`
-- `frontend/src/app/(dashboard)/trips/[tripId]/stay/page.tsx`
-- `frontend/src/app/(marketing)/stays/page.tsx`
+- `src/domain/accommodations/container.ts`
+- `src/domain/accommodations/service.ts`
+- `src/domain/accommodations/booking-orchestrator.ts`
+- `src/domain/accommodations/providers/types.ts`
+- `src/domain/schemas/accommodations.ts`
+- `src/ai/tools/server/accommodations.ts`
+- `src/lib/agents/accommodation-agent.ts`
+- `src/components/features/search/cards/accommodation-card.tsx`
+- `src/components/features/search/results/hotel-results.tsx`
+- `src/app/(dashboard)/trips/[tripId]/stay/page.tsx`
+- `src/app/(marketing)/stays/page.tsx`
 
 ### 3.3 Removed files
 
 After migration is fully complete and tests pass, remove:
 
-- `frontend/src/domain/expedia/*`
-- `frontend/src/domain/schemas/expedia.ts`
+- `src/domain/expedia/*`
+- `src/domain/schemas/expedia.ts`
 - Any Expedia-specific environment variables from `.env.example` and runtime use.
 
 ---
@@ -179,7 +179,7 @@ After migration is fully complete and tests pass, remove:
 
 ### 4.1 Amadeus client
 
-File: `frontend/src/domain/amadeus/client.ts`
+File: `src/domain/amadeus/client.ts`
 
 Responsibilities:
 
@@ -193,7 +193,7 @@ Responsibilities:
 
 Implementation notes for AI agent:
 
-- [x] Add `amadeus` to `frontend/package.json` dependencies.
+- [x] Add `amadeus` to `package.json` dependencies.
 
 - [x] Create a singleton Amadeus client using env vars:
 
@@ -235,7 +235,7 @@ Implementation notes for AI agent:
 
 ### 4.2 Amadeus schemas
 
-File: `frontend/src/domain/amadeus/schemas.ts`
+File: `src/domain/amadeus/schemas.ts`
 
 Responsibilities:
 
@@ -254,11 +254,11 @@ Tasks:
 
 ### 4.3 Mapping to existing accommodation schemas
 
-File: `frontend/src/domain/amadeus/mappers.ts`
+File: `src/domain/amadeus/mappers.ts`
 
 Responsibilities:
 
-- Map `AmadeusHotel` + `AmadeusHotelOffer` → existing `Accommodation` schema in `frontend/src/domain/schemas/search.ts`.
+- Map `AmadeusHotel` + `AmadeusHotelOffer` → existing `Accommodation` schema in `src/domain/schemas/search.ts`.
 
 Considerations:
 
@@ -282,7 +282,7 @@ Tasks:
 
 ## 5. Accommodations Service Changes
 
-File: `frontend/src/domain/accommodations/service.ts`
+File: `src/domain/accommodations/service.ts`
 
 ### 5.1 Generalize from Expedia-specific types
 
@@ -349,11 +349,11 @@ Tasks:
 
 ## 6. Provider Adapter: Amadeus
 
-File: `frontend/src/domain/accommodations/providers/amadeus-adapter.ts`
+File: `src/domain/accommodations/providers/amadeus-adapter.ts`
 
 ### 6.1 Interface
 
-File: `frontend/src/domain/accommodations/providers/types.ts`
+File: `src/domain/accommodations/providers/types.ts`
 
 Tasks:
 
@@ -418,7 +418,7 @@ Tasks:
 
 ## 7. Booking Orchestrator Adjustments
 
-File: `frontend/src/domain/accommodations/booking-orchestrator.ts`
+File: `src/domain/accommodations/booking-orchestrator.ts`
 
 Current state:
 
@@ -472,7 +472,7 @@ Tasks:
 
 ### 8.1 Tools
 
-File: `frontend/src/ai/tools/server/accommodations.ts`
+File: `src/ai/tools/server/accommodations.ts`
 
 Tasks:
 
@@ -488,7 +488,7 @@ Tasks:
 
 ### 8.2 Agent
 
-File: `frontend/src/lib/agents/accommodation-agent.ts`
+File: `src/lib/agents/accommodation-agent.ts`
 
 Tasks:
 
@@ -514,10 +514,10 @@ components.([shadcn/ui](https://ui.shadcn.com))
 
 Files:
 
-- `frontend/src/components/features/search/cards/accommodation-card.tsx`
-- `frontend/src/components/features/search/results/hotel-results.tsx`
-- `frontend/src/app/(dashboard)/trips/[tripId]/stay/page.tsx`
-- `frontend/src/app/(marketing)/stays/page.tsx`
+- `src/components/features/search/cards/accommodation-card.tsx`
+- `src/components/features/search/results/hotel-results.tsx`
+- `src/app/(dashboard)/trips/[tripId]/stay/page.tsx`
+- `src/app/(marketing)/stays/page.tsx`
 
 Tasks:
 
@@ -555,11 +555,11 @@ Guidelines:
 
 Add/Update:
 
-- `frontend/src/domain/amadeus/__tests__/client.test.ts`
-- `frontend/src/domain/amadeus/__tests__/mappers.test.ts`
-- `frontend/src/domain/accommodations/__tests__/service-amadeus.test.ts`
-- `frontend/src/domain/accommodations/__tests__/booking-orchestrator.test.ts`
-- `frontend/src/ai/tools/server/__tests__/accommodations-tools.test.ts`
+- `src/domain/amadeus/__tests__/client.test.ts`
+- `src/domain/amadeus/__tests__/mappers.test.ts`
+- `src/domain/accommodations/__tests__/service-amadeus.test.ts`
+- `src/domain/accommodations/__tests__/booking-orchestrator.test.ts`
+- `src/ai/tools/server/__tests__/accommodations-tools.test.ts`
 
 Scope:
 
@@ -598,9 +598,9 @@ Using Vitest + MSW:
 ### Phase 1 – Setup & Skeleton
 
 - [x] Add Amadeus env vars and `amadeus` dependency.
-- [x] Create `frontend/src/domain/amadeus/client.ts`.
-- [x] Create `frontend/src/domain/amadeus/schemas.ts`.
-- [x] Create `frontend/src/domain/amadeus/mappers.ts`.
+- [x] Create `src/domain/amadeus/client.ts`.
+- [x] Create `src/domain/amadeus/schemas.ts`.
+- [x] Create `src/domain/amadeus/mappers.ts`.
 
 ### Phase 2 – Provider Adapter & Container
 

@@ -1,5 +1,9 @@
 # Flatten Next.js App Structure - Functional & Technical Spec
 
+**Status**: IMPLEMENTED (2025-12-08)
+
+**Note**: This spec was successfully implemented. The historical path references (`frontend/`) throughout this document are preserved as-is to document the migration context. Current code uses root paths (`src/`, `package.json`, etc.) as described in the target state.
+
 ## 1. Summary
 
 Flatten the project structure by moving the Next.js application out of the `frontend/` subdirectory to the repository root. This change consolidates all application code, configuration, and dependencies into a single unified project. The flattening will improve developer experience, with one directory to manage, reduce configuration redundancy, and align the repo with standard Next.js practices.

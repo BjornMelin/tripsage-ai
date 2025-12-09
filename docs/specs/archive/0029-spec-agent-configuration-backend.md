@@ -101,7 +101,7 @@ with a single, auditable, versioned configuration control plane.
 
 ### 6.1 Zod Schemas (existing)
 
-Source: `frontend/src/domain/schemas/configuration.ts`.:contentReference[oaicite:99]{index=99}
+Source: `src/domain/schemas/configuration.ts`.:contentReference[oaicite:99]{index=99}
 
 Key structures:
 
@@ -150,7 +150,7 @@ Key structures:
 
 ## 7. API Design & Integration Points
 
-All routes live under `frontend/src/app/api/config/agents`:
+All routes live under `src/app/api/config/agents`:
 
 ### 7.1 `GET /api/config/agents/:agentType`
 

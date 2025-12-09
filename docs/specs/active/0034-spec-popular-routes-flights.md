@@ -68,7 +68,7 @@ Client (usePopularRoutes hook)
 - Hook return type: `{ data?: PopularRoute[]; isLoading: boolean; isError: boolean; refetch: () => Promise<...> }`.
 
 ## 8. Client Integration
-- New hook `frontend/src/hooks/use-popular-routes.ts` using React Query; key `["popular-routes", origin]`; `staleTime = 5 * 60 * 1000`, `gcTime = 30 * 60 * 1000`.
+- New hook `src/hooks/use-popular-routes.ts` using React Query; key `["popular-routes", origin]`; `staleTime = 5 * 60 * 1000`, `gcTime = 30 * 60 * 1000`.
 - Update `FlightSearchPage` to:
   - call `usePopularRoutes` (origin optional from URL params or defaults),
   - render skeleton while loading,
@@ -76,7 +76,7 @@ Client (usePopularRoutes hook)
   - keep current hardcoded cards as fallback when `data` absent.
 
 ## 9. Backend Implementation Notes
-- Route handler location: `frontend/src/app/api/flights/popular-routes/route.ts`.
+- Route handler location: `src/app/api/flights/popular-routes/route.ts`.
 - Build Amadeus client per request (no module-scope state) using existing factory patterns.
 - Caching via `@/lib/cache/upstash` with request-scoped Redis client; avoid global singletons.
 - Convert Amadeus responses to DTOs; clamp/round prices to two decimals; guard against missing dates.

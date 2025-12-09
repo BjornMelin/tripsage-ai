@@ -25,7 +25,7 @@ TripSage development patterns and architecture overview. This document provides 
 ### Project Structure
 
 ```text
-frontend/src/
+src/
 ├── app/                    # Next.js App Router
 │   ├── (auth)/            # Auth route group
 │   ├── (dashboard)/       # Protected route group
@@ -201,7 +201,7 @@ See [Zod Schema Guide](zod-schema-guide.md) for schema patterns and [Standards](
 
 ```bash
 # Install and run
-cd frontend && pnpm install && pnpm dev
+pnpm install && pnpm dev
 
 # Quality gates
 pnpm biome:check && pnpm type-check && pnpm test:run

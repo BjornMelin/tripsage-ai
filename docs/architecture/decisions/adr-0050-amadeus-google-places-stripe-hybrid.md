@@ -34,46 +34,46 @@
 
 **Existing implementation:**
 
-- **Core domain:** `frontend/src/domain/accommodations/*`  
-  - **Service orchestrator and caching:**  
-    `frontend/src/domain/accommodations/service.ts`  
-  - **Provider container:**  
-    `frontend/src/domain/accommodations/container.ts` (hard-wired to `ExpediaProviderAdapter`)  
-  - **Provider adapter:**  
-    `frontend/src/domain/accommodations/providers/expedia-adapter.ts` (wrapping `@domain/expedia/client`)  
-  - **Booking orchestration with Stripe:**  
-    `frontend/src/domain/accommodations/booking-orchestrator.ts`  
+- **Core domain:** `src/domain/accommodations/*`
+  - **Service orchestrator and caching:**
+    `src/domain/accommodations/service.ts`
+  - **Provider container:**
+    `src/domain/accommodations/container.ts` (hard-wired to `ExpediaProviderAdapter`)
+  - **Provider adapter:**
+    `src/domain/accommodations/providers/expedia-adapter.ts` (wrapping `@domain/expedia/client`)
+  - **Booking orchestration with Stripe:**
+    `src/domain/accommodations/booking-orchestrator.ts`
 
 - **Expedia-specific domain & schemas:**
-  - **Rapid client, types, utils:**  
-    `frontend/src/domain/expedia/*`  
-  - **Zod schemas for Rapid:**  
-    `frontend/src/domain/schemas/expedia.ts` (imported as `@schemas/expedia`)  
+  - **Rapid client, types, utils:**
+    `src/domain/expedia/*`
+  - **Zod schemas for Rapid:**
+    `src/domain/schemas/expedia.ts` (imported as `@schemas/expedia`)
 
-- **Accommodations schemas** (provider-agnostic surface but Expedia-shaped):  
-  `frontend/src/domain/schemas/accommodations.ts` (and sometimes aliased as `@schemas/accommodations`)  
+- **Accommodations schemas** (provider-agnostic surface but Expedia-shaped):
+  `src/domain/schemas/accommodations.ts` (and sometimes aliased as `@schemas/accommodations`)  
 
 **AI tools:**
 
 - **Search, details, checkAvailability, book:**
-  `frontend/src/ai/tools/server/accommodations.ts` (search, details, checkAvailability, book; all described as “via Expedia Partner Solutions” and using `normalizePhoneForRapid`, `splitGuestName`, `extractTokenFromHref`)  
+  `src/ai/tools/server/accommodations.ts` (search, details, checkAvailability, book; all described as "via Expedia Partner Solutions" and using `normalizePhoneForRapid`, `splitGuestName`, `extractTokenFromHref`)
 
-**Agent orchestration:**  
-  `frontend/src/lib/agents/accommodation-agent.ts` (AI SDK v6 `streamText`, tools: `searchAccommodations`, `getAccommodationDetails`, `checkAvailability`, `bookAccommodation`)  
+**Agent orchestration:**
+  `src/lib/agents/accommodation-agent.ts` (AI SDK v6 `streamText`, tools: `searchAccommodations`, `getAccommodationDetails`, `checkAvailability`, `bookAccommodation`)
 
 **UI:**
 
 - **Search pages:**
-    `frontend/src/app/(dashboard)/trips/[tripId]/stay/page.tsx` and `frontend/src/app/(marketing)/stays/page.tsx` (hero, forms, but results placeholder commented out)  
+    `src/app/(dashboard)/trips/[tripId]/stay/page.tsx` and `src/app/(marketing)/stays/page.tsx` (hero, forms, but results placeholder commented out)
 - **Cards and lists:**
-    `frontend/src/components/features/search/cards/accommodation-card.tsx` and related hotel UI.  
+    `src/components/features/search/cards/accommodation-card.tsx` and related hotel UI.
 
 **Infrastructure:**
 
-- **Upstash Redis client / caching:** `frontend/src/lib/redis.ts`, `frontend/src/lib/cache/upstash.ts`  
-- **Upstash Ratelimit:** `@upstash/ratelimit` used in `accommodations/container.ts` and AI tools.  
-- **Supabase booking persistence:** in `runBookingOrchestrator` via `bookings` table.  
-- **Stripe payment orchestration:** `frontend/src/lib/payments/booking-payment.ts` (called from `bookAccommodation`).  
+- **Upstash Redis client / caching:** `src/lib/redis.ts`, `src/lib/cache/upstash.ts`
+- **Upstash Ratelimit:** `@upstash/ratelimit` used in `accommodations/container.ts` and AI tools.
+- **Supabase booking persistence:** in `runBookingOrchestrator` via `bookings` table.
+- **Stripe payment orchestration:** `src/lib/payments/booking-payment.ts` (called from `bookAccommodation`).  
 
 **Problems with Expedia Rapid:**
 
@@ -158,16 +158,16 @@
   - Stripe PaymentIntents for charge/authorization, as already used in `booking-payment.ts`.:contentReference[oaicite:29]{index=29}  
 
 - Maintain the existing public surface:
-  - AI tools in `frontend/src/ai/tools/server/accommodations.ts`.
-  - Schemas in `frontend/src/domain/schemas/accommodations.ts`.
-  - Agent API in `frontend/src/lib/agents/accommodation-agent.ts`.
+  - AI tools in `src/ai/tools/server/accommodations.ts`.
+  - Schemas in `src/domain/schemas/accommodations.ts`.
+  - Agent API in `src/lib/agents/accommodation-agent.ts`.
 
 - Adapt the domain so that:
-  - `AccommodationsService` talks to a new `AmadeusProviderAdapter` implementing `AccommodationProviderAdapter`.  
-  - Booking orchestration (`runBookingOrchestrator`) is generalized to provider-agnostic result payloads; Expedia-specific fields move into the adapter layer.  
+  - `AccommodationsService` talks to a new `AmadeusProviderAdapter` implementing `AccommodationProviderAdapter`.
+  - Booking orchestration (`runBookingOrchestrator`) is generalized to provider-agnostic result payloads; Expedia-specific fields move into the adapter layer.
 
 - Remove all runtime dependencies on:
-  - `frontend/src/domain/expedia/*`
+  - `src/domain/expedia/*`
   - `@schemas/expedia`
   - Any `Expedia*` env vars.
 

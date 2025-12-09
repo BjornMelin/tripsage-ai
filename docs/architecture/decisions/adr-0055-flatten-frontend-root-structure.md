@@ -1,8 +1,8 @@
 # ADR-0055: Flatten Next.js App Structure to Repository Root
 
-**Version:** 1.0.0  
-**Status:** Proposed  
-**Date:** 2025-11-26  
+**Version:** 1.0.0
+**Status:** Accepted
+**Date:** 2025-12-08  
 **Category:** Architecture  
 **Domain:** Frontend  
 **Related ADRs:** ADR-0013 (Next.js 16 Proxy Adoption)【46†L31-L39】, ADR-0016 (Tailwind CSS v4 Config)【46†L33-L36】  

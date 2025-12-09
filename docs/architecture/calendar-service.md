@@ -20,7 +20,7 @@ secrets.
 
 ## Components
 
-### Schemas (`frontend/src/domain/schemas/`)
+### Schemas (`src/domain/schemas/`)
 
 - **`calendar.ts`**: Zod v4 schemas aligned with Google Calendar API
   - Event models: `CalendarEvent`, `CreateEventRequest`, `UpdateEventRequest`
@@ -30,7 +30,7 @@ secrets.
   - `DateRange`, `TimeRange`, `DateTimeRange`, `Duration`
   - `RecurrenceRule`, `BusinessHours`, `Availability`
 
-### Server Utilities (`frontend/src/lib/calendar/`)
+### Server Utilities (`src/lib/calendar/`)
 
 - **`auth.ts`**: OAuth token retrieval from Supabase session
   - `getGoogleProviderToken()`: Retrieves Google provider token from session
@@ -43,7 +43,7 @@ secrets.
   - `tripToCalendarEvents()`: Converts trip destinations/activities to calendar events
   - `exportTripToICS()`: Exports trip as ICS file
 
-### API Routes (`frontend/src/app/api/calendar/`)
+### API Routes (`src/app/api/calendar/`)
 
 All routes are server-only with `dynamic = "force-dynamic"`:
 
@@ -66,15 +66,15 @@ All routes are server-only with `dynamic = "force-dynamic"`:
   - Generate ICS file from events payload
   - Rate limit: 30 req/min
 
-### AI SDK Tools (`frontend/src/ai/tools/server/calendar.ts`)
+### AI SDK Tools (`src/ai/tools/server/calendar.ts`)
 
 - **`createCalendarEvent`**: Create events in user's Google Calendar
 - **`getAvailability`**: Check calendar availability (free/busy)
 - **`exportItineraryToICS`**: Export events to ICS format
 
-Tools are automatically available in chat via `toolRegistry` in `frontend/src/ai/tools/index.ts`.
+Tools are automatically available in chat via `toolRegistry` in `src/ai/tools/index.ts`.
 
-### UI Components (`frontend/src/components/calendar/`)
+### UI Components (`src/components/calendar/`)
 
 - **`CalendarConnect`**: Server component wrapper for connection status
 - **`CalendarStatus`**: Server component displaying connection status and calendars

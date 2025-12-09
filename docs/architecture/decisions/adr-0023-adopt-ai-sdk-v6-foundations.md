@@ -13,7 +13,7 @@
 
 ## Decision
 
-- Adopt Vercel AI SDK v6 patterns in `frontend/` with a demo streaming route and minimal AI Elements UI, keeping secrets server-only and avoiding bespoke streaming code.
+- Adopt Vercel AI SDK v6 patterns with a demo streaming route and minimal AI Elements UI, keeping secrets server-only and avoiding bespoke streaming code.
 - Implement a demo route at `src/app/api/_health/stream/route.ts` returning a UI Message Stream response.
 - Add AI Elements components (`conversation`, `message`, `prompt-input`) via the CLI and compose a placeholder page at `src/app/ai-demo/page.tsx`.
 

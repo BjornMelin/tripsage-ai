@@ -4,7 +4,7 @@
 
 The `withComputed` middleware provides automatic computed properties for Zustand stores. Computed values update automatically when base state changes.
 
-**Location**: `frontend/src/stores/middleware/computed.ts`
+**Location**: `src/stores/middleware/computed.ts`
 
 ---
 
@@ -324,5 +324,5 @@ const compute = createComputeFn<MyState>({
 ## Changelog
 
 - **2025-12-03**: Initial documentation created for computed middleware pattern
-- **Reference**: Implementation in `frontend/src/stores/middleware/computed.ts`
+- **Reference**: Implementation in `src/stores/middleware/computed.ts`
 - **Related**: ADR-0057 (Search Filter Panel Architecture)
