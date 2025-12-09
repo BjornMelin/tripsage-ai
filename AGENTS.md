@@ -114,6 +114,11 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 - Adapters: parse `NextRequest`, construct SSR clients/ratelimiters/config **inside** handler (no module‑scope), delegate to DI handlers (`_handler.ts`).
 - DI handlers: pure functions; accept `supabase`, `resolveProvider`, `limit`, `stream`, `clock`, `logger`, `config`. No `process.env` or global state.
 
+**Import restrictions (enforce in PR review):**
+
+- Never import `createClient` directly from `@supabase/supabase-js` — use `createServerSupabase()` from `@/lib/supabase/server` instead.
+- Never use inline `NextResponse.json({ error: ... })` — use `errorResponse()` from `@/lib/next/route-helpers` instead.
+
 ### 5.2 AI SDK v6 usage
 
 - Use AI SDK v6 primitives only; no custom streaming/tool-calling.
