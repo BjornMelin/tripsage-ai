@@ -71,7 +71,7 @@ NEXTAUTH_URL=http://localhost:3000
 1. **Start development server**
 
    ```bash
-   cd frontend && pnpm dev
+   pnpm dev
    ```
 
 2. **Test OAuth flows**

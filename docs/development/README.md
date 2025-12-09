@@ -34,10 +34,10 @@ Resources and guidelines for TripSage development.
 
 ```bash
 # Install and run
-cd frontend && pnpm install && pnpm dev
+pnpm install && pnpm dev
 
 # Quality gates
-cd frontend && pnpm biome:check && pnpm type-check && pnpm test:run
+pnpm biome:check && pnpm type-check && pnpm test:run
 ```
 
 ## Architecture
