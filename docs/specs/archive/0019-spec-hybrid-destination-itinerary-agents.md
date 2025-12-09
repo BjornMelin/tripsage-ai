@@ -65,7 +65,7 @@ flowchart TD
 
 ### 3. Tool Registry & Orchestrators
 
-- **Files**: `src/lib/tools/index.ts`, `src/lib/tools/research-destination.ts`, `src/lib/tools/generate-itinerary.ts` (new), plus updates to existing tool modules.
+- **Files**: `src/ai/tools/index.ts`, `src/ai/tools/research-destination.ts`, `src/ai/tools/generate-itinerary.ts` (new), plus updates to existing tool modules.
 - **Requirements**:
   - Compose high-level tools that call existing primitives (web search, crawl, planning) and return structured payloads defined in schemas.
   - Register new tools in `toolRegistry` with unique names (`researchDestination`, `generateItineraryPlan`).
@@ -73,7 +73,7 @@ flowchart TD
 
 ### 4. Route Handlers & Agents
 
-- **Files**: `src/app/api/agents/destinations/route.ts`, `src/app/api/agents/itineraries/route.ts`, `src/lib/agents/{destination,itinerary}-agent.ts`, `src/lib/agents/middleware.ts`, `src/lib/agents/summarizers.ts`.
+- **Files**: `src/app/api/agents/destinations/route.ts`, `src/app/api/agents/itineraries/route.ts`, `src/ai/agents/{destination,itinerary}-agent.ts`, `src/ai/agents/middleware.ts`, `src/ai/agents/summarizers.ts`.
 - **Requirements**:
   - Each route imports Supabase auth helper to resolve user ID, then obtains provider via `resolveProvider` (with optional `modelHint` query param).
   - Instantiate `ToolLoopAgent` (AI SDK v6) with:
