@@ -2,7 +2,7 @@
 
 ## 1. Scope and Method
 
-- Objective: identify Model Context Protocol (MCP) servers that accelerate Tripsage AI’s frontend development and tooling, focusing on the Next.js 16 + React 19 stack under `frontend/`.
+- Objective: identify Model Context Protocol (MCP) servers that accelerate Tripsage AI's frontend development and tooling, focusing on the Next.js 16 + React 19 stack.
 - Constraints: library-first solutions, no legacy support, decision framework weights (Solution Leverage 35%, Application Value 30%, Maintenance Load 25%, Architectural Adaptability 10%) with ≥9.0/10 minimum for final recommendations.
 - Evidence sources: official documentation for Next.js MCP support, Vercel MCP platform, AI SDK v6, AI Gateway, AI Elements, Supabase MCP, Upstash MCP, Playwright MCP, and community server registries.[^1][^2][^3][^4][^5][^6][^7][^8][^9][^10][^11][^12]
 - Tooling log: `mcp__exa__get_code_context_exa`, `mcp__firecrawl__firecrawl_search`, `mcp__exa__crawling_exa`, `mcp__zen__analyze`, `mcp__zen__thinkdeep`, `mcp__zen__consensus` (two runs), and `mcp__zen__challenge` executed per Codex agent contract.
@@ -12,7 +12,7 @@
 - Framework: Next.js 16.0.1 (App Router) with React 19.2, AI SDK v6 betas (`@ai-sdk/openai`, `@ai-sdk/anthropic`, `@ai-sdk/react`, `ai`).
 - UI system: AI Elements, Tailwind CSS v4, Radix UI primitives, shadcn-based components.
 - Data & infra: Supabase client libraries, Upstash Redis/ratelimit, TanStack Query, Zod, Playwright for e2e, Vitest for unit testing.
-- Current gap: no MCP clients/servers wired into frontend routes; AI SDK usage limited to BYOK provider registry.[^6]
+- Current gap: no MCP clients/servers wired into routes; AI SDK usage limited to BYOK provider registry.[^6]
 
 ## 3. Candidate MCP Servers and Fit
 
@@ -82,7 +82,7 @@
 - AI SDK v6 integration: leverage `experimental_createMCPClient` to register MCP tools alongside provider models within existing streaming handlers, ensuring message conversion via `convertToModelMessages`.[^6]
 - AI SDK UI + AI Elements: maintain `@ai-sdk/react` hooks (`useChat`, `useCompletion`, `useObject`) and AI Elements components for consistent UX; the Elements CLI (`npx ai-elements@latest`) installs components under `src/components/ai-elements` per current structure.[^7][^8]
 - Vercel AI Gateway: continue routing external providers through the Gateway for observability and cost controls; MCP integrations should reuse the same environment keys to avoid divergent auth flows.[^5]
-- Code review insight: `zen.analyze` confirmed no existing MCP scaffolding in `frontend/src`; recommend creating a centralized MCP client service to avoid scattering auth secrets once integrations begin.
+- Code review insight: `zen.analyze` confirmed no existing MCP scaffolding in `src`; recommend creating a centralized MCP client service to avoid scattering auth secrets once integrations begin.
 
 ## 7. Recommendations and Next Steps
 
@@ -93,7 +93,7 @@
    - Next DevTools MCP when teams need guided migrations, cache-component tuning, or onboarding assistance.
    - Upstash MCP when rate-limit observability or Redis provisioning needs agent-facing tooling.
    - Playwright MCP after stabilizing CI capacity for automated browser sessions and regression authoring.
-5. Create shared MCP client utilities in `frontend/src/lib` to register tool catalogs safely and reuse existing Supabase/Upstash configuration loaders.
+5. Create shared MCP client utilities in `src/lib` to register tool catalogs safely and reuse existing Supabase/Upstash configuration loaders.
 6. Update onboarding docs after implementation to capture agent connection steps and secret management patterns.
 
 [^1]: Next.js MCP Guide. <https://nextjs.org/docs/app/guides/mcp>

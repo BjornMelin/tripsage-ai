@@ -59,7 +59,7 @@ architectural decision made along with its context and consequences.
 | [ADR-0046](adr-0046-otel-tracing-frontend.md) | OTEL Tracing for Next.js 16 Route Handlers | Proposed | 2025-11-20 |
 | [ADR-0047](adr-0047-runtime-policy-edge-vs-node.md) | Runtime Policy for AI SDK Routes (Edge vs Node) | Proposed | 2025-11-20 |
 | [ADR-0054](adr-0054-upstash-testing-harness.md) | Hybrid Upstash Testing (Mocks + Local Emulators + Smoke) | Proposed | 2025-11-24 |
-| [ADR-0055](adr-0055-flatten-frontend-root-structure.md) | Flatten Next.js App Structure to Repository Root | Proposed | 2025-11-26 |
+| [ADR-0055](adr-0055-flatten-frontend-root-structure.md) | Flatten Next.js App Structure to Repository Root | Accepted | 2025-12-08 |
 | [ADR-0056](adr-0056-popular-routes-flights.md) | Popular Routes for Flights (Amadeus + Upstash Caching) | Proposed | 2025-12-03 |
 | [ADR-0057](adr-0057-search-filter-panel-system.md) | Search Filter Panel System | Proposed | 2025-12-03 |
 | [ADR-0048](adr-0048-qstash-retries-and-idempotency.md) | QStash Retries and Idempotency for Webhooks/Tasks | Proposed | 2025-11-20 |

@@ -16,11 +16,11 @@
 
 ## Decision
 
-We will replace the Python-based destination research and itinerary agents with **hybrid ToolLoopAgent workflows implemented entirely in `frontend/`**:
+We will replace the Python-based destination research and itinerary agents with **hybrid ToolLoopAgent workflows implemented entirely in the Next.js application**:
 
 1. **Next.js Route Handlers** under `src/app/api/agents/destinations` and `.../itineraries` will host ToolLoopAgent instances bound to our TypeScript tool registry. The handlers stream UI messages via `toUIMessageStreamResponse()`.
 2. **Hybrid Guardrails**: each tool invocation passes through deterministic validators (Zod schemas, Upstash rate limits, cache lookups). The ToolLoop is capped via `stopWhen` conditions and summarized deterministically before responding.
-3. **Shared Schemas & Prompts**: destination + itinerary request/response schemas, prompt templates, and telemetry contracts are centralized in `frontend/src/schemas` and `frontend/src/prompts` for reuse by UI, tests, and observability.
+3. **Shared Schemas & Prompts**: destination + itinerary request/response schemas, prompt templates, and telemetry contracts are centralized in `src/schemas` and `src/prompts` for reuse by UI, tests, and observability.
 4. **AI Elements-first UX**: chat quick actions, structured cards, and timelines render the new agent outputs without dumping JSON, reusing the existing AI Elements Conversation/PromptInput components.
 5. **Telemetry & Rollout**: tool-level metrics (cache hits, validator rejections, budgets) flow through the existing telemetry stack. For this program, rollout uses full cutover (no flags); rollback is a deploy revert.
 
@@ -41,7 +41,7 @@ We will replace the Python-based destination research and itinerary agents with 
 
 ### Negative
 
-- Increases complexity inside `frontend/` (ToolLoop orchestration, caching, telemetry) and requires careful testing to avoid regressions.
+- Increases complexity inside the Next.js application (ToolLoop orchestration, caching, telemetry) and requires careful testing to avoid regressions.
 - Requires new Supabase tables/records for destination research persistence if we choose to store summaries.
 - Demands additional monitoring to ensure hybrid loops do not exceed budgets or silently fail.
 

@@ -44,7 +44,7 @@ flowchart TD
     E --> H["retrieval"]
 ```
 
-- **Orchestrator module** (`frontend/src/lib/memory/orchestrator.ts`)
+- **Orchestrator module** (`src/lib/memory/orchestrator.ts`)
   - Validates intents, enforces feature flags, runs PII redaction helpers, and
     emits OTLP spans/metrics.
   - Dispatches intents to adapters sequentially (Supabase → Upstash → Mem0 by

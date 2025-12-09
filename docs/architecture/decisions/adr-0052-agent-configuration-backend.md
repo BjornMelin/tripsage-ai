@@ -18,7 +18,7 @@ UI.
 We already have:
 
 - Canonical Zod schemas for agent configuration requests and records in
-  `frontend/src/domain/schemas/configuration.ts`.
+  `src/domain/schemas/configuration.ts`.
 - An admin UI (`AgentConfigurationManager`) that allows choosing an agent,
   editing configuration fields, and showing basic metrics.
 - A robust Supabase SSR client (`createServerSupabase`) and route guards
@@ -57,7 +57,7 @@ Implement a **Supabase-backed agent configuration service** with:
      service-role-only read/write access to ensure database-level protections
      in addition to application guards.
 
-2. **API surface (`frontend/src/app/api/config/agents/**`):**
+2. **API surface (`src/app/api/config/agents/**`):**
 
    - `GET /api/config/agents/:agentType` → returns the effective active config
      using hierarchical scope resolution (global → tenant → user). API accepts an
@@ -175,12 +175,12 @@ Implement a **Supabase-backed agent configuration service** with:
 
 ## References
 
-- `frontend/src/domain/schemas/configuration.ts` (agent configuration schemas).
-- `frontend/src/components/features/agents/configuration-manager.tsx`
+- `src/domain/schemas/configuration.ts` (agent configuration schemas).
+- `src/components/features/agents/configuration-manager.tsx`
   (current admin UI).
-- `frontend/src/lib/supabase/server.ts`, `frontend/src/lib/supabase/factory.ts` (SSR
+- `src/lib/supabase/server.ts`, `src/lib/supabase/factory.ts` (SSR
   Supabase client).
-- `frontend/src/lib/cache/upstash.ts`, `frontend/src/lib/cache/tags.ts` (Upstash
+- `src/lib/cache/upstash.ts`, `src/lib/cache/tags.ts` (Upstash
   JSON cache + cache tags).
-- `frontend/src/app/api/agents/*.ts` (agent route handlers using AI SDK v6).
+- `src/app/api/agents/*.ts` (agent route handlers using AI SDK v6).
 - `docs/specs/archive/0029-spec-agent-configuration-backend.md` (SPEC-0029 agent configuration backend).

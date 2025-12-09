@@ -33,7 +33,7 @@ Temperatures are hard-coded per agent (default 0.3). Adjust via code near each a
 ## Guardrails (Always On)
 
 - Per-tool Redis caching with TTLs and SHA-256 input hashing.
-- Upstash sliding-window rate limits configured in `frontend/src/lib/ratelimit/config.ts`:
+- Upstash sliding-window rate limits configured in `src/lib/ratelimit/config.ts`:
   - Flights: 8/minute
   - Accommodations: 10/minute
   - Budget: 6/minute
@@ -48,7 +48,6 @@ Temperatures are hard-coded per agent (default 0.3). Adjust via code near each a
 ## Validation & Local Testing
 
 ```bash
-cd frontend
 pnpm biome:check
 pnpm type-check
 pnpm test:run
