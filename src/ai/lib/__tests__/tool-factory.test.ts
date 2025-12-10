@@ -1,10 +1,10 @@
 /** @vitest-environment jsdom */
 
-import { createAiTool } from "@ai/lib/tool-factory";
 import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
 import type { ToolCallOptions } from "ai";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import { z } from "zod";
+import { setupUpstashTestEnvironment } from "@/test/upstash/setup";
 
 const headerStore = new Map<string, string>();
 const setMockHeaders = (values: Record<string, string | undefined>) => {
@@ -78,6 +78,15 @@ const redisClient = {
   set: vi.fn(),
 };
 
+const {
+  afterAllHook: upstashAfterAllHook,
+  beforeEachHook: upstashBeforeEachHook,
+  mocks: upstashMocks,
+} = setupUpstashTestEnvironment();
+
+const originalRatelimitLimit = upstashMocks.ratelimit.Ratelimit.prototype.limit;
+const recordedRateLimitIdentifiers: string[] = [];
+
 vi.mock("next/headers", () => ({
   headers: () =>
     Promise.resolve({
@@ -106,34 +115,31 @@ vi.mock("@/lib/redis", () => ({
   getRedis: () => redisClient,
 }));
 
-const ratelimitLimit = vi.fn(
-  async (): Promise<{
-    success: boolean;
-    limit?: number;
-    remaining?: number;
-    reset?: number;
-  }> => ({ success: true })
-);
+let createAiTool: typeof import("@ai/lib/tool-factory").createAiTool;
 
-vi.mock("@upstash/ratelimit", () => ({
-  Ratelimit: class {
-    static slidingWindow(limit: number, window: string) {
-      return { limit, window };
-    }
-
-    limit = ratelimitLimit;
-  },
-}));
-
-// Removed unused baseCallOptions - each test creates its own callOptions
+beforeAll(async () => {
+  vi.resetModules();
+  ({ createAiTool } = await import("@ai/lib/tool-factory"));
+});
 
 beforeEach(() => {
+  upstashBeforeEachHook();
   getUpstashCache().reset();
-  ratelimitLimit.mockClear();
+  recordedRateLimitIdentifiers.length = 0;
+  // Wrap limiter to capture identifiers while preserving mock behavior
+  upstashMocks.ratelimit.Ratelimit.prototype.limit = vi.fn(function (
+    this: InstanceType<(typeof upstashMocks.ratelimit)["Ratelimit"]>,
+    identifier: string
+  ) {
+    recordedRateLimitIdentifiers.push(identifier);
+    return originalRatelimitLimit.call(this, identifier);
+  });
   telemetrySpan.addEvent.mockClear();
   telemetrySpan.setAttribute.mockClear();
   setMockHeaders({});
 });
+
+afterAll(upstashAfterAllHook);
 
 describe("createAiTool", () => {
   test("creates AI SDK compatible tool with caching", async () => {
@@ -195,7 +201,7 @@ describe("createAiTool", () => {
   });
 
   test("throws tool error when rate limit exceeded", async () => {
-    ratelimitLimit.mockResolvedValue({
+    upstashMocks.ratelimit.__force({
       limit: 1,
       remaining: 0,
       reset: Math.floor(Date.now() / 1000) + 60,
@@ -228,17 +234,10 @@ describe("createAiTool", () => {
         code: TOOL_ERROR_CODES.webSearchRateLimited,
       }
     );
-    expect(ratelimitLimit).toHaveBeenCalled();
+    expect(recordedRateLimitIdentifiers.length).toBeGreaterThan(0);
   });
 
   test("passes ToolCallOptions to execute function", async () => {
-    // Ensure rate limit passes for this test
-    ratelimitLimit.mockResolvedValueOnce({
-      limit: 10,
-      remaining: 9,
-      success: true,
-    });
-
     let capturedCallOptions: ToolCallOptions | null = null;
     // biome-ignore lint/suspicious/useAwait: Mock function must return Promise to match tool execute signature
     const executeSpy = vi.fn(async (_params: unknown, callOptions: ToolCallOptions) => {
@@ -288,11 +287,6 @@ describe("createAiTool", () => {
       "x-forwarded-for": "203.0.113.10, 203.0.113.11",
       "x-user-id": "user-abc",
     });
-    ratelimitLimit.mockResolvedValue({
-      limit: 5,
-      remaining: 4,
-      success: true,
-    });
 
     const tool = createAiTool({
       description: "rate limited tool",
@@ -309,17 +303,12 @@ describe("createAiTool", () => {
     });
 
     await tool.execute?.({ payload: "demo" }, { messages: [], toolCallId: "call-1" });
-    expect(ratelimitLimit).toHaveBeenCalledWith("user:user-abc");
+    expect(recordedRateLimitIdentifiers).toContain("user:user-abc");
   });
 
   test("falls back to x-forwarded-for header when user header missing", async () => {
     setMockHeaders({
       "x-forwarded-for": "198.51.100.25, 198.51.100.26",
-    });
-    ratelimitLimit.mockResolvedValue({
-      limit: 3,
-      remaining: 2,
-      success: true,
     });
 
     const tool = createAiTool({
@@ -337,16 +326,11 @@ describe("createAiTool", () => {
     });
 
     await tool.execute?.({ payload: "demo" }, { messages: [], toolCallId: "call-2" });
-    expect(ratelimitLimit).toHaveBeenCalledWith("ip:198.51.100.25");
+    expect(recordedRateLimitIdentifiers).toContain("ip:198.51.100.25");
   });
 
   test("defaults to unknown identifier when headers missing", async () => {
     setMockHeaders({});
-    ratelimitLimit.mockResolvedValue({
-      limit: 2,
-      remaining: 1,
-      success: true,
-    });
 
     const tool = createAiTool({
       description: "rate limited tool default",
@@ -363,17 +347,12 @@ describe("createAiTool", () => {
     });
 
     await tool.execute?.({ payload: "demo" }, { messages: [], toolCallId: "call-3" });
-    expect(ratelimitLimit).toHaveBeenCalledWith("unknown");
+    expect(recordedRateLimitIdentifiers).toContain("unknown");
   });
 
   test("rejects invalid x-forwarded-for IP addresses to prevent spoofing", async () => {
     setMockHeaders({
       "x-forwarded-for": "not-an-ip-address, 198.51.100.25",
-    });
-    ratelimitLimit.mockResolvedValue({
-      limit: 2,
-      remaining: 1,
-      success: true,
     });
 
     const tool = createAiTool({
@@ -392,6 +371,6 @@ describe("createAiTool", () => {
 
     // Should fall back to "unknown" when IP is invalid
     await tool.execute?.({ payload: "demo" }, { messages: [], toolCallId: "call-4" });
-    expect(ratelimitLimit).toHaveBeenCalledWith("unknown");
+    expect(recordedRateLimitIdentifiers).toContain("unknown");
   });
 });

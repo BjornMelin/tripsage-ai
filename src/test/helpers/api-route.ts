@@ -15,7 +15,10 @@ import {
   setSupabaseFactoryForTests,
 } from "@/lib/api/factory";
 import { createMockSupabaseClient } from "@/test/mocks/supabase";
+import { registerUpstashMocksWithVitest } from "@/test/upstash/setup";
 import { getMockCookiesForTest } from "./route";
+
+registerUpstashMocksWithVitest();
 
 // ---- REQUEST FACTORIES ------------------------------------------------------
 
@@ -117,26 +120,8 @@ vi.mock("@/lib/redis", () => ({
 }));
 
 const LIMIT_SPY = vi.hoisted(() =>
-  vi.fn(async (_key: string, _identifier: string) => ({
-    ...DEFAULT_RATE_LIMIT,
-  }))
+  vi.fn(async (_key: string, _identifier: string) => ({ ...DEFAULT_RATE_LIMIT }))
 );
-
-const RATELIMIT_CTOR = vi.hoisted(() => {
-  const ctor = vi.fn(function MockRatelimit() {
-    return {
-      limit: LIMIT_SPY,
-    };
-  });
-  (ctor as unknown as { slidingWindow: ReturnType<typeof vi.fn> }).slidingWindow =
-    vi.fn(() => ({}));
-  return ctor;
-});
-
-vi.mock("@upstash/ratelimit", () => ({
-  // biome-ignore lint/style/useNamingConvention: mimic Upstash exported constructor name.
-  Ratelimit: RATELIMIT_CTOR,
-}));
 
 // Create a lazily-initialized Supabase client holder
 // The actual client is created after imports are resolved
