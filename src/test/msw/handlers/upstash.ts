@@ -6,7 +6,7 @@
 
 import type { HttpHandler } from "msw";
 import { HttpResponse, http } from "msw";
-import { RatelimitMock } from "@/test/upstash/ratelimit-mock";
+import { createRatelimitMock } from "@/test/upstash/ratelimit-mock";
 import {
   resetRedisStore,
   runUpstashPipeline,
@@ -18,8 +18,10 @@ const ratelimitMatcher = /https?:\/\/[^/]*upstash\.io\/ratelimit.*/;
 const qstashMatcher = /https?:\/\/qstash\.upstash\.io\/.*/;
 const anyUpstash = /https?:\/\/[^/]*upstash\.io\/.*/;
 
-const ratelimit = new RatelimitMock({
-  limiter: RatelimitMock.slidingWindow(10, "1 m"),
+// Create mock module and limiter instance
+const ratelimitMock = createRatelimitMock();
+const ratelimit = new ratelimitMock.Ratelimit({
+  limiter: ratelimitMock.Ratelimit.slidingWindow(10, "1 m"),
 });
 
 export const upstashHandlers: HttpHandler[] = [
@@ -55,5 +57,5 @@ export const upstashHandlers: HttpHandler[] = [
 
 export function resetUpstashHandlers(): void {
   resetRedisStore(sharedUpstashStore);
-  ratelimit.force({ remaining: 10, success: true });
+  ratelimitMock.__reset();
 }
