@@ -31,9 +31,6 @@ const CREATE_SUPABASE = vi.hoisted(() => vi.fn(async () => MOCK_SUPABASE));
 
 const MOCK_GET_REDIS = vi.hoisted(() => vi.fn(() => undefined));
 
-const originalRatelimitLimit = upstashMocks.ratelimit.Ratelimit.prototype.limit;
-const recordedRateLimitIdentifiers: string[] = [];
-
 const MOCK_SERVICE = vi.hoisted(() => ({
   details: vi.fn(),
   search: vi.fn(),
@@ -79,15 +76,6 @@ describe("/api/activities routes", () => {
   beforeEach(() => {
     upstashBeforeEachHook();
     vi.clearAllMocks();
-    vi.spyOn(upstashMocks.ratelimit.Ratelimit.prototype, "limit");
-    recordedRateLimitIdentifiers.length = 0;
-    upstashMocks.ratelimit.Ratelimit.prototype.limit = vi.fn(function (
-      this: InstanceType<(typeof upstashMocks.ratelimit)["Ratelimit"]>,
-      identifier: string
-    ) {
-      recordedRateLimitIdentifiers.push(identifier);
-      return originalRatelimitLimit.call(this, identifier);
-    });
     upstashMocks.ratelimit.__force({
       limit: 20,
       remaining: 10,
@@ -206,7 +194,9 @@ describe("/api/activities routes", () => {
       const res = await POST(req, createRouteParamsContext({}));
 
       expect(res.status).toBe(429);
-      expect(recordedRateLimitIdentifiers.length).toBeGreaterThan(0);
+      expect(upstashMocks.ratelimit.__getRecordedIdentifiers().length).toBeGreaterThan(
+        0
+      );
     });
   });
 
@@ -298,8 +288,8 @@ describe("/api/activities routes", () => {
       expect(body.error).toBe("invalid_request");
     });
   });
-});
 
-afterAll(() => {
-  upstashAfterAllHook();
+  afterAll(() => {
+    upstashAfterAllHook();
+  });
 });

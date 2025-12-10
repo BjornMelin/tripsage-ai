@@ -377,8 +377,8 @@ describe("POST /api/jobs/memory-sync", () => {
     expect(result.syncType).toBe("incremental");
     expect(result.memoriesStored).toBe(0);
   });
-});
 
-afterAll(() => {
-  upstashAfterAllHook();
+  afterAll(() => {
+    upstashAfterAllHook();
+  });
 });

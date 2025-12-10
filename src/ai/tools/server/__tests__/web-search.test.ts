@@ -163,10 +163,10 @@ describe("webSearch", () => {
       )
     ).rejects.toMatchObject({ code: TOOL_ERROR_CODES.webSearchNotConfigured });
   });
-});
 
-afterAll(() => {
-  upstashAfterAllHook();
+  afterAll(() => {
+    upstashAfterAllHook();
+  });
 });
 
 describe("webSearch cache key generation", () => {
