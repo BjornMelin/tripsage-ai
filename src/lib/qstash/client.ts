@@ -38,9 +38,10 @@ let testClientFactory: (() => QStashClientLike) | null = null;
  * @example
  * ```ts
  * import { setQStashClientFactoryForTests } from "@/lib/qstash/client";
- * import { QStashClientMock } from "@/test/upstash/qstash-mock";
+ * import { createQStashMock } from "@/test/upstash/qstash-mock";
  *
- * setQStashClientFactoryForTests(() => new QStashClientMock({ token: "test" }));
+ * const qstash = createQStashMock();
+ * setQStashClientFactoryForTests(() => new qstash.Client({ token: "test" }));
  *
  * // After tests
  * setQStashClientFactoryForTests(null);
