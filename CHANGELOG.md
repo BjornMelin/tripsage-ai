@@ -1,3 +1,10 @@
+## [1.10.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.9.0...v1.10.0) (2025-12-10)
+
+### Features
+
+* **qstash:** add centralized client factory with test injection support ([03dad5d](https://github.com/BjornMelin/tripsage-ai/commit/03dad5dd61f589a166b1ab54c5fedc9e710d0316))
+* **redis:** add test factory injection with singleton cache management ([9e6686d](https://github.com/BjornMelin/tripsage-ai/commit/9e6686d7ab09194422b05db6fc789e1a9031bc1d))
+
 ## [1.9.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.8.0...v1.9.0) (2025-12-10)
 
 ### Features
