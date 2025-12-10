@@ -1,39 +1,51 @@
 /**
- * @fileoverview Attachment files listing endpoint with Upstash Redis caching.
+ * @fileoverview Attachment files listing endpoint.
  *
- * Proxies to backend API with per-user response caching via Upstash Redis.
- * Cache TTL: 2 minutes. Invalidated when files are uploaded/deleted.
+ * Queries Supabase directly for attachment metadata with per-user Redis caching.
+ * Generates signed URLs for private storage access. See ADR-0058 and SPEC-0036.
  */
 
 import "server-only";
 
+import type { AttachmentListQuery } from "@schemas/attachments";
+import { attachmentListQuerySchema } from "@schemas/attachments";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { requireUserId } from "@/lib/api/route-helpers";
+import { errorResponse, requireUserId } from "@/lib/api/route-helpers";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
-import { getServerEnvVarWithFallback } from "@/lib/env/server";
+import { createServerLogger } from "@/lib/telemetry/logger";
 
 /** Cache TTL for attachment listings (2 minutes). */
 const CACHE_TTL_SECONDS = 120;
 
-/** Returns backend API URL from environment or default. */
-function getBackendApiUrl(): string {
-  return (
-    getServerEnvVarWithFallback("BACKEND_API_URL", "http://localhost:8001") ??
-    "http://localhost:8001"
-  );
-}
+/** Storage bucket name for attachments. */
+const STORAGE_BUCKET = "attachments";
+
+/** Signed URL expiration in seconds (1 hour). */
+const SIGNED_URL_EXPIRATION = 3600;
+
+/** Logger for attachments file listing operations. */
+const logger = createServerLogger("attachments.files");
 
 /**
- * Builds cache key for attachment file listings.
+ * Builds normalized cache key for attachment file listings.
+ *
+ * Uses sorted parameter names to ensure cache hits regardless of
+ * query string ordering (e.g., ?limit=20&offset=0 vs ?offset=0&limit=20).
  *
  * @param userId - Authenticated user ID.
- * @param queryString - URL query string for pagination.
- * @returns Redis cache key.
+ * @param params - Validated query parameters.
+ * @returns Redis cache key with normalized parameters.
  */
-function buildCacheKey(userId: string, queryString: string): string {
-  return `attachments:files:${userId}:${queryString || "default"}`;
+function buildCacheKey(userId: string, params: AttachmentListQuery): string {
+  const normalized =
+    `limit=${params.limit}&offset=${params.offset}` +
+    (params.tripId !== undefined ? `&tripId=${params.tripId}` : "") +
+    (params.chatMessageId !== undefined
+      ? `&chatMessageId=${params.chatMessageId}`
+      : "");
+  return `attachments:files:${userId}:${normalized}`;
 }
 
 /**
@@ -41,6 +53,7 @@ function buildCacheKey(userId: string, queryString: string): string {
  *
  * Lists user attachment files with pagination support.
  * Response cached per-user in Redis with 2-minute TTL.
+ * URLs are signed for secure private bucket access.
  *
  * @param req - Request with optional pagination query params.
  * @returns JSON array of attachment metadata or error.
@@ -50,41 +63,133 @@ export const GET = withApiGuards({
   rateLimit: "attachments:files",
   telemetry: "attachments.files.read",
 })(async (req: NextRequest, { user, supabase }) => {
-  const result = requireUserId(user);
-  if ("error" in result) return result.error;
-  const { userId } = result;
-  const { searchParams } = req.nextUrl;
-  const qs = searchParams.toString();
+  const userResult = requireUserId(user);
+  if ("error" in userResult) {
+    return userResult.error;
+  }
+  const { userId } = userResult;
 
-  // Check cache first
-  const cacheKey = buildCacheKey(userId, qs);
+  // Parse and validate query parameters
+  const { searchParams } = req.nextUrl;
+  const queryResult = attachmentListQuerySchema.safeParse({
+    chatMessageId: searchParams.get("chatMessageId") ?? undefined,
+    limit: searchParams.get("limit") ?? undefined,
+    offset: searchParams.get("offset") ?? undefined,
+    tripId: searchParams.get("tripId") ?? undefined,
+  });
+
+  if (!queryResult.success) {
+    return errorResponse({
+      error: "invalid_request",
+      reason: "Invalid query parameters",
+      status: 400,
+    });
+  }
+
+  const { tripId, chatMessageId, limit, offset } = queryResult.data;
+
+  // Check cache first (with normalized key)
+  const cacheKey = buildCacheKey(userId, queryResult.data);
   const cached = await getCachedJson<unknown>(cacheKey);
   if (cached) {
     return NextResponse.json(cached, { status: 200 });
   }
 
-  // Fetch from backend
-  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-  if (sessionError || !sessionData?.session?.access_token) {
-    return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+  // Build Supabase query - Zod already coerces to numbers
+  let query = supabase
+    .from("file_attachments")
+    .select("*", { count: "exact" })
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  // Filter by tripId if provided (Zod coercion ensures it's a number)
+  if (tripId !== undefined) {
+    query = query.eq("trip_id", tripId);
   }
 
-  const url = `${getBackendApiUrl()}/api/attachments/files${qs ? `?${qs}` : ""}`;
-  const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${sessionData.session.access_token}` },
-    method: "GET",
-  });
-
-  const data = await response.json();
-  if (!response.ok) {
-    return NextResponse.json(
-      { error: (data as { detail?: string })?.detail || "Failed to fetch attachments" },
-      { status: response.status }
-    );
+  // Filter by chatMessageId if provided (Zod coercion ensures it's a number)
+  if (chatMessageId !== undefined) {
+    query = query.eq("chat_message_id", chatMessageId);
   }
+
+  const { data: attachments, error: queryError, count } = await query;
+
+  if (queryError) {
+    return errorResponse({
+      err: new Error(queryError.message),
+      error: "internal",
+      reason: "Failed to fetch attachments",
+      status: 500,
+    });
+  }
+
+  const total = count ?? 0;
+  const hasMore = offset + limit < total;
+  const nextOffset = hasMore ? offset + limit : null;
+
+  // Generate signed URLs for all file paths in a batch
+  const paths = (attachments ?? [])
+    .map((att) => att.file_path)
+    .filter((path): path is string => typeof path === "string" && path.length > 0);
+
+  let urlMap = new Map<string, string>();
+
+  if (paths.length > 0) {
+    try {
+      const { data: signedData, error: signedError } = await supabase.storage
+        .from(STORAGE_BUCKET)
+        .createSignedUrls(paths, SIGNED_URL_EXPIRATION, { download: true });
+
+      if (signedError) {
+        logger.error("Failed to generate signed URLs", {
+          bucket: STORAGE_BUCKET,
+          error: signedError.message,
+          pathCount: paths.length,
+          userId,
+        });
+      } else if (signedData) {
+        urlMap = new Map(signedData.map((s) => [s.path ?? "", s.signedUrl]));
+      }
+    } catch (error) {
+      logger.error("Unexpected error generating signed URLs", {
+        bucket: STORAGE_BUCKET,
+        error: error instanceof Error ? error.message : String(error),
+        pathCount: paths.length,
+        userId,
+      });
+    }
+  }
+
+  // Transform to response format
+  const items = (attachments ?? []).map((att) => ({
+    // Keep numbers as numbers - no .toString() conversion (fixes type mismatch)
+    chatMessageId: att.chat_message_id ?? null,
+    createdAt: att.created_at,
+    id: att.id,
+    mimeType: att.mime_type,
+    name: att.filename,
+    originalName: att.original_filename,
+    size: att.file_size,
+    tripId: att.trip_id ?? null,
+    updatedAt: att.updated_at,
+    uploadStatus: att.upload_status,
+    url: urlMap.get(att.file_path) ?? null,
+  }));
+
+  const response = {
+    items,
+    pagination: {
+      hasMore,
+      limit,
+      nextOffset,
+      offset,
+      total,
+    },
+  };
 
   // Cache successful response
-  await setCachedJson(cacheKey, data, CACHE_TTL_SECONDS);
+  await setCachedJson(cacheKey, response, CACHE_TTL_SECONDS);
 
-  return NextResponse.json(data, { status: 200 });
+  return NextResponse.json(response, { status: 200 });
 });
