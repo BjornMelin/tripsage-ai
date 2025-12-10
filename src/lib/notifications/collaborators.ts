@@ -4,9 +4,10 @@
 
 import "server-only";
 
-import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
+import { withCircuitBreaker } from "@/lib/circuit-breaker";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
+import { createAdminSupabase } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import type { WebhookPayload } from "@/lib/webhooks/payload";
@@ -20,21 +21,6 @@ type CollaboratorRecord = {
   tripId?: number;
   userId?: string;
 };
-
-/**
- * Creates an admin Supabase client with service role credentials.
- *
- * @return Admin Supabase client instance.
- * @throws When Supabase credentials are not configured.
- */
-function createAdminSupabase() {
-  const url = getServerEnvVarWithFallback("NEXT_PUBLIC_SUPABASE_URL", "");
-  const serviceKey = getServerEnvVarWithFallback("SUPABASE_SERVICE_ROLE_KEY", "");
-  if (!url || !serviceKey) {
-    throw new Error("Supabase admin credentials are required for notifications");
-  }
-  return createClient<Database>(url, serviceKey);
-}
 
 /**
  * Looks up a user's email address by their user ID.
@@ -86,23 +72,38 @@ export async function sendCollaboratorNotifications(
       );
 
       // Email via Resend (if configured and user email is resolvable)
+      // Uses circuit breaker to prevent DLQ flood during Resend outages
       if (resendKey && userId) {
         const email = await lookupUserEmail(userId);
         if (email) {
           const resend = new Resend(resendKey);
           const subject = buildSubject(event);
           const text = buildBody(event, eventKey);
-          try {
-            await resend.emails.send({
-              from: `${fromName} <${fromEmail}>`,
-              headers: { "X-Idempotency-Key": eventKey },
-              subject,
-              text,
-              to: [email],
-            });
+
+          const { circuitOpen, state } = await withCircuitBreaker(
+            {
+              cooldownSeconds: 60,
+              failureThreshold: 3,
+              name: "resend",
+              successThreshold: 2,
+            },
+            async () => {
+              await resend.emails.send({
+                from: `${fromName} <${fromEmail}>`,
+                headers: { "X-Idempotency-Key": eventKey },
+                subject,
+                text,
+                to: [email],
+              });
+              return true;
+            }
+          );
+
+          span.setAttribute("circuit.resend.state", state);
+          span.setAttribute("circuit.resend.open", circuitOpen);
+
+          if (!circuitOpen) {
             emailed = true;
-          } catch (err) {
-            span.recordException(err as Error);
           }
         }
       }
