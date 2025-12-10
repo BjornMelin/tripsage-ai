@@ -56,6 +56,8 @@ export type RatelimitMockModule = {
     slidingWindow: (limit: number, window: string) => LimiterConfig;
     fixedWindow: (limit: number, window: string) => LimiterConfig;
   };
+  __getRecordedIdentifiers: () => string[];
+  __getLimitCallCount: () => number;
   __reset: () => void;
   __force: (
     result: Partial<{
@@ -111,7 +113,9 @@ export function createRatelimitMock(): RatelimitMockModule {
   // Shared state for all limiter instances created by this mock
   const globalState = new Map<string, CounterState>();
   const perInstanceForced = new Map<string, ForcedOverrides>();
+  const recordedIdentifiers: string[] = [];
   let globalForced: ForcedOverrides | undefined;
+  let limitCallCount = 0;
   let instanceSeq = 0;
 
   const resolveForcedOutcome = (
@@ -165,6 +169,9 @@ export function createRatelimitMock(): RatelimitMockModule {
       reset: number;
       retryAfter: number;
     }> {
+      recordedIdentifiers.push(identifier);
+      limitCallCount += 1;
+
       const forced = resolveForcedOutcome(
         perInstanceForced.get(this.instanceId) ?? globalForced,
         this.config.limiter
@@ -258,29 +265,22 @@ export function createRatelimitMock(): RatelimitMockModule {
     }
   }
 
-  // Add static methods to the constructor
-  const RatelimitConstructor = RatelimitInstance as unknown as RatelimitMockClass & {
+  // Add static methods to the constructor while keeping typing explicit
+  const RatelimitConstructor = Object.assign(RatelimitInstance, {
+    fixedWindow: (limit: number, window: string): LimiterConfig => ({
+      intervalMs: parseWindow(window),
+      limit,
+      type: "fixed",
+    }),
+    slidingWindow: (limit: number, window: string): LimiterConfig => ({
+      intervalMs: parseWindow(window),
+      limit,
+      type: "sliding",
+    }),
+  }) as RatelimitMockClass & {
     slidingWindow: (limit: number, window: string) => LimiterConfig;
     fixedWindow: (limit: number, window: string) => LimiterConfig;
   };
-
-  RatelimitConstructor.slidingWindow = (
-    limit: number,
-    window: string
-  ): LimiterConfig => ({
-    intervalMs: parseWindow(window),
-    limit,
-    type: "sliding",
-  });
-
-  RatelimitConstructor.fixedWindow = (
-    limit: number,
-    window: string
-  ): LimiterConfig => ({
-    intervalMs: parseWindow(window),
-    limit,
-    type: "fixed",
-  });
 
   return {
     __force: (result) => {
@@ -292,11 +292,15 @@ export function createRatelimitMock(): RatelimitMockModule {
         success: result.success ?? false,
       };
     },
+    __getLimitCallCount: () => limitCallCount,
+    __getRecordedIdentifiers: () => [...recordedIdentifiers],
     __reset: () => {
       globalState.clear();
       perInstanceForced.clear();
       instanceSeq = 0;
       globalForced = undefined;
+      recordedIdentifiers.length = 0;
+      limitCallCount = 0;
     },
     // biome-ignore lint/style/useNamingConvention: mirrors @upstash/ratelimit export shape
     Ratelimit: RatelimitConstructor,

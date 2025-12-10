@@ -1,6 +1,6 @@
 /** @vitest-environment node */
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   getPublishedQStashMessages,
   installUpstashMocks,
@@ -8,6 +8,12 @@ import {
 } from "@/test/upstash";
 
 describe("getPublishedQStashMessages", () => {
+  beforeEach(() => {
+    // Ensure mocks are installed and reset between tests
+    const { qstash } = installUpstashMocks();
+    qstash.__reset();
+  });
+
   afterEach(() => {
     teardownUpstashMocks();
   });

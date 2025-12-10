@@ -179,8 +179,8 @@ describe("POST /api/jobs/notify-collaborators", () => {
       validJob.eventKey
     );
   });
-});
 
-afterAll(() => {
-  upstashAfterAllHook();
+  afterAll(() => {
+    upstashAfterAllHook();
+  });
 });

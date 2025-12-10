@@ -3,13 +3,11 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { WebhookPayload } from "@/lib/webhooks/payload";
 import { createMockNextRequest, getMockCookiesForTest } from "@/test/helpers/route";
+import { getPublishedQStashMessages } from "@/test/upstash";
 import { setupUpstashTestEnvironment } from "@/test/upstash/setup";
 
-const {
-  afterAllHook: upstashAfterAllHook,
-  beforeEachHook: upstashBeforeEachHook,
-  mocks: upstashMocks,
-} = setupUpstashTestEnvironment();
+const { afterAllHook: upstashAfterAllHook, beforeEachHook: upstashBeforeEachHook } =
+  setupUpstashTestEnvironment();
 
 type ParseAndVerify = (req: Request) => Promise<ParseResult>;
 type BuildEventKey = (payload: WebhookPayload) => string;
@@ -35,11 +33,6 @@ const tryReserveKeyMock = vi.hoisted(() => vi.fn<TryReserveKey>(async () => true
 const sendCollaboratorNotificationsMock = vi.hoisted(() =>
   vi.fn<SendNotifications>(async () => ({ emailed: true, webhookPosted: false }))
 );
-let qstashPublishSpy: ReturnType<
-  typeof vi.spyOn<(typeof upstashMocks.qstash)["Client"]["prototype"], "publishJSON">
->;
-const originalPublishJson = upstashMocks.qstash.Client.prototype.publishJSON;
-const recordedPublishPayloads: Array<{ body: unknown; url: string }> = [];
 const envStore = vi.hoisted<Record<string, string | undefined>>(() => ({
   NEXT_PUBLIC_SUPABASE_URL: "https://supabase.test",
   QSTASH_TOKEN: "qstash-token",
@@ -136,21 +129,11 @@ describe("POST /api/hooks/trips", () => {
   beforeEach(() => {
     upstashBeforeEachHook();
     vi.clearAllMocks();
-    qstashPublishSpy ??= vi.spyOn(upstashMocks.qstash.Client.prototype, "publishJSON");
-    recordedPublishPayloads.length = 0;
-    upstashMocks.qstash.Client.prototype.publishJSON = vi.fn(function (
-      this: InstanceType<(typeof upstashMocks.qstash)["Client"]>,
-      opts: { body: unknown; url: string }
-    ) {
-      recordedPublishPayloads.push(opts);
-      return originalPublishJson.call(this, opts);
-    });
     parseAndVerifyMock.mockReset();
     buildEventKeyMock.mockReset();
     buildEventKeyMock.mockReturnValue("event-key-1");
     tryReserveKeyMock.mockReset();
     sendCollaboratorNotificationsMock.mockReset();
-    qstashPublishSpy.mockClear();
     afterCallbacks.length = 0;
     envStore.NEXT_PUBLIC_SUPABASE_URL = "https://supabase.test";
     envStore.SUPABASE_SERVICE_ROLE_KEY = "service-role";
@@ -222,10 +205,12 @@ describe("POST /api/hooks/trips", () => {
     const json = await res.json();
     expect(res.status).toBe(200);
     expect(json.enqueued).toBe(true);
-    expect(recordedPublishPayloads).toContainEqual({
-      body: { eventKey: "event-key-1", payload: expect.any(Object) },
-      url: "http://localhost/api/jobs/notify-collaborators",
-    });
+    expect(getPublishedQStashMessages()).toContainEqual(
+      expect.objectContaining({
+        body: { eventKey: "event-key-1", payload: expect.any(Object) },
+        url: "http://localhost/api/jobs/notify-collaborators",
+      })
+    );
   });
 
   it("uses after() fallback when QStash is not configured", async () => {
