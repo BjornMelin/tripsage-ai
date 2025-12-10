@@ -365,9 +365,34 @@ function sanitizeFilename(filename: string): string {
 
   // Limit length (preserve extension)
   const maxLength = 100;
-  // ... truncation logic
+  if (sanitized.length <= maxLength) {
+    return sanitized;
+  }
 
-  return sanitized;
+  // Find the last dot that's not the first character (to handle hidden files like .gitignore)
+  const lastDotIndex = sanitized.lastIndexOf(".");
+  const hasExtension = lastDotIndex > 0;
+
+  if (!hasExtension) {
+    // No extension, just truncate to maxLength
+    return sanitized.substring(0, maxLength);
+  }
+
+  // Split into name and extension (extension includes the leading dot)
+  const extension = sanitized.substring(lastDotIndex);
+  const name = sanitized.substring(0, lastDotIndex);
+
+  // Calculate space available for the name after reserving space for extension
+  const maxNameLength = maxLength - extension.length;
+
+  // If there's no room for even 1 character of name, truncate the whole filename
+  if (maxNameLength < 1) {
+    return sanitized.substring(0, maxLength);
+  }
+
+  // Truncate name and rejoin with extension
+  const truncatedName = name.substring(0, maxNameLength);
+  return truncatedName + extension;
 }
 ```
 
