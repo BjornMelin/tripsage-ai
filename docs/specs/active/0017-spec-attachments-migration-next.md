@@ -1,19 +1,19 @@
 # SPEC-0017: Attachments & File Uploads Migration (Next.js)
 
-**Version**: 1.0.0  
-**Status**: Partial (Proxy Implementation)  
-**Date**: 2025-11-04
+**Version**: 1.1.0
+**Status**: Implemented (Phase 1 - Vercel Blob)
+**Date**: 2025-12-10
 
 ## Overview
 
-- Goal: Replace FastAPI attachments endpoints with Next.js Route Handlers using Supabase Storage, signed URLs, MIME/size validation, and stricter rate limits.
+- Goal: Replace FastAPI attachments endpoints with Next.js Route Handlers using Vercel Blob for file storage, Supabase for metadata, MIME/size validation, and stricter rate limits.
 
-**Current Status:** Upload endpoint (`POST /api/chat/attachments`) proxies to backend FastAPI. Listing endpoint (`GET /api/attachments/files`) also proxies to backend. Direct Supabase Storage integration is pending.
+**Current Status:** Upload endpoint (`POST /api/chat/attachments`) uploads directly to Vercel Blob with metadata stored in Supabase. Listing endpoint (`GET /api/attachments/files`) queries Supabase directly with per-user Redis caching. Legacy backend proxy has been removed. See ADR-0058 and SPEC-0036 for the detailed implementation.
 
 ## Routes (Current Implementation)
 
-- `POST /api/chat/attachments` — Proxies to backend FastAPI `/api/attachments/upload` or `/api/attachments/upload/batch`. Validates multipart form data, enforces 10MB per-file cap, max 5 files per request, and rejects requests advertising total payload >50MB via `Content-Length`. Auth is bound to the current Supabase session cookie (`sb-access-token`); caller `Authorization` headers are ignored and never forwarded. Uses `withApiGuards` for auth and rate limiting (`chat:attachments`). Revalidates `attachments` cache tag on success.
-- `GET /api/attachments/files` — Proxies to backend FastAPI `/api/attachments/files` with pagination. Uses `withApiGuards` with rate limiting (`attachments:files`). Participates in cache tag invalidation via `next: { tags: ['attachments'] }`.
+- `POST /api/chat/attachments` — Uploads files directly to Vercel Blob storage. Validates multipart form data, enforces 10MB per-file cap, max 5 files per request, and rejects requests advertising total payload >50MB via `Content-Length`. Auth is bound to the current Supabase session cookie (`sb-access-token`). Uses `withApiGuards` for auth and rate limiting (`chat:attachments`). Stores file metadata in Supabase `file_attachments` table. Revalidates `attachments` cache tag and bumps Redis tag version on success.
+- `GET /api/attachments/files` — Queries Supabase `file_attachments` table directly with pagination. Uses `withApiGuards` with rate limiting (`attachments:files`). Per-user Redis caching with 2-minute TTL. Participates in cache tag invalidation via Upstash tag versioning.
 
 ## Routes (Target Implementation - Not Yet Migrated)
 

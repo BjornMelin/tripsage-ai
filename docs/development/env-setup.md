@@ -28,6 +28,13 @@ Copy the root `.env.example` to `.env`, then follow the checklists below to popu
   - `QSTASH_NEXT_SIGNING_KEY`
   - Console: <https://console.upstash.com/qstash>
 
+## Vercel Blob (Attachments Storage)
+
+- `BLOB_READ_WRITE_TOKEN` — Required for file uploads; auto-detected on Vercel
+- `BLOB_PUBLIC_BASE_URL` — Optional; for custom branded domains
+- Dashboard: <https://vercel.com/dashboard> → Storage → Blob
+- Docs: <https://vercel.com/docs/storage/vercel-blob>
+
 ## AI providers / Gateway
 
 - Vercel AI Gateway:
@@ -98,6 +105,7 @@ Copy the root `.env.example` to `.env`, then follow the checklists below to popu
 - [ ] Supabase URL + anon key + service role key present
 - [ ] Upstash Redis REST URL + token present
 - [ ] QStash token + signing keys present
+- [ ] Vercel Blob token set if attachment uploads are tested (`BLOB_READ_WRITE_TOKEN`)
 - [ ] At least one model provider key (OpenAI/Anthropic/xAI/OpenRouter or `AI_GATEWAY_API_KEY`)
 - [ ] Google Maps server key set if using maps; browser key for client maps
 - [ ] Stripe keys set if payment flows are exercised
