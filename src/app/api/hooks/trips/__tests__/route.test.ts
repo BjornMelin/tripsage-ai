@@ -243,8 +243,8 @@ describe("POST /api/hooks/trips", () => {
       "event-key-1"
     );
   });
-});
 
-afterAll(() => {
-  upstashAfterAllHook();
+  afterAll(() => {
+    upstashAfterAllHook();
+  });
 });
