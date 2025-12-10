@@ -54,10 +54,10 @@ Docs:
 #### Load Tools
 
 - claude.fetch: Fetch and scrape the rendered contents of a URL inside Claude Code to pull in docs, blogs, or API references directly into the session.
-- context7.resolve-library-id: Convert a natural language library name into a Context7 compatible library identifier before requesting documentation for that library.
-- context7.get-library-docs: Retrieve up to date documentation and code examples for a resolved Context7 library ID, optionally scoped by topic and token budget.
-- gh_grep.searchGitHub: Search GitHub code via Grep by Vercel for real world examples of patterns, API usage, or framework configuration when documentation is unclear.
-- zen.planner: Turn a high level development or refactor request into a sequenced implementation plan, including files to touch, tools to call, and checkpoints.
+- context7.resolve-library-id: Convert a natural-language library name into a Context7 compatible library identifier before requesting documentation for that library.
+- context7.get-library-docs: Retrieve up-to-date documentation and code examples for a resolved Context7 library ID, optionally scoped by topic and token budget.
+- gh_grep.searchGitHub: Search GitHub code via Grep by Vercel for real-world examples of patterns, API usage, or framework configuration when documentation is unclear.
+- zen.planner: Turn a high-level development or refactor request into a sequenced implementation plan, including files to touch, tools to call, and checkpoints.
 - zen.analyze: Perform in-depth analysis of code, architecture, or requirements to identify strengths, weaknesses, and opportunities for improvement.
 - zen.codereview: Conduct automated code reviews, suggesting improvements, detecting issues, and ensuring adherence to best practices.
 - zen.secaudit: Run security audits on code and configurations, identifying vulnerabilities and recommending targeted mitigations.
@@ -179,6 +179,8 @@ Create `src/test/mocks/upstash.ts` with:
 3. For QStash:
 
    - Wrap direct `new Client()` usage in a factory function that tests can override with a mock.
+
+> **Test-only injection guard:** `setRedisClientForTests`, `setRateLimitFactoryForTests`, and the QStash factory override are exported only in test builds (e.g., guarded by `NODE_ENV === "test"` / test-only tsconfig path). Use them inside Vitest suites to swap the production instances before running tests and reset them afterwards; never call them from production code. They accept the same typed interfaces (`RedisLike`, `RateLimitFactory`, QStash factory signature) to keep type-safety intact. Always restore the original factories in `afterEach` to avoid cross-test pollution.
 
 ### Step 3 – Tests
 

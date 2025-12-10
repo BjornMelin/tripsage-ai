@@ -55,17 +55,17 @@ Docs:
 - claude.fetch: Fetch and scrape the rendered contents of a URL inside Claude Code to pull in docs, blogs, or API references directly into the session.
 - vercel.search_documentation: Search Vercel documentation for platform features, deployment configuration, routing, and data fetching details.
 - supabase.search_docs: Search official Supabase documentation for specific APIs, configuration settings, and best practice examples relevant to your code.
-- context7.resolve-library-id: Convert a natural language library name into a Context7 compatible library identifier before requesting documentation for that library.
-- context7.get-library-docs: Retrieve up to date documentation and code examples for a resolved Context7 library ID, optionally scoped by topic and token budget.
-- gh_grep.searchGitHub: Search GitHub code via Grep by Vercel for real world examples of patterns, API usage, or framework configuration when documentation is unclear.
-- zen.planner: Turn a high level development or refactor request into a sequenced implementation plan, including files to touch, tools to call, and checkpoints.
+- context7.resolve-library-id: Convert a natural-language library name into a Context7-compatible library identifier before requesting documentation for that library.
+- context7.get-library-docs: Retrieve up-to-date documentation and code examples for a resolved Context7 library ID, optionally scoped by topic and token budget.
+- gh_grep.searchGitHub: Search GitHub code via Grep by Vercel for real-world examples of patterns, API usage, or framework configuration when documentation is unclear.
+- zen.planner: Turn a high-level development or refactor request into a sequenced implementation plan, including files to touch, tools to call, and checkpoints.
 - zen.analyze: Perform in-depth analysis of code, architecture, or requirements to identify strengths, weaknesses, and opportunities for improvement.
 - zen.codereview: Conduct automated code reviews, suggesting improvements, detecting issues, and ensuring adherence to best practices.
 - zen.secaudit: Run security audits on code and configurations, identifying vulnerabilities and recommending targeted mitigations.
 
 #### Load Skills
 
-- ai-sdk-core: Use Vercel AI SDK core primitives and patterns to design type safe LLM calls, streaming responses, and tool integrations.
+- ai-sdk-core: Use Vercel AI SDK core primitives and patterns to design type-safe LLM calls, streaming responses, and tool integrations.
 
 ### Usage Guidelines
 
@@ -80,7 +80,7 @@ Docs:
 
 YOU MUST USE the following skills explicitly in your workflow:
 
-- ai-sdk-core: Use Vercel AI SDK core primitives and patterns to design type safe LLM calls, streaming responses, and tool integrations. Invoke this skill for configuring telemetry in LLM calls (e.g., experimental_telemetry with functionId in generateText).
+- ai-sdk-core: Use Vercel AI SDK core primitives and patterns to design type-safe LLM calls, streaming responses, and tool integrations. Invoke this skill for configuring telemetry in LLM calls (e.g., experimental_telemetry with functionId in generateText).
 
 ### Enforcement Guidelines
 

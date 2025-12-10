@@ -41,12 +41,12 @@ AI SDK UI and streaming docs:
 #### Load Tools
 
 - claude.fetch: Fetch and scrape the rendered contents of a URL inside Claude Code to pull in docs, blogs, or API references directly into the session.
-- next-devtools.nextjs_docs: Search the Next.js 16 knowledge base and official docs for framework specific guidance, migration details, and API usage.
+- next-devtools.nextjs_docs: Search the Next.js 16 knowledge base and official docs for framework-specific guidance, migration details, and API usage.
 - vercel.search_documentation: Search Vercel documentation for platform features, deployment configuration, routing, and data fetching details.
 - next-devtools.nextjs_runtime: Inspect a running Next.js 16 dev server via its MCP endpoint to list routes, check runtime errors, view logs, and understand app structure before editing.
-- next-devtools.browser_eval: Use Playwright based browser automation to load pages, execute JavaScript, capture console messages, take screenshots, and validate behavior in a real browser.
-- gh_grep.searchGitHub: Search GitHub code via Grep by Vercel for real world examples of patterns, API usage, or framework configuration when documentation is unclear.
-- zen.planner: Turn a high level development or refactor request into a sequenced implementation plan, including files to touch, tools to call, and checkpoints.
+- next-devtools.browser_eval: Use Playwright-based browser automation to load pages, execute JavaScript, capture console messages, take screenshots, and validate behavior in a real browser.
+- gh_grep.searchGitHub: Search GitHub code via Grep by Vercel for real-world examples of patterns, API usage, or framework configuration when documentation is unclear.
+- zen.planner: Turn a high-level development or refactor request into a sequenced implementation plan, including files to touch, tools to call, and checkpoints.
 - zen.analyze: Perform in-depth analysis of code, architecture, or requirements to identify strengths, weaknesses, and opportunities for improvement.
 - zen.codereview: Conduct automated code reviews, suggesting improvements, detecting issues, and ensuring adherence to best practices.
 - zen.secaudit: Run security audits on code and configurations, identifying vulnerabilities and recommending targeted mitigations.

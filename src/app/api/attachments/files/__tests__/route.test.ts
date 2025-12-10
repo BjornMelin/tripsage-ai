@@ -18,20 +18,22 @@ vi.mock("@/lib/cache/upstash", () => ({
 describe("/api/attachments/files", () => {
   // Storage mock for signed URL generation
   const mockCreateSignedUrls = vi.fn();
+  type SupabaseClientMock = ReturnType<typeof getApiRouteSupabaseMock>;
 
   beforeEach(() => {
+    vi.resetModules();
     resetApiRouteMocks();
     mockApiRouteAuthUser({ id: "user-1" });
     vi.clearAllMocks();
 
     // Setup storage mock for signed URL generation
     const supabase = getApiRouteSupabaseMock();
-    // biome-ignore lint/suspicious/noExplicitAny: test mock
-    (supabase.storage as any) = {
-      from: vi.fn(() => ({
-        createSignedUrls: mockCreateSignedUrls,
-      })),
-    };
+    vi.spyOn(supabase.storage, "from").mockImplementation(
+      () =>
+        ({
+          createSignedUrls: mockCreateSignedUrls,
+        }) as unknown as ReturnType<SupabaseClientMock["storage"]["from"]>
+    );
 
     // Default: return signed URLs matching file paths
     mockCreateSignedUrls.mockImplementation((paths: string[]) =>
@@ -52,17 +54,46 @@ describe("/api/attachments/files", () => {
    * @returns Object with all mock functions for assertions
    */
   function setupSupabaseQueryMock(
-    supabase: ReturnType<typeof getApiRouteSupabaseMock>,
+    supabase: SupabaseClientMock,
     options: { count: number | null; data: unknown[] | null; error: unknown }
   ) {
-    const rangeMock = vi.fn().mockResolvedValue(options);
-    const orderMock = vi.fn(() => ({ range: rangeMock }));
-    const eqMock = vi.fn(() => ({ order: orderMock }));
-    const selectMock = vi.fn(() => ({ eq: eqMock }));
-    // biome-ignore lint/suspicious/noExplicitAny: test mock
-    (supabase.from as any) = vi.fn(() => ({ select: selectMock }));
+    type QueryResult = { count: number | null; data: unknown[] | null; error: unknown };
+    type QueryChain = Promise<QueryResult> & {
+      eq: (column: string, value: unknown) => QueryChain;
+      order: (column: string, options?: unknown) => QueryChain;
+      range: (from: number, to: number) => QueryChain;
+    };
 
-    return { eqMock, orderMock, rangeMock, selectMock };
+    const eqMock = vi.fn<(column: string, value: unknown) => QueryChain>();
+    const orderMock = vi.fn<(column: string, options?: unknown) => QueryChain>();
+    const rangeMock = vi.fn<(from: number, to: number) => QueryChain>();
+
+    const chainable: QueryChain = Object.assign(Promise.resolve(options), {
+      eq: eqMock,
+      order: orderMock,
+      range: rangeMock,
+    });
+
+    eqMock.mockReturnValue(chainable);
+    orderMock.mockReturnValue(chainable);
+    rangeMock.mockReturnValue(chainable);
+
+    const selectMock = vi.fn(
+      (_columns?: string, _options?: { count?: "exact" | null }) => chainable
+    );
+    vi.spyOn(supabase, "from").mockImplementation(
+      () =>
+        ({
+          select: selectMock,
+        }) as unknown as ReturnType<SupabaseClientMock["from"]>
+    );
+
+    return {
+      eqMock,
+      orderMock,
+      rangeMock,
+      selectMock,
+    };
   }
 
   it("should list attachments from Supabase", async () => {
@@ -190,32 +221,11 @@ describe("/api/attachments/files", () => {
   it("should filter by tripId when provided", async () => {
     const supabase = getApiRouteSupabaseMock();
 
-    // Create a chainable query builder mock
-    const eqMock = vi.fn();
-    const orderMock = vi.fn();
-    const rangeMock = vi.fn();
-    const selectMock = vi.fn();
-
-    // Each method returns the chainable object (including then for Promise-like behavior)
-    const chainable = {
-      eq: eqMock,
-      order: orderMock,
-      range: rangeMock,
-      // biome-ignore lint/suspicious/noThenProperty: Required for Promise-like Supabase query mock
-      then: (
-        resolve: (value: { count: number; data: unknown[]; error: null }) => void
-      ) => {
-        resolve({ count: 0, data: [], error: null });
-      },
-    };
-
-    eqMock.mockReturnValue(chainable);
-    orderMock.mockReturnValue(chainable);
-    rangeMock.mockReturnValue(chainable);
-    selectMock.mockReturnValue(chainable);
-
-    // biome-ignore lint/suspicious/noExplicitAny: test mock
-    (supabase.from as any) = vi.fn(() => ({ select: selectMock }));
+    const { eqMock } = setupSupabaseQueryMock(supabase, {
+      count: 0,
+      data: [],
+      error: null,
+    });
 
     const mod = await import("../route");
     const req = new NextRequest("http://localhost/api/attachments/files?tripId=123", {
@@ -233,32 +243,11 @@ describe("/api/attachments/files", () => {
   it("should filter by chatMessageId when provided", async () => {
     const supabase = getApiRouteSupabaseMock();
 
-    // Create a chainable query builder mock
-    const eqMock = vi.fn();
-    const orderMock = vi.fn();
-    const rangeMock = vi.fn();
-    const selectMock = vi.fn();
-
-    // Each method returns the chainable object (including then for Promise-like behavior)
-    const chainable = {
-      eq: eqMock,
-      order: orderMock,
-      range: rangeMock,
-      // biome-ignore lint/suspicious/noThenProperty: Required for Promise-like Supabase query mock
-      then: (
-        resolve: (value: { count: number; data: unknown[]; error: null }) => void
-      ) => {
-        resolve({ count: 0, data: [], error: null });
-      },
-    };
-
-    eqMock.mockReturnValue(chainable);
-    orderMock.mockReturnValue(chainable);
-    rangeMock.mockReturnValue(chainable);
-    selectMock.mockReturnValue(chainable);
-
-    // biome-ignore lint/suspicious/noExplicitAny: test mock
-    (supabase.from as any) = vi.fn(() => ({ select: selectMock }));
+    const { eqMock } = setupSupabaseQueryMock(supabase, {
+      count: 0,
+      data: [],
+      error: null,
+    });
 
     const mod = await import("../route");
     const req = new NextRequest(
@@ -292,16 +281,11 @@ describe("/api/attachments/files", () => {
   it("should handle Supabase query errors", async () => {
     const supabase = getApiRouteSupabaseMock();
 
-    const rangeMock = vi.fn().mockResolvedValue({
+    setupSupabaseQueryMock(supabase, {
       count: null,
       data: null,
       error: { message: "Database connection failed" },
     });
-    const orderMock = vi.fn(() => ({ range: rangeMock }));
-    const eqMock = vi.fn(() => ({ order: orderMock }));
-    const selectMock = vi.fn(() => ({ eq: eqMock }));
-    // biome-ignore lint/suspicious/noExplicitAny: test mock
-    (supabase.from as any) = vi.fn(() => ({ select: selectMock }));
 
     const mod = await import("../route");
     const req = new NextRequest("http://localhost/api/attachments/files", {
@@ -331,16 +315,11 @@ describe("/api/attachments/files", () => {
   it("should use default pagination values", async () => {
     const supabase = getApiRouteSupabaseMock();
 
-    const rangeMock = vi.fn().mockResolvedValue({
+    const { rangeMock } = setupSupabaseQueryMock(supabase, {
       count: 0,
       data: [],
       error: null,
     });
-    const orderMock = vi.fn(() => ({ range: rangeMock }));
-    const eqMock = vi.fn(() => ({ order: orderMock }));
-    const selectMock = vi.fn(() => ({ eq: eqMock }));
-    // biome-ignore lint/suspicious/noExplicitAny: test mock
-    (supabase.from as any) = vi.fn(() => ({ select: selectMock }));
 
     const mod = await import("../route");
     // No limit or offset provided
@@ -362,16 +341,11 @@ describe("/api/attachments/files", () => {
   it("should handle empty results gracefully", async () => {
     const supabase = getApiRouteSupabaseMock();
 
-    const rangeMock = vi.fn().mockResolvedValue({
+    setupSupabaseQueryMock(supabase, {
       count: 0,
       data: [],
       error: null,
     });
-    const orderMock = vi.fn(() => ({ range: rangeMock }));
-    const eqMock = vi.fn(() => ({ order: orderMock }));
-    const selectMock = vi.fn(() => ({ eq: eqMock }));
-    // biome-ignore lint/suspicious/noExplicitAny: test mock
-    (supabase.from as any) = vi.fn(() => ({ select: selectMock }));
 
     const mod = await import("../route");
     const req = new NextRequest("http://localhost/api/attachments/files", {
@@ -413,16 +387,11 @@ describe("/api/attachments/files", () => {
       },
     ];
 
-    const rangeMock = vi.fn().mockResolvedValue({
+    setupSupabaseQueryMock(supabase, {
       count: 1,
       data: mockAttachments,
       error: null,
     });
-    const orderMock = vi.fn(() => ({ range: rangeMock }));
-    const eqMock = vi.fn(() => ({ order: orderMock }));
-    const selectMock = vi.fn(() => ({ eq: eqMock }));
-    // biome-ignore lint/suspicious/noExplicitAny: test mock
-    (supabase.from as any) = vi.fn(() => ({ select: selectMock }));
 
     // Simulate signed URL generation failure
     mockCreateSignedUrls.mockResolvedValue({
