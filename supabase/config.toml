@@ -95,10 +95,3 @@ enabled = false
 client_id = "env(GITHUB_CLIENT_ID)"
 secret = "env(GITHUB_CLIENT_SECRET)"
 redirect_uri = "http://localhost:54321/auth/v1/callback"
-
-[edge_runtime]
-enabled = true
-# Use "oneshot" for development with hot reload (default)
-# Use "per_worker" for load testing or background tasks
-policy = "oneshot"
-inspector_port = 8083
