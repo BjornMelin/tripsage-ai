@@ -1,9 +1,13 @@
 # SPEC-0036: Attachments V2 with Vercel Blob
 
 **Version**: 1.0.0
-**Status**: Implementing
+**Status**: Superseded by SPEC-0037
 **Date**: 2025-12-10
 **Related ADRs**: ADR-0058
+
+> **SUPERSEDED**: This specification was superseded by [SPEC-0037](../active/0037-spec-attachments-v2-supabase-storage.md).
+> The implementation uses Supabase Storage instead of Vercel Blob for enhanced security
+> through native RLS integration and signed URLs. See SPEC-0037 and ADR-0059 for the current architecture.
 
 ## Overview
 

@@ -1,12 +1,16 @@
 # ADR-0058: Vercel Blob for Chat Attachments Storage
 
 **Version**: 1.0.0
-**Status**: Accepted
+**Status**: Superseded by ADR-0059
 **Date**: 2025-12-10
 **Category**: Architecture/Storage
 **Domain**: Attachments, File Storage
 **Related ADRs**: ADR-0040
 **Related Specs**: SPEC-0017, SPEC-0036
+
+> **SUPERSEDED**: This ADR has been superseded by [ADR-0059](../adr-0059-supabase-storage-attachments.md).
+> The implementation pivoted from Vercel Blob to Supabase Storage for enhanced security
+> through signed URLs and unified RLS integration. See ADR-0059 for the current architecture.
 
 ## Context
 
