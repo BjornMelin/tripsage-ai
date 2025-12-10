@@ -703,26 +703,6 @@ export class ApiClient {
   public sendChat<Request, Response>(request: Request): Promise<Response> {
     return this.post<Request, Response>("/chat", request);
   }
-
-  /**
-   * Uploads one or more attachments using multipart/form-data.
-   *
-   * Constructs a `FormData` payload and posts it to `/chat/attachments`.
-   * Content-Type is managed by the browser; do not set it explicitly.
-   *
-   * @param files List of `File` objects to upload.
-   * @returns Object containing uploaded file URLs or metadata.
-   */
-  // biome-ignore lint/style/useNamingConvention: TypeScript generic type parameter convention
-  public uploadAttachments<TResponse = { urls: string[] }>(
-    files: File[]
-  ): Promise<TResponse> {
-    const formData = new FormData();
-    files.forEach((file, i) => {
-      formData.append(`file-${i}`, file);
-    });
-    return this.post<FormData, TResponse>("/chat/attachments", formData);
-  }
 }
 
 /**

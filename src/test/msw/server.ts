@@ -12,7 +12,6 @@
 import { setupServer } from "msw/node";
 import { amadeusHandlers } from "./handlers/amadeus";
 import { apiRouteHandlers } from "./handlers/api-routes";
-import { attachmentHandlers } from "./handlers/attachments";
 import { authHandlers } from "./handlers/auth";
 import { authRouteHandlers } from "./handlers/auth-routes";
 import { chatHandlers } from "./handlers/chat";
@@ -26,7 +25,6 @@ import { telemetryHandlers } from "./handlers/telemetry";
 import { upstashHandlers } from "./handlers/upstash";
 
 const handlers = [
-  ...attachmentHandlers,
   ...apiRouteHandlers,
   ...authHandlers,
   ...authRouteHandlers,

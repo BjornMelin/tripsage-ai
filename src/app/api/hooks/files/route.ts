@@ -4,6 +4,7 @@
 
 import "server-only";
 
+// Exception: Webhook handler requires service role client for admin operations (AGENTS.md §5.1)
 import { createClient } from "@supabase/supabase-js";
 import { type NextRequest, NextResponse } from "next/server";
 import { errorResponse, unauthorizedResponse } from "@/lib/api/route-helpers";
