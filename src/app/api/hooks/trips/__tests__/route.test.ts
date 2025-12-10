@@ -1,8 +1,12 @@
 /** @vitest-environment node */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { WebhookPayload } from "@/lib/webhooks/payload";
 import { createMockNextRequest, getMockCookiesForTest } from "@/test/helpers/route";
+import { setupUpstashTestEnvironment } from "@/test/upstash/setup";
+
+const { afterAllHook: upstashAfterAllHook, beforeEachHook: upstashBeforeEachHook } =
+  setupUpstashTestEnvironment();
 
 type ParseAndVerify = (req: Request) => Promise<ParseResult>;
 type BuildEventKey = (payload: WebhookPayload) => string;
@@ -158,6 +162,7 @@ function makeRequest(body: unknown, headers: Record<string, string> = {}) {
 
 describe("POST /api/hooks/trips", () => {
   beforeEach(() => {
+    upstashBeforeEachHook();
     vi.clearAllMocks();
     parseAndVerifyMock.mockReset();
     buildEventKeyMock.mockReset();
@@ -275,5 +280,9 @@ describe("POST /api/hooks/trips", () => {
       expect.objectContaining({ table: "trip_collaborators" }),
       "event-key-1"
     );
+  });
+
+  afterAll(() => {
+    upstashAfterAllHook();
   });
 });

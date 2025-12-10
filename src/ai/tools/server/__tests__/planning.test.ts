@@ -1,25 +1,22 @@
 /** @vitest-environment node */
 
 import { TTL_DRAFT_SECONDS, TTL_FINAL_SECONDS } from "@ai/tools/server/constants";
-import { createTravelPlan, saveTravelPlan } from "@ai/tools/server/planning";
 import { planSchema } from "@ai/tools/server/planning.schema";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { getMockCookiesForTest } from "@/test/helpers/route";
+import { setupUpstashTestEnvironment } from "@/test/upstash/setup";
 
-vi.mock("@upstash/ratelimit", () => ({
-  Ratelimit: class {
-    limit = vi.fn(async () => ({
-      limit: 10,
-      remaining: 9,
-      reset: Math.floor(Date.now() / 1000) + 60,
-      success: true,
-    }));
-
-    static slidingWindow(limit: number, window: string) {
-      return { limit, window } as const;
-    }
-  },
-}));
+const { afterAllHook: upstashAfterAllHook, beforeEachHook: upstashBeforeEachHook } =
+  setupUpstashTestEnvironment();
 
 // Mock next/headers cookies() before any imports that use it
 vi.mock("next/headers", () => ({
@@ -68,6 +65,13 @@ vi.mock("@/lib/redis", () => {
   return { getRedis: () => store };
 });
 
+let createTravelPlan: typeof import("@ai/tools/server/planning").createTravelPlan;
+let saveTravelPlan: typeof import("@ai/tools/server/planning").saveTravelPlan;
+
+beforeAll(async () => {
+  ({ createTravelPlan, saveTravelPlan } = await import("@ai/tools/server/planning"));
+});
+
 let currentUserId = "u1";
 const mockCreateServerSupabase = vi.hoisted(() =>
   vi.fn(async () => ({
@@ -107,6 +111,7 @@ describe("planning tools", () => {
   let redis: RedisMock;
 
   beforeEach(async () => {
+    upstashBeforeEachHook();
     const mod = (await import("@/lib/redis")) as unknown as {
       getRedis: () => RedisMock;
     };
@@ -117,6 +122,10 @@ describe("planning tools", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  afterAll(() => {
+    upstashAfterAllHook();
   });
 
   const exec = async <T>(toolObj: unknown, args: Record<string, unknown>) =>

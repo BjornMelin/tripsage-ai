@@ -10,6 +10,10 @@ import {
   createRouteParamsContext,
   getMockCookiesForTest,
 } from "@/test/helpers/route";
+import { setupUpstashTestEnvironment } from "@/test/upstash/setup";
+
+const { afterAllHook: upstashAfterAllHook, beforeEachHook: upstashBeforeEachHook } =
+  setupUpstashTestEnvironment();
 
 const mockLogger = vi.hoisted(() => ({
   error: vi.fn(),
@@ -45,16 +49,6 @@ vi.mock("@/lib/env/server", () => ({
   }),
 }));
 
-vi.mock("@upstash/redis", async () => {
-  const { createRedisMock } = await import("@/test/upstash/redis-mock");
-  return createRedisMock();
-});
-
-vi.mock("@upstash/ratelimit", async () => {
-  const { createRatelimitMock } = await import("@/test/upstash/ratelimit-mock");
-  return createRatelimitMock();
-});
-
 const supabaseClient = {
   auth: {
     getUser: vi.fn(),
@@ -86,7 +80,8 @@ async function importRoute() {
 }
 
 describe("POST /api/memory/user/[userId] (delete memories)", () => {
-  beforeEach(async () => {
+  beforeEach(() => {
+    upstashBeforeEachHook();
     vi.clearAllMocks();
     setRateLimitFactoryForTests(async () => ({
       limit: 10,
@@ -113,20 +108,12 @@ describe("POST /api/memory/user/[userId] (delete memories)", () => {
     });
 
     mockEq.mockResolvedValue({ error: null });
-
-    const redisModule = (await import("@upstash/redis")) as {
-      __reset?: () => void;
-    };
-    const ratelimitModule = (await import("@upstash/ratelimit")) as {
-      __reset?: () => void;
-    };
-    redisModule.__reset?.();
-    ratelimitModule.__reset?.();
   });
 
   afterAll(() => {
     setSupabaseFactoryForTests(null);
     setRateLimitFactoryForTests(null);
+    upstashAfterAllHook();
   });
 
   it("returns 401 when user is unauthenticated", async () => {
