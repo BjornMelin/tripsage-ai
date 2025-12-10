@@ -1,3 +1,16 @@
+## [1.9.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.8.0...v1.9.0) (2025-12-10)
+
+### Features
+
+* **attachments:** add Zod v4 validation schemas ([00fbc24](https://github.com/BjornMelin/tripsage-ai/commit/00fbc24192604d4a64bedfad1642ae06fe563cf6))
+* **attachments:** rewrite list endpoint with signed URL generation ([5251571](https://github.com/BjornMelin/tripsage-ai/commit/5251571bd549bdffa1ae5f5c50d693d9f79bf909))
+* **attachments:** rewrite upload endpoint for Supabase Storage ([bdf5afa](https://github.com/BjornMelin/tripsage-ai/commit/bdf5afa6aaa54b76a598ad05325a039674dbcaa8))
+* **deps:** replace @vercel/blob with file-type for MIME verification ([c150f04](https://github.com/BjornMelin/tripsage-ai/commit/c150f04eda244be829c1eecea84e711aab18a210))
+
+### Bug Fixes
+
+* **api:** add AGENTS.md exception comment for webhook createClient import ([467f44e](https://github.com/BjornMelin/tripsage-ai/commit/467f44e716c16e33c5685cd46b958b1b74af4169))
+
 ## [1.8.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.7.0...v1.8.0) (2025-12-09)
 
 ### ⚠ BREAKING CHANGES
