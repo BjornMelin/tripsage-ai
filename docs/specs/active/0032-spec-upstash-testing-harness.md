@@ -1,8 +1,8 @@
 # SPEC-0032: Upstash Testing Harness (Mocks, Emulators, Smoke)
 
-**Version**: 1.0.0  
-**Status**: Proposed  
-**Date**: 2025-11-24
+**Version**: 1.1.0
+**Status**: Implemented
+**Date**: 2025-12-10
 
 ## Objective
 
@@ -110,6 +110,85 @@ Define a DRY, deterministic testing harness for all Upstash integrations (Redis,
 - [x] Documentation/CHANGELOG for emulator + smoke, and CI wiring.
 
 > Note: For Vitest `--pool=threads`, use `vi.doMock` (not `vi.mock`) when registering shared Upstash mocks to avoid hoist/TDZ issues.
+
+## Usage
+
+### Quick Start
+
+```typescript
+/** @vitest-environment node */
+import { beforeEach, describe, it, expect, vi } from "vitest";
+import {
+  installUpstashMocks,
+  resetUpstashMocks,
+  getPublishedQStashMessages,
+} from "@/test/upstash";
+
+const mocks = installUpstashMocks();
+
+// Register mocks (use vi.doMock for --pool=threads safety)
+vi.doMock("@upstash/redis", () => ({ Redis: mocks.redis.Redis }));
+vi.doMock("@upstash/ratelimit", () => ({ Ratelimit: mocks.ratelimit.Ratelimit }));
+vi.doMock("@upstash/qstash", () => ({
+  Client: mocks.qstash.Client,
+  Receiver: mocks.qstash.Receiver,
+}));
+
+describe("my test suite", () => {
+  beforeEach(() => resetUpstashMocks());
+
+  it("tracks QStash messages", async () => {
+    // ... code that calls publishJSON
+    expect(getPublishedQStashMessages()).toHaveLength(1);
+  });
+});
+```
+
+### Using Setup Helpers
+
+```typescript
+import { setupUpstashTestEnvironment } from "@/test/upstash/setup";
+import { beforeEach, afterAll } from "vitest";
+
+const { beforeEachHook, afterAllHook, mocks } = setupUpstashTestEnvironment();
+beforeEach(beforeEachHook);
+afterAll(afterAllHook);
+```
+
+### Test Injection (Production Code)
+
+```typescript
+import { setRedisFactoryForTests } from "@/lib/redis";
+import { setQStashClientFactoryForTests } from "@/lib/qstash/client";
+import { RedisMockClient, QStashClientMock } from "@/test/upstash";
+
+// Setup
+setRedisFactoryForTests(() => new RedisMockClient() as unknown as Redis);
+setQStashClientFactoryForTests(() => new QStashClientMock({ token: "test" }));
+
+// Teardown
+setRedisFactoryForTests(null);
+setQStashClientFactoryForTests(null);
+```
+
+### Force Rate Limit / QStash Outcomes
+
+```typescript
+// Force rate limit rejection
+mocks.ratelimit.Ratelimit.force({ success: false, remaining: 0, retryAfter: 60 });
+
+// Force QStash signature verification failure
+mocks.qstash.__forceVerify(false);
+// Or throw an error
+mocks.qstash.__forceVerify(new Error("Signature invalid"));
+```
+
+## Caveats
+
+- Redis mock does not implement LRU eviction; TTL is time-based only
+- QStash mock does not validate signature cryptography
+- Use `vi.doMock()` not `vi.mock()` for thread-safety with `--pool=threads`
+- Test injection only works when mocks are registered before module import
 
 ## Risks & Mitigations
 
