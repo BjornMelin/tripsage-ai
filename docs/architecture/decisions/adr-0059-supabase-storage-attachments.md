@@ -78,6 +78,27 @@ chat/550e8400-e29b-41d4-a716-446655440000/a1b2c3d4-vacation-photo.jpg
 3. **Validation**: Zod v4 schemas enforce size limits (10MB per file), MIME types, and file counts (max 5)
 4. **Cache invalidation**: Use `revalidateTag('attachments')` and Upstash `bumpTag()` for listing cache
 
+#### Signed URL TTL and Refresh Strategy
+
+Signed URLs expire after 1 hour. For long-lived references (pages open beyond the TTL), implement the following:
+
+**Client-side detection**:
+- Handle 403/410 responses when accessing expired signed URLs
+- Detect via HTTP status codes or explicit error response from storage
+- Example: `if (response.status === 403 || response.status === 410) { /* URL expired */ }`
+
+**Server-side refresh endpoint**:
+- Implement `GET /api/attachments/{id}/refresh-url` to regenerate signed URLs on demand
+- Validates user ownership before issuing new URL
+- Returns new signed URL with fresh 1-hour TTL
+- Example response: `{ "url": "https://...", "expiresAt": "2025-12-10T23:00:00Z" }`
+
+**Error handling for batch operations**:
+- When listing files with URLs, batch regenerate any expired URLs via `createSignedUrls()`
+- Validate paths belong to authenticated user before signing
+- Stale URLs are acceptable; refresh on access failure
+- Example: User opens attachment list after 45+ minutes; URLs are pre-emptively refreshed on response
+
 ## Consequences
 
 ### Positive
@@ -134,11 +155,18 @@ Maintain the legacy backend proxy for attachments.
 
 ## Implementation Notes
 
+### Required Dependencies
+
+- `file-type` (v18+): For magic byte detection and MIME verification
+  - Install: `npm install file-type`
+  - Validates actual file type matches declared MIME type to prevent spoofing
+
 ### Upload Flow (Server-Side)
 
 ```typescript
 import { secureUuid } from '@/lib/security/random';
 import { sanitizeFilename } from '@schemas/attachments';
+import { fileTypeFromBuffer } from 'file-type';
 
 // Verify MIME type using magic bytes
 const buffer = new Uint8Array(await file.arrayBuffer());
@@ -184,6 +212,8 @@ const { data } = await supabase.storage
   .from('attachments')
   .createSignedUrls(paths, 3600, { download: true });
 ```
+
+**Note on `download: true` option**: Setting `download: true` in the signed URL options forces the browser to download the file as an attachment rather than opening it inline. This prevents XSS attacks where embedded content (e.g., HTML files) could execute in the user's browser context. TTL (time-to-live) is set to 3600 seconds (1 hour).
 
 ### Validation Schema (Zod v4)
 
