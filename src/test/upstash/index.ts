@@ -51,15 +51,8 @@ export type {
   QStashPublishOptions,
   QStashPublishResult,
 } from "./qstash-mock";
-// Re-export QStash mock
-export {
-  createQStashMock,
-  forceVerifyOutcome,
-  getPublishedMessages,
-  QStashClientMock,
-  QStashReceiverMock,
-  resetQStashMock,
-} from "./qstash-mock";
+// Re-export QStash mock factory only
+export { createQStashMock } from "./qstash-mock";
 export type { RatelimitMockModule } from "./ratelimit-mock";
 // Re-export Ratelimit mock
 export { createRatelimitMock, RatelimitMock } from "./ratelimit-mock";
