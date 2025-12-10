@@ -62,24 +62,24 @@ You will:
 
 #### Load Tools
 
-- exa.deep_search_exa: Run deep semantic search over web-scale content when you need high quality, context rich results for research, technical topics, or niche queries.
+- exa.deep_search_exa: Run deep semantic search over web-scale content when you need high-quality, context-rich results for research, technical topics, or niche queries.
 - fetch: Fetch and scrape the rendered contents of a URL inside Claude Code to pull in docs, blogs, or API references directly into the session.
-- context7.resolve-library-id: Convert a natural language library name into a Context7 compatible library identifier before requesting documentation for that library.
-- context7.get-library-docs: Retrieve up to date documentation and code examples for a resolved Context7 library ID, optionally scoped by topic and token budget.
+- context7.resolve-library-id: Convert a natural-language library name into a Context7-compatible library identifier before requesting documentation for that library.
+- context7.get-library-docs: Retrieve up-to-date documentation and code examples for a resolved Context7 library ID, optionally scoped by topic and token budget.
 - supabase.search_docs: Search official Supabase documentation for specific APIs, configuration settings, and best practice examples relevant to your code.
-- next-devtools.nextjs_docs: Search the Next.js 16 knowledge base and official docs for framework specific guidance, migration details, and API usage.
+- next-devtools.nextjs_docs: Search the Next.js 16 knowledge base and official docs for framework-specific guidance, migration details, and API usage.
 - vercel.search_documentation: Search Vercel documentation for platform features, deployment configuration, routing, and data fetching details.
 - next-devtools.nextjs_runtime: Inspect a running Next.js 16 dev server via its MCP endpoint to list routes, check runtime errors, view logs, and understand app structure before editing.
-- next-devtools.upgrade_nextjs_16: Guide and automate upgrading a project to Next.js 16 using the official codemod plus follow up manual remediation steps.
-- gh_grep.searchGitHub: Search GitHub code via Grep by Vercel for real world examples of patterns, API usage, or framework configuration when documentation is unclear.
-- zen.planner: Turn a high level development or refactor request into a sequenced implementation plan, including files to touch, tools to call, and checkpoints.
+- next-devtools.upgrade_nextjs_16: Guide and automate upgrading a project to Next.js 16 using the official codemod plus follow-up manual remediation steps.
+- gh_grep.searchGitHub: Search GitHub code via Grep by Vercel for real-world examples of patterns, API usage, or framework configuration when documentation is unclear.
+- zen.planner: Turn a high-level development or refactor request into a sequenced implementation plan, including files to touch, tools to call, and checkpoints.
 - zen.analyze: Perform in-depth analysis of code, architecture, or requirements to identify strengths, weaknesses, and opportunities for improvement.
 - zen.codereview: Conduct automated code reviews, suggesting improvements, detecting issues, and ensuring adherence to best practices.
 - zen.secaudit: Run security audits on code and configurations, identifying vulnerabilities and recommending targeted mitigations.
 
 #### Load Skills
 
-- claude.ai-sdk-core: Use Vercel AI SDK core primitives and patterns to design type safe LLM calls, streaming responses, and tool integrations.
+- claude.ai-sdk-core: Use Vercel AI SDK core primitives and patterns to design type-safe LLM calls, streaming responses, and tool integrations.
 - claude.zod-v4: Apply Zod v4 schemas for input validation, output typing, and migrations across APIs, configuration, and internal data structures.
 
 ### Usage Guidelines

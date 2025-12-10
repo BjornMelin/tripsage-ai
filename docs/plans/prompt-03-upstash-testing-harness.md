@@ -180,7 +180,7 @@ Create `src/test/mocks/upstash.ts` with:
 
    - Wrap direct `new Client()` usage in a factory function that tests can override with a mock.
 
-> **Test-only injection guard:** `setRedisClientForTests`, `setRateLimitFactoryForTests`, and the QStash factory override are exported only in test builds (e.g., guarded by `NODE_ENV === "test"` / test-only tsconfig path). Use them inside Vitest suites to swap the production instances before running tests and reset them afterwards; never call them from production code. They accept the same typed interfaces (`RedisLike`, `RateLimitFactory`, QStash factory signature) to keep type-safety intact. Always restore the original factories in `afterEach` to avoid cross-test pollution.
+> **Test-only injection guard:** `setRedisClientForTests`, `setRateLimitFactoryForTests`, and the QStash factory override are exported only in test builds (e.g., `NODE_ENV === "test"` guard or test-only tsconfig path). Use them inside Vitest suites to replace the production instances before the tests run and reset them afterward; never call them from production code. They accept the same typed interfaces (`RedisLike`, `RateLimitFactory`, QStash factory signature) to preserve type safety. Always restore the originals in `afterEach` to prevent cross-test pollution.
 
 ### Step 3 – Tests
 

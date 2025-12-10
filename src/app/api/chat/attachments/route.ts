@@ -103,7 +103,10 @@ function validateUploadFiles(
 async function verifyMimeType(
   buffer: Uint8Array,
   declaredType: string
-): Promise<{ valid: true; detectedType: string } | { valid: false; reason: string }> {
+): Promise<
+  | { valid: true; detectedType: string }
+  | { detectedType?: string; reason: string; valid: false }
+> {
   const detected = await fileTypeFromBuffer(buffer);
 
   // For files without detectable magic bytes (e.g., text/csv, text/plain),
@@ -138,6 +141,8 @@ async function verifyMimeType(
 interface UploadResult {
   file: File;
   path: string;
+  detectedType?: string;
+  errorKind?: "validation" | "storage";
   error: Error | null;
 }
 
@@ -166,7 +171,13 @@ async function uploadToSupabaseStorage(
   // Verify MIME type using magic bytes
   const mimeVerification = await verifyMimeType(buffer, file.type);
   if (!mimeVerification.valid) {
-    return { error: new Error(mimeVerification.reason), file, path: "" };
+    return {
+      detectedType: mimeVerification.detectedType,
+      error: new Error(mimeVerification.reason),
+      errorKind: "validation",
+      file,
+      path: "",
+    };
   }
 
   const contentType = mimeVerification.detectedType ?? file.type;
@@ -180,10 +191,21 @@ async function uploadToSupabaseStorage(
     });
 
   if (error) {
-    return { error: new Error(error.message), file, path: storagePath };
+    return {
+      detectedType: mimeVerification.detectedType,
+      error: new Error(error.message),
+      errorKind: "storage",
+      file,
+      path: storagePath,
+    };
   }
 
-  return { error: null, file, path: storagePath };
+  return {
+    detectedType: mimeVerification.detectedType,
+    error: null,
+    file,
+    path: storagePath,
+  };
 }
 
 /**
@@ -268,6 +290,7 @@ export const POST = withApiGuards({
   const uploadedPaths: string[] = []; // Track successful uploads for cleanup
   const insertedAttachmentIds: string[] = []; // Track inserted metadata for rollback
   let firstUploadError: Error | null = null;
+  let firstUploadStatus: number | null = null;
 
   for (const result of uploadResults) {
     if (result.status === "rejected") {
@@ -282,7 +305,7 @@ export const POST = withApiGuards({
       continue; // Don't return yet - need to cleanup uploaded files
     }
 
-    const { file, path, error: uploadError } = result.value;
+    const { detectedType, file, path, error: uploadError, errorKind } = result.value;
 
     if (uploadError) {
       // Upload returned an error (validation or storage error)
@@ -292,7 +315,10 @@ export const POST = withApiGuards({
         fileName: file.name,
         userId,
       });
-      if (!firstUploadError) firstUploadError = uploadError;
+      if (!firstUploadError) {
+        firstUploadError = uploadError;
+        firstUploadStatus = errorKind === "validation" ? 400 : 500;
+      }
       continue; // Don't return yet - need to cleanup uploaded files
     }
 
@@ -310,7 +336,7 @@ export const POST = withApiGuards({
       file_size: file.size,
       filename: fileId, // Storage key (UUID)
       id: fileId,
-      mime_type: file.type,
+      mime_type: detectedType ?? file.type,
       original_filename: file.name, // User-facing name
       upload_status: "completed",
       user_id: userId,
@@ -340,7 +366,7 @@ export const POST = withApiGuards({
         name: file.name,
         size: file.size,
         status: "failed",
-        type: file.type,
+        type: detectedType ?? file.type,
         url: null,
       });
       continue;
@@ -358,7 +384,7 @@ export const POST = withApiGuards({
       name: file.name,
       size: file.size,
       status: "completed",
-      type: file.type,
+      type: detectedType ?? file.type,
       url: signedUrl,
     });
 
@@ -425,9 +451,9 @@ export const POST = withApiGuards({
 
     return errorResponse({
       err: firstUploadError,
-      error: "internal",
+      error: firstUploadStatus === 400 ? "invalid_request" : "internal",
       reason: "File upload failed",
-      status: 500,
+      status: firstUploadStatus ?? 500,
     });
   }
 

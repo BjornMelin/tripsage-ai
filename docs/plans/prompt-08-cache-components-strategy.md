@@ -10,6 +10,7 @@ You specialize in:
 - `cacheTag` and `revalidateTag` for data invalidation.
 - Coordinating server cache with client-side caches (TanStack Query).
 - Avoiding unnecessary complexity in caching.
+- Enforcing that `'use cache'` directives are only used in modules that do **not** call request-scoped APIs such as `cookies()`, `headers()`, `params`, or `searchParams`; authenticated/dynamic routes should use server functions without the directive or rely on a distributed store (e.g., Upstash).
 
 ---
 
@@ -52,6 +53,8 @@ TanStack Query (React):
 - Validate using zen.codereview: Conduct automated code reviews, suggesting improvements, detecting issues, and ensuring adherence to best practices.
 - Secure with zen.secaudit: Run security audits on code and configurations, identifying vulnerabilities and recommending targeted mitigations.
 
+> Constraint: `'use cache'` directives cannot access request-specific APIs. Only place them in modules that do **not** call `cookies()`, `headers()`, `params`, or `searchParams`. For authenticated or otherwise dynamic routes, drop the directive and use plain server functions or a distributed store such as Upstash instead.
+
 #### Load Skills
 
 - zod-v4: Apply Zod v4 schemas for input validation, output typing, and migrations across APIs, configuration, and internal data structures.
@@ -64,6 +67,7 @@ TanStack Query (React):
 - Examples: `gh_grep.searchGitHub` for "Next.js cacheTag TanStack Query coordination".
 - Chain review: `zen.analyze` on `src/lib/cache/tags.ts` → `zen.secaudit` for staleness → `zen.codereview` on helpers.
 - Invoke tools via standard MCP syntax in your responses (e.g., `next-devtools.nextjs_docs {query: "Next.js use cache directive with cacheTag examples"}`).
+- Never apply `'use cache'` in modules that access `cookies()`, `headers()`, `params`, or `searchParams`; those routes must stay dynamic (no directive) and, if stateful, should leverage server functions or distributed storage (e.g., Upstash).
 
 ### Skills Enforcement
 
@@ -126,6 +130,8 @@ Create `src/lib/cache/next-cache.ts` with:
 
   import { cacheTag } from 'next/cache';
 
+  // Do NOT add this directive in modules that call cookies(), headers(), params, or searchParams.
+  // Authenticated/dynamic routes should stay dynamic and use server functions or distributed cache (e.g., Upstash).
   export function withCacheTag<T>(
     tag: string,
     fn: () => Promise<T> | T,
@@ -146,6 +152,7 @@ Identify 3–5 data loaders that:
 
 - Are read-mostly.
 - Expensive or more than trivial.
+- Do **not** access `cookies()`, `headers()`, `params`, or `searchParams`; if they do, leave them dynamic (no `'use cache'`) and prefer server functions or Upstash-backed caching instead.
 
 Examples:
 
