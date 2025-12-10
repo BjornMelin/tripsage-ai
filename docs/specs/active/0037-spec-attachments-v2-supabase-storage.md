@@ -1,7 +1,7 @@
 # SPEC-0037: Attachments V2 with Supabase Storage
 
 **Version**: 1.0.0
-**Status**: Implemented
+**Status**: Accepted
 **Date**: 2025-12-10
 **Related ADRs**: ADR-0059
 **Supersedes**: SPEC-0036
@@ -25,6 +25,19 @@ This specification defines the API contracts, validation rules, and implementati
 - Migration of existing historical attachments (separate effort)
 - Virus scanning integration (future enhancement)
 
+## Breaking Changes from SPEC-0036
+
+This specification supersedes SPEC-0036 (Vercel Blob) with the following intentional breaking changes:
+
+1. **Response ID Types**: `tripId` and `chatMessageId` in API responses are now numeric types (integers) rather than stringified values.
+   - SPEC-0036: `"tripId": "123"`, `"chatMessageId": "456"` (strings)
+   - SPEC-0037: `"tripId": 123, "chatMessageId": 456` (integers)
+   - **Client Migration**: Update JSON parsers to handle numeric IDs; typeof checks expecting strings will fail.
+
+2. **Storage Provider**: File bytes now stored in Supabase Storage instead of Vercel Blob.
+   - Metadata remains in Supabase Postgres as before.
+   - Signed URLs use Supabase endpoints (different domain pattern).
+
 ---
 
 ## API Contracts
@@ -39,7 +52,7 @@ Upload one or more files to chat attachments storage.
 
 **Form Fields**:
 
-- `files` or `files[]`: One or more `File` objects
+- `files` or `files[]`: One or more files uploaded via `multipart/form-data` (e.g., browser File API objects or file uploads from HTTP clients)
 
 **Headers**:
 
@@ -354,7 +367,7 @@ function sanitizeFilename(filename: string): string {
   const maxLength = 100;
   // ... truncation logic
 
-  return safe;
+  return sanitized;
 }
 ```
 
@@ -385,7 +398,7 @@ Rate limit keys are derived from `chat:attachments` and `attachments:files` resp
 
 ### Rate Limiting Implementation
 
-- **Store**: Upstash Redis (distributed); in-memory only for local single-instance development.
+- **Store**: Upstash Redis (distributed); in-memory only for local, single-instance development.
 - **Key structure**: `chat:attachments:{userId}:{yyyyMMddHHmm}` (fixed window). Listing route: `attachments:files:{userId}:{yyyyMMddHHmm}`.
 - **TTL**: Set expiry equal to window length so counters auto-expire; no manual cleanup required.
 - **Distributed requirement**: Use Redis/Upstash in any multi-instance deployment to avoid split-brain counters.
@@ -502,7 +515,7 @@ export const attachmentFileSchema = z.strictObject({
   originalName: z.string(),
   size: z.number().int().nonnegative(),
   mimeType: z.string(),
-  url: z.url(),
+  url: z.url().nullable(),
   tripId: z.number().int().nonnegative().nullable(),
   chatMessageId: z.number().int().nonnegative().nullable(),
   uploadStatus: z.enum(['uploading', 'completed', 'failed']),
