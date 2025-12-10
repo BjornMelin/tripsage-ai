@@ -15,7 +15,7 @@ Deliver production-grade “Popular Routes” data on the flights search page. R
 
 ## 2. Goals
 
-- Serve real popular routes with prices and dates, using Amadeus Flight Offers Search and Flight Destinations (inspiration).
+- Serve actual popular routes with prices and dates, using Amadeus Flight Offers Search and Flight Destinations (inspiration).
 - Cache results in Upstash (prices ~1h TTL, routes ~24h TTL) with per-origin keys and invalidation hooks.
 - Provide a single API contract `/api/flights/popular-routes` consumed by a `usePopularRoutes(origin?)` hook.
 - Preserve UX resilience: fallback curated cards when API/caching fails; clear loading/error states.
