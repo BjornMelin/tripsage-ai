@@ -21,6 +21,7 @@ import { createWebhookHandler } from "@/lib/webhooks/handler";
  * - Idempotency via Redis (prevents duplicate cache bumps)
  */
 export const POST = createWebhookHandler({
+  // Idempotency settings (grouped for readability)
   enableIdempotency: true,
 
   async handle(payload, _eventKey, span) {
@@ -35,5 +36,6 @@ export const POST = createWebhookHandler({
     return { bumped, tags };
   },
   idempotencyTTL: 60, // Shorter TTL for cache ops
+
   name: "cache",
 });

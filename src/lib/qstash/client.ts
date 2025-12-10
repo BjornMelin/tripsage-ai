@@ -11,6 +11,7 @@ import "server-only";
 
 import { Client } from "@upstash/qstash";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
+import { secureId } from "@/lib/security/random";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import { QSTASH_RETRY_CONFIG } from "./config";
 
@@ -44,10 +45,16 @@ export function isQstashAvailable(): boolean {
 
 /**
  * Parse a delay string (e.g., "10s", "5m") to seconds.
+ *
+ * @throws Error if the delay string format is invalid
  */
 function parseDelayToSeconds(delay: string): number {
   const match = delay.match(/^(\d+)(s|m|h|d)?$/);
-  if (!match) return 10; // Default to 10 seconds
+  if (!match) {
+    throw new Error(
+      `Invalid delay format: "${delay}". Expected format: <number>[s|m|h|d] (e.g., "10s", "5m", "1h", "1d")`
+    );
+  }
 
   const value = parseInt(match[1], 10);
   const unit = match[2] || "s";
@@ -144,8 +151,8 @@ export async function enqueueJob(
       const url = `${origin}${path}`;
       span.setAttribute("qstash.url", url);
 
-      // Build deduplication ID if not provided
-      const deduplicationId = options.deduplicationId ?? `${jobType}:${Date.now()}`;
+      // Build deduplication ID if not provided (use secureId to prevent collision)
+      const deduplicationId = options.deduplicationId ?? `${jobType}:${secureId()}`;
       span.setAttribute("qstash.dedup_id", deduplicationId);
 
       // Parse delay from config (e.g., "10s" -> 10)

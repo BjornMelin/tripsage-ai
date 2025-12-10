@@ -97,8 +97,8 @@ describe("POST /api/hooks/cache", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns 401 when payload is missing (H3 abstraction behavior)", async () => {
-    // Handler abstraction returns 401 for all parseAndVerify failures
+  it("returns 401 when payload is missing (createWebhookHandler abstraction)", async () => {
+    // createWebhookHandler abstraction returns 401 for all parseAndVerify failures
     parseAndVerifyMock.mockResolvedValue({ ok: true, payload: undefined });
     const { POST } = await loadRoute();
     const res = await POST(makeRequest({}));

@@ -61,7 +61,12 @@ Key implementation details:
 - Max 6 total attempts (1 initial + 5 retries) with exponential backoff starting at 10s
 - DLQ entries stored in Redis with 7-day TTL and max 1000 entries per job type
 - Retry attempt tracked via `Upstash-Retried` header; DLQ push on final failure
-- Telemetry spans emit `qstash.attempt`, `qstash.dlq`, `qstash.dlq_entry_id` attributes
+- Telemetry spans emit the following attributes:
+  - `qstash.attempt` - Current attempt number (1-based)
+  - `qstash.max_retries` - Maximum configured retries
+  - `qstash.final_attempt` - Boolean indicating if this is the last retry
+  - `qstash.dlq` - Boolean indicating entry was pushed to DLQ
+  - `qstash.dlq_entry_id` - Unique ID of the DLQ entry (if pushed)
 
 ## References
 

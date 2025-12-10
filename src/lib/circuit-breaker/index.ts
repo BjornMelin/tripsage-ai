@@ -150,6 +150,9 @@ export async function checkCircuit(
 /**
  * Record a failure for a service.
  *
+ * Uses Redis SETEX for atomic set-with-expiry when setting initial value,
+ * falling back to separate commands for increments (Upstash Redis limitation).
+ *
  * @param config - Circuit breaker configuration
  */
 export async function recordFailure(
@@ -160,13 +163,22 @@ export async function recordFailure(
 
   const { name, failureWindowSeconds = DEFAULT_FAILURE_WINDOW_SECONDS } = config;
   const failureCountKey = getFailureCountKey(name);
+  const successCountKey = getSuccessCountKey(name);
 
-  // Increment failure count with TTL
-  await redis.incr(failureCountKey);
-  await redis.expire(failureCountKey, failureWindowSeconds);
+  // Check current value to decide approach
+  const current = await redis.get(failureCountKey);
+
+  if (current === null) {
+    // First failure: use atomic SETEX (set with expiry in one command)
+    await redis.setex(failureCountKey, failureWindowSeconds, "1");
+  } else {
+    // Subsequent failures: increment and refresh TTL
+    // Note: These are separate commands but TTL refresh is best-effort
+    await redis.incr(failureCountKey);
+    await redis.expire(failureCountKey, failureWindowSeconds);
+  }
 
   // Reset success count on failure
-  const successCountKey = getSuccessCountKey(name);
   await redis.del(successCountKey);
 }
 
@@ -216,14 +228,37 @@ export async function recordSuccess(
 }
 
 /**
- * Get the current state of a circuit breaker.
+ * Get the current state of a circuit breaker (read-only).
+ *
+ * Unlike checkCircuit, this function performs a read-only lookup without
+ * any side effects (no circuit opening, no threshold evaluation, no metrics).
  *
  * @param name - Service name
  * @returns Current circuit state
  */
 export async function getCircuitState(name: string): Promise<CircuitState> {
-  const result = await checkCircuit({ name });
-  return result.state;
+  const redis = getRedis();
+  if (!redis) {
+    return "closed"; // Fail open if Redis unavailable
+  }
+
+  const openedAtKey = getOpenedAtKey(name);
+  const openedAt = await redis.get(openedAtKey);
+
+  if (!openedAt) {
+    return "closed";
+  }
+
+  // Circuit was opened - check if cooldown has passed
+  const openedAtMs = parseInt(openedAt as string, 10);
+  const elapsedSeconds = (Date.now() - openedAtMs) / 1000;
+
+  // Use default cooldown for read-only state check
+  if (elapsedSeconds < DEFAULT_COOLDOWN_SECONDS) {
+    return "open";
+  }
+
+  return "half-open";
 }
 
 /**

@@ -10,6 +10,7 @@ import "server-only";
 import { Ratelimit } from "@upstash/ratelimit";
 import { getRedis } from "@/lib/redis";
 import { warnRedisUnavailable } from "@/lib/telemetry/redis";
+import { recordTelemetryEvent } from "@/lib/telemetry/span";
 
 const REDIS_FEATURE = "webhooks.rate_limit";
 
@@ -57,7 +58,7 @@ export interface RateLimitResult {
  * Checks headers in order:
  * 1. X-Forwarded-For (first IP in comma-separated list)
  * 2. CF-Connecting-IP (Cloudflare)
- * 3. Fallback to "unknown"
+ * 3. Fallback to "unknown" (logged for monitoring)
  *
  * @param req - The incoming request
  * @returns Client IP address string
@@ -70,6 +71,19 @@ export function getClientIp(req: Request): string {
 
   const cfIp = req.headers.get("cf-connecting-ip");
   if (cfIp) return cfIp;
+
+  // Log fallback to "unknown" for monitoring (rate-limited via telemetry)
+  // This creates a shared rate-limit bucket which may be problematic at scale
+  recordTelemetryEvent("webhook.ip_missing", {
+    attributes: {
+      "request.cf_connecting_ip": cfIp ?? "missing",
+      "request.method": req.method,
+      "request.url": new URL(req.url).pathname,
+      "request.user_agent": req.headers.get("user-agent") ?? "unknown",
+      "request.x_forwarded_for": forwardedFor ?? "missing",
+    },
+    level: "warning",
+  });
 
   return "unknown";
 }
