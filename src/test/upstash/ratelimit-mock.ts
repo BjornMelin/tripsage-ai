@@ -2,12 +2,14 @@
  * @fileoverview Mock implementation of Upstash Ratelimit for testing.
  *
  * Provides a shared in-memory store for Ratelimit operations, simulating
- * Ratelimit behavior with sliding window support and forced outcomes.
+ * Ratelimit behavior with sliding/fixed window support and forced outcomes.
+ * Compatible with vi.doMock() for thread-safe testing with --pool=threads.
  */
 
-type SlidingWindowConfig = {
+type LimiterConfig = {
   limit: number;
   intervalMs: number;
+  type: "sliding" | "fixed";
 };
 
 type CounterState = {
@@ -39,25 +41,14 @@ function parseWindow(window: string): number {
   }
 }
 
-export class RatelimitMock {
-  static slidingWindow(limit: number, window: string): SlidingWindowConfig {
-    return { intervalMs: parseWindow(window), limit };
-  }
-
-  private readonly state = new Map<string, CounterState>();
-  private forced?: {
-    success: boolean;
-    remaining?: number;
-    limit?: number;
-    reset?: number;
-    retryAfter?: number;
+export type RatelimitMockModule = {
+  // biome-ignore lint/style/useNamingConvention: mirrors @upstash/ratelimit export shape
+  Ratelimit: RatelimitMockClass & {
+    slidingWindow: (limit: number, window: string) => LimiterConfig;
+    fixedWindow: (limit: number, window: string) => LimiterConfig;
   };
-
-  constructor(
-    private readonly config: { limiter: SlidingWindowConfig; prefix?: string }
-  ) {}
-
-  force(
+  __reset: () => void;
+  __force: (
     result: Partial<{
       success: boolean;
       remaining: number;
@@ -65,104 +56,202 @@ export class RatelimitMock {
       reset: number;
       retryAfter: number;
     }>
-  ): void {
-    this.forced = {
-      limit: result.limit ?? this.config.limiter.limit,
-      remaining: result.remaining ?? 0,
-      reset: result.reset ?? Date.now() + this.config.limiter.intervalMs,
-      retryAfter: result.retryAfter ?? 1,
-      success: result.success ?? false,
-    };
-  }
+  ) => void;
+};
 
-  resetAll(): void {
-    this.state.clear();
-    this.forced = undefined;
-  }
+type RatelimitMockClass = new (config: {
+  limiter: LimiterConfig;
+  prefix?: string;
+}) => RatelimitMockInstance;
 
-  limit(identifier: string): Promise<{
+type RatelimitMockInstance = {
+  limit: (identifier: string) => Promise<{
     success: boolean;
     limit: number;
     remaining: number;
     reset: number;
     retryAfter: number;
-  }> {
-    if (this.forced) {
-      return Promise.resolve({
-        limit: this.forced.limit ?? this.config.limiter.limit,
-        remaining: this.forced.remaining ?? 0,
-        reset: this.forced.reset ?? Date.now() + this.config.limiter.intervalMs,
-        retryAfter: this.forced.retryAfter ?? 1,
-        success: this.forced.success,
-      });
+  }>;
+  force: (
+    result: Partial<{
+      success: boolean;
+      remaining: number;
+      limit: number;
+      reset: number;
+      retryAfter: number;
+    }>
+  ) => void;
+};
+
+/**
+ * Create Ratelimit mock module for vi.doMock() registration.
+ * Each call creates an isolated mock with its own shared state.
+ *
+ * @example
+ * ```ts
+ * const ratelimit = createRatelimitMock();
+ *
+ * vi.doMock("@upstash/ratelimit", () => ({
+ *   Ratelimit: ratelimit.Ratelimit,
+ * }));
+ *
+ * beforeEach(() => ratelimit.__reset());
+ * ```
+ */
+export function createRatelimitMock(): RatelimitMockModule {
+  // Shared state for all limiter instances created by this mock
+  const globalState = new Map<string, CounterState>();
+  let globalForced:
+    | {
+        success: boolean;
+        remaining?: number;
+        limit?: number;
+        reset?: number;
+        retryAfter?: number;
+      }
+    | undefined;
+
+  /**
+   * Ratelimit limiter instance with proper state isolation.
+   */
+  class RatelimitInstance {
+    private readonly config: { limiter: LimiterConfig; prefix?: string };
+
+    constructor(config: { limiter: LimiterConfig; prefix?: string }) {
+      this.config = config;
     }
 
-    const now = Date.now();
-    const key = `${this.config.prefix ?? "ratelimit"}:${identifier}`;
-    const current = this.state.get(key);
-    if (!current || current.resetAt <= now) {
-      const next: CounterState = {
-        remaining: this.config.limiter.limit - 1,
-        resetAt: now + this.config.limiter.intervalMs,
+    force(
+      result: Partial<{
+        success: boolean;
+        remaining: number;
+        limit: number;
+        reset: number;
+        retryAfter: number;
+      }>
+    ): void {
+      globalForced = {
+        limit: result.limit ?? this.config.limiter.limit,
+        remaining: result.remaining ?? 0,
+        reset: result.reset ?? Date.now() + this.config.limiter.intervalMs,
+        retryAfter: result.retryAfter ?? 1,
+        success: result.success ?? false,
       };
-      this.state.set(key, next);
+    }
+
+    limit(identifier: string): Promise<{
+      success: boolean;
+      limit: number;
+      remaining: number;
+      reset: number;
+      retryAfter: number;
+    }> {
+      // Check for forced outcome first
+      if (globalForced) {
+        return Promise.resolve({
+          limit: globalForced.limit ?? this.config.limiter.limit,
+          remaining: globalForced.remaining ?? 0,
+          reset: globalForced.reset ?? Date.now() + this.config.limiter.intervalMs,
+          retryAfter: globalForced.retryAfter ?? 1,
+          success: globalForced.success,
+        });
+      }
+
+      const now = Date.now();
+      const key = `${this.config.prefix ?? "ratelimit"}:${identifier}`;
+      const current = globalState.get(key);
+
+      // New window or expired window
+      if (!current || current.resetAt <= now) {
+        const next: CounterState = {
+          remaining: this.config.limiter.limit - 1,
+          resetAt: now + this.config.limiter.intervalMs,
+        };
+        globalState.set(key, next);
+        return Promise.resolve({
+          limit: this.config.limiter.limit,
+          remaining: next.remaining,
+          reset: next.resetAt,
+          retryAfter: 0,
+          success: true,
+        });
+      }
+
+      // Rate limit exceeded
+      if (current.remaining <= 0) {
+        return Promise.resolve({
+          limit: this.config.limiter.limit,
+          remaining: 0,
+          reset: current.resetAt,
+          retryAfter: Math.max(1, Math.ceil((current.resetAt - now) / 1000)),
+          success: false,
+        });
+      }
+
+      // Consume one request
+      current.remaining -= 1;
+      globalState.set(key, current);
       return Promise.resolve({
         limit: this.config.limiter.limit,
-        remaining: next.remaining,
-        reset: next.resetAt,
+        remaining: current.remaining,
+        reset: current.resetAt,
         retryAfter: 0,
         success: true,
       });
     }
-
-    if (current.remaining <= 0) {
-      return Promise.resolve({
-        limit: this.config.limiter.limit,
-        remaining: 0,
-        reset: current.resetAt,
-        retryAfter: Math.max(1, Math.ceil((current.resetAt - now) / 1000)),
-        success: false,
-      });
-    }
-
-    current.remaining -= 1;
-    this.state.set(key, current);
-    return Promise.resolve({
-      limit: this.config.limiter.limit,
-      remaining: current.remaining,
-      reset: current.resetAt,
-      retryAfter: 0,
-      success: true,
-    });
   }
-}
 
-export type RatelimitMockModule = {
-  // biome-ignore lint/style/useNamingConvention: mirrors @upstash/ratelimit export
-  Ratelimit: typeof RatelimitMock & {
-    slidingWindow: typeof RatelimitMock.slidingWindow;
+  // Add static methods to the constructor
+  const RatelimitConstructor = RatelimitInstance as unknown as RatelimitMockClass & {
+    slidingWindow: (limit: number, window: string) => LimiterConfig;
+    fixedWindow: (limit: number, window: string) => LimiterConfig;
   };
-  __reset: () => void;
-};
 
-export function createRatelimitMock(): RatelimitMockModule {
-  const slidingWindow = RatelimitMock.slidingWindow;
-  const instance = new RatelimitMock({ limiter: slidingWindow(10, "1 m") });
-  const reset = () => instance.resetAll();
-  const RatelimitCtor = class extends RatelimitMock {
-    static slidingWindow = slidingWindow;
-    constructor(options: { limiter: SlidingWindowConfig; prefix?: string }) {
-      super(options);
-      instance.resetAll();
-      Object.assign(instance, options);
-    }
-  };
+  RatelimitConstructor.slidingWindow = (
+    limit: number,
+    window: string
+  ): LimiterConfig => ({
+    intervalMs: parseWindow(window),
+    limit,
+    type: "sliding",
+  });
+
+  RatelimitConstructor.fixedWindow = (
+    limit: number,
+    window: string
+  ): LimiterConfig => ({
+    intervalMs: parseWindow(window),
+    limit,
+    type: "fixed",
+  });
 
   return {
-    __reset: reset,
-    // biome-ignore lint/style/useNamingConvention: mirrors @upstash/ratelimit export
-    Ratelimit: RatelimitCtor as unknown as typeof RatelimitMock & {
-      slidingWindow: typeof RatelimitMock.slidingWindow;
+    __force: (result) => {
+      globalForced = {
+        limit: result.limit,
+        remaining: result.remaining ?? 0,
+        reset: result.reset ?? Date.now() + 60000,
+        retryAfter: result.retryAfter ?? 1,
+        success: result.success ?? false,
+      };
     },
+    __reset: () => {
+      globalState.clear();
+      globalForced = undefined;
+    },
+    // biome-ignore lint/style/useNamingConvention: mirrors @upstash/ratelimit export shape
+    Ratelimit: RatelimitConstructor,
   };
+}
+
+// Legacy export for backwards compatibility
+// biome-ignore lint/complexity/noStaticOnlyClass: maintains backwards-compatible class API
+export class RatelimitMock {
+  static slidingWindow(limit: number, window: string): LimiterConfig {
+    return { intervalMs: parseWindow(window), limit, type: "sliding" };
+  }
+
+  static fixedWindow(limit: number, window: string): LimiterConfig {
+    return { intervalMs: parseWindow(window), limit, type: "fixed" };
+  }
 }

@@ -116,6 +116,25 @@ export class RedisMockClient {
     this.store.set(key, { ...entry, value: String(next) });
     return Promise.resolve(next);
   }
+
+  mget<T extends unknown[]>(...keys: string[]): Promise<T> {
+    const now = Date.now();
+    const results = keys.map((key) => {
+      const entry = touch(this.store, key, now);
+      return entry ? deserialize(entry.value) : null;
+    });
+    return Promise.resolve(results as T);
+  }
+
+  exists(...keys: string[]): Promise<number> {
+    const now = Date.now();
+    let count = 0;
+    for (const key of keys) {
+      const entry = touch(this.store, key, now);
+      if (entry) count += 1;
+    }
+    return Promise.resolve(count);
+  }
 }
 
 export class RedisMock {
