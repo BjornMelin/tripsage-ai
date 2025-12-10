@@ -32,9 +32,10 @@ specific features or components.
 
 | Spec | Title | Status | Date |
 |------|-------|--------|------|
-| [SPEC-0017](active/0017-spec-attachments-migration-next.md) | Attachments & File Uploads Migration (Next.js) | Partial | 2025-11-04 |
+| [SPEC-0017](active/0017-spec-attachments-migration-next.md) | Attachments & File Uploads Migration (Next.js) | Implemented | 2025-11-04 |
 | [SPEC-0018](active/0018-spec-rag-retriever-indexer.md) | RAG Retriever & Indexer (AI SDK v6) | Partial | 2025-11-04 |
 | [SPEC-0021](active/0021-spec-supabase-webhooks-vercel-consolidation.md) | Supabase Webhooks to Vercel Consolidation | Draft | 2025-11-12 |
+| [SPEC-0037](active/0037-spec-attachments-v2-supabase-storage.md) | Attachments V2 (Supabase Storage) | Accepted | 2025-12-10 |
 | [SPEC-0032](active/0032-spec-upstash-testing-harness.md) | Upstash Testing Harness (Mocks, Emulators, Smoke) | Proposed | 2025-11-24 |
 | [SPEC-0033](active/0033-spec-flatten-frontend-root-structure.md) | Flatten Next.js App Structure to Repository Root | Proposed | 2025-11-26 |
 | [SPEC-0034](active/0034-spec-popular-routes-flights.md) | Popular Routes for Flights (Amadeus + Upstash) | Proposed | 2025-12-03 |
@@ -42,6 +43,10 @@ specific features or components.
 ## Archived Specifications
 
 Completed, accepted, implemented, and superseded specs (plus historical migrations) are stored in [`archive/`](archive/). Refer to individual files there for status history and outcomes.
+
+Notable archived specs:
+
+- **SPEC-0036** (Attachments V2 Vercel Blob) — Superseded by SPEC-0037 (Supabase Storage)
 
 ## Creating a New Spec
 
