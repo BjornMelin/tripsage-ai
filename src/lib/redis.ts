@@ -38,8 +38,13 @@ export function setRedisFactoryForTests(
 }
 
 /**
- * Returns a singleton Upstash Redis client if credentials are present.
- * Uses test factory if set via setRedisFactoryForTests().
+ * Returns the Redis client for server code.
+ * - Production path: returns a cached singleton (constructed once per process).
+ * - Test path: if setRedisFactoryForTests() is configured, returns the factory
+ *   result per call (may or may not be singleton depending on the factory).
+ *
+ * setRedisFactoryForTests() clears the cached singleton so the next call uses
+ * the test factory or recreates the production client with fresh credentials.
  * @returns The Redis client or undefined if env is missing.
  */
 export function getRedis(): Redis | undefined {

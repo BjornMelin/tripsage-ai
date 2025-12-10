@@ -160,11 +160,12 @@ afterAll(afterAllHook);
 ```typescript
 import { setRedisFactoryForTests } from "@/lib/redis";
 import { setQStashClientFactoryForTests } from "@/lib/qstash/client";
-import { RedisMockClient, QStashClientMock } from "@/test/upstash";
+import { RedisMockClient, createQStashMock } from "@/test/upstash";
 
 // Setup
+const qstash = createQStashMock();
 setRedisFactoryForTests(() => new RedisMockClient() as unknown as Redis);
-setQStashClientFactoryForTests(() => new QStashClientMock({ token: "test" }));
+setQStashClientFactoryForTests(() => new qstash.Client({ token: "test" }));
 
 // Teardown
 setRedisFactoryForTests(null);
@@ -175,7 +176,7 @@ setQStashClientFactoryForTests(null);
 
 ```typescript
 // Force rate limit rejection
-mocks.ratelimit.Ratelimit.force({ success: false, remaining: 0, retryAfter: 60 });
+mocks.ratelimit.__force({ success: false, remaining: 0, retryAfter: 60 });
 
 // Force QStash signature verification failure
 mocks.qstash.__forceVerify(false);

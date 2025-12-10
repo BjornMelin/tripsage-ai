@@ -1,7 +1,8 @@
 /** @vitest-environment node */
 
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createRedisMock, sharedUpstashStore } from "@/test/upstash/redis-mock";
+import { withFakeTimers } from "@/test/utils/with-fake-timers";
 
 const redisMock = createRedisMock(sharedUpstashStore);
 
@@ -213,16 +214,21 @@ describe("Redis mock for idempotency", () => {
       expect(count).toBe(3);
     });
 
-    it("does not count expired keys", async () => {
-      const client = redisMock.Redis.fromEnv();
+    it(
+      "does not count expired keys",
+      withFakeTimers(async () => {
+        const base = new Date("2024-01-01T00:00:00Z");
+        vi.setSystemTime(base);
+        const client = redisMock.Redis.fromEnv();
 
-      await client.set("expire:exists", "1", { px: 1 });
-      await new Promise((r) => setTimeout(r, 10));
+        await client.set("expire:exists", "1", { px: 1 });
+        vi.advanceTimersByTime(10);
 
-      const count = await client.exists("expire:exists");
+        const count = await client.exists("expire:exists");
 
-      expect(count).toBe(0);
-    });
+        expect(count).toBe(0);
+      })
+    );
   });
 
   describe("mset operations", () => {

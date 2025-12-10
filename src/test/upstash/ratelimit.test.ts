@@ -1,7 +1,8 @@
 /** @vitest-environment node */
 
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createRatelimitMock } from "@/test/upstash/ratelimit-mock";
+import { withFakeTimers } from "@/test/utils/with-fake-timers";
 
 const ratelimit = createRatelimitMock();
 
@@ -64,44 +65,64 @@ describe("RatelimitMock", () => {
       expect(result.limit).toBe(5);
     });
 
-    it("returns reset timestamp in the future", async () => {
-      const limiter = new ratelimit.Ratelimit({
-        limiter: ratelimit.Ratelimit.slidingWindow(3, "1 m"),
-      });
+    it(
+      "returns reset timestamp in the future",
+      withFakeTimers(async () => {
+        const base = new Date("2024-01-01T00:00:00Z");
+        vi.setSystemTime(base);
+        const limiter = new ratelimit.Ratelimit({
+          limiter: ratelimit.Ratelimit.slidingWindow(3, "1 m"),
+        });
 
-      const result = await limiter.limit("user-1");
+        const result = await limiter.limit("user-1");
 
-      expect(result.reset).toBeGreaterThan(Date.now());
-    });
+        expect(result.reset).toBeGreaterThan(base.getTime());
+      })
+    );
   });
 
   describe("window time parsing", () => {
-    it("parses seconds", async () => {
-      const limiter = new ratelimit.Ratelimit({
-        limiter: ratelimit.Ratelimit.slidingWindow(1, "30 s"),
-      });
+    it(
+      "parses seconds",
+      withFakeTimers(async () => {
+        const baseMs = new Date("2024-01-01T00:00:00Z").getTime();
+        vi.setSystemTime(baseMs);
+        const limiter = new ratelimit.Ratelimit({
+          limiter: ratelimit.Ratelimit.slidingWindow(1, "30 s"),
+        });
 
-      const r1 = await limiter.limit("user-1");
-      expect(r1.reset).toBeLessThanOrEqual(Date.now() + 31_000);
-    });
+        const r1 = await limiter.limit("user-1");
+        expect(r1.reset).toBeLessThanOrEqual(baseMs + 31_000);
+      })
+    );
 
-    it("parses minutes", async () => {
-      const limiter = new ratelimit.Ratelimit({
-        limiter: ratelimit.Ratelimit.slidingWindow(1, "2 m"),
-      });
+    it(
+      "parses minutes",
+      withFakeTimers(async () => {
+        const baseMs = new Date("2024-01-01T00:00:00Z").getTime();
+        vi.setSystemTime(baseMs);
+        const limiter = new ratelimit.Ratelimit({
+          limiter: ratelimit.Ratelimit.slidingWindow(1, "2 m"),
+        });
 
-      const r1 = await limiter.limit("user-1");
-      expect(r1.reset).toBeLessThanOrEqual(Date.now() + 121_000);
-    });
+        const r1 = await limiter.limit("user-1");
+        expect(r1.reset).toBeLessThanOrEqual(baseMs + 121_000);
+      })
+    );
 
-    it("parses hours", async () => {
-      const limiter = new ratelimit.Ratelimit({
-        limiter: ratelimit.Ratelimit.slidingWindow(1, "1 h"),
-      });
+    it(
+      "parses hours",
+      withFakeTimers(async () => {
+        const baseMs = new Date("2024-01-01T00:00:00Z").getTime();
+        vi.setSystemTime(baseMs);
+        const limiter = new ratelimit.Ratelimit({
+          limiter: ratelimit.Ratelimit.slidingWindow(1, "1 h"),
+        });
 
-      const r1 = await limiter.limit("user-1");
-      expect(r1.reset).toBeLessThanOrEqual(Date.now() + 3_601_000);
-    });
+        const r1 = await limiter.limit("user-1");
+        expect(r1.reset).toBeLessThanOrEqual(baseMs + 3_601_000);
+      })
+    );
   });
 
   describe("fixed window behavior", () => {

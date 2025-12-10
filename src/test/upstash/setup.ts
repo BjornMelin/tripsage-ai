@@ -75,7 +75,7 @@ export function registerUpstashMocksWithVitest(): UpstashMocksState {
  * afterAll(afterAllHook);
  *
  * // Use mocks directly or inject via factories:
- * setQStashClientFactoryForTests(() => mocks.qstash.Client);
+ * setQStashClientFactoryForTests(() => new mocks.qstash.Client({ token: "test" }));
  * // ... tests that call getQStashClient() will use the mock
  * ```
  */
