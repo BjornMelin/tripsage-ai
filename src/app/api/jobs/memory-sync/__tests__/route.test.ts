@@ -1,25 +1,16 @@
 /** @vitest-environment node */
 
 import { NextRequest } from "next/server";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { setupUpstashTestEnvironment } from "@/test/upstash/setup";
+
+const {
+  afterAllHook: upstashAfterAllHook,
+  beforeEachHook: upstashBeforeEachHook,
+  mocks: upstashMocks,
+} = setupUpstashTestEnvironment();
 
 // Mock external dependencies
-vi.mock("@upstash/qstash", () => {
-  const mockVerify = vi.fn().mockResolvedValue(true);
-  // Mock Receiver as a class constructor
-  class MockReceiver {
-    // Prototype method so tests can override via prototype or mockVerify
-    async verify(...args: unknown[]) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-      return await mockVerify(...args);
-    }
-  }
-  return {
-    mockVerify,
-    Receiver: MockReceiver,
-  };
-});
-
 vi.mock("@/lib/env/server", () => ({
   getServerEnvVar: vi.fn(() => "test-current-key"),
   getServerEnvVarWithFallback: vi.fn(() => "test-next-key"),
@@ -176,6 +167,7 @@ describe("POST /api/jobs/memory-sync", () => {
   };
 
   beforeEach(() => {
+    upstashBeforeEachHook();
     // Reset MOCK_FROM to default implementation before each test
     MOCK_FROM.mockImplementation(createDefaultFromMock);
     tryReserveKeyMock.mockResolvedValue(true);
@@ -218,9 +210,7 @@ describe("POST /api/jobs/memory-sync", () => {
       },
     };
 
-    // @ts-expect-error test helper is added via vi.mock in setup
-    const { mockVerify } = await import("@upstash/qstash");
-    mockVerify.mockResolvedValueOnce(false);
+    upstashMocks.qstash.__forceVerify(false);
 
     const req = mockRequest(payload, "invalid-sig");
     const response = await post(req);
@@ -386,5 +376,9 @@ describe("POST /api/jobs/memory-sync", () => {
     expect(result.contextUpdated).toBe(true);
     expect(result.syncType).toBe("incremental");
     expect(result.memoriesStored).toBe(0);
+  });
+
+  afterAll(() => {
+    upstashAfterAllHook();
   });
 });

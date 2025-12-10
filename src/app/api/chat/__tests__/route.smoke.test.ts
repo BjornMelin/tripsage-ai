@@ -1,12 +1,16 @@
 /** @vitest-environment node */
 
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { unstubAllEnvs } from "@/test/helpers/env";
 import {
   createMockNextRequest,
   createRouteParamsContext,
   getMockCookiesForTest,
 } from "@/test/helpers/route";
+import { setupUpstashTestEnvironment } from "@/test/upstash/setup";
+
+const { afterAllHook: upstashAfterAllHook, beforeEachHook: upstashBeforeEachHook } =
+  setupUpstashTestEnvironment();
 
 // Mock next/headers cookies() BEFORE any imports that use it
 vi.mock("next/headers", () => ({
@@ -44,24 +48,6 @@ vi.mock("ai", () => ({
   generateText: mockGenerateText,
 }));
 
-vi.mock("@upstash/ratelimit", () => ({
-  Ratelimit: vi.fn(() => ({
-    limit: vi.fn().mockResolvedValue({
-      limit: 40,
-      remaining: 39,
-      reset: Date.now() + 60000,
-      success: true,
-    }),
-  })),
-  slidingWindow: vi.fn(),
-}));
-
-vi.mock("@upstash/redis", () => ({
-  Redis: {
-    fromEnv: vi.fn(() => ({})),
-  },
-}));
-
 vi.mock("@/lib/env/server", () => ({
   getServerEnvVarWithFallback: vi.fn(() => undefined),
 }));
@@ -84,12 +70,17 @@ describe("/api/chat route smoke", () => {
   });
 
   beforeEach(() => {
+    upstashBeforeEachHook();
     vi.clearAllMocks();
     unstubAllEnvs();
     mockGetUser.mockReset();
     mockFrom.mockReset();
     mockResolveProvider.mockReset();
     mockGenerateText.mockReset();
+  });
+
+  afterAll(() => {
+    upstashAfterAllHook();
   });
 
   it("returns 401 unauthenticated", async () => {

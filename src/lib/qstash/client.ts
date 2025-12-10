@@ -5,6 +5,8 @@
  * across all webhook handlers. Implements policy defined in ADR-0048:
  * - 5 retries (6 total attempts)
  * - Exponential backoff starting at 10s
+ *
+ * Also provides a factory pattern for test injection support.
  */
 
 import "server-only";
@@ -15,16 +17,66 @@ import { secureId } from "@/lib/security/random";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import { QSTASH_RETRY_CONFIG } from "./config";
 
+// ===== TYPES =====
+
+/**
+ * QStash client interface for dependency injection.
+ * Matches the subset of Client methods we use.
+ */
+// biome-ignore lint/style/useNamingConvention: mirrors @upstash/qstash API naming
+export type QStashClientLike = {
+  // biome-ignore lint/style/useNamingConvention: mirrors @upstash/qstash method name
+  publishJSON: (opts: {
+    url: string;
+    body: unknown;
+    headers?: Record<string, string>;
+    retries?: number;
+    delay?: number;
+    deduplicationId?: string;
+    callback?: string;
+  }) => Promise<{ messageId: string; url?: string; scheduled?: boolean }>;
+};
+
+// ===== TEST INJECTION =====
+
+// Test injection point (follows factory.ts pattern)
+let testClientFactory: (() => QStashClientLike) | null = null;
+
+/**
+ * Override QStash client factory for tests.
+ * Pass null to reset to production behavior.
+ *
+ * @example
+ * ```ts
+ * import { setQStashClientFactoryForTests } from "@/lib/qstash/client";
+ * import { createQStashMock } from "@/test/upstash/qstash-mock";
+ *
+ * const qstash = createQStashMock();
+ * setQStashClientFactoryForTests(() => new qstash.Client({ token: "test" }));
+ *
+ * // After tests
+ * setQStashClientFactoryForTests(null);
+ * ```
+ */
+// biome-ignore lint/style/useNamingConvention: mirrors QStash naming
+export function setQStashClientFactoryForTests(
+  factory: (() => QStashClientLike) | null
+): void {
+  testClientFactory = factory;
+}
+
 // ===== CLIENT SINGLETON =====
 
-let qstashClient: Client | null = null;
+let qstashClient: QStashClientLike | null = null;
 
 /**
  * Get or create the QStash client singleton.
+ * Uses test factory if set, otherwise creates production client.
  *
  * @returns QStash client or null if QSTASH_TOKEN is not configured
  */
-export function getQstashClient(): Client | null {
+export function getQstashClient(): QStashClientLike | null {
+  if (testClientFactory) return testClientFactory();
   if (qstashClient) return qstashClient;
 
   const token = getServerEnvVarWithFallback("QSTASH_TOKEN", "");

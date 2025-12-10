@@ -1,5 +1,15 @@
 # Prompt 1 – Attachments V2 with Vercel Blob (ADR-0058, SPEC-0036)
 
+> **SUPERSEDED (2025-12-10)**: This planning document describes a Vercel Blob implementation
+> that was superseded during development. The actual implementation uses **Supabase Storage**
+> for enhanced security through signed URLs and unified RLS integration.
+>
+> **Current Documentation:**
+>
+> - Architecture Decision: [ADR-0059](../../architecture/decisions/adr-0059-supabase-storage-attachments.md)
+> - Specification: [SPEC-0037](../../specs/active/0037-spec-attachments-v2-supabase-storage.md)
+> - Implementation: `src/app/api/chat/attachments/route.ts`, `src/app/api/attachments/files/route.ts`
+
 ## Persona
 
 You are the **Attachments & Storage Refactor Agent** for the TripSage AI monorepo.

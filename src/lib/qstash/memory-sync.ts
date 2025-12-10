@@ -7,20 +7,9 @@
 import "server-only";
 
 import type { MemorySyncJob } from "@schemas/webhooks";
-import { Client } from "@upstash/qstash";
-import { getServerEnvVar } from "@/lib/env/server";
 import { secureUuid } from "@/lib/security/random";
 import { getRequiredServerOrigin } from "@/lib/url/server-origin";
-
-/**
- * Get configured QStash client for memory sync operations.
- *
- * @return QStash client instance.
- */
-function getQstashClient(): Client {
-  const token = getServerEnvVar("QSTASH_TOKEN") as string;
-  return new Client({ token });
-}
+import { getQstashClient } from "./client";
 
 /**
  * Enqueue a memory sync job via QStash with deduplication.
@@ -38,6 +27,9 @@ export async function enqueueMemorySync(
   } = {}
 ): Promise<{ messageId: string; idempotencyKey: string }> {
   const client = getQstashClient();
+  if (!client) {
+    throw new Error("QStash client not available - QSTASH_TOKEN not configured");
+  }
   const idempotencyKey = options.idempotencyKey ?? secureUuid();
 
   const job: MemorySyncJob = {

@@ -1,0 +1,248 @@
+/** @vitest-environment node */
+
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createRatelimitMock } from "@/test/upstash/ratelimit-mock";
+import { withFakeTimers } from "@/test/utils/with-fake-timers";
+
+const ratelimit = createRatelimitMock();
+
+describe("RatelimitMock", () => {
+  beforeEach(() => {
+    ratelimit.__reset();
+  });
+
+  describe("sliding window behavior", () => {
+    it("allows requests within limit", async () => {
+      const limiter = new ratelimit.Ratelimit({
+        limiter: ratelimit.Ratelimit.slidingWindow(3, "1 m"),
+      });
+
+      const r1 = await limiter.limit("user-1");
+      const r2 = await limiter.limit("user-1");
+      const r3 = await limiter.limit("user-1");
+
+      expect(r1.success).toBe(true);
+      expect(r1.remaining).toBe(2);
+      expect(r2.success).toBe(true);
+      expect(r2.remaining).toBe(1);
+      expect(r3.success).toBe(true);
+      expect(r3.remaining).toBe(0);
+    });
+
+    it("rejects requests exceeding limit", async () => {
+      const limiter = new ratelimit.Ratelimit({
+        limiter: ratelimit.Ratelimit.slidingWindow(2, "1 m"),
+      });
+
+      await limiter.limit("user-1");
+      await limiter.limit("user-1");
+      const r3 = await limiter.limit("user-1");
+
+      expect(r3.success).toBe(false);
+      expect(r3.remaining).toBe(0);
+      expect(r3.retryAfter).toBeGreaterThan(0);
+    });
+
+    it("isolates identifiers", async () => {
+      const limiter = new ratelimit.Ratelimit({
+        limiter: ratelimit.Ratelimit.slidingWindow(1, "1 m"),
+      });
+
+      const r1 = await limiter.limit("user-1");
+      const r2 = await limiter.limit("user-2");
+
+      expect(r1.success).toBe(true);
+      expect(r2.success).toBe(true);
+    });
+
+    it("returns correct limit value", async () => {
+      const limiter = new ratelimit.Ratelimit({
+        limiter: ratelimit.Ratelimit.slidingWindow(5, "1 m"),
+      });
+
+      const result = await limiter.limit("user-1");
+
+      expect(result.limit).toBe(5);
+    });
+
+    it(
+      "returns reset timestamp in the future",
+      withFakeTimers(async () => {
+        const base = new Date("2024-01-01T00:00:00Z");
+        vi.setSystemTime(base);
+        const limiter = new ratelimit.Ratelimit({
+          limiter: ratelimit.Ratelimit.slidingWindow(3, "1 m"),
+        });
+
+        const result = await limiter.limit("user-1");
+
+        expect(result.reset).toBeGreaterThan(base.getTime());
+      })
+    );
+  });
+
+  describe("window time parsing", () => {
+    it(
+      "parses seconds",
+      withFakeTimers(async () => {
+        const baseMs = new Date("2024-01-01T00:00:00Z").getTime();
+        vi.setSystemTime(baseMs);
+        const limiter = new ratelimit.Ratelimit({
+          limiter: ratelimit.Ratelimit.slidingWindow(1, "30 s"),
+        });
+
+        const r1 = await limiter.limit("user-1");
+        expect(r1.reset).toBeLessThanOrEqual(baseMs + 31_000);
+      })
+    );
+
+    it(
+      "parses minutes",
+      withFakeTimers(async () => {
+        const baseMs = new Date("2024-01-01T00:00:00Z").getTime();
+        vi.setSystemTime(baseMs);
+        const limiter = new ratelimit.Ratelimit({
+          limiter: ratelimit.Ratelimit.slidingWindow(1, "2 m"),
+        });
+
+        const r1 = await limiter.limit("user-1");
+        expect(r1.reset).toBeLessThanOrEqual(baseMs + 121_000);
+      })
+    );
+
+    it(
+      "parses hours",
+      withFakeTimers(async () => {
+        const baseMs = new Date("2024-01-01T00:00:00Z").getTime();
+        vi.setSystemTime(baseMs);
+        const limiter = new ratelimit.Ratelimit({
+          limiter: ratelimit.Ratelimit.slidingWindow(1, "1 h"),
+        });
+
+        const r1 = await limiter.limit("user-1");
+        expect(r1.reset).toBeLessThanOrEqual(baseMs + 3_601_000);
+      })
+    );
+  });
+
+  describe("fixed window behavior", () => {
+    it("allows requests within limit", async () => {
+      const limiter = new ratelimit.Ratelimit({
+        limiter: ratelimit.Ratelimit.fixedWindow(3, "1 m"),
+      });
+
+      const r1 = await limiter.limit("user-1");
+      const r2 = await limiter.limit("user-1");
+      const r3 = await limiter.limit("user-1");
+
+      expect(r1.success).toBe(true);
+      expect(r1.remaining).toBe(2);
+      expect(r2.success).toBe(true);
+      expect(r2.remaining).toBe(1);
+      expect(r3.success).toBe(true);
+      expect(r3.remaining).toBe(0);
+    });
+
+    it("rejects requests exceeding limit", async () => {
+      const limiter = new ratelimit.Ratelimit({
+        limiter: ratelimit.Ratelimit.fixedWindow(2, "1 m"),
+      });
+
+      await limiter.limit("user-1");
+      await limiter.limit("user-1");
+      const r3 = await limiter.limit("user-1");
+
+      expect(r3.success).toBe(false);
+      expect(r3.remaining).toBe(0);
+      expect(r3.retryAfter).toBeGreaterThan(0);
+    });
+
+    it("isolates identifiers", async () => {
+      const limiter = new ratelimit.Ratelimit({
+        limiter: ratelimit.Ratelimit.fixedWindow(1, "1 m"),
+      });
+
+      const r1 = await limiter.limit("user-1");
+      const r2 = await limiter.limit("user-2");
+
+      expect(r1.success).toBe(true);
+      expect(r2.success).toBe(true);
+    });
+
+    it("returns correct limit value", async () => {
+      const limiter = new ratelimit.Ratelimit({
+        limiter: ratelimit.Ratelimit.fixedWindow(5, "1 m"),
+      });
+
+      const result = await limiter.limit("user-1");
+
+      expect(result.limit).toBe(5);
+    });
+  });
+
+  describe("forced outcomes", () => {
+    it("can force success=false globally", async () => {
+      ratelimit.__force({ success: false });
+
+      const limiter = new ratelimit.Ratelimit({
+        limiter: ratelimit.Ratelimit.slidingWindow(100, "1 m"),
+      });
+
+      const result = await limiter.limit("user-1");
+
+      expect(result.success).toBe(false);
+    });
+
+    it("can force custom remaining value", async () => {
+      ratelimit.__force({ remaining: 42, success: true });
+
+      const limiter = new ratelimit.Ratelimit({
+        limiter: ratelimit.Ratelimit.slidingWindow(100, "1 m"),
+      });
+
+      const result = await limiter.limit("user-1");
+
+      expect(result.success).toBe(true);
+      expect(result.remaining).toBe(42);
+    });
+
+    it("scopes instance.force to a single limiter", async () => {
+      const limiterA = new ratelimit.Ratelimit({
+        limiter: ratelimit.Ratelimit.slidingWindow(1, "1 m"),
+      });
+      const limiterB = new ratelimit.Ratelimit({
+        limiter: ratelimit.Ratelimit.slidingWindow(1, "1 m"),
+      });
+
+      limiterA.force({ remaining: 0, success: false });
+
+      const forced = await limiterA.limit("user-1");
+      const unaffected = await limiterB.limit("user-1");
+
+      expect(forced.success).toBe(false);
+      expect(unaffected.success).toBe(true);
+      expect(unaffected.remaining).toBe(0);
+    });
+  });
+
+  describe("reset behavior", () => {
+    it("clears all rate limit state", async () => {
+      const limiter1 = new ratelimit.Ratelimit({
+        limiter: ratelimit.Ratelimit.slidingWindow(1, "1 m"),
+      });
+
+      await limiter1.limit("user-1");
+      const r1 = await limiter1.limit("user-1");
+      expect(r1.success).toBe(false);
+
+      ratelimit.__reset();
+
+      // Create fresh limiter after reset to verify clean state
+      const limiter2 = new ratelimit.Ratelimit({
+        limiter: ratelimit.Ratelimit.slidingWindow(1, "1 m"),
+      });
+      const r2 = await limiter2.limit("user-1");
+      expect(r2.success).toBe(true);
+    });
+  });
+});
