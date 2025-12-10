@@ -15,6 +15,7 @@ type LimiterConfig = {
 type CounterState = {
   remaining: number;
   resetAt: number;
+  windowStart?: number;
 };
 
 function parseWindow(window: string): number {
@@ -160,16 +161,58 @@ export function createRatelimitMock(): RatelimitMockModule {
       const now = Date.now();
       const key = `${this.config.prefix ?? "ratelimit"}:${identifier}`;
       const current = globalState.get(key);
+      const { limit, intervalMs, type } = this.config.limiter;
 
-      // New window or expired window
+      // Fixed window: count resets on aligned window boundaries
+      if (type === "fixed") {
+        const windowStart = Math.floor(now / intervalMs) * intervalMs;
+        const windowEnd = windowStart + intervalMs;
+        if (!current || current.windowStart !== windowStart) {
+          const next: CounterState = {
+            remaining: limit - 1,
+            resetAt: windowEnd,
+            windowStart,
+          };
+          globalState.set(key, next);
+          return Promise.resolve({
+            limit,
+            remaining: next.remaining,
+            reset: windowEnd,
+            retryAfter: 0,
+            success: true,
+          });
+        }
+
+        if (current.remaining <= 0) {
+          return Promise.resolve({
+            limit,
+            remaining: 0,
+            reset: current.resetAt,
+            retryAfter: Math.max(1, Math.ceil((current.resetAt - now) / 1000)),
+            success: false,
+          });
+        }
+
+        current.remaining -= 1;
+        globalState.set(key, current);
+        return Promise.resolve({
+          limit,
+          remaining: current.remaining,
+          reset: current.resetAt,
+          retryAfter: 0,
+          success: true,
+        });
+      }
+
+      // Sliding window: reset relative to first request after expiry
       if (!current || current.resetAt <= now) {
         const next: CounterState = {
-          remaining: this.config.limiter.limit - 1,
-          resetAt: now + this.config.limiter.intervalMs,
+          remaining: limit - 1,
+          resetAt: now + intervalMs,
         };
         globalState.set(key, next);
         return Promise.resolve({
-          limit: this.config.limiter.limit,
+          limit,
           remaining: next.remaining,
           reset: next.resetAt,
           retryAfter: 0,
@@ -177,10 +220,9 @@ export function createRatelimitMock(): RatelimitMockModule {
         });
       }
 
-      // Rate limit exceeded
       if (current.remaining <= 0) {
         return Promise.resolve({
-          limit: this.config.limiter.limit,
+          limit,
           remaining: 0,
           reset: current.resetAt,
           retryAfter: Math.max(1, Math.ceil((current.resetAt - now) / 1000)),
@@ -188,11 +230,10 @@ export function createRatelimitMock(): RatelimitMockModule {
         });
       }
 
-      // Consume one request
       current.remaining -= 1;
       globalState.set(key, current);
       return Promise.resolve({
-        limit: this.config.limiter.limit,
+        limit,
         remaining: current.remaining,
         reset: current.resetAt,
         retryAfter: 0,

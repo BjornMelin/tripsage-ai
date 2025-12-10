@@ -37,7 +37,9 @@ export const upstashHandlers: HttpHandler[] = [
     headers.set("x-ratelimit-limit", String(outcome.limit));
     headers.set("x-ratelimit-remaining", String(outcome.remaining));
     headers.set("x-ratelimit-reset", String(outcome.reset));
-    headers.set("retry-after", String(outcome.retryAfter));
+    if (outcome.retryAfter != null) {
+      headers.set("retry-after", String(outcome.retryAfter));
+    }
     return HttpResponse.json(
       { result: outcome.success ? "OK" : "RATE_LIMITED" },
       {

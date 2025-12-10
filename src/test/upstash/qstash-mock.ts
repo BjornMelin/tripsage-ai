@@ -30,92 +30,37 @@ export type QStashMessage = QStashPublishOptions & {
   messageId: string;
 };
 
-// Shared state for message tracking
-const publishedMessages: QStashMessage[] = [];
-let verifyOutcome: boolean | Error = true;
-let messageCounter = 0;
-
-/**
- * Mock QStash Client for testing.
- * Tracks all published messages for test assertions.
- */
-// biome-ignore lint/style/useNamingConvention: mirrors @upstash/qstash Client class
-export class QStashClientMock {
-  // biome-ignore lint/complexity/noUselessConstructor: maintains API compatibility with @upstash/qstash Client
-  constructor(_opts: { token: string; enableTelemetry?: boolean }) {
-    // Constructor matches @upstash/qstash Client signature for compatibility
-  }
-
-  // biome-ignore lint/style/useNamingConvention: mirrors @upstash/qstash method name
-  publishJSON(opts: QStashPublishOptions): Promise<QStashPublishResult> {
-    messageCounter += 1;
-    const messageId = `qstash-mock-${messageCounter}`;
-    publishedMessages.push({ ...opts, messageId, publishedAt: Date.now() });
-    return Promise.resolve({
-      messageId,
-      scheduled: (opts.delay ?? 0) > 0,
-      url: opts.url,
-    });
-  }
-}
-
-/**
- * Mock QStash Receiver for testing signature verification.
- * Default behavior returns true; use forceVerifyOutcome() to control.
- */
-// biome-ignore lint/style/useNamingConvention: mirrors @upstash/qstash Receiver class
-export class QStashReceiverMock {
-  // biome-ignore lint/complexity/noUselessConstructor: maintains API compatibility with @upstash/qstash Receiver
-  constructor(_opts: { currentSigningKey: string; nextSigningKey: string }) {
-    // Constructor matches @upstash/qstash Receiver signature for compatibility
-  }
-
-  verify(_opts: {
-    signature: string;
-    body: string;
-    url?: string;
-    clockTolerance?: number;
-  }): Promise<boolean> {
-    if (verifyOutcome instanceof Error) return Promise.reject(verifyOutcome);
-    return Promise.resolve(verifyOutcome);
-  }
-}
-
-/**
- * Get all messages published via QStashClientMock.publishJSON().
- * Returns a copy to prevent mutation.
- */
-export function getPublishedMessages(): QStashMessage[] {
-  return [...publishedMessages];
-}
-
-/**
- * Force QStash signature verification outcome.
- * @param outcome - true/false for verify result, or Error to throw
- */
-export function forceVerifyOutcome(outcome: boolean | Error): void {
-  verifyOutcome = outcome;
-}
-
-/**
- * Reset all QStash mock state between tests.
- */
-// biome-ignore lint/style/useNamingConvention: mirrors QStash naming
-export function resetQStashMock(): void {
-  publishedMessages.length = 0;
-  verifyOutcome = true;
-  messageCounter = 0;
-}
-
 /**
  * QStash mock module type for vi.doMock registration.
  */
 // biome-ignore lint/style/useNamingConvention: mirrors QStash naming
+type QStashClientConstructor = new (opts: {
+  token: string;
+  enableTelemetry?: boolean;
+}) => {
+  // biome-ignore lint/style/useNamingConvention: mirrors @upstash/qstash API naming
+  publishJSON: (opts: QStashPublishOptions) => Promise<QStashPublishResult>;
+};
+
+// biome-ignore lint/style/useNamingConvention: mirrors @upstash/qstash API naming
+type QStashReceiverConstructor = new (opts: {
+  currentSigningKey: string;
+  nextSigningKey: string;
+}) => {
+  verify: (opts: {
+    signature: string;
+    body: string;
+    url?: string;
+    clockTolerance?: number;
+  }) => Promise<boolean>;
+};
+
+// biome-ignore lint/style/useNamingConvention: mirrors @upstash/qstash API naming
 export type QStashMockModule = {
   // biome-ignore lint/style/useNamingConvention: mirrors @upstash/qstash export
-  Client: typeof QStashClientMock;
+  Client: QStashClientConstructor;
   // biome-ignore lint/style/useNamingConvention: mirrors @upstash/qstash export
-  Receiver: typeof QStashReceiverMock;
+  Receiver: QStashReceiverConstructor;
   __reset: () => void;
   __getMessages: () => QStashMessage[];
   __forceVerify: (outcome: boolean | Error) => void;
@@ -137,6 +82,72 @@ export type QStashMockModule = {
  */
 // biome-ignore lint/style/useNamingConvention: mirrors QStash naming
 export function createQStashMock(): QStashMockModule {
+  // Shared state for this mock instance
+  const publishedMessages: QStashMessage[] = [];
+  let verifyOutcome: boolean | Error = true;
+  let messageCounter = 0;
+
+  // Mock QStash Client for testing (per-instance state)
+  // biome-ignore lint/style/useNamingConvention: mirrors @upstash/qstash Client class
+  class QStashClientMock {
+    private readonly token: string;
+
+    private readonly enableTelemetry?: boolean;
+
+    constructor(opts: { token: string; enableTelemetry?: boolean }) {
+      this.token = opts.token;
+      this.enableTelemetry = opts.enableTelemetry;
+    }
+
+    // biome-ignore lint/style/useNamingConvention: mirrors @upstash/qstash method name
+    publishJSON(opts: QStashPublishOptions): Promise<QStashPublishResult> {
+      messageCounter += 1;
+      const messageId = `qstash-mock-${messageCounter}`;
+      publishedMessages.push({ ...opts, messageId, publishedAt: Date.now() });
+      return Promise.resolve({
+        messageId,
+        scheduled: (opts.delay ?? 0) > 0,
+        url: opts.url,
+      });
+    }
+  }
+
+  // Mock QStash Receiver for testing signature verification (per-instance state)
+  // biome-ignore lint/style/useNamingConvention: mirrors @upstash/qstash Receiver class
+  class QStashReceiverMock {
+    private readonly currentSigningKey: string;
+
+    private readonly nextSigningKey: string;
+
+    constructor(opts: { currentSigningKey: string; nextSigningKey: string }) {
+      this.currentSigningKey = opts.currentSigningKey;
+      this.nextSigningKey = opts.nextSigningKey;
+    }
+
+    verify(_opts: {
+      signature: string;
+      body: string;
+      url?: string;
+      clockTolerance?: number;
+    }): Promise<boolean> {
+      if (verifyOutcome instanceof Error) return Promise.reject(verifyOutcome);
+      return Promise.resolve(verifyOutcome);
+    }
+  }
+
+  const getPublishedMessages = (): QStashMessage[] => [...publishedMessages];
+
+  const forceVerifyOutcome = (outcome: boolean | Error): void => {
+    verifyOutcome = outcome;
+  };
+
+  // biome-ignore lint/style/useNamingConvention: mirrors QStash naming
+  const resetQStashMock = (): void => {
+    publishedMessages.length = 0;
+    verifyOutcome = true;
+    messageCounter = 0;
+  };
+
   return {
     __forceVerify: forceVerifyOutcome,
     __getMessages: getPublishedMessages,
