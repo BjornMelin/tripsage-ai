@@ -7,6 +7,120 @@
 
 import { z } from "zod";
 
+// ===== FORMAT VALIDATORS =====
+
+/**
+ * Creates a Zod schema for API keys with minimum length validation.
+ * Ensures API keys meet basic format requirements to prevent unclear runtime failures.
+ * Empty strings are allowed (treated as "not configured").
+ */
+const apiKeySchema = (name: string, minLength = 20) =>
+  z
+    .string()
+    .refine((val) => val === "" || val.length >= minLength, {
+      message: `${name} must be at least ${minLength} characters when configured`,
+    })
+    .optional();
+
+/**
+ * Creates a Zod schema for cryptographic secrets with minimum length.
+ * Empty strings are allowed (treated as "not configured").
+ */
+const secretSchema = (name: string, minLength = 32) =>
+  z
+    .string()
+    .refine((val) => val === "" || val.length >= minLength, {
+      message: `${name} must be at least ${minLength} characters for security when configured`,
+    })
+    .optional();
+
+/**
+ * Resend API key format: starts with "re_".
+ * Empty strings are allowed (treated as "not configured").
+ */
+const resendApiKeySchema = z
+  .string()
+  .refine((val) => val === "" || val.startsWith("re_"), {
+    message: "RESEND_API_KEY must start with 're_' when configured",
+  })
+  .optional();
+
+/**
+ * Stripe secret key format: starts with "sk_test_" or "sk_live_".
+ * Empty strings are allowed (treated as "not configured").
+ */
+const stripeSecretKeySchema = z
+  .string()
+  .refine(
+    (val) => val === "" || val.startsWith("sk_test_") || val.startsWith("sk_live_"),
+    {
+      message:
+        "STRIPE_SECRET_KEY must start with 'sk_test_' or 'sk_live_' when configured",
+    }
+  )
+  .optional();
+
+/**
+ * Stripe publishable key format: starts with "pk_test_" or "pk_live_".
+ * Empty strings are allowed (treated as "not configured").
+ */
+const stripePublishableKeySchema = z
+  .string()
+  .refine(
+    (val) => val === "" || val.startsWith("pk_test_") || val.startsWith("pk_live_"),
+    {
+      message:
+        "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY must start with 'pk_test_' or 'pk_live_' when configured",
+    }
+  )
+  .optional();
+
+/**
+ * OpenAI API key format: starts with "sk-".
+ * Empty strings are allowed (treated as "not configured").
+ */
+const openaiApiKeySchema = z
+  .string()
+  .refine((val) => val === "" || val.startsWith("sk-"), {
+    message: "OPENAI_API_KEY must start with 'sk-' when configured",
+  })
+  .optional();
+
+/**
+ * Anthropic API key format: starts with "sk-ant-".
+ * Empty strings are allowed (treated as "not configured").
+ */
+const anthropicApiKeySchema = z
+  .string()
+  .refine((val) => val === "" || val.startsWith("sk-ant-"), {
+    message: "ANTHROPIC_API_KEY must start with 'sk-ant-' when configured",
+  })
+  .optional();
+
+/**
+ * Supabase JWT secret must be at least 32 chars for HS256.
+ * Empty strings are allowed (treated as "not configured").
+ */
+const supabaseJwtSecretSchema = z
+  .string()
+  .refine((val) => val === "" || val.length >= 32, {
+    message:
+      "SUPABASE_JWT_SECRET must be at least 32 characters for HS256 signing when configured",
+  })
+  .optional();
+
+/**
+ * HMAC secret must be at least 32 chars for secure signing.
+ * Empty strings are allowed (treated as "not configured").
+ */
+const hmacSecretSchema = z
+  .string()
+  .refine((val) => val === "" || val.length >= 32, {
+    message:
+      "HMAC_SECRET must be at least 32 characters for secure signing when configured",
+  })
+  .optional();
+
 // Base environment schema for common variables
 const baseEnvSchema = z.object({
   HOSTNAME: z.string().optional(),
@@ -29,8 +143,8 @@ const supabaseEnvSchema = z.object({
     .string()
     .min(1, "Supabase anonymous key is required"),
   NEXT_PUBLIC_SUPABASE_URL: z.url("Invalid Supabase URL"),
-  SUPABASE_JWT_SECRET: z.string().optional(),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
+  SUPABASE_JWT_SECRET: supabaseJwtSecretSchema,
+  SUPABASE_SERVICE_ROLE_KEY: apiKeySchema("SUPABASE_SERVICE_ROLE_KEY", 30),
 });
 
 // Database configuration (minimal - only DATABASE_URL used)
@@ -49,47 +163,50 @@ const authEnvSchema = z.object({});
 
 // AI Service API Keys
 const aiServiceEnvSchema = z.object({
-  AI_GATEWAY_API_KEY: z.string().optional(),
+  AI_GATEWAY_API_KEY: apiKeySchema("AI_GATEWAY_API_KEY"),
   AI_GATEWAY_URL: z.url().optional(),
-  ANTHROPIC_API_KEY: z.string().optional(),
-  EMBEDDINGS_API_KEY: z.string().optional(),
+  ANTHROPIC_API_KEY: anthropicApiKeySchema,
+  EMBEDDINGS_API_KEY: apiKeySchema("EMBEDDINGS_API_KEY"),
   // Firecrawl & Exa search/crawl
-  FIRECRAWL_API_KEY: z.string().optional(),
+  FIRECRAWL_API_KEY: apiKeySchema("FIRECRAWL_API_KEY"),
   FIRECRAWL_BASE_URL: z.url().optional(),
-  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_API_KEY: openaiApiKeySchema,
   // OpenRouter API key (server-side fallback, not attribution)
-  OPENROUTER_API_KEY: z.string().optional(),
-  QSTASH_CURRENT_SIGNING_KEY: z.string().optional(),
-  QSTASH_NEXT_SIGNING_KEY: z.string().optional(),
+  OPENROUTER_API_KEY: apiKeySchema("OPENROUTER_API_KEY"),
+  QSTASH_CURRENT_SIGNING_KEY: secretSchema("QSTASH_CURRENT_SIGNING_KEY"),
+  QSTASH_NEXT_SIGNING_KEY: secretSchema("QSTASH_NEXT_SIGNING_KEY"),
   // Upstash QStash (durable notifications queue)
-  QSTASH_TOKEN: z.string().optional(),
+  QSTASH_TOKEN: apiKeySchema("QSTASH_TOKEN"),
   // Resend (email notifications)
-  RESEND_API_KEY: z.string().optional(),
+  RESEND_API_KEY: resendApiKeySchema,
   RESEND_FROM_EMAIL: z.email().optional(),
   RESEND_FROM_NAME: z.string().optional(),
   // xAI API key (server-side fallback)
-  XAI_API_KEY: z.string().optional(),
+  XAI_API_KEY: apiKeySchema("XAI_API_KEY"),
 });
 
 // Travel & External API Keys
 const travelApiEnvSchema = z.object({
   // Amadeus Self-Service API
-  AMADEUS_CLIENT_ID: z.string().optional(),
-  AMADEUS_CLIENT_SECRET: z.string().optional(),
+  AMADEUS_CLIENT_ID: apiKeySchema("AMADEUS_CLIENT_ID", 10),
+  AMADEUS_CLIENT_SECRET: secretSchema("AMADEUS_CLIENT_SECRET", 16),
   AMADEUS_ENV: z.enum(["test", "production"]).optional(),
   BACKEND_API_URL: z.url().optional(),
   // Duffel flights
-  DUFFEL_ACCESS_TOKEN: z.string().optional(),
-  DUFFEL_API_KEY: z.string().optional(),
+  DUFFEL_ACCESS_TOKEN: apiKeySchema("DUFFEL_ACCESS_TOKEN"),
+  DUFFEL_API_KEY: apiKeySchema("DUFFEL_API_KEY"),
   // Server routes/tools: Server key for Geocoding/Places/Routes/Time Zone (IP+API restricted)
-  GOOGLE_MAPS_SERVER_API_KEY: z.string().optional(),
+  GOOGLE_MAPS_SERVER_API_KEY: apiKeySchema("GOOGLE_MAPS_SERVER_API_KEY", 30),
   // Frontend: Browser key for Maps JS (referrer-restricted)
-  NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY: z.string().optional(),
-  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional(),
+  NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY: apiKeySchema(
+    "NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY",
+    30
+  ),
+  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: stripePublishableKeySchema,
   // Weather
-  OPENWEATHERMAP_API_KEY: z.string().optional(),
+  OPENWEATHERMAP_API_KEY: apiKeySchema("OPENWEATHERMAP_API_KEY", 16),
   // Stripe payment processing
-  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_SECRET_KEY: stripeSecretKeySchema,
 });
 
 // Monitoring and Analytics (minimal - only used vars)
@@ -108,11 +225,8 @@ const securityEnvSchema = z.object({
   // Optional downstream collaborator webhook URL (signed at app layer)
   COLLAB_WEBHOOK_URL: z.url().optional(),
   // HMAC secret for verifying Supabase Database Webhooks
-  HMAC_SECRET: z.string().optional(),
-  MFA_BACKUP_CODE_PEPPER: z
-    .string()
-    .min(16, "MFA_BACKUP_CODE_PEPPER is required and must be at least 16 characters")
-    .optional(),
+  HMAC_SECRET: hmacSecretSchema,
+  MFA_BACKUP_CODE_PEPPER: secretSchema("MFA_BACKUP_CODE_PEPPER", 16),
 });
 
 // Development and debugging (minimal - only ANALYZE and DEBUG used)

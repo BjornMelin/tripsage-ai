@@ -36,12 +36,14 @@ describe("env/server", () => {
 
     it("should return validated server environment", () => {
       vi.stubEnv("NODE_ENV", "test");
-      vi.stubEnv("GOOGLE_MAPS_SERVER_API_KEY", "test-server-key");
+      vi.stubEnv("GOOGLE_MAPS_SERVER_API_KEY", "test-server-key-for-google-maps-api");
 
       const env = getServerEnv();
       expect(env).toBeDefined();
       expect(env.NODE_ENV).toBe("test");
-      expect(env.GOOGLE_MAPS_SERVER_API_KEY).toBe("test-server-key");
+      expect(env.GOOGLE_MAPS_SERVER_API_KEY).toBe(
+        "test-server-key-for-google-maps-api"
+      );
     });
 
     it("should throw on invalid environment", () => {
@@ -53,10 +55,10 @@ describe("env/server", () => {
 
   describe("getServerEnvVar", () => {
     it("should return environment variable value", () => {
-      vi.stubEnv("GOOGLE_MAPS_SERVER_API_KEY", "test-key");
+      vi.stubEnv("GOOGLE_MAPS_SERVER_API_KEY", "test-key-for-google-maps-server-api");
 
       const value = getServerEnvVar("GOOGLE_MAPS_SERVER_API_KEY");
-      expect(value).toBe("test-key");
+      expect(value).toBe("test-key-for-google-maps-server-api");
     });
 
     it("should throw when variable is missing", () => {
@@ -70,13 +72,13 @@ describe("env/server", () => {
 
   describe("getServerEnvVarWithFallback", () => {
     it("should return environment variable value when present", () => {
-      vi.stubEnv("GOOGLE_MAPS_SERVER_API_KEY", "test-key");
+      vi.stubEnv("GOOGLE_MAPS_SERVER_API_KEY", "test-key-for-google-maps-server-api");
 
       const value = getServerEnvVarWithFallback(
         "GOOGLE_MAPS_SERVER_API_KEY",
         "fallback"
       );
-      expect(value).toBe("test-key");
+      expect(value).toBe("test-key-for-google-maps-server-api");
     });
 
     it("should return fallback when variable is missing", () => {
@@ -92,14 +94,14 @@ describe("env/server", () => {
 
   describe("getGoogleMapsServerKey", () => {
     it("should return Google Maps server API key", async () => {
-      vi.stubEnv("GOOGLE_MAPS_SERVER_API_KEY", "test-server-key");
+      vi.stubEnv("GOOGLE_MAPS_SERVER_API_KEY", "test-server-key-for-google-maps-api");
       vi.resetModules();
       const { getGoogleMapsServerKey: freshGetGoogleMapsServerKey } = await import(
         "../server"
       );
 
       const key = freshGetGoogleMapsServerKey();
-      expect(key).toBe("test-server-key");
+      expect(key).toBe("test-server-key-for-google-maps-api");
     });
 
     it("should throw when key is missing", async () => {
@@ -119,9 +121,8 @@ describe("env/server", () => {
         "../server"
       );
 
-      expect(() => freshGetGoogleMapsServerKey()).toThrow(
-        /GOOGLE_MAPS_SERVER_API_KEY.*required.*Google Maps Platform/
-      );
+      // Validation rejects short/invalid values (including the literal "undefined" string)
+      expect(() => freshGetGoogleMapsServerKey()).toThrow(/GOOGLE_MAPS_SERVER_API_KEY/);
     });
   });
 });
