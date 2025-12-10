@@ -34,9 +34,6 @@ const tryReserveKeyMock = vi.hoisted(() => vi.fn<TryReserveKey>(async () => true
 const sendNotificationsMock = vi.hoisted(() =>
   vi.fn<SendNotifications>(async () => ({ emailed: true, webhookPosted: false }))
 );
-let receiverVerifySpy: ReturnType<
-  typeof vi.spyOn<(typeof upstashMocks.qstash)["Receiver"]["prototype"], "verify">
->;
 
 vi.mock("@/lib/env/server", () => ({
   getServerEnvVar: (key: string) => {
@@ -114,8 +111,6 @@ describe("POST /api/jobs/notify-collaborators", () => {
   beforeEach(() => {
     upstashBeforeEachHook();
     vi.clearAllMocks();
-    receiverVerifySpy ??= vi.spyOn(upstashMocks.qstash.Receiver.prototype, "verify");
-    receiverVerifySpy.mockClear();
     tryReserveKeyMock.mockReset();
     sendNotificationsMock.mockReset();
     upstashMocks.qstash.__forceVerify(true);
