@@ -153,13 +153,7 @@ export function createRatelimitMock(): RatelimitMockModule {
         retryAfter: number;
       }>
     ): void {
-      perInstanceForced.set(this.instanceId, {
-        limit: result.limit ?? this.config.limiter.limit,
-        remaining: result.remaining ?? 0,
-        reset: result.reset ?? Date.now() + this.config.limiter.intervalMs,
-        retryAfter: result.retryAfter ?? 1,
-        success: result.success ?? false,
-      });
+      perInstanceForced.set(this.instanceId, { ...result });
     }
 
     limit(identifier: string): Promise<{
@@ -284,13 +278,7 @@ export function createRatelimitMock(): RatelimitMockModule {
 
   return {
     __force: (result) => {
-      globalForced = {
-        limit: result.limit,
-        remaining: result.remaining ?? 0,
-        reset: result.reset ?? Date.now() + 60000,
-        retryAfter: result.retryAfter ?? 1,
-        success: result.success ?? false,
-      };
+      globalForced = { ...result };
     },
     __getLimitCallCount: () => limitCallCount,
     __getRecordedIdentifiers: () => [...recordedIdentifiers],
