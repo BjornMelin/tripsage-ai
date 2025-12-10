@@ -191,7 +191,6 @@ const travelApiEnvSchema = z.object({
   AMADEUS_CLIENT_ID: apiKeySchema("AMADEUS_CLIENT_ID", 10),
   AMADEUS_CLIENT_SECRET: secretSchema("AMADEUS_CLIENT_SECRET", 16),
   AMADEUS_ENV: z.enum(["test", "production"]).optional(),
-  BACKEND_API_URL: z.url().optional(),
   // Duffel flights
   DUFFEL_ACCESS_TOKEN: apiKeySchema("DUFFEL_ACCESS_TOKEN"),
   DUFFEL_API_KEY: apiKeySchema("DUFFEL_API_KEY"),
