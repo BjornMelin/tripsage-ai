@@ -1,12 +1,19 @@
 /** @vitest-environment node */
 
 import type { NextRequest } from "next/server";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createMockNextRequest,
   createRouteParamsContext,
   getMockCookiesForTest,
 } from "@/test/helpers/route";
+import { setupUpstashTestEnvironment } from "@/test/upstash/setup";
+
+const {
+  afterAllHook: upstashAfterAllHook,
+  beforeEachHook: upstashBeforeEachHook,
+  mocks: upstashMocks,
+} = setupUpstashTestEnvironment();
 
 vi.mock("next/headers", () => ({
   cookies: vi.fn(() =>
@@ -24,7 +31,8 @@ const CREATE_SUPABASE = vi.hoisted(() => vi.fn(async () => MOCK_SUPABASE));
 
 const MOCK_GET_REDIS = vi.hoisted(() => vi.fn(() => undefined));
 
-const LIMIT_SPY = vi.hoisted(() => vi.fn());
+const originalRatelimitLimit = upstashMocks.ratelimit.Ratelimit.prototype.limit;
+const recordedRateLimitIdentifiers: string[] = [];
 
 const MOCK_SERVICE = vi.hoisted(() => ({
   details: vi.fn(),
@@ -34,21 +42,6 @@ const MOCK_SERVICE = vi.hoisted(() => ({
 vi.mock("@/lib/redis", () => ({
   getRedis: MOCK_GET_REDIS,
 }));
-
-vi.mock("@upstash/ratelimit", () => {
-  const slidingWindow = vi.fn(() => ({}));
-  const ctor = vi.fn(function RatelimitMock() {
-    return { limit: LIMIT_SPY };
-  }) as unknown as {
-    new (...args: unknown[]): { limit: ReturnType<typeof LIMIT_SPY> };
-    slidingWindow: (...args: unknown[]) => unknown;
-  };
-  ctor.slidingWindow = slidingWindow as unknown as (...args: unknown[]) => unknown;
-  return {
-    Ratelimit: ctor,
-    slidingWindow,
-  };
-});
 
 vi.mock("@/lib/supabase/server", () => ({
   createServerSupabase: CREATE_SUPABASE,
@@ -84,8 +77,23 @@ vi.mock("@/lib/api/route-helpers", async () => {
 
 describe("/api/activities routes", () => {
   beforeEach(() => {
+    upstashBeforeEachHook();
     vi.clearAllMocks();
-    LIMIT_SPY.mockResolvedValue({ limit: 20, remaining: 10, reset: 0, success: true });
+    vi.spyOn(upstashMocks.ratelimit.Ratelimit.prototype, "limit");
+    recordedRateLimitIdentifiers.length = 0;
+    upstashMocks.ratelimit.Ratelimit.prototype.limit = vi.fn(function (
+      this: InstanceType<(typeof upstashMocks.ratelimit)["Ratelimit"]>,
+      identifier: string
+    ) {
+      recordedRateLimitIdentifiers.push(identifier);
+      return originalRatelimitLimit.call(this, identifier);
+    });
+    upstashMocks.ratelimit.__force({
+      limit: 20,
+      remaining: 10,
+      reset: Date.now() + 60_000,
+      success: true,
+    });
     CREATE_SUPABASE.mockResolvedValue(MOCK_SUPABASE);
     MOCK_SUPABASE.auth.getUser.mockResolvedValue({
       data: { user: { id: "user-1" } },
@@ -178,7 +186,7 @@ describe("/api/activities routes", () => {
     });
 
     it("should enforce rate limiting", async () => {
-      LIMIT_SPY.mockResolvedValue({
+      upstashMocks.ratelimit.__force({
         limit: 20,
         remaining: 0,
         reset: Date.now() + 60000,
@@ -198,7 +206,7 @@ describe("/api/activities routes", () => {
       const res = await POST(req, createRouteParamsContext({}));
 
       expect(res.status).toBe(429);
-      expect(LIMIT_SPY).toHaveBeenCalled();
+      expect(recordedRateLimitIdentifiers.length).toBeGreaterThan(0);
     });
   });
 
@@ -290,4 +298,8 @@ describe("/api/activities routes", () => {
       expect(body.error).toBe("invalid_request");
     });
   });
+});
+
+afterAll(() => {
+  upstashAfterAllHook();
 });

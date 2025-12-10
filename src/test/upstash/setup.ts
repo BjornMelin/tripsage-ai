@@ -35,16 +35,20 @@ export function registerUpstashMocksWithVitest(): UpstashMocksState {
 
   // Use vi.doMock for thread-safety (not vi.mock which hoists)
   vi.doMock("@upstash/redis", () => ({
+    __reset: mocks.redis.__reset,
     // biome-ignore lint/style/useNamingConvention: matches @upstash/redis export
     Redis: mocks.redis.Redis,
   }));
 
   vi.doMock("@upstash/ratelimit", () => ({
+    __reset: mocks.ratelimit.__reset,
     // biome-ignore lint/style/useNamingConvention: matches @upstash/ratelimit export
     Ratelimit: mocks.ratelimit.Ratelimit,
   }));
 
   vi.doMock("@upstash/qstash", () => ({
+    __forceVerify: mocks.qstash.__forceVerify,
+    __reset: mocks.qstash.__reset,
     // biome-ignore lint/style/useNamingConvention: matches @upstash/qstash export
     Client: mocks.qstash.Client,
     // biome-ignore lint/style/useNamingConvention: matches @upstash/qstash export

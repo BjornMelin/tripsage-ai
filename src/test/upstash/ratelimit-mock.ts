@@ -18,6 +18,14 @@ type CounterState = {
   windowStart?: number;
 };
 
+type ForcedOverrides = Partial<{
+  success: boolean;
+  remaining: number;
+  limit: number;
+  reset: number;
+  retryAfter: number;
+}>;
+
 function parseWindow(window: string): number {
   const [valueRaw, unit] = window.trim().split(/\s+/);
   const value = Number(valueRaw);
@@ -102,24 +110,34 @@ type RatelimitMockInstance = {
 export function createRatelimitMock(): RatelimitMockModule {
   // Shared state for all limiter instances created by this mock
   const globalState = new Map<string, CounterState>();
-  let globalForced:
-    | {
-        success: boolean;
-        remaining?: number;
-        limit?: number;
-        reset?: number;
-        retryAfter?: number;
-      }
-    | undefined;
+  const perInstanceForced = new Map<string, ForcedOverrides>();
+  let globalForced: ForcedOverrides | undefined;
+  let instanceSeq = 0;
+
+  const resolveForcedOutcome = (
+    forced: ForcedOverrides | undefined,
+    limiter: LimiterConfig
+  ) => {
+    if (!forced) return undefined;
+    return {
+      limit: forced.limit ?? limiter.limit,
+      remaining: forced.remaining ?? 0,
+      reset: forced.reset ?? Date.now() + limiter.intervalMs,
+      retryAfter: forced.retryAfter ?? 1,
+      success: forced.success ?? false,
+    };
+  };
 
   /**
    * Ratelimit limiter instance with proper state isolation.
    */
   class RatelimitInstance {
     private readonly config: { limiter: LimiterConfig; prefix?: string };
+    private readonly instanceId: string;
 
     constructor(config: { limiter: LimiterConfig; prefix?: string }) {
       this.config = config;
+      this.instanceId = `rl-${++instanceSeq}`;
     }
 
     force(
@@ -131,13 +149,13 @@ export function createRatelimitMock(): RatelimitMockModule {
         retryAfter: number;
       }>
     ): void {
-      globalForced = {
+      perInstanceForced.set(this.instanceId, {
         limit: result.limit ?? this.config.limiter.limit,
         remaining: result.remaining ?? 0,
         reset: result.reset ?? Date.now() + this.config.limiter.intervalMs,
         retryAfter: result.retryAfter ?? 1,
         success: result.success ?? false,
-      };
+      });
     }
 
     limit(identifier: string): Promise<{
@@ -147,17 +165,15 @@ export function createRatelimitMock(): RatelimitMockModule {
       reset: number;
       retryAfter: number;
     }> {
-      // Check for forced outcome first
-      if (globalForced) {
-        return Promise.resolve({
-          limit: globalForced.limit ?? this.config.limiter.limit,
-          remaining: globalForced.remaining ?? 0,
-          reset: globalForced.reset ?? Date.now() + this.config.limiter.intervalMs,
-          retryAfter: globalForced.retryAfter ?? 1,
-          success: globalForced.success,
-        });
+      const forced = resolveForcedOutcome(
+        perInstanceForced.get(this.instanceId) ?? globalForced,
+        this.config.limiter
+      );
+      if (forced) {
+        return Promise.resolve(forced);
       }
 
+      // Check for forced outcome first
       const now = Date.now();
       const key = `${this.config.prefix ?? "ratelimit"}:${identifier}`;
       const current = globalState.get(key);
@@ -278,6 +294,8 @@ export function createRatelimitMock(): RatelimitMockModule {
     },
     __reset: () => {
       globalState.clear();
+      perInstanceForced.clear();
+      instanceSeq = 0;
       globalForced = undefined;
     },
     // biome-ignore lint/style/useNamingConvention: mirrors @upstash/ratelimit export shape

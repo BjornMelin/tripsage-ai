@@ -2,13 +2,25 @@
 
 import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
 import { HttpResponse, http } from "msw";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  test,
+  vi,
+} from "vitest";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 import { server } from "@/test/msw/server";
+import { setupUpstashTestEnvironment } from "@/test/upstash/setup";
+
+const { afterAllHook: upstashAfterAllHook, beforeEachHook: upstashBeforeEachHook } =
+  setupUpstashTestEnvironment();
 
 // Hoisted mocks for all dependencies
 const mockGetRedis = vi.hoisted(() => vi.fn());
-const mockRatelimitLimit = vi.hoisted(() => vi.fn(async () => ({ success: true })));
 const mockGetServerEnvVar = vi.hoisted(() => vi.fn(() => "test_key"));
 const mockGetServerEnvVarWithFallback = vi.hoisted(() =>
   vi.fn((key: string, fallback?: string) => {
@@ -20,16 +32,6 @@ const mockGetServerEnvVarWithFallback = vi.hoisted(() =>
 
 vi.mock("@/lib/redis", () => ({
   getRedis: mockGetRedis,
-}));
-
-vi.mock("@upstash/ratelimit", () => ({
-  Ratelimit: class {
-    static slidingWindow(limit: number, window: string) {
-      return { limit, window };
-    }
-
-    limit = mockRatelimitLimit;
-  },
 }));
 
 // Telemetry shim: execute callback immediately and capture attrs via spy
@@ -49,8 +51,8 @@ vi.mock("@/lib/env/server", () => ({
   getServerEnvVarWithFallback: mockGetServerEnvVarWithFallback,
 }));
 
-// Static import after mocks
-import { webSearch } from "@ai/tools/server/web-search";
+let webSearch: typeof import("@ai/tools/server/web-search").webSearch;
+
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 const mockContext = {
@@ -59,10 +61,14 @@ const mockContext = {
 };
 
 describe("webSearch", () => {
+  beforeAll(async () => {
+    ({ webSearch } = await import("@ai/tools/server/web-search"));
+  });
+
   beforeEach(() => {
+    upstashBeforeEachHook();
     vi.clearAllMocks();
     mockGetRedis.mockReturnValue(null);
-    mockRatelimitLimit.mockResolvedValue({ success: true });
     mockGetServerEnvVar.mockReturnValue("test_key");
   });
 
@@ -157,6 +163,10 @@ describe("webSearch", () => {
       )
     ).rejects.toMatchObject({ code: TOOL_ERROR_CODES.webSearchNotConfigured });
   });
+});
+
+afterAll(() => {
+  upstashAfterAllHook();
 });
 
 describe("webSearch cache key generation", () => {

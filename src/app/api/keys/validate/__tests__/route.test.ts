@@ -2,7 +2,7 @@
 
 import type { Redis } from "@upstash/redis";
 import type { NextRequest } from "next/server";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   setRateLimitFactoryForTests,
   setSupabaseFactoryForTests,
@@ -17,6 +17,10 @@ import {
   createRouteParamsContext,
   getMockCookiesForTest,
 } from "@/test/helpers/route";
+import { setupUpstashTestEnvironment } from "@/test/upstash/setup";
+
+const { afterAllHook: upstashAfterAllHook, beforeEachHook: upstashBeforeEachHook } =
+  setupUpstashTestEnvironment();
 
 // Mock next/headers cookies() BEFORE any imports that use it
 vi.mock("next/headers", () => ({
@@ -72,21 +76,6 @@ vi.mock("@/lib/redis", () => ({
   getRedis: MOCK_GET_REDIS,
 }));
 
-vi.mock("@upstash/ratelimit", () => {
-  const slidingWindow = vi.fn(() => ({}));
-  const ctor = vi.fn(function RatelimitMock() {
-    return { limit: LIMIT_SPY };
-  }) as unknown as {
-    new (...args: unknown[]): { limit: ReturnType<typeof LIMIT_SPY> };
-    slidingWindow: (...args: unknown[]) => unknown;
-  };
-  ctor.slidingWindow = slidingWindow as unknown as (...args: unknown[]) => unknown;
-  return {
-    Ratelimit: ctor,
-    slidingWindow,
-  };
-});
-
 vi.mock("@/lib/supabase/server", () => ({
   createServerSupabase: CREATE_SUPABASE,
 }));
@@ -139,6 +128,7 @@ function buildProvider(fetchMock: MockFetch, baseUrl = "https://provider.test/")
 
 describe("/api/keys/validate route", () => {
   beforeEach(() => {
+    upstashBeforeEachHook();
     vi.clearAllMocks();
     unstubAllEnvs();
     stubRateLimitDisabled();
@@ -180,6 +170,10 @@ describe("/api/keys/validate route", () => {
   afterEach(() => {
     setSupabaseFactoryForTests(null);
     setRateLimitFactoryForTests(null);
+  });
+
+  afterAll(() => {
+    upstashAfterAllHook();
   });
 
   it("returns isValid true on successful provider response", async () => {

@@ -1,8 +1,23 @@
 /** @vitest-environment node */
 
-import { createTravelPlan, updateTravelPlan } from "@ai/tools/server/planning";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { getMockCookiesForTest } from "@/test/helpers/route";
+import { setupUpstashTestEnvironment } from "@/test/upstash/setup";
+
+const {
+  afterAllHook: upstashAfterAllHook,
+  beforeEachHook: upstashBeforeEachHook,
+  mocks: upstashMocks,
+} = setupUpstashTestEnvironment();
 
 // Mock Next.js cookies() before any imports that use it
 vi.mock("next/headers", () => ({
@@ -35,47 +50,6 @@ vi.mock("@/lib/telemetry/span", async () => {
   return {
     ...actual,
     withTelemetrySpan: mockWithTelemetrySpan,
-  };
-});
-
-const ratelimitFailNext = vi.hoisted(() => ({ fail: false }));
-
-vi.mock("@upstash/ratelimit", () => {
-  return {
-    Ratelimit: class {
-      static slidingWindow(limit: number, window: string) {
-        return { limit, window };
-      }
-      private count = 0;
-      private readonly max: number;
-      constructor(opts: {
-        limiter: { limit: number };
-        prefix?: string;
-        redis?: unknown;
-      }) {
-        this.max = opts.limiter.limit;
-      }
-      limit() {
-        this.count += 1;
-        const shouldFail = ratelimitFailNext.fail;
-        if (shouldFail) {
-          ratelimitFailNext.fail = false;
-          return {
-            limit: this.max,
-            remaining: 0,
-            reset: Math.floor(Date.now() / 1000) + 60,
-            success: false,
-          };
-        }
-        const success = this.count <= this.max;
-        return {
-          limit: this.max,
-          remaining: Math.max(0, this.max - this.count),
-          reset: Math.floor(Date.now() / 1000) + 60,
-          success,
-        };
-      }
-    },
   };
 });
 
@@ -119,6 +93,13 @@ vi.mock("@/lib/redis", () => {
   return { getRedis: () => store };
 });
 
+let createTravelPlan: typeof import("@ai/tools/server/planning").createTravelPlan;
+let updateTravelPlan: typeof import("@ai/tools/server/planning").updateTravelPlan;
+
+beforeAll(async () => {
+  ({ createTravelPlan, updateTravelPlan } = await import("@ai/tools/server/planning"));
+});
+
 let currentUserId = "u1";
 const mockCreateServerSupabase = vi.hoisted(() =>
   vi.fn(async () => ({
@@ -158,6 +139,7 @@ describe("planning tool telemetry", () => {
   let redis: RedisMock;
 
   beforeEach(async () => {
+    upstashBeforeEachHook();
     const mod = (await import("@/lib/redis")) as unknown as {
       getRedis: () => RedisMock;
     };
@@ -174,6 +156,10 @@ describe("planning tool telemetry", () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterAll(() => {
+    upstashAfterAllHook();
   });
 
   it("createTravelPlan wraps execution in withTelemetrySpan and emits rate_limited event on RL breach", async () => {
@@ -205,7 +191,12 @@ describe("planning tool telemetry", () => {
     });
 
     // Simulate rate limit breach
-    ratelimitFailNext.fail = true;
+    upstashMocks.ratelimit.__force({
+      limit: 1,
+      remaining: 0,
+      reset: Math.floor(Date.now() / 1000) + 60,
+      success: false,
+    });
 
     vi.clearAllMocks();
 
@@ -276,7 +267,12 @@ describe("planning tool telemetry", () => {
     });
 
     // Simulate rate limit breach
-    ratelimitFailNext.fail = true;
+    upstashMocks.ratelimit.__force({
+      limit: 1,
+      remaining: 0,
+      reset: Math.floor(Date.now() / 1000) + 60,
+      success: false,
+    });
 
     vi.clearAllMocks();
 
