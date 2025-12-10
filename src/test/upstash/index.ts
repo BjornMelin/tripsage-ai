@@ -136,7 +136,11 @@ export function teardownUpstashMocks(): void {
  */
 // biome-ignore lint/style/useNamingConvention: mirrors QStash naming
 export function getPublishedQStashMessages(): QStashMessage[] {
-  if (!state) return [];
+  if (!state) {
+    throw new Error(
+      "Upstash mocks not installed; call installUpstashMocks() in test setup"
+    );
+  }
   return state.qstash.__getMessages();
 }
 

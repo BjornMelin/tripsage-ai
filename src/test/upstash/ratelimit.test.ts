@@ -205,6 +205,24 @@ describe("RatelimitMock", () => {
       expect(result.success).toBe(true);
       expect(result.remaining).toBe(42);
     });
+
+    it("scopes instance.force to a single limiter", async () => {
+      const limiterA = new ratelimit.Ratelimit({
+        limiter: ratelimit.Ratelimit.slidingWindow(1, "1 m"),
+      });
+      const limiterB = new ratelimit.Ratelimit({
+        limiter: ratelimit.Ratelimit.slidingWindow(1, "1 m"),
+      });
+
+      limiterA.force({ remaining: 0, success: false });
+
+      const forced = await limiterA.limit("user-1");
+      const unaffected = await limiterB.limit("user-1");
+
+      expect(forced.success).toBe(false);
+      expect(unaffected.success).toBe(true);
+      expect(unaffected.remaining).toBe(0);
+    });
   });
 
   describe("reset behavior", () => {
