@@ -2,6 +2,8 @@
  * @fileoverview QStash configuration constants per ADR-0048.
  */
 
+import "server-only";
+
 /**
  * QStash retry configuration for webhook job handlers.
  * Max 6 total attempts (1 initial + 5 retries) with exponential backoff.

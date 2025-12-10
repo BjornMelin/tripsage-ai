@@ -14,10 +14,10 @@
 
 import "server-only";
 
-import type { Span } from "@opentelemetry/api";
 import { type NextRequest, NextResponse } from "next/server";
+import { ZodError } from "zod";
 import { tryReserveKey } from "@/lib/idempotency/redis";
-import { withTelemetrySpan } from "@/lib/telemetry/span";
+import { type Span, withTelemetrySpan } from "@/lib/telemetry/span";
 import { buildEventKey, parseAndVerify, type WebhookPayload } from "./payload";
 import { checkWebhookRateLimit, createRateLimitHeaders } from "./rate-limit";
 
@@ -34,8 +34,20 @@ type ErrorCode =
   | "TIMEOUT"
   | "UNKNOWN";
 
+/** Type guard to check if error has a code property. */
+function hasErrorCode(error: unknown): error is Error & { code: string } {
+  return (
+    error instanceof Error &&
+    "code" in error &&
+    typeof (error as { code: unknown }).code === "string"
+  );
+}
+
 /**
  * Classifies an error and returns the appropriate HTTP status code.
+ *
+ * Uses concrete error classes and standardized error codes first,
+ * falling back to message heuristics for legacy/unknown errors.
  *
  * @param error - The error to classify
  * @returns Object with status code and error code
@@ -45,6 +57,35 @@ function classifyError(error: unknown): { status: number; code: ErrorCode } {
     return { code: "UNKNOWN", status: 500 };
   }
 
+  // 1. Check concrete error classes first (most reliable)
+  if (error instanceof ZodError) {
+    return { code: "VALIDATION_ERROR", status: 400 };
+  }
+
+  // 2. Check standardized error codes (if present)
+  if (hasErrorCode(error)) {
+    switch (error.code) {
+      case "VALIDATION_ERROR":
+      case "INVALID_INPUT":
+        return { code: "VALIDATION_ERROR", status: 400 };
+      case "NOT_FOUND":
+      case "ENOENT":
+        return { code: "NOT_FOUND", status: 404 };
+      case "CONFLICT":
+      case "DUPLICATE":
+        return { code: "CONFLICT", status: 409 };
+      case "SERVICE_UNAVAILABLE":
+      case "CIRCUIT_OPEN":
+      case "ECONNREFUSED":
+        return { code: "SERVICE_UNAVAILABLE", status: 503 };
+      case "TIMEOUT":
+      case "ETIMEDOUT":
+      case "ESOCKETTIMEDOUT":
+        return { code: "TIMEOUT", status: 504 };
+    }
+  }
+
+  // 3. Fall back to message/name heuristics for legacy errors
   const message = error.message.toLowerCase();
   const name = error.name.toLowerCase();
 
@@ -198,7 +239,7 @@ export function createWebhookHandler<T extends WebhookHandlerResult>(
     handle,
   } = config;
 
-  return async function Post(req: NextRequest): Promise<NextResponse> {
+  return async function post(req: NextRequest): Promise<NextResponse> {
     return await withTelemetrySpan(
       `webhook.${name}`,
       { attributes: { route: `/api/hooks/${name}` } },

@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { DLQ_MAX_ENTRIES, DLQ_TTL_SECONDS } from "../config";
 
 // Hoisted mocks
 const mockRedisLpush = vi.hoisted(() => vi.fn());
@@ -105,7 +106,7 @@ describe("DLQ", () => {
       expect(mockRedisLtrim).toHaveBeenCalledWith(
         "qstash-dlq:test-job",
         0,
-        999 // DLQ_MAX_ENTRIES - 1
+        DLQ_MAX_ENTRIES - 1
       );
     });
 
@@ -116,7 +117,7 @@ describe("DLQ", () => {
 
       expect(mockRedisExpire).toHaveBeenCalledWith(
         "qstash-dlq:test-job",
-        604800 // 7 days in seconds
+        DLQ_TTL_SECONDS
       );
     });
 

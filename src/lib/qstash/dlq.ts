@@ -27,17 +27,34 @@ const DLQ_ALERT_THRESHOLD = 100;
 /**
  * Sensitive field names to redact from payloads before storing in DLQ.
  * These patterns protect PII and credentials if Redis is compromised.
+ * Includes both camelCase and snake_case variants.
  */
 const SENSITIVE_FIELDS = [
+  // Authentication & secrets
   "email",
   "password",
   "token",
   "api_key",
   "apiKey",
   "secret",
+  // Personal identifiers
   "ssn",
+  "socialSecurityNumber",
+  "social_security_number",
+  "name",
+  "firstName",
+  "first_name",
+  "lastName",
+  "last_name",
+  "dob",
+  "dateOfBirth",
+  "date_of_birth",
+  "birthDate",
+  "birth_date",
+  // Financial
   "credit_card",
   "creditCard",
+  // Contact info
   "phone",
   "address",
 ] as const;
@@ -132,8 +149,8 @@ export async function pushToDLQ(
       span.setAttribute("dlq.key", key);
       span.setAttribute("dlq.entry_id", entryId);
 
-      // Use LPUSH to add to front of list (most recent first)
-      await redis.lpush(key, JSON.stringify(entry));
+      // Use LPUSH to add to front of list - returns new list length
+      const newLength = await redis.lpush(key, JSON.stringify(entry));
 
       // Trim list to max entries to prevent unbounded growth
       await redis.ltrim(key, 0, DLQ_MAX_ENTRIES - 1);
@@ -153,19 +170,18 @@ export async function pushToDLQ(
         level: "warning",
       });
 
-      // Check threshold and emit critical alert
-      const count = await getDLQCount(jobType);
-      if (count > DLQ_ALERT_THRESHOLD) {
+      // Use LPUSH return value (new length) for threshold check - avoids extra Redis call
+      if (newLength > DLQ_ALERT_THRESHOLD) {
         recordTelemetryEvent("qstash.dlq_threshold_exceeded", {
           attributes: {
-            "dlq.count": count,
+            "dlq.count": newLength,
             "dlq.job_type": jobType,
             "dlq.threshold": DLQ_ALERT_THRESHOLD,
           },
           level: "error",
         });
         span.setAttribute("dlq.threshold_exceeded", true);
-        span.setAttribute("dlq.count", count);
+        span.setAttribute("dlq.count", newLength);
       }
 
       return entryId;

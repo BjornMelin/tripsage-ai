@@ -16,6 +16,7 @@ import { getServerEnvVar, getServerEnvVarWithFallback } from "@/lib/env/server";
 import { tryReserveKey } from "@/lib/idempotency/redis";
 import { sendCollaboratorNotifications } from "@/lib/notifications/collaborators";
 import { pushToDLQ } from "@/lib/qstash/dlq";
+import { emitOperationalAlert } from "@/lib/telemetry/alerts";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 /**
@@ -31,13 +32,15 @@ function getQstashReceiver(): Receiver {
   const next = getServerEnvVarWithFallback("QSTASH_NEXT_SIGNING_KEY", "");
 
   if (!next) {
-    // Log warning about fallback to help operators during key rotation
-    console.warn(
-      "[QStash Worker] QSTASH_NEXT_SIGNING_KEY not configured. " +
-        "Using current key for both. This is normal for regular operation " +
-        "but may cause request failures during key rotation if not addressed. " +
-        "See: https://upstash.com/docs/qstash/howto/signature-validation"
-    );
+    // Emit operational alert about fallback to help operators during key rotation
+    emitOperationalAlert("qstash.next_signing_key_missing", {
+      attributes: {
+        "config.current_key_set": true,
+        "config.next_key_set": false,
+        "docs.url": "https://upstash.com/docs/qstash/howto/signature-validation",
+      },
+      severity: "warning",
+    });
   }
 
   return new Receiver({
