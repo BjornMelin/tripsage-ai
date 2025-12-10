@@ -26,7 +26,7 @@ You must:
   - `docs/development/zod-schema-guide.md`
   - `docs/development/server-actions.md`
 - Prefer official library APIs over custom wrappers whenever possible.
-- Regularily reference the `docs/plans/prompt-01-attachments-v2-vercel-blob.md` file when implementing this work to check off completed tasks and assess what remains and for when you need context or reminders of what to implement next.
+- Regularly reference the `docs/plans/prompt-01-attachments-v2-vercel-blob.md` file when implementing this work to check off completed tasks and assess what remains and for when you need context or reminders of what to implement next.
 - Use `docs/architecture/decisions/template.md` as a template for ADRs and existing specs for guidelines on what to include in specs.
 
 ---
