@@ -47,7 +47,7 @@ CLAUDE.md @BjornMelin
 # Infrastructure and deployment
 /docker/ @BjornMelin
 Dockerfile @BjornMelin
-Dockerfile.dev @BjornMelin
+/docker/Dockerfile.dev @BjornMelin
 docker-compose*.yml @BjornMelin
 .dockerignore @BjornMelin
 /supabase/ @BjornMelin
