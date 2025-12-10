@@ -66,6 +66,8 @@ architectural decision made along with its context and consequences.
 | [ADR-0049](superseded/adr-0049-expedia-rapid.md) | Expedia Rapid Integration Research | Superseded | 2025-11-20 |
 | [ADR-0050](adr-0050-amadeus-google-places-stripe-hybrid.md) | Replace Expedia Rapid with Amadeus + Google Places + Stripe | Accepted | 2025-11-20 |
 | [ADR-0053](adr-0053-activity-search-google-places-integration.md) | Activity Search & Booking via Google Places API (Hybrid + Web Fallback) | Proposed | 2025-11-24 |
+| [ADR-0058](superseded/adr-0058-vercel-blob-attachments.md) | Vercel Blob for Chat Attachments Storage | Superseded | 2025-12-10 |
+| [ADR-0059](adr-0059-supabase-storage-attachments.md) | Supabase Storage for Chat Attachments | Accepted | 2025-12-10 |
 
 ## Superseded ADRs
 
@@ -88,6 +90,7 @@ The following ADRs have been superseded by newer decisions:
 | [ADR-0022](superseded/adr-0022-python-pytest-foundation.md) | Standardize Python Test Suite Foundations | ADR-0007 | 2025-10-24 |
 | [ADR-0043](superseded/adr-0043-expedia-rapid-integration.md) | Expedia Rapid API Integration for Lodging Search/Booking | ADR-0050 | 2025-11-20 |
 | [ADR-0049](superseded/adr-0049-expedia-rapid.md) | Expedia Rapid Integration Research | ADR-0050 | 2025-11-20 |
+| [ADR-0058](superseded/adr-0058-vercel-blob-attachments.md) | Vercel Blob for Chat Attachments Storage | ADR-0059 | 2025-12-10 |
 
 ## By Category
 
@@ -117,6 +120,7 @@ The following ADRs have been superseded by newer decisions:
 - ADR-0055: Flatten Next.js App Structure to Repository Root
 - ADR-0056: Popular Routes for Flights (Amadeus + Upstash Caching)
 - ADR-0057: Search Filter Panel System
+- ADR-0059: Supabase Storage for Chat Attachments
 
 ### Backend
 
