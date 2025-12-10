@@ -1,14 +1,15 @@
 /** @vitest-environment node */
 
 import type { NotifyJob } from "@schemas/webhooks";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMockNextRequest, getMockCookiesForTest } from "@/test/helpers/route";
+import { setupUpstashTestEnvironment } from "@/test/upstash/setup";
 
-type ReceiverVerify = (args: {
-  body: string;
-  signature: string;
-  url: string;
-}) => Promise<boolean>;
+const {
+  afterAllHook: upstashAfterAllHook,
+  beforeEachHook: upstashBeforeEachHook,
+  mocks: upstashMocks,
+} = setupUpstashTestEnvironment();
 type TryReserveKey = (key: string, ttlSeconds?: number) => Promise<boolean>;
 type SendNotifications = (
   payload: NotifyJob["payload"],
@@ -29,7 +30,6 @@ const envStore = vi.hoisted<Record<string, string | undefined>>(() => ({
   QSTASH_NEXT_SIGNING_KEY: "next",
 }));
 
-const receiverVerifyMock = vi.hoisted(() => vi.fn<ReceiverVerify>());
 const tryReserveKeyMock = vi.hoisted(() => vi.fn<TryReserveKey>(async () => true));
 const sendNotificationsMock = vi.hoisted(() =>
   vi.fn<SendNotifications>(async () => ({ emailed: true, webhookPosted: false }))
@@ -46,12 +46,6 @@ vi.mock("@/lib/env/server", () => ({
   getServerEnvVarWithFallback: (key: string, fallback?: string) => {
     const value = (envStore as Record<string, string | undefined>)[key];
     return (value ?? fallback) as string;
-  },
-}));
-
-vi.mock("@upstash/qstash", () => ({
-  Receiver: class {
-    verify = (args: Parameters<ReceiverVerify>[0]) => receiverVerifyMock(args);
   },
 }));
 
@@ -115,11 +109,11 @@ const validJob: NotifyJob = {
 
 describe("POST /api/jobs/notify-collaborators", () => {
   beforeEach(() => {
+    upstashBeforeEachHook();
     vi.clearAllMocks();
-    receiverVerifyMock.mockReset();
     tryReserveKeyMock.mockReset();
     sendNotificationsMock.mockReset();
-    receiverVerifyMock.mockResolvedValue(true);
+    upstashMocks.qstash.__forceVerify(true);
     tryReserveKeyMock.mockResolvedValue(true);
     envStore.QSTASH_CURRENT_SIGNING_KEY = "current";
     envStore.QSTASH_NEXT_SIGNING_KEY = "next";
@@ -140,7 +134,7 @@ describe("POST /api/jobs/notify-collaborators", () => {
   });
 
   it("returns 401 when signature verification fails", async () => {
-    receiverVerifyMock.mockResolvedValue(false);
+    upstashMocks.qstash.__forceVerify(false);
     const { POST } = await loadRoute();
     const res = await POST(makeRequest(validJob));
     expect(res.status).toBe(401);
@@ -179,5 +173,9 @@ describe("POST /api/jobs/notify-collaborators", () => {
       validJob.payload,
       validJob.eventKey
     );
+  });
+
+  afterAll(() => {
+    upstashAfterAllHook();
   });
 });
