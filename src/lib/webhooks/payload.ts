@@ -1,5 +1,8 @@
 /**
  * @fileoverview Webhook payload parsing, verification, and event key generation.
+ *
+ * Implements single-pass body read to avoid redundant request cloning
+ * and potential stream exhaustion issues.
  */
 
 import "server-only";
@@ -7,7 +10,7 @@ import { createHash } from "node:crypto";
 import type { WebhookPayload } from "@schemas/webhooks";
 import { webhookPayloadSchema } from "@schemas/webhooks";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
-import { verifyRequestHmac } from "@/lib/security/webhook";
+import { computeHmacSha256Hex, timingSafeEqualHex } from "@/lib/security/webhook";
 import { emitOperationalAlert } from "@/lib/telemetry/alerts";
 import { addEventToActiveSpan } from "@/lib/telemetry/span";
 
@@ -57,6 +60,11 @@ function recordVerificationFailure(reason: string): void {
 /**
  * Parses and verifies a webhook request with HMAC signature.
  *
+ * Uses single-pass body read to avoid redundant request cloning:
+ * 1. Read body as raw text once
+ * 2. Verify HMAC on raw text
+ * 3. Parse JSON from the same text
+ *
  * @param req - The incoming webhook request.
  * @return Object with verification status and optional parsed payload.
  */
@@ -68,18 +76,40 @@ export async function parseAndVerify(
     recordVerificationFailure("missing_secret_env");
     return { ok: false };
   }
-  const verified = await verifyRequestHmac(req, secret);
-  if (!verified) {
+
+  // Get signature from header
+  const sig = req.headers.get("x-signature-hmac");
+  if (!sig) {
+    recordVerificationFailure("missing_signature");
+    return { ok: false };
+  }
+
+  // Single-pass body read: read as text once, verify, then parse
+  let rawBody: string;
+  try {
+    rawBody = await req.text();
+  } catch {
+    recordVerificationFailure("body_read_error");
+    return { ok: false };
+  }
+
+  // Verify HMAC on raw text
+  const expected = computeHmacSha256Hex(rawBody, secret);
+  if (!timingSafeEqualHex(expected, sig)) {
     recordVerificationFailure("invalid_signature");
     return { ok: false };
   }
+
+  // Parse JSON from the already-read text
   let raw: RawWebhookPayload;
   try {
-    raw = (await req.json()) as RawWebhookPayload;
+    raw = JSON.parse(rawBody) as RawWebhookPayload;
   } catch {
     recordVerificationFailure("invalid_json");
     return { ok: false };
   }
+
+  // Normalize and validate payload
   let payload: WebhookPayload;
   try {
     payload = normalizeWebhookPayload(raw);
@@ -87,10 +117,12 @@ export async function parseAndVerify(
     recordVerificationFailure("invalid_payload_shape");
     return { ok: false };
   }
+
   if (!payload?.type || !payload?.table) {
     recordVerificationFailure("invalid_payload_shape");
     return { ok: false };
   }
+
   return { ok: true, payload };
 }
 
