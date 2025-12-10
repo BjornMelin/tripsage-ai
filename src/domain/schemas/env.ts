@@ -77,7 +77,6 @@ const travelApiEnvSchema = z.object({
   AMADEUS_CLIENT_ID: z.string().optional(),
   AMADEUS_CLIENT_SECRET: z.string().optional(),
   AMADEUS_ENV: z.enum(["test", "production"]).optional(),
-  BACKEND_API_URL: z.url().optional(),
   // Duffel flights
   DUFFEL_ACCESS_TOKEN: z.string().optional(),
   DUFFEL_API_KEY: z.string().optional(),
