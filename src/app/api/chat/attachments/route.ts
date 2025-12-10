@@ -1,68 +1,220 @@
 /**
- * @fileoverview Chat attachment upload endpoint.
+ * @fileoverview Chat attachment upload endpoint using Supabase Storage.
  *
- * Handles multipart form data uploads, validates file sizes and types.
+ * Handles multipart form data uploads directly to Supabase Storage bucket,
+ * with metadata stored in Supabase file_attachments table. See ADR-0058 and SPEC-0036.
  */
 
 import "server-only";
 
-import { FILE_COUNT_LIMITS, FILE_SIZE_LIMITS } from "@schemas/api";
+import {
+  ATTACHMENT_ALLOWED_MIME_TYPES,
+  ATTACHMENT_MAX_FILE_SIZE,
+  ATTACHMENT_MAX_FILES,
+  ATTACHMENT_MAX_TOTAL_SIZE,
+  isAllowedMimeType,
+  sanitizeFilename,
+} from "@schemas/attachments";
+import { fileTypeFromBuffer } from "file-type";
 import { revalidateTag } from "next/cache";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { validateMultipart } from "@/lib/api/guards/multipart";
-import { errorResponse } from "@/lib/api/route-helpers";
-import { getServerEnvVarWithFallback } from "@/lib/env/server";
+import { errorResponse, requireUserId } from "@/lib/api/route-helpers";
+import { bumpTag } from "@/lib/cache/tags";
+import { secureUuid } from "@/lib/security/random";
+import type { TypedServerSupabase } from "@/lib/supabase/server";
+import { createServerLogger } from "@/lib/telemetry/logger";
+import { recordErrorOnActiveSpan } from "@/lib/telemetry/span";
+
+const logger = createServerLogger("chat.attachments.upload");
+
+/** Storage bucket name for chat attachments. */
+const STORAGE_BUCKET = "attachments";
 
 /**
- * Returns backend API URL from environment or default.
+ * Validates files from form data for upload.
  *
- * @returns Backend API URL string.
+ * @param formData - FormData object containing files.
+ * @returns Validation result with files or error response.
  */
-function getBackendApiUrl(): string {
-  return (
-    getServerEnvVarWithFallback("BACKEND_API_URL", "http://localhost:8001") ??
-    "http://localhost:8001"
+function validateUploadFiles(
+  formData: FormData
+): { data: File[] } | { error: NextResponse } {
+  const files = Array.from(formData.values()).filter(
+    (value): value is File => value instanceof File && value.size > 0
   );
-}
 
-/** Single file upload response from backend API. */
-interface SingleUploadResponse {
-  file_id: string;
-  filename: string;
-  file_size: number;
-  mime_type: string;
-  processing_status: string;
-}
+  if (files.length === 0) {
+    return {
+      error: errorResponse({
+        error: "invalid_request",
+        reason: "No files uploaded",
+        status: 400,
+      }),
+    };
+  }
 
-/** Batch upload file response structure. */
-interface BatchUploadFileResponse {
-  fileId: string;
-  filename: string;
-  fileSize: number;
-  mimeType: string;
-  processingStatus: string;
-}
+  if (files.length > ATTACHMENT_MAX_FILES) {
+    return {
+      error: errorResponse({
+        error: "invalid_request",
+        reason: `Maximum ${ATTACHMENT_MAX_FILES} files allowed per request`,
+        status: 400,
+      }),
+    };
+  }
 
-/** Batch upload response from backend API. */
-interface BatchUploadResponse {
-  successful_uploads: BatchUploadFileResponse[];
+  const oversizedFile = files.find((file) => file.size > ATTACHMENT_MAX_FILE_SIZE);
+  if (oversizedFile) {
+    return {
+      error: errorResponse({
+        error: "invalid_request",
+        reason: `File "${oversizedFile.name}" exceeds maximum size of ${Math.floor(ATTACHMENT_MAX_FILE_SIZE / 1024 / 1024)}MB`,
+        status: 400,
+      }),
+    };
+  }
+
+  const invalidTypeFile = files.find((file) => !isAllowedMimeType(file.type));
+  if (invalidTypeFile) {
+    return {
+      error: errorResponse({
+        error: "invalid_request",
+        reason: `File "${invalidTypeFile.name}" has invalid type. Allowed types: ${ATTACHMENT_ALLOWED_MIME_TYPES.join(", ")}`,
+        status: 400,
+      }),
+    };
+  }
+
+  return { data: files };
 }
 
 /**
- * Handles multipart form data file uploads with validation.
+ * Verifies file MIME type using magic bytes.
  *
- * @param req - Next.js request containing multipart form data.
- * @returns JSON response with uploaded file metadata or error.
+ * Compares detected MIME type from file contents against declared type.
+ * Prevents malware disguised as allowed file types.
+ *
+ * @param buffer - File contents as Uint8Array.
+ * @param declaredType - MIME type declared by client.
+ * @returns Validation result with detected type or error.
  */
-const MAX_TOTAL_UPLOAD_BYTES = FILE_COUNT_LIMITS.STANDARD * FILE_SIZE_LIMITS.STANDARD;
+async function verifyMimeType(
+  buffer: Uint8Array,
+  declaredType: string
+): Promise<{ valid: true; detectedType: string } | { valid: false; reason: string }> {
+  const detected = await fileTypeFromBuffer(buffer);
+
+  // For files without detectable magic bytes (e.g., text/csv, text/plain),
+  // trust the declared type if it's in allowed list
+  if (!detected) {
+    if (isAllowedMimeType(declaredType)) {
+      return { detectedType: declaredType, valid: true };
+    }
+    return { reason: "Unable to verify file type", valid: false };
+  }
+
+  // Make detected MIME the source of truth - must be in allowed list
+  if (!isAllowedMimeType(detected.mime)) {
+    return {
+      reason: `Detected MIME type ${detected.mime} is not allowed`,
+      valid: false,
+    };
+  }
+
+  // Require exact match - no category-based relaxation (prevents malware disguised as images)
+  if (detected.mime !== declaredType) {
+    return {
+      reason: `MIME type mismatch: declared ${declaredType}, detected ${detected.mime}`,
+      valid: false,
+    };
+  }
+
+  return { detectedType: detected.mime, valid: true };
+}
+
+/** Result of a single file upload operation. */
+interface UploadResult {
+  file: File;
+  path: string;
+  error: Error | null;
+}
+
+/**
+ * Uploads a single file to Supabase Storage.
+ *
+ * @param file - File to upload.
+ * @param userId - User ID for path prefix.
+ * @param supabase - Supabase client.
+ * @returns Upload result with path or error.
+ */
+async function uploadToSupabaseStorage(
+  file: File,
+  userId: string,
+  supabase: TypedServerSupabase
+): Promise<UploadResult> {
+  const uuid = secureUuid();
+  const sanitizedName = sanitizeFilename(file.name);
+  // Path format per SPEC-0036: chat/{userId}/filename
+  const storagePath = `chat/${userId}/${uuid}-${sanitizedName}`;
+
+  // Convert File to Buffer for magic byte verification
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = new Uint8Array(arrayBuffer);
+
+  // Verify MIME type using magic bytes
+  const mimeVerification = await verifyMimeType(buffer, file.type);
+  if (!mimeVerification.valid) {
+    return { error: new Error(mimeVerification.reason), file, path: "" };
+  }
+
+  // Upload to Supabase Storage
+  const { error } = await supabase.storage
+    .from(STORAGE_BUCKET)
+    .upload(storagePath, buffer, {
+      contentType: file.type,
+      upsert: false,
+    });
+
+  if (error) {
+    return { error: new Error(error.message), file, path: storagePath };
+  }
+
+  return { error: null, file, path: storagePath };
+}
+
+/**
+ * Deletes a file from Supabase Storage.
+ *
+ * @param path - File path within the bucket.
+ * @param supabase - Supabase client.
+ */
+async function deleteFromStorage(
+  path: string,
+  supabase: TypedServerSupabase
+): Promise<void> {
+  const { error } = await supabase.storage.from(STORAGE_BUCKET).remove([path]);
+  if (error) {
+    throw new Error(`Failed to delete file: ${error.message}`);
+  }
+}
+
+/** Shape of an uploaded file record in the response. */
+interface UploadedFileRecord {
+  id: string;
+  name: string;
+  size: number;
+  status: "uploading" | "completed" | "failed";
+  type: string;
+  url: string | null;
+}
 
 export const POST = withApiGuards({
   auth: true,
   rateLimit: "chat:attachments",
   telemetry: "chat.attachments.upload",
-})(async (req: NextRequest, { supabase }) => {
+})(async (req: NextRequest, { supabase, user }) => {
   // Validate content type
   const contentType = req.headers.get("content-type");
   if (!contentType?.includes("multipart/form-data")) {
@@ -77,130 +229,185 @@ export const POST = withApiGuards({
   const contentLengthHeader = req.headers.get("content-length");
   if (contentLengthHeader) {
     const contentLength = Number.parseInt(contentLengthHeader, 10);
-    if (Number.isFinite(contentLength) && contentLength > MAX_TOTAL_UPLOAD_BYTES) {
+    if (Number.isFinite(contentLength) && contentLength > ATTACHMENT_MAX_TOTAL_SIZE) {
       return errorResponse({
         error: "invalid_request",
-        reason: `Request payload exceeds maximum total size of ${Math.floor(
-          MAX_TOTAL_UPLOAD_BYTES / (1024 * 1024)
-        )}MB`,
+        reason: `Request payload exceeds maximum total size of ${Math.floor(ATTACHMENT_MAX_TOTAL_SIZE / (1024 * 1024))}MB`,
         status: 413,
       });
     }
   }
 
+  // Extract and validate user ID
+  const userResult = requireUserId(user);
+  if ("error" in userResult) {
+    return userResult.error;
+  }
+  const { userId } = userResult;
+
   // Parse form data
   const formData = await req.formData();
 
   // Validate and extract files
-  const validation = validateMultipart(formData, {
-    maxFiles: FILE_COUNT_LIMITS.STANDARD,
-    maxSize: FILE_SIZE_LIMITS.STANDARD,
-  });
-
+  const validation = validateUploadFiles(formData);
   if ("error" in validation) {
     return validation.error;
   }
-
   const files = validation.data;
 
-  // Prepare backend request
-  const backendFormData = new FormData();
-  if (files.length === 1) {
-    backendFormData.append("file", files[0]);
-  } else {
-    for (const file of files) {
-      backendFormData.append("files", file);
-    }
-  }
-
-  // Call backend API
-  const endpoint =
-    files.length === 1 ? "/api/attachments/upload" : "/api/attachments/upload/batch";
-
-  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-  if (sessionError || !sessionData?.session?.access_token) {
-    return errorResponse({
-      error: "unauthenticated",
-      reason: "Missing authenticated session",
-      status: 401,
-    });
-  }
-
-  const response = await fetch(`${getBackendApiUrl()}${endpoint}`, {
-    body: backendFormData,
-    headers: {
-      Authorization: `Bearer ${sessionData.session.access_token}`,
-    },
-    method: "POST",
-  });
-
-  const data: unknown = await response.json();
-
-  if (!response.ok) {
-    const detail = (data as { detail?: string } | undefined)?.detail ?? "Upload failed";
-    return errorResponse({
-      err: new Error(`File upload failed: ${detail}`),
-      error: "internal",
-      reason: "File upload failed",
-      status: response.status >= 400 && response.status < 500 ? response.status : 502,
-    });
-  }
-
-  // Transform response
-  if (files.length === 1) {
-    const singleUpload = data as SingleUploadResponse;
-    const payload = {
-      files: [
-        {
-          id: singleUpload.file_id,
-          name: singleUpload.filename,
-          size: singleUpload.file_size,
-          status: singleUpload.processing_status,
-          type: singleUpload.mime_type,
-          url: `/api/attachments/${singleUpload.file_id}/download`,
-        },
-      ],
-      urls: [`/api/attachments/${singleUpload.file_id}/download`],
-    };
-    try {
-      revalidateTag("attachments", "max");
-    } catch {
-      // Ignore cache revalidation errors in non-Next runtime test environments
-    }
-    return NextResponse.json(payload);
-  }
-
-  // Batch response
-  const batchResponse = data as BatchUploadResponse;
-  const transformedFiles = batchResponse.successful_uploads.map(
-    (
-      file
-    ): {
-      id: string;
-      name: string;
-      size: number;
-      status: string;
-      type: string;
-      url: string;
-    } => ({
-      id: file.fileId,
-      name: file.filename,
-      size: file.fileSize,
-      status: file.processingStatus,
-      type: file.mimeType,
-      url: `/api/attachments/${file.fileId}/download`,
-    })
+  // Upload files to Supabase Storage in parallel
+  const uploadResults = await Promise.allSettled(
+    files.map((file) => uploadToSupabaseStorage(file, userId, supabase))
   );
 
-  const resultPayload = {
-    files: transformedFiles,
-    urls: transformedFiles.map((f) => f.url),
-  };
-  const result = NextResponse.json(resultPayload);
+  // Process upload results and store metadata
+  const uploadedFiles: UploadedFileRecord[] = [];
+  const urls: string[] = [];
+  const uploadedPaths: string[] = []; // Track successful uploads for cleanup
+  let firstUploadError: Error | null = null;
+
+  for (const result of uploadResults) {
+    if (result.status === "rejected") {
+      // Upload promise itself rejected (unexpected error)
+      const error =
+        result.reason instanceof Error
+          ? result.reason
+          : new Error(String(result.reason));
+      recordErrorOnActiveSpan(error);
+      logger.error("Unexpected upload error", { error: error.message, userId });
+      if (!firstUploadError) firstUploadError = error;
+      continue; // Don't return yet - need to cleanup uploaded files
+    }
+
+    const { file, path, error: uploadError } = result.value;
+
+    if (uploadError) {
+      // Upload returned an error (validation or storage error)
+      recordErrorOnActiveSpan(uploadError);
+      logger.error("Failed to upload file to Supabase Storage", {
+        error: uploadError.message,
+        fileName: file.name,
+        userId,
+      });
+      if (!firstUploadError) firstUploadError = uploadError;
+      continue; // Don't return yet - need to cleanup uploaded files
+    }
+
+    // Track this successful upload for potential cleanup
+    uploadedPaths.push(path);
+
+    // Generate file ID for metadata
+    const fileId = secureUuid();
+
+    // Insert metadata into Supabase
+    // Note: filename = storage key (UUID), original_filename = user-facing name
+    const { error: insertError } = await supabase.from("file_attachments").insert({
+      bucket_name: STORAGE_BUCKET,
+      file_path: path,
+      file_size: file.size,
+      filename: fileId, // Storage key (UUID)
+      id: fileId,
+      mime_type: file.type,
+      original_filename: file.name, // User-facing name
+      upload_status: "completed",
+      user_id: userId,
+    });
+
+    if (insertError) {
+      logger.error("Failed to insert attachment metadata", {
+        error: insertError.message,
+        fileId,
+        userId,
+      });
+      // Clean up uploaded file on metadata failure
+      try {
+        await deleteFromStorage(path, supabase);
+      } catch (cleanupError) {
+        logger.warn("Failed to clean up storage after metadata insert failure", {
+          cleanupError:
+            cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
+          fileId,
+          path,
+          userId,
+        });
+      }
+      // Mark this file as failed but continue with others
+      uploadedFiles.push({
+        id: fileId,
+        name: file.name,
+        size: file.size,
+        status: "failed",
+        type: file.type,
+        url: null,
+      });
+      continue;
+    }
+
+    // Generate signed URL for the uploaded file (1 hour expiry)
+    const { data: signedUrlData } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .createSignedUrl(path, 3600, { download: true });
+
+    const signedUrl = signedUrlData?.signedUrl ?? null;
+
+    uploadedFiles.push({
+      id: fileId,
+      name: file.name,
+      size: file.size,
+      status: "completed",
+      type: file.type,
+      url: signedUrl,
+    });
+
+    if (signedUrl) {
+      urls.push(signedUrl);
+    }
+  }
+
+  // If any upload failed, cleanup all successfully uploaded files
+  if (firstUploadError) {
+    logger.warn("Cleaning up uploaded files due to upload failure", {
+      count: uploadedPaths.length,
+      userId,
+    });
+
+    // Delete all successfully uploaded files
+    const cleanupResults = await Promise.allSettled(
+      uploadedPaths.map((path) => deleteFromStorage(path, supabase))
+    );
+
+    // Log cleanup failures but don't block the error response
+    for (const [index, result] of cleanupResults.entries()) {
+      if (result.status === "rejected") {
+        logger.error("Failed to cleanup uploaded file", {
+          error:
+            result.reason instanceof Error
+              ? result.reason.message
+              : String(result.reason),
+          path: uploadedPaths[index],
+          userId,
+        });
+      }
+    }
+
+    return errorResponse({
+      err: firstUploadError,
+      error: "internal",
+      reason: "File upload failed",
+      status: 500,
+    });
+  }
+
+  // Invalidate attachment caches
   try {
-    revalidateTag("attachments", "max");
+    revalidateTag("attachments", { expire: 0 });
+    await bumpTag("attachments");
   } catch {
     // Ignore cache revalidation errors in non-Next runtime test environments
   }
-  return result;
+
+  return NextResponse.json({
+    files: uploadedFiles,
+    urls,
+  });
 });
