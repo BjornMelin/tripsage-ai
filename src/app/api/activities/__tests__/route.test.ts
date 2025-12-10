@@ -75,7 +75,6 @@ vi.mock("@/lib/api/route-helpers", async () => {
 describe("/api/activities routes", () => {
   beforeEach(() => {
     upstashBeforeEachHook();
-    vi.clearAllMocks();
     upstashMocks.ratelimit.__force({
       limit: 20,
       remaining: 10,
