@@ -1,79 +1,39 @@
 /**
  * @fileoverview Cache invalidation webhook handler for database changes.
+ *
+ * Uses the shared webhook handler abstraction and cache registry.
+ * Adds idempotency to prevent unnecessary cache version bumps.
  */
 
 import "server-only";
 
-import { type NextRequest, NextResponse } from "next/server";
-import { errorResponse, unauthorizedResponse } from "@/lib/api/route-helpers";
+import { getTagsForTable } from "@/lib/cache/registry";
 import { bumpTags } from "@/lib/cache/tags";
-import { withTelemetrySpan } from "@/lib/telemetry/span";
-import { parseAndVerify } from "@/lib/webhooks/payload";
-
-/**
- * Returns cache tags to invalidate for a given database table.
- *
- * @param table - The name of the database table that changed.
- * @return Array of cache tag names to invalidate.
- */
-function tagsForTable(table: string): string[] {
-  switch (table) {
-    case "trips":
-      return ["trip", "user_trips", "trip_search", "search", "search_cache"];
-    case "flights":
-      return ["flight", "flight_search", "search", "search_cache"];
-    case "accommodations":
-      return ["accommodation", "hotel_search", "search", "search_cache"];
-    case "search_destinations":
-    case "search_flights":
-    case "search_hotels":
-    case "search_activities":
-      return ["search", "search_cache"];
-    case "trip_collaborators":
-      return ["trips", "users", "search"];
-    case "chat_messages":
-    case "chat_sessions":
-      return ["memory", "conversation", "chat_memory"];
-    default:
-      return ["search", "cache"];
-  }
-}
+import { createWebhookHandler } from "@/lib/webhooks/handler";
 
 /**
  * Handles database change webhooks to invalidate related cache tags.
  *
- * @param req - The incoming webhook request.
- * @return Response indicating success or error.
+ * Features (via handler abstraction):
+ * - Rate limiting (100 req/min per IP)
+ * - Body size validation (64KB max)
+ * - HMAC signature verification
+ * - Idempotency via Redis (prevents duplicate cache bumps)
  */
-export async function POST(req: NextRequest) {
-  return await withTelemetrySpan(
-    "webhook.cache",
-    { attributes: { route: "/api/hooks/cache" } },
-    async (span) => {
-      const { ok, payload } = await parseAndVerify(req);
-      if (!ok) {
-        return unauthorizedResponse();
-      }
-      if (!payload) {
-        return errorResponse({
-          error: "invalid_request",
-          reason: "Missing webhook payload",
-          status: 400,
-        });
-      }
-      if (!payload.table) {
-        return errorResponse({
-          error: "invalid_request",
-          reason: "Missing table in webhook payload",
-          status: 400,
-        });
-      }
-      span.setAttribute("table", payload.table);
-      span.setAttribute("op", payload.type);
-      const tags = tagsForTable(payload.table);
-      const bumped = await bumpTags(tags);
-      span.setAttribute("tags.count", tags.length);
-      return NextResponse.json({ bumped, ok: true });
-    }
-  );
-}
+export const POST = createWebhookHandler({
+  enableIdempotency: true,
+
+  async handle(payload, _eventKey, span) {
+    // Get tags from centralized registry
+    const tags = getTagsForTable(payload.table);
+    span.setAttribute("cache.tags", tags.join(","));
+    span.setAttribute("cache.tags_count", tags.length);
+
+    // Bump version counters for all affected tags
+    const bumped = await bumpTags(tags);
+
+    return { bumped, tags };
+  },
+  idempotencyTTL: 60, // Shorter TTL for cache ops
+  name: "cache",
+});

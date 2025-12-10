@@ -1,85 +1,56 @@
 /**
  * @fileoverview File attachment webhook handler for upload status changes.
+ *
+ * Uses the shared webhook handler abstraction to reduce boilerplate.
  */
 
 import "server-only";
 
-import { createClient } from "@supabase/supabase-js";
-import { type NextRequest, NextResponse } from "next/server";
-import { errorResponse, unauthorizedResponse } from "@/lib/api/route-helpers";
-import { getServerEnvVar } from "@/lib/env/server";
-import { tryReserveKey } from "@/lib/idempotency/redis";
+import { createAdminSupabase } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
-import { recordErrorOnSpan, withTelemetrySpan } from "@/lib/telemetry/span";
-import { buildEventKey, parseAndVerify } from "@/lib/webhooks/payload";
+import { createWebhookHandler } from "@/lib/webhooks/handler";
 
 type FileAttachmentRow = Database["public"]["Tables"]["file_attachments"]["Row"];
 
 /**
- * Creates an admin Supabase client with service role credentials.
- *
- * @return Admin Supabase client instance.
- * @throws When SUPABASE_SERVICE_ROLE_KEY is not configured.
- */
-function createAdminSupabase() {
-  const url = getServerEnvVar("NEXT_PUBLIC_SUPABASE_URL");
-  const serviceKey = getServerEnvVar("SUPABASE_SERVICE_ROLE_KEY");
-  if (!serviceKey) {
-    throw new Error(
-      "SUPABASE_SERVICE_ROLE_KEY is required for file webhook processing"
-    );
-  }
-  return createClient<Database>(url, serviceKey);
-}
-
-/**
  * Handles file attachment database change webhooks.
  *
- * @param req - The incoming webhook request.
- * @return Response indicating success or error.
+ * Features (via handler abstraction):
+ * - Rate limiting (100 req/min per IP)
+ * - Body size validation (64KB max)
+ * - HMAC signature verification
+ * - Table filtering (file_attachments only)
+ * - Idempotency via Redis
  */
-export async function POST(req: NextRequest) {
-  return await withTelemetrySpan(
-    "webhook.files",
-    { attributes: { route: "/api/hooks/files" } },
-    async (span) => {
-      const { ok, payload } = await parseAndVerify(req);
-      if (!ok || !payload) {
-        return unauthorizedResponse();
-      }
-      span.setAttribute("table", payload.table);
-      span.setAttribute("op", payload.type);
-      if (payload.table !== "file_attachments") {
-        return NextResponse.json({ ok: true, skipped: true });
-      }
+export const POST = createWebhookHandler({
+  enableIdempotency: true,
 
-      const eventKey = buildEventKey(payload);
-      span.setAttribute("event.key", eventKey);
-      const unique = await tryReserveKey(eventKey, 300);
-      if (!unique) return NextResponse.json({ duplicate: true, ok: true });
+  async handle(payload, _eventKey, span) {
+    const record = payload.record as Partial<FileAttachmentRow> | null;
+    const attachmentId = record?.id;
+    const uploadStatus = record?.upload_status;
 
+    // Verify file attachment exists on INSERT with uploading status
+    if (payload.type === "INSERT" && attachmentId && uploadStatus === "uploading") {
       const supabase = createAdminSupabase();
-      const record = payload.record as Partial<FileAttachmentRow> | null;
-      const attachmentId = record?.id;
-      const uploadStatus = record?.upload_status;
-      if (payload.type === "INSERT" && attachmentId && uploadStatus === "uploading") {
-        const { error } = await supabase
-          .from("file_attachments")
-          .select("id")
-          .eq("id", attachmentId)
-          .limit(1)
-          .single();
-        if (error) {
-          recordErrorOnSpan(span, error);
-          return errorResponse({
-            err: error,
-            error: "db_error",
-            reason: "Failed to verify file attachment",
-            status: 500,
-          });
-        }
+      const { error } = await supabase
+        .from("file_attachments")
+        .select("id")
+        .eq("id", attachmentId)
+        .limit(1)
+        .single();
+
+      if (error) {
+        span.recordException(error);
+        throw error; // Will be caught by handler and return 500
       }
-      return NextResponse.json({ ok: true });
+
+      span.setAttribute("file.verified", true);
     }
-  );
-}
+
+    return {};
+  },
+  idempotencyTTL: 300,
+  name: "files",
+  tableFilter: "file_attachments",
+});

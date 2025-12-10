@@ -11,10 +11,6 @@ type SendNotifications = (
   payload: WebhookPayload,
   eventKey: string
 ) => Promise<{ emailed?: boolean; webhookPosted?: boolean }>;
-type PublishJson = (args: { body: unknown; url: string }) => Promise<{
-  messageId: string;
-  scheduled: boolean;
-}>;
 
 type ParseResult = { ok: boolean; payload?: WebhookPayload };
 type TripsRouteModule = typeof import("../route");
@@ -32,10 +28,8 @@ const tryReserveKeyMock = vi.hoisted(() => vi.fn<TryReserveKey>(async () => true
 const sendCollaboratorNotificationsMock = vi.hoisted(() =>
   vi.fn<SendNotifications>(async () => ({ emailed: true, webhookPosted: false }))
 );
-const qstashPublishMock = vi.hoisted(() =>
-  vi.fn<PublishJson>(async () => ({ messageId: "msg_1", scheduled: false }))
-);
 const envStore = vi.hoisted<Record<string, string | undefined>>(() => ({
+  NEXT_PUBLIC_SITE_URL: "http://localhost:3000",
   NEXT_PUBLIC_SUPABASE_URL: "https://supabase.test",
   QSTASH_TOKEN: "qstash-token",
   SUPABASE_SERVICE_ROLE_KEY: "service-role",
@@ -84,10 +78,23 @@ vi.mock("@supabase/supabase-js", () => ({
   createClient: vi.fn(() => supabaseFactory()),
 }));
 
-vi.mock("@upstash/qstash", () => ({
-  Client: class {
-    publishJSON = qstashPublishMock;
-  },
+// Mock QStash client for enqueue testing
+type TryEnqueueJobResult =
+  | { messageId: string; success: true }
+  | { error: Error | null; success: false };
+type TryEnqueueJob = (
+  jobType: string,
+  payload: unknown,
+  path: string
+) => Promise<TryEnqueueJobResult>;
+
+const tryEnqueueJobMock = vi.hoisted(() =>
+  vi.fn<TryEnqueueJob>(async () => ({ messageId: "msg_test", success: true }))
+);
+
+vi.mock("@/lib/qstash/client", () => ({
+  tryEnqueueJob: (jobType: string, payload: unknown, path: string) =>
+    tryEnqueueJobMock(jobType, payload, path),
 }));
 
 vi.mock("next/server", async () => {
@@ -122,6 +129,22 @@ vi.mock("@/lib/telemetry/span", () => ({
       recordException: vi.fn(),
       setAttribute: vi.fn(),
     }),
+  withTelemetrySpanSync: (
+    _name: string,
+    _opts: unknown,
+    fn: (span: Record<string, unknown>) => unknown
+  ) =>
+    fn({
+      addEvent: vi.fn(),
+      recordException: vi.fn(),
+      setAttribute: vi.fn(),
+    }),
+}));
+
+// Mock rate limiter
+vi.mock("@/lib/webhooks/rate-limit", () => ({
+  checkWebhookRateLimit: vi.fn(async () => ({ success: true })),
+  createRateLimitHeaders: vi.fn(() => ({})),
 }));
 
 function makeRequest(body: unknown, headers: Record<string, string> = {}) {
@@ -141,7 +164,8 @@ describe("POST /api/hooks/trips", () => {
     buildEventKeyMock.mockReturnValue("event-key-1");
     tryReserveKeyMock.mockReset();
     sendCollaboratorNotificationsMock.mockReset();
-    qstashPublishMock.mockReset();
+    tryEnqueueJobMock.mockReset();
+    tryEnqueueJobMock.mockResolvedValue({ messageId: "msg_test", success: true });
     afterCallbacks.length = 0;
     envStore.NEXT_PUBLIC_SUPABASE_URL = "https://supabase.test";
     envStore.SUPABASE_SERVICE_ROLE_KEY = "service-role";
@@ -213,14 +237,17 @@ describe("POST /api/hooks/trips", () => {
     const json = await res.json();
     expect(res.status).toBe(200);
     expect(json.enqueued).toBe(true);
-    expect(qstashPublishMock).toHaveBeenCalledWith({
-      body: { eventKey: "event-key-1", payload: expect.any(Object) },
-      url: "http://localhost/api/jobs/notify-collaborators",
-    });
+    // tryEnqueueJob is called with job type, payload, and path
+    expect(tryEnqueueJobMock).toHaveBeenCalledWith(
+      "notify-collaborators",
+      { eventKey: "event-key-1", payload: expect.any(Object) },
+      "/api/jobs/notify-collaborators"
+    );
   });
 
   it("uses after() fallback when QStash is not configured", async () => {
-    envStore.QSTASH_TOKEN = "";
+    // Mock tryEnqueueJob to return failure (simulates QStash unavailable)
+    tryEnqueueJobMock.mockResolvedValue({ error: null, success: false });
     parseAndVerifyMock.mockResolvedValue({
       ok: true,
       payload: {
