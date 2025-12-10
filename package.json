@@ -95,6 +95,7 @@
     "@upstash/qstash": "^2.8.4",
     "@upstash/ratelimit": "2.0.7",
     "@upstash/redis": "^1.35.7",
+    "@vercel/blob": "^2.0.0",
     "@vercel/otel": "^2.1.0",
     "ai": "6.0.0-beta.138",
     "amadeus": "^11.0.0",
