@@ -149,7 +149,41 @@ export const GET = withApiGuards({
           userId,
         });
       } else if (signedData) {
-        urlMap = new Map(signedData.map((s) => [s.path ?? "", s.signedUrl]));
+        const validEntries = signedData.filter(
+          (s): s is { path: string; signedUrl: string; error: string | null } => {
+            const hasPath = typeof s.path === "string" && s.path.trim().length > 0;
+            const hasUrl =
+              typeof s.signedUrl === "string" && s.signedUrl.trim().length > 0;
+            const noError =
+              s.error === null || s.error === undefined || s.error.length === 0;
+            return hasPath && hasUrl && noError;
+          }
+        );
+
+        const skipped = signedData.length - validEntries.length;
+        if (skipped > 0) {
+          logger.warn("Skipped signed URL entries without valid paths", {
+            bucket: STORAGE_BUCKET,
+            pathCount: paths.length,
+            skipped,
+            userId,
+          });
+        }
+
+        const dedupedEntries: Array<[string, string]> = [];
+        const seenPaths = new Set<string>();
+
+        for (const entry of validEntries) {
+          const path = entry.path;
+
+          if (seenPaths.has(path)) {
+            continue;
+          }
+          seenPaths.add(path);
+          dedupedEntries.push([path, entry.signedUrl]);
+        }
+
+        urlMap = new Map(dedupedEntries);
       }
     } catch (error) {
       logger.error("Unexpected error generating signed URLs", {
@@ -162,20 +196,23 @@ export const GET = withApiGuards({
   }
 
   // Transform to response format
-  const items = (attachments ?? []).map((att) => ({
-    // Keep numbers as numbers - no .toString() conversion (fixes type mismatch)
-    chatMessageId: att.chat_message_id ?? null,
-    createdAt: att.created_at,
-    id: att.id,
-    mimeType: att.mime_type,
-    name: att.filename,
-    originalName: att.original_filename,
-    size: att.file_size,
-    tripId: att.trip_id ?? null,
-    updatedAt: att.updated_at,
-    uploadStatus: att.upload_status,
-    url: urlMap.get(att.file_path) ?? null,
-  }));
+  const items = (attachments ?? []).map((att) => {
+    const urlKey = typeof att.file_path === "string" ? att.file_path : null;
+    return {
+      // Keep numbers as numbers - no .toString() conversion (fixes type mismatch)
+      chatMessageId: att.chat_message_id ?? null,
+      createdAt: att.created_at,
+      id: att.id,
+      mimeType: att.mime_type,
+      name: att.filename,
+      originalName: att.original_filename,
+      size: att.file_size,
+      tripId: att.trip_id ?? null,
+      updatedAt: att.updated_at,
+      uploadStatus: att.upload_status,
+      url: urlKey ? (urlMap.get(urlKey) ?? null) : null,
+    };
+  });
 
   const response = {
     items,

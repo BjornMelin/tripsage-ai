@@ -23,10 +23,10 @@ Deliver production-grade “Popular Routes” data on the flights search page. R
 
 ## 3. Non-Goals
 
-- No booking or payment flow changes.
-- No new provider besides Amadeus; no multi-provider arbitration.
-- No flight offer deep-linking yet; focus on list retrieval.
-- No mobile-specific layout redesign (UI remains current cards + skeleton/error handling).
+- Booking and payment flows unchanged.
+- Only Amadeus will be used; no multi-provider arbitration.
+- Flight offer deep-linking deferred; focus on list retrieval.
+- Mobile layout unchanged; retain current cards + skeleton/error handling.
 
 ## 4. User Stories / UX
 
@@ -57,7 +57,7 @@ Deliver production-grade “Popular Routes” data on the flights search page. R
 
 ## 6. Architecture / Data Flow
 
-```
+```text
 Client (usePopularRoutes hook)
     -> /api/flights/popular-routes (Next.js route handler)
         -> construct Amadeus client (server-only) on demand

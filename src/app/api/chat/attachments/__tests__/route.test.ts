@@ -46,6 +46,18 @@ describe("/api/chat/attachments", () => {
   const mockUpload = vi.fn();
   const mockRemove = vi.fn();
   const mockCreateSignedUrl = vi.fn();
+  type SupabaseClientMock = ReturnType<typeof getApiRouteSupabaseMock>;
+  type InsertMock = ReturnType<
+    typeof vi.fn<(payload: unknown) => Promise<{ error: unknown }>>
+  >;
+  const setInsertMock = (supabase: SupabaseClientMock, insertMock: InsertMock) => {
+    return vi.spyOn(supabase, "from").mockImplementation(
+      () =>
+        ({
+          insert: insertMock,
+        }) as unknown as ReturnType<SupabaseClientMock["from"]>
+    );
+  };
 
   beforeEach(async () => {
     vi.resetModules();
@@ -76,14 +88,14 @@ describe("/api/chat/attachments", () => {
 
     // Setup Supabase storage mock
     const supabase = getApiRouteSupabaseMock();
-    // biome-ignore lint/suspicious/noExplicitAny: test mock
-    (supabase.storage as any) = {
-      from: vi.fn(() => ({
-        createSignedUrl: mockCreateSignedUrl,
-        remove: mockRemove,
-        upload: mockUpload,
-      })),
-    };
+    vi.spyOn(supabase.storage, "from").mockImplementation(
+      () =>
+        ({
+          createSignedUrl: mockCreateSignedUrl,
+          remove: mockRemove,
+          upload: mockUpload,
+        }) as unknown as ReturnType<SupabaseClientMock["storage"]["from"]>
+    );
   });
 
   it("should validate content type header", async () => {
@@ -118,9 +130,10 @@ describe("/api/chat/attachments", () => {
   it("should upload single file to Supabase Storage", async () => {
     // Mock Supabase insert
     const supabase = getApiRouteSupabaseMock();
-    const insertMock = vi.fn().mockResolvedValue({ error: null });
-    // biome-ignore lint/suspicious/noExplicitAny: test mock
-    (supabase.from as any) = vi.fn(() => ({ insert: insertMock }));
+    const insertMock = vi
+      .fn<(payload: unknown) => Promise<{ error: unknown }>>()
+      .mockResolvedValue({ error: null });
+    setInsertMock(supabase, insertMock);
 
     const mod = await import("../route");
     const validFile = new File(["test content"], "test.jpg", { type: "image/jpeg" });
@@ -186,9 +199,10 @@ describe("/api/chat/attachments", () => {
 
     // Mock Supabase insert - create fresh mock and attach
     const supabase = getApiRouteSupabaseMock();
-    const insertMock = vi.fn().mockResolvedValue({ error: null });
-    // biome-ignore lint/suspicious/noExplicitAny: test mock
-    (supabase.from as any) = vi.fn(() => ({ insert: insertMock }));
+    const insertMock = vi
+      .fn<(payload: unknown) => Promise<{ error: unknown }>>()
+      .mockResolvedValue({ error: null });
+    setInsertMock(supabase, insertMock);
 
     // Mock multiple storage uploads
     mockUpload
@@ -323,9 +337,10 @@ describe("/api/chat/attachments", () => {
 
     // Mock Supabase insert
     const supabase = getApiRouteSupabaseMock();
-    const insertMock = vi.fn().mockResolvedValue({ error: null });
-    // biome-ignore lint/suspicious/noExplicitAny: test mock
-    (supabase.from as any) = vi.fn(() => ({ insert: insertMock }));
+    const insertMock = vi
+      .fn<(payload: unknown) => Promise<{ error: unknown }>>()
+      .mockResolvedValue({ error: null });
+    setInsertMock(supabase, insertMock);
 
     const mod = await import("../route");
     const validFile = new File(["content"], "test.jpg", { type: "image/jpeg" });
@@ -347,11 +362,12 @@ describe("/api/chat/attachments", () => {
   it("should handle Supabase metadata insert errors gracefully", async () => {
     // Mock Supabase insert to fail
     const supabase = getApiRouteSupabaseMock();
-    const insertMock = vi.fn().mockResolvedValue({
-      error: { message: "Database error" },
-    });
-    // biome-ignore lint/suspicious/noExplicitAny: test mock
-    (supabase.from as any) = vi.fn(() => ({ insert: insertMock }));
+    const insertMock = vi
+      .fn<(payload: unknown) => Promise<{ error: unknown }>>()
+      .mockResolvedValue({
+        error: { message: "Database error" },
+      });
+    setInsertMock(supabase, insertMock);
 
     const mod = await import("../route");
     const validFile = new File(["content"], "test.jpg", { type: "image/jpeg" });
@@ -437,5 +453,75 @@ describe("/api/chat/attachments", () => {
 
     // Verify storage upload was NOT called (blocked at validation)
     expect(mockUpload).not.toHaveBeenCalled();
+  });
+
+  it("rolls back metadata when any upload in the batch fails after prior inserts", async () => {
+    // First upload succeeds, second fails
+    mockUpload.mockReset();
+    mockUpload
+      .mockResolvedValueOnce({
+        data: { path: "chat/user-1/test-uuid-1-file1.png" },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: null,
+        error: { message: "Storage upload failed" },
+      });
+
+    const fileType = await import("file-type");
+    (fileType.fileTypeFromBuffer as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ext: "png",
+      mime: "image/png",
+    });
+
+    const supabase = getApiRouteSupabaseMock();
+    const apiMetricsInsertMock = vi.fn().mockResolvedValue({ error: null });
+    const insertMock = vi.fn().mockResolvedValue({ error: null });
+    const eqMock = vi.fn().mockResolvedValue({ error: null });
+    const deleteMock = vi.fn();
+    deleteMock.mockReturnValue({ delete: deleteMock, eq: eqMock });
+    vi.spyOn(supabase, "from").mockImplementation(
+      (table: string) =>
+        (table === "file_attachments"
+          ? { delete: deleteMock, eq: eqMock, insert: insertMock }
+          : table === "api_metrics"
+            ? { insert: apiMetricsInsertMock }
+            : { insert: vi.fn() }) as unknown as ReturnType<SupabaseClientMock["from"]>
+    );
+
+    const mod = await import("../route");
+    const file1 = new File(["content1"], "file1.png", { type: "image/png" });
+    const file2 = new File(["content2"], "file2.png", { type: "image/png" });
+    const formData = new FormData();
+    formData.append("file", file1);
+    formData.append("file", file2);
+
+    const req = new NextRequest("http://localhost/api/chat/attachments", {
+      body: formData,
+      method: "POST",
+    });
+
+    const res = await mod.POST(req, createRouteParamsContext());
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.reason).toBe("File upload failed");
+
+    // Confirm metadata insert happened for first file
+    expect(insertMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        bucket_name: "attachments",
+        filename: "test-uuid-3",
+        id: "test-uuid-3",
+        original_filename: "file1.png",
+        upload_status: "completed",
+      })
+    );
+
+    // Metadata rows for successful uploads are deleted on failure
+    expect(deleteMock).toHaveBeenCalledTimes(1);
+    expect(eqMock).toHaveBeenCalledWith("id", "test-uuid-3");
+
+    // Uploaded storage object is cleaned up
+    expect(mockRemove).toHaveBeenCalledWith(["chat/user-1/test-uuid-1-file1.png"]);
   });
 });

@@ -51,20 +51,20 @@ AI SDK docs:
 
 - fetch: Fetch and scrape the rendered contents of a URL inside Claude Code to pull in docs, blogs, or API references directly into the session.
 - supabase.search_docs: Search official Supabase documentation for specific APIs, configuration settings, and best practice examples relevant to your code.
-- next-devtools.nextjs_docs: Search the Next.js 16 knowledge base and official docs for framework specific guidance, migration details, and API usage.
-- exa.web_search_exa: Perform broad, fresh web search when you need up to date information, product comparisons, news, or recent releases.
-- context7.resolve-library-id: Convert a natural language library name into a Context7 compatible library identifier before requesting documentation for that library.
-- context7.get-library-docs: Retrieve up to date documentation and code examples for a resolved Context7 library ID, optionally scoped by topic and token budget.
+- next-devtools.nextjs_docs: Search the Next.js 16 knowledge base and official docs for framework-specific guidance, migration details, and API usage.
+- exa.web_search_exa: Perform broad, fresh web search when you need up-to-date information, product comparisons, news, or recent releases.
+- context7.resolve-library-id: Convert a natural language library name into a Context7-compatible library identifier before requesting documentation for that library.
+- context7.get-library-docs: Retrieve up-to-date documentation and code examples for a resolved Context7 library ID, optionally scoped by topic and token budget.
 - next-devtools.nextjs_runtime: Inspect a running Next.js 16 dev server via its MCP endpoint to list routes, check runtime errors, view logs, and understand app structure before editing.
-- gh_grep.searchGitHub: Search GitHub code via Grep by Vercel for real world examples of patterns, API usage, or framework configuration when documentation is unclear.
-- zen.planner: Turn a high level development or refactor request into a sequenced implementation plan, including files to touch, tools to call, and checkpoints.
+- gh_grep.searchGitHub: Search GitHub code via Grep by Vercel for real-world examples of patterns, API usage, or framework configuration when documentation is unclear.
+- zen.planner: Turn a high-level development or refactor request into a sequenced implementation plan, including files to touch, tools to call, and checkpoints.
 - zen.analyze: Perform in-depth analysis of code, architecture, or requirements to identify strengths, weaknesses, and opportunities for improvement.
 - zen.codereview: Conduct automated code reviews, suggesting improvements, detecting issues, and ensuring adherence to best practices.
 - zen.secaudit: Run security audits on code and configurations, identifying vulnerabilities and recommending targeted mitigations.
 
 #### Load Skills
 
-- ai-sdk-core: Use Vercel AI SDK core primitives and patterns to design type safe LLM calls, streaming responses, and tool integrations.
+- ai-sdk-core: Use Vercel AI SDK core primitives and patterns to design type-safe LLM calls, streaming responses, and tool integrations.
 - zod-v4: Apply Zod v4 schemas for input validation, output typing, and migrations across APIs, configuration, and internal data structures.
 
 ### Usage Guidelines
@@ -80,7 +80,7 @@ AI SDK docs:
 
 YOU MUST USE the following skills explicitly in your workflow:
 
-- ai-sdk-core: Use Vercel AI SDK core primitives and patterns to design type safe LLM calls, streaming responses, and tool integrations. Invoke this skill for implementing embeddings, reranking, and agent tools (e.g., in `/api/rag/search` and `ragSearchTool`).
+- ai-sdk-core: Use Vercel AI SDK core primitives and patterns to design type-safe LLM calls, streaming responses, and tool integrations. Invoke this skill for implementing embeddings, reranking, and agent tools (e.g., in `/api/rag/search` and `ragSearchTool`).
 - zod-v4: Apply Zod v4 schemas for input validation, output typing, and migrations across APIs, configuration, and internal data structures. Invoke this skill whenever defining or refining validation schemas (e.g., for endpoint JSON inputs, retriever filters, or tool params) to maintain type-safety and consistency with repo patterns.
 
 ### Enforcement Guidelines

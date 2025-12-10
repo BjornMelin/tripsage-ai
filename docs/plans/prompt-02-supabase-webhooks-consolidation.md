@@ -61,20 +61,20 @@ Upstash docs:
 
 - claude.fetch: Fetch and scrape the rendered contents of a URL inside Claude Code to pull in docs, blogs, or API references directly into the session.
 - supabase.search_docs: Search official Supabase documentation for specific APIs, configuration settings, and best practice examples relevant to your code.
-- next-devtools.nextjs_docs: Search the Next.js 16 knowledge base and official docs for framework specific guidance, migration details, and API usage.
+- next-devtools.nextjs_docs: Search the Next.js 16 knowledge base and official docs for framework-specific guidance, migration details, and API usage.
 - vercel.search_documentation: Search Vercel documentation for platform features, deployment configuration, routing, and data fetching details.
-- exa.web_search_exa: Perform broad, fresh web search when you need up to date information, product comparisons, news, or recent releases.
+- exa.web_search_exa: Perform broad, fresh web search when you need up-to-date information, product comparisons, news, or recent releases.
 - next-devtools.nextjs_runtime: Inspect a running Next.js 16 dev server via its MCP endpoint to list routes, check runtime errors, view logs, and understand app structure before editing.
-- gh_grep.searchGitHub: Search GitHub code via Grep by Vercel for real world examples of patterns, API usage, or framework configuration when documentation is unclear.
-- zen.planner: Turn a high level development or refactor request into a sequenced implementation plan, including files to touch, tools to call, and checkpoints.
+- gh_grep.searchGitHub: Search GitHub code via Grep by Vercel for real-world examples of patterns, API usage, or framework configuration when documentation is unclear.
+- zen.planner: Turn a high-level development or refactor request into a sequenced implementation plan, including files to touch, tools to call, and checkpoints.
 - zen.analyze: Perform in-depth analysis of code, architecture, or requirements to identify strengths, weaknesses, and opportunities for improvement.
-- zen.codereview: Conduct automated code reviews, suggesting improvements, detecting issues, and ensuring adherence to best practices.
-- zen.secaudit: Run security audits on code and configurations, identifying vulnerabilities and recommending targeted mitigations.
+- zen.codereview: Perform automated code reviews, suggesting improvements, detecting issues, and ensuring adherence to best practices.
+- zen.secaudit: Identify vulnerabilities and recommend targeted mitigations through security audits on code and configurations.
 
 #### Load Skills
 
 - zod-v4: Apply Zod v4 schemas for input validation, output typing, and migrations across APIs, configuration, and internal data structures.
-- ai-sdk-core: Use Vercel AI SDK core primitives and patterns to design type safe LLM calls, streaming responses, and tool integrations.
+- ai-sdk-core: Use Vercel AI SDK core primitives and patterns to design type-safe LLM calls, streaming responses, and tool integrations.
 
 ### Usage Guidelines
 
@@ -90,7 +90,7 @@ Upstash docs:
 YOU MUST USE the following skills explicitly in your workflow:
 
 - zod-v4: Apply Zod v4 schemas for input validation, output typing, and migrations across APIs, configuration, and internal data structures. Invoke this skill whenever defining or refining validation schemas (e.g., for webhook payloads, env vars, or request bodies) to maintain type-safety and consistency with repo patterns.
-- ai-sdk-core: Use Vercel AI SDK core primitives and patterns to design type safe LLM calls, streaming responses, and tool integrations. Invoke this skill for adding error handling, telemetry, or observability to route handlers and async flows (e.g., in webhook processing or QStash integrations).
+- ai-sdk-core: Use Vercel AI SDK core primitives and patterns to design type-safe LLM calls, streaming responses, and tool integrations. Invoke this skill for adding error handling, telemetry, or observability to route handlers and async flows (e.g., in webhook processing or QStash integrations).
 
 ### Enforcement Guidelines
 

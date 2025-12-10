@@ -155,6 +155,7 @@ Create a server function, e.g. `src/lib/flights/popular-routes.ts`:
   ```
 
 - Inside, apply `cacheTag('popular-routes')` if appropriate.
+- Note: `'use cache'` and `cacheTag()` apply only to public, unauthenticated routes on Next.js 15/16. BYOK/authenticated routes must remain dynamic and must not use `'use cache'`; for authenticated data use dynamic server functions or per-user caching (e.g., session-aware server fetching or storing per-user results in Redis/Supabase).
 - Implementation examples:
 
   - If Supabase:

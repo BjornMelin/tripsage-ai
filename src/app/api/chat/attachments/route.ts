@@ -169,11 +169,13 @@ async function uploadToSupabaseStorage(
     return { error: new Error(mimeVerification.reason), file, path: "" };
   }
 
+  const contentType = mimeVerification.detectedType ?? file.type;
+
   // Upload to Supabase Storage
   const { error } = await supabase.storage
     .from(STORAGE_BUCKET)
     .upload(storagePath, buffer, {
-      contentType: file.type,
+      contentType,
       upsert: false,
     });
 
@@ -264,6 +266,7 @@ export const POST = withApiGuards({
   const uploadedFiles: UploadedFileRecord[] = [];
   const urls: string[] = [];
   const uploadedPaths: string[] = []; // Track successful uploads for cleanup
+  const insertedAttachmentIds: string[] = []; // Track inserted metadata for rollback
   let firstUploadError: Error | null = null;
 
   for (const result of uploadResults) {
@@ -359,6 +362,8 @@ export const POST = withApiGuards({
       url: signedUrl,
     });
 
+    insertedAttachmentIds.push(fileId);
+
     if (signedUrl) {
       urls.push(signedUrl);
     }
@@ -370,6 +375,34 @@ export const POST = withApiGuards({
       count: uploadedPaths.length,
       userId,
     });
+
+    if (insertedAttachmentIds.length > 0) {
+      const metadataCleanupResults = await Promise.allSettled(
+        insertedAttachmentIds.map((id) =>
+          supabase.from("file_attachments").delete().eq("id", id)
+        )
+      );
+
+      for (const [index, result] of metadataCleanupResults.entries()) {
+        if (result.status === "fulfilled" && result.value?.error) {
+          logger.error("Failed to cleanup attachment metadata", {
+            error: result.value.error.message,
+            fileId: insertedAttachmentIds[index],
+            userId,
+          });
+        }
+        if (result.status === "rejected") {
+          logger.error("Failed to cleanup attachment metadata", {
+            error:
+              result.reason instanceof Error
+                ? result.reason.message
+                : String(result.reason),
+            fileId: insertedAttachmentIds[index],
+            userId,
+          });
+        }
+      }
+    }
 
     // Delete all successfully uploaded files
     const cleanupResults = await Promise.allSettled(

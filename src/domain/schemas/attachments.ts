@@ -147,19 +147,21 @@ export function sanitizeFilename(filename: string): string {
     .replace(/_+/g, "_")
     .replace(/^_|_$/g, "");
 
+  const safe = sanitized.length > 0 ? sanitized : "file";
+
   // Limit length (preserve extension)
   const maxLength = 100;
-  if (sanitized.length <= maxLength) {
-    return sanitized;
+  if (safe.length <= maxLength) {
+    return safe;
   }
 
-  const lastDot = sanitized.lastIndexOf(".");
-  if (lastDot === -1 || lastDot < sanitized.length - 10) {
-    return sanitized.slice(0, maxLength);
+  const lastDot = safe.lastIndexOf(".");
+  if (lastDot === -1 || lastDot < safe.length - 10) {
+    return safe.slice(0, maxLength);
   }
 
-  const extension = sanitized.slice(lastDot);
-  const name = sanitized.slice(0, lastDot);
+  const extension = safe.slice(lastDot);
+  const name = safe.slice(0, lastDot);
   const maxNameLength = maxLength - extension.length;
   return name.slice(0, maxNameLength) + extension;
 }
