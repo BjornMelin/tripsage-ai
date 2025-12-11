@@ -14,22 +14,23 @@ import "server-only";
 import { z } from "zod";
 import { getRedis } from "@/lib/redis";
 import { nowIso, secureUuid } from "@/lib/security/random";
+import { warnRedisUnavailable } from "@/lib/telemetry/redis";
 import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
-import { DLQ_KEY_PREFIX, DLQ_MAX_ENTRIES, DLQ_TTL_SECONDS } from "./config";
+import {
+  DLQ_ALERT_THRESHOLD,
+  DLQ_KEY_PREFIX,
+  DLQ_MAX_ENTRIES,
+  DLQ_TTL_SECONDS,
+} from "./config";
 
 // ===== CONSTANTS =====
-
-/**
- * Threshold for critical alerts - when DLQ count exceeds this, emit critical event.
- */
-const DLQ_ALERT_THRESHOLD = 100;
 
 /**
  * Sensitive field names to redact from payloads before storing in DLQ.
  * These patterns protect PII and credentials if Redis is compromised.
  * Includes both camelCase and snake_case variants.
  */
-const SENSITIVE_FIELDS = [
+const SENSITIVE_FIELDS_EXACT = [
   // Authentication & secrets
   "email",
   "password",
@@ -58,6 +59,21 @@ const SENSITIVE_FIELDS = [
   "phone",
   "address",
 ] as const;
+
+const SENSITIVE_FIELDS_SUBSTRING = [
+  "token",
+  "secret",
+  "password",
+  "api_key",
+  "apikey",
+] as const;
+
+const SENSITIVE_FIELDS_EXACT_SET = new Set(
+  SENSITIVE_FIELDS_EXACT.map((field) => field.toLowerCase())
+);
+const SENSITIVE_FIELDS_SUBSTRING_LOWER = SENSITIVE_FIELDS_SUBSTRING.map((field) =>
+  field.toLowerCase()
+);
 
 // ===== SCHEMAS =====
 
@@ -121,6 +137,7 @@ export async function pushToDLQ(
       const redis = getRedis();
       if (!redis) {
         span.setAttribute("dlq.redis_unavailable", true);
+        warnRedisUnavailable("qstash.dlq");
         return null;
       }
 
@@ -213,6 +230,7 @@ export async function listDLQEntries(
       const redis = getRedis();
       if (!redis) {
         span.setAttribute("dlq.redis_unavailable", true);
+        warnRedisUnavailable("qstash.dlq");
         return [];
       }
 
@@ -230,7 +248,8 @@ export async function listDLQEntries(
         // Scan all DLQ keys (pattern: qstash-dlq:*)
         const pattern = `${DLQ_KEY_PREFIX}:*`;
         let cursor = 0;
-        const perTypeLimit = Math.ceil(limit / 5); // Distribute limit across types
+        const discoveredKeys = new Set<string>();
+        let perTypeLimit = Math.max(1, Math.ceil(limit / 10)); // Initial conservative estimate
 
         do {
           const [nextCursor, keys] = await redis.scan(cursor, {
@@ -238,6 +257,13 @@ export async function listDLQEntries(
             match: pattern,
           });
           cursor = Number(nextCursor);
+          keys.forEach((key) => {
+            discoveredKeys.add(key);
+          });
+          perTypeLimit = Math.max(
+            1,
+            Math.ceil(limit / Math.max(discoveredKeys.size, 1))
+          );
 
           for (const key of keys) {
             if (entries.length >= limit) break;
@@ -289,6 +315,7 @@ export async function removeDLQEntry(
       const redis = getRedis();
       if (!redis) {
         span.setAttribute("dlq.redis_unavailable", true);
+        warnRedisUnavailable("qstash.dlq");
         return false;
       }
 
@@ -333,7 +360,10 @@ export async function removeDLQEntry(
 // biome-ignore lint/style/useNamingConvention: DLQ is established acronym for Dead Letter Queue
 export async function getDLQCount(jobType: string): Promise<number> {
   const redis = getRedis();
-  if (!redis) return 0;
+  if (!redis) {
+    warnRedisUnavailable("qstash.dlq");
+    return 0;
+  }
 
   const key = `${DLQ_KEY_PREFIX}:${jobType}`;
   return await redis.llen(key);
@@ -360,23 +390,42 @@ function parseDlqEntry(raw: unknown): DLQEntry | null {
 /**
  * Sanitize a payload before storing in DLQ to prevent PII exposure.
  *
- * Recursively redacts sensitive fields like email, password, token, etc.
- * This protects user data if the Redis instance is ever compromised.
+ * - Strings are never stored verbatim: we try JSON.parse, otherwise redact.
+ * - Objects/arrays are recursively redacted by field name.
+ * - Other primitives are returned as-is.
  *
  * @param payload - Raw payload to sanitize
  * @return Sanitized payload with sensitive fields redacted
  */
-function sanitizePayloadForDlq(payload: unknown): unknown {
+function sanitizePayloadForDlq(
+  payload: unknown,
+  seen: WeakSet<object> = new WeakSet()
+): unknown {
   if (payload === null || payload === undefined) {
     return payload;
   }
 
-  if (Array.isArray(payload)) {
-    return payload.map(sanitizePayloadForDlq);
+  if (typeof payload === "string") {
+    try {
+      const parsed = JSON.parse(payload) as unknown;
+      return sanitizePayloadForDlq(parsed, seen);
+    } catch {
+      return "[REDACTED_STRING_PAYLOAD]";
+    }
   }
 
   if (typeof payload !== "object") {
     return payload;
+  }
+
+  if (seen.has(payload as object)) {
+    return "[CIRCULAR]";
+  }
+
+  seen.add(payload as object);
+
+  if (Array.isArray(payload)) {
+    return payload.map((item) => sanitizePayloadForDlq(item, seen));
   }
 
   const sanitized: Record<string, unknown> = {};
@@ -385,17 +434,17 @@ function sanitizePayloadForDlq(payload: unknown): unknown {
   for (const [key, value] of Object.entries(obj)) {
     const lowerKey = key.toLowerCase();
 
-    // Check if this key matches any sensitive field pattern
-    const isSensitive = SENSITIVE_FIELDS.some(
-      (field) =>
-        lowerKey === field.toLowerCase() || lowerKey.includes(field.toLowerCase())
+    const isSensitiveExact = SENSITIVE_FIELDS_EXACT_SET.has(lowerKey);
+    const isSensitiveSubstring = SENSITIVE_FIELDS_SUBSTRING_LOWER.some((field) =>
+      lowerKey.includes(field)
     );
+    const isSensitive = isSensitiveExact || isSensitiveSubstring;
 
     if (isSensitive && value !== undefined && value !== null) {
       sanitized[key] = "[REDACTED]";
     } else if (typeof value === "object" && value !== null) {
       // Recursively sanitize nested objects (including record/old_record)
-      sanitized[key] = sanitizePayloadForDlq(value);
+      sanitized[key] = sanitizePayloadForDlq(value, seen);
     } else {
       sanitized[key] = value;
     }

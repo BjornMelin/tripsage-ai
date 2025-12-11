@@ -24,5 +24,8 @@ export const DLQ_TTL_SECONDS = 60 * 60 * 24 * 7;
 /** Maximum number of DLQ entries to keep per job type */
 export const DLQ_MAX_ENTRIES = 1000;
 
+/** Threshold for DLQ size alerts */
+export const DLQ_ALERT_THRESHOLD = 100;
+
 /** QStash signing key header name */
 export const QSTASH_SIGNATURE_HEADER = "upstash-signature" as const;

@@ -48,6 +48,8 @@ function hasErrorCode(error: unknown): error is Error & { code: string } {
  *
  * Uses concrete error classes and standardized error codes first,
  * falling back to message heuristics for legacy/unknown errors.
+ * Prefer throwing typed errors with explicit codes; the heuristics are
+ * best-effort and may misclassify localized/custom messages.
  *
  * @param error - The error to classify
  * @returns Object with status code and error code
@@ -275,6 +277,8 @@ export function createWebhookHandler<T extends WebhookHandlerResult>(
         span.setAttribute("webhook.op", payload.type);
 
         // 4. Table filtering (H6 - check BEFORE idempotency)
+        // Rationale: idempotency is handler-scoped; we avoid burning keys for
+        // other handlers if Supabase posts the same event to multiple endpoints.
         if (tableFilter && payload.table !== tableFilter) {
           span.setAttribute("webhook.skipped", true);
           span.setAttribute("webhook.skip_reason", "table_mismatch");
@@ -287,6 +291,7 @@ export function createWebhookHandler<T extends WebhookHandlerResult>(
 
         // 6. Idempotency check (now AFTER table validation - H6)
         if (enableIdempotency) {
+          span.setAttribute("webhook.idempotency_scope", "handler");
           const unique = await tryReserveKey(eventKey, idempotencyTTL);
           if (!unique) {
             span.setAttribute("webhook.duplicate", true);
@@ -306,11 +311,26 @@ export function createWebhookHandler<T extends WebhookHandlerResult>(
           const { status, code } = classifyError(error);
           span.setAttribute("webhook.error_code", code);
           span.setAttribute("webhook.error_status", status);
+          if (error instanceof Error) {
+            span.setAttribute("webhook.error_message", error.message);
+          }
 
-          return NextResponse.json(
-            { code, error: error instanceof Error ? error.message : "internal_error" },
-            { status }
-          );
+          const safeMessage =
+            status >= 500
+              ? "internal_error"
+              : code === "VALIDATION_ERROR"
+                ? "invalid_request"
+                : code === "NOT_FOUND"
+                  ? "not_found"
+                  : code === "CONFLICT"
+                    ? "conflict"
+                    : code === "SERVICE_UNAVAILABLE"
+                      ? "service_unavailable"
+                      : code === "TIMEOUT"
+                        ? "timeout"
+                        : "internal_error";
+
+          return NextResponse.json({ code, error: safeMessage }, { status });
         }
       }
     );

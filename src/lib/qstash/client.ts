@@ -13,8 +13,7 @@ import "server-only";
 
 import { Client } from "@upstash/qstash";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
-import { secureId } from "@/lib/security/random";
-import { withTelemetrySpan } from "@/lib/telemetry/span";
+import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
 import { QSTASH_RETRY_CONFIG } from "./config";
 
 // ===== TYPES =====
@@ -101,6 +100,8 @@ export function isQstashAvailable(): boolean {
  * @throws Error if the delay string format is invalid
  */
 function parseDelayToSeconds(delay: string): number {
+  type DelayUnit = "s" | "m" | "h" | "d";
+
   const match = delay.match(/^(\d+)(s|m|h|d)?$/);
   if (!match) {
     throw new Error(
@@ -109,7 +110,7 @@ function parseDelayToSeconds(delay: string): number {
   }
 
   const value = parseInt(match[1], 10);
-  const unit = match[2] || "s";
+  const unit = (match[2] ?? "s") as DelayUnit;
 
   switch (unit) {
     case "s":
@@ -120,9 +121,10 @@ function parseDelayToSeconds(delay: string): number {
       return value * 3600;
     case "d":
       return value * 86400;
-    default:
-      return value;
   }
+
+  const exhaustiveCheck: never = unit;
+  return exhaustiveCheck;
 }
 
 // ===== JOB ENQUEUE =====
@@ -198,14 +200,24 @@ export async function enqueueJob(
       const origin = getServerEnvVarWithFallback("NEXT_PUBLIC_SITE_URL", "");
       if (!origin) {
         span.setAttribute("qstash.missing_origin", true);
-        return null;
+        recordTelemetryEvent("qstash.missing_origin", {
+          attributes: { jobType, path },
+          level: "warning",
+        });
+        throw new Error(
+          "NEXT_PUBLIC_SITE_URL is not configured; cannot enqueue QStash job"
+        );
       }
       const url = `${origin}${path}`;
       span.setAttribute("qstash.url", url);
 
-      // Build deduplication ID if not provided (use secureId to prevent collision)
-      const deduplicationId = options.deduplicationId ?? `${jobType}:${secureId()}`;
-      span.setAttribute("qstash.dedup_id", deduplicationId);
+      // Deduplication is caller-controlled; random IDs defeat dedup purpose
+      const deduplicationId = options.deduplicationId;
+      if (deduplicationId) {
+        span.setAttribute("qstash.dedup_id", deduplicationId);
+      } else {
+        span.setAttribute("qstash.dedup_id_missing", true);
+      }
 
       // Parse delay from config (e.g., "10s" -> 10)
       const defaultDelay = parseDelayToSeconds(QSTASH_RETRY_CONFIG.delay);

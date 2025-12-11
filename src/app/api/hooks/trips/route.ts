@@ -10,7 +10,7 @@ import "server-only";
 import { after } from "next/server";
 import { sendCollaboratorNotifications } from "@/lib/notifications/collaborators";
 import { tryEnqueueJob } from "@/lib/qstash/client";
-import { createAdminSupabase } from "@/lib/supabase/admin";
+import { getAdminSupabase } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
@@ -41,16 +41,22 @@ export const POST = createWebhookHandler({
     const tripId = typeof tripIdValue === "number" ? tripIdValue : undefined;
 
     if (tripId) {
-      const supabase = createAdminSupabase();
-      const { error } = await supabase
+      const supabase = getAdminSupabase();
+      const { data, error } = await supabase
         .from("trips")
         .select("id")
         .eq("id", tripId)
-        .limit(1);
+        .limit(1)
+        .maybeSingle();
 
       if (error) {
         span.recordException(error);
         throw error; // Will be caught by handler and return 500
+      }
+
+      if (!data) {
+        span.setAttribute("webhook.trip_not_found", true);
+        return { ok: true, reason: "trip_not_found", skipped: true };
       }
     }
 
@@ -58,7 +64,8 @@ export const POST = createWebhookHandler({
     const result = await tryEnqueueJob(
       "notify-collaborators",
       { eventKey, payload },
-      "/api/jobs/notify-collaborators"
+      "/api/jobs/notify-collaborators",
+      { deduplicationId: `notify:${eventKey}` }
     );
 
     if (result.success) {

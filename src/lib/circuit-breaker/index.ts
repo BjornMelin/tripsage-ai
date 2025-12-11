@@ -150,8 +150,8 @@ export async function checkCircuit(
 /**
  * Record a failure for a service.
  *
- * Uses Redis SETEX for atomic set-with-expiry when setting initial value,
- * falling back to separate commands for increments (Upstash Redis limitation).
+ * Uses Redis SETEX for atomic set-with-expiry when setting initial value and
+ * a Lua script to atomically increment + refresh TTL for subsequent failures.
  *
  * @param config - Circuit breaker configuration
  */
@@ -172,10 +172,16 @@ export async function recordFailure(
     // First failure: use atomic SETEX (set with expiry in one command)
     await redis.setex(failureCountKey, failureWindowSeconds, "1");
   } else {
-    // Subsequent failures: increment and refresh TTL
-    // Note: These are separate commands but TTL refresh is best-effort
-    await redis.incr(failureCountKey);
-    await redis.expire(failureCountKey, failureWindowSeconds);
+    // Subsequent failures: increment and refresh TTL atomically to avoid race
+    await redis.eval(
+      `
+        local v = redis.call("INCR", KEYS[1])
+        redis.call("EXPIRE", KEYS[1], tonumber(ARGV[1]))
+        return v
+      `,
+      [failureCountKey],
+      [failureWindowSeconds]
+    );
   }
 
   // Reset success count on failure
@@ -236,7 +242,10 @@ export async function recordSuccess(
  * @param name - Service name
  * @returns Current circuit state
  */
-export async function getCircuitState(name: string): Promise<CircuitState> {
+export async function getCircuitState(
+  name: string,
+  cooldownSeconds = DEFAULT_COOLDOWN_SECONDS
+): Promise<CircuitState> {
   const redis = getRedis();
   if (!redis) {
     return "closed"; // Fail open if Redis unavailable
@@ -253,8 +262,8 @@ export async function getCircuitState(name: string): Promise<CircuitState> {
   const openedAtMs = parseInt(openedAt as string, 10);
   const elapsedSeconds = (Date.now() - openedAtMs) / 1000;
 
-  // Use default cooldown for read-only state check
-  if (elapsedSeconds < DEFAULT_COOLDOWN_SECONDS) {
+  // Use provided cooldown for read-only state check
+  if (elapsedSeconds < cooldownSeconds) {
     return "open";
   }
 

@@ -17,6 +17,7 @@ const REDIS_FEATURE = "idempotency.keys";
 /**
  * Default fail mode from environment variable.
  * Set IDEMPOTENCY_FAIL_OPEN=false to fail closed (throw on Redis unavailable).
+ * Evaluated at module load; runtime env mutations will not change behavior.
  */
 const DEFAULT_FAIL_OPEN = process.env.IDEMPOTENCY_FAIL_OPEN !== "false";
 

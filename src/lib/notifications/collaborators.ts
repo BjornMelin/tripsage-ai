@@ -80,30 +80,35 @@ export async function sendCollaboratorNotifications(
           const subject = buildSubject(event);
           const text = buildBody(event, eventKey);
 
-          const { circuitOpen, state } = await withCircuitBreaker(
-            {
-              cooldownSeconds: 60,
-              failureThreshold: 3,
-              name: "resend",
-              successThreshold: 2,
-            },
-            async () => {
-              await resend.emails.send({
-                from: `${fromName} <${fromEmail}>`,
-                headers: { "X-Idempotency-Key": eventKey },
-                subject,
-                text,
-                to: [email],
-              });
-              return true;
+          try {
+            const { circuitOpen, state } = await withCircuitBreaker(
+              {
+                cooldownSeconds: 60,
+                failureThreshold: 3,
+                name: "resend",
+                successThreshold: 2,
+              },
+              async () => {
+                await resend.emails.send({
+                  from: `${fromName} <${fromEmail}>`,
+                  headers: { "X-Idempotency-Key": eventKey },
+                  subject,
+                  text,
+                  to: [email],
+                });
+                return true;
+              }
+            );
+
+            span.setAttribute("circuit.resend.state", state);
+            span.setAttribute("circuit.resend.open", circuitOpen);
+
+            if (!circuitOpen) {
+              emailed = true;
             }
-          );
-
-          span.setAttribute("circuit.resend.state", state);
-          span.setAttribute("circuit.resend.open", circuitOpen);
-
-          if (!circuitOpen) {
-            emailed = true;
+          } catch (err) {
+            span.recordException(err as Error);
+            span.setAttribute("circuit.resend.error", true);
           }
         }
       }
