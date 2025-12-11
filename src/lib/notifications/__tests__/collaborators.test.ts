@@ -14,6 +14,12 @@ const envValues = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/env/server", () => ({
+  getServerEnvVar: (key: string) => {
+    const store = envValues as Record<string, string | undefined>;
+    const value = store[key];
+    if (!value) throw new Error(`Missing env: ${key}`);
+    return value;
+  },
   getServerEnvVarWithFallback: (key: string, fallback?: string) => {
     const store = envValues as Record<string, string | undefined>;
     const value = store[key];

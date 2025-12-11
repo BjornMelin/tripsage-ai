@@ -15,20 +15,59 @@ import {
 import { getServerEnvVar, getServerEnvVarWithFallback } from "@/lib/env/server";
 import { tryReserveKey } from "@/lib/idempotency/redis";
 import { sendCollaboratorNotifications } from "@/lib/notifications/collaborators";
+import { pushToDLQ } from "@/lib/qstash/dlq";
+import { emitOperationalAlert } from "@/lib/telemetry/alerts";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 /**
  * Creates a QStash receiver for webhook signature verification.
  *
- * @return QStash receiver instance or null if not configured.
+ * Logs a warning if QSTASH_NEXT_SIGNING_KEY is not set, as this
+ * could cause issues during key rotation.
+ *
+ * @return QStash receiver instance.
  */
 function getQstashReceiver(): Receiver {
   const current = getServerEnvVar("QSTASH_CURRENT_SIGNING_KEY") as string;
-  const next = getServerEnvVarWithFallback(
-    "QSTASH_NEXT_SIGNING_KEY",
-    current
-  ) as string;
-  return new Receiver({ currentSigningKey: current, nextSigningKey: next });
+  const next = getServerEnvVarWithFallback("QSTASH_NEXT_SIGNING_KEY", "");
+
+  if (!next) {
+    // Emit operational alert about fallback to help operators during key rotation
+    emitOperationalAlert("qstash.next_signing_key_missing", {
+      attributes: {
+        "config.current_key_set": true,
+        "config.next_key_set": false,
+        "docs.url": "https://upstash.com/docs/qstash/howto/signature-validation",
+      },
+      severity: "warning",
+    });
+  }
+
+  return new Receiver({
+    currentSigningKey: current,
+    nextSigningKey: next || current,
+  });
+}
+
+/** Max retries configured for QStash (per ADR-0048) */
+const MAX_RETRIES = 5;
+
+/**
+ * Extract retry attempt information from QStash headers.
+ *
+ * @param req - Incoming request
+ * @return Object with current attempt and max retries
+ */
+function getRetryInfo(req: Request): { attempt: number; maxRetries: number } {
+  const retriedHeader = req.headers.get("Upstash-Retried");
+  let retried = parseInt(retriedHeader ?? "", 10);
+  if (Number.isNaN(retried) || retried < 0) retried = 0;
+
+  const maxRetriesHeader = req.headers.get("Upstash-Max-Retries");
+  let maxRetries = parseInt(maxRetriesHeader ?? "", 10);
+  if (Number.isNaN(maxRetries) || maxRetries < 0) maxRetries = MAX_RETRIES;
+
+  return { attempt: retried + 1, maxRetries };
 }
 
 /**
@@ -42,6 +81,13 @@ export async function POST(req: Request) {
     "jobs.notify-collaborators",
     { attributes: { route: "/api/jobs/notify-collaborators" } },
     async (span) => {
+      const { attempt, maxRetries } = getRetryInfo(req);
+      span.setAttribute("qstash.attempt", attempt);
+      span.setAttribute("qstash.max_retries", maxRetries);
+
+      // Store raw job payload for DLQ on failure
+      let jobPayload: unknown = null;
+
       try {
         let receiver: Receiver;
         try {
@@ -58,6 +104,7 @@ export async function POST(req: Request) {
 
         const sig = req.headers.get("Upstash-Signature");
         const body = await req.clone().text();
+        jobPayload = body;
         const url = req.url;
         const valid = sig
           ? await receiver.verify({ body, signature: sig, url })
@@ -81,7 +128,8 @@ export async function POST(req: Request) {
           return unauthorizedResponse();
         }
 
-        const json = (await req.json()) as unknown;
+        const json = JSON.parse(body) as unknown;
+        jobPayload = json; // Store parsed form for DLQ/validation
         const validation = validateSchema(notifyJobSchema, json);
         if ("error" in validation) {
           return validation.error;
@@ -102,6 +150,23 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: true, ...result });
       } catch (error) {
         span.recordException(error as Error);
+
+        // Check if this is the final retry attempt
+        const isFinalAttempt = attempt >= maxRetries;
+        span.setAttribute("qstash.final_attempt", isFinalAttempt);
+
+        if (isFinalAttempt) {
+          // Push to DLQ on final failure per ADR-0048
+          const dlqEntryId = await pushToDLQ(
+            "notify-collaborators",
+            jobPayload,
+            error,
+            attempt
+          );
+          span.setAttribute("qstash.dlq", true);
+          span.setAttribute("qstash.dlq_entry_id", dlqEntryId ?? "unavailable");
+        }
+
         return errorResponse({
           err: error,
           error: "internal",
