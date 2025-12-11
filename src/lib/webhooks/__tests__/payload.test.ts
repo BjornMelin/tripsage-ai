@@ -1,16 +1,11 @@
 /** @vitest-environment node */
 
+import { createHmac } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { WebhookPayload } from "@/lib/webhooks/payload";
 
-const VERIFY_REQUEST_HMAC = vi.hoisted(() => vi.fn());
 const GET_ENV = vi.hoisted(() => vi.fn());
 const EMIT_ALERT = vi.hoisted(() => vi.fn());
-
-vi.mock("@/lib/security/webhook", () => ({
-  verifyRequestHmac: (...args: Parameters<typeof VERIFY_REQUEST_HMAC>) =>
-    VERIFY_REQUEST_HMAC(...args),
-}));
 
 vi.mock("@/lib/env/server", () => ({
   getServerEnvVarWithFallback: (...args: Parameters<typeof GET_ENV>) =>
@@ -51,6 +46,13 @@ vi.mock("@opentelemetry/api", () => ({
 
 const { buildEventKey, parseAndVerify } = await import("@/lib/webhooks/payload");
 
+/** Helper to compute HMAC signature for test requests */
+function computeSignature(body: string, secret: string): string {
+  return createHmac("sha256", Buffer.from(secret, "utf8"))
+    .update(body, "utf8")
+    .digest("hex");
+}
+
 describe("buildEventKey", () => {
   it("includes table, type, and occurredAt", () => {
     const p: WebhookPayload = {
@@ -79,17 +81,22 @@ describe("buildEventKey", () => {
 });
 
 describe("parseAndVerify", () => {
+  const TestSecret = "test-webhook-secret";
+
   beforeEach(() => {
     vi.clearAllMocks();
-    GET_ENV.mockReturnValue("secret");
-    VERIFY_REQUEST_HMAC.mockResolvedValue(true);
+    GET_ENV.mockReturnValue(TestSecret);
   });
 
   it("fails when secret missing and emits alert", async () => {
     GET_ENV.mockReturnValueOnce("");
+    const body = JSON.stringify({ record: {}, table: "trips", type: "INSERT" });
     const req = new Request("https://example.com/api/hooks/trips", {
-      body: JSON.stringify({ record: {}, table: "trips", type: "INSERT" }),
-      headers: { "Content-Type": "application/json" },
+      body,
+      headers: {
+        "Content-Type": "application/json",
+        "x-signature-hmac": computeSignature(body, TestSecret),
+      },
       method: "POST",
     });
     const result = await parseAndVerify(req);
@@ -99,11 +106,26 @@ describe("parseAndVerify", () => {
     });
   });
 
-  it("fails when signature invalid", async () => {
-    VERIFY_REQUEST_HMAC.mockResolvedValueOnce(false);
+  it("fails when signature header missing", async () => {
     const req = new Request("https://example.com/api/hooks/trips", {
       body: JSON.stringify({ record: {}, table: "trips", type: "INSERT" }),
       headers: { "Content-Type": "application/json" },
+      method: "POST",
+    });
+    const result = await parseAndVerify(req);
+    expect(result.ok).toBe(false);
+    expect(EMIT_ALERT).toHaveBeenCalledWith("webhook.verification_failed", {
+      attributes: { reason: "missing_signature" },
+    });
+  });
+
+  it("fails when signature invalid", async () => {
+    const req = new Request("https://example.com/api/hooks/trips", {
+      body: JSON.stringify({ record: {}, table: "trips", type: "INSERT" }),
+      headers: {
+        "Content-Type": "application/json",
+        "x-signature-hmac": "invalid-signature",
+      },
       method: "POST",
     });
     const result = await parseAndVerify(req);
@@ -114,9 +136,13 @@ describe("parseAndVerify", () => {
   });
 
   it("fails when JSON invalid", async () => {
+    const body = "not-json";
     const req = new Request("https://example.com/api/hooks/trips", {
-      body: "not-json",
-      headers: { "Content-Type": "application/json" },
+      body,
+      headers: {
+        "Content-Type": "application/json",
+        "x-signature-hmac": computeSignature(body, TestSecret),
+      },
       method: "POST",
     });
     const result = await parseAndVerify(req);
@@ -127,9 +153,13 @@ describe("parseAndVerify", () => {
   });
 
   it("fails when payload shape invalid", async () => {
+    const body = JSON.stringify({ record: {}, table: "", type: "INSERT" });
     const req = new Request("https://example.com/api/hooks/trips", {
-      body: JSON.stringify({ record: {}, table: "", type: "INSERT" }),
-      headers: { "Content-Type": "application/json" },
+      body,
+      headers: {
+        "Content-Type": "application/json",
+        "x-signature-hmac": computeSignature(body, TestSecret),
+      },
       method: "POST",
     });
     const result = await parseAndVerify(req);
@@ -140,15 +170,19 @@ describe("parseAndVerify", () => {
   });
 
   it("returns payload when verification succeeds", async () => {
+    const body = JSON.stringify({
+      occurred_at: "2025-11-13T03:00:00Z",
+      old_record: null,
+      record: { id: "abc123" },
+      table: "trip_collaborators",
+      type: "UPDATE",
+    });
     const req = new Request("https://example.com/api/hooks/trips", {
-      body: JSON.stringify({
-        occurred_at: "2025-11-13T03:00:00Z",
-        old_record: null,
-        record: { id: "abc123" },
-        table: "trip_collaborators",
-        type: "UPDATE",
-      }),
-      headers: { "Content-Type": "application/json" },
+      body,
+      headers: {
+        "Content-Type": "application/json",
+        "x-signature-hmac": computeSignature(body, TestSecret),
+      },
       method: "POST",
     });
     const result = await parseAndVerify(req);
