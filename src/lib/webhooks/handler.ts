@@ -250,15 +250,19 @@ export function createWebhookHandler<T extends WebhookHandlerResult>(
       async (span) => {
         // 1. Rate limiting
         const rateLimitResult = await checkWebhookRateLimit(req);
+        const attachRateLimitHeaders = (response: NextResponse) => {
+          const headers = createRateLimitHeaders(rateLimitResult);
+          for (const [key, value] of Object.entries(headers)) {
+            response.headers.set(key, value);
+          }
+          return response;
+        };
         if (!rateLimitResult.success) {
           span.setAttribute("webhook.rate_limited", true);
-          return new NextResponse(JSON.stringify({ error: "rate_limit_exceeded" }), {
-            headers: {
-              "Content-Type": "application/json",
-              ...createRateLimitHeaders(rateLimitResult),
-            },
-            status: 429,
-          });
+          return NextResponse.json(
+            { error: "rate_limit_exceeded" },
+            { headers: createRateLimitHeaders(rateLimitResult), status: 429 }
+          );
         }
 
         // 2. Body size validation
@@ -272,14 +276,18 @@ export function createWebhookHandler<T extends WebhookHandlerResult>(
             : 0;
         if (contentLength > maxBodySize) {
           span.setAttribute("webhook.payload_too_large", true);
-          return NextResponse.json({ error: "payload_too_large" }, { status: 413 });
+          return attachRateLimitHeaders(
+            NextResponse.json({ error: "payload_too_large" }, { status: 413 })
+          );
         }
 
         // 3. Parse and verify HMAC signature
         const { ok, payload } = await parseAndVerify(req);
         if (!ok || !payload) {
           span.setAttribute("webhook.unauthorized", true);
-          return NextResponse.json({ error: "invalid_signature" }, { status: 401 });
+          return attachRateLimitHeaders(
+            NextResponse.json({ error: "invalid_signature" }, { status: 401 })
+          );
         }
 
         span.setAttribute("webhook.table", payload.table);
@@ -295,7 +303,9 @@ export function createWebhookHandler<T extends WebhookHandlerResult>(
           const unique = await tryReserveKey(eventKey, idempotencyTTL);
           if (!unique) {
             span.setAttribute("webhook.duplicate", true);
-            return NextResponse.json({ duplicate: true, ok: true });
+            return attachRateLimitHeaders(
+              NextResponse.json({ duplicate: true, ok: true })
+            );
           }
         }
 
@@ -304,13 +314,13 @@ export function createWebhookHandler<T extends WebhookHandlerResult>(
         if (tableFilter && payload.table !== tableFilter) {
           span.setAttribute("webhook.skipped", true);
           span.setAttribute("webhook.skip_reason", "table_mismatch");
-          return NextResponse.json({ ok: true, skipped: true });
+          return attachRateLimitHeaders(NextResponse.json({ ok: true, skipped: true }));
         }
 
         // 7. Execute custom handler with error classification
         try {
           const result = await handle(payload, eventKey, span, req);
-          return NextResponse.json({ ok: true, ...result });
+          return attachRateLimitHeaders(NextResponse.json({ ok: true, ...result }));
         } catch (error) {
           span.recordException(error as Error);
           span.setAttribute("webhook.error", true);
@@ -336,7 +346,9 @@ export function createWebhookHandler<T extends WebhookHandlerResult>(
               ? "internal_error"
               : (safeMessageMap.get(code) ?? "internal_error");
 
-          return NextResponse.json({ code, error: safeMessage }, { status });
+          return attachRateLimitHeaders(
+            NextResponse.json({ code, error: safeMessage }, { status })
+          );
         }
       }
     );
