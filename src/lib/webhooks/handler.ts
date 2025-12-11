@@ -276,27 +276,26 @@ export function createWebhookHandler<T extends WebhookHandlerResult>(
         span.setAttribute("webhook.table", payload.table);
         span.setAttribute("webhook.op", payload.type);
 
-        // 4. Table filtering (H6 - check BEFORE idempotency)
-        // Rationale: idempotency is handler-scoped; we avoid burning keys for
-        // other handlers if Supabase posts the same event to multiple endpoints.
-        if (tableFilter && payload.table !== tableFilter) {
-          span.setAttribute("webhook.skipped", true);
-          span.setAttribute("webhook.skip_reason", "table_mismatch");
-          return NextResponse.json({ ok: true, skipped: true });
-        }
-
-        // 5. Build event key
+        // 4. Build event key (used for global idempotency across handlers)
         const eventKey = buildEventKey(payload);
         span.setAttribute("webhook.event_key", eventKey);
 
-        // 6. Idempotency check (now AFTER table validation - H6)
+        // 5. Idempotency check (global)
         if (enableIdempotency) {
-          span.setAttribute("webhook.idempotency_scope", "handler");
+          span.setAttribute("webhook.idempotency_scope", "global");
           const unique = await tryReserveKey(eventKey, idempotencyTTL);
           if (!unique) {
             span.setAttribute("webhook.duplicate", true);
             return NextResponse.json({ duplicate: true, ok: true });
           }
+        }
+
+        // 6. Table filtering (post-idempotency to prevent duplicate processing
+        // across multiple handlers that may receive the same event)
+        if (tableFilter && payload.table !== tableFilter) {
+          span.setAttribute("webhook.skipped", true);
+          span.setAttribute("webhook.skip_reason", "table_mismatch");
+          return NextResponse.json({ ok: true, skipped: true });
         }
 
         // 7. Execute custom handler with error classification

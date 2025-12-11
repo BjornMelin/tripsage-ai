@@ -17,7 +17,7 @@ const REDIS_FEATURE = "idempotency.keys";
 /**
  * Default fail mode from environment variable.
  * Set IDEMPOTENCY_FAIL_OPEN=false to fail closed (throw on Redis unavailable).
- * Evaluated at module load; runtime env mutations will not change behavior.
+ * Evaluated once at module load; runtime env changes will not affect behavior.
  */
 const DEFAULT_FAIL_OPEN = process.env.IDEMPOTENCY_FAIL_OPEN !== "false";
 
@@ -103,13 +103,21 @@ export async function tryReserveKey(
  * Check if an idempotency key exists without reserving it.
  *
  * @param key - Unique key to check
+ * @param options - Optional overrides (failOpen only)
  * @returns true if key exists (is a duplicate), false if new
  */
-export async function hasKey(key: string): Promise<boolean> {
+export async function hasKey(
+  key: string,
+  options?: { failOpen?: boolean }
+): Promise<boolean> {
+  const failOpen = options?.failOpen ?? DEFAULT_FAIL_OPEN;
+
   const redis = getRedis();
   if (!redis) {
     warnRedisUnavailable(REDIS_FEATURE);
-    return false;
+    // Fail-open: allow processing (treat as not found)
+    // Fail-closed: block processing by treating as duplicate
+    return !failOpen;
   }
 
   const namespaced = `idemp:${key}`;
