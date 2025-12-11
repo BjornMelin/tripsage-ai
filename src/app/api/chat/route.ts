@@ -31,6 +31,7 @@ export const maxDuration = 30;
  */
 export const POST = withApiGuards({
   auth: true,
+  botId: true,
   rateLimit: "chat:nonstream",
   telemetry: "chat.nonstream",
 })(async (req: NextRequest, { supabase }): Promise<Response> => {
