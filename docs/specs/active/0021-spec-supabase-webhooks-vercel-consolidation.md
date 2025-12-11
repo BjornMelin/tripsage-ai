@@ -217,6 +217,7 @@ vercel.json (excerpt):
 |----------|----------|-------------|
 | `HMAC_SECRET` | Yes | Shared secret for Supabase→Vercel webhook signatures |
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon/public key for client-side access |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Service role key for admin operations |
 | `UPSTASH_REDIS_REST_URL` | Yes | Upstash Redis URL for idempotency/cache |
 | `UPSTASH_REDIS_REST_TOKEN` | Yes | Upstash Redis token |
@@ -230,8 +231,9 @@ vercel.json (excerpt):
 ### Supabase Database Configuration
 
 ```sql
--- Set webhook URLs
+-- Set webhook URLs (trips => /api/hooks/trips, files => /api/hooks/files, cache => /api/hooks/cache)
 ALTER DATABASE postgres SET app.vercel_webhook_trips = 'https://your-app.vercel.app/api/hooks/trips';
+ALTER DATABASE postgres SET app.vercel_webhook_files = 'https://your-app.vercel.app/api/hooks/files';
 ALTER DATABASE postgres SET app.vercel_webhook_cache = 'https://your-app.vercel.app/api/hooks/cache';
 ALTER DATABASE postgres SET app.webhook_hmac_secret = 'your-secret-here';
 ```

@@ -192,14 +192,41 @@ export class RedisMockClient {
     const now = Date.now();
     const list = this.getList(key, now);
     let removed = 0;
-    const remaining = [];
-    for (const item of list) {
-      if (removed < Math.abs(count) && item === value) {
-        removed += 1;
-        if (count > 0) continue;
+    let remaining: string[];
+
+    if (count === 0) {
+      // Remove all matches
+      remaining = [];
+      for (const item of list) {
+        if (item === value) {
+          removed += 1;
+        } else {
+          remaining.push(item);
+        }
       }
-      remaining.push(item);
+    } else if (count > 0) {
+      // Remove first N matches from start
+      remaining = [];
+      for (const item of list) {
+        if (item === value && removed < count) {
+          removed += 1;
+          continue;
+        }
+        remaining.push(item);
+      }
+    } else {
+      // count < 0: remove from end, up to |count| matches
+      const toRemove = Math.abs(count);
+      const indicesToRemove = new Set<number>();
+      for (let i = list.length - 1; i >= 0 && removed < toRemove; i -= 1) {
+        if (list[i] === value) {
+          indicesToRemove.add(i);
+          removed += 1;
+        }
+      }
+      remaining = list.filter((_item, idx) => !indicesToRemove.has(idx));
     }
+
     const entry = this.store.get(key);
     this.setList(key, remaining, entry?.expiresAt);
     return Promise.resolve(removed);
