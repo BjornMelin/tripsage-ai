@@ -11,6 +11,7 @@ Weights: Solution Leverage 35%, Application Value 30%, Maintenance Load 25% (hig
 | mcp-chrome | 7.5 | 7.8 | 6.0 | 8.0 | 7.27 |
 
 ## Recommendations
+
 - Primary: Browserbase Stagehand MCP for production-like flows and anti-bot resilience (≥9.0).
 - Complement: Apify MCP for structured data extraction at scale.
 - Development: Playwright MCP for local deterministic tests; Browser-Use for ad-hoc demos.
