@@ -121,6 +121,10 @@ export const ROUTE_RATE_LIMITS = {
   "places:photo": { limit: 60, window: "1 m" },
   "places:search": { limit: 60, window: "1 m" },
 
+  // RAG (Retrieval-Augmented Generation)
+  "rag:index": { limit: 10, window: "1 m" }, // Batch indexing
+  "rag:search": { limit: 100, window: "1 m" }, // Hybrid search
+
   // Routes and directions
   "route-matrix": { limit: 30, window: "1 m" },
   routes: { limit: 60, window: "1 m" },
