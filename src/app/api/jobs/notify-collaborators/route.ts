@@ -59,8 +59,14 @@ const MAX_RETRIES = 5;
  * @return Object with current attempt and max retries
  */
 function getRetryInfo(req: Request): { attempt: number; maxRetries: number } {
-  const retried = Number(req.headers.get("Upstash-Retried")) || 0;
-  const maxRetries = Number(req.headers.get("Upstash-Max-Retries")) || MAX_RETRIES;
+  const retriedHeader = req.headers.get("Upstash-Retried");
+  let retried = parseInt(retriedHeader ?? "", 10);
+  if (Number.isNaN(retried) || retried < 0) retried = 0;
+
+  const maxRetriesHeader = req.headers.get("Upstash-Max-Retries");
+  let maxRetries = parseInt(maxRetriesHeader ?? "", 10);
+  if (Number.isNaN(maxRetries) || maxRetries < 0) maxRetries = MAX_RETRIES;
+
   return { attempt: retried + 1, maxRetries };
 }
 
@@ -79,7 +85,7 @@ export async function POST(req: Request) {
       span.setAttribute("qstash.attempt", attempt);
       span.setAttribute("qstash.max_retries", maxRetries);
 
-      // Store parsed job data for DLQ on failure
+      // Store raw job payload for DLQ on failure
       let jobPayload: unknown = null;
 
       try {
@@ -98,6 +104,7 @@ export async function POST(req: Request) {
 
         const sig = req.headers.get("Upstash-Signature");
         const body = await req.clone().text();
+        jobPayload = body;
         const url = req.url;
         const valid = sig
           ? await receiver.verify({ body, signature: sig, url })
@@ -121,8 +128,8 @@ export async function POST(req: Request) {
           return unauthorizedResponse();
         }
 
-        const json = (await req.json()) as unknown;
-        jobPayload = json; // Store for DLQ
+        const json = JSON.parse(body) as unknown;
+        jobPayload = json; // Store parsed form for DLQ/validation
         const validation = validateSchema(notifyJobSchema, json);
         if ("error" in validation) {
           return validation.error;

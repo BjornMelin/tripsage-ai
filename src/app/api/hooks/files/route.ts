@@ -6,7 +6,7 @@
 
 import "server-only";
 
-import { createAdminSupabase } from "@/lib/supabase/admin";
+import { getAdminSupabase } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
 import { createWebhookHandler } from "@/lib/webhooks/handler";
 
@@ -32,7 +32,7 @@ export const POST = createWebhookHandler({
 
     // Verify file attachment exists on INSERT with uploading status
     if (payload.type === "INSERT" && attachmentId && uploadStatus === "uploading") {
-      const supabase = createAdminSupabase();
+      const supabase = getAdminSupabase();
       const { error } = await supabase
         .from("file_attachments")
         .select("id")

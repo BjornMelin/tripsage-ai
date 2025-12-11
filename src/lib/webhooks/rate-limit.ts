@@ -72,8 +72,7 @@ export function getClientIp(req: Request): string {
   const cfIp = req.headers.get("cf-connecting-ip");
   if (cfIp) return cfIp;
 
-  // Log fallback to "unknown" for monitoring (rate-limited via telemetry)
-  // This creates a shared rate-limit bucket which may be problematic at scale
+  // Log fallback when no IP headers are present (rate-limited via telemetry)
   recordTelemetryEvent("webhook.ip_missing", {
     attributes: {
       "request.cf_connecting_ip": cfIp ?? "missing",
@@ -85,7 +84,8 @@ export function getClientIp(req: Request): string {
     level: "warning",
   });
 
-  return "unknown";
+  // Single shared bucket to prevent UA rotation from bypassing rate limits
+  return "unknown-ip";
 }
 
 /**

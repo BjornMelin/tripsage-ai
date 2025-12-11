@@ -87,6 +87,8 @@ export async function parseAndVerify(
   // Single-pass body read: read as text once, verify, then parse
   let rawBody: string;
   try {
+    // Note: req.text() consumes the body stream; early returns above/below
+    // intentionally leave the request mutated since we don't re-use it.
     rawBody = await req.text();
   } catch {
     recordVerificationFailure("body_read_error");
@@ -114,11 +116,6 @@ export async function parseAndVerify(
   try {
     payload = normalizeWebhookPayload(raw);
   } catch {
-    recordVerificationFailure("invalid_payload_shape");
-    return { ok: false };
-  }
-
-  if (!payload?.type || !payload?.table) {
     recordVerificationFailure("invalid_payload_shape");
     return { ok: false };
   }

@@ -35,7 +35,7 @@ export const POST = createWebhookHandler({
 
     return { bumped, tags };
   },
-  idempotencyTTL: 60, // Shorter TTL for cache ops
+  idempotencyTTL: 60, // Cache invalidations can be replayed safely; shorter window avoids suppressing legitimate rapid updates
 
   name: "cache",
 });

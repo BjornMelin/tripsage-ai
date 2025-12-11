@@ -48,7 +48,7 @@ vi.mock("@/lib/idempotency/redis", () => ({
 }));
 
 vi.mock("@/lib/supabase/admin", () => ({
-  createAdminSupabase: vi.fn(() => supabaseFactory()),
+  getAdminSupabase: vi.fn(() => supabaseFactory()),
 }));
 
 // Mock telemetry span

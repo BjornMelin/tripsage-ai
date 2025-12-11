@@ -41,7 +41,8 @@ const envStore = vi.hoisted<Record<string, string | undefined>>(() => ({
 const afterCallbacks = vi.hoisted<Array<() => unknown>>(() => []);
 
 function createSupabaseStub() {
-  const limit = vi.fn(async () => ({ error: null }));
+  const maybeSingle = vi.fn(async () => ({ data: { id: "trip-1" }, error: null }));
+  const limit = vi.fn(() => ({ maybeSingle }));
   const eq = vi.fn(() => ({ limit }));
   const select = vi.fn(() => ({ eq }));
   const from = vi.fn(() => ({ select }));
@@ -82,6 +83,10 @@ vi.mock("@supabase/supabase-js", () => ({
   createClient: vi.fn(() => supabaseFactory()),
 }));
 
+vi.mock("@/lib/supabase/admin", () => ({
+  getAdminSupabase: () => supabaseFactory(),
+}));
+
 // Mock QStash client for enqueue testing
 type TryEnqueueJobResult =
   | { messageId: string; success: true }
@@ -89,7 +94,8 @@ type TryEnqueueJobResult =
 type TryEnqueueJob = (
   jobType: string,
   payload: unknown,
-  path: string
+  path: string,
+  options?: Record<string, unknown>
 ) => Promise<TryEnqueueJobResult>;
 
 const tryEnqueueJobMock = vi.hoisted(() =>
@@ -97,8 +103,12 @@ const tryEnqueueJobMock = vi.hoisted(() =>
 );
 
 vi.mock("@/lib/qstash/client", () => ({
-  tryEnqueueJob: (jobType: string, payload: unknown, path: string) =>
-    tryEnqueueJobMock(jobType, payload, path),
+  tryEnqueueJob: (
+    jobType: string,
+    payload: unknown,
+    path: string,
+    options?: Record<string, unknown>
+  ) => tryEnqueueJobMock(jobType, payload, path, options),
 }));
 
 vi.mock("next/server", async () => {
@@ -246,7 +256,8 @@ describe("POST /api/hooks/trips", () => {
     expect(tryEnqueueJobMock).toHaveBeenCalledWith(
       "notify-collaborators",
       { eventKey: "event-key-1", payload: expect.any(Object) },
-      "/api/jobs/notify-collaborators"
+      "/api/jobs/notify-collaborators",
+      { deduplicationId: "notify:event-key-1" }
     );
   });
 

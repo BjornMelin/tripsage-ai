@@ -40,8 +40,19 @@ vi.mock("@/lib/security/random", () => ({
 
 // Mock telemetry
 vi.mock("@/lib/telemetry/span", () => ({
+  recordErrorOnSpan: vi.fn(),
   recordTelemetryEvent: (...args: unknown[]) => mockRecordTelemetryEvent(...args),
   withTelemetrySpan: async (
+    _name: string,
+    _opts: unknown,
+    fn: (span: Record<string, unknown>) => unknown
+  ) =>
+    fn({
+      addEvent: vi.fn(),
+      recordException: vi.fn(),
+      setAttribute: vi.fn(),
+    }),
+  withTelemetrySpanSync: (
     _name: string,
     _opts: unknown,
     fn: (span: Record<string, unknown>) => unknown
@@ -128,6 +139,15 @@ describe("DLQ", () => {
 
       const pushedEntry = JSON.parse(mockRedisLpush.mock.calls[0][1]);
       expect(pushedEntry.error).toBe("String error message");
+    });
+
+    it("redacts raw string payloads to avoid leaking secrets", async () => {
+      const { pushToDLQ } = await import("../dlq");
+
+      await pushToDLQ("test-job", "secret-token-123", "error", 1);
+
+      const pushedEntry = JSON.parse(mockRedisLpush.mock.calls[0][1]);
+      expect(pushedEntry.payload).toBe("[REDACTED_STRING_PAYLOAD]");
     });
 
     it("returns null when Redis is unavailable", async () => {
