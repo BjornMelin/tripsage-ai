@@ -224,6 +224,7 @@ vercel.json (excerpt):
 | `QSTASH_CURRENT_SIGNING_KEY` | Yes | QStash signature verification |
 | `QSTASH_NEXT_SIGNING_KEY` | No | Key rotation support |
 | `RESEND_API_KEY` | No | Email notifications |
+| `IDEMPOTENCY_FAIL_OPEN` | No | Controls fail-open vs fail-closed when Redis is unavailable for idempotency keys |
 | `COLLAB_WEBHOOK_URL` | No | Downstream webhook URL |
 
 ### Supabase Database Configuration
