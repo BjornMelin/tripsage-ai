@@ -242,7 +242,6 @@ scan-results/
 .env.staging.local
 
 # Project specific files
-!docs/development/core/development-guide.md
 .agent/
 supabase/.temp/
 

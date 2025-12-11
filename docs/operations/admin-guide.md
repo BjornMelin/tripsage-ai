@@ -23,7 +23,7 @@ POST /api/config/agents/:agentType/rollback/:versionId
 ```
 
 - Scope parsing uses `scopeSchema` (`global` default).
-- Writes emit OpenTelemetry spans (`config.update`) and are rate limited via `withApiGuards`.
+- Writes emit OpenTelemetry spans (`agent_config.load_existing`, `agent_config.update_failed`, `agent_config.updated`) and are rate limited via `withApiGuards`.
 - Rollback keeps one canonical history; no parallel config tracks.
 
 ### Dashboard metrics
@@ -37,10 +37,15 @@ GET /api/dashboard?window=24h|7d|30d|all
 
 ## Operational playbook
 
+> **Supabase SSR Cookies**: Authenticated requests require two session cookies from the Supabase SSR setup: `sb-access-token` (access token) and `sb-refresh-token` (refresh token). Pass both via `-b` flags in curl requests.
+
 1) **Verify admin session**
 
     ```bash
-    curl -I -b "sb=<session-cookie>" https://<app>/api/config/agents
+    curl -I \
+      -b "sb-access-token=<access-token>" \
+      -b "sb-refresh-token=<refresh-token>" \
+      https://<app>/api/config/agents
     # expect 200 for admins, 403 otherwise
     ```
 
@@ -48,7 +53,8 @@ GET /api/dashboard?window=24h|7d|30d|all
 
     ```bash
     curl -X PUT https://<app>/api/config/agents/budget \
-      -b "sb=<session-cookie>" \
+      -b "sb-access-token=<access-token>" \
+      -b "sb-refresh-token=<refresh-token>" \
       -H "Content-Type: application/json" \
       -d '{"modelId":"gpt-4o-mini","temperature":0.3,"scope":"global"}'
     ```
@@ -57,13 +63,16 @@ GET /api/dashboard?window=24h|7d|30d|all
 
     ```bash
     curl -X POST https://<app>/api/config/agents/budget/rollback/<versionId> \
-      -b "sb=<session-cookie>"
+      -b "sb-access-token=<access-token>" \
+      -b "sb-refresh-token=<refresh-token>"
     ```
 
 4) **Metrics sanity check**
 
     ```bash
-    curl -b "sb=<session-cookie>" "https://<app>/api/dashboard?window=24h"
+    curl -b "sb-access-token=<access-token>" \
+      -b "sb-refresh-token=<refresh-token>" \
+      "https://<app>/api/dashboard?window=24h"
     ```
 
 ## Security & auditing
@@ -75,6 +84,6 @@ GET /api/dashboard?window=24h|7d|30d|all
 ## Troubleshooting
 
 - **403 on admin routes**: confirm session cookie present and `app_metadata.is_admin` true in Supabase dashboard.
-- **429**: rate limit buckets (`dashboard:metrics`, `config:update`) are powered by Upstash; verify `UPSTASH_*` envs.
+- **429**: rate limit buckets (`dashboard:metrics`, `config:agents:read`, `config:agents:update`, `config:agents:rollback`, `config:agents:versions`) are powered by Upstash; verify `UPSTASH_*` envs.
 - **Config drift**: use `/api/config/agents/:agentType/versions` to confirm latest version; rollback if necessary.
 - **Missing telemetry**: ensure OTLP exporter envs (`NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT` for client, server exporter config in code) are set in the environment.
