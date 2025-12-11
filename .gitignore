@@ -97,7 +97,7 @@ worktrees/
 **/*.pyc
 
 # Archived local files
-.archived/
+
 
 # Archived documentation (moved out of main repo)
 ARCHIVED_DOCS/
@@ -114,11 +114,6 @@ ARCHIVED_DOCS/
 *_TEST.md
 *_DEBUG.md
 !README.md
-!TODO.md
-!KNOWLEDGE_PACK.md
-# Exception for security documentation
-!docs/operations/RLS_IMPLEMENTATION.md
-!docs/operations/INFRASTRUCTURE_UPGRADE_SUMMARY.md
 
 # Temporary analysis scripts
 analyze_*.py
@@ -172,7 +167,7 @@ docs/**/*-backup.*
 *.development.*
 *.staging.*
 development-*
-!docs/development/development-guide.md
+!docs/development/core/development-guide.md
 staging-*
 
 # Performance and profiling outputs
@@ -247,20 +242,17 @@ scan-results/
 .env.staging.local
 
 # Project specific files
-!docs/development/development-guide.md
+!docs/development/core/development-guide.md
 .agent/
 supabase/.temp/
-docs/prompts/database-provider-research
-docs/prompts/tools/
+
 docs/prompts/
 # Generated review artifacts
-docs/review/
+
 docs/implementation/
-docs/specs/migrations/
-docs/migrations/
+
 # Archived docs not part of source
-docs/reviews/
-docs/archived/
+
 
 # Frontend workspace (consolidated from frontend/.gitignore)
 next-env.d.ts
