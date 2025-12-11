@@ -83,8 +83,10 @@ const DEFAULT_TAGS = ["search", "cache"] as const;
  * ```
  */
 export function getTagsForTable(table: string): string[] {
-  const registeredTags = CACHE_TAG_REGISTRY[table as CacheTable];
-  return registeredTags ? [...registeredTags] : [...DEFAULT_TAGS];
+  if (isRegisteredTable(table)) {
+    return [...CACHE_TAG_REGISTRY[table]];
+  }
+  return [...DEFAULT_TAGS];
 }
 
 /**
@@ -94,7 +96,7 @@ export function getTagsForTable(table: string): string[] {
  * @returns true if the table has registered cache tags
  */
 export function isRegisteredTable(table: string): table is CacheTable {
-  return table in CACHE_TAG_REGISTRY;
+  return Object.hasOwn(CACHE_TAG_REGISTRY, table);
 }
 
 /**
@@ -103,7 +105,9 @@ export function isRegisteredTable(table: string): table is CacheTable {
  * @returns Array of all registered table names
  */
 export function getRegisteredTables(): CacheTable[] {
-  return Object.keys(CACHE_TAG_REGISTRY) as CacheTable[];
+  return Object.keys(CACHE_TAG_REGISTRY).filter((table): table is CacheTable =>
+    isRegisteredTable(table)
+  );
 }
 
 /**

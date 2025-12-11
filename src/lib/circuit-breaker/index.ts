@@ -165,24 +165,16 @@ export async function recordFailure(
   const failureCountKey = getFailureCountKey(name);
   const successCountKey = getSuccessCountKey(name);
 
-  // Check current value to decide approach
-  const current = await redis.get(failureCountKey);
-
-  if (current === null) {
-    // First failure: use atomic SETEX (set with expiry in one command)
-    await redis.setex(failureCountKey, failureWindowSeconds, "1");
-  } else {
-    // Subsequent failures: increment and refresh TTL atomically to avoid race
-    await redis.eval(
-      `
-        local v = redis.call("INCR", KEYS[1])
-        redis.call("EXPIRE", KEYS[1], tonumber(ARGV[1]))
-        return v
-      `,
-      [failureCountKey],
-      [failureWindowSeconds]
-    );
-  }
+  // Atomically increment failure count and refresh TTL to avoid TOCTOU races
+  await redis.eval(
+    `
+      local v = redis.call("INCR", KEYS[1])
+      redis.call("EXPIRE", KEYS[1], tonumber(ARGV[1]))
+      return v
+    `,
+    [failureCountKey],
+    [failureWindowSeconds]
+  );
 
   // Reset success count on failure
   await redis.del(successCountKey);

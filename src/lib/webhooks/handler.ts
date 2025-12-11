@@ -54,7 +54,7 @@ function hasErrorCode(error: unknown): error is Error & { code: string } {
  * @param error - The error to classify
  * @returns Object with status code and error code
  */
-function classifyError(error: unknown): { status: number; code: ErrorCode } {
+export function classifyError(error: unknown): { status: number; code: ErrorCode } {
   if (!(error instanceof Error)) {
     return { code: "UNKNOWN", status: 500 };
   }
@@ -87,7 +87,9 @@ function classifyError(error: unknown): { status: number; code: ErrorCode } {
     }
   }
 
-  // 3. Fall back to message/name heuristics for legacy errors
+  // 3. Fall back to message/name heuristics for legacy errors.
+  // Prefer throwing typed errors with explicit codes; keep these heuristics in sync with
+  // real error payloads to avoid misclassification (especially for localized messages).
   const message = error.message.toLowerCase();
   const name = error.name.toLowerCase();
 

@@ -9,17 +9,28 @@
 
 import "server-only";
 
+import { z } from "zod";
+
 import { getRedis } from "@/lib/redis";
 import { warnRedisUnavailable } from "@/lib/telemetry/redis";
 
 const REDIS_FEATURE = "idempotency.keys";
 
+const idempotencyConfigSchema = z.strictObject({
+  // biome-ignore lint/style/useNamingConvention: Env var casing is uppercase by convention
+  IDEMPOTENCY_FAIL_OPEN: z.string().optional().default("true"),
+});
+
 /**
  * Default fail mode from environment variable.
  * Set IDEMPOTENCY_FAIL_OPEN=false to fail closed (throw on Redis unavailable).
- * Evaluated once at module load; runtime env changes will not affect behavior.
+ * Evaluated once at module load; pass `failOpen` option per call to override at runtime.
  */
-const DEFAULT_FAIL_OPEN = process.env.IDEMPOTENCY_FAIL_OPEN !== "false";
+const { IDEMPOTENCY_FAIL_OPEN } = idempotencyConfigSchema.parse({
+  // biome-ignore lint/style/useNamingConvention: Env var casing is uppercase by convention
+  IDEMPOTENCY_FAIL_OPEN: process.env.IDEMPOTENCY_FAIL_OPEN,
+});
+const DEFAULT_FAIL_OPEN = IDEMPOTENCY_FAIL_OPEN !== "false";
 
 /**
  * Error thrown when idempotency check fails due to Redis unavailability
@@ -47,7 +58,7 @@ export interface ReserveKeyOptions {
    * - true (default): Return true (allow processing), log warning
    * - false: Throw IdempotencyServiceUnavailableError
    *
-   * Can also be set globally via IDEMPOTENCY_FAIL_OPEN env var.
+   * Can also be set globally via IDEMPOTENCY_FAIL_OPEN env var (read at module load).
    */
   failOpen?: boolean;
 }
@@ -131,10 +142,16 @@ export async function hasKey(
  * @param key - Unique key to release
  * @returns true if key was released, false if not found or Redis unavailable
  */
-export async function releaseKey(key: string): Promise<boolean> {
+export async function releaseKey(
+  key: string,
+  options?: { failOpen?: boolean }
+): Promise<boolean> {
   const redis = getRedis();
   if (!redis) {
     warnRedisUnavailable(REDIS_FEATURE);
+    if (options?.failOpen === false) {
+      throw new IdempotencyServiceUnavailableError();
+    }
     return false;
   }
 
