@@ -99,8 +99,8 @@ pnpm test:run
 
 ## Next Steps
 
-- Standards: [docs/development/standards.md](standards.md)
-- Zod Schema Guide: [docs/development/zod-schema-guide.md](zod-schema-guide.md)
-- Testing: [docs/development/testing.md](testing.md)
-- Observability: [docs/development/observability.md](observability.md)
-- Troubleshooting: [docs/development/troubleshooting.md](troubleshooting.md)
+- Standards: [docs/development/standards/standards.md](../standards/standards.md)
+- Zod Schema Guide: [docs/development/standards/zod-schema-guide.md](../standards/zod-schema-guide.md)
+- Testing: [docs/development/testing/testing.md](../testing/testing.md)
+- Observability: [docs/development/backend/observability.md](../backend/observability.md)
+- Troubleshooting: [docs/development/core/troubleshooting.md](troubleshooting.md)

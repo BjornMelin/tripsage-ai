@@ -29,7 +29,7 @@ conversational AI applications.
 - **Multi-Provider Routing**: Automatic provider selection across OpenAI,
   Anthropic, xAI, and OpenRouter with fallback logic
 - **Agentic Tool Calling**: 15+ production tools via AI SDK v6 with Zod
-  schemas—web search, accommodations (MCP), flights (Duffel), activities
+  schemas—web search, accommodations, flights (Duffel), activities
   (Google Places), weather, maps, planning, and memory
 - **Hybrid RAG Pipeline**: Vector similarity (pgvector) + keyword search
   with provider-based reranking (Cohere Rerank v3.5) for optimal
@@ -74,8 +74,6 @@ conversational AI applications.
 
 - **AI SDK v6 Native**: Full migration from Python—TypeScript-first tools,
   unified provider API, and strict Zod validation
-- **MCP Integration**: External APIs (Airbnb, weather, flights) bridged
-  via Model Context Protocol for extensible tool ecosystems
 - **Type-Safe Everything**: End-to-end TypeScript with strict mode, Zod
   schemas, and generated Supabase types
 - **High Test Coverage**: 85-90% Vitest coverage with isolated unit tests,
@@ -111,11 +109,11 @@ conversational AI applications.
 This project follows strict DRY principles and established patterns:
 
 - **API Routes**: Use `withApiGuards` factory
-  ([guide](../docs/development/development-guide.md#next-js-api-routes))
+  ([guide](../core/development-guide.md#next-js-api-routes))
 - **State Management**: Zustand with composition pattern
-  ([guide](../docs/development/standards.md#zustand-stores))
+  ([guide](../standards/standards.md#zustand-stores))
 - **Testing**: Centralized utilities in `src/test/`
-  ([guide](../docs/development/testing.md))
+  ([guide](../testing/testing.md))
 
 ### Key Metrics
 
@@ -148,7 +146,7 @@ intent:
   `src/lib/tools/planning.ts` (`createTravelPlan`,
   `updateTravelPlan`, `combineSearchResults`, `saveTravelPlan`,
   `deleteTravelPlan`)
-- **Accommodations**: `search_accommodations` (via Airbnb MCP),
+- **Accommodations**: `search_accommodations` (via Airbnb),
   `get_accommodation_details`, `book_accommodation` (requires approval)
 - **Flights**: `search_flights` (Duffel API), `book_flight` (requires
   approval)
@@ -614,11 +612,7 @@ NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY=your_browser_maps_key  # Client-safe, re
 FIRECRAWL_API_KEY=fc-your_firecrawl_key  # Server-only
 FIRECRAWL_BASE_URL=https://api.firecrawl.dev/v2  # Server-only, optional override
 
-# Accommodations (MCP or HTTP)
-# Server-only, SSE endpoint for MCP tools
-AIRBNB_MCP_URL=your_airbnb_mcp_endpoint
-# Server-only, Bearer token for MCP auth
-AIRBNB_MCP_API_KEY=your_airbnb_mcp_api_key
+# Accommodations (HTTP)
 # Server-only, HTTP fallback endpoint
 ACCOM_SEARCH_URL=your_accommodation_search_endpoint
 # Server-only, Bearer token for HTTP auth
@@ -734,11 +728,11 @@ Full-stack instrumentation without compromising privacy:
 
 ### Development
 
-- [Development Guide](../docs/development/development-guide.md)
+- [Development Guide](../core/development-guide.md)
   - Frontend architecture & patterns
-- [Testing Guide](../docs/development/testing.md) - Testing
+- [Testing Guide](../testing/testing.md) - Testing
   strategies & coverage requirements
-- [Code Standards](../docs/development/standards.md) - Code quality,
+- [Code Standards](../standards/standards.md) - Code quality,
   conventions, and Zod schema organization policy
 - [AI SDK Migration Prompts](../docs/prompts/ai-sdk/RUN-ORDER.md) -
   Complete migration guide
