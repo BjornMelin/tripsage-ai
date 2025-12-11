@@ -35,6 +35,7 @@ import {
   saveTravelPlan,
   updateTravelPlan,
 } from "./server/planning";
+import { ragSearch } from "./server/rag";
 import { getTravelAdvisory } from "./server/travel-advisory";
 import { getCurrentWeather } from "./server/weather";
 import { crawlSite, crawlUrl } from "./server/web-crawl";
@@ -63,6 +64,7 @@ export {
   getTravelAdvisory,
   grantApproval,
   lookupPoiContext,
+  ragSearch,
   requireApproval,
   saveTravelPlan,
   searchAccommodations,
@@ -97,6 +99,7 @@ export const toolRegistry = {
   getCurrentWeather,
   getTravelAdvisory,
   lookupPoiContext,
+  ragSearch,
   saveTravelPlan,
   searchAccommodations,
   searchActivities,

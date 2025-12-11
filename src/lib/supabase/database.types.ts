@@ -1079,6 +1079,43 @@ export type Database = {
         };
         Relationships: [];
       };
+      rag_documents: {
+        Row: {
+          chunk_index: number;
+          content: string;
+          created_at: string;
+          embedding: string | null;
+          fts: unknown | null;
+          id: string;
+          metadata: Json;
+          namespace: string;
+          source_id: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          chunk_index?: number;
+          content: string;
+          created_at?: string;
+          embedding?: string | null;
+          id?: string;
+          metadata?: Json;
+          namespace?: string;
+          source_id?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          chunk_index?: number;
+          content?: string;
+          created_at?: string;
+          embedding?: string | null;
+          id?: string;
+          metadata?: Json;
+          namespace?: string;
+          source_id?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       accommodations: {
         Row: {
           address: string | null;
@@ -2149,6 +2186,45 @@ export type Database = {
         Returns: {
           id: string;
           similarity: number;
+        }[];
+      };
+      match_rag_documents: {
+        Args: {
+          query_embedding: string;
+          filter_namespace?: string | null;
+          match_threshold?: number;
+          match_count?: number;
+        };
+        Returns: {
+          id: string;
+          content: string;
+          metadata: Json;
+          namespace: string;
+          source_id: string | null;
+          chunk_index: number;
+          similarity: number;
+        }[];
+      };
+      hybrid_rag_search: {
+        Args: {
+          query_text: string;
+          query_embedding: string;
+          filter_namespace?: string | null;
+          match_count?: number;
+          match_threshold?: number;
+          keyword_weight?: number;
+          semantic_weight?: number;
+        };
+        Returns: {
+          id: string;
+          content: string;
+          metadata: Json;
+          namespace: string;
+          source_id: string | null;
+          chunk_index: number;
+          similarity: number;
+          keyword_rank: number;
+          combined_score: number;
         }[];
       };
       replace_backup_codes: {
