@@ -321,32 +321,28 @@ export async function removeDLQEntry(
 
       const key = `${DLQ_KEY_PREFIX}:${jobType}`;
 
-      // Find the entry to get its exact serialized form for LREM
-      const entries = await redis.lrange(key, 0, -1);
+      // Atomically scan and remove matching entry via Lua to avoid race conditions
+      const removed = (await redis.eval(
+        `
+          local entries = redis.call('LRANGE', KEYS[1], 0, -1)
+          for _, entry in ipairs(entries) do
+            local ok, parsed = pcall(cjson.decode, entry)
+            if ok and parsed and parsed.id == ARGV[1] then
+              return redis.call('LREM', KEYS[1], 1, entry)
+            end
+          end
+          return 0
+        `,
+        [key],
+        [entryId]
+      )) as number;
 
-      for (const entryStr of entries) {
-        try {
-          const entry = parseDlqEntry(entryStr);
-          if (entry?.id === entryId) {
-            // Use atomic LREM to remove exactly this serialized entry
-            // This is thread-safe: concurrent removals won't lose other entries
-            const removed = await redis.lrem(
-              key,
-              1,
-              typeof entryStr === "string" ? entryStr : JSON.stringify(entryStr)
-            );
-            const success = removed > 0;
-            span.setAttribute("dlq.removed", success);
-            return success;
-          }
-        } catch {
-          // Skip entries that fail to parse - corrupted data
-        }
+      const success = removed > 0;
+      span.setAttribute("dlq.removed", success);
+      if (!success) {
+        span.setAttribute("dlq.entry_not_found", true);
       }
-
-      span.setAttribute("dlq.removed", false);
-      span.setAttribute("dlq.entry_not_found", true);
-      return false;
+      return success;
     }
   );
 }

@@ -211,7 +211,28 @@ export async function recordSuccess(
 
   if (openedAt) {
     // In half-open state, track successes
-    const successCount = await redis.incr(successCountKey);
+    const ttlSeconds = await redis.ttl(openedAtKey);
+    const successTtlSeconds =
+      typeof ttlSeconds === "number" && ttlSeconds > 0
+        ? ttlSeconds
+        : DEFAULT_COOLDOWN_SECONDS * 2;
+
+    const successCountRaw = await redis.eval(
+      `
+        local v = redis.call("INCR", KEYS[1])
+        redis.call("EXPIRE", KEYS[1], tonumber(ARGV[1]))
+        return v
+      `,
+      [successCountKey],
+      [successTtlSeconds]
+    );
+
+    let successCount = 0;
+    if (typeof successCountRaw === "number") {
+      successCount = successCountRaw;
+    } else if (typeof successCountRaw === "string") {
+      successCount = Number.parseInt(successCountRaw, 10);
+    }
 
     if (successCount >= successThreshold) {
       // Enough successes, close circuit

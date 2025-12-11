@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { getRedis } from "@/lib/redis";
 import { DLQ_MAX_ENTRIES, DLQ_TTL_SECONDS } from "../config";
 
 // Hoisted mocks
@@ -13,6 +14,7 @@ const mockRedisDel = vi.hoisted(() => vi.fn());
 const mockRedisRpush = vi.hoisted(() => vi.fn());
 const mockRedisLrem = vi.hoisted(() => vi.fn());
 const mockRedisLlen = vi.hoisted(() => vi.fn());
+const mockRedisEval = vi.hoisted(() => vi.fn());
 const mockSecureUuid = vi.hoisted(() => vi.fn(() => "test-uuid-12345"));
 const mockNowIso = vi.hoisted(() => vi.fn(() => "2025-12-10T12:00:00.000Z"));
 const mockRecordTelemetryEvent = vi.hoisted(() => vi.fn());
@@ -21,6 +23,7 @@ const mockRecordTelemetryEvent = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/redis", () => ({
   getRedis: vi.fn(() => ({
     del: mockRedisDel,
+    eval: mockRedisEval,
     expire: mockRedisExpire,
     llen: mockRedisLlen,
     lpush: mockRedisLpush,
@@ -66,6 +69,7 @@ vi.mock("@/lib/telemetry/span", () => ({
 
 describe("DLQ", () => {
   beforeEach(() => {
+    vi.resetModules();
     vi.clearAllMocks();
     mockRedisLpush.mockResolvedValue(1);
     mockRedisLtrim.mockResolvedValue("OK");
@@ -76,6 +80,19 @@ describe("DLQ", () => {
     mockRedisRpush.mockResolvedValue(1);
     mockRedisLrem.mockResolvedValue(1);
     mockRedisLlen.mockResolvedValue(0);
+    mockRedisEval.mockResolvedValue(1);
+    vi.mocked(getRedis).mockReturnValue({
+      del: mockRedisDel,
+      eval: mockRedisEval,
+      expire: mockRedisExpire,
+      llen: mockRedisLlen,
+      lpush: mockRedisLpush,
+      lrange: mockRedisLrange,
+      lrem: mockRedisLrem,
+      ltrim: mockRedisLtrim,
+      rpush: mockRedisRpush,
+      scan: mockRedisScan,
+    } as unknown as ReturnType<typeof getRedis>);
   });
 
   describe("pushToDLQ", () => {
@@ -245,68 +262,28 @@ describe("DLQ", () => {
   });
 
   describe("removeDLQEntry", () => {
-    const entry1 = {
-      attempts: 1,
-      error: "Error 1",
-      failedAt: "2025-12-10T12:00:00.000Z",
-      id: "entry-1",
-      jobType: "test-job",
-      payload: {},
-    };
-    const entry2 = {
-      attempts: 2,
-      error: "Error 2",
-      failedAt: "2025-12-10T12:00:00.000Z",
-      id: "entry-2",
-      jobType: "test-job",
-      payload: {},
-    };
-
-    it("removes entry by ID using atomic LREM", async () => {
-      const entry1Str = JSON.stringify(entry1);
-      mockRedisLrange.mockResolvedValue([entry1Str, JSON.stringify(entry2)]);
-      mockRedisLrem.mockResolvedValue(1);
+    it("removes entry by ID using atomic Lua eval", async () => {
+      mockRedisEval.mockResolvedValueOnce(1);
 
       const { removeDLQEntry } = await import("../dlq");
       const removed = await removeDLQEntry("test-job", "entry-1");
 
       expect(removed).toBe(true);
-      // Should use atomic LREM instead of del/rpush (H1 fix)
-      expect(mockRedisLrem).toHaveBeenCalledWith("qstash-dlq:test-job", 1, entry1Str);
-      expect(mockRedisDel).not.toHaveBeenCalled();
-      expect(mockRedisRpush).not.toHaveBeenCalled();
+      expect(mockRedisEval).toHaveBeenCalledWith(
+        expect.stringContaining("redis.call('LRANGE'"),
+        ["qstash-dlq:test-job"],
+        ["entry-1"]
+      );
     });
 
     it("returns false when entry not found", async () => {
-      mockRedisLrange.mockResolvedValue([JSON.stringify(entry1)]);
-
-      const { removeDLQEntry } = await import("../dlq");
-      const removed = await removeDLQEntry("test-job", "nonexistent");
-
-      expect(removed).toBe(false);
-      expect(mockRedisLrem).not.toHaveBeenCalled();
-    });
-
-    it("removes single entry successfully", async () => {
-      const entry1Str = JSON.stringify(entry1);
-      mockRedisLrange.mockResolvedValue([entry1Str]);
-      mockRedisLrem.mockResolvedValue(1);
-
-      const { removeDLQEntry } = await import("../dlq");
-      const removed = await removeDLQEntry("test-job", "entry-1");
-
-      expect(removed).toBe(true);
-      expect(mockRedisLrem).toHaveBeenCalledWith("qstash-dlq:test-job", 1, entry1Str);
-    });
-
-    it("returns false when LREM returns 0", async () => {
-      mockRedisLrange.mockResolvedValue([JSON.stringify(entry1)]);
-      mockRedisLrem.mockResolvedValue(0);
+      mockRedisEval.mockResolvedValueOnce(0);
 
       const { removeDLQEntry } = await import("../dlq");
       const removed = await removeDLQEntry("test-job", "entry-1");
 
       expect(removed).toBe(false);
+      expect(mockRedisEval).toHaveBeenCalled();
     });
 
     it("returns false when Redis unavailable", async () => {

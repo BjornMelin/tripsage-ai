@@ -94,4 +94,41 @@ describe("createWebhookHandler", () => {
     const recorded = spanAttributes.find(([k]) => k === "webhook.error_message");
     expect(recorded?.[1]).toBe("boom");
   });
+
+  it("reserves idempotency key even when table is filtered out", async () => {
+    const handler = createWebhookHandler({
+      handle: async () => ({}),
+      name: "test",
+      tableFilter: "other_table",
+    });
+
+    const res = await handler(new NextRequest("https://example.com/api/hooks/test"));
+    const body = (await res.json()) as Record<string, unknown>;
+
+    expect(body).toEqual({ ok: true, skipped: true });
+    expect(tryReserveKeyMock).toHaveBeenCalledWith("event-key", 300);
+    const scope = spanAttributes.find(([k]) => k === "webhook.idempotency_scope");
+    expect(scope?.[1]).toBe("global");
+    const skipped = spanAttributes.find(([k]) => k === "webhook.skipped");
+    expect(skipped?.[1]).toBe(true);
+  });
+
+  it("returns duplicate when idempotency key already exists even if table mismatches", async () => {
+    tryReserveKeyMock.mockResolvedValueOnce(false);
+
+    const handler = createWebhookHandler({
+      handle: async () => ({}),
+      name: "test",
+      tableFilter: "other_table",
+    });
+
+    const res = await handler(new NextRequest("https://example.com/api/hooks/test"));
+    const body = (await res.json()) as Record<string, unknown>;
+
+    expect(body).toEqual({ duplicate: true, ok: true });
+    expect(spanAttributes.find(([k]) => k === "webhook.duplicate")?.[1]).toBe(true);
+    // Table filter should not run after duplicate short-circuit
+    const skipped = spanAttributes.find(([k]) => k === "webhook.skipped");
+    expect(skipped).toBeUndefined();
+  });
 });
