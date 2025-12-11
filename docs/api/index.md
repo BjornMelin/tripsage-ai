@@ -225,7 +225,7 @@ Request and response schemas are defined using Zod v4 and located in:
 - **API**: `@schemas/api` (`placesSearchRequestSchema`, `postKeyBodySchema`, `loginRequestSchema`)
 - **Supabase**: `@schemas/supabase` (Database table schemas)
 
-All schemas use Zod v4 APIs exclusively. See `docs/development/standards.md` (Zod schemas) for organization details.
+All schemas use Zod v4 APIs exclusively. See `docs/development/standards/standards.md` (Zod schemas) for organization details.
 
 ## Streaming Endpoints
 
@@ -255,7 +255,7 @@ while (true) {
 }
 ```
 
-### Python
+### Python (SSE)
 
 Use `sseclient-py` library:
 

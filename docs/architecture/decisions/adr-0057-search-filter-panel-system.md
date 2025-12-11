@@ -226,6 +226,7 @@ const {
 ```
 
 **QuickFilters interim behavior (follow-up):** The QuickFilters component will be included in FilterPanel but initially render as disabled or hidden. Two paths to activation exist:
+
   1. **Store API** (deferred follow-up): Once `getMostUsedFilters` is implemented in the store, QuickFilters will call it to populate badge suggestions from usage analytics.
   2. **Props fallback** (interim): Parent component can pass `quickFilterPresets?: FilterPreset[]` prop as a temporary source until the store API is ready.
 

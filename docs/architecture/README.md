@@ -119,7 +119,7 @@ Test suite with 90%+ coverage:
 ## Related Documentation
 
 - **[Database Operations](../operations/database/)** - Database operations and Supabase configuration
-- **[Development Guide](../development/)** - Implementation details, code
+- **[Development Guide](../development/core/development-guide.md)** - Implementation details, code
   examples, testing
 - **[API Documentation](../api/)** - REST specifications and Supabase
   Realtime guide

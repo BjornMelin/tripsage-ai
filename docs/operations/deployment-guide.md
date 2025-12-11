@@ -4,14 +4,14 @@ This guide replaces the legacy FastAPI backend material. TripSage now runs as a 
 
 ## Prerequisites
 
-- Node.js 20+ and pnpm 9+
+- Node.js 24+ and pnpm 9+
 - Supabase project (Postgres + GoTrue)
-- Upstash Redis + QStash accounts
+- Upstash Redis + QStash accounts (HTTP/REST clients only; no TCP Redis clients)
 - Provider keys (OpenAI/Anthropic/xAI/OpenRouter or Vercel AI Gateway)
 
 ## Required environment variables
 
-Copy the root `.env.example` to the target environment and fill the values (see links in `docs/development/env-setup.md` for how to obtain each key):
+Copy the root `.env.example` to the target environment and fill the values (see links in `docs/development/core/env-setup.md` for how to obtain each key):
 
 - **Core URLs**: `APP_BASE_URL`, `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_APP_NAME`, `NODE_ENV`
 - **Supabase**: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_JWT_SECRET` (Dashboard → Settings → API)
@@ -24,12 +24,20 @@ Copy the root `.env.example` to the target environment and fill the values (see 
 
 Keep root `.env.test.example` aligned for CI.
 
+> Tip: keep runtime-only secrets (service role, gateway keys) server-side; never expose them via `NEXT_PUBLIC_*`.
+
 ## Supabase setup
 
 1) Create a project → copy project URL and anon key.  
 2) Generate a service role key (Project Settings → API → Service role).  
 3) Set JWT secret (same page) and paste into `SUPABASE_JWT_SECRET`.  
 4) Apply SQL extensions/policies as needed.
+5) Link and push migrations before production deploys:
+
+```bash
+make supa.link PROJECT_REF=<your-ref>   # one-time
+make supa.db.push                       # apply supabase/migrations/* to remote
+```
 
 ## Upstash setup
 
@@ -38,12 +46,15 @@ Keep root `.env.test.example` aligned for CI.
 
 ## Deployment
 
-- **Vercel**: add the env vars above in Project Settings → Environment Variables; deploy from `main`.  
-- **Self-host**: `pnpm install && pnpm build && pnpm start` with a fully populated `.env` (or `.env.production`).
+- **Canonical: Vercel (Next.js App Router)**  
+  - Default runtime: **Node.js**. Use Edge only for stateless/public paths that do not require Supabase SSR cookies.  
+  - Set Environment Variables in Project Settings for `production` and `preview`.  
+  - Build command: `pnpm build`; Output: `Next.js`.  
+- **Self-host (optional)**: `pnpm install && pnpm build && pnpm start` with a fully populated `.env` (or `.env.production`). Provide your own reverse proxy/TLS and process manager.
 
 ## Observability
 
-Telemetry is emitted via `@/lib/telemetry`. Configure OTLP export endpoints in `NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT` if collecting client traces; server spans rely on runtime exporters configured in code.
+Telemetry is emitted via `@/lib/telemetry`. Configure OTLP export endpoints in `NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT` for client traces; server spans export via OTLP/HTTP and can be scraped by Jaeger/Tempo/OTel Collector. Avoid `console.*` in server code—use `createServerLogger()` from `@/lib/telemetry/logger` and span events instead.
 
 ## Health and verification
 

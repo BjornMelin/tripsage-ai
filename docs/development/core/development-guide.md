@@ -2,7 +2,7 @@
 
 TripSage development patterns and architecture overview. This document provides architectural context and links to specialized documentation for each topic.
 
-**Import Paths**: All TypeScript imports must follow the [Import Path Standards](standards.md#import-paths). Use semantic aliases (`@schemas/*`, `@domain/*`, `@ai/*`) for architectural boundaries and `@/*` for generic src-root imports.
+**Import Paths**: All TypeScript imports must follow the [Import Path Standards](../standards/standards.md#import-paths). Use semantic aliases (`@schemas/*`, `@domain/*`, `@ai/*`) for architectural boundaries and `@/*` for generic src-root imports.
 
 ## Architecture Overview
 
@@ -64,24 +64,24 @@ src/
 
 | Guide | Purpose |
 |-------|---------|
-| [Standards](standards.md) | TypeScript, import paths, Zod schemas, Zustand stores, security |
-| [Zod Schema Guide](zod-schema-guide.md) | Zod v4 patterns, validation, AI SDK tool schemas |
-| [Database Architecture](../architecture/database.md) | Schema design, RLS, Supabase integration |
+| [Standards](../standards/standards.md) | TypeScript, import paths, Zod schemas, Zustand stores, security |
+| [Zod Schema Guide](../standards/zod-schema-guide.md) | Zod v4 patterns, validation, AI SDK tool schemas |
+| [Database Architecture](../../architecture/database.md) | Schema design, RLS, Supabase integration |
 
 ### AI & Tools
 
 | Guide | Purpose |
 |-------|---------|
-| [AI Integration](ai-integration.md) | Vercel AI Gateway, BYOK provider configuration |
-| [AI Tools](ai-tools.md) | `createAiTool` factory, guardrails, tool patterns |
-| [Activities](activities.md) | Activity search service, tools, and API usage |
+| [AI Integration](../ai/ai-integration.md) | Vercel AI Gateway, BYOK provider configuration |
+| [AI Tools](../ai/ai-tools.md) | `createAiTool` factory, guardrails, tool patterns |
+| [Activities](../frontend/activities.md) | Activity search service, tools, and API usage |
 
 ### Infrastructure
 
 | Guide | Purpose |
 |-------|---------|
-| [Observability](observability.md) | Telemetry spans, logging, operational alerts |
-| [Cache Versioned Keys](cache-versioned-keys.md) | Tag-based cache invalidation patterns |
+| [Observability](../backend/observability.md) | Telemetry spans, logging, operational alerts |
+| [Cache Versioned Keys](../backend/cache-versioned-keys.md) | Tag-based cache invalidation patterns |
 
 ### Utilities
 
@@ -94,7 +94,7 @@ src/
 
 | Guide | Purpose |
 |-------|---------|
-| [Testing](testing.md) | Strategy, patterns, templates, MSW handlers |
+| [Testing](../testing/testing.md) | Strategy, patterns, templates, MSW handlers |
 | [Troubleshooting](troubleshooting.md) | Debugging, CI/CD, workflow guidance |
 
 ## Key Patterns
@@ -117,7 +117,7 @@ export const GET = withApiGuards({
 });
 ```
 
-Rate limits are configured in `src/lib/ratelimit/routes.ts`. See [Standards](standards.md#security--validation) for security patterns.
+Rate limits are configured in `src/lib/ratelimit/routes.ts`. See [Standards](../standards/standards.md#security--validation) for security patterns.
 
 ### AI Agents
 
@@ -143,7 +143,7 @@ export async function POST(req: NextRequest): Promise<Response> {
 }
 ```
 
-See [AI Integration](ai-integration.md) for provider configuration and [AI Tools](ai-tools.md) for tool creation.
+See [AI Integration](../ai/ai-integration.md) for provider configuration and [AI Tools](../ai/ai-tools.md) for tool creation.
 
 ### Input Validation
 
@@ -195,7 +195,7 @@ const tripData = validation.data;
 | `forbiddenResponse(reason)` | Standardized 403 response |
 | `errorResponse({...})` | Custom error responses |
 
-See [Zod Schema Guide](zod-schema-guide.md) for schema patterns and [Standards](standards.md#zod-schemas-v4) for conventions.
+See [Zod Schema Guide](../standards/zod-schema-guide.md) for schema patterns and [Standards](../standards/standards.md#zod-schemas-v4) for conventions.
 
 ## Development Workflow
 

@@ -1,191 +1,89 @@
 # Administrator Guide
 
-Manage system configuration, monitoring, and TripSage deployment operations.
+Admin surfaces are implemented in Next.js route handlers and rely on Supabase SSR sessions. Admin identity is asserted via `app_metadata.is_admin === true` on the Supabase user object (`ensureAdmin` helper).
 
-## Admin Access
+## Access requirements
 
-Admin functionality requires JWT tokens with admin privileges (`metadata.is_admin: true` or admin role). Admin endpoints are protected with `AdminPrincipalDep`.
+- Valid Supabase session cookie (SSR) with `app_metadata.is_admin: true`.
+- Environment variables populated for Supabase + Upstash (see `docs/operations/deployment-guide.md`).
+- Admin routes are telemetry-instrumented; no server `console.*`.
 
-### Admin-Only Endpoints
+## Admin endpoints
 
-- `/api/config/*`: Agent configuration management
-- `/api/dashboard/*`: System monitoring and analytics
+### Agent configuration (versioned)
 
-## System Configuration
+All endpoints enforce `ensureAdmin(user)` and run on the Node runtime.
 
-### Agent Configuration
-
-Admin users can manage AI agent configurations through `/api/config` endpoints:
-
-**Available Agents:**
-
-- Budget Agent
-- Destination Research Agent
-- Itinerary Agent
-
-**Configuration Management:**
-
-- View current agent configurations
-- Update model settings and parameters
-- Manage configuration versions
-- Set environment-specific overrides
-
-```bash
-# List available agent types (admin only)
-GET /api/config/agents
-
-# Get configuration for specific agent (admin only)
-GET /api/config/agents/{agent_type}
-
-# Update agent configuration (admin only)
-PUT /api/config/agents/{agent_type}
+```http
+GET  /api/config/agents                 # list agent types + scopes
+GET  /api/config/agents/:agentType      # fetch active config (supports ?scope=global|env)
+PUT  /api/config/agents/:agentType      # update config (Zod-validated)
+GET  /api/config/agents/:agentType/versions
+POST /api/config/agents/:agentType/rollback/:versionId
 ```
 
-## Analytics & Monitoring
+- Scope parsing uses `scopeSchema` (`global` default).
+- Writes emit OpenTelemetry spans (`agent_config.load_existing`, `agent_config.update_failed`, `agent_config.updated`) and are rate limited via `withApiGuards`.
+- Rollback keeps one canonical history; no parallel config tracks.
 
-Admin users can access comprehensive system analytics through `/api/dashboard` endpoints:
+### Dashboard metrics
 
-### System Overview
-
-```bash
-# Get system status and metrics
-GET /api/dashboard/overview
-
-# Get real-time metrics
-GET /api/dashboard/metrics/realtime
-
-# Get usage statistics
-GET /api/dashboard/usage
+```http
+GET /api/dashboard?window=24h|7d|30d|all
 ```
 
-**Available Metrics:**
+- Auth required; rate limited as `dashboard:metrics`.
+- Returns cached aggregates (Upstash Redis cache-aside) with private cache headers.
 
-- System status and health indicators
-- Real-time performance metrics (response times, throughput)
-- Usage statistics (requests, users, API calls)
-- Rate limiting status and quota information
-- Service health status for all components
+## Operational playbook
 
-### Alert Management
+> **Supabase SSR Cookies**: Authenticated requests require two session cookies from the Supabase SSR setup: `sb-access-token` (access token) and `sb-refresh-token` (refresh token). Pass both via `-b` flags in curl requests.
 
-```bash
-# Get active alerts
-GET /api/dashboard/alerts
+1) **Verify admin session**
 
-# Get alert history
-GET /api/dashboard/alerts/history
-```
+    ```bash
+    curl -I \
+      -b "sb-access-token=<access-token>" \
+      -b "sb-refresh-token=<refresh-token>" \
+      https://<app>/api/config/agents
+    # expect 200 for admins, 403 otherwise
+    ```
 
-**Alert Types:**
+2) **Update agent config**
 
-- Rate limit violations
-- System performance degradation
-- Service availability issues
-- Security events
+    ```bash
+    curl -X PUT https://<app>/api/config/agents/budget \
+      -b "sb-access-token=<access-token>" \
+      -b "sb-refresh-token=<refresh-token>" \
+      -H "Content-Type: application/json" \
+      -d '{"modelId":"gpt-4o-mini","temperature":0.3,"scope":"global"}'
+    ```
 
-### User Activity Monitoring
+3) **Rollback**
 
-```bash
-# Get user activity data
-GET /api/dashboard/users/activity
+    ```bash
+    curl -X POST https://<app>/api/config/agents/budget/rollback/<versionId> \
+      -b "sb-access-token=<access-token>" \
+      -b "sb-refresh-token=<refresh-token>"
+    ```
 
-# Get top consumers and usage patterns
-GET /api/dashboard/users/top-consumers
-```
+4) **Metrics sanity check**
 
-## Security & Audit
+    ```bash
+    curl -b "sb-access-token=<access-token>" \
+      -b "sb-refresh-token=<refresh-token>" \
+      "https://<app>/api/dashboard?window=24h"
+    ```
 
-### Authentication Auditing
+## Security & auditing
 
-All authentication events are logged via the audit logging service:
-
-- JWT token validation attempts
-- Authentication successes and failures
-- Security events and violations
-- Admin access patterns
-
-### Access Control
-
-Admin access is controlled through:
-
-- JWT metadata (`is_admin: true`)
-- Role-based permissions (admin, superadmin, site_admin)
-- Endpoint-level authorization checks
-
-## Health Monitoring
-
-### Health Endpoints
-
-```bash
-# Basic health check
-GET /health
-
-# Comprehensive health check
-GET /health?full=true
-
-# Database health
-GET /health/database
-
-# Cache health
-GET /health/cache
-```
-
-**Health Checks Include:**
-
-- Database connectivity and performance
-- Redis/Upstash cache availability
-- External API service status
-- System resource utilization
-
-## Maintenance Operations
-
-### Database Operations
-
-- Connection monitoring and recovery
-- Performance optimization checks
-- Query execution monitoring
-- Backup verification procedures
-
-### Cache Management
-
-- Redis connection health monitoring
-- Memory usage and eviction tracking
-- Performance optimization
-- Connection pool management
-
-### System Updates
-
-1. Review configuration changes through admin endpoints
-2. Test agent configuration updates
-3. Monitor system health post-deployment
-4. Rollback procedures available through configuration versioning
+- Admin auth comes solely from Supabase `app_metadata.is_admin`; there are no parallel RBAC tables.
+- Secrets and BYOK values remain in Supabase Vault; admin routes never return raw keys.
+- All admin routes emit OTEL spans; failures attach `status`, `reason`, and request ID. Scrape via your OTLP/Jaeger pipeline.
 
 ## Troubleshooting
 
-### Common Issues
-
-**Authentication Problems:**
-
-- Verify JWT token validity and admin claims
-- Check audit logs for authentication failures
-- Validate admin role configuration
-
-**Performance Issues:**
-
-- Check dashboard metrics for bottlenecks
-- Monitor database and cache performance
-- Review rate limiting status
-
-**Configuration Problems:**
-
-- Use admin endpoints to verify agent configurations
-- Check system health for service dependencies
-- Review dashboard alerts for system issues
-
-### Diagnostic Procedures
-
-1. Check system health endpoints
-2. Review dashboard metrics and alerts
-3. Examine audit logs for security events
-4. Verify agent configuration status
-5. Monitor rate limiting and usage patterns
+- **403 on admin routes**: confirm session cookie present and `app_metadata.is_admin` true in Supabase dashboard.
+- **429**: rate limit buckets (`dashboard:metrics`, `config:agents:read`, `config:agents:update`, `config:agents:rollback`, `config:agents:versions`) are powered by Upstash; verify `UPSTASH_*` envs.
+- **Config drift**: use `/api/config/agents/:agentType/versions` to confirm latest version; rollback if necessary.
+- **Missing telemetry**: ensure OTLP exporter envs (`NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT` for client, server exporter config in code) are set in the environment.

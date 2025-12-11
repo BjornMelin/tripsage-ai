@@ -1,6 +1,6 @@
 # Authentication Guide
 
-TripSage uses Supabase for authentication with OAuth support for Google and GitHub.
+TripSage uses Supabase Auth with OAuth support for Google and GitHub. Flows terminate at the Supabase callback and return to the Next.js app via Supabase SSR helpers.
 
 ## Prerequisites
 
@@ -26,6 +26,7 @@ TripSage supports OAuth authentication through Supabase for Google and GitHub pr
    - Add client credentials from provider consoles
    - Set redirect URL to: `https://[project-ref].supabase.co/auth/v1/callback`
    - Configure required scopes (email, profile)
+   - Set **Site URL** in Supabase Auth → Settings to match `APP_BASE_URL` (e.g., `https://your-domain.com`)
 
 ### Provider-Specific Setup
 
@@ -44,24 +45,22 @@ TripSage supports OAuth authentication through Supabase for Google and GitHub pr
 
 ## Environment Configuration
 
-### Required Variables
+Set these in `.env` (local) and your deployment platform:
 
 ```bash
-# Supabase Configuration
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-
-# Production URLs
+APP_BASE_URL=https://your-domain.com          # also set as Supabase Auth "Site URL"
 NEXT_PUBLIC_APP_URL=https://your-domain.com
-NEXTAUTH_URL=https://your-domain.com
+NEXT_PUBLIC_SITE_URL=https://your-domain.com
 ```
 
-### Development Setup
+For local testing:
 
 ```bash
-# Development URLs
+APP_BASE_URL=http://localhost:3000
 NEXT_PUBLIC_APP_URL=http://localhost:3000
-NEXTAUTH_URL=http://localhost:3000
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
 ## Testing
@@ -102,6 +101,7 @@ NEXTAUTH_URL=http://localhost:3000
 **Invalid redirect URI:**
 
 - Ensure redirect URI matches: `https://[project-ref].supabase.co/auth/v1/callback`
+- Set Site URL in Supabase Auth settings to your app domain
 - Use HTTPS in production
 
 **Authentication errors:**

@@ -28,7 +28,7 @@ AI agents with rich AI SDK v6 tools and all-in-one travel services.
 ### AI & Intelligence
 
 - **Multi-Provider AI Routing**: Vercel AI Gateway with automatic fallback across OpenAI, Anthropic, xAI, and OpenRouter—BYOK support with encrypted key storage
-- **Agentic Tool Orchestration**: 15+ production-ready tools via AI SDK v6 with Zod validation—flights (Duffel), accommodations (MCP), weather, maps, planning, and memory
+- **Agentic Tool Orchestration**: 15+ production-ready tools via AI SDK v6 with Zod validation—flights (Duffel), accommodations, weather, maps, planning, and memory
 - **Hybrid RAG Pipeline**: Vector similarity search with Supabase pgvector + keyword fusion, Cohere Rerank v3.5 for optimal retrieval accuracy
 - **Structured Outputs**: Schema-first LLM responses with `generateObject` for deterministic parsing and type-safe validation
 - **Streaming Intelligence**: Real-time SSE streaming with interleaved tool calls and generative UI components
@@ -229,7 +229,7 @@ channel.subscribe()
 
 ## 🤝 Contributing
 
-We welcome contributions! See the [Development Guide](docs/development/development-guide.md) for the full workflow, code standards, and testing details.
+We welcome contributions! See the [Development Guide](docs/development/core/development-guide.md) for the full workflow, code standards, and testing details.
 
 ---
 
