@@ -7,6 +7,7 @@
 
 import "server-only";
 
+import { SpanStatusCode } from "@opentelemetry/api";
 import { after } from "next/server";
 import { sendCollaboratorNotifications } from "@/lib/notifications/collaborators";
 import { tryEnqueueJob } from "@/lib/qstash/client";
@@ -85,12 +86,24 @@ export const POST = createWebhookHandler({
               route: "/api/hooks/trips",
             },
           },
-          async () => {
-            await sendCollaboratorNotifications(payload, eventKey);
+          async (fallbackSpan) => {
+            try {
+              await sendCollaboratorNotifications(payload, eventKey);
+            } catch (err) {
+              fallbackSpan.recordException(err as Error);
+              fallbackSpan.setStatus({
+                code: SpanStatusCode.ERROR,
+                message: err instanceof Error ? err.message : "unknown_error",
+              });
+              logger.error("fallback_failed", {
+                error: err instanceof Error ? err.message : "unknown_error",
+                eventKey,
+              });
+            }
           }
         );
       } catch (err) {
-        // Swallow to avoid rethrowing inside after(); telemetry span captures the error
+        // Swallow to avoid rethrowing inside after(); span already recorded the error
         logger.error("fallback_failed", {
           error: err instanceof Error ? err.message : "unknown_error",
           eventKey,
