@@ -231,8 +231,8 @@ export async function enqueueJob(
         url,
       });
 
-      // Handle response - messageId exists on PublishToUrlResponse
-      const messageId = "messageId" in response ? response.messageId : "unknown";
+      // Handle response - messageId is present on PublishToUrlResponse
+      const messageId = response.messageId;
       span.setAttribute("qstash.message_id", messageId);
 
       return { messageId };
