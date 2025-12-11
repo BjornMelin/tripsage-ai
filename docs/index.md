@@ -97,8 +97,7 @@ curl http://localhost:3000/api/dashboard
 
 ### For Operators
 
-- **Containerized Deployment**: Docker-based deployment with multi-cloud
-  support
+- **Vercel Deployments**: Next.js 16 on Node runtime (Edge opt-in) with managed previews and rollbacks
 - **Monitoring**: Built-in health checks and observability with
   OpenTelemetry
 - **Security**: Row Level Security, encryption, and comprehensive audit

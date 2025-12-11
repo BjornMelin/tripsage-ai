@@ -11,7 +11,7 @@
 ### Specialized Guides
 
 - **[Admin Guide](./admin-guide.md)** - Agent configuration and system monitoring
-- **[Database Operations](./database/)** - Supabase setup and configuration
+- **[Runbooks](./runbooks/)** - Database, storage, and operator playbooks
 - **[OAuth Provider Setup](./oauth-provider-setup-guide.md)** - OAuth configuration
 
 ### Operations Bulletins

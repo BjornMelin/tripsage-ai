@@ -264,13 +264,17 @@ Restart Codex. If the server requires cached browsers, run `npx playwright insta
 > Usage tip: script CI jobs that start Playwright MCP in headless mode and let agents request targeted smoke tests before merges.
 
 ### 4.4 Apify MCP (Structured Data Extraction)
+
 - Purpose: run Apify Actors for scraping/data extraction; complements browser automation.
 
 #### Remote (OAuth preferred)
+
 ```json
 { "mcpServers": { "apify": { "url": "https://mcp.apify.com" } } }
 ```
+
 Or with token header:
+
 ```json
 { "mcpServers": { "apify": {
   "url": "https://mcp.apify.com",
@@ -279,6 +283,7 @@ Or with token header:
 ```
 
 #### Local (stdio)
+
 ```bash
 export APIFY_TOKEN="<your-apify-token>"
 npx -y @apify/actors-mcp-server

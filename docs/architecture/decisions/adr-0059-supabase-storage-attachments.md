@@ -83,17 +83,20 @@ chat/550e8400-e29b-41d4-a716-446655440000/a1b2c3d4-vacation-photo.jpg
 Signed URLs expire after 1 hour. For long-lived references (pages open beyond the TTL), implement the following:
 
 **Client-side detection**:
+
 - Handle 403/410 responses when accessing expired signed URLs
 - Detect via HTTP status codes or explicit error response from storage
 - Example: `if (response.status === 403 || response.status === 410) { /* URL expired */ }`
 
 **Server-side refresh endpoint**:
+
 - Implement `GET /api/attachments/{id}/refresh-url` to regenerate signed URLs on demand
 - Validates user ownership before issuing new URL
 - Returns new signed URL with fresh 1-hour TTL
 - Example response: `{ "url": "https://...", "expiresAt": "2025-12-10T23:00:00Z" }`
 
 **Error handling for batch operations**:
+
 - When listing files with URLs, batch regenerate any expired URLs via `createSignedUrls()`
 - Validate paths belong to authenticated user before signing
 - Stale URLs are acceptable; refresh on access failure
