@@ -1,3 +1,20 @@
+## [1.11.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.10.0...v1.11.0) (2025-12-11)
+
+### Features
+
+* **circuit-breaker:** add circuit breaker for external service resilience ([57a5fe0](https://github.com/BjornMelin/tripsage-ai/commit/57a5fe0550c14aa52ce2bc8db995bda1160a5d34))
+* **env:** add format validation for API keys and secrets ([125a9c4](https://github.com/BjornMelin/tripsage-ai/commit/125a9c44ae62e11e833f459405f5f4a37b253e80))
+* **idempotency:** add configurable fail mode for Redis unavailability ([886508e](https://github.com/BjornMelin/tripsage-ai/commit/886508e8121f1569f1f02dc357387b49a7ddfe75))
+* **qstash:** add centralized client with DLQ and retry configuration ([d0ac199](https://github.com/BjornMelin/tripsage-ai/commit/d0ac1999f1194aad84c6ec7ea6366480ab02b9b9))
+* **qstash:** enhance retry/DLQ infrastructure and error classification ([2268884](https://github.com/BjornMelin/tripsage-ai/commit/2268884d7f7cb33cd86a82e8c646f6aa53837c18))
+* **webhooks:** add handler abstraction with rate limiting and cache registry ([6067bf3](https://github.com/BjornMelin/tripsage-ai/commit/6067bf39280758f8eed7bce60804b47bbbaf8cbc))
+
+### Bug Fixes
+
+* **trips-webhook:** record fallback exceptions on span ([d686403](https://github.com/BjornMelin/tripsage-ai/commit/d686403789b26e8d3d39d0979209828d508cc29f))
+* **webhooks:** harden dlq redaction and rate-limit fallback ([74c4701](https://github.com/BjornMelin/tripsage-ai/commit/74c470107a3ace205d1099eb3e148adab7c66c1e))
+* **webhooks:** harden idempotency and qstash handling ([a9e4839](https://github.com/BjornMelin/tripsage-ai/commit/a9e4839e3e0f003edf10e097c48034d6d8910d73))
+
 ## [1.10.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.9.0...v1.10.0) (2025-12-10)
 
 ### Features
