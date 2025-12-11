@@ -137,7 +137,7 @@ const nextConfig: NextConfig = {
   },
 
   // Rewrites for BotID to prevent ad-blocker interference
-  // @see https://vercel.com/docs/botid/get-started#configure-redirects
+  // @see https://vercel.com/docs/botid/get-started#configure-rewrites
   rewrites() {
     return [
       {

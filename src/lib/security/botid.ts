@@ -14,6 +14,7 @@
 import "server-only";
 
 import { checkBotId } from "botid/server";
+import { emitOperationalAlert } from "@/lib/telemetry/alerts";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
 const botIdLogger = createServerLogger("security.botid");
@@ -144,11 +145,22 @@ export async function assertHumanOrThrow(
 ): Promise<void> {
   const { level = "basic", allowVerifiedAiAssistants = true } = options;
 
-  const result = await checkBotId({
-    advancedOptions: {
-      checkLevel: level === "deep" ? "deepAnalysis" : "basic",
-    },
-  });
+  const result = await (async () => {
+    try {
+      return await checkBotId({
+        advancedOptions: {
+          checkLevel: level === "deep" ? "deepAnalysis" : "basic",
+        },
+      });
+    } catch (error) {
+      botIdLogger.error("botid_service_error", { error, routeName });
+      emitOperationalAlert("botid.service_failure", {
+        attributes: { routeName },
+        severity: "error",
+      });
+      throw error;
+    }
+  })();
 
   // Normalize the result to our interface (handle union type)
   const verification: BotIdVerification = {
@@ -158,8 +170,7 @@ export async function assertHumanOrThrow(
     isVerifiedBot: result.isVerifiedBot,
     verifiedBotCategory:
       "verifiedBotCategory" in result ? result.verifiedBotCategory : undefined,
-    verifiedBotName:
-      "verifiedBotName" in result ? result.verifiedBotName : undefined,
+    verifiedBotName: "verifiedBotName" in result ? result.verifiedBotName : undefined,
   };
 
   if (verification.isBot) {

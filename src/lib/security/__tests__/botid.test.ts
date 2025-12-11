@@ -154,9 +154,7 @@ describe("assertHumanOrThrow", () => {
       createMockBotIdResponse({ isBot: true, isHuman: false })
     );
 
-    await expect(assertHumanOrThrow("chat.stream")).rejects.toThrow(
-      BotDetectedError
-    );
+    await expect(assertHumanOrThrow("chat.stream")).rejects.toThrow(BotDetectedError);
   });
 
   it("throws with correct route name in error", async () => {
@@ -199,9 +197,7 @@ describe("assertHumanOrThrow", () => {
       })
     );
 
-    await expect(assertHumanOrThrow("chat.stream")).rejects.toThrow(
-      BotDetectedError
-    );
+    await expect(assertHumanOrThrow("chat.stream")).rejects.toThrow(BotDetectedError);
   });
 
   it("blocks AI assistants when allowVerifiedAiAssistants is false", async () => {
@@ -218,6 +214,19 @@ describe("assertHumanOrThrow", () => {
     await expect(
       assertHumanOrThrow("chat.stream", { allowVerifiedAiAssistants: false })
     ).rejects.toThrow(BotDetectedError);
+  });
+
+  it("propagates errors from checkBotId", async () => {
+    const networkError = new Error("Network failure");
+    mockCheckBotId.mockRejectedValue(networkError);
+
+    await expect(assertHumanOrThrow("chat.stream")).rejects.toThrow(networkError);
+  });
+
+  it("allows requests when BotID is bypassed", async () => {
+    mockCheckBotId.mockResolvedValue(createMockBotIdResponse({ bypassed: true }));
+
+    await expect(assertHumanOrThrow("chat.stream")).resolves.toBeUndefined();
   });
 
   it("passes deep level option to checkBotId", async () => {
