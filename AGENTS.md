@@ -55,7 +55,7 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 - **Library-first:** Prefer maintained libraries covering ≥80 % of needs with ≤30 % custom code.
 - **KISS / DRY / YAGNI:** Keep solutions straightforward; remove duplication via small focused helpers; implement only what's needed now—no speculative APIs or feature flags (unless requested).
 - **Final-only:** Remove superseded code/tests immediately after new behavior lands; no partial migrations.
-- **Telemetry/logging:** Use `@/lib/telemetry/{span,logger}` helpers: `withTelemetrySpan()`, `withTelemetrySpanSync()`, `recordTelemetryEvent()`, `createServerLogger()`, `emitOperationalAlert()`. Direct `@opentelemetry/api` only in `lib/telemetry/*` and `lib/supabase/factory.ts`. Client: `@/lib/telemetry/client`. See `docs/development/observability.md`.
+- **Telemetry/logging:** Use `@/lib/telemetry/{span,logger}` helpers: `withTelemetrySpan()`, `withTelemetrySpanSync()`, `recordTelemetryEvent()`, `createServerLogger()`, `emitOperationalAlert()`. Direct `@opentelemetry/api` only in `lib/telemetry/*` and `lib/supabase/factory.ts`. Client: `@/lib/telemetry/client`. See `docs/development/backend/observability.md`.
   - **Server code:** No `console.*` except test files and telemetry infra.
   - **Client-only UI (`"use client"` modules):** Dev-only `console.*` is allowed when guarded by `process.env.NODE_ENV === 'development'`. Bundlers eliminate these calls in prod builds.
   - **Zustand stores:** Use `createStoreLogger` from `@/lib/telemetry/store-logger` for error tracking via OTEL spans.
@@ -83,7 +83,7 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 - **Imports:** See 4.2 path aliases; no barrel files.
 - **Logging:** `createStoreLogger` for errors; see 4.1 for telemetry rules.
 - **Selectors:** Export named selectors: `export const useSearchType = () => useStore(s => s.type);`
-- **Details:** See `docs/development/standards.md#zustand-stores` and `docs/development/zustand-computed-middleware.md`.
+- **Details:** See `docs/development/standards/standards.md#zustand-stores` and `docs/development/frontend/zustand-computed-middleware.md`.
 
 ### 4.4 Zod v4 schemas
 
@@ -102,7 +102,7 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 - **Single file per domain:** Core business + tool input schemas together (e.g., `calendar.ts`, `memory.ts`).
 - **Import path:** `@schemas/domain-name`; see 4.2 for aliases.
 - **Section markers:** `// ===== CORE SCHEMAS =====`, `// ===== FORM SCHEMAS =====`, `// ===== TOOL INPUT SCHEMAS =====`.
-- **Details:** See `docs/development/zod-schema-guide.md`.
+- **Details:** See `docs/development/standards/zod-schema-guide.md`.
 
 ---
 
@@ -157,7 +157,7 @@ PR reviewers: enforce in `src/app/api/**`; approve exceptions with justification
 - **Server actions:** `"use server"` + `"server-only"` import; Zod validation; `createServerSupabase()`. Location: `src/app/(route)/actions.ts` or `src/lib/*/actions.ts`.
 - **Returns:** Serializable data or `redirect()`. Revalidate via `revalidatePath()`/`revalidateTag()`.
 - **Integration:** `useActionState` for progressive enhancement; `form.handleSubmitSafe()` with telemetry (see 4.1).
-- **Details:** See `docs/development/forms.md` and `docs/development/server-actions.md`.
+- **Details:** See `docs/development/frontend/forms.md` and `docs/development/backend/server-actions.md`.
 
 ---
 
@@ -173,7 +173,7 @@ PR reviewers: enforce in `src/app/api/**`; approve exceptions with justification
 - **Timers:** No global `vi.useFakeTimers()`; use `withFakeTimers` wrapper from `@/test/utils/with-fake-timers`.
 - **AI SDK tests:** Use `MockLanguageModelV3`, `createMockModelWithTracking` from `@/test/ai-sdk/*`.
 - **Coverage:** ≥85% overall; meet `vitest.config.ts` thresholds.
-- **Details:** See `docs/development/testing.md`.
+- **Details:** See `docs/development/testing/testing.md`.
 
 ### 6.2 Quality gates (mandatory)
 
