@@ -61,7 +61,7 @@ describe("idempotency redis helpers", () => {
       expect(warnRedisUnavailableMock).toHaveBeenCalled();
     });
 
-    it("returns true and logs when redis unavailable with failOpen=false (fail-closed)", async () => {
+    it("returns true (treat as duplicate/already processed) and logs when redis unavailable with failOpen=false (fail-closed)", async () => {
       redisClient = undefined;
 
       const { hasKey } = await import("../redis");
@@ -142,16 +142,6 @@ describe("idempotency redis helpers", () => {
     });
 
     it("returns false when redis unavailable and logs (failOpen default)", async () => {
-      redisClient = undefined;
-      const { releaseKey } = await import("../redis");
-
-      const result = await releaseKey("abc");
-
-      expect(result).toBe(false);
-      expect(warnRedisUnavailableMock).toHaveBeenCalled();
-    });
-
-    it("returns false when redis unavailable during release", async () => {
       redisClient = undefined;
       const { releaseKey } = await import("../redis");
 

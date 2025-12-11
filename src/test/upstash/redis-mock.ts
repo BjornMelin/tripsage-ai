@@ -156,7 +156,10 @@ export class RedisMockClient {
   lpush(key: string, ...values: string[]): Promise<number> {
     const now = Date.now();
     const list = this.getList(key, now);
-    list.unshift(...values);
+    // Redis LPUSH inserts each value from left to right so the last argument ends up at the head.
+    for (let i = 0; i < values.length; i += 1) {
+      list.unshift(values[i]);
+    }
     const entry = this.store.get(key);
     this.setList(key, list, entry?.expiresAt);
     return Promise.resolve(list.length);
