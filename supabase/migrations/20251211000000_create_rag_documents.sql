@@ -77,6 +77,13 @@ CREATE POLICY "Allow authenticated users to read RAG documents"
   TO authenticated
   USING (true);
 
+-- Anonymous users can read documents for public search
+CREATE POLICY "Allow anonymous users to read RAG documents"
+  ON public.rag_documents
+  FOR SELECT
+  TO anon
+  USING (true);
+
 -- Service role has full access for indexing
 CREATE POLICY "Allow service role to manage RAG documents"
   ON public.rag_documents
