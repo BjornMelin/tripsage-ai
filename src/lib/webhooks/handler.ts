@@ -262,8 +262,15 @@ export function createWebhookHandler<T extends WebhookHandlerResult>(
         }
 
         // 2. Body size validation
-        const contentLength = req.headers.get("content-length");
-        if (contentLength && parseInt(contentLength, 10) > maxBodySize) {
+        const contentLengthHeader = req.headers.get("content-length");
+        const parsedContentLength = contentLengthHeader?.trim()
+          ? Number.parseInt(contentLengthHeader.trim(), 10)
+          : Number.NaN;
+        const contentLength =
+          Number.isFinite(parsedContentLength) && parsedContentLength > 0
+            ? parsedContentLength
+            : 0;
+        if (contentLength > maxBodySize) {
           span.setAttribute("webhook.payload_too_large", true);
           return NextResponse.json({ error: "payload_too_large" }, { status: 413 });
         }

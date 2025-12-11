@@ -105,9 +105,7 @@ export function isRegisteredTable(table: string): table is CacheTable {
  * @returns Array of all registered table names
  */
 export function getRegisteredTables(): CacheTable[] {
-  return Object.keys(CACHE_TAG_REGISTRY).filter((table): table is CacheTable =>
-    isRegisteredTable(table)
-  );
+  return Object.keys(CACHE_TAG_REGISTRY) as CacheTable[];
 }
 
 /**

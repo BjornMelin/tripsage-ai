@@ -146,10 +146,12 @@ export async function releaseKey(
   key: string,
   options?: { failOpen?: boolean }
 ): Promise<boolean> {
+  const failOpen = options?.failOpen ?? DEFAULT_FAIL_OPEN;
+
   const redis = getRedis();
   if (!redis) {
     warnRedisUnavailable(REDIS_FEATURE);
-    if (options?.failOpen === false) {
+    if (failOpen === false) {
       throw new IdempotencyServiceUnavailableError();
     }
     return false;
