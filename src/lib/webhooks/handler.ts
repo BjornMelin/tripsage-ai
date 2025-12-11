@@ -323,20 +323,18 @@ export function createWebhookHandler<T extends WebhookHandlerResult>(
             span.setAttribute("webhook.error_message", error.message);
           }
 
+          const safeMessageMap = new Map<ErrorCode, string>([
+            ["VALIDATION_ERROR", "invalid_request"],
+            ["NOT_FOUND", "not_found"],
+            ["CONFLICT", "conflict"],
+            ["SERVICE_UNAVAILABLE", "service_unavailable"],
+            ["TIMEOUT", "timeout"],
+          ]);
+
           const safeMessage =
             status >= 500
               ? "internal_error"
-              : code === "VALIDATION_ERROR"
-                ? "invalid_request"
-                : code === "NOT_FOUND"
-                  ? "not_found"
-                  : code === "CONFLICT"
-                    ? "conflict"
-                    : code === "SERVICE_UNAVAILABLE"
-                      ? "service_unavailable"
-                      : code === "TIMEOUT"
-                        ? "timeout"
-                        : "internal_error";
+              : (safeMessageMap.get(code) ?? "internal_error");
 
           return NextResponse.json({ code, error: safeMessage }, { status });
         }
