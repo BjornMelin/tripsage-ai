@@ -1,6 +1,9 @@
-# Flatten Next.js App Structure - Functional & Technical Spec
+# SPEC-0033: Flatten Next.js App Structure
 
-**Status**: IMPLEMENTED (2025-12-08)
+**Version**: 1.0.0
+**Status**: Implemented
+**Date**: 2025-12-08
+**Implementation Date**: 2025-12-08
 
 **Note**: This spec was successfully implemented. The historical path references (`frontend/`) throughout this document are preserved as-is to document the migration context. Current code uses root paths (`src/`, `package.json`, etc.) as described in the target state.
 
