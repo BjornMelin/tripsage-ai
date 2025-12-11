@@ -90,7 +90,8 @@ Signed URLs expire after 1 hour. For long-lived references (pages open beyond th
 
 **Server-side refresh endpoint**:
 
-- Implement `GET /api/attachments/{id}/refresh-url` to regenerate signed URLs on demand
+- Implement `GET /api/attachments/{attachmentId}/refresh-url` to regenerate signed URLs on demand
+  - `attachmentId` refers to the `id` column from the `file_attachments` table (not the storage UUID or any other identifier)
 - Validates user ownership before issuing new URL
 - Returns new signed URL with fresh 1-hour TTL
 - Example response: `{ "url": "https://...", "expiresAt": "2025-12-10T23:00:00Z" }`
