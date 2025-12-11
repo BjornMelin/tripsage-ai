@@ -35,6 +35,7 @@ const RequestSchema = agentSchemas.routerRequestSchema;
  */
 export const POST = withApiGuards({
   auth: true,
+  botId: true,
   rateLimit: "agents:router",
   telemetry: "agent.router",
 })(async (req: NextRequest, { user }) => {

@@ -22,6 +22,7 @@ import {
 import { fireAndForgetMetric } from "@/lib/metrics/api-metrics";
 import { ROUTE_RATE_LIMITS, type RouteRateLimitKey } from "@/lib/ratelimit/routes";
 import { getRedis } from "@/lib/redis";
+import { assertHumanOrThrow, isBotDetectedError } from "@/lib/security/botid";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createServerLogger } from "@/lib/telemetry/logger";
@@ -34,6 +35,17 @@ const apiFactoryLogger = createServerLogger("api.factory");
 export interface GuardsConfig<T extends z.ZodType = z.ZodType> {
   /** Whether authentication is required. Defaults to false. */
   auth?: boolean;
+  /**
+   * Enable BotID protection to block automated bots.
+   * - true: Basic mode (free) - validates browser sessions
+   * - "deep": Deep Analysis mode ($1/1000 calls) - Kasada-powered analysis
+   *
+   * Verified AI assistants (ChatGPT, Perplexity, Claude, etc.) are allowed
+   * through but still subject to rate limiting.
+   *
+   * @see https://vercel.com/docs/botid
+   */
+  botId?: boolean | "deep";
   /** Rate limit key from ROUTE_RATE_LIMITS registry. */
   rateLimit?: RouteRateLimitKey;
   /** Telemetry span name for observability. */
@@ -243,7 +255,7 @@ export function withApiGuards<SchemaType extends z.ZodType>(
 ): (
   handler: RouteHandler<SchemaType extends z.ZodType ? z.infer<SchemaType> : unknown>
 ) => (req: NextRequest, routeContext: RouteParamsContext) => Promise<Response> {
-  const { auth = false, rateLimit, telemetry, schema } = config;
+  const { auth = false, botId, rateLimit, telemetry, schema } = config;
 
   // Validate rate limit key exists if provided
   if (rateLimit && !ROUTE_RATE_LIMITS[rateLimit]) {
@@ -268,6 +280,26 @@ export function withApiGuards<SchemaType extends z.ZodType>(
           return unauthorizedResponse();
         }
         user = authResult.user as User | null;
+      }
+
+      // Handle BotID protection if configured (after auth, before rate limiting)
+      // Bot traffic shouldn't count against rate limits
+      if (botId) {
+        try {
+          await assertHumanOrThrow(telemetry ?? req.nextUrl.pathname, {
+            allowVerifiedAiAssistants: true, // Allow ChatGPT, Perplexity, Claude, etc.
+            level: botId === "deep" ? "deep" : "basic",
+          });
+        } catch (error) {
+          if (isBotDetectedError(error)) {
+            return errorResponse({
+              error: "bot_detected",
+              reason: "Automated access is not allowed.",
+              status: 403,
+            });
+          }
+          throw error;
+        }
       }
 
       // Handle rate limiting if configured
