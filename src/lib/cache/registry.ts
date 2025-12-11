@@ -42,9 +42,13 @@ export const CACHE_TAG_REGISTRY = {
   search_destinations: ["search", "search_cache"],
   search_flights: ["search", "search_cache"],
   search_hotels: ["search", "search_cache"],
+
   // Trip-related tables
   trip_collaborators: ["trips", "users", "search"],
   trips: ["trip", "user_trips", "trip_search", "search", "search_cache"],
+
+  // User-related tables
+  users: ["users", "user_settings", "gateway_user_keys"],
 } as const satisfies Record<string, readonly string[]>;
 
 /**
