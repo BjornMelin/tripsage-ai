@@ -98,6 +98,7 @@
     "@vercel/otel": "^2.1.0",
     "ai": "6.0.0-beta.138",
     "amadeus": "^11.0.0",
+    "botid": "^1.5.10",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
