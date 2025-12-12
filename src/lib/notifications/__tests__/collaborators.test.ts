@@ -12,20 +12,33 @@ const envValues = vi.hoisted(() => ({
   SUPABASE_SERVICE_ROLE_KEY: "service-role",
 }));
 
-const mockAuthAdminGetUserById = vi.hoisted(() =>
-  vi.fn().mockResolvedValue({
+function createDefaultAuthAdminGetUserByIdResult() {
+  return {
     data: { user: { email: "user@example.com" } },
     error: null,
-  })
+  };
+}
+
+const mockAuthAdminGetUserById = vi.hoisted(() =>
+  vi.fn().mockResolvedValue(createDefaultAuthAdminGetUserByIdResult())
 );
 
 vi.mock("server-only", () => ({}));
 
-vi.mock("@/lib/supabase/admin", () => ({
-  createAdminSupabase: () => ({
-    auth: { admin: { getUserById: mockAuthAdminGetUserById } },
-  }),
-}));
+vi.mock("@/lib/supabase/admin", async () => {
+  const actual =
+    await vi.importActual<typeof import("@/lib/supabase/admin")>(
+      "@/lib/supabase/admin"
+    );
+
+  return {
+    ...actual,
+    createAdminSupabase: (..._args: Parameters<typeof actual.createAdminSupabase>) =>
+      ({
+        auth: { admin: { getUserById: mockAuthAdminGetUserById } },
+      }) as unknown as ReturnType<typeof actual.createAdminSupabase>,
+  };
+});
 
 vi.mock("@/lib/env/server", () => ({
   getServerEnvVar: (key: string) => {
@@ -52,6 +65,10 @@ vi.mock("resend", () => {
 describe("sendCollaboratorNotifications", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAuthAdminGetUserById.mockReset();
+    mockAuthAdminGetUserById.mockResolvedValue(
+      createDefaultAuthAdminGetUserByIdResult()
+    );
   });
 
   it("returns empty result when table is not trip_collaborators", async () => {
@@ -79,6 +96,7 @@ describe("sendCollaboratorNotifications", () => {
     );
 
     expect(mockAuthAdminGetUserById).toHaveBeenCalledWith("user-1");
+    expect(mockAuthAdminGetUserById).toHaveBeenCalledTimes(1);
     expect(result.emailed).toBe(true);
   });
 });
