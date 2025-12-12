@@ -37,6 +37,12 @@ type FinishReason =
   | "other"
   | "unknown";
 
+type UsageLike = {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+};
+
 /**
  * Options for creating a mock language model.
  */
@@ -86,7 +92,7 @@ export function createMockModel(options: MockModelOptions = {}) {
         inputTokens: usage.inputTokens ?? 10,
         outputTokens: usage.outputTokens ?? 20,
         totalTokens: (usage.inputTokens ?? 10) + (usage.outputTokens ?? 20),
-      } as unknown as any,
+      } satisfies UsageLike,
       warnings: warnings as never[],
     }),
   });
@@ -140,7 +146,7 @@ export function createMockToolModel(
         inputTokens: 10,
         outputTokens: 20,
         totalTokens: 30,
-      } as unknown as any,
+      } satisfies UsageLike,
       warnings: [],
     }),
   });
@@ -202,20 +208,20 @@ export function createStreamingMockModel(options: StreamingMockModelOptions) {
             type: "text-delta" as const,
           })),
           { id: "text-1", type: "text-end" as const },
-	          {
-	            finishReason,
-	            logprobs: undefined,
-	            type: "finish" as const,
-	            usage: {
-	              inputTokens,
-	              outputTokens,
-	              totalTokens,
-	            } as unknown as any,
-	          } as any,
-	        ],
-	      }),
-	    }),
-	  });
+          {
+            finishReason,
+            logprobs: undefined,
+            type: "finish" as const,
+            usage: {
+              inputTokens,
+              outputTokens,
+              totalTokens,
+            } satisfies UsageLike,
+          },
+        ],
+      }),
+    }),
+  });
 }
 
 /**
@@ -326,17 +332,17 @@ export function createStreamingToolMockModel(options: StreamingToolMockModelOpti
     finishReason === "stop" || finishReason === "tool-calls"
       ? finishReason
       : "tool-calls";
-	  streamChunks.push({
-	    finishReason: resolvedFinishReason,
-	    logprobs: undefined,
-	    type: "finish",
-	    usage: { inputTokens, outputTokens, totalTokens } as unknown as any,
-	  });
+  streamChunks.push({
+    finishReason: resolvedFinishReason,
+    logprobs: undefined,
+    type: "finish",
+    usage: { inputTokens, outputTokens, totalTokens },
+  });
 
   return new MockLanguageModelV3({
     // biome-ignore lint/suspicious/noExplicitAny: MockLanguageModelV3 stream types vary across AI SDK betas
     doStream: async (): Promise<any> => ({
-      stream: simulateReadableStream({ chunks: streamChunks }) as unknown as any,
+      stream: simulateReadableStream({ chunks: streamChunks }),
     }),
   });
 }
@@ -364,14 +370,14 @@ export function createStreamingToolMockModel(options: StreamingToolMockModelOpti
  */
 export function createMockObjectModel<T>(jsonObject: T) {
   return new MockLanguageModelV3({
-	    doGenerate: async () => ({
-	      content: [{ text: JSON.stringify(jsonObject), type: "text" as const }],
-	      finishReason: "stop" as const,
-	      usage: { inputTokens: 10, outputTokens: 20, totalTokens: 30 } as unknown as any,
-	      warnings: [],
-	    }),
-	  });
-	}
+    doGenerate: async () => ({
+      content: [{ text: JSON.stringify(jsonObject), type: "text" as const }],
+      finishReason: "stop" as const,
+      usage: { inputTokens: 10, outputTokens: 20, totalTokens: 30 } satisfies UsageLike,
+      warnings: [],
+    }),
+  });
+}
 
 /**
  * Creates a streaming mock model for streamObject tests.
@@ -419,20 +425,20 @@ export function createStreamingObjectMockModel<T>(jsonObject: T) {
             type: "text-delta" as const,
           })),
           { id: "text-1", type: "text-end" as const },
-	          {
-	            finishReason: "stop" as const,
-	            logprobs: undefined,
-	            type: "finish" as const,
-	            usage: {
-	              inputTokens: 10,
-	              outputTokens: 20,
-	              totalTokens: 30,
-	            } as unknown as any,
-	          } as any,
-	        ],
-	      }),
-	    }),
-	  });
+          {
+            finishReason: "stop" as const,
+            logprobs: undefined,
+            type: "finish" as const,
+            usage: {
+              inputTokens: 10,
+              outputTokens: 20,
+              totalTokens: 30,
+            } satisfies UsageLike,
+          },
+        ],
+      }),
+    }),
+  });
 }
 
 /** Re-export simulateReadableStream for direct use in tests */
