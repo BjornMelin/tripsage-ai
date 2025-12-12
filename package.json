@@ -169,6 +169,7 @@
     "tailwindcss-animate": "^1.0.7",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
+    "unified": "^11.0.5",
     "vitest": "^4.0.15"
   },
   "engines": {
