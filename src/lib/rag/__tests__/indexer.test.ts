@@ -105,12 +105,11 @@ describe("chunkText", () => {
     // Check for overlap - content at end of first chunk should appear at start of second
     // With 100 token overlap (400 chars), there should be some shared content
     if (chunks.length >= 2) {
-      const endOfFirst = chunks[0].slice(-200);
-      const startOfSecond = chunks[1].slice(0, 500);
-      // Note: overlap detection can be fuzzy due to sentence boundary breaks
-      // Verify overlap exists (some content from end of first appears in start of second)
-      const overlapFound = startOfSecond.includes(endOfFirst.slice(-50).trim());
-      expect(overlapFound || chunks.length > 1).toBe(true);
+      const endOfFirst = chunks[0].slice(-300).trim();
+      const startOfSecond = chunks[1].slice(0, 600);
+      // Verify overlap exists (suffix of first chunk appears in second chunk)
+      const overlapProbe = endOfFirst.slice(-100);
+      expect(startOfSecond.includes(overlapProbe)).toBe(true);
     }
   });
 

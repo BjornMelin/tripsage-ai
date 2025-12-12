@@ -104,15 +104,19 @@ import type { AgentDependencies } from "../types";
  * Creates a mock LanguageModel for testing.
  */
 function createMockModel() {
-  return new MockLanguageModelV3({
-    doGenerate: async () => ({
-      content: [{ text: "Mock response", type: "text" as const }],
-      finishReason: "stop" as const,
-      usage: { inputTokens: 10, outputTokens: 20, totalTokens: 30 },
-      warnings: [],
-    }),
-  });
-}
+	  return new MockLanguageModelV3({
+	    doGenerate: async () => ({
+	      content: [{ text: "Mock response", type: "text" as const }],
+	      finishReason: "stop" as const,
+	      usage: {
+	        inputTokens: 10,
+	        outputTokens: 20,
+	        totalTokens: 30,
+	      } as unknown as any,
+	      warnings: [],
+	    }),
+	  });
+	}
 
 /**
  * Creates test dependencies.

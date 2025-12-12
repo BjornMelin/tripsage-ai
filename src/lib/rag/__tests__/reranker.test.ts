@@ -117,7 +117,7 @@ describe("TogetherReranker", () => {
 
     expect(mockRerank).toHaveBeenCalledWith(
       expect.objectContaining({
-        topN: 1, // Should use config topN as minimum
+        topN: 1, // Should cap topN by config topN
       })
     );
     expect(result).toHaveLength(1);
@@ -192,6 +192,7 @@ describe("NoOpReranker", () => {
     const result = await reranker.rerank("query", documents, 2);
 
     expect(result).toHaveLength(2);
+    expect(result.map((d) => d.id)).toEqual(["1", "2"]);
   });
 
   it("handles empty document array", async () => {
@@ -224,5 +225,29 @@ describe("createReranker", () => {
       topN: 5,
     });
     expect(reranker).toBeInstanceOf(TogetherReranker);
+  });
+
+  it("propagates factory config into effective topN", async () => {
+    const documents = [
+      createMockDocument("1", "Doc 1", 0.9),
+      createMockDocument("2", "Doc 2", 0.8),
+      createMockDocument("3", "Doc 3", 0.7),
+    ];
+
+    mockRerank.mockResolvedValueOnce({
+      ranking: [
+        { document: "Doc 1", originalIndex: 0, score: 0.9 },
+        { document: "Doc 2", originalIndex: 1, score: 0.8 },
+      ],
+    });
+
+    const reranker = createReranker({ provider: "together", topN: 1 });
+    await reranker.rerank("query", documents, 10);
+
+    expect(mockRerank).toHaveBeenCalledWith(
+      expect.objectContaining({
+        topN: 1,
+      })
+    );
   });
 });

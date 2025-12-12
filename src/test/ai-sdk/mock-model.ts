@@ -86,7 +86,7 @@ export function createMockModel(options: MockModelOptions = {}) {
         inputTokens: usage.inputTokens ?? 10,
         outputTokens: usage.outputTokens ?? 20,
         totalTokens: (usage.inputTokens ?? 10) + (usage.outputTokens ?? 20),
-      },
+      } as unknown as any,
       warnings: warnings as never[],
     }),
   });
@@ -140,7 +140,7 @@ export function createMockToolModel(
         inputTokens: 10,
         outputTokens: 20,
         totalTokens: 30,
-      },
+      } as unknown as any,
       warnings: [],
     }),
   });
@@ -202,20 +202,20 @@ export function createStreamingMockModel(options: StreamingMockModelOptions) {
             type: "text-delta" as const,
           })),
           { id: "text-1", type: "text-end" as const },
-          {
-            finishReason,
-            logprobs: undefined,
-            type: "finish" as const,
-            usage: {
-              inputTokens,
-              outputTokens,
-              totalTokens,
-            },
-          },
-        ],
-      }),
-    }),
-  });
+	          {
+	            finishReason,
+	            logprobs: undefined,
+	            type: "finish" as const,
+	            usage: {
+	              inputTokens,
+	              outputTokens,
+	              totalTokens,
+	            } as unknown as any,
+	          } as any,
+	        ],
+	      }),
+	    }),
+	  });
 }
 
 /**
@@ -326,16 +326,17 @@ export function createStreamingToolMockModel(options: StreamingToolMockModelOpti
     finishReason === "stop" || finishReason === "tool-calls"
       ? finishReason
       : "tool-calls";
-  streamChunks.push({
-    finishReason: resolvedFinishReason,
-    logprobs: undefined,
-    type: "finish",
-    usage: { inputTokens, outputTokens, totalTokens },
-  });
+	  streamChunks.push({
+	    finishReason: resolvedFinishReason,
+	    logprobs: undefined,
+	    type: "finish",
+	    usage: { inputTokens, outputTokens, totalTokens } as unknown as any,
+	  });
 
   return new MockLanguageModelV3({
-    doStream: async () => ({
-      stream: simulateReadableStream({ chunks: streamChunks }),
+    // biome-ignore lint/suspicious/noExplicitAny: MockLanguageModelV3 stream types vary across AI SDK betas
+    doStream: async (): Promise<any> => ({
+      stream: simulateReadableStream({ chunks: streamChunks }) as unknown as any,
     }),
   });
 }
@@ -363,14 +364,14 @@ export function createStreamingToolMockModel(options: StreamingToolMockModelOpti
  */
 export function createMockObjectModel<T>(jsonObject: T) {
   return new MockLanguageModelV3({
-    doGenerate: async () => ({
-      content: [{ text: JSON.stringify(jsonObject), type: "text" as const }],
-      finishReason: "stop" as const,
-      usage: { inputTokens: 10, outputTokens: 20, totalTokens: 30 },
-      warnings: [],
-    }),
-  });
-}
+	    doGenerate: async () => ({
+	      content: [{ text: JSON.stringify(jsonObject), type: "text" as const }],
+	      finishReason: "stop" as const,
+	      usage: { inputTokens: 10, outputTokens: 20, totalTokens: 30 } as unknown as any,
+	      warnings: [],
+	    }),
+	  });
+	}
 
 /**
  * Creates a streaming mock model for streamObject tests.
@@ -418,16 +419,20 @@ export function createStreamingObjectMockModel<T>(jsonObject: T) {
             type: "text-delta" as const,
           })),
           { id: "text-1", type: "text-end" as const },
-          {
-            finishReason: "stop" as const,
-            logprobs: undefined,
-            type: "finish" as const,
-            usage: { inputTokens: 10, outputTokens: 20, totalTokens: 30 },
-          },
-        ],
-      }),
-    }),
-  });
+	          {
+	            finishReason: "stop" as const,
+	            logprobs: undefined,
+	            type: "finish" as const,
+	            usage: {
+	              inputTokens: 10,
+	              outputTokens: 20,
+	              totalTokens: 30,
+	            } as unknown as any,
+	          } as any,
+	        ],
+	      }),
+	    }),
+	  });
 }
 
 /** Re-export simulateReadableStream for direct use in tests */

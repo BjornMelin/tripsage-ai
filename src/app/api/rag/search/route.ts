@@ -35,7 +35,7 @@ import { retrieveDocuments } from "@/lib/rag/retriever";
  * ```
  */
 export const POST = withApiGuards({
-  auth: false, // Public search allowed
+  auth: true, // Authentication required for search
   rateLimit: "rag:search",
   schema: ragSearchRequestSchema,
   telemetry: "rag.search",

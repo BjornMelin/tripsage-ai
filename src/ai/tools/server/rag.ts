@@ -10,6 +10,7 @@ import "server-only";
 import { createAiTool } from "@ai/lib/tool-factory";
 import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
 import { ragSearchInputSchema } from "@schemas/rag";
+import { hashInputForCache } from "@/lib/cache/hash";
 import { createReranker } from "@/lib/rag/reranker";
 import { retrieveDocuments } from "@/lib/rag/retriever";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -77,7 +78,11 @@ export const ragSearch = createAiTool({
   },
   guardrails: {
     cache: {
-      key: (p) => `rag:${p.namespace ?? "all"}:${p.query}`,
+      key: (p) => {
+        const namespacePart = p.namespace ?? "all";
+        const queryPart = p.query.length > 64 ? hashInputForCache(p.query) : p.query;
+        return `rag:${namespacePart}:${queryPart}`;
+      },
       ttlSeconds: 300, // 5 minute cache
     },
     rateLimit: {
