@@ -178,7 +178,7 @@ export function ChatMessageItem({ message }: { message: UIMessage }) {
                 }
               }
 
-              return <Response key={`${message.id}-t-${idx}`}>{part.text}</Response>;
+              return <Response key={`${message.id}-t-${idx}`}>{text}</Response>;
             }
 
             if (partType === "source-url") {

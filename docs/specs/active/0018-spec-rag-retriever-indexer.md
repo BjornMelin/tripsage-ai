@@ -79,7 +79,7 @@ Index documents with automatic chunking and embedding generation.
 
 **Status codes:**
 
-- Always returns `200 OK`, including partial indexing; inspect `success` and `failed` for per-item status.
+- On successful authentication and request validation, returns `200 OK` with per-item `success`/`failed` details (partial indexing possible); otherwise returns the appropriate `4xx/5xx` error for authentication, validation, or server failures.
 
 ### POST /api/rag/search
 
@@ -177,7 +177,7 @@ Available to AI agents via the tool registry.
 | AI SDK Support | Native via @ai-sdk/togetherai |
 
 **Fallback:** NoOp reranker returns documents sorted by combined score.
-**Timeout target (configurable):** 700ms with graceful degradation.
+**Timeout target (configurable) for the external reranker HTTP call:** 700ms; on timeout the system will gracefully degrade to the NoOp reranker (documents returned sorted by combined score).
 
 ## Retention & Ownership
 

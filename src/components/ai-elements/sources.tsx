@@ -91,10 +91,10 @@ export function Source({ className, children, href, ...props }: SourceProps) {
         "block truncate rounded px-2 py-1 text-foreground/80 underline-offset-4 hover:underline",
         className
       )}
+      {...props}
       href={safe}
       target="_blank"
       rel="noreferrer noopener"
-      {...props}
     >
       {children ?? safe}
     </a>

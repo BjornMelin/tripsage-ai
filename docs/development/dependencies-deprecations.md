@@ -62,28 +62,25 @@ We accept these until upstreams ship non‑deprecated replacements, per "Keep St
 
 We keep two narrow `pnpm.overrides` for security advisories. `pnpm` does not support inline override comments, so rationale lives here.
 
-- `axios@1.13.2`: pinned to pick up CVE‑2025‑58754 (DoS via `data:` URL) and CVE‑2025‑27152 fixes. Added 2025‑12‑11 by Bjorn Melin. Verified with `pnpm why axios` (only `mem0ai` depends on it) and `pnpm audit` clean.
-- `undici@5.29.0`: pinned for CVE‑2025‑47279 fix. Added 2025‑12‑11 by Bjorn Melin. Verified with `pnpm why undici` (only `semantic-release` tooling chain) and `pnpm audit` clean.
+- `axios@1.13.2`: pinned for [CVE‑2025‑58754](https://github.com/axios/axios/security/advisories/GHSA-4hjh-wcwx-xvwj) (DoS via `data:` URL) and [CVE‑2025‑27152](https://github.com/axios/axios/security/advisories/GHSA-jr5f-v2jv-69x6) (SSRF via absolute URLs). Added 2025‑12‑11 by Bjorn Melin. Verified with `pnpm why axios` (only `mem0ai` depends on it) and `pnpm audit` clean.
+- `undici@5.29.0`: pinned for [CVE‑2025‑47279](https://alas.aws.amazon.com/cve/html/CVE-2025-47279.html) (webhook retry memory leak). Added 2025‑12‑11 by Bjorn Melin. Verified with `pnpm why undici` (only `semantic-release` tooling chain) and `pnpm audit` clean.
 
 ## Resolution Strategy
 
 1. **Prune unused `mem0ai` peers (Cluster A + most of C)**  
-   - Disable pnpm auto peer install.
-   - Ignore missing peers that are not used in hosted Mem0 mode.
-   - Verify Mem0 hosted client works without `sqlite3`.
+   - Disable pnpm auto peer install, then ignore missing storage peers that Mem0 hosted mode doesn’t use.
+   - Verify Mem0 hosted client works without `sqlite3` on our supported runtimes.
 
 2. **Keep Streamdown and track upstream (Cluster B)**  
-   - No local override; wait for upstream migration off `hast`.
-   - Maintain Tailwind v4 scanning + centralized config in app.
+   - No local override; wait for upstream migration off deprecated `hast`, while keeping Tailwind v4 scanning + centralized config in app.
 
 3. **Accept upstream‑blocked deprecations (residual C/D)**  
-   - AI SDK versions are pinned by repo contract.
-   - `semantic-release` is already at latest in this repo.
+   - AI SDK versions stay pinned by contract; `semantic-release` is already at repo‑latest.
 
 ## Upstream Tracking
 
-- Streamdown `hast` deprecation: track migration issue in `vercel/streamdown` repo.
-- Mem0 peers optionality: request upstream to mark storage peers optional.
+- Streamdown `hast` deprecation: track upstream migration in `vercel/streamdown` ([issues search](https://github.com/vercel/streamdown/issues?q=hast+deprecation)).  
+- Mem0 optional peers: request upstream to mark storage peers optional ([mem0ai/mem0#2488](https://github.com/mem0ai/mem0/issues/2488)).  
 - AI SDK polyfills: re-check when contract allows bumping pinned betas.
 
 ## Recheck Cadence

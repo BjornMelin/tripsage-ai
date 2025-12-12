@@ -66,6 +66,7 @@ export const streamdownRehypePlugins: NonNullable<StreamdownProps["rehypePlugins
     hardenFn,
     {
       ...hardenDefaults,
+      allowDataImages: false,
       allowedProtocols: ["http", "https", "mailto"],
     },
   ],
