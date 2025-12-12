@@ -1,0 +1,35 @@
+/* Streamdown chat-specific styling overrides.
+ *
+ * Streamdown already ships shadcn/ui-aligned styles. These rules gently
+ * tighten spacing and borders to match TripSage chat surfaces.
+ */
+
+.streamdown-chat [data-streamdown="code-block"],
+.streamdown-chat [data-streamdown="mermaid-block"] {
+  border: 1px solid hsl(var(--border));
+  border-radius: calc(var(--radius) + 2px);
+  background-color: hsl(var(--muted));
+}
+
+.streamdown-chat [data-streamdown="inline-code"] {
+  background-color: hsl(var(--muted));
+  border-radius: 0.25rem;
+  padding: 0.1rem 0.25rem;
+}
+
+.streamdown-chat [data-streamdown="table-wrapper"] {
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.streamdown-chat [data-streamdown="blockquote"] {
+  background-color: hsl(var(--muted));
+  border-left: 3px solid hsl(var(--primary));
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+}
+
+.streamdown-chat [data-streamdown^="heading-"] {
+  scroll-margin-top: 6rem;
+}

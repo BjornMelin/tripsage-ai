@@ -7,6 +7,7 @@
 
 import type * as React from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { safeHref } from "@/lib/url/safe-href";
 import { cn } from "@/lib/utils";
 
 export type SourcesProps = React.ComponentPropsWithoutRef<typeof Popover>;
@@ -73,18 +74,29 @@ export interface SourceProps extends React.AnchorHTMLAttributes<HTMLAnchorElemen
 /**
  * Source renders a single source link item.
  */
-export function Source({ className, children, ...props }: SourceProps) {
+export function Source({ className, children, href, ...props }: SourceProps) {
+  const safe = safeHref(typeof href === "string" ? href : undefined);
+  if (!safe) {
+    return (
+      <span
+        className={cn("block truncate rounded px-2 py-1 text-foreground/60", className)}
+      >
+        {children ?? href ?? "Unavailable source"}
+      </span>
+    );
+  }
   return (
     <a
       className={cn(
         "block truncate rounded px-2 py-1 text-foreground/80 underline-offset-4 hover:underline",
         className
       )}
+      {...props}
+      href={safe}
       target="_blank"
       rel="noreferrer noopener"
-      {...props}
     >
-      {children ?? props.href}
+      {children ?? safe}
     </a>
   );
 }

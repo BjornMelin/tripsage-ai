@@ -5,6 +5,12 @@ import { describe, expect, it, vi } from "vitest";
 
 // Mock streamdown to avoid CSS imports (KaTeX) in test environment
 vi.mock("streamdown", () => ({
+  defaultRehypePlugins: {
+    harden: [() => undefined, {}],
+    katex: () => undefined,
+    raw: () => undefined,
+  },
+  defaultRemarkPlugins: {},
   Streamdown: ({ children, ...props }: { children?: React.ReactNode }) => (
     <div data-testid="mock-streamdown" {...props}>
       {children}
