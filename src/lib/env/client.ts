@@ -31,12 +31,14 @@ function validateClientEnv(): ClientEnv {
         (issue) => `${issue.path.join(".")}: ${issue.message}`
       );
 
-      // During build phase or development, return defaults to allow build to complete
-      // The actual env vars will be available at runtime
-      if (process.env.NODE_ENV === "development" || isBuildPhase()) {
-        if (process.env.NODE_ENV === "development") {
-          console.error(`Client environment validation failed:\n${errors.join("\n")}`);
-        }
+      const allowPlaceholderPublicEnv =
+        process.env.NODE_ENV === "development" ||
+        (isBuildPhase() && process.env.NEXT_PUBLIC_ALLOW_PLACEHOLDER_ENV === "true");
+
+      // Only allow placeholder NEXT_PUBLIC_* values in development, or when explicitly
+      // opted-in during build (e.g. docs/CI builds). NEXT_PUBLIC_* values are inlined
+      // into client bundles at build time.
+      if (allowPlaceholderPublicEnv) {
         // Return partial object with defaults for development/build
         return {
           NEXT_PUBLIC_APP_NAME: "TripSage",

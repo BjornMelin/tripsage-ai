@@ -25,7 +25,7 @@ import { cacheLife, cacheTag } from "next/cache";
  * import { applyCacheProfile } from "@/lib/cache/next-cache";
  *
  * export async function getPublicData() {
- *   applyCacheProfile("medium", nextCacheTags.publicConfig);
+ *   applyCacheProfile("hour", nextCacheTags.publicConfig);
  *   return await fetchData();
  * }
  * ```
@@ -34,7 +34,7 @@ import { cacheLife, cacheTag } from "next/cache";
  * @param tag - Cache tag for invalidation via revalidateTag()
  */
 export function applyCacheProfile(
-  profile: "short" | "medium" | "long" | "hour",
+  profile: "short" | "hour" | "long",
   tag: NextCacheTag
 ): void {
   cacheTag(tag);
@@ -42,11 +42,8 @@ export function applyCacheProfile(
     case "short":
       cacheLife("minutes"); // ~5 min
       break;
-    case "medium":
-      cacheLife("hours"); // ~1 hour (aligned with Redis medium TTL)
-      break;
     case "hour":
-      cacheLife("hours"); // Alias for explicit 1 hour profile
+      cacheLife("hours");
       break;
     case "long":
       cacheLife("days"); // ~24 hours

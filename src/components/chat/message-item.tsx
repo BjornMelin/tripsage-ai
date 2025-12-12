@@ -72,6 +72,20 @@ const SAFE_MIME_TYPES = new Set([
   "application/pdf",
 ]);
 
+const BASE64_PATTERN = /^[A-Za-z0-9+/]+={0,2}$/;
+
+// biome-ignore lint/style/useNamingConvention: Internal utility function, not a React component
+function isValidBase64(value: string): boolean {
+  if (!value || value.length % 4 !== 0) return false;
+  if (!BASE64_PATTERN.test(value)) return false;
+
+  try {
+    return btoa(atob(value)).replace(/=+$/, "") === value.replace(/=+$/, "");
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Validates and normalizes a MIME type string.
  * Returns the MIME type if it's in the allowlist, otherwise returns a safe default.
@@ -467,7 +481,9 @@ export function ChatMessageItem({
               );
               const fileUrl =
                 filePart.url ??
-                (filePart.data ? `data:${mimeType};base64,${filePart.data}` : null);
+                (filePart.data && isValidBase64(filePart.data)
+                  ? `data:${mimeType};base64,${filePart.data}`
+                  : null);
 
               // Render images inline
               if (mimeType.startsWith("image/") && fileUrl) {
@@ -479,6 +495,9 @@ export function ChatMessageItem({
                       alt={fileName}
                       className="max-h-64 max-w-full rounded-md border"
                       loading="lazy"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                      }}
                     />
                   </div>
                 );

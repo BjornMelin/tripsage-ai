@@ -162,22 +162,22 @@ return data;
 
 **Files:**
 
-- `src/lib/cache/next-cache.ts` – `applyCacheProfile()`, `NEXT_CACHE_TAGS`
+- `src/lib/cache/next-cache.ts` – `applyCacheProfile()`, `nextCacheTags`
 
 **Pattern (future public endpoints only):**
 
 ```typescript
 "use cache";
-import { applyCacheProfile } from "@/lib/cache/next-cache";
+import { applyCacheProfile, nextCacheTags } from "@/lib/cache/next-cache";
 import { revalidateTag } from "next/cache";
 
 async function getPublicConfig() {
-  applyCacheProfile("hour", "public-config");
+  applyCacheProfile("hour", nextCacheTags.publicConfig);
   return await fetchConfig();
 }
 
 // Invalidate when config changes:
-revalidateTag("public-config");
+revalidateTag(nextCacheTags.publicConfig);
 ```
 
 **Current status:** No routes currently qualify. All data routes are auth-protected.

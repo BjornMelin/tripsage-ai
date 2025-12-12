@@ -44,12 +44,19 @@ export function ChatClient(): ReactElement {
   const isLoading = isStreaming || isSubmitting;
   const lastMessageId = messages.at(-1)?.id;
 
-  const handleSubmit = (text?: string) => {
+  const handleSubmit = async (text?: string) => {
     const messageText = text?.trim() || input.trim();
     if (!messageText || isLoading) return;
 
-    sendMessage({ text: messageText });
-    setInput("");
+    try {
+      await sendMessage({ text: messageText });
+    } catch (err) {
+      if (process.env.NODE_ENV === "development") {
+        console.error("Failed to submit chat message:", err);
+      }
+    } finally {
+      setInput("");
+    }
   };
 
   return (

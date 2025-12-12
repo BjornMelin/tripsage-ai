@@ -547,9 +547,9 @@ export async function verifyBackupCode(
 
       // Best-effort metadata; do not fail the request if counting fails.
       if (countError) {
+        span.recordException(countError);
         auditLogger.warn("failed to count remaining backup codes", {
           error: countError.message,
-          userId,
         });
       }
 
