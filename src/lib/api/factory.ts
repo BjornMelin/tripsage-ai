@@ -298,7 +298,6 @@ export function withApiGuards<SchemaType extends z.ZodType>(
           if (isBotDetectedError(error)) {
             return errorResponse({
               ...BOT_DETECTED_RESPONSE,
-              reason: BOT_DETECTED_RESPONSE.message,
               status: 403,
             });
           }
