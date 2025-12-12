@@ -540,10 +540,18 @@ export async function verifyBackupCode(
         throw new InvalidBackupCodeError("backup_code_already_consumed");
       }
 
-      const { count } = await table
+      const { count, error: countError } = await table
         .select("id", { count: "exact", head: true })
         .eq("user_id", userId)
         .is("consumed_at", null);
+
+      // Best-effort metadata; do not fail the request if counting fails.
+      if (countError) {
+        auditLogger.warn("failed to count remaining backup codes", {
+          error: countError.message,
+          userId,
+        });
+      }
 
       await logBackupCodeAudit(adminSupabase, userId, "consumed", 1, meta);
 
