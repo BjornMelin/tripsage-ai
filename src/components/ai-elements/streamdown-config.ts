@@ -18,6 +18,7 @@ type HardenOptions = {
   allowDataImages?: boolean;
 };
 
+// Normalize dual plugin shapes (function or [function, options] tuple) and cast for streamdown's plugin type constraints.
 const hardenRaw = defaultRehypePlugins.harden as unknown;
 const hardenFn = (Array.isArray(hardenRaw) ? hardenRaw[0] : hardenRaw) as Plugin;
 const hardenDefaults =

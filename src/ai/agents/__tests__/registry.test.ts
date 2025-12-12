@@ -109,9 +109,23 @@ function createMockModel() {
       content: [{ text: "Mock response", type: "text" as const }],
       finishReason: "stop" as const,
       usage: {
-        inputTokens: 10,
-        outputTokens: 20,
-        totalTokens: 30,
+        inputTokens: {
+          cacheRead: undefined,
+          cacheWrite: undefined,
+          noCache: undefined,
+          total: 10,
+        },
+        outputTokens: {
+          reasoning: undefined,
+          text: 20,
+          total: 20,
+        },
+        totalTokens: {
+          cacheRead: undefined,
+          cacheWrite: undefined,
+          noCache: undefined,
+          total: 30,
+        },
       },
       warnings: [],
     }),

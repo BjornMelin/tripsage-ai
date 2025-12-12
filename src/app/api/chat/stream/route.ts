@@ -44,6 +44,7 @@ type IncomingBody = {
  */
 export const POST = withApiGuards({
   auth: true,
+  botId: true,
   rateLimit: "chat:stream",
   telemetry: "chat.stream",
 })(async (req: NextRequest, { supabase }): Promise<Response> => {

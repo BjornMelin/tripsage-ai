@@ -5,6 +5,7 @@
  * Includes global font loading and metadata.
  */
 
+import { BotIdClient } from "botid/client";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Suspense } from "react";
@@ -81,6 +82,15 @@ export default function RootLayout({
       >
         {/* Initialize client-side OpenTelemetry tracing */}
         <TelemetryProvider />
+        {/* Initialize BotID protection for chat and agent API routes */}
+        <BotIdClient
+          protect={[
+            { method: "POST", path: "/api/chat" },
+            { method: "POST", path: "/api/chat/stream" },
+            { method: "POST", path: "/api/agents/router" },
+            { method: "POST", path: "/api/chat/attachments" },
+          ]}
+        />
         <PerformanceMonitor>
           <TanStackQueryProvider>
             <ThemeProvider

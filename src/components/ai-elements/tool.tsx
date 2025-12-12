@@ -80,8 +80,12 @@ export function Tool({
       </CollapsibleTrigger>
       {hasInput || hasOutput ? (
         <CollapsibleContent className="space-y-2 border-t px-3 py-2">
-          {hasInput ? <CodeBlock label="Input" value={formatValue(input)} /> : null}
-          {hasOutput ? <CodeBlock label="Output" value={formatValue(output)} /> : null}
+          {open && hasInput ? (
+            <CodeBlock label="Input" value={formatValue(input)} />
+          ) : null}
+          {open && hasOutput ? (
+            <CodeBlock label="Output" value={formatValue(output)} />
+          ) : null}
         </CollapsibleContent>
       ) : null}
     </Collapsible>
