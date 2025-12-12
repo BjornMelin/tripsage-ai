@@ -6,8 +6,9 @@
 
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { CalendarIcon, ClockIcon, MapPinIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { z } from "zod";
 import {
   Card,
   CardContent,
@@ -18,16 +19,43 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
 
-/** Shape of a calendar event from the API. */
-interface CalendarEvent {
-  id: string;
-  summary: string;
-  description?: string;
-  location?: string;
-  start: { dateTime?: string; date?: string };
-  end: { dateTime?: string; date?: string };
-  htmlLink?: string;
-}
+const CalendarEventListItemSchema = z.strictObject({
+  description: z.string().max(8192).optional(),
+  end: z
+    .strictObject({
+      date: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Date must be YYYY-MM-DD" })
+        .optional(),
+      dateTime: z.iso.datetime().optional(),
+    })
+    .refine((data) => data.date || data.dateTime, {
+      error: "end.date or end.dateTime is required",
+      path: [],
+    }),
+  htmlLink: z.url().optional(),
+  id: z.string().min(1, { error: "id is required" }),
+  location: z.string().max(1024).optional(),
+  start: z
+    .strictObject({
+      date: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Date must be YYYY-MM-DD" })
+        .optional(),
+      dateTime: z.iso.datetime().optional(),
+    })
+    .refine((data) => data.date || data.dateTime, {
+      error: "start.date or start.dateTime is required",
+      path: [],
+    }),
+  summary: z.string().min(1).max(1024).default("Untitled"),
+});
+
+type CalendarEventListItem = z.infer<typeof CalendarEventListItemSchema>;
+
+const CalendarEventsApiResponseSchema = z.looseObject({
+  items: z.array(CalendarEventListItemSchema).default([]),
+});
 
 /** Props for CalendarEventList component. */
 export interface CalendarEventListProps {
@@ -53,62 +81,43 @@ export function CalendarEventList({
   timeMax,
   className,
 }: CalendarEventListProps) {
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const timeMinIso = timeMin?.toISOString() ?? null;
+  const timeMaxIso = timeMax?.toISOString() ?? null;
 
-  useEffect(() => {
-    const controller = new AbortController();
-
-    (async () => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const params = new URLSearchParams();
-        params.set("calendarId", calendarId);
-        params.set("maxResults", "250");
-        if (timeMin) {
-          params.set("timeMin", timeMin.toISOString());
-        }
-        if (timeMax) {
-          params.set("timeMax", timeMax.toISOString());
-        }
-
-        const response = await fetch(`/api/calendar/events?${params}`, {
-          signal: controller.signal,
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch events: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        const items = (data.items || []).filter(
-          (event: Partial<CalendarEvent>): event is CalendarEvent =>
-            Boolean(event.id && event.start && event.end)
-        );
-        setEvents(items);
-      } catch (err) {
-        if (err instanceof Error && err.name === "AbortError") {
-          return;
-        }
-        const message = err instanceof Error ? err.message : "Unknown error";
-        setError(message);
-        if (process.env.NODE_ENV === "development") {
-          console.error("Failed to fetch calendar events:", err);
-        }
-      } finally {
-        setIsLoading(false);
+  const {
+    data: events = [],
+    error,
+    isError,
+    isPending,
+  } = useQuery<CalendarEventListItem[]>({
+    queryFn: async ({ signal }) => {
+      const params = new URLSearchParams();
+      params.set("calendarId", calendarId);
+      params.set("maxResults", "250");
+      if (timeMinIso) {
+        params.set("timeMin", timeMinIso);
       }
-    })();
+      if (timeMaxIso) {
+        params.set("timeMax", timeMaxIso);
+      }
 
-    return () => {
-      controller.abort();
-    };
-  }, [calendarId, timeMin, timeMax]);
+      const response = await fetch(`/api/calendar/events?${params}`, { signal });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch events: ${response.statusText}`);
+      }
 
-  if (isLoading) {
+      const json: unknown = await response.json();
+      const parsed = CalendarEventsApiResponseSchema.safeParse(json);
+      if (!parsed.success) {
+        throw new Error("Invalid calendar events response");
+      }
+
+      return parsed.data.items;
+    },
+    queryKey: ["calendar", "events", { calendarId, timeMaxIso, timeMinIso }],
+  });
+
+  if (isPending) {
     return (
       <Card className={className}>
         <CardHeader>
@@ -128,7 +137,8 @@ export function CalendarEventList({
     );
   }
 
-  if (error) {
+  if (isError) {
+    const message = error instanceof Error ? error.message : "Unknown error";
     return (
       <Card className={className}>
         <CardHeader>
@@ -137,7 +147,7 @@ export function CalendarEventList({
             Upcoming Events
           </CardTitle>
           <CardDescription className="text-destructive">
-            Failed to load events: {error}
+            Failed to load events: {message}
           </CardDescription>
         </CardHeader>
       </Card>

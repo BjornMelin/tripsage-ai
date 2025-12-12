@@ -42,16 +42,17 @@ function parseServerEnv(): ServerEnv {
   if (parseError) {
     throw parseError;
   }
+
+  // During build phase, always return a Proxy that fails fast on access.
+  if (isBuildPhase()) {
+    envCache = createBuildPhaseServerEnvProxy();
+    return envCache;
+  }
+
   try {
     envCache = envSchema.parse(process.env);
     return envCache;
   } catch (error) {
-    // During build phase, return a Proxy that fails fast on access.
-    if (isBuildPhase()) {
-      envCache = createBuildPhaseServerEnvProxy();
-      return envCache;
-    }
-
     if (error instanceof Error && "issues" in error) {
       const zodError = error as { issues: Array<{ path: string[]; message: string }> };
       const messages = zodError.issues.map(
