@@ -117,7 +117,7 @@ describe("TogetherReranker", () => {
 
     expect(mockRerank).toHaveBeenCalledWith(
       expect.objectContaining({
-        topN: 1, // Should cap topN by config topN
+        topN: 1, // Should use min(requested topN, documents.length, config.topN)
       })
     );
     expect(result).toHaveLength(1);

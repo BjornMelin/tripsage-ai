@@ -19,8 +19,8 @@ import { indexDocuments } from "@/lib/rag/indexer";
  * Index documents into the RAG store with automatic chunking and embedding.
  *
  * @param req - Request with documents array.
- * @returns Index result with counts and failed documents. Uses HTTP 207
- *          (Multi-Status) when indexing partially succeeds.
+ * @returns Index result with counts and failed documents. Always returns HTTP 200;
+ *          partial success is conveyed via `success: false` and per-item failures.
  *
  * @example
  * ```bash
@@ -49,7 +49,5 @@ export const POST = withApiGuards({
     supabase,
   });
 
-  return NextResponse.json(result, {
-    status: result.success ? 200 : 207, // 207 Multi-Status for partial success
-  });
+  return NextResponse.json(result, { status: 200 });
 });
