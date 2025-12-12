@@ -150,6 +150,10 @@ const nextConfig: NextConfig = {
   // Enable static exports optimization
   trailingSlash: false,
 
+  // Streamdown uses Shiki for code blocks. Force bundling to avoid
+  // "Package shiki can't be external" warnings in Next.js/Turbopack.
+  transpilePackages: ["shiki"],
+
   // Turbopack configuration for Next.js 16
   // Set root to current directory (where pnpm-lock.yaml is located)
   // Note: For non-monorepo setups, this is the default but explicitly set for clarity

@@ -18,6 +18,7 @@ import {
   PromptInputSubmit,
   PromptInputTextarea,
 } from "@/components/ai-elements/prompt-input";
+import { Response } from "@/components/ai-elements/response";
 
 /**
  * Render the AI SDK v6 demo page.
@@ -30,7 +31,7 @@ import {
 export default function AiDemoPage() {
   const [_input, setInput] = useState("");
   const [output, setOutput] = useState("");
-  const [_isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const logTelemetry = useCallback((status: "success" | "error", detail?: string) => {
@@ -119,7 +120,7 @@ export default function AiDemoPage() {
               <strong>Error:</strong> {error}
             </div>
           ) : output ? (
-            <pre className="whitespace-pre-wrap text-sm">{output}</pre>
+            <Response isAnimating={isLoading}>{output}</Response>
           ) : (
             <ConversationEmptyState description="Type a message and submit to stream a demo response." />
           )}
@@ -134,10 +135,13 @@ export default function AiDemoPage() {
           }}
         >
           <PromptInputBody>
-            <PromptInputTextarea placeholder="Say hello to AI SDK v6" />
+            <PromptInputTextarea
+              placeholder="Say hello to AI SDK v6"
+              disabled={isLoading}
+            />
           </PromptInputBody>
           <PromptInputFooter>
-            <PromptInputSubmit />
+            <PromptInputSubmit status={isLoading ? "streaming" : undefined} />
           </PromptInputFooter>
         </PromptInput>
       </div>
