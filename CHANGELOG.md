@@ -1,3 +1,14 @@
+## [1.12.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.11.0...v1.12.0) (2025-12-12)
+
+### Features
+
+* integrate Vercel BotID for bot protection on chat and agent endpoints ([ed1e8a9](https://github.com/BjornMelin/tripsage-ai/commit/ed1e8a93a6a9899c0b1587291e9c30b3888381d0))
+
+### Bug Fixes
+
+* align BotID error response with spec documentation ([23c9e5f](https://github.com/BjornMelin/tripsage-ai/commit/23c9e5feb88616dd93a251bb3cf3ae32d4896430))
+* **botid:** address PR review feedback ([be99bee](https://github.com/BjornMelin/tripsage-ai/commit/be99bee50fef23bb29b5099ff050ea17f5e3d5ce))
+
 ## [1.11.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.10.0...v1.11.0) (2025-12-11)
 
 ### Features
