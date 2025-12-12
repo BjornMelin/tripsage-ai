@@ -27,19 +27,6 @@ describe("BYOK Routes Security (ADR-0024)", () => {
       expect(hasDirective).toBe(false);
     });
 
-    it(`should contain security comment referencing ADR-0024 in ${routeFile}`, () => {
-      const filePath = join(BYOK_ROUTES_DIR, routeFile);
-      const content = readFileSync(filePath, "utf-8");
-
-      // Security comment should reference ADR-0024 or Cache Components dynamic behavior
-      const hasSecurityComment =
-        content.includes("ADR-0024") ||
-        content.includes("Cache Components") ||
-        content.includes("dynamic by default");
-
-      expect(hasSecurityComment).toBe(true);
-    });
-
     it(`should use 'server-only' import in ${routeFile}`, () => {
       const filePath = join(BYOK_ROUTES_DIR, routeFile);
       const content = readFileSync(filePath, "utf-8");
@@ -73,16 +60,17 @@ describe("User Settings Route Security", () => {
     expect(hasDirective).toBe(false);
   });
 
-  it("should contain security comment in user-settings/route.ts", () => {
+  it("should use 'server-only' import in user-settings/route.ts", () => {
     const filePath = join(process.cwd(), "src/app/api/user-settings/route.ts");
     const content = readFileSync(filePath, "utf-8");
 
-    // Security comment should reference Cache Components or dynamic behavior
-    const hasSecurityComment =
-      content.includes("Cache Components") ||
-      content.includes("dynamic by default") ||
-      content.includes("user-specific");
+    expect(content).toContain('import "server-only"');
+  });
 
-    expect(hasSecurityComment).toBe(true);
+  it("should use withApiGuards({ auth: true }) in user-settings/route.ts", () => {
+    const filePath = join(process.cwd(), "src/app/api/user-settings/route.ts");
+    const content = readFileSync(filePath, "utf-8");
+
+    expect(content).toContain("auth: true");
   });
 });

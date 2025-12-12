@@ -14,6 +14,16 @@ vi.mock("file-type", () => ({
   fileTypeFromBuffer: vi.fn(() => Promise.resolve({ ext: "jpg", mime: "image/jpeg" })),
 }));
 
+// Silence BotID warnings by stubbing the server check to deterministic "human".
+vi.mock("botid/server", () => ({
+  checkBotId: vi.fn(async () => ({
+    bypassed: true,
+    isBot: false,
+    isHuman: true,
+    isVerifiedBot: false,
+  })),
+}));
+
 // Mock secureUuid to return predictable values
 let uuidCounter = 0;
 vi.mock("@/lib/security/random", () => ({
@@ -60,7 +70,6 @@ describe("/api/chat/attachments", () => {
   };
 
   beforeEach(async () => {
-    vi.resetModules();
     resetApiRouteMocks();
     mockApiRouteAuthUser({ id: "user-1" });
     vi.clearAllMocks();
