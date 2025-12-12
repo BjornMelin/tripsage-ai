@@ -27,6 +27,7 @@ import { getAdminSupabase, type TypedAdminSupabase } from "@/lib/supabase/admin"
 import type { Database } from "@/lib/supabase/database.types";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
+import { isBuildPhase } from "@/lib/utils/build-phase";
 
 type TypedSupabase = SupabaseClient<Database>;
 type BackupAuditMeta = { ip?: string; userAgent?: string };
@@ -666,6 +667,7 @@ function hashBackupCode(code: string): string {
   return createHash("sha256").update(`${pepper}:${normalized}`, "utf8").digest("hex");
 }
 
-if (process.env.NODE_ENV !== "test") {
+// Skip validation during tests and build phase (env vars aren't available during build)
+if (process.env.NODE_ENV !== "test" && !isBuildPhase()) {
   validateMfaConfig();
 }

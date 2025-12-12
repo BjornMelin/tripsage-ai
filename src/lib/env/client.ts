@@ -8,12 +8,13 @@
 
 import type { ClientEnv } from "@schemas/env";
 import { clientEnvSchema } from "@schemas/env";
+import { isBuildPhase } from "@/lib/utils/build-phase";
 
 /**
  * Extract and validate client-safe environment variables.
  *
  * @returns Validated client environment object
- * @throws Error if validation fails
+ * @throws Error if validation fails (except during build/development)
  */
 function validateClientEnv(): ClientEnv {
   // Extract NEXT_PUBLIC_ variables from process.env
@@ -30,10 +31,13 @@ function validateClientEnv(): ClientEnv {
         (issue) => `${issue.path.join(".")}: ${issue.message}`
       );
 
-      // In development, log but don't throw to allow graceful degradation
-      if (process.env.NODE_ENV === "development") {
-        console.error(`Client environment validation failed:\n${errors.join("\n")}`);
-        // Return partial object with defaults for development
+      // During build phase or development, return defaults to allow build to complete
+      // The actual env vars will be available at runtime
+      if (process.env.NODE_ENV === "development" || isBuildPhase()) {
+        if (process.env.NODE_ENV === "development") {
+          console.error(`Client environment validation failed:\n${errors.join("\n")}`);
+        }
+        // Return partial object with defaults for development/build
         return {
           NEXT_PUBLIC_APP_NAME: "TripSage",
           NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318/v1/traces",
