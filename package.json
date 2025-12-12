@@ -171,6 +171,18 @@
     "pnpm": ">=9.0.0"
   },
   "pnpm": {
+    "packageExtensions": {
+      "openai@*": {
+        "dependencies": {
+          "zod": "3.25.76"
+        }
+      }
+    },
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "openai>zod": "^4.1.13"
+      }
+    },
     "overrides": {
       "axios": "1.13.2",
       "prismjs": ">=1.30.0",
