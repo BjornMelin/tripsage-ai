@@ -1,5 +1,9 @@
 @import "tailwindcss";
 @import "../styles/loading-animations.css";
+@import "../styles/streamdown.css";
+
+/* Tailwind v4 scanning for Streamdown utilities */
+@source "../../node_modules/streamdown/dist/*.js";
 
 @layer base {
   :root {
