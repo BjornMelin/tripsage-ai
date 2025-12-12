@@ -76,6 +76,10 @@ Index documents with automatic chunking and embedding generation.
 }
 ```
 
+**Status codes:**
+
+- Always returns `200 OK`, including partial indexing; inspect `success` and `failed` for per-item status.
+
 ### POST /api/rag/search
 
 Search documents with hybrid retrieval and optional reranking.
