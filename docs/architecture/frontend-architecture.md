@@ -110,6 +110,119 @@ Avoid new barrels; import concrete modules.
 - **Background Work**: QStash webhooks for async tasks (e.g., memory sync). Handlers must be idempotent and stateless.
 - **Telemetry**: Wrap server logic with `withTelemetrySpan` / `withTelemetrySpanSync` and `createServerLogger`; emit operational alerts via `emitOperationalAlert` for critical failures. Avoid `console.*` in server code.
 
+## Caching Strategy
+
+TripSage uses a **three-tier caching architecture**. Choose the right tier based on data sensitivity and access patterns.
+
+### Decision Matrix
+
+| Data Type | Access Pattern | Cache Tier | Reason |
+|-----------|---------------|------------|--------|
+| Per-user data | Auth required | Upstash Redis | Dynamic, user-scoped |
+| Public global data | No auth | Next.js Cache Components | HTTP-level, CDN cacheable |
+| Client state | Interactive | TanStack Query | Deduplication, SWR |
+
+### Tier 1: Upstash Redis (Server-side)
+
+**When to use:**
+
+- Auth-protected routes (access `cookies()`, `headers()`, auth state)
+- Per-user personalized data
+- Cross-request deduplication for expensive operations (AI, external APIs)
+
+**Files:**
+
+- `src/lib/cache/upstash.ts` – `getCachedJson()`, `setCachedJson()`
+- `src/lib/cache/tags.ts` – `versionedKey()`, `bumpTag()`
+- `src/lib/cache/registry.ts` – Table-to-tag mappings
+
+**Pattern:**
+
+```typescript
+const cacheKey = await versionedKey("trips", `user:${userId}:list`);
+const cached = await getCachedJson<Trip[]>(cacheKey);
+if (cached) return cached;
+
+const data = await fetchTrips(userId);
+await setCachedJson(cacheKey, data, 300); // 5 min TTL
+return data;
+```
+
+**Invalidation:** Webhook-driven via `/api/hooks/cache/route.ts` or manual `bumpTag()`.
+
+### Tier 2: Next.js Cache Components (HTTP-level)
+
+**When to use:**
+
+- Public, unauthenticated data only
+- Static or slow-changing content
+- No access to `cookies()`, `headers()`, `params`, `searchParams`, or auth state
+
+**Constraint:** Cannot use `"use cache"` in routes that call any request-scoped APIs.
+
+**Files:**
+
+- `src/lib/cache/next-cache.ts` – `applyCacheProfile()`, `NEXT_CACHE_TAGS`
+
+**Pattern (future public endpoints only):**
+
+```typescript
+"use cache";
+import { applyCacheProfile } from "@/lib/cache/next-cache";
+import { revalidateTag } from "next/cache";
+
+async function getPublicConfig() {
+  applyCacheProfile("hour", "public-config");
+  return await fetchConfig();
+}
+
+// Invalidate when config changes:
+revalidateTag("public-config");
+```
+
+**Current status:** No routes currently qualify. All data routes are auth-protected.
+
+### Tier 3: TanStack Query (Client-side)
+
+**When to use:**
+
+- Client-side data fetching from API routes
+- Real-time updates with Supabase subscriptions
+- Optimistic updates on mutations
+
+**Files:**
+
+- `src/lib/cache/query-cache.ts` – Query client configuration
+- `src/lib/query-keys.ts` – Query key factory
+
+**Pattern:**
+
+```typescript
+const { data } = useQuery({
+  queryKey: queryKeys.trips.all(),
+  queryFn: () => fetch("/api/trips").then(r => r.json()),
+  staleTime: staleTimes.trips, // 5 min
+});
+
+// Invalidate on mutation:
+useMutation({
+  mutationFn: createTrip,
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.trips.all() });
+  },
+});
+```
+
+### Coordination: Upstash + Next.js + TanStack Query
+
+For full-stack invalidation:
+
+1. **Server mutation** → `bumpTag()` (Upstash) + `revalidateTag()` (Next.js)
+2. **API response** → Include cache headers
+3. **Client** → `invalidateQueries()` or real-time subscription triggers refetch
+
+See also: `docs/development/backend/cache-versioned-keys.md` for detailed Upstash patterns.
+
 ## Workflow Examples
 
 - **Chat streaming**: Client `useChat` (DefaultChatTransport) → `/api/chat/stream` → provider resolved via registry → `streamText` with tools → `toUIMessageStreamResponse()` SSE to client → UI renders progressive tokens.
