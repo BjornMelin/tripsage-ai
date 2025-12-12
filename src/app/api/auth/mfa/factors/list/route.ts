@@ -11,9 +11,6 @@ import { listFactors, refreshAal } from "@/lib/security/mfa";
 import { classifyMfaError, logMfaError } from "@/lib/security/mfa-error";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
-/** The dynamic route for listing MFA factors. */
-export const dynamic = "force-dynamic";
-
 const logger = createServerLogger("api.auth.mfa.factors.list", {
   redactKeys: ["userId", "factorId", "challengeId"],
 });

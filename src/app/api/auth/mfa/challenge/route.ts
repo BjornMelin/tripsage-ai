@@ -12,9 +12,6 @@ import { challengeTotp } from "@/lib/security/mfa";
 import { classifyMfaError, logMfaError } from "@/lib/security/mfa-error";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
-/** The dynamic route for the MFA challenge API. */
-export const dynamic = "force-dynamic";
-
 const logger = createServerLogger("api.auth.mfa.challenge", {
   redactKeys: ["factorId", "userId"],
 });
