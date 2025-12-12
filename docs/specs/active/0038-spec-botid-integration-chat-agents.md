@@ -68,14 +68,14 @@ WARN  bot_detected { routeName, isVerifiedBot, verifiedBotName, verifiedBotCateg
 
 ```tsx
 // src/app/layout.tsx
-import { BotIdClient } from "botid/react";
+import { BotIdClient } from "botid/client";
 
 <BotIdClient
-  routes={[
-    "/api/chat",
-    "/api/chat/stream",
-    "/api/agents/router",
-    "/api/chat/attachments",
+  protect={[
+    { method: "POST", path: "/api/chat" },
+    { method: "POST", path: "/api/chat/stream" },
+    { method: "POST", path: "/api/agents/router" },
+    { method: "POST", path: "/api/chat/attachments" },
   ]}
 />
 ```
@@ -171,9 +171,9 @@ BotID metrics are available in:
 
 ## Dependencies
 
-- `botid` package (v1.5.0+)
+- `botid` package (v1.5.10+)
 - Vercel deployment (BotID is Vercel-only)
-- Next.js 15.3+ (for `<BotIdClient>` without config wrapper)
+- Next.js 15.3+ (minimum required; project currently uses 16.0.7 for `<BotIdClient>` without config wrapper)
 
 ## Cost
 

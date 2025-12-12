@@ -216,6 +216,19 @@ describe("assertHumanOrThrow", () => {
     ).rejects.toThrow(BotDetectedError);
   });
 
+  it("propagates errors from checkBotId", async () => {
+    const networkError = new Error("Network failure");
+    mockCheckBotId.mockRejectedValue(networkError);
+
+    await expect(assertHumanOrThrow("chat.stream")).rejects.toThrow(networkError);
+  });
+
+  it("allows requests when BotID is bypassed", async () => {
+    mockCheckBotId.mockResolvedValue(createMockBotIdResponse({ bypassed: true }));
+
+    await expect(assertHumanOrThrow("chat.stream")).resolves.toBeUndefined();
+  });
+
   it("passes deep level option to checkBotId", async () => {
     mockCheckBotId.mockResolvedValue(createMockBotIdResponse({ isBot: false }));
 

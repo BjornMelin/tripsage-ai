@@ -22,7 +22,11 @@ import {
 import { fireAndForgetMetric } from "@/lib/metrics/api-metrics";
 import { ROUTE_RATE_LIMITS, type RouteRateLimitKey } from "@/lib/ratelimit/routes";
 import { getRedis } from "@/lib/redis";
-import { assertHumanOrThrow, isBotDetectedError } from "@/lib/security/botid";
+import {
+  assertHumanOrThrow,
+  BOT_DETECTED_RESPONSE,
+  isBotDetectedError,
+} from "@/lib/security/botid";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createServerLogger } from "@/lib/telemetry/logger";
@@ -293,8 +297,8 @@ export function withApiGuards<SchemaType extends z.ZodType>(
         } catch (error) {
           if (isBotDetectedError(error)) {
             return errorResponse({
-              error: "bot_detected",
-              reason: "Automated access is not allowed.",
+              ...BOT_DETECTED_RESPONSE,
+              reason: BOT_DETECTED_RESPONSE.message,
               status: 403,
             });
           }
