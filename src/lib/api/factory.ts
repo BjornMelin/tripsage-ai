@@ -43,13 +43,15 @@ export interface GuardsConfig<T extends z.ZodType = z.ZodType> {
    * Enable BotID protection to block automated bots.
    * - true: Basic mode (free) - validates browser sessions
    * - "deep": Deep Analysis mode ($1/1000 calls) - Kasada-powered analysis
+   * - { mode, allowVerifiedAiAssistants }: Advanced configuration
    *
    * Verified AI assistants (ChatGPT, Perplexity, Claude, etc.) are allowed
-   * through but still subject to rate limiting.
+   * through by default but still subject to rate limiting. Set
+   * allowVerifiedAiAssistants to false to block them on specific routes.
    *
    * @see https://vercel.com/docs/botid
    */
-  botId?: boolean | "deep";
+  botId?: BotIdGuardConfig;
   /** Rate limit key from ROUTE_RATE_LIMITS registry. */
   rateLimit?: RouteRateLimitKey;
   /** Telemetry span name for observability. */
@@ -57,6 +59,14 @@ export interface GuardsConfig<T extends z.ZodType = z.ZodType> {
   /** Optional Zod schema for request body validation. */
   schema?: T;
 }
+
+export type BotIdGuardConfig =
+  | boolean
+  | "deep"
+  | {
+      mode: boolean | "deep";
+      allowVerifiedAiAssistants?: boolean;
+    };
 
 /**
  * Context injected into route handlers by the factory.
@@ -260,6 +270,17 @@ export function withApiGuards<SchemaType extends z.ZodType>(
   handler: RouteHandler<SchemaType extends z.ZodType ? z.infer<SchemaType> : unknown>
 ) => (req: NextRequest, routeContext: RouteParamsContext) => Promise<Response> {
   const { auth = false, botId, rateLimit, telemetry, schema } = config;
+  const botIdConfig: {
+    mode: boolean | "deep";
+    allowVerifiedAiAssistants: boolean;
+  } | null = botId
+    ? typeof botId === "object"
+      ? {
+          allowVerifiedAiAssistants: botId.allowVerifiedAiAssistants ?? true,
+          mode: botId.mode,
+        }
+      : { allowVerifiedAiAssistants: true, mode: botId }
+    : null;
 
   // Validate rate limit key exists if provided
   if (rateLimit && !ROUTE_RATE_LIMITS[rateLimit]) {
@@ -288,11 +309,11 @@ export function withApiGuards<SchemaType extends z.ZodType>(
 
       // Handle BotID protection if configured (after auth, before rate limiting)
       // Bot traffic shouldn't count against rate limits
-      if (botId) {
+      if (botIdConfig?.mode) {
         try {
           await assertHumanOrThrow(telemetry ?? req.nextUrl.pathname, {
-            allowVerifiedAiAssistants: true, // Allow ChatGPT, Perplexity, Claude, etc.
-            level: botId === "deep" ? "deep" : "basic",
+            allowVerifiedAiAssistants: botIdConfig.allowVerifiedAiAssistants,
+            level: botIdConfig.mode === "deep" ? "deep" : "basic",
           });
         } catch (error) {
           if (isBotDetectedError(error)) {

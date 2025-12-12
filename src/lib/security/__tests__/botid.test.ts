@@ -42,15 +42,20 @@ function createMockBotIdResponse(
     verifiedBotCategory: string | undefined;
   }> = {}
 ) {
-  return {
+  const base = {
     bypassed: false,
     isBot: false,
     isHuman: true,
     isVerifiedBot: false,
-    verifiedBotCategory: undefined,
-    verifiedBotName: undefined,
-    ...overrides,
   };
+  const withVerified =
+    "verifiedBotCategory" in overrides || "verifiedBotName" in overrides
+      ? {
+          verifiedBotCategory: undefined,
+          verifiedBotName: undefined,
+        }
+      : {};
+  return { ...base, ...withVerified, ...overrides };
 }
 
 describe("BotDetectedError", () => {
@@ -221,6 +226,23 @@ describe("assertHumanOrThrow", () => {
     mockCheckBotId.mockRejectedValue(networkError);
 
     await expect(assertHumanOrThrow("chat.stream")).rejects.toThrow(networkError);
+  });
+
+  it("handles responses without verifiedBot fields", async () => {
+    mockCheckBotId.mockResolvedValue(
+      createMockBotIdResponse({ isBot: true, isHuman: false })
+    );
+
+    try {
+      await assertHumanOrThrow("chat.stream");
+      expect.fail("Should have thrown");
+    } catch (error) {
+      expect(isBotDetectedError(error)).toBe(true);
+      expect(
+        (error as BotDetectedError).verification.verifiedBotCategory
+      ).toBeUndefined();
+      expect((error as BotDetectedError).verification.verifiedBotName).toBeUndefined();
+    }
   });
 
   it("allows requests when BotID is bypassed", async () => {
