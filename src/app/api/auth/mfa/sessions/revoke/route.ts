@@ -12,9 +12,6 @@ import { MfaRequiredError, requireAal2, revokeSessions } from "@/lib/security/mf
 import { classifyMfaError, logMfaError } from "@/lib/security/mfa-error";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
-/** The dynamic route for the MFA sessions revoke API. */
-export const dynamic = "force-dynamic";
-
 const logger = createServerLogger("api.auth.mfa.sessions.revoke", {
   redactKeys: ["userId", "scope"],
 });

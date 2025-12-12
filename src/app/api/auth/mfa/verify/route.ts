@@ -21,9 +21,6 @@ import {
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
-/** The dynamic route for the MFA verify API. */
-export const dynamic = "force-dynamic";
-
 const logger = createServerLogger("api.auth.mfa.verify", {
   redactKeys: ["challengeId", "factorId", "code"],
 });

@@ -12,9 +12,6 @@ import { classifyMfaError, logMfaError } from "@/lib/security/mfa-error";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
-/** The dynamic route for setting up MFA. */
-export const dynamic = "force-dynamic";
-
 const logger = createServerLogger("api.auth.mfa.setup", {
   redactKeys: ["qrCode", "uri"],
 });
