@@ -9,10 +9,8 @@ import "server-only";
 
 import { ragSearchRequestSchema } from "@schemas/rag";
 import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { createReranker } from "@/lib/rag/reranker";
-import { retrieveDocuments } from "@/lib/rag/retriever";
+import { handleRagSearch } from "./_handler";
 
 /**
  * POST /api/rag/search
@@ -39,24 +37,6 @@ export const POST = withApiGuards({
   rateLimit: "rag:search",
   schema: ragSearchRequestSchema,
   telemetry: "rag.search",
-})(async (_req: NextRequest, { supabase }, body) => {
-  const reranker = body.useReranking
-    ? createReranker({ provider: "together", timeout: 700 })
-    : createReranker({ provider: "noop" });
-
-  const result = await retrieveDocuments({
-    config: {
-      keywordWeight: body.keywordWeight,
-      limit: body.limit,
-      namespace: body.namespace,
-      semanticWeight: body.semanticWeight,
-      threshold: body.threshold,
-      useReranking: body.useReranking,
-    },
-    query: body.query,
-    reranker,
-    supabase,
-  });
-
-  return NextResponse.json(result);
-});
+})(async (_req: NextRequest, { supabase }, body) =>
+  handleRagSearch({ supabase }, body)
+);
