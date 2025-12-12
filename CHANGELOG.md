@@ -1,3 +1,19 @@
+## [1.13.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.12.0...v1.13.0) (2025-12-12)
+
+### Features
+
+* **ai-elements:** adopt Streamdown and safe tool rendering ([6d7bea2](https://github.com/BjornMelin/tripsage-ai/commit/6d7bea2e41ecde87fef7707c04c49815b9c366f5))
+* enhance AI element components, update RAG spec and API route, and refine documentation and linter rules. ([6d3020a](https://github.com/BjornMelin/tripsage-ai/commit/6d3020ade91fe9372e7c0a93e9126be27e47a722))
+* implement initial RAG system with indexer, retriever, and reranker components including API routes, database schema, and tests. ([1f4def7](https://github.com/BjornMelin/tripsage-ai/commit/1f4def75d76551deab986f4e7e5c84949df8add7))
+
+### Bug Fixes
+
+* **deps:** add unified as direct dependency for type resolution ([8b6939c](https://github.com/BjornMelin/tripsage-ai/commit/8b6939c417e3d13856584dd09734e278639f8aa7))
+* **rag:** align handlers, spec, and zod peers ([63b31ed](https://github.com/BjornMelin/tripsage-ai/commit/63b31ed2c93af858ed0b074f2a97d138ac236a53))
+* **rag:** allow anonymous rag search access ([15cd994](https://github.com/BjornMelin/tripsage-ai/commit/15cd99474fc35b668c07a39fd1cd37a8178ec60a))
+* **rag:** resolve PR review threads ([9dde8c1](https://github.com/BjornMelin/tripsage-ai/commit/9dde8c1656fdc536d4938107360742ff5ac250c4))
+* **rag:** return 200 for partial indexing ([589e337](https://github.com/BjornMelin/tripsage-ai/commit/589e3376d00582f0f844e305a586f3d6c6379d1e))
+
 ## [1.12.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.11.0...v1.12.0) (2025-12-12)
 
 ### Features
