@@ -2,6 +2,11 @@
 
 Zod v4 schemas for TripSage AI validation. Provides compile-time types and runtime validation in one declarative API.
 
+> Note: All TripSage application schemas must use **Zod v4 only**. Some transitive
+> dependencies (notably the OpenAI Node SDK) still declare a peer on Zod v3; we
+> handle this at the package manager level (pnpm `peerDependencyRules` /
+> `packageExtensions`). Do not import or author Zod v3 schemas in app code.
+
 ## Organization
 
 **Domain Schemas** (`src/domain/schemas/`): Core business entities independent of AI
