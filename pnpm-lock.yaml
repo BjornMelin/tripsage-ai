@@ -10,6 +10,8 @@ overrides:
   undici: 5.29.0
   brace-expansion: '>=2.0.2'
 
+packageExtensionsChecksum: sha256-e0oGVYZm0rjSTi9paZ5zbAQWOYbXBXvFmp6P/IUc8es=
+
 importers:
 
   .:
