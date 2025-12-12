@@ -73,7 +73,7 @@ export type RagChunk = z.infer<typeof ragChunkSchema>;
  */
 export const ragSearchResultSchema = z.object({
   chunkIndex: z.number().int().nonnegative(),
-  combinedScore: z.number().min(0).max(1),
+  combinedScore: z.number().min(0),
   content: z.string(),
   id: primitiveSchemas.uuid,
   keywordRank: z.number().nonnegative(),
@@ -109,9 +109,12 @@ export type RagIndexRequest = z.infer<typeof ragIndexRequestSchema>;
 /**
  * Zod schema for POST /api/rag/search request body.
  * Validates hybrid search with optional reranking.
+ *
+ * `keywordWeight` and `semanticWeight` are independent multipliers used directly
+ * by the hybrid ranking function. Defaults are 0.3 and 0.7 respectively; they
+ * do not need to sum to 1.0.
  */
 export const ragSearchRequestSchema = z.object({
-  filterMetadata: ragMetadataSchema.optional(),
   keywordWeight: z.number().min(0).max(1).default(0.3),
   limit: z.number().int().min(1).max(50).default(10),
   namespace: ragNamespaceSchema.optional(),

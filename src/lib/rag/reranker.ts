@@ -109,9 +109,9 @@ export class TogetherReranker implements Reranker {
           });
 
           // Fallback: return original documents sorted by combined score
-          return documents
-            .slice(0, effectiveTopN)
-            .sort((a, b) => b.combinedScore - a.combinedScore);
+          return [...documents]
+            .sort((a, b) => b.combinedScore - a.combinedScore)
+            .slice(0, effectiveTopN);
         }
       }
     );
@@ -130,9 +130,10 @@ export class NoOpReranker implements Reranker {
     topN: number
   ): Promise<RagSearchResult[]> {
     // Return documents sorted by combined score, limited to topN
-    return documents
-      .slice(0, Math.min(topN, documents.length))
-      .sort((a, b) => b.combinedScore - a.combinedScore);
+    const effectiveTopN = Math.min(topN, documents.length);
+    return [...documents]
+      .sort((a, b) => b.combinedScore - a.combinedScore)
+      .slice(0, effectiveTopN);
   }
 }
 

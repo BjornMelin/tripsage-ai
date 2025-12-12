@@ -19,7 +19,8 @@ import { indexDocuments } from "@/lib/rag/indexer";
  * Index documents into the RAG store with automatic chunking and embedding.
  *
  * @param req - Request with documents array.
- * @returns Index result with counts and failed documents.
+ * @returns Index result with counts and failed documents. Uses HTTP 207
+ *          (Multi-Status) when indexing partially succeeds.
  *
  * @example
  * ```bash

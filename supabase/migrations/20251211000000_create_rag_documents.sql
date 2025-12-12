@@ -190,16 +190,17 @@ BEGIN
     ORDER BY d.embedding <=> query_embedding
     LIMIT match_count * 2
   ),
-  keyword_results AS (
-    SELECT
-      d.id,
-      ts_rank_cd(d.fts, websearch_to_tsquery('english', query_text), 32) AS kw_rank
-    FROM public.rag_documents d
-    WHERE
-      (filter_namespace IS NULL OR d.namespace = filter_namespace) AND
-      d.fts @@ websearch_to_tsquery('english', query_text)
-    LIMIT match_count * 2
-  )
+	  keyword_results AS (
+	    SELECT
+	      d.id,
+	      ts_rank_cd(d.fts, websearch_to_tsquery('english', query_text), 32) AS kw_rank
+	    FROM public.rag_documents d
+	    WHERE
+	      (filter_namespace IS NULL OR d.namespace = filter_namespace) AND
+	      d.fts @@ websearch_to_tsquery('english', query_text)
+	    ORDER BY kw_rank DESC
+	    LIMIT match_count * 2
+	  )
   SELECT
     s.id,
     s.content,

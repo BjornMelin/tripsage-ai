@@ -124,7 +124,7 @@ export async function retrieveDocuments(
       }));
 
       // Apply reranking if enabled and we have results
-      let finalResults = results;
+      let finalResults: RagSearchResult[];
       let rerankingApplied = false;
 
       if (config.useReranking && results.length > 0) {
@@ -192,6 +192,12 @@ export async function semanticSearch(params: {
     model: openai.embeddingModel("text-embedding-3-small"),
     value: query,
   });
+
+  if (embedding.length !== 1536) {
+    throw new Error(
+      `Query embedding dimension mismatch: expected 1536, got ${embedding.length}`
+    );
+  }
 
   // Call simpler match function
   const { data, error } = await supabase.rpc("match_rag_documents", {
