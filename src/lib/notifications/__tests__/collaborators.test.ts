@@ -1,6 +1,5 @@
 /** @vitest-environment node */
 
-import * as supabaseModule from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { sendCollaboratorNotifications } from "@/lib/notifications/collaborators";
 
@@ -11,6 +10,21 @@ const envValues = vi.hoisted(() => ({
   RESEND_FROM_EMAIL: "noreply@test.dev",
   RESEND_FROM_NAME: "TripSage QA",
   SUPABASE_SERVICE_ROLE_KEY: "service-role",
+}));
+
+const mockAuthAdminGetUserById = vi.hoisted(() =>
+  vi.fn().mockResolvedValue({
+    data: { user: { email: "user@example.com" } },
+    error: null,
+  })
+);
+
+vi.mock("server-only", () => ({}));
+
+vi.mock("@/lib/supabase/admin", () => ({
+  createAdminSupabase: () => ({
+    auth: { admin: { getUserById: mockAuthAdminGetUserById } },
+  }),
 }));
 
 vi.mock("@/lib/env/server", () => ({
@@ -54,14 +68,6 @@ describe("sendCollaboratorNotifications", () => {
   });
 
   it("sends email when user email is resolved", async () => {
-    const authAdminGetUserById = vi.fn().mockResolvedValue({
-      data: { user: { email: "user@example.com" } },
-      error: null,
-    });
-    vi.spyOn(supabaseModule, "createClient").mockReturnValue({
-      auth: { admin: { getUserById: authAdminGetUserById } },
-    } as unknown as ReturnType<typeof supabaseModule.createClient>);
-
     const result = await sendCollaboratorNotifications(
       {
         oldRecord: null,
@@ -72,6 +78,7 @@ describe("sendCollaboratorNotifications", () => {
       "event-key-1"
     );
 
+    expect(mockAuthAdminGetUserById).toHaveBeenCalledWith("user-1");
     expect(result.emailed).toBe(true);
   });
 });
