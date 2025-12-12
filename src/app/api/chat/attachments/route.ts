@@ -236,6 +236,7 @@ interface UploadedFileRecord {
 
 export const POST = withApiGuards({
   auth: true,
+  botId: true,
   rateLimit: "chat:attachments",
   telemetry: "chat.attachments.upload",
 })(async (req: NextRequest, { supabase, user }) => {

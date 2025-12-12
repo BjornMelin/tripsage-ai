@@ -1,6 +1,6 @@
 {
   "name": "tripsage-ai-frontend",
-  "version": "1.11.0",
+  "version": "1.12.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -99,6 +99,7 @@
     "@vercel/otel": "^2.1.0",
     "ai": "6.0.0-beta.148",
     "amadeus": "^11.0.0",
+    "botid": "^1.5.10",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",

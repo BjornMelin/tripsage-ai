@@ -25,6 +25,7 @@ export function CodeBlock({
   maxHeightClassName = "max-h-96",
 }: CodeBlockProps) {
   const [copied, setCopied] = useState(false);
+  const isMountedRef = useRef(true);
   const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const canCopy =
     typeof navigator !== "undefined" &&
@@ -32,6 +33,7 @@ export function CodeBlock({
 
   useEffect(() => {
     return () => {
+      isMountedRef.current = false;
       if (copiedTimeoutRef.current) {
         clearTimeout(copiedTimeoutRef.current);
         copiedTimeoutRef.current = null;
@@ -44,12 +46,14 @@ export function CodeBlock({
     navigator.clipboard
       .writeText(value)
       .then(() => {
+        if (!isMountedRef.current) return;
         setCopied(true);
         if (copiedTimeoutRef.current) {
           clearTimeout(copiedTimeoutRef.current);
           copiedTimeoutRef.current = null;
         }
         copiedTimeoutRef.current = setTimeout(() => {
+          if (!isMountedRef.current) return;
           setCopied(false);
           copiedTimeoutRef.current = null;
         }, 1500);

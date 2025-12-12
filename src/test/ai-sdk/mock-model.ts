@@ -37,11 +37,60 @@ type FinishReason =
   | "other"
   | "unknown";
 
-type UsageLike = {
-  inputTokens: number;
-  outputTokens: number;
-  totalTokens: number;
+/**
+ * Input token count structure for AI SDK v6 beta.148+.
+ * Supports cache-aware token tracking.
+ */
+type InputTokenCount = {
+  total: number | undefined;
+  noCache: number | undefined;
+  cacheRead: number | undefined;
+  cacheWrite: number | undefined;
 };
+
+/**
+ * Output token count structure for AI SDK v6 beta.148+.
+ * Supports text and reasoning token breakdown.
+ */
+type OutputTokenCount = {
+  total: number | undefined;
+  text: number | undefined;
+  reasoning: number | undefined;
+};
+
+/**
+ * Usage structure matching LanguageModelV3Usage in AI SDK v6 beta.148+.
+ */
+type UsageLike = {
+  inputTokens: InputTokenCount;
+  outputTokens: OutputTokenCount;
+  totalTokens: InputTokenCount;
+};
+
+/**
+ * Creates a usage object compatible with LanguageModelV3Usage.
+ */
+function createUsage(input: number, output: number): UsageLike {
+  return {
+    inputTokens: {
+      cacheRead: undefined,
+      cacheWrite: undefined,
+      noCache: undefined,
+      total: input,
+    },
+    outputTokens: {
+      reasoning: undefined,
+      text: output,
+      total: output,
+    },
+    totalTokens: {
+      cacheRead: undefined,
+      cacheWrite: undefined,
+      noCache: undefined,
+      total: input + output,
+    },
+  };
+}
 
 /**
  * Options for creating a mock language model.
@@ -88,11 +137,7 @@ export function createMockModel(options: MockModelOptions = {}) {
     doGenerate: async (_options) => ({
       content: [{ text, type: "text" as const }],
       finishReason,
-      usage: {
-        inputTokens: usage.inputTokens ?? 10,
-        outputTokens: usage.outputTokens ?? 20,
-        totalTokens: (usage.inputTokens ?? 10) + (usage.outputTokens ?? 20),
-      } satisfies UsageLike,
+      usage: createUsage(usage.inputTokens ?? 10, usage.outputTokens ?? 20),
       warnings: warnings as never[],
     }),
   });
@@ -142,11 +187,7 @@ export function createMockToolModel(
         })),
       ],
       finishReason: toolCalls.length > 0 ? ("tool-calls" as const) : ("stop" as const),
-      usage: {
-        inputTokens: 10,
-        outputTokens: 20,
-        totalTokens: 30,
-      } satisfies UsageLike,
+      usage: createUsage(10, 20),
       warnings: [],
     }),
   });
@@ -195,7 +236,6 @@ export function createStreamingMockModel(options: StreamingMockModelOptions) {
 
   const inputTokens = usage.inputTokens ?? 10;
   const outputTokens = usage.outputTokens ?? 20;
-  const totalTokens = usage.totalTokens ?? inputTokens + outputTokens;
 
   return new MockLanguageModelV3({
     doStream: async () => ({
@@ -212,11 +252,7 @@ export function createStreamingMockModel(options: StreamingMockModelOptions) {
             finishReason,
             logprobs: undefined,
             type: "finish" as const,
-            usage: {
-              inputTokens,
-              outputTokens,
-              totalTokens,
-            } satisfies UsageLike,
+            usage: createUsage(inputTokens, outputTokens),
           },
         ],
       }),
@@ -290,7 +326,7 @@ export function createStreamingToolMockModel(options: StreamingToolMockModelOpti
         type: "finish";
         finishReason: "tool-calls" | "stop";
         logprobs: undefined;
-        usage: { inputTokens: number; outputTokens: number; totalTokens: number };
+        usage: UsageLike;
       };
 
   const streamChunks: StreamChunk[] = [];
@@ -327,7 +363,6 @@ export function createStreamingToolMockModel(options: StreamingToolMockModelOpti
   // Add finish
   const inputTokens = usage?.promptTokens ?? 10;
   const outputTokens = usage?.completionTokens ?? 20;
-  const totalTokens = usage?.totalTokens ?? inputTokens + outputTokens;
   const resolvedFinishReason: "stop" | "tool-calls" =
     finishReason === "stop" || finishReason === "tool-calls"
       ? finishReason
@@ -336,7 +371,7 @@ export function createStreamingToolMockModel(options: StreamingToolMockModelOpti
     finishReason: resolvedFinishReason,
     logprobs: undefined,
     type: "finish",
-    usage: { inputTokens, outputTokens, totalTokens },
+    usage: createUsage(inputTokens, outputTokens),
   });
 
   return new MockLanguageModelV3({
@@ -373,7 +408,7 @@ export function createMockObjectModel<T>(jsonObject: T) {
     doGenerate: async () => ({
       content: [{ text: JSON.stringify(jsonObject), type: "text" as const }],
       finishReason: "stop" as const,
-      usage: { inputTokens: 10, outputTokens: 20, totalTokens: 30 } satisfies UsageLike,
+      usage: createUsage(10, 20),
       warnings: [],
     }),
   });
@@ -429,11 +464,7 @@ export function createStreamingObjectMockModel<T>(jsonObject: T) {
             finishReason: "stop" as const,
             logprobs: undefined,
             type: "finish" as const,
-            usage: {
-              inputTokens: 10,
-              outputTokens: 20,
-              totalTokens: 30,
-            } satisfies UsageLike,
+            usage: createUsage(10, 20),
           },
         ],
       }),

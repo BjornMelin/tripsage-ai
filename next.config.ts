@@ -136,6 +136,17 @@ const nextConfig: NextConfig = {
     ];
   },
 
+  // Rewrites for BotID to prevent ad-blocker interference
+  // @see https://vercel.com/docs/botid/get-started#configure-rewrites
+  rewrites() {
+    return [
+      {
+        destination: "https://challenges.cloudflare.com/:path*",
+        source: "/_botid/:path*",
+      },
+    ];
+  },
+
   // Enable static exports optimization
   trailingSlash: false,
 
