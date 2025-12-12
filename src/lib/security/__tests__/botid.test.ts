@@ -154,9 +154,7 @@ describe("assertHumanOrThrow", () => {
       createMockBotIdResponse({ isBot: true, isHuman: false })
     );
 
-    await expect(assertHumanOrThrow("chat.stream")).rejects.toThrow(
-      BotDetectedError
-    );
+    await expect(assertHumanOrThrow("chat.stream")).rejects.toThrow(BotDetectedError);
   });
 
   it("throws with correct route name in error", async () => {
@@ -199,9 +197,7 @@ describe("assertHumanOrThrow", () => {
       })
     );
 
-    await expect(assertHumanOrThrow("chat.stream")).rejects.toThrow(
-      BotDetectedError
-    );
+    await expect(assertHumanOrThrow("chat.stream")).rejects.toThrow(BotDetectedError);
   });
 
   it("blocks AI assistants when allowVerifiedAiAssistants is false", async () => {

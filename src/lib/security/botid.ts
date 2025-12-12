@@ -158,8 +158,7 @@ export async function assertHumanOrThrow(
     isVerifiedBot: result.isVerifiedBot,
     verifiedBotCategory:
       "verifiedBotCategory" in result ? result.verifiedBotCategory : undefined,
-    verifiedBotName:
-      "verifiedBotName" in result ? result.verifiedBotName : undefined,
+    verifiedBotName: "verifiedBotName" in result ? result.verifiedBotName : undefined,
   };
 
   if (verification.isBot) {
