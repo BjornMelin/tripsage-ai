@@ -201,42 +201,49 @@ function buildMapSearchUrl(activity: ActivityWithMetadata): string | null {
   return `https://www.google.com/maps/search/?api=1&query=${query}`;
 }
 
-/** Emit booking telemetry (client via beacon/fetch, server via OTEL). */
+/**
+ * Emit booking telemetry via API endpoint.
+ *
+ * This module is imported by client components, so we always use the API
+ * endpoint approach to avoid importing server-only telemetry modules.
+ */
 async function recordBookingEvent(
   eventName: string,
   attributes?: TelemetryAttributes,
   level: "info" | "warning" | "error" = "info"
 ): Promise<void> {
-  // Client: fire-and-forget to telemetry endpoint to capture real user clicks.
-  if (typeof window !== "undefined") {
-    try {
-      const payload = JSON.stringify({ attributes, eventName, level });
-      if (
-        typeof navigator !== "undefined" &&
-        typeof navigator.sendBeacon === "function"
-      ) {
-        const blob = new Blob([payload], { type: "application/json" });
-        navigator.sendBeacon("/api/telemetry/activities", blob);
-      } else {
-        fetch("/api/telemetry/activities", {
-          body: payload,
-          headers: { "Content-Type": "application/json" },
-          keepalive: true,
-          method: "POST",
-        }).catch(() => undefined);
-      }
-    } catch {
-      // Client telemetry is best-effort; ignore failures.
-    }
-    return;
-  }
-
-  // Server: record span-based telemetry.
+  // Always use API endpoint for telemetry (works client and server-side).
+  // This avoids importing server-only modules in client component bundles.
   try {
-    const telemetry = await import("@/lib/telemetry/span");
-    telemetry.recordTelemetryEvent(eventName, { attributes, level });
+    const payload = JSON.stringify({ attributes, eventName, level });
+
+    // Prefer sendBeacon in browser for fire-and-forget reliability
+    if (
+      typeof window !== "undefined" &&
+      typeof navigator !== "undefined" &&
+      typeof navigator.sendBeacon === "function"
+    ) {
+      const blob = new Blob([payload], { type: "application/json" });
+      const success = navigator.sendBeacon("/api/telemetry/activities", blob);
+      if (success) {
+        return;
+      }
+    }
+
+    // Fallback to fetch (works in Node.js and browsers without sendBeacon).
+    // Use NEXT_PUBLIC_APP_URL only (public) so this stays client-bundle-safe.
+    const baseUrl =
+      typeof window !== "undefined"
+        ? ""
+        : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    await fetch(`${baseUrl}/api/telemetry/activities`, {
+      body: payload,
+      headers: { "Content-Type": "application/json" },
+      keepalive: true,
+      method: "POST",
+    });
   } catch {
-    // Telemetry is best-effort; swallow errors to avoid impacting runtime.
+    // Telemetry is best-effort; ignore failures.
   }
 }
 
