@@ -85,10 +85,10 @@ export default function RootLayout({
         {/* Initialize BotID protection for chat and agent API routes */}
         <BotIdClient
           protect={[
-            { path: "/api/chat", method: "POST" },
-            { path: "/api/chat/stream", method: "POST" },
-            { path: "/api/agents/router", method: "POST" },
-            { path: "/api/chat/attachments", method: "POST" },
+            { method: "POST", path: "/api/chat" },
+            { method: "POST", path: "/api/chat/stream" },
+            { method: "POST", path: "/api/agents/router" },
+            { method: "POST", path: "/api/chat/attachments" },
           ]}
         />
         <PerformanceMonitor>
