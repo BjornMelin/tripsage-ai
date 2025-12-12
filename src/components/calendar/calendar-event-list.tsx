@@ -1,8 +1,13 @@
 /**
- * @fileoverview Server Component for displaying calendar events list.
+ * @fileoverview Client Component for displaying calendar events list.
+ *
+ * Fetches events via API route to avoid server/client boundary violations.
  */
 
+"use client";
+
 import { CalendarIcon, ClockIcon, MapPinIcon } from "lucide-react";
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -10,11 +15,19 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { listEvents } from "@/lib/calendar/google";
+import { Skeleton } from "@/components/ui/skeleton";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
-import { createServerLogger } from "@/lib/telemetry/logger";
 
-const CalendarEventLogger = createServerLogger("component.calendar-event-list");
+/** Shape of a calendar event from the API. */
+interface CalendarEvent {
+  id: string;
+  summary: string;
+  description?: string;
+  location?: string;
+  start: { dateTime?: string; date?: string };
+  end: { dateTime?: string; date?: string };
+  htmlLink?: string;
+}
 
 /** Props for CalendarEventList component. */
 export interface CalendarEventListProps {
@@ -29,64 +42,106 @@ export interface CalendarEventListProps {
 }
 
 /**
- * Fetches Calendar events server-side and renders a summarized list in a card.
+ * Fetches Calendar events via API and renders a summarized list in a card.
  *
  * @param props - Optional calendar id and time range plus styling hook.
- * @returns Server component output with event list.
+ * @returns Client component output with event list.
  */
-export async function CalendarEventList({
+export function CalendarEventList({
   calendarId = "primary",
   timeMin,
   timeMax,
   className,
 }: CalendarEventListProps) {
-  // Fetch events
-  let events: Array<{
-    id: string;
-    summary: string;
-    description?: string;
-    location?: string;
-    start: { dateTime?: string; date?: string };
-    end: { dateTime?: string; date?: string };
-    htmlLink?: string;
-  }> = [];
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  try {
-    const result = await listEvents({
-      alwaysIncludeEmail: false,
-      calendarId,
-      maxResults: 250,
-      showDeleted: false,
-      showHiddenInvitations: false,
-      singleEvents: false,
-      timeMax,
-      timeMin,
-    });
-    // Filter and map events, ensuring id is present
-    events = (result.items || [])
-      .filter((event): event is typeof event & { id: string } => Boolean(event.id))
-      .map((event) => ({
-        description: event.description,
-        end: {
-          date: event.end.date,
-          dateTime: event.end.dateTime?.toISOString(),
-        },
-        htmlLink: event.htmlLink?.toString(),
-        id: event.id,
-        location: event.location,
-        start: {
-          date: event.start.date,
-          dateTime: event.start.dateTime?.toISOString(),
-        },
-        summary: event.summary,
-      }));
-  } catch (error) {
-    CalendarEventLogger.error("Failed to fetch calendar events", {
-      calendarId,
-      error: error instanceof Error ? error.message : String(error),
-      timeMax: timeMax?.toISOString(),
-      timeMin: timeMin?.toISOString(),
-    });
+  useEffect(() => {
+    const controller = new AbortController();
+
+    (async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const params = new URLSearchParams();
+        params.set("calendarId", calendarId);
+        params.set("maxResults", "250");
+        if (timeMin) {
+          params.set("timeMin", timeMin.toISOString());
+        }
+        if (timeMax) {
+          params.set("timeMax", timeMax.toISOString());
+        }
+
+        const response = await fetch(`/api/calendar/events?${params}`, {
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch events: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        const items = (data.items || []).filter(
+          (event: Partial<CalendarEvent>): event is CalendarEvent =>
+            Boolean(event.id && event.start && event.end)
+        );
+        setEvents(items);
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") {
+          return;
+        }
+        const message = err instanceof Error ? err.message : "Unknown error";
+        setError(message);
+        if (process.env.NODE_ENV === "development") {
+          console.error("Failed to fetch calendar events:", err);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    })();
+
+    return () => {
+      controller.abort();
+    };
+  }, [calendarId, timeMin, timeMax]);
+
+  if (isLoading) {
+    return (
+      <Card className={className}>
+        <CardHeader>
+          <Skeleton className="h-6 w-32" />
+          <Skeleton className="h-4 w-48 mt-2" />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="p-4 border rounded-lg space-y-2">
+              <Skeleton className="h-5 w-3/4" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-1/2" />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className={className}>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CalendarIcon className="h-5 w-5" />
+            Upcoming Events
+          </CardTitle>
+          <CardDescription className="text-destructive">
+            Failed to load events: {error}
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
   }
 
   return (
@@ -106,14 +161,14 @@ export async function CalendarEventList({
         {events.length > 0 ? (
           <ul className="space-y-4">
             {events.map((event) => {
-              const startDate = event.start.dateTime
+              const startDate = event.start?.dateTime
                 ? DateUtils.parse(event.start.dateTime)
-                : event.start.date
+                : event.start?.date
                   ? DateUtils.parse(event.start.date)
                   : null;
-              const endDate = event.end.dateTime
+              const endDate = event.end?.dateTime
                 ? DateUtils.parse(event.end.dateTime)
-                : event.end.date
+                : event.end?.date
                   ? DateUtils.parse(event.end.date)
                   : null;
 

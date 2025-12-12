@@ -8,12 +8,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Suspense, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { CalendarConnectionCard } from "@/components/calendar/calendar-connection-card";
 import { CalendarEventForm } from "@/components/calendar/calendar-event-form";
 import { CalendarEventList } from "@/components/calendar/calendar-event-list";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
@@ -24,26 +22,6 @@ import { DateUtils } from "@/lib/dates/unified-date-utils";
  *
  * @returns Calendar management layout with tabbed controls.
  */
-function CalendarEventListSkeleton() {
-  return (
-    <Card>
-      <CardHeader>
-        <Skeleton className="h-6 w-32" />
-        <Skeleton className="h-4 w-48 mt-2" />
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="p-4 border rounded-lg space-y-2">
-            <Skeleton className="h-5 w-3/4" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-1/2" />
-          </div>
-        ))}
-      </CardContent>
-    </Card>
-  );
-}
-
 export default function CalendarPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -77,9 +55,7 @@ export default function CalendarPage() {
         </TabsContent>
 
         <TabsContent value="events" className="space-y-6">
-          <Suspense fallback={<CalendarEventListSkeleton />}>
-            <CalendarEventList timeMin={now} timeMax={nextWeek} />
-          </Suspense>
+          <CalendarEventList timeMin={now} timeMax={nextWeek} />
         </TabsContent>
 
         <TabsContent value="create" className="space-y-6">
