@@ -38,6 +38,8 @@ Content-Type: application/json
 }
 ```
 
+The response body intentionally includes only `error` and `reason` fields, matching `BOT_DETECTED_RESPONSE` and the shared `errorResponse()` shape.
+
 ### Verified AI Assistants
 
 The following verified bot categories are allowed through BotID protection:
