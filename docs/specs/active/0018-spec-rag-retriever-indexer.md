@@ -57,11 +57,12 @@ Index documents with automatic chunking and embedding generation.
     sourceId?: string;
   }>;
   namespace?: string;  // default: "default"
-  chunkSize?: number;  // default: 512 tokens
-  chunkOverlap?: number;  // default: 100 tokens
-  batchSize?: number;  // default: 10
+  chunkSize?: number;  // default: 512 token-estimate (~2k chars; model-dependent)
+  chunkOverlap?: number;  // default: 100 token-estimate (~400 chars)
 }
 ```
+
+> Note: `batchSize` is an internal indexer setting (default ~10 documents per embedding batch as of 2025-12-12) and is not exposed on the public API.
 
 **Response:**
 

@@ -9,9 +9,8 @@ import "server-only";
 
 import { ragIndexRequestSchema } from "@schemas/rag";
 import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { indexDocuments } from "@/lib/rag/indexer";
+import { handleRagIndex } from "./_handler";
 
 /**
  * POST /api/rag/index
@@ -38,16 +37,4 @@ export const POST = withApiGuards({
   rateLimit: "rag:index",
   schema: ragIndexRequestSchema,
   telemetry: "rag.index",
-})(async (_req: NextRequest, { supabase }, body) => {
-  const result = await indexDocuments({
-    config: {
-      chunkOverlap: body.chunkOverlap,
-      chunkSize: body.chunkSize,
-      namespace: body.namespace,
-    },
-    documents: body.documents,
-    supabase,
-  });
-
-  return NextResponse.json(result, { status: 200 });
-});
+})(async (_req: NextRequest, { supabase }, body) => handleRagIndex({ supabase }, body));
