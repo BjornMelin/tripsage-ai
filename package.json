@@ -113,16 +113,19 @@
     "libphonenumber-js": "^1.12.29",
     "lucide-react": "^0.560.0",
     "mem0ai": "^2.1.38",
+    "motion": "^12.23.26",
     "nanoid": "^5.1.6",
     "next": "^16.0.9",
     "next-themes": "^0.4.6",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "react-error-boundary": "^6.0.0",
+    "react-is": "^19.2.3",
     "react-hook-form": "^7.68.0",
     "react-syntax-highlighter": "^16.1.0",
     "recharts": "^3.5.1",
     "resend": "^6.5.2",
+    "shiki": "^3.19.0",
     "streamdown": "^1.6.8",
     "stripe": "^20.0.0",
     "tailwind-merge": "^3.4.0",
@@ -140,6 +143,7 @@
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/git": "^10.0.1",
     "@tailwindcss/postcss": "^4.1.17",
+    "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/user-event": "^14.6.1",
     "@types/google.maps": "^3.58.1",
@@ -170,21 +174,43 @@
     "node": "^24 || >=24",
     "pnpm": ">=9.0.0"
   },
-  "overrides": {
-    "axios": "1.13.2",
-    "prismjs": ">=1.30.0",
-    "undici": "5.29.0",
-    "brace-expansion": ">=2.0.2"
-  },
   "pnpm": {
+    "packageExtensions": {
+      "openai@*": {
+        "dependencies": {
+          "zod": "3.25.76"
+        }
+      }
+    },
     "peerDependencyRules": {
       "allowedVersions": {
         "openai>zod": "^4.1.13"
-      }
+      },
+      "ignoreMissing": [
+        "@anthropic-ai/sdk",
+        "@cloudflare/workers-types",
+        "@google/genai",
+        "@langchain/core",
+        "@mistralai/mistralai",
+        "@qdrant/js-client-rest",
+        "@types/jest",
+        "@types/pg",
+        "@types/sqlite3",
+        "cloudflare",
+        "groq-sdk",
+        "neo4j-driver",
+        "ollama",
+        "pg",
+        "redis",
+        "sqlite3"
+      ]
     },
-    "ignoredBuiltDependencies": [
-      "esbuild",
-      "msw"
-    ]
+    "overrides": {
+      "axios": "1.13.2",
+      "prismjs": ">=1.30.0",
+      "undici": "5.29.0",
+      "brace-expansion": ">=2.0.2"
+    },
+    "ignoredBuiltDependencies": ["esbuild", "msw"]
   }
 }
