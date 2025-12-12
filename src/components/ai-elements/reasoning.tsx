@@ -56,13 +56,15 @@ export function Reasoning({
         </button>
       </CollapsibleTrigger>
       <CollapsibleContent className="border-t border-yellow-300/30 bg-yellow-50 px-3 py-2 text-xs text-yellow-900 dark:border-yellow-300/20 dark:bg-yellow-950 dark:text-yellow-200">
-        {isAnimating && text.length === 0 ? (
-          <Shimmer>Thinking…</Shimmer>
-        ) : (
-          <Response className="prose-sm" mode="static">
-            {text}
-          </Response>
-        )}
+        {open ? (
+          isAnimating && text.length === 0 ? (
+            <Shimmer>Thinking…</Shimmer>
+          ) : (
+            <Response className="prose-sm" mode="static">
+              {text}
+            </Response>
+          )
+        ) : null}
       </CollapsibleContent>
     </Collapsible>
   );

@@ -5,6 +5,9 @@
  * POST /api/rag/search
  */
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 import "server-only";
 
 import { ragSearchRequestSchema } from "@schemas/rag";

@@ -5,7 +5,7 @@
 "use client";
 
 import { CheckIcon, CopyIcon } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -25,9 +25,19 @@ export function CodeBlock({
   maxHeightClassName = "max-h-96",
 }: CodeBlockProps) {
   const [copied, setCopied] = useState(false);
+  const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const canCopy =
     typeof navigator !== "undefined" &&
     typeof navigator.clipboard?.writeText === "function";
+
+  useEffect(() => {
+    return () => {
+      if (copiedTimeoutRef.current) {
+        clearTimeout(copiedTimeoutRef.current);
+        copiedTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   const onCopy = useCallback(() => {
     if (!canCopy || isAnimating || value.length === 0) return;
@@ -35,17 +45,26 @@ export function CodeBlock({
       .writeText(value)
       .then(() => {
         setCopied(true);
-        setTimeout(() => setCopied(false), 1500);
+        if (copiedTimeoutRef.current) {
+          clearTimeout(copiedTimeoutRef.current);
+          copiedTimeoutRef.current = null;
+        }
+        copiedTimeoutRef.current = setTimeout(() => {
+          setCopied(false);
+          copiedTimeoutRef.current = null;
+        }, 1500);
       })
       .catch(() => undefined);
   }, [canCopy, isAnimating, value]);
+
+  const copyAriaLabel = label ? `Copy ${label}` : "Copy";
 
   return (
     <div className={cn("rounded-md border bg-muted/30 text-xs", className)}>
       <div className="flex items-center justify-between border-b px-2 py-1">
         <div className="font-medium text-muted-foreground">{label}</div>
         <Button
-          aria-label="Copy output"
+          aria-label={copyAriaLabel}
           disabled={!canCopy || copied || isAnimating || value.length === 0}
           onClick={onCopy}
           size="icon-sm"

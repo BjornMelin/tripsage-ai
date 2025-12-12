@@ -20,7 +20,8 @@ export function safeHref(raw?: string | null): string | undefined {
   if (!trimmed) return undefined;
 
   if (trimmed.startsWith("//")) return undefined;
-  if (trimmed.startsWith("/")) return trimmed;
+  if (trimmed.startsWith("/") || trimmed.startsWith("#") || trimmed.startsWith("?"))
+    return trimmed;
 
   try {
     const url = new URL(trimmed);

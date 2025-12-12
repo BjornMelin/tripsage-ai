@@ -485,6 +485,46 @@
           }
         }
       }
+    },
+    {
+      "includes": ["**/ai-elements/tool.tsx"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": {
+              "level": "error",
+              "options": {
+                "conventions": [
+                  {
+                    "formats": ["PascalCase"],
+                    "match": "[A-Z].*",
+                    "selector": { "kind": "const", "scope": "global" }
+                  },
+                  {
+                    "formats": ["camelCase"],
+                    "selector": { "kind": "const", "scope": "global" }
+                  },
+                  {
+                    "formats": ["camelCase", "PascalCase"],
+                    "selector": { "kind": "function", "scope": "global" }
+                  },
+                  {
+                    "formats": ["camelCase"],
+                    "match": "use[A-Z].*",
+                    "selector": { "kind": "function" }
+                  },
+                  {
+                    "formats": ["camelCase", "PascalCase", "snake_case"],
+                    "selector": { "kind": "objectLiteralProperty" }
+                  }
+                ],
+                "requireAscii": true,
+                "strictCase": false
+              }
+            }
+          }
+        }
+      }
     }
   ],
 

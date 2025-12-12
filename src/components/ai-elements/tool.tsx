@@ -24,7 +24,7 @@ export type ToolProps = {
   defaultOpen?: boolean;
 };
 
-function FormatValue(value: unknown): string {
+function formatValue(value: unknown): string {
   if (value === undefined) return "";
   if (typeof value === "string") return value;
   try {
@@ -80,8 +80,8 @@ export function Tool({
       </CollapsibleTrigger>
       {hasInput || hasOutput ? (
         <CollapsibleContent className="space-y-2 border-t px-3 py-2">
-          {hasInput ? <CodeBlock label="Input" value={FormatValue(input)} /> : null}
-          {hasOutput ? <CodeBlock label="Output" value={FormatValue(output)} /> : null}
+          {hasInput ? <CodeBlock label="Input" value={formatValue(input)} /> : null}
+          {hasOutput ? <CodeBlock label="Output" value={formatValue(output)} /> : null}
         </CollapsibleContent>
       ) : null}
     </Collapsible>
