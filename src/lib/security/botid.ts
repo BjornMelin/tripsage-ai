@@ -211,5 +211,5 @@ export async function assertHumanOrThrow(
  */
 export const BOT_DETECTED_RESPONSE = {
   error: "bot_detected",
-  message: "Automated access is not allowed.",
+  reason: "Automated access is not allowed.",
 } as const;

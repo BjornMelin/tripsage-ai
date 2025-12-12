@@ -248,13 +248,26 @@ describe("assertHumanOrThrow", () => {
       advancedOptions: { checkLevel: "basic" },
     });
   });
+
+  it("allows requests when bypassed is true (local development)", async () => {
+    // In local development, BotID returns bypassed: true with isBot: false
+    mockCheckBotId.mockResolvedValue(
+      createMockBotIdResponse({
+        bypassed: true,
+        isBot: false,
+        isHuman: true,
+      })
+    );
+
+    await expect(assertHumanOrThrow("chat.stream")).resolves.toBeUndefined();
+  });
 });
 
 describe("BOT_DETECTED_RESPONSE", () => {
-  it("has correct error structure", () => {
+  it("has correct error structure matching spec", () => {
     expect(BOT_DETECTED_RESPONSE).toEqual({
       error: "bot_detected",
-      message: "Automated access is not allowed.",
+      reason: "Automated access is not allowed.",
     });
   });
 });
