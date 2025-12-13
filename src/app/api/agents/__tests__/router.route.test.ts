@@ -9,6 +9,13 @@ import {
   resetApiRouteMocks,
 } from "@/test/helpers/api-route";
 
+vi.mock("botid/server", async () => {
+  const { mockBotIdHumanResponse } = await import("@/test/mocks/botid");
+  return {
+    checkBotId: vi.fn(async () => mockBotIdHumanResponse),
+  };
+});
+
 const classifyUserMessage = vi.hoisted(() => vi.fn());
 
 vi.mock("@ai/agents/router-agent", () => ({

@@ -20,9 +20,6 @@ import {
 } from "@/lib/security/mfa";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 
-/** The dynamic route for the MFA backup code regenerate API. */
-export const dynamic = "force-dynamic";
-
 /** The POST handler for the MFA backup code regenerate API. */
 export const POST = withApiGuards({
   auth: true,

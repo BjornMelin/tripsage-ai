@@ -9,10 +9,25 @@
 import "server-only";
 import type { ServerEnv } from "@schemas/env";
 import { envSchema } from "@schemas/env";
+import { isBuildPhase } from "@/lib/utils/build-phase";
 
 // Single cached validated environment
 let envCache: ServerEnv | null = null;
 let parseError: Error | null = null;
+
+function createBuildPhaseServerEnvProxy(): ServerEnv {
+  const handler: ProxyHandler<ServerEnv> = {
+    get(_target, prop) {
+      if (typeof prop === "string") {
+        throw new Error(
+          `Server env ${prop} accessed during Next.js build phase. Guard access with isBuildPhase() or provide runtime env vars.`
+        );
+      }
+      return undefined as never;
+    },
+  };
+  return new Proxy({} as ServerEnv, handler);
+}
 
 /** Test-only helper to clear cached env between runs. */
 export function __resetServerEnvCacheForTest() {
@@ -27,6 +42,13 @@ function parseServerEnv(): ServerEnv {
   if (parseError) {
     throw parseError;
   }
+
+  // During build phase, always return a Proxy that fails fast on access.
+  if (isBuildPhase()) {
+    envCache = createBuildPhaseServerEnvProxy();
+    return envCache;
+  }
+
   try {
     envCache = envSchema.parse(process.env);
     return envCache;

@@ -5,10 +5,9 @@
  * Client-only slice - no direct Supabase clients or server logic.
  */
 
-import type { ChatSession, Message, SendMessageOptions } from "@schemas/chat";
+import type { ChatSession, Message } from "@schemas/chat";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { sendChatMessage, streamChatMessage } from "@/lib/chat/api-client";
 import { generateId, getCurrentTimestamp } from "@/stores/helpers";
 
 // Memory sync handled server-side via orchestrator - no client-side memory store needed
@@ -19,7 +18,6 @@ export interface ChatMessagesState {
   sessions: ChatSession[];
   currentSessionId: string | null;
   isLoading: boolean;
-  isStreaming: boolean;
   error: string | null;
 
   // Computed
@@ -40,11 +38,6 @@ export interface ChatMessagesState {
   ) => void;
   clearMessages: (sessionId: string) => void;
 
-  // Streaming actions
-  sendMessage: (content: string, options?: SendMessageOptions) => Promise<void>;
-  streamMessage: (content: string, options?: SendMessageOptions) => Promise<void>;
-  stopStreaming: () => void;
-
   // Tool actions
   addToolResult: (
     sessionId: string,
@@ -58,9 +51,6 @@ export interface ChatMessagesState {
   exportSessionData: (sessionId: string) => string;
   importSessionData: (jsonData: string) => string | null;
 }
-
-// Abort controller for canceling stream requests
-let abortController: AbortController | null = null;
 
 // Track object URLs for attachment cleanup
 const objectUrls = new Map<string, Set<string>>(); // sessionId -> Set<objectUrl>
@@ -298,7 +288,6 @@ export const useChatMessages = create<ChatMessagesState>()(
           }
         },
         isLoading: false,
-        isStreaming: false,
 
         renameSession: (sessionId, title) => {
           set((state) => {
@@ -314,71 +303,6 @@ export const useChatMessages = create<ChatMessagesState>()(
             };
           });
         },
-
-        sendMessage: async (content, options = {}) => {
-          const { currentSessionId, currentSession } = get();
-
-          let sessionId = currentSessionId;
-          if (!sessionId || !currentSession) {
-            sessionId = get().createSession("New Conversation");
-          }
-
-          const session = get().sessions.find((s) => s.id === sessionId);
-          const existingMessages = session?.messages || [];
-
-          // Add user message with attachment URL tracking
-          const attachmentUrls: string[] = [];
-          get().addMessage(sessionId, {
-            attachments: options.attachments?.map((file) => {
-              const objectUrl = URL.createObjectURL(file);
-              attachmentUrls.push(objectUrl);
-              // Track object URL for cleanup
-              if (!objectUrls.has(sessionId)) {
-                objectUrls.set(sessionId, new Set());
-              }
-              objectUrls.get(sessionId)?.add(objectUrl);
-              return {
-                contentType: file.type,
-                id: generateId(),
-                name: file.name,
-                size: file.size,
-                url: objectUrl,
-              };
-            }),
-            content,
-            role: "user",
-          });
-
-          set({ error: null, isLoading: true });
-
-          try {
-            // Call API route to send message
-            const assistantMessage = await sendChatMessage(
-              {
-                content,
-                options,
-                sessionId,
-              },
-              existingMessages
-            );
-
-            // Add assistant response
-            get().addMessage(sessionId, assistantMessage);
-
-            set({ isLoading: false });
-          } catch (error) {
-            set({
-              error: error instanceof Error ? error.message : "Failed to send message",
-              isLoading: false,
-            });
-
-            get().addMessage(sessionId, {
-              content:
-                "Sorry, there was an error processing your request. Please try again.",
-              role: "system",
-            });
-          }
-        },
         sessions: [],
 
         setCurrentSession: (sessionId) => {
@@ -386,103 +310,6 @@ export const useChatMessages = create<ChatMessagesState>()(
             currentSession: deriveCurrentSession(state.sessions, sessionId),
             currentSessionId: sessionId,
           }));
-        },
-
-        stopStreaming: () => {
-          if (abortController) {
-            abortController.abort();
-            abortController = null;
-            set({ isStreaming: false });
-          }
-        },
-
-        streamMessage: async (content, options = {}) => {
-          const { currentSessionId, currentSession } = get();
-
-          let sessionId = currentSessionId;
-          if (!sessionId || !currentSession) {
-            sessionId = get().createSession("New Conversation");
-          }
-
-          const session = get().sessions.find((s) => s.id === sessionId);
-          const existingMessages = session?.messages || [];
-
-          // Add user message with attachment URL tracking
-          const attachmentUrls: string[] = [];
-          get().addMessage(sessionId, {
-            attachments: options.attachments?.map((file) => {
-              const objectUrl = URL.createObjectURL(file);
-              attachmentUrls.push(objectUrl);
-              // Track object URL for cleanup
-              if (!objectUrls.has(sessionId)) {
-                objectUrls.set(sessionId, new Set());
-              }
-              objectUrls.get(sessionId)?.add(objectUrl);
-              return {
-                contentType: file.type,
-                id: generateId(),
-                name: file.name,
-                size: file.size,
-                url: objectUrl,
-              };
-            }),
-            content,
-            role: "user",
-          });
-
-          // Create a placeholder message for streaming
-          const assistantMessageId = get().addMessage(sessionId, {
-            content: "",
-            isStreaming: true,
-            role: "assistant",
-          });
-
-          set({ error: null, isStreaming: true });
-          abortController = new AbortController();
-
-          try {
-            let streamContent = "";
-
-            // Call API route to stream message
-            await streamChatMessage(
-              {
-                content,
-                options,
-                sessionId,
-              },
-              existingMessages,
-              (chunk) => {
-                if (abortController?.signal.aborted) {
-                  return;
-                }
-                streamContent += chunk;
-                get().updateMessage(sessionId, assistantMessageId, {
-                  content: streamContent,
-                });
-              },
-              abortController.signal
-            );
-
-            get().updateMessage(sessionId, assistantMessageId, {
-              isStreaming: false,
-            });
-          } catch (error) {
-            if (!(error instanceof DOMException && error.name === "AbortError")) {
-              set({
-                error:
-                  error instanceof Error ? error.message : "Failed to stream message",
-              });
-
-              get().updateMessage(sessionId, assistantMessageId, {
-                content:
-                  "Sorry, there was an error generating the response. Please try again.",
-                isStreaming: false,
-              });
-            }
-          } finally {
-            abortController = null;
-            set({ isStreaming: false });
-          }
         },
 
         updateMessage: (sessionId, messageId, updates) => {
@@ -537,6 +364,5 @@ useChatMessages.subscribe((state) => {
 // Selectors
 export const useCurrentSession = () => useChatMessages((state) => state.currentSession);
 export const useSessions = () => useChatMessages((state) => state.sessions);
-export const useIsStreaming = () => useChatMessages((state) => state.isStreaming);
 export const useIsLoading = () => useChatMessages((state) => state.isLoading);
 export const useChatError = () => useChatMessages((state) => state.error);

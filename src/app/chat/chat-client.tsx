@@ -1,12 +1,14 @@
-"use client";
-
 /**
- * @fileoverview Client chat shell rendering messages and invoking the server action.
+ * @fileoverview Client chat shell using AI SDK v6 useChat hook for real streaming.
  */
 
-import type { UIMessage } from "ai";
+"use client";
+
+import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
+import { RefreshCwIcon, StopCircleIcon } from "lucide-react";
 import type { ReactElement } from "react";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import {
   Conversation,
   ConversationContent,
@@ -22,53 +24,40 @@ import {
   PromptInputTextarea,
 } from "@/components/ai-elements/prompt-input";
 import { ChatMessageItem } from "@/components/chat/message-item";
-import { nowIso, secureId } from "@/lib/security/random";
-import { submitChatMessage } from "./ai";
+import { Button } from "@/components/ui/button";
 
 /**
- * Client-side chat container that renders history and invokes the server action.
+ * Client-side chat container using AI SDK v6 useChat hook.
+ * Connects to /api/chat/stream for real-time streaming responses.
  */
 export function ChatClient(): ReactElement {
-  const [messages, setMessages] = useState<UIMessage[]>([]);
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [input, setInput] = useState("");
 
-  const handleSend = useCallback(
-    async (text: string) => {
-      if (pending) return;
-      if (!text.trim()) return;
+  const { messages, sendMessage, status, error, stop, regenerate } = useChat({
+    transport: new DefaultChatTransport({
+      api: "/api/chat/stream",
+    }),
+  });
 
-      setPending(true);
-      setError(null);
+  const isStreaming = status === "streaming";
+  const isSubmitting = status === "submitted";
+  const isLoading = isStreaming || isSubmitting;
+  const lastMessageId = messages.at(-1)?.id;
 
-      const optimisticUserMessage: UIMessage = {
-        id: secureId(),
-        metadata: { createdAt: nowIso() },
-        parts: [{ text, type: "text" }],
-        role: "user",
-      };
+  const handleSubmit = async (text?: string) => {
+    const messageText = text?.trim() || input.trim();
+    if (!messageText || isLoading) return;
 
-      const previousMessages = messages;
-      const nextMessages = [...previousMessages, optimisticUserMessage];
-      setMessages(nextMessages);
-
-      try {
-        const result = await submitChatMessage({ messages: previousMessages, text });
-        setMessages((prev) =>
-          prev
-            .map((m) => (m.id === optimisticUserMessage.id ? result.userMessage : m))
-            .concat(result.assistantMessage)
-        );
-      } catch (err) {
-        setMessages((prev) => prev.filter((m) => m.id !== optimisticUserMessage.id));
-        setError(err instanceof Error ? err.message : "Failed to send message.");
-        throw err instanceof Error ? err : new Error("Failed to send message.");
-      } finally {
-        setPending(false);
+    try {
+      await sendMessage({ text: messageText });
+    } catch (err) {
+      if (process.env.NODE_ENV === "development") {
+        console.error("Failed to submit chat message:", err);
       }
-    },
-    [messages, pending]
-  );
+    } finally {
+      setInput("");
+    }
+  };
 
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col">
@@ -78,7 +67,15 @@ export function ChatClient(): ReactElement {
             <ConversationEmptyState description="Start a conversation to see messages here." />
           ) : (
             messages.map((message) => (
-              <ChatMessageItem key={message.id} message={message} />
+              <ChatMessageItem
+                key={message.id}
+                message={message}
+                isStreaming={
+                  isStreaming &&
+                  message.role === "assistant" &&
+                  message.id === lastMessageId
+                }
+              />
             ))
           )}
         </ConversationContent>
@@ -86,26 +83,74 @@ export function ChatClient(): ReactElement {
       </Conversation>
 
       <div className="border-t p-2">
-        <PromptInput onSubmit={({ text }) => handleSend(text ?? "")}>
+        <PromptInput onSubmit={({ text }) => handleSubmit(text)}>
           <PromptInputHeader />
           <PromptInputBody>
             <PromptInputTextarea
               placeholder="Ask TripSage AI anything about travel planning…"
               aria-label="Chat prompt"
-              disabled={pending}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              disabled={isLoading}
             />
           </PromptInputBody>
           <PromptInputFooter>
-            <div className="ml-auto">
-              <PromptInputSubmit status={pending ? "streaming" : undefined} />
+            <div className="flex items-center gap-2">
+              {/* Streaming controls */}
+              {isStreaming ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => stop()}
+                  aria-label="Stop generation"
+                >
+                  <StopCircleIcon className="mr-1 size-4" />
+                  Stop
+                </Button>
+              ) : null}
+
+              {/* Regenerate button - only show when ready and there are messages */}
+              {status === "ready" && messages.length > 0 ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => regenerate()}
+                  aria-label="Regenerate response"
+                >
+                  <RefreshCwIcon className="mr-1 size-4" />
+                  Regenerate
+                </Button>
+              ) : null}
             </div>
-            {error ? (
-              <p className="mt-2 text-sm text-destructive" data-testid="chat-error">
-                {error}
-              </p>
-            ) : null}
+
+            <div className="ml-auto">
+              <PromptInputSubmit status={isLoading ? "streaming" : undefined} />
+            </div>
           </PromptInputFooter>
         </PromptInput>
+
+        {/* Error display with retry */}
+        {error ? (
+          <div
+            className="mt-2 flex items-center justify-between rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2"
+            data-testid="chat-error"
+          >
+            <p className="text-sm text-destructive">
+              {error.message || "An error occurred"}
+            </p>
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              onClick={() => regenerate()}
+              className="text-destructive"
+            >
+              Retry
+            </Button>
+          </div>
+        ) : null}
       </div>
     </div>
   );

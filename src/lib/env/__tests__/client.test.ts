@@ -39,14 +39,23 @@ describe("env/client", () => {
       }).rejects.toThrow();
     });
 
-    it("should return defaults in development when validation fails", async () => {
-      vi.stubEnv("NODE_ENV", "development");
-      // Missing required vars
+    it("should throw during build phase without placeholder opt-in", async () => {
+      vi.stubEnv("NODE_ENV", "production");
+      vi.stubEnv("NEXT_PHASE", "phase-production-build");
+      // Missing required vars and no NEXT_PUBLIC_ALLOW_PLACEHOLDER_ENV
 
-      // Suppress console.error output for this test
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {
-        // Swallow expected validation error logs
-      });
+      vi.resetModules();
+      await expect(async () => {
+        const { getClientEnv: freshGetClientEnv } = await import("../client");
+        freshGetClientEnv();
+      }).rejects.toThrow();
+    });
+
+    it("should allow placeholder values during build when explicitly enabled", async () => {
+      vi.stubEnv("NODE_ENV", "production");
+      vi.stubEnv("NEXT_PHASE", "phase-production-build");
+      vi.stubEnv("NEXT_PUBLIC_ALLOW_PLACEHOLDER_ENV", "true");
+      // Missing required vars
 
       vi.resetModules();
       const { getClientEnv: freshGetClientEnv } = await import("../client");
@@ -55,8 +64,19 @@ describe("env/client", () => {
       expect(env.NEXT_PUBLIC_APP_NAME).toBe("TripSage");
       expect(env.NEXT_PUBLIC_SUPABASE_ANON_KEY).toBe("");
       expect(env.NEXT_PUBLIC_SUPABASE_URL).toBe("");
+    });
 
-      consoleErrorSpy.mockRestore();
+    it("should return defaults in development when validation fails", async () => {
+      vi.stubEnv("NODE_ENV", "development");
+      // Missing required vars
+
+      vi.resetModules();
+      const { getClientEnv: freshGetClientEnv } = await import("../client");
+
+      const env = freshGetClientEnv();
+      expect(env.NEXT_PUBLIC_APP_NAME).toBe("TripSage");
+      expect(env.NEXT_PUBLIC_SUPABASE_ANON_KEY).toBe("");
+      expect(env.NEXT_PUBLIC_SUPABASE_URL).toBe("");
     });
   });
 

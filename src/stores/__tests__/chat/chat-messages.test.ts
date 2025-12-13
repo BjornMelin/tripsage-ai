@@ -13,7 +13,6 @@ describe("ChatMessages", () => {
         currentSessionId: null,
         error: null,
         isLoading: false,
-        isStreaming: false,
         sessions: [],
       });
       useChatRealtime.setState({

@@ -5,13 +5,6 @@
 
 import "server-only";
 
-export const dynamic = "force-dynamic";
-
-// Security: Prevent caching of sensitive API key data per ADR-0024.
-// With Cache Components enabled, route handlers are dynamic by default.
-// Using withApiGuards({ auth: true }) ensures this route uses cookies/headers,
-// making it dynamic and preventing caching. No 'use cache' directives are present.
-
 import { type PostKeyBody, postKeyBodySchema } from "@schemas/api";
 import type { NextRequest } from "next/server";
 import type { RateLimitResult } from "@/app/api/keys/_rate-limiter";

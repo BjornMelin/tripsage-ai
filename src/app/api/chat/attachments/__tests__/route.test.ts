@@ -14,6 +14,13 @@ vi.mock("file-type", () => ({
   fileTypeFromBuffer: vi.fn(() => Promise.resolve({ ext: "jpg", mime: "image/jpeg" })),
 }));
 
+vi.mock("botid/server", async () => {
+  const { mockBotIdHumanResponse } = await import("@/test/mocks/botid");
+  return {
+    checkBotId: vi.fn(async () => mockBotIdHumanResponse),
+  };
+});
+
 // Mock secureUuid to return predictable values
 let uuidCounter = 0;
 vi.mock("@/lib/security/random", () => ({
@@ -60,7 +67,6 @@ describe("/api/chat/attachments", () => {
   };
 
   beforeEach(async () => {
-    vi.resetModules();
     resetApiRouteMocks();
     mockApiRouteAuthUser({ id: "user-1" });
     vi.clearAllMocks();
