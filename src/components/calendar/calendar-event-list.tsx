@@ -19,7 +19,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
 
-const CalendarEventListItemSchema = z.strictObject({
+const CalendarEventListItemSchema = z.looseObject({
   description: z.string().max(8192).optional(),
   end: z
     .strictObject({
@@ -31,7 +31,7 @@ const CalendarEventListItemSchema = z.strictObject({
     })
     .refine((data) => data.date || data.dateTime, {
       error: "end.date or end.dateTime is required",
-      path: [],
+      path: ["end"],
     }),
   htmlLink: z.url().optional(),
   id: z.string().min(1, { error: "id is required" }),
@@ -46,7 +46,7 @@ const CalendarEventListItemSchema = z.strictObject({
     })
     .refine((data) => data.date || data.dateTime, {
       error: "start.date or start.dateTime is required",
-      path: [],
+      path: ["start"],
     }),
   summary: z.string().min(1).max(1024).default("Untitled"),
 });
@@ -109,6 +109,9 @@ export function CalendarEventList({
       const json: unknown = await response.json();
       const parsed = CalendarEventsApiResponseSchema.safeParse(json);
       if (!parsed.success) {
+        if (process.env.NODE_ENV === "development") {
+          console.error("Calendar events validation error:", parsed.error);
+        }
         throw new Error("Invalid calendar events response");
       }
 
