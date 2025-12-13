@@ -22,7 +22,7 @@ import { cacheLife, cacheTag } from "next/cache";
  * Usage in public server components/functions:
  * ```
  * "use cache";
- * import { applyCacheProfile } from "@/lib/cache/next-cache";
+ * import { applyCacheProfile, nextCacheTags } from "@/lib/cache/next-cache";
  *
  * export async function getPublicData() {
  *   applyCacheProfile("hour", nextCacheTags.publicConfig);

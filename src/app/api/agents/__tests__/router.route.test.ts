@@ -9,15 +9,12 @@ import {
   resetApiRouteMocks,
 } from "@/test/helpers/api-route";
 
-// Silence BotID dev warnings by stubbing to deterministic "human".
-vi.mock("botid/server", () => ({
-  checkBotId: vi.fn(async () => ({
-    bypassed: true,
-    isBot: false,
-    isHuman: true,
-    isVerifiedBot: false,
-  })),
-}));
+vi.mock("botid/server", async () => {
+  const { mockBotIdHumanResponse } = await import("@/test/mocks/botid");
+  return {
+    checkBotId: vi.fn(async () => mockBotIdHumanResponse),
+  };
+});
 
 const classifyUserMessage = vi.hoisted(() => vi.fn());
 

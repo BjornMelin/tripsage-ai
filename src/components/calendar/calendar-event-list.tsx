@@ -171,6 +171,7 @@ export function CalendarEventList({
         {events.length > 0 ? (
           <ul className="space-y-4">
             {events.map((event) => {
+              const isAllDay = Boolean(event.start?.date && !event.start?.dateTime);
               const startDate = event.start?.dateTime
                 ? DateUtils.parse(event.start.dateTime)
                 : event.start?.date
@@ -198,8 +199,14 @@ export function CalendarEventList({
                       {startDate && (
                         <div className="flex items-center gap-1">
                           <ClockIcon className="h-4 w-4" />
-                          {DateUtils.format(startDate, "MMM d, yyyy h:mm a")}
-                          {endDate && ` - ${DateUtils.format(endDate, "h:mm a")}`}
+                          {isAllDay ? (
+                            <>{DateUtils.format(startDate, "MMM d, yyyy")} - All day</>
+                          ) : (
+                            <>
+                              {DateUtils.format(startDate, "MMM d, yyyy h:mm a")}
+                              {endDate && ` - ${DateUtils.format(endDate, "h:mm a")}`}
+                            </>
+                          )}
                         </div>
                       )}
                       {event.location && (
