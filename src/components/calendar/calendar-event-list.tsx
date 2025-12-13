@@ -22,7 +22,7 @@ import { DateUtils } from "@/lib/dates/unified-date-utils";
 const CalendarEventListItemSchema = z.looseObject({
   description: z.string().max(8192).optional(),
   end: z
-    .strictObject({
+    .looseObject({
       date: z
         .string()
         .regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Date must be YYYY-MM-DD" })
@@ -37,7 +37,7 @@ const CalendarEventListItemSchema = z.looseObject({
   id: z.string().min(1, { error: "id is required" }),
   location: z.string().max(1024).optional(),
   start: z
-    .strictObject({
+    .looseObject({
       date: z
         .string()
         .regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Date must be YYYY-MM-DD" })
