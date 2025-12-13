@@ -27,6 +27,7 @@ import { getAdminSupabase, type TypedAdminSupabase } from "@/lib/supabase/admin"
 import type { Database } from "@/lib/supabase/database.types";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
+import { isBuildPhase } from "@/lib/utils/build-phase";
 
 type TypedSupabase = SupabaseClient<Database>;
 type BackupAuditMeta = { ip?: string; userAgent?: string };
@@ -539,10 +540,18 @@ export async function verifyBackupCode(
         throw new InvalidBackupCodeError("backup_code_already_consumed");
       }
 
-      const { count } = await table
+      const { count, error: countError } = await table
         .select("id", { count: "exact", head: true })
         .eq("user_id", userId)
         .is("consumed_at", null);
+
+      // Best-effort metadata; do not fail the request if counting fails.
+      if (countError) {
+        span.recordException(countError);
+        auditLogger.warn("failed to count remaining backup codes", {
+          error: countError.message,
+        });
+      }
 
       await logBackupCodeAudit(adminSupabase, userId, "consumed", 1, meta);
 
@@ -666,6 +675,7 @@ function hashBackupCode(code: string): string {
   return createHash("sha256").update(`${pepper}:${normalized}`, "utf8").digest("hex");
 }
 
-if (process.env.NODE_ENV !== "test") {
+// Skip validation during tests and build phase (env vars aren't available during build)
+if (process.env.NODE_ENV !== "test" && !isBuildPhase()) {
   validateMfaConfig();
 }

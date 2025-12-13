@@ -34,6 +34,13 @@ describe("env/server", () => {
       }
     });
 
+    it("should return proxy during build phase that fails on access", () => {
+      vi.stubEnv("NEXT_PHASE", "phase-production-build");
+
+      const env = getServerEnv();
+      expect(() => env.NODE_ENV).toThrow(/build phase/i);
+    });
+
     it("should return validated server environment", () => {
       vi.stubEnv("NODE_ENV", "test");
       vi.stubEnv("GOOGLE_MAPS_SERVER_API_KEY", "test-server-key-for-google-maps-api");

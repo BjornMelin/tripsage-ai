@@ -16,7 +16,13 @@ import {
 } from "./streamdown-config";
 
 /** Props for the Response component. */
-export type ResponseProps = ComponentProps<typeof Streamdown>;
+export type ResponseProps = ComponentProps<typeof Streamdown> & {
+  /**
+   * When true, disables interactive controls during streaming.
+   * Mode defaults to "streaming" when not explicitly provided.
+   */
+  isAnimating?: boolean;
+};
 
 /**
  * Response renders markdown content (with streaming-friendly parsing).
@@ -28,8 +34,9 @@ export const Response = memo(
   ({
     className,
     controls = streamdownControls,
+    isAnimating,
     mermaid = streamdownMermaid,
-    mode = "streaming",
+    mode,
     rehypePlugins = streamdownRehypePlugins,
     remarkPlugins = streamdownRemarkPlugins,
     shikiTheme = streamdownShikiTheme,
@@ -41,8 +48,9 @@ export const Response = memo(
         className
       )}
       controls={controls}
+      isAnimating={isAnimating}
       mermaid={mermaid}
-      mode={mode}
+      mode={mode ?? "streaming"}
       rehypePlugins={rehypePlugins}
       remarkPlugins={remarkPlugins}
       shikiTheme={shikiTheme}

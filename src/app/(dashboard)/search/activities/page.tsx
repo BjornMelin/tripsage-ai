@@ -6,8 +6,6 @@ import { type ActivitySearchParams, activitySearchParamsSchema } from "@schemas/
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import ActivitiesSearchClient from "./activities-search-client";
 
-export const dynamic = "force-dynamic";
-
 export default function ActivitiesSearchPage() {
   return <ActivitiesSearchClient onSubmitServer={submitActivitySearch} />;
 }

@@ -1,8 +1,14 @@
 /**
- * @fileoverview Server Component for displaying calendar events list.
+ * @fileoverview Client Component for displaying calendar events list.
+ *
+ * Fetches events via API route to avoid server/client boundary violations.
  */
 
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
 import { CalendarIcon, ClockIcon, MapPinIcon } from "lucide-react";
+import { z } from "zod";
 import {
   Card,
   CardContent,
@@ -10,11 +16,46 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { listEvents } from "@/lib/calendar/google";
+import { Skeleton } from "@/components/ui/skeleton";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
-import { createServerLogger } from "@/lib/telemetry/logger";
 
-const CalendarEventLogger = createServerLogger("component.calendar-event-list");
+const CalendarEventListItemSchema = z.looseObject({
+  description: z.string().max(8192).optional(),
+  end: z
+    .looseObject({
+      date: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Date must be YYYY-MM-DD" })
+        .optional(),
+      dateTime: z.iso.datetime().optional(),
+    })
+    .refine((data) => data.date || data.dateTime, {
+      error: "end.date or end.dateTime is required",
+      path: ["end"],
+    }),
+  htmlLink: z.url().optional(),
+  id: z.string().min(1, { error: "id is required" }),
+  location: z.string().max(1024).optional(),
+  start: z
+    .looseObject({
+      date: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Date must be YYYY-MM-DD" })
+        .optional(),
+      dateTime: z.iso.datetime().optional(),
+    })
+    .refine((data) => data.date || data.dateTime, {
+      error: "start.date or start.dateTime is required",
+      path: ["start"],
+    }),
+  summary: z.string().min(1).max(1024).default("Untitled"),
+});
+
+type CalendarEventListItem = z.infer<typeof CalendarEventListItemSchema>;
+
+const CalendarEventsApiResponseSchema = z.looseObject({
+  items: z.array(CalendarEventListItemSchema).default([]),
+});
 
 /** Props for CalendarEventList component. */
 export interface CalendarEventListProps {
@@ -29,64 +70,91 @@ export interface CalendarEventListProps {
 }
 
 /**
- * Fetches Calendar events server-side and renders a summarized list in a card.
+ * Fetches Calendar events via API and renders a summarized list in a card.
  *
  * @param props - Optional calendar id and time range plus styling hook.
- * @returns Server component output with event list.
+ * @returns Client component output with event list.
  */
-export async function CalendarEventList({
+export function CalendarEventList({
   calendarId = "primary",
   timeMin,
   timeMax,
   className,
 }: CalendarEventListProps) {
-  // Fetch events
-  let events: Array<{
-    id: string;
-    summary: string;
-    description?: string;
-    location?: string;
-    start: { dateTime?: string; date?: string };
-    end: { dateTime?: string; date?: string };
-    htmlLink?: string;
-  }> = [];
+  const timeMinIso = timeMin?.toISOString() ?? null;
+  const timeMaxIso = timeMax?.toISOString() ?? null;
 
-  try {
-    const result = await listEvents({
-      alwaysIncludeEmail: false,
-      calendarId,
-      maxResults: 250,
-      showDeleted: false,
-      showHiddenInvitations: false,
-      singleEvents: false,
-      timeMax,
-      timeMin,
-    });
-    // Filter and map events, ensuring id is present
-    events = (result.items || [])
-      .filter((event): event is typeof event & { id: string } => Boolean(event.id))
-      .map((event) => ({
-        description: event.description,
-        end: {
-          date: event.end.date,
-          dateTime: event.end.dateTime?.toISOString(),
-        },
-        htmlLink: event.htmlLink?.toString(),
-        id: event.id,
-        location: event.location,
-        start: {
-          date: event.start.date,
-          dateTime: event.start.dateTime?.toISOString(),
-        },
-        summary: event.summary,
-      }));
-  } catch (error) {
-    CalendarEventLogger.error("Failed to fetch calendar events", {
-      calendarId,
-      error: error instanceof Error ? error.message : String(error),
-      timeMax: timeMax?.toISOString(),
-      timeMin: timeMin?.toISOString(),
-    });
+  const {
+    data: events = [],
+    error,
+    isError,
+    isPending,
+  } = useQuery<CalendarEventListItem[]>({
+    queryFn: async ({ signal }) => {
+      const params = new URLSearchParams();
+      params.set("calendarId", calendarId);
+      params.set("maxResults", "250");
+      if (timeMinIso) {
+        params.set("timeMin", timeMinIso);
+      }
+      if (timeMaxIso) {
+        params.set("timeMax", timeMaxIso);
+      }
+
+      const response = await fetch(`/api/calendar/events?${params}`, { signal });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch events: ${response.statusText}`);
+      }
+
+      const json: unknown = await response.json();
+      const parsed = CalendarEventsApiResponseSchema.safeParse(json);
+      if (!parsed.success) {
+        if (process.env.NODE_ENV === "development") {
+          console.error("Calendar events validation error:", parsed.error);
+        }
+        throw new Error("Invalid calendar events response");
+      }
+
+      return parsed.data.items;
+    },
+    queryKey: ["calendar", "events", { calendarId, timeMaxIso, timeMinIso }],
+  });
+
+  if (isPending) {
+    return (
+      <Card className={className}>
+        <CardHeader>
+          <Skeleton className="h-6 w-32" />
+          <Skeleton className="h-4 w-48 mt-2" />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="p-4 border rounded-lg space-y-2">
+              <Skeleton className="h-5 w-3/4" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-1/2" />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (isError) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return (
+      <Card className={className}>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CalendarIcon className="h-5 w-5" />
+            Upcoming Events
+          </CardTitle>
+          <CardDescription className="text-destructive">
+            Failed to load events: {message}
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
   }
 
   return (
@@ -106,14 +174,15 @@ export async function CalendarEventList({
         {events.length > 0 ? (
           <ul className="space-y-4">
             {events.map((event) => {
-              const startDate = event.start.dateTime
+              const isAllDay = Boolean(event.start?.date && !event.start?.dateTime);
+              const startDate = event.start?.dateTime
                 ? DateUtils.parse(event.start.dateTime)
-                : event.start.date
+                : event.start?.date
                   ? DateUtils.parse(event.start.date)
                   : null;
-              const endDate = event.end.dateTime
+              const endDate = event.end?.dateTime
                 ? DateUtils.parse(event.end.dateTime)
-                : event.end.date
+                : event.end?.date
                   ? DateUtils.parse(event.end.date)
                   : null;
 
@@ -133,8 +202,14 @@ export async function CalendarEventList({
                       {startDate && (
                         <div className="flex items-center gap-1">
                           <ClockIcon className="h-4 w-4" />
-                          {DateUtils.format(startDate, "MMM d, yyyy h:mm a")}
-                          {endDate && ` - ${DateUtils.format(endDate, "h:mm a")}`}
+                          {isAllDay ? (
+                            <>{DateUtils.format(startDate, "MMM d, yyyy")} - All day</>
+                          ) : (
+                            <>
+                              {DateUtils.format(startDate, "MMM d, yyyy h:mm a")}
+                              {endDate && ` - ${DateUtils.format(endDate, "h:mm a")}`}
+                            </>
+                          )}
                         </div>
                       )}
                       {event.location && (

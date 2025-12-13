@@ -5,6 +5,7 @@
  */
 
 import type { UIMessage } from "ai";
+import { FileIcon } from "lucide-react";
 import { BudgetChart } from "@/components/ai-elements/budget-chart";
 import { DestinationCard } from "@/components/ai-elements/destination-card";
 import { FlightOfferCard } from "@/components/ai-elements/flight-card";
@@ -56,6 +57,55 @@ const REDACT_KEYS = new Set(["apikey", "token", "secret", "password", "id"]);
 const MAX_STRING_LENGTH = 200;
 const MAX_DEPTH = 2;
 
+/** Allowlist of safe MIME types for data URLs */
+const SAFE_MIME_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/gif",
+  "image/webp",
+  "image/svg+xml",
+  "video/mp4",
+  "video/webm",
+  "audio/mpeg",
+  "audio/wav",
+  "application/pdf",
+]);
+
+const BASE64_PATTERN = /^[A-Za-z0-9+/]+={0,2}$/;
+
+// biome-ignore lint/style/useNamingConvention: Internal utility function, not a React component
+function isValidBase64(value: string): boolean {
+  if (!value || value.length % 4 !== 0) return false;
+  if (!BASE64_PATTERN.test(value)) return false;
+
+  try {
+    return btoa(atob(value)).replace(/=+$/, "") === value.replace(/=+$/, "");
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Validates and normalizes a MIME type string.
+ * Returns the MIME type if it's in the allowlist, otherwise returns a safe default.
+ * Only explicit MIME types in SAFE_MIME_TYPES are allowed to prevent XSS vectors.
+ */
+// biome-ignore lint/style/useNamingConvention: Internal utility function, not a React component
+function validateMimeType(mimeType?: string): string {
+  if (!mimeType || typeof mimeType !== "string") {
+    return "application/octet-stream";
+  }
+
+  const normalized = mimeType.toLowerCase().trim();
+  if (SAFE_MIME_TYPES.has(normalized)) {
+    return normalized;
+  }
+
+  // Default to safe fallback for unknown types
+  return "application/octet-stream";
+}
+
 // biome-ignore lint/style/useNamingConvention: Internal utility function, not a React component
 function sanitizeValue(value: unknown, depth: number): unknown {
   if (depth > MAX_DEPTH) return "[truncated]";
@@ -102,10 +152,22 @@ export function sanitizeToolOutput(raw: unknown): unknown {
   }
 }
 
-export function ChatMessageItem({ message }: { message: UIMessage }) {
+export interface ChatMessageItemProps {
+  /** The message to render */
+  message: UIMessage;
+  /** When true, indicates the message is currently streaming (enables animation) */
+  isStreaming?: boolean;
+}
+
+export function ChatMessageItem({
+  message,
+  isStreaming = false,
+}: ChatMessageItemProps) {
   const parts = message.parts ?? [];
   // Extract source-url parts for citation display
   const sourceParts: SourceUrlPart[] = (parts as unknown[]).filter(isSourceUrlPart);
+  // Only animate the last text part of an assistant message during streaming
+  const lastTextPartIndex = parts.findLastIndex((p) => p?.type === "text");
 
   return (
     <Message from={message.role} data-testid={`msg-${message.id}`}>
@@ -178,7 +240,17 @@ export function ChatMessageItem({ message }: { message: UIMessage }) {
                 }
               }
 
-              return <Response key={`${message.id}-t-${idx}`}>{text}</Response>;
+              // Animate Streamdown only for the last text part of assistant messages during streaming
+              const shouldAnimate =
+                isStreaming &&
+                message.role === "assistant" &&
+                idx === lastTextPartIndex;
+
+              return (
+                <Response key={`${message.id}-t-${idx}`} isAnimating={shouldAnimate}>
+                  {text}
+                </Response>
+              );
             }
 
             if (partType === "source-url") {
@@ -335,6 +407,116 @@ export function ChatMessageItem({ message }: { message: UIMessage }) {
               );
             }
 
+            // AI SDK v6 standardized part types: tool-invocation, tool-result
+            if (partType === "tool-invocation") {
+              type ToolInvocationPart = {
+                type: "tool-invocation";
+                toolName?: string;
+                name?: string;
+                toolCallId: string;
+                state: string;
+                args?: unknown;
+                input?: unknown;
+                result?: unknown;
+                output?: unknown;
+              };
+              const invocation = part as unknown as ToolInvocationPart;
+              const toolName = invocation.toolName ?? invocation.name ?? "Tool";
+              const inputVal = invocation.args ?? invocation.input;
+              const outputVal = invocation.result ?? invocation.output;
+              return (
+                <Tool
+                  key={`${message.id}-inv-${idx}`}
+                  input={
+                    inputVal !== undefined ? sanitizeToolOutput(inputVal) : undefined
+                  }
+                  name={toolName}
+                  output={
+                    outputVal !== undefined ? sanitizeToolOutput(outputVal) : undefined
+                  }
+                  status={invocation.state === "result" ? "result" : "call"}
+                />
+              );
+            }
+
+            if (partType === "tool-result") {
+              type ToolResultPart = {
+                type: "tool-result";
+                toolName?: string;
+                name?: string;
+                toolCallId: string;
+                result?: unknown;
+                output?: unknown;
+              };
+              const toolResult = part as unknown as ToolResultPart;
+              const resultToolName = toolResult.toolName ?? toolResult.name ?? "Tool";
+              const resultVal = toolResult.result ?? toolResult.output;
+              return (
+                <Tool
+                  key={`${message.id}-res-${idx}`}
+                  name={resultToolName}
+                  output={
+                    resultVal !== undefined ? sanitizeToolOutput(resultVal) : undefined
+                  }
+                  status="result"
+                />
+              );
+            }
+
+            // File attachment part (includes images in AI SDK v6)
+            if (partType === "file") {
+              type FilePart = {
+                type: "file";
+                name?: string;
+                filename?: string;
+                mimeType?: string;
+                mediaType?: string;
+                data?: string;
+                url?: string;
+              };
+              const filePart = part as unknown as FilePart;
+              const fileName = filePart.name ?? filePart.filename ?? "Attachment";
+              const mimeType = validateMimeType(
+                filePart.mimeType ?? filePart.mediaType
+              );
+              const fileUrl =
+                filePart.url ??
+                (filePart.data && isValidBase64(filePart.data)
+                  ? `data:${mimeType};base64,${filePart.data}`
+                  : null);
+
+              // Render images inline
+              if (mimeType.startsWith("image/") && fileUrl) {
+                return (
+                  <div key={`${message.id}-img-${idx}`} className="my-2">
+                    {/* biome-ignore lint/performance/noImgElement: External URLs without known dimensions */}
+                    <img
+                      src={fileUrl}
+                      alt={fileName}
+                      className="max-h-64 max-w-full rounded-md border"
+                      loading="lazy"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                      }}
+                    />
+                  </div>
+                );
+              }
+
+              // Render other files as attachment
+              return (
+                <div
+                  key={`${message.id}-file-${idx}`}
+                  className="my-2 inline-flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2"
+                >
+                  <FileIcon className="size-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">{fileName}</span>
+                  <span className="text-xs text-muted-foreground">{mimeType}</span>
+                </div>
+              );
+            }
+
+            // Fallback for unknown part types
             let fallback = "";
             if (typeof part === "string") {
               fallback = part;
