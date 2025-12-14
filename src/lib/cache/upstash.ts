@@ -20,15 +20,39 @@
 
 import type { z } from "zod";
 import { getRedis } from "@/lib/redis";
+import { withTelemetrySpan } from "@/lib/telemetry/span";
+
+type CacheTelemetryOptions = {
+  namespace?: string;
+};
+
+/**
+ * Derives a low-cardinality cache "namespace" from a Redis key.
+ *
+ * This intentionally avoids emitting full keys (which may include user IDs or
+ * other high-cardinality data) into telemetry. We only emit the top-level
+ * namespace segment (before the first `:`) because later segments may include
+ * user-derived or high-cardinality identifiers.
+ */
+function deriveCacheNamespace(key: string): string {
+  const separatorIndex = key.indexOf(":");
+  if (separatorIndex <= 0) return "unknown";
+  const candidate = key.slice(0, separatorIndex);
+  // Only allow low-cardinality namespaces (avoid IDs, UUIDs, or user-provided prefixes).
+  if (candidate.length > 32) return "unknown";
+  if (!/^[a-z][a-z0-9_-]*$/i.test(candidate)) return "unknown";
+  return candidate.toLowerCase();
+}
 
 /**
  * Result of a cache lookup with explicit status.
- * Allows callers to distinguish cache miss from corrupted data.
+ * Allows callers to distinguish cache miss from corrupted data and unavailability.
  */
 export type CacheResult<T> =
   | { status: "hit"; data: T }
   | { status: "miss" }
-  | { status: "invalid"; raw: unknown };
+  | { status: "invalid"; raw: unknown }
+  | { status: "unavailable" };
 
 /**
  * Retrieves a cached JSON value from Upstash Redis.
@@ -46,21 +70,46 @@ export type CacheResult<T> =
  * const trips = await getCachedJson<Trip[]>("user:123:trips");
  * ```
  */
-export async function getCachedJson<T>(key: string): Promise<T | null> {
-  const redis = getRedis();
-  if (!redis) return null;
+export function getCachedJson<T>(
+  key: string,
+  options?: CacheTelemetryOptions
+): Promise<T | null> {
+  return withTelemetrySpan(
+    "cache.get",
+    {
+      attributes: {
+        "cache.key_length": key.length,
+        "cache.namespace": options?.namespace ?? deriveCacheNamespace(key),
+        "cache.operation": "get",
+        "cache.system": "upstash",
+      },
+    },
+    async (span) => {
+      const redis = getRedis();
+      if (!redis) {
+        span.setAttribute("cache.status", "unavailable");
+        return null;
+      }
 
-  // We store JSON strings via JSON.stringify(), so we need to parse them manually.
-  // Upstash Redis only auto-deserializes when storing objects directly, not pre-stringified JSON.
-  const raw = await redis.get<string>(key);
-  if (raw === null) return null;
+      // We store JSON strings via JSON.stringify(), so we need to parse them manually.
+      // Upstash Redis only auto-deserializes when storing objects directly, not pre-stringified JSON.
+      const raw = await redis.get<string>(key);
+      if (raw === null) {
+        span.setAttribute("cache.hit", false);
+        return null;
+      }
 
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    // Invalid JSON - return null to indicate cache miss/invalid data
-    return null;
-  }
+      try {
+        span.setAttribute("cache.hit", true);
+        return JSON.parse(raw) as T;
+      } catch {
+        // Invalid JSON - return null to indicate cache miss/invalid data
+        span.setAttribute("cache.hit", false);
+        span.setAttribute("cache.parse_error", true);
+        return null;
+      }
+    }
+  );
 }
 
 /**
@@ -87,35 +136,61 @@ export async function getCachedJson<T>(key: string): Promise<T | null> {
  * // Fetch fresh data...
  * ```
  */
-export async function getCachedJsonSafe<T>(
+export function getCachedJsonSafe<T>(
   key: string,
-  schema?: z.ZodType<T>
+  schema?: z.ZodType<T>,
+  options?: CacheTelemetryOptions
 ): Promise<CacheResult<T>> {
-  const redis = getRedis();
-  if (!redis) return { status: "miss" };
+  return withTelemetrySpan(
+    "cache.get_safe",
+    {
+      attributes: {
+        "cache.has_schema": Boolean(schema),
+        "cache.key_length": key.length,
+        "cache.namespace": options?.namespace ?? deriveCacheNamespace(key),
+        "cache.operation": "get",
+        "cache.system": "upstash",
+      },
+    },
+    async (span) => {
+      const redis = getRedis();
+      if (!redis) {
+        span.setAttribute("cache.status", "unavailable");
+        return { status: "unavailable" as const };
+      }
 
-  // We store JSON strings via JSON.stringify(), so we need to parse them manually.
-  // Upstash Redis only auto-deserializes when storing objects directly, not pre-stringified JSON.
-  const raw = await redis.get<string>(key);
-  if (raw === null) return { status: "miss" };
+      // We store JSON strings via JSON.stringify(), so we need to parse them manually.
+      // Upstash Redis only auto-deserializes when storing objects directly, not pre-stringified JSON.
+      const raw = await redis.get<string>(key);
+      if (raw === null) {
+        span.setAttribute("cache.status", "miss");
+        return { status: "miss" as const };
+      }
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    // Invalid JSON - return invalid status with raw string
-    return { raw, status: "invalid" };
-  }
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        // Invalid JSON - return invalid status with raw string
+        span.setAttribute("cache.status", "invalid");
+        return { raw, status: "invalid" as const };
+      }
 
-  if (schema) {
-    const result = schema.safeParse(parsed);
-    if (!result.success) {
-      return { raw: parsed, status: "invalid" };
+      if (schema) {
+        const result = schema.safeParse(parsed);
+        if (!result.success) {
+          span.setAttribute("cache.status", "invalid");
+          span.setAttribute("cache.validation_failed", true);
+          return { raw: parsed, status: "invalid" as const };
+        }
+        span.setAttribute("cache.status", "hit");
+        return { data: result.data, status: "hit" as const };
+      }
+
+      span.setAttribute("cache.status", "hit");
+      return { data: parsed as T, status: "hit" as const };
     }
-    return { data: result.data, status: "hit" };
-  }
-
-  return { data: parsed as T, status: "hit" };
+  );
 }
 
 /**
@@ -137,20 +212,39 @@ export async function getCachedJsonSafe<T>(
  * await setCachedJson("config:features", features);
  * ```
  */
-export async function setCachedJson(
+export function setCachedJson(
   key: string,
   value: unknown,
-  ttlSeconds?: number
+  ttlSeconds?: number,
+  options?: CacheTelemetryOptions
 ): Promise<void> {
-  const redis = getRedis();
-  if (!redis) return;
+  return withTelemetrySpan(
+    "cache.set",
+    {
+      attributes: {
+        "cache.key_length": key.length,
+        "cache.namespace": options?.namespace ?? deriveCacheNamespace(key),
+        "cache.operation": "set",
+        "cache.system": "upstash",
+        "cache.ttl_seconds": ttlSeconds ?? 0,
+      },
+    },
+    async (span) => {
+      const redis = getRedis();
+      if (!redis) {
+        span.setAttribute("cache.status", "unavailable");
+        return;
+      }
 
-  const payload = JSON.stringify(value);
-  if (ttlSeconds && ttlSeconds > 0) {
-    await redis.set(key, payload, { ex: ttlSeconds });
-    return;
-  }
-  await redis.set(key, payload);
+      const payload = JSON.stringify(value);
+      span.setAttribute("cache.value_bytes", payload.length);
+      if (ttlSeconds && ttlSeconds > 0) {
+        await redis.set(key, payload, { ex: ttlSeconds });
+        return;
+      }
+      await redis.set(key, payload);
+    }
+  );
 }
 
 /**
@@ -167,10 +261,30 @@ export async function setCachedJson(
  * await deleteCachedJson("user:123:trips");
  * ```
  */
-export async function deleteCachedJson(key: string): Promise<void> {
-  const redis = getRedis();
-  if (!redis) return;
-  await redis.del(key);
+export function deleteCachedJson(
+  key: string,
+  options?: CacheTelemetryOptions
+): Promise<void> {
+  return withTelemetrySpan(
+    "cache.delete",
+    {
+      attributes: {
+        "cache.key_length": key.length,
+        "cache.namespace": options?.namespace ?? deriveCacheNamespace(key),
+        "cache.operation": "delete",
+        "cache.system": "upstash",
+      },
+    },
+    async (span) => {
+      const redis = getRedis();
+      if (!redis) {
+        span.setAttribute("cache.status", "unavailable");
+        return;
+      }
+      const deleted = await redis.del(key);
+      span.setAttribute("cache.deleted_count", deleted);
+    }
+  );
 }
 
 /**
@@ -192,11 +306,34 @@ export async function deleteCachedJson(key: string): Promise<void> {
  * ]);
  * ```
  */
-export async function deleteCachedJsonMany(keys: string[]): Promise<number> {
-  const redis = getRedis();
-  if (!redis) return 0;
-  if (keys.length === 0) return 0;
-  return await redis.del(...keys);
+export function deleteCachedJsonMany(
+  keys: string[],
+  options?: CacheTelemetryOptions
+): Promise<number> {
+  return withTelemetrySpan(
+    "cache.delete_many",
+    {
+      attributes: {
+        "cache.key_count": keys.length,
+        "cache.namespace":
+          options?.namespace ??
+          (keys.length > 0 ? deriveCacheNamespace(keys[0]) : "unknown"),
+        "cache.operation": "delete",
+        "cache.system": "upstash",
+      },
+    },
+    async (span) => {
+      const redis = getRedis();
+      if (!redis) {
+        span.setAttribute("cache.status", "unavailable");
+        return 0;
+      }
+      if (keys.length === 0) return 0;
+      const deleted = await redis.del(...keys);
+      span.setAttribute("cache.deleted_count", deleted);
+      return deleted;
+    }
+  );
 }
 
 /**

@@ -78,3 +78,81 @@ export function without<T>(arr: T[], ...items: T[]): T[] {
 export function unique<T>(arr: T[]): T[] {
   return Array.from(new Set(arr));
 }
+
+/**
+ * Deep equality check for objects and primitives with cycle detection.
+ *
+ * Compares values recursively, handling objects, arrays, dates, and primitives.
+ * Property order in objects is ignored (objects with same keys/values in
+ * different order are considered equal). Detects circular references to prevent
+ * infinite recursion.
+ *
+ * @param a - First value to compare
+ * @param b - Second value to compare
+ * @returns True if values are deeply equal
+ *
+ * @example
+ * deepEqual({ a: 1, b: 2 }, { b: 2, a: 1 }); // true
+ * deepEqual([1, 2], [1, 2]); // true
+ * deepEqual([1, 2], [2, 1]); // false (arrays are order-sensitive)
+ */
+export function deepEqual(a: unknown, b: unknown): boolean {
+  const visited = new WeakMap<object, WeakSet<object>>();
+
+  function compare(x: unknown, y: unknown): boolean {
+    // Same reference or primitive equality
+    if (x === y) return true;
+
+    // Handle null/undefined
+    if (x === null || y === null || x === undefined || y === undefined) {
+      return x === y;
+    }
+
+    // Type mismatch
+    if (typeof x !== typeof y) return false;
+
+    // Handle Date objects
+    if (x instanceof Date && y instanceof Date) {
+      return x.getTime() === y.getTime();
+    }
+
+    // Handle arrays
+    if (Array.isArray(x) && Array.isArray(y)) {
+      if (x.length !== y.length) return false;
+
+      // Check for circular reference
+      if (!visited.has(x)) {
+        visited.set(x, new WeakSet());
+      }
+      const xSet = visited.get(x);
+      if (xSet?.has(y)) return true; // Already comparing this pair
+      xSet?.add(y);
+
+      return x.every((item, index) => compare(item, y[index]));
+    }
+
+    // Handle objects (but not arrays)
+    if (typeof x === "object" && typeof y === "object") {
+      // Check for circular reference
+      if (!visited.has(x)) {
+        visited.set(x, new WeakSet());
+      }
+      const xSet = visited.get(x);
+      if (xSet?.has(y)) return true; // Already comparing this pair
+      xSet?.add(y);
+
+      const xObj = x as Record<string, unknown>;
+      const yObj = y as Record<string, unknown>;
+      const xKeys = Object.keys(xObj);
+      const yKeys = Object.keys(yObj);
+
+      if (xKeys.length !== yKeys.length) return false;
+
+      return xKeys.every((key) => compare(xObj[key], yObj[key]));
+    }
+
+    return false;
+  }
+
+  return compare(a, b);
+}

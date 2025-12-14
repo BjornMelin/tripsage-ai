@@ -3,6 +3,8 @@
  * Provides a singleton typed client for the Database schema.
  */
 
+"use client";
+
 import { createBrowserClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { useMemo } from "react";
@@ -14,6 +16,20 @@ export type TypedSupabaseClient = SupabaseClient<Database>;
 
 /** The browser singleton Supabase client. */
 let client: TypedSupabaseClient | null = null;
+
+const SSR_SUPABASE_CLIENT = new Proxy(
+  {},
+  {
+    get(_target, prop) {
+      const stack = new Error().stack;
+      throw new Error(
+        `Attempted to access Supabase client property "${String(prop)}" during SSR/prerender. ` +
+          "This client is only available in the browser after component hydration. " +
+          `Move Supabase operations into a useEffect hook or server action.\n\nCall stack:\n${stack}`
+      );
+    },
+  }
+) as TypedSupabaseClient;
 
 /**
  * Return the browser singleton Supabase client.
@@ -32,16 +48,22 @@ export function getBrowserClient(): TypedSupabaseClient | null {
     return null;
   }
 
-  try {
-    const supabaseUrl = getClientEnvVar("NEXT_PUBLIC_SUPABASE_URL");
-    const supabaseAnonKey = getClientEnvVar("NEXT_PUBLIC_SUPABASE_ANON_KEY");
-    client = createBrowserClient<Database>(supabaseUrl, supabaseAnonKey);
-    return client;
-  } catch {
-    throw new Error(
-      "Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY"
-    );
+  const supabaseUrl = getClientEnvVar("NEXT_PUBLIC_SUPABASE_URL");
+  const supabaseAnonKey = getClientEnvVar("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+
+  // Allow the app to boot in dev/build placeholder mode without crashing.
+  if (!supabaseUrl || !supabaseAnonKey) {
+    if (process.env.NODE_ENV === "development") {
+      console.warn(
+        "[supabase/client] Supabase env vars missing (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY). " +
+          "This is expected during development or build with placeholder mode enabled."
+      );
+    }
+    return null;
   }
+
+  client = createBrowserClient<Database>(supabaseUrl, supabaseAnonKey);
+  return client;
 }
 
 /**
@@ -66,6 +88,9 @@ export function useSupabase(): TypedSupabaseClient | null {
 export function useSupabaseRequired(): TypedSupabaseClient {
   const client = useMemo(getBrowserClient, []);
   if (!client) {
+    if (typeof window === "undefined") {
+      return SSR_SUPABASE_CLIENT;
+    }
     throw new Error(
       "useSupabaseRequired: Supabase client unavailable. This hook can only be used in client components after hydration."
     );
@@ -83,14 +108,13 @@ export function createClient(): TypedSupabaseClient | null {
     return null;
   }
 
-  try {
-    const supabaseUrl = getClientEnvVar("NEXT_PUBLIC_SUPABASE_URL");
-    const supabaseAnonKey = getClientEnvVar("NEXT_PUBLIC_SUPABASE_ANON_KEY");
-    // Intentionally create a fresh client (used by utility code that expects non-singleton behavior)
-    return createBrowserClient<Database>(supabaseUrl, supabaseAnonKey);
-  } catch {
-    throw new Error(
-      "Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY"
-    );
+  const supabaseUrl = getClientEnvVar("NEXT_PUBLIC_SUPABASE_URL");
+  const supabaseAnonKey = getClientEnvVar("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return null;
   }
+
+  // Intentionally create a fresh client (used by utility code that expects non-singleton behavior)
+  return createBrowserClient<Database>(supabaseUrl, supabaseAnonKey);
 }
