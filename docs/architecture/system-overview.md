@@ -26,7 +26,7 @@ graph TD
 - Payments/Email: Stripe `^19.3.0`, Resend `^6.5.0`.
 - Scheduling/Calendar: `ical-generator@10.0.0`, Google Calendar integration in `src/lib/calendar`.
 - State: Server Components by default; client state with Zustand; server state with TanStack Query.
-- Observability: `@vercel/otel`, `@opentelemetry/api` with helpers in `src/lib/telemetry` and `src/lib/logging`.
+- Observability: `@vercel/otel`, `@opentelemetry/api` with helpers in `src/lib/telemetry` (see `docs/development/backend/observability.md`).
 - Testing/tooling: Biome format/lint, Vitest, Playwright, `tsc`.
 
 ## Key Capabilities
@@ -68,8 +68,9 @@ graph TD
 
 ### Observability
 
-- Use `withTelemetrySpan` / `withTelemetrySpanSync`, `recordTelemetryEvent`, and `createServerLogger` (see `src/lib/telemetry` and `src/lib/logging`). Console logging is reserved for tests/client-only code.
+- Use `withTelemetrySpan` / `withTelemetrySpanSync`, `recordTelemetryEvent`, and `createServerLogger` (see `src/lib/telemetry` and `docs/development/backend/observability.md`). Console logging is reserved for tests/client-only code.
 - OpenTelemetry exporters are wired through `@vercel/otel`; spans wrap API handlers and external calls.
+- Automatic tracing is registered in `src/instrumentation.ts` via `registerOTel({ serviceName: "tripsage-frontend" })`.
 - Critical-path failures should emit `emitOperationalAlert` for downstream alerting (see `src/lib/telemetry/alerts.ts`).
 
 ### External Integrations (present in repo)
