@@ -19,6 +19,7 @@ import {
 import { normalizeWebSearchResults } from "@ai/tools/server/web-search-normalize";
 import type { ToolCallOptions } from "ai";
 import { z } from "zod";
+import { hashInputForCache } from "@/lib/cache/hash";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 import { getServerEnvVar, getServerEnvVarWithFallback } from "@/lib/env/server";
 import { fetchWithRetry } from "@/lib/http/retry";
@@ -81,7 +82,6 @@ export const webSearch = createAiTool<WebSearchInput, WebSearchResult>({
         limit: params.limit,
         sourcesCount: Array.isArray(params.sources) ? params.sources.length : 0,
       }),
-      redactKeys: ["query"],
     },
   },
   inputSchema: webSearchInputSchema,
@@ -169,25 +169,23 @@ function resolveFirecrawlApiKey(): string {
 
 async function handleHttpError(response: Response): Promise<never> {
   const text = await response.text();
+  const retryAfter = response.headers.get("retry-after") ?? undefined;
+  const meta = {
+    bodyHash: text ? hashInputForCache(text) : undefined,
+    bodyLength: text.length,
+    ...(retryAfter ? { retryAfter } : {}),
+    status: response.status,
+  };
   if (response.status === 429) {
-    throw createToolError(TOOL_ERROR_CODES.webSearchRateLimited, undefined, {
-      body: text,
-    });
+    throw createToolError(TOOL_ERROR_CODES.webSearchRateLimited, undefined, meta);
   }
   if (response.status === 401) {
-    throw createToolError(TOOL_ERROR_CODES.webSearchUnauthorized, undefined, {
-      body: text,
-    });
+    throw createToolError(TOOL_ERROR_CODES.webSearchUnauthorized, undefined, meta);
   }
   if (response.status === 402) {
-    throw createToolError(TOOL_ERROR_CODES.webSearchPaymentRequired, undefined, {
-      body: text,
-    });
+    throw createToolError(TOOL_ERROR_CODES.webSearchPaymentRequired, undefined, meta);
   }
-  throw createToolError(TOOL_ERROR_CODES.webSearchFailed, undefined, {
-    body: text,
-    status: response.status,
-  });
+  throw createToolError(TOOL_ERROR_CODES.webSearchFailed, undefined, meta);
 }
 
 function getTimeout(timeoutMs?: number): number {
@@ -222,7 +220,8 @@ function buildCacheKeySuffix(params: WebSearchInput): string {
     }
   }
 
-  return canonicalizeParamsForCache(cacheParams, "ws");
+  const canonical = canonicalizeParamsForCache(cacheParams);
+  return `v1:${hashInputForCache(canonical)}`;
 }
 
 function buildRequestBody(params: {

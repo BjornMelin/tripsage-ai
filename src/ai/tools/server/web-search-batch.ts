@@ -15,6 +15,7 @@ import { Redis } from "@upstash/redis";
 import type { ToolCallOptions } from "ai";
 import { tool } from "ai";
 import type { z } from "zod";
+import { hashInputForCache } from "@/lib/cache/hash";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
@@ -84,7 +85,7 @@ export const webSearchBatch = tool({
           if (rl && userId) {
             const rr = await rl.limit(userId);
             if (!rr.success) {
-              span.addEvent("rate_limited", { userId });
+              span.addEvent("rate_limited", { "ratelimit.subject_type": "user" });
               const err = new Error("web_search_rate_limited");
               (err as Error & { meta?: unknown }).meta = rr;
               throw err;
@@ -176,7 +177,7 @@ export const webSearchBatch = tool({
                   timeout: rest.timeoutMs,
                 } as Record<string, unknown>;
                 const startedAt = Date.now();
-                span.addEvent("http_fallback_post", { q });
+                span.addEvent("http_fallback_post", { queryLength: q.length });
                 const res = await fetch(url, {
                   body: JSON.stringify(body),
                   headers: {
@@ -187,7 +188,9 @@ export const webSearchBatch = tool({
                 });
                 if (!res.ok) {
                   const text = await res.text();
-                  throw new Error(`web_search_failed:${res.status}:${text}`);
+                  throw new Error(
+                    `web_search_failed:${res.status}:body_hash=${hashInputForCache(text)}:body_length=${text.length}`
+                  );
                 }
                 const data = (await res.json()) as {
                   results?: {
@@ -213,24 +216,25 @@ export const webSearchBatch = tool({
               } catch (e2) {
                 const msg2 = e2 instanceof Error ? e2.message : String(e2);
                 span.addEvent("http_fallback_error", {
-                  message: msg2.slice(0, 120),
-                  q,
+                  code,
+                  queryLength: q.length,
                 });
                 // Debug aid for tests
-                webSearchBatchLogger.error("fallback_error", { error: msg2, query: q });
+                webSearchBatchLogger.error("fallback_error", {
+                  code,
+                  queryLength: q.length,
+                });
                 results.push({ error: { code, message: msg2 }, ok: false, query: q });
               }
             } else {
               span.addEvent("primary_error", {
                 code,
-                message: message.slice(0, 120),
-                q,
+                queryLength: q.length,
               });
               // Debug aid for tests
               webSearchBatchLogger.error("primary_error", {
                 code,
-                error: message,
-                query: q,
+                queryLength: q.length,
               });
               results.push({ error: { code, message }, ok: false, query: q });
             }

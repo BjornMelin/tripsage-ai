@@ -13,6 +13,7 @@ import {
   type WEATHER_RESULT_SCHEMA,
 } from "@ai/tools/schemas/weather";
 import type { z } from "zod";
+import { hashInputForCache } from "@/lib/cache/hash";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 import { fetchWithRetry } from "@/lib/http/retry";
 import { WEATHER_CACHE_TTL_SECONDS } from "./constants";
@@ -214,16 +215,17 @@ export const getCurrentWeather = createAiTool<GetCurrentWeatherInput, WeatherRes
   },
   guardrails: {
     cache: {
-      hashInput: true,
       key: (params) =>
-        canonicalizeParamsForCache({
-          city: params.city?.trim().toLowerCase(),
-          lang: params.lang,
-          lat: params.coordinates?.lat,
-          lon: params.coordinates?.lon,
-          units: params.units,
-          zip: params.zip?.trim(),
-        }),
+        `v1:${hashInputForCache(
+          canonicalizeParamsForCache({
+            city: params.city?.trim().toLowerCase(),
+            lang: params.lang,
+            lat: params.coordinates?.lat,
+            lon: params.coordinates?.lon,
+            units: params.units,
+            zip: params.zip?.trim(),
+          })
+        )}`,
       namespace: "tool:weather:current",
       onHit: (cached, _params, meta) => ({
         ...cached,
@@ -240,7 +242,6 @@ export const getCurrentWeather = createAiTool<GetCurrentWeatherInput, WeatherRes
         hasZip: Boolean(params.zip),
         units: params.units,
       }),
-      redactKeys: ["city", "zip"],
     },
   },
   inputSchema: getCurrentWeatherInputSchema,

@@ -32,7 +32,7 @@ Temperatures are hard-coded per agent (default 0.3). Adjust via code near each a
 
 ## Guardrails (Always On)
 
-- Per-tool Redis caching with TTLs and SHA-256 input hashing.
+- Per-tool Redis caching (where safe) with TTLs and SHA-256 input hashing (avoid caching write tools like memory updates).
 - Upstash sliding-window rate limits configured in `src/lib/ratelimit/config.ts`:
   - Flights: 8/minute
   - Accommodations: 10/minute

@@ -149,10 +149,6 @@ export const searchUserMemories = createAiTool({
     }));
   },
   guardrails: {
-    cache: {
-      key: (p) => JSON.stringify(p),
-      ttlSeconds: 60,
-    },
     rateLimit: {
       errorCode: TOOL_ERROR_CODES.toolRateLimited,
       limit: 20,
