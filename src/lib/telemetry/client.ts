@@ -15,6 +15,10 @@ import { FetchInstrumentation } from "@opentelemetry/instrumentation-fetch";
 import { BatchSpanProcessor, type SpanProcessor } from "@opentelemetry/sdk-trace-base";
 import { WebTracerProvider } from "@opentelemetry/sdk-trace-web";
 import { getClientEnvVarWithFallback } from "@/lib/env/client";
+import {
+  buildSanitizedErrorForTelemetry,
+  sanitizeClientErrorMessage,
+} from "./client-sanitize";
 
 /**
  * Module-level flag to prevent double-initialization.
@@ -26,7 +30,7 @@ let isInitialized = false;
  * Runs a client-side operation inside an OTEL span. No-op safe if tracing is not initialized.
  *
  * @param name - The name of the span.
- * @param attributes - The attributes to add to the span.
+ * @param attributes - Span attributes (must be low-cardinality and MUST NOT contain PII/secrets).
  * @param fn - The function to run inside the span.
  * @returns The result of the function.
  */
@@ -44,10 +48,16 @@ export async function withClientTelemetrySpan<T>(
     return result;
   } catch (error) {
     if (span) {
-      span.recordException(error as Error);
+      const err = error instanceof Error ? error : new Error("Unknown error");
+      const sanitized = sanitizeClientErrorMessage(err.message);
+      const exceptionError =
+        sanitized.redacted || sanitized.truncated
+          ? buildSanitizedErrorForTelemetry(err, sanitized.message)
+          : err;
+      span.recordException(exceptionError);
       span.setStatus({
         code: SpanStatusCode.ERROR,
-        message: error instanceof Error ? error.message : "Unknown error",
+        message: sanitized.message,
       });
     }
     throw error;

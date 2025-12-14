@@ -1,16 +1,14 @@
 /**
- * @fileoverview Shared tracer utilities for frontend telemetry.
+ * @fileoverview Shared tracer utilities for TripSage telemetry.
  */
-
-import "server-only";
 
 import { type Tracer, trace } from "@opentelemetry/api";
 import { TELEMETRY_SERVICE_NAME } from "./constants";
 
 /**
- * Returns the shared tracer instance for frontend telemetry.
+ * Returns the shared tracer instance for TripSage telemetry.
  *
- * @return OpenTelemetry tracer bound to the canonical frontend service name.
+ * @returns OpenTelemetry tracer bound to the canonical shared service name.
  */
 export function getTelemetryTracer(): Tracer {
   return trace.getTracer(TELEMETRY_SERVICE_NAME);
