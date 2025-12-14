@@ -34,8 +34,10 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/components/ui/use-toast";
 import { exportTripToIcs } from "@/lib/calendar/trip-export";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
+import { ROUTES } from "@/lib/routes";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { statusVariants } from "@/lib/variants/status";
 import { useTripStore } from "@/stores/trip-store";
@@ -68,6 +70,7 @@ const sanitizeTripTitleForFilename = (title?: string) => {
 export default function TripDetailsPage() {
   const params = useParams();
   const router = useRouter();
+  const { toast } = useToast();
   const { trips, currentTrip, setCurrentTrip } = useTripStore();
   const [isLoading, setIsLoading] = useState(true);
 
@@ -80,19 +83,38 @@ export default function TripDetailsPage() {
       setIsLoading(false);
     } else {
       // Trip not found, redirect to trips page
-      router.push("/dashboard/trips");
+      setIsLoading(false);
+      router.push(ROUTES.dashboard.trips);
     }
   }, [tripId, trips, setCurrentTrip, router]);
 
   const handleBackToTrips = () => {
-    router.push("/dashboard/trips");
+    router.push(ROUTES.dashboard.trips);
+  };
+
+  const safeParseTripDate = (value: string | undefined): Date | null => {
+    if (!value) return null;
+    try {
+      return DateUtils.parse(value);
+    } catch (error) {
+      recordClientErrorOnActiveSpan(
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          action: "safeParseTripDate",
+          context: "TripDetailsPage",
+          value,
+        }
+      );
+      return null;
+    }
   };
 
   const getTripStatus = () => {
     if (!currentTrip?.startDate || !currentTrip?.endDate) return "draft";
     const now = new Date();
-    const startDate = DateUtils.parse(currentTrip.startDate);
-    const endDate = DateUtils.parse(currentTrip.endDate);
+    const startDate = safeParseTripDate(currentTrip.startDate);
+    const endDate = safeParseTripDate(currentTrip.endDate);
+    if (!startDate || !endDate) return "draft";
 
     if (DateUtils.isBefore(now, startDate)) return "upcoming";
     if (DateUtils.isAfter(now, endDate)) return "completed";
@@ -101,14 +123,17 @@ export default function TripDetailsPage() {
 
   const getTripDuration = () => {
     if (!currentTrip?.startDate || !currentTrip?.endDate) return null;
-    const startDate = DateUtils.parse(currentTrip.startDate);
-    const endDate = DateUtils.parse(currentTrip.endDate);
+    const startDate = safeParseTripDate(currentTrip.startDate);
+    const endDate = safeParseTripDate(currentTrip.endDate);
+    if (!startDate || !endDate) return null;
     return DateUtils.difference(endDate, startDate, "days") + 1;
   };
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return "Not set";
-    return DateUtils.format(DateUtils.parse(dateString), "MMMM dd, yyyy");
+    const parsed = safeParseTripDate(dateString);
+    if (!parsed) return "Invalid date";
+    return DateUtils.format(parsed, "MMMM dd, yyyy");
   };
 
   /**
@@ -149,6 +174,43 @@ export default function TripDetailsPage() {
 
   const status = getTripStatus();
   const duration = getTripDuration();
+  const accommodations = currentTrip.destinations.filter((dest) => dest.accommodation);
+  const transportations = currentTrip.destinations.filter(
+    (dest) => dest.transportation
+  );
+
+  const handleExportToCalendar = async (): Promise<void> => {
+    try {
+      const icsContent = await exportTripToIcs(currentTrip);
+      const blob = new Blob([icsContent], { type: "text/calendar" });
+      const url = URL.createObjectURL(blob);
+      try {
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${sanitizeTripTitleForFilename(currentTrip.title)}.ics`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    } catch (error) {
+      if (process.env.NODE_ENV === "development") {
+        console.error("Failed to export trip:", error);
+      }
+      const normalizedError = error instanceof Error ? error : new Error(String(error));
+      recordClientErrorOnActiveSpan(normalizedError, {
+        action: "exportTripToIcs",
+        context: "TripDetailsPage",
+        tripId: currentTrip.id,
+      });
+      toast({
+        description: "Failed to export trip to calendar. Please try again.",
+        title: "Export failed",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="container mx-auto py-8">
@@ -180,45 +242,7 @@ export default function TripDetailsPage() {
             <Share2Icon className="h-4 w-4 mr-2" />
             Share
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={async () => {
-              const trip = currentTrip;
-              if (!trip) return;
-              try {
-                const icsContent = await exportTripToIcs(trip);
-                const blob = new Blob([icsContent], { type: "text/calendar" });
-                const url = URL.createObjectURL(blob);
-                try {
-                  const a = document.createElement("a");
-                  a.href = url;
-                  const sanitizedFilename = `${sanitizeTripTitleForFilename(
-                    trip.title
-                  )}.ics`;
-                  a.download = sanitizedFilename;
-                  document.body.appendChild(a);
-                  a.click();
-                  document.body.removeChild(a);
-                } finally {
-                  URL.revokeObjectURL(url);
-                }
-              } catch (error) {
-                if (process.env.NODE_ENV === "development") {
-                  console.error("Failed to export trip:", error);
-                }
-                const normalizedError =
-                  error instanceof Error ? error : new Error(String(error));
-                recordClientErrorOnActiveSpan(normalizedError, {
-                  action: "exportTripToIcs",
-                  context: "TripDetailsPage",
-                  tripId: trip.id,
-                  tripTitle: trip.title,
-                });
-                alert("Failed to export trip to calendar");
-              }
-            }}
-          >
+          <Button variant="outline" size="sm" onClick={handleExportToCalendar}>
             <DownloadIcon className="h-4 w-4 mr-2" />
             Export to Calendar
           </Button>
@@ -318,7 +342,7 @@ export default function TripDetailsPage() {
                 <div>
                   <h4 className="font-semibold mb-2">Estimated Costs</h4>
                   <div className="space-y-1 text-sm">
-                    {currentTrip.destinations.map((dest, _index) => (
+                    {currentTrip.destinations.map((dest) => (
                       <div key={dest.id} className="flex justify-between">
                         <span>{dest.name}</span>
                         <span>${dest.estimatedCost || 0}</span>
@@ -341,44 +365,38 @@ export default function TripDetailsPage() {
                 <div>
                   <h4 className="font-semibold mb-2">Accommodations</h4>
                   <div className="space-y-1 text-sm">
-                    {currentTrip.destinations
-                      .filter((dest) => dest.accommodation)
-                      .map((dest) => (
-                        <div key={dest.id}>
-                          <div className="font-medium">{dest.name}</div>
-                          <div className="text-muted-foreground">
-                            {dest.accommodation?.name}
-                          </div>
+                    {accommodations.map((dest) => (
+                      <div key={dest.id}>
+                        <div className="font-medium">{dest.name}</div>
+                        <div className="text-muted-foreground">
+                          {dest.accommodation?.name}
                         </div>
-                      ))}
-                    {currentTrip.destinations.filter((dest) => dest.accommodation)
-                      .length === 0 && (
+                      </div>
+                    ))}
+                    {accommodations.length === 0 ? (
                       <div className="text-muted-foreground">
                         No accommodations booked
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 </div>
 
                 <div>
                   <h4 className="font-semibold mb-2">Transportation</h4>
                   <div className="space-y-1 text-sm">
-                    {currentTrip.destinations
-                      .filter((dest) => dest.transportation)
-                      .map((dest) => (
-                        <div key={dest.id}>
-                          <div className="font-medium">To {dest.name}</div>
-                          <div className="text-muted-foreground">
-                            {dest.transportation?.type} - {dest.transportation?.details}
-                          </div>
+                    {transportations.map((dest) => (
+                      <div key={dest.id}>
+                        <div className="font-medium">To {dest.name}</div>
+                        <div className="text-muted-foreground">
+                          {dest.transportation?.type} - {dest.transportation?.details}
                         </div>
-                      ))}
-                    {currentTrip.destinations.filter((dest) => dest.transportation)
-                      .length === 0 && (
+                      </div>
+                    ))}
+                    {transportations.length === 0 ? (
                       <div className="text-muted-foreground">
                         No transportation planned
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -407,9 +425,7 @@ export default function TripDetailsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground">
-                  Additional budget features coming soon...
-                </p>
+                <BudgetPlanningSkeleton />
               </CardContent>
             </Card>
           </div>
@@ -427,13 +443,45 @@ export default function TripDetailsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">
-                Trip settings panel coming soon...
-              </p>
+              <TripSettingsSkeleton />
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function BudgetPlanningSkeleton() {
+  return (
+    <div className="space-y-3">
+      <p className="text-muted-foreground">
+        Detailed budget planning is not yet available.
+      </p>
+      <div className="text-sm text-muted-foreground">
+        Planned additions:
+        <ul className="list-disc pl-5 pt-2 space-y-1">
+          <li>Per-destination breakdowns</li>
+          <li>Category budgets (lodging, flights, activities)</li>
+          <li>Alerts when spending exceeds budget</li>
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+function TripSettingsSkeleton() {
+  return (
+    <div className="space-y-3">
+      <p className="text-muted-foreground">Trip settings are not yet available.</p>
+      <div className="text-sm text-muted-foreground">
+        Planned additions:
+        <ul className="list-disc pl-5 pt-2 space-y-1">
+          <li>Sharing and collaboration controls</li>
+          <li>Default currency and budget preferences</li>
+          <li>Notification settings</li>
+        </ul>
+      </div>
     </div>
   );
 }

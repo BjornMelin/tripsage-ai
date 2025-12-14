@@ -146,6 +146,23 @@ export function getGoogleMapsServerKey(): string {
   }
 }
 
+/**
+ * Get the public Google Maps browser key from a server context.
+ *
+ * This key is safe to embed in client-consumed URLs and should be referrer-restricted.
+ *
+ * @returns Public browser key or undefined if unavailable (or during build phase)
+ */
+export function getGoogleMapsBrowserKey(): string | undefined {
+  if (isBuildPhase()) return undefined;
+  const key = getServerEnvVarWithFallback(
+    "NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY",
+    undefined
+  );
+  if (!key || key === "undefined") return undefined;
+  return key;
+}
+
 // Export validated env object for advanced use cases (lazy getter)
 export const env = new Proxy({} as ServerEnv, {
   get(_target, prop) {

@@ -206,7 +206,7 @@ export type SearchType = z.infer<typeof searchTypeSchema>;
 export const flightSchema = z.object({
   airline: z.string().min(1),
   arrivalTime: DATE_STRING_SCHEMA,
-  cabinClass: z.string(),
+  cabinClass: z.string().optional(),
   departureTime: DATE_STRING_SCHEMA,
   destination: z.string().min(1),
   duration: POSITIVE_INT_SCHEMA,
@@ -222,7 +222,7 @@ export const flightSchema = z.object({
     .optional(),
   origin: z.string().min(1),
   price: z.number().positive(),
-  seatsAvailable: NON_NEGATIVE_INT_SCHEMA,
+  seatsAvailable: NON_NEGATIVE_INT_SCHEMA.optional(),
   stops: NON_NEGATIVE_INT_SCHEMA,
 });
 
@@ -815,7 +815,7 @@ export const hotelResultSchema = z.strictObject({
         type: z.enum(["early_bird", "last_minute", "extended_stay", "all_inclusive"]),
       })
       .optional(),
-    priceHistory: z.enum(["rising", "falling", "stable"]),
+    priceHistory: z.enum(["rising", "falling", "stable", "unknown"]),
     pricePerNight: z.number().nonnegative(),
     taxes: z.number().nonnegative(),
     taxesEstimated: z.boolean(),
