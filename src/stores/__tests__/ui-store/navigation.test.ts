@@ -19,7 +19,7 @@ Object.defineProperty(window, "matchMedia", {
   writable: true,
 });
 
-import { useUiStore } from "@/stores/ui-store";
+import { useUiStore } from "@/stores/ui";
 
 describe("UI Store - Navigation", () => {
   beforeEach(() => {
