@@ -20,11 +20,11 @@ importers:
         specifier: 3.0.0-beta.83
         version: 3.0.0-beta.83(zod@4.1.13)
       '@ai-sdk/openai':
-        specifier: 3.0.0-beta.95
-        version: 3.0.0-beta.95(zod@4.1.13)
+        specifier: 3.0.0-beta.96
+        version: 3.0.0-beta.96(zod@4.1.13)
       '@ai-sdk/react':
-        specifier: 3.0.0-beta.151
-        version: 3.0.0-beta.151(react@19.2.3)(zod@4.1.13)
+        specifier: 3.0.0-beta.153
+        version: 3.0.0-beta.153(react@19.2.3)(zod@4.1.13)
       '@ai-sdk/togetherai':
         specifier: 2.0.0-beta.49
         version: 2.0.0-beta.49(zod@4.1.13)
@@ -163,9 +163,6 @@ importers:
       '@testing-library/react':
         specifier: ^16.3.0
         version: 16.3.0(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
-      '@types/react-syntax-highlighter':
-        specifier: ^15.5.13
-        version: 15.5.13
       '@upstash/qstash':
         specifier: ^2.8.4
         version: 2.8.4
@@ -179,8 +176,8 @@ importers:
         specifier: ^2.1.0
         version: 2.1.0(@opentelemetry/api-logs@0.208.0)(@opentelemetry/api@1.9.0)(@opentelemetry/instrumentation@0.208.0(@opentelemetry/api@1.9.0))(@opentelemetry/resources@2.2.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-logs@0.208.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-metrics@2.2.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.2.0(@opentelemetry/api@1.9.0))
       ai:
-        specifier: 6.0.0-beta.148
-        version: 6.0.0-beta.148(zod@4.1.13)
+        specifier: 6.0.0-beta.150
+        version: 6.0.0-beta.150(zod@4.1.13)
       amadeus:
         specifier: ^11.0.0
         version: 11.0.0
@@ -202,9 +199,6 @@ importers:
       file-type:
         specifier: ^21.1.1
         version: 21.1.1
-      framer-motion:
-        specifier: 12.23.26
-        version: 12.23.26(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       html-to-text:
         specifier: ^9.0.5
         version: 9.0.5
@@ -217,15 +211,15 @@ importers:
       ical.js:
         specifier: ^2.2.1
         version: 2.2.1
+      import-in-the-middle:
+        specifier: ^2.0.0
+        version: 2.0.0
       js-tiktoken:
         specifier: ^1.0.21
         version: 1.0.21
-      libphonenumber-js:
-        specifier: ^1.12.31
-        version: 1.12.31
       lucide-react:
-        specifier: ^0.560.0
-        version: 0.560.0(react@19.2.3)
+        specifier: ^0.561.0
+        version: 0.561.0(react@19.2.3)
       mem0ai:
         specifier: ^2.1.38
         version: 2.1.38(@supabase/supabase-js@2.87.1)(ws@8.18.3)
@@ -253,15 +247,12 @@ importers:
       react-hook-form:
         specifier: ^7.68.0
         version: 7.68.0(react@19.2.3)
-      react-is:
-        specifier: ^19.2.3
-        version: 19.2.3
-      react-syntax-highlighter:
-        specifier: ^16.1.0
-        version: 16.1.0(react@19.2.3)
       recharts:
         specifier: ^3.5.1
-        version: 3.5.1(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react-is@19.2.3)(react@19.2.3)(redux@5.0.1)
+        version: 3.5.1(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react-is@17.0.2)(react@19.2.3)(redux@5.0.1)
+      require-in-the-middle:
+        specifier: ^8.0.1
+        version: 8.0.1
       resend:
         specifier: ^6.6.0
         version: 6.6.0
@@ -280,9 +271,6 @@ importers:
       use-stick-to-bottom:
         specifier: ^1.1.1
         version: 1.1.1(react@19.2.3)
-      uuid:
-        specifier: ^13.0.0
-        version: 13.0.0
       vaul:
         specifier: ^1.1.2
         version: 1.1.2(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -434,8 +422,8 @@ packages:
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
-  '@ai-sdk/openai@3.0.0-beta.95':
-    resolution: {integrity: sha512-SPUw+6rUJ+xEQDBvYUDsUO+baU+1/vvnsPk8L+Zj10QWkxECwbdKbW4hjsdZ+/gwz3HwPN4Jr8e3fWoaBUex4Q==}
+  '@ai-sdk/openai@3.0.0-beta.96':
+    resolution: {integrity: sha512-C4zOLbnxDYRqBWbQoY6lfgEtKF8ylBZTynzbPInSrmt53HJERBC3smLV1XEKWX2l28TspWrTMG7VeqDS/kzZjg==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -460,8 +448,8 @@ packages:
     resolution: {integrity: sha512-UQyOlrpahFL1CZ/QA0ZpFhAkE32fw1XXBx+6gu23YWSCMJCjaf/fiJUPV7xUhp/nXqVO/IC+PIIfLomx55D16A==}
     engines: {node: '>=18'}
 
-  '@ai-sdk/react@3.0.0-beta.151':
-    resolution: {integrity: sha512-GsdTcPBzyA9ORtEUM+fnolXrzdXNiyWm8dd2fD0JCkDsJpP1GZI3fiXp8Mx1Bl8IRYyGcwJKHmq/Vru1bf8cNw==}
+  '@ai-sdk/react@3.0.0-beta.153':
+    resolution: {integrity: sha512-wdldNFesBAWum/8CJ9nebSDV+jnCig2uuL3H7pugWzuDclgqXdBSirUldBk0pHT8mtzQFmNp4Db9opcAO9svYQ==}
     engines: {node: '>=18'}
     peerDependencies:
       react: ^18 || ~19.0.1 || ~19.1.2 || ^19.2.1
@@ -2891,16 +2879,10 @@ packages:
   '@types/phoenix@1.6.7':
     resolution: {integrity: sha512-oN9ive//QSBkf19rfDv45M7eZPi0eEXylht2OLEXicu5b4KoQ1OzXIw+xDSGWxSxe1JmepRR/ZH283vsu518/Q==}
 
-  '@types/prismjs@1.26.5':
-    resolution: {integrity: sha512-AUZTa7hQ2KY5L7AmtSiqxlhWxb4ina0yd8hNbl4TWuqnv/pFP0nDMb3YrfSBf4hJVGLh2YEIBfKaBW/9UEl6IQ==}
-
   '@types/react-dom@19.2.3':
     resolution: {integrity: sha512-jp2L/eY6fn+KgVVQAOqYItbF0VY/YApe5Mz2F0aykSO8gx31bYCZyvSeYxCHKvzHG5eZjc+zyaS5BrBWya2+kQ==}
     peerDependencies:
       '@types/react': ^19.2.0
-
-  '@types/react-syntax-highlighter@15.5.13':
-    resolution: {integrity: sha512-uLGJ87j6Sz8UaBAooU0T6lWJ0dBmjZgN1PZTrj05TNql2/XpC6+4HhMT5syIdFUUt+FASfCeLLv4kBygNU+8qA==}
 
   '@types/react@19.2.7':
     resolution: {integrity: sha512-MWtvHrGZLFttgeEj28VXHxpmwYbor/ATPYbBfSFZEIRK0ecCFLl2Qo55z52Hss+UV9CRN7trSeq1zbgx7YDWWg==}
@@ -3040,8 +3022,8 @@ packages:
     resolution: {integrity: sha512-gOsf2YwSlleG6IjRYG2A7k0HmBMEo6qVNk9Bp/EaLgAJT5ngH6PXbqa4ItvnEwCm/velL5jAnQgsHsWnjhGmvw==}
     engines: {node: '>=18'}
 
-  ai@6.0.0-beta.148:
-    resolution: {integrity: sha512-Ml8RbKNcDFxr0yJQng8FhgYAc4ECTBSnRpl9//6dUIwWFubV1DFFYX0XpEVYU9XgcC18eJJ4IqYkWQgE73YGEQ==}
+  ai@6.0.0-beta.150:
+    resolution: {integrity: sha512-gBCzE2/m5w1ybx0bnWKf66ppCH+921jGFeGUTQv3+GWaaB1WLeaOa8H4sEmdx29YAZ5n+iqZKh+L5swhNSCIRg==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -3790,9 +3772,6 @@ packages:
   fast-sha256@1.3.0:
     resolution: {integrity: sha512-n11RGP/lrWEFI/bWdygLxhI+pVeo1ZYIVwvvPkW7azl/rOy+F3HYRZ2K5zeE9mmkhQppyv9sQFx0JM9UabnpPQ==}
 
-  fault@1.0.4:
-    resolution: {integrity: sha512-CJ0HCB5tL5fYTEA7ToAq5+kTwd++Borf1/bifxd9iT70QcXr4MRrO3Llf8Ifs70q+SJcGHFtnIE/Nw6giCtECA==}
-
   fdir@6.5.0:
     resolution: {integrity: sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg==}
     engines: {node: '>=12.0.0'}
@@ -3863,10 +3842,6 @@ packages:
   form-data@4.0.5:
     resolution: {integrity: sha512-8RipRLol37bNs2bhoV67fiTEvdTrbMUYcFTiy3+wuuOnUog2QBHCZWXDRijWQfAkhBj2Uf5UnVaiWwA5vdd82w==}
     engines: {node: '>= 6'}
-
-  format@0.2.2:
-    resolution: {integrity: sha512-wzsgA6WOq+09wrU1tsJ09udeR/YZRaeArL9e1wPbFg3GG2yDnC2ldKpxs4xunpFF9DgqCqOIra3bc1HWrJ37Ww==}
-    engines: {node: '>=0.4.x'}
 
   formdata-node@4.4.1:
     resolution: {integrity: sha512-0iirZp3uVDjVGt9p49aTaqjk84TrglENEDuqfdlZQ1roC9CWlPk6Avf8EEnZNcAqPonwkG35x4n3ww/1THYAeQ==}
@@ -4050,9 +4025,6 @@ packages:
 
   highlight.js@10.7.3:
     resolution: {integrity: sha512-tzcUFauisWKNHaRkN4Wjl/ZA07gENAjFl3J/c480dprkGTg5EQstgaNFqBfUqCq54kZRIEcreTsAgF/m2quD7A==}
-
-  highlightjs-vue@1.0.0:
-    resolution: {integrity: sha512-PDEfEF102G23vHmPhLyPboFCD+BkMGu+GuJe2d9/eH4FsCwvgBpnc9n0pGE+ffKdph38s6foEZiEjdgHdzp+IA==}
 
   hook-std@4.0.0:
     resolution: {integrity: sha512-IHI4bEVOt3vRUDJ+bFA9VUJlo7SzvFARPNLw75pqSmAOP2HmTWfFJtPvLBrDrlgjEYXY9zs7SFdHPQaJShkSCQ==}
@@ -4404,9 +4376,6 @@ packages:
   leac@0.6.0:
     resolution: {integrity: sha512-y+SqErxb8h7nE/fiEX07jsbuhrpO9lL8eca7/Y1nuWV2moNlXhyd59iDGcRf6moVyDMbmTNzL40SUyrFU/yDpg==}
 
-  libphonenumber-js@1.12.31:
-    resolution: {integrity: sha512-Z3IhgVgrqO1S5xPYM3K5XwbkDasU67/Vys4heW+lfSBALcUZjeIIzI8zCLifY+OCzSq+fpDdywMDa7z+4srJPQ==}
-
   lightningcss-android-arm64@1.30.2:
     resolution: {integrity: sha512-BH9sEdOCahSgmkVhBLeU7Hc9DWeZ1Eb6wNS6Da8igvUwAe0sqROHddIlvU06q3WyXVEOYDZ6ykBZQnjTbmo4+A==}
     engines: {node: '>= 12.0.0'}
@@ -4522,9 +4491,6 @@ packages:
   longest-streak@3.1.0:
     resolution: {integrity: sha512-9Ri+o0JYgehTaVBBDoMqIl8GXtbWg711O3srftcHhZ0dqnETqLaoIK0x17fUw9rFSlK/0NlsKe0Ahhyl5pXE2g==}
 
-  lowlight@1.20.0:
-    resolution: {integrity: sha512-8Ktj+prEb1RoCPkEOrPMYUN/nCggB7qAWe3a7OpMjWQkh3l2RD5wKRQ+o8Q8YuI9RG/xs95waaI/E6ym/7NsTw==}
-
   lru-cache@10.4.3:
     resolution: {integrity: sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ==}
 
@@ -4540,8 +4506,8 @@ packages:
     peerDependencies:
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
-  lucide-react@0.560.0:
-    resolution: {integrity: sha512-NwKoUA/aBShsdL8WE5lukV2F/tjHzQRlonQs7fkNGI1sCT0Ay4a9Ap3ST2clUUkcY+9eQ0pBe2hybTQd2fmyDA==}
+  lucide-react@0.561.0:
+    resolution: {integrity: sha512-Y59gMY38tl4/i0qewcqohPdEbieBy7SovpBL9IFebhc2mDd8x4PZSOsiFRkpPcOq6bj1r/mjH/Rk73gSlIJP2A==}
     peerDependencies:
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
@@ -5273,10 +5239,6 @@ packages:
     resolution: {integrity: sha512-gjVS5hOP+M3wMm5nmNOucbIrqudzs9v/57bWRHQWLYklXqoXKrVfYW2W9+glfGsqtPgpiz5WwyEEB+ksXIx3gQ==}
     engines: {node: '>=18'}
 
-  prismjs@1.30.0:
-    resolution: {integrity: sha512-DEvV2ZF2r2/63V+tK8hQvrR2ZGn10srHbXviTlcv7Kpzw8jWiNTqbVgjO3IY8RxrrOUF8VPMQQFysYYYv0YZxw==}
-    engines: {node: '>=6'}
-
   process-nextick-args@2.0.1:
     resolution: {integrity: sha512-3ouUOpQhtgrbOa17J7+uxOTpITYWaGP7/AhoR3+A+/1e9skrzelGi/dXzEYyvbxubEF6Wn2ypscTKiKJFFn1ag==}
 
@@ -5330,9 +5292,6 @@ packages:
   react-is@17.0.2:
     resolution: {integrity: sha512-w2GsyukL62IJnlaff/nRegPQR94C/XXamvMWmSHRJ4y7Ts/4ocGRmTHvOs8PSE6pB3dWOrD/nueuU5sduBsQ4w==}
 
-  react-is@19.2.3:
-    resolution: {integrity: sha512-qJNJfu81ByyabuG7hPFEbXqNcWSU3+eVus+KJs+0ncpGfMyYdvSmxiJxbWR65lYi1I+/0HBcliO029gc4F+PnA==}
-
   react-redux@9.2.0:
     resolution: {integrity: sha512-ROY9fvHhwOD9ySfrF0wmvu//bKCQ6AeZZq1nJNtbDC+kk5DuSuNX/n6YWYF/SYy7bSba4D4FSz8DJeKY/S/r+g==}
     peerDependencies:
@@ -5378,12 +5337,6 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
-
-  react-syntax-highlighter@16.1.0:
-    resolution: {integrity: sha512-E40/hBiP5rCNwkeBN1vRP+xow1X0pndinO+z3h7HLsHyjztbyjfzNWNKuAsJj+7DLam9iT4AaaOZnueCU+Nplg==}
-    engines: {node: '>= 16.20.2'}
-    peerDependencies:
-      react: '>= 0.14.0'
 
   react@19.2.3:
     resolution: {integrity: sha512-Ku/hhYbVjOQnXDZFv2+RibmLFGwFdeeKHFcOTlrt7xplBnya5OGn/hIRDsqDiSUcfORsDC7MPxwork8jBwsIWA==}
@@ -5431,9 +5384,6 @@ packages:
 
   redux@5.0.1:
     resolution: {integrity: sha512-M9/ELqF6fy8FwmkpnF0S3YKOqMyoWJ4+CS5Efg2ct3oY9daQvd/Pc71FpGZsVsbl3Cpb+IIcjBDUnnyBdQbq4w==}
-
-  refractor@5.0.0:
-    resolution: {integrity: sha512-QXOrHQF5jOpjjLfiNk5GFnWhRXvxjUVnlFxkeDmewR5sXkr3iM46Zo+CnRR8B+MDVqkULW4EcLVcRBNOPXHosw==}
 
   regex-recursion@6.0.2:
     resolution: {integrity: sha512-0YCaSCq2VRIebiaUviZNs0cBz1kg5kVS2UKUfNIx8YVs1cN3AV7NTctO5FOKBA+UT2BPJIWZauYHPqJODG50cg==}
@@ -6091,10 +6041,6 @@ packages:
     resolution: {integrity: sha512-0/A9rDy9P7cJ+8w1c9WD9V//9Wj15Ce2MPz8Ri6032usz+NfePxx5AcN3bN+r6ZL6jEo066/yNYB3tn4pQEx+A==}
     hasBin: true
 
-  uuid@13.0.0:
-    resolution: {integrity: sha512-XQegIaBTVUjSHliKqcnFqYypAd4S+WCYt5NIeRs6w/UAry7z8Y9j5ZwRRL4kzq9U3sD6v+85er9FvkEaBpji2w==}
-    hasBin: true
-
   uuid@9.0.1:
     resolution: {integrity: sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==}
     hasBin: true
@@ -6441,7 +6387,7 @@ snapshots:
       - arktype
       - effect
 
-  '@ai-sdk/openai@3.0.0-beta.95(zod@4.1.13)':
+  '@ai-sdk/openai@3.0.0-beta.96(zod@4.1.13)':
     dependencies:
       '@ai-sdk/provider': 3.0.0-beta.26
       '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.1.13)
@@ -6462,10 +6408,10 @@ snapshots:
     dependencies:
       json-schema: 0.4.0
 
-  '@ai-sdk/react@3.0.0-beta.151(react@19.2.3)(zod@4.1.13)':
+  '@ai-sdk/react@3.0.0-beta.153(react@19.2.3)(zod@4.1.13)':
     dependencies:
       '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.1.13)
-      ai: 6.0.0-beta.148(zod@4.1.13)
+      ai: 6.0.0-beta.150(zod@4.1.13)
       react: 19.2.3
       swr: 2.3.7(react@19.2.3)
       throttleit: 2.1.0
@@ -8907,13 +8853,7 @@ snapshots:
 
   '@types/phoenix@1.6.7': {}
 
-  '@types/prismjs@1.26.5': {}
-
   '@types/react-dom@19.2.3(@types/react@19.2.7)':
-    dependencies:
-      '@types/react': 19.2.7
-
-  '@types/react-syntax-highlighter@15.5.13':
     dependencies:
       '@types/react': 19.2.7
 
@@ -9079,7 +9019,7 @@ snapshots:
       clean-stack: 5.3.0
       indent-string: 5.0.0
 
-  ai@6.0.0-beta.148(zod@4.1.13):
+  ai@6.0.0-beta.150(zod@4.1.13):
     dependencies:
       '@ai-sdk/gateway': 2.0.0-beta.78(zod@4.1.13)
       '@ai-sdk/provider': 3.0.0-beta.26
@@ -9884,10 +9824,6 @@ snapshots:
 
   fast-sha256@1.3.0: {}
 
-  fault@1.0.4:
-    dependencies:
-      format: 0.2.2
-
   fdir@6.5.0(picomatch@4.0.3):
     optionalDependencies:
       picomatch: 4.0.3
@@ -9951,8 +9887,6 @@ snapshots:
       es-set-tostringtag: 2.1.0
       hasown: 2.0.2
       mime-types: 2.1.35
-
-  format@0.2.2: {}
 
   formdata-node@4.4.1:
     dependencies:
@@ -10201,8 +10135,6 @@ snapshots:
   headers-polyfill@4.0.3: {}
 
   highlight.js@10.7.3: {}
-
-  highlightjs-vue@1.0.0: {}
 
   hook-std@4.0.0: {}
 
@@ -10518,8 +10450,6 @@ snapshots:
 
   leac@0.6.0: {}
 
-  libphonenumber-js@1.12.31: {}
-
   lightningcss-android-arm64@1.30.2:
     optional: true
 
@@ -10608,11 +10538,6 @@ snapshots:
 
   longest-streak@3.1.0: {}
 
-  lowlight@1.20.0:
-    dependencies:
-      fault: 1.0.4
-      highlight.js: 10.7.3
-
   lru-cache@10.4.3: {}
 
   lru-cache@11.2.4: {}
@@ -10625,7 +10550,7 @@ snapshots:
     dependencies:
       react: 19.2.3
 
-  lucide-react@0.560.0(react@19.2.3):
+  lucide-react@0.561.0(react@19.2.3):
     dependencies:
       react: 19.2.3
 
@@ -11498,8 +11423,6 @@ snapshots:
     dependencies:
       parse-ms: 4.0.0
 
-  prismjs@1.30.0: {}
-
   process-nextick-args@2.0.1: {}
 
   property-information@7.1.0: {}
@@ -11556,8 +11479,6 @@ snapshots:
 
   react-is@17.0.2: {}
 
-  react-is@19.2.3: {}
-
   react-redux@9.2.0(@types/react@19.2.7)(react@19.2.3)(redux@5.0.1):
     dependencies:
       '@types/use-sync-external-store': 0.0.6
@@ -11595,16 +11516,6 @@ snapshots:
       tslib: 2.8.1
     optionalDependencies:
       '@types/react': 19.2.7
-
-  react-syntax-highlighter@16.1.0(react@19.2.3):
-    dependencies:
-      '@babel/runtime': 7.28.4
-      highlight.js: 10.7.3
-      highlightjs-vue: 1.0.0
-      lowlight: 1.20.0
-      prismjs: 1.30.0
-      react: 19.2.3
-      refractor: 5.0.0
 
   react@19.2.3: {}
 
@@ -11654,7 +11565,7 @@ snapshots:
       tiny-invariant: 1.3.3
       tslib: 2.8.1
 
-  recharts@3.5.1(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react-is@19.2.3)(react@19.2.3)(redux@5.0.1):
+  recharts@3.5.1(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react-is@17.0.2)(react@19.2.3)(redux@5.0.1):
     dependencies:
       '@reduxjs/toolkit': 2.11.1(react-redux@9.2.0(@types/react@19.2.7)(react@19.2.3)(redux@5.0.1))(react@19.2.3)
       clsx: 2.1.1
@@ -11664,7 +11575,7 @@ snapshots:
       immer: 10.2.0
       react: 19.2.3
       react-dom: 19.2.3(react@19.2.3)
-      react-is: 19.2.3
+      react-is: 17.0.2
       react-redux: 9.2.0(@types/react@19.2.7)(react@19.2.3)(redux@5.0.1)
       reselect: 5.1.1
       tiny-invariant: 1.3.3
@@ -11684,13 +11595,6 @@ snapshots:
       redux: 5.0.1
 
   redux@5.0.1: {}
-
-  refractor@5.0.0:
-    dependencies:
-      '@types/hast': 3.0.4
-      '@types/prismjs': 1.26.5
-      hastscript: 9.0.1
-      parse-entities: 4.0.2
 
   regex-recursion@6.0.2:
     dependencies:
@@ -12441,8 +12345,6 @@ snapshots:
   uuid@10.0.0: {}
 
   uuid@11.1.0: {}
-
-  uuid@13.0.0: {}
 
   uuid@9.0.1: {}
 
