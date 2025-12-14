@@ -40,6 +40,8 @@ import {
 import { ROUTES } from "@/lib/routes";
 import { useSearchHistoryStore } from "@/stores/search-history/index";
 
+type RepeatSearchParams = Record<string, string | number | boolean | null | undefined>;
+
 /** Get the base path for a search type. */
 function getSearchPath(searchType: SearchType): string {
   switch (searchType) {
@@ -73,7 +75,7 @@ export default function SearchHubClient() {
    */
   const handleRepeatSearch = (
     searchType: SearchType,
-    params: Record<string, string | number | boolean | null | undefined>
+    params: RepeatSearchParams
   ): void => {
     const basePath = getSearchPath(searchType);
     const queryParams = new URLSearchParams();
@@ -240,15 +242,16 @@ export default function SearchHubClient() {
                         title={getSearchTitle(search.params)}
                         type={search.searchType}
                         date={new Date(search.timestamp).toLocaleDateString()}
-                        onRepeat={() =>
-                          handleRepeatSearch(
-                            search.searchType,
-                            search.params as Record<
-                              string,
-                              string | number | boolean | null | undefined
-                            >
-                          )
-                        }
+                        onRepeat={() => {
+                          const safeParams = Object.fromEntries(
+                            Object.entries(search.params).filter(
+                              ([_key, value]) =>
+                                value == null ||
+                                ["string", "number", "boolean"].includes(typeof value)
+                            )
+                          ) as RepeatSearchParams;
+                          handleRepeatSearch(search.searchType, safeParams);
+                        }}
                       />
                     ))}
                   </div>
@@ -352,7 +355,7 @@ function RecentSearchCard({
   title: string;
   type: SearchType;
   date: string;
-  onRepeat: () => Promise<void> | void;
+  onRepeat: () => void;
 }) {
   return (
     <Card className="h-full hover:bg-accent/50 transition-colors group">

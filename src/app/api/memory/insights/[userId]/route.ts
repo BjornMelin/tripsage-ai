@@ -96,8 +96,7 @@ export const GET = withApiGuards({
       const { model, modelId } = await resolveProvider(userId, "gpt-4o-mini");
 
       const result = await generateText({
-        // biome-ignore lint/complexity/useLiteralKeys: AI SDK API uses snake_case option key
-        ["experimental_telemetry"]: {
+        experimental_telemetry: {
           functionId: "memory.insights.generate",
           isEnabled: true,
           metadata: {
