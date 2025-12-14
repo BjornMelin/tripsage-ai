@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "@/test/test-utils";
 
 import AuthError from "../(auth)/error";
-import DashboardError from "../(dashboard)/error";
+import DashboardError from "../dashboard/error";
 // Import the error boundary components
 import ErrorComponent from "../error";
 import GlobalError from "../global-error";
@@ -196,7 +196,7 @@ describe("Next.js Error Boundaries Integration", () => {
     });
   });
 
-  describe("Dashboard Error Boundary ((dashboard)/error.tsx)", () => {
+  describe("Dashboard Error Boundary (dashboard/error.tsx)", () => {
     it("should render ErrorFallback for dashboard errors", () => {
       render(<DashboardError error={mockError} reset={mockReset} />);
 
