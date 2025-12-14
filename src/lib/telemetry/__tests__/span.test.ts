@@ -77,6 +77,24 @@ describe("withTelemetrySpan", () => {
     expect(END_SPAN).toHaveBeenCalledTimes(1);
   });
 
+  it("does not crash when recordException is missing on span", async () => {
+    START_ACTIVE_SPAN.mockImplementationOnce((...args: unknown[]) => {
+      const callback = args.at(-1) as (span: unknown) => unknown;
+      return callback({
+        end: END_SPAN,
+        setStatus: SET_STATUS,
+      } as never);
+    });
+
+    await expect(
+      withTelemetrySpan("test", {}, () => {
+        throw new Error("boom");
+      })
+    ).rejects.toThrow("boom");
+    expect(SET_STATUS).toHaveBeenCalledWith({ code: 2, message: "boom" });
+    expect(END_SPAN).toHaveBeenCalledTimes(1);
+  });
+
   it("sets the span status to OK on successful completion", async () => {
     await expect(
       withTelemetrySpan("test", {}, () => Promise.resolve("success"))

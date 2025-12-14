@@ -1,14 +1,13 @@
 /**
- * @fileoverview Server-side telemetry span utilities.
+ * @fileoverview Telemetry span utilities.
  *
- * Canonical server-only OpenTelemetry span helper with attribute redaction and logging.
- * Client components should import from ./client instead.
+ * Provides OpenTelemetry span helpers with attribute redaction and lightweight event logging.
+ * Client-side tracing setup still lives in `./client` (this module does not initialize OTEL).
  */
-
-import "server-only";
 
 import { type Span, SpanStatusCode, type Tracer, trace } from "@opentelemetry/api";
 import { getTelemetryTracer } from "@/lib/telemetry/tracer";
+import { REDACTED_VALUE } from "./constants";
 
 // Re-export Span type for use by other modules (avoids direct @opentelemetry/api imports)
 export type { Span };
@@ -34,8 +33,13 @@ export type TelemetryLogOptions = {
   level?: "info" | "warning" | "error";
 };
 
-const REDACTED_VALUE = "[REDACTED]";
-
+/**
+ * Ensures span has all expected methods by wrapping with no-op fallbacks.
+ *
+ * This proxy handles cases where span implementations (e.g., mock spans in tests
+ * or partial OTEL implementations) may not provide all standard Span methods.
+ * Rather than throwing on missing methods, we return chainable no-ops.
+ */
 function ensureSpanCapabilities(span: Span): Span {
   // Use Proxy to avoid mutating the original span object
   return new Proxy(span, {
@@ -47,6 +51,24 @@ function ensureSpanCapabilities(span: Span): Span {
       if (prop === "setAttribute" && typeof target.setAttribute !== "function") {
         // No-op fallback for spans without setAttribute capability
         return () => receiver;
+      }
+      if (
+        prop === "recordException" &&
+        typeof (target as Partial<Span>).recordException !== "function"
+      ) {
+        // No-op fallback for spans without exception recording capability
+        return () => undefined;
+      }
+      if (
+        prop === "setStatus" &&
+        typeof (target as Partial<Span>).setStatus !== "function"
+      ) {
+        // No-op fallback for spans without status capability
+        return () => undefined;
+      }
+      if (prop === "end" && typeof (target as Partial<Span>).end !== "function") {
+        // No-op fallback for spans without end capability
+        return () => undefined;
       }
       // Delegate all other properties/methods to the original span
       return Reflect.get(target, prop, receiver);
@@ -67,6 +89,11 @@ function getTracer(): Tracer {
 /**
  * Common span execution logic for both sync and async operations.
  *
+ * Uses a second proxy (separate from ensureSpanCapabilities) to intercept
+ * recordException calls. This tracking ensures we don't set span status to OK
+ * after the execute callback has already recorded an exception. Without this,
+ * non-throwing error paths that call recordException would be overwritten.
+ *
  * @internal
  */
 function executeSpan<T>(
@@ -75,13 +102,19 @@ function executeSpan<T>(
   isAsync: boolean
 ): T | Promise<T> {
   let exceptionRecorded = false;
-  // Wrap recordException to track if it was called while preserving span prototype methods
+  // Wrap recordException calls without mutating the original span.
   const originalRecordException = span.recordException.bind(span);
-  const wrappedSpan = span as Span & { recordException: Span["recordException"] };
-  wrappedSpan.recordException = (exception: Error) => {
-    exceptionRecorded = true;
-    originalRecordException(exception);
-  };
+  const wrappedSpan = new Proxy(span, {
+    get(target, prop, receiver) {
+      if (prop === "recordException") {
+        return (exception: Error) => {
+          exceptionRecorded = true;
+          originalRecordException(exception);
+        };
+      }
+      return Reflect.get(target, prop, receiver);
+    },
+  }) as Span;
 
   const handleResult = (result: T): T => {
     // Only set status to OK if no exception was recorded
