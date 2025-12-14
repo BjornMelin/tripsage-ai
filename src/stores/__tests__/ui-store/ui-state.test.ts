@@ -20,7 +20,7 @@ Object.defineProperty(window, "matchMedia", {
 });
 
 import type { Theme } from "@schemas/stores";
-import { useUiStore } from "@/stores/ui-store";
+import { useUiStore } from "@/stores/ui";
 
 describe("UI Store - UI State Management", () => {
   beforeEach(() => {
@@ -93,6 +93,12 @@ describe("UI Store - UI State Management", () => {
       });
 
       expect(result.current.theme).toBe("dark");
+
+      act(() => {
+        result.current.toggleTheme();
+      });
+
+      expect(result.current.theme).toBe("system");
 
       act(() => {
         result.current.toggleTheme();
@@ -760,6 +766,11 @@ describe("UI Store - UI State Management", () => {
 
       act(() => {
         result.current.setTheme("dark");
+        result.current.toggleTheme();
+      });
+      expect(result.current.theme).toBe("system");
+
+      act(() => {
         result.current.toggleTheme();
       });
       expect(result.current.theme).toBe("light");
