@@ -1,24 +1,37 @@
-# Frontend Observability & Telemetry
+# Observability & Telemetry
 
-This note explains how frontend code emits telemetry for monitoring and debugging.
+This guide covers tracing, structured logging, and operational alerts for the Next.js app (route handlers + server utilities + client components).
+
+## Automatic instrumentation (`@vercel/otel`)
+
+`src/instrumentation.ts` registers `@vercel/otel` with `TELEMETRY_SERVICE_NAME` (`"tripsage-frontend"`). This enables default Next.js spans (Route Handlers, Server Components, Middleware) plus runtime instrumentations supported by the platform.
+
+Use custom spans/events from `@/lib/telemetry/*` for application-level operations and stable naming/attributes.
 
 ## Approved Telemetry & Logging Entrypoints
 
 Server code must use these helpers exclusively. Direct usage of `@opentelemetry/api` or `console.*` in server modules is prohibited except in:
 
 - Test files
-- Telemetry infrastructure (`lib/telemetry/*`, `lib/supabase/factory.ts`)
-- Operational alert sinks (`lib/telemetry/alerts.ts`)
+- Telemetry infrastructure (`src/lib/telemetry/*`, `src/lib/supabase/factory.ts`)
 
 **Client-side exception:** Development-only `console.*` is allowed in client components (`"use client"`) when guarded by `process.env.NODE_ENV === 'development'`. Bundlers (Next.js SWC, Terser) perform dead code elimination, removing these calls from production bundles entirely.
 
-**Core helpers:**
+**Server helpers (default):**
 
-- `getTelemetryTracer()` - Acquire tracer instance (use via `withTelemetrySpan`, not directly)
-- `withTelemetrySpan()` - Wrap async operations with spans
-- `recordTelemetryEvent()` - Emit structured events without full operation tracing
-- `createServerLogger()` - Structured logging for route handlers and tools
-- `emitOperationalAlert()` - Critical alerts for paging (use sparingly)
+- `withTelemetrySpan()` / `withTelemetrySpanSync()` - Wrap operations with spans
+- `getTelemetryTracer()` - Acquire tracer instance (prefer `withTelemetrySpan`, not direct calls)
+- `recordTelemetryEvent()` - Emit a lightweight event (`event.{name}` span)
+- `addEventToActiveSpan()` - Attach events to the current span
+- `recordErrorOnSpan()` / `recordErrorOnActiveSpan()` - Record exception + ERROR status
+- `createServerLogger()` - Structured logging (records `log.*` attributes via telemetry)
+- `emitOperationalAlert()` - High-severity events intended for paging (use sparingly)
+
+**Client helpers (`"use client"`):**
+
+- `initTelemetry()` - Initialize OTEL Web SDK (export + fetch instrumentation)
+- `withClientTelemetrySpan()` - Optional client-only spans (rare)
+- `recordClientErrorOnActiveSpan()` - Attach sanitized errors to the active span
 
 ## OpenTelemetry spans
 
@@ -50,6 +63,87 @@ const result = await withTelemetrySpan(
 - If you call `span.recordException()` or `span.setStatus({ code: SpanStatusCode.ERROR })` inside the callback, `withTelemetrySpan` will preserve that status instead of overwriting it with OK.
 - **Note:** `@/lib/telemetry/span` is server-only (marked with `"server-only"`). Client-side telemetry is handled separately (see Client-side telemetry section below).
 
+Use `withTelemetrySpanSync` for synchronous operations (e.g., client initialization).
+
+## AI SDK telemetry (`experimental_telemetry`)
+
+AI SDK v6 calls should set `experimental_telemetry` with a stable `functionId`. Keep `metadata` low-cardinality and avoid PII (no email/name/raw user IDs; prefer counts and booleans).
+
+Current `functionId` values in this codebase:
+
+| Function ID | Location | Notes |
+| --- | --- | --- |
+| `agent.{agentType}` | `src/ai/agents/agent-factory.ts` | ToolLoopAgent instances |
+| `router.classifyUserMessage` | `src/ai/agents/router-agent.ts` | Message classification |
+| `agent.memory.summarize` | `src/ai/agents/memory-agent.ts` | Memory write summary |
+| `memory.insights.generate` | `src/app/api/memory/insights/[userId]/route.ts` | Insights generation |
+| `ai.stream.demo` | `src/app/api/ai/stream/route.ts` | Demo streaming route |
+
+## Infrastructure spans (catalog)
+
+Span names are stable. Attributes must be low-cardinality and must not contain secrets/PII.
+
+### Supabase
+
+**Factory spans (`src/lib/supabase/factory.ts`):**
+
+| Span name | When |
+| --- | --- |
+| `supabase.init` | `createServerSupabase()` |
+| `middleware.supabase.init` | `createMiddlewareSupabase()` (tracing usually disabled) |
+| `supabase.auth.getUser` | `getCurrentUser()` |
+
+**CRUD spans (`src/lib/supabase/typed-helpers.ts`):**
+
+| Span name | Helper |
+| --- | --- |
+| `supabase.insert` | `insertSingle` |
+| `supabase.update` | `updateSingle` |
+| `supabase.select` | `getSingle`, `getMaybeSingle` |
+| `supabase.upsert` | `upsertSingle` |
+| `supabase.delete` | `deleteSingle` |
+
+Common attributes:
+
+- `db.system`: `"postgres"`
+- `db.name`: `"tripsage"`
+- `db.supabase.operation`: `"select" | "insert" | "update" | "delete" | "upsert" | "init" | "auth.getUser"`
+- `db.supabase.table`: table name (typed helpers)
+- `db.supabase.row_count`: result count (delete)
+
+### Upstash Redis cache
+
+Cache helpers in `src/lib/cache/upstash.ts` emit spans:
+
+| Span name | Operation | Notes |
+| --- | --- | --- |
+| `cache.get` | get | Sets `cache.hit` and `cache.parse_error` |
+| `cache.get_safe` | get | Sets `cache.status` (`hit`/`miss`/`invalid`), `cache.has_schema`, and `cache.validation_failed` |
+| `cache.set` | set | Sets `cache.ttl_seconds` and `cache.value_bytes` |
+| `cache.delete` | delete | Sets `cache.deleted_count` |
+| `cache.delete_many` | delete | Sets `cache.key_count` and `cache.deleted_count` |
+
+Common attributes:
+
+- `cache.system`: `"upstash"`
+- `cache.operation`: `"get" | "set" | "delete"`
+- `cache.namespace`: low-cardinality namespace derived from the key
+- `cache.key_length`: key length (we intentionally do not record raw keys)
+- `cache.unavailable`: `true` when Redis is not configured
+- `cache.has_schema`: `true` when a schema is provided (`cache.get_safe`)
+- `cache.validation_failed`: `true` when schema validation fails (`cache.get_safe`)
+
+### QStash + DLQ
+
+QStash helpers emit spans for enqueue and DLQ operations:
+
+| Span name | Location |
+| --- | --- |
+| `qstash.enqueue` | `src/lib/qstash/client.ts` |
+| `qstash.dlq.push` | `src/lib/qstash/dlq.ts` |
+| `qstash.dlq.list` | `src/lib/qstash/dlq.ts` |
+| `qstash.dlq.remove` | `src/lib/qstash/dlq.ts` |
+
 ## Client-side telemetry
 
 Client-side OpenTelemetry is minimal and focused on distributed tracing and error reporting:
@@ -59,7 +153,13 @@ Client-side OpenTelemetry is minimal and focused on distributed tracing and erro
   - Trace context propagation via `traceparent` headers (distributed tracing from client → server)
 - **Error recording:** `recordClientErrorOnActiveSpan()` from `@/lib/telemetry/client-errors` records client-side errors on active spans, linking errors to traces.
 
-**Important:** Client-side telemetry does not provide span helpers (`withTelemetrySpan`, etc.). All span creation and event recording happens server-side. Client telemetry only initializes the OTEL Web SDK and records errors.
+**Important:** Client-side telemetry is intentionally small. Do not import server-only helpers (`@/lib/telemetry/span`, `@/lib/telemetry/logger`) from client code. Use `recordClientErrorOnActiveSpan` to link client errors to in-flight traces; use `withClientTelemetrySpan` only for rare, client-only spans.
+
+**Configuration:**
+
+```bash
+NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318/v1/traces
+```
 
 ## Structured logging
 
@@ -129,15 +229,18 @@ recordTelemetryEvent("api.keys.validation_error", {
     ```typescript
     import { createStoreLogger } from "@/lib/telemetry/store-logger";
 
-    // In a Zustand store action
+    // In a Zustand store - create logger once at store initialization
+    const logger = createStoreLogger({ storeName: "store.my-store" });
+
     const store = create((set) => ({
       fetchData: async () => {
         try {
           const data = await api.getData();
           set({ data });
         } catch (error) {
-          const logger = createStoreLogger("store.my-store");
-          logger.error("Failed to fetch data", error);
+          logger.error("Failed to fetch data", {
+            message: error instanceof Error ? error.message : String(error),
+          });
           throw error;
         }
       },
@@ -145,15 +248,19 @@ recordTelemetryEvent("api.keys.validation_error", {
     ```
 
   - **Tests:** `console.*` allowed freely for debugging.
-- **Optional:** Configure `compiler.removeConsole` in `next.config.js` for additional safety:
+- **Optional:** Configure `compiler.removeConsole` in `next.config.ts` for additional safety:
 
-  ```javascript
-  module.exports = {
+  ```ts
+  import type { NextConfig } from "next";
+
+  const nextConfig: NextConfig = {
     compiler: {
-      removeConsole: process.env.NODE_ENV === 'production',
-      // Or keep console.error: removeConsole: { exclude: ['error'] }
-    }
-  }
+      removeConsole: process.env.NODE_ENV === "production",
+      // Or keep console.error: removeConsole: { exclude: ["error"] }
+    },
+  };
+
+  export default nextConfig;
   ```
 
 - Use concise event names: `api.{module}.{action}_error`
@@ -175,10 +282,11 @@ recordTelemetryEvent("api.keys.validation_error", {
 | `api.keys.validate.parse_error` | error | `message` | JSON parsing in validate API                             |
 | `api.keys.validate.post_error` | error | `message` | General errors in validate API                           |
 
-## Operational alerts (log-based)
+## Operational alerts (paging)
 
-Critical failures that need paging use structured JSON alerts via `emitOperationalAlert`.
-These are separate from regular telemetry and use console output for log aggregation.
+Use `emitOperationalAlert` for conditions that require operator attention.
+
+Alerts are recorded via telemetry as `alert.{event}` (for example, `alert.redis.unavailable`) with `alert.*` attributes. They do not rely on server `console.*` logging.
 
 **Use sparingly** - only for conditions that require immediate operator attention. Prefer `createServerLogger` or `recordTelemetryEvent` for normal error logging.
 
@@ -198,13 +306,7 @@ emitOperationalAlert("webhook.verification_failed", {
 });
 ```
 
-- Logs are emitted as structured JSON:
-
-```text
-[operational-alert] {"event":"webhook.verification_failed","severity":"error","attributes":{"reason":"invalid_signature"},"source":"tripsage-frontend","timestamp":"2025-11-14T00:00:00.000Z"}
-```
-
-- `severity` defaults to `"error"` (uses `console.error`); `"warning"` routes to `console.warn`.
+- `severity` defaults to `"error"`.
 - Keep attributes low-cardinality and avoid secrets.
 - Do not route normal logs through this channel.
 
@@ -213,7 +315,7 @@ emitOperationalAlert("webhook.verification_failed", {
 | Event                      | Severity | Attributes                | Trigger                                                   |
 |----------------------------|----------|---------------------------|-----------------------------------------------------------|
 | `redis.unavailable`        | error    | `feature` (cache module)  | `warnRedisUnavailable` when Upstash credentials missing   |
-| `webhook.verification_failed` | error | `reason` (`missing_secret_env`, `invalid_signature`, `invalid_json`, `invalid_payload_shape`) | `parseAndVerify` failures prior to processing payloads |
+| `webhook.verification_failed` | error | `reason` (`missing_secret_env`, `missing_signature`, `body_read_error`, `invalid_signature`, `invalid_json`, `invalid_payload_shape`) | `parseAndVerify` failures before processing payloads |
 
 ### Adding telemetry events
 
@@ -228,7 +330,7 @@ emitOperationalAlert("webhook.verification_failed", {
 1. Decide if the condition truly needs paging. Prefer telemetry events or metrics for noisy cases.
 2. Call `emitOperationalAlert` near the existing error handling path.
 3. Update this document and the relevant runbooks (operator docs) with the new event name and attributes.
-4. If applicable, add a unit test that stubs `console.error`/`console.warn` to verify the payload.
+4. If applicable, add a unit test that asserts the emitted `alert.{event}` telemetry attributes.
 
 ## Integration with runbooks
 
@@ -241,3 +343,10 @@ emitOperationalAlert("webhook.verification_failed", {
 - Deployment guides include steps to check `.github/workflows/deploy.yml` and
   `scripts/operators/verify_webhook_secret.sh`, so keep those docs in sync when
   adding future alerts or telemetry changes.
+
+## References
+
+- `docs/architecture/decisions/adr-0046-otel-tracing-frontend.md`
+- Vercel OTEL: <https://vercel.com/docs/observability/otel-overview>
+- AI SDK telemetry: <https://v6.ai-sdk.dev/docs/ai-sdk-core/telemetry>
+- OpenTelemetry JS: <https://opentelemetry.io/docs/languages/js/>

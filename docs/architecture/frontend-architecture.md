@@ -47,7 +47,7 @@ Audience: frontend engineers working on the Next.js application. Content is impl
   - `react-hook-form@7.66.1`: form state.
   - Zod `4.1.12` + `@hookform/resolvers`: shared schemas in `src/domain/schemas`.
 - **Observability**
-  - `@vercel/otel`, `@opentelemetry/api/core/sdk-*`, `@opentelemetry/exporter-trace-otlp-http`: tracing stack; app wrappers in `src/lib/telemetry` and `src/lib/logging`.
+  - `@vercel/otel`, `@opentelemetry/api/core/sdk-*`, `@opentelemetry/exporter-trace-otlp-http`: tracing stack; app wrappers in `src/lib/telemetry` (see `docs/development/backend/observability.md`).
 - **Security / IDs**
   - `nanoid@5.1.6`, `@/lib/security/random`: ids/timestamps; `jose@6.1.2` for JWT work.
 - **Media / Rendering**
