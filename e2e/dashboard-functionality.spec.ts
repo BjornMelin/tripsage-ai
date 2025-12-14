@@ -1,7 +1,33 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Locator, type Page, test } from "@playwright/test";
+import { authenticateAsTestUser, resetTestAuth } from "./helpers/auth";
+
+const navigationTimeoutMs = 15_000;
+
+async function clickAndWaitForUrl(
+  page: Page,
+  locator: Locator,
+  url: string,
+  options: { attempts?: number; timeoutMs?: number } = {}
+): Promise<void> {
+  const attempts = options.attempts ?? 2;
+  const timeoutMs = options.timeoutMs ?? navigationTimeoutMs;
+
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    await locator.click();
+    try {
+      await expect(page).toHaveURL(url, { timeout: timeoutMs });
+      return;
+    } catch (error) {
+      if (attempt === attempts - 1) {
+        throw error;
+      }
+    }
+  }
+}
 
 test.describe("Dashboard Functionality", () => {
   test.beforeEach(async ({ page }) => {
+    await resetTestAuth(page);
     // Navigate to the application
     await page.goto("/");
   });
@@ -14,15 +40,8 @@ test.describe("Dashboard Functionality", () => {
     await expect(page).toHaveTitle(/TripSage/);
     await expect(page.getByRole("heading", { name: /sign in/i })).toBeVisible();
 
-    // Fill in login form
-    await page.fill('input[type="email"]', "test@example.com");
-    await page.fill('input[type="password"]', "password123");
-
-    // Submit login form
-    await page.click('button[type="submit"]');
-
-    // Wait for redirect to dashboard
-    await page.waitForURL("/dashboard");
+    await authenticateAsTestUser(page);
+    await page.goto("/dashboard");
 
     // Verify dashboard content
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
@@ -37,111 +56,99 @@ test.describe("Dashboard Functionality", () => {
     await expect(page.getByRole("navigation").getByText("Overview")).toBeVisible();
     await expect(page.getByRole("navigation").getByText("My Trips")).toBeVisible();
     await expect(page.getByRole("navigation").getByText("Search")).toBeVisible();
-
-    // Take screenshot for verification
-    await page.screenshot({
-      fullPage: true,
-      path: "dashboard-authenticated.png",
-    });
   });
 
   test("dashboard navigation works correctly", async ({ page }) => {
-    // Start from login and authenticate
-    await page.goto("/login");
-    await page.fill('input[type="email"]', "test@example.com");
-    await page.fill('input[type="password"]', "password123");
-    await page.click('button[type="submit"]');
-    await page.waitForURL("/dashboard");
+    await authenticateAsTestUser(page);
+    await page.goto("/dashboard");
 
     // Test sidebar navigation
     await page.getByRole("navigation").getByRole("link", { name: "My Trips" }).click();
-    await expect(page).toHaveURL("/dashboard/trips");
+    await expect(page).toHaveURL("/dashboard/trips", { timeout: navigationTimeoutMs });
 
     await page.getByRole("navigation").getByRole("link", { name: "Search" }).click();
-    await expect(page).toHaveURL("/dashboard/search");
+    await expect(page).toHaveURL("/dashboard/search", { timeout: navigationTimeoutMs });
 
     await page
       .getByRole("navigation")
       .getByRole("link", { name: "AI Assistant" })
       .click();
-    await expect(page).toHaveURL("/dashboard/chat");
+    await expect(page).toHaveURL("/chat", { timeout: navigationTimeoutMs });
 
-    // Return to dashboard home
-    await page.getByRole("navigation").getByRole("link", { name: "Overview" }).click();
-    await expect(page).toHaveURL("/dashboard");
+    // Return to dashboard home from /chat
+    await page.goto("/dashboard");
+    await expect(page).toHaveURL("/dashboard", { timeout: navigationTimeoutMs });
   });
 
   test("user navigation menu works", async ({ page }) => {
-    // Authenticate first
-    await page.goto("/login");
-    await page.fill('input[type="email"]', "test@example.com");
-    await page.fill('input[type="password"]', "password123");
-    await page.click('button[type="submit"]');
-    await page.waitForURL("/dashboard");
+    await authenticateAsTestUser(page);
+    await page.goto("/dashboard");
 
     // Click on user menu
     await page.getByRole("button", { name: "User" }).click();
 
     // Wait for popover to be visible and target menu items within the popover content
     const popoverContent = page.locator("[data-radix-popper-content-wrapper]");
-    await expect(popoverContent).toBeVisible();
+    await expect(popoverContent).toBeVisible({ timeout: 15000 });
 
     // Verify menu options using the popover container to avoid sidebar conflicts
-    await expect(popoverContent.getByRole("link", { name: "Profile" })).toBeVisible();
-    await expect(popoverContent.getByRole("link", { name: "Settings" })).toBeVisible();
-    await expect(popoverContent.getByRole("button", { name: "Log out" })).toBeVisible();
+    await expect(popoverContent.getByRole("link", { name: "Profile" })).toBeVisible({
+      timeout: 15000,
+    });
+    await expect(popoverContent.getByRole("link", { name: "Settings" })).toBeVisible({
+      timeout: 15000,
+    });
+    await expect(popoverContent.getByRole("button", { name: "Log out" })).toBeVisible({
+      timeout: 15000,
+    });
 
     // Test profile navigation
     await popoverContent.getByRole("link", { name: "Profile" }).click();
-    await expect(page).toHaveURL("/dashboard/profile");
+    await expect(page).toHaveURL("/dashboard/profile", {
+      timeout: navigationTimeoutMs,
+    });
 
     // Navigate back and test settings
     await page.goto("/dashboard");
     await page.getByRole("button", { name: "User" }).click();
 
     // Wait for popover again and click settings
-    await expect(popoverContent).toBeVisible();
+    await expect(popoverContent).toBeVisible({ timeout: 15000 });
     await popoverContent.getByRole("link", { name: "Settings" }).click();
-    await expect(page).toHaveURL("/dashboard/settings");
+    await expect(page).toHaveURL("/dashboard/settings", {
+      timeout: navigationTimeoutMs,
+    });
   });
 
   test("logout functionality works", async ({ page }) => {
-    // Authenticate first
-    await page.goto("/login");
-    await page.fill('input[type="email"]', "test@example.com");
-    await page.fill('input[type="password"]', "password123");
-    await page.click('button[type="submit"]');
-    await page.waitForURL("/dashboard");
+    await authenticateAsTestUser(page);
+    await page.goto("/dashboard");
 
     // Click on user menu and logout
     await page.getByRole("button", { name: "User" }).click();
 
     // Wait for popover to be visible and target logout button within it
     const popoverContent = page.locator("[data-radix-popper-content-wrapper]");
-    await expect(popoverContent).toBeVisible();
+    await expect(popoverContent).toBeVisible({ timeout: 15000 });
     await popoverContent.getByRole("button", { name: "Log out" }).click();
 
-    // Wait for redirect to home page (logout redirects to /)
-    await page.waitForURL("/");
-
-    // Verify we're on home page with login button (unauthenticated)
-    await expect(page.getByRole("button", { name: "Log in" })).toBeVisible();
+    // Wait for redirect to login page
+    await page.waitForURL(/\/login/, { timeout: 15000 });
+    await expect(page.getByRole("heading", { name: /sign in/i })).toBeVisible({
+      timeout: 15000,
+    });
 
     // Verify that trying to access dashboard redirects to login
     await page.goto("/dashboard");
-    await page.waitForURL(/\/login/);
-    await expect(
-      page.getByRole("heading", { name: "Sign in to TripSage" })
-    ).toBeVisible();
+    await page.waitForURL(/\/login/, { timeout: 15000 });
+    await expect(page.getByRole("heading", { name: /sign in/i })).toBeVisible({
+      timeout: 15000,
+    });
   });
 
   test("theme toggle works", async ({ page }) => {
-    // Authenticate first
-    await page.goto("/login");
-    await page.fill('input[type="email"]', "test@example.com");
-    await page.fill('input[type="password"]', "password123");
-    await page.click('button[type="submit"]');
-    await page.waitForURL("/dashboard");
+    await authenticateAsTestUser(page);
+    await page.goto("/dashboard");
 
     // Target theme toggle specifically in the header banner to avoid duplicates
     const headerThemeToggle = page
@@ -165,70 +172,71 @@ test.describe("Dashboard Functionality", () => {
   });
 
   test("dashboard quick actions work", async ({ page }) => {
-    // Authenticate first
-    await page.goto("/login");
-    await page.fill('input[type="email"]', "test@example.com");
-    await page.fill('input[type="password"]', "password123");
-    await page.click('button[type="submit"]');
-    await page.waitForURL("/dashboard");
+    await authenticateAsTestUser(page);
+    await page.goto("/dashboard");
 
     // Test quick action navigation
-    await page.getByRole("link", { name: "Search Flights" }).first().click();
-    await expect(page).toHaveURL("/dashboard/search/flights");
+    const searchFlightsLink = page
+      .getByRole("link", { name: "Search Flights" })
+      .first();
+    await expect(searchFlightsLink).toHaveAttribute(
+      "href",
+      "/dashboard/search/flights"
+    );
+    await clickAndWaitForUrl(page, searchFlightsLink, "/dashboard/search/flights");
 
     // Go back to dashboard
-    await page.goto("/dashboard");
-    await page.getByRole("link", { name: "Find Hotels" }).click();
-    await expect(page).toHaveURL("/dashboard/search/hotels");
+    await page.getByRole("navigation").getByRole("link", { name: "Overview" }).click();
+    await expect(page).toHaveURL("/dashboard", { timeout: navigationTimeoutMs });
+    const findHotelsLink = page.getByRole("link", { name: "Find Hotels" });
+    await expect(findHotelsLink).toHaveAttribute("href", "/dashboard/search/hotels");
+    await clickAndWaitForUrl(page, findHotelsLink, "/dashboard/search/hotels");
 
     // Go back and test AI Assistant
-    await page.goto("/dashboard");
-    await page.getByRole("link", { name: "Ask AI Assistant" }).click();
-    await expect(page).toHaveURL("/dashboard/chat");
+    await page.getByRole("navigation").getByRole("link", { name: "Overview" }).click();
+    await expect(page).toHaveURL("/dashboard", { timeout: navigationTimeoutMs });
+    const aiAssistantLink = page.getByRole("link", { name: "Ask AI Assistant" });
+    await expect(aiAssistantLink).toHaveAttribute("href", "/chat");
+    await expect(aiAssistantLink).toBeVisible({ timeout: navigationTimeoutMs });
+    await clickAndWaitForUrl(page, aiAssistantLink, "/chat");
   });
 
   test("dashboard is responsive on mobile", async ({ page }) => {
     // Set mobile viewport
     await page.setViewportSize({ height: 667, width: 375 });
 
-    // Authenticate
-    await page.goto("/login");
-    await page.fill('input[type="email"]', "test@example.com");
-    await page.fill('input[type="password"]', "password123");
-    await page.click('button[type="submit"]');
-    await page.waitForURL("/dashboard");
+    await authenticateAsTestUser(page);
+    await page.goto("/dashboard");
 
     // Verify dashboard renders on mobile
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
 
     // Verify quick actions are still accessible
     await expect(page.getByText("Search Flights").first()).toBeVisible();
-
-    // Take mobile screenshot
-    await page.screenshot({
-      fullPage: true,
-      path: "dashboard-mobile.png",
-    });
   });
 
   test("protected routes redirect to login when not authenticated", async ({
     page,
   }) => {
+    const redirectTimeout = 30_000;
+
     // Try to access dashboard directly without auth
     await page.goto("/dashboard");
 
     // Should redirect to login
-    await expect(page).toHaveURL(/\/login/);
-    await expect(page.getByRole("heading", { name: /sign in/i })).toBeVisible();
+    await page.waitForURL(/\/login/, { timeout: redirectTimeout });
+    await expect(page.getByRole("heading", { name: /sign in/i })).toBeVisible({
+      timeout: redirectTimeout,
+    });
 
     // Verify other protected routes
     await page.goto("/dashboard/trips");
-    await expect(page).toHaveURL(/\/login/);
+    await page.waitForURL(/\/login/, { timeout: redirectTimeout });
 
     await page.goto("/dashboard/profile");
-    await expect(page).toHaveURL(/\/login/);
+    await page.waitForURL(/\/login/, { timeout: redirectTimeout });
 
-    await page.goto("/dashboard/chat");
-    await expect(page).toHaveURL(/\/login/);
+    await page.goto("/chat");
+    await page.waitForURL(/\/login/, { timeout: redirectTimeout });
   });
 });

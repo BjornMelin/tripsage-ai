@@ -1,36 +1,58 @@
 import { expect, test } from "@playwright/test";
+import { authenticateAsTestUser, resetTestAuth } from "./helpers/auth";
+
+/** Expected shape of captured request body from chat stream API. */
+type ChatStreamBody = {
+  messages?: unknown[];
+  [key: string]: unknown;
+};
 
 test.describe("Budget and Memory Agents", () => {
   test.beforeEach(async ({ page }) => {
+    await resetTestAuth(page);
+    await authenticateAsTestUser(page);
     await page.goto("/chat");
   });
 
   test("budget agent displays chart", async ({ page }) => {
-    // Wait for chat interface to load
-    await page.waitForSelector('[data-testid^="msg-"]', { timeout: 5000 }).catch(() => {
-      // Chat may be empty initially
-    });
-
-    // Mock the API response for budget agent
-    await page.route("**/api/agents/budget", async (route) => {
+    let handled = false;
+    let capturedBody: ChatStreamBody | null = null;
+    await page.route("**/api/chat/stream**", async (route) => {
       const request = route.request();
-      const body = await request.postDataJSON();
-      expect(body).toMatchObject({
-        destination: expect.any(String),
-        durationDays: expect.any(Number),
+      handled = true;
+      const body = (() => {
+        try {
+          return request.postDataJSON() as ChatStreamBody;
+        } catch {
+          return {} as ChatStreamBody;
+        }
+      })();
+      capturedBody = body;
+
+      const text = JSON.stringify({
+        allocations: [
+          { amount: 500, category: "Flights", rationale: "Round trip" },
+          { amount: 800, category: "Accommodation", rationale: "5 nights" },
+        ],
+        currency: "USD",
+        schemaVersion: "budget.v1",
+        tips: ["Book early for better rates"],
       });
 
-      // Return a mock streaming response with budget result
       await route.fulfill({
-        body: `data: {"type":"text","text":"{\\"schemaVersion\\":\\"budget.v1\\",\\"currency\\":\\"USD\\",\\"allocations\\":[{\\"category\\":\\"Flights\\",\\"amount\\":500,\\"rationale\\":\\"Round trip\\"},{\\"category\\":\\"Accommodation\\",\\"amount\\":800,\\"rationale\\":\\"5 nights\\"}],\\"tips\\":[\\"Book early for better rates\\"]}"}\n\ndata: {"type":"finish"}\n\n`,
+        body: `data: ${JSON.stringify({ messageId: "assistant-1", type: "start" })}\n\ndata: ${JSON.stringify({ id: "text-1", type: "text-start" })}\n\ndata: ${JSON.stringify({ delta: text, id: "text-1", type: "text-delta" })}\n\ndata: ${JSON.stringify({ id: "text-1", type: "text-end" })}\n\ndata: ${JSON.stringify({ finishReason: "stop", type: "finish" })}\n\ndata: [DONE]\n\n`,
         contentType: "text/event-stream",
+        headers: { "x-vercel-ai-ui-message-stream": "v1" },
         status: 200,
       });
     });
 
-    // Trigger budget agent via quick action menu
-    await page.click('button[aria-label="More actions"]');
-    await page.click("text=Plan budget");
+    const textarea = page.locator('textarea[aria-label="Chat prompt"]');
+    await textarea.fill("Plan a budget for Paris for 5 days");
+    await textarea.press("Enter");
+
+    await expect.poll(() => handled).toBe(true);
+    expect(capturedBody).toMatchObject({ messages: expect.any(Array) });
 
     // Wait for budget chart to appear
     await expect(page.locator("text=Budget Plan")).toBeVisible({ timeout: 10000 });
@@ -39,27 +61,24 @@ test.describe("Budget and Memory Agents", () => {
   });
 
   test("memory agent confirms write", async ({ page }) => {
-    // Wait for chat interface to load
-    await page.waitForSelector('[data-testid^="msg-"]', { timeout: 5000 }).catch(() => {
-      // Chat may be empty initially
-    });
-
-    // Mock the API response for memory agent
-    await page.route("**/api/agents/memory", async (route) => {
+    let handled = false;
+    let capturedBody: ChatStreamBody | null = null;
+    await page.route("**/api/chat/stream**", async (route) => {
       const request = route.request();
-      const body = await request.postDataJSON();
-      expect(body).toMatchObject({
-        records: expect.arrayContaining([
-          expect.objectContaining({
-            content: expect.any(String),
-          }),
-        ]),
-      });
+      handled = true;
+      const body = (() => {
+        try {
+          return request.postDataJSON() as ChatStreamBody;
+        } catch {
+          return {} as ChatStreamBody;
+        }
+      })();
+      capturedBody = body;
 
-      // Return a mock streaming response with confirmation
       await route.fulfill({
-        body: `data: {"type":"text","text":"Memory stored successfully."}\n\ndata: {"type":"finish"}\n\n`,
+        body: `data: ${JSON.stringify({ messageId: "assistant-1", type: "start" })}\n\ndata: ${JSON.stringify({ id: "text-1", type: "text-start" })}\n\ndata: ${JSON.stringify({ delta: "Memory stored successfully.", id: "text-1", type: "text-delta" })}\n\ndata: ${JSON.stringify({ id: "text-1", type: "text-end" })}\n\ndata: ${JSON.stringify({ finishReason: "stop", type: "finish" })}\n\ndata: [DONE]\n\n`,
         contentType: "text/event-stream",
+        headers: { "x-vercel-ai-ui-message-stream": "v1" },
         status: 200,
       });
     });
@@ -68,6 +87,9 @@ test.describe("Budget and Memory Agents", () => {
     const textarea = page.locator('textarea[aria-label="Chat prompt"]');
     await textarea.fill("Remember that I prefer window seats");
     await textarea.press("Enter");
+
+    await expect.poll(() => handled).toBe(true);
+    expect(capturedBody).toMatchObject({ messages: expect.any(Array) });
 
     // Wait for confirmation message
     await expect(page.locator("text=Memory stored")).toBeVisible({ timeout: 10000 });
