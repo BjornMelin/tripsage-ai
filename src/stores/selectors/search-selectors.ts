@@ -8,7 +8,7 @@
 
 import type { SearchResults, SearchType } from "@schemas/search";
 import { useSearchFiltersStore } from "../search-filters-store";
-import { useSearchHistoryStore } from "../search-history-store";
+import { useSearchHistoryStore } from "../search-history";
 import { useSearchParamsStore } from "../search-params-store";
 import { useSearchResultsStore } from "../search-results-store";
 
@@ -116,11 +116,13 @@ export const useSearchValidation = () => {
  */
 export const useSearchHistorySummary = () => {
   const totalRecent = useSearchHistoryStore((s) => s.recentSearches.length);
-  const totalSaved = useSearchHistoryStore((s) => s.totalSavedSearches);
-  const favoriteCount = useSearchHistoryStore((s) => s.favoriteSearches.length);
+  const totalSaved = useSearchHistoryStore((s) => s.savedSearches.length);
+  const favorites = useSearchHistoryStore((s) =>
+    s.savedSearches.filter((s) => s.isFavorite)
+  );
   const collectionCount = useSearchHistoryStore((s) => s.searchCollections.length);
 
-  return { collectionCount, favoriteCount, totalRecent, totalSaved };
+  return { collectionCount, favoriteCount: favorites.length, totalRecent, totalSaved };
 };
 
 /**

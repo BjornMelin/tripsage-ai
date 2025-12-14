@@ -40,7 +40,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useSearchHistoryStore } from "@/stores/search-history-store";
+import { useSearchHistoryStore } from "@/stores/search-history";
 
 /** Props for the search collections component */
 interface SearchCollectionsProps {

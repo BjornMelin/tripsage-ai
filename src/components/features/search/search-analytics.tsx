@@ -21,7 +21,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useSearchHistoryStore } from "@/stores/search-history-store";
+import { useSearchHistoryStore } from "@/stores/search-history";
 
 /** Props for the search analytics component */
 interface SearchAnalyticsProps {

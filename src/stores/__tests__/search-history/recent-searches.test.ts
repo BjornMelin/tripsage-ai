@@ -3,12 +3,12 @@
 import type { SearchHistoryItem, ValidatedSavedSearch } from "@schemas/stores";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
+import { useSearchHistoryStore } from "@/stores/search-history";
 import {
   selectFavoriteSearchesFrom,
   selectRecentSearchesByTypeFrom,
   selectTotalSavedSearchesFrom,
-  useSearchHistoryStore,
-} from "@/stores/search-history-store";
+} from "@/stores/search-history/selectors";
 
 describe("Search History Store - Initial State and Recent Searches", () => {
   beforeEach(() => {
