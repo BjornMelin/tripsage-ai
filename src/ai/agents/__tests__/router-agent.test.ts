@@ -73,7 +73,7 @@ describe("classifyUserMessage", () => {
     );
   });
 
-  it("includes telemetry metadata when identifier provided", async () => {
+  it("does not include identifier in provider telemetry metadata", async () => {
     await classifyUserMessage(
       { identifier: "user-123", model: mockModel, modelId: "gpt-4o" },
       "Find flights"
@@ -85,12 +85,18 @@ describe("classifyUserMessage", () => {
           functionId: "router.classifyUserMessage",
           isEnabled: true,
           metadata: expect.objectContaining({
-            identifier: "user-123",
             modelId: "gpt-4o",
           }),
         }),
       })
     );
+    const experimentalTelemetry = mockGenerateText.mock.calls[0]?.[0]
+      ?.experimental_telemetry as { metadata?: unknown } | undefined;
+    const metadata = experimentalTelemetry?.metadata as
+      | Record<string, unknown>
+      | undefined;
+    expect(metadata).toBeDefined();
+    expect(metadata).not.toHaveProperty("identifier");
   });
 
   it("throws error for empty message", async () => {

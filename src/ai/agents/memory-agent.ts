@@ -1,9 +1,11 @@
 /**
  * @fileoverview Memory update agent using AI SDK v6 streaming.
  *
- * Wraps memory tools (addConversationMemory) with guardrails (caching, rate
- * limiting) and executes streaming text generation to confirm memory writes.
- * Returns structured confirmation messages.
+ * Wraps memory tools (addConversationMemory) with guardrails (rate limiting,
+ * telemetry) and executes streaming text generation to confirm memory writes.
+ *
+ * Note: memory writes are intentionally not cached to avoid cross-user cache
+ * collisions and unintended idempotency.
  *
  * Note: This agent uses streamText directly, not ToolLoopAgent, because
  * memory persistence is a batch operation followed by a summary - not
@@ -130,6 +132,15 @@ async function persistAndSummarize(
   const { maxTokens } = clampMaxTokens(messages, desiredMaxTokens, deps.modelId);
 
   return streamText({
+    // biome-ignore lint/style/useNamingConvention: AI SDK API uses snake_case
+    experimental_telemetry: {
+      functionId: "agent.memory.summarize",
+      isEnabled: true,
+      metadata: {
+        modelId: deps.modelId,
+        recordCount: input.records?.length ?? 0,
+      },
+    },
     maxOutputTokens: maxTokens,
     messages: [
       { content: systemPrompt, role: "system" },
@@ -186,12 +197,6 @@ export async function persistMemoryRecords(
       };
     },
     guardrails: {
-      cache: {
-        hashInput: true,
-        key: () => "agent:memory:add",
-        namespace: "",
-        ttlSeconds: 60 * 5,
-      },
       rateLimit: {
         errorCode: TOOL_ERROR_CODES.toolRateLimited,
         identifier: () => rateLimit.identifier,

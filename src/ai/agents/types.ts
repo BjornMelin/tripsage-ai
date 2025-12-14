@@ -111,7 +111,6 @@ export interface PrepareCallResult<ToolsT extends ToolSet = ToolSet> {
 export interface TripSageAgentConfig<
   ToolsType extends ToolSet = ToolSet,
   CallOptionsType = never,
-  // biome-ignore lint/correctness/noUnusedVariables: OutputType kept for documentation/future use
   OutputType = unknown,
 > {
   /** Unique agent type identifier. */
@@ -172,7 +171,7 @@ export interface TripSageAgentConfig<
    * Stored in config but not passed to ToolLoopAgent constructor.
    * Pass output when calling agent.generate({ output }) or agent.stream({ output }).
    */
-  output?: ReturnType<typeof Output.object>;
+  output?: StructuredOutput<OutputType>;
 
   /**
    * Active tools subset for this agent.
@@ -204,6 +203,14 @@ export interface TripSageAgentResult<
 
   /** Default schema-enforcing messages to stream with the agent. */
   defaultMessages: ChatMessage[];
+
+  /**
+   * Optional structured output spec associated with this agent.
+   *
+   * ToolLoopAgent does not accept `output` at construction time; callers should pass
+   * this value explicitly to `agent.generate({ output })` / `agent.stream({ output })`.
+   */
+  output?: StructuredOutput<OutputType>;
 }
 
 /** Type helper for inferring UI message types from a TripSage agent. */

@@ -18,6 +18,7 @@ import { createStateDepartmentProvider } from "@ai/tools/server/travel-advisory/
 import { mapToCountryCode } from "@ai/tools/server/travel-advisory/utils";
 import type { ToolCallOptions } from "ai";
 import { tool } from "ai";
+import { hashInputForCache } from "@/lib/cache/hash";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
@@ -25,6 +26,11 @@ import { withTelemetrySpan } from "@/lib/telemetry/span";
 // Initialize and register the State Department provider
 const stateDepartmentProvider = createStateDepartmentProvider();
 registerProvider(stateDepartmentProvider);
+
+// Create logger first (used in fetchSafetyScores below)
+const travelAdvisoryLogger = createServerLogger("tools.travel_advisory", {
+  redactKeys: ["error"],
+});
 
 /**
  * Fetch safety scores from State Department API or similar service.
@@ -59,7 +65,8 @@ async function fetchSafetyScores(destination: string): Promise<SafetyResult | nu
   } catch (error) {
     // Log error but don't throw - let caller handle fallback
     travelAdvisoryLogger.error("provider_fetch_failed", {
-      destination,
+      countryCode,
+      destinationLength: destination.length,
       error: error instanceof Error ? error.message : "unknown_error",
     });
     return null;
@@ -81,16 +88,19 @@ export const getTravelAdvisory = tool({
   execute: async (params, _callOptions?: ToolCallOptions) => {
     // Validate input at boundary (AI SDK validates, but ensure for direct calls)
     const validatedParams = travelAdvisoryInputSchema.parse(params);
+    const mappedCountryCode = mapToCountryCode(validatedParams.destination);
     return await withTelemetrySpan(
       "tool.travel_advisory.get",
       {
         attributes: {
-          destination: params.destination,
+          countryCode: mappedCountryCode ?? "unknown",
+          destinationLength: validatedParams.destination.length,
           "tool.name": "getTravelAdvisory",
         },
       },
       async () => {
-        const cacheKey = `travel_advisory:${validatedParams.destination.toLowerCase()}`;
+        const normalizedDestination = validatedParams.destination.trim().toLowerCase();
+        const cacheKey = `travel_advisory:v1:${hashInputForCache(normalizedDestination)}`;
 
         // Check cache (7d = 604800 seconds)
         const cached = await getCachedJson<SafetyResult>(cacheKey);
@@ -129,4 +139,3 @@ export const getTravelAdvisory = tool({
   },
   inputSchema: travelAdvisoryInputSchema,
 });
-const travelAdvisoryLogger = createServerLogger("tools.travel_advisory");

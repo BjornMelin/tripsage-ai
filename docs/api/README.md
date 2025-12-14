@@ -98,7 +98,7 @@ Streaming AI agents with tool calling for travel planning:
 | `/api/agents/destinations`   | POST   | Destination research agent                   |
 | `/api/agents/itineraries`    | POST   | Itinerary planning agent                     |
 | `/api/agents/budget`         | POST   | Budget planning agent                        |
-| `/api/agents/memory`         | POST   | Memory/context agent                         |
+| `/api/agents/memory`         | POST   | Memory update agent                          |
 | `/api/agents/router`         | POST   | Intent classification router                 |
 
 ### Chat (`/api/chat/*`)

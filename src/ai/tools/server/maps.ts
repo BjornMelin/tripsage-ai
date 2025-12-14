@@ -7,6 +7,8 @@ import "server-only";
 import { createAiTool } from "@ai/lib/tool-factory";
 import { distanceMatrixInputSchema, geocodeInputSchema } from "@ai/tools/schemas/maps";
 import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
+import { hashInputForCache } from "@/lib/cache/hash";
+import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
 
 /** Get Google Maps server API key or null if not configured. */
@@ -16,6 +18,10 @@ function getGmapsKeyOrNull(): string | null {
   } catch {
     return null;
   }
+}
+
+function normalizeLocationString(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
 /**
@@ -42,7 +48,7 @@ export const geocode = createAiTool({
   },
   guardrails: {
     cache: {
-      key: (p) => p.address.toLowerCase(),
+      key: (p) => `v1:${hashInputForCache(normalizeLocationString(p.address))}`,
       ttlSeconds: 3600,
     },
     rateLimit: {
@@ -83,7 +89,14 @@ export const distanceMatrix = createAiTool({
   },
   guardrails: {
     cache: {
-      key: (p) => JSON.stringify(p),
+      key: (p) =>
+        `v1:${hashInputForCache(
+          canonicalizeParamsForCache({
+            destinations: p.destinations.map((value) => normalizeLocationString(value)),
+            origins: p.origins.map((value) => normalizeLocationString(value)),
+            units: p.units,
+          })
+        )}`,
       ttlSeconds: 3600,
     },
     rateLimit: {

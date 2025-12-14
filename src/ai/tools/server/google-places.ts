@@ -14,6 +14,8 @@ import "server-only";
 import { createAiTool } from "@ai/lib/tool-factory";
 import { lookupPoiInputSchema } from "@ai/tools/schemas/google-places";
 import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
+import { hashInputForCache } from "@/lib/cache/hash";
+import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
 import { resolveLocationToLatLng } from "@/lib/google/places-geocoding";
 
@@ -178,7 +180,16 @@ export const lookupPoiContext = createAiTool({
   },
   guardrails: {
     cache: {
-      key: (params) => JSON.stringify(params),
+      key: (params) =>
+        `v1:${hashInputForCache(
+          canonicalizeParamsForCache({
+            destination: params.destination?.trim().toLowerCase() ?? null,
+            lat: params.lat ?? null,
+            lon: params.lon ?? null,
+            query: params.query?.trim().toLowerCase() ?? null,
+            radiusMeters: params.radiusMeters,
+          })
+        )}`,
       ttlSeconds: 600,
     },
     rateLimit: {

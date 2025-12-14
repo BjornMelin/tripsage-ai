@@ -5,10 +5,15 @@
 import "server-only";
 
 import { createAiTool } from "@ai/lib/tool-factory";
-import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
+import {
+  createToolError,
+  isToolError,
+  TOOL_ERROR_CODES,
+} from "@ai/tools/server/errors";
 import { searchFlightsService } from "@domain/flights/service";
 import type { FlightSearchRequest, FlightSearchResult } from "@schemas/flights";
 import { flightSearchRequestSchema } from "@schemas/flights";
+import { hashInputForCache } from "@/lib/cache/hash";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 
 export const searchFlightsInputSchema = flightSearchRequestSchema;
@@ -23,36 +28,54 @@ export const searchFlights = createAiTool<SearchFlightsInput, SearchFlightsResul
     try {
       return await searchFlightsService(params);
     } catch (err) {
-      // Map provider errors to tool error codes for consistency
+      if (isToolError(err)) {
+        throw err;
+      }
+
+      // Map provider errors to canonical ToolErrors for consistency and observability
       const message = err instanceof Error ? err.message : "unknown_error";
+      const errorMeta = {
+        messageHash: hashInputForCache(message),
+        messageLength: message.length,
+        provider: "duffel",
+      };
+
       if (message.includes("duffel_not_configured")) {
-        const error = new Error(message);
-        (error as Error & { code?: string }).code =
-          TOOL_ERROR_CODES.toolExecutionFailed;
-        throw error;
+        throw createToolError(
+          TOOL_ERROR_CODES.toolExecutionFailed,
+          "Duffel API key is not configured",
+          {
+            ...errorMeta,
+            reason: "not_configured",
+          }
+        );
       }
       if (message.startsWith("duffel_offer_request_failed")) {
-        const error = new Error(message);
-        (error as Error & { code?: string }).code =
-          TOOL_ERROR_CODES.toolExecutionFailed;
-        throw error;
+        throw createToolError(TOOL_ERROR_CODES.toolExecutionFailed, message, {
+          ...errorMeta,
+          reason: "offer_request_failed",
+        });
       }
-      throw err;
+      throw createToolError(TOOL_ERROR_CODES.toolExecutionFailed, message, {
+        ...errorMeta,
+        reason: "unknown",
+      });
     }
   },
   guardrails: {
     cache: {
-      hashInput: true,
       key: (params) =>
-        canonicalizeParamsForCache({
-          cabinClass: params.cabinClass,
-          currency: params.currency,
-          departureDate: params.departureDate,
-          destination: params.destination,
-          origin: params.origin,
-          passengers: params.passengers,
-          returnDate: params.returnDate ?? "none",
-        }),
+        `v1:${hashInputForCache(
+          canonicalizeParamsForCache({
+            cabinClass: params.cabinClass,
+            currency: params.currency,
+            departureDate: params.departureDate,
+            destination: params.destination,
+            origin: params.origin,
+            passengers: params.passengers,
+            returnDate: params.returnDate ?? "none",
+          })
+        )}`,
       namespace: "agent:flight:search",
       ttlSeconds: 60 * 30,
     },
@@ -69,7 +92,6 @@ export const searchFlights = createAiTool<SearchFlightsInput, SearchFlightsResul
         passengers: params.passengers,
         provider: "duffel",
       }),
-      redactKeys: ["origin", "destination"],
       workflow: "flightSearch",
     },
   },
