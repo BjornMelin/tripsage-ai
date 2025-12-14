@@ -1,4 +1,5 @@
 import withBundleAnalyzer from "@next/bundle-analyzer";
+import { withBotId } from "botid/next/config";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -22,13 +23,23 @@ const nextConfig: NextConfig = {
     optimizePackageImports: [
       "lucide-react",
       "@radix-ui/react-icons",
-      "framer-motion",
       "recharts",
       "@supabase/supabase-js",
       "zod",
       "ai",
       "@ai-sdk/openai",
       "@ai-sdk/anthropic",
+      "@ai-sdk/react",
+      "@ai-sdk/xai",
+      "@ai-sdk/togetherai",
+      "@tanstack/react-query",
+      "react-hook-form",
+      "@hookform/resolvers",
+      "date-fns",
+      "@opentelemetry/api",
+      "motion",
+      "@hello-pangea/dnd",
+      "streamdown",
     ],
     // Enable Turbopack file system caching for faster dev builds
     // Note: turbopackFileSystemCacheForBuild requires canary version
@@ -129,20 +140,9 @@ const nextConfig: NextConfig = {
         source: "/auth/reset-password",
       },
       {
-        destination: "/security",
+        destination: "/dashboard/security",
         permanent: true,
         source: "/settings/security",
-      },
-    ];
-  },
-
-  // Rewrites for BotID to prevent ad-blocker interference
-  // @see https://vercel.com/docs/botid/get-started#configure-rewrites
-  rewrites() {
-    return [
-      {
-        destination: "https://challenges.cloudflare.com/:path*",
-        source: "/_botid/:path*",
       },
     ];
   },
@@ -158,10 +158,10 @@ const nextConfig: NextConfig = {
   // Set root to current directory (where pnpm-lock.yaml is located)
   // Note: For non-monorepo setups, this is the default but explicitly set for clarity
   turbopack: {
-    root: ".",
+    root: process.cwd(),
   },
 };
 
 export default withBundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
-})(nextConfig);
+})(withBotId(nextConfig));
