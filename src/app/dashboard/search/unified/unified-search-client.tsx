@@ -182,16 +182,15 @@ export default function UnifiedSearchClient({
     }
   };
 
-  const handleFlightSelect = (flight: FlightResult): Promise<void> => {
+  const handleFlightSelect = (flight: FlightResult): void => {
     setSelectedFlight(flight);
     toast({
       description: `${flight.airline} • ${flight.origin.code} → ${flight.destination.code}`,
       title: "Flight selected",
     });
-    return Promise.resolve();
   };
 
-  const handleHotelSelect = (hotel: HotelResult): Promise<void> => {
+  const handleHotelSelect = (hotel: HotelResult): void => {
     setSelectedHotel(hotel);
     toast({
       description: hotel.location.city
@@ -199,7 +198,6 @@ export default function UnifiedSearchClient({
         : hotel.name,
       title: "Hotel selected",
     });
-    return Promise.resolve();
   };
 
   const handleCompareFlights = (flights: FlightResult[]) => {
@@ -376,7 +374,7 @@ export default function UnifiedSearchClient({
         </Dialog>
 
         {/* Hero Section */}
-        <Card className="bg-gradient-to-r from-blue-50 to-green-50 border-none">
+        <Card className="bg-linear-to-r from-blue-50 to-green-50 border-none">
           <CardContent className="p-8">
             <div className="text-center space-y-4">
               <h1 className="text-3xl font-bold">Unified Search Experience</h1>

@@ -76,7 +76,7 @@ export interface UseResultsListReturn<T, S extends string> {
    * Handle item selection with optimistic UI and error handling.
    * Wraps the async callback in a transition.
    */
-  handleSelect: (item: T, onSelect: (item: T) => Promise<void>) => void;
+  handleSelect: (item: T, onSelect: (item: T) => Promise<void> | void) => void;
 }
 
 /**
@@ -173,7 +173,7 @@ export function useResultsList<T, S extends string>({
 
   // Handle item selection with optimistic UI
   const handleSelect = useCallback(
-    (item: T, onSelect: (item: T) => Promise<void>) => {
+    (item: T, onSelect: (item: T) => Promise<void> | void) => {
       const itemId = getId(item);
       startTransition(async () => {
         setOptimisticSelectingId(itemId);

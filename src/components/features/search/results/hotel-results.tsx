@@ -27,8 +27,8 @@ import { HotelCard } from "../cards/hotel-card";
 interface HotelResultsProps {
   results: HotelResult[];
   loading?: boolean;
-  onSelect: (hotel: HotelResult) => Promise<void>;
-  onSaveToWishlist: (hotelId: string) => void;
+  onSelect: (hotel: HotelResult) => Promise<void> | void;
+  onSaveToWishlist: (hotelId: string) => Promise<void> | void;
   className?: string;
   showMap?: boolean;
   /** Optional controlled wishlist state passed from a parent component. */
@@ -100,25 +100,31 @@ export function HotelResults({
     });
   };
 
-  /** Toggle hotel for comparison */
+  /** Toggle hotel wishlist state. */
   const toggleWishlist = (hotelId: string) => {
-    setOptimisticSavedHotels(hotelId);
-    try {
-      onSaveToWishlist(hotelId);
-    } catch (error) {
-      // Revert optimistic toggle if the parent callback throws.
+    startTransition(async () => {
       setOptimisticSavedHotels(hotelId);
-      throw error;
-    }
-    if (wishlistHotelIds) return;
-    setInternalSavedHotels((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(hotelId)) {
-        newSet.delete(hotelId);
-      } else {
-        newSet.add(hotelId);
+      try {
+        await onSaveToWishlist(hotelId);
+      } catch (error) {
+        // Revert optimistic toggle if the parent callback throws.
+        setOptimisticSavedHotels(hotelId);
+        recordClientErrorOnActiveSpan(
+          error instanceof Error ? error : new Error(String(error)),
+          { action: "toggleWishlist", context: "HotelResults", hotelId }
+        );
+        return;
       }
-      return newSet;
+      if (wishlistHotelIds) return;
+      setInternalSavedHotels((prev) => {
+        const newSet = new Set(prev);
+        if (newSet.has(hotelId)) {
+          newSet.delete(hotelId);
+        } else {
+          newSet.add(hotelId);
+        }
+        return newSet;
+      });
     });
   };
 
