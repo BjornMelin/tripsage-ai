@@ -200,13 +200,10 @@ describe("ai stream route", () => {
     });
 
     const response = await POST(request, createRouteParamsContext());
-    expect(response.status).toBe(200);
-    expect(MOCK_STREAM_TEXT).toHaveBeenCalledWith(
-      expect.objectContaining({
-        model: "openai/gpt-4o",
-        prompt: "Hello from AI SDK v6",
-      })
-    );
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toBe("invalid_request");
+    expect(MOCK_STREAM_TEXT).not.toHaveBeenCalled();
   });
 
   it("handles non-POST requests", async () => {
@@ -218,7 +215,10 @@ describe("ai stream route", () => {
     // The route handler should handle this appropriately
     // Note: Next.js route handlers typically only respond to their defined methods
     const response = await POST(request, createRouteParamsContext());
-    expect(response).toBeDefined();
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toBe("invalid_request");
+    expect(MOCK_STREAM_TEXT).not.toHaveBeenCalled();
   });
 
   it("handles requests without content-type header", async () => {
