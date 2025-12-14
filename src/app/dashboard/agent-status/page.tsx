@@ -27,6 +27,12 @@ const AGENT_COLORS = {
 
 type AgentConnectionStatus = "connected" | "disconnected" | "error";
 
+const REALTIME_BUTTON_LABEL: Record<AgentConnectionStatus, string> = {
+  connected: "Pause Realtime",
+  disconnected: "Resume Realtime",
+  error: "Reconnect",
+} as const;
+
 function getConnectionStatus(
   isConnected: boolean,
   connectionStatus: string
@@ -52,13 +58,13 @@ export default function AgentsPage() {
     if (agents.length === 0) {
       return [0, 0];
     }
-    const healthSum = agents.reduce((sum, agent) => sum + (agent.progress ?? 0), 0);
+    const progressSum = agents.reduce((sum, agent) => sum + (agent.progress ?? 0), 0);
     const pendingTotal = agents.reduce(
       (sum, agent) =>
         sum + agent.tasks.filter((task) => task.status === "pending").length,
       0
     );
-    return [Math.round(healthSum / agents.length), pendingTotal];
+    return [Math.round(progressSum / agents.length), pendingTotal];
   }, [agents]);
 
   const isConnected = connectionStatus === "subscribed";
@@ -95,11 +101,7 @@ export default function AgentsPage() {
             showMetrics={false}
           />
           <Button variant="outline" onClick={toggleRealtime}>
-            {computedConnectionStatus === "connected"
-              ? "Pause Realtime"
-              : computedConnectionStatus === "error"
-                ? "Reconnect"
-                : "Resume Realtime"}
+            {REALTIME_BUTTON_LABEL[computedConnectionStatus]}
           </Button>
         </div>
       </div>

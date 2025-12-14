@@ -2,8 +2,8 @@
  * @fileoverview Memory agent route handler (frontend-only).
  * - Supabase SSR auth → userId
  * - Provider resolution (BYOK/Gateway)
- * - Guardrails (cache, ratelimit, telemetry) around tools
- * - AI SDK v6 streaming with tool calls
+ * - Guardrails (rate limiting, telemetry)
+ * - AI SDK v6 streaming summary response
  */
 
 import "server-only";
@@ -24,7 +24,7 @@ const RequestSchema = agentSchemas.memoryUpdateRequestSchema;
 /**
  * POST /api/agents/memory
  *
- * Validates request, resolves provider, and streams ToolLoop response.
+ * Validates request, resolves provider, and streams a confirmation response.
  */
 export const POST = withApiGuards({
   auth: true,

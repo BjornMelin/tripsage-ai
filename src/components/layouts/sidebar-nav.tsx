@@ -6,6 +6,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ROUTES } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 /**
@@ -43,8 +44,8 @@ export function SidebarNav({ className, items, ...props }: SidebarNavProps) {
           className={cn(
             "flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
             (
-              item.href === "/dashboard"
-                ? pathname === "/dashboard"
+              item.href === ROUTES.dashboard.root
+                ? pathname === ROUTES.dashboard.root
                 : pathname === item.href || pathname?.startsWith(`${item.href}/`)
             )
               ? "bg-accent text-accent-foreground"

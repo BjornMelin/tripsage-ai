@@ -4,7 +4,6 @@
 
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
 import {
   ActivityIcon,
   AlertTriangleIcon,
@@ -24,6 +23,7 @@ import {
   WifiOffIcon,
   ZapIcon,
 } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";

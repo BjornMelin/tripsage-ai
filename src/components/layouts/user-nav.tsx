@@ -18,6 +18,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { logoutAction } from "@/lib/auth/actions";
+import { ROUTES } from "@/lib/routes";
 
 interface UserNavProps {
   user: AuthUser;
@@ -78,7 +79,7 @@ export function UserNav({ user }: UserNavProps) {
 
           <div className="p-1">
             <Link
-              href="/dashboard/profile"
+              href={ROUTES.dashboard.profile}
               className="flex items-center gap-2 px-2 py-2 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground transition-colors"
               onClick={() => setIsOpen(false)}
             >
@@ -87,7 +88,7 @@ export function UserNav({ user }: UserNavProps) {
             </Link>
 
             <Link
-              href="/dashboard/settings"
+              href={ROUTES.dashboard.settings}
               className="flex items-center gap-2 px-2 py-2 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground transition-colors"
               onClick={() => setIsOpen(false)}
             >
@@ -95,7 +96,7 @@ export function UserNav({ user }: UserNavProps) {
               Settings
             </Link>
             <Link
-              href="/security" // dedicated security section
+              href={ROUTES.dashboard.security}
               className="flex items-center gap-2 px-2 py-2 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground transition-colors"
               onClick={() => setIsOpen(false)}
             >

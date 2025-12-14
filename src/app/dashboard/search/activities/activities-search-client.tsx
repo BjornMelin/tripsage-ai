@@ -87,31 +87,43 @@ export default function ActivitiesSearchClient({
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [pendingAddFromComparison, setPendingAddFromComparison] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
-  const { addItem, removeItem, clearByType, hasItem, getItemsByType } =
-    useComparisonStore((state) => ({
-      addItem: state.addItem,
-      clearByType: state.clearByType,
-      getItemsByType: state.getItemsByType,
-      hasItem: state.hasItem,
-      removeItem: state.removeItem,
-    }));
+  const { addItem, removeItem, clearByType, hasItem } = useComparisonStore((state) => ({
+    addItem: state.addItem,
+    clearByType: state.clearByType,
+    hasItem: state.hasItem,
+    removeItem: state.removeItem,
+  }));
+  const activityComparisonItems = useComparisonStore((state) =>
+    state.getItemsByType("activity")
+  );
 
   const [isTripModalOpen, setIsTripModalOpen] = useState(false);
   const [trips, setTrips] = useState<UiTrip[]>([]);
   const [isPending, setIsPending] = useState(false);
 
-  // Derived state for comparison list (computed per render to reflect store changes)
-  const comparisonList = new Set(getItemsByType("activity").map((item) => item.id));
+  const comparisonList = useMemo(
+    () => new Set(activityComparisonItems.map((item) => item.id)),
+    [activityComparisonItems]
+  );
 
   // Initialize search type on mount
   useEffect(() => {
     initializeSearch("activity");
   }, [initializeSearch]);
 
+  const manualSearchController = useRef<AbortController | null>(null);
+  useEffect(() => {
+    return () => {
+      manualSearchController.current?.abort();
+      manualSearchController.current = null;
+    };
+  }, []);
+
   // Initialize search with URL parameters
   useEffect(() => {
     const destination = searchParams.get("destination");
     const category = searchParams.get("category");
+    const controller = new AbortController();
 
     if (destination) {
       const initialParams: ActivitySearchParams = {
@@ -121,9 +133,17 @@ export default function ActivitiesSearchClient({
       (async () => {
         try {
           const normalizedParams = await onSubmitServer(initialParams);
-          await executeSearch(normalizedParams ?? initialParams);
+          if (controller.signal.aborted) return;
+          await executeSearch(normalizedParams ?? initialParams, controller.signal);
+          if (controller.signal.aborted) return;
           setHasSearched(true);
         } catch (error) {
+          if (
+            controller.signal.aborted ||
+            (error instanceof Error && error.name === "AbortError")
+          ) {
+            return;
+          }
           const message = getErrorMessage(error);
           toast({
             description: message,
@@ -133,24 +153,43 @@ export default function ActivitiesSearchClient({
         }
       })();
     }
+    return () => controller.abort();
   }, [searchParams, executeSearch, onSubmitServer, toast]);
 
-  const handleSearch = async (params: ActivitySearchParams) => {
-    if (params.destination) {
-      try {
-        const normalizedParams = await onSubmitServer(params); // server-side telemetry and validation
-        await executeSearch(normalizedParams ?? params); // client fetch/store update
-        setHasSearched(true);
-      } catch (error) {
-        const message = getErrorMessage(error);
-        toast({
-          description: message,
-          title: "Search failed",
-          variant: "destructive",
-        });
+  const handleSearch = useCallback(
+    async (params: ActivitySearchParams) => {
+      if (params.destination) {
+        manualSearchController.current?.abort();
+        const controller = new AbortController();
+        manualSearchController.current = controller;
+        try {
+          const normalizedParams = await onSubmitServer(params); // server-side telemetry and validation
+          if (controller.signal.aborted) return;
+          await executeSearch(normalizedParams ?? params, controller.signal); // client fetch/store update
+          if (controller.signal.aborted) return;
+          setHasSearched(true);
+        } catch (error) {
+          if (
+            controller.signal.aborted ||
+            (error instanceof Error && error.name === "AbortError")
+          ) {
+            return;
+          }
+          const message = getErrorMessage(error);
+          toast({
+            description: message,
+            title: "Search failed",
+            variant: "destructive",
+          });
+        } finally {
+          if (manualSearchController.current === controller) {
+            manualSearchController.current = null;
+          }
+        }
       }
-    }
-  };
+    },
+    [executeSearch, onSubmitServer, toast]
+  );
 
   const handleAddToTripClick = useCallback(async () => {
     setIsPending(true);
@@ -158,9 +197,18 @@ export default function ActivitiesSearchClient({
       const fetchedTrips = await getPlanningTrips();
       setTrips(fetchedTrips);
       setIsTripModalOpen(true);
-    } catch (_error) {
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : error
+            ? String(error)
+            : "Failed to load trips.";
+      if (process.env.NODE_ENV === "development") {
+        console.error("Failed to load trips:", error);
+      }
       toast({
-        description: "Failed to load trips. Please try again.",
+        description: message || "Failed to load trips.",
         title: "Error",
         variant: "destructive",
       });
@@ -169,107 +217,123 @@ export default function ActivitiesSearchClient({
     }
   }, [toast]);
 
-  const handleConfirmAddToTrip = async (tripId: string) => {
-    if (!selectedActivity) return;
+  const handleConfirmAddToTrip = useCallback(
+    async (tripId: string) => {
+      if (!selectedActivity) return;
 
-    setIsPending(true);
-    try {
-      await addActivityToTrip(tripId, {
-        currency: "USD",
-        description: selectedActivity.description,
-        externalId: selectedActivity.id,
-        location: selectedActivity.location,
-        metadata: {
-          ...(selectedActivity.images && { images: selectedActivity.images }),
-          rating: selectedActivity.rating,
-          type: selectedActivity.type,
-        },
-        price: selectedActivity.price,
-        title: selectedActivity.name,
-      });
+      const currencyRaw: unknown = Reflect.get(selectedActivity, "currency");
+      const currency =
+        typeof currencyRaw === "string" ? currencyRaw.trim() || "USD" : "USD";
 
-      toast({
-        description: `Added "${selectedActivity.name}" to your trip`,
-        title: "Activity added",
-      });
+      setIsPending(true);
+      try {
+        await addActivityToTrip(tripId, {
+          currency,
+          description: selectedActivity.description,
+          externalId: selectedActivity.id,
+          location: selectedActivity.location,
+          metadata: {
+            ...(selectedActivity.images && { images: selectedActivity.images }),
+            rating: selectedActivity.rating,
+            type: selectedActivity.type,
+          },
+          price: selectedActivity.price,
+          title: selectedActivity.name,
+        });
 
-      setIsTripModalOpen(false);
-      setSelectedActivity(null);
-    } catch (error) {
-      toast({
-        description: getErrorMessage(error),
-        title: "Error",
-        variant: "destructive",
-      });
-    } finally {
-      setIsPending(false);
-    }
-  };
+        toast({
+          description: `Added "${selectedActivity.name}" to your trip`,
+          title: "Activity added",
+        });
 
-  const handleSelectActivity = (activity: Activity) => {
+        setIsTripModalOpen(false);
+        setSelectedActivity(null);
+      } catch (error) {
+        toast({
+          description: getErrorMessage(error),
+          title: "Error",
+          variant: "destructive",
+        });
+      } finally {
+        setIsPending(false);
+      }
+    },
+    [selectedActivity, toast]
+  );
+
+  const handleSelectActivity = useCallback((activity: Activity) => {
     setSelectedActivity(activity);
-  };
+  }, []);
 
   const [showComparisonModal, setShowComparisonModal] = useState(false);
 
-  const toggleComparison = (activity: Activity) => {
-    // Read current count from store selector (not memoized Set) for accurate size
-    const currentCount = getItemsByType("activity").length;
+  const toggleComparison = useCallback(
+    (activity: Activity) => {
+      // Read current count from store selector (not memoized Set) for accurate size
+      const currentCount = activityComparisonItems.length;
 
-    if (hasItem(activity.id)) {
-      removeItem(activity.id);
+      if (hasItem(activity.id)) {
+        removeItem(activity.id);
+        toast({
+          description: `Removed "${activity.name}" from comparison`,
+          title: "Removed from comparison",
+        });
+        return { nextSize: currentCount - 1, wasAdded: false };
+      }
+
+      if (currentCount >= MAX_COMPARISON_ITEMS) {
+        toast({
+          description: `You can compare up to ${MAX_COMPARISON_ITEMS} activities at once`,
+          title: "Comparison limit reached",
+          variant: "destructive",
+        });
+        return { nextSize: currentCount, wasAdded: false };
+      }
+
+      addItem("activity", activity.id, activity);
       toast({
-        description: `Removed "${activity.name}" from comparison`,
-        title: "Removed from comparison",
+        description: `Added "${activity.name}" to comparison`,
+        title: "Added to comparison",
       });
-      return { nextSize: currentCount - 1, wasAdded: false };
-    }
+      return { nextSize: currentCount + 1, wasAdded: true };
+    },
+    [activityComparisonItems.length, addItem, hasItem, removeItem, toast]
+  );
 
-    if (currentCount >= MAX_COMPARISON_ITEMS) {
-      toast({
-        description: `You can compare up to ${MAX_COMPARISON_ITEMS} activities at once`,
-        title: "Comparison limit reached",
-        variant: "destructive",
-      });
-      return { nextSize: currentCount, wasAdded: false };
-    }
+  const handleCompareActivity = useCallback(
+    (activity: Activity) => {
+      const { nextSize, wasAdded } = toggleComparison(activity);
 
-    addItem("activity", activity.id, activity);
-    toast({
-      description: `Added "${activity.name}" to comparison`,
-      title: "Added to comparison",
-    });
-    return { nextSize: currentCount + 1, wasAdded: true };
-  };
+      if (wasAdded && nextSize >= 2) {
+        setShowComparisonModal(true);
+      } else if (!wasAdded && nextSize <= 1) {
+        setShowComparisonModal(false);
+      }
+    },
+    [toggleComparison]
+  );
 
-  const handleCompareActivity = (activity: Activity) => {
-    const { nextSize, wasAdded } = toggleComparison(activity);
+  const handleRemoveFromComparison = useCallback(
+    (activityId: string) => {
+      // Read current count from store selector (not memoized Set) for accurate size
+      const currentCount = activityComparisonItems.length;
+      removeItem(activityId);
+      if (currentCount - 1 <= 1) {
+        setShowComparisonModal(false);
+      }
+    },
+    [activityComparisonItems.length, removeItem]
+  );
 
-    if (wasAdded && nextSize >= 2) {
-      setShowComparisonModal(true);
-    } else if (!wasAdded && nextSize <= 1) {
-      setShowComparisonModal(false);
-    }
-  };
-
-  const handleRemoveFromComparison = (activityId: string) => {
-    // Read current count from store selector (not memoized Set) for accurate size
-    const currentCount = getItemsByType("activity").length;
-    removeItem(activityId);
-    if (currentCount - 1 <= 1) {
-      setShowComparisonModal(false);
-    }
-  };
-
-  const handleAddFromComparison = (activity: Activity) => {
+  const handleAddFromComparison = useCallback((activity: Activity) => {
     setSelectedActivity(activity);
     setPendingAddFromComparison(true);
     setShowComparisonModal(false);
-  };
+  }, []);
 
   const hasActiveResults = activities.length > 0;
 
-  const comparisonActivities = getItemsByType("activity")
+  const comparisonActivities = activityComparisonItems
     .map((item) => item.data)
     .filter(isActivity);
 

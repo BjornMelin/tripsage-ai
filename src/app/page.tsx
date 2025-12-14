@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 // caching handled at app level via cacheComponents; no per-file directive
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CurrentYear } from "@/components/ui/current-year";
+import { ROUTES } from "@/lib/routes";
 
 /**
  * Main landing page component for TripSage AI.
@@ -24,14 +25,14 @@ export default function Home() {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background px-6">
-        <Link href="/" className="flex items-center gap-2 font-semibold">
+        <Link href={ROUTES.home} className="flex items-center gap-2 font-semibold">
           TripSage AI
         </Link>
         <div className="ml-auto flex items-center gap-4">
-          <Link href="/auth/login">
+          <Link href={ROUTES.login}>
             <Button variant="outline">Log in</Button>
           </Link>
-          <Link href="/auth/register">
+          <Link href={ROUTES.register}>
             <Button>Sign up</Button>
           </Link>
         </div>
@@ -49,12 +50,12 @@ export default function Home() {
                 place.
               </p>
               <div className="flex flex-col gap-2 min-[400px]:flex-row">
-                <Link href="/auth/register">
+                <Link href={ROUTES.register}>
                   <Button size="lg" className="w-full min-[400px]:w-auto">
                     Get Started
                   </Button>
                 </Link>
-                <Link href="/chat">
+                <Link href={ROUTES.aiDemo}>
                   <Button
                     size="lg"
                     variant="outline"
@@ -146,19 +147,19 @@ export default function Home() {
           </p>
           <div className="flex items-center gap-4">
             <Link
-              href="/privacy"
+              href={ROUTES.privacy}
               className="text-sm text-muted-foreground underline-offset-4 hover:underline"
             >
               Privacy
             </Link>
             <Link
-              href="/terms"
+              href={ROUTES.terms}
               className="text-sm text-muted-foreground underline-offset-4 hover:underline"
             >
               Terms
             </Link>
             <Link
-              href="/contact"
+              href={ROUTES.contact}
               className="text-sm text-muted-foreground underline-offset-4 hover:underline"
             >
               Contact

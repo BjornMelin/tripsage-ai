@@ -31,6 +31,8 @@ interface HotelResultsProps {
   onSaveToWishlist: (hotelId: string) => void;
   className?: string;
   showMap?: boolean;
+  /** Optional controlled wishlist state passed from a parent component. */
+  wishlistHotelIds?: ReadonlySet<string>;
   /** Search center coordinates for distance calculation. */
   searchCenter?: Coordinates;
 }
@@ -43,13 +45,33 @@ export function HotelResults({
   onSaveToWishlist,
   className,
   showMap = true,
+  wishlistHotelIds,
   searchCenter,
 }: HotelResultsProps) {
   const [isPending, startTransition] = useTransition();
   const [viewMode, setViewMode] = useState<"list" | "grid" | "map">("list");
-  const [savedHotels, setSavedHotels] = useState<Set<string>>(new Set());
+  const [internalSavedHotels, setInternalSavedHotels] = useState<Set<string>>(
+    new Set()
+  );
   const [sortBy, setSortBy] = useState<"ai" | "price" | "rating" | "distance">("ai");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const baseSavedHotels = useMemo(
+    () => new Set(wishlistHotelIds ?? internalSavedHotels),
+    [internalSavedHotels, wishlistHotelIds]
+  );
+  const [optimisticSavedHotels, setOptimisticSavedHotels] = useOptimistic(
+    baseSavedHotels,
+    (state: Set<string>, hotelId: string) => {
+      const next = new Set(state);
+      if (next.has(hotelId)) {
+        next.delete(hotelId);
+      } else {
+        next.add(hotelId);
+      }
+      return next;
+    }
+  );
+  const savedHotels = optimisticSavedHotels;
 
   // Optimistic selection state
   const [optimisticSelecting, setOptimisticSelecting] = useOptimistic(
@@ -80,14 +102,22 @@ export function HotelResults({
 
   /** Toggle hotel for comparison */
   const toggleWishlist = (hotelId: string) => {
-    setSavedHotels((prev) => {
+    setOptimisticSavedHotels(hotelId);
+    try {
+      onSaveToWishlist(hotelId);
+    } catch (error) {
+      // Revert optimistic toggle if the parent callback throws.
+      setOptimisticSavedHotels(hotelId);
+      throw error;
+    }
+    if (wishlistHotelIds) return;
+    setInternalSavedHotels((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(hotelId)) {
         newSet.delete(hotelId);
       } else {
         newSet.add(hotelId);
       }
-      onSaveToWishlist(hotelId);
       return newSet;
     });
   };

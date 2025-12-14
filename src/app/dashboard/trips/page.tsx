@@ -8,9 +8,19 @@
 "use client";
 
 import { FilterIcon, GridIcon, ListIcon, PlusIcon, SearchIcon } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ConnectionStatusIndicator } from "@/components/features/realtime/connection-status-monitor";
 import { TripCard } from "@/components/features/trips";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -27,8 +37,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useToast } from "@/components/ui/use-toast";
 import { useDeleteTrip, useTrips } from "@/hooks/use-trips";
+import { getErrorMessage } from "@/lib/api/error-types";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { type Trip, useTripStore } from "@/stores/trip-store";
 
 /**
@@ -49,10 +62,28 @@ const DISCONNECTED_MESSAGE =
 
 type ConnectionState = "connected" | "error" | "disconnected";
 
+const TRIP_SKELETON_KEYS = [
+  "trip-skeleton-0",
+  "trip-skeleton-1",
+  "trip-skeleton-2",
+  "trip-skeleton-3",
+  "trip-skeleton-4",
+  "trip-skeleton-5",
+] as const;
+
 const getConnectionStatusMessage = (state: ConnectionState): string => {
   if (state === "connected") return CONNECTED_MESSAGE;
   if (state === "error") return ERROR_MESSAGE;
   return DISCONNECTED_MESSAGE;
+};
+
+const getConnectionState = (
+  realtimeErrorCount: number,
+  isConnected: boolean
+): ConnectionState => {
+  if (realtimeErrorCount > 0) return "error";
+  if (isConnected) return "connected";
+  return "disconnected";
 };
 
 const parseTripDate = (value?: string | null): Date | null => {
@@ -61,7 +92,15 @@ const parseTripDate = (value?: string | null): Date | null => {
   }
   try {
     return DateUtils.parse(value);
-  } catch {
+  } catch (error) {
+    recordClientErrorOnActiveSpan(
+      error instanceof Error ? error : new Error(String(error)),
+      {
+        action: "parseTripDate",
+        context: "TripsPage",
+        value,
+      }
+    );
     return null;
   }
 };
@@ -79,32 +118,38 @@ export default function TripsPage() {
   const { createTrip } = useTripStore();
   const deleteTripMutation = useDeleteTrip();
   const { data: trips, isLoading, error, isConnected, realtimeStatus } = useTrips();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("date");
   const [filterBy, setFilterBy] = useState<FilterOption>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [isCreating, setIsCreating] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [pendingDeleteTripId, setPendingDeleteTripId] = useState<string | null>(null);
+  const lastErrorMessageRef = useRef<string | null>(null);
 
   const tripsArray = trips ?? [];
   const realtimeErrorCount = Array.isArray(realtimeStatus?.errors)
     ? realtimeStatus.errors.length
     : 0;
-  const connectionState: ConnectionState =
-    realtimeErrorCount > 0 ? "error" : isConnected ? "connected" : "disconnected";
+  const connectionState = getConnectionState(realtimeErrorCount, isConnected);
   const connectionStatusMessage = getConnectionStatusMessage(connectionState);
 
   const filteredAndSortedTrips = useMemo(() => {
     if (tripsArray.length === 0) return [];
 
     let filtered = tripsArray;
+    const nowTs = Date.now();
+    const searchQueryLower = searchQuery.toLowerCase();
 
     // Apply search filter
     if (searchQuery) {
       filtered = filtered.filter(
         (trip: Trip) =>
-          (trip.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-          trip.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (trip.title || "").toLowerCase().includes(searchQueryLower) ||
+          trip.description?.toLowerCase().includes(searchQueryLower) ||
           (trip.destinations || []).some((dest) =>
-            dest.name.toLowerCase().includes(searchQuery.toLowerCase())
+            dest.name.toLowerCase().includes(searchQueryLower)
           )
       );
     }
@@ -114,14 +159,17 @@ export default function TripsPage() {
       filtered = filtered.filter((trip: Trip) => {
         const startDate = parseTripDate(trip.startDate);
         const endDate = parseTripDate(trip.endDate);
-        const nowTs = Date.now();
+        const isInvalidRange =
+          !!startDate && !!endDate && endDate.getTime() < startDate.getTime();
 
         switch (filterBy) {
           case "draft":
-            return !startDate || !endDate;
+            return isInvalidRange || !startDate || !endDate;
           case "upcoming":
-            return !!startDate && startDate.getTime() > nowTs;
+            if (isInvalidRange || !startDate || !endDate) return false;
+            return startDate.getTime() > nowTs;
           case "active":
+            if (isInvalidRange) return false;
             return (
               !!startDate &&
               !!endDate &&
@@ -129,7 +177,8 @@ export default function TripsPage() {
               endDate.getTime() >= nowTs
             );
           case "completed":
-            return !!endDate && endDate.getTime() < nowTs;
+            if (isInvalidRange || !startDate || !endDate) return false;
+            return endDate.getTime() < nowTs;
           default:
             return true;
         }
@@ -137,7 +186,7 @@ export default function TripsPage() {
     }
 
     // Apply sorting
-    return filtered.sort((a: Trip, b: Trip) => {
+    return [...filtered].sort((a: Trip, b: Trip) => {
       switch (sortBy) {
         case "name":
           return (a.title || "").localeCompare(b.title || "");
@@ -157,33 +206,66 @@ export default function TripsPage() {
   }, [tripsArray, searchQuery, sortBy, filterBy]);
 
   const handleCreateTrip = async () => {
-    await createTrip({
-      description: "",
-      destinations: [],
-      title: "New Trip",
-      visibility: "private",
-    });
-  };
-
-  const handleDeleteTrip = async (tripId: string) => {
-    if (confirm("Are you sure you want to delete this trip?")) {
-      await deleteTripMutation.mutateAsync(tripId);
+    setIsCreating(true);
+    try {
+      await createTrip({
+        description: "",
+        destinations: [],
+        title: "New Trip",
+        visibility: "private",
+      });
+    } catch (createError) {
+      toast({
+        description: getErrorMessage(createError),
+        title: "Unable to create trip",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreating(false);
     }
   };
 
-  const getStatusCounts = () => {
-    const tripsArray = trips ?? [];
-    if (tripsArray.length === 0)
+  const handleDeleteTrip = (tripId: string) => {
+    setPendingDeleteTripId(tripId);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteTrip = async () => {
+    if (!pendingDeleteTripId) return;
+    try {
+      await deleteTripMutation.mutateAsync(pendingDeleteTripId);
+      toast({
+        description: "Your trip has been deleted.",
+        title: "Trip deleted",
+      });
+    } catch (deleteError) {
+      toast({
+        description: getErrorMessage(deleteError),
+        title: "Unable to delete trip",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setPendingDeleteTripId(null);
+    }
+  };
+
+  const statusCounts = useMemo(() => {
+    const tripsForCounts = trips ?? [];
+    if (tripsForCounts.length === 0) {
       return { active: 0, completed: 0, draft: 0, upcoming: 0 };
+    }
 
     const now = new Date();
-    return tripsArray.reduce(
+    return tripsForCounts.reduce(
       (counts: Record<string, number>, trip: Trip) => {
         const startDate = parseTripDate(trip.startDate);
         const endDate = parseTripDate(trip.endDate);
         const nowTs = now.getTime();
+        const isInvalidRange =
+          !!startDate && !!endDate && endDate.getTime() < startDate.getTime();
 
-        if (!startDate || !endDate) {
+        if (isInvalidRange || !startDate || !endDate) {
           counts.draft++;
         } else if (startDate.getTime() > nowTs) {
           counts.upcoming++;
@@ -197,18 +279,27 @@ export default function TripsPage() {
       },
       { active: 0, completed: 0, draft: 0, upcoming: 0 }
     );
-  };
-
-  const statusCounts = getStatusCounts();
+  }, [trips]);
 
   // Handle error state
   useEffect(() => {
     if (error) {
+      const message = getErrorMessage(error) || "Unable to load trips.";
+      if (message !== lastErrorMessageRef.current) {
+        lastErrorMessageRef.current = message;
+        toast({
+          description: message,
+          title: "Unable to load trips",
+          variant: "destructive",
+        });
+      }
       if (process.env.NODE_ENV === "development") {
         console.error("Trips error:", error);
       }
+    } else {
+      lastErrorMessageRef.current = null;
     }
-  }, [error]);
+  }, [error, toast]);
 
   // Show loading state
   if (isLoading && tripsArray.length === 0) {
@@ -224,13 +315,13 @@ export default function TripsPage() {
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={`trip-skeleton-${i}-${Date.now()}`} className="animate-pulse">
+          {TRIP_SKELETON_KEYS.map((key) => (
+            <Card key={key} className="animate-pulse">
               <CardContent className="p-6">
-                <div className="h-4 bg-gray-200 rounded mb-4" />
-                <div className="h-3 bg-gray-200 rounded mb-2" />
-                <div className="h-3 bg-gray-200 rounded mb-4" />
-                <div className="h-8 bg-gray-200 rounded" />
+                <div className="h-4 bg-muted rounded mb-4" />
+                <div className="h-3 bg-muted rounded mb-2" />
+                <div className="h-3 bg-muted rounded mb-4" />
+                <div className="h-8 bg-muted rounded" />
               </CardContent>
             </Card>
           ))}
@@ -259,7 +350,7 @@ export default function TripsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
-            <Button onClick={handleCreateTrip} size="lg">
+            <Button onClick={handleCreateTrip} size="lg" disabled={isCreating}>
               <PlusIcon className="h-5 w-5 mr-2" />
               Create Your First Trip
             </Button>
@@ -290,7 +381,7 @@ export default function TripsPage() {
               {connectionStatusMessage}
             </output>
           </div>
-          <Button onClick={handleCreateTrip}>
+          <Button onClick={handleCreateTrip} disabled={isCreating}>
             <PlusIcon className="h-4 w-4 mr-2" />
             Create Trip
           </Button>
@@ -448,6 +539,40 @@ export default function TripsPage() {
           </p>
         </div>
       )}
+
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={(open) => {
+          setIsDeleteDialogOpen(open);
+          if (!open) {
+            setPendingDeleteTripId(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete trip?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete your trip and
+              remove its data from your account.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteTripMutation.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async (event) => {
+                event.preventDefault();
+                await confirmDeleteTrip();
+              }}
+              disabled={deleteTripMutation.isPending}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

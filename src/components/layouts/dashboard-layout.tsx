@@ -8,6 +8,7 @@ import type { AuthUser } from "@schemas/stores";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { mapSupabaseUserToAuthUser, requireUser } from "@/lib/auth/server";
+import { ROUTES } from "@/lib/routes";
 import { SidebarNav } from "./sidebar-nav";
 import { UserNav } from "./user-nav";
 
@@ -24,17 +25,16 @@ export interface DashboardLayoutData {
 }
 
 export const DASHBOARD_NAV_ITEMS: ReadonlyArray<DashboardNavItem> = [
-  { href: "/dashboard", title: "Overview" },
-  { href: "/dashboard/trips", title: "My Trips" },
-  { href: "/dashboard/search", title: "Search" },
-  { href: "/dashboard/calendar", title: "Calendar" },
+  { href: ROUTES.dashboard.root, title: "Overview" },
+  { href: ROUTES.dashboard.trips, title: "My Trips" },
+  { href: ROUTES.dashboard.search, title: "Search" },
+  { href: ROUTES.dashboard.calendar, title: "Calendar" },
   // Chat is intentionally outside the dashboard namespace; keep `/chat` public.
-  { href: "/chat", title: "AI Assistant" },
-  { href: "/dashboard/agent-status", title: "Agent Status" },
-  // Security is mounted at /security (top-level dashboard group)
-  { href: "/security", title: "Security" },
-  { href: "/dashboard/settings", title: "Settings" },
-  { href: "/dashboard/profile", title: "Profile" },
+  { href: ROUTES.chat, title: "AI Assistant" },
+  { href: ROUTES.dashboard.agentStatus, title: "Agent Status" },
+  { href: ROUTES.dashboard.security, title: "Security" },
+  { href: ROUTES.dashboard.settings, title: "Settings" },
+  { href: ROUTES.dashboard.profile, title: "Profile" },
 ];
 
 /**
@@ -67,7 +67,10 @@ export function DashboardLayoutView({
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background px-6">
-        <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
+        <Link
+          href={ROUTES.dashboard.root}
+          className="flex items-center gap-2 font-semibold"
+        >
           TripSage AI
         </Link>
         <div className="ml-auto flex items-center gap-2">

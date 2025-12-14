@@ -22,7 +22,10 @@ export interface DestinationResult {
 }
 
 export interface UseDestinationSearchResult {
-  searchDestinations: (params: DestinationSearchParams) => Promise<void>;
+  searchDestinations: (
+    params: DestinationSearchParams,
+    signal?: AbortSignal
+  ) => Promise<void>;
   isSearching: boolean;
   searchError: Error | null;
   resetSearch: () => void;
@@ -95,7 +98,7 @@ export function useDestinationSearch(): UseDestinationSearchResult {
   }, []);
 
   const performSearch = useCallback(
-    async (params: DestinationSearchParams) => {
+    async (params: DestinationSearchParams, externalSignal?: AbortSignal) => {
       const trimmedQuery = params.query?.trim() ?? "";
 
       if (trimmedQuery.length < 2) {
@@ -120,6 +123,9 @@ export function useDestinationSearch(): UseDestinationSearchResult {
       }
       const abortController = new AbortController();
       abortControllerRef.current = abortController;
+      externalSignal?.addEventListener("abort", () => abortController.abort(), {
+        once: true,
+      });
 
       setIsSearching(true);
       setSearchError(null);
@@ -218,6 +224,8 @@ export function useDestinationSearch(): UseDestinationSearchResult {
   );
 
   const debounceState = useRef<{
+    abortHandler?: () => void;
+    abortSignal?: AbortSignal;
     timeoutId: ReturnType<typeof setTimeout> | null;
     reject?: (reason?: unknown) => void;
   }>({
@@ -225,21 +233,51 @@ export function useDestinationSearch(): UseDestinationSearchResult {
   });
 
   const debouncedSearch = useCallback(
-    (params: DestinationSearchParams): Promise<void> =>
+    (params: DestinationSearchParams, externalSignal?: AbortSignal): Promise<void> =>
       new Promise<void>((resolve, reject) => {
+        if (externalSignal?.aborted) {
+          const abortError = new Error("Aborted");
+          abortError.name = "AbortError";
+          reject(abortError);
+          return;
+        }
         const state = debounceState.current;
         if (state.timeoutId) {
           clearTimeout(state.timeoutId);
           const abortError = new Error("Debounced");
           abortError.name = "AbortError";
           state.reject?.(abortError);
+          if (state.abortSignal && state.abortHandler) {
+            state.abortSignal.removeEventListener("abort", state.abortHandler);
+          }
         }
 
+        const abortHandler = () => {
+          const current = debounceState.current;
+          if (current.timeoutId) {
+            clearTimeout(current.timeoutId);
+            current.timeoutId = null;
+            const abortError = new Error("Aborted");
+            abortError.name = "AbortError";
+            reject(abortError);
+            current.reject = undefined;
+          }
+        };
+
+        externalSignal?.addEventListener("abort", abortHandler, { once: true });
         const timeoutId = setTimeout(async () => {
           debounceState.current.timeoutId = null;
           debounceState.current.reject = undefined;
+          if (debounceState.current.abortSignal && debounceState.current.abortHandler) {
+            debounceState.current.abortSignal.removeEventListener(
+              "abort",
+              debounceState.current.abortHandler
+            );
+          }
+          debounceState.current.abortSignal = undefined;
+          debounceState.current.abortHandler = undefined;
           try {
-            await performSearch(params);
+            await performSearch(params, externalSignal);
             resolve();
           } catch (error) {
             reject(error);
@@ -247,6 +285,8 @@ export function useDestinationSearch(): UseDestinationSearchResult {
         }, 300);
 
         debounceState.current = {
+          abortHandler,
+          abortSignal: externalSignal,
           reject,
           timeoutId,
         };
@@ -255,7 +295,8 @@ export function useDestinationSearch(): UseDestinationSearchResult {
   );
 
   const searchDestinations = useCallback(
-    (params: DestinationSearchParams): Promise<void> => debouncedSearch(params),
+    (params: DestinationSearchParams, externalSignal?: AbortSignal): Promise<void> =>
+      debouncedSearch(params, externalSignal),
     [debouncedSearch]
   );
 
@@ -272,6 +313,14 @@ export function useDestinationSearch(): UseDestinationSearchResult {
       debounceState.current.reject?.(abortError);
       debounceState.current.reject = undefined;
     }
+    if (debounceState.current.abortSignal && debounceState.current.abortHandler) {
+      debounceState.current.abortSignal.removeEventListener(
+        "abort",
+        debounceState.current.abortHandler
+      );
+    }
+    debounceState.current.abortSignal = undefined;
+    debounceState.current.abortHandler = undefined;
     setIsSearching(false);
     setSearchError(null);
     setResults([]);
@@ -291,6 +340,14 @@ export function useDestinationSearch(): UseDestinationSearchResult {
         debounceState.current.reject?.(abortError);
         debounceState.current.reject = undefined;
       }
+      if (debounceState.current.abortSignal && debounceState.current.abortHandler) {
+        debounceState.current.abortSignal.removeEventListener(
+          "abort",
+          debounceState.current.abortHandler
+        );
+      }
+      debounceState.current.abortSignal = undefined;
+      debounceState.current.abortHandler = undefined;
     },
     []
   );
