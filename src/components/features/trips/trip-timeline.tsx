@@ -7,6 +7,7 @@
 
 "use client";
 
+import type { TripDestination, UiTrip } from "@schemas/trips";
 import {
   CalendarIcon,
   CarIcon,
@@ -29,7 +30,9 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
-import type { Destination, Trip } from "@/stores/trip-store";
+
+type Trip = UiTrip;
+type Destination = TripDestination;
 
 /**
  * Props for the TripTimeline component.

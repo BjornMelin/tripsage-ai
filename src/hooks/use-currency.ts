@@ -17,7 +17,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect } from "react";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
 import { type AppError, handleApiError, isApiError } from "@/lib/api/error-types";
-import { queryKeys, staleTimes } from "@/lib/query-keys";
+import { staleTimes } from "@/lib/query/config";
+import { queryKeys } from "@/lib/query-keys";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { useCurrencyStore } from "@/stores/currency-store";
 

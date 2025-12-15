@@ -17,7 +17,7 @@ import {
   UsersIcon,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { BudgetTracker } from "@/components/features/trips/budget-tracker";
 import { ItineraryBuilder } from "@/components/features/trips/itinerary-builder";
 import { TripTimeline } from "@/components/features/trips/trip-timeline";
@@ -33,12 +33,14 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
+import { useTrip } from "@/hooks/use-trips";
+import { ApiError } from "@/lib/api/error-types";
 import { exportTripToIcs } from "@/lib/calendar/trip-export";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { ROUTES } from "@/lib/routes";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { statusVariants } from "@/lib/variants/status";
-import { useTripStore } from "@/stores/trip-store";
+import { useTripItineraryStore } from "@/stores/trip-itinerary-store";
 
 const MAX_FILENAME_LENGTH = 80;
 
@@ -69,22 +71,23 @@ export default function TripDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
-  const { trips, currentTrip, setCurrentTrip } = useTripStore();
-  const [isLoading, setIsLoading] = useState(true);
 
   const tripId = params.id as string;
+  const { data: trip, error, isLoading } = useTrip(tripId);
+  const destinations =
+    useTripItineraryStore((state) => state.destinationsByTripId[tripId]) ?? [];
 
   useEffect(() => {
-    const trip = trips.find((t) => t.id === tripId);
-    if (trip) {
-      setCurrentTrip(trip);
-      setIsLoading(false);
-    } else {
-      // Trip not found, redirect to trips page
-      setIsLoading(false);
+    if (!error) return;
+    if (error instanceof ApiError && error.status === 404) {
+      toast({
+        description: "This trip no longer exists or you don't have access to it.",
+        title: "Trip not found",
+        variant: "destructive",
+      });
       router.push(ROUTES.dashboard.trips);
     }
-  }, [tripId, trips, setCurrentTrip, router]);
+  }, [error, router, toast]);
 
   const handleBackToTrips = () => {
     router.push(ROUTES.dashboard.trips);
@@ -108,10 +111,10 @@ export default function TripDetailsPage() {
   };
 
   const getTripStatus = () => {
-    if (!currentTrip?.startDate || !currentTrip?.endDate) return "draft";
+    if (!mergedTrip?.startDate || !mergedTrip?.endDate) return "draft";
     const now = new Date();
-    const startDate = safeParseTripDate(currentTrip.startDate);
-    const endDate = safeParseTripDate(currentTrip.endDate);
+    const startDate = safeParseTripDate(mergedTrip.startDate);
+    const endDate = safeParseTripDate(mergedTrip.endDate);
     if (!startDate || !endDate) return "draft";
 
     if (DateUtils.isBefore(now, startDate)) return "upcoming";
@@ -120,9 +123,9 @@ export default function TripDetailsPage() {
   };
 
   const getTripDuration = () => {
-    if (!currentTrip?.startDate || !currentTrip?.endDate) return null;
-    const startDate = safeParseTripDate(currentTrip.startDate);
-    const endDate = safeParseTripDate(currentTrip.endDate);
+    if (!mergedTrip?.startDate || !mergedTrip?.endDate) return null;
+    const startDate = safeParseTripDate(mergedTrip.startDate);
+    const endDate = safeParseTripDate(mergedTrip.endDate);
     if (!startDate || !endDate) return null;
     return DateUtils.difference(endDate, startDate, "days") + 1;
   };
@@ -158,7 +161,9 @@ export default function TripDetailsPage() {
     }
   };
 
-  if (isLoading || !currentTrip) {
+  const mergedTrip = trip ? { ...trip, destinations } : null;
+
+  if (isLoading) {
     return (
       <div className="container mx-auto py-8">
         <div className="animate-pulse space-y-4">
@@ -170,22 +175,39 @@ export default function TripDetailsPage() {
     );
   }
 
+  if (!mergedTrip) {
+    return (
+      <div className="container mx-auto py-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Trip unavailable</CardTitle>
+            <CardDescription>
+              We couldn't load this trip. It may have been deleted or you may not have
+              access.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={handleBackToTrips}>Back to trips</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   const status = getTripStatus();
   const duration = getTripDuration();
-  const accommodations = currentTrip.destinations.filter((dest) => dest.accommodation);
-  const transportations = currentTrip.destinations.filter(
-    (dest) => dest.transportation
-  );
+  const accommodations = mergedTrip.destinations.filter((dest) => dest.accommodation);
+  const transportations = mergedTrip.destinations.filter((dest) => dest.transportation);
 
   const handleExportToCalendar = async (): Promise<void> => {
     try {
-      const icsContent = await exportTripToIcs(currentTrip);
+      const icsContent = await exportTripToIcs(mergedTrip);
       const blob = new Blob([icsContent], { type: "text/calendar" });
       const url = URL.createObjectURL(blob);
       try {
         const a = document.createElement("a");
         a.href = url;
-        a.download = `${sanitizeTripTitleForFilename(currentTrip.title)}.ics`;
+        a.download = `${sanitizeTripTitleForFilename(mergedTrip.title)}.ics`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -200,7 +222,7 @@ export default function TripDetailsPage() {
       recordClientErrorOnActiveSpan(normalizedError, {
         action: "exportTripToIcs",
         context: "TripDetailsPage",
-        tripId: currentTrip.id,
+        tripId: mergedTrip.id,
       });
       toast({
         description: "Failed to export trip to calendar. Please try again.",
@@ -219,16 +241,16 @@ export default function TripDetailsPage() {
         </Button>
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold">{currentTrip.title}</h1>
+            <h1 className="text-3xl font-bold">{mergedTrip.title}</h1>
             <Badge className={getStatusClassName(status)}>
               {status.charAt(0).toUpperCase() + status.slice(1)}
             </Badge>
-            {currentTrip.visibility === "public" && (
+            {mergedTrip.visibility === "public" && (
               <Badge variant="outline">Public</Badge>
             )}
           </div>
-          {currentTrip.description && (
-            <p className="text-muted-foreground mt-1">{currentTrip.description}</p>
+          {mergedTrip.description && (
+            <p className="text-muted-foreground mt-1">{mergedTrip.description}</p>
           )}
         </div>
         <div className="flex gap-2">
@@ -259,7 +281,7 @@ export default function TripDetailsPage() {
               {duration ? `${duration} days` : "Not set"}
             </div>
             <div className="text-xs text-muted-foreground mt-1">
-              {formatDate(currentTrip.startDate)} - {formatDate(currentTrip.endDate)}
+              {formatDate(mergedTrip.startDate)} - {formatDate(mergedTrip.endDate)}
             </div>
           </CardContent>
         </Card>
@@ -270,10 +292,10 @@ export default function TripDetailsPage() {
               <MapPinIcon className="h-4 w-4" />
               Destinations
             </div>
-            <div className="font-semibold">{currentTrip.destinations.length}</div>
+            <div className="font-semibold">{mergedTrip.destinations.length}</div>
             <div className="text-xs text-muted-foreground mt-1">
-              {currentTrip.destinations.length > 0
-                ? currentTrip.destinations.map((d) => d.name).join(", ")
+              {mergedTrip.destinations.length > 0
+                ? mergedTrip.destinations.map((d) => d.name).join(", ")
                 : "None planned"}
             </div>
           </CardContent>
@@ -286,15 +308,15 @@ export default function TripDetailsPage() {
               Budget
             </div>
             <div className="font-semibold">
-              {currentTrip.budget
+              {mergedTrip.budget
                 ? new Intl.NumberFormat("en-US", {
-                    currency: currentTrip.currency || "USD",
+                    currency: mergedTrip.currency || "USD",
                     style: "currency",
-                  }).format(currentTrip.budget)
+                  }).format(mergedTrip.budget)
                 : "Not set"}
             </div>
             <div className="text-xs text-muted-foreground mt-1">
-              {currentTrip.currency || "USD"}
+              {mergedTrip.currency || "USD"}
             </div>
           </CardContent>
         </Card>
@@ -323,10 +345,10 @@ export default function TripDetailsPage() {
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Timeline */}
-            <TripTimeline trip={currentTrip} showActions={true} />
+            <TripTimeline trip={mergedTrip} showActions={true} />
 
             {/* Budget Tracker */}
-            <BudgetTracker tripId={currentTrip.id} showActions={true} />
+            <BudgetTracker tripId={mergedTrip.id} showActions={true} />
           </div>
 
           {/* Quick Stats */}
@@ -340,7 +362,7 @@ export default function TripDetailsPage() {
                 <div>
                   <h4 className="font-semibold mb-2">Estimated Costs</h4>
                   <div className="space-y-1 text-sm">
-                    {currentTrip.destinations.map((dest) => (
+                    {mergedTrip.destinations.map((dest) => (
                       <div key={dest.id} className="flex justify-between">
                         <span>{dest.name}</span>
                         <span>${dest.estimatedCost || 0}</span>
@@ -351,7 +373,7 @@ export default function TripDetailsPage() {
                       <span>Total</span>
                       <span>
                         $
-                        {currentTrip.destinations.reduce(
+                        {mergedTrip.destinations.reduce(
                           (sum, dest) => sum + (dest.estimatedCost || 0),
                           0
                         )}
@@ -403,13 +425,13 @@ export default function TripDetailsPage() {
         </TabsContent>
 
         <TabsContent value="itinerary">
-          <ItineraryBuilder trip={currentTrip} />
+          <ItineraryBuilder trip={mergedTrip} />
         </TabsContent>
 
         <TabsContent value="budget">
           <div className="space-y-6">
             <BudgetTracker
-              tripId={currentTrip.id}
+              tripId={mergedTrip.id}
               showActions={true}
               className="max-w-2xl"
             />

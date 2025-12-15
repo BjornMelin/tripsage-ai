@@ -217,7 +217,8 @@ describe("POST /api/jobs/memory-sync", () => {
     const result = await response.json();
 
     expect(response.status).toBe(401);
-    expect(result.error).toBe("invalid qstash signature");
+    expect(result.error).toBe("unauthorized");
+    expect(result.reason).toBe("Invalid Upstash signature");
   });
 
   it("rejects invalid job payload", async () => {

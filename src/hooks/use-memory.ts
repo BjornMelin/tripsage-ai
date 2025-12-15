@@ -21,7 +21,8 @@ import type {
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
 import { type AppError, handleApiError } from "@/lib/api/error-types";
-import { queryKeys, staleTimes } from "@/lib/query-keys";
+import { staleTimes } from "@/lib/query/config";
+import { queryKeys } from "@/lib/query-keys";
 
 /**
  * Hook for fetching user memory context.

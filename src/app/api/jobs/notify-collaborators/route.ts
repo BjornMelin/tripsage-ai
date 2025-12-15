@@ -5,49 +5,13 @@
 import "server-only";
 
 import { notifyJobSchema } from "@schemas/webhooks";
-import { Receiver } from "@upstash/qstash";
 import { NextResponse } from "next/server";
-import {
-  errorResponse,
-  unauthorizedResponse,
-  validateSchema,
-} from "@/lib/api/route-helpers";
-import { getServerEnvVar, getServerEnvVarWithFallback } from "@/lib/env/server";
+import { errorResponse, validateSchema } from "@/lib/api/route-helpers";
 import { tryReserveKey } from "@/lib/idempotency/redis";
 import { sendCollaboratorNotifications } from "@/lib/notifications/collaborators";
 import { pushToDLQ } from "@/lib/qstash/dlq";
-import { emitOperationalAlert } from "@/lib/telemetry/alerts";
+import { getQstashReceiver, verifyQstashRequest } from "@/lib/qstash/receiver";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
-
-/**
- * Creates a QStash receiver for webhook signature verification.
- *
- * Logs a warning if QSTASH_NEXT_SIGNING_KEY is not set, as this
- * could cause issues during key rotation.
- *
- * @return QStash receiver instance.
- */
-function getQstashReceiver(): Receiver {
-  const current = getServerEnvVar("QSTASH_CURRENT_SIGNING_KEY") as string;
-  const next = getServerEnvVarWithFallback("QSTASH_NEXT_SIGNING_KEY", "");
-
-  if (!next) {
-    // Emit operational alert about fallback to help operators during key rotation
-    emitOperationalAlert("qstash.next_signing_key_missing", {
-      attributes: {
-        "config.current_key_set": true,
-        "config.next_key_set": false,
-        "docs.url": "https://upstash.com/docs/qstash/howto/signature-validation",
-      },
-      severity: "warning",
-    });
-  }
-
-  return new Receiver({
-    currentSigningKey: current,
-    nextSigningKey: next || current,
-  });
-}
 
 /** Max retries configured for QStash (per ADR-0048) */
 const MAX_RETRIES = 5;
@@ -89,7 +53,7 @@ export async function POST(req: Request) {
       let jobPayload: unknown = null;
 
       try {
-        let receiver: Receiver;
+        let receiver: ReturnType<typeof getQstashReceiver>;
         try {
           receiver = getQstashReceiver();
         } catch (error) {
@@ -102,14 +66,8 @@ export async function POST(req: Request) {
           });
         }
 
-        const sig = req.headers.get("Upstash-Signature");
-        const body = await req.clone().text();
-        jobPayload = body;
-        const url = req.url;
-        const valid = sig
-          ? await receiver.verify({ body, signature: sig, url })
-          : false;
-        if (!valid) {
+        const verified = await verifyQstashRequest(req, receiver);
+        if (!verified.ok) {
           try {
             const forwardedFor = req.headers.get("x-forwarded-for");
             const ip =
@@ -117,18 +75,20 @@ export async function POST(req: Request) {
               req.headers.get("cf-connecting-ip") ??
               undefined;
             span.addEvent("unauthorized_attempt", {
-              hasSignature: Boolean(sig),
+              hasSignature: verified.reason !== "missing_signature",
               ip,
-              reason: "invalid_signature",
-              url,
+              reason: verified.reason,
+              url: req.url,
             });
           } catch (spanError) {
             span.recordException(spanError as Error);
           }
-          return unauthorizedResponse();
+          return verified.response;
         }
 
-        const json = JSON.parse(body) as unknown;
+        jobPayload = verified.body;
+
+        const json = JSON.parse(verified.body) as unknown;
         jobPayload = json; // Store parsed form for DLQ/validation
         const validation = validateSchema(notifyJobSchema, json);
         if ("error" in validation) {

@@ -1,11 +1,11 @@
 /** @vitest-environment node */
 
+import type { UiTrip } from "@schemas/trips";
 import { describe, expect, it } from "vitest";
-import type { Trip } from "@/stores/trip-store";
 import { tripToCalendarEvents } from "../trip-export";
 
 describe("trip-export", () => {
-  const mockTrip: Trip = {
+  const mockTrip: UiTrip = {
     currency: "USD",
     description: "A test trip",
     destinations: [
@@ -73,7 +73,7 @@ describe("trip-export", () => {
     });
 
     it("handles trip without dates", () => {
-      const tripWithoutDates: Trip = {
+      const tripWithoutDates: UiTrip = {
         ...mockTrip,
         endDate: undefined,
         startDate: undefined,
@@ -84,7 +84,7 @@ describe("trip-export", () => {
     });
 
     it("handles destinations without dates", () => {
-      const tripWithUndatedDestinations: Trip = {
+      const tripWithUndatedDestinations: UiTrip = {
         ...mockTrip,
         destinations: [
           {
@@ -100,7 +100,7 @@ describe("trip-export", () => {
     });
 
     it("handles empty destinations array", () => {
-      const tripWithNoDestinations: Trip = {
+      const tripWithNoDestinations: UiTrip = {
         ...mockTrip,
         destinations: [],
       };
@@ -110,7 +110,7 @@ describe("trip-export", () => {
     });
 
     it("handles destinations without activities", () => {
-      const tripWithoutActivities: Trip = {
+      const tripWithoutActivities: UiTrip = {
         ...mockTrip,
         destinations: [
           {
@@ -128,7 +128,7 @@ describe("trip-export", () => {
     });
 
     it("handles trip with only start date", () => {
-      const tripWithOnlyStart: Trip = {
+      const tripWithOnlyStart: UiTrip = {
         ...mockTrip,
         endDate: undefined,
       };
