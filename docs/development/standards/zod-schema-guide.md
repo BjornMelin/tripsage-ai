@@ -112,6 +112,70 @@ const futureDate = refinedSchemas.futureDate.parse("2025-12-31T12:00:00Z");
 const password = refinedSchemas.strongPassword.parse("Test123!Password");
 ```
 
+## Zod v4.2.0 Features
+
+New features available in Zod v4.2.0+ for improved schema expressiveness.
+
+### z.looseRecord() - Flexible Records
+
+Use `z.looseRecord()` for records that explicitly allow additional properties:
+
+```typescript
+// Metadata, configuration, or extensible data
+metadata: z.looseRecord(z.string(), z.unknown()).optional()
+
+// Prefer over z.record() when semantics of "extra properties allowed" matters
+// Both are functionally equivalent, but looseRecord is more explicit
+```
+
+### z.xor() - Mutually Exclusive Unions
+
+Use `z.xor()` when exactly one schema must match (not zero, not multiple):
+
+```typescript
+// WebSocket messages - exactly one type per message
+const wsMessage = z.xor([
+  statusUpdateSchema,
+  taskUpdateSchema,
+  resourceUpdateSchema,
+]);
+
+// Unlike z.union(), z.xor() enforces mutual exclusivity
+// Use for discriminated-like unions without a common discriminator field
+```
+
+### .toJSONSchema() - Schema Export
+
+Convert Zod schemas to JSON Schema for documentation:
+
+```typescript
+import { toJsonSchema } from "@/lib/schema/json-schema";
+
+const jsonSchema = toJsonSchema(mySchema);
+// Use for OpenAPI docs, external consumers, or SDK generation
+
+// For multiple schemas:
+import { toJsonSchemaRegistry } from "@/lib/schema/json-schema";
+const registry = toJsonSchemaRegistry({ User: userSchema, Trip: tripSchema });
+```
+
+### z.fromJSONSchema() - Schema Import
+
+Convert JSON Schema to Zod schemas (useful for external API integration):
+
+```typescript
+const jsonSchema = {
+  type: "object",
+  properties: {
+    name: { type: "string" },
+    age: { type: "number" }
+  },
+  required: ["name"]
+};
+
+const zodSchema = z.fromJSONSchema(jsonSchema);
+```
+
 ## Form Schema Patterns
 
 Schemas for React Hook Form integration with Zod v4.

@@ -14,7 +14,7 @@ const USER_RESPONSE_SCHEMA = z.object({
   email: z.email(),
   id: z.uuid(),
   isActive: z.boolean(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
+  metadata: z.looseRecord(z.string(), z.unknown()).optional(),
   name: z.string().min(1),
   updatedAt: z.iso.datetime(),
 });
@@ -480,7 +480,7 @@ describe("API client with Zod Validation", () => {
         email: z.email(),
         id: z.uuid(),
         isActive: z.boolean(),
-        metadata: z.record(z.string(), z.unknown()).optional(),
+        metadata: z.looseRecord(z.string(), z.unknown()).optional(),
         name: z.string().min(1),
         updatedAt: z.iso.datetime(),
       });

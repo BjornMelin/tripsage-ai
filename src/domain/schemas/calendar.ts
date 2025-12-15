@@ -81,8 +81,8 @@ export type EventAttendee = z.infer<typeof eventAttendeeSchema>;
 /** Zod schema for Google Calendar conference data. */
 export const conferenceDataSchema = z.object({
   conferenceId: z.string().optional(),
-  conferenceSolution: z.record(z.string(), z.unknown()).optional(),
-  entryPoints: z.array(z.record(z.string(), z.unknown())).optional(),
+  conferenceSolution: z.looseRecord(z.string(), z.unknown()).optional(),
+  entryPoints: z.array(z.looseRecord(z.string(), z.unknown())).optional(),
   notes: z.string().optional(),
 });
 /** TypeScript type for conference data. */
@@ -105,7 +105,7 @@ export const calendarEventSchema = z.object({
   colorId: z.string().optional(),
   conferenceData: conferenceDataSchema.optional(),
   created: z.date().optional(),
-  creator: z.record(z.string(), z.unknown()).optional(),
+  creator: z.looseRecord(z.string(), z.unknown()).optional(),
   description: z.string().max(8192).optional(),
   end: eventDateTimeSchema,
   endTimeUnspecified: z.boolean().default(false),
@@ -116,7 +116,7 @@ export const calendarEventSchema = z.object({
   iCalUID: z.string().optional(),
   id: z.string().optional(),
   location: z.string().max(1024).optional(),
-  organizer: z.record(z.string(), z.unknown()).optional(),
+  organizer: z.looseRecord(z.string(), z.unknown()).optional(),
   originalStartTime: eventDateTimeSchema.optional(),
   recurrence: z.array(z.string()).optional(),
   recurringEventId: z.string().optional(),
@@ -131,7 +131,7 @@ export const calendarEventSchema = z.object({
   status: eventStatusSchema.default("confirmed"),
   summary: z.string().min(1).max(1024),
   transparency: z.enum(["opaque", "transparent"]).default("opaque"),
-  travelMetadata: z.record(z.string(), z.unknown()).optional(),
+  travelMetadata: z.looseRecord(z.string(), z.unknown()).optional(),
   updated: z.date().optional(),
   visibility: eventVisibilitySchema.default("default"),
 });
@@ -162,7 +162,7 @@ export const createEventRequestSchema = z.object({
   summary: z.string().min(1).max(1024),
   timeZone: z.string().optional(),
   transparency: z.enum(["opaque", "transparent"]).default("opaque"),
-  travelMetadata: z.record(z.string(), z.unknown()).optional(),
+  travelMetadata: z.looseRecord(z.string(), z.unknown()).optional(),
   visibility: eventVisibilitySchema.default("default"),
 });
 /** TypeScript type for create event requests. */
@@ -185,7 +185,7 @@ export const updateEventRequestSchema = z.object({
   summary: z.string().min(1).max(1024).optional(),
   timeZone: z.string().optional(),
   transparency: z.enum(["opaque", "transparent"]).optional(),
-  travelMetadata: z.record(z.string(), z.unknown()).optional(),
+  travelMetadata: z.looseRecord(z.string(), z.unknown()).optional(),
   visibility: eventVisibilitySchema.optional(),
 });
 /** TypeScript type for update event requests. */
@@ -196,7 +196,7 @@ export const calendarListEntrySchema = z.object({
   accessRole: z.string().default("reader"),
   backgroundColor: z.string().optional(),
   colorId: z.string().optional(),
-  conferenceProperties: z.record(z.string(), z.unknown()).optional(),
+  conferenceProperties: z.looseRecord(z.string(), z.unknown()).optional(),
   defaultReminders: z.array(eventReminderSchema).default([]),
   deleted: z.boolean().default(false),
   description: z.string().optional(),
@@ -206,7 +206,7 @@ export const calendarListEntrySchema = z.object({
   id: z.string(),
   kind: z.literal("calendar#calendarListEntry").default("calendar#calendarListEntry"),
   location: z.string().optional(),
-  notificationSettings: z.record(z.string(), z.unknown()).optional(),
+  notificationSettings: z.looseRecord(z.string(), z.unknown()).optional(),
   primary: z.boolean().default(false),
   selected: z.boolean().default(true),
   summary: z.string(),
@@ -256,8 +256,8 @@ export type FreeBusyRequest = z.infer<typeof freeBusyRequestSchema>;
 
 /** Zod schema for Google Calendar free/busy responses. */
 export const freeBusyResponseSchema = z.object({
-  calendars: z.record(z.string(), z.record(z.string(), z.unknown())).default({}),
-  groups: z.record(z.string(), z.unknown()).default({}),
+  calendars: z.record(z.string(), z.looseRecord(z.string(), z.unknown())).default({}),
+  groups: z.looseRecord(z.string(), z.unknown()).default({}),
   kind: z.literal("calendar#freeBusy").default("calendar#freeBusy"),
   timeMax: z.date(),
   timeMin: z.date(),

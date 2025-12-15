@@ -59,7 +59,7 @@ export const amadeusHotelOfferSchema = z.strictObject({
     })
     .optional(),
   id: z.string(),
-  policies: z.record(z.string(), z.unknown()).optional(),
+  policies: z.looseRecord(z.string(), z.unknown()).optional(),
   price: amadeusOfferPriceSchema,
   room: z
     .strictObject({

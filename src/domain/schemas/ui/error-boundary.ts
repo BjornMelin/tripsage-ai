@@ -31,7 +31,7 @@ export const routeErrorPropsSchema = z.object({
   error: z.instanceof(Error),
   pathname: z.string().optional(),
   reset: z.function(),
-  searchParams: z.record(z.string(), z.unknown()).optional(),
+  searchParams: z.looseRecord(z.string(), z.unknown()).optional(),
 });
 export type RouteErrorProps = z.infer<typeof routeErrorPropsSchema>;
 
