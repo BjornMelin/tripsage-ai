@@ -7,7 +7,7 @@ import "server-only";
 import type { MfaFactor } from "@schemas/mfa";
 import { redirect } from "next/navigation";
 import { MfaPanel } from "@/components/features/security/mfa-panel";
-import { getErrorMessage } from "@/lib/errors/get-error-message";
+import { getUnknownErrorMessage } from "@/lib/errors/get-unknown-error-message";
 import { ROUTES } from "@/lib/routes";
 import { listFactors, refreshAal } from "@/lib/security/mfa";
 import { getCurrentUser } from "@/lib/supabase/factory";
@@ -36,7 +36,10 @@ export default async function SecurityPage() {
     aal = aalResult.value;
   } else {
     const reason = aalResult.reason;
-    const message = getErrorMessage(reason, "failed to load MFA assurance level");
+    const message = getUnknownErrorMessage(
+      reason,
+      "failed to load MFA assurance level"
+    );
     loadError = loadError ? `${loadError}\n${message}` : message;
     const safeError = reason instanceof Error ? reason : new Error(String(reason));
     logger.error("failed to refresh MFA assurance level", {
@@ -48,7 +51,7 @@ export default async function SecurityPage() {
     factors = factorsResult.value;
   } else {
     const reason = factorsResult.reason;
-    const message = getErrorMessage(reason, "failed to load MFA factors");
+    const message = getUnknownErrorMessage(reason, "failed to load MFA factors");
     loadError = loadError ? `${loadError}\n${message}` : message;
     const safeError = reason instanceof Error ? reason : new Error(String(reason));
     logger.error("failed to load MFA factors", {
