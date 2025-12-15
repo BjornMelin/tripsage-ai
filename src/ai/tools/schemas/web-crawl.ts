@@ -10,7 +10,7 @@ import { z } from "zod";
 const scrapeOptionsSchema = z
   .strictObject({
     actions: z
-      .array(z.record(z.string(), z.unknown()))
+      .array(z.looseRecord(z.string(), z.unknown()))
       .nullable()
       .describe("Custom scraping actions to perform"),
     formats: z

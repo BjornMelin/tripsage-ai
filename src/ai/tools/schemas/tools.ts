@@ -108,7 +108,7 @@ export type ToolErrorCode = z.infer<typeof toolErrorCodeSchema>;
 export const toolErrorSchema = z.object({
   code: toolErrorCodeSchema,
   message: z.string().min(1),
-  meta: z.record(z.string(), z.unknown()).optional(),
+  meta: z.looseRecord(z.string(), z.unknown()).optional(),
   name: z.literal("ToolError").optional(),
   stack: z.string().optional(),
 });

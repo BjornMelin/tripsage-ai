@@ -80,7 +80,7 @@ const ERROR_MESSAGE_SCHEMA = z.string().min(1, "Error message cannot be empty");
 
 const CHAT_SESSION_INSERT_SCHEMA = z
   .object({
-    metadata: z.record(z.string(), z.unknown()).optional(),
+    metadata: z.looseRecord(z.string(), z.unknown()).optional(),
     title: z.string().optional(),
     // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
     trip_id: z.number().nullable().optional(),

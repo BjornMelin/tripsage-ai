@@ -16,7 +16,7 @@ export const jsonSchema: z.ZodType<Json> = z.union([
   z.number(),
   z.boolean(),
   z.null(),
-  z.record(z.string(), z.unknown()),
+  z.looseRecord(z.string(), z.unknown()),
   z.array(z.unknown()),
 ]) as z.ZodType<Json>;
 

@@ -293,7 +293,7 @@ export const searchHistoryItemSchema = z.object({
       country: z.string().optional(),
     })
     .optional(),
-  params: z.record(z.string(), z.unknown()),
+  params: z.looseRecord(z.string(), z.unknown()),
   resultsCount: z.number().min(0).optional(),
   searchDuration: z.number().min(0).optional(),
   searchType: searchTypeSchema,
@@ -318,7 +318,7 @@ export const savedSearchSchema = z.object({
     })
     .optional(),
   name: z.string().min(1).max(100),
-  params: z.record(z.string(), z.unknown()),
+  params: z.looseRecord(z.string(), z.unknown()),
   searchType: searchTypeSchema,
   tags: z.array(z.string()).default([]),
   updatedAt: TIMESTAMP_SCHEMA,
@@ -348,7 +348,7 @@ export const quickSearchSchema = z.object({
   id: z.string(),
   isVisible: z.boolean().default(true),
   label: z.string().min(1).max(50),
-  params: z.record(z.string(), z.unknown()),
+  params: z.looseRecord(z.string(), z.unknown()),
   searchType: searchTypeSchema,
   sortOrder: z.number().default(0),
 });
@@ -383,7 +383,7 @@ export const searchContextSchema = z.object({
   completedAt: TIMESTAMP_SCHEMA.optional(),
   metrics: searchMetricsSchema.optional(),
   searchId: z.string(),
-  searchParams: z.record(z.string(), z.unknown()),
+  searchParams: z.looseRecord(z.string(), z.unknown()),
   searchType: searchTypeSchema,
   startedAt: TIMESTAMP_SCHEMA,
 });
@@ -392,7 +392,7 @@ export type SearchContext = z.infer<typeof searchContextSchema>;
 
 export const errorDetailsSchema = z.object({
   code: z.string().optional(),
-  details: z.record(z.string(), z.unknown()).optional(),
+  details: z.looseRecord(z.string(), z.unknown()).optional(),
   message: z.string(),
   occurredAt: TIMESTAMP_SCHEMA,
   retryable: z.boolean().default(true),
@@ -590,16 +590,16 @@ export type AuthStoreActions = z.infer<typeof authStoreActionsSchema>;
  */
 export const searchStoreStateSchema = z
   .object({
-    currentParams: z.record(z.string(), z.unknown()).nullable(),
+    currentParams: z.looseRecord(z.string(), z.unknown()).nullable(),
     currentSearchType: z
       .enum(["flight", "accommodation", "activity", "destination"])
       .nullable(),
-    filters: z.record(z.string(), z.unknown()),
+    filters: z.looseRecord(z.string(), z.unknown()),
     pagination: PAGINATION_STATE_SCHEMA.optional(),
     recentSearches: z.array(
       z.object({
         id: z.string(),
-        params: z.record(z.string(), z.unknown()),
+        params: z.looseRecord(z.string(), z.unknown()),
         timestamp: TIMESTAMP_SCHEMA,
         type: z.enum(["flight", "accommodation", "activity", "destination"]),
       })
@@ -616,7 +616,7 @@ export const searchStoreStateSchema = z
         id: z.string(),
         lastUsed: TIMESTAMP_SCHEMA.optional(),
         name: z.string(),
-        params: z.record(z.string(), z.unknown()),
+        params: z.looseRecord(z.string(), z.unknown()),
         type: z.enum(["flight", "accommodation", "activity", "destination"]),
       })
     ),
@@ -724,7 +724,7 @@ export const chatStoreStateSchema = z
           z.object({
             content: z.string(),
             id: UUID_SCHEMA,
-            metadata: z.record(z.string(), z.unknown()).optional(),
+            metadata: z.looseRecord(z.string(), z.unknown()).optional(),
             role: messageRoleSchema,
             timestamp: TIMESTAMP_SCHEMA,
           })
@@ -901,7 +901,7 @@ export const budgetStoreStateSchema = z
     ),
     currentBudget: z
       .object({
-        categories: z.record(z.string(), z.unknown()),
+        categories: z.looseRecord(z.string(), z.unknown()),
         currency: primitiveSchemas.isoCurrency,
         expenses: z.array(z.unknown()),
         spent: NON_NEGATIVE_NUMBER_SCHEMA,

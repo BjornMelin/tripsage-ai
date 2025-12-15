@@ -15,8 +15,8 @@ import { primitiveSchemas } from "./registry";
  */
 export const webhookPayloadSchema = z.object({
   occurredAt: primitiveSchemas.isoDateTime.optional(),
-  oldRecord: z.record(z.string(), z.unknown()).nullable().default(null),
-  record: z.record(z.string(), z.unknown()).nullable(),
+  oldRecord: z.looseRecord(z.string(), z.unknown()).nullable().default(null),
+  record: z.looseRecord(z.string(), z.unknown()).nullable(),
   schema: z.string().optional(),
   table: z.string().min(1),
   type: z.enum(["INSERT", "UPDATE", "DELETE"]),
@@ -48,7 +48,7 @@ export const memorySyncJobSchema = z.object({
       .array(
         z.object({
           content: z.string(),
-          metadata: z.record(z.string(), z.unknown()).optional(),
+          metadata: z.looseRecord(z.string(), z.unknown()).optional(),
           role: z.enum(["user", "assistant", "system"]),
           timestamp: primitiveSchemas.isoDateTime,
         })

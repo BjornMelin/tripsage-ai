@@ -15,14 +15,14 @@ import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 const scrapeOptionsSchema = z
   .object({
-    actions: z.array(z.record(z.string(), z.unknown())).optional(),
+    actions: z.array(z.looseRecord(z.string(), z.unknown())).optional(),
     formats: z
       .array(
         z.union([
           z.enum(["markdown", "html", "links", "screenshot", "summary"]),
           z.object({
             prompt: z.string().optional(),
-            schema: z.record(z.string(), z.unknown()).optional(),
+            schema: z.looseRecord(z.string(), z.unknown()).optional(),
             type: z.literal("json"),
           }),
         ])
