@@ -10,6 +10,25 @@ vi.mock("@/lib/supabase", () => ({
   getBrowserClient: vi.fn(),
 }));
 
+// Mock useZodForm to use standard useForm to avoid async validation issues in tests
+vi.mock("@/hooks/use-zod-form", async () => {
+  const { useForm } = await import("react-hook-form");
+  const { zodResolver } = await import("@hookform/resolvers/zod");
+  return {
+    useZodForm: ({
+      schema,
+      defaultValues,
+    }: {
+      schema: unknown;
+      defaultValues: unknown;
+      mode?: string;
+    }) => {
+      // biome-ignore lint/suspicious/noExplicitAny: test mock needs flexible typing
+      return useForm({ defaultValues: defaultValues as any, resolver: zodResolver(schema as any) });
+    },
+  };
+});
+
 const TOAST_SPY = vi.fn();
 vi.mock("@/components/ui/use-toast", () => ({
   useToast: () => ({ toast: TOAST_SPY }),
