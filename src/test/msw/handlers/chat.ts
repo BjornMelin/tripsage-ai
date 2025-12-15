@@ -54,6 +54,28 @@ export const chatHandlers = [
     });
   }),
 
+  // POST /api/ai/stream - AI streaming endpoint for demo
+  http.post(`${BASE_URL}/api/ai/stream`, () => {
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(
+          encoder.encode('data: {"type":"text","text":"Hello from AI"}\n\n')
+        );
+        controller.close();
+      },
+    });
+    return new HttpResponse(stream, {
+      headers: { "Content-Type": "text/event-stream" },
+      status: 200,
+    });
+  }),
+
+  // POST /api/telemetry/ai-demo - Telemetry for AI demo
+  http.post(`${BASE_URL}/api/telemetry/ai-demo`, () => {
+    return HttpResponse.json({ success: true });
+  }),
+
   // fallback relative handlers
   http.post("/api/chat/stream", () => {
     return new HttpResponse("streamed mock content", {
@@ -66,5 +88,23 @@ export const chatHandlers = [
       headers: { "Content-Type": "text/plain" },
       status: 200,
     });
+  }),
+  http.post("/api/ai/stream", () => {
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(
+          encoder.encode('data: {"type":"text","text":"Hello from AI"}\n\n')
+        );
+        controller.close();
+      },
+    });
+    return new HttpResponse(stream, {
+      headers: { "Content-Type": "text/event-stream" },
+      status: 200,
+    });
+  }),
+  http.post("/api/telemetry/ai-demo", () => {
+    return HttpResponse.json({ success: true });
   }),
 ];

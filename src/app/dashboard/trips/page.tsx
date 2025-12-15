@@ -90,8 +90,26 @@ const isInvalidTripDateRange = (
   endDate: Date | null
 ): boolean => !!startDate && !!endDate && endDate.getTime() < startDate.getTime();
 
+type TripStatus = "draft" | "upcoming" | "active" | "completed";
 type SortOption = "name" | "date" | "budget" | "destinations";
 type FilterOption = "all" | "draft" | "upcoming" | "active" | "completed";
+
+const getTripStatus = (trip: Trip, nowTs: number): TripStatus => {
+  const startDate = parseTripDate(trip.startDate, { context: "TripsPage" });
+  const endDate = parseTripDate(trip.endDate, { context: "TripsPage" });
+  const isInvalidRange = isInvalidTripDateRange(startDate, endDate);
+
+  if (isInvalidRange || !startDate || !endDate) {
+    return "draft";
+  }
+  if (startDate.getTime() > nowTs) {
+    return "upcoming";
+  }
+  if (endDate.getTime() < nowTs) {
+    return "completed";
+  }
+  return "active";
+};
 
 /**
  * Renders the trips management dashboard with filtering, sorting, and view
@@ -141,30 +159,8 @@ export default function TripsPage() {
     // Apply status filter
     if (filterBy !== "all") {
       filtered = filtered.filter((trip: Trip) => {
-        const startDate = parseTripDate(trip.startDate, { context: "TripsPage" });
-        const endDate = parseTripDate(trip.endDate, { context: "TripsPage" });
-        const isInvalidRange = isInvalidTripDateRange(startDate, endDate);
-
-        switch (filterBy) {
-          case "draft":
-            return isInvalidRange || !startDate || !endDate;
-          case "upcoming":
-            if (isInvalidRange || !startDate || !endDate) return false;
-            return startDate.getTime() > nowTs;
-          case "active":
-            if (isInvalidRange) return false;
-            return (
-              !!startDate &&
-              !!endDate &&
-              startDate.getTime() <= nowTs &&
-              endDate.getTime() >= nowTs
-            );
-          case "completed":
-            if (isInvalidRange || !startDate || !endDate) return false;
-            return endDate.getTime() < nowTs;
-          default:
-            return true;
-        }
+        const status = getTripStatus(trip, nowTs);
+        return status === filterBy;
       });
     }
 
@@ -243,24 +239,11 @@ export default function TripsPage() {
       return { active: 0, completed: 0, draft: 0, upcoming: 0 };
     }
 
-    const now = new Date();
+    const nowTs = Date.now();
     return tripsForCounts.reduce(
       (counts: Record<string, number>, trip: Trip) => {
-        const startDate = parseTripDate(trip.startDate, { context: "TripsPage" });
-        const endDate = parseTripDate(trip.endDate, { context: "TripsPage" });
-        const nowTs = now.getTime();
-        const isInvalidRange = isInvalidTripDateRange(startDate, endDate);
-
-        if (isInvalidRange || !startDate || !endDate) {
-          counts.draft++;
-        } else if (startDate.getTime() > nowTs) {
-          counts.upcoming++;
-        } else if (endDate.getTime() < nowTs) {
-          counts.completed++;
-        } else {
-          counts.active++;
-        }
-
+        const status = getTripStatus(trip, nowTs);
+        counts[status]++;
         return counts;
       },
       { active: 0, completed: 0, draft: 0, upcoming: 0 }

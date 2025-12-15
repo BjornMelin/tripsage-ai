@@ -3,7 +3,6 @@
  * over Sonner. Maintains the same interface as the previous Radix-based toast.
  */
 
-import type { ReactNode } from "react";
 import { toast as sonnerToast } from "sonner";
 
 type ToastVariant = "default" | "destructive";
@@ -12,10 +11,10 @@ type ToastVariant = "default" | "destructive";
  * Props for creating a toast notification.
  */
 interface ToastProps {
-  /** Primary toast title */
-  title?: ReactNode;
-  /** Secondary description text */
-  description?: ReactNode;
+  /** Primary toast title (must be a string for Sonner compatibility) */
+  title?: string;
+  /** Secondary description text (must be a string for Sonner compatibility) */
+  description?: string;
   /** Visual variant - "destructive" renders as error toast */
   variant?: ToastVariant;
   /** Optional action button */
@@ -33,8 +32,8 @@ interface ToastReturn {
   id: string | number;
   /** Dismiss this specific toast */
   dismiss: () => void;
-  /** Update this toast with new props */
-  update: (props: ToastProps) => void;
+  /** Update this toast with new props; returns new toast with updated ID */
+  update: (props: ToastProps) => ToastReturn;
 }
 
 /**
@@ -75,7 +74,7 @@ function toast(props: ToastProps): ToastReturn {
     id,
     update: (next: ToastProps) => {
       sonnerToast.dismiss(id);
-      toast(next);
+      return toast(next);
     },
   };
 }
