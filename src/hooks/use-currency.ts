@@ -17,7 +17,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect } from "react";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
 import { type AppError, handleApiError, isApiError } from "@/lib/api/error-types";
-import { staleTimes } from "@/lib/query-keys";
+import { queryKeys, staleTimes } from "@/lib/query-keys";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { useCurrencyStore } from "@/stores/currency-store";
 
@@ -164,7 +164,7 @@ export function useFetchExchangeRates() {
         throw handleApiError(error);
       }
     },
-    queryKey: ["currency", "rates"],
+    queryKey: queryKeys.currency.rates(),
     refetchInterval: 60 * 60 * 1000, // Refresh rates every hour
     retry: shouldRetryCurrencyQuery,
     staleTime: staleTimes.currency,
@@ -209,7 +209,7 @@ export function useFetchExchangeRate(targetCurrency: CurrencyCode) {
         throw handleApiError(error);
       }
     },
-    queryKey: ["currency", "rate", targetCurrency],
+    queryKey: queryKeys.currency.rate(targetCurrency),
     retry: shouldRetryCurrencyQuery,
     staleTime: staleTimes.currency,
     throwOnError: false,

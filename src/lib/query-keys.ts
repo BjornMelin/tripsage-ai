@@ -4,6 +4,10 @@
  */
 
 import type { TimeWindow } from "@schemas/dashboard";
+import {
+  cacheTimes as baseCacheTimes,
+  staleTimes as baseStaleTimes,
+} from "@/lib/query/config";
 
 export const queryKeys = {
   // Agent Status & Monitoring
@@ -41,6 +45,14 @@ export const queryKeys = {
     stats: (userId: string) => [...queryKeys.chat.all(), "stats", userId] as const,
   },
 
+  // Currency (external exchange rate data)
+  currency: {
+    all: () => ["currency"] as const,
+    rate: (targetCurrency: string) =>
+      [...queryKeys.currency.all(), "rate", targetCurrency] as const,
+    rates: () => [...queryKeys.currency.all(), "rates"] as const,
+  },
+
   // Dashboard & Metrics
   dashboard: {
     all: () => ["dashboard"] as const,
@@ -50,7 +62,6 @@ export const queryKeys = {
 
   // External API Data
   external: {
-    currency: (from: string, to: string) => ["external", "currency", from, to] as const,
     deals: (category?: string) => ["external", "deals", { category }] as const,
     upcomingFlights: (params?: Record<string, unknown>) =>
       ["external", "upcoming-flights", { params }] as const,
@@ -161,39 +172,28 @@ export function createQueryKey<T extends readonly unknown[]>(
 }
 
 /**
- * Predefined stale times for different types of data
+ * Predefined stale times for different types of data.
+ * Core values from @/lib/query/config, extended with domain-specific keys.
  */
 export const staleTimes = {
+  ...baseStaleTimes,
+  // Additional domain-specific stale times
   categories: 60 * 60 * 1000, // 1 hour
-  chat: 1 * 60 * 1000, // 1 minute
-
-  // Very stable data
   configuration: 60 * 60 * 1000, // 1 hour
-  currency: 30 * 60 * 1000, // 30 minutes
-
-  // Dashboard metrics - fast changing
   dashboard: 30 * 1000, // 30 seconds
-
   files: 5 * 60 * 1000, // 5 minutes
-  // Fast changing data
   realtime: 30 * 1000, // 30 seconds
   search: 2 * 60 * 1000, // 2 minutes
   stats: 15 * 60 * 1000, // 15 minutes
-
-  // Slow changing data
   suggestions: 15 * 60 * 1000, // 15 minutes
-
-  // Medium changing data
-  trips: 5 * 60 * 1000, // 5 minutes
   user: 5 * 60 * 1000, // 5 minutes
 } as const;
 
 /**
- * Cache time (gcTime) configurations
+ * Cache time (gcTime) configurations.
+ * Core values from @/lib/query/config, extended with veryLong.
  */
 export const cacheTimes = {
-  long: 30 * 60 * 1000, // 30 minutes
-  medium: 15 * 60 * 1000, // 15 minutes
-  short: 5 * 60 * 1000, // 5 minutes
+  ...baseCacheTimes,
   veryLong: 60 * 60 * 1000, // 1 hour
 } as const;
