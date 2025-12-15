@@ -59,11 +59,11 @@ const PROVIDER_DISPLAY_NAMES: Record<AllowedService, string> = {
 
 const SUPPORTED_SET: ReadonlySet<AllowedService> = new Set(SUPPORTED);
 
-function IsAllowedService(value: string): value is AllowedService {
+function isAllowedService(value: string): value is AllowedService {
   return SUPPORTED_SET.has(value as AllowedService);
 }
 
-function ToTitleCaseIdentifier(value: string): string {
+function toTitleCaseIdentifier(value: string): string {
   return value
     .trim()
     .split(/[-_\s]+/g)
@@ -72,10 +72,10 @@ function ToTitleCaseIdentifier(value: string): string {
     .join(" ");
 }
 
-function GetProviderDisplayName(providerId: string): string {
+function getProviderDisplayName(providerId: string): string {
   const normalized = providerId.trim().toLowerCase();
-  if (IsAllowedService(normalized)) return PROVIDER_DISPLAY_NAMES[normalized];
-  return ToTitleCaseIdentifier(providerId) || providerId;
+  if (isAllowedService(normalized)) return PROVIDER_DISPLAY_NAMES[normalized];
+  return toTitleCaseIdentifier(providerId) || providerId;
 }
 
 type ApiKeySummary = {
@@ -294,7 +294,7 @@ export function ApiKeysContent() {
                   <Select
                     value={service}
                     onValueChange={(v) => {
-                      if (IsAllowedService(v)) {
+                      if (isAllowedService(v)) {
                         form.setValue("service", v, {
                           shouldDirty: true,
                           shouldValidate: true,
@@ -308,7 +308,7 @@ export function ApiKeysContent() {
                     <SelectContent>
                       {SUPPORTED.map((s) => (
                         <SelectItem key={s} value={s}>
-                          {GetProviderDisplayName(s)}
+                          {getProviderDisplayName(s)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -360,7 +360,7 @@ export function ApiKeysContent() {
                 return (
                   <div key={s} className="flex items-center justify-between py-2">
                     <div className="space-y-1">
-                      <div className="font-medium">{GetProviderDisplayName(s)}</div>
+                      <div className="font-medium">{getProviderDisplayName(s)}</div>
                       <div className="text-sm text-muted-foreground">
                         {present && row?.createdAt
                           ? `Added: ${new Date(row.createdAt).toLocaleString()}`

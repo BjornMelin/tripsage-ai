@@ -25,17 +25,26 @@ const AGENT_COLORS = {
   error: "text-red-700",
 } as const;
 
+/** Unified connection status for UI state management. */
 type AgentConnectionStatus = "connected" | "disconnected" | "error";
 
+/** Button labels mapped to each connection status. */
 const REALTIME_BUTTON_LABEL: Record<AgentConnectionStatus, string> = {
   connected: "Pause Realtime",
   disconnected: "Resume Realtime",
   error: "Reconnect",
 } as const;
 
+/**
+ * Derives unified connection status from websocket state.
+ *
+ * @param isConnected - Whether websocket is actively subscribed
+ * @param connectionStatus - Raw connection status from websocket hook
+ * @returns Unified status for UI consumption
+ */
 function getConnectionStatus(
   isConnected: boolean,
-  connectionStatus: string
+  connectionStatus: "subscribed" | "error" | "disconnected" | (string & {})
 ): AgentConnectionStatus {
   if (isConnected) return "connected";
   if (connectionStatus === "error") return "error";
