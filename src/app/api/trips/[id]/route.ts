@@ -21,12 +21,10 @@ import {
   requireUserId,
   validateSchema,
 } from "@/lib/api/route-helpers";
-import { bumpTag } from "@/lib/cache/tags";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { deleteSingle, getSingle, updateSingle } from "@/lib/supabase/typed-helpers";
 import { mapDbTripToUi } from "@/lib/trips/mappers";
-
-const TRIPS_CACHE_TAG = "trips";
+import { invalidateUserTripsCache } from "../_handler";
 
 /**
  * Maps validated trip update payload from camelCase API contract
@@ -141,7 +139,7 @@ async function updateTripById(
     });
   }
 
-  await bumpTag(TRIPS_CACHE_TAG);
+  await invalidateUserTripsCache(userId);
 
   // Parse through schema to ensure type compatibility with mapDbTripToUi
   const row = tripsRowSchema.parse(data);
@@ -178,7 +176,7 @@ async function deleteTripById(
     return notFoundResponse("Trip");
   }
 
-  await bumpTag(TRIPS_CACHE_TAG);
+  await invalidateUserTripsCache(userId);
   return new Response(null, { status: 204 });
 }
 

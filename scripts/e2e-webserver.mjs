@@ -19,7 +19,7 @@ const supabaseUrl = new URL(
 );
 const debugAuthRequests = process.env.E2E_DEBUG_AUTH === "1";
 
-const supabasePort = Number.parseInt(supabaseUrl.port || "80", 10);
+const supabasePort = Number.parseInt(supabaseUrl.port || "54329", 10);
 console.error(`[e2e-webserver] Mock Supabase Auth on ${supabaseUrl.origin}`);
 
 function sendJson(res, status, payload) {

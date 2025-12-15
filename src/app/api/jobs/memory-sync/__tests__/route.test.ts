@@ -130,6 +130,7 @@ vi.mock("@/lib/telemetry/span", () => ({
   sanitizeAttributes: vi.fn((attrs) => attrs),
   withTelemetrySpan: vi.fn((_name, _opts, fn) => {
     const span = {
+      addEvent: vi.fn(),
       end: vi.fn(),
       recordException: vi.fn(),
       setAttribute: vi.fn(),

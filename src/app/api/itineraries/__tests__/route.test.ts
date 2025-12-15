@@ -12,14 +12,19 @@ import {
 import { setupUpstashMocks } from "@/test/upstash/redis-mock";
 import { GET, POST } from "../route";
 
-vi.mock("next/headers", () => ({
-  cookies: vi.fn(() =>
+// Hoist the cookies mock so it's defined before modules that read cookies
+const COOKIES_MOCK = vi.hoisted(() =>
+  vi.fn(() =>
     Promise.resolve(
       getMockCookiesForTest({
         "sb-access-token": "test-token",
       })
     )
-  ),
+  )
+);
+
+vi.mock("next/headers", () => ({
+  cookies: COOKIES_MOCK,
 }));
 
 type ItineraryItemsRow = Database["public"]["Tables"]["itinerary_items"]["Row"];

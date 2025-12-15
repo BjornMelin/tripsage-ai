@@ -22,32 +22,32 @@ function buildGlobalPopularRoutes(): PopularRoute[] {
   const nextYear = new Date().getUTCFullYear() + 1;
   return [
     {
-      date: `May 28, ${nextYear}`,
+      date: `${nextYear}-05-28`,
       destination: "London",
       origin: "New York",
       price: 456,
     },
     {
-      date: `Jun 15, ${nextYear}`,
+      date: `${nextYear}-06-15`,
       destination: "Tokyo",
       origin: "Los Angeles",
       price: 789,
     },
-    { date: `Jun 8, ${nextYear}`, destination: "Paris", origin: "Chicago", price: 567 },
+    { date: `${nextYear}-06-08`, destination: "Paris", origin: "Chicago", price: 567 },
     {
-      date: `Jun 22, ${nextYear}`,
+      date: `${nextYear}-06-22`,
       destination: "Barcelona",
       origin: "Miami",
       price: 623,
     },
     {
-      date: `Jul 10, ${nextYear}`,
+      date: `${nextYear}-07-10`,
       destination: "Amsterdam",
       origin: "Seattle",
       price: 749,
     },
     {
-      date: `Jul 18, ${nextYear}`,
+      date: `${nextYear}-07-18`,
       destination: "Sydney",
       origin: "Dallas",
       price: 999,

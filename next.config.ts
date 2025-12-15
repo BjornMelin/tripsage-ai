@@ -158,7 +158,7 @@ const nextConfig: NextConfig = {
   // Set root to current directory (where pnpm-lock.yaml is located)
   // Note: For non-monorepo setups, this is the default but explicitly set for clarity
   turbopack: {
-    root: process.cwd(),
+    root: ".",
   },
 };
 
