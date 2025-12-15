@@ -353,7 +353,7 @@ describe("Google API Client", () => {
       expect(mockFetch).toHaveBeenCalledWith(
         "https://places.googleapis.com/v1/places:searchNearby",
         expect.objectContaining({
-          // Body order matches implementation: locationRestriction, maxResultCount, then includedTypes
+          // Body order matches implementation: locationRestriction, maxResultCount, then includedTypes (added conditionally)
           body: JSON.stringify({
             locationRestriction: {
               circle: {

@@ -83,7 +83,17 @@ export const POST = withApiGuards({
     });
   }
 
-  const rawData = await response.json();
+  // Parse JSON with error handling for malformed responses
+  let rawData: unknown;
+  try {
+    rawData = await response.json();
+  } catch {
+    return errorResponse({
+      error: "upstream_parse_error",
+      reason: "Invalid JSON from Places API",
+      status: 502,
+    });
+  }
 
   // Validate upstream response
   const parseResult = upstreamPlacesSearchResponseSchema.safeParse(rawData);
