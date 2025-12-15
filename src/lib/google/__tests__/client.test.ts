@@ -1,25 +1,9 @@
 /** @vitest-environment node */
 
+import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-// Capture fetch arguments via retryWithBackoff mock
-let capturedFetchFn: (() => Promise<Response>) | null = null;
-
-vi.mock("@/lib/http/retry", () => ({
-  retryWithBackoff: vi.fn((fn) => {
-    capturedFetchFn = fn;
-    // Create a mock response
-    return Promise.resolve(
-      new Response(JSON.stringify({}), {
-        headers: { "Content-Type": "application/json" },
-        status: 200,
-      })
-    );
-  }),
-}));
-
-// Import after mocking
-const {
+import { server } from "@/test/msw/server";
+import {
   getGeocode,
   getPlaceDetails,
   getPlacePhoto,
@@ -30,73 +14,60 @@ const {
   postComputeRoutes,
   postNearbySearch,
   postPlacesSearch,
-} = await import("../client");
+} from "../client";
 
 describe("Google API Client", () => {
   beforeEach(() => {
+    server.resetHandlers();
     vi.clearAllMocks();
-    capturedFetchFn = null;
   });
 
   describe("postPlacesSearch", () => {
     it("should call retryWithBackoff with correct fetch configuration", async () => {
+      server.use(
+        http.post(
+          "https://places.googleapis.com/v1/places:searchText",
+          async ({ request }) => {
+            expect(request.headers.get("Content-Type")).toBe("application/json");
+            expect(request.headers.get("X-Goog-Api-Key")).toBe("test-key");
+            expect(request.headers.get("X-Goog-FieldMask")).toBe(
+              "places.id,places.displayName"
+            );
+
+            const body = await request.json();
+            expect(body).toEqual({ textQuery: "restaurants" });
+
+            return HttpResponse.json({});
+          }
+        )
+      );
+
       await postPlacesSearch({
         apiKey: "test-key",
         body: { textQuery: "restaurants" },
         fieldMask: "places.id,places.displayName",
       });
-
-      expect(capturedFetchFn).toBeDefined();
-
-      // Execute the captured fetch function to get the Request
-      const mockFetch = vi.fn().mockResolvedValue(new Response());
-      vi.stubGlobal("fetch", mockFetch);
-
-      await capturedFetchFn?.();
-
-      expect(mockFetch).toHaveBeenCalledWith(
-        "https://places.googleapis.com/v1/places:searchText",
-        expect.objectContaining({
-          body: JSON.stringify({ textQuery: "restaurants" }),
-          headers: {
-            "Content-Type": "application/json",
-            "X-Goog-Api-Key": "test-key",
-            "X-Goog-FieldMask": "places.id,places.displayName",
-          },
-          method: "POST",
-        })
-      );
-
-      vi.unstubAllGlobals();
     });
   });
 
   describe("getPlaceDetails", () => {
     it("should include session token when provided", async () => {
+      server.use(
+        http.get("https://places.googleapis.com/v1/ChIJ123abc", ({ request }) => {
+          expect(request.headers.get("X-Goog-Api-Key")).toBe("test-key");
+          expect(request.headers.get("X-Goog-FieldMask")).toBe("displayName");
+          expect(request.headers.get("X-Goog-Session-Token")).toBe("session-123");
+
+          return HttpResponse.json({ id: "ChIJ123abc" });
+        })
+      );
+
       await getPlaceDetails({
         apiKey: "test-key",
         fieldMask: "displayName",
         placeId: "ChIJ123abc",
         sessionToken: "session-123",
       });
-
-      expect(capturedFetchFn).toBeDefined();
-
-      const mockFetch = vi.fn().mockResolvedValue(new Response());
-      vi.stubGlobal("fetch", mockFetch);
-
-      await capturedFetchFn?.();
-
-      expect(mockFetch).toHaveBeenCalledWith(
-        "https://places.googleapis.com/v1/ChIJ123abc",
-        expect.objectContaining({
-          headers: expect.objectContaining({
-            "X-Goog-Session-Token": "session-123",
-          }),
-        })
-      );
-
-      vi.unstubAllGlobals();
     });
 
     it("should throw error for invalid placeId", async () => {
@@ -122,102 +93,89 @@ describe("Google API Client", () => {
 
   describe("postComputeRoutes", () => {
     it("should call correct Routes API endpoint", async () => {
+      server.use(
+        http.post(
+          "https://routes.googleapis.com/directions/v2:computeRoutes",
+          async ({ request }) => {
+            expect(request.headers.get("Content-Type")).toBe("application/json");
+            expect(request.headers.get("X-Goog-Api-Key")).toBe("test-key");
+            expect(request.headers.get("X-Goog-FieldMask")).toBe("routes.duration");
+
+            const body = await request.json();
+            expect(body).toEqual({ destination: {}, origin: {} });
+
+            return HttpResponse.json({});
+          }
+        )
+      );
+
       await postComputeRoutes({
         apiKey: "test-key",
         body: { destination: {}, origin: {} },
         fieldMask: "routes.duration",
       });
-
-      expect(capturedFetchFn).toBeDefined();
-
-      const mockFetch = vi.fn().mockResolvedValue(new Response());
-      vi.stubGlobal("fetch", mockFetch);
-
-      await capturedFetchFn?.();
-
-      expect(mockFetch).toHaveBeenCalledWith(
-        "https://routes.googleapis.com/directions/v2:computeRoutes",
-        expect.objectContaining({
-          headers: expect.objectContaining({
-            "X-Goog-Api-Key": "test-key",
-            "X-Goog-FieldMask": "routes.duration",
-          }),
-          method: "POST",
-        })
-      );
-
-      vi.unstubAllGlobals();
     });
   });
 
   describe("postComputeRouteMatrix", () => {
     it("should call correct Routes API matrix endpoint", async () => {
+      server.use(
+        http.post(
+          "https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix",
+          ({ request }) => {
+            expect(request.headers.get("X-Goog-Api-Key")).toBe("test-key");
+            expect(request.headers.get("X-Goog-FieldMask")).toBe(
+              "originIndex,destinationIndex"
+            );
+            return HttpResponse.json({});
+          }
+        )
+      );
+
       await postComputeRouteMatrix({
         apiKey: "test-key",
         body: { destinations: [], origins: [] },
         fieldMask: "originIndex,destinationIndex",
       });
-
-      expect(capturedFetchFn).toBeDefined();
-
-      const mockFetch = vi.fn().mockResolvedValue(new Response());
-      vi.stubGlobal("fetch", mockFetch);
-
-      await capturedFetchFn?.();
-
-      expect(mockFetch).toHaveBeenCalledWith(
-        "https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix",
-        expect.objectContaining({
-          method: "POST",
-        })
-      );
-
-      vi.unstubAllGlobals();
     });
   });
 
   describe("getGeocode", () => {
     it("should construct correct URL with address parameter", async () => {
+      server.use(
+        http.get("https://maps.googleapis.com/maps/api/geocode/json", ({ request }) => {
+          const url = new URL(request.url);
+          expect(url.searchParams.get("address")).toBe("123 Main St, New York, NY");
+          expect(url.searchParams.get("key")).toBe("test-key");
+
+          return HttpResponse.json({ results: [], status: "OK" });
+        })
+      );
+
       await getGeocode({
         address: "123 Main St, New York, NY",
         apiKey: "test-key",
       });
-
-      expect(capturedFetchFn).toBeDefined();
-
-      const mockFetch = vi.fn().mockResolvedValue(new Response());
-      vi.stubGlobal("fetch", mockFetch);
-
-      await capturedFetchFn?.();
-
-      const calledUrl = mockFetch.mock.calls[0][0];
-      expect(calledUrl).toContain("maps.googleapis.com/maps/api/geocode/json");
-      expect(calledUrl).toContain("address=123+Main+St%2C+New+York%2C+NY");
-      expect(calledUrl).toContain("key=test-key");
-
-      vi.unstubAllGlobals();
     });
   });
 
   describe("getReverseGeocode", () => {
     it("should construct correct URL with latlng parameter", async () => {
+      server.use(
+        http.get("https://maps.googleapis.com/maps/api/geocode/json", ({ request }) => {
+          const url = new URL(request.url);
+          expect(url.searchParams.get("latlng")).toBe("40.7128,-74.006");
+          expect(url.searchParams.get("key")).toBe("test-key");
+
+          return HttpResponse.json({ results: [], status: "OK" });
+        })
+      );
+
       await getReverseGeocode({
         apiKey: "test-key",
         lat: 40.7128,
         lng: -74.006,
       });
-
-      expect(capturedFetchFn).toBeDefined();
-
-      const mockFetch = vi.fn().mockResolvedValue(new Response());
-      vi.stubGlobal("fetch", mockFetch);
-
-      await capturedFetchFn?.();
-
-      const calledUrl = mockFetch.mock.calls[0][0];
-      expect(calledUrl).toContain("latlng=40.7128%2C-74.006");
-
-      vi.unstubAllGlobals();
     });
 
     it("should throw error for invalid latitude", async () => {
@@ -243,6 +201,20 @@ describe("Google API Client", () => {
 
   describe("getTimezone", () => {
     it("should construct correct URL with location and timestamp", async () => {
+      server.use(
+        http.get(
+          "https://maps.googleapis.com/maps/api/timezone/json",
+          ({ request }) => {
+            const url = new URL(request.url);
+            expect(url.searchParams.get("location")).toBe("35.6762,139.6503");
+            expect(url.searchParams.get("timestamp")).toBe("1700000000");
+            expect(url.searchParams.get("key")).toBe("test-key");
+
+            return HttpResponse.json({ status: "OK" });
+          }
+        )
+      );
+
       const mockTimestamp = 1700000000;
       await getTimezone({
         apiKey: "test-key",
@@ -250,20 +222,6 @@ describe("Google API Client", () => {
         lng: 139.6503,
         timestamp: mockTimestamp,
       });
-
-      expect(capturedFetchFn).toBeDefined();
-
-      const mockFetch = vi.fn().mockResolvedValue(new Response());
-      vi.stubGlobal("fetch", mockFetch);
-
-      await capturedFetchFn?.();
-
-      const calledUrl = mockFetch.mock.calls[0][0];
-      expect(calledUrl).toContain("maps.googleapis.com/maps/api/timezone/json");
-      expect(calledUrl).toContain("location=35.6762%2C139.6503");
-      expect(calledUrl).toContain("timestamp=1700000000");
-
-      vi.unstubAllGlobals();
     });
 
     it("should throw error for invalid coordinates", async () => {
@@ -279,47 +237,43 @@ describe("Google API Client", () => {
 
   describe("getPlacePhoto", () => {
     it("should construct correct URL with photo name", async () => {
+      server.use(
+        http.get(
+          "https://places.googleapis.com/v1/places/:placeId/photos/:photoId/media",
+          ({ params }) => {
+            expect(params.placeId).toBe("ABC123");
+            expect(params.photoId).toBe("XYZ789");
+            return new HttpResponse("ok", { status: 200 });
+          }
+        )
+      );
+
       await getPlacePhoto({
         apiKey: "test-key",
         maxWidthPx: 400,
         photoName: "places/ABC123/photos/XYZ789",
       });
-
-      expect(capturedFetchFn).toBeDefined();
-
-      const mockFetch = vi.fn().mockResolvedValue(new Response());
-      vi.stubGlobal("fetch", mockFetch);
-
-      await capturedFetchFn?.();
-
-      const calledUrl = mockFetch.mock.calls[0][0];
-      expect(calledUrl).toContain(
-        "places.googleapis.com/v1/places/ABC123/photos/XYZ789/media"
-      );
-
-      vi.unstubAllGlobals();
     });
 
     it("should include dimension parameters when provided", async () => {
+      server.use(
+        http.get(
+          "https://places.googleapis.com/v1/places/:placeId/photos/:photoId/media",
+          ({ request }) => {
+            const url = new URL(request.url);
+            expect(url.searchParams.get("maxWidthPx")).toBe("600");
+            expect(url.searchParams.get("maxHeightPx")).toBe("400");
+            return new HttpResponse("ok", { status: 200 });
+          }
+        )
+      );
+
       await getPlacePhoto({
         apiKey: "test-key",
         maxHeightPx: 400,
         maxWidthPx: 600,
         photoName: "places/ABC123/photos/XYZ789",
       });
-
-      expect(capturedFetchFn).toBeDefined();
-
-      const mockFetch = vi.fn().mockResolvedValue(new Response());
-      vi.stubGlobal("fetch", mockFetch);
-
-      await capturedFetchFn?.();
-
-      const calledUrl = mockFetch.mock.calls[0][0];
-      expect(calledUrl).toContain("maxWidthPx=600");
-      expect(calledUrl).toContain("maxHeightPx=400");
-
-      vi.unstubAllGlobals();
     });
 
     it("should throw error for invalid photoName format", async () => {
@@ -344,6 +298,31 @@ describe("Google API Client", () => {
 
   describe("postNearbySearch", () => {
     it("should construct correct request body", async () => {
+      server.use(
+        http.post(
+          "https://places.googleapis.com/v1/places:searchNearby",
+          async ({ request }) => {
+            expect(request.headers.get("Content-Type")).toBe("application/json");
+            expect(request.headers.get("X-Goog-Api-Key")).toBe("test-key");
+            expect(request.headers.get("X-Goog-FieldMask")).toBe("places.id");
+
+            const body = await request.json();
+            expect(body).toEqual({
+              includedTypes: ["restaurant", "cafe"],
+              locationRestriction: {
+                circle: {
+                  center: { latitude: 40.7128, longitude: -74.006 },
+                  radius: 2000,
+                },
+              },
+              maxResultCount: 15,
+            });
+
+            return HttpResponse.json({});
+          }
+        )
+      );
+
       await postNearbySearch({
         apiKey: "test-key",
         fieldMask: "places.id",
@@ -353,33 +332,6 @@ describe("Google API Client", () => {
         maxResultCount: 15,
         radiusMeters: 2000,
       });
-
-      expect(capturedFetchFn).toBeDefined();
-
-      const mockFetch = vi.fn().mockResolvedValue(new Response());
-      vi.stubGlobal("fetch", mockFetch);
-
-      await capturedFetchFn?.();
-
-      expect(mockFetch).toHaveBeenCalledWith(
-        "https://places.googleapis.com/v1/places:searchNearby",
-        expect.objectContaining({
-          // Body order matches implementation: locationRestriction, maxResultCount, then includedTypes (added conditionally)
-          body: JSON.stringify({
-            locationRestriction: {
-              circle: {
-                center: { latitude: 40.7128, longitude: -74.006 },
-                radius: 2000,
-              },
-            },
-            maxResultCount: 15,
-            includedTypes: ["restaurant", "cafe"],
-          }),
-          method: "POST",
-        })
-      );
-
-      vi.unstubAllGlobals();
     });
 
     it("should throw error for invalid coordinates", async () => {
@@ -460,44 +412,42 @@ describe("Google API Client", () => {
 
   describe("getPlacePhoto with skipHttpRedirect", () => {
     it("should include skipHttpRedirect parameter when true", async () => {
+      server.use(
+        http.get(
+          "https://places.googleapis.com/v1/places/:placeId/photos/:photoId/media",
+          ({ request }) => {
+            const url = new URL(request.url);
+            expect(url.searchParams.get("skipHttpRedirect")).toBe("true");
+            return new HttpResponse("ok", { status: 200 });
+          }
+        )
+      );
+
       await getPlacePhoto({
         apiKey: "test-key",
         maxWidthPx: 400,
         photoName: "places/ABC123/photos/XYZ789",
         skipHttpRedirect: true,
       });
-
-      expect(capturedFetchFn).toBeDefined();
-
-      const mockFetch = vi.fn().mockResolvedValue(new Response());
-      vi.stubGlobal("fetch", mockFetch);
-
-      await capturedFetchFn?.();
-
-      const calledUrl = mockFetch.mock.calls[0][0];
-      expect(calledUrl).toContain("skipHttpRedirect=true");
-
-      vi.unstubAllGlobals();
     });
 
     it("should not include skipHttpRedirect when not provided", async () => {
+      server.use(
+        http.get(
+          "https://places.googleapis.com/v1/places/:placeId/photos/:photoId/media",
+          ({ request }) => {
+            const url = new URL(request.url);
+            expect(url.searchParams.has("skipHttpRedirect")).toBe(false);
+            return new HttpResponse("ok", { status: 200 });
+          }
+        )
+      );
+
       await getPlacePhoto({
         apiKey: "test-key",
         maxWidthPx: 400,
         photoName: "places/ABC123/photos/XYZ789",
       });
-
-      expect(capturedFetchFn).toBeDefined();
-
-      const mockFetch = vi.fn().mockResolvedValue(new Response());
-      vi.stubGlobal("fetch", mockFetch);
-
-      await capturedFetchFn?.();
-
-      const calledUrl = mockFetch.mock.calls[0][0];
-      expect(calledUrl).not.toContain("skipHttpRedirect");
-
-      vi.unstubAllGlobals();
     });
   });
 });
