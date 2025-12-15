@@ -84,5 +84,3 @@ export const GET = withApiGuards({
     });
   }
 });
-
-export const dynamic = "force-dynamic";

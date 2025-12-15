@@ -46,8 +46,10 @@ const SUPPORTED_AVATAR_TYPES = {
 type SupportedAvatarType = keyof typeof SUPPORTED_AVATAR_TYPES;
 type SupportedAvatarExt = (typeof SUPPORTED_AVATAR_TYPES)[SupportedAvatarType];
 
-function resolveAvatarExt(file: File): SupportedAvatarExt | null {
-  return (SUPPORTED_AVATAR_TYPES as Record<string, SupportedAvatarExt>)[file.type] ?? null;
+function ResolveAvatarExt(file: File): SupportedAvatarExt | null {
+  return (
+    (SUPPORTED_AVATAR_TYPES as Record<string, SupportedAvatarExt>)[file.type] ?? null
+  );
 }
 
 export function PersonalInfoSection() {
@@ -106,8 +108,8 @@ export function PersonalInfoSection() {
         data: {
           bio: bio ?? null,
           display_name: data.displayName,
-          full_name: data.displayName,
           first_name: data.firstName,
+          full_name: data.displayName,
           last_name: data.lastName,
           location: location ?? null,
           website: website ?? null,
@@ -135,7 +137,10 @@ export function PersonalInfoSection() {
       });
     } catch (error) {
       toast({
-        description: getUnknownErrorMessage(error, "Failed to update profile. Please try again."),
+        description: getUnknownErrorMessage(
+          error,
+          "Failed to update profile. Please try again."
+        ),
         title: "Error",
         variant: "destructive",
       });
@@ -146,10 +151,11 @@ export function PersonalInfoSection() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const ext = resolveAvatarExt(file);
+    const ext = ResolveAvatarExt(file);
     if (!ext) {
       toast({
-        description: "Please select a supported image file (jpg, png, gif, webp, avif).",
+        description:
+          "Please select a supported image file (jpg, png, gif, webp, avif).",
         title: "Invalid file type",
         variant: "destructive",
       });
@@ -200,11 +206,13 @@ export function PersonalInfoSection() {
       const { data } = supabase.storage.from("avatars").getPublicUrl(avatarPath);
       const avatarUrl = data.publicUrl;
 
-      const { data: updateResult, error: updateError } = await supabase.auth.updateUser({
-        data: {
-          avatar_url: avatarUrl,
-        },
-      });
+      const { data: updateResult, error: updateError } = await supabase.auth.updateUser(
+        {
+          data: {
+            avatar_url: avatarUrl,
+          },
+        }
+      );
 
       if (updateError) {
         throw updateError;
@@ -222,7 +230,10 @@ export function PersonalInfoSection() {
       });
     } catch (error) {
       toast({
-        description: getUnknownErrorMessage(error, "Failed to upload avatar. Please try again."),
+        description: getUnknownErrorMessage(
+          error,
+          "Failed to upload avatar. Please try again."
+        ),
         title: "Upload failed",
         variant: "destructive",
       });
@@ -260,7 +271,11 @@ export function PersonalInfoSection() {
             <Avatar className="h-24 w-24">
               <AvatarImage
                 src={authUser?.avatarUrl}
-                alt={authUser?.displayName ? `${authUser.displayName} profile picture` : "Profile picture"}
+                alt={
+                  authUser?.displayName
+                    ? `${authUser.displayName} profile picture`
+                    : "Profile picture"
+                }
               />
               <AvatarFallback className="text-lg">
                 {getInitials(

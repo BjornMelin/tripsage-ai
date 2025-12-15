@@ -1,14 +1,15 @@
 /**
  * @fileoverview Preferences section: update currency, language, timezone, and units.
- * UI only; server actions are stubbed.
  */
 
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { CurrencyCode } from "@schemas/currency";
+import { CURRENCY_CODE_SCHEMA, type CurrencyCode } from "@schemas/currency";
 import { type PreferencesFormData, preferencesFormSchema } from "@schemas/profile";
 import { GlobeIcon, ZapIcon } from "lucide-react";
+import { useTheme } from "next-themes";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,62 +36,184 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
+import { getUnknownErrorMessage } from "@/lib/errors/get-unknown-error-message";
+import { getBrowserClient } from "@/lib/supabase";
+import { useAuthCore } from "@/stores/auth/auth-core";
 import { useCurrencyStore } from "@/stores/currency-store";
-import { useUserProfileStore } from "@/stores/user-store";
+
+type AdditionalSettingKey =
+  | "analytics"
+  | "autoSaveSearches"
+  | "locationServices"
+  | "smartSuggestions";
 
 export function PreferencesSection() {
-  const { profile: _profile } = useUserProfileStore();
+  const { user: authUser, setUser } = useAuthCore();
   const { baseCurrency, setBaseCurrency } = useCurrencyStore();
   const { toast } = useToast();
+  const { setTheme } = useTheme();
+
+  const defaultValues = useMemo(
+    (): PreferencesFormData => ({
+      currency: authUser?.preferences?.currency ?? baseCurrency ?? "USD",
+      dateFormat: authUser?.preferences?.dateFormat ?? "MM/DD/YYYY",
+      language: authUser?.preferences?.language ?? "en",
+      theme: authUser?.preferences?.theme ?? "system",
+      timeFormat: authUser?.preferences?.timeFormat ?? "12h",
+      timezone:
+        authUser?.preferences?.timezone ??
+        Intl.DateTimeFormat().resolvedOptions().timeZone,
+      units: authUser?.preferences?.units ?? "metric",
+    }),
+    [authUser?.preferences, baseCurrency]
+  );
+
+  const initialAdditionalSettings = useMemo(
+    () => ({
+      analytics: authUser?.preferences?.analytics ?? true,
+      autoSaveSearches: authUser?.preferences?.autoSaveSearches ?? true,
+      locationServices: authUser?.preferences?.locationServices ?? false,
+      smartSuggestions: authUser?.preferences?.smartSuggestions ?? true,
+    }),
+    [
+      authUser?.preferences?.analytics,
+      authUser?.preferences?.autoSaveSearches,
+      authUser?.preferences?.locationServices,
+      authUser?.preferences?.smartSuggestions,
+    ]
+  );
+  const [additionalSettings, setAdditionalSettings] = useState(
+    initialAdditionalSettings
+  );
 
   const form = useForm<PreferencesFormData>({
-    defaultValues: {
-      currency: baseCurrency || "USD",
-      dateFormat: "MM/DD/YYYY",
-      language: "en",
-      theme: "system",
-      timeFormat: "12h",
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      units: "metric",
-    },
+    defaultValues,
     resolver: zodResolver(preferencesFormSchema),
   });
 
+  useEffect(() => {
+    form.reset(defaultValues);
+  }, [defaultValues, form]);
+
+  useEffect(() => {
+    setAdditionalSettings(initialAdditionalSettings);
+  }, [initialAdditionalSettings]);
+
+  const resolveSupabaseClient = () => {
+    try {
+      return getBrowserClient();
+    } catch (_error) {
+      return null;
+    }
+  };
+
   const onSubmit = async (data: PreferencesFormData) => {
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      if (!authUser) {
+        throw new Error("You must be signed in to update your preferences.");
+      }
+
+      const supabase = resolveSupabaseClient();
+      if (!supabase) {
+        throw new Error("Unable to access preferences client. Please try again.");
+      }
+
+      const nextPreferences = {
+        ...(authUser.preferences ?? {}),
+        currency: data.currency,
+        dateFormat: data.dateFormat,
+        language: data.language,
+        theme: data.theme,
+        timeFormat: data.timeFormat,
+        timezone: data.timezone,
+        units: data.units,
+      };
+
+      const { data: result, error } = await supabase.auth.updateUser({
+        data: {
+          preferences: nextPreferences,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      setUser({
+        ...authUser,
+        preferences: nextPreferences,
+        updatedAt: result.user?.updated_at ?? authUser.updatedAt,
+      });
 
       // Update currency store if changed
       if (data.currency !== baseCurrency) {
-        setBaseCurrency(data.currency as CurrencyCode);
+        const currency = CURRENCY_CODE_SCHEMA.parse(data.currency) as CurrencyCode;
+        setBaseCurrency(currency);
       }
+
+      setTheme(data.theme);
 
       toast({
         description: "Your preferences have been successfully saved.",
         title: "Preferences updated",
       });
-    } catch (_error) {
+    } catch (error) {
       toast({
-        description: "Failed to update preferences. Please try again.",
+        description: getUnknownErrorMessage(
+          error,
+          "Failed to update preferences. Please try again."
+        ),
         title: "Error",
         variant: "destructive",
       });
     }
   };
 
-  const toggleAdditionalSetting = async (setting: string, enabled: boolean) => {
+  const toggleAdditionalSetting = async (
+    setting: AdditionalSettingKey,
+    enabled: boolean
+  ) => {
+    setAdditionalSettings((prev) => ({ ...prev, [setting]: enabled }));
+
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      if (!authUser) {
+        throw new Error("You must be signed in to update your preferences.");
+      }
+
+      const supabase = resolveSupabaseClient();
+      if (!supabase) {
+        throw new Error("Unable to access preferences client. Please try again.");
+      }
+
+      const nextPreferences = {
+        ...(authUser.preferences ?? {}),
+        [setting]: enabled,
+      };
+
+      const { data, error } = await supabase.auth.updateUser({
+        data: {
+          preferences: nextPreferences,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      setUser({
+        ...authUser,
+        preferences: nextPreferences,
+        updatedAt: data.user?.updated_at ?? authUser.updatedAt,
+      });
 
       toast({
         description: `${setting} ${enabled ? "enabled" : "disabled"}.`,
         title: "Setting updated",
       });
-    } catch (_error) {
+    } catch (error) {
+      setAdditionalSettings((prev) => ({ ...prev, [setting]: !enabled }));
       toast({
-        description: "Failed to update setting.",
+        description: getUnknownErrorMessage(error, "Failed to update setting."),
         title: "Error",
         variant: "destructive",
       });
@@ -351,7 +474,7 @@ export function PreferencesSection() {
               </div>
             </div>
             <Switch
-              defaultChecked={true}
+              checked={additionalSettings.autoSaveSearches}
               onCheckedChange={(enabled) =>
                 toggleAdditionalSetting("autoSaveSearches", enabled)
               }
@@ -366,7 +489,7 @@ export function PreferencesSection() {
               </div>
             </div>
             <Switch
-              defaultChecked={true}
+              checked={additionalSettings.smartSuggestions}
               onCheckedChange={(enabled) =>
                 toggleAdditionalSetting("smartSuggestions", enabled)
               }
@@ -381,7 +504,7 @@ export function PreferencesSection() {
               </div>
             </div>
             <Switch
-              defaultChecked={false}
+              checked={additionalSettings.locationServices}
               onCheckedChange={(enabled) =>
                 toggleAdditionalSetting("locationServices", enabled)
               }
@@ -396,7 +519,7 @@ export function PreferencesSection() {
               </div>
             </div>
             <Switch
-              defaultChecked={true}
+              checked={additionalSettings.analytics}
               onCheckedChange={(enabled) =>
                 toggleAdditionalSetting("analytics", enabled)
               }

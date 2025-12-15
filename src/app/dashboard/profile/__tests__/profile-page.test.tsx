@@ -1,10 +1,9 @@
 /** @vitest-environment jsdom */
 
-import type { AuthUser as User, UserProfile } from "@schemas/stores";
+import type { AuthUser as User } from "@schemas/stores";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAuthCore } from "@/stores/auth/auth-core";
-import { useUserProfileStore } from "@/stores/user-store";
 
 const { mockReplace } = vi.hoisted(() => ({
   mockReplace: vi.fn(),
@@ -81,22 +80,10 @@ vi.mock("@/components/ui/tabs", () => {
  * Type definition for auth store return values.
  */
 interface AuthStoreReturn {
-  /** Whether the user is authenticated */
-  isAuthenticated: boolean;
   /** Whether authentication is loading */
   isLoading: boolean;
   /** Current user data */
   user: User | null;
-}
-
-/**
- * Type definition for user profile store return values.
- */
-interface UserProfileStoreReturn {
-  /** Whether profile data is loading */
-  isLoading: boolean;
-  /** Current user profile data */
-  profile: UserProfile | null;
 }
 
 /**
@@ -113,7 +100,6 @@ const MOCK_USER: Partial<User> = {
 };
 
 // Mock the stores and profile components
-vi.mock("@/stores/user-store");
 vi.mock("@/stores/auth/auth-core");
 
 // Define mock components in a hoisted block so they are available to vi.mock
@@ -156,35 +142,16 @@ describe("ProfilePage", () => {
     vi.clearAllMocks();
   });
 
-  const defaultProfile: UserProfile = {
-    createdAt: "2025-01-01T00:00:00.000Z",
-    email: MOCK_USER.email ?? "user@example.com",
-    favoriteDestinations: [],
-    id: "p1",
-    travelDocuments: [],
-    updatedAt: "2025-01-01T00:00:00.000Z",
-  };
-
   const setupAuthState = (overrides: Partial<AuthStoreReturn> = {}) => {
     vi.mocked(useAuthCore).mockReturnValue({
-      isAuthenticated: true,
       isLoading: false,
       user: MOCK_USER as User,
       ...overrides,
     } as AuthStoreReturn);
   };
 
-  const setupProfileState = (overrides: Partial<UserProfileStoreReturn> = {}) => {
-    vi.mocked(useUserProfileStore).mockReturnValue({
-      isLoading: false,
-      profile: defaultProfile,
-      ...overrides,
-    } as UserProfileStoreReturn);
-  };
-
   it("renders loading state when user data is loading", () => {
-    setupAuthState({ isAuthenticated: false, isLoading: true, user: null });
-    setupProfileState({ profile: null });
+    setupAuthState({ isLoading: true, user: null });
 
     render(<PROFILE_PAGE />);
 
@@ -194,8 +161,7 @@ describe("ProfilePage", () => {
   });
 
   it("redirects to login when user is not logged in", async () => {
-    setupAuthState({ isAuthenticated: false, user: null });
-    setupProfileState({ profile: null });
+    setupAuthState({ user: null });
 
     render(<PROFILE_PAGE />);
 
@@ -206,7 +172,6 @@ describe("ProfilePage", () => {
 
   it("renders profile page with tabs when user is logged in", () => {
     setupAuthState();
-    setupProfileState();
 
     render(<PROFILE_PAGE />);
 
@@ -228,7 +193,6 @@ describe("ProfilePage", () => {
 
   it("displays personal info section by default", () => {
     setupAuthState();
-    setupProfileState();
 
     render(<PROFILE_PAGE />);
 
@@ -237,7 +201,6 @@ describe("ProfilePage", () => {
 
   it("switches to account settings tab", async () => {
     setupAuthState();
-    setupProfileState();
 
     render(<PROFILE_PAGE />);
 
@@ -250,7 +213,6 @@ describe("ProfilePage", () => {
 
   it("switches to preferences tab", async () => {
     setupAuthState();
-    setupProfileState();
 
     render(<PROFILE_PAGE />);
 
@@ -263,7 +225,6 @@ describe("ProfilePage", () => {
 
   it("renders tab icons correctly", () => {
     setupAuthState();
-    setupProfileState();
 
     render(<PROFILE_PAGE />);
 
@@ -279,7 +240,6 @@ describe("ProfilePage", () => {
 
   it("maintains tab state during navigation", async () => {
     setupAuthState();
-    setupProfileState();
 
     render(<PROFILE_PAGE />);
 
@@ -300,7 +260,6 @@ describe("ProfilePage", () => {
 
   it("renders proper heading structure", () => {
     setupAuthState();
-    setupProfileState();
 
     render(<PROFILE_PAGE />);
 
@@ -311,7 +270,6 @@ describe("ProfilePage", () => {
 
   it("has accessible tab structure", () => {
     setupAuthState();
-    setupProfileState({ profile: null });
 
     render(<PROFILE_PAGE />);
 
@@ -327,7 +285,6 @@ describe("ProfilePage", () => {
 
   it("handles loading state gracefully with skeletons", () => {
     setupAuthState({ isLoading: true, user: null });
-    setupProfileState({ isLoading: true, profile: null });
 
     render(<PROFILE_PAGE />);
 
