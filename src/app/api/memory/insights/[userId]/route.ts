@@ -63,6 +63,9 @@ export const GET = withApiGuards({
       status: 403,
     });
   }
+  const scopedLogger = createServerLogger("memory.insights", {
+    redactKeys: ["error", "userId"],
+  });
   try {
     const memoryResult = await handleMemoryIntent({
       limit: 20,
@@ -81,9 +84,6 @@ export const GET = withApiGuards({
       return NextResponse.json(cached);
     }
 
-    const scopedLogger = createServerLogger("memory.insights", {
-      redactKeys: ["error", "userId"],
-    });
     const limitedContext = contextItems.slice(0, 20);
     const contextSummary = buildContextSummary(limitedContext);
     const prompt = buildInsightsPrompt(contextSummary, limitedContext.length);
@@ -136,6 +136,19 @@ export const GET = withApiGuards({
       return NextResponse.json(fallback, { status: 200 });
     }
   } catch (error) {
+    scopedLogger.error("memory.insights.request_failed", {
+      cacheKeyPrefix: "memory:insights",
+      error:
+        error instanceof Error
+          ? {
+              cause: error.cause,
+              message: error.message,
+              name: error.name,
+              stack: error.stack,
+            }
+          : error,
+      userId,
+    });
     return errorResponse({
       err: error,
       error: "memory_insights_failed",

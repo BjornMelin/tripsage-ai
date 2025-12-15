@@ -42,15 +42,11 @@ export async function POST(req: Request) {
 
         const verified = await verifyQstashRequest(req, receiver);
         if (!verified.ok) {
-          try {
-            span.addEvent("unauthorized_attempt", {
-              hasSignature: verified.reason !== "missing_signature",
-              reason: verified.reason,
-              url: req.url,
-            });
-          } catch (spanError) {
-            span.recordException(spanError as Error);
-          }
+          span.addEvent("unauthorized_attempt", {
+            hasSignature: verified.reason !== "missing_signature",
+            reason: verified.reason,
+            url: req.url,
+          });
           return verified.response;
         }
 

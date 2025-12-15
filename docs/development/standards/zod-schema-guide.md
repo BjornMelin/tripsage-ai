@@ -159,21 +159,19 @@ import { toJsonSchemaRegistry } from "@/lib/schema/json-schema";
 const registry = toJsonSchemaRegistry({ User: userSchema, Trip: tripSchema });
 ```
 
-### z.fromJSONSchema() - Schema Import
+### JSON Schema import (Zod v4)
 
-Convert JSON Schema to Zod schemas (useful for external API integration):
+Zod v4 exposes JSON Schema export (`.toJSONSchema()` / `toJsonSchema(...)`), but it does **not** include a built-in JSON Schema → Zod API (there is no `z.fromJSONSchema()` in Zod v4).
 
-```typescript
-const jsonSchema = {
-  type: "object",
-  properties: {
-    name: { type: "string" },
-    age: { type: "number" }
-  },
-  required: ["name"]
-};
+If you need to convert JSON Schema to Zod, use an external converter (community-maintained), for example:
 
-const zodSchema = z.fromJSONSchema(jsonSchema);
+- `json-schema-to-zod` (npm): <https://www.npmjs.com/package/json-schema-to-zod>
+- `json-schema-to-zod` (GitHub): <https://github.com/StefanTerdell/json-schema-to-zod>
+
+Example (CLI):
+
+```bash
+json-schema-to-zod -i mySchema.json -o mySchema.ts
 ```
 
 ## Form Schema Patterns

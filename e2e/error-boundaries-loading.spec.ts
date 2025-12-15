@@ -1,5 +1,42 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import { authenticateAsTestUser, resetTestAuth } from "./helpers/auth";
+
+type DashboardApiBody = {
+  activeTrips: number;
+  avgLatencyMs: number;
+  completedTrips: number;
+  errorRate: number;
+  totalRequests: number;
+  totalTrips: number;
+};
+
+const defaultDashboardApiBody: DashboardApiBody = {
+  activeTrips: 0,
+  avgLatencyMs: 0,
+  completedTrips: 0,
+  errorRate: 0,
+  totalRequests: 0,
+  totalTrips: 0,
+};
+
+async function mockDashboardApi(
+  page: Page,
+  options: {
+    delayMs?: number;
+    bodyOverrides?: Partial<DashboardApiBody>;
+  } = {}
+): Promise<void> {
+  const { delayMs = 800, bodyOverrides } = options;
+
+  await page.route("**/api/dashboard**", async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+    await route.fulfill({
+      body: JSON.stringify({ ...defaultDashboardApiBody, ...bodyOverrides }),
+      contentType: "application/json",
+      status: 200,
+    });
+  });
+}
 
 test.describe("Loading States", () => {
   test.beforeEach(async ({ page }) => {
@@ -8,20 +45,8 @@ test.describe("Loading States", () => {
   });
 
   test("dashboard shows skeletons while metrics load", async ({ page }) => {
-    await page.route("**/api/dashboard**", async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      await route.fulfill({
-        body: JSON.stringify({
-          activeTrips: 0,
-          avgLatencyMs: 123.4,
-          completedTrips: 0,
-          errorRate: 0,
-          totalRequests: 42,
-          totalTrips: 0,
-        }),
-        contentType: "application/json",
-        status: 200,
-      });
+    await mockDashboardApi(page, {
+      bodyOverrides: { avgLatencyMs: 123.4, totalRequests: 42 },
     });
 
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
@@ -43,21 +68,7 @@ test.describe("Loading States", () => {
   });
 
   test("skeletons expose aria labels for accessibility", async ({ page }) => {
-    await page.route("**/api/dashboard**", async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      await route.fulfill({
-        body: JSON.stringify({
-          activeTrips: 0,
-          avgLatencyMs: 0,
-          completedTrips: 0,
-          errorRate: 0,
-          totalRequests: 0,
-          totalTrips: 0,
-        }),
-        contentType: "application/json",
-        status: 200,
-      });
-    });
+    await mockDashboardApi(page);
 
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 

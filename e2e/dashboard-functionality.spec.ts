@@ -7,9 +7,10 @@ async function clickAndWaitForUrl(
   page: Page,
   locator: Locator,
   url: string,
-  options: { attempts?: number; timeoutMs?: number } = {}
+  options: { attempts?: number; retryDelayMs?: number; timeoutMs?: number } = {}
 ): Promise<void> {
   const attempts = options.attempts ?? 2;
+  const retryDelayMs = options.retryDelayMs ?? 300;
   const timeoutMs = options.timeoutMs ?? navigationTimeoutMs;
 
   for (let attempt = 0; attempt < attempts; attempt++) {
@@ -21,6 +22,8 @@ async function clickAndWaitForUrl(
       if (attempt === attempts - 1) {
         throw error;
       }
+      // Allow in-flight navigation or state changes to settle before retrying
+      await page.waitForTimeout(retryDelayMs);
     }
   }
 }

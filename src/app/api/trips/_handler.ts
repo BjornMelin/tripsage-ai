@@ -8,10 +8,23 @@ import type { TripCreateInput, TripFilters } from "@schemas/trips";
 import { NextResponse } from "next/server";
 import { errorResponse } from "@/lib/api/route-helpers";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
-import { bumpTag } from "@/lib/cache/tags";
+import { bumpTag, versionedKey } from "@/lib/cache/tags";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
+import { createServerLogger } from "@/lib/telemetry/logger";
 import { mapDbTripToUi } from "@/lib/trips/mappers";
+
+const logger = createServerLogger("api.trips.handler");
+
+/**
+ * Escapes SQL LIKE/ILIKE wildcard characters in user input.
+ *
+ * Prevents unintended wildcard matches by escaping '%', '_', and backslashes.
+ * The escaped value can then be safely wrapped with '%' for substring search.
+ */
+function escapeIlikePattern(input: string): string {
+  return input.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
+}
 
 export interface TripsDeps {
   supabase: TypedServerSupabase;
@@ -20,8 +33,15 @@ export interface TripsDeps {
 /** Cache TTL for trip listings (5 minutes). */
 const TRIPS_CACHE_TTL = 300;
 
-/** Cache tag for trip-related caches. */
-const TRIPS_CACHE_TAG = "trips";
+/**
+ * Generates a user-scoped cache tag for trips.
+ *
+ * @param userId - The user's ID
+ * @returns A cache tag scoped to that user's trips
+ */
+export function getUserTripsCacheTag(userId: string): string {
+  return `trips:${userId}`;
+}
 
 /**
  * Builds versioned cache key for trip listings.
@@ -29,26 +49,24 @@ const TRIPS_CACHE_TAG = "trips";
  * Uses cache tag versioning to enable efficient invalidation of all
  * filter variants when trips are created or updated.
  */
-async function buildTripsCacheKey(
-  userId: string,
-  filters: TripFilters
-): Promise<string> {
+function buildTripsCacheKey(userId: string, filters: TripFilters): Promise<string> {
   const canonical = canonicalizeParamsForCache(filters as Record<string, unknown>);
   const baseKey = `trips:list:${userId}:${canonical || "all"}`;
-  const { versionedKey } = await import("@/lib/cache/tags");
-  return await versionedKey(TRIPS_CACHE_TAG, baseKey);
+  return versionedKey(getUserTripsCacheTag(userId), baseKey);
 }
 
 /**
- * Invalidates all trip cache entries for all users.
+ * Invalidates all trip cache entries for a specific user.
  *
  * Uses cache tag versioning to invalidate all filter variants
  * (e.g., "all", "status:active", "destination:paris", etc.) by
- * bumping the tag version. Subsequent reads will generate new
- * versioned keys, causing cache misses.
+ * bumping the user-scoped tag version. Subsequent reads will generate
+ * new versioned keys, causing cache misses for that user only.
+ *
+ * @param userId - The user whose trip cache should be invalidated
  */
-async function invalidateTripsCache(): Promise<void> {
-  await bumpTag(TRIPS_CACHE_TAG);
+export async function invalidateUserTripsCache(userId: string): Promise<void> {
+  await bumpTag(getUserTripsCacheTag(userId));
 }
 
 /**
@@ -57,12 +75,14 @@ async function invalidateTripsCache(): Promise<void> {
  * Keeps request/response validation layered on top of the generated
  * Supabase table schemas, avoiding direct coupling between API contracts
  * and database column names.
+ *
+ * @returns The insert payload or null if validation fails
  */
 function mapCreatePayloadToInsert(
   payload: TripCreateInput,
   userId: string
-): TripsInsert {
-  return tripsInsertSchema.parse({
+): TripsInsert | null {
+  const result = tripsInsertSchema.safeParse({
     budget: payload.budget ?? 0,
     currency: payload.currency ?? "USD",
     destination: payload.destination,
@@ -82,6 +102,19 @@ function mapCreatePayloadToInsert(
     // biome-ignore lint/style/useNamingConvention: Supabase column name
     user_id: userId,
   });
+
+  if (!result.success) {
+    logger.error("trip_payload_mapping_failed", {
+      issues: result.error.issues.map((i) => ({
+        code: i.code,
+        message: i.message,
+        path: i.path.join("."),
+      })),
+    });
+    return null;
+  }
+
+  return result.data;
 }
 
 export async function handleListTrips(
@@ -102,7 +135,8 @@ export async function handleListTrips(
     .order("created_at", { ascending: false });
 
   if (params.filters.destination) {
-    query = query.ilike("destination", `%${params.filters.destination}%`);
+    const escapedDestination = escapeIlikePattern(params.filters.destination);
+    query = query.ilike("destination", `%${escapedDestination}%`);
   }
 
   if (params.filters.status) {
@@ -127,8 +161,39 @@ export async function handleListTrips(
     });
   }
 
-  const rows = (data ?? []).map((row) => tripsRowSchema.parse(row));
-  const uiTrips = rows.map(mapDbTripToUi);
+  // Parse rows with safeParse to avoid crashing on invalid DB records
+  const rawRows = data ?? [];
+  const validRows: ReturnType<typeof tripsRowSchema.parse>[] = [];
+  const failedRows: Array<{
+    id: unknown;
+    issues: Array<{ code: string; message: string; path: string }>;
+  }> = [];
+
+  for (const row of rawRows) {
+    const result = tripsRowSchema.safeParse(row);
+    if (result.success) {
+      validRows.push(result.data);
+    } else {
+      failedRows.push({
+        id: (row as { id?: unknown }).id,
+        issues: result.error.issues.map((i) => ({
+          code: i.code,
+          message: i.message,
+          path: i.path.join("."),
+        })),
+      });
+    }
+  }
+
+  // Log any rows that failed validation
+  if (failedRows.length > 0) {
+    logger.warn("trips_row_validation_failed", {
+      count: failedRows.length,
+      errors: failedRows,
+    });
+  }
+
+  const uiTrips = validRows.map(mapDbTripToUi);
 
   await setCachedJson(cacheKey, uiTrips, TRIPS_CACHE_TTL);
 
@@ -140,6 +205,15 @@ export async function handleCreateTrip(
   params: { userId: string; payload: TripCreateInput }
 ): Promise<Response> {
   const insertPayload = mapCreatePayloadToInsert(params.payload, params.userId);
+
+  if (!insertPayload) {
+    return errorResponse({
+      err: new Error("Trip payload failed schema validation"),
+      error: "validation",
+      reason: "Invalid trip data: payload could not be mapped to database schema",
+      status: 400,
+    });
+  }
 
   const { data, error } = await deps.supabase
     .from("trips")
@@ -156,7 +230,7 @@ export async function handleCreateTrip(
     });
   }
 
-  await invalidateTripsCache();
+  await invalidateUserTripsCache(params.userId);
 
   const row = tripsRowSchema.parse(data);
   const uiTrip = mapDbTripToUi(row);

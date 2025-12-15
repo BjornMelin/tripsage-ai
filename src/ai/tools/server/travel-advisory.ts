@@ -36,16 +36,20 @@ const travelAdvisoryLogger = createServerLogger("tools.travel_advisory", {
  * Fetch safety scores from State Department API or similar service.
  *
  * @param destination Destination name or country code.
+ * @param precomputedCountryCode Optional pre-computed country code to avoid redundant mapping.
  * @returns Promise resolving to safety result or null if unavailable.
  */
-async function fetchSafetyScores(destination: string): Promise<SafetyResult | null> {
+async function fetchSafetyScores(
+  destination: string,
+  precomputedCountryCode?: string | null
+): Promise<SafetyResult | null> {
   const provider = getDefaultProvider();
   if (!provider) {
     return null;
   }
 
-  // Try to map destination to country code
-  const countryCode = mapToCountryCode(destination);
+  // Use pre-computed country code if provided, otherwise map destination
+  const countryCode = precomputedCountryCode ?? mapToCountryCode(destination);
   if (!countryCode) {
     // If destination doesn't map to a country code, return null
     // (caller will handle fallback)
@@ -111,8 +115,11 @@ export const getTravelAdvisory = tool({
           } as const;
         }
 
-        // Fetch from API
-        const result = await fetchSafetyScores(validatedParams.destination);
+        // Fetch from API (pass pre-computed country code to avoid redundant mapping)
+        const result = await fetchSafetyScores(
+          validatedParams.destination,
+          mappedCountryCode
+        );
 
         if (!result) {
           // Fallback to stub if API unavailable or country not found
