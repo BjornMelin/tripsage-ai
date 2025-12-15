@@ -8,14 +8,16 @@ import { PersonalInfoSection } from "../personal-info-section";
 import { PreferencesSection } from "../preferences-section";
 
 // Mock all dependencies to focus on component rendering
-vi.mock("@/stores/user-store", () => ({
-  useUserProfileStore: () => ({
-    updateUser: vi.fn(),
+vi.mock("@/stores/auth/auth-core", () => ({
+  useAuthCore: () => ({
+    logout: vi.fn(),
+    setUser: vi.fn(),
     user: {
+      createdAt: "2025-01-01T00:00:00.000Z",
       displayName: "John Doe",
       email: "test@example.com",
       firstName: "John",
-      id: "1",
+      id: "user-1",
       isEmailVerified: true,
       lastName: "Doe",
       preferences: {
@@ -26,17 +28,15 @@ vi.mock("@/stores/user-store", () => ({
           tripReminders: true,
         },
       },
-      security: {
-        twoFactorEnabled: false,
-      },
+      updatedAt: "2025-01-01T00:00:00.000Z",
     },
   }),
 }));
 
 vi.mock("@/stores/currency-store", () => ({
   useCurrencyStore: () => ({
-    currency: "USD",
-    setCurrency: vi.fn(),
+    baseCurrency: "USD",
+    setBaseCurrency: vi.fn(),
   }),
 }));
 

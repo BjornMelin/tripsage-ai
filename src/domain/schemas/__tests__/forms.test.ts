@@ -182,19 +182,11 @@ describe("forms schemas", () => {
       const result = preferencesFormSchema.safeParse({
         currency: "USD",
         dateFormat: "MM/DD/YYYY",
-        defaultCurrency: "USD",
-        defaultLanguage: "en",
-        emailNotifications: true,
         language: "en",
-        marketingEmails: false,
-        pushNotifications: true,
-        smsNotifications: false,
         theme: "light",
         timeFormat: "12h",
         timezone: "America/New_York",
-        travelDeals: false,
         units: "metric",
-        weeklyDigest: false,
       });
       expect(result.success).toBe(true);
     });

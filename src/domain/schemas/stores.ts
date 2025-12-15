@@ -538,49 +538,6 @@ export const authStoreActionsSchema = z.object({
 export type AuthStoreActions = z.infer<typeof authStoreActionsSchema>;
 
 /**
- * Zod schema for user store state.
- * Manages user profile data and loading state.
- */
-export const userStoreStateSchema = z
-  .object({
-    profile: z
-      .object({
-        avatar: URL_SCHEMA.optional(),
-        bio: z.string().optional(),
-        currency: primitiveSchemas.isoCurrency.optional(),
-        displayName: z.string().optional(),
-        email: EMAIL_SCHEMA,
-        firstName: z.string(),
-        id: UUID_SCHEMA,
-        language: z.string().optional(),
-        lastName: z.string(),
-        preferences: z.record(z.string(), z.unknown()).optional(),
-        timezone: z.string().optional(),
-      })
-      .nullable(),
-  })
-  .extend(LOADING_STATE_SCHEMA.shape);
-
-/** TypeScript type for user store state. */
-export type UserStoreState = z.infer<typeof userStoreStateSchema>;
-
-/**
- * Zod schema for user store actions.
- * Validates action function signatures for user store.
- */
-export const userStoreActionsSchema = z.object({
-  deleteAccount: z.function(),
-  fetchProfile: z.function(),
-  reset: z.function(),
-  updatePreferences: z.function(),
-  updateProfile: z.function(),
-  uploadAvatar: z.function(),
-});
-
-/** TypeScript type for user store actions. */
-export type UserStoreActions = z.infer<typeof userStoreActionsSchema>;
-
-/**
  * Zod schema for search store state.
  * Manages search parameters, results, filters, and saved searches.
  */

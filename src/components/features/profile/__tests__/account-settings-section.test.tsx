@@ -4,30 +4,19 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "@/components/ui/use-toast";
 import { useAuthCore } from "@/stores/auth/auth-core";
-import { useUserProfileStore } from "@/stores/user-store";
 import { AccountSettingsSection } from "../account-settings-section";
 
 // Mock the stores and hooks
-vi.mock("@/stores/user-store");
 vi.mock("@/stores/auth/auth-core");
-vi.mock("@/lib/supabase", () => {
-  const updateUser = vi.fn().mockResolvedValue({ data: { user: {} }, error: null });
-  return {
-    getBrowserClient: () => ({ auth: { updateUser } }),
-  };
-});
+const { UPDATE_USER } = vi.hoisted(() => ({
+  UPDATE_USER: vi.fn(),
+}));
+
+vi.mock("@/lib/supabase", () => ({
+  getBrowserClient: () => ({ auth: { updateUser: UPDATE_USER } }),
+}));
 // use-toast is fully mocked in test-setup.ts; avoid overriding here.
 
-const MockProfile = {
-  createdAt: "",
-  email: "test@example.com",
-  firstName: "John",
-  id: "1",
-  lastName: "Doe",
-  updatedAt: "",
-};
-
-const MockUpdatePersonalInfo = vi.fn();
 const MockToast = toast as unknown as ReturnType<typeof vi.fn>;
 const MockLogout = vi.fn();
 const MockSetUser = vi.fn();
@@ -43,10 +32,7 @@ describe("AccountSettingsSection", () => {
   beforeEach(() => {
     vi.useRealTimers();
     vi.clearAllMocks();
-    vi.mocked(useUserProfileStore).mockReturnValue({
-      profile: MockProfile,
-      updatePersonalInfo: MockUpdatePersonalInfo,
-    });
+    UPDATE_USER.mockResolvedValue({ data: { user: {} }, error: null });
     vi.mocked(useAuthCore).mockReturnValue({
       logout: MockLogout,
       setUser: MockSetUser,
@@ -167,6 +153,7 @@ describe("AccountSettingsSection", () => {
   // Email update error path omitted; component simulates happy-path toast.
 
   it("shows loading state during email update", () => {
+    UPDATE_USER.mockImplementation(() => new Promise(() => {}));
     render(<AccountSettingsSection />);
 
     const updateButton = screen.getByRole("button", { name: /update email/i });
