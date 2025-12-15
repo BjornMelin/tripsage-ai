@@ -1,3 +1,20 @@
+## [1.14.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.13.0...v1.14.0) (2025-12-13)
+
+### Features
+
+* add GitHub integration creation API endpoint, schema, and service logic. ([d918ae2](https://github.com/BjornMelin/tripsage-ai/commit/d918ae2b6a2142568a13ae81c45ef4f0ef945daf))
+* **calendar:** fetch events client-side ([7baa49c](https://github.com/BjornMelin/tripsage-ai/commit/7baa49cc50ed1047826fd2cc1e38be14ea1807c9))
+* **chat:** migrate to AI SDK v6 useChat hook with streaming ([4da5952](https://github.com/BjornMelin/tripsage-ai/commit/4da5952dd8002784db8b7d869b464561f98abb76))
+* enhance calendar event list UI and tests, centralize BotID mock, and improve Playwright E2E configuration. ([6d67fd0](https://github.com/BjornMelin/tripsage-ai/commit/6d67fd01736db9cfb4a895b334111c73d9f5821a))
+
+### Bug Fixes
+
+* **activities:** improve booking telemetry delivery ([925495c](https://github.com/BjornMelin/tripsage-ai/commit/925495ce0e903816c2cd253c1941aba9a7f7ef83))
+* **calendar-event-list:** resolve PR [#548](https://github.com/BjornMelin/tripsage-ai/issues/548) review comments ([9c5ba9f](https://github.com/BjornMelin/tripsage-ai/commit/9c5ba9f8f61898b4c1c148b2a10862b0adde13a0))
+* **calendar:** allow extra fields in nested start/end schemas ([6376c33](https://github.com/BjornMelin/tripsage-ai/commit/6376c33202e87bd4a3359e91400d7ac823b7ae2f))
+* **mfa:** make backup code count best-effort ([7bcd548](https://github.com/BjornMelin/tripsage-ai/commit/7bcd54872a1256123ddb9af9c2f1e5c5640c7bd8))
+* **review:** address PR [#548](https://github.com/BjornMelin/tripsage-ai/issues/548) feedback ([0edcf22](https://github.com/BjornMelin/tripsage-ai/commit/0edcf2277a9f59ede2536e77d5ebf71cb9bb601f))
+
 ## [1.13.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.12.0...v1.13.0) (2025-12-12)
 
 ### Features
