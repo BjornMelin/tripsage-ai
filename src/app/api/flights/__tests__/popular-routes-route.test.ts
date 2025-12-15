@@ -10,7 +10,7 @@ import { setupUpstashMocks } from "@/test/upstash/redis-mock";
 const { redis, ratelimit } = setupUpstashMocks();
 
 vi.mock("next/headers", () => ({
-  cookies: vi.fn(async () => new Map()),
+  cookies: vi.fn(() => Promise.resolve(new Map())),
 }));
 
 // Mock @/lib/redis to return raw values (matches real Upstash behavior for getCachedJson)
