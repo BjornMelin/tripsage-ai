@@ -37,7 +37,7 @@ export const POST = withApiGuards({
   const apiKey = getGoogleMapsServerKey();
 
   // Forward geocoding: address -> lat/lng
-  if (validated.address) {
+  if ("address" in validated) {
     const normalizedAddress = validated.address.toLowerCase().trim();
     const cacheKey = `geocode:${normalizedAddress}`;
 
@@ -70,7 +70,16 @@ export const POST = withApiGuards({
       });
     }
 
-    const rawData = await response.json();
+    let rawData: unknown;
+    try {
+      rawData = await response.json();
+    } catch (_jsonError) {
+      return errorResponse({
+        error: "upstream_parse_error",
+        reason: "Failed to parse Geocoding API response",
+        status: 502,
+      });
+    }
 
     // Validate upstream response
     const parseResult = upstreamGeocodeResponseSchema.safeParse(rawData);
@@ -100,7 +109,7 @@ export const POST = withApiGuards({
   }
 
   // Reverse geocoding: lat/lng -> address
-  if (typeof validated.lat === "number" && typeof validated.lng === "number") {
+  if ("lat" in validated && "lng" in validated) {
     const response = await getReverseGeocode({
       apiKey,
       lat: validated.lat,
@@ -115,7 +124,16 @@ export const POST = withApiGuards({
       });
     }
 
-    const rawData = await response.json();
+    let rawData: unknown;
+    try {
+      rawData = await response.json();
+    } catch (_jsonError) {
+      return errorResponse({
+        error: "upstream_parse_error",
+        reason: "Failed to parse Geocoding API response",
+        status: 502,
+      });
+    }
 
     // Validate upstream response
     const parseResult = upstreamGeocodeResponseSchema.safeParse(rawData);

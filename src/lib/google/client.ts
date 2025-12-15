@@ -11,6 +11,30 @@ import "server-only";
 
 import { retryWithBackoff } from "@/lib/http/retry";
 
+// === Coordinate Validation ===
+
+/**
+ * Validates latitude and longitude coordinates.
+ *
+ * Throws descriptive errors if coordinates are invalid. Used by multiple
+ * API functions to ensure consistent validation and error messages.
+ *
+ * @param lat - Latitude to validate (-90 to 90).
+ * @param lng - Longitude to validate (-180 to 180).
+ * @throws Error if coordinates are not finite numbers or out of valid range.
+ */
+function validateCoordinates(lat: number, lng: number): void {
+  if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
+    throw new Error(`Invalid latitude "${lat}": must be a number between -90 and 90`);
+  }
+
+  if (!Number.isFinite(lng) || lng < -180 || lng > 180) {
+    throw new Error(
+      `Invalid longitude "${lng}": must be a number between -180 and 180`
+    );
+  }
+}
+
 // === NDJSON Helpers ===
 
 /**
@@ -246,8 +270,16 @@ type GeocodeParams = {
  * @throws Error if all retry attempts fail.
  */
 export async function getGeocode(params: GeocodeParams): Promise<Response> {
+  // Validate address parameter
+  const trimmedAddress = params.address.trim();
+  if (!trimmedAddress) {
+    throw new Error(
+      "Invalid address: must be a non-empty string after trimming whitespace"
+    );
+  }
+
   const url = new URL("https://maps.googleapis.com/maps/api/geocode/json");
-  url.searchParams.set("address", params.address);
+  url.searchParams.set("address", trimmedAddress);
   url.searchParams.set("key", params.apiKey);
 
   return await retryWithBackoff(
@@ -282,17 +314,7 @@ type ReverseGeocodeParams = {
 export async function getReverseGeocode(
   params: ReverseGeocodeParams
 ): Promise<Response> {
-  if (!Number.isFinite(params.lat) || params.lat < -90 || params.lat > 90) {
-    throw new Error(
-      `Invalid latitude "${params.lat}": must be a number between -90 and 90`
-    );
-  }
-
-  if (!Number.isFinite(params.lng) || params.lng < -180 || params.lng > 180) {
-    throw new Error(
-      `Invalid longitude "${params.lng}": must be a number between -180 and 180`
-    );
-  }
+  validateCoordinates(params.lat, params.lng);
 
   const url = new URL("https://maps.googleapis.com/maps/api/geocode/json");
   url.searchParams.set("latlng", `${params.lat},${params.lng}`);
@@ -332,17 +354,7 @@ type TimezoneParams = {
  * @throws Error if all retry attempts fail.
  */
 export async function getTimezone(params: TimezoneParams): Promise<Response> {
-  if (!Number.isFinite(params.lat) || params.lat < -90 || params.lat > 90) {
-    throw new Error(
-      `Invalid latitude "${params.lat}": must be a number between -90 and 90`
-    );
-  }
-
-  if (!Number.isFinite(params.lng) || params.lng < -180 || params.lng > 180) {
-    throw new Error(
-      `Invalid longitude "${params.lng}": must be a number between -180 and 180`
-    );
-  }
+  validateCoordinates(params.lat, params.lng);
 
   const url = new URL("https://maps.googleapis.com/maps/api/timezone/json");
   url.searchParams.set("location", `${params.lat},${params.lng}`);
@@ -395,11 +407,49 @@ export async function getPlacePhoto(params: PlacePhotoParams): Promise<Response>
     );
   }
 
+  // Validate photo dimensions if provided
+  const maxDimension = 2048;
+  if (params.maxWidthPx !== undefined) {
+    if (!Number.isFinite(params.maxWidthPx) || !Number.isInteger(params.maxWidthPx)) {
+      throw new Error(
+        `Invalid maxWidthPx "${params.maxWidthPx}": must be a finite integer`
+      );
+    }
+    if (params.maxWidthPx <= 0) {
+      throw new Error(
+        `Invalid maxWidthPx "${params.maxWidthPx}": must be greater than 0`
+      );
+    }
+    if (params.maxWidthPx > maxDimension) {
+      throw new Error(
+        `Invalid maxWidthPx "${params.maxWidthPx}": must not exceed ${maxDimension}`
+      );
+    }
+  }
+
+  if (params.maxHeightPx !== undefined) {
+    if (!Number.isFinite(params.maxHeightPx) || !Number.isInteger(params.maxHeightPx)) {
+      throw new Error(
+        `Invalid maxHeightPx "${params.maxHeightPx}": must be a finite integer`
+      );
+    }
+    if (params.maxHeightPx <= 0) {
+      throw new Error(
+        `Invalid maxHeightPx "${params.maxHeightPx}": must be greater than 0`
+      );
+    }
+    if (params.maxHeightPx > maxDimension) {
+      throw new Error(
+        `Invalid maxHeightPx "${params.maxHeightPx}": must not exceed ${maxDimension}`
+      );
+    }
+  }
+
   const url = new URL(`https://places.googleapis.com/v1/${params.photoName}/media`);
-  if (params.maxWidthPx) {
+  if (params.maxWidthPx !== undefined) {
     url.searchParams.set("maxWidthPx", String(params.maxWidthPx));
   }
-  if (params.maxHeightPx) {
+  if (params.maxHeightPx !== undefined) {
     url.searchParams.set("maxHeightPx", String(params.maxHeightPx));
   }
   if (params.skipHttpRedirect) {
@@ -428,17 +478,7 @@ export async function getPlacePhoto(params: PlacePhotoParams): Promise<Response>
  * @throws Error if all retry attempts fail.
  */
 export async function postNearbySearch(params: NearbySearchParams): Promise<Response> {
-  if (!Number.isFinite(params.lat) || params.lat < -90 || params.lat > 90) {
-    throw new Error(
-      `Invalid latitude "${params.lat}": must be a number between -90 and 90`
-    );
-  }
-
-  if (!Number.isFinite(params.lng) || params.lng < -180 || params.lng > 180) {
-    throw new Error(
-      `Invalid longitude "${params.lng}": must be a number between -180 and 180`
-    );
-  }
+  validateCoordinates(params.lat, params.lng);
 
   if (params.maxResultCount !== undefined) {
     if (

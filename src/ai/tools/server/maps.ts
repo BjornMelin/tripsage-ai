@@ -52,7 +52,10 @@ export const geocode = createAiTool({
     const parseResult = upstreamGeocodeResponseSchema.safeParse(rawData);
 
     if (!parseResult.success) {
-      throw new Error("Invalid response from Geocoding API");
+      const zodError = parseResult.error.format();
+      throw new Error(
+        `Invalid response from Geocoding API: ${JSON.stringify(zodError).slice(0, 200)}`
+      );
     }
 
     return parseResult.data.results;
@@ -153,15 +156,28 @@ export const distanceMatrix = createAiTool({
       destinations.map((addr) => geocodeAddress(addr, apiKey))
     );
 
-    // Check for geocoding failures
-    const failedOrigins = originCoords.indexOf(null);
-    const failedDests = destCoords.indexOf(null);
+    // Check for geocoding failures - collect ALL failures
+    const failedOriginIndices = originCoords
+      .map((coord, idx) => (coord === null ? idx : -1))
+      .filter((idx) => idx !== -1);
+    const failedDestIndices = destCoords
+      .map((coord, idx) => (coord === null ? idx : -1))
+      .filter((idx) => idx !== -1);
 
-    if (failedOrigins !== -1) {
-      throw new Error(`Failed to geocode origin: ${origins[failedOrigins]}`);
-    }
-    if (failedDests !== -1) {
-      throw new Error(`Failed to geocode destination: ${destinations[failedDests]}`);
+    if (failedOriginIndices.length > 0 || failedDestIndices.length > 0) {
+      const errors: string[] = [];
+
+      if (failedOriginIndices.length > 0) {
+        const addrs = failedOriginIndices.map((idx) => origins[idx]).join(", ");
+        errors.push(`Failed to geocode origins: ${addrs}`);
+      }
+
+      if (failedDestIndices.length > 0) {
+        const addrs = failedDestIndices.map((idx) => destinations[idx]).join(", ");
+        errors.push(`Failed to geocode destinations: ${addrs}`);
+      }
+
+      throw new Error(errors.join("; "));
     }
 
     // Type-narrow to non-null after validation
@@ -181,7 +197,8 @@ export const distanceMatrix = createAiTool({
     }));
 
     // Call Routes API computeRouteMatrix
-    const fieldMask = "originIndex,destinationIndex,duration,distanceMeters,status";
+    const fieldMask =
+      "originIndex,destinationIndex,duration,distanceMeters,status,condition";
     const response = await postComputeRouteMatrix({
       apiKey,
       body: {
@@ -217,12 +234,23 @@ export const distanceMatrix = createAiTool({
 
     // Transform Routes API response to legacy Distance Matrix format
     const entries = parseResult.data;
+
+    // Pre-index entries for O(1) lookup (avoids O(n²) find() in nested loops)
+    const entryMap = new Map<string, (typeof entries)[number]>();
+    for (const e of entries) {
+      entryMap.set(`${e.originIndex}:${e.destinationIndex}`, e);
+    }
+
     const rows = origins.map((_, originIdx) => ({
       elements: destinations.map((_, destIdx) => {
-        const entry = entries.find(
-          (e) => e.originIndex === originIdx && e.destinationIndex === destIdx
-        );
-        if (!entry || entry.status?.code !== 0) {
+        const entry = entryMap.get(`${originIdx}:${destIdx}`);
+        // Check if route exists: condition is ROUTE_EXISTS OR status is empty/missing
+        const isSuccess =
+          entry &&
+          (entry.condition === "ROUTE_EXISTS" ||
+            !entry.status ||
+            Object.keys(entry.status).length === 0);
+        if (!isSuccess) {
           return { status: "ZERO_RESULTS" };
         }
         return {
