@@ -8,27 +8,19 @@ import { setupUpstashMocks } from "@/test/upstash/redis-mock";
 
 const { redis, ratelimit } = setupUpstashMocks();
 
-const redisClient = {
-  del: vi.fn((...keys: string[]) => {
-    let deleted = 0;
-    keys.forEach((key) => {
-      if (redis.store.delete(key)) deleted += 1;
-    });
-    return deleted;
-  }),
-  get: vi.fn(async (key: string) => redis.store.get(key)?.value ?? null),
-  set: vi.fn((key: string, value: string) => {
-    redis.store.set(key, { value });
-    return "OK";
-  }),
-};
-
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => new Map()),
 }));
 
+// Mock @/lib/redis to return raw values (matches real Upstash behavior for getCachedJson)
 vi.mock("@/lib/redis", () => ({
-  getRedis: vi.fn(() => redisClient),
+  getRedis: vi.fn(() => ({
+    get: async (key: string) => redis.store.get(key)?.value ?? null,
+    set: async (key: string, value: string) => {
+      redis.store.set(key, { value });
+      return "OK";
+    },
+  })),
 }));
 
 // Import after mocks are registered
@@ -49,9 +41,6 @@ describe("/api/flights/popular-routes", () => {
     stubRateLimitDisabled();
     redis.__reset?.();
     ratelimit.__reset?.();
-    redisClient.del.mockClear();
-    redisClient.get.mockClear();
-    redisClient.set.mockClear();
     setSupabaseFactoryForTests(async () => supabaseClient as never);
     supabaseClient.auth.getUser.mockResolvedValue({
       data: { user: null },
@@ -66,12 +55,12 @@ describe("/api/flights/popular-routes", () => {
   });
 
   it("returns cached routes when present", async () => {
-    await redisClient.set(
-      "popular-routes:global",
-      JSON.stringify([
+    // Seed cache directly in the shared store (getCachedJson expects raw JSON string)
+    redis.store.set("popular-routes:global", {
+      value: JSON.stringify([
         { date: "May 1, 2026", destination: "Paris", origin: "NYC", price: 123 },
-      ])
-    );
+      ]),
+    });
 
     const req = createMockNextRequest({
       method: "GET",
