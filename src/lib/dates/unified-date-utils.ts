@@ -45,18 +45,6 @@ import {
 } from "date-fns";
 
 /**
- * Timezone configuration constants.
- *
- * @constant TIMEZONE_CONFIG
- */
-export const TIMEZONE_CONFIG = {
-  /** Default timezone for the application. */
-  default: "UTC",
-  /** User-specific timezone setting. */
-  user: "UTC",
-} as const;
-
-/**
  * Predefined date format patterns used throughout the application.
  *
  * @constant DATE_FORMATS
@@ -98,20 +86,6 @@ function ensureValidDate(date: Date): void {
   if (!isValidFn(date)) {
     throw new Error("Invalid date instance");
   }
-}
-
-/**
- * Converts a Date or timestamp to a Date instance.
- *
- * @private
- * @param input - Date object or timestamp to convert.
- * @returns A Date instance.
- */
-function toDate(input: Date | number): Date {
-  if (input instanceof Date) {
-    return input;
-  }
-  return new Date(input);
 }
 
 /**
@@ -352,125 +326,4 @@ export class DateUtils {
     ensureValidDate(date2);
     return date1.valueOf() - date2.valueOf();
   }
-}
-
-export function getTimezoneOffset(
-  timeZone: string,
-  date: Date | number = new Date()
-): number {
-  const targetDate = toDate(date);
-  const dtf = new Intl.DateTimeFormat("en-US", {
-    day: "2-digit",
-    hour: "2-digit",
-    hour12: false,
-    minute: "2-digit",
-    month: "2-digit",
-    second: "2-digit",
-    timeZone,
-    year: "numeric",
-  });
-  const parts = dtf.formatToParts(targetDate);
-  const partValues: Record<string, string> = {};
-  for (const part of parts) {
-    if (part.type !== "literal") {
-      partValues[part.type] = part.value;
-    }
-  }
-  const year = Number.parseInt(partValues.year ?? "0", 10);
-  const month = Number.parseInt(partValues.month ?? "1", 10) - 1;
-  const day = Number.parseInt(partValues.day ?? "1", 10);
-  const hour = Number.parseInt(partValues.hour ?? "0", 10);
-  const minute = Number.parseInt(partValues.minute ?? "0", 10);
-  const second = Number.parseInt(partValues.second ?? "0", 10);
-  const utcMillis = Date.UTC(year, month, day, hour, minute, second);
-  const timestamp = DateUtils.toUnix(targetDate) * 1000;
-  return (utcMillis - timestamp) / 60000;
-}
-
-export function utcToZonedTime(date: Date | number, timeZone: string): Date {
-  const utcDate = toDate(date);
-  const offset = getTimezoneOffset(timeZone, utcDate);
-  return DateUtils.add(utcDate, offset, "minutes");
-}
-
-export function zonedTimeToUtc(date: Date | number, timeZone: string): Date {
-  const zonedDate = toDate(date);
-  const offset = getTimezoneOffset(timeZone, zonedDate);
-  return DateUtils.add(zonedDate, -offset, "minutes");
-}
-
-// biome-ignore lint/complexity/noStaticOnlyClass: Shared utility API consumed as static class across app.
-export class TimezoneUtils {
-  static utcToUserTimezone(
-    date: Date,
-    userTimezone: string = TIMEZONE_CONFIG.user
-  ): Date {
-    return utcToZonedTime(date, userTimezone);
-  }
-
-  static userTimezoneToUtc(
-    date: Date,
-    userTimezone: string = TIMEZONE_CONFIG.user
-  ): Date {
-    return zonedTimeToUtc(date, userTimezone);
-  }
-
-  static getTimezoneOffset(timezone: string = TIMEZONE_CONFIG.user): number {
-    return getTimezoneOffset(timezone);
-  }
-
-  static formatInUserTimezone(
-    date: Date,
-    pattern: string = DATE_FORMATS.display,
-    userTimezone: string = TIMEZONE_CONFIG.user
-  ): string {
-    const userDate = TimezoneUtils.utcToUserTimezone(date, userTimezone);
-    return format(userDate, pattern);
-  }
-}
-
-// biome-ignore lint/complexity/noStaticOnlyClass: Shared utility API consumed as static class across app.
-export class CalendarUtils {
-  static generateCalendarMonth(date: Date): Date[][] {
-    const start = DateUtils.startOf(date, "month");
-    const end = DateUtils.endOf(date, "month");
-    const startWeek = DateUtils.startOf(start, "week");
-    const endWeek = DateUtils.endOf(end, "week");
-    const weeks: Date[][] = [];
-    let weekStart = startWeek;
-    while (
-      DateUtils.isBefore(weekStart, endWeek) ||
-      DateUtils.isSame(weekStart, endWeek, "day")
-    ) {
-      const weekDays = DateUtils.eachDay(weekStart, DateUtils.endOf(weekStart, "week"));
-      weeks.push(weekDays);
-      weekStart = DateUtils.add(weekStart, 7, "days");
-    }
-    return weeks;
-  }
-
-  static isCurrentMonth(date: Date, referenceDate: Date): boolean {
-    return DateUtils.isSame(date, referenceDate, "month");
-  }
-
-  static isToday(date: Date): boolean {
-    return DateUtils.isSame(date, new Date(), "day");
-  }
-
-  static isPast(date: Date): boolean {
-    return DateUtils.isBefore(date, new Date());
-  }
-
-  static isFuture(date: Date): boolean {
-    return DateUtils.isAfter(date, new Date());
-  }
-}
-
-export function createDateRange(start: Date, end: Date): DateRange {
-  ensureValidDate(start);
-  ensureValidDate(end);
-  if (DateUtils.isAfter(start, end)) {
-    throw new Error("Start date must be before end date");
-  }
-  return { end, start };
 }

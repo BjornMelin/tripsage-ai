@@ -11,25 +11,22 @@
  * @param fallback - Optional fallback message when no error message is available.
  * @returns A trimmed message when present, otherwise the fallback string.
  */
+function trimmedOrFallback(message: string, fallback: string): string {
+  const trimmedMessage = message.trim();
+  return trimmedMessage.length > 0 ? trimmedMessage : fallback;
+}
+
 export function getErrorMessage(reason: unknown, fallback = "Unknown error"): string {
   if (typeof reason === "string") {
-    const trimmedMessage = reason.trim();
-    return trimmedMessage.length > 0 ? trimmedMessage : fallback;
+    return trimmedOrFallback(reason, fallback);
   }
   if (reason instanceof Error) {
-    const trimmedMessage = reason.message.trim();
-    return trimmedMessage.length > 0 ? trimmedMessage : fallback;
+    return trimmedOrFallback(reason.message, fallback);
   }
   if (reason !== null && typeof reason === "object") {
-    let message: unknown;
-    try {
-      message = (reason as { message?: unknown }).message;
-    } catch {
-      return fallback;
-    }
+    const message = (reason as { message?: unknown }).message;
     if (typeof message === "string") {
-      const trimmedMessage = message.trim();
-      return trimmedMessage.length > 0 ? trimmedMessage : fallback;
+      return trimmedOrFallback(message, fallback);
     }
   }
   return fallback;

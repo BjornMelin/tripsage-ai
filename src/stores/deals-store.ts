@@ -12,10 +12,10 @@ import {
   type DealType,
 } from "@schemas/deals";
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import { compact } from "@/lib/collection-utils";
+import { devtools, persist } from "zustand/middleware";
 import { nowIso, secureId } from "@/lib/security/random";
 import { createStoreLogger } from "@/lib/telemetry/store-logger";
+import { createComputeFn, withComputed } from "@/stores/middleware/computed";
 
 const logger = createStoreLogger({ storeName: "deals" });
 
@@ -25,6 +25,10 @@ interface DealsStore extends DealState {
   featuredDeals: string[];
   savedDeals: string[];
   recentlyViewedDeals: string[];
+  // Computed, derived state (kept in sync via withComputed middleware)
+  featuredDealItems: Deal[];
+  savedDealItems: Deal[];
+  recentlyViewedDealItems: Deal[];
   alerts: DealAlert[];
   filters: DealState["filters"] | undefined;
   lastUpdated: string | null;
@@ -77,16 +81,6 @@ interface DealsStore extends DealState {
 // Helper functions
 const GENERATE_ID = () => secureId(12);
 const GET_CURRENT_TIMESTAMP = () => nowIso();
-
-// Utility for validating deal objects
-const _validateDeal = (deal: unknown): deal is Deal => {
-  return DEAL_SCHEMA.safeParse(deal).success;
-};
-
-// Utility for validating alert objects
-const _validateAlert = (alert: unknown): alert is DealAlert => {
-  return DEAL_ALERT_SCHEMA.safeParse(alert).success;
-};
 
 // Calculate percentage discount
 const CALCULATE_DISCOUNT_PERCENTAGE = (
@@ -250,300 +244,319 @@ const MATCH_DEAL_WITH_FILTERS = (
   return true;
 };
 
+const pickDealsByIds = (state: DealsStore, dealIds: readonly string[]): Deal[] => {
+  return dealIds
+    .map((id) => state.deals[id])
+    .filter((deal): deal is Deal => deal != null);
+};
+
+const computeDealsState = createComputeFn<DealsStore>({
+  featuredDealItems: (state) => pickDealsByIds(state, state.featuredDeals),
+  recentlyViewedDealItems: (state) => pickDealsByIds(state, state.recentlyViewedDeals),
+  savedDealItems: (state) => pickDealsByIds(state, state.savedDeals),
+});
+
 export const useDealsStore = create<DealsStore>()(
-  persist(
-    (set, get) => ({
-      addAlert: (alert) => {
-        const result = DEAL_ALERT_SCHEMA.safeParse(alert);
-        if (result.success) {
+  devtools(
+    persist(
+      withComputed({ compute: computeDealsState }, (set, get) => ({
+        addAlert: (alert) => {
+          const result = DEAL_ALERT_SCHEMA.safeParse(alert);
+          if (result.success) {
+            set((state) => {
+              const newAlert = {
+                ...result.data,
+                createdAt: result.data.createdAt || GET_CURRENT_TIMESTAMP(),
+                id: result.data.id || GENERATE_ID(),
+                updatedAt: GET_CURRENT_TIMESTAMP(),
+              };
+
+              return {
+                alerts: [...state.alerts, newAlert],
+              };
+            });
+            return true;
+          }
+          logger.error("Invalid alert data", { error: result.error });
+          return false;
+        },
+
+        addDeal: (deal) => {
+          const result = DEAL_SCHEMA.safeParse(deal);
+          if (result.success) {
+            set((state) => {
+              // Ensure deal has required timestamps
+              const newDeal = {
+                ...result.data,
+                createdAt: result.data.createdAt || GET_CURRENT_TIMESTAMP(),
+                updatedAt: GET_CURRENT_TIMESTAMP(),
+              };
+
+              return {
+                deals: {
+                  ...state.deals,
+                  [newDeal.id]: newDeal,
+                },
+                lastUpdated: GET_CURRENT_TIMESTAMP(),
+              };
+            });
+            return true;
+          }
+          logger.error("Invalid deal data", { error: result.error });
+          return false;
+        },
+
+        addToFeaturedDeals: (dealId) =>
           set((state) => {
-            const newAlert = {
-              ...result.data,
-              createdAt: result.data.createdAt || GET_CURRENT_TIMESTAMP(),
-              id: result.data.id || GENERATE_ID(),
-              updatedAt: GET_CURRENT_TIMESTAMP(),
-            };
+            if (!state.deals[dealId] || state.featuredDeals.includes(dealId)) {
+              return state;
+            }
 
             return {
-              alerts: [...state.alerts, newAlert],
+              featuredDeals: [...state.featuredDeals, dealId],
             };
-          });
-          return true;
-        }
-        logger.error("Invalid alert data", { error: result.error });
-        return false;
-      },
+          }),
 
-      addDeal: (deal) => {
-        const result = DEAL_SCHEMA.safeParse(deal);
-        if (result.success) {
+        // Recently viewed deals
+        addToRecentlyViewed: (dealId) =>
           set((state) => {
-            // Ensure deal has required timestamps
-            const newDeal = {
-              ...result.data,
-              createdAt: result.data.createdAt || GET_CURRENT_TIMESTAMP(),
-              updatedAt: GET_CURRENT_TIMESTAMP(),
+            if (!state.deals[dealId]) return state;
+
+            // Remove if already exists (to move to front)
+            const filtered = state.recentlyViewedDeals.filter((id) => id !== dealId);
+
+            // Add to front and limit to 20 items
+            return {
+              recentlyViewedDeals: [dealId, ...filtered].slice(0, 20),
             };
+          }),
+
+        addToSavedDeals: (dealId) =>
+          set((state) => {
+            if (!state.deals[dealId] || state.savedDeals.includes(dealId)) {
+              return state;
+            }
 
             return {
-              deals: {
-                ...state.deals,
-                [newDeal.id]: newDeal,
-              },
-              lastUpdated: GET_CURRENT_TIMESTAMP(),
+              savedDeals: [...state.savedDeals, dealId],
             };
-          });
-          return true;
-        }
-        logger.error("Invalid deal data", { error: result.error });
-        return false;
-      },
+          }),
+        alerts: [],
 
-      addToFeaturedDeals: (dealId) =>
-        set((state) => {
-          if (!state.deals[dealId] || state.featuredDeals.includes(dealId)) {
-            return state;
-          }
+        clearFilters: () => set({ filters: undefined }),
 
-          return {
-            featuredDeals: [...state.featuredDeals, dealId],
-          };
-        }),
+        clearRecentlyViewed: () => set({ recentlyViewedDeals: [] }),
+        // Initial state
+        deals: {},
+        featuredDealItems: [],
+        featuredDeals: [],
+        filters: undefined,
 
-      // Recently viewed deals
-      addToRecentlyViewed: (dealId) =>
-        set((state) => {
-          if (!state.deals[dealId]) return state;
+        getAlertById: (id) => {
+          const state = get();
+          return state.alerts.find((alert) => alert.id === id);
+        },
 
-          // Remove if already exists (to move to front)
-          const filtered = state.recentlyViewedDeals.filter((id) => id !== dealId);
+        // Computed properties & utilities
+        getDealById: (id) => {
+          const state = get();
+          return state.deals[id];
+        },
 
-          // Add to front and limit to 20 items
-          return {
-            recentlyViewedDeals: [dealId, ...filtered].slice(0, 20),
-          };
-        }),
+        getDealsStats: () => {
+          const state = get();
+          const allDeals = Object.values(state.deals);
+          return CALCULATE_DEALS_STATS(allDeals);
+        },
 
-      addToSavedDeals: (dealId) =>
-        set((state) => {
-          if (!state.deals[dealId] || state.savedDeals.includes(dealId)) {
-            return state;
-          }
+        getFeaturedDeals: () => {
+          return get().featuredDealItems;
+        },
 
-          return {
-            savedDeals: [...state.savedDeals, dealId],
-          };
-        }),
-      alerts: [],
+        getFilteredDeals: () => {
+          const state = get();
+          const allDeals = Object.values(state.deals);
 
-      clearFilters: () => set({ filters: undefined }),
+          if (!state.filters) return allDeals;
 
-      clearRecentlyViewed: () => set({ recentlyViewedDeals: [] }),
-      // Initial state
-      deals: {},
-      featuredDeals: [],
-      filters: undefined,
-
-      getAlertById: (id) => {
-        const state = get();
-        return state.alerts.find((alert) => alert.id === id);
-      },
-
-      // Computed properties & utilities
-      getDealById: (id) => {
-        const state = get();
-        return state.deals[id];
-      },
-
-      getDealsStats: () => {
-        const state = get();
-        const allDeals = Object.values(state.deals);
-        return CALCULATE_DEALS_STATS(allDeals);
-      },
-
-      getFeaturedDeals: () => {
-        const state = get();
-        return compact(state.featuredDeals.map((id) => state.deals[id]));
-      },
-
-      getFilteredDeals: () => {
-        const state = get();
-        const allDeals = Object.values(state.deals);
-
-        if (!state.filters) return allDeals;
-
-        return allDeals.filter((deal) => MATCH_DEAL_WITH_FILTERS(deal, state.filters));
-      },
-
-      getRecentlyViewedDeals: () => {
-        const state = get();
-        return compact(state.recentlyViewedDeals.map((id) => state.deals[id]));
-      },
-
-      getSavedDeals: () => {
-        const state = get();
-        return compact(state.savedDeals.map((id) => state.deals[id]));
-      },
-
-      // State management
-      initialize: () => set({ isInitialized: true }),
-      isInitialized: false,
-      lastUpdated: null,
-      recentlyViewedDeals: [],
-
-      removeAlert: (id) =>
-        set((state) => ({
-          alerts: state.alerts.filter((alert) => alert.id !== id),
-        })),
-
-      removeDeal: (id) =>
-        set((state) => {
-          const { deals, featuredDeals, savedDeals, recentlyViewedDeals } = state;
-
-          // Remove from all collections
-          const newDeals = { ...deals };
-          delete newDeals[id];
-
-          const newFeaturedDeals = featuredDeals.filter((dealId) => dealId !== id);
-          const newSavedDeals = savedDeals.filter((dealId) => dealId !== id);
-          const newRecentlyViewedDeals = recentlyViewedDeals.filter(
-            (dealId) => dealId !== id
+          return allDeals.filter((deal) =>
+            MATCH_DEAL_WITH_FILTERS(deal, state.filters)
           );
+        },
 
-          return {
-            deals: newDeals,
-            featuredDeals: newFeaturedDeals,
+        getRecentlyViewedDeals: () => {
+          return get().recentlyViewedDealItems;
+        },
+
+        getSavedDeals: () => {
+          return get().savedDealItems;
+        },
+
+        // State management
+        initialize: () => set({ isInitialized: true }),
+        isInitialized: false,
+        lastUpdated: null,
+        recentlyViewedDealItems: [],
+        recentlyViewedDeals: [],
+
+        removeAlert: (id) =>
+          set((state) => ({
+            alerts: state.alerts.filter((alert) => alert.id !== id),
+          })),
+
+        removeDeal: (id) =>
+          set((state) => {
+            const { deals, featuredDeals, savedDeals, recentlyViewedDeals } = state;
+
+            // Remove from all collections
+            const newDeals = { ...deals };
+            delete newDeals[id];
+
+            const newFeaturedDeals = featuredDeals.filter((dealId) => dealId !== id);
+            const newSavedDeals = savedDeals.filter((dealId) => dealId !== id);
+            const newRecentlyViewedDeals = recentlyViewedDeals.filter(
+              (dealId) => dealId !== id
+            );
+
+            return {
+              deals: newDeals,
+              featuredDeals: newFeaturedDeals,
+              lastUpdated: GET_CURRENT_TIMESTAMP(),
+              recentlyViewedDeals: newRecentlyViewedDeals,
+              savedDeals: newSavedDeals,
+            };
+          }),
+
+        removeFromFeaturedDeals: (dealId) =>
+          set((state) => ({
+            featuredDeals: state.featuredDeals.filter((id) => id !== dealId),
+          })),
+
+        removeFromSavedDeals: (dealId) =>
+          set((state) => ({
+            savedDeals: state.savedDeals.filter((id) => id !== dealId),
+          })),
+
+        reset: () =>
+          set({
+            alerts: [],
+            deals: {},
+            featuredDealItems: [],
+            featuredDeals: [],
+            filters: undefined,
+            isInitialized: false,
+            lastUpdated: null,
+            recentlyViewedDealItems: [],
+            recentlyViewedDeals: [],
+            savedDealItems: [],
+            savedDeals: [],
+          }),
+        savedDealItems: [],
+        savedDeals: [],
+
+        // Deal alerts
+        setAlerts: (alerts) => set({ alerts }),
+
+        // Deals management
+        setDeals: (deals) =>
+          set(() => ({
+            deals,
             lastUpdated: GET_CURRENT_TIMESTAMP(),
-            recentlyViewedDeals: newRecentlyViewedDeals,
-            savedDeals: newSavedDeals,
-          };
-        }),
+          })),
 
-      removeFromFeaturedDeals: (dealId) =>
-        set((state) => ({
-          featuredDeals: state.featuredDeals.filter((id) => id !== dealId),
-        })),
+        // Featured deals
+        setFeaturedDeals: (dealIds) => set({ featuredDeals: dealIds }),
 
-      removeFromSavedDeals: (dealId) =>
-        set((state) => ({
-          savedDeals: state.savedDeals.filter((id) => id !== dealId),
-        })),
+        // Filtering
+        setFilters: (filters) => set({ filters }),
 
-      reset: () =>
-        set({
-          alerts: [],
-          deals: {},
-          featuredDeals: [],
-          filters: undefined,
-          isInitialized: false,
-          lastUpdated: null,
-          recentlyViewedDeals: [],
-          savedDeals: [],
-        }),
-      savedDeals: [],
+        // Saved deals
+        setSavedDeals: (dealIds) => set({ savedDeals: dealIds }),
 
-      // Deal alerts
-      setAlerts: (alerts) => set({ alerts }),
+        toggleAlertActive: (id) =>
+          set((state) => {
+            const alertIndex = state.alerts.findIndex((alert) => alert.id === id);
+            if (alertIndex === -1) return state;
 
-      // Deals management
-      setDeals: (deals) =>
-        set(() => ({
-          deals,
-          lastUpdated: GET_CURRENT_TIMESTAMP(),
-        })),
+            const newAlerts = [...state.alerts];
+            newAlerts[alertIndex] = {
+              ...newAlerts[alertIndex],
+              isActive: !newAlerts[alertIndex].isActive,
+              updatedAt: GET_CURRENT_TIMESTAMP(),
+            };
 
-      // Featured deals
-      setFeaturedDeals: (dealIds) => set({ featuredDeals: dealIds }),
+            return {
+              alerts: newAlerts,
+            };
+          }),
 
-      // Filtering
-      setFilters: (filters) => set({ filters }),
-
-      // Saved deals
-      setSavedDeals: (dealIds) => set({ savedDeals: dealIds }),
-
-      toggleAlertActive: (id) =>
-        set((state) => {
+        updateAlert: (id, updates) => {
+          const state = get();
           const alertIndex = state.alerts.findIndex((alert) => alert.id === id);
-          if (alertIndex === -1) return state;
+          if (alertIndex === -1) return false;
 
-          const newAlerts = [...state.alerts];
-          newAlerts[alertIndex] = {
-            ...newAlerts[alertIndex],
-            isActive: !newAlerts[alertIndex].isActive,
+          const existingAlert = state.alerts[alertIndex];
+          const updatedAlert = {
+            ...existingAlert,
+            ...updates,
             updatedAt: GET_CURRENT_TIMESTAMP(),
           };
 
-          return {
+          const result = DEAL_ALERT_SCHEMA.safeParse(updatedAlert);
+          if (!result.success) {
+            logger.error("Invalid alert update", { error: result.error });
+            return false;
+          }
+
+          const newAlerts = [...state.alerts];
+          newAlerts[alertIndex] = updatedAlert;
+
+          set({
             alerts: newAlerts,
+          });
+          return true;
+        },
+
+        updateDeal: (id, updates) => {
+          const state = get();
+          const existingDeal = state.deals[id];
+          if (!existingDeal) return false;
+
+          const updatedDeal = {
+            ...existingDeal,
+            ...updates,
+            updatedAt: GET_CURRENT_TIMESTAMP(),
           };
+
+          const result = DEAL_SCHEMA.safeParse(updatedDeal);
+          if (!result.success) {
+            logger.error("Invalid deal update", { error: result.error });
+            return false;
+          }
+
+          set({
+            deals: {
+              ...state.deals,
+              [id]: updatedDeal,
+            },
+            lastUpdated: GET_CURRENT_TIMESTAMP(),
+          });
+          return true;
+        },
+      })),
+      {
+        name: "deals-storage",
+        partialize: (state) => ({
+          alerts: state.alerts,
+          // Only persist certain parts of the state
+          featuredDeals: state.featuredDeals,
+          isInitialized: state.isInitialized,
+          recentlyViewedDeals: state.recentlyViewedDeals,
+          savedDeals: state.savedDeals,
+          // Don't persist deals, as they may become outdated
+          // Don't persist filters, reset them on reload
         }),
-
-      updateAlert: (id, updates) => {
-        const state = get();
-        const alertIndex = state.alerts.findIndex((alert) => alert.id === id);
-        if (alertIndex === -1) return false;
-
-        const existingAlert = state.alerts[alertIndex];
-        const updatedAlert = {
-          ...existingAlert,
-          ...updates,
-          updatedAt: GET_CURRENT_TIMESTAMP(),
-        };
-
-        const result = DEAL_ALERT_SCHEMA.safeParse(updatedAlert);
-        if (!result.success) {
-          logger.error("Invalid alert update", { error: result.error });
-          return false;
-        }
-
-        const newAlerts = [...state.alerts];
-        newAlerts[alertIndex] = updatedAlert;
-
-        set({
-          alerts: newAlerts,
-        });
-        return true;
-      },
-
-      updateDeal: (id, updates) => {
-        const state = get();
-        const existingDeal = state.deals[id];
-        if (!existingDeal) return false;
-
-        const updatedDeal = {
-          ...existingDeal,
-          ...updates,
-          updatedAt: GET_CURRENT_TIMESTAMP(),
-        };
-
-        const result = DEAL_SCHEMA.safeParse(updatedDeal);
-        if (!result.success) {
-          logger.error("Invalid deal update", { error: result.error });
-          return false;
-        }
-
-        set({
-          deals: {
-            ...state.deals,
-            [id]: updatedDeal,
-          },
-          lastUpdated: GET_CURRENT_TIMESTAMP(),
-        });
-        return true;
-      },
-    }),
-    {
-      name: "deals-storage",
-      partialize: (state) => ({
-        alerts: state.alerts,
-        // Only persist certain parts of the state
-        featuredDeals: state.featuredDeals,
-        isInitialized: state.isInitialized,
-        recentlyViewedDeals: state.recentlyViewedDeals,
-        savedDeals: state.savedDeals,
-        // Don't persist deals, as they may become outdated
-        // Don't persist filters, reset them on reload
-      }),
-    }
+      }
+    )
   )
 );

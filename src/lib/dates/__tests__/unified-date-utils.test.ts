@@ -1,7 +1,7 @@
 /** @vitest-environment node */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { DATE_FORMATS, DateUtils, TIMEZONE_CONFIG } from "../unified-date-utils";
+import { DATE_FORMATS, DateUtils } from "../unified-date-utils";
 
 describe("DateUtils", () => {
   beforeEach(() => {
@@ -369,15 +369,6 @@ describe("Constants", () => {
         expect(typeof format).toBe("string");
         expect(format.length).toBeGreaterThan(0);
       });
-    });
-  });
-
-  describe("TIMEZONE_CONFIG", () => {
-    it("should have timezone configuration", () => {
-      expect(TIMEZONE_CONFIG.default).toBeDefined();
-      expect(TIMEZONE_CONFIG.user).toBeDefined();
-      expect(typeof TIMEZONE_CONFIG.default).toBe("string");
-      expect(typeof TIMEZONE_CONFIG.user).toBe("string");
     });
   });
 });
