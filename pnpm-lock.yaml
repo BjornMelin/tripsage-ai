@@ -23,8 +23,8 @@ importers:
         specifier: 3.0.0-beta.95
         version: 3.0.0-beta.95(zod@4.1.13)
       '@ai-sdk/react':
-        specifier: 3.0.0-beta.151
-        version: 3.0.0-beta.151(react@19.2.3)(zod@4.1.13)
+        specifier: 3.0.0-beta.153
+        version: 3.0.0-beta.153(react@19.2.3)(zod@4.1.13)
       '@ai-sdk/togetherai':
         specifier: 2.0.0-beta.49
         version: 2.0.0-beta.49(zod@4.1.13)
@@ -460,8 +460,8 @@ packages:
     resolution: {integrity: sha512-UQyOlrpahFL1CZ/QA0ZpFhAkE32fw1XXBx+6gu23YWSCMJCjaf/fiJUPV7xUhp/nXqVO/IC+PIIfLomx55D16A==}
     engines: {node: '>=18'}
 
-  '@ai-sdk/react@3.0.0-beta.151':
-    resolution: {integrity: sha512-GsdTcPBzyA9ORtEUM+fnolXrzdXNiyWm8dd2fD0JCkDsJpP1GZI3fiXp8Mx1Bl8IRYyGcwJKHmq/Vru1bf8cNw==}
+  '@ai-sdk/react@3.0.0-beta.153':
+    resolution: {integrity: sha512-wdldNFesBAWum/8CJ9nebSDV+jnCig2uuL3H7pugWzuDclgqXdBSirUldBk0pHT8mtzQFmNp4Db9opcAO9svYQ==}
     engines: {node: '>=18'}
     peerDependencies:
       react: ^18 || ~19.0.1 || ~19.1.2 || ^19.2.1
@@ -3042,6 +3042,12 @@ packages:
 
   ai@6.0.0-beta.148:
     resolution: {integrity: sha512-Ml8RbKNcDFxr0yJQng8FhgYAc4ECTBSnRpl9//6dUIwWFubV1DFFYX0XpEVYU9XgcC18eJJ4IqYkWQgE73YGEQ==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  ai@6.0.0-beta.150:
+    resolution: {integrity: sha512-gBCzE2/m5w1ybx0bnWKf66ppCH+921jGFeGUTQv3+GWaaB1WLeaOa8H4sEmdx29YAZ5n+iqZKh+L5swhNSCIRg==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -6462,10 +6468,10 @@ snapshots:
     dependencies:
       json-schema: 0.4.0
 
-  '@ai-sdk/react@3.0.0-beta.151(react@19.2.3)(zod@4.1.13)':
+  '@ai-sdk/react@3.0.0-beta.153(react@19.2.3)(zod@4.1.13)':
     dependencies:
       '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.1.13)
-      ai: 6.0.0-beta.148(zod@4.1.13)
+      ai: 6.0.0-beta.150(zod@4.1.13)
       react: 19.2.3
       swr: 2.3.7(react@19.2.3)
       throttleit: 2.1.0
@@ -9080,6 +9086,18 @@ snapshots:
       indent-string: 5.0.0
 
   ai@6.0.0-beta.148(zod@4.1.13):
+    dependencies:
+      '@ai-sdk/gateway': 2.0.0-beta.78(zod@4.1.13)
+      '@ai-sdk/provider': 3.0.0-beta.26
+      '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.1.13)
+      '@opentelemetry/api': 1.9.0
+      zod: 4.1.13
+    transitivePeerDependencies:
+      - '@valibot/to-json-schema'
+      - arktype
+      - effect
+
+  ai@6.0.0-beta.150(zod@4.1.13):
     dependencies:
       '@ai-sdk/gateway': 2.0.0-beta.78(zod@4.1.13)
       '@ai-sdk/provider': 3.0.0-beta.26
