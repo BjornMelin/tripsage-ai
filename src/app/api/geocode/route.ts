@@ -13,11 +13,45 @@ import {
   upstreamGeocodeResponseSchema,
 } from "@schemas/api";
 import { type NextRequest, NextResponse } from "next/server";
+import type { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse } from "@/lib/api/route-helpers";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
 import { cacheLatLng, getCachedLatLng } from "@/lib/google/caching";
 import { getGeocode, getReverseGeocode } from "@/lib/google/client";
+
+async function parseAndValidateGeocodeResponse(
+  response: Response
+): Promise<
+  | { data: z.output<typeof upstreamGeocodeResponseSchema> }
+  | { error: ReturnType<typeof errorResponse> }
+> {
+  let rawData: unknown;
+  try {
+    rawData = await response.json();
+  } catch (_jsonError) {
+    return {
+      error: errorResponse({
+        error: "upstream_parse_error",
+        reason: "Failed to parse Geocoding API response",
+        status: 502,
+      }),
+    };
+  }
+
+  const parseResult = upstreamGeocodeResponseSchema.safeParse(rawData);
+  if (!parseResult.success) {
+    return {
+      error: errorResponse({
+        error: "upstream_validation_error",
+        reason: "Invalid response from Geocoding API",
+        status: 502,
+      }),
+    };
+  }
+
+  return { data: parseResult.data };
+}
 
 /**
  * POST /api/geocode
@@ -70,28 +104,9 @@ export const POST = withApiGuards({
       });
     }
 
-    let rawData: unknown;
-    try {
-      rawData = await response.json();
-    } catch (_jsonError) {
-      return errorResponse({
-        error: "upstream_parse_error",
-        reason: "Failed to parse Geocoding API response",
-        status: 502,
-      });
-    }
-
-    // Validate upstream response
-    const parseResult = upstreamGeocodeResponseSchema.safeParse(rawData);
-    if (!parseResult.success) {
-      return errorResponse({
-        error: "upstream_validation_error",
-        reason: "Invalid response from Geocoding API",
-        status: 502,
-      });
-    }
-
-    const data = parseResult.data;
+    const parsed = await parseAndValidateGeocodeResponse(response);
+    if ("error" in parsed) return parsed.error;
+    const { data } = parsed;
 
     if (data.status === "OK" && data.results?.[0]?.geometry?.location) {
       const location = data.results[0].geometry.location;
@@ -124,28 +139,9 @@ export const POST = withApiGuards({
       });
     }
 
-    let rawData: unknown;
-    try {
-      rawData = await response.json();
-    } catch (_jsonError) {
-      return errorResponse({
-        error: "upstream_parse_error",
-        reason: "Failed to parse Geocoding API response",
-        status: 502,
-      });
-    }
-
-    // Validate upstream response
-    const parseResult = upstreamGeocodeResponseSchema.safeParse(rawData);
-    if (!parseResult.success) {
-      return errorResponse({
-        error: "upstream_validation_error",
-        reason: "Invalid response from Geocoding API",
-        status: 502,
-      });
-    }
-
-    return NextResponse.json(parseResult.data);
+    const parsed = await parseAndValidateGeocodeResponse(response);
+    if ("error" in parsed) return parsed.error;
+    return NextResponse.json(parsed.data);
   }
 
   return errorResponse({

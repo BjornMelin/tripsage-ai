@@ -34,12 +34,22 @@ export const POST = withApiGuards({
 })(async (_req: NextRequest, _context, validated: TimezoneRequest) => {
   const apiKey = getGoogleMapsServerKey();
 
-  const response = await getTimezone({
-    apiKey,
-    lat: validated.lat,
-    lng: validated.lng,
-    timestamp: validated.timestamp,
-  });
+  let response: Response;
+  try {
+    response = await getTimezone({
+      apiKey,
+      lat: validated.lat,
+      lng: validated.lng,
+      timestamp: validated.timestamp,
+    });
+  } catch (err) {
+    return errorResponse({
+      err: err instanceof Error ? err : new Error("Timezone fetch failed"),
+      error: "external_api_error",
+      reason: "Failed to fetch timezone data",
+      status: 502,
+    });
+  }
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -50,7 +60,18 @@ export const POST = withApiGuards({
     });
   }
 
-  const rawData = await response.json();
+  let rawData: unknown;
+  try {
+    rawData = await response.json();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return errorResponse({
+      err,
+      error: "upstream_parse_error",
+      reason: `Failed to parse JSON response from Timezone API: ${message}`,
+      status: 502,
+    });
+  }
 
   // Validate upstream response
   const parseResult = upstreamTimezoneResponseSchema.safeParse(rawData);
