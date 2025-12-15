@@ -198,6 +198,10 @@ type ComputeRoutesParams = {
 export async function postComputeRoutes(
   params: ComputeRoutesParams
 ): Promise<Response> {
+  if (!params.fieldMask || params.fieldMask.trim().length === 0) {
+    throw new Error("fieldMask is required for computeRoutes");
+  }
+
   return await retryWithBackoff(
     () =>
       fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
@@ -235,6 +239,10 @@ type ComputeRouteMatrixParams = {
 export async function postComputeRouteMatrix(
   params: ComputeRouteMatrixParams
 ): Promise<Response> {
+  if (!params.fieldMask || params.fieldMask.trim().length === 0) {
+    throw new Error("fieldMask is required for computeRouteMatrix");
+  }
+
   return await retryWithBackoff(
     () =>
       fetch("https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix", {
@@ -282,14 +290,11 @@ export async function getGeocode(params: GeocodeParams): Promise<Response> {
   url.searchParams.set("address", trimmedAddress);
   url.searchParams.set("key", params.apiKey);
 
-  return await retryWithBackoff(
-    () =>
-      fetch(url.toString(), {
-        headers: { "Content-Type": "application/json" },
-        method: "GET",
-      }),
-    { attempts: 3, baseDelayMs: 200, maxDelayMs: 1_000 }
-  );
+  return await retryWithBackoff(() => fetch(url.toString(), { method: "GET" }), {
+    attempts: 3,
+    baseDelayMs: 200,
+    maxDelayMs: 1_000,
+  });
 }
 
 /**
@@ -320,14 +325,11 @@ export async function getReverseGeocode(
   url.searchParams.set("latlng", `${params.lat},${params.lng}`);
   url.searchParams.set("key", params.apiKey);
 
-  return await retryWithBackoff(
-    () =>
-      fetch(url.toString(), {
-        headers: { "Content-Type": "application/json" },
-        method: "GET",
-      }),
-    { attempts: 3, baseDelayMs: 200, maxDelayMs: 1_000 }
-  );
+  return await retryWithBackoff(() => fetch(url.toString(), { method: "GET" }), {
+    attempts: 3,
+    baseDelayMs: 200,
+    maxDelayMs: 1_000,
+  });
 }
 
 // === Legacy Timezone API ===
@@ -364,14 +366,11 @@ export async function getTimezone(params: TimezoneParams): Promise<Response> {
   );
   url.searchParams.set("key", params.apiKey);
 
-  return await retryWithBackoff(
-    () =>
-      fetch(url.toString(), {
-        headers: { "Content-Type": "application/json" },
-        method: "GET",
-      }),
-    { attempts: 3, baseDelayMs: 200, maxDelayMs: 1_000 }
-  );
+  return await retryWithBackoff(() => fetch(url.toString(), { method: "GET" }), {
+    attempts: 3,
+    baseDelayMs: 200,
+    maxDelayMs: 1_000,
+  });
 }
 
 // === Places Photo API ===
@@ -405,6 +404,11 @@ export async function getPlacePhoto(params: PlacePhotoParams): Promise<Response>
     throw new Error(
       `Invalid photoName "${params.photoName}": must match pattern places/{placeId}/photos/{photoId}`
     );
+  }
+
+  // Google Places Photo API requires at least one dimension parameter
+  if (params.maxWidthPx === undefined && params.maxHeightPx === undefined) {
+    throw new Error("Either maxWidthPx or maxHeightPx must be provided");
   }
 
   // Validate photo dimensions if provided

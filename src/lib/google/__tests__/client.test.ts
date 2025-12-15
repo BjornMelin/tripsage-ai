@@ -281,6 +281,7 @@ describe("Google API Client", () => {
     it("should construct correct URL with photo name", async () => {
       await getPlacePhoto({
         apiKey: "test-key",
+        maxWidthPx: 400,
         photoName: "places/ABC123/photos/XYZ789",
       });
 
@@ -325,9 +326,19 @@ describe("Google API Client", () => {
       await expect(
         getPlacePhoto({
           apiKey: "test-key",
+          maxWidthPx: 400,
           photoName: "invalid-photo-name",
         })
       ).rejects.toThrow("Invalid photoName");
+    });
+
+    it("should throw error when no dimension parameter provided", async () => {
+      await expect(
+        getPlacePhoto({
+          apiKey: "test-key",
+          photoName: "places/ABC123/photos/XYZ789",
+        })
+      ).rejects.toThrow("Either maxWidthPx or maxHeightPx must be provided");
     });
   });
 
@@ -355,7 +366,6 @@ describe("Google API Client", () => {
         expect.objectContaining({
           // Body order matches implementation: locationRestriction, maxResultCount, then includedTypes (added conditionally)
           body: JSON.stringify({
-            includedTypes: ["restaurant", "cafe"],
             locationRestriction: {
               circle: {
                 center: { latitude: 40.7128, longitude: -74.006 },
@@ -363,6 +373,7 @@ describe("Google API Client", () => {
               },
             },
             maxResultCount: 15,
+            includedTypes: ["restaurant", "cafe"],
           }),
           method: "POST",
         })
@@ -451,6 +462,7 @@ describe("Google API Client", () => {
     it("should include skipHttpRedirect parameter when true", async () => {
       await getPlacePhoto({
         apiKey: "test-key",
+        maxWidthPx: 400,
         photoName: "places/ABC123/photos/XYZ789",
         skipHttpRedirect: true,
       });
@@ -471,6 +483,7 @@ describe("Google API Client", () => {
     it("should not include skipHttpRedirect when not provided", async () => {
       await getPlacePhoto({
         apiKey: "test-key",
+        maxWidthPx: 400,
         photoName: "places/ABC123/photos/XYZ789",
       });
 
