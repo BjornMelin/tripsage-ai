@@ -520,12 +520,15 @@ export type PlacesNearbyRequest = z.infer<typeof placesNearbyRequestSchema>;
  * Validates upstream place data from Text Search, Nearby Search, Place Details.
  */
 export const upstreamPlaceSchema = z.object({
+  businessStatus: z.string().optional(),
   displayName: z
     .object({ languageCode: z.string().optional(), text: z.string() })
     .optional(),
+  editorialSummary: z.object({ text: z.string() }).optional(),
   formattedAddress: z.string().optional(),
   googleMapsUri: z.string().optional(),
   id: z.string(),
+  internationalPhoneNumber: z.string().optional(),
   location: z.object({ latitude: z.number(), longitude: z.number() }).optional(),
   photos: z.array(z.object({ name: z.string() })).optional(),
   primaryType: z.string().optional(),
@@ -535,6 +538,7 @@ export const upstreamPlaceSchema = z.object({
     .optional(),
   shortFormattedAddress: z.string().optional(),
   types: z.array(z.string()).optional(),
+  url: z.string().optional(),
   userRatingCount: z.number().optional(),
   websiteUri: z.string().optional(),
 });

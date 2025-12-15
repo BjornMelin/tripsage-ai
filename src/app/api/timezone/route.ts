@@ -42,10 +42,12 @@ export const POST = withApiGuards({
   });
 
   if (!response.ok) {
-    return NextResponse.json(
-      { error: `Time Zone API error: ${response.status}` },
-      { status: response.status }
-    );
+    const errorText = await response.text();
+    return errorResponse({
+      error: "upstream_error",
+      reason: `Time Zone API error: ${response.status}. Details: ${errorText.slice(0, 200)}`,
+      status: response.status >= 400 && response.status < 500 ? response.status : 502,
+    });
   }
 
   const rawData = await response.json();

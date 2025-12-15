@@ -25,6 +25,7 @@ const {
   getPlacePhoto,
   getReverseGeocode,
   getTimezone,
+  parseNdjsonResponse,
   postComputeRouteMatrix,
   postComputeRoutes,
   postNearbySearch,
@@ -352,6 +353,7 @@ describe("Google API Client", () => {
       expect(mockFetch).toHaveBeenCalledWith(
         "https://places.googleapis.com/v1/places:searchNearby",
         expect.objectContaining({
+          // Body order matches implementation: locationRestriction, maxResultCount, then includedTypes
           body: JSON.stringify({
             locationRestriction: {
               circle: {
@@ -402,6 +404,87 @@ describe("Google API Client", () => {
           radiusMeters: 100000,
         })
       ).rejects.toThrow("Invalid radiusMeters");
+    });
+  });
+
+  describe("parseNdjsonResponse", () => {
+    it("should parse single line NDJSON", async () => {
+      const response = new Response('{"originIndex":0,"destinationIndex":0}\n');
+      const result = await parseNdjsonResponse(response);
+      expect(result).toEqual([{ destinationIndex: 0, originIndex: 0 }]);
+    });
+
+    it("should parse multiple line NDJSON", async () => {
+      const ndjson =
+        '{"originIndex":0,"destinationIndex":0}\n{"originIndex":0,"destinationIndex":1}\n{"originIndex":1,"destinationIndex":0}\n';
+      const response = new Response(ndjson);
+      const result = await parseNdjsonResponse(response);
+      expect(result).toEqual([
+        { destinationIndex: 0, originIndex: 0 },
+        { destinationIndex: 1, originIndex: 0 },
+        { destinationIndex: 0, originIndex: 1 },
+      ]);
+    });
+
+    it("should skip empty lines", async () => {
+      const ndjson = '{"a":1}\n\n{"b":2}\n   \n{"c":3}\n';
+      const response = new Response(ndjson);
+      const result = await parseNdjsonResponse(response);
+      expect(result).toEqual([{ a: 1 }, { b: 2 }, { c: 3 }]);
+    });
+
+    it("should throw error for invalid JSON line", async () => {
+      const response = new Response('{"valid":true}\ninvalid json\n');
+      await expect(parseNdjsonResponse(response)).rejects.toThrow(
+        "Failed to parse NDJSON line 2"
+      );
+    });
+
+    it("should return empty array for empty response", async () => {
+      const response = new Response("");
+      const result = await parseNdjsonResponse(response);
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe("getPlacePhoto with skipHttpRedirect", () => {
+    it("should include skipHttpRedirect parameter when true", async () => {
+      await getPlacePhoto({
+        apiKey: "test-key",
+        photoName: "places/ABC123/photos/XYZ789",
+        skipHttpRedirect: true,
+      });
+
+      expect(capturedFetchFn).toBeDefined();
+
+      const mockFetch = vi.fn().mockResolvedValue(new Response());
+      vi.stubGlobal("fetch", mockFetch);
+
+      await capturedFetchFn?.();
+
+      const calledUrl = mockFetch.mock.calls[0][0];
+      expect(calledUrl).toContain("skipHttpRedirect=true");
+
+      vi.unstubAllGlobals();
+    });
+
+    it("should not include skipHttpRedirect when not provided", async () => {
+      await getPlacePhoto({
+        apiKey: "test-key",
+        photoName: "places/ABC123/photos/XYZ789",
+      });
+
+      expect(capturedFetchFn).toBeDefined();
+
+      const mockFetch = vi.fn().mockResolvedValue(new Response());
+      vi.stubGlobal("fetch", mockFetch);
+
+      await capturedFetchFn?.();
+
+      const calledUrl = mockFetch.mock.calls[0][0];
+      expect(calledUrl).not.toContain("skipHttpRedirect");
+
+      vi.unstubAllGlobals();
     });
   });
 });

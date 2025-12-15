@@ -15,7 +15,11 @@ import {
   upstreamRouteMatrixResponseSchema,
 } from "@schemas/api";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
-import { getGeocode, postComputeRouteMatrix } from "@/lib/google/client";
+import {
+  getGeocode,
+  parseNdjsonResponse,
+  postComputeRouteMatrix,
+} from "@/lib/google/client";
 
 /** Get Google Maps server API key or null if not configured. */
 function getGmapsKeyOrNull(): string | null {
@@ -96,10 +100,11 @@ function formatDuration(durationStr: string | undefined): {
   text: string;
   value: number;
 } {
-  if (!durationStr) return { text: "0 mins", value: 0 };
+  if (!durationStr) return { text: "0 min", value: 0 };
   const seconds = Number.parseInt(durationStr.replace("s", ""), 10) || 0;
   const minutes = Math.round(seconds / 60);
-  const text = minutes === 1 ? "1 min" : `${minutes} mins`;
+  // Use singular "min" for 0 and 1, plural "mins" for 2+
+  const text = minutes <= 1 ? `${minutes} min` : `${minutes} mins`;
   return { text, value: seconds };
 }
 
@@ -113,8 +118,9 @@ function formatDistance(
   if (!meters) return { text: "0 m", value: 0 };
   if (units === "imperial") {
     const miles = meters / 1609.344;
+    // 3.28084 is the precise conversion factor for meters to feet
     const text =
-      miles < 0.1 ? `${Math.round(meters * 3.281)} ft` : `${miles.toFixed(1)} mi`;
+      miles < 0.1 ? `${Math.round(meters * 3.28084)} ft` : `${miles.toFixed(1)} mi`;
     return { text, value: meters };
   }
   const text = meters < 1000 ? `${meters} m` : `${(meters / 1000).toFixed(1)} km`;
@@ -187,14 +193,26 @@ export const distanceMatrix = createAiTool({
     });
 
     if (!response.ok) {
-      throw new Error(`Routes API failed: ${response.status}`);
+      const errorText = await response.text();
+      throw new Error(
+        `Routes API failed: ${response.status}. Details: ${errorText.slice(0, 200)}`
+      );
     }
 
-    const rawData = await response.json();
+    // Parse NDJSON stream: computeRouteMatrix returns newline-delimited JSON
+    let rawData: unknown[];
+    try {
+      rawData = await parseNdjsonResponse(response);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      throw new Error(`Failed to parse NDJSON response: ${message}`);
+    }
+
     const parseResult = upstreamRouteMatrixResponseSchema.safeParse(rawData);
 
     if (!parseResult.success) {
-      throw new Error("Invalid response from Routes API");
+      const zodError = parseResult.error.format();
+      throw new Error(`Invalid response from Routes API: ${JSON.stringify(zodError)}`);
     }
 
     // Transform Routes API response to legacy Distance Matrix format

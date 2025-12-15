@@ -72,14 +72,27 @@ async function fetchPoisFromPlacesApi(
   const response = await postPlacesSearch({ apiKey, body, fieldMask });
 
   if (!response.ok) {
-    throw new Error(`Google Places API error: ${response.status}`);
+    const errorText = await response.text();
+    throw new Error(
+      `Google Places API error: ${response.status}. Details: ${errorText.slice(0, 200)}`
+    );
   }
 
-  const rawData = await response.json();
+  let rawData: unknown;
+  try {
+    rawData = await response.json();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(`Failed to parse JSON response from Places API: ${message}`);
+  }
+
   const parseResult = upstreamPlacesSearchResponseSchema.safeParse(rawData);
 
   if (!parseResult.success) {
-    throw new Error("Invalid response from Google Places API");
+    const zodError = parseResult.error.format();
+    throw new Error(
+      `Invalid response from Google Places API: ${JSON.stringify(zodError)}`
+    );
   }
 
   // Filter and map places with valid coordinates

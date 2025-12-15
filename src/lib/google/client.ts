@@ -1,10 +1,46 @@
 /**
- * @fileoverview Lightweight Google Places client helpers for server-side calls.
+ * @fileoverview Centralized Google API client helpers for server-side calls.
+ *
+ * Provides thin wrappers around Google APIs (Places, Routes, Geocoding, Timezone)
+ * with retry logic, input validation, and consistent error handling.
+ *
+ * Includes NDJSON parsing for streaming endpoints like computeRouteMatrix.
  */
 
 import "server-only";
 
 import { retryWithBackoff } from "@/lib/http/retry";
+
+// === NDJSON Helpers ===
+
+/**
+ * Parses a newline-delimited JSON (NDJSON) response body into an array of objects.
+ *
+ * Google Routes API computeRouteMatrix returns NDJSON streams where each line
+ * is a separate JSON object, not a single JSON array. This helper reads the
+ * response text and parses each non-empty line as JSON.
+ *
+ * @param response - Fetch Response object to parse.
+ * @returns Promise resolving to array of parsed JSON objects.
+ * @throws Error if any line fails to parse as JSON.
+ */
+export async function parseNdjsonResponse<T = unknown>(
+  response: Response
+): Promise<T[]> {
+  const text = await response.text();
+  const lines = text.split("\n").filter((line) => line.trim().length > 0);
+
+  return lines.map((line, index) => {
+    try {
+      return JSON.parse(line) as T;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      throw new Error(
+        `Failed to parse NDJSON line ${index + 1}: ${message}. Line content: ${line.slice(0, 100)}...`
+      );
+    }
+  });
+}
 
 /**
  * Parameters for Google Places Text Search API request.
@@ -340,6 +376,8 @@ type PlacePhotoParams = {
   maxWidthPx?: number;
   /** Photo resource name (e.g., "places/ABC/photos/XYZ"). */
   photoName: string;
+  /** If true, skip HTTP redirect and return photo URI instead (optional). */
+  skipHttpRedirect?: boolean;
 };
 
 /**
@@ -363,6 +401,9 @@ export async function getPlacePhoto(params: PlacePhotoParams): Promise<Response>
   }
   if (params.maxHeightPx) {
     url.searchParams.set("maxHeightPx", String(params.maxHeightPx));
+  }
+  if (params.skipHttpRedirect) {
+    url.searchParams.set("skipHttpRedirect", "true");
   }
 
   return await retryWithBackoff(
