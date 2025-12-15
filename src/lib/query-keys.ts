@@ -4,10 +4,6 @@
  */
 
 import type { TimeWindow } from "@schemas/dashboard";
-import {
-  cacheTimes as baseCacheTimes,
-  staleTimes as baseStaleTimes,
-} from "@/lib/query/config";
 
 export const queryKeys = {
   // Agent Status & Monitoring
@@ -170,30 +166,3 @@ export function createQueryKey<T extends readonly unknown[]>(
     : [baseKey];
   return key as unknown as T;
 }
-
-/**
- * Predefined stale times for different types of data.
- * Core values from @/lib/query/config, extended with domain-specific keys.
- */
-export const staleTimes = {
-  ...baseStaleTimes,
-  // Additional domain-specific stale times
-  categories: 60 * 60 * 1000, // 1 hour
-  configuration: 60 * 60 * 1000, // 1 hour
-  dashboard: 30 * 1000, // 30 seconds
-  files: 5 * 60 * 1000, // 5 minutes
-  realtime: 30 * 1000, // 30 seconds
-  search: 2 * 60 * 1000, // 2 minutes
-  stats: 15 * 60 * 1000, // 15 minutes
-  suggestions: 15 * 60 * 1000, // 15 minutes
-  user: 5 * 60 * 1000, // 5 minutes
-} as const;
-
-/**
- * Cache time (gcTime) configurations.
- * Core values from @/lib/query/config, extended with veryLong.
- */
-export const cacheTimes = {
-  ...baseCacheTimes,
-  veryLong: 60 * 60 * 1000, // 1 hour
-} as const;

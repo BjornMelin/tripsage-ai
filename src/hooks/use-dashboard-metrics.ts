@@ -11,7 +11,8 @@ import type { DashboardMetrics, TimeWindow } from "@schemas/dashboard";
 import { dashboardMetricsSchema } from "@schemas/dashboard";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
-import { queryKeys, staleTimes } from "@/lib/query-keys";
+import { staleTimes } from "@/lib/query/config";
+import { queryKeys } from "@/lib/query-keys";
 
 /**
  * Options for the useDashboardMetrics hook.

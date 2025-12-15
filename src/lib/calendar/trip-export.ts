@@ -4,8 +4,8 @@
 
 import type { CalendarEvent } from "@schemas/calendar";
 import { calendarEventSchema } from "@schemas/calendar";
+import type { UiTrip } from "@schemas/trips";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
-import type { Trip } from "@/stores/trip-store";
 
 /**
  * Converts a trip structure into structured calendar events.
@@ -13,7 +13,7 @@ import type { Trip } from "@/stores/trip-store";
  * @param trip - Trip definition including destinations and activities.
  * @returns Serialized calendar events.
  */
-export function tripToCalendarEvents(trip: Trip): CalendarEvent[] {
+export function tripToCalendarEvents(trip: UiTrip): CalendarEvent[] {
   const events: CalendarEvent[] = [];
 
   // Trip start event
@@ -128,7 +128,7 @@ export function tripToCalendarEvents(trip: Trip): CalendarEvent[] {
  * @returns Serialized ICS content returned by the API.
  */
 export async function exportTripToIcs(
-  trip: Trip,
+  trip: UiTrip,
   calendarName?: string
 ): Promise<string> {
   const events = tripToCalendarEvents(trip);

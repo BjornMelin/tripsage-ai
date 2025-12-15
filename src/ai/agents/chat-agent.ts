@@ -8,12 +8,12 @@
 
 import "server-only";
 
+import { CHAT_DEFAULT_SYSTEM_PROMPT } from "@ai/constants";
 import { toolRegistry } from "@ai/tools";
 import { wrapToolsWithUserId } from "@ai/tools/server/injection";
 import type { ModelMessage, SystemModelMessage, ToolSet, UIMessage } from "ai";
 import { convertToModelMessages } from "ai";
 import { z } from "zod";
-import { CHAT_DEFAULT_SYSTEM_PROMPT } from "@/ai/constants";
 import { extractTexts, validateImageAttachments } from "@/app/api/_helpers/attachments";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import type { ChatMessage } from "@/lib/tokens/budget";

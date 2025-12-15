@@ -37,11 +37,16 @@ const mockRealtimeStatus = vi.hoisted(() =>
   vi.fn(() => ({ errors: [] as Error[], isConnected: true }))
 );
 const mockCreateTrip = vi.hoisted(() => vi.fn());
+const mockCreateIsPending = vi.hoisted(() => vi.fn(() => false));
 const mockDeleteTrip = vi.hoisted(() => vi.fn());
 const mockDeleteIsPending = vi.hoisted(() => vi.fn(() => false));
 const mockToast = vi.hoisted(() => vi.fn());
 
 vi.mock("@/hooks/use-trips", () => ({
+  useCreateTrip: () => ({
+    isPending: mockCreateIsPending(),
+    mutateAsync: mockCreateTrip,
+  }),
   useDeleteTrip: () => ({
     isPending: mockDeleteIsPending(),
     mutateAsync: mockDeleteTrip,
@@ -57,12 +62,6 @@ vi.mock("@/hooks/use-trips", () => ({
 
 vi.mock("@/components/ui/use-toast", () => ({
   useToast: () => ({ toast: mockToast }),
-}));
-
-vi.mock("@/stores/trip-store", () => ({
-  useTripStore: () => ({
-    createTrip: mockCreateTrip,
-  }),
 }));
 
 // Mock child components
@@ -102,6 +101,7 @@ describe("TripsPage", () => {
     mockIsConnected.mockReset();
     mockRealtimeStatus.mockReset();
     mockCreateTrip.mockReset();
+    mockCreateIsPending.mockReset();
     mockDeleteTrip.mockReset();
     mockDeleteIsPending.mockReset();
     mockToast.mockReset();
@@ -110,6 +110,7 @@ describe("TripsPage", () => {
     mockError.mockReturnValue(null);
     mockIsConnected.mockReturnValue(true);
     mockRealtimeStatus.mockReturnValue({ errors: [], isConnected: true });
+    mockCreateIsPending.mockReturnValue(false);
     mockDeleteIsPending.mockReturnValue(false);
   });
 

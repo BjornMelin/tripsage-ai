@@ -1,7 +1,8 @@
 /** @vitest-environment node */
 
 import { describe, expect, it } from "vitest";
-import { cacheTimes, queryKeys, staleTimes } from "../query-keys";
+import { cacheTimes, staleTimes } from "../query/config";
+import { queryKeys } from "../query-keys";
 
 describe("queryKeys", () => {
   describe("memory", () => {
@@ -162,7 +163,6 @@ describe("cacheTimes", () => {
     expect(cacheTimes.short).toBe(5 * 60 * 1000); // 5 minutes
     expect(cacheTimes.medium).toBe(10 * 60 * 1000); // 10 minutes (canonical from config.ts)
     expect(cacheTimes.long).toBe(60 * 60 * 1000); // 1 hour (canonical from config.ts)
-    expect(cacheTimes.veryLong).toBe(60 * 60 * 1000); // 1 hour
   });
 
   it("all cache times are positive numbers", () => {
@@ -175,6 +175,5 @@ describe("cacheTimes", () => {
   it("cache times are in non-decreasing order", () => {
     expect(cacheTimes.short).toBeLessThan(cacheTimes.medium);
     expect(cacheTimes.medium).toBeLessThan(cacheTimes.long);
-    expect(cacheTimes.long).toBeLessThanOrEqual(cacheTimes.veryLong);
   });
 });

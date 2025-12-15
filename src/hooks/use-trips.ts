@@ -18,7 +18,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
 import { type AppError, handleApiError } from "@/lib/api/error-types";
-import { cacheTimes, queryKeys, staleTimes } from "@/lib/query-keys";
+import { cacheTimes, staleTimes } from "@/lib/query/config";
+import { queryKeys } from "@/lib/query-keys";
 import { useSupabaseRequired } from "@/lib/supabase";
 import type { UpdateTables } from "@/lib/supabase/database.types";
 

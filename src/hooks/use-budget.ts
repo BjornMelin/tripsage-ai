@@ -21,7 +21,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
 import { type AppError, handleApiError } from "@/lib/api/error-types";
-import { queryKeys, staleTimes } from "@/lib/query-keys";
+import { staleTimes } from "@/lib/query/config";
+import { queryKeys } from "@/lib/query-keys";
 import { useBudgetStore } from "@/stores/budget-store";
 
 /**

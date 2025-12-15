@@ -38,11 +38,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { useDeleteTrip, useTrips } from "@/hooks/use-trips";
+import { type Trip, useCreateTrip, useDeleteTrip, useTrips } from "@/hooks/use-trips";
 import { getErrorMessage } from "@/lib/api/error-types";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
+import { nowIso } from "@/lib/security/random";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
-import { type Trip, useTripStore } from "@/stores/trip-store";
 
 /**
  * Trip status count colors aligned with statusVariants.
@@ -115,7 +115,7 @@ type FilterOption = "all" | "draft" | "upcoming" | "active" | "completed";
  * @returns Trips management layout with grid/list modes.
  */
 export default function TripsPage() {
-  const { createTrip } = useTripStore();
+  const createTripMutation = useCreateTrip();
   const deleteTripMutation = useDeleteTrip();
   const { data: trips, isLoading, error, isConnected, realtimeStatus } = useTrips();
   const { toast } = useToast();
@@ -123,7 +123,6 @@ export default function TripsPage() {
   const [sortBy, setSortBy] = useState<SortOption>("date");
   const [filterBy, setFilterBy] = useState<FilterOption>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [isCreating, setIsCreating] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [pendingDeleteTripId, setPendingDeleteTripId] = useState<string | null>(null);
   const lastErrorMessageRef = useRef<string | null>(null);
@@ -206,12 +205,16 @@ export default function TripsPage() {
   }, [tripsArray, searchQuery, sortBy, filterBy]);
 
   const handleCreateTrip = async () => {
-    setIsCreating(true);
     try {
-      await createTrip({
-        description: "",
-        destinations: [],
+      await createTripMutation.mutateAsync({
+        currency: "USD",
+        destination: "Destination TBD",
+        endDate: nowIso(),
+        startDate: nowIso(),
+        status: "planning",
         title: "New Trip",
+        travelers: 1,
+        tripType: "leisure",
         visibility: "private",
       });
     } catch (createError) {
@@ -220,8 +223,6 @@ export default function TripsPage() {
         title: "Unable to create trip",
         variant: "destructive",
       });
-    } finally {
-      setIsCreating(false);
     }
   };
 
@@ -350,7 +351,11 @@ export default function TripsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
-            <Button onClick={handleCreateTrip} size="lg" disabled={isCreating}>
+            <Button
+              onClick={handleCreateTrip}
+              size="lg"
+              disabled={createTripMutation.isPending}
+            >
               <PlusIcon className="h-5 w-5 mr-2" />
               Create Your First Trip
             </Button>
@@ -381,7 +386,7 @@ export default function TripsPage() {
               {connectionStatusMessage}
             </output>
           </div>
-          <Button onClick={handleCreateTrip} disabled={isCreating}>
+          <Button onClick={handleCreateTrip} disabled={createTripMutation.isPending}>
             <PlusIcon className="h-4 w-4 mr-2" />
             Create Trip
           </Button>
