@@ -73,7 +73,6 @@ vi.mock("@/lib/api/route-helpers", async () => {
       try {
         return await fn(span);
       } catch (error) {
-        // eslint-disable-next-line no-console
         console.error("withRequestSpan error", error);
         throw error;
       }

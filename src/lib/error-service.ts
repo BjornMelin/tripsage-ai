@@ -11,7 +11,10 @@ import {
   errorReportSchema,
 } from "@schemas/errors";
 import { secureId } from "@/lib/security/random";
-import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
+import {
+  type ErrorSpanMetadata,
+  recordClientErrorOnActiveSpan,
+} from "@/lib/telemetry/client-errors";
 
 /**
  * Error service for logging and reporting errors
@@ -28,7 +31,10 @@ class ErrorService {
   /**
    * Report an error with validation
    */
-  async reportError(report: ErrorReport): Promise<void> {
+  async reportError(
+    report: ErrorReport,
+    spanMetadata?: ErrorSpanMetadata
+  ): Promise<void> {
     try {
       // Validate the error report using Zod
       const validatedReport = errorReportSchema.parse(report);
@@ -43,7 +49,7 @@ class ErrorService {
           if (validatedReport.error.stack) {
             error.stack = validatedReport.error.stack;
           }
-          recordClientErrorOnActiveSpan(error);
+          recordClientErrorOnActiveSpan(error, spanMetadata);
         } catch {
           // Don't fail error reporting if OTel recording fails
           // Telemetry errors are non-critical

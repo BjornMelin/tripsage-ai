@@ -15,8 +15,8 @@ import { primitiveSchemas } from "./registry";
  */
 export const webhookPayloadSchema = z.object({
   occurredAt: primitiveSchemas.isoDateTime.optional(),
-  oldRecord: z.record(z.string(), z.any()).nullable().default(null),
-  record: z.record(z.string(), z.any()).nullable(),
+  oldRecord: z.record(z.string(), z.unknown()).nullable().default(null),
+  record: z.record(z.string(), z.unknown()).nullable(),
   schema: z.string().optional(),
   table: z.string().min(1),
   type: z.enum(["INSERT", "UPDATE", "DELETE"]),

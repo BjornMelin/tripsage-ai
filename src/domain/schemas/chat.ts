@@ -233,7 +233,7 @@ export const sendMessageFormSchema = z.object({
   attachments: z
     .array(
       z.object({
-        file: z.any(), // File object validated at runtime
+        file: z.instanceof(File),
         name: z.string().min(1),
         size: z
           .number()

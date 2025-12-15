@@ -258,8 +258,7 @@ export function useSupabaseChat() {
           "chat_sessions",
           // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
           { updated_at: new Date().toISOString() },
-          // biome-ignore lint/suspicious/noExplicitAny: Required for Supabase query builder typing
-          (qb) => (qb as any).eq("id", validatedSessionId)
+          (qb) => qb.eq("id", validatedSessionId)
         );
 
         return data as ChatMessage;
@@ -419,8 +418,7 @@ export function useSupabaseChat() {
           supabase,
           "chat_tool_calls",
           updates,
-          // biome-ignore lint/suspicious/noExplicitAny: Required for Supabase query builder typing
-          (qb) => (qb as any).eq("id", validatedId)
+          (qb) => qb.eq("id", validatedId)
         );
 
         if (error) throw error;
@@ -475,8 +473,7 @@ export function useSupabaseChat() {
             // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
             updated_at: new Date().toISOString(),
           },
-          // biome-ignore lint/suspicious/noExplicitAny: Required for Supabase query builder typing
-          (qb) => (qb as any).eq("id", validatedSessionId)
+          (qb) => qb.eq("id", validatedSessionId)
         );
 
         if (error) throw error;

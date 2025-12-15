@@ -5,7 +5,7 @@
 import { z } from "zod";
 
 export const loadingStateSchema = z.object({
-  data: z.any().nullable(),
+  data: z.unknown().nullable(),
   error: z.string().nullable(),
   isLoading: z.boolean(),
 });

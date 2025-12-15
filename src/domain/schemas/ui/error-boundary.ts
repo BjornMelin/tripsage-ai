@@ -5,7 +5,7 @@
 import { z } from "zod";
 
 export const errorBoundarySchema = z.object({
-  children: z.any(),
+  children: z.unknown(),
   className: z.string().optional(),
   fallback: z.function().optional(),
   onError: z.function().optional(),
@@ -14,9 +14,9 @@ export type ErrorBoundaryPropsType = z.infer<typeof errorBoundarySchema>;
 
 export const errorStateSchema = z.object({
   error: z.instanceof(Error).nullable(),
-  errorInfo: z.any().nullable(),
+  errorInfo: z.unknown().nullable(),
   hasError: z.boolean(),
-  retryCount: z.number().default(0),
+  retryCount: z.number().int().default(0),
 });
 export type ErrorState = z.infer<typeof errorStateSchema>;
 

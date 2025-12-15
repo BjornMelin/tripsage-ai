@@ -7,10 +7,10 @@
 
 import { convert } from "html-to-text";
 import countries from "i18n-iso-countries";
+import enLocale from "i18n-iso-countries/langs/en.json";
 
 // Register English locale for country names.
-// eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-unsafe-argument
-countries.registerLocale(require("i18n-iso-countries/langs/en.json"));
+countries.registerLocale(enLocale);
 
 /**
  * Convert US State Department advisory level to safety score (0-100).
