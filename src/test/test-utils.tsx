@@ -13,25 +13,30 @@ import { createMockQueryClient } from "./helpers/query";
 // Type for next-themes provider props.
 type NextThemesProviderProps = ComponentProps<typeof ThemeProvider>;
 
-// Fresh QueryClient per test for memory isolation (prevents OOM in large test suites)
-// Note: Slightly slower than shared instance, but guarantees no memory accumulation
+// Shared QueryClient for performance (cleared between tests via resetTestQueryClient)
+let sharedQueryClient: QueryClient | null = null;
 
 /**
- * Creates a fresh test QueryClient with disabled retries and caching.
- * Each test gets its own instance for memory isolation.
+ * Returns a shared test QueryClient with disabled retries and caching.
+ * Call resetTestQueryClient() in afterEach to clear caches between tests.
  *
  * @returns A configured QueryClient for testing.
  */
 export const getTestQueryClient = (): QueryClient => {
-  return createMockQueryClient();
+  if (!sharedQueryClient) {
+    sharedQueryClient = createMockQueryClient();
+  }
+  return sharedQueryClient;
 };
 
 /**
- * No-op reset function for API compatibility.
- * Each test creates a fresh QueryClient, so no cleanup is needed.
+ * Clears query and mutation caches on the shared QueryClient.
+ * Call in afterEach() to ensure test isolation.
  */
 export const resetTestQueryClient = (): void => {
-  // Fresh clients per test; no shared state to reset
+  if (!sharedQueryClient) return;
+  sharedQueryClient.getQueryCache?.().clear?.();
+  sharedQueryClient.getMutationCache?.().clear?.();
 };
 
 // Props for the AllTheProviders component.

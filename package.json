@@ -19,7 +19,7 @@
     "test:coverage": "vitest run --coverage.enabled --coverage.provider=v8",
     "test:benchmark": "node scripts/run-benchmark.mjs",
     "test:quick": "vitest run --reporter=dot",
-    "test:ci": "NODE_OPTIONS='--max-old-space-size=4096' vitest run --reporter=dot",
+    "test:ci": "NODE_OPTIONS='--max-old-space-size=4096' vitest run --maxWorkers=2 --reporter=dot",
     "test:dev-fast": "vitest --reporter=default",
     "test:unit": "vitest run --project=unit",
     "test:components": "vitest run --project=component",
