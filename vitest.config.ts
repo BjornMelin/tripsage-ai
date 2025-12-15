@@ -11,8 +11,12 @@ import { defineConfig } from "vitest/config";
 
 const isCi = process.env.CI === "true" || process.env.CI === "1";
 
+// Dynamic worker count: fewer in CI (for sharding), more locally
+const maxWorkers = isCi ? 4 : Math.max(1, Math.floor(require("os").cpus().length / 2));
+
 export default defineConfig({
   plugins: [react()],
+  cacheDir: ".vitest-cache",
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -59,9 +63,13 @@ export default defineConfig({
     exclude: ["**/node_modules/**", "**/e2e/**", "**/*.e2e.*"],
     globals: true,
     hookTimeout: 8000,
+    // Dynamic workers: fewer in CI (for sharding), more locally
+    maxWorkers,
     passWithNoTests: false,
-    // Use threads pool (worker tuning handled via maxWorkers)
-    pool: "threads",
+    // Use forks pool for proper memory isolation (inherits execArgv)
+    pool: "forks",
+    // Pass memory limit to worker processes (4GB per worker)
+    execArgv: ["--max-old-space-size=4096"],
     // Projects: schemas, integration, api, component, unit (ordered by specificity)
     projects: [
       {

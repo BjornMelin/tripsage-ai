@@ -4,6 +4,7 @@ import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { server } from "@/test/msw/server";
+import { withFakeTimers } from "@/test/utils/with-fake-timers";
 import { ApiClient } from "../api-client";
 import { ApiError } from "../error-types";
 
@@ -297,33 +298,34 @@ describe("API client with Zod Validation", () => {
       ).rejects.toThrow(ApiError);
     });
 
-    it("handles network errors gracefully", async () => {
-      vi.useFakeTimers();
-      server.use(
-        http.get("http://localhost/api/users", () => {
-          throw new Error("Network error");
-        })
-      );
+    it(
+      "handles network errors gracefully",
+      withFakeTimers(async () => {
+        server.use(
+          http.get("http://localhost/api/users", () => {
+            throw new Error("Network error");
+          })
+        );
 
-      // Use a fast client to avoid exceeding the per-test timeout (6s)
-      const fastClient = new ApiClient({
-        baseUrl: "http://localhost",
-        retries: 1,
-        timeout: 100,
-      });
+        // Use a fast client to avoid exceeding the per-test timeout (6s)
+        const fastClient = new ApiClient({
+          baseUrl: "http://localhost",
+          retries: 1,
+          timeout: 100,
+        });
 
-      const pendingRequest = fastClient.getValidated(
-        "/api/users",
-        USER_RESPONSE_SCHEMA
-      );
+        const pendingRequest = fastClient.getValidated(
+          "/api/users",
+          USER_RESPONSE_SCHEMA
+        );
 
-      pendingRequest.catch(() => undefined);
+        pendingRequest.catch(() => undefined);
 
-      await vi.advanceTimersByTimeAsync(2000);
+        await vi.advanceTimersByTimeAsync(2000);
 
-      await expect(pendingRequest).rejects.toThrow("Network error");
-      vi.useRealTimers();
-    });
+        await expect(pendingRequest).rejects.toThrow("Network error");
+      })
+    );
   });
 
   describe("HTTP Methods with Validation", () => {
