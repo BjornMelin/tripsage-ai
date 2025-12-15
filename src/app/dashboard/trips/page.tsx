@@ -10,7 +10,7 @@
 import { FilterIcon, GridIcon, ListIcon, PlusIcon, SearchIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ConnectionStatusIndicator } from "@/components/features/realtime/connection-status-monitor";
-import { TripCard } from "@/components/features/trips";
+import { TripCard } from "@/components/features/trips/trip-card";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -468,6 +468,7 @@ export default function TripsPage() {
 
         <div className="flex border rounded-md">
           <Button
+            aria-label="Grid view"
             aria-pressed={viewMode === "grid"}
             data-state={viewMode === "grid" ? "on" : "off"}
             variant={viewMode === "grid" ? "default" : "ghost"}
@@ -478,6 +479,7 @@ export default function TripsPage() {
             <GridIcon className="h-4 w-4" />
           </Button>
           <Button
+            aria-label="List view"
             aria-pressed={viewMode === "list"}
             data-state={viewMode === "list" ? "on" : "off"}
             variant={viewMode === "list" ? "default" : "ghost"}

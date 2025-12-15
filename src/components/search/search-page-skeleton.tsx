@@ -2,8 +2,6 @@
  * @fileoverview Shared loading skeleton for search result pages.
  */
 
-"use client";
-
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
@@ -13,10 +11,12 @@ import { Skeleton } from "@/components/ui/skeleton";
  */
 export function SearchPageSkeleton() {
   return (
-    <div className="space-y-6 p-6">
-      <Skeleton className="h-10 w-64" />
-      <Skeleton className="h-48 w-full" />
-      <Skeleton className="h-48 w-full" />
+    // biome-ignore lint/a11y/useSemanticElements: Loading skeleton uses role="status" live region; no semantic element fits this container.
+    <div role="status" className="space-y-6 p-6">
+      <span className="sr-only">Loading search results</span>
+      <Skeleton aria-hidden="true" className="h-10 w-64" />
+      <Skeleton aria-hidden="true" className="h-48 w-full" />
+      <Skeleton aria-hidden="true" className="h-48 w-full" />
     </div>
   );
 }

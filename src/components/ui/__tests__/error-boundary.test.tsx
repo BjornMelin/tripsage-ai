@@ -3,12 +3,12 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ErrorBoundary } from "@/components/error/error-boundary";
 import {
-  ErrorBoundary,
   ErrorFallback,
   MinimalErrorFallback,
   PageErrorFallback,
-} from "../../error";
+} from "@/components/error/error-fallback";
 
 // Mock console.error to prevent test noise
 const OriginalConsoleError = console.error;

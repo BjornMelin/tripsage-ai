@@ -20,7 +20,7 @@ import type {
 } from "@schemas/memory";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
-import { type AppError, handleApiError, isApiError } from "@/lib/api/error-types";
+import { type AppError, handleApiError } from "@/lib/api/error-types";
 import { queryKeys, staleTimes } from "@/lib/query-keys";
 
 /**
@@ -45,12 +45,6 @@ export function useMemoryContext(userId: string, enabled = true) {
       }
     },
     queryKey: queryKeys.memory.context(userId),
-    retry: (failureCount, error) => {
-      if (isApiError(error)) {
-        if (error.status === 401 || error.status === 403) return false;
-      }
-      return failureCount < 2;
-    },
     staleTime: staleTimes.user,
     throwOnError: false,
   });
@@ -76,12 +70,6 @@ export function useSearchMemories() {
       } catch (error) {
         throw handleApiError(error);
       }
-    },
-    retry: (failureCount, error) => {
-      if (isApiError(error)) {
-        if (error.status >= 400 && error.status < 500) return false;
-      }
-      return failureCount < 1;
     },
     throwOnError: false,
   });
@@ -110,12 +98,6 @@ export function useUpdatePreferences(userId: string) {
         throw handleApiError(error);
       }
     },
-    retry: (failureCount, error) => {
-      if (isApiError(error)) {
-        if (error.status >= 400 && error.status < 500) return false;
-      }
-      return failureCount < 1;
-    },
     throwOnError: false,
   });
 }
@@ -142,12 +124,6 @@ export function useMemoryInsights(userId: string, enabled = true) {
       }
     },
     queryKey: queryKeys.memory.insights(userId),
-    retry: (failureCount, error) => {
-      if (isApiError(error)) {
-        if (error.status === 401 || error.status === 403) return false;
-      }
-      return failureCount < 2;
-    },
     staleTime: staleTimes.stats,
     throwOnError: false,
   });
@@ -178,12 +154,6 @@ export function useAddConversationMemory() {
         throw handleApiError(error);
       }
     },
-    retry: (failureCount, error) => {
-      if (isApiError(error)) {
-        if (error.status >= 400 && error.status < 500) return false;
-      }
-      return failureCount < 1;
-    },
     throwOnError: false,
   });
 }
@@ -208,12 +178,6 @@ export function useDeleteUserMemories(userId: string) {
       } catch (error) {
         throw handleApiError(error);
       }
-    },
-    retry: (failureCount, error) => {
-      if (isApiError(error)) {
-        if (error.status >= 400 && error.status < 500) return false;
-      }
-      return failureCount < 1;
     },
     throwOnError: false,
   });
@@ -252,12 +216,6 @@ export function useMemoryStats(userId: string, enabled = true) {
       }
     },
     queryKey: queryKeys.memory.stats(userId),
-    retry: (failureCount, error) => {
-      if (isApiError(error)) {
-        if (error.status === 401 || error.status === 403) return false;
-      }
-      return failureCount < 2;
-    },
     staleTime: staleTimes.stats,
     throwOnError: false,
   });

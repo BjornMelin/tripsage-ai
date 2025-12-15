@@ -18,11 +18,9 @@ import {
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import {
-  BudgetTracker,
-  ItineraryBuilder,
-  TripTimeline,
-} from "@/components/features/trips";
+import { BudgetTracker } from "@/components/features/trips/budget-tracker";
+import { ItineraryBuilder } from "@/components/features/trips/itinerary-builder";
+import { TripTimeline } from "@/components/features/trips/trip-timeline";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {

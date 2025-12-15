@@ -17,7 +17,7 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
-import { type AppError, handleApiError, isApiError } from "@/lib/api/error-types";
+import { type AppError, handleApiError } from "@/lib/api/error-types";
 import { cacheTimes, queryKeys, staleTimes } from "@/lib/query-keys";
 import { useSupabaseRequired } from "@/lib/supabase";
 import type { UpdateTables } from "@/lib/supabase/database.types";
@@ -72,12 +72,6 @@ export function useTripSuggestions(params?: TripSuggestionsParams) {
       }
     },
     queryKey: queryKeys.trips.suggestions(normalizedParams),
-    retry: (failureCount, error) => {
-      if (isApiError(error)) {
-        if (error.status === 401 || error.status === 403) return false;
-      }
-      return failureCount < 2;
-    },
     staleTime: staleTimes.suggestions,
     throwOnError: false,
   });
@@ -110,12 +104,6 @@ export function useCreateTrip() {
 
       // Optionally invalidate suggestions if they might be affected
       queryClient.invalidateQueries({ queryKey: queryKeys.trips.suggestions() });
-    },
-    retry: (failureCount, error) => {
-      if (isApiError(error)) {
-        if (error.status >= 400 && error.status < 500) return false; // Don't retry client errors
-      }
-      return failureCount < 1;
     },
     throwOnError: false,
   });
@@ -164,12 +152,6 @@ export function useUpdateTrip() {
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.trips.all() });
     },
-    retry: (failureCount, error) => {
-      if (isApiError(error)) {
-        if (error.status >= 400 && error.status < 500) return false; // Don't retry client errors
-      }
-      return failureCount < 1;
-    },
     throwOnError: false,
   });
 }
@@ -203,12 +185,6 @@ export function useDeleteTrip() {
         queryKey: queryKeys.trips.detail(numericTripId),
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.trips.all() });
-    },
-    retry: (failureCount, error) => {
-      if (isApiError(error)) {
-        if (error.status >= 400 && error.status < 500) return false; // Don't retry client errors
-      }
-      return failureCount < 1;
     },
     throwOnError: false,
   });
@@ -284,12 +260,6 @@ export function useTrips(filters?: TripFilters) {
       }
     },
     queryKey: queryKeys.trips.list(filters),
-    retry: (failureCount, error) => {
-      if (isApiError(error)) {
-        if (error.status === 401 || error.status === 403) return false;
-      }
-      return failureCount < 2;
-    },
     staleTime: staleTimes.trips,
     throwOnError: false,
   });
@@ -432,12 +402,6 @@ export function useTrip(tripId: string | number | null | undefined) {
       }
     },
     queryKey: queryKeys.trips.detail(numericTripId ?? 0),
-    retry: (failureCount, error) => {
-      if (isApiError(error)) {
-        if (error.status === 401 || error.status === 403) return false;
-      }
-      return failureCount < 2;
-    },
     staleTime: staleTimes.trips,
     throwOnError: false,
   });
@@ -618,12 +582,6 @@ export function useUpcomingFlights(params?: UpcomingFlightsParams) {
     queryKey: queryKeys.external.upcomingFlights(normalizedParams),
     refetchInterval: 2 * 60 * 1000, // Refetch every 2 minutes for fresh flight data
     refetchIntervalInBackground: false, // Only when page is visible
-    retry: (failureCount, error) => {
-      if (isApiError(error)) {
-        if (error.status === 401 || error.status === 403) return false;
-      }
-      return failureCount < 3; // More retries for external flight API
-    },
     staleTime: staleTimes.realtime, // 30 seconds for real-time flight data
     throwOnError: false,
   });
