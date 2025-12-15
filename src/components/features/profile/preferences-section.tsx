@@ -99,15 +99,13 @@ export function PreferencesSection() {
     setAdditionalSettings(initialAdditionalSettings);
   }, [initialAdditionalSettings]);
 
-  const resolveSupabaseClient = () => getBrowserClient();
-
   const onSubmit = async (data: PreferencesFormData) => {
     try {
       if (!authUser) {
         throw new Error("You must be signed in to update your preferences.");
       }
 
-      const supabase = resolveSupabaseClient();
+      const supabase = getBrowserClient();
       if (!supabase) {
         throw new Error("Unable to access preferences client. Please try again.");
       }
@@ -174,7 +172,7 @@ export function PreferencesSection() {
         throw new Error("You must be signed in to update your preferences.");
       }
 
-      const supabase = resolveSupabaseClient();
+      const supabase = getBrowserClient();
       if (!supabase) {
         throw new Error("Unable to access preferences client. Please try again.");
       }

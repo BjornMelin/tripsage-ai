@@ -58,8 +58,6 @@ export default defineConfig({
     },
     exclude: ["**/node_modules/**", "**/e2e/**", "**/*.e2e.*"],
     globals: true,
-    // Worker configuration (memory limit set via NODE_OPTIONS in scripts)
-    maxWorkers: isCi ? 2 : "50%",
     hookTimeout: 8000,
     passWithNoTests: false,
     // Use threads pool (worker tuning handled via maxWorkers)
