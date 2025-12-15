@@ -39,6 +39,7 @@ import { exportTripToIcs } from "@/lib/calendar/trip-export";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { ROUTES } from "@/lib/routes";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
+import { parseTripDate } from "@/lib/trips/parse-trip-date";
 import { statusVariants } from "@/lib/variants/status";
 import { useTripItineraryStore } from "@/stores/trip-itinerary-store";
 
@@ -93,28 +94,13 @@ export default function TripDetailsPage() {
     router.push(ROUTES.dashboard.trips);
   };
 
-  const safeParseTripDate = (value: string | undefined): Date | null => {
-    if (!value) return null;
-    try {
-      return DateUtils.parse(value);
-    } catch (error) {
-      recordClientErrorOnActiveSpan(
-        error instanceof Error ? error : new Error(String(error)),
-        {
-          action: "safeParseTripDate",
-          context: "TripDetailsPage",
-          value,
-        }
-      );
-      return null;
-    }
-  };
-
   const getTripStatus = () => {
     if (!mergedTrip?.startDate || !mergedTrip?.endDate) return "draft";
     const now = new Date();
-    const startDate = safeParseTripDate(mergedTrip.startDate);
-    const endDate = safeParseTripDate(mergedTrip.endDate);
+    const startDate = parseTripDate(mergedTrip.startDate, {
+      context: "TripDetailsPage",
+    });
+    const endDate = parseTripDate(mergedTrip.endDate, { context: "TripDetailsPage" });
     if (!startDate || !endDate) return "draft";
 
     if (DateUtils.isBefore(now, startDate)) return "upcoming";
@@ -124,15 +110,17 @@ export default function TripDetailsPage() {
 
   const getTripDuration = () => {
     if (!mergedTrip?.startDate || !mergedTrip?.endDate) return null;
-    const startDate = safeParseTripDate(mergedTrip.startDate);
-    const endDate = safeParseTripDate(mergedTrip.endDate);
+    const startDate = parseTripDate(mergedTrip.startDate, {
+      context: "TripDetailsPage",
+    });
+    const endDate = parseTripDate(mergedTrip.endDate, { context: "TripDetailsPage" });
     if (!startDate || !endDate) return null;
     return DateUtils.difference(endDate, startDate, "days") + 1;
   };
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return "Not set";
-    const parsed = safeParseTripDate(dateString);
+    const parsed = parseTripDate(dateString, { context: "TripDetailsPage" });
     if (!parsed) return "Invalid date";
     return DateUtils.format(parsed, "MMMM dd, yyyy");
   };

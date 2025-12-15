@@ -41,6 +41,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { useTrip } from "@/hooks/use-trips";
+import { copyTextToClipboard } from "@/lib/client/clipboard";
 import { nowIso, secureId } from "@/lib/security/random";
 import { getBrowserClient } from "@/lib/supabase";
 import { statusVariants } from "@/lib/variants/status";
@@ -207,68 +208,51 @@ export default function TripCollaborationPage() {
    */
   const handleCopyShareLink = async (): Promise<void> => {
     const shareUrl = `${window.location.origin}/trips/${tripId}/share`;
+    const result = await copyTextToClipboard(shareUrl);
 
-    const copyWithFallback = (): boolean => {
-      const textarea = document.createElement("textarea");
-      textarea.value = shareUrl;
-      textarea.setAttribute("readonly", "");
-      textarea.style.position = "fixed";
-      textarea.style.left = "-9999px";
-      textarea.style.top = "0";
-      document.body.appendChild(textarea);
-      textarea.select();
-      const success = document.execCommand("copy");
-      document.body.removeChild(textarea);
-      return success;
-    };
-
-    if (navigator.clipboard?.writeText) {
-      try {
-        await navigator.clipboard.writeText(shareUrl);
-        toast({ description: "Share link copied to clipboard", title: "Link Copied" });
-        return;
-      } catch (error) {
-        if (error instanceof Error && error.name === "NotAllowedError") {
-          toast({
-            description:
-              "Clipboard permission denied. Please allow access and try again.",
-            title: "Permission Required",
-            variant: "destructive",
-          });
-          return;
-        }
-        if (error instanceof Error && error.name === "SecurityError") {
-          toast({
-            description:
-              "Clipboard access is only available in secure contexts (HTTPS).",
-            title: "Clipboard Unavailable",
-            variant: "destructive",
-          });
-          return;
-        }
-        const success = copyWithFallback();
-        toast({
-          description: success
-            ? "Share link copied to clipboard"
-            : "Unable to copy link. Please copy it manually.",
-          title: success ? "Link Copied" : "Copy Failed",
-          variant: success ? "default" : "destructive",
-        });
-        if (!success && process.env.NODE_ENV === "development") {
-          console.error("Failed to copy share link:", error);
-        }
-        return;
-      }
+    if (result.ok) {
+      toast({ description: "Share link copied to clipboard", title: "Link Copied" });
+      return;
     }
 
-    const fallbackSuccess = copyWithFallback();
-    toast({
-      description: fallbackSuccess
-        ? "Share link copied to clipboard"
-        : "Clipboard API unavailable. Please copy the link manually.",
-      title: fallbackSuccess ? "Link Copied" : "Copy Failed",
-      variant: fallbackSuccess ? "default" : "destructive",
-    });
+    switch (result.reason) {
+      case "permission-denied":
+        toast({
+          description:
+            "Clipboard permission denied. Please allow access and try again.",
+          title: "Permission Required",
+          variant: "destructive",
+        });
+        return;
+      case "insecure-context":
+        toast({
+          description: "Clipboard access is only available in secure contexts (HTTPS).",
+          title: "Clipboard Unavailable",
+          variant: "destructive",
+        });
+        return;
+      case "unavailable":
+        toast({
+          description: "Clipboard API unavailable. Please copy the link manually.",
+          title: "Copy Failed",
+          variant: "destructive",
+        });
+        return;
+      case "failed":
+        toast({
+          description: "Unable to copy link. Please copy it manually.",
+          title: "Copy Failed",
+          variant: "destructive",
+        });
+        if (process.env.NODE_ENV === "development") {
+          console.error("Failed to copy share link:", result.error);
+        }
+        return;
+      default: {
+        const _exhaustiveCheck: never = result.reason;
+        return _exhaustiveCheck;
+      }
+    }
   };
 
   /**

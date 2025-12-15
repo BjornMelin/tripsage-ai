@@ -88,7 +88,7 @@ export function PreferencesSection() {
 
   const form = useForm<PreferencesFormData>({
     defaultValues,
-    resolver: zodResolver(preferencesFormSchema),
+    resolver: zodResolver(preferencesFormSchema as never),
   });
 
   useEffect(() => {

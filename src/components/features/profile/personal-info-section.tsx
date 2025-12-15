@@ -74,7 +74,7 @@ export function PersonalInfoSection() {
 
   const form = useForm<PersonalInfoFormData>({
     defaultValues,
-    resolver: zodResolver(personalInfoFormSchema),
+    resolver: zodResolver(personalInfoFormSchema as never),
   });
 
   useEffect(() => {
