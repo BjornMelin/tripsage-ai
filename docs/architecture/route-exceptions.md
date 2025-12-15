@@ -63,32 +63,16 @@ execution patterns.
 **Example**: QStash job processing
 
 ```typescript
-import { errorResponse } from "@/lib/api/route-helpers";
+import { getQstashReceiver, verifyQstashRequest } from "@/lib/qstash/receiver";
 
 // Cannot use factory - custom signature verification
 export async function POST(req: NextRequest) {
-  const signature = req.headers.get('x-qstash-signature');
-  if (!signature) {
-    return errorResponse({
-      error: "unauthorized",
-      reason: "Missing QStash signature",
-      status: 401,
-    });
-  }
-
-  // Verify QStash signature
-  const body = await req.text();
-  const isValid = verifyQstashSignature(body, signature);
-  if (!isValid) {
-    return errorResponse({
-      error: "unauthorized",
-      reason: "Invalid QStash signature",
-      status: 401,
-    });
-  }
+  const receiver = getQstashReceiver();
+  const verification = await verifyQstashRequest(req, receiver);
+  if (!verification.ok) return verification.response;
 
   // Process job without user context
-  const job = JSON.parse(body);
+  const job = JSON.parse(verification.body);
   await processJob(job);
   return Response.json({ ok: true });
 }
@@ -97,6 +81,7 @@ export async function POST(req: NextRequest) {
 **Routes Affected**:
 
 - `/api/jobs/memory-sync` - User memory synchronization
+- `/api/jobs/notify-collaborators` - Collaboration notifications (QStash fan-out)
 
 ### 3. Complex Custom Requirements
 
@@ -143,6 +128,7 @@ If the factory cannot support requirements, document:
 | `/api/hooks/files` | Webhook | File processing signature | ADR-0032 |
 | `/api/hooks/trips` | Webhook | Trip sync signature | ADR-0032 |
 | `/api/jobs/memory-sync` | Background Job | QStash signature check | ADR-0032 |
+| `/api/jobs/notify-collaborators` | Background Job | QStash signature check | ADR-0032 |
 
 ## Exception Monitoring
 
