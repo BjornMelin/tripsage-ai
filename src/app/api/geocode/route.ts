@@ -7,12 +7,17 @@
 
 import "server-only";
 
-import { type GeocodeRequest, geocodeRequestSchema } from "@schemas/api";
+import {
+  type GeocodeRequest,
+  geocodeRequestSchema,
+  upstreamGeocodeResponseSchema,
+} from "@schemas/api";
 import { type NextRequest, NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse } from "@/lib/api/route-helpers";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
 import { cacheLatLng, getCachedLatLng } from "@/lib/google/caching";
+import { getGeocode, getReverseGeocode } from "@/lib/google/client";
 
 /**
  * POST /api/geocode
@@ -52,11 +57,11 @@ export const POST = withApiGuards({
       });
     }
 
-    const url = new URL("https://maps.googleapis.com/maps/api/geocode/json");
-    url.searchParams.set("address", validated.address);
-    url.searchParams.set("key", apiKey);
+    const response = await getGeocode({
+      address: validated.address,
+      apiKey,
+    });
 
-    const response = await fetch(url);
     if (!response.ok) {
       return errorResponse({
         error: "upstream_error",
@@ -65,14 +70,19 @@ export const POST = withApiGuards({
       });
     }
 
-    const data = (await response.json()) as {
-      status?: string;
-      results?: Array<{
-        geometry?: {
-          location?: { lat?: number; lng?: number };
-        };
-      }>;
-    };
+    const rawData = await response.json();
+
+    // Validate upstream response
+    const parseResult = upstreamGeocodeResponseSchema.safeParse(rawData);
+    if (!parseResult.success) {
+      return errorResponse({
+        error: "upstream_validation_error",
+        reason: "Invalid response from Geocoding API",
+        status: 502,
+      });
+    }
+
+    const data = parseResult.data;
 
     if (data.status === "OK" && data.results?.[0]?.geometry?.location) {
       const location = data.results[0].geometry.location;
@@ -91,11 +101,12 @@ export const POST = withApiGuards({
 
   // Reverse geocoding: lat/lng -> address
   if (typeof validated.lat === "number" && typeof validated.lng === "number") {
-    const url = new URL("https://maps.googleapis.com/maps/api/geocode/json");
-    url.searchParams.set("latlng", `${validated.lat},${validated.lng}`);
-    url.searchParams.set("key", apiKey);
+    const response = await getReverseGeocode({
+      apiKey,
+      lat: validated.lat,
+      lng: validated.lng,
+    });
 
-    const response = await fetch(url);
     if (!response.ok) {
       return errorResponse({
         error: "upstream_error",
@@ -104,8 +115,19 @@ export const POST = withApiGuards({
       });
     }
 
-    const data = await response.json();
-    return NextResponse.json(data);
+    const rawData = await response.json();
+
+    // Validate upstream response
+    const parseResult = upstreamGeocodeResponseSchema.safeParse(rawData);
+    if (!parseResult.success) {
+      return errorResponse({
+        error: "upstream_validation_error",
+        reason: "Invalid response from Geocoding API",
+        status: 502,
+      });
+    }
+
+    return NextResponse.json(parseResult.data);
   }
 
   return errorResponse({
