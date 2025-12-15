@@ -1,5 +1,5 @@
 /**
- * @fileoverview Client-side API key input validation helpers.
+ * @fileoverview API key input validation helpers.
  *
  * These checks are intentionally lightweight to avoid false negatives; server-side
  * validation remains the source of truth.

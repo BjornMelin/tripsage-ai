@@ -5,7 +5,6 @@
 import type { SearchCollection } from "@schemas/stores";
 import { searchCollectionSchema } from "@schemas/stores";
 import type { StateCreator } from "zustand";
-import { unique } from "@/lib/collection-utils";
 import { createStoreLogger } from "@/lib/telemetry/store-logger";
 import { generateId, getCurrentTimestamp } from "../helpers";
 import type { CollectionsSlice, SearchHistoryState } from "./types";
@@ -24,7 +23,7 @@ export const createCollectionsSlice: StateCreator<
         collection.id === collectionId
           ? {
               ...collection,
-              searchIds: unique([...collection.searchIds, searchId]),
+              searchIds: [...new Set([...collection.searchIds, searchId])],
               updatedAt: getCurrentTimestamp(),
             }
           : collection

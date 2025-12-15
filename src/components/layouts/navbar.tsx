@@ -10,15 +10,16 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { ROUTES } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 const NavItems = [
   { href: "/", name: "Home" },
-  { href: "/trips", icon: <MapPinIcon className="h-4 w-4 mr-2" />, name: "Trips" },
+  { href: ROUTES.dashboard.trips, icon: <MapPinIcon className="h-4 w-4 mr-2" />, name: "Trips" },
   {
-    href: "/itinerary",
+    href: ROUTES.dashboard.calendar,
     icon: <CalendarIcon className="h-4 w-4 mr-2" />,
-    name: "Itinerary",
+    name: "Calendar",
   },
 ];
 

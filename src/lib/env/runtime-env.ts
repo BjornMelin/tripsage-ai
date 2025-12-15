@@ -10,18 +10,17 @@ import "server-only";
  * Prefers `VERCEL_ENV` when present and otherwise falls back to a normalized
  * value derived from `NODE_ENV`.
  */
-export function getRuntimeEnv():
-  | "production"
-  | "preview"
-  | "development"
-  | "test"
-  | string {
-  return (
-    process.env.VERCEL_ENV ??
-    (process.env.NODE_ENV === "production"
-      ? "production"
-      : process.env.NODE_ENV === "test"
-        ? "test"
-        : "development")
-  );
+export function getRuntimeEnv(): "production" | "preview" | "development" | "test" {
+  const vercelEnv = process.env.VERCEL_ENV;
+  if (
+    vercelEnv === "production" ||
+    vercelEnv === "preview" ||
+    vercelEnv === "development"
+  ) {
+    return vercelEnv;
+  }
+
+  if (process.env.NODE_ENV === "production") return "production";
+  if (process.env.NODE_ENV === "test") return "test";
+  return "development";
 }
