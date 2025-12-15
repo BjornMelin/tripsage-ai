@@ -74,14 +74,25 @@ export function GET(req: NextRequest, context: { params: Promise<{ id: string }>
       });
     }
 
-    const rawData = await response.json();
+    let rawData: unknown;
+    try {
+      rawData = await response.json();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return errorResponse({
+        error: "upstream_parse_error",
+        reason: `Failed to parse JSON response from Places API: ${message}`,
+        status: 502,
+      });
+    }
 
     // Validate upstream response
     const parseResult = upstreamPlaceSchema.safeParse(rawData);
     if (!parseResult.success) {
+      const zodError = parseResult.error.format();
       return errorResponse({
         error: "upstream_validation_error",
-        reason: "Invalid response from Places API",
+        reason: `Invalid response from Places API: ${JSON.stringify(zodError)}`,
         status: 502,
       });
     }

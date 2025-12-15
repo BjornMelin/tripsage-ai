@@ -15,7 +15,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse } from "@/lib/api/route-helpers";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
-import { postComputeRouteMatrix } from "@/lib/google/client";
+import { parseNdjsonResponse, postComputeRouteMatrix } from "@/lib/google/client";
 
 /**
  * POST /api/route-matrix
@@ -70,14 +70,26 @@ export const POST = withApiGuards({
     );
   }
 
-  const rawData = await response.json();
+  // Parse NDJSON stream: computeRouteMatrix returns newline-delimited JSON
+  let rawData: unknown[];
+  try {
+    rawData = await parseNdjsonResponse(response);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return errorResponse({
+      error: "upstream_parse_error",
+      reason: `Failed to parse NDJSON response: ${message}`,
+      status: 502,
+    });
+  }
 
   // Validate upstream response (array of matrix entries)
   const parseResult = upstreamRouteMatrixResponseSchema.safeParse(rawData);
   if (!parseResult.success) {
+    const zodError = parseResult.error.format();
     return errorResponse({
       error: "upstream_validation_error",
-      reason: "Invalid response from Routes API",
+      reason: `Invalid response from Routes API: ${JSON.stringify(zodError)}`,
       status: 502,
     });
   }

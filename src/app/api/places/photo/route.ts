@@ -56,6 +56,7 @@ export const GET = withApiGuards({
       maxHeightPx: validated.maxHeightPx,
       maxWidthPx: validated.maxWidthPx,
       photoName: validated.name,
+      skipHttpRedirect: validated.skipHttpRedirect,
     });
   } catch (err) {
     return errorResponse({
