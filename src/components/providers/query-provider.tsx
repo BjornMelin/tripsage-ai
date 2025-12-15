@@ -6,8 +6,14 @@
 "use client";
 
 import { QueryClient, QueryClientProvider, type QueryKey } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import dynamic from "next/dynamic";
 import { type ReactNode, useState } from "react";
+
+const ReactQueryDevtools = dynamic(
+  () => import("@tanstack/react-query-devtools").then((mod) => mod.ReactQueryDevtools),
+  { ssr: false }
+);
+
 import { shouldRetryError } from "@/lib/api/error-types";
 import { cacheTimes, staleTimes } from "@/lib/query/config";
 
@@ -70,11 +76,13 @@ export function TanStackQueryProvider({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       {children}
-      <ReactQueryDevtools
-        initialIsOpen={false}
-        position="bottom"
-        buttonPosition="bottom-right"
-      />
+      {process.env.NODE_ENV === "development" && (
+        <ReactQueryDevtools
+          initialIsOpen={false}
+          position="bottom"
+          buttonPosition="bottom-right"
+        />
+      )}
     </QueryClientProvider>
   );
 }

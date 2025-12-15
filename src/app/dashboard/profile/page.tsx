@@ -23,22 +23,20 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ROUTES } from "@/lib/routes";
 import { useAuthCore } from "@/stores/auth/auth-core";
-import { useUserProfileStore } from "@/stores/user-store";
 
 export default function ProfilePage() {
   const router = useRouter();
   const { user, isLoading } = useAuthCore();
-  const { isLoading: isProfileLoading } = useUserProfileStore();
 
   useEffect(() => {
-    if (isLoading || isProfileLoading) return;
+    if (isLoading) return;
     if (user) return;
     const query = new URLSearchParams({ from: ROUTES.dashboard.profile }).toString();
     const target = `${ROUTES.login}?${query}`;
     router.replace(target);
-  }, [isLoading, isProfileLoading, router, user]);
+  }, [isLoading, router, user]);
 
-  if (isLoading || isProfileLoading) {
+  if (isLoading) {
     return (
       <div
         className="container mx-auto py-6 space-y-8"

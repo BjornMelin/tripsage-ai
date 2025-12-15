@@ -1,6 +1,6 @@
 /**
  * @fileoverview Account settings section: email update, verification, and
- * notification preferences. UI only; server actions are stubbed.
+ * notification preferences.
  */
 
 "use client";
@@ -45,7 +45,6 @@ import { useToast } from "@/components/ui/use-toast";
 import { getBrowserClient } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import { useAuthCore } from "@/stores/auth/auth-core";
-import { useUserProfileStore } from "@/stores/user-store";
 
 /**
  * Alert colors for account status indicators.
@@ -71,11 +70,10 @@ const ALERT_COLORS = {
  * @returns A settings section with email and notification controls.
  */
 export function AccountSettingsSection() {
-  const { profile, updatePersonalInfo: _updatePersonalInfo } = useUserProfileStore();
   const { user: authUser, setUser, logout } = useAuthCore();
   const { toast } = useToast();
 
-  const currentEmail = authUser?.email ?? profile?.email ?? "";
+  const currentEmail = authUser?.email ?? "";
   const [seenUnverified, setSeenUnverified] = useState(false);
   const isEmailVerified =
     seenUnverified || authUser?.isEmailVerified === false

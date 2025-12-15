@@ -1,31 +1,31 @@
 "use client";
 
-import {
-  Toast,
-  ToastClose,
-  ToastDescription,
-  ToastProvider,
-  ToastTitle,
-  ToastViewport,
-} from "@/components/ui/toast";
-import { useToast } from "@/components/ui/use-toast";
+import { useTheme } from "next-themes";
+import { Toaster as SonnerToaster } from "sonner";
 
+/**
+ * Toast notification container using Sonner.
+ *
+ * Integrates with next-themes for automatic light/dark theme support.
+ * Renders at bottom-right on desktop, top on mobile.
+ */
 export function Toaster() {
-  const { toasts } = useToast();
+  const { theme = "system" } = useTheme();
 
   return (
-    <ToastProvider>
-      {toasts.map(({ id, title, description, action, ...props }) => (
-        <Toast key={id} {...props}>
-          <div className="grid gap-1">
-            {title && <ToastTitle>{title}</ToastTitle>}
-            {description && <ToastDescription>{description}</ToastDescription>}
-          </div>
-          {action}
-          <ToastClose />
-        </Toast>
-      ))}
-      <ToastViewport />
-    </ToastProvider>
+    <SonnerToaster
+      theme={theme as "light" | "dark" | "system"}
+      className="toaster group"
+      toastOptions={{
+        classNames: {
+          actionButton:
+            "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
+          cancelButton: "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
+          description: "group-[.toast]:text-muted-foreground",
+          toast:
+            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
+        },
+      }}
+    />
   );
 }
