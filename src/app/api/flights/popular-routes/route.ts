@@ -25,6 +25,11 @@ interface PopularRoute {
 
 const POPULAR_ROUTES_TTL_SECONDS = 24 * 60 * 60; // 24 hours
 
+/**
+ * Builds a static list of popular flight routes for the next year.
+ *
+ * @returns Array of popular routes with example dates, destinations, and prices.
+ */
 function buildGlobalPopularRoutes(): PopularRoute[] {
   const nextYear = new Date().getUTCFullYear() + 1;
   return [
