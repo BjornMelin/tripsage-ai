@@ -119,7 +119,7 @@ function startMockSupabaseAuth() {
         reject(
           new Error(
             `Port ${supabasePort} is already in use. ` +
-              "Free the port or specify a different SUPABASE_PORT environment variable."
+              "Free the port or set NEXT_PUBLIC_SUPABASE_URL to a URL with a different port (for example, http://127.0.0.1:54330)."
           )
         );
       } else {

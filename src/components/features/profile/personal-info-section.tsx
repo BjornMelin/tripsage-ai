@@ -4,11 +4,9 @@
 
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
 import { type PersonalInfoFormData, personalInfoFormSchema } from "@schemas/profile";
 import { CameraIcon, UploadIcon } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +28,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
+import { useZodForm } from "@/hooks/use-zod-form";
 import { getUnknownErrorMessage } from "@/lib/errors/get-unknown-error-message";
 import { getBrowserClient } from "@/lib/supabase";
 import { useAuthCore } from "@/stores/auth/auth-core";
@@ -46,18 +45,17 @@ const SUPPORTED_AVATAR_TYPES = {
 type SupportedAvatarType = keyof typeof SUPPORTED_AVATAR_TYPES;
 type SupportedAvatarExt = (typeof SUPPORTED_AVATAR_TYPES)[SupportedAvatarType];
 
-function resolveAvatarExt(file: File): SupportedAvatarExt | null {
-  return (
-    (SUPPORTED_AVATAR_TYPES as Record<string, SupportedAvatarExt>)[file.type] ?? null
-  );
-}
-
 export function PersonalInfoSection() {
   const avatarInputId = useId();
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const { user: authUser, setUser } = useAuthCore();
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
+  const resolveAvatarExt = (file: File): SupportedAvatarExt | null => {
+    return (
+      (SUPPORTED_AVATAR_TYPES as Record<string, SupportedAvatarExt>)[file.type] ?? null
+    );
+  };
 
   const defaultValues = useMemo(
     (): PersonalInfoFormData => ({
@@ -72,9 +70,10 @@ export function PersonalInfoSection() {
     [authUser]
   );
 
-  const form = useForm<PersonalInfoFormData>({
+  const form = useZodForm<PersonalInfoFormData>({
     defaultValues,
-    resolver: zodResolver(personalInfoFormSchema as never),
+    mode: "onChange",
+    schema: personalInfoFormSchema,
   });
 
   useEffect(() => {
@@ -82,11 +81,7 @@ export function PersonalInfoSection() {
   }, [defaultValues, form]);
 
   const resolveSupabaseClient = () => {
-    try {
-      return getBrowserClient();
-    } catch (_error) {
-      return null;
-    }
+    return getBrowserClient();
   };
 
   const onSubmit = async (data: PersonalInfoFormData) => {
@@ -187,14 +182,11 @@ export function PersonalInfoSection() {
         .filter((candidate) => candidate !== ext)
         .map((candidate) => `${authUser.id}.${candidate}`);
 
-      if (otherPaths.length > 0) {
-        await supabase.storage.from("avatars").remove(otherPaths);
-      }
-
+      // Upload first to avoid losing existing avatar on failure
       const { error: uploadError } = await supabase.storage
         .from("avatars")
         .upload(avatarPath, file, {
-          cacheControl: "0",
+          cacheControl: "public, max-age=3600",
           contentType: file.type,
           upsert: true,
         });
@@ -203,8 +195,14 @@ export function PersonalInfoSection() {
         throw uploadError;
       }
 
+      // Only remove other format avatars after successful upload
+      if (otherPaths.length > 0) {
+        await supabase.storage.from("avatars").remove(otherPaths);
+      }
+
       const { data } = supabase.storage.from("avatars").getPublicUrl(avatarPath);
-      const avatarUrl = data.publicUrl;
+      // Add cache-busting query parameter so clients fetch the updated image
+      const avatarUrl = `${data.publicUrl}?v=${Date.now()}`;
 
       const { data: updateResult, error: updateError } = await supabase.auth.updateUser(
         {

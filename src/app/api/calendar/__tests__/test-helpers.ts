@@ -188,17 +188,19 @@ export function setupCalendarMocks(overrides?: {
 
   vi.doMock("@upstash/ratelimit", () => {
     const slidingWindow = vi.fn(() => ({}));
-    const ctor = vi.fn(function RatelimitMock() {
-      return {
-        limit: CALENDAR_MOCKS.limitSpy,
-      };
-    }) as unknown as {
-      new (...args: unknown[]): { limit: ReturnType<typeof vi.fn> };
-      slidingWindow: typeof slidingWindow;
-    };
-    ctor.slidingWindow = slidingWindow;
+    class Ratelimit {
+      static slidingWindow = slidingWindow;
+
+      limit = CALENDAR_MOCKS.limitSpy;
+
+      // biome-ignore lint/complexity/noUselessConstructor: Signature matches external class constructor.
+      constructor(..._args: unknown[]) {
+        // Intentionally empty.
+      }
+    }
+
     // biome-ignore lint/style/useNamingConvention: Ratelimit matches external library export
-    return { Ratelimit: ctor };
+    return { Ratelimit };
   });
 
   vi.doMock("@upstash/redis", () => ({

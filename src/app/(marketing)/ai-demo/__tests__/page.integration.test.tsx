@@ -2,16 +2,11 @@
 
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import Page from "@/app/(marketing)/ai-demo/page";
 import { server } from "@/test/msw/server";
 
 describe("AI Demo Page", () => {
-  beforeEach(() => {
-    // MSW server is already listening; reset handlers before each test
-    server.resetHandlers();
-  });
-
   afterEach(() => {
     server.resetHandlers();
   });

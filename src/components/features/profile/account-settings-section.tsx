@@ -104,12 +104,15 @@ export function AccountSettingsSection() {
     defaultValues: {
       email: currentEmail,
     },
+    mode: "onChange",
     schema: emailUpdateFormSchema,
   });
 
+  const { reset } = emailForm;
+
   useEffect(() => {
-    emailForm.reset({ email: currentEmail });
-  }, [currentEmail, emailForm.reset]);
+    reset({ email: currentEmail });
+  }, [currentEmail, reset]);
 
   useEffect(() => {
     setNotificationPrefs(initialNotificationPrefs);

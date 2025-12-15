@@ -4,13 +4,11 @@
 
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { CURRENCY_CODE_SCHEMA, type CurrencyCode } from "@schemas/currency";
+import { CURRENCY_CODE_SCHEMA } from "@schemas/currency";
 import { type PreferencesFormData, preferencesFormSchema } from "@schemas/profile";
 import { GlobeIcon, ZapIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -36,6 +34,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
+import { useZodForm } from "@/hooks/use-zod-form";
 import { getUnknownErrorMessage } from "@/lib/errors/get-unknown-error-message";
 import { getBrowserClient } from "@/lib/supabase";
 import { useAuthCore } from "@/stores/auth/auth-core";
@@ -86,9 +85,10 @@ export function PreferencesSection() {
     initialAdditionalSettings
   );
 
-  const form = useForm<PreferencesFormData>({
+  const form = useZodForm<PreferencesFormData>({
     defaultValues,
-    resolver: zodResolver(preferencesFormSchema as never),
+    mode: "onChange",
+    schema: preferencesFormSchema,
   });
 
   useEffect(() => {
@@ -99,13 +99,7 @@ export function PreferencesSection() {
     setAdditionalSettings(initialAdditionalSettings);
   }, [initialAdditionalSettings]);
 
-  const resolveSupabaseClient = () => {
-    try {
-      return getBrowserClient();
-    } catch (_error) {
-      return null;
-    }
-  };
+  const resolveSupabaseClient = () => getBrowserClient();
 
   const onSubmit = async (data: PreferencesFormData) => {
     try {
@@ -147,8 +141,8 @@ export function PreferencesSection() {
 
       // Update currency store if changed
       if (data.currency !== baseCurrency) {
-        const currency = CURRENCY_CODE_SCHEMA.parse(data.currency) as CurrencyCode;
-        setBaseCurrency(currency);
+        const parsedCurrency = CURRENCY_CODE_SCHEMA.parse(data.currency);
+        setBaseCurrency(parsedCurrency);
       }
 
       setTheme(data.theme);

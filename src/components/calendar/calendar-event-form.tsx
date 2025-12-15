@@ -4,10 +4,8 @@
 
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
 import { createEventRequestSchema } from "@schemas/calendar";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
+import { useZodForm } from "@/hooks/use-zod-form";
 
 const EVENT_FORM_SCHEMA = createEventRequestSchema.extend({
   calendarId: z.string().default("primary"),
@@ -58,7 +57,7 @@ export function CalendarEventForm({
     watch,
     setValue,
     reset,
-  } = useForm<EventFormData>({
+  } = useZodForm<EventFormData>({
     defaultValues: {
       calendarId: "primary",
       ...initialData,
@@ -69,7 +68,8 @@ export function CalendarEventForm({
         dateTime: new Date(),
       },
     },
-    resolver: zodResolver(EVENT_FORM_SCHEMA as never) as never,
+    mode: "onChange",
+    schema: EVENT_FORM_SCHEMA,
   });
 
   const startDateTime = watch("start.dateTime");

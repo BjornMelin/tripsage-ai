@@ -23,6 +23,9 @@ vi.mock("lucide-react", async (importOriginal) => {
     FilterIcon: () => <span data-testid="filter-icon" />,
     GridIcon: () => <span data-testid="grid-icon" />,
     ListIcon: () => <span data-testid="list-icon" />,
+    Loader2Icon: ({ className }: { className?: string }) => (
+      <span data-testid="loader-icon" className={className} />
+    ),
     PlusIcon: () => <span data-testid="plus-icon" />,
     SearchIcon: () => <span data-testid="search-icon" />,
   };
@@ -570,6 +573,31 @@ describe("TripsPage", () => {
       });
 
       expect(screen.getByTestId("trip-card-trip-delete-id")).toBeInTheDocument();
+    });
+
+    it("shows loading state on delete button while deletion is pending", async () => {
+      mockTrips.mockReturnValue([
+        {
+          createdAt: "2024-01-10T10:00:00Z",
+          currency: DEFAULT_CURRENCY,
+          destinations: [destination("Kyoto", "Japan")],
+          id: "trip-delete-id",
+          title: "Kyoto Escape",
+          visibility: "private",
+        },
+      ]);
+      mockDeleteIsPending.mockReturnValue(true);
+
+      render(<TripsPage />);
+
+      await userEvent.click(screen.getByText("Delete"));
+
+      const dialog = await screen.findByRole("alertdialog");
+      const deleteButton = within(dialog).getByRole("button", { name: /deleting/i });
+
+      expect(deleteButton).toBeDisabled();
+      expect(deleteButton).toHaveAttribute("aria-busy", "true");
+      expect(within(deleteButton).getByTestId("loader-icon")).toBeInTheDocument();
     });
   });
 

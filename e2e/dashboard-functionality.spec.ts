@@ -2,6 +2,7 @@ import { expect, type Locator, type Page, test } from "@playwright/test";
 import { authenticateAsTestUser, resetTestAuth } from "./helpers/auth";
 
 const navigationTimeoutMs = 15_000;
+const visibilityTimeoutMs = navigationTimeoutMs;
 
 async function clickAndWaitForUrl(
   page: Page,
@@ -92,17 +93,17 @@ test.describe("Dashboard Functionality", () => {
 
     // Wait for popover to be visible and target menu items within the popover content
     const popoverContent = page.locator("[data-radix-popper-content-wrapper]");
-    await expect(popoverContent).toBeVisible({ timeout: 15000 });
+    await expect(popoverContent).toBeVisible({ timeout: visibilityTimeoutMs });
 
     // Verify menu options using the popover container to avoid sidebar conflicts
     await expect(popoverContent.getByRole("link", { name: "Profile" })).toBeVisible({
-      timeout: 15000,
+      timeout: visibilityTimeoutMs,
     });
     await expect(popoverContent.getByRole("link", { name: "Settings" })).toBeVisible({
-      timeout: 15000,
+      timeout: visibilityTimeoutMs,
     });
     await expect(popoverContent.getByRole("button", { name: "Log out" })).toBeVisible({
-      timeout: 15000,
+      timeout: visibilityTimeoutMs,
     });
 
     // Test profile navigation
@@ -116,7 +117,7 @@ test.describe("Dashboard Functionality", () => {
     await page.getByRole("button", { name: "User" }).click();
 
     // Wait for popover again and click settings
-    await expect(popoverContent).toBeVisible({ timeout: 15000 });
+    await expect(popoverContent).toBeVisible({ timeout: visibilityTimeoutMs });
     await popoverContent.getByRole("link", { name: "Settings" }).click();
     await expect(page).toHaveURL("/dashboard/settings", {
       timeout: navigationTimeoutMs,
@@ -132,20 +133,20 @@ test.describe("Dashboard Functionality", () => {
 
     // Wait for popover to be visible and target logout button within it
     const popoverContent = page.locator("[data-radix-popper-content-wrapper]");
-    await expect(popoverContent).toBeVisible({ timeout: 15000 });
+    await expect(popoverContent).toBeVisible({ timeout: visibilityTimeoutMs });
     await popoverContent.getByRole("button", { name: "Log out" }).click();
 
     // Wait for redirect to login page
-    await page.waitForURL(/\/login/, { timeout: 15000 });
+    await page.waitForURL(/\/login/, { timeout: navigationTimeoutMs });
     await expect(page.getByRole("heading", { name: /sign in/i })).toBeVisible({
-      timeout: 15000,
+      timeout: visibilityTimeoutMs,
     });
 
     // Verify that trying to access dashboard redirects to login
     await page.goto("/dashboard");
-    await page.waitForURL(/\/login/, { timeout: 15000 });
+    await page.waitForURL(/\/login/, { timeout: navigationTimeoutMs });
     await expect(page.getByRole("heading", { name: /sign in/i })).toBeVisible({
-      timeout: 15000,
+      timeout: visibilityTimeoutMs,
     });
   });
 

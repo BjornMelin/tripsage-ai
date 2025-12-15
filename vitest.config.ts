@@ -1,7 +1,7 @@
 /**
  * @fileoverview Vitest configuration with multi-project setup for optimized performance.
  * - Uses projects to split unit, component, API, and integration tests
- * - Pool selection and concurrency controlled via CLI flags (--pool, --maxWorkers)
+ * - Uses forks pool for memory isolation (prevents OOM in large test suites)
  * - Defaults to jsdom for component tests (correctness over speed)
  */
 
@@ -58,11 +58,12 @@ export default defineConfig({
     },
     exclude: ["**/node_modules/**", "**/e2e/**", "**/*.e2e.*"],
     globals: true,
+    // Worker configuration (memory limit set via NODE_OPTIONS in scripts)
+    maxWorkers: isCi ? 2 : "50%",
     hookTimeout: 8000,
     passWithNoTests: false,
-    // Use threads pool for better performance with CPU-bound tests
+    // Use threads pool (worker tuning handled via maxWorkers)
     pool: "threads",
-    // Pool and parallelism controlled via CLI flags
     // Projects: schemas, integration, api, component, unit (ordered by specificity)
     projects: [
       {
@@ -76,8 +77,8 @@ export default defineConfig({
           },
           environment: "node",
           include: ["src/lib/schemas/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
+          isolate: false, // Pure validation, no side effects
           name: "schemas",
-          pool: "threads",
         },
       },
       {
@@ -100,7 +101,6 @@ export default defineConfig({
             "src/**/*-integration.{test,spec}.?(c|m)[jt]s?(x)",
           ],
           name: "integration",
-          pool: "threads",
         },
       },
       {
@@ -115,7 +115,6 @@ export default defineConfig({
           environment: "node",
           include: ["src/app/api/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
           name: "api",
-          pool: "threads",
         },
       },
       {
@@ -136,7 +135,6 @@ export default defineConfig({
             "src/stores/**/*.{test,spec}.?(c|m)[jt]s?(x)",
           ],
           name: "component",
-          pool: "threads",
         },
       },
       {
@@ -161,8 +159,8 @@ export default defineConfig({
             "src/stores/**/*.{test,spec}.?(c|m)[jt]s?(x)",
           ],
           include: ["src/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
+          isolate: false, // Pure functions, no side effects
           name: "unit",
-          pool: "threads",
         },
       },
     ],
