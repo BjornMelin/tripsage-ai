@@ -3,8 +3,9 @@
 import type { FlightSearchParams } from "@schemas/search";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Mock telemetry span
+// Mock telemetry span (must include recordTelemetryEvent as logger.ts imports it)
 vi.mock("@/lib/telemetry/span", () => ({
+  recordTelemetryEvent: vi.fn(),
   withTelemetrySpan: vi.fn(
     async <T>(_name: string, _options: unknown, fn: () => T | Promise<T>): Promise<T> =>
       await fn()

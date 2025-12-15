@@ -136,6 +136,7 @@ export const GET = withApiGuards({
       return NextResponse.json(fallback, { status: 200 });
     }
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     scopedLogger.error("memory.insights.request_failed", {
       cacheKeyPrefix: "memory:insights",
       error:
@@ -147,6 +148,7 @@ export const GET = withApiGuards({
               stack: error.stack,
             }
           : error,
+      errorMessage,
       userId,
     });
     return errorResponse({
@@ -200,7 +202,9 @@ function buildContextSummary(contextItems: MemoryContextResponse[]): string {
 function buildInsightsPrompt(contextSummary: string, count: number): string {
   return [
     "You are an insights analyst for a travel memory system.",
-    `Analyze ${count} memory snippets and return structured insights only as JSON matching the provided schema.`,
+    `Analyze ${count} memory snippets and return structured insights only as JSON.`,
+    "Return a single JSON object matching the provided schema exactly with top-level keys: insights, metadata, success.",
+    "Do not include markdown, commentary, code fences, or any additional keys.",
     "Focus on budget patterns, destination preferences, travel personality, and actionable recommendations.",
     "When data is thin, lower confidence and avoid fabrication.",
     "Memories:",
