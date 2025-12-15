@@ -135,5 +135,6 @@ export const renderWithProviders = (
   return render(ui, { wrapper, ...options });
 };
 
-export * from "@testing-library/react";
+// Explicit re-exports from testing-library (commonly used across tests)
+export { fireEvent, screen, waitFor, within } from "@testing-library/react";
 export { renderWithProviders as render };

@@ -5,6 +5,8 @@
  * from @/test/mocks/* in individual test files.
  */
 
+import "./test/setup";
+
 import { cleanup } from "@testing-library/react";
 import React from "react";
 import { afterAll, afterEach, beforeAll, vi } from "vitest";

@@ -21,6 +21,22 @@ import { staleTimes } from "@/lib/query-keys";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { useCurrencyStore } from "@/stores/currency-store";
 
+const MAX_CURRENCY_QUERY_RETRIES = 2;
+
+/**
+ * React Query retry policy for currency fetches.
+ *
+ * @param failureCount - The number of consecutive failures so far.
+ * @param error - Normalized application error for the failed request.
+ * @returns True when the query should be retried, otherwise false.
+ */
+function shouldRetryCurrencyQuery(failureCount: number, error: AppError): boolean {
+  if (isApiError(error) && (error.status === 401 || error.status === 403)) {
+    return false;
+  }
+  return failureCount < MAX_CURRENCY_QUERY_RETRIES && error.shouldRetry;
+}
+
 /**
  * Hook for accessing currency state.
  */
@@ -150,12 +166,7 @@ export function useFetchExchangeRates() {
     },
     queryKey: ["currency", "rates"],
     refetchInterval: 60 * 60 * 1000, // Refresh rates every hour
-    retry: (failureCount, error) => {
-      if (isApiError(error)) {
-        if (error.status === 401 || error.status === 403) return false;
-      }
-      return failureCount < 2;
-    },
+    retry: shouldRetryCurrencyQuery,
     staleTime: staleTimes.currency,
     throwOnError: false,
   });
@@ -199,12 +210,7 @@ export function useFetchExchangeRate(targetCurrency: CurrencyCode) {
       }
     },
     queryKey: ["currency", "rate", targetCurrency],
-    retry: (failureCount, error) => {
-      if (isApiError(error)) {
-        if (error.status === 401 || error.status === 403) return false;
-      }
-      return failureCount < 2;
-    },
+    retry: shouldRetryCurrencyQuery,
     staleTime: staleTimes.currency,
     throwOnError: false,
   });

@@ -2,8 +2,6 @@
  * @fileoverview Loading skeleton for the trips dashboard page.
  */
 
-"use client";
-
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function TripsLoading() {

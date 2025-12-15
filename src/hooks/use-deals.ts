@@ -9,7 +9,7 @@
 
 import type { Deal, DealFilters, DealState, DealType } from "@schemas/deals";
 import { useCallback, useEffect, useMemo } from "react";
-import { groupBy, unique } from "@/lib/collection-utils";
+import { groupBy, mapToUnique } from "@/lib/collection-utils";
 import { useDealsStore } from "@/stores/deals-store";
 
 /**
@@ -172,12 +172,12 @@ export function useDeals() {
 
   // Get unique destinations
   const uniqueDestinations = useMemo(() => {
-    return unique(allDeals.map((deal) => deal.destination));
+    return mapToUnique(allDeals, (deal) => deal.destination);
   }, [allDeals]);
 
   // Get unique providers
   const uniqueProviders = useMemo(() => {
-    return unique(allDeals.map((deal) => deal.provider));
+    return mapToUnique(allDeals, (deal) => deal.provider);
   }, [allDeals]);
 
   return {

@@ -4,7 +4,7 @@
 
 "use client";
 
-import { CalendarIcon, MapPinIcon, MenuIcon, SettingsIcon, XIcon } from "lucide-react";
+import { CalendarIcon, MapPinIcon, MenuIcon, XIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -19,11 +19,6 @@ const NavItems = [
     href: "/itinerary",
     icon: <CalendarIcon className="h-4 w-4 mr-2" />,
     name: "Itinerary",
-  },
-  {
-    href: "/settings",
-    icon: <SettingsIcon className="h-4 w-4 mr-2" />,
-    name: "Settings",
   },
 ];
 

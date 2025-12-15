@@ -6,13 +6,11 @@
  */
 
 import { Suspense } from "react";
-import {
-  DashboardMetrics,
-  QuickActions,
-  RecentTrips,
-  TripSuggestions,
-  UpcomingFlights,
-} from "@/components/features/dashboard";
+import { DashboardMetrics } from "@/components/features/dashboard/dashboard-metrics";
+import { QuickActions } from "@/components/features/dashboard/quick-actions";
+import { RecentTrips } from "@/components/features/dashboard/recent-trips";
+import { TripSuggestions } from "@/components/features/dashboard/trip-suggestions";
+import { UpcomingFlights } from "@/components/features/dashboard/upcoming-flights";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 

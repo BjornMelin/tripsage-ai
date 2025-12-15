@@ -8,15 +8,14 @@
 import { BotIdClient } from "botid/client";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { Suspense } from "react";
 import "./globals.css";
-import { Navbar } from "@/components/layouts/navbar";
 import { PerformanceMonitor } from "@/components/providers/performance-provider";
 import { TanStackQueryProvider } from "@/components/providers/query-provider";
 import { RealtimeAuthProvider } from "@/components/providers/realtime-auth-provider";
 import { TelemetryProvider } from "@/components/providers/telemetry-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
+import { BOTID_PROTECT, SHOULD_ENABLE_BOT_ID } from "@/config/bot-protection";
 
 /**
  * Primary sans-serif font configuration.
@@ -82,14 +81,7 @@ export default function RootLayout({
       >
         {/* Initialize client-side OpenTelemetry tracing */}
         <TelemetryProvider />
-        {/* Initialize BotID protection for chat and agent API routes */}
-        <BotIdClient
-          protect={[
-            { method: "POST", path: "/api/chat/stream" },
-            { method: "POST", path: "/api/agents/router" },
-            { method: "POST", path: "/api/chat/attachments" },
-          ]}
-        />
+        {SHOULD_ENABLE_BOT_ID && <BotIdClient protect={BOTID_PROTECT} />}
         <PerformanceMonitor>
           <TanStackQueryProvider>
             <ThemeProvider
@@ -100,12 +92,7 @@ export default function RootLayout({
             >
               {/* Keep Supabase Realtime authorized with the current access token */}
               <RealtimeAuthProvider />
-              <div className="flex flex-col min-h-screen">
-                <Suspense fallback={null}>
-                  <Navbar />
-                </Suspense>
-                <main className="flex-1">{children}</main>
-              </div>
+              <main className="flex flex-col min-h-screen">{children}</main>
               <Toaster />
             </ThemeProvider>
           </TanStackQueryProvider>

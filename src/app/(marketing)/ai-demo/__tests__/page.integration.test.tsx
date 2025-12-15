@@ -2,7 +2,7 @@
 
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import Page from "@/app/ai-demo/page";
+import Page from "@/app/(marketing)/ai-demo/page";
 
 // Mock fetch to control API responses
 const MOCK_FETCH = vi.fn();

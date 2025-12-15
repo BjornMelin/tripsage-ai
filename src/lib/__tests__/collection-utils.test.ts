@@ -1,7 +1,7 @@
 /** @vitest-environment node */
 
 import { describe, expect, it } from "vitest";
-import { compact, groupBy, unique, without } from "../collection-utils";
+import { groupBy, mapToUnique } from "../collection-utils";
 
 describe("groupBy", () => {
   it("should group objects by a property", () => {
@@ -64,139 +64,29 @@ describe("groupBy", () => {
   });
 });
 
-describe("compact", () => {
-  it("should remove null and undefined values", () => {
-    const arr = [1, null, 2, undefined, 3];
-    expect(compact(arr)).toEqual([1, 2, 3]);
+describe("mapToUnique", () => {
+  it("returns an empty array for empty input", () => {
+    expect(mapToUnique<number, number>([], (item) => item)).toEqual([]);
   });
 
-  it("should handle empty array", () => {
-    expect(compact([])).toEqual([]);
+  it("returns the full mapped list when all mapped values are unique", () => {
+    const items = [{ id: 1 }, { id: 2 }, { id: 3 }];
+    expect(mapToUnique(items, (item) => item.id)).toEqual([1, 2, 3]);
   });
 
-  it("should handle array with only null/undefined", () => {
-    expect(compact([null, undefined, null])).toEqual([]);
+  it("returns a single-element array when all items map to the same value", () => {
+    const items = [{ id: 1 }, { id: 2 }, { id: 3 }];
+    expect(mapToUnique(items, () => 1)).toEqual([1]);
   });
 
-  it("should preserve falsy values that are not null/undefined", () => {
-    const arr = [0, false, "", null, undefined];
-    expect(compact(arr)).toEqual([0, false, ""]);
+  it("deduplicates mapped primitive values while preserving first-seen order", () => {
+    const items = [{ id: 1 }, { id: 2 }, { id: 1 }];
+    expect(mapToUnique(items, (item) => item.id)).toEqual([1, 2]);
   });
 
-  it("should preserve NaN", () => {
-    const arr = [1, NaN, null, undefined, 2];
-    const result = compact(arr);
-    expect(result).toHaveLength(3);
-    expect(result[0]).toBe(1);
-    expect(Number.isNaN(result[1])).toBe(true);
-    expect(result[2]).toBe(2);
-  });
-
-  it("should handle arrays of objects", () => {
-    const arr = [{ id: 1 }, null, { id: 2 }, undefined];
-    expect(compact(arr)).toEqual([{ id: 1 }, { id: 2 }]);
-  });
-
-  it("should not modify original array", () => {
-    const arr = [1, null, 2];
-    compact(arr);
-    expect(arr).toEqual([1, null, 2]);
-  });
-});
-
-describe("without", () => {
-  it("should remove specified items", () => {
-    expect(without([1, 2, 3, 4], 2, 4)).toEqual([1, 3]);
-  });
-
-  it("should handle empty array", () => {
-    expect(without([], 1, 2)).toEqual([]);
-  });
-
-  it("should handle no items to remove", () => {
-    expect(without([1, 2, 3])).toEqual([1, 2, 3]);
-  });
-
-  it("should handle items not in array", () => {
-    expect(without([1, 2, 3], 4, 5)).toEqual([1, 2, 3]);
-  });
-
-  it("should handle duplicate values in array", () => {
-    expect(without([1, 2, 2, 3, 2], 2)).toEqual([1, 3]);
-  });
-
-  it("should handle removing all items", () => {
-    expect(without([1, 2], 1, 2)).toEqual([]);
-  });
-
-  it("should handle strings", () => {
-    expect(without(["a", "b", "c"], "b")).toEqual(["a", "c"]);
-  });
-
-  it("should handle objects (by reference)", () => {
-    const obj1 = { id: 1 };
-    const obj2 = { id: 2 };
-    const obj3 = { id: 3 };
-    expect(without([obj1, obj2, obj3], obj2)).toEqual([obj1, obj3]);
-  });
-
-  it("should not modify original array", () => {
-    const arr = [1, 2, 3];
-    without(arr, 2);
-    expect(arr).toEqual([1, 2, 3]);
-  });
-});
-
-describe("unique", () => {
-  it("should remove duplicate values", () => {
-    expect(unique([1, 2, 2, 3, 1])).toEqual([1, 2, 3]);
-  });
-
-  it("should handle empty array", () => {
-    expect(unique([])).toEqual([]);
-  });
-
-  it("should handle array with no duplicates", () => {
-    expect(unique([1, 2, 3])).toEqual([1, 2, 3]);
-  });
-
-  it("should handle array with all duplicates", () => {
-    expect(unique([1, 1, 1])).toEqual([1]);
-  });
-
-  it("should handle strings", () => {
-    expect(unique(["a", "b", "a", "c", "b"])).toEqual(["a", "b", "c"]);
-  });
-
-  it("should preserve order of first occurrence", () => {
-    expect(unique([3, 1, 2, 1, 3])).toEqual([3, 1, 2]);
-  });
-
-  it("should handle mixed types", () => {
-    const arr = [1, "1", 2, "2", 1];
-    expect(unique(arr)).toEqual([1, "1", 2, "2"]);
-  });
-
-  it("should handle NaN correctly", () => {
-    // Note: Set treats NaN as equal to NaN
-    const result = unique([NaN, 1, NaN, 2]);
-    expect(result).toHaveLength(3);
-    expect(Number.isNaN(result[0])).toBe(true);
-    expect(result[1]).toBe(1);
-    expect(result[2]).toBe(2);
-  });
-
-  it("should handle objects (by reference)", () => {
-    const obj1 = { id: 1 };
-    const obj2 = { id: 2 };
-    const result = unique([obj1, obj2, obj1]);
-    expect(result).toEqual([obj1, obj2]);
-    expect(result).toHaveLength(2);
-  });
-
-  it("should not modify original array", () => {
-    const arr = [1, 2, 2, 3];
-    unique(arr);
-    expect(arr).toEqual([1, 2, 2, 3]);
+  it("deduplicates by reference for non-primitive mapped values", () => {
+    const a = { id: 1 };
+    const b = { id: 1 };
+    expect(mapToUnique([a, b, a], (item) => item)).toEqual([a, b]);
   });
 });

@@ -42,5 +42,5 @@ export async function updateGatewayFallbackPreference(
   }
 
   // Revalidate the settings page to reflect the change
-  revalidatePath("/settings/api-keys");
+  revalidatePath("/dashboard/settings/api-keys");
 }
