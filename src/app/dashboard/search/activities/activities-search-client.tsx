@@ -221,7 +221,7 @@ export default function ActivitiesSearchClient({
     async (tripId: string) => {
       if (!selectedActivity) return;
 
-      const currencyRaw: unknown = Reflect.get(selectedActivity, "currency");
+      const currencyRaw = selectedActivity?.currency;
       const currency =
         typeof currencyRaw === "string" ? currencyRaw.trim() || "USD" : "USD";
 

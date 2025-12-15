@@ -296,6 +296,7 @@ export type AccommodationAvailability = z.infer<typeof accommodationAvailability
  */
 export const activitySchema = z.object({
   coordinates: COORDINATES_SCHEMA.optional(),
+  currency: z.string().optional(),
   date: DATE_STRING_SCHEMA,
   description: z.string(),
   duration: POSITIVE_INT_SCHEMA,

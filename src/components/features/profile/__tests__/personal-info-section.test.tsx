@@ -23,9 +23,10 @@ vi.mock("@/hooks/use-zod-form", async () => {
       defaultValues: unknown;
       mode?: string;
     }) => {
-      // biome-ignore lint/suspicious/noExplicitAny: test mock needs flexible typing
       return useForm({
+        // biome-ignore lint/suspicious/noExplicitAny: test mock needs flexible typing
         defaultValues: defaultValues as any,
+        // biome-ignore lint/suspicious/noExplicitAny: test mock needs flexible typing
         resolver: zodResolver(schema as any),
       });
     },

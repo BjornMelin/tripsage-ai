@@ -133,7 +133,7 @@ export const FEATURES: ReadonlyArray<DemoCard> = [
     status: "completed",
     title: "File Upload & Storage",
   },
-] as const;
+];
 
 /**
  * Demonstration page showcasing all real-time Supabase integration features
