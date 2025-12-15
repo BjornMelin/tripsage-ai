@@ -7,7 +7,14 @@
 
 "use client";
 
-import { FilterIcon, GridIcon, ListIcon, PlusIcon, SearchIcon } from "lucide-react";
+import {
+  FilterIcon,
+  GridIcon,
+  ListIcon,
+  Loader2Icon,
+  PlusIcon,
+  SearchIcon,
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ConnectionStatusIndicator } from "@/components/features/realtime/connection-status-monitor";
 import { TripCard } from "@/components/features/trips/trip-card";
@@ -542,8 +549,16 @@ export default function TripsPage() {
                 await confirmDeleteTrip();
               }}
               disabled={deleteTripMutation.isPending}
+              aria-busy={deleteTripMutation.isPending}
             >
-              Delete
+              {deleteTripMutation.isPending ? (
+                <>
+                  <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

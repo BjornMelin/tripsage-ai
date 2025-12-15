@@ -7,6 +7,7 @@ import "server-only";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse } from "@/lib/api/route-helpers";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
+import { POPULAR_ROUTES_CACHE_KEY_GLOBAL } from "@/lib/flights/popular-routes-cache";
 
 /**
  * Popular flight route entry returned to the client.
@@ -78,14 +79,17 @@ export const GET = withApiGuards({
   telemetry: "flights.popular_routes",
 })(async () => {
   try {
-    const cacheKey = "popular-routes:global";
-    const cached = await getCachedJson<PopularRoute[]>(cacheKey);
+    const cached = await getCachedJson<PopularRoute[]>(POPULAR_ROUTES_CACHE_KEY_GLOBAL);
     if (cached) {
       return Response.json(cached);
     }
 
     const routes = buildGlobalPopularRoutes();
-    await setCachedJson(cacheKey, routes, POPULAR_ROUTES_TTL_SECONDS);
+    await setCachedJson(
+      POPULAR_ROUTES_CACHE_KEY_GLOBAL,
+      routes,
+      POPULAR_ROUTES_TTL_SECONDS
+    );
     return Response.json(routes);
   } catch (err) {
     return errorResponse({

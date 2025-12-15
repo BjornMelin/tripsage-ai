@@ -17,7 +17,7 @@ import {
   UsersIcon,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { BudgetTracker } from "@/components/features/trips/budget-tracker";
 import { ItineraryBuilder } from "@/components/features/trips/itinerary-builder";
 import { TripTimeline } from "@/components/features/trips/trip-timeline";
@@ -94,26 +94,32 @@ export default function TripDetailsPage() {
     router.push(ROUTES.dashboard.trips);
   };
 
+  // Merge trip with destinations first so helpers can reference it
+  const mergedTrip = trip ? { ...trip, destinations } : null;
+
+  // Parse start/end dates once to avoid duplicate telemetry/errors
+  const parsedDates = useMemo(() => {
+    if (!mergedTrip?.startDate || !mergedTrip?.endDate) {
+      return { endDate: null, startDate: null };
+    }
+    return {
+      endDate: parseTripDate(mergedTrip.endDate, { context: "TripDetailsPage" }),
+      startDate: parseTripDate(mergedTrip.startDate, { context: "TripDetailsPage" }),
+    };
+  }, [mergedTrip?.startDate, mergedTrip?.endDate]);
+
   const getTripStatus = () => {
-    if (!mergedTrip?.startDate || !mergedTrip?.endDate) return "draft";
-    const now = new Date();
-    const startDate = parseTripDate(mergedTrip.startDate, {
-      context: "TripDetailsPage",
-    });
-    const endDate = parseTripDate(mergedTrip.endDate, { context: "TripDetailsPage" });
+    const { startDate, endDate } = parsedDates;
     if (!startDate || !endDate) return "draft";
 
+    const now = new Date();
     if (DateUtils.isBefore(now, startDate)) return "upcoming";
     if (DateUtils.isAfter(now, endDate)) return "completed";
     return "active";
   };
 
   const getTripDuration = () => {
-    if (!mergedTrip?.startDate || !mergedTrip?.endDate) return null;
-    const startDate = parseTripDate(mergedTrip.startDate, {
-      context: "TripDetailsPage",
-    });
-    const endDate = parseTripDate(mergedTrip.endDate, { context: "TripDetailsPage" });
+    const { startDate, endDate } = parsedDates;
     if (!startDate || !endDate) return null;
     return DateUtils.difference(endDate, startDate, "days") + 1;
   };
@@ -148,8 +154,6 @@ export default function TripDetailsPage() {
         return assertNever(status);
     }
   };
-
-  const mergedTrip = trip ? { ...trip, destinations } : null;
 
   if (isLoading) {
     return (

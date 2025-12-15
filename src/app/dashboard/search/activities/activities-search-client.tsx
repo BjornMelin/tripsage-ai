@@ -268,7 +268,7 @@ export default function ActivitiesSearchClient({
   const [showComparisonModal, setShowComparisonModal] = useState(false);
 
   const toggleComparison = useCallback(
-    (activity: Activity) => {
+    (activity: Activity): void => {
       // Read current count from store selector (not memoized Set) for accurate size
       const currentCount = activityComparisonItems.length;
 
@@ -278,7 +278,7 @@ export default function ActivitiesSearchClient({
           description: `Removed "${activity.name}" from comparison`,
           title: "Removed from comparison",
         });
-        return { nextSize: currentCount - 1, wasAdded: false };
+        return;
       }
 
       if (currentCount >= MAX_COMPARISON_ITEMS) {
@@ -287,7 +287,7 @@ export default function ActivitiesSearchClient({
           title: "Comparison limit reached",
           variant: "destructive",
         });
-        return { nextSize: currentCount, wasAdded: false };
+        return;
       }
 
       addItem("activity", activity.id, activity);
@@ -295,22 +295,24 @@ export default function ActivitiesSearchClient({
         description: `Added "${activity.name}" to comparison`,
         title: "Added to comparison",
       });
-      return { nextSize: currentCount + 1, wasAdded: true };
     },
     [activityComparisonItems.length, addItem, hasItem, removeItem, toast]
   );
 
   const handleCompareActivity = useCallback(
     (activity: Activity) => {
-      const { nextSize, wasAdded } = toggleComparison(activity);
+      const hadItem = hasItem(activity.id);
+      toggleComparison(activity);
+      const hasItemAfter = hasItem(activity.id);
+      const nextSize = useComparisonStore.getState().getItemsByType("activity").length;
 
-      if (wasAdded && nextSize >= 2) {
+      if (!hadItem && hasItemAfter && nextSize >= 2) {
         setShowComparisonModal(true);
-      } else if (!wasAdded && nextSize <= 1) {
+      } else if (hadItem && !hasItemAfter && nextSize <= 1) {
         setShowComparisonModal(false);
       }
     },
-    [toggleComparison]
+    [hasItem, toggleComparison]
   );
 
   const handleRemoveFromComparison = useCallback(

@@ -42,7 +42,6 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { useTrip } from "@/hooks/use-trips";
 import { copyTextToClipboard } from "@/lib/client/clipboard";
-import { nowIso, secureId } from "@/lib/security/random";
 import { getBrowserClient } from "@/lib/supabase";
 import { statusVariants } from "@/lib/variants/status";
 
@@ -122,43 +121,22 @@ export default function TripCollaborationPage() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [isInviting, setIsInviting] = useState(false);
 
-  // Mock collaborators data - in real implementation, this would come from a hook.
-  const [collaborators] = useState<Collaborator[]>(() => [
-    {
-      acceptedAt: nowIso(),
-      email: "alice@example.com",
-      id: secureId(),
-      invitedAt: nowIso(),
-      name: "Alice Johnson",
-      permissions: { canDelete: true, canEdit: true, canInvite: true },
-      role: "owner",
-      status: "accepted",
-      tripId,
-      userId: secureId(),
-    },
-    {
-      acceptedAt: nowIso(),
-      email: "bob@example.com",
-      id: secureId(),
-      invitedAt: nowIso(),
-      name: "Bob Smith",
-      permissions: { canDelete: false, canEdit: true, canInvite: false },
-      role: "editor",
-      status: "accepted",
-      tripId,
-      userId: secureId(),
-    },
-    {
-      email: "charlie@example.com",
-      id: secureId(),
-      invitedAt: nowIso(),
-      permissions: { canDelete: false, canEdit: false, canInvite: false },
-      role: "viewer",
-      status: "pending",
-      tripId,
-      userId: secureId(),
-    },
-  ]);
+  // TODO: Replace with useCollaborators(tripId) hook when API endpoint is implemented.
+  // Tracking issue: https://github.com/BjornMelin/tripsage-ai/issues/TBD
+  const [collaboratorsState] = useState<{
+    data: Collaborator[];
+    error: Error | null;
+    isLoading: boolean;
+  }>(() => ({
+    data: [],
+    error: null,
+    isLoading: false,
+  }));
+  const {
+    data: collaborators,
+    error: collaboratorsError,
+    isLoading: isLoadingCollaborators,
+  } = collaboratorsState;
 
   /**
    * Handles sending collaboration invitations to new users.
@@ -405,6 +383,25 @@ export default function TripCollaborationPage() {
               <div className="space-y-4">
                 <Label>Current Collaborators</Label>
                 <div className="space-y-3">
+                  {isLoadingCollaborators && (
+                    <div className="flex items-center justify-center p-6 text-muted-foreground">
+                      <span>Loading collaborators...</span>
+                    </div>
+                  )}
+                  {collaboratorsError && (
+                    <div className="p-4 rounded-lg border border-destructive/50 bg-destructive/10 text-destructive text-sm">
+                      Failed to load collaborators. Please try again.
+                    </div>
+                  )}
+                  {!isLoadingCollaborators &&
+                    !collaboratorsError &&
+                    collaborators.length === 0 && (
+                      <div className="flex items-center justify-center p-6 text-muted-foreground">
+                        <span>
+                          No collaborators yet. Invite someone to get started!
+                        </span>
+                      </div>
+                    )}
                   {collaborators.map((collaborator) => (
                     <div
                       key={collaborator.id}

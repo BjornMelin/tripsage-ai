@@ -2,6 +2,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setSupabaseFactoryForTests } from "@/lib/api/factory";
+import { POPULAR_ROUTES_CACHE_KEY_GLOBAL } from "@/lib/flights/popular-routes-cache";
 import { stubRateLimitDisabled } from "@/test/helpers/env";
 import { createMockNextRequest, createRouteParamsContext } from "@/test/helpers/route";
 import { setupUpstashMocks } from "@/test/upstash/redis-mock";
@@ -16,7 +17,7 @@ vi.mock("next/headers", () => ({
 vi.mock("@/lib/redis", () => ({
   getRedis: vi.fn(() => ({
     get: async (key: string) => redis.store.get(key)?.value ?? null,
-    set: async (key: string, value: string) => {
+    set: (key: string, value: string) => {
       redis.store.set(key, { value });
       return "OK";
     },
@@ -56,7 +57,7 @@ describe("/api/flights/popular-routes", () => {
 
   it("returns cached routes when present", async () => {
     // Seed cache directly in the shared store (getCachedJson expects raw JSON string)
-    redis.store.set("popular-routes:global", {
+    redis.store.set(POPULAR_ROUTES_CACHE_KEY_GLOBAL, {
       value: JSON.stringify([
         { date: "May 1, 2026", destination: "Paris", origin: "NYC", price: 123 },
       ]),

@@ -205,9 +205,6 @@ importers:
       ical.js:
         specifier: ^2.2.1
         version: 2.2.1
-      import-in-the-middle:
-        specifier: ^2.0.0
-        version: 2.0.0
       js-tiktoken:
         specifier: ^1.0.21
         version: 1.0.21
@@ -241,9 +238,6 @@ importers:
       recharts:
         specifier: ^3.6.0
         version: 3.6.0(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react-is@17.0.2)(react@19.2.3)(redux@5.0.1)
-      require-in-the-middle:
-        specifier: ^8.0.1
-        version: 8.0.1
       resend:
         specifier: ^6.6.0
         version: 6.6.0

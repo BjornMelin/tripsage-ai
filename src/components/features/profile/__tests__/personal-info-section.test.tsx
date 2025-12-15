@@ -165,13 +165,16 @@ describe("PersonalInfoSection", () => {
 
     await waitFor(() => expect(MOCK_UPLOAD).toHaveBeenCalled());
     expect(MOCK_UPLOAD).toHaveBeenCalledWith("user-1.jpg", validFile, {
-      cacheControl: "0",
+      cacheControl: "public, max-age=3600",
       contentType: "image/jpeg",
       upsert: true,
     });
+    // Avatar URL includes cache-busting query parameter
     expect(MOCK_UPDATE_USER).toHaveBeenCalledWith({
       data: {
-        avatar_url: "https://cdn.example.com/avatars/user-1.jpg",
+        avatar_url: expect.stringMatching(
+          /^https:\/\/cdn\.example\.com\/avatars\/user-1\.jpg\?v=\d+$/
+        ),
       },
     });
     expect(TOAST_SPY).toHaveBeenCalledWith({
