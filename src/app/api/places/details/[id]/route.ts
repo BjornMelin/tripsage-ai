@@ -12,6 +12,7 @@ import {
   placesDetailsRequestSchema,
   upstreamPlaceSchema,
 } from "@schemas/api";
+import { z } from "zod";
 import { type NextRequest, NextResponse } from "next/server";
 import type { RouteParamsContext } from "@/lib/api/factory";
 import { withApiGuards } from "@/lib/api/factory";
@@ -102,8 +103,9 @@ export function GET(req: NextRequest, context: { params: Promise<{ id: string }>
     // Validate upstream response
     const parseResult = upstreamPlaceSchema.safeParse(rawData);
     if (!parseResult.success) {
-      const zodError = parseResult.error.format();
+      const zodError = z.treeifyError(parseResult.error);
       return errorResponse({
+        err: parseResult.error,
         error: "upstream_validation_error",
         reason: `Invalid response from Places API: ${JSON.stringify(zodError)}`,
         status: 502,
