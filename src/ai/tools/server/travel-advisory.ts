@@ -49,7 +49,10 @@ async function fetchSafetyScores(
   }
 
   // Use pre-computed country code if provided, otherwise map destination
-  const countryCode = precomputedCountryCode ?? mapToCountryCode(destination);
+  const countryCode =
+    precomputedCountryCode === undefined
+      ? mapToCountryCode(destination)
+      : precomputedCountryCode;
   if (!countryCode) {
     // If destination doesn't map to a country code, return null
     // (caller will handle fallback)

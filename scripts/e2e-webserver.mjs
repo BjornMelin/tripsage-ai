@@ -142,7 +142,12 @@ function startNextDev() {
 const mockServer = await startMockSupabaseAuth();
 const nextChild = startNextDev();
 
+let shuttingDown = false;
+
 function shutdown() {
+  if (shuttingDown) return;
+  shuttingDown = true;
+
   try {
     mockServer.close();
   } catch {

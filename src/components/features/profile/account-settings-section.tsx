@@ -109,7 +109,7 @@ export function AccountSettingsSection() {
 
   useEffect(() => {
     emailForm.reset({ email: currentEmail });
-  }, [currentEmail, emailForm]);
+  }, [currentEmail, emailForm.reset]);
 
   useEffect(() => {
     setNotificationPrefs(initialNotificationPrefs);

@@ -221,25 +221,23 @@ test.describe("Dashboard Functionality", () => {
   test("protected routes redirect to login when not authenticated", async ({
     page,
   }) => {
-    const redirectTimeout = 30_000;
-
     // Try to access dashboard directly without auth
     await page.goto("/dashboard");
 
     // Should redirect to login
-    await page.waitForURL(/\/login/, { timeout: redirectTimeout });
+    await page.waitForURL(/\/login/, { timeout: navigationTimeoutMs });
     await expect(page.getByRole("heading", { name: /sign in/i })).toBeVisible({
-      timeout: redirectTimeout,
+      timeout: navigationTimeoutMs,
     });
 
     // Verify other protected routes
     await page.goto("/dashboard/trips");
-    await page.waitForURL(/\/login/, { timeout: redirectTimeout });
+    await page.waitForURL(/\/login/, { timeout: navigationTimeoutMs });
 
     await page.goto("/dashboard/profile");
-    await page.waitForURL(/\/login/, { timeout: redirectTimeout });
+    await page.waitForURL(/\/login/, { timeout: navigationTimeoutMs });
 
     await page.goto("/chat");
-    await page.waitForURL(/\/login/, { timeout: redirectTimeout });
+    await page.waitForURL(/\/login/, { timeout: navigationTimeoutMs });
   });
 });

@@ -8,7 +8,14 @@ import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse } from "@/lib/api/route-helpers";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 
-/** Popular route returned to the client. */
+/**
+ * Popular flight route entry returned to the client.
+ *
+ * @property {string} date - ISO date string (YYYY-MM-DD) for the example flight date.
+ * @property {string} destination - Destination city/market name.
+ * @property {string} origin - Origin city/market name.
+ * @property {number} price - Example price shown to the user.
+ */
 interface PopularRoute {
   date: string;
   destination: string;
