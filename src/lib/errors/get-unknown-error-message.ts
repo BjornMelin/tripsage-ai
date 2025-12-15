@@ -16,7 +16,17 @@ function trimmedOrFallback(message: string, fallback: string): string {
   return trimmedMessage.length > 0 ? trimmedMessage : fallback;
 }
 
-export function getErrorMessage(reason: unknown, fallback = "Unknown error"): string {
+/**
+ * Returns a human-readable message from an unknown error value.
+ *
+ * @param reason - The thrown/rejected value to extract a message from.
+ * @param fallback - Optional fallback message when no error message is available.
+ * @returns A trimmed message when present, otherwise the fallback string.
+ */
+export function getUnknownErrorMessage(
+  reason: unknown,
+  fallback = "Unknown error"
+): string {
   if (typeof reason === "string") {
     return trimmedOrFallback(reason, fallback);
   }

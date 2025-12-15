@@ -247,7 +247,6 @@ export const webSearchBatch = tool({
             (async function worker() {
               while (index < queries.length) {
                 const current = queries[index++];
-                // eslint-disable-next-line no-await-in-loop
                 await runOne(current);
               }
             })()

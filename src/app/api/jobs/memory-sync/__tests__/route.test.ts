@@ -138,7 +138,6 @@ vi.mock("@/lib/telemetry/span", () => ({
     try {
       return fn(span);
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.error("withTelemetrySpan error", error);
       throw error;
     }

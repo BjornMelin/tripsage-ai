@@ -35,7 +35,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
 import { useZodForm } from "@/hooks/use-zod-form";
 import { ApiError } from "@/lib/api/error-types";
-import { getErrorMessage } from "@/lib/errors/get-error-message";
+import { getUnknownErrorMessage } from "@/lib/errors/get-unknown-error-message";
 import { validateApiKeyInput } from "@/lib/security/api-key-validation";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 
@@ -142,7 +142,7 @@ export function ApiKeysContent() {
         description:
           error instanceof ApiError
             ? error.userMessage
-            : getErrorMessage(error, "Failed to load API keys."),
+            : getUnknownErrorMessage(error, "Failed to load API keys."),
         title: "Failed to load",
         variant: "destructive",
       });
@@ -196,7 +196,7 @@ export function ApiKeysContent() {
         description:
           error instanceof ApiError
             ? error.userMessage
-            : getErrorMessage(error, "Failed to save API key."),
+            : getUnknownErrorMessage(error, "Failed to save API key."),
         title: "Save failed",
         variant: "destructive",
       });
@@ -223,7 +223,7 @@ export function ApiKeysContent() {
         description:
           error instanceof ApiError
             ? error.userMessage
-            : getErrorMessage(error, "Failed to delete API key."),
+            : getUnknownErrorMessage(error, "Failed to delete API key."),
         title: "Delete failed",
         variant: "destructive",
       });
