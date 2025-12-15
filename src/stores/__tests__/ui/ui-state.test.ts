@@ -2,6 +2,7 @@
 
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { withFakeTimers } from "@/test/utils/with-fake-timers";
 
 // Ensure matchMedia is mocked before importing the store
 Object.defineProperty(window, "matchMedia", {
@@ -334,29 +335,30 @@ describe("UI Store - UI State Management", () => {
       );
     });
 
-    it("adds notification with duration and auto-removes", async () => {
-      vi.useFakeTimers();
-      const { result } = renderHook(() => useUiStore());
+    it(
+      "adds notification with duration and auto-removes",
+      withFakeTimers(async () => {
+        const { result } = renderHook(() => useUiStore());
 
-      const notification = {
-        duration: 100,
-        isRead: false,
-        title: "Info",
-        type: "info" as const,
-      };
+        const notification = {
+          duration: 100,
+          isRead: false,
+          title: "Info",
+          type: "info" as const,
+        };
 
-      act(() => {
-        result.current.addNotification(notification);
-      });
+        act(() => {
+          result.current.addNotification(notification);
+        });
 
-      expect(result.current.notifications).toHaveLength(1);
+        expect(result.current.notifications).toHaveLength(1);
 
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(100);
-      });
-      expect(result.current.notifications).toHaveLength(0);
-      vi.useRealTimers();
-    });
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(100);
+        });
+        expect(result.current.notifications).toHaveLength(0);
+      })
+    );
 
     it("removes notification by ID", () => {
       const { result } = renderHook(() => useUiStore());

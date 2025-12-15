@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createBackupCodes,
   InvalidBackupCodeError,
-  resetBackupCodePepperForTest,
+  resetMfaInitForTest,
   startTotpEnrollment,
   verifyBackupCode,
   verifyTotp,
@@ -256,7 +256,7 @@ describe("mfa service", () => {
     backupRows.length = 0;
     mfaEnrollmentRows.length = 0;
     process.env.MFA_BACKUP_CODE_PEPPER = "test-pepper-secret-12345";
-    resetBackupCodePepperForTest();
+    resetMfaInitForTest();
     vi.clearAllMocks();
   });
 
