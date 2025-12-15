@@ -89,7 +89,17 @@ async function geocodeAddress(
   const rawData = await response.json();
   const parseResult = upstreamGeocodeResponseSchema.safeParse(rawData);
 
-  if (!parseResult.success || parseResult.data.results.length === 0) {
+  if (!parseResult.success) {
+    return null;
+  }
+
+  // Check API status - "OK" means successful geocoding
+  if (parseResult.data.status !== "OK") {
+    return null;
+  }
+
+  // Check for results
+  if (parseResult.data.results.length === 0) {
     return null;
   }
 
