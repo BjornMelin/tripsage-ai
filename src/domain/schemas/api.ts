@@ -493,8 +493,8 @@ export type PlacesDetailsRequest = z.infer<typeof placesDetailsRequestSchema>;
  * Validates Google Places API (New) Photo Media request parameters.
  */
 export const placesPhotoRequestSchema = z.object({
-  maxHeightPx: z.number().int().positive().max(2048).optional(),
-  maxWidthPx: z.number().int().positive().max(2048).optional(),
+  maxHeightPx: z.number().int().positive().max(4800).optional(),
+  maxWidthPx: z.number().int().positive().max(4800).optional(),
   name: z.string().min(1),
   skipHttpRedirect: z.boolean().optional(),
 });

@@ -411,8 +411,8 @@ export async function getPlacePhoto(params: PlacePhotoParams): Promise<Response>
     throw new Error("Either maxWidthPx or maxHeightPx must be provided");
   }
 
-  // Validate photo dimensions if provided
-  const maxDimension = 2048;
+  // Validate photo dimensions if provided (Google Places Photo API limit is 4800)
+  const maxDimension = 4800;
   if (params.maxWidthPx !== undefined) {
     if (!Number.isFinite(params.maxWidthPx) || !Number.isInteger(params.maxWidthPx)) {
       throw new Error(
