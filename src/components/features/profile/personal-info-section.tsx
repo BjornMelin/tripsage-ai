@@ -46,7 +46,7 @@ const SUPPORTED_AVATAR_TYPES = {
 type SupportedAvatarType = keyof typeof SUPPORTED_AVATAR_TYPES;
 type SupportedAvatarExt = (typeof SUPPORTED_AVATAR_TYPES)[SupportedAvatarType];
 
-function ResolveAvatarExt(file: File): SupportedAvatarExt | null {
+function resolveAvatarExt(file: File): SupportedAvatarExt | null {
   return (
     (SUPPORTED_AVATAR_TYPES as Record<string, SupportedAvatarExt>)[file.type] ?? null
   );
@@ -151,7 +151,7 @@ export function PersonalInfoSection() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const ext = ResolveAvatarExt(file);
+    const ext = resolveAvatarExt(file);
     if (!ext) {
       toast({
         description:
