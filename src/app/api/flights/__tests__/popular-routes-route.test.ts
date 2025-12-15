@@ -1,27 +1,36 @@
 /** @vitest-environment node */
 
+import type { Redis } from "@upstash/redis";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setSupabaseFactoryForTests } from "@/lib/api/factory";
 import { POPULAR_ROUTES_CACHE_KEY_GLOBAL } from "@/lib/flights/popular-routes-cache";
+import { setRedisFactoryForTests } from "@/lib/redis";
 import { stubRateLimitDisabled } from "@/test/helpers/env";
 import { createMockNextRequest, createRouteParamsContext } from "@/test/helpers/route";
-import { setupUpstashMocks } from "@/test/upstash/redis-mock";
+import {
+  RedisMockClient,
+  setupUpstashMocks,
+  type UpstashMemoryStore,
+} from "@/test/upstash/redis-mock";
 
 const { redis, ratelimit } = setupUpstashMocks();
 
+/**
+ * Custom Redis mock that returns raw string values for `get` without auto-deserializing.
+ * This matches the behavior expected by `getCachedJson` which stores JSON strings and
+ * parses them itself.
+ */
+class RawStringRedisMock extends RedisMockClient {
+  override get<T = unknown>(key: string): Promise<T | null> {
+    const entry = (this as unknown as { store: UpstashMemoryStore }).store.get(key);
+    if (!entry) return Promise.resolve(null);
+    // Return raw string value without deserializing
+    return Promise.resolve(entry.value as T);
+  }
+}
+
 vi.mock("next/headers", () => ({
   cookies: vi.fn(() => Promise.resolve(new Map())),
-}));
-
-// Mock @/lib/redis to return raw values (matches real Upstash behavior for getCachedJson)
-vi.mock("@/lib/redis", () => ({
-  getRedis: vi.fn(() => ({
-    get: async (key: string) => redis.store.get(key)?.value ?? null,
-    set: (key: string, value: string) => {
-      redis.store.set(key, { value });
-      return "OK";
-    },
-  })),
 }));
 
 // Import after mocks are registered
@@ -40,8 +49,11 @@ describe("/api/flights/popular-routes", () => {
 
   beforeEach(() => {
     stubRateLimitDisabled();
-    redis.__reset?.();
-    ratelimit.__reset?.();
+    redis.__reset();
+    ratelimit.__reset();
+    setRedisFactoryForTests(
+      () => new RawStringRedisMock(redis.store) as unknown as Redis
+    );
     setSupabaseFactoryForTests(async () => supabaseClient as never);
     supabaseClient.auth.getUser.mockResolvedValue({
       data: { user: null },
@@ -51,6 +63,9 @@ describe("/api/flights/popular-routes", () => {
   });
 
   afterEach(() => {
+    setRedisFactoryForTests(null);
+    redis.__reset();
+    ratelimit.__reset();
     setSupabaseFactoryForTests(null);
     vi.clearAllMocks();
   });
@@ -84,9 +99,37 @@ describe("/api/flights/popular-routes", () => {
     });
 
     const res = await getPopularRoutes(req, createRouteParamsContext());
-    const body = (await res.json()) as Array<{ origin: string; destination: string }>;
+    const body = (await res.json()) as Array<{
+      date: string;
+      destination: string;
+      origin: string;
+      price: number;
+    }>;
 
     expect(res.status).toBe(200);
-    expect(body.some((route) => route.origin === "New York")).toBe(true);
+
+    // Verify response is an array with sufficient fallback routes
+    expect(Array.isArray(body)).toBe(true);
+    expect(body.length).toBeGreaterThanOrEqual(3);
+
+    // Verify each item has the expected shape
+    for (const route of body) {
+      expect(typeof route.origin).toBe("string");
+      expect(typeof route.destination).toBe("string");
+      expect(typeof route.date).toBe("string");
+      expect(typeof route.price).toBe("number");
+      expect(route.origin.length).toBeGreaterThan(0);
+      expect(route.destination.length).toBeGreaterThan(0);
+    }
+
+    // Verify known fallback origins are present
+    const origins = body.map((r) => r.origin);
+    expect(origins).toContain("New York");
+    expect(origins).toContain("Los Angeles");
+
+    // Verify known fallback destinations are present
+    const destinations = body.map((r) => r.destination);
+    expect(destinations).toContain("London");
+    expect(destinations).toContain("Tokyo");
   });
 });
