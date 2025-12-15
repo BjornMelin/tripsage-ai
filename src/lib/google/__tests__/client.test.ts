@@ -355,6 +355,7 @@ describe("Google API Client", () => {
         expect.objectContaining({
           // Body order matches implementation: locationRestriction, maxResultCount, then includedTypes (added conditionally)
           body: JSON.stringify({
+            includedTypes: ["restaurant", "cafe"],
             locationRestriction: {
               circle: {
                 center: { latitude: 40.7128, longitude: -74.006 },
@@ -362,7 +363,6 @@ describe("Google API Client", () => {
               },
             },
             maxResultCount: 15,
-            includedTypes: ["restaurant", "cafe"],
           }),
           method: "POST",
         })
