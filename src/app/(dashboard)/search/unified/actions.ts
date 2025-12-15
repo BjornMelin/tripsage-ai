@@ -14,16 +14,21 @@ import {
   type SearchAccommodationParams,
   searchAccommodationParamsSchema,
 } from "@schemas/search";
-import { getGoogleMapsBrowserKey } from "@/lib/env/client";
 import { secureUuid } from "@/lib/security/random";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
-/** Build photo URL. */
+/**
+ * Build photo URL via server proxy.
+ * Uses /api/places/photo to avoid exposing API key in client URLs.
+ */
 function buildPhotoUrl(photoName?: string): string | undefined {
   if (!photoName) return undefined;
-  const apiKey = getGoogleMapsBrowserKey();
-  if (!apiKey) return undefined;
-  return `https://places.googleapis.com/v1/${photoName}/media?maxHeightPx=800&maxWidthPx=1200&key=${apiKey}`;
+  const params = new URLSearchParams({
+    maxHeightPx: "800",
+    maxWidthPx: "1200",
+    name: photoName,
+  });
+  return `/api/places/photo?${params.toString()}`;
 }
 
 /**

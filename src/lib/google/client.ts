@@ -28,6 +28,8 @@ type PlaceDetailsParams = {
   fieldMask: string;
   /** Place ID to fetch details for. */
   placeId: string;
+  /** Session token for autocomplete session termination (optional). */
+  sessionToken?: string;
 };
 
 /**
@@ -72,14 +74,20 @@ export async function getPlaceDetails(params: PlaceDetailsParams): Promise<Respo
     throw new Error("fieldMask is required for place details");
   }
 
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "X-Goog-Api-Key": params.apiKey,
+    "X-Goog-FieldMask": params.fieldMask,
+  };
+
+  if (params.sessionToken) {
+    headers["X-Goog-Session-Token"] = params.sessionToken;
+  }
+
   return await retryWithBackoff(
     () =>
       fetch(`https://places.googleapis.com/v1/${params.placeId}`, {
-        headers: {
-          "Content-Type": "application/json",
-          "X-Goog-Api-Key": params.apiKey,
-          "X-Goog-FieldMask": params.fieldMask,
-        },
+        headers,
         method: "GET",
       }),
     { attempts: 3, baseDelayMs: 200, maxDelayMs: 1_000 }
@@ -105,6 +113,271 @@ type NearbySearchParams = {
   /** Search radius in meters (max 50000). */
   radiusMeters?: number;
 };
+
+// === Routes API v2 ===
+
+/**
+ * Parameters for Google Routes API computeRoutes request.
+ */
+type ComputeRoutesParams = {
+  /** Google Maps API key for authentication. */
+  apiKey: string;
+  /** Request body containing origin, destination, and options. */
+  body: Record<string, unknown>;
+  /** Field mask specifying which route fields to return. */
+  fieldMask: string;
+};
+
+/**
+ * Performs a computeRoutes request against Google Routes API with retry logic.
+ *
+ * @param params - Route parameters including API key, request body, and field mask.
+ * @returns Promise resolving to the API response.
+ * @throws Error if all retry attempts fail.
+ */
+export async function postComputeRoutes(
+  params: ComputeRoutesParams
+): Promise<Response> {
+  return await retryWithBackoff(
+    () =>
+      fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
+        body: JSON.stringify(params.body),
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": params.apiKey,
+          "X-Goog-FieldMask": params.fieldMask,
+        },
+        method: "POST",
+      }),
+    { attempts: 3, baseDelayMs: 200, maxDelayMs: 1_000 }
+  );
+}
+
+/**
+ * Parameters for Google Routes API computeRouteMatrix request.
+ */
+type ComputeRouteMatrixParams = {
+  /** Google Maps API key for authentication. */
+  apiKey: string;
+  /** Request body containing origins, destinations, and options. */
+  body: Record<string, unknown>;
+  /** Field mask specifying which matrix fields to return. */
+  fieldMask: string;
+};
+
+/**
+ * Performs a computeRouteMatrix request against Google Routes API with retry logic.
+ *
+ * @param params - Matrix parameters including API key, request body, and field mask.
+ * @returns Promise resolving to the API response.
+ * @throws Error if all retry attempts fail.
+ */
+export async function postComputeRouteMatrix(
+  params: ComputeRouteMatrixParams
+): Promise<Response> {
+  return await retryWithBackoff(
+    () =>
+      fetch("https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix", {
+        body: JSON.stringify(params.body),
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": params.apiKey,
+          "X-Goog-FieldMask": params.fieldMask,
+        },
+        method: "POST",
+      }),
+    { attempts: 3, baseDelayMs: 200, maxDelayMs: 1_000 }
+  );
+}
+
+// === Legacy Geocoding API ===
+
+/**
+ * Parameters for Google Geocoding API forward geocode request.
+ */
+type GeocodeParams = {
+  /** Address string to geocode. */
+  address: string;
+  /** Google Maps API key for authentication. */
+  apiKey: string;
+};
+
+/**
+ * Performs forward geocoding against Google Geocoding API with retry logic.
+ *
+ * @param params - Geocode parameters including API key and address.
+ * @returns Promise resolving to the API response.
+ * @throws Error if all retry attempts fail.
+ */
+export async function getGeocode(params: GeocodeParams): Promise<Response> {
+  const url = new URL("https://maps.googleapis.com/maps/api/geocode/json");
+  url.searchParams.set("address", params.address);
+  url.searchParams.set("key", params.apiKey);
+
+  return await retryWithBackoff(
+    () =>
+      fetch(url.toString(), {
+        headers: { "Content-Type": "application/json" },
+        method: "GET",
+      }),
+    { attempts: 3, baseDelayMs: 200, maxDelayMs: 1_000 }
+  );
+}
+
+/**
+ * Parameters for Google Geocoding API reverse geocode request.
+ */
+type ReverseGeocodeParams = {
+  /** Google Maps API key for authentication. */
+  apiKey: string;
+  /** Latitude of the location to reverse geocode. */
+  lat: number;
+  /** Longitude of the location to reverse geocode. */
+  lng: number;
+};
+
+/**
+ * Performs reverse geocoding against Google Geocoding API with retry logic.
+ *
+ * @param params - Reverse geocode parameters including API key and coordinates.
+ * @returns Promise resolving to the API response.
+ * @throws Error if all retry attempts fail.
+ */
+export async function getReverseGeocode(
+  params: ReverseGeocodeParams
+): Promise<Response> {
+  if (!Number.isFinite(params.lat) || params.lat < -90 || params.lat > 90) {
+    throw new Error(
+      `Invalid latitude "${params.lat}": must be a number between -90 and 90`
+    );
+  }
+
+  if (!Number.isFinite(params.lng) || params.lng < -180 || params.lng > 180) {
+    throw new Error(
+      `Invalid longitude "${params.lng}": must be a number between -180 and 180`
+    );
+  }
+
+  const url = new URL("https://maps.googleapis.com/maps/api/geocode/json");
+  url.searchParams.set("latlng", `${params.lat},${params.lng}`);
+  url.searchParams.set("key", params.apiKey);
+
+  return await retryWithBackoff(
+    () =>
+      fetch(url.toString(), {
+        headers: { "Content-Type": "application/json" },
+        method: "GET",
+      }),
+    { attempts: 3, baseDelayMs: 200, maxDelayMs: 1_000 }
+  );
+}
+
+// === Legacy Timezone API ===
+
+/**
+ * Parameters for Google Timezone API request.
+ */
+type TimezoneParams = {
+  /** Google Maps API key for authentication. */
+  apiKey: string;
+  /** Latitude of the location. */
+  lat: number;
+  /** Longitude of the location. */
+  lng: number;
+  /** Unix timestamp in seconds (defaults to current time). */
+  timestamp?: number;
+};
+
+/**
+ * Fetches timezone information from Google Timezone API with retry logic.
+ *
+ * @param params - Timezone parameters including API key, coordinates, and optional timestamp.
+ * @returns Promise resolving to the API response.
+ * @throws Error if all retry attempts fail.
+ */
+export async function getTimezone(params: TimezoneParams): Promise<Response> {
+  if (!Number.isFinite(params.lat) || params.lat < -90 || params.lat > 90) {
+    throw new Error(
+      `Invalid latitude "${params.lat}": must be a number between -90 and 90`
+    );
+  }
+
+  if (!Number.isFinite(params.lng) || params.lng < -180 || params.lng > 180) {
+    throw new Error(
+      `Invalid longitude "${params.lng}": must be a number between -180 and 180`
+    );
+  }
+
+  const url = new URL("https://maps.googleapis.com/maps/api/timezone/json");
+  url.searchParams.set("location", `${params.lat},${params.lng}`);
+  url.searchParams.set(
+    "timestamp",
+    String(params.timestamp ?? Math.floor(Date.now() / 1000))
+  );
+  url.searchParams.set("key", params.apiKey);
+
+  return await retryWithBackoff(
+    () =>
+      fetch(url.toString(), {
+        headers: { "Content-Type": "application/json" },
+        method: "GET",
+      }),
+    { attempts: 3, baseDelayMs: 200, maxDelayMs: 1_000 }
+  );
+}
+
+// === Places Photo API ===
+
+/**
+ * Parameters for Google Places API photo media request.
+ */
+type PlacePhotoParams = {
+  /** Google Maps API key for authentication. */
+  apiKey: string;
+  /** Maximum height in pixels (optional). */
+  maxHeightPx?: number;
+  /** Maximum width in pixels (optional). */
+  maxWidthPx?: number;
+  /** Photo resource name (e.g., "places/ABC/photos/XYZ"). */
+  photoName: string;
+};
+
+/**
+ * Fetches place photo from Google Places API with retry logic.
+ *
+ * @param params - Photo parameters including API key, photo name, and optional dimensions.
+ * @returns Promise resolving to the API response (photo bytes or redirect).
+ * @throws Error if all retry attempts fail.
+ */
+export async function getPlacePhoto(params: PlacePhotoParams): Promise<Response> {
+  const photoNamePattern = /^places\/[A-Za-z0-9_-]+\/photos\/[A-Za-z0-9_-]+$/;
+  if (!photoNamePattern.test(params.photoName)) {
+    throw new Error(
+      `Invalid photoName "${params.photoName}": must match pattern places/{placeId}/photos/{photoId}`
+    );
+  }
+
+  const url = new URL(`https://places.googleapis.com/v1/${params.photoName}/media`);
+  if (params.maxWidthPx) {
+    url.searchParams.set("maxWidthPx", String(params.maxWidthPx));
+  }
+  if (params.maxHeightPx) {
+    url.searchParams.set("maxHeightPx", String(params.maxHeightPx));
+  }
+
+  return await retryWithBackoff(
+    () =>
+      fetch(url.toString(), {
+        headers: {
+          "X-Goog-Api-Key": params.apiKey,
+        },
+        method: "GET",
+      }),
+    { attempts: 3, baseDelayMs: 200, maxDelayMs: 1_000 }
+  );
+}
+
+// === Places Nearby Search API ===
 
 /**
  * Performs a nearby search against Google Places API with retry logic.
