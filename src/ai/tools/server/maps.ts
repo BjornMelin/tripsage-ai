@@ -180,9 +180,16 @@ export const distanceMatrix = createAiTool({
       throw new Error(errors.join("; "));
     }
 
-    // Type-narrow to non-null after validation
-    const validOriginCoords = originCoords as { lat: number; lng: number }[];
-    const validDestCoords = destCoords as { lat: number; lng: number }[];
+    // Type guard for coordinate objects - safer than type assertion
+    const isCoord = (x: unknown): x is { lat: number; lng: number } =>
+      x !== null &&
+      x !== undefined &&
+      typeof (x as { lat: number }).lat === "number" &&
+      typeof (x as { lng: number }).lng === "number";
+
+    // Type-narrow using type guard filter (safer than type assertion)
+    const validOriginCoords = originCoords.filter(isCoord);
+    const validDestCoords = destCoords.filter(isCoord);
 
     // Build Routes API waypoints
     const routeOrigins = validOriginCoords.map((coord) => ({
