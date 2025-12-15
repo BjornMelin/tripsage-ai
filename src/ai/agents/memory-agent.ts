@@ -28,6 +28,8 @@ import { clampMaxTokens } from "@/lib/tokens/budget";
 
 // Note: no wrapped tools are exposed here; we execute persistence directly with guardrails.
 
+const MAX_MEMORY_RECORDS_PER_REQUEST = 25;
+
 /**
  * Execute the memory agent with AI SDK v6 streaming.
  *
@@ -161,15 +163,17 @@ async function persistAndSummarize(
  * @param identifier - User or session identifier for rate limiting.
  * @param input - Validated memory update request with records to persist.
  * @returns Promise resolving to operation outcomes (successes and failures).
- * @throws {Error} When record count exceeds maximum allowed (25).
+ * @throws {Error} When record count exceeds MAX_MEMORY_RECORDS_PER_REQUEST.
  */
 export async function persistMemoryRecords(
   identifier: string,
   input: MemoryUpdateRequest
 ): Promise<PersistOutcome> {
   const records = input.records ?? [];
-  if (records.length > 25) {
-    throw new Error("too_many_records: max 25 per request");
+  if (records.length > MAX_MEMORY_RECORDS_PER_REQUEST) {
+    throw new Error(
+      `too_many_records: max ${MAX_MEMORY_RECORDS_PER_REQUEST} per request`
+    );
   }
 
   const failures: PersistOutcome["failures"] = [];
