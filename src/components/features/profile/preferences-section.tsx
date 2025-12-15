@@ -91,9 +91,10 @@ export function PreferencesSection() {
     schema: preferencesFormSchema,
   });
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: form instance is stable from useZodForm
   useEffect(() => {
     form.reset(defaultValues);
-  }, [defaultValues, form]);
+  }, [defaultValues]);
 
   useEffect(() => {
     setAdditionalSettings(initialAdditionalSettings);
