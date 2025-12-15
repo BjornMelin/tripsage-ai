@@ -26,14 +26,13 @@ export default function CalendarPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("status");
-  const todayKey = DateUtils.format(new Date(), "yyyy-MM-dd");
   const timeWindow = useMemo(() => {
-    const start = DateUtils.startOf(DateUtils.parse(todayKey), "day");
+    const start = DateUtils.startOf(new Date(), "day");
     return {
       nextWeek: DateUtils.add(start, 7, "days"),
       now: start,
     };
-  }, [todayKey]);
+  }, []);
 
   return (
     <div className="space-y-6">

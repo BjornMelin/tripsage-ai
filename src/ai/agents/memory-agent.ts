@@ -28,7 +28,8 @@ import { clampMaxTokens } from "@/lib/tokens/budget";
 
 // Note: no wrapped tools are exposed here; we execute persistence directly with guardrails.
 
-const MAX_MEMORY_RECORDS_PER_REQUEST = 25;
+/** Maximum number of memory records allowed per request. */
+export const MAX_MEMORY_RECORDS_PER_REQUEST = 25;
 
 /**
  * Execute the memory agent with AI SDK v6 streaming.

@@ -58,6 +58,7 @@ export async function handleCreateItineraryItem(
     .single();
 
   if (tripError) {
+    // PGRST116: PostgREST error code for "no rows returned" from .single()
     if (tripError.code === "PGRST116") {
       return errorResponse({
         error: "forbidden",

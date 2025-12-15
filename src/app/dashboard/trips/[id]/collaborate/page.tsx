@@ -127,11 +127,11 @@ export default function TripCollaborationPage() {
     data: Collaborator[];
     error: Error | null;
     isLoading: boolean;
-  }>(() => ({
+  }>({
     data: [],
     error: null,
     isLoading: false,
-  }));
+  });
   const {
     data: collaborators,
     error: collaboratorsError,

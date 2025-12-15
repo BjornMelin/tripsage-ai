@@ -7,7 +7,7 @@ const visibilityTimeoutMs = navigationTimeoutMs;
 async function clickAndWaitForUrl(
   page: Page,
   locator: Locator,
-  url: string,
+  url: string | RegExp,
   options: { attempts?: number; retryDelayMs?: number; timeoutMs?: number } = {}
 ): Promise<void> {
   const attempts = options.attempts ?? 2;

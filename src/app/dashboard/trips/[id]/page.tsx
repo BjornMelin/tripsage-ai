@@ -124,11 +124,9 @@ export default function TripDetailsPage() {
     return DateUtils.difference(endDate, startDate, "days") + 1;
   };
 
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "Not set";
-    const parsed = parseTripDate(dateString, { context: "TripDetailsPage" });
-    if (!parsed) return "Invalid date";
-    return DateUtils.format(parsed, "MMMM dd, yyyy");
+  const formatParsedDate = (date: Date | null) => {
+    if (!date) return "Not set";
+    return DateUtils.format(date, "MMMM dd, yyyy");
   };
 
   /**
@@ -273,7 +271,8 @@ export default function TripDetailsPage() {
               {duration ? `${duration} days` : "Not set"}
             </div>
             <div className="text-xs text-muted-foreground mt-1">
-              {formatDate(mergedTrip.startDate)} - {formatDate(mergedTrip.endDate)}
+              {formatParsedDate(parsedDates.startDate)} -{" "}
+              {formatParsedDate(parsedDates.endDate)}
             </div>
           </CardContent>
         </Card>

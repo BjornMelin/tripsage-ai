@@ -269,7 +269,7 @@ export default function ActivitiesSearchClient({
 
   const toggleComparison = useCallback(
     (activity: Activity): void => {
-      // Read current count from store selector (not memoized Set) for accurate size
+      // Pre-mutation count from selector; accurate since we early-return after remove
       const currentCount = activityComparisonItems.length;
 
       if (hasItem(activity.id)) {
@@ -317,7 +317,7 @@ export default function ActivitiesSearchClient({
 
   const handleRemoveFromComparison = useCallback(
     (activityId: string) => {
-      // Read current count from store selector (not memoized Set) for accurate size
+      // Pre-mutation count; subtract 1 since removeItem hasn't re-rendered yet
       const currentCount = activityComparisonItems.length;
       removeItem(activityId);
       if (currentCount - 1 <= 1) {
