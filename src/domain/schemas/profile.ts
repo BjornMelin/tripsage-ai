@@ -59,21 +59,13 @@ export type PersonalInfoFormData = z.infer<typeof personalInfoFormSchema>;
  * Validates user preferences including currency, language, theme, and notification settings.
  */
 export const preferencesFormSchema = z.object({
-  currency: z.string().min(1, { error: "Please select a currency" }),
+  currency: CURRENCY_SCHEMA.default("USD"),
   dateFormat: z.enum(["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"]),
-  defaultCurrency: CURRENCY_SCHEMA,
-  defaultLanguage: z.string().min(2).max(5),
-  emailNotifications: z.boolean(),
   language: z.string().min(1, { error: "Please select a language" }),
-  marketingEmails: z.boolean(),
-  pushNotifications: z.boolean(),
-  smsNotifications: z.boolean(),
   theme: z.enum(["light", "dark", "system"]),
   timeFormat: z.enum(["12h", "24h"]),
   timezone: z.string().min(1, { error: "Please select a timezone" }),
-  travelDeals: z.boolean(),
   units: z.enum(["metric", "imperial"]),
-  weeklyDigest: z.boolean(),
 });
 
 /** TypeScript type for preferences form data. */

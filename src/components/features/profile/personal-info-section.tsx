@@ -1,6 +1,5 @@
 /**
  * @fileoverview Personal info section: update profile picture and personal details.
- * UI only; server actions are stubbed.
  */
 
 "use client";
@@ -8,7 +7,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { type PersonalInfoFormData, personalInfoFormSchema } from "@schemas/profile";
 import { CameraIcon, UploadIcon } from "lucide-react";
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -31,40 +30,112 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
-import { useUserProfileStore } from "@/stores/user-store";
+import { getUnknownErrorMessage } from "@/lib/errors/get-unknown-error-message";
+import { getBrowserClient } from "@/lib/supabase";
+import { useAuthCore } from "@/stores/auth/auth-core";
+
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
+const SUPPORTED_AVATAR_TYPES = {
+  "image/avif": "avif",
+  "image/gif": "gif",
+  "image/jpeg": "jpg",
+  "image/jpg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+} as const;
+type SupportedAvatarType = keyof typeof SUPPORTED_AVATAR_TYPES;
+type SupportedAvatarExt = (typeof SUPPORTED_AVATAR_TYPES)[SupportedAvatarType];
+
+function resolveAvatarExt(file: File): SupportedAvatarExt | null {
+  return (SUPPORTED_AVATAR_TYPES as Record<string, SupportedAvatarExt>)[file.type] ?? null;
+}
 
 export function PersonalInfoSection() {
   const avatarInputId = useId();
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
-  const { profile, updatePersonalInfo, uploadAvatar } = useUserProfileStore();
+  const { user: authUser, setUser } = useAuthCore();
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
 
+  const defaultValues = useMemo(
+    (): PersonalInfoFormData => ({
+      bio: authUser?.bio ?? "",
+      displayName:
+        authUser?.displayName ?? (authUser?.email ? authUser.email.split("@")[0] : ""),
+      firstName: authUser?.firstName ?? "",
+      lastName: authUser?.lastName ?? "",
+      location: authUser?.location ?? "",
+      website: authUser?.website ?? "",
+    }),
+    [authUser]
+  );
+
   const form = useForm<PersonalInfoFormData>({
-    defaultValues: {
-      bio: profile?.personalInfo?.bio || "",
-      displayName: profile?.personalInfo?.displayName || "",
-      firstName: profile?.personalInfo?.firstName || "",
-      lastName: profile?.personalInfo?.lastName || "",
-      location: profile?.personalInfo?.location || "",
-      website: profile?.personalInfo?.website || "",
-    },
+    defaultValues,
     resolver: zodResolver(personalInfoFormSchema),
   });
 
+  useEffect(() => {
+    form.reset(defaultValues);
+  }, [defaultValues, form]);
+
+  const resolveSupabaseClient = () => {
+    try {
+      return getBrowserClient();
+    } catch (_error) {
+      return null;
+    }
+  };
+
   const onSubmit = async (data: PersonalInfoFormData) => {
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      if (!authUser) {
+        throw new Error("You must be signed in to update your profile.");
+      }
 
-      await updatePersonalInfo(data);
+      const supabase = resolveSupabaseClient();
+      if (!supabase) {
+        throw new Error("Unable to access profile client. Please try again.");
+      }
+
+      const bio = data.bio?.trim() ? data.bio.trim() : undefined;
+      const location = data.location?.trim() ? data.location.trim() : undefined;
+      const website = data.website?.trim() ? data.website.trim() : undefined;
+
+      const { data: result, error } = await supabase.auth.updateUser({
+        data: {
+          bio: bio ?? null,
+          display_name: data.displayName,
+          full_name: data.displayName,
+          first_name: data.firstName,
+          last_name: data.lastName,
+          location: location ?? null,
+          website: website ?? null,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      setUser({
+        ...authUser,
+        bio,
+        displayName: data.displayName,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        location,
+        updatedAt: result.user?.updated_at ?? authUser.updatedAt,
+        website,
+      });
+
       toast({
         description: "Your personal information has been successfully updated.",
         title: "Profile updated",
       });
-    } catch (_error) {
+    } catch (error) {
       toast({
-        description: "Failed to update profile. Please try again.",
+        description: getUnknownErrorMessage(error, "Failed to update profile. Please try again."),
         title: "Error",
         variant: "destructive",
       });
@@ -75,18 +146,17 @@ export function PersonalInfoSection() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
-    if (!file.type.startsWith("image/")) {
+    const ext = resolveAvatarExt(file);
+    if (!ext) {
       toast({
-        description: "Please select an image file.",
+        description: "Please select a supported image file (jpg, png, gif, webp, avif).",
         title: "Invalid file type",
         variant: "destructive",
       });
       return;
     }
 
-    // Validate file size (5MB limit)
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > MAX_AVATAR_BYTES) {
       toast({
         description: "Please select an image smaller than 5MB.",
         title: "File too large",
@@ -97,23 +167,67 @@ export function PersonalInfoSection() {
 
     setIsUploading(true);
     try {
-      const avatarUrl = await uploadAvatar(file);
-
-      if (avatarUrl) {
-        toast({
-          description: "Your profile picture has been successfully updated.",
-          title: "Avatar updated",
-        });
-      } else {
-        throw new Error("Upload failed");
+      if (!authUser) {
+        throw new Error("You must be signed in to update your avatar.");
       }
-    } catch (_error) {
+
+      const supabase = resolveSupabaseClient();
+      if (!supabase) {
+        throw new Error("Unable to access profile client. Please try again.");
+      }
+
+      const avatarPath = `${authUser.id}.${ext}`;
+      const otherPaths = (Object.values(SUPPORTED_AVATAR_TYPES) as SupportedAvatarExt[])
+        .filter((candidate) => candidate !== ext)
+        .map((candidate) => `${authUser.id}.${candidate}`);
+
+      if (otherPaths.length > 0) {
+        await supabase.storage.from("avatars").remove(otherPaths);
+      }
+
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(avatarPath, file, {
+          cacheControl: "0",
+          contentType: file.type,
+          upsert: true,
+        });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data } = supabase.storage.from("avatars").getPublicUrl(avatarPath);
+      const avatarUrl = data.publicUrl;
+
+      const { data: updateResult, error: updateError } = await supabase.auth.updateUser({
+        data: {
+          avatar_url: avatarUrl,
+        },
+      });
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      setUser({
+        ...authUser,
+        avatarUrl,
+        updatedAt: updateResult.user?.updated_at ?? authUser.updatedAt,
+      });
+
       toast({
-        description: "Failed to upload avatar. Please try again.",
+        description: "Your profile picture has been successfully updated.",
+        title: "Avatar updated",
+      });
+    } catch (error) {
+      toast({
+        description: getUnknownErrorMessage(error, "Failed to upload avatar. Please try again."),
         title: "Upload failed",
         variant: "destructive",
       });
     } finally {
+      event.target.value = "";
       setIsUploading(false);
     }
   };
@@ -128,7 +242,7 @@ export function PersonalInfoSection() {
         ? `${parts[0][0]}${parts[1][0]}`.toUpperCase()
         : displayName.slice(0, 2).toUpperCase();
     }
-    return profile?.email?.slice(0, 2).toUpperCase() || "U";
+    return authUser?.email?.slice(0, 2).toUpperCase() || "U";
   };
 
   return (
@@ -144,12 +258,15 @@ export function PersonalInfoSection() {
         <div className="flex items-center gap-6">
           <div className="relative">
             <Avatar className="h-24 w-24">
-              <AvatarImage src={profile?.avatarUrl} alt="Profile picture" />
+              <AvatarImage
+                src={authUser?.avatarUrl}
+                alt={authUser?.displayName ? `${authUser.displayName} profile picture` : "Profile picture"}
+              />
               <AvatarFallback className="text-lg">
                 {getInitials(
-                  profile?.personalInfo?.firstName,
-                  profile?.personalInfo?.lastName,
-                  profile?.personalInfo?.displayName
+                  authUser?.firstName,
+                  authUser?.lastName,
+                  authUser?.displayName
                 )}
               </AvatarFallback>
             </Avatar>
