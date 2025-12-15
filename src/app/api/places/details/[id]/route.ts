@@ -58,12 +58,25 @@ export function GET(req: NextRequest, context: { params: Promise<{ id: string }>
       "id,displayName,formattedAddress,location,url,internationalPhoneNumber,rating,userRatingCount,regularOpeningHours,photos.name,businessStatus,types,editorialSummary";
 
     const placeId = id.startsWith("places/") ? id : `places/${id}`;
-    const response = await getPlaceDetails({
-      apiKey,
-      fieldMask,
-      placeId,
-      sessionToken: validated.sessionToken,
-    });
+
+    let response: Response;
+    try {
+      response = await getPlaceDetails({
+        apiKey,
+        fieldMask,
+        placeId,
+        sessionToken: validated.sessionToken,
+      });
+    } catch (err) {
+      // Client validation errors (e.g., invalid placeId format)
+      const message = err instanceof Error ? err.message : String(err);
+      return errorResponse({
+        err,
+        error: "invalid_request",
+        reason: message,
+        status: 400,
+      });
+    }
 
     if (!response.ok) {
       return errorResponse({
