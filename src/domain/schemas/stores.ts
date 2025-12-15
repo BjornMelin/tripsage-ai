@@ -4,13 +4,60 @@
  */
 
 import { z } from "zod";
-import { createStoreLogger } from "@/lib/telemetry/store-logger";
 import { messageRoleSchema } from "./chat";
 import { primitiveSchemas } from "./registry";
 import { searchTypeSchema as baseSearchTypeSchema } from "./search";
 import { storeTripSchema } from "./trips";
 
-const schemaLogger = createStoreLogger({ storeName: "schema-validation" });
+type SchemaLogDetails = Record<string, unknown>;
+
+interface SchemaLogger {
+  error: (message: string, details?: SchemaLogDetails) => void;
+  warn: (message: string, details?: SchemaLogDetails) => void;
+  info: (message: string, details?: SchemaLogDetails) => void;
+}
+
+const noopSchemaLogger: SchemaLogger = {
+  error: () => {
+    // noop
+  },
+  info: () => {
+    // noop
+  },
+  warn: () => {
+    // noop
+  },
+};
+
+let schemaLoggerPromise: Promise<SchemaLogger> | null = null;
+
+function getSchemaLogger(): Promise<SchemaLogger> {
+  if (schemaLoggerPromise) return schemaLoggerPromise;
+
+  schemaLoggerPromise = import("@/lib/telemetry/store-logger")
+    .then(({ createStoreLogger }) =>
+      createStoreLogger({ storeName: "schema-validation" })
+    )
+    .catch(() => noopSchemaLogger);
+
+  return schemaLoggerPromise;
+}
+
+function ignorePromise(promise: Promise<unknown>): void {
+  promise.catch(() => {
+    // noop
+  });
+}
+
+function logSchemaError(message: string, details?: SchemaLogDetails): void {
+  if (typeof window === "undefined") return;
+  ignorePromise(getSchemaLogger().then((logger) => logger.error(message, details)));
+}
+
+function logSchemaWarn(message: string, details?: SchemaLogDetails): void {
+  if (typeof window === "undefined") return;
+  ignorePromise(getSchemaLogger().then((logger) => logger.warn(message, details)));
+}
 
 // ===== CORE SCHEMAS =====
 // Core store state patterns and reusable schemas
@@ -963,7 +1010,7 @@ export const validateStoreState = <T>(
     return schema.parse(state);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      schemaLogger.error(`${storeName || "Store"} state validation failed`, {
+      logSchemaError(`${storeName || "Store"} state validation failed`, {
         issues: error.issues,
       });
       throw new Error(
@@ -990,7 +1037,7 @@ export const safeValidateStoreState = <T>(
 ) => {
   const result = schema.safeParse(state);
   if (!result.success) {
-    schemaLogger.warn(`${storeName || "Store"} state validation failed`, {
+    logSchemaWarn(`${storeName || "Store"} state validation failed`, {
       issues: result.error.issues,
     });
   }
@@ -1020,7 +1067,7 @@ export const storeValidationMiddleware =
           const mergedState = replace ? newState : { ...get(), ...newState };
           const result = safeValidateStoreState(schema, mergedState, storeName);
           if (!result.success) {
-            schemaLogger.error(`Store mutation validation failed for ${storeName}`, {
+            logSchemaError(`Store mutation validation failed for ${storeName}`, {
               issues: result.error.issues,
             });
           }
@@ -1036,7 +1083,7 @@ export const storeValidationMiddleware =
     if (process.env.NODE_ENV === "development") {
       const result = safeValidateStoreState(schema, store, storeName);
       if (!result.success) {
-        schemaLogger.error(`Initial store state validation failed for ${storeName}`, {
+        logSchemaError(`Initial store state validation failed for ${storeName}`, {
           issues: result.error.issues,
         });
       }

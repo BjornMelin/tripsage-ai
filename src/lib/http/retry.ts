@@ -2,6 +2,8 @@
  * @fileoverview Lightweight retry helper with exponential backoff and jitter.
  */
 
+import { secureRandomFloat } from "@/lib/security/random";
+
 /**
  * Retry configuration for {@link retryWithBackoff}.
  */
@@ -90,7 +92,8 @@ function calculateDelay(params: {
   const jitterRange = Math.floor(capped * params.jitterRatio);
   if (jitterRange <= 0) return capped;
   const jitterSource =
-    params.jitterFn ?? ((range: number) => Math.floor(Math.random() * (range + 1)));
+    params.jitterFn ??
+    ((range: number) => Math.floor(secureRandomFloat() * (range + 1)));
   const jitter = clamp(jitterSource(jitterRange), 0, jitterRange);
   return capped - jitterRange / 2 + jitter;
 }

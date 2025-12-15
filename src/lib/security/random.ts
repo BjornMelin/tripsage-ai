@@ -61,6 +61,32 @@ export function secureId(length = 12): string {
   return base.slice(0, Math.max(1, Math.min(length, base.length)));
 }
 
+let fallbackPrngState = 0x9e3779b9;
+
+/**
+ * Generate a random float in the range [0, 1).
+ *
+ * Uses Web Crypto when available. If Web Crypto is unavailable, falls back to a
+ * deterministic pseudo-random generator (NOT cryptographically secure) that
+ * avoids Math.random().
+ */
+export function secureRandomFloat(): number {
+  const g = globalThis as unknown as { crypto?: Crypto };
+  if (g.crypto && typeof g.crypto.getRandomValues === "function") {
+    const ints = new Uint32Array(1);
+    g.crypto.getRandomValues(ints);
+    return ints[0] / 2 ** 32;
+  }
+
+  // Deterministic xorshift32 fallback for environments without Web Crypto.
+  let x = fallbackPrngState | 0;
+  x ^= x << 13;
+  x ^= x >>> 17;
+  x ^= x << 5;
+  fallbackPrngState = x | 0;
+  return (fallbackPrngState >>> 0) / 2 ** 32;
+}
+
 /**
  * Get current timestamp in ISO 8601 format.
  * @returns ISO timestamp string.

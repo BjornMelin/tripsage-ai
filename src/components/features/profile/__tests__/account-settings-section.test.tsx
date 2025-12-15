@@ -8,12 +8,12 @@ import { AccountSettingsSection } from "../account-settings-section";
 
 // Mock the stores and hooks
 vi.mock("@/stores/auth/auth-core");
-const { UPDATE_USER } = vi.hoisted(() => ({
-  UPDATE_USER: vi.fn(),
+const { updateUserMock } = vi.hoisted(() => ({
+  updateUserMock: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase", () => ({
-  getBrowserClient: () => ({ auth: { updateUser: UPDATE_USER } }),
+  getBrowserClient: () => ({ auth: { updateUser: updateUserMock } }),
 }));
 // use-toast is fully mocked in test-setup.ts; avoid overriding here.
 
@@ -32,7 +32,7 @@ describe("AccountSettingsSection", () => {
   beforeEach(() => {
     vi.useRealTimers();
     vi.clearAllMocks();
-    UPDATE_USER.mockResolvedValue({ data: { user: {} }, error: null });
+    updateUserMock.mockResolvedValue({ data: { user: {} }, error: null });
     vi.mocked(useAuthCore).mockReturnValue({
       logout: MockLogout,
       setUser: MockSetUser,
@@ -153,7 +153,12 @@ describe("AccountSettingsSection", () => {
   // Email update error path omitted; component simulates happy-path toast.
 
   it("shows loading state during email update", () => {
-    UPDATE_USER.mockImplementation(() => new Promise(() => {}));
+    updateUserMock.mockImplementation(
+      () =>
+        new Promise<never>(() => {
+          // Intentionally never resolves to assert loading UI.
+        })
+    );
     render(<AccountSettingsSection />);
 
     const updateButton = screen.getByRole("button", { name: /update email/i });
