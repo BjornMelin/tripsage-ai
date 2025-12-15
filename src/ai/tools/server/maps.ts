@@ -58,6 +58,18 @@ export const geocode = createAiTool({
       );
     }
 
+    if (parseResult.data.status === "ZERO_RESULTS") {
+      return [];
+    }
+    if (parseResult.data.status !== "OK") {
+      const errMsg = parseResult.data.error_message?.slice(0, 200);
+      throw new Error(
+        `Geocoding failed with status: ${parseResult.data.status}. Address: ${address}${
+          errMsg ? `. Details: ${errMsg}` : ""
+        }`
+      );
+    }
+
     return parseResult.data.results;
   },
   guardrails: {
@@ -261,12 +273,7 @@ export const distanceMatrix = createAiTool({
     const rows = origins.map((_, originIdx) => ({
       elements: destinations.map((_, destIdx) => {
         const entry = entryMap.get(`${originIdx}:${destIdx}`);
-        // Check if route exists: condition is ROUTE_EXISTS OR status is empty/missing
-        const isSuccess =
-          entry &&
-          (entry.condition === "ROUTE_EXISTS" ||
-            !entry.status ||
-            Object.keys(entry.status).length === 0);
+        const isSuccess = entry && entry.condition === "ROUTE_EXISTS";
         if (!isSuccess) {
           return { status: "ZERO_RESULTS" };
         }

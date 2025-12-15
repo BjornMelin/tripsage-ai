@@ -12,8 +12,8 @@ import {
   placesDetailsRequestSchema,
   upstreamPlaceSchema,
 } from "@schemas/api";
-import { z } from "zod";
 import { type NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import type { RouteParamsContext } from "@/lib/api/factory";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse, parseStringId, validateSchema } from "@/lib/api/route-helpers";
@@ -94,6 +94,7 @@ export function GET(req: NextRequest, context: { params: Promise<{ id: string }>
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       return errorResponse({
+        err,
         error: "upstream_parse_error",
         reason: `Failed to parse JSON response from Places API: ${message}`,
         status: 502,

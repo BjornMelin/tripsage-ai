@@ -651,6 +651,7 @@ export type UpstreamGeocodeResult = z.infer<typeof upstreamGeocodeResultSchema>;
  * Validates upstream response from Geocoding endpoint.
  */
 export const upstreamGeocodeResponseSchema = z.looseObject({
+  error_message: z.string().optional(),
   results: z.array(upstreamGeocodeResultSchema).optional().default([]),
   status: z.string(),
 });
