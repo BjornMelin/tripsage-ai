@@ -130,11 +130,11 @@ describe("queryKeys", () => {
 
 describe("staleTimes", () => {
   it("defines stale time for trips", () => {
-    expect(staleTimes.trips).toBe(5 * 60 * 1000); // 5 minutes
+    expect(staleTimes.trips).toBe(2 * 60 * 1000); // 2 minutes (canonical from config.ts)
   });
 
   it("defines stale time for chat", () => {
-    expect(staleTimes.chat).toBe(1 * 60 * 1000); // 1 minute
+    expect(staleTimes.chat).toBe(30 * 1000); // 30 seconds (canonical from config.ts)
   });
 
   it("defines stale time for stats", () => {
@@ -143,6 +143,10 @@ describe("staleTimes", () => {
 
   it("defines stale time for realtime", () => {
     expect(staleTimes.realtime).toBe(30 * 1000); // 30 seconds
+  });
+
+  it("defines stale time for currency", () => {
+    expect(staleTimes.currency).toBe(60 * 60 * 1000); // 1 hour (canonical from config.ts)
   });
 
   it("all stale times are positive numbers", () => {
@@ -156,8 +160,8 @@ describe("staleTimes", () => {
 describe("cacheTimes", () => {
   it("defines cache time levels", () => {
     expect(cacheTimes.short).toBe(5 * 60 * 1000); // 5 minutes
-    expect(cacheTimes.medium).toBe(15 * 60 * 1000); // 15 minutes
-    expect(cacheTimes.long).toBe(30 * 60 * 1000); // 30 minutes
+    expect(cacheTimes.medium).toBe(10 * 60 * 1000); // 10 minutes (canonical from config.ts)
+    expect(cacheTimes.long).toBe(60 * 60 * 1000); // 1 hour (canonical from config.ts)
     expect(cacheTimes.veryLong).toBe(60 * 60 * 1000); // 1 hour
   });
 
@@ -168,9 +172,9 @@ describe("cacheTimes", () => {
     }
   });
 
-  it("cache times are in increasing order", () => {
+  it("cache times are in non-decreasing order", () => {
     expect(cacheTimes.short).toBeLessThan(cacheTimes.medium);
     expect(cacheTimes.medium).toBeLessThan(cacheTimes.long);
-    expect(cacheTimes.long).toBeLessThan(cacheTimes.veryLong);
+    expect(cacheTimes.long).toBeLessThanOrEqual(cacheTimes.veryLong);
   });
 });

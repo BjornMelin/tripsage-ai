@@ -16,7 +16,7 @@ import {
   useState,
 } from "react";
 import { z } from "zod";
-import { updateGatewayFallbackPreference } from "@/app/api/user-settings/actions";
+import { updateGatewayFallbackPreference } from "@/app/dashboard/settings/api-keys/actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
