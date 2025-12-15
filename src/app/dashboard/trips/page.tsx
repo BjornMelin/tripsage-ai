@@ -40,9 +40,8 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { type Trip, useCreateTrip, useDeleteTrip, useTrips } from "@/hooks/use-trips";
 import { getErrorMessage } from "@/lib/api/error-types";
-import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { nowIso } from "@/lib/security/random";
-import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
+import { parseTripDate } from "@/lib/trips/parse-trip-date";
 
 /**
  * Trip status count colors aligned with statusVariants.
@@ -86,24 +85,10 @@ const getConnectionState = (
   return "disconnected";
 };
 
-const parseTripDate = (value?: string | null): Date | null => {
-  if (!value) {
-    return null;
-  }
-  try {
-    return DateUtils.parse(value);
-  } catch (error) {
-    recordClientErrorOnActiveSpan(
-      error instanceof Error ? error : new Error(String(error)),
-      {
-        action: "parseTripDate",
-        context: "TripsPage",
-        value,
-      }
-    );
-    return null;
-  }
-};
+const isInvalidTripDateRange = (
+  startDate: Date | null,
+  endDate: Date | null
+): boolean => !!startDate && !!endDate && endDate.getTime() < startDate.getTime();
 
 type SortOption = "name" | "date" | "budget" | "destinations";
 type FilterOption = "all" | "draft" | "upcoming" | "active" | "completed";
@@ -156,10 +141,9 @@ export default function TripsPage() {
     // Apply status filter
     if (filterBy !== "all") {
       filtered = filtered.filter((trip: Trip) => {
-        const startDate = parseTripDate(trip.startDate);
-        const endDate = parseTripDate(trip.endDate);
-        const isInvalidRange =
-          !!startDate && !!endDate && endDate.getTime() < startDate.getTime();
+        const startDate = parseTripDate(trip.startDate, { context: "TripsPage" });
+        const endDate = parseTripDate(trip.endDate, { context: "TripsPage" });
+        const isInvalidRange = isInvalidTripDateRange(startDate, endDate);
 
         switch (filterBy) {
           case "draft":
@@ -190,8 +174,10 @@ export default function TripsPage() {
         case "name":
           return (a.title || "").localeCompare(b.title || "");
         case "date": {
-          const parsedB = parseTripDate(b.createdAt) ?? new Date(0);
-          const parsedA = parseTripDate(a.createdAt) ?? new Date(0);
+          const parsedB =
+            parseTripDate(b.createdAt, { context: "TripsPage" }) ?? new Date(0);
+          const parsedA =
+            parseTripDate(a.createdAt, { context: "TripsPage" }) ?? new Date(0);
           return parsedB.getTime() - parsedA.getTime();
         }
         case "budget":
@@ -260,11 +246,10 @@ export default function TripsPage() {
     const now = new Date();
     return tripsForCounts.reduce(
       (counts: Record<string, number>, trip: Trip) => {
-        const startDate = parseTripDate(trip.startDate);
-        const endDate = parseTripDate(trip.endDate);
+        const startDate = parseTripDate(trip.startDate, { context: "TripsPage" });
+        const endDate = parseTripDate(trip.endDate, { context: "TripsPage" });
         const nowTs = now.getTime();
-        const isInvalidRange =
-          !!startDate && !!endDate && endDate.getTime() < startDate.getTime();
+        const isInvalidRange = isInvalidTripDateRange(startDate, endDate);
 
         if (isInvalidRange || !startDate || !endDate) {
           counts.draft++;

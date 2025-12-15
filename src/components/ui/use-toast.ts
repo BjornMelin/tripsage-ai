@@ -57,20 +57,17 @@ interface ToastReturn {
 function toast(props: ToastProps): ToastReturn {
   const { title, description, variant, action } = props;
 
-  // Convert ReactNode title to string for Sonner
-  const titleString = typeof title === "string" ? title : String(title ?? "");
-
   const options = {
     action: action ? { label: action.label, onClick: action.onClick } : undefined,
-    description: description as string | undefined,
+    description,
   };
 
   let id: string | number;
 
   if (variant === "destructive") {
-    id = sonnerToast.error(titleString, options);
+    id = sonnerToast.error(title ?? "", options);
   } else {
-    id = sonnerToast(titleString, options);
+    id = sonnerToast(title ?? "", options);
   }
 
   return {

@@ -10,7 +10,7 @@ import { z } from "zod";
 function FormHarness() {
   const schema = z.object({ email: z.email() });
   const { handleSubmit, register } = useForm<{ email: string }>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema as never),
   });
   const onSubmit = () => {
     // Empty submit handler for test

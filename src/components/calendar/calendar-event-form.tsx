@@ -69,7 +69,7 @@ export function CalendarEventForm({
         dateTime: new Date(),
       },
     },
-    resolver: zodResolver(EVENT_FORM_SCHEMA) as never,
+    resolver: zodResolver(EVENT_FORM_SCHEMA as never) as never,
   });
 
   const startDateTime = watch("start.dateTime");

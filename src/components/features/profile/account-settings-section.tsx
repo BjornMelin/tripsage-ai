@@ -104,7 +104,7 @@ export function AccountSettingsSection() {
     defaultValues: {
       email: currentEmail,
     },
-    resolver: zodResolver(emailUpdateFormSchema),
+    resolver: zodResolver(emailUpdateFormSchema as never),
   });
 
   useEffect(() => {
