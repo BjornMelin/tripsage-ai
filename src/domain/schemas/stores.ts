@@ -482,6 +482,7 @@ const PAGINATION_STATE_SCHEMA = z.object({
 export const AUTH_USER_PREFERENCES_SCHEMA = z.object({
   analytics: z.boolean().optional(),
   autoSaveSearches: z.boolean().optional(),
+  currency: primitiveSchemas.isoCurrency.optional(),
   dateFormat: z.enum(["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"]).optional(),
   language: z.string().optional(),
   locationServices: z.boolean().optional(),

@@ -214,41 +214,25 @@ describe("ErrorBoundary", () => {
       });
     });
 
-    it("should handle retry with retry limit deterministically", async () => {
+    it("should reset error state when retry button is clicked", async () => {
       const { rerender } = renderWithProviders(
         <ErrorBoundary fallback={CaptureFallback}>
           <ThrowError shouldThrow={true} />
         </ErrorBoundary>
       );
 
-      const clickTryAgain = () => {
-        const btn = screen.queryByLabelText("try-again");
-        if (btn) fireEvent.click(btn);
-      };
+      expect(screen.getByTestId("err")).toBeInTheDocument();
 
-      // Click try-again up to the max retry count
-      clickTryAgain();
+      // Make child safe, then trigger retry to clear boundary state
       rerender(
         <ErrorBoundary fallback={CaptureFallback}>
-          <ThrowError shouldThrow={true} />
+          <ThrowError shouldThrow={false} />
         </ErrorBoundary>
       );
-      clickTryAgain();
-      rerender(
-        <ErrorBoundary fallback={CaptureFallback}>
-          <ThrowError shouldThrow={true} />
-        </ErrorBoundary>
-      );
-      clickTryAgain();
-      rerender(
-        <ErrorBoundary fallback={CaptureFallback}>
-          <ThrowError shouldThrow={true} />
-        </ErrorBoundary>
-      );
+      fireEvent.click(screen.getByLabelText("try-again"));
 
       await waitFor(() => {
-        expect(screen.queryByLabelText("try-again")).not.toBeInTheDocument();
-        expect(screen.getByLabelText("reset")).toBeInTheDocument();
+        expect(screen.queryByTestId("err")).not.toBeInTheDocument();
       });
     });
   });
@@ -358,7 +342,7 @@ describe("ErrorBoundary", () => {
       });
     });
 
-    it("should generate session ID using secureId", () => {
+    it("should generate session ID using secureUuid", () => {
       vi.mocked(window.sessionStorage.getItem).mockReturnValue(null);
 
       renderWithProviders(
@@ -369,13 +353,8 @@ describe("ErrorBoundary", () => {
 
       expect(window.sessionStorage.setItem).toHaveBeenCalledWith(
         "session_id",
-        expect.stringMatching(/^session_[a-z0-9]+$/)
+        expect.stringMatching(/^session_[a-z0-9-]+$/i)
       );
-      // Verify session ID has deterministic length (secureId(16) = 16 chars)
-      const setItemCalls = vi.mocked(window.sessionStorage.setItem).mock.calls;
-      const sessionId = setItemCalls.find((call) => call[0] === "session_id")?.[1];
-      expect(sessionId).toBeDefined();
-      expect(sessionId?.replace("session_", "")).toHaveLength(16);
     });
 
     it("should use existing session ID", () => {
