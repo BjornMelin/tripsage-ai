@@ -21,9 +21,7 @@ const MOCK_REMOVE = vi.fn();
 const MOCK_UPLOAD = vi.fn();
 const MOCK_GET_PUBLIC_URL = vi.fn();
 
-const GET_BROWSER_CLIENT = vi.mocked(
-  (await import("@/lib/supabase")).getBrowserClient
-);
+const GET_BROWSER_CLIENT = vi.mocked((await import("@/lib/supabase")).getBrowserClient);
 
 const BASE_USER = {
   avatarUrl: "https://example.com/avatars/user-1.jpg",
@@ -50,7 +48,10 @@ describe("PersonalInfoSection", () => {
       upload: MOCK_UPLOAD,
     };
     MOCK_REMOVE.mockResolvedValue({ data: null, error: null });
-    MOCK_UPLOAD.mockResolvedValue({ data: { path: "avatars/user-1.jpg" }, error: null });
+    MOCK_UPLOAD.mockResolvedValue({
+      data: { path: "avatars/user-1.jpg" },
+      error: null,
+    });
     MOCK_GET_PUBLIC_URL.mockReturnValue({
       data: { publicUrl: "https://cdn.example.com/avatars/user-1.jpg" },
     });
@@ -129,7 +130,7 @@ describe("PersonalInfoSection", () => {
         location: "New York, USA",
         website: "https://johndoe.com",
       })
-    });
+    );
     expect(TOAST_SPY).toHaveBeenCalledWith({
       description: "Your personal information has been successfully updated.",
       title: "Profile updated",

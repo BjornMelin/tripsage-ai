@@ -55,7 +55,7 @@ vi.mock("@/lib/api/route-helpers", async () => {
 
 vi.mock("ai", () => ({
   embed: vi.fn(async () => ({
-    embedding: Array.from({ length: 1536 }, () => Math.random()),
+    embedding: Array.from({ length: 1536 }, (_, i) => i / 1536),
     usage: { tokens: { input: 12 } },
   })),
 }));
