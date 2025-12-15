@@ -84,8 +84,9 @@ function toast(props: ToastProps): ToastReturn {
  *
  * Maintains backward compatibility with previous Radix-based implementation.
  * Note: Sonner manages its own internal state, so `toasts` array is always empty.
+ * This hook exists for API compatibility. To render toasts, use `<Toaster />` from sonner.
  *
- * @returns Object with toast function, dismiss function, and toasts array
+ * @returns Object with toast function, dismiss function, and toasts array (always empty)
  */
 function useToast() {
   return {

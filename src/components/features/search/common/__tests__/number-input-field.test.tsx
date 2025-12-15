@@ -25,7 +25,7 @@ function TestWrapper({
 }) {
   const form = useForm<TestFormData>({
     defaultValues,
-    resolver: zodResolver(TestSchema as never),
+    resolver: zodResolver(TestSchema as any),
   });
   return <FormProvider {...form}>{children(form.control)}</FormProvider>;
 }
@@ -40,7 +40,7 @@ function FormWithSubmit({
   const form = useForm<TestFormData>({
     defaultValues,
     mode: "onChange",
-    resolver: zodResolver(TestSchema as never),
+    resolver: zodResolver(TestSchema as any),
   });
 
   return (
