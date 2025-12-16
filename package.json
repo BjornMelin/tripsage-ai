@@ -1,6 +1,6 @@
 {
   "name": "tripsage-ai-frontend",
-  "version": "1.16.1",
+  "version": "1.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -165,7 +165,7 @@
     "vitest": "^4.0.15"
   },
   "engines": {
-    "node": "^24 || >=24",
+    "node": "24.x",
     "pnpm": ">=9.0.0"
   },
   "pnpm": {

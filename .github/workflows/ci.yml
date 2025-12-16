@@ -97,7 +97,7 @@ jobs:
           # Stub required env vars for build (no secrets needed)
           NEXT_PUBLIC_SITE_URL: 'https://example.com'
           NEXT_PUBLIC_SUPABASE_URL: 'https://abcd1234.supabase.co'
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: 'fake_anon_key_for_ci_build_only_do_not_use'
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjaV9idWlsZF9vbmx5IiwiaWF0IjoxNjAwMDAwMDAwfQ.dummysignature'
 
       - name: Unit tests (quick, no coverage)
         env:
