@@ -1,3 +1,10 @@
+## [1.16.1](https://github.com/BjornMelin/tripsage-ai/compare/v1.16.0...v1.16.1) (2025-12-16)
+
+### Bug Fixes
+
+* **review:** address PR [#560](https://github.com/BjornMelin/tripsage-ai/issues/560) review feedback ([ade2ceb](https://github.com/BjornMelin/tripsage-ai/commit/ade2ceb82ae8e31caad48393750dd42301345cce))
+* **supabase:** add api_metrics to typed infrastructure and remove type assertions ([377df90](https://github.com/BjornMelin/tripsage-ai/commit/377df9034f829db6d4f83a81db82445b32cfef5e))
+
 ## [1.16.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.15.0...v1.16.0) (2025-12-16)
 
 ### Features
