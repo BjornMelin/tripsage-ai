@@ -151,7 +151,9 @@ export class ApiError extends Error {
       case "NOT_FOUND":
         return "The requested resource was not found.";
       case "VALIDATION_ERROR":
-        return this.getFirstFieldError() || "Invalid data provided. Please check your input.";
+        return (
+          this.getFirstFieldError() || "Invalid data provided. Please check your input."
+        );
       case "RATE_LIMITED":
         return "Too many requests. Please try again later.";
       case "SERVER_ERROR":
@@ -210,24 +212,21 @@ export class ApiError extends Error {
 
   /** Factory for network errors. */
   static network(message = "Network error occurred"): ApiError {
-    return new ApiError({ message, status: 0, code: "NETWORK_ERROR" });
+    return new ApiError({ code: "NETWORK_ERROR", message, status: 0 });
   }
 
   /** Factory for timeout errors. */
   static timeout(message = "Request timed out"): ApiError {
-    return new ApiError({ message, status: 408, code: "TIMEOUT_ERROR" });
+    return new ApiError({ code: "TIMEOUT_ERROR", message, status: 408 });
   }
 
   /** Factory for validation errors. */
-  static validation(
-    message: string,
-    fieldErrors?: FieldValidationErrors
-  ): ApiError {
+  static validation(message: string, fieldErrors?: FieldValidationErrors): ApiError {
     return new ApiError({
-      message,
-      status: 422,
       code: "VALIDATION_ERROR",
       fieldErrors,
+      message,
+      status: 422,
     });
   }
 }
@@ -280,9 +279,9 @@ export const handleApiError = (error: unknown): ApiError => {
     }
     if (error.name === "AbortError") {
       return new ApiError({
+        code: "REQUEST_CANCELLED",
         message: "Request was cancelled",
         status: 0,
-        code: "REQUEST_CANCELLED",
       });
     }
 

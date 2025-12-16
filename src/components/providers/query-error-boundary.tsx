@@ -11,10 +11,7 @@ import type { ComponentType, ErrorInfo, JSX, ReactNode } from "react";
 import { useRef } from "react";
 import { ErrorBoundary, type FallbackProps } from "react-error-boundary";
 import { Button } from "@/components/ui/button";
-import {
-  getErrorMessage,
-  handleApiError,
-} from "@/lib/api/error-types";
+import { getErrorMessage, handleApiError } from "@/lib/api/error-types";
 import { getSessionId } from "@/lib/client/session";
 import { errorService } from "@/lib/error-service";
 import { cn, fireAndForget } from "@/lib/utils";
