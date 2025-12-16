@@ -10,7 +10,7 @@ import "./setup-node";
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import React from "react";
-import { afterEach, vi } from "vitest";
+import { afterAll, afterEach, vi } from "vitest";
 import { resetTestQueryClient } from "./helpers/query-client";
 
 (globalThis as unknown as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT ??= true;
@@ -201,6 +201,10 @@ console.error = (...args: unknown[]) => {
   }
   originalConsoleError.call(console, ...args);
 };
+
+afterAll(() => {
+  console.error = originalConsoleError;
+});
 
 afterEach(() => {
   if (typeof document !== "undefined") {

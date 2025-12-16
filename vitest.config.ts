@@ -2,7 +2,7 @@
  * @fileoverview Vitest configuration optimized for <1 minute test runtime.
  * Key optimizations:
  * - Extends Vitest default excludes (critical for fast discovery)
- * - Uses threads for Node-only projects, forks only for jsdom
+ * - Uses forks for deterministic worker teardown (avoids Node fetch/threads hangs)
  * - Enables dependency optimization for client only
  * - Disables CSS processing globally
  */
@@ -65,10 +65,10 @@ export default defineConfig({
     hookTimeout: 3000,
     teardownTimeout: 2000,
 
-    // Default to threads (faster), forks only for jsdom
-    pool: "threads",
-    // Worker limit is pool-agnostic; set conservatively for threads by default.
-    // Fork-based projects must override this to avoid memory pressure.
+    // Prefer forks for compatibility and reliable shutdown across Node + jsdom.
+    pool: "forks",
+    // Worker limit is pool-agnostic; keep this conservative for Node projects.
+    // JSDOM forks are memory-heavy, so that project overrides the worker cap.
     maxWorkers: maxThreads,
 
     // Fixed dependency optimization
@@ -119,7 +119,6 @@ export default defineConfig({
           ],
           isolate: false,
           name: "schemas",
-          pool: "threads",
           sequence: { groupOrder: 0 },
         },
       },
@@ -151,7 +150,6 @@ export default defineConfig({
             "src/ai/**/*-integration.{test,spec}.?(c|m)[jt]s",
           ],
           name: "integration",
-          pool: "threads",
           sequence: { groupOrder: 0 },
         },
       },
@@ -161,7 +159,6 @@ export default defineConfig({
           environment: "node",
           include: ["src/app/api/**/*.{test,spec}.?(c|m)[jt]s"],
           name: "api",
-          pool: "threads",
           sequence: { groupOrder: 0 },
         },
       },
@@ -212,7 +209,6 @@ export default defineConfig({
           include: ["src/**/*.{test,spec}.?(c|m)[jt]s"],
           isolate: true,
           name: "unit",
-          pool: "threads",
           sequence: { groupOrder: 0 },
         },
       },
