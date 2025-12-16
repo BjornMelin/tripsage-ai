@@ -52,6 +52,29 @@ make supa.db.push                       # apply supabase/migrations/* to remote
   - Build command: `pnpm build`; Output: `Next.js`.  
 - **Self-host (optional)**: `pnpm install && pnpm build && pnpm start` with a fully populated `.env` (or `.env.production`). Provide your own reverse proxy/TLS and process manager.
 
+### Vercel configuration (`vercel.json`)
+
+The `vercel.json` file configures function settings:
+
+```json
+{
+  "functions": {
+    "src/app/api/**/route.*": {
+      "maxDuration": 60
+    }
+  }
+}
+```
+
+**Why no `regions` property?** Vercel's function config schema does not support `regions` at the function level—including it causes deployment errors. For regional pinning in Next.js App Router, use route segment config exports instead:
+
+```typescript
+// In any route.ts file
+export const preferredRegion = 'iad1'  // or ['iad1', 'sfo1'] for multi-region
+```
+
+Alternatively, configure the default function region in Vercel Dashboard → Project → Settings → Functions.
+
 ## Observability
 
 Telemetry is emitted via `@/lib/telemetry`. Configure OTLP export endpoints in `NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT` for client traces; server spans export via OTLP/HTTP and can be scraped by Jaeger/Tempo/OTel Collector. Avoid `console.*` in server code—use `createServerLogger()` from `@/lib/telemetry/logger` and span events instead.
