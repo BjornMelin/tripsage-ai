@@ -54,7 +54,21 @@ describe("auth/callback route", () => {
     expect(res.headers.get("location")).toBe("https://app.example.com/dashboard");
   });
 
-  it("redirects to login on error", async () => {
+  it("redirects to login on error, preserving safe next path", async () => {
+    EXCHANGE_MOCK.mockResolvedValueOnce({ error: new Error("bad") });
+    const req = createMockNextRequest({
+      headers: {},
+      method: "GET",
+      url: "https://app.example.com/auth/callback?code=bad&next=%2Fsettings",
+    });
+    const res = await GET(req);
+    // Preserves safe next path for post-error redirect
+    expect(res.headers.get("location")).toBe(
+      "https://app.example.com/login?error=oauth_failed&next=%2Fsettings"
+    );
+  });
+
+  it("redirects to login on error with fallback path when next missing", async () => {
     EXCHANGE_MOCK.mockResolvedValueOnce({ error: new Error("bad") });
     const req = createMockNextRequest({
       headers: {},
@@ -62,8 +76,9 @@ describe("auth/callback route", () => {
       url: "https://app.example.com/auth/callback?code=bad",
     });
     const res = await GET(req);
+    // Falls back to /dashboard when next is not provided
     expect(res.headers.get("location")).toBe(
-      "https://app.example.com/login?error=oauth_failed"
+      "https://app.example.com/login?error=oauth_failed&next=%2Fdashboard"
     );
   });
 });

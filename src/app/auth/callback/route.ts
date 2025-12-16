@@ -2,44 +2,43 @@
  * @fileoverview Supabase authentication callback route handler.
  *
  * Handles OAuth callback, exchanges authorization code for session, and redirects users.
+ * Uses hardened redirect utilities to prevent open-redirect attacks.
  */
 
 import "server-only";
 
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { resolveServerRedirectUrl, safeNextPath } from "@/lib/auth/redirect-server";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { getOriginFromRequest } from "@/lib/url/server-origin";
 
 /**
  * Handles OAuth callback from Supabase Auth.
  *
- * Exchanges authorization code for session and redirects. Supports local development
- * and production with host forwarding.
+ * Exchanges authorization code for session and redirects. Uses safe redirect
+ * utilities to prevent open-redirect attacks and correctly handle proxied requests.
  *
  * @param request - Incoming request with auth callback
  * @returns Redirect response to dashboard or specified URL
  */
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
-  let next = searchParams.get("next") ?? "/dashboard";
-  if (!next.startsWith("/")) next = "/dashboard";
+  const nextParam = searchParams.get("next");
 
   if (code) {
     const supabase = await createServerSupabase();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      const forwardedHost = request.headers.get("x-forwarded-host");
-      const isLocalEnv = process.env.NODE_ENV === "development";
-      if (isLocalEnv) {
-        return NextResponse.redirect(`${origin}${next}`);
-      } else if (forwardedHost) {
-        return NextResponse.redirect(`https://${forwardedHost}${next}`);
-      } else {
-        return NextResponse.redirect(`${origin}${next}`);
-      }
+      const redirectUrl = resolveServerRedirectUrl(request, nextParam);
+      return NextResponse.redirect(redirectUrl);
     }
   }
 
-  return NextResponse.redirect(`${origin}/login?error=oauth_failed`);
+  // Preserve safe next path for post-login redirect after error resolution
+  const origin = getOriginFromRequest(request);
+  const safePath = safeNextPath(nextParam);
+  const errorUrl = `${origin}/login?error=oauth_failed&next=${encodeURIComponent(safePath)}`;
+  return NextResponse.redirect(errorUrl);
 }

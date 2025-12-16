@@ -7,6 +7,7 @@
 
 import "server-only";
 
+import type { NextRequest } from "next/server";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
@@ -115,4 +116,48 @@ export function toAbsoluteUrl(path: string): string {
   }
   const origin = getServerOrigin();
   return new URL(path, origin).toString();
+}
+
+/**
+ * Resolves the origin from a NextRequest, preferring configured origin for security.
+ *
+ * Priority (security-first):
+ * 1. Configured origin from environment variables (most secure)
+ * 2. x-forwarded-host + x-forwarded-proto (only when no configured origin)
+ * 3. Request URL origin (final fallback)
+ *
+ * WARNING: Only uses x-forwarded-* headers when no configured origin is available.
+ * These headers must be set/stripped by a trusted reverse proxy. For strict
+ * security guarantees, use getRequiredServerOrigin() instead.
+ *
+ * @param request - The incoming NextRequest
+ * @returns The resolved origin URL (e.g., "https://example.com")
+ */
+export function getOriginFromRequest(request: NextRequest): string {
+  // 1. Prefer configured origin (most secure - not influenced by request headers)
+  const configuredOrigin = resolveConfiguredOrigin();
+  if (configuredOrigin) {
+    return configuredOrigin;
+  }
+
+  // 2. Only if no configured origin, consider forwarded headers from trusted proxy
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  if (forwardedHost) {
+    const rawProto = request.headers.get("x-forwarded-proto") ?? "https";
+    const protocolCandidate = rawProto.split(",")[0]?.trim().toLowerCase();
+
+    // Validate protocol - only allow http/https, default to https for anything else
+    const protocol =
+      protocolCandidate === "http" || protocolCandidate === "https"
+        ? protocolCandidate
+        : "https";
+
+    const host = forwardedHost.split(",")[0]?.trim();
+    if (host) {
+      return `${protocol}://${host}`;
+    }
+  }
+
+  // 3. Final fallback: request URL origin
+  return new URL(request.url).origin;
 }
