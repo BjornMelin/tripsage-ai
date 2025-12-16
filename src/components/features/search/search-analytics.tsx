@@ -20,7 +20,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { clampProgress } from "@/lib/utils";
 import { useSearchHistoryStore } from "@/stores/search-history";
 
 /** Props for the search analytics component */
@@ -158,12 +160,10 @@ export function SearchAnalytics({ className, dateRange }: SearchAnalyticsProps) 
                       <span className="text-sm capitalize">{item.type}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-primary rounded-full"
-                          style={{ width: `${item.percentage}%` }}
-                        />
-                      </div>
+                      <Progress
+                        value={clampProgress(item.percentage)}
+                        className="w-24 h-2"
+                      />
                       <span className="text-xs text-muted-foreground w-8 text-right">
                         {item.count}
                       </span>
@@ -201,29 +201,31 @@ export function SearchAnalytics({ className, dateRange }: SearchAnalyticsProps) 
                 Last 14 Days
               </h4>
               <div className="flex items-end gap-1 h-24">
-                {trends.map((day, index) => {
-                  const maxCount = Math.max(...trends.map((t) => t.count), 1);
-                  const height = (day.count / maxCount) * 100;
-                  return (
-                    <div
-                      key={day.date}
-                      className="flex-1 flex flex-col items-center"
-                      title={`${day.date}: ${day.count} searches`}
-                    >
+                {(() => {
+                  const maxTrendCount = Math.max(...trends.map((t) => t.count), 1);
+                  return trends.map((day, index) => {
+                    const height = (day.count / maxTrendCount) * 100;
+                    return (
                       <div
-                        className={`w-full rounded-t ${
-                          day.count > 0 ? "bg-primary" : "bg-muted"
-                        }`}
-                        style={{ height: `${Math.max(height, 4)}%` }}
-                      />
-                      {index % 2 === 0 && (
-                        <span className="text-[10px] text-muted-foreground mt-1">
-                          {new Date(day.date).getDate()}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
+                        key={day.date}
+                        className="flex-1 flex flex-col items-center"
+                        title={`${day.date}: ${day.count} searches`}
+                      >
+                        <div
+                          className={`w-full rounded-t ${
+                            day.count > 0 ? "bg-primary" : "bg-muted"
+                          }`}
+                          style={{ height: `${Math.max(height, 4)}%` }}
+                        />
+                        {index % 2 === 0 && (
+                          <span className="text-[10px] text-muted-foreground mt-1">
+                            {new Date(day.date).getDate()}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  });
+                })()}
               </div>
               <p className="text-xs text-muted-foreground text-center mt-2">
                 {trends.reduce((sum, t) => sum + t.count, 0)} searches in the last 2
@@ -272,23 +274,25 @@ export function SearchAnalytics({ className, dateRange }: SearchAnalyticsProps) 
             <div>
               <h4 className="text-sm font-medium mb-2">Daily Distribution</h4>
               <div className="flex items-end gap-px h-16">
-                {analytics.popularSearchTimes.map((hourData) => {
-                  const maxCount = Math.max(
+                {(() => {
+                  const maxHourCount = Math.max(
                     ...analytics.popularSearchTimes.map((h) => h.count),
                     1
                   );
-                  const height = (hourData.count / maxCount) * 100;
-                  return (
-                    <div
-                      key={hourData.hour}
-                      className={`flex-1 rounded-t ${
-                        hourData.count > 0 ? "bg-primary/60" : "bg-muted"
-                      }`}
-                      style={{ height: `${Math.max(height, 2)}%` }}
-                      title={`${formatHour(hourData.hour)}: ${hourData.count} searches`}
-                    />
-                  );
-                })}
+                  return analytics.popularSearchTimes.map((hourData) => {
+                    const height = (hourData.count / maxHourCount) * 100;
+                    return (
+                      <div
+                        key={hourData.hour}
+                        className={`flex-1 rounded-t ${
+                          hourData.count > 0 ? "bg-primary/60" : "bg-muted"
+                        }`}
+                        style={{ height: `${Math.max(height, 2)}%` }}
+                        title={`${formatHour(hourData.hour)}: ${hourData.count} searches`}
+                      />
+                    );
+                  });
+                })()}
               </div>
               <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
                 <span>12AM</span>

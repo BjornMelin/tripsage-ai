@@ -37,18 +37,33 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
+import { clampProgress, cn } from "@/lib/utils";
+import { getToneColors, type ToneVariant } from "@/lib/variants/status";
 
 /**
- * Consistent color palette aligned with statusVariants
+ * Maps connection status to statusVariants tones for consistent styling.
  */
-const STATUS_COLORS = {
-  connected: "text-green-700",
-  connecting: "text-blue-700",
-  disconnected: "text-gray-700",
-  error: "text-red-700",
-  reconnecting: "text-amber-700",
-} as const;
+const CONNECTION_STATUS_TONE: Record<ConnectionStatus, ToneVariant> = {
+  connected: "active", // green
+  connecting: "info", // blue
+  disconnected: "unknown", // slate
+  error: "error", // red
+  reconnecting: "pending", // amber
+};
+
+/**
+ * Get colors for a connection status from the tone system.
+ * Uses getToneColors to derive colors from the single source of truth (TONE_CLASSES).
+ */
+const GetStatusColors = (status: ConnectionStatus) => {
+  const tone = CONNECTION_STATUS_TONE[status];
+  const colors = getToneColors(tone);
+  return {
+    bgColor: colors.bg,
+    borderColor: colors.border,
+    textColor: colors.text,
+  };
+};
 
 const QUALITY_COLORS = {
   excellent: "text-green-700",
@@ -362,12 +377,15 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
   }, [status]);
 
   const getStatusConfig = () => {
+    const colors = GetStatusColors(status);
+    const defaultColors = GetStatusColors("disconnected");
+
     switch (status) {
       case "connected":
         return {
-          bgColor: "bg-green-700/10",
-          borderColor: "border-green-700/20",
-          color: STATUS_COLORS.connected,
+          bgColor: colors.bgColor,
+          borderColor: colors.borderColor,
+          color: colors.textColor,
           description: "Real-time connection active",
           icon: <CheckCircle2Icon className="h-4 w-4" />,
           label: "Connected",
@@ -375,9 +393,9 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
         };
       case "connecting":
         return {
-          bgColor: "bg-blue-700/10",
-          borderColor: "border-blue-700/20",
-          color: STATUS_COLORS.connecting,
+          bgColor: colors.bgColor,
+          borderColor: colors.borderColor,
+          color: colors.textColor,
           description: "Establishing connection...",
           icon: <Loader2Icon className="h-4 w-4 animate-spin" />,
           label: "Connecting",
@@ -385,9 +403,9 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
         };
       case "reconnecting":
         return {
-          bgColor: "bg-amber-700/10",
-          borderColor: "border-amber-700/20",
-          color: STATUS_COLORS.reconnecting,
+          bgColor: colors.bgColor,
+          borderColor: colors.borderColor,
+          color: colors.textColor,
           description: `Attempt ${analytics.reconnectCount + 1}`,
           icon: <RefreshCwIcon className="h-4 w-4 animate-spin" />,
           label: "Reconnecting",
@@ -395,9 +413,9 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
         };
       case "disconnected":
         return {
-          bgColor: "bg-gray-700/10",
-          borderColor: "border-gray-700/20",
-          color: STATUS_COLORS.disconnected,
+          bgColor: colors.bgColor,
+          borderColor: colors.borderColor,
+          color: colors.textColor,
           description: "No real-time connection",
           icon: <WifiOffIcon className="h-4 w-4" />,
           label: "Disconnected",
@@ -405,9 +423,9 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
         };
       case "error":
         return {
-          bgColor: "bg-red-700/10",
-          borderColor: "border-red-700/20",
-          color: STATUS_COLORS.error,
+          bgColor: colors.bgColor,
+          borderColor: colors.borderColor,
+          color: colors.textColor,
           description: "Failed to establish connection",
           icon: <AlertTriangleIcon className="h-4 w-4" />,
           label: "Connection Error",
@@ -415,9 +433,9 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
         };
       default:
         return {
-          bgColor: "bg-gray-700/10",
-          borderColor: "border-gray-700/20",
-          color: STATUS_COLORS.disconnected,
+          bgColor: defaultColors.bgColor,
+          borderColor: defaultColors.borderColor,
+          color: defaultColors.textColor,
           description: "Status unknown",
           icon: <WifiIcon className="h-4 w-4" />,
           label: "Unknown",
@@ -458,7 +476,15 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
                 config.color,
                 className
               )}
+              role="button"
+              tabIndex={0}
               onClick={() => setShowDetails(!showDetails)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  setShowDetails((prev) => !prev);
+                }
+              }}
             >
               <motion.div
                 animate={isAnimating ? { rotate: 360 } : {}}
@@ -657,7 +683,10 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
               <div className="flex items-center gap-3 mb-3">
                 <span className="text-sm text-muted-foreground">Signal Strength:</span>
                 <div className="flex-1">
-                  <Progress value={metrics.signalStrength} className="h-2" />
+                  <Progress
+                    value={clampProgress(metrics.signalStrength)}
+                    className="h-2"
+                  />
                 </div>
                 <span className="text-sm font-medium">{metrics.signalStrength}%</span>
               </div>
@@ -669,7 +698,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
                   <span className="ml-2 font-medium">
                     {analytics.totalMessages}
                     {analytics.failedMessages > 0 && (
-                      <span className={STATUS_COLORS.error}>
+                      <span className={getToneColors("error").text}>
                         {" "}
                         ({analytics.failedMessages} failed)
                       </span>
