@@ -1,6 +1,7 @@
 /** @vitest-environment jsdom */
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { FieldValues, UseFormProps } from "react-hook-form";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAuthCore } from "@/stores/auth/auth-core";
 import { PersonalInfoSection } from "../personal-info-section";
@@ -18,14 +19,16 @@ vi.mock("@/hooks/use-zod-form", async () => {
     useZodForm: ({
       schema,
       defaultValues,
+      mode,
     }: {
       schema: unknown;
       defaultValues: unknown;
-      mode?: string;
+      mode?: UseFormProps<FieldValues>["mode"];
     }) => {
       return useForm({
         // biome-ignore lint/suspicious/noExplicitAny: test mock needs flexible typing
         defaultValues: defaultValues as any,
+        mode,
         // biome-ignore lint/suspicious/noExplicitAny: test mock needs flexible typing
         resolver: zodResolver(schema as any),
       });

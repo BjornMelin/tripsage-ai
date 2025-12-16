@@ -44,11 +44,12 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  server.resetHandlers();
   vi.clearAllMocks();
 });
 
-describe("web-crawl tool", () => {
-  test("calls Firecrawl crawl endpoint with correct payload", async () => {
+describe("web-search tool", () => {
+  test("calls Firecrawl search endpoint with correct payload", async () => {
     const { webSearch } = await import("@ai/tools/server/web-search");
 
     let capturedBody: unknown = null;

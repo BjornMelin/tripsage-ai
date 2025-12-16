@@ -128,7 +128,7 @@ vi.mock("@/lib/supabase/server", () => ({
   createServerSupabase: mockCreateServerSupabase,
 }));
 
-// Dynamic import in beforeAll - required because setupUpstashTestEnvironment() must run first
+// Dynamic import ensures all vi.mock() registrations are applied before loading @ai/tools/server/planning.
 let createTravelPlan: typeof import("@ai/tools/server/planning").createTravelPlan;
 let updateTravelPlan: typeof import("@ai/tools/server/planning").updateTravelPlan;
 

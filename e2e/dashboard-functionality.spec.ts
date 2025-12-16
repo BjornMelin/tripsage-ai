@@ -201,7 +201,7 @@ test.describe("Dashboard Functionality", () => {
     await expect(page).toHaveURL("/dashboard", { timeout: navigationTimeoutMs });
     const aiAssistantLink = page.getByRole("link", { name: "Ask AI Assistant" });
     await expect(aiAssistantLink).toHaveAttribute("href", "/chat");
-    await expect(aiAssistantLink).toBeVisible({ timeout: navigationTimeoutMs });
+    await expect(aiAssistantLink).toBeVisible({ timeout: visibilityTimeoutMs });
     await clickAndWaitForUrl(page, aiAssistantLink, "/chat");
   });
 

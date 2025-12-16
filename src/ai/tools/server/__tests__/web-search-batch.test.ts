@@ -49,6 +49,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  server.resetHandlers();
   vi.clearAllMocks();
 });
 

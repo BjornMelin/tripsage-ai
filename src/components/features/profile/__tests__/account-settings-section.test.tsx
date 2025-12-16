@@ -28,11 +28,27 @@ const MockAuthUser = {
   updatedAt: "",
 };
 
+const MockSupabaseUser = {
+  app_metadata: { provider: "email", providers: ["email"] },
+  aud: "authenticated",
+  confirmed_at: "2025-01-01T00:00:00.000Z",
+  created_at: "2025-01-01T00:00:00.000Z",
+  email: "test@example.com",
+  email_confirmed_at: "2025-01-01T00:00:00.000Z",
+  id: "user-1",
+  identities: [],
+  last_sign_in_at: "2025-01-15T12:00:00.000Z",
+  phone: "",
+  role: "authenticated",
+  updated_at: "2025-01-15T12:00:00.000Z",
+  user_metadata: { displayName: "Test User" },
+};
+
 describe("AccountSettingsSection", () => {
   beforeEach(() => {
     vi.useRealTimers();
     vi.clearAllMocks();
-    updateUserMock.mockResolvedValue({ data: { user: {} }, error: null });
+    updateUserMock.mockResolvedValue({ data: { user: MockSupabaseUser }, error: null });
     vi.mocked(useAuthCore).mockReturnValue({
       logout: MockLogout,
       setUser: MockSetUser,
@@ -63,10 +79,6 @@ describe("AccountSettingsSection", () => {
       screen.getByRole("button", { name: /send verification/i })
     ).toBeInTheDocument();
   });
-
-  // Unverified flow UI is currently disabled in component (behind false && ...). Omit.
-
-  // email verification banner not present in current implementation
 
   it("validates email format in update form", async () => {
     render(<AccountSettingsSection />);
