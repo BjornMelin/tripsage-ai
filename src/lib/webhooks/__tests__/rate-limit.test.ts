@@ -31,7 +31,7 @@ describe("getClientIp", () => {
   it("falls back to shared bucket when no IP headers", () => {
     const req = new Request("https://example.com/api");
 
-    expect(getClientIp(req)).toBe("unknown-ip");
+    expect(getClientIp(req)).toBe("unknown");
     expect(recordTelemetryEvent).toHaveBeenCalledWith(
       "webhook.ip_missing",
       expect.objectContaining({

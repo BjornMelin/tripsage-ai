@@ -348,7 +348,10 @@ describe("/api/keys/validate route", () => {
 
     const res = await POST(req, createRouteParamsContext());
 
-    expect(RATE_LIMIT_FACTORY).toHaveBeenCalledWith("keys:validate", "validate-user");
+    expect(RATE_LIMIT_FACTORY).toHaveBeenCalledWith(
+      "keys:validate",
+      "user:852dd215a16d18fadb30b9d700d92bc019f9aa68c9f6cdc4a6de7b1c52e66486"
+    );
     expect(res.status).toBe(429);
     expect(res.headers.get("X-RateLimit-Limit")).toBe("20");
     expect(res.headers.get("X-RateLimit-Remaining")).toBe("0");

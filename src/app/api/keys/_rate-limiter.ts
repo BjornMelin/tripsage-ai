@@ -3,8 +3,8 @@
  */
 
 import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
 import { getServerEnvVar, getServerEnvVarWithFallback } from "@/lib/env/server";
+import { getRedis } from "@/lib/redis";
 import { recordTelemetryEvent } from "@/lib/telemetry/span";
 
 const RATELIMIT_PREFIX = "ratelimit:keys";
@@ -42,7 +42,8 @@ export function buildRateLimiter(): KeyRateLimiter | undefined {
   const token = getServerEnvVarWithFallback("UPSTASH_REDIS_REST_TOKEN", undefined);
   const isProduction = getServerEnvVar("NODE_ENV") === "production";
 
-  if (!url || !token) {
+  const redis = getRedis();
+  if (!url || !token || !redis) {
     if (isProduction) {
       const errorMessage =
         "Rate limiter configuration missing: UPSTASH_REDIS_REST_URL and " +
@@ -65,6 +66,6 @@ export function buildRateLimiter(): KeyRateLimiter | undefined {
     analytics: true,
     limiter: Ratelimit.slidingWindow(10, "1 m"),
     prefix: RATELIMIT_PREFIX,
-    redis: Redis.fromEnv(),
+    redis,
   });
 }
