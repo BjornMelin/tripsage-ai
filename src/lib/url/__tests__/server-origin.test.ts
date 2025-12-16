@@ -143,4 +143,66 @@ describe("getOriginFromRequest", () => {
       expect(getOriginFromRequest(request)).toBe("https://fallback.com");
     });
   });
+
+  describe("security - configured origin priority", () => {
+    it("prefers APP_BASE_URL over x-forwarded-host", () => {
+      process.env.APP_BASE_URL = "https://configured.com";
+      const request = createMockRequest("http://localhost:3000/callback", {
+        "x-forwarded-host": "attacker.com",
+        "x-forwarded-proto": "https",
+      });
+      expect(getOriginFromRequest(request)).toBe("https://configured.com");
+    });
+
+    it("prefers NEXT_PUBLIC_SITE_URL over x-forwarded-host", () => {
+      process.env.NEXT_PUBLIC_SITE_URL = "https://site.com";
+      const request = createMockRequest("http://localhost:3000/callback", {
+        "x-forwarded-host": "attacker.com",
+        "x-forwarded-proto": "https",
+      });
+      expect(getOriginFromRequest(request)).toBe("https://site.com");
+    });
+  });
+
+  describe("security - host validation", () => {
+    it("rejects x-forwarded-host with @ character (userinfo injection)", () => {
+      const request = createMockRequest("https://fallback.com/callback", {
+        "x-forwarded-host": "evil.com@trusted.com",
+        "x-forwarded-proto": "https",
+      });
+      expect(getOriginFromRequest(request)).toBe("https://fallback.com");
+    });
+
+    it("rejects x-forwarded-host with spaces", () => {
+      const request = createMockRequest("https://fallback.com/callback", {
+        "x-forwarded-host": "evil .com",
+        "x-forwarded-proto": "https",
+      });
+      expect(getOriginFromRequest(request)).toBe("https://fallback.com");
+    });
+
+    it("rejects x-forwarded-host with control characters", () => {
+      const request = createMockRequest("https://fallback.com/callback", {
+        "x-forwarded-host": "evil\t.com",
+        "x-forwarded-proto": "https",
+      });
+      expect(getOriginFromRequest(request)).toBe("https://fallback.com");
+    });
+
+    it("rejects malformed hostnames", () => {
+      const request = createMockRequest("https://fallback.com/callback", {
+        "x-forwarded-host": "-invalid.com",
+        "x-forwarded-proto": "https",
+      });
+      expect(getOriginFromRequest(request)).toBe("https://fallback.com");
+    });
+
+    it("accepts valid hostname with port", () => {
+      const request = createMockRequest("http://localhost:3000/callback", {
+        "x-forwarded-host": "example.com:8080",
+        "x-forwarded-proto": "https",
+      });
+      expect(getOriginFromRequest(request)).toBe("https://example.com:8080");
+    });
+  });
 });

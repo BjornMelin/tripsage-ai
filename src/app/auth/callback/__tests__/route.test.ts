@@ -81,4 +81,18 @@ describe("auth/callback route", () => {
       "https://app.example.com/login?error=oauth_failed&next=%2Fdashboard"
     );
   });
+
+  it("blocks malicious redirect in error path", async () => {
+    EXCHANGE_MOCK.mockResolvedValueOnce({ error: new Error("bad") });
+    const req = createMockNextRequest({
+      headers: {},
+      method: "GET",
+      url: "https://app.example.com/auth/callback?code=bad&next=//evil.com",
+    });
+    const res = await GET(req);
+    // Malicious next param is sanitized to fallback path
+    expect(res.headers.get("location")).toBe(
+      "https://app.example.com/login?error=oauth_failed&next=%2Fdashboard"
+    );
+  });
 });

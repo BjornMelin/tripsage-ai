@@ -28,6 +28,36 @@ const isProduction = process.env.NODE_ENV === "production";
 
 const logger = createServerLogger("url.server-origin");
 
+/**
+ * Validates that a host value is well-formed and doesn't contain suspicious characters.
+ * Blocks userinfo segments (@), control characters, and other injection vectors.
+ */
+function isValidHost(host: string): boolean {
+  if (!host || !host.trim()) return false;
+
+  // Block userinfo segments (evil.com@trusted.com), control chars, spaces
+  if (/[@\s\t\r\n]/.test(host)) {
+    logger.warn("rejected invalid x-forwarded-host", {
+      host,
+      reason: "suspicious-chars",
+    });
+    return false;
+  }
+
+  // Basic hostname pattern: alphanumeric, dots, hyphens, optional port
+  // Allows: example.com, sub.example.com, localhost:3000, 192.168.1.1:8080
+  const hostnamePattern = /^[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?(:\d+)?$/;
+  if (!hostnamePattern.test(host)) {
+    logger.warn("rejected invalid x-forwarded-host", {
+      host,
+      reason: "invalid-format",
+    });
+    return false;
+  }
+
+  return true;
+}
+
 function resolveConfiguredOrigin(): string | null {
   try {
     const appBaseUrl = getServerEnvVarWithFallback("APP_BASE_URL", "");
@@ -153,7 +183,7 @@ export function getOriginFromRequest(request: NextRequest): string {
         : "https";
 
     const host = forwardedHost.split(",")[0]?.trim();
-    if (host) {
+    if (host && isValidHost(host)) {
       return `${protocol}://${host}`;
     }
   }

@@ -32,7 +32,12 @@ function rejectPath(reason: string, original: string): string {
  * Blocks:
  * - Protocol-relative URLs (e.g., "//evil.com")
  * - Absolute URLs with protocols (e.g., "https://evil.com")
+ * - Paths with userinfo segments (e.g., "/@attacker.com")
+ * - Paths with control characters (tabs, newlines, carriage returns)
  * - Empty or whitespace-only paths
+ *
+ * Normalizes:
+ * - Backslashes to forward slashes (e.g., "\path" becomes "/path")
  *
  * @param nextParam - The "next" query parameter value
  * @returns A safe relative path (always starts with "/")
@@ -42,6 +47,12 @@ export function safeNextPath(nextParam: string | null | undefined): string {
 
   const trimmed = nextParam.trim();
   if (!trimmed) return FALLBACK_PATH;
+
+  // Block control characters (tabs, newlines, carriage returns) that browsers
+  // may strip, potentially bypassing validation (e.g., "/\t/evil.com" -> "//evil.com")
+  if (/[\t\r\n]/.test(trimmed)) {
+    return rejectPath("contains-control-chars", trimmed);
+  }
 
   // Block protocol-relative URLs (//evil.com)
   if (trimmed.startsWith("//")) {
@@ -77,6 +88,14 @@ export function safeNextPath(nextParam: string | null | undefined): string {
     }
   } catch {
     // Invalid encoding - treat as safe since browser won't decode it either
+  }
+
+  // Block paths containing unencoded "@" (userinfo segment).
+  // While prepending origin makes "/@attacker.com" safe (becomes
+  // "https://trusted.com/@attacker.com"), blocking @ explicitly guards
+  // against parser inconsistencies and clarifies intent.
+  if (normalized.includes("@")) {
+    return rejectPath("contains-userinfo-@", normalized);
   }
 
   return normalized;

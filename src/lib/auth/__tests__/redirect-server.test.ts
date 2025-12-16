@@ -82,6 +82,26 @@ describe("safeNextPath", () => {
     expect(result).not.toBe("//evil.com");
   });
 
+  it("handles malformed URL encoding gracefully", () => {
+    // Invalid percent-encoding - decodeURIComponent throws, but we handle it
+    expect(safeNextPath("/%")).toMatch(/^\//);
+    expect(safeNextPath("/%E")).toMatch(/^\//);
+    expect(safeNextPath("/%GG")).toMatch(/^\//);
+  });
+
+  it("blocks paths with control characters", () => {
+    expect(safeNextPath("/\t/evil.com")).toBe("/dashboard");
+    expect(safeNextPath("/\n/evil.com")).toBe("/dashboard");
+    expect(safeNextPath("/\r/evil.com")).toBe("/dashboard");
+    expect(safeNextPath("/path\twith\ttabs")).toBe("/dashboard");
+  });
+
+  it("blocks paths containing @ (userinfo segments)", () => {
+    expect(safeNextPath("/@attacker.com")).toBe("/dashboard");
+    expect(safeNextPath("/user@evil.com/path")).toBe("/dashboard");
+    expect(safeNextPath("/@")).toBe("/dashboard");
+  });
+
   it("exports fallback constant", () => {
     expect(AUTH_SERVER_FALLBACK_PATH).toBe("/dashboard");
   });
