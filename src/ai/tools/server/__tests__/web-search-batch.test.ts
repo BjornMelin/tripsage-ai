@@ -1,19 +1,25 @@
 /** @vitest-environment node */
 
+import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
+import { server } from "@/test/msw/server";
 
 vi.mock("@/lib/redis", () => ({
   getRedis: vi.fn(),
 }));
 
+type WebSearchOutput = {
+  fromCache: boolean;
+  results: Array<{ title: string; url: string }>;
+  tookMs: number;
+};
+
+const webSearchExecuteMock = vi.hoisted(() => vi.fn<() => Promise<WebSearchOutput>>());
+
 vi.mock("@ai/tools/server/web-search", () => ({
   webSearch: {
-    execute: vi.fn(async () => ({
-      fromCache: false,
-      results: [{ title: "Example", url: "https://example.com" }],
-      tookMs: 25,
-    })),
+    execute: webSearchExecuteMock,
   },
 }));
 
@@ -35,11 +41,14 @@ vi.mock("@/lib/env/server", () => ({
 }));
 
 beforeEach(() => {
-  vi.stubGlobal("fetch", vi.fn());
+  webSearchExecuteMock.mockResolvedValue({
+    fromCache: false,
+    results: [{ title: "Example", url: "https://example.com" }],
+    tookMs: 25,
+  });
 });
 
 afterEach(() => {
-  vi.unstubAllGlobals();
   vi.clearAllMocks();
 });
 
@@ -49,22 +58,10 @@ const mockContext = {
 };
 
 describe("webSearchBatch", () => {
-  test("normalizes Firecrawl batch responses", async () => {
+  test("executes webSearch for each query and normalizes results", async () => {
     const { getRedis } = await import("@/lib/redis");
     (getRedis as ReturnType<typeof vi.fn>).mockReturnValue(null);
     const { webSearchBatch } = await import("@ai/tools/server/web-search-batch");
-    const mockRes = {
-      json: async () => ({
-        results: [
-          {
-            query: "q1",
-            results: [{ title: "Example", url: "https://example.com" }],
-          },
-        ],
-      }),
-      ok: true,
-    } as Response;
-    (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockRes);
     const exec = webSearchBatch.execute as
       | ((params: unknown, ctx: unknown) => Promise<unknown>)
       | undefined;
@@ -91,7 +88,52 @@ describe("webSearchBatch", () => {
       tookMs: number;
     };
     expect(outAny.results[0].query).toBe("q1");
+    expect(outAny.results[0].ok).toBe(true);
     expect(outAny.results[0].value?.results[0]?.url).toBe("https://example.com");
+  });
+
+  test("falls back to direct HTTP when webSearch throws an unexpected error", async () => {
+    webSearchExecuteMock.mockRejectedValueOnce(new Error("boom"));
+    server.use(
+      http.post("https://api.firecrawl.dev/v2/search", () => {
+        return HttpResponse.json({
+          results: [{ title: "Fallback", url: "https://fallback.example.com" }],
+        });
+      })
+    );
+
+    const { webSearchBatch } = await import("@ai/tools/server/web-search-batch");
+    const exec = webSearchBatch.execute as
+      | ((params: unknown, ctx: unknown) => Promise<unknown>)
+      | undefined;
+    if (!exec) {
+      throw new Error("webSearchBatch.execute is undefined");
+    }
+
+    const out = await exec(
+      {
+        limit: 1,
+        queries: ["q1"],
+      },
+      mockContext
+    );
+    const outAny = out as unknown as {
+      results: Array<{
+        query: string;
+        ok: boolean;
+        value?: {
+          results: Array<{ url: string; title?: string; snippet?: string }>;
+          fromCache: boolean;
+          tookMs: number;
+        };
+      }>;
+      tookMs: number;
+    };
+
+    expect(outAny.results[0].ok).toBe(true);
+    expect(outAny.results[0].value?.results[0]?.url).toBe(
+      "https://fallback.example.com"
+    );
   });
 });
 

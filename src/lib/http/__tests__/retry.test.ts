@@ -1,6 +1,8 @@
 /** @vitest-environment node */
 
+import { delay, HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { server } from "@/test/msw/server";
 import { fetchWithRetry, type RetryOptions, retryWithBackoff } from "../retry";
 
 describe("retryWithBackoff", () => {
@@ -182,123 +184,119 @@ describe("retryWithBackoff", () => {
 });
 
 describe("fetchWithRetry", () => {
-  // fetchWithRetry tests use real timers since function has internal timeout logic
-  // Using minimal backoff to keep tests fast
-  let originalFetch: typeof global.fetch;
-
-  beforeEach(() => {
-    originalFetch = global.fetch;
-  });
-
-  afterEach(() => {
-    global.fetch = originalFetch;
-  });
+  const ApiUrl = "https://api.example.com/data";
 
   it("returns response on successful fetch", async () => {
-    const mockResponse = new Response(JSON.stringify({ data: "test" }), {
-      status: 200,
-    });
-    global.fetch = vi.fn().mockResolvedValue(mockResponse);
+    server.use(
+      http.get(ApiUrl, () => {
+        return HttpResponse.json({ data: "test" }, { status: 200 });
+      })
+    );
 
-    const result = await fetchWithRetry("https://api.example.com/data", {});
-
-    expect(result).toBe(mockResponse);
-    expect(global.fetch).toHaveBeenCalledTimes(1);
+    const result = await fetchWithRetry(ApiUrl, {});
+    expect(result.status).toBe(200);
+    await expect(result.json()).resolves.toEqual({ data: "test" });
   });
 
   it("retries on network errors and succeeds", async () => {
-    const mockResponse = new Response(JSON.stringify({ data: "test" }), {
-      status: 200,
-    });
-    global.fetch = vi
-      .fn()
-      .mockRejectedValueOnce(new Error("Network error"))
-      .mockResolvedValue(mockResponse);
-
-    const result = await fetchWithRetry(
-      "https://api.example.com/data",
-      {},
-      { backoffMs: 1, retries: 1 }
+    let calls = 0;
+    server.use(
+      http.get(ApiUrl, () => {
+        calls += 1;
+        if (calls === 1) {
+          return HttpResponse.error();
+        }
+        return HttpResponse.json({ data: "test" }, { status: 200 });
+      })
     );
 
-    expect(result).toBe(mockResponse);
-    expect(global.fetch).toHaveBeenCalledTimes(2);
+    const result = await fetchWithRetry(ApiUrl, {}, { backoffMs: 1, retries: 1 });
+    expect(calls).toBe(2);
+    await expect(result.json()).resolves.toEqual({ data: "test" });
   });
 
   it("throws error with code after exhausting retries", async () => {
-    global.fetch = vi.fn().mockRejectedValue(new Error("Network error"));
+    let calls = 0;
+    server.use(
+      http.get(ApiUrl, () => {
+        calls += 1;
+        return HttpResponse.error();
+      })
+    );
 
     await expect(
-      fetchWithRetry("https://api.example.com/data", {}, { backoffMs: 1, retries: 1 })
+      fetchWithRetry(ApiUrl, {}, { backoffMs: 1, retries: 1 })
     ).rejects.toMatchObject({
       code: "fetch_failed",
       message: "fetch_failed",
       meta: {
         attempt: 2,
         maxRetries: 1,
-        url: "https://api.example.com/data",
+        url: ApiUrl,
       },
     });
+    expect(calls).toBe(2);
   });
 
   it("throws timeout error when request aborts", async () => {
-    const abortError = new Error("Aborted");
-    abortError.name = "AbortError";
-    global.fetch = vi.fn().mockRejectedValue(abortError);
+    server.use(
+      http.get(ApiUrl, async () => {
+        await delay(50);
+        return HttpResponse.json({ data: "late" }, { status: 200 });
+      })
+    );
 
-    await expect(
-      fetchWithRetry("https://api.example.com/data", {}, { timeoutMs: 100 })
-    ).rejects.toMatchObject({
+    await expect(fetchWithRetry(ApiUrl, {}, { timeoutMs: 10 })).rejects.toMatchObject({
       code: "fetch_timeout",
       message: "fetch_timeout",
     });
   });
 
   it("does not retry on timeout errors", async () => {
-    const abortError = new Error("Aborted");
-    abortError.name = "AbortError";
-    global.fetch = vi.fn().mockRejectedValue(abortError);
+    let calls = 0;
+    server.use(
+      http.get(ApiUrl, async () => {
+        calls += 1;
+        await delay(50);
+        return HttpResponse.json({ data: "late" }, { status: 200 });
+      })
+    );
 
     await expect(
-      fetchWithRetry("https://api.example.com/data", {}, { backoffMs: 1, retries: 3 })
+      fetchWithRetry(ApiUrl, {}, { backoffMs: 1, retries: 3, timeoutMs: 10 })
     ).rejects.toThrow();
 
-    // Should only call fetch once since timeout errors are not retryable
-    expect(global.fetch).toHaveBeenCalledTimes(1);
+    // Should only attempt once since timeout errors are not retryable
+    expect(calls).toBe(1);
   });
 
   it("passes request options to fetch", async () => {
-    const mockResponse = new Response(JSON.stringify({ created: true }), {
-      status: 201,
-    });
-    global.fetch = vi.fn().mockResolvedValue(mockResponse);
+    const requests: Request[] = [];
+    server.use(
+      http.post(ApiUrl, ({ request }) => {
+        requests.push(request);
+        return HttpResponse.json({ created: true }, { status: 201 });
+      })
+    );
 
-    await fetchWithRetry("https://api.example.com/data", {
+    await fetchWithRetry(ApiUrl, {
       body: JSON.stringify({ name: "test" }),
       headers: { "Content-Type": "application/json" },
       method: "POST",
     });
 
-    expect(global.fetch).toHaveBeenCalledWith(
-      "https://api.example.com/data",
-      expect.objectContaining({
-        body: JSON.stringify({ name: "test" }),
-        headers: { "Content-Type": "application/json" },
-        method: "POST",
-      })
-    );
+    expect(requests).toHaveLength(1);
+    await expect(requests[0].text()).resolves.toBe(JSON.stringify({ name: "test" }));
+    expect(requests[0].method).toBe("POST");
+    expect(requests[0].headers.get("content-type")).toContain("application/json");
   });
 
   it("handles caller abort signal", async () => {
     const controller = new AbortController();
-    const abortError = new Error("Aborted by caller");
-    abortError.name = "AbortError";
-
-    global.fetch = vi.fn().mockRejectedValue(abortError);
     controller.abort();
 
     await expect(
-      fetchWithRetry("https://api.example.com/data", {
+      fetchWithRetry(ApiUrl, {
         signal: controller.signal,
       })
     ).rejects.toMatchObject({

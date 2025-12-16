@@ -30,13 +30,18 @@ Authoritative testing reference for TripSage frontend.
 
 ## Global Test Setup
 
-`src/test-setup.ts` provides:
+Vitest uses split setup files for Node and DOM projects:
 
-- Polyfills: Web Streams, ResizeObserver
-- DOM mocks: location, storage, matchMedia
-- Next.js mocks: navigation, image, headers, toast
-- MSW server lifecycle (`onUnhandledRequest: "warn"`)
-- Automatic cleanup: RTL, React Query cache, MSW handlers
+- `src/test/setup-node.ts` (all projects):
+  - MSW server lifecycle (unhandled requests: `warn` locally, `error` in CI)
+  - Web Streams polyfills
+  - Safe default env vars for client components in tests
+  - Fake timer cleanup (opt-in via `withFakeTimers`)
+- `src/test/setup-jsdom.ts` (component project only):
+  - `@testing-library/jest-dom` matchers
+  - Next.js shims (`next/navigation`, `next/image`, toast)
+  - DOM mocks (storage, matchMedia, Resize/IntersectionObserver, CSS.supports)
+  - RTL cleanup + React Query cache reset
 
 MSW server starts once; handlers reset after each test. Avoid redundant `server.resetHandlers()` unless resetting mid-test.
 

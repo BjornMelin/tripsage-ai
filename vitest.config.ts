@@ -23,7 +23,11 @@ const maxThreads = isCi
   ? Math.min(4, Math.max(1, Math.floor(cpuCount / 2)))
   : Math.max(1, Math.floor(cpuCount / 2));
 // Component tests (jsdom) use more memory - limit concurrency
-const maxForks = isCi ? 2 : Math.max(1, Math.min(4, Math.floor(cpuCount / 4)));
+const maxForks = isCi
+  ? cpuCount >= 4
+    ? 3
+    : 2
+  : Math.max(1, Math.min(4, Math.floor(cpuCount / 4)));
 
 export default defineConfig({
   plugins: [react()],
@@ -66,18 +70,6 @@ export default defineConfig({
     // Worker limit is pool-agnostic; set conservatively for threads by default.
     // Fork-based projects must override this to avoid memory pressure.
     maxWorkers: maxThreads,
-    poolOptions: {
-      threads: {
-        minThreads: 1,
-        maxThreads,
-        execArgv: ["--max-old-space-size=4096"],
-      },
-      forks: {
-        minForks: 1,
-        maxForks,
-        execArgv: ["--max-old-space-size=4096"],
-      },
-    },
 
     // Fixed dependency optimization
     deps: {
@@ -128,6 +120,7 @@ export default defineConfig({
           isolate: false,
           name: "schemas",
           pool: "threads",
+          sequence: { groupOrder: 0 },
         },
       },
       {
@@ -140,7 +133,6 @@ export default defineConfig({
             "src/components/**",
             "src/hooks/**",
             "src/stores/**",
-            "src/__tests__/**",
             "src/app/api/**",
             "src/**/*.dom.{test,spec}.?(c|m)[jt]s?(x)",
           ],
@@ -160,6 +152,7 @@ export default defineConfig({
           ],
           name: "integration",
           pool: "threads",
+          sequence: { groupOrder: 0 },
         },
       },
       {
@@ -169,13 +162,19 @@ export default defineConfig({
           include: ["src/app/api/**/*.{test,spec}.?(c|m)[jt]s"],
           name: "api",
           pool: "threads",
+          sequence: { groupOrder: 0 },
         },
       },
       {
         extends: true,
         test: {
           environment: "jsdom",
-          exclude: ["src/app/api/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
+          exclude: [
+            "src/app/api/**/*.{test,spec}.?(c|m)[jt]s?(x)",
+            "src/__tests__/**/*.integration.{test,spec}.?(c|m)[jt]s?(x)",
+            "src/__tests__/**/*.int.{test,spec}.?(c|m)[jt]s?(x)",
+            "src/__tests__/**/*-integration.{test,spec}.?(c|m)[jt]s?(x)",
+          ],
           include: [
             "src/components/**/*.{test,spec}.?(c|m)[jt]s?(x)",
             "src/app/**/*.{test,spec}.?(c|m)[jt]s?(x)",
@@ -189,6 +188,7 @@ export default defineConfig({
           maxWorkers: maxForks,
           setupFiles: ["./src/test/setup-jsdom.ts"],
           pool: "forks",
+          sequence: { groupOrder: 1 },
         },
       },
       {
@@ -213,6 +213,7 @@ export default defineConfig({
           isolate: true,
           name: "unit",
           pool: "threads",
+          sequence: { groupOrder: 0 },
         },
       },
     ],

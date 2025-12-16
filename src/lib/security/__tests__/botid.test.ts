@@ -30,6 +30,7 @@ const {
 } = await import("@/lib/security/botid");
 
 type BotIdVerification = import("@/lib/security/botid").BotIdVerification;
+type BotDetectedErrorType = import("@/lib/security/botid").BotDetectedError;
 
 const mockCheckBotId = vi.mocked(checkBotId);
 
@@ -176,7 +177,7 @@ describe("assertHumanOrThrow", () => {
       expect.fail("Should have thrown");
     } catch (error) {
       expect(isBotDetectedError(error)).toBe(true);
-      expect((error as BotDetectedError).routeName).toBe("agent.router");
+      expect((error as BotDetectedErrorType).routeName).toBe("agent.router");
     }
   });
 
@@ -243,9 +244,11 @@ describe("assertHumanOrThrow", () => {
     } catch (error) {
       expect(isBotDetectedError(error)).toBe(true);
       expect(
-        (error as BotDetectedError).verification.verifiedBotCategory
+        (error as BotDetectedErrorType).verification.verifiedBotCategory
       ).toBeUndefined();
-      expect((error as BotDetectedError).verification.verifiedBotName).toBeUndefined();
+      expect(
+        (error as BotDetectedErrorType).verification.verifiedBotName
+      ).toBeUndefined();
     }
   });
 

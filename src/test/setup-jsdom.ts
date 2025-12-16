@@ -13,9 +13,7 @@ import React from "react";
 import { afterEach, vi } from "vitest";
 import { resetTestQueryClient } from "./helpers/query-client";
 
-(
-  globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }
-).IS_REACT_ACT_ENVIRONMENT = true;
+(globalThis as unknown as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT ??= true;
 
 // Minimal toast mock (used by many components)
 type UnknownRecord = Record<string, unknown>;
@@ -122,9 +120,15 @@ const CREATE_MOCK_STORAGE = (): Storage => {
 
 if (typeof window !== "undefined") {
   class MockResizeObserver implements ResizeObserver {
-    observe(): void {}
-    unobserve(): void {}
-    disconnect(): void {}
+    observe(): void {
+      /* noop */
+    }
+    unobserve(): void {
+      /* noop */
+    }
+    disconnect(): void {
+      /* noop */
+    }
   }
 
   class MockIntersectionObserver implements IntersectionObserver {
@@ -132,9 +136,15 @@ if (typeof window !== "undefined") {
     readonly rootMargin = "";
     readonly thresholds: number[] = [];
 
-    observe(): void {}
-    unobserve(): void {}
-    disconnect(): void {}
+    observe(): void {
+      /* noop */
+    }
+    unobserve(): void {
+      /* noop */
+    }
+    disconnect(): void {
+      /* noop */
+    }
     takeRecords(): IntersectionObserverEntry[] {
       return [];
     }
@@ -158,17 +168,23 @@ if (typeof window !== "undefined") {
     value: CREATE_MOCK_STORAGE(),
   });
 
-  (globalThis as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
-    MockResizeObserver;
-  (
-    globalThis as { IntersectionObserver: typeof IntersectionObserver }
-  ).IntersectionObserver = MockIntersectionObserver;
+  Object.defineProperty(globalThis, "ResizeObserver", {
+    configurable: true,
+    value: MockResizeObserver,
+    writable: true,
+  });
 
-  (
-    globalThis as { CSS?: { supports: (property: string, value?: string) => boolean } }
-  ).CSS = {
-    supports: vi.fn().mockReturnValue(false),
-  };
+  Object.defineProperty(globalThis, "IntersectionObserver", {
+    configurable: true,
+    value: MockIntersectionObserver,
+    writable: true,
+  });
+
+  Object.defineProperty(globalThis, "CSS", {
+    configurable: true,
+    value: { supports: vi.fn().mockReturnValue(false) },
+    writable: true,
+  });
 }
 
 // Suppress React act() warnings during test runs to prevent console flooding.
@@ -178,7 +194,8 @@ console.error = (...args: unknown[]) => {
   if (
     typeof firstArg === "string" &&
     (firstArg.includes("not wrapped in act") ||
-      firstArg.includes("Warning: An update to"))
+      firstArg.includes("Warning: An update to") ||
+      firstArg.includes("Not implemented: navigation"))
   ) {
     return;
   }

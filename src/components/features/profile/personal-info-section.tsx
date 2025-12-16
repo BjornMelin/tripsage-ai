@@ -76,9 +76,11 @@ export function PersonalInfoSection() {
     schema: personalInfoFormSchema,
   });
 
+  const resetForm = form.reset;
+
   useEffect(() => {
-    form.reset(defaultValues);
-  }, [defaultValues, form]);
+    resetForm(defaultValues);
+  }, [defaultValues, resetForm]);
 
   const resolveSupabaseClient = () => {
     return getBrowserClient();
