@@ -8,6 +8,7 @@
 
 import "server-only";
 
+import type { HttpMethod } from "@schemas/supabase";
 import { getRedis, incrCounter } from "@/lib/redis";
 import type { ApiMetricInsert } from "@/lib/supabase/database.types";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -23,8 +24,8 @@ export interface ApiMetric {
   endpoint: string;
   /** Error class name for failed requests */
   errorType?: string;
-  /** HTTP method */
-  method: ApiMetricInsert["method"];
+  /** HTTP method (compile-time validated enum) */
+  method: HttpMethod;
   /** Rate limit key used for this request */
   rateLimitKey?: string;
   /** HTTP response status code */
