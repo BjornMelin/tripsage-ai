@@ -7,11 +7,16 @@
 
 import "server-only";
 
-import { type PlacesSearchRequest, placesSearchRequestSchema } from "@schemas/api";
+import {
+  type PlacesSearchRequest,
+  placesSearchRequestSchema,
+  upstreamPlacesSearchResponseSchema,
+} from "@schemas/api";
 import { type NextRequest, NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse } from "@/lib/api/route-helpers";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
+import { postPlacesSearch } from "@/lib/google/client";
 
 /**
  * POST /api/places/search
@@ -60,14 +65,10 @@ export const POST = withApiGuards({
   const fieldMask =
     "places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.photos.name,places.types";
 
-  const response = await fetch("https://places.googleapis.com/v1/places:searchText", {
-    body: JSON.stringify(requestBody),
-    headers: {
-      "Content-Type": "application/json",
-      "X-Goog-Api-Key": apiKey,
-      "X-Goog-FieldMask": fieldMask,
-    },
-    method: "POST",
+  const response = await postPlacesSearch({
+    apiKey,
+    body: requestBody,
+    fieldMask,
   });
 
   if (!response.ok) {
@@ -82,6 +83,27 @@ export const POST = withApiGuards({
     });
   }
 
-  const data = await response.json();
-  return NextResponse.json(data);
+  // Parse JSON with error handling for malformed responses
+  let rawData: unknown;
+  try {
+    rawData = await response.json();
+  } catch {
+    return errorResponse({
+      error: "upstream_parse_error",
+      reason: "Invalid JSON from Places API",
+      status: 502,
+    });
+  }
+
+  // Validate upstream response
+  const parseResult = upstreamPlacesSearchResponseSchema.safeParse(rawData);
+  if (!parseResult.success) {
+    return errorResponse({
+      error: "upstream_validation_error",
+      reason: "Invalid response from Places API",
+      status: 502,
+    });
+  }
+
+  return NextResponse.json(parseResult.data);
 });

@@ -7,12 +7,18 @@
 
 import "server-only";
 
-import { type PlacesDetailsRequest, placesDetailsRequestSchema } from "@schemas/api";
+import {
+  type PlacesDetailsRequest,
+  placesDetailsRequestSchema,
+  upstreamPlaceSchema,
+} from "@schemas/api";
 import { type NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import type { RouteParamsContext } from "@/lib/api/factory";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse, parseStringId, validateSchema } from "@/lib/api/route-helpers";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
+import { getPlaceDetails } from "@/lib/google/client";
 
 /**
  * GET /api/places/details/[id]
@@ -52,21 +58,26 @@ export function GET(req: NextRequest, context: { params: Promise<{ id: string }>
     const fieldMask =
       "id,displayName,formattedAddress,location,url,internationalPhoneNumber,rating,userRatingCount,regularOpeningHours,photos.name,businessStatus,types,editorialSummary";
 
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      "X-Goog-Api-Key": apiKey,
-      "X-Goog-FieldMask": fieldMask,
-    };
-
-    if (validated.sessionToken) {
-      headers["X-Goog-Session-Token"] = validated.sessionToken;
-    }
-
     const placeId = id.startsWith("places/") ? id : `places/${id}`;
-    const response = await fetch(`https://places.googleapis.com/v1/${placeId}`, {
-      headers,
-      method: "GET",
-    });
+
+    let response: Response;
+    try {
+      response = await getPlaceDetails({
+        apiKey,
+        fieldMask,
+        placeId,
+        sessionToken: validated.sessionToken,
+      });
+    } catch (err) {
+      // Client validation errors (e.g., invalid placeId format)
+      const message = err instanceof Error ? err.message : String(err);
+      return errorResponse({
+        err,
+        error: "invalid_request",
+        reason: message,
+        status: 400,
+      });
+    }
 
     if (!response.ok) {
       return errorResponse({
@@ -77,7 +88,31 @@ export function GET(req: NextRequest, context: { params: Promise<{ id: string }>
       });
     }
 
-    const data = await response.json();
-    return NextResponse.json(data);
+    let rawData: unknown;
+    try {
+      rawData = await response.json();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return errorResponse({
+        err,
+        error: "upstream_parse_error",
+        reason: `Failed to parse JSON response from Places API: ${message}`,
+        status: 502,
+      });
+    }
+
+    // Validate upstream response
+    const parseResult = upstreamPlaceSchema.safeParse(rawData);
+    if (!parseResult.success) {
+      const zodError = z.treeifyError(parseResult.error);
+      return errorResponse({
+        err: parseResult.error,
+        error: "upstream_validation_error",
+        reason: `Invalid response from Places API: ${JSON.stringify(zodError)}`,
+        status: 502,
+      });
+    }
+
+    return NextResponse.json(parseResult.data);
   })(req, context);
 }

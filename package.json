@@ -1,6 +1,6 @@
 {
   "name": "tripsage-ai-frontend",
-  "version": "1.14.0",
+  "version": "1.15.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -176,7 +176,7 @@
     },
     "peerDependencyRules": {
       "allowedVersions": {
-        "openai>zod": "^4.1.13"
+        "openai>zod": "^4.2.0"
       },
       "ignoreMissing": [
         "@anthropic-ai/sdk",
