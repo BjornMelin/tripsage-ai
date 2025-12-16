@@ -18,19 +18,19 @@ importers:
     dependencies:
       '@ai-sdk/anthropic':
         specifier: 3.0.0-beta.83
-        version: 3.0.0-beta.83(zod@4.2.0)
+        version: 3.0.0-beta.83(zod@4.2.1)
       '@ai-sdk/openai':
         specifier: 3.0.0-beta.96
-        version: 3.0.0-beta.96(zod@4.2.0)
+        version: 3.0.0-beta.96(zod@4.2.1)
       '@ai-sdk/react':
         specifier: 3.0.0-beta.153
-        version: 3.0.0-beta.153(react@19.2.3)(zod@4.2.0)
+        version: 3.0.0-beta.153(react@19.2.3)(zod@4.2.1)
       '@ai-sdk/togetherai':
         specifier: 2.0.0-beta.49
-        version: 2.0.0-beta.49(zod@4.2.0)
+        version: 2.0.0-beta.49(zod@4.2.1)
       '@ai-sdk/xai':
         specifier: 3.0.0-beta.55
-        version: 3.0.0-beta.55(zod@4.2.0)
+        version: 3.0.0-beta.55(zod@4.2.1)
       '@hello-pangea/dnd':
         specifier: ^18.0.1
         version: 18.0.1(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -143,20 +143,17 @@ importers:
         specifier: ^1.2.8
         version: 1.2.8(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@supabase/postgrest-js':
-        specifier: ^2.87.2
-        version: 2.87.2
+        specifier: ^2.87.3
+        version: 2.87.3
       '@supabase/ssr':
         specifier: ^0.8.0
-        version: 0.8.0(@supabase/supabase-js@2.87.2)
+        version: 0.8.0(@supabase/supabase-js@2.87.3)
       '@supabase/supabase-js':
-        specifier: ^2.87.2
-        version: 2.87.2
+        specifier: ^2.87.3
+        version: 2.87.3
       '@tanstack/react-query':
         specifier: ^5.90.12
         version: 5.90.12(react@19.2.3)
-      '@testing-library/react':
-        specifier: ^16.3.1
-        version: 16.3.1(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@upstash/qstash':
         specifier: ^2.8.4
         version: 2.8.4
@@ -171,7 +168,7 @@ importers:
         version: 2.1.0(@opentelemetry/api-logs@0.208.0)(@opentelemetry/api@1.9.0)(@opentelemetry/instrumentation@0.208.0(@opentelemetry/api@1.9.0))(@opentelemetry/resources@2.2.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-logs@0.208.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-metrics@2.2.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.2.0(@opentelemetry/api@1.9.0))
       ai:
         specifier: 6.0.0-beta.150
-        version: 6.0.0-beta.150(zod@4.2.0)
+        version: 6.0.0-beta.150(zod@4.2.1)
       amadeus:
         specifier: ^11.0.0
         version: 11.0.0
@@ -213,7 +210,7 @@ importers:
         version: 0.561.0(react@19.2.3)
       mem0ai:
         specifier: ^2.1.38
-        version: 2.1.38(@supabase/supabase-js@2.87.2)(ws@8.18.3)
+        version: 2.1.38(@supabase/supabase-js@2.87.3)(ws@8.18.3)
       motion:
         specifier: ^12.23.26
         version: 12.23.26(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -266,8 +263,8 @@ importers:
         specifier: ^5.1.0
         version: 5.1.0
       zod:
-        specifier: ^4.2.0
-        version: 4.2.0
+        specifier: ^4.2.1
+        version: 4.2.1
       zustand:
         specifier: ^5.0.9
         version: 5.0.9(@types/react@19.2.7)(immer@11.0.1)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3))
@@ -299,6 +296,9 @@ importers:
       '@testing-library/jest-dom':
         specifier: ^6.9.1
         version: 6.9.1
+      '@testing-library/react':
+        specifier: ^16.3.1
+        version: 16.3.1(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@testing-library/user-event':
         specifier: ^14.6.1
         version: 14.6.1(@testing-library/dom@10.4.1)
@@ -315,7 +315,7 @@ importers:
         specifier: ^3.7.1
         version: 3.7.1
       '@types/node':
-        specifier: 25.0.2
+        specifier: ^25.0.2
         version: 25.0.2
       '@types/react':
         specifier: ^19.2.7
@@ -2354,26 +2354,26 @@ packages:
   '@stablelib/base64@1.0.1':
     resolution: {integrity: sha512-1bnPQqSxSuc3Ii6MhBysoWCg58j97aUjuCSZrGSmDxNqtytIi0k8utUenAwTZN4V5mXXYGsVUI9zeBqy+jBOSQ==}
 
-  '@standard-schema/spec@1.0.0':
-    resolution: {integrity: sha512-m2bOd0f2RT9k8QJx1JN85cZYyH1RqFBdlwtkSlf4tBDYLCiiZnv1fIIwacK6cqwXavOydf0NPToMQgpKq+dVlA==}
+  '@standard-schema/spec@1.1.0':
+    resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
 
   '@standard-schema/utils@0.3.0':
     resolution: {integrity: sha512-e7Mew686owMaPJVNNLs55PUvgz371nKgwsc4vxE49zsODpJEnxgxRo2y/OKrqueavXgZNMDVj3DdHFlaSAeU8g==}
 
-  '@supabase/auth-js@2.87.2':
-    resolution: {integrity: sha512-6oyHALE/RA3DKa2GGrva8izvUOs9QMLKLquOnpox7VBpkRGt91JYciK1meQUVTQoE45OPu/ZRmhVN/5SOGdG0A==}
+  '@supabase/auth-js@2.87.3':
+    resolution: {integrity: sha512-/JjrPXOLhd0fFzf7pd7K16P+nEW2HvVHijis5fLrdGF+jErxuFYCouyzpTOxXO/nfO+EMwYYnu2e55uOet4fog==}
     engines: {node: '>=20.0.0'}
 
-  '@supabase/functions-js@2.87.2':
-    resolution: {integrity: sha512-sHkQjObZ82J41pLgyM0VeQ0w88XbGOqcPOPYn9zKPLRNIELH8xFYvybRpcnBFG2EQ/gQJcKBY7hw+8HDo3yR5w==}
+  '@supabase/functions-js@2.87.3':
+    resolution: {integrity: sha512-nuDxFza9Pv8AXq8TAQscG2EE0+h7RKg0rgBIqFasSKN7Y1n5N1tkQYhUpW9bSMmLLy6hw9jHUE71iLF8gXhGUQ==}
     engines: {node: '>=20.0.0'}
 
-  '@supabase/postgrest-js@2.87.2':
-    resolution: {integrity: sha512-P7BJJWe6x1caN7gY3LeI33Kj5W0+Jcn/OSAnLV8moPAs1bEITu0yzEG/ehPnG4F4AKieIO/D3FcNzNO44KOlzg==}
+  '@supabase/postgrest-js@2.87.3':
+    resolution: {integrity: sha512-5Z+yXOAUX5QPgGbKOAFNzG9Qu2BWufZ86edyDqfvZVm8IzqbbLh98kw4KJMqvJlKynfthBte3RCvbQ20MRk+Mg==}
     engines: {node: '>=20.0.0'}
 
-  '@supabase/realtime-js@2.87.2':
-    resolution: {integrity: sha512-zc9yjvpuA1k4o24oj25L/CNTtyzKwYq5Pg6u9pc3YwF7G/eAMDLtM2hk0kx9SGK59yvqWqjoeTHZyHO74z/kHw==}
+  '@supabase/realtime-js@2.87.3':
+    resolution: {integrity: sha512-KwlE8hp8rxuKQtqyY2s3H1tgzHCtQ+6s0AedpX4PzHgDF63XPjCdDLWzs1/c/7Ut21FRPG7hHcgfGObzq+Npjw==}
     engines: {node: '>=20.0.0'}
 
   '@supabase/ssr@0.8.0':
@@ -2381,12 +2381,12 @@ packages:
     peerDependencies:
       '@supabase/supabase-js': ^2.76.1
 
-  '@supabase/storage-js@2.87.2':
-    resolution: {integrity: sha512-EsCLmbtDhqT78kGqyFSjUgHyctXjEnd2891y1YHE4reoWbHH7cOO6Q8vVeMROUq7OXyeLr4y7vI5YX7BGyQ7cg==}
+  '@supabase/storage-js@2.87.3':
+    resolution: {integrity: sha512-cMHz9584GNrEl15+uWfNoIusw40QuZ0/F887qihiP2UkrRAW4gVcAZyUa3xUITKsLPQg0zr8fTf4CAw3ugLSNw==}
     engines: {node: '>=20.0.0'}
 
-  '@supabase/supabase-js@2.87.2':
-    resolution: {integrity: sha512-VEZNXeIHPihWGLcIfGJKtp5jphpAWdlnSqAG+hmf4zjeyZS++8yOpwycVAfIV8vNFcHULGK/4oL/lnA2F3qHGQ==}
+  '@supabase/supabase-js@2.87.3':
+    resolution: {integrity: sha512-MH6JmZx7nVxnzNuK4nAAOTIgqSQutd1OqfExmVGU7B8v+/II4gG2h33qskiHMWHPx934nMrckDUicHBrnXA0Cg==}
     engines: {node: '>=20.0.0'}
 
   '@swc/helpers@0.5.15':
@@ -6128,8 +6128,8 @@ packages:
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
-  zod@4.2.0:
-    resolution: {integrity: sha512-Bd5fw9wlIhtqCCxotZgdTOMwGm1a0u75wARVEY9HMs1X17trvA/lMi4+MGK5EUfYkXVTbX8UDiDKW4OgzHVUZw==}
+  zod@4.2.1:
+    resolution: {integrity: sha512-0wZ1IRqGGhMP76gLqz8EyfBXKk0J2qo2+H3fi4mcUP/KtTocoX08nmIAHl1Z2kJIZbZee8KOpBCSNPRgauucjw==}
 
   zustand@5.0.9:
     resolution: {integrity: sha512-ALBtUj0AfjJt3uNRQoL1tL2tMvj6Gp/6e39dnfT6uzpelGru8v1tPOGBzayOWbPJvujM8JojDk3E1LxeFisBNg==}
@@ -6174,62 +6174,62 @@ snapshots:
 
   '@adobe/css-tools@4.4.4': {}
 
-  '@ai-sdk/anthropic@3.0.0-beta.83(zod@4.2.0)':
+  '@ai-sdk/anthropic@3.0.0-beta.83(zod@4.2.1)':
     dependencies:
       '@ai-sdk/provider': 3.0.0-beta.26
-      '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.2.0)
-      zod: 4.2.0
+      '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.2.1)
+      zod: 4.2.1
     transitivePeerDependencies:
       - '@valibot/to-json-schema'
       - arktype
       - effect
 
-  '@ai-sdk/gateway@2.0.0-beta.78(zod@4.2.0)':
+  '@ai-sdk/gateway@2.0.0-beta.78(zod@4.2.1)':
     dependencies:
       '@ai-sdk/provider': 3.0.0-beta.26
-      '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.2.0)
+      '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.2.1)
       '@vercel/oidc': 3.0.5
-      zod: 4.2.0
+      zod: 4.2.1
     transitivePeerDependencies:
       - '@valibot/to-json-schema'
       - arktype
       - effect
 
-  '@ai-sdk/openai-compatible@2.0.0-beta.48(zod@4.2.0)':
+  '@ai-sdk/openai-compatible@2.0.0-beta.48(zod@4.2.1)':
     dependencies:
       '@ai-sdk/provider': 3.0.0-beta.26
-      '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.2.0)
-      zod: 4.2.0
+      '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.2.1)
+      zod: 4.2.1
     transitivePeerDependencies:
       - '@valibot/to-json-schema'
       - arktype
       - effect
 
-  '@ai-sdk/openai@3.0.0-beta.96(zod@4.2.0)':
+  '@ai-sdk/openai@3.0.0-beta.96(zod@4.2.1)':
     dependencies:
       '@ai-sdk/provider': 3.0.0-beta.26
-      '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.2.0)
-      zod: 4.2.0
+      '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.2.1)
+      zod: 4.2.1
     transitivePeerDependencies:
       - '@valibot/to-json-schema'
       - arktype
       - effect
 
-  '@ai-sdk/provider-utils@4.0.0-beta.47(zod@4.2.0)':
+  '@ai-sdk/provider-utils@4.0.0-beta.47(zod@4.2.1)':
     dependencies:
       '@ai-sdk/provider': 3.0.0-beta.26
-      '@standard-schema/spec': 1.0.0
+      '@standard-schema/spec': 1.1.0
       eventsource-parser: 3.0.6
-      zod: 4.2.0
+      zod: 4.2.1
 
   '@ai-sdk/provider@3.0.0-beta.26':
     dependencies:
       json-schema: 0.4.0
 
-  '@ai-sdk/react@3.0.0-beta.153(react@19.2.3)(zod@4.2.0)':
+  '@ai-sdk/react@3.0.0-beta.153(react@19.2.3)(zod@4.2.1)':
     dependencies:
-      '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.2.0)
-      ai: 6.0.0-beta.150(zod@4.2.0)
+      '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.2.1)
+      ai: 6.0.0-beta.150(zod@4.2.1)
       react: 19.2.3
       swr: 2.3.8(react@19.2.3)
       throttleit: 2.1.0
@@ -6239,23 +6239,23 @@ snapshots:
       - effect
       - zod
 
-  '@ai-sdk/togetherai@2.0.0-beta.49(zod@4.2.0)':
+  '@ai-sdk/togetherai@2.0.0-beta.49(zod@4.2.1)':
     dependencies:
-      '@ai-sdk/openai-compatible': 2.0.0-beta.48(zod@4.2.0)
+      '@ai-sdk/openai-compatible': 2.0.0-beta.48(zod@4.2.1)
       '@ai-sdk/provider': 3.0.0-beta.26
-      '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.2.0)
-      zod: 4.2.0
+      '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.2.1)
+      zod: 4.2.1
     transitivePeerDependencies:
       - '@valibot/to-json-schema'
       - arktype
       - effect
 
-  '@ai-sdk/xai@3.0.0-beta.55(zod@4.2.0)':
+  '@ai-sdk/xai@3.0.0-beta.55(zod@4.2.1)':
     dependencies:
-      '@ai-sdk/openai-compatible': 2.0.0-beta.48(zod@4.2.0)
+      '@ai-sdk/openai-compatible': 2.0.0-beta.48(zod@4.2.1)
       '@ai-sdk/provider': 3.0.0-beta.26
-      '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.2.0)
-      zod: 4.2.0
+      '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.2.1)
+      zod: 4.2.1
     transitivePeerDependencies:
       - '@valibot/to-json-schema'
       - arktype
@@ -7970,7 +7970,7 @@ snapshots:
 
   '@reduxjs/toolkit@2.11.2(react-redux@9.2.0(@types/react@19.2.7)(react@19.2.3)(redux@5.0.1))(react@19.2.3)':
     dependencies:
-      '@standard-schema/spec': 1.0.0
+      '@standard-schema/spec': 1.1.0
       '@standard-schema/utils': 0.3.0
       immer: 11.0.1
       redux: 5.0.1
@@ -8192,23 +8192,23 @@ snapshots:
 
   '@stablelib/base64@1.0.1': {}
 
-  '@standard-schema/spec@1.0.0': {}
+  '@standard-schema/spec@1.1.0': {}
 
   '@standard-schema/utils@0.3.0': {}
 
-  '@supabase/auth-js@2.87.2':
+  '@supabase/auth-js@2.87.3':
     dependencies:
       tslib: 2.8.1
 
-  '@supabase/functions-js@2.87.2':
+  '@supabase/functions-js@2.87.3':
     dependencies:
       tslib: 2.8.1
 
-  '@supabase/postgrest-js@2.87.2':
+  '@supabase/postgrest-js@2.87.3':
     dependencies:
       tslib: 2.8.1
 
-  '@supabase/realtime-js@2.87.2':
+  '@supabase/realtime-js@2.87.3':
     dependencies:
       '@types/phoenix': 1.6.7
       '@types/ws': 8.18.1
@@ -8218,23 +8218,23 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-  '@supabase/ssr@0.8.0(@supabase/supabase-js@2.87.2)':
+  '@supabase/ssr@0.8.0(@supabase/supabase-js@2.87.3)':
     dependencies:
-      '@supabase/supabase-js': 2.87.2
+      '@supabase/supabase-js': 2.87.3
       cookie: 1.1.1
 
-  '@supabase/storage-js@2.87.2':
+  '@supabase/storage-js@2.87.3':
     dependencies:
       iceberg-js: 0.8.1
       tslib: 2.8.1
 
-  '@supabase/supabase-js@2.87.2':
+  '@supabase/supabase-js@2.87.3':
     dependencies:
-      '@supabase/auth-js': 2.87.2
-      '@supabase/functions-js': 2.87.2
-      '@supabase/postgrest-js': 2.87.2
-      '@supabase/realtime-js': 2.87.2
-      '@supabase/storage-js': 2.87.2
+      '@supabase/auth-js': 2.87.3
+      '@supabase/functions-js': 2.87.3
+      '@supabase/postgrest-js': 2.87.3
+      '@supabase/realtime-js': 2.87.3
+      '@supabase/storage-js': 2.87.3
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -8660,7 +8660,7 @@ snapshots:
 
   '@vitest/expect@4.0.15':
     dependencies:
-      '@standard-schema/spec': 1.0.0
+      '@standard-schema/spec': 1.1.0
       '@types/chai': 5.2.3
       '@vitest/spy': 4.0.15
       '@vitest/utils': 4.0.15
@@ -8739,13 +8739,13 @@ snapshots:
       clean-stack: 5.3.0
       indent-string: 5.0.0
 
-  ai@6.0.0-beta.150(zod@4.2.0):
+  ai@6.0.0-beta.150(zod@4.2.1):
     dependencies:
-      '@ai-sdk/gateway': 2.0.0-beta.78(zod@4.2.0)
+      '@ai-sdk/gateway': 2.0.0-beta.78(zod@4.2.1)
       '@ai-sdk/provider': 3.0.0-beta.26
-      '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.2.0)
+      '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.2.1)
       '@opentelemetry/api': 1.9.0
-      zod: 4.2.0
+      zod: 4.2.1
     transitivePeerDependencies:
       - '@valibot/to-json-schema'
       - arktype
@@ -10458,9 +10458,9 @@ snapshots:
 
   mdn-data@2.12.2: {}
 
-  mem0ai@2.1.38(@supabase/supabase-js@2.87.2)(ws@8.18.3):
+  mem0ai@2.1.38(@supabase/supabase-js@2.87.3)(ws@8.18.3):
     dependencies:
-      '@supabase/supabase-js': 2.87.2
+      '@supabase/supabase-js': 2.87.3
       axios: 1.13.2
       openai: 4.104.0(ws@8.18.3)(zod@3.25.76)
       uuid: 9.0.1
@@ -12300,7 +12300,7 @@ snapshots:
 
   zod@3.25.76: {}
 
-  zod@4.2.0: {}
+  zod@4.2.1: {}
 
   zustand@5.0.9(@types/react@19.2.7)(immer@11.0.1)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3)):
     optionalDependencies:
