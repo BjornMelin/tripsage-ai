@@ -6,6 +6,7 @@ import "server-only";
 
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse, parseJsonBody, requireUserId } from "@/lib/api/route-helpers";
+import { createServerLogger } from "@/lib/telemetry/logger";
 import { handleCreateItineraryItem, handleListItineraryItems } from "./_handler";
 
 /**
@@ -18,6 +19,8 @@ export const GET = withApiGuards({
   rateLimit: "itineraries:list",
   telemetry: "itineraries.list",
 })((req, { supabase, user }) => {
+  const logger = createServerLogger("api.itineraries");
+
   const result = requireUserId(user);
   if ("error" in result) return result.error;
   const { userId } = result;
@@ -37,7 +40,7 @@ export const GET = withApiGuards({
     tripId = parsed;
   }
 
-  return handleListItineraryItems({ supabase }, { tripId, userId });
+  return handleListItineraryItems({ logger, supabase }, { tripId, userId });
 });
 
 /**
@@ -50,6 +53,8 @@ export const POST = withApiGuards({
   rateLimit: "itineraries:create",
   telemetry: "itineraries.create",
 })(async (req, { supabase, user }) => {
+  const logger = createServerLogger("api.itineraries");
+
   const result = requireUserId(user);
   if ("error" in result) return result.error;
   const { userId } = result;
@@ -59,5 +64,5 @@ export const POST = withApiGuards({
     return parsed.error;
   }
 
-  return handleCreateItineraryItem({ supabase }, { body: parsed.body, userId });
+  return handleCreateItineraryItem({ logger, supabase }, { body: parsed.body, userId });
 });

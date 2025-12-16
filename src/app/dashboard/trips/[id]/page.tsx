@@ -17,7 +17,7 @@ import {
   UsersIcon,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { BudgetTracker } from "@/components/features/trips/budget-tracker";
 import { ItineraryBuilder } from "@/components/features/trips/itinerary-builder";
 import { TripTimeline } from "@/components/features/trips/trip-timeline";
@@ -73,21 +73,115 @@ export default function TripDetailsPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const tripId = params.id as string;
-  const { data: trip, error, isLoading } = useTrip(tripId);
+  const tripIdParam = params.id as string;
+  const tripIdNumber = Number.parseInt(tripIdParam, 10);
+  // Pass null to useTrip when tripId is invalid to prevent requests to /api/trips/NaN
+  const validTripId = Number.isNaN(tripIdNumber) ? null : tripIdNumber;
+  const { data: trip, error, isLoading } = useTrip(validTripId);
   const destinations =
-    useTripItineraryStore((state) => state.destinationsByTripId[tripId]) ?? [];
+    useTripItineraryStore((state) => state.destinationsByTripId[tripIdParam]) ?? [];
+
+  // Track handled errors to prevent duplicate toasts/redirects
+  const handledErrorRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!error) return;
-    if (error instanceof ApiError && error.status === 404) {
+    if (!error) {
+      handledErrorRef.current = null;
+      return;
+    }
+
+    // Generate error key for deduplication
+    const errorKey =
+      error instanceof ApiError
+        ? `${error.status}-${error.message}`
+        : error instanceof Error
+          ? error.message
+          : String(error);
+
+    // Skip if already handled this exact error
+    if (handledErrorRef.current === errorKey) return;
+    handledErrorRef.current = errorKey;
+
+    // Handle ApiError cases
+    if (error instanceof ApiError) {
+      const { status } = error;
+
+      // 401/403: Authentication or authorization error
+      if (status === 401) {
+        toast({
+          description: "Please sign in to view this trip.",
+          title: "Authentication required",
+          variant: "destructive",
+        });
+        router.push(ROUTES.login);
+        return;
+      }
+
+      if (status === 403) {
+        toast({
+          description: "You don't have permission to view this trip.",
+          title: "Access denied",
+          variant: "destructive",
+        });
+        router.push(ROUTES.dashboard.trips);
+        return;
+      }
+
+      // 404: Not found
+      if (status === 404) {
+        toast({
+          description: "This trip no longer exists or you don't have access to it.",
+          title: "Trip not found",
+          variant: "destructive",
+        });
+        router.push(ROUTES.dashboard.trips);
+        return;
+      }
+
+      // 5xx: Server error
+      if (status >= 500 && status < 600) {
+        toast({
+          description: "The server encountered an error. Please try again later.",
+          title: "Server error",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Other API errors
       toast({
-        description: "This trip no longer exists or you don't have access to it.",
-        title: "Trip not found",
+        description: error.message || "An unexpected error occurred.",
+        title: "Error loading trip",
         variant: "destructive",
       });
-      router.push(ROUTES.dashboard.trips);
+      return;
     }
+
+    // Network error detection
+    const isNetworkError =
+      error instanceof Error &&
+      (error.name === "TypeError" ||
+        error.message.includes("fetch") ||
+        error.message.includes("network") ||
+        (typeof navigator !== "undefined" && !navigator.onLine));
+
+    if (isNetworkError) {
+      toast({
+        description:
+          "Unable to connect to the server. Check your internet connection and try again.",
+        title: "Network error",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Generic error fallback
+    toast({
+      description:
+        error instanceof Error ? error.message : "An unexpected error occurred.",
+      title: "Error loading trip",
+      variant: "destructive",
+    });
   }, [error, router, toast]);
 
   const handleBackToTrips = () => {
@@ -384,11 +478,11 @@ export default function TripDetailsPage() {
                         </div>
                       </div>
                     ))}
-                    {accommodations.length === 0 ? (
+                    {accommodations.length === 0 && (
                       <div className="text-muted-foreground">
                         No accommodations booked
                       </div>
-                    ) : null}
+                    )}
                   </div>
                 </div>
 
@@ -403,11 +497,11 @@ export default function TripDetailsPage() {
                         </div>
                       </div>
                     ))}
-                    {transportations.length === 0 ? (
+                    {transportations.length === 0 && (
                       <div className="text-muted-foreground">
                         No transportation planned
                       </div>
-                    ) : null}
+                    )}
                   </div>
                 </div>
               </div>
@@ -436,7 +530,7 @@ export default function TripDetailsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <BudgetPlanningSkeleton />
+                <BudgetPlanningPlaceholder />
               </CardContent>
             </Card>
           </div>
@@ -454,7 +548,7 @@ export default function TripDetailsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <TripSettingsSkeleton />
+              <TripSettingsPlaceholder />
             </CardContent>
           </Card>
         </TabsContent>
@@ -463,7 +557,7 @@ export default function TripDetailsPage() {
   );
 }
 
-function BudgetPlanningSkeleton() {
+function BudgetPlanningPlaceholder() {
   return (
     <div className="space-y-3">
       <p className="text-muted-foreground">
@@ -481,7 +575,7 @@ function BudgetPlanningSkeleton() {
   );
 }
 
-function TripSettingsSkeleton() {
+function TripSettingsPlaceholder() {
   return (
     <div className="space-y-3">
       <p className="text-muted-foreground">Trip settings are not yet available.</p>

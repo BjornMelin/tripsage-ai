@@ -97,12 +97,14 @@ interface Collaborator {
  */
 export default function TripCollaborationPage() {
   const params = useParams();
-  const tripId = params.id as string;
-  const tripIdNumber = Number.parseInt(tripId, 10);
+  const tripIdParam = params.id as string;
+  const tripIdNumber = Number.parseInt(tripIdParam, 10);
+  // Pass null to useTrip when tripId is invalid to prevent requests to /api/trips/NaN
+  const validTripId = Number.isNaN(tripIdNumber) ? null : tripIdNumber;
   const inviteInputId = useId();
   const { toast } = useToast();
 
-  const { data: trip, isConnected } = useTrip(tripId);
+  const { data: trip, isConnected } = useTrip(validTripId);
 
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   useEffect(() => {
@@ -122,16 +124,15 @@ export default function TripCollaborationPage() {
   const [isInviting, setIsInviting] = useState(false);
 
   // TODO: Replace with useCollaborators(tripId) hook when API endpoint is implemented.
-  // Tracking issue: https://github.com/BjornMelin/tripsage-ai/issues/TBD
-  const [collaboratorsState] = useState<{
+  const collaboratorsState: {
     data: Collaborator[];
     error: Error | null;
     isLoading: boolean;
-  }>({
+  } = {
     data: [],
     error: null,
     isLoading: false,
-  });
+  };
   const {
     data: collaborators,
     error: collaboratorsError,
@@ -142,6 +143,9 @@ export default function TripCollaborationPage() {
    * Handles sending collaboration invitations to new users.
    */
   const handleInviteCollaborator = async () => {
+    // Prevent duplicate submissions while invite is in progress
+    if (isInviting) return;
+
     const trimmedEmail = inviteEmail.trim();
     if (!trimmedEmail) {
       toast({
@@ -185,7 +189,7 @@ export default function TripCollaborationPage() {
    * Copies the trip share link to clipboard.
    */
   const handleCopyShareLink = async (): Promise<void> => {
-    const shareUrl = `${window.location.origin}/trips/${tripId}/share`;
+    const shareUrl = `${window.location.origin}/trips/${tripIdParam}/share`;
     const result = await copyTextToClipboard(shareUrl);
 
     if (result.ok) {
@@ -365,7 +369,7 @@ export default function TripCollaborationPage() {
                 <div className="flex space-x-2">
                   <Input
                     readOnly
-                    value={`${typeof window !== "undefined" ? window.location.origin : ""}/trips/${tripId}/share`}
+                    value={`${typeof window !== "undefined" ? window.location.origin : ""}/trips/${tripIdParam}/share`}
                     className="bg-muted"
                   />
                   <Button variant="outline" onClick={handleCopyShareLink}>

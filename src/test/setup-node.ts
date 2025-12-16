@@ -17,6 +17,7 @@ import { afterAll, afterEach, beforeAll, vi } from "vitest";
 import { server } from "./msw/server";
 
 const onUnhandledRequest = process.env.CI ? "error" : "warn";
+const DEBUG_OPEN_HANDLES = process.env.VITEST_DEBUG_OPEN_HANDLES === "1";
 
 // Provide sane defaults for client-visible env used in some client components.
 if (typeof process !== "undefined" && process.env) {
@@ -58,6 +59,47 @@ beforeAll(() => {
 
 afterAll(() => {
   server.close();
+
+  if (!DEBUG_OPEN_HANDLES) return;
+  const globalFlag = globalThis as unknown as Record<string, unknown>;
+  if (globalFlag.__TRIPSAGE_VITEST_OPEN_HANDLES_DUMPED__) return;
+  globalFlag.__TRIPSAGE_VITEST_OPEN_HANDLES_DUMPED__ = true;
+
+  const timeout = setTimeout(() => {
+    // biome-ignore lint/suspicious/noConsoleLog: debug output enabled via env var
+    console.log("[vitest-debug] dumping active handles/requests…");
+    const activeHandles = (
+      process as unknown as {
+        _getActiveHandles?: () => unknown[];
+        _getActiveRequests?: () => unknown[];
+      }
+    )._getActiveHandles?.();
+    const activeRequests = (
+      process as unknown as {
+        _getActiveRequests?: () => unknown[];
+      }
+    )._getActiveRequests?.();
+
+    const summarize = (items: unknown[] | undefined) => {
+      const counts = new Map<string, number>();
+      for (const item of items ?? []) {
+        const name =
+          typeof item === "object" && item && "constructor" in item
+            ? // biome-ignore lint/suspicious/noExplicitAny: debug-only safe cast
+              String((item as any).constructor?.name ?? "Object")
+            : typeof item;
+        counts.set(name, (counts.get(name) ?? 0) + 1);
+      }
+      return [...counts.entries()].sort((a, b) => b[1] - a[1]);
+    };
+
+    // biome-ignore lint/suspicious/noConsoleLog: debug output enabled via env var
+    console.log("[vitest-debug] active handles:", summarize(activeHandles));
+    // biome-ignore lint/suspicious/noConsoleLog: debug output enabled via env var
+    console.log("[vitest-debug] active requests:", summarize(activeRequests));
+  }, 1000);
+
+  timeout.unref();
 });
 
 afterEach(() => {

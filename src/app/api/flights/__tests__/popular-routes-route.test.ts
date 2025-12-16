@@ -1,10 +1,12 @@
 /** @vitest-environment node */
 
 import type { Redis } from "@upstash/redis";
+import type { MockInstance } from "vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setSupabaseFactoryForTests } from "@/lib/api/factory";
 import { POPULAR_ROUTES_CACHE_KEY_GLOBAL } from "@/lib/flights/popular-routes-cache";
 import { setRedisFactoryForTests } from "@/lib/redis";
+import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { stubRateLimitDisabled } from "@/test/helpers/env";
 import { createMockNextRequest, createRouteParamsContext } from "@/test/helpers/route";
 import {
@@ -12,6 +14,18 @@ import {
   setupUpstashMocks,
   type UpstashMemoryStore,
 } from "@/test/upstash/redis-mock";
+
+/**
+ * Narrow mock type matching the Supabase methods used by the popular-routes route.
+ */
+interface MockedSupabaseClient {
+  auth: {
+    // biome-ignore lint/suspicious/noExplicitAny: test mock needs flexible typing
+    getUser: MockInstance<() => Promise<{ data: { user: any }; error: any }>>;
+  };
+  // biome-ignore lint/suspicious/noExplicitAny: test mock needs flexible typing
+  from: MockInstance<(table: string) => any>;
+}
 
 const { redis, ratelimit } = setupUpstashMocks();
 
@@ -37,14 +51,11 @@ vi.mock("next/headers", () => ({
 import { GET as getPopularRoutes } from "../popular-routes/route";
 
 describe("/api/flights/popular-routes", () => {
-  const supabaseClient = {
+  const supabaseClient: MockedSupabaseClient = {
     auth: {
       getUser: vi.fn(),
     },
     from: vi.fn(),
-  } as {
-    auth: { getUser: ReturnType<typeof vi.fn> };
-    from: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
@@ -54,7 +65,9 @@ describe("/api/flights/popular-routes", () => {
     setRedisFactoryForTests(
       () => new RawStringRedisMock(redis.store) as unknown as Redis
     );
-    setSupabaseFactoryForTests(async () => supabaseClient as never);
+    setSupabaseFactoryForTests(
+      async () => supabaseClient as unknown as TypedServerSupabase
+    );
     supabaseClient.auth.getUser.mockResolvedValue({
       data: { user: null },
       error: null,
