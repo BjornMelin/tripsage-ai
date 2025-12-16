@@ -1011,6 +1011,42 @@ export type Database = {
   };
   public: {
     Tables: {
+      api_metrics: {
+        Row: {
+          id: string;
+          endpoint: string;
+          method: string;
+          status_code: number;
+          duration_ms: number;
+          user_id: string | null;
+          created_at: string;
+          error_type: string | null;
+          rate_limit_key: string | null;
+        };
+        Insert: {
+          id?: string;
+          endpoint: string;
+          method: string;
+          status_code: number;
+          duration_ms: number;
+          user_id?: string | null;
+          created_at?: string;
+          error_type?: string | null;
+          rate_limit_key?: string | null;
+        };
+        Update: {
+          id?: string;
+          endpoint?: string;
+          method?: string;
+          status_code?: number;
+          duration_ms?: number;
+          user_id?: string | null;
+          created_at?: string;
+          error_type?: string | null;
+          rate_limit_key?: string | null;
+        };
+        Relationships: [];
+      };
       auth_backup_codes: {
         Row: {
           code_hash: string;
@@ -2948,6 +2984,10 @@ export type TripUpdate = UpdateTables<"trips">;
 export type Accommodation = Tables<"accommodations">;
 export type AccommodationInsert = InsertTables<"accommodations">;
 export type AccommodationUpdate = UpdateTables<"accommodations">;
+
+export type ApiMetric = Tables<"api_metrics">;
+export type ApiMetricInsert = InsertTables<"api_metrics">;
+export type ApiMetricUpdate = UpdateTables<"api_metrics">;
 
 export type FileAttachment = Tables<"file_attachments">;
 export type FileAttachmentInsert = InsertTables<"file_attachments">;
