@@ -18,12 +18,13 @@ type TableName = keyof Database["public"]["Tables"];
  * excessive complexity and type instability. Biome rule suppressed below.
  */
 // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing is any-based
-export type TableFilterBuilder<_T extends TableName> = any;
+export type TableFilterBuilder = any;
 
 const SUPPORTED_TABLES = [
-  "trips",
-  "flights",
   "accommodations",
+  "api_metrics",
+  "flights",
+  "trips",
   "user_settings",
 ] as const;
 type SupportedTable = (typeof SUPPORTED_TABLES)[number];
@@ -122,7 +123,7 @@ export function updateSingle<T extends TableName>(
   client: TypedClient,
   table: T,
   updates: Partial<UpdateTables<T>>,
-  where: (qb: TableFilterBuilder<T>) => TableFilterBuilder<T>
+  where: (qb: TableFilterBuilder) => TableFilterBuilder
 ): Promise<{ data: Tables<T> | null; error: unknown }> {
   return withTelemetrySpan(
     "supabase.update",
@@ -154,7 +155,7 @@ export function updateSingle<T extends TableName>(
         // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
         (anyClient as any)
           .from(table as string)
-          .update(updates as unknown) as TableFilterBuilder<T>
+          .update(updates as unknown) as TableFilterBuilder
       );
       const { data, error } = await filtered.select().single();
       if (error) return { data: null, error };
@@ -192,7 +193,7 @@ export function updateSingle<T extends TableName>(
 export function getSingle<T extends TableName>(
   client: TypedClient,
   table: T,
-  where: (qb: TableFilterBuilder<T>) => TableFilterBuilder<T>
+  where: (qb: TableFilterBuilder) => TableFilterBuilder
 ): Promise<{ data: Tables<T> | null; error: unknown }> {
   return withTelemetrySpan(
     "supabase.select",
@@ -211,7 +212,7 @@ export function getSingle<T extends TableName>(
       const anyClient = client as any;
       const qb = where(
         // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-        (anyClient as any).from(table as string).select("*") as TableFilterBuilder<T>
+        (anyClient as any).from(table as string).select("*") as TableFilterBuilder
       );
       const { data, error } = await qb.single();
       if (error) return { data: null, error };
@@ -250,7 +251,7 @@ export function getSingle<T extends TableName>(
 export function deleteSingle<T extends TableName>(
   client: TypedClient,
   table: T,
-  where: (qb: TableFilterBuilder<T>) => TableFilterBuilder<T>
+  where: (qb: TableFilterBuilder) => TableFilterBuilder
 ): Promise<{ count: number; error: unknown | null }> {
   return withTelemetrySpan(
     "supabase.delete",
@@ -269,7 +270,7 @@ export function deleteSingle<T extends TableName>(
         // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
         (anyClient as any)
           .from(table as string)
-          .delete({ count: "exact" }) as TableFilterBuilder<T>
+          .delete({ count: "exact" }) as TableFilterBuilder
       );
       const { count, error } = await qb;
       span.setAttribute("db.supabase.row_count", count ?? 0);
@@ -294,7 +295,7 @@ export function deleteSingle<T extends TableName>(
 export function getMaybeSingle<T extends TableName>(
   client: TypedClient,
   table: T,
-  where: (qb: TableFilterBuilder<T>) => TableFilterBuilder<T>
+  where: (qb: TableFilterBuilder) => TableFilterBuilder
 ): Promise<{ data: Tables<T> | null; error: unknown }> {
   return withTelemetrySpan(
     "supabase.select",
@@ -313,7 +314,7 @@ export function getMaybeSingle<T extends TableName>(
       const anyClient = client as any;
       const qb = where(
         // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-        (anyClient as any).from(table as string).select("*") as TableFilterBuilder<T>
+        (anyClient as any).from(table as string).select("*") as TableFilterBuilder
       );
       const { data, error } = await qb.maybeSingle();
       if (error) return { data: null, error };

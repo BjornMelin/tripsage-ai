@@ -19,7 +19,7 @@ import {
   unauthorizedResponse,
   withRequestSpan,
 } from "@/lib/api/route-helpers";
-import { fireAndForgetMetric } from "@/lib/metrics/api-metrics";
+import { type ApiMetric, fireAndForgetMetric } from "@/lib/metrics/api-metrics";
 import { applyRateLimitHeaders } from "@/lib/ratelimit/headers";
 import { hashIdentifier, normalizeIdentifier } from "@/lib/ratelimit/identifier";
 import { ROUTE_RATE_LIMITS, type RouteRateLimitKey } from "@/lib/ratelimit/routes";
@@ -383,7 +383,7 @@ export function withApiGuards<SchemaType extends z.ZodType>(
           fireAndForgetMetric({
             durationMs,
             endpoint: req.nextUrl.pathname,
-            method: req.method,
+            method: req.method as ApiMetric["method"],
             rateLimitKey: rateLimit,
             statusCode: response.status,
             userId: user?.id,
@@ -398,7 +398,7 @@ export function withApiGuards<SchemaType extends z.ZodType>(
             durationMs,
             endpoint: req.nextUrl.pathname,
             errorType: error instanceof Error ? error.name : "UnknownError",
-            method: req.method,
+            method: req.method as ApiMetric["method"],
             rateLimitKey: rateLimit,
             statusCode: 500,
             userId: user?.id,

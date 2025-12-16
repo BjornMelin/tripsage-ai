@@ -54,3 +54,13 @@ export const securityMetricsSchema = z.strictObject({
 
 /** Type for security metrics. */
 export type SecurityMetrics = z.infer<typeof securityMetricsSchema>;
+
+/** Default security metrics used as a safe fallback when data is unavailable. */
+export const DefaultMetrics: SecurityMetrics = {
+  activeSessions: 0,
+  failedLoginAttempts: 0,
+  lastLogin: "never",
+  oauthConnections: [],
+  securityScore: 0,
+  trustedDevices: 0,
+};

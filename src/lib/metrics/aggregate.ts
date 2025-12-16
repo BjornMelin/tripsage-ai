@@ -10,8 +10,12 @@ import "server-only";
 
 import { type DashboardMetrics, dashboardMetricsSchema } from "@schemas/dashboard";
 import { getRedis } from "@/lib/redis";
+import type { ApiMetric } from "@/lib/supabase/database.types";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
+
+/** Metric row shape for api_metrics queries (subset of columns needed). */
+type ApiMetricRow = Pick<ApiMetric, "duration_ms" | "status_code">;
 
 /**
  * Aggregates dashboard metrics from Supabase with Redis caching.
@@ -133,16 +137,6 @@ export function aggregateDashboardMetrics(
 }
 
 /**
- * Metric row shape for api_metrics queries.
- */
-interface ApiMetricRow {
-  /* biome-ignore lint/style/useNamingConvention: Supabase column */
-  duration_ms: number;
-  /* biome-ignore lint/style/useNamingConvention: Supabase column */
-  status_code: number;
-}
-
-/**
  * Fetches API metrics from Supabase.
  *
  * Gracefully handles missing table (returns empty array).
@@ -156,26 +150,7 @@ async function fetchApiMetrics(
   since: string | null
 ): Promise<ApiMetricRow[]> {
   try {
-    // Using type assertion since api_metrics table isn't in generated types yet
-    const client = supabase as unknown as {
-      from: (table: string) => {
-        select: (columns: string) => {
-          gte: (
-            column: string,
-            value: string
-          ) => {
-            limit: (
-              n: number
-            ) => Promise<{ data: ApiMetricRow[] | null; error: unknown }>;
-          };
-          limit: (
-            n: number
-          ) => Promise<{ data: ApiMetricRow[] | null; error: unknown }>;
-        };
-      };
-    };
-
-    const query = client.from("api_metrics").select("duration_ms, status_code");
+    const query = supabase.from("api_metrics").select("duration_ms, status_code");
 
     if (since) {
       const result = await query.gte("created_at", since).limit(10000);
