@@ -9,7 +9,7 @@ import type { ValidationResult } from "@schemas/validation";
 import type { z } from "zod";
 import { getClientEnvVarWithFallback } from "../env/client";
 import { getClientOrigin } from "../url/client-origin";
-import { ApiError } from "./error-types";
+import { ApiError, type ApiErrorCode } from "./error-types";
 
 /**
  * Configuration options for individual API requests.
@@ -131,12 +131,10 @@ export class ApiClient {
   private async request<TRequest, TResponse>(
     config: RequestConfig<TRequest, TResponse>
   ): Promise<TResponse> {
-    const finalConfig = config;
-
     // Validate request data if schema provided
-    if (finalConfig.requestSchema && finalConfig.data !== undefined) {
-      if (finalConfig.validateRequest ?? this.config.validateRequests) {
-        const validationResult = finalConfig.requestSchema.safeParse(finalConfig.data);
+    if (config.requestSchema && config.data !== undefined) {
+      if (config.validateRequest ?? this.config.validateRequests) {
+        const validationResult = config.requestSchema.safeParse(config.data);
         if (!validationResult.success) {
           const validationErrors: ValidationResult<unknown> = {
             errors: validationResult.error.issues.map((issue) => ({
@@ -154,8 +152,8 @@ export class ApiClient {
             `Request validation failed: ${validationResult.error.issues.map((i) => i.message).join(", ")}`,
             400,
             "VALIDATION_ERROR",
-            finalConfig.data,
-            finalConfig.endpoint,
+            config.data,
+            config.endpoint,
             validationErrors
           );
         }
@@ -163,9 +161,9 @@ export class ApiClient {
     }
 
     // Build URL
-    const url = new URL(finalConfig.endpoint, this.config.baseUrl);
-    if (finalConfig.params) {
-      Object.entries(finalConfig.params).forEach(([key, value]) => {
+    const url = new URL(config.endpoint, this.config.baseUrl);
+    if (config.params) {
+      Object.entries(config.params).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
           url.searchParams.set(key, String(value));
         }
@@ -175,12 +173,12 @@ export class ApiClient {
     // Prepare headers
     let headers: Record<string, string> = {
       ...this.config.defaultHeaders,
-      ...finalConfig.headers,
+      ...config.headers,
     };
 
     // Add body for POST/PUT/PATCH requests
-    if (finalConfig.data !== undefined && finalConfig.method !== "GET") {
-      if (finalConfig.data instanceof FormData) {
+    if (config.data !== undefined && config.method !== "GET") {
+      if (config.data instanceof FormData) {
         // Remove content-type for FormData (browser will set it with boundary)
         const { "Content-Type": _, ...headersWithoutContentType } = headers;
         headers = headersWithoutContentType;
@@ -190,39 +188,43 @@ export class ApiClient {
     // Prepare request options (signal is bound via internal controller below)
     const requestOptions: RequestInit = {
       headers,
-      method: finalConfig.method || "GET",
+      method: config.method || "GET",
     };
 
     // Add body for POST/PUT/PATCH requests
-    if (finalConfig.data !== undefined && finalConfig.method !== "GET") {
-      if (finalConfig.data instanceof FormData) {
-        requestOptions.body = finalConfig.data;
+    if (config.data !== undefined && config.method !== "GET") {
+      if (config.data instanceof FormData) {
+        requestOptions.body = config.data;
       } else {
-        requestOptions.body = JSON.stringify(finalConfig.data);
+        requestOptions.body = JSON.stringify(config.data);
       }
     }
 
     // Setup timeout and retry logic
-    const timeout = finalConfig.timeout ?? this.config.timeout;
-    const retries = finalConfig.retries ?? this.config.retries;
+    const timeout = config.timeout ?? this.config.timeout;
+    const retries = config.retries ?? this.config.retries;
 
     let lastError: Error | null = null;
     for (let attempt = 0; attempt <= retries; attempt++) {
+      // Track abort source to distinguish timeout vs external cancellation
+      let abortedByTimeout = false;
+
       try {
         const controller = new AbortController();
         // Bridge external abort signals to our internal controller so timeout always applies
-        if (finalConfig.abortSignal) {
-          if (finalConfig.abortSignal.aborted) {
+        if (config.abortSignal) {
+          if (config.abortSignal.aborted) {
             controller.abort();
           } else {
-            finalConfig.abortSignal.addEventListener(
-              "abort",
-              () => controller.abort(),
-              { once: true }
-            );
+            config.abortSignal.addEventListener("abort", () => controller.abort(), {
+              once: true,
+            });
           }
         }
-        const timeoutId = setTimeout(() => controller.abort(), timeout);
+        const timeoutId = setTimeout(() => {
+          abortedByTimeout = true;
+          controller.abort();
+        }, timeout);
 
         const response = await fetch(url.toString(), {
           ...requestOptions,
@@ -243,9 +245,11 @@ export class ApiClient {
           throw new ApiError(
             errorObject.message || `HTTP ${response.status}: ${response.statusText}`,
             response.status,
-            String(errorObject.code ?? `HTTP_${response.status}`),
+            (errorObject.code
+              ? String(errorObject.code)
+              : `HTTP_${response.status}`) as ApiErrorCode,
             errorData,
-            finalConfig.endpoint
+            config.endpoint
           );
         }
 
@@ -253,9 +257,9 @@ export class ApiClient {
         let responseData = await this.parseResponseBody(response);
 
         // Validate response if schema provided
-        if (finalConfig.responseSchema) {
-          if (finalConfig.validateResponse ?? this.config.validateResponses) {
-            const zodResult = finalConfig.responseSchema.safeParse(responseData);
+        if (config.responseSchema) {
+          if (config.validateResponse ?? this.config.validateResponses) {
+            const zodResult = config.responseSchema.safeParse(responseData);
             if (!zodResult.success) {
               const validationResult: ValidationResult<unknown> = {
                 errors: zodResult.error.issues.map((issue) => ({
@@ -274,7 +278,7 @@ export class ApiClient {
                 500,
                 "RESPONSE_VALIDATION_ERROR",
                 responseData,
-                finalConfig.endpoint,
+                config.endpoint,
                 validationResult
               );
             }
@@ -295,14 +299,24 @@ export class ApiClient {
           throw error;
         }
 
-        // Don't retry on abort errors
+        // Don't retry on abort errors - distinguish timeout vs external cancellation
         if (error instanceof DOMException && error.name === "AbortError") {
+          if (abortedByTimeout) {
+            throw new ApiError(
+              `Request timeout after ${timeout}ms`,
+              408,
+              "TIMEOUT_ERROR",
+              undefined,
+              config.endpoint
+            );
+          }
+          // External cancellation (user/caller aborted)
           throw new ApiError(
-            `Request timeout after ${timeout}ms`,
-            408,
-            "TIMEOUT_ERROR",
+            "Request was cancelled",
+            499,
+            "REQUEST_CANCELLED",
             undefined,
-            finalConfig.endpoint
+            config.endpoint
           );
         }
 

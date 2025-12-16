@@ -159,25 +159,28 @@ export function useAuthenticatedApi() {
           { retries: requestRetries, timeout: requestTimeout }
         );
       } catch (error) {
-        // ApiClient already returns typed ApiError - just propagate it
+        // ApiClient handles abort signals and timeouts internally, returning
+        // properly typed ApiError instances. Pass them through unchanged.
         if (error instanceof ApiError) {
           throw error;
         }
 
-        // Handle explicit abort
-        if (error instanceof DOMException && error.name === "AbortError") {
+        // Detect network failures: TypeError (fetch fails) when offline
+        const isOffline =
+          typeof navigator !== "undefined" && navigator.onLine === false;
+        if (error instanceof TypeError && isOffline) {
           throw new ApiError({
-            code: "REQUEST_CANCELLED",
-            message: "Request cancelled",
-            status: 499,
+            code: "NETWORK_ERROR",
+            message: error.message || "Network request failed",
+            status: 0,
           });
         }
 
         // Fallback for unexpected errors
         throw new ApiError({
-          code: "NETWORK_ERROR",
+          code: "UNKNOWN_ERROR",
           message: error instanceof Error ? error.message : "Request failed",
-          status: 0,
+          status: 500,
         });
       }
     },

@@ -66,8 +66,10 @@ describe("useAuthenticatedApi", () => {
     expect((error as ApiError).message).toBe("Rate limited");
   });
 
-  it("wraps network failures into ApiError with NETWORK_ERROR code", async () => {
-    // Use HttpResponse.error() to simulate actual network failure (not HTTP error)
+  it("wraps unexpected errors into ApiError with UNKNOWN_ERROR code", async () => {
+    // Use HttpResponse.error() to simulate a network failure. When online,
+    // unexpected TypeErrors fall through to UNKNOWN_ERROR (NETWORK_ERROR
+    // is reserved for when navigator.onLine === false).
     server.use(
       http.get(`${API_BASE}/api/test-endpoint`, () => {
         return HttpResponse.error();
@@ -86,8 +88,8 @@ describe("useAuthenticatedApi", () => {
     }
 
     expect(error).toBeInstanceOf(ApiError);
-    expect((error as ApiError).code).toBe("NETWORK_ERROR");
-    expect((error as ApiError).status).toBe(0);
+    expect((error as ApiError).code).toBe("UNKNOWN_ERROR");
+    expect((error as ApiError).status).toBe(500);
   });
 
   it("passes through ApiError instances from apiClient unchanged", async () => {
@@ -118,9 +120,9 @@ describe("useAuthenticatedApi", () => {
     getSpy.mockRestore();
   });
 
-  it("maps DOMException AbortError to REQUEST_CANCELLED ApiError", async () => {
-    // Mock apiClient to throw DOMException (abort) directly
-    // This tests the hook's abort handling when the error isn't pre-wrapped
+  it("treats escaped DOMException as UNKNOWN_ERROR (ApiClient should handle aborts)", async () => {
+    // ApiClient handles abort signals internally and returns typed ApiError.
+    // If a raw DOMException escapes, it's unexpected and becomes UNKNOWN_ERROR.
     const abortError = new DOMException("The operation was aborted.", "AbortError");
     const getSpy = vi.spyOn(apiClient, "get").mockRejectedValueOnce(abortError);
 
@@ -136,8 +138,8 @@ describe("useAuthenticatedApi", () => {
     }
 
     expect(error).toBeInstanceOf(ApiError);
-    expect((error as ApiError).code).toBe("REQUEST_CANCELLED");
-    expect((error as ApiError).status).toBe(499);
+    expect((error as ApiError).code).toBe("UNKNOWN_ERROR");
+    expect((error as ApiError).status).toBe(500);
 
     getSpy.mockRestore();
   });

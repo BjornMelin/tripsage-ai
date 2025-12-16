@@ -15,7 +15,8 @@ export type ApiErrorCode =
   | "RATE_LIMITED"
   | "SERVER_ERROR"
   | "UNKNOWN_ERROR"
-  | string; // Allow custom codes like HTTP_xxx
+  | "RESPONSE_VALIDATION_ERROR"
+  | `HTTP_${number}`; // Allow custom HTTP codes while preserving type safety
 
 /** API error response interface. */
 export interface ApiErrorResponse {
@@ -105,7 +106,7 @@ export class ApiError extends Error {
   }
 
   /** Derive error code from HTTP status. */
-  private static codeFromStatus(status: number): ApiErrorCode {
+  public static codeFromStatus(status: number): ApiErrorCode {
     if (status === 0) return "NETWORK_ERROR";
     if (status === 401) return "UNAUTHORIZED";
     if (status === 403) return "FORBIDDEN";
@@ -113,6 +114,7 @@ export class ApiError extends Error {
     if (status === 408) return "TIMEOUT_ERROR";
     if (status === 422) return "VALIDATION_ERROR";
     if (status === 429) return "RATE_LIMITED";
+    if (status === 499) return "REQUEST_CANCELLED";
     if (status >= 500) return "SERVER_ERROR";
     return "UNKNOWN_ERROR";
   }
@@ -151,16 +153,42 @@ export class ApiError extends Error {
       case "NOT_FOUND":
         return "The requested resource was not found.";
       case "VALIDATION_ERROR":
-        return (
-          this.getFirstFieldError() || "Invalid data provided. Please check your input."
-        );
+        return this.getValidationUserMessage();
       case "RATE_LIMITED":
         return "Too many requests. Please try again later.";
       case "SERVER_ERROR":
         return "Server error. Please try again later.";
+      case "REQUEST_CANCELLED":
+        return "Request was cancelled.";
       default:
         return this.message;
     }
+  }
+
+  /** Get user-friendly message for validation errors. */
+  private getValidationUserMessage(): string {
+    const errorCount = this.getValidationErrorCount();
+    if (errorCount === 0) {
+      return "Invalid data provided. Please check your input.";
+    }
+    if (errorCount === 1) {
+      return (
+        this.getFirstFieldError() || "Invalid data provided. Please check your input."
+      );
+    }
+    return `${errorCount} validation errors occurred. Please check your input.`;
+  }
+
+  /** Get total count of validation errors. */
+  private getValidationErrorCount(): number {
+    let count = 0;
+    if (this.validationErrors?.errors) {
+      count += this.validationErrors.errors.length;
+    }
+    if (this.fieldErrors) {
+      count += Object.values(this.fieldErrors).flat().length;
+    }
+    return count;
   }
 
   /** Get first field error message if available. */
@@ -168,6 +196,9 @@ export class ApiError extends Error {
     if (this.fieldErrors) {
       const firstError = Object.values(this.fieldErrors)[0]?.[0];
       if (firstError) return firstError;
+    }
+    if (this.validationErrors?.errors?.[0]) {
+      return this.validationErrors.errors[0].message;
     }
     return undefined;
   }
@@ -229,6 +260,11 @@ export class ApiError extends Error {
       status: 422,
     });
   }
+
+  /** Factory for unknown errors. */
+  static unknown(message = "An unknown error occurred"): ApiError {
+    return new ApiError({ code: "UNKNOWN_ERROR", message, status: 500 });
+  }
 }
 
 /** Type guard for ApiError. */
@@ -252,12 +288,14 @@ export const isTimeoutError = (error: unknown): error is ApiError => {
   );
 };
 
-/** Check if an error is a validation error (code-based). */
-export const isValidationErrorGuard = (error: unknown): error is ApiError => {
-  return (
-    (error instanceof ApiError && error.code === "VALIDATION_ERROR") ||
-    (error instanceof ApiError && error.isValidationError())
-  );
+/** Check if an error is a validation error (code-based or has validation details). */
+export const isValidationError = (error: unknown): error is ApiError => {
+  // ApiError: use instance method which checks code, fieldErrors, and validationErrors
+  if (error instanceof ApiError) {
+    return error.isValidationError();
+  }
+  // Legacy support for Error with name "ValidationError"
+  return error instanceof Error && error.name === "ValidationError";
 };
 
 /** Union type for app errors (now just ApiError). */
@@ -281,7 +319,7 @@ export const handleApiError = (error: unknown): ApiError => {
       return new ApiError({
         code: "REQUEST_CANCELLED",
         message: "Request was cancelled",
-        status: 0,
+        status: 499,
       });
     }
 
@@ -305,12 +343,12 @@ export const handleApiError = (error: unknown): ApiError => {
       );
     }
 
-    // Default to network error for generic errors
-    return ApiError.network(error.message);
+    // Default to unknown error for generic errors
+    return ApiError.unknown(error.message);
   }
 
   // Fallback for unknown error types
-  return ApiError.network("An unknown error occurred");
+  return ApiError.unknown("An unknown error occurred");
 };
 
 /** Error boundary helper for React Query errors */
