@@ -2,7 +2,8 @@
  * @fileoverview Server-first security dashboard rendering live security data.
  */
 
-import type { SecurityEvent, SecurityMetrics } from "@schemas/security";
+import type { SecurityEvent } from "@schemas/security";
+import { DefaultMetrics } from "@schemas/security";
 import {
   ActivityIcon,
   AlertTriangleIcon,
@@ -27,15 +28,6 @@ import { createServerSupabase, getCurrentUser } from "@/lib/supabase/server";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
 const SecurityDashboardLogger = createServerLogger("security.dashboard");
-
-const DefaultMetrics: SecurityMetrics = {
-  activeSessions: 0,
-  failedLoginAttempts: 0,
-  lastLogin: "never",
-  oauthConnections: [],
-  securityScore: 0,
-  trustedDevices: 0,
-};
 
 /**
  * Get the security data for the current user.

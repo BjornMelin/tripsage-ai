@@ -86,15 +86,13 @@ export async function getCurrentSessionId(
  */
 function getIpAddress(ipValue: unknown): string {
   if (typeof ipValue === "string") return ipValue;
-  if (
-    ipValue &&
-    typeof ipValue === "object" &&
-    "address" in (ipValue as Record<string, unknown>)
-  ) {
-    const address = (ipValue as { address?: unknown }).address;
-    if (typeof address === "string") return address;
-  }
+  if (isIpObject(ipValue)) return ipValue.address;
   return "Unknown";
+}
+
+function isIpObject(value: unknown): value is { address: string } {
+  if (typeof value !== "object" || value === null) return false;
+  return typeof Reflect.get(value, "address") === "string";
 }
 
 /**
