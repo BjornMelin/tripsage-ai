@@ -5,6 +5,7 @@
  */
 
 import type { Activity } from "@schemas/search";
+import { getClientOrigin } from "@/lib/url/client-origin";
 
 /** Structured attributes carried with booking telemetry events. */
 type TelemetryAttributes = Record<string, string | number | boolean>;
@@ -231,11 +232,8 @@ async function recordBookingEvent(
     }
 
     // Fallback to fetch (works in Node.js and browsers without sendBeacon).
-    // Use NEXT_PUBLIC_APP_URL only (public) so this stays client-bundle-safe.
-    const baseUrl =
-      typeof window !== "undefined"
-        ? ""
-        : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    // Use relative URL in browser; use validated origin helper on server.
+    const baseUrl = typeof window !== "undefined" ? "" : getClientOrigin();
     await fetch(`${baseUrl}/api/telemetry/activities`, {
       body: payload,
       headers: { "Content-Type": "application/json" },

@@ -44,9 +44,8 @@ pnpm install
 
 ```bash
 # URLs
-APP_BASE_URL=http://localhost:3000
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-NEXT_PUBLIC_SITE_URL=http://localhost:3000
+APP_BASE_URL=http://localhost:3000               # server-side origin
+NEXT_PUBLIC_SITE_URL=http://localhost:3000       # client-side origin (canonical)
 NEXT_PUBLIC_API_URL=http://localhost:3000
 
 # Supabase

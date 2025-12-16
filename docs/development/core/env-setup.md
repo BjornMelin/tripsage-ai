@@ -5,9 +5,8 @@ Copy the root `.env.example` to `.env`, then follow the checklists below to popu
 ## Core & Supabase
 
 - Core URLs (all usually `http://localhost:3000` during dev):
-  - `APP_BASE_URL`
-  - `NEXT_PUBLIC_APP_URL`
-  - `NEXT_PUBLIC_SITE_URL`
+  - `APP_BASE_URL` — server-side origin (API routes, server actions)
+  - `NEXT_PUBLIC_SITE_URL` — client-side origin (OAuth redirects, client components) — **canonical**
   - `NEXT_PUBLIC_API_URL`
 - Supabase (Dashboard → Settings → API):
   - `NEXT_PUBLIC_SUPABASE_URL`

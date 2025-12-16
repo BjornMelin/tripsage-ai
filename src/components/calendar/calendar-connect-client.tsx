@@ -10,6 +10,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useToast } from "@/components/ui/use-toast";
 import { useSupabaseRequired } from "@/lib/supabase";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
+import { getClientOrigin } from "@/lib/url/client-origin";
 
 /**
  * CalendarConnectClient component.
@@ -24,10 +25,7 @@ export function CalendarConnectClient() {
   const handleConnect = async () => {
     setIsConnecting(true);
     try {
-      const redirectUrl =
-        process.env.NEXT_PUBLIC_SITE_URL ||
-        process.env.NEXT_PUBLIC_APP_URL ||
-        window.location.origin;
+      const redirectUrl = getClientOrigin();
       const { error } = await supabase.auth.signInWithOAuth({
         options: {
           redirectTo: `${redirectUrl}/auth/callback?next=/dashboard`,

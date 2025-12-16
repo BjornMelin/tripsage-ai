@@ -50,16 +50,14 @@ Set these in `.env` (local) and your deployment platform:
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-APP_BASE_URL=https://your-domain.com          # also set as Supabase Auth "Site URL"
-NEXT_PUBLIC_APP_URL=https://your-domain.com
-NEXT_PUBLIC_SITE_URL=https://your-domain.com
+APP_BASE_URL=https://your-domain.com          # server-side origin; also set as Supabase Auth "Site URL"
+NEXT_PUBLIC_SITE_URL=https://your-domain.com  # client-side origin (canonical)
 ```
 
 For local testing:
 
 ```bash
 APP_BASE_URL=http://localhost:3000
-NEXT_PUBLIC_APP_URL=http://localhost:3000
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
