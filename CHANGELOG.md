@@ -1,3 +1,14 @@
+## [1.16.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.15.0...v1.16.0) (2025-12-16)
+
+### Features
+
+* **cache:** add telemetry instrumentation and improve Redis client safety ([ecd8bd0](https://github.com/BjornMelin/tripsage-ai/commit/ecd8bd050ceb02c889056a39768b4d4d8402deaf))
+
+### Bug Fixes
+
+* **pr-549:** address review comments - camelCase functions and JSDoc ([7a295a5](https://github.com/BjornMelin/tripsage-ai/commit/7a295a5ade54262fb0eee049439cfd07e80f5b13)), closes [#549](https://github.com/BjornMelin/tripsage-ai/issues/549)
+* **review:** resolve PR 549 feedback ([2fd3c20](https://github.com/BjornMelin/tripsage-ai/commit/2fd3c207eda982f92ae59c6201e180fcf49fc601))
+
 ## [1.15.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.14.0...v1.15.0) (2025-12-16)
 
 ### ⚠ BREAKING CHANGES
