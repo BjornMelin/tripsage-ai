@@ -41,7 +41,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { useTrip } from "@/hooks/use-trips";
-import { copyTextToClipboard } from "@/lib/client/clipboard";
+import { copyToClipboardWithToast } from "@/lib/client/clipboard";
 import { getBrowserClient } from "@/lib/supabase";
 import { statusVariants } from "@/lib/variants/status";
 
@@ -190,51 +190,9 @@ export default function TripCollaborationPage() {
    */
   const handleCopyShareLink = async (): Promise<void> => {
     const shareUrl = `${window.location.origin}/trips/${tripIdParam}/share`;
-    const result = await copyTextToClipboard(shareUrl);
-
-    if (result.ok) {
-      toast({ description: "Share link copied to clipboard", title: "Link Copied" });
-      return;
-    }
-
-    switch (result.reason) {
-      case "permission-denied":
-        toast({
-          description:
-            "Clipboard permission denied. Please allow access and try again.",
-          title: "Permission Required",
-          variant: "destructive",
-        });
-        return;
-      case "insecure-context":
-        toast({
-          description: "Clipboard access is only available in secure contexts (HTTPS).",
-          title: "Clipboard Unavailable",
-          variant: "destructive",
-        });
-        return;
-      case "unavailable":
-        toast({
-          description: "Clipboard API unavailable. Please copy the link manually.",
-          title: "Copy Failed",
-          variant: "destructive",
-        });
-        return;
-      case "failed":
-        toast({
-          description: "Unable to copy link. Please copy it manually.",
-          title: "Copy Failed",
-          variant: "destructive",
-        });
-        if (process.env.NODE_ENV === "development") {
-          console.error("Failed to copy share link:", result.error);
-        }
-        return;
-      default: {
-        const _exhaustiveCheck: never = result.reason;
-        return _exhaustiveCheck;
-      }
-    }
+    await copyToClipboardWithToast(shareUrl, toast, {
+      success: { description: "Share link copied to clipboard", title: "Link Copied" },
+    });
   };
 
   /**
