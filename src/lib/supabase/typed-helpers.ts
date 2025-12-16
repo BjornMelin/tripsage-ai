@@ -21,9 +21,10 @@ type TableName = keyof Database["public"]["Tables"];
 export type TableFilterBuilder<_T extends TableName> = any;
 
 const SUPPORTED_TABLES = [
-  "trips",
-  "flights",
   "accommodations",
+  "api_metrics",
+  "flights",
+  "trips",
   "user_settings",
 ] as const;
 type SupportedTable = (typeof SUPPORTED_TABLES)[number];
