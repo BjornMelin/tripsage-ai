@@ -18,19 +18,19 @@ importers:
     dependencies:
       '@ai-sdk/anthropic':
         specifier: 3.0.0-beta.83
-        version: 3.0.0-beta.83(zod@4.1.13)
+        version: 3.0.0-beta.83(zod@4.2.0)
       '@ai-sdk/openai':
         specifier: 3.0.0-beta.96
-        version: 3.0.0-beta.96(zod@4.1.13)
+        version: 3.0.0-beta.96(zod@4.2.0)
       '@ai-sdk/react':
         specifier: 3.0.0-beta.151
-        version: 3.0.0-beta.151(react@19.2.3)(zod@4.1.13)
+        version: 3.0.0-beta.151(react@19.2.3)(zod@4.2.0)
       '@ai-sdk/togetherai':
         specifier: 2.0.0-beta.49
-        version: 2.0.0-beta.49(zod@4.1.13)
+        version: 2.0.0-beta.49(zod@4.2.0)
       '@ai-sdk/xai':
         specifier: 3.0.0-beta.55
-        version: 3.0.0-beta.55(zod@4.1.13)
+        version: 3.0.0-beta.55(zod@4.2.0)
       '@hello-pangea/dnd':
         specifier: ^18.0.1
         version: 18.0.1(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -180,7 +180,7 @@ importers:
         version: 2.1.0(@opentelemetry/api-logs@0.208.0)(@opentelemetry/api@1.9.0)(@opentelemetry/instrumentation@0.208.0(@opentelemetry/api@1.9.0))(@opentelemetry/resources@2.2.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-logs@0.208.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-metrics@2.2.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.2.0(@opentelemetry/api@1.9.0))
       ai:
         specifier: 6.0.0-beta.148
-        version: 6.0.0-beta.148(zod@4.1.13)
+        version: 6.0.0-beta.148(zod@4.2.0)
       amadeus:
         specifier: ^11.0.0
         version: 11.0.0
@@ -290,8 +290,8 @@ importers:
         specifier: ^5.1.0
         version: 5.1.0
       zod:
-        specifier: ^4.1.13
-        version: 4.1.13
+        specifier: ^4.2.0
+        version: 4.2.0
       zustand:
         specifier: ^5.0.9
         version: 5.0.9(@types/react@19.2.7)(immer@11.0.1)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3))
@@ -6364,8 +6364,8 @@ packages:
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
-  zod@4.1.13:
-    resolution: {integrity: sha512-AvvthqfqrAhNH9dnfmrfKzX5upOdjUVJYFqNSlkmGf64gRaTzlPwz99IHYnVs28qYAybvAlBV+H7pn0saFY4Ig==}
+  zod@4.2.0:
+    resolution: {integrity: sha512-Bd5fw9wlIhtqCCxotZgdTOMwGm1a0u75wARVEY9HMs1X17trvA/lMi4+MGK5EUfYkXVTbX8UDiDKW4OgzHVUZw==}
 
   zustand@5.0.9:
     resolution: {integrity: sha512-ALBtUj0AfjJt3uNRQoL1tL2tMvj6Gp/6e39dnfT6uzpelGru8v1tPOGBzayOWbPJvujM8JojDk3E1LxeFisBNg==}
@@ -6410,62 +6410,62 @@ snapshots:
 
   '@adobe/css-tools@4.4.4': {}
 
-  '@ai-sdk/anthropic@3.0.0-beta.83(zod@4.1.13)':
+  '@ai-sdk/anthropic@3.0.0-beta.83(zod@4.2.0)':
     dependencies:
       '@ai-sdk/provider': 3.0.0-beta.26
-      '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.1.13)
-      zod: 4.1.13
+      '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.2.0)
+      zod: 4.2.0
     transitivePeerDependencies:
       - '@valibot/to-json-schema'
       - arktype
       - effect
 
-  '@ai-sdk/gateway@2.0.0-beta.78(zod@4.1.13)':
+  '@ai-sdk/gateway@2.0.0-beta.78(zod@4.2.0)':
     dependencies:
       '@ai-sdk/provider': 3.0.0-beta.26
-      '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.1.13)
+      '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.2.0)
       '@vercel/oidc': 3.0.5
-      zod: 4.1.13
+      zod: 4.2.0
     transitivePeerDependencies:
       - '@valibot/to-json-schema'
       - arktype
       - effect
 
-  '@ai-sdk/openai-compatible@2.0.0-beta.48(zod@4.1.13)':
+  '@ai-sdk/openai-compatible@2.0.0-beta.48(zod@4.2.0)':
     dependencies:
       '@ai-sdk/provider': 3.0.0-beta.26
-      '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.1.13)
-      zod: 4.1.13
+      '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.2.0)
+      zod: 4.2.0
     transitivePeerDependencies:
       - '@valibot/to-json-schema'
       - arktype
       - effect
 
-  '@ai-sdk/openai@3.0.0-beta.96(zod@4.1.13)':
+  '@ai-sdk/openai@3.0.0-beta.96(zod@4.2.0)':
     dependencies:
       '@ai-sdk/provider': 3.0.0-beta.26
-      '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.1.13)
-      zod: 4.1.13
+      '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.2.0)
+      zod: 4.2.0
     transitivePeerDependencies:
       - '@valibot/to-json-schema'
       - arktype
       - effect
 
-  '@ai-sdk/provider-utils@4.0.0-beta.47(zod@4.1.13)':
+  '@ai-sdk/provider-utils@4.0.0-beta.47(zod@4.2.0)':
     dependencies:
       '@ai-sdk/provider': 3.0.0-beta.26
       '@standard-schema/spec': 1.0.0
       eventsource-parser: 3.0.6
-      zod: 4.1.13
+      zod: 4.2.0
 
   '@ai-sdk/provider@3.0.0-beta.26':
     dependencies:
       json-schema: 0.4.0
 
-  '@ai-sdk/react@3.0.0-beta.151(react@19.2.3)(zod@4.1.13)':
+  '@ai-sdk/react@3.0.0-beta.151(react@19.2.3)(zod@4.2.0)':
     dependencies:
-      '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.1.13)
-      ai: 6.0.0-beta.148(zod@4.1.13)
+      '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.2.0)
+      ai: 6.0.0-beta.148(zod@4.2.0)
       react: 19.2.3
       swr: 2.3.7(react@19.2.3)
       throttleit: 2.1.0
@@ -6475,23 +6475,23 @@ snapshots:
       - effect
       - zod
 
-  '@ai-sdk/togetherai@2.0.0-beta.49(zod@4.1.13)':
+  '@ai-sdk/togetherai@2.0.0-beta.49(zod@4.2.0)':
     dependencies:
-      '@ai-sdk/openai-compatible': 2.0.0-beta.48(zod@4.1.13)
+      '@ai-sdk/openai-compatible': 2.0.0-beta.48(zod@4.2.0)
       '@ai-sdk/provider': 3.0.0-beta.26
-      '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.1.13)
-      zod: 4.1.13
+      '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.2.0)
+      zod: 4.2.0
     transitivePeerDependencies:
       - '@valibot/to-json-schema'
       - arktype
       - effect
 
-  '@ai-sdk/xai@3.0.0-beta.55(zod@4.1.13)':
+  '@ai-sdk/xai@3.0.0-beta.55(zod@4.2.0)':
     dependencies:
-      '@ai-sdk/openai-compatible': 2.0.0-beta.48(zod@4.1.13)
+      '@ai-sdk/openai-compatible': 2.0.0-beta.48(zod@4.2.0)
       '@ai-sdk/provider': 3.0.0-beta.26
-      '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.1.13)
-      zod: 4.1.13
+      '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.2.0)
+      zod: 4.2.0
     transitivePeerDependencies:
       - '@valibot/to-json-schema'
       - arktype
@@ -9079,13 +9079,13 @@ snapshots:
       clean-stack: 5.3.0
       indent-string: 5.0.0
 
-  ai@6.0.0-beta.148(zod@4.1.13):
+  ai@6.0.0-beta.148(zod@4.2.0):
     dependencies:
-      '@ai-sdk/gateway': 2.0.0-beta.78(zod@4.1.13)
+      '@ai-sdk/gateway': 2.0.0-beta.78(zod@4.2.0)
       '@ai-sdk/provider': 3.0.0-beta.26
-      '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.1.13)
+      '@ai-sdk/provider-utils': 4.0.0-beta.47(zod@4.2.0)
       '@opentelemetry/api': 1.9.0
-      zod: 4.1.13
+      zod: 4.2.0
     transitivePeerDependencies:
       - '@valibot/to-json-schema'
       - arktype
@@ -12704,7 +12704,7 @@ snapshots:
 
   zod@3.25.76: {}
 
-  zod@4.1.13: {}
+  zod@4.2.0: {}
 
   zustand@5.0.9(@types/react@19.2.7)(immer@11.0.1)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3)):
     optionalDependencies:

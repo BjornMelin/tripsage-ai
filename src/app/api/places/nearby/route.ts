@@ -7,9 +7,12 @@
 
 import "server-only";
 
-import { type PlacesNearbyRequest, placesNearbyRequestSchema } from "@schemas/api";
+import {
+  type PlacesNearbyRequest,
+  placesNearbyRequestSchema,
+  upstreamPlaceSchema,
+} from "@schemas/api";
 import { type NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse } from "@/lib/api/route-helpers";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
@@ -21,20 +24,6 @@ import { recordTelemetryEvent } from "@/lib/telemetry/span";
  */
 const NEARBY_FIELD_MASK =
   "places.id,places.displayName,places.shortFormattedAddress,places.types,places.rating,places.location";
-
-const upstreamPlaceSchema = z.strictObject({
-  displayName: z.object({ text: z.string().min(1) }).optional(),
-  id: z.string(),
-  location: z
-    .object({
-      latitude: z.number().optional(),
-      longitude: z.number().optional(),
-    })
-    .optional(),
-  rating: z.number().optional(),
-  shortFormattedAddress: z.string().optional(),
-  types: z.array(z.string()).optional(),
-});
 
 /**
  * POST /api/places/nearby

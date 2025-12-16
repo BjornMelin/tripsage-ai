@@ -7,10 +7,16 @@
 
 import "server-only";
 
-import { type ComputeRoutesRequest, computeRoutesRequestSchema } from "@schemas/api";
+import {
+  type ComputeRoutesRequest,
+  computeRoutesRequestSchema,
+  upstreamRoutesResponseSchema,
+} from "@schemas/api";
 import { type NextRequest, NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
+import { errorResponse } from "@/lib/api/route-helpers";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
+import { postComputeRoutes } from "@/lib/google/client";
 
 /**
  * POST /api/routes
@@ -40,14 +46,10 @@ export const POST = withApiGuards({
     travelMode: validated.travelMode ?? "DRIVE",
   };
 
-  const response = await fetch("https://routes.googleapis.com/v2:computeRoutes", {
-    body: JSON.stringify(requestBody),
-    headers: {
-      "Content-Type": "application/json",
-      "X-Goog-Api-Key": apiKey,
-      "X-Goog-FieldMask": fieldMask,
-    },
-    method: "POST",
+  const response = await postComputeRoutes({
+    apiKey,
+    body: requestBody,
+    fieldMask,
   });
 
   if (!response.ok) {
@@ -58,6 +60,17 @@ export const POST = withApiGuards({
     );
   }
 
-  const data = await response.json();
-  return NextResponse.json(data);
+  const rawData = await response.json();
+
+  // Validate upstream response
+  const parseResult = upstreamRoutesResponseSchema.safeParse(rawData);
+  if (!parseResult.success) {
+    return errorResponse({
+      error: "upstream_validation_error",
+      reason: "Invalid response from Routes API",
+      status: 502,
+    });
+  }
+
+  return NextResponse.json(parseResult.data);
 });
