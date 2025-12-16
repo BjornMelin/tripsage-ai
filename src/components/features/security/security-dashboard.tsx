@@ -2,14 +2,7 @@
  * @fileoverview Server-first security dashboard rendering live security data.
  */
 
-import {
-  type ActiveSession,
-  activeSessionSchema,
-  type SecurityEvent,
-  type SecurityMetrics,
-  securityEventSchema,
-  securityMetricsSchema,
-} from "@schemas/security";
+import type { SecurityEvent, SecurityMetrics } from "@schemas/security";
 import {
   ActivityIcon,
   AlertTriangleIcon,
@@ -19,9 +12,7 @@ import {
   ShieldIcon,
   UserCheckIcon,
 } from "lucide-react";
-import { cookies, headers } from "next/headers";
 import type React from "react";
-import type { ZodTypeAny } from "zod";
 import {
   ActiveSessionsList,
   ConnectionsSummary,
@@ -29,61 +20,52 @@ import {
 } from "@/components/features/security/security-dashboard-client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { getUserSecurityEvents, getUserSecurityMetrics } from "@/lib/security/service";
+import { getCurrentSessionId, listActiveSessions } from "@/lib/security/sessions";
+import { createAdminSupabase } from "@/lib/supabase/admin";
+import { createServerSupabase, getCurrentUser } from "@/lib/supabase/server";
 
-/**
- * Build a cookie header string from the cookie store.
- *
- * @returns The cookie header string.
- */
-const BuildCookieHeader = async () => {
-  const cookieStore = await cookies();
-  return cookieStore
-    .getAll()
-    .map((c: { name: string; value: string }) => `${c.name}=${c.value}`)
-    .join("; ");
+const DefaultMetrics: SecurityMetrics = {
+  activeSessions: 0,
+  failedLoginAttempts: 0,
+  lastLogin: "never",
+  oauthConnections: [],
+  securityScore: 0,
+  trustedDevices: 0,
 };
 
 /**
- * Fetch data from the API and parse it using a Zod schema.
- *
- * @param path - The path to fetch the data from.
- * @param schema - The Zod schema to parse the data with.
- * @returns The parsed data.
- */
-const ApiFetch = async <T,>(path: string, schema: ZodTypeAny) => {
-  const headerStore = await headers();
-  const host = headerStore.get("x-forwarded-host") ?? headerStore.get("host");
-  const protocol = headerStore.get("x-forwarded-proto") ?? "http";
-  const base = host ? `${protocol}://${host}` : "";
-  const response = await fetch(`${base}${path}`, {
-    cache: "no-store",
-    headers: {
-      cookie: await BuildCookieHeader(),
-    },
-  });
-  if (!response.ok) {
-    throw new Error(`Failed to fetch ${path}: ${response.status}`);
-  }
-  const json = (await response.json()) as unknown;
-  const parsed = schema.safeParse(json);
-  if (!parsed.success) {
-    throw new Error(`Invalid shape from ${path}`);
-  }
-  return parsed.data as T;
-};
-
-/**
- * Get the security data from the API.
+ * Get the security data for the current user.
  *
  * @returns The security data.
  */
 async function GetSecurityData() {
-  const [events, metrics, sessions] = await Promise.all([
-    ApiFetch<SecurityEvent[]>("/api/security/events", securityEventSchema.array()),
-    ApiFetch<SecurityMetrics>("/api/security/metrics", securityMetricsSchema),
-    ApiFetch<ActiveSession[]>("/api/security/sessions", activeSessionSchema.array()),
+  const supabase = await createServerSupabase();
+  const { user, error } = await getCurrentUser(supabase);
+  if (error) {
+    throw error;
+  }
+  if (!user) {
+    throw new Error("unauthorized");
+  }
+
+  const adminSupabase = createAdminSupabase();
+
+  const [eventsResult, metricsResult, sessionsResult] = await Promise.allSettled([
+    getUserSecurityEvents(adminSupabase, user.id),
+    getUserSecurityMetrics(adminSupabase, user.id),
+    (async () => {
+      const currentSessionId = await getCurrentSessionId(supabase);
+      return await listActiveSessions(adminSupabase, user.id, { currentSessionId });
+    })(),
   ]);
-  return { events, metrics, sessions };
+
+  return {
+    events: eventsResult.status === "fulfilled" ? eventsResult.value : [],
+    metrics:
+      metricsResult.status === "fulfilled" ? metricsResult.value : DefaultMetrics,
+    sessions: sessionsResult.status === "fulfilled" ? sessionsResult.value : [],
+  };
 }
 
 /** The risk color for each security event risk level. */

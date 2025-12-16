@@ -61,9 +61,7 @@ let adminInstance: ReturnType<typeof adminMock> = adminMock();
 
 describe("/api/security/sessions routes", () => {
   vi.mock("next/headers", () => ({
-    cookies: vi.fn(() =>
-      Promise.resolve(getMockCookiesForTest({ "sb-access-token": "token" }))
-    ),
+    cookies: vi.fn(() => getMockCookiesForTest({ "sb-access-token": "token" })),
   }));
 
   vi.mock("@/lib/redis", () => ({
@@ -115,10 +113,25 @@ describe("/api/security/sessions routes", () => {
     );
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as Array<{ id: string; isCurrent: boolean }>;
+    const body = (await res.json()) as Array<{
+      browser: string;
+      device: string;
+      id: string;
+      ipAddress: string;
+      isCurrent: boolean;
+      lastActivity: string;
+      location: string;
+    }>;
     expect(body).toHaveLength(1);
-    expect(body[0]?.id).toBe("sess-1");
-    expect(body[0]?.isCurrent).toBe(true);
+    expect(body[0]).toMatchObject({
+      browser: "Chrome on macOS",
+      device: "Chrome on macOS",
+      id: "sess-1",
+      ipAddress: "192.0.2.1",
+      isCurrent: true,
+      lastActivity: "2025-01-01T01:00:00Z",
+      location: "Unknown",
+    });
   });
 
   it("terminates a session for the authenticated user", async () => {
