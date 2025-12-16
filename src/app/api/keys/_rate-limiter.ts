@@ -38,28 +38,26 @@ export class RateLimiterConfigurationError extends Error {
  *   production.
  */
 export function buildRateLimiter(): KeyRateLimiter | undefined {
-  const url = getServerEnvVarWithFallback("UPSTASH_REDIS_REST_URL", undefined);
-  const token = getServerEnvVarWithFallback("UPSTASH_REDIS_REST_TOKEN", undefined);
   const isProduction = getServerEnvVar("NODE_ENV") === "production";
 
   const redis = getRedis();
-  if (!url || !token || !redis) {
-    if (isProduction) {
-      const errorMessage =
-        "Rate limiter configuration missing: UPSTASH_REDIS_REST_URL and " +
-        "UPSTASH_REDIS_REST_TOKEN must be set in production";
-      recordTelemetryEvent("api.keys.rate_limit_config_error", {
-        attributes: {
-          hasToken: Boolean(token),
-          hasUrl: Boolean(url),
-          message: errorMessage,
-        },
-        level: "error",
-      });
-      throw new RateLimiterConfigurationError(errorMessage);
-    }
-    // In development/test, allow graceful degradation
-    return undefined;
+  if (!redis) {
+    if (!isProduction) return undefined;
+
+    const url = getServerEnvVarWithFallback("UPSTASH_REDIS_REST_URL", undefined);
+    const token = getServerEnvVarWithFallback("UPSTASH_REDIS_REST_TOKEN", undefined);
+    const errorMessage =
+      "Rate limiter configuration missing: UPSTASH_REDIS_REST_URL and " +
+      "UPSTASH_REDIS_REST_TOKEN must be set in production";
+    recordTelemetryEvent("api.keys.rate_limit_config_error", {
+      attributes: {
+        hasToken: Boolean(token),
+        hasUrl: Boolean(url),
+        message: errorMessage,
+      },
+      level: "error",
+    });
+    throw new RateLimiterConfigurationError(errorMessage);
   }
 
   return new Ratelimit({

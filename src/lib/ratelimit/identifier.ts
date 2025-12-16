@@ -40,5 +40,5 @@ export function getTrustedRateLimitIdentifierFromHeaders(
 ): string {
   const ip = getClientIpFromHeaders(headers);
   if (ip === "unknown") return "unknown";
-  return hashIdentifier(ip);
+  return hashIdentifier(normalizeIdentifier(ip));
 }

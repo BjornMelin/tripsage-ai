@@ -10,12 +10,12 @@ TripSage uses Upstash Redis + `@upstash/ratelimit` for server-side throttling:
 
 Always obtain Redis via `getRedis()`:
 
-- `src/lib/redis.ts#L1` exports `getRedis()` with a test injection hook.
+- `src/lib/redis.ts` exports `getRedis()` with a test injection hook.
 - Do not call `Redis.fromEnv()` in application code.
 
 ## Client IP extraction (canonical)
 
-Use `src/lib/http/ip.ts#L1`:
+Use `src/lib/http/ip.ts`:
 
 - `getClientIpFromHeaders(headers)` accepts a header-only interface so it can be used from:
   - `NextRequest.headers` (route handlers)
@@ -32,7 +32,7 @@ Use `src/lib/http/ip.ts#L1`:
 
 Never use raw IPs as Upstash identifiers. Hash IP-derived identifiers before passing them to `Ratelimit.limit()`:
 
-- `src/lib/ratelimit/identifier.ts#L1`
+- `src/lib/ratelimit/identifier.ts`
   - `hashIdentifier(raw)` → SHA-256 hex
   - `getTrustedRateLimitIdentifierFromHeaders(headers)` → stable hashed identifier derived from client IP headers
 
@@ -57,7 +57,7 @@ HTTP endpoints attach standard headers on 429 responses:
 
 Shared helpers:
 
-- `src/lib/ratelimit/headers.ts#L1` provides `createRateLimitHeaders()` and `applyRateLimitHeaders()`.
+- `src/lib/ratelimit/headers.ts` provides `createRateLimitHeaders()` and `applyRateLimitHeaders()`.
 
 ## Testing and mocking
 
