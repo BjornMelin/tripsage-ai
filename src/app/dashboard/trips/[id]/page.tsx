@@ -160,7 +160,9 @@ export default function TripDetailsPage() {
     // Network error detection
     const isNetworkError =
       error instanceof Error &&
-      (error.name === "TypeError" ||
+      ((error.name === "TypeError" &&
+        (error.message.toLowerCase().includes("failed to fetch") ||
+          error.message.toLowerCase().includes("networkerror"))) ||
         error.name === "NetworkError" ||
         error.message.toLowerCase().includes("failed to fetch") ||
         error.message.toLowerCase().includes("networkerror") ||

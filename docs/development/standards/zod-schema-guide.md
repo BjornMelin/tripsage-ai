@@ -120,6 +120,7 @@ New features available in Zod v4.2.0+ for improved schema expressiveness.
 
 Use `z.looseRecord()` when you want record-like objects but **do not** want to
 error on keys that fail the `keySchema` validation.
+(Introduced in Zod v4.2.0; see [release notes](https://github.com/colinhacks/zod/releases/tag/v4.2.0).)
 
 ```typescript
 // Metadata, configuration, or extensible data
@@ -134,7 +135,7 @@ metadata: z.looseRecord(z.string(), z.unknown()).optional()
 ### z.xor() - Mutually Exclusive Unions
 
 Use `z.xor()` when exactly one schema must match (not zero, not multiple).
-(Introduced in Zod v4.2.0; see [release notes](https://github.com/colinhacks/zod/releases/tag/zod%404.2.0).)
+(Introduced in Zod v4.2.0; see [release notes](https://github.com/colinhacks/zod/releases/tag/v4.2.0).)
 
 ```typescript
 // WebSocket messages - exactly one type per message
