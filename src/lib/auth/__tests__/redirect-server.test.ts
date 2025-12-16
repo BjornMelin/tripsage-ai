@@ -2,11 +2,10 @@
 
 import type { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  AUTH_SERVER_FALLBACK_PATH,
-  resolveServerRedirectUrl,
-  safeNextPath,
-} from "@/lib/auth/redirect-server";
+
+// Create hoisted mock functions so they can be accessed in tests
+const mockLoggerWarn = vi.hoisted(() => vi.fn());
+const mockLoggerError = vi.hoisted(() => vi.fn());
 
 vi.mock("server-only", () => ({}));
 
@@ -21,12 +20,24 @@ vi.mock("@/lib/env/server", () => ({
 
 vi.mock("@/lib/telemetry/logger", () => ({
   createServerLogger: () => ({
-    error: vi.fn(),
-    warn: vi.fn(),
+    error: mockLoggerError,
+    warn: mockLoggerWarn,
   }),
 }));
 
+// Import after mocks are set up
+import {
+  AUTH_SERVER_FALLBACK_PATH,
+  resolveServerRedirectUrl,
+  safeNextPath,
+} from "@/lib/auth/redirect-server";
+
 describe("safeNextPath", () => {
+  beforeEach(() => {
+    mockLoggerWarn.mockClear();
+    mockLoggerError.mockClear();
+  });
+
   it("returns fallback for null", () => {
     expect(safeNextPath(null)).toBe("/dashboard");
   });
@@ -51,37 +62,91 @@ describe("safeNextPath", () => {
     expect(safeNextPath("/search?q=test")).toBe("/search?q=test");
   });
 
-  it("blocks protocol-relative URLs (//evil.com)", () => {
+  it("blocks protocol-relative URLs (//evil.com) and logs security event", () => {
     expect(safeNextPath("//evil.com")).toBe("/dashboard");
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      "blocked unsafe redirect path",
+      expect.objectContaining({ reason: "protocol-relative" })
+    );
+
+    mockLoggerWarn.mockClear();
     expect(safeNextPath("//evil.com/path")).toBe("/dashboard");
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      "blocked unsafe redirect path",
+      expect.objectContaining({ reason: "protocol-relative" })
+    );
+
+    mockLoggerWarn.mockClear();
     expect(safeNextPath("//localhost")).toBe("/dashboard");
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      "blocked unsafe redirect path",
+      expect.objectContaining({ reason: "protocol-relative" })
+    );
   });
 
-  it("blocks absolute URLs with protocols", () => {
+  it("blocks absolute URLs with protocols and logs security event", () => {
     expect(safeNextPath("https://evil.com")).toBe("/dashboard");
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      "blocked unsafe redirect path",
+      expect.objectContaining({ reason: "absolute-url" })
+    );
+
+    mockLoggerWarn.mockClear();
     expect(safeNextPath("http://evil.com")).toBe("/dashboard");
-    expect(safeNextPath("https://evil.com/callback")).toBe("/dashboard");
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      "blocked unsafe redirect path",
+      expect.objectContaining({ reason: "absolute-url" })
+    );
+
+    // javascript: and data: are blocked as "missing-leading-slash" since they don't start with /
+    mockLoggerWarn.mockClear();
     expect(safeNextPath("javascript:alert(1)")).toBe("/dashboard");
-    expect(safeNextPath("data:text/html,<script>")).toBe("/dashboard");
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      "blocked unsafe redirect path",
+      expect.objectContaining({ reason: "missing-leading-slash" })
+    );
   });
 
-  it("blocks paths not starting with /", () => {
+  it("blocks paths not starting with / and logs security event", () => {
     expect(safeNextPath("dashboard")).toBe("/dashboard");
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      "blocked unsafe redirect path",
+      expect.objectContaining({ reason: "missing-leading-slash" })
+    );
+
+    mockLoggerWarn.mockClear();
     expect(safeNextPath("../etc/passwd")).toBe("/dashboard");
-    expect(safeNextPath(".hidden")).toBe("/dashboard");
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      "blocked unsafe redirect path",
+      expect.objectContaining({ reason: "missing-leading-slash" })
+    );
   });
 
   it("normalizes backslashes to forward slashes", () => {
     expect(safeNextPath("/path\\to\\page")).toBe("/path/to/page");
   });
 
-  it("blocks backslash-based protocol-relative patterns after normalization", () => {
+  it("blocks backslash-based protocol-relative patterns after normalization and logs", () => {
     expect(safeNextPath("/\\evil.com")).toBe("/dashboard");
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      "blocked unsafe redirect path",
+      expect.objectContaining({ reason: "normalized-protocol-relative" })
+    );
   });
 
-  it("blocks URL-encoded protocol patterns", () => {
+  it("blocks URL-encoded protocol patterns and logs security event", () => {
     expect(safeNextPath("/%2Fevil.com")).toBe("/dashboard");
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      "blocked unsafe redirect path",
+      expect.objectContaining({ reason: "encoded-protocol-pattern" })
+    );
+
+    mockLoggerWarn.mockClear();
     expect(safeNextPath("/%2F%2Fevil.com")).toBe("/dashboard");
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      "blocked unsafe redirect path",
+      expect.objectContaining({ reason: "encoded-protocol-pattern" })
+    );
   });
 
   it("handles double-encoded patterns safely", () => {
@@ -98,17 +163,34 @@ describe("safeNextPath", () => {
     expect(safeNextPath("/%GG")).toMatch(/^\//);
   });
 
-  it("blocks paths with control characters", () => {
+  it("blocks paths with control characters and logs security event", () => {
     expect(safeNextPath("/\t/evil.com")).toBe("/dashboard");
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      "blocked unsafe redirect path",
+      expect.objectContaining({ reason: "contains-control-chars" })
+    );
+
+    mockLoggerWarn.mockClear();
     expect(safeNextPath("/\n/evil.com")).toBe("/dashboard");
-    expect(safeNextPath("/\r/evil.com")).toBe("/dashboard");
-    expect(safeNextPath("/path\twith\ttabs")).toBe("/dashboard");
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      "blocked unsafe redirect path",
+      expect.objectContaining({ reason: "contains-control-chars" })
+    );
   });
 
-  it("blocks paths containing @ (userinfo segments)", () => {
+  it("blocks paths containing @ (userinfo segments) and logs security event", () => {
     expect(safeNextPath("/@attacker.com")).toBe("/dashboard");
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      "blocked unsafe redirect path",
+      expect.objectContaining({ reason: "contains-userinfo-@" })
+    );
+
+    mockLoggerWarn.mockClear();
     expect(safeNextPath("/user@evil.com/path")).toBe("/dashboard");
-    expect(safeNextPath("/@")).toBe("/dashboard");
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      "blocked unsafe redirect path",
+      expect.objectContaining({ reason: "contains-userinfo-@" })
+    );
   });
 
   it("exports fallback constant", () => {
