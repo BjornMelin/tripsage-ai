@@ -9,9 +9,13 @@
  * - Telemetry spans
  */
 
-import { createHash } from "node:crypto";
 import { type NextRequest, NextResponse } from "next/server";
 import type { z } from "zod";
+import { getClientIpFromHeaders as getClientIpFromHeaderValues } from "@/lib/http/ip";
+import {
+  getTrustedRateLimitIdentifierFromHeaders,
+  hashIdentifier as hashRateLimitIdentifier,
+} from "@/lib/ratelimit/identifier";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
 const logger = createServerLogger("route-helpers");
@@ -31,10 +35,11 @@ export const API_CONSTANTS = {
 /**
  * Extract the client IP from trusted sources with deterministic fallback.
  *
- * Priority order (matches @vercel/functions ipAddress() behavior):
+ * Priority order (Vercel-compatible):
  * 1. x-real-ip header (Vercel's canonical client IP header, set by edge)
  * 2. x-forwarded-for header (first IP - trusted on Vercel, spoofable elsewhere)
- * 3. "unknown" (fallback when no IP available)
+ * 3. cf-connecting-ip header (Cloudflare deployments)
+ * 4. "unknown" (fallback when no IP available)
  *
  * **Security notes:**
  * - On Vercel: Both headers are trusted. Vercel's edge network overwrites
@@ -51,24 +56,7 @@ export const API_CONSTANTS = {
  * @returns Client IP string or "unknown".
  */
 export function getClientIpFromHeaders(req: NextRequest): string {
-  const headers = req.headers;
-
-  // 1. x-real-ip: Vercel's canonical client IP header (set by edge, not caller-controlled)
-  // This matches @vercel/functions ipAddress() behavior
-  const realIp = headers.get("x-real-ip");
-  if (realIp && realIp.length > 0) {
-    return realIp.trim();
-  }
-
-  // 2. x-forwarded-for: Standard proxy header
-  // On Vercel: trusted (edge overwrites it). Self-hosted: SPOOFABLE without proxy config.
-  const xff = headers.get("x-forwarded-for");
-  if (xff && xff.length > 0) {
-    const firstIp = xff.split(",")[0]?.trim();
-    if (firstIp) return firstIp;
-  }
-
-  return "unknown";
+  return getClientIpFromHeaderValues(req.headers);
 }
 
 /**
@@ -81,7 +69,7 @@ export function getClientIpFromHeaders(req: NextRequest): string {
  * @returns Hashed identifier as hex string.
  */
 export function hashIdentifier(identifier: string): string {
-  return createHash("sha256").update(identifier).digest("hex");
+  return hashRateLimitIdentifier(identifier);
 }
 
 /**
@@ -94,12 +82,7 @@ export function hashIdentifier(identifier: string): string {
  * @returns Hashed identifier string.
  */
 export function getTrustedRateLimitIdentifier(req: NextRequest): string {
-  const ip = getClientIpFromHeaders(req);
-  // Hash to prevent enumeration; "unknown" remains "unknown" after hashing
-  if (ip === "unknown") {
-    return "unknown";
-  }
-  return hashIdentifier(ip);
+  return getTrustedRateLimitIdentifierFromHeaders(req.headers);
 }
 
 /**
@@ -160,8 +143,9 @@ export function getAuthorization(req: NextRequest): string | null {
 export function buildRateLimitKey(req: NextRequest): string {
   const auth = getAuthorization(req) || "anon";
   const bearer = auth.startsWith("Bearer ") ? auth.slice(7) : auth;
-  const ip = getClientIpFromHeaders(req);
-  return `${bearer}:${ip}`;
+  const bearerHash = bearer === "anon" ? "anon" : hashIdentifier(bearer);
+  const ipIdentifier = getTrustedRateLimitIdentifier(req);
+  return `${bearerHash}:${ipIdentifier}`;
 }
 
 /**
