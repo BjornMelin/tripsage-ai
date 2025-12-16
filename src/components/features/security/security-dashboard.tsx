@@ -24,6 +24,9 @@ import { getUserSecurityEvents, getUserSecurityMetrics } from "@/lib/security/se
 import { getCurrentSessionId, listActiveSessions } from "@/lib/security/sessions";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import { createServerSupabase, getCurrentUser } from "@/lib/supabase/server";
+import { createServerLogger } from "@/lib/telemetry/logger";
+
+const SecurityDashboardLogger = createServerLogger("security.dashboard");
 
 const DefaultMetrics: SecurityMetrics = {
   activeSessions: 0,
@@ -54,11 +57,38 @@ async function GetSecurityData() {
   const [eventsResult, metricsResult, sessionsResult] = await Promise.allSettled([
     getUserSecurityEvents(adminSupabase, user.id),
     getUserSecurityMetrics(adminSupabase, user.id),
-    (async () => {
-      const currentSessionId = await getCurrentSessionId(supabase);
-      return await listActiveSessions(adminSupabase, user.id, { currentSessionId });
-    })(),
+    getCurrentSessionId(supabase).then((currentSessionId) =>
+      listActiveSessions(adminSupabase, user.id, { currentSessionId })
+    ),
   ]);
+
+  if (eventsResult.status === "rejected") {
+    SecurityDashboardLogger.warn("security_dashboard_events_fetch_failed", {
+      error:
+        eventsResult.reason instanceof Error
+          ? eventsResult.reason.message
+          : "unknown_error",
+      userId: user.id,
+    });
+  }
+  if (metricsResult.status === "rejected") {
+    SecurityDashboardLogger.warn("security_dashboard_metrics_fetch_failed", {
+      error:
+        metricsResult.reason instanceof Error
+          ? metricsResult.reason.message
+          : "unknown_error",
+      userId: user.id,
+    });
+  }
+  if (sessionsResult.status === "rejected") {
+    SecurityDashboardLogger.warn("security_dashboard_sessions_fetch_failed", {
+      error:
+        sessionsResult.reason instanceof Error
+          ? sessionsResult.reason.message
+          : "unknown_error",
+      userId: user.id,
+    });
+  }
 
   return {
     events: eventsResult.status === "fulfilled" ? eventsResult.value : [],
