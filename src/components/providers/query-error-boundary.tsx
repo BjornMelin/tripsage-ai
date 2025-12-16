@@ -18,8 +18,9 @@ import {
   isNetworkError,
   shouldRetryError,
 } from "@/lib/api/error-types";
-import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
-import { cn } from "@/lib/utils";
+import { getSessionId } from "@/lib/client/session";
+import { errorService } from "@/lib/error-service";
+import { cn, fireAndForget } from "@/lib/utils";
 
 type ErrorVariant = "network" | "server" | "auth" | "permission" | "default";
 
@@ -127,15 +128,23 @@ function ResolveMeta(error: unknown): ErrorMeta {
  */
 function RecordTelemetry(error: Error, info: ErrorInfo, meta: ErrorMeta) {
   try {
-    recordClientErrorOnActiveSpan(error, {
-      action: "render",
-      componentStack: info.componentStack,
-      context: COMPONENT_CONTEXT,
-      errorCode: meta.errorCode,
-      retryable: meta.isRetryable,
-      statusCode: meta.statusCode,
-      variant: meta.variant,
-    });
+    const errorReport = errorService.createErrorReport(
+      error,
+      info.componentStack ? { componentStack: info.componentStack } : undefined,
+      { sessionId: getSessionId() }
+    );
+
+    fireAndForget(
+      errorService.reportError(errorReport, {
+        action: "render",
+        componentStack: info.componentStack,
+        context: COMPONENT_CONTEXT,
+        errorCode: meta.errorCode,
+        retryable: meta.isRetryable,
+        statusCode: meta.statusCode,
+        variant: meta.variant,
+      })
+    );
   } catch {
     // Telemetry failures must never break the UI
   }

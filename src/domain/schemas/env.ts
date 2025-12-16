@@ -134,6 +134,7 @@ const nextEnvSchema = z.object({
   NEXT_PUBLIC_API_URL: z.url().optional(),
   NEXT_PUBLIC_APP_NAME: z.string().default("TripSage"),
   NEXT_PUBLIC_BASE_PATH: z.string().optional(),
+  NEXT_PUBLIC_FALLBACK_HOTEL_IMAGE: z.string().optional(),
   NEXT_PUBLIC_SITE_URL: z.url().optional(),
 });
 
@@ -196,7 +197,7 @@ const travelApiEnvSchema = z.object({
   DUFFEL_API_KEY: apiKeySchema("DUFFEL_API_KEY"),
   // Server routes/tools: Server key for Geocoding/Places/Routes/Time Zone (IP+API restricted)
   GOOGLE_MAPS_SERVER_API_KEY: apiKeySchema("GOOGLE_MAPS_SERVER_API_KEY", 30),
-  // Frontend: Browser key for Maps JS (referrer-restricted)
+  // Frontend: Browser key for Maps JS / Places (referrer-restricted)
   NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY: apiKeySchema(
     "NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY",
     30
@@ -284,6 +285,7 @@ export const clientEnvSchema = z.object({
   NEXT_PUBLIC_API_URL: z.url().optional(),
   NEXT_PUBLIC_APP_NAME: z.string().default("TripSage"),
   NEXT_PUBLIC_BASE_PATH: z.string().optional(),
+  NEXT_PUBLIC_FALLBACK_HOTEL_IMAGE: z.string().optional(),
   NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY: z.string().optional(),
   NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT: z.url().optional(),
   NEXT_PUBLIC_SITE_URL: z.url().optional(),

@@ -11,7 +11,7 @@ import {
   useBudgetStore,
 } from "@/stores/budget-store";
 
-// Note: persist middleware is already mocked globally in test-setup.ts
+// Note: persist middleware is mocked in src/test/setup-jsdom.ts
 
 describe("Budget Store - Budget Calculation", () => {
   beforeEach(() => {

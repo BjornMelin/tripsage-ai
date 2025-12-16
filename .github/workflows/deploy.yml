@@ -75,7 +75,7 @@ jobs:
 
           if [ -n "$has_supabase" ] || [ -n "$has_upstash" ]; then
             echo "Running infrastructure validation..."
-            pnpm ops:check || echo "::warning::Infrastructure check failed (non-blocking)"
+            pnpm ops check all || echo "::warning::Infrastructure check failed (non-blocking)"
           else
             echo "Skipping infra check - credentials not configured"
           fi

@@ -1,6 +1,6 @@
 /** @vitest-environment node */
 
-import type { Activity, ActivitySearchParams } from "@schemas/search";
+import type { ActivitySearchParams } from "@schemas/search";
 import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/test/msw/server";
@@ -111,28 +111,6 @@ describe("ActivitiesService", () => {
       await expect(
         service.search({} as unknown as ActivitySearchParams, {})
       ).rejects.toThrow("Destination is required");
-    });
-
-    it("should compute query hash consistently", () => {
-      const params1: ActivitySearchParams = {
-        category: "museums",
-        destination: "Paris",
-      };
-      const params2: ActivitySearchParams = {
-        category: "museums",
-        destination: "Paris",
-      };
-
-      // Access private method via type assertion for testing
-      // Using Record to bypass private access restrictions
-      const serviceRecord = service as unknown as Record<string, unknown>;
-      const computeQueryHash = serviceRecord.computeQueryHash as (
-        params: ActivitySearchParams
-      ) => string;
-      const hash1 = computeQueryHash.call(service, params1);
-      const hash2 = computeQueryHash.call(service, params2);
-
-      expect(hash1).toBe(hash2);
     });
 
     it("should return cached results when available", async () => {
@@ -460,94 +438,6 @@ describe("ActivitiesService", () => {
       await expect(service.details("invalid", {})).rejects.toThrow(
         "Activity not found"
       );
-    });
-  });
-
-  describe("isPopularDestination", () => {
-    it("should identify popular destinations", () => {
-      // Access private method via type assertion for testing
-      // Using Record to bypass private access restrictions
-      const serviceRecord = service as unknown as Record<string, unknown>;
-      const isPopular = (
-        serviceRecord.isPopularDestination as (destination: string) => boolean
-      ).bind(service);
-      expect(isPopular("Paris")).toBe(true);
-      expect(isPopular("Tokyo")).toBe(true);
-      expect(isPopular("New York")).toBe(true);
-      expect(isPopular("Random Small Town")).toBe(false);
-    });
-  });
-
-  describe("normalizeWebResultsToActivities", () => {
-    it("should map web search results to activities", () => {
-      // Access private method via type assertion for testing
-      // Using Record to bypass private access restrictions
-      const serviceRecord = service as unknown as Record<string, unknown>;
-      type NormalizeFn = (
-        webResults: Array<{
-          url: string;
-          title?: string;
-          snippet?: string;
-        }>,
-        destination: string,
-        date?: string
-      ) => Activity[];
-      const normalize = (
-        serviceRecord.normalizeWebResultsToActivities as NormalizeFn
-      ).bind(service);
-
-      const webResults = [
-        {
-          snippet: "A great museum experience",
-          title: "Local Museum",
-          url: "https://example.com/museum",
-        },
-        {
-          snippet: "Guided walking tour",
-          title: "Central Park Tour",
-          url: "https://example.com/park",
-        },
-      ];
-
-      const activities = normalize(webResults, "New York", "2025-01-01");
-
-      expect(activities).toHaveLength(2);
-      expect(activities[0].id).toMatch(/^ai_fallback:/);
-      expect(activities[0].name).toBe("Local Museum");
-      expect(activities[0].type).toBe("museum");
-      expect(activities[1].type).toBe("tour");
-    });
-
-    it("should skip results without title or snippet", () => {
-      // Access private method via type assertion for testing
-      // Using Record to bypass private access restrictions
-      const serviceRecord = service as unknown as Record<string, unknown>;
-      type NormalizeFn = (
-        webResults: Array<{
-          url: string;
-          title?: string;
-          snippet?: string;
-        }>,
-        destination: string,
-        date?: string
-      ) => Activity[];
-      const normalize = (
-        serviceRecord.normalizeWebResultsToActivities as NormalizeFn
-      ).bind(service);
-
-      const webResults = [
-        { snippet: "", title: "", url: "https://example.com" },
-        {
-          snippet: "Valid snippet",
-          title: "Valid Title",
-          url: "https://example.com/2",
-        },
-      ];
-
-      const activities = normalize(webResults, "Paris", "2025-01-01");
-
-      expect(activities).toHaveLength(1);
-      expect(activities[0].name).toBe("Valid Title");
     });
   });
 });

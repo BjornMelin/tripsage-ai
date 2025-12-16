@@ -27,7 +27,6 @@ import { getAdminSupabase, type TypedAdminSupabase } from "@/lib/supabase/admin"
 import type { Database } from "@/lib/supabase/database.types";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
-import { isBuildPhase } from "@/lib/utils/build-phase";
 
 type TypedSupabase = SupabaseClient<Database>;
 type BackupAuditMeta = { ip?: string; userAgent?: string };
@@ -86,8 +85,28 @@ export class TotpVerificationInternalError extends Error {
 /** The cache of the backup code pepper. */
 let backupCodePepperCache: string | null = null;
 
-/** Resets the backup code pepper for testing. */
-export function resetBackupCodePepperForTest() {
+/** Tracks whether MFA module has been initialized. */
+let mfaInitialized = false;
+
+/**
+ * Initializes the MFA module by validating configuration.
+ * Must be called explicitly during application bootstrap.
+ * Safe to call multiple times (idempotent).
+ */
+export function initMfa(): void {
+  if (mfaInitialized) {
+    return;
+  }
+  mfaInitialized = true;
+  validateMfaConfig();
+}
+
+/**
+ * Resets MFA initialization state for testing.
+ * @internal Test-only export.
+ */
+export function resetMfaInitForTest(): void {
+  mfaInitialized = false;
   backupCodePepperCache = null;
 }
 
@@ -673,9 +692,4 @@ function hashBackupCode(code: string): string {
   const pepper = getBackupCodePepper();
   // Lightweight pepper to avoid plain deterministic hash reuse
   return createHash("sha256").update(`${pepper}:${normalized}`, "utf8").digest("hex");
-}
-
-// Skip validation during tests and build phase (env vars aren't available during build)
-if (process.env.NODE_ENV !== "test" && !isBuildPhase()) {
-  validateMfaConfig();
 }

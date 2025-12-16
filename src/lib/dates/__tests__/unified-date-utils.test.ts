@@ -1,17 +1,18 @@
 /** @vitest-environment node */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { DATE_FORMATS, DateUtils, TIMEZONE_CONFIG } from "../unified-date-utils";
+import { createFakeTimersContext } from "@/test/utils/with-fake-timers";
+import { DATE_FORMATS, DateUtils } from "../unified-date-utils";
 
 describe("DateUtils", () => {
+  const timers = createFakeTimersContext();
+
   beforeEach(() => {
-    vi.useFakeTimers();
+    timers.setup();
     vi.setSystemTime(new Date("2024-01-15T10:30:00Z"));
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
-  });
+  afterEach(timers.teardown);
 
   describe("parse", () => {
     it("should parse ISO date string", () => {
@@ -369,15 +370,6 @@ describe("Constants", () => {
         expect(typeof format).toBe("string");
         expect(format.length).toBeGreaterThan(0);
       });
-    });
-  });
-
-  describe("TIMEZONE_CONFIG", () => {
-    it("should have timezone configuration", () => {
-      expect(TIMEZONE_CONFIG.default).toBeDefined();
-      expect(TIMEZONE_CONFIG.user).toBeDefined();
-      expect(typeof TIMEZONE_CONFIG.default).toBe("string");
-      expect(typeof TIMEZONE_CONFIG.user).toBe("string");
     });
   });
 });

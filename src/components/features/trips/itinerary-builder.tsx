@@ -10,6 +10,7 @@ import {
   Droppable,
   type DropResult,
 } from "@hello-pangea/dnd";
+import type { TripDestination, UiTrip } from "@schemas/trips";
 import {
   CalendarIcon,
   CarIcon,
@@ -52,11 +53,11 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { secureUuid } from "@/lib/security/random";
-import { type Destination, type Trip, useTripStore } from "@/stores/trip-store";
+import { useTripItineraryStore } from "@/stores/trip-itinerary-store";
 
 interface ItineraryBuilderProps {
-  trip: Trip;
-  onUpdateTrip?: (trip: Trip) => void;
+  trip: UiTrip;
+  onUpdateTrip?: (trip: UiTrip) => void;
   className?: string;
 }
 
@@ -89,7 +90,7 @@ interface DestinationDialogProps {
   addActivity: () => void;
   updateActivity: (index: number, value: string) => void;
   removeActivity: (index: number) => void;
-  onSave: () => Promise<void>;
+  onSave: () => void | Promise<void>;
   isEditing: boolean;
 }
 
@@ -340,10 +341,12 @@ export function ItineraryBuilder({
   onUpdateTrip,
   className,
 }: ItineraryBuilderProps) {
-  const { updateTrip, addDestination, updateDestination, removeDestination } =
-    useTripStore();
+  const addDestination = useTripItineraryStore((state) => state.addDestination);
+  const removeDestination = useTripItineraryStore((state) => state.removeDestination);
+  const setDestinations = useTripItineraryStore((state) => state.setDestinations);
+  const updateDestination = useTripItineraryStore((state) => state.updateDestination);
   const [isAddingDestination, setIsAddingDestination] = useState(false);
-  const [editingDestination, setEditingDestination] = useState<Destination | null>(
+  const [editingDestination, setEditingDestination] = useState<TripDestination | null>(
     null
   );
   const [formData, setFormData] = useState<DestinationFormData>({
@@ -370,11 +373,11 @@ export function ItineraryBuilder({
 
       if (onUpdateTrip) {
         onUpdateTrip(updatedTrip);
-      } else {
-        updateTrip(trip.id, { destinations: items });
       }
+
+      setDestinations(trip.id, items);
     },
-    [trip, onUpdateTrip, updateTrip]
+    [trip, onUpdateTrip, setDestinations]
   );
 
   const resetForm = () => {
@@ -396,7 +399,7 @@ export function ItineraryBuilder({
     setIsAddingDestination(true);
   };
 
-  const openEditDialog = (destination: Destination) => {
+  const openEditDialog = (destination: TripDestination) => {
     setFormData({
       accommodation: destination.accommodation || { name: "", type: "" },
       activities: destination.activities || [],
@@ -411,8 +414,8 @@ export function ItineraryBuilder({
     setEditingDestination(destination);
   };
 
-  const handleSaveDestination = async () => {
-    const destinationData: Partial<Destination> = {
+  const handleSaveDestination = () => {
+    const destinationData: Partial<TripDestination> = {
       accommodation: formData.accommodation.name ? formData.accommodation : undefined,
       activities: formData.activities.length > 0 ? formData.activities : undefined,
       country: formData.country,
@@ -427,21 +430,21 @@ export function ItineraryBuilder({
     };
 
     if (editingDestination) {
-      await updateDestination(trip.id, editingDestination.id, destinationData);
+      updateDestination(trip.id, editingDestination.id, destinationData);
       setEditingDestination(null);
     } else {
-      await addDestination(trip.id, {
+      addDestination(trip.id, {
         ...destinationData,
         id: secureUuid(),
-      } as Destination);
+      } as TripDestination);
       setIsAddingDestination(false);
     }
 
     resetForm();
   };
 
-  const handleDeleteDestination = async (destinationId: string) => {
-    await removeDestination(trip.id, destinationId);
+  const handleDeleteDestination = (destinationId: string) => {
+    removeDestination(trip.id, destinationId);
   };
 
   const addActivity = () => {

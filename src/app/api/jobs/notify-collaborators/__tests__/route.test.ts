@@ -73,7 +73,6 @@ vi.mock("@/lib/api/route-helpers", async () => {
       try {
         return await fn(span);
       } catch (error) {
-        // eslint-disable-next-line no-console
         console.error("withRequestSpan error", error);
         throw error;
       }
@@ -139,9 +138,9 @@ describe("POST /api/jobs/notify-collaborators", () => {
     const res = await POST(makeRequest(validJob));
     expect(res.status).toBe(401);
     const json = await res.json();
-    // unauthorizedResponse() returns standardized error format
+    // Signature verification returns standardized error format
     expect(json.error).toBe("unauthorized");
-    expect(json.reason).toBe("Authentication required");
+    expect(json.reason).toBe("Invalid Upstash signature");
   });
 
   it("returns 400 on invalid job payload", async () => {

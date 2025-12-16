@@ -80,7 +80,7 @@ const ERROR_MESSAGE_SCHEMA = z.string().min(1, "Error message cannot be empty");
 
 const CHAT_SESSION_INSERT_SCHEMA = z
   .object({
-    metadata: z.record(z.string(), z.unknown()).optional(),
+    metadata: z.looseRecord(z.string(), z.unknown()).optional(),
     title: z.string().optional(),
     // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
     trip_id: z.number().nullable().optional(),
@@ -258,8 +258,7 @@ export function useSupabaseChat() {
           "chat_sessions",
           // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
           { updated_at: new Date().toISOString() },
-          // biome-ignore lint/suspicious/noExplicitAny: Required for Supabase query builder typing
-          (qb) => (qb as any).eq("id", validatedSessionId)
+          (qb) => qb.eq("id", validatedSessionId)
         );
 
         return data as ChatMessage;
@@ -419,8 +418,7 @@ export function useSupabaseChat() {
           supabase,
           "chat_tool_calls",
           updates,
-          // biome-ignore lint/suspicious/noExplicitAny: Required for Supabase query builder typing
-          (qb) => (qb as any).eq("id", validatedId)
+          (qb) => qb.eq("id", validatedId)
         );
 
         if (error) throw error;
@@ -475,8 +473,7 @@ export function useSupabaseChat() {
             // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
             updated_at: new Date().toISOString(),
           },
-          // biome-ignore lint/suspicious/noExplicitAny: Required for Supabase query builder typing
-          (qb) => (qb as any).eq("id", validatedSessionId)
+          (qb) => qb.eq("id", validatedSessionId)
         );
 
         if (error) throw error;

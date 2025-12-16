@@ -16,8 +16,14 @@ import { TELEMETRY_SERVICE_NAME } from "@/lib/telemetry/constants";
  * server-side tracing. The @vercel/otel wrapper handles all the complexity
  * of setting up NodeSDK, resource detection, and Next.js-specific instrumentation.
  */
-export function register() {
+export async function register() {
   registerOTel({
     serviceName: TELEMETRY_SERVICE_NAME,
   });
+
+  // Initialize security modules on server runtime only
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    const { initMfa } = await import("@/lib/security/mfa");
+    initMfa();
+  }
 }

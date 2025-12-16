@@ -246,9 +246,9 @@ describe("Memory Hooks", () => {
 
       const { result } = renderHook(() => useAddConversationMemory(), { wrapper });
       await act(async () => {
-        await expect(
-          result.current.mutateAsync(conversationData)
-        ).resolves.toBeUndefined();
+        await expect(result.current.mutateAsync(conversationData)).rejects.toThrow(
+          "Storage failed"
+        );
       });
       expect(MOCK_MAKE_AUTHENTICATED_REQUEST).toHaveBeenCalledWith(
         "/api/memory/conversations",

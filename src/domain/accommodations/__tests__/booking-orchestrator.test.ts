@@ -1,7 +1,5 @@
 /** @vitest-environment node */
 
-import { runBookingOrchestrator } from "@domain/accommodations/booking-orchestrator";
-import { ProviderError } from "@domain/accommodations/errors";
 import type { AccommodationProviderAdapter } from "@domain/accommodations/providers/types";
 import { vi } from "vitest";
 
@@ -9,7 +7,14 @@ vi.mock("@/lib/payments/booking-payment", () => ({
   refundBookingPayment: vi.fn().mockResolvedValue({ amount: 0, refundId: "rf_1" }),
 }));
 
-import { refundBookingPayment } from "@/lib/payments/booking-payment";
+// Reset modules to ensure fresh imports with mocks applied
+vi.resetModules();
+
+const { runBookingOrchestrator } = await import(
+  "@domain/accommodations/booking-orchestrator"
+);
+const { ProviderError } = await import("@domain/accommodations/errors");
+const { refundBookingPayment } = await import("@/lib/payments/booking-payment");
 
 const baseCommand = {
   amount: 10000,

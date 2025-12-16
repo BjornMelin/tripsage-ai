@@ -4,7 +4,7 @@
  * This server intercepts HTTP requests during test execution, providing
  * predictable mock responses without requiring real network calls.
  *
- * The server is integrated into the global test setup (test-setup.ts) and is
+ * The server is integrated into the Vitest setup (setup-node / setup-jsdom) and is
  * active for all tests. Individual tests can override default handlers using
  * server.use() for specific scenarios.
  */

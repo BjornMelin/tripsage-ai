@@ -11,16 +11,53 @@ import { clientEnvSchema } from "@schemas/env";
 import { isBuildPhase } from "@/lib/utils/build-phase";
 
 /**
+ * Normalize an optional environment variable by trimming and removing falsy values.
+ *
+ * Treats `undefined`, empty strings, and the string "undefined" (case-insensitive,
+ * e.g., "undefined", "UNDEFINED", "Undefined") as absent. This prevents drift
+ * between environment configuration and runtime behavior.
+ *
+ * @param value - Raw environment variable value (may be undefined or whitespace)
+ * @returns Trimmed value or undefined if empty/falsy
+ */
+function normalizeOptionalEnvVar(value: string | undefined): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.toLowerCase() === "undefined") {
+    return undefined;
+  }
+  return trimmed;
+}
+
+/**
  * Extract and validate client-safe environment variables.
  *
  * @returns Validated client environment object
  * @throws Error if validation fails (except during build/development)
  */
 function validateClientEnv(): ClientEnv {
-  // Extract NEXT_PUBLIC_ variables from process.env
-  const clientVars = Object.fromEntries(
-    Object.entries(process.env).filter(([key]) => key.startsWith("NEXT_PUBLIC_"))
-  );
+  // Avoid enumerating process.env in client bundles; Next.js inlines env var
+  // accesses but does not guarantee process.env is enumerable in the browser.
+  const clientVars = {
+    NEXT_PUBLIC_API_URL: normalizeOptionalEnvVar(process.env.NEXT_PUBLIC_API_URL),
+    NEXT_PUBLIC_APP_NAME: normalizeOptionalEnvVar(process.env.NEXT_PUBLIC_APP_NAME),
+    NEXT_PUBLIC_BASE_PATH: normalizeOptionalEnvVar(process.env.NEXT_PUBLIC_BASE_PATH),
+    NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY: normalizeOptionalEnvVar(
+      process.env.NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY
+    ),
+    NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT: normalizeOptionalEnvVar(
+      process.env.NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT
+    ),
+    NEXT_PUBLIC_SITE_URL: normalizeOptionalEnvVar(process.env.NEXT_PUBLIC_SITE_URL),
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: normalizeOptionalEnvVar(
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    ),
+    NEXT_PUBLIC_SUPABASE_URL: normalizeOptionalEnvVar(
+      process.env.NEXT_PUBLIC_SUPABASE_URL
+    ),
+  };
 
   try {
     return clientEnvSchema.parse(clientVars);

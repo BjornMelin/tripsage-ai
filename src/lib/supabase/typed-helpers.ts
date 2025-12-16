@@ -6,6 +6,7 @@
 
 import { getSupabaseSchema } from "@schemas/supabase";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { recordErrorOnSpan, withTelemetrySpan } from "@/lib/telemetry/span";
 import type { Database, InsertTables, Tables, UpdateTables } from "./database.types";
 
 export type TypedClient = SupabaseClient<Database>;
@@ -43,38 +44,63 @@ const isSupportedTable = (table: TableName): table is SupportedTable =>
  * @param values Insert payload (validated via Zod schema)
  * @returns Selected row (validated) and error (if any)
  */
-export async function insertSingle<T extends keyof Database["public"]["Tables"]>(
+export function insertSingle<T extends keyof Database["public"]["Tables"]>(
   client: TypedClient,
   table: T,
   values: InsertTables<T> | InsertTables<T>[]
 ): Promise<{ data: Tables<T> | null; error: unknown }> {
-  // Validate input if schema exists
-  const schema = isSupportedTable(table) ? getSupabaseSchema(table) : undefined;
-  if (schema?.insert && !Array.isArray(values)) {
-    schema.insert.parse(values);
-  }
-
-  // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-  const anyClient = client as any;
-  // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-  const insertQb = (anyClient as any).from(table as string).insert(values as unknown);
-  // Some tests stub a very lightweight query builder without select/single methods.
-  // Gracefully handle those by treating the insert as fire-and-forget.
-  if (insertQb && typeof insertQb.select === "function") {
-    const { data, error } = await insertQb.select().single();
-    if (error) return { data: null, error };
-    // Validate output if schema exists
-    if (schema?.row && data) {
-      try {
-        const validated = schema.row.parse(data);
-        return { data: validated as Tables<T>, error: null };
-      } catch (validationError) {
-        return { data: null, error: validationError };
+  return withTelemetrySpan(
+    "supabase.insert",
+    {
+      attributes: {
+        "db.name": "tripsage",
+        "db.supabase.operation": "insert",
+        "db.supabase.table": table,
+        "db.system": "postgres",
+      },
+    },
+    async (span) => {
+      // Validate input if schema exists
+      const schema = isSupportedTable(table) ? getSupabaseSchema(table) : undefined;
+      if (schema?.insert && !Array.isArray(values)) {
+        try {
+          schema.insert.parse(values);
+        } catch (validationError) {
+          if (validationError instanceof Error) {
+            recordErrorOnSpan(span, validationError);
+          }
+          return { data: null, error: validationError };
+        }
       }
+
+      // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
+      const anyClient = client as any;
+      // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
+      const insertQb = (anyClient as any)
+        .from(table as string)
+        .insert(values as unknown);
+      // Some tests stub a very lightweight query builder without select/single methods.
+      // Gracefully handle those by treating the insert as fire-and-forget.
+      if (insertQb && typeof insertQb.select === "function") {
+        const { data, error } = await insertQb.select().single();
+        if (error) return { data: null, error };
+        // Validate output if schema exists
+        if (schema?.row && data) {
+          try {
+            const validated = schema.row.parse(data);
+            return { data: validated as Tables<T>, error: null };
+          } catch (validationError) {
+            if (validationError instanceof Error) {
+              recordErrorOnSpan(span, validationError);
+            }
+            return { data: null, error: validationError };
+          }
+        }
+        return { data: (data ?? null) as Tables<T> | null, error: null };
+      }
+      return { data: null, error: null };
     }
-    return { data: (data ?? null) as Tables<T> | null, error: null };
-  }
-  return { data: null, error: null };
+  );
 }
 
 /**
@@ -92,38 +118,61 @@ export async function insertSingle<T extends keyof Database["public"]["Tables"]>
  * @param where Closure to apply filters to the builder
  * @returns Selected row (validated) and error (if any)
  */
-export async function updateSingle<T extends TableName>(
+export function updateSingle<T extends TableName>(
   client: TypedClient,
   table: T,
   updates: Partial<UpdateTables<T>>,
   where: (qb: TableFilterBuilder<T>) => TableFilterBuilder<T>
 ): Promise<{ data: Tables<T> | null; error: unknown }> {
-  // Validate input if schema exists
-  const schema = isSupportedTable(table) ? getSupabaseSchema(table) : undefined;
-  if (schema?.update) {
-    schema.update.parse(updates);
-  }
+  return withTelemetrySpan(
+    "supabase.update",
+    {
+      attributes: {
+        "db.name": "tripsage",
+        "db.supabase.operation": "update",
+        "db.supabase.table": table,
+        "db.system": "postgres",
+      },
+    },
+    async (span) => {
+      // Validate input if schema exists
+      const schema = isSupportedTable(table) ? getSupabaseSchema(table) : undefined;
+      if (schema?.update) {
+        try {
+          schema.update.parse(updates);
+        } catch (validationError) {
+          if (validationError instanceof Error) {
+            recordErrorOnSpan(span, validationError);
+          }
+          return { data: null, error: validationError };
+        }
+      }
 
-  // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-  const anyClient = client as any;
-  const filtered = where(
-    // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-    (anyClient as any)
-      .from(table as string)
-      .update(updates as unknown) as TableFilterBuilder<T>
-  );
-  const { data, error } = await filtered.select().single();
-  if (error) return { data: null, error };
-  // Validate output if schema exists
-  if (schema?.row && data) {
-    try {
-      const validated = schema.row.parse(data);
-      return { data: validated as Tables<T>, error: null };
-    } catch (validationError) {
-      return { data: null, error: validationError };
+      // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
+      const anyClient = client as any;
+      const filtered = where(
+        // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
+        (anyClient as any)
+          .from(table as string)
+          .update(updates as unknown) as TableFilterBuilder<T>
+      );
+      const { data, error } = await filtered.select().single();
+      if (error) return { data: null, error };
+      // Validate output if schema exists
+      if (schema?.row && data) {
+        try {
+          const validated = schema.row.parse(data);
+          return { data: validated as Tables<T>, error: null };
+        } catch (validationError) {
+          if (validationError instanceof Error) {
+            recordErrorOnSpan(span, validationError);
+          }
+          return { data: null, error: validationError };
+        }
+      }
+      return { data: (data ?? null) as Tables<T> | null, error: null };
     }
-  }
-  return { data: (data ?? null) as Tables<T> | null, error: null };
+  );
 }
 
 /**
@@ -140,32 +189,48 @@ export async function updateSingle<T extends TableName>(
  * @param where Closure to apply filters to the builder
  * @returns Selected row (validated) and error (if any)
  */
-export async function getSingle<T extends TableName>(
+export function getSingle<T extends TableName>(
   client: TypedClient,
   table: T,
   where: (qb: TableFilterBuilder<T>) => TableFilterBuilder<T>
 ): Promise<{ data: Tables<T> | null; error: unknown }> {
-  const schema = isSupportedTable(table) ? getSupabaseSchema(table) : undefined;
+  return withTelemetrySpan(
+    "supabase.select",
+    {
+      attributes: {
+        "db.name": "tripsage",
+        "db.supabase.operation": "select",
+        "db.supabase.table": table,
+        "db.system": "postgres",
+      },
+    },
+    async (span) => {
+      const schema = isSupportedTable(table) ? getSupabaseSchema(table) : undefined;
 
-  // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-  const anyClient = client as any;
-  const qb = where(
-    // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-    (anyClient as any).from(table as string).select("*") as TableFilterBuilder<T>
-  );
-  const { data, error } = await qb.single();
-  if (error) return { data: null, error };
-  if (!data) return { data: null, error: null };
-  // Validate output if schema exists
-  if (schema?.row) {
-    try {
-      const validated = schema.row.parse(data);
-      return { data: validated as Tables<T>, error: null };
-    } catch (validationError) {
-      return { data: null, error: validationError };
+      // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
+      const anyClient = client as any;
+      const qb = where(
+        // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
+        (anyClient as any).from(table as string).select("*") as TableFilterBuilder<T>
+      );
+      const { data, error } = await qb.single();
+      if (error) return { data: null, error };
+      if (!data) return { data: null, error: null };
+      // Validate output if schema exists
+      if (schema?.row) {
+        try {
+          const validated = schema.row.parse(data);
+          return { data: validated as Tables<T>, error: null };
+        } catch (validationError) {
+          if (validationError instanceof Error) {
+            recordErrorOnSpan(span, validationError);
+          }
+          return { data: null, error: validationError };
+        }
+      }
+      return { data: (data ?? null) as Tables<T> | null, error: null };
     }
-  }
-  return { data: (data ?? null) as Tables<T> | null, error: null };
+  );
 }
 
 /**
@@ -182,21 +247,35 @@ export async function getSingle<T extends TableName>(
  * @param where Closure to apply filters to the builder
  * @returns Error (if any)
  */
-export async function deleteSingle<T extends TableName>(
+export function deleteSingle<T extends TableName>(
   client: TypedClient,
   table: T,
   where: (qb: TableFilterBuilder<T>) => TableFilterBuilder<T>
 ): Promise<{ count: number; error: unknown | null }> {
-  // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-  const anyClient = client as any;
-  const qb = where(
-    // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-    (anyClient as any)
-      .from(table as string)
-      .delete({ count: "exact" }) as TableFilterBuilder<T>
+  return withTelemetrySpan(
+    "supabase.delete",
+    {
+      attributes: {
+        "db.name": "tripsage",
+        "db.supabase.operation": "delete",
+        "db.supabase.table": table,
+        "db.system": "postgres",
+      },
+    },
+    async (span) => {
+      // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
+      const anyClient = client as any;
+      const qb = where(
+        // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
+        (anyClient as any)
+          .from(table as string)
+          .delete({ count: "exact" }) as TableFilterBuilder<T>
+      );
+      const { count, error } = await qb;
+      span.setAttribute("db.supabase.row_count", count ?? 0);
+      return { count: count ?? 0, error: error ?? null };
+    }
   );
-  const { count, error } = await qb;
-  return { count: count ?? 0, error: error ?? null };
 }
 
 /**
@@ -212,32 +291,48 @@ export async function deleteSingle<T extends TableName>(
  * @param where Closure to apply filters to the builder
  * @returns Selected row (validated) or null, and error (if any)
  */
-export async function getMaybeSingle<T extends TableName>(
+export function getMaybeSingle<T extends TableName>(
   client: TypedClient,
   table: T,
   where: (qb: TableFilterBuilder<T>) => TableFilterBuilder<T>
 ): Promise<{ data: Tables<T> | null; error: unknown }> {
-  const schema = isSupportedTable(table) ? getSupabaseSchema(table) : undefined;
+  return withTelemetrySpan(
+    "supabase.select",
+    {
+      attributes: {
+        "db.name": "tripsage",
+        "db.supabase.operation": "select",
+        "db.supabase.table": table,
+        "db.system": "postgres",
+      },
+    },
+    async (span) => {
+      const schema = isSupportedTable(table) ? getSupabaseSchema(table) : undefined;
 
-  // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-  const anyClient = client as any;
-  const qb = where(
-    // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-    (anyClient as any).from(table as string).select("*") as TableFilterBuilder<T>
-  );
-  const { data, error } = await qb.maybeSingle();
-  if (error) return { data: null, error };
-  if (!data) return { data: null, error: null };
-  // Validate output if schema exists
-  if (schema?.row) {
-    try {
-      const validated = schema.row.parse(data);
-      return { data: validated as Tables<T>, error: null };
-    } catch (validationError) {
-      return { data: null, error: validationError };
+      // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
+      const anyClient = client as any;
+      const qb = where(
+        // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
+        (anyClient as any).from(table as string).select("*") as TableFilterBuilder<T>
+      );
+      const { data, error } = await qb.maybeSingle();
+      if (error) return { data: null, error };
+      if (!data) return { data: null, error: null };
+      // Validate output if schema exists
+      if (schema?.row) {
+        try {
+          const validated = schema.row.parse(data);
+          return { data: validated as Tables<T>, error: null };
+        } catch (validationError) {
+          if (validationError instanceof Error) {
+            recordErrorOnSpan(span, validationError);
+          }
+          return { data: null, error: validationError };
+        }
+      }
+      return { data: data as Tables<T>, error: null };
     }
-  }
-  return { data: data as Tables<T>, error: null };
+  );
 }
 
 /**
@@ -252,39 +347,64 @@ export async function getMaybeSingle<T extends TableName>(
  * @param onConflict Column name(s) to determine conflict (e.g., "user_id")
  * @returns Selected row (validated) and error (if any)
  */
-export async function upsertSingle<T extends keyof Database["public"]["Tables"]>(
+export function upsertSingle<T extends keyof Database["public"]["Tables"]>(
   client: TypedClient,
   table: T,
   values: InsertTables<T>,
   onConflict: string
 ): Promise<{ data: Tables<T> | null; error: unknown }> {
-  const schema = isSupportedTable(table) ? getSupabaseSchema(table) : undefined;
-  if (schema?.insert) {
-    schema.insert.parse(values);
-  }
-
-  // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-  const anyClient = client as any;
-  // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-  const upsertQb = (anyClient as any).from(table as string).upsert(values as unknown, {
-    ignoreDuplicates: false,
-    onConflict,
-  });
-
-  // Chain select/single to return the upserted row
-  if (upsertQb && typeof upsertQb.select === "function") {
-    const { data, error } = await upsertQb.select().single();
-    if (error) return { data: null, error };
-    // Validate output if schema exists
-    if (schema?.row && data) {
-      try {
-        const validated = schema.row.parse(data);
-        return { data: validated as Tables<T>, error: null };
-      } catch (validationError) {
-        return { data: null, error: validationError };
+  return withTelemetrySpan(
+    "supabase.upsert",
+    {
+      attributes: {
+        "db.name": "tripsage",
+        "db.supabase.operation": "upsert",
+        "db.supabase.table": table,
+        "db.system": "postgres",
+      },
+    },
+    async (span) => {
+      const schema = isSupportedTable(table) ? getSupabaseSchema(table) : undefined;
+      if (schema?.insert) {
+        try {
+          schema.insert.parse(values);
+        } catch (validationError) {
+          if (validationError instanceof Error) {
+            recordErrorOnSpan(span, validationError);
+          }
+          return { data: null, error: validationError };
+        }
       }
+
+      // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
+      const anyClient = client as any;
+      // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
+      const upsertQb = (anyClient as any)
+        .from(table as string)
+        .upsert(values as unknown, {
+          ignoreDuplicates: false,
+          onConflict,
+        });
+
+      // Chain select/single to return the upserted row
+      if (upsertQb && typeof upsertQb.select === "function") {
+        const { data, error } = await upsertQb.select().single();
+        if (error) return { data: null, error };
+        // Validate output if schema exists
+        if (schema?.row && data) {
+          try {
+            const validated = schema.row.parse(data);
+            return { data: validated as Tables<T>, error: null };
+          } catch (validationError) {
+            if (validationError instanceof Error) {
+              recordErrorOnSpan(span, validationError);
+            }
+            return { data: null, error: validationError };
+          }
+        }
+        return { data: (data ?? null) as Tables<T> | null, error: null };
+      }
+      return { data: null, error: null };
     }
-    return { data: (data ?? null) as Tables<T> | null, error: null };
-  }
-  return { data: null, error: null };
+  );
 }

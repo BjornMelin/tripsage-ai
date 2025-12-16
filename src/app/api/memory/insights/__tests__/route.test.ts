@@ -161,7 +161,11 @@ describe("/api/memory/insights/[userId] route", () => {
       data: { user: { id: "user-123" } },
       error: null,
     });
-    mockResolveProvider.mockResolvedValue({ model: { id: "model-stub" } });
+    mockResolveProvider.mockResolvedValue({
+      model: { id: "model-stub" },
+      modelId: "gpt-4o-mini",
+      provider: "openai",
+    });
     mockHandleMemoryIntent.mockResolvedValue({
       context: baseContext,
       intent: {
@@ -195,6 +199,21 @@ describe("/api/memory/insights/[userId] route", () => {
 
     const res = await Get(req, createRouteParamsContext({ userId: "user-123" }));
     expect(res.status).toBe(401);
+    expect(mockHandleMemoryIntent).not.toHaveBeenCalled();
+  });
+
+  it("returns 403 when requesting another user's insights", async () => {
+    const Get = await importRoute();
+    const req = createMockNextRequest({
+      method: "GET",
+      url: "http://localhost/api/memory/insights/other-user",
+    });
+
+    const res = await Get(req, createRouteParamsContext({ userId: "other-user" }));
+    expect(res.status).toBe(403);
+    const body = (await res.json()) as { error: string; reason: string };
+    expect(body.error).toBe("forbidden");
+    expect(body.reason).toBe("Cannot request insights for another user");
     expect(mockHandleMemoryIntent).not.toHaveBeenCalled();
   });
 

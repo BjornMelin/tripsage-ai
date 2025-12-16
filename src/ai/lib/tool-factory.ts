@@ -237,9 +237,7 @@ export function createAiTool<InputValue, OutputValue>(
               span.addEvent("output_validation_failed", {
                 error: validation.error,
               });
-              // Using "invalid_params" with validationType metadata to distinguish output errors
-              // Consider adding "invalid_output" to ToolErrorCode if this pattern is common
-              throw createToolError("invalid_params", validation.error, {
+              throw createToolError("invalid_output", validation.error, {
                 tool: options.name,
                 validationType: "output",
               });
@@ -355,8 +353,10 @@ async function readFromCache<InputValue, OutputValue>(
   const redisKey = resolveCacheKey(cache, toolName, params);
   if (!redisKey) return { hit: false };
 
+  const namespace = cache.namespace ?? `tool:${toolName}`;
+
   try {
-    const cached = await getCachedJson<OutputValue>(redisKey);
+    const cached = await getCachedJson<OutputValue>(redisKey, { namespace });
     if (!cached) return { hit: false };
 
     // Apply deserialization if provided
@@ -364,11 +364,11 @@ async function readFromCache<InputValue, OutputValue>(
 
     // Apply onHit transformation if provided
     const hydrated = cache.onHit ? cache.onHit(value, params, { startedAt }) : value;
-    span.addEvent("cache_hit", { key: redisKey });
+    span.addEvent("cache_hit", { "cache.namespace": namespace });
     return { hit: true, value: hydrated };
   } catch (error) {
     span.addEvent("cache_error", {
-      key: redisKey,
+      "cache.namespace": namespace,
       reason: error instanceof Error ? error.message : "unknown_error",
     });
     return { hit: false };
@@ -399,6 +399,7 @@ async function writeToCache<InputValue, OutputValue>(
   const redisKey = resolveCacheKey(cache, toolName, params);
   if (!redisKey) return;
 
+  const namespace = cache.namespace ?? `tool:${toolName}`;
   const payload = cache.serialize ? cache.serialize(result, params) : result;
   if (payload === undefined) return;
 
@@ -412,12 +413,13 @@ async function writeToCache<InputValue, OutputValue>(
     await setCachedJson(
       redisKey,
       payload,
-      ttl ? Math.max(1, Math.floor(ttl)) : undefined
+      ttl ? Math.max(1, Math.floor(ttl)) : undefined,
+      { namespace }
     );
-    span.addEvent("cache_write", { key: redisKey, ttl });
+    span.addEvent("cache_write", { "cache.namespace": namespace, ttl });
   } catch (error) {
     span.addEvent("cache_error", {
-      key: redisKey,
+      "cache.namespace": namespace,
       reason: error instanceof Error ? error.message : "unknown_error",
     });
   }
@@ -517,17 +519,22 @@ async function enforceRateLimit<InputValue>(
 
   if (validatedResult.success) return;
 
-  span.addEvent("rate_limited", { identifier });
+  const subjectType = identifier.startsWith("user:")
+    ? "user"
+    : identifier.startsWith("ip:")
+      ? "ip"
+      : "unknown";
+  span.addEvent("rate_limited", { "ratelimit.subject_type": subjectType });
   const nowSeconds = Math.floor(Date.now() / 1000);
   const retryAfter = validatedResult.reset
     ? Math.max(0, validatedResult.reset - nowSeconds)
     : undefined;
   throw createToolError(config.errorCode, undefined, {
-    identifier,
     limit: validatedResult.limit,
     remaining: validatedResult.remaining,
     reset: validatedResult.reset,
     retryAfter,
+    subjectType,
   });
 }
 

@@ -1,9 +1,9 @@
 /** @vitest-environment jsdom */
 
+import type { UiTrip } from "@schemas/trips";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import type React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Trip } from "@/stores/trip-store";
 import { ItineraryBuilder } from "../itinerary-builder";
 
 // Mock the drag and drop library
@@ -73,23 +73,25 @@ vi.mock("@hello-pangea/dnd", () => ({
   },
 }));
 
-// Mock the trip store
-const MockUpdateTrip = vi.fn();
+// Mock the trip itinerary store
 const MockAddDestination = vi.fn();
 const MockUpdateDestination = vi.fn();
 const MockRemoveDestination = vi.fn();
+const MockSetDestinations = vi.fn();
 
-vi.mock("@/stores/trip-store", () => ({
-  useTripStore: vi.fn(() => ({
-    addDestination: MockAddDestination,
-    removeDestination: MockRemoveDestination,
-    updateDestination: MockUpdateDestination,
-    updateTrip: MockUpdateTrip,
-  })),
+vi.mock("@/stores/trip-itinerary-store", () => ({
+  useTripItineraryStore: vi.fn((selector: (state: unknown) => unknown) =>
+    selector({
+      addDestination: MockAddDestination,
+      removeDestination: MockRemoveDestination,
+      setDestinations: MockSetDestinations,
+      updateDestination: MockUpdateDestination,
+    })
+  ),
 }));
 
 describe("ItineraryBuilder", () => {
-  const mockTrip: Trip = {
+  const mockTrip: UiTrip = {
     budget: 3000,
     createdAt: "2024-01-01",
     currency: "USD",
@@ -118,7 +120,7 @@ describe("ItineraryBuilder", () => {
     visibility: "private",
   };
 
-  const emptyTrip: Trip = {
+  const emptyTrip: UiTrip = {
     ...mockTrip,
     destinations: [],
   };

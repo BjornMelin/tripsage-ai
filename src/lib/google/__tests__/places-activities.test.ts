@@ -1,13 +1,6 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getPlaceDetails, postPlacesSearch } from "../client";
-import {
-  buildActivitySearchQuery,
-  getActivityDetailsFromPlaces,
-  mapPlacesPlaceToActivity,
-  searchActivitiesWithPlaces,
-} from "../places-activities";
 
 vi.mock("@/lib/env/server", () => ({
   getGoogleMapsServerKey: vi.fn(() => "test-api-key"),
@@ -26,6 +19,18 @@ vi.mock("@/lib/telemetry/span", () => ({
     })
   ),
 }));
+
+// Reset modules to ensure fresh imports with mocks applied
+vi.resetModules();
+
+// Dynamic imports after mocks
+const { getPlaceDetails, postPlacesSearch } = await import("../client");
+const {
+  buildActivitySearchQuery,
+  getActivityDetailsFromPlaces,
+  mapPlacesPlaceToActivity,
+  searchActivitiesWithPlaces,
+} = await import("../places-activities");
 
 describe("places-activities", () => {
   beforeEach(() => {

@@ -10,11 +10,11 @@ export const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/u, "must be YYYY-MM
 export const isoDateTime = z.iso.datetime();
 
 export const planComponentsSchema = z.object({
-  accommodations: z.array(z.record(z.string(), z.unknown())).default([]),
-  activities: z.array(z.record(z.string(), z.unknown())).default([]),
-  flights: z.array(z.record(z.string(), z.unknown())).default([]),
-  notes: z.array(z.record(z.string(), z.unknown())).default([]),
-  transportation: z.array(z.record(z.string(), z.unknown())).default([]),
+  accommodations: z.array(z.looseRecord(z.string(), z.unknown())).default([]),
+  activities: z.array(z.looseRecord(z.string(), z.unknown())).default([]),
+  flights: z.array(z.looseRecord(z.string(), z.unknown())).default([]),
+  notes: z.array(z.looseRecord(z.string(), z.unknown())).default([]),
+  transportation: z.array(z.looseRecord(z.string(), z.unknown())).default([]),
 });
 
 export const planSchema = z.object({
@@ -25,7 +25,7 @@ export const planSchema = z.object({
   endDate: isoDate,
   finalizedAt: isoDateTime.optional(),
   planId: z.uuid(),
-  preferences: z.record(z.string(), z.unknown()).default({}),
+  preferences: z.looseRecord(z.string(), z.unknown()).default({}),
   startDate: isoDate,
   status: z.enum(["draft", "finalized"]).default("draft"),
   title: z.string().min(1),

@@ -6,6 +6,7 @@
 
 "use client";
 
+import type { UiTrip } from "@schemas/trips";
 import { CalendarIcon, ClockIcon, MapPinIcon } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +22,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTrips } from "@/hooks/use-trips";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
-import type { Trip } from "@/stores/trip-store";
+
+type Trip = UiTrip;
 
 interface RecentTripsProps {
   limit?: number;

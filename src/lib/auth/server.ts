@@ -8,7 +8,7 @@
 
 import "server-only";
 
-import type { AuthUser } from "@schemas/stores";
+import { AUTH_USER_PREFERENCES_SCHEMA, type AuthUser } from "@schemas/stores";
 import type { User } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
@@ -48,6 +48,11 @@ export function mapSupabaseUserToAuthUser(user: User): AuthUser {
     firstName ??
     (user.email ? user.email.split("@")[0] : undefined);
 
+  const preferencesResult = AUTH_USER_PREFERENCES_SCHEMA.safeParse(
+    metadata.preferences
+  );
+  const preferences = preferencesResult.success ? preferencesResult.data : undefined;
+
   return {
     avatarUrl: (metadata.avatar_url as string | undefined) ?? undefined,
     bio: (metadata.bio as string | undefined) ?? undefined,
@@ -59,7 +64,7 @@ export function mapSupabaseUserToAuthUser(user: User): AuthUser {
     isEmailVerified: Boolean(user.email_confirmed_at),
     lastName,
     location: (metadata.location as string | undefined) ?? undefined,
-    preferences: undefined,
+    preferences,
     security: undefined,
     updatedAt: user.updated_at ?? user.created_at,
     website: (metadata.website as string | undefined) ?? undefined,

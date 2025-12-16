@@ -204,7 +204,7 @@ See [Zod Schema Guide](../standards/zod-schema-guide.md) for schema patterns and
 pnpm install && pnpm dev
 
 # Quality gates
-pnpm biome:check && pnpm type-check && pnpm test:run
+pnpm biome:check && pnpm type-check && pnpm test
 ```
 
 See [Quick Start](quick-start.md) for full setup and [Troubleshooting](troubleshooting.md) for common issues.

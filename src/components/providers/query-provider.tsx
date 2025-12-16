@@ -5,9 +5,23 @@
 
 "use client";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { QueryClient, QueryClientProvider, type QueryKey } from "@tanstack/react-query";
+import dynamic from "next/dynamic";
 import { type ReactNode, useState } from "react";
+
+const ReactQueryDevtools = dynamic(
+  () => import("@tanstack/react-query-devtools").then((mod) => mod.ReactQueryDevtools),
+  { ssr: false }
+);
+
+import { shouldRetryError } from "@/lib/api/error-types";
+import { cacheTimes, staleTimes } from "@/lib/query/config";
+
+type QueryDefault = {
+  gcTime: number;
+  queryKey: QueryKey;
+  staleTime: number;
+};
 
 /**
  * Create a new QueryClient with default options.
@@ -15,42 +29,39 @@ import { type ReactNode, useState } from "react";
  * @returns QueryClient instance with default options.
  */
 function CreateQueryClient() {
-  return new QueryClient({
+  const client = new QueryClient({
     defaultOptions: {
       mutations: {
         networkMode: "online",
-        retry: (failureCount, error) => {
-          // Don't retry mutations for 4xx errors
-          if (error instanceof Error && "status" in error) {
-            const status = (error as Error & { status: number }).status;
-            if (status >= 400 && status < 500) return false;
-          }
-          // Retry once for 5xx errors or network issues
-          return failureCount < 1;
-        },
-        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+        retry: false,
       },
       queries: {
-        gcTime: 10 * 60 * 1000, // 10 minutes - cache retention
-        // Enable network mode for proper error handling
+        gcTime: cacheTimes.medium,
         networkMode: "online",
         refetchOnMount: true,
         refetchOnReconnect: true,
         refetchOnWindowFocus: false,
-        retry: (failureCount, error) => {
-          // Don't retry for 4xx errors (client errors)
-          if (error instanceof Error && "status" in error) {
-            const status = (error as Error & { status: number }).status;
-            if (status >= 400 && status < 500) return false;
-          }
-          // Retry up to 2 times for other errors
-          return failureCount < 2;
-        },
+        retry: (failureCount, error) => failureCount < 2 && shouldRetryError(error),
         retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-        staleTime: 5 * 60 * 1000, // 5 minutes - data stays fresh
+        // Global fallback for queries without per-key staleTime defaults.
+        staleTime: staleTimes.default,
       },
     },
   });
+
+  const queryDefaults: readonly QueryDefault[] = [
+    { gcTime: cacheTimes.medium, queryKey: ["trips"], staleTime: staleTimes.trips },
+    { gcTime: cacheTimes.short, queryKey: ["chat"], staleTime: staleTimes.chat },
+    { gcTime: cacheTimes.medium, queryKey: ["memory"], staleTime: staleTimes.memory },
+    { gcTime: cacheTimes.medium, queryKey: ["budget"], staleTime: staleTimes.budget },
+    { gcTime: cacheTimes.long, queryKey: ["currency"], staleTime: staleTimes.currency },
+  ];
+
+  for (const { gcTime, queryKey, staleTime } of queryDefaults) {
+    client.setQueryDefaults(queryKey, { gcTime, staleTime });
+  }
+
+  return client;
 }
 
 /**
@@ -65,11 +76,13 @@ export function TanStackQueryProvider({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       {children}
-      <ReactQueryDevtools
-        initialIsOpen={false}
-        position="bottom"
-        buttonPosition="bottom-right"
-      />
+      {process.env.NODE_ENV === "development" && (
+        <ReactQueryDevtools
+          initialIsOpen={false}
+          position="bottom"
+          buttonPosition="bottom-right"
+        />
+      )}
     </QueryClientProvider>
   );
 }

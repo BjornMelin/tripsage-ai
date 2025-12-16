@@ -61,78 +61,30 @@ export function secureId(length = 12): string {
   return base.slice(0, Math.max(1, Math.min(length, base.length)));
 }
 
-export const SECURE_RANDOM_UNAVAILABLE = "secure_random_unavailable" as const;
-
-export class SecureRandomUnavailableError extends Error {
-  constructor() {
-    super(SECURE_RANDOM_UNAVAILABLE);
-    this.name = "SecureRandomUnavailableError";
-  }
-}
+let fallbackPrngState = 0x9e3779b9;
 
 /**
- * Generate a random integer in [0, max].
- * Uses Web Crypto when available for cryptographic security; falls back to
- * timestamp + counter distribution when crypto is unavailable (non-cryptographic).
+ * Generate a random float in the range [0, 1).
  *
- * Note: We intentionally avoid Math.random() to satisfy security scanning rules.
- *
- * @param max Upper bound (inclusive). Must be non-negative.
- * @param options Optional configuration for crypto enforcement and fallback control.
- * @returns Random integer between 0 and max (inclusive).
+ * Uses Web Crypto when available. If Web Crypto is unavailable, falls back to a
+ * deterministic pseudo-random generator (NOT cryptographically secure) that
+ * avoids Math.random().
  */
-export function secureRandomInt(
-  max: number,
-  options?: { allowInsecureFallback?: boolean; requireCrypto?: boolean }
-): number {
-  if (!Number.isFinite(max) || !Number.isInteger(max)) {
-    throw new RangeError("max must be a finite integer");
-  }
-  if (max > 2 ** 48 - 1) {
-    throw new RangeError("max must be <= 2^48 - 1");
-  }
-  if (max < 0) {
-    throw new RangeError("max must be non-negative");
-  }
-  if (max === 0) return 0;
-
+export function secureRandomFloat(): number {
   const g = globalThis as unknown as { crypto?: Crypto };
   if (g.crypto && typeof g.crypto.getRandomValues === "function") {
-    const range = max + 1;
-    // Calculate bytes needed to represent the range
-    const byteCount = Math.ceil(Math.log2(range) / 8) || 1;
-    const maxValid = 256 ** byteCount;
-    // Ensure uniform distribution by rejecting values that would cause bias
-    const limit = maxValid - (maxValid % range);
-    const bytes = new Uint8Array(byteCount);
-    let value: number;
-    do {
-      g.crypto.getRandomValues(bytes);
-      value = bytes.reduce((acc, b, i) => acc + b * 256 ** i, 0);
-    } while (value >= limit);
-    return value % range;
+    const ints = new Uint32Array(1);
+    g.crypto.getRandomValues(ints);
+    return ints[0] / 2 ** 32;
   }
 
-  if (options?.requireCrypto) {
-    throw new SecureRandomUnavailableError();
-  }
-
-  if (options?.allowInsecureFallback === false) {
-    throw new SecureRandomUnavailableError();
-  }
-
-  // Fallback for non-secure environments (same pattern as secureUuid fallback)
-  const globalWithCounter = globalThis as typeof globalThis & {
-    // biome-ignore lint/style/useNamingConvention: Global counter property uses snake_case
-    __secure_random_counter?: number;
-  };
-  if (typeof globalWithCounter.__secure_random_counter !== "number") {
-    globalWithCounter.__secure_random_counter = 0;
-  }
-  globalWithCounter.__secure_random_counter += 1;
-  const counter = globalWithCounter.__secure_random_counter;
-  const base = Date.now() + counter;
-  return base % (max + 1);
+  // Deterministic xorshift32 fallback for environments without Web Crypto.
+  let x = fallbackPrngState | 0;
+  x ^= x << 13;
+  x ^= x >>> 17;
+  x ^= x << 5;
+  fallbackPrngState = x | 0;
+  return (fallbackPrngState >>> 0) / 2 ** 32;
 }
 
 /**

@@ -31,7 +31,6 @@ export function getClientOrigin(): string {
 
   if (!isProduction && typeof window !== "undefined") {
     // Dev-only nudge to configure site/base URL; avoids server-side console usage
-    // eslint-disable-next-line no-console
     console.warn(
       "[client-origin] No NEXT_PUBLIC_SITE_URL or NEXT_PUBLIC_BASE_URL configured. Falling back to http://localhost:3000"
     );

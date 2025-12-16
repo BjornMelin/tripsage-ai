@@ -7,7 +7,7 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 ## 0. Architecture and Stack
 
 - **Frontend-first:** All features at repository root. Next.js 16, React 19, TypeScript 5.9.
-- **AI SDK v6 (exact versions):** `ai@6.0.0-beta.148`, `@ai-sdk/react@3.0.0-beta.151`, `@ai-sdk/openai@3.0.0-beta.95`, `@ai-sdk/anthropic@3.0.0-beta.83`, `@ai-sdk/xai@3.0.0-beta.55`. Use these when researching.
+- **AI SDK v6 (exact versions):** `ai@6.0.0-beta.150`, `@ai-sdk/react@3.0.0-beta.153`, `@ai-sdk/openai@3.0.0-beta.96`, `@ai-sdk/anthropic@3.0.0-beta.83`, `@ai-sdk/xai@3.0.0-beta.55`. Use these when researching.
 - **Data/State:** Zod v4, Zustand v5, React Query v5, React Hook Form.
 - **Backend:** Supabase SSR, Upstash (Redis/Ratelimit/QStash), OpenTelemetry.
 - **UI:** Radix UI primitives, Tailwind CSS + CVA + clsx, Lucide icons.
@@ -177,7 +177,7 @@ PR reviewers: enforce in `src/app/api/**`; approve exceptions with justification
 
 ### 6.2 Quality gates (mandatory)
 
-After any code change (`.ts`, `.tsx`, schema, config affecting builds), run at repository root:
+Before finalizing any work that includes code changes (`.ts`, `.tsx`, schemas, or config affecting builds), run at repository root:
 
 1. `pnpm biome:fix` — fix all issues; resolve any remaining errors manually.
 2. `pnpm type-check` — must pass with zero errors.
@@ -186,6 +186,10 @@ After any code change (`.ts`, `.tsx`, schema, config affecting builds), run at r
 **Skip for:** doc-only (`.md`), comments, non-code config, questions, or analysis.
 
 Do not return final response until all gates pass for code changes.
+
+**During iteration:** Prefer the smallest relevant shard (`pnpm test:unit`, `pnpm test:api`, `pnpm test:components`, `pnpm test:schemas`, `pnpm test:integration`). Run `pnpm test` only when changing test harness/config (e.g. `vitest.config.ts`, `src/test/**`) or before merging.
+
+**If Vitest hangs after finishing:** run `VITEST_DEBUG_OPEN_HANDLES=1 pnpm test` and ensure MSW is not bypassing unhandled requests (`MSW_ON_UNHANDLED_REQUEST=error`).
 
 ### Upstash testing
 

@@ -290,7 +290,7 @@ curl -N -X POST "http://localhost:3000/api/agents/budget" \
 
 ## `POST /api/agents/memory`
 
-Conversational memory agent that retrieves and utilizes user preferences and conversation history.
+Memory update agent that persists user memory records (preferences, trip history, etc.) and streams a short confirmation summary.
 
 **Authentication**: Required
 **Rate Limit Key**: `agents:memory`
@@ -301,22 +301,20 @@ Conversational memory agent that retrieves and utilizes user preferences and con
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `query` | string | Yes | User query or message |
-| `conversationId` | string | No | Conversation ID for context continuity |
-| `userId` | string | No | User ID for personalized memory retrieval (auto-detected from auth if not provided) |
-| `includePreferences` | boolean | No | Include user preferences in context (default: true) |
-| `includePastTrips` | boolean | No | Include past trip history in context (default: true) |
-| `maxMemoryItems` | number | No | Maximum memory items to retrieve (default: 10) |
-| `memoryTypes` | array | No | Types of memory to retrieve: `preferences`, `trips`, `searches`, `conversations` |
-| `timeRange` | object | No | Time range filter {from: ISO date, to: ISO date} |
+| `records` | array | Yes | Memory records to persist (max: 25) |
+| `records[].content` | string | Yes | Memory content to store (min length: 1) |
+| `records[].category` | string | No | Category: `user_preference`, `trip_history`, `search_pattern`, `conversation_context`, `other` (unknown values default to `other`) |
+| `records[].id` | string | No | Ignored (server assigns IDs) |
+| `records[].createdAt` | string | No | Ignored (server assigns timestamps) |
+| `userId` | string (UUID) | No | Ignored; server always uses the authenticated user ID |
 
 ### Response
 
-`200 OK` - SSE stream with memory-enhanced responses including retrieved context
+`200 OK` - SSE stream with a concise confirmation (does not echo raw memory content)
 
 ### Errors
 
-- `400` - Invalid request parameters (missing query, invalid memoryTypes, malformed timeRange)
+- `400` - Invalid request parameters (missing records, empty content, too many records)
 - `401` - Not authenticated
 - `429` - Rate limit exceeded
 
@@ -327,11 +325,10 @@ curl -N -X POST "http://localhost:3000/api/agents/memory" \
   --cookie "sb-access-token=$JWT" \
   -H "Content-Type: application/json" \
   -d '{
-    "query": "What were my favorite destinations from last year?",
-    "conversationId": "conv-123",
-    "includePreferences": true,
-    "includePastTrips": true,
-    "memoryTypes": ["preferences", "trips"]
+    "records": [
+      { "category": "user_preference", "content": "I prefer window seats." },
+      { "category": "other", "content": "Allergies: peanuts." }
+    ]
   }'
 ```
 

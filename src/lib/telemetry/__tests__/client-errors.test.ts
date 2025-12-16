@@ -7,6 +7,7 @@ import { recordClientErrorOnActiveSpan } from "../client-errors";
 describe("recordClientErrorOnActiveSpan", () => {
   let mockSpan: {
     recordException: ReturnType<typeof vi.fn>;
+    setAttribute: ReturnType<typeof vi.fn>;
     setStatus: ReturnType<typeof vi.fn>;
   };
   let getActiveSpanSpy: ReturnType<typeof vi.spyOn>;
@@ -14,6 +15,7 @@ describe("recordClientErrorOnActiveSpan", () => {
   beforeEach(() => {
     mockSpan = {
       recordException: vi.fn(),
+      setAttribute: vi.fn(),
       setStatus: vi.fn(),
     };
 
@@ -34,7 +36,11 @@ describe("recordClientErrorOnActiveSpan", () => {
     recordClientErrorOnActiveSpan(error);
 
     expect(getActiveSpanSpy).toHaveBeenCalled();
-    expect(mockSpan.recordException).toHaveBeenCalledWith(error);
+    expect(mockSpan.recordException).toHaveBeenCalledTimes(1);
+    const [capturedError] = mockSpan.recordException.mock.calls[0] ?? [];
+    expect(capturedError).toBeInstanceOf(Error);
+    expect((capturedError as Error).name).toBe("TestError");
+    expect((capturedError as Error).message).toBe("Test error");
     expect(mockSpan.setStatus).toHaveBeenCalledWith({
       code: SpanStatusCode.ERROR,
       message: "Test error",
@@ -50,6 +56,21 @@ describe("recordClientErrorOnActiveSpan", () => {
 
     expect(() => recordClientErrorOnActiveSpan(error)).not.toThrow();
     expect(mockSpan.recordException).not.toHaveBeenCalled();
+    expect(mockSpan.setAttribute).not.toHaveBeenCalled();
     expect(mockSpan.setStatus).not.toHaveBeenCalled();
+  });
+
+  it("redacts sensitive metadata keys", () => {
+    const error = new Error("Test error");
+
+    recordClientErrorOnActiveSpan(error, {
+      context: "SearchForm",
+      token: "secret-token",
+      userId: "user-123",
+    });
+
+    expect(mockSpan.setAttribute).toHaveBeenCalledWith("error.context", "SearchForm");
+    expect(mockSpan.setAttribute).toHaveBeenCalledWith("error.token", "[REDACTED]");
+    expect(mockSpan.setAttribute).toHaveBeenCalledWith("error.userId", "[REDACTED]");
   });
 });

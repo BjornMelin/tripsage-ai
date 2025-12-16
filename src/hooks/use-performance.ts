@@ -38,9 +38,18 @@ export function usePerformance() {
 
     const startTime = performance.now();
 
-    // Measure initial load time
-    const loadTime =
-      performance.timing?.loadEventEnd - performance.timing?.navigationStart || 0;
+    // Measure initial load time using Navigation Timing L2
+    let loadTime = 0;
+    const navEntry = performance.getEntriesByType?.("navigation")?.[0];
+    if (navEntry) {
+      const navTiming = navEntry as PerformanceNavigationTiming;
+      if (Number.isFinite(navTiming.loadEventEnd) && navTiming.loadEventEnd > 0) {
+        loadTime = navTiming.loadEventEnd - navTiming.startTime;
+      } else {
+        // Page load not complete yet - use current time as approximation
+        loadTime = performance.now();
+      }
+    }
 
     // Measure render time
     const renderTime = performance.now() - startTime;

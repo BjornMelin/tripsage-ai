@@ -29,7 +29,7 @@ export type RagNamespace = z.infer<typeof ragNamespaceSchema>;
  * Zod schema for document metadata.
  * Arbitrary key-value pairs for filtering and context.
  */
-export const ragMetadataSchema = z.record(z.string(), z.unknown()).default({});
+export const ragMetadataSchema = z.looseRecord(z.string(), z.unknown()).default({});
 
 /** TypeScript type for document metadata. */
 export type RagMetadata = z.infer<typeof ragMetadataSchema>;

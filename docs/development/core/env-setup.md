@@ -107,7 +107,7 @@ Copy the root `.env.example` to `.env`, then follow the checklists below to popu
 ## Quick verification
 
 ```bash
-pnpm biome:check && pnpm type-check && pnpm test:run
+pnpm biome:check && pnpm type-check && pnpm test
 ```
 
 If startup validation fails, re-check required variables above before debugging code.

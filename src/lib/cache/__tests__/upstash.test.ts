@@ -99,12 +99,12 @@ describe("getCachedJsonSafe", () => {
     mockRedisGet.mockReset();
   });
 
-  it("returns miss status when Redis is not available", async () => {
+  it("returns unavailable status when Redis is not available", async () => {
     mockGetRedis.mockReturnValueOnce(null);
 
     const result = await getCachedJsonSafe("test-key");
 
-    expect(result).toEqual({ status: "miss" });
+    expect(result).toEqual({ status: "unavailable" });
   });
 
   it("returns miss status when key does not exist", async () => {

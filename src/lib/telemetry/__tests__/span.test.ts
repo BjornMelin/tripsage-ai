@@ -7,10 +7,6 @@ const SET_STATUS = vi.hoisted(() => vi.fn());
 const RECORD_EXCEPTION = vi.hoisted(() => vi.fn());
 const END_SPAN = vi.hoisted(() => vi.fn());
 
-vi.mock("@opentelemetry/api", () => ({
-  SpanStatusCode: { ERROR: 2, OK: 1 },
-}));
-
 vi.mock("@/lib/telemetry/tracer", () => ({
   getTelemetryTracer: () => ({
     startActiveSpan: (...args: Parameters<typeof START_ACTIVE_SPAN>) =>
@@ -19,6 +15,8 @@ vi.mock("@/lib/telemetry/tracer", () => ({
   TELEMETRY_SERVICE_NAME: "tripsage-frontend",
 }));
 
+// Reset modules before importing to ensure fresh state (tracerRef is null)
+vi.resetModules();
 const { withTelemetrySpan } = await import("@/lib/telemetry/span");
 
 describe("withTelemetrySpan", () => {
@@ -73,6 +71,24 @@ describe("withTelemetrySpan", () => {
       })
     ).rejects.toThrow("boom");
     expect(RECORD_EXCEPTION).toHaveBeenCalledTimes(1);
+    expect(SET_STATUS).toHaveBeenCalledWith({ code: 2, message: "boom" });
+    expect(END_SPAN).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not crash when recordException is missing on span", async () => {
+    START_ACTIVE_SPAN.mockImplementationOnce((...args: unknown[]) => {
+      const callback = args.at(-1) as (span: unknown) => unknown;
+      return callback({
+        end: END_SPAN,
+        setStatus: SET_STATUS,
+      } as never);
+    });
+
+    await expect(
+      withTelemetrySpan("test", {}, () => {
+        throw new Error("boom");
+      })
+    ).rejects.toThrow("boom");
     expect(SET_STATUS).toHaveBeenCalledWith({ code: 2, message: "boom" });
     expect(END_SPAN).toHaveBeenCalledTimes(1);
   });

@@ -164,7 +164,7 @@ curl "$BASE/places/details/ChIJN1t_tDeuEmsRUsoyG83frY4"
 - `POST /agents/destinations` — Destination research.
 - `POST /agents/itineraries` — Itinerary agent.
 - `POST /agents/budget` — Budget planning agent.
-- `POST /agents/memory` — Conversational memory agent.
+- `POST /agents/memory` — Memory update agent.
 - `POST /agents/router` — Intent router.
 
 Streaming example (TS)
