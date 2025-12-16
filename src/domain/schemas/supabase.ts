@@ -342,6 +342,80 @@ export const accommodationsUpdateSchema = z.object({
 /** TypeScript type for accommodations Update. */
 export type AccommodationsUpdate = z.infer<typeof accommodationsUpdateSchema>;
 
+/**
+ * Zod schema for HTTP method enum.
+ * Defines allowed HTTP methods for API metrics.
+ */
+export const httpMethodSchema = z.enum([
+  "GET",
+  "POST",
+  "PUT",
+  "PATCH",
+  "DELETE",
+  "OPTIONS",
+  "HEAD",
+]);
+
+/** TypeScript type for HTTP method. */
+export type HttpMethod = z.infer<typeof httpMethodSchema>;
+
+/**
+ * Zod schema for api_metrics table Row.
+ * Validates complete api_metrics row data from database.
+ */
+export const apiMetricsRowSchema = z.object({
+  created_at: primitiveSchemas.isoDateTime,
+  duration_ms: z.number().nonnegative(),
+  endpoint: z.string().min(1),
+  error_type: z.string().nullable(),
+  id: primitiveSchemas.uuid,
+  method: httpMethodSchema,
+  rate_limit_key: z.string().nullable(),
+  status_code: z.number().int().min(100).max(599),
+  user_id: primitiveSchemas.uuid.nullable(),
+});
+
+/** TypeScript type for api_metrics Row. */
+export type ApiMetricsRow = z.infer<typeof apiMetricsRowSchema>;
+
+/**
+ * Zod schema for api_metrics table Insert.
+ * Validates insert parameters for api_metrics table.
+ */
+export const apiMetricsInsertSchema = z.object({
+  created_at: primitiveSchemas.isoDateTime.optional(),
+  duration_ms: z.number().nonnegative(),
+  endpoint: z.string().min(1),
+  error_type: z.string().nullable().optional(),
+  id: primitiveSchemas.uuid.optional(),
+  method: httpMethodSchema,
+  rate_limit_key: z.string().nullable().optional(),
+  status_code: z.number().int().min(100).max(599),
+  user_id: primitiveSchemas.uuid.nullable().optional(),
+});
+
+/** TypeScript type for api_metrics Insert. */
+export type ApiMetricsInsert = z.infer<typeof apiMetricsInsertSchema>;
+
+/**
+ * Zod schema for api_metrics table Update.
+ * Validates update parameters for api_metrics table.
+ */
+export const apiMetricsUpdateSchema = z.object({
+  created_at: primitiveSchemas.isoDateTime.optional(),
+  duration_ms: z.number().nonnegative().optional(),
+  endpoint: z.string().min(1).optional(),
+  error_type: z.string().nullable().optional(),
+  id: primitiveSchemas.uuid.optional(),
+  method: httpMethodSchema.optional(),
+  rate_limit_key: z.string().nullable().optional(),
+  status_code: z.number().int().min(100).max(599).optional(),
+  user_id: primitiveSchemas.uuid.nullable().optional(),
+});
+
+/** TypeScript type for api_metrics Update. */
+export type ApiMetricsUpdate = z.infer<typeof apiMetricsUpdateSchema>;
+
 // ===== UTILITY FUNCTIONS =====
 // Schema registry and helper functions
 
@@ -354,6 +428,11 @@ export const supabaseSchemas = {
     insert: accommodationsInsertSchema,
     row: accommodationsRowSchema,
     update: accommodationsUpdateSchema,
+  },
+  api_metrics: {
+    insert: apiMetricsInsertSchema,
+    row: apiMetricsRowSchema,
+    update: apiMetricsUpdateSchema,
   },
   flights: {
     insert: flightsInsertSchema,

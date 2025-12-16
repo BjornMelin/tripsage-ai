@@ -8,7 +8,9 @@
 
 import "server-only";
 
+import type { HttpMethod } from "@schemas/supabase";
 import { getRedis, incrCounter } from "@/lib/redis";
+import type { ApiMetricInsert } from "@/lib/supabase/database.types";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
@@ -22,8 +24,8 @@ export interface ApiMetric {
   endpoint: string;
   /** Error class name for failed requests */
   errorType?: string;
-  /** HTTP method */
-  method: string;
+  /** HTTP method (compile-time validated enum) */
+  method: HttpMethod;
   /** Rate limit key used for this request */
   rateLimitKey?: string;
   /** HTTP response status code */
@@ -61,17 +63,10 @@ export async function recordApiMetric(metric: ApiMetric): Promise<void> {
       const operations: Promise<unknown>[] = [];
 
       // 1. Insert into Supabase api_metrics table
-      // Note: api_metrics table types will be available after migration + type regeneration
-      // Using type assertion until database.types.ts is regenerated
       try {
         const supabase = await createServerSupabase();
-        const client = supabase as unknown as {
-          from: (table: string) => {
-            insert: (data: unknown) => { then: Promise<unknown>["then"] };
-          };
-        };
         // Supabase table columns use snake_case
-        const insertOp = client.from("api_metrics").insert({
+        const insertPayload: ApiMetricInsert = {
           /* biome-ignore lint/style/useNamingConvention: Supabase column */
           duration_ms: metric.durationMs,
           endpoint: metric.endpoint,
@@ -84,7 +79,8 @@ export async function recordApiMetric(metric: ApiMetric): Promise<void> {
           status_code: metric.statusCode,
           /* biome-ignore lint/style/useNamingConvention: Supabase column */
           user_id: metric.userId ?? null,
-        });
+        };
+        const insertOp = supabase.from("api_metrics").insert(insertPayload);
         operations.push(Promise.resolve(insertOp));
       } catch {
         span.setAttribute("supabase.error", true);
