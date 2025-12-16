@@ -159,56 +159,12 @@ export function useAuthenticatedApi() {
           { retries: requestRetries, timeout: requestTimeout }
         );
       } catch (error) {
-        const controllerAborted =
-          abortControllerRef.current === null ||
-          abortControllerRef.current?.signal.aborted === true;
-
-        if (controllerAborted) {
-          throw new ApiError({
-            code: "REQUEST_CANCELLED",
-            message: "Request cancelled",
-            status: 499,
-          });
-        }
-
+        // ApiClient already returns typed ApiError - just propagate it
         if (error instanceof ApiError) {
-          const errorData =
-            (error.data as { message?: string; name?: string } | undefined) ?? {};
-          const isAbortError =
-            error.code === "TIMEOUT_ERROR" ||
-            error.status === 408 ||
-            error.message.toLowerCase().includes("abort");
-          const isLikelyNetworkFailure =
-            error.code === "NETWORK_ERROR" ||
-            (error.status === 500 &&
-              ((typeof error.data === "string" && error.data.length === 0) ||
-                error.data === undefined ||
-                error.data === null ||
-                errorData.message?.toLowerCase().includes("network request failed") ===
-                  true ||
-                errorData.name === "Error"));
-
-          if (isAbortError) {
-            throw new ApiError({
-              code: "REQUEST_CANCELLED",
-              message: "Request cancelled",
-              status: 499,
-            });
-          }
-
-          if (isLikelyNetworkFailure) {
-            throw new ApiError({
-              code: "NETWORK_ERROR",
-              message: error.message,
-              status: 0,
-            });
-          }
-          throw new ApiError({
-            code: error.code,
-            message: error.message,
-            status: error.status,
-          });
+          throw error;
         }
+
+        // Handle explicit abort
         if (error instanceof DOMException && error.name === "AbortError") {
           throw new ApiError({
             code: "REQUEST_CANCELLED",
@@ -216,6 +172,8 @@ export function useAuthenticatedApi() {
             status: 499,
           });
         }
+
+        // Fallback for unexpected errors
         throw new ApiError({
           code: "NETWORK_ERROR",
           message: error instanceof Error ? error.message : "Request failed",
