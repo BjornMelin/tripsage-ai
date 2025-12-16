@@ -5,10 +5,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const START_ACTIVE_SPAN = vi.hoisted(() => vi.fn());
 const EMIT_ALERT = vi.hoisted(() => vi.fn());
 
-vi.mock("@opentelemetry/api", () => ({
-  SpanStatusCode: { ERROR: 2 },
-}));
-
 vi.mock("@/lib/telemetry/tracer", () => ({
   getTelemetryTracer: () => ({
     startActiveSpan: (...args: Parameters<typeof START_ACTIVE_SPAN>) =>
@@ -20,6 +16,9 @@ vi.mock("@/lib/telemetry/tracer", () => ({
 vi.mock("@/lib/telemetry/alerts", () => ({
   emitOperationalAlert: (...args: Parameters<typeof EMIT_ALERT>) => EMIT_ALERT(...args),
 }));
+
+// Reset modules to ensure fresh imports with mocks applied
+vi.resetModules();
 
 const { resetRedisWarningStateForTests, warnRedisUnavailable } = await import(
   "@/lib/telemetry/redis"

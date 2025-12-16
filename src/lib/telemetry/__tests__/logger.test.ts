@@ -12,6 +12,9 @@ vi.mock("@/lib/telemetry/span", async (importOriginal) => {
   };
 });
 
+// Reset modules to ensure fresh imports with mocks applied
+vi.resetModules();
+
 const { createServerLogger } = await import("@/lib/telemetry/logger");
 
 describe("createServerLogger", () => {

@@ -15,7 +15,7 @@ Authoritative testing reference for TripSage frontend.
 - Environment directive (mandatory first line):
   - `/** @vitest-environment jsdom */` — React, DOM, browser hooks
   - `/** @vitest-environment node */` — API routes, server utilities
-- Commands: `pnpm test:run`, `test:run --project=<name>`, `test:coverage`.
+- Commands: `pnpm test`, `test --project=<name>`, `test:coverage`.
 
 ## Decision Table
 
@@ -327,13 +327,13 @@ Use `@/test/factories/*` for schema-valid fixtures. Reset counters when determin
 ## Running and Debugging
 
 ```bash
-pnpm test:run                           # all tests
+pnpm test                               # all tests
 pnpm test:unit                          # unit tests only
 pnpm test:components                    # component tests only
 pnpm test:api                           # API route tests only
 pnpm test:integration                   # integration tests
-pnpm test:run --project=api             # single project
-pnpm test:run src/path/to/file.test.ts  # single file
+pnpm test --project=api                 # single project
+pnpm test src/path/to/file.test.ts      # single file
 pnpm test -- -t "pattern"               # by name pattern
 pnpm test:coverage                      # with coverage
 pnpm test:changed                       # only changed files
@@ -341,7 +341,7 @@ pnpm test:changed                       # only changed files
 
 ## CI / Quality Gates
 
-- Pre-commit: `pnpm biome:check`, `pnpm type-check`, targeted `test:run`
+- Pre-commit: `pnpm biome:check`, `pnpm type-check`, targeted `test`
 - CI: `pnpm test:ci`, `pnpm test:coverage`, `test:coverage:shard`
 
 ## Playwright (E2E)

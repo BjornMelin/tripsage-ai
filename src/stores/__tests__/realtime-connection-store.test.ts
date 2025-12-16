@@ -2,9 +2,15 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_BACKOFF_CONFIG } from "@/lib/realtime/backoff";
 import { useRealtimeConnectionStore } from "@/stores/realtime-connection-store";
+import { createFakeTimersContext } from "@/test/utils/with-fake-timers";
 
 describe("realtime connection store", () => {
+  // Use createFakeTimersContext for safe timer handling across all tests
+  // shouldAdvanceTime: true allows async operations to work with fake timers
+  const timers = createFakeTimersContext({ shouldAdvanceTime: true });
+
   beforeEach(() => {
+    timers.setup();
     useRealtimeConnectionStore.setState({
       connections: {},
       isReconnecting: false,
@@ -14,9 +20,7 @@ describe("realtime connection store", () => {
   });
 
   afterEach(() => {
-    vi.useRealTimers();
-    vi.clearAllTimers();
-    vi.clearAllMocks();
+    timers.teardown();
   });
 
   it("registers channels and updates status", () => {
@@ -98,7 +102,6 @@ describe("realtime connection store", () => {
   });
 
   it("increments reconnect attempts and applies backoff", async () => {
-    vi.useFakeTimers();
     const subscribeMock = vi.fn().mockResolvedValue(undefined);
     const unsubscribeMock = vi.fn().mockResolvedValue(undefined);
     const channel = {
@@ -128,7 +131,6 @@ describe("realtime connection store", () => {
   });
 
   it("prevents concurrent reconnectAll executions", async () => {
-    vi.useFakeTimers();
     const subscribeMock = vi.fn().mockResolvedValue(undefined);
     const unsubscribeMock = vi.fn().mockResolvedValue(undefined);
     const channel = {
@@ -151,7 +153,6 @@ describe("realtime connection store", () => {
   });
 
   it("reconnects gracefully when no channels are registered", async () => {
-    vi.useFakeTimers();
     const store = useRealtimeConnectionStore.getState();
 
     expect(store.summary().totalCount).toBe(0);
@@ -166,7 +167,6 @@ describe("realtime connection store", () => {
   });
 
   it("surfaces reconnect failures when a channel subscribe throws", async () => {
-    vi.useFakeTimers();
     const subscribeMock = vi.fn().mockRejectedValue(new Error("subscribe failed"));
     const unsubscribeMock = vi.fn().mockResolvedValue(undefined);
     const channel = {

@@ -110,7 +110,7 @@ pnpm install --frozen-lockfile
 pnpm dev            # Next.js dev server (includes API routes)
 pnpm type-check
 pnpm biome:check
-pnpm test:run       # Vitest
+pnpm test           # Vitest
 pnpm test:e2e       # Playwright
 
 # Supabase tooling (optional)
@@ -248,7 +248,7 @@ TripSage AI is optimized for high performance and global scalability:
 
 ```bash
 # Performance testing via load testing tools
-pnpm test:run --grep performance
+pnpm test --grep performance
 
 # Or use external load testing
 autocannon -c 100 -d 30 http://localhost:3000/api/health
@@ -278,7 +278,7 @@ git grep -i "fallback-secret\|development-only" .  # Should return empty
 pnpm audit
 
 # Run security-focused tests
-pnpm test:run --grep security
+pnpm test --grep security
 ```
 
 ---

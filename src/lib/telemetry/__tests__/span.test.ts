@@ -7,10 +7,6 @@ const SET_STATUS = vi.hoisted(() => vi.fn());
 const RECORD_EXCEPTION = vi.hoisted(() => vi.fn());
 const END_SPAN = vi.hoisted(() => vi.fn());
 
-vi.mock("@opentelemetry/api", () => ({
-  SpanStatusCode: { ERROR: 2, OK: 1 },
-}));
-
 vi.mock("@/lib/telemetry/tracer", () => ({
   getTelemetryTracer: () => ({
     startActiveSpan: (...args: Parameters<typeof START_ACTIVE_SPAN>) =>
@@ -19,6 +15,8 @@ vi.mock("@/lib/telemetry/tracer", () => ({
   TELEMETRY_SERVICE_NAME: "tripsage-frontend",
 }));
 
+// Reset modules before importing to ensure fresh state (tracerRef is null)
+vi.resetModules();
 const { withTelemetrySpan } = await import("@/lib/telemetry/span");
 
 describe("withTelemetrySpan", () => {

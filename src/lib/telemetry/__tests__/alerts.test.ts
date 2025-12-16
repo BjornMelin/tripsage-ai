@@ -2,6 +2,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TELEMETRY_SERVICE_NAME } from "@/lib/telemetry/constants";
+import { createFakeTimersContext } from "@/test/utils/with-fake-timers";
 
 vi.mock("@/lib/telemetry/span", () => ({
   recordTelemetryEvent: vi.fn(),
@@ -13,15 +14,16 @@ import { recordTelemetryEvent } from "@/lib/telemetry/span";
 const mockRecordTelemetryEvent = vi.mocked(recordTelemetryEvent);
 
 describe("emitOperationalAlert", () => {
+  const timers = createFakeTimersContext();
+
   beforeEach(() => {
-    vi.useFakeTimers();
+    timers.setup();
     vi.setSystemTime(new Date("2025-11-13T00:00:00.000Z"));
     mockRecordTelemetryEvent.mockClear();
   });
 
   afterEach(() => {
-    vi.useRealTimers();
-    vi.restoreAllMocks();
+    timers.teardown();
   });
 
   it("records error severity alert via OTel with default error level", () => {

@@ -201,69 +201,63 @@ describe("FlightCard", () => {
 });
 
 describe("PriceChangeIcon", () => {
-  it("renders down icon for falling prices", () => {
-    const { container } = render(<PriceChangeIcon change="down" />);
+  it.each([
+    {
+      change: "down" as const,
+      expectedClass: FLIGHT_COLORS.priceTrendDown,
+      rotated: true,
+    },
+    {
+      change: "up" as const,
+      expectedClass: FLIGHT_COLORS.priceTrendUp,
+      rotated: false,
+    },
+  ])("renders icon for $change prices", ({ change, expectedClass, rotated }) => {
+    const { container } = render(<PriceChangeIcon change={change} />);
     const icon = container.querySelector("svg");
-    expect(icon).toHaveClass("rotate-180");
-    expect(icon).toHaveClass(FLIGHT_COLORS.priceTrendDown);
+    expect(icon).toHaveClass(expectedClass);
+    if (rotated) {
+      expect(icon).toHaveClass("rotate-180");
+    } else {
+      expect(icon).not.toHaveClass("rotate-180");
+    }
   });
 
-  it("renders up icon for rising prices", () => {
-    const { container } = render(<PriceChangeIcon change="up" />);
-    const icon = container.querySelector("svg");
-    expect(icon).not.toHaveClass("rotate-180");
-    expect(icon).toHaveClass(FLIGHT_COLORS.priceTrendUp);
-  });
-
-  it("renders nothing for stable prices", () => {
-    const { container } = render(<PriceChangeIcon change="stable" />);
-    expect(container.querySelector("svg")).toBeNull();
-  });
-
-  it("renders nothing when change is undefined", () => {
-    const { container } = render(<PriceChangeIcon change={undefined} />);
+  it.each([
+    { change: "stable" as const, desc: "stable prices" },
+    { change: undefined, desc: "undefined" },
+  ])("renders nothing for $desc", ({ change }) => {
+    const { container } = render(<PriceChangeIcon change={change} />);
     expect(container.querySelector("svg")).toBeNull();
   });
 });
 
 describe("PredictionBadge", () => {
-  it("renders Book Now badge for buy_now alert", () => {
-    render(
-      <PredictionBadge
-        prediction={{ confidence: 85, priceAlert: "buy_now", reason: "test" }}
-      />
-    );
-    expect(screen.getByText("Book Now (85%)")).toBeInTheDocument();
-  });
-
-  it("renders Wait badge for wait alert", () => {
-    render(
-      <PredictionBadge
-        prediction={{ confidence: 70, priceAlert: "wait", reason: "test" }}
-      />
-    );
-    expect(screen.getByText("Wait (70%)")).toBeInTheDocument();
-  });
-
-  it("renders Monitor badge for neutral alert", () => {
-    render(
-      <PredictionBadge
-        prediction={{ confidence: 50, priceAlert: "neutral", reason: "test" }}
-      />
-    );
-    expect(screen.getByText("Monitor (50%)")).toBeInTheDocument();
+  it.each([
+    { confidence: 85, expectedText: "Book Now (85%)", priceAlert: "buy_now" as const },
+    { confidence: 70, expectedText: "Wait (70%)", priceAlert: "wait" as const },
+    { confidence: 50, expectedText: "Monitor (50%)", priceAlert: "neutral" as const },
+  ])("renders $expectedText for $priceAlert alert", ({
+    priceAlert,
+    confidence,
+    expectedText,
+  }) => {
+    render(<PredictionBadge prediction={{ confidence, priceAlert, reason: "test" }} />);
+    expect(screen.getByText(expectedText)).toBeInTheDocument();
   });
 });
 
 describe("FLIGHT_COLORS", () => {
-  it("exports color constants", () => {
-    expect(FLIGHT_COLORS.airlineIcon).toBe("bg-blue-50 text-blue-700");
-    expect(FLIGHT_COLORS.dealBadge).toBe("bg-green-50 text-green-700");
-    expect(FLIGHT_COLORS.emissionLow).toBe("bg-green-500");
-    expect(FLIGHT_COLORS.emissionMedium).toBe("bg-amber-500");
-    expect(FLIGHT_COLORS.emissionHigh).toBe("bg-red-500");
-    expect(FLIGHT_COLORS.priceTrendDown).toBe("text-green-700");
-    expect(FLIGHT_COLORS.priceTrendUp).toBe("text-red-700");
-    expect(FLIGHT_COLORS.promotionBadge).toBe("bg-red-600 text-white");
+  it.each([
+    { key: "airlineIcon" as const, value: "bg-blue-50 text-blue-700" },
+    { key: "dealBadge" as const, value: "bg-green-50 text-green-700" },
+    { key: "emissionLow" as const, value: "bg-green-500" },
+    { key: "emissionMedium" as const, value: "bg-amber-500" },
+    { key: "emissionHigh" as const, value: "bg-red-500" },
+    { key: "priceTrendDown" as const, value: "text-green-700" },
+    { key: "priceTrendUp" as const, value: "text-red-700" },
+    { key: "promotionBadge" as const, value: "bg-red-600 text-white" },
+  ])("exports $key as $value", ({ key, value }) => {
+    expect(FLIGHT_COLORS[key]).toBe(value);
   });
 });

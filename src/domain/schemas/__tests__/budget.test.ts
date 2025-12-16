@@ -20,24 +20,26 @@ import { describe, expect, it } from "vitest";
 
 describe("budget schemas", () => {
   describe("expenseCategorySchema", () => {
-    it.concurrent("should validate valid expense categories", () => {
-      const categories = [
-        "flights",
-        "accommodations",
-        "transportation",
-        "food",
-        "activities",
-        "shopping",
-        "other",
-      ];
-      for (const category of categories) {
-        const result = expenseCategorySchema.safeParse(category);
-        expect(result.success).toBe(true);
-      }
+    it.concurrent.each([
+      "flights",
+      "accommodations",
+      "transportation",
+      "food",
+      "activities",
+      "shopping",
+      "other",
+    ])("validates category: %s", (category) => {
+      const result = expenseCategorySchema.safeParse(category);
+      expect(result.success).toBe(true);
     });
 
-    it.concurrent("should reject invalid category", () => {
-      const result = expenseCategorySchema.safeParse("invalid");
+    it.concurrent.each([
+      ["invalid", "unknown category"],
+      ["", "empty string"],
+      [123, "number instead of string"],
+      [null, "null value"],
+    ])("rejects invalid input: %s (%s)", (input, _description) => {
+      const result = expenseCategorySchema.safeParse(input);
       expect(result.success).toBe(false);
     });
   });
@@ -274,20 +276,21 @@ describe("budget schemas", () => {
       expect(result.success).toBe(true);
     });
 
-    it.concurrent("should validate all alert types", () => {
-      const types = ["threshold", "category", "daily"];
-      for (const type of types) {
-        const result = budgetAlertSchema.safeParse({
-          budgetId: "123e4567-e89b-12d3-a456-426614174001",
-          createdAt: "2024-01-01T00:00:00Z",
-          id: "123e4567-e89b-12d3-a456-426614174000",
-          isRead: false,
-          message: "Budget alert",
-          threshold: 80,
-          type,
-        });
-        expect(result.success).toBe(true);
-      }
+    it.concurrent.each([
+      "threshold",
+      "category",
+      "daily",
+    ])("validates alert type: %s", (type) => {
+      const result = budgetAlertSchema.safeParse({
+        budgetId: "123e4567-e89b-12d3-a456-426614174001",
+        createdAt: "2024-01-01T00:00:00Z",
+        id: "123e4567-e89b-12d3-a456-426614174000",
+        isRead: false,
+        message: "Budget alert",
+        threshold: 80,
+        type,
+      });
+      expect(result.success).toBe(true);
     });
   });
 

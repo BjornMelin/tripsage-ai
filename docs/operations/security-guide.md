@@ -119,7 +119,7 @@ pnpm audit
 pnpm type-check
 
 # Run security-focused tests
-pnpm test:run -t security
+pnpm test -t security
 
 # Secret detection (install gitleaks first)
 gitleaks detect --source . --verbose

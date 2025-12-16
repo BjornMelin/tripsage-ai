@@ -1,7 +1,6 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { sendCollaboratorNotifications } from "@/lib/notifications/collaborators";
 
 const envValues = vi.hoisted(() => ({
   COLLAB_WEBHOOK_URL: undefined,
@@ -61,6 +60,13 @@ vi.mock("resend", () => {
   }
   return { Resend };
 });
+
+// Reset modules to ensure fresh imports with mocks applied
+vi.resetModules();
+
+const { sendCollaboratorNotifications } = await import(
+  "@/lib/notifications/collaborators"
+);
 
 describe("sendCollaboratorNotifications", () => {
   beforeEach(() => {

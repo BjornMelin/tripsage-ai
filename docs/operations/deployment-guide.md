@@ -58,5 +58,5 @@ Telemetry is emitted via `@/lib/telemetry`. Configure OTLP export endpoints in `
 
 ## Health and verification
 
-- `pnpm biome:check && pnpm type-check && pnpm test:run` for local validation.
+- `pnpm biome:check && pnpm type-check && pnpm test` for local validation.
 - Verify Supabase connectivity by running any server route that uses `getServerEnvVar("SUPABASE_SERVICE_ROLE_KEY")` (e.g., `/api/hooks/files`).

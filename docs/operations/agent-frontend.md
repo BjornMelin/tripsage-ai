@@ -50,7 +50,7 @@ Temperatures are hard-coded per agent (default 0.3). Adjust via code near each a
 ```bash
 pnpm biome:check
 pnpm type-check
-pnpm test:run
+pnpm test
 ```
 
 ## UI Rendering

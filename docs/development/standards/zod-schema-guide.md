@@ -365,7 +365,7 @@ export const webSearchTool = tool({
 - `src/domain/schemas/__tests__/` - Domain schema tests
 - `src/ai/tools/__tests__/` - AI tool schema tests
 
-**Run Tests:** `pnpm test:run src/domain/schemas/__tests__ src/ai/tools/__tests__`
+**Run Tests:** `pnpm test src/domain/schemas/__tests__ src/ai/tools/__tests__`
 
 ### Schema Creation Checklist
 

@@ -15,7 +15,7 @@ TripSage development maintenance checklist and procedures.
 
 ### Testing
 
-- [ ] Run test suite: `pnpm test:run`
+- [ ] Run test suite: `pnpm test`
 - [ ] Check test coverage: `pnpm test:coverage`
 - [ ] Review failing tests and fix or document
 - [ ] Update test utilities if patterns change
@@ -146,7 +146,7 @@ TripSage development maintenance checklist and procedures.
 
 ### Test Failures
 
-1. Run tests individually: `pnpm test:run -- --reporter=verbose`
+1. Run tests individually: `pnpm test -- --reporter=verbose`
 2. Check test environment setup
 3. Verify mock configurations
 4. Review changes to shared test utilities

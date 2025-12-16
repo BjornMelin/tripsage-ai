@@ -15,7 +15,7 @@ const { updateUserMock } = vi.hoisted(() => ({
 vi.mock("@/lib/supabase", () => ({
   getBrowserClient: () => ({ auth: { updateUser: updateUserMock } }),
 }));
-// use-toast is fully mocked in test-setup.ts; avoid overriding here.
+// use-toast is mocked in src/test/setup-jsdom.ts; avoid overriding here.
 
 const MockToast = toast as unknown as ReturnType<typeof vi.fn>;
 const MockLogout = vi.fn();

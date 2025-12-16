@@ -1,10 +1,7 @@
 /** @vitest-environment node */
 
-import { lookupPoiContext } from "@ai/tools/server/google-places";
 import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getGoogleMapsServerKey } from "@/lib/env/server";
-import { cacheLatLng, getCachedLatLng } from "@/lib/google/caching";
 import { server } from "@/test/msw/server";
 
 const mockContext = {
@@ -50,6 +47,14 @@ vi.mock("@/lib/telemetry/span", async () => {
     ),
   };
 });
+
+// Reset modules to ensure fresh imports with mocks applied
+vi.resetModules();
+
+// Dynamic imports after mocks
+const { lookupPoiContext } = await import("@ai/tools/server/google-places");
+const { getGoogleMapsServerKey } = await import("@/lib/env/server");
+const { cacheLatLng, getCachedLatLng } = await import("@/lib/google/caching");
 
 describe("lookupPoiContext", () => {
   beforeEach(() => {
