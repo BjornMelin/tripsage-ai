@@ -169,8 +169,9 @@ export function fireAndForget<T>(
  * Clamp a number to the valid percentage range [0, 100].
  *
  * @param value Input value to clamp.
- * @returns Value constrained to [0, 100].
+ * @returns Value constrained to [0, 100]. Returns 0 for NaN inputs.
  */
 export function clampProgress(value: number): number {
+  if (Number.isNaN(value)) return 0;
   return Math.min(100, Math.max(0, value));
 }

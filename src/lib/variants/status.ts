@@ -72,23 +72,70 @@ export type ToneColorSet = {
 };
 
 /**
- * Extract individual color classes from TONE_CLASSES for a given tone.
- * Returns colors suitable for status indicators with subtle backgrounds.
+ * Static mapping of ToneVariant to ToneColorSet with explicit Tailwind classes.
+ * Ensures all classes are statically present for Tailwind JIT compilation.
+ */
+export const TONE_COLOR_SETS: Record<ToneVariant, ToneColorSet> = {
+  active: {
+    bg: "bg-green-700/10",
+    border: "border-green-700/20",
+    text: "text-green-700",
+  },
+  calendar: {
+    bg: "bg-indigo-700/10",
+    border: "border-indigo-700/20",
+    text: "text-indigo-700",
+  },
+  create: {
+    bg: "bg-green-700/10",
+    border: "border-green-700/20",
+    text: "text-green-700",
+  },
+  deals: {
+    bg: "bg-orange-700/10",
+    border: "border-orange-700/20",
+    text: "text-orange-700",
+  },
+  error: { bg: "bg-red-700/10", border: "border-red-700/20", text: "text-red-700" },
+  explore: {
+    bg: "bg-purple-700/10",
+    border: "border-purple-700/20",
+    text: "text-purple-700",
+  },
+  high: { bg: "bg-red-700/10", border: "border-red-700/20", text: "text-red-700" },
+  info: { bg: "bg-blue-700/10", border: "border-blue-700/20", text: "text-blue-700" },
+  low: { bg: "bg-green-700/10", border: "border-green-700/20", text: "text-green-700" },
+  medium: {
+    bg: "bg-amber-700/10",
+    border: "border-amber-700/20",
+    text: "text-amber-700",
+  },
+  pending: {
+    bg: "bg-amber-700/10",
+    border: "border-amber-700/20",
+    text: "text-amber-700",
+  },
+  search: { bg: "bg-blue-700/10", border: "border-blue-700/20", text: "text-blue-700" },
+  success: {
+    bg: "bg-green-700/10",
+    border: "border-green-700/20",
+    text: "text-green-700",
+  },
+  unknown: {
+    bg: "bg-slate-700/10",
+    border: "border-slate-700/20",
+    text: "text-slate-700",
+  },
+};
+
+/**
+ * Get the static color set for a tone variant.
  *
  * @param tone The tone variant to get colors for.
- * @returns Object with text, bg (subtle), and border color classes.
+ * @returns Object with text, bg, and border color classes.
  */
 export function getToneColors(tone: ToneVariant): ToneColorSet {
-  const classes = TONE_CLASSES[tone];
-  const parts = classes.split(" ");
-  const text = parts.find((c) => c.startsWith("text-")) ?? "text-slate-700";
-  const colorMatch = text.match(/text-(\w+-\d+)/);
-  const colorName = colorMatch ? colorMatch[1] : "slate-700";
-  return {
-    bg: `bg-${colorName}/10`,
-    border: `border-${colorName}/20`,
-    text,
-  };
+  return TONE_COLOR_SETS[tone] ?? TONE_COLOR_SETS.unknown;
 }
 
 export const AGENT_STATUS_COLORS = {

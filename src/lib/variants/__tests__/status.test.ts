@@ -153,5 +153,7 @@ describe("getToneColors", () => {
 
     const exploreColors = getToneColors("explore");
     expect(exploreColors.text).toBe("text-purple-700");
+    expect(exploreColors.bg).toBe("bg-purple-700/10");
+    expect(exploreColors.border).toBe("border-purple-700/20");
   });
 });

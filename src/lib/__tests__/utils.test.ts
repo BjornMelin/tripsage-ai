@@ -25,4 +25,10 @@ describe("clampProgress", () => {
     expect(clampProgress(-0.1)).toBe(0);
     expect(clampProgress(100.1)).toBe(100);
   });
+
+  it("handles special numeric values", () => {
+    expect(clampProgress(Number.NaN)).toBe(0);
+    expect(clampProgress(Number.POSITIVE_INFINITY)).toBe(100);
+    expect(clampProgress(Number.NEGATIVE_INFINITY)).toBe(0);
+  });
 });
