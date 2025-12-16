@@ -130,7 +130,8 @@ metadata: z.looseRecord(z.string(), z.unknown()).optional()
 
 ### z.xor() - Mutually Exclusive Unions
 
-Use `z.xor()` when exactly one schema must match (not zero, not multiple):
+Use `z.xor()` when exactly one schema must match (not zero, not multiple).
+(Introduced in Zod v4.2.0; see [release notes](https://github.com/colinhacks/zod/releases/tag/zod%404.2.0).)
 
 ```typescript
 // WebSocket messages - exactly one type per message

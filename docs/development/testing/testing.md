@@ -15,7 +15,8 @@ Authoritative testing reference for TripSage frontend.
 - Environment directive (mandatory first line):
   - `/** @vitest-environment jsdom */` — React, DOM, browser hooks
   - `/** @vitest-environment node */` — API routes, server utilities
-- Commands: `pnpm test`, `test --project=<name>`, `test:coverage`.
+- Commands: `pnpm test`, `pnpm test:affected`, `test --project=<name>`, `test:coverage`.
+  - `test:affected` runs tests related to changed files (e.g., `pnpm test:affected -- --base=main` for post-commit verification).
 
 ## Decision Table
 
@@ -346,8 +347,10 @@ pnpm test:changed                       # only changed files
 
 ## CI / Quality Gates
 
-- Pre-commit: `pnpm biome:check`, `pnpm type-check`, targeted `test`
+- Pre-commit: `pnpm biome:check`, `pnpm type-check`, `pnpm test:affected`
 - CI: `pnpm test:ci`, `pnpm test:coverage`, `test:coverage:shard`
+
+> **Tip:** Run `pnpm biome:fix` locally to auto-fix lint issues before committing.
 
 ## Playwright (E2E)
 
