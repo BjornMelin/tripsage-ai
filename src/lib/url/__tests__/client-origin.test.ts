@@ -71,6 +71,32 @@ describe("client-origin", () => {
 
       globalThis.window = originalWindow;
     });
+
+    it("should warn in development when window exists but no env vars are set", async () => {
+      const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {
+        // no-op: suppress console output in test
+      });
+
+      // Clear BASE_URL if set
+      Reflect.deleteProperty(process.env, "NEXT_PUBLIC_BASE_URL");
+
+      // Mock window with no location.origin
+      const originalWindow = globalThis.window;
+      // biome-ignore lint/suspicious/noExplicitAny: test utility
+      (globalThis as any).window = {};
+
+      vi.resetModules();
+      const { getClientOrigin } = await import("../client-origin");
+      expect(getClientOrigin()).toBe("http://localhost:3000");
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining(
+          "No NEXT_PUBLIC_SITE_URL or NEXT_PUBLIC_BASE_URL configured"
+        )
+      );
+
+      globalThis.window = originalWindow;
+      consoleWarnSpy.mockRestore();
+    });
   });
 
   describe("toClientAbsoluteUrl", () => {
