@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { statusVariants } from "../status";
+import { getToneColors, statusVariants } from "../status";
 
 describe("statusVariants", () => {
   describe("urgency variants", () => {
@@ -106,5 +106,52 @@ describe("statusVariants", () => {
       expect(result).toContain("bg-orange-50");
       expect(result).toContain("text-orange-700");
     });
+  });
+});
+
+describe("getToneColors", () => {
+  it("returns correct colors for active tone", () => {
+    const colors = getToneColors("active");
+    expect(colors.text).toBe("text-green-700");
+    expect(colors.bg).toBe("bg-green-700/10");
+    expect(colors.border).toBe("border-green-700/20");
+  });
+
+  it("returns correct colors for error tone", () => {
+    const colors = getToneColors("error");
+    expect(colors.text).toBe("text-red-700");
+    expect(colors.bg).toBe("bg-red-700/10");
+    expect(colors.border).toBe("border-red-700/20");
+  });
+
+  it("returns correct colors for info tone", () => {
+    const colors = getToneColors("info");
+    expect(colors.text).toBe("text-blue-700");
+    expect(colors.bg).toBe("bg-blue-700/10");
+    expect(colors.border).toBe("border-blue-700/20");
+  });
+
+  it("returns correct colors for pending tone", () => {
+    const colors = getToneColors("pending");
+    expect(colors.text).toBe("text-amber-700");
+    expect(colors.bg).toBe("bg-amber-700/10");
+    expect(colors.border).toBe("border-amber-700/20");
+  });
+
+  it("returns correct colors for unknown tone", () => {
+    const colors = getToneColors("unknown");
+    expect(colors.text).toBe("text-slate-700");
+    expect(colors.bg).toBe("bg-slate-700/10");
+    expect(colors.border).toBe("border-slate-700/20");
+  });
+
+  it("returns correct colors for action tones", () => {
+    const dealColors = getToneColors("deals");
+    expect(dealColors.text).toBe("text-orange-700");
+    expect(dealColors.bg).toBe("bg-orange-700/10");
+    expect(dealColors.border).toBe("border-orange-700/20");
+
+    const exploreColors = getToneColors("explore");
+    expect(exploreColors.text).toBe("text-purple-700");
   });
 });

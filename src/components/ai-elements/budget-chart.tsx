@@ -13,6 +13,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { clampProgress } from "@/lib/utils";
 import { Source, Sources, SourcesContent, SourcesTrigger } from "./sources";
 
 /**
@@ -51,8 +53,9 @@ export function BudgetChart({ result, ...props }: BudgetChartProps) {
       <CardContent>
         <div className="space-y-3">
           {allocations.map((allocation: BudgetAllocation, index: number) => {
-            const percentage =
-              total > 0 ? Math.round((allocation.amount / total) * 100) : 0;
+            const percentage = clampProgress(
+              total > 0 ? Math.round((allocation.amount / total) * 100) : 0
+            );
             return (
               <div key={`${allocation.category}-${index}`} className="space-y-1">
                 <div className="flex items-center justify-between text-sm">
@@ -64,12 +67,7 @@ export function BudgetChart({ result, ...props }: BudgetChartProps) {
                     }).format(allocation.amount)}
                   </span>
                 </div>
-                <div className="h-2 rounded-full bg-muted">
-                  <div
-                    className="h-2 rounded-full bg-primary"
-                    style={{ width: `${percentage}%` }}
-                  />
-                </div>
+                <Progress value={percentage} className="h-2" />
                 {allocation.rationale ? (
                   <p className="text-xs opacity-80">{allocation.rationale}</p>
                 ) : null}

@@ -7,6 +7,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { LoadingSpinner } from "./loading-spinner";
+import { Progress } from "./progress";
 
 /**
  * Loading overlay component for full-screen or container loading
@@ -90,14 +91,10 @@ export const LoadingOverlay = React.forwardRef<HTMLDivElement, LoadingOverlayPro
                   <span>{isFullScreen ? "Loading" : "Progress"}</span>
                   <span>{Math.round(progress)}%</span>
                 </div>
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-primary transition-all duration-300 ease-out"
-                    style={{
-                      width: `${Math.min(100, Math.max(0, progress))}%`,
-                    }}
-                  />
-                </div>
+                <Progress
+                  value={Math.min(100, Math.max(0, progress))}
+                  className="h-2"
+                />
               </div>
             )}
           </div>

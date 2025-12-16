@@ -9,7 +9,8 @@
 import type { AgentStatusType } from "@schemas/agent-status";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
+import { Progress } from "@/components/ui/progress";
+import { clampProgress, cn } from "@/lib/utils";
 import { statusVariants, type ToneVariant } from "@/lib/variants/status";
 import { useAgentStatusStore } from "@/stores/agent-status-store";
 import { useChatMessages, useSessions } from "@/stores/chat/chat-messages";
@@ -234,14 +235,9 @@ function AgentStatusPanel({ className, ...props }: AgentStatusPanelProps) {
                         ?.description || "Task in progress..."
                     : "Waiting for tasks..."}
                 </div>
-                {agent.progress && (
+                {agent.progress != null && (
                   <div className="mt-2">
-                    <div className="w-full bg-gray-200 rounded-full h-1.5">
-                      <div
-                        className="bg-primary h-1.5 rounded-full transition-all"
-                        style={{ width: `${agent.progress}%` }}
-                      />
-                    </div>
+                    <Progress value={clampProgress(agent.progress)} className="h-1.5" />
                     <div className="text-xs text-muted-foreground mt-1">
                       {agent.progress}% complete
                     </div>

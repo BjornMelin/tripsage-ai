@@ -15,7 +15,7 @@ import { cva, type VariantProps } from "class-variance-authority";
  * - pending/medium both use amber (intermediate/waiting states)
  */
 
-const TONE_CLASSES = {
+export const TONE_CLASSES = {
   active: "bg-green-50 text-green-700 ring-green-600/20",
   calendar: "bg-indigo-50 text-indigo-700 ring-indigo-600/20",
   create: "bg-green-50 text-green-700 ring-green-600/20",
@@ -61,6 +61,35 @@ export type StatusVariantInput = {
   tone?: ToneVariant;
   excludeRing?: boolean;
 };
+
+/**
+ * Color set for a tone variant with text, background, and border colors.
+ */
+export type ToneColorSet = {
+  text: string;
+  bg: string;
+  border: string;
+};
+
+/**
+ * Extract individual color classes from TONE_CLASSES for a given tone.
+ * Returns colors suitable for status indicators with subtle backgrounds.
+ *
+ * @param tone The tone variant to get colors for.
+ * @returns Object with text, bg (subtle), and border color classes.
+ */
+export function getToneColors(tone: ToneVariant): ToneColorSet {
+  const classes = TONE_CLASSES[tone];
+  const parts = classes.split(" ");
+  const text = parts.find((c) => c.startsWith("text-")) ?? "text-slate-700";
+  const colorMatch = text.match(/text-(\w+-\d+)/);
+  const colorName = colorMatch ? colorMatch[1] : "slate-700";
+  return {
+    bg: `bg-${colorName}/10`,
+    border: `border-${colorName}/20`,
+    text,
+  };
+}
 
 export const AGENT_STATUS_COLORS = {
   active: "bg-green-500",

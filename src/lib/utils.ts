@@ -164,3 +164,13 @@ export function fireAndForget<T>(
 
   Promise.resolve(promise).catch(handleRejection);
 }
+
+/**
+ * Clamp a number to the valid percentage range [0, 100].
+ *
+ * @param value Input value to clamp.
+ * @returns Value constrained to [0, 100].
+ */
+export function clampProgress(value: number): number {
+  return Math.min(100, Math.max(0, value));
+}
