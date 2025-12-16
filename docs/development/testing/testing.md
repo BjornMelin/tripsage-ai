@@ -15,7 +15,7 @@ Authoritative testing reference for TripSage frontend.
 - Environment directive (mandatory first line):
   - `/** @vitest-environment jsdom */` — React, DOM, browser hooks
   - `/** @vitest-environment node */` — API routes, server utilities
-- Commands: `pnpm test`, `pnpm test:affected`, `test --project=<name>`, `test:coverage`.
+- Commands: `pnpm test`, `pnpm test:affected`, `pnpm test -- --project=<name>`, `pnpm test:coverage`.
   - `test:affected` runs tests related to changed files (e.g., `pnpm test:affected -- --base=main` for post-commit verification).
 
 ## Decision Table

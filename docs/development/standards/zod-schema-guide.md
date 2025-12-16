@@ -118,14 +118,17 @@ New features available in Zod v4.2.0+ for improved schema expressiveness.
 
 ### z.looseRecord() - Flexible Records
 
-Use `z.looseRecord()` for records that explicitly allow additional properties:
+Use `z.looseRecord()` when you want record-like objects but **do not** want to
+error on keys that fail the `keySchema` validation.
 
 ```typescript
 // Metadata, configuration, or extensible data
 metadata: z.looseRecord(z.string(), z.unknown()).optional()
 
-// Prefer over z.record() when semantics of "extra properties allowed" matters
-// Both are functionally equivalent, but looseRecord is more explicit
+// Key difference vs z.record():
+// - z.record(keySchema, valueSchema) errors on invalid keys
+// - z.looseRecord(keySchema, valueSchema) passes invalid keys through unchanged
+//   (and skips validating the valueSchema for those keys)
 ```
 
 ### z.xor() - Mutually Exclusive Unions

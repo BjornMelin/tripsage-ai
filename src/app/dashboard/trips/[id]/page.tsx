@@ -161,8 +161,9 @@ export default function TripDetailsPage() {
     const isNetworkError =
       error instanceof Error &&
       (error.name === "TypeError" ||
-        error.message.includes("fetch") ||
-        error.message.includes("network") ||
+        error.name === "NetworkError" ||
+        error.message.toLowerCase().includes("failed to fetch") ||
+        error.message.toLowerCase().includes("networkerror") ||
         (typeof navigator !== "undefined" && !navigator.onLine));
 
     if (isNetworkError) {
