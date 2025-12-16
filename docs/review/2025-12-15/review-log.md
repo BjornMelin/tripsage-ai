@@ -896,7 +896,7 @@
 
 - <https://genai.owasp.org/llmrisk2023-24/llm09-overreliance/>  
 - <https://cacm.acm.org/news/nonsense-and-malicious-packages-llm-hallucinations-in-code-generation/>  
-- <https://simonwillison.net/2025/Mar/2/hallucinations-in-code/>
+- <https://simonwillison.net/2023/May/3/hallucinations-in-code/>
 
 ### AI-003 - Minor - AI-Slop - Heuristic error classification in webhook handler (message-based status mapping)
 

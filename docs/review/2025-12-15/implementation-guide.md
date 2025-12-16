@@ -25,7 +25,7 @@ This file is both:
 - OWASP GenAI LLM09 Overreliance: <https://genai.owasp.org/llmrisk2023-24/llm09-overreliance/>
 - Measuring LLM Package Hallucination Vulnerabilities (arXiv HTML): <https://arxiv.org/html/2501.19012v1>
 - CACM (hallucinated/malicious packages risk): <https://cacm.acm.org/news/nonsense-and-malicious-packages-llm-hallucinations-in-code-generation/>
-- Simon Willison (hallucinations risk patterns): <https://simonwillison.net/2025/Mar/2/hallucinations-in-code/>
+- Simon Willison (hallucinations risk patterns): <https://simonwillison.net/2023/May/3/hallucinations-in-code/>
 - Next.js `use server` directive: <https://nextjs.org/docs/app/api-reference/directives/use-server>
 - React `use server` directive: <https://react.dev/reference/rsc/use-server>
 - Next.js `serverExternalPackages`: <https://nextjs.org/docs/app/api-reference/config/next-config-js/serverExternalPackages>
