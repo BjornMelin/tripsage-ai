@@ -1,4 +1,7 @@
 {
+  "git": {
+    "deploymentEnabled": false
+  },
   "functions": {
     "src/app/api/**/route.*": {
       "maxDuration": 60
