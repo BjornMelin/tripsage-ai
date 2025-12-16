@@ -5,6 +5,7 @@
 import "server-only";
 
 import { type ActiveSession, activeSessionSchema } from "@schemas/security";
+import { nowIso } from "@/lib/security/random";
 import type { TypedAdminSupabase } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
@@ -15,6 +16,11 @@ const logger = createServerLogger("security.sessions");
 
 /** Shape of a session row from the auth.sessions table. */
 type SessionRow = Database["auth"]["Tables"]["sessions"]["Row"];
+
+type SessionRowForMapping = Pick<
+  SessionRow,
+  "created_at" | "id" | "ip" | "refreshed_at" | "updated_at" | "user_agent"
+>;
 
 export class SessionsListError extends Error {
   public override readonly cause?: unknown;
@@ -99,18 +105,23 @@ function getIpAddress(ipValue: unknown): string {
  * @returns The mapped session DTO.
  */
 export function mapSessionRow(
-  row: SessionRow,
+  row: SessionRowForMapping,
   currentSessionId: string | null
 ): ActiveSession {
-  const lastActivity =
-    row.refreshed_at ?? row.updated_at ?? row.created_at ?? new Date().toISOString();
+  const lastActivity = row.refreshed_at ?? row.updated_at ?? row.created_at;
+  if (!lastActivity) {
+    logger.warn("session_missing_activity_timestamp", {
+      observedAt: nowIso(),
+      sessionId: row.id,
+    });
+  }
   return {
     browser: row.user_agent ?? "Unknown",
     device: row.user_agent ?? "Unknown device",
     id: row.id,
     ipAddress: getIpAddress(row.ip),
     isCurrent: currentSessionId === row.id,
-    lastActivity,
+    lastActivity: lastActivity ?? "Unknown",
     location: "Unknown",
   };
 }
@@ -137,12 +148,12 @@ export async function listActiveSessions(
       const query = adminSupabase
         .schema("auth")
         .from("sessions")
-        .select(
-          "id, user_agent, ip, refreshed_at, updated_at, created_at, not_after, user_id, aal, factor_id, oauth_client_id, tag"
-        )
+        .select("id, user_agent, ip, refreshed_at, updated_at, created_at")
         .eq("user_id", userId)
         .is("not_after", null)
         .order("refreshed_at", { ascending: false })
+        .order("updated_at", { ascending: false })
+        .order("created_at", { ascending: false })
         .limit(50);
 
       const { data, error } = await query;

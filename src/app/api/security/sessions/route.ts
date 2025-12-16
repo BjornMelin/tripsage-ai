@@ -10,9 +10,6 @@ import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse, requireUserId } from "@/lib/api/route-helpers";
 import { getCurrentSessionId, listActiveSessions } from "@/lib/security/sessions";
 import { createAdminSupabase } from "@/lib/supabase/admin";
-import { createServerLogger } from "@/lib/telemetry/logger";
-
-const logger = createServerLogger("api.security.sessions.list");
 
 /** Handles GET /api/security/sessions for the authenticated user. */
 export const GET = withApiGuards({
@@ -34,13 +31,8 @@ export const GET = withApiGuards({
       currentSessionId,
     });
     return NextResponse.json(sessions);
-  } catch (error) {
-    logger.error("sessions_list_failed", {
-      error: error instanceof Error ? error.message : "unknown_error",
-      userId,
-    });
+  } catch {
     return errorResponse({
-      err: error,
       error: "db_error",
       reason: "Failed to fetch sessions",
       status: 500,
