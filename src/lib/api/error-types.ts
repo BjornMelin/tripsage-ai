@@ -153,6 +153,7 @@ export class ApiError extends Error {
       case "NOT_FOUND":
         return "The requested resource was not found.";
       case "VALIDATION_ERROR":
+      case "RESPONSE_VALIDATION_ERROR":
         return this.getValidationUserMessage();
       case "RATE_LIMITED":
         return "Too many requests. Please try again later.";
