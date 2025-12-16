@@ -66,10 +66,10 @@ describe("useAuthenticatedApi", () => {
     expect((error as ApiError).message).toBe("Rate limited");
   });
 
-  it("wraps unexpected errors into ApiError with UNKNOWN_ERROR code", async () => {
-    // Use HttpResponse.error() to simulate a network failure. When online,
-    // unexpected TypeErrors fall through to UNKNOWN_ERROR (NETWORK_ERROR
-    // is reserved for when navigator.onLine === false).
+  it("wraps fetch TypeError as NETWORK_ERROR regardless of online status", async () => {
+    // Use HttpResponse.error() to simulate a network failure. Fetch throws
+    // TypeError on network errors (DNS failure, connection refused, CORS, etc.)
+    // and we treat all such errors as NETWORK_ERROR for consistent semantics.
     server.use(
       http.get(`${API_BASE}/api/test-endpoint`, () => {
         return HttpResponse.error();
@@ -88,8 +88,8 @@ describe("useAuthenticatedApi", () => {
     }
 
     expect(error).toBeInstanceOf(ApiError);
-    expect((error as ApiError).code).toBe("UNKNOWN_ERROR");
-    expect((error as ApiError).status).toBe(500);
+    expect((error as ApiError).code).toBe("NETWORK_ERROR");
+    expect((error as ApiError).status).toBe(0);
   });
 
   it("passes through ApiError instances from apiClient unchanged", async () => {

@@ -315,6 +315,12 @@ export const handleApiError = (error: unknown): ApiError => {
     if (error.name === "TimeoutError") {
       return ApiError.timeout(error.message);
     }
+    // AbortError handling: Treats raw AbortError as external cancellation
+    // (REQUEST_CANCELLED / 499). The api-client module must wrap timeout-induced
+    // aborts with a distinct TIMEOUT_ERROR (408) before errors reach here;
+    // without such wrapping, it's impossible to distinguish timeout vs external
+    // cancellation. api-client uses an internal `abortedByTimeout` flag to
+    // determine abort source and throws the appropriate ApiError directly.
     if (error.name === "AbortError") {
       return new ApiError({
         code: "REQUEST_CANCELLED",

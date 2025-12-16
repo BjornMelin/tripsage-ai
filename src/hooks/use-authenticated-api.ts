@@ -165,10 +165,11 @@ export function useAuthenticatedApi() {
           throw error;
         }
 
-        // Detect network failures: TypeError (fetch fails) when offline
-        const isOffline =
-          typeof navigator !== "undefined" && navigator.onLine === false;
-        if (error instanceof TypeError && isOffline) {
+        // Detect network failures: fetch throws TypeError on network errors
+        // (DNS failure, connection refused, CORS blocked, etc.). This can
+        // happen even when navigator.onLine reports true, so we treat all
+        // fetch TypeErrors as network errors for consistent semantics.
+        if (error instanceof TypeError) {
           throw new ApiError({
             code: "NETWORK_ERROR",
             message: error.message || "Network request failed",
