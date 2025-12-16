@@ -1,10 +1,6 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { cacheLatLng, cachePlaceId, getCachedPlaceId } from "../caching";
-import { getPlaceDetails, postPlacesSearch } from "../client";
-import { enrichHotelListingWithPlaces } from "../places-enrichment";
-import { buildGeocodeCacheKey, buildQueryToPlaceIdKey } from "../places-utils";
 
 vi.mock("../caching");
 vi.mock("../client");
@@ -15,6 +11,17 @@ vi.mock("@/lib/env/server", () => ({
 vi.mock("@/lib/telemetry/span", () => ({
   withTelemetrySpan: vi.fn((_name, _opts, fn) => fn()),
 }));
+
+// Reset modules to ensure fresh imports with mocks applied
+vi.resetModules();
+
+// Dynamic imports after mocks
+const { cacheLatLng, cachePlaceId, getCachedPlaceId } = await import("../caching");
+const { getPlaceDetails, postPlacesSearch } = await import("../client");
+const { enrichHotelListingWithPlaces } = await import("../places-enrichment");
+const { buildGeocodeCacheKey, buildQueryToPlaceIdKey } = await import(
+  "../places-utils"
+);
 
 describe("places-enrichment", () => {
   beforeEach(() => {

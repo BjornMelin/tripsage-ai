@@ -93,13 +93,6 @@ vi.mock("@/lib/redis", () => {
   return { getRedis: () => store };
 });
 
-let createTravelPlan: typeof import("@ai/tools/server/planning").createTravelPlan;
-let updateTravelPlan: typeof import("@ai/tools/server/planning").updateTravelPlan;
-
-beforeAll(async () => {
-  ({ createTravelPlan, updateTravelPlan } = await import("@ai/tools/server/planning"));
-});
-
 let currentUserId = "u1";
 const mockCreateServerSupabase = vi.hoisted(() =>
   vi.fn(async () => ({
@@ -134,6 +127,14 @@ vi.mock("@/lib/supabase/server", () => ({
   __setUserIdForTests: setUserIdForTests,
   createServerSupabase: mockCreateServerSupabase,
 }));
+
+// Dynamic import in beforeAll - required because setupUpstashTestEnvironment() must run first
+let createTravelPlan: typeof import("@ai/tools/server/planning").createTravelPlan;
+let updateTravelPlan: typeof import("@ai/tools/server/planning").updateTravelPlan;
+
+beforeAll(async () => {
+  ({ createTravelPlan, updateTravelPlan } = await import("@ai/tools/server/planning"));
+});
 
 describe("planning tool telemetry", () => {
   let redis: RedisMock;

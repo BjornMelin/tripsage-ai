@@ -7,43 +7,40 @@ import { AccountSettingsSection } from "../account-settings-section";
 import { PersonalInfoSection } from "../personal-info-section";
 import { PreferencesSection } from "../preferences-section";
 
-// Mock all dependencies to focus on component rendering
-vi.mock("@/stores/auth/auth-core", () => ({
-  useAuthCore: () => ({
-    logout: vi.fn(),
-    setUser: vi.fn(),
-    user: {
-      createdAt: "2025-01-01T00:00:00.000Z",
-      displayName: "John Doe",
-      email: "test@example.com",
-      firstName: "John",
-      id: "user-1",
-      isEmailVerified: true,
-      lastName: "Doe",
-      preferences: {
-        notifications: {
-          email: true,
-          marketing: false,
-          priceAlerts: false,
-          tripReminders: true,
-        },
+const authCoreState = vi.hoisted(() => ({
+  logout: vi.fn(),
+  setUser: vi.fn(),
+  user: {
+    createdAt: "2025-01-01T00:00:00.000Z",
+    displayName: "John Doe",
+    email: "test@example.com",
+    firstName: "John",
+    id: "user-1",
+    isEmailVerified: true,
+    lastName: "Doe",
+    preferences: {
+      notifications: {
+        email: true,
+        marketing: false,
+        priceAlerts: false,
+        tripReminders: true,
       },
-      updatedAt: "2025-01-01T00:00:00.000Z",
     },
-  }),
+    updatedAt: "2025-01-01T00:00:00.000Z",
+  },
+}));
+
+vi.mock("@/stores/auth/auth-core", () => ({
+  useAuthCore: () => authCoreState,
+}));
+
+const currencyStoreState = vi.hoisted(() => ({
+  baseCurrency: "USD",
+  setBaseCurrency: vi.fn(),
 }));
 
 vi.mock("@/stores/currency-store", () => ({
-  useCurrencyStore: () => ({
-    baseCurrency: "USD",
-    setBaseCurrency: vi.fn(),
-  }),
-}));
-
-vi.mock("@/components/ui/use-toast", () => ({
-  useToast: () => ({
-    toast: vi.fn(),
-  }),
+  useCurrencyStore: () => currencyStoreState,
 }));
 
 // Use real react-hook-form and zod resolver for integration-level rendering

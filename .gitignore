@@ -46,7 +46,7 @@ dev-debug.log
 test-results/
 playwright-report/
 playwright/.cache/
-.vitest-cache/
+**/.vitest-cache/
 coverage/
 htmlcov/
 .nyc_output/

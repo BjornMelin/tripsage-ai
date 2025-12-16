@@ -4,6 +4,7 @@ import type { UiTrip } from "@schemas/trips";
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createFakeTimersContext } from "@/test/utils/with-fake-timers";
 import { TripCard } from "../trip-card";
 
 // Mock DateUtils
@@ -125,14 +126,16 @@ describe("TripCard", () => {
   });
 
   describe("Trip Status", () => {
+    const timers = createFakeTimersContext();
+
     beforeEach(() => {
       // Mock current date to 2024-01-01 for consistent testing
-      vi.useFakeTimers();
+      timers.setup();
       vi.setSystemTime(new Date("2024-01-01"));
     });
 
     afterEach(() => {
-      vi.useRealTimers();
+      timers.teardown();
     });
 
     it("should show 'upcoming' status for future trips", () => {

@@ -88,13 +88,13 @@ Visit <http://localhost:3000> and sign in via Supabase auth.
 
 ```bash
 pnpm biome:check && pnpm type-check
-pnpm test:run
+pnpm test
 ```
 
 ## Development Workflow
 
 - **Lint/format/type:** `pnpm biome:check`, `pnpm biome:fix`, `pnpm type-check`
-- **Tests:** `pnpm test:run` (or `--project=<name>`), `pnpm test:e2e` for Playwright
+- **Tests:** `pnpm test` (or `--project=<name>`), `pnpm test:e2e` for Playwright
 - **Troubleshooting:** restart TS server, re-run `pnpm type-check`, verify env loaded (`env | grep SUPABASE`)
 
 ## Next Steps

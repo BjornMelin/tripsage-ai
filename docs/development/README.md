@@ -38,7 +38,7 @@ Resources and guidelines for TripSage development.
 pnpm install && pnpm dev
 
 # Quality gates
-pnpm biome:check && pnpm type-check && pnpm test:run
+pnpm biome:check && pnpm type-check && pnpm test
 ```
 
 ## Architecture

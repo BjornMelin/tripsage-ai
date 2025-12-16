@@ -227,7 +227,7 @@ BYOK API key management:
 
 ```bash
 # Run all tests
-pnpm test:run
+pnpm test
 
 # Run API route tests
 pnpm test:api

@@ -1,10 +1,6 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { cacheLatLng, getCachedLatLng } from "../caching";
-import { postPlacesSearch } from "../client";
-import { resolveLocationToLatLng } from "../places-geocoding";
-import { buildGeocodeCacheKey } from "../places-utils";
 
 vi.mock("../caching");
 vi.mock("../client");
@@ -15,6 +11,12 @@ vi.mock("@/lib/env/server", () => ({
 vi.mock("@/lib/telemetry/span", () => ({
   withTelemetrySpan: vi.fn((_name, _opts, fn) => fn()),
 }));
+
+// Static imports after vi.mock() - Vitest hoists mocks automatically
+import { cacheLatLng, getCachedLatLng } from "../caching";
+import { postPlacesSearch } from "../client";
+import { resolveLocationToLatLng } from "../places-geocoding";
+import { buildGeocodeCacheKey } from "../places-utils";
 
 describe("places-geocoding", () => {
   beforeEach(() => {

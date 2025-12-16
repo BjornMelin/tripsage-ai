@@ -31,10 +31,16 @@ vi.mock("@/lib/cache/tags", () => ({
   versionedKey: vi.fn(async (_tag: string, key: string) => `tag:v1:${key}`),
 }));
 
-import type { AccommodationProviderAdapter } from "@domain/accommodations/providers/types";
-import { AccommodationsService } from "@domain/accommodations/service";
-import { getCachedJson } from "@/lib/cache/upstash";
-import { getCachedLatLng } from "@/lib/google/caching";
+// Reset modules to ensure fresh imports with mocks applied
+vi.resetModules();
+
+// Dynamic imports after mocks
+const { AccommodationsService } = await import("@domain/accommodations/service");
+const { getCachedJson } = await import("@/lib/cache/upstash");
+const { getCachedLatLng } = await import("@/lib/google/caching");
+
+type AccommodationProviderAdapter =
+  import("@domain/accommodations/providers/types").AccommodationProviderAdapter;
 
 describe("AccommodationsService (Amadeus)", () => {
   beforeEach(() => {

@@ -1,52 +1,41 @@
-// @ts-expect-error startActiveSpanMock is provided only by the Vitest mock.
-import { SpanStatusCode, startActiveSpanMock, trace } from "@opentelemetry/api";
+/** @vitest-environment node */
+
 import type { CookieMethodsServer } from "@supabase/ssr";
-import { createServerClient } from "@supabase/ssr";
 import type { User } from "@supabase/supabase-js";
 import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getClientEnv } from "@/lib/env/client";
-import type { ServerSupabaseClient } from "../factory";
-import {
-  createCookieAdapter,
-  createMiddlewareSupabase,
-  createServerSupabase,
-  getCurrentUser,
-} from "../factory";
-import { isSupabaseClient } from "../guards";
+
+// Hoisted mock for startActiveSpan
+const startActiveSpanMock = vi.hoisted(() =>
+  vi.fn((_name: string, _options: unknown, callback: (span: unknown) => unknown) => {
+    const mockSpan = {
+      end: vi.fn(),
+      recordException: vi.fn(),
+      setAttribute: vi.fn(),
+      setStatus: vi.fn(),
+    };
+    return callback(mockSpan);
+  })
+);
 
 // Mock dependencies
 vi.mock("@supabase/ssr", () => ({
   createServerClient: vi.fn(),
 }));
 
-vi.mock("@opentelemetry/api", () => {
-  const localStartActiveSpanMock = vi.fn(
-    (_name: string, _options: unknown, callback: (span: unknown) => unknown) => {
-      const mockSpan = {
-        end: vi.fn(),
-        recordException: vi.fn(),
-        setAttribute: vi.fn(),
-        setStatus: vi.fn(),
-      };
-      return callback(mockSpan);
-    }
-  );
-
-  return {
-    SpanStatusCode: {
-      ERROR: 2,
-      OK: 1,
-      UNSET: 0,
-    },
-    startActiveSpanMock: localStartActiveSpanMock,
-    trace: {
-      getTracer: vi.fn(() => ({
-        startActiveSpan: localStartActiveSpanMock,
-      })),
-    },
-  };
-});
+vi.mock("@opentelemetry/api", () => ({
+  SpanStatusCode: {
+    ERROR: 2,
+    OK: 1,
+    UNSET: 0,
+  },
+  trace: {
+    getActiveSpan: vi.fn(() => null),
+    getTracer: vi.fn(() => ({
+      startActiveSpan: startActiveSpanMock,
+    })),
+  },
+}));
 
 vi.mock("@/lib/env/server", () => ({
   getServerEnv: vi.fn(() => ({
@@ -63,9 +52,28 @@ vi.mock("@/lib/env/client", () => ({
 }));
 
 vi.mock("@/lib/telemetry/tracer", () => ({
-  getTelemetryTracer: () => trace.getTracer("tripsage-frontend"),
+  getTelemetryTracer: vi.fn(() => ({
+    startActiveSpan: startActiveSpanMock,
+  })),
   TELEMETRY_SERVICE_NAME: "tripsage-frontend",
 }));
+
+// Reset modules to ensure fresh imports with mocks applied
+vi.resetModules();
+
+// Dynamic imports after mocks are set up
+const { createServerClient } = await import("@supabase/ssr");
+const { SpanStatusCode } = await import("@opentelemetry/api");
+const { getClientEnv } = await import("@/lib/env/client");
+const {
+  createCookieAdapter,
+  createMiddlewareSupabase,
+  createServerSupabase,
+  getCurrentUser,
+} = await import("../factory");
+const { isSupabaseClient } = await import("../guards");
+
+type ServerSupabaseClient = Awaited<ReturnType<typeof createServerSupabase>>;
 
 describe("Supabase Factory", () => {
   const mockCreateServerClient = vi.mocked(createServerClient);

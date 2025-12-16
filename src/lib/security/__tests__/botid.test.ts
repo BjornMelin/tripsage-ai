@@ -17,15 +17,19 @@ vi.mock("@/lib/telemetry/logger", () => ({
   }),
 }));
 
-// Import after mocks are set up
-import { checkBotId } from "botid/server";
-import {
+// Reset modules to ensure fresh imports with mocks applied
+vi.resetModules();
+
+// Import after mocks are set up (dynamic import after vi.resetModules())
+const { checkBotId } = await import("botid/server");
+const {
   assertHumanOrThrow,
   BOT_DETECTED_RESPONSE,
   BotDetectedError,
-  type BotIdVerification,
   isBotDetectedError,
-} from "@/lib/security/botid";
+} = await import("@/lib/security/botid");
+
+type BotIdVerification = import("@/lib/security/botid").BotIdVerification;
 
 const mockCheckBotId = vi.mocked(checkBotId);
 
