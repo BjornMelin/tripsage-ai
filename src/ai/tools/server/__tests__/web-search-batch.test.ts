@@ -4,9 +4,12 @@ import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 import { server } from "@/test/msw/server";
+import { setupUpstashMocks } from "@/test/upstash/redis-mock";
+
+const { redis: redisMock } = setupUpstashMocks();
 
 vi.mock("@/lib/redis", () => ({
-  getRedis: vi.fn(),
+  getRedis: vi.fn(() => new redisMock.Redis()),
 }));
 
 type WebSearchOutput = {
@@ -41,6 +44,7 @@ vi.mock("@/lib/env/server", () => ({
 }));
 
 beforeEach(() => {
+  redisMock.__reset();
   webSearchExecuteMock.mockResolvedValue({
     fromCache: false,
     results: [{ title: "Example", url: "https://example.com" }],
@@ -60,8 +64,6 @@ const mockContext = {
 
 describe("webSearchBatch", () => {
   test("executes webSearch for each query and normalizes results", async () => {
-    const { getRedis } = await import("@/lib/redis");
-    (getRedis as ReturnType<typeof vi.fn>).mockReturnValue(null);
     const { webSearchBatch } = await import("@ai/tools/server/web-search-batch");
     const exec = webSearchBatch.execute as
       | ((params: unknown, ctx: unknown) => Promise<unknown>)

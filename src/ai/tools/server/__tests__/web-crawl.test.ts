@@ -45,7 +45,6 @@ beforeEach(() => {
 
 afterEach(() => {
   server.resetHandlers();
-  vi.clearAllMocks();
 });
 
 describe("web-search tool", () => {

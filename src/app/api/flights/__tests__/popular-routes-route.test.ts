@@ -35,8 +35,12 @@ const { redis, ratelimit } = setupUpstashMocks();
  * parses them itself.
  */
 class RawStringRedisMock extends RedisMockClient {
+  constructor(private readonly rawStore: UpstashMemoryStore) {
+    super(rawStore);
+  }
+
   override get<T = unknown>(key: string): Promise<T | null> {
-    const entry = (this as unknown as { store: UpstashMemoryStore }).store.get(key);
+    const entry = this.rawStore.get(key);
     if (!entry) return Promise.resolve(null);
     // Return raw string value without deserializing
     return Promise.resolve(entry.value as T);
