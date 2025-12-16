@@ -145,6 +145,13 @@ describe("getToneColors", () => {
     expect(colors.border).toBe("border-slate-700/20");
   });
 
+  it("falls back to unknown colors for invalid tone", () => {
+    const colors = getToneColors("invalid" as unknown as never);
+    expect(colors.text).toBe("text-slate-700");
+    expect(colors.bg).toBe("bg-slate-700/10");
+    expect(colors.border).toBe("border-slate-700/20");
+  });
+
   it("returns correct colors for action tones", () => {
     const dealColors = getToneColors("deals");
     expect(dealColors.text).toBe("text-orange-700");
