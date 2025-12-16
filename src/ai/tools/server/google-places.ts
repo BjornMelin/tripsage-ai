@@ -14,9 +14,11 @@ import "server-only";
 import { createAiTool } from "@ai/lib/tool-factory";
 import { lookupPoiInputSchema } from "@ai/tools/schemas/google-places";
 import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
+import { upstreamPlacesSearchResponseSchema } from "@schemas/api";
 import { hashInputForCache } from "@/lib/cache/hash";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
+import { postPlacesSearch } from "@/lib/google/client";
 import { resolveLocationToLatLng } from "@/lib/google/places-geocoding";
 
 /** Normalized POI result structure matching Google Places API (New) fields. */
@@ -36,8 +38,8 @@ type NormalizedPoi = {
 /**
  * Fetch POIs from Google Places API (New) Text Search.
  *
- * Uses Text Search (New) with field mask to minimize costs. Returns normalized
- * POI array with place_id, location, and essential fields only.
+ * Uses centralized client with retry logic and Zod validation.
+ * Returns normalized POI array with place_id, location, and essential fields.
  *
  * @param query Search query (e.g., "restaurants in Tokyo").
  * @param locationBias Optional location bias circle.
@@ -49,7 +51,6 @@ async function fetchPoisFromPlacesApi(
   locationBias: { lat: number; lon: number; radiusMeters: number } | null,
   apiKey: string
 ): Promise<NormalizedPoi[]> {
-  const url = "https://places.googleapis.com/v1/places:searchText";
   const body: Record<string, unknown> = {
     maxResultCount: 20,
     textQuery: query,
@@ -70,26 +71,44 @@ async function fetchPoisFromPlacesApi(
   const fieldMask =
     "places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.photos.name,places.types";
 
-  const response = await fetch(url, {
-    body: JSON.stringify(body),
-    headers: {
-      "Content-Type": "application/json",
-      "X-Goog-Api-Key": apiKey,
-      "X-Goog-FieldMask": fieldMask,
-    },
-    method: "POST",
-  });
+  const response = await postPlacesSearch({ apiKey, body, fieldMask });
 
   if (!response.ok) {
-    throw new Error(`Google Places API error: ${response.status}`);
+    const errorText = await response.text();
+    throw new Error(
+      `Google Places API error: ${response.status}. Details: ${errorText.slice(0, 200)}`
+    );
   }
 
-  const data = await response.json();
-  // biome-ignore lint/suspicious/noExplicitAny: Google API response
-  return (data.places ?? []).map((place: any) => ({
+  let rawData: unknown;
+  try {
+    rawData = await response.json();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(`Failed to parse JSON response from Places API: ${message}`);
+  }
+
+  const parseResult = upstreamPlacesSearchResponseSchema.safeParse(rawData);
+
+  if (!parseResult.success) {
+    const zodError = parseResult.error.format();
+    throw new Error(
+      `Invalid response from Google Places API: ${JSON.stringify(zodError)}`
+    );
+  }
+
+  // Filter and map places with valid coordinates
+  const placesWithCoords = parseResult.data.places.filter(
+    (
+      place
+    ): place is typeof place & { location: { latitude: number; longitude: number } } =>
+      place.location?.latitude != null && place.location?.longitude != null
+  );
+
+  return placesWithCoords.map((place) => ({
     formattedAddress: place.formattedAddress,
-    lat: place.location?.latitude,
-    lon: place.location?.longitude,
+    lat: place.location.latitude,
+    lon: place.location.longitude,
     name: place.displayName?.text ?? "Unnamed Place",
     photoName: place.photos?.[0]?.name,
     placeId: place.id,

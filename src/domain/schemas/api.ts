@@ -203,7 +203,7 @@ export const chatMessageSchema = z.object({
   conversationId: UUID_SCHEMA,
   id: UUID_SCHEMA,
   metadata: z
-    .object({
+    .looseObject({
       model: z.string().optional(),
       processingTime: z.number().nonnegative().optional(),
       temperature: z.number().min(0).max(2).optional(),
@@ -226,7 +226,7 @@ export const conversationSchema = z.object({
   id: UUID_SCHEMA,
   messages: z.array(chatMessageSchema),
   metadata: z
-    .object({
+    .looseObject({
       lastMessageAt: TIMESTAMP_SCHEMA.optional(),
       messageCount: NON_NEGATIVE_NUMBER_SCHEMA,
       totalTokens: NON_NEGATIVE_NUMBER_SCHEMA,
@@ -427,13 +427,20 @@ export type RouteMatrixRequest = z.infer<typeof routeMatrixRequestSchema>;
 
 /**
  * Zod schema for POST /api/geocode request body.
- * Validates geocoding request parameters for forward or reverse geocoding.
+ * Validates geocoding request parameters.
+ * Uses xor to enforce exactly one geocoding mode:
+ * - Forward: address string
+ * - Reverse: lat AND lng coordinates
  */
-export const geocodeRequestSchema = z.object({
-  address: z.string().optional(),
-  lat: z.number().optional(),
-  lng: z.number().optional(),
-});
+export const geocodeRequestSchema = z.xor([
+  z.object({
+    address: z.string().min(1),
+  }),
+  z.object({
+    lat: z.number().min(-90).max(90),
+    lng: z.number().min(-180).max(180),
+  }),
+]);
 
 /** TypeScript type for geocode requests. */
 export type GeocodeRequest = z.infer<typeof geocodeRequestSchema>;
@@ -486,8 +493,8 @@ export type PlacesDetailsRequest = z.infer<typeof placesDetailsRequestSchema>;
  * Validates Google Places API (New) Photo Media request parameters.
  */
 export const placesPhotoRequestSchema = z.object({
-  maxHeightPx: z.number().int().positive().optional(),
-  maxWidthPx: z.number().int().positive().optional(),
+  maxHeightPx: z.number().int().positive().max(4800).optional(),
+  maxWidthPx: z.number().int().positive().max(4800).optional(),
   name: z.string().min(1),
   skipHttpRedirect: z.boolean().optional(),
 });
@@ -512,6 +519,164 @@ export const placesNearbyRequestSchema = z.object({
 
 /** TypeScript type for places nearby requests. */
 export type PlacesNearbyRequest = z.infer<typeof placesNearbyRequestSchema>;
+
+// ===== Upstream Google Places API v1 Response Schemas =====
+
+/**
+ * Zod schema for Google Places API place object.
+ * Validates upstream place data from Text Search, Nearby Search, Place Details.
+ * Uses looseObject to accept additional fields from Google API.
+ */
+export const upstreamPlaceSchema = z.looseObject({
+  businessStatus: z.string().optional(),
+  displayName: z
+    .looseObject({ languageCode: z.string().optional(), text: z.string() })
+    .optional(),
+  editorialSummary: z.looseObject({ text: z.string() }).optional(),
+  formattedAddress: z.string().optional(),
+  googleMapsUri: z.string().optional(),
+  id: z.string(),
+  internationalPhoneNumber: z.string().optional(),
+  location: z.looseObject({ latitude: z.number(), longitude: z.number() }).optional(),
+  photos: z.array(z.looseObject({ name: z.string() })).optional(),
+  primaryType: z.string().optional(),
+  rating: z.number().optional(),
+  regularOpeningHours: z
+    .looseObject({ weekdayDescriptions: z.array(z.string()).optional() })
+    .optional(),
+  shortFormattedAddress: z.string().optional(),
+  types: z.array(z.string()).optional(),
+  url: z.string().optional(),
+  userRatingCount: z.number().optional(),
+  websiteUri: z.string().optional(),
+});
+
+/** TypeScript type for upstream Google Place. */
+export type UpstreamPlace = z.infer<typeof upstreamPlaceSchema>;
+
+/**
+ * Zod schema for Google Places API search response.
+ * Validates upstream response from Text Search and Nearby Search endpoints.
+ */
+export const upstreamPlacesSearchResponseSchema = z.looseObject({
+  places: z.array(upstreamPlaceSchema).optional().default([]),
+});
+
+/** TypeScript type for upstream Places search response. */
+export type UpstreamPlacesSearchResponse = z.infer<
+  typeof upstreamPlacesSearchResponseSchema
+>;
+
+// ===== Upstream Google Routes API v2 Response Schemas =====
+
+/**
+ * Zod schema for Google Routes API route object.
+ * Validates upstream route data returned from computeRoutes.
+ */
+export const upstreamRouteSchema = z.looseObject({
+  distanceMeters: z.number().optional(),
+  duration: z.string().optional(),
+  legs: z.array(z.looseObject({ stepCount: z.number().optional() })).optional(),
+  polyline: z.looseObject({ encodedPolyline: z.string() }).optional(),
+  routeLabels: z.array(z.string()).optional(),
+});
+
+/** TypeScript type for upstream Route. */
+export type UpstreamRoute = z.infer<typeof upstreamRouteSchema>;
+
+/**
+ * Zod schema for Google Routes API computeRoutes response.
+ * Validates upstream response from computeRoutes endpoint.
+ */
+export const upstreamRoutesResponseSchema = z.looseObject({
+  routes: z.array(upstreamRouteSchema).optional().default([]),
+});
+
+/** TypeScript type for upstream Routes response. */
+export type UpstreamRoutesResponse = z.infer<typeof upstreamRoutesResponseSchema>;
+
+/**
+ * Zod schema for Google Routes API route matrix entry.
+ * Validates upstream matrix entry data returned from computeRouteMatrix.
+ * The condition field indicates route availability per Google Routes API v2.
+ */
+export const upstreamRouteMatrixEntrySchema = z.looseObject({
+  condition: z
+    .enum(["ROUTE_EXISTS", "ROUTE_NOT_FOUND", "ROUTE_NOT_ALLOWED"])
+    .optional(),
+  destinationIndex: z.number(),
+  distanceMeters: z.number().optional(),
+  duration: z.string().optional(),
+  originIndex: z.number(),
+  status: z
+    .looseObject({ code: z.number().optional(), message: z.string().optional() })
+    .optional(),
+});
+
+/** TypeScript type for upstream Route matrix entry. */
+export type UpstreamRouteMatrixEntry = z.infer<typeof upstreamRouteMatrixEntrySchema>;
+
+/**
+ * Zod schema for Google Routes API computeRouteMatrix response.
+ * Validates upstream response from computeRouteMatrix endpoint (array of entries).
+ */
+export const upstreamRouteMatrixResponseSchema = z.array(
+  upstreamRouteMatrixEntrySchema
+);
+
+/** TypeScript type for upstream Route matrix response. */
+export type UpstreamRouteMatrixResponse = z.infer<
+  typeof upstreamRouteMatrixResponseSchema
+>;
+
+// ===== Upstream Google Geocoding API Response Schemas =====
+
+/**
+ * Zod schema for Google Geocoding API result object.
+ * Validates upstream geocoding result data.
+ */
+export const upstreamGeocodeResultSchema = z.looseObject({
+  formatted_address: z.string(),
+  geometry: z.looseObject({
+    location: z.looseObject({ lat: z.number(), lng: z.number() }),
+  }),
+  place_id: z.string().optional(),
+});
+
+/** TypeScript type for upstream Geocode result. */
+export type UpstreamGeocodeResult = z.infer<typeof upstreamGeocodeResultSchema>;
+
+/**
+ * Zod schema for Google Geocoding API response.
+ * Validates upstream response from Geocoding endpoint.
+ */
+export const upstreamGeocodeResponseSchema = z.looseObject({
+  error_message: z.string().optional(),
+  results: z.array(upstreamGeocodeResultSchema).optional().default([]),
+  status: z.string(),
+});
+
+/** TypeScript type for upstream Geocode response. */
+export type UpstreamGeocodeResponse = z.infer<typeof upstreamGeocodeResponseSchema>;
+
+// ===== Upstream Google Timezone API Response Schemas =====
+
+/**
+ * Zod schema for Google Timezone API response.
+ * Validates upstream response from Timezone endpoint.
+ * Note: dstOffset, rawOffset, timeZoneId, and timeZoneName are optional
+ * because error responses (e.g., ZERO_RESULTS) only include the status field.
+ */
+export const upstreamTimezoneResponseSchema = z.looseObject({
+  dstOffset: z.number().optional(),
+  rawOffset: z.number().optional(),
+  status: z.string(),
+  timeZoneId: z.string().optional(),
+  timeZoneName: z.string().optional(),
+});
+
+/** TypeScript type for upstream Timezone response. */
+export type UpstreamTimezoneResponse = z.infer<typeof upstreamTimezoneResponseSchema>;
 
 /**
  * Zod schema for POST /api/accommodations/personalize request body.

@@ -1,3 +1,25 @@
+## [1.15.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.14.0...v1.15.0) (2025-12-16)
+
+### ⚠ BREAKING CHANGES
+
+* **google-api:** distanceMatrix AI tool now uses Routes API computeRouteMatrix
+internally (geocodes addresses first, then calls matrix endpoint)
+
+### Bug Fixes
+
+* **geocode-address:** add status validation to helper function ([8bcdfdb](https://github.com/BjornMelin/tripsage-ai/commit/8bcdfdb0e8f8899b3c6c15635254fe1a488ca975))
+* **google-api:** address PR review comments for validation and API compliance ([b3bd761](https://github.com/BjornMelin/tripsage-ai/commit/b3bd76151b6bb640496c9deef74733aa4313edb0))
+* **google-api:** improve Routes API handling and error observability ([6263973](https://github.com/BjornMelin/tripsage-ai/commit/62639733442c1a759a1d07a3f3f64b02d03aee7a))
+* **google-api:** resolve PR [#552](https://github.com/BjornMelin/tripsage-ai/issues/552) review comments ([86b9b3d](https://github.com/BjornMelin/tripsage-ai/commit/86b9b3d93afd430aeb80e3e8e87f1623ddec655b))
+* **google:** harden maps endpoints ([7f6d682](https://github.com/BjornMelin/tripsage-ai/commit/7f6d682cf54636b201ad85f7b88914332490f303))
+* **places-details:** add error handling for getPlaceDetails validation ([8231fc8](https://github.com/BjornMelin/tripsage-ai/commit/8231fc887f9cb92701f0cb8861447636336f5490))
+* **places-details:** use Zod v4 treeifyError API and improve error handling ([1a5ba38](https://github.com/BjornMelin/tripsage-ai/commit/1a5ba380e6d9f2b1aa4d0cbdcc0eca9e01c6c747))
+* **places-photo:** update maxDimension limit from 2048 to 4800 ([08014af](https://github.com/BjornMelin/tripsage-ai/commit/08014af1a3dcfbd974409e8ed035dba9b2aacacd))
+
+### Code Refactoring
+
+* **google-api:** consolidate all Google API calls into centralized client ([1f3538c](https://github.com/BjornMelin/tripsage-ai/commit/1f3538ccfc5fa2c5c37a863f6e9fb4cb6bc09f93))
+
 ## [1.14.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.13.0...v1.14.0) (2025-12-13)
 
 ### Features

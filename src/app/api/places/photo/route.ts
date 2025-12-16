@@ -12,6 +12,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse, validateSchema } from "@/lib/api/route-helpers";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
+import { getPlacePhoto } from "@/lib/google/client";
 
 /**
  * GET /api/places/photo
@@ -48,23 +49,23 @@ export const GET = withApiGuards({
 
   const apiKey = getGoogleMapsServerKey();
 
-  const url = new URL(`https://places.googleapis.com/v1/${validated.name}/media`);
-  if (validated.maxWidthPx) {
-    url.searchParams.set("maxWidthPx", String(validated.maxWidthPx));
+  let response: Response;
+  try {
+    response = await getPlacePhoto({
+      apiKey,
+      maxHeightPx: validated.maxHeightPx,
+      maxWidthPx: validated.maxWidthPx,
+      photoName: validated.name,
+      skipHttpRedirect: validated.skipHttpRedirect,
+    });
+  } catch (err) {
+    return errorResponse({
+      err: err instanceof Error ? err : new Error("Photo fetch failed"),
+      error: "external_api_error",
+      reason: "Failed to fetch photo from Places API",
+      status: 502,
+    });
   }
-  if (validated.maxHeightPx) {
-    url.searchParams.set("maxHeightPx", String(validated.maxHeightPx));
-  }
-  if (validated.skipHttpRedirect) {
-    url.searchParams.set("skipHttpRedirect", "true");
-  }
-
-  const response = await fetch(url.toString(), {
-    headers: {
-      "X-Goog-Api-Key": apiKey,
-    },
-    method: "GET",
-  });
 
   if (!response.ok) {
     return errorResponse({
