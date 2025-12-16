@@ -89,12 +89,37 @@ describe("apiMetricsRowSchema", () => {
     expect(tooHigh.success).toBe(false);
   });
 
+  it.concurrent("should accept boundary status codes (100 and 599)", () => {
+    const minValid = apiMetricsRowSchema.safeParse({
+      ...validRow,
+      status_code: 100,
+    });
+    expect(minValid.success).toBe(true);
+
+    const maxValid = apiMetricsRowSchema.safeParse({
+      ...validRow,
+      status_code: 599,
+    });
+    expect(maxValid.success).toBe(true);
+  });
+
   it.concurrent("should reject negative duration_ms", () => {
     const result = apiMetricsRowSchema.safeParse({
       ...validRow,
       duration_ms: -10,
     });
     expect(result.success).toBe(false);
+  });
+
+  it.concurrent("should accept zero duration_ms", () => {
+    const result = apiMetricsRowSchema.safeParse({
+      ...validRow,
+      duration_ms: 0,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.duration_ms).toBe(0);
+    }
   });
 
   it.concurrent("should reject invalid UUID for id", () => {
@@ -150,6 +175,43 @@ describe("apiMetricsInsertSchema", () => {
     };
     const result = apiMetricsInsertSchema.safeParse(missing);
     expect(result.success).toBe(false);
+  });
+
+  it.concurrent("should accept valid created_at ISO datetime", () => {
+    const withCreatedAt = {
+      created_at: "2024-06-15T14:30:00.000Z",
+      duration_ms: 100,
+      endpoint: "/api/test",
+      method: "GET",
+      status_code: 200,
+    };
+    const result = apiMetricsInsertSchema.safeParse(withCreatedAt);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.created_at).toBe("2024-06-15T14:30:00.000Z");
+    }
+  });
+
+  it.concurrent("should reject invalid created_at format", () => {
+    const invalidDate = {
+      created_at: "not-a-date",
+      duration_ms: 100,
+      endpoint: "/api/test",
+      method: "GET",
+      status_code: 200,
+    };
+    const result = apiMetricsInsertSchema.safeParse(invalidDate);
+    expect(result.success).toBe(false);
+
+    const wrongFormat = {
+      created_at: "2024/06/15 14:30:00",
+      duration_ms: 100,
+      endpoint: "/api/test",
+      method: "GET",
+      status_code: 200,
+    };
+    const result2 = apiMetricsInsertSchema.safeParse(wrongFormat);
+    expect(result2.success).toBe(false);
   });
 });
 
