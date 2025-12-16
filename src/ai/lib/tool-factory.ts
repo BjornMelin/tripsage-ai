@@ -617,5 +617,5 @@ async function getRateLimitIdentifier(): Promise<string> {
     // headers() throws when executed outside of a request context. Fall through.
   }
 
-  return "unknown";
+  return "ip:unknown";
 }

@@ -351,7 +351,7 @@ describe("createAiTool", () => {
     });
 
     await tool.execute?.({ payload: "demo" }, { messages: [], toolCallId: "call-3" });
-    expect(recordedRateLimitIdentifiers).toContain("unknown");
+    expect(recordedRateLimitIdentifiers).toContain("ip:unknown");
   });
 
   test("rejects invalid x-forwarded-for IP addresses to prevent spoofing", async () => {
@@ -375,6 +375,6 @@ describe("createAiTool", () => {
 
     // Should fall back to "unknown" when IP is invalid
     await tool.execute?.({ payload: "demo" }, { messages: [], toolCallId: "call-4" });
-    expect(recordedRateLimitIdentifiers).toContain("unknown");
+    expect(recordedRateLimitIdentifiers).toContain("ip:unknown");
   });
 });

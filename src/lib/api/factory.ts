@@ -328,12 +328,13 @@ export function withApiGuards<SchemaType extends z.ZodType>(
 
       // Handle rate limiting if configured
       if (rateLimit) {
-        const identifier = user?.id
-          ? `user:${hashIdentifier(normalizeIdentifier(user.id))}`
-          : (() => {
-              const ipHash = getTrustedRateLimitIdentifier(req);
-              return ipHash === "unknown" ? "ip:unknown" : `ip:${ipHash}`;
-            })();
+        let identifier: string;
+        if (user?.id) {
+          identifier = `user:${hashIdentifier(normalizeIdentifier(user.id))}`;
+        } else {
+          const ipHash = getTrustedRateLimitIdentifier(req);
+          identifier = ipHash === "unknown" ? "ip:unknown" : `ip:${ipHash}`;
+        }
         const rateLimitError = await enforceRateLimit(rateLimit, identifier);
         if (rateLimitError) {
           return rateLimitError;
