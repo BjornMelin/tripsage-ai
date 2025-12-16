@@ -18,6 +18,9 @@ import { asSchema, tool } from "ai";
 import { headers } from "next/headers";
 import { hashInputForCache } from "@/lib/cache/hash";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
+import { getClientIpFromHeaders } from "@/lib/http/ip";
+import { normalizeRateLimitResetToMs } from "@/lib/ratelimit/headers";
+import { hashIdentifier, normalizeIdentifier } from "@/lib/ratelimit/identifier";
 import { getRedis } from "@/lib/redis";
 import {
   type Span,
@@ -479,9 +482,12 @@ async function enforceRateLimit<InputValue>(
   callOptions: ToolCallOptions,
   span: Span
 ): Promise<void> {
-  const identifier =
-    sanitizeRateLimitIdentifier(config.identifier?.(params, callOptions)) ??
-    (await getRateLimitIdentifier());
+  const override = sanitizeRateLimitIdentifier(
+    config.identifier?.(params, callOptions)
+  );
+  const identifier = override
+    ? toHashedLimiterIdentifier(override)
+    : await getRateLimitIdentifier();
 
   const redis = getRedis();
   if (!redis) {
@@ -513,7 +519,10 @@ async function enforceRateLimit<InputValue>(
   const validatedResult: RateLimitResult = rateLimitResultSchema.parse({
     limit: result.limit,
     remaining: result.remaining,
-    reset: result.reset,
+    reset:
+      typeof result.reset === "number"
+        ? normalizeRateLimitResetToMs(result.reset)
+        : undefined,
     success: result.success,
   });
 
@@ -525,9 +534,9 @@ async function enforceRateLimit<InputValue>(
       ? "ip"
       : "unknown";
   span.addEvent("rate_limited", { "ratelimit.subject_type": subjectType });
-  const nowSeconds = Math.floor(Date.now() / 1000);
+  const nowMs = Date.now();
   const retryAfter = validatedResult.reset
-    ? Math.max(0, validatedResult.reset - nowSeconds)
+    ? Math.max(0, Math.ceil((validatedResult.reset - nowMs) / 1000))
     : undefined;
   throw createToolError(config.errorCode, undefined, {
     limit: validatedResult.limit,
@@ -563,54 +572,50 @@ function sanitizeRateLimitIdentifier(identifier?: string | null): string | undef
 }
 
 /**
- * Validates if a string is a valid IPv4 or IPv6 address.
+ * Convert a raw identifier into a stable, hashed limiter identifier.
  *
- * @param ip - String to validate as IP address
- * @returns True if valid IPv4 or IPv6 format, false otherwise
+ * - Preserves an explicit `{prefix}:{value}` form by hashing only the value.
+ * - Otherwise uses `id:{sha256(raw)}` to avoid leaking raw identifiers in Redis keys.
  */
-function isValidIpAddress(ip: string): boolean {
-  // IPv4 regex: 4 octets (0-255) separated by dots
-  const ipv4Regex =
-    /^(?:(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)$/;
+function toHashedLimiterIdentifier(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return "unknown";
+  if (trimmed === "unknown") return "unknown";
 
-  // IPv6 regex: supports full, compressed, and IPv4-mapped forms
-  const ipv6Regex =
-    /^(?:(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,7}:|(?:[0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,5}(?::[0-9a-fA-F]{1,4}){1,2}|(?:[0-9a-fA-F]{1,4}:){1,4}(?::[0-9a-fA-F]{1,4}){1,3}|(?:[0-9a-fA-F]{1,4}:){1,3}(?::[0-9a-fA-F]{1,4}){1,4}|(?:[0-9a-fA-F]{1,4}:){1,2}(?::[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:(?:(?::[0-9a-fA-F]{1,4}){1,6})|:(?:(?::[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(?::[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]+|::(?:ffff(?::0{1,4})?:)?(?:(?:25[0-5]|(?:2[0-4]|1?\d)?\d)\.){3}(?:25[0-5]|(?:2[0-4]|1?\d)?\d)|(?:[0-9a-fA-F]{1,4}:){1,4}:(?:(?:25[0-5]|(?:2[0-4]|1?\d)?\d)\.){3}(?:25[0-5]|(?:2[0-4]|1?\d)?\d))$/;
+  const match = /^([a-z][a-z0-9_-]*):(.*)$/i.exec(trimmed);
+  if (match) {
+    const prefix = match[1]?.toLowerCase();
+    const rest = match[2]?.trim();
+    if (!prefix || !rest) return "unknown";
+    return `${prefix}:${hashIdentifier(rest)}`;
+  }
 
-  return ipv4Regex.test(ip) || ipv6Regex.test(ip);
+  return `id:${hashIdentifier(trimmed)}`;
 }
 
 /**
  * Derives a rate limit identifier from request headers.
  *
  * Extracts user ID from x-user-id header first, then falls back to first IP
- * from x-forwarded-for (after validating IP format to prevent spoofing).
+ * from trusted client IP headers.
  * Returns "unknown" if no valid identifier found.
  *
- * @returns Rate limit identifier in format "user:{id}", "ip:{ip}", or "unknown".
+ * @returns Hashed rate limit identifier in format "user:{sha256}", "ip:{sha256}", or "unknown".
  */
 async function getRateLimitIdentifier(): Promise<string> {
   try {
     const requestHeaders = await headers();
     const userId = requestHeaders.get("x-user-id");
     if (userId) {
-      const trimmed = userId.trim();
-      if (trimmed) {
-        return `user:${trimmed}`;
-      }
+      const normalized = normalizeIdentifier(userId);
+      if (normalized) return `user:${hashIdentifier(normalized)}`;
     }
 
-    const forwardedFor = requestHeaders.get("x-forwarded-for");
-    if (forwardedFor) {
-      const primaryIp = forwardedFor.split(",")[0]?.trim();
-      // Validate IP format to prevent spoofing attacks
-      if (primaryIp && isValidIpAddress(primaryIp)) {
-        return `ip:${primaryIp}`;
-      }
-    }
+    const ip = getClientIpFromHeaders(requestHeaders);
+    if (ip !== "unknown") return `ip:${hashIdentifier(ip)}`;
   } catch {
     // headers() throws when executed outside of a request context. Fall through.
   }
 
-  return "unknown";
+  return "ip:unknown";
 }

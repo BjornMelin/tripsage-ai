@@ -11,12 +11,12 @@ import { WEB_SEARCH_BATCH_OUTPUT_SCHEMA } from "@ai/tools/schemas/web-search";
 import { webSearchBatchInputSchema } from "@ai/tools/schemas/web-search-batch";
 import { normalizeWebSearchResults } from "@ai/tools/server/web-search-normalize";
 import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
 import type { ToolCallOptions } from "ai";
 import { tool } from "ai";
 import type { z } from "zod";
 import { hashInputForCache } from "@/lib/cache/hash";
-import { getServerEnvVarWithFallback } from "@/lib/env/server";
+import { hashIdentifier, normalizeIdentifier } from "@/lib/ratelimit/identifier";
+import { getRedis } from "@/lib/redis";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import { webSearch } from "./web-search";
@@ -33,14 +33,13 @@ const webSearchBatchLogger = createServerLogger("tools.web_search_batch");
  */
 
 function buildToolRateLimiter(): InstanceType<typeof Ratelimit> | undefined {
-  const url = getServerEnvVarWithFallback("UPSTASH_REDIS_REST_URL", undefined);
-  const token = getServerEnvVarWithFallback("UPSTASH_REDIS_REST_TOKEN", undefined);
-  if (!url || !token) return undefined;
+  const redis = getRedis();
+  if (!redis) return undefined;
   return new Ratelimit({
     analytics: true,
     limiter: Ratelimit.slidingWindow(20, "1 m"),
     prefix: "ratelimit:tools:web-search-batch",
-    redis: Redis.fromEnv(),
+    redis,
   });
 }
 
@@ -83,7 +82,8 @@ export const webSearchBatch = tool({
         try {
           const rl = buildToolRateLimiter();
           if (rl && userId) {
-            const rr = await rl.limit(userId);
+            const identifier = `user:${hashIdentifier(normalizeIdentifier(userId))}`;
+            const rr = await rl.limit(identifier);
             if (!rr.success) {
               span.addEvent("rate_limited", { "ratelimit.subject_type": "user" });
               const err = new Error("web_search_rate_limited");

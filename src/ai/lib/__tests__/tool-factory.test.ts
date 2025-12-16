@@ -204,7 +204,7 @@ describe("createAiTool", () => {
     upstashMocks.ratelimit.__force({
       limit: 1,
       remaining: 0,
-      reset: Math.floor(Date.now() / 1000) + 60,
+      reset: Date.now() + 60_000,
       success: false,
     });
 
@@ -303,7 +303,9 @@ describe("createAiTool", () => {
     });
 
     await tool.execute?.({ payload: "demo" }, { messages: [], toolCallId: "call-1" });
-    expect(recordedRateLimitIdentifiers).toContain("user:user-abc");
+    expect(recordedRateLimitIdentifiers).toContain(
+      "user:291fd0e83dac217f4e5bd62d007d2c754e061a92f76b0d7468be3544f95c28cd"
+    );
   });
 
   test("falls back to x-forwarded-for header when user header missing", async () => {
@@ -326,7 +328,9 @@ describe("createAiTool", () => {
     });
 
     await tool.execute?.({ payload: "demo" }, { messages: [], toolCallId: "call-2" });
-    expect(recordedRateLimitIdentifiers).toContain("ip:198.51.100.25");
+    expect(recordedRateLimitIdentifiers).toContain(
+      "ip:725adbffa67a0230fdf009da59ec27b10093cc3b2cb5b9fe72868c0d571b7ad8"
+    );
   });
 
   test("defaults to unknown identifier when headers missing", async () => {
@@ -347,7 +351,7 @@ describe("createAiTool", () => {
     });
 
     await tool.execute?.({ payload: "demo" }, { messages: [], toolCallId: "call-3" });
-    expect(recordedRateLimitIdentifiers).toContain("unknown");
+    expect(recordedRateLimitIdentifiers).toContain("ip:unknown");
   });
 
   test("rejects invalid x-forwarded-for IP addresses to prevent spoofing", async () => {
@@ -371,6 +375,6 @@ describe("createAiTool", () => {
 
     // Should fall back to "unknown" when IP is invalid
     await tool.execute?.({ payload: "demo" }, { messages: [], toolCallId: "call-4" });
-    expect(recordedRateLimitIdentifiers).toContain("unknown");
+    expect(recordedRateLimitIdentifiers).toContain("ip:unknown");
   });
 });
