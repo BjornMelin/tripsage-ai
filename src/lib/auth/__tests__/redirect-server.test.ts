@@ -10,6 +10,15 @@ import {
 
 vi.mock("server-only", () => ({}));
 
+vi.mock("@/lib/env/server", () => ({
+  getServerEnvVarWithFallback: vi.fn((key: string, fallback: string) => {
+    if (key === "APP_BASE_URL") return process.env.APP_BASE_URL || fallback;
+    if (key === "NEXT_PUBLIC_SITE_URL")
+      return process.env.NEXT_PUBLIC_SITE_URL || fallback;
+    return fallback;
+  }),
+}));
+
 vi.mock("@/lib/telemetry/logger", () => ({
   createServerLogger: () => ({
     error: vi.fn(),
