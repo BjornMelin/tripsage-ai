@@ -2,14 +2,8 @@
  * @fileoverview Server-first security dashboard rendering live security data.
  */
 
-import {
-  type ActiveSession,
-  activeSessionSchema,
-  type SecurityEvent,
-  type SecurityMetrics,
-  securityEventSchema,
-  securityMetricsSchema,
-} from "@schemas/security";
+import type { SecurityEvent } from "@schemas/security";
+import { DefaultMetrics } from "@schemas/security";
 import {
   ActivityIcon,
   AlertTriangleIcon,
@@ -19,9 +13,7 @@ import {
   ShieldIcon,
   UserCheckIcon,
 } from "lucide-react";
-import { cookies, headers } from "next/headers";
 import type React from "react";
-import type { ZodTypeAny } from "zod";
 import {
   ActiveSessionsList,
   ConnectionsSummary,
@@ -29,61 +21,73 @@ import {
 } from "@/components/features/security/security-dashboard-client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { getUserSecurityEvents, getUserSecurityMetrics } from "@/lib/security/service";
+import { getCurrentSessionId, listActiveSessions } from "@/lib/security/sessions";
+import { createAdminSupabase } from "@/lib/supabase/admin";
+import { createServerSupabase, getCurrentUser } from "@/lib/supabase/server";
+import { createServerLogger } from "@/lib/telemetry/logger";
+
+const SecurityDashboardLogger = createServerLogger("security.dashboard");
 
 /**
- * Build a cookie header string from the cookie store.
- *
- * @returns The cookie header string.
- */
-const BuildCookieHeader = async () => {
-  const cookieStore = await cookies();
-  return cookieStore
-    .getAll()
-    .map((c: { name: string; value: string }) => `${c.name}=${c.value}`)
-    .join("; ");
-};
-
-/**
- * Fetch data from the API and parse it using a Zod schema.
- *
- * @param path - The path to fetch the data from.
- * @param schema - The Zod schema to parse the data with.
- * @returns The parsed data.
- */
-const ApiFetch = async <T,>(path: string, schema: ZodTypeAny) => {
-  const headerStore = await headers();
-  const host = headerStore.get("x-forwarded-host") ?? headerStore.get("host");
-  const protocol = headerStore.get("x-forwarded-proto") ?? "http";
-  const base = host ? `${protocol}://${host}` : "";
-  const response = await fetch(`${base}${path}`, {
-    cache: "no-store",
-    headers: {
-      cookie: await BuildCookieHeader(),
-    },
-  });
-  if (!response.ok) {
-    throw new Error(`Failed to fetch ${path}: ${response.status}`);
-  }
-  const json = (await response.json()) as unknown;
-  const parsed = schema.safeParse(json);
-  if (!parsed.success) {
-    throw new Error(`Invalid shape from ${path}`);
-  }
-  return parsed.data as T;
-};
-
-/**
- * Get the security data from the API.
+ * Get the security data for the current user.
  *
  * @returns The security data.
  */
 async function GetSecurityData() {
-  const [events, metrics, sessions] = await Promise.all([
-    ApiFetch<SecurityEvent[]>("/api/security/events", securityEventSchema.array()),
-    ApiFetch<SecurityMetrics>("/api/security/metrics", securityMetricsSchema),
-    ApiFetch<ActiveSession[]>("/api/security/sessions", activeSessionSchema.array()),
+  const supabase = await createServerSupabase();
+  const { user, error } = await getCurrentUser(supabase);
+  if (error) {
+    throw error;
+  }
+  if (!user) {
+    throw new Error("unauthorized");
+  }
+
+  const adminSupabase = createAdminSupabase();
+
+  const [eventsResult, metricsResult, sessionsResult] = await Promise.allSettled([
+    getUserSecurityEvents(adminSupabase, user.id),
+    getUserSecurityMetrics(adminSupabase, user.id),
+    getCurrentSessionId(supabase).then((currentSessionId) =>
+      listActiveSessions(adminSupabase, user.id, { currentSessionId })
+    ),
   ]);
-  return { events, metrics, sessions };
+
+  if (eventsResult.status === "rejected") {
+    SecurityDashboardLogger.warn("security_dashboard_events_fetch_failed", {
+      error:
+        eventsResult.reason instanceof Error
+          ? eventsResult.reason.message
+          : "unknown_error",
+      userId: user.id,
+    });
+  }
+  if (metricsResult.status === "rejected") {
+    SecurityDashboardLogger.warn("security_dashboard_metrics_fetch_failed", {
+      error:
+        metricsResult.reason instanceof Error
+          ? metricsResult.reason.message
+          : "unknown_error",
+      userId: user.id,
+    });
+  }
+  if (sessionsResult.status === "rejected") {
+    SecurityDashboardLogger.warn("security_dashboard_sessions_fetch_failed", {
+      error:
+        sessionsResult.reason instanceof Error
+          ? sessionsResult.reason.message
+          : "unknown_error",
+      userId: user.id,
+    });
+  }
+
+  return {
+    events: eventsResult.status === "fulfilled" ? eventsResult.value : [],
+    metrics:
+      metricsResult.status === "fulfilled" ? metricsResult.value : DefaultMetrics,
+    sessions: sessionsResult.status === "fulfilled" ? sessionsResult.value : [],
+  };
 }
 
 /** The risk color for each security event risk level. */
