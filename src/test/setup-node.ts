@@ -16,40 +16,44 @@ import {
 import { afterAll, afterEach, beforeAll, vi } from "vitest";
 import { server } from "./msw/server";
 
+const onUnhandledRequest = process.env.CI ? "error" : "warn";
+
 // Provide sane defaults for client-visible env used in some client components.
 if (typeof process !== "undefined" && process.env) {
-  process.env.NODE_ENV ||= "test";
-  process.env.NEXT_PUBLIC_SUPABASE_URL ||= "http://localhost:54321";
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||= "test-anon-key";
+  const env = process.env as Record<string, string | undefined>;
+  env.NODE_ENV ||= "test";
+  env.NEXT_PUBLIC_SUPABASE_URL ||= "http://localhost:54321";
+  env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||= "test-anon-key";
 }
 
 // Provide Web Streams polyfills for environments missing them (used by
 // eventsource-parser / AI SDK transport in tests).
-type Rs = typeof ReadableStream;
-type Ws = typeof WritableStream;
-type Ts = typeof TransformStream;
-const GLOBAL_STREAMS = globalThis as typeof globalThis & {
-  ReadableStream?: Rs;
-  WritableStream?: Ws;
-  TransformStream?: Ts;
-};
-if (!GLOBAL_STREAMS.ReadableStream) {
-  (GLOBAL_STREAMS as { ReadableStream?: Rs }).ReadableStream =
-    NodeReadableStream as unknown as Rs;
+const globalAny = globalThis as Record<string, unknown>;
+if (!globalAny.ReadableStream) {
+  Object.defineProperty(globalThis, "ReadableStream", {
+    configurable: true,
+    value: NodeReadableStream,
+    writable: true,
+  });
 }
-if (!GLOBAL_STREAMS.WritableStream) {
-  (GLOBAL_STREAMS as { WritableStream?: Ws }).WritableStream =
-    NodeWritableStream as unknown as Ws;
+if (!globalAny.WritableStream) {
+  Object.defineProperty(globalThis, "WritableStream", {
+    configurable: true,
+    value: NodeWritableStream,
+    writable: true,
+  });
 }
-if (!GLOBAL_STREAMS.TransformStream) {
-  (GLOBAL_STREAMS as { TransformStream?: Ts }).TransformStream =
-    NodeTransformStream as unknown as Ts;
+if (!globalAny.TransformStream) {
+  Object.defineProperty(globalThis, "TransformStream", {
+    configurable: true,
+    value: NodeTransformStream,
+    writable: true,
+  });
 }
 
 beforeAll(() => {
   // Start MSW server to intercept HTTP requests.
-  // Keep "warn" until the suite is fully standardized on explicit handlers.
-  server.listen({ onUnhandledRequest: "warn" });
+  server.listen({ onUnhandledRequest });
 });
 
 afterAll(() => {

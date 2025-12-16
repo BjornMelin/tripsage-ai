@@ -7,7 +7,7 @@ import { AccountSettingsSection } from "../account-settings-section";
 import { PersonalInfoSection } from "../personal-info-section";
 import { PreferencesSection } from "../preferences-section";
 
-const authCoreState = vi.hoisted(() => ({
+const AuthCoreState = vi.hoisted(() => ({
   logout: vi.fn(),
   setUser: vi.fn(),
   user: {
@@ -31,16 +31,16 @@ const authCoreState = vi.hoisted(() => ({
 }));
 
 vi.mock("@/stores/auth/auth-core", () => ({
-  useAuthCore: () => authCoreState,
+  useAuthCore: () => AuthCoreState,
 }));
 
-const currencyStoreState = vi.hoisted(() => ({
+const CurrencyStoreState = vi.hoisted(() => ({
   baseCurrency: "USD",
   setBaseCurrency: vi.fn(),
 }));
 
 vi.mock("@/stores/currency-store", () => ({
-  useCurrencyStore: () => currencyStoreState,
+  useCurrencyStore: () => CurrencyStoreState,
 }));
 
 // Use real react-hook-form and zod resolver for integration-level rendering

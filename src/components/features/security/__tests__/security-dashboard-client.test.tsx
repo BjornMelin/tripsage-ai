@@ -2,20 +2,15 @@
 
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { vi } from "vitest";
+import { HttpResponse, http } from "msw";
+import { toast } from "@/components/ui/use-toast";
+import { server } from "@/test/msw/server";
 import {
   ActiveSessionsList,
   ConnectionsSummary,
   LocalTime,
   SecurityEventsList,
 } from "../security-dashboard-client";
-
-vi.mock("@/components/ui/use-toast");
-
-beforeEach(() => {
-  vi.clearAllMocks();
-  vi.restoreAllMocks();
-});
 
 function CreateDeferred<T>() {
   let resolve: ((value: T) => void) | undefined;
@@ -102,16 +97,15 @@ describe("ConnectionsSummary", () => {
 });
 
 describe("ActiveSessionsList", () => {
-  const successResponse = { json: async () => ({}), ok: true } as Response;
-  const failureResponse = {
-    json: async () => ({}),
-    ok: false,
-    status: 500,
-  } as Response;
-
   it("terminates a non-current session and removes it from the list", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(successResponse);
-    const { toast } = await import("@/components/ui/use-toast");
+    const terminatedSessionIds: string[] = [];
+    server.use(
+      http.delete("/api/security/sessions/:id", ({ params }) => {
+        terminatedSessionIds.push(String(params.id));
+        return new HttpResponse(null, { status: 200 });
+      })
+    );
+
     const sessions = [
       {
         browser: "Chrome",
@@ -138,9 +132,7 @@ describe("ActiveSessionsList", () => {
     await userEvent.click(screen.getByRole("button", { name: "Terminate" }));
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith("/api/security/sessions/sess-1", {
-        method: "DELETE",
-      });
+      expect(terminatedSessionIds).toEqual(["sess-1"]);
     });
 
     await waitFor(() => {
@@ -154,8 +146,14 @@ describe("ActiveSessionsList", () => {
   });
 
   it("shows an error toast when termination fails", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(failureResponse);
-    const { toast } = await import("@/components/ui/use-toast");
+    let calls = 0;
+    server.use(
+      http.delete("/api/security/sessions/:id", () => {
+        calls += 1;
+        return HttpResponse.json({}, { status: 500 });
+      })
+    );
+
     const sessions = [
       {
         browser: "Chrome",
@@ -174,7 +172,7 @@ describe("ActiveSessionsList", () => {
     await userEvent.click(terminateButton);
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(calls).toBe(1);
     });
 
     expect(toast).toHaveBeenCalledWith({
@@ -186,8 +184,13 @@ describe("ActiveSessionsList", () => {
   });
 
   it("disables the terminate button while the request is pending", async () => {
-    const deferredFetch = CreateDeferred<Response>();
-    vi.spyOn(globalThis, "fetch").mockReturnValue(deferredFetch.promise);
+    const deferredResponse = CreateDeferred<void>();
+    server.use(
+      http.delete("/api/security/sessions/:id", async () => {
+        await deferredResponse.promise;
+        return new HttpResponse(null, { status: 200 });
+      })
+    );
 
     const sessions = [
       {
@@ -208,7 +211,7 @@ describe("ActiveSessionsList", () => {
 
     expect(terminateButton).toBeDisabled();
 
-    deferredFetch.resolve(successResponse);
+    deferredResponse.resolve(undefined);
 
     await waitFor(() => {
       expect(
