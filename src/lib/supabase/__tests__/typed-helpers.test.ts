@@ -165,7 +165,7 @@ describe("typed-helpers", () => {
         client,
         "trips",
         { name: "Fail" },
-        (qb) => qb as unknown as TableFilterBuilder<"trips">
+        (qb) => qb as unknown as TableFilterBuilder
       );
       expect(result.data).toBeNull();
       expect(result.error).toBeTruthy();
@@ -184,7 +184,7 @@ describe("typed-helpers", () => {
 
       const { data, error } = await getSingle(client, "trips", (qb) => {
         const chain = qb as unknown as MockChain;
-        return chain.eq("id", 1) as unknown as TableFilterBuilder<"trips">;
+        return chain.eq("id", 1) as unknown as TableFilterBuilder;
       });
       expect(error).toBeNull();
       expect(data).toBeTruthy();
@@ -204,7 +204,7 @@ describe("typed-helpers", () => {
       const { data, error } = await getSingle(
         client,
         "trips",
-        (qb) => qb as unknown as TableFilterBuilder<"trips">
+        (qb) => qb as unknown as TableFilterBuilder
       );
       expect(data).toBeNull();
       expect(error).toBeTruthy();
@@ -222,7 +222,7 @@ describe("typed-helpers", () => {
       (chain.delete as ReturnType<typeof vi.fn>).mockReturnValue(deleteResult);
 
       const { count, error } = await deleteSingle(client, "trips", () => {
-        return deleteResult as unknown as TableFilterBuilder<"trips">;
+        return deleteResult as unknown as TableFilterBuilder;
       });
       expect(count).toBe(1);
       expect(error).toBeNull();
@@ -238,7 +238,7 @@ describe("typed-helpers", () => {
       (chain.delete as ReturnType<typeof vi.fn>).mockReturnValue(deleteResult);
 
       const { count, error } = await deleteSingle(client, "trips", () => {
-        return deleteResult as unknown as TableFilterBuilder<"trips">;
+        return deleteResult as unknown as TableFilterBuilder;
       });
       expect(count).toBe(0);
       expect(error).toBeTruthy();
@@ -257,7 +257,7 @@ describe("typed-helpers", () => {
 
       const { data, error } = await getMaybeSingle(client, "trips", (qb) => {
         const chain = qb as unknown as MockChain;
-        return chain.eq("id", 1) as unknown as TableFilterBuilder<"trips">;
+        return chain.eq("id", 1) as unknown as TableFilterBuilder;
       });
       expect(error).toBeNull();
       expect(data).toBeTruthy();
