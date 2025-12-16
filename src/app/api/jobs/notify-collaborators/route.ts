@@ -7,6 +7,7 @@ import "server-only";
 import { notifyJobSchema } from "@schemas/webhooks";
 import { NextResponse } from "next/server";
 import { errorResponse, validateSchema } from "@/lib/api/route-helpers";
+import { getClientIpFromHeaders } from "@/lib/http/ip";
 import { tryReserveKey } from "@/lib/idempotency/redis";
 import { sendCollaboratorNotifications } from "@/lib/notifications/collaborators";
 import { pushToDLQ } from "@/lib/qstash/dlq";
@@ -69,14 +70,10 @@ export async function POST(req: Request) {
         const verified = await verifyQstashRequest(req, receiver);
         if (!verified.ok) {
           try {
-            const forwardedFor = req.headers.get("x-forwarded-for");
-            const ip =
-              forwardedFor?.split(",")[0]?.trim() ??
-              req.headers.get("cf-connecting-ip") ??
-              undefined;
+            const ip = getClientIpFromHeaders(req.headers);
             span.addEvent("unauthorized_attempt", {
               hasSignature: verified.reason !== "missing_signature",
-              ip,
+              ip: ip === "unknown" ? undefined : ip,
               reason: verified.reason,
               url: req.url,
             });

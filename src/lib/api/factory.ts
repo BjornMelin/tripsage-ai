@@ -20,6 +20,8 @@ import {
   withRequestSpan,
 } from "@/lib/api/route-helpers";
 import { type ApiMetric, fireAndForgetMetric } from "@/lib/metrics/api-metrics";
+import { applyRateLimitHeaders } from "@/lib/ratelimit/headers";
+import { hashIdentifier, normalizeIdentifier } from "@/lib/ratelimit/identifier";
 import { ROUTE_RATE_LIMITS, type RouteRateLimitKey } from "@/lib/ratelimit/routes";
 import { getRedis } from "@/lib/redis";
 import {
@@ -172,13 +174,12 @@ async function enforceRateLimit(
           reason: "Too many requests",
           status: 429,
         });
-        response.headers.set(
-          "Retry-After",
-          String(Math.ceil((reset - Date.now()) / 1000))
-        );
-        response.headers.set("X-RateLimit-Limit", String(limit));
-        response.headers.set("X-RateLimit-Remaining", String(remaining));
-        response.headers.set("X-RateLimit-Reset", String(reset));
+        applyRateLimitHeaders(response.headers, {
+          limit,
+          remaining,
+          reset,
+          success,
+        });
         return response;
       }
       return null;
@@ -206,13 +207,12 @@ async function enforceRateLimit(
         reason: "Too many requests",
         status: 429,
       });
-      response.headers.set(
-        "Retry-After",
-        String(Math.ceil((reset - Date.now()) / 1000))
-      );
-      response.headers.set("X-RateLimit-Limit", String(config.limit));
-      response.headers.set("X-RateLimit-Remaining", String(remaining));
-      response.headers.set("X-RateLimit-Reset", String(reset));
+      applyRateLimitHeaders(response.headers, {
+        limit: config.limit,
+        remaining,
+        reset,
+        success,
+      });
       return response;
     }
     return null;
@@ -328,7 +328,13 @@ export function withApiGuards<SchemaType extends z.ZodType>(
 
       // Handle rate limiting if configured
       if (rateLimit) {
-        const identifier = user?.id ?? getTrustedRateLimitIdentifier(req);
+        let identifier: string;
+        if (user?.id) {
+          identifier = `user:${hashIdentifier(normalizeIdentifier(user.id))}`;
+        } else {
+          const ipHash = getTrustedRateLimitIdentifier(req);
+          identifier = ipHash === "unknown" ? "ip:unknown" : `ip:${ipHash}`;
+        }
         const rateLimitError = await enforceRateLimit(rateLimit, identifier);
         if (rateLimitError) {
           return rateLimitError;

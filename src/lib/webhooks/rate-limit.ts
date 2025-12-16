@@ -8,6 +8,9 @@
 import "server-only";
 
 import { Ratelimit } from "@upstash/ratelimit";
+import { getClientIpFromHeaders } from "@/lib/http/ip";
+import { createRateLimitHeaders as createStandardRateLimitHeaders } from "@/lib/ratelimit/headers";
+import { hashIdentifier } from "@/lib/ratelimit/identifier";
 import { getRedis } from "@/lib/redis";
 import { warnRedisUnavailable } from "@/lib/telemetry/redis";
 import { recordTelemetryEvent } from "@/lib/telemetry/span";
@@ -56,36 +59,32 @@ export interface RateLimitResult {
  * Extract client IP address from request headers.
  *
  * Checks headers in order:
- * 1. X-Forwarded-For (first IP in comma-separated list)
- * 2. CF-Connecting-IP (Cloudflare)
- * 3. Fallback to "unknown" (logged for monitoring)
+ * 1. X-Real-IP (Vercel canonical)
+ * 2. X-Forwarded-For (first IP in comma-separated list)
+ * 3. CF-Connecting-IP (Cloudflare)
+ * 4. Fallback to "unknown" (logged for monitoring)
  *
  * @param req - The incoming request
  * @returns Client IP address string
  */
 export function getClientIp(req: Request): string {
-  const forwardedFor = req.headers.get("x-forwarded-for");
-  if (forwardedFor) {
-    return forwardedFor.split(",")[0]?.trim() ?? "unknown";
-  }
-
-  const cfIp = req.headers.get("cf-connecting-ip");
-  if (cfIp) return cfIp;
+  const ip = getClientIpFromHeaders(req.headers);
+  if (ip !== "unknown") return ip;
 
   // Log fallback when no IP headers are present (rate-limited via telemetry)
   recordTelemetryEvent("webhook.ip_missing", {
     attributes: {
-      "request.cf_connecting_ip": cfIp ?? "missing",
+      "request.cf_connecting_ip": req.headers.get("cf-connecting-ip") ?? "missing",
       "request.method": req.method,
       "request.url": new URL(req.url).pathname,
       "request.user_agent": req.headers.get("user-agent") ?? "unknown",
-      "request.x_forwarded_for": forwardedFor ?? "missing",
+      "request.x_forwarded_for": req.headers.get("x-forwarded-for") ?? "missing",
     },
     level: "warning",
   });
 
   // Single shared bucket to prevent UA rotation from bypassing rate limits
-  return "unknown-ip";
+  return "unknown";
 }
 
 /**
@@ -106,7 +105,8 @@ export async function checkWebhookRateLimit(req: Request): Promise<RateLimitResu
   }
 
   const ip = getClientIp(req);
-  const { success, reset, remaining, limit } = await rateLimiter.limit(ip);
+  const identifier = ip === "unknown" ? "ip:unknown" : `ip:${hashIdentifier(ip)}`;
+  const { success, reset, remaining, limit } = await rateLimiter.limit(identifier);
 
   return { limit, remaining, reset, success };
 }
@@ -120,17 +120,5 @@ export async function checkWebhookRateLimit(req: Request): Promise<RateLimitResu
 export function createRateLimitHeaders(
   result: RateLimitResult
 ): Record<string, string> {
-  const headers: Record<string, string> = {};
-
-  if (result.limit !== undefined) {
-    headers["X-RateLimit-Limit"] = result.limit.toString();
-  }
-  if (result.remaining !== undefined) {
-    headers["X-RateLimit-Remaining"] = result.remaining.toString();
-  }
-  if (result.reset !== undefined) {
-    headers["X-RateLimit-Reset"] = result.reset.toString();
-  }
-
-  return headers;
+  return createStandardRateLimitHeaders(result);
 }

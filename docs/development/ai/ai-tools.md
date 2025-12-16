@@ -159,8 +159,10 @@ rateLimit: {
   // Required: error code to throw when limit exceeded
   errorCode: TOOL_ERROR_CODES.webSearchRateLimited,
   
-  // Required: function that returns identifier for rate-limiting
-  // Can use params and/or callOptions.messages
+  // Required: function that returns a stable identifier for rate-limiting.
+  // The tool factory hashes identifiers before calling Upstash to avoid
+  // storing raw IPs/user IDs in Redis keys.
+  // Can use params and/or callOptions.messages.
   identifier: (params, callOptions) => {
     // Extract user ID from messages or params
     return params.userId ?? extractUserIdFromMessages(callOptions.messages);
