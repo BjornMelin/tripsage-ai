@@ -16,7 +16,9 @@ import {
 import { afterAll, afterEach, beforeAll, vi } from "vitest";
 import { server } from "./msw/server";
 
-const onUnhandledRequest = process.env.CI ? "error" : "warn";
+const onUnhandledRequest =
+  (process.env.MSW_ON_UNHANDLED_REQUEST as "bypass" | "error" | "warn" | undefined) ??
+  "error";
 const DEBUG_OPEN_HANDLES = process.env.VITEST_DEBUG_OPEN_HANDLES === "1";
 
 // Provide sane defaults for client-visible env used in some client components.
@@ -66,7 +68,6 @@ afterAll(() => {
   globalFlag.__TRIPSAGE_VITEST_OPEN_HANDLES_DUMPED__ = true;
 
   const timeout = setTimeout(() => {
-    // biome-ignore lint/suspicious/noConsoleLog: debug output enabled via env var
     console.log("[vitest-debug] dumping active handles/requests…");
     const activeHandles = (
       process as unknown as {
@@ -93,9 +94,7 @@ afterAll(() => {
       return [...counts.entries()].sort((a, b) => b[1] - a[1]);
     };
 
-    // biome-ignore lint/suspicious/noConsoleLog: debug output enabled via env var
     console.log("[vitest-debug] active handles:", summarize(activeHandles));
-    // biome-ignore lint/suspicious/noConsoleLog: debug output enabled via env var
     console.log("[vitest-debug] active requests:", summarize(activeRequests));
   }, 1000);
 
