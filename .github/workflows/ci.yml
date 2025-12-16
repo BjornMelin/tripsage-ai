@@ -91,6 +91,14 @@ jobs:
       - name: TypeScript type check
         run: pnpm type-check
 
+      - name: Production build
+        run: pnpm build
+        env:
+          # Stub required env vars for build (no secrets needed)
+          NEXT_PUBLIC_SITE_URL: 'https://example.com'
+          NEXT_PUBLIC_SUPABASE_URL: 'https://example.supabase.co'
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: 'stub-key-for-build-only'
+
       - name: Unit tests (quick, no coverage)
         env:
           VITEST_POOL: threads

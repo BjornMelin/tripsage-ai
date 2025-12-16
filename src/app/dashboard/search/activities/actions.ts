@@ -25,17 +25,6 @@ const logger = createServerLogger("search.activities.actions");
 const tripIdSchema = z.coerce.number().int().positive();
 
 /**
- * Typed validation error for activity search parameters.
- * Allows callers to distinguish validation failures from other exceptions.
- */
-export class ActivitySearchValidationError extends Error {
-  constructor(public readonly validationMessage: string) {
-    super(`Invalid activity search params: ${validationMessage}`);
-    this.name = "ActivitySearchValidationError";
-  }
-}
-
-/**
  * Validates/normalizes activity search parameters inside a server-side telemetry span.
  *
  * Note: this action does not execute the activity search itself.
@@ -55,7 +44,7 @@ export async function submitActivitySearch(
     () => {
       const validation = activitySearchParamsSchema.safeParse(params);
       if (!validation.success) {
-        throw new ActivitySearchValidationError(validation.error.message);
+        throw new Error(`Invalid activity search params: ${validation.error.message}`);
       }
       return validation.data;
     }
