@@ -177,7 +177,7 @@ PR reviewers: enforce in `src/app/api/**`; approve exceptions with justification
 
 ### 6.2 Quality gates (mandatory)
 
-After any code change (`.ts`, `.tsx`, schema, config affecting builds), run at repository root:
+Before finalizing any work that includes code changes (`.ts`, `.tsx`, schemas, or config affecting builds), run at repository root:
 
 1. `pnpm biome:fix` — fix all issues; resolve any remaining errors manually.
 2. `pnpm type-check` — must pass with zero errors.
@@ -186,6 +186,10 @@ After any code change (`.ts`, `.tsx`, schema, config affecting builds), run at r
 **Skip for:** doc-only (`.md`), comments, non-code config, questions, or analysis.
 
 Do not return final response until all gates pass for code changes.
+
+**During iteration:** Prefer the smallest relevant shard (`pnpm test:unit`, `pnpm test:api`, `pnpm test:components`, `pnpm test:schemas`, `pnpm test:integration`). Run `pnpm test` only when changing test harness/config (e.g. `vitest.config.ts`, `src/test/**`) or before merging.
+
+**If Vitest hangs after finishing:** run `VITEST_DEBUG_OPEN_HANDLES=1 pnpm test` and ensure MSW is not bypassing unhandled requests (`MSW_ON_UNHANDLED_REQUEST=error`).
 
 ### Upstash testing
 
