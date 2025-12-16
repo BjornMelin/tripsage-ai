@@ -7,6 +7,7 @@
 
 import "server-only";
 
+import type { NextRequest } from "next/server";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
@@ -26,6 +27,36 @@ const DEFAULT_LOCALHOST_ORIGIN = "http://localhost:3000";
 const isProduction = process.env.NODE_ENV === "production";
 
 const logger = createServerLogger("url.server-origin");
+
+/**
+ * Validates that a host value is well-formed and doesn't contain suspicious characters.
+ * Blocks userinfo segments (@), control characters, and other injection vectors.
+ */
+function isValidHost(host: string): boolean {
+  if (!host || !host.trim()) return false;
+
+  // Block userinfo segments (evil.com@trusted.com), control chars, spaces
+  if (/[@\s\t\r\n]/.test(host)) {
+    logger.warn("rejected invalid x-forwarded-host", {
+      host,
+      reason: "suspicious-chars",
+    });
+    return false;
+  }
+
+  // Basic hostname pattern: alphanumeric, dots, hyphens, optional port
+  // Allows: example.com, sub.example.com, localhost:3000, 192.168.1.1:8080
+  const hostnamePattern = /^[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?(:\d+)?$/;
+  if (!hostnamePattern.test(host)) {
+    logger.warn("rejected invalid x-forwarded-host", {
+      host,
+      reason: "invalid-format",
+    });
+    return false;
+  }
+
+  return true;
+}
 
 function resolveConfiguredOrigin(): string | null {
   try {
@@ -115,4 +146,48 @@ export function toAbsoluteUrl(path: string): string {
   }
   const origin = getServerOrigin();
   return new URL(path, origin).toString();
+}
+
+/**
+ * Resolves the origin from a NextRequest, preferring configured origin for security.
+ *
+ * Priority (security-first):
+ * 1. Configured origin from environment variables (most secure)
+ * 2. x-forwarded-host + x-forwarded-proto (only when no configured origin)
+ * 3. Request URL origin (final fallback)
+ *
+ * WARNING: Only uses x-forwarded-* headers when no configured origin is available.
+ * These headers must be set/stripped by a trusted reverse proxy. For strict
+ * security guarantees, use getRequiredServerOrigin() instead.
+ *
+ * @param request - The incoming NextRequest
+ * @returns The resolved origin URL (e.g., "https://example.com")
+ */
+export function getOriginFromRequest(request: NextRequest): string {
+  // 1. Prefer configured origin (most secure - not influenced by request headers)
+  const configuredOrigin = resolveConfiguredOrigin();
+  if (configuredOrigin) {
+    return configuredOrigin;
+  }
+
+  // 2. Only if no configured origin, consider forwarded headers from trusted proxy
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  if (forwardedHost) {
+    const rawProto = request.headers.get("x-forwarded-proto") ?? "https";
+    const protocolCandidate = rawProto.split(",")[0]?.trim().toLowerCase();
+
+    // Validate protocol - only allow http/https, default to https for anything else
+    const protocol =
+      protocolCandidate === "http" || protocolCandidate === "https"
+        ? protocolCandidate
+        : "https";
+
+    const host = forwardedHost.split(",")[0]?.trim();
+    if (host && isValidHost(host)) {
+      return `${protocol}://${host}`;
+    }
+  }
+
+  // 3. Final fallback: request URL origin
+  return new URL(request.url).origin;
 }
