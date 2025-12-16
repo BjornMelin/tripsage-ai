@@ -36,7 +36,7 @@ const FLIGHT_SORT_OPTIONS: Array<{ value: FlightSortField; label: string }> = [
 interface FlightResultsProps {
   results: FlightResult[];
   loading?: boolean;
-  onSelect: (flight: FlightResult) => Promise<void>;
+  onSelect: (flight: FlightResult) => Promise<void> | void;
   onCompare: (flights: FlightResult[]) => void;
   onModifySearch?: () => void;
   className?: string;

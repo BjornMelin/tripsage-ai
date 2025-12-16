@@ -41,16 +41,13 @@ export function recordAgentToolEvent(event: AgentToolEvent): Promise<void> {
       attributes: {
         "agent.cache_hit": Boolean(cacheHit),
         "agent.duration_ms": durationMs,
+        ...(errorMessage ? { "agent.error": errorMessage } : {}),
         "agent.status": status,
         "agent.tool": tool,
         "agent.workflow": workflow,
       },
       redactKeys: ["agent.error"],
     },
-    (span) => {
-      if (errorMessage) {
-        span.setAttribute("agent.error", errorMessage);
-      }
-    }
+    () => undefined
   );
 }

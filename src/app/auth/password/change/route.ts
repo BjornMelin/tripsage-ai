@@ -12,6 +12,7 @@ import { changePasswordFormSchema } from "@schemas/auth";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth/server";
+import { ROUTES } from "@/lib/routes";
 
 interface ChangePasswordPayload {
   confirmPassword?: unknown;
@@ -44,7 +45,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const { supabase, user } = await requireUser({ redirectTo: "/security" });
+  const { supabase, user } = await requireUser({
+    redirectTo: ROUTES.dashboard.security,
+  });
   const email = user.email;
 
   if (!email) {

@@ -11,12 +11,14 @@ vi.mock("../stripe-client", () => ({
 }));
 
 import {
-  type ProcessBookingParams,
   processBookingPayment,
   refundBookingPayment,
   verifyPaymentStatus,
 } from "../booking-payment";
+// Static imports after vi.mock() - Vitest hoists mocks automatically
 import { createPaymentIntent, getPaymentIntent, refundPayment } from "../stripe-client";
+
+type ProcessBookingParams = Parameters<typeof processBookingPayment>[0];
 
 const mockCreatePaymentIntent = vi.mocked(createPaymentIntent);
 const mockGetPaymentIntent = vi.mocked(getPaymentIntent);

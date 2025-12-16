@@ -36,45 +36,21 @@ export function groupBy<T, K extends string | number>(
 }
 
 /**
- * Removes null and undefined values from an array.
- *
- * @template T - The type of non-null items in the array
- * @param arr - The array to compact
- * @returns A new array with all null and undefined values removed
- *
- * @example
- * compact([1, null, 2, undefined, 3]); // [1, 2, 3]
- */
-export function compact<T>(arr: (T | null | undefined)[]): T[] {
-  return arr.filter((item): item is T => item !== null && item !== undefined);
-}
-
-/**
- * Creates a new array excluding specified items.
+ * Maps items to values and returns unique results (preserving first-seen order).
  *
  * @template T - The type of items in the array
- * @param arr - The source array
- * @param items - Items to exclude
- * @returns A new array with specified items removed
+ * @template U - The mapped value type
  *
- * @example
- * without([1, 2, 3, 4], 2, 4); // [1, 3]
+ * @remarks
+ * Uniqueness is determined by JavaScript `Set` equality (SameValueZero): primitives
+ * are deduplicated by value, while objects/arrays/functions are deduplicated by
+ * reference. If your mapper returns objects, different instances with the same
+ * contents will not be considered equal—prefer returning a stable primitive key
+ * (e.g., an `id`) when you need value-based deduplication.
+ * @param arr - The array to map
+ * @param mapper - Function that maps each item to a value
+ * @returns A list of unique mapped values
  */
-export function without<T>(arr: T[], ...items: T[]): T[] {
-  const excludeSet = new Set(items);
-  return arr.filter((item) => !excludeSet.has(item));
-}
-
-/**
- * Creates a new array with only unique values.
- *
- * @template T - The type of items in the array
- * @param arr - The array to deduplicate
- * @returns A new array containing only unique values
- *
- * @example
- * unique([1, 2, 2, 3, 1]); // [1, 2, 3]
- */
-export function unique<T>(arr: T[]): T[] {
-  return Array.from(new Set(arr));
+export function mapToUnique<T, U>(arr: ReadonlyArray<T>, mapper: (item: T) => U): U[] {
+  return [...new Set(arr.map(mapper))];
 }

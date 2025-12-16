@@ -51,10 +51,21 @@ export const GET = withApiGuards({
   auth: true,
   rateLimit: "memory:insights",
   telemetry: "memory.insights",
-})(async (_req, { user }) => {
+})(async (_req, { user }, _data, { params }) => {
   const result = requireUserId(user);
   if ("error" in result) return result.error;
   const { userId } = result;
+  const { userId: requestedUserId } = await params;
+  if (requestedUserId !== userId) {
+    return errorResponse({
+      error: "forbidden",
+      reason: "Cannot request insights for another user",
+      status: 403,
+    });
+  }
+  const scopedLogger = createServerLogger("memory.insights", {
+    redactKeys: ["error", "userId"],
+  });
   try {
     const memoryResult = await handleMemoryIntent({
       limit: 20,
@@ -73,19 +84,26 @@ export const GET = withApiGuards({
       return NextResponse.json(cached);
     }
 
-    const scopedLogger = createServerLogger("memory.insights");
     const limitedContext = contextItems.slice(0, 20);
     const contextSummary = buildContextSummary(limitedContext);
-    const prompt = buildInsightsPrompt(userId, contextSummary, limitedContext.length);
+    const prompt = buildInsightsPrompt(contextSummary, limitedContext.length);
 
     try {
       recordTelemetryEvent("cache.memory_insights", {
         attributes: { cache: "memory.insights", status: "miss" },
       });
 
-      const { model } = await resolveProvider(userId, "gpt-4o-mini");
+      const { model, modelId } = await resolveProvider(userId, "gpt-4o-mini");
 
       const result = await generateText({
+        experimental_telemetry: {
+          functionId: "memory.insights.generate",
+          isEnabled: true,
+          metadata: {
+            contextItemCount: limitedContext.length,
+            modelId,
+          },
+        },
         model,
         output: Output.object({ schema: MEMORY_INSIGHTS_RESPONSE_SCHEMA }),
         prompt,
@@ -118,6 +136,21 @@ export const GET = withApiGuards({
       return NextResponse.json(fallback, { status: 200 });
     }
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    scopedLogger.error("memory.insights.request_failed", {
+      cacheKeyPrefix: "memory:insights",
+      error:
+        error instanceof Error
+          ? {
+              cause: error.cause,
+              message: error.message,
+              name: error.name,
+              stack: error.stack,
+            }
+          : error,
+      errorMessage,
+      userId,
+    });
     return errorResponse({
       err: error,
       error: "memory_insights_failed",
@@ -162,22 +195,18 @@ function buildContextSummary(contextItems: MemoryContextResponse[]): string {
  * insights focusing on budget patterns, destination preferences, travel
  * personality, and recommendations.
  *
- * @param userId - The user ID for context.
  * @param contextSummary - Formatted summary of memory context items.
  * @param count - Number of memory snippets being analyzed.
  * @returns Complete prompt string for the AI model.
  */
-function buildInsightsPrompt(
-  userId: string,
-  contextSummary: string,
-  count: number
-): string {
+function buildInsightsPrompt(contextSummary: string, count: number): string {
   return [
     "You are an insights analyst for a travel memory system.",
-    `Analyze ${count} memory snippets and return structured insights only as JSON matching the provided schema.`,
+    `Analyze ${count} memory snippets and return structured insights only as JSON.`,
+    "Return a single JSON object matching the provided schema exactly with top-level keys: insights, metadata, success.",
+    "Do not include markdown, commentary, code fences, or any additional keys.",
     "Focus on budget patterns, destination preferences, travel personality, and actionable recommendations.",
     "When data is thin, lower confidence and avoid fabrication.",
-    `User: ${userId}`,
     "Memories:",
     contextSummary,
   ].join("\n\n");

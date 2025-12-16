@@ -28,7 +28,7 @@ const MAX_MESSAGE_LENGTH = 10_000;
 export interface RouterAgentDeps {
   /** Language model for classification. */
   model: LanguageModel;
-  /** Optional identifier for telemetry (user ID or request ID). */
+  /** Optional identifier for internal diagnostics (NOT sent to AI provider telemetry). */
   identifier?: string;
   /** Optional model ID for telemetry. */
   modelId?: string;
@@ -86,12 +86,11 @@ export async function classifyUserMessage(
 
   try {
     const result = await generateText({
-      // biome-ignore lint/style/useNamingConvention: AI SDK property name
+      // biome-ignore lint/style/useNamingConvention: AI SDK API uses snake_case
       experimental_telemetry: {
         functionId: "router.classifyUserMessage",
         isEnabled: true,
         metadata: {
-          ...(deps.identifier ? { identifier: deps.identifier } : {}),
           ...(deps.modelId ? { modelId: deps.modelId } : {}),
         },
       },

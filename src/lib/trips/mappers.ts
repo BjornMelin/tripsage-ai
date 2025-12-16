@@ -4,7 +4,8 @@
  */
 
 import type { TripsRow } from "@schemas/supabase";
-import type { UiTrip } from "@schemas/trips";
+import type { ItineraryItemCreateInput, UiTrip } from "@schemas/trips";
+import type { Database, Json } from "@/lib/supabase/database.types";
 
 /**
  * Maps a database trip row to UI-friendly trip object format.
@@ -35,5 +36,41 @@ export function mapDbTripToUi(row: TripsRow): UiTrip {
     updatedAt: row.updated_at ?? undefined,
     userId: row.user_id,
     visibility: "private",
+  };
+}
+
+/**
+ * Maps a validated itinerary item input into a Supabase `itinerary_items` insert payload.
+ *
+ * Keeps snake_case column naming localized to a single helper.
+ *
+ * @param item - Validated itinerary item data.
+ * @param userId - Owning user id.
+ */
+export function mapItineraryItemCreateToDbInsert(
+  item: ItineraryItemCreateInput,
+  userId: string
+): Database["public"]["Tables"]["itinerary_items"]["Insert"] {
+  return {
+    // biome-ignore lint/style/useNamingConvention: Supabase columns use snake_case
+    booking_status: item.bookingStatus,
+    currency: item.currency,
+    description: item.description ?? null,
+    // biome-ignore lint/style/useNamingConvention: Supabase columns use snake_case
+    end_time: item.endTime ?? null,
+    // biome-ignore lint/style/useNamingConvention: Supabase columns use snake_case
+    external_id: item.externalId ?? null,
+    // biome-ignore lint/style/useNamingConvention: Supabase columns use snake_case
+    item_type: item.itemType,
+    location: item.location ?? null,
+    metadata: (item.metadata ?? {}) as Json,
+    price: item.price ?? null,
+    // biome-ignore lint/style/useNamingConvention: Supabase columns use snake_case
+    start_time: item.startTime ?? null,
+    title: item.title,
+    // biome-ignore lint/style/useNamingConvention: Supabase columns use snake_case
+    trip_id: item.tripId,
+    // biome-ignore lint/style/useNamingConvention: Supabase columns use snake_case
+    user_id: userId,
   };
 }

@@ -26,7 +26,7 @@ import { ActivityCard } from "../cards/activity-card";
 interface ActivityResultsProps {
   results: Activity[];
   loading?: boolean;
-  onSelect: (activity: Activity) => Promise<void>;
+  onSelect: (activity: Activity) => Promise<void> | void;
   onCompare?: (activities: Activity[]) => void;
   onOpenFilters?: () => void;
   onLoadMore?: () => Promise<void>;

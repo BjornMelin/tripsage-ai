@@ -1,20 +1,13 @@
 /** @vitest-environment node */
 
-import { lookupPoiContext } from "@ai/tools/server/google-places";
 import { HttpResponse, http } from "msw";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getGoogleMapsServerKey } from "@/lib/env/server";
-import { cacheLatLng, getCachedLatLng } from "@/lib/google/caching";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/test/msw/server";
 
 const mockContext = {
   messages: [],
   toolCallId: "test-call-id",
 };
-
-afterEach(() => {
-  server.resetHandlers();
-});
 
 vi.mock("@/lib/google/caching", () => ({
   cacheLatLng: vi.fn().mockResolvedValue(undefined),
@@ -51,12 +44,59 @@ vi.mock("@/lib/telemetry/span", async () => {
   };
 });
 
+// Hoisted module references for stable imports across tests
+const googlePlacesMod = vi.hoisted(() => ({
+  module: null as null | typeof import("@ai/tools/server/google-places"),
+}));
+const envServerMod = vi.hoisted(() => ({
+  module: null as null | typeof import("@/lib/env/server"),
+}));
+const cachingMod = vi.hoisted(() => ({
+  module: null as null | typeof import("@/lib/google/caching"),
+}));
+
+// Test-scoped variables rebinded from hoisted modules
+let lookupPoiContext: Awaited<
+  typeof import("@ai/tools/server/google-places")
+>["lookupPoiContext"];
+let getGoogleMapsServerKey: Awaited<
+  typeof import("@/lib/env/server")
+>["getGoogleMapsServerKey"];
+let cacheLatLng: Awaited<typeof import("@/lib/google/caching")>["cacheLatLng"];
+let getCachedLatLng: Awaited<typeof import("@/lib/google/caching")>["getCachedLatLng"];
+
 describe("lookupPoiContext", () => {
+  beforeAll(async () => {
+    // Load modules once to avoid vi.resetModules() overhead
+    googlePlacesMod.module = await import("@ai/tools/server/google-places");
+    envServerMod.module = await import("@/lib/env/server");
+    cachingMod.module = await import("@/lib/google/caching");
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // Rebind from hoisted modules (guaranteed non-null after beforeAll)
+    // biome-ignore lint/style/noNonNullAssertion: module loaded in beforeAll
+    const googlePlaces = googlePlacesMod.module!;
+    // biome-ignore lint/style/noNonNullAssertion: module loaded in beforeAll
+    const envServer = envServerMod.module!;
+    // biome-ignore lint/style/noNonNullAssertion: module loaded in beforeAll
+    const caching = cachingMod.module!;
+
+    lookupPoiContext = googlePlaces.lookupPoiContext;
+    getGoogleMapsServerKey = envServer.getGoogleMapsServerKey;
+    cacheLatLng = caching.cacheLatLng;
+    getCachedLatLng = caching.getCachedLatLng;
+
+    // Reset mock state
     vi.mocked(getCachedLatLng).mockResolvedValue(null);
     vi.mocked(cacheLatLng).mockResolvedValue(undefined);
     vi.mocked(getGoogleMapsServerKey).mockReturnValue("test-server-key");
+  });
+
+  afterEach(() => {
+    server.resetHandlers();
   });
 
   it("returns stub when API key not configured", async () => {

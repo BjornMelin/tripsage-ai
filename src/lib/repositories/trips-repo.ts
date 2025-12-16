@@ -73,10 +73,7 @@ export async function updateTrip(id: number, userId: string, updates: TripUpdate
   const validated = tripsUpdateSchema.parse(updates);
   const supabase = getClientOrThrow();
   const { data, error } = await updateSingle(supabase, "trips", validated, (qb) =>
-    // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder types are complex
-    (qb as any)
-      .eq("id", id)
-      .eq("user_id", userId)
+    qb.eq("id", id).eq("user_id", userId)
   );
   if (error || !data) throw error || new Error("Failed to update trip");
   // Validate response using Zod schema

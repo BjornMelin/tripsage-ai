@@ -25,7 +25,7 @@ vi.mock("@ai/lib/tool-factory", () => ({
 const hoisted = vi.hoisted(() => ({
   executeSpy: vi.fn().mockImplementation(() => ({
     createdAt: new Date().toISOString(),
-    id: Math.floor(Math.random() * 1000),
+    id: "memory-1",
   })),
 }));
 
@@ -59,6 +59,12 @@ describe("persistMemoryRecords", () => {
     };
 
     const out = await persistMemoryRecords("user-123", req);
+
+    const createAiToolCall = createAiToolMock.mock.calls[0]?.[0] as
+      | { guardrails?: Record<string, unknown> }
+      | undefined;
+    expect(createAiToolCall?.guardrails).toBeDefined();
+    expect(createAiToolCall?.guardrails).not.toHaveProperty("cache");
 
     // Assert successes and failures separately
     expect(out.successes).toBeDefined();

@@ -2,8 +2,10 @@
 
 import { searchFlights } from "@ai/tools";
 import type { FlightSearchResult } from "@schemas/flights";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { HttpResponse, http } from "msw";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { buildUpstashCacheMock } from "@/test/mocks/cache";
+import { server } from "@/test/msw/server";
 
 const mockContext = {
   messages: [],
@@ -60,18 +62,21 @@ describe("searchFlights tool", () => {
     getUpstashCache().reset();
   });
 
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
   it("submits Duffel offer requests with normalized payload", async () => {
-    const mockOffers = [{ id: "offer-1" }];
-    const fetchMock = vi.fn(async () => ({
-      json: async () => ({ data: { offers: mockOffers } }),
-      ok: true,
-      status: 200,
-    })) as unknown as typeof fetch;
-    vi.stubGlobal("fetch", fetchMock);
+    const captured = {
+      authorization: null as string | null,
+      body: null as unknown,
+      duffelVersion: null as string | null,
+    };
+
+    server.use(
+      http.post("https://api.duffel.com/air/offer_requests", async ({ request }) => {
+        captured.body = await request.json();
+        captured.authorization = request.headers.get("authorization");
+        captured.duffelVersion = request.headers.get("duffel-version");
+        return HttpResponse.json({ data: { offers: [{ id: "offer-1" }] } });
+      })
+    );
 
     const result = (await searchFlights.execute?.(
       {
@@ -85,12 +90,13 @@ describe("searchFlights tool", () => {
       mockContext
     )) as unknown as FlightSearchResult;
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      "https://api.duffel.com/air/offer_requests",
-      expect.objectContaining({
-        method: "POST",
-      })
-    );
+    expect(captured.authorization).toBe("Bearer test_duffel_key");
+    expect(captured.duffelVersion).toBe("v2");
+    expect(captured.body).toMatchObject({
+      cabin_class: "economy",
+      payment_currency: "USD",
+      return_offers: true,
+    });
     expect(result).toMatchObject({ currency: "USD" });
     expect(Array.isArray(result?.offers)).toBe(true);
   });
@@ -117,13 +123,10 @@ describe("searchFlights tool", () => {
   });
 
   it("bubbles up Duffel API errors", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => ({
-        ok: false,
-        status: 500,
-        text: async () => "server_error",
-      })) as unknown as typeof fetch
+    server.use(
+      http.post("https://api.duffel.com/air/offer_requests", () => {
+        return HttpResponse.text("server_error", { status: 500 });
+      })
     );
     const envModule = (await import("@/lib/env/server")) as unknown as {
       setMockDuffelKey: (value?: string) => void;

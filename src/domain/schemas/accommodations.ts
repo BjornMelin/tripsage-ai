@@ -195,7 +195,7 @@ export const accommodationSearchOutputSchema = z.strictObject({
   provider: z.enum(["amadeus", "cache"]),
   resultsReturned: z.number(),
   searchId: z.string(),
-  searchParameters: z.record(z.string(), z.unknown()),
+  searchParameters: z.looseRecord(z.string(), z.unknown()),
   status: z.literal("success"),
   tookMs: z.number(),
   totalResults: z.number(),

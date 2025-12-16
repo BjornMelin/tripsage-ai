@@ -1,15 +1,13 @@
 /**
  * @fileoverview Account settings section: email update, verification, and
- * notification preferences. UI only; server actions are stubbed.
+ * notification preferences.
  */
 
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
 import { type EmailUpdateFormData, emailUpdateFormSchema } from "@schemas/profile";
 import { CheckIcon, MailIcon, Trash2Icon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,10 +40,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
+import { useZodForm } from "@/hooks/use-zod-form";
+import { getUnknownErrorMessage } from "@/lib/errors/get-unknown-error-message";
 import { getBrowserClient } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import { useAuthCore } from "@/stores/auth/auth-core";
-import { useUserProfileStore } from "@/stores/user-store";
 
 /**
  * Alert colors for account status indicators.
@@ -71,11 +70,10 @@ const ALERT_COLORS = {
  * @returns A settings section with email and notification controls.
  */
 export function AccountSettingsSection() {
-  const { profile, updatePersonalInfo: _updatePersonalInfo } = useUserProfileStore();
   const { user: authUser, setUser, logout } = useAuthCore();
   const { toast } = useToast();
 
-  const currentEmail = authUser?.email ?? profile?.email ?? "";
+  const currentEmail = authUser?.email ?? "";
   const [seenUnverified, setSeenUnverified] = useState(false);
   const isEmailVerified =
     seenUnverified || authUser?.isEmailVerified === false
@@ -102,16 +100,19 @@ export function AccountSettingsSection() {
   const [isVerifyingEmail, setIsVerifyingEmail] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
-  const emailForm = useForm<EmailUpdateFormData>({
+  const emailForm = useZodForm({
     defaultValues: {
       email: currentEmail,
     },
-    resolver: zodResolver(emailUpdateFormSchema),
+    mode: "onChange",
+    schema: emailUpdateFormSchema,
   });
 
+  const { reset } = emailForm;
+
   useEffect(() => {
-    emailForm.reset({ email: currentEmail });
-  }, [currentEmail, emailForm]);
+    reset({ email: currentEmail });
+  }, [currentEmail, reset]);
 
   useEffect(() => {
     setNotificationPrefs(initialNotificationPrefs);
@@ -160,13 +161,12 @@ export function AccountSettingsSection() {
           : "Please check your inbox to verify your new email address.",
         title: verified ? "Email updated" : "Verification required",
       });
-    } catch (_error) {
-      const description =
-        _error instanceof Error
-          ? _error.message
-          : "Failed to update email. Please try again.";
+    } catch (error) {
       toast({
-        description,
+        description: getUnknownErrorMessage(
+          error,
+          "Failed to update email. Please try again."
+        ),
         title: "Error",
         variant: "destructive",
       });
@@ -191,13 +191,12 @@ export function AccountSettingsSection() {
         description: "Please check your inbox and click the verification link.",
         title: "Verification email sent",
       });
-    } catch (_error) {
-      const description =
-        _error instanceof Error
-          ? _error.message
-          : "Failed to send verification email. Please try again.";
+    } catch (error) {
       toast({
-        description,
+        description: getUnknownErrorMessage(
+          error,
+          "Failed to send verification email. Please try again."
+        ),
         title: "Error",
         variant: "destructive",
       });
@@ -226,13 +225,12 @@ export function AccountSettingsSection() {
         description: "Your account deletion request has been processed.",
         title: "Account deletion initiated",
       });
-    } catch (_error) {
-      const description =
-        _error instanceof Error
-          ? _error.message
-          : "Failed to delete account. Please try again.";
+    } catch (error) {
       toast({
-        description,
+        description: getUnknownErrorMessage(
+          error,
+          "Failed to delete account. Please try again."
+        ),
         title: "Error",
         variant: "destructive",
       });
@@ -281,14 +279,13 @@ export function AccountSettingsSection() {
         description: `${setting} notifications ${enabled ? "enabled" : "disabled"}.`,
         title: "Settings updated",
       });
-    } catch (_error) {
+    } catch (error) {
       setNotificationPrefs((prev) => ({ ...prev, [setting]: !enabled }));
-      const description =
-        _error instanceof Error
-          ? _error.message
-          : "Failed to update notification settings.";
       toast({
-        description,
+        description: getUnknownErrorMessage(
+          error,
+          "Failed to update notification settings."
+        ),
         title: "Error",
         variant: "destructive",
       });

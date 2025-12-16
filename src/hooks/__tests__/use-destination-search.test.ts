@@ -1,8 +1,11 @@
 /** @vitest-environment jsdom */
 
 import { act, renderHook } from "@testing-library/react";
+import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useSearchResultsStore } from "@/stores/search-results-store";
+import { server } from "@/test/msw/server";
+import { createFakeTimersContext } from "@/test/utils/with-fake-timers";
 import { useDestinationSearch } from "../search/use-destination-search";
 
 interface Place {
@@ -13,18 +16,6 @@ interface Place {
   types?: string[];
 }
 
-const createFetchResponse = (
-  places: Place[] = [],
-  ok = true,
-  status = 200,
-  extra: Record<string, unknown> = {}
-) =>
-  ({
-    json: vi.fn().mockResolvedValue(ok ? { places, ...extra } : extra),
-    ok,
-    status,
-  }) as unknown as Response;
-
 const runSearch = async (
   search: (params: {
     query: string;
@@ -34,21 +25,22 @@ const runSearch = async (
   params: { query: string; types?: string[]; limit?: number }
 ) => {
   const promise = search(params);
-  vi.runAllTimers();
+  await vi.runAllTimersAsync();
   await promise;
 };
 
 describe("useDestinationSearch", () => {
+  const timers = createFakeTimersContext({ shouldAdvanceTime: true });
+
   beforeEach(() => {
-    vi.useFakeTimers();
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(createFetchResponse()));
+    timers.setup();
     useSearchResultsStore.getState().reset();
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
-    vi.unstubAllGlobals();
-    vi.useRealTimers();
-    vi.clearAllMocks();
+    timers.teardown();
+    server.resetHandlers();
     useSearchResultsStore.getState().reset();
     localStorage.clear();
   });
@@ -62,14 +54,21 @@ describe("useDestinationSearch", () => {
   });
 
   it("returns early for short queries without calling the API", async () => {
-    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    let apiCalled = false;
+    server.use(
+      http.post("/api/places/search", () => {
+        apiCalled = true;
+        return HttpResponse.json({ places: [] });
+      })
+    );
+
     const { result } = renderHook(() => useDestinationSearch());
 
     await act(async () => {
       await runSearch(result.current.searchDestinations, { query: "a" });
     });
 
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(apiCalled).toBe(false);
     expect(result.current.results).toEqual([]);
     expect(result.current.searchError).toBeNull();
   });
@@ -92,8 +91,7 @@ describe("useDestinationSearch", () => {
       },
     ];
 
-    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
-    fetchMock.mockResolvedValue(createFetchResponse(places));
+    server.use(http.post("/api/places/search", () => HttpResponse.json({ places })));
 
     const { result } = renderHook(() => useDestinationSearch());
 
@@ -134,8 +132,13 @@ describe("useDestinationSearch", () => {
       },
     ];
 
-    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
-    fetchMock.mockResolvedValue(createFetchResponse(places));
+    const captured: { body: Record<string, unknown> | null } = { body: null };
+    server.use(
+      http.post("/api/places/search", async ({ request }) => {
+        captured.body = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ places });
+      })
+    );
 
     const { result } = renderHook(() => useDestinationSearch());
 
@@ -149,31 +152,32 @@ describe("useDestinationSearch", () => {
 
     expect(result.current.results).toHaveLength(1);
     expect(result.current.results[0].types).toContain("city");
-
-    const body = JSON.parse(
-      (fetchMock.mock.calls[0]?.[1] as RequestInit).body as string
-    );
-    expect(body.maxResultCount).toBe(1);
+    expect(captured.body?.maxResultCount).toBe(1);
   });
 
   it("clamps invalid limits to API constraints", async () => {
-    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    const captured: { body: Record<string, unknown> | null } = { body: null };
+    server.use(
+      http.post("/api/places/search", async ({ request }) => {
+        captured.body = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ places: [] });
+      })
+    );
+
     const { result } = renderHook(() => useDestinationSearch());
 
     await act(async () => {
       await runSearch(result.current.searchDestinations, { limit: -5, query: "Paris" });
     });
 
-    const body = JSON.parse(
-      (fetchMock.mock.calls[0]?.[1] as RequestInit).body as string
-    );
-    expect(body.maxResultCount).toBe(1);
+    expect(captured.body?.maxResultCount).toBe(1);
   });
 
   it("surfaces API errors and clears results", async () => {
-    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
-    fetchMock.mockResolvedValue(
-      createFetchResponse([], false, 500, { reason: "boom" })
+    server.use(
+      http.post("/api/places/search", () =>
+        HttpResponse.json({ reason: "boom" }, { status: 500 })
+      )
     );
 
     const { result } = renderHook(() => useDestinationSearch());
@@ -188,32 +192,40 @@ describe("useDestinationSearch", () => {
 
   it("aborts in-flight searches when a new search starts", async () => {
     const capturedSignals: AbortSignal[] = [];
-    const pendingResolvers: Array<() => void> = [];
+    let resolveFirst: (() => void) | null = null;
+    let resolveSecond: (() => void) | null = null;
+    let callCount = 0;
 
-    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
-    fetchMock.mockImplementation((_, init: RequestInit) => {
-      const signal = init.signal as AbortSignal;
-      capturedSignals.push(signal);
+    server.use(
+      http.post("/api/places/search", ({ request }) => {
+        const signal = request.signal;
+        capturedSignals.push(signal);
+        callCount++;
 
-      return new Promise<Response>((resolve) => {
-        const complete = () => resolve(createFetchResponse([{ id: "1" } as Place]));
-        pendingResolvers.push(complete);
-        signal?.addEventListener("abort", () => complete(), { once: true });
-      });
-    });
+        return new Promise<Response>((resolve) => {
+          const complete = () => resolve(HttpResponse.json({ places: [{ id: "1" }] }));
+          if (callCount === 1) {
+            resolveFirst = complete;
+          } else {
+            resolveSecond = complete;
+          }
+          signal?.addEventListener("abort", complete, { once: true });
+        });
+      })
+    );
 
     const { result } = renderHook(() => useDestinationSearch());
 
     await act(async () => {
       const firstPromise = result.current.searchDestinations({ query: "Paris" });
-      vi.runAllTimers();
+      await vi.runAllTimersAsync();
 
       const secondPromise = result.current.searchDestinations({ query: "Berlin" });
-      vi.runAllTimers();
+      await vi.runAllTimersAsync();
 
-      pendingResolvers.forEach((resolve) => {
-        resolve();
-      });
+      // Complete requests
+      resolveFirst?.();
+      resolveSecond?.();
 
       await Promise.all([firstPromise, secondPromise]);
     });

@@ -1,0 +1,491 @@
+/**
+ * @fileoverview Trip collaboration page.
+ *
+ * Manages trip collaborators and real-time editing. Handles collaborator invitations,
+ * permissions, sharing, and activity monitoring.
+ */
+
+"use client";
+
+import {
+  ClockIcon,
+  CopyIcon,
+  CrownIcon,
+  EditIcon,
+  EyeIcon,
+  MailIcon,
+  Share2Icon,
+  Trash2Icon,
+  UserPlusIcon,
+  UsersIcon,
+} from "lucide-react";
+import { useParams } from "next/navigation";
+import { useEffect, useId, useState } from "react";
+import { z } from "zod";
+import { ConnectionStatusMonitor } from "@/components/features/realtime/connection-status-monitor";
+import {
+  CollaborationIndicator,
+  OptimisticTripUpdates,
+} from "@/components/features/realtime/optimistic-trip-updates";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/components/ui/use-toast";
+import { useTrip } from "@/hooks/use-trips";
+import { copyToClipboardWithToast } from "@/lib/client/clipboard";
+import { getBrowserClient } from "@/lib/supabase";
+import { statusVariants } from "@/lib/variants/status";
+
+/**
+ * Consistent color palette aligned with statusVariants for roles
+ */
+const ROLE_ICON_COLORS: Record<Collaborator["role"], string> = {
+  editor: "text-blue-700",
+  owner: "text-amber-700",
+  viewer: "text-gray-700",
+};
+
+/**
+ * Represents a collaborator on a trip with their permissions and status.
+ */
+interface Collaborator {
+  /** Unique identifier for the collaborator record. */
+  id: string;
+  /** User ID of the collaborator. */
+  userId: string;
+  /** ID of the trip being collaborated on. */
+  tripId: string;
+  /** Email address of the collaborator. */
+  email: string;
+  /** Optional display name of the collaborator. */
+  name?: string;
+  /** Role determining permissions level. */
+  role: "owner" | "editor" | "viewer";
+  /** Current invitation/acceptance status. */
+  status: "pending" | "accepted" | "declined";
+  /** Detailed permission flags. */
+  permissions: {
+    /** Whether the collaborator can edit trip content. */
+    canEdit: boolean;
+    /** Whether the collaborator can invite others. */
+    canInvite: boolean;
+    /** Whether the collaborator can delete the trip. */
+    canDelete: boolean;
+  };
+  /** Timestamp when the invitation was sent. */
+  invitedAt: string;
+  /** Timestamp when the invitation was accepted. */
+  acceptedAt?: string;
+}
+
+/**
+ * Trip collaboration page component.
+ *
+ * Displays interface for managing collaborators, real-time editing, activity monitoring,
+ * and sharing settings.
+ *
+ * @returns The trip collaboration page JSX element
+ */
+export default function TripCollaborationPage() {
+  const params = useParams();
+  const tripIdParam = params.id as string;
+  const tripIdNumber = Number.parseInt(tripIdParam, 10);
+  // Pass null to useTrip when tripId is invalid to prevent requests to /api/trips/NaN
+  const validTripId = Number.isNaN(tripIdNumber) ? null : tripIdNumber;
+  const inviteInputId = useId();
+  const { toast } = useToast();
+
+  const { data: trip, isConnected } = useTrip(validTripId);
+
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  useEffect(() => {
+    const supabase = getBrowserClient();
+    // getBrowserClient() may return null during initial client-side initialization/hydration — skip auth check until client is available
+    if (!supabase) return;
+    supabase.auth
+      .getUser()
+      .then(({ data }) => setCurrentUserId(data.user?.id ?? null))
+      .catch(() => {
+        // Best-effort: keep UI consistent even if auth lookup fails
+        setCurrentUserId(null);
+      });
+  }, []);
+
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [isInviting, setIsInviting] = useState(false);
+
+  // TODO: Replace with useCollaborators(tripId) hook when API endpoint is implemented.
+  const collaboratorsState: {
+    data: Collaborator[];
+    error: Error | null;
+    isLoading: boolean;
+  } = {
+    data: [],
+    error: null,
+    isLoading: false,
+  };
+  const {
+    data: collaborators,
+    error: collaboratorsError,
+    isLoading: isLoadingCollaborators,
+  } = collaboratorsState;
+
+  /**
+   * Handles sending collaboration invitations to new users.
+   */
+  const handleInviteCollaborator = async () => {
+    // Prevent duplicate submissions while invite is in progress
+    if (isInviting) return;
+
+    const trimmedEmail = inviteEmail.trim();
+    if (!trimmedEmail) {
+      toast({
+        description: "Please enter an email address to invite.",
+        title: "Email Required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const emailValidation = z.email().safeParse(trimmedEmail);
+    if (!emailValidation.success) {
+      toast({
+        description: "Please enter a valid email address.",
+        title: "Invalid Email",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsInviting(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      toast({
+        description: `Invitation sent to ${trimmedEmail}`,
+        title: "Invitation Sent",
+      });
+      setInviteEmail("");
+    } catch (_error) {
+      toast({
+        description: "Failed to send invitation. Please try again.",
+        title: "Invitation Failed",
+        variant: "destructive",
+      });
+    } finally {
+      setIsInviting(false);
+    }
+  };
+
+  /**
+   * Copies the trip share link to clipboard.
+   */
+  const handleCopyShareLink = async (): Promise<void> => {
+    const shareUrl = `${window.location.origin}/trips/${tripIdParam}/share`;
+    await copyToClipboardWithToast(shareUrl, toast, {
+      success: { description: "Share link copied to clipboard", title: "Link Copied" },
+    });
+  };
+
+  /**
+   * Returns the appropriate icon component for a collaborator role.
+   *
+   * @param role - The collaborator role
+   * @returns Icon component for the role
+   */
+  const getRoleIcon = (role: Collaborator["role"]) => {
+    switch (role) {
+      case "owner":
+        return <CrownIcon className={`h-4 w-4 ${ROLE_ICON_COLORS.owner}`} />;
+      case "editor":
+        return <EditIcon className={`h-4 w-4 ${ROLE_ICON_COLORS.editor}`} />;
+      case "viewer":
+        return <EyeIcon className={`h-4 w-4 ${ROLE_ICON_COLORS.viewer}`} />;
+      default: {
+        const _exhaustiveCheck: never = role;
+        return _exhaustiveCheck;
+      }
+    }
+  };
+
+  /**
+   * Returns the appropriate status badge component for invitation status.
+   *
+   * @param status - The invitation status
+   * @returns Badge component for the status
+   */
+  const getStatusBadge = (status: Collaborator["status"]) => {
+    switch (status) {
+      case "accepted":
+        return <Badge className={statusVariants({ status: "active" })}>Active</Badge>;
+      case "pending":
+        return <Badge className={statusVariants({ status: "pending" })}>Pending</Badge>;
+      case "declined":
+        return <Badge className={statusVariants({ status: "error" })}>Declined</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  if (!trip) {
+    return (
+      <div className="container mx-auto py-8">
+        <Card>
+          <CardContent className="text-center py-12">
+            <h2 className="text-xl font-semibold mb-2">Trip not found</h2>
+            <p className="text-muted-foreground">
+              The trip you're looking for doesn't exist or you don't have access to it.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto py-8 space-y-8">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">
+            Collaborate on {trip.title ?? "this trip"}
+          </h1>
+          <p className="text-muted-foreground">
+            Manage collaborators and real-time editing
+          </p>
+        </div>
+        <div className="flex items-center space-x-4">
+          <ConnectionStatusMonitor />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Main Content */}
+        <div className="lg:col-span-2 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <EditIcon className="h-5 w-5" />
+                <span>Live Trip Editing</span>
+              </CardTitle>
+              <CardDescription>
+                Edit trip details with real-time collaboration
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {Number.isNaN(tripIdNumber) ? null : (
+                <OptimisticTripUpdates tripId={tripIdNumber} />
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <UsersIcon className="h-5 w-5" />
+                <span>Collaborators</span>
+                <Badge variant="secondary">{collaborators.length}</Badge>
+              </CardTitle>
+              <CardDescription>
+                Manage who can access and edit this trip
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <Label htmlFor={inviteInputId}>Invite by Email</Label>
+                <div className="flex space-x-2">
+                  <Input
+                    id={inviteInputId}
+                    type="email"
+                    placeholder="Enter email address..."
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleInviteCollaborator();
+                    }}
+                  />
+                  <Button onClick={handleInviteCollaborator} disabled={isInviting}>
+                    <UserPlusIcon className="h-4 w-4 mr-2" />
+                    {isInviting ? "Inviting..." : "Invite"}
+                  </Button>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-4">
+                <Label>Share Link</Label>
+                <div className="flex space-x-2">
+                  <Input
+                    readOnly
+                    value={`${typeof window !== "undefined" ? window.location.origin : ""}/trips/${tripIdParam}/share`}
+                    className="bg-muted"
+                  />
+                  <Button variant="outline" onClick={handleCopyShareLink}>
+                    <CopyIcon className="h-4 w-4 mr-2" />
+                    Copy
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Anyone with this link can view the trip details
+                </p>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-4">
+                <Label>Current Collaborators</Label>
+                <div className="space-y-3">
+                  {isLoadingCollaborators && (
+                    <div className="flex items-center justify-center p-6 text-muted-foreground">
+                      <span>Loading collaborators...</span>
+                    </div>
+                  )}
+                  {collaboratorsError && (
+                    <div className="p-4 rounded-lg border border-destructive/50 bg-destructive/10 text-destructive text-sm">
+                      Failed to load collaborators. Please try again.
+                    </div>
+                  )}
+                  {!isLoadingCollaborators &&
+                    !collaboratorsError &&
+                    collaborators.length === 0 && (
+                      <div className="flex items-center justify-center p-6 text-muted-foreground">
+                        <span>
+                          No collaborators yet. Invite someone to get started!
+                        </span>
+                      </div>
+                    )}
+                  {collaborators.map((collaborator) => (
+                    <div
+                      key={collaborator.id}
+                      className="flex items-center justify-between p-3 rounded-lg border"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                          <MailIcon className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <div className="flex items-center space-x-2">
+                            <span className="font-medium">
+                              {collaborator.name || collaborator.email}
+                            </span>
+                            {collaborator.userId === currentUserId && (
+                              <Badge variant="outline" className="text-xs">
+                                You
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                            <span>{collaborator.email}</span>
+                            <span>•</span>
+                            <div className="flex items-center space-x-1">
+                              {getRoleIcon(collaborator.role)}
+                              <span className="capitalize">{collaborator.role}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        {getStatusBadge(collaborator.status)}
+                        {collaborator.role !== "owner" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled
+                            aria-label="Remove collaborator (coming soon)"
+                            title="Remove collaborator (coming soon)"
+                          >
+                            <Trash2Icon className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-6">
+          {Number.isNaN(tripIdNumber) ? null : (
+            <CollaborationIndicator tripId={tripIdNumber} />
+          )}
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <ClockIcon className="h-5 w-5" />
+                <span>Recent Activity</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="text-sm">
+                  <div className="font-medium">Alice Johnson</div>
+                  <div className="text-muted-foreground">Updated trip budget</div>
+                  <div className="text-xs text-muted-foreground">2 minutes ago</div>
+                </div>
+                <Separator />
+                <div className="text-sm">
+                  <div className="font-medium">Bob Smith</div>
+                  <div className="text-muted-foreground">Added destination: Rome</div>
+                  <div className="text-xs text-muted-foreground">1 hour ago</div>
+                </div>
+                <Separator />
+                <div className="text-sm">
+                  <div className="font-medium">You</div>
+                  <div className="text-muted-foreground">Invited Charlie Brown</div>
+                  <div className="text-xs text-muted-foreground">2 hours ago</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Share2Icon className="h-5 w-5" />
+                <span>Sharing Settings</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Visibility</Label>
+                <Badge variant="secondary">{trip.visibility ?? "private"}</Badge>
+                <p className="text-xs text-muted-foreground">
+                  {trip.visibility === "public"
+                    ? "Anyone can view this trip"
+                    : trip.visibility === "shared"
+                      ? "Only invited collaborators can view"
+                      : "Only you can view this trip"}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Real-time Updates</Label>
+                <Badge variant={isConnected ? "default" : "destructive"}>
+                  {isConnected ? "Connected" : "Disconnected"}
+                </Badge>
+                <p className="text-xs text-muted-foreground">
+                  Changes are synced automatically when connected
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}

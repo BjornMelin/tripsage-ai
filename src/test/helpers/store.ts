@@ -23,7 +23,6 @@ export function setupTimeoutMock(): { mockRestore: () => void } {
     ...args: unknown[]
   ) => {
     if (typeof cb === "function") {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       cb(...(args as never[]));
     }
     return 0 as unknown as ReturnType<typeof setTimeout>;

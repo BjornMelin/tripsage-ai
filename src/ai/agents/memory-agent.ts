@@ -1,9 +1,11 @@
 /**
  * @fileoverview Memory update agent using AI SDK v6 streaming.
  *
- * Wraps memory tools (addConversationMemory) with guardrails (caching, rate
- * limiting) and executes streaming text generation to confirm memory writes.
- * Returns structured confirmation messages.
+ * Wraps memory tools (addConversationMemory) with guardrails (rate limiting,
+ * telemetry) and executes streaming text generation to confirm memory writes.
+ *
+ * Note: memory writes are intentionally not cached to avoid cross-user cache
+ * collisions and unintended idempotency.
  *
  * Note: This agent uses streamText directly, not ToolLoopAgent, because
  * memory persistence is a batch operation followed by a summary - not
@@ -25,6 +27,9 @@ import type { ChatMessage } from "@/lib/tokens/budget";
 import { clampMaxTokens } from "@/lib/tokens/budget";
 
 // Note: no wrapped tools are exposed here; we execute persistence directly with guardrails.
+
+/** Maximum number of memory records allowed per request. */
+export const MAX_MEMORY_RECORDS_PER_REQUEST = 25;
 
 /**
  * Execute the memory agent with AI SDK v6 streaming.
@@ -130,6 +135,15 @@ async function persistAndSummarize(
   const { maxTokens } = clampMaxTokens(messages, desiredMaxTokens, deps.modelId);
 
   return streamText({
+    // biome-ignore lint/style/useNamingConvention: AI SDK API uses snake_case
+    experimental_telemetry: {
+      functionId: "agent.memory.summarize",
+      isEnabled: true,
+      metadata: {
+        modelId: deps.modelId,
+        recordCount: input.records?.length ?? 0,
+      },
+    },
     maxOutputTokens: maxTokens,
     messages: [
       { content: systemPrompt, role: "system" },
@@ -150,15 +164,17 @@ async function persistAndSummarize(
  * @param identifier - User or session identifier for rate limiting.
  * @param input - Validated memory update request with records to persist.
  * @returns Promise resolving to operation outcomes (successes and failures).
- * @throws {Error} When record count exceeds maximum allowed (25).
+ * @throws {Error} When record count exceeds MAX_MEMORY_RECORDS_PER_REQUEST.
  */
 export async function persistMemoryRecords(
   identifier: string,
   input: MemoryUpdateRequest
 ): Promise<PersistOutcome> {
   const records = input.records ?? [];
-  if (records.length > 25) {
-    throw new Error("too_many_records: max 25 per request");
+  if (records.length > MAX_MEMORY_RECORDS_PER_REQUEST) {
+    throw new Error(
+      `too_many_records: max ${MAX_MEMORY_RECORDS_PER_REQUEST} per request`
+    );
   }
 
   const failures: PersistOutcome["failures"] = [];
@@ -186,12 +202,6 @@ export async function persistMemoryRecords(
       };
     },
     guardrails: {
-      cache: {
-        hashInput: true,
-        key: () => "agent:memory:add",
-        namespace: "",
-        ttlSeconds: 60 * 5,
-      },
       rateLimit: {
         errorCode: TOOL_ERROR_CODES.toolRateLimited,
         identifier: () => rateLimit.identifier,

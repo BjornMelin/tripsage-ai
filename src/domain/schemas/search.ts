@@ -206,7 +206,7 @@ export type SearchType = z.infer<typeof searchTypeSchema>;
 export const flightSchema = z.object({
   airline: z.string().min(1),
   arrivalTime: DATE_STRING_SCHEMA,
-  cabinClass: z.string(),
+  cabinClass: z.string().optional(),
   departureTime: DATE_STRING_SCHEMA,
   destination: z.string().min(1),
   duration: POSITIVE_INT_SCHEMA,
@@ -222,7 +222,7 @@ export const flightSchema = z.object({
     .optional(),
   origin: z.string().min(1),
   price: z.number().positive(),
-  seatsAvailable: NON_NEGATIVE_INT_SCHEMA,
+  seatsAvailable: NON_NEGATIVE_INT_SCHEMA.optional(),
   stops: NON_NEGATIVE_INT_SCHEMA,
 });
 
@@ -296,6 +296,7 @@ export type AccommodationAvailability = z.infer<typeof accommodationAvailability
  */
 export const activitySchema = z.object({
   coordinates: COORDINATES_SCHEMA.optional(),
+  currency: z.string().optional(),
   date: DATE_STRING_SCHEMA,
   description: z.string(),
   duration: POSITIVE_INT_SCHEMA,
@@ -412,7 +413,7 @@ export const metadataValueSchema = z.union([
   z.string(),
   z.number(),
   z.boolean(),
-  z.record(z.string(), z.unknown()),
+  z.looseRecord(z.string(), z.unknown()),
 ]);
 
 /** TypeScript type for metadata values. */
@@ -815,7 +816,7 @@ export const hotelResultSchema = z.strictObject({
         type: z.enum(["early_bird", "last_minute", "extended_stay", "all_inclusive"]),
       })
       .optional(),
-    priceHistory: z.enum(["rising", "falling", "stable"]),
+    priceHistory: z.enum(["rising", "falling", "stable", "unknown"]),
     pricePerNight: z.number().nonnegative(),
     taxes: z.number().nonnegative(),
     taxesEstimated: z.boolean(),
@@ -917,10 +918,10 @@ export const searchHotelsRowSchema = z.strictObject({
   guests: z.number().int().positive(),
   id: z.number().int().positive(),
   query_hash: z.string().min(1),
-  query_parameters: z.record(z.string(), z.unknown()),
-  results: z.record(z.string(), z.unknown()),
+  query_parameters: z.looseRecord(z.string(), z.unknown()),
+  results: z.looseRecord(z.string(), z.unknown()),
   rooms: z.number().int().positive(),
-  search_metadata: z.record(z.string(), z.unknown()),
+  search_metadata: z.looseRecord(z.string(), z.unknown()),
   source: z.enum(["amadeus", "external_api", "cached"]),
   user_id: primitiveSchemas.uuid,
 });
@@ -942,10 +943,10 @@ export const searchFlightsRowSchema = z.strictObject({
   origin: z.string().min(1),
   passengers: z.number().int().positive(),
   query_hash: z.string().min(1),
-  query_parameters: z.record(z.string(), z.unknown()),
-  results: z.record(z.string(), z.unknown()),
+  query_parameters: z.looseRecord(z.string(), z.unknown()),
+  results: z.looseRecord(z.string(), z.unknown()),
   return_date: DATE_STRING_SCHEMA.nullable(),
-  search_metadata: z.record(z.string(), z.unknown()),
+  search_metadata: z.looseRecord(z.string(), z.unknown()),
   source: z.enum(["duffel", "amadeus", "external_api", "cached"]),
   user_id: primitiveSchemas.uuid,
 });
@@ -964,9 +965,9 @@ export const searchActivitiesRowSchema = z.strictObject({
   expires_at: z.string(),
   id: z.number().int().positive(),
   query_hash: z.string().min(1),
-  query_parameters: z.record(z.string(), z.unknown()),
-  results: z.record(z.string(), z.unknown()),
-  search_metadata: z.record(z.string(), z.unknown()),
+  query_parameters: z.looseRecord(z.string(), z.unknown()),
+  results: z.looseRecord(z.string(), z.unknown()),
+  search_metadata: z.looseRecord(z.string(), z.unknown()),
   source: z.enum([
     "viator",
     "getyourguide",
@@ -991,8 +992,8 @@ export const searchDestinationsRowSchema = z.strictObject({
   id: z.number().int().positive(),
   query: z.string().min(1),
   query_hash: z.string().min(1),
-  results: z.record(z.string(), z.unknown()),
-  search_metadata: z.record(z.string(), z.unknown()),
+  results: z.looseRecord(z.string(), z.unknown()),
+  search_metadata: z.looseRecord(z.string(), z.unknown()),
   source: z.enum(["google_maps", "external_api", "cached"]),
   user_id: primitiveSchemas.uuid,
 });

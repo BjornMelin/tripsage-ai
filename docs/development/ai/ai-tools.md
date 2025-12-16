@@ -113,6 +113,11 @@ type ToolExecute<InputValue, OutputValue> = (
 
 Caching uses Upstash Redis via `@/lib/cache/upstash`. See [Observability](observability.md) for cache-related telemetry.
 
+**Notes:**
+
+- Cache keys must be user-scoped when results depend on the authenticated user.
+- Avoid caching write tools (e.g., persistence/mutations); caching is best suited to deterministic/idempotent reads or expensive pure computations.
+
 ```typescript
 cache: {
   // Required: function that generates cache key suffix

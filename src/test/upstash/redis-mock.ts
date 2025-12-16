@@ -371,7 +371,6 @@ export async function runUpstashPipeline(
   const results: unknown[] = [];
   for (const cmd of commands) {
     if (Array.isArray(cmd)) {
-      // eslint-disable-next-line no-await-in-loop
       results.push(await runUpstashCommand(store, cmd.map(String)));
     }
   }

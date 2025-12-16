@@ -1,162 +1,114 @@
 "use client";
 
-import type { ErrorBoundaryProps } from "@schemas/errors";
+import type { ErrorBoundaryProps, ErrorInfo } from "@schemas/errors";
 import type React from "react";
-import { Component, type ErrorInfo, type ReactNode } from "react";
+import { useCallback } from "react";
+import {
+  type FallbackProps,
+  ErrorBoundary as ReactErrorBoundary,
+} from "react-error-boundary";
+import { getSessionId } from "@/lib/client/session";
 import { errorService } from "@/lib/error-service";
-import { secureId } from "@/lib/security/random";
-import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
+import { fireAndForget } from "@/lib/utils";
 import { ErrorFallback } from "./error-fallback";
 
-interface ErrorBoundaryState {
-  hasError: boolean;
-  error: Error | null;
-  errorInfo: ErrorInfo | null;
-  retryCount: number;
-}
+const COMPONENT_CONTEXT = "ErrorBoundary" as const;
+
+type ErrorWithDigest = Error & { digest?: string };
 
 /**
- * Reusable Error Boundary component with logging and fallback UI
+ * Extract the user ID from the global window.userStore.
+ *
+ * `window.userStore` is initialized by the Zustand auth store during app bootstrap
+ * (see src/stores/auth-store.ts). This function is defensive: the try-catch guards
+ * against environments or timings where the global may not yet be available.
+ *
+ * @returns The current user ID if available, or undefined if not set or inaccessible.
  */
-export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  private maxRetries = 3;
-
-  constructor(props: ErrorBoundaryProps) {
-    super(props);
-    this.state = {
-      error: null,
-      errorInfo: null,
-      hasError: false,
-      retryCount: 0,
-    };
-  }
-
-  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
-    return {
-      error,
-      hasError: true,
-    };
-  }
-
-  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    this.setState({
-      errorInfo,
-    });
-
-    // Custom error handler
-    if (this.props.onError) {
-      this.props.onError(error, {
-        componentStack: errorInfo.componentStack ?? "",
-      });
+function GetUserId(): string | undefined {
+  try {
+    interface UserStore {
+      user?: { id?: string };
     }
+    const userStore = (window as unknown as { userStore?: UserStore }).userStore;
+    return userStore?.user?.id;
+  } catch {
+    return undefined;
+  }
+}
 
-    // Report error to service
-    const errorReport = errorService.createErrorReport(
-      error,
-      { componentStack: errorInfo.componentStack ?? undefined },
-      {
-        sessionId: this.getSessionId(),
-        userId: this.getUserId(),
-      }
-    );
+function ToSchemaErrorInfo(
+  info: { componentStack?: string | null } | undefined
+): ErrorInfo {
+  return {
+    componentStack: info?.componentStack ?? "",
+  };
+}
 
-    errorService.reportError(errorReport).catch((reportError) => {
-      if (process.env.NODE_ENV === "development") {
-        console.error("Error reporting failed:", reportError);
-      }
-      try {
-        recordClientErrorOnActiveSpan(
-          reportError instanceof Error ? reportError : new Error(String(reportError)),
-          { action: "reportError", context: "ErrorBoundary" }
-        );
-      } catch (telemetryError) {
-        // Swallow telemetry errors - don't let them propagate
-        if (process.env.NODE_ENV === "development") {
-          console.warn(
-            "Failed to record telemetry error:",
-            telemetryError instanceof Error
-              ? telemetryError.message
-              : String(telemetryError)
-          );
+function GetFallbackComponent(
+  fallback: ErrorBoundaryProps["fallback"] | undefined
+): React.ComponentType<{
+  error: ErrorWithDigest;
+  reset?: () => void;
+  retry?: () => void;
+}> {
+  return fallback ?? ErrorFallback;
+}
+
+export function ErrorBoundary({
+  children,
+  fallback,
+  onError,
+  level,
+}: ErrorBoundaryProps) {
+  const FallbackComponent = GetFallbackComponent(fallback);
+
+  const handleError = useCallback(
+    (error: Error, info: { componentStack?: string | null }) => {
+      const schemaInfo = ToSchemaErrorInfo(info);
+      onError?.(error, schemaInfo);
+
+      const errorReport = errorService.createErrorReport(
+        error,
+        schemaInfo.componentStack
+          ? { componentStack: schemaInfo.componentStack }
+          : undefined,
+        {
+          sessionId: getSessionId(),
+          userId: GetUserId(),
         }
-      }
-    });
-
-    // Log to console in development
-    if (process.env.NODE_ENV === "development") {
-      console.group("🚨 Error Boundary Caught Error");
-      console.error("Error:", error);
-      console.error("Error Info:", errorInfo);
-      console.error("Props:", this.props);
-      console.groupEnd();
-    }
-  }
-
-  private getUserId(): string | undefined {
-    // Try to get user ID from various sources
-    try {
-      // Check if user store is available
-      const userStore = (window as Window & { userStore?: { user: { id: string } } })
-        .userStore;
-      return userStore?.user?.id;
-    } catch {
-      return undefined;
-    }
-  }
-
-  private getSessionId(): string | undefined {
-    try {
-      // Generate or retrieve session ID using cryptographically secure random
-      let sessionId = sessionStorage.getItem("session_id");
-      if (!sessionId) {
-        sessionId = `session_${secureId(16)}`;
-        sessionStorage.setItem("session_id", sessionId);
-      }
-      return sessionId;
-    } catch {
-      return undefined;
-    }
-  }
-
-  private handleReset = (): void => {
-    this.setState({
-      error: null,
-      errorInfo: null,
-      hasError: false,
-      retryCount: 0,
-    });
-  };
-
-  private handleRetry = (): void => {
-    if (this.state.retryCount < this.maxRetries) {
-      this.setState((prevState) => ({
-        error: null,
-        errorInfo: null,
-        hasError: false,
-        retryCount: prevState.retryCount + 1,
-      }));
-    } else {
-      // Max retries reached, just reset
-      this.handleReset();
-    }
-  };
-
-  render(): ReactNode {
-    if (this.state.hasError && this.state.error) {
-      const FallbackComponent = this.props.fallback || ErrorFallback;
-      const errorWithDigest = this.state.error as Error & { digest?: string };
-
-      return (
-        <FallbackComponent
-          error={errorWithDigest}
-          reset={this.handleReset}
-          retry={this.state.retryCount < this.maxRetries ? this.handleRetry : undefined}
-        />
       );
-    }
 
-    return this.props.children;
-  }
+      fireAndForget(
+        errorService.reportError(errorReport, {
+          action: "render",
+          componentStack: schemaInfo.componentStack,
+          context: COMPONENT_CONTEXT,
+          level,
+        })
+      );
+
+      if (process.env.NODE_ENV === "development") {
+        console.error("ErrorBoundary caught error:", error);
+      }
+    },
+    [level, onError]
+  );
+
+  return (
+    <ReactErrorBoundary
+      fallbackRender={({ error, resetErrorBoundary }: FallbackProps) => (
+        <FallbackComponent
+          error={error as ErrorWithDigest}
+          reset={resetErrorBoundary}
+          retry={resetErrorBoundary}
+        />
+      )}
+      onError={handleError}
+    >
+      {children}
+    </ReactErrorBoundary>
+  );
 }
 
 /**

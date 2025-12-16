@@ -19,6 +19,7 @@ Resources and guidelines for TripSage development.
 | [AI Integration](ai/ai-integration.md) | Vercel AI Gateway, BYOK provider configuration |
 | [AI Tools](ai/ai-tools.md) | `createAiTool` factory, guardrails, tool patterns |
 | [Activities](frontend/activities.md) | Activity search service, tools, API usage example |
+| [Loading Components](frontend/loading-components.md) | Spinners, skeletons, wrappers, and loading hooks |
 
 ## Infrastructure
 
@@ -37,7 +38,7 @@ Resources and guidelines for TripSage development.
 pnpm install && pnpm dev
 
 # Quality gates
-pnpm biome:check && pnpm type-check && pnpm test:run
+pnpm biome:check && pnpm type-check && pnpm test
 ```
 
 ## Architecture

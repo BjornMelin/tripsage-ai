@@ -1,9 +1,10 @@
 /** @vitest-environment jsdom */
 
+import type { UiTrip } from "@schemas/trips";
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Trip } from "@/stores/trip-store";
+import { createFakeTimersContext } from "@/test/utils/with-fake-timers";
 import { TripCard } from "../trip-card";
 
 // Mock DateUtils
@@ -47,7 +48,7 @@ vi.mock("next/link", () => ({
 }));
 
 describe("TripCard", () => {
-  const mockTrip: Trip = {
+  const mockTrip: UiTrip = {
     budget: 3000,
     createdAt: "2024-01-01",
     currency: "USD",
@@ -125,14 +126,16 @@ describe("TripCard", () => {
   });
 
   describe("Trip Status", () => {
+    const timers = createFakeTimersContext();
+
     beforeEach(() => {
       // Mock current date to 2024-01-01 for consistent testing
-      vi.useFakeTimers();
+      timers.setup();
       vi.setSystemTime(new Date("2024-01-01"));
     });
 
     afterEach(() => {
-      vi.useRealTimers();
+      timers.teardown();
     });
 
     it("should show 'upcoming' status for future trips", () => {
@@ -236,7 +239,7 @@ describe("TripCard", () => {
     it("should use USD as default currency when currency is not specified", () => {
       // Test with currency omitted - component should handle gracefully
       const { currency: _currency, ...noCurrencyTrip } = mockTrip;
-      render(<TripCard trip={noCurrencyTrip as Trip} />);
+      render(<TripCard trip={noCurrencyTrip as unknown as UiTrip} />);
 
       expect(screen.getByText("Budget: $3,000.00")).toBeInTheDocument();
     });

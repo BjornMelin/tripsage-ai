@@ -112,6 +112,73 @@ const futureDate = refinedSchemas.futureDate.parse("2025-12-31T12:00:00Z");
 const password = refinedSchemas.strongPassword.parse("Test123!Password");
 ```
 
+## Zod v4.2.0 Features
+
+New features available in Zod v4.2.0+ for improved schema expressiveness.
+
+### z.looseRecord() - Flexible Records
+
+Use `z.looseRecord()` when you want record-like objects but **do not** want to
+error on keys that fail the `keySchema` validation.
+(Introduced in Zod v4.2.0; see [release notes](https://github.com/colinhacks/zod/releases/tag/v4.2.0).)
+
+```typescript
+// Metadata, configuration, or extensible data
+metadata: z.looseRecord(z.string(), z.unknown()).optional()
+
+// Key difference vs z.record():
+// - z.record(keySchema, valueSchema) errors on invalid keys
+// - z.looseRecord(keySchema, valueSchema) passes invalid keys through unchanged
+//   (and skips validating the valueSchema for those keys)
+```
+
+### z.xor() - Mutually Exclusive Unions
+
+Use `z.xor()` when exactly one schema must match (not zero, not multiple).
+(Introduced in Zod v4.2.0; see [release notes](https://github.com/colinhacks/zod/releases/tag/v4.2.0).)
+
+```typescript
+// WebSocket messages - exactly one type per message
+const wsMessage = z.xor([
+  statusUpdateSchema,
+  taskUpdateSchema,
+  resourceUpdateSchema,
+]);
+
+// Unlike z.union(), z.xor() enforces mutual exclusivity
+// Use for discriminated-like unions without a common discriminator field
+```
+
+### .toJSONSchema() - Schema Export
+
+Convert Zod schemas to JSON Schema for documentation:
+
+```typescript
+import { toJsonSchema } from "@/lib/schema/json-schema";
+
+const jsonSchema = toJsonSchema(mySchema);
+// Use for OpenAPI docs, external consumers, or SDK generation
+
+// For multiple schemas:
+import { toJsonSchemaRegistry } from "@/lib/schema/json-schema";
+const registry = toJsonSchemaRegistry({ User: userSchema, Trip: tripSchema });
+```
+
+### JSON Schema import (Zod v4)
+
+Zod v4 exposes JSON Schema export (`.toJSONSchema()` / `toJsonSchema(...)`), but it does **not** include a built-in JSON Schema → Zod API (there is no `z.fromJSONSchema()` in Zod v4).
+
+If you need to convert JSON Schema to Zod, use an external converter (community-maintained), for example:
+
+- `json-schema-to-zod` (npm): <https://www.npmjs.com/package/json-schema-to-zod>
+- `json-schema-to-zod` (GitHub): <https://github.com/StefanTerdell/json-schema-to-zod>
+
+Example (CLI):
+
+```bash
+json-schema-to-zod -i mySchema.json -o mySchema.ts
+```
+
 ## Form Schema Patterns
 
 Schemas for React Hook Form integration with Zod v4.
@@ -303,7 +370,7 @@ export const webSearchTool = tool({
 - `src/domain/schemas/__tests__/` - Domain schema tests
 - `src/ai/tools/__tests__/` - AI tool schema tests
 
-**Run Tests:** `pnpm test:run src/domain/schemas/__tests__ src/ai/tools/__tests__`
+**Run Tests:** `pnpm test src/domain/schemas/__tests__ src/ai/tools/__tests__`
 
 ### Schema Creation Checklist
 

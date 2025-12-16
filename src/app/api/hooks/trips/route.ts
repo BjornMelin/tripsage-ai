@@ -7,14 +7,13 @@
 
 import "server-only";
 
-import { SpanStatusCode } from "@opentelemetry/api";
 import { after } from "next/server";
 import { sendCollaboratorNotifications } from "@/lib/notifications/collaborators";
 import { tryEnqueueJob } from "@/lib/qstash/client";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
 import { createServerLogger } from "@/lib/telemetry/logger";
-import { withTelemetrySpan } from "@/lib/telemetry/span";
+import { recordErrorOnSpan, withTelemetrySpan } from "@/lib/telemetry/span";
 import { createWebhookHandler } from "@/lib/webhooks/handler";
 
 type TripCollaboratorRow = Database["public"]["Tables"]["trip_collaborators"]["Row"];
@@ -90,13 +89,10 @@ export const POST = createWebhookHandler({
             try {
               await sendCollaboratorNotifications(payload, eventKey);
             } catch (err) {
-              fallbackSpan.recordException(err as Error);
-              fallbackSpan.setStatus({
-                code: SpanStatusCode.ERROR,
-                message: err instanceof Error ? err.message : "unknown_error",
-              });
+              const error = err instanceof Error ? err : new Error("unknown_error");
+              recordErrorOnSpan(fallbackSpan, error);
               logger.error("fallback_failed", {
-                error: err instanceof Error ? err.message : "unknown_error",
+                error: error.message,
                 eventKey,
               });
             }

@@ -20,8 +20,9 @@ import type {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
-import { type AppError, handleApiError, isApiError } from "@/lib/api/error-types";
-import { queryKeys, staleTimes } from "@/lib/query-keys";
+import { type AppError, handleApiError } from "@/lib/api/error-types";
+import { staleTimes } from "@/lib/query/config";
+import { queryKeys } from "@/lib/query-keys";
 import { useBudgetStore } from "@/stores/budget-store";
 
 /**
@@ -122,12 +123,6 @@ export function useFetchBudgets() {
       }
     },
     queryKey: queryKeys.budget.categories(),
-    retry: (failureCount, error) => {
-      if (isApiError(error)) {
-        if (error.status === 401 || error.status === 403) return false;
-      }
-      return failureCount < 2;
-    },
     staleTime: staleTimes.categories,
     throwOnError: false,
   });
@@ -169,12 +164,6 @@ export function useFetchBudget(id: string) {
       }
     },
     queryKey: queryKeys.budget.trips(Number.parseInt(id, 10)),
-    retry: (failureCount, error) => {
-      if (isApiError(error)) {
-        if (error.status === 401 || error.status === 403) return false;
-      }
-      return failureCount < 2;
-    },
     staleTime: staleTimes.categories,
     throwOnError: false,
   });
@@ -210,12 +199,6 @@ export function useCreateBudget() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.budget.categories() });
-    },
-    retry: (failureCount, error) => {
-      if (isApiError(error)) {
-        if (error.status >= 400 && error.status < 500) return false;
-      }
-      return failureCount < 1;
     },
     throwOnError: false,
   });
@@ -254,12 +237,6 @@ export function useUpdateBudget() {
         queryKey: queryKeys.budget.trips(Number.parseInt(data.id, 10)),
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.budget.categories() });
-    },
-    retry: (failureCount, error) => {
-      if (isApiError(error)) {
-        if (error.status >= 400 && error.status < 500) return false;
-      }
-      return failureCount < 1;
     },
     throwOnError: false,
   });
@@ -300,12 +277,6 @@ export function useDeleteBudget() {
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.budget.categories() });
     },
-    retry: (failureCount, error) => {
-      if (isApiError(error)) {
-        if (error.status >= 400 && error.status < 500) return false;
-      }
-      return failureCount < 1;
-    },
     throwOnError: false,
   });
 
@@ -339,12 +310,6 @@ export function useFetchExpenses(budgetId: string) {
       }
     },
     queryKey: ["budget", "expenses", budgetId],
-    retry: (failureCount, error) => {
-      if (isApiError(error)) {
-        if (error.status === 401 || error.status === 403) return false;
-      }
-      return failureCount < 2;
-    },
     staleTime: staleTimes.categories,
     throwOnError: false,
   });
@@ -383,12 +348,6 @@ export function useAddExpense() {
         queryKey: ["budget", "expenses", data.budgetId],
       });
     },
-    retry: (failureCount, error) => {
-      if (isApiError(error)) {
-        if (error.status >= 400 && error.status < 500) return false;
-      }
-      return failureCount < 1;
-    },
     throwOnError: false,
   });
 
@@ -425,12 +384,6 @@ export function useUpdateExpense() {
       queryClient.invalidateQueries({
         queryKey: ["budget", "expenses", data.budgetId],
       });
-    },
-    retry: (failureCount, error) => {
-      if (isApiError(error)) {
-        if (error.status >= 400 && error.status < 500) return false;
-      }
-      return failureCount < 1;
     },
     throwOnError: false,
   });
@@ -475,12 +428,6 @@ export function useDeleteExpense() {
         queryKey: ["budget", "expenses", data.budgetId],
       });
     },
-    retry: (failureCount, error) => {
-      if (isApiError(error)) {
-        if (error.status >= 400 && error.status < 500) return false;
-      }
-      return failureCount < 1;
-    },
     throwOnError: false,
   });
 
@@ -514,12 +461,6 @@ export function useFetchAlerts(budgetId: string) {
       }
     },
     queryKey: ["budget", "alerts", budgetId],
-    retry: (failureCount, error) => {
-      if (isApiError(error)) {
-        if (error.status === 401 || error.status === 403) return false;
-      }
-      return failureCount < 2;
-    },
     staleTime: staleTimes.categories,
     throwOnError: false,
   });
@@ -555,12 +496,6 @@ export function useCreateAlert() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["budget", "alerts", data.budgetId] });
-    },
-    retry: (failureCount, error) => {
-      if (isApiError(error)) {
-        if (error.status >= 400 && error.status < 500) return false;
-      }
-      return failureCount < 1;
     },
     throwOnError: false,
   });
@@ -605,12 +540,6 @@ export function useMarkAlertAsRead() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["budget", "alerts", data.budgetId] });
     },
-    retry: (failureCount, error) => {
-      if (isApiError(error)) {
-        if (error.status >= 400 && error.status < 500) return false;
-      }
-      return failureCount < 1;
-    },
     throwOnError: false,
   });
 
@@ -642,12 +571,6 @@ export function useFetchCurrencyRates() {
     },
     queryKey: ["currency", "rates"],
     refetchInterval: 60 * 60 * 1000, // Refresh currency rates every hour
-    retry: (failureCount, error) => {
-      if (isApiError(error)) {
-        if (error.status === 401 || error.status === 403) return false;
-      }
-      return failureCount < 2;
-    },
     staleTime: staleTimes.currency,
     throwOnError: false,
   });

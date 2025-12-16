@@ -14,7 +14,6 @@ import {
   useForm,
 } from "react-hook-form";
 import { ZodError, type z } from "zod";
-import { unique } from "@/lib/collection-utils";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 
 // Form options - using a data type parameter to avoid complex generic constraints
@@ -513,7 +512,7 @@ export function useZodFormWizard<T extends FieldValues>(
     if (isValid && !isLastStep) {
       const currentData = form.getValues();
       setStepData((prev) => ({ ...prev, ...currentData }));
-      setCompletedSteps((prev) => unique([...prev, currentStep]));
+      setCompletedSteps((prev) => [...new Set([...prev, currentStep])]);
       setCurrentStep((prev) => prev + 1);
     }
     return isValid;

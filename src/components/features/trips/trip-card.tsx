@@ -7,6 +7,7 @@
 
 "use client";
 
+import type { UiTrip } from "@schemas/trips";
 import { CalendarIcon, DollarSignIcon, MapPinIcon } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +24,8 @@ import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { cn } from "@/lib/utils";
 import { statusVariants } from "@/lib/variants/status";
 import { useBudgetStore } from "@/stores/budget-store";
-import type { Trip } from "@/stores/trip-store";
+
+type Trip = UiTrip;
 
 /**
  * Props for the TripCard component.

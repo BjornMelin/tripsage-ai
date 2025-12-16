@@ -7,6 +7,7 @@
 
 import type { NextRequest } from "next/server";
 import { vi } from "vitest";
+import { createRatelimitMock } from "@/test/upstash/ratelimit-mock";
 
 /**
  * Mock rate limit result for successful requests.
@@ -55,16 +56,18 @@ export const MOCK_SUPABASE_UNAUTHENTICATED = {
 /**
  * Hoisted mocks for shared use across tests.
  */
+const ratelimitMock = createRatelimitMock();
+
 export const CALENDAR_MOCKS = {
   createEvent: vi.hoisted(() => vi.fn()),
   createServerSupabase: vi.hoisted(() => vi.fn()),
   deleteEvent: vi.hoisted(() => vi.fn()),
   getServerEnvVarWithFallback: vi.hoisted(() => vi.fn()),
   hasGoogleCalendarScopes: vi.hoisted(() => vi.fn()),
-  limitSpy: vi.hoisted(() => vi.fn()),
   listCalendars: vi.hoisted(() => vi.fn()),
   listEvents: vi.hoisted(() => vi.fn()),
   queryFreeBusy: vi.hoisted(() => vi.fn()),
+  ratelimitMock: ratelimitMock,
   updateEvent: vi.hoisted(() => vi.fn()),
 } as const;
 
@@ -81,7 +84,6 @@ export function setupCalendarMocks(overrides?: {
   hasScopes?: boolean;
 }) {
   const isAuthenticated = overrides?.authenticated ?? true;
-  const rateLimit = overrides?.rateLimit ?? MOCK_RATE_LIMIT_SUCCESS;
   const hasScopes = overrides?.hasScopes ?? true;
 
   // Reset all mocks
@@ -157,8 +159,8 @@ export function setupCalendarMocks(overrides?: {
 
   CALENDAR_MOCKS.hasGoogleCalendarScopes.mockResolvedValue(hasScopes);
 
-  // Setup rate limit mock
-  CALENDAR_MOCKS.limitSpy.mockResolvedValue(rateLimit);
+  // Setup rate limit using centralized mock
+  ratelimitMock.__reset();
 
   // Setup env mock
   CALENDAR_MOCKS.getServerEnvVarWithFallback.mockImplementation((key: string) => {
@@ -186,20 +188,10 @@ export function setupCalendarMocks(overrides?: {
     hasGoogleCalendarScopes: CALENDAR_MOCKS.hasGoogleCalendarScopes,
   }));
 
-  vi.doMock("@upstash/ratelimit", () => {
-    const slidingWindow = vi.fn(() => ({}));
-    const ctor = vi.fn(function RatelimitMock() {
-      return {
-        limit: CALENDAR_MOCKS.limitSpy,
-      };
-    }) as unknown as {
-      new (...args: unknown[]): { limit: ReturnType<typeof vi.fn> };
-      slidingWindow: typeof slidingWindow;
-    };
-    ctor.slidingWindow = slidingWindow;
+  vi.doMock("@upstash/ratelimit", () => ({
     // biome-ignore lint/style/useNamingConvention: Ratelimit matches external library export
-    return { Ratelimit: ctor };
-  });
+    Ratelimit: ratelimitMock.Ratelimit,
+  }));
 
   vi.doMock("@upstash/redis", () => ({
     // biome-ignore lint/style/useNamingConvention: Redis matches external library export

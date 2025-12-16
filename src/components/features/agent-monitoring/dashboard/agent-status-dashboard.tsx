@@ -46,7 +46,11 @@ const AGENT_STATUS_TONE: Record<AgentStatusType, ToneVariant> = {
   waiting: "pending",
 };
 
-type AgentStatusDashboardProps = Pick<
+/**
+ * Realtime controls passed in by the parent so this dashboard stays
+ * data-source-agnostic (tests can inject deterministic WebSocket state).
+ */
+export type AgentStatusDashboardProps = Pick<
   AgentStatusRealtimeControls,
   | "connectionStatus"
   | "connectionError"
@@ -338,4 +342,3 @@ export const AgentStatusDashboard = ({
 };
 
 export default AgentStatusDashboard;
-export type { AgentStatusDashboardProps };

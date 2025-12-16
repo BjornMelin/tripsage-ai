@@ -4,13 +4,60 @@
  */
 
 import { z } from "zod";
-import { createStoreLogger } from "@/lib/telemetry/store-logger";
 import { messageRoleSchema } from "./chat";
 import { primitiveSchemas } from "./registry";
 import { searchTypeSchema as baseSearchTypeSchema } from "./search";
 import { storeTripSchema } from "./trips";
 
-const schemaLogger = createStoreLogger({ storeName: "schema-validation" });
+type SchemaLogDetails = Record<string, unknown>;
+
+interface SchemaLogger {
+  error: (message: string, details?: SchemaLogDetails) => void;
+  warn: (message: string, details?: SchemaLogDetails) => void;
+  info: (message: string, details?: SchemaLogDetails) => void;
+}
+
+const noopSchemaLogger: SchemaLogger = {
+  error: () => {
+    // noop
+  },
+  info: () => {
+    // noop
+  },
+  warn: () => {
+    // noop
+  },
+};
+
+let schemaLoggerPromise: Promise<SchemaLogger> | null = null;
+
+function getSchemaLogger(): Promise<SchemaLogger> {
+  if (schemaLoggerPromise) return schemaLoggerPromise;
+
+  schemaLoggerPromise = import("@/lib/telemetry/store-logger")
+    .then(({ createStoreLogger }) =>
+      createStoreLogger({ storeName: "schema-validation" })
+    )
+    .catch(() => noopSchemaLogger);
+
+  return schemaLoggerPromise;
+}
+
+function ignorePromise(promise: Promise<unknown>): void {
+  promise.catch(() => {
+    // noop
+  });
+}
+
+function logSchemaError(message: string, details?: SchemaLogDetails): void {
+  if (typeof window === "undefined") return;
+  ignorePromise(getSchemaLogger().then((logger) => logger.error(message, details)));
+}
+
+function logSchemaWarn(message: string, details?: SchemaLogDetails): void {
+  if (typeof window === "undefined") return;
+  ignorePromise(getSchemaLogger().then((logger) => logger.warn(message, details)));
+}
 
 // ===== CORE SCHEMAS =====
 // Core store state patterns and reusable schemas
@@ -22,106 +69,6 @@ const EMAIL_SCHEMA = primitiveSchemas.email;
 const URL_SCHEMA = primitiveSchemas.url;
 const POSITIVE_NUMBER_SCHEMA = primitiveSchemas.positiveNumber;
 const NON_NEGATIVE_NUMBER_SCHEMA = primitiveSchemas.nonNegativeNumber;
-
-// ===== USER PROFILE STORE SCHEMAS =====
-
-export const travelPreferencesSchema = z.object({
-  accessibilityRequirements: z.array(z.string()).default([]),
-  dietaryRestrictions: z.array(z.string()).default([]),
-  excludedAirlines: z.array(z.string()).default([]),
-  maxBudgetPerNight: z.number().min(0).optional(),
-  maxLayovers: z.number().min(0).max(5).default(2),
-  preferredAccommodationType: z
-    .enum(["hotel", "apartment", "villa", "hostel", "resort"])
-    .default("hotel"),
-  preferredAirlines: z.array(z.string()).default([]),
-  preferredArrivalTime: z
-    .enum(["early_morning", "morning", "afternoon", "evening", "late_night"])
-    .optional(),
-  preferredCabinClass: z
-    .enum(["economy", "premium_economy", "business", "first"])
-    .default("economy"),
-  preferredDepartureTime: z
-    .enum(["early_morning", "morning", "afternoon", "evening", "late_night"])
-    .optional(),
-  preferredHotelChains: z.array(z.string()).default([]),
-  requireBreakfast: z.boolean().default(false),
-  requireGym: z.boolean().default(false),
-  requireParking: z.boolean().default(false),
-  requirePool: z.boolean().default(false),
-  requireWifi: z.boolean().default(true),
-});
-
-export type TravelPreferences = z.infer<typeof travelPreferencesSchema>;
-
-export const personalInfoSchema = z.object({
-  bio: z.string().max(500).optional(),
-  dateOfBirth: z.string().optional(),
-  displayName: z.string().optional(),
-  emergencyContact: z
-    .object({
-      email: primitiveSchemas.email,
-      name: z.string(),
-      phone: z.string(),
-      relationship: z.string(),
-    })
-    .optional(),
-  firstName: z.string().optional(),
-  gender: z.enum(["male", "female", "other", "prefer_not_to_say"]).optional(),
-  lastName: z.string().optional(),
-  location: z.string().optional(),
-  phoneNumber: z.string().optional(),
-  website: primitiveSchemas.url.optional(),
-});
-
-export type PersonalInfo = z.infer<typeof personalInfoSchema>;
-
-export const privacySettingsSchema = z.object({
-  allowDataSharing: z.boolean().default(false),
-  enableAnalytics: z.boolean().default(true),
-  enableLocationTracking: z.boolean().default(false),
-  profileVisibility: z.enum(["public", "friends", "private"]).default("private"),
-  showTravelHistory: z.boolean().default(false),
-});
-
-export type PrivacySettings = z.infer<typeof privacySettingsSchema>;
-
-const favoriteDestinationSchema = z.object({
-  country: z.string(),
-  id: z.string(),
-  lastVisited: TIMESTAMP_SCHEMA.optional(),
-  name: z.string(),
-  notes: z.string().optional(),
-  visitCount: z.number().default(0),
-});
-
-export type FavoriteDestination = z.infer<typeof favoriteDestinationSchema>;
-
-const travelDocumentSchema = z.object({
-  expiryDate: TIMESTAMP_SCHEMA,
-  id: z.string(),
-  issuingCountry: z.string(),
-  notes: z.string().optional(),
-  number: z.string(),
-  type: z.enum(["passport", "visa", "license", "insurance", "vaccination"]),
-});
-
-export type TravelDocument = z.infer<typeof travelDocumentSchema>;
-
-export const userProfileSchema = z.object({
-  avatarUrl: primitiveSchemas.url.optional(),
-  createdAt: TIMESTAMP_SCHEMA,
-  email: primitiveSchemas.email,
-  favoriteDestinations: z.array(favoriteDestinationSchema).default([]),
-  id: z.string(),
-  personalInfo: personalInfoSchema.optional(),
-  privacySettings: privacySettingsSchema.optional(),
-  travelDocuments: z.array(travelDocumentSchema).default([]),
-  travelPreferences: travelPreferencesSchema.optional(),
-  updatedAt: TIMESTAMP_SCHEMA,
-});
-
-export type UserProfile = z.infer<typeof userProfileSchema>;
 
 // ===== SEARCH PARAMS STORE SCHEMAS =====
 
@@ -346,7 +293,7 @@ export const searchHistoryItemSchema = z.object({
       country: z.string().optional(),
     })
     .optional(),
-  params: z.record(z.string(), z.unknown()),
+  params: z.looseRecord(z.string(), z.unknown()),
   resultsCount: z.number().min(0).optional(),
   searchDuration: z.number().min(0).optional(),
   searchType: searchTypeSchema,
@@ -371,7 +318,7 @@ export const savedSearchSchema = z.object({
     })
     .optional(),
   name: z.string().min(1).max(100),
-  params: z.record(z.string(), z.unknown()),
+  params: z.looseRecord(z.string(), z.unknown()),
   searchType: searchTypeSchema,
   tags: z.array(z.string()).default([]),
   updatedAt: TIMESTAMP_SCHEMA,
@@ -401,7 +348,7 @@ export const quickSearchSchema = z.object({
   id: z.string(),
   isVisible: z.boolean().default(true),
   label: z.string().min(1).max(50),
-  params: z.record(z.string(), z.unknown()),
+  params: z.looseRecord(z.string(), z.unknown()),
   searchType: searchTypeSchema,
   sortOrder: z.number().default(0),
 });
@@ -436,7 +383,7 @@ export const searchContextSchema = z.object({
   completedAt: TIMESTAMP_SCHEMA.optional(),
   metrics: searchMetricsSchema.optional(),
   searchId: z.string(),
-  searchParams: z.record(z.string(), z.unknown()),
+  searchParams: z.looseRecord(z.string(), z.unknown()),
   searchType: searchTypeSchema,
   startedAt: TIMESTAMP_SCHEMA,
 });
@@ -445,7 +392,7 @@ export type SearchContext = z.infer<typeof searchContextSchema>;
 
 export const errorDetailsSchema = z.object({
   code: z.string().optional(),
-  details: z.record(z.string(), z.unknown()).optional(),
+  details: z.looseRecord(z.string(), z.unknown()).optional(),
   message: z.string(),
   occurredAt: TIMESTAMP_SCHEMA,
   retryable: z.boolean().default(true),
@@ -482,6 +429,7 @@ const PAGINATION_STATE_SCHEMA = z.object({
 export const AUTH_USER_PREFERENCES_SCHEMA = z.object({
   analytics: z.boolean().optional(),
   autoSaveSearches: z.boolean().optional(),
+  currency: primitiveSchemas.isoCurrency.optional(),
   dateFormat: z.enum(["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"]).optional(),
   language: z.string().optional(),
   locationServices: z.boolean().optional(),
@@ -637,64 +585,21 @@ export const authStoreActionsSchema = z.object({
 export type AuthStoreActions = z.infer<typeof authStoreActionsSchema>;
 
 /**
- * Zod schema for user store state.
- * Manages user profile data and loading state.
- */
-export const userStoreStateSchema = z
-  .object({
-    profile: z
-      .object({
-        avatar: URL_SCHEMA.optional(),
-        bio: z.string().optional(),
-        currency: primitiveSchemas.isoCurrency.optional(),
-        displayName: z.string().optional(),
-        email: EMAIL_SCHEMA,
-        firstName: z.string(),
-        id: UUID_SCHEMA,
-        language: z.string().optional(),
-        lastName: z.string(),
-        preferences: z.record(z.string(), z.unknown()).optional(),
-        timezone: z.string().optional(),
-      })
-      .nullable(),
-  })
-  .extend(LOADING_STATE_SCHEMA.shape);
-
-/** TypeScript type for user store state. */
-export type UserStoreState = z.infer<typeof userStoreStateSchema>;
-
-/**
- * Zod schema for user store actions.
- * Validates action function signatures for user store.
- */
-export const userStoreActionsSchema = z.object({
-  deleteAccount: z.function(),
-  fetchProfile: z.function(),
-  reset: z.function(),
-  updatePreferences: z.function(),
-  updateProfile: z.function(),
-  uploadAvatar: z.function(),
-});
-
-/** TypeScript type for user store actions. */
-export type UserStoreActions = z.infer<typeof userStoreActionsSchema>;
-
-/**
  * Zod schema for search store state.
  * Manages search parameters, results, filters, and saved searches.
  */
 export const searchStoreStateSchema = z
   .object({
-    currentParams: z.record(z.string(), z.unknown()).nullable(),
+    currentParams: z.looseRecord(z.string(), z.unknown()).nullable(),
     currentSearchType: z
       .enum(["flight", "accommodation", "activity", "destination"])
       .nullable(),
-    filters: z.record(z.string(), z.unknown()),
+    filters: z.looseRecord(z.string(), z.unknown()),
     pagination: PAGINATION_STATE_SCHEMA.optional(),
     recentSearches: z.array(
       z.object({
         id: z.string(),
-        params: z.record(z.string(), z.unknown()),
+        params: z.looseRecord(z.string(), z.unknown()),
         timestamp: TIMESTAMP_SCHEMA,
         type: z.enum(["flight", "accommodation", "activity", "destination"]),
       })
@@ -711,7 +616,7 @@ export const searchStoreStateSchema = z
         id: z.string(),
         lastUsed: TIMESTAMP_SCHEMA.optional(),
         name: z.string(),
-        params: z.record(z.string(), z.unknown()),
+        params: z.looseRecord(z.string(), z.unknown()),
         type: z.enum(["flight", "accommodation", "activity", "destination"]),
       })
     ),
@@ -819,7 +724,7 @@ export const chatStoreStateSchema = z
           z.object({
             content: z.string(),
             id: UUID_SCHEMA,
-            metadata: z.record(z.string(), z.unknown()).optional(),
+            metadata: z.looseRecord(z.string(), z.unknown()).optional(),
             role: messageRoleSchema,
             timestamp: TIMESTAMP_SCHEMA,
           })
@@ -996,7 +901,7 @@ export const budgetStoreStateSchema = z
     ),
     currentBudget: z
       .object({
-        categories: z.record(z.string(), z.unknown()),
+        categories: z.looseRecord(z.string(), z.unknown()),
         currency: primitiveSchemas.isoCurrency,
         expenses: z.array(z.unknown()),
         spent: NON_NEGATIVE_NUMBER_SCHEMA,
@@ -1105,7 +1010,7 @@ export const validateStoreState = <T>(
     return schema.parse(state);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      schemaLogger.error(`${storeName || "Store"} state validation failed`, {
+      logSchemaError(`${storeName || "Store"} state validation failed`, {
         issues: error.issues,
       });
       throw new Error(
@@ -1132,7 +1037,7 @@ export const safeValidateStoreState = <T>(
 ) => {
   const result = schema.safeParse(state);
   if (!result.success) {
-    schemaLogger.warn(`${storeName || "Store"} state validation failed`, {
+    logSchemaWarn(`${storeName || "Store"} state validation failed`, {
       issues: result.error.issues,
     });
   }
@@ -1162,7 +1067,7 @@ export const storeValidationMiddleware =
           const mergedState = replace ? newState : { ...get(), ...newState };
           const result = safeValidateStoreState(schema, mergedState, storeName);
           if (!result.success) {
-            schemaLogger.error(`Store mutation validation failed for ${storeName}`, {
+            logSchemaError(`Store mutation validation failed for ${storeName}`, {
               issues: result.error.issues,
             });
           }
@@ -1178,7 +1083,7 @@ export const storeValidationMiddleware =
     if (process.env.NODE_ENV === "development") {
       const result = safeValidateStoreState(schema, store, storeName);
       if (!result.success) {
-        schemaLogger.error(`Initial store state validation failed for ${storeName}`, {
+        logSchemaError(`Initial store state validation failed for ${storeName}`, {
           issues: result.error.issues,
         });
       }

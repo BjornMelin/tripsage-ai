@@ -7,28 +7,13 @@
 import "server-only";
 
 import { memorySyncJobSchema } from "@schemas/webhooks";
-import { Receiver } from "@upstash/qstash";
 import { NextResponse } from "next/server";
 import { errorResponse, validateSchema } from "@/lib/api/route-helpers";
-import { getServerEnvVar, getServerEnvVarWithFallback } from "@/lib/env/server";
 import { tryReserveKey } from "@/lib/idempotency/redis";
+import { getQstashReceiver, verifyQstashRequest } from "@/lib/qstash/receiver";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
-
-/**
- * Creates a QStash receiver for webhook signature verification.
- *
- * @return QStash receiver instance or null if not configured.
- */
-function getQstashReceiver(): Receiver {
-  const current = getServerEnvVar("QSTASH_CURRENT_SIGNING_KEY") as string;
-  const next = getServerEnvVarWithFallback(
-    "QSTASH_NEXT_SIGNING_KEY",
-    current
-  ) as string;
-  return new Receiver({ currentSigningKey: current, nextSigningKey: next });
-}
 
 /**
  * Processes queued memory sync jobs with signature verification and deduplication.
@@ -42,31 +27,41 @@ export async function POST(req: Request) {
     { attributes: { route: "/api/jobs/memory-sync" } },
     async (span) => {
       try {
-        let receiver: Receiver;
+        let receiver: ReturnType<typeof getQstashReceiver>;
         try {
           receiver = getQstashReceiver();
         } catch (error) {
           span.recordException(error as Error);
-          return NextResponse.json(
-            { error: "qstash signing keys are not configured" },
-            { status: 500 }
-          );
+          return errorResponse({
+            err: error,
+            error: "configuration_error",
+            reason: "QStash signing keys are misconfigured",
+            status: 500,
+          });
         }
 
-        const sig = req.headers.get("Upstash-Signature");
-        const body = await req.clone().text();
-        const url = req.url;
-        const valid = sig
-          ? await receiver.verify({ body, signature: sig, url })
-          : false;
-        if (!valid) {
-          return NextResponse.json(
-            { error: "invalid qstash signature" },
-            { status: 401 }
-          );
+        const verified = await verifyQstashRequest(req, receiver);
+        if (!verified.ok) {
+          span.addEvent("unauthorized_attempt", {
+            hasSignature: verified.reason !== "missing_signature",
+            reason: verified.reason,
+            url: req.url,
+          });
+          return verified.response;
         }
 
-        const json = (await req.json()) as unknown;
+        let json: unknown;
+        try {
+          json = JSON.parse(verified.body) as unknown;
+        } catch (error) {
+          return errorResponse({
+            err: error,
+            error: "invalid_request",
+            reason: "Malformed JSON in request body",
+            status: 400,
+          });
+        }
+
         const validation = validateSchema(memorySyncJobSchema, json);
         if ("error" in validation) {
           return validation.error;

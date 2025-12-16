@@ -4,30 +4,19 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "@/components/ui/use-toast";
 import { useAuthCore } from "@/stores/auth/auth-core";
-import { useUserProfileStore } from "@/stores/user-store";
 import { AccountSettingsSection } from "../account-settings-section";
 
 // Mock the stores and hooks
-vi.mock("@/stores/user-store");
 vi.mock("@/stores/auth/auth-core");
-vi.mock("@/lib/supabase", () => {
-  const updateUser = vi.fn().mockResolvedValue({ data: { user: {} }, error: null });
-  return {
-    getBrowserClient: () => ({ auth: { updateUser } }),
-  };
-});
-// use-toast is fully mocked in test-setup.ts; avoid overriding here.
+const { updateUserMock } = vi.hoisted(() => ({
+  updateUserMock: vi.fn(),
+}));
 
-const MockProfile = {
-  createdAt: "",
-  email: "test@example.com",
-  firstName: "John",
-  id: "1",
-  lastName: "Doe",
-  updatedAt: "",
-};
+vi.mock("@/lib/supabase", () => ({
+  getBrowserClient: () => ({ auth: { updateUser: updateUserMock } }),
+}));
+// use-toast is mocked in src/test/setup-jsdom.ts; avoid overriding here.
 
-const MockUpdatePersonalInfo = vi.fn();
 const MockToast = toast as unknown as ReturnType<typeof vi.fn>;
 const MockLogout = vi.fn();
 const MockSetUser = vi.fn();
@@ -39,14 +28,27 @@ const MockAuthUser = {
   updatedAt: "",
 };
 
+const MockSupabaseUser = {
+  app_metadata: { provider: "email", providers: ["email"] },
+  aud: "authenticated",
+  confirmed_at: "2025-01-01T00:00:00.000Z",
+  created_at: "2025-01-01T00:00:00.000Z",
+  email: "test@example.com",
+  email_confirmed_at: "2025-01-01T00:00:00.000Z",
+  id: "user-1",
+  identities: [],
+  last_sign_in_at: "2025-01-15T12:00:00.000Z",
+  phone: "",
+  role: "authenticated",
+  updated_at: "2025-01-15T12:00:00.000Z",
+  user_metadata: { displayName: "Test User" },
+};
+
 describe("AccountSettingsSection", () => {
   beforeEach(() => {
     vi.useRealTimers();
     vi.clearAllMocks();
-    vi.mocked(useUserProfileStore).mockReturnValue({
-      profile: MockProfile,
-      updatePersonalInfo: MockUpdatePersonalInfo,
-    });
+    updateUserMock.mockResolvedValue({ data: { user: MockSupabaseUser }, error: null });
     vi.mocked(useAuthCore).mockReturnValue({
       logout: MockLogout,
       setUser: MockSetUser,
@@ -77,10 +79,6 @@ describe("AccountSettingsSection", () => {
       screen.getByRole("button", { name: /send verification/i })
     ).toBeInTheDocument();
   });
-
-  // Unverified flow UI is currently disabled in component (behind false && ...). Omit.
-
-  // email verification banner not present in current implementation
 
   it("validates email format in update form", async () => {
     render(<AccountSettingsSection />);
@@ -167,6 +165,12 @@ describe("AccountSettingsSection", () => {
   // Email update error path omitted; component simulates happy-path toast.
 
   it("shows loading state during email update", () => {
+    updateUserMock.mockImplementation(
+      () =>
+        new Promise<never>(() => {
+          // Intentionally never resolves to assert loading UI.
+        })
+    );
     render(<AccountSettingsSection />);
 
     const updateButton = screen.getByRole("button", { name: /update email/i });

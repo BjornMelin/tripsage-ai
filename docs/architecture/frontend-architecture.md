@@ -4,58 +4,28 @@ Audience: frontend engineers working on the Next.js application. Content is impl
 
 ## Platform Overview
 
-- Next.js `16.0.3` with React `19.2.x`, App Router, RSC-first; React Compiler enabled via `next.config.ts`.
-- TypeScript `5.9.x`, strict mode; lint/format via Biome (`pnpm biome:check`); tests via Vitest/Playwright.
-- AI SDK v6 (`ai@6.0.0-beta.99`, `@ai-sdk/react@3.0.0-beta.99`) is the only LLM transport.
+- Next.js `^16.0.10` with React `^19.2.3`, App Router, RSC-first; React Compiler enabled via `next.config.ts`.
+- TypeScript `^5.9.3`, strict mode; lint/format via Biome (`pnpm biome:check`); tests via Vitest/Playwright.
+- AI SDK v6 (`ai@6.0.0-beta.150`, `@ai-sdk/react@3.0.0-beta.153`) is the only LLM transport.
 - Supabase for auth, database, Realtime, Storage, and Vault (BYOK keys).
 - Upstash Redis/Ratelimit for cache and throttling; Upstash QStash for async jobs.
-- UI stack: Radix primitives, Tailwind CSS v4, shadcn/ui compositions, Framer Motion.
-- Payments/Email: Stripe `^19.3.0`, Resend `^6.5.0`.
+- UI stack: Radix primitives, Tailwind CSS v4, shadcn/ui compositions, Motion (`motion` package).
+- Payments/Email: Stripe `^20.0.0`, Resend `^6.6.0`.
 - Calendar/Scheduling: `ical-generator@10.0.0` with Google Calendar REST integration in `src/lib/calendar`.
 
-## Library Details (versions from `package.json`)
+## Library Details (from `package.json`)
 
-- **Framework**
-  - Next.js `16.0.3`: App Router, RSC-first, React Compiler enabled.
-  - React `19.2.x`: UI runtime aligned to Next.js 16.
-  - TypeScript `5.9.x`: strict type-checking.
-- **AI & Providers**
-  - `ai@6.0.0-beta.99`: `streamText/streamObject/generateObject` transports.
-  - `@ai-sdk/react@3.0.0-beta.99`: `useChat`, `useAssistant`, `DefaultChatTransport`.
-  - `@ai-sdk/openai@3.0.0-beta.60`, `@ai-sdk/anthropic@3.0.0-beta.54`, `@ai-sdk/xai@3.0.0-beta.38`: model connectors.
-  - `createGateway`: Vercel AI Gateway routing for BYOK/Gateway keys.
-- **Data / Auth**
-  - `@supabase/ssr@0.7.0`: SSR client + cookie refresh.
-  - `@supabase/supabase-js@2.80.0`: Supabase client (DB, Storage, Realtime).
-  - `@supabase/postgrest-js@2.80.0`: typed PostgREST queries.
-- **State**
-  - `zustand@5.0.8`: client UI state stores.
-  - `@tanstack/react-query@5.90.x`: server state cache/fetching + devtools.
-- **Realtime**
-  - Supabase Realtime (via `supabase-js`): presence/broadcast; wrapped by `use-realtime-channel`.
-- **Caching / Rate Limit / Jobs**
-  - `@upstash/redis@1.35.6`: HTTP Redis for caches/dedup keys.
-  - `@upstash/ratelimit@2.0.7`: sliding-window throttling per route.
-  - `@upstash/qstash@2.8.4`: webhook-based background jobs.
-- **UI / UX**
-  - Radix UI (`@radix-ui/react-*`): accessible primitives.
-  - Tailwind CSS v4 + `shadcn/ui`: utility styling + composed components.
-  - `framer-motion@12.23.24`: animation; `lucide-react@0.554.0`: icons.
-    - We intentionally import lucide components with the `*Icon` suffix (e.g., `AlertTriangleIcon`) to align with lucide's maintained alias exports and avoid churn from icon deprecations. Keep the Icon-suffixed aliases unless the design system is revised.
-  - `class-variance-authority`, `tailwind-merge`: variant/class helpers.
-- **Forms / Validation**
-  - `react-hook-form@7.66.1`: form state.
-  - Zod `4.1.12` + `@hookform/resolvers`: shared schemas in `src/domain/schemas`.
-- **Observability**
-  - `@vercel/otel`, `@opentelemetry/api/core/sdk-*`, `@opentelemetry/exporter-trace-otlp-http`: tracing stack; app wrappers in `src/lib/telemetry` and `src/lib/logging`.
-- **Security / IDs**
-  - `nanoid@5.1.6`, `@/lib/security/random`: ids/timestamps; `jose@6.1.2` for JWT work.
-- **Media / Rendering**
-  - `html-to-text`, `react-syntax-highlighter`, `streamdown`: markdown/code rendering in streams.
-- **Testing / Tooling**
-  - Vitest `^4.0.10`, Playwright `^1.56.1`: unit/e2e.
-  - Biome `^2.3.6`: lint/format; `tsx@4.20.6`: scripting.
-  - `pnpm boundary:check`: enforce architecture boundaries.
+> Keep this list high-level to avoid docs drift; use `package.json` as the source of truth for exact semver ranges.
+
+- **Framework:** `next@^16.0.10`, `react@^19.2.3`, `typescript@^5.9.3`
+- **AI SDK v6:** `ai@6.0.0-beta.150`, `@ai-sdk/react@3.0.0-beta.153`, connectors `@ai-sdk/openai@3.0.0-beta.96`, `@ai-sdk/anthropic@3.0.0-beta.83`, `@ai-sdk/xai@3.0.0-beta.55`, `@ai-sdk/togetherai@2.0.0-beta.49`
+- **Data/Auth:** `@supabase/ssr@^0.8.0`, `@supabase/supabase-js@^2.87.1`, `@supabase/postgrest-js@^2.87.1`
+- **State:** `zustand@^5.0.9`, `@tanstack/react-query@^5.90.12`
+- **Caching/Jobs:** `@upstash/redis@^1.35.7`, `@upstash/ratelimit@2.0.7`, `@upstash/qstash@^2.8.4`
+- **UI:** Radix primitives, `tailwindcss@^4.1.18`, `lucide-react@^0.561.0`, `motion@^12.23.26`, `class-variance-authority@^0.7.1`, `clsx@^2.1.1`
+- **Forms/Validation:** `react-hook-form@^7.68.0`, `zod@^4.1.13`, `@hookform/resolvers@^5.2.2`
+- **Observability:** `@vercel/otel@^2.1.0`, `@opentelemetry/*` (wrappers in `src/lib/telemetry`; see `docs/development/backend/observability.md`)
+- **Testing/Tooling:** `vitest@^4.0.15`, `@playwright/test@^1.57.0`, `@biomejs/biome@^2.3.8`, `pnpm boundary:check`
 
 ## Project Layout
 
@@ -65,13 +35,16 @@ src/
     api/**/route.ts    # Server-only handlers; no module-scope state
   components/          # UI primitives and features (client/server as needed)
   domain/              # Domain logic (e.g., accommodations, amadeus)
+    schemas/           # Zod schemas (shared validation/structured outputs)
   hooks/               # Reusable React hooks (client)
   lib/                 # Providers, telemetry, supabase, security, cache, etc.
   ai/                  # AI SDK tools, models, and helpers
   stores/              # Zustand client stores
-  schemas/             # Zod schemas (shared validation/structured outputs)
   prompts/             # Prompt templates
-test/, test-utils/, __tests__/ # Vitest utilities and suites
+  styles/              # Tailwind + global styles
+  test/                # Vitest mocks/fixtures
+  test-utils/          # Shared testing helpers
+  __tests__/           # Contract/integration test suites
 ```
 
 Path aliases:
@@ -192,7 +165,8 @@ revalidateTag(nextCacheTags.publicConfig);
 
 **Files:**
 
-- `src/lib/cache/query-cache.ts` – Query client configuration
+- `src/components/providers/query-provider.tsx` – QueryClient defaults + devtools
+- `src/lib/query/config.ts` – canonical `staleTimes` / `cacheTimes`
 - `src/lib/query-keys.ts` – Query key factory
 
 **Pattern:**
@@ -201,7 +175,7 @@ revalidateTag(nextCacheTags.publicConfig);
 const { data } = useQuery({
   queryKey: queryKeys.trips.all(),
   queryFn: () => fetch("/api/trips").then(r => r.json()),
-  staleTime: staleTimes.trips, // 5 min
+  staleTime: staleTimes.trips, // 2 min
 });
 
 // Invalidate on mutation:

@@ -1,6 +1,8 @@
 /** @vitest-environment node */
 
+import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { server } from "@/test/msw/server";
 
 const mockContext = {
   messages: [],
@@ -38,22 +40,25 @@ vi.mock("@/lib/telemetry/span", () => ({
 }));
 
 beforeEach(() => {
-  vi.stubGlobal("fetch", vi.fn());
-});
-
-afterEach(() => {
-  vi.unstubAllGlobals();
   vi.clearAllMocks();
 });
 
-describe("web-crawl tool", () => {
-  test("calls Firecrawl crawl endpoint with correct payload", async () => {
+afterEach(() => {
+  server.resetHandlers();
+});
+
+describe("web-search tool", () => {
+  test("calls Firecrawl search endpoint with correct payload", async () => {
     const { webSearch } = await import("@ai/tools/server/web-search");
-    const mockRes = {
-      json: async () => ({ results: [] }),
-      ok: true,
-    } as Response;
-    (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockRes);
+
+    let capturedBody: unknown = null;
+    server.use(
+      http.post("https://api.firecrawl.dev/v2/search", async ({ request }) => {
+        capturedBody = await request.json();
+        return HttpResponse.json({ results: [] });
+      })
+    );
+
     await webSearch.execute?.(
       {
         categories: null,
@@ -71,6 +76,10 @@ describe("web-crawl tool", () => {
       },
       mockContext
     );
-    expect(fetch).toHaveBeenCalled();
+    expect(capturedBody).toMatchObject({
+      limit: 1,
+      query: "test site",
+      sources: ["web"],
+    });
   });
 });

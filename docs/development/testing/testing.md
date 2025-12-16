@@ -15,7 +15,8 @@ Authoritative testing reference for TripSage frontend.
 - Environment directive (mandatory first line):
   - `/** @vitest-environment jsdom */` — React, DOM, browser hooks
   - `/** @vitest-environment node */` — API routes, server utilities
-- Commands: `pnpm test:run`, `test:run --project=<name>`, `test:coverage`.
+- Commands: `pnpm test`, `pnpm test:affected`, `pnpm test -- --project=<name>`, `pnpm test:coverage`.
+  - `test:affected` runs tests related to changed files (e.g., `pnpm test:affected -- --base=main` for post-commit verification).
 
 ## Decision Table
 
@@ -30,13 +31,18 @@ Authoritative testing reference for TripSage frontend.
 
 ## Global Test Setup
 
-`src/test-setup.ts` provides:
+Vitest uses split setup files for Node and DOM projects:
 
-- Polyfills: Web Streams, ResizeObserver
-- DOM mocks: location, storage, matchMedia
-- Next.js mocks: navigation, image, headers, toast
-- MSW server lifecycle (`onUnhandledRequest: "warn"`)
-- Automatic cleanup: RTL, React Query cache, MSW handlers
+- `src/test/setup-node.ts` (all projects):
+  - MSW server lifecycle (unhandled requests: `warn` locally, `error` in CI)
+  - Web Streams polyfills
+  - Safe default env vars for client components in tests
+  - Fake timer cleanup (opt-in via `withFakeTimers`)
+- `src/test/setup-jsdom.ts` (component project only):
+  - `@testing-library/jest-dom` matchers
+  - Next.js shims (`next/navigation`, `next/image`, toast)
+  - DOM mocks (storage, matchMedia, Resize/IntersectionObserver, CSS.supports)
+  - RTL cleanup + React Query cache reset
 
 MSW server starts once; handlers reset after each test. Avoid redundant `server.resetHandlers()` unless resetting mid-test.
 
@@ -327,13 +333,13 @@ Use `@/test/factories/*` for schema-valid fixtures. Reset counters when determin
 ## Running and Debugging
 
 ```bash
-pnpm test:run                           # all tests
+pnpm test                               # all tests
 pnpm test:unit                          # unit tests only
 pnpm test:components                    # component tests only
 pnpm test:api                           # API route tests only
 pnpm test:integration                   # integration tests
-pnpm test:run --project=api             # single project
-pnpm test:run src/path/to/file.test.ts  # single file
+pnpm test --project=api                 # single project
+pnpm test src/path/to/file.test.ts      # single file
 pnpm test -- -t "pattern"               # by name pattern
 pnpm test:coverage                      # with coverage
 pnpm test:changed                       # only changed files
@@ -341,8 +347,10 @@ pnpm test:changed                       # only changed files
 
 ## CI / Quality Gates
 
-- Pre-commit: `pnpm biome:check`, `pnpm type-check`, targeted `test:run`
+- Pre-commit: `pnpm biome:check`, `pnpm type-check`, `pnpm test:affected`
 - CI: `pnpm test:ci`, `pnpm test:coverage`, `test:coverage:shard`
+
+> **Tip:** Run `pnpm biome:fix` locally to auto-fix lint issues before committing.
 
 ## Playwright (E2E)
 

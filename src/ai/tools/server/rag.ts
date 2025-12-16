@@ -78,11 +78,13 @@ export const ragSearch = createAiTool({
   },
   guardrails: {
     cache: {
-      key: (p) => {
-        const namespacePart = p.namespace ?? "all";
-        const queryPart = p.query.length > 64 ? hashInputForCache(p.query) : p.query;
-        return `rag:${namespacePart}:${queryPart}`;
-      },
+      key: (p) =>
+        `v1:${hashInputForCache({
+          limit: p.limit,
+          namespace: p.namespace ?? "all",
+          query: p.query.trim().toLowerCase(),
+          threshold: p.threshold,
+        })}`,
       ttlSeconds: 300, // 5 minute cache
     },
     rateLimit: {

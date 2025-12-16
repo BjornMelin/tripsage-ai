@@ -1,9 +1,10 @@
 /** @vitest-environment jsdom */
 
 import { act, renderHook } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useWebSocketChat } from "@/hooks/chat/use-websocket-chat";
 import type { RealtimeConnectionStatus } from "@/hooks/supabase/use-realtime-channel";
+import { createFakeTimersContext } from "@/test/utils/with-fake-timers";
 
 const mockSendBroadcast = vi.fn().mockResolvedValue(undefined);
 const mockSetChatConnectionStatus = vi.fn();
@@ -12,22 +13,29 @@ const mockRemoveUserTyping = vi.fn();
 const mockHandleRealtimeMessage = vi.fn();
 const mockHandleTypingUpdate = vi.fn();
 
-const firedTopics = new Set<string>();
+/** Store callbacks for controlled triggering instead of real setTimeout */
+const channelCallbacks = new Map<
+  string,
+  {
+    onStatusChange?: (status: RealtimeConnectionStatus) => void;
+  }
+>();
 
-const flushTimers = () => {
-  act(() => {
-    vi.runAllTimers();
-  });
-};
+/** Track which topics have been subscribed to */
+const subscribedTopics = new Set<string>();
 
 vi.mock("@/hooks/supabase/use-realtime-channel", () => ({
   useRealtimeChannel: vi.fn((topic, opts) => {
     const key = topic ?? "default";
-    if (topic && !firedTopics.has(key)) {
-      firedTopics.add(key);
-      setTimeout(() => {
-        opts?.onStatusChange?.("subscribed" as RealtimeConnectionStatus);
-      }, 0);
+    if (topic) {
+      channelCallbacks.set(key, { onStatusChange: opts?.onStatusChange });
+      if (!subscribedTopics.has(key)) {
+        subscribedTopics.add(key);
+        // Schedule status change synchronously via queueMicrotask (works with fake timers)
+        queueMicrotask(() => {
+          opts?.onStatusChange?.("subscribed" as RealtimeConnectionStatus);
+        });
+      }
     }
     return {
       channel: topic ? { unsubscribe: vi.fn() } : null,
@@ -59,36 +67,51 @@ vi.mock("@/stores/chat/chat-realtime", () => ({
 vi.mock("@/stores", () => ({ useAuthStore: () => ({ user: { id: "u1" } }) }));
 
 describe("useWebSocketChat", () => {
+  const timers = createFakeTimersContext({ shouldAdvanceTime: true });
+
+  beforeEach(() => {
+    timers.setup();
+  });
+
   afterEach(() => {
+    timers.teardown();
     vi.clearAllMocks();
-    firedTopics.clear();
+    channelCallbacks.clear();
+    subscribedTopics.clear();
   });
 
   it("subscribes to user topic by default", async () => {
-    vi.useFakeTimers();
     renderHook(() => useWebSocketChat({ autoConnect: true }));
-    await flushTimers();
-    vi.useRealTimers();
+
+    // Allow microtask to run
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
     expect(mockSetChatConnectionStatus).toHaveBeenCalledWith("connected");
   });
 
   it("uses session topic when requested", async () => {
-    vi.useFakeTimers();
     renderHook(() =>
       useWebSocketChat({ autoConnect: true, sessionId: "s1", topicType: "session" })
     );
-    await flushTimers();
-    vi.useRealTimers();
+
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
     expect(mockSetChatConnectionStatus).toHaveBeenCalledWith("connected");
   });
 
   it("sends message via sendBroadcast", async () => {
-    vi.useFakeTimers();
     const { result } = renderHook(() =>
       useWebSocketChat({ autoConnect: true, sessionId: "s1", topicType: "session" })
     );
-    flushTimers();
-    vi.useRealTimers();
+
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
     await act(async () => {
       await result.current.sendMessage("hello");
     });
@@ -101,10 +124,12 @@ describe("useWebSocketChat", () => {
   });
 
   it("emits typing events via sendBroadcast", async () => {
-    vi.useFakeTimers();
     const { result } = renderHook(() => useWebSocketChat({ autoConnect: true }));
-    await flushTimers();
-    vi.useRealTimers();
+
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
     act(() => {
       result.current.startTyping();
     });
@@ -135,9 +160,10 @@ describe("useWebSocketChat", () => {
       "@/hooks/supabase/use-realtime-channel"
     );
     vi.mocked(useRealtimeChannel).mockImplementationOnce((_topic, opts) => {
-      setTimeout(() => {
+      // Use queueMicrotask for controlled timing
+      queueMicrotask(() => {
         opts?.onStatusChange?.("error" as RealtimeConnectionStatus);
-      }, 0);
+      });
       return {
         channel: null,
         connectionStatus: "error",
@@ -147,10 +173,12 @@ describe("useWebSocketChat", () => {
       };
     });
 
-    vi.useFakeTimers();
     renderHook(() => useWebSocketChat({ autoConnect: true }));
-    flushTimers();
-    vi.useRealTimers();
+
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
     expect(mockSetChatConnectionStatus).toHaveBeenCalledWith("error");
   });
 });

@@ -85,7 +85,7 @@ export const agentSchema = z.object({
   currentTaskId: primitiveSchemas.uuid.optional(),
   description: z.string().max(500).optional(),
   id: primitiveSchemas.uuid,
-  metadata: z.record(z.string(), z.unknown()).optional(),
+  metadata: z.looseRecord(z.string(), z.unknown()).optional(),
   name: z
     .string()
     .min(1, { error: "Agent name is required" })
@@ -114,7 +114,7 @@ export const agentActivitySchema = z.object({
     .string()
     .min(1, { error: "Activity message is required" })
     .max(1000, { error: "Message too long" }),
-  metadata: z.record(z.string(), z.unknown()).optional(),
+  metadata: z.looseRecord(z.string(), z.unknown()).optional(),
   timestamp: DATE_STRING_SCHEMA,
   type: z
     .string()
@@ -199,7 +199,7 @@ export type AgentWorkflowEntity = z.infer<typeof agentWorkflowEntitySchema>;
 export const agentRuntimeConfigSchema = z.object({
   agentId: primitiveSchemas.uuid,
   createdAt: DATE_STRING_SCHEMA,
-  customSettings: z.record(z.string(), z.unknown()).optional(),
+  customSettings: z.looseRecord(z.string(), z.unknown()).optional(),
   enableLogging: z.boolean(),
   enableMetrics: z.boolean(),
   id: primitiveSchemas.uuid,
@@ -266,7 +266,7 @@ export type AgentState = z.infer<typeof agentStateSchema>;
 export const createAgentTaskRequestSchema = z.object({
   agentId: primitiveSchemas.uuid,
   description: z.string().max(1000, { error: "Description too long" }),
-  metadata: z.record(z.string(), z.unknown()).optional(),
+  metadata: z.looseRecord(z.string(), z.unknown()).optional(),
   priority: z.enum(["low", "normal", "high", "critical"]).default("normal"),
   title: z
     .string()
@@ -309,7 +309,7 @@ export const createAgentRequestSchema = z.object({
     })
     .optional(),
   description: z.string().max(500).optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
+  metadata: z.looseRecord(z.string(), z.unknown()).optional(),
   name: z
     .string()
     .min(1, { error: "Agent name is required" })
@@ -330,7 +330,7 @@ export type CreateAgentRequest = z.infer<typeof createAgentRequestSchema>;
 export const updateAgentRequestSchema = z.object({
   description: z.string().max(500).optional(),
   id: primitiveSchemas.uuid,
-  metadata: z.record(z.string(), z.unknown()).optional(),
+  metadata: z.looseRecord(z.string(), z.unknown()).optional(),
   name: z.string().min(1).max(100).optional(),
   status: agentStatusTypeSchema.optional(),
 });
@@ -421,10 +421,11 @@ export const resourceUsageUpdateSchema = z.object({
 export type ResourceUsageUpdate = z.infer<typeof resourceUsageUpdateSchema>;
 
 /**
- * Zod schema for union of all agent WebSocket message types.
- * Supports status updates, task updates, and resource usage updates.
+ * Zod schema for mutually exclusive agent WebSocket message types.
+ * Exactly one of: status update, task update, or resource usage update.
+ * Uses z.xor() to enforce mutual exclusivity (Zod v4.2.0+).
  */
-export const agentWebSocketMessageSchema = z.union([
+export const agentWebSocketMessageSchema = z.xor([
   agentStatusUpdateSchema,
   taskStatusUpdateSchema,
   resourceUsageUpdateSchema,

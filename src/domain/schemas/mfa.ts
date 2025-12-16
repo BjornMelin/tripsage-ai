@@ -30,7 +30,7 @@ export const mfaEnrollmentSchema = z.strictObject({
     .string()
     .optional()
     .refine((value) => !value || /^otpauth:\/\/.+$/i.test(value), {
-      message: "Invalid otpauth URI",
+      error: "Invalid otpauth URI",
     }),
 });
 
@@ -40,7 +40,7 @@ export type MfaEnrollment = z.infer<typeof mfaEnrollmentSchema>;
 /** The MFA verification input schema. */
 export const mfaVerificationInputSchema = z.strictObject({
   challengeId: primitiveSchemas.uuid,
-  code: z.string().regex(/^[0-9]{6}$/, { message: "Code must be a 6-digit number" }),
+  code: z.string().regex(/^[0-9]{6}$/, { error: "Code must be a 6-digit number" }),
   factorId: primitiveSchemas.uuid,
 });
 
@@ -49,7 +49,7 @@ export type MfaVerificationInput = z.infer<typeof mfaVerificationInputSchema>;
 
 /** The backup code schema. */
 export const backupCodeSchema = z.string().regex(/^[A-Z0-9]{6}-[A-Z0-9]{6}$/, {
-  message: "Invalid backup code format",
+  error: "Invalid backup code format",
 });
 
 /** The backup code type. */

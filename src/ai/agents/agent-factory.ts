@@ -112,7 +112,7 @@ export function createTripSageAgent<
     onStepFinish: configOnStepFinish,
     // Note: output is NOT passed to ToolLoopAgent constructor.
     // It should be passed when calling agent.generate() or agent.stream().
-    output: _,
+    output,
     prepareCall,
     prepareStep,
     stopWhen: customStopWhen,
@@ -125,7 +125,6 @@ export function createTripSageAgent<
 
   logger.info(`Creating agent: ${name}`, {
     agentType,
-    identifier: deps.identifier,
     maxSteps,
     modelId: deps.modelId,
     requestId,
@@ -209,12 +208,10 @@ export function createTripSageAgent<
             if (hasInjectionRisk(normalizedInstructions)) {
               logger.warn("Prompt injection patterns detected in agent instructions", {
                 hasFilteredContent: isFilteredValue(sanitizedInstructions),
-                identifier: deps.identifier,
                 modelId: deps.modelId,
               });
               recordTelemetryEvent("security.prompt_injection_detected", {
                 attributes: {
-                  identifier: deps.identifier,
                   modelId: deps.modelId,
                   wasFiltered: isFilteredValue(sanitizedInstructions),
                 },
@@ -444,16 +441,13 @@ export function createTripSageAgent<
     },
 
     // Telemetry settings
-    // biome-ignore lint/style/useNamingConvention: AI SDK property name
+    // biome-ignore lint/style/useNamingConvention: AI SDK API uses snake_case
     experimental_telemetry: {
       functionId: `agent.${agentType}`,
       isEnabled: true,
       metadata: {
         agentType,
-        identifier: deps.identifier,
         modelId: deps.modelId,
-        ...(deps.sessionId ? { sessionId: deps.sessionId } : {}),
-        ...(deps.userId ? { userId: deps.userId } : {}),
       },
     },
     // Core configuration
@@ -475,6 +469,7 @@ export function createTripSageAgent<
     agentType,
     defaultMessages,
     modelId: deps.modelId,
+    output,
   };
 }
 

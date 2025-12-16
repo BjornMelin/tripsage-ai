@@ -18,7 +18,7 @@ export const MEMORY_SCHEMA = z.object({
   content: z.string(),
   createdAt: primitiveSchemas.isoDateTime,
   id: primitiveSchemas.uuid,
-  metadata: z.record(z.string(), z.unknown()).optional(),
+  metadata: z.looseRecord(z.string(), z.unknown()).optional(),
   sessionId: primitiveSchemas.uuid.optional(),
   type: z.string(),
   updatedAt: primitiveSchemas.isoDateTime,
@@ -81,7 +81,7 @@ export type MemoryInsight = z.infer<typeof MEMORY_INSIGHT_SCHEMA>;
  */
 export const CONVERSATION_MESSAGE_SCHEMA = z.object({
   content: z.string(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
+  metadata: z.looseRecord(z.string(), z.unknown()).optional(),
   role: messageRoleSchema,
   timestamp: primitiveSchemas.isoDateTime.optional(),
 });
@@ -104,7 +104,7 @@ export const SEARCH_MEMORIES_FILTERS_SCHEMA = z
         start: primitiveSchemas.isoDateTime,
       })
       .optional(),
-    metadata: z.record(z.string(), z.unknown()).optional(),
+    metadata: z.looseRecord(z.string(), z.unknown()).optional(),
     type: z.array(z.string()).optional(),
   })
   .optional();
@@ -217,7 +217,7 @@ export type UpdatePreferencesResponse = z.infer<
 export const ADD_CONVERSATION_MEMORY_REQUEST_SCHEMA = z.object({
   contextType: z.string().optional(),
   messages: z.array(CONVERSATION_MESSAGE_SCHEMA),
-  metadata: z.record(z.string(), z.unknown()).optional(),
+  metadata: z.looseRecord(z.string(), z.unknown()).optional(),
   sessionId: primitiveSchemas.uuid.optional(),
   userId: primitiveSchemas.uuid,
 });
@@ -349,7 +349,7 @@ export type MemorySearchRequest = z.infer<typeof memorySearchRequestSchema>;
  */
 export const memoryUpdatePreferencesSchema = z.object({
   merge_strategy: z.enum(["merge", "replace"]).default("merge"),
-  preferences: z.record(z.string(), z.unknown()),
+  preferences: z.looseRecord(z.string(), z.unknown()),
 });
 
 /** TypeScript type for memory update preferences requests. */

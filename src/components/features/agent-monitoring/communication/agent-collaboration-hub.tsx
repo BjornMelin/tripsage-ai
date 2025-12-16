@@ -4,7 +4,6 @@
 
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
 import {
   ActivityIcon,
   AlertTriangleIcon,
@@ -20,6 +19,7 @@ import {
   UsersIcon,
   WorkflowIcon,
 } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import type React from "react";
 import { startTransition, useEffect, useOptimistic, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";

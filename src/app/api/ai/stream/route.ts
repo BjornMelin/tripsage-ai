@@ -7,15 +7,33 @@ import "server-only";
 
 import { openai } from "@ai-sdk/openai";
 import { streamText } from "ai";
-import type { NextRequest } from "next/server";
+import { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
-import { parseJsonBody } from "@/lib/api/route-helpers";
 import {
   type ChatMessage,
   clampMaxTokens,
   countPromptTokens,
 } from "@/lib/tokens/budget";
 import { getModelContextLimit } from "@/lib/tokens/limits";
+
+const STREAM_BODY_SCHEMA = z.strictObject({
+  desiredMaxTokens: z.number().int().min(1).max(4096).default(512),
+  messages: z
+    .array(
+      z.strictObject({
+        content: z.string().max(4000),
+        role: z.enum(["assistant", "system", "user"]),
+      })
+    )
+    .max(32)
+    .default([]),
+  model: z.enum(["gpt-4o", "gpt-4o-mini"]).default("gpt-4o"),
+  prompt: z
+    .string()
+    .max(4000)
+    .default("Hello from AI SDK v6")
+    .transform((value) => (value.length ? value : "Hello from AI SDK v6")),
+});
 
 // Allow streaming responses up to 30 seconds
 /** Maximum duration (seconds) to allow for streaming responses. */
@@ -31,31 +49,13 @@ export const maxDuration = 30;
 export const POST = withApiGuards({
   auth: false,
   rateLimit: "ai:stream",
+  schema: STREAM_BODY_SCHEMA,
   telemetry: "ai.stream",
-})(async (req: NextRequest): Promise<Response> => {
-  let prompt = "Hello from AI SDK v6";
-  let model = "gpt-4o";
-  let desiredMaxTokens = 512;
-  let messages: ChatMessage[] | undefined;
-
-  // If JSON parsing fails, use default values
-  const parsed = await parseJsonBody(req);
-  if (!("error" in parsed)) {
-    const body = parsed.body as {
-      prompt?: string;
-      model?: string;
-      desiredMaxTokens?: number;
-      messages?: ChatMessage[];
-    };
-    prompt = body.prompt || prompt;
-    model = body.model || model;
-    if (typeof body.desiredMaxTokens === "number") {
-      desiredMaxTokens = body.desiredMaxTokens;
-    }
-    if (Array.isArray(body.messages)) {
-      messages = body.messages;
-    }
-  }
+})((_req, _ctx, body) => {
+  const { desiredMaxTokens, model, prompt } = body;
+  const messages: ChatMessage[] | undefined = body.messages.length
+    ? body.messages
+    : undefined;
 
   // Build message list if not provided
   const finalMessages: ChatMessage[] = messages ?? [{ content: prompt, role: "user" }];
@@ -79,6 +79,14 @@ export const POST = withApiGuards({
   }
 
   const result = streamText({
+    experimental_telemetry: {
+      functionId: "ai.stream.demo",
+      isEnabled: true,
+      metadata: {
+        hasMessages: Boolean(messages?.length),
+        modelId: model,
+      },
+    },
     model: openai(model),
     // Prefer messages when available; otherwise prompt.
     ...(messages ? { messages: finalMessages } : { prompt }),

@@ -10,9 +10,12 @@ import "server-only";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth/server";
+import { ROUTES } from "@/lib/routes";
 
 export async function POST(_request: NextRequest): Promise<NextResponse> {
-  const { supabase, user } = await requireUser({ redirectTo: "/settings" });
+  const { supabase, user } = await requireUser({
+    redirectTo: ROUTES.dashboard.settings,
+  });
 
   if (!user.email) {
     return NextResponse.json(

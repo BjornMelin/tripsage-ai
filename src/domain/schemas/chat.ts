@@ -37,7 +37,7 @@ export type ToolCallStatus = z.infer<typeof toolCallStatusSchema>;
 
 /** Zod schema for tool call metadata and execution tracking. */
 export const toolCallSchema = z.object({
-  arguments: z.record(z.string(), z.unknown()).optional(),
+  arguments: z.looseRecord(z.string(), z.unknown()).optional(),
   error: z.string().optional(),
   executionTime: z.number().optional(),
   id: z.string(),
@@ -216,7 +216,7 @@ export const sendMessageOptionsSchema = z.object({
   attachments: z.array(z.instanceof(File)).optional(),
   systemPrompt: z.string().optional(),
   temperature: z.number().min(0).max(2).optional(),
-  tools: z.array(z.record(z.string(), z.unknown())).optional(),
+  tools: z.array(z.looseRecord(z.string(), z.unknown())).optional(),
 });
 
 /** TypeScript type for send message options. */
@@ -233,7 +233,7 @@ export const sendMessageFormSchema = z.object({
   attachments: z
     .array(
       z.object({
-        file: z.any(), // File object validated at runtime
+        file: z.instanceof(File),
         name: z.string().min(1),
         size: z
           .number()
@@ -249,7 +249,7 @@ export const sendMessageFormSchema = z.object({
     .string()
     .min(1, { error: "Message cannot be empty" })
     .max(10000, { error: "Message too long" }),
-  metadata: z.record(z.string(), z.unknown()).optional(),
+  metadata: z.looseRecord(z.string(), z.unknown()).optional(),
 });
 
 /** TypeScript type for send message form data. */

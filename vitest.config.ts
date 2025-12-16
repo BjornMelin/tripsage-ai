@@ -1,31 +1,45 @@
 /**
- * @fileoverview Vitest configuration with multi-project setup for optimized performance.
- * - Uses projects to split unit, component, API, and integration tests
- * - Pool selection and concurrency controlled via CLI flags (--pool, --maxWorkers)
- * - Defaults to jsdom for component tests (correctness over speed)
+ * @fileoverview Vitest configuration optimized for <1 minute test runtime.
+ * Key optimizations:
+ * - Extends Vitest default excludes (critical for fast discovery)
+ * - Uses forks for deterministic worker teardown (avoids Node fetch/threads hangs)
+ * - Enables dependency optimization for client only
+ * - Disables CSS processing globally
  */
 
+import os from "node:os";
 import path from "node:path";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 
 const isCi = process.env.CI === "true" || process.env.CI === "1";
 
+const cpuCount =
+  typeof os.availableParallelism === "function"
+    ? os.availableParallelism()
+    : os.cpus().length;
+
+const maxThreads = isCi
+  ? Math.min(4, Math.max(1, Math.floor(cpuCount / 2)))
+  : Math.max(1, Math.floor(cpuCount / 2));
+// Component tests (jsdom) use more memory - limit concurrency
+const maxForks = isCi
+  ? cpuCount >= 4
+    ? 3
+    : 2
+  : Math.max(1, Math.min(4, Math.floor(cpuCount / 4)));
+
 export default defineConfig({
   plugins: [react()],
+  cacheDir: ".vitest-cache",
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
       "@ai": path.resolve(__dirname, "./src/ai"),
       "@domain": path.resolve(__dirname, "./src/domain"),
       "@schemas": path.resolve(__dirname, "./src/domain/schemas"),
-      // Shim problematic ESM/CJS package in test runners
       "rehype-harden": path.resolve(__dirname, "./src/test/mocks/rehype-harden.ts"),
-      "rehype-harden/dist/index.js": path.resolve(
-        __dirname,
-        "./src/test/mocks/rehype-harden.ts"
-      ),
-      // Shim Next.js server-only import for tests
+      "rehype-harden/dist/index.js": path.resolve(__dirname, "./src/test/mocks/rehype-harden.ts"),
       "server-only": path.resolve(__dirname, "./src/test/mocks/server-only.ts"),
     },
   },
@@ -33,9 +47,52 @@ export default defineConfig({
     noExternal: ["rehype-harden"],
   },
   test: {
-    // Shared defaults
+    // Core settings
     bail: isCi ? 5 : 0,
     clearMocks: true,
+    restoreMocks: true,
+    unstubEnvs: true,
+    globals: true,
+
+    // CRITICAL: Extend defaults, do not replace
+    exclude: [...configDefaults.exclude, "**/e2e/**", "**/*.e2e.*"],
+
+    // Disable CSS processing globally
+    css: false,
+
+    // Timeouts (balanced for speed and reliability)
+    testTimeout: 5000,
+    hookTimeout: 3000,
+    teardownTimeout: 2000,
+
+    // Prefer forks for compatibility and reliable shutdown across Node + jsdom.
+    pool: "forks",
+    // Worker limit is pool-agnostic; keep this conservative for Node projects.
+    // JSDOM forks are memory-heavy, so that project overrides the worker cap.
+    maxWorkers: maxThreads,
+
+    // Fixed dependency optimization
+    deps: {
+      optimizer: {
+        client: {
+          enabled: true,
+          include: [
+            "react",
+            "react-dom",
+            "@testing-library/react",
+            "@testing-library/user-event",
+            "@testing-library/jest-dom",
+          ],
+        },
+        ssr: {
+          enabled: false,
+        },
+      },
+    },
+
+    // Reporters (blob only for sharding)
+    reporters: isCi ? ["dot", "github-actions"] : ["default"],
+
     coverage: {
       exclude: ["**/dist/**", "**/e2e/**", "**/*.config.*"],
       provider: "v8",
@@ -49,108 +106,95 @@ export default defineConfig({
         },
       },
     },
-    deps: {
-      optimizer: {
-        web: {
-          enabled: true,
-        },
-      },
-    },
-    exclude: ["**/node_modules/**", "**/e2e/**", "**/*.e2e.*"],
-    globals: true,
-    hookTimeout: 8000,
-    passWithNoTests: false,
-    // Use threads pool for better performance with CPU-bound tests
-    pool: "threads",
-    // Pool and parallelism controlled via CLI flags
-    // Projects: schemas, integration, api, component, unit (ordered by specificity)
+
+    // Projects: schemas, integration, api, component, unit
     projects: [
       {
-        // Schema tests: pure validation, no DOM (most specific)
         extends: true,
         test: {
-          deps: {
-            web: {
-              transformCss: false,
-            },
-          },
           environment: "node",
-          include: ["src/lib/schemas/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
+          include: [
+            "src/domain/schemas/**/*.{test,spec}.?(c|m)[jt]s",
+            "src/ai/tools/schemas/**/*.{test,spec}.?(c|m)[jt]s",
+          ],
+          isolate: false,
           name: "schemas",
-          pool: "threads",
+          sequence: { groupOrder: 0 },
         },
       },
       {
-        // Integration tests: end-to-end flows (must come before api/component to catch .integration.* files)
         extends: true,
         test: {
-          deps: {
-            web: {
-              transformCss: false,
-            },
-          },
           environment: "node",
+          // Prevent overlap with component/ui tests and API route tests (these belong to other projects).
           exclude: [
-            // Exclude browser-dependent integration tests that need jsdom
-            "src/app/__tests__/error-boundaries-integration.test.tsx",
+            "src/app/**",
+            "src/components/**",
+            "src/hooks/**",
+            "src/stores/**",
+            "src/app/api/**",
+            "src/**/*.dom.{test,spec}.?(c|m)[jt]s?(x)",
           ],
           include: [
-            "src/**/*.integration.{test,spec}.?(c|m)[jt]s?(x)",
-            "src/**/*.int.{test,spec}.?(c|m)[jt]s?(x)",
-            "src/**/*-integration.{test,spec}.?(c|m)[jt]s?(x)",
+            "src/__tests__/**/*.integration.{test,spec}.?(c|m)[jt]s",
+            "src/__tests__/**/*.int.{test,spec}.?(c|m)[jt]s",
+            "src/__tests__/**/*-integration.{test,spec}.?(c|m)[jt]s",
+            "src/domain/**/*.integration.{test,spec}.?(c|m)[jt]s",
+            "src/domain/**/*.int.{test,spec}.?(c|m)[jt]s",
+            "src/domain/**/*-integration.{test,spec}.?(c|m)[jt]s",
+            "src/lib/**/*.integration.{test,spec}.?(c|m)[jt]s",
+            "src/lib/**/*.int.{test,spec}.?(c|m)[jt]s",
+            "src/lib/**/*-integration.{test,spec}.?(c|m)[jt]s",
+            "src/ai/**/*.integration.{test,spec}.?(c|m)[jt]s",
+            "src/ai/**/*.int.{test,spec}.?(c|m)[jt]s",
+            "src/ai/**/*-integration.{test,spec}.?(c|m)[jt]s",
           ],
           name: "integration",
-          pool: "threads",
+          sequence: { groupOrder: 0 },
         },
       },
       {
-        // API route tests: server-side handlers in app/api
         extends: true,
         test: {
-          deps: {
-            web: {
-              transformCss: false,
-            },
-          },
           environment: "node",
-          include: ["src/app/api/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
+          include: ["src/app/api/**/*.{test,spec}.?(c|m)[jt]s"],
           name: "api",
-          pool: "threads",
+          sequence: { groupOrder: 0 },
         },
       },
       {
-        // Component tests: React components, hooks, app pages, stores (jsdom environment)
         extends: true,
         test: {
-          deps: {
-            web: {
-              transformCss: true,
-            },
-          },
           environment: "jsdom",
-          exclude: ["src/app/api/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
+          exclude: [
+            "src/app/api/**/*.{test,spec}.?(c|m)[jt]s?(x)",
+            "src/__tests__/**/*.integration.{test,spec}.?(c|m)[jt]s?(x)",
+            "src/__tests__/**/*.int.{test,spec}.?(c|m)[jt]s?(x)",
+            "src/__tests__/**/*-integration.{test,spec}.?(c|m)[jt]s?(x)",
+          ],
           include: [
             "src/components/**/*.{test,spec}.?(c|m)[jt]s?(x)",
             "src/app/**/*.{test,spec}.?(c|m)[jt]s?(x)",
             "src/hooks/**/*.{test,spec}.?(c|m)[jt]s?(x)",
             "src/stores/**/*.{test,spec}.?(c|m)[jt]s?(x)",
+            "src/__tests__/**/*.{test,spec}.?(c|m)[jt]s?(x)",
+            "src/**/*.dom.{test,spec}.?(c|m)[jt]s?(x)",
           ],
           name: "component",
-          pool: "threads",
+          // Forked workers are memory-heavy; keep this capped regardless of CPU count.
+          maxWorkers: maxForks,
+          setupFiles: ["./src/test/setup-jsdom.ts"],
+          pool: "forks",
+          sequence: { groupOrder: 1 },
         },
       },
       {
-        // Unit tests: lib utilities, stores, pure functions (catch-all for remaining)
         extends: true,
         test: {
-          deps: {
-            web: {
-              transformCss: false,
-            },
-          },
           environment: "node",
           exclude: [
-            "src/lib/schemas/**/*.{test,spec}.?(c|m)[jt]s?(x)",
+            "src/domain/schemas/**/*.{test,spec}.?(c|m)[jt]s?(x)",
+            "src/ai/tools/schemas/**/*.{test,spec}.?(c|m)[jt]s?(x)",
             "src/**/*.integration.{test,spec}.?(c|m)[jt]s?(x)",
             "src/**/*.int.{test,spec}.?(c|m)[jt]s?(x)",
             "src/**/*-integration.{test,spec}.?(c|m)[jt]s?(x)",
@@ -159,22 +203,24 @@ export default defineConfig({
             "src/app/**/*.{test,spec}.?(c|m)[jt]s?(x)",
             "src/hooks/**/*.{test,spec}.?(c|m)[jt]s?(x)",
             "src/stores/**/*.{test,spec}.?(c|m)[jt]s?(x)",
+            "src/__tests__/**",
+            "src/**/*.dom.{test,spec}.?(c|m)[jt]s?(x)",
           ],
-          include: ["src/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
+          include: ["src/**/*.{test,spec}.?(c|m)[jt]s"],
+          isolate: true,
           name: "unit",
-          pool: "threads",
+          sequence: { groupOrder: 0 },
         },
       },
     ],
-    restoreMocks: true,
+
     server: {
       deps: {
         inline: ["rehype-harden"],
       },
     },
-    setupFiles: ["./src/test-setup.ts"],
-    teardownTimeout: 6000,
-    testTimeout: 5000,
-    unstubEnvs: true,
+
+    setupFiles: ["./src/test/setup-node.ts"],
+    passWithNoTests: false,
   },
 });
