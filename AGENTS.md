@@ -63,6 +63,7 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 ### 4.2 TypeScript and frontend style
 
 - **TypeScript:** `strict: true`, `noUnusedLocals`, `noFallthroughCasesInSwitch`. Avoid `any`; use precise unions/generics. Handle `null`/`undefined` explicitly.
+- **Unsafe casts:** `as unknown as T` casts are forbidden in production code (`src/**` excluding tests). CI runs `pnpm check:no-new-unknown-casts` on PRs to reject new violations. Use type guards, schema validation, or `satisfies` instead. For test mocks requiring unsafe casts, use `unsafeCast<T>()` from `@/test/helpers/unsafe-cast`.
 - **Biome:** `pnpm format:biome`, `pnpm biome:check` (must pass), `pnpm biome:fix`. Do **not** edit `biome.json`; fix code instead.
 - **File structure:**
   - Source (`.ts`, `.tsx`): Optional `@fileoverview`, blank line, `"use client"` (if needed), blank line, imports, implementation.
