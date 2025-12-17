@@ -546,13 +546,19 @@
 2) Refactor: extract ICS generation into a shared pure function used by both the route handler and the tool.  
 3) Replace with library-native approach: if a route must remain the single entrypoint, authenticate the internal call explicitly (forward cookies/headers or require an internal service key) and apply SSRF defenses.
 
-**Acceptance criteria:**  
+**Acceptance criteria:**
 
-- [ ] `exportItineraryToIcs` succeeds without making a network call to the same service.  
-- [ ] Route handler and tool produce identical ICS output for the same input (golden-file style test).  
-- [ ] No server-only code uses `NEXT_PUBLIC_*` env vars for internal routing without strong justification.
+- [x] `exportItineraryToIcs` succeeds without making a network call to the same service.
+- [x] Route handler and tool produce identical ICS output for the same input (golden-file style test).
+- [x] No server-only code uses `NEXT_PUBLIC_*` env vars for internal routing without strong justification.
 
-**References:**  
+**Implementation notes (2025-12-16):**
+- Created shared `generateIcsFromEvents()` in `src/lib/calendar/ics.ts`
+- Both route handler and AI tool now call the pure function directly
+- Removed `fetch()` and `NEXT_PUBLIC_SITE_URL` usage from AI tool
+- Added 24 unit tests covering all ICS generation scenarios
+
+**References:**
 
 - <https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html>
 
@@ -774,13 +780,22 @@
    - Filter out items without a valid URL (explicitly documented behavior).  
 3) Replace with library-native approach: use Zod contracts as the source of truth and test them at the boundary.
 
-**Acceptance criteria:**  
+**Acceptance criteria:**
 
-- [ ] Schema and handler agree on the nullability of `url`.  
-- [ ] A test covers the “signed URL generation fails” path and asserts the chosen behavior.  
-- [ ] Cached payloads match the schema contract (no caching of invalid shapes).
+- [x] Schema and handler agree on the nullability of `url`.
+- [x] A test covers the "signed URL generation fails" path and asserts the chosen behavior.
+- [x] Cached payloads match the schema contract (no caching of invalid shapes).
 
-**References:**  
+**Implementation notes (2025-12-16):**
+
+- Chose Option C: Filter out items without valid URLs (keep schema strict)
+- Handler now filters attachments that cannot be assigned valid signed URLs
+- Added logging for dropped items without exposing PII
+- Updated existing test for URL generation failure (expects empty items array)
+- Added new test for partial URL generation failure scenario
+- Schema `url: z.url()` remains non-nullable - contract is now enforced
+
+**References:**
 
 - <https://zod.dev/v4>
 
