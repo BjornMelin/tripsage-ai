@@ -231,17 +231,22 @@ Hook testing with `renderHook`:
 import { renderHook, act } from "@testing-library/react";
 import { useZodForm } from "@/hooks/use-zod-form";
 
-it("validates all fields", async () => {
-  const { result } = renderHook(() => useZodForm({ schema, defaultValues: { title: "" } }));
-  let validation: Awaited<ReturnType<typeof result.current.validateAllFields>>;
-  await act(async () => { validation = await result.current.validateAllFields(); });
-  expect(validation!.success).toBe(false);
+it("validates all fields with trigger()", async () => {
+  const { result } = renderHook(() =>
+    useZodForm({ schema, defaultValues: { title: "" }, mode: "onChange" })
+  );
+  let isValid: boolean;
+  await act(async () => {
+    isValid = await result.current.trigger();
+  });
+  expect(isValid!).toBe(false);
 });
 ```
 
 ### Submission testing
 
 - Use `handleSubmitSafe` and `vi.fn()` to assert submits occur once for valid data and are skipped for invalid data.
+- `validationState` is a submit-time summary updated by `handleSubmitSafe`; for on-change/on-blur validation, assert via `formState` or `await trigger()`.
 - Example:
 
 ```tsx
@@ -262,28 +267,8 @@ it("submits with telemetry span", async () => {
 
 ### Wizard navigation testing
 
-- With `enableWizard` or `useZodFormWizard`, assert step gating and navigation helpers.
-
-```tsx
-it("prevents advancing when step invalid", async () => {
-  const { result } = renderHook(() =>
-    useZodForm({
-      schema: fullSchema,
-      enableWizard: true,
-      wizardSteps: ["basics", "dates"],
-      stepValidationSchemas: [basicsSchema, datesSchema],
-      defaultValues: { title: "", startDate: "" },
-    })
-  );
-
-  await act(async () => result.current.wizardActions.goToNext());
-  expect(result.current.wizardState.currentStep).toBe(0);
-
-  await act(async () => result.current.setValue("title", "My Trip"));
-  await act(async () => result.current.wizardActions.validateAndGoToNext());
-  expect(result.current.wizardState.currentStep).toBe(1);
-});
-```
+- For multi-step forms, drive step state in the component and gate progress with
+  `await form.trigger([...fieldNames])` (or `trigger()` for the full form).
 
 ## Server Actions
 
