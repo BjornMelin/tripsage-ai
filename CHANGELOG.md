@@ -1,3 +1,68 @@
+## [1.17.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.16.1...v1.17.0) (2025-12-17)
+
+### ⚠ BREAKING CHANGES
+
+* **ui:** None - all changes are internal refactoring
+* **api:** Error type checking now uses code-based detection instead of instanceof.
+
+## Summary
+- Consolidate NetworkError, TimeoutError, ValidationError into single ApiError class with error codes
+- Remove unused batch(), healthCheck(), sendChat() methods and interceptor system from ApiClient
+- Simplify useAuthenticatedApi hook by removing redundant error re-classification
+
+## Changes
+
+### error-types.ts
+- Single ApiError class with ApiErrorCode discriminant (NETWORK_ERROR, TIMEOUT_ERROR, etc.)
+- Added static factory methods: ApiError.network(), ApiError.timeout(), ApiError.validation()
+- Code-based type guards: isNetworkError(), isTimeoutError(), isValidationErrorGuard()
+- handleApiError() normalizes all errors to ApiError
+
+### api-client.ts (-139 lines)
+- Removed batch() method (0 usage, zen.consensus decision)
+- Removed interceptor system (only no-op interceptors)
+- Removed healthCheck() and sendChat() trivial wrappers
+
+### use-authenticated-api.ts (-42 lines)
+- Simplified error handling - ApiClient already returns typed ApiError
+- Removed redundant error classification logic
+
+### Consumer updates
+- query-error-boundary.tsx: Use code-based error checks
+- trips/[id]/page.tsx: Use handleApiError() and code checks
+
+## Migration
+```typescript
+// Before
+if (error instanceof NetworkError) { ... }
+
+// After
+if (error instanceof ApiError && error.code === 'NETWORK_ERROR') { ... }
+// Or use type guard:
+if (isNetworkError(error)) { ... }
+```
+
+## Impact
+- Net reduction: 151 lines removed
+- All 3031 tests passing
+- Type-check and lint clean
+
+### Bug Fixes
+
+* **api:** add RESPONSE_VALIDATION_ERROR case to userMessage getter ([570f77a](https://github.com/BjornMelin/tripsage-ai/commit/570f77a46dbcbb07a714ddd0ab8772d4e134b91c))
+* **api:** address PR review feedback on error types and client ([0862374](https://github.com/BjornMelin/tripsage-ai/commit/08623740e5d2ee33e3db31be5f3aeb01d2f85b15))
+* **api:** improve network error detection and add AbortError documentation ([64ea044](https://github.com/BjornMelin/tripsage-ai/commit/64ea044fa6b8b72cdd010983cc52cfb577d88ce0))
+* **release:** restore semantic-release tag ancestry ([d15a64b](https://github.com/BjornMelin/tripsage-ai/commit/d15a64b901c32a5bfb3c76c90f3b87a079e64a5e))
+* resolve all PR [#567](https://github.com/BjornMelin/tripsage-ai/issues/567) review comments ([37c7ef8](https://github.com/BjornMelin/tripsage-ai/commit/37c7ef8b99863c7ac1f45bb41063b8b1fc4e5c3a))
+* **security:** address PR review comments for auth redirect hardening ([5585af4](https://github.com/BjornMelin/tripsage-ai/commit/5585af41fb31f2043d4d581c6fd5e7f1831cd024))
+* **security:** harden auth callback redirects against open-redirect attacks ([edcc369](https://github.com/BjornMelin/tripsage-ai/commit/edcc369073e2bb1568cb17e6814f41a23a673737))
+* **ui:** resolve PR review comments for progress clamping and tone colors ([e9138ba](https://github.com/BjornMelin/tripsage-ai/commit/e9138ba7b195a9922a6c6ea0cf8c1b3bb0296ba0)), closes [#570](https://github.com/BjornMelin/tripsage-ai/issues/570)
+
+### Code Refactoring
+
+* **api:** simplify API client infrastructure and consolidate error types ([d3d8924](https://github.com/BjornMelin/tripsage-ai/commit/d3d8924ddb1da31315001570652344fbb9143da6))
+* **ui:** consolidate progress clamping, tone colors, and improve accessibility ([a9e7919](https://github.com/BjornMelin/tripsage-ai/commit/a9e791900b8c364cc24079a1a44fffc66f320136))
+
 ## [1.16.1](https://github.com/BjornMelin/tripsage-ai/compare/v1.16.0...v1.16.1) (2025-12-16)
 
 ### Bug Fixes
