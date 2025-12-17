@@ -4,7 +4,11 @@
  * for testing route handlers that use `cookies()` from `next/headers`.
  */
 
-import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
+import {
+  type ReadonlyRequestCookies,
+  RequestCookiesAdapter,
+} from "next/dist/server/web/spec-extension/adapters/request-cookies";
+import { RequestCookies } from "next/dist/server/web/spec-extension/cookies";
 import { NextRequest } from "next/server";
 
 /**
@@ -53,7 +57,8 @@ export function createMockNextRequest(options: {
   });
 
   // Create request with body if provided
-  const init: RequestInit = {
+  type NextRequestInit = NonNullable<ConstructorParameters<typeof NextRequest>[1]>;
+  const init: NextRequestInit = {
     headers,
     method,
   };
@@ -65,11 +70,7 @@ export function createMockNextRequest(options: {
     }
   }
 
-  // NextRequest constructor accepts its own RequestInit type
-  return new NextRequest(
-    urlObj.toString(),
-    init as unknown as ConstructorParameters<typeof NextRequest>[1]
-  );
+  return new NextRequest(urlObj.toString(), init);
 }
 
 /**
@@ -85,39 +86,15 @@ export function createMockNextRequest(options: {
 export function createMockCookies(
   cookieMap: Record<string, string> = {}
 ): ReadonlyRequestCookies {
-  const cookies = new Map<string, string>();
-  Object.entries(cookieMap).forEach(([key, value]) => {
-    cookies.set(key, value);
-  });
+  const cookieHeader = Object.entries(cookieMap)
+    .map(([key, value]) => `${key}=${value}`)
+    .join("; ");
+  const headers = new Headers();
+  if (cookieHeader) {
+    headers.set("cookie", cookieHeader);
+  }
 
-  return {
-    clear: () => {
-      throw new Error("Mock cookies are readonly");
-    },
-    delete: () => {
-      throw new Error("Mock cookies are readonly");
-    },
-    get: (name: string) => {
-      const value = cookies.get(name);
-      return value
-        ? {
-            name,
-            value,
-          }
-        : undefined;
-    },
-    getAll: () =>
-      Array.from(cookies.entries()).map(([name, value]) => ({ name, value })),
-    has: (name: string) => cookies.has(name),
-    set: () => {
-      throw new Error("Mock cookies are readonly");
-    },
-    toString: () => {
-      return Array.from(cookies.entries())
-        .map(([key, value]) => `${key}=${value}`)
-        .join("; ");
-    },
-  } as unknown as ReadonlyRequestCookies;
+  return RequestCookiesAdapter.seal(new RequestCookies(headers));
 }
 
 /**

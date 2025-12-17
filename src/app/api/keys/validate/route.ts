@@ -1,7 +1,5 @@
 /**
- * @fileoverview BYOK validate route. Checks if a provided API key is valid for a given service.
- * Route: POST /api/keys/validate
- * Never persists the key.
+ * @fileoverview POST /api/keys/validate verifies a user-supplied provider API key without persisting it.
  */
 
 import "server-only";
@@ -102,7 +100,7 @@ const PROVIDER_BUILDERS: Partial<Record<string, ProviderRequestBuilder>> = {
       baseURL: getServerEnvVarWithFallback("AI_GATEWAY_URL", undefined),
       defaultBaseURL: "https://ai-gateway.vercel.sh/v1",
       modelId: DEFAULT_MODEL_IDS.gateway,
-      sdkCreator: createGateway as unknown as SDKCreator,
+      sdkCreator: createGateway,
     }),
   openai: (apiKey) =>
     buildSDKRequest({

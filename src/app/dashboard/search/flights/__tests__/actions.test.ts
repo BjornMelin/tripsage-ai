@@ -2,6 +2,7 @@
 
 import type { FlightSearchParams } from "@schemas/search";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
 // Mock telemetry span (must include recordTelemetryEvent as logger.ts imports it)
 vi.mock("@/lib/telemetry/span", () => ({
@@ -82,7 +83,7 @@ describe("submitFlightSearch server action", () => {
     };
 
     await expect(
-      submitFlightSearch(params as unknown as FlightSearchParams)
+      submitFlightSearch(unsafeCast<FlightSearchParams>(params))
     ).rejects.toThrow(/Invalid flight search parameters/);
   });
 

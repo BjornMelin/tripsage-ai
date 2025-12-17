@@ -4,6 +4,7 @@ import type { UiTrip } from "@schemas/trips";
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { createFakeTimersContext } from "@/test/utils/with-fake-timers";
 import { TripCard } from "../trip-card";
 
@@ -239,7 +240,7 @@ describe("TripCard", () => {
     it("should use USD as default currency when currency is not specified", () => {
       // Test with currency omitted - component should handle gracefully
       const { currency: _currency, ...noCurrencyTrip } = mockTrip;
-      render(<TripCard trip={noCurrencyTrip as unknown as UiTrip} />);
+      render(<TripCard trip={unsafeCast<UiTrip>(noCurrencyTrip)} />);
 
       expect(screen.getByText("Budget: $3,000.00")).toBeInTheDocument();
     });

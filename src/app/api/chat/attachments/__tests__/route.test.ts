@@ -8,6 +8,7 @@ import {
   resetApiRouteMocks,
 } from "@/test/helpers/api-route";
 import { createRouteParamsContext } from "@/test/helpers/route";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
 // Mock file-type for magic byte verification
 vi.mock("file-type", () => ({
@@ -58,11 +59,10 @@ describe("/api/chat/attachments", () => {
     typeof vi.fn<(payload: unknown) => Promise<{ error: unknown }>>
   >;
   const setInsertMock = (supabase: SupabaseClientMock, insertMock: InsertMock) => {
-    return vi.spyOn(supabase, "from").mockImplementation(
-      () =>
-        ({
-          insert: insertMock,
-        }) as unknown as ReturnType<SupabaseClientMock["from"]>
+    return vi.spyOn(supabase, "from").mockImplementation(() =>
+      unsafeCast<ReturnType<SupabaseClientMock["from"]>>({
+        insert: insertMock,
+      })
     );
   };
 
@@ -94,13 +94,12 @@ describe("/api/chat/attachments", () => {
 
     // Setup Supabase storage mock
     const supabase = getApiRouteSupabaseMock();
-    vi.spyOn(supabase.storage, "from").mockImplementation(
-      () =>
-        ({
-          createSignedUrl: mockCreateSignedUrl,
-          remove: mockRemove,
-          upload: mockUpload,
-        }) as unknown as ReturnType<SupabaseClientMock["storage"]["from"]>
+    vi.spyOn(supabase.storage, "from").mockImplementation(() =>
+      unsafeCast<ReturnType<SupabaseClientMock["storage"]["from"]>>({
+        createSignedUrl: mockCreateSignedUrl,
+        remove: mockRemove,
+        upload: mockUpload,
+      })
     );
   });
 
@@ -487,13 +486,14 @@ describe("/api/chat/attachments", () => {
     const eqMock = vi.fn().mockResolvedValue({ error: null });
     const deleteMock = vi.fn();
     deleteMock.mockReturnValue({ delete: deleteMock, eq: eqMock });
-    vi.spyOn(supabase, "from").mockImplementation(
-      (table: string) =>
-        (table === "file_attachments"
+    vi.spyOn(supabase, "from").mockImplementation((table: string) =>
+      unsafeCast<ReturnType<SupabaseClientMock["from"]>>(
+        table === "file_attachments"
           ? { delete: deleteMock, eq: eqMock, insert: insertMock }
           : table === "api_metrics"
             ? { insert: apiMetricsInsertMock }
-            : { insert: vi.fn() }) as unknown as ReturnType<SupabaseClientMock["from"]>
+            : { insert: vi.fn() }
+      )
     );
 
     const mod = await import("../route");

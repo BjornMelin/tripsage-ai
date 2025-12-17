@@ -1,5 +1,8 @@
+/**
+ * @fileoverview In-memory Supabase client mock for Trip store tests.
+ */
+
 import { randomInt, randomUUID } from "node:crypto";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { vi } from "vitest";
 
 type TripTableName = "trips";
@@ -178,9 +181,9 @@ class TripQueryBuilder {
 
 /**
  * Create a Supabase client mock tailored for trip store tests.
- * @returns Partial SupabaseClient with typed trip table helpers.
+ * @returns Minimal Supabase-like mock with trip table helpers.
  */
-export const createTripStoreMockClient = (): Partial<SupabaseClient<unknown>> => ({
+export const createTripStoreMockClient = () => ({
   auth: {
     getSession: vi.fn(async () => ({
       data: {
@@ -200,19 +203,21 @@ export const createTripStoreMockClient = (): Partial<SupabaseClient<unknown>> =>
     signOut: vi.fn(async () => ({ error: null })),
     signUp: vi.fn(async () => ({ data: null, error: null })),
     updateUser: vi.fn(async () => ({ data: null, error: null })),
-  } as unknown as SupabaseClient<unknown>["auth"],
+  },
   channel: vi.fn(() => ({
     on: vi.fn().mockReturnThis(),
     subscribe: vi.fn(() => ({ unsubscribe: vi.fn() })),
-  })) as unknown as SupabaseClient<unknown>["channel"],
+  })),
   from: vi.fn((table: string) => {
     if (table !== "trips") {
       throw new Error(`Unsupported table ${table} in trip store mock`);
     }
     return new TripQueryBuilder("trips");
-  }) as unknown as SupabaseClient<unknown>["from"],
+  }),
   removeChannel: vi.fn(),
 });
+
+export type TripStoreMockClient = ReturnType<typeof createTripStoreMockClient>;
 
 /** Reset the shared trip data between tests. */
 export const resetTripStoreMockData = () => {

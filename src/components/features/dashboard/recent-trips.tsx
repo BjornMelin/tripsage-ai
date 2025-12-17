@@ -1,7 +1,5 @@
 /**
- * @fileoverview RecentTrips dashboard widget.
- * Renders recent trip cards using data from useTrips with resilient parsing
- * for items/data.items shapes. Includes accessible links and stable date text.
+ * @fileoverview Dashboard widget that renders a list of recently updated trips.
  */
 
 "use client";
@@ -207,12 +205,8 @@ export function RecentTrips({ limit = 5, showEmpty = true }: RecentTripsProps) {
   }
   const recentTrips = tripsData
     .sort((a: Trip, b: Trip) => {
-      const aUpdated = (a as unknown as { updatedAt?: string }).updatedAt;
-      const aCreated = (a as unknown as { createdAt?: string }).createdAt;
-      const bUpdated = (b as unknown as { updatedAt?: string }).updatedAt;
-      const bCreated = (b as unknown as { createdAt?: string }).createdAt;
-      const dateA = new Date(aUpdated || aCreated || "1970-01-01T00:00:00Z");
-      const dateB = new Date(bUpdated || bCreated || "1970-01-01T00:00:00Z");
+      const dateA = new Date(a.updatedAt || a.createdAt || "1970-01-01T00:00:00Z");
+      const dateB = new Date(b.updatedAt || b.createdAt || "1970-01-01T00:00:00Z");
       return dateB.getTime() - dateA.getTime();
     })
     .slice(0, limit);

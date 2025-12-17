@@ -36,6 +36,18 @@ function createMockAdapter(
   };
 }
 
+type OnTurnCommittedIntent = Extract<MemoryIntent, { type: "onTurnCommitted" }>;
+
+function getOnTurnCommittedIntent(intent: MemoryIntent | null): OnTurnCommittedIntent {
+  if (!intent) {
+    throw new Error("Expected captured intent to be set");
+  }
+  if (intent.type !== "onTurnCommitted") {
+    throw new Error(`Expected onTurnCommitted intent, got ${intent.type}`);
+  }
+  return intent;
+}
+
 describe("runMemoryOrchestrator", () => {
   const mockClock = vi.fn(() => 1000);
 
@@ -311,11 +323,7 @@ describe("PII redaction", () => {
 
     await runMemoryOrchestrator(turnIntent, options);
 
-    expect(capturedIntent).not.toBeNull();
-    const captured = capturedIntent as unknown as Extract<
-      MemoryIntent,
-      { type: "onTurnCommitted" }
-    >;
+    const captured = getOnTurnCommittedIntent(capturedIntent);
     expect(captured.turn.content).toContain("[REDACTED]");
     expect(captured.turn.content).not.toContain("john@example.com");
   });
@@ -349,10 +357,7 @@ describe("PII redaction", () => {
 
     await runMemoryOrchestrator(turnIntent, options);
 
-    const captured = capturedIntent as unknown as Extract<
-      MemoryIntent,
-      { type: "onTurnCommitted" }
-    >;
+    const captured = getOnTurnCommittedIntent(capturedIntent);
     expect(captured.turn.content).toContain("[REDACTED]");
     expect(captured.turn.content).not.toContain("+1-555-123-4567");
   });
@@ -386,10 +391,7 @@ describe("PII redaction", () => {
 
     await runMemoryOrchestrator(turnIntent, options);
 
-    const captured = capturedIntent as unknown as Extract<
-      MemoryIntent,
-      { type: "onTurnCommitted" }
-    >;
+    const captured = getOnTurnCommittedIntent(capturedIntent);
     expect(captured.turn.content).toContain("[REDACTED]");
     expect(captured.turn.content).not.toContain("4111");
   });
@@ -423,120 +425,7 @@ describe("PII redaction", () => {
 
     await runMemoryOrchestrator(turnIntent, options);
 
-    const captured = capturedIntent as unknown as Extract<
-      MemoryIntent,
-      { type: "onTurnCommitted" }
-    >;
-    expect(captured.turn.content).toBe("I want to book a trip to Paris");
-  });
-
-  it("redacts phone numbers in turn content", async () => {
-    const turnIntent: MemoryIntent = {
-      sessionId: "session-123",
-      turn: {
-        content: "Call me at +1-555-123-4567",
-        id: "turn-1",
-        role: "user",
-        timestamp: "2025-01-01T00:00:00Z",
-      },
-      type: "onTurnCommitted",
-      userId: "user-456",
-    };
-
-    let capturedIntent: MemoryIntent | null = null;
-
-    const adapters = [
-      createMockAdapter("mem0", ["onTurnCommitted"], (intent) => {
-        capturedIntent = intent;
-        return Promise.resolve({ status: "ok" });
-      }),
-    ];
-
-    const options: MemoryOrchestratorOptions = {
-      adapters,
-      clock: mockClock,
-    };
-
-    await runMemoryOrchestrator(turnIntent, options);
-
-    const captured = capturedIntent as unknown as Extract<
-      MemoryIntent,
-      { type: "onTurnCommitted" }
-    >;
-    expect(captured.turn.content).toContain("[REDACTED]");
-    expect(captured.turn.content).not.toContain("+1-555-123-4567");
-  });
-
-  it("redacts credit card-like numbers in turn content", async () => {
-    const turnIntent: MemoryIntent = {
-      sessionId: "session-123",
-      turn: {
-        content: "My card number is 4111 1111 1111 1111",
-        id: "turn-1",
-        role: "user",
-        timestamp: "2025-01-01T00:00:00Z",
-      },
-      type: "onTurnCommitted",
-      userId: "user-456",
-    };
-
-    let capturedIntent: MemoryIntent | null = null;
-
-    const adapters = [
-      createMockAdapter("upstash", ["onTurnCommitted"], (intent) => {
-        capturedIntent = intent;
-        return Promise.resolve({ status: "ok" });
-      }),
-    ];
-
-    const options: MemoryOrchestratorOptions = {
-      adapters,
-      clock: mockClock,
-    };
-
-    await runMemoryOrchestrator(turnIntent, options);
-
-    const captured = capturedIntent as unknown as Extract<
-      MemoryIntent,
-      { type: "onTurnCommitted" }
-    >;
-    expect(captured.turn.content).toContain("[REDACTED]");
-    expect(captured.turn.content).not.toContain("4111");
-  });
-
-  it("does not modify content without PII", async () => {
-    const turnIntent: MemoryIntent = {
-      sessionId: "session-123",
-      turn: {
-        content: "I want to book a trip to Paris",
-        id: "turn-1",
-        role: "user",
-        timestamp: "2025-01-01T00:00:00Z",
-      },
-      type: "onTurnCommitted",
-      userId: "user-456",
-    };
-
-    let capturedIntent: MemoryIntent | null = null;
-
-    const adapters = [
-      createMockAdapter("mem0", ["onTurnCommitted"], (intent) => {
-        capturedIntent = intent;
-        return Promise.resolve({ status: "ok" });
-      }),
-    ];
-
-    const options: MemoryOrchestratorOptions = {
-      adapters,
-      clock: mockClock,
-    };
-
-    await runMemoryOrchestrator(turnIntent, options);
-
-    const captured = capturedIntent as unknown as Extract<
-      MemoryIntent,
-      { type: "onTurnCommitted" }
-    >;
+    const captured = getOnTurnCommittedIntent(capturedIntent);
     expect(captured.turn.content).toBe("I want to book a trip to Paris");
   });
 

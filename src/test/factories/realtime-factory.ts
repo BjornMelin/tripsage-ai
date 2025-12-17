@@ -2,10 +2,7 @@
  * @fileoverview Factory for creating Supabase Realtime mocks for testing.
  */
 
-import type {
-  RealtimeChannel,
-  RealtimePostgresChangesPayload,
-} from "@supabase/supabase-js";
+import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { vi } from "vitest";
 
 /**
@@ -49,7 +46,7 @@ export interface MockRealtimeChannel {
  * Mock Realtime client interface.
  */
 export interface MockRealtimeClient {
-  channels: RealtimeChannel[];
+  channels: MockRealtimeChannel[];
   connect: ReturnType<typeof vi.fn>;
   disconnect: ReturnType<typeof vi.fn>;
 }
@@ -154,7 +151,7 @@ export function createMockRealtimeClient(
   const { channels = [] } = options;
 
   return {
-    channels: channels as unknown as RealtimeChannel[],
+    channels,
     connect: vi.fn(),
     disconnect: vi.fn(),
   };

@@ -14,9 +14,11 @@ import {
   setRateLimitFactoryForTests,
   setSupabaseFactoryForTests,
 } from "@/lib/api/factory";
+import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { createMockSupabaseClient } from "@/test/mocks/supabase";
 import { registerUpstashMocksWithVitest } from "@/test/upstash/setup";
 import { getMockCookiesForTest } from "./route";
+import { unsafeCast } from "./unsafe-cast";
 
 registerUpstashMocksWithVitest();
 
@@ -181,12 +183,7 @@ export function resetApiRouteMocks(): void {
   const client = getSupabaseClient();
   CREATE_SUPABASE_MOCK.mockReset();
   CREATE_SUPABASE_MOCK.mockResolvedValue(client);
-  setSupabaseFactoryForTests(
-    async () =>
-      client as unknown as Awaited<
-        ReturnType<typeof import("@/lib/supabase/server").createServerSupabase>
-      >
-  );
+  setSupabaseFactoryForTests(async () => client as TypedServerSupabase);
   LIMIT_SPY.mockReset();
   LIMIT_SPY.mockResolvedValue({ ...DEFAULT_RATE_LIMIT });
   setRateLimitFactoryForTests(null);
@@ -258,9 +255,7 @@ const ensureMfaMock = (client: ReturnType<typeof createMockSupabaseClient>) => {
     unenroll: vi.fn(async () => ({ data: { id: "unenroll-mock" }, error: null })),
     verify: vi.fn(async () => ({ data: {}, error: null })),
   };
-  const authObj = client.auth as unknown as Record<string, unknown>;
-  // biome-ignore lint/performance/noDelete: test mock mutation
-  delete authObj.mfa;
+  const authObj = unsafeCast<Record<string, unknown>>(client.auth);
   authObj.mfa = mfa;
   return client;
 };

@@ -1,8 +1,5 @@
 /**
- * @fileoverview RAG document indexer with chunking and batch embedding.
- *
- * Processes documents into chunks, generates embeddings via OpenAI
- * text-embedding-3-small (1536-d), and stores in Supabase pgvector.
+ * @fileoverview Server-only RAG indexing (chunking + embeddings + storage).
  */
 
 import "server-only";
@@ -22,6 +19,7 @@ import { secureUuid } from "@/lib/security/random";
 import type { Database } from "@/lib/supabase/database.types";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
+import { toPgvector } from "./pgvector";
 
 const logger = createServerLogger("rag.indexer");
 
@@ -297,8 +295,7 @@ async function indexBatch(params: IndexBatchParams): Promise<IndexBatchResult> {
       // biome-ignore lint/style/useNamingConvention: Database field name
       chunk_index: item.chunkIndex,
       content: item.chunk,
-      // Cast to string for Supabase client types (pgvector accepts number[])
-      embedding: embeddings[idx] as unknown as string,
+      embedding: toPgvector(embeddings[idx]),
       id: item.document.id ?? secureUuid(),
       metadata: (item.document.metadata ??
         {}) as Database["public"]["Tables"]["rag_documents"]["Insert"]["metadata"],

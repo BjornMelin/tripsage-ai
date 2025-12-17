@@ -2,6 +2,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import {
   createMessage,
   createSession,
@@ -92,7 +93,7 @@ function supabase(
 describe("sessions _handlers", () => {
   it("create/list session happy path", async () => {
     const store = { messages: [] as MessageRow[], sessions: [] as SessionRow[] };
-    const s = supabase("u1", store) as unknown as TypedServerSupabase;
+    const s = unsafeCast<TypedServerSupabase>(supabase("u1", store));
     const res1 = await createSession({ supabase: s, userId: "u1" }, "Trip");
     expect(res1.status).toBe(201);
     const res2 = await listSessions({ supabase: s, userId: "u1" });
@@ -106,7 +107,7 @@ describe("sessions _handlers", () => {
         { createdAt: "", id: "s1", metadata: {}, updatedAt: "", userId: "u2" },
       ],
     };
-    const s = supabase("u2", store) as unknown as TypedServerSupabase;
+    const s = unsafeCast<TypedServerSupabase>(supabase("u2", store));
     const g = await getSession({ supabase: s, userId: "u2" }, "s1");
     expect(g.status).toBe(200);
     const d = await deleteSession({ supabase: s, userId: "u2" }, "s1");
@@ -118,7 +119,7 @@ describe("sessions _handlers", () => {
       messages: [] as MessageRow[],
       sessions: [{ id: "s1", userId: "u3" }],
     };
-    const s = supabase("u3", store) as unknown as TypedServerSupabase;
+    const s = unsafeCast<TypedServerSupabase>(supabase("u3", store));
     const r1 = await createMessage({ supabase: s, userId: "u3" }, "s1", {
       parts: [{ text: "hi", type: "text" }],
       role: "user",

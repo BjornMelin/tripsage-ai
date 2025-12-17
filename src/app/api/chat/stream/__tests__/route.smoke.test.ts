@@ -8,6 +8,10 @@ import type { TypedServerSupabase } from "@/lib/supabase/server";
 import type { ChatDeps } from "../_handler";
 import { handleChatStream } from "../_handler";
 
+function unsafeCast<T>(value: unknown): T {
+  return value as T;
+}
+
 // Mock the chat agent module
 vi.mock("@ai/agents", () => ({
   CHAT_DEFAULT_SYSTEM_PROMPT: "test-system-prompt",
@@ -54,25 +58,25 @@ vi.mock("@/lib/security/random", () => ({
 }));
 
 const MOCK_SUPABASE = vi.hoisted(() => {
-  const mockUser = { id: "user-1" } as unknown as User;
+  const mockUser = unsafeCast<User>({ id: "user-1" });
 
-  return {
+  return unsafeCast<TypedServerSupabase>({
     auth: {
       getUser: vi.fn(async () => ({
         data: { user: mockUser },
         error: null,
       })),
     },
-  } as unknown as TypedServerSupabase;
+  });
 });
 
 const MOCK_RESOLVE_PROVIDER = vi.hoisted(() =>
   vi.fn(
     async (): Promise<ProviderResolution> => ({
-      model: {
+      model: unsafeCast<LanguageModel>({
         id: "gpt-4o-mini",
         providerId: "openai",
-      } as unknown as LanguageModel,
+      }),
       modelId: "gpt-4o-mini",
       provider: "openai" as const,
     })
@@ -108,14 +112,14 @@ describe("/api/chat/stream route smoke", () => {
 
   it("returns 401 unauthenticated", async () => {
     const deps = createDeps({
-      supabase: {
+      supabase: unsafeCast<TypedServerSupabase>({
         auth: {
           getUser: vi.fn(async () => ({
             data: { user: null },
             error: { message: "Unauthorized" },
           })),
         },
-      } as unknown as TypedServerSupabase,
+      }),
     });
 
     const res = await handleChatStream(deps, { ip: "1.2.3.4", messages: [] });

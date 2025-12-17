@@ -1,8 +1,5 @@
 /**
- * @fileoverview Activity details API route.
- *
- * GET /api/activities/[id]
- * Retrieves detailed information for a specific activity by Google Place ID.
+ * @fileoverview GET /api/activities/[id] route handler.
  */
 
 import "server-only";
@@ -12,7 +9,7 @@ import { isNotFoundError } from "@domain/activities/errors";
 import type { RouteParamsContext } from "@/lib/api/factory";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse, parseStringId } from "@/lib/api/route-helpers";
-import { getCurrentUser } from "@/lib/supabase/factory";
+import { getCurrentUser } from "@/lib/supabase/server";
 
 /**
  * Determines whether the request contains Supabase authentication cookies.

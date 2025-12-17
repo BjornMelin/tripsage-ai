@@ -11,51 +11,44 @@ import {
   parseStringId,
   unauthorizedResponse,
 } from "@/lib/api/route-helpers";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
+
+function makeRequest(headers: HeadersInit = {}): NextRequest {
+  return unsafeCast<NextRequest>({ headers: new Headers(headers) });
+}
 
 describe("route-helpers", () => {
   describe("getClientIpFromHeaders", () => {
     it("prefers x-real-ip (Vercel's canonical IP header)", () => {
-      const req = {
-        headers: new Headers({
-          "x-forwarded-for": "203.0.113.10, 198.51.100.2",
-          "x-real-ip": "198.51.100.5",
-        }),
-      } as unknown as NextRequest;
+      const req = makeRequest({
+        "x-forwarded-for": "203.0.113.10, 198.51.100.2",
+        "x-real-ip": "198.51.100.5",
+      });
       expect(getClientIpFromHeaders(req)).toBe("198.51.100.5");
     });
 
     it("falls back to first IP from x-forwarded-for when x-real-ip is absent", () => {
-      const req = {
-        headers: new Headers({
-          "x-forwarded-for": "203.0.113.10, 198.51.100.2",
-        }),
-      } as unknown as NextRequest;
+      const req = makeRequest({
+        "x-forwarded-for": "203.0.113.10, 198.51.100.2",
+      });
       expect(getClientIpFromHeaders(req)).toBe("203.0.113.10");
     });
 
     it("falls back to 'unknown' when no IP headers exist", () => {
-      const req = {
-        headers: new Headers(),
-      } as unknown as NextRequest;
+      const req = makeRequest();
       expect(getClientIpFromHeaders(req)).toBe("unknown");
       expect(buildRateLimitKey(req)).toContain("unknown");
     });
 
     it("trims whitespace from x-real-ip", () => {
-      const req = {
-        headers: new Headers({
-          "x-real-ip": "  192.168.1.1  ",
-        }),
-      } as unknown as NextRequest;
+      const req = makeRequest({ "x-real-ip": "  192.168.1.1  " });
       expect(getClientIpFromHeaders(req)).toBe("192.168.1.1");
     });
 
     it("trims whitespace from x-forwarded-for entries", () => {
-      const req = {
-        headers: new Headers({
-          "x-forwarded-for": "  203.0.113.10  , 198.51.100.2",
-        }),
-      } as unknown as NextRequest;
+      const req = makeRequest({
+        "x-forwarded-for": "  203.0.113.10  , 198.51.100.2",
+      });
       expect(getClientIpFromHeaders(req)).toBe("203.0.113.10");
     });
   });

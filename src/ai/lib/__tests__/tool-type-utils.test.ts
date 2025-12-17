@@ -3,6 +3,7 @@
 import { type ToolSet, type TypedToolCall, type TypedToolResult, tool } from "ai";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { ZodError, z } from "zod";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
 import {
   type InferToolInput,
@@ -169,7 +170,7 @@ describe("Tool type utilities integration", () => {
         if (!calcExecute) return;
 
         await expect(
-          calcExecute({ a: 1 } as unknown as { a: number; b: number }, {
+          calcExecute(unsafeCast<{ a: number; b: number }>({ a: 1 }), {
             messages: [],
             toolCallId: "error-calc-missing-b",
           })
@@ -182,7 +183,7 @@ describe("Tool type utilities integration", () => {
         if (!calcExecute) return;
 
         await expect(
-          calcExecute({ b: 2 } as unknown as { a: number; b: number }, {
+          calcExecute(unsafeCast<{ a: number; b: number }>({ b: 2 }), {
             messages: [],
             toolCallId: "error-calc-missing-a",
           })
@@ -195,7 +196,7 @@ describe("Tool type utilities integration", () => {
         if (!calcExecute) return;
 
         await expect(
-          calcExecute({ a: "x", b: 2 } as unknown as { a: number; b: number }, {
+          calcExecute(unsafeCast<{ a: number; b: number }>({ a: "x", b: 2 }), {
             messages: [],
             toolCallId: "error-calc-wrong-type-a",
           })
@@ -208,7 +209,7 @@ describe("Tool type utilities integration", () => {
         if (!calcExecute) return;
 
         await expect(
-          calcExecute({ a: 1, b: "y" } as unknown as { a: number; b: number }, {
+          calcExecute(unsafeCast<{ a: number; b: number }>({ a: 1, b: "y" }), {
             messages: [],
             toolCallId: "error-calc-wrong-type-b",
           })
@@ -223,7 +224,7 @@ describe("Tool type utilities integration", () => {
         if (!searchExecute) return;
 
         await expect(
-          searchExecute({} as unknown as { query: string }, {
+          searchExecute(unsafeCast<{ query: string }>({}), {
             messages: [],
             toolCallId: "error-search-missing-query",
           })
@@ -236,7 +237,7 @@ describe("Tool type utilities integration", () => {
         if (!searchExecute) return;
 
         await expect(
-          searchExecute({ query: 123 } as unknown as { query: string }, {
+          searchExecute(unsafeCast<{ query: string }>({ query: 123 }), {
             messages: [],
             toolCallId: "error-search-wrong-type-query",
           })
@@ -249,7 +250,7 @@ describe("Tool type utilities integration", () => {
         if (!searchExecute) return;
 
         await expect(
-          searchExecute({ query: null } as unknown as { query: string }, {
+          searchExecute(unsafeCast<{ query: string }>({ query: null }), {
             messages: [],
             toolCallId: "error-search-null-query",
           })

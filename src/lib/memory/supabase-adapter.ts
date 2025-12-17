@@ -1,14 +1,11 @@
 /**
- * @fileoverview Supabase memory adapter implementation.
- *
- * Uses the canonical `memories.*` schema (memories.sessions, memories.turns, memories.turn_embeddings)
- * as the long-term store for conversation context. This adapter handles reads and writes
- * for the orchestrator and is considered authoritative for recall and analytics.
+ * @fileoverview Memory adapter backed by Supabase `memories.*` tables.
  */
 
 import "server-only";
 
 import type { MemoryContextResponse } from "@schemas/chat";
+import { jsonSchema } from "@schemas/supabase";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
@@ -139,23 +136,20 @@ async function handleOnTurnCommitted(
 
     // Insert turn
     const turnInsert = {
-      attachments: (intent.turn.attachments ||
-        []) as unknown as Database["memories"]["Tables"]["turns"]["Insert"]["attachments"],
+      attachments: jsonSchema.parse(intent.turn.attachments ?? []),
       // Convert string content to JSONB format: { text: string }
       content: {
         text: intent.turn.content,
-      } as unknown as Database["memories"]["Tables"]["turns"]["Insert"]["content"],
+      },
       // biome-ignore lint/style/useNamingConvention: database column uses snake_case
       pii_scrubbed: false,
       role: intent.turn.role,
       // biome-ignore lint/style/useNamingConvention: database column uses snake_case
       session_id: intent.sessionId,
       // biome-ignore lint/style/useNamingConvention: database column uses snake_case
-      tool_calls: (intent.turn.toolCalls ||
-        []) as unknown as Database["memories"]["Tables"]["turns"]["Insert"]["tool_calls"],
+      tool_calls: jsonSchema.parse(intent.turn.toolCalls ?? []),
       // biome-ignore lint/style/useNamingConvention: database column uses snake_case
-      tool_results: (intent.turn.toolResults ||
-        []) as unknown as Database["memories"]["Tables"]["turns"]["Insert"]["tool_results"],
+      tool_results: jsonSchema.parse(intent.turn.toolResults ?? []),
       // biome-ignore lint/style/useNamingConvention: database column uses snake_case
       user_id: intent.userId,
     };

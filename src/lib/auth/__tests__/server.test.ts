@@ -3,6 +3,7 @@
 import type { User } from "@supabase/supabase-js";
 import { describe, expect, it, vi } from "vitest";
 import { getOptionalUser, requireUser } from "@/lib/auth/server";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
 vi.mock("@/lib/supabase/server", () => {
   return {
@@ -37,7 +38,7 @@ describe("server-side auth helpers", () => {
   });
 
   it("requireUser returns context when user is present", async () => {
-    const user = { id: "user-1" } as unknown as User;
+    const user = unsafeCast<User>({ id: "user-1" });
     mockedSupabaseServer.getCurrentUser.mockResolvedValueOnce({
       error: null,
       user,

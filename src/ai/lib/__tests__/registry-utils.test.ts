@@ -4,6 +4,7 @@ import type { toolRegistry } from "@ai/tools";
 import type { ToolCallOptions } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
 // Mock server-only module before imports
 vi.mock("server-only", () => ({}));
@@ -89,13 +90,13 @@ describe("requireTool", () => {
 
 describe("getRegistryTool", () => {
   it("should retrieve and validate tool from registry", () => {
-    const mockRegistry = {
+    const mockRegistry = unsafeCast<typeof toolRegistry>({
       webSearch: {
         description: "Web search tool",
         execute: vi.fn(),
         inputSchema: z.object({ query: z.string() }),
       },
-    } as unknown as typeof toolRegistry;
+    });
 
     const result = getRegistryTool<{ query: string }, { results: string[] }>(
       mockRegistry,
@@ -107,7 +108,7 @@ describe("getRegistryTool", () => {
   });
 
   it("should throw for missing registry tool", () => {
-    const mockRegistry = {} as unknown as typeof toolRegistry;
+    const mockRegistry = unsafeCast<typeof toolRegistry>({});
 
     expect(() =>
       getRegistryTool(mockRegistry, "nonexistent" as keyof typeof mockRegistry)
@@ -185,12 +186,12 @@ describe("invokeTool", () => {
   it("should include tool metadata in telemetry span", async () => {
     const { withTelemetrySpan } = await import("@/lib/telemetry/span");
 
-    const mockTool = {
+    const mockTool: RegisteredTool<{ query: string }, { data: string }> = {
       description: "Telemetry test tool",
       execute: vi.fn().mockResolvedValue({ data: "result" }),
       inputSchema: z.object({ query: z.string() }),
       name: "telemetryTool",
-    } as unknown as RegisteredTool<{ query: string }, { data: string }>;
+    };
 
     await invokeTool(mockTool, { query: "test" });
 

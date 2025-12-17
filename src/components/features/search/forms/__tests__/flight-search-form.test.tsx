@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { FlightSearchForm } from "../flight-search-form";
 
 // Mock the onSearch function
@@ -28,16 +29,18 @@ describe("FlightSearchForm", () => {
     vi.restoreAllMocks();
     vi.stubGlobal(
       "fetch",
-      vi.fn(
-        async () =>
-          new Response(
-            JSON.stringify([
-              { code: "NYC", name: "New York", savings: "$127" },
-              { code: "LAX", name: "Los Angeles", savings: "$89" },
-            ]),
-            { status: 200 }
-          )
-      ) as unknown as typeof fetch
+      unsafeCast<typeof fetch>(
+        vi.fn(
+          async () =>
+            new Response(
+              JSON.stringify([
+                { code: "NYC", name: "New York", savings: "$127" },
+                { code: "LAX", name: "Los Angeles", savings: "$89" },
+              ]),
+              { status: 200 }
+            )
+        )
+      )
     );
   });
 

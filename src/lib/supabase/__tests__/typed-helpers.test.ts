@@ -2,7 +2,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 import type { InsertTables, Tables, UpdateTables } from "@/lib/supabase/database.types";
-import type { TableFilterBuilder, TypedClient } from "@/lib/supabase/typed-helpers";
+import type { TypedClient } from "@/lib/supabase/typed-helpers";
 import {
   deleteSingle,
   getMaybeSingle,
@@ -11,6 +11,7 @@ import {
   updateSingle,
   upsertSingle,
 } from "@/lib/supabase/typed-helpers";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
 /**
  * Create a chained mock object simulating a Supabase table query builder.
@@ -45,16 +46,16 @@ function makeMockFrom(): MockChain {
 /**
  * Create a minimal `TypedClient` mock that returns the same chain for any table.
  *
- * @returns A `TypedClient` compatible mock.
+ * @returns A `TypedClient` compatible mock plus the underlying chain.
  */
-function makeClient(): TypedClient {
+function makeClientWithChain(): { client: TypedClient; chain: MockChain } {
   const chain = makeMockFrom();
-  return {
-    // Narrow mock type to satisfy compiler while retaining runtime shape
+  const client = unsafeCast<TypedClient>({
     from(_table: string): unknown {
       return chain;
     },
-  } as unknown as TypedClient;
+  });
+  return { chain, client };
 }
 
 const userId = "123e4567-e89b-12d3-a456-426614174000";
@@ -84,7 +85,7 @@ function mockTripsRow(overrides?: Partial<Tables<"trips">>): Tables<"trips"> {
 describe("typed-helpers", () => {
   describe("insertSingle", () => {
     it("returns the inserted row for trips", async () => {
-      const client = makeClient();
+      const { client, chain } = makeClientWithChain();
       const payload: InsertTables<"trips"> = {
         budget: 1000,
         destination: "NYC",
@@ -96,9 +97,6 @@ describe("typed-helpers", () => {
       };
 
       const row = mockTripsRow();
-      const chain = (client as unknown as { from: (table: string) => MockChain }).from(
-        "trips"
-      );
       chain.single.mockResolvedValue({ data: row, error: null });
 
       const { data, error } = await insertSingle(client, "trips", payload);
@@ -108,10 +106,7 @@ describe("typed-helpers", () => {
     });
 
     it("returns error when insert fails", async () => {
-      const client = makeClient();
-      const chain = (client as unknown as { from: (table: string) => MockChain }).from(
-        "trips"
-      );
+      const { client, chain } = makeClientWithChain();
       chain.single.mockResolvedValue({
         data: null,
         error: { message: "Insert failed" },
@@ -133,18 +128,14 @@ describe("typed-helpers", () => {
 
   describe("updateSingle", () => {
     it("applies filters and returns the updated row", async () => {
-      const client = makeClient();
+      const { client, chain } = makeClientWithChain();
       const updates: Partial<UpdateTables<"trips">> = { name: "Updated" };
       const row = mockTripsRow({ id: 2, name: "Updated" });
 
-      const chain = (client as unknown as { from: (table: string) => MockChain }).from(
-        "trips"
-      );
       chain.single.mockResolvedValue({ data: row, error: null });
 
       const result = await updateSingle(client, "trips", updates, (qb) => {
-        const chain = qb as unknown as MockChain;
-        return chain.eq("id", 2);
+        return qb.eq("id", 2);
       });
       expect(result.error).toBeNull();
       expect(result.data?.id).toBe(2);
@@ -152,21 +143,13 @@ describe("typed-helpers", () => {
     });
 
     it("returns error when update fails", async () => {
-      const client = makeClient();
-      const chain = (client as unknown as { from: (table: string) => MockChain }).from(
-        "trips"
-      );
+      const { client, chain } = makeClientWithChain();
       chain.single.mockResolvedValue({
         data: null,
         error: { message: "Update failed" },
       });
 
-      const result = await updateSingle(
-        client,
-        "trips",
-        { name: "Fail" },
-        (qb) => qb as unknown as TableFilterBuilder
-      );
+      const result = await updateSingle(client, "trips", { name: "Fail" }, (qb) => qb);
       expect(result.data).toBeNull();
       expect(result.error).toBeTruthy();
     });
@@ -174,38 +157,25 @@ describe("typed-helpers", () => {
 
   describe("getSingle", () => {
     it("returns the fetched row for trips", async () => {
-      const client = makeClient();
+      const { client, chain } = makeClientWithChain();
       const row = mockTripsRow();
 
-      const chain = (client as unknown as { from: (table: string) => MockChain }).from(
-        "trips"
-      );
       chain.single.mockResolvedValue({ data: row, error: null });
 
-      const { data, error } = await getSingle(client, "trips", (qb) => {
-        const chain = qb as unknown as MockChain;
-        return chain.eq("id", 1) as unknown as TableFilterBuilder;
-      });
+      const { data, error } = await getSingle(client, "trips", (qb) => qb.eq("id", 1));
       expect(error).toBeNull();
       expect(data).toBeTruthy();
       expect(data?.id).toBe(1);
     });
 
     it("returns error when row not found", async () => {
-      const client = makeClient();
-      const chain = (client as unknown as { from: (table: string) => MockChain }).from(
-        "trips"
-      );
+      const { client, chain } = makeClientWithChain();
       chain.single.mockResolvedValue({
         data: null,
         error: { code: "PGRST116", message: "Not found" },
       });
 
-      const { data, error } = await getSingle(
-        client,
-        "trips",
-        (qb) => qb as unknown as TableFilterBuilder
-      );
+      const { data, error } = await getSingle(client, "trips", (qb) => qb);
       expect(data).toBeNull();
       expect(error).toBeTruthy();
     });
@@ -213,32 +183,26 @@ describe("typed-helpers", () => {
 
   describe("deleteSingle", () => {
     it("deletes successfully", async () => {
-      const client = makeClient();
-      const chain = (client as unknown as { from: (table: string) => MockChain }).from(
-        "trips"
-      );
+      const { client, chain } = makeClientWithChain();
       // Mock delete to return a thenable that resolves
       const deleteResult = Promise.resolve({ count: 1, error: null });
       (chain.delete as ReturnType<typeof vi.fn>).mockReturnValue(deleteResult);
 
       const { count, error } = await deleteSingle(client, "trips", () => {
-        return deleteResult as unknown as TableFilterBuilder;
+        return deleteResult;
       });
       expect(count).toBe(1);
       expect(error).toBeNull();
     });
 
     it("returns error when delete fails", async () => {
-      const client = makeClient();
-      const chain = (client as unknown as { from: (table: string) => MockChain }).from(
-        "trips"
-      );
+      const { client, chain } = makeClientWithChain();
       const deleteError = { message: "Delete failed" };
       const deleteResult = Promise.resolve({ count: 0, error: deleteError });
       (chain.delete as ReturnType<typeof vi.fn>).mockReturnValue(deleteResult);
 
       const { count, error } = await deleteSingle(client, "trips", () => {
-        return deleteResult as unknown as TableFilterBuilder;
+        return deleteResult;
       });
       expect(count).toBe(0);
       expect(error).toBeTruthy();
@@ -247,28 +211,21 @@ describe("typed-helpers", () => {
 
   describe("getMaybeSingle", () => {
     it("returns the fetched row when found", async () => {
-      const client = makeClient();
+      const { client, chain } = makeClientWithChain();
       const row = mockTripsRow();
 
-      const chain = (client as unknown as { from: (table: string) => MockChain }).from(
-        "trips"
-      );
       chain.maybeSingle.mockResolvedValue({ data: row, error: null });
 
-      const { data, error } = await getMaybeSingle(client, "trips", (qb) => {
-        const chain = qb as unknown as MockChain;
-        return chain.eq("id", 1) as unknown as TableFilterBuilder;
-      });
+      const { data, error } = await getMaybeSingle(client, "trips", (qb) =>
+        qb.eq("id", 1)
+      );
       expect(error).toBeNull();
       expect(data).toBeTruthy();
       expect(data?.id).toBe(1);
     });
 
     it("returns null when row not found (no error)", async () => {
-      const client = makeClient();
-      const chain = (client as unknown as { from: (table: string) => MockChain }).from(
-        "trips"
-      );
+      const { client, chain } = makeClientWithChain();
       chain.maybeSingle.mockResolvedValue({ data: null, error: null });
 
       const { data, error } = await getMaybeSingle(client, "trips", (qb) => qb);
@@ -277,10 +234,7 @@ describe("typed-helpers", () => {
     });
 
     it("returns error when query fails", async () => {
-      const client = makeClient();
-      const chain = (client as unknown as { from: (table: string) => MockChain }).from(
-        "trips"
-      );
+      const { client, chain } = makeClientWithChain();
       chain.maybeSingle.mockResolvedValue({
         data: null,
         error: { message: "Query failed" },
@@ -294,7 +248,7 @@ describe("typed-helpers", () => {
 
   describe("upsertSingle", () => {
     it("returns the upserted row for trips", async () => {
-      const client = makeClient();
+      const { client, chain } = makeClientWithChain();
       const payload: InsertTables<"trips"> = {
         budget: 1500,
         destination: "LAX",
@@ -306,9 +260,6 @@ describe("typed-helpers", () => {
       };
       const row = mockTripsRow({ ...payload, id: 5 });
 
-      const chain = (client as unknown as { from: (table: string) => MockChain }).from(
-        "trips"
-      );
       chain.single.mockResolvedValue({ data: row, error: null });
 
       const { data, error } = await upsertSingle(client, "trips", payload, "user_id");
@@ -319,10 +270,7 @@ describe("typed-helpers", () => {
     });
 
     it("returns error when upsert fails", async () => {
-      const client = makeClient();
-      const chain = (client as unknown as { from: (table: string) => MockChain }).from(
-        "trips"
-      );
+      const { client, chain } = makeClientWithChain();
       chain.single.mockResolvedValue({
         data: null,
         error: { message: "Upsert failed" },

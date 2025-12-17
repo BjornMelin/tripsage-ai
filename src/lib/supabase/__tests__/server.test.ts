@@ -4,6 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
 import { cookies } from "next/headers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import type { TypedServerSupabase } from "../server";
 
 // Import after mocking dependencies
@@ -64,12 +65,12 @@ describe("Supabase Server Client", () => {
     };
 
     vi.mocked(cookies).mockResolvedValue(
-      mockCookieStore as unknown as ReadonlyRequestCookies
+      unsafeCast<ReadonlyRequestCookies>(mockCookieStore)
     );
 
     const mockClient = { auth: {}, from: vi.fn() };
     vi.mocked(createServerClient).mockReturnValue(
-      mockClient as unknown as TypedServerSupabase
+      unsafeCast<TypedServerSupabase>(mockClient)
     );
 
     const client = await createServerSupabase();
@@ -106,14 +107,14 @@ describe("Supabase Server Client", () => {
     };
 
     vi.mocked(cookies).mockResolvedValue(
-      mockCookieStore as unknown as ReadonlyRequestCookies
+      unsafeCast<ReadonlyRequestCookies>(mockCookieStore)
     );
 
     let capturedCookieHandlers: CookieHandlers | null = null;
     vi.mocked(createServerClient).mockImplementation((_url, _key, options) => {
       const handlers = options.cookies as CookieHandlers;
       capturedCookieHandlers = handlers;
-      return { auth: {} } as unknown as TypedServerSupabase;
+      return unsafeCast<TypedServerSupabase>({ auth: {} });
     });
 
     await createServerSupabase();
@@ -156,7 +157,7 @@ describe("Supabase Server Client", () => {
       set: vi.fn(),
     };
     vi.mocked(cookies).mockResolvedValue(
-      mockCookieStore as unknown as ReadonlyRequestCookies
+      unsafeCast<ReadonlyRequestCookies>(mockCookieStore)
     );
 
     await expect(createServerSupabase()).rejects.toThrow(
@@ -170,12 +171,12 @@ describe("Supabase Server Client", () => {
       set: vi.fn(),
     };
     vi.mocked(cookies).mockResolvedValue(
-      mockCookieStore as unknown as ReadonlyRequestCookies
+      unsafeCast<ReadonlyRequestCookies>(mockCookieStore)
     );
 
     const mockClient = { auth: {}, from: vi.fn() };
     vi.mocked(createServerClient).mockReturnValue(
-      mockClient as unknown as TypedServerSupabase
+      unsafeCast<TypedServerSupabase>(mockClient)
     );
 
     const client = await createServerSupabase();

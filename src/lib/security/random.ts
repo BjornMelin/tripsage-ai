@@ -1,6 +1,5 @@
 /**
- * @fileoverview Secure ID and time utilities for frontend usage.
- * Centralizes UUID/ID generation to avoid insecure Math.random usage.
+ * @fileoverview Secure ID and timestamp helpers that avoid Math.random().
  */
 
 /**
@@ -14,13 +13,13 @@
  * @returns A UUID v4 string.
  */
 export function secureUuid(): string {
-  const g = globalThis as unknown as { crypto?: Crypto };
-  if (g.crypto && typeof g.crypto.randomUUID === "function") {
-    return g.crypto.randomUUID();
+  const crypto: Crypto | undefined = globalThis.crypto;
+  if (crypto && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
   }
-  if (g.crypto && typeof g.crypto.getRandomValues === "function") {
+  if (crypto && typeof crypto.getRandomValues === "function") {
     const bytes = new Uint8Array(16);
-    g.crypto.getRandomValues(bytes);
+    crypto.getRandomValues(bytes);
     // Per RFC 4122 §4.4 set version and variant bits
     bytes[6] = (bytes[6] & 0x0f) | 0x40; // Version 4
     bytes[8] = (bytes[8] & 0x3f) | 0x80; // Variant 10
@@ -71,10 +70,10 @@ let fallbackPrngState = 0x9e3779b9;
  * avoids Math.random().
  */
 export function secureRandomFloat(): number {
-  const g = globalThis as unknown as { crypto?: Crypto };
-  if (g.crypto && typeof g.crypto.getRandomValues === "function") {
+  const crypto: Crypto | undefined = globalThis.crypto;
+  if (crypto && typeof crypto.getRandomValues === "function") {
     const ints = new Uint32Array(1);
-    g.crypto.getRandomValues(ints);
+    crypto.getRandomValues(ints);
     return ints[0] / 2 ** 32;
   }
 

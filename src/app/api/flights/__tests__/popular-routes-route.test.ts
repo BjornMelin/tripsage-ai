@@ -9,6 +9,7 @@ import { setRedisFactoryForTests } from "@/lib/redis";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { stubRateLimitDisabled } from "@/test/helpers/env";
 import { createMockNextRequest, createRouteParamsContext } from "@/test/helpers/route";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import {
   RedisMockClient,
   setupUpstashMocks,
@@ -66,11 +67,11 @@ describe("/api/flights/popular-routes", () => {
     stubRateLimitDisabled();
     redis.__reset();
     ratelimit.__reset();
-    setRedisFactoryForTests(
-      () => new RawStringRedisMock(redis.store) as unknown as Redis
+    setRedisFactoryForTests(() =>
+      unsafeCast<Redis>(new RawStringRedisMock(redis.store))
     );
-    setSupabaseFactoryForTests(
-      async () => supabaseClient as unknown as TypedServerSupabase
+    setSupabaseFactoryForTests(async () =>
+      unsafeCast<TypedServerSupabase>(supabaseClient)
     );
     supabaseClient.auth.getUser.mockResolvedValue({
       data: { user: null },

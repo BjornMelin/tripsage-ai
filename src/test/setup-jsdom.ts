@@ -13,7 +13,8 @@ import React from "react";
 import { afterAll, afterEach, vi } from "vitest";
 import { resetTestQueryClient } from "./helpers/query-client";
 
-(globalThis as unknown as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT ??= true;
+const globalFlag = globalThis as Record<string, unknown>;
+globalFlag.IS_REACT_ACT_ENVIRONMENT ??= true;
 
 // Minimal toast mock (used by many components)
 type UnknownRecord = Record<string, unknown>;

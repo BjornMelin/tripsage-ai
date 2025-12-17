@@ -2,6 +2,7 @@
 
 import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { buildUpstashCacheMock } from "@/test/mocks/cache";
 import { server } from "@/test/msw/server";
 
@@ -41,6 +42,7 @@ const { getCachedLatLng } = await import("@/lib/google/caching");
 
 type AccommodationProviderAdapter =
   import("@domain/accommodations/providers/types").AccommodationProviderAdapter;
+type TypedServerSupabase = import("@/lib/supabase/server").TypedServerSupabase;
 
 describe("AccommodationsService (Amadeus)", () => {
   beforeEach(() => {
@@ -93,8 +95,7 @@ describe("AccommodationsService (Amadeus)", () => {
       cacheTtlSeconds: 0,
       provider,
       rateLimiter: undefined,
-      supabase: async () =>
-        ({}) as unknown as import("@/lib/supabase/server").TypedServerSupabase,
+      supabase: async () => unsafeCast<TypedServerSupabase>({}),
     });
 
     const result = await service.search({
@@ -108,7 +109,7 @@ describe("AccommodationsService (Amadeus)", () => {
     expect(result.searchParameters?.lng).toBeCloseTo(2.345);
     expect(result.provider).toBe("amadeus");
     expect(result.resultsReturned).toBe(1);
-    const searchMock = provider.search as unknown as ReturnType<typeof vi.fn>;
+    const searchMock = vi.mocked(provider.search);
     const [searchCallArgs] = searchMock.mock.calls[0] ?? [];
     expect(searchCallArgs?.lat).toBeCloseTo(1.234);
     expect(searchCallArgs?.lng).toBeCloseTo(2.345);
@@ -152,8 +153,7 @@ describe("AccommodationsService (Amadeus)", () => {
       cacheTtlSeconds: 0,
       provider,
       rateLimiter: undefined,
-      supabase: async () =>
-        ({}) as unknown as import("@/lib/supabase/server").TypedServerSupabase,
+      supabase: async () => unsafeCast<TypedServerSupabase>({}),
     });
 
     const result = await service.search(
@@ -191,8 +191,7 @@ describe("AccommodationsService (Amadeus)", () => {
       cacheTtlSeconds: 0,
       provider,
       rateLimiter: undefined,
-      supabase: async () =>
-        ({}) as unknown as import("@/lib/supabase/server").TypedServerSupabase,
+      supabase: async () => unsafeCast<TypedServerSupabase>({}),
     });
 
     await service.search(
@@ -208,7 +207,7 @@ describe("AccommodationsService (Amadeus)", () => {
       }
     );
 
-    const searchMock = provider.search as unknown as ReturnType<typeof vi.fn>;
+    const searchMock = vi.mocked(provider.search);
     const [, providerCtx] = searchMock.mock.calls[0] ?? [];
     expect(providerCtx?.sessionId).toBe("user-123");
     expect(providerCtx?.userId).toBe("user-123");
@@ -256,8 +255,7 @@ describe("AccommodationsService (Amadeus)", () => {
       cacheTtlSeconds: 0,
       provider,
       rateLimiter: undefined,
-      supabase: async () =>
-        ({}) as unknown as import("@/lib/supabase/server").TypedServerSupabase,
+      supabase: async () => unsafeCast<TypedServerSupabase>({}),
     });
 
     const details = await service.details({ listingId: "H1" }, {});

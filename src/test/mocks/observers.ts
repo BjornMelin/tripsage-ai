@@ -101,11 +101,68 @@ export const createMockIntersectionObserver = (
  * });
  */
 export const installMockObservers = (): void => {
+  class MockGlobalResizeObserver implements ResizeObserver {
+    constructor(private readonly callback: ResizeObserverCallback = () => undefined) {}
+
+    observe = vi.fn((target: Element) => {
+      const entries: ResizeObserverEntry[] = [
+        {
+          borderBoxSize: [],
+          contentBoxSize: [],
+          contentRect: target.getBoundingClientRect(),
+          devicePixelContentBoxSize: [],
+          target,
+        },
+      ];
+      this.callback(entries, this);
+    });
+
+    unobserve = vi.fn();
+    disconnect = vi.fn();
+  }
+
+  class MockGlobalIntersectionObserver implements IntersectionObserver {
+    readonly root: Element | Document | null;
+    readonly rootMargin: string;
+    readonly thresholds: number[];
+
+    constructor(
+      private readonly callback: IntersectionObserverCallback = () => undefined,
+      options?: IntersectionObserverInit
+    ) {
+      this.root = options?.root ?? null;
+      this.rootMargin = options?.rootMargin ?? "";
+      this.thresholds = Array.isArray(options?.threshold)
+        ? options.threshold
+        : options?.threshold !== undefined
+          ? [options.threshold]
+          : [];
+    }
+
+    observe = vi.fn((target: Element) => {
+      const entries: IntersectionObserverEntry[] = [
+        {
+          boundingClientRect: target.getBoundingClientRect(),
+          intersectionRatio: 1,
+          intersectionRect: target.getBoundingClientRect(),
+          isIntersecting: true,
+          rootBounds: null,
+          target,
+          time: Date.now(),
+        },
+      ];
+      this.callback(entries, this);
+    });
+
+    unobserve = vi.fn();
+    disconnect = vi.fn();
+    takeRecords = vi.fn(() => []);
+  }
+
   (globalThis as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
-    createMockResizeObserver as unknown as typeof ResizeObserver;
+    MockGlobalResizeObserver;
 
   (
     globalThis as { IntersectionObserver: typeof IntersectionObserver }
-  ).IntersectionObserver =
-    createMockIntersectionObserver as unknown as typeof IntersectionObserver;
+  ).IntersectionObserver = MockGlobalIntersectionObserver;
 };

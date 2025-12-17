@@ -3,6 +3,7 @@
 import type { Accommodation } from "@schemas/search";
 import { describe, expect, it } from "vitest";
 import { FALLBACK_HOTEL_IMAGE } from "@/lib/constants/images";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { mapAccommodationToHotelResult } from "../hotel-mapping";
 
 function buildBaseAccommodation(overrides: Partial<Accommodation> = {}): Accommodation {
@@ -78,7 +79,7 @@ describe("mapAccommodationToHotelResult", () => {
   it("falls back to hotel category for unknown categories", () => {
     const result = mapAccommodationToHotelResult(
       buildBaseAccommodation({
-        category: "castle" as unknown as Accommodation["category"],
+        category: unsafeCast<Accommodation["category"]>("castle"),
       })
     );
     expect(result.category).toBe("hotel");
@@ -114,11 +115,11 @@ describe("mapAccommodationToHotelResult", () => {
   it("prefers district from address when provided", () => {
     const result = mapAccommodationToHotelResult(
       buildBaseAccommodation({
-        address: {
+        address: unsafeCast<Accommodation["address"]>({
           cityName: "Paris",
           district: "Center",
           lines: ["123 Rue Example"],
-        } as unknown as Accommodation["address"],
+        }),
       })
     );
     expect(result.location.district).toBe("Center");

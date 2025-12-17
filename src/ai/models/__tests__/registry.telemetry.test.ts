@@ -67,9 +67,7 @@ describe("resolveProvider telemetry", () => {
   it("emits attributes for team-gateway path", async () => {
     // No user gateway; enable team fallback via env key
     const rpc = await import("@/lib/supabase/rpc");
-    (
-      rpc as unknown as { getUserApiKey: (a?: unknown, b?: unknown) => unknown }
-    ).getUserApiKey = vi.fn(async () => null);
+    vi.mocked(rpc.getUserApiKey).mockResolvedValue(null);
     vi.stubEnv("AI_GATEWAY_API_KEY", "team-key");
     vi.stubEnv("AI_GATEWAY_URL", "https://ai-gateway.vercel.sh/v1");
     const { resolveProvider } = await import("@ai/models/registry");

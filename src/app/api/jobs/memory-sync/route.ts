@@ -1,11 +1,10 @@
 /**
- * @fileoverview Durable job handler for memory sync operations via QStash.
- * Processes conversation memory storage and context synchronization with
- * deduplication, retry logic, and proper telemetry.
+ * @fileoverview QStash job route that validates and persists memory sync payloads.
  */
 
 import "server-only";
 
+import { jsonSchema } from "@schemas/supabase";
 import { memorySyncJobSchema } from "@schemas/webhooks";
 import { NextResponse } from "next/server";
 import { errorResponse, validateSchema } from "@/lib/api/route-helpers";
@@ -165,19 +164,16 @@ async function processMemorySync(payload: {
     // Store conversation turns
     const turnInserts: Database["memories"]["Tables"]["turns"]["Insert"][] =
       messagesToStore.map((msg) => ({
-        attachments: ((msg.metadata?.attachments as unknown[]) ||
-          []) as unknown as Database["memories"]["Tables"]["turns"]["Insert"]["attachments"],
+        attachments: jsonSchema.parse(msg.metadata?.attachments ?? []),
         // Convert string content to JSONB format: { text: string }
         content: {
           text: msg.content,
-        } as unknown as Database["memories"]["Tables"]["turns"]["Insert"]["content"],
+        },
         pii_scrubbed: false,
         role: msg.role,
         session_id: payload.sessionId,
-        tool_calls: ((msg.metadata?.toolCalls as unknown[]) ||
-          []) as unknown as Database["memories"]["Tables"]["turns"]["Insert"]["tool_calls"],
-        tool_results: ((msg.metadata?.toolResults as unknown[]) ||
-          []) as unknown as Database["memories"]["Tables"]["turns"]["Insert"]["tool_results"],
+        tool_calls: jsonSchema.parse(msg.metadata?.toolCalls ?? []),
+        tool_results: jsonSchema.parse(msg.metadata?.toolResults ?? []),
         user_id: payload.userId,
       }));
 

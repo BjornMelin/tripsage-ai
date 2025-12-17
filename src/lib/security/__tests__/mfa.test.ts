@@ -10,6 +10,7 @@ import {
   verifyBackupCode,
   verifyTotp,
 } from "@/lib/security/mfa";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
 const mockIds = {
   challengeId: "22222222-2222-4222-8222-222222222222",
@@ -29,7 +30,7 @@ const mfaEnrollmentRows: {
   status: string;
 }[] = [];
 
-const mockSupabase = {
+const mockSupabase = unsafeCast<Parameters<typeof startTotpEnrollment>[0]>({
   auth: {
     getUser: vi.fn(async () => ({
       data: { user: { id: mockIds.userId } },
@@ -92,7 +93,7 @@ const mockSupabase = {
     }
     throw new Error(`Unhandled mock table: ${table}`);
   }),
-} as unknown as Parameters<typeof startTotpEnrollment>[0];
+});
 const backupRows: {
   // biome-ignore lint/style/useNamingConvention: mimic DB columns
   code_hash: string;
@@ -103,7 +104,10 @@ const backupRows: {
   user_id: string;
 }[] = [];
 
-const mockAdmin = {
+type AdminSupabase = Parameters<typeof createBackupCodes>[0];
+type AdminFromReturn = ReturnType<AdminSupabase["from"]>;
+
+const mockAdmin = unsafeCast<AdminSupabase>({
   from: vi.fn((table: string) => {
     if (table === "auth_backup_codes") {
       return {
@@ -200,9 +204,9 @@ const mockAdmin = {
     }
 
     if (table === "mfa_backup_code_audit") {
-      return {
+      return unsafeCast<AdminFromReturn>({
         insert: (rows: unknown) => ({ data: rows, error: null }),
-      } as unknown as ReturnType<typeof mockAdmin.from>;
+      });
     }
 
     if (table === "mfa_enrollments") {
@@ -249,7 +253,7 @@ const mockAdmin = {
     );
     return { data: hashes.length, error: null };
   }),
-} as unknown as Parameters<typeof createBackupCodes>[0];
+});
 
 describe("mfa service", () => {
   beforeEach(() => {

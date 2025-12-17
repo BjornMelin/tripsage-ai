@@ -3,6 +3,7 @@
 import type { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getOriginFromRequest } from "@/lib/url/server-origin";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
 vi.mock("server-only", () => ({}));
 
@@ -45,10 +46,10 @@ describe("getOriginFromRequest", () => {
     for (const [key, value] of Object.entries(headers)) {
       headersObj.set(key, value);
     }
-    return {
+    return unsafeCast<NextRequest>({
       headers: headersObj,
       url,
-    } as unknown as NextRequest;
+    });
   }
 
   describe("with forwarded headers", () => {

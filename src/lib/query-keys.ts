@@ -157,12 +157,14 @@ export type QueryKeyPath = keyof QueryKey;
 /**
  * Factory function for creating dynamic query keys with validation
  */
-export function createQueryKey<T extends readonly unknown[]>(
+export function createQueryKey(
   baseKey: string,
   params?: Record<string, unknown>
-): T {
-  const key: (string | Record<string, unknown>)[] = params
-    ? [baseKey, params]
-    : [baseKey];
-  return key as unknown as T;
+): readonly [string] | readonly [string, Record<string, unknown>] {
+  if (params) {
+    const key: readonly [string, Record<string, unknown>] = [baseKey, params];
+    return key;
+  }
+  const key: readonly [string] = [baseKey];
+  return key;
 }

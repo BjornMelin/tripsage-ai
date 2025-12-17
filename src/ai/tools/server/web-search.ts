@@ -1,7 +1,5 @@
 /**
- * @fileoverview Web search tool powered by Firecrawl v2.5 with guardrails.
- * Provides standardized caching, rate limiting, telemetry, and error handling
- * through the createAiTool factory.
+ * @fileoverview Web search tool backed by Firecrawl with caching, rate limiting, and telemetry guardrails.
  */
 
 import "server-only";
@@ -157,7 +155,7 @@ async function runWebSearch(
 
 function resolveFirecrawlApiKey(): string {
   try {
-    const key = getServerEnvVar("FIRECRAWL_API_KEY") as unknown as string;
+    const key = getServerEnvVar("FIRECRAWL_API_KEY");
     if (!key) {
       throw createToolError(TOOL_ERROR_CODES.webSearchNotConfigured);
     }

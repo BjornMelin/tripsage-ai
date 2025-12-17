@@ -3,6 +3,7 @@
 import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { server } from "@/test/msw/server";
 import { withFakeTimers } from "@/test/utils/with-fake-timers";
 import { ApiClient } from "../api-client";
@@ -133,8 +134,8 @@ describe("API client with Zod Validation", () => {
         email: "test@example.com",
         name: "John Doe",
         preferences: {
-          notifications: "yes" as unknown as boolean, // Should be boolean
-          theme: "invalid-theme" as unknown as "dark" | "light", // Invalid enum value
+          notifications: unsafeCast<boolean>("yes"), // Should be boolean
+          theme: unsafeCast<"dark" | "light">("invalid-theme"), // Invalid enum value
         },
       } as UserCreateRequest;
 
@@ -257,7 +258,7 @@ describe("API client with Zod Validation", () => {
   describe("Error Handling with Validation", () => {
     it("provides detailed validation error messages", async () => {
       const invalidData = {
-        age: "twenty-five" as unknown as number, // Should be number
+        age: unsafeCast<number>("twenty-five"), // Should be number
         email: "not-an-email",
         name: "",
       } as UserCreateRequest;

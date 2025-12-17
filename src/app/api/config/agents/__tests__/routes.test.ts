@@ -2,6 +2,7 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockApiRouteAuthUser, resetApiRouteMocks } from "@/test/helpers/api-route";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
 vi.mock("@/lib/cache/tags", () => ({
   bumpTag: vi.fn(async () => 1),
@@ -111,14 +112,11 @@ describe("config routes", () => {
     mockResolveAgentConfig.mockResolvedValue({ config: supabaseData.config });
     const { GET } = await import("../[agentType]/route");
     const req = new NextRequest("http://localhost/api/config/agents/budgetAgent");
-    const res = await GET(
-      req as unknown as NextRequest,
-      {
-        params: Promise.resolve({ agentType: "budgetAgent" }),
-        supabase: {} as never,
-        user: { app_metadata: { is_admin: true }, id: "admin-user" } as never,
-      } as never
-    );
+    const res = await GET(req, {
+      params: Promise.resolve({ agentType: "budgetAgent" }),
+      supabase: {} as never,
+      user: { app_metadata: { is_admin: true }, id: "admin-user" } as never,
+    } as never);
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ config: supabaseData.config });
@@ -133,7 +131,10 @@ describe("config routes", () => {
       data: [{ version_id: "ver-2" }],
       error: null,
     });
-    const supabase = {
+    const supabase = unsafeCast<{
+      from: ReturnType<typeof vi.fn>;
+      rpc: ReturnType<typeof vi.fn>;
+    }>({
       from: vi.fn(() => ({
         select: vi.fn(() => ({
           eq: vi.fn(() => ({
@@ -142,10 +143,7 @@ describe("config routes", () => {
         })),
       })),
       rpc: supabaseRpc,
-    } as unknown as {
-      from: ReturnType<typeof vi.fn>;
-      rpc: ReturnType<typeof vi.fn>;
-    };
+    });
 
     supabaseMaybeSingle.mockResolvedValue({
       data: { config: supabaseData.config },
@@ -168,14 +166,11 @@ describe("config routes", () => {
       method: "PUT",
     } as never);
 
-    const res = await PUT(
-      req as unknown as NextRequest,
-      {
-        params: Promise.resolve({ agentType: "budgetAgent" }),
-        supabase,
-        user: { app_metadata: { is_admin: true }, id: "admin-user" } as never,
-      } as never
-    );
+    const res = await PUT(req, {
+      params: Promise.resolve({ agentType: "budgetAgent" }),
+      supabase,
+      user: { app_metadata: { is_admin: true }, id: "admin-user" } as never,
+    } as never);
 
     expect(res.status).toBe(200);
     const json = await res.json();
@@ -215,7 +210,7 @@ describe("config routes", () => {
       summary: "initial",
     };
 
-    const supabase = {
+    const supabase = unsafeCast<{ from: ReturnType<typeof vi.fn> }>({
       from: vi.fn(() => ({
         select: vi.fn(() => ({
           eq: vi.fn(() => ({
@@ -227,20 +222,17 @@ describe("config routes", () => {
           })),
         })),
       })),
-    } as unknown as { from: ReturnType<typeof vi.fn> };
+    });
 
     const { GET } = await import("../[agentType]/versions/route");
     const req = new NextRequest(
       "http://localhost/api/config/agents/budgetAgent/versions"
     );
-    const res = await GET(
-      req as unknown as NextRequest,
-      {
-        params: Promise.resolve({ agentType: "budgetAgent" }),
-        supabase,
-        user: { app_metadata: { is_admin: true }, id: "admin-user" } as never,
-      } as never
-    );
+    const res = await GET(req, {
+      params: Promise.resolve({ agentType: "budgetAgent" }),
+      supabase,
+      user: { app_metadata: { is_admin: true }, id: "admin-user" } as never,
+    } as never);
 
     expect(res.status).toBe(200);
     const json = await res.json();
@@ -249,7 +241,10 @@ describe("config routes", () => {
   });
 
   it("rollback emits alert", async () => {
-    const supabase = {
+    const supabase = unsafeCast<{
+      from: ReturnType<typeof vi.fn>;
+      rpc: ReturnType<typeof vi.fn>;
+    }>({
       from: vi.fn(() => ({
         select: vi.fn(() => ({
           eq: vi.fn(() => ({
@@ -262,27 +257,21 @@ describe("config routes", () => {
         })),
       })),
       rpc: vi.fn(async () => ({ data: [{ version_id: "ver-rollback" }], error: null })),
-    } as unknown as {
-      from: ReturnType<typeof vi.fn>;
-      rpc: ReturnType<typeof vi.fn>;
-    };
+    });
 
     const { POST } = await import("../[agentType]/rollback/[versionId]/route");
     const req = new NextRequest(
       "http://localhost/api/config/agents/budgetAgent/rollback/11111111-1111-4111-8111-111111111111"
     );
 
-    const res = await POST(
-      req as unknown as NextRequest,
-      {
-        params: Promise.resolve({
-          agentType: "budgetAgent",
-          versionId: "11111111-1111-4111-8111-111111111111",
-        }),
-        supabase,
-        user: { app_metadata: { is_admin: true }, id: "admin-user" } as never,
-      } as never
-    );
+    const res = await POST(req, {
+      params: Promise.resolve({
+        agentType: "budgetAgent",
+        versionId: "11111111-1111-4111-8111-111111111111",
+      }),
+      supabase,
+      user: { app_metadata: { is_admin: true }, id: "admin-user" } as never,
+    } as never);
 
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -303,14 +292,11 @@ describe("config routes", () => {
     mockApiRouteAuthUser({ id: "user" } as never);
     const { GET } = await import("../[agentType]/route");
     const req = new NextRequest("http://localhost/api/config/agents/budgetAgent");
-    const res = await GET(
-      req as unknown as NextRequest,
-      {
-        params: Promise.resolve({ agentType: "budgetAgent" }),
-        supabase: {} as never,
-        user: { id: "user" } as never,
-      } as never
-    );
+    const res = await GET(req, {
+      params: Promise.resolve({ agentType: "budgetAgent" }),
+      supabase: {} as never,
+      user: { id: "user" } as never,
+    } as never);
     expect(res.status).toBe(403);
   });
 });

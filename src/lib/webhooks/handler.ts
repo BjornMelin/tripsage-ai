@@ -1,145 +1,50 @@
 /**
- * @fileoverview Webhook handler abstraction to reduce code duplication.
- *
- * Provides a factory function that creates standardized webhook handlers with:
- * - Rate limiting
- * - Body size validation
- * - HMAC signature verification
- * - Table filtering (optional)
- * - Idempotency via Redis (optional)
- * - OpenTelemetry instrumentation
- *
- * Reduces ~75 lines of duplicated boilerplate per handler to ~25 lines.
+ * @fileoverview Webhook handler factory with rate limiting, signature verification, idempotency, and telemetry.
  */
 
 import "server-only";
 
 import { type NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
-import { tryReserveKey } from "@/lib/idempotency/redis";
+import {
+  IdempotencyServiceUnavailableError,
+  tryReserveKey,
+} from "@/lib/idempotency/redis";
 import { type Span, withTelemetrySpan } from "@/lib/telemetry/span";
+import {
+  WebhookDuplicateError,
+  WebhookError,
+  type WebhookErrorCode,
+  WebhookServiceUnavailableError,
+  WebhookValidationError,
+} from "./errors";
 import { buildEventKey, parseAndVerify, type WebhookPayload } from "./payload";
 import { checkWebhookRateLimit, createRateLimitHeaders } from "./rate-limit";
 
-// ===== ERROR CLASSIFICATION =====
+function normalizeWebhookError(error: unknown): WebhookError {
+  if (error instanceof WebhookError) return error;
+  if (error instanceof ZodError)
+    return new WebhookValidationError("invalid_request", { cause: error });
+  if (error instanceof IdempotencyServiceUnavailableError) {
+    return new WebhookServiceUnavailableError("service_unavailable", { cause: error });
+  }
 
-/**
- * Known error codes for classification.
- */
-type ErrorCode =
-  | "VALIDATION_ERROR"
-  | "NOT_FOUND"
-  | "CONFLICT"
-  | "SERVICE_UNAVAILABLE"
-  | "TIMEOUT"
-  | "UNKNOWN";
-
-/** Type guard to check if error has a code property. */
-function hasErrorCode(error: unknown): error is Error & { code: string } {
-  return (
-    error instanceof Error &&
-    "code" in error &&
-    typeof (error as { code: unknown }).code === "string"
-  );
+  const cause = error instanceof Error ? error : new Error("unknown_error");
+  return new WebhookError("internal_error", { cause, code: "UNKNOWN", status: 500 });
 }
 
-/**
- * Classifies an error and returns the appropriate HTTP status code.
- *
- * Uses concrete error classes and standardized error codes first,
- * falling back to message heuristics for legacy/unknown errors.
- * Prefer throwing typed errors with explicit codes; the heuristics are
- * best-effort and may misclassify localized/custom messages.
- *
- * @param error - The error to classify
- * @returns Object with status code and error code
- */
-export function classifyError(error: unknown): { status: number; code: ErrorCode } {
-  if (!(error instanceof Error)) {
-    return { code: "UNKNOWN", status: 500 };
-  }
+function getSafeErrorMessage(code: WebhookErrorCode, status: number): string {
+  const safeMessageMap = new Map<WebhookErrorCode, string>([
+    ["VALIDATION_ERROR", "invalid_request"],
+    ["UNAUTHORIZED", "unauthorized"],
+    ["NOT_FOUND", "not_found"],
+    ["CONFLICT", "conflict"],
+    ["RATE_LIMITED", "rate_limit_exceeded"],
+  ]);
 
-  // 1. Check concrete error classes first (most reliable)
-  if (error instanceof ZodError) {
-    return { code: "VALIDATION_ERROR", status: 400 };
-  }
-
-  // 2. Check standardized error codes (if present)
-  if (hasErrorCode(error)) {
-    switch (error.code) {
-      case "VALIDATION_ERROR":
-      case "INVALID_INPUT":
-        return { code: "VALIDATION_ERROR", status: 400 };
-      case "NOT_FOUND":
-      case "ENOENT":
-        return { code: "NOT_FOUND", status: 404 };
-      case "CONFLICT":
-      case "DUPLICATE":
-        return { code: "CONFLICT", status: 409 };
-      case "SERVICE_UNAVAILABLE":
-      case "CIRCUIT_OPEN":
-      case "ECONNREFUSED":
-        return { code: "SERVICE_UNAVAILABLE", status: 503 };
-      case "TIMEOUT":
-      case "ETIMEDOUT":
-      case "ESOCKETTIMEDOUT":
-        return { code: "TIMEOUT", status: 504 };
-    }
-  }
-
-  // 3. Fall back to message/name heuristics for legacy errors.
-  // Prefer throwing typed errors with explicit codes; keep these heuristics in sync with
-  // real error payloads to avoid misclassification (especially for localized messages).
-  const message = error.message.toLowerCase();
-  const name = error.name.toLowerCase();
-
-  // Validation errors -> 400
-  if (
-    name.includes("validation") ||
-    name.includes("zod") ||
-    message.includes("invalid") ||
-    message.includes("required") ||
-    message.includes("must be")
-  ) {
-    return { code: "VALIDATION_ERROR", status: 400 };
-  }
-
-  // Not found errors -> 404
-  if (message.includes("not found") || message.includes("does not exist")) {
-    return { code: "NOT_FOUND", status: 404 };
-  }
-
-  // Conflict/duplicate errors -> 409
-  if (
-    message.includes("already exists") ||
-    message.includes("duplicate") ||
-    message.includes("conflict")
-  ) {
-    return { code: "CONFLICT", status: 409 };
-  }
-
-  // Service unavailable / circuit breaker -> 503
-  if (
-    message.includes("circuit open") ||
-    message.includes("service unavailable") ||
-    message.includes("temporarily unavailable") ||
-    message.includes("rate limit") ||
-    name.includes("serviceerror")
-  ) {
-    return { code: "SERVICE_UNAVAILABLE", status: 503 };
-  }
-
-  // Timeout errors -> 504
-  if (
-    message.includes("timeout") ||
-    message.includes("timed out") ||
-    name.includes("timeout")
-  ) {
-    return { code: "TIMEOUT", status: 504 };
-  }
-
-  // Default to 500 for unknown errors
-  return { code: "UNKNOWN", status: 500 };
+  // 5xx errors always return a generic message to avoid leaking details.
+  if (status >= 500) return "internal_error";
+  return safeMessageMap.get(code) ?? "invalid_request";
 }
 
 // ===== TYPES =====
@@ -260,7 +165,7 @@ export function createWebhookHandler<T extends WebhookHandlerResult>(
         if (!rateLimitResult.success) {
           span.setAttribute("webhook.rate_limited", true);
           return NextResponse.json(
-            { error: "rate_limit_exceeded" },
+            { code: "RATE_LIMITED", error: "rate_limit_exceeded" },
             { headers: createRateLimitHeaders(rateLimitResult), status: 429 }
           );
         }
@@ -277,19 +182,70 @@ export function createWebhookHandler<T extends WebhookHandlerResult>(
         if (contentLength > maxBodySize) {
           span.setAttribute("webhook.payload_too_large", true);
           return attachRateLimitHeaders(
-            NextResponse.json({ error: "payload_too_large" }, { status: 413 })
+            NextResponse.json(
+              { code: "VALIDATION_ERROR", error: "payload_too_large" },
+              { status: 413 }
+            )
           );
         }
 
         // 3. Parse and verify HMAC signature
-        const { ok, payload } = await parseAndVerify(req);
-        if (!ok || !payload) {
+        const verification = await parseAndVerify(req, { maxBytes: maxBodySize });
+        if (!verification.ok) {
+          if (verification.reason === "payload_too_large") {
+            span.setAttribute("webhook.payload_too_large", true);
+            return attachRateLimitHeaders(
+              NextResponse.json(
+                { code: "VALIDATION_ERROR", error: "payload_too_large" },
+                { status: 413 }
+              )
+            );
+          }
+          if (
+            verification.reason === "invalid_json" ||
+            verification.reason === "invalid_payload_shape"
+          ) {
+            span.setAttribute("webhook.validation_error", true);
+            return attachRateLimitHeaders(
+              NextResponse.json(
+                { code: "VALIDATION_ERROR", error: "invalid_request" },
+                { status: 400 }
+              )
+            );
+          }
+          if (
+            verification.reason === "missing_secret_env" ||
+            verification.reason === "body_read_error"
+          ) {
+            span.setAttribute("webhook.error", true);
+            span.setAttribute("webhook.error_code", "SERVICE_UNAVAILABLE");
+            span.setAttribute("webhook.error_status", 503);
+            return attachRateLimitHeaders(
+              NextResponse.json(
+                { code: "SERVICE_UNAVAILABLE", error: "internal_error" },
+                { status: 503 }
+              )
+            );
+          }
           span.setAttribute("webhook.unauthorized", true);
           return attachRateLimitHeaders(
-            NextResponse.json({ error: "invalid_signature" }, { status: 401 })
+            NextResponse.json(
+              { code: "UNAUTHORIZED", error: "invalid_signature" },
+              { status: 401 }
+            )
           );
         }
 
+        const payload = verification.payload;
+        if (!payload) {
+          span.setAttribute("webhook.unauthorized", true);
+          return attachRateLimitHeaders(
+            NextResponse.json(
+              { code: "UNAUTHORIZED", error: "invalid_signature" },
+              { status: 401 }
+            )
+          );
+        }
         span.setAttribute("webhook.table", payload.table);
         span.setAttribute("webhook.op", payload.type);
 
@@ -297,58 +253,67 @@ export function createWebhookHandler<T extends WebhookHandlerResult>(
         const eventKey = buildEventKey(payload);
         span.setAttribute("webhook.event_key", eventKey);
 
-        // 5. Idempotency check (global)
-        if (enableIdempotency) {
-          span.setAttribute("webhook.idempotency_scope", "global");
-          const unique = await tryReserveKey(eventKey, idempotencyTTL);
-          if (!unique) {
-            span.setAttribute("webhook.duplicate", true);
+        try {
+          // 5. Idempotency check (global)
+          if (enableIdempotency) {
+            span.setAttribute("webhook.idempotency_scope", "global");
+            const unique = await tryReserveKey(eventKey, idempotencyTTL);
+            if (!unique) {
+              span.setAttribute("webhook.duplicate", true);
+              return attachRateLimitHeaders(
+                NextResponse.json({ duplicate: true, ok: true })
+              );
+            }
+          }
+
+          // 6. Table filtering (post-idempotency to prevent duplicate processing
+          // across multiple handlers that may receive the same event)
+          if (tableFilter && payload.table !== tableFilter) {
+            span.setAttribute("webhook.skipped", true);
+            span.setAttribute("webhook.skip_reason", "table_mismatch");
+            return attachRateLimitHeaders(
+              NextResponse.json({ ok: true, skipped: true })
+            );
+          }
+
+          const result = await handle(payload, eventKey, span, req);
+          return attachRateLimitHeaders(NextResponse.json({ ok: true, ...result }));
+        } catch (error) {
+          const exception =
+            error instanceof Error
+              ? error
+              : new Error(typeof error === "string" ? error : "error");
+          span.recordException(exception);
+          span.setAttribute("webhook.error", true);
+
+          const webhookError = normalizeWebhookError(error);
+          span.setAttribute("webhook.error_code", webhookError.code);
+          span.setAttribute("webhook.error_status", webhookError.status);
+          if (exception.message) {
+            span.setAttribute("webhook.error_message", exception.message);
+          }
+
+          if (webhookError instanceof WebhookDuplicateError) {
             return attachRateLimitHeaders(
               NextResponse.json({ duplicate: true, ok: true })
             );
           }
-        }
 
-        // 6. Table filtering (post-idempotency to prevent duplicate processing
-        // across multiple handlers that may receive the same event)
-        if (tableFilter && payload.table !== tableFilter) {
-          span.setAttribute("webhook.skipped", true);
-          span.setAttribute("webhook.skip_reason", "table_mismatch");
-          return attachRateLimitHeaders(NextResponse.json({ ok: true, skipped: true }));
-        }
+          const response = attachRateLimitHeaders(
+            NextResponse.json(
+              {
+                code: webhookError.code,
+                error: getSafeErrorMessage(webhookError.code, webhookError.status),
+              },
+              { status: webhookError.status }
+            )
+          );
 
-        // 7. Execute custom handler with error classification
-        try {
-          const result = await handle(payload, eventKey, span, req);
-          return attachRateLimitHeaders(NextResponse.json({ ok: true, ...result }));
-        } catch (error) {
-          span.recordException(error as Error);
-          span.setAttribute("webhook.error", true);
-
-          // M6: Classify error to return appropriate status code
-          const { status, code } = classifyError(error);
-          span.setAttribute("webhook.error_code", code);
-          span.setAttribute("webhook.error_status", status);
-          if (error instanceof Error) {
-            span.setAttribute("webhook.error_message", error.message);
+          if (webhookError.retryAfterSeconds != null) {
+            response.headers.set("Retry-After", String(webhookError.retryAfterSeconds));
           }
 
-          const safeMessageMap = new Map<ErrorCode, string>([
-            ["VALIDATION_ERROR", "invalid_request"],
-            ["NOT_FOUND", "not_found"],
-            ["CONFLICT", "conflict"],
-            ["SERVICE_UNAVAILABLE", "service_unavailable"],
-            ["TIMEOUT", "timeout"],
-          ]);
-
-          const safeMessage =
-            status >= 500
-              ? "internal_error"
-              : (safeMessageMap.get(code) ?? "internal_error");
-
-          return attachRateLimitHeaders(
-            NextResponse.json({ code, error: safeMessage }, { status })
-          );
+          return response;
         }
       }
     );

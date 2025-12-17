@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { getToneColors, statusVariants } from "../status";
 
 describe("statusVariants", () => {
@@ -70,7 +71,7 @@ describe("statusVariants", () => {
     });
 
     it("falls back to unknown tone for invalid values", () => {
-      const result = statusVariants({ tone: "invalid" as unknown as never });
+      const result = statusVariants({ tone: unsafeCast<never>("invalid") });
       expect(result).toContain("bg-slate-50");
       expect(result).toContain("text-slate-700");
       expect(result).toContain("ring-slate-600/20");
@@ -146,7 +147,7 @@ describe("getToneColors", () => {
   });
 
   it("falls back to unknown colors for invalid tone", () => {
-    const colors = getToneColors("invalid" as unknown as never);
+    const colors = getToneColors(unsafeCast<never>("invalid"));
     expect(colors.text).toBe("text-slate-700");
     expect(colors.bg).toBe("bg-slate-700/10");
     expect(colors.border).toBe("border-slate-700/20");

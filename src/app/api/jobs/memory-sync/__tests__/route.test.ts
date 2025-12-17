@@ -2,6 +2,7 @@
 
 import { NextRequest } from "next/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { setupUpstashTestEnvironment } from "@/test/upstash/setup";
 
 const {
@@ -104,6 +105,8 @@ const createDefaultFromMock = vi.hoisted(() => {
 
 const MOCK_FROM = vi.hoisted(() => vi.fn(createDefaultFromMock));
 
+type MockFromReturn = ReturnType<typeof createDefaultFromMock>;
+
 vi.mock("@/lib/supabase/server", () => {
   return {
     createServerSupabase: vi.fn(() =>
@@ -151,7 +154,7 @@ let tryReserveKeyMock: ReturnType<typeof vi.fn>;
 beforeAll(async () => {
   ({ POST: post } = await import("../route"));
   const { tryReserveKey } = await import("@/lib/idempotency/redis");
-  tryReserveKeyMock = tryReserveKey as unknown as ReturnType<typeof vi.fn>;
+  tryReserveKeyMock = unsafeCast<ReturnType<typeof vi.fn>>(tryReserveKey);
 });
 
 describe("POST /api/jobs/memory-sync", () => {
@@ -236,8 +239,7 @@ describe("POST /api/jobs/memory-sync", () => {
   });
 
   it("handles duplicate jobs gracefully", async () => {
-    const { tryReserveKey } = await import("@/lib/idempotency/redis");
-    (tryReserveKey as ReturnType<typeof vi.fn>).mockResolvedValue(false); // Simulate duplicate
+    tryReserveKeyMock.mockResolvedValue(false); // Simulate duplicate
 
     const payload = {
       idempotencyKey: "test-key-123",
@@ -260,7 +262,7 @@ describe("POST /api/jobs/memory-sync", () => {
   it("handles session not found error", async () => {
     MOCK_FROM.mockImplementation((table: string) => {
       if (table === "chat_sessions") {
-        return {
+        return unsafeCast<MockFromReturn>({
           select: vi.fn(() => ({
             eq: vi.fn(() => ({
               eq: vi.fn(() => ({
@@ -271,11 +273,9 @@ describe("POST /api/jobs/memory-sync", () => {
               })),
             })),
           })),
-        } as unknown as ReturnType<typeof createDefaultFromMock>;
+        });
       }
-      return createDefaultFromMock(table as string) as unknown as ReturnType<
-        typeof createDefaultFromMock
-      >;
+      return createDefaultFromMock(table);
     });
 
     const payload = {
@@ -298,7 +298,7 @@ describe("POST /api/jobs/memory-sync", () => {
     // Override the memories insert mock to return 50 items
     MOCK_FROM.mockImplementation((table: string) => {
       if (table === "chat_sessions") {
-        return {
+        return unsafeCast<MockFromReturn>({
           select: vi.fn(() => ({
             eq: vi.fn(() => ({
               eq: vi.fn(() => ({
@@ -315,10 +315,10 @@ describe("POST /api/jobs/memory-sync", () => {
               error: null,
             }),
           })),
-        } as unknown as ReturnType<typeof createDefaultFromMock>;
+        });
       }
       if (table === "memories") {
-        return {
+        return unsafeCast<MockFromReturn>({
           insert: vi.fn(() => ({
             select: vi.fn().mockResolvedValue({
               data: Array.from({ length: 50 }, (_, i) => ({
@@ -328,11 +328,9 @@ describe("POST /api/jobs/memory-sync", () => {
               error: null,
             }),
           })),
-        } as unknown as ReturnType<typeof createDefaultFromMock>;
+        });
       }
-      return createDefaultFromMock(table as string) as unknown as ReturnType<
-        typeof createDefaultFromMock
-      >;
+      return createDefaultFromMock(table);
     });
 
     const messages = Array.from({ length: 60 }, (_, i) => ({

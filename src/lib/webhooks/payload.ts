@@ -1,8 +1,5 @@
 /**
- * @fileoverview Webhook payload parsing, verification, and event key generation.
- *
- * Implements single-pass body read to avoid redundant request cloning
- * and potential stream exhaustion issues.
+ * @fileoverview Webhook payload parsing and HMAC verification with bounded, single-pass body reads.
  */
 
 import "server-only";
@@ -57,58 +54,116 @@ function recordVerificationFailure(reason: string): void {
   });
 }
 
+export type ParseAndVerifyFailureReason =
+  | "body_read_error"
+  | "invalid_json"
+  | "invalid_payload_shape"
+  | "invalid_signature"
+  | "missing_secret_env"
+  | "missing_signature"
+  | "payload_too_large";
+
+export type ParseAndVerifyResult =
+  | { ok: true; payload: WebhookPayload }
+  | { ok: false; reason: ParseAndVerifyFailureReason };
+
+async function readBodyBytesWithLimit(
+  req: Request,
+  maxBytes: number
+): Promise<
+  { ok: true; bytes: Uint8Array } | { ok: false; reason: "payload_too_large" }
+> {
+  if (!req.body) {
+    return { bytes: new Uint8Array(), ok: true };
+  }
+
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (!value) continue;
+
+    const nextTotal = total + value.byteLength;
+    if (nextTotal > maxBytes) {
+      await reader.cancel();
+      return { ok: false, reason: "payload_too_large" };
+    }
+
+    chunks.push(value);
+    total = nextTotal;
+  }
+
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return { bytes, ok: true };
+}
+
 /**
  * Parses and verifies a webhook request with HMAC signature.
  *
- * Uses single-pass body read to avoid redundant request cloning:
- * 1. Read body as raw text once
- * 2. Verify HMAC on raw text
- * 3. Parse JSON from the same text
+ * Uses a bounded single-pass body read:
+ * 1. Read body bytes once (enforcing a max size)
+ * 2. Verify HMAC on raw bytes
+ * 3. Parse JSON from the same bytes
  *
  * @param req - The incoming webhook request.
+ * @param options - Optional body size limit configuration.
  * @return Object with verification status and optional parsed payload.
  */
 export async function parseAndVerify(
-  req: Request
-): Promise<{ ok: boolean; payload?: WebhookPayload }> {
+  req: Request,
+  options: { maxBytes?: number } = {}
+): Promise<ParseAndVerifyResult> {
+  const { maxBytes = 65536 } = options;
   const secret = getServerEnvVarWithFallback("HMAC_SECRET", "");
   if (!secret) {
     recordVerificationFailure("missing_secret_env");
-    return { ok: false };
+    return { ok: false, reason: "missing_secret_env" };
   }
 
   // Get signature from header
   const sig = req.headers.get("x-signature-hmac");
   if (!sig) {
     recordVerificationFailure("missing_signature");
-    return { ok: false };
+    return { ok: false, reason: "missing_signature" };
   }
 
-  // Single-pass body read: read as text once, verify, then parse.
-  // Note: req.text() consumes the stream; early exits above/below leave
-  // the request mutated, which is acceptable because we don't reuse it.
-  let rawBody: string;
+  let rawBytes: Uint8Array;
   try {
-    rawBody = await req.text();
+    const bodyRead = await readBodyBytesWithLimit(req, maxBytes);
+    if (!bodyRead.ok) {
+      recordVerificationFailure("payload_too_large");
+      return { ok: false, reason: "payload_too_large" };
+    }
+    rawBytes = bodyRead.bytes;
   } catch {
     recordVerificationFailure("body_read_error");
-    return { ok: false };
+    return { ok: false, reason: "body_read_error" };
   }
 
-  // Verify HMAC on raw text
-  const expected = computeHmacSha256Hex(rawBody, secret);
+  // Verify HMAC on raw bytes
+  const expected = computeHmacSha256Hex(rawBytes, secret);
   if (!timingSafeEqualHex(expected, sig)) {
     recordVerificationFailure("invalid_signature");
-    return { ok: false };
+    return { ok: false, reason: "invalid_signature" };
   }
 
-  // Parse JSON from the already-read text
+  const rawBody = Buffer.from(rawBytes).toString("utf8");
+
+  // Parse JSON from the already-read body
   let raw: RawWebhookPayload;
   try {
     raw = JSON.parse(rawBody) as RawWebhookPayload;
   } catch {
     recordVerificationFailure("invalid_json");
-    return { ok: false };
+    return { ok: false, reason: "invalid_json" };
   }
 
   // Normalize and validate payload
@@ -117,7 +172,7 @@ export async function parseAndVerify(
     payload = normalizeWebhookPayload(raw);
   } catch {
     recordVerificationFailure("invalid_payload_shape");
-    return { ok: false };
+    return { ok: false, reason: "invalid_payload_shape" };
   }
 
   return { ok: true, payload };

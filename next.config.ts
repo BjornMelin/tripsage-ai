@@ -1,10 +1,23 @@
+/**
+ * @fileoverview Next.js configuration for TripSage AI (Turbopack root, build optimizations, and security headers).
+ */
+
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import withBundleAnalyzer from "@next/bundle-analyzer";
 import { withBotId } from "botid/next/config";
 import type { NextConfig } from "next";
 
+const TURBOPACK_ROOT = dirname(fileURLToPath(import.meta.url));
+
 const nextConfig: NextConfig = {
   // Enable Cache Components (required for "use cache" directives in codebase)
   cacheComponents: true,
+
+  turbopack: {
+    // Explicit root avoids Next.js selecting an unrelated lockfile in a parent directory.
+    root: TURBOPACK_ROOT,
+  },
 
   compiler: {
     // Remove console.log statements in production

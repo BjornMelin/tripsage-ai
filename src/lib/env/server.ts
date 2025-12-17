@@ -1,9 +1,5 @@
 /**
- * @fileoverview Server-only environment variable access.
- *
- * This module MUST only be imported in server contexts (API routes, Server
- * Components, server actions). It validates and caches server environment
- * variables at module load time.
+ * @fileoverview Server-only validated environment access with per-process caching and build-phase fail-fast guard.
  */
 
 import "server-only";
@@ -88,13 +84,15 @@ export function getServerEnv(): ServerEnv {
  * @returns Environment variable value
  * @throws Error if key is missing or invalid
  */
-export function getServerEnvVar<T extends keyof ServerEnv>(key: T): ServerEnv[T] {
+export function getServerEnvVar<T extends keyof ServerEnv>(
+  key: T
+): Exclude<ServerEnv[T], undefined> {
   const env = getServerEnv();
   const value = env[key];
   if (value === undefined) {
     throw new Error(`Environment variable ${String(key)} is not defined`);
   }
-  return value;
+  return value as Exclude<ServerEnv[T], undefined>;
 }
 
 /**
@@ -132,7 +130,7 @@ export function getGoogleMapsServerKey(): string {
         "GOOGLE_MAPS_SERVER_API_KEY is required for Google Maps Platform services"
       );
     }
-    return key as string;
+    return key;
   } catch (error) {
     // When the env var is missing entirely, preserve original 'not defined' message
     if (error instanceof Error && error.message.includes("not defined")) {

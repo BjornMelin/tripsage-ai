@@ -37,7 +37,7 @@ export function stubRateLimitEnabled(): void {
  */
 export async function resetAndImport<T = unknown>(path: string): Promise<T> {
   vi.resetModules();
-  return (await import(path)) as unknown as T;
+  return (await import(path)) as T;
 }
 
 /**

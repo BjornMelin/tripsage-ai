@@ -1,22 +1,18 @@
 /**
- * @fileoverview Agent registry for TripSage AI agents.
- *
- * Provides a centralized registry for all available agents with type-safe
- * lookup and factory function access.
+ * @fileoverview Registry and helpers for constructing TripSage ToolLoopAgent workflows.
  */
 
 import "server-only";
 
 import type { AgentWorkflowKind } from "@schemas/agents";
 import type { AgentConfig } from "@schemas/configuration";
-import type { ToolSet } from "ai";
 
 import { createAccommodationAgent } from "./accommodation-agent";
 import { createBudgetAgent } from "./budget-agent";
 import { createDestinationAgent } from "./destination-agent";
 import { createFlightAgent } from "./flight-agent";
 import { createItineraryAgent } from "./itinerary-agent";
-import type { AgentDependencies, TripSageAgentResult } from "./types";
+import type { AgentDependencies } from "./types";
 
 // Re-export all agent creators for direct imports
 export { createAccommodationAgent } from "./accommodation-agent";
@@ -49,30 +45,25 @@ export type {
 } from "./types";
 export { extractAgentParameters } from "./types";
 
-/** Input types for each agent workflow. */
-export interface AgentInputTypes {
-  // Supported by agentRegistry and createAgentForWorkflow
-  accommodationSearch: import("@schemas/agents").AccommodationSearchRequest;
-  budgetPlanning: import("@schemas/agents").BudgetPlanRequest;
-  destinationResearch: import("@schemas/agents").DestinationResearchRequest;
-  flightSearch: import("@schemas/flights").FlightSearchRequest;
-  itineraryPlanning: import("@schemas/agents").ItineraryPlanRequest;
-  // Special handling - not supported via agentRegistry
-  memoryUpdate: never;
-  router: never; // Router uses generateText with Output.object, not ToolLoopAgent
-}
+type AgentRegistry = {
+  accommodationSearch: typeof createAccommodationAgent;
+  budgetPlanning: typeof createBudgetAgent;
+  destinationResearch: typeof createDestinationAgent;
+  flightSearch: typeof createFlightAgent;
+  itineraryPlanning: typeof createItineraryAgent;
+};
 
 /** Registry of agent factory functions. */
-export const agentRegistry = {
+export const agentRegistry: AgentRegistry = {
   accommodationSearch: createAccommodationAgent,
   budgetPlanning: createBudgetAgent,
   destinationResearch: createDestinationAgent,
   flightSearch: createFlightAgent,
   itineraryPlanning: createItineraryAgent,
-} as const;
+};
 
 /** Agent workflow kinds supported by the registry. Excludes 'memoryUpdate' and 'router'. */
-export type SupportedAgentKind = keyof typeof agentRegistry;
+export type SupportedAgentKind = keyof AgentRegistry;
 
 /**
  * Checks if an agent workflow kind is supported by the registry.
@@ -96,27 +87,78 @@ export function isSupportedAgentKind(
  * @returns Configured ToolLoopAgent instance.
  * @throws Error if the agent kind is not supported.
  */
-export function createAgentForWorkflow<Kind extends SupportedAgentKind>(
-  kind: Kind,
+export function createAgentForWorkflow(
+  kind: "accommodationSearch",
   deps: AgentDependencies,
   config: AgentConfig,
-  input: AgentInputTypes[Kind]
-): TripSageAgentResult<ToolSet> {
-  const factory = agentRegistry[kind];
-  // Defensive check (compile-time constraint already guarantees presence)
-  if (!factory) {
-    throw new Error(`Unsupported agent kind: ${kind}`);
+  input: Parameters<typeof createAccommodationAgent>[2]
+): ReturnType<typeof createAccommodationAgent>;
+export function createAgentForWorkflow(
+  kind: "budgetPlanning",
+  deps: AgentDependencies,
+  config: AgentConfig,
+  input: Parameters<typeof createBudgetAgent>[2]
+): ReturnType<typeof createBudgetAgent>;
+export function createAgentForWorkflow(
+  kind: "destinationResearch",
+  deps: AgentDependencies,
+  config: AgentConfig,
+  input: Parameters<typeof createDestinationAgent>[2]
+): ReturnType<typeof createDestinationAgent>;
+export function createAgentForWorkflow(
+  kind: "flightSearch",
+  deps: AgentDependencies,
+  config: AgentConfig,
+  input: Parameters<typeof createFlightAgent>[2]
+): ReturnType<typeof createFlightAgent>;
+export function createAgentForWorkflow(
+  kind: "itineraryPlanning",
+  deps: AgentDependencies,
+  config: AgentConfig,
+  input: Parameters<typeof createItineraryAgent>[2]
+): ReturnType<typeof createItineraryAgent>;
+export function createAgentForWorkflow(
+  kind: SupportedAgentKind,
+  deps: AgentDependencies,
+  config: AgentConfig,
+  input: Parameters<AgentRegistry[SupportedAgentKind]>[2]
+): ReturnType<AgentRegistry[SupportedAgentKind]> {
+  switch (kind) {
+    case "accommodationSearch":
+      return createAccommodationAgent(
+        deps,
+        config,
+        input as Parameters<typeof createAccommodationAgent>[2]
+      );
+    case "budgetPlanning":
+      return createBudgetAgent(
+        deps,
+        config,
+        input as Parameters<typeof createBudgetAgent>[2]
+      );
+    case "destinationResearch":
+      return createDestinationAgent(
+        deps,
+        config,
+        input as Parameters<typeof createDestinationAgent>[2]
+      );
+    case "flightSearch":
+      return createFlightAgent(
+        deps,
+        config,
+        input as Parameters<typeof createFlightAgent>[2]
+      );
+    case "itineraryPlanning":
+      return createItineraryAgent(
+        deps,
+        config,
+        input as Parameters<typeof createItineraryAgent>[2]
+      );
+    default: {
+      const exhaustive: never = kind;
+      throw new Error(`Unsupported agent kind: ${exhaustive}`);
+    }
   }
-
-  // Type assertion needed because factory functions have different specific tool sets
-  // but all return TripSageAgentResult. We cast through unknown to satisfy TypeScript.
-  return (
-    factory as unknown as (
-      deps: AgentDependencies,
-      config: AgentConfig,
-      input: unknown
-    ) => TripSageAgentResult<ToolSet>
-  )(deps, config, input);
 }
 
 /**

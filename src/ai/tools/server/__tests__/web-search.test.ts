@@ -13,6 +13,7 @@ import {
   vi,
 } from "vitest";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { server } from "@/test/msw/server";
 import { setupUpstashTestEnvironment } from "@/test/upstash/setup";
 
@@ -108,7 +109,7 @@ describe("webSearch", () => {
       mockContext
     );
 
-    const outAny = out as unknown as {
+    const outAny = unsafeCast<{
       results: Array<{
         url: string;
         title?: string;
@@ -117,7 +118,7 @@ describe("webSearch", () => {
       }>;
       fromCache: boolean;
       tookMs: number;
-    };
+    }>(out);
 
     expect(Array.isArray(outAny.results)).toBe(true);
     expect(outAny.results[0].url).toBe("https://x");

@@ -1,14 +1,15 @@
 /**
- * @fileoverview ThemeProvider props validation schema.
- * Aligned with next-themes configuration for theme management.
+ * @fileoverview Zod schema for next-themes ThemeProvider props.
  */
 
 import { z } from "zod";
 
-const ATTRIBUTE_SCHEMA = z.union([
-  z.literal("class"),
-  z.string().regex(/^data-/, { error: "Must be a data attribute (data-*)" }),
-]) as unknown as z.ZodType<`data-${string}` | "class">;
+const DATA_ATTRIBUTE_SCHEMA = z.custom<`data-${string}`>(
+  (value) => typeof value === "string" && /^data-/.test(value),
+  { error: "Must be a data attribute (data-*)" }
+);
+
+const ATTRIBUTE_SCHEMA = z.union([z.literal("class"), DATA_ATTRIBUTE_SCHEMA]);
 
 const VALUE_OBJECT_SCHEMA = z.record(z.string(), z.string());
 

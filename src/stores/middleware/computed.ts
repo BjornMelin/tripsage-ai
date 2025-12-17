@@ -1,12 +1,5 @@
 /**
- * @fileoverview Zustand middleware for automatic computed state derivation.
- *
- * Enables reactive derived properties that stay synchronized with store state
- * without manual cache invalidation. Compute functions run automatically on
- * every state update to recalculate derived values.
- *
- * @see {@link https://github.com/your-org/docs/blob/main/docs/development/zustand-computed-middleware.md | Zustand Computed Middleware Guide} for detailed architecture, patterns, and examples
- * @see ADR-0057 for architectural rationale and filter panel integration
+ * @fileoverview Zustand middleware that recomputes derived state on every update.
  */
 
 import type { StateCreator, StoreMutatorIdentifier } from "zustand";
@@ -70,7 +63,8 @@ export function withComputed<
     ) => {
       const partialState =
         typeof nextState === "function" ? nextState(get()) : nextState;
-      const mergedState = replace ? partialState : { ...get(), ...partialState };
+      const mergedState =
+        replace === true ? partialState : { ...get(), ...partialState };
       const derived = config.compute(mergedState as T);
       return { derived, partialState, replace: replace === true };
     };
@@ -79,35 +73,38 @@ export function withComputed<
       const [nextState, replace] = args;
       const { derived, partialState } = applyComputed(nextState, replace);
       const updatedArgs = [...args] as Parameters<typeof set>;
+
       updatedArgs[0] = (
-        replace
+        replace === true
           ? ({ ...(partialState as T), ...derived } as T)
-          : (((state) => ({ ...state, ...partialState, ...derived })) as Parameters<
-              typeof set
-            >[0])
+          : (state: T) => ({ ...state, ...partialState, ...derived })
       ) as Parameters<typeof set>[0];
-      return (
-        set as unknown as (...setArgs: Parameters<typeof set>) => ReturnType<typeof set>
-      )(...(updatedArgs as unknown as Parameters<typeof set>));
+
+      const setFn = set as (
+        ...setArgs: Parameters<typeof set>
+      ) => ReturnType<typeof set>;
+      return setFn(...updatedArgs);
     }) as typeof set;
 
     const originalSetState = api.setState;
     api.setState = ((...args: Parameters<typeof api.setState>) => {
       const [nextState, replace] = args;
-      const { derived, partialState } = applyComputed(nextState, replace);
+      const { derived, partialState } = applyComputed(
+        nextState as Parameters<typeof set>[0],
+        replace as Parameters<typeof set>[1]
+      );
       const updatedArgs = [...args] as Parameters<typeof api.setState>;
+
       updatedArgs[0] = (
-        replace
+        replace === true
           ? ({ ...(partialState as T), ...derived } as T)
-          : (((state) => ({ ...state, ...partialState, ...derived })) as Parameters<
-              typeof api.setState
-            >[0])
+          : (state: T) => ({ ...state, ...partialState, ...derived })
       ) as Parameters<typeof api.setState>[0];
-      return (
-        originalSetState as unknown as (
-          ...setArgs: Parameters<typeof api.setState>
-        ) => ReturnType<typeof api.setState>
-      )(...(updatedArgs as unknown as Parameters<typeof api.setState>));
+
+      const setStateFn = originalSetState as (
+        ...setArgs: Parameters<typeof api.setState>
+      ) => ReturnType<typeof api.setState>;
+      return setStateFn(...updatedArgs);
     }) as typeof api.setState;
 
     return stateCreator(computedSet, get, api);

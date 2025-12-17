@@ -3,6 +3,7 @@
 import type { ErrorReport, ErrorServiceConfig } from "@schemas/errors";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as telemetryClientErrors from "@/lib/telemetry/client-errors";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { createMockStorage } from "@/test/mocks/storage";
 import {
   createErrorReportingRecorder,
@@ -30,11 +31,12 @@ const setupBrowserEnv = (): StorageMocks => {
     location,
     navigator,
     sessionStorage: sessionStorageMock,
-  } as unknown as Window & typeof globalThis;
+  };
+  const typedWindow = unsafeCast<Window & typeof globalThis>(win);
 
   Object.defineProperty(globalThis, "window", {
     configurable: true,
-    value: win,
+    value: typedWindow,
     writable: true,
   });
   Object.defineProperty(globalThis, "location", {
@@ -192,11 +194,12 @@ describe("ErrorService", () => {
         timestamp: new Date().toISOString(),
         url: "https://example.com",
         userAgent: "Vitest",
-      } as unknown as ErrorReport;
+      };
+      const typedInvalidReport = unsafeCast<ErrorReport>(invalidReport);
 
       // Should complete without throwing - error service swallows validation errors
       // to prevent recursive error loops in production
-      await errorService.reportError(invalidReport);
+      await errorService.reportError(typedInvalidReport);
 
       // No network calls made for invalid reports
       expect(recorder.requests).toHaveLength(0);

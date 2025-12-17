@@ -11,6 +11,7 @@ import {
   createRouteParamsContext,
   getMockCookiesForTest,
 } from "@/test/helpers/route";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
 // Mock next/headers cookies() before any imports that use it
 vi.mock("next/headers", () => ({
@@ -56,16 +57,15 @@ describe("/api/agents/accommodations validation", () => {
       success: true,
     });
     setRateLimitFactoryForTests(async (_key, _identifier) => mockLimitFn());
-    setSupabaseFactoryForTests(
-      async () =>
-        ({
-          auth: {
-            getUser: async () => ({
-              data: { user: { id: "user-1" } },
-              error: null,
-            }),
-          },
-        }) as unknown as TypedServerSupabase
+    setSupabaseFactoryForTests(async () =>
+      unsafeCast<TypedServerSupabase>({
+        auth: {
+          getUser: async () => ({
+            data: { user: { id: "user-1" } },
+            error: null,
+          }),
+        },
+      })
     );
   });
 

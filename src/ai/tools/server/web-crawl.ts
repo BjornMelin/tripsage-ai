@@ -1,7 +1,5 @@
 /**
- * @fileoverview Web crawl/scrape tools using Firecrawl v2.5 API with Redis caching.
- * Library-first: prefers Firecrawl endpoints; falls back to a 400 error if misconfigured.
- * Uses direct API (not SDK) for latest v2.5 features and cost control.
+ * @fileoverview Firecrawl-backed web scrape/crawl tools with Redis caching.
  */
 
 import "server-only";
@@ -305,9 +303,9 @@ export const crawlUrl = tool({
         const { getServerEnvVar, getServerEnvVarWithFallback } = await import(
           "@/lib/env/server"
         );
-        let apiKey: string | undefined;
+        let apiKey: string;
         try {
-          apiKey = getServerEnvVar("FIRECRAWL_API_KEY") as unknown as string;
+          apiKey = getServerEnvVar("FIRECRAWL_API_KEY");
         } catch {
           // Normalize missing configuration into a tool-specific error code
           throw new Error("web_crawl_not_configured");
@@ -398,9 +396,9 @@ export const crawlSite = tool({
         const { getServerEnvVar, getServerEnvVarWithFallback } = await import(
           "@/lib/env/server"
         );
-        let apiKey: string | undefined;
+        let apiKey: string;
         try {
-          apiKey = getServerEnvVar("FIRECRAWL_API_KEY") as unknown as string;
+          apiKey = getServerEnvVar("FIRECRAWL_API_KEY");
         } catch {
           throw new Error("web_crawl_not_configured");
         }

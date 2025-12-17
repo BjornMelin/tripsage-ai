@@ -1,7 +1,5 @@
 /**
- * @fileoverview ICS export endpoint.
- *
- * Generates ICS file from events payload. Supports caching for performance.
+ * @fileoverview POST /api/calendar/ics/export generates an ICS file from a validated events payload.
  */
 
 import "server-only";
@@ -11,7 +9,7 @@ import "server-only";
 // making it dynamic and preventing caching of user-specific data.
 
 import { type IcsExportRequest, icsExportRequestSchema } from "@schemas/calendar";
-import ical from "ical-generator";
+import ical, { ICalAlarmType, ICalAttendeeStatus } from "ical-generator";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
@@ -24,18 +22,16 @@ import { DateUtils } from "@/lib/dates/unified-date-utils";
  * @param status - Google Calendar style attendee status.
  * @returns iCal attendee status string.
  */
-function eventAttendeeStatusToIcal(
-  status: string
-): "ACCEPTED" | "DECLINED" | "TENTATIVE" | "NEEDS-ACTION" {
+function eventAttendeeStatusToIcal(status: string): ICalAttendeeStatus {
   switch (status) {
     case "accepted":
-      return "ACCEPTED";
+      return ICalAttendeeStatus.ACCEPTED;
     case "declined":
-      return "DECLINED";
+      return ICalAttendeeStatus.DECLINED;
     case "tentative":
-      return "TENTATIVE";
+      return ICalAttendeeStatus.TENTATIVE;
     default:
-      return "NEEDS-ACTION";
+      return ICalAttendeeStatus.NEEDSACTION;
   }
 }
 
@@ -45,12 +41,12 @@ function eventAttendeeStatusToIcal(
  * @param method - Notification channel provided by Google events.
  * @returns Alarm type accepted by ical-generator.
  */
-function reminderMethodToIcal(method: string): "display" | "email" | "audio" {
+function reminderMethodToIcal(method: string): ICalAlarmType {
   switch (method) {
     case "email":
-      return "email";
+      return ICalAlarmType.email;
     default:
-      return "display";
+      return ICalAlarmType.display;
   }
 }
 
@@ -118,8 +114,7 @@ export const POST = withApiGuards({
           email: att.email,
           name: att.displayName,
           rsvp: !att.optional,
-          // biome-ignore lint/suspicious/noExplicitAny: third-party type casting for ical types
-          status: eventAttendeeStatusToIcal(att.responseStatus) as unknown as any,
+          status: eventAttendeeStatusToIcal(att.responseStatus),
         });
       }
     }
@@ -128,8 +123,7 @@ export const POST = withApiGuards({
       for (const rem of event.reminders.overrides) {
         ev.createAlarm({
           trigger: rem.minutes * 60, // seconds
-          // biome-ignore lint/suspicious/noExplicitAny: third-party type casting for ical types
-          type: reminderMethodToIcal(rem.method) as unknown as any,
+          type: reminderMethodToIcal(rem.method),
         });
       }
     }

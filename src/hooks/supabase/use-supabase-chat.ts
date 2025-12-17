@@ -1,12 +1,10 @@
 /**
- * @fileoverview React hooks for Supabase chat functionality.
- *
- * Provides hooks for managing chat sessions, messages, tool calls,
- * and real-time updates with optimistic UI.
+ * @fileoverview Client hooks for Supabase chat sessions, messages, and tool calls.
  */
 
 "use client";
 
+import { jsonSchema } from "@schemas/supabase";
 import {
   useInfiniteQuery,
   useMutation,
@@ -23,7 +21,6 @@ import type {
   ChatSessionInsert,
   ChatToolCall,
   ChatToolCallInsert,
-  Json,
   UpdateTables,
 } from "@/lib/supabase/database.types";
 import { insertSingle, updateSingle } from "@/lib/supabase/typed-helpers";
@@ -195,10 +192,11 @@ export function useSupabaseChat() {
         // Validate input with Zod
         const validatedSessionData = CHAT_SESSION_INSERT_SCHEMA.parse(sessionData);
 
-        // Cast metadata to Json to satisfy type
         const prepared: ChatSessionInsert = {
           ...validatedSessionData,
-          metadata: (validatedSessionData.metadata as unknown as Json) ?? undefined,
+          metadata: validatedSessionData.metadata
+            ? jsonSchema.parse(validatedSessionData.metadata)
+            : undefined,
           // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
           user_id: userId,
         };
@@ -391,28 +389,23 @@ export function useSupabaseChat() {
           ? ERROR_MESSAGE_SCHEMA.parse(error_message)
           : undefined;
 
-        const updates: Partial<UpdateTables<"chat_tool_calls">> = {
+        const updates = {
           // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
           completed_at:
             validatedStatus === "completed" || validatedStatus === "failed"
               ? new Date().toISOString()
               : null,
           status: validatedStatus,
-        };
-
-        if (validatedResult !== undefined) {
-          (
-            updates as Partial<UpdateTables<"chat_tool_calls">> & { result?: Json }
-          ).result = validatedResult as unknown as Json;
-        }
-        if (validatedErrorMessage !== undefined) {
-          (
-            updates as Partial<UpdateTables<"chat_tool_calls">> & {
-              // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
-              error_message?: string;
-            }
-          ).error_message = validatedErrorMessage;
-        }
+          ...(validatedResult !== undefined
+            ? { result: jsonSchema.parse(validatedResult) }
+            : {}),
+          ...(validatedErrorMessage !== undefined
+            ? {
+                // biome-ignore lint/style/useNamingConvention: Database field names use snake_case
+                error_message: validatedErrorMessage,
+              }
+            : {}),
+        } satisfies Partial<UpdateTables<"chat_tool_calls">>;
 
         const { data, error } = await updateSingle(
           supabase,

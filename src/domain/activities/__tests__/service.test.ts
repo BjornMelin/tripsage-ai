@@ -3,6 +3,7 @@
 import type { ActivitySearchParams } from "@schemas/search";
 import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { server } from "@/test/msw/server";
 import type { ActivitiesServiceDeps } from "../service";
 import { ActivitiesService } from "../service";
@@ -109,7 +110,7 @@ describe("ActivitiesService", () => {
   describe("search", () => {
     it("should validate destination is required", async () => {
       await expect(
-        service.search({} as unknown as ActivitySearchParams, {})
+        service.search(unsafeCast<ActivitySearchParams>({}), {})
       ).rejects.toThrow("Destination is required");
     });
 

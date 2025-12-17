@@ -2,6 +2,7 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_BACKOFF_CONFIG } from "@/lib/realtime/backoff";
 import { useRealtimeConnectionStore } from "@/stores/realtime-connection-store";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { createFakeTimersContext } from "@/test/utils/with-fake-timers";
 
 describe("realtime connection store", () => {
@@ -24,7 +25,7 @@ describe("realtime connection store", () => {
   });
 
   it("registers channels and updates status", () => {
-    const channel = { topic: "realtime:test" } as unknown as RealtimeChannel;
+    const channel = unsafeCast<RealtimeChannel>({ topic: "realtime:test" });
     const store = useRealtimeConnectionStore.getState();
     store.registerChannel(channel);
 
@@ -35,7 +36,7 @@ describe("realtime connection store", () => {
   });
 
   it("tracks last activity when updated", () => {
-    const channel = { topic: "realtime:activity" } as unknown as RealtimeChannel;
+    const channel = unsafeCast<RealtimeChannel>({ topic: "realtime:activity" });
     const store = useRealtimeConnectionStore.getState();
     store.registerChannel(channel);
     store.updateActivity(channel.topic);
@@ -56,7 +57,7 @@ describe("realtime connection store", () => {
   });
 
   it("registers the same channel twice without duplicating entries", () => {
-    const channel = { topic: "realtime:duplicate" } as unknown as RealtimeChannel;
+    const channel = unsafeCast<RealtimeChannel>({ topic: "realtime:duplicate" });
     const store = useRealtimeConnectionStore.getState();
     store.registerChannel(channel);
     store.registerChannel(channel);
@@ -66,7 +67,7 @@ describe("realtime connection store", () => {
   });
 
   it("removes channels and updates summary counts", () => {
-    const channel = { topic: "realtime:remove" } as unknown as RealtimeChannel;
+    const channel = unsafeCast<RealtimeChannel>({ topic: "realtime:remove" });
     const store = useRealtimeConnectionStore.getState();
     store.registerChannel(channel);
 
@@ -80,7 +81,7 @@ describe("realtime connection store", () => {
   });
 
   it("clears lastError after recovery and updates summary health", () => {
-    const channel = { topic: "realtime:errors" } as unknown as RealtimeChannel;
+    const channel = unsafeCast<RealtimeChannel>({ topic: "realtime:errors" });
     const store = useRealtimeConnectionStore.getState();
     store.registerChannel(channel);
 
@@ -104,11 +105,11 @@ describe("realtime connection store", () => {
   it("increments reconnect attempts and applies backoff", async () => {
     const subscribeMock = vi.fn().mockResolvedValue(undefined);
     const unsubscribeMock = vi.fn().mockResolvedValue(undefined);
-    const channel = {
+    const channel = unsafeCast<RealtimeChannel>({
       subscribe: subscribeMock,
       topic: "realtime:retry",
       unsubscribe: unsubscribeMock,
-    } as unknown as RealtimeChannel;
+    });
 
     const store = useRealtimeConnectionStore.getState();
     store.registerChannel(channel);
@@ -133,11 +134,11 @@ describe("realtime connection store", () => {
   it("prevents concurrent reconnectAll executions", async () => {
     const subscribeMock = vi.fn().mockResolvedValue(undefined);
     const unsubscribeMock = vi.fn().mockResolvedValue(undefined);
-    const channel = {
+    const channel = unsafeCast<RealtimeChannel>({
       subscribe: subscribeMock,
       topic: "realtime:once",
       unsubscribe: unsubscribeMock,
-    } as unknown as RealtimeChannel;
+    });
 
     const store = useRealtimeConnectionStore.getState();
     store.registerChannel(channel);
@@ -169,11 +170,11 @@ describe("realtime connection store", () => {
   it("surfaces reconnect failures when a channel subscribe throws", async () => {
     const subscribeMock = vi.fn().mockRejectedValue(new Error("subscribe failed"));
     const unsubscribeMock = vi.fn().mockResolvedValue(undefined);
-    const channel = {
+    const channel = unsafeCast<RealtimeChannel>({
       subscribe: subscribeMock,
       topic: "realtime:retry-fail",
       unsubscribe: unsubscribeMock,
-    } as unknown as RealtimeChannel;
+    });
 
     const store = useRealtimeConnectionStore.getState();
     store.registerChannel(channel);
@@ -203,7 +204,7 @@ describe("realtime connection store", () => {
     const store = useRealtimeConnectionStore.getState();
     const first = store.summary();
 
-    const channel = { topic: "realtime:memo" } as unknown as RealtimeChannel;
+    const channel = unsafeCast<RealtimeChannel>({ topic: "realtime:memo" });
     store.registerChannel(channel);
 
     const second = store.summary();
@@ -215,7 +216,7 @@ describe("realtime connection store", () => {
     const store = useRealtimeConnectionStore.getState();
     const channels = ["realtime:one", "realtime:two", "realtime:three"];
     for (const topic of channels) {
-      store.registerChannel({ topic } as unknown as RealtimeChannel);
+      store.registerChannel(unsafeCast<RealtimeChannel>({ topic }));
     }
 
     for (const topic of channels) {
@@ -229,7 +230,7 @@ describe("realtime connection store", () => {
   });
 
   it("reports connectedCount and totalCount separately in summary", () => {
-    const channel = { topic: "realtime:test-counts" } as unknown as RealtimeChannel;
+    const channel = unsafeCast<RealtimeChannel>({ topic: "realtime:test-counts" });
     const store = useRealtimeConnectionStore.getState();
     store.registerChannel(channel);
     store.updateStatus(channel.topic, "subscribed", false, null);

@@ -1,8 +1,5 @@
 /**
- * @fileoverview RAG document retriever with hybrid search and reranking.
- *
- * Combines vector similarity (cosine) and lexical search (BM25/ts_rank)
- * with optional cross-encoder reranking via Together.ai.
+ * @fileoverview Server-only RAG retrieval (hybrid/semantic) and optional reranking.
  */
 
 import "server-only";
@@ -15,6 +12,7 @@ import { embed } from "ai";
 import type { Database } from "@/lib/supabase/database.types";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
+import { toPgvector } from "./pgvector";
 import { createReranker, type Reranker } from "./reranker";
 
 const logger = createServerLogger("rag.retriever");
@@ -99,7 +97,7 @@ export async function retrieveDocuments(
         // biome-ignore lint/style/useNamingConvention: RPC parameter name
         match_threshold: config.threshold,
         // biome-ignore lint/style/useNamingConvention: RPC parameter name
-        query_embedding: embedding as unknown as string,
+        query_embedding: toPgvector(embedding),
         // biome-ignore lint/style/useNamingConvention: RPC parameter name
         query_text: query,
         // biome-ignore lint/style/useNamingConvention: RPC parameter name
@@ -208,7 +206,7 @@ export async function semanticSearch(params: {
     // biome-ignore lint/style/useNamingConvention: RPC parameter name
     match_threshold: threshold,
     // biome-ignore lint/style/useNamingConvention: RPC parameter name
-    query_embedding: embedding as unknown as string,
+    query_embedding: toPgvector(embedding),
   });
 
   if (error) {

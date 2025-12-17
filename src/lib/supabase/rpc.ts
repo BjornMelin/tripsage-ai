@@ -1,6 +1,7 @@
 /**
- * @fileoverview Typed wrappers for Supabase Vault RPCs used by BYOK routes.
+ * @fileoverview Supabase RPC wrappers for Vault and gateway user settings.
  */
+
 import "server-only";
 
 import type { TypedAdminSupabase } from "./admin";
@@ -13,23 +14,12 @@ export type SupportedService =
   | "xai"
   | "gateway";
 
-/**
- * Type helper for Supabase RPC calls with proper typing.
- * Supabase RPC types are not fully generated, so we use a minimal type assertion.
- */
-type SupabaseRpcClient = {
-  rpc: (
-    name: string,
-    params: Record<string, unknown>
-  ) => Promise<{ data?: unknown; error: unknown | null }>;
-};
-
 function normalizeService(service: string): SupportedService {
   const s = service.trim().toLowerCase();
   if (s === "openai" || s === "openrouter" || s === "anthropic" || s === "xai") {
     return s;
   }
-  if (s === "gateway") return s as SupportedService;
+  if (s === "gateway") return s;
   throw new Error(`Invalid service: ${service}`);
 }
 
@@ -51,17 +41,14 @@ export async function insertUserApiKey(
 ): Promise<void> {
   const svc = normalizeService(service);
   const supabase = client ?? createAdminSupabase();
-  const { error } = await (supabase as unknown as SupabaseRpcClient).rpc(
-    "insert_user_api_key",
-    {
-      // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
-      p_api_key: apiKey,
-      // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
-      p_service: svc,
-      // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
-      p_user_id: userId,
-    }
-  );
+  const { error } = await supabase.rpc("insert_user_api_key", {
+    // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
+    p_api_key: apiKey,
+    // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
+    p_service: svc,
+    // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
+    p_user_id: userId,
+  });
   if (error) throw error;
 }
 
@@ -81,15 +68,12 @@ export async function deleteUserApiKey(
 ): Promise<void> {
   const svc = normalizeService(service);
   const supabase = client ?? createAdminSupabase();
-  const { error } = await (supabase as unknown as SupabaseRpcClient).rpc(
-    "delete_user_api_key",
-    {
-      // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
-      p_service: svc,
-      // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
-      p_user_id: userId,
-    }
-  );
+  const { error } = await supabase.rpc("delete_user_api_key", {
+    // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
+    p_service: svc,
+    // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
+    p_user_id: userId,
+  });
   if (error) throw error;
 }
 
@@ -111,15 +95,12 @@ export async function getUserApiKey(
 ): Promise<string | null> {
   const svc = normalizeService(service);
   const supabase = client ?? createAdminSupabase();
-  const { data, error } = await (supabase as unknown as SupabaseRpcClient).rpc(
-    "get_user_api_key",
-    {
-      // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
-      p_service: svc,
-      // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
-      p_user_id: userId,
-    }
-  );
+  const { data, error } = await supabase.rpc("get_user_api_key", {
+    // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
+    p_service: svc,
+    // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
+    p_user_id: userId,
+  });
   if (error) throw error;
   return typeof data === "string" ? data : null;
 }
@@ -140,15 +121,12 @@ export async function touchUserApiKey(
 ): Promise<void> {
   const svc = normalizeService(service);
   const supabase = client ?? createAdminSupabase();
-  const { error } = await (supabase as unknown as SupabaseRpcClient).rpc(
-    "touch_user_api_key",
-    {
-      // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
-      p_service: svc,
-      // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
-      p_user_id: userId,
-    }
-  );
+  const { error } = await supabase.rpc("touch_user_api_key", {
+    // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
+    p_service: svc,
+    // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
+    p_user_id: userId,
+  });
   if (error) throw error;
 }
 
@@ -160,15 +138,12 @@ export async function upsertUserGatewayBaseUrl(
   client?: TypedAdminSupabase
 ): Promise<void> {
   const supabase = client ?? createAdminSupabase();
-  const { error } = await (supabase as unknown as SupabaseRpcClient).rpc(
-    "upsert_user_gateway_config",
-    {
-      // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
-      p_base_url: baseUrl,
-      // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
-      p_user_id: userId,
-    }
-  );
+  const { error } = await supabase.rpc("upsert_user_gateway_config", {
+    // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
+    p_base_url: baseUrl,
+    // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
+    p_user_id: userId,
+  });
   if (error) throw error;
 }
 
@@ -177,13 +152,10 @@ export async function getUserGatewayBaseUrl(
   client?: TypedAdminSupabase
 ): Promise<string | null> {
   const supabase = client ?? createAdminSupabase();
-  const { data, error } = await (supabase as unknown as SupabaseRpcClient).rpc(
-    "get_user_gateway_base_url",
-    {
-      // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
-      p_user_id: userId,
-    }
-  );
+  const { data, error } = await supabase.rpc("get_user_gateway_base_url", {
+    // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
+    p_user_id: userId,
+  });
   if (error) throw error;
   return typeof data === "string" ? data : null;
 }
@@ -193,13 +165,10 @@ export async function deleteUserGatewayBaseUrl(
   client?: TypedAdminSupabase
 ): Promise<void> {
   const supabase = client ?? createAdminSupabase();
-  const { error } = await (supabase as unknown as SupabaseRpcClient).rpc(
-    "delete_user_gateway_config",
-    {
-      // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
-      p_user_id: userId,
-    }
-  );
+  const { error } = await supabase.rpc("delete_user_gateway_config", {
+    // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
+    p_user_id: userId,
+  });
   if (error) throw error;
 }
 
@@ -208,13 +177,10 @@ export async function getUserAllowGatewayFallback(
   client?: TypedAdminSupabase
 ): Promise<boolean | null> {
   const supabase = client ?? createAdminSupabase();
-  const { data, error } = await (supabase as unknown as SupabaseRpcClient).rpc(
-    "get_user_allow_gateway_fallback",
-    {
-      // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
-      p_user_id: userId,
-    }
-  );
+  const { data, error } = await supabase.rpc("get_user_allow_gateway_fallback", {
+    // biome-ignore lint/style/useNamingConvention: Database RPC parameter names use snake_case
+    p_user_id: userId,
+  });
   if (error) throw error;
   return typeof data === "boolean" ? data : null;
 }

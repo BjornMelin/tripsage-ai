@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Client error boundary wrapper with error reporting and user/session context.
+ */
+
 "use client";
 
 import type { ErrorBoundaryProps, ErrorInfo } from "@schemas/errors";
@@ -27,11 +31,7 @@ type ErrorWithDigest = Error & { digest?: string };
  */
 function GetUserId(): string | undefined {
   try {
-    interface UserStore {
-      user?: { id?: string };
-    }
-    const userStore = (window as unknown as { userStore?: UserStore }).userStore;
-    return userStore?.user?.id;
+    return window.userStore?.user?.id;
   } catch {
     return undefined;
   }

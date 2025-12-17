@@ -11,6 +11,7 @@ import {
   vi,
 } from "vitest";
 import { getMockCookiesForTest } from "@/test/helpers/route";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { setupUpstashTestEnvironment } from "@/test/upstash/setup";
 
 const {
@@ -61,6 +62,10 @@ type RedisMock = {
   expire: (key: string, seconds: number) => Promise<void>;
   incr: (key: string) => Promise<number>;
   del: (key: string) => Promise<number>;
+};
+
+type ToolWithExecute = {
+  execute?: (args: unknown, callOptions?: unknown) => Promise<unknown>;
 };
 
 vi.mock("@/lib/redis", () => {
@@ -141,16 +146,14 @@ describe("planning tool telemetry", () => {
 
   beforeEach(async () => {
     upstashBeforeEachHook();
-    const mod = (await import("@/lib/redis")) as unknown as {
-      getRedis: () => RedisMock;
-    };
+    const mod = unsafeCast<{ getRedis: () => RedisMock }>(await import("@/lib/redis"));
     redis = mod.getRedis();
     redis.data.clear();
     redis.ttl.clear();
     // Reset user ID to default
-    const supabaseMod = (await import("@/lib/supabase/server")) as unknown as {
-      __setUserIdForTests: (id: string) => void;
-    };
+    const supabaseMod = unsafeCast<{ __setUserIdForTests: (id: string) => void }>(
+      await import("@/lib/supabase/server")
+    );
     supabaseMod.__setUserIdForTests("u1");
     vi.clearAllMocks();
   });
@@ -165,12 +168,9 @@ describe("planning tool telemetry", () => {
 
   it("createTravelPlan wraps execution in withTelemetrySpan and emits rate_limited event on RL breach", async () => {
     const callOptions = { messages: [], toolCallId: "call-1" };
+    const createTool = unsafeCast<ToolWithExecute>(createTravelPlan);
     // Setup: create a plan first to get a valid planId
-    const created = (await (
-      createTravelPlan as unknown as {
-        execute?: (a: unknown, c?: unknown) => Promise<unknown>;
-      }
-    ).execute?.(
+    const created = (await createTool.execute?.(
       {
         destinations: ["AMS"],
         endDate: "2025-07-10",
@@ -202,11 +202,7 @@ describe("planning tool telemetry", () => {
     vi.clearAllMocks();
 
     await expect(
-      (
-        createTravelPlan as unknown as {
-          execute?: (a: unknown, c?: unknown) => Promise<unknown>;
-        }
-      ).execute?.(
+      createTool.execute?.(
         {
           destinations: ["ZRH"],
           endDate: "2025-08-10",
@@ -222,12 +218,10 @@ describe("planning tool telemetry", () => {
 
   it("updateTravelPlan wraps execution in withTelemetrySpan and emits rate_limited event on RL breach", async () => {
     const callOptions = { messages: [], toolCallId: "call-2" };
+    const createTool = unsafeCast<ToolWithExecute>(createTravelPlan);
+    const updateTool = unsafeCast<ToolWithExecute>(updateTravelPlan);
     // Setup: create a plan first
-    const created = (await (
-      createTravelPlan as unknown as {
-        execute?: (a: unknown, c?: unknown) => Promise<unknown>;
-      }
-    ).execute?.(
+    const created = (await createTool.execute?.(
       {
         destinations: ["ROM"],
         endDate: "2025-09-10",
@@ -245,11 +239,7 @@ describe("planning tool telemetry", () => {
     vi.clearAllMocks();
 
     // First update should succeed
-    const updated = (await (
-      updateTravelPlan as unknown as {
-        execute?: (a: unknown, c?: unknown) => Promise<unknown>;
-      }
-    ).execute?.(
+    const updated = (await updateTool.execute?.(
       {
         planId,
         updates: { title: "Updated Title" },
@@ -278,11 +268,7 @@ describe("planning tool telemetry", () => {
     vi.clearAllMocks();
 
     await expect(
-      (
-        updateTravelPlan as unknown as {
-          execute?: (a: unknown, c?: unknown) => Promise<unknown>;
-        }
-      ).execute?.(
+      updateTool.execute?.(
         {
           planId,
           updates: { title: "Another Update" },

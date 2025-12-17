@@ -4,18 +4,25 @@ import type { CookieMethodsServer } from "@supabase/ssr";
 import type { User } from "@supabase/supabase-js";
 import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
 // Hoisted mock for startActiveSpan
 const startActiveSpanMock = vi.hoisted(() =>
-  vi.fn((_name: string, _options: unknown, callback: (span: unknown) => unknown) => {
-    const mockSpan = {
-      end: vi.fn(),
-      recordException: vi.fn(),
-      setAttribute: vi.fn(),
-      setStatus: vi.fn(),
-    };
-    return callback(mockSpan);
-  })
+  vi.fn(
+    (_name: string, maybeOptions: unknown, maybeCb?: (span: unknown) => unknown) => {
+      const callback = typeof maybeOptions === "function" ? maybeOptions : maybeCb;
+      if (typeof callback !== "function") {
+        throw new TypeError("callback is not a function");
+      }
+      const mockSpan = {
+        end: vi.fn(),
+        recordException: vi.fn(),
+        setAttribute: vi.fn(),
+        setStatus: vi.fn(),
+      };
+      return callback(mockSpan);
+    }
+  )
 );
 
 // Mock dependencies
@@ -68,12 +75,12 @@ const { getClientEnv } = await import("@/lib/env/client");
 const {
   createCookieAdapter,
   createMiddlewareSupabase,
-  createServerSupabase,
+  createServerSupabaseClient,
   getCurrentUser,
 } = await import("../factory");
 const { isSupabaseClient } = await import("../guards");
 
-type ServerSupabaseClient = Awaited<ReturnType<typeof createServerSupabase>>;
+type ServerSupabaseClient = ReturnType<typeof createServerSupabaseClient>;
 
 describe("Supabase Factory", () => {
   const mockCreateServerClient = vi.mocked(createServerClient);
@@ -82,7 +89,7 @@ describe("Supabase Factory", () => {
     vi.clearAllMocks();
   });
 
-  describe("createServerSupabase", () => {
+  describe("createServerSupabaseClient", () => {
     let mockCookieAdapter: CookieMethodsServer;
 
     beforeEach(() => {
@@ -104,7 +111,7 @@ describe("Supabase Factory", () => {
         from: vi.fn(),
       });
 
-      const client = createServerSupabase({
+      const client = createServerSupabaseClient({
         cookies: mockCookieAdapter,
       });
 
@@ -126,7 +133,7 @@ describe("Supabase Factory", () => {
         from: vi.fn(),
       });
 
-      createServerSupabase({
+      createServerSupabaseClient({
         cookies: mockCookieAdapter,
       });
 
@@ -150,7 +157,7 @@ describe("Supabase Factory", () => {
         from: vi.fn(),
       });
 
-      createServerSupabase({
+      createServerSupabaseClient({
         cookies: mockCookieAdapter,
         enableTracing: false,
       });
@@ -164,7 +171,7 @@ describe("Supabase Factory", () => {
         from: vi.fn(),
       });
 
-      createServerSupabase({
+      createServerSupabaseClient({
         cookies: mockCookieAdapter,
         spanName: "custom.span.name",
       });
@@ -186,12 +193,7 @@ describe("Supabase Factory", () => {
 
       mockCreateServerClient.mockImplementation(
         (_url: string, _key: string, options: { cookies: CookieMethodsServer }) => {
-          // Simulate calling getAll to trigger error
-          try {
-            options.cookies.getAll();
-          } catch {
-            // Error should be caught by factory
-          }
+          expect(options.cookies.getAll()).toEqual([]);
           return {
             auth: { getUser: vi.fn() },
             from: vi.fn(),
@@ -200,7 +202,7 @@ describe("Supabase Factory", () => {
       );
 
       expect(() =>
-        createServerSupabase({
+        createServerSupabaseClient({
           cookies: errorCookieAdapter,
           enableTracing: false,
         })
@@ -218,14 +220,15 @@ describe("Supabase Factory", () => {
             options.cookies.setAll?.([{ name: "cookie", options: {}, value: "value" }])
           ).toThrow("Cookie adapter required for server client creation");
 
-          return {
+          return unsafeCast<ServerSupabaseClient>({
             auth: { getUser: vi.fn() },
             from: vi.fn(),
-          } as unknown as ServerSupabaseClient;
+          });
         }
       );
 
-      createServerSupabase({
+      // @ts-expect-error - runtime should guard against missing cookie adapter
+      createServerSupabaseClient({
         enableTracing: false,
       });
     });
@@ -344,13 +347,12 @@ describe("Supabase Factory", () => {
 
     beforeEach(() => {
       authGetUserMock = vi.fn();
-      mockSupabaseClient = {
+      mockSupabaseClient = unsafeCast<ServerSupabaseClient>({
         auth: {
-          getUser:
-            authGetUserMock as unknown as ServerSupabaseClient["auth"]["getUser"],
+          getUser: unsafeCast<ServerSupabaseClient["auth"]["getUser"]>(authGetUserMock),
         },
         from: vi.fn(),
-      } as unknown as ServerSupabaseClient;
+      });
     });
 
     afterEach(() => {
@@ -521,13 +523,13 @@ describe("Supabase Factory", () => {
 
   describe("createCookieAdapter", () => {
     it("should create cookie adapter from Next.js cookie store", () => {
-      const mockCookieStore = {
+      const mockCookieStore = unsafeCast<ReadonlyRequestCookies>({
         getAll: vi.fn(() => [
           { name: "cookie1", value: "value1" },
           { name: "cookie2", value: "value2" },
         ]),
         set: vi.fn(),
-      } as unknown as ReadonlyRequestCookies;
+      });
 
       const adapter = createCookieAdapter(mockCookieStore);
 
@@ -542,12 +544,12 @@ describe("Supabase Factory", () => {
     });
 
     it("should handle cookie set errors gracefully", () => {
-      const mockCookieStore = {
+      const mockCookieStore = unsafeCast<ReadonlyRequestCookies>({
         getAll: vi.fn(() => []),
         set: vi.fn(() => {
           throw new Error("Cookie set error");
         }),
-      } as unknown as ReadonlyRequestCookies;
+      });
 
       const adapter = createCookieAdapter(mockCookieStore);
 

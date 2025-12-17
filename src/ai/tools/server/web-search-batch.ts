@@ -1,13 +1,14 @@
 /**
- * @fileoverview Batch web search tool that executes multiple queries concurrently.
- *
- * Uses bounded parallelism (pool size 5) and reuses webSearch tool per query.
- * Includes optional top-level rate limiting (20/min) in addition to per-query limits.
+ * @fileoverview Batch web search tool with bounded concurrency and optional top-level rate limiting.
  */
 
 import "server-only";
 
-import { WEB_SEARCH_BATCH_OUTPUT_SCHEMA } from "@ai/tools/schemas/web-search";
+import {
+  WEB_SEARCH_BATCH_OUTPUT_SCHEMA,
+  WEB_SEARCH_OUTPUT_SCHEMA,
+  webSearchInputSchema,
+} from "@ai/tools/schemas/web-search";
 import { webSearchBatchInputSchema } from "@ai/tools/schemas/web-search-batch";
 import { normalizeWebSearchResults } from "@ai/tools/server/web-search-normalize";
 import { Ratelimit } from "@upstash/ratelimit";
@@ -22,6 +23,26 @@ import { withTelemetrySpan } from "@/lib/telemetry/span";
 import { webSearch } from "./web-search";
 
 const webSearchBatchLogger = createServerLogger("tools.web_search_batch");
+
+function isAsyncIterable(value: unknown): value is AsyncIterable<unknown> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as { [Symbol.asyncIterator]?: unknown })[Symbol.asyncIterator] ===
+      "function"
+  );
+}
+
+async function resolveToolResult(result: unknown): Promise<unknown> {
+  if (isAsyncIterable(result)) {
+    let last: unknown;
+    for await (const chunk of result) {
+      last = chunk;
+    }
+    return last;
+  }
+  return await Promise.resolve(result);
+}
 
 /**
  * Build Upstash rate limiter for batch web search tool.
@@ -103,38 +124,30 @@ export const webSearchBatch = tool({
         let index = 0;
         const runOne = async (q: string) => {
           try {
-            const exec = (
-              webSearch as unknown as {
-                execute: (a: unknown, b?: unknown) => Promise<unknown>;
-              }
-            ).execute;
-            const value = (await exec(
-              {
-                ...rest,
-                fresh: rest.fresh ?? false,
-                limit: rest.limit ?? 5,
-                query: q,
-                userId,
-              },
-              callOptions
-            )) as unknown as {
-              results: {
-                url: string;
-                title?: string;
-                snippet?: string;
-                publishedAt?: string;
-              }[];
-              fromCache: boolean;
-              tookMs: number;
-            };
-            // Normalize results to ensure strict schema compliance
-            const rawResults = Array.isArray(value.results) ? value.results : [];
-            const normalizedResults = normalizeWebSearchResults(rawResults);
-            const validatedValue = {
-              fromCache: Boolean(value.fromCache),
+            const params = webSearchInputSchema.parse({
+              categories: rest.categories ?? null,
+              fresh: rest.fresh ?? false,
+              freshness: null,
+              limit: rest.limit ?? 5,
+              location: rest.location ?? null,
+              query: q,
+              region: null,
+              scrapeOptions: rest.scrapeOptions ?? null,
+              sources: rest.sources ?? null,
+              tbs: rest.tbs ?? null,
+              timeoutMs: rest.timeoutMs ?? null,
+              userId: userId ?? null,
+            });
+            if (typeof webSearch.execute !== "function") {
+              throw new Error("web_search_execute_missing");
+            }
+            const raw = await resolveToolResult(webSearch.execute(params, callOptions));
+            const parsed = WEB_SEARCH_OUTPUT_SCHEMA.parse(raw);
+            const normalizedResults = normalizeWebSearchResults(parsed.results);
+            const validatedValue = WEB_SEARCH_OUTPUT_SCHEMA.parse({
+              ...parsed,
               results: normalizedResults,
-              tookMs: Number(value.tookMs),
-            };
+            });
             results.push({ ok: true, query: q, value: validatedValue });
           } catch (err) {
             const message = err instanceof Error ? err.message : String(err);
@@ -154,9 +167,9 @@ export const webSearchBatch = tool({
                 const { getServerEnvVar, getServerEnvVarWithFallback } = await import(
                   "@/lib/env/server"
                 );
-                let apiKey: string | undefined;
+                let apiKey: string;
                 try {
-                  apiKey = getServerEnvVar("FIRECRAWL_API_KEY") as unknown as string;
+                  apiKey = getServerEnvVar("FIRECRAWL_API_KEY");
                 } catch {
                   throw new Error("web_search_not_configured");
                 }

@@ -99,7 +99,7 @@ vi.mock("@ai/tools/server/injection", () => ({
 }));
 
 import type { LanguageModel, UIMessage } from "ai";
-
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { createChatAgent, validateChatMessages } from "../chat-agent";
 import type { AgentDependencies } from "../types";
 
@@ -107,7 +107,7 @@ import type { AgentDependencies } from "../types";
  * Creates a mock LanguageModel for testing.
  */
 function createMockModel(): LanguageModel {
-  return {
+  return unsafeCast<LanguageModel>({
     defaultObjectGenerationMode: "json",
     doGenerate: vi.fn(),
     doStream: vi.fn(),
@@ -115,7 +115,7 @@ function createMockModel(): LanguageModel {
     provider: "test-provider",
     specificationVersion: "V3",
     supportsStructuredOutputs: true,
-  } as unknown as LanguageModel;
+  });
 }
 
 /**
@@ -135,13 +135,13 @@ function createTestDeps(): AgentDependencies {
  * Creates test UIMessages.
  */
 function createTestMessages(): UIMessage[] {
-  return [
+  return unsafeCast<UIMessage[]>([
     {
       id: "1",
       parts: [{ text: "Hello", type: "text" }],
       role: "user",
     },
-  ] as unknown as UIMessage[];
+  ]);
 }
 
 describe("createChatAgent", () => {

@@ -1,6 +1,5 @@
 /**
- * @fileoverview Server-side Supabase client creation.
- * Provides async wrapper for Next.js cookie integration.
+ * @fileoverview Server-only Supabase client entrypoint wired to Next.js cookies().
  */
 
 import "server-only";
@@ -8,10 +7,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import type { Database } from "./database.types";
-import {
-  createCookieAdapter,
-  createServerSupabase as createSupabaseFactory,
-} from "./factory";
+import { createCookieAdapter, createServerSupabaseClient } from "./factory";
 
 export type TypedServerSupabase = SupabaseClient<Database>;
 
@@ -21,9 +17,8 @@ export type TypedServerSupabase = SupabaseClient<Database>;
  */
 export async function createServerSupabase(): Promise<TypedServerSupabase> {
   const cookieStore = await cookies();
-  return createSupabaseFactory({
+  return createServerSupabaseClient({
     cookies: createCookieAdapter(cookieStore),
-    enableTracing: true,
   });
 }
 

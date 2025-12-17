@@ -3,6 +3,7 @@
  */
 
 import { describe, expect, it, vi } from "vitest";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
 // Mock server-only module before imports
 vi.mock("server-only", () => ({}));
@@ -33,7 +34,7 @@ import { extractAgentParameters } from "../types";
  * Creates a mock LanguageModel for testing.
  */
 function createMockModel(): LanguageModel {
-  return {
+  return unsafeCast<LanguageModel>({
     defaultObjectGenerationMode: "json",
     doGenerate: vi.fn(async () => ({
       finishReason: "stop",
@@ -54,7 +55,7 @@ function createMockModel(): LanguageModel {
     provider: "test-provider",
     specificationVersion: "V3",
     supportsStructuredOutputs: true,
-  } as unknown as LanguageModel;
+  });
 }
 
 /**
