@@ -143,11 +143,10 @@ export const webSearchBatch = tool({
             }
             const raw = await resolveToolResult(webSearch.execute(params, callOptions));
             const parsed = WEB_SEARCH_OUTPUT_SCHEMA.parse(raw);
-            const normalizedResults = normalizeWebSearchResults(parsed.results);
-            const validatedValue = WEB_SEARCH_OUTPUT_SCHEMA.parse({
+            const validatedValue = {
               ...parsed,
-              results: normalizedResults,
-            });
+              results: normalizeWebSearchResults(parsed.results),
+            };
             results.push({ ok: true, query: q, value: validatedValue });
           } catch (err) {
             const message = err instanceof Error ? err.message : String(err);

@@ -8,6 +8,10 @@ import type { TypedServerSupabase } from "@/lib/supabase/server";
 import type { ChatDeps } from "../_handler";
 import { handleChatStream } from "../_handler";
 
+/**
+ * Local unsafeCast required here because vi.hoisted() callbacks run before
+ * ES module imports are resolved. Cannot use @/test/helpers/unsafe-cast.
+ */
 function unsafeCast<T>(value: unknown): T {
   return value as T;
 }

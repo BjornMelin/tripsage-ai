@@ -13,6 +13,10 @@ import {
 } from "@/lib/api/route-helpers";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
+/**
+ * Creates a minimal NextRequest mock with only headers populated.
+ * @internal Only use where headers are the sole accessed property.
+ */
 function makeRequest(headers: HeadersInit = {}): NextRequest {
   return unsafeCast<NextRequest>({ headers: new Headers(headers) });
 }

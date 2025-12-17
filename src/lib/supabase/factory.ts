@@ -233,7 +233,7 @@ export async function getCurrentUser(
         return { error, user: null };
       }
 
-      let message = "Unknown error";
+      let message: string;
       if (typeof error === "string") {
         message = error;
       } else {

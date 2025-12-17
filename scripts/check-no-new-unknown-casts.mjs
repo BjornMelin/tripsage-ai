@@ -14,14 +14,7 @@ function isExcludedPath(filePath) {
   if (!filePath.startsWith("src/")) return true;
   if (!CHECKED_FILE_RE.test(filePath)) return true;
   if (EXCLUDED_PATH_PARTS.some((part) => filePath.includes(part))) return true;
-  return (
-    filePath.includes(".test.") ||
-    filePath.includes(".spec.") ||
-    filePath.endsWith(".test.ts") ||
-    filePath.endsWith(".test.tsx") ||
-    filePath.endsWith(".spec.ts") ||
-    filePath.endsWith(".spec.tsx")
-  );
+  return filePath.includes(".test.") || filePath.includes(".spec.");
 }
 
 function runGitDiff(range) {

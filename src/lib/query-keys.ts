@@ -162,9 +162,7 @@ export function createQueryKey(
   params?: Record<string, unknown>
 ): readonly [string] | readonly [string, Record<string, unknown>] {
   if (params) {
-    const key: readonly [string, Record<string, unknown>] = [baseKey, params];
-    return key;
+    return [baseKey, params];
   }
-  const key: readonly [string] = [baseKey];
-  return key;
+  return [baseKey];
 }

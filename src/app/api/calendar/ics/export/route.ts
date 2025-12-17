@@ -41,7 +41,9 @@ function eventAttendeeStatusToIcal(status: string): ICalAttendeeStatus {
  * @param method - Notification channel provided by Google events.
  * @returns Alarm type accepted by ical-generator.
  */
-function reminderMethodToIcal(method: string): ICalAlarmType {
+function reminderMethodToIcal(
+  method: "email" | "popup" | "sms" | string
+): ICalAlarmType {
   switch (method) {
     case "email":
       return ICalAlarmType.email;
