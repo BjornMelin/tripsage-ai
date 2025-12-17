@@ -65,6 +65,14 @@ describe("useZodForm (UI integration)", () => {
     expect(onSubmit).not.toHaveBeenCalled();
 
     await user.type(screen.getByLabelText("Title"), "Trip");
+
+    // Verify validation message disappears after entering valid data
+    await waitFor(() => {
+      expect(
+        screen.queryByText("Title must be at least 3 characters")
+      ).not.toBeInTheDocument();
+    });
+
     await user.click(screen.getByRole("button", { name: "Submit" }));
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));

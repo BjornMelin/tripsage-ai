@@ -185,6 +185,7 @@ export function useZodForm<Data extends FieldValues>(
     onSubmitSuccess,
     onSubmitError,
     mode,
+    reValidateMode,
     ...formOptions
   } = options;
 
@@ -195,7 +196,7 @@ export function useZodForm<Data extends FieldValues>(
     mode: resolvedMode,
     // biome-ignore lint/suspicious/noExplicitAny: zodResolver requires flexible schema typing
     resolver: zodResolver(schema as any),
-    reValidateMode: options.reValidateMode ?? "onChange",
+    reValidateMode: reValidateMode ?? "onChange",
   });
 
   // Validation state management
@@ -227,7 +228,17 @@ export function useZodForm<Data extends FieldValues>(
               }
 
               await onValid(submitData);
-              await onSubmitSuccess?.(submitData);
+
+              // Handle onSubmitSuccess errors separately - don't treat as submission failure
+              try {
+                await onSubmitSuccess?.(submitData);
+              } catch (successCallbackError) {
+                const callbackError =
+                  successCallbackError instanceof Error
+                    ? successCallbackError
+                    : new Error("onSubmitSuccess callback failed");
+                recordClientErrorOnActiveSpan(callbackError);
+              }
             } catch (error) {
               const submitError =
                 error instanceof Error ? error : new Error("Submit failed");

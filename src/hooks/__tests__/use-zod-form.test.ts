@@ -112,12 +112,16 @@ describe("useZodForm", () => {
       result.current.setValue("title", "  Trip  ");
     });
 
+    const onSubmit = vi.fn();
+
     await act(async () => {
       await result.current.handleSubmitSafe((data) => {
+        onSubmit(data);
         expect(data).toEqual({ title: "Trip" });
       })();
     });
 
+    expect(onSubmit).toHaveBeenCalledWith({ title: "Trip" });
     expect(result.current.validationState.validationErrors).toHaveLength(0);
   });
 });
