@@ -1,7 +1,5 @@
 /**
- * @fileoverview Upstash Redis client helper.
- * Uses the HTTP/REST client so it can run on Edge and Node runtimes.
- * Reads credentials from environment (Vercel integration recommended).
+ * @fileoverview Upstash Redis REST client helper with an optional test factory override.
  */
 import { Redis } from "@upstash/redis";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
@@ -24,7 +22,7 @@ let testRedisFactory: (() => Redis | undefined) | null = null;
  * import { setRedisFactoryForTests } from "@/lib/redis";
  * import { RedisMockClient } from "@/test/upstash/redis-mock";
  *
- * setRedisFactoryForTests(() => new RedisMockClient() as unknown as Redis);
+ * setRedisFactoryForTests(() => new RedisMockClient() as never);
  *
  * // After tests
  * setRedisFactoryForTests(null);

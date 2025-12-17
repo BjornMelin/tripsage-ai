@@ -7,6 +7,7 @@
 
 import type { NextRequest } from "next/server";
 import { vi } from "vitest";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { createRatelimitMock } from "@/test/upstash/ratelimit-mock";
 
 /**
@@ -227,5 +228,5 @@ export function buildMockRequest(
     method,
   });
 
-  return request as unknown as NextRequest;
+  return unsafeCast<NextRequest>(request);
 }

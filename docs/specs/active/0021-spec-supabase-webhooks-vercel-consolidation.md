@@ -191,6 +191,16 @@ vercel.json (excerpt):
 - Use exponential backoff on Vercel Background re-queues when needed
 - Alert on non-2xx rates and latency spikes; log structured JSON
 
+### HTTP status semantics (Supabase → Vercel)
+
+- `2xx`: accepted; no retry (includes `{ duplicate: true, ok: true }` for idempotent replays)
+- `401/403`: rejected (invalid signature / unauthorized); no retry expected
+- `413`: rejected (payload too large); no retry expected
+- `429`: throttled; retry expected (use `Retry-After` when available)
+- `5xx`: transient failure; retry expected
+
+Implementation detail: handler code can throw typed errors from `src/lib/webhooks/errors.ts` to control status mapping.
+
 ## Testing
 
 - Unit: HMAC verification, payload validation, idempotency guards

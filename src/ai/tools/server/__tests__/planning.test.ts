@@ -13,6 +13,7 @@ import {
   vi,
 } from "vitest";
 import { getMockCookiesForTest } from "@/test/helpers/route";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { setupUpstashTestEnvironment } from "@/test/upstash/setup";
 
 const { afterAllHook: upstashAfterAllHook, beforeEachHook: upstashBeforeEachHook } =
@@ -112,9 +113,7 @@ describe("planning tools", () => {
 
   beforeEach(async () => {
     upstashBeforeEachHook();
-    const mod = (await import("@/lib/redis")) as unknown as {
-      getRedis: () => RedisMock;
-    };
+    const mod = unsafeCast<{ getRedis: () => RedisMock }>(await import("@/lib/redis"));
     redis = mod.getRedis();
     redis.data.clear();
     redis.ttl.clear();
@@ -135,22 +134,15 @@ describe("planning tools", () => {
     ) as Promise<T>;
 
   it("createTravelPlan stores plan with 7d TTL and returns id", async () => {
-    const res = (await (
-      createTravelPlan as unknown as {
-        execute?: (a: unknown, c?: unknown) => Promise<unknown>;
-      }
-    ).execute?.(
-      {
-        budget: 1500,
-        destinations: ["Paris"],
-        endDate: "2025-04-14",
-        startDate: "2025-04-10",
-        title: "Paris Spring",
-        travelers: 2,
-        userId: "u1",
-      },
-      {}
-    )) as { success: boolean; planId: string };
+    const res = await exec<{ success: boolean; planId: string }>(createTravelPlan, {
+      budget: 1500,
+      destinations: ["Paris"],
+      endDate: "2025-04-14",
+      startDate: "2025-04-10",
+      title: "Paris Spring",
+      travelers: 2,
+      userId: "u1",
+    });
     expect(res.success).toBe(true);
     const key = `travel_plan:${res.planId}`;
     expect(redis.data.has(key)).toBe(true);
@@ -186,9 +178,7 @@ describe("planning tools", () => {
       userId: "u1",
     });
     expect(ok.success).toBe(true);
-    const mod = (await import("@/lib/redis")) as unknown as {
-      getRedis: () => RedisMock;
-    };
+    const mod = unsafeCast<{ getRedis: () => RedisMock }>(await import("@/lib/redis"));
     const redis2 = mod.getRedis();
     const key = `travel_plan:${created.planId}`;
     expect(redis2.ttl.get(key)).toBe(TTL_FINAL_SECONDS);

@@ -1,8 +1,8 @@
-"use client";
-
 /**
- * @fileoverview Chat message renderer for AI/UI messages with schema card support and safe tool output rendering.
+ * @fileoverview Chat message renderer for AI/UI messages with safe tool output rendering.
  */
+
+"use client";
 
 import type { UIMessage } from "ai";
 import { FileIcon } from "lucide-react";
@@ -44,6 +44,11 @@ type WebSearchUiResult = {
   fromCache?: boolean;
   tookMs?: number;
 };
+
+function AsRecord(value: unknown): Record<string, unknown> | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
 
 // biome-ignore lint/style/useNamingConvention: Type guard helper for discriminated parts
 function isSourceUrlPart(value: unknown): value is SourceUrlPart {
@@ -409,21 +414,16 @@ export function ChatMessageItem({
 
             // AI SDK v6 standardized part types: tool-invocation, tool-result
             if (partType === "tool-invocation") {
-              type ToolInvocationPart = {
-                type: "tool-invocation";
-                toolName?: string;
-                name?: string;
-                toolCallId: string;
-                state: string;
-                args?: unknown;
-                input?: unknown;
-                result?: unknown;
-                output?: unknown;
-              };
-              const invocation = part as unknown as ToolInvocationPart;
-              const toolName = invocation.toolName ?? invocation.name ?? "Tool";
+              const invocation = AsRecord(part);
+              if (!invocation) return null;
+              const toolName =
+                (typeof invocation.toolName === "string" && invocation.toolName) ||
+                (typeof invocation.name === "string" && invocation.name) ||
+                "Tool";
               const inputVal = invocation.args ?? invocation.input;
               const outputVal = invocation.result ?? invocation.output;
+              const state =
+                typeof invocation.state === "string" ? invocation.state : "";
               return (
                 <Tool
                   key={`${message.id}-inv-${idx}`}
@@ -434,22 +434,18 @@ export function ChatMessageItem({
                   output={
                     outputVal !== undefined ? sanitizeToolOutput(outputVal) : undefined
                   }
-                  status={invocation.state === "result" ? "result" : "call"}
+                  status={state === "result" ? "result" : "call"}
                 />
               );
             }
 
             if (partType === "tool-result") {
-              type ToolResultPart = {
-                type: "tool-result";
-                toolName?: string;
-                name?: string;
-                toolCallId: string;
-                result?: unknown;
-                output?: unknown;
-              };
-              const toolResult = part as unknown as ToolResultPart;
-              const resultToolName = toolResult.toolName ?? toolResult.name ?? "Tool";
+              const toolResult = AsRecord(part);
+              if (!toolResult) return null;
+              const resultToolName =
+                (typeof toolResult.toolName === "string" && toolResult.toolName) ||
+                (typeof toolResult.name === "string" && toolResult.name) ||
+                "Tool";
               const resultVal = toolResult.result ?? toolResult.output;
               return (
                 <Tool
@@ -465,24 +461,25 @@ export function ChatMessageItem({
 
             // File attachment part (includes images in AI SDK v6)
             if (partType === "file") {
-              type FilePart = {
-                type: "file";
-                name?: string;
-                filename?: string;
-                mimeType?: string;
-                mediaType?: string;
-                data?: string;
-                url?: string;
-              };
-              const filePart = part as unknown as FilePart;
-              const fileName = filePart.name ?? filePart.filename ?? "Attachment";
+              const filePart = AsRecord(part);
+              if (!filePart) return null;
+              const name =
+                typeof filePart.name === "string" ? filePart.name : undefined;
+              const filename =
+                typeof filePart.filename === "string" ? filePart.filename : undefined;
+              const fileName = name ?? filename ?? "Attachment";
               const mimeType = validateMimeType(
-                filePart.mimeType ?? filePart.mediaType
+                (typeof filePart.mimeType === "string" && filePart.mimeType) ||
+                  (typeof filePart.mediaType === "string" && filePart.mediaType) ||
+                  undefined
               );
+              const data =
+                typeof filePart.data === "string" ? filePart.data : undefined;
+              const url = typeof filePart.url === "string" ? filePart.url : undefined;
               const fileUrl =
-                filePart.url ??
-                (filePart.data && isValidBase64(filePart.data)
-                  ? `data:${mimeType};base64,${filePart.data}`
+                url ??
+                (data && isValidBase64(data)
+                  ? `data:${mimeType};base64,${data}`
                   : null);
 
               // Render images inline

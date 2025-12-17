@@ -1,6 +1,5 @@
 /**
- * @fileoverview Root-level error boundary for the app directory.
- * This catches errors in the root layout and pages.
+ * @fileoverview Root-level error boundary for the Next.js app router.
  */
 
 "use client";
@@ -47,13 +46,7 @@ export default function RootErrorBoundary({
  */
 function getUserId(): string | undefined {
   try {
-    interface UserStore {
-      user?: {
-        id?: string;
-      };
-    }
-    const userStore = (window as unknown as { userStore?: UserStore }).userStore;
-    return userStore?.user?.id;
+    return window.userStore?.user?.id;
   } catch {
     return undefined;
   }

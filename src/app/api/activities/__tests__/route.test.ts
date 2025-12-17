@@ -28,6 +28,12 @@ const MOCK_SUPABASE = vi.hoisted(() => ({
 }));
 
 const CREATE_SUPABASE = vi.hoisted(() => vi.fn(async () => MOCK_SUPABASE));
+const GET_CURRENT_USER = vi.hoisted(() =>
+  vi.fn(async () => ({
+    error: null,
+    user: { id: "user-1" } as never,
+  }))
+);
 
 const MOCK_GET_REDIS = vi.hoisted(() => vi.fn(() => undefined));
 
@@ -42,13 +48,7 @@ vi.mock("@/lib/redis", () => ({
 
 vi.mock("@/lib/supabase/server", () => ({
   createServerSupabase: CREATE_SUPABASE,
-}));
-
-vi.mock("@/lib/supabase/factory", () => ({
-  getCurrentUser: vi.fn(async () => ({
-    error: null,
-    user: { id: "user-1" } as never,
-  })),
+  getCurrentUser: GET_CURRENT_USER,
 }));
 
 vi.mock("@domain/activities/container", () => ({

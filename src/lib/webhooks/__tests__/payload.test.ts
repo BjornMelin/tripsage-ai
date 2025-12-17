@@ -101,6 +101,8 @@ describe("parseAndVerify", () => {
     });
     const result = await parseAndVerify(req);
     expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected parseAndVerify to fail");
+    expect(result.reason).toBe("missing_secret_env");
     expect(EMIT_ALERT).toHaveBeenCalledWith("webhook.verification_failed", {
       attributes: { reason: "missing_secret_env" },
     });
@@ -114,6 +116,8 @@ describe("parseAndVerify", () => {
     });
     const result = await parseAndVerify(req);
     expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected parseAndVerify to fail");
+    expect(result.reason).toBe("missing_signature");
     expect(EMIT_ALERT).toHaveBeenCalledWith("webhook.verification_failed", {
       attributes: { reason: "missing_signature" },
     });
@@ -130,6 +134,8 @@ describe("parseAndVerify", () => {
     });
     const result = await parseAndVerify(req);
     expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected parseAndVerify to fail");
+    expect(result.reason).toBe("invalid_signature");
     expect(EMIT_ALERT).toHaveBeenCalledWith("webhook.verification_failed", {
       attributes: { reason: "invalid_signature" },
     });
@@ -147,6 +153,8 @@ describe("parseAndVerify", () => {
     });
     const result = await parseAndVerify(req);
     expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected parseAndVerify to fail");
+    expect(result.reason).toBe("invalid_json");
     expect(EMIT_ALERT).toHaveBeenCalledWith("webhook.verification_failed", {
       attributes: { reason: "invalid_json" },
     });
@@ -164,8 +172,30 @@ describe("parseAndVerify", () => {
     });
     const result = await parseAndVerify(req);
     expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected parseAndVerify to fail");
+    expect(result.reason).toBe("invalid_payload_shape");
     expect(EMIT_ALERT).toHaveBeenCalledWith("webhook.verification_failed", {
       attributes: { reason: "invalid_payload_shape" },
+    });
+  });
+
+  it("fails when body exceeds limit", async () => {
+    const body = "a".repeat(11);
+    const req = new Request("https://example.com/api/hooks/trips", {
+      body,
+      headers: {
+        "Content-Type": "application/json",
+        "x-signature-hmac": computeSignature(body, TestSecret),
+      },
+      method: "POST",
+    });
+
+    const result = await parseAndVerify(req, { maxBytes: 10 });
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected parseAndVerify to fail");
+    expect(result.reason).toBe("payload_too_large");
+    expect(EMIT_ALERT).toHaveBeenCalledWith("webhook.verification_failed", {
+      attributes: { reason: "payload_too_large" },
     });
   });
 
@@ -187,6 +217,7 @@ describe("parseAndVerify", () => {
     });
     const result = await parseAndVerify(req);
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected parseAndVerify to succeed");
     expect(result.payload).toMatchObject({
       occurredAt: "2025-11-13T03:00:00Z",
       record: { id: "abc123" },

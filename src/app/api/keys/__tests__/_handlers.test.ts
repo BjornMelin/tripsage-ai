@@ -3,6 +3,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Tables } from "@/lib/supabase/database.types";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { getKeys, postKey } from "../_handlers";
 
 /**
@@ -16,7 +17,7 @@ function makeSupabase(
   userId: string | null,
   rows: Array<Pick<Tables<"api_keys">, "service" | "created_at" | "last_used">> = []
 ) {
-  return {
+  return unsafeCast<TypedServerSupabase>({
     auth: {
       getUser: vi.fn(async () => ({ data: { user: userId ? { id: userId } : null } })),
     },
@@ -25,7 +26,7 @@ function makeSupabase(
       order: vi.fn().mockResolvedValue({ data: rows, error: null }),
       select: vi.fn().mockReturnThis(),
     })),
-  } as unknown as TypedServerSupabase;
+  });
 }
 
 describe("keys _handlers", () => {
@@ -81,7 +82,7 @@ describe("keys _handlers", () => {
     const eq = vi.fn().mockReturnValue({ order });
     const select = vi.fn().mockReturnValue({ eq });
     const from = vi.fn().mockReturnValue({ select });
-    const supabase = { from } as unknown as TypedServerSupabase;
+    const supabase = unsafeCast<TypedServerSupabase>({ from });
 
     const res = await getKeys({ supabase, userId: "u3" });
     expect(res.status).toBe(500);

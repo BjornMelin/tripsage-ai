@@ -3,11 +3,14 @@
 import { AmadeusProviderAdapter } from "@domain/accommodations/providers/amadeus-adapter";
 import { AccommodationsService } from "@domain/accommodations/service";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { createMockSupabaseFactory } from "@/test/mocks/supabase";
 import { googlePlacesHandlers } from "@/test/msw/handlers/google-places";
 import { stripeHandlers } from "@/test/msw/handlers/stripe";
 import { composeHandlers } from "@/test/msw/handlers/utils";
 import { server } from "@/test/msw/server";
+
+type TypedServerSupabase = import("@/lib/supabase/server").TypedServerSupabase;
 
 const cache = new Map<string, unknown>();
 
@@ -226,12 +229,14 @@ describe("AccommodationsService end-to-end (Amadeus + Places + Stripe mocks)", (
     const service = createService([]);
 
     await expect(
-      service.search({
-        checkin: "",
-        checkout: "",
-        guests: 0,
-        location: "",
-      } as unknown as Parameters<typeof service.search>[0])
+      service.search(
+        unsafeCast<Parameters<typeof service.search>[0]>({
+          checkin: "",
+          checkout: "",
+          guests: 0,
+          location: "",
+        })
+      )
     ).rejects.toThrow(/location_not_found|invalid location/);
 
     geocodeSpy.mockRestore();
@@ -254,10 +259,10 @@ describe("AccommodationsService end-to-end (Amadeus + Places + Stripe mocks)", (
 
     const service = new AccommodationsService({
       cacheTtlSeconds: 60,
-      provider: failingProvider as unknown as AmadeusProviderAdapter,
+      provider: unsafeCast<AmadeusProviderAdapter>(failingProvider),
       rateLimiter: undefined,
       supabase: async () =>
-        ({
+        unsafeCast<TypedServerSupabase>({
           from: () => ({
             insert: () => ({ error: null }),
             select: () => ({
@@ -266,7 +271,7 @@ describe("AccommodationsService end-to-end (Amadeus + Places + Stripe mocks)", (
               }),
             }),
           }),
-        }) as unknown as import("@/lib/supabase/server").TypedServerSupabase,
+        }),
     });
 
     await expect(
@@ -298,10 +303,10 @@ describe("AccommodationsService end-to-end (Amadeus + Places + Stripe mocks)", (
 
     const service = new AccommodationsService({
       cacheTtlSeconds: 60,
-      provider: providerStub as unknown as AmadeusProviderAdapter,
+      provider: unsafeCast<AmadeusProviderAdapter>(providerStub),
       rateLimiter: undefined,
       supabase: async () =>
-        ({
+        unsafeCast<TypedServerSupabase>({
           from: () => ({
             insert: () => ({ error: null }),
             select: () => ({
@@ -310,7 +315,7 @@ describe("AccommodationsService end-to-end (Amadeus + Places + Stripe mocks)", (
               }),
             }),
           }),
-        }) as unknown as import("@/lib/supabase/server").TypedServerSupabase,
+        }),
     });
 
     const result = await service.details({ listingId: "H1" });

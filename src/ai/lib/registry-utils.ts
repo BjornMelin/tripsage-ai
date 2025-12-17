@@ -16,6 +16,7 @@ export type RegisteredTool<Params = unknown, Result = unknown> = Tool<
   Params,
   Result
 > & {
+  name?: string;
   description?: string;
   inputSchema?: unknown;
   execute: (params: Params, callOptions?: ToolCallOptions) => Promise<Result> | Result;
@@ -53,7 +54,7 @@ export const invokeTool = <Params, Result>(
       attributes: {
         hasCallOptions: Boolean(callOptions),
         toolDescription: tool.description ?? "unknown",
-        toolName: (tool as { name?: string }).name ?? "unknown",
+        toolName: tool.name ?? "unknown",
       },
     },
     async () => {

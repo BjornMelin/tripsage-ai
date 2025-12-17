@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
 import { describe, expect, it } from "vitest";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import {
   hasInjectionRisk,
   sanitizeArray,
@@ -45,9 +46,9 @@ describe("prompt-sanitizer", () => {
     });
 
     it("handles non-string input gracefully", () => {
-      expect(sanitizeForPrompt(null as unknown as string)).toBe("");
-      expect(sanitizeForPrompt(undefined as unknown as string)).toBe("");
-      expect(sanitizeForPrompt(123 as unknown as string)).toBe("");
+      expect(sanitizeForPrompt(unsafeCast<string>(null))).toBe("");
+      expect(sanitizeForPrompt(unsafeCast<string>(undefined))).toBe("");
+      expect(sanitizeForPrompt(unsafeCast<string>(123))).toBe("");
     });
 
     it("handles empty string", () => {
@@ -107,8 +108,8 @@ describe("prompt-sanitizer", () => {
     });
 
     it("handles non-string input gracefully", () => {
-      expect(sanitizeWithInjectionDetection(null as unknown as string)).toBe("");
-      expect(sanitizeWithInjectionDetection(undefined as unknown as string)).toBe("");
+      expect(sanitizeWithInjectionDetection(unsafeCast<string>(null))).toBe("");
+      expect(sanitizeWithInjectionDetection(unsafeCast<string>(undefined))).toBe("");
     });
 
     it("preserves normal text", () => {
@@ -153,8 +154,8 @@ describe("prompt-sanitizer", () => {
     });
 
     it("handles non-string input", () => {
-      expect(hasInjectionRisk(null as unknown as string)).toBe(false);
-      expect(hasInjectionRisk(undefined as unknown as string)).toBe(false);
+      expect(hasInjectionRisk(unsafeCast<string>(null))).toBe(false);
+      expect(hasInjectionRisk(unsafeCast<string>(undefined))).toBe(false);
     });
   });
 
@@ -190,8 +191,8 @@ describe("prompt-sanitizer", () => {
     });
 
     it("handles non-array input", () => {
-      expect(sanitizeArray(null as unknown as string[])).toEqual([]);
-      expect(sanitizeArray(undefined as unknown as string[])).toEqual([]);
+      expect(sanitizeArray(unsafeCast<string[]>(null))).toEqual([]);
+      expect(sanitizeArray(unsafeCast<string[]>(undefined))).toEqual([]);
     });
   });
 
@@ -228,14 +229,14 @@ describe("prompt-sanitizer", () => {
     });
 
     it("omits non-string values", () => {
-      const input = {
+      const input = unsafeCast<Record<string, string | undefined>>({
         active: true,
         age: 30,
         email: null,
         meta: { nested: true },
         name: "Traveler",
         score: 4.5,
-      } as unknown as Record<string, string | undefined>;
+      });
 
       const result = sanitizeRecord(input);
 

@@ -1,7 +1,5 @@
 /**
- * @fileoverview Text embedding generation endpoint.
- *
- * Generates embeddings using OpenAI text-embedding-3-small model.
+ * @fileoverview API route that generates and optionally persists text embeddings.
  */
 
 import "server-only";
@@ -13,6 +11,7 @@ import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse, parseJsonBody } from "@/lib/api/route-helpers";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
+import { toPgvector } from "@/lib/rag/pgvector";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import type { InsertTables } from "@/lib/supabase/database.types";
 import { createServerLogger } from "@/lib/telemetry/logger";
@@ -85,8 +84,7 @@ async function persistAccommodationEmbedding(
   const payload: InsertTables<"accommodation_embeddings"> = {
     amenities: normalizeAmenities(property.amenities),
     description: property.description ?? null,
-    // Supabase CLI types surface pgvector as string; cast to satisfy client types while sending number[].
-    embedding: embedding as unknown as string,
+    embedding: toPgvector(embedding),
     id: property.id,
     name: property.name ?? null,
     source: normalizeSource(property.source),

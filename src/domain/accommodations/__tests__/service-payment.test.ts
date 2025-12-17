@@ -4,6 +4,7 @@ import type { AccommodationProviderAdapter } from "@domain/accommodations/provid
 import { AccommodationsService } from "@domain/accommodations/service";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getCachedJson } from "@/lib/cache/upstash";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import type { buildUpstashCacheMock } from "@/test/mocks/cache";
 
 vi.mock("@/lib/cache/upstash", async () => {
@@ -77,7 +78,7 @@ describe("AccommodationsService booking payments", () => {
       provider,
       rateLimiter: undefined,
       supabase: async () =>
-        supabase as unknown as import("@/lib/supabase/server").TypedServerSupabase,
+        unsafeCast<import("@/lib/supabase/server").TypedServerSupabase>(supabase),
     });
 
     await service.book(

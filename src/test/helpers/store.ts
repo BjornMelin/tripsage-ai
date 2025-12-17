@@ -17,16 +17,20 @@ import { vi } from "vitest";
  * @returns Object with mockRestore function
  */
 export function setupTimeoutMock(): { mockRestore: () => void } {
-  const timeoutSpy = vi.spyOn(globalThis, "setTimeout").mockImplementation(((
-    cb: TimerHandler,
-    _ms?: number,
-    ...args: unknown[]
-  ) => {
-    if (typeof cb === "function") {
-      cb(...(args as never[]));
-    }
-    return 0 as unknown as ReturnType<typeof setTimeout>;
-  }) as unknown as typeof setTimeout);
+  const originalSetTimeout = globalThis.setTimeout;
+
+  const timeoutSpy = vi
+    .spyOn(globalThis, "setTimeout")
+    .mockImplementation((cb: TimerHandler, _ms?: number, ...args: unknown[]) => {
+      if (typeof cb === "function") {
+        cb(...(args as never[]));
+      }
+      const handle = originalSetTimeout(() => undefined, 0);
+      if (typeof handle === "object" && handle && "unref" in handle) {
+        (handle as { unref?: () => void }).unref?.();
+      }
+      return handle;
+    });
 
   return {
     mockRestore: () => {

@@ -1,6 +1,5 @@
 /**
- * @fileoverview Server-only utility to retrieve Google OAuth provider token
- * from Supabase session for Google Calendar API calls.
+ * @fileoverview Server-only helpers for reading Google OAuth tokens from the Supabase session.
  */
 
 import "server-only";
@@ -40,9 +39,7 @@ export async function getGoogleProviderToken(): Promise<string> {
 
   // Check if provider_token exists in session
   // Supabase stores provider tokens in session.provider_token for OAuth providers
-  const providerToken =
-    // biome-ignore lint/style/useNamingConvention: Supabase API field name
-    (session as unknown as { provider_token?: string }).provider_token ?? null;
+  const providerToken = session.provider_token ?? null;
 
   if (!providerToken) {
     // Attempt to refresh session in case token expired
@@ -57,10 +54,7 @@ export async function getGoogleProviderToken(): Promise<string> {
       );
     }
 
-    const refreshedProviderToken =
-      // biome-ignore lint/style/useNamingConvention: Supabase API field name
-      (refreshedSession as unknown as { provider_token?: string }).provider_token ??
-      null;
+    const refreshedProviderToken = refreshedSession.provider_token ?? null;
 
     if (!refreshedProviderToken) {
       throw new GoogleTokenError(
@@ -96,25 +90,12 @@ export async function hasGoogleCalendarScopes(
       return false;
     }
 
-    // Check provider_refresh_token or provider_token existence
-    // Supabase may store scope information in session metadata
-    const sessionData = session as unknown as {
-      // biome-ignore lint/style/useNamingConvention: Supabase API field names
-      provider_token?: string;
-      // biome-ignore lint/style/useNamingConvention: Supabase API field names
-      provider_refresh_token?: string;
-      user?: {
-        // biome-ignore lint/style/useNamingConvention: Supabase API field name
-        app_metadata?: Record<string, unknown>;
-      };
-    };
-
-    // If provider tokens exist, assume scopes are granted
-    // In production, you may want to decode the token and verify scopes
-    return !!(
-      sessionData.provider_token ||
-      sessionData.provider_refresh_token ||
-      sessionData.user?.app_metadata?.provider === "google"
+    // If provider tokens exist, assume scopes are granted. For stricter checks,
+    // decode the provider token and validate scopes against required scopes.
+    return Boolean(
+      session.provider_token ||
+        session.provider_refresh_token ||
+        session.user.app_metadata?.provider === "google"
     );
   } catch {
     return false;

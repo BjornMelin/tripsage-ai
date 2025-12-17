@@ -24,25 +24,10 @@ function RenderWithQueryClient(ui: React.ReactElement) {
 describe("FlightSearchForm", () => {
   beforeEach(() => {
     // Clear mock calls between tests
+    // MSW handlers in src/test/msw/handlers/api-routes.ts provide
+    // /api/flights/popular-destinations responses
     MockOnSearch.mockClear();
     vi.restoreAllMocks();
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        async () =>
-          new Response(
-            JSON.stringify([
-              { code: "NYC", name: "New York", savings: "$127" },
-              { code: "LAX", name: "Los Angeles", savings: "$89" },
-            ]),
-            { status: 200 }
-          )
-      ) as unknown as typeof fetch
-    );
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
   });
 
   it("renders the form correctly (aligned with current UI)", () => {

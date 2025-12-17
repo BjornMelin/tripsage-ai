@@ -1,18 +1,5 @@
 /**
- * @fileoverview Unified Supabase factory for SSR/RSC compatibility.
- *
- * This module provides a centralized factory for creating Supabase clients in both
- * server and client contexts. It integrates OpenTelemetry tracing, Zod environment
- * validation, and eliminates duplicate auth.getUser() calls across the application.
- *
- * Key features:
- * - Type-safe factory with overloads for server/client contexts
- * - OpenTelemetry span creation for database operations
- * - Zod-validated environment variables
- * - Unified getCurrentUser helper to reduce N+1 queries
- * - SSR cookie handling via @supabase/ssr
- *
- * @see https://vercel.com/docs/functions/edge-runtime#supabase-ssr
+ * @fileoverview Server-only Supabase SSR factories and cookie adapter helpers.
  */
 
 import "server-only";
@@ -26,6 +13,7 @@ import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension
 import { getClientEnv } from "@/lib/env/client";
 import { getServerEnv } from "@/lib/env/server";
 import { TELEMETRY_SERVICE_NAME } from "@/lib/telemetry/constants";
+import { createServerLogger } from "@/lib/telemetry/logger";
 import {
   recordErrorOnSpan,
   withTelemetrySpan,
@@ -33,27 +21,24 @@ import {
 } from "@/lib/telemetry/span";
 import type { Database } from "./database.types";
 
-/**
- * Type alias for server-side Supabase client with Database schema.
- */
+/** Type alias for server-side Supabase client with Database schema. */
 export type ServerSupabaseClient = SupabaseClient<Database>;
 
-/**
- * Type alias for browser-side Supabase client with Database schema.
- */
+/** Type alias for browser-side Supabase client with Database schema. */
 export type BrowserSupabaseClient = SupabaseClient<Database>;
 
-/**
- * Options for creating a server Supabase client.
- */
+/** Options for creating a server Supabase client. */
 type CookieSetAllArgs = Parameters<NonNullable<CookieMethodsServer["setAll"]>>[0];
 
 export interface CreateServerSupabaseOptions {
   /**
    * Cookie adapter for SSR cookie handling.
-   * If not provided, will use Next.js cookies() by default.
+   *
+   * Required: provide an explicit adapter at the boundary.
+   * For Next.js Route Handlers / Server Components, prefer `createServerSupabase()`
+   * from `./server` which wires up `cookies()` for you.
    */
-  cookies?: CookieMethodsServer;
+  cookies: CookieMethodsServer;
 
   /**
    * Whether to enable OpenTelemetry tracing for this client.
@@ -68,12 +53,30 @@ export interface CreateServerSupabaseOptions {
   spanName?: string;
 }
 
-/**
- * Result of getCurrentUser operation.
- */
+/** Result of getCurrentUser operation. */
 export interface GetCurrentUserResult {
   user: User | null;
   error: Error | null;
+}
+
+const cookieLogger = createServerLogger("supabase.cookies");
+let didWarnCookieAdapterFailure = false;
+
+function warnCookieAdapterFailureOnce(
+  operation: "getAll" | "setAll",
+  error: unknown
+): void {
+  if (didWarnCookieAdapterFailure) return;
+  didWarnCookieAdapterFailure = true;
+
+  if (process.env.NODE_ENV === "production") return;
+
+  cookieLogger.warn("Supabase SSR cookie adapter failed", {
+    errorName: error instanceof Error ? error.name : null,
+    errorType: typeof error,
+    nodeEnv: process.env.NODE_ENV,
+    operation,
+  });
 }
 
 /**
@@ -90,26 +93,17 @@ function redactUserId(userId: string | undefined): string {
  * Creates a Supabase server client with SSR cookie handling and OpenTelemetry tracing.
  *
  * This factory function creates a server-side Supabase client configured for Next.js
- * App Router (React Server Components and Route Handlers). It automatically handles
- * cookie management for SSR and integrates OpenTelemetry spans for observability.
+ * App Router (React Server Components and Route Handlers). Callers must provide an
+ * explicit cookie adapter at the request boundary.
  *
  * @param options - Configuration options for the server client
  * @returns A typed Supabase client instance for server-side operations
  * @throws Error if required environment variables are missing
- *
- * @example
- * In a Server Component:
- * const supabase = createServerSupabase();
- * const result = await getCurrentUser(supabase);
- *
- * @example
- * In a Route Handler with custom cookies:
- * const supabase = createServerSupabase(options);
  */
-export function createServerSupabase(
-  options: CreateServerSupabaseOptions = {}
+export function createServerSupabaseClient(
+  options: CreateServerSupabaseOptions
 ): ServerSupabaseClient {
-  const { enableTracing = true, spanName = "supabase.init" } = options;
+  const { cookies, enableTracing = true, spanName = "supabase.init" } = options;
 
   // Validate environment variables using Zod schema
   const env = getServerEnv();
@@ -120,7 +114,7 @@ export function createServerSupabase(
       env.NEXT_PUBLIC_SUPABASE_URL,
       env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
       {
-        cookies: createCookieMethods(options.cookies),
+        cookies: createCookieMethods(cookies),
       }
     );
   };
@@ -162,9 +156,13 @@ export function createServerSupabase(
  * });
  */
 export function createMiddlewareSupabase(
-  options: CreateServerSupabaseOptions = {}
+  options: CreateServerSupabaseOptions
 ): ServerSupabaseClient {
-  const { enableTracing = false, spanName = "middleware.supabase.init" } = options;
+  const {
+    cookies,
+    enableTracing = false,
+    spanName = "middleware.supabase.init",
+  } = options;
 
   // Validate only client environment variables for Edge runtime compatibility
   const env = getClientEnv();
@@ -175,7 +173,7 @@ export function createMiddlewareSupabase(
       env.NEXT_PUBLIC_SUPABASE_URL,
       env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
       {
-        cookies: createCookieMethods(options.cookies),
+        cookies: createCookieMethods(cookies),
       }
     );
   };
@@ -211,11 +209,6 @@ export function createMiddlewareSupabase(
  * @param supabase - Supabase client instance
  * @param options - Optional configuration
  * @returns Promise resolving to user and error state
- *
- * @example
- * const supabase = createServerSupabase();
- * const result = await getCurrentUser(supabase);
- * if (result.user) { // use user }
  */
 export async function getCurrentUser(
   supabase: ServerSupabaseClient,
@@ -236,8 +229,23 @@ export async function getCurrentUser(
 
       return { error: null, user };
     } catch (error) {
+      if (error instanceof Error) {
+        return { error, user: null };
+      }
+
+      let message: string;
+      if (typeof error === "string") {
+        message = error;
+      } else {
+        try {
+          message = JSON.stringify(error);
+        } catch {
+          message = "Unknown error";
+        }
+      }
+
       return {
-        error: error instanceof Error ? error : new Error("Unknown error"),
+        error: new Error(message, { cause: error }),
         user: null,
       };
     }
@@ -283,24 +291,27 @@ export async function getCurrentUser(
  *
  * @param cookieStore - Next.js readonly request cookies
  * @returns Cookie adapter instance
- *
- * @example
- * const cookieStore = await cookies();
- * const adapter = createCookieAdapter(cookieStore);
- * const supabase = createServerSupabase({ cookies: adapter });
  */
 export function createCookieAdapter(
   cookieStore: ReadonlyRequestCookies
 ): CookieMethodsServer {
   return {
-    getAll: () => cookieStore.getAll(),
+    getAll: () => {
+      try {
+        return cookieStore.getAll();
+      } catch (error) {
+        warnCookieAdapterFailureOnce("getAll", error);
+        return [];
+      }
+    },
     setAll: (cookiesToSet: CookieSetAllArgs) => {
       try {
         cookiesToSet.forEach(({ name, value, options }) => {
           cookieStore.set(name, value, options);
         });
-      } catch {
-        // Ignore cookie set errors (e.g., locked headers in certain runtimes)
+      } catch (error) {
+        // Ignore cookie set errors (e.g., locked headers in Server Components).
+        warnCookieAdapterFailureOnce("setAll", error);
       }
     },
   };
@@ -309,13 +320,21 @@ export function createCookieAdapter(
 function createCookieMethods(adapter?: CookieMethodsServer): CookieMethodsServer {
   if (adapter) {
     return {
-      getAll: () => adapter.getAll(),
+      getAll: () => {
+        try {
+          return adapter.getAll();
+        } catch (error) {
+          warnCookieAdapterFailureOnce("getAll", error);
+          return [];
+        }
+      },
       setAll: adapter.setAll
         ? (cookiesToSet: CookieSetAllArgs) => {
             try {
               return adapter.setAll?.(cookiesToSet);
-            } catch {
-              // Ignore cookie set errors (e.g., locked headers)
+            } catch (error) {
+              // Ignore cookie set errors (e.g., locked headers).
+              warnCookieAdapterFailureOnce("setAll", error);
               return undefined;
             }
           }

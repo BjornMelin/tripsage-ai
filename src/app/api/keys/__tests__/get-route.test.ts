@@ -7,6 +7,7 @@ import {
   createRouteParamsContext,
   getMockCookiesForTest,
 } from "@/test/helpers/route";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
 // Mock next/headers cookies() BEFORE any imports that use it
 vi.mock("next/headers", () => ({
@@ -54,10 +55,12 @@ describe("GET /api/keys route", () => {
     const eq = vi.fn().mockReturnValue({ order });
     const select = vi.fn().mockReturnValue({ eq });
     const from = vi.fn().mockReturnValue({ select });
-    MOCK_CREATE_SERVER_SUPABASE.mockResolvedValue({
-      auth: { getUser: vi.fn(async () => ({ data: { user: { id: "u1" } } })) },
-      from,
-    } as unknown as TypedServerSupabase);
+    MOCK_CREATE_SERVER_SUPABASE.mockResolvedValue(
+      unsafeCast<TypedServerSupabase>({
+        auth: { getUser: vi.fn(async () => ({ data: { user: { id: "u1" } } })) },
+        from,
+      })
+    );
     const { GET } = await import("../route");
     const req = createMockNextRequest({
       method: "GET",
@@ -70,9 +73,11 @@ describe("GET /api/keys route", () => {
   });
 
   it("returns 401 when not authenticated", async () => {
-    MOCK_CREATE_SERVER_SUPABASE.mockResolvedValue({
-      auth: { getUser: vi.fn(async () => ({ data: { user: null } })) },
-    } as unknown as TypedServerSupabase);
+    MOCK_CREATE_SERVER_SUPABASE.mockResolvedValue(
+      unsafeCast<TypedServerSupabase>({
+        auth: { getUser: vi.fn(async () => ({ data: { user: null } })) },
+      })
+    );
     const { GET } = await import("../route");
     const req = createMockNextRequest({
       method: "GET",

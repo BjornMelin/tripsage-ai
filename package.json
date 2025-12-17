@@ -37,7 +37,9 @@
     "ops": "tsx scripts/ops.ts",
     "test:analyze": "pnpm ops test analyze failures",
     "test:analyze:all": "pnpm ops test analyze all",
-    "boundary:check": "node scripts/check-boundaries.mjs"
+    "boundary:check": "node scripts/check-boundaries.mjs",
+    "check:no-new-unknown-casts": "node scripts/check-no-new-unknown-casts.mjs",
+    "check:no-unknown-casts": "node scripts/check-no-unknown-casts.mjs"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "3.0.0-beta.83",

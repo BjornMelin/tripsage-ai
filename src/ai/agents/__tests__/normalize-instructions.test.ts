@@ -3,6 +3,7 @@
 import type { SystemModelMessage } from "ai";
 import { describe, expect, it } from "vitest";
 
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { extractTextFromContent, normalizeInstructions } from "../chat-agent";
 
 describe("normalizeInstructions", () => {
@@ -11,22 +12,22 @@ describe("normalizeInstructions", () => {
   });
 
   it("joins text parts from structured content", () => {
-    const systemMsg = {
+    const systemMsg = unsafeCast<SystemModelMessage>({
       content: [
         { text: "Line one", type: "text" },
         { text: "Line two", type: "text" },
       ],
       role: "system",
-    } as unknown as SystemModelMessage;
+    });
 
     expect(normalizeInstructions(systemMsg)).toBe("Line one\nLine two");
   });
 
   it("falls back to empty string when no text content present", () => {
-    const systemMsg = {
+    const systemMsg = unsafeCast<SystemModelMessage>({
       content: [{ type: "image", url: "https://example.com/image.png" }],
       role: "system",
-    } as unknown as SystemModelMessage;
+    });
 
     expect(normalizeInstructions(systemMsg)).toBe("");
   });
@@ -41,7 +42,7 @@ describe("extractTextFromContent", () => {
     ];
 
     expect(
-      extractTextFromContent(content as unknown as SystemModelMessage["content"])
+      extractTextFromContent(unsafeCast<SystemModelMessage["content"]>(content))
     ).toBe("alpha\nbeta\ngamma\nignored");
   });
 });

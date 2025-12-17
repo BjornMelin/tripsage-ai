@@ -57,6 +57,12 @@ vi.mock("@/lib/webhooks/payload", () => ({
 }));
 
 vi.mock("@/lib/idempotency/redis", () => ({
+  IdempotencyServiceUnavailableError: class IdempotencyServiceUnavailableError extends Error {
+    constructor() {
+      super("Idempotency service unavailable: Redis not configured");
+      this.name = "IdempotencyServiceUnavailableError";
+    }
+  },
   tryReserveKey: (key: string, ttl?: number) => tryReserveKeyMock(key, ttl),
 }));
 

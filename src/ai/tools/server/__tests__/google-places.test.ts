@@ -2,6 +2,7 @@
 
 import { HttpResponse, http } from "msw";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { server } from "@/test/msw/server";
 
 const mockContext = {
@@ -35,11 +36,13 @@ vi.mock("@/lib/telemetry/span", async () => {
         _options: Parameters<WithSpan>[1],
         fn: Parameters<WithSpan>[2]
       ) =>
-        fn({
-          addEvent: vi.fn(),
-          recordException: vi.fn(),
-          setAttribute: vi.fn(),
-        } as unknown as SpanArg)
+        fn(
+          unsafeCast<SpanArg>({
+            addEvent: vi.fn(),
+            recordException: vi.fn(),
+            setAttribute: vi.fn(),
+          })
+        )
     ),
   };
 });

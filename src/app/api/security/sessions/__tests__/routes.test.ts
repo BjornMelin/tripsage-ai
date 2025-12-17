@@ -6,6 +6,7 @@ import {
   createRouteParamsContext,
   getMockCookiesForTest,
 } from "@/test/helpers/route";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { DELETE } from "../[sessionId]/route";
 import { GET } from "../route";
 
@@ -150,7 +151,7 @@ describe("/api/security/sessions routes", () => {
       })),
     };
 
-    adminInstance = {
+    adminInstance = unsafeCast<ReturnType<typeof adminMock>>({
       schema: vi.fn(() => ({
         from: vi.fn(() => ({
           delete: vi.fn(() => deleteChain),
@@ -159,7 +160,7 @@ describe("/api/security/sessions routes", () => {
           select: vi.fn().mockReturnThis(),
         })),
       })),
-    } as unknown as ReturnType<typeof adminMock>;
+    });
 
     const res = await DELETE(
       createMockNextRequest({

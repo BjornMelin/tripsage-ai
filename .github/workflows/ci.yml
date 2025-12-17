@@ -71,6 +71,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Fetch main for diff checks
+        run: git fetch --no-tags origin main
 
       - name: Set up Node
         uses: actions/setup-node@v6
@@ -90,6 +95,12 @@ jobs:
 
       - name: TypeScript type check
         run: pnpm type-check
+
+      - name: Reject unknown casts (full scan)
+        run: pnpm check:no-unknown-casts
+
+      - name: Reject new unknown casts
+        run: pnpm check:no-new-unknown-casts
 
       - name: Production build
         run: pnpm build

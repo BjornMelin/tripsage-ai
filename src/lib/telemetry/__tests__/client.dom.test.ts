@@ -1,6 +1,7 @@
 /** @vitest-environment jsdom */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
 const WEB_TRACER_PROVIDER = vi.hoisted(() => {
   // Use a proper constructor function to avoid vi.fn() warnings
@@ -136,9 +137,9 @@ describe("initTelemetry", () => {
 
     expect(OTLP_TRACE_EXPORTER).toHaveBeenCalled();
     // Access mock calls with proper type assertion
-    const mockCalls = OTLP_TRACE_EXPORTER.mock.calls as unknown as Array<
-      [{ url: string }]
-    >;
+    const mockCalls = unsafeCast<Array<[{ url: string }]>>(
+      OTLP_TRACE_EXPORTER.mock.calls
+    );
     expect(mockCalls[0]).toBeDefined();
     const exporterConfig = mockCalls[0]?.[0];
     expect(exporterConfig).toHaveProperty("url");

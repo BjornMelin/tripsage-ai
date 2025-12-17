@@ -3,11 +3,12 @@
 import type { UIMessage } from "ai";
 import { describe, expect, it } from "vitest";
 import { ChatMessageItem } from "@/components/chat/message-item";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { fireEvent, render, screen } from "@/test/test-utils";
 
 describe("ChatMessageItem file parts", () => {
   it("does not render inline image for invalid base64 data", () => {
-    const message = {
+    const message = unsafeCast<UIMessage>({
       id: "m1",
       parts: [
         {
@@ -17,7 +18,7 @@ describe("ChatMessageItem file parts", () => {
         },
       ],
       role: "assistant",
-    } as unknown as UIMessage;
+    });
 
     render(<ChatMessageItem message={message} />);
 
@@ -27,7 +28,7 @@ describe("ChatMessageItem file parts", () => {
   });
 
   it("hides inline image when load fails", () => {
-    const message = {
+    const message = unsafeCast<UIMessage>({
       id: "m2",
       parts: [
         {
@@ -37,7 +38,7 @@ describe("ChatMessageItem file parts", () => {
         },
       ],
       role: "assistant",
-    } as unknown as UIMessage;
+    });
 
     render(<ChatMessageItem message={message} />);
 

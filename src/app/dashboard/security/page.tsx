@@ -1,5 +1,5 @@
 /**
- * @fileoverview The security page for the dashboard.
+ * @fileoverview Dashboard security page (MFA settings).
  */
 
 import "server-only";
@@ -10,8 +10,7 @@ import { MfaPanel } from "@/components/features/security/mfa-panel";
 import { getUnknownErrorMessage } from "@/lib/errors/get-unknown-error-message";
 import { ROUTES } from "@/lib/routes";
 import { listFactors, refreshAal } from "@/lib/security/mfa";
-import { getCurrentUser } from "@/lib/supabase/factory";
-import { createServerSupabase } from "@/lib/supabase/server";
+import { createServerSupabase, getCurrentUser } from "@/lib/supabase/server";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
 const logger = createServerLogger("app.security.page");

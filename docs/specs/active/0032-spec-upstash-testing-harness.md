@@ -158,13 +158,15 @@ afterAll(afterAllHook);
 ### Test Injection (Production Code)
 
 ```typescript
+import type { Redis } from "@upstash/redis";
 import { setRedisFactoryForTests } from "@/lib/redis";
 import { setQStashClientFactoryForTests } from "@/lib/qstash/client";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { RedisMockClient, createQStashMock } from "@/test/upstash";
 
 // Setup
 const qstash = createQStashMock();
-setRedisFactoryForTests(() => new RedisMockClient() as unknown as Redis);
+setRedisFactoryForTests(() => unsafeCast<Redis>(new RedisMockClient()));
 setQStashClientFactoryForTests(() => new qstash.Client({ token: "test" }));
 
 // Teardown

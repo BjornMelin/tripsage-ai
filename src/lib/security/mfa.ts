@@ -479,8 +479,7 @@ export async function createBackupCodes(
         user_id: userId,
       }));
 
-      const adminClient = adminSupabase as unknown as SupabaseClient<Database>;
-      const { data, error } = await adminClient.rpc(
+      const { data, error } = await adminSupabase.rpc(
         "replace_backup_codes" as never,
         {
           // biome-ignore lint/style/useNamingConvention: RPC parameters must match SQL function names
@@ -656,8 +655,7 @@ async function logBackupCodeAudit(
   count: number,
   meta: BackupAuditMeta
 ) {
-  const adminClient = adminSupabase as unknown as SupabaseClient<Database>;
-  const { error } = await adminClient.from("mfa_backup_code_audit" as never).insert({
+  const { error } = await adminSupabase.from("mfa_backup_code_audit" as never).insert({
     count,
     event,
     ip: meta.ip,

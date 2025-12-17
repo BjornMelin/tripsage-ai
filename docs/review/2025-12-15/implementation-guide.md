@@ -121,12 +121,12 @@ Goal: restore “merge-safe” invariants (build passes, CI enforces build, base
   - Files:
     - `next.config.ts`
   - Steps:
-    - Delete `turbopack.root` entirely (preferred) unless you actually depend on linked/workspace resolution outside repo root.
-    - If you must keep it, set it to an absolute path (doc contract).
+    - Delete `turbopack.root` entirely (preferred) unless you actually depend on linked/workspace resolution outside repo root, or Next is inferring the root from an unrelated lockfile in a parent directory.
+    - If you keep it, set it to an absolute path. The build-time assertion in `next.config.ts` validates that `turbopack.root` is absolute and points to an existing directory (throws on failure).
   - Verify:
-    - `pnpm build` no longer prints `turbopack.root should be absolute`.
+    - `pnpm build` succeeds; the programmatic assertion in `next.config.ts` enforces the absolute-path contract automatically.
   - References:
-    - <https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack>
+    - <https://nextjs.org/docs/pages/api-reference/config/next-config-js/turbopack>
 
 ### 0.5 Make coverage thresholds real (or remove the illusion)
 
@@ -150,7 +150,7 @@ Goal: delete misleading docs, reduce type escapes, and force a single “correct
 
 ### 1.1 Fix Supabase SSR factory naming collision and doc drift
 
-- [ ] (AI-001) Remove misleading factory docs and eliminate `createServerSupabase` naming collision
+- [x] (AI-001) Remove misleading factory docs and eliminate `createServerSupabase` naming collision
   - Files:
     - `src/lib/supabase/factory.ts`
     - `src/lib/supabase/server.ts`
@@ -167,7 +167,7 @@ Goal: delete misleading docs, reduce type escapes, and force a single “correct
 
 ### 1.2 Reduce type-safety bypass via `as unknown as`
 
-- [ ] (AI-004) Burn down `as unknown as` in boundary modules first (DB/RPC/external API/tool adapters)
+- [x] (AI-004) Burn down `as unknown as` in boundary modules first (DB/RPC/external API/tool adapters)
   - Files (starting targets from evidence):
     - `src/lib/supabase/rpc.ts`
     - `src/lib/rag/**`
@@ -176,27 +176,30 @@ Goal: delete misleading docs, reduce type escapes, and force a single “correct
     - Replace casts with Zod validation at boundaries using existing `@schemas/*` where available.
     - If a cast is unavoidable, isolate it to a tiny adapter with a single exported function and a test.
     - Add a CI check that flags new `as unknown as` in non-test code unless explicitly allowlisted.
+    - Optional follow-up: remove `as unknown as` from `src/test/**` helpers/mocks; when a type is too large to model, centralize intentional test-only coercions in `src/test/helpers/unsafe-cast.ts`.
   - Verify:
-    - `rg \"as unknown as\" src --glob '!src/test/**' --glob '!src/**/__tests__/**' --glob '!src/**/*.test.*' --glob '!src/**/*.spec.*' | wc -l` decreases.
+    - `pnpm check:no-unknown-casts`
+    - `rg \"as unknown as\" src | wc -l` is `0`.
+    - `rg \"as unknown as\" src --glob '!src/test/**' --glob '!src/**/__tests__/**' --glob '!src/**/*.test.*' --glob '!src/**/*.spec.*' --glob '!src/mocks/**' | wc -l` is `0`.
     - `pnpm test:affected`
 
 ### 1.3 Remove boilerplate `@fileoverview` headers where they don’t encode invariants
 
-- [ ] (AI-002) Strip template headers in files you touch anyway (don’t try to “boil the ocean”)
+- [x] (AI-002) Keep `@fileoverview` headers, but make them concise and accurate
   - Files:
     - Opportunistic: any files modified for Phase 0–2 fixes
   - Steps:
-    - Delete file headers that restate the filename or exports.
-    - Keep only non-obvious invariants (security boundaries, caching constraints) and ensure tests/documentation back them.
+    - Keep `@fileoverview` in touched files for fast scanning.
+    - Make it 1 sentence, technical, and consistent with exports (no "key features" lists).
+    - Remove lists of features; reference a doc or test if detail is needed.
   - Verify:
-    - `rg \"@fileoverview\" src | wc -l` decreases in touched areas.
-    - Code review rule: no new boilerplate headers without a specific invariant.
+    - Review touched files: `@fileoverview` is short and matches behavior.
   - References:
     - <https://genai.owasp.org/llmrisk2023-24/llm09-overreliance/>
 
 ### 1.4 Replace webhook error heuristics with typed errors
 
-- [ ] (AI-003) Remove `classifyError()` substring heuristics; switch to explicit typed errors
+- [x] (AI-003) Remove `classifyError()` substring heuristics; switch to explicit typed errors
   - Files:
     - `src/lib/webhooks/handler.ts`
     - Related webhook entrypoints in `src/app/api/**` that depend on its behavior
@@ -289,6 +292,9 @@ Goal: close high-blast-radius holes (public cost-bearing routes, open redirects,
   - Verify:
     - `pnpm test:affected`
     - Add tests that simulate oversized payloads and assert 413 without buffering full body.
+  - Implementation note (2025-12-17):
+    - Webhook verification now enforces a bounded body read and returns `413` on exceed (`src/lib/webhooks/payload.ts`, `src/lib/webhooks/handler.ts`).
+    - JSON route parsing limits are still pending under `src/lib/api/*`.
   - References:
     - <https://owasp.org/API-Security/editions/2023/en/0xa4-unrestricted-resource-consumption/>
 

@@ -5,6 +5,7 @@ import type { User } from "@supabase/supabase-js";
 import type { LanguageModel, UIMessage } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import type { ChatDeps } from "../_handler";
 import { handleChatStream } from "../_handler";
 
@@ -53,6 +54,7 @@ vi.mock("@/lib/security/random", () => ({
   secureUuid: vi.fn(() => "test-uuid-123"),
 }));
 
+// Type assertions inline since vi.hoisted runs before ES module imports
 const MOCK_SUPABASE = vi.hoisted(() => {
   const mockUser = { id: "user-1" } as unknown as User;
 
@@ -108,14 +110,14 @@ describe("/api/chat/stream route smoke", () => {
 
   it("returns 401 unauthenticated", async () => {
     const deps = createDeps({
-      supabase: {
+      supabase: unsafeCast<TypedServerSupabase>({
         auth: {
           getUser: vi.fn(async () => ({
             data: { user: null },
             error: { message: "Unauthorized" },
           })),
         },
-      } as unknown as TypedServerSupabase,
+      }),
     });
 
     const res = await handleChatStream(deps, { ip: "1.2.3.4", messages: [] });

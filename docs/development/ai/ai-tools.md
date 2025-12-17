@@ -211,19 +211,11 @@ import { createAiTool } from "@ai/lib/tool-factory";
 import { toolRegistry } from "@ai/tools";
 
 function buildMyAgentTools(identifier: string): ToolSet {
-  const baseTool = toolRegistry.myTool as unknown as {
-    execute?: (params: unknown, callOptions: unknown) => Promise<unknown> | unknown;
-  };
+  const baseTool = toolRegistry.myTool;
 
   const wrappedTool = createAiTool({
     description: baseTool.description ?? "My tool",
-    execute: async (params, callOptions) => {
-      if (typeof baseTool.execute !== "function") {
-        throw new Error("Tool missing execute binding");
-      }
-      const result = baseTool.execute(params, callOptions);
-      return result instanceof Promise ? result : Promise.resolve(result);
-    },
+    execute: async (params, callOptions) => baseTool.execute(params, callOptions),
     guardrails: {
       cache: {
         hashInput: true,

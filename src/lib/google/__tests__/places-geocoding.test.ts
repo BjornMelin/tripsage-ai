@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
 vi.mock("../caching");
 vi.mock("../client");
@@ -50,9 +51,7 @@ describe("places-geocoding", () => {
         }),
         ok: true,
       };
-      vi.mocked(postPlacesSearch).mockResolvedValue(
-        mockResponse as unknown as Response
-      );
+      vi.mocked(postPlacesSearch).mockResolvedValue(unsafeCast<Response>(mockResponse));
 
       const result = await resolveLocationToLatLng("New York, NY");
 
@@ -90,9 +89,7 @@ describe("places-geocoding", () => {
         ok: false,
         status: 400,
       };
-      vi.mocked(postPlacesSearch).mockResolvedValue(
-        mockResponse as unknown as Response
-      );
+      vi.mocked(postPlacesSearch).mockResolvedValue(unsafeCast<Response>(mockResponse));
 
       const result = await resolveLocationToLatLng("Invalid Location");
 
@@ -107,9 +104,7 @@ describe("places-geocoding", () => {
         json: vi.fn().mockResolvedValue({ places: [] }),
         ok: true,
       };
-      vi.mocked(postPlacesSearch).mockResolvedValue(
-        mockResponse as unknown as Response
-      );
+      vi.mocked(postPlacesSearch).mockResolvedValue(unsafeCast<Response>(mockResponse));
 
       const result = await resolveLocationToLatLng("Unknown Place");
 

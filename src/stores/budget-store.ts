@@ -157,13 +157,13 @@ const CALCULATE_BUDGET_SUMMARY = (
  */
 export const useBudgetStore = create<BudgetState>()(
   persist(
-    (set, _get) => ({
+    (set, get) => ({
       // Computed properties
       /**
        * The currently active budget, or null if none is active.
        */
       get activeBudget(): Budget | null {
-        const { activeBudgetId, budgets } = this as unknown as BudgetState;
+        const { activeBudgetId, budgets } = get();
         return activeBudgetId ? (budgets[activeBudgetId] ?? null) : null;
       },
       activeBudgetId: null,
@@ -282,10 +282,10 @@ export const useBudgetStore = create<BudgetState>()(
        * Returns null when there is no active budget.
        */
       get budgetSummary(): BudgetSummary | null {
-        const { activeBudget, expenses } = this as unknown as BudgetState;
+        const { activeBudgetId, budgets, expenses } = get();
+        const activeBudget = activeBudgetId ? (budgets[activeBudgetId] ?? null) : null;
         if (!activeBudget) return null;
-        const budgetExpenses = expenses[activeBudget.id] ?? [];
-        return CALCULATE_BUDGET_SUMMARY(activeBudget, budgetExpenses);
+        return CALCULATE_BUDGET_SUMMARY(activeBudget, expenses[activeBudget.id] ?? []);
       },
       // Initial state
       budgets: {},
@@ -294,7 +294,7 @@ export const useBudgetStore = create<BudgetState>()(
        * Map of tripId to a list of budget IDs belonging to that trip.
        */
       get budgetsByTrip(): Record<string, string[]> {
-        const { budgets } = this as unknown as BudgetState;
+        const { budgets } = get();
         return Object.values(budgets).reduce(
           (acc, budget) => {
             if (budget.tripId) {
@@ -357,7 +357,7 @@ export const useBudgetStore = create<BudgetState>()(
        * The 10 most recent expenses across all budgets, newest first.
        */
       get recentExpenses(): Expense[] {
-        const { expenses } = this as unknown as BudgetState;
+        const { expenses } = get();
         return Object.values(expenses)
           .flat()
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())

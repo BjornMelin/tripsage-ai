@@ -7,6 +7,7 @@ import {
   mockApiRouteAuthUser,
   resetApiRouteMocks,
 } from "@/test/helpers/api-route";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
 const mockMfaVerify = vi.hoisted(() => vi.fn());
 const mockRegenerate = vi.hoisted(() => vi.fn());
@@ -132,7 +133,7 @@ describe("POST /api/auth/mfa/verify", () => {
 
   it("returns 401 when user id is missing during initial enrollment", async () => {
     mockMfaVerify.mockResolvedValueOnce({ isInitialEnrollment: true });
-    mockApiRouteAuthUser({ id: undefined as unknown as string });
+    mockApiRouteAuthUser(unsafeCast<{ id: string }>({ id: undefined }));
 
     const { POST } = await import("../verify/route");
     const res = await POST(

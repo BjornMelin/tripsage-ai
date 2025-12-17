@@ -2,6 +2,7 @@
 
 import type { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
 // Create hoisted mock functions so they can be accessed in tests
 const mockLoggerWarn = vi.hoisted(() => vi.fn());
@@ -217,10 +218,10 @@ describe("resolveServerRedirectUrl", () => {
     for (const [key, value] of Object.entries(headers)) {
       headersObj.set(key, value);
     }
-    return {
+    return unsafeCast<NextRequest>({
       headers: headersObj,
       url,
-    } as unknown as NextRequest;
+    });
   }
 
   it("uses request origin for valid relative path", () => {

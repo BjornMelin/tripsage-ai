@@ -3,6 +3,7 @@
 import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { server } from "@/test/msw/server";
 import { setupUpstashMocks } from "@/test/upstash/redis-mock";
 
@@ -78,7 +79,7 @@ describe("webSearchBatch", () => {
       },
       mockContext
     );
-    const outAny = out as unknown as {
+    const outAny = unsafeCast<{
       results: Array<{
         query: string;
         ok: boolean;
@@ -89,7 +90,7 @@ describe("webSearchBatch", () => {
         };
       }>;
       tookMs: number;
-    };
+    }>(out);
     expect(outAny.results[0].query).toBe("q1");
     expect(outAny.results[0].ok).toBe(true);
     expect(outAny.results[0].value?.results[0]?.url).toBe("https://example.com");
@@ -120,7 +121,7 @@ describe("webSearchBatch", () => {
       },
       mockContext
     );
-    const outAny = out as unknown as {
+    const outAny = unsafeCast<{
       results: Array<{
         query: string;
         ok: boolean;
@@ -131,7 +132,7 @@ describe("webSearchBatch", () => {
         };
       }>;
       tookMs: number;
-    };
+    }>(out);
 
     expect(outAny.results[0].ok).toBe(true);
     expect(outAny.results[0].value?.results[0]?.url).toBe(

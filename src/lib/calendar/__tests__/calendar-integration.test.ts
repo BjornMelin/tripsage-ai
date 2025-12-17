@@ -6,6 +6,7 @@ import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createCalendarEvent } from "@/test/factories/calendar-factory";
 import { resetAllFactories } from "@/test/factories/reset";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { server } from "@/test/msw/server";
 import type { DateRange } from "../../dates/unified-date-utils";
 import { DateUtils } from "../../dates/unified-date-utils";
@@ -43,7 +44,7 @@ describe("CalendarIntegration", () => {
 
     it("should throw error for unsupported provider type", () => {
       expect(() =>
-        calendarFactory.create("unsupported" as unknown as "supabase")
+        calendarFactory.create(unsafeCast<"supabase">("unsupported"))
       ).toThrow("Unsupported calendar type: unsupported");
     });
   });

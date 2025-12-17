@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import type { TypedAdminSupabase } from "../admin";
 
 describe("rpc helpers", () => {
@@ -10,7 +11,7 @@ describe("rpc helpers", () => {
 
   it("calls insert_user_api_key with normalized service", async () => {
     const rpc = vi.fn().mockResolvedValue({ data: null, error: null });
-    const mockClient = { rpc } as unknown as TypedAdminSupabase;
+    const mockClient = unsafeCast<TypedAdminSupabase>({ rpc });
     const { insertUserApiKey } = await import("../rpc");
     await insertUserApiKey("user-1", "OpenAI", "sk-test", mockClient);
     expect(rpc).toHaveBeenCalledWith("insert_user_api_key", {
@@ -22,7 +23,7 @@ describe("rpc helpers", () => {
 
   it("calls delete_user_api_key with normalized service", async () => {
     const rpc = vi.fn().mockResolvedValue({ data: null, error: null });
-    const mockClient = { rpc } as unknown as TypedAdminSupabase;
+    const mockClient = unsafeCast<TypedAdminSupabase>({ rpc });
     const { deleteUserApiKey } = await import("../rpc");
     await deleteUserApiKey("user-1", "xai", mockClient);
     expect(rpc).toHaveBeenCalledWith("delete_user_api_key", {
@@ -33,7 +34,7 @@ describe("rpc helpers", () => {
 
   it("returns value from get_user_api_key", async () => {
     const rpc = vi.fn().mockResolvedValue({ data: "secret", error: null });
-    const mockClient = { rpc } as unknown as TypedAdminSupabase;
+    const mockClient = unsafeCast<TypedAdminSupabase>({ rpc });
     const { getUserApiKey } = await import("../rpc");
     const res = await getUserApiKey("user-1", "openrouter", mockClient);
     expect(res).toBe("secret");

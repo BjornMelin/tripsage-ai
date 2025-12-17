@@ -33,7 +33,7 @@ vi.mock("@/lib/supabase/rpc", () => ({
 
 function mockTableUpsert(ok = true) {
   const upsert = vi.fn(async () => ({ error: ok ? null : new Error("db") }));
-  const builder = { upsert } as unknown as { upsert: typeof upsert };
+  const builder: { upsert: typeof upsert } = { upsert };
   MOCK_SUPABASE.from.mockReturnValue(builder);
   return { upsert };
 }

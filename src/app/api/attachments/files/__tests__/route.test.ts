@@ -8,6 +8,7 @@ import {
   resetApiRouteMocks,
 } from "@/test/helpers/api-route";
 import { createRouteParamsContext } from "@/test/helpers/route";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
 // Mock cache functions to skip caching in tests
 vi.mock("@/lib/cache/upstash", () => ({
@@ -28,11 +29,10 @@ describe("/api/attachments/files", () => {
 
     // Setup storage mock for signed URL generation
     const supabase = getApiRouteSupabaseMock();
-    vi.spyOn(supabase.storage, "from").mockImplementation(
-      () =>
-        ({
-          createSignedUrls: mockCreateSignedUrls,
-        }) as unknown as ReturnType<SupabaseClientMock["storage"]["from"]>
+    vi.spyOn(supabase.storage, "from").mockImplementation(() =>
+      unsafeCast<ReturnType<SupabaseClientMock["storage"]["from"]>>({
+        createSignedUrls: mockCreateSignedUrls,
+      })
     );
 
     // Default: return signed URLs matching file paths
@@ -81,11 +81,10 @@ describe("/api/attachments/files", () => {
     const selectMock = vi.fn(
       (_columns?: string, _options?: { count?: "exact" | null }) => chainable
     );
-    vi.spyOn(supabase, "from").mockImplementation(
-      () =>
-        ({
-          select: selectMock,
-        }) as unknown as ReturnType<SupabaseClientMock["from"]>
+    vi.spyOn(supabase, "from").mockImplementation(() =>
+      unsafeCast<ReturnType<SupabaseClientMock["from"]>>({
+        select: selectMock,
+      })
     );
 
     return {

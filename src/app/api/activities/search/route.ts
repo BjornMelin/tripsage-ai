@@ -1,8 +1,5 @@
 /**
- * @fileoverview Activity search API route.
- *
- * POST /api/activities/search
- * Searches for activities using Google Places API with optional AI fallback.
+ * @fileoverview POST /api/activities/search route handler.
  */
 
 import "server-only";
@@ -10,7 +7,7 @@ import "server-only";
 import { getActivitiesService } from "@domain/activities/container";
 import { activitySearchParamsSchema } from "@schemas/search";
 import { withApiGuards } from "@/lib/api/factory";
-import { getCurrentUser } from "@/lib/supabase/factory";
+import { getCurrentUser } from "@/lib/supabase/server";
 
 export const POST = withApiGuards({
   auth: false, // Allow anonymous searches

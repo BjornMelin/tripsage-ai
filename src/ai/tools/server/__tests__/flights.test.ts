@@ -4,6 +4,7 @@ import { searchFlights } from "@ai/tools";
 import type { FlightSearchResult } from "@schemas/flights";
 import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import type { buildUpstashCacheMock } from "@/test/mocks/cache";
 import { server } from "@/test/msw/server";
 
@@ -88,7 +89,8 @@ describe("searchFlights tool", () => {
         passengers: 2,
       },
       mockContext
-    )) as unknown as FlightSearchResult;
+    )) as unknown;
+    const typedResult = unsafeCast<FlightSearchResult>(result);
 
     expect(captured.authorization).toBe("Bearer test_duffel_key");
     expect(captured.duffelVersion).toBe("v2");
@@ -97,14 +99,14 @@ describe("searchFlights tool", () => {
       payment_currency: "USD",
       return_offers: true,
     });
-    expect(result).toMatchObject({ currency: "USD" });
-    expect(Array.isArray(result?.offers)).toBe(true);
+    expect(typedResult).toMatchObject({ currency: "USD" });
+    expect(Array.isArray(typedResult?.offers)).toBe(true);
   });
 
   it("throws when Duffel credentials are missing", async () => {
-    const envModule = (await import("@/lib/env/server")) as unknown as {
+    const envModule = unsafeCast<{
       setMockDuffelKey: (value?: string) => void;
-    };
+    }>(await import("@/lib/env/server"));
     envModule.setMockDuffelKey(undefined);
     await expect(
       searchFlights.execute?.(
@@ -128,9 +130,9 @@ describe("searchFlights tool", () => {
         return HttpResponse.text("server_error", { status: 500 });
       })
     );
-    const envModule = (await import("@/lib/env/server")) as unknown as {
+    const envModule = unsafeCast<{
       setMockDuffelKey: (value?: string) => void;
-    };
+    }>(await import("@/lib/env/server"));
     envModule.setMockDuffelKey("test_duffel_key");
 
     await expect(

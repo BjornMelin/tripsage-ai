@@ -4,6 +4,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "@/components/ui/use-toast";
 import { useAuthCore } from "@/stores/auth/auth-core";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { AccountSettingsSection } from "../account-settings-section";
 
 // Mock the stores and hooks
@@ -17,7 +18,7 @@ vi.mock("@/lib/supabase", () => ({
 }));
 // use-toast is mocked in src/test/setup-jsdom.ts; avoid overriding here.
 
-const MockToast = toast as unknown as ReturnType<typeof vi.fn>;
+const MockToast = unsafeCast<ReturnType<typeof vi.fn>>(toast);
 const MockLogout = vi.fn();
 const MockSetUser = vi.fn();
 const MockAuthUser = {

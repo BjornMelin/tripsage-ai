@@ -1,11 +1,8 @@
 /**
- * @fileoverview Supabase client exports for browser/client-side usage.
+ * @fileoverview Browser/client-safe Supabase exports.
  *
- * Note: Server-only utilities (createCookieAdapter, createMiddlewareSupabase,
- * createAdminSupabase, createServerSupabase, getCurrentUser) are not re-exported
- * here to prevent client bundles from loading server-only modules.
- * Import them directly from ./factory, ./server, or ./admin when needed in
- * server-side code (Route Handlers, Server Components, Server Actions).
+ * Server entrypoints live in `./server` (Route Handlers / Server Components) and
+ * `./factory` (middleware/proxy cookie adapters).
  */
 
 // Browser client helpers

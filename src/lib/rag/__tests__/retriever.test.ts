@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
 // Use vi.hoisted to create mocks before vi.mock hoisting
 const mockEmbed = vi.hoisted(() => vi.fn());
@@ -51,14 +52,17 @@ function createMockEmbedding(): number[] {
   return Array(1536).fill(0.1);
 }
 
+type RetrieveSupabase = Parameters<typeof retrieveDocuments>[0]["supabase"];
+type SemanticSearchSupabase = Parameters<typeof semanticSearch>[0]["supabase"];
+
 // Mock Supabase client
-function createMockSupabase(rpcResult: unknown = []) {
-  return {
+function createMockSupabase(rpcResult: unknown = []): RetrieveSupabase {
+  return unsafeCast<RetrieveSupabase>({
     rpc: vi.fn().mockResolvedValue({
       data: rpcResult,
       error: null,
     }),
-  } as unknown as Parameters<typeof retrieveDocuments>[0]["supabase"];
+  });
 }
 
 describe("retrieveDocuments", () => {
@@ -279,12 +283,12 @@ describe("retrieveDocuments", () => {
   });
 
   it("throws error when RPC fails", async () => {
-    const supabase = {
+    const supabase = unsafeCast<RetrieveSupabase>({
       rpc: vi.fn().mockResolvedValue({
         data: null,
         error: { message: "Database error" },
       }),
-    } as unknown as Parameters<typeof retrieveDocuments>[0]["supabase"];
+    });
 
     await expect(
       retrieveDocuments({
@@ -327,12 +331,12 @@ describe("semanticSearch", () => {
       },
     ];
 
-    const supabase = {
+    const supabase = unsafeCast<SemanticSearchSupabase>({
       rpc: vi.fn().mockResolvedValue({
         data: mockData,
         error: null,
       }),
-    } as unknown as Parameters<typeof semanticSearch>[0]["supabase"];
+    });
 
     const result = await semanticSearch({
       query: "simple search",
@@ -353,12 +357,12 @@ describe("semanticSearch", () => {
   });
 
   it("respects limit and threshold parameters", async () => {
-    const supabase = {
+    const supabase = unsafeCast<SemanticSearchSupabase>({
       rpc: vi.fn().mockResolvedValue({
         data: [],
         error: null,
       }),
-    } as unknown as Parameters<typeof semanticSearch>[0]["supabase"];
+    });
 
     await semanticSearch({
       limit: 5,
@@ -377,12 +381,12 @@ describe("semanticSearch", () => {
   });
 
   it("filters by namespace when provided", async () => {
-    const supabase = {
+    const supabase = unsafeCast<SemanticSearchSupabase>({
       rpc: vi.fn().mockResolvedValue({
         data: [],
         error: null,
       }),
-    } as unknown as Parameters<typeof semanticSearch>[0]["supabase"];
+    });
 
     await semanticSearch({
       namespace: "activities",
@@ -399,12 +403,12 @@ describe("semanticSearch", () => {
   });
 
   it("throws error on RPC failure", async () => {
-    const supabase = {
+    const supabase = unsafeCast<SemanticSearchSupabase>({
       rpc: vi.fn().mockResolvedValue({
         data: null,
         error: { message: "Search failed" },
       }),
-    } as unknown as Parameters<typeof semanticSearch>[0]["supabase"];
+    });
 
     await expect(
       semanticSearch({

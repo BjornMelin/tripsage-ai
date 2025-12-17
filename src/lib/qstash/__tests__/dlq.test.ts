@@ -2,6 +2,7 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getRedis } from "@/lib/redis";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { DLQ_MAX_ENTRIES, DLQ_TTL_SECONDS } from "../config";
 
 // Hoisted mocks
@@ -81,18 +82,20 @@ describe("DLQ", () => {
     mockRedisLrem.mockResolvedValue(1);
     mockRedisLlen.mockResolvedValue(0);
     mockRedisEval.mockResolvedValue(1);
-    vi.mocked(getRedis).mockReturnValue({
-      del: mockRedisDel,
-      eval: mockRedisEval,
-      expire: mockRedisExpire,
-      llen: mockRedisLlen,
-      lpush: mockRedisLpush,
-      lrange: mockRedisLrange,
-      lrem: mockRedisLrem,
-      ltrim: mockRedisLtrim,
-      rpush: mockRedisRpush,
-      scan: mockRedisScan,
-    } as unknown as ReturnType<typeof getRedis>);
+    vi.mocked(getRedis).mockReturnValue(
+      unsafeCast<ReturnType<typeof getRedis>>({
+        del: mockRedisDel,
+        eval: mockRedisEval,
+        expire: mockRedisExpire,
+        llen: mockRedisLlen,
+        lpush: mockRedisLpush,
+        lrange: mockRedisLrange,
+        lrem: mockRedisLrem,
+        ltrim: mockRedisLtrim,
+        rpush: mockRedisRpush,
+        scan: mockRedisScan,
+      })
+    );
   });
 
   describe("pushToDLQ", () => {

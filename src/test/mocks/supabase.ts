@@ -15,6 +15,7 @@ import type {
 import type { MockInstance } from "vitest";
 import { vi } from "vitest";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
 /** Generic record type for unknown database row structures. */
 type UnknownRecord = Record<string, unknown>;
@@ -79,7 +80,7 @@ export interface SupabaseMockConfig {
  */
 const CREATE_MOCK_FN = <T extends (...args: never[]) => unknown>(
   implementation: T
-): AuthMethodMock<T> => vi.fn(implementation) as unknown as AuthMethodMock<T>;
+): AuthMethodMock<T> => vi.fn(implementation) as AuthMethodMock<T>;
 
 /**
  * Creates a mock User object with default test values.
@@ -324,19 +325,19 @@ export const createMockSupabaseClient = (
     upload: vi.fn(async () => ({ data: null, error: null })),
   }));
 
-  const storage = {
+  const storage = unsafeCast<SupabaseClient<UnknownRecord>["storage"]>({
     from: storageFrom,
     getBucket: vi.fn(async () => ({ data: null, error: null })),
     getBucketId: vi.fn(() => "attachments"),
-  } as unknown as SupabaseClient<UnknownRecord>["storage"];
+  });
 
-  return {
+  return unsafeCast<SupabaseClient<UnknownRecord>>({
     auth,
     channel,
     from,
     removeChannel: vi.fn(),
     storage,
-  } as unknown as SupabaseClient<UnknownRecord>;
+  });
 };
 
 /**
@@ -371,7 +372,7 @@ export function createMockSupabaseFactory(
 
   return () => {
     const client = createMockSupabaseClient({ insertCapture, selectResult, user });
-    return Promise.resolve(client as unknown as TypedServerSupabase);
+    return Promise.resolve(client as TypedServerSupabase);
   };
 }
 

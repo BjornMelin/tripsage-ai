@@ -63,23 +63,18 @@ afterAll(() => {
   server.close();
 
   if (!DEBUG_OPEN_HANDLES) return;
-  const globalFlag = globalThis as unknown as Record<string, unknown>;
+  const globalFlag = globalThis as Record<string, unknown>;
   if (globalFlag.__TRIPSAGE_VITEST_OPEN_HANDLES_DUMPED__) return;
   globalFlag.__TRIPSAGE_VITEST_OPEN_HANDLES_DUMPED__ = true;
 
   const timeout = setTimeout(() => {
     console.log("[vitest-debug] dumping active handles/requests…");
-    const activeHandles = (
-      process as unknown as {
-        _getActiveHandles?: () => unknown[];
-        _getActiveRequests?: () => unknown[];
-      }
-    )._getActiveHandles?.();
-    const activeRequests = (
-      process as unknown as {
-        _getActiveRequests?: () => unknown[];
-      }
-    )._getActiveRequests?.();
+    const processWithDebugMethods = process as typeof process & {
+      _getActiveHandles?: () => unknown[];
+      _getActiveRequests?: () => unknown[];
+    };
+    const activeHandles = processWithDebugMethods._getActiveHandles?.();
+    const activeRequests = processWithDebugMethods._getActiveRequests?.();
 
     const summarize = (items: unknown[] | undefined) => {
       const counts = new Map<string, number>();

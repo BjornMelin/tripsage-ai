@@ -1,8 +1,5 @@
 /**
- * @fileoverview User settings API route handlers.
- *
- * Handles BYOK/Gateway consent preferences. Methods: GET (read),
- * POST (upsert allow_gateway_fallback).
+ * @fileoverview API route for reading/writing per-user gateway fallback settings.
  */
 
 import "server-only";
@@ -16,6 +13,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse, parseJsonBody, requireUserId } from "@/lib/api/route-helpers";
+import type { InsertTables } from "@/lib/supabase/database.types";
 import { getUserAllowGatewayFallback } from "@/lib/supabase/rpc";
 
 /**
@@ -36,8 +34,6 @@ export const GET = withApiGuards({
   const allowGatewayFallback = await getUserAllowGatewayFallback(userId);
   return NextResponse.json({ allowGatewayFallback });
 });
-
-import type { Database } from "@/lib/supabase/database.types";
 
 /**
  * Updates the user's gateway fallback preference setting.
@@ -75,27 +71,16 @@ export const POST = withApiGuards({
   const { userId } = result;
 
   // Upsert row with owner RLS via SSR client
-  type UserSettingsInsert = Database["public"]["Tables"]["user_settings"]["Insert"];
+  type UserSettingsInsert = InsertTables<"user_settings">;
   // DB column names use snake_case by convention
   const payload: UserSettingsInsert = {
     allow_gateway_fallback: allowGatewayFallback,
     user_id: userId,
   };
-  const { error: upsertError } = await (
-    supabase as unknown as {
-      from: (table: string) => {
-        upsert: (
-          values: Record<string, unknown>,
-          options?: { onConflict?: string; ignoreDuplicates?: boolean }
-        ) => Promise<{ error: unknown | null }>;
-      };
-    }
-  )
-    .from("user_settings")
-    .upsert(payload as unknown as Record<string, unknown>, {
-      ignoreDuplicates: false,
-      onConflict: "user_id",
-    });
+  const { error: upsertError } = await supabase.from("user_settings").upsert(payload, {
+    ignoreDuplicates: false,
+    onConflict: "user_id",
+  });
   if (upsertError) {
     throw upsertError;
   }

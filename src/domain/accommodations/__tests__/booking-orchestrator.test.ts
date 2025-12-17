@@ -2,6 +2,9 @@
 
 import type { AccommodationProviderAdapter } from "@domain/accommodations/providers/types";
 import { vi } from "vitest";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
+
+type TypedServerSupabase = import("@/lib/supabase/server").TypedServerSupabase;
 
 vi.mock("@/lib/payments/booking-payment", () => ({
   refundBookingPayment: vi.fn().mockResolvedValue({ amount: 0, refundId: "rf_1" }),
@@ -52,11 +55,11 @@ describe("runBookingOrchestrator", () => {
       search: vi.fn(),
     };
 
-    const supabase = {
+    const supabase = unsafeCast<TypedServerSupabase>({
       from: vi
         .fn()
         .mockReturnValue({ insert: vi.fn().mockResolvedValue({ error: null }) }),
-    } as unknown as import("@/lib/supabase/server").TypedServerSupabase;
+    });
 
     await expect(
       runBookingOrchestrator(
@@ -90,11 +93,11 @@ describe("runBookingOrchestrator", () => {
       search: vi.fn(),
     };
 
-    const supabase = {
+    const supabase = unsafeCast<TypedServerSupabase>({
       from: vi
         .fn()
         .mockReturnValue({ insert: vi.fn().mockResolvedValue({ error: null }) }),
-    } as unknown as import("@/lib/supabase/server").TypedServerSupabase;
+    });
 
     await runBookingOrchestrator(
       { provider, supabase },
@@ -131,11 +134,11 @@ describe("runBookingOrchestrator", () => {
       search: vi.fn(),
     };
 
-    const supabase = {
+    const supabase = unsafeCast<TypedServerSupabase>({
       from: vi.fn().mockReturnValue({
         insert: vi.fn().mockResolvedValue({ error: null }),
       }),
-    } as unknown as import("@/lib/supabase/server").TypedServerSupabase;
+    });
 
     await expect(
       runBookingOrchestrator(

@@ -15,19 +15,13 @@ import type {
 } from "recharts";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
-/** Type-safe dynamic import wrapper for Recharts components */
-const CreateDynamicComponent = <P extends object>(
-  importFunc: () => Promise<{ default: ComponentType<P> } | ComponentType<P>>
-) => {
-  return dynamic(
-    async () => {
-      const component = await importFunc();
-      // Handle both default export and named export patterns
-      return typeof component === "function" ? component : component.default;
-    },
-    { ssr: false }
-  );
-};
+function CreateDynamicComponent<P extends object>(
+  loader: () => Promise<ComponentType<P>>
+) {
+  return dynamic<P>(() => loader().then((Component) => ({ default: Component })), {
+    ssr: false,
+  });
+}
 
 /** Dynamically import chart components to reduce initial bundle size */
 export const ResponsiveContainer = dynamic(
@@ -67,10 +61,8 @@ export const LineChart = dynamic(
  *
  * @returns The Area component.
  */
-export const Area = CreateDynamicComponent(() =>
-  import("recharts").then(
-    (mod) => mod.Area as unknown as React.ComponentType<RechartsAreaProps>
-  )
+export const Area = CreateDynamicComponent<RechartsAreaProps>(() =>
+  import("recharts").then((mod) => mod.Area)
 );
 
 /**
@@ -78,10 +70,8 @@ export const Area = CreateDynamicComponent(() =>
  *
  * @returns The Line component.
  */
-export const Line = CreateDynamicComponent(() =>
-  import("recharts").then(
-    (mod) => mod.Line as unknown as React.ComponentType<RechartsLineProps>
-  )
+export const Line = CreateDynamicComponent<RechartsLineProps>(() =>
+  import("recharts").then((mod) => mod.Line)
 );
 
 /**
@@ -99,10 +89,8 @@ export const CartesianGrid = dynamic(
  *
  * @returns The XAxis component.
  */
-export const XAxis = CreateDynamicComponent(() =>
-  import("recharts").then(
-    (mod) => mod.XAxis as unknown as React.ComponentType<RechartsXAxisProps>
-  )
+export const XAxis = CreateDynamicComponent<RechartsXAxisProps>(() =>
+  import("recharts").then((mod) => mod.XAxis)
 );
 
 /**
@@ -110,10 +98,8 @@ export const XAxis = CreateDynamicComponent(() =>
  *
  * @returns The YAxis component.
  */
-export const YAxis = CreateDynamicComponent(() =>
-  import("recharts").then(
-    (mod) => mod.YAxis as unknown as React.ComponentType<RechartsYAxisProps>
-  )
+export const YAxis = CreateDynamicComponent<RechartsYAxisProps>(() =>
+  import("recharts").then((mod) => mod.YAxis)
 );
 
 /**
@@ -121,14 +107,9 @@ export const YAxis = CreateDynamicComponent(() =>
  *
  * @returns The Tooltip component.
  */
-export const Tooltip = CreateDynamicComponent(() =>
-  import("recharts").then(
-    (mod) =>
-      mod.Tooltip as unknown as React.ComponentType<
-        RechartsTooltipProps<string | number, string | number>
-      >
-  )
-);
+export const Tooltip = CreateDynamicComponent<
+  RechartsTooltipProps<string | number, string | number>
+>(() => import("recharts").then((mod) => mod.Tooltip));
 
 /** Export types for better TypeScript support */
 export type ResponsiveContainerProps = ComponentProps<typeof ResponsiveContainer>;

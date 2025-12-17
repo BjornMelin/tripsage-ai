@@ -3,6 +3,7 @@
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RealtimeAuthProvider } from "@/components/providers/realtime-auth-provider";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { render } from "@/test/test-utils";
 
 /** Mock setAuth function for testing */
@@ -57,13 +58,16 @@ describe("RealtimeAuthProvider", () => {
     // Simulate login event via auth state change callback
     const authCallback = mockOnAuthStateChange.mock.calls[0]?.[0];
     if (authCallback) {
-      authCallback("SIGNED_IN", {
-        access_token: token,
-        expiresIn: 3600,
-        refreshToken: "refresh",
-        tokenType: "bearer",
-        user: { id: "user-id" },
-      } as unknown as Session);
+      authCallback(
+        "SIGNED_IN",
+        unsafeCast<Session>({
+          access_token: token,
+          expiresIn: 3600,
+          refreshToken: "refresh",
+          tokenType: "bearer",
+          user: { id: "user-id" },
+        })
+      );
     }
 
     await vi.waitFor(() => {

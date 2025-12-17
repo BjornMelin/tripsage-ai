@@ -68,7 +68,7 @@ export async function sendCollaboratorNotifications(
       const fromName = getServerEnvVarWithFallback("RESEND_FROM_NAME", "TripSage");
       const downstreamUrl = getServerEnvVarWithFallback(
         "COLLAB_WEBHOOK_URL",
-        undefined as unknown as string | undefined
+        undefined
       );
 
       // Email via Resend (if configured and user email is resolvable)

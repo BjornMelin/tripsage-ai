@@ -3,6 +3,7 @@
 import type { ProviderId } from "@schemas/providers";
 import type { LanguageModel, UIMessage } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import type { ChatDeps, ProviderResolver } from "../_handler";
 
 type AgentUIStreamOptions = {
@@ -115,14 +116,14 @@ function fakeSupabase(
     };
   };
 
-  return {
+  return unsafeCast<ChatDeps["supabase"]>({
     auth: {
       getUser: vi.fn(async () => ({
         data: { user: userId ? { id: userId } : null },
       })),
     },
     from: vi.fn(mockQueryBuilder),
-  } as unknown as ChatDeps["supabase"];
+  });
 }
 
 describe("handleChatStream", () => {

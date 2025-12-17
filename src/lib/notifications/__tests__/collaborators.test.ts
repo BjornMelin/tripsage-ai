@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
 const envValues = vi.hoisted(() => ({
   COLLAB_WEBHOOK_URL: undefined,
@@ -33,9 +34,9 @@ vi.mock("@/lib/supabase/admin", async () => {
   return {
     ...actual,
     createAdminSupabase: (..._args: Parameters<typeof actual.createAdminSupabase>) =>
-      ({
+      unsafeCast<ReturnType<typeof actual.createAdminSupabase>>({
         auth: { admin: { getUserById: mockAuthAdminGetUserById } },
-      }) as unknown as ReturnType<typeof actual.createAdminSupabase>,
+      }),
   };
 });
 

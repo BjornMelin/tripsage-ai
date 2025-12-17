@@ -1,8 +1,5 @@
 /**
- * @fileoverview Weather tools using OpenWeatherMap API.
- *
- * Uses direct HTTP GET requests to OpenWeatherMap API. Implements caching,
- * retry logic, and standardized error handling.
+ * @fileoverview OpenWeatherMap-backed weather tool with caching, retries, and standardized errors.
  */
 
 import "server-only";
@@ -38,9 +35,9 @@ async function executeWeatherQuery(
   params: Record<string, unknown>
 ): Promise<{ data: unknown; provider: string }> {
   const { getServerEnvVar } = await import("@/lib/env/server");
-  let apiKey: string | undefined;
+  let apiKey: string;
   try {
-    apiKey = getServerEnvVar("OPENWEATHERMAP_API_KEY") as unknown as string;
+    apiKey = getServerEnvVar("OPENWEATHERMAP_API_KEY");
   } catch {
     const error: Error & { code?: string } = new Error("weather_not_configured");
     error.code = "weather_not_configured";

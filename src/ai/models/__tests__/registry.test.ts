@@ -1,6 +1,6 @@
 /** @vitest-environment node */
 
-import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const makeModel = (label: string) => {
   const fn = vi.fn();
@@ -59,8 +59,8 @@ describe("resolveProvider", () => {
 
   it("prefers OpenAI when user has openai key", async () => {
     const { getUserApiKey } = await import("@/lib/supabase/rpc");
-    (getUserApiKey as unknown as Mock).mockImplementation(
-      async (_uid: string, svc: string) => (svc === "openai" ? "sk-openai" : null)
+    vi.mocked(getUserApiKey).mockImplementation(async (_uid: string, svc: string) =>
+      svc === "openai" ? "sk-openai" : null
     );
     const { resolveProvider } = await import("@ai/models/registry");
     const result = await resolveProvider("user-1", "gpt-4o-mini");
@@ -71,8 +71,8 @@ describe("resolveProvider", () => {
 
   it("uses per-user Gateway when gateway key exists", async () => {
     const { getUserApiKey } = await import("@/lib/supabase/rpc");
-    (getUserApiKey as unknown as Mock).mockImplementation(
-      async (_uid: string, svc: string) => (svc === "gateway" ? "gw-user-key" : null)
+    vi.mocked(getUserApiKey).mockImplementation(async (_uid: string, svc: string) =>
+      svc === "gateway" ? "gw-user-key" : null
     );
     const { resolveProvider } = await import("@ai/models/registry");
     const result = await resolveProvider("user-gw", "openai/gpt-4o-mini");
@@ -84,8 +84,8 @@ describe("resolveProvider", () => {
 
   it("falls back to OpenRouter", async () => {
     const { getUserApiKey } = await import("@/lib/supabase/rpc");
-    (getUserApiKey as unknown as Mock).mockImplementation(
-      async (_uid: string, svc: string) => (svc === "openrouter" ? "sk-or" : null)
+    vi.mocked(getUserApiKey).mockImplementation(async (_uid: string, svc: string) =>
+      svc === "openrouter" ? "sk-or" : null
     );
     const { resolveProvider } = await import("@ai/models/registry");
     const result = await resolveProvider(
@@ -113,8 +113,8 @@ describe("resolveProvider", () => {
     env2.NEXT_PUBLIC_APP_NAME = undefined;
     process.env = env2;
     const { getUserApiKey } = await import("@/lib/supabase/rpc");
-    (getUserApiKey as unknown as Mock).mockImplementation(
-      async (_uid: string, svc: string) => (svc === "openrouter" ? "sk-or" : null)
+    vi.mocked(getUserApiKey).mockImplementation(async (_uid: string, svc: string) =>
+      svc === "openrouter" ? "sk-or" : null
     );
     const { resolveProvider } = await import("@ai/models/registry");
     const result = await resolveProvider("user-6", "openai/gpt-4o-mini");
@@ -128,8 +128,8 @@ describe("resolveProvider", () => {
 
   it("uses Anthropic when only anthropic key exists", async () => {
     const { getUserApiKey } = await import("@/lib/supabase/rpc");
-    (getUserApiKey as unknown as Mock).mockImplementation(
-      async (_uid: string, svc: string) => (svc === "anthropic" ? "sk-ant" : null)
+    vi.mocked(getUserApiKey).mockImplementation(async (_uid: string, svc: string) =>
+      svc === "anthropic" ? "sk-ant" : null
     );
     const { resolveProvider } = await import("@ai/models/registry");
     const result = await resolveProvider("user-3", "claude-3-5-sonnet-20241022");
@@ -141,8 +141,8 @@ describe("resolveProvider", () => {
 
   it("uses xAI when only xai key exists", async () => {
     const { getUserApiKey } = await import("@/lib/supabase/rpc");
-    (getUserApiKey as unknown as Mock).mockImplementation(
-      async (_uid: string, svc: string) => (svc === "xai" ? "sk-xai" : null)
+    vi.mocked(getUserApiKey).mockImplementation(async (_uid: string, svc: string) =>
+      svc === "xai" ? "sk-xai" : null
     );
     const { resolveProvider } = await import("@ai/models/registry");
     const result = await resolveProvider("user-4", "grok-3");
@@ -163,7 +163,7 @@ describe("resolveProvider", () => {
     };
 
     const { getUserApiKey } = await import("@/lib/supabase/rpc");
-    (getUserApiKey as unknown as Mock).mockResolvedValue(null);
+    vi.mocked(getUserApiKey).mockResolvedValue(null);
     const { resolveProvider } = await import("@ai/models/registry");
 
     await expect(resolveProvider("user-5")).rejects.toThrow(/No provider key found/);

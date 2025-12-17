@@ -3,6 +3,7 @@
  */
 
 import { describe, expect, it, vi } from "vitest";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
 // Mock server-only module before imports
 vi.mock("server-only", () => ({}));
@@ -322,7 +323,7 @@ describe("createAgentForWorkflow", () => {
     expect(() => {
       createAgentForWorkflow(
         // Intentionally pass an unsupported workflow kind to verify runtime guardrails
-        "memoryUpdate" as unknown as "budgetPlanning",
+        unsafeCast<"budgetPlanning">("memoryUpdate"),
         deps,
         createTestConfig("budgetAgent"),
         { destination: "Test", durationDays: 1 }
@@ -335,7 +336,7 @@ describe("createAgentForWorkflow", () => {
     expect(() => {
       createAgentForWorkflow(
         // Intentionally pass an unsupported workflow kind to verify runtime guardrails
-        "invalidWorkflow" as unknown as "budgetPlanning",
+        unsafeCast<"budgetPlanning">("invalidWorkflow"),
         deps,
         createTestConfig("budgetAgent"),
         { destination: "Test", durationDays: 1 }

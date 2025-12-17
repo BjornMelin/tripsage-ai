@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
 vi.mock("../caching");
 vi.mock("../client");
@@ -56,7 +57,7 @@ describe("places-enrichment", () => {
         ok: true,
       };
       vi.mocked(getPlaceDetails).mockResolvedValue(
-        mockDetailsResponse as unknown as Response
+        unsafeCast<Response>(mockDetailsResponse)
       );
 
       const result = await enrichHotelListingWithPlaces(listing);
@@ -94,7 +95,7 @@ describe("places-enrichment", () => {
         ok: true,
       };
       vi.mocked(postPlacesSearch).mockResolvedValue(
-        mockSearchResponse as unknown as Response
+        unsafeCast<Response>(mockSearchResponse)
       );
       const mockDetailsResponse = {
         json: vi.fn().mockResolvedValue({
@@ -104,7 +105,7 @@ describe("places-enrichment", () => {
         ok: true,
       };
       vi.mocked(getPlaceDetails).mockResolvedValue(
-        mockDetailsResponse as unknown as Response
+        unsafeCast<Response>(mockDetailsResponse)
       );
 
       const result = await enrichHotelListingWithPlaces(listing);
@@ -134,7 +135,7 @@ describe("places-enrichment", () => {
         ok: false,
       };
       vi.mocked(postPlacesSearch).mockResolvedValue(
-        mockSearchResponse as unknown as Response
+        unsafeCast<Response>(mockSearchResponse)
       );
 
       const result = await enrichHotelListingWithPlaces(listing);
@@ -156,7 +157,7 @@ describe("places-enrichment", () => {
         ok: false,
       };
       vi.mocked(getPlaceDetails).mockResolvedValue(
-        mockDetailsResponse as unknown as Response
+        unsafeCast<Response>(mockDetailsResponse)
       );
 
       const result = await enrichHotelListingWithPlaces(listing);
@@ -189,7 +190,7 @@ describe("places-enrichment", () => {
         ok: true,
       };
       vi.mocked(postPlacesSearch).mockResolvedValue(
-        mockSearchResponse as unknown as Response
+        unsafeCast<Response>(mockSearchResponse)
       );
       const mockDetailsResponse = {
         json: vi.fn().mockResolvedValue({
@@ -201,7 +202,7 @@ describe("places-enrichment", () => {
         ok: true,
       };
       vi.mocked(getPlaceDetails).mockResolvedValue(
-        mockDetailsResponse as unknown as Response
+        unsafeCast<Response>(mockDetailsResponse)
       );
 
       await enrichHotelListingWithPlaces(listing);

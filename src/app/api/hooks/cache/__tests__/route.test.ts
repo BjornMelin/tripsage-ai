@@ -56,6 +56,12 @@ vi.mock("@/lib/webhooks/rate-limit", () => ({
 
 // Mock idempotency
 vi.mock("@/lib/idempotency/redis", () => ({
+  IdempotencyServiceUnavailableError: class IdempotencyServiceUnavailableError extends Error {
+    constructor() {
+      super("Idempotency service unavailable: Redis not configured");
+      this.name = "IdempotencyServiceUnavailableError";
+    }
+  },
   tryReserveKey: vi.fn(async () => true),
 }));
 
@@ -98,7 +104,7 @@ describe("POST /api/hooks/cache", () => {
   });
 
   it("returns 401 when payload is missing (createWebhookHandler abstraction)", async () => {
-    // createWebhookHandler abstraction returns 401 for all parseAndVerify failures
+    // createWebhookHandler returns 401 for caller-side verification failures.
     parseAndVerifyMock.mockResolvedValue({ ok: true, payload: undefined });
     const { POST } = await loadRoute();
     const res = await POST(makeRequest({}));

@@ -2,6 +2,7 @@
 
 import { SpanStatusCode, trace } from "@opentelemetry/api";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { recordClientErrorOnActiveSpan } from "../client-errors";
 
 describe("recordClientErrorOnActiveSpan", () => {
@@ -21,7 +22,7 @@ describe("recordClientErrorOnActiveSpan", () => {
 
     getActiveSpanSpy = vi
       .spyOn(trace, "getActiveSpan")
-      .mockReturnValue(mockSpan as unknown as ReturnType<typeof trace.getActiveSpan>);
+      .mockReturnValue(unsafeCast<ReturnType<typeof trace.getActiveSpan>>(mockSpan));
   });
 
   afterEach(() => {
@@ -49,7 +50,7 @@ describe("recordClientErrorOnActiveSpan", () => {
 
   it("is a no-op when there is no active span", () => {
     getActiveSpanSpy.mockReturnValueOnce(
-      undefined as unknown as ReturnType<typeof trace.getActiveSpan>
+      unsafeCast<ReturnType<typeof trace.getActiveSpan>>(undefined)
     );
 
     const error = new Error("Test error");

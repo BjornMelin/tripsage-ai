@@ -159,7 +159,7 @@ export default function HotelsSearchClient({
   const [isWishlistUpdating, setIsWishlistUpdating] = useState(false);
   const [popularDestinations, setPopularDestinations] = useState<
     PopularDestinationProps[]
-  >(() => POPULAR_DESTINATIONS.slice() as unknown as PopularDestinationProps[]);
+  >(() => POPULAR_DESTINATIONS.slice());
   const [isPopularDestinationsLoading, setIsPopularDestinationsLoading] =
     useState(false);
   const accommodationResults = useSearchResultsStore(

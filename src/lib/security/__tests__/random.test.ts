@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
 import { describe, expect, it, vi } from "vitest";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { nowIso, secureId, secureUuid } from "../random";
 
 const UUID_V4_REGEX =
@@ -34,7 +35,7 @@ describe("security/random", () => {
   });
 
   it("falls back when crypto is unavailable", () => {
-    vi.stubGlobal("crypto", undefined as unknown as Crypto);
+    vi.stubGlobal("crypto", unsafeCast<Crypto>(undefined));
     try {
       const id = secureUuid();
       // Not necessarily UUID format, but must be non-empty and unique across calls
