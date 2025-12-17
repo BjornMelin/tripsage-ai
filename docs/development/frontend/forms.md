@@ -6,7 +6,8 @@ React Hook Form (RHF) integration with Zod v4 for TripSage forms.
 
 ### useZodForm
 
-Full-featured form hook with validation, error handling, and telemetry.
+Thin wrapper around `react-hook-form` that wires `zodResolver(schema)` and adds a
+small set of convenience helpers.
 
 **Location:** `@/hooks/use-zod-form`
 
@@ -33,34 +34,22 @@ const onSubmit = form.handleSubmitSafe(async (data) => {
 |--------|------|---------|-------------|
 | `schema` | `z.ZodType<T>` | required | Zod schema for validation |
 | `defaultValues` | `DefaultValues<T>` | `{}` | Initial form values |
-| `validateMode` | `"onChange" \| "onBlur" \| "onSubmit" \| "onTouched" \| "all"` | `"onChange"` | When to validate |
+| `mode` | `"onChange" \| "onBlur" \| "onSubmit" \| "onTouched" \| "all"` | `"onChange"` | Standard RHF validation mode (recommended) |
+| `validateMode` | `"onChange" \| "onBlur" \| "onSubmit" \| "onTouched" \| "all"` | `"onChange"` | Legacy alias for RHF `mode` (prefer `mode`) |
 | `reValidateMode` | `"onChange" \| "onBlur" \| "onSubmit"` | `"onChange"` | When to re-validate after error |
 | `transformSubmitData` | `(data: T) => T` | - | Transform data before submission |
 | `onValidationError` | `(errors) => void` | - | Callback on validation failure |
 | `onSubmitSuccess` | `(data) => void` | - | Callback on successful submission |
 | `onSubmitError` | `(error) => void` | - | Callback on submission error |
-| `enableAsyncValidation` | `boolean` | `false` | Turn on debounced async validation hooks |
-| `debounceValidation` | `number` | `300` | Debounce duration (ms) when async validation enabled |
-| `enableWizard` | `boolean` | `false` | Enable multi-step wizard mode |
-| `wizardSteps` | `string[]` | `[]` | Step identifiers (when wizard enabled) |
-| `stepValidationSchemas` | `z.ZodType<unknown>[]` | `[]` | Per-step schemas (wizard) |
 
 **Return Values:**
 
 | Property | Description |
 |----------|-------------|
 | `handleSubmitSafe` | Safe submit handler with validation |
-| `validateField(name, value)` | Validate single field |
-| `validateAllFields()` | Validate entire form |
-| `isFieldValid(name)` | Check if field is valid |
-| `getFieldError(name)` | Get field error message |
-| `hasAnyErrors` | Boolean if form has errors |
-| `isFormComplete` | Boolean if form passes validation |
-| `getCleanData()` | Get parsed/validated data |
-| `resetToDefaults()` | Reset form to default values |
-| `validationState` | `{ isValidating, lastValidation, validationErrors }` |
-| `wizardState` | Wizard-only: `{ currentStep, totalSteps, isFirstStep, isLastStep }` |
-| `wizardActions` | Wizard-only: `{ goToNext, goToPrevious, goToStep, validateAndGoToNext }` |
+| `isFormComplete` | Convenience alias for `formState.isValid` |
+| `validationState` | Submit-only summary: `{ isValidating, lastValidation, validationErrors }` |
+| `...useForm()` | All standard React Hook Form methods/state (`register`, `control`, `trigger`, `formState`, etc.) |
 
 ### useSearchForm
 
@@ -82,35 +71,6 @@ function HotelSearch() {
 
   return <Form {...form}>{/* fields */}</Form>;
 }
-```
-
-### useZodFormWizard
-
-Multi-step form wizard with step validation.
-
-**Location:** `@/hooks/use-zod-form`
-
-```typescript
-import { useZodFormWizard } from "@/hooks/use-zod-form";
-
-const steps = [
-  { name: "basics", title: "Basic Info", schema: basicInfoSchema },
-  { name: "dates", title: "Travel Dates", schema: datesSchema },
-  { name: "preferences", title: "Preferences", schema: preferencesSchema },
-];
-
-const wizard = useZodFormWizard(steps, tripFinalSchema);
-
-// Access wizard state
-wizard.currentStep;        // 0-based index
-wizard.progress;           // percentage complete
-wizard.isFirstStep;        // boolean
-wizard.isLastStep;         // boolean
-
-// Navigation
-wizard.nextStep();         // validate current step, advance if valid
-wizard.previousStep();     // go back
-wizard.submitWizard();     // validate all, return final data
 ```
 
 ## UI Components
@@ -166,20 +126,13 @@ const dateRangeSchema = z.strictObject({
 );
 ```
 
-### Async Validation
+### Programmatic Validation
 
-Use `useAsyncZodValidation` for debounced async validation:
+For step gating or manual checks, prefer React Hook Form built-ins:
 
-```typescript
-import { useAsyncZodValidation } from "@/hooks/use-zod-form";
-
-const { validate, isValidating, errors } = useAsyncZodValidation(
-  emailUniqueSchema,
-  300 // debounce ms
-);
-
-// Call validate(data) on input changes
-```
+- `await form.trigger()` to validate the full form
+- `await form.trigger("fieldName")` to validate one field
+- Read `form.formState.errors` for field errors
 
 ## Submission Patterns
 

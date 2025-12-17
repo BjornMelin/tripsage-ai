@@ -153,7 +153,7 @@ PR reviewers: enforce in `src/app/api/**`; approve exceptions with justification
 
 ### 5.7 Forms and Server Actions
 
-- **Client forms:** `useZodForm` (`@/hooks/use-zod-form`), `useSearchForm`, `useZodFormWizard`. Components: `Form`, `FormField`, `FormControl`, `FormMessage` from `@/components/ui/form`. Mode: `onChange`; `AbortController` for async cleanup.
+- **Client forms:** `useZodForm` (`@/hooks/use-zod-form`), `useSearchForm`. Components: `Form`, `FormField`, `FormControl`, `FormMessage` from `@/components/ui/form`. Mode: `onChange`; use `form.trigger()` for programmatic validation/step gating; `AbortController` for async cleanup.
 - **Server actions:** `"use server"` + `"server-only"` import; Zod validation; `createServerSupabase()`. Location: `src/app/(route)/actions.ts` or `src/lib/*/actions.ts`.
 - **Returns:** Serializable data or `redirect()`. Revalidate via `revalidatePath()`/`revalidateTag()`.
 - **Integration:** `useActionState` for progressive enhancement; `form.handleSubmitSafe()` with telemetry (see 4.1).
