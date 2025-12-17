@@ -4,7 +4,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { FlightSearchForm } from "../flight-search-form";
 
 // Mock the onSearch function
@@ -25,27 +24,10 @@ function RenderWithQueryClient(ui: React.ReactElement) {
 describe("FlightSearchForm", () => {
   beforeEach(() => {
     // Clear mock calls between tests
+    // MSW handlers in src/test/msw/handlers/api-routes.ts provide
+    // /api/flights/popular-destinations responses
     MockOnSearch.mockClear();
     vi.restoreAllMocks();
-    vi.stubGlobal(
-      "fetch",
-      unsafeCast<typeof fetch>(
-        vi.fn(
-          async () =>
-            new Response(
-              JSON.stringify([
-                { code: "NYC", name: "New York", savings: "$127" },
-                { code: "LAX", name: "Los Angeles", savings: "$89" },
-              ]),
-              { status: 200 }
-            )
-        )
-      )
-    );
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
   });
 
   it("renders the form correctly (aligned with current UI)", () => {

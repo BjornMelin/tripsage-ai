@@ -1,6 +1,5 @@
 /** @vitest-environment node */
 
-import type { NextRequest } from "next/server";
 import { describe, expect, it } from "vitest";
 import {
   buildRateLimitKey,
@@ -11,15 +10,7 @@ import {
   parseStringId,
   unauthorizedResponse,
 } from "@/lib/api/route-helpers";
-import { unsafeCast } from "@/test/helpers/unsafe-cast";
-
-/**
- * Creates a minimal NextRequest mock with only headers populated.
- * @internal Only use where headers are the sole accessed property.
- */
-function makeRequest(headers: HeadersInit = {}): NextRequest {
-  return unsafeCast<NextRequest>({ headers: new Headers(headers) });
-}
+import { makeRequest } from "@/test/helpers/make-request";
 
 describe("route-helpers", () => {
   describe("getClientIpFromHeaders", () => {

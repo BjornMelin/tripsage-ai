@@ -5,16 +5,9 @@ import type { User } from "@supabase/supabase-js";
 import type { LanguageModel, UIMessage } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import type { ChatDeps } from "../_handler";
 import { handleChatStream } from "../_handler";
-
-/**
- * Local unsafeCast required here because vi.hoisted() callbacks run before
- * ES module imports are resolved. Cannot use @/test/helpers/unsafe-cast.
- */
-function unsafeCast<T>(value: unknown): T {
-  return value as T;
-}
 
 // Mock the chat agent module
 vi.mock("@ai/agents", () => ({
@@ -61,26 +54,27 @@ vi.mock("@/lib/security/random", () => ({
   secureUuid: vi.fn(() => "test-uuid-123"),
 }));
 
+// Type assertions inline since vi.hoisted runs before ES module imports
 const MOCK_SUPABASE = vi.hoisted(() => {
-  const mockUser = unsafeCast<User>({ id: "user-1" });
+  const mockUser = { id: "user-1" } as unknown as User;
 
-  return unsafeCast<TypedServerSupabase>({
+  return {
     auth: {
       getUser: vi.fn(async () => ({
         data: { user: mockUser },
         error: null,
       })),
     },
-  });
+  } as unknown as TypedServerSupabase;
 });
 
 const MOCK_RESOLVE_PROVIDER = vi.hoisted(() =>
   vi.fn(
     async (): Promise<ProviderResolution> => ({
-      model: unsafeCast<LanguageModel>({
+      model: {
         id: "gpt-4o-mini",
         providerId: "openai",
-      }),
+      } as unknown as LanguageModel,
       modelId: "gpt-4o-mini",
       provider: "openai" as const,
     })

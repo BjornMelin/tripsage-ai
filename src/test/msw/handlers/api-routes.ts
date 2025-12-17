@@ -56,4 +56,22 @@ export const apiRouteHandlers = [
   http.get(`${BASE_URL}/api/ping`, () => {
     return HttpResponse.json({ ok: true });
   }),
+
+  // GET /api/flights/popular-destinations - Popular flight destinations
+  http.get("/api/flights/popular-destinations", () => {
+    return HttpResponse.json([
+      { code: "NYC", name: "New York", savings: "$127" },
+      { code: "LAX", name: "Los Angeles", savings: "$89" },
+      { code: "MIA", name: "Miami", savings: "$95" },
+      { code: "SFO", name: "San Francisco", savings: "$112" },
+    ]);
+  }),
+  http.get(`${BASE_URL}/api/flights/popular-destinations`, () => {
+    return HttpResponse.json([
+      { code: "NYC", name: "New York", savings: "$127" },
+      { code: "LAX", name: "Los Angeles", savings: "$89" },
+      { code: "MIA", name: "Miami", savings: "$95" },
+      { code: "SFO", name: "San Francisco", savings: "$112" },
+    ]);
+  }),
 ];
