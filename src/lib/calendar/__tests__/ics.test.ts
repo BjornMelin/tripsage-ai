@@ -426,15 +426,31 @@ describe("sanitizeCalendarFilename", () => {
     expect(sanitizeCalendarFilename("My Trip")).toBe("My_Trip");
   });
 
-  it("should replace special characters with underscores", () => {
-    expect(sanitizeCalendarFilename("Trip: NYC -> LA")).toBe("Trip__NYC____LA");
+  it("should replace special characters with underscores and collapse consecutive underscores", () => {
+    expect(sanitizeCalendarFilename("Trip: NYC -> LA")).toBe("Trip_NYC_LA");
   });
 
   it("should handle alphanumeric names unchanged", () => {
     expect(sanitizeCalendarFilename("TripSage2024")).toBe("TripSage2024");
   });
 
-  it("should handle empty string", () => {
-    expect(sanitizeCalendarFilename("")).toBe("");
+  it("should return default for empty string", () => {
+    expect(sanitizeCalendarFilename("")).toBe("calendar");
+  });
+
+  it("should return default for all-special-character names", () => {
+    expect(sanitizeCalendarFilename("!!!")).toBe("calendar");
+    expect(sanitizeCalendarFilename("@#$%")).toBe("calendar");
+  });
+
+  it("should trim leading and trailing underscores", () => {
+    expect(sanitizeCalendarFilename("  Trip  ")).toBe("Trip");
+    expect(sanitizeCalendarFilename("___Trip___")).toBe("Trip");
+  });
+
+  it("should truncate very long names for filesystem safety", () => {
+    const longName = "A".repeat(300);
+    const result = sanitizeCalendarFilename(longName);
+    expect(result.length).toBe(200);
   });
 });

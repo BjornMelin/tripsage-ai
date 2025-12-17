@@ -6,9 +6,13 @@
  */
 
 import type { CalendarEvent } from "@schemas/calendar";
-import ical from "ical-generator";
+import ical, { ICalAlarmType, ICalAttendeeStatus } from "ical-generator";
 import { RecurringDateGenerator } from "@/lib/dates/recurring-rules";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
+import { createServerLogger } from "@/lib/telemetry/logger";
+
+/** Logger for ICS generation operations. */
+const logger = createServerLogger("calendar.ics");
 
 /**
  * Options for ICS generation.
@@ -36,20 +40,18 @@ export interface GenerateIcsResult {
  * Converts an attendee response status to the canonical iCal constant.
  *
  * @param status - Google Calendar style attendee status.
- * @returns iCal attendee status string.
+ * @returns iCal attendee status enum value.
  */
-function eventAttendeeStatusToIcal(
-  status: string
-): "ACCEPTED" | "DECLINED" | "TENTATIVE" | "NEEDS-ACTION" {
+function eventAttendeeStatusToIcal(status: string): ICalAttendeeStatus {
   switch (status) {
     case "accepted":
-      return "ACCEPTED";
+      return ICalAttendeeStatus.ACCEPTED;
     case "declined":
-      return "DECLINED";
+      return ICalAttendeeStatus.DECLINED;
     case "tentative":
-      return "TENTATIVE";
+      return ICalAttendeeStatus.TENTATIVE;
     default:
-      return "NEEDS-ACTION";
+      return ICalAttendeeStatus.NEEDSACTION;
   }
 }
 
@@ -57,14 +59,14 @@ function eventAttendeeStatusToIcal(
  * Normalizes reminder methods to the subset supported by iCal alarms.
  *
  * @param method - Notification channel provided by Google events.
- * @returns Alarm type accepted by ical-generator.
+ * @returns Alarm type enum value accepted by ical-generator.
  */
-function reminderMethodToIcal(method: string): "display" | "email" | "audio" {
+function reminderMethodToIcal(method: string): ICalAlarmType {
   switch (method) {
     case "email":
-      return "email";
+      return ICalAlarmType.email;
     default:
-      return "display";
+      return ICalAlarmType.display;
   }
 }
 
@@ -97,12 +99,18 @@ export function generateIcsFromEvents(options: GenerateIcsOptions): GenerateIcsR
 
   // Add events
   for (const event of events) {
-    const startDate =
-      event.start.dateTime instanceof Date
-        ? event.start.dateTime
-        : event.start.date
-          ? DateUtils.parse(event.start.date)
-          : new Date();
+    let startDate: Date;
+    if (event.start.dateTime instanceof Date) {
+      startDate = event.start.dateTime;
+    } else if (event.start.date) {
+      startDate = DateUtils.parse(event.start.date);
+    } else {
+      logger.warn("Event missing start date, using current time", {
+        eventId: event.id,
+        eventSummary: event.summary,
+      });
+      startDate = new Date();
+    }
 
     const endDate =
       event.end.dateTime instanceof Date
@@ -139,8 +147,7 @@ export function generateIcsFromEvents(options: GenerateIcsOptions): GenerateIcsR
           email: att.email,
           name: att.displayName,
           rsvp: !att.optional,
-          // biome-ignore lint/suspicious/noExplicitAny: third-party type casting for ical types
-          status: eventAttendeeStatusToIcal(att.responseStatus) as unknown as any,
+          status: eventAttendeeStatusToIcal(att.responseStatus),
         });
       }
     }
@@ -149,8 +156,7 @@ export function generateIcsFromEvents(options: GenerateIcsOptions): GenerateIcsR
       for (const rem of event.reminders.overrides) {
         ev.createAlarm({
           trigger: rem.minutes * 60, // seconds
-          // biome-ignore lint/suspicious/noExplicitAny: third-party type casting for ical types
-          type: reminderMethodToIcal(rem.method) as unknown as any,
+          type: reminderMethodToIcal(rem.method),
         });
       }
     }
@@ -162,14 +168,32 @@ export function generateIcsFromEvents(options: GenerateIcsOptions): GenerateIcsR
   };
 }
 
+/** Default filename used when input produces empty result. */
+const DEFAULT_CALENDAR_FILENAME = "calendar";
+
+/** Maximum filename length for filesystem safety. */
+const MAX_FILENAME_LENGTH = 200;
+
 /**
  * Sanitizes a calendar name for use as a filename.
  *
- * Replaces non-alphanumeric characters with underscores.
+ * Replaces non-alphanumeric characters with underscores, collapses consecutive
+ * underscores, trims leading/trailing underscores, and enforces length limits.
  *
  * @param name - Calendar name to sanitize.
- * @returns Sanitized filename (without extension).
+ * @returns Sanitized filename (without extension), or "calendar" if empty.
  */
 export function sanitizeCalendarFilename(name: string): string {
-  return name.replace(/[^a-z0-9]/gi, "_");
+  const sanitized = name
+    .replace(/[^a-z0-9]/gi, "_") // Replace non-alphanumeric with underscores
+    .replace(/_+/g, "_") // Collapse consecutive underscores
+    .replace(/^_|_$/g, ""); // Trim leading/trailing underscores
+
+  // Return default for empty/all-special-char names
+  if (!sanitized) {
+    return DEFAULT_CALENDAR_FILENAME;
+  }
+
+  // Enforce length limit for filesystem safety
+  return sanitized.slice(0, MAX_FILENAME_LENGTH);
 }

@@ -229,6 +229,7 @@ export const GET = withApiGuards({
     logger.warn("Filtered attachments without valid signed URLs", {
       dropped: droppedCount,
       total: allItems.length,
+      userId,
     });
   }
 
