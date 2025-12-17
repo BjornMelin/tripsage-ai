@@ -195,24 +195,42 @@ export const GET = withApiGuards({
     }
   }
 
-  // Transform to response format
-  const items = (attachments ?? []).map((att) => {
-    const urlKey = typeof att.file_path === "string" ? att.file_path : null;
-    return {
-      // Keep numbers as numbers - no .toString() conversion (fixes type mismatch)
-      chatMessageId: att.chat_message_id ?? null,
-      createdAt: att.created_at,
-      id: att.id,
-      mimeType: att.mime_type,
-      name: att.filename,
-      originalName: att.original_filename,
-      size: att.file_size,
-      tripId: att.trip_id ?? null,
-      updatedAt: att.updated_at,
-      uploadStatus: att.upload_status,
-      url: urlKey ? (urlMap.get(urlKey) ?? null) : null,
-    };
-  });
+  // Transform to response format, filtering out items without valid URLs
+  const allItems = attachments ?? [];
+  const items = allItems
+    .map((att) => {
+      const urlKey = typeof att.file_path === "string" ? att.file_path : null;
+      const url = urlKey ? urlMap.get(urlKey) : undefined;
+
+      // Skip items without valid signed URLs (schema requires url to be non-null)
+      if (!url) {
+        return null;
+      }
+
+      return {
+        chatMessageId: att.chat_message_id ?? null,
+        createdAt: att.created_at,
+        id: att.id,
+        mimeType: att.mime_type,
+        name: att.filename,
+        originalName: att.original_filename,
+        size: att.file_size,
+        tripId: att.trip_id ?? null,
+        updatedAt: att.updated_at,
+        uploadStatus: att.upload_status,
+        url,
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null);
+
+  // Log if items were filtered due to missing URLs
+  const droppedCount = allItems.length - items.length;
+  if (droppedCount > 0) {
+    logger.warn("Filtered attachments without valid signed URLs", {
+      dropped: droppedCount,
+      total: allItems.length,
+    });
+  }
 
   const response = {
     items,

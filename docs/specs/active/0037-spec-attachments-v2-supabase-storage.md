@@ -516,7 +516,7 @@ Field sources for response objects:
 | `originalName` | Client-provided upload filename |
 | `size` | File-derived (bytes) |
 | `mimeType` | File-derived (magic bytes verified) |
-| `url` | Supabase Storage signed URL |
+| `url` | Supabase Storage signed URL (items without valid URLs are filtered out) |
 | `tripId` | Client-provided (optional) |
 | `chatMessageId` | Client-provided (optional) |
 | `uploadStatus` | Server-generated |
@@ -529,7 +529,7 @@ export const uploadedFileSchema = z.strictObject({
   size: z.number().int().nonnegative(),
   status: z.enum(['uploading', 'completed', 'failed']),
   type: z.string(),
-  url: z.url().nullable(),
+  url: z.url(),
 });
 
 export type UploadedFile = z.infer<typeof uploadedFileSchema>;
@@ -540,7 +540,7 @@ export const attachmentFileSchema = z.strictObject({
   originalName: z.string(),
   size: z.number().int().nonnegative(),
   mimeType: z.string(),
-  url: z.url().nullable(),
+  url: z.url(),
   tripId: z.number().int().nonnegative().nullable(),
   chatMessageId: z.number().int().nonnegative().nullable(),
   uploadStatus: z.enum(['uploading', 'completed', 'failed']),
@@ -565,6 +565,12 @@ export const attachmentListResponseSchema = z.strictObject({
 
 export type AttachmentListResponse = z.infer<typeof attachmentListResponseSchema>;
 ```
+
+**URL Contract Enforcement**: The `url` field is required (non-nullable) in both schemas.
+If signed URL generation fails for an attachment (e.g., storage errors, missing files),
+the item is filtered out of the response rather than returned with a null URL. This ensures
+clients always receive valid, downloadable URLs. The `pagination.total` still reflects the
+database count for cursor math, but `items.length` may be less if any items were filtered.
 
 ---
 
@@ -602,6 +608,8 @@ export type AttachmentListResponse = z.infer<typeof attachmentListResponseSchema
    - Empty result handling
    - Missing auth returns 401
    - Invalid query parameters return 400
+   - URL generation failure filters out items (not null URLs)
+   - Partial URL generation failure filters affected items only
 
 ### Integration Tests
 
