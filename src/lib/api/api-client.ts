@@ -1,7 +1,6 @@
 /**
- * @fileoverview API client with Zod validation. Provides runtime type safety
- * for requests and responses, request/response interceptors, and retry/timeout
- * behavior suitable for browser runtimes.
+ * @fileoverview Simplified API client with Zod validation. Provides runtime
+ * type safety for requests and responses with retry/timeout behavior.
  */
 
 "use client";
@@ -10,7 +9,7 @@ import type { ValidationResult } from "@schemas/validation";
 import type { z } from "zod";
 import { getClientEnvVarWithFallback } from "../env/client";
 import { getClientOrigin } from "../url/client-origin";
-import { ApiError } from "./error-types";
+import { ApiError, type ApiErrorCode } from "./error-types";
 
 /**
  * Configuration options for individual API requests.
@@ -64,31 +63,12 @@ interface ApiClientConfig {
 }
 
 /**
- * Function signature for response interceptors that can modify the response data.
- */
-type ResponseInterceptor<T = unknown> = (
-  response: T,
-  config: RequestConfig<unknown, T>
-) => T | Promise<T>;
-
-/**
- * Function signature for request interceptors that can modify the request configuration.
- */
-type RequestInterceptor = (
-  config: RequestConfig
-) => RequestConfig | Promise<RequestConfig>;
-
-/**
- * HTTP client for making API requests with validation, retry logic, and interceptors.
+ * HTTP client for making API requests with validation and retry logic.
  * Provides type-safe request methods with optional Zod schema validation.
  */
 export class ApiClient {
   /** Client configuration with defaults and user overrides. */
   private config: ApiClientConfig;
-  /** Array of request interceptors that modify requests before sending. */
-  private requestInterceptors: RequestInterceptor[] = [];
-  /** Array of response interceptors that modify responses after receiving. */
-  private responseInterceptors: ResponseInterceptor[] = [];
 
   /**
    * Creates a new ApiClient instance with the provided configuration.
@@ -96,8 +76,6 @@ export class ApiClient {
    * @param config Partial configuration to override defaults.
    */
   constructor(config: Partial<ApiClientConfig> = {}) {
-    // Use schema-validated env access for NEXT_PUBLIC_ vars
-    // NODE_ENV is safe to access directly as it's a runtime constant
     const publicApiUrl = getClientEnvVarWithFallback("NEXT_PUBLIC_API_URL", undefined);
     const nodeEnv =
       typeof process !== "undefined" ? process.env.NODE_ENV : "development";
@@ -128,24 +106,6 @@ export class ApiClient {
   }
 
   /**
-   * Adds a request interceptor that can modify request configurations before sending.
-   *
-   * @param interceptor Function that receives and can modify the request config.
-   */
-  public addRequestInterceptor(interceptor: RequestInterceptor): void {
-    this.requestInterceptors.push(interceptor);
-  }
-
-  /**
-   * Adds a response interceptor that can modify response data after receiving.
-   *
-   * @param interceptor Function that receives and can modify the response data.
-   */
-  public addResponseInterceptor<T>(interceptor: ResponseInterceptor<T>): void {
-    this.responseInterceptors.push(interceptor as ResponseInterceptor);
-  }
-
-  /**
    * Sets the authentication token for all subsequent requests.
    *
    * @param token JWT or other authentication token to include in requests.
@@ -162,7 +122,7 @@ export class ApiClient {
   }
 
   /**
-   * Internal method that handles the core request logic with validation, retries, and interceptors.
+   * Internal method that handles the core request logic with validation and retries.
    *
    * @param config Request configuration including endpoint, method, data, and options.
    * @returns Promise that resolves with the validated response data.
@@ -171,19 +131,10 @@ export class ApiClient {
   private async request<TRequest, TResponse>(
     config: RequestConfig<TRequest, TResponse>
   ): Promise<TResponse> {
-    // Apply request interceptors
-    let finalConfig = config;
-    for (const interceptor of this.requestInterceptors) {
-      finalConfig = (await interceptor(finalConfig)) as RequestConfig<
-        TRequest,
-        TResponse
-      >;
-    }
-
     // Validate request data if schema provided
-    if (finalConfig.requestSchema && finalConfig.data !== undefined) {
-      if (finalConfig.validateRequest ?? this.config.validateRequests) {
-        const validationResult = finalConfig.requestSchema.safeParse(finalConfig.data);
+    if (config.requestSchema && config.data !== undefined) {
+      if (config.validateRequest ?? this.config.validateRequests) {
+        const validationResult = config.requestSchema.safeParse(config.data);
         if (!validationResult.success) {
           const validationErrors: ValidationResult<unknown> = {
             errors: validationResult.error.issues.map((issue) => ({
@@ -201,8 +152,8 @@ export class ApiClient {
             `Request validation failed: ${validationResult.error.issues.map((i) => i.message).join(", ")}`,
             400,
             "VALIDATION_ERROR",
-            finalConfig.data,
-            finalConfig.endpoint,
+            config.data,
+            config.endpoint,
             validationErrors
           );
         }
@@ -210,9 +161,9 @@ export class ApiClient {
     }
 
     // Build URL
-    const url = new URL(finalConfig.endpoint, this.config.baseUrl);
-    if (finalConfig.params) {
-      Object.entries(finalConfig.params).forEach(([key, value]) => {
+    const url = new URL(config.endpoint, this.config.baseUrl);
+    if (config.params) {
+      Object.entries(config.params).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
           url.searchParams.set(key, String(value));
         }
@@ -222,12 +173,12 @@ export class ApiClient {
     // Prepare headers
     let headers: Record<string, string> = {
       ...this.config.defaultHeaders,
-      ...finalConfig.headers,
+      ...config.headers,
     };
 
     // Add body for POST/PUT/PATCH requests
-    if (finalConfig.data !== undefined && finalConfig.method !== "GET") {
-      if (finalConfig.data instanceof FormData) {
+    if (config.data !== undefined && config.method !== "GET") {
+      if (config.data instanceof FormData) {
         // Remove content-type for FormData (browser will set it with boundary)
         const { "Content-Type": _, ...headersWithoutContentType } = headers;
         headers = headersWithoutContentType;
@@ -237,39 +188,43 @@ export class ApiClient {
     // Prepare request options (signal is bound via internal controller below)
     const requestOptions: RequestInit = {
       headers,
-      method: finalConfig.method || "GET",
+      method: config.method || "GET",
     };
 
     // Add body for POST/PUT/PATCH requests
-    if (finalConfig.data !== undefined && finalConfig.method !== "GET") {
-      if (finalConfig.data instanceof FormData) {
-        requestOptions.body = finalConfig.data;
+    if (config.data !== undefined && config.method !== "GET") {
+      if (config.data instanceof FormData) {
+        requestOptions.body = config.data;
       } else {
-        requestOptions.body = JSON.stringify(finalConfig.data);
+        requestOptions.body = JSON.stringify(config.data);
       }
     }
 
     // Setup timeout and retry logic
-    const timeout = finalConfig.timeout ?? this.config.timeout;
-    const retries = finalConfig.retries ?? this.config.retries;
+    const timeout = config.timeout ?? this.config.timeout;
+    const retries = config.retries ?? this.config.retries;
 
     let lastError: Error | null = null;
     for (let attempt = 0; attempt <= retries; attempt++) {
+      // Track abort source to distinguish timeout vs external cancellation
+      let abortedByTimeout = false;
+
       try {
         const controller = new AbortController();
         // Bridge external abort signals to our internal controller so timeout always applies
-        if (finalConfig.abortSignal) {
-          if (finalConfig.abortSignal.aborted) {
+        if (config.abortSignal) {
+          if (config.abortSignal.aborted) {
             controller.abort();
           } else {
-            finalConfig.abortSignal.addEventListener(
-              "abort",
-              () => controller.abort(),
-              { once: true }
-            );
+            config.abortSignal.addEventListener("abort", () => controller.abort(), {
+              once: true,
+            });
           }
         }
-        const timeoutId = setTimeout(() => controller.abort(), timeout);
+        const timeoutId = setTimeout(() => {
+          abortedByTimeout = true;
+          controller.abort();
+        }, timeout);
 
         const response = await fetch(url.toString(), {
           ...requestOptions,
@@ -290,9 +245,11 @@ export class ApiClient {
           throw new ApiError(
             errorObject.message || `HTTP ${response.status}: ${response.statusText}`,
             response.status,
-            String(errorObject.code ?? `HTTP_${response.status}`),
+            (errorObject.code
+              ? String(errorObject.code)
+              : `HTTP_${response.status}`) as ApiErrorCode,
             errorData,
-            finalConfig.endpoint
+            config.endpoint
           );
         }
 
@@ -300,9 +257,9 @@ export class ApiClient {
         let responseData = await this.parseResponseBody(response);
 
         // Validate response if schema provided
-        if (finalConfig.responseSchema) {
-          if (finalConfig.validateResponse ?? this.config.validateResponses) {
-            const zodResult = finalConfig.responseSchema.safeParse(responseData);
+        if (config.responseSchema) {
+          if (config.validateResponse ?? this.config.validateResponses) {
+            const zodResult = config.responseSchema.safeParse(responseData);
             if (!zodResult.success) {
               const validationResult: ValidationResult<unknown> = {
                 errors: zodResult.error.issues.map((issue) => ({
@@ -321,18 +278,13 @@ export class ApiClient {
                 500,
                 "RESPONSE_VALIDATION_ERROR",
                 responseData,
-                finalConfig.endpoint,
+                config.endpoint,
                 validationResult
               );
             }
 
             responseData = zodResult.data;
           }
-        }
-
-        // Apply response interceptors
-        for (const interceptor of this.responseInterceptors) {
-          responseData = await interceptor(responseData, finalConfig);
         }
 
         return responseData as TResponse;
@@ -347,14 +299,24 @@ export class ApiClient {
           throw error;
         }
 
-        // Don't retry on abort errors
+        // Don't retry on abort errors - distinguish timeout vs external cancellation
         if (error instanceof DOMException && error.name === "AbortError") {
+          if (abortedByTimeout) {
+            throw new ApiError(
+              `Request timeout after ${timeout}ms`,
+              408,
+              "TIMEOUT_ERROR",
+              undefined,
+              config.endpoint
+            );
+          }
+          // External cancellation (user/caller aborted)
           throw new ApiError(
-            `Request timeout after ${timeout}ms`,
-            408,
-            "TIMEOUT_ERROR",
+            "Request was cancelled",
+            499,
+            "REQUEST_CANCELLED",
             undefined,
-            finalConfig.endpoint
+            config.endpoint
           );
         }
 
@@ -636,98 +598,12 @@ export class ApiClient {
   ): Promise<TResponse> {
     return this.delete(endpoint, { ...options, responseSchema });
   }
-
-  /**
-   * Executes multiple requests concurrently with controlled concurrency and error handling.
-   *
-   * @param requests Array of request functions to execute.
-   * @param options Configuration for concurrency and error handling.
-   * @returns Array of results with success/error status for each request.
-   */
-  public async batch<T>(
-    requests: Array<() => Promise<T>>,
-    options: { concurrency?: number; failFast?: boolean } = {}
-  ): Promise<Array<{ success: boolean; data?: T; error?: Error }>> {
-    const { concurrency = 5, failFast = false } = options;
-    const results: Array<{ success: boolean; data?: T; error?: Error }> = [];
-
-    // Process requests in chunks
-    for (let i = 0; i < requests.length; i += concurrency) {
-      const chunk = requests.slice(i, i + concurrency);
-      const chunkPromises = chunk.map(async (request, index) => {
-        try {
-          const data = await request();
-          return { data, index: i + index, success: true as const };
-        } catch (error) {
-          const err = error as Error;
-          if (failFast) throw err;
-          return { error: err, index: i + index, success: false as const };
-        }
-      });
-
-      try {
-        const chunkResults = await Promise.all(chunkPromises);
-        chunkResults.forEach((result) => {
-          results[result.index] = {
-            data: result.data,
-            error: result.error,
-            success: result.success,
-          };
-        });
-      } catch (error) {
-        if (failFast) throw error;
-      }
-    }
-
-    return results;
-  }
-
-  /**
-   * Performs a health check request to verify API availability.
-   *
-   * @returns Promise that resolves with health check response containing status and timestamp.
-   */
-  // biome-ignore lint/suspicious/useAwait: Method delegates to async request method
-  public async healthCheck(): Promise<{ status: string; timestamp: string }> {
-    return this.get("/health");
-  }
-
-  /**
-   * Sends a chat completion request.
-   *
-   * This is a convenience wrapper around `post` for the chat endpoint.
-   *
-   * @param request Chat completion request payload.
-   * @returns Chat completion response payload.
-   */
-  public sendChat<Request, Response>(request: Request): Promise<Response> {
-    return this.post<Request, Response>("/chat", request);
-  }
 }
 
 /**
- * Default API client instance with standard configuration and interceptors.
- * Configured with authentication and development logging interceptors.
+ * Default API client instance with standard configuration.
  */
-const defaultClient = new ApiClient();
+export const apiClient = new ApiClient();
 
-// Add common request interceptor for authentication
-defaultClient.addRequestInterceptor((config) => {
-  // Add any common request modifications here
-  return config;
-});
-
-// Add common response interceptor for logging
-defaultClient.addResponseInterceptor((response, _config) => {
-  // Response interceptor - telemetry/logging handled by route handlers
-  return Promise.resolve(response);
-});
-
-/**
- * Default API client instance pre-configured with interceptors.
- * Use this for most API calls requiring authentication and logging.
- */
-export { defaultClient as apiClient };
-
-/** Exported types for API client configuration and interceptors. */
-export type { RequestConfig, ResponseInterceptor, RequestInterceptor };
+/** Exported types for API client configuration. */
+export type { RequestConfig };

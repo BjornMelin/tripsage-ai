@@ -34,7 +34,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { useTrip } from "@/hooks/use-trips";
-import { ApiError } from "@/lib/api/error-types";
+import { handleApiError } from "@/lib/api/error-types";
 import { exportTripToIcs } from "@/lib/calendar/trip-export";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { ROUTES } from "@/lib/routes";
@@ -90,85 +90,53 @@ export default function TripDetailsPage() {
       return;
     }
 
+    // Normalize error for consistent handling
+    const normalized = handleApiError(error);
+
     // Generate error key for deduplication
-    const errorKey =
-      error instanceof ApiError
-        ? `${error.status}-${error.message}`
-        : error instanceof Error
-          ? error.message
-          : String(error);
+    const errorKey = `${normalized.status}-${normalized.message}`;
 
     // Skip if already handled this exact error
     if (handledErrorRef.current === errorKey) return;
     handledErrorRef.current = errorKey;
 
-    // Handle ApiError cases
-    if (error instanceof ApiError) {
-      const { status } = error;
+    const { status, code, userMessage } = normalized;
 
-      // 401/403: Authentication or authorization error
-      if (status === 401) {
-        toast({
-          description: "Please sign in to view this trip.",
-          title: "Authentication required",
-          variant: "destructive",
-        });
-        router.push(ROUTES.login);
-        return;
-      }
-
-      if (status === 403) {
-        toast({
-          description: "You don't have permission to view this trip.",
-          title: "Access denied",
-          variant: "destructive",
-        });
-        router.push(ROUTES.dashboard.trips);
-        return;
-      }
-
-      // 404: Not found
-      if (status === 404) {
-        toast({
-          description: "This trip no longer exists or you don't have access to it.",
-          title: "Trip not found",
-          variant: "destructive",
-        });
-        router.push(ROUTES.dashboard.trips);
-        return;
-      }
-
-      // 5xx: Server error
-      if (status >= 500 && status < 600) {
-        toast({
-          description: "The server encountered an error. Please try again later.",
-          title: "Server error",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Other API errors
+    // 401: Authentication required
+    if (status === 401 || code === "UNAUTHORIZED") {
       toast({
-        description: error.message || "An unexpected error occurred.",
-        title: "Error loading trip",
+        description: "Please sign in to view this trip.",
+        title: "Authentication required",
         variant: "destructive",
       });
+      router.push(ROUTES.login);
       return;
     }
 
-    // Network error detection
-    const isNetworkError =
-      error instanceof Error &&
-      ((error.name === "TypeError" &&
-        (error.message.toLowerCase().includes("failed to fetch") ||
-          error.message.toLowerCase().includes("networkerror"))) ||
-        error.name === "NetworkError" ||
-        error.message.toLowerCase().includes("failed to fetch") ||
-        error.message.toLowerCase().includes("networkerror") ||
-        (typeof navigator !== "undefined" && !navigator.onLine));
+    // 403: Access denied
+    if (status === 403 || code === "FORBIDDEN") {
+      toast({
+        description: "You don't have permission to view this trip.",
+        title: "Access denied",
+        variant: "destructive",
+      });
+      router.push(ROUTES.dashboard.trips);
+      return;
+    }
 
-    if (isNetworkError) {
+    // 404: Not found
+    if (status === 404 || code === "NOT_FOUND") {
+      toast({
+        description: "This trip no longer exists or you don't have access to it.",
+        title: "Trip not found",
+        variant: "destructive",
+      });
+      router.push(ROUTES.dashboard.trips);
+      return;
+    }
+
+    // Network error
+    if (code === "NETWORK_ERROR") {
       toast({
         description:
           "Unable to connect to the server. Check your internet connection and try again.",
@@ -178,10 +146,19 @@ export default function TripDetailsPage() {
       return;
     }
 
-    // Generic error fallback
+    // 5xx: Server error
+    if (status >= 500 || code === "SERVER_ERROR") {
+      toast({
+        description: "The server encountered an error. Please try again later.",
+        title: "Server error",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Generic error fallback - use userMessage for friendly text
     toast({
-      description:
-        error instanceof Error ? error.message : "An unexpected error occurred.",
+      description: userMessage || "An unexpected error occurred.",
       title: "Error loading trip",
       variant: "destructive",
     });

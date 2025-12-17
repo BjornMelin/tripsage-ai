@@ -11,13 +11,7 @@ import type { ComponentType, ErrorInfo, JSX, ReactNode } from "react";
 import { useRef } from "react";
 import { ErrorBoundary, type FallbackProps } from "react-error-boundary";
 import { Button } from "@/components/ui/button";
-import {
-  ApiError,
-  getErrorMessage,
-  handleApiError,
-  isNetworkError,
-  shouldRetryError,
-} from "@/lib/api/error-types";
+import { getErrorMessage, handleApiError } from "@/lib/api/error-types";
 import { getSessionId } from "@/lib/client/session";
 import { errorService } from "@/lib/error-service";
 import { cn, fireAndForget } from "@/lib/utils";
@@ -97,23 +91,20 @@ function SafeInvoke(
  */
 function ResolveMeta(error: unknown): ErrorMeta {
   const normalized = handleApiError(error);
+
+  // Use code-based checks since handleApiError always returns ApiError
   const variant: ErrorVariant = (() => {
-    if (isNetworkError(normalized)) return "network";
-    if (normalized instanceof ApiError) {
-      if (normalized.status >= 500) return "server";
-      if (normalized.status === 401) return "auth";
-      if (normalized.status === 403) return "permission";
-    }
+    if (normalized.code === "NETWORK_ERROR") return "network";
+    if (normalized.status >= 500) return "server";
+    if (normalized.status === 401) return "auth";
+    if (normalized.status === 403) return "permission";
     return "default";
   })();
 
-  const statusCode = normalized instanceof ApiError ? normalized.status : undefined;
-  const errorCode = normalized instanceof ApiError ? normalized.code : undefined;
-
   return {
-    errorCode,
-    isRetryable: shouldRetryError(normalized),
-    statusCode,
+    errorCode: normalized.code,
+    isRetryable: normalized.shouldRetry,
+    statusCode: normalized.status,
     variant,
   };
 }

@@ -159,67 +159,29 @@ export function useAuthenticatedApi() {
           { retries: requestRetries, timeout: requestTimeout }
         );
       } catch (error) {
-        const controllerAborted =
-          abortControllerRef.current === null ||
-          abortControllerRef.current?.signal.aborted === true;
-
-        if (controllerAborted) {
-          throw new ApiError({
-            code: "REQUEST_CANCELLED",
-            message: "Request cancelled",
-            status: 499,
-          });
-        }
-
+        // ApiClient handles abort signals and timeouts internally, returning
+        // properly typed ApiError instances. Pass them through unchanged.
         if (error instanceof ApiError) {
-          const errorData =
-            (error.data as { message?: string; name?: string } | undefined) ?? {};
-          const isAbortError =
-            error.code === "TIMEOUT_ERROR" ||
-            error.status === 408 ||
-            error.message.toLowerCase().includes("abort");
-          const isLikelyNetworkFailure =
-            error.code === "NETWORK_ERROR" ||
-            (error.status === 500 &&
-              ((typeof error.data === "string" && error.data.length === 0) ||
-                error.data === undefined ||
-                error.data === null ||
-                errorData.message?.toLowerCase().includes("network request failed") ===
-                  true ||
-                errorData.name === "Error"));
+          throw error;
+        }
 
-          if (isAbortError) {
-            throw new ApiError({
-              code: "REQUEST_CANCELLED",
-              message: "Request cancelled",
-              status: 499,
-            });
-          }
-
-          if (isLikelyNetworkFailure) {
-            throw new ApiError({
-              code: "NETWORK_ERROR",
-              message: error.message,
-              status: 0,
-            });
-          }
+        // Detect network failures: fetch throws TypeError on network errors
+        // (DNS failure, connection refused, CORS blocked, etc.). This can
+        // happen even when navigator.onLine reports true, so we treat all
+        // fetch TypeErrors as network errors for consistent semantics.
+        if (error instanceof TypeError) {
           throw new ApiError({
-            code: error.code,
-            message: error.message,
-            status: error.status,
+            code: "NETWORK_ERROR",
+            message: error.message || "Network request failed",
+            status: 0,
           });
         }
-        if (error instanceof DOMException && error.name === "AbortError") {
-          throw new ApiError({
-            code: "REQUEST_CANCELLED",
-            message: "Request cancelled",
-            status: 499,
-          });
-        }
+
+        // Fallback for unexpected errors
         throw new ApiError({
-          code: "NETWORK_ERROR",
+          code: "UNKNOWN_ERROR",
           message: error instanceof Error ? error.message : "Request failed",
-          status: 0,
+          status: 500,
         });
       }
     },
