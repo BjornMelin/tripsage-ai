@@ -1,3 +1,16 @@
+## [1.19.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.18.0...v1.19.0) (2025-12-17)
+
+### Features
+
+* **config:** add build-time turbopack.root validation ([b3bf3a4](https://github.com/BjornMelin/tripsage-ai/commit/b3bf3a4774fbe114a2de6368130896787e6317b2))
+
+### Bug Fixes
+
+* address additional PR [#574](https://github.com/BjornMelin/tripsage-ai/issues/574) review feedback ([2196374](https://github.com/BjornMelin/tripsage-ai/commit/2196374a755f1b1303f2f25c13d1419acb6da78a))
+* address PR [#574](https://github.com/BjornMelin/tripsage-ai/issues/574) review comments ([6be8b42](https://github.com/BjornMelin/tripsage-ai/commit/6be8b4276849068bb2e4db46e186c8b69a0f3e83))
+* **ci:** restore fetch-depth for diff-based cast checks ([2840535](https://github.com/BjornMelin/tripsage-ai/commit/284053581904122bffaaec1f0ecd06a8c15ccdbe))
+* resolve merge conflict in calendar ICS export route ([1e74d06](https://github.com/BjornMelin/tripsage-ai/commit/1e74d066bcb81abdc943c23ea152f60cfd098ce2))
+
 ## [1.18.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.17.1...v1.18.0) (2025-12-17)
 
 ### Features
