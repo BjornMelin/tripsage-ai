@@ -15,7 +15,7 @@ import {
   freeBusyRequestSchema,
 } from "@schemas/calendar";
 import { createEvent, queryFreeBusy } from "@/lib/calendar/google";
-import { getServerEnvVarWithFallback } from "@/lib/env/server";
+import { generateIcsFromEvents } from "@/lib/calendar/ics";
 
 /**
  * Creates calendar events in Google Calendar.
@@ -92,32 +92,19 @@ export const getAvailability = createAiTool({
  */
 export const exportItineraryToIcs = createAiTool({
   description: "Export a list of calendar events to ICS (iCalendar) format.",
+  // biome-ignore lint/suspicious/useAwait: createAiTool requires Promise return type
   execute: async (params) => {
     try {
-      // Call the ICS export route internally
-      const siteUrl = getServerEnvVarWithFallback(
-        "NEXT_PUBLIC_SITE_URL",
-        "http://localhost:3000"
-      );
-      const response = await fetch(`${siteUrl}/api/calendar/ics/export`, {
-        body: JSON.stringify(params),
-        headers: { "Content-Type": "application/json" },
-        method: "POST",
+      const { icsString, eventCount } = generateIcsFromEvents({
+        calendarName: params.calendarName,
+        events: params.events,
+        timezone: params.timezone ?? undefined,
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        return {
-          error: `ICS export failed: ${response.status} ${errorText}`,
-          success: false,
-        };
-      }
-
-      const icsContent = await response.text();
       return {
         calendarName: params.calendarName,
-        eventCount: params.events.length,
-        icsContent,
+        eventCount,
+        icsContent: icsString,
         success: true,
       };
     } catch (error) {

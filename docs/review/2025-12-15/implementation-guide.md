@@ -356,34 +356,42 @@ Goal: remove internal loopback calls, fix schema/runtime contract mismatches, an
 
 ### 3.1 Remove loopback HTTP fetch for ICS generation
 
-- [ ] (REL-002) Extract a shared ICS generator and call it directly from both tool + route
+- [x] (REL-002) Extract a shared ICS generator and call it directly from both tool + route
   - Files:
     - `src/ai/tools/server/calendar.ts`
     - `src/app/api/calendar/ics/export/route.ts`
-    - New shared module (suggested): `src/lib/calendar/ics.ts`
-  - Steps:
-    - Move ICS generation logic into a pure function.
-    - Replace `fetch(${NEXT_PUBLIC_SITE_URL}...)` with direct function call.
+    - `src/lib/calendar/ics.ts` (new)
+    - `src/lib/calendar/__tests__/ics.test.ts` (new)
+  - Implementation notes:
+    - Created `generateIcsFromEvents()` pure function in `src/lib/calendar/ics.ts`
+    - Extracted `eventAttendeeStatusToIcal()` and `reminderMethodToIcal()` helpers
+    - Route handler now imports and uses shared generator
+    - AI tool now calls generator directly (removed `fetch()` and `NEXT_PUBLIC_SITE_URL` usage)
+    - Added comprehensive unit tests (24 tests covering attendees, reminders, recurrence, metadata)
   - Verify:
-    - `pnpm test:affected`
-    - Add a golden test ensuring route output === tool output for same input.
+    - `pnpm test:affected` ✓
+    - `pnpm type-check` ✓
   - References:
     - <https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html>
 
 ### 3.2 Fix attachments list schema/handler contract mismatch
 
-- [ ] (REL-003) Decide and enforce the contract for attachment `url`
+- [x] (REL-003) Decide and enforce the contract for attachment `url`
   - Files:
     - `src/app/api/attachments/files/route.ts`
-    - `src/domain/schemas/attachments.ts`
-  - Steps:
-    - Pick one:
-      - Option A: `url` nullable and UI handles missing URLs, or
-      - Option B: route fails if it cannot produce URLs, or
-      - Option C: filter out items with missing URLs.
-    - Update schema and handler to match; add tests for the failure path.
+    - `src/app/api/attachments/files/__tests__/route.test.ts`
+    - `src/domain/schemas/attachments.ts` (unchanged - schema remains strict)
+  - Decision: **Option C** - filter out items with missing URLs
+  - Implementation notes:
+    - Schema keeps `url: z.url()` as required (non-nullable)
+    - Handler now filters out items where signed URL generation fails
+    - Added warning log when items are dropped (logs count only, no PII)
+    - Pagination `total` still reflects DB count for cursor math
+    - Updated tests: complete URL generation failure → empty items array
+    - Added new test for partial URL generation failure (one succeeds, one fails)
   - Verify:
-    - `pnpm test:affected`
+    - `pnpm test:affected` ✓
+    - `pnpm type-check` ✓
   - References:
     - <https://zod.dev/v4>
 

@@ -365,7 +365,7 @@ describe("/api/attachments/files", () => {
     });
   });
 
-  it("should handle signed URL generation failure gracefully", async () => {
+  it("should filter out items when signed URL generation fails completely", async () => {
     const supabase = getApiRouteSupabaseMock();
     const mockAttachments = [
       {
@@ -407,7 +407,84 @@ describe("/api/attachments/files", () => {
     expect(res.status).toBe(200);
 
     const body = await res.json();
-    // URL should be null when signed URL generation fails
-    expect(body.items[0].url).toBeNull();
+    // Items without valid URLs are filtered out (schema requires url to be non-null)
+    expect(body.items).toHaveLength(0);
+    // Pagination total still reflects DB count for cursor math
+    expect(body.pagination.total).toBe(1);
+  });
+
+  it("should filter out items when individual signed URLs fail", async () => {
+    const supabase = getApiRouteSupabaseMock();
+    const mockAttachments = [
+      {
+        bucket_name: "attachments",
+        chat_message_id: null,
+        created_at: "2025-01-01T00:00:00Z",
+        file_path: "chat/user-1/file1.jpg",
+        file_size: 1024,
+        filename: "file-1",
+        id: "file-1",
+        metadata: null,
+        mime_type: "image/jpeg",
+        original_filename: "file1.jpg",
+        trip_id: null,
+        updated_at: "2025-01-01T00:00:00Z",
+        upload_status: "completed",
+        user_id: "user-1",
+      },
+      {
+        bucket_name: "attachments",
+        chat_message_id: null,
+        created_at: "2025-01-01T00:00:00Z",
+        file_path: "chat/user-1/file2.jpg",
+        file_size: 2048,
+        filename: "file-2",
+        id: "file-2",
+        metadata: null,
+        mime_type: "image/jpeg",
+        original_filename: "file2.jpg",
+        trip_id: null,
+        updated_at: "2025-01-01T00:00:00Z",
+        upload_status: "completed",
+        user_id: "user-1",
+      },
+    ];
+
+    setupSupabaseQueryMock(supabase, {
+      count: 2,
+      data: mockAttachments,
+      error: null,
+    });
+
+    // First file gets a URL, second file fails
+    mockCreateSignedUrls.mockResolvedValue({
+      data: [
+        {
+          error: null,
+          path: "chat/user-1/file1.jpg",
+          signedUrl: "https://supabase.storage/signed/file1.jpg?token=abc",
+        },
+        {
+          error: "Failed to generate URL",
+          path: "chat/user-1/file2.jpg",
+          signedUrl: "",
+        },
+      ],
+      error: null,
+    });
+
+    const mod = await import("../route");
+    const req = new NextRequest("http://localhost/api/attachments/files", {
+      method: "GET",
+    });
+
+    const res = await mod.GET(req, createRouteParamsContext());
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    // Only the item with a valid URL is returned
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0].id).toBe("file-1");
+    expect(body.items[0].url).toContain("supabase.storage/signed");
   });
 });

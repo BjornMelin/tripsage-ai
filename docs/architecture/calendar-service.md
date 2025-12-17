@@ -42,6 +42,11 @@ secrets.
 - **`trip-export.ts`**: Trip-to-calendar conversion utilities
   - `tripToCalendarEvents()`: Converts trip destinations/activities to calendar events
   - `exportTripToICS()`: Exports trip as ICS file
+- **`ics.ts`**: Pure ICS generation utilities (RFC 5545)
+  - `generateIcsFromEvents()`: Generates ICS string from CalendarEvent array
+  - `sanitizeCalendarFilename()`: Sanitizes calendar name for filename use
+  - Uses `ical-generator` library for RFC 5545 compliance
+  - Shared by both API route and AI tool (no HTTP, no auth dependencies)
 
 ### API Routes (`src/app/api/calendar/`)
 
