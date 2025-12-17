@@ -122,9 +122,9 @@ Goal: restore “merge-safe” invariants (build passes, CI enforces build, base
     - `next.config.ts`
   - Steps:
     - Delete `turbopack.root` entirely (preferred) unless you actually depend on linked/workspace resolution outside repo root, or Next is inferring the root from an unrelated lockfile in a parent directory.
-    - If you keep it, set it to an absolute path. Add a build-time assertion in `next.config.ts` that validates `turbopack.root` is an absolute path pointing to an existing directory (throw on failure).
+    - If you keep it, set it to an absolute path. The build-time assertion in `next.config.ts` validates that `turbopack.root` is absolute and points to an existing directory (throws on failure).
   - Verify:
-    - `pnpm build` emits no Turbopack root warnings and the programmatic assertion passes.
+    - `pnpm build` succeeds; the programmatic assertion in `next.config.ts` enforces the absolute-path contract automatically.
   - References:
     - <https://nextjs.org/docs/pages/api-reference/config/next-config-js/turbopack>
 

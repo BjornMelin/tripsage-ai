@@ -2,13 +2,22 @@
  * @fileoverview Next.js configuration for TripSage AI (Turbopack root, build optimizations, and security headers).
  */
 
-import { dirname } from "node:path";
+import { existsSync } from "node:fs";
+import { dirname, isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
 import withBundleAnalyzer from "@next/bundle-analyzer";
 import { withBotId } from "botid/next/config";
 import type { NextConfig } from "next";
 
 const TURBOPACK_ROOT = dirname(fileURLToPath(import.meta.url));
+
+// Build-time assertion: turbopack.root must be absolute and exist
+if (!isAbsolute(TURBOPACK_ROOT)) {
+  throw new Error(`turbopack.root must be an absolute path, got: ${TURBOPACK_ROOT}`);
+}
+if (!existsSync(TURBOPACK_ROOT)) {
+  throw new Error(`turbopack.root must point to an existing directory: ${TURBOPACK_ROOT}`);
+}
 
 const nextConfig: NextConfig = {
   // Enable Cache Components (required for "use cache" directives in codebase)
