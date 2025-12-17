@@ -1,3 +1,9 @@
+## [1.17.1](https://github.com/BjornMelin/tripsage-ai/compare/v1.17.0...v1.17.1) (2025-12-17)
+
+### Bug Fixes
+
+* **forms:** address PR review feedback for useZodForm ([a9a165b](https://github.com/BjornMelin/tripsage-ai/commit/a9a165bd3b9aeae81a2f50eb723a3e9377761de6))
+
 ## [1.17.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.16.1...v1.17.0) (2025-12-17)
 
 ### ⚠ BREAKING CHANGES
