@@ -122,9 +122,9 @@ Goal: restore “merge-safe” invariants (build passes, CI enforces build, base
     - `next.config.ts`
   - Steps:
     - Delete `turbopack.root` entirely (preferred) unless you actually depend on linked/workspace resolution outside repo root, or Next is inferring the root from an unrelated lockfile in a parent directory.
-    - If you keep it, set it to an absolute path (doc contract).
+    - If you keep it, set it to an absolute path. Add a build-time assertion in `next.config.ts` that validates `turbopack.root` is an absolute path pointing to an existing directory (throw on failure).
   - Verify:
-    - `pnpm build` emits no Turbopack root warnings.
+    - `pnpm build` emits no Turbopack root warnings and the programmatic assertion passes.
   - References:
     - <https://nextjs.org/docs/pages/api-reference/config/next-config-js/turbopack>
 
@@ -190,8 +190,8 @@ Goal: delete misleading docs, reduce type escapes, and force a single “correct
     - Opportunistic: any files modified for Phase 0–2 fixes
   - Steps:
     - Keep `@fileoverview` in touched files for fast scanning.
-    - Make it 1 sentence, technical, and consistent with exports (no “key features” lists).
-    - Keep only stable invariants; prefer tests or a single doc link over duplicated prose.
+    - Make it 1 sentence, technical, and consistent with exports (no "key features" lists).
+    - Remove lists of features; reference a doc or test if detail is needed.
   - Verify:
     - Review touched files: `@fileoverview` is short and matches behavior.
   - References:

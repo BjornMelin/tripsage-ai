@@ -155,7 +155,10 @@ export type QueryKey = typeof queryKeys;
 export type QueryKeyPath = keyof QueryKey;
 
 /**
- * Factory function for creating dynamic query keys with validation
+ * Builds dynamic query key tuples.
+ * @param baseKey - Base key string
+ * @param params - Optional parameters object
+ * @returns `[key]` or `[key, params]` depending on whether params are provided
  */
 export function createQueryKey(
   baseKey: string,

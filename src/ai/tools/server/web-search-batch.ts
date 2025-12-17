@@ -138,10 +138,9 @@ export const webSearchBatch = tool({
               timeoutMs: rest.timeoutMs ?? null,
               userId: userId ?? null,
             });
-            if (typeof webSearch.execute !== "function") {
-              throw new Error("web_search_execute_missing");
-            }
-            const raw = await resolveToolResult(webSearch.execute(params, callOptions));
+            const raw = await resolveToolResult(
+              webSearch.execute?.(params, callOptions)
+            );
             const parsed = WEB_SEARCH_OUTPUT_SCHEMA.parse(raw);
             const validatedValue = {
               ...parsed,
