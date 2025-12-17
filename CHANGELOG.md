@@ -1,3 +1,13 @@
+## [1.18.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.17.1...v1.18.0) (2025-12-17)
+
+### Features
+
+* **reliability:** extract ICS generator and enforce attachment URL contract ([0b97295](https://github.com/BjornMelin/tripsage-ai/commit/0b972953ec5fb5e2cd2e826507c250a5fa9be11c))
+
+### Bug Fixes
+
+* **calendar,attachments:** address PR review feedback for ICS and attachments ([5299092](https://github.com/BjornMelin/tripsage-ai/commit/5299092e0a14dade04a45397373f63acd40c77db)), closes [#572](https://github.com/BjornMelin/tripsage-ai/issues/572)
+
 ## [1.17.1](https://github.com/BjornMelin/tripsage-ai/compare/v1.17.0...v1.17.1) (2025-12-17)
 
 ### Bug Fixes
