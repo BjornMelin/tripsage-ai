@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
   issues: write
@@ -11,12 +15,30 @@ permissions:
 
 jobs:
   release:
+    if: ${{ !startsWith(github.event.head_commit.message || '', 'chore(release):') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v6.0.1
         with:
           fetch-depth: 0
+
+      - name: Validate release tag ancestry
+        shell: bash
+        run: |
+          set -euo pipefail
+          latest_tag="$(git tag -l 'v*' --sort=-version:refname | head -n 1 || true)"
+          if [[ -z "${latest_tag}" ]]; then
+            echo "No existing v* tags found; continuing."
+            exit 0
+          fi
+          if git merge-base --is-ancestor "${latest_tag}" HEAD; then
+            echo "Latest tag ${latest_tag} is reachable from HEAD."
+            exit 0
+          fi
+          echo "::error::Latest tag ${latest_tag} is not reachable from HEAD. Release tags are out of sync with branch history."
+          echo "::error::Fix by re-aligning tags to this branch history before running semantic-release."
+          exit 1
 
       - name: Set up Node
         uses: actions/setup-node@v6
@@ -31,6 +53,6 @@ jobs:
 
       - name: Run semantic-release
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_BOT_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_BOT_TOKEN || github.token }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npx semantic-release --extends ./release.config.mjs
