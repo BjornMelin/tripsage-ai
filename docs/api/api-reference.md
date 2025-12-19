@@ -10,6 +10,7 @@ Base URLs
 Conventions
 
 - **Auth**: Supabase SSR cookies (`sb-access-token`) unless “Anonymous” noted.
+- **Internal key**: Some privileged endpoints require `x-internal-key` and are disabled unless explicitly enabled via env.
 - **Rate limit**: Per-route keys (e.g., `trips:list`, `places:search`); 429 on exceed.
 - **Errors**: `{ "error": "<code>", "reason": "<human text>", "issues"?: [...] }`
 - **Streaming**: “SSE stream” returns Server-Sent Events (AI SDK v6 UI stream).
@@ -252,7 +253,7 @@ Response: `204` on success.
 
 ### Embeddings
 
-- `POST /embeddings` (Auth) — Generate embeddings.
+- `POST /embeddings` (Internal key) — Generate embeddings (disabled unless configured).
 
 ### Routes
 
@@ -269,11 +270,11 @@ Response: `204` on success.
 
 ### Telemetry demo
 
-- `POST /telemetry/ai-demo` (Auth) — Demo/observability endpoint.
+- `POST /telemetry/ai-demo` (Internal key + gate) — Emit AI demo operational alert (disabled by default).
 
 ### AI stream (generic)
 
-- `POST /ai/stream` (Auth) — Generic AI stream route used in demos/tests.
+- `POST /ai/stream` (Auth + gate) — Generic AI stream route used in demos/tests (disabled by default).
 
 ### Keys helper endpoints
 

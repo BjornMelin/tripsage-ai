@@ -17,6 +17,7 @@ All job handlers are:
 - **Idempotent**: Safe to retry without side effects
 - **Stateless**: Don't rely on in-memory state
 - **Verified**: Require valid QStash signatures
+- **Bounded**: Reject oversized bodies (`413 Payload Too Large`) before parsing
 
 ---
 
@@ -71,9 +72,8 @@ Notification job data including:
 
 On failure, QStash will retry with exponential backoff:
 
-- Max retries: 3
+- Max retries: 5 (6 total attempts)
 - Initial delay: 10 seconds
-- Max delay: 5 minutes
 
 ---
 
@@ -135,6 +135,5 @@ This job is triggered after conversations to:
 
 On failure, QStash will retry with exponential backoff:
 
-- Max retries: 3
-- Initial delay: 30 seconds
-- Max delay: 10 minutes
+- Max retries: 5 (6 total attempts)
+- Initial delay: 10 seconds

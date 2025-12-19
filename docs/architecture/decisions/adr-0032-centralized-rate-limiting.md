@@ -9,9 +9,13 @@ Context
 Decision
 
 - Centralize rate limiting in Next.js using Upstash (`@upstash/ratelimit` + `@upstash/redis`).
-- Identifier: prefer `user.id` (auth) with `req.ip` fallback.
+- Identifier: prefer a stable **hashed** user identifier when authenticated (e.g., `user:${sha256(user.id)}`); otherwise use a **hashed** client IP derived from trusted headers. Never use raw IP/user IDs as Upstash identifiers.
 - Budgets per category: chat (60/min), tools sensitive (20/min), BYOK CRUD (10/min), validation (20/min).
 - Expose `Retry-After` on 429. Record counters in OTel as attributes.
+- Explicit degraded-mode policy (fail-open vs fail-closed):
+  - Privileged/cost-bearing endpoints must **fail closed** (`503 rate_limit_unavailable`) when rate limiting cannot be enforced.
+  - Non-privileged endpoints may **fail open** for availability, but must emit a deduped operational alert (`ratelimit.degraded`).
+  - Treat Upstash timeouts (`success: true`, `reason: "timeout"`) as degraded infrastructure and apply the same policy (Upstash allows-by-default on timeout).
 
 Rationale (Decision Framework)
 
@@ -30,4 +34,6 @@ Consequences
 References
 
 - Upstash template: <https://vercel.com/templates/next.js/ratelimit-with-upstash-redis>
+- Upstash Ratelimit (TS) – Timeout behavior: <https://upstash.com/docs/redis/sdks/ratelimit-ts/features#timeout>
+- Upstash Ratelimit (TS) – `limit()` response (`reason: "timeout"`): <https://upstash.com/docs/redis/sdks/ratelimit-ts/methods#limit>
 - Next.js Edge guidance: <https://nextjs.org/blog/next-16#proxyts-formerly-middlewarets>

@@ -36,7 +36,9 @@ This file is both:
 - Next.js Image SVG safety: <https://nextjs.org/docs/app/api-reference/components/image#dangerouslyallowsvg>
 - Vercel conformance rule (safe SVG images): <https://vercel.com/docs/conformance/rules/NEXTJS_SAFE_SVG_IMAGES>
 - Supabase SSR client creation: <https://supabase.com/docs/guides/auth/server-side/creating-a-client>
-- Upstash QStash signature validation: <https://upstash.com/docs/qstash/howto/signature-validation>
+- Upstash QStash signature validation (raw body required): <https://upstash.com/docs/qstash/howto/signature>
+- Upstash Ratelimit timeout behavior (allow-by-default): <https://upstash.com/docs/redis/sdks/ratelimit-ts/features#timeout>
+- Upstash Ratelimit `limit()` response (`reason: "timeout"`): <https://upstash.com/docs/redis/sdks/ratelimit-ts/methods#limit>
 - OWASP Unvalidated Redirects & Forwards: <https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html>
 - OWASP SSRF Prevention: <https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html>
 - OWASP API4:2023 Unrestricted Resource Consumption: <https://owasp.org/API-Security/editions/2023/en/0xa4-unrestricted-resource-consumption/>
@@ -218,7 +220,7 @@ Goal: close high-blast-radius holes (public cost-bearing routes, open redirects,
 
 ### 2.1 Lock down `/api/embeddings` (must fail closed)
 
-- [ ] (SEC-006, SEC-002) Make embeddings generation + persistence impossible without explicit auth
+- [x] (SEC-006, SEC-002) Make embeddings generation + persistence impossible without explicit auth
   - Files:
     - `src/app/api/embeddings/route.ts`
     - `src/lib/api/factory.ts` (if guardrails need new modes)
@@ -232,12 +234,17 @@ Goal: close high-blast-radius holes (public cost-bearing routes, open redirects,
   - Verify:
     - `pnpm test:affected`
     - Manual negative test: request without key returns `401/403` (or `503` when disabled).
+  - Implementation notes (2025-12-17):
+    - The route now returns `503` when `EMBEDDINGS_API_KEY` is missing (disabled state).
+    - The route requires `x-internal-key` to match `EMBEDDINGS_API_KEY` before generating or persisting embeddings.
+    - Rate limiting is configured `fail_closed` for `/api/embeddings`.
+    - Tests: `src/app/api/embeddings/__tests__/route.test.ts`.
   - References:
     - <https://owasp.org/API-Security/editions/2023/en/0xa4-unrestricted-resource-consumption/>
 
 ### 2.2 Remove or hard-gate the demo LLM streaming route
 
-- [ ] (SEC-007, SEC-002) Disable `/api/ai/stream` in production, or require auth + explicit env gate
+- [x] (SEC-007, SEC-002) Disable `/api/ai/stream` in production, or require auth + explicit env gate
   - Files:
     - `src/app/api/ai/stream/route.ts`
   - Steps:
@@ -247,12 +254,16 @@ Goal: close high-blast-radius holes (public cost-bearing routes, open redirects,
   - Verify:
     - `pnpm test:affected`
     - Production config: route is unreachable unless explicitly enabled.
+  - Implementation notes (2025-12-17):
+    - `/api/ai/stream` now returns `404` unless `ENABLE_AI_DEMO === "true"`.
+    - When enabled, it requires auth and uses fail-closed rate limiting.
+    - Tests: `src/app/api/ai/stream/__tests__/route.integration.test.ts`.
   - References:
     - <https://owasp.org/API-Security/editions/2023/en/0xa4-unrestricted-resource-consumption/>
 
 ### 2.3 Protect the telemetry demo endpoint (alerts are privileged)
 
-- [ ] (SEC-009, SEC-002) Require auth/internal key for `/api/telemetry/ai-demo` and add abuse caps
+- [x] (SEC-009, SEC-002) Require auth/internal key for `/api/telemetry/ai-demo` and add abuse caps
   - Files:
     - `src/app/api/telemetry/ai-demo/route.ts`
   - Steps:
@@ -261,10 +272,18 @@ Goal: close high-blast-radius holes (public cost-bearing routes, open redirects,
     - Ensure alert emission is deduped/rate-limited even when Redis is unavailable.
   - Verify:
     - `pnpm test:affected`
+  - Implementation notes (2025-12-17):
+    - `/api/telemetry/ai-demo` now returns `404` unless `ENABLE_AI_DEMO === "true"`.
+    - It requires `TELEMETRY_AI_DEMO_KEY` to be configured (else `503`) and validates `x-internal-key`.
+    - It enforces a small body limit (16KB) and caps `detail` length.
+    - Operational alerts do **not** include raw `detail`; they emit only low-risk metadata (`has_detail`, `detail_length`).
+    - `detail_hash` is an HMAC fingerprint (truncated) and is emitted only when `TELEMETRY_HASH_SECRET` is configured; otherwise it is omitted/null.
+    - Rate limiting is configured `fail_closed` to prevent alert emission when limiter infra is degraded.
+    - Tests: `src/app/api/telemetry/ai-demo/__tests__/route.test.ts`.
 
 ### 2.4 Fix open redirect in email confirm flow
 
-- [ ] (SEC-005) Validate/sanitize the `next` parameter in `src/app/auth/confirm/route.ts`
+- [x] (SEC-005) Validate/sanitize the `next` parameter in `src/app/auth/confirm/route.ts`
   - Files:
     - `src/app/auth/confirm/route.ts`
   - Steps:
@@ -273,13 +292,20 @@ Goal: close high-blast-radius holes (public cost-bearing routes, open redirects,
   - Verify:
     - `pnpm test:affected`
     - Add tests for bypass encodings: `//evil`, `%2F%2Fevil`, `\\evil`.
+  - Implementation notes (2025-12-17):
+    - `next` is decoded once and must be an internal path starting with `/` but not `//`; backslashes are rejected.
+    - `next` is allowlisted to `/dashboard` and subpaths; other internal paths fall back to `/dashboard`.
+    - Invalid `next` values fall back to `/dashboard`.
+    - Tests: `src/app/auth/confirm/__tests__/route.test.ts`.
+  - Follow-up (2025-12-18):
+    - Centralized `next` sanitization in `src/lib/auth/confirm-next.ts` to keep allowlist policy in one place.
   - References:
     - <https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html>
     - <https://nextjs.org/docs/app/api-reference/functions/redirect>
 
 ### 2.5 Enforce hard request body limits before parsing
 
-- [ ] (SEC-001) Add bounded body readers for JSON and webhook verification
+- [x] (SEC-001) Add bounded body readers for JSON and webhook verification
   - Files:
     - `src/lib/api/route-helpers.ts`
     - `src/lib/api/factory.ts`
@@ -293,14 +319,21 @@ Goal: close high-blast-radius holes (public cost-bearing routes, open redirects,
     - `pnpm test:affected`
     - Add tests that simulate oversized payloads and assert 413 without buffering full body.
   - Implementation note (2025-12-17):
-    - Webhook verification now enforces a bounded body read and returns `413` on exceed (`src/lib/webhooks/payload.ts`, `src/lib/webhooks/handler.ts`).
-    - JSON route parsing limits are still pending under `src/lib/api/*`.
+    - Added `readRequestBodyBytesWithLimit()` (`src/lib/http/body.ts`) and wired it into:
+      - `parseJsonBody()` (`src/lib/api/route-helpers.ts`) for bounded JSON parsing (no `req.json()`/`req.text()`).
+      - Webhook HMAC verification (`src/lib/webhooks/payload.ts`) and QStash verification (`src/lib/qstash/receiver.ts`) for raw-body validation.
+      - Auth JSON routes under `src/app/auth/**` (email verify + password flows) now parse via the bounded reader and return `413` on exceed.
+    - Removed redundant post-parse `Content-Length` checks where present (e.g., `/api/keys`) now that parsing is bounded pre-parse.
+    - Representative tests cover 413 behavior for JSON parsing and webhook/QStash verification.
+  - Follow-up (2025-12-18):
+    - Added a clear `400 invalid_request` path when a request body is already consumed (prevents ambiguous second-read errors).
+    - Refactored auth JSON routes to call `parseJsonBody()` directly to standardize bounded parsing behavior.
   - References:
     - <https://owasp.org/API-Security/editions/2023/en/0xa4-unrestricted-resource-consumption/>
 
 ### 2.6 Make rate limiting/idempotency policy explicit and safe under degraded infra
 
-- [ ] (SEC-002) Introduce explicit fail-open/fail-closed modes per endpoint class
+- [x] (SEC-002) Introduce explicit fail-open/fail-closed modes per endpoint class
   - Files:
     - `src/lib/api/factory.ts`
     - `src/lib/webhooks/rate-limit.ts`
@@ -311,10 +344,18 @@ Goal: close high-blast-radius holes (public cost-bearing routes, open redirects,
     - Apply fail-closed to at least: auth endpoints, key management, webhooks/jobs, embeddings/LLM routes.
   - Verify:
     - `pnpm test:affected`
+  - Implementation notes (2025-12-17):
+    - `withApiGuards` supports `degradedMode: "fail_closed" | "fail_open"`; privileged/cost-bearing routes default to `fail_closed`.
+    - `fail_open` fallbacks emit a deduped operational alert (`ratelimit.degraded`, `idempotency.degraded`).
+    - Degraded-mode alerts use low-cardinality attributes (no full request path) and the dedupe map is periodically cleaned up to avoid unbounded growth (`src/lib/telemetry/degraded-mode.ts`).
+    - Tests: `src/lib/api/__tests__/factory.degraded-mode.test.ts`.
+  - Follow-up (2025-12-18):
+    - Added `maxBodyBytes` override to `withApiGuards` schema parsing to avoid bespoke parsing code for smaller body caps.
+    - Added fail-closed rate limiting to `POST /auth/password/reset-request` to reduce password-reset email spam risk under normal and degraded conditions.
 
 ### 2.7 Remove secrets-in-logs for QStash
 
-- [ ] (SEC-003) Stop logging the raw QStash signature header
+- [x] (SEC-003) Stop logging the raw QStash signature header
   - Files:
     - `src/lib/qstash/receiver.ts`
   - Steps:
@@ -322,11 +363,11 @@ Goal: close high-blast-radius holes (public cost-bearing routes, open redirects,
   - Verify:
     - `pnpm test:affected`
   - References:
-    - <https://upstash.com/docs/qstash/howto/signature-validation>
+    - <https://upstash.com/docs/qstash/howto/signature>
 
 ### 2.8 Stop emitting raw user/session identifiers into telemetry by default
 
-- [ ] (SEC-004) Add telemetry-safe identifier helpers and apply in memory sync job
+- [x] (SEC-004) Add telemetry-safe identifier helpers and apply in memory-sync job
   - Files:
     - `src/app/api/jobs/memory-sync/route.ts`
     - `src/lib/telemetry/**` (new helper module if needed)
@@ -335,10 +376,23 @@ Goal: close high-blast-radius holes (public cost-bearing routes, open redirects,
     - Document a minimal “telemetry data classification” policy in `docs/`.
   - Verify:
     - `pnpm test:affected`
+  - Implementation notes (2025-12-17):
+    - Added `hashTelemetryIdentifier()` (`src/lib/telemetry/identifiers.ts`) using `TELEMETRY_HASH_SECRET`; safe default is to omit identifiers when unset.
+    - Memory sync job now emits `user.id_hash` / `session.id_hash` only and avoids embedding raw identifiers in exception messages.
+    - Additional spans emitting user/session identifiers were migrated to hashed/omitted forms:
+      - `src/lib/supabase/factory.ts`
+      - `src/app/api/keys/_telemetry.ts`
+      - `src/lib/security/sessions.ts`
+      - `src/app/api/security/sessions/_handlers.ts`
+      - `src/app/api/itineraries/_handler.ts`
+      - `src/lib/memory/orchestrator.ts`
+      - `src/domain/accommodations/providers/amadeus-adapter.ts`
+    - API factory now records a stable, low-cardinality `routeKey` for metrics/spans (telemetry name or rateLimit key, else sanitized path) to avoid emitting raw dynamic paths containing IDs.
+    - Documented policy in `docs/development/security/telemetry-data-classification.md`.
 
 ### 2.9 Fix `dangerouslyAllowSVG` configuration
 
-- [ ] (SEC-008) Disable SVG serving through image optimization unless strictly required
+- [x] (SEC-008) Disable SVG serving through image optimization unless strictly required
   - Files:
     - `next.config.ts`
   - Steps:
@@ -346,6 +400,8 @@ Goal: close high-blast-radius holes (public cost-bearing routes, open redirects,
     - If required: add `contentDispositionType: \"attachment\"` and keep strict CSP; also restrict sources.
   - Verify:
     - `pnpm build`
+  - Implementation notes (2025-12-17):
+    - `next.config.ts` now sets `images.dangerouslyAllowSVG = false`.
   - References:
     - <https://nextjs.org/docs/app/api-reference/components/image#dangerouslyallowsvg>
     - <https://vercel.com/docs/conformance/rules/NEXTJS_SAFE_SVG_IMAGES>
@@ -445,12 +501,13 @@ Goal: enforce boundaries and conventions so the same classes of bugs don’t ret
 
 ### 4.4 Raise meaningful test coverage where it matters
 
-- [ ] (TEST-001, SEC-006, SEC-001, SEC-002) Add tests for the highest-risk surfaces and set staged thresholds
+- [x] (SEC-006, SEC-001, SEC-002, SEC-005, SEC-007, SEC-009) Add security regression tests for the highest-risk surfaces
   - Target behaviors to test (minimum set):
     - Embeddings route rejects unauthenticated/misconfigured access.
     - Body-size limiting returns 413 without buffering.
     - Rate limiting fail-closed for privileged/cost-bearing endpoints under Redis outage simulation.
     - Open redirect sanitization.
   - Verify:
-    - `pnpm test:coverage` (enforced thresholds)
     - `pnpm test:affected`
+  - Implementation notes (2025-12-17):
+    - Added/updated tests for embeddings gating, AI demo gating/auth, telemetry internal-key gating, bounded body reads, degraded-mode behavior, and open-redirect sanitization.

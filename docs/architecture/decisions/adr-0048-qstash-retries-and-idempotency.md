@@ -19,8 +19,12 @@
 - Handlers must be idempotent: wrap side-effecting operations in a per-idempotency-key Upstash Redis lock (TTL 2 minutes) before executing.  
 - Retry policy: max 6 attempts, exponential backoff starting at 10s; mark dead-letter to `qstash-dlq` Redis list with payload + attempt count.  
 - Observability: emit OTEL span attributes `qstash.attempt`, `qstash.dedup_id`, `qstash.dlq` and structured log on final failure.  
-- Security: validate QStash signature per official middleware; reject unverified requests before any side effects.  
+- Security:
+  - Validate QStash signature on the raw request body; reject unverified requests before any side effects.
+  - Enforce a hard request body size limit before verification/parsing (return `413 Payload Too Large`).
+  - Never log raw signature headers; if correlation is required, log a short hash prefix only.  
 - Storage writes must be transactional (Supabase RPC or single statement) to keep idempotency guarantees.
+- Degraded-mode policy: job endpoints are privileged; idempotency must fail closed when Redis is unavailable.
 
 ## Consequences
 
@@ -54,6 +58,7 @@ The DLQ and retry handling is implemented in:
 
 - `src/lib/qstash/config.ts` - Configuration constants (retry count, DLQ TTL, key prefixes)
 - `src/lib/qstash/dlq.ts` - Dead Letter Queue operations (push, list, remove, count)
+- `src/lib/qstash/receiver.ts` - Signature verification with bounded raw body reads
 - `src/app/api/jobs/notify-collaborators/route.ts` - Worker with DLQ integration
 
 Key implementation details:
@@ -70,6 +75,7 @@ Key implementation details:
 
 ## References
 
-- Upstash QStash retry docs
+- Upstash QStash – Retry: <https://upstash.com/docs/qstash/features/retry>
+- Upstash QStash – Verify signatures (raw body required): <https://upstash.com/docs/qstash/howto/signature>
 - ADR-0041 (webhook notifications), ADR-0032 (rate limiting), ADR-0047 (runtime policy)
 - SPEC-0021 (Supabase Webhooks Consolidation)

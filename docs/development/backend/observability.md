@@ -48,7 +48,6 @@ const result = await withTelemetrySpan(
       "db.name": "tripsage",
       "db.system": "postgres",
     },
-    redactKeys: ["user.id"], // Optional: redact sensitive attributes
   },
   async (span) => {
     // Set additional attributes during execution
@@ -77,7 +76,15 @@ Current `functionId` values in this codebase:
 | `router.classifyUserMessage` | `src/ai/agents/router-agent.ts` | Message classification |
 | `agent.memory.summarize` | `src/ai/agents/memory-agent.ts` | Memory write summary |
 | `memory.insights.generate` | `src/app/api/memory/insights/[userId]/route.ts` | Insights generation |
-| `ai.stream.demo` | `src/app/api/ai/stream/route.ts` | Demo streaming route |
+| `ai.stream.demo` | `src/app/api/ai/stream/route.ts` | Demo streaming route (requires `ENABLE_AI_DEMO="true"`) |
+
+## Telemetry-safe identifiers
+
+Do not record raw user/session identifiers in telemetry spans by default.
+
+- Use `hashTelemetryIdentifier()` from `src/lib/telemetry/identifiers.ts` to emit stable pseudonyms (e.g., `user.id_hash`, `session.id_hash`) when `TELEMETRY_HASH_SECRET` is configured (required in production).
+- In non-production, if `TELEMETRY_HASH_SECRET` is unset, identifier attributes should be omitted (fail-safe).
+- Policy and attribute classification: `docs/development/security/telemetry-data-classification.md`.
 
 ## Infrastructure spans (catalog)
 
@@ -273,7 +280,6 @@ recordTelemetryEvent("api.keys.validation_error", {
 | `api.keys.parse_error`     | error    | `message`, `operation`    | JSON parsing failures in keys API                        |
 | `api.keys.auth_error`      | error    | `message`, `operation`    | Authentication failures in keys API                      |
 | `api.keys.validation_error`| warning  | `field`, `message`        | Zod validation failures in keys API                      |
-| `api.keys.size_limit`      | warning  | `size_bytes`, `limit_bytes`| Request size limit exceeded                              |
 | `api.keys.post_error`      | error    | `message`, `operation`    | General POST errors in keys API                          |
 | `api.keys.get_error`       | error    | `message`, `operation`    | GET errors in keys API                                   |
 | `api.keys.rate_limit_config_error` | error | `hasToken`, `hasUrl`, `message` | Rate limiter configuration missing in production        |
@@ -315,7 +321,10 @@ emitOperationalAlert("webhook.verification_failed", {
 | Event                      | Severity | Attributes                | Trigger                                                   |
 |----------------------------|----------|---------------------------|-----------------------------------------------------------|
 | `redis.unavailable`        | error    | `feature` (cache module)  | `warnRedisUnavailable` when Upstash credentials missing   |
-| `webhook.verification_failed` | error | `reason` (`missing_secret_env`, `missing_signature`, `body_read_error`, `invalid_signature`, `invalid_json`, `invalid_payload_shape`) | `parseAndVerify` failures before processing payloads |
+| `webhook.verification_failed` | warning | `reason` (`missing_secret_env`, `missing_signature`, `body_read_error`, `invalid_signature`, `invalid_json`, `invalid_payload_shape`, `payload_too_large`) | `parseAndVerify` failures before processing payloads |
+| `ratelimit.degraded`       | error    | `reason`, `degradedMode`, plus `rateLimitKey` (API) or `feature` + `route` (webhooks) | Fail-open fallback when rate limiting cannot be enforced |
+| `idempotency.degraded`     | error    | `namespace`, `reason`, `degradedMode` | Fail-open fallback when idempotency cannot be enforced |
+| `ai_demo.stream`           | info     | `status`, `has_detail`, `detail_length`, optional HMAC `detail_hash` | Privileged AI demo alert emission (gated) |
 
 ### Adding telemetry events
 
