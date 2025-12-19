@@ -9,6 +9,7 @@ import "server-only";
 
 import { Ratelimit } from "@upstash/ratelimit";
 import { NextResponse } from "next/server";
+import type { DegradedMode } from "@/lib/api/factory";
 import { getClientIpFromHeaders } from "@/lib/http/ip";
 import { createRateLimitHeaders as createStandardRateLimitHeaders } from "@/lib/ratelimit/headers";
 import { hashIdentifier } from "@/lib/ratelimit/identifier";
@@ -35,8 +36,6 @@ export interface RateLimitResult {
   /** Maximum requests allowed in the window */
   limit?: number;
 }
-
-export type DegradedMode = "fail_closed" | "fail_open";
 
 /**
  * Extract client IP address from request headers.

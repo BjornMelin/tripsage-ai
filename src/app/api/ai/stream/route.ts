@@ -103,6 +103,13 @@ const guardedPOST = withApiGuards({
   return result.toUIMessageStreamResponse();
 });
 
+/**
+ * Feature-flagged POST handler for AI streaming demo.
+ *
+ * @param req - Next.js request object
+ * @param routeContext - Route context with params
+ * @returns 404 error response when ENABLE_AI_DEMO is disabled, otherwise delegates to guardedPOST
+ */
 export const POST = async (req: NextRequest, routeContext: RouteParamsContext) => {
   const enabled = getServerEnvVarWithFallback("ENABLE_AI_DEMO", false);
   if (!enabled) {
