@@ -198,6 +198,35 @@ function getSafeRouteKeyForTelemetry(options: {
 }
 
 /**
+ * Handles rate limit timeout by either failing closed (503) or failing open with an alert.
+ *
+ * @returns Response if should fail closed, null if failing open
+ */
+function handleRateLimitTimeout(
+  rateLimitKey: RouteRateLimitKey,
+  windowMs: number,
+  degradedMode: DegradedMode
+): NextResponse | null {
+  if (degradedMode === "fail_closed") {
+    return errorResponse({
+      error: "rate_limit_unavailable",
+      reason: "Rate limiting unavailable",
+      status: 503,
+    });
+  }
+  emitOperationalAlertOncePerWindow({
+    attributes: {
+      degradedMode: "fail_open",
+      rateLimitKey,
+      reason: "timeout",
+    },
+    event: "ratelimit.degraded",
+    windowMs,
+  });
+  return null;
+}
+
+/**
  * Enforces rate limiting for a route.
  *
  * @param rateLimitKey Rate limit key from registry.
@@ -262,23 +291,8 @@ async function enforceRateLimit(
         identifier
       );
       if (reason === "timeout") {
-        if (options.degradedMode === "fail_closed") {
-          return errorResponse({
-            error: "rate_limit_unavailable",
-            reason: "Rate limiting unavailable",
-            status: 503,
-          });
-        }
-        emitOperationalAlertOncePerWindow({
-          attributes: {
-            degradedMode: "fail_open",
-            rateLimitKey,
-            reason: "timeout",
-          },
-          event: "ratelimit.degraded",
-          windowMs: parseRateLimitWindowMs(config.window) ?? 60_000,
-        });
-        return null;
+        const windowMs = parseRateLimitWindowMs(config.window) ?? 60_000;
+        return handleRateLimitTimeout(rateLimitKey, windowMs, options.degradedMode);
       }
       if (!success) {
         const response = errorResponse({
@@ -314,23 +328,8 @@ async function enforceRateLimit(
 
     const { success, remaining, reset, reason } = await limiter.limit(identifier);
     if (reason === "timeout") {
-      if (options.degradedMode === "fail_closed") {
-        return errorResponse({
-          error: "rate_limit_unavailable",
-          reason: "Rate limiting unavailable",
-          status: 503,
-        });
-      }
-      emitOperationalAlertOncePerWindow({
-        attributes: {
-          degradedMode: "fail_open",
-          rateLimitKey,
-          reason: "timeout",
-        },
-        event: "ratelimit.degraded",
-        windowMs: parseRateLimitWindowMs(config.window) ?? 60_000,
-      });
-      return null;
+      const windowMs = parseRateLimitWindowMs(config.window) ?? 60_000;
+      return handleRateLimitTimeout(rateLimitKey, windowMs, options.degradedMode);
     }
     if (!success) {
       const response = errorResponse({

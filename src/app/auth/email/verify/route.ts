@@ -15,6 +15,7 @@ import { parseJsonBody } from "@/lib/api/route-helpers";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { emitOperationalAlertOncePerWindow } from "@/lib/telemetry/degraded-mode";
 import { createServerLogger } from "@/lib/telemetry/logger";
+import { isPlainObject } from "@/lib/utils/type-guards";
 
 interface VerifyPayload {
   token?: unknown;
@@ -22,10 +23,6 @@ interface VerifyPayload {
 
 const MAX_BODY_BYTES = 16 * 1024;
 const logger = createServerLogger("auth.email.verify");
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const parsed = await parseJsonBody(request, { maxBytes: MAX_BODY_BYTES });
@@ -42,7 +39,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const payload: VerifyPayload = isRecord(parsed.body) ? parsed.body : {};
+  const payload: VerifyPayload = isPlainObject(parsed.body) ? parsed.body : {};
 
   const token = typeof payload.token === "string" ? payload.token : "";
   if (!token) {

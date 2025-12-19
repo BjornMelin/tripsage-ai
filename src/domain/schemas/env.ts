@@ -219,7 +219,8 @@ const monitoringEnvSchema = z.object({
 
 // Feature flags and configuration (empty - not used in frontend)
 const featureEnvSchema = z.object({
-  ENABLE_AI_DEMO: z.string().optional(),
+  // Coerce to boolean for type safety; avoids string comparison pitfalls ("true" vs "TRUE")
+  ENABLE_AI_DEMO: z.coerce.boolean().default(false),
 });
 
 // Security configuration

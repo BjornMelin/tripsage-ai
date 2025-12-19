@@ -37,15 +37,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const payload = passwordResetPayloadSchema.safeParse(parsedBody.body);
   if (!payload.success) {
-    const errors = payload.error.issues.map(({ code, message, path }) => ({
-      code,
+    // Sanitize validation errors for auth endpoints - expose only field names, not internal codes
+    const fieldErrors = payload.error.issues.map(({ message, path }) => ({
+      field: path.length > 0 ? String(path[0]) : "unknown",
       message,
-      path,
     }));
     return NextResponse.json(
       {
         code: "VALIDATION_ERROR",
-        errors,
+        errors: fieldErrors,
         message: "Invalid password reset payload",
       },
       { status: 400 }

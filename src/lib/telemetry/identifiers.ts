@@ -22,6 +22,11 @@ function hashTelemetryValue(value: string): string | null {
  *
  * This is a stable pseudonymization primitive (HMAC-SHA256) that only activates when
  * `TELEMETRY_HASH_SECRET` is configured. Prefer this for low-cardinality identifiers.
+ *
+ * @param identifier - The identifier string to hash
+ * @returns Hex-encoded HMAC-SHA256 hash, or `null` if `TELEMETRY_HASH_SECRET` is not configured
+ *          or if the input is empty/whitespace-only. Callers should handle `null` gracefully
+ *          (e.g., by omitting the attribute or using a placeholder).
  */
 export function hashTelemetryIdentifier(identifier: string): string | null {
   return hashTelemetryValue(identifier);
@@ -30,6 +35,11 @@ export function hashTelemetryIdentifier(identifier: string): string | null {
 /**
  * Hashes an arbitrary value for telemetry fingerprinting (e.g., hashing long/high-cardinality
  * text for dedupe). Callers should typically store only a short prefix of the hash.
+ *
+ * @param value - The value string to hash
+ * @returns Hex-encoded HMAC-SHA256 hash, or `null` if `TELEMETRY_HASH_SECRET` is not configured
+ *          or if the input is empty/whitespace-only. Callers should handle `null` gracefully
+ *          (e.g., by using a fallback or omitting the fingerprint).
  */
 export function hashTelemetryFingerprint(value: string): string | null {
   return hashTelemetryValue(value);

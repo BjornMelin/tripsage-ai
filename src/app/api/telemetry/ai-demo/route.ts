@@ -37,9 +37,8 @@ const guardedPOST = withApiGuards({
 })((_req: NextRequest, _ctx: RouteContext, body: TelemetryAiDemoRequest) => {
   const hasDetail = Boolean(body.detail?.length);
   const detailLength = body.detail?.length ?? 0;
-  const detailHash = body.detail
-    ? (hashTelemetryFingerprint(body.detail)?.slice(0, 16) ?? null)
-    : null;
+  const fullHash = body.detail ? hashTelemetryFingerprint(body.detail) : null;
+  const detailHash = fullHash ? fullHash.slice(0, 16) : null;
 
   emitOperationalAlert("ai_demo.stream", {
     attributes: {
@@ -54,18 +53,15 @@ const guardedPOST = withApiGuards({
 });
 
 export const POST = async (req: NextRequest, routeContext: RouteParamsContext) => {
-  const enabled = getServerEnvVarWithFallback("ENABLE_AI_DEMO", "");
-  if (enabled !== "true") {
+  const enabled = getServerEnvVarWithFallback("ENABLE_AI_DEMO", false);
+  if (!enabled) {
     return errorResponse({ error: "not_found", reason: "Not found", status: 404 });
   }
 
+  // Return consistent 404 to avoid leaking feature/config state
   const internalKey = getServerEnvVarWithFallback("TELEMETRY_AI_DEMO_KEY", "");
   if (!internalKey) {
-    return errorResponse({
-      error: "telemetry_disabled",
-      reason: "Telemetry demo endpoint disabled",
-      status: 503,
-    });
+    return errorResponse({ error: "not_found", reason: "Not found", status: 404 });
   }
 
   const provided = req.headers.get("x-internal-key");

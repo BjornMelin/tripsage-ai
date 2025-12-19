@@ -59,7 +59,7 @@ describe("/api/telemetry/ai-demo", () => {
     expect(EMIT_ALERT).not.toHaveBeenCalled();
   });
 
-  it("returns 503 when TELEMETRY_AI_DEMO_KEY is missing", async () => {
+  it("returns 404 when TELEMETRY_AI_DEMO_KEY is missing (security: consistent 404)", async () => {
     vi.stubEnv("TELEMETRY_AI_DEMO_KEY", "");
     __resetServerEnvCacheForTest();
 
@@ -72,7 +72,8 @@ describe("/api/telemetry/ai-demo", () => {
       createRouteParamsContext()
     );
 
-    expect(res.status).toBe(503);
+    // Returns 404 to avoid leaking whether endpoint exists but is misconfigured vs disabled
+    expect(res.status).toBe(404);
     expect(EMIT_ALERT).not.toHaveBeenCalled();
   });
 

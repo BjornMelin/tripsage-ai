@@ -102,8 +102,8 @@ const guardedPOST = withApiGuards({
 });
 
 export const POST = async (req: NextRequest, routeContext: RouteParamsContext) => {
-  const enabled = getServerEnvVarWithFallback("ENABLE_AI_DEMO", "");
-  if (enabled !== "true") {
+  const enabled = getServerEnvVarWithFallback("ENABLE_AI_DEMO", false);
+  if (!enabled) {
     return errorResponse({ error: "not_found", reason: "Not found", status: 404 });
   }
 

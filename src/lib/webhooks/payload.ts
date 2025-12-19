@@ -51,10 +51,19 @@ function normalizeWebhookPayload(raw: RawWebhookPayload): WebhookPayload {
 
 function recordVerificationFailure(req: Request, reason: string): void {
   addEventToActiveSpan("webhook_verification_failed", { reason });
+
+  // Safely parse URL to avoid exceptions on malformed request URLs
+  let pathname = "/unknown";
+  try {
+    pathname = new URL(req.url).pathname;
+  } catch {
+    // Fall back to unknown if URL parsing fails
+  }
+
   emitOperationalAlertOncePerWindow({
     attributes: {
       reason,
-      route: sanitizePathnameForTelemetry(new URL(req.url).pathname),
+      route: sanitizePathnameForTelemetry(pathname),
     },
     event: "webhook.verification_failed",
     severity: "warning",

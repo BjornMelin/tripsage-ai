@@ -43,6 +43,7 @@ describe("POST /api/auth/mfa/setup", () => {
     );
     const json = await res.json();
     expect(res.status).toBe(200);
+    expect(mockStartTotpEnrollment).toHaveBeenCalledTimes(1);
     expect(json.data.factorId).toBe("factor-1");
     expect(json.data.challengeId).toBe("challenge-1");
     expect(json.data.secret).toBeUndefined();

@@ -21,6 +21,7 @@ import {
 import { ROUTES } from "@/lib/routes";
 import { emitOperationalAlertOncePerWindow } from "@/lib/telemetry/degraded-mode";
 import { createServerLogger } from "@/lib/telemetry/logger";
+import { isPlainObject } from "@/lib/utils/type-guards";
 
 interface ChangePasswordPayload {
   confirmPassword?: unknown;
@@ -30,10 +31,6 @@ interface ChangePasswordPayload {
 
 // Password change payloads are tiny; keep a tight limit to reduce DoS surface.
 const MAX_BODY_BYTES = 4 * 1024;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 const logger = createServerLogger("auth.password.change");
 
@@ -52,7 +49,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const payload: ChangePasswordPayload = isRecord(parsedBody.body)
+  const payload: ChangePasswordPayload = isPlainObject(parsedBody.body)
     ? parsedBody.body
     : {};
 
@@ -137,20 +134,35 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   });
 
   if (updateError) {
+    const upstreamStatus = getAuthErrorStatus(updateError) ?? 500;
+    const errorCode = getAuthErrorCode(updateError);
+
     emitOperationalAlertOncePerWindow({
       attributes: {
-        errorCode: updateError.code ?? null,
+        errorCode: errorCode ?? null,
         reason: "update_failed",
-        status: updateError.status ?? null,
+        status: upstreamStatus,
       },
       event: "auth.password.change.update_failed",
       severity: "warning",
       windowMs: 60_000,
     });
     logger.error("password change update failed", {
-      errorCode: updateError.code,
-      status: updateError.status,
+      errorCode,
+      status: upstreamStatus,
     });
+
+    // Distinguish upstream service errors from validation failures
+    if (upstreamStatus >= 500 || upstreamStatus === 429) {
+      return NextResponse.json(
+        {
+          code: "AUTH_UPSTREAM_ERROR",
+          message: "Password update temporarily unavailable",
+        },
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json(
       { code: "UPDATE_FAILED", message: "Password update failed" },
       { status: 400 }

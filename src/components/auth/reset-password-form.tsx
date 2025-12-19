@@ -58,11 +58,17 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
   const [error, setError] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
   const emailFieldId = React.useId();
-  const basePath = (getClientEnv().NEXT_PUBLIC_BASE_PATH ?? "").trim();
-  const normalizedBasePath = basePath ? `/${basePath.replace(/^\/+|\/+$/g, "")}` : "";
-  const resetRequestPath = `${normalizedBasePath}/auth/password/reset-request`;
-  const loginPath = `${normalizedBasePath}/login`;
-  const supportPath = `${normalizedBasePath}/support`;
+
+  // Memoize path calculations since they depend only on static env config
+  const { resetRequestPath, loginPath, supportPath } = React.useMemo(() => {
+    const basePath = (getClientEnv().NEXT_PUBLIC_BASE_PATH ?? "").trim();
+    const normalizedBasePath = basePath ? `/${basePath.replace(/^\/+|\/+$/g, "")}` : "";
+    return {
+      loginPath: `${normalizedBasePath}/login`,
+      resetRequestPath: `${normalizedBasePath}/auth/password/reset-request`,
+      supportPath: `${normalizedBasePath}/support`,
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
