@@ -7,8 +7,11 @@ import "server-only";
 
 import { openai } from "@ai-sdk/openai";
 import { streamText } from "ai";
+import type { NextRequest } from "next/server";
 import { z } from "zod";
-import { withApiGuards } from "@/lib/api/factory";
+import { type RouteParamsContext, withApiGuards } from "@/lib/api/factory";
+import { errorResponse } from "@/lib/api/route-helpers";
+import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import {
   type ChatMessage,
   clampMaxTokens,
@@ -21,11 +24,11 @@ const STREAM_BODY_SCHEMA = z.strictObject({
   messages: z
     .array(
       z.strictObject({
-        content: z.string().max(4000),
+        content: z.string().max(2000),
         role: z.enum(["assistant", "system", "user"]),
       })
     )
-    .max(32)
+    .max(16)
     .default([]),
   model: z.enum(["gpt-4o", "gpt-4o-mini"]).default("gpt-4o"),
   prompt: z
@@ -46,8 +49,9 @@ export const maxDuration = 30;
  * @param routeContext - Route context from withApiGuards
  * @returns A Response implementing the UI message stream protocol (SSE).
  */
-export const POST = withApiGuards({
-  auth: false,
+const guardedPOST = withApiGuards({
+  auth: true,
+  degradedMode: "fail_closed",
   rateLimit: "ai:stream",
   schema: STREAM_BODY_SCHEMA,
   telemetry: "ai.stream",
@@ -96,3 +100,12 @@ export const POST = withApiGuards({
   // Return a UI Message Stream response suitable for AI Elements consumers
   return result.toUIMessageStreamResponse();
 });
+
+export const POST = async (req: NextRequest, routeContext: RouteParamsContext) => {
+  const enabled = getServerEnvVarWithFallback("ENABLE_AI_DEMO", "");
+  if (enabled !== "true") {
+    return errorResponse({ error: "not_found", reason: "Not found", status: 404 });
+  }
+
+  return await guardedPOST(req, routeContext);
+};

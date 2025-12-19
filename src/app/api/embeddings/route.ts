@@ -5,36 +5,24 @@
 import "server-only";
 
 import { openai } from "@ai-sdk/openai";
+import {
+  embeddingsRequestSchema,
+  type PersistableEmbeddingsProperty,
+  persistableEmbeddingsPropertySchema,
+} from "@schemas/embeddings";
 import { embed } from "ai";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { errorResponse, parseJsonBody } from "@/lib/api/route-helpers";
+import { errorResponse, parseJsonBody, validateSchema } from "@/lib/api/route-helpers";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { toPgvector } from "@/lib/rag/pgvector";
+import { isValidInternalKey } from "@/lib/security/internal-key";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import type { InsertTables } from "@/lib/supabase/database.types";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
 const MAX_INPUT_LENGTH = 8000;
-
-/** Request payload for embedding generation. */
-type EmbeddingRequest = {
-  text?: string;
-  property?: {
-    id?: string;
-    name?: string;
-    description?: string;
-    amenities?: string[] | string;
-    source?: string;
-  };
-};
-
-/** Property with required ID for persistence. */
-type PersistableProperty = Required<
-  Pick<NonNullable<EmbeddingRequest["property"]>, "id">
-> &
-  NonNullable<EmbeddingRequest["property"]>;
 
 /**
  * Normalizes source string to "hotel" or "vrbo".
@@ -77,7 +65,7 @@ function normalizeAmenities(amenities?: string[] | string): string | null {
  * @throws Error if database operation fails.
  */
 async function persistAccommodationEmbedding(
-  property: PersistableProperty,
+  property: PersistableEmbeddingsProperty,
   embedding: number[]
 ): Promise<void> {
   const supabase = createAdminSupabase();
@@ -108,27 +96,38 @@ async function persistAccommodationEmbedding(
  */
 export const POST = withApiGuards({
   auth: false,
+  degradedMode: "fail_closed",
   rateLimit: "embeddings",
   telemetry: "embeddings.generate",
 })(async (req: NextRequest) => {
   const logger = createServerLogger("embeddings.generate");
-  const internalKey = getServerEnvVarWithFallback("EMBEDDINGS_API_KEY", undefined);
-  if (internalKey) {
-    const provided = req.headers.get("x-internal-key");
-    if (provided !== internalKey) {
-      return errorResponse({
-        error: "unauthorized",
-        reason: "Authentication required",
-        status: 401,
-      });
-    }
+  const internalKey = getServerEnvVarWithFallback("EMBEDDINGS_API_KEY", "");
+  if (!internalKey) {
+    return errorResponse({
+      error: "embeddings_disabled",
+      reason: "Embeddings endpoint disabled",
+      status: 503,
+    });
+  }
+
+  const provided = req.headers.get("x-internal-key");
+  if (!isValidInternalKey(provided, internalKey)) {
+    return errorResponse({
+      error: "unauthorized",
+      reason: "Authentication required",
+      status: 401,
+    });
   }
 
   const parsed = await parseJsonBody(req);
   if ("error" in parsed) {
     return parsed.error;
   }
-  const body = parsed.body as EmbeddingRequest;
+  const validation = validateSchema(embeddingsRequestSchema, parsed.body);
+  if ("error" in validation) {
+    return validation.error;
+  }
+  const body = validation.data;
   const text =
     body.text ??
     (body.property
@@ -167,17 +166,17 @@ export const POST = withApiGuards({
   }
 
   let persisted = false;
-  if (body.property?.id) {
+  const persistablePropertyResult = body.property
+    ? persistableEmbeddingsPropertySchema.safeParse(body.property)
+    : null;
+  if (persistablePropertyResult?.success) {
     try {
-      await persistAccommodationEmbedding(
-        body.property as PersistableProperty,
-        embedding
-      );
+      await persistAccommodationEmbedding(persistablePropertyResult.data, embedding);
       persisted = true;
     } catch (persistError) {
       logger.error("persist_failed", {
         error: persistError instanceof Error ? persistError.message : "unknown_error",
-        propertyId: body.property.id,
+        propertyId: persistablePropertyResult.data.id,
       });
     }
   }

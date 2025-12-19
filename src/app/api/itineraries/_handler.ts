@@ -2,10 +2,13 @@
  * @fileoverview Dependency-injected handlers for itinerary CRUD routes.
  */
 
+import "server-only";
+
 import { itineraryItemCreateSchema } from "@schemas/trips";
 import { NextResponse } from "next/server";
 import { errorResponse, validateSchema } from "@/lib/api/route-helpers";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
+import { hashTelemetryIdentifier } from "@/lib/telemetry/identifiers";
 import type { ServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import { mapItineraryItemCreateToDbInsert } from "@/lib/trips/mappers";
@@ -19,11 +22,12 @@ export function handleListItineraryItems(
   deps: ItinerariesDeps,
   params: { userId: string; tripId?: number }
 ): Promise<Response> {
+  const userIdHash = hashTelemetryIdentifier(params.userId);
+
   return withTelemetrySpan(
     "itineraries.list.query",
-    { attributes: { userId: params.userId } },
+    { attributes: userIdHash ? { "user.id_hash": userIdHash } : {} },
     async (span) => {
-      span.setAttribute("itinerary.userId", params.userId);
       if (params.tripId !== undefined) {
         span.setAttribute("itinerary.tripId", params.tripId);
       }
@@ -44,7 +48,7 @@ export function handleListItineraryItems(
         deps.logger.error("itinerary_items_query_failed", {
           error: error.message,
           tripId: params.tripId,
-          userId: params.userId,
+          userIdHash: userIdHash ?? undefined,
         });
         return errorResponse({
           err: error,
@@ -69,13 +73,18 @@ export async function handleCreateItineraryItem(
   }
 
   const payload = validation.data;
+  const userIdHash = hashTelemetryIdentifier(params.userId);
 
   return await withTelemetrySpan(
     "itineraries.create.db",
-    { attributes: { tripId: payload.tripId, userId: params.userId } },
+    {
+      attributes: {
+        tripId: payload.tripId,
+        ...(userIdHash ? { "user.id_hash": userIdHash } : {}),
+      },
+    },
     async (span) => {
       span.setAttribute("itinerary.tripId", payload.tripId);
-      span.setAttribute("itinerary.userId", params.userId);
 
       const { error: tripError } = await deps.supabase
         .from("trips")
@@ -89,7 +98,7 @@ export async function handleCreateItineraryItem(
         if (tripError.code === "PGRST116") {
           deps.logger.warn("trip_not_found_for_user", {
             tripId: payload.tripId,
-            userId: params.userId,
+            userIdHash: userIdHash ?? undefined,
           });
           return errorResponse({
             error: "forbidden",
@@ -102,7 +111,7 @@ export async function handleCreateItineraryItem(
         deps.logger.error("trip_lookup_failed", {
           error: tripError.message,
           tripId: payload.tripId,
-          userId: params.userId,
+          userIdHash: userIdHash ?? undefined,
         });
         return errorResponse({
           err: tripError,
@@ -124,7 +133,7 @@ export async function handleCreateItineraryItem(
         deps.logger.error("itinerary_item_insert_failed", {
           error: error?.message ?? "Insert returned no data",
           tripId: payload.tripId,
-          userId: params.userId,
+          userIdHash: userIdHash ?? undefined,
         });
         return errorResponse({
           err: error ?? new Error("Insert returned no data"),
@@ -137,7 +146,7 @@ export async function handleCreateItineraryItem(
       deps.logger.info("itinerary_item_created", {
         itemId: data.id,
         tripId: payload.tripId,
-        userId: params.userId,
+        userIdHash: userIdHash ?? undefined,
       });
 
       return NextResponse.json(data, { status: 201 });

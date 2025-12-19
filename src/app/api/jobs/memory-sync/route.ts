@@ -12,6 +12,7 @@ import { tryReserveKey } from "@/lib/idempotency/redis";
 import { getQstashReceiver, verifyQstashRequest } from "@/lib/qstash/receiver";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
+import { hashTelemetryIdentifier } from "@/lib/telemetry/identifiers";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 /**
@@ -41,10 +42,11 @@ export async function POST(req: Request) {
 
         const verified = await verifyQstashRequest(req, receiver);
         if (!verified.ok) {
+          const pathname = new URL(req.url).pathname;
           span.addEvent("unauthorized_attempt", {
             hasSignature: verified.reason !== "missing_signature",
+            path: pathname,
             reason: verified.reason,
-            url: req.url,
           });
           return verified.response;
         }
@@ -68,11 +70,20 @@ export async function POST(req: Request) {
         const { idempotencyKey, payload } = validation.data;
         span.setAttribute("idempotency.key", idempotencyKey);
         span.setAttribute("sync.type", payload.syncType);
-        span.setAttribute("session.id", payload.sessionId);
-        span.setAttribute("user.id", payload.userId);
+        const sessionIdHash = hashTelemetryIdentifier(payload.sessionId);
+        if (sessionIdHash) {
+          span.setAttribute("session.id_hash", sessionIdHash);
+        }
+        const userIdHash = hashTelemetryIdentifier(payload.userId);
+        if (userIdHash) {
+          span.setAttribute("user.id_hash", userIdHash);
+        }
 
         // De-duplicate at worker level to avoid double-processing on retries
-        const unique = await tryReserveKey(`memory-sync:${idempotencyKey}`, 600); // 10min TTL
+        const unique = await tryReserveKey(`memory-sync:${idempotencyKey}`, {
+          degradedMode: "fail_closed",
+          ttlSeconds: 600, // 10min TTL
+        });
         if (!unique) {
           span.setAttribute("job.duplicate", true);
           return NextResponse.json({ duplicate: true, ok: true });
@@ -121,7 +132,7 @@ async function processMemorySync(payload: {
     .single();
 
   if (sessionError || !session) {
-    throw new Error(`session_not_found_or_unauthorized: ${payload.sessionId}`);
+    throw new Error("session_not_found_or_unauthorized");
   }
 
   let memoriesStored = 0;

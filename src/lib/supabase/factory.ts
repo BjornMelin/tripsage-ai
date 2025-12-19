@@ -13,6 +13,7 @@ import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension
 import { getClientEnv } from "@/lib/env/client";
 import { getServerEnv } from "@/lib/env/server";
 import { TELEMETRY_SERVICE_NAME } from "@/lib/telemetry/constants";
+import { hashTelemetryIdentifier } from "@/lib/telemetry/identifiers";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import {
   recordErrorOnSpan,
@@ -77,16 +78,6 @@ function warnCookieAdapterFailureOnce(
     nodeEnv: process.env.NODE_ENV,
     operation,
   });
-}
-
-/**
- * Redacts sensitive user information from telemetry logs.
- * @param userId - User ID to redact
- * @returns Redacted user ID string
- * @internal
- */
-function redactUserId(userId: string | undefined): string {
-  return userId ? "[REDACTED]" : "[NONE]";
 }
 
 /**
@@ -268,8 +259,12 @@ export async function getCurrentUser(
     async (span) => {
       const result = await fetchUser();
 
-      // Redact user ID in telemetry for privacy
-      span.setAttribute("user.id", redactUserId(result.user?.id));
+      const userIdHash = result.user?.id
+        ? hashTelemetryIdentifier(result.user.id)
+        : null;
+      if (userIdHash) {
+        span.setAttribute("user.id_hash", userIdHash);
+      }
       span.setAttribute("user.authenticated", !!result.user);
 
       // If there's an error, record it but don't throw (we return it in the result)

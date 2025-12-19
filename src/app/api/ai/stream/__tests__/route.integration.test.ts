@@ -1,6 +1,11 @@
 /** @vitest-environment node */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  setRateLimitFactoryForTests,
+  setSupabaseFactoryForTests,
+} from "@/lib/api/factory";
+import { __resetServerEnvCacheForTest } from "@/lib/env/server";
 import { createRouteParamsContext, getMockCookiesForTest } from "@/test/helpers/route";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
@@ -91,6 +96,63 @@ const createMockStreamResult = (
 describe("ai stream route", () => {
   beforeEach(() => {
     MOCK_STREAM_TEXT.mockClear();
+    vi.stubEnv("ENABLE_AI_DEMO", "true");
+    __resetServerEnvCacheForTest();
+    setRateLimitFactoryForTests(async () => ({
+      limit: 40,
+      remaining: 39,
+      reset: Date.now() + 60_000,
+      success: true,
+    }));
+    setSupabaseFactoryForTests(async () =>
+      unsafeCast({
+        auth: {
+          getUser: async () => ({ data: { user: { id: "user-1" } }, error: null }),
+        },
+      })
+    );
+  });
+
+  afterEach(() => {
+    setRateLimitFactoryForTests(null);
+    setSupabaseFactoryForTests(null);
+    vi.unstubAllEnvs();
+    __resetServerEnvCacheForTest();
+  });
+
+  it("returns 404 when demo route is disabled", async () => {
+    vi.stubEnv("ENABLE_AI_DEMO", "");
+    __resetServerEnvCacheForTest();
+
+    const request = createMockNextRequest({
+      body: { prompt: "Hello world" },
+      method: "POST",
+      url: "http://localhost",
+    });
+
+    const response = await POST(request, createRouteParamsContext());
+
+    expect(response.status).toBe(404);
+    expect(MOCK_STREAM_TEXT).not.toHaveBeenCalled();
+  });
+
+  it("returns 401 when unauthenticated", async () => {
+    setSupabaseFactoryForTests(async () =>
+      unsafeCast({
+        auth: { getUser: async () => ({ data: { user: null }, error: null }) },
+      })
+    );
+
+    const request = createMockNextRequest({
+      body: { prompt: "Hello world" },
+      method: "POST",
+      url: "http://localhost",
+    });
+
+    const response = await POST(request, createRouteParamsContext());
+
+    expect(response.status).toBe(401);
+    expect(MOCK_STREAM_TEXT).not.toHaveBeenCalled();
   });
 
   it("returns an SSE response on successful request", async () => {
@@ -304,6 +366,20 @@ describe("ai stream route", () => {
     expect(response.status).toBe(500);
     const body = await response.json();
     expect(body.error).toBe("internal");
+  });
+
+  it("fails closed when rate limiting infrastructure is degraded", async () => {
+    setRateLimitFactoryForTests(() => Promise.reject(new Error("redis_down")));
+
+    const request = createMockNextRequest({
+      body: { prompt: "Hello world" },
+      method: "POST",
+      url: "http://localhost",
+    });
+
+    const response = await POST(request, createRouteParamsContext());
+    expect(response.status).toBe(503);
+    expect(MOCK_STREAM_TEXT).not.toHaveBeenCalled();
   });
 
   it("handles prompt content without heavy token calc", async () => {

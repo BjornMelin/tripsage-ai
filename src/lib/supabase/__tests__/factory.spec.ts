@@ -1,5 +1,6 @@
 /** @vitest-environment node */
 
+import { createHmac } from "node:crypto";
 import type { CookieMethodsServer } from "@supabase/ssr";
 import type { User } from "@supabase/supabase-js";
 import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
@@ -48,7 +49,12 @@ vi.mock("@/lib/env/server", () => ({
   getServerEnv: vi.fn(() => ({
     NEXT_PUBLIC_SUPABASE_ANON_KEY: "test-anon-key",
     NEXT_PUBLIC_SUPABASE_URL: "https://test.supabase.co",
+    TELEMETRY_HASH_SECRET: "0123456789abcdef0123456789abcdef",
   })),
+  getServerEnvVarWithFallback: vi.fn((key: string, fallback: string) => {
+    if (key === "TELEMETRY_HASH_SECRET") return "0123456789abcdef0123456789abcdef";
+    return fallback;
+  }),
 }));
 
 vi.mock("@/lib/env/client", () => ({
@@ -435,7 +441,7 @@ describe("Supabase Factory", () => {
       );
     });
 
-    it("should redact user ID in telemetry", async () => {
+    it("should hash user ID in telemetry when secret configured", async () => {
       const mockUser: User = {
         app_metadata: {},
         aud: "authenticated",
@@ -471,7 +477,17 @@ describe("Supabase Factory", () => {
 
       await callbackFn(mockSpan);
 
-      expect(mockSpan.setAttribute).toHaveBeenCalledWith("user.id", "[REDACTED]");
+      const expectedUserIdHash = createHmac(
+        "sha256",
+        "0123456789abcdef0123456789abcdef"
+      )
+        .update("user-123", "utf8")
+        .digest("hex");
+
+      expect(mockSpan.setAttribute).toHaveBeenCalledWith(
+        "user.id_hash",
+        expectedUserIdHash
+      );
       expect(mockSpan.setAttribute).toHaveBeenCalledWith("user.authenticated", true);
     });
 
