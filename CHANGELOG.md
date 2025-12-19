@@ -1,3 +1,20 @@
+## [1.20.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.19.0...v1.20.0) (2025-12-19)
+
+### Features
+
+* **ai:** refine embeddings and memory flows ([cf6333f](https://github.com/BjornMelin/tripsage-ai/commit/cf6333f8ac15a32b6fb47ccaba7575906d0a2502))
+* **api:** tighten telemetry and rate-limiting ([49a4dd9](https://github.com/BjornMelin/tripsage-ai/commit/49a4dd9d1d7541b01fec907327e2aeedfa670f76))
+* **auth:** harden auth flows and sessions ([57818e5](https://github.com/BjornMelin/tripsage-ai/commit/57818e5df6a3b997b4b9b2cc94dc40f016ca3ff7))
+* **utils:** add plain object guard ([036ccff](https://github.com/BjornMelin/tripsage-ai/commit/036ccff040a822b7b421545f0341a7d86f7ae75f))
+* **webhooks:** harden hooks and idempotency ([d57ddeb](https://github.com/BjornMelin/tripsage-ai/commit/d57ddeb59e5e2f47f1424617f433fe3b5cd58aad))
+
+### Bug Fixes
+
+* **pr-review:** address remaining review comments for security hardening ([894ec86](https://github.com/BjornMelin/tripsage-ai/commit/894ec86b0cbd736cb8c458727b45331aba6e0a7d))
+* **review:** address all remaining PR [#575](https://github.com/BjornMelin/tripsage-ai/issues/575) review comments ([8785d4e](https://github.com/BjornMelin/tripsage-ai/commit/8785d4ec3818db5b6812372e2d2fd6ea755fbe9e))
+* **review:** resolve PR [#575](https://github.com/BjornMelin/tripsage-ai/issues/575) review comments ([2cbeae2](https://github.com/BjornMelin/tripsage-ai/commit/2cbeae2c2145cf2370badab590c7506a91762dbc))
+* **test:** use mockClear for mockGetAdminSupabase ([146f0b3](https://github.com/BjornMelin/tripsage-ai/commit/146f0b3c7df1ee84f38c75ff4fddd174acf2aeb2))
+
 ## [1.19.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.18.0...v1.19.0) (2025-12-17)
 
 ### Features
