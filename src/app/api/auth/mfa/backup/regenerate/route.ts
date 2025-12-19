@@ -13,11 +13,8 @@ import {
   getClientIpFromHeaders,
   unauthorizedResponse,
 } from "@/lib/api/route-helpers";
-import {
-  MfaRequiredError,
-  regenerateBackupCodes,
-  requireAal2,
-} from "@/lib/security/mfa";
+import { isMfaRequiredError } from "@/lib/auth/supabase-errors";
+import { regenerateBackupCodes, requireAal2 } from "@/lib/security/mfa";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 
 /** The POST handler for the MFA backup code regenerate API. */
@@ -41,10 +38,7 @@ export const POST = withApiGuards({
     });
     return NextResponse.json({ data: { backupCodes: result.codes } });
   } catch (error) {
-    if (
-      error instanceof MfaRequiredError ||
-      (error as { code?: string } | null)?.code === "MFA_REQUIRED"
-    ) {
+    if (isMfaRequiredError(error)) {
       return forbiddenResponse("MFA verification required to regenerate backup codes");
     }
     return errorResponse({

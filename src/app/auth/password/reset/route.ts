@@ -7,49 +7,78 @@
 
 import "server-only";
 
+import { passwordResetPayloadSchema } from "@schemas/auth";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { parseJsonBody } from "@/lib/api/route-helpers";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { emitOperationalAlertOncePerWindow } from "@/lib/telemetry/degraded-mode";
+import { createServerLogger } from "@/lib/telemetry/logger";
 
-interface ResetPayload {
-  newPassword?: unknown;
-  token?: unknown;
-}
+const MAX_BODY_BYTES = 16 * 1024;
+const OTP_TYPE: EmailOtpType = "recovery";
+const logger = createServerLogger("auth.password.reset");
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  let payload: ResetPayload;
-  try {
-    payload = (await request.json()) as ResetPayload;
-  } catch {
+  const parsedBody = await parseJsonBody(request, { maxBytes: MAX_BODY_BYTES });
+  if ("error" in parsedBody) {
+    if (parsedBody.error.status === 413) {
+      return NextResponse.json(
+        { code: "PAYLOAD_TOO_LARGE", message: "Request body exceeds limit" },
+        { status: 413 }
+      );
+    }
     return NextResponse.json(
       { code: "BAD_REQUEST", message: "Malformed JSON" },
       { status: 400 }
     );
   }
 
-  const token = typeof payload.token === "string" ? payload.token : "";
-  const newPassword =
-    typeof payload.newPassword === "string" ? payload.newPassword : "";
-
-  if (!token || !newPassword) {
+  const payload = passwordResetPayloadSchema.safeParse(parsedBody.body);
+  if (!payload.success) {
+    const errors = payload.error.issues.map(({ code, message, path }) => ({
+      code,
+      message,
+      path,
+    }));
     return NextResponse.json(
-      { code: "VALIDATION_ERROR", message: "Token and new password are required" },
+      {
+        code: "VALIDATION_ERROR",
+        errors,
+        message: "Invalid password reset payload",
+      },
       { status: 400 }
     );
   }
+
+  const { token, newPassword } = payload.data;
 
   const supabase = await createServerSupabase();
 
   // Verify the password recovery token.
   const { error: verifyError } = await supabase.auth.verifyOtp({
     token_hash: token,
-    type: "recovery" as EmailOtpType,
+    type: OTP_TYPE,
   });
 
   if (verifyError) {
+    emitOperationalAlertOncePerWindow({
+      attributes: {
+        errorCode: verifyError.code ?? null,
+        reason: "verify_otp_failed",
+        status: verifyError.status ?? null,
+      },
+      event: "auth.password.reset.verify_failed",
+      severity: "warning",
+      windowMs: 60_000,
+    });
+    logger.warn("password reset token verification failed", {
+      errorCode: verifyError.code,
+      status: verifyError.status,
+    });
     return NextResponse.json(
-      { code: "INVALID_TOKEN", message: verifyError.message },
+      { code: "INVALID_TOKEN", message: "Password reset failed" },
       { status: 400 }
     );
   }
@@ -59,8 +88,22 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   });
 
   if (updateError) {
+    emitOperationalAlertOncePerWindow({
+      attributes: {
+        errorCode: updateError.code ?? null,
+        reason: "update_failed",
+        status: updateError.status ?? null,
+      },
+      event: "auth.password.reset.update_failed",
+      severity: "warning",
+      windowMs: 60_000,
+    });
+    logger.error("password reset update failed", {
+      errorCode: updateError.code,
+      status: updateError.status,
+    });
     return NextResponse.json(
-      { code: "UPDATE_FAILED", message: updateError.message },
+      { code: "UPDATE_FAILED", message: "Password reset failed" },
       { status: 400 }
     );
   }

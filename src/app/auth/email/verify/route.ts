@@ -11,22 +11,38 @@ import "server-only";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { parseJsonBody } from "@/lib/api/route-helpers";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { emitOperationalAlertOncePerWindow } from "@/lib/telemetry/degraded-mode";
+import { createServerLogger } from "@/lib/telemetry/logger";
 
 interface VerifyPayload {
   token?: unknown;
 }
 
+const MAX_BODY_BYTES = 16 * 1024;
+const logger = createServerLogger("auth.email.verify");
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  let payload: VerifyPayload;
-  try {
-    payload = (await request.json()) as VerifyPayload;
-  } catch {
+  const parsed = await parseJsonBody(request, { maxBytes: MAX_BODY_BYTES });
+  if ("error" in parsed) {
+    if (parsed.error.status === 413) {
+      return NextResponse.json(
+        { code: "PAYLOAD_TOO_LARGE", message: "Request body exceeds limit" },
+        { status: 413 }
+      );
+    }
     return NextResponse.json(
       { code: "BAD_REQUEST", message: "Malformed JSON" },
       { status: 400 }
     );
   }
+
+  const payload: VerifyPayload = isRecord(parsed.body) ? parsed.body : {};
 
   const token = typeof payload.token === "string" ? payload.token : "";
   if (!token) {
@@ -43,8 +59,22 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   });
 
   if (error) {
+    emitOperationalAlertOncePerWindow({
+      attributes: {
+        errorCode: error.code ?? null,
+        reason: "verify_otp_failed",
+        status: error.status ?? null,
+      },
+      event: "auth.email.verify.failed",
+      severity: "warning",
+      windowMs: 60_000,
+    });
+    logger.warn("email verification failed", {
+      errorCode: error.code,
+      status: error.status,
+    });
     return NextResponse.json(
-      { code: "VERIFICATION_FAILED", message: error.message },
+      { code: "VERIFICATION_FAILED", message: "Verification failed" },
       { status: 400 }
     );
   }

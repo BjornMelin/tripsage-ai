@@ -1,9 +1,13 @@
 /**
  * @fileoverview Security session handlers for terminating sessions.
  */
+
+import "server-only";
+
 import { NextResponse } from "next/server";
 import { errorResponse, notFoundResponse } from "@/lib/api/route-helpers";
 import type { TypedAdminSupabase } from "@/lib/supabase/admin";
+import { hashTelemetryIdentifier } from "@/lib/telemetry/identifiers";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
@@ -21,10 +25,17 @@ export async function terminateSessionHandler(params: {
   userId: string;
 }): Promise<NextResponse> {
   const { adminSupabase, sessionId, userId } = params;
+  const sessionIdHash = hashTelemetryIdentifier(sessionId);
+  const userIdHash = hashTelemetryIdentifier(userId);
 
   return await withTelemetrySpan(
     "security.sessions.terminate",
-    { attributes: { sessionId, userId } },
+    {
+      attributes: {
+        ...(sessionIdHash ? { "session.id_hash": sessionIdHash } : {}),
+        ...(userIdHash ? { "user.id_hash": userIdHash } : {}),
+      },
+    },
     async (span) => {
       const sessionQuery = adminSupabase
         .schema("auth")
@@ -39,8 +50,8 @@ export async function terminateSessionHandler(params: {
         span.setAttribute("security.sessions.terminate.error", true);
         logger.error("session_lookup_failed", {
           error: fetchError.message,
-          sessionId,
-          userId,
+          sessionIdHash: sessionIdHash ?? undefined,
+          userIdHash: userIdHash ?? undefined,
         });
         return errorResponse({
           err: fetchError,
@@ -65,8 +76,8 @@ export async function terminateSessionHandler(params: {
         span.setAttribute("security.sessions.terminate.error", true);
         logger.error("session_delete_failed", {
           error: deleteResult.error.message,
-          sessionId,
-          userId,
+          sessionIdHash: sessionIdHash ?? undefined,
+          userIdHash: userIdHash ?? undefined,
         });
         return errorResponse({
           err: deleteResult.error,

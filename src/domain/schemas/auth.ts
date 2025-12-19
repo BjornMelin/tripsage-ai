@@ -81,6 +81,18 @@ export type ConfirmResetPasswordFormData = z.infer<
 >;
 
 /**
+ * Zod schema for password reset payloads.
+ * Validates the reset token and new password for API requests.
+ */
+export const passwordResetPayloadSchema = z.strictObject({
+  newPassword: PASSWORD_SCHEMA,
+  token: z.string().min(1, { error: "Reset token is required" }),
+});
+
+/** TypeScript type for password reset payloads. */
+export type PasswordResetPayload = z.infer<typeof passwordResetPayloadSchema>;
+
+/**
  * Zod schema for password change form validation.
  * Validates current password, new password, and confirmation with business rules.
  */
