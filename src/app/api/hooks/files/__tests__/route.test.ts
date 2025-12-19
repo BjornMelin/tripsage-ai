@@ -90,10 +90,14 @@ vi.mock("@/lib/telemetry/span", () => ({
 }));
 
 // Mock rate limiter
-vi.mock("@/lib/webhooks/rate-limit", () => ({
-  checkWebhookRateLimit: vi.fn(async () => ({ success: true })),
-  createRateLimitHeaders: vi.fn(() => ({})),
-}));
+vi.mock("@/lib/webhooks/rate-limit", async (importOriginal) => {
+  const original = await importOriginal<typeof import("@/lib/webhooks/rate-limit")>();
+  return {
+    ...original,
+    checkWebhookRateLimit: vi.fn(async () => ({ success: true })),
+    createRateLimitHeaders: vi.fn(() => ({})),
+  };
+});
 
 function makeRequest(body: unknown, headers: Record<string, string> = {}) {
   return createMockNextRequest({

@@ -8,6 +8,7 @@
 import "server-only";
 
 import { Ratelimit } from "@upstash/ratelimit";
+import { NextResponse } from "next/server";
 import { getClientIpFromHeaders } from "@/lib/http/ip";
 import { createRateLimitHeaders as createStandardRateLimitHeaders } from "@/lib/ratelimit/headers";
 import { hashIdentifier } from "@/lib/ratelimit/identifier";
@@ -182,4 +183,46 @@ export function createRateLimitHeaders(
   result: RateLimitResult
 ): Record<string, string> {
   return createStandardRateLimitHeaders(result);
+}
+
+/**
+ * Response payload structure for webhook responses.
+ */
+interface WebhookResponsePayload {
+  /** Response body (will be JSON-serialized) */
+  body: Record<string, unknown>;
+  /** HTTP status code (defaults to 200) */
+  status?: number;
+}
+
+/**
+ * Create a NextResponse with rate limit headers attached.
+ *
+ * This helper combines response creation and header attachment in a single call,
+ * reducing boilerplate at call sites.
+ *
+ * @param rateLimitResult - Rate limit check result for headers
+ * @param payload - Response body and optional status code
+ * @returns NextResponse with rate limit headers attached
+ *
+ * @example
+ * ```ts
+ * return createWebhookResponse(rateLimitResult, {
+ *   body: { code: "RATE_LIMITED", error: "rate_limit_exceeded" },
+ *   status: 429,
+ * });
+ * ```
+ */
+export function createWebhookResponse(
+  rateLimitResult: RateLimitResult,
+  payload: WebhookResponsePayload
+): NextResponse {
+  const response = NextResponse.json(payload.body, {
+    status: payload.status ?? 200,
+  });
+  const headers = createRateLimitHeaders(rateLimitResult);
+  for (const [key, value] of Object.entries(headers)) {
+    response.headers.set(key, value);
+  }
+  return response;
 }

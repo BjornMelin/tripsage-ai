@@ -66,10 +66,14 @@ vi.mock("@/lib/idempotency/redis", () => ({
   tryReserveKey: tryReserveKeyMock,
 }));
 
-vi.mock("../rate-limit", () => ({
-  checkWebhookRateLimit: checkRateLimitMock,
-  createRateLimitHeaders: () => ({}),
-}));
+vi.mock("../rate-limit", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../rate-limit")>();
+  return {
+    ...original,
+    checkWebhookRateLimit: checkRateLimitMock,
+    createRateLimitHeaders: () => ({}),
+  };
+});
 
 vi.mock("@/lib/telemetry/span", () => ({
   withTelemetrySpan: async (

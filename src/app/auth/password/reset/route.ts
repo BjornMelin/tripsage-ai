@@ -77,8 +77,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       errorCode: verifyError.code,
       status: verifyError.status,
     });
+    // Use uniform error code to avoid leaking which step failed
     return NextResponse.json(
-      { code: "INVALID_TOKEN", message: "Password reset failed" },
+      { code: "RESET_FAILED", message: "Password reset failed" },
       { status: 400 }
     );
   }
@@ -102,8 +103,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       errorCode: updateError.code,
       status: updateError.status,
     });
+    // Use uniform error code to avoid leaking which step failed
     return NextResponse.json(
-      { code: "UPDATE_FAILED", message: "Password reset failed" },
+      { code: "RESET_FAILED", message: "Password reset failed" },
       { status: 400 }
     );
   }

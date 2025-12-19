@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import React from "react";
+import { z } from "zod";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +31,12 @@ import { Label } from "@/components/ui/label";
 import { getClientEnv } from "@/lib/env/client";
 import { cn } from "@/lib/utils";
 import { statusVariants } from "@/lib/variants/status";
+
+/** Schema for validating password reset response payload. */
+const ResetResponseSchema = z.looseObject({
+  error: z.string().optional(),
+  message: z.string().optional(),
+});
 
 /**
  * Props for the ResetPasswordForm component.
@@ -84,10 +91,18 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
         headers: { "Content-Type": "application/json" },
         method: "POST",
       });
-      const data = (await response.json().catch(() => ({}))) as {
-        error?: string;
-        message?: string;
-      };
+      // Parse and validate response with Zod for runtime guarantees
+      const rawData = await response.json().catch(() => ({}));
+      const parseResult = ResetResponseSchema.safeParse(rawData);
+      const data = parseResult.success
+        ? parseResult.data
+        : { error: undefined, message: undefined };
+      if (!parseResult.success && process.env.NODE_ENV === "development") {
+        console.warn(
+          "Reset password response validation failed:",
+          parseResult.error.issues
+        );
+      }
       if (!response.ok) {
         setError(data.message ?? data.error ?? "Failed to send reset email");
         setIsLoading(false);

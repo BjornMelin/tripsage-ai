@@ -4,7 +4,7 @@
 
 import "server-only";
 
-import { type NextRequest, NextResponse } from "next/server";
+import type { NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 import {
   IdempotencyServiceUnavailableError,
@@ -19,7 +19,7 @@ import {
   WebhookValidationError,
 } from "./errors";
 import { buildEventKey, parseAndVerify, type WebhookPayload } from "./payload";
-import { checkWebhookRateLimit, createRateLimitHeaders } from "./rate-limit";
+import { checkWebhookRateLimit, createWebhookResponse } from "./rate-limit";
 
 function normalizeWebhookError(error: unknown): WebhookError {
   if (error instanceof WebhookError) return error;
@@ -155,30 +155,24 @@ export function createWebhookHandler<T extends WebhookHandlerResult>(
       async (span) => {
         // 1. Rate limiting
         const rateLimitResult = await checkWebhookRateLimit(req);
-        const attachRateLimitHeaders = (response: NextResponse) => {
-          const headers = createRateLimitHeaders(rateLimitResult);
-          for (const [key, value] of Object.entries(headers)) {
-            response.headers.set(key, value);
-          }
-          return response;
-        };
+
+        // Helper to create responses with rate limit headers attached
+        const withRateLimitHeaders = (body: Record<string, unknown>, status?: number) =>
+          createWebhookResponse(rateLimitResult, { body, status });
+
         if (!rateLimitResult.success) {
           if (rateLimitResult.reason === "limiter_unavailable") {
             span.setAttribute("webhook.rate_limit_unavailable", true);
-            return attachRateLimitHeaders(
-              NextResponse.json(
-                { code: "SERVICE_UNAVAILABLE", error: "internal_error" },
-                { status: 503 }
-              )
+            return withRateLimitHeaders(
+              { code: "SERVICE_UNAVAILABLE", error: "internal_error" },
+              503
             );
           }
 
           span.setAttribute("webhook.rate_limited", true);
-          return attachRateLimitHeaders(
-            NextResponse.json(
-              { code: "RATE_LIMITED", error: "rate_limit_exceeded" },
-              { status: 429 }
-            )
+          return withRateLimitHeaders(
+            { code: "RATE_LIMITED", error: "rate_limit_exceeded" },
+            429
           );
         }
 
@@ -193,11 +187,9 @@ export function createWebhookHandler<T extends WebhookHandlerResult>(
             : 0;
         if (contentLength > maxBodySize) {
           span.setAttribute("webhook.payload_too_large", true);
-          return attachRateLimitHeaders(
-            NextResponse.json(
-              { code: "VALIDATION_ERROR", error: "payload_too_large" },
-              { status: 413 }
-            )
+          return withRateLimitHeaders(
+            { code: "VALIDATION_ERROR", error: "payload_too_large" },
+            413
           );
         }
 
@@ -206,11 +198,9 @@ export function createWebhookHandler<T extends WebhookHandlerResult>(
         if (!verification.ok) {
           if (verification.reason === "payload_too_large") {
             span.setAttribute("webhook.payload_too_large", true);
-            return attachRateLimitHeaders(
-              NextResponse.json(
-                { code: "VALIDATION_ERROR", error: "payload_too_large" },
-                { status: 413 }
-              )
+            return withRateLimitHeaders(
+              { code: "VALIDATION_ERROR", error: "payload_too_large" },
+              413
             );
           }
           if (
@@ -218,11 +208,9 @@ export function createWebhookHandler<T extends WebhookHandlerResult>(
             verification.reason === "invalid_payload_shape"
           ) {
             span.setAttribute("webhook.validation_error", true);
-            return attachRateLimitHeaders(
-              NextResponse.json(
-                { code: "VALIDATION_ERROR", error: "invalid_request" },
-                { status: 400 }
-              )
+            return withRateLimitHeaders(
+              { code: "VALIDATION_ERROR", error: "invalid_request" },
+              400
             );
           }
           if (
@@ -232,30 +220,24 @@ export function createWebhookHandler<T extends WebhookHandlerResult>(
             span.setAttribute("webhook.error", true);
             span.setAttribute("webhook.error_code", "SERVICE_UNAVAILABLE");
             span.setAttribute("webhook.error_status", 503);
-            return attachRateLimitHeaders(
-              NextResponse.json(
-                { code: "SERVICE_UNAVAILABLE", error: "internal_error" },
-                { status: 503 }
-              )
+            return withRateLimitHeaders(
+              { code: "SERVICE_UNAVAILABLE", error: "internal_error" },
+              503
             );
           }
           span.setAttribute("webhook.unauthorized", true);
-          return attachRateLimitHeaders(
-            NextResponse.json(
-              { code: "UNAUTHORIZED", error: "invalid_signature" },
-              { status: 401 }
-            )
+          return withRateLimitHeaders(
+            { code: "UNAUTHORIZED", error: "invalid_signature" },
+            401
           );
         }
 
         const payload = verification.payload;
         if (!payload) {
           span.setAttribute("webhook.unauthorized", true);
-          return attachRateLimitHeaders(
-            NextResponse.json(
-              { code: "UNAUTHORIZED", error: "invalid_signature" },
-              { status: 401 }
-            )
+          return withRateLimitHeaders(
+            { code: "UNAUTHORIZED", error: "invalid_signature" },
+            401
           );
         }
         span.setAttribute("webhook.table", payload.table);
@@ -275,9 +257,7 @@ export function createWebhookHandler<T extends WebhookHandlerResult>(
             });
             if (!unique) {
               span.setAttribute("webhook.duplicate", true);
-              return attachRateLimitHeaders(
-                NextResponse.json({ duplicate: true, ok: true })
-              );
+              return withRateLimitHeaders({ duplicate: true, ok: true });
             }
           }
 
@@ -286,13 +266,11 @@ export function createWebhookHandler<T extends WebhookHandlerResult>(
           if (tableFilter && payload.table !== tableFilter) {
             span.setAttribute("webhook.skipped", true);
             span.setAttribute("webhook.skip_reason", "table_mismatch");
-            return attachRateLimitHeaders(
-              NextResponse.json({ ok: true, skipped: true })
-            );
+            return withRateLimitHeaders({ ok: true, skipped: true });
           }
 
           const result = await handle(payload, eventKey, span, req);
-          return attachRateLimitHeaders(NextResponse.json({ ok: true, ...result }));
+          return withRateLimitHeaders({ ok: true, ...result });
         } catch (error) {
           const exception =
             error instanceof Error
@@ -309,19 +287,15 @@ export function createWebhookHandler<T extends WebhookHandlerResult>(
           }
 
           if (webhookError instanceof WebhookDuplicateError) {
-            return attachRateLimitHeaders(
-              NextResponse.json({ duplicate: true, ok: true })
-            );
+            return withRateLimitHeaders({ duplicate: true, ok: true });
           }
 
-          const response = attachRateLimitHeaders(
-            NextResponse.json(
-              {
-                code: webhookError.code,
-                error: getSafeErrorMessage(webhookError.code, webhookError.status),
-              },
-              { status: webhookError.status }
-            )
+          const response = withRateLimitHeaders(
+            {
+              code: webhookError.code,
+              error: getSafeErrorMessage(webhookError.code, webhookError.status),
+            },
+            webhookError.status
           );
 
           if (webhookError.retryAfterSeconds != null) {

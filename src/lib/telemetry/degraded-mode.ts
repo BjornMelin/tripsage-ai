@@ -6,18 +6,13 @@ import "server-only";
 
 import type { OperationalAlertOptions } from "@/lib/telemetry/alerts";
 import { emitOperationalAlert } from "@/lib/telemetry/alerts";
+import { isPlainObject } from "@/lib/utils/type-guards";
 
 const lastEmittedAtByKey = new Map<string, number>();
 const MAX_DEDUPE_ENTRY_AGE_MS = 24 * 60 * 60 * 1000; // 24h
 const CLEANUP_INTERVAL_MS = 10 * 60 * 1000; // 10m
 const CLEANUP_SIZE_THRESHOLD = 1000;
 let lastCleanupAt = 0;
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  if (typeof value !== "object" || value === null) return false;
-  const proto = Object.getPrototypeOf(value);
-  return proto === Object.prototype || proto === null;
-}
 
 function normalizeForStableJson(value: unknown): unknown {
   if (value === null) return null;

@@ -51,12 +51,16 @@ describe("warnRedisUnavailable", () => {
     expect(START_ACTIVE_SPAN).toHaveBeenCalledTimes(1);
     expect(START_ACTIVE_SPAN).toHaveBeenCalledWith(
       "redis.unavailable",
-      { attributes: { feature: "cache.tags" } },
+      { attributes: { "error.name": "RedisUnavailable", feature: "cache.tags" } },
       expect.any(Function)
     );
     expect(EMIT_ALERT).toHaveBeenCalledTimes(1);
     expect(EMIT_ALERT).toHaveBeenCalledWith("redis.unavailable", {
-      attributes: { feature: "cache.tags" },
+      attributes: {
+        errorMessage: "Redis client not configured",
+        errorName: "RedisUnavailable",
+        feature: "cache.tags",
+      },
     });
   });
 
@@ -66,8 +70,35 @@ describe("warnRedisUnavailable", () => {
 
     expect(EMIT_ALERT).toHaveBeenCalledTimes(2);
     expect(EMIT_ALERT.mock.calls.map((call) => call[1])).toEqual([
-      { attributes: { feature: "cache.tags" } },
-      { attributes: { feature: "cache.lock" } },
+      {
+        attributes: {
+          errorMessage: "Redis client not configured",
+          errorName: "RedisUnavailable",
+          feature: "cache.tags",
+        },
+      },
+      {
+        attributes: {
+          errorMessage: "Redis client not configured",
+          errorName: "RedisUnavailable",
+          feature: "cache.lock",
+        },
+      },
     ]);
+  });
+
+  it("includes custom error details when provided", () => {
+    warnRedisUnavailable("cache.custom", {
+      errorMessage: "Connection refused",
+      errorName: "ConnectionError",
+    });
+
+    expect(EMIT_ALERT).toHaveBeenCalledWith("redis.unavailable", {
+      attributes: {
+        errorMessage: "Connection refused",
+        errorName: "ConnectionError",
+        feature: "cache.custom",
+      },
+    });
   });
 });

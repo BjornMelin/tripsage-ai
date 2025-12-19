@@ -49,6 +49,8 @@ export const maxDuration = 30;
  * @param routeContext - Route context from withApiGuards
  * @returns A Response implementing the UI message stream protocol (SSE).
  */
+// auth: true required to identify the user making streaming requests.
+// Compare with /api/telemetry/ai-demo which uses internal-key auth for backend telemetry.
 const guardedPOST = withApiGuards({
   auth: true,
   degradedMode: "fail_closed",
