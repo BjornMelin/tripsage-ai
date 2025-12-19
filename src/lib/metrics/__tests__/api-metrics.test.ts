@@ -52,7 +52,6 @@ describe("api-metrics", () => {
         endpoint: "/api/test",
         method: "GET",
         statusCode: 200,
-        userId: "user-123",
       });
 
       // Verify Supabase insert was called
@@ -63,7 +62,7 @@ describe("api-metrics", () => {
           endpoint: "/api/test",
           method: "GET",
           status_code: 200,
-          user_id: "user-123",
+          user_id: null,
         })
       );
 

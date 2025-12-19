@@ -11,6 +11,11 @@
 
 import { type NextRequest, NextResponse } from "next/server";
 import type { z } from "zod";
+import {
+  PayloadTooLargeError,
+  RequestBodyAlreadyReadError,
+  readRequestBodyBytesWithLimit,
+} from "@/lib/http/body";
 import { getClientIpFromHeaders as getClientIpFromHeaderValues } from "@/lib/http/ip";
 import {
   getTrustedRateLimitIdentifierFromHeaders,
@@ -276,12 +281,35 @@ export function errorResponse({
  * ```
  */
 export async function parseJsonBody(
-  req: NextRequest
+  req: NextRequest,
+  options: { maxBytes?: number } = {}
 ): Promise<{ body: unknown } | { error: NextResponse }> {
+  const { maxBytes = API_CONSTANTS.maxBodySizeBytes } = options;
   try {
-    const body = await req.json();
+    const bytes = await readRequestBodyBytesWithLimit(req, maxBytes);
+    const raw = new TextDecoder().decode(bytes);
+    const body = JSON.parse(raw) as unknown;
     return { body };
-  } catch {
+  } catch (error) {
+    if (error instanceof PayloadTooLargeError) {
+      return {
+        error: errorResponse({
+          error: "payload_too_large",
+          reason: "Request body exceeds limit",
+          status: 413,
+        }),
+      };
+    }
+    if (error instanceof RequestBodyAlreadyReadError) {
+      return {
+        error: errorResponse({
+          err: error,
+          error: "invalid_request",
+          reason: "Request body has already been read",
+          status: 400,
+        }),
+      };
+    }
     return {
       error: errorResponse({
         error: "invalid_request",

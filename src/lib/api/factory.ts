@@ -31,9 +31,13 @@ import {
 } from "@/lib/security/botid";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { emitOperationalAlertOncePerWindow } from "@/lib/telemetry/degraded-mode";
 import { createServerLogger } from "@/lib/telemetry/logger";
+import { sanitizePathnameForTelemetry } from "@/lib/telemetry/route-key";
 
 const apiFactoryLogger = createServerLogger("api.factory");
+
+export type DegradedMode = "fail_closed" | "fail_open";
 
 /**
  * Configuration for route handler guards.
@@ -56,10 +60,23 @@ export interface GuardsConfig<T extends z.ZodType = z.ZodType> {
   botId?: BotIdGuardConfig;
   /** Rate limit key from ROUTE_RATE_LIMITS registry. */
   rateLimit?: RouteRateLimitKey;
+  /**
+   * Controls behavior when rate limiting infrastructure is unavailable.
+   *
+   * - fail_closed: deny the request when rate limiting can't be enforced
+   * - fail_open: allow the request, but emit an operational alert
+   */
+  degradedMode?: DegradedMode;
   /** Telemetry span name for observability. */
   telemetry?: string;
   /** Optional Zod schema for request body validation. */
   schema?: T;
+  /**
+   * Override maximum JSON request body size (bytes) for schema parsing.
+   *
+   * Defaults to `API_CONSTANTS.maxBodySizeBytes` (64KB).
+   */
+  maxBodyBytes?: number;
 }
 
 export type BotIdGuardConfig =
@@ -89,6 +106,7 @@ type RateLimitResult = {
   limit: number;
   remaining: number;
   reset: number;
+  reason?: "timeout";
   success: boolean;
 };
 
@@ -138,6 +156,47 @@ function getRateLimitConfig(
   return ROUTE_RATE_LIMITS[key] || null;
 }
 
+function parseRateLimitWindowMs(window: string): number | null {
+  const parts = window.trim().split(/\s+/);
+  if (parts.length !== 2) return null;
+  const value = Number(parts[0]);
+  const unit = parts[1];
+  if (!Number.isFinite(value) || value <= 0) return null;
+  const unitMs =
+    unit === "ms"
+      ? 1
+      : unit === "s"
+        ? 1000
+        : unit === "m"
+          ? 60_000
+          : unit === "h"
+            ? 3_600_000
+            : unit === "d"
+              ? 86_400_000
+              : null;
+  if (!unitMs) return null;
+  return Math.floor(value * unitMs);
+}
+
+function defaultDegradedModeForRateLimitKey(key: RouteRateLimitKey): DegradedMode {
+  if (key === "embeddings" || key === "ai:stream" || key === "telemetry:ai-demo") {
+    return "fail_closed";
+  }
+  if (key.startsWith("auth:")) return "fail_closed";
+  if (key.startsWith("keys:")) return "fail_closed";
+  return "fail_open";
+}
+
+function getSafeRouteKeyForTelemetry(options: {
+  telemetry?: string;
+  rateLimit?: RouteRateLimitKey;
+  pathname: string;
+}): string {
+  if (options.telemetry) return options.telemetry;
+  if (options.rateLimit) return options.rateLimit;
+  return sanitizePathnameForTelemetry(options.pathname);
+}
+
 /**
  * Enforces rate limiting for a route.
  *
@@ -147,27 +206,80 @@ function getRateLimitConfig(
  */
 async function enforceRateLimit(
   rateLimitKey: RouteRateLimitKey,
-  identifier: string
+  identifier: string,
+  options: { degradedMode: DegradedMode }
 ): Promise<NextResponse | null> {
   const config = getRateLimitConfig(rateLimitKey);
   if (!config) {
     apiFactoryLogger.warn("missing_rate_limit_config", {
       key: String(rateLimitKey),
     });
-    return null; // Graceful degradation
+    if (options.degradedMode === "fail_closed") {
+      return errorResponse({
+        error: "rate_limit_unavailable",
+        reason: "Rate limiting misconfigured",
+        status: 503,
+      });
+    }
+    emitOperationalAlertOncePerWindow({
+      attributes: {
+        degradedMode: "fail_open",
+        rateLimitKey,
+        reason: "missing_config",
+      },
+      event: "ratelimit.degraded",
+      windowMs: 60_000,
+    });
+    return null;
   }
 
   const redis = getRedis();
   if (!redis && !rateLimitFactory) {
-    return null; // Graceful degradation when Redis unavailable and no override set
+    if (options.degradedMode === "fail_closed") {
+      return errorResponse({
+        error: "rate_limit_unavailable",
+        reason: "Rate limiting unavailable",
+        status: 503,
+      });
+    }
+
+    emitOperationalAlertOncePerWindow({
+      attributes: {
+        degradedMode: "fail_open",
+        rateLimitKey,
+        reason: "redis_unavailable",
+      },
+      event: "ratelimit.degraded",
+      windowMs: parseRateLimitWindowMs(config.window) ?? 60_000,
+    });
+    return null;
   }
 
   try {
     if (rateLimitFactory) {
-      const { success, remaining, reset, limit } = await rateLimitFactory(
+      const { success, remaining, reset, limit, reason } = await rateLimitFactory(
         rateLimitKey,
         identifier
       );
+      if (reason === "timeout") {
+        if (options.degradedMode === "fail_closed") {
+          return errorResponse({
+            error: "rate_limit_unavailable",
+            reason: "Rate limiting unavailable",
+            status: 503,
+          });
+        }
+        emitOperationalAlertOncePerWindow({
+          attributes: {
+            degradedMode: "fail_open",
+            rateLimitKey,
+            reason: "timeout",
+          },
+          event: "ratelimit.degraded",
+          windowMs: parseRateLimitWindowMs(config.window) ?? 60_000,
+        });
+        return null;
+      }
       if (!success) {
         const response = errorResponse({
           error: "rate_limit_exceeded",
@@ -200,7 +312,26 @@ async function enforceRateLimit(
       redis,
     });
 
-    const { success, remaining, reset } = await limiter.limit(identifier);
+    const { success, remaining, reset, reason } = await limiter.limit(identifier);
+    if (reason === "timeout") {
+      if (options.degradedMode === "fail_closed") {
+        return errorResponse({
+          error: "rate_limit_unavailable",
+          reason: "Rate limiting unavailable",
+          status: 503,
+        });
+      }
+      emitOperationalAlertOncePerWindow({
+        attributes: {
+          degradedMode: "fail_open",
+          rateLimitKey,
+          reason: "timeout",
+        },
+        event: "ratelimit.degraded",
+        windowMs: parseRateLimitWindowMs(config.window) ?? 60_000,
+      });
+      return null;
+    }
     if (!success) {
       const response = errorResponse({
         error: "rate_limit_exceeded",
@@ -221,7 +352,24 @@ async function enforceRateLimit(
       error: error instanceof Error ? error.message : "unknown_error",
       key: String(rateLimitKey),
     });
-    return null; // Graceful degradation on error
+    if (options.degradedMode === "fail_closed") {
+      return errorResponse({
+        err: error,
+        error: "rate_limit_unavailable",
+        reason: "Rate limiting unavailable",
+        status: 503,
+      });
+    }
+    emitOperationalAlertOncePerWindow({
+      attributes: {
+        degradedMode: "fail_open",
+        rateLimitKey,
+        reason: "enforcement_error",
+      },
+      event: "ratelimit.degraded",
+      windowMs: parseRateLimitWindowMs(config.window) ?? 60_000,
+    });
+    return null;
   }
 }
 
@@ -294,12 +442,11 @@ export function withApiGuards<SchemaType extends z.ZodType>(
       req: NextRequest,
       routeContext: RouteParamsContext
     ): Promise<Response> => {
-      // Create Supabase client
-      const supabase = await supabaseFactory();
-
       // Handle authentication if required
+      let supabase: TypedServerSupabase | null = null;
       let user: User | null = null;
       if (auth) {
+        supabase = await supabaseFactory();
         const authResult = await checkAuthentication(supabase);
         if (!authResult.isAuthenticated) {
           return unauthorizedResponse();
@@ -311,10 +458,17 @@ export function withApiGuards<SchemaType extends z.ZodType>(
       // Bot traffic shouldn't count against rate limits
       if (botIdConfig?.mode) {
         try {
-          await assertHumanOrThrow(telemetry ?? req.nextUrl.pathname, {
-            allowVerifiedAiAssistants: botIdConfig.allowVerifiedAiAssistants,
-            level: botIdConfig.mode === "deep" ? "deep" : "basic",
-          });
+          await assertHumanOrThrow(
+            getSafeRouteKeyForTelemetry({
+              pathname: req.nextUrl.pathname,
+              rateLimit,
+              telemetry,
+            }),
+            {
+              allowVerifiedAiAssistants: botIdConfig.allowVerifiedAiAssistants,
+              level: botIdConfig.mode === "deep" ? "deep" : "basic",
+            }
+          );
         } catch (error) {
           if (isBotDetectedError(error)) {
             return errorResponse({
@@ -335,7 +489,11 @@ export function withApiGuards<SchemaType extends z.ZodType>(
           const ipHash = getTrustedRateLimitIdentifier(req);
           identifier = ipHash === "unknown" ? "ip:unknown" : `ip:${ipHash}`;
         }
-        const rateLimitError = await enforceRateLimit(rateLimit, identifier);
+        const degradedMode =
+          config.degradedMode ?? defaultDegradedModeForRateLimitKey(rateLimit);
+        const rateLimitError = await enforceRateLimit(rateLimit, identifier, {
+          degradedMode,
+        });
         if (rateLimitError) {
           return rateLimitError;
         }
@@ -344,7 +502,7 @@ export function withApiGuards<SchemaType extends z.ZodType>(
       // Parse and validate request body if schema is provided
       let validatedData: SchemaType extends z.ZodType ? z.infer<SchemaType> : unknown;
       if (schema) {
-        const parsed = await parseJsonBody(req);
+        const parsed = await parseJsonBody(req, { maxBytes: config.maxBodyBytes });
         if ("error" in parsed) {
           return parsed.error;
         }
@@ -368,13 +526,24 @@ export function withApiGuards<SchemaType extends z.ZodType>(
           : unknown;
       }
 
+      const routeKey = getSafeRouteKeyForTelemetry({
+        pathname: req.nextUrl.pathname,
+        rateLimit,
+        telemetry,
+      });
+
       // Execute handler with telemetry if configured
       const executeHandler = async () => {
         const startTime = process.hrtime.bigint();
         try {
+          let supabaseClient = supabase;
+          if (!supabaseClient) {
+            supabaseClient = await supabaseFactory();
+            supabase = supabaseClient;
+          }
           const response = await handler(
             req,
-            { supabase, user },
+            { supabase: supabaseClient, user },
             validatedData,
             routeContext
           );
@@ -383,11 +552,10 @@ export function withApiGuards<SchemaType extends z.ZodType>(
           // Record metric (fire-and-forget)
           fireAndForgetMetric({
             durationMs,
-            endpoint: req.nextUrl.pathname,
+            endpoint: routeKey,
             method: req.method as ApiMetric["method"],
             rateLimitKey: rateLimit,
             statusCode: response.status,
-            userId: user?.id,
           });
 
           return response;
@@ -397,12 +565,11 @@ export function withApiGuards<SchemaType extends z.ZodType>(
           // Record error metric (fire-and-forget)
           fireAndForgetMetric({
             durationMs,
-            endpoint: req.nextUrl.pathname,
+            endpoint: routeKey,
             errorType: error instanceof Error ? error.name : "UnknownError",
             method: req.method as ApiMetric["method"],
             rateLimitKey: rateLimit,
             statusCode: 500,
-            userId: user?.id,
           });
 
           return errorResponse({
@@ -420,7 +587,7 @@ export function withApiGuards<SchemaType extends z.ZodType>(
           {
             identifierType: user?.id ? "user" : "ip",
             method: req.method,
-            route: req.nextUrl.pathname,
+            route: routeKey,
           },
           executeHandler
         );

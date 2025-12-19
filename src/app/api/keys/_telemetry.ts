@@ -2,6 +2,9 @@
  * @fileoverview Helpers for generating BYOK telemetry span attributes.
  */
 
+import "server-only";
+
+import { hashTelemetryIdentifier } from "@/lib/telemetry/identifiers";
 import type { TelemetrySpanAttributes } from "@/lib/telemetry/span";
 import type { RateLimitResult } from "./_rate-limiter";
 
@@ -25,15 +28,21 @@ export type BuildKeySpanAttributesInput = {
 export function buildKeySpanAttributes(
   input: BuildKeySpanAttributesInput
 ): TelemetrySpanAttributes {
-  return {
+  const attrs: TelemetrySpanAttributes = {
     "keys.identifier_type": input.identifierType,
     "keys.operation": input.operation,
     "keys.service": input.service,
-    "keys.user_id": input.userId ?? "anonymous",
     "ratelimit.has_limit": Boolean(input.rateLimit),
     "ratelimit.limit": input.rateLimit?.limit ?? 0,
     "ratelimit.remaining": input.rateLimit?.remaining ?? 0,
     "ratelimit.reset": input.rateLimit?.reset ?? 0,
     "ratelimit.success": input.rateLimit?.success ?? true,
   };
+
+  const userIdHash = input.userId ? hashTelemetryIdentifier(input.userId) : null;
+  if (userIdHash) {
+    attrs["keys.user_id_hash"] = userIdHash;
+  }
+
+  return attrs;
 }
