@@ -22,7 +22,8 @@ describe("POST /api/auth/mfa/setup", () => {
   beforeEach(() => {
     resetApiRouteMocks();
     mockStartTotpEnrollment.mockReset();
-    mockGetAdminSupabase.mockReset();
+    // Use mockClear to preserve implementation while clearing call history
+    mockGetAdminSupabase.mockClear();
     mockStartTotpEnrollment.mockResolvedValue({
       challengeId: "challenge-1",
       expiresAt: new Date(Date.now() + 900_000).toISOString(),
